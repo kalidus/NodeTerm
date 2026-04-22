@@ -859,3 +859,115 @@ button[aria-label="Seleccionar tipo de terminal"]:focus i {
   background: var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.2)) !important;
   transform: scale(0.95);
 }
+
+/* --- Cyberpunk Integrated Terminal Tabs --- */
+.cyber-terminal-tabs-container {
+    display: flex;
+    align-items: center;
+    height: 32px;
+    min-height: 32px;
+    background: var(--terminal-tab-bar-bg, rgba(0, 0, 0, 0.2));
+    border-bottom: 1px solid var(--terminal-tab-border, rgba(255, 255, 255, 0.05));
+    padding: 0 4px;
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    overflow: hidden;
+    position: relative;
+    z-index: 10;
+}
+
+.cyber-tab {
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    cursor: pointer;
+    position: relative;
+    min-width: 130px;
+    max-width: 210px;
+    height: 100%;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--terminal-tab-text, rgba(255, 255, 255, 0.6));
+    border-right: 1px solid var(--terminal-tab-border, rgba(255, 255, 255, 0.03));
+    user-select: none;
+    font-size: 0.74rem;
+    font-family: 'Fira Code', 'Cascadia Code', monospace;
+    letter-spacing: 0.2px;
+}
+
+.cyber-tab:hover {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--terminal-tab-active-text, #fff);
+}
+
+.cyber-tab.active {
+    background: var(--terminal-tab-active-bg, rgba(255, 255, 255, 0.07));
+    color: var(--terminal-tab-active-text, #fff);
+    font-weight: 500;
+}
+
+/* Neon accent line for active tab */
+.cyber-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 4px;
+    right: 4px;
+    height: 2px;
+    background: var(--terminal-tab-accent, #00f2ff);
+    box-shadow: 0 0 10px var(--terminal-tab-accent, #00f2ff), 0 0 2px var(--terminal-tab-accent, #00f2ff);
+    z-index: 2;
+    border-radius: 2px 2px 0 0;
+}
+
+.cyber-tab-close {
+    margin-left: auto;
+    opacity: 0.3;
+    transition: all 0.2s;
+    font-size: 10px !important;
+    padding: 4px !important;
+    border-radius: 4px;
+    color: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+}
+
+.cyber-tab:hover .cyber-tab-close {
+    opacity: 0.7;
+}
+
+.cyber-tab-close:hover {
+    background: rgba(255, 50, 50, 0.2) !important;
+    color: #ff5f56 !important;
+    opacity: 1 !important;
+}
+
+.cyber-tab-icon {
+    font-size: 11px;
+    margin-right: 8px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.5));
+}
+
+.cyber-tab-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-right: 8px;
+}
+
+/* macOS style traffic light indicator for terminal */
+.cyber-terminal-mac-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-left: 10px;
+    margin-right: 12px;
+    flex-shrink: 0;
+    position: relative;
+    box-shadow: 0 0 12px var(--terminal-tab-accent-glow, rgba(0, 242, 255, 0.4));
+    background: var(--terminal-tab-accent, #00f2ff);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}

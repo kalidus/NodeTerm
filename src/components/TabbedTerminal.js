@@ -33,6 +33,7 @@ function adjustColorBrightness(hex, percent) {
 const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, localFontFamily, localFontSize, localPowerShellTheme, localLinuxTerminalTheme, hideStatusBar = false, hideTabs = false, isIntegrated = false, onTabChange, persistenceKey = null }, ref) => {
     // Referencias para control de scroll de pestañas
     const tabsContainerRef = useRef(null);
+    const dropdownRef = useRef(null);
     const [canScrollLeft, setCanScrollLeft] = useState(false);
     const [canScrollRight, setCanScrollRight] = useState(false);
 
@@ -1631,6 +1632,11 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         selection: 'rgba(255,255,255,0.3)'
     };
 
+    // Determinar el tema de la terminal actual para inyectar colores dinámicos
+    const terminalTheme = activeTab?.type === 'powershell' || activeTab?.type === 'cygwin' || activeTab?.type === 'claude' || activeTab?.type === 'opencode' || activeTab?.type === 'geminicli' || activeTab?.type === 'codexcli'
+        ? (themes[localPowerShellTheme]?.theme || powershellXtermTheme)
+        : (themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme);
+
     // Obtener los colores del tema de pestañas seleccionado
     const getTabColors = () => {
         // Obtener estilos computados del documento (que incluyen los temas de pestañas)
@@ -1645,120 +1651,99 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
 
         // Asegurar contraste para el círculo estilo macOS
         const tabAccentCircle = adjustColorBrightness(tabAccent, 20);
-        const tabAccentBorder = adjustColorBrightness(tabAccent, -35);
+        const tabAccentBorder = isIntegrated && terminalTheme.brightBlack ? terminalTheme.brightBlack + '66' : adjustColorBrightness(tabAccent, -35);
 
-        return { tabBg, tabActiveBg, tabText, tabActiveText, tabAccent, tabAccentCircle, tabAccentBorder };
+        return {
+            tabBg,
+            tabActiveBg,
+            tabText,
+            tabActiveText,
+            tabAccent,
+            tabAccentCircle,
+            tabAccentBorder,
+            terminalBg: terminalTheme.background || '#0c0c0c',
+            terminalAccent: terminalTheme.cursor || terminalTheme.blue || '#00f2ff',
+            terminalForeground: terminalTheme.foreground || '#c9d1d9',
+            terminalSelection: terminalTheme.selection || 'rgba(255,255,255,0.1)'
+        };
     };
 
-    const { tabBg, tabActiveBg, tabText, tabActiveText, tabAccent, tabAccentCircle, tabAccentBorder } = getTabColors();
+    const {
+        tabBg, tabActiveBg, tabText, tabActiveText, tabAccent, tabAccentCircle, tabAccentBorder,
+        terminalBg, terminalAccent, terminalForeground, terminalSelection
+    } = getTabColors();
 
     return (
-        <div style={{
+        <div className="tabbed-terminal-root" style={{
             height: '100%',
             width: '100%',
             display: 'flex',
             flexDirection: 'column',
             background: 'transparent',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            '--terminal-tab-bar-bg': isIntegrated ? 'transparent' : tabBg,
+            '--terminal-tab-border': isIntegrated ? (terminalTheme.brightBlack ? terminalTheme.brightBlack + '33' : 'rgba(255,255,255,0.05)') : 'rgba(255,255,255,0.1)',
+            '--terminal-tab-text': isIntegrated ? (terminalForeground + '99') : tabText,
+            '--terminal-tab-active-text': isIntegrated ? terminalForeground : tabActiveText,
+            '--terminal-tab-active-bg': isIntegrated ? (terminalSelection || 'rgba(255,255,255,0.1)') : tabActiveBg,
+            '--terminal-tab-accent': isIntegrated ? terminalAccent : tabAccent,
+            '--terminal-tab-accent-glow': isIntegrated ? (terminalAccent + '4d') : (tabAccent + '33')
         }}>
             {/* Barra de pestañas */}
             {!hideTabs && (
-                <div style={{
-                    background: tabBg,
-                    borderBottom: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    minHeight: '32px',
-                    overflow: 'hidden'
-                }}>
+                <div className="cyber-terminal-tabs-container">
                     {/* Indicador circular estilo macOS usando el color del tema */}
-                    <div
-                        style={{
-                            width: 9,
-                            height: 9,
-                            borderRadius: '50%',
-                            background: tabAccentCircle,
-                            boxShadow: `0 0 0 3px ${tabAccent}33`,
-                            border: `1px solid ${tabAccentBorder}`,
-                            marginLeft: 8,
-                            marginRight: 10,
-                            flexShrink: 0
-                        }}
-                    />
-                    <div style={{
+                    <div className="cyber-terminal-mac-dot" />
+                    
+                    <div className="tabs-scroll-viewport" style={{
                         display: 'flex',
                         alignItems: 'center',
                         flex: 1,
                         overflow: 'hidden',
-                        minWidth: 0, // Permite que se contraiga
-                        marginLeft: '4px' // Margen izquierdo para que no esté pegado
+                        minWidth: 0,
+                        marginLeft: '0'
                     }}>
                         {/* Flecha izquierda */}
                         {(canScrollLeft || tabs.length > 3) && (
                             <Button
                                 icon="pi pi-chevron-left"
-                                className="p-button-text p-button-sm"
+                                className="tab-nav-arrow p-button-text"
                                 style={{
-                                    color: 'rgba(255, 255, 255, 0.8)',
                                     padding: '2px 4px',
                                     minWidth: '18px',
                                     width: '18px',
-                                    height: '18px',
+                                    height: '24px',
                                     fontSize: '8px',
-                                    background: 'rgba(255, 255, 255, 0.1)',
-                                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                                    borderRadius: '3px',
-                                    marginRight: '3px'
+                                    marginRight: '2px',
+                                    zIndex: 5
                                 }}
                                 onClick={() => scrollTabs('left')}
-                                aria-label="Desplazar pestañas a la izquierda"
-                                title="Desplazar pestañas a la izquierda"
                             />
                         )}
 
                         {/* Pestañas */}
                         <div
                             ref={tabsContainerRef}
+                            className="hide-scrollbar"
                             style={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                overflow: 'auto',
-                                scrollbarWidth: 'none', // Firefox
-                                msOverflowStyle: 'none', // IE/Edge
-                                WebkitScrollbar: { display: 'none' }, // Webkit browsers
-                                flex: '0 1 auto', // Ajustar al contenido
-                                minWidth: 0, // Permite que se contraiga
-                                maxWidth: 'calc(100% - 150px)', // Dejar espacio para los botones
-                                height: '32px'
+                                overflowX: 'auto',
+                                overflowY: 'hidden',
+                                flex: '1 1 auto',
+                                minWidth: 0,
+                                height: '100%'
                             }}
-                            className="hide-scrollbar"
                             onScroll={checkScrollButtons}
                         >
                             {tabs.map((tab, index) => (
                                 <div
                                     key={tab.id}
+                                    className={`cyber-tab ${tab.active ? 'active' : ''}`}
                                     style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        background: tab.active ? tabActiveBg : 'transparent',
-                                        color: tab.active ? tabActiveText : tabText,
-                                        borderTop: tab.active ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
-                                        borderRight: tab.active ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
-                                        borderBottom: 'none',
-                                        // Use individual border properties instead of shorthand
-                                        borderLeftColor: dragOverTabIndex === index ? 'var(--primary-color)' : (tab.active ? 'rgba(255,255,255,0.1)' : 'transparent'),
-                                        borderLeftWidth: dragOverTabIndex === index ? '3px' : '1px',
-                                        borderLeftStyle: 'solid',
-                                        padding: '4px 9px',
-                                        cursor: draggedTabIndex === index ? 'grabbing' : 'grab',
-                                        position: 'relative',
-                                        minWidth: '130px',
-                                        maxWidth: '200px',
-                                        flexShrink: 0, // Evita que las pestañas se contraigan
-                                        borderTopLeftRadius: '4px',
-                                        borderTopRightRadius: '4px',
-                                        transition: 'all 0.2s ease',
-                                        opacity: draggedTabIndex === index ? 0.5 : (tab.active ? 1 : 0.8)
+                                        borderLeftColor: dragOverTabIndex === index ? 'var(--terminal-tab-accent)' : 'transparent',
+                                        borderLeftWidth: dragOverTabIndex === index ? '3px' : '0',
+                                        opacity: draggedTabIndex === index ? 0.5 : 1
                                     }}
                                     onClick={(e) => {
                                         if (draggedTabIndex !== null || dragStartTimer !== null) {
@@ -1768,16 +1753,6 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                         }
                                         switchTab(tab.id);
                                     }}
-                                    onMouseEnter={(e) => {
-                                        if (!tab.active && draggedTabIndex === null) {
-                                            e.target.style.background = 'rgba(255,255,255,0.05)';
-                                        }
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        if (!tab.active && draggedTabIndex === null) {
-                                            e.target.style.background = 'transparent';
-                                        }
-                                    }}
                                     draggable={true}
                                     onDragStart={(e) => handleLocalTabDragStart(e, index)}
                                     onDragOver={(e) => handleLocalTabDragOver(e, index)}
@@ -1786,74 +1761,36 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     onDragEnd={handleLocalTabDragEnd}
                                 >
                                     {tab.type === 'powershell' ? (
-                                        <FaWindows style={{
-                                            color: '#4fc3f7',
-                                            fontSize: '11px',
-                                            marginRight: '5px'
-                                        }} />
+                                        <FaWindows className="cyber-tab-icon" style={{ color: '#4fc3f7' }} />
                                     ) : tab.type === 'ubuntu' ? (
-                                        <FaUbuntu style={{
-                                            color: '#E95420',
-                                            fontSize: '11px',
-                                            marginRight: '5px'
-                                        }} />
+                                        <FaUbuntu className="cyber-tab-icon" style={{ color: '#E95420' }} />
                                     ) : tab.type === 'debian' ? (
-                                        <SiDebian style={{
-                                            color: '#D70A53',
-                                            fontSize: '11px',
-                                            marginRight: '5px'
-                                        }} />
+                                        <SiDebian className="cyber-tab-icon" style={{ color: '#D70A53' }} />
                                     ) : (
                                         <i
-                                            className={tab.type === 'wsl' || tab.type === 'wsl-distro' ? 'pi pi-server' :
-                                                tab.type === 'cygwin' ? 'pi pi-code' :
-                                                    tab.type === 'claude' ? 'pi pi-comments' :
-                                                    tab.type === 'opencode' ? 'pi pi-code' :
-                                                    tab.type === 'geminicli' ? 'pi pi-star' :
-                                                    tab.type === 'codexcli' ? 'pi pi-bolt' :
-                                                    tab.type === 'docker' ? 'pi pi-box' :
-                                                        tab.type === 'rdp-guacamole' ? 'pi pi-desktop' : 'pi pi-circle'}
-                                            style={{
-                                                color: (tab.type === 'wsl' || tab.type === 'wsl-distro') ? '#8ae234' :
-                                                    tab.type === 'cygwin' ? '#00FF00' :
-                                                        tab.type === 'claude' ? '#f59e0b' :
-                                                        tab.type === 'opencode' ? '#6366f1' :
-                                                        tab.type === 'geminicli' ? '#1a73e8' :
-                                                        tab.type === 'codexcli' ? '#10b981' :
-                                                        tab.type === 'docker' ? '#2496ED' :
-                                                            tab.type === 'rdp-guacamole' ? '#ff6b35' : '#e95420',
-                                                fontSize: '11px',
-                                                marginRight: '5px'
+                                            className={tab.type === 'wsl' || tab.type === 'wsl-distro' ? 'pi pi-server cyber-tab-icon' :
+                                                tab.type === 'cygwin' ? 'pi pi-code cyber-tab-icon' :
+                                                    tab.type === 'claude' ? 'pi pi-comments cyber-tab-icon' :
+                                                    tab.type === 'opencode' ? 'pi pi-code cyber-tab-icon' :
+                                                    tab.type === 'geminicli' ? 'pi pi-star cyber-tab-icon' :
+                                                    tab.type === 'codexcli' ? 'pi pi-bolt cyber-tab-icon' :
+                                                    tab.type === 'docker' ? 'pi pi-box cyber-tab-icon' : 'pi pi-desktop cyber-tab-icon'}
+                                            style={{ 
+                                                color: tab.active ? 'var(--terminal-tab-accent)' : 'inherit'
                                             }}
                                         />
                                     )}
-                                    <span style={{
-                                        color: tab.active ? tabActiveText : tabText,
-                                        fontSize: '11px',
-                                        fontWeight: tab.active ? '600' : '400',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap',
-                                        flex: 1
-                                    }}>
-                                        {tab.title}
-                                    </span>
+
+                                    <span className="cyber-tab-label">{tab.title}</span>
+
                                     {tabs.length > 1 && (
-                                        <Button
-                                            icon="pi pi-times"
-                                            className="p-button-text p-button-sm"
-                                            style={{
-                                                color: 'rgba(255, 255, 255, 0.7)',
-                                                padding: '1px',
-                                                minWidth: '14px',
-                                                width: '14px',
-                                                height: '14px',
-                                                marginLeft: '3px'
-                                            }}
+                                        <i
+                                            className="pi pi-times cyber-tab-close"
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 closeTab(tab.id);
                                             }}
+                                            title="Cerrar pestaña"
                                         />
                                     )}
                                 </div>
@@ -1864,477 +1801,201 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                         {(canScrollRight || tabs.length > 3) && (
                             <Button
                                 icon="pi pi-chevron-right"
-                                className="p-button-text p-button-sm"
+                                className="tab-nav-arrow p-button-text"
                                 style={{
-                                    color: 'rgba(255, 255, 255, 0.8)',
                                     padding: '2px 4px',
                                     minWidth: '18px',
                                     width: '18px',
-                                    height: '18px',
+                                    height: '24px',
                                     fontSize: '8px',
-                                    background: 'rgba(255, 255, 255, 0.1)',
-                                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                                    borderRadius: '3px',
-                                    marginLeft: '3px',
-                                    marginRight: '3px'
+                                    marginLeft: '2px',
+                                    zIndex: 5
                                 }}
                                 onClick={() => scrollTabs('right')}
-                                aria-label="Desplazar pestañas a la derecha"
-                                title="Desplazar pestañas a la derecha"
                             />
                         )}
-
-                        {/* Botones estilo PowerShell al lado de las pestañas */}
-                        <div style={{ display: 'flex', alignItems: 'center', marginLeft: '4px', gap: '3px' }}>
-                            {/* Botón para nueva pestaña */}
-                            <Button
-                                icon="pi pi-plus"
-                                className="p-button-text p-button-sm tab-action-button"
-                                style={{
-                                    color: 'var(--ui-tab-text, rgba(255, 255, 255, 0.7))',
-                                    background: 'transparent',
-                                    border: 'none',
-                                    padding: '0',
-                                    minWidth: '18px',
-                                    width: '18px',
-                                    height: '18px',
-                                    fontSize: '9px',
-                                    borderRadius: '2px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
-                                }}
-                                onClick={() => {
-                                    // Usar el tipo de terminal actualmente seleccionado
-                                    createNewTab();
-                                }}
-                                aria-label="Nueva pestaña"
-                                title="Nueva pestaña"
-                            />
-
-                            {/* Botón dropdown para seleccionar tipo de terminal */}
-                            <Button
-                                icon="pi pi-chevron-down"
-                                className="p-button-text p-button-sm tab-action-button"
-                                style={{
-                                    color: 'var(--ui-tab-text, rgba(255, 255, 255, 0.7))',
-                                    background: 'transparent',
-                                    border: 'none',
-                                    padding: '0',
-                                    minWidth: '18px',
-                                    width: '18px',
-                                    height: '18px',
-                                    fontSize: '8px',
-                                    borderRadius: '2px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
-                                }}
-                                onClick={(e) => {
-                                    // Crear un menú contextual
-                                    e.preventDefault();
-                                    e.stopPropagation();
-
-                                    // Recalcular terminalOptions en el momento del click para asegurar que Docker esté incluido
-                                    const currentTerminalOptions = getTerminalOptions();
-
-                                    // Crear un menú desplegable temporal
-                                    const menu = document.createElement('div');
-                                    menu.style.position = 'absolute';
-                                    menu.style.top = (e.target.getBoundingClientRect().bottom + 5) + 'px';
-                                    menu.style.left = e.target.getBoundingClientRect().left + 'px';
-                                    menu.style.background = '#2a4a6b';
-                                    menu.style.border = '1px solid #3a5a7b';
-                                    menu.style.borderRadius = '4px';
-                                    menu.style.padding = '4px 0';
-                                    menu.style.minWidth = '180px';
-                                    menu.style.zIndex = '1000';
-                                    menu.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
-
-                                    // Separar opciones locales y Docker
-                                    const localOptions = currentTerminalOptions.filter(opt => !opt.value.startsWith('docker-'));
-                                    const dockerOptions = currentTerminalOptions.filter(opt => opt.value.startsWith('docker-'));
-
-                                    // Agregar opciones locales
-                                    localOptions.forEach((option) => {
-                                        const item = document.createElement('div');
-                                        item.style.padding = '8px 12px';
-                                        item.style.cursor = 'pointer';
-                                        item.style.display = 'flex';
-                                        item.style.alignItems = 'center';
-                                        item.style.gap = '8px';
-                                        item.style.color = '#ffffff';
-                                        item.style.fontSize = '12px';
-                                        item.style.transition = 'background-color 0.2s';
-
-                                        const iconColor = option.value === 'powershell' ? '#4fc3f7' :
-                                            option.value === 'wsl' ? '#8ae234' :
-                                                option.value === 'cygwin' ? '#00FF00' : '#e95420';
-
-                                        // Usar icono de Windows para PowerShell, icono de PrimeReact para otros
-                                        const iconHTML = option.value === 'powershell'
-                                            ? `<svg width="12" height="12" viewBox="0 0 448 512" fill="${iconColor}" style="margin-right: 0;"><path d="M0 93.7l183.6-25.3v177.4H0V93.7zm0 324.6l183.6 25.3V268.4H0v149.9zm203.8 28L448 480V268.4H203.8v177.9zm0-380.6v180.1H448V32L203.8 65.7z"/></svg>`
-                                            : `<i class="${option.icon}" style="color: ${iconColor}; font-size: 12px;"></i>`;
-
-                                        item.innerHTML = `
-                                            ${iconHTML}
-                                            <span>${option.label}</span>
-                                        `;
-
-                                        item.addEventListener('mouseenter', () => {
-                                            item.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-                                        });
-
-                                        item.addEventListener('mouseleave', () => {
-                                            item.style.backgroundColor = 'transparent';
-                                        });
-
-                                        item.addEventListener('click', () => {
-                                            setSelectedTerminalType(option.value);
-                                            createNewTab(option.value);
-                                            document.body.removeChild(menu);
-                                        });
-
-                                        menu.appendChild(item);
-                                    });
-
-                                    // Agregar Docker submenu si hay contenedores
-                                    if (dockerOptions.length > 0) {
-                                        const divider = document.createElement('div');
-                                        divider.style.height = '1px';
-                                        divider.style.background = 'rgba(255, 255, 255, 0.1)';
-                                        divider.style.margin = '4px 0';
-                                        menu.appendChild(divider);
-
-                                        const dockerItem = document.createElement('div');
-                                        dockerItem.style.padding = '8px 12px';
-                                        dockerItem.style.cursor = 'pointer';
-                                        dockerItem.style.display = 'flex';
-                                        dockerItem.style.alignItems = 'center';
-                                        dockerItem.style.gap = '8px';
-                                        dockerItem.style.color = '#ffffff';
-                                        dockerItem.style.fontSize = '12px';
-                                        dockerItem.style.transition = 'background-color 0.2s';
-                                        dockerItem.style.position = 'relative';
-
-                                        dockerItem.innerHTML = `
-                                            <i class="pi pi-box" style="color: #2496ED; font-size: 12px;"></i>
-                                            <span>🐳 Docker</span>
-                                            <i class="pi pi-chevron-right" style="margin-left: auto; font-size: 10px; color: rgba(255,255,255,0.6);"></i>
-                                        `;
-
-                                        let submenuVisible = false;
-                                        let submenu = null;
-                                        let hideTimeout = null;
-
-                                        const showSubmenu = () => {
-                                            // Cancelar el timeout de ocultamiento si existe
-                                            if (hideTimeout) {
-                                                clearTimeout(hideTimeout);
-                                                hideTimeout = null;
-                                            }
-
-                                            if (submenuVisible && submenu) return;
-
-                                            submenu = document.createElement('div');
-                                            submenu.style.position = 'absolute';
-                                            submenu.style.left = '100%';
-                                            submenu.style.top = '0';
-                                            submenu.style.background = '#2a4a6b';
-                                            submenu.style.border = '1px solid #3a5a7b';
-                                            submenu.style.borderRadius = '4px';
-                                            submenu.style.padding = '4px 0';
-                                            submenu.style.minWidth = '200px';
-                                            submenu.style.zIndex = '1001';
-                                            submenu.style.marginLeft = '4px';
-
-                                            dockerOptions.forEach(option => {
-                                                const subItem = document.createElement('div');
-                                                subItem.style.padding = '8px 12px';
-                                                subItem.style.cursor = 'pointer';
-                                                subItem.style.color = '#ffffff';
-                                                subItem.style.fontSize = '12px';
-                                                subItem.style.transition = 'background-color 0.2s';
-                                                subItem.style.display = 'flex';
-                                                subItem.style.alignItems = 'center';
-                                                subItem.style.gap = '8px';
-
-                                                subItem.innerHTML = `
-                                                    <i class="pi pi-box" style="color: #2496ED; font-size: 12px;"></i>
-                                                    <span>${option.label.replace('Docker: ', '')}</span>
-                                                `;
-
-                                                subItem.addEventListener('mouseenter', () => {
-                                                    subItem.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-                                                });
-
-                                                subItem.addEventListener('mouseleave', () => {
-                                                    subItem.style.backgroundColor = 'transparent';
-                                                });
-
-                                                subItem.addEventListener('click', () => {
-                                                    setSelectedTerminalType(option.value);
-                                                    createNewTab(option.value);
-                                                    document.body.removeChild(menu);
-                                                });
-
-                                                submenu.appendChild(subItem);
-                                            });
-
-                                            dockerItem.appendChild(submenu);
-                                            submenuVisible = true;
-                                        };
-
-                                        const hideSubmenu = () => {
-                                            hideTimeout = setTimeout(() => {
-                                                if (submenu && dockerItem.contains(submenu)) {
-                                                    dockerItem.removeChild(submenu);
-                                                }
-                                                submenuVisible = false;
-                                                submenu = null;
-                                            }, 200); // Esperar 200ms antes de ocultarlo
-                                        };
-
-                                        dockerItem.addEventListener('mouseenter', showSubmenu);
-                                        dockerItem.addEventListener('mouseleave', hideSubmenu);
-
-                                        // Cuando el mouse entra al submenu, cancelar el ocultamiento
-                                        dockerItem.addEventListener('mouseenter', () => {
-                                            if (submenu) {
-                                                submenu.addEventListener('mouseenter', showSubmenu);
-                                                submenu.addEventListener('mouseleave', hideSubmenu);
-                                            }
-                                        });
-
-                                        menu.appendChild(dockerItem);
-                                    }
-
-                                    // Agregar listener para cerrar el menú al hacer click fuera
-                                    const handleClickOutside = (event) => {
-                                        if (!menu.contains(event.target)) {
-                                            if (menu.parentNode) {
-                                                menu.parentNode.removeChild(menu);
-                                            }
-                                            document.removeEventListener('click', handleClickOutside);
-                                        }
-                                    };
-
-                                    document.body.appendChild(menu);
-                                    setTimeout(() => {
-                                        document.addEventListener('click', handleClickOutside);
-                                    }, 0);
-                                }}
-                                aria-label="Seleccionar tipo de terminal"
-                                title="Seleccionar tipo de terminal"
-                            />
-                        </div>
                     </div>
 
-                    {/* Controles del lado derecho - Vacio para usar HomeTab */}
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '0 16px'
-                    }}>
+                    {/* Botones de acción */}
+                    <div className="local-terminal-buttons" style={{ marginLeft: 'auto', display: 'flex', gap: '4px', paddingRight: '8px' }}>
+                        <Button
+                            icon="pi pi-plus"
+                            className="tab-action-button"
+                            onClick={(e) => dropdownRef.current.toggle(e)}
+                            aria-label="Nueva pestaña"
+                            title="Nueva pestaña"
+                        />
+                        <Button
+                            icon="pi pi-chevron-down"
+                            className="tab-action-button"
+                            onClick={(e) => dropdownRef.current.toggle(e)}
+                            aria-label="Seleccionar tipo de terminal"
+                            title="Seleccionar tipo de terminal"
+                        />
                     </div>
                 </div>
             )}
 
             {/* Contenido de las pestañas */}
-            <div style={{
-                flex: 1,
-                position: 'relative',
-                overflow: 'hidden'
-            }}>
-                {
-                    tabs.map((tab) => (
-                        <div
-                            key={tab.id}
-                            className={isIntegrated ? 'integrated-terminal' : ''}
-                            style={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                transform: tab.active ? 'translateX(0)' : 'translateX(100%)',
-                                transition: 'transform 0.1s ease-out',
-                                visibility: tab.active ? 'visible' : 'hidden',
-                                opacity: tab.active ? 1 : 0,
-                                background: 'transparent'
-                            }}
-                        >
-                            {(() => {
-                                // Log para depurar el tipo de terminal (deshabilitado)
-                                // if (tab.id === 'tab-1') {
-                                //     console.log('🔍 Renderizando terminal para tab-1:', {
-                                //         type: tab.type,
-                                //         title: tab.title,
-                                //         hasDistroInfo: !!tab.distroInfo,
-                                //         distroInfo: tab.distroInfo,
-                                //         updateKey: tab._updateKey,
-                                //         isPowerShell: tab.type === 'powershell',
-                                //         isUbuntu: tab.type === 'ubuntu',
-                                //         isWslDistro: tab.type === 'wsl-distro',
-                                //         willRenderPowerShell: tab.type === 'powershell',
-                                //         willRenderUbuntu: (tab.type === 'ubuntu' || tab.type === 'wsl-distro')
-                                //     });
-                                // }
-                                return null;
-                            })()}
-                            {tab.type === 'powershell' ? (
-                                <PowerShellTerminal
-                                    key={`${tab.id}-terminal-powershell`}
-                                    ref={(ref) => {
-                                        if (ref) terminalRefs.current[tab.id] = ref;
-                                    }}
-                                    tabId={tab.id}
-                                    fontFamily={localFontFamily}
-                                    fontSize={localFontSize}
-                                    theme={themes[localPowerShellTheme]?.theme || powershellXtermTheme}
-                                    hideStatusBar={hideStatusBar}
-                                    isIntegrated={isIntegrated}
-                                />
-                            ) : tab.type === 'wsl' ? (
-                                <WSLTerminal
-                                    key={`${tab.id}-terminal-wsl`}
-                                    ref={(ref) => {
-                                        if (ref) terminalRefs.current[tab.id] = ref;
-                                    }}
-                                    tabId={tab.id}
-                                    theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
-                                    hideStatusBar={hideStatusBar}
-                                    isIntegrated={isIntegrated}
-                                />
-                            ) : (tab.type === 'ubuntu' || tab.type === 'debian' || tab.type === 'wsl-distro') ? (
-                                (() => {
-                                    const ubuntuInfo = tab.distroInfo || tab.ubuntuInfo;
-                                    if (!ubuntuInfo) {
-                                        console.error('❌ ERROR: UbuntuTerminal sin ubuntuInfo!', {
-                                            tabId: tab.id,
-                                            tabType: tab.type,
-                                            tabTitle: tab.title,
-                                            tab: tab
-                                        });
-                                    }
-                                    return (
-                                        <UbuntuTerminal
-                                            key={`${tab.id}-terminal-${tab.type}-${ubuntuInfo?.name || 'no-info'}`}
-                                            ref={(ref) => {
-                                                if (ref) terminalRefs.current[tab.id] = ref;
-                                            }}
-                                            tabId={tab.id}
-                                            ubuntuInfo={ubuntuInfo}
-                                            tabType={tab.type} // Pasar el tipo explícitamente si es necesario
-                                            fontFamily={localFontFamily}
-                                            fontSize={localFontSize}
-                                            theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
-                                            hideStatusBar={hideStatusBar}
-                                            isIntegrated={isIntegrated}
-                                        />
-                                    );
-                                })()
-                            ) : tab.type === 'cygwin' ? (
-                                <CygwinTerminal
-                                    key={`${tab.id}-terminal`}
-                                    ref={(ref) => {
-                                        if (ref) terminalRefs.current[tab.id] = ref;
-                                    }}
-                                    tabId={tab.id}
-                                    fontFamily={localFontFamily}
-                                    fontSize={localFontSize}
-                                    theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
-                                    hideStatusBar={hideStatusBar}
-                                    isIntegrated={isIntegrated}
-                                />
-                            ) : tab.type === 'docker' ? (
-                                <DockerTerminal
-                                    key={`${tab.id}-terminal`}
-                                    ref={(ref) => {
-                                        if (ref) terminalRefs.current[tab.id] = ref;
-                                    }}
-                                    tabId={tab.id}
-                                    dockerInfo={tab.distroInfo}
-                                    fontFamily={localFontFamily}
-                                    fontSize={localFontSize}
-                                    theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
-                                    hideStatusBar={hideStatusBar}
-                                    isIntegrated={isIntegrated}
-                                />
-                            ) : tab.type === 'claude' ? (
-                                <ClaudeTerminal
-                                    key={`${tab.id}-terminal`}
-                                    ref={(ref) => {
-                                        if (ref) terminalRefs.current[tab.id] = ref;
-                                    }}
-                                    tabId={tab.id}
-                                    fontFamily={localFontFamily}
-                                    fontSize={localFontSize}
-                                    theme={themes[localPowerShellTheme]?.theme || powershellXtermTheme}
-                                    isIntegrated={isIntegrated}
-                                />
-                            ) : tab.type === 'opencode' ? (
-                                <OpenCodeTerminal
-                                    key={`${tab.id}-terminal`}
-                                    ref={(ref) => {
-                                        if (ref) terminalRefs.current[tab.id] = ref;
-                                    }}
-                                    tabId={tab.id}
-                                    fontFamily={localFontFamily}
-                                    fontSize={localFontSize}
-                                    theme={themes[localPowerShellTheme]?.theme || powershellXtermTheme}
-                                    isIntegrated={isIntegrated}
-                                />
-                            ) : tab.type === 'geminicli' ? (
-                                <GeminiCliTerminal
-                                    key={`${tab.id}-terminal`}
-                                    ref={(ref) => {
-                                        if (ref) terminalRefs.current[tab.id] = ref;
-                                    }}
-                                    tabId={tab.id}
-                                    fontFamily={localFontFamily}
-                                    fontSize={localFontSize}
-                                    theme={themes[localPowerShellTheme]?.theme || powershellXtermTheme}
-                                    isIntegrated={isIntegrated}
-                                />
-                            ) : tab.type === 'codexcli' ? (
-                                <CodexCliTerminal
-                                    key={`${tab.id}-terminal`}
-                                    ref={(ref) => {
-                                        if (ref) terminalRefs.current[tab.id] = ref;
-                                    }}
-                                    tabId={tab.id}
-                                    fontFamily={localFontFamily}
-                                    fontSize={localFontSize}
-                                    theme={themes[localPowerShellTheme]?.theme || powershellXtermTheme}
-                                    isIntegrated={isIntegrated}
-                                />
-                            ) : tab.type === 'rdp-guacamole' ? (
-                                <GuacamoleTerminal
-                                    key={`${tab.id}-terminal`}
-                                    ref={(ref) => {
-                                        if (ref) terminalRefs.current[tab.id] = ref;
-                                    }}
-                                    tabId={tab.id}
-                                    rdpConfig={tab.rdpConfig}
-                                />
-                            ) : (
-                                <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    height: '100%',
-                                    color: 'rgba(255,255,255,0.7)'
-                                }}>
-                                    <span>Tipo de terminal no soportado: {tab.type}</span>
-                                </div>
-                            )}
-                        </div>
-                    ))
-                }
-            </div >
-        </div >
+            <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: 'transparent' }}>
+                {tabs.map((tab) => (
+                    <div
+                        key={tab.id}
+                        style={{
+                            display: tab.active ? 'block' : 'none',
+                            height: '100%',
+                            width: '100%',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0
+                        }}
+                    >
+                        {tab.type === 'powershell' && (
+                            <PowerShellTerminal
+                                key={`${tab.id}-terminal-powershell`}
+                                ref={(ref) => {
+                                    if (ref) terminalRefs.current[tab.id] = ref;
+                                }}
+                                tabId={tab.id}
+                                fontFamily={localFontFamily}
+                                fontSize={localFontSize}
+                                theme={themes[localPowerShellTheme]?.theme || powershellXtermTheme}
+                                hideStatusBar={hideStatusBar}
+                                isIntegrated={isIntegrated}
+                            />
+                        )}
+                        {tab.type === 'wsl' && (
+                            <WSLTerminal
+                                key={`${tab.id}-terminal-wsl`}
+                                ref={(ref) => {
+                                    if (ref) terminalRefs.current[tab.id] = ref;
+                                }}
+                                tabId={tab.id}
+                                theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
+                                hideStatusBar={hideStatusBar}
+                                isIntegrated={isIntegrated}
+                            />
+                        )}
+                        {(tab.type === 'ubuntu' || tab.type === 'debian' || tab.type === 'wsl-distro') && (
+                            <UbuntuTerminal
+                                key={`${tab.id}-terminal-${tab.type}`}
+                                ref={(ref) => {
+                                    if (ref) terminalRefs.current[tab.id] = ref;
+                                }}
+                                tabId={tab.id}
+                                ubuntuInfo={tab.distroInfo || tab.ubuntuInfo}
+                                tabType={tab.type}
+                                fontFamily={localFontFamily}
+                                fontSize={localFontSize}
+                                theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
+                                hideStatusBar={hideStatusBar}
+                                isIntegrated={isIntegrated}
+                            />
+                        )}
+                        {tab.type === 'cygwin' && (
+                            <CygwinTerminal
+                                key={`${tab.id}-terminal`}
+                                ref={(ref) => {
+                                    if (ref) terminalRefs.current[tab.id] = ref;
+                                }}
+                                tabId={tab.id}
+                                fontFamily={localFontFamily}
+                                fontSize={localFontSize}
+                                theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
+                                hideStatusBar={hideStatusBar}
+                                isIntegrated={isIntegrated}
+                            />
+                        )}
+                        {tab.type === 'docker' && (
+                            <DockerTerminal
+                                key={`${tab.id}-terminal`}
+                                ref={(ref) => {
+                                    if (ref) terminalRefs.current[tab.id] = ref;
+                                }}
+                                tabId={tab.id}
+                                dockerInfo={tab.distroInfo}
+                                fontFamily={localFontFamily}
+                                fontSize={localFontSize}
+                                theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
+                                hideStatusBar={hideStatusBar}
+                                isIntegrated={isIntegrated}
+                            />
+                        )}
+                        {tab.type === 'claude' && (
+                            <ClaudeTerminal
+                                key={`${tab.id}-terminal`}
+                                ref={(ref) => {
+                                    if (ref) terminalRefs.current[tab.id] = ref;
+                                }}
+                                tabId={tab.id}
+                                fontFamily={localFontFamily}
+                                fontSize={localFontSize}
+                                theme={themes[localPowerShellTheme]?.theme || powershellXtermTheme}
+                                isIntegrated={isIntegrated}
+                            />
+                        )}
+                        {tab.type === 'opencode' && (
+                            <OpenCodeTerminal
+                                key={`${tab.id}-terminal`}
+                                ref={(ref) => {
+                                    if (ref) terminalRefs.current[tab.id] = ref;
+                                }}
+                                tabId={tab.id}
+                                fontFamily={localFontFamily}
+                                fontSize={localFontSize}
+                                theme={themes[localPowerShellTheme]?.theme || powershellXtermTheme}
+                                isIntegrated={isIntegrated}
+                            />
+                        )}
+                        {tab.type === 'geminicli' && (
+                            <GeminiCliTerminal
+                                key={`${tab.id}-terminal`}
+                                ref={(ref) => {
+                                    if (ref) terminalRefs.current[tab.id] = ref;
+                                }}
+                                tabId={tab.id}
+                                fontFamily={localFontFamily}
+                                fontSize={localFontSize}
+                                theme={themes[localPowerShellTheme]?.theme || powershellXtermTheme}
+                                isIntegrated={isIntegrated}
+                            />
+                        )}
+                        {tab.type === 'codexcli' && (
+                            <CodexCliTerminal
+                                key={`${tab.id}-terminal`}
+                                ref={(ref) => {
+                                    if (ref) terminalRefs.current[tab.id] = ref;
+                                }}
+                                tabId={tab.id}
+                                fontFamily={localFontFamily}
+                                fontSize={localFontSize}
+                                theme={themes[localPowerShellTheme]?.theme || powershellXtermTheme}
+                                isIntegrated={isIntegrated}
+                            />
+                        )}
+                        {tab.type === 'rdp-guacamole' && (
+                            <GuacamoleTerminal
+                                key={`${tab.id}-terminal`}
+                                ref={(ref) => {
+                                    if (ref) terminalRefs.current[tab.id] = ref;
+                                }}
+                                tabId={tab.id}
+                                rdpConfig={tab.rdpConfig}
+                            />
+                        )}
+                    </div>
+                ))}
+            </div>
+
+            {/* Menú de selección de terminal */}
+            <Dropdown
+                ref={dropdownRef}
+                options={getTerminalOptions()}
+                onChange={(e) => createNewTab(e.value)}
+                style={{ display: 'none' }}
+                appendTo={document.body}
+            />
+        </div>
     );
 });
 
