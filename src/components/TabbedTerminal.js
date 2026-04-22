@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { Button } from 'primereact/button';
-import { Dropdown } from 'primereact/dropdown';
-import { FaWindows, FaUbuntu, FaLinux } from 'react-icons/fa';
-import { SiDebian, SiDocker } from 'react-icons/si';
+import { Menu } from 'primereact/menu';
+import { OverlayPanel } from 'primereact/overlaypanel';
+import { FaWindows, FaUbuntu, FaLinux, FaBrain } from 'react-icons/fa';
+import { SiAnthropic, SiDebian, SiDocker, SiGooglegemini, SiOpenai } from 'react-icons/si';
+import AIClientBrandIcon from './AIClientBrandIcon';
 import PowerShellTerminal from './PowerShellTerminal';
 import WSLTerminal from './WSLTerminal';
 import UbuntuTerminal from './UbuntuTerminal';
@@ -33,9 +35,42 @@ function adjustColorBrightness(hex, percent) {
 const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, localFontFamily, localFontSize, localPowerShellTheme, localLinuxTerminalTheme, hideStatusBar = false, hideTabs = false, isIntegrated = false, onTabChange, persistenceKey = null }, ref) => {
     // Referencias para control de scroll de pestañas
     const tabsContainerRef = useRef(null);
-    const dropdownRef = useRef(null);
+    const menuRef = useRef(null);
     const [canScrollLeft, setCanScrollLeft] = useState(false);
     const [canScrollRight, setCanScrollRight] = useState(false);
+
+    // Estado para clientes de IA habilitados
+    const [aiClientsEnabled, setAiClientsEnabled] = useState({
+        claude: false,
+        opencode: false,
+        geminicli: false,
+        codexcli: false
+    });
+
+    useEffect(() => {
+        const syncAiClients = () => {
+            try {
+                const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
+                setAiClientsEnabled({
+                    claude: cfg.claude === true,
+                    opencode: cfg.opencode === true,
+                    geminicli: cfg.geminicli === true,
+                    codexcli: cfg.codexcli === true
+                });
+            } catch {
+                /* noop */
+            }
+        };
+
+        syncAiClients();
+        window.addEventListener('ai-clients-config-changed', syncAiClients);
+        window.addEventListener('storage', syncAiClients);
+
+        return () => {
+            window.removeEventListener('ai-clients-config-changed', syncAiClients);
+            window.removeEventListener('storage', syncAiClients);
+        };
+    }, []);
 
     // Funciones para controlar el scroll de pestañas
     const checkScrollButtons = () => {
@@ -1227,91 +1262,87 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         return () => cancelScheduledFit();
     }, [activeTabKey, tabs, scheduleFitForTab, cancelScheduledFit]);
 
-    // Efecto para redimensionar terminales cuando cambia el estado (minimized/maximized/normal)
-    useEffect(() => {
-        const activeTab = tabs.find(tab => tab.active);
-        if (activeTab && terminalState) {
-            scheduleFitForTab(activeTab.id);
-        }
-        return () => cancelScheduledFit();
-    }, [terminalState, tabs, scheduleFitForTab, cancelScheduledFit]);
-
-    // Opciones para el selector de tipo de terminal (dinámicas basadas en SO y distribuciones disponibles)
-    const getTerminalOptions = () => {
+    // Opciones para el selector de tipo de terminal agrupadas por categorías
+    const getGroupedTerminalOptions = () => {
         const platform = window.electron?.platform || 'unknown';
+        const groups = [];
 
+        // --- Categoría: SHELLS ---
+        const shells = [];
         if (platform === 'win32') {
-            // En Windows: mostrar PowerShell, WSL, Cygwin y cada distribución WSL detectada
-            const options = [
-                { label: 'PowerShell', value: 'powershell', icon: 'pi pi-desktop' },
-                { label: 'Claude Code', value: 'claude', icon: 'pi pi-comments', color: '#f59e0b' },
-                { label: 'OpenCode', value: 'opencode', icon: 'pi pi-code', color: '#6366f1' },
-                { label: 'Gemini CLI', value: 'geminicli', icon: 'pi pi-star', color: '#1a73e8' },
-                { label: 'Codex CLI', value: 'codexcli', icon: 'pi pi-bolt', color: '#10b981' },
-                // Cygwin siempre visible en Windows (se instalará bajo demanda si no existe)
-                {
-                    label: cygwinAvailable ? 'Cygwin' : 'Cygwin (instalar)',
-                    value: 'cygwin',
-                    icon: 'pi pi-code',
-                    color: '#00FF00'
-                },
-            ];
+            shells.push({ label: 'PowerShell', value: 'powershell', icon: <FaWindows style={{ color: '#0078D4' }} /> });
+            shells.push({
+                label: cygwinAvailable ? 'Cygwin' : 'Cygwin (instalar)',
+                value: 'cygwin',
+                icon: <FaLinux style={{ color: '#FCC624' }} />
+            });
+        } else {
+            shells.push({
+                label: platform === 'darwin' ? 'Terminal macOS' : 'Terminal Linux',
+                value: 'linux-terminal',
+                icon: <FaLinux style={{ color: '#FCC624' }} />
+            });
+        }
 
-            // Agregar cada distribución WSL como opción separada
-            options.push(...wslDistributions.map(distro => ({
+        // Agregar distribuciones WSL a Shells
+        wslDistributions.forEach(distro => {
+            let icon = <FaLinux style={{ color: '#8ae234' }} />;
+            if (distro.category === 'ubuntu' || distro.label.toLowerCase().includes('ubuntu')) {
+                icon = <FaUbuntu style={{ color: '#E95420' }} />;
+            } else if (distro.category === 'debian' || distro.label.toLowerCase().includes('debian')) {
+                icon = <SiDebian style={{ color: '#D70A53' }} />;
+            } else if (distro.label.toLowerCase().includes('kali')) {
+                icon = <FaLinux style={{ color: '#2196F3' }} />;
+            }
+
+            shells.push({
                 label: distro.label,
                 value: `wsl-${distro.name}`,
-                icon: distro.icon,
-                executable: distro.executable,
-                category: distro.category,
-                distroName: distro.name,
+                icon: icon,
                 distroInfo: distro
-            })));
+            });
+        });
 
-            // Agregar contenedores Docker si están disponibles
-            if (dockerContainers.length > 0) {
-                options.push(...dockerContainers.map(container => ({
-                    label: `Docker: ${container.name}`,
-                    value: `docker-${container.name}`,
-                    icon: 'pi pi-box',
-                    color: '#2496ED',
-                    dockerContainer: container
-                })));
-            }
-
-            return options;
-        } else if (platform === 'linux' || platform === 'darwin') {
-            // En Linux/macOS: mostrar terminal nativo y Docker si disponible
-            const options = [
-                { label: 'Terminal', value: 'linux-terminal', icon: 'pi pi-desktop' },
-                { label: 'Claude Code', value: 'claude', icon: 'pi pi-comments', color: '#f59e0b' },
-                { label: 'OpenCode', value: 'opencode', icon: 'pi pi-code', color: '#6366f1' },
-                { label: 'Gemini CLI', value: 'geminicli', icon: 'pi pi-star', color: '#1a73e8' },
-                { label: 'Codex CLI', value: 'codexcli', icon: 'pi pi-bolt', color: '#10b981' }
-            ];
-
-            // Agregar contenedores Docker si están disponibles
-            if (dockerContainers.length > 0) {
-                options.push(...dockerContainers.map(container => ({
-                    label: `Docker: ${container.name}`,
-                    value: `docker-${container.name}`,
-                    icon: 'pi pi-box',
-                    color: '#2496ED',
-                    dockerContainer: container
-                })));
-            }
-
-            return options;
-        } else {
-            // Fallback para otros sistemas
-            return [
-                { label: 'Terminal', value: 'powershell', icon: 'pi pi-desktop' }
-            ];
+        if (shells.length > 0) {
+            groups.push({ label: 'Shells', icon: 'pi pi-desktop', items: shells });
         }
+
+        // --- Categoría: AI CLIS ---
+        const aiClis = [];
+        if (aiClientsEnabled.claude) {
+            aiClis.push({ label: 'Claude Code', value: 'claude', icon: <SiAnthropic style={{ color: '#D97706' }} /> });
+        }
+        if (aiClientsEnabled.opencode) {
+            aiClis.push({ label: 'OpenCode', value: 'opencode', icon: <AIClientBrandIcon tabType="opencode" size={18} /> });
+        }
+        if (aiClientsEnabled.geminicli) {
+            aiClis.push({ label: 'Gemini CLI', value: 'geminicli', icon: <SiGooglegemini style={{ color: '#8E75B2' }} /> });
+        }
+        if (aiClientsEnabled.codexcli) {
+            aiClis.push({ label: 'Codex CLI', value: 'codexcli', icon: <SiOpenai style={{ color: '#10A37F' }} /> });
+        }
+
+        if (aiClis.length > 0) {
+            groups.push({ label: 'AI CLIs', icon: 'pi pi-bolt', items: aiClis });
+        }
+
+        // --- Categoría: CONTAINERS ---
+        const containers = [];
+        dockerContainers.forEach(container => {
+            containers.push({
+                label: container.name,
+                value: `docker-${container.name}`,
+                icon: <SiDocker style={{ color: '#2496ED' }} />,
+                distroInfo: container
+            });
+        });
+
+        if (containers.length > 0) {
+            groups.push({ label: 'Containers', icon: 'pi pi-box', items: containers });
+        }
+
+        return groups;
     };
-
-    const terminalOptions = getTerminalOptions();
-
 
     // Función para crear una pestaña RDP con configuración específica
     const createRdpTab = (title, rdpConfig) => {
@@ -1490,6 +1521,18 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     shortId: 'unknown'
                 };
             }
+        } else if (terminalTypeToUse === 'claude') {
+            title = 'Claude Code';
+            terminalType = 'claude';
+        } else if (terminalTypeToUse === 'opencode') {
+            title = 'OpenCode';
+            terminalType = 'opencode';
+        } else if (terminalTypeToUse === 'geminicli') {
+            title = 'Gemini CLI';
+            terminalType = 'geminicli';
+        } else if (terminalTypeToUse === 'codexcli') {
+            title = 'Codex CLI';
+            terminalType = 'codexcli';
         } else {
             title = 'Terminal';
             terminalType = terminalTypeToUse;
@@ -1728,7 +1771,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 display: 'flex',
                                 overflowX: 'auto',
                                 overflowY: 'hidden',
-                                flex: '1 1 auto',
+                                flex: '0 1 auto',
                                 minWidth: 0,
                                 height: '100%'
                             }}
@@ -1781,18 +1824,42 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
 
                                     <span className="cyber-tab-label">{tab.title}</span>
 
-                                    {tabs.length > 1 && (
-                                        <i
-                                            className="pi pi-times cyber-tab-close"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                closeTab(tab.id);
-                                            }}
-                                            title="Cerrar pestaña"
-                                        />
-                                    )}
+                                    <i
+                                        className="pi pi-times cyber-tab-close"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            closeTab(tab.id);
+                                        }}
+                                        title="Cerrar pestaña"
+                                    />
                                 </div>
                             ))}
+                        </div>
+
+                        {/* Botones de acción pegados a las pestañas */}
+                        <div className="local-terminal-buttons" style={{ display: 'flex', alignItems: 'center', gap: '2px', padding: '0 8px', flexShrink: 0, zIndex: 10 }}>
+                            <Button
+                                icon="pi pi-plus"
+                                className="tab-action-button"
+                                style={{ width: '22px', height: '22px', fontSize: '10px' }}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    createNewTab();
+                                }}
+                                aria-label="Nueva pestaña"
+                                title="Nueva pestaña"
+                            />
+                            <Button
+                                icon="pi pi-chevron-down"
+                                className="tab-action-button"
+                                style={{ width: '18px', height: '22px', fontSize: '8px' }}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    menuRef.current?.toggle(e);
+                                }}
+                                aria-label="Seleccionar tipo de terminal"
+                                title="Seleccionar tipo de terminal"
+                            />
                         </div>
 
                         {/* Flecha derecha */}
@@ -1812,24 +1879,6 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 onClick={() => scrollTabs('right')}
                             />
                         )}
-                    </div>
-
-                    {/* Botones de acción */}
-                    <div className="local-terminal-buttons" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px', paddingRight: '8px' }}>
-                        <Button
-                            icon="pi pi-plus"
-                            className="tab-action-button"
-                            onClick={(e) => dropdownRef.current.toggle(e)}
-                            aria-label="Nueva pestaña"
-                            title="Nueva pestaña"
-                        />
-                        <Button
-                            icon="pi pi-chevron-down"
-                            className="tab-action-button"
-                            onClick={(e) => dropdownRef.current.toggle(e)}
-                            aria-label="Seleccionar tipo de terminal"
-                            title="Seleccionar tipo de terminal"
-                        />
                     </div>
                 </div>
             )}
@@ -1986,13 +2035,49 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             </div>
 
             {/* Menú de selección de terminal */}
-            <Dropdown
-                ref={dropdownRef}
-                options={getTerminalOptions()}
-                onChange={(e) => createNewTab(e.value)}
-                style={{ display: 'none' }}
-                appendTo={document.body}
-            />
+            <OverlayPanel ref={menuRef} appendTo={document.body} className="cyber-terminal-menu">
+                <div className="terminal-launcher-container">
+                    <div style={{
+                        fontSize: '9px',
+                        fontWeight: '800',
+                        letterSpacing: '0.2em',
+                        textTransform: 'uppercase',
+                        marginBottom: '15px',
+                        color: 'var(--terminal-tab-accent, #00f2ff)',
+                        opacity: 0.6,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                    }}>
+                        <i className="pi pi-th-large" style={{ fontSize: '9px' }} />
+                        TERMINAL LAUNCHER
+                    </div>
+
+                    {getGroupedTerminalOptions().map(group => (
+                        <div key={group.label} className="launcher-section">
+                            <div className="launcher-section-title">
+                                <i className={group.icon} />
+                                {group.label} ({group.items.length})
+                            </div>
+                            <div className="launcher-grid">
+                                {group.items.map(opt => (
+                                    <div
+                                        key={opt.value}
+                                        className="launcher-card"
+                                        onClick={() => {
+                                            createNewTab(opt.value, opt.distroInfo);
+                                            menuRef.current?.hide();
+                                        }}
+                                    >
+                                        {opt.icon}
+                                        <span>{opt.label}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </OverlayPanel>
         </div>
     );
 });

@@ -881,9 +881,9 @@ button[aria-label="Seleccionar tipo de terminal"]:focus i {
     padding: 0 14px;
     cursor: pointer;
     position: relative;
-    flex: 1;
-    min-width: 100px;
-    max-width: 400px;
+    flex: 0 1 auto;
+    min-width: 120px;
+    max-width: 240px;
     height: 100%;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     color: var(--terminal-tab-text, rgba(255, 255, 255, 0.6));
@@ -920,18 +920,23 @@ button[aria-label="Seleccionar tipo de terminal"]:focus i {
 }
 
 .cyber-tab-close {
-    margin-left: auto;
-    opacity: 0.3;
+    margin-left: 8px;
+    opacity: 0.4;
     transition: all 0.2s;
-    font-size: 10px !important;
-    padding: 4px !important;
-    border-radius: 4px;
+    font-size: 9px !important;
+    padding: 3px !important;
+    border-radius: 50%;
     color: inherit;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
+    border: 1px solid transparent;
+}
+
+.cyber-tab.active .cyber-tab-close {
+    opacity: 0.8;
 }
 
 .cyber-tab:hover .cyber-tab-close {
@@ -971,4 +976,118 @@ button[aria-label="Seleccionar tipo de terminal"]:focus i {
     box-shadow: 0 0 12px var(--terminal-tab-accent-glow, rgba(0, 242, 255, 0.4));
     background: var(--terminal-tab-accent, #00f2ff);
     border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.cyber-menu-item:hover {
+    background: rgba(0, 242, 255, 0.15) !important;
+    box-shadow: inset 0 0 10px rgba(0, 242, 255, 0.1);
+}
+
+.cyber-terminal-menu {
+    background: rgba(10, 10, 15, 0.9) !important;
+    backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(0, 242, 255, 0.3) !important;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5), 0 0 10px rgba(0, 242, 255, 0.1) !important;
+    padding: 0 !important;
+    border-radius: 10px !important;
+}
+
+.cyber-terminal-menu::before, .cyber-terminal-menu::after {
+    display: none !important;
+}
+
+/* Launcher styles for OverlayPanel */
+.terminal-launcher-container {
+    padding: 14px;
+    background: transparent;
+    width: min(580px, 90vw);
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.launcher-section {
+    margin-bottom: 18px;
+}
+
+.launcher-section:last-child {
+    margin-bottom: 4px;
+}
+
+.launcher-section-title {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--terminal-tab-accent, #00f2ff);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    opacity: 0.8;
+}
+
+.launcher-section-title i {
+    font-size: 10px;
+}
+
+.launcher-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 8px;
+}
+
+.launcher-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(0, 242, 255, 0.12);
+    padding: 10px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: #e2f8ff;
+    position: relative;
+    overflow: hidden;
+}
+
+.launcher-card:hover {
+    background: rgba(0, 242, 255, 0.1);
+    border-color: rgba(0, 242, 255, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3), 0 0 10px rgba(0, 242, 255, 0.1);
+}
+
+.launcher-card i {
+    font-size: 14px;
+    color: var(--terminal-tab-accent, #00f2ff);
+    width: 18px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.launcher-card span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+}
+
+.launcher-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 2px;
+    height: 100%;
+    background: var(--terminal-tab-accent, #00f2ff);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.launcher-card:hover::after {
+    opacity: 1;
 }
