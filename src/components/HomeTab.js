@@ -1186,6 +1186,78 @@ const HomeTab = ({
             background-color: ${localTerminalBg} !important;
             background: ${localTerminalBg} !important;
           }
+          /* Premium Switch Styles */
+          .premium-switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+            flex-shrink: 0;
+          }
+          .premium-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+          }
+          .premium-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(120, 120, 120, 0.2);
+            transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+          }
+          .premium-slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 2px;
+            bottom: 2px;
+            background-color: #fff;
+            transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+          }
+          input:checked + .premium-slider {
+            background-color: ${themeColors.primaryColor || '#2196f3'};
+          }
+          input:checked + .premium-slider:before {
+            transform: translateX(20px);
+          }
+          
+          .menu-item-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 8px 12px;
+            margin: 0 -8px;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+          }
+          .menu-item-row:hover {
+            background: rgba(255, 255, 255, 0.05);
+          }
+          .menu-item-row:active {
+            transform: scale(0.98);
+          }
+
+          /* Glassmorphism for OverlayPanel */
+          .premium-overlay {
+            backdrop-filter: blur(25px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(25px) saturate(180%) !important;
+            background: ${themeColors.cardBackground ? (themeColors.cardBackground.replace(')', ', 0.85)')) : 'rgba(30, 30, 30, 0.85)'} !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.5) !important;
+            border-radius: 18px !important;
+            overflow: hidden !important;
+          }
+          .p-overlaypanel-content {
+            padding: 0 !important;
+          }
         `}
       </style>
       <div style={{
@@ -1199,12 +1271,23 @@ const HomeTab = ({
         visibility: terminalState === 'maximized' ? 'hidden' : 'visible',
         transition: 'opacity 0.1s ease, visibility 0.1s ease'
       }}>
-        <OverlayPanel ref={homeOptionsOverlayRef} style={{ width: '260px', background: themeColors.cardBackground || '#1e1e1e' }}>
-          <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.9rem', fontWeight: 600 }}>Opacidad</span>
-                <span style={{ color: themeColors.textSecondary || '#aaa', fontSize: '0.8rem' }}>{Math.round(terminalOpacity * 100)}%</span>
+        <OverlayPanel 
+          ref={homeOptionsOverlayRef} 
+          className="premium-overlay"
+          style={{ width: '300px' }}
+        >
+          <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ marginBottom: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.95rem', fontWeight: 600 }}>Opacidad</span>
+                <span style={{ 
+                  color: themeColors.primaryColor || '#2196f3', 
+                  fontSize: '0.85rem', 
+                  fontWeight: 700,
+                  background: `${themeColors.primaryColor || '#2196f3'}22`,
+                  padding: '2px 8px',
+                  borderRadius: '6px'
+                }}>{Math.round(terminalOpacity * 100)}%</span>
               </div>
               <Slider
                 value={terminalOpacity * 100}
@@ -1212,122 +1295,76 @@ const HomeTab = ({
                 min={5}
                 max={100}
                 step={1}
-                style={{ width: '100%' }}
+                style={{ width: '100%', height: '4px' }}
               />
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem' }}>Pestañas</span>
-              <button
-                type="button"
-                onClick={() => setShowLocalTerminalTabs(prev => !prev)}
-                style={{
-                  border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.2)'}`,
-                  background: showLocalTerminalTabs
-                    ? (themeColors.primaryColor || '#2196f3')
-                    : 'rgba(120,120,120,0.25)',
-                  color: '#fff',
-                  borderRadius: '999px',
-                  padding: '0.2rem 0.65rem',
-                  cursor: 'pointer',
-                  fontSize: '0.78rem',
-                  fontWeight: 600
-                }}
-              >
-                {showLocalTerminalTabs ? 'Visible' : 'Oculta'}
-              </button>
+            <div className="menu-item-row" onClick={() => setShowLocalTerminalTabs(prev => !prev)}>
+              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.88rem', fontWeight: 500 }}>Pestañas</span>
+              <label className="premium-switch" onClick={(e) => e.stopPropagation()}>
+                <input 
+                  type="checkbox" 
+                  checked={showLocalTerminalTabs} 
+                  onChange={() => setShowLocalTerminalTabs(prev => !prev)} 
+                />
+                <span className="premium-slider"></span>
+              </label>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem' }}>Status bar terminal local</span>
-              <button
-                type="button"
-                onClick={handleToggleStatusBar}
-                style={{
-                  border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.2)'}`,
-                  background: statusBarVisible
-                    ? (themeColors.primaryColor || '#2196f3')
-                    : 'rgba(120,120,120,0.25)',
-                  color: '#fff',
-                  borderRadius: '999px',
-                  padding: '0.2rem 0.65rem',
-                  cursor: 'pointer',
-                  fontSize: '0.78rem',
-                  fontWeight: 600
-                }}
-              >
-                {statusBarVisible ? 'Visible' : 'Oculta'}
-              </button>
+            <div className="menu-item-row" onClick={handleToggleStatusBar}>
+              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.88rem', fontWeight: 500 }}>Status bar terminal local</span>
+              <label className="premium-switch" onClick={(e) => e.stopPropagation()}>
+                <input 
+                  type="checkbox" 
+                  checked={statusBarVisible} 
+                  onChange={handleToggleStatusBar} 
+                />
+                <span className="premium-slider"></span>
+              </label>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem' }}>Barra derecha (accesos rápidos)</span>
-              <button
-                type="button"
-                onClick={handleToggleRightColumnVisibility}
-                style={{
-                  border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.2)'}`,
-                  background: rightColumnVisible
-                    ? (themeColors.primaryColor || '#2196f3')
-                    : 'rgba(120,120,120,0.25)',
-                  color: '#fff',
-                  borderRadius: '999px',
-                  padding: '0.2rem 0.65rem',
-                  cursor: 'pointer',
-                  fontSize: '0.78rem',
-                  fontWeight: 600
-                }}
-              >
-                {rightColumnVisible ? 'Visible' : 'Oculta'}
-              </button>
+            <div className="menu-item-row" onClick={handleToggleRightColumnVisibility}>
+              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.88rem', fontWeight: 500 }}>Barra derecha (accesos rápidos)</span>
+              <label className="premium-switch" onClick={(e) => e.stopPropagation()}>
+                <input 
+                  type="checkbox" 
+                  checked={rightColumnVisible} 
+                  onChange={handleToggleRightColumnVisibility} 
+                />
+                <span className="premium-slider"></span>
+              </label>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem' }}>Tarjeta Home (Buscador/Acciones)</span>
-              <button
-                type="button"
-                onClick={handleToggleHomeCardVisibility}
-                style={{
-                  border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.2)'}`,
-                  background: homeCardVisible
-                    ? (themeColors.primaryColor || '#2196f3')
-                    : 'rgba(120,120,120,0.25)',
-                  color: '#fff',
-                  borderRadius: '999px',
-                  padding: '0.2rem 0.65rem',
-                  cursor: 'pointer',
-                  fontSize: '0.78rem',
-                  fontWeight: 600
-                }}
-              >
-                {homeCardVisible ? 'Visible' : 'Oculta'}
-              </button>
+            <div className="menu-item-row" onClick={handleToggleHomeCardVisibility}>
+              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.88rem', fontWeight: 500 }}>Tarjeta Home (Buscador/Acciones)</span>
+              <label className="premium-switch" onClick={(e) => e.stopPropagation()}>
+                <input 
+                  type="checkbox" 
+                  checked={homeCardVisible} 
+                  onChange={handleToggleHomeCardVisibility} 
+                />
+                <span className="premium-slider"></span>
+              </label>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem' }}>Modo Minimalista Absoluto</span>
-              <button
-                type="button"
-                onClick={() => {
-                  try {
-                    window.dispatchEvent(new CustomEvent('toggle-minimal-mode'));
-                  } catch (e) { /* noop */ }
-                }}
-                style={{
-                  border: `1px solid ${isMinimalMode ? (themeColors.primaryColor || '#2196f3') : (themeColors.borderColor || 'rgba(255,255,255,0.2)')}`,
-                  background: isMinimalMode
-                    ? (themeColors.primaryColor || '#2196f3')
-                    : 'rgba(120,120,120,0.25)',
-                  color: '#fff',
-                  borderRadius: '999px',
-                  padding: '0.2rem 0.65rem',
-                  cursor: 'pointer',
-                  fontSize: '0.78rem',
-                  fontWeight: 600
-                }}
-              >
-                {isMinimalMode ? 'Activo' : 'Inactivo'}
-              </button>
+            <div className="menu-item-row" onClick={() => {
+              try {
+                window.dispatchEvent(new CustomEvent('toggle-minimal-mode'));
+              } catch (e) { /* noop */ }
+            }}>
+              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.88rem', fontWeight: 500 }}>Modo Minimalista Absoluto</span>
+              <label className="premium-switch" onClick={(e) => e.stopPropagation()}>
+                <input 
+                  type="checkbox" 
+                  checked={isMinimalMode} 
+                  onChange={() => {
+                    try {
+                      window.dispatchEvent(new CustomEvent('toggle-minimal-mode'));
+                    } catch (e) { /* noop */ }
+                  }} 
+                />
+                <span className="premium-slider"></span>
+              </label>
             </div>
           </div>
         </OverlayPanel>
