@@ -548,6 +548,9 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     const [wslDistributions, setWSLDistributions] = useState([]);
     const [cygwinAvailable, setCygwinAvailable] = useState(false); // Estado para Cygwin
     const [dockerContainers, setDockerContainers] = useState([]); // Estado para Docker
+    const [collapsedLauncherSections, setCollapsedLauncherSections] = useState({
+        Containers: true
+    });
     // Estado para drag & drop de pestañas locales del terminal
     const [draggedTabIndex, setDraggedTabIndex] = useState(null);
     const [dragOverTabIndex, setDragOverTabIndex] = useState(null);
@@ -2061,25 +2064,40 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
 
                     {getGroupedTerminalOptions().map(group => (
                         <div key={group.label} className="launcher-section">
-                            <div className="launcher-section-title">
+                            <div
+                                className="launcher-section-title"
+                                onClick={() => {
+                                    setCollapsedLauncherSections((prev) => ({
+                                        ...prev,
+                                        [group.label]: !prev[group.label]
+                                    }));
+                                }}
+                                style={{ cursor: 'pointer', userSelect: 'none' }}
+                            >
                                 <i className={group.icon} />
                                 {group.label} ({group.items.length})
+                                <i
+                                    className={`pi ${collapsedLauncherSections[group.label] ? 'pi-chevron-down' : 'pi-chevron-up'}`}
+                                    style={{ marginLeft: 'auto', opacity: 0.8, fontSize: '10px' }}
+                                />
                             </div>
-                            <div className="launcher-grid">
-                                {group.items.map(opt => (
-                                    <div
-                                        key={opt.value}
-                                        className="launcher-card"
-                                        onClick={() => {
-                                            createNewTab(opt.value, opt.distroInfo);
-                                            menuRef.current?.hide();
-                                        }}
-                                    >
-                                        {opt.icon}
-                                        <span>{opt.label}</span>
-                                    </div>
-                                ))}
-                            </div>
+                            {!collapsedLauncherSections[group.label] && (
+                                <div className="launcher-grid">
+                                    {group.items.map(opt => (
+                                        <div
+                                            key={opt.value}
+                                            className="launcher-card"
+                                            onClick={() => {
+                                                createNewTab(opt.value, opt.distroInfo);
+                                                menuRef.current?.hide();
+                                            }}
+                                        >
+                                            {opt.icon}
+                                            <span>{opt.label}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>

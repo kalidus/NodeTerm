@@ -13,6 +13,9 @@ import { themeManager } from '../utils/themeManager';
 import { Slider } from 'primereact/slider';
 import { uiThemes, CLASSIC_UI_KEYS, FUTURISTIC_UI_KEYS, MODERN_UI_KEYS, ANIMATED_UI_KEYS, NATURE_UI_KEYS } from '../themes/ui-themes';
 import StandaloneStatusBar from './StandaloneStatusBar';
+import { FaWindows, FaUbuntu, FaLinux } from 'react-icons/fa';
+import { SiAnthropic, SiDebian, SiDocker, SiGooglegemini, SiOpenai } from 'react-icons/si';
+import AIClientBrandIcon from './AIClientBrandIcon';
 
 // Formatear "Hace 5m", "Hace 2 h", "Ayer", etc.
 function formatRelativeTime(iso) {
@@ -191,6 +194,51 @@ const ConnectionHistory = ({
 	const [currentUITheme, setCurrentUITheme] = useState(() => localStorage.getItem('ui_theme') || 'Light');
 	const [availableTerminals, setAvailableTerminals] = useState([]);
 	const [isDetectingTerminals, setIsDetectingTerminals] = useState(false);
+	const [dockerContainers, setDockerContainers] = useState([]);
+	const [collapsedLauncherSections, setCollapsedLauncherSections] = useState({
+		Containers: true
+	});
+	const groupedTerminalOptions = useMemo(() => {
+		const shellValues = new Set([
+			'powershell',
+			'linux-terminal',
+			'wsl',
+			'cygwin',
+			'ubuntu',
+			'debian',
+			'wsl-distro'
+		]);
+		const aiCliValues = new Set(['claude', 'opencode', 'geminicli', 'codexcli']);
+
+		const groups = [
+			{ label: 'Shells', icon: 'pi pi-desktop', items: [] },
+			{ label: 'AI CLIs', icon: 'pi pi-bolt', items: [] },
+			{ label: 'Containers', icon: 'pi pi-box', items: [] },
+			{ label: 'Otros', icon: 'pi pi-th-large', items: [] }
+		];
+
+		availableTerminals.forEach((terminal) => {
+			const terminalValue = terminal.type || terminal.value;
+			const valueLower = (terminalValue || '').toLowerCase();
+			const isWslDistro =
+				terminal.type === 'ubuntu' ||
+				terminal.type === 'debian' ||
+				terminal.type === 'wsl-distro' ||
+				(valueLower && valueLower.startsWith('wsl-'));
+
+			if (shellValues.has(valueLower) || isWslDistro) {
+				groups[0].items.push(terminal);
+			} else if (aiCliValues.has(valueLower)) {
+				groups[1].items.push(terminal);
+			} else if (valueLower.startsWith('docker-')) {
+				groups[2].items.push(terminal);
+			} else {
+				groups[3].items.push(terminal);
+			}
+		});
+
+		return groups.filter((group) => group.items.length > 0);
+	}, [availableTerminals]);
 
 	const activeViewName = useMemo(() => {
 		if (terminalView) return 'terminal';
@@ -306,37 +354,18 @@ const ConnectionHistory = ({
 				}
 
 				if (platform === 'win32') {
-					shells.push({ label: 'PowerShell', value: 'powershell', icon: 'pi-desktop', color: '#4fc3f7' });
+					shells.push({ label: 'PowerShell', value: 'powershell', icon: <FaWindows style={{ color: '#0078D4' }} /> });
 					if (aiClientsCfg.geminicli === true) {
-						shells.push({ label: 'Gemini CLI', value: 'geminicli', icon: 'pi-star', color: '#1a73e8' });
+						shells.push({ label: 'Gemini CLI', value: 'geminicli', icon: <SiGooglegemini style={{ color: '#8E75B2' }} /> });
 					}
 					if (aiClientsCfg.claude === true) {
-						shells.push({ label: 'Claude Code', value: 'claude', icon: 'pi-comments', color: '#f59e0b' });
+						shells.push({ label: 'Claude Code', value: 'claude', icon: <SiAnthropic style={{ color: '#D97706' }} /> });
 					}
 					if (aiClientsCfg.opencode === true) {
-						shells.push({ label: 'OpenCode', value: 'opencode', icon: 'pi-code', color: '#6366f1' });
+						shells.push({ label: 'OpenCode', value: 'opencode', icon: <AIClientBrandIcon tabType="opencode" size={18} /> });
 					}
 					if (aiClientsCfg.codexcli === true) {
-						shells.push({ label: 'Codex CLI', value: 'codexcli', icon: 'pi-bolt', color: '#10b981' });
-					}
-					// Docker AI Apps
-					if (aiClientsCfg.anythingllm === true) {
-						shells.push({ label: 'AnythingLLM', value: 'anythingllm', icon: 'pi-box', color: '#3b82f6' });
-					}
-					if (aiClientsCfg.openwebui === true) {
-						shells.push({ label: 'Open WebUI', value: 'openwebui', icon: 'pi-link', color: '#10b981' });
-					}
-					if (aiClientsCfg.librechat === true) {
-						shells.push({ label: 'LibreChat', value: 'librechat', icon: 'pi-comments', color: '#6366f1' });
-					}
-					if (aiClientsCfg.agentzero === true) {
-						shells.push({ label: 'Agent Zero', value: 'agentzero', icon: 'pi-android', color: '#f59e0b' });
-					}
-					if (aiClientsCfg.openclaw === true) {
-						shells.push({ label: 'OpenClaw', value: 'openclaw', icon: 'pi-bolt', color: '#ff4081' });
-					}
-					if (aiClientsCfg.opennotebook === true) {
-						shells.push({ label: 'Open Notebook', value: 'open-notebook', icon: 'pi-book', color: '#2196f3' });
+						shells.push({ label: 'Codex CLI', value: 'codexcli', icon: <SiOpenai style={{ color: '#10A37F' }} /> });
 					}
 
 					// WSL
@@ -344,13 +373,20 @@ const ConnectionHistory = ({
 						const distributions = await window.electron.ipcRenderer.invoke('detect-wsl-distributions');
 						if (Array.isArray(distributions)) {
 							distributions.forEach(d => {
+								let icon = <FaLinux style={{ color: '#8ae234' }} />;
+								if (d.category === 'ubuntu' || (d.label || '').toLowerCase().includes('ubuntu')) {
+									icon = <FaUbuntu style={{ color: '#E95420' }} />;
+								} else if (d.category === 'debian' || (d.label || '').toLowerCase().includes('debian')) {
+									icon = <SiDebian style={{ color: '#D70A53' }} />;
+								} else if ((d.label || '').toLowerCase().includes('kali')) {
+									icon = <FaLinux style={{ color: '#2196F3' }} />;
+								}
 								shells.push({
 									label: d.label || d.name,
 									value: d.name,
 									type: d.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro',
 									distroInfo: d,
-									icon: d.category === 'ubuntu' ? 'pi-server' : 'pi-server',
-									color: '#8ae234'
+									icon
 								});
 							});
 						}
@@ -360,23 +396,39 @@ const ConnectionHistory = ({
 					try {
 						const result = await window.electronAPI.invoke('cygwin:detect');
 						if (result && result.available) {
-							shells.push({ label: 'Cygwin', value: 'cygwin', icon: 'pi-server', color: '#FFC107' });
+							shells.push({ label: 'Cygwin', value: 'cygwin', icon: <FaLinux style={{ color: '#FCC624' }} /> });
 						}
 					} catch (e) { /* ignore */ }
 				} else {
-					shells.push({ label: platform === 'darwin' ? 'macOS Terminal' : 'Linux Terminal', value: 'powershell', icon: 'pi-desktop', color: '#4fc3f7' });
+					shells.push({
+						label: platform === 'darwin' ? 'macOS Terminal' : 'Linux Terminal',
+						value: 'powershell',
+						icon: <FaLinux style={{ color: '#FCC624' }} />
+					});
 					if (aiClientsCfg.claude === true) {
-						shells.push({ label: 'Claude Code', value: 'claude', icon: 'pi-comments', color: '#f59e0b' });
+						shells.push({ label: 'Claude Code', value: 'claude', icon: <SiAnthropic style={{ color: '#D97706' }} /> });
 					}
 					if (aiClientsCfg.opencode === true) {
-						shells.push({ label: 'OpenCode', value: 'opencode', icon: 'pi-code', color: '#6366f1' });
+						shells.push({ label: 'OpenCode', value: 'opencode', icon: <AIClientBrandIcon tabType="opencode" size={18} /> });
 					}
 					if (aiClientsCfg.geminicli === true) {
-						shells.push({ label: 'Gemini CLI', value: 'geminicli', icon: 'pi-star', color: '#1a73e8' });
+						shells.push({ label: 'Gemini CLI', value: 'geminicli', icon: <SiGooglegemini style={{ color: '#8E75B2' }} /> });
 					}
 					if (aiClientsCfg.codexcli === true) {
-						shells.push({ label: 'Codex CLI', value: 'codexcli', icon: 'pi-bolt', color: '#10b981' });
+						shells.push({ label: 'Codex CLI', value: 'codexcli', icon: <SiOpenai style={{ color: '#10A37F' }} /> });
 					}
+				}
+
+				if (Array.isArray(dockerContainers)) {
+					dockerContainers.forEach(container => {
+						shells.push({
+							label: container.name,
+							value: `docker-${container.name}`,
+							type: 'docker',
+							distroInfo: container,
+							icon: <SiDocker style={{ color: '#2496ED' }} />
+						});
+					});
 				}
 
 				setAvailableTerminals(shells);
@@ -394,7 +446,36 @@ const ConnectionHistory = ({
 			window.removeEventListener('ai-clients-config-changed', detectTerminals);
 			window.removeEventListener('storage', detectTerminals);
 		};
-	}, [terminalView]);
+	}, [terminalView, dockerContainers]);
+
+	// Detectar contenedores Docker para igualar selector de TabbedTerminal
+	useEffect(() => {
+		let mounted = true;
+
+		const timer = setTimeout(() => {
+			const detectDocker = async () => {
+				try {
+					if (window.electron && window.electronAPI && mounted) {
+						const result = await window.electronAPI.invoke('docker:list');
+						if (mounted && result && result.success && Array.isArray(result.containers)) {
+							setDockerContainers(result.containers);
+						} else if (mounted) {
+							setDockerContainers([]);
+						}
+					}
+				} catch {
+					if (mounted) setDockerContainers([]);
+				}
+			};
+
+			detectDocker();
+		}, 700);
+
+		return () => {
+			mounted = false;
+			clearTimeout(timer);
+		};
+	}, []);
 
 	// Funci\u00F3n para encontrar todas las conexiones en el \u00E1rbol
 	const findAllSidebarConnections = useCallback((nodesList) => {
@@ -3339,65 +3420,72 @@ const ConnectionHistory = ({
 
 			<OverlayPanel
 				ref={terminalSwitcherOverlayRef}
-				style={{
-					width: '240px',
-					backgroundColor: 'var(--ui-dialog-bg, #1e1e1e)',
-					border: '1px solid var(--ui-content-border, #444)',
-					boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-					borderRadius: '8px'
-				}}
-				className="theme-picker-overlay"
+				appendTo={document.body}
+				className="cyber-terminal-menu"
 			>
-				<div style={{ padding: '8px' }}>
+				<div className="terminal-launcher-container">
 					<div style={{
-						padding: '8px 12px',
-						fontWeight: '600',
-						fontSize: '14px',
-						color: 'var(--ui-dialog-text)',
-						borderBottom: '1px solid var(--ui-content-border, #444)',
-						marginBottom: '8px',
+						fontSize: '9px',
+						fontWeight: '800',
+						letterSpacing: '0.2em',
+						textTransform: 'uppercase',
+						marginBottom: '15px',
+						color: 'var(--terminal-tab-accent, #00f2ff)',
+						opacity: 0.6,
 						display: 'flex',
 						alignItems: 'center',
-						justifyContent: 'space-between'
+						gap: '8px'
 					}}>
-						<span>Seleccionar Terminal</span>
-						<i className="pi pi-th-large" style={{ opacity: 0.7 }} />
+						<i className="pi pi-th-large" style={{ fontSize: '9px' }} />
+						TERMINAL LAUNCHER
 					</div>
-					<div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-						{availableTerminals.length === 0 ? (
-							<div style={{ padding: '20px', textAlign: 'center', opacity: 0.5, fontSize: '0.8rem' }}>
-								{isDetectingTerminals ? 'Detectando shell...' : 'No se detectaron terminales'}
-							</div>
-						) : (
-							availableTerminals.map((shell, idx) => (
+
+					{availableTerminals.length === 0 ? (
+						<div style={{ padding: '20px', textAlign: 'center', opacity: 0.5, fontSize: '0.8rem' }}>
+							{isDetectingTerminals ? 'Detectando shell...' : 'No se detectaron terminales'}
+						</div>
+					) : (
+						groupedTerminalOptions.map((group) => (
+							<div key={group.label} className="launcher-section">
 								<div
-									key={`${shell.value}-${idx}`}
+									className="launcher-section-title"
 									onClick={() => {
-										if (onSwitchTerminal) {
-											onSwitchTerminal(shell.type || shell.value, shell.distroInfo);
-										}
-										terminalSwitcherOverlayRef.current?.hide();
+										setCollapsedLauncherSections((prev) => ({
+											...prev,
+											[group.label]: !prev[group.label]
+										}));
 									}}
-									style={{
-										display: 'flex',
-										alignItems: 'center',
-										gap: '12px',
-										padding: '10px 12px',
-										cursor: 'pointer',
-										borderRadius: '6px',
-										transition: 'all 0.2s',
-										margin: '2px 0'
-									}}
-									className="theme-picker-item"
-									onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'}
-									onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+									style={{ cursor: 'pointer', userSelect: 'none' }}
 								>
-									<i className={`pi ${shell.icon}`} style={{ color: shell.color, fontSize: '1rem' }} />
-									<span style={{ fontSize: '13px', color: 'var(--ui-dialog-text)', flex: 1 }}>{shell.label}</span>
+									<i className={group.icon} />
+									{group.label} ({group.items.length})
+									<i
+										className={`pi ${collapsedLauncherSections[group.label] ? 'pi-chevron-down' : 'pi-chevron-up'}`}
+										style={{ marginLeft: 'auto', opacity: 0.8, fontSize: '10px' }}
+									/>
 								</div>
-							))
-						)}
-					</div>
+								{!collapsedLauncherSections[group.label] && (
+									<div className="launcher-grid">
+										{group.items.map((shell, idx) => (
+											<div
+												key={`${shell.value}-${idx}`}
+												className="launcher-card"
+												onClick={() => {
+													if (onSwitchTerminal) {
+														onSwitchTerminal(shell.type || shell.value, shell.distroInfo);
+													}
+													terminalSwitcherOverlayRef.current?.hide();
+												}}
+											>
+												{shell.icon || <i className="pi pi-desktop" style={{ color: 'var(--terminal-tab-accent, #00f2ff)' }} />}
+												<span>{shell.label}</span>
+											</div>
+										))}
+									</div>
+								)}
+							</div>
+						))
+					)}
 				</div>
 			</OverlayPanel>
 
