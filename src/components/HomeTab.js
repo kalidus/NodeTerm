@@ -1299,6 +1299,44 @@ const HomeTab = ({
               />
             </div>
 
+            <div style={{ marginBottom: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.88rem', fontWeight: 500 }}>
+                  Tema terminal local
+                </span>
+                <i
+                  className="pi pi-palette"
+                  style={{
+                    color: themeColors.primaryColor || '#2196f3',
+                    fontSize: '0.8rem',
+                    opacity: 0.8
+                  }}
+                />
+              </div>
+              <select
+                value={localLinuxTerminalTheme}
+                onChange={(e) => setLocalLinuxTerminalTheme?.(e.target.value)}
+                style={{
+                  width: '100%',
+                  height: '32px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  color: themeColors.textPrimary || '#fff',
+                  padding: '0 10px',
+                  fontSize: '0.83rem',
+                  outline: 'none'
+                }}
+                title="Tema (Linux/WSL)"
+              >
+                {Object.keys(themes).map((themeKey) => (
+                  <option key={themeKey} value={themeKey} style={{ color: '#111' }}>
+                    {themeKey}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="menu-item-row" onClick={() => setShowLocalTerminalTabs(prev => !prev)}>
               <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.88rem', fontWeight: 500 }}>Pestañas</span>
               <label className="premium-switch" onClick={(e) => e.stopPropagation()}>
