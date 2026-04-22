@@ -2954,29 +2954,7 @@ const MainContentArea = ({
                 </span>
               </span>
             }
-            headerExtra={
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <i
-                  className="pi pi-cog"
-                  style={{
-                    fontSize: '0.9rem',
-                    color: 'var(--ui-titlebar-text, #fff)',
-                    opacity: 0.7,
-                    cursor: 'pointer',
-                    padding: 4,
-                    borderRadius: 4,
-                    transition: 'all 0.2s'
-                  }}
-                  title="Cambiar tema de la interfaz"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleOpenUiThemePickerFromHeader(e);
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; }}
-                />
-              </div>
-            }
+            headerExtra={null}
           >
             {(homeTabs.length > 0 || sshTabs.length > 0 || fileExplorerTabs.length > 0) ? (
               <div style={{
