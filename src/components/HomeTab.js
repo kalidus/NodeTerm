@@ -1239,6 +1239,28 @@ const HomeTab = ({
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem' }}>Status bar terminal local</span>
+              <button
+                type="button"
+                onClick={handleToggleStatusBar}
+                style={{
+                  border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.2)'}`,
+                  background: statusBarVisible
+                    ? (themeColors.primaryColor || '#2196f3')
+                    : 'rgba(120,120,120,0.25)',
+                  color: '#fff',
+                  borderRadius: '999px',
+                  padding: '0.2rem 0.65rem',
+                  cursor: 'pointer',
+                  fontSize: '0.78rem',
+                  fontWeight: 600
+                }}
+              >
+                {statusBarVisible ? 'Visible' : 'Oculta'}
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
               <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem' }}>Barra derecha (accesos rápidos)</span>
               <button
                 type="button"
