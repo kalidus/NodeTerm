@@ -207,20 +207,13 @@ const HomeTab = ({
     }
   }, [showLocalTerminalTabs]);
 
-  // Auto-inicializar terminal embebido al montar el componente si est\u00E1 visible por defecto
+  // Inicializar estado del terminal embebido al montar.
+  // TabbedTerminal ya crea una pestaña inicial, así que aquí no debemos añadir otra.
   useEffect(() => {
     if (terminalView && !embeddedTerminalInitialized.current) {
-      const terminalType = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
       embeddedTerminalInitialized.current = true;
 
       setTimeout(() => {
-        try {
-          if (embeddedTabbedTerminalRef.current?.addTerminalTab) {
-            embeddedTabbedTerminalRef.current.addTerminalTab(terminalType);
-          }
-        } catch (err) {
-          console.warn('[HomeTab] embedded auto init:', err);
-        }
         window.dispatchEvent(new Event('resize'));
       }, 500); // Retraso ligeramente mayor al montar inicialmente para asegurar render DOM
     }
@@ -961,15 +954,8 @@ const HomeTab = ({
         embeddedTabbedTerminalRef.current.addTerminalTab(terminalType);
       } else if (!embeddedTerminalInitialized.current && terminalType) {
         embeddedTerminalInitialized.current = true;
-        // Solo para el terminal embebido, le agregamos el tab expl??cito si es la primera vez
+        // Evitar duplicar la pestaña inicial; solo forzar resize tras mostrar la vista.
         setTimeout(() => {
-          try {
-            if (embeddedTabbedTerminalRef.current?.addTerminalTab) {
-              embeddedTabbedTerminalRef.current.addTerminalTab(terminalType);
-            }
-          } catch (err) {
-            console.warn('[HomeTab] embedded addTerminalTab:', err);
-          }
           window.dispatchEvent(new Event('resize'));
         }, 150); // Dar algo m??s de tiempo para que se monte correctamente en el viewport antes de crear xterm
       } else {

@@ -225,13 +225,19 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 ...tab,
                 active: Boolean(tab?.active) && index >= 0
             }));
-            if (!normalizedTabs.some(tab => tab.active)) {
-                normalizedTabs[0].active = true;
-            }
+            const activeTabIndex = normalizedTabs.findIndex(tab => tab.active);
+            const initialTabIndex = activeTabIndex >= 0 ? activeTabIndex : 0;
+            const initialTab = normalizedTabs[initialTabIndex] || normalizedTabs[0];
+            const startupTabs = [
+                {
+                    ...initialTab,
+                    active: true
+                }
+            ];
 
             return {
-                tabs: normalizedTabs,
-                nextTabId: Number.isFinite(parsed?.nextTabId) ? parsed.nextTabId : (normalizedTabs.length + 1)
+                tabs: startupTabs,
+                nextTabId: Number.isFinite(parsed?.nextTabId) ? parsed.nextTabId : 2
             };
         } catch (error) {
             console.warn('[TabbedTerminal] No se pudo restaurar workspace:', error);
