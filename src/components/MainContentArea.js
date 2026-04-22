@@ -28,6 +28,7 @@ import SSHFileExplorerPanel from './SSHFileExplorerPanel';
 import { TAB_TYPES } from '../utils/constants';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
+import { presetManager } from '../utils/presetManager';
 import { applyTabTheme, getTabThemeList, applyTabLayout, getTabLayoutList, loadSavedTabLayout } from '../utils/tabThemeLoader';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { treeThemes, treeThemeOptions } from '../themes/tree-themes';
@@ -1753,8 +1754,26 @@ const MainContentArea = ({
         optLayout.addEventListener('mouseleave', () => { optLayout.style.background = 'var(--ui-tab-hover-bg, rgba(255,255,255,0.06))'; });
         optLayout.addEventListener('click', (ev) => { ev.stopPropagation(); showLayoutList(); });
 
+        const optUiTheme = document.createElement('button');
+        optUiTheme.type = 'button';
+        optUiTheme.style.cssText = choiceBtnStyle(false);
+        optUiTheme.innerHTML = '<i class="pi pi-desktop" style="font-size: 1.1rem; opacity: 0.9;"></i><span>Tema de apariencia</span>';
+        optUiTheme.addEventListener('mouseenter', () => { optUiTheme.style.background = 'var(--ui-tab-hover-bg, rgba(255,255,255,0.08))'; });
+        optUiTheme.addEventListener('mouseleave', () => { optUiTheme.style.background = 'var(--ui-tab-hover-bg, rgba(255,255,255,0.06))'; });
+        optUiTheme.addEventListener('click', (ev) => { ev.stopPropagation(); showUiThemeList(); });
+
+        const optPresets = document.createElement('button');
+        optPresets.type = 'button';
+        optPresets.style.cssText = choiceBtnStyle(false);
+        optPresets.innerHTML = '<i class="pi pi-star" style="font-size: 1.1rem; opacity: 0.9;"></i><span>Presets de temas</span>';
+        optPresets.addEventListener('mouseenter', () => { optPresets.style.background = 'var(--ui-tab-hover-bg, rgba(255,255,255,0.08))'; });
+        optPresets.addEventListener('mouseleave', () => { optPresets.style.background = 'var(--ui-tab-hover-bg, rgba(255,255,255,0.06))'; });
+        optPresets.addEventListener('click', (ev) => { ev.stopPropagation(); showPresetList(); });
+
         contentArea.appendChild(optThemes);
         contentArea.appendChild(optLayout);
+        contentArea.appendChild(optUiTheme);
+        contentArea.appendChild(optPresets);
       }
 
       function addBackBar(title, onBack) {
@@ -1920,6 +1939,140 @@ const MainContentArea = ({
             panel.remove();
             document.removeEventListener('click', closeOutside);
           });
+          contentArea.appendChild(item);
+        });
+      }
+
+      function showUiThemeList() {
+        contentArea.innerHTML = '';
+        contentArea.style.padding = '8px';
+        addBackBar('Tema de apariencia', showChoice);
+
+        const currentUiTheme = localStorage.getItem('ui_theme') || 'Light';
+        const uiThemeList = Array.from(
+          new Map(
+            Object.values(uiThemes || {})
+              .filter(theme => theme?.name)
+              .map(theme => [theme.name, theme])
+          ).values()
+        );
+
+        uiThemeList.forEach((theme) => {
+          const isActive = theme.name === currentUiTheme;
+          const item = document.createElement('div');
+          item.dataset.uiThemeName = theme.name;
+          item.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 8px;
+            cursor: pointer;
+            border-radius: 6px;
+            color: var(--ui-tab-text, rgba(255,255,255,0.9));
+            background: ${isActive ? 'var(--ui-tab-active-bg, rgba(255,255,255,0.12))' : 'transparent'};
+          `;
+
+          const swatch = document.createElement('div');
+          swatch.style.cssText = `
+            width: 28px;
+            height: 18px;
+            flex-shrink: 0;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: linear-gradient(135deg, ${theme.colors?.sidebarBackground || '#2b2f33'} 0%, ${theme.colors?.contentBackground || '#1e1e1e'} 100%);
+          `;
+
+          const label = document.createElement('span');
+          label.textContent = theme.name;
+          label.style.cssText = 'flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
+
+          item.appendChild(swatch);
+          item.appendChild(label);
+          if (isActive) {
+            const check = document.createElement('i');
+            check.className = 'pi pi-check';
+            check.style.cssText = 'font-size: 0.7rem; opacity: 0.9; flex-shrink: 0;';
+            item.appendChild(check);
+          }
+
+          item.addEventListener('mouseenter', () => {
+            if (!isActive) item.style.background = 'var(--ui-tab-hover-bg, rgba(255,255,255,0.06))';
+          });
+          item.addEventListener('mouseleave', () => {
+            if (!isActive) item.style.background = 'transparent';
+          });
+          item.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            themeManager.applyTheme(theme.name);
+            panel.remove();
+            document.removeEventListener('click', closeOutside);
+          });
+
+          contentArea.appendChild(item);
+        });
+      }
+
+      function showPresetList() {
+        contentArea.innerHTML = '';
+        contentArea.style.padding = '8px';
+        addBackBar('Presets de temas', showChoice);
+
+        const allPresets = presetManager.getAllPresets();
+        const activePresetId = presetManager.getActivePresetId();
+
+        allPresets.forEach((preset) => {
+          const isActive = preset.id === activePresetId;
+          const item = document.createElement('div');
+          item.dataset.presetId = preset.id;
+          item.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 8px;
+            cursor: pointer;
+            border-radius: 6px;
+            color: var(--ui-tab-text, rgba(255,255,255,0.9));
+            background: ${isActive ? 'var(--ui-tab-active-bg, rgba(255,255,255,0.12))' : 'transparent'};
+          `;
+
+          const icon = document.createElement('span');
+          icon.textContent = preset.icon || '🎨';
+          icon.style.cssText = 'font-size: 0.95rem; line-height: 1; width: 16px; text-align: center; flex-shrink: 0;';
+
+          const textWrap = document.createElement('div');
+          textWrap.style.cssText = 'display: flex; flex-direction: column; min-width: 0; flex: 1;';
+          const label = document.createElement('span');
+          label.textContent = preset.name;
+          label.style.cssText = 'overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
+          const subLabel = document.createElement('span');
+          subLabel.textContent = preset.description || '';
+          subLabel.style.cssText = 'font-size: 10px; opacity: 0.72; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
+          textWrap.appendChild(label);
+          textWrap.appendChild(subLabel);
+
+          item.appendChild(icon);
+          item.appendChild(textWrap);
+
+          if (isActive) {
+            const check = document.createElement('i');
+            check.className = 'pi pi-check';
+            check.style.cssText = 'font-size: 0.7rem; opacity: 0.9; flex-shrink: 0;';
+            item.appendChild(check);
+          }
+
+          item.addEventListener('mouseenter', () => {
+            if (!isActive) item.style.background = 'var(--ui-tab-hover-bg, rgba(255,255,255,0.06))';
+          });
+          item.addEventListener('mouseleave', () => {
+            if (!isActive) item.style.background = 'transparent';
+          });
+          item.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            presetManager.applyPreset(preset);
+            panel.remove();
+            document.removeEventListener('click', closeOutside);
+          });
+
           contentArea.appendChild(item);
         });
       }
