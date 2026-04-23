@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useImperativeHandle, forwardRef, useState, useMemo } from 'react';
+import { useStatusBarSessionHistory } from '../hooks/useStatusBarSessionHistory';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
@@ -38,7 +39,7 @@ const TerminalComponent = forwardRef(({
     isSplit = false
 }, ref) => {
     const [forceUpdateCounter, setForceUpdateCounter] = useState(0);
-    const [cpuHistory, setCpuHistory] = useState([]);
+    const sessionHistory = useStatusBarSessionHistory(stats);
     // Visibilidad local del status bar (toggle desde el menú de la sesión SSH)
     const [localStatusBarVisible, setLocalStatusBarVisible] = useState(true);
     // Menú rápido de tema de terminal (abierto/cerrado)
@@ -67,20 +68,6 @@ const TerminalComponent = forwardRef(({
         broadcastPropsRef.current = { isBroadcastActive, onBroadcastData };
     }, [isBroadcastActive, onBroadcastData]);
 
-    // Actualizar cpuHistory cada vez que cambie stats.cpu, pero solo si es v??lido
-    useEffect(() => {
-        const cpuValue = stats && typeof stats.cpu === 'string'
-            ? parseFloat(stats.cpu)
-            : stats && typeof stats.cpu === 'number'
-                ? stats.cpu
-                : null;
-        if (cpuValue !== null && !isNaN(cpuValue)) {
-            setCpuHistory(prev => {
-                const newArr = [...prev, cpuValue].slice(-30);
-                return newArr;
-            });
-        }
-    }, [stats?.cpu]);
 
     // Escuchar cambios del setting de local echo SSH
     useEffect(() => {
@@ -1052,7 +1039,7 @@ const TerminalComponent = forwardRef(({
                 }} />
             </div>
             {!hideStatusBar && localStatusBarVisible && <StatusBar
-                stats={{ ...stats, cpuHistory: cpuHistory }}
+                stats={{ ...stats, cpuHistory: sessionHistory.map(s => s.cpu), sessionHistory }}
                 active={active}
                 statusBarIconTheme={statusBarIconTheme}
                 terminalType={isLocalTerminal ? 'linux' : 'ssh'}

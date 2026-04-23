@@ -242,3 +242,169 @@
   filter: brightness(1.1);
   transform: translateX(2px);
 }
+
+/* ── Metric popover trigger (hover highlight) ─────────────────────────── */
+.sbpop-trigger {
+  cursor: default;
+  border-radius: 3px;
+  transition: background 0.15s ease;
+}
+.sbpop-trigger:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* ── Metric popover panel ─────────────────────────────────────────────── */
+.sbpop-panel {
+  position: fixed;
+  z-index: 99999;
+  background: #0a0e14;
+  border: 1px solid rgba(0, 255, 231, 0.2);
+  border-radius: 6px;
+  padding: 10px 8px 8px 8px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.82);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.8),
+    0 6px 24px rgba(0, 0, 0, 0.7),
+    0 0 16px rgba(0, 255, 231, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  pointer-events: auto;
+  user-select: none;
+  animation: sbpop-in 0.12s ease forwards;
+  /* CSS custom properties that panels can reference */
+  --sbpop-cpu: #00ffe7;
+  --sbpop-net-down: #40c8ff;
+  --sbpop-net-up: #ff9f40;
+}
+
+@keyframes sbpop-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Subtle scanline texture */
+.sbpop-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(255, 255, 255, 0.012) 3px,
+    rgba(255, 255, 255, 0.012) 4px
+  );
+  pointer-events: none;
+}
+
+.sbpop-header {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 6px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.sbpop-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.sbpop-sublabel {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
+}
+
+.sbpop-badge {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 1px 4px;
+  border-radius: 2px;
+  background: rgba(64, 200, 255, 0.18);
+  color: #40c8ff;
+  border: 1px solid rgba(64, 200, 255, 0.3);
+}
+
+.sbpop-bigval {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  line-height: 1;
+}
+
+.sbpop-unit {
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0;
+}
+
+.sbpop-cores {
+  font-size: 9px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.3);
+  margin-left: 6px;
+  letter-spacing: 0.5px;
+  align-self: center;
+}
+
+.sbpop-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 0;
+}
+
+.sbpop-row.sbpop-dim {
+  opacity: 0.55;
+}
+
+.sbpop-key {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.38);
+  letter-spacing: 0.3px;
+}
+
+.sbpop-val {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.78);
+  letter-spacing: 0.3px;
+}
+
+.sbpop-bar-track {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.sbpop-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+.sbpop-legend {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.28);
+  text-align: right;
+  margin-top: 4px;
+  letter-spacing: 0.3px;
+}

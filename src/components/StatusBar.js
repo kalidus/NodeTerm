@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useCallback } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMicrochip, faMemory, faHdd, faClock, faArrowDown, faArrowUp, faServer, faDesktop, faCog, faExternalLinkAlt } from '@fortawesome/free-solid-svg-icons';
 import { FaHdd, FaMemory, FaMicrochip, FaArrowUp, FaArrowDown, FaClock, FaLinux, FaUbuntu, FaRedhat, FaCentos, FaFedora, FaWindows, FaNetworkWired } from 'react-icons/fa';
@@ -7,6 +7,7 @@ import { OverlayPanel } from 'primereact/overlaypanel';
 import { getVersionInfo } from '../version-info';
 import { statusBarIconThemes } from '../themes/statusbar-icon-themes';
 import { statusBarThemes } from '../themes/status-bar-themes';
+import { CpuPanel, MemPanel, NetPanel, DiskPanel, useMetricPopover } from './StatusBarMetricPopover';
 
 const CpuSparkline = ({ history }) => (
     <div className="sparkline-container">
@@ -94,6 +95,7 @@ const DistroIcon = ({ distro }) => {
 
 const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkDisks = true, isLoading = false, gpuStats = null, terminalType = 'ssh' }) => {
     const op = useRef(null);
+    const { open: popOpen, openPopover, closePopover, cancelClose } = useMetricPopover();
     // Obtener la versión de la aplicación de forma segura
     const { appVersion } = getVersionInfo();
 
@@ -172,6 +174,12 @@ const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkD
         return '#9c27b0'; // Púrpura por defecto para GPU
     };
 
+    // OBLIGATORIO: los hooks no pueden ir después de un return condicional
+    const makeHoverProps = useCallback((type, diskIndex = 0) => ({
+        onMouseEnter: (e) => openPopover(type, e.currentTarget.getBoundingClientRect(), diskIndex),
+        onMouseLeave: closePopover,
+    }), [openPopover, closePopover]);
+
     // Mostrar estado de carga si no hay stats o está cargando
     if (!stats || isLoading) {
         return (
@@ -223,7 +231,7 @@ const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkD
         );
     }
 
-    const { cpu, mem, disk, cpuHistory, uptime, network, hostname, distro, ip, versionId = '' } = stats;
+    const { cpu, mem, disk, cpuHistory, sessionHistory, uptime, network, hostname, distro, ip, versionId = '' } = stats;
 
     const formatBytes = (bytes) => {
         if (!bytes || bytes === 0) return '0 B';
@@ -254,7 +262,7 @@ const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkD
                     </div>
                 )}
                 {cpu !== undefined && (
-                    <div className="status-bar-section cpu-section">
+                    <div className="status-bar-section cpu-section sbpop-trigger" {...makeHoverProps('cpu')}>
                         <span
                             className="status-bar-icon cpu"
                             style={{ color: currentIconTheme.colors.cpu }}
@@ -266,7 +274,7 @@ const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkD
                     </div>
                 )}
                 {mem && mem.total > 0 && (
-                    <div className="status-bar-section">
+                    <div className="status-bar-section sbpop-trigger" {...makeHoverProps('mem')}>
                         <span
                             className="status-bar-icon mem"
                             style={{ color: currentIconTheme.colors.memory }}
@@ -305,7 +313,7 @@ const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkD
                     </div>
                 )}
                 {network && (
-                    <div className="status-bar-section network-section">
+                    <div className="status-bar-section network-section sbpop-trigger" {...makeHoverProps('net')}>
                         <span
                             className="status-bar-icon net-down"
                             style={{ color: currentIconTheme.colors.networkDown }}
@@ -331,7 +339,10 @@ const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkD
                                 const idLabel = ((d && (d.fs || d.name || d.mount)) || '').trim();
                                 const pct = (d && (d.use || d.percentage)) ?? '';
                                 return (
-                                    <div key={index} className="disk-info-item">
+                                    <div key={index} className="disk-info-item sbpop-trigger"
+                                        onMouseEnter={(e) => openPopover('disk', e.currentTarget.getBoundingClientRect(), index)}
+                                        onMouseLeave={closePopover}
+                                    >
                                         <span
                                             className="status-bar-icon disk"
                                             style={{ color: isNet ? currentIconTheme.colors.networkDown : currentIconTheme.colors.disk }}
@@ -392,6 +403,20 @@ const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkD
                     <FontAwesomeIcon icon={faCog} className="status-bar-settings-icon" />
                 </div>
             </div>
+
+            {/* Metric popovers */}
+            {popOpen?.type === 'cpu' && (
+                <CpuPanel stats={stats} sessionHistory={sessionHistory} anchorRect={popOpen.rect} onClose={closePopover} onStay={cancelClose} />
+            )}
+            {popOpen?.type === 'mem' && (
+                <MemPanel stats={stats} sessionHistory={sessionHistory} anchorRect={popOpen.rect} onClose={closePopover} onStay={cancelClose} />
+            )}
+            {popOpen?.type === 'net' && (
+                <NetPanel stats={stats} sessionHistory={sessionHistory} anchorRect={popOpen.rect} onClose={closePopover} onStay={cancelClose} />
+            )}
+            {popOpen?.type === 'disk' && Array.isArray(disk) && disk[popOpen.diskIndex] && (
+                <DiskPanel disk={disk[popOpen.diskIndex]} anchorRect={popOpen.rect} onClose={closePopover} onStay={cancelClose} />
+            )}
 
             <OverlayPanel ref={op} className="statusbar-theme-overlay" style={{ width: '280px' }}>
                 <div className="statusbar-quick-presets">

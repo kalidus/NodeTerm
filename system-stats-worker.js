@@ -17,8 +17,8 @@ let lastNetTime = null;
 let networkDrivesCache = { data: new Set(), timestamp: 0, ttl: 30000 };
 // Sticky stats para mantener estado cuando hay errores
 let lastValidStats = {
-  cpu: { usage: 0, cores: 0, model: 'Iniciando...' },
-  memory: { used: 0, total: 0, percentage: 0 },
+  cpu: { usage: 0, cores: 0, model: 'Iniciando...', perCpuLoad: [] },
+  memory: { used: 0, total: 0, free: 0, percentage: 0 },
   disks: [],
   network: { download: 0, upload: 0 },
   hostname: '',
@@ -47,6 +47,7 @@ async function getSystemStats() {
     if (totalMem > 0) {
       stats.memory.total = Math.round(totalMem / (1024 * 1024 * 1024) * 10) / 10;
       stats.memory.used = Math.round(usedMem / (1024 * 1024 * 1024) * 10) / 10;
+      stats.memory.free = Math.round(freeMem / (1024 * 1024 * 1024) * 10) / 10;
       stats.memory.percentage = Math.round((usedMem / totalMem) * 100 * 10) / 10;
     }
   } catch (error) {
@@ -64,6 +65,9 @@ async function getSystemStats() {
       stats.cpu.usage = Math.round(cpuData.currentLoad * 10) / 10;
       stats.cpu.cores = cpuData.cpus ? cpuData.cpus.length : os.cpus().length;
       stats.cpu.model = os.cpus()[0]?.model || 'CPU';
+      stats.cpu.perCpuLoad = cpuData.cpus
+        ? cpuData.cpus.map(c => Math.round((c.load || 0) * 10) / 10)
+        : [];
     }
   } catch (error) {
     // Mantener valores anteriores de CPU si falla

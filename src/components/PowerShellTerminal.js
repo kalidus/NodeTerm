@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useImperativeHandle, forwardRef, useState } from 'react';
+import { useStatusBarSessionHistory } from '../hooks/useStatusBarSessionHistory';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
@@ -22,7 +23,7 @@ const PowerShellTerminal = forwardRef(({
     const [isConnected, setIsConnected] = useState(false);
     const [statusStats, setStatusStats] = useState(null);
     const [isLoadingStats, setIsLoadingStats] = useState(true);
-    const [cpuHistory, setCpuHistory] = useState([]);
+    const sessionHistory = useStatusBarSessionHistory(statusStats);
     const [statusBarIconTheme, setStatusBarIconTheme] = useState(() => {
         try { return localStorage.getItem('basicapp_statusbar_icon_theme') || 'classic'; } catch { return 'classic'; }
     });
@@ -85,7 +86,7 @@ const PowerShellTerminal = forwardRef(({
                 const memTotalBytes = (systemStats.memory?.total || 0) * 1024 * 1024 * 1024;
                 const memUsedBytes = (systemStats.memory?.used || 0) * 1024 * 1024 * 1024;
                 const disk = Array.isArray(systemStats.disks)
-                    ? systemStats.disks.map(d => ({ fs: d.name, use: d.percentage, isNetwork: d.isNetwork }))
+                    ? systemStats.disks.map(d => ({ fs: d.name, mount: d.mount, use: d.percentage, isNetwork: d.isNetwork, usedGb: d.used, totalGb: d.total }))
                     : [];
                 const rxBytesPerSec = ((systemStats.network?.download || 0) * 1000000) / 8; // Mb/s ??? B/s
                 const txBytesPerSec = ((systemStats.network?.upload || 0) * 1000000) / 8;   // Mb/s ??? B/s
@@ -95,26 +96,23 @@ const PowerShellTerminal = forwardRef(({
                     const isUNC = id.startsWith('\\\\') || id.startsWith('//');
                     return !(d && (d.isNetwork || isUNC));
                 });
+                const memFreeBytes = (systemStats.memory?.free || 0) * 1024 * 1024 * 1024;
                 const statsPayload = {
                     cpu: Math.round((systemStats.cpu?.usage || 0) * 10) / 10,
-                    mem: { total: memTotalBytes, used: memUsedBytes },
+                    mem: { total: memTotalBytes, used: memUsedBytes, free: memFreeBytes },
                     disk: displayDisk,
                     network: { rx_speed: rxBytesPerSec, tx_speed: txBytesPerSec },
                     hostname: systemStats.hostname,
                     ip: systemStats.ip,
                     distro: window.electron?.platform === 'win32' ? 'windows' : (window.electron?.platform === 'darwin' ? 'macos' : 'linux'),
-                    // Optional fields omitted for local PS (hostname/distro/uptime/ip)
-                    cpuHistory
+                    cpuMeta: {
+                        cores: systemStats.cpu?.cores || 0,
+                        model: systemStats.cpu?.model || '',
+                        perCpuLoad: systemStats.cpu?.perCpuLoad || [],
+                    },
                 };
                 setStatusStats(statsPayload);
                 setIsLoadingStats(false);
-                const cpuValue = typeof statsPayload.cpu === 'number' ? statsPayload.cpu : null;
-                if (cpuValue !== null && !isNaN(cpuValue)) {
-                    setCpuHistory(prev => {
-                        const arr = [...prev, cpuValue];
-                        return arr.slice(-30);
-                    });
-                }
             } catch (error) {
                 console.error('Error obteniendo estad??sticas:', error);
             }
@@ -579,7 +577,7 @@ const PowerShellTerminal = forwardRef(({
             </div>
             {!hideStatusBar && (
                 <StatusBar
-                    stats={{ ...(statusStats || {}), cpuHistory }}
+                    stats={{ ...(statusStats || {}), cpuHistory: sessionHistory.map(s => s.cpu), sessionHistory }}
                     active={true}
                     statusBarIconTheme={statusBarIconTheme}
                     showNetworkDisks={showNetworkDisks}

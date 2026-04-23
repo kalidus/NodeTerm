@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useImperativeHandle, forwardRef, useState } from 'react';
+import { useStatusBarSessionHistory } from '../hooks/useStatusBarSessionHistory';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
@@ -24,7 +25,7 @@ const UbuntuTerminal = forwardRef(({
     const [distroId, setDistroId] = useState(() => (ubuntuInfo?.category || 'ubuntu').toLowerCase());
     const [statusStats, setStatusStats] = useState(null);
     const [isLoadingStats, setIsLoadingStats] = useState(true);
-    const [cpuHistory, setCpuHistory] = useState([]);
+    const sessionHistory = useStatusBarSessionHistory(statusStats);
     const [statusBarIconTheme, setStatusBarIconTheme] = useState(() => {
         try { return localStorage.getItem('basicapp_statusbar_icon_theme') || 'classic'; } catch { return 'classic'; }
     });
@@ -104,7 +105,7 @@ const UbuntuTerminal = forwardRef(({
                 const memTotalBytes = (systemStats.memory?.total || 0) * 1024 * 1024 * 1024;
                 const memUsedBytes = (systemStats.memory?.used || 0) * 1024 * 1024 * 1024;
                 const disk = Array.isArray(systemStats.disks)
-                    ? systemStats.disks.map(d => ({ fs: d.name, use: d.percentage, isNetwork: d.isNetwork }))
+                    ? systemStats.disks.map(d => ({ fs: d.name, mount: d.mount, use: d.percentage, isNetwork: d.isNetwork, usedGb: d.used, totalGb: d.total }))
                     : [];
                 const rxBytesPerSec = ((systemStats.network?.download || 0) * 1000000) / 8;
                 const txBytesPerSec = ((systemStats.network?.upload || 0) * 1000000) / 8;
@@ -114,20 +115,23 @@ const UbuntuTerminal = forwardRef(({
                     const isUNC = id.startsWith('\\\\') || id.startsWith('//');
                     return !(d && (d.isNetwork || isUNC));
                 });
+                const memFreeBytes = (systemStats.memory?.free || 0) * 1024 * 1024 * 1024;
                 const payload = {
                     cpu: Math.round((systemStats.cpu?.usage || 0) * 10) / 10,
-                    mem: { total: memTotalBytes, used: memUsedBytes },
+                    mem: { total: memTotalBytes, used: memUsedBytes, free: memFreeBytes },
                     disk: displayDisk,
                     network: { rx_speed: rxBytesPerSec, tx_speed: txBytesPerSec },
                     hostname: systemStats.hostname,
                     ip: systemStats.ip,
                     distro: distroId || 'ubuntu',
-                    cpuHistory
+                    cpuMeta: {
+                        cores: systemStats.cpu?.cores || 0,
+                        model: systemStats.cpu?.model || '',
+                        perCpuLoad: systemStats.cpu?.perCpuLoad || [],
+                    },
                 };
                 setStatusStats(payload);
                 setIsLoadingStats(false);
-                const cpuVal = typeof payload.cpu === 'number' ? payload.cpu : null;
-                if (cpuVal !== null && !isNaN(cpuVal)) setCpuHistory(prev => [...prev, cpuVal].slice(-30));
             } catch { }
         };
         const loop = () => {
@@ -585,7 +589,7 @@ const UbuntuTerminal = forwardRef(({
             </div>
             {!hideStatusBar && (
                 <StatusBar
-                    stats={{ ...(statusStats || {}), cpuHistory }}
+                    stats={{ ...(statusStats || {}), cpuHistory: sessionHistory.map(s => s.cpu), sessionHistory }}
                     active={true}
                     statusBarIconTheme={statusBarIconTheme}
                     showNetworkDisks={showNetworkDisks}

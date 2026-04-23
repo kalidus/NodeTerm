@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
+import { useStatusBarSessionHistory } from '../hooks/useStatusBarSessionHistory';
 
 const StandaloneStatusBar = ({ visible = true, style = {} }) => {
     const [statusStats, setStatusStats] = useState(null);
     const [isLoadingStats, setIsLoadingStats] = useState(true);
-    const [cpuHistory, setCpuHistory] = useState([]);
-    const cpuHistoryRef = useRef([]);
     const [gpuStats, setGpuStats] = useState(null);
     const [statusBarIconTheme, setStatusBarIconTheme] = useState(() => {
         try { return localStorage.getItem('basicapp_statusbar_icon_theme') || 'classic'; } catch { return 'classic'; }
@@ -18,7 +17,8 @@ const StandaloneStatusBar = ({ visible = true, style = {} }) => {
         try { return localStorage.getItem('localLinuxStatusBarTheme') || localStorage.getItem('basicapp_statusbar_theme') || 'Default Dark'; } catch { return 'Default Dark'; }
     });
 
-    // Build CSS variable overrides for StatusBar
+    const sessionHistory = useStatusBarSessionHistory(statusStats);
+
     const getScopedStatusBarCssVars = () => {
         const theme = statusBarThemes[localStatusBarThemeName] || statusBarThemes['Default Dark'];
         const colors = theme.colors || {};
@@ -36,9 +36,8 @@ const StandaloneStatusBar = ({ visible = true, style = {} }) => {
         };
     };
 
-    // Poll local system stats
     useEffect(() => {
-        if (!visible) return; // No hacer polling si no está visible
+        if (!visible) return;
 
         let stopped = false;
         let timer = null;
@@ -62,18 +61,16 @@ const StandaloneStatusBar = ({ visible = true, style = {} }) => {
         const fetchStats = async () => {
             try {
                 const systemStats = await window.electronAPI?.getSystemStats();
-                if (!systemStats || stopped) {
-                    return;
-                }
+                if (!systemStats || stopped) return;
 
-                // Map worker stats → StatusBar expected shape
                 const memTotalBytes = (systemStats.memory?.total || 0) * 1024 * 1024 * 1024;
                 const memUsedBytes = (systemStats.memory?.used || 0) * 1024 * 1024 * 1024;
+                const memFreeBytes = (systemStats.memory?.free || 0) * 1024 * 1024 * 1024;
                 const disk = Array.isArray(systemStats.disks)
-                    ? systemStats.disks.map(d => ({ fs: d.name, use: d.percentage, isNetwork: d.isNetwork }))
+                    ? systemStats.disks.map(d => ({ fs: d.name, mount: d.mount, use: d.percentage, isNetwork: d.isNetwork, usedGb: d.used, totalGb: d.total }))
                     : [];
-                const rxBytesPerSec = ((systemStats.network?.download || 0) * 1000000) / 8; // Mb/s → B/s
-                const txBytesPerSec = ((systemStats.network?.upload || 0) * 1000000) / 8;   // Mb/s → B/s
+                const rxBytesPerSec = ((systemStats.network?.download || 0) * 1000000) / 8;
+                const txBytesPerSec = ((systemStats.network?.upload || 0) * 1000000) / 8;
                 const showNet = (() => { try { return (localStorage.getItem('localShowNetworkDisks') || 'true') === 'true'; } catch { return true; } })();
                 const displayDisk = showNet ? disk : disk.filter(d => {
                     const id = String((d && (d.fs || d.name || d.mount)) || '');
@@ -81,35 +78,26 @@ const StandaloneStatusBar = ({ visible = true, style = {} }) => {
                     return !(d && (d.isNetwork || isUNC));
                 });
 
-                const cpuVal = typeof systemStats.cpu?.usage === 'number' ? systemStats.cpu.usage : null;
-                if (cpuVal !== null && !isNaN(cpuVal)) {
-                    cpuHistoryRef.current = [...cpuHistoryRef.current, cpuVal].slice(-20);
-                    setCpuHistory([...cpuHistoryRef.current]);
-                }
-
-                // Obtener estadísticas de GPU
                 try {
                     const gpuData = await window.electron.system?.getGPUStats();
-                    if (gpuData && gpuData.ok) {
-                        setGpuStats(gpuData);
-                    } else {
-                        setGpuStats(null);
-                    }
-                } catch (gpuError) {
-                    // GPU no disponible o error
+                    setGpuStats(gpuData && gpuData.ok ? gpuData : null);
+                } catch {
                     setGpuStats(null);
                 }
 
-                // Usar el historial actualizado desde el ref
                 const statsPayload = {
                     cpu: Math.round((systemStats.cpu?.usage || 0) * 10) / 10,
-                    mem: { total: memTotalBytes, used: memUsedBytes },
+                    mem: { total: memTotalBytes, used: memUsedBytes, free: memFreeBytes },
                     disk: displayDisk,
                     network: { rx_speed: rxBytesPerSec, tx_speed: txBytesPerSec },
                     hostname: systemStats.hostname,
                     ip: systemStats.ip || undefined,
                     distro: 'windows',
-                    cpuHistory: [...cpuHistoryRef.current]
+                    cpuMeta: {
+                        cores: systemStats.cpu?.cores || 0,
+                        model: systemStats.cpu?.model || '',
+                        perCpuLoad: systemStats.cpu?.perCpuLoad || [],
+                    },
                 };
 
                 setStatusStats(statsPayload);
@@ -119,7 +107,6 @@ const StandaloneStatusBar = ({ visible = true, style = {} }) => {
             }
         };
 
-        // Escuchar cambios en configuración
         const handleStorageChange = (e) => {
             if (e.key === 'basicapp_statusbar_icon_theme') {
                 setStatusBarIconTheme(e.newValue || 'classic');
@@ -137,7 +124,6 @@ const StandaloneStatusBar = ({ visible = true, style = {} }) => {
         window.addEventListener('storage', handleStorageChange);
         window.addEventListener('statusbar-theme-changed', onThemeChanged);
 
-        // Inicializar
         fetchStats();
         timer = setInterval(fetchStats, pollingInterval);
 
@@ -151,9 +137,7 @@ const StandaloneStatusBar = ({ visible = true, style = {} }) => {
         };
     }, [visible]);
 
-    if (!visible) {
-        return null;
-    }
+    if (!visible) return null;
 
     return (
         <div style={{
@@ -167,7 +151,7 @@ const StandaloneStatusBar = ({ visible = true, style = {} }) => {
             ...style
         }}>
             <StatusBar
-                stats={statusStats || {}}
+                stats={{ ...(statusStats || {}), cpuHistory: sessionHistory.map(s => s.cpu), sessionHistory }}
                 gpuStats={gpuStats}
                 active={true}
                 statusBarIconTheme={statusBarIconTheme}
@@ -180,4 +164,3 @@ const StandaloneStatusBar = ({ visible = true, style = {} }) => {
 };
 
 export default StandaloneStatusBar;
-
