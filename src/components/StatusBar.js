@@ -1,13 +1,13 @@
 import React, { useMemo, useRef, useCallback } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMicrochip, faMemory, faHdd, faClock, faArrowDown, faArrowUp, faServer, faDesktop, faCog, faExternalLinkAlt } from '@fortawesome/free-solid-svg-icons';
-import { FaHdd, FaMemory, FaMicrochip, FaArrowUp, FaArrowDown, FaClock, FaLinux, FaUbuntu, FaRedhat, FaCentos, FaFedora, FaWindows, FaNetworkWired } from 'react-icons/fa';
+import { FaHdd, FaMemory, FaMicrochip, FaArrowUp, FaArrowDown, FaClock, FaLinux, FaUbuntu, FaRedhat, FaCentos, FaFedora, FaWindows } from 'react-icons/fa';
 import { SiDebian } from 'react-icons/si';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { getVersionInfo } from '../version-info';
 import { statusBarIconThemes } from '../themes/statusbar-icon-themes';
 import { statusBarThemes } from '../themes/status-bar-themes';
-import { CpuPanel, MemPanel, NetPanel, DiskPanel, GpuPanel, useMetricPopover } from './StatusBarMetricPopover';
+import { CpuPanel, MemPanel, NetPanel, DiskPanel, DiskSummaryPanel, GpuPanel, useMetricPopover } from './StatusBarMetricPopover';
 
 const CpuSparkline = ({ history }) => (
     <div className="sparkline-container">
@@ -232,6 +232,17 @@ const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkD
     }
 
     const { cpu, mem, disk, cpuHistory, sessionHistory, uptime, network, hostname, distro, ip, versionId = '' } = stats;
+    const visibleDisks = Array.isArray(disk)
+        ? disk.filter(d => (showNetworkDisks ? true : !Boolean(d && d.isNetwork)))
+        : [];
+    const localDisks = visibleDisks.filter((d) => !Boolean(d && d.isNetwork));
+    const networkDisks = visibleDisks.filter((d) => Boolean(d && d.isNetwork));
+    const localDiskAvgUse = localDisks.length > 0
+        ? Math.round(localDisks.reduce((acc, d) => acc + Number((d && (d.use || d.percentage)) || 0), 0) / localDisks.length)
+        : 0;
+    const networkDiskAvgUse = networkDisks.length > 0
+        ? Math.round(networkDisks.reduce((acc, d) => acc + Number((d && (d.use || d.percentage)) || 0), 0) / networkDisks.length)
+        : 0;
 
     const formatBytes = (bytes) => {
         if (!bytes || bytes === 0) return '0 B';
@@ -330,29 +341,36 @@ const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkD
                         <span>{formatSpeed(network.tx_speed)}</span>
                     </div>
                 )}
-                {Array.isArray(disk) && disk.length > 0 && (
+                {(localDisks.length > 0 || networkDisks.length > 0) && (
                     <div className="status-bar-section disk-section">
-                        {disk
-                            .filter(d => (showNetworkDisks ? true : !Boolean(d && d.isNetwork)))
-                            .map((d, index) => {
-                                const isNet = Boolean(d && d.isNetwork);
-                                const idLabel = ((d && (d.fs || d.name || d.mount)) || '').trim();
-                                const pct = (d && (d.use || d.percentage)) ?? '';
-                                return (
-                                    <div key={index} className="disk-info-item sbpop-trigger"
-                                        onMouseEnter={(e) => openPopover('disk', e.currentTarget.getBoundingClientRect(), index)}
-                                        onMouseLeave={closePopover}
-                                    >
-                                        <span
-                                            className="status-bar-icon disk"
-                                            style={{ color: isNet ? currentIconTheme.colors.networkDown : currentIconTheme.colors.disk }}
-                                        >
-                                            {isNet ? <FaNetworkWired /> : currentIconTheme.icons.disk}
-                                        </span>
-                                        <span className="disk-info-text">{idLabel} {pct}%</span>
-                                    </div>
-                                );
-                            })}
+                        {localDisks.length > 0 && (
+                            <div
+                                className="disk-info-item sbpop-trigger"
+                                {...makeHoverProps('disk-local-summary')}
+                            >
+                                <span
+                                    className="status-bar-icon disk"
+                                    style={{ color: currentIconTheme.colors.disk }}
+                                >
+                                    {currentIconTheme.icons.disk}
+                                </span>
+                                <span className="disk-info-text">Local {localDiskAvgUse}%</span>
+                            </div>
+                        )}
+                        {networkDisks.length > 0 && showNetworkDisks && (
+                            <div
+                                className="disk-info-item sbpop-trigger"
+                                {...makeHoverProps('disk-network-summary')}
+                            >
+                                <span
+                                    className="status-bar-icon disk"
+                                    style={{ color: currentIconTheme.colors.networkDown }}
+                                >
+                                    {currentIconTheme.icons.disk}
+                                </span>
+                                <span className="disk-info-text">Red {networkDiskAvgUse}%</span>
+                            </div>
+                        )}
                     </div>
                 )}
                 {uptime && (
@@ -419,6 +437,24 @@ const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkD
             )}
             {popOpen?.type === 'disk' && Array.isArray(disk) && disk[popOpen.diskIndex] && (
                 <DiskPanel disk={disk[popOpen.diskIndex]} anchorRect={popOpen.rect} onClose={closePopover} onStay={cancelClose} />
+            )}
+            {popOpen?.type === 'disk-local-summary' && localDisks.length > 0 && (
+                <DiskSummaryPanel
+                    disks={localDisks}
+                    title="DISCOS LOCALES"
+                    anchorRect={popOpen.rect}
+                    onClose={closePopover}
+                    onStay={cancelClose}
+                />
+            )}
+            {popOpen?.type === 'disk-network-summary' && networkDisks.length > 0 && (
+                <DiskSummaryPanel
+                    disks={networkDisks}
+                    title="UNIDADES DE RED"
+                    anchorRect={popOpen.rect}
+                    onClose={closePopover}
+                    onStay={cancelClose}
+                />
             )}
 
             <OverlayPanel ref={op} className="statusbar-theme-overlay" style={{ width: '280px' }}>

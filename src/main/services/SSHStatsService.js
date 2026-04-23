@@ -244,15 +244,21 @@ class SSHStatsService {
       const p = line.trim().split(/\s+/);
       if (p.length >= 6) {
         const use = parseInt(p[p.length - 2], 10);
-        const name = p[p.length - 1];
+        const mount = p[p.length - 1];
+        // Formato esperado df -P: ... <total> <used> <avail> <use%> <mount>
+        // Tomamos desde el final para robustez ante columnas variables.
+        const totalKb = parseInt(p[p.length - 5], 10);
+        const usedKb = parseInt(p[p.length - 4], 10);
 
         // Filtrar montajes no relevantes
-        if (name && name.startsWith('/') && !isNaN(use) &&
-          !name.startsWith('/sys') &&
-          !name.startsWith('/run') &&
-          !name.startsWith('/dev') &&
-          !name.includes('/snap/')) {
-          return { fs: name, use };
+        if (mount && mount.startsWith('/') && !isNaN(use) &&
+          !mount.startsWith('/sys') &&
+          !mount.startsWith('/run') &&
+          !mount.startsWith('/dev') &&
+          !mount.includes('/snap/')) {
+          const totalGb = Number.isFinite(totalKb) ? Math.round((totalKb / (1024 * 1024)) * 10) / 10 : null;
+          const usedGb = Number.isFinite(usedKb) ? Math.round((usedKb / (1024 * 1024)) * 10) / 10 : null;
+          return { fs: mount, use, usedGb, totalGb };
         }
       }
       return null;

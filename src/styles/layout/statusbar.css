@@ -417,3 +417,72 @@
   margin-top: 6px;
   margin-bottom: 2px;
 }
+
+.sbpop-diskgroup {
+  padding: 3px 0;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.sbpop-diskgroup:last-of-type {
+  border-bottom: none;
+}
+
+.sbpop-diskgroup-logicals {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.18s ease, opacity 0.18s ease;
+  padding-left: 8px;
+}
+
+.sbpop-diskgroup:hover .sbpop-diskgroup-logicals {
+  max-height: 180px;
+  opacity: 1;
+}
+
+.sbpop-disklogical .sbpop-key {
+  color: rgba(255, 255, 255, 0.28);
+}
+
+.sbpop-diskgroup-logicals-open {
+  max-height: none;
+  opacity: 1;
+  overflow: visible;
+  padding-left: 8px;
+}
+
+.sbpop-disklogical-card {
+  margin: 5px 0 7px 0;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.sbpop-disklogical-header .sbpop-key {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.sbpop-diskgroup-header {
+  cursor: default;
+}
+
+.sbpop-diskgroup-details {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.18s ease, opacity 0.18s ease;
+  padding-left: 8px;
+}
+
+.sbpop-diskgroup:hover .sbpop-diskgroup-details {
+  max-height: 220px;
+  opacity: 1;
+}
+
+.sbpop-disklogical-details {
+  max-height: 160px;
+  opacity: 1;
+  overflow: visible;
+  transition: none;
+}

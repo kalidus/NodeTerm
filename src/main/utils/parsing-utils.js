@@ -7,7 +7,7 @@
 /**
  * Parsea la salida del comando 'df -P' para extraer información de uso de disco
  * @param {string} dfOutput - Salida del comando df
- * @returns {Array} Array de objetos con {fs, use} para cada filesystem
+ * @returns {Array} Array de objetos con {fs, use, usedGb, totalGb} para cada filesystem
  */
 function parseDfOutput(dfOutput) {
   const lines = dfOutput.trim().split('\n');
@@ -15,14 +15,21 @@ function parseDfOutput(dfOutput) {
   return lines.map(line => {
     const parts = line.trim().split(/\s+/);
     if (parts.length >= 6) {
+      const mount = parts[parts.length - 1];
       const use = parseInt(parts[parts.length - 2], 10);
-      const name = parts[parts.length - 1];
-      if (name && name.startsWith('/') && !isNaN(use) &&
-        !name.startsWith('/sys') &&
-        !name.startsWith('/run') &&
-        !name.startsWith('/dev') &&
-        !name.includes('/snap/')) {
-        return { fs: name, use };
+      // Formato esperado df -P: ... <total> <used> <avail> <use%> <mount>
+      // Tomamos desde el final para evitar problemas con columnas variables.
+      const totalKb = parseInt(parts[parts.length - 5], 10);
+      const usedKb = parseInt(parts[parts.length - 4], 10);
+
+      if (mount && mount.startsWith('/') && !isNaN(use) &&
+        !mount.startsWith('/sys') &&
+        !mount.startsWith('/run') &&
+        !mount.startsWith('/dev') &&
+        !mount.includes('/snap/')) {
+        const totalGb = Number.isFinite(totalKb) ? Math.round((totalKb / (1024 * 1024)) * 10) / 10 : null;
+        const usedGb = Number.isFinite(usedKb) ? Math.round((usedKb / (1024 * 1024)) * 10) / 10 : null;
+        return { fs: mount, use, usedGb, totalGb };
       }
     }
     return null;

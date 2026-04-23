@@ -453,6 +453,171 @@ export const DiskPanel = ({ disk, anchorRect, onClose, onStay }) => {
     );
 };
 
+const getDiskLabel = (disk) => disk?.fs || disk?.name || disk?.mount || '?';
+
+const getPhysicalKey = (disk) => {
+    const fs = String(disk?.fs || '');
+    const mount = String(disk?.mount || '');
+    const identity = fs || mount;
+
+    // Windows: C:, D:, ...
+    const letter = identity.match(/^[A-Z]:/i);
+    if (letter) return letter[0].toUpperCase();
+
+    // Linux/macOS: /dev/sda1 -> /dev/sda, /dev/nvme0n1p2 -> /dev/nvme0n1
+    if (fs.startsWith('/dev/')) {
+        const base = fs.replace(/p?\d+$/, '');
+        return base || fs;
+    }
+
+    // Network shares: group by host/share prefix when possible
+    if (identity.startsWith('\\\\') || identity.startsWith('//')) {
+        const normalized = identity.replace(/\\/g, '/');
+        const parts = normalized.split('/').filter(Boolean);
+        if (parts.length >= 2) return `//${parts[0]}/${parts[1]}`;
+        return normalized;
+    }
+
+    // Fallback by mount root, then label
+    if (mount && mount !== '/') return mount.split('/')[1] ? `/${mount.split('/')[1]}` : mount;
+    return identity || '?';
+};
+
+export const buildDiskGroups = (disks) => {
+    const groups = new Map();
+    (Array.isArray(disks) ? disks : []).forEach((disk) => {
+        const key = getPhysicalKey(disk);
+        const list = groups.get(key) || [];
+        list.push(disk);
+        groups.set(key, list);
+    });
+
+    return Array.from(groups.entries()).map(([key, logicals]) => {
+        const avgUse = logicals.length
+            ? Math.round(logicals.reduce((acc, d) => acc + Number(d?.use ?? d?.percentage ?? 0), 0) / logicals.length)
+            : 0;
+        const isNetwork = logicals.some((d) => Boolean(d?.isNetwork));
+        return { key, logicals, avgUse, isNetwork };
+    });
+};
+
+export const DiskPhysicalPanel = ({ group, anchorRect, onClose, onStay }) => {
+    if (!group) return null;
+    const diskColor = '#ffd580';
+
+    return (
+        <MetricPopover anchorRect={anchorRect} onMouseEnter={onStay} onMouseLeave={onClose}>
+            <div className="sbpop-header">
+                <span className="sbpop-label" style={{ color: diskColor }}>DISCO</span>
+                <span className="sbpop-sublabel">{group.key}</span>
+            </div>
+            <div className="sbpop-row">
+                <span className="sbpop-key">Uso medio</span>
+                <span className="sbpop-val" style={{ color: group.avgUse > 90 ? '#ff4d6d' : group.avgUse > 70 ? '#ffd580' : '#5effa0' }}>
+                    {group.avgUse}%
+                </span>
+            </div>
+            {group.logicals.map((logical, index) => {
+                const pct = Number(logical?.use ?? logical?.percentage ?? 0);
+                const label = getDiskLabel(logical);
+                return (
+                    <div key={`${group.key}-${index}`} className="sbpop-row">
+                        <span className="sbpop-key">{label}</span>
+                        <span className="sbpop-val">{pct}%</span>
+                    </div>
+                );
+            })}
+        </MetricPopover>
+    );
+};
+
+export const DiskSummaryPanel = ({ disks, title = 'DISCOS', anchorRect, onClose, onStay }) => {
+    const diskColor = '#ffd580';
+    const groups = buildDiskGroups(disks);
+
+    return (
+        <MetricPopover anchorRect={anchorRect} onMouseEnter={onStay} onMouseLeave={onClose}>
+            <div className="sbpop-header">
+                <span className="sbpop-label" style={{ color: diskColor }}>{title}</span>
+                <span className="sbpop-sublabel">{groups.length} fisicos</span>
+            </div>
+            {groups.length === 0 && (
+                <div className="sbpop-row sbpop-dim">
+                    <span className="sbpop-key">Sin datos de disco</span>
+                    <span className="sbpop-val">--</span>
+                </div>
+            )}
+            {groups.map((group) => (
+                <div key={group.key} className="sbpop-diskgroup">
+                    <div className="sbpop-row sbpop-diskgroup-header">
+                        <span className="sbpop-key">
+                            {group.key}
+                            {group.isNetwork ? ' (RED)' : ''}
+                        </span>
+                        <span className="sbpop-val" style={{ color: group.avgUse > 90 ? '#ff4d6d' : group.avgUse > 70 ? '#ffd580' : '#5effa0' }}>
+                            {group.avgUse}%
+                        </span>
+                    </div>
+                    <div className="sbpop-diskgroup-logicals sbpop-diskgroup-logicals-open sbpop-diskgroup-details">
+                        {group.logicals.map((logical, index) => {
+                            const pct = Number(logical?.use ?? logical?.percentage ?? 0);
+                            const usedGb = typeof logical?.usedGb === 'number' ? logical.usedGb : null;
+                            const totalGb = typeof logical?.totalGb === 'number' ? logical.totalGb : null;
+                            const freeGb = usedGb !== null && totalGb !== null ? Math.max(0, totalGb - usedGb) : null;
+                            const mount = logical?.mount || '';
+                            return (
+                                <div key={`${group.key}-${index}`} className="sbpop-disklogical-card">
+                                    {group.logicals.length > 1 && (
+                                        <div className="sbpop-row sbpop-disklogical-header">
+                                            <span className="sbpop-key">{getDiskLabel(logical)}</span>
+                                            <span className="sbpop-val">{pct}%</span>
+                                        </div>
+                                    )}
+                                    <div className="sbpop-disklogical-details">
+                                        {mount && (
+                                            <div className="sbpop-row sbpop-dim">
+                                                <span className="sbpop-key">Mount</span>
+                                                <span className="sbpop-val">{mount}</span>
+                                            </div>
+                                        )}
+                                        {(usedGb !== null && totalGb !== null) ? (
+                                            <>
+                                                <div className="sbpop-row">
+                                                    <span className="sbpop-key">Uso</span>
+                                                    <span className="sbpop-val">{usedGb.toFixed(1)} GB / {totalGb.toFixed(1)} GB</span>
+                                                </div>
+                                                {freeGb !== null && (
+                                                    <div className="sbpop-row sbpop-dim">
+                                                        <span className="sbpop-key">Libre</span>
+                                                        <span className="sbpop-val" style={{ color: '#5effa0' }}>{freeGb.toFixed(1)} GB</span>
+                                                    </div>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <div className="sbpop-row sbpop-dim">
+                                                <span className="sbpop-key">Capacidad</span>
+                                                <span className="sbpop-val">No disponible</span>
+                                            </div>
+                                        )}
+                                        <div className="sbpop-bar-track" style={{ marginTop: '4px' }}>
+                                            <div className="sbpop-bar-fill" style={{
+                                                width: `${pct}%`,
+                                                background: pct > 90 ? '#ff4d6d' : pct > 70 ? '#ffd580' : diskColor,
+                                                boxShadow: `0 0 6px ${diskColor}66`
+                                            }} />
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            ))}
+            <div className="sbpop-legend">Se muestran particiones con uso y capacidad</div>
+        </MetricPopover>
+    );
+};
+
 // ─── Hook to manage popover state ────────────────────────────────────────────
 
 export function useMetricPopover() {
