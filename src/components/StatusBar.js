@@ -7,7 +7,7 @@ import { OverlayPanel } from 'primereact/overlaypanel';
 import { getVersionInfo } from '../version-info';
 import { statusBarIconThemes } from '../themes/statusbar-icon-themes';
 import { statusBarThemes } from '../themes/status-bar-themes';
-import { CpuPanel, MemPanel, NetPanel, DiskPanel, useMetricPopover } from './StatusBarMetricPopover';
+import { CpuPanel, MemPanel, NetPanel, DiskPanel, GpuPanel, useMetricPopover } from './StatusBarMetricPopover';
 
 const CpuSparkline = ({ history }) => (
     <div className="sparkline-container">
@@ -285,7 +285,7 @@ const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkD
                     </div>
                 )}
                 {gpuStats && gpuStats.ok && gpuStats.type && (
-                    <div className="status-bar-section gpu-section" title={gpuStats.name || `${gpuStats.type.toUpperCase()} GPU`}>
+                    <div className="status-bar-section gpu-section sbpop-trigger" title={gpuStats.name || `${gpuStats.type.toUpperCase()} GPU`} {...makeHoverProps('gpu')}>
                         <span
                             className="status-bar-icon gpu"
                             style={{
@@ -413,6 +413,9 @@ const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkD
             )}
             {popOpen?.type === 'net' && (
                 <NetPanel stats={stats} sessionHistory={sessionHistory} anchorRect={popOpen.rect} onClose={closePopover} onStay={cancelClose} />
+            )}
+            {popOpen?.type === 'gpu' && gpuStats && (
+                <GpuPanel gpuStats={gpuStats} sessionHistory={sessionHistory} anchorRect={popOpen.rect} onClose={closePopover} onStay={cancelClose} />
             )}
             {popOpen?.type === 'disk' && Array.isArray(disk) && disk[popOpen.diskIndex] && (
                 <DiskPanel disk={disk[popOpen.diskIndex]} anchorRect={popOpen.rect} onClose={closePopover} onStay={cancelClose} />

@@ -3,8 +3,17 @@ import { createPortal } from 'react-dom';
 
 // ─── Mini SVG area chart ────────────────────────────────────────────────────
 
+const padOnePoint = (arr) => {
+    if (!arr || arr.length === 0) return [];
+    if (arr.length === 1) return [arr[0], arr[0]];
+    return arr;
+};
+
 const MiniAreaChart = ({ data, width = 220, height = 52, color = '#00ffe7', maxVal, secondData, secondColor }) => {
-    if (!data || data.length < 2) {
+    const dataP = padOnePoint(data);
+    const secondP = secondData ? padOnePoint(secondData) : null;
+
+    if (!dataP || dataP.length < 2) {
         return (
             <svg width={width} height={height} style={{ display: 'block' }}>
                 <text x={width / 2} y={height / 2 + 4} textAnchor="middle" fill="rgba(255,255,255,0.2)" fontSize="10">sin datos</text>
@@ -16,10 +25,10 @@ const MiniAreaChart = ({ data, width = 220, height = 52, color = '#00ffe7', maxV
     const W = width - pad.l - pad.r;
     const H = height - pad.t - pad.b;
 
-    const allVals = secondData ? [...data, ...secondData] : data;
-    const peak = maxVal !== undefined ? maxVal : Math.max(...allVals, 1);
+    const allVals = secondP ? [...dataP, ...secondP] : dataP;
+    const peak = maxVal !== undefined ? maxVal : Math.max(...allVals, 1e-9);
 
-    const toX = (i, len) => pad.l + (i / (len - 1)) * W;
+    const toX = (i, len) => (len < 2 ? pad.l : pad.l + (i / (len - 1)) * W);
     const toY = (v) => pad.t + H - (v / peak) * H;
 
     const buildPath = (arr) => {
@@ -47,19 +56,19 @@ const MiniAreaChart = ({ data, width = 220, height = 52, color = '#00ffe7', maxV
                     stroke="rgba(255,255,255,0.07)" strokeWidth="0.5" strokeDasharray="3,3" />
             ))}
             {/* Area fill */}
-            <path d={buildPath(data)} fill={color} fillOpacity="0.12" />
-            {secondData && <path d={buildPath(secondData)} fill={secondColor || '#ff5f87'} fillOpacity="0.1" />}
+            <path d={buildPath(dataP)} fill={color} fillOpacity="0.12" />
+            {secondP && <path d={buildPath(secondP)} fill={secondColor || '#ff5f87'} fillOpacity="0.1" />}
             {/* Line */}
-            <path d={buildLine(data)} fill="none" stroke={color} strokeWidth="1.5"
+            <path d={buildLine(dataP)} fill="none" stroke={color} strokeWidth="1.5"
                 strokeLinejoin="round" strokeLinecap="round"
                 style={{ filter: `drop-shadow(0 0 3px ${color})` }} />
-            {secondData && (
-                <path d={buildLine(secondData)} fill="none" stroke={secondColor || '#ff5f87'} strokeWidth="1.5"
+            {secondP && (
+                <path d={buildLine(secondP)} fill="none" stroke={secondColor || '#ff5f87'} strokeWidth="1.5"
                     strokeLinejoin="round" strokeLinecap="round"
                     style={{ filter: `drop-shadow(0 0 3px ${secondColor || '#ff5f87'})` }} />
             )}
             {/* Last value dot */}
-            <circle cx={toX(data.length - 1, data.length)} cy={toY(data[data.length - 1])} r="2.5"
+            <circle cx={toX(dataP.length - 1, dataP.length)} cy={toY(dataP[dataP.length - 1])} r="2.5"
                 fill={color} style={{ filter: `drop-shadow(0 0 4px ${color})` }} />
         </svg>
     );
@@ -215,21 +224,112 @@ export const MemPanel = ({ stats, sessionHistory, anchorRect, onClose, onStay })
     );
 };
 
+const gpuAccent = (type) => {
+    if (!type) return '#b57aff';
+    const t = String(type).toLowerCase();
+    if (t.includes('nvidia')) return '#76b900';
+    if (t.includes('amd')) return '#ed1c24';
+    if (t.includes('intel')) return '#0071c5';
+    if (t.includes('apple')) return '#a8a8a8';
+    return '#b57aff';
+};
+
+export const GpuPanel = ({ gpuStats, sessionHistory, anchorRect, onClose, onStay }) => {
+    if (!gpuStats || !gpuStats.ok) return null;
+    const accent = gpuAccent(gpuStats.type);
+    const name = gpuStats.name || (gpuStats.type && String(gpuStats.type).toUpperCase()) || 'GPU';
+    const totalMB = gpuStats.totalMB || 0;
+    const usedMB = typeof gpuStats.usedMB === 'number' ? gpuStats.usedMB : null;
+    const usePct = totalMB > 0 && usedMB != null ? Math.round((usedMB / totalMB) * 100) : null;
+    const temp = gpuStats.temperature;
+
+    const sh = sessionHistory || [];
+    const vramSeries = sh.map(s => {
+        if (s.gpuTotalMB > 0 && typeof s.gpuUsedMB === 'number') {
+            return (s.gpuUsedMB / s.gpuTotalMB) * 100;
+        }
+        return 0;
+    });
+    const tempSeries = sh.map(s => (typeof s.gpuTemp === 'number' ? s.gpuTemp : 0));
+    const hasTempLine = sh.some(s => typeof s.gpuTemp === 'number') || (typeof temp === 'number');
+    const tempMax = hasTempLine ? Math.max(100, ...tempSeries, typeof temp === 'number' ? temp : 0, 1) : 100;
+
+    return (
+        <MetricPopover anchorRect={anchorRect} onMouseEnter={onStay} onMouseLeave={onClose}>
+            <div className="sbpop-header">
+                <span className="sbpop-label" style={{ color: accent }}>GPU</span>
+                <span className="sbpop-sublabel">{name}</span>
+            </div>
+            {totalMB > 0 && usedMB != null && (
+                <div className="sbpop-bigval" style={{ color: accent, fontSize: '15px' }}>
+                    {(usedMB / 1024).toFixed(1)}<span className="sbpop-unit"> / {(totalMB / 1024).toFixed(1)} GB</span>
+                </div>
+            )}
+            {usePct != null && (
+                <>
+                    <div className="sbpop-row">
+                        <span className="sbpop-key">VRAM</span>
+                        <span className="sbpop-val" style={{ color: accent }}>{usePct}%</span>
+                    </div>
+                    <div className="sbpop-bar-track">
+                        <div
+                            className="sbpop-bar-fill"
+                            style={{ width: `${usePct}%`, background: accent, boxShadow: `0 0 6px ${accent}88` }}
+                        />
+                    </div>
+                </>
+            )}
+            {vramSeries.length > 0 && (
+                <div className="sbpop-chart-caption">Histórico VRAM (sesión)</div>
+            )}
+            {vramSeries.length > 0 && (
+                <MiniAreaChart
+                    data={vramSeries}
+                    color={accent}
+                    maxVal={100}
+                    width={PANEL_W - 16}
+                    height={46}
+                />
+            )}
+            {hasTempLine && (
+                <div className="sbpop-chart-caption">Temperatura (°C)</div>
+            )}
+            {hasTempLine && (
+                <MiniAreaChart
+                    data={tempSeries}
+                    color="#5effa0"
+                    maxVal={tempMax}
+                    width={PANEL_W - 16}
+                    height={40}
+                />
+            )}
+            {typeof temp === 'number' && (
+                <div className="sbpop-row" style={{ marginTop: 4 }}>
+                    <span className="sbpop-key">Actual</span>
+                    <span className="sbpop-val" style={{ color: '#5effa0' }}>{temp}°C</span>
+                </div>
+            )}
+        </MetricPopover>
+    );
+};
+
 export const NetPanel = ({ stats, sessionHistory, anchorRect, onClose, onStay }) => {
-    const rxColor = 'var(--sbpop-net-down, #40c8ff)';
-    const txColor = 'var(--sbpop-net-up, #ff9f40)';
     const rxColorHex = '#40c8ff';
     const txColorHex = '#ff9f40';
     const network = stats?.network || {};
     const rx = network.rx_speed || 0;
     const tx = network.tx_speed || 0;
-    const rxData = sessionHistory ? sessionHistory.map(s => s.rx) : [];
-    const txData = sessionHistory ? sessionHistory.map(s => s.tx) : [];
-    const peak = Math.max(...rxData, ...txData, 1);
+    const sh = sessionHistory || [];
+    const rxData = sh.map(s => s.rx);
+    const txData = sh.map(s => s.tx);
+    const totalData = sh.map(s => (s.rx || 0) + (s.tx || 0));
+    const peak = Math.max(1e-9, ...rxData, ...txData);
 
-    // Peak values in the window
     const peakRx = rxData.length ? Math.max(...rxData) : 0;
     const peakTx = txData.length ? Math.max(...txData) : 0;
+    const peakTotal = totalData.length ? Math.max(...totalData) : 0;
+
+    const hasHistory = sh.length > 0;
 
     return (
         <MetricPopover anchorRect={anchorRect} onMouseEnter={onStay} onMouseLeave={onClose}>
@@ -244,7 +344,7 @@ export const NetPanel = ({ stats, sessionHistory, anchorRect, onClose, onStay })
                 <span className="sbpop-key">▲ TX</span>
                 <span className="sbpop-val" style={{ color: txColorHex }}>{fmtSpeed(tx)}</span>
             </div>
-            {rxData.length > 0 && (
+            {hasHistory && (
                 <>
                     <div className="sbpop-row sbpop-dim">
                         <span className="sbpop-key">Pico RX</span>
@@ -256,15 +356,30 @@ export const NetPanel = ({ stats, sessionHistory, anchorRect, onClose, onStay })
                     </div>
                 </>
             )}
-            {(rxData.length > 1 || txData.length > 1) && (
+            {hasHistory && (
+                <div className="sbpop-chart-caption">RX / TX (sesión)</div>
+            )}
+            {hasHistory && (
                 <MiniAreaChart
-                    data={rxData.length > 1 ? rxData : [0]}
-                    secondData={txData.length > 1 ? txData : undefined}
+                    data={rxData.length ? rxData : [0]}
+                    secondData={txData.length ? txData : undefined}
                     color={rxColorHex}
                     secondColor={txColorHex}
                     maxVal={peak}
                     width={PANEL_W - 16}
                     height={48}
+                />
+            )}
+            {hasHistory && totalData.some((v) => v > 0) && (
+                <div className="sbpop-chart-caption">Ancho de banda total (RX+TX)</div>
+            )}
+            {hasHistory && totalData.some((v) => v > 0) && (
+                <MiniAreaChart
+                    data={totalData}
+                    color="#7af7c7"
+                    maxVal={Math.max(peakTotal, 1e-9)}
+                    width={PANEL_W - 16}
+                    height={40}
                 />
             )}
             <div className="sbpop-legend">

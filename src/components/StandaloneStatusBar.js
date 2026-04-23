@@ -17,7 +17,7 @@ const StandaloneStatusBar = ({ visible = true, style = {} }) => {
         try { return localStorage.getItem('localLinuxStatusBarTheme') || localStorage.getItem('basicapp_statusbar_theme') || 'Default Dark'; } catch { return 'Default Dark'; }
     });
 
-    const sessionHistory = useStatusBarSessionHistory(statusStats);
+    const sessionHistory = useStatusBarSessionHistory(statusStats, { gpuStats });
 
     const getScopedStatusBarCssVars = () => {
         const theme = statusBarThemes[localStatusBarThemeName] || statusBarThemes['Default Dark'];

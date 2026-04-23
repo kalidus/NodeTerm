@@ -408,3 +408,12 @@
   margin-top: 4px;
   letter-spacing: 0.3px;
 }
+
+.sbpop-chart-caption {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  margin-top: 6px;
+  margin-bottom: 2px;
+}
