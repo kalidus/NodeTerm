@@ -24,6 +24,7 @@ import { Badge } from 'primereact/badge';
 import { Tooltip } from 'primereact/tooltip';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
+import CvssCalculatorPanel from './network-tools/CvssCalculatorPanel';
 
 // Categorías de herramientas
 const TOOL_CATEGORIES = [
@@ -66,7 +67,8 @@ const TOOL_CATEGORIES = [
       { id: 'ssl-check', label: 'SSL Checker', icon: 'pi pi-lock', description: 'Verificación de certificados SSL/TLS' },
       { id: 'http-headers', label: 'HTTP Headers', icon: 'pi pi-file', description: 'Análisis de cabeceras HTTP' },
       { id: 'host-vuln-scan', label: 'Host Vuln Scanner', icon: 'pi pi-exclamation-triangle', description: 'Detecta vulnerabilidades y CVEs en servicios' },
-      { id: 'web-security-scan', label: 'Web Security', icon: 'pi pi-globe', description: 'Analiza seguridad web, headers y cookies' }
+      { id: 'web-security-scan', label: 'Web Security', icon: 'pi pi-globe', description: 'Analiza seguridad web, headers y cookies' },
+      { id: 'cvss-calculator', label: 'CVSS Calculator', icon: 'pi pi-chart-bar', description: 'Calcula CVSS 3.1 y 4.0 · Templates · Reportes HTML/PDF' }
     ]
   },
   {
@@ -505,6 +507,9 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
           });
           break;
 
+        case 'cvss-calculator':
+          return;
+
         default:
           throw new Error('Herramienta no reconocida');
       }
@@ -617,7 +622,9 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
         return null;
 
       case 'web-security-scan':
-        // Layout especial: formulario en el header
+        return null;
+
+      case 'cvss-calculator':
         return null;
 
       case 'whois':
@@ -639,6 +646,11 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
 
   // Renderizar resultados según la herramienta
   const renderResults = () => {
+    // El panel CVSS gestiona su propio estado, no depende de executeTool
+    if (selectedTool === 'cvss-calculator') {
+      return <CvssCalculatorPanel />;
+    }
+
     // Mostrar salida en tiempo real mientras se ejecuta
     if (loading) {
       const liveOutputStyle = {
@@ -2316,6 +2328,9 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
           </div>
         );
 
+      case 'cvss-calculator':
+        return <CvssCalculatorPanel />;
+
       default:
         return <div>Resultados no disponibles</div>;
     }
@@ -2729,7 +2744,7 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
               flexShrink: 0
             }}>
               {/* Primera fila: Solo título para herramientas con header especial, título + botón para otros */}
-              {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'http-headers', 'whois', 'subnet-calc', 'wake-on-lan', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) ? (
+              {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'http-headers', 'whois', 'subnet-calc', 'wake-on-lan', 'host-vuln-scan', 'web-security-scan', 'cvss-calculator'].includes(selectedTool) ? (
                 <div style={{
                   display: 'flex',
                   flexDirection: isMobile ? 'column' : 'row',
@@ -3612,7 +3627,7 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
           {/* Contenido: formulario y resultados */}
           <div className="network-tools-form-results">
             {/* Panel de formulario - Solo si NO es tool con header especial */}
-            {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'http-headers', 'whois', 'subnet-calc', 'wake-on-lan', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) && (
+            {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'http-headers', 'whois', 'subnet-calc', 'wake-on-lan', 'host-vuln-scan', 'web-security-scan', 'cvss-calculator'].includes(selectedTool) && (
               <div className="network-tools-form" style={{
                 padding: '1rem',
                 paddingBottom: '2rem',
@@ -3628,9 +3643,9 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
               padding: '1rem',
               paddingBottom: '2rem',
               background: 'rgba(0,0,0,0.1)',
-              width: ['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'http-headers', 'whois', 'subnet-calc', 'wake-on-lan', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) ? '100%' : undefined
+              width: ['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'http-headers', 'whois', 'subnet-calc', 'wake-on-lan', 'host-vuln-scan', 'web-security-scan', 'cvss-calculator'].includes(selectedTool) ? '100%' : undefined
             }}>
-              {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'http-headers', 'whois', 'subnet-calc', 'wake-on-lan', 'host-vuln-scan', 'web-security-scan'].includes(selectedTool) && (
+              {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'http-headers', 'whois', 'subnet-calc', 'wake-on-lan', 'host-vuln-scan', 'web-security-scan', 'cvss-calculator'].includes(selectedTool) && (
                 <div style={{
                   marginBottom: '0.75rem',
                   fontSize: '0.85rem',

@@ -4,7 +4,9 @@
  * Expone las funcionalidades del NetworkToolsService al proceso renderer
  */
 
-const { ipcMain } = require('electron');
+const { ipcMain, dialog, BrowserWindow } = require('electron');
+const fs = require('fs');
+const path = require('path');
 const NetworkToolsService = require('../services/NetworkToolsService');
 
 // Instancia singleton del servicio
@@ -347,6 +349,57 @@ function registerNetworkToolsHandlers() {
     } catch (err) {
       console.error('[network-tools:get-interfaces] Error:', err);
       return { success: false, error: err?.message || 'Error desconocido', interfaces: [] };
+    }
+  });
+
+  // ── CVSS: Guardar reporte HTML ────────────────────────────────────────────
+  ipcMain.handle('network-tools:save-cvss-report-html', async (event, { html, suggestedName }) => {
+    try {
+      const focusedWin = BrowserWindow.getFocusedWindow();
+      const { canceled, filePath } = await dialog.showSaveDialog(focusedWin, {
+        title: 'Guardar reporte CVSS (HTML)',
+        defaultPath: suggestedName || 'cvss-report.html',
+        filters: [{ name: 'HTML', extensions: ['html'] }]
+      });
+      if (canceled || !filePath) return { success: false, error: 'Operación cancelada.' };
+      fs.writeFileSync(filePath, html, 'utf-8');
+      return { success: true, filePath };
+    } catch (err) {
+      console.error('[network-tools:save-cvss-report-html]', err);
+      return { success: false, error: err?.message || 'Error al guardar el reporte HTML.' };
+    }
+  });
+
+  // ── CVSS: Guardar reporte PDF ─────────────────────────────────────────────
+  ipcMain.handle('network-tools:save-cvss-report-pdf', async (event, { html, suggestedName }) => {
+    let pdfWin = null;
+    try {
+      const focusedWin = BrowserWindow.getFocusedWindow();
+      const { canceled, filePath } = await dialog.showSaveDialog(focusedWin, {
+        title: 'Guardar reporte CVSS (PDF)',
+        defaultPath: suggestedName || 'cvss-report.pdf',
+        filters: [{ name: 'PDF', extensions: ['pdf'] }]
+      });
+      if (canceled || !filePath) return { success: false, error: 'Operación cancelada.' };
+
+      pdfWin = new BrowserWindow({ show: false, webPreferences: { javascript: false } });
+      const dataUrl = `data:text/html;charset=utf-8;base64,${Buffer.from(html, 'utf-8').toString('base64')}`;
+      await pdfWin.loadURL(dataUrl);
+
+      const pdfBuffer = await pdfWin.webContents.printToPDF({
+        marginsType: 1,
+        printBackground: true,
+        pageSize: 'A4',
+        landscape: false
+      });
+
+      fs.writeFileSync(filePath, pdfBuffer);
+      return { success: true, filePath };
+    } catch (err) {
+      console.error('[network-tools:save-cvss-report-pdf]', err);
+      return { success: false, error: err?.message || 'Error al guardar el reporte PDF.' };
+    } finally {
+      if (pdfWin && !pdfWin.isDestroyed()) pdfWin.destroy();
     }
   });
 }
