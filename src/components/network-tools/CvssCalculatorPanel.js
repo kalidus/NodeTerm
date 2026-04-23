@@ -4,6 +4,7 @@ import { Dropdown } from 'primereact/dropdown';
 import { InputText } from 'primereact/inputtext';
 import { Message } from 'primereact/message';
 import { TabView, TabPanel } from 'primereact/tabview';
+import { Accordion, AccordionTab } from 'primereact/accordion';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Dialog } from 'primereact/dialog';
@@ -145,6 +146,7 @@ const CvssCalculatorPanel = () => {
   const [feedback, setFeedback] = useState(null);
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [vectorInput, setVectorInput] = useState('');
+  const [expandedMetricGroups, setExpandedMetricGroups] = useState([0]);
 
   const feedbackTimer = useRef(null);
 
@@ -333,10 +335,26 @@ const CvssCalculatorPanel = () => {
 
   const sevCfg = getSeverityConfig(computed.severity || 'None');
 
+  const metricSections = useMemo(() => {
+    if (version === '3.1') {
+      return [
+        { key: 'base', title: 'Base (obligatorias)', metrics: service.BASE_METRICS || [] },
+        { key: 'temporal', title: 'Temporal (opcionales)', metrics: service.TEMPORAL_METRICS || [] },
+        { key: 'environmental', title: 'Environmental (opcionales)', metrics: service.ENVIRONMENTAL_METRICS || [] }
+      ];
+    }
+    return [
+      { key: 'base', title: 'Base (obligatorias)', metrics: service.BASE_METRICS || [] },
+      { key: 'threat', title: 'Threat (opcionales)', metrics: service.THREAT_METRICS || [] },
+      { key: 'environmental', title: 'Environmental (opcionales)', metrics: service.ENVIRONMENTAL_METRICS || [] },
+      { key: 'supplemental', title: 'Supplemental (opcionales)', metrics: service.SUPPLEMENTAL_METRICS || [] }
+    ];
+  }, [version, service]);
+
   // ─── Render métricas ──────────────────────────────────────────────────────
-  const renderMetricsGrid = () => {
-    const half = Math.ceil(service.METRIC_ORDER.length / 2);
-    const cols = [service.METRIC_ORDER.slice(0, half), service.METRIC_ORDER.slice(half)];
+  const renderMetricsGrid = (metricList = []) => {
+    const half = Math.ceil(metricList.length / 2);
+    const cols = [metricList.slice(0, half), metricList.slice(half)];
 
     return (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: '0.55rem' }}>
@@ -346,15 +364,15 @@ const CvssCalculatorPanel = () => {
               const desc = service.METRIC_DESCRIPTIONS?.[metricKey];
               const tooltipId = `cvss-tip-${metricKey}`;
               return (
-                <div key={metricKey} style={{ display: 'grid', gridTemplateColumns: '32px 1fr', gap: '0.45rem', alignItems: 'center' }}>
+                <div key={metricKey} style={{ display: 'grid', gridTemplateColumns: '28px 1fr', gap: '0.4rem', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <span
                       id={tooltipId}
                       style={{
                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                        width: '22px', height: '22px', borderRadius: '50%',
+                        width: '18px', height: '18px', borderRadius: '50%',
                         background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.4)',
-                        fontSize: '0.65rem', fontWeight: 700, color: '#a5b4fc',
+                        fontSize: '0.6rem', fontWeight: 700, color: '#a5b4fc',
                         cursor: 'help', flexShrink: 0
                       }}
                     >
@@ -366,7 +384,7 @@ const CvssCalculatorPanel = () => {
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.35rem', alignItems: 'center' }}>
                     <div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-color-secondary)', marginBottom: '2px', fontWeight: 600, letterSpacing: '0.03em' }}>
+                      <div style={{ fontSize: '0.66rem', color: 'var(--text-color-secondary)', marginBottom: '2px', fontWeight: 600, letterSpacing: '0.02em' }}>
                         {desc?.labelEs || metricKey} <span style={{ color: '#6366f1', opacity: 0.7, fontSize: '0.65rem' }}>({metricKey})</span>
                       </div>
                       <Dropdown
@@ -400,7 +418,7 @@ const CvssCalculatorPanel = () => {
         <ScoreGauge score={computed.score || 0} severity={computed.severity || 'None'} />
         <div style={{ flex: 1, minWidth: '200px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <div style={{ fontSize: '0.78rem', color: 'var(--text-color-secondary)', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-            CVSS {version} · Base Score
+            CVSS {version} · {computed.scoringMode || 'Base'} Score
           </div>
           <ScoreBar score={computed.score || 0} />
           <div style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: 'var(--text-color-secondary)', wordBreak: 'break-all', marginTop: '0.1rem' }}>
@@ -433,12 +451,35 @@ const CvssCalculatorPanel = () => {
       {/* Métricas */}
       <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '10px', padding: '0.9rem' }}>
         <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-color-secondary)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.7rem' }}>
-          Métricas Base — <span style={{ color: '#818cf8' }}>CVSS {version}</span>
+          Métricas CVSS Completas — <span style={{ color: '#818cf8' }}>CVSS {version}</span>
           <span style={{ marginLeft: '0.5rem', fontSize: '0.68rem', fontWeight: 400, color: '#64748b' }}>
             Haz clic en <span style={{ color: '#a5b4fc' }}>?</span> para ver la descripción de cada métrica
           </span>
         </div>
-        {renderMetricsGrid()}
+        <Accordion
+          className="cvss-accordion"
+          multiple
+          activeIndex={expandedMetricGroups}
+          onTabChange={(e) => setExpandedMetricGroups(Array.isArray(e.index) ? e.index : [e.index])}
+        >
+          {metricSections.map((section, idx) => (
+            <AccordionTab
+              key={section.key}
+              header={
+                <span style={{ fontSize: '0.78rem', fontWeight: 600 }}>
+                  {section.title} <span style={{ opacity: 0.7 }}>({section.metrics.length})</span>
+                </span>
+              }
+            >
+              {renderMetricsGrid(section.metrics)}
+            </AccordionTab>
+          ))}
+        </Accordion>
+        {computed.score === 0 && (
+          <div style={{ marginTop: '0.5rem', fontSize: '0.73rem', color: '#94a3b8' }}>
+            Nota: el score puede ser 0.0 si en Base dejas impactos en <strong>None</strong>. Ajusta métricas Base para obtener una puntuación representativa.
+          </div>
+        )}
       </div>
 
       {/* Acciones */}
@@ -602,6 +643,45 @@ const CvssCalculatorPanel = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
+      <style>{`
+        .cvss-accordion.p-accordion .p-accordion-header .p-accordion-header-link {
+          background: rgba(255,255,255,0.04) !important;
+          color: #cbd5e1 !important;
+          border: 1px solid rgba(255,255,255,0.09) !important;
+          padding: 0.62rem 0.8rem !important;
+          border-radius: 8px !important;
+          box-shadow: none !important;
+        }
+        .cvss-accordion.p-accordion .p-accordion-header .p-accordion-header-link .p-accordion-header-text,
+        .cvss-accordion.p-accordion .p-accordion-header .p-accordion-header-link span {
+          color: #cbd5e1 !important;
+          opacity: 1 !important;
+        }
+        .cvss-accordion.p-accordion .p-accordion-header .p-accordion-header-link .p-accordion-toggle-icon {
+          color: #94a3b8 !important;
+        }
+        .cvss-accordion.p-accordion .p-accordion-header:not(.p-disabled).p-highlight .p-accordion-header-link {
+          background: rgba(99,102,241,0.15) !important;
+          border-color: rgba(99,102,241,0.42) !important;
+          color: #dbeafe !important;
+        }
+        .cvss-accordion.p-accordion .p-accordion-header:not(.p-disabled).p-highlight .p-accordion-header-link .p-accordion-header-text,
+        .cvss-accordion.p-accordion .p-accordion-header:not(.p-disabled).p-highlight .p-accordion-header-link span {
+          color: #dbeafe !important;
+          opacity: 1 !important;
+        }
+        .cvss-accordion.p-accordion .p-accordion-header:not(.p-disabled) .p-accordion-header-link:focus {
+          box-shadow: 0 0 0 2px rgba(99,102,241,0.28) !important;
+        }
+        .cvss-accordion.p-accordion .p-accordion-content {
+          background: rgba(255,255,255,0.015) !important;
+          color: #d1d5db !important;
+          border: 1px solid rgba(255,255,255,0.06) !important;
+          border-top: none !important;
+          border-radius: 0 0 8px 8px !important;
+          padding: 0.7rem 0.75rem 0.6rem !important;
+        }
+      `}</style>
       <ConfirmDialog />
 
       {feedback && (
@@ -631,7 +711,9 @@ const CvssCalculatorPanel = () => {
           ))}
         </div>
         <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-          {version === '3.1' ? '8 métricas base · Estándar ampliamente adoptado' : '11 métricas base · Última versión con impacto en sistemas downstream'}
+          {version === '3.1'
+            ? 'Base + Temporal + Environmental (22 métricas)'
+            : 'Base + Threat + Environmental + Supplemental (32 métricas)'}
         </span>
       </div>
 

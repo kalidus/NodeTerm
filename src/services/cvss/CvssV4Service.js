@@ -1,63 +1,37 @@
-import { calculateBaseScore, validate } from 'cvss4';
+import { calculateBaseScore, expectedMetricOrder, parseVectorV4, validateVectorV4 } from 'cvss4';
 
-const METRIC_ORDER = ['AV', 'AC', 'AT', 'PR', 'UI', 'VC', 'VI', 'VA', 'SC', 'SI', 'SA'];
+const BASE_METRICS = ['AV', 'AC', 'AT', 'PR', 'UI', 'VC', 'VI', 'VA', 'SC', 'SI', 'SA'];
+const THREAT_METRICS = ['E'];
+const ENVIRONMENTAL_METRICS = ['CR', 'IR', 'AR', 'MAV', 'MAC', 'MAT', 'MPR', 'MUI', 'MVC', 'MVI', 'MVA', 'MSC', 'MSI', 'MSA'];
+const SUPPLEMENTAL_METRICS = ['S', 'AU', 'R', 'V', 'RE', 'U'];
+const METRIC_ORDER = [...BASE_METRICS, ...THREAT_METRICS, ...ENVIRONMENTAL_METRICS, ...SUPPLEMENTAL_METRICS];
 
-const METRIC_OPTIONS = {
-  AV: [
-    { label: 'Network (N)', value: 'N' },
-    { label: 'Adjacent (A)', value: 'A' },
-    { label: 'Local (L)', value: 'L' },
-    { label: 'Physical (P)', value: 'P' }
-  ],
-  AC: [
-    { label: 'Low (L)', value: 'L' },
-    { label: 'High (H)', value: 'H' }
-  ],
-  AT: [
-    { label: 'None (N)', value: 'N' },
-    { label: 'Present (P)', value: 'P' }
-  ],
-  PR: [
-    { label: 'None (N)', value: 'N' },
-    { label: 'Low (L)', value: 'L' },
-    { label: 'High (H)', value: 'H' }
-  ],
-  UI: [
-    { label: 'None (N)', value: 'N' },
-    { label: 'Passive (P)', value: 'P' },
-    { label: 'Active (A)', value: 'A' }
-  ],
-  VC: [
-    { label: 'None (N)', value: 'N' },
-    { label: 'Low (L)', value: 'L' },
-    { label: 'High (H)', value: 'H' }
-  ],
-  VI: [
-    { label: 'None (N)', value: 'N' },
-    { label: 'Low (L)', value: 'L' },
-    { label: 'High (H)', value: 'H' }
-  ],
-  VA: [
-    { label: 'None (N)', value: 'N' },
-    { label: 'Low (L)', value: 'L' },
-    { label: 'High (H)', value: 'H' }
-  ],
-  SC: [
-    { label: 'None (N)', value: 'N' },
-    { label: 'Low (L)', value: 'L' },
-    { label: 'High (H)', value: 'H' }
-  ],
-  SI: [
-    { label: 'None (N)', value: 'N' },
-    { label: 'Low (L)', value: 'L' },
-    { label: 'High (H)', value: 'H' }
-  ],
-  SA: [
-    { label: 'None (N)', value: 'N' },
-    { label: 'Low (L)', value: 'L' },
-    { label: 'High (H)', value: 'H' }
-  ]
+const VALUE_LABELS = {
+  X: 'Not Defined',
+  N: 'None / Network',
+  A: 'Adjacent / Active',
+  L: 'Low / Local',
+  P: 'Present / Passive / Physical',
+  H: 'High',
+  M: 'Medium',
+  U: 'Unreported / Unknown',
+  S: 'Safety',
+  Y: 'Yes',
+  D: 'Diffused',
+  C: 'Confirmed / Concentrated',
+  I: 'Internal',
+  Clear: 'Clear',
+  Green: 'Green',
+  Amber: 'Amber',
+  Red: 'Red'
 };
+
+const METRIC_OPTIONS = Object.fromEntries(
+  Object.entries(expectedMetricOrder).map(([metric, values]) => [
+    metric,
+    values.map((value) => ({ label: `${VALUE_LABELS[value] || value} (${value})`, value }))
+  ])
+);
 
 const METRIC_DESCRIPTIONS = {
   AV: {
@@ -179,6 +153,132 @@ const METRIC_DESCRIPTIONS = {
       L: 'Low — Degradación o interrupciones intermitentes en sistemas downstream.',
       H: 'High — Pérdida total de disponibilidad en sistemas posteriores (DoS en cascada).'
     }
+  },
+  E: {
+    label: 'Exploit Maturity',
+    labelEs: 'Madurez del Exploit',
+    description: 'Métrica Threat de CVSS 4.0 que refleja la probabilidad real de explotación.',
+    values: { X: 'No definido.', A: 'Ataque activo observado.', P: 'PoC pública.', U: 'No disponible / no observado.' }
+  },
+  CR: {
+    label: 'Confidentiality Requirement',
+    labelEs: 'Requisito de Confidencialidad',
+    description: 'Importancia de la confidencialidad para el entorno.',
+    values: { X: 'No definido.', L: 'Baja.', M: 'Media.', H: 'Alta.' }
+  },
+  IR: {
+    label: 'Integrity Requirement',
+    labelEs: 'Requisito de Integridad',
+    description: 'Importancia de la integridad para el entorno.',
+    values: { X: 'No definido.', L: 'Baja.', M: 'Media.', H: 'Alta.' }
+  },
+  AR: {
+    label: 'Availability Requirement',
+    labelEs: 'Requisito de Disponibilidad',
+    description: 'Importancia de la disponibilidad para el entorno.',
+    values: { X: 'No definido.', L: 'Baja.', M: 'Media.', H: 'Alta.' }
+  },
+  MAV: {
+    label: 'Modified Attack Vector',
+    labelEs: 'Vector de Ataque Modificado',
+    description: 'Sobrescribe AV para reflejar el entorno real.',
+    values: { X: 'No definido.', N: 'Network.', A: 'Adjacent.', L: 'Local.', P: 'Physical.' }
+  },
+  MAC: {
+    label: 'Modified Attack Complexity',
+    labelEs: 'Complejidad Modificada',
+    description: 'Sobrescribe AC según controles y contexto del entorno.',
+    values: { X: 'No definido.', L: 'Low.', H: 'High.' }
+  },
+  MAT: {
+    label: 'Modified Attack Requirements',
+    labelEs: 'Requisitos de Ataque Modificados',
+    description: 'Sobrescribe AT en el entorno evaluado.',
+    values: { X: 'No definido.', N: 'None.', P: 'Present.' }
+  },
+  MPR: {
+    label: 'Modified Privileges Required',
+    labelEs: 'Privilegios Requeridos Modificados',
+    description: 'Sobrescribe PR para la realidad operativa.',
+    values: { X: 'No definido.', N: 'None.', L: 'Low.', H: 'High.' }
+  },
+  MUI: {
+    label: 'Modified User Interaction',
+    labelEs: 'Interacción de Usuario Modificada',
+    description: 'Sobrescribe UI según la superficie de ataque real.',
+    values: { X: 'No definido.', N: 'None.', P: 'Passive.', A: 'Active.' }
+  },
+  MVC: {
+    label: 'Modified Vulnerable Confidentiality',
+    labelEs: 'Confidencialidad Vulnerable Modificada',
+    description: 'Sobrescribe VC en el entorno real.',
+    values: { X: 'No definido.', H: 'High.', L: 'Low.', N: 'None.' }
+  },
+  MVI: {
+    label: 'Modified Vulnerable Integrity',
+    labelEs: 'Integridad Vulnerable Modificada',
+    description: 'Sobrescribe VI en el entorno real.',
+    values: { X: 'No definido.', H: 'High.', L: 'Low.', N: 'None.' }
+  },
+  MVA: {
+    label: 'Modified Vulnerable Availability',
+    labelEs: 'Disponibilidad Vulnerable Modificada',
+    description: 'Sobrescribe VA en el entorno real.',
+    values: { X: 'No definido.', H: 'High.', L: 'Low.', N: 'None.' }
+  },
+  MSC: {
+    label: 'Modified Subsequent Confidentiality',
+    labelEs: 'Confidencialidad Posterior Modificada',
+    description: 'Sobrescribe SC para sistemas posteriores.',
+    values: { X: 'No definido.', H: 'High.', L: 'Low.', N: 'None.' }
+  },
+  MSI: {
+    label: 'Modified Subsequent Integrity',
+    labelEs: 'Integridad Posterior Modificada',
+    description: 'Sobrescribe SI para sistemas posteriores.',
+    values: { X: 'No definido.', S: 'Safety.', H: 'High.', L: 'Low.', N: 'None.' }
+  },
+  MSA: {
+    label: 'Modified Subsequent Availability',
+    labelEs: 'Disponibilidad Posterior Modificada',
+    description: 'Sobrescribe SA para sistemas posteriores.',
+    values: { X: 'No definido.', S: 'Safety.', H: 'High.', L: 'Low.', N: 'None.' }
+  },
+  S: {
+    label: 'Safety',
+    labelEs: 'Impacto en Seguridad Física',
+    description: 'Métrica Supplemental para reflejar riesgo de daño físico.',
+    values: { X: 'No definido.', N: 'Sin impacto.', P: 'Posible impacto.' }
+  },
+  AU: {
+    label: 'Automatable',
+    labelEs: 'Automatizable',
+    description: 'Indica si el ataque puede automatizarse en masa.',
+    values: { X: 'No definido.', N: 'No automatizable.', Y: 'Automatizable.' }
+  },
+  R: {
+    label: 'Recovery',
+    labelEs: 'Recuperación',
+    description: 'Nivel de recuperación esperado tras explotación.',
+    values: { X: 'No definido.', A: 'Automática.', U: 'Intervención de usuario.', I: 'Intervención intensiva.' }
+  },
+  V: {
+    label: 'Value Density',
+    labelEs: 'Densidad de Valor',
+    description: 'Concentración de activos valiosos en el objetivo.',
+    values: { X: 'No definido.', D: 'Difusa.', C: 'Concentrada.' }
+  },
+  RE: {
+    label: 'Vulnerability Response Effort',
+    labelEs: 'Esfuerzo de Respuesta',
+    description: 'Esfuerzo operativo necesario para responder y mitigar.',
+    values: { X: 'No definido.', L: 'Bajo.', M: 'Medio.', H: 'Alto.' }
+  },
+  U: {
+    label: 'Provider Urgency',
+    labelEs: 'Urgencia del Proveedor',
+    description: 'Nivel de urgencia recomendado por proveedor/equipo.',
+    values: { X: 'No definido.', Clear: 'Clear', Green: 'Green', Amber: 'Amber', Red: 'Red' }
   }
 };
 
@@ -193,7 +293,28 @@ const DEFAULT_METRICS = {
   VA: 'N',
   SC: 'N',
   SI: 'N',
-  SA: 'N'
+  SA: 'N',
+  E: 'X',
+  CR: 'X',
+  IR: 'X',
+  AR: 'X',
+  MAV: 'X',
+  MAC: 'X',
+  MAT: 'X',
+  MPR: 'X',
+  MUI: 'X',
+  MVC: 'X',
+  MVI: 'X',
+  MVA: 'X',
+  MSC: 'X',
+  MSI: 'X',
+  MSA: 'X',
+  S: 'X',
+  AU: 'X',
+  R: 'X',
+  V: 'X',
+  RE: 'X',
+  U: 'X'
 };
 
 function getSeverity(score) {
@@ -207,8 +328,10 @@ function getSeverity(score) {
 function normalizeMetrics(metrics = {}) {
   const normalized = {};
   for (const key of METRIC_ORDER) {
-    const value = (metrics[key] || '').toString().trim().toUpperCase();
-    if (value) normalized[key] = value;
+    const rawValue = (metrics[key] || '').toString().trim();
+    if (!rawValue) continue;
+    const value = rawValue.length === 1 ? rawValue.toUpperCase() : rawValue;
+    normalized[key] = value;
   }
   return normalized;
 }
@@ -217,23 +340,20 @@ function normalizeVector(vector = '') {
   const trimmed = vector.toString().trim();
   if (!trimmed) return '';
   const prefixed = trimmed.startsWith('CVSS:4.0/') ? trimmed : `CVSS:4.0/${trimmed.replace(/^CVSS:\d\.\d\//, '')}`;
-  const parts = prefixed.split('/');
-  const head = parts.shift();
-  const map = {};
-  for (const part of parts) {
-    const [k, v] = part.split(':');
-    if (k && v) map[k] = v.toUpperCase();
-  }
-  const ordered = METRIC_ORDER.filter((metric) => map[metric]).map((metric) => `${metric}:${map[metric]}`);
-  return `${head}/${ordered.join('/')}`;
+  const parsed = parseVectorV4(prefixed);
+  return buildVector(parsed);
 }
 
 function buildVector(metrics = {}) {
-  const normalized = normalizeMetrics(metrics);
+  const normalized = normalizeMetrics({ ...DEFAULT_METRICS, ...metrics });
   const chunks = [];
-  for (const metric of METRIC_ORDER) {
+  for (const metric of BASE_METRICS) {
     if (!normalized[metric]) throw new Error(`Métrica requerida faltante: ${metric}`);
     chunks.push(`${metric}:${normalized[metric]}`);
+  }
+  for (const metric of [...THREAT_METRICS, ...ENVIRONMENTAL_METRICS, ...SUPPLEMENTAL_METRICS]) {
+    const value = normalized[metric];
+    if (value && value !== 'X') chunks.push(`${metric}:${value}`);
   }
   return `CVSS:4.0/${chunks.join('/')}`;
 }
@@ -241,31 +361,33 @@ function buildVector(metrics = {}) {
 function parseVector(vector) {
   const normalizedVector = normalizeVector(vector);
   if (!normalizedVector) throw new Error('Vector CVSS vacío');
-  validate(normalizedVector);
-  const metrics = {};
-  for (const pair of normalizedVector.replace('CVSS:4.0/', '').split('/')) {
-    const [k, v] = pair.split(':');
-    if (k && v) metrics[k] = v;
+  const validation = validateVectorV4(normalizedVector);
+  if (!validation.valid) {
+    throw new Error(validation.reason || 'Vector CVSS v4.0 inválido');
   }
-  return metrics;
+  const parsed = parseVectorV4(normalizedVector);
+  return { ...DEFAULT_METRICS, ...parsed };
 }
 
 function validateMetrics(metrics = {}) {
   const vector = buildVector(metrics);
-  validate(vector);
+  const validation = validateVectorV4(vector);
+  if (!validation.valid) throw new Error(validation.reason || 'Métricas CVSS v4.0 inválidas');
   return true;
 }
 
 function calculate(metrics = {}) {
   const vector = buildVector(metrics);
-  validate(vector);
+  const validation = validateVectorV4(vector);
+  if (!validation.valid) throw new Error(validation.reason || 'Vector CVSS v4.0 inválido');
   const score = calculateBaseScore(vector);
   return {
     version: '4.0',
     vector,
-    metrics: normalizeMetrics(metrics),
+    metrics: normalizeMetrics({ ...DEFAULT_METRICS, ...metrics }),
     score,
-    severity: getSeverity(score)
+    severity: getSeverity(score),
+    scoringMode: 'Base'
   };
 }
 
@@ -275,6 +397,10 @@ function calculateFromVector(vector = '') {
 }
 
 export const cvssV4Service = {
+  BASE_METRICS,
+  THREAT_METRICS,
+  ENVIRONMENTAL_METRICS,
+  SUPPLEMENTAL_METRICS,
   METRIC_ORDER,
   METRIC_OPTIONS,
   METRIC_DESCRIPTIONS,
