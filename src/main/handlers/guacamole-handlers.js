@@ -276,6 +276,10 @@ function registerGuacamoleHandlers({
       // Detectar tipo de conexión: RDP o VNC
       const connectionType = config.connectionType || (config.type === 'vnc' || config.type === 'vnc-guacamole' ? 'vnc' : 'rdp');
       const isVNC = connectionType === 'vnc';
+      const isWallixLikeRdp = !isVNC
+        && typeof config?.username === 'string'
+        && config.username.includes('@')
+        && config.username.includes(':');
 
       // Calcular resolución final: priorizar width/height, luego parsear resolution
       let finalWidth = config.width || 1024;
@@ -425,6 +429,20 @@ function registerGuacamoleHandlers({
           "enable-mouse": true, // Asegurar que el mouse esté habilitado
           "mouse-autoselect": true // Auto-selección de mouse para mejor experiencia
         };
+      }
+
+      // Log de diagnóstico para analizar cierres tempranos (sin exponer password)
+      if (!isVNC) {
+        console.log('[Guacamole][RDP token] creando token', {
+          host: connectionSettings.hostname,
+          port: connectionSettings.port,
+          username: connectionSettings.username,
+          security: connectionSettings.security,
+          width: connectionSettings.width,
+          height: connectionSettings.height,
+          colorDepth: connectionSettings['color-depth'],
+          wallixLike: isWallixLikeRdp
+        });
       }
 
       const tokenObject = {

@@ -78,7 +78,19 @@ function setupGuacamoleServerEvents(guacamoleServer, activeGuacamoleConnections,
 
   guacamoleServer.on('close', (clientConnection) => {
     try {
-      console.log('🔚 Conexión Guacamole cerrada:', clientConnection.connectionId);
+      const guacdClient = clientConnection?.guacdClient || null;
+      const inactivityMs = guacdClient?.lastActivity ? (Date.now() - guacdClient.lastActivity) : null;
+      const closeDetails = {
+        connectionId: clientConnection?.connectionId,
+        inactivityMs,
+        hasGuacdClient: !!guacdClient
+      };
+      // Algunos objetos de guacamole-lite exponen información adicional en runtime
+      // (dependiendo de versión): mantener trazabilidad sin romper si no existen.
+      if (clientConnection?.error) closeDetails.error = String(clientConnection.error);
+      if (clientConnection?.state) closeDetails.state = clientConnection.state;
+      if (guacdClient?.state) closeDetails.guacdState = guacdClient.state;
+      console.log('🔚 Conexión Guacamole cerrada:', closeDetails);
       activeGuacamoleConnections.delete(clientConnection);
     } catch (e) {
       // noop

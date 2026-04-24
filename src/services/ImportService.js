@@ -964,7 +964,17 @@ class ImportService {
             let deviceInfo = null;
             let serviceInfo = null;
 
-            if (acc.device) {
+            // IMPORTANTE:
+            // Si Wallix informa "application", ese target debe tratarse como APP
+            // aunque también venga "device" informado en la misma entrada.
+            if (acc.application) {
+                // Es un target tipo aplicación en Wallix, no un device directo para proxy
+                targetName = acc.application;
+                host = acc.application; // Placeholder visual
+                protocol = 'RDP'; // Transporte RDP para aplicaciones publicadas
+                port = 3389;
+                alias = 'Wallix Application';
+            } else if (acc.device) {
                 deviceInfo = devicesMap[acc.device];
                 if (!deviceInfo) continue; // Si es un device pero no está en la lista global, saltar
                 
@@ -982,13 +992,6 @@ class ImportService {
                 protocol = (serviceInfo?.protocol || 'SSH').toUpperCase();
                 port = serviceInfo?.port || (protocol === 'RDP' ? 3389 : 22);
 
-            } else if (acc.application) {
-                // Es un target tipo aplicación en Wallix, no un device directo
-                targetName = acc.application;
-                host = acc.application; // Usamos la app como placeholder de host
-                protocol = 'RDP'; // Generalmente se distribuyen por RemoteApp (RDP)
-                port = 3389;
-                alias = 'Wallix Application';
             } else {
                 continue; // No es ni device ni application
             }
@@ -996,9 +999,17 @@ class ImportService {
             let folderNames = [groupName];
 
             const accountName = acc.account || '';
-            // El servicio de la API (e.g. "SSH", "SSH_TACACS") se usa para el formato del proxy.
-            // Si no hay campo 'service' en la entrada usamos el protocolo resuelto del device.
-            const serviceLabel = (acc.service || protocol).toUpperCase();
+            // El servicio/protocolo para el proxy debe venir de la API de Wallix.
+            // Prioridad estricta basada en datos de respuesta:
+            // 1) acc.service
+            // 2) serviceInfo.service_name
+            // 3) serviceInfo.protocol
+            // 4) protocol (fallback técnico)
+            const serviceLabel = String(
+              acc.application
+                ? 'APP'
+                : (acc.service || serviceInfo?.service_name || serviceInfo?.protocol || protocol || 'SSH')
+            ).trim();
             const nodeName = accountName ? `${targetName} (${accountName})` : targetName;
 
             for (let folder of folderNames) {
@@ -1033,15 +1044,38 @@ class ImportService {
                 const effectiveAccount = accountName || username;
                 const proxyUsername = `${effectiveAccount}@${accountDomain}@${targetName}:${serviceLabel}:${username}`;
 
+                const transportPort = protocol === 'RDP'
+                  ? 3389
+                  : (parseInt(port, 10) || 22);
+
                 const connObj = {
                     name: nodeName,
                     hostname: bastionHostname,
-                    port: protocol === 'RDP' ? 3389 : 22,
+                    // En Wallix, el transporte va al bastión:
+                    // - SSH  -> 22
+                    // - RDP  -> 3389
+                    // El puerto del servicio objetivo queda implícito en el proxyUsername.
+                    port: transportPort,
                     username: proxyUsername,
                     password: password, // Credencial Wallix del usuario que importa
                     protocol: protocol,
                     description: alias
                 };
+
+                // DEBUG: cadena de conexión efectiva generada por importación Wallix
+                // (para comparar 1:1 con conexiones creadas manualmente)
+                if (protocol === 'RDP') {
+                  console.log('[WallixImport][RDP] cadena generada', {
+                    nodeName,
+                    bastionHost: bastionHostname,
+                    transportPort,
+                    proxyUsername,
+                    targetName,
+                    serviceLabel,
+                    accountDomain,
+                    importedFrom: 'Wallix'
+                  });
+                }
 
                 let converted;
                 if (this.isSSHProtocol(protocol)) {
@@ -1050,6 +1084,21 @@ class ImportService {
                     converted = this.createRDPNode(baseNode, connObj);
                 } else {
                     converted = this.createSSHNodeFromOther(baseNode, connObj);
+                }
+
+                // Marcar explícitamente como conexión de bastión para que use el flujo Wallix
+                // (el mismo que usan las conexiones configuradas manualmente).
+                if (converted?.data) {
+                  converted.data.useBastionWallix = true;
+                  converted.data.bastionHost = bastionHostname;
+                  converted.data.bastionUser = proxyUsername;
+                  converted.data.targetServer = targetName;
+                  converted.data.wallixService = serviceLabel;
+                  // Para Wallix+RDP con Guacamole, "rdp" suele ser más estable que "any"
+                  // al evitar negociación automática hacia NLA/TLS no compatibles.
+                  if (protocol === 'RDP') {
+                    converted.data.guacSecurity = 'rdp';
+                  }
                 }
 
                 groups[folder].push(converted);
@@ -1094,15 +1143,31 @@ class ImportService {
                   // Huérfanos no tienen group ni account, pasamos el target directo
                   const proxyUsername = `${d.device_name}:${protocol}:${username}`;
 
+                  const transportPort = protocol === 'RDP'
+                    ? 3389
+                    : (parseInt(port, 10) || 22);
+
                   const connObj = {
                       name: nodeName,
                       hostname: bastionHostname,
-                      port: protocol === 'RDP' ? 3389 : 22,
+                      port: transportPort,
                       username: proxyUsername,
                       password: password, // Credencial Wallix del usuario que importa
                       protocol: protocol,
                       description: `Alias: ${d.alias || ''}`
                   };
+
+                  if (protocol === 'RDP') {
+                    console.log('[WallixImport][RDP orphan] cadena generada', {
+                      nodeName,
+                      bastionHost: bastionHostname,
+                      transportPort,
+                      proxyUsername,
+                      targetName: d.device_name,
+                      serviceLabel: protocol,
+                      importedFrom: 'Wallix'
+                    });
+                  }
 
                   let converted;
                   if (this.isSSHProtocol(protocol)) {
@@ -1111,6 +1176,17 @@ class ImportService {
                       converted = this.createRDPNode(baseNode, connObj);
                   } else {
                       converted = this.createSSHNodeFromOther(baseNode, connObj);
+                  }
+
+                  if (converted?.data) {
+                    converted.data.useBastionWallix = true;
+                    converted.data.bastionHost = bastionHostname;
+                    converted.data.bastionUser = proxyUsername;
+                    converted.data.targetServer = d.device_name;
+                    converted.data.wallixService = protocol;
+                    if (protocol === 'RDP') {
+                      converted.data.guacSecurity = 'rdp';
+                    }
                   }
 
                   groups[folder].push(converted);

@@ -638,6 +638,22 @@ export const useConnectionManagement = ({
         span: baseRdp.span === true
       };
 
+      // DEBUG: cadena efectiva enviada a Guacamole al conectar RDP
+      // Permite comparar manual vs importado (Wallix) en el punto real de conexión.
+      try {
+        const sourceType = (baseRdp.useBastionWallix || baseRdp.bastionUser || baseRdp.targetServer) ? 'wallix' : 'normal';
+        console.log('[RDP Connect][Guacamole] config efectiva', {
+          sourceType,
+          name: node.label || node.name || 'RDP Connection',
+          hostname: rdpConfig.hostname,
+          port: rdpConfig.port,
+          username: rdpConfig.username,
+          security: rdpConfig.security || 'any',
+          autoResize: rdpConfig.autoResize,
+          colorDepth: rdpConfig.colorDepth
+        });
+      } catch (_) { /* noop */ }
+
       // Crear pestaña RDP-Guacamole igual que SSH
       setRdpTabs(prevTabs => {
         const tabId = `${node.key || node.id || 'rdp'}_${Date.now()}`;
