@@ -19,7 +19,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
   const [activeIndex, setActiveIndex] = useState(-1);
   const [passwordNodes, setPasswordNodes] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
-  const MIN_SEARCH_CHARS = 6;
+  const MIN_SEARCH_CHARS = 3;
   const lastAutoExpandedSignatureRef = useRef('');
 
   // Cache para passwords y conexiones aplanados
