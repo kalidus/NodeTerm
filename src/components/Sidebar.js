@@ -1812,7 +1812,8 @@ const Sidebar = React.memo(({
   // };
   // nodeTemplate adaptado de App.js
   const nodeTemplate = (node, options) => {
-    const isFolder = node.droppable;
+    const hasChildren = Array.isArray(node.children) && node.children.length > 0;
+    const isFolder = !!(node.droppable || hasChildren);
     const isSSH = node.data && node.data.type === 'ssh';
     const isRDP = node.data && node.data.type === 'rdp';
     const isVNC = node.data && (node.data.type === 'vnc' || node.data.type === 'vnc-guacamole');
@@ -2167,9 +2168,26 @@ const Sidebar = React.memo(({
     // Detectar si tiene icono personalizado (para ajustar alineación del texto)
     const hasCustomFolderIcon = isFolder && node.folderIcon && node.folderIcon !== 'general' && FolderIconPresets[node.folderIcon.toUpperCase()];
 
+    const handleFolderRowClick = (e) => {
+      if (!isFolder) return;
+      // Evitar conflicto con acciones específicas dentro del nodo (ej: refresh Wallix)
+      if (e.target && typeof e.target.closest === 'function' && e.target.closest('.pi-refresh')) return;
+      setExpandedKeys((prev) => {
+        const current = prev || {};
+        const next = { ...current };
+        if (next[node.key]) {
+          delete next[node.key];
+        } else {
+          next[node.key] = true;
+        }
+        return next;
+      });
+    };
+
     // Render básico, puedes añadir acciones/contextual aquí
     return (
       <div className="flex align-items-center gap-1"
+        onClick={handleFolderRowClick}
         onContextMenu={options.onNodeContextMenu ? (e) => options.onNodeContextMenu(e, node) : undefined}
         onDoubleClick={(e) => {
           e.stopPropagation();

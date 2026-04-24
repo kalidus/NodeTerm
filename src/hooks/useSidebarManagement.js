@@ -4,13 +4,90 @@ import { unblockAllInputs } from '../utils/formDebugger';
 import localStorageSyncService from '../services/LocalStorageSyncService';
 import { STORAGE_KEYS, GROUP_KEYS } from '../utils/constants';
 
+function normalizeTreeNodes(inputNodes) {
+  const seenKeys = new Set();
+  let fixedCount = 0;
+  let uniqueCounter = 0;
+  let changed = false;
+
+  const normalizeNodeList = (nodeList, parentPath = 'root') => {
+    if (!Array.isArray(nodeList)) return [];
+
+    return nodeList.map((node, index) => {
+      const safeNode = node && typeof node === 'object' ? { ...node } : {};
+      const fallbackKey = `node_${parentPath}_${index}`;
+      const candidateKey = safeNode.key != null ? String(safeNode.key) : fallbackKey;
+
+      let uniqueKey = candidateKey;
+      if (!candidateKey || seenKeys.has(candidateKey)) {
+        uniqueCounter += 1;
+        uniqueKey = `${fallbackKey}__dedup_${uniqueCounter}`;
+        fixedCount += 1;
+        changed = true;
+      }
+
+      seenKeys.add(uniqueKey);
+      if (safeNode.key !== uniqueKey) {
+        safeNode.key = uniqueKey;
+        changed = true;
+      }
+
+      if (safeNode.uid == null || safeNode.uid === '') {
+        safeNode.uid = uniqueKey;
+        changed = true;
+      }
+
+      if (Array.isArray(safeNode.children)) {
+        safeNode.children = normalizeNodeList(safeNode.children, `${parentPath}_${index}`);
+      }
+
+      if (safeNode.droppable && !Array.isArray(safeNode.children)) {
+        safeNode.children = [];
+        changed = true;
+      }
+
+      // Compatibilidad con datos legacy/importados:
+      // si un nodo trae hijos pero no marca "droppable", tratarlo como carpeta.
+      if (Array.isArray(safeNode.children) && safeNode.children.length > 0 && !safeNode.droppable) {
+        safeNode.droppable = true;
+        changed = true;
+      }
+
+      if (safeNode.droppable) {
+        if (safeNode.leaf !== false) {
+          safeNode.leaf = false;
+          changed = true;
+        }
+      }
+
+      // Evitar conflicto entre estado interno del nodo y expandedKeys controlado.
+      // En Sidebar usamos expandedKeys como única fuente de verdad para expand/collapse.
+      if (Object.prototype.hasOwnProperty.call(safeNode, 'expanded')) {
+        delete safeNode.expanded;
+        changed = true;
+      }
+
+      return safeNode;
+    });
+  };
+
+  const normalized = normalizeNodeList(inputNodes);
+  return { normalized, fixedCount, changed };
+}
+
 export const useSidebarManagement = (toast, tabManagementProps = {}) => {
   // === ESTADO DEL SIDEBAR ===
   const [nodes, setNodes] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.TREE_DATA);
 
     try {
-      return saved ? JSON.parse(saved) : [];
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      const { normalized, fixedCount } = normalizeTreeNodes(parsed);
+      if (fixedCount > 0) {
+        console.warn(`[useSidebarManagement] Se normalizaron ${fixedCount} keys duplicadas/inválidas en el árbol`);
+      }
+      return normalized;
     } catch (error) {
       console.error('Error parsing tree data:', error);
       return [];
@@ -36,7 +113,12 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
       if (saved) {
         console.log('[useSidebarManagement] Recargando nodos desde localStorage...');
         isExternalReloadRef.current = true;
-        setNodes(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        const { normalized, fixedCount } = normalizeTreeNodes(parsed);
+        if (fixedCount > 0) {
+          console.warn(`[useSidebarManagement] Se normalizaron ${fixedCount} keys duplicadas/inválidas durante reload`);
+        }
+        setNodes(normalized);
       }
     } catch (e) {
       console.error('[useSidebarManagement] Error recargando nodos:', e);
@@ -108,7 +190,12 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
             // Solo actualizar nodes si NO hay datos encriptados (porque los encriptados mandan)
             if (!remoteEncrypted) {
                 isExternalReloadRef.current = true;
-                setNodes(JSON.parse(remoteJson));
+                const parsed = JSON.parse(remoteJson);
+                const { normalized, fixedCount } = normalizeTreeNodes(parsed);
+                if (fixedCount > 0) {
+                  console.warn(`[useSidebarManagement] Se normalizaron ${fixedCount} keys duplicadas/inválidas en sync`);
+                }
+                setNodes(normalized);
             }
         }
 
@@ -232,6 +319,18 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
 
   // === ESTADO DE EXPANSIÓN GLOBAL ===
   const [allExpanded, setAllExpanded] = useState(false);
+
+  // Auto-saneo en caliente: corrige nodos legacy/duplicados tras cambios locales
+  useEffect(() => {
+    const { normalized, fixedCount, changed } = normalizeTreeNodes(nodes || []);
+    if (!changed) return;
+
+    if (fixedCount > 0) {
+      console.warn(`[useSidebarManagement] Auto-normalización aplicada (${fixedCount} keys corregidas)`);
+    }
+
+    setNodes(normalized);
+  }, [nodes]);
 
   // Función para expandir o plegar solo las carpetas de primer nivel
   const toggleExpandAll = useCallback(() => {
