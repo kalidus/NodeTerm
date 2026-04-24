@@ -129,6 +129,37 @@ const getNodeFolderPath = (nodes, targetNode) => {
 	return findFolderPath(nodes, targetNode);
 };
 
+const findNodePath = (nodes, targetNode) => {
+	const findPath = (nodeList, target, currentPath = []) => {
+		if (!nodeList) return null;
+		for (const node of nodeList) {
+			const newPath = [...currentPath, node.key];
+
+			if (node.key === target.key) {
+				return newPath;
+			}
+
+			if (node.children && node.children.length > 0) {
+				const foundPath = findPath(node.children, target, newPath);
+				if (foundPath) return foundPath;
+			}
+		}
+		return null;
+	};
+
+	return findPath(nodes, targetNode);
+};
+
+const expandNodePath = (nodePath, currentExpandedKeys = {}) => {
+	if (!nodePath || nodePath.length === 0) return currentExpandedKeys;
+
+	const newExpandedKeys = { ...currentExpandedKeys };
+	for (let i = 0; i < nodePath.length - 1; i++) {
+		newExpandedKeys[nodePath[i]] = true;
+	}
+	return newExpandedKeys;
+};
+
 const ConnectionHistory = ({
 	onConnectToHistory,
 	recentConnections = [],
@@ -185,6 +216,8 @@ const ConnectionHistory = ({
 	const [isSearching, setIsSearching] = useState(false);
 	const [showDropdown, setShowDropdown] = useState(false);
 	const [activeIndex, setActiveIndex] = useState(-1);
+	const MIN_SEARCH_CHARS = 6;
+	const lastAutoExpandedSignatureRef = useRef('');
 	const [activeBottomView, setActiveBottomView] = useState('all');
 	const themePickerRef = useRef(null);
 	const uiThemePickerRef = useRef(null);
@@ -516,7 +549,7 @@ const ConnectionHistory = ({
 	// L\u00F3gica de b\u00FAsqueda debounced
 	useEffect(() => {
 		const timeoutId = setTimeout(() => {
-			if (searchTerm.trim()) {
+			if (searchTerm.trim().length >= MIN_SEARCH_CHARS) {
 				setIsSearching(true);
 				const performSearch = () => {
 					try {
@@ -556,7 +589,7 @@ const ConnectionHistory = ({
 						setFilteredSearchResults(filtered);
 						setShowDropdown(filtered.length > 0);
 						setIsSearching(false);
-						setActiveIndex(-1);
+						setActiveIndex(filtered.length > 0 ? 0 : -1);
 					} catch (err) {
 						console.error('Search error:', err);
 						setIsSearching(false);
@@ -572,11 +605,12 @@ const ConnectionHistory = ({
 				setFilteredSearchResults([]);
 				setShowDropdown(false);
 				setIsSearching(false);
+				setActiveIndex(-1);
 			}
 		}, 300);
 
 		return () => clearTimeout(timeoutId);
-	}, [searchTerm, sidebarNodes, passwordNodes, findAllSidebarConnections, findAllPasswords]);
+	}, [searchTerm, sidebarNodes, passwordNodes, findAllSidebarConnections, findAllPasswords, MIN_SEARCH_CHARS]);
 
 	// Cerrar dropdown al hacer click fuera
 	useEffect(() => {
@@ -588,6 +622,41 @@ const ConnectionHistory = ({
 		document.addEventListener('mousedown', handleClickOutside);
 		return () => document.removeEventListener('mousedown', handleClickOutside);
 	}, [showDropdown]);
+
+	// Auto-expandir la ruta de todos los resultados visibles sin requerir Enter.
+	useEffect(() => {
+		if (!showDropdown) return;
+		if (searchTerm.trim().length < MIN_SEARCH_CHARS) return;
+		if (!filteredSearchResults.length) return;
+
+		const keysToExpand = filteredSearchResults.map((node) => node?.key).filter(Boolean);
+		if (!keysToExpand.length) return;
+		const signature = keysToExpand.join('|');
+		if (lastAutoExpandedSignatureRef.current === signature) return;
+		lastAutoExpandedSignatureRef.current = signature;
+
+		window.dispatchEvent(new CustomEvent('expand-sidebar'));
+
+		let mergedExpandedKeys = {};
+		try {
+			mergedExpandedKeys = JSON.parse(localStorage.getItem('basicapp2_sidebar_expanded_keys') || '{}');
+		} catch {
+			mergedExpandedKeys = {};
+		}
+
+		keysToExpand.forEach((nodeKey) => {
+			const node = filteredSearchResults.find((n) => n?.key === nodeKey);
+			if (!node) return;
+			const nodePath = findNodePath(sidebarNodes, node);
+			if (nodePath && nodePath.length > 1) {
+				mergedExpandedKeys = expandNodePath(nodePath, mergedExpandedKeys);
+			}
+		});
+
+		window.dispatchEvent(new CustomEvent('expand-node-path', {
+			detail: { expandedKeys: mergedExpandedKeys, nodeKey: keysToExpand[0] }
+		}));
+	}, [showDropdown, searchTerm, filteredSearchResults, sidebarNodes, MIN_SEARCH_CHARS]);
 
 	const handleSearchKeyDown = (e) => {
 		if (!showDropdown) return;
@@ -610,6 +679,25 @@ const ConnectionHistory = ({
 	const handleSelectSearchResult = (node) => {
 		setSearchTerm('');
 		setShowDropdown(false);
+		setActiveIndex(-1);
+
+		// Asegurar que la sidebar esté visible para percibir la expansión.
+		window.dispatchEvent(new CustomEvent('expand-sidebar'));
+
+		// Expandir en sidebar la ruta de la conexión seleccionada en el buscador del Home.
+		const nodePath = findNodePath(sidebarNodes, node);
+		if (nodePath && nodePath.length > 1) {
+			let savedExpandedKeys = {};
+			try {
+				savedExpandedKeys = JSON.parse(localStorage.getItem('basicapp2_sidebar_expanded_keys') || '{}');
+			} catch {
+				savedExpandedKeys = {};
+			}
+			const newExpandedKeys = expandNodePath(nodePath, savedExpandedKeys);
+			window.dispatchEvent(new CustomEvent('expand-node-path', {
+				detail: { expandedKeys: newExpandedKeys, nodeKey: node.key }
+			}));
+		}
 
 		const isPassword = node.data && node.data.type === 'password';
 		if (isPassword) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import appIcon from '../assets/app-icon.png';
 import { InputText } from 'primereact/inputtext';
@@ -16,8 +16,11 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
   const [isMaximized, setIsMaximized] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [filteredConnections, setFilteredConnections] = useState([]);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const [passwordNodes, setPasswordNodes] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const MIN_SEARCH_CHARS = 6;
+  const lastAutoExpandedSignatureRef = useRef('');
 
   // Cache para passwords y conexiones aplanados
   const [cachedAllItems, setCachedAllItems] = useState([]);
@@ -147,7 +150,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
   useEffect(() => {
     // Debouncing: esperar 200ms después de que el usuario deje de escribir
     const timeoutId = setTimeout(() => {
-      if (sidebarFilter.trim()) {
+      if (sidebarFilter.trim().length >= MIN_SEARCH_CHARS) {
         setIsSearching(true);
 
         // Realizar filtrado de manera asíncrona
@@ -190,6 +193,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
 
             setFilteredConnections(filtered);
             setShowDropdown(filtered.length > 0);
+            setActiveIndex(filtered.length > 0 ? 0 : -1);
             setIsSearching(false);
           } catch (error) {
             console.error('Error en búsqueda:', error);
@@ -206,13 +210,14 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
       } else {
         setFilteredConnections([]);
         setShowDropdown(false);
+        setActiveIndex(-1);
         setIsSearching(false);
       }
     }, 200); // Reducido a 200ms para respuesta más rápida
 
     // Limpiar timeout si el usuario sigue escribiendo
     return () => clearTimeout(timeoutId);
-  }, [sidebarFilter, cachedAllItems]);
+  }, [sidebarFilter, cachedAllItems, MIN_SEARCH_CHARS]);
 
   // Efecto para ocultar dropdown al hacer click fuera
   useEffect(() => {
@@ -228,9 +233,57 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
     }
   }, [showDropdown]);
 
+  // Auto-expandir la ruta de todos los resultados visibles sin requerir Enter.
+  useEffect(() => {
+    if (!showDropdown) return;
+    if (sidebarFilter.trim().length < MIN_SEARCH_CHARS) return;
+    if (!filteredConnections.length) return;
+
+    const keysToExpand = filteredConnections.map((node) => node?.key).filter(Boolean);
+    if (!keysToExpand.length) return;
+    const signature = keysToExpand.join('|');
+    if (lastAutoExpandedSignatureRef.current === signature) return;
+    lastAutoExpandedSignatureRef.current = signature;
+
+    window.dispatchEvent(new CustomEvent('expand-sidebar'));
+
+    let mergedExpandedKeys = { ...(expandedKeys || {}) };
+    keysToExpand.forEach((nodeKey) => {
+      const node = filteredConnections.find((n) => n?.key === nodeKey);
+      if (!node) return;
+      const nodePath = findNodePath(allNodes, node);
+      if (nodePath && nodePath.length > 1) {
+        mergedExpandedKeys = expandNodePath(nodePath, mergedExpandedKeys);
+      }
+    });
+
+    window.dispatchEvent(new CustomEvent('expand-node-path', {
+      detail: { expandedKeys: mergedExpandedKeys, nodeKey: keysToExpand[0] }
+    }));
+  }, [showDropdown, sidebarFilter, filteredConnections, allNodes, expandedKeys]);
+
   // Función para manejar el focus del input
   const handleInputFocus = () => {
     // El dropdown se muestra automáticamente en el useEffect
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (!showDropdown) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex((prev) => (prev < filteredConnections.length - 1 ? prev + 1 : prev));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex((prev) => (prev > 0 ? prev - 1 : prev));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (activeIndex >= 0 && activeIndex < filteredConnections.length) {
+        handleSelectConnection(filteredConnections[activeIndex]);
+      }
+    } else if (e.key === 'Escape') {
+      setShowDropdown(false);
+    }
   };
 
   // Banner para detectar cambios en fuentes vinculadas (usuario inicia revalidación bajo demanda)
@@ -476,6 +529,10 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
   const handleSelectConnection = (node) => {
     setSidebarFilter('');
     setShowDropdown(false);
+    setActiveIndex(-1);
+
+    // Asegurar que la sidebar esté visible para ver la expansión.
+    window.dispatchEvent(new CustomEvent('expand-sidebar'));
 
     // Encontrar la ruta de la conexión y expandir las carpetas padre
     const nodePath = findNodePath(allNodes, node);
@@ -485,7 +542,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
 
       // Disparar evento personalizado para que el componente padre actualice expandedKeys
       const expandEvent = new CustomEvent('expand-node-path', {
-        detail: { expandedKeys: newExpandedKeys }
+        detail: { expandedKeys: newExpandedKeys, nodeKey: node.key }
       });
       window.dispatchEvent(expandEvent);
     }
@@ -1191,6 +1248,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
           <InputText
             value={sidebarFilter}
             onChange={e => setSidebarFilter(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
             placeholder=""
             className="search-input"
             data-animation=""
@@ -1252,7 +1310,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                 scrollbarWidth: 'thin',
                 scrollbarColor: 'var(--ui-sidebar-selected, #00bfff) var(--ui-dialog-bg, #232629)',
               }}>
-              {filteredConnections.map(node => {
+              {filteredConnections.map((node, idx) => {
                 const isSSH = node.data && node.data.type === 'ssh';
                 const isRDP = node.data && node.data.type === 'rdp';
                 const isPassword = node.data && node.data.type === 'password';
@@ -1300,8 +1358,12 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                       borderRadius: '4px',
                       margin: '2px 4px',
                       minHeight: '60px',
+                      backgroundColor: activeIndex === idx ? 'var(--ui-sidebar-hover, #2a2d31)' : 'transparent',
+                      transform: activeIndex === idx ? 'translateY(-1px)' : 'translateY(0)',
+                      boxShadow: activeIndex === idx ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
                     }}
                     onMouseEnter={(e) => {
+                      setActiveIndex(idx);
                       e.currentTarget.style.backgroundColor = 'var(--ui-sidebar-hover, #2a2d31)';
                       e.currentTarget.style.transform = 'translateY(-1px)';
                       e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';

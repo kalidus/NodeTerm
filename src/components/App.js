@@ -2152,10 +2152,41 @@ const App = () => {
 
   // Escuchar eventos de expansión de nodos desde el buscador
   useEffect(() => {
+    const findNodePathByKey = (nodeList, targetKey, currentPath = []) => {
+      if (!nodeList || !targetKey) return null;
+      for (const node of nodeList) {
+        const nextPath = [...currentPath, node.key];
+        if (node.key === targetKey) return nextPath;
+        if (node.children && node.children.length > 0) {
+          const found = findNodePathByKey(node.children, targetKey, nextPath);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const buildExpandedKeysFromPath = (nodePath = [], baseExpanded = {}) => {
+      const merged = { ...(baseExpanded || {}) };
+      for (let i = 0; i < nodePath.length - 1; i++) {
+        merged[nodePath[i]] = true;
+      }
+      return merged;
+    };
+
     const handleExpandNodePath = (event) => {
-      const { expandedKeys: newExpandedKeys } = event.detail;
+      const { expandedKeys: newExpandedKeys, nodeKey } = event.detail || {};
+
       if (newExpandedKeys) {
-        setExpandedKeys(newExpandedKeys);
+        setExpandedKeys((prev) => ({ ...(prev || {}), ...newExpandedKeys }));
+        return;
+      }
+
+      if (nodeKey) {
+        const path = findNodePathByKey(nodes, nodeKey);
+        if (path && path.length > 1) {
+          setExpandedKeys((prev) => buildExpandedKeysFromPath(path, prev));
+          return;
+        }
       }
     };
 
@@ -2266,7 +2297,7 @@ const App = () => {
       window.removeEventListener('create-openclaw-tab', handleCreateOpenClawTab);
       window.removeEventListener('create-open-notebook-tab', handleCreateOpenNotebookTab);
     };
-  }, [setExpandedKeys]);
+  }, [setExpandedKeys, nodes]);
 
   // Configurar callbacks RDP para el sidebar
   useEffect(() => {
