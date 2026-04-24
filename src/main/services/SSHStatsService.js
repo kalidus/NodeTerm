@@ -350,11 +350,18 @@ class SSHStatsService {
       return fallbackHost;
     }
 
-    const ipLine = parts[parts.length - 1].trim();
-    const ipCandidates = ipLine.split(/\s+/).filter(s => s && s !== '127.0.0.1' && s !== '::1');
+    // Buscar desde el final una linea con IP valida para soportar bloques extra al final.
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const line = (parts[i] || '').trim();
+      if (!line) continue;
+      const ipCandidates = line
+        .split(/\s+/)
+        .filter(s => s && s !== '127.0.0.1' && s !== '::1')
+        .filter(s => /^(\d{1,3}\.){3}\d{1,3}$/.test(s) || /^[0-9a-f:]+$/i.test(s));
 
-    if (ipCandidates.length > 0) {
-      return ipCandidates[ipCandidates.length - 1];
+      if (ipCandidates.length > 0) {
+        return ipCandidates[ipCandidates.length - 1];
+      }
     }
 
     return fallbackHost;
@@ -423,11 +430,13 @@ class SSHStatsService {
   parseDistro(parts, defaultDistro = 'linux') {
     let finalDistroId = defaultDistro;
     let versionId = '';
+    let osPrettyName = '';
 
     try {
       const idLine = parts.find(line => line.trim().startsWith('ID='));
       const idLikeLine = parts.find(line => line.trim().startsWith('ID_LIKE='));
       const versionIdLine = parts.find(line => line.trim().startsWith('VERSION_ID='));
+      const prettyNameLine = parts.find(line => line.trim().startsWith('PRETTY_NAME='));
 
       let rawDistro = '';
 
@@ -456,11 +465,22 @@ class SSHStatsService {
         const match = versionIdLine.match(/^VERSION_ID=("?)([^"\n]*)\1$/);
         if (match) versionId = match[2];
       }
+
+      if (prettyNameLine) {
+        const match = prettyNameLine.match(/^PRETTY_NAME=("?)([^"\n]*)\1$/);
+        if (match) osPrettyName = match[2];
+      }
     } catch (e) {
       // Ignorar errores de parsing
     }
 
-    return { distro: finalDistroId, versionId };
+    return { distro: finalDistroId, versionId, osPrettyName };
+  }
+
+  parseMarkerValue(parts, marker) {
+    const idx = parts.findIndex(line => line.trim() === marker);
+    if (idx <= 0) return '';
+    return (parts[idx - 1] || '').trim();
   }
 
   /**
@@ -476,6 +496,9 @@ class SSHStatsService {
       hostname,
       distro,
       versionId: '',
+      kernel: '',
+      arch: '',
+      osPrettyName: '',
       ip: host
     };
   }
@@ -491,7 +514,7 @@ class SSHStatsService {
 
       // Consolidar CPU, memoria, disco, uptime, red, IP y distro en una SOLA llamada de shell.
       // Esto es CRÍTICO para routers y bastiones que limitan canales/sesiones.
-      const command = `grep '^cpu' /proc/stat && echo "---CPU_END---" && free -b 2>/dev/null && echo "---MEM_END---" && df -P 2>/dev/null && echo "---DISK_END---" && uptime 2>/dev/null && echo "---UPTIME_END---" && cat /proc/net/dev 2>/dev/null && echo "---NET_END---" && (cat /etc/os-release 2>/dev/null || cat /usr/lib/os-release 2>/dev/null || echo "") && echo "---OS_END---" && (hostname -I 2>/dev/null || hostname -i 2>/dev/null || echo "")`;
+      const command = `grep '^cpu' /proc/stat && echo "---CPU_END---" && free -b 2>/dev/null && echo "---MEM_END---" && df -P 2>/dev/null && echo "---DISK_END---" && uptime 2>/dev/null && echo "---UPTIME_END---" && cat /proc/net/dev 2>/dev/null && echo "---NET_END---" && (cat /etc/os-release 2>/dev/null || cat /usr/lib/os-release 2>/dev/null || echo "") && echo "---OS_END---" && (uname -r 2>/dev/null || echo "") && echo "---KERNEL_END---" && (uname -m 2>/dev/null || echo "") && echo "---ARCH_END---" && (hostname -I 2>/dev/null || hostname -i 2>/dev/null || echo "")`;
 
       const rawOutput = await conn.ssh.exec(command);
       const parts = rawOutput.split('\n');
@@ -519,7 +542,9 @@ class SSHStatsService {
       }
 
       const ip = this.parseIP(parts, host);
-      const { distro, versionId } = this.parseDistro(parts, finalDistroId);
+      const { distro, versionId, osPrettyName } = this.parseDistro(parts, finalDistroId);
+      const kernel = this.parseMarkerValue(parts, '---KERNEL_END---');
+      const arch = this.parseMarkerValue(parts, '---ARCH_END---');
 
       return {
         cpu: cpuLoad,
@@ -529,6 +554,9 @@ class SSHStatsService {
         network,
         distro,
         versionId,
+        kernel,
+        arch,
+        osPrettyName,
         ip,
         cores,
         coreLoads: coreLoads || null,
@@ -552,7 +580,9 @@ class SSHStatsService {
         "vm_stat",
         "df -P",
         "uptime",
-        "networksetup -listallhardwareports" // Opcional, netstat es mejor
+        "networksetup -listallhardwareports", // Opcional, netstat es mejor
+        "uname -r",
+        "uname -m"
       ];
 
       // Ejecutar comandos en paralelo (o secuencial si el server es lento)
@@ -586,6 +616,9 @@ class SSHStatsService {
         network,
         distro: 'macos',
         versionId: '',
+        kernel: (results[7] || '').trim(),
+        arch: (results[8] || '').trim(),
+        osPrettyName: 'macOS',
         ip: host,
         cores,
         coreLoads: null,
@@ -686,7 +719,9 @@ class SSHStatsService {
       // Hostname, IP y distro
       const hostname = this.parseHostnameBastion(parts);
       const ip = this.parseIPBastion(parts, configHost);
-      const { distro, versionId } = this.parseDistro(parts);
+      const { distro, versionId, osPrettyName } = this.parseDistro(parts);
+      const kernel = this.parseMarkerValue(parts, '---KERNEL_END---');
+      const arch = this.parseMarkerValue(parts, '---ARCH_END---');
 
       return {
         cpu: cpuLoad,
@@ -696,6 +731,9 @@ class SSHStatsService {
         network,
         distro,
         versionId,
+        osPrettyName,
+        kernel,
+        arch,
         ip,
         cores,
         coreLoads: typeof coreLoads !== 'undefined' ? coreLoads : null,

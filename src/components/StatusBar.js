@@ -7,7 +7,7 @@ import { OverlayPanel } from 'primereact/overlaypanel';
 import { getVersionInfo } from '../version-info';
 import { statusBarIconThemes } from '../themes/statusbar-icon-themes';
 import { statusBarThemes } from '../themes/status-bar-themes';
-import { CpuPanel, MemPanel, NetPanel, DiskPanel, DiskSummaryPanel, GpuPanel, useMetricPopover } from './StatusBarMetricPopover';
+import { CpuPanel, MemPanel, NetPanel, DiskPanel, DiskSummaryPanel, GpuPanel, HostPanel, useMetricPopover } from './StatusBarMetricPopover';
 
 const CpuSparkline = ({ history }) => (
     <div className="sparkline-container">
@@ -265,8 +265,9 @@ const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkD
             <div className="status-group" style={{ flex: 1 }}>
                 {(hostname || distro || ip) && (
                     <div
-                        className="status-bar-section hostname-section"
+                        className="status-bar-section hostname-section sbpop-trigger"
                         title={`Host: ${hostname || ip || 'Unknown'} | IP: ${ip || 'N/A'} | Platform: ${distro || 'linux'}`}
+                        {...makeHoverProps('host')}
                     >
                         <DistroIcon distro={distro} />
                         <span>{(hostname && hostname !== 'unknown' && hostname !== 'localhost') ? hostname : (ip || hostname || 'Unknown')}</span>
@@ -434,6 +435,9 @@ const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkD
             )}
             {popOpen?.type === 'gpu' && gpuStats && (
                 <GpuPanel gpuStats={gpuStats} sessionHistory={sessionHistory} anchorRect={popOpen.rect} onClose={closePopover} onStay={cancelClose} />
+            )}
+            {popOpen?.type === 'host' && (
+                <HostPanel stats={stats} anchorRect={popOpen.rect} onClose={closePopover} onStay={cancelClose} />
             )}
             {popOpen?.type === 'disk' && Array.isArray(disk) && disk[popOpen.diskIndex] && (
                 <DiskPanel disk={disk[popOpen.diskIndex]} anchorRect={popOpen.rect} onClose={closePopover} onStay={cancelClose} />

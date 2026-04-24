@@ -390,6 +390,53 @@ export const NetPanel = ({ stats, sessionHistory, anchorRect, onClose, onStay })
     );
 };
 
+export const HostPanel = ({ stats, anchorRect, onClose, onStay }) => {
+    const hostColor = '#7ab8ff';
+    const hostname = stats?.hostname || 'Unknown';
+    const distro = stats?.distro || 'linux';
+    const versionId = stats?.versionId || '';
+    const kernel = stats?.kernel || '';
+    const platform = stats?.platform || '';
+    const arch = stats?.arch || '';
+    const osPrettyName = stats?.osPrettyName || '';
+    const kernelLabel = kernel || 'N/A';
+    const archLabel = arch || 'N/A';
+
+    const distroLabel = String(distro).toUpperCase();
+    const osLabel = osPrettyName || `${distroLabel}${versionId ? ` ${versionId}` : ''}`;
+
+    return (
+        <MetricPopover anchorRect={anchorRect} onMouseEnter={onStay} onMouseLeave={onClose}>
+            <div className="sbpop-header">
+                <span className="sbpop-label" style={{ color: hostColor }}>HOST</span>
+                <span className="sbpop-sublabel">{hostname}</span>
+            </div>
+            <div className="sbpop-row">
+                <span className="sbpop-key">Hostname</span>
+                <span className="sbpop-val">{hostname}</span>
+            </div>
+            <div className="sbpop-row">
+                <span className="sbpop-key">Sistema</span>
+                <span className="sbpop-val">{osLabel}</span>
+            </div>
+            <div className="sbpop-row">
+                <span className="sbpop-key">Kernel</span>
+                <span className="sbpop-val">{kernelLabel}</span>
+            </div>
+            {platform && (
+                <div className="sbpop-row sbpop-dim">
+                    <span className="sbpop-key">Plataforma</span>
+                    <span className="sbpop-val">{platform}</span>
+                </div>
+            )}
+            <div className="sbpop-row sbpop-dim">
+                <span className="sbpop-key">Arquitectura</span>
+                <span className="sbpop-val">{archLabel}</span>
+            </div>
+        </MetricPopover>
+    );
+};
+
 export const DiskPanel = ({ disk, anchorRect, onClose, onStay }) => {
     if (!disk) return null;
     const diskColor = '#ffd580';

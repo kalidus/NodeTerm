@@ -226,7 +226,10 @@ function registerCriticalHandlers(dependencies) {
         disks: [],
         network: { download: 0, upload: 0 },
         hostname: os.hostname(),
-        platform: process.platform
+        platform: process.platform,
+        arch: os.arch(),
+        kernel: os.release(),
+        osVersion: (typeof os.version === 'function' ? os.version() : '')
       };
     }
   });

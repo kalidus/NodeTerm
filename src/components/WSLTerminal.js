@@ -31,6 +31,9 @@ const WSLTerminal = forwardRef(({
         try { return localStorage.getItem('localLinuxStatusBarTheme') || localStorage.getItem('basicapp_statusbar_theme') || 'Default Dark'; } catch { return 'Default Dark'; }
     });
     const [distroId, setDistroId] = useState('ubuntu');
+    const [linuxKernel, setLinuxKernel] = useState('');
+    const [linuxArch, setLinuxArch] = useState('');
+    const [linuxPrettyName, setLinuxPrettyName] = useState('');
     const [showNetworkDisks, setShowNetworkDisks] = useState(() => {
         try { return (localStorage.getItem('localShowNetworkDisks') || 'true') === 'true'; } catch { return true; }
     });
@@ -68,10 +71,27 @@ const WSLTerminal = forwardRef(({
                                 setDistroId(match[2].toLowerCase());
                             }
                         }
+                        if (text.includes('PRETTY_NAME=')) {
+                            const prettyMatch = text.match(/\bPRETTY_NAME=("?)([^"\n]+)\1/);
+                            if (prettyMatch && prettyMatch[2]) {
+                                setLinuxPrettyName(prettyMatch[2]);
+                            }
+                        }
+                        const kernelMatch = text.match(/\bKERNEL=([^\r\n]+)/);
+                        if (kernelMatch && kernelMatch[1]) {
+                            setLinuxKernel(kernelMatch[1].trim());
+                        }
+                        const archMatch = text.match(/\bARCH=([^\r\n]+)/);
+                        if (archMatch && archMatch[1]) {
+                            setLinuxArch(archMatch[1].trim());
+                        }
                     } catch { }
                 };
                 const unsubscribe = window.electron?.ipcRenderer.on(`wsl:data:${tabId}`, handler);
-                window.electron?.ipcRenderer.send(`wsl:data:${tabId}`, 'cat /etc/os-release\n');
+                window.electron?.ipcRenderer.send(
+                    `wsl:data:${tabId}`,
+                    'echo "KERNEL=$(uname -r)"; echo "ARCH=$(uname -m)"; cat /etc/os-release\n'
+                );
                 setTimeout(() => { try { if (typeof unsubscribe === 'function') unsubscribe(); } catch { } }, 1200);
             } catch { }
         };
@@ -127,6 +147,11 @@ const WSLTerminal = forwardRef(({
                     hostname: systemStats.hostname || undefined,
                     ip: systemStats.ip || undefined,
                     distro: distroId || 'ubuntu',
+                    versionId: systemStats.osVersion || '',
+                    kernel: linuxKernel || '',
+                    platform: 'linux',
+                    arch: linuxArch || systemStats.arch || '',
+                    osPrettyName: linuxPrettyName || '',
                     cpuMeta: {
                         cores: systemStats.cpu?.cores || 0,
                         model: systemStats.cpu?.model || '',
@@ -150,7 +175,7 @@ const WSLTerminal = forwardRef(({
             window.removeEventListener('focus', handleFocus);
             window.removeEventListener('blur', handleBlur);
         };
-    }, [distroId]);
+    }, [distroId, linuxKernel, linuxArch, linuxPrettyName]);
 
     useEffect(() => {
         const onStorage = (e) => {

@@ -23,7 +23,12 @@ let lastValidStats = {
   network: { download: 0, upload: 0 },
   hostname: '',
   ip: '',
-  temperature: { cpu: 0, gpu: 0 }
+  temperature: { cpu: 0, gpu: 0 },
+  platform: process.platform,
+  arch: os.arch(),
+  kernel: os.release(),
+  osVersion: (typeof os.version === 'function' ? os.version() : ''),
+  osPrettyName: ''
 };
 
 async function getSystemStats() {
@@ -35,7 +40,12 @@ async function getSystemStats() {
     network: { ...lastValidStats.network },
     hostname: os.hostname(),
     ip: lastValidStats.ip || '',
-    temperature: { ...lastValidStats.temperature }
+    temperature: { ...lastValidStats.temperature },
+    platform: process.platform,
+    arch: os.arch(),
+    kernel: os.release(),
+    osVersion: (typeof os.version === 'function' ? os.version() : ''),
+    osPrettyName: lastValidStats.osPrettyName || ''
   };
 
   // Memoria (siempre disponible, actualizar directamente)
@@ -236,7 +246,12 @@ async function getSystemStats() {
     network: { ...stats.network },
     hostname: stats.hostname,
     ip: stats.ip,
-    temperature: { ...stats.temperature }
+    temperature: { ...stats.temperature },
+    platform: stats.platform,
+    arch: stats.arch,
+    kernel: stats.kernel,
+    osVersion: stats.osVersion,
+    osPrettyName: stats.osPrettyName
   };
 
   return stats;
