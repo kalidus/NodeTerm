@@ -7,6 +7,12 @@ class ImportService {
   // Contador para claves únicas durante la sesión
   static _idCounter = 0;
 
+  static sortNodesAlphabetically(nodes = []) {
+    return [...nodes].sort((a, b) =>
+      String(a?.label || '').localeCompare(String(b?.label || ''), 'es', { sensitivity: 'base' })
+    );
+  }
+
   static generateKey(prefix) {
     const randomPart = Math.floor(Math.random() * 1e6);
     return `${prefix}_${Date.now()}_${randomPart}_${ImportService._idCounter++}`;
@@ -925,12 +931,408 @@ class ImportService {
          devicesMap[d.device_name] = d;
       }
 
-      // 2. Obtener Grupos (Carpetas y accesos)
+      // 2. Fuente principal: Session Rights (derechos efectivos del usuario)
+      const normalizeListPayload = (payload) => {
+        if (Array.isArray(payload)) return payload;
+        if (payload && Array.isArray(payload.results)) return payload.results;
+        if (payload && Array.isArray(payload.items)) return payload.items;
+        if (payload && Array.isArray(payload.data)) return payload.data;
+        return [];
+      };
+
+      const sessionRightsEndpoints = ['/api/sessionrights?limit=-1', '/api/sessionrights'];
+      let sessionRights = [];
+      for (const ep of sessionRightsEndpoints) {
+        try {
+          const res = await fetch(`${baseUrl}${ep}`, { headers });
+          if (!res.ok) continue;
+          const payload = await res.json();
+          const list = normalizeListPayload(payload);
+          if (Array.isArray(list) && list.length > 0) {
+            sessionRights = list;
+            break;
+          }
+        } catch (_) {
+          // noop
+        }
+      }
+
+      if (sessionRights.length > 0) {
+        const groups = {};
+        const flatConnections = [];
+        let connectionCount = 0;
+        let folderCount = 0;
+        const seenCheck = new Set();
+
+        const inferProtocolFromRight = (right) => {
+          const p = String(right?.service_protocol || right?.target_protocol || right?.service || '').toUpperCase();
+          if (p.includes('RDP') || p === 'APP') return 'RDP';
+          if (p.includes('SSH')) return 'SSH';
+          return 'SSH';
+        };
+
+        for (const right of sessionRights) {
+          const rightType = String(right?.type || '').toLowerCase();
+          const isApp = rightType === 'application' || !!right?.application;
+          const targetName = isApp ? (right?.application || '') : (right?.device || '');
+          if (!targetName) continue;
+
+          const accountName = String(right?.account || '').trim();
+          const domain = String(right?.domain || 'default').trim() || 'default';
+          const serviceLabel = String(right?.service || right?.service_protocol || (isApp ? 'APP' : 'SSH')).trim().toUpperCase();
+          const protocol = inferProtocolFromRight(right);
+          const transportPort = protocol === 'RDP' ? 3389 : (parseInt(right?.service_port, 10) || 22);
+          const groupName = String(right?.target_group || right?.authorization || 'Session Rights').trim() || 'Session Rights';
+          const nodeName = accountName ? `${targetName} (${accountName})` : targetName;
+          const effectiveAccount = accountName || username;
+          const proxyUsername = `${effectiveAccount}@${domain}@${targetName}:${serviceLabel}:${username}`;
+          const dupKey = `${groupName}_${targetName}_${effectiveAccount}_${serviceLabel}_${transportPort}`;
+          if (seenCheck.has(dupKey)) continue;
+          seenCheck.add(dupKey);
+
+          if (!groups[groupName]) {
+            groups[groupName] = [];
+            folderCount++;
+          }
+
+          const baseKey = this.generateKey('imported_wallix_right');
+          const baseNode = {
+            key: baseKey,
+            label: nodeName,
+            uid: baseKey,
+            createdAt: new Date().toISOString(),
+            isUserCreated: true,
+            imported: true,
+            importedFrom: 'Wallix',
+            originalProtocol: protocol
+          };
+
+          const connObj = {
+            name: nodeName,
+            hostname: bastionHostname,
+            port: transportPort,
+            username: proxyUsername,
+            password: password,
+            protocol,
+            description: isApp
+              ? `Wallix Application${right?.application_description ? ` - ${right.application_description}` : ''}`
+              : `Alias: ${right?.device_alias || ''}`
+          };
+
+          let converted;
+          if (this.isSSHProtocol(protocol)) converted = this.createSSHNode(baseNode, connObj);
+          else if (protocol === 'RDP') converted = this.createRDPNode(baseNode, connObj);
+          else converted = this.createSSHNodeFromOther(baseNode, connObj);
+
+          if (converted?.data) {
+            converted.data.useBastionWallix = true;
+            converted.data.bastionHost = bastionHostname;
+            converted.data.bastionUser = proxyUsername;
+            converted.data.targetServer = targetName;
+            converted.data.wallixService = serviceLabel;
+          }
+
+          groups[groupName].push(converted);
+          flatConnections.push(converted);
+          connectionCount++;
+        }
+
+        const nodes = [];
+        const sortedGroups = Object.entries(groups).sort(([a], [b]) =>
+          String(a || '').localeCompare(String(b || ''), 'es', { sensitivity: 'base' })
+        );
+        for (const [groupName, children] of sortedGroups) {
+          const folderKey = this.generateKey('folder_wallix');
+          nodes.push({
+            key: folderKey,
+            uid: folderKey,
+            label: groupName,
+            droppable: true,
+            createdAt: new Date().toISOString(),
+            isUserCreated: true,
+            imported: true,
+            importedFrom: 'Wallix',
+            data: { type: 'folder', name: groupName },
+            children: this.sortNodesAlphabetically(children)
+          });
+        }
+
+        return {
+          success: true,
+          structure: {
+            nodes,
+            flatConnections,
+            connectionCount,
+            folderCount
+          },
+          connections: flatConnections,
+          count: connectionCount,
+          metadata: {
+            source: 'Wallix',
+            importDate: new Date().toISOString(),
+            wallixUrl: url,
+            wallixUsername: username,
+            wallixSourceMode: 'sessionrights'
+          }
+        };
+      }
+
+      // 3. Fallback legacy: TargetGroups + Authorizations + Sessions
+
       const groupsResponse = await fetch(`${baseUrl}/api/targetgroups?limit=-1`, { headers });
       if (!groupsResponse.ok) {
         throw new Error(`Error GET /api/targetgroups: ${groupsResponse.status} ${groupsResponse.statusText}`);
       }
-      const groupsData = await groupsResponse.json();
+      const groupsPayload = await groupsResponse.json();
+      const groupsData = normalizeListPayload(groupsPayload);
+
+      // 3. Mix con Authorizations (filtro de lo efectivamente autorizado)
+      // Prioridad:
+      // 1) /api/my_authorizations (efectivas del usuario)
+      // 2) fallback controlado a /api/authorizations (global) con filtros estrictos
+      const authEndpoints = [
+        '/api/my_authorizations?limit=-1',
+        '/api/my_authorizations',
+        '/api/authorizations?limit=-1',
+        '/api/authorizations'
+      ];
+      let sourceMode = 'targetgroups';
+      let authList = [];
+
+      // Resolver grupos del usuario para filtrar autorizaciones
+      // en esta instancia se obtienen desde /api/sessions (no existen /api/users/me ni /api/me).
+      const userGroupKeys = new Set();
+      const normalizeGroupKey = (v) => String(v || '').trim().toLowerCase();
+      const toArray = (v) => Array.isArray(v) ? v : (v ? [v] : []);
+
+      // Refuerzo opcional: usar /api/sessions como catálogo accesible de target_group.
+      // En algunas instancias, este endpoint expone "todas las sesiones con acceso".
+      const sessionDerivedTargetGroups = new Set();
+      const sessionsEndpoints = ['/api/sessions?limit=500', '/api/sessions?limit=-1', '/api/sessions'];
+      for (const ep of sessionsEndpoints) {
+        try {
+          const res = await fetch(`${baseUrl}${ep}`, { headers });
+          if (!res.ok) continue;
+          const payload = await res.json();
+          const sessions = normalizeListPayload(payload);
+          if (!Array.isArray(sessions) || sessions.length === 0) continue;
+
+          sessions.forEach((s) => {
+            // user_group observado en sesiones (útil para reforzar match de user_group)
+            if (s?.user_group) userGroupKeys.add(normalizeGroupKey(s.user_group));
+
+            if (s?.target_group) sessionDerivedTargetGroups.add(normalizeGroupKey(s.target_group));
+            const tgUrlId = extractUrlId(s?.url || s?.target_group_url || '');
+            if (tgUrlId) sessionDerivedTargetGroups.add(normalizeGroupKey(tgUrlId));
+          });
+
+          // Si este endpoint ya aportó datos útiles, no hace falta seguir
+          if (userGroupKeys.size > 0 || sessionDerivedTargetGroups.size > 0) break;
+        } catch (_) {
+          // noop
+        }
+      }
+
+      let usedGlobalAuthorizationsFallback = false;
+      for (const ep of authEndpoints) {
+        try {
+          const res = await fetch(`${baseUrl}${ep}`, { headers });
+          if (!res.ok) continue;
+          const payload = await res.json();
+          const list = normalizeListPayload(payload);
+          if (Array.isArray(list) && list.length > 0) {
+            if (ep.includes('/api/authorizations') && !ep.includes('/api/my_authorizations')) {
+              usedGlobalAuthorizationsFallback = true;
+            }
+            authList = list;
+            sourceMode = `mixed-targetgroups+authorizations (${ep})`;
+            break;
+          }
+        } catch (_) {
+          // noop: mantenemos fallback a targetgroups
+        }
+      }
+
+      if (!authList || authList.length === 0) {
+        throw new Error('No se pudieron obtener autorizaciones desde /api/my_authorizations ni /api/authorizations. Importación cancelada para evitar mostrar carpetas no autorizadas.');
+      }
+      if (usedGlobalAuthorizationsFallback) {
+        sourceMode = `${sourceMode} [fallback-global]`;
+        console.warn('[WallixImport] Usando fallback /api/authorizations por ausencia de /api/my_authorizations');
+      }
+
+      const normalizeSubprotocolToService = (value) => {
+        const v = String(value || '').toUpperCase();
+        if (!v) return null;
+        if (v.includes('SSH')) return 'SSH';
+        if (v.includes('RDP')) return 'RDP';
+        if (v.includes('APP') || v.includes('APPLICATION') || v.includes('REMOTEAPP')) return 'APP';
+        return v;
+      };
+
+      const extractUrlId = (v) => {
+        const s = String(v || '').trim();
+        if (!s) return '';
+        const match = s.match(/\/api\/targetgroups\/([^/?#]+)/i);
+        return match ? match[1] : '';
+      };
+      const collectTargetGroupRefsDeep = (node, out) => {
+        if (!node) return;
+        if (typeof node === 'string') {
+          const urlId = extractUrlId(node);
+          if (urlId) out.push(urlId);
+          return;
+        }
+        if (Array.isArray(node)) {
+          node.forEach((item) => collectTargetGroupRefsDeep(item, out));
+          return;
+        }
+        if (typeof node === 'object') {
+          const directId = node.id || node.target_group_id || node.targetGroupId;
+          if (directId) out.push(String(directId));
+          const directUrl = node.url || node.target_group_url || node.targetGroupUrl;
+          if (directUrl) {
+            const urlId = extractUrlId(directUrl);
+            if (urlId) out.push(urlId);
+          }
+          Object.entries(node).forEach(([k, v]) => {
+            const key = String(k || '').toLowerCase();
+            // Buscar explícitamente campos relacionados con target_group
+            if (key.includes('target_group') || key.includes('targetgroup')) {
+              collectTargetGroupRefsDeep(v, out);
+            }
+          });
+        }
+      };
+
+      const extractTargetGroupRefs = (auth) => {
+        // Match estricto: solo referencias explícitas de target_group.
+        // Evitamos campos ambiguos como auth.group_name que pueden representar
+        // el nombre de la autorización y provocar falsos positivos.
+        const idRefs = [];
+        const nameFallbackRefs = [];
+        const candidates = [
+          auth?.target_group,
+          auth?.targetGroup,
+          auth?.target_group_id,
+          auth?.target_groups,
+          auth?.targetGroups
+        ];
+        candidates.forEach((c) => {
+          toArray(c).forEach((item) => {
+            if (!item) return;
+            if (typeof item === 'string') {
+              const maybeIdFromUrl = extractUrlId(item);
+              if (maybeIdFromUrl) idRefs.push(maybeIdFromUrl);
+              else nameFallbackRefs.push(item);
+              return;
+            }
+            // Objeto target_group: priorizar id/url; usar nombre solo como fallback.
+            const objectId = item.id || extractUrlId(item.url || '');
+            if (objectId) idRefs.push(objectId);
+            else if (item.group_name || item.name) nameFallbackRefs.push(item.group_name || item.name);
+          });
+        });
+        // Refuerzo: escaneo profundo de claves target_group* para estructuras anidadas.
+        collectTargetGroupRefsDeep(auth, idRefs);
+
+        const refs = idRefs.length > 0 ? idRefs : nameFallbackRefs;
+        return refs.filter(Boolean).map(String);
+      };
+
+      const extractAuthorizationUserGroupRefs = (auth) => {
+        const refs = [];
+        const candidates = [auth?.user_group, auth?.userGroup, auth?.user_groups, auth?.userGroups, auth?.groups];
+        candidates.forEach((c) => {
+          toArray(c).forEach((item) => {
+            if (!item) return;
+            if (typeof item === 'string') {
+              refs.push(item);
+            } else {
+              refs.push(item.id, item.group_name, item.name, item.url);
+            }
+          });
+        });
+        return refs.filter(Boolean).map((v) => normalizeGroupKey(v));
+      };
+
+      const authByTargetGroup = new Map();
+      let filteredByUserGroup = 0;
+      let filteredByMissingUserGroup = 0;
+      const ensureAuthAggregate = (key) => {
+        const k = normalizeGroupKey(key);
+        if (!k) return null;
+        if (!authByTargetGroup.has(k)) {
+          authByTargetGroup.set(k, {
+            hasAny: false,
+            hasAnyAuthorizeTrue: false,
+            hasAnyAuthorizeFalse: false,
+            allowedSubprotocols: new Set()
+          });
+        }
+        return authByTargetGroup.get(k);
+      };
+      for (const a of authList) {
+        const authUserGroups = extractAuthorizationUserGroupRefs(a);
+        if (userGroupKeys.size > 0) {
+          // Modo estricto: si conocemos los grupos del usuario, exigimos match explícito.
+          // Si la autorización no trae user_group/userGroups, se descarta por ambigua.
+          if (authUserGroups.length === 0) {
+            filteredByMissingUserGroup += 1;
+            continue;
+          }
+          const matchesUserGroup = authUserGroups.some((g) => userGroupKeys.has(g));
+          if (!matchesUserGroup) {
+            filteredByUserGroup += 1;
+            continue;
+          }
+        }
+
+        const refs = extractTargetGroupRefs(a);
+        if (refs.length === 0) continue;
+
+        const authorizeSessions = a?.authorize_sessions;
+        const allowed = new Set();
+        const subs = Array.isArray(a?.subprotocols) ? a.subprotocols : [];
+        subs.forEach((sp) => {
+          const normalized = normalizeSubprotocolToService(sp);
+          if (normalized) allowed.add(normalized);
+        });
+
+        refs.forEach((ref) => {
+          const aggDirect = ensureAuthAggregate(ref);
+          if (aggDirect) {
+            aggDirect.hasAny = true;
+            if (authorizeSessions === true) aggDirect.hasAnyAuthorizeTrue = true;
+            if (authorizeSessions === false) aggDirect.hasAnyAuthorizeFalse = true;
+            // Unir subprotocols permitidos solo si no está explícitamente denegada la sesión
+            if (authorizeSessions !== false) {
+              allowed.forEach((p) => aggDirect.allowedSubprotocols.add(p));
+            }
+          }
+
+          const refUrlId = extractUrlId(ref);
+          if (refUrlId) {
+            const aggUrlId = ensureAuthAggregate(refUrlId);
+            if (aggUrlId) {
+              aggUrlId.hasAny = true;
+              if (authorizeSessions === true) aggUrlId.hasAnyAuthorizeTrue = true;
+              if (authorizeSessions === false) aggUrlId.hasAnyAuthorizeFalse = true;
+              if (authorizeSessions !== false) {
+                allowed.forEach((p) => aggUrlId.allowedSubprotocols.add(p));
+              }
+            }
+          }
+        });
+      }
+
+      const hasAuthorizationsFilter = authList.length > 0;
+      const hasSessionTargetGroupFilter = sessionDerivedTargetGroups.size > 0;
+      let filteredByAuthorizeSessions = 0;
+      let filteredBySubprotocol = 0;
+      let filteredByNoAuthorizationMatch = 0;
+      let filteredBySessionTargetGroup = 0;
+      let groupsEvaluated = 0;
 
       const groups = {};
       const flatConnections = [];
@@ -941,7 +1343,43 @@ class ImportService {
       const mappedDevices = new Set();
 
       for (const group of groupsData) {
+        groupsEvaluated += 1;
         const groupName = group.group_name || 'Wallix TargetGroups';
+        const groupId = group.id || extractUrlId(group.url || '');
+        const groupKeyName = normalizeGroupKey(groupName);
+        const groupKeyId = normalizeGroupKey(groupId);
+        const groupAuth = authByTargetGroup.get(normalizeGroupKey(groupName))
+          || authByTargetGroup.get(normalizeGroupKey(groupId))
+          || authByTargetGroup.get(normalizeGroupKey(group.url || ''));
+
+        // Filtro por sessions: si está disponible, el grupo debe aparecer ahí.
+        if (hasSessionTargetGroupFilter) {
+          const inSessions = sessionDerivedTargetGroups.has(groupKeyName) || sessionDerivedTargetGroups.has(groupKeyId);
+          if (!inSessions) {
+            filteredBySessionTargetGroup += 1;
+            continue;
+          }
+        }
+
+        // Modo estricto: si hay authorizations disponibles, solo importar grupos
+        // explícitamente referenciados por esas autorizaciones.
+        if (hasAuthorizationsFilter && !groupAuth) {
+          filteredByNoAuthorizationMatch += 1;
+          continue;
+        }
+
+        const groupAllowed = groupAuth?.allowedSubprotocols || null;
+        // Denegar solo si existen autorizaciones y TODAS bloquean sesiones.
+        const groupSessionsDenied = Boolean(
+          groupAuth?.hasAny &&
+          groupAuth?.hasAnyAuthorizeFalse &&
+          !groupAuth?.hasAnyAuthorizeTrue
+        );
+
+        if (groupSessionsDenied) {
+          filteredByAuthorizeSessions += 1;
+          continue;
+        }
         
         let accounts = [];
         if (group.session) {
@@ -1010,6 +1448,21 @@ class ImportService {
                 ? 'APP'
                 : (acc.service || serviceInfo?.service_name || serviceInfo?.protocol || protocol || 'SSH')
             ).trim();
+            const normalizedService = normalizeSubprotocolToService(serviceLabel) || serviceLabel.toUpperCase();
+            const isApplicationTarget = !!acc.application;
+
+            // Si hay autorizaciones de grupo, filtrar solo subprotocolos permitidos
+            if (groupAllowed && groupAllowed.size > 0) {
+                // Compatibilidad Wallix:
+                // Muchas autorizaciones de aplicaciones publicadas declaran subprotocolo "RDP"
+                // aunque la cadena proxy del target use servicio "APP".
+                const appAllowedViaRdp = isApplicationTarget && normalizedService === 'APP' && groupAllowed.has('RDP');
+                const allowed = groupAllowed.has(normalizedService) || appAllowedViaRdp;
+                if (!allowed) {
+                    filteredBySubprotocol += 1;
+                    continue;
+                }
+            }
             const nodeName = accountName ? `${targetName} (${accountName})` : targetName;
 
             for (let folder of folderNames) {
@@ -1103,93 +1556,14 @@ class ImportService {
         }
       }
 
-      // 3. Procesar dispositivos huérfanos (que están en devices pero no tenían accounts en targetgroups)
-      const orphanGroupName = 'Otros Dispositivos (Sin Grupo)';
-      for (const d of devicesData) {
-          if (!mappedDevices.has(d.device_name)) {
-              
-              let serviceInfo = null;
-              if (d.services && d.services.length > 0) serviceInfo = d.services[0];
-              
-              let folderNames = [orphanGroupName];
-
-              const protocol = (serviceInfo?.protocol || 'SSH').toUpperCase();
-              const port = serviceInfo?.port || (protocol === 'RDP' ? 3389 : 22);
-              const nodeName = d.device_name;
-
-              for (let folder of folderNames) {
-                  if (!groups[folder]) {
-                      groups[folder] = [];
-                      folderCount++;
-                  }
-
-                  const baseKey = this.generateKey('imported_wallix_orphan');
-                  const baseNode = {
-                      key: baseKey,
-                      label: nodeName,
-                      uid: baseKey,
-                      createdAt: new Date().toISOString(),
-                      isUserCreated: true,
-                      imported: true,
-                      importedFrom: 'Wallix',
-                      originalProtocol: protocol
-                  };
-
-                  // Huérfanos no tienen group ni account, pasamos el target directo
-                  const proxyUsername = `${d.device_name}:${protocol}:${username}`;
-
-                  const transportPort = protocol === 'RDP'
-                    ? 3389
-                    : (parseInt(port, 10) || 22);
-
-                  const connObj = {
-                      name: nodeName,
-                      hostname: bastionHostname,
-                      port: transportPort,
-                      username: proxyUsername,
-                      password: password, // Credencial Wallix del usuario que importa
-                      protocol: protocol,
-                      description: `Alias: ${d.alias || ''}`
-                  };
-
-                  if (protocol === 'RDP') {
-                    console.log('[WallixImport][RDP orphan] cadena generada', {
-                      nodeName,
-                      bastionHost: bastionHostname,
-                      transportPort,
-                      proxyUsername,
-                      targetName: d.device_name,
-                      serviceLabel: protocol,
-                      importedFrom: 'Wallix'
-                    });
-                  }
-
-                  let converted;
-                  if (this.isSSHProtocol(protocol)) {
-                      converted = this.createSSHNode(baseNode, connObj);
-                  } else if (protocol === 'RDP') {
-                      converted = this.createRDPNode(baseNode, connObj);
-                  } else {
-                      converted = this.createSSHNodeFromOther(baseNode, connObj);
-                  }
-
-                  if (converted?.data) {
-                    converted.data.useBastionWallix = true;
-                    converted.data.bastionHost = bastionHostname;
-                    converted.data.bastionUser = proxyUsername;
-                    converted.data.targetServer = d.device_name;
-                    converted.data.wallixService = protocol;
-                  }
-
-                  groups[folder].push(converted);
-                  flatConnections.push(converted);
-                  connectionCount++;
-              }
-          }
-      }
+      // NOTA: No importar dispositivos huérfanos en Wallix.
+      // Solo se importan accesos explícitos de grupos/autorizaciones visibles.
 
       const nodes = [];
-      for (const [groupName, children] of Object.entries(groups)) {
+      const sortedGroups = Object.entries(groups).sort(([a], [b]) =>
+        String(a || '').localeCompare(String(b || ''), 'es', { sensitivity: 'base' })
+      );
+      for (const [groupName, children] of sortedGroups) {
         const folderKey = this.generateKey('folder_wallix');
         nodes.push({
           key: folderKey,
@@ -1201,7 +1575,7 @@ class ImportService {
           imported: true,
           importedFrom: 'Wallix',
           data: { type: 'folder', name: groupName },
-          children
+          children: this.sortNodesAlphabetically(children)
         });
       }
 
@@ -1219,7 +1593,22 @@ class ImportService {
             source: 'Wallix',
             importDate: new Date().toISOString(),
             wallixUrl: url,
-            wallixUsername: username
+            wallixUsername: username,
+            wallixSourceMode: sourceMode,
+            wallixFilterStats: {
+              groupsEvaluated,
+              authRecords: authList.length,
+              userGroupsDetected: userGroupKeys.size,
+              sessionDerivedTargetGroups: sessionDerivedTargetGroups.size,
+              filteredByUserGroup,
+              filteredByMissingUserGroup,
+              hasAuthorizationsFilter,
+              hasSessionTargetGroupFilter,
+              filteredBySessionTargetGroup,
+              filteredByNoAuthorizationMatch,
+              filteredByAuthorizeSessions,
+              filteredBySubprotocol
+            }
         }
       };
 
