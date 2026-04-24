@@ -2871,6 +2871,33 @@ const ConnectionHistory = ({
 							</div>
 							<div className="recents-header-right">
 								<button
+									className="recents-header-filter-btn"
+									onClick={(e) => {
+										e.stopPropagation();
+										const terminalType = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
+										if (onTerminalToggle) onTerminalToggle(true, terminalType, false);
+									}}
+									title="Abrir terminal"
+								>
+									<i className="pi pi-plus-circle" />
+								</button>
+								<button
+									className="recents-header-filter-btn"
+									onClick={() => setActiveBottomView('recent')}
+									title="Ir a recientes"
+								>
+									<i className="pi pi-clock" />
+								</button>
+								<div
+									aria-hidden="true"
+									style={{
+										width: '1px',
+										height: '14px',
+										background: 'rgba(255,255,255,0.20)',
+										margin: '0 4px'
+									}}
+								/>
+								<button
 									className={`recents-header-filter-btn ${getActiveFilterCount(activeFavFilters) > 0 ? 'active' : ''}`}
 									onClick={() => { setFilterContext('favorites'); setFilterPanelOpen(true); }}
 									title="Filtrar favoritos"
@@ -3001,6 +3028,33 @@ const ConnectionHistory = ({
 								<span className="path-tilde">~</span>/recent &nbsp;{'\u00B7'}&nbsp; {filteredRecentsForDisplay.length} connections
 							</div>
 							<div className="recents-header-right">
+								<button
+									className="recents-header-filter-btn"
+									onClick={(e) => {
+										e.stopPropagation();
+										const terminalType = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
+										if (onTerminalToggle) onTerminalToggle(true, terminalType, false);
+									}}
+									title="Abrir terminal"
+								>
+									<i className="pi pi-plus-circle" />
+								</button>
+								<button
+									className="recents-header-filter-btn"
+									onClick={() => setActiveBottomView('favorites')}
+									title="Ir a favoritos"
+								>
+									<i className="pi pi-star" />
+								</button>
+								<div
+									aria-hidden="true"
+									style={{
+										width: '1px',
+										height: '14px',
+										background: 'rgba(255,255,255,0.20)',
+										margin: '0 4px'
+									}}
+								/>
 								<button
 									className={`recents-header-filter-btn ${getActiveFilterCount(activeRecentFilters) > 0 ? 'active' : ''}`}
 									onClick={() => { setFilterContext('recents'); setFilterPanelOpen(true); }}
@@ -3215,6 +3269,53 @@ const ConnectionHistory = ({
 						<span className="path-tilde">~</span>{terminalTitle}
 					</div>
 					<div className="recents-header-right" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+						<i
+							className="pi pi-clock"
+							style={{
+								fontSize: '0.86rem',
+								color: terminalTheme.foreground || '#c9d1d9',
+								opacity: 0.7,
+								cursor: 'pointer',
+								padding: '4px',
+								transition: 'all 0.2s'
+							}}
+							title="Ir a Recientes"
+							onClick={(e) => {
+								e.stopPropagation();
+								setActiveBottomView('recent');
+								if (onTerminalToggle) onTerminalToggle(false);
+							}}
+							onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+							onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; }}
+						/>
+						<i
+							className="pi pi-star"
+							style={{
+								fontSize: '0.86rem',
+								color: terminalTheme.foreground || '#c9d1d9',
+								opacity: 0.7,
+								cursor: 'pointer',
+								padding: '4px',
+								transition: 'all 0.2s'
+							}}
+							title="Ir a Favoritos"
+							onClick={(e) => {
+								e.stopPropagation();
+								setActiveBottomView('favorites');
+								if (onTerminalToggle) onTerminalToggle(false);
+							}}
+							onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+							onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; }}
+						/>
+						<div
+							aria-hidden="true"
+							style={{
+								width: '1px',
+								height: '14px',
+								background: 'rgba(255,255,255,0.20)',
+								margin: '0 4px'
+							}}
+						/>
 						<i
 							className="pi pi-sliders-h"
 							style={{
