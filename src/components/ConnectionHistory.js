@@ -2875,6 +2875,7 @@ const ConnectionHistory = ({
 									onClick={(e) => {
 										e.stopPropagation();
 										const terminalType = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
+										// Reabrir el terminal integrado sin crear nueva tab para preservar la sesión.
 										if (onTerminalToggle) onTerminalToggle(true, terminalType, false);
 									}}
 									title="Abrir terminal"
@@ -3033,6 +3034,7 @@ const ConnectionHistory = ({
 									onClick={(e) => {
 										e.stopPropagation();
 										const terminalType = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
+										// Reabrir el terminal integrado sin crear nueva tab para preservar la sesión.
 										if (onTerminalToggle) onTerminalToggle(true, terminalType, false);
 									}}
 									title="Abrir terminal"
