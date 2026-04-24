@@ -167,6 +167,7 @@ const ImportWizardDialog = ({
     // Vista previa
     const [previewData, setPreviewData] = useState(null);
     const [previewLoading, setPreviewLoading] = useState(false);
+    const [previewStatus, setPreviewStatus] = useState('');
     const [previewError, setPreviewError] = useState(null);
 
     // Estado de importación
@@ -209,6 +210,7 @@ const ImportWizardDialog = ({
         });
         setPreviewData(null);
         setPreviewLoading(false);
+        setPreviewStatus('');
         setPreviewError(null);
         setImporting(false);
         setImportProgress(0);
@@ -347,8 +349,11 @@ const ImportWizardDialog = ({
 
     const handleNext = async () => {
         if (currentStep === 1) {
-            // Al pasar de Configurar a Vista Previa, generar preview
+            // Pasar inmediatamente a Vista Previa para mostrar estado de carga
+            // y evitar la sensación de UI bloqueada.
+            setCurrentStep(2);
             await generatePreview();
+            return;
         }
         if (currentStep < 3) {
             setCurrentStep(currentStep + 1);
@@ -377,6 +382,7 @@ const ImportWizardDialog = ({
         if (!selectedSource) return;
 
         setPreviewLoading(true);
+        setPreviewStatus('Iniciando análisis...');
         setPreviewError(null);
 
         try {
@@ -406,6 +412,7 @@ const ImportWizardDialog = ({
 
     const generateNodeTermPreview = async () => {
         try {
+            setPreviewStatus('Leyendo backup de NodeTerm...');
             const text = await readFileAsText(selectedFile);
             let data = JSON.parse(text);
 
@@ -414,16 +421,19 @@ const ImportWizardDialog = ({
                 if (!password) {
                     throw new Error('Este archivo está encriptado. Ingrese la contraseña.');
                 }
+                setPreviewStatus('Desencriptando archivo...');
                 data = await exportImportService.decryptData(data.encryptedData, password);
             }
 
             // Validar estructura
+            setPreviewStatus('Validando estructura...');
             const validation = await exportImportService.validateExportFile(data);
             if (!validation.valid) {
                 throw new Error(validation.error || 'Archivo inválido');
             }
 
             // Generar preview
+            setPreviewStatus('Generando vista previa...');
             const preview = await exportImportService.getExportPreview(data);
             setPreviewData({
                 type: 'nodeterm',
@@ -443,6 +453,7 @@ const ImportWizardDialog = ({
 
     const generateMRemoteNGPreview = async () => {
         try {
+            setPreviewStatus('Parseando XML de mRemoteNG...');
             const result = await ImportService.importFromMRemoteNG(selectedFile);
 
             if (!result.success) {
@@ -471,9 +482,11 @@ const ImportWizardDialog = ({
 
     const generateKeePassPreview = async () => {
         try {
+            setPreviewStatus('Cargando librería KeePass...');
             // Cargar kdbxweb si no está cargado
             const kdbxweb = await ensureKdbxwebLoaded();
 
+            setPreviewStatus('Leyendo base de datos KeePass...');
             const ab = await readFileAsArrayBuffer(selectedFile);
             const keyAb = selectedKeyFile ? await readFileAsArrayBuffer(selectedKeyFile) : null;
 
@@ -482,6 +495,7 @@ const ImportWizardDialog = ({
                 keyAb ? new Uint8Array(keyAb) : null
             );
 
+            setPreviewStatus('Descifrando y analizando entradas...');
             const db = await kdbxweb.Kdbx.load(ab, credentials);
 
             // Contar entradas
@@ -517,12 +531,14 @@ const ImportWizardDialog = ({
 
     const generateWallixPreview = async () => {
         try {
+            setPreviewStatus('Conectando con API de Wallix...');
             const result = await ImportService.importFromWallix(wallixUrl, wallixUsername, password);
 
             if (!result.success) {
                 throw new Error(result.error || 'Error al conectar con la API de Wallix');
             }
 
+            setPreviewStatus('Construyendo estructura de conexiones...');
             const treeNodes = convertStructureToTree(result.structure?.nodes || []);
 
             setPreviewData({
@@ -1315,7 +1331,8 @@ const ImportWizardDialog = ({
             return (
                 <div className="import-wizard-loading">
                     <i className="pi pi-spin pi-spinner" style={{ fontSize: '2rem' }} />
-                    <p>Procesando archivo...</p>
+                    <p>{previewStatus || 'Procesando archivo...'}</p>
+                    <ProgressBar mode="indeterminate" style={{ height: '6px', marginTop: '0.75rem' }} />
                 </div>
             );
         }
