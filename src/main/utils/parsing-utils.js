@@ -45,6 +45,7 @@ function parseNetDev(netDevOutput) {
   const lines = netDevOutput.trim().split('\n');
   let totalRx = 0;
   let totalTx = 0;
+  const interfaces = [];
 
   lines.slice(2).forEach(line => {
     const parts = line.trim().split(/\s+/);
@@ -52,12 +53,19 @@ function parseNetDev(netDevOutput) {
     if (iface && iface !== 'lo:' && parts.length >= 10) {
       const rx = parseInt(parts[1], 10);
       const tx = parseInt(parts[9], 10);
-      if (!isNaN(rx)) totalRx += rx;
-      if (!isNaN(tx)) totalTx += tx;
+      const rxBytes = isNaN(rx) ? 0 : rx;
+      const txBytes = isNaN(tx) ? 0 : tx;
+      totalRx += rxBytes;
+      totalTx += txBytes;
+      interfaces.push({
+        iface: iface.replace(/:$/, ''),
+        rx_bytes: rxBytes,
+        tx_bytes: txBytes
+      });
     }
   });
 
-  return { totalRx, totalTx };
+  return { totalRx, totalTx, interfaces };
 }
 
 /**

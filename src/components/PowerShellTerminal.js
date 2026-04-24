@@ -102,6 +102,7 @@ const PowerShellTerminal = forwardRef(({
                     mem: { total: memTotalBytes, used: memUsedBytes, free: memFreeBytes },
                     disk: displayDisk,
                     network: { rx_speed: rxBytesPerSec, tx_speed: txBytesPerSec },
+                    networkInterfaces: Array.isArray(systemStats.networkInterfaces) ? systemStats.networkInterfaces : [],
                     hostname: systemStats.hostname,
                     ip: systemStats.ip,
                     distro: window.electron?.platform === 'win32' ? 'windows' : (window.electron?.platform === 'darwin' ? 'macos' : 'linux'),

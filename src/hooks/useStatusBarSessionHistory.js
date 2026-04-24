@@ -17,6 +17,7 @@ export function useStatusBarSessionHistory(stats, options = {}) {
     const memTotal = stats?.mem?.total;
     const rx = stats?.network?.rx_speed;
     const tx = stats?.network?.tx_speed;
+    const netIfaces = Array.isArray(stats?.networkInterfaces) ? stats.networkInterfaces : [];
     const gUsed = gpuStats?.usedMB;
     const gTotal = gpuStats?.totalMB;
     const gTemp = gpuStats?.temperature;
@@ -34,6 +35,11 @@ export function useStatusBarSessionHistory(stats, options = {}) {
             memTotal: typeof memTotal === 'number' ? memTotal : 0,
             rx: typeof rx === 'number' ? rx : 0,
             tx: typeof tx === 'number' ? tx : 0,
+            netIfaces: netIfaces.map((ni) => ({
+                iface: ni?.iface || 'iface',
+                rx: typeof ni?.rx_speed === 'number' ? ni.rx_speed : 0,
+                tx: typeof ni?.tx_speed === 'number' ? ni.tx_speed : 0,
+            })),
             gpuUsedMB: typeof gUsed === 'number' ? gUsed : null,
             gpuTotalMB: typeof gTotal === 'number' ? gTotal : null,
             gpuTemp: typeof gTemp === 'number' ? gTemp : null,
@@ -48,7 +54,7 @@ export function useStatusBarSessionHistory(stats, options = {}) {
 
         setHistory([...samplesRef.current]);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [cpu, memUsed, rx, tx, gUsed, gTotal, gTemp]);
+    }, [cpu, memUsed, rx, tx, netIfaces, gUsed, gTotal, gTemp]);
 
     return history;
 }

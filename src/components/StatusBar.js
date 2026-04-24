@@ -7,7 +7,7 @@ import { OverlayPanel } from 'primereact/overlaypanel';
 import { getVersionInfo } from '../version-info';
 import { statusBarIconThemes } from '../themes/statusbar-icon-themes';
 import { statusBarThemes } from '../themes/status-bar-themes';
-import { CpuPanel, MemPanel, NetPanel, DiskPanel, DiskSummaryPanel, GpuPanel, HostPanel, useMetricPopover } from './StatusBarMetricPopover';
+import { CpuPanel, MemPanel, NetPanel, DiskPanel, DiskSummaryPanel, GpuPanel, HostPanel, HostNetworkPanel, useMetricPopover } from './StatusBarMetricPopover';
 
 const CpuSparkline = ({ history }) => (
     <div className="sparkline-container">
@@ -389,7 +389,7 @@ const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkD
                     ip !== hostname &&
                     hostname !== 'unknown' &&
                     hostname !== 'localhost' && (
-                        <div className="status-bar-section ip-section">
+                        <div className="status-bar-section ip-section sbpop-trigger" {...makeHoverProps('host-net')}>
                             <span
                                 className="status-bar-icon"
                                 style={{ color: currentIconTheme.colors.server }}
@@ -438,6 +438,9 @@ const StatusBar = ({ stats, active, statusBarIconTheme = 'classic', showNetworkD
             )}
             {popOpen?.type === 'host' && (
                 <HostPanel stats={stats} anchorRect={popOpen.rect} onClose={closePopover} onStay={cancelClose} />
+            )}
+            {popOpen?.type === 'host-net' && (
+                <HostNetworkPanel stats={stats} sessionHistory={sessionHistory} anchorRect={popOpen.rect} onClose={closePopover} onStay={cancelClose} />
             )}
             {popOpen?.type === 'disk' && Array.isArray(disk) && disk[popOpen.diskIndex] && (
                 <DiskPanel disk={disk[popOpen.diskIndex]} anchorRect={popOpen.rect} onClose={closePopover} onStay={cancelClose} />

@@ -298,6 +298,11 @@ class SSHStatsService {
     const currentTime = Date.now();
 
     let network = { rx_speed: 0, tx_speed: 0 };
+    let networkInterfaces = (currentNet.interfaces || []).map((it) => ({
+      iface: it.iface,
+      rx_speed: 0,
+      tx_speed: 0
+    }));
 
     if (previousNet && previousTime) {
       const timeDiff = (currentTime - previousTime) / 1000;
@@ -306,9 +311,21 @@ class SSHStatsService {
 
       network.rx_speed = Math.max(0, rxDiff / timeDiff);
       network.tx_speed = Math.max(0, txDiff / timeDiff);
+
+      const prevByIface = new Map((previousNet.interfaces || []).map((it) => [it.iface, it]));
+      networkInterfaces = (currentNet.interfaces || []).map((it) => {
+        const prev = prevByIface.get(it.iface);
+        const rxIfaceDiff = prev ? Math.max(0, it.rx_bytes - prev.rx_bytes) : 0;
+        const txIfaceDiff = prev ? Math.max(0, it.tx_bytes - prev.tx_bytes) : 0;
+        return {
+          iface: it.iface,
+          rx_speed: Math.max(0, rxIfaceDiff / timeDiff),
+          tx_speed: Math.max(0, txIfaceDiff / timeDiff)
+        };
+      });
     }
 
-    return { network, currentNet, currentTime };
+    return { network, networkInterfaces, currentNet, currentTime };
   }
 
   /**
@@ -325,6 +342,11 @@ class SSHStatsService {
     const currentNet = parseNetDev(netOutput);
     const currentTime = Date.now();
     let network = { rx_speed: 0, tx_speed: 0 };
+    let networkInterfaces = (currentNet.interfaces || []).map((it) => ({
+      iface: it.iface,
+      rx_speed: 0,
+      tx_speed: 0
+    }));
 
     if (previousNet && previousTime) {
       const timeDiff = (currentTime - previousTime) / 1000;
@@ -333,10 +355,23 @@ class SSHStatsService {
 
       network.rx_speed = Math.max(0, rxDiff / timeDiff);
       network.tx_speed = Math.max(0, txDiff / timeDiff);
+
+      const prevByIface = new Map((previousNet.interfaces || []).map((it) => [it.iface, it]));
+      networkInterfaces = (currentNet.interfaces || []).map((it) => {
+        const prev = prevByIface.get(it.iface);
+        const rxIfaceDiff = prev ? Math.max(0, it.rx_bytes - prev.rx_bytes) : 0;
+        const txIfaceDiff = prev ? Math.max(0, it.tx_bytes - prev.tx_bytes) : 0;
+        return {
+          iface: it.iface,
+          rx_speed: Math.max(0, rxIfaceDiff / timeDiff),
+          tx_speed: Math.max(0, txIfaceDiff / timeDiff)
+        };
+      });
     }
 
     return {
       network,
+      networkInterfaces,
       currentNet,
       currentTime
     };
@@ -493,6 +528,7 @@ class SSHStatsService {
       disk: [],
       uptime: 'Error',
       network: { rx_speed: 0, tx_speed: 0 },
+      networkInterfaces: [],
       hostname,
       distro,
       versionId: '',
@@ -530,7 +566,7 @@ class SSHStatsService {
       const disks = this.parseDisks(parts);
       const uptime = this.parseUptime(parts);
 
-      const { network, currentNet, currentTime } = this.parseNetwork(
+      const { network, networkInterfaces, currentNet, currentTime } = this.parseNetwork(
         parts,
         conn.previousNet,
         conn.previousTime
@@ -552,6 +588,7 @@ class SSHStatsService {
         disk: disks,
         uptime,
         network,
+        networkInterfaces,
         distro,
         versionId,
         kernel,
@@ -704,7 +741,7 @@ class SSHStatsService {
       const uptime = this.parseUptime(parts);
 
       // Red
-      const { network, currentNet, currentTime } = this.parseNetworkBastion(
+      const { network, networkInterfaces, currentNet, currentTime } = this.parseNetworkBastion(
         parts,
         bastionStatsState[tabId]?.previousNet,
         bastionStatsState[tabId]?.previousTime
@@ -729,6 +766,7 @@ class SSHStatsService {
         disk: disks,
         uptime,
         network,
+        networkInterfaces,
         distro,
         versionId,
         osPrettyName,

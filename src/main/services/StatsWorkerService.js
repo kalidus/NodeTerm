@@ -47,6 +47,7 @@ function getFallbackStats(model = 'NoData') {
     memory: { used: 0, total: 0, percentage: 0 },
     disks: [],
     network: { download: 0, upload: 0 },
+    networkInterfaces: [],
     temperature: { cpu: 0, gpu: 0 },
     hostname: os.hostname(),
     platform: process.platform,

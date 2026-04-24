@@ -90,6 +90,7 @@ const StandaloneStatusBar = ({ visible = true, style = {} }) => {
                     mem: { total: memTotalBytes, used: memUsedBytes, free: memFreeBytes },
                     disk: displayDisk,
                     network: { rx_speed: rxBytesPerSec, tx_speed: txBytesPerSec },
+                    networkInterfaces: Array.isArray(systemStats.networkInterfaces) ? systemStats.networkInterfaces : [],
                     hostname: systemStats.hostname,
                     ip: systemStats.ip || undefined,
                     distro: 'windows',

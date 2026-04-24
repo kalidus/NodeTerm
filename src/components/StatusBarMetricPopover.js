@@ -390,6 +390,132 @@ export const NetPanel = ({ stats, sessionHistory, anchorRect, onClose, onStay })
     );
 };
 
+export const HostNetworkPanel = ({ stats, sessionHistory, anchorRect, onClose, onStay }) => {
+    const accent = '#40c8ff';
+    const accent2 = '#ff4fd8';
+    const [expanded, setExpanded] = useState({});
+    const sh = sessionHistory || [];
+    const interfaces = Array.isArray(stats?.networkInterfaces) ? stats.networkInterfaces : [];
+    const interfaceRows = interfaces
+        .filter((row) => row && row.iface)
+        .map((row) => ({
+            iface: row.iface,
+            ip4: row.ip4 || '',
+            ip6: row.ip6 || '',
+            mac: row.mac || '',
+            operstate: row.operstate || '',
+            rxSpeed: typeof row.rx_speed === 'number' ? row.rx_speed : 0,
+            txSpeed: typeof row.tx_speed === 'number' ? row.tx_speed : 0,
+        }))
+        .filter((row) => String(row.operstate || '').toLowerCase() !== 'down')
+        .map((row) => {
+            const rxSeries = sh.map((sample) => {
+                const item = (sample?.netIfaces || []).find((entry) => entry.iface === row.iface);
+                return item ? (item.rx || 0) : 0;
+            });
+            const txSeries = sh.map((sample) => {
+                const item = (sample?.netIfaces || []).find((entry) => entry.iface === row.iface);
+                return item ? (item.tx || 0) : 0;
+            });
+            return {
+                ...row,
+                rxSeries,
+                txSeries,
+                peak: Math.max(1e-9, ...rxSeries, ...txSeries),
+            };
+        })
+        .sort((a, b) => a.iface.localeCompare(b.iface));
+
+    return (
+        <MetricPopover anchorRect={anchorRect} onMouseEnter={onStay} onMouseLeave={onClose}>
+            <div className="sbpop-header" style={{ borderBottomColor: 'rgba(64,200,255,0.25)' }}>
+                <span className="sbpop-label" style={{ color: accent, textShadow: '0 0 6px rgba(64,200,255,0.6)' }}>
+                    INTERFACES
+                </span>
+                <span className="sbpop-sublabel" style={{ color: 'rgba(255,79,216,0.75)' }}>
+                    NET-MATRIX
+                </span>
+            </div>
+            {interfaceRows.length === 0 && (
+                <div className="sbpop-row sbpop-dim">
+                    <span className="sbpop-key">Interfaces</span>
+                    <span className="sbpop-val">Sin datos</span>
+                </div>
+            )}
+            {interfaceRows.map((row) => (
+                <div
+                    key={row.iface}
+                    className="sbpop-disklogical-card"
+                    style={{
+                        marginTop: 6,
+                        borderColor: 'rgba(64,200,255,0.25)',
+                        background: 'linear-gradient(180deg, rgba(64,200,255,0.08), rgba(255,79,216,0.05))',
+                        boxShadow: '0 0 10px rgba(64,200,255,0.15) inset'
+                    }}
+                >
+                    <div className="sbpop-row" style={{ paddingBottom: 1 }}>
+                        <span className="sbpop-key" style={{ color: 'rgba(255,255,255,0.7)' }}>{row.iface}</span>
+                        <span className="sbpop-val" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                            <span>{row.operstate || '--'}</span>
+                            <button
+                                type="button"
+                                onClick={() => setExpanded((prev) => ({ ...prev, [row.iface]: !prev[row.iface] }))}
+                                aria-label={expanded[row.iface] ? `Ocultar detalles de ${row.iface}` : `Ver detalles de ${row.iface}`}
+                                style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: 'rgba(255,255,255,0.75)',
+                                    fontSize: '11px',
+                                    lineHeight: 1,
+                                    padding: 0,
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                {expanded[row.iface] ? '▲' : '▼'}
+                            </button>
+                        </span>
+                    </div>
+                    {row.ip4 && (
+                        <div className="sbpop-row sbpop-dim">
+                            <span className="sbpop-key">IPv4</span>
+                            <span className="sbpop-val">{row.ip4}</span>
+                        </div>
+                    )}
+                    <div className="sbpop-row sbpop-dim">
+                        <span className="sbpop-key">RX/TX</span>
+                        <span className="sbpop-val" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                            {fmtSpeed(row.rxSpeed)} / {fmtSpeed(row.txSpeed)}
+                        </span>
+                    </div>
+                    {sh.length > 1 && (
+                        <MiniAreaChart
+                            data={row.rxSeries}
+                            secondData={row.txSeries}
+                            color={accent}
+                            secondColor={accent2}
+                            maxVal={row.peak}
+                            width={PANEL_W - 28}
+                            height={34}
+                        />
+                    )}
+                    {expanded[row.iface] && row.ip6 && (
+                        <div className="sbpop-row sbpop-dim">
+                            <span className="sbpop-key">IPv6</span>
+                            <span className="sbpop-val">{row.ip6}</span>
+                        </div>
+                    )}
+                    {expanded[row.iface] && row.mac && (
+                        <div className="sbpop-row sbpop-dim">
+                            <span className="sbpop-key">MAC</span>
+                            <span className="sbpop-val">{row.mac}</span>
+                        </div>
+                    )}
+                </div>
+            ))}
+        </MetricPopover>
+    );
+};
+
 export const HostPanel = ({ stats, anchorRect, onClose, onStay }) => {
     const hostColor = '#7ab8ff';
     const hostname = stats?.hostname || 'Unknown';
