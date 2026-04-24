@@ -1094,11 +1094,6 @@ class ImportService {
                   converted.data.bastionUser = proxyUsername;
                   converted.data.targetServer = targetName;
                   converted.data.wallixService = serviceLabel;
-                  // Para Wallix+RDP con Guacamole, "rdp" suele ser más estable que "any"
-                  // al evitar negociación automática hacia NLA/TLS no compatibles.
-                  if (protocol === 'RDP') {
-                    converted.data.guacSecurity = 'rdp';
-                  }
                 }
 
                 groups[folder].push(converted);
@@ -1184,9 +1179,6 @@ class ImportService {
                     converted.data.bastionUser = proxyUsername;
                     converted.data.targetServer = d.device_name;
                     converted.data.wallixService = protocol;
-                    if (protocol === 'RDP') {
-                      converted.data.guacSecurity = 'rdp';
-                    }
                   }
 
                   groups[folder].push(converted);
