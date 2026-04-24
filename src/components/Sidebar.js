@@ -1292,111 +1292,101 @@ const Sidebar = React.memo(({
       return node;
     });
   }
-  // Drag and drop con manipulación explícita del árbol para asegurar funcionamiento robusto
+  // Drag and drop robusto para mover entre raíz/carpetas sin mutar estado previo.
   const onDragDrop = (event) => {
-    const { dragNode, dropNode, dropPoint, value } = event;
+    const { dragNode, dropNode, dropPoint, value } = event || {};
+    if (!dragNode || !dropNode) {
+      if (Array.isArray(value)) setNodes(value);
+      return;
+    }
 
-    // Validar nodo destino
     const isDropOverNode = dropPoint === 0;
-    const isDropTargetFolder = dropNode && dropNode.droppable === true;
+    const isDropTargetFolder = !!(dropNode && dropNode.droppable === true);
 
-    if (isDropOverNode && !isDropTargetFolder) {
+    // Reordenado estándar (antes/después del nodo destino)
+    if (!isDropOverNode || !isDropTargetFolder) {
+      if (Array.isArray(value)) {
+        setNodes(value);
+      }
+      return;
+    }
+
+    // Evitar mover un nodo dentro de sí mismo o de su propio subárbol.
+    const isDescendantKey = (node, targetKey) => {
+      if (!node || !Array.isArray(node.children)) return false;
+      for (const child of node.children) {
+        if (child.key === targetKey) return true;
+        if (isDescendantKey(child, targetKey)) return true;
+      }
+      return false;
+    };
+
+    if (dragNode.key === dropNode.key || isDescendantKey(dragNode, dropNode.key)) {
       showToast && showToast({
         severity: 'warn',
         summary: 'Operación no permitida',
-        detail: 'No se puede arrastrar dentro de este elemento.',
-        life: 3000
+        detail: 'No puedes mover una carpeta dentro de sí misma.',
+        life: 2500
       });
       return;
     }
 
-    // Función pura para eliminar nodo del árbol
-    const removeNode = (nodes, key) => {
-      let filtered = [];
-      for (let node of nodes) {
-        if (node.key === key) continue;
-        if (node.children) {
-          node.children = removeNode(node.children, key);
+    // Remover de forma inmutable y devolver también el nodo removido.
+    const removeNodeByKey = (list, key) => {
+      let removed = null;
+      const next = [];
+      for (const currentNode of list || []) {
+        if (currentNode.key === key) {
+          removed = currentNode;
+          continue;
         }
-        filtered.push(node);
+
+        if (Array.isArray(currentNode.children) && currentNode.children.length > 0) {
+          const childResult = removeNodeByKey(currentNode.children, key);
+          if (childResult.removed) removed = childResult.removed;
+          next.push({ ...currentNode, children: childResult.nodes });
+        } else {
+          next.push(currentNode);
+        }
       }
-      return filtered;
+      return { nodes: next, removed };
     };
 
-    // Función pura para insertar nodo (traverse)
-    const insertNode = (nodes, targetKey, nodeToInsert) => {
+    const insertIntoFolder = (list, targetKey, nodeToInsert) => {
       let inserted = false;
+      const next = (list || []).map((currentNode) => {
+        if (currentNode.key === targetKey) {
+          inserted = true;
+          const currentChildren = Array.isArray(currentNode.children) ? currentNode.children : [];
+          // Insertar al inicio para mantener comportamiento previo.
+          return { ...currentNode, children: [nodeToInsert, ...currentChildren] };
+        }
 
-      const traverse = (list) => {
-        return list.map(node => {
-          if (node.key === targetKey) {
-            console.log('[Sidebar] insertNode: Found target folder', node.label);
-            // Insertar dentro
-            const children = node.children || [];
-            // Evitar duplicados si por alguna razón falla el remove
-            if (children.some(c => c.key === nodeToInsert.key)) {
-              console.warn('[Sidebar] insertNode: Node already exists in target');
-              return node;
-            }
-            inserted = true;
-            return { ...node, children: [nodeToInsert, ...children], expanded: true };
-          }
-          if (node.children) {
-            return { ...node, children: traverse(node.children) };
-          }
-          return node;
-        });
-      };
+        if (Array.isArray(currentNode.children) && currentNode.children.length > 0) {
+          const updatedChildren = insertIntoFolder(currentNode.children, targetKey, nodeToInsert);
+          if (updatedChildren.inserted) inserted = true;
+          return { ...currentNode, children: updatedChildren.nodes };
+        }
+        return currentNode;
+      });
 
-      const newNodes = traverse(nodes);
-      return { newNodes, inserted };
+      return { nodes: next, inserted };
     };
 
-    // Si es dropPoint === 0 (dentro de carpeta), hacemos la lógica manual.
-    // También manejamos casos donde PrimeReact reporta otro dropPoint al soltar sobre carpeta.
-    if (isDropTargetFolder) {
-      console.log('[Sidebar] onDragDrop: Detected drop INSIDE folder', {
-        drag: dragNode.label,
-        drop: dropNode.label,
-        nodesTotal: nodes.length
-      });
-
-      // Clonación profunda manual ya que deepCopy no está en scope aquí
-      const nodesParams = JSON.parse(JSON.stringify(nodes));
-
-      // 1. Obtener árbol sin el nodo
-      let newTree = removeNode(nodesParams, dragNode.key);
-
-      // 2. Insertar en destino
-      // Usamos dragNode directamente, pero asegurando que es una copia limpia
-      const nodeToMove = JSON.parse(JSON.stringify(dragNode));
-      const insertResult = insertNode(newTree, dropNode.key, nodeToMove);
-
-      if (insertResult.inserted) {
-        // Forzar actualización
-        setNodes(insertResult.newNodes);
-        // Log de confirmación
-        console.log('[Sidebar] Manual drop complete. New tree set.');
-      } else {
-        console.error('[Sidebar] Manual drop FAILED: Target folder not found in new tree');
-      }
-
-    } else {
-      console.log('[Sidebar] onDragDrop: Standard reorder (PrimeReact)', {
-        value: value ? 'Valid Tree' : 'Null',
-        point: dropPoint,
-        isFolder: isDropTargetFolder
-      });
-
-      // Para reordenar (arriba/abajo), confiamos en event.value de PrimeReact
-      // pero verificamos que sea válido
-      if (value) {
-        // IMPORTANTE: A veces value viene sin la expansión correcta
-        // o con nodos perdidos si la validación interna falló.
-        // Pero para reordenar suele funcionar.
-        setNodes(value);
-      }
+    const clonedTree = JSON.parse(JSON.stringify(nodes || []));
+    const removedResult = removeNodeByKey(clonedTree, dragNode.key);
+    if (!removedResult.removed) {
+      if (Array.isArray(value)) setNodes(value);
+      return;
     }
+
+    const insertedResult = insertIntoFolder(removedResult.nodes, dropNode.key, removedResult.removed);
+    if (!insertedResult.inserted) {
+      if (Array.isArray(value)) setNodes(value);
+      return;
+    }
+
+    setNodes(insertedResult.nodes);
   };
 
   const stopTreeDragAutoScroll = useCallback(() => {
