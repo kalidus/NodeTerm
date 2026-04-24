@@ -124,6 +124,11 @@ const UbuntuTerminal = forwardRef(({
                     hostname: systemStats.hostname,
                     ip: systemStats.ip,
                     distro: distroId || 'ubuntu',
+                    versionId: systemStats.osVersion || '',
+                    kernel: systemStats.kernel || '',
+                    platform: systemStats.platform || 'linux',
+                    arch: systemStats.arch || '',
+                    osPrettyName: systemStats.osPrettyName || '',
                     cpuMeta: {
                         cores: systemStats.cpu?.cores || 0,
                         model: systemStats.cpu?.model || '',

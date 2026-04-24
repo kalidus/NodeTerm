@@ -93,6 +93,11 @@ const StandaloneStatusBar = ({ visible = true, style = {} }) => {
                     hostname: systemStats.hostname,
                     ip: systemStats.ip || undefined,
                     distro: 'windows',
+                    versionId: systemStats.osVersion || '',
+                    kernel: systemStats.kernel || '',
+                    platform: systemStats.platform || 'win32',
+                    arch: systemStats.arch || '',
+                    osPrettyName: systemStats.osPrettyName || '',
                     cpuMeta: {
                         cores: systemStats.cpu?.cores || 0,
                         model: systemStats.cpu?.model || '',

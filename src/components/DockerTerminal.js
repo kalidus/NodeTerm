@@ -84,6 +84,11 @@ const DockerTerminal = forwardRef(({
                     hostname: systemStats.hostname || undefined,
                     ip: systemStats.ip || undefined,
                     distro: 'docker',
+                    versionId: systemStats.osVersion || '',
+                    kernel: systemStats.kernel || '',
+                    platform: systemStats.platform || window.electron?.platform || '',
+                    arch: systemStats.arch || '',
+                    osPrettyName: systemStats.osPrettyName || '',
                     cpuMeta: {
                         cores: systemStats.cpu?.cores || 0,
                         model: systemStats.cpu?.model || '',
