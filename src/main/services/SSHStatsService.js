@@ -809,7 +809,7 @@ class SSHStatsService {
 
       try {
         if (connObj.ssh.execCommand) {
-          const command = 'grep "^cpu" /proc/stat && free -b && df -P && uptime && cat /proc/net/dev && hostname && hostname -I 2>/dev/null || hostname -i 2>/dev/null || echo "" && cat /etc/os-release';
+          const command = 'grep "^cpu" /proc/stat && free -b && df -P && uptime && cat /proc/net/dev && hostname && (hostname -I 2>/dev/null || hostname -i 2>/dev/null || echo "") && (cat /etc/os-release 2>/dev/null || cat /usr/lib/os-release 2>/dev/null || echo "") && (uname -r 2>/dev/null || echo "") && echo "---KERNEL_END---" && (uname -m 2>/dev/null || echo "") && echo "---ARCH_END---"';
 
           connObj.ssh.execCommand(command, (err, result) => {
             if (err || !result) {
