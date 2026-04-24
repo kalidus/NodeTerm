@@ -213,6 +213,10 @@ const Sidebar = React.memo(({
   const firstExpandTimeoutRef = useRef(null);
   const expandedContentReady = true;
   const expandedContentRef = useRef(null);
+  const treeContainerRef = useRef(null);
+  const dragAutoScrollRafRef = useRef(null);
+  const dragAutoScrollSpeedRef = useRef(0);
+  const dragAutoScrollActiveRef = useRef(false);
 
   // Forzar layout del contenido pre-montado lo antes posible para reducir lag en 1ª expansión
   useEffect(() => {
@@ -1394,6 +1398,96 @@ const Sidebar = React.memo(({
       }
     }
   };
+
+  const stopTreeDragAutoScroll = useCallback(() => {
+    dragAutoScrollSpeedRef.current = 0;
+    if (treeContainerRef.current) {
+      treeContainerRef.current.classList.remove('drag-autoscroll-active');
+    }
+    if (dragAutoScrollRafRef.current) {
+      cancelAnimationFrame(dragAutoScrollRafRef.current);
+      dragAutoScrollRafRef.current = null;
+    }
+    dragAutoScrollActiveRef.current = false;
+  }, []);
+
+  const runTreeDragAutoScroll = useCallback(() => {
+    const container = treeContainerRef.current;
+    if (!container) {
+      stopTreeDragAutoScroll();
+      return;
+    }
+
+    const speed = dragAutoScrollSpeedRef.current;
+    if (!speed) {
+      stopTreeDragAutoScroll();
+      return;
+    }
+
+    const maxScrollTop = container.scrollHeight - container.clientHeight;
+    if (maxScrollTop <= 0) {
+      stopTreeDragAutoScroll();
+      return;
+    }
+
+    const nextScrollTop = Math.max(0, Math.min(maxScrollTop, container.scrollTop + speed));
+    container.scrollTop = nextScrollTop;
+
+    if ((nextScrollTop <= 0 && speed < 0) || (nextScrollTop >= maxScrollTop && speed > 0)) {
+      stopTreeDragAutoScroll();
+      return;
+    }
+
+    dragAutoScrollRafRef.current = requestAnimationFrame(runTreeDragAutoScroll);
+  }, [stopTreeDragAutoScroll]);
+
+  const handleTreeContainerDragOver = useCallback((e) => {
+    const container = treeContainerRef.current;
+    if (!container) return;
+
+    e.preventDefault();
+
+    const rect = container.getBoundingClientRect();
+    const threshold = 72;
+    const maxSpeed = 14;
+    const pointerY = e.clientY;
+    const distanceTop = pointerY - rect.top;
+    const distanceBottom = rect.bottom - pointerY;
+
+    let nextSpeed = 0;
+    if (distanceTop >= 0 && distanceTop < threshold) {
+      const ratio = (threshold - distanceTop) / threshold;
+      nextSpeed = -Math.max(1, ratio * maxSpeed);
+    } else if (distanceBottom >= 0 && distanceBottom < threshold) {
+      const ratio = (threshold - distanceBottom) / threshold;
+      nextSpeed = Math.max(1, ratio * maxSpeed);
+    }
+
+    dragAutoScrollSpeedRef.current = nextSpeed;
+
+    if (nextSpeed !== 0) {
+      container.classList.add('drag-autoscroll-active');
+      if (!dragAutoScrollActiveRef.current) {
+        dragAutoScrollActiveRef.current = true;
+        dragAutoScrollRafRef.current = requestAnimationFrame(runTreeDragAutoScroll);
+      }
+    } else {
+      stopTreeDragAutoScroll();
+    }
+  }, [runTreeDragAutoScroll, stopTreeDragAutoScroll]);
+
+  const handleTreeContainerDragLeave = useCallback((e) => {
+    const container = treeContainerRef.current;
+    if (!container) return;
+    if (e.currentTarget.contains(e.relatedTarget)) return;
+    stopTreeDragAutoScroll();
+  }, [stopTreeDragAutoScroll]);
+
+  useEffect(() => {
+    return () => {
+      stopTreeDragAutoScroll();
+    };
+  }, [stopTreeDragAutoScroll]);
 
 
   // Eventos globales para acciones de acceso rápido desde Home
@@ -2682,6 +2776,7 @@ const Sidebar = React.memo(({
           {/* Eliminamos el Divider ya que la Línea Técnica actúa como separador */}
 
           <div
+            ref={treeContainerRef}
             style={{
               flex: 1,
               minHeight: 0,
@@ -2695,6 +2790,9 @@ const Sidebar = React.memo(({
             onContextMenu={onTreeAreaContextMenu}
             className="tree-container"
             onDragStart={handleExternalDragStart}
+            onDragOver={handleTreeContainerDragOver}
+            onDragLeave={handleTreeContainerDragLeave}
+            onDrop={stopTreeDragAutoScroll}
           >
             {nodes.length === 0 ? (
               <div className="empty-tree-message" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
@@ -2737,6 +2835,7 @@ const Sidebar = React.memo(({
                 dragdropScope="sidebar"
                 onDragDrop={onDragDrop}
                 onDragEnd={() => {
+                  stopTreeDragAutoScroll();
                   // Limpiar el nodo SSH arrastrado al finalizar el drag
                   if (window.draggedSSHNodeRef) {
                     window.draggedSSHNodeRef.current = null;

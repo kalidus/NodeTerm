@@ -20,6 +20,10 @@
   overflow-x: hidden !important;
 }
 
+.tree-container.drag-autoscroll-active {
+  scroll-behavior: auto !important;
+}
+
 /* Ocultar scrollbar en WebKit (Chrome, Safari, Edge) */
 .tree-container::-webkit-scrollbar {
   display: none !important;
