@@ -171,7 +171,7 @@ export const useFormHandlers = ({
           throw new Error(`Parent node with key ${parentNodeKey} not found`);
         }
         parentNode.children = parentNode.children || [];
-        parentNode.children.push(newFolder);
+        parentNode.children.unshift(newFolder);
       }
       
       setNodes(nodesCopy);
@@ -587,7 +587,7 @@ export const useFormHandlers = ({
       const parentNode = findNodeByKey(nodesCopy, targetFolderKey);
       if (parentNode && parentNode.droppable) {
         parentNode.children = parentNode.children || [];
-        parentNode.children.push(newNode);
+        parentNode.children.unshift(newNode);
       } else {
         nodesCopy.push(newNode);
       }

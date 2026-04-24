@@ -972,13 +972,13 @@ const Sidebar = React.memo(({
             if (finalOverwrite) {
               targetNode.children = removeConflictsAndAdd(currentChildren, [newChild]);
             } else {
-              targetNode.children = [...currentChildren, newChild];
+              targetNode.children = [newChild, ...currentChildren];
             }
           } else {
             if (finalOverwrite) {
               targetNode.children = removeConflictsAndAdd(currentChildren, nodesToInsert);
             } else {
-              targetNode.children = [...currentChildren, ...nodesToInsert];
+              targetNode.children = [...nodesToInsert, ...currentChildren];
             }
           }
           return nodesCopy;
@@ -1255,7 +1255,7 @@ const Sidebar = React.memo(({
           return;
         }
         parentNode.children = parentNode.children || [];
-        parentNode.children.push(newFolder);
+        parentNode.children.unshift(newFolder);
       }
       setNodes(() => logSetNodes('Sidebar', nodesCopy));
       showToast && showToast({ severity: 'success', summary: 'Éxito', detail: `Carpeta "${folderName}" creada`, life: 3000 });
@@ -1348,10 +1348,9 @@ const Sidebar = React.memo(({
       return { newNodes, inserted };
     };
 
-    // Si es dropPoint === 0 (dentro de carpeta), hacemos la lógica manual
-    // A veces PrimeReact puede no dar dropPoint 0 si se suelta justo en el borde, pero asumimos que el usuario
-    // quiere soltar dentro si el nodo destino es carpeta y se suelta "sobre" él.
-    if (isDropOverNode && isDropTargetFolder) {
+    // Si es dropPoint === 0 (dentro de carpeta), hacemos la lógica manual.
+    // También manejamos casos donde PrimeReact reporta otro dropPoint al soltar sobre carpeta.
+    if (isDropTargetFolder) {
       console.log('[Sidebar] onDragDrop: Detected drop INSIDE folder', {
         drag: dragNode.label,
         drop: dropNode.label,
