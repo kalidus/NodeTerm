@@ -2880,7 +2880,7 @@ const ConnectionHistory = ({
 									}}
 									title="Abrir terminal"
 								>
-									<i className="pi pi-plus-circle" />
+									<i className="pi pi-desktop" />
 								</button>
 								<button
 									className="recents-header-filter-btn"
@@ -3039,7 +3039,7 @@ const ConnectionHistory = ({
 									}}
 									title="Abrir terminal"
 								>
-									<i className="pi pi-plus-circle" />
+									<i className="pi pi-desktop" />
 								</button>
 								<button
 									className="recents-header-filter-btn"
