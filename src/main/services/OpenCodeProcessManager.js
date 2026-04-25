@@ -73,8 +73,7 @@ async function startOpenCodeSession(tabId, { cols, rows } = {}) {
 
     if (os.platform() === 'win32') {
       spawnOptions.windowsHide = false;
-      spawnOptions.useConpty = false;
-      spawnOptions.backend = 'winpty';
+      spawnOptions.useConpty = true;
     }
 
     const candidates = resolveOpenCodeCandidates(config);
