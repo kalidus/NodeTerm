@@ -164,25 +164,39 @@ const TabHeader = React.memo(({
 
     // PowerShell
     if (terminalType === 'powershell') {
-      return <FaWindows style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: '#0078D4' }} />;
+      return <FaWindows style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: '#0078D4', flexShrink: 0 }} />;
+    }
+
+    // AI CLIs (Claude, Gemini, Codex, OpenCode)
+    if (terminalType === 'claude') {
+      return <AIClientBrandIcon tabType="claude" size={baseIconSize} style={{ marginRight: '6px', flexShrink: 0 }} />;
+    }
+    if (terminalType === 'geminicli') {
+      return <AIClientBrandIcon tabType="geminicli" size={baseIconSize} style={{ marginRight: '6px', flexShrink: 0 }} />;
+    }
+    if (terminalType === 'codexcli') {
+      return <AIClientBrandIcon tabType="codexcli" size={baseIconSize} style={{ marginRight: '6px', flexShrink: 0 }} />;
+    }
+    if (terminalType === 'opencode') {
+      return <AIClientBrandIcon tabType="opencode" size={baseIconSize + 2} style={{ marginRight: '6px', flexShrink: 0 }} />;
     }
 
     // WSL genérico (sin distribución específica) - debe ser exactamente 'wsl' sin distroInfo
     // Usar el color primario del tema
     if (terminalType === 'wsl' && !distroInfo) {
-      return <FaLinux style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: primaryColor }} />;
+      return <FaLinux style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: primaryColor, flexShrink: 0 }} />;
     }
 
     // Ubuntu (por categoría, terminalType o nombre)
     if (category === 'ubuntu' || terminalType === 'ubuntu' || label.includes('ubuntu') || (terminalType.includes('ubuntu') && !terminalType.includes('kubuntu'))) {
       const isBasicUbuntu = !label.includes('24.04') && !label.includes('22.04') && !label.includes('20.04');
       const ubuntuColor = isBasicUbuntu ? '#FFFFFF' : (distroInfo?.color || getColorForCategory('ubuntu'));
-      return <FaUbuntu style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: ubuntuColor }} />;
+      return <FaUbuntu style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: ubuntuColor, flexShrink: 0 }} />;
     }
 
     // Debian
     if (category === 'debian' || label.includes('debian') || terminalType.includes('debian')) {
-      return <SiDebian style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: distroInfo?.color || getColorForCategory('debian') }} />;
+      return <SiDebian style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: distroInfo?.color || getColorForCategory('debian'), flexShrink: 0 }} />;
     }
 
     // Kali Linux
@@ -208,46 +222,46 @@ const TabHeader = React.memo(({
 
     // Alpine, openSUSE - usar FaLinux
     if (category === 'alpine' || category === 'opensuse' || label.includes('alpine') || label.includes('opensuse') || label.includes('suse')) {
-      return <FaLinux style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: distroInfo?.color || getColorForCategory(category) }} />;
+      return <FaLinux style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: distroInfo?.color || getColorForCategory(category), flexShrink: 0 }} />;
     }
 
     // Fedora
     if (category === 'fedora' || label.includes('fedora')) {
-      return <FaFedora style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: distroInfo?.color || getColorForCategory('fedora') }} />;
+      return <FaFedora style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: distroInfo?.color || getColorForCategory('fedora'), flexShrink: 0 }} />;
     }
 
     // CentOS
     if (category === 'centos' || label.includes('centos')) {
-      return <FaCentos style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: distroInfo?.color || getColorForCategory('centos') }} />;
+      return <FaCentos style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: distroInfo?.color || getColorForCategory('centos'), flexShrink: 0 }} />;
     }
 
     // RedHat
     if (category === 'redhat' || category === 'rhel' || label.includes('redhat') || label.includes('rhel')) {
-      return <FaRedhat style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: distroInfo?.color || getColorForCategory('redhat') }} />;
+      return <FaRedhat style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: distroInfo?.color || getColorForCategory('redhat'), flexShrink: 0 }} />;
     }
 
     // Cygwin
     if (terminalType === 'cygwin' || label.includes('cygwin')) {
-      return <i className="pi pi-code" style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: '#00FF00', fontWeight: 'bold' }}></i>;
+      return <i className="pi pi-code" style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: '#00FF00', fontWeight: 'bold', flexShrink: 0 }}></i>;
     }
 
     // Docker
     if (terminalType === 'docker' || label.includes('docker') || tab.type === 'docker') {
-      return <SiDocker style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: '#0db7ed' }} />;
+      return <SiDocker style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: '#0db7ed', flexShrink: 0 }} />;
     }
 
     // Linux terminal genérico
     if (terminalType === 'linux-terminal') {
-      return <FaLinux style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: '#4fc3f7' }} />;
+      return <FaLinux style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: '#4fc3f7', flexShrink: 0 }} />;
     }
 
     // WSL con distribución específica (wsl-*)
     if (terminalType?.startsWith('wsl-')) {
-      return <FaLinux style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: primaryColor }} />;
+      return <FaLinux style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: primaryColor, flexShrink: 0 }} />;
     }
 
     // Fallback: icono genérico
-    return <i className="pi pi-desktop" style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: '#4fc3f7' }}></i>;
+    return <i className="pi pi-desktop" style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: '#4fc3f7', flexShrink: 0 }}></i>;
   };
 
   return (
@@ -258,9 +272,9 @@ const TabHeader = React.memo(({
         display: 'flex',
         alignItems: 'center',
         justifyContent: isHomeTab ? 'center' : 'flex-start',
-        maxWidth: isHomeTab ? '100%' : 220,
-        minWidth: isHomeTab ? '100%' : 130,
-        width: isHomeTab ? '100%' : undefined,
+        maxWidth: isHomeTab ? '100%' : 'inherit',
+        minWidth: isHomeTab ? '100%' : 'inherit',
+        width: isHomeTab ? '100%' : 'inherit',
         opacity: isDragging ? 0.5 : 1,
         borderLeft: isDragOver ? '3px solid var(--primary-color)' : 'none',
         transition: 'opacity 0.2s, border-left 0.2s, box-shadow 0.2s, background 0.2s, border 0.2s',
@@ -298,7 +312,9 @@ const TabHeader = React.memo(({
 
       {/* Mostrar icono de distribución si está disponible para pestañas de terminal */}
       {tab.type === 'terminal' && tabDistros && tabDistros[tab.key] && (
-        <DistroIcon distro={tabDistros[tab.key]} size={12} />
+        <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+          <DistroIcon distro={tabDistros[tab.key]} size={12} />
+        </span>
       )}
 
       {/* Icono específico para pestaña de inicio */}
@@ -319,27 +335,27 @@ const TabHeader = React.memo(({
 
       {/* Icono específico para splits */}
       {tab.type === 'split' && (
-        <i className="pi pi-window-maximize" style={{ fontSize: '12px', marginRight: '6px', color: '#007ad9' }}></i>
+        <i className="pi pi-window-maximize" style={{ fontSize: '12px', marginRight: '6px', color: '#007ad9', flexShrink: 0 }}></i>
       )}
 
       {/* Icono específico para exploradores */}
       {(tab.type === 'explorer' || tab.isExplorerInSSH) && (
-        <i className="pi pi-folder-open" style={{ fontSize: '12px', marginRight: '6px' }}></i>
+        <i className="pi pi-folder-open" style={{ fontSize: '12px', marginRight: '6px', flexShrink: 0 }}></i>
       )}
 
       {/* Icono específico para pestañas RDP */}
       {tab.type === 'rdp' && (
-        <i className="pi pi-desktop" style={{ fontSize: '12px', marginRight: '6px', color: '#007ad9' }}></i>
+        <i className="pi pi-desktop" style={{ fontSize: '12px', marginRight: '6px', color: '#007ad9', flexShrink: 0 }}></i>
       )}
 
       {/* Icono específico para pestañas RDP-Guacamole */}
       {tab.type === 'rdp-guacamole' && (
-        <i className="pi pi-desktop" style={{ fontSize: '12px', marginRight: '6px', color: '#ff6b35' }}></i>
+        <i className="pi pi-desktop" style={{ fontSize: '12px', marginRight: '6px', color: '#ff6b35', flexShrink: 0 }}></i>
       )}
 
       {/* Icono específico para pestañas Guacamole */}
       {tab.type === 'guacamole' && (
-        <i className="pi pi-globe" style={{ fontSize: '12px', marginRight: '6px', color: '#00C851' }}></i>
+        <i className="pi pi-globe" style={{ fontSize: '12px', marginRight: '6px', color: '#00C851', flexShrink: 0 }}></i>
       )}
 
       {/* Icono específico para terminales locales - usar misma lógica que NodeTermStatus */}
@@ -347,30 +363,37 @@ const TabHeader = React.memo(({
 
       {/* Iconos de marca: Chat IA integrado y clientes embebidos (logos oficiales) */}
       {tab.type === 'ai-chat' && (
-        <i className="pi pi-comments" style={{ fontSize: '12px', marginRight: '6px', color: primaryColor }} />
+        <i className="pi pi-comments" style={{ fontSize: '12px', marginRight: '6px', color: primaryColor, flexShrink: 0 }} />
       )}
       {tab.type === 'anything-llm' && (
-        <AIClientBrandIcon tabType="anything-llm" size={12} style={{ marginRight: '6px' }} />
+        <AIClientBrandIcon tabType="anything-llm" size={12} style={{ marginRight: '6px', flexShrink: 0 }} />
       )}
       {tab.type === 'openwebui' && (
-        <AIClientBrandIcon tabType="openwebui" size={12} style={{ marginRight: '6px' }} />
+        <AIClientBrandIcon tabType="openwebui" size={12} style={{ marginRight: '6px', flexShrink: 0 }} />
       )}
       {tab.type === 'librechat' && (
-        <AIClientBrandIcon tabType="librechat" size={12} style={{ marginRight: '6px' }} />
+        <AIClientBrandIcon tabType="librechat" size={12} style={{ marginRight: '6px', flexShrink: 0 }} />
       )}
       {tab.type === 'agentzero' && (
-        <AIClientBrandIcon tabType="agentzero" size={12} style={{ marginRight: '6px' }} />
+        <AIClientBrandIcon tabType="agentzero" size={12} style={{ marginRight: '6px', flexShrink: 0 }} />
       )}
       {tab.type === 'openclaw' && (
-        <AIClientBrandIcon tabType="openclaw" size={12} style={{ marginRight: '6px' }} />
+        <AIClientBrandIcon tabType="openclaw" size={12} style={{ marginRight: '6px', flexShrink: 0 }} />
       )}
       {tab.type === 'open-notebook' && (
-        <AIClientBrandIcon tabType="open-notebook" size={12} style={{ marginRight: '6px' }} />
+        <AIClientBrandIcon tabType="open-notebook" size={12} style={{ marginRight: '6px', flexShrink: 0 }} />
       )}
 
       {/* Mostrar label solo si NO es pestaña de inicio (las pestañas de inicio nunca muestran texto) */}
       {!isHomeTab && (
-        <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span style={{ 
+          flex: '1 1 auto', 
+          overflow: 'hidden', 
+          textOverflow: 'ellipsis', 
+          whiteSpace: 'nowrap',
+          minWidth: 0, /* Crucial para que el label se encoja antes que los iconos */
+          marginRight: '4px'
+        }}>
           {tab.label}
         </span>
       )}
@@ -379,8 +402,15 @@ const TabHeader = React.memo(({
       {tab.type !== 'home' && (
         <Button
           icon="pi pi-times"
-          className="p-button-rounded p-button-text p-button-sm ml-2"
-          style={{ marginLeft: 8, minWidth: 12, minHeight: 12 }}
+          className="p-button-rounded p-button-text p-button-sm ml-2 close-tab-btn"
+          style={{ 
+            marginLeft: 'auto', 
+            minWidth: 16, 
+            minHeight: 16, 
+            width: 16, 
+            height: 16,
+            flexShrink: 0 /* No permitir que el botón de cerrar desaparezca */
+          }}
           onClick={(e) => {
             e.stopPropagation();
             if (onTabClose) {

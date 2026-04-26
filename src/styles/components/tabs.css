@@ -22,12 +22,14 @@
   overflow-y: visible !important;
   flex-wrap: nowrap;
   white-space: nowrap;
-  height: 30px;
-  min-height: 30px;
+  height: 38px; /* Altura profesional tipo navegador */
+  min-height: 38px;
   margin-bottom: 0;
   padding-bottom: 0;
+  display: flex !important; /* Asegurar flex para el comportamiento adaptativo */
+  align-items: stretch !important;
   background: var(--ui-content-bg) !important;
-  border-bottom: none !important;
+  border-bottom: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.1)) !important;
   /* Ocultar scrollbar */
   scrollbar-width: none !important; /* Firefox */
   -ms-overflow-style: none !important; /* IE/Edge */
@@ -53,21 +55,23 @@
 }
 
 .p-tabview .p-tabview-nav li {
-  flex: 0 0 auto;
-  min-width: 118px !important;
-  max-width: 210px !important;
+  flex: 1 1 200px !important; /* Comportamiento MobaXterm: crecen hasta 200px y encogen */
+  min-width: 80px !important; /* Mínimo para que el icono sea visible */
+  max-width: 220px !important; /* Máximo profesional */
   margin-bottom: 0;
   padding-bottom: 0;
   margin-right: 1px !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important; /* Transición suave de tamaño */
 }
 
-/* Pestaña de inicio: misma altura que el resto, más ancha, centrada */
+/* Pestaña de inicio: redimensionada para la nueva altura de barra */
 .p-tabview .p-tabview-nav li.home-tab {
-  margin-right: 6px !important;
-  width: 42px !important;
-  min-width: 42px !important;
-  max-width: 42px !important;
-  flex: 0 0 42px !important;
+  margin-right: 8px !important;
+  width: 40px !important;
+  min-width: 40px !important;
+  max-width: 40px !important;
+  flex: 0 0 40px !important;
+  height: 30px !important; /* Ligeramente más baja que los 38px de la barra */
   align-self: center !important;
 }
 
@@ -102,14 +106,38 @@
 }
 
 .p-tabview .p-tabview-nav li .p-tabview-nav-link {
-  padding: 0 0.55rem !important;
-  font-size: 0.76rem !important;
+  padding: 0 0.75rem !important;
+  font-size: 0.82rem !important; /* Texto un poco más legible */
   height: 100%;
   min-height: 0;
   margin-bottom: 0;
   padding-bottom: 0;
   display: flex;
   align-items: center;
+  border-radius: 6px 6px 0 0 !important; /* Esquinas superiores suaves */
+  border: 1px solid transparent !important;
+  border-bottom: none !important;
+  background: transparent !important;
+  color: var(--ui-tab-text, rgba(255, 255, 255, 0.6)) !important;
+  transition: all 0.2s ease !important;
+}
+
+/* Hover en pestaña inactiva */
+.p-tabview .p-tabview-nav li:not(.p-highlight) .p-tabview-nav-link:hover {
+  background: var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.05)) !important;
+  color: var(--ui-tab-text-hover, rgba(255, 255, 255, 0.9)) !important;
+}
+
+/* Pestaña ACTIVA: Estilo Profesional */
+.p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+  background: var(--ui-tab-active-bg, rgba(255, 255, 255, 0.08)) !important;
+  color: var(--ui-tab-active-text, #fff) !important;
+  border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.15)) !important;
+  border-bottom: none !important;
+  border-top: 2px solid var(--primary-color) !important; /* Línea de acento superior */
+  box-shadow: 0 -2px 10px rgba(var(--primary-rgb, 0, 122, 255), 0.2) !important; /* Sutil resplandor */
+  position: relative;
+  z-index: 2;
 }
 
 /* === Variantes de layout de pestañas === */

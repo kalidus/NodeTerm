@@ -7,6 +7,8 @@ import openCodeSvg from '../assets/ai-clients/opencode.svg';
 import agentZeroSvg from '../assets/ai-clients/agent-zero.svg';
 import openNotebookSvg from '../assets/ai-clients/open-notebook.svg';
 
+import { SiAnthropic, SiGooglegemini, SiOpenai } from 'react-icons/si';
+
 /** Recursos oficiales de cada proyecto (repos públicos). */
 const BRAND_BY_TAB_TYPE = {
   'anything-llm': { src: anythingLlmPng, alt: 'AnythingLLM' },
@@ -15,7 +17,10 @@ const BRAND_BY_TAB_TYPE = {
   agentzero: { src: agentZeroSvg, alt: 'Agent Zero' },
   openclaw: { src: openclawPng, alt: 'OpenClaw' },
   opencode: { src: openCodeSvg, alt: 'OpenCode' },
-  'open-notebook': { src: openNotebookSvg, alt: 'Open Notebook' }
+  'open-notebook': { src: openNotebookSvg, alt: 'Open Notebook' },
+  claude: { component: SiAnthropic, color: '#D97706', alt: 'Claude' },
+  geminicli: { component: SiGooglegemini, color: '#8E75B2', alt: 'Gemini' },
+  codexcli: { component: SiOpenai, color: '#10A37F', alt: 'Codex' }
 };
 
 /**
@@ -61,6 +66,23 @@ const AIClientBrandIcon = ({ tabType, size = 14, className, style }) => {
       >
         {fallbackLabel}
       </span>
+    );
+  }
+
+  if (meta.component) {
+    const IconComponent = meta.component;
+    return (
+      <IconComponent
+        className={className}
+        style={{
+          width: size,
+          height: size,
+          fontSize: size,
+          color: meta.color || 'inherit',
+          flexShrink: 0,
+          ...style
+        }}
+      />
     );
   }
 
