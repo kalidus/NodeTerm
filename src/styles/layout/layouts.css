@@ -33,8 +33,35 @@ body.layout-cyberpunk {
   /* Neon glow effect based on primary color */
   --layout-panel-shadow: 0 0 10px rgba(var(--primary-color-rgb, 99, 102, 241), 0.3);
   
-  /* Techy font override */
-  --layout-font-family: 'Share Tech Mono', 'Orbitron', 'Courier New', monospace !important;
+  /* Techy font override - Preferred Orbitron for titles, JetBrains for content */
+  --layout-font-family: 'JetBrains Mono', 'Share Tech Mono', 'Orbitron', 'Courier New', monospace !important;
+  
+  /* UI Specific values */
+  --ui-titlebar-margin: 0px !important;
+  --ui-titlebar-radius: 0px !important;
+  --ui-sidebar-radius: 0px !important;
+  --ui-glass-radius: 0px !important;
+}
+
+/* Scrollbar Overrides for Cyberpunk */
+body.layout-cyberpunk *::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+}
+
+body.layout-cyberpunk *::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2) !important;
+}
+
+body.layout-cyberpunk *::-webkit-scrollbar-thumb {
+  background: var(--ui-button-primary, #6366f1) !important;
+  border-radius: 0px !important;
+  box-shadow: 0 0 5px var(--ui-button-primary, #6366f1) !important;
+}
+
+body.layout-cyberpunk *::-webkit-scrollbar-thumb:hover {
+  background: #fff !important;
+  box-shadow: 0 0 10px var(--ui-button-primary, #6366f1) !important;
 }
 
 /* --- Global application of layout variables --- */
@@ -58,8 +85,41 @@ body.layout-cyberpunk .p-checkbox-box,
 body.layout-cyberpunk .p-toast-message,
 body.layout-cyberpunk .general-setting-card,
 body.layout-cyberpunk .status-bar,
-body.layout-cyberpunk .p-splitter-panel {
+body.layout-cyberpunk .p-splitter-panel,
+body.layout-cyberpunk .terminal-frame,
+body.layout-cyberpunk .terminal-frame-header,
+body.layout-cyberpunk .p-tabview-nav li,
+body.layout-cyberpunk .p-tabview-nav li .p-tabview-nav-link,
+body.layout-cyberpunk .glass-button,
+body.layout-cyberpunk .title-bar {
   border-radius: var(--layout-border-radius-main) !important;
+}
+
+/* Force TitleBar to be flush and sharp */
+body.layout-cyberpunk .title-bar {
+  margin: var(--ui-titlebar-margin) !important;
+  border-radius: var(--ui-titlebar-radius) !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-top: none !important;
+  letter-spacing: 1px;
+}
+
+/* Force Sidebar buttons to be sharp */
+body.layout-cyberpunk .sidebar-action-glass-group .glass-button {
+  border-radius: var(--ui-glass-radius) !important;
+}
+
+/* Typography and spacing adjustments for Cyberpunk */
+body.layout-cyberpunk .terminal-frame-title {
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: bold;
+}
+
+body.layout-cyberpunk .p-tabview-nav-link {
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 /* Special Neon Glows for Cyberpunk */
@@ -91,4 +151,28 @@ body.layout-cyberpunk .p-tabview-nav-link.p-highlight {
 body.layout-cyberpunk .p-inputtext:enabled:focus,
 body.layout-cyberpunk .p-dropdown:not(.p-disabled).p-focus {
   box-shadow: 0 0 0 0.2rem var(--ui-button-primary) !important;
+}
+
+/* AI Chat Specific Cyberpunk Refinements */
+body.layout-cyberpunk .ai-codeblock {
+  border-radius: 0px !important;
+  border: 1px solid var(--ui-button-primary, #6366f1) !important;
+}
+
+body.layout-cyberpunk .ai-code-header {
+  border-radius: 0px !important;
+  background: rgba(var(--primary-color-rgb, 99, 102, 241), 0.1) !important;
+}
+
+body.layout-cyberpunk .ai-md h1, 
+body.layout-cyberpunk .ai-md h2 {
+  border-radius: 0px !important;
+  text-transform: uppercase;
+}
+
+body.layout-cyberpunk .ai-md code:not(pre code) {
+  border-radius: 0px !important;
+  background: rgba(var(--primary-color-rgb, 99, 102, 241), 0.2) !important;
+  color: #fff !important;
+  border: 1px solid var(--ui-button-primary) !important;
 }

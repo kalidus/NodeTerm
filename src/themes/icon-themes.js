@@ -1,6 +1,53 @@
 import React from 'react';
 // Estructura de temas de iconos locales (SVG inline)
 export const iconThemes = {
+  cyberpunk: {
+    name: 'Cyberpunk',
+    icons: {
+      folder: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 4h7l2 2h11v14H2V4z" strokeLinejoin="miter"/></svg>
+      ),
+      folderOpen: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 4h7l2 2h11v14H2V4z" strokeLinejoin="miter"/></svg>
+      ),
+      ssh: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <rect x="2" y="4" width="20" height="14" stroke="currentColor" strokeWidth="2" strokeLinejoin="miter"/>
+          <path d="M6 10l3 3-3 3M11 16h7" stroke="currentColor" strokeWidth="2" strokeLinecap="square"/>
+        </svg>
+      ),
+      rdp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="3" width="18" height="13" stroke="currentColor" strokeWidth="2" strokeLinejoin="miter"/>
+          <path d="M7 21h10M12 16v5" stroke="currentColor" strokeWidth="2" strokeLinecap="square"/>
+          <rect x="6" y="6" width="12" height="7" fill="currentColor" fillOpacity="0.2"/>
+        </svg>
+      ),
+      vnc: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <rect x="2" y="4" width="20" height="13" stroke="currentColor" strokeWidth="2" strokeLinejoin="miter"/>
+          <circle cx="12" cy="10.5" r="3" stroke="currentColor" strokeWidth="2"/>
+          <circle cx="12" cy="10.5" r="1" fill="currentColor"/>
+        </svg>
+      ),
+      file: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2H4v20h16V9l-7-7z" strokeLinejoin="miter"/></svg>
+      ),
+      sftp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M13 2H4v20h16V9l-7-7z" strokeLinejoin="miter"/>
+          <rect x="9" y="13" width="6" height="4" stroke="currentColor" strokeWidth="1.5"/>
+          <path d="M10 13v-1.5a2 2 0 1 1 4 0V13" stroke="currentColor" strokeWidth="1.5"/>
+        </svg>
+      ),
+      ftp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M13 2H4v20h16V9l-7-7z" strokeLinejoin="miter"/>
+          <path d="M12 12l-3 3 3 3M9 15h6" stroke="currentColor" strokeWidth="1.5"/>
+        </svg>
+      )
+    }
+  },
   material: {
     name: 'Material',
     icons: {
