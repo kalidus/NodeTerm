@@ -45,6 +45,24 @@ export const iconThemes = {
           <path d="M13 2H4v20h16V9l-7-7z" strokeLinejoin="miter"/>
           <path d="M12 12l-3 3 3 3M9 15h6" stroke="currentColor" strokeWidth="1.5"/>
         </svg>
+      ),
+      scp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M13 2H4v20h16V9l-7-7z" strokeLinejoin="miter"/>
+          <path d="M9 15l3-3 3 3" stroke="currentColor" strokeWidth="1.5"/>
+        </svg>
+      ),
+      password: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="3" y="11" width="18" height="10" strokeLinejoin="miter"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" strokeLinejoin="miter"/>
+          <circle cx="12" cy="16" r="1.5" fill="currentColor"/>
+        </svg>
+      ),
+      'ssh-tunnel': (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" strokeLinejoin="miter"/>
+        </svg>
       )
     }
   },

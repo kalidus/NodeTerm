@@ -67,8 +67,13 @@ body.layout-cyberpunk *::-webkit-scrollbar-thumb:hover {
 /* --- Global application of layout variables --- */
 
 /* Font Family Overrides for Cyberpunk */
-body.layout-cyberpunk * {
+body.layout-cyberpunk *:not(.pi) {
   font-family: var(--layout-font-family) !important;
+}
+
+/* Ensure PrimeIcons maintain their own font family */
+body.layout-cyberpunk .pi {
+  font-family: 'primeicons' !important;
 }
 
 /* Base PrimeReact overriding for border radius */

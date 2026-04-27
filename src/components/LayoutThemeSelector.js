@@ -13,6 +13,16 @@ const LayoutThemeSelector = () => {
     setCurrentLayout(layoutId);
     localStorage.setItem('ui_layout', layoutId);
     
+    // Auto-sync icon theme for Cyberpunk
+    if (layoutId === 'cyberpunk') {
+      localStorage.setItem('iconTheme', 'cyberpunk');
+      localStorage.setItem('iconThemeSidebar', 'cyberpunk');
+      // Dispatch event to notify useThemeManagement and other components
+      window.dispatchEvent(new CustomEvent('settings-updated', { 
+        detail: { source: 'layout-sync' } 
+      }));
+    }
+    
     // Update body classes
     document.body.classList.remove('layout-default', 'layout-cyberpunk');
     document.body.classList.add(`layout-${layoutId}`);
