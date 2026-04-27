@@ -17,6 +17,7 @@ import { useTranslation } from '../i18n/hooks/useTranslation';
 import ThemeSelector from './ThemeSelector';
 import StatusBarSettingsTab from './StatusBarSettingsTab';
 import TabThemeSelector from './TabThemeSelector';
+import LayoutThemeSelector from './LayoutThemeSelector';
 import SyncSettingsDialog from './SyncSettingsDialog';
 import UpdatePanel from './UpdatePanel';
 import { themes } from '../themes';
@@ -231,13 +232,14 @@ const SettingsDialog = ({
       'nueva-pestana': { parent: 'seguridad', index: 2 },
       // Dentro de Apariencia (índice 2)
       'interfaz': { parent: 'apariencia', index: 0 },
-      'pestanas': { parent: 'apariencia', index: 1 },
-      'pagina-inicio': { parent: 'apariencia', index: 2 },
-      'terminal': { parent: 'apariencia', index: 3 },
-      'status-bar': { parent: 'apariencia', index: 4 },
-      'explorador-sesiones': { parent: 'apariencia', index: 5 },
-      'explorador-archivos': { parent: 'apariencia', index: 6 },
-      'presets': { parent: 'apariencia', index: 7 }
+      'layouts': { parent: 'apariencia', index: 1 },
+      'pestanas': { parent: 'apariencia', index: 2 },
+      'pagina-inicio': { parent: 'apariencia', index: 3 },
+      'terminal': { parent: 'apariencia', index: 4 },
+      'status-bar': { parent: 'apariencia', index: 5 },
+      'explorador-sesiones': { parent: 'apariencia', index: 6 },
+      'explorador-archivos': { parent: 'apariencia', index: 7 },
+      'presets': { parent: 'apariencia', index: 8 }
     };
     return subTabMap[subTab];
   };
@@ -3354,6 +3356,9 @@ const SettingsDialog = ({
                 {/* Renderizado condicional basado en activeSubTab */}
                 {activeSubTab === 'interfaz' && (
                   <ThemeSelector showPreview={true} />
+                )}
+                {activeSubTab === 'layouts' && (
+                  <LayoutThemeSelector />
                 )}
                 {activeSubTab === 'terminal' && (
                   <TerminalSettingsTab

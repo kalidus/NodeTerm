@@ -47,6 +47,7 @@ if (typeof window !== 'undefined') {
 
 // Custom styles
 import './styles/main.css';
+import './styles/layout/layouts.css';
 // Fuentes locales integradas (generadas con npm run download-fonts)
 import './styles/fonts.css';
 // import './assets/DashboardStyles.css';
@@ -82,6 +83,10 @@ const applyEarlyBootTheme = () => {
     // Fondo base acorde para evitar flash (blanco o oscuro)
     // Esto debe coincidir con el color de fondo del tema para ser imperceptible
     document.body.style.backgroundColor = isLight ? '#ffffff' : '#0e1116';
+
+    // Apply layout class
+    const savedLayout = localStorage.getItem('ui_layout') || 'default';
+    document.body.classList.add(`layout-${savedLayout}`);
   } catch { }
 };
 applyEarlyBootTheme();

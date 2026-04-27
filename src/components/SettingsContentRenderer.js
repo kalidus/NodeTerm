@@ -24,6 +24,7 @@ const SettingsContentRenderer = ({
       'clave-maestra': 1.1,
       'auditoria': 1.2,
       'interfaz': 2.1,
+      'layouts': 2.15,
       'terminal': 2.2,
       'status-bar': 2.3,
       'explorador-sesiones': 2.4,

@@ -21,6 +21,7 @@
     "audit": "Auditoría",
     "appearance": "Apariencia",
     "interface": "Interfaz",
+    "layouts": "Layouts",
     "tabs": "Pestañas",
     "homePage": "Página de Inicio",
     "terminal": "Terminal",
@@ -79,6 +80,15 @@
     "iconTheme": "Tema de iconos",
     "fontSize": "Tamaño de fuente",
     "fontFamily": "Familia de fuente",
+    "layouts": {
+      "title": "Configuración de Layout",
+      "description": "Cambia la estructura visual global de la aplicación",
+      "select": "Selecciona un Layout",
+      "options": {
+        "default": "Moderno (Redondeado)",
+        "cyberpunk": "Cyberpunk (Angular)"
+      }
+    },
     "sessionExplorer": {
       "title": "Explorador de Sesiones",
       "description": "Personaliza iconos, tamaños, tipografía y color del árbol",

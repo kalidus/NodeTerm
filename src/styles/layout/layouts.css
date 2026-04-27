@@ -1,0 +1,94 @@
+/* 
+  Layout Global Styles
+  This file handles the visual structure changes between different global layouts 
+  (e.g., Default/Modern vs Cyberpunk)
+*/
+
+/* =========================================
+   LAYOUT: DEFAULT (MODERN)
+   ========================================= */
+body.layout-default {
+  --layout-border-radius-main: 8px;
+  --layout-border-radius-sm: 4px;
+  --layout-border-radius-lg: 12px;
+  
+  --layout-border-width: 1px;
+  --layout-panel-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  
+  --layout-font-family: inherit; /* Use theme font */
+}
+
+/* =========================================
+   LAYOUT: CYBERPUNK
+   ========================================= */
+body.layout-cyberpunk {
+  /* Sharp corners everywhere */
+  --layout-border-radius-main: 0px !important;
+  --layout-border-radius-sm: 0px !important;
+  --layout-border-radius-lg: 0px !important;
+  --border-radius: 0px !important;
+  
+  --layout-border-width: 1px;
+  
+  /* Neon glow effect based on primary color */
+  --layout-panel-shadow: 0 0 10px rgba(var(--primary-color-rgb, 99, 102, 241), 0.3);
+  
+  /* Techy font override */
+  --layout-font-family: 'Share Tech Mono', 'Orbitron', 'Courier New', monospace !important;
+}
+
+/* --- Global application of layout variables --- */
+
+/* Font Family Overrides for Cyberpunk */
+body.layout-cyberpunk * {
+  font-family: var(--layout-font-family) !important;
+}
+
+/* Base PrimeReact overriding for border radius */
+body.layout-cyberpunk .p-button,
+body.layout-cyberpunk .p-inputtext,
+body.layout-cyberpunk .p-dropdown,
+body.layout-cyberpunk .p-card,
+body.layout-cyberpunk .p-dialog,
+body.layout-cyberpunk .p-menu,
+body.layout-cyberpunk .p-tabview-nav-link,
+body.layout-cyberpunk .sidebar-container,
+body.layout-cyberpunk .sidebar-action-button,
+body.layout-cyberpunk .p-checkbox-box,
+body.layout-cyberpunk .p-toast-message,
+body.layout-cyberpunk .general-setting-card,
+body.layout-cyberpunk .status-bar,
+body.layout-cyberpunk .p-splitter-panel {
+  border-radius: var(--layout-border-radius-main) !important;
+}
+
+/* Special Neon Glows for Cyberpunk */
+body.layout-cyberpunk .p-button:not(.p-button-text):not(.p-button-danger):not(.p-button-success) {
+  background: transparent !important;
+  color: var(--ui-button-primary) !important;
+  box-shadow: 0 0 8px var(--ui-button-primary) !important;
+  border: 1px solid var(--ui-button-primary) !important;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+body.layout-cyberpunk .p-button:not(.p-button-text):not(.p-button-danger):not(.p-button-success):hover {
+  box-shadow: 0 0 12px var(--ui-button-primary) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+body.layout-cyberpunk .p-dialog,
+body.layout-cyberpunk .p-menu,
+body.layout-cyberpunk .general-setting-card:hover {
+  box-shadow: 0 0 8px var(--ui-button-primary) !important;
+  border: 1px solid var(--ui-button-primary) !important;
+}
+
+body.layout-cyberpunk .p-tabview-nav-link.p-highlight {
+  box-shadow: inset 0 -2px 10px var(--ui-button-primary) !important;
+}
+
+body.layout-cyberpunk .p-inputtext:enabled:focus,
+body.layout-cyberpunk .p-dropdown:not(.p-disabled).p-focus {
+  box-shadow: 0 0 0 0.2rem var(--ui-button-primary) !important;
+}

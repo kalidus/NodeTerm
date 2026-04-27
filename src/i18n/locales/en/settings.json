@@ -21,6 +21,7 @@
     "audit": "Audit",
     "appearance": "Appearance",
     "interface": "Interface",
+    "layouts": "Layouts",
     "tabs": "Tabs",
     "homePage": "Home Page",
     "terminal": "Terminal",
@@ -73,7 +74,7 @@
     "startWithSystem": "Start with system",
     "checkUpdates": "Check for updates on startup"
   },
-  "appearance": {
+  "appearance_legacy": {
     "title": "Appearance",
     "theme": "Theme",
     "iconTheme": "Icon theme",
@@ -224,6 +225,15 @@
     "iconTheme": "Icon theme",
     "fontSize": "Font size",
     "fontFamily": "Font family",
+    "layouts": {
+      "title": "Layout Configuration",
+      "description": "Change the global visual structure of the application",
+      "select": "Select a Layout",
+      "options": {
+        "default": "Modern (Rounded)",
+        "cyberpunk": "Cyberpunk (Angular)"
+      }
+    },
     "sessionExplorer": {
       "title": "Session Explorer",
       "description": "Customize icons, sizes, typography and tree color",
