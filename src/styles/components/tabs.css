@@ -64,15 +64,15 @@
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important; /* Transición suave de tamaño */
 }
 
-/* Pestaña de inicio: redimensionada para la nueva altura de barra */
+/* Pestaña de inicio: misma altura/alineación que el resto */
 .p-tabview .p-tabview-nav li.home-tab {
   margin-right: 8px !important;
   width: 40px !important;
   min-width: 40px !important;
   max-width: 40px !important;
   flex: 0 0 40px !important;
-  height: 30px !important; /* Ligeramente más baja que los 38px de la barra */
-  align-self: center !important;
+  height: auto !important;
+  align-self: auto !important;
 }
 
 /* El nav-link del home: misma altura que otras pestañas, contenido centrado */
@@ -88,7 +88,7 @@
   align-self: center !important;
   border-radius: 6px !important;
   border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.22)) !important;
-  margin: 0 !important;
+  margin-bottom: 0 !important;
   background: var(--home-tab-theme-bg, var(--ui-tab-bg, rgba(255, 255, 255, 0.04))) !important;
   transition: background 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.15s !important;
   outline: none !important;
@@ -295,6 +295,10 @@
   border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.22)) !important;
 }
 
+:root[data-tab-layout="browser"] .p-tabview .p-tabview-nav li.home-tab .p-tabview-nav-link {
+  margin-top: 3px !important;
+}
+
 :root[data-tab-layout="classicBrowser"] .p-tabview .p-tabview-nav {
   height: 32px;
   min-height: 32px;
@@ -336,6 +340,10 @@
   margin: 2px 0 !important;
   border-radius: 999px !important;
   border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.22)) !important;
+}
+
+:root[data-tab-layout="arcPills"] .p-tabview .p-tabview-nav li.home-tab .p-tabview-nav-link {
+  margin: 2px 0 !important;
 }
 
 /* Barra de tinta para la pestaña activa */
