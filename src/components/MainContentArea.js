@@ -1856,7 +1856,7 @@ const MainContentArea = ({
 
         // Reordenados según petición del usuario: Barra de título, Marco superior, Modo minimalista
         contentArea.appendChild(createToggleOption('Barra de título', null, isTitleBarVisible, () => window.dispatchEvent(new CustomEvent('toggle-titlebar'))));
-        contentArea.appendChild(createToggleOption('Marco superior', null, isMarcoVisible, () => setMainFrameHeaderCollapsed(!isMarcoVisible)));
+        contentArea.appendChild(createToggleOption('Marco superior', null, isMarcoVisible, () => setMainFrameHeaderCollapsed(prev => !prev)));
         contentArea.appendChild(createToggleOption('Modo Minimalista Absoluto', null, isMinimal, () => window.dispatchEvent(new CustomEvent('toggle-minimal-mode'))));
       }
 
