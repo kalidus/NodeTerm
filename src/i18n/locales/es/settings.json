@@ -21,7 +21,7 @@
     "audit": "Auditoría",
     "appearance": "Apariencia",
     "interface": "Interfaz",
-    "layouts": "Layouts",
+    "layouts": "Estilos",
     "tabs": "Pestañas",
     "homePage": "Página de Inicio",
     "terminal": "Terminal",
@@ -81,7 +81,7 @@
     "fontSize": "Tamaño de fuente",
     "fontFamily": "Familia de fuente",
     "layouts": {
-      "title": "Configuración de Layout",
+      "title": "Estilos",
       "description": "Cambia la estructura visual global de la aplicación",
       "select": "Selecciona un Layout",
       "options": {

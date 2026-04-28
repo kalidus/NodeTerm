@@ -33,7 +33,7 @@ const LayoutThemeSelector = () => {
       id: 'default',
       name: 'Moderno (Redondeado)',
       description: 'El diseño original de NodeTerm con bordes redondeados y sombras suaves.',
-      icon: 'pi-objects-column',
+      icon: 'pi-th-large',
       preview: () => (
         <div style={{
           width: '100%',
@@ -88,8 +88,8 @@ const LayoutThemeSelector = () => {
       <div className="theme-explore-section">
         <div className="theme-explore-header">
           <div className="theme-explore-title">
-            <i className="pi pi-objects-column"></i>
-            Configuración de Layouts
+            <i className="pi pi-th-large"></i>
+            Estilos
           </div>
         </div>
 

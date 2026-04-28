@@ -22,7 +22,7 @@ const SettingsSidebarNav = ({
     {
       id: 'general',
       label: t('sidebar.general'),
-      icon: 'pi pi-sliders-h',
+      icon: 'pi pi-cog',
       subitems: []
     },
     {
@@ -46,7 +46,7 @@ const SettingsSidebarNav = ({
       icon: 'pi pi-palette',
       subitems: [
         { id: 'interfaz', label: t('sidebar.interface'), icon: 'pi pi-eye' },
-        { id: 'layouts', label: t('sidebar.layouts'), icon: 'pi pi-objects-column' },
+        { id: 'layouts', label: t('sidebar.layouts'), icon: 'pi pi-th-large' },
         { id: 'pestanas', label: t('sidebar.tabs'), icon: 'pi pi-palette' },
         { id: 'pagina-inicio', label: t('sidebar.homePage'), icon: 'pi pi-home' },
         { id: 'terminal', label: t('sidebar.terminal'), icon: 'pi pi-desktop' },
