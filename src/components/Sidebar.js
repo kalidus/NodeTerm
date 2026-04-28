@@ -433,9 +433,192 @@ const Sidebar = React.memo(({
     }
   }, [isAIChatActive, viewMode, setViewMode, initialFilesystemPath]);
 
+  // --- Utilidades para manipulación de colores en SVGs ---
+
+  // Función para convertir hex a HSL
+  const hexToHsl = (hex) => {
+    if (!hex || typeof hex !== 'string' || !hex.startsWith('#')) return [0, 0, 0];
+    const r = parseInt(hex.substr(1, 2), 16) / 255;
+    const g = parseInt(hex.substr(3, 2), 16) / 255;
+    const b = parseInt(hex.substr(5, 2), 16) / 255;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h, s, l = (max + min) / 2;
+
+    if (max === min) {
+      h = s = 0;
+    } else {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        case b: h = (r - g) / d + 4; break;
+      }
+      h /= 6;
+    }
+
+    return [h * 360, s * 100, l * 100];
+  };
+
+  // Función para convertir HSL a hex
+  const hslToHex = (h, s, l) => {
+    h /= 360;
+    s /= 100;
+    l /= 100;
+
+    const hue2rgb = (p, q, t) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+      return p;
+    };
+
+    let r, g, b;
+    if (s === 0) {
+      r = g = b = l;
+    } else {
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      const p = 2 * l - q;
+      r = hue2rgb(p, q, h + 1 / 3);
+      g = hue2rgb(p, q, h);
+      b = hue2rgb(p, q, h - 1 / 3);
+    }
+
+    const toHex = (c) => {
+      const hex = Math.round(c * 255).toString(16);
+      return hex.length === 1 ? '0' + hex : hex;
+    };
+
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  };
+
+  // Función para modificar colores de un elemento SVG de forma recursiva
+  const modifySVGColors = (element, newColor, themeKey, index = 0) => {
+    if (!element || !element.props) return element;
+
+    const newProps = { ...element.props };
+
+    // Añadir key única si no existe para evitar warnings de React
+    if (!newProps.key) {
+      newProps.key = `svg-child-${index}-${Date.now()}`;
+    }
+
+    // Lista de temas que deben preservar sus colores originales
+    const preserveOriginalColorsThemes = [
+      'monokai', 'onedark', 'gruvbox', 'tokyonight', 'palenight', 'minimal',
+      'cyberpunk', 'retroGaming', 'corporate', 'space', 'ocean',
+      'fire', 'ice', 'forest', 'sunset', 'matrix', 'neon', 'gradient',
+      'rainbow', 'metallic', 'holographic', 'glitch',
+      'vaporwave', 'minimalist', 'geometric', 'organic', 'tech', 'gaming', 'professional',
+      'acrylic', 'neumorphic'
+    ];
+
+    // Si es un tema que debe preservar colores originales, no modificar nada
+    if (preserveOriginalColorsThemes.includes(themeKey)) {
+      return element;
+    }
+
+    // Mapeo de colores específicos del tema a colores adaptados
+    const colorMapping = {
+      // Synthwave: #ff007c (rosa) -> color personalizado, #00d4ff (cian) -> MANTENER (parte superior)
+      '#ff007c': newColor,
+      '#00d4ff': '#00d4ff',
+
+      // Nord: #5e81ac (azul) -> color personalizado, #88c0d0 (azul claro) -> MANTENER (parte superior)
+      '#5e81ac': newColor,
+      '#88c0d0': '#88c0d0',
+
+      // Dracula: #bd93f9 (púrpura) -> color personalizado, #ff79c6 (rosa) -> MANTENER (parte superior)
+      '#bd93f9': newColor,
+      '#ff79c6': '#ff79c6',
+
+      // Fluent: #0078d4 (azul) -> color personalizado, #50e6ff (cian) -> MANTENER (parte superior)
+      '#0078d4': newColor,
+      '#50e6ff': '#50e6ff',
+
+      // Solarized: #b58900 (amarillo) -> color personalizado, #268bd2 (azul) -> MANTENER (parte superior)
+      '#b58900': newColor,
+      '#268bd2': '#268bd2',
+
+      // Material: #007ad9 (azul) -> color personalizado, #42a5f5 (azul claro) -> MANTENER (parte superior)
+      // También añadimos variantes comunes de Material
+      '#007ad9': newColor,
+      '#42a5f5': '#42a5f5',
+      '#1976d2': newColor,
+      '#2196f3': newColor,
+
+      // VS Code: #dcb67a (dorado) -> color personalizado, #f5d18a (dorado claro) -> MANTENER (parte superior)
+      '#dcb67a': newColor,
+      '#f5d18a': '#f5d18a',
+    };
+
+    // Cambiar colores de manera inteligente (fill y stroke)
+    if (newProps.fill && newProps.fill !== 'none' && !newProps.fill.startsWith('url')) {
+      if (colorMapping[newProps.fill]) {
+        newProps.fill = colorMapping[newProps.fill];
+      } else {
+        newProps.fill = newColor;
+      }
+    }
+
+    if (newProps.stroke && newProps.stroke !== 'none' && !newProps.stroke.startsWith('url')) {
+      if (colorMapping[newProps.stroke]) {
+        newProps.stroke = colorMapping[newProps.stroke];
+      } else {
+        newProps.stroke = newColor;
+      }
+    }
+
+    // Procesar children recursivamente
+    if (newProps.children) {
+      if (Array.isArray(newProps.children)) {
+        newProps.children = newProps.children.map((child, idx) =>
+          typeof child === 'object' ? modifySVGColors(child, newColor, themeKey, idx) : child
+        );
+      } else if (typeof newProps.children === 'object') {
+        newProps.children = modifySVGColors(newProps.children, newColor, themeKey, 0);
+      }
+    }
+
+    return React.cloneElement(element, newProps);
+  };
+
+  // Función para verificar si un color es el color por defecto de algún tema
+  const isDefaultThemeColor = (color) => {
+    if (!color || typeof color !== 'string') return false;
+
+    // 1. Verificar contra lista explícita de colores de temas
+    const defaultThemeColors = [
+      '#007ad9', '#42a5f5', '#1976d2', '#2196f3', // Material
+      '#0078d4', '#50e6ff', // Fluent
+      '#ff007c', '#00d4ff', // Synthwave
+      '#5e81ac', '#88c0d0', // Nord
+      '#bd93f9', '#ff79c6', // Dracula
+      '#b58900', '#268bd2', // Solarized
+      '#dcb67a', '#f5d18a', // VS Code
+      '#6c7086', '#808080', '#999999', '#7f8c8d', '#95a5a6' // Minimal / Grises comunes
+    ];
+
+    if (defaultThemeColors.includes(color.toLowerCase())) return true;
+
+    // 2. Heurística: Cualquier color con saturación muy baja (< 15%) se trata como gris/default
+    try {
+      const [h, s, l] = hexToHsl(color);
+      if (s < 15) return true;
+    } catch (e) {
+      // Ignorar errores de parseo
+    }
+
+    return false;
+  };
+
   // Función para obtener el color por defecto del tema actual
   const getThemeDefaultColor = (themeName) => {
-    const theme = iconThemes[themeName];
+    const theme = iconThemes[themeName?.toLowerCase() || 'nord'];
     if (!theme || !theme.icons || !theme.icons.folder) return '#5e81ac'; // Nord color por defecto
 
     const folderIcon = theme.icons.folder;
@@ -469,34 +652,18 @@ const Sidebar = React.memo(({
     return '#5e81ac'; // Nord color por defecto
   };
 
-  // Función para verificar si un color es el color por defecto de algún tema
-  const isDefaultThemeColor = (color) => {
-    if (!color) return false;
 
-    // Lista de colores por defecto de todos los temas
-    const defaultThemeColors = [
-      '#007ad9', // Material
-      '#0078d4', // Fluent
-      '#ff007c', // Synthwave
-      '#5e81ac', // Nord
-      '#bd93f9', // Dracula
-      '#b58900', // Solarized
-      '#dcb67a'  // VS Code
-    ];
-
-    return defaultThemeColors.includes(color.toLowerCase());
-  };
 
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [folderName, setFolderName] = useState('');
-  const [folderColor, setFolderColor] = useState(() => getThemeDefaultColor(iconTheme));
+  const [folderColor, setFolderColor] = useState(() => getThemeDefaultColor(iconTheme?.toLowerCase() || 'nord'));
   const [folderIcon, setFolderIcon] = useState(null);
   const [parentNodeKey, setParentNodeKey] = useState(null);
   const [editingNode, setEditingNode] = useState(null); // Para saber si estamos editando un nodo existente
 
   // Actualizar color por defecto cuando cambie el tema
   useEffect(() => {
-    const newDefaultColor = getThemeDefaultColor(iconTheme);
+    const newDefaultColor = getThemeDefaultColor(iconTheme?.toLowerCase() || 'nord');
     setFolderColor(newDefaultColor);
 
     // Actualizar colores de carpetas existentes SOLO si no tienen color personalizado
@@ -507,10 +674,9 @@ const Sidebar = React.memo(({
           const updatedNode = { ...node };
 
           // Si la carpeta no tiene la propiedad hasCustomColor, determinar si tiene color personalizado
-          // basándose en si su color es diferente al color del tema actual
-          if (node.hasCustomColor === undefined) {
-            const currentThemeColor = getThemeDefaultColor(iconTheme);
-            updatedNode.hasCustomColor = node.color && node.color !== currentThemeColor;
+          // basándose en si su color es uno de los colores por defecto conocidos
+          if (node.hasCustomColor === undefined || !node.hasCustomColor) {
+            updatedNode.hasCustomColor = node.color && !isDefaultThemeColor(node.color);
           }
 
           // Solo actualizar el color si la carpeta NO tiene color personalizado
@@ -1268,7 +1434,7 @@ const Sidebar = React.memo(({
     // Limpiar formulario
     setShowFolderDialog(false);
     setFolderName('');
-    setFolderColor(getThemeDefaultColor(iconTheme));
+    setFolderColor(getThemeDefaultColor(iconTheme?.toLowerCase() || 'nord'));
     setParentNodeKey(null);
     setEditingNode(null);
 
@@ -1777,7 +1943,7 @@ const Sidebar = React.memo(({
           setParentNodeKey(parentKey);
           setEditingNode(node); // Estado para saber que estamos editando
           setFolderName(node.label);
-          setFolderColor(node.color || getThemeDefaultColor(iconTheme));
+          setFolderColor(node.color || getThemeDefaultColor(iconTheme?.toLowerCase() || 'nord'));
           setFolderIcon(node.folderIcon || null);
           setShowFolderDialog(true);
         },
@@ -1906,7 +2072,8 @@ const Sidebar = React.memo(({
     const isSSHTunnel = node.data && node.data.type === 'ssh-tunnel';
     // Icono según tema seleccionado para la sidebar
     let icon = null;
-    const themeIcons = iconThemes[iconTheme]?.icons || iconThemes['nord'].icons;
+    const themeKey = (iconTheme || 'nord').toLowerCase();
+    const themeIcons = iconThemes[themeKey]?.icons || iconThemes['nord'].icons;
     if (isSSH) {
       // Verificar si tiene icono personalizado (ignorar 'default' para usar el icono del tema)
       if (node.data?.customIcon && node.data.customIcon !== 'default' && SSHIconPresets[node.data.customIcon.toUpperCase()]) {
@@ -1984,15 +2151,20 @@ const Sidebar = React.memo(({
       const themeIcon = themeIcons[protocol] || iconThemes['material']?.icons?.[protocol];
 
       if (themeIcon) {
-        icon = React.cloneElement(themeIcon, {
-          width: connectionIconSize,
-          height: connectionIconSize,
-          style: {
-            ...themeIcon.props.style,
-            width: `${connectionIconSize}px`,
-            height: `${connectionIconSize}px`
-          }
-        });
+        const connectionColor = getThemeDefaultColor(themeKey);
+        icon = modifySVGColors(
+          React.cloneElement(themeIcon, {
+            width: connectionIconSize,
+            height: connectionIconSize,
+            style: {
+              ...themeIcon.props.style,
+              width: `${connectionIconSize}px`,
+              height: `${connectionIconSize}px`
+            }
+          }),
+          connectionColor,
+          themeKey
+        );
       } else {
         // Último fallback si no hay icono en ningún tema
         const fallbackColors = {
@@ -2013,7 +2185,7 @@ const Sidebar = React.memo(({
         // 2. Si tiene color pero es un color por defecto de algún tema → usar color por defecto del tema actual
         // 3. Si tiene color personalizado → mantener ese color
         const hasCustomColor = node.color && !isDefaultThemeColor(node.color);
-        const folderColor = hasCustomColor ? node.color : getThemeDefaultColor(iconTheme);
+        const folderColor = hasCustomColor ? node.color : getThemeDefaultColor(themeKey);
 
         // Usar el icono del tema si existe, pero forzar el color
         const themeIcon = options.expanded ? themeIcons.folderOpen : themeIcons.folder;
@@ -2035,180 +2207,7 @@ const Sidebar = React.memo(({
             'data-debug': 'sidebar-theme-icon'
           });
 
-          // Modificar los colores del SVG preservando la identidad del tema
-          const modifySVGColors = (element, newColor, index = 0) => {
-            if (!element || !element.props) return element;
-
-            const newProps = { ...element.props };
-
-            // Añadir key única si no existe
-            if (!newProps.key) {
-              newProps.key = `svg-child-${index}-${Date.now()}`;
-            }
-
-            // Función para convertir hex a HSL
-            const hexToHsl = (hex) => {
-              const r = parseInt(hex.substr(1, 2), 16) / 255;
-              const g = parseInt(hex.substr(3, 2), 16) / 255;
-              const b = parseInt(hex.substr(5, 2), 16) / 255;
-
-              const max = Math.max(r, g, b);
-              const min = Math.min(r, g, b);
-              let h, s, l = (max + min) / 2;
-
-              if (max === min) {
-                h = s = 0;
-              } else {
-                const d = max - min;
-                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-                switch (max) {
-                  case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-                  case g: h = (b - r) / d + 2; break;
-                  case b: h = (r - g) / d + 4; break;
-                }
-                h /= 6;
-              }
-
-              return [h * 360, s * 100, l * 100];
-            };
-
-            // Función para convertir HSL a hex
-            const hslToHex = (h, s, l) => {
-              h /= 360;
-              s /= 100;
-              l /= 100;
-
-              const hue2rgb = (p, q, t) => {
-                if (t < 0) t += 1;
-                if (t > 1) t -= 1;
-                if (t < 1 / 6) return p + (q - p) * 6 * t;
-                if (t < 1 / 2) return q;
-                if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-                return p;
-              };
-
-              let r, g, b;
-              if (s === 0) {
-                r = g = b = l;
-              } else {
-                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-                const p = 2 * l - q;
-                r = hue2rgb(p, q, h + 1 / 3);
-                g = hue2rgb(p, q, h);
-                b = hue2rgb(p, q, h - 1 / 3);
-              }
-
-              const toHex = (c) => {
-                const hex = Math.round(c * 255).toString(16);
-                return hex.length === 1 ? '0' + hex : hex;
-              };
-
-              return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-            };
-
-            // Función para crear un color complementario
-            const getComplementaryColor = (color) => {
-              const [h, s, l] = hexToHsl(color);
-              return hslToHex((h + 180) % 360, s, l);
-            };
-
-            // Función para crear un color análogo (desplazado en el círculo cromático)
-            const getAnalogousColor = (color, offset = 30) => {
-              const [h, s, l] = hexToHsl(color);
-              return hslToHex((h + offset) % 360, s, l);
-            };
-
-            // Función para ajustar la saturación
-            const adjustSaturation = (color, factor) => {
-              const [h, s, l] = hexToHsl(color);
-              return hslToHex(h, Math.min(100, s * factor), l);
-            };
-
-            // Función para ajustar la luminosidad
-            const adjustLightness = (color, factor) => {
-              const [h, s, l] = hexToHsl(color);
-              return hslToHex(h, s, Math.min(100, Math.max(0, l * factor)));
-            };
-
-            // Lista de temas que deben preservar sus colores originales
-            // NOTA: Fluent se excluye intencionalmente para mantener su funcionalidad de colores personalizados
-            const preserveOriginalColorsThemes = [
-              // Temas originales que deben mantener sus colores
-              'monokai', 'onedark', 'gruvbox', 'tokyonight', 'palenight', 'minimal',
-              // Nuevos temas añadidos
-              'cyberpunk', 'retroGaming', 'corporate', 'space', 'ocean',
-              'fire', 'ice', 'forest', 'sunset', 'matrix', 'neon', 'gradient',
-              'rainbow', 'metallic', 'holographic', 'glitch',
-              'vaporwave', 'minimalist', 'geometric', 'organic', 'tech', 'gaming', 'professional',
-              'acrylic', 'neumorphic', 'fluent'
-            ];
-
-            // Si es un tema que debe preservar colores originales, no modificar nada
-            if (preserveOriginalColorsThemes.includes(iconTheme)) {
-              return element;
-            }
-
-            // Mapeo de colores específicos del tema a colores adaptados
-            // REGLA: La parte superior (flap) mantiene el color secundario del tema, solo el cuerpo cambia
-            const colorMapping = {
-              // Synthwave: #ff007c (rosa) -> color personalizado, #00d4ff (cian) -> MANTENER (parte superior)
-              '#ff007c': newColor,   // Aplicar color personalizado al cuerpo
-              '#00d4ff': '#00d4ff', // Mantener cian original en parte superior
-
-              // Nord: #5e81ac (azul) -> color personalizado, #88c0d0 (azul claro) -> MANTENER (parte superior)
-              '#5e81ac': newColor,   // Aplicar color personalizado al cuerpo
-              '#88c0d0': '#88c0d0', // Mantener azul claro original en parte superior
-
-              // Dracula: #bd93f9 (púrpura) -> color personalizado, #ff79c6 (rosa) -> MANTENER (parte superior)
-              '#bd93f9': newColor,   // Aplicar color personalizado al cuerpo
-              '#ff79c6': '#ff79c6', // Mantener rosa original en parte superior
-
-              // Fluent: #0078d4 (azul) -> color personalizado, #50e6ff (cian) -> MANTENER (parte superior)
-              '#0078d4': newColor,   // Aplicar color personalizado al cuerpo
-              '#50e6ff': '#50e6ff', // Mantener cian original en parte superior
-
-              // Solarized: #b58900 (amarillo) -> color personalizado, #268bd2 (azul) -> MANTENER (parte superior)
-              '#b58900': newColor,   // Aplicar color personalizado al cuerpo
-              '#268bd2': '#268bd2', // Mantener azul original en parte superior
-
-              // VS Code: #dcb67a (dorado) -> color personalizado, #f5d18a (dorado claro) -> MANTENER (parte superior)
-              '#dcb67a': newColor,   // Aplicar color personalizado al cuerpo
-              '#f5d18a': '#f5d18a', // Mantener dorado claro original en parte superior
-            };
-
-            // Cambiar colores de manera inteligente
-            if (newProps.fill && newProps.fill !== 'none') {
-              if (colorMapping[newProps.fill]) {
-                newProps.fill = colorMapping[newProps.fill];
-              } else {
-                // Para colores no mapeados, usar el color personalizado
-                newProps.fill = newColor;
-              }
-            }
-
-            if (newProps.stroke && newProps.stroke !== 'none') {
-              if (colorMapping[newProps.stroke]) {
-                newProps.stroke = colorMapping[newProps.stroke];
-              } else {
-                newProps.stroke = newColor;
-              }
-            }
-
-            // Procesar children recursivamente
-            if (newProps.children) {
-              if (Array.isArray(newProps.children)) {
-                newProps.children = newProps.children.map((child, index) =>
-                  typeof child === 'object' ? modifySVGColors(child, newColor, index) : child
-                );
-              } else if (typeof newProps.children === 'object') {
-                newProps.children = modifySVGColors(newProps.children, newColor, 0);
-              }
-            }
-
-            return React.cloneElement(element, newProps);
-          };
-
-          icon = modifySVGColors(modifiedIcon, folderColor, 0);
+          icon = modifySVGColors(modifiedIcon, folderColor, themeKey, 0);
         } else {
           // Fallback a iconos PrimeReact con color forzado
           icon = options.expanded
@@ -2309,7 +2308,7 @@ const Sidebar = React.memo(({
         }}>
           {icon}
           {/* Tag SSH superpuesto en la parte derecha inferior - Solo para tema Nodeterm Basic */}
-          {isSSH && iconTheme === 'nodetermBasic' && (
+          {isSSH && themeKey === 'nodetermbasic' && (
             <span
               className="ssh-connection-tag"
               style={{
@@ -2335,7 +2334,7 @@ const Sidebar = React.memo(({
           )}
 
           {/* Tag RDP superpuesto en la parte derecha inferior - Solo para tema Nodeterm Basic */}
-          {isRDP && iconTheme === 'nodetermBasic' && (
+          {isRDP && themeKey === 'nodetermbasic' && (
             <span
               className="rdp-connection-tag"
               style={{
@@ -2362,7 +2361,7 @@ const Sidebar = React.memo(({
         </span>
         <span className="node-label" style={{
           flex: 1,
-          marginLeft: (isSSH || isRDP || isVNC) && iconTheme === 'nodetermBasic' ? '6px' : '0px',
+          marginLeft: (isSSH || isRDP || isVNC) && themeKey === 'nodetermbasic' ? '6px' : '0px',
           lineHeight: '20px',
           height: '20px',
           display: 'block',
@@ -3557,7 +3556,7 @@ const Sidebar = React.memo(({
         onHide={() => {
           setShowFolderDialog(false);
           setFolderName('');
-          setFolderColor(getThemeDefaultColor(iconTheme));
+          setFolderColor(getThemeDefaultColor(iconTheme?.toLowerCase() || 'nord'));
           setFolderIcon(null);
           setEditingNode(null); // Limpiar estado de edición al cerrar
         }}
@@ -3569,8 +3568,8 @@ const Sidebar = React.memo(({
         folderIcon={folderIcon}
         setFolderIcon={setFolderIcon}
         onConfirm={createNewFolder}
-        themeDefaultColor={getThemeDefaultColor(iconTheme)}
-        themeName={iconThemes[iconTheme]?.name || 'Material'}
+        themeDefaultColor={getThemeDefaultColor(iconTheme?.toLowerCase() || 'nord')}
+        themeName={iconThemes[iconTheme?.toLowerCase()]?.name || 'Material'}
       />
       {/* Los diálogos de edición SSH y RDP ahora se manejan en DialogsManager */}
 
