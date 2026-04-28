@@ -1791,27 +1791,46 @@ const MainContentArea = ({
           btn.type = 'button';
           btn.style.cssText = choiceBtnStyle(false);
           btn.style.justifyContent = 'space-between';
+          btn.style.padding = '10px 12px';
           
           const leftSide = document.createElement('div');
           leftSide.style.cssText = 'display: flex; align-items: center; gap: 12px;';
-          leftSide.innerHTML = `<i class="pi ${iconClass}" style="font-size: 1.1rem; opacity: 0.9;"></i><span>${label}</span>`;
+          // Si no hay icono, el texto se alinea a la izquierda
+          if (iconClass) {
+            leftSide.innerHTML = `<i class="pi ${iconClass}" style="font-size: 1.1rem; opacity: 0.9;"></i><span style="font-weight: 500;">${label}</span>`;
+          } else {
+            leftSide.innerHTML = `<span style="font-weight: 500;">${label}</span>`;
+          }
           
-          const status = document.createElement('div');
-          status.style.cssText = `
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 9px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            background: ${isActive ? 'var(--ui-button-primary, #00f3ff)' : 'rgba(255,255,255,0.05)'};
-            color: ${isActive ? '#000' : 'rgba(255,255,255,0.4)'};
-            transition: all 0.2s;
+          // Switch Track (Estilo de la imagen)
+          const track = document.createElement('div');
+          track.style.cssText = `
+            width: 38px;
+            height: 20px;
+            border-radius: 12px;
+            background: ${isActive ? '#4d79c7' : '#323d4d'};
+            position: relative;
+            transition: background 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            flex-shrink: 0;
           `;
-          status.textContent = isActive ? 'ON' : 'OFF';
           
+          // Switch Thumb (Círculo blanco)
+          const thumb = document.createElement('div');
+          thumb.style.cssText = `
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: white;
+            position: absolute;
+            top: 2px;
+            left: ${isActive ? '20px' : '2px'};
+            transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+          `;
+          
+          track.appendChild(thumb);
           btn.appendChild(leftSide);
-          btn.appendChild(status);
+          btn.appendChild(track);
           
           btn.addEventListener('mouseenter', () => { 
             btn.style.background = 'var(--ui-tab-hover-bg, rgba(255,255,255,0.08))';
@@ -1822,19 +1841,23 @@ const MainContentArea = ({
           btn.addEventListener('click', (ev) => {
             ev.stopPropagation();
             onToggle();
-            // Refrescar el menú para mostrar el cambio
-            setTimeout(() => showChoice(), 0);
+            // Feedback visual inmediato
+            const willBeActive = !isActive;
+            track.style.background = willBeActive ? '#4d79c7' : '#323d4d';
+            thumb.style.left = willBeActive ? '20px' : '2px';
+            setTimeout(() => showChoice(), 150);
           });
           return btn;
         };
 
-        const isMarcoVisible = !mainFrameHeaderCollapsedRef.current;
         const isTitleBarVisible = !titleBarCollapsedRef.current;
+        const isMarcoVisible = !mainFrameHeaderCollapsedRef.current;
         const isMinimal = isMinimalModeRef.current;
 
-        contentArea.appendChild(createToggleOption('Marco superior', 'pi-window-maximize', isMarcoVisible, () => setMainFrameHeaderCollapsed(!isMarcoVisible)));
-        contentArea.appendChild(createToggleOption('Barra de título', 'pi-window-minimize', isTitleBarVisible, () => window.dispatchEvent(new CustomEvent('toggle-titlebar'))));
-        contentArea.appendChild(createToggleOption('Modo minimalista', 'pi-expand', isMinimal, () => window.dispatchEvent(new CustomEvent('toggle-minimal-mode'))));
+        // Reordenados según petición del usuario: Barra de título, Marco superior, Modo minimalista
+        contentArea.appendChild(createToggleOption('Barra de título', null, isTitleBarVisible, () => window.dispatchEvent(new CustomEvent('toggle-titlebar'))));
+        contentArea.appendChild(createToggleOption('Marco superior', null, isMarcoVisible, () => setMainFrameHeaderCollapsed(!isMarcoVisible)));
+        contentArea.appendChild(createToggleOption('Modo Minimalista Absoluto', null, isMinimal, () => window.dispatchEvent(new CustomEvent('toggle-minimal-mode'))));
       }
 
       function addBackBar(title, onBack) {
