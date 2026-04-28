@@ -744,9 +744,13 @@ const Sidebar = React.memo(({
     nodeterm: true,
     claude: false,
     opencode: false,
+    geminicli: false,
+    codexcli: false,
     anythingllm: false,
     openwebui: false,
     librechat: false,
+    agentzero: false,
+    openclaw: false,
     opennotebook: false
   });
 
@@ -761,6 +765,8 @@ const Sidebar = React.memo(({
             nodeterm: parsed.nodeterm === true,
             claude: parsed.claude === true,
             opencode: parsed.opencode === true,
+            geminicli: parsed.geminicli === true,
+            codexcli: parsed.codexcli === true,
             anythingllm: parsed.anythingllm === true,
             openwebui: parsed.openwebui === true,
             librechat: parsed.librechat === true,
@@ -771,9 +777,11 @@ const Sidebar = React.memo(({
         } else {
           // Si no hay configuración, todos desactivados por defecto
           setAiClientsEnabled({
-            nodeterm: false,
+            nodeterm: true,
             claude: false,
             opencode: false,
+            geminicli: false,
+            codexcli: false,
             anythingllm: false,
             openwebui: false,
             librechat: false,
@@ -813,6 +821,31 @@ const Sidebar = React.memo(({
 
   // Ref para el contenedor de la sidebar
   const sidebarRef = useRef(null);
+
+  const openOpenCodeTab = () => {
+    window.dispatchEvent(new CustomEvent('create-local-terminal', {
+      detail: { terminalType: 'opencode' }
+    }));
+  };
+
+  const openGeminiCliTab = () => {
+    window.dispatchEvent(new CustomEvent('create-local-terminal', {
+      detail: { terminalType: 'geminicli' }
+    }));
+  };
+
+  const openCodexCliTab = () => {
+    window.dispatchEvent(new CustomEvent('create-local-terminal', {
+      detail: { terminalType: 'codexcli' }
+    }));
+  };
+
+  const openClaudeTab = () => {
+    window.dispatchEvent(new CustomEvent('create-local-terminal', {
+      detail: { terminalType: 'claude' }
+    }));
+  };
+
   const openAnythingLLMTab = () => {
     const newTab = {
       key: `anythingllm-${Date.now()}`,
@@ -3160,7 +3193,7 @@ const Sidebar = React.memo(({
               </Button>
 
               {/* Separador para clientes de IA */}
-              {(aiClientsEnabled.nodeterm || aiClientsEnabled.anythingllm || aiClientsEnabled.openwebui || aiClientsEnabled.librechat || aiClientsEnabled.agentzero || aiClientsEnabled.openclaw || aiClientsEnabled.opennotebook) && (
+              {Object.values(aiClientsEnabled).some(v => v === true) && (
                 <div style={{
                   width: '28px',
                   height: '1px',
@@ -3172,14 +3205,127 @@ const Sidebar = React.memo(({
                 }} />
               )}
 
-              {/* Botones de clientes de IA */}
-              {/* Botón de Chat de IA - Solo visible si está activado */}
+              {/* CLIs de IA (Primero) */}
+              {aiClientsEnabled.opencode && (
+                <Button
+                  className="p-button-rounded p-button-text sidebar-action-button"
+                  onClick={openOpenCodeTab}
+                  tooltip={t('tooltips.openCode')}
+                  tooltipOptions={{ position: 'right' }}
+                  style={{
+                    margin: 0,
+                    width: 40,
+                    height: 40,
+                    minWidth: 40,
+                    minHeight: 40,
+                    border: 'none',
+                    display: 'flex !important',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    visibility: 'visible !important',
+                    opacity: '1 !important',
+                    padding: 0
+                  }}
+                >
+                  <AIClientBrandIcon tabType="opencode" size={22} />
+                </Button>
+              )}
+
+              {aiClientsEnabled.geminicli && (
+                <Button
+                  className="p-button-rounded p-button-text sidebar-action-button"
+                  onClick={openGeminiCliTab}
+                  tooltip={t('tooltips.geminiCLI')}
+                  tooltipOptions={{ position: 'right' }}
+                  style={{
+                    margin: 0,
+                    width: 40,
+                    height: 40,
+                    minWidth: 40,
+                    minHeight: 40,
+                    border: 'none',
+                    display: 'flex !important',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    visibility: 'visible !important',
+                    opacity: '1 !important',
+                    padding: 0
+                  }}
+                >
+                  <AIClientBrandIcon tabType="geminicli" size={22} />
+                </Button>
+              )}
+
+              {aiClientsEnabled.codexcli && (
+                <Button
+                  className="p-button-rounded p-button-text sidebar-action-button"
+                  onClick={openCodexCliTab}
+                  tooltip={t('tooltips.codexCLI')}
+                  tooltipOptions={{ position: 'right' }}
+                  style={{
+                    margin: 0,
+                    width: 40,
+                    height: 40,
+                    minWidth: 40,
+                    minHeight: 40,
+                    border: 'none',
+                    display: 'flex !important',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    visibility: 'visible !important',
+                    opacity: '1 !important',
+                    padding: 0
+                  }}
+                >
+                  <AIClientBrandIcon tabType="codexcli" size={22} />
+                </Button>
+              )}
+
+              {aiClientsEnabled.claude && (
+                <Button
+                  className="p-button-rounded p-button-text sidebar-action-button"
+                  onClick={openClaudeTab}
+                  tooltip={t('tooltips.claudeCode')}
+                  tooltipOptions={{ position: 'right' }}
+                  style={{
+                    margin: 0,
+                    width: 40,
+                    height: 40,
+                    minWidth: 40,
+                    minHeight: 40,
+                    border: 'none',
+                    display: 'flex !important',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    visibility: 'visible !important',
+                    opacity: '1 !important',
+                    padding: 0
+                  }}
+                >
+                  <AIClientBrandIcon tabType="claude" size={22} />
+                </Button>
+              )}
+
+              {/* Separador entre CLIs de IA y Apps de IA */}
+              {((aiClientsEnabled.nodeterm || aiClientsEnabled.anythingllm || aiClientsEnabled.openwebui || aiClientsEnabled.librechat || aiClientsEnabled.agentzero || aiClientsEnabled.openclaw || aiClientsEnabled.opennotebook) && 
+                (aiClientsEnabled.opencode || aiClientsEnabled.geminicli || aiClientsEnabled.codexcli || aiClientsEnabled.claude)) && (
+                <div style={{
+                  width: '24px',
+                  height: '1px',
+                  backgroundColor: 'var(--ui-sidebar-border, rgba(255, 255, 255, 0.1))',
+                  margin: '8px auto',
+                  borderRadius: '0.5px',
+                  opacity: 0.4,
+                  flexShrink: 0
+                }} />
+              )}
+
+              {/* Apps de IA (Después) */}
               {aiClientsEnabled.nodeterm && (
                 <Button
                   icon="pi pi-comments"
                   className="p-button-rounded p-button-text sidebar-action-button"
                   onClick={() => {
-                    // Crear pestaña de IA
                     const newAITab = {
                       key: `ai-chat-${Date.now()}`,
                       label: 'Chat IA',
@@ -3187,8 +3333,6 @@ const Sidebar = React.memo(({
                       createdAt: Date.now(),
                       groupId: null
                     };
-
-                    // Disparar evento para crear la pestaña
                     window.dispatchEvent(new CustomEvent('create-ai-tab', {
                       detail: { tab: newAITab }
                     }));
@@ -3212,7 +3356,6 @@ const Sidebar = React.memo(({
                 />
               )}
 
-              {/* Botón de AnythingLLM - Solo visible si está activado */}
               {aiClientsEnabled.anythingllm && (
                 <Button
                   className="p-button-rounded p-button-text sidebar-action-button"
@@ -3238,7 +3381,6 @@ const Sidebar = React.memo(({
                 </Button>
               )}
 
-              {/* Botón de Open WebUI - Solo visible si está activado */}
               {aiClientsEnabled.openwebui && (
                 <Button
                   className="p-button-rounded p-button-text sidebar-action-button"
@@ -3363,6 +3505,7 @@ const Sidebar = React.memo(({
                   <AIClientBrandIcon tabType="open-notebook" size={22} />
                 </Button>
               )}
+
             </div>
 
             <div style={{ flexGrow: 1 }} />
