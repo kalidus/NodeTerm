@@ -151,11 +151,13 @@ const MainContentArea = ({
   const tabsContainerRef = useRef(null);
   const titleBarCollapsedRef = useRef(titleBarCollapsed);
   const mainFrameHeaderCollapsedRef = useRef(mainFrameHeaderCollapsed);
+  const isMinimalModeRef = useRef(isMinimalMode);
   const [sidebarSettingsView, setSidebarSettingsView] = useState('choice'); // 'choice', 'tree', 'icons'
   const treeThemePanelRef = useRef(null);
 
   titleBarCollapsedRef.current = titleBarCollapsed;
   mainFrameHeaderCollapsedRef.current = mainFrameHeaderCollapsed;
+  isMinimalModeRef.current = isMinimalMode;
 
   // Estado para el panel SSH System Monitor
   const [sshSystemMonitorTabId, setSshSystemMonitorTabId] = useState(null);
@@ -1774,6 +1776,65 @@ const MainContentArea = ({
         contentArea.appendChild(optLayout);
         contentArea.appendChild(optUiTheme);
         contentArea.appendChild(optPresets);
+
+        const separator = document.createElement('div');
+        separator.style.cssText = 'height: 1px; background: var(--ui-tab-border, rgba(255,255,255,0.1)); margin: 8px 4px;';
+        contentArea.appendChild(separator);
+
+        const titleVentana = document.createElement('div');
+        titleVentana.textContent = 'Ventana';
+        titleVentana.style.cssText = 'font-size: 10px; font-weight: 700; text-transform: uppercase; opacity: 0.5; margin: 4px 10px 8px; letter-spacing: 0.05em; color: var(--ui-tab-text);';
+        contentArea.appendChild(titleVentana);
+
+        const createToggleOption = (label, iconClass, isActive, onToggle) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.style.cssText = choiceBtnStyle(false);
+          btn.style.justifyContent = 'space-between';
+          
+          const leftSide = document.createElement('div');
+          leftSide.style.cssText = 'display: flex; align-items: center; gap: 12px;';
+          leftSide.innerHTML = `<i class="pi ${iconClass}" style="font-size: 1.1rem; opacity: 0.9;"></i><span>${label}</span>`;
+          
+          const status = document.createElement('div');
+          status.style.cssText = `
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: ${isActive ? 'var(--ui-button-primary, #00f3ff)' : 'rgba(255,255,255,0.05)'};
+            color: ${isActive ? '#000' : 'rgba(255,255,255,0.4)'};
+            transition: all 0.2s;
+          `;
+          status.textContent = isActive ? 'ON' : 'OFF';
+          
+          btn.appendChild(leftSide);
+          btn.appendChild(status);
+          
+          btn.addEventListener('mouseenter', () => { 
+            btn.style.background = 'var(--ui-tab-hover-bg, rgba(255,255,255,0.08))';
+          });
+          btn.addEventListener('mouseleave', () => { 
+            btn.style.background = 'var(--ui-tab-hover-bg, rgba(255,255,255,0.06))';
+          });
+          btn.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            onToggle();
+            // Refrescar el menú para mostrar el cambio
+            setTimeout(() => showChoice(), 0);
+          });
+          return btn;
+        };
+
+        const isMarcoVisible = !mainFrameHeaderCollapsedRef.current;
+        const isTitleBarVisible = !titleBarCollapsedRef.current;
+        const isMinimal = isMinimalModeRef.current;
+
+        contentArea.appendChild(createToggleOption('Marco superior', 'pi-window-maximize', isMarcoVisible, () => setMainFrameHeaderCollapsed(!isMarcoVisible)));
+        contentArea.appendChild(createToggleOption('Barra de título', 'pi-window-minimize', isTitleBarVisible, () => window.dispatchEvent(new CustomEvent('toggle-titlebar'))));
+        contentArea.appendChild(createToggleOption('Modo minimalista', 'pi-expand', isMinimal, () => window.dispatchEvent(new CustomEvent('toggle-minimal-mode'))));
       }
 
       function addBackBar(title, onBack) {
@@ -2214,7 +2275,6 @@ const MainContentArea = ({
       height: 20px;
     `;
     
-    appearanceButtonWrapper.appendChild(frameToggleButton);
     appearanceButtonWrapper.appendChild(appearanceButton);
 
     buttonsContainer.appendChild(plusButton);
