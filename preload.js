@@ -109,6 +109,10 @@ contextBridge.exposeInMainWorld('electron', {
     getMemoryStats: () => ipcRenderer.invoke('system:get-memory-stats'),
     getGPUStats: () => ipcRenderer.invoke('system:get-gpu-stats')
   },
+  sshMonitor: {
+    getListeningPorts: (tabId) => ipcRenderer.invoke('ssh:get-listening-ports', { tabId }),
+    getRunningServices: (tabId) => ipcRenderer.invoke('ssh:get-running-services', { tabId })
+  },
   theme: {
     get: () => ipcRenderer.invoke('theme:get'),
     save: (config) => ipcRenderer.invoke('theme:save', config)

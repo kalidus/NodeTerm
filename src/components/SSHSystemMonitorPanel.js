@@ -65,6 +65,7 @@ const StatBar = ({ value, type = 'cpu' }) => {
 const SORT_DIRECTIONS = { asc: 'asc', desc: 'desc' };
 const REFRESH_OPTIONS = [1000, 2000, 3000, 5000, 10000];
 const MAX_HISTORY = 40;
+const MONITOR_SUBTABS = { processes: 'processes', services: 'services' };
 
 /**
  * SSHSystemMonitorPanel - Task Manager / htop style overlay for SSH sessions
@@ -88,6 +89,13 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
     const [diskHistory, setDiskHistory] = useState([]);
     const [lastRefreshed, setLastRefreshed] = useState(null);
     const [netIfaces, setNetIfaces] = useState([]);
+    const [activeSubtab, setActiveSubtab] = useState(MONITOR_SUBTABS.processes);
+    const [servicesLoading, setServicesLoading] = useState(false);
+    const [servicesLoaded, setServicesLoaded] = useState(false);
+    const [servicesError, setServicesError] = useState('');
+    const [listeningPorts, setListeningPorts] = useState([]);
+    const [runningServices, setRunningServices] = useState([]);
+    const [servicesMeta, setServicesMeta] = useState({});
 
     // Dropdown refresh menu state
     const [refreshInterval, setRefreshInterval] = useState(() => {
@@ -120,6 +128,48 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
         } finally {
             setProcessesLoading(false);
             setLastRefreshed(new Date());
+        }
+    }, [tabId, tab?.type]);
+
+    const fetchServicesAndPorts = useCallback(async () => {
+        const invoke = window.electron?.ipcRenderer?.invoke;
+        if (!invoke || tab?.type === 'local-terminal') return;
+        setServicesLoading(true);
+        setServicesError('');
+        try {
+            const [portsRes, servicesRes] = await Promise.all([
+                invoke('ssh:get-listening-ports', { tabId }),
+                invoke('ssh:get-running-services', { tabId })
+            ]);
+
+            if (portsRes?.success && Array.isArray(portsRes.ports)) {
+                setListeningPorts(portsRes.ports);
+            } else {
+                setListeningPorts([]);
+            }
+
+            if (servicesRes?.success && Array.isArray(servicesRes.services)) {
+                setRunningServices(servicesRes.services);
+            } else {
+                setRunningServices([]);
+            }
+
+            setServicesMeta({
+                ports: portsRes?.meta || null,
+                services: servicesRes?.meta || null,
+                fetchedAt: new Date().toISOString()
+            });
+
+            if (!portsRes?.success || !servicesRes?.success) {
+                setServicesError(portsRes?.error || servicesRes?.error || 'No fue posible obtener algunos datos del sistema.');
+            }
+        } catch (_e) {
+            setServicesError('No fue posible cargar servicios y puertos en este momento.');
+            setListeningPorts([]);
+            setRunningServices([]);
+        } finally {
+            setServicesLoading(false);
+            setServicesLoaded(true);
         }
     }, [tabId, tab?.type]);
 
@@ -182,6 +232,11 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
         intervalRef.current = setInterval(fetchProcesses, refreshInterval);
         return () => clearInterval(intervalRef.current);
     }, [fetchProcesses, fetchNetIfaces, refreshInterval]);
+
+    useEffect(() => {
+        if (activeSubtab !== MONITOR_SUBTABS.services || servicesLoaded || tab?.type === 'local-terminal') return;
+        fetchServicesAndPorts();
+    }, [activeSubtab, servicesLoaded, fetchServicesAndPorts, tab?.type]);
 
 
     // ── Fetch local stats ONLY for local terminal ────────────────────────────
@@ -637,8 +692,27 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
                     </div>
                 </div>
 
-                {/* ── Process List ──────────────────────────────────────────── */}
+                {/* ── Lower Section Tabs ────────────────────────────────────── */}
                 <div className="ssh-monitor-process-section">
+                    <div className="ssh-monitor-subtabs">
+                        <button
+                            className={`ssh-monitor-subtab-btn ${activeSubtab === MONITOR_SUBTABS.processes ? 'active' : ''}`}
+                            onClick={() => setActiveSubtab(MONITOR_SUBTABS.processes)}
+                        >
+                            Procesos
+                        </button>
+                        <button
+                            className={`ssh-monitor-subtab-btn ${activeSubtab === MONITOR_SUBTABS.services ? 'active' : ''}`}
+                            onClick={() => setActiveSubtab(MONITOR_SUBTABS.services)}
+                            disabled={tab?.type === 'local-terminal'}
+                            title={tab?.type === 'local-terminal' ? 'Disponible solo para sesiones SSH' : 'Ver servicios y puertos'}
+                        >
+                            Servicios y Puertos
+                        </button>
+                    </div>
+
+                    {activeSubtab === MONITOR_SUBTABS.processes ? (
+                        <>
                     <div className="ssh-monitor-process-header">
                         <span className="ssh-monitor-process-title">Procesos</span>
                         <input
@@ -718,6 +792,100 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
                             </table>
                         )}
                     </div>
+                        </>
+                    ) : (
+                        <>
+                            <div className="ssh-monitor-process-header">
+                                <span className="ssh-monitor-process-title">Servicios y Puertos</span>
+                                <button
+                                    className="ssh-monitor-services-refresh-btn"
+                                    onClick={fetchServicesAndPorts}
+                                    disabled={servicesLoading}
+                                >
+                                    {servicesLoading ? 'Actualizando...' : 'Refrescar'}
+                                </button>
+                                <span className="ssh-monitor-process-count">
+                                    {runningServices.length} servicios | {listeningPorts.length} puertos
+                                </span>
+                            </div>
+
+                            <div className="ssh-monitor-services-wrapper">
+                                {servicesLoading && !servicesLoaded ? (
+                                    <div className="ssh-monitor-services-state">
+                                        <i className="pi pi-spin pi-spinner" /> Cargando servicios y puertos...
+                                    </div>
+                                ) : (
+                                    <>
+                                        {servicesError && (
+                                            <div className="ssh-monitor-services-warning">{servicesError}</div>
+                                        )}
+
+                                        <div className="ssh-monitor-services-grid">
+                                            <div className="ssh-monitor-services-block">
+                                                <div className="ssh-monitor-services-block-title">Servicios en ejecución</div>
+                                                {runningServices.length === 0 ? (
+                                                    <div className="ssh-monitor-services-empty">Sin datos de servicios.</div>
+                                                ) : (
+                                                    <table className="ssh-monitor-table">
+                                                        <thead>
+                                                            <tr>
+                                                                <th style={{ width: 240 }}>Servicio</th>
+                                                                <th style={{ width: 130 }}>Estado</th>
+                                                                <th>Detalle</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {runningServices.map((service, idx) => (
+                                                                <tr key={`${service.name}-${idx}`}>
+                                                                    <td className="cmd" title={service.name}>{service.name}</td>
+                                                                    <td className="user">{service.state || 'unknown'}</td>
+                                                                    <td className="cmd" title={service.detail || ''}>{service.detail || '—'}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                )}
+                                            </div>
+
+                                            <div className="ssh-monitor-services-block">
+                                                <div className="ssh-monitor-services-block-title">Puertos en escucha</div>
+                                                {listeningPorts.length === 0 ? (
+                                                    <div className="ssh-monitor-services-empty">Sin datos de puertos en escucha.</div>
+                                                ) : (
+                                                    <table className="ssh-monitor-table">
+                                                        <thead>
+                                                            <tr>
+                                                                <th style={{ width: 90 }}>Protocolo</th>
+                                                                <th style={{ width: 90 }}>Puerto</th>
+                                                                <th style={{ width: 130 }}>Estado</th>
+                                                                <th>Dirección local</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {listeningPorts.map((port, idx) => (
+                                                                <tr key={`${port.protocol}-${port.localAddress}-${idx}`}>
+                                                                    <td className="user">{port.protocol || '—'}</td>
+                                                                    <td className="cpu">{port.localPort || '—'}</td>
+                                                                    <td className="mem">{port.state || '—'}</td>
+                                                                    <td className="cmd" title={port.localAddress || ''}>{port.localAddress || '—'}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {(servicesMeta?.ports?.warning || servicesMeta?.services?.warning) && (
+                                            <div className="ssh-monitor-services-note">
+                                                {servicesMeta?.ports?.warning || servicesMeta?.services?.warning}
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 {/* ── Footer ────────────────────────────────────────────────── */}

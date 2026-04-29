@@ -80,6 +80,76 @@ function withTimeout(promise, ms, message) {
   ]);
 }
 
+function parseListeningPorts(rawOutput) {
+  const lines = String(rawOutput || '').split('\n').map((line) => line.trim()).filter(Boolean);
+  const ports = [];
+
+  for (const line of lines) {
+    if (!line) continue;
+    const lowerLine = line.toLowerCase();
+    if (lowerLine.includes('proto') || lowerLine.includes('active internet connections') || lowerLine.includes('recvv-q')) {
+      continue;
+    }
+
+    const parts = line.split(/\s+/);
+    if (parts.length < 4) continue;
+
+    const protocol = parts[0];
+    const state = protocol.startsWith('udp')
+      ? 'LISTEN'
+      : (parts[1] || '').toUpperCase();
+
+    // Support ss/netstat variants
+    const localCandidate = parts.find((part) => part.includes(':') || part === '*') || '';
+    const localAddress = localCandidate;
+    const portMatch = localCandidate.match(/:(\d+)\b/);
+    const localPort = portMatch ? portMatch[1] : '';
+
+    ports.push({
+      protocol,
+      localAddress,
+      localPort,
+      state: state || 'UNKNOWN'
+    });
+  }
+
+  return ports.slice(0, 300);
+}
+
+function parseRunningServices(rawOutput) {
+  const lines = String(rawOutput || '').split('\n').map((line) => line.trim()).filter(Boolean);
+  const services = [];
+
+  for (const line of lines) {
+    if (!line) continue;
+
+    // systemd format: name.service loaded active running Description
+    const systemdMatch = line.match(/^([^\s]+)\s+\S+\s+(\S+)\s+(\S+)\s+(.+)$/);
+    if (systemdMatch) {
+      services.push({
+        name: systemdMatch[1],
+        state: `${systemdMatch[2]} ${systemdMatch[3]}`.trim(),
+        detail: systemdMatch[4] || ''
+      });
+      continue;
+    }
+
+    // service --status-all format: [ + ]  ssh
+    const serviceMatch = line.match(/^\[\s*([+\-?])\s*\]\s+(.+)$/);
+    if (serviceMatch) {
+      const token = serviceMatch[1];
+      services.push({
+        name: serviceMatch[2],
+        state: token === '+' ? 'running' : token === '-' ? 'stopped' : 'unknown',
+        detail: ''
+      });
+      continue;
+    }
+  }
+
+  return services.slice(0, 300);
+}
+
 /**
  * Registra todos los manejadores IPC relacionados con SSH
  * @param {Object} dependencies - Dependencias necesarias para los handlers
@@ -727,6 +797,60 @@ function registerSSHHandlers(dependencies = {}) {
       return { success: true, processes };
     } catch (err) {
       console.error('[SSH PROCESSES] Error:', err);
+      return { success: false, error: err.message || String(err) };
+    }
+  });
+
+  // SSH: Obtener puertos en escucha (on-demand)
+  ipcMain.handle('ssh:get-listening-ports', async (event, { tabId }) => {
+    try {
+      const conn = sshConnections && sshConnections[tabId];
+      if (!conn || !conn.ssh) {
+        return { success: false, error: 'No SSH connection found' };
+      }
+
+      const command = 'ss -tuln 2>/dev/null || netstat -tuln 2>/dev/null || netstat -an 2>/dev/null';
+      const rawOutput = await conn.ssh.exec(command);
+      const ports = parseListeningPorts(rawOutput);
+      const warning = ports.length === 0 ? 'No se pudieron leer puertos o no hay datos disponibles.' : null;
+
+      return {
+        success: true,
+        ports,
+        meta: {
+          sourceCommand: 'ss/netstat',
+          fetchedAt: new Date().toISOString(),
+          warning
+        }
+      };
+    } catch (err) {
+      return { success: false, error: err.message || String(err) };
+    }
+  });
+
+  // SSH: Obtener servicios en ejecución (on-demand)
+  ipcMain.handle('ssh:get-running-services', async (event, { tabId }) => {
+    try {
+      const conn = sshConnections && sshConnections[tabId];
+      if (!conn || !conn.ssh) {
+        return { success: false, error: 'No SSH connection found' };
+      }
+
+      const command = 'systemctl list-units --type=service --state=running --no-pager --no-legend 2>/dev/null || service --status-all 2>/dev/null';
+      const rawOutput = await conn.ssh.exec(command);
+      const services = parseRunningServices(rawOutput);
+      const warning = services.length === 0 ? 'No se pudieron leer servicios o el sistema no expone esta información.' : null;
+
+      return {
+        success: true,
+        services,
+        meta: {
+          sourceCommand: 'systemctl/service',
+          fetchedAt: new Date().toISOString(),
+          warning
+        }
+      };
+    } catch (err) {
       return { success: false, error: err.message || String(err) };
     }
   });
