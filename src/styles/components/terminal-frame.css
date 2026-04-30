@@ -845,3 +845,9 @@ body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents
     -webkit-app-region: no-drag;
     app-region: no-drag;
 }
+
+/* En minimalista absoluto ocultar accesos rápidos de Recientes/Favoritos (reloj + estrella). */
+body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .recents-header-right .pi-clock,
+body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .recents-header-right .pi-star {
+    display: none !important;
+}
