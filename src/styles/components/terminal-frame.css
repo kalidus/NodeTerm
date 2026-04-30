@@ -806,6 +806,11 @@ body.minimalist-terminal-mode .connection-history-root.is-terminal-view .hero-sp
     min-height: 0 !important;
 }
 
+/* Ocultar por completo la card de Home en modo minimalista */
+body.minimalist-terminal-mode .connection-history-root .hero-splash-header {
+    display: none !important;
+}
+
 /*
  * Minimalista + terminal integrado (Home): barra tipo título para arrastrar la ventana
  * (titlebar nativo oculto / frameless). Los controles siguen con no-drag.
