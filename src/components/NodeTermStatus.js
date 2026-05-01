@@ -3482,7 +3482,7 @@ const NodeTermStatus = ({
 												if (dockerContainers.length === 1) {
 													// Si solo hay un contenedor, abrirlo directamente
 													console.log('[Docker] Abriendo contenedor único:', dockerContainers[0].name);
-													handleOpenTerminal(`docker-${dockerContainers[0].name}`, { dockerContainer: dockerContainers[0] });
+													handleOpenTerminal(`docker-${dockerContainers[0].name}`, { containerName: dockerContainers[0].name, containerId: dockerContainers[0].id, shortId: dockerContainers[0].shortId });
 												} else {
 													// Si hay múltiples, calcular posición y abrir/cerrar el menú
 													if (dockerButtonRef.current) {
@@ -3648,7 +3648,7 @@ const NodeTermStatus = ({
 															<button
 																key={idx}
 																onClick={() => {
-																	handleOpenTerminal(`docker-${container.name}`, { dockerContainer: container });
+																	handleOpenTerminal(`docker-${container.name}`, { containerName: container.name, containerId: container.id, shortId: container.shortId });
 																	setDockerMenuOpen(false);
 																}}
 																style={{

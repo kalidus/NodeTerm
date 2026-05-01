@@ -1517,11 +1517,41 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 setCygwinAvailable(false);
                 return;
             }
+        } else if (terminalTypeToUse.startsWith('docker-')) {
+            // Extraer información del contenedor Docker seleccionado
+            const containerName = terminalTypeToUse.replace('docker-', '');
+            console.log('🐳 Buscando contenedor:', containerName, 'en', dockerContainers.map(c => c.name));
+            let selectedContainer = explicitDistroInfo || dockerContainers.find(c => c.name === containerName);
+            
+            // Soporte para estructura anidada { dockerContainer: container } que a veces viene de NodeTermStatus
+            if (selectedContainer && selectedContainer.dockerContainer) {
+                selectedContainer = selectedContainer.dockerContainer;
+            }
+
+            if (selectedContainer) {
+                title = `🐳 ${selectedContainer.name || containerName}`;
+                terminalType = 'docker';
+                distroInfo = {
+                    containerName: selectedContainer.name || containerName,
+                    containerId: selectedContainer.id || selectedContainer.containerId,
+                    shortId: selectedContainer.shortId
+                };
+                console.log('🐳 Contenedor encontrado:', distroInfo);
+            } else {
+                console.warn('🐳 Contenedor NO encontrado, usando fallback:', containerName);
+                title = `🐳 ${containerName}`;
+                terminalType = 'docker';
+                distroInfo = {
+                    containerName: containerName,
+                    containerId: 'unknown',
+                    shortId: 'unknown'
+                };
+            }
         } else if (terminalTypeToUse.startsWith('wsl-') || terminalTypeToUse === 'debian' || matchedDistro || terminalTypeToUse.toLowerCase().includes('ubuntu') || terminalTypeToUse.toLowerCase().includes('debian')) {
             // Extraer información de la distribución WSL seleccionada (permite tanto "wsl-<name>" como "<name>")
             const selectedDistro = matchedDistro || findDistroByValue(terminalTypeToUse);
 
-            if (selectedDistro) {
+            if (selectedDistro && selectedDistro.category !== 'docker') {
                 title = selectedDistro.label;
                 terminalType = selectedDistro.category === 'ubuntu' ? 'ubuntu' : (selectedDistro.category === 'debian' ? 'debian' : 'wsl-distro');
                 distroInfo = {
@@ -1544,31 +1574,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 title = 'WSL';
                 terminalType = 'wsl-distro';
             }
-        } else if (terminalTypeToUse.startsWith('docker-')) {
-            // Extraer información del contenedor Docker seleccionado
-            const containerName = terminalTypeToUse.replace('docker-', '');
-            console.log('🐳 Buscando contenedor:', containerName, 'en', dockerContainers.map(c => c.name));
-            const selectedContainer = distroInfo || dockerContainers.find(c => c.name === containerName);
 
-            if (selectedContainer) {
-                title = `🐳 ${selectedContainer.name || containerName}`;
-                terminalType = 'docker';
-                distroInfo = {
-                    containerName: selectedContainer.name || containerName,
-                    containerId: selectedContainer.id || selectedContainer.containerId,
-                    shortId: selectedContainer.shortId
-                };
-                console.log('🐳 Contenedor encontrado:', distroInfo);
-            } else {
-                console.warn('🐳 Contenedor NO encontrado, usando fallback:', containerName);
-                title = `🐳 ${containerName}`;
-                terminalType = 'docker';
-                distroInfo = {
-                    containerName: containerName,
-                    containerId: 'unknown',
-                    shortId: 'unknown'
-                };
-            }
         } else if (terminalTypeToUse === 'claude') {
             title = 'Claude Code';
             terminalType = 'claude';
