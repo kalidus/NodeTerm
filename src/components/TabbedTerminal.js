@@ -32,7 +32,7 @@ function adjustColorBrightness(hex, percent) {
     return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 }
 
-const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, localFontFamily, localFontSize, localPowerShellTheme, localLinuxTerminalTheme, hideStatusBar = false, hideTabs = false, isIntegrated = false, onTabChange, persistenceKey = null }, ref) => {
+const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, localFontFamily, localFontSize, localPowerShellTheme, localLinuxTerminalTheme, hideStatusBar = false, hideTabs = false, isIntegrated = false, onTabChange, persistenceKey = null, preferDefaultOnStartup = false }, ref) => {
     // Referencias para control de scroll de pestañas
     const tabsContainerRef = useRef(null);
     const menuRef = useRef(null);
@@ -106,6 +106,22 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         // Leer configuración de terminal por defecto
         const defaultTerminal = localStorage.getItem('nodeterm_default_local_terminal');
         const platform = window.electron?.platform || 'unknown';
+        const looksLikeWslDistro = (value) => {
+            if (!value || typeof value !== 'string') return false;
+            const normalized = value.toLowerCase();
+            return normalized.startsWith('wsl-') ||
+                normalized.includes('ubuntu') ||
+                normalized.includes('debian') ||
+                normalized.includes('kali') ||
+                normalized.includes('linux') ||
+                normalized.includes('wsl');
+        };
+        const inferWslCategory = (value) => {
+            const normalized = String(value || '').toLowerCase();
+            if (normalized.includes('ubuntu')) return 'ubuntu';
+            if (normalized.includes('debian')) return 'debian';
+            return 'wsl';
+        };
 
         // Si hay configuración guardada, usarla
         if (defaultTerminal) {
@@ -164,6 +180,23 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             }
 
             // Fallback: usar el valor tal cual
+            // Si parece una distro WSL, arrancar directamente como WSL para evitar
+            // el parpadeo PowerShell -> distro al cargar las distribuciones.
+            if (looksLikeWslDistro(defaultTerminal)) {
+                const inferredCategory = inferWslCategory(defaultTerminal);
+                return {
+                    id: 'tab-1',
+                    title: defaultTerminal,
+                    type: inferredCategory === 'ubuntu' ? 'ubuntu' : (inferredCategory === 'debian' ? 'debian' : 'wsl-distro'),
+                    distroInfo: {
+                        name: defaultTerminal,
+                        label: defaultTerminal,
+                        category: inferredCategory
+                    },
+                    active: true
+                };
+            }
+
             return {
                 id: 'tab-1',
                 title: defaultTerminal,
@@ -205,6 +238,9 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
 
     const getInitialWorkspace = () => {
         const fallbackTabs = [getInitialTab(false, [])];
+        if (preferDefaultOnStartup) {
+            return { tabs: fallbackTabs, nextTabId: 2 };
+        }
         if (!persistenceKey) {
             return { tabs: fallbackTabs, nextTabId: 2 };
         }
@@ -1103,8 +1139,11 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     useEffect(() => {
         // console.log('TabbedTerminal mounted, window.electron:', !!window.electron);
         if (window.electron) {
-            // console.log('Registering tab-1 events');
-            window.electron.ipcRenderer.send('register-tab-events', 'tab-1');
+            tabs.forEach((tab) => {
+                if (tab?.id) {
+                    window.electron.ipcRenderer.send('register-tab-events', tab.id);
+                }
+            });
         }
 
         // Listener para redimensionamiento de ventana

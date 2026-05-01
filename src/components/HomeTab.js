@@ -925,20 +925,29 @@ const HomeTab = ({
     const handleAddTerminal = (e) => {
       const { terminalType, distroInfo } = e?.detail || {};
       if (!terminalType) return;
-      if (terminalHidden) {
-        setTerminalHidden(false);
+      // Abrir siempre en el terminal integrado del HomeTab
+      setTerminalView(true);
+      setTerminalHidden(true);
+      try {
+        localStorage.setItem(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE, 'false');
+      } catch (err) {
+        // Ignorar errores de persistencia
       }
       setTimeout(() => {
         try {
-          tabbedTerminalRef.current?.addTerminalTab?.(terminalType, distroInfo);
+          if (showLocalTerminalTabs && embeddedTabbedTerminalRef.current?.addTerminalTab) {
+            embeddedTabbedTerminalRef.current.addTerminalTab(terminalType, distroInfo);
+          } else if (embeddedTabbedTerminalRef.current?.replaceActiveTabWithTerminal) {
+            embeddedTabbedTerminalRef.current.replaceActiveTabWithTerminal(terminalType, distroInfo);
+          }
         } catch (err) {
           console.warn('[HomeTab] addTerminalTab:', err);
         }
-      }, terminalHidden ? 120 : 50);
+      }, 120);
     };
     window.addEventListener('home-tab-add-terminal', handleAddTerminal);
     return () => window.removeEventListener('home-tab-add-terminal', handleAddTerminal);
-  }, [terminalHidden]);
+  }, [showLocalTerminalTabs]);
 
   // Callback para toggling del terminal embebido (llamado por ConnectionHistory via prop)
   const handleTerminalToggle = React.useCallback((show, terminalType, addNewTab = false) => {
@@ -1568,6 +1577,7 @@ const HomeTab = ({
                       hideTabs={!showLocalTerminalTabs}
                       isIntegrated={true}
                       persistenceKey={STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_WORKSPACE}
+                      preferDefaultOnStartup={true}
                       onTabChange={(tab) => setTerminalTitle(tab.title)}
                     />
                   </div>

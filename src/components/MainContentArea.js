@@ -417,7 +417,32 @@ const MainContentArea = ({
     const handleCreateLocalTerminal = (event) => {
       const { terminalType, distroInfo } = event.detail;
       console.log('Recibido evento create-local-terminal:', { terminalType, distroInfo });
-      createLocalTerminalTab(terminalType, distroInfo);
+
+      // Forzar apertura en el terminal integrado del HomeTab (no en pestañas globales)
+      try {
+        if (activeGroupId !== null) {
+          const currentGroupKey = activeGroupId || 'no-group';
+          setGroupActiveIndices(prev => ({
+            ...prev,
+            [currentGroupKey]: activeTabIndex
+          }));
+          setActiveGroupId(null);
+        }
+
+        const baseTabs = getTabsInGroup ? getTabsInGroup(null) : [];
+        const homeIndex = baseTabs.findIndex(tab => tab?.type === TAB_TYPES.HOME || tab?.key === 'home_tab_default');
+        setActiveTabIndex(homeIndex >= 0 ? homeIndex : 0);
+
+        // Esperar al render del HomeTab para que su listener esté activo
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('home-tab-add-terminal', {
+            detail: { terminalType, distroInfo }
+          }));
+        }, 120);
+      } catch (error) {
+        console.warn('No se pudo abrir terminal en HomeTab integrado, fallback a pestaña global:', error);
+        createLocalTerminalTab(terminalType, distroInfo);
+      }
     };
 
     window.addEventListener('create-local-terminal', handleCreateLocalTerminal);
@@ -425,7 +450,7 @@ const MainContentArea = ({
     return () => {
       window.removeEventListener('create-local-terminal', handleCreateLocalTerminal);
     };
-  }, []);
+  }, [activeGroupId, activeTabIndex, getTabsInGroup, setActiveGroupId, setGroupActiveIndices, setActiveTabIndex]);
 
   // Escuchar cambios en la configuración de terminal por defecto
   useEffect(() => {
