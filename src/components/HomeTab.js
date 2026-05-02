@@ -17,6 +17,19 @@ import { themes } from '../themes';
 import { getRecents, onUpdate, getRecentPasswords, subscribeRecents } from '../utils/connectionStore';
 import { STORAGE_KEYS } from '../utils/constants';
 
+/** Opciones de marco del terminal local (Home); mismas claves que `TERMINAL_FRAME_STYLE` en ConnectionHistory. */
+const HOME_TERMINAL_FRAME_STYLE_OPTIONS = [
+  { id: 'macos', label: 'macOS (Traffic)', dots: ['#ff5f56', '#ffbd2e', '#27c93f'] },
+  { id: 'gnome', label: 'GNOME (Adwaita)', icon: 'pi pi-times', right: true },
+  { id: 'kde', label: 'KDE (Breeze)', icons: ['pi-minus', 'pi-stop', 'pi-times'], right: true },
+  { id: 'windows', label: 'Windows (WinUI)', icons: ['pi-minus', 'pi-stop', 'pi-times'], right: true },
+  { id: 'matcha', label: 'Matcha (Green)', line: '#2eb398', icons: ['pi-times'], right: true },
+  { id: 'futuristic', label: 'Futurista (Cyber)', color: '#00f2ff', text: 'EXE' },
+  { id: 'modern', label: 'Moderno (Glass)', rounded: true, icons: ['pi-times'], right: true },
+  { id: 'minimal', label: 'Minimal (Sin botones)', noButtons: true },
+  { id: 'retro', label: 'Retro (CRT)', color: '#0f0', switch: true }
+];
+
 const HomeTab = ({
   isActiveTab = true,
   onCreateSSHConnection,
@@ -185,6 +198,7 @@ const HomeTab = ({
 
   const homeOptionsOverlayRef = useRef(null);
   const localThemeOverlayRef = useRef(null);
+  const frameStyleOverlayRef = useRef(null);
   const [containerHeight, setContainerHeight] = useState(window.innerHeight - 100);
   const [containerWidth, setContainerWidth] = useState(window.innerWidth - 100);
   const [hasUserMovedTerminal, setHasUserMovedTerminal] = useState(false);
@@ -431,6 +445,7 @@ const HomeTab = ({
     try {
       homeOptionsOverlayRef.current?.hide();
       localThemeOverlayRef.current?.hide();
+      frameStyleOverlayRef.current?.hide();
     } catch {
       // Ignorar fallos del overlay al desmontar o en cambios rápidos de vista
     }
@@ -1242,6 +1257,57 @@ const HomeTab = ({
             transform: scale(0.98);
           }
 
+          .theme-picker-overlay .p-overlaypanel-content {
+            padding: 0;
+          }
+          .theme-picker-overlay *::-webkit-scrollbar {
+            width: 8px;
+          }
+          .theme-picker-overlay *::-webkit-scrollbar-track {
+            background: transparent;
+          }
+          .theme-picker-overlay *::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+            border: 2px solid transparent;
+            background-clip: padding-box;
+          }
+          .theme-picker-overlay *::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border: 2px solid transparent;
+            background-clip: padding-box;
+          }
+          .frame-style-option {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-radius: 8px;
+            color: #fff;
+          }
+          .frame-style-option:hover {
+            background: rgba(255, 255, 255, 0.05);
+          }
+          .frame-style-option.active {
+            background: ${themeColors.hoverBackground || 'rgba(255, 255, 255, 0.1)'};
+            border: 1px solid rgba(255, 255, 255, 0.1);
+          }
+          .frame-preview {
+            display: flex;
+            align-items: center;
+            width: 60px;
+            height: 24px;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 0 4px;
+            overflow: hidden;
+            background: rgba(0,0,0,0.2);
+          }
+          .frame-preview-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+          .frame-preview-bar { flex: 1; height: 2px; background: rgba(255,255,255,0.1); margin: 0 4px; border-radius: 1px; }
+
           /* Glassmorphism for OverlayPanel */
           .premium-overlay {
             backdrop-filter: blur(25px) saturate(180%) !important;
@@ -1346,6 +1412,49 @@ const HomeTab = ({
                   <span style={{ fontSize: '0.82rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {localLinuxTerminalTheme}
                   </span>
+                </span>
+                <i className="pi pi-chevron-down" style={{ fontSize: '0.7rem', opacity: 0.8, flexShrink: 0 }} />
+              </button>
+            </div>
+
+            <div style={{ marginBottom: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.88rem', fontWeight: 500 }}>
+                  Estilo de marco
+                </span>
+                <i
+                  className="pi pi-desktop"
+                  style={{
+                    color: themeColors.primaryColor || '#2196f3',
+                    fontSize: '0.8rem',
+                    opacity: 0.8
+                  }}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  frameStyleOverlayRef.current?.toggle(e);
+                }}
+                style={{
+                  width: '100%',
+                  height: '34px',
+                  borderRadius: '8px',
+                  border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.12)'}`,
+                  background: 'rgba(255,255,255,0.04)',
+                  color: themeColors.textPrimary || '#fff',
+                  padding: '0 10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '10px',
+                  cursor: 'pointer'
+                }}
+                title="Estilo de marco de la ventana del terminal"
+              >
+                <span style={{ fontSize: '0.82rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {(HOME_TERMINAL_FRAME_STYLE_OPTIONS.find((o) => o.id === terminalFrameStyle) || {}).label || terminalFrameStyle}
                 </span>
                 <i className="pi pi-chevron-down" style={{ fontSize: '0.7rem', opacity: 0.8, flexShrink: 0 }} />
               </button>
@@ -1492,6 +1601,55 @@ const HomeTab = ({
             })}
           </div>
         </OverlayPanel>
+        <OverlayPanel
+          ref={frameStyleOverlayRef}
+          className="premium-overlay theme-picker-overlay"
+          style={{ background: themeColors.cardBackground || '#1e1e1e', width: '240px' }}
+          appendTo={document.body}
+        >
+          <div style={{ padding: '8px', maxHeight: 'min(70vh, 420px)', overflowY: 'auto' }}>
+            <h4 style={{ margin: '0 0 10px 8px', color: themeColors.textPrimary || '#fff', fontSize: '0.9rem' }}>Estilo de Marco</h4>
+            {HOME_TERMINAL_FRAME_STYLE_OPTIONS.map((style) => (
+              <div
+                key={style.id}
+                className={`frame-style-option ${terminalFrameStyle === style.id ? 'active' : ''}`}
+                onClick={() => {
+                  setTerminalFrameStyle(style.id);
+                  frameStyleOverlayRef.current?.hide();
+                }}
+              >
+                <div
+                  className="frame-preview"
+                  style={{
+                    borderColor: style.color || 'rgba(255,255,255,0.1)',
+                    borderTop: style.line ? `2px solid ${style.line}` : undefined,
+                    borderRadius: style.rounded ? '8px' : '4px'
+                  }}
+                >
+                  {style.noButtons ? null : style.dots ? (
+                    <div style={{ display: 'flex', gap: '3px' }}>
+                      {style.dots.map((c, i) => (
+                        <div key={i} className="frame-preview-dot" style={{ background: c }} />
+                      ))}
+                    </div>
+                  ) : style.switch ? (
+                    <div className="frame-preview-dot" style={{ background: '#0f0', boxShadow: '0 0 4px #0f0' }} />
+                  ) : style.text ? (
+                    <span style={{ fontSize: '6px', color: style.color }}>{style.text}</span>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '2px', marginLeft: style.right ? 'auto' : 0 }}>
+                      {(style.icons || [style.icon]).map((ico, i) => (
+                        <i key={i} className={`pi ${ico}`} style={{ fontSize: '6px', opacity: 0.5 }} />
+                      ))}
+                    </div>
+                  )}
+                  <div className="frame-preview-bar" />
+                </div>
+                <span style={{ fontSize: '0.82rem' }}>{style.label}</span>
+              </div>
+            ))}
+          </div>
+        </OverlayPanel>
         <div className="home-page-scroll" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
           {/* Layout principal: \u00E1rea central + columna derecha */}
           <div style={{
@@ -1550,7 +1708,6 @@ const HomeTab = ({
                   onOpenSettings={onOpenSettings}
                   onToggleTerminalVisibility={handleToggleTerminalVisibility}
                   terminalFrameStyle={terminalFrameStyle}
-                  setTerminalFrameStyle={setTerminalFrameStyle}
                   terminalOpacity={terminalOpacity}
                   onTerminalOpacityChange={setTerminalOpacity}
                   onOpenHomeOptions={(e) => homeOptionsOverlayRef.current?.toggle(e)}

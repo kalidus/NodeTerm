@@ -177,7 +177,6 @@ const ConnectionHistory = ({
 	terminalTitle = '/local',
 	onOpenSettings = null,
 	terminalFrameStyle = 'macos',
-	setTerminalFrameStyle = () => { },
 	terminalOpacity = 1.0,
 	onTerminalOpacityChange = () => { },
 	onToggleTerminalVisibility,
@@ -221,7 +220,6 @@ const ConnectionHistory = ({
 	const [activeBottomView, setActiveBottomView] = useState('all');
 	const themePickerRef = useRef(null);
 	const uiThemePickerRef = useRef(null);
-	const frameStylePickerRef = useRef(null);
 
 	const terminalSwitcherOverlayRef = useRef(null);
 	const [currentUITheme, setCurrentUITheme] = useState(() => localStorage.getItem('ui_theme') || 'Light');
@@ -2259,38 +2257,6 @@ const ConnectionHistory = ({
 					border: 2px solid transparent;
 					background-clip: padding-box;
 				}
-
-				.frame-style-option {
-					display: flex;
-					align-items: center;
-					gap: 12px;
-					padding: 10px 16px;
-					cursor: pointer;
-					transition: all 0.2s;
-					border-radius: 8px;
-					color: #fff;
-				}
-				.frame-style-option:hover {
-					background: rgba(255, 255, 255, 0.05);
-				}
-				.frame-style-option.active {
-					background: ${themeColors.hoverBackground || 'rgba(255, 255, 255, 0.1)'};
-					border: 1px solid rgba(255, 255, 255, 0.1);
-				}
-				.frame-preview {
-					display: flex;
-					align-items: center;
-					width: 60px;
-					height: 24px;
-					border-radius: 4px;
-					border: 1px solid rgba(255,255,255,0.1);
-					padding: 0 4px;
-					overflow: hidden;
-					background: rgba(0,0,0,0.2);
-				}
-				.frame-preview-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-				.frame-preview-bar { flex: 1; height: 2px; background: rgba(255,255,255,0.1); margin: 0 4px; border-radius: 1px; }
-				.frame-preview-btn { width: 4px; height: 4px; background: rgba(255,255,255,0.2); flex-shrink: 0; }
 			`}</style>
 
 
@@ -2349,28 +2315,6 @@ const ConnectionHistory = ({
 							</span>
 							<span style={{ opacity: 0.5 }}>·</span>
 							<span style={{ opacity: 0.9 }}>{activeViewName}</span>
-						</div>
-						<div className="recents-header-right" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px', zIndex: 10 }}>
-							<i
-								className="pi pi-desktop"
-								style={{
-									fontSize: '0.9rem',
-									color: terminalTheme.foreground || '#c9d1d9',
-									opacity: 0.6,
-									cursor: 'pointer',
-									padding: '4px',
-									borderRadius: '4px',
-									transition: 'all 0.2s'
-								}}
-								title="Cambiar estilo de marco"
-								onClick={(e) => {
-									e.stopPropagation();
-									frameStylePickerRef.current?.toggle(e);
-								}}
-								onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-								onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
-							/>
-
 						</div>
 					</div>
 					<div className="top-terminal-body">
@@ -3677,56 +3621,6 @@ const ConnectionHistory = ({
 							</div>
 						))
 					)}
-				</div>
-			</OverlayPanel>
-
-			<OverlayPanel ref={frameStylePickerRef} className="theme-picker-overlay" style={{ background: themeColors.cardBackground || '#1e1e1e', width: '220px' }}>
-				<div style={{ padding: '8px' }}>
-					<h4 style={{ margin: '0 0 10px 8px', color: themeColors.textPrimary || '#fff', fontSize: '0.9rem' }}>Estilo de Marco</h4>
-					{[
-						{ id: 'macos', label: 'macOS (Traffic)', dots: ['#ff5f56', '#ffbd2e', '#27c93f'] },
-						{ id: 'gnome', label: 'GNOME (Adwaita)', icon: 'pi pi-times', right: true },
-						{ id: 'kde', label: 'KDE (Breeze)', icons: ['pi-minus', 'pi-stop', 'pi-times'], right: true },
-						{ id: 'windows', label: 'Windows (WinUI)', icons: ['pi-minus', 'pi-stop', 'pi-times'], right: true },
-						{ id: 'matcha', label: 'Matcha (Green)', line: '#2eb398', icons: ['pi-times'], right: true },
-						{ id: 'futuristic', label: 'Futurista (Cyber)', color: '#00f2ff', text: 'EXE' },
-						{ id: 'modern', label: 'Moderno (Glass)', rounded: true, icons: ['pi-times'], right: true },
-						{ id: 'minimal', label: 'Minimal (Sin botones)', noButtons: true },
-						{ id: 'retro', label: 'Retro (CRT)', color: '#0f0', switch: true }
-					].map(style => (
-						<div
-							key={style.id}
-							className={`frame-style-option ${terminalFrameStyle === style.id ? 'active' : ''}`}
-							onClick={() => {
-								setTerminalFrameStyle(style.id);
-								frameStylePickerRef.current?.hide();
-							}}
-						>
-							<div className="frame-preview" style={{
-								borderColor: style.color || 'rgba(255,255,255,0.1)',
-								borderTop: style.line ? `2px solid ${style.line}` : undefined,
-								borderRadius: style.rounded ? '8px' : '4px'
-							}}>
-								{style.noButtons ? null : style.dots ? (
-									<div style={{ display: 'flex', gap: '3px' }}>
-										{style.dots.map((c, i) => <div key={i} className="frame-preview-dot" style={{ background: c }} />)}
-									</div>
-								) : style.switch ? (
-									<div className="frame-preview-dot" style={{ background: '#0f0', boxShadow: '0 0 4px #0f0' }} />
-								) : style.text ? (
-									<span style={{ fontSize: '6px', color: style.color }}>{style.text}</span>
-								) : (
-									<div style={{ display: 'flex', gap: '2px', marginLeft: style.right ? 'auto' : 0 }}>
-										{(style.icons || [style.icon]).map((ico, i) => (
-											<i key={i} className={`pi ${ico}`} style={{ fontSize: '6px', opacity: 0.5 }} />
-										))}
-									</div>
-								)}
-								<div className="frame-preview-bar" />
-							</div>
-							<span style={{ fontSize: '0.82rem' }}>{style.label}</span>
-						</div>
-					))}
 				</div>
 			</OverlayPanel>
 		</div >
