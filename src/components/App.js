@@ -2978,8 +2978,6 @@ const App = () => {
     findNodeByKey,
     // Recording props
     setSshTabs,
-    // Tab group props
-    setShowCreateGroupDialog,
     // Active connections
     activeIds,
     handleToggleBroadcast,
@@ -2994,7 +2992,7 @@ const App = () => {
     explorerColorTheme, explorerFontSize, fontFamily, fontSize, terminalTheme,
     handleTerminalContextMenu, showTerminalContextMenu, sshStatsByTabId,
     terminalRefs, statusBarIconTheme, handleCloseSplitPanel, openInSplit, rdpTabs, findNodeByKey,
-    setSshTabs, setShowCreateGroupDialog, activeIds, handleToggleBroadcast, handleToggleBroadcastTarget, handleBroadcastData,
+    setSshTabs, activeIds, handleToggleBroadcast, handleToggleBroadcastTarget, handleBroadcastData,
     masterKey, secureStorage
   ]);
 

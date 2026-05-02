@@ -51,7 +51,6 @@ const HomeTab = ({
   onLoadGroup,
   onOpenSSHTunnel,
   sidebarNodes = null,
-  setShowCreateGroupDialog,
   activeIds = new Set(),
   masterKey = null,
   secureStorage = null,
@@ -2012,7 +2011,6 @@ const HomeTab = ({
               onCollapse={handleToggleRightColumn}
               showAIChat={showAIChat}
               statusBarVisible={statusBarVisible}
-              setShowCreateGroupDialog={setShowCreateGroupDialog}
             />
           )}
         </div>

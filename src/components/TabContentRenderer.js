@@ -87,7 +87,6 @@ const TabContentRenderer = React.memo(({
   activeGroupId,
   activeTabIndex,
   // Tab group props
-  setShowCreateGroupDialog,
   activeIds,
   openInSplit,
   handleToggleBroadcast,
@@ -189,7 +188,6 @@ const TabContentRenderer = React.memo(({
             window.dispatchEvent(new CustomEvent('open-settings-dialog'));
           } catch (e) { /* noop */ }
         }}
-        setShowCreateGroupDialog={setShowCreateGroupDialog}
         masterKey={masterKey}
         secureStorage={secureStorage}
       />
