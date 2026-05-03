@@ -478,7 +478,6 @@ const MainContentArea = ({
 
   // Estado para controlar la visibilidad de las opciones de clientes de IA
   const [aiClientsEnabled, setAiClientsEnabled] = React.useState({
-    nodeterm: false,
     claude: false,
     opencode: false,
     geminicli: false,
@@ -499,7 +498,6 @@ const MainContentArea = ({
   });
 
   const defaultAiClientsEnabled = React.useMemo(() => ({
-    nodeterm: false,
     claude: false,
     opencode: false,
     geminicli: false,
@@ -893,25 +891,6 @@ const MainContentArea = ({
       }
 
       const apps = [];
-      if (aiClientsEnabled.nodeterm) {
-        apps.push({
-          label: 'AI Chat',
-          icon: 'pi pi-comments',
-          command: () => {
-            const tabId = `ai-chat-${Date.now()}`;
-            const newAITab = {
-              key: tabId,
-              label: 'Chat IA',
-              type: 'ai-chat',
-              createdAt: Date.now(),
-              groupId: null
-            };
-            window.dispatchEvent(new CustomEvent('create-ai-tab', {
-              detail: { tab: newAITab }
-            }));
-          }
-        });
-      }
       if (aiClientsEnabled.anythingllm) {
         apps.push({
           label: 'AnythingLLM',
@@ -1013,25 +992,6 @@ const MainContentArea = ({
       }
 
       const apps = [];
-      if (aiClientsEnabled.nodeterm) {
-        apps.push({
-          label: 'AI Chat',
-          icon: 'pi pi-comments',
-          command: () => {
-            const tabId = `ai-chat-${Date.now()}`;
-            const newAITab = {
-              key: tabId,
-              label: 'Chat IA',
-              type: 'ai-chat',
-              createdAt: Date.now(),
-              groupId: null
-            };
-            window.dispatchEvent(new CustomEvent('create-ai-tab', {
-              detail: { tab: newAITab }
-            }));
-          }
-        });
-      }
       if (aiClientsEnabled.anythingllm) {
         apps.push({
           label: 'AnythingLLM',

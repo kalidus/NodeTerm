@@ -1,11 +1,11 @@
 /* ===================================
-   Estilos para AIClientsTab
-   Gestión visual de clientes de IA
-   Usa las variables globales de general-settings.css
+   AI Clients Tab — Rediseño v2
+   Categorías CLI / Aplicaciones Web
    =================================== */
 
+/* ── Contenedor principal ─────────────────────────── */
 .ai-clients-tab {
-  padding: 0.5rem 0.75rem 0.75rem;
+  padding: 0;
   height: 100% !important;
   max-height: 100% !important;
   min-height: 0 !important;
@@ -14,72 +14,234 @@
   box-sizing: border-box !important;
   display: flex !important;
   flex-direction: column !important;
+  gap: 0;
 }
 
-/* Asegurar que el contenedor respete la altura del panel padre */
-.settings-dialog .p-tabview-panel .ai-clients-tab,
-.p-dialog.settings-dialog .p-tabview-panel .ai-clients-tab {
-  height: 100% !important;
-  max-height: 100% !important;
-  min-height: 0 !important;
-  flex: 1 1 auto !important;
-}
-
-/* Reducir espacio vertical entre el título de pestaña y el contenido */
-.settings-dialog .p-tabview-panels .p-tabview-panel:has(.ai-clients-tab),
-.p-dialog.settings-dialog .p-tabview-panels .p-tabview-panel:has(.ai-clients-tab) {
-  padding-top: 0.35rem !important;
-}
-
-/* Grid de cards */
-.ai-clients-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+/* ── Toolbar ──────────────────────────────────────── */
+.ai-clients-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.875rem;
+  border-bottom: 1px solid var(--surface-border);
+  background: var(--surface-card);
   gap: 0.75rem;
-  margin-bottom: 0.75rem;
-  width: 100%;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
-/* Card de cliente */
-.ai-client-card {
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-  border-radius: var(--settings-radius-card, 10px);
+.ai-toolbar-left {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
+.ai-toolbar-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-color);
+  letter-spacing: 0.01em;
+}
+
+.ai-toolbar-count {
+  font-size: 0.7rem;
+  color: var(--text-color-secondary);
+  white-space: nowrap;
+}
+
+.ai-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ── Buscador ─────────────────────────────────────── */
+.ai-search-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ai-search-icon {
+  position: absolute;
+  left: 0.5rem;
+  font-size: 0.7rem;
+  color: var(--text-color-secondary);
+  pointer-events: none;
+}
+
+.ai-search-input {
+  padding: 0.3rem 1.6rem 0.3rem 1.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--surface-border);
+  background: var(--surface-ground);
+  color: var(--text-color);
+  font-size: 0.72rem;
+  width: 170px;
+  outline: none;
+  transition: border-color 0.2s, width 0.2s;
+}
+
+.ai-search-input:focus {
+  border-color: var(--primary-color, #6366f1);
+  width: 200px;
+}
+
+.ai-search-clear {
+  position: absolute;
+  right: 0.35rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-color-secondary);
+  padding: 0;
+  font-size: 0.65rem;
+  line-height: 1;
+}
+
+/* ── Toggle vista ─────────────────────────────────── */
+.ai-view-toggle {
+  display: flex;
+  border: 1px solid var(--surface-border);
+  border-radius: 6px;
   overflow: hidden;
 }
 
+.ai-view-btn {
+  background: none;
+  border: none;
+  padding: 0.3rem 0.5rem;
+  cursor: pointer;
+  color: var(--text-color-secondary);
+  font-size: 0.75rem;
+  transition: background 0.15s, color 0.15s;
+}
+
+.ai-view-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text-color);
+}
+
+.ai-view-btn.active {
+  background: var(--primary-color, #6366f1);
+  color: #fff;
+}
+
+/* ── Sección de categoría ─────────────────────────── */
+.ai-category-section {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.ai-category-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0.875rem;
+  background: var(--surface-ground);
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.ai-category-header:hover {
+  background: var(--surface-hover);
+}
+
+.ai-category-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ai-category-emoji {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.ai-category-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-color);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.ai-category-meta {
+  font-size: 0.68rem;
+  color: var(--text-color-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.ai-category-active-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.4rem;
+  background: var(--primary-color, #6366f1);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 600;
+}
+
+.ai-category-chevron {
+  font-size: 0.7rem;
+  color: var(--text-color-secondary);
+  transition: transform 0.2s;
+}
+
+/* ── Grid de cards ────────────────────────────────── */
+.ai-clients-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.625rem;
+  padding: 0.625rem 0.875rem;
+}
+
+/* ── Card ─────────────────────────────────────────── */
+.ai-client-card {
+  border-radius: var(--settings-radius-card, 8px);
+  overflow: hidden;
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  transition: box-shadow 0.2s, transform 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+
 .ai-client-card:hover {
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
   transform: translateY(-1px);
 }
 
-.ai-client-card.enabled {
-  background: var(--surface-card);
-}
-
 .ai-client-card.disabled {
-  background: var(--surface-ground);
-  filter: grayscale(0.3);
+  opacity: 0.65;
 }
 
 /* Header de la card */
 .ai-client-card-header {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 0.875rem;
-  border-radius: 4px 4px 0 0;
+  gap: 0.625rem;
+  padding: 0.625rem 0.75rem;
 }
 
 .ai-client-icon-wrapper {
-  width: 38px;
-  height: 38px;
-  border-radius: var(--settings-radius-card, 8px);
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
 }
 
 .ai-client-header-info {
@@ -87,35 +249,49 @@
   min-width: 0;
 }
 
+.ai-client-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.2rem;
+  flex-wrap: wrap;
+}
+
 .ai-client-name {
-  margin: 0 0 0.375rem 0;
+  margin: 0;
   font-size: 0.825rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-color);
   line-height: 1.2;
+  white-space: nowrap;
 }
 
 .ai-client-badges {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
+  gap: 0.25rem;
   align-items: center;
 }
 
 .ai-client-toggle {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
 }
 
 /* Body de la card */
 .ai-client-card-body {
-  padding: 0.625rem 0.75rem 0.75rem;
+  padding: 0.5rem 0.75rem 0.625rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
 }
 
 .ai-client-description {
-  margin: 0 0 0.5rem 0;
-  font-size: 0.735rem;
-  line-height: 1.35;
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
   color: var(--text-color-secondary);
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -123,169 +299,339 @@
   overflow: hidden;
 }
 
+/* Features como chips */
 .ai-client-features {
-  margin-bottom: 0.625rem;
-}
-
-.ai-client-features h4 {
-  margin: 0 0 0.25rem 0;
-  font-weight: 600;
-  font-size: 0.74rem;
-}
-
-.ai-client-features ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.ai-client-features li {
-  padding: 0.125rem 0;
-  font-size: 0.72rem;
-  color: var(--text-color);
-  display: flex;
-  align-items: center;
-}
-
-/* Información de Docker */
-.ai-client-docker-info {
-  margin-top: 0.625rem;
-  padding-top: 0.625rem;
-  border-top: 1px solid var(--surface-border);
-}
-
-.docker-info-item {
-  display: flex;
-  align-items: center;
-  padding: 0.16rem 0;
-  font-size: 0.7rem;
-  color: var(--text-color);
-}
-
-.docker-info-item code {
-  margin-left: 0.375rem;
-  padding: 0.125rem 0.375rem;
-  background: var(--surface-ground);
-  border: 1px solid var(--surface-border);
-  border-radius: var(--settings-radius-icon, 6px);
-  font-family: 'Courier New', monospace;
-  font-size: var(--settings-font-mini, 0.6875rem);
-}
-
-.docker-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.375rem;
+  gap: 0.3rem;
+}
+
+.ai-feature-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.45rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 999px;
+  font-size: 0.63rem;
+  background: var(--surface-ground);
+}
+
+/* ── Status dots ──────────────────────────────────── */
+.ai-status-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ai-status-dot.running {
+  background: #22c55e;
+  box-shadow: 0 0 0 2px rgba(34,197,94,0.25);
+  animation: pulse-green 2s infinite;
+}
+
+.ai-status-dot.installed {
+  background: #22c55e;
+}
+
+.ai-status-dot.stopped {
+  background: #94a3b8;
+}
+
+.ai-status-dot.not-installed {
+  background: #f59e0b;
+}
+
+.ai-status-dot.error {
+  background: #ef4444;
+}
+
+.ai-status-dot.loading {
+  background: var(--primary-color, #6366f1);
+  animation: pulse-blue 1s infinite;
+}
+
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(34,197,94,0.25); }
+  50%       { box-shadow: 0 0 0 4px rgba(34,197,94,0.12); }
+}
+
+@keyframes pulse-blue {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+/* Status label */
+.ai-status-label {
+  font-size: 0.62rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.ai-status-label.running   { background: rgba(34,197,94,0.15);  color: #16a34a; }
+.ai-status-label.installed { background: rgba(34,197,94,0.15);  color: #16a34a; }
+.ai-status-label.stopped   { background: rgba(148,163,184,0.2); color: var(--text-color-secondary); }
+.ai-status-label.error     { background: rgba(239,68,68,0.15);  color: #dc2626; }
+.ai-status-label.not-installed { background: rgba(245,158,11,0.15); color: #b45309; }
+
+/* ── Docker info ──────────────────────────────────── */
+.ai-docker-info {
+  padding: 0.5rem;
+  background: var(--surface-ground);
+  border-radius: 6px;
+  border: 1px solid var(--surface-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.docker-url-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.68rem;
+  flex-wrap: wrap;
+}
+
+.docker-url-row code {
+  font-family: monospace;
+  font-size: 0.65rem;
+  color: var(--text-color);
+}
+
+.docker-port-chip {
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.62rem;
+  font-weight: 600;
+  font-family: monospace;
+}
+
+.docker-action-row {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
 }
 
 .docker-error {
-  font-size: 0.74rem;
-  line-height: 1.35;
-}
-
-/* Nota informativa */
-.ai-client-note {
-  line-height: 1.35;
-  font-size: 0.74rem !important;
-}
-
-/* Footer con información adicional */
-.ai-clients-footer {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 0.75rem;
-  margin-top: 0.625rem;
-}
-
-.info-card {
   display: flex;
-  gap: 0.625rem;
-  padding: 0.75rem;
+  align-items: flex-start;
+  gap: 0.35rem;
+  font-size: 0.68rem;
+  color: #ef4444;
+  line-height: 1.3;
+}
+
+/* ── Acordeón de config ───────────────────────────── */
+.config-accordion {
+  border-top: 1px solid var(--surface-border);
+  padding-top: 0.4rem;
+  margin-top: 0.1rem;
+}
+
+.config-accordion-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.2rem 0;
+  transition: opacity 0.15s;
+}
+
+.config-accordion-toggle:hover {
+  opacity: 0.8;
+}
+
+.config-accordion-toggle i {
+  font-size: 0.6rem;
+}
+
+.config-accordion-body {
+  margin-top: 0.5rem;
+}
+
+/* Inner config */
+.adv-config-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: var(--surface-ground);
+  border-radius: 6px;
+  border: 1px solid var(--surface-border);
+}
+
+.cli-status-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.cli-path {
+  font-family: monospace;
+  font-size: 0.62rem;
+  padding: 0.1rem 0.35rem;
   background: var(--surface-card);
   border: 1px solid var(--surface-border);
-  border-radius: var(--settings-radius-card, 8px);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  border-radius: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+  white-space: nowrap;
 }
 
-.info-card strong {
-  display: block;
-  margin-bottom: 0.25rem;
-  font-size: 0.76rem;
+.cli-action-row {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.config-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.config-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.config-field label {
+  font-size: 0.65rem;
+  color: var(--text-color-secondary);
+  font-weight: 500;
+}
+
+.config-error {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.68rem;
+  color: #ef4444;
+  padding: 0.3rem 0.5rem;
+  background: rgba(239,68,68,0.08);
+  border-radius: 4px;
+}
+
+/* ── Lista (view mode) ────────────────────────────── */
+.ai-clients-list {
+  display: flex;
+  flex-direction: column;
+  padding: 0.375rem 0.875rem 0.625rem;
+  gap: 0.3rem;
+}
+
+.ai-client-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.45rem 0.625rem;
+  border-radius: 6px;
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  transition: background 0.15s;
+}
+
+.ai-client-row:hover {
+  background: var(--surface-hover);
+}
+
+.ai-client-row.disabled {
+  opacity: 0.6;
+}
+
+.ai-row-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ai-row-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.ai-row-name {
+  font-size: 0.78rem;
+  font-weight: 600;
   color: var(--text-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.info-card p {
-  margin: 0;
-  font-size: 0.71rem;
-  line-height: 1.35;
+.ai-row-badges {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.ai-row-status {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+  min-width: 80px;
+}
+
+.ai-row-toggle {
+  flex-shrink: 0;
+}
+
+/* ── Sin resultados ───────────────────────────────── */
+.ai-no-results {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  gap: 0.75rem;
   color: var(--text-color-secondary);
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .ai-clients-tab {
-    padding: 0.4rem 0.5rem 0.6rem;
-  }
+.ai-no-results p {
+  margin: 0;
+  font-size: 0.8rem;
+  text-align: center;
+}
 
-  .ai-client-card-header {
-    gap: 0.55rem;
-    padding: 0.625rem;
-  }
-
-  .ai-client-toggle {
-    margin-top: 0;
-  }
-
-  .ai-client-card-body {
-    padding: 0.55rem 0.625rem 0.625rem;
-  }
-
+/* ── Responsive ───────────────────────────────────── */
+@media (max-width: 600px) {
   .ai-clients-grid {
     grid-template-columns: 1fr;
-    gap: 0.6rem;
   }
-
-  .ai-clients-footer {
+  .config-grid {
     grid-template-columns: 1fr;
-    gap: 0.6rem;
-    margin-top: 0.5rem;
+  }
+  .ai-search-input {
+    width: 120px;
   }
 }
 
-/* Animaciones */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* ── Animación de entrada ─────────────────────────── */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .ai-client-card {
-  animation: fadeIn 0.3s ease-out;
+  animation: fadeSlideIn 0.25s ease-out;
 }
-
-/* Badge personalizado */
-.p-badge.p-badge-warning {
-  background-color: #ff9800;
-}
-
-.p-badge.p-badge-info {
-  background-color: #2196F3;
-}
-
-.p-badge.p-badge-success {
-  background-color: #4CAF50;
-}
-
-.p-badge.p-badge-danger {
-  background-color: #f44336;
-}
-
-.p-badge.p-badge-secondary {
-  background-color: #9E9E9E;
-}
-

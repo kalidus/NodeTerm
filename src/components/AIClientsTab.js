@@ -1,12 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { Card } from 'primereact/card';
 import { InputSwitch } from 'primereact/inputswitch';
 import { Badge } from 'primereact/badge';
 import { Button } from 'primereact/button';
 import { Password } from 'primereact/password';
 import { InputText } from 'primereact/inputtext';
-import { ProgressSpinner } from 'primereact/progressspinner';
+import AIClientBrandIcon from './AIClientBrandIcon';
 import '../styles/components/ai-clients-tab.css';
+
+const CATEGORIES = [
+  {
+    key: 'cli',
+    label: 'CLI Local',
+    emoji: '🖥️',
+    description: 'Herramientas de IA que se ejecutan como proceso local en tu terminal',
+    clients: ['claude', 'opencode', 'geminicli', 'codexcli']
+  },
+  {
+    key: 'webapps',
+    label: 'Aplicaciones Web',
+    emoji: '🌐',
+    description: 'Interfaces web completas que se ejecutan en contenedores Docker',
+    clients: ['anythingllm', 'openwebui', 'librechat', 'agentzero', 'openclaw', 'opennotebook']
+  }
+];
 
 const AI_CLIENTS_STORAGE_KEY = 'ai_clients_enabled';
 
@@ -17,7 +33,6 @@ const AI_CLIENTS_STORAGE_KEY = 'ai_clients_enabled';
 const AIClientsTab = ({ themeColors }) => {
   // Estado para cada cliente de IA
   const [clients, setClients] = useState({
-    nodeterm: false,
     claude: false,
     opencode: false,
     geminicli: false,
@@ -81,6 +96,15 @@ const AIClientsTab = ({ themeColors }) => {
   const [openCodeConfig, setOpenCodeConfig] = useState({ binaryPath: '', extraArgs: '' });
   const [geminiCliConfig, setGeminiCliConfig] = useState({ binaryPath: '', extraArgs: '', apiKey: '' });
   const [codexCliConfig, setCodexCliConfig] = useState({ binaryPath: '', extraArgs: '', apiKey: '' });
+
+  // UI state — categorías colapsables, búsqueda, vista
+  const [collapsedSections, setCollapsedSections] = useState({});
+  const [expandedConfigs, setExpandedConfigs] = useState({});
+  const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState('grid');
+
+  const toggleSection = (key) => setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }));
+  const toggleConfig  = (key) => setExpandedConfigs(prev => ({ ...prev, [key]: !prev[key] }));
 
   // Cargar configuración desde localStorage al montar
   useEffect(() => {
@@ -668,801 +692,474 @@ const AIClientsTab = ({ themeColors }) => {
     }
   };
 
+  // Mapeo key → brandType para AIClientBrandIcon
+  const BRAND_TYPE_MAP = {
+    claude: 'claude',
+    opencode: 'opencode',
+    geminicli: 'geminicli',
+    codexcli: 'codexcli',
+    anythingllm: 'anything-llm',
+    openwebui: 'openwebui',
+    librechat: 'librechat',
+    agentzero: 'agentzero',
+    openclaw: 'openclaw',
+    opennotebook: 'open-notebook'
+  };
+
   // Definición de los clientes de IA
   const clientsDefinition = [
     {
-      key: 'claude',
-      name: 'Claude Code (CLI Local)',
-      icon: 'pi pi-comments',
+      key: 'claude', category: 'cli',
+      name: 'Claude Code', shortName: 'Claude Code',
       color: '#f59e0b',
-      description: 'Integra Claude Code como terminal local en NodeTerm. Si no está instalado, NodeTerm puede instalar el CLI automáticamente.',
-      features: ['Instalación automática', 'Terminal local dedicada', 'Activar/Desactivar desde Clientes IA', 'Configuración en Settings'],
-      badges: [
-        { label: 'LOCAL CLI', severity: 'warning', icon: 'pi pi-desktop' }
-      ],
-      requiresDocker: false,
-      isLocalCli: true
+      description: 'Integra Claude Code como terminal local en NodeTerm. Instalación automática del CLI incluida.',
+      features: ['Instalación automática', 'Terminal local dedicada', 'Multi-modelo'],
+      badges: [{ label: 'LOCAL CLI', severity: 'warning' }],
+      requiresDocker: false, isLocalCli: true
     },
     {
-      key: 'opencode',
-      name: 'OpenCode (CLI Local)',
-      icon: 'pi pi-code',
+      key: 'opencode', category: 'cli',
+      name: 'OpenCode', shortName: 'OpenCode',
       color: '#6366f1',
-      description: 'Agente de IA open-source para codificación en terminal. Soporta 75+ proveedores de modelos incluyendo Claude, GPT, Gemini y modelos locales.',
-      features: ['Open Source', 'Multi-proveedor (75+ LLMs)', 'Terminal local dedicada', 'Instalación automática'],
-      badges: [
-        { label: 'LOCAL CLI', severity: 'warning', icon: 'pi pi-desktop' },
-        { label: 'FREE', severity: 'success', icon: 'pi pi-star' }
-      ],
-      requiresDocker: false,
-      isLocalCli: true
+      description: 'Agente de IA open-source para codificación en terminal. Soporta 75+ proveedores de modelos.',
+      features: ['Open Source', '75+ proveedores', 'Terminal dedicada'],
+      badges: [{ label: 'LOCAL CLI', severity: 'warning' }, { label: 'FREE', severity: 'success' }],
+      requiresDocker: false, isLocalCli: true
     },
     {
-      key: 'geminicli',
-      name: 'Gemini CLI (CLI Local)',
-      icon: 'pi pi-star',
+      key: 'geminicli', category: 'cli',
+      name: 'Gemini CLI', shortName: 'Gemini CLI',
       color: '#1a73e8',
-      description: 'CLI oficial de Google Gemini para desarrollo con IA directamente en el terminal. Accede a los modelos Gemini de Google con soporte para código, análisis y más.',
-      features: ['Google Gemini', 'Terminal local dedicada', 'Instalación automática', 'Gratis con cuenta Google'],
-      badges: [
-        { label: 'LOCAL CLI', severity: 'warning', icon: 'pi pi-desktop' },
-        { label: 'GOOGLE', severity: 'info', icon: 'pi pi-globe' }
-      ],
-      requiresDocker: false,
-      isLocalCli: true
+      description: 'CLI oficial de Google Gemini. Accede a los modelos Gemini con soporte para código, análisis y más.',
+      features: ['Google Gemini', 'Gratis con cuenta Google', 'Terminal dedicada'],
+      badges: [{ label: 'LOCAL CLI', severity: 'warning' }, { label: 'GOOGLE', severity: 'info' }],
+      requiresDocker: false, isLocalCli: true
     },
     {
-      key: 'codexcli',
-      name: 'Codex CLI (CLI Local)',
-      icon: 'pi pi-bolt',
+      key: 'codexcli', category: 'cli',
+      name: 'Codex CLI', shortName: 'Codex CLI',
       color: '#10b981',
-      description: 'CLI de OpenAI Codex para desarrollo con IA directamente en el terminal. Agente de codificación ligero y open-source que usa modelos de OpenAI con soporte para lectura de archivos, ejecución de comandos y más.',
-      features: ['OpenAI Codex', 'Terminal local dedicada', 'Instalación automática', 'Open Source'],
-      badges: [
-        { label: 'LOCAL CLI', severity: 'warning', icon: 'pi pi-desktop' },
-        { label: 'OPENAI', severity: 'success', icon: 'pi pi-bolt' }
-      ],
-      requiresDocker: false,
-      isLocalCli: true
+      description: 'CLI de OpenAI Codex. Agente de codificación ligero y open-source que ejecuta comandos y lee archivos.',
+      features: ['OpenAI Codex', 'Open Source', 'Terminal dedicada'],
+      badges: [{ label: 'LOCAL CLI', severity: 'warning' }, { label: 'OPENAI', severity: 'success' }],
+      requiresDocker: false, isLocalCli: true
     },
     {
-      key: 'anythingllm',
-      name: 'AnythingLLM',
-      icon: 'pi pi-cloud',
+      key: 'anythingllm', category: 'webapps',
+      name: 'AnythingLLM', shortName: 'AnythingLLM',
       color: '#4CAF50',
-      description: 'Plataforma completa de IA con RAG, documentos, embeddings y múltiples modelos. Incluye interfaz web completa.',
-      features: ['RAG avanzado', 'Múltiples LLMs', 'Gestión de documentos', 'Interfaz web'],
-      badges: [
-        { label: 'DOCKER', severity: 'info', icon: 'pi pi-box' }
-      ],
-      requiresDocker: true,
-      port: 3001,
-      url: 'http://127.0.0.1:3001'
+      description: 'Plataforma completa de IA con RAG, documentos, embeddings y múltiples modelos.',
+      features: ['RAG avanzado', 'Múltiples LLMs', 'Gestión de documentos'],
+      badges: [{ label: 'DOCKER', severity: 'info' }],
+      requiresDocker: true, port: 3001, url: 'http://127.0.0.1:3001'
     },
     {
-      key: 'openwebui',
-      name: 'Open WebUI',
-      icon: 'pi pi-globe',
+      key: 'openwebui', category: 'webapps',
+      name: 'Open WebUI', shortName: 'Open WebUI',
       color: '#2196F3',
-      description: 'Interfaz web moderna tipo ChatGPT para Ollama. Experiencia de usuario similar a ChatGPT con tus modelos locales.',
-      features: ['Interfaz tipo ChatGPT', 'Historial completo', 'Compartir conversaciones', 'Plugins'],
-      badges: [
-        { label: 'DOCKER', severity: 'info', icon: 'pi pi-box' }
-      ],
-      requiresDocker: true,
-      port: 3000,
-      url: 'http://127.0.0.1:3000'
+      description: 'Interfaz web moderna tipo ChatGPT para Ollama y modelos locales.',
+      features: ['Interfaz tipo ChatGPT', 'Historial completo', 'Plugins'],
+      badges: [{ label: 'DOCKER', severity: 'info' }],
+      requiresDocker: true, port: 3000, url: 'http://127.0.0.1:3000'
     },
     {
-      key: 'librechat',
-      name: 'LibreChat',
-      icon: 'pi pi-comment',
+      key: 'librechat', category: 'webapps',
+      name: 'LibreChat', shortName: 'LibreChat',
       color: '#9C27B0',
-      description: 'Interfaz de chat de IA avanzada y personalizable. Soporta múltiples proveedores y modelos con una experiencia premium.',
-      features: ['Multi-proveedor', 'Presets de búsqueda', 'Historial avanzado', 'Plugins y herramientas'],
-      badges: [
-        { label: 'DOCKER', severity: 'info', icon: 'pi pi-box' }
-      ],
-      requiresDocker: true,
-      port: 3080,
-      url: 'http://127.0.0.1:3080'
+      description: 'Interfaz de chat avanzada y personalizable. Soporta múltiples proveedores con experiencia premium.',
+      features: ['Multi-proveedor', 'Historial avanzado', 'Plugins y herramientas'],
+      badges: [{ label: 'DOCKER', severity: 'info' }],
+      requiresDocker: true, port: 3080, url: 'http://127.0.0.1:3080'
     },
     {
-      key: 'agentzero',
-      name: 'Agent Zero',
-      icon: 'pi pi-android',
+      key: 'agentzero', category: 'webapps',
+      name: 'Agent Zero', shortName: 'Agent Zero',
       color: '#E91E63',
-      description: 'Framework de IA agente. Una interfaz innovadora para interactuar con agentes autónomos usando modelos locales o en la nube.',
-      features: ['Agentes Autónomos', 'Ejecución de Código', 'Búsqueda Web', 'Archivos'],
-      badges: [
-        { label: 'DOCKER', severity: 'info', icon: 'pi pi-box' }
-      ],
-      requiresDocker: true,
-      port: 3081,
-      url: 'http://127.0.0.1:3081'
+      description: 'Framework de IA agente para interactuar con agentes autónomos usando modelos locales o en la nube.',
+      features: ['Agentes autónomos', 'Ejecución de código', 'Búsqueda web'],
+      badges: [{ label: 'DOCKER', severity: 'info' }],
+      requiresDocker: true, port: 3081, url: 'http://127.0.0.1:3081'
     },
     {
-      key: 'openclaw',
-      name: 'OpenClaw',
-      icon: 'pi pi-bolt',
+      key: 'openclaw', category: 'webapps',
+      name: 'OpenClaw', shortName: 'OpenClaw',
       color: '#FF6B35',
-      description: 'Gateway de agentes IA con sandboxing Docker, soporte multi-modelo y canales de mensajería (Telegram, Discord, WhatsApp).',
-      features: ['Agentes con sandbox', 'Multi-modelo (OpenAI, Anthropic)', 'Canales de mensajería', 'Control UI integrado'],
-      badges: [
-        { label: 'DOCKER', severity: 'info', icon: 'pi pi-box' }
-      ],
-      requiresDocker: true,
-      port: 18789,
-      url: 'http://127.0.0.1:18789'
+      description: 'Gateway de agentes IA con sandboxing Docker, multi-modelo y canales de mensajería.',
+      features: ['Agentes con sandbox', 'Multi-modelo', 'Mensajería integrada'],
+      badges: [{ label: 'DOCKER', severity: 'info' }],
+      requiresDocker: true, port: 18789, url: 'http://127.0.0.1:18789'
     },
     {
-      key: 'opennotebook',
-      name: 'Open Notebook',
-      icon: 'pi pi-book',
+      key: 'opennotebook', category: 'webapps',
+      name: 'Open Notebook', shortName: 'Open Notebook',
       color: '#10B981',
-      description: 'Alternativa self-hosted a Google NotebookLM. Organiza documentos, PDFs y webs con IA multi-modelo y privacidad total.',
-      features: ['RAG sobre documentos y PDFs', 'Multi-modelo (OpenAI, Ollama, Anthropic)', 'Podcasts generados con IA', 'Privacidad total'],
-      badges: [
-        { label: 'DOCKER', severity: 'info', icon: 'pi pi-box' }
-      ],
-      requiresDocker: true,
-      port: 8502,
-      url: 'http://127.0.0.1:8502'
-    },
-    {
-      key: 'nodeterm',
-      name: 'Chat IA NodeTerm',
-      icon: 'pi pi-comments',
-      color: '#00BCD4',
-      description: 'Cliente de IA integrado en NodeTerm con Ollama local. Perfecto para desarrollo y uso offline.',
-      features: ['Ollama local', 'Privacidad total', 'Modelos personalizados', 'Sin límites de uso'],
-      badges: [
-        { label: 'EXPERIMENTAL', severity: 'warning', icon: 'pi pi-exclamation-triangle' }
-      ],
-      requiresDocker: false
+      description: 'Alternativa self-hosted a Google NotebookLM. Organiza documentos y PDFs con IA multi-modelo.',
+      features: ['RAG sobre PDFs', 'Multi-modelo', 'Privacidad total'],
+      badges: [{ label: 'DOCKER', severity: 'info' }],
+      requiresDocker: true, port: 8502, url: 'http://127.0.0.1:8502'
     }
   ];
 
-  // Renderizar una card de cliente
+  // ── Helpers de estado ─────────────────────────────────────────
+  const getCliStatus = (key) => {
+    if (key === 'claude') return claudeCliStatus;
+    if (key === 'opencode') return openCodeCliStatus;
+    if (key === 'geminicli') return geminiCliStatus;
+    if (key === 'codexcli') return codexCliStatus;
+    return null;
+  };
+
+  const StatusDot = ({ client }) => {
+    if (client.isLocalCli) {
+      const s = getCliStatus(client.key);
+      if (!s) return null;
+      if (s.loading) return <span className="ai-status-dot loading" title="Verificando..." />;
+      if (s.installed) return <span className="ai-status-dot installed" title={`Instalado${s.version ? ` (${s.version})` : ''}`} />;
+      return <span className="ai-status-dot not-installed" title="No instalado" />;
+    }
+    if (client.requiresDocker) {
+      const s = dockerStatus[client.key];
+      if (!clients[client.key]) return null;
+      if (!s) return null;
+      if (s.loading) return <span className="ai-status-dot loading" title="Verificando..." />;
+      if (s.running) return <span className="ai-status-dot running" title="En ejecución" />;
+      if (s.error) return <span className="ai-status-dot error" title={s.error} />;
+      return <span className="ai-status-dot stopped" title="Detenido" />;
+    }
+    return null;
+  };
+
+  const StatusLabel = ({ client }) => {
+    if (client.isLocalCli) {
+      const s = getCliStatus(client.key);
+      if (!s || s.loading) return null;
+      if (s.installed) return <span className="ai-status-label installed">{s.version ? `v${s.version}` : 'Instalado'}</span>;
+      return <span className="ai-status-label not-installed">No instalado</span>;
+    }
+    if (client.requiresDocker && clients[client.key]) {
+      const s = dockerStatus[client.key];
+      if (!s || s.loading) return null;
+      if (s.running) return <span className="ai-status-label running">Running</span>;
+      if (s.error) return <span className="ai-status-label error">Error</span>;
+      return <span className="ai-status-label stopped">Detenido</span>;
+    }
+    return null;
+  };
+
+  // ── Config avanzada por cliente (acordeón) ────────────────────
+  const renderAdvancedConfig = (client) => {
+    const key = client.key;
+    if (key === 'claude') {
+      return (
+        <div className="adv-config-inner">
+          <div className="cli-status-row">
+            <i className="pi pi-info-circle" style={{ color: '#f59e0b' }} />
+            <strong>Estado CLI:</strong>{' '}
+            <span>{claudeCliStatus.loading ? 'verificando...' : claudeCliStatus.installed ? `instalado${claudeCliStatus.version ? ` (${claudeCliStatus.version})` : ''}` : 'no instalado'}</span>
+            {claudeCliStatus.binaryPath && <code className="cli-path">{claudeCliStatus.binaryPath}</code>}
+          </div>
+          <div className="cli-action-row">
+            {!claudeCliStatus.installed && <Button label="Instalar CLI" icon="pi pi-download" className="p-button-warning p-button-sm" onClick={installClaudeCli} loading={claudeCliStatus.installing} />}
+            {claudeCliStatus.installed && <Button label="Reinstalar" icon="pi pi-refresh" className="p-button-secondary p-button-sm" onClick={installClaudeCli} loading={claudeCliStatus.installing} />}
+            <Button label="Verificar" icon="pi pi-search" className="p-button-secondary p-button-sm" onClick={checkClaudeCliStatus} loading={claudeCliStatus.loading} />
+          </div>
+          <div className="config-grid">
+            <div className="config-field"><label>Ruta binario</label><InputText value={claudeConfig.binaryPath} onChange={(e) => setClaudeConfig(p => ({ ...p, binaryPath: e.target.value }))} placeholder="npx @anthropic-ai/claude-code" className="p-inputtext-sm" style={{ width: '100%' }} /></div>
+            <div className="config-field"><label>Modelo</label><InputText value={claudeConfig.defaultModel} onChange={(e) => setClaudeConfig(p => ({ ...p, defaultModel: e.target.value }))} placeholder="claude-3-7-sonnet-latest" className="p-inputtext-sm" style={{ width: '100%' }} /></div>
+            <div className="config-field"><label>Args extra</label><InputText value={claudeConfig.extraArgs} onChange={(e) => setClaudeConfig(p => ({ ...p, extraArgs: e.target.value }))} placeholder="--no-interactive" className="p-inputtext-sm" style={{ width: '100%' }} /></div>
+            <div className="config-field"><label>Auth Token</label><Password value={claudeConfig.authToken} onChange={(e) => setClaudeConfig(p => ({ ...p, authToken: e.target.value }))} feedback={false} toggleMask placeholder="Token opcional" className="p-inputtext-sm" style={{ width: '100%' }} inputStyle={{ width: '100%' }} /></div>
+          </div>
+          <Button label="Guardar Configuración" icon="pi pi-save" className="p-button-warning p-button-sm p-button-text" style={{ marginTop: '0.5rem' }} onClick={handleSaveClaudeConfig} />
+          {claudeCliStatus.error && <div className="config-error"><i className="pi pi-times-circle" /> {claudeCliStatus.error}</div>}
+        </div>
+      );
+    }
+    if (key === 'opencode') {
+      return (
+        <div className="adv-config-inner">
+          <div className="cli-status-row">
+            <i className="pi pi-info-circle" style={{ color: '#6366f1' }} />
+            <strong>Estado CLI:</strong>{' '}
+            <span>{openCodeCliStatus.loading ? 'verificando...' : openCodeCliStatus.installed ? `instalado${openCodeCliStatus.version ? ` (${openCodeCliStatus.version})` : ''}` : 'no instalado'}</span>
+            {openCodeCliStatus.binaryPath && <code className="cli-path">{openCodeCliStatus.binaryPath}</code>}
+          </div>
+          <div className="cli-action-row">
+            {!openCodeCliStatus.installed && <Button label="Instalar CLI" icon="pi pi-download" className="p-button-sm" style={{ background: '#6366f1', border: 'none' }} onClick={installOpenCodeCli} loading={openCodeCliStatus.installing} />}
+            {openCodeCliStatus.installed && <Button label="Reinstalar" icon="pi pi-refresh" className="p-button-secondary p-button-sm" onClick={installOpenCodeCli} loading={openCodeCliStatus.installing} />}
+            <Button label="Verificar" icon="pi pi-search" className="p-button-secondary p-button-sm" onClick={checkOpenCodeCliStatus} loading={openCodeCliStatus.loading} />
+          </div>
+          <div className="config-grid">
+            <div className="config-field"><label>Ruta binario</label><InputText value={openCodeConfig.binaryPath} onChange={(e) => setOpenCodeConfig(p => ({ ...p, binaryPath: e.target.value }))} placeholder="opencode" className="p-inputtext-sm" style={{ width: '100%' }} /></div>
+            <div className="config-field"><label>Args extra</label><InputText value={openCodeConfig.extraArgs} onChange={(e) => setOpenCodeConfig(p => ({ ...p, extraArgs: e.target.value }))} placeholder="" className="p-inputtext-sm" style={{ width: '100%' }} /></div>
+          </div>
+          <Button label="Guardar Configuración" icon="pi pi-save" className="p-button-sm p-button-text" style={{ marginTop: '0.5rem', color: '#6366f1' }} onClick={handleSaveOpenCodeConfig} />
+          {openCodeCliStatus.error && <div className="config-error"><i className="pi pi-times-circle" /> {openCodeCliStatus.error}</div>}
+        </div>
+      );
+    }
+    if (key === 'geminicli') {
+      return (
+        <div className="adv-config-inner">
+          <div className="cli-status-row">
+            <i className="pi pi-info-circle" style={{ color: '#1a73e8' }} />
+            <strong>Estado CLI:</strong>{' '}
+            <span>{geminiCliStatus.loading ? 'verificando...' : geminiCliStatus.installed ? `instalado${geminiCliStatus.version ? ` (${geminiCliStatus.version})` : ''}` : 'no instalado'}</span>
+            {geminiCliStatus.binaryPath && <code className="cli-path">{geminiCliStatus.binaryPath}</code>}
+          </div>
+          <div className="cli-action-row">
+            {!geminiCliStatus.installed && <Button label="Instalar CLI" icon="pi pi-download" className="p-button-sm" style={{ background: '#1a73e8', border: 'none' }} onClick={installGeminiCli} loading={geminiCliStatus.installing} />}
+            {geminiCliStatus.installed && <Button label="Reinstalar" icon="pi pi-refresh" className="p-button-secondary p-button-sm" onClick={installGeminiCli} loading={geminiCliStatus.installing} />}
+            <Button label="Verificar" icon="pi pi-search" className="p-button-secondary p-button-sm" onClick={checkGeminiCliStatus} loading={geminiCliStatus.loading} />
+          </div>
+          <div className="config-grid">
+            <div className="config-field"><label>Ruta binario</label><InputText value={geminiCliConfig.binaryPath} onChange={(e) => setGeminiCliConfig(p => ({ ...p, binaryPath: e.target.value }))} placeholder="gemini" className="p-inputtext-sm" style={{ width: '100%' }} /></div>
+            <div className="config-field"><label>Args extra</label><InputText value={geminiCliConfig.extraArgs} onChange={(e) => setGeminiCliConfig(p => ({ ...p, extraArgs: e.target.value }))} placeholder="--model gemini-1.5-flash" className="p-inputtext-sm" style={{ width: '100%' }} /></div>
+          </div>
+          <Button label="Guardar Configuración" icon="pi pi-save" className="p-button-sm p-button-text" style={{ marginTop: '0.5rem', color: '#1a73e8' }} onClick={handleSaveGeminiCliConfig} />
+          <div style={{ marginTop: '0.75rem' }}>
+            <Password value={geminiApiKeyInput} onChange={(e) => setGeminiApiKeyInput(e.target.value)} feedback={false} toggleMask placeholder={geminiApiKeySaved ? 'API key guardada (escribe para reemplazar)' : 'Pegar API key Gemini'} style={{ width: '100%', maxWidth: '420px' }} inputStyle={{ width: '100%' }} />
+          </div>
+          <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <Button label={geminiApiKeyInput.trim() ? 'Guardar API key' : 'Eliminar API key'} icon="pi pi-key" className="p-button-secondary p-button-sm" onClick={saveGeminiApiKey} />
+            {geminiApiKeySaved && <span style={{ color: '#93c5fd', fontSize: '0.85rem', alignSelf: 'center' }}>API key guardada</span>}
+          </div>
+          {geminiCliStatus.error && <div className="config-error"><i className="pi pi-times-circle" /> {geminiCliStatus.error}</div>}
+        </div>
+      );
+    }
+    if (key === 'codexcli') {
+      return (
+        <div className="adv-config-inner">
+          <div className="cli-status-row">
+            <i className="pi pi-info-circle" style={{ color: '#10b981' }} />
+            <strong>Estado CLI:</strong>{' '}
+            <span>{codexCliStatus.loading ? 'verificando...' : codexCliStatus.installed ? `instalado${codexCliStatus.version ? ` (${codexCliStatus.version})` : ''}` : 'no instalado'}</span>
+            {codexCliStatus.binaryPath && <code className="cli-path">{codexCliStatus.binaryPath}</code>}
+          </div>
+          <div className="cli-action-row">
+            {!codexCliStatus.installed && <Button label="Instalar CLI" icon="pi pi-download" className="p-button-sm" style={{ background: '#10b981', border: 'none' }} onClick={installCodexCli} loading={codexCliStatus.installing} />}
+            {codexCliStatus.installed && <Button label="Reinstalar" icon="pi pi-refresh" className="p-button-secondary p-button-sm" onClick={installCodexCli} loading={codexCliStatus.installing} />}
+            <Button label="Verificar" icon="pi pi-search" className="p-button-secondary p-button-sm" onClick={checkCodexCliStatus} loading={codexCliStatus.loading} />
+          </div>
+          <div className="config-grid">
+            <div className="config-field"><label>Ruta binario</label><InputText value={codexCliConfig.binaryPath} onChange={(e) => setCodexCliConfig(p => ({ ...p, binaryPath: e.target.value }))} placeholder="codex" className="p-inputtext-sm" style={{ width: '100%' }} /></div>
+            <div className="config-field"><label>Args extra</label><InputText value={codexCliConfig.extraArgs} onChange={(e) => setCodexCliConfig(p => ({ ...p, extraArgs: e.target.value }))} placeholder="" className="p-inputtext-sm" style={{ width: '100%' }} /></div>
+          </div>
+          <Button label="Guardar Configuración" icon="pi pi-save" className="p-button-sm p-button-text" style={{ marginTop: '0.5rem', color: '#10b981' }} onClick={handleSaveCodexCliConfig} />
+          <div style={{ marginTop: '0.75rem' }}>
+            <Password value={codexApiKeyInput} onChange={(e) => setCodexApiKeyInput(e.target.value)} feedback={false} toggleMask placeholder={codexApiKeySaved ? 'API key guardada (escribe para reemplazar)' : 'Pegar API key OpenAI'} style={{ width: '100%', maxWidth: '420px' }} inputStyle={{ width: '100%' }} />
+          </div>
+          <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <Button label={codexApiKeyInput.trim() ? 'Guardar API key' : 'Eliminar API key'} icon="pi pi-key" className="p-button-secondary p-button-sm" onClick={saveCodexApiKey} />
+            {codexApiKeySaved && <span style={{ color: '#93c5fd', fontSize: '0.85rem', alignSelf: 'center' }}>API key guardada</span>}
+          </div>
+          {codexCliStatus.error && <div className="config-error"><i className="pi pi-times-circle" /> {codexCliStatus.error}</div>}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // ── Card (grid view) ──────────────────────────────────────────
   const renderClientCard = (client) => {
     const isEnabled = clients[client.key];
     const status = dockerStatus[client.key];
-
-    const cardHeader = (
-      <div className="ai-client-card-header" style={{ 
-        background: `linear-gradient(135deg, ${client.color}20, ${client.color}10)`,
-        borderBottom: `2px solid ${client.color}40`
-      }}>
-        <div className="ai-client-icon-wrapper" style={{ 
-          background: `linear-gradient(135deg, ${client.color}, ${client.color}CC)` 
-        }}>
-          <i className={client.icon} style={{ fontSize: '1.25rem', color: 'white' }} />
-        </div>
-        <div className="ai-client-header-info">
-          <h3 className="ai-client-name">{client.name}</h3>
-          <div className="ai-client-badges">
-            {client.badges.map((badge, idx) => (
-              <Badge 
-                key={idx}
-                value={badge.label} 
-                severity={badge.severity}
-                icon={badge.icon}
-                style={{ marginRight: '0.5rem' }}
-              />
-            ))}
-            {client.requiresDocker && isEnabled && (
-              status.loading ? (
-                <Badge 
-                  value="VERIFICANDO" 
-                  severity="secondary"
-                  icon={<ProgressSpinner style={{ width: '14px', height: '14px' }} />}
-                />
-              ) : status.running ? (
-                <Badge 
-                  value="EN EJECUCIÓN" 
-                  severity="success"
-                  icon="pi pi-check-circle"
-                />
-              ) : status.error ? (
-                <Badge 
-                  value="ERROR" 
-                  severity="danger"
-                  icon="pi pi-times-circle"
-                />
-              ) : (
-                <Badge 
-                  value="DETENIDO" 
-                  severity="warning"
-                  icon="pi pi-minus-circle"
-                />
-              )
-            )}
-          </div>
-        </div>
-        <div className="ai-client-toggle">
-          <InputSwitch 
-            checked={isEnabled} 
-            onChange={() => handleToggleClient(client.key)}
-            style={{
-              transform: 'scale(1.05)'
-            }}
-          />
-        </div>
-      </div>
-    );
+    const brandType = BRAND_TYPE_MAP[client.key];
+    const isConfigOpen = !!expandedConfigs[client.key];
 
     return (
-      <Card 
+      <div
         key={client.key}
-        header={cardHeader}
         className={`ai-client-card ${isEnabled ? 'enabled' : 'disabled'}`}
-        style={{
-          borderLeft: `4px solid ${isEnabled ? client.color : '#666'}`,
-          opacity: isEnabled ? 1 : 0.7
-        }}
+        style={{ borderLeft: `3px solid ${isEnabled ? client.color : 'var(--surface-border)'}` }}
       >
+        {/* Header */}
+        <div className="ai-client-card-header" style={{ background: `linear-gradient(135deg, ${client.color}16, ${client.color}06)`, borderBottom: `1px solid ${client.color}28` }}>
+          <div className="ai-client-icon-wrapper" style={{ background: `${client.color}18`, border: `1.5px solid ${client.color}35` }}>
+            <AIClientBrandIcon tabType={brandType} size={26} />
+          </div>
+          <div className="ai-client-header-info">
+            <div className="ai-client-name-row">
+              <h3 className="ai-client-name">{client.name}</h3>
+              <StatusDot client={client} />
+              <StatusLabel client={client} />
+            </div>
+            <div className="ai-client-badges">
+              {client.badges.map((badge, idx) => (
+                <Badge key={idx} value={badge.label} severity={badge.severity} style={{ marginRight: '0.3rem', fontSize: '0.6rem' }} />
+              ))}
+            </div>
+          </div>
+          <div className="ai-client-toggle">
+            <InputSwitch checked={isEnabled} onChange={() => handleToggleClient(client.key)} />
+          </div>
+        </div>
+
+        {/* Body */}
         <div className="ai-client-card-body">
           <p className="ai-client-description">{client.description}</p>
-          
+
           <div className="ai-client-features">
-            <h4 style={{ fontSize: '0.9rem', marginBottom: '0.5rem', color: 'var(--text-color-secondary)' }}>
-              ✨ Características principales:
-            </h4>
-            <ul>
-              {client.features.map((feature, idx) => (
-                <li key={idx}>
-                  <i className="pi pi-check-circle" style={{ color: client.color, marginRight: '0.5rem' }} />
-                  {feature}
-                </li>
-              ))}
-            </ul>
+            {client.features.map((f, idx) => (
+              <span key={idx} className="ai-feature-chip" style={{ borderColor: `${client.color}50`, color: 'var(--text-color)' }}>
+                <i className="pi pi-check" style={{ color: client.color, fontSize: '0.6rem' }} />
+                {f}
+              </span>
+            ))}
           </div>
 
-          {/* Información adicional para servicios Docker */}
-          {client.requiresDocker && isEnabled && (
-            <div className="ai-client-docker-info">
-              <div className="docker-info-item">
-                <i className="pi pi-link" style={{ color: client.color, marginRight: '0.5rem' }} />
-                <strong>URL:</strong> <code>{client.url}</code>
+          {/* Docker info */}
+          {client.requiresDocker && isEnabled && status && (
+            <div className="ai-docker-info">
+              <div className="docker-url-row">
+                <i className="pi pi-link" style={{ color: client.color }} />
+                <code>{client.url}</code>
+                <span className="docker-port-chip" style={{ background: `${client.color}20`, color: client.color }}>:{client.port}</span>
               </div>
-              <div className="docker-info-item">
-                <i className="pi pi-server" style={{ color: client.color, marginRight: '0.5rem' }} />
-                <strong>Puerto:</strong> <code>{client.port}</code>
-              </div>
-              
-              {/* Botones de acción */}
-              <div className="docker-actions" style={{ marginTop: '1rem' }}>
+              <div className="docker-action-row">
                 {!status.running && !status.loading && (
-                  <Button
-                    label="Iniciar Servicio"
-                    icon="pi pi-play"
-                    onClick={() => handleStartDockerService(client.key)}
-                    className="p-button-success p-button-sm"
-                    style={{ marginRight: '0.5rem' }}
-                  />
+                  <Button label="Iniciar" icon="pi pi-play" onClick={() => handleStartDockerService(client.key)} className="p-button-success p-button-sm" />
                 )}
-                <Button
-                  label="Verificar Estado"
-                  icon="pi pi-refresh"
-                  onClick={() => checkDockerServiceStatus(client.key)}
-                  className="p-button-secondary p-button-sm"
-                  loading={status.loading}
-                />
+                <Button label="Verificar" icon="pi pi-refresh" onClick={() => checkDockerServiceStatus(client.key)} className="p-button-secondary p-button-sm" loading={status.loading} />
               </div>
-
-              {/* Mostrar error si existe */}
               {status.error && (
-                <div className="docker-error" style={{
-                  marginTop: '1rem',
-                  padding: '0.75rem',
-                  background: '#f443361a',
-                  border: '1px solid #f44336',
-                  borderRadius: '4px'
-                }}>
-                  <i className="pi pi-exclamation-triangle" style={{ color: '#f44336', marginRight: '0.5rem' }} />
-                  <span style={{ color: '#f44336' }}>{status.error}</span>
+                <div className="docker-error">
+                  <i className="pi pi-exclamation-triangle" style={{ color: '#f44336' }} />
+                  <span>{status.error}</span>
                 </div>
               )}
             </div>
           )}
 
-          {/* Información para NodeTerm */}
-          {client.key === 'nodeterm' && isEnabled && (
-            <div className="ai-client-note" style={{
-              marginTop: '1rem',
-              padding: '0.75rem',
-              background: '#ff98001a',
-              border: '1px solid #ff9800',
-              borderRadius: '4px',
-              fontSize: '0.85rem'
-            }}>
-              <i className="pi pi-info-circle" style={{ color: '#ff9800', marginRight: '0.5rem' }} />
-              <strong>Nota:</strong> Este cliente está en fase experimental. Requiere Ollama instalado localmente.
-            </div>
-          )}
-
-          {client.key === 'claude' && (
-            <div className="ai-client-note" style={{
-              marginTop: '1rem',
-              padding: '0.75rem',
-              background: 'rgba(245, 158, 11, 0.12)',
-              border: '1px solid #f59e0b',
-              borderRadius: '4px',
-              fontSize: '0.85rem'
-            }}>
-              <div style={{ marginBottom: '0.5rem' }}>
-                <i className="pi pi-info-circle" style={{ color: '#f59e0b', marginRight: '0.5rem' }} />
-                <strong>Estado CLI:</strong>{' '}
-                {claudeCliStatus.loading
-                  ? 'verificando...'
-                  : (claudeCliStatus.installed
-                    ? `instalado${claudeCliStatus.version ? ` (${claudeCliStatus.version})` : ''}`
-                    : 'no instalado')}
-              </div>
-              {claudeCliStatus.binaryPath && (
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <strong>Binario:</strong> <code>{claudeCliStatus.binaryPath}</code>
-                </div>
-              )}
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                {!claudeCliStatus.installed && (
-                  <Button
-                    label="Instalar Claude CLI"
-                    icon="pi pi-download"
-                    className="p-button-warning p-button-sm"
-                    onClick={installClaudeCli}
-                    loading={claudeCliStatus.installing}
-                  />
-                )}
-                {claudeCliStatus.installed && (
-                  <Button
-                    label="Reinstalar CLI"
-                    icon="pi pi-refresh"
-                    className="p-button-secondary p-button-sm"
-                    onClick={installClaudeCli}
-                    loading={claudeCliStatus.installing}
-                  />
-                )}
-                <Button
-                  label="Verificar"
-                  icon="pi pi-search"
-                  className="p-button-secondary p-button-sm"
-                  onClick={checkClaudeCliStatus}
-                  loading={claudeCliStatus.loading}
-                />
-              </div>
-
-              {/* Configuración avanzada Claude */}
-              <div className="cli-advanced-config" style={{ marginTop: '1rem', borderTop: '1px solid rgba(245, 158, 11, 0.2)', paddingTop: '1rem' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  <div className="p-field">
-                    <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '4px' }}>Ruta binario</label>
-                    <InputText
-                      value={claudeConfig.binaryPath}
-                      onChange={(e) => setClaudeConfig(prev => ({ ...prev, binaryPath: e.target.value }))}
-                      placeholder="npx @anthropic-ai/claude-code"
-                      className="p-inputtext-sm"
-                      style={{ width: '100%' }}
-                    />
-                  </div>
-                  <div className="p-field">
-                    <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '4px' }}>Modelo</label>
-                    <InputText
-                      value={claudeConfig.defaultModel}
-                      onChange={(e) => setClaudeConfig(prev => ({ ...prev, defaultModel: e.target.value }))}
-                      placeholder="claude-3-7-sonnet-latest"
-                      className="p-inputtext-sm"
-                      style={{ width: '100%' }}
-                    />
-                  </div>
-                  <div className="p-field">
-                    <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '4px' }}>Args extra</label>
-                    <InputText
-                      value={claudeConfig.extraArgs}
-                      onChange={(e) => setClaudeConfig(prev => ({ ...prev, extraArgs: e.target.value }))}
-                      placeholder="--no-interactive"
-                      className="p-inputtext-sm"
-                      style={{ width: '100%' }}
-                    />
-                  </div>
-                  <div className="p-field">
-                    <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '4px' }}>Auth Token</label>
-                    <Password
-                      value={claudeConfig.authToken}
-                      onChange={(e) => setClaudeConfig(prev => ({ ...prev, authToken: e.target.value }))}
-                      feedback={false}
-                      toggleMask
-                      placeholder="Token opcional"
-                      className="p-inputtext-sm"
-                      style={{ width: '100%' }}
-                      inputStyle={{ width: '100%' }}
-                    />
-                  </div>
-                </div>
-                <Button
-                  label="Guardar Configuración"
-                  icon="pi pi-save"
-                  className="p-button-warning p-button-sm p-button-text"
-                  style={{ marginTop: '0.5rem' }}
-                  onClick={handleSaveClaudeConfig}
-                />
-              </div>
-
-              {claudeCliStatus.error && (
-                <div style={{ marginTop: '0.75rem', color: '#ef4444' }}>
-                  <i className="pi pi-times-circle" style={{ marginRight: '0.4rem' }} />
-                  {claudeCliStatus.error}
-                </div>
-              )}
-            </div>
-          )}
-
-          {client.key === 'opencode' && (
-            <div className="ai-client-note" style={{
-              marginTop: '1rem',
-              padding: '0.75rem',
-              background: 'rgba(99, 102, 241, 0.12)',
-              border: '1px solid #6366f1',
-              borderRadius: '4px',
-              fontSize: '0.85rem'
-            }}>
-              <div style={{ marginBottom: '0.5rem' }}>
-                <i className="pi pi-info-circle" style={{ color: '#6366f1', marginRight: '0.5rem' }} />
-                <strong>Estado CLI:</strong>{' '}
-                {openCodeCliStatus.loading
-                  ? 'verificando...'
-                  : (openCodeCliStatus.installed
-                    ? `instalado${openCodeCliStatus.version ? ` (${openCodeCliStatus.version})` : ''}`
-                    : 'no instalado')}
-              </div>
-              {openCodeCliStatus.binaryPath && (
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <strong>Binario:</strong> <code>{openCodeCliStatus.binaryPath}</code>
-                </div>
-              )}
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                {!openCodeCliStatus.installed && (
-                  <Button
-                    label="Instalar OpenCode CLI"
-                    icon="pi pi-download"
-                    className="p-button-sm"
-                    style={{ background: '#6366f1', border: '1px solid #6366f1' }}
-                    onClick={installOpenCodeCli}
-                    loading={openCodeCliStatus.installing}
-                  />
-                )}
-                {openCodeCliStatus.installed && (
-                  <Button
-                    label="Reinstalar CLI"
-                    icon="pi pi-refresh"
-                    className="p-button-secondary p-button-sm"
-                    onClick={installOpenCodeCli}
-                    loading={openCodeCliStatus.installing}
-                  />
-                )}
-                <Button
-                  label="Verificar"
-                  icon="pi pi-search"
-                  className="p-button-secondary p-button-sm"
-                  onClick={checkOpenCodeCliStatus}
-                  loading={openCodeCliStatus.loading}
-                />
-              </div>
-
-              {/* Configuración avanzada OpenCode */}
-              <div className="cli-advanced-config" style={{ marginTop: '1rem', borderTop: '1px solid rgba(99, 102, 241, 0.2)', paddingTop: '1rem' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  <div className="p-field">
-                    <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '4px' }}>Ruta binario</label>
-                    <InputText
-                      value={openCodeConfig.binaryPath}
-                      onChange={(e) => setOpenCodeConfig(prev => ({ ...prev, binaryPath: e.target.value }))}
-                      placeholder="opencode"
-                      className="p-inputtext-sm"
-                      style={{ width: '100%' }}
-                    />
-                  </div>
-                  <div className="p-field">
-                    <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '4px' }}>Args extra</label>
-                    <InputText
-                      value={openCodeConfig.extraArgs}
-                      onChange={(e) => setOpenCodeConfig(prev => ({ ...prev, extraArgs: e.target.value }))}
-                      placeholder="--model gpt-4"
-                      className="p-inputtext-sm"
-                      style={{ width: '100%' }}
-                    />
-                  </div>
-                </div>
-                <Button
-                  label="Guardar Configuración"
-                  icon="pi pi-save"
-                  className="p-button-sm p-button-text"
-                  style={{ marginTop: '0.5rem', color: '#6366f1' }}
-                  onClick={handleSaveOpenCodeConfig}
-                />
-              </div>
-
-              {openCodeCliStatus.error && (
-                <div style={{ marginTop: '0.75rem', color: '#ef4444' }}>
-                  <i className="pi pi-times-circle" style={{ marginRight: '0.4rem' }} />
-                  {openCodeCliStatus.error}
-                </div>
-              )}
-            </div>
-          )}
-
-          {client.key === 'codexcli' && (
-            <div className="ai-client-note" style={{
-              marginTop: '1rem',
-              padding: '0.75rem',
-              background: 'rgba(16, 185, 129, 0.12)',
-              border: '1px solid #10b981',
-              borderRadius: '4px',
-              fontSize: '0.85rem'
-            }}>
-              <div style={{ marginBottom: '0.5rem' }}>
-                <i className="pi pi-info-circle" style={{ color: '#10b981', marginRight: '0.5rem' }} />
-                <strong>Estado CLI:</strong>{' '}
-                {codexCliStatus.loading
-                  ? 'verificando...'
-                  : (codexCliStatus.installed
-                    ? `instalado${codexCliStatus.version ? ` (${codexCliStatus.version})` : ''}`
-                    : 'no instalado')}
-              </div>
-              {codexCliStatus.binaryPath && (
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <strong>Binario:</strong> <code>{codexCliStatus.binaryPath}</code>
-                </div>
-              )}
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                {!codexCliStatus.installed && (
-                  <Button
-                    label="Instalar Codex CLI"
-                    icon="pi pi-download"
-                    className="p-button-sm"
-                    style={{ background: '#10b981', border: '1px solid #10b981' }}
-                    onClick={installCodexCli}
-                    loading={codexCliStatus.installing}
-                  />
-                )}
-                {codexCliStatus.installed && (
-                  <Button
-                    label="Reinstalar CLI"
-                    icon="pi pi-refresh"
-                    className="p-button-secondary p-button-sm"
-                    onClick={installCodexCli}
-                    loading={codexCliStatus.installing}
-                  />
-                )}
-                <Button
-                  label="Verificar"
-                  icon="pi pi-search"
-                  className="p-button-secondary p-button-sm"
-                  onClick={checkCodexCliStatus}
-                  loading={codexCliStatus.loading}
-                />
-              </div>
-
-              {/* Configuración avanzada Codex */}
-              <div className="cli-advanced-config" style={{ marginTop: '1rem', borderTop: '1px solid rgba(16, 185, 129, 0.2)', paddingTop: '1rem' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  <div className="p-field">
-                    <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '4px' }}>Ruta binario</label>
-                    <InputText
-                      value={codexCliConfig.binaryPath}
-                      onChange={(e) => setCodexCliConfig(prev => ({ ...prev, binaryPath: e.target.value }))}
-                      placeholder="codex"
-                      className="p-inputtext-sm"
-                      style={{ width: '100%' }}
-                    />
-                  </div>
-                  <div className="p-field">
-                    <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '4px' }}>Args extra</label>
-                    <InputText
-                      value={codexCliConfig.extraArgs}
-                      onChange={(e) => setCodexCliConfig(prev => ({ ...prev, extraArgs: e.target.value }))}
-                      placeholder="--provider openai"
-                      className="p-inputtext-sm"
-                      style={{ width: '100%' }}
-                    />
-                  </div>
-                </div>
-                <Button
-                  label="Guardar Configuración"
-                  icon="pi pi-save"
-                  className="p-button-sm p-button-text"
-                  style={{ marginTop: '0.5rem', color: '#10b981' }}
-                  onClick={handleSaveCodexCliConfig}
-                />
-              </div>
-
-              <div style={{ marginTop: '0.75rem' }}>
-                <Password
-                  value={codexApiKeyInput}
-                  onChange={(e) => setCodexApiKeyInput(e.target.value)}
-                  feedback={false}
-                  toggleMask
-                  placeholder={codexApiKeySaved ? 'API key guardada (escribe para reemplazar)' : 'Pegar OPENAI_API_KEY'}
-                  style={{ width: '100%', maxWidth: '420px' }}
-                  inputStyle={{ width: '100%' }}
-                />
-              </div>
-              <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <Button
-                  label={codexApiKeyInput.trim() ? 'Guardar API key' : 'Eliminar API key'}
-                  icon="pi pi-key"
-                  className="p-button-secondary p-button-sm"
-                  onClick={saveCodexApiKey}
-                />
-                {codexApiKeySaved && (
-                  <span style={{ color: '#6ee7b7', fontSize: '0.85rem', alignSelf: 'center' }}>
-                    API key guardada en seguridad local
-                  </span>
-                )}
-              </div>
-              {codexCliStatus.error && (
-                <div style={{ marginTop: '0.75rem', color: '#ef4444' }}>
-                  <i className="pi pi-times-circle" style={{ marginRight: '0.4rem' }} />
-                  {codexCliStatus.error}
-                </div>
-              )}
-            </div>
-          )}
-
-          {client.key === 'geminicli' && (
-            <div className="ai-client-note" style={{
-              marginTop: '1rem',
-              padding: '0.75rem',
-              background: 'rgba(26, 115, 232, 0.12)',
-              border: '1px solid #1a73e8',
-              borderRadius: '4px',
-              fontSize: '0.85rem'
-            }}>
-              <div style={{ marginBottom: '0.5rem' }}>
-                <i className="pi pi-info-circle" style={{ color: '#1a73e8', marginRight: '0.5rem' }} />
-                <strong>Estado CLI:</strong>{' '}
-                {geminiCliStatus.loading
-                  ? 'verificando...'
-                  : (geminiCliStatus.installed
-                    ? `instalado${geminiCliStatus.version ? ` (${geminiCliStatus.version})` : ''}`
-                    : 'no instalado')}
-              </div>
-              {geminiCliStatus.binaryPath && (
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <strong>Binario:</strong> <code>{geminiCliStatus.binaryPath}</code>
-                </div>
-              )}
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                {!geminiCliStatus.installed && (
-                  <Button
-                    label="Instalar Gemini CLI"
-                    icon="pi pi-download"
-                    className="p-button-sm"
-                    style={{ background: '#1a73e8', border: '1px solid #1a73e8' }}
-                    onClick={installGeminiCli}
-                    loading={geminiCliStatus.installing}
-                  />
-                )}
-                {geminiCliStatus.installed && (
-                  <Button
-                    label="Reinstalar CLI"
-                    icon="pi pi-refresh"
-                    className="p-button-secondary p-button-sm"
-                    onClick={installGeminiCli}
-                    loading={geminiCliStatus.installing}
-                  />
-                )}
-                <Button
-                  label="Verificar"
-                  icon="pi pi-search"
-                  className="p-button-secondary p-button-sm"
-                  onClick={checkGeminiCliStatus}
-                  loading={geminiCliStatus.loading}
-                />
-              </div>
-
-              {/* Configuración avanzada Gemini */}
-              <div className="cli-advanced-config" style={{ marginTop: '1rem', borderTop: '1px solid rgba(26, 115, 232, 0.2)', paddingTop: '1rem' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  <div className="p-field">
-                    <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '4px' }}>Ruta binario</label>
-                    <InputText
-                      value={geminiCliConfig.binaryPath}
-                      onChange={(e) => setGeminiCliConfig(prev => ({ ...prev, binaryPath: e.target.value }))}
-                      placeholder="gemini-cli"
-                      className="p-inputtext-sm"
-                      style={{ width: '100%' }}
-                    />
-                  </div>
-                  <div className="p-field">
-                    <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '4px' }}>Args extra</label>
-                    <InputText
-                      value={geminiCliConfig.extraArgs}
-                      onChange={(e) => setGeminiCliConfig(prev => ({ ...prev, extraArgs: e.target.value }))}
-                      placeholder="--model gemini-1.5-flash"
-                      className="p-inputtext-sm"
-                      style={{ width: '100%' }}
-                    />
-                  </div>
-                </div>
-                <Button
-                  label="Guardar Configuración"
-                  icon="pi pi-save"
-                  className="p-button-sm p-button-text"
-                  style={{ marginTop: '0.5rem', color: '#1a73e8' }}
-                  onClick={handleSaveGeminiCliConfig}
-                />
-              </div>
-
-              <div style={{ marginTop: '0.75rem' }}>
-                <Password
-                  value={geminiApiKeyInput}
-                  onChange={(e) => setGeminiApiKeyInput(e.target.value)}
-                  feedback={false}
-                  toggleMask
-                  placeholder={geminiApiKeySaved ? 'API key guardada (escribe para reemplazar)' : 'Pegar API key Gemini'}
-                  style={{ width: '100%', maxWidth: '420px' }}
-                  inputStyle={{ width: '100%' }}
-                />
-              </div>
-              <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <Button
-                  label={geminiApiKeyInput.trim() ? 'Guardar API key' : 'Eliminar API key'}
-                  icon="pi pi-key"
-                  className="p-button-secondary p-button-sm"
-                  onClick={saveGeminiApiKey}
-                />
-                {geminiApiKeySaved && (
-                  <span style={{ color: '#93c5fd', fontSize: '0.85rem', alignSelf: 'center' }}>
-                    API key guardada en seguridad local
-                  </span>
-                )}
-              </div>
-              {geminiCliStatus.error && (
-                <div style={{ marginTop: '0.75rem', color: '#ef4444' }}>
-                  <i className="pi pi-times-circle" style={{ marginRight: '0.4rem' }} />
-                  {geminiCliStatus.error}
+          {/* Acordeón de configuración avanzada (solo CLI local) */}
+          {client.isLocalCli && (
+            <div className="config-accordion">
+              <button className="config-accordion-toggle" onClick={() => toggleConfig(client.key)} style={{ color: client.color }}>
+                <i className={`pi pi-chevron-${isConfigOpen ? 'down' : 'right'}`} />
+                Configuración avanzada
+              </button>
+              {isConfigOpen && (
+                <div className="config-accordion-body">
+                  {renderAdvancedConfig(client)}
                 </div>
               )}
             </div>
           )}
         </div>
-      </Card>
+      </div>
     );
   };
 
+  // ── List row ──────────────────────────────────────────────────
+  const renderClientRow = (client) => {
+    const isEnabled = clients[client.key];
+    const brandType = BRAND_TYPE_MAP[client.key];
+    return (
+      <div
+        key={client.key}
+        className={`ai-client-row ${isEnabled ? 'enabled' : 'disabled'}`}
+        style={{ borderLeft: `3px solid ${isEnabled ? client.color : 'transparent'}` }}
+      >
+        <div className="ai-row-icon" style={{ background: `${client.color}15`, border: `1px solid ${client.color}30` }}>
+          <AIClientBrandIcon tabType={brandType} size={20} />
+        </div>
+        <div className="ai-row-info">
+          <span className="ai-row-name">{client.name}</span>
+          <div className="ai-row-badges">
+            {client.badges.map((b, i) => <Badge key={i} value={b.label} severity={b.severity} style={{ fontSize: '0.55rem', marginRight: '0.25rem' }} />)}
+          </div>
+        </div>
+        <div className="ai-row-status">
+          <StatusDot client={client} />
+          <StatusLabel client={client} />
+        </div>
+        <div className="ai-row-toggle">
+          <InputSwitch checked={isEnabled} onChange={() => handleToggleClient(client.key)} />
+        </div>
+      </div>
+    );
+  };
+
+  // ── Render principal ──────────────────────────────────────────
+  const totalActive = clientsDefinition.filter(c => clients[c.key]).length;
+  const totalCount = clientsDefinition.length;
+
+  const filteredClients = (categoryClients) => {
+    if (!searchQuery.trim()) return categoryClients;
+    const q = searchQuery.toLowerCase();
+    return categoryClients.filter(c => c.name.toLowerCase().includes(q) || c.description.toLowerCase().includes(q));
+  };
+
   return (
-    <div className="ai-clients-tab" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
-      <div className="ai-clients-grid">
-        {clientsDefinition.map(client => renderClientCard(client))}
+    <div className="ai-clients-tab">
+      {/* ── Toolbar ─────────────────────────────────────────── */}
+      <div className="ai-clients-toolbar">
+        <div className="ai-toolbar-left">
+          <span className="ai-toolbar-title">Clientes IA</span>
+          <span className="ai-toolbar-count">{totalActive} activos · {totalCount} total</span>
+        </div>
+        <div className="ai-toolbar-right">
+          <div className="ai-search-wrapper">
+            <i className="pi pi-search ai-search-icon" />
+            <input
+              className="ai-search-input"
+              placeholder="Buscar cliente..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button className="ai-search-clear" onClick={() => setSearchQuery('')}><i className="pi pi-times" /></button>
+            )}
+          </div>
+          <div className="ai-view-toggle">
+            <button className={`ai-view-btn ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => setViewMode('grid')} title="Vista cuadrícula">
+              <i className="pi pi-th-large" />
+            </button>
+            <button className={`ai-view-btn ${viewMode === 'list' ? 'active' : ''}`} onClick={() => setViewMode('list')} title="Vista lista">
+              <i className="pi pi-list" />
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Información adicional */}
-      <div className="ai-clients-footer">
-        <div className="info-card">
-          <i className="pi pi-info-circle" style={{ fontSize: '1.2rem', color: '#2196F3', marginRight: '0.75rem' }} />
-          <div>
-            <strong>¿Cómo funciona?</strong>
-            <p>
-              Activa los clientes que deseas usar. Los servicios Docker (AnythingLLM y OpenWebUI) 
-              solo se iniciarán cuando estén activados. NodeTerm IA es el cliente integrado que 
-              funciona directamente con Ollama local sin necesidad de Docker.
-            </p>
+      {/* ── Categorías ──────────────────────────────────────── */}
+      {CATEGORIES.map(cat => {
+        const catClients = clientsDefinition.filter(c => c.category === cat.key);
+        const visible = filteredClients(catClients);
+        if (visible.length === 0) return null;
+        const activeInCat = visible.filter(c => clients[c.key]).length;
+        const isCollapsed = !!collapsedSections[cat.key];
+
+        return (
+          <div key={cat.key} className="ai-category-section">
+            <button className="ai-category-header" onClick={() => toggleSection(cat.key)}>
+              <div className="ai-category-header-left">
+                <span className="ai-category-emoji">{cat.emoji}</span>
+                <span className="ai-category-label">{cat.label}</span>
+                <span className="ai-category-meta">
+                  {visible.length} herramienta{visible.length !== 1 ? 's' : ''}
+                  {activeInCat > 0 && <span className="ai-category-active-badge">{activeInCat} activa{activeInCat !== 1 ? 's' : ''}</span>}
+                </span>
+              </div>
+              <i className={`pi pi-chevron-${isCollapsed ? 'right' : 'down'} ai-category-chevron`} />
+            </button>
+
+            {!isCollapsed && (
+              viewMode === 'grid'
+                ? <div className="ai-clients-grid">{visible.map(c => renderClientCard(c))}</div>
+                : <div className="ai-clients-list">{visible.map(c => renderClientRow(c))}</div>
+            )}
           </div>
+        );
+      })}
+
+      {/* Sin resultados */}
+      {searchQuery && CATEGORIES.every(cat => filteredClients(clientsDefinition.filter(c => c.category === cat.key)).length === 0) && (
+        <div className="ai-no-results">
+          <i className="pi pi-search" style={{ fontSize: '2rem', opacity: 0.3 }} />
+          <p>No se encontraron clientes para <strong>"{searchQuery}"</strong></p>
         </div>
-        
-        <div className="info-card">
-          <i className="pi pi-box" style={{ fontSize: '1.2rem', color: '#4CAF50', marginRight: '0.75rem' }} />
-          <div>
-            <strong>Requisitos de Docker</strong>
-            <p>
-              Para usar AnythingLLM y OpenWebUI necesitas Docker Desktop instalado y en ejecución. 
-              LibreChat también requiere Docker. La primera vez que actives un servicio,
-              se descargará la imagen correspondiente.
-            </p>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 };
