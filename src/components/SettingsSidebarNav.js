@@ -72,7 +72,10 @@ const SettingsSidebarNav = ({
       id: 'actualizaciones',
       label: t('sidebar.updates'),
       icon: 'pi pi-refresh',
-      subitems: []
+      subitems: [
+        { id: 'nodeterm', label: 'NodeTerm', icon: 'pi pi-desktop' },
+        { id: 'servidores-docker', label: 'Servidores (Docker)', icon: 'pi pi-server' }
+      ]
     },
     {
       id: 'sincronizacion',

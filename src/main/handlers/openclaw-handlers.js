@@ -76,6 +76,9 @@ function registerOpenClawHandlers({ openClawService }) {
       };
     }
   });
+
+  ipcMain.handle('openclaw:check-update', () => wrap(() => openClawService.checkForUpdate()));
+  ipcMain.handle('openclaw:apply-update', () => wrap(() => openClawService.applyUpdate()));
 }
 
 module.exports = {

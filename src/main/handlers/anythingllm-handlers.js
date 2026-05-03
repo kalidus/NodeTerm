@@ -252,6 +252,9 @@ function registerAnythingLLMHandlers({ anythingLLMService }) {
       };
     }
   });
+
+  ipcMain.handle('anythingllm:check-update', () => wrap(() => anythingLLMService.checkForUpdate()));
+  ipcMain.handle('anythingllm:apply-update', () => wrap(() => anythingLLMService.applyUpdate()));
 }
 
 module.exports = {

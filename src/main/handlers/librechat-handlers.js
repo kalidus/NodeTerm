@@ -58,6 +58,9 @@ function registerLibreChatHandlers({ libreChatService }) {
       };
     }
   });
+
+  ipcMain.handle('librechat:check-update', () => wrap(() => libreChatService.checkForUpdate()));
+  ipcMain.handle('librechat:apply-update', () => wrap(() => libreChatService.applyUpdate()));
 }
 
 module.exports = {

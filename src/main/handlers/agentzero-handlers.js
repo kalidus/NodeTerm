@@ -58,6 +58,9 @@ function registerAgentZeroHandlers({ agentZeroService }) {
       };
     }
   });
+
+  ipcMain.handle('agentzero:check-update', () => wrap(() => agentZeroService.checkForUpdate()));
+  ipcMain.handle('agentzero:apply-update', () => wrap(() => agentZeroService.applyUpdate()));
 }
 
 module.exports = {

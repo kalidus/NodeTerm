@@ -58,6 +58,9 @@ function registerOpenNotebookHandlers({ openNotebookService }) {
       };
     }
   });
+
+  ipcMain.handle('opennotebook:check-update', () => wrap(() => openNotebookService.checkForUpdate()));
+  ipcMain.handle('opennotebook:apply-update', () => wrap(() => openNotebookService.applyUpdate()));
 }
 
 module.exports = {

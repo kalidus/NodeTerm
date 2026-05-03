@@ -49,7 +49,9 @@ class AgentZeroService {
       url: null,
       containerName: this.containerName,
       dataDir: null,
-      lastError: null
+      lastError: null,
+      updateAvailable: false,
+      lastCheck: null
     };
 
     this.dataDir = this._resolveDataDir();
@@ -205,6 +207,75 @@ class AgentZeroService {
     }
   }
 
+  async getImageId(imageName) {
+    try {
+      const { stdout } = await execAsync(this.buildDockerCommand(`image inspect --format "{{.Id}}" ${imageName}`));
+      return stdout.trim();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /**
+   * Verifica si hay una versión más reciente de la imagen en el registro.
+   * @returns {Promise<boolean>} True si hay una actualización disponible.
+   */
+  async checkForUpdate() {
+    this.status.message = 'Buscando actualizaciones...';
+    try {
+      const oldId = await this.getImageId(this.imageName);
+      
+      // Intentamos descargar la última versión
+      await execAsync(this.buildDockerCommand(`pull ${this.imageName}`));
+      
+      const newId = await this.getImageId(this.imageName);
+      
+      const hasUpdate = oldId !== null && newId !== null && oldId !== newId;
+      
+      this.status.updateAvailable = hasUpdate;
+      this.status.lastUpdateCheck = new Date().toISOString();
+      
+      if (hasUpdate) {
+        this.status.message = 'Actualización disponible';
+      } else {
+        this.status.message = 'El software está al día';
+      }
+      
+      return hasUpdate;
+    } catch (error) {
+      console.error('[AgentZero] Error buscando actualizaciones:', error);
+      this.status.message = 'Error al buscar actualizaciones';
+      return false;
+    }
+  }
+
+  /**
+   * Aplica la actualización: detiene, elimina y vuelve a crear el contenedor.
+   */
+  async applyUpdate() {
+    this.status.phase = 'updating';
+    this.status.message = 'Aplicando actualización...';
+    
+    try {
+      // 1. Detener y eliminar (los datos están en el volumen persistente)
+      await this.removeContainer(this.containerName);
+      
+      // 2. Iniciar de nuevo (usará la imagen que acabamos de bajar en checkForUpdate)
+      await this.startContainer();
+      
+      // 3. Esperar a que esté listo
+      await this.waitForHealth();
+      
+      this.status.updateAvailable = false;
+      this.status.message = 'Actualización completada con éxito';
+      return true;
+    } catch (error) {
+      this.status.phase = 'error';
+      this.status.message = `Error actualizando: ${error.message}`;
+      throw error;
+    }
+  }
+
   async ensureDataDir() {
     this.status.phase = 'volume';
     this.status.message = 'Preparando volúmenes de datos';
@@ -343,6 +414,69 @@ class AgentZeroService {
     return this.getStatus();
   }
 
+  async getImageId(imageName) {
+    try {
+      const { stdout } = await execAsync(this.buildDockerCommand(`image inspect ${imageName} --format "{{.Id}}"`));
+      return stdout.trim();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async checkForUpdate() {
+    this.status.phase = 'checking';
+    this.status.message = 'Buscando actualizaciones para Agent Zero...';
+    try {
+      const currentImageId = await this.getImageId(this.imageName);
+      
+      // Pull silencioso para ver si hay algo nuevo
+      await execAsync(this.buildDockerCommand(`pull ${this.imageName}`));
+      
+      const latestImageId = await this.getImageId(this.imageName);
+      
+      const updateAvailable = currentImageId !== latestImageId;
+      
+      this.status.updateAvailable = updateAvailable;
+      this.status.lastCheck = new Date().toISOString();
+      this.status.phase = 'idle';
+      this.status.message = updateAvailable ? 'Actualización disponible' : 'Agent Zero está al día';
+      
+      return this.getStatus();
+    } catch (error) {
+      this.status.phase = 'error';
+      this.status.message = 'Error buscando actualizaciones';
+      throw error;
+    }
+  }
+
+  async applyUpdate() {
+    this.status.phase = 'updating';
+    this.status.message = 'Actualizando Agent Zero (esto puede tardar)...';
+    try {
+      // 1. Asegurar que tenemos la última imagen
+      await execAsync(this.buildDockerCommand(`pull ${this.imageName}`));
+      
+      // 2. Detener y eliminar contenedor actual (Agent Zero usa volúmenes así que es seguro)
+      await this.removeContainer(this.containerName);
+      
+      // 3. Iniciar de nuevo (usará la nueva imagen)
+      await this.startContainer();
+      
+      // 4. Esperar a que esté listo
+      await this.waitForHealth();
+      
+      this.status.updateAvailable = false;
+      this.status.phase = 'ready';
+      this.status.message = 'Agent Zero actualizado con éxito';
+      
+      return this.getStatus();
+    } catch (error) {
+      this.status.phase = 'error';
+      this.status.message = 'Error aplicando actualización';
+      throw error;
+    }
+  }
+
   getStatus() {
     return {
       ...this.status,
@@ -351,6 +485,8 @@ class AgentZeroService {
       imageName: this.imageName,
       dataDir: this.dataDir,
       lastHealthCheck: this.lastHealthCheck,
+      updateAvailable: this.status.updateAvailable || false,
+      lastCheck: this.status.lastCheck || null,
       lastError: this.status.lastError || (this.lastError && this.lastError.message) || null
     };
   }

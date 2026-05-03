@@ -212,7 +212,13 @@ contextBridge.exposeInMainWorld('electron', {
         /^ssh-tunnel:.*$/,
         /^theme:.*$/,
         /^security:.*$/,
-        /^appdata:.*$/
+        /^appdata:.*$/,
+        /^agentzero:.*$/,
+        /^anythingllm:.*$/,
+        /^openwebui:.*$/,
+        /^librechat:.*$/,
+        /^openclaw:.*$/,
+        /^opennotebook:.*$/
       ];
       if (validChannels.some(regex => {
         if (typeof regex === 'string') {

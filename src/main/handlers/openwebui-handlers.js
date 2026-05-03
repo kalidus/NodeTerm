@@ -73,6 +73,9 @@ function registerOpenWebUIHandlers({ openWebUIService }) {
       };
     }
   });
+
+  ipcMain.handle('openwebui:check-update', () => wrap(() => openWebUIService.checkForUpdate()));
+  ipcMain.handle('openwebui:apply-update', () => wrap(() => openWebUIService.applyUpdate()));
 }
 
 module.exports = {

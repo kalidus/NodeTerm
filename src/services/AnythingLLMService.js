@@ -47,7 +47,9 @@ class AnythingLLMService {
       url: null,
       containerName: this.containerName,
       dataDir: null,
-      lastError: null
+      lastError: null,
+      updateAvailable: false,
+      lastCheck: null
     };
 
     this.dataDir = this._resolveDataDir();
@@ -188,6 +190,52 @@ class AnythingLLMService {
     } catch (_) {
       this.status.message = 'Descargando imagen AnythingLLM...';
       await execAsync(this.buildDockerCommand(`pull ${this.imageName}`));
+    }
+  }
+
+  async getImageId() {
+    try {
+      const { stdout } = await execAsync(this.buildDockerCommand(`image inspect --format "{{.Id}}" ${this.imageName}`));
+      return stdout.trim();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async checkForUpdate() {
+    this.status.message = 'Buscando actualizaciones...';
+    try {
+      const oldId = await this.getImageId();
+      await execAsync(this.buildDockerCommand(`pull ${this.imageName}`));
+      const newId = await this.getImageId();
+      
+      const hasUpdate = oldId !== null && newId !== null && oldId !== newId;
+      this.status.updateAvailable = hasUpdate;
+      this.status.lastUpdateCheck = new Date().toISOString();
+      
+      this.status.message = hasUpdate ? 'Actualización disponible' : 'AnythingLLM al día';
+      return hasUpdate;
+    } catch (error) {
+      console.error('[AnythingLLM] Error buscando actualizaciones:', error);
+      this.status.message = 'Error al buscar actualizaciones';
+      return false;
+    }
+  }
+
+  async applyUpdate() {
+    this.status.phase = 'updating';
+    this.status.message = 'Aplicando actualización...';
+    try {
+      await this.removeContainer();
+      await this.startContainer();
+      await this.waitForHealth();
+      this.status.updateAvailable = false;
+      this.status.message = 'Actualización completada';
+      return true;
+    } catch (error) {
+      this.status.phase = 'error';
+      this.status.message = `Error actualizando: ${error.message}`;
+      throw error;
     }
   }
 
@@ -429,6 +477,8 @@ class AnythingLLMService {
       imageName: this.imageName,
       dataDir: this.dataDir,
       lastHealthCheck: this.lastHealthCheck,
+      updateAvailable: this.status.updateAvailable,
+      lastUpdateCheck: this.status.lastUpdateCheck,
       lastError: this.status.lastError || (this.lastError && this.lastError.message) || null
     };
   }
@@ -731,6 +781,87 @@ class AnythingLLMService {
     }
 
     return null;
+  }
+
+  async getImageId(imageName) {
+    try {
+      const { stdout } = await execAsync(this.buildDockerCommand(`image inspect ${imageName} --format "{{.Id}}"`));
+      return stdout.trim();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async checkForUpdate() {
+    this.status.phase = 'checking';
+    this.status.message = 'Buscando actualizaciones para AnythingLLM...';
+    try {
+      const currentImageId = await this.getImageId(this.imageName);
+      
+      // Pull silencioso para ver si hay algo nuevo
+      await execAsync(this.buildDockerCommand(`pull ${this.imageName}`));
+      
+      const latestImageId = await this.getImageId(this.imageName);
+      
+      const updateAvailable = currentImageId !== latestImageId;
+      
+      this.status.updateAvailable = updateAvailable;
+      this.status.lastCheck = new Date().toISOString();
+      this.status.phase = 'idle';
+      this.status.message = updateAvailable ? 'Actualización disponible' : 'AnythingLLM está al día';
+      
+      return this.getStatus();
+    } catch (error) {
+      this.status.phase = 'error';
+      this.status.message = 'Error buscando actualizaciones';
+      throw error;
+    }
+  }
+
+  async applyUpdate() {
+    this.status.phase = 'updating';
+    this.status.message = 'Actualizando AnythingLLM (esto puede tardar)...';
+    try {
+      // 1. Asegurar que tenemos la última imagen
+      await execAsync(this.buildDockerCommand(`pull ${this.imageName}`));
+      
+      // 2. Detener y eliminar contenedor actual
+      await this.removeContainer(this.containerName);
+      
+      // 3. Iniciar de nuevo (usará la nueva imagen)
+      await this.startContainer();
+      
+      // 4. Esperar a que esté listo
+      await this.waitForHealth();
+      
+      this.status.updateAvailable = false;
+      this.status.phase = 'ready';
+      this.status.message = 'AnythingLLM actualizado con éxito';
+      
+      return this.getStatus();
+    } catch (error) {
+      this.status.phase = 'error';
+      this.status.message = 'Error aplicando actualización';
+      throw error;
+    }
+  }
+
+  getStatus() {
+    return {
+      ...this.status,
+      url: this.status.url || this.getBaseUrl(),
+      containerName: this.containerName,
+      imageName: this.imageName,
+      dataDir: this.dataDir,
+      lastHealthCheck: this.lastHealthCheck,
+      lastError: this.status.lastError || (this.lastError && this.lastError.message) || null,
+      updateAvailable: this.status.updateAvailable || false,
+      lastCheck: this.status.lastCheck || null
+    };
+  }
+
+  getDataDir() {
+    return this.dataDir;
   }
 }
 

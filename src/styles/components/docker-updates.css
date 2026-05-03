@@ -1,0 +1,105 @@
+.docker-update-panel {
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.docker-update-panel .p-datatable {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--surface-border);
+}
+
+.docker-update-panel .p-datatable .p-datatable-thead > tr > th {
+  background: var(--surface-ground);
+  color: var(--text-color-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+  padding: 1rem;
+}
+
+.docker-update-panel .p-datatable .p-datatable-tbody > tr {
+  background: var(--surface-card);
+  transition: background 0.2s ease;
+}
+
+.docker-update-panel .p-datatable .p-datatable-tbody > tr:hover {
+  background: var(--surface-hover) !important;
+}
+
+.docker-update-panel .p-datatable .p-datatable-tbody > tr > td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.docker-update-panel .p-badge {
+  padding: 0.5rem 0.75rem;
+  font-weight: 600;
+  border-radius: 6px;
+}
+
+.docker-update-panel .p-badge-success {
+  background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+}
+
+.docker-update-panel .p-badge-warning {
+  background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+  box-shadow: 0 2px 4px rgba(255, 152, 0, 0.3);
+}
+
+.docker-update-panel .p-badge-info {
+  background: linear-gradient(135deg, #2196F3 0%, #1565C0 100%);
+  box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+}
+
+.docker-update-panel .p-button-text:hover {
+  background: rgba(var(--primary-color-rgb), 0.1);
+}
+
+.docker-update-panel .p-button-success {
+  background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%);
+  border: none;
+}
+
+.docker-update-panel .p-button-success:hover {
+  filter: brightness(1.1);
+}
+
+.pulse {
+  animation: pulse-animation 2s infinite;
+}
+
+@keyframes pulse-animation {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(0.98); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.service-icon-wrapper {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--surface-ground);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary-color);
+  border: 1px solid var(--surface-border);
+}
+
+.status-loading {
+  color: var(--text-color-secondary);
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+.docker-table-card {
+  border: 1px solid var(--surface-border);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2) !important;
+}
