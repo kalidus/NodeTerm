@@ -819,6 +819,54 @@ const Sidebar = React.memo(({
     };
   }, []);
 
+  // Lógica para redimensionado inteligente de iconos en sidebar colapsada
+  const [collapsedIconSize, setCollapsedIconSize] = useState(40);
+  const [collapsedGap, setCollapsedGap] = useState(8);
+
+  useEffect(() => {
+    if (!sidebarCollapsed) return;
+
+    const calculateSizes = () => {
+      const baseSize = 40;
+      const minSize = 24;
+      const baseGap = 8;
+      const minGap = 2;
+      
+      // Contar elementos activos en la sidebar colapsada
+      let count = 7; // fijos: collapse, conn, pass, group, tools, settings, menu
+      
+      if (aiClientsEnabled) {
+        const enabledClients = Object.values(aiClientsEnabled).filter(Boolean).length;
+        count += enabledClients;
+        if (enabledClients > 0) count += 1; // separador de clientes
+        // separador entre CLIs y Apps
+        if ((aiClientsEnabled.nodeterm || aiClientsEnabled.anythingllm || aiClientsEnabled.openwebui || aiClientsEnabled.librechat || aiClientsEnabled.agentzero || aiClientsEnabled.openclaw || aiClientsEnabled.opennotebook) && 
+            (aiClientsEnabled.opencode || aiClientsEnabled.geminicli || aiClientsEnabled.codexcli || aiClientsEnabled.claude)) {
+          count += 1;
+        }
+      }
+      
+      if (filesystemAvailable && isAIChatActive) count += 2.5; // terminal, filesystem, separador
+      
+      // Altura disponible aproximada (restando márgenes)
+      const availableHeight = window.innerHeight - 60;
+      const totalNeeded = count * (baseSize + baseGap);
+      
+      if (totalNeeded > availableHeight) {
+        const ratio = availableHeight / totalNeeded;
+        setCollapsedIconSize(Math.max(minSize, Math.floor(baseSize * ratio)));
+        setCollapsedGap(Math.max(minGap, Math.floor(baseGap * ratio)));
+      } else {
+        setCollapsedIconSize(baseSize);
+        setCollapsedGap(baseGap);
+      }
+    };
+
+    calculateSizes();
+    window.addEventListener('resize', calculateSizes);
+    return () => window.removeEventListener('resize', calculateSizes);
+  }, [sidebarCollapsed, aiClientsEnabled, filesystemAvailable, isAIChatActive]);
+
   // Ref para el contenedor de la sidebar
   const sidebarRef = useRef(null);
 
@@ -3002,20 +3050,20 @@ const Sidebar = React.memo(({
           <div style={{
             display: 'flex',
             flexDirection: 'column',
-            alignItems: 'flex-start', // Alinear a la izquierda
-            padding: '8px 2px 100px 2px',
+            alignItems: 'center',
+            padding: `8px 2px ${collapsedIconSize > 32 ? '100px' : '90px'} 2px`,
             width: '100%',
             visibility: 'visible',
             opacity: 1,
             zIndex: 1000,
-            gap: '8px',
+            gap: `${collapsedGap}px`,
             boxSizing: 'border-box'
           }}>
             <div style={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'flex-start',
-              gap: '8px',
+              gap: `${collapsedGap}px`,
               width: '100%'
             }}>
               {/* Botón de colapsar */}
@@ -3026,10 +3074,10 @@ const Sidebar = React.memo(({
                 tooltipOptions={{ position: 'right' }}
                 style={{
                   margin: 0,
-                  width: 40,
-                  height: 40,
-                  minWidth: 40,
-                  minHeight: 40,
+                  width: collapsedIconSize,
+                  height: collapsedIconSize,
+                  minWidth: collapsedIconSize,
+                  minHeight: collapsedIconSize,
                   border: 'none',
                   display: 'flex !important',
                   alignItems: 'center',
@@ -3043,8 +3091,8 @@ const Sidebar = React.memo(({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: '20px',
-                  height: '20px',
+                  width: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
+                  height: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
                   color: 'var(--ui-sidebar-text)'
                 }}>
                   {sidebarCollapsed
@@ -3065,10 +3113,10 @@ const Sidebar = React.memo(({
                 tooltipOptions={{ position: 'right' }}
                 style={{
                   margin: 0,
-                  width: 40,
-                  height: 40,
-                  minWidth: 40,
-                  minHeight: 40,
+                  width: collapsedIconSize,
+                  height: collapsedIconSize,
+                  minWidth: collapsedIconSize,
+                  minHeight: collapsedIconSize,
                   border: 'none',
                   display: 'flex !important',
                   alignItems: 'center',
@@ -3082,8 +3130,8 @@ const Sidebar = React.memo(({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: '20px',
-                  height: '20px',
+                  width: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
+                  height: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
                   color: '#2196f3'
                 }}>
                   {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newConnection}
@@ -3101,10 +3149,10 @@ const Sidebar = React.memo(({
                 tooltipOptions={{ position: 'right' }}
                 style={{
                   margin: 0,
-                  width: 40,
-                  height: 40,
-                  minWidth: 40,
-                  minHeight: 40,
+                  width: collapsedIconSize,
+                  height: collapsedIconSize,
+                  minWidth: collapsedIconSize,
+                  minHeight: collapsedIconSize,
                   border: 'none',
                   display: 'flex !important',
                   alignItems: 'center',
@@ -3118,8 +3166,8 @@ const Sidebar = React.memo(({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: '20px',
-                  height: '20px',
+                  width: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
+                  height: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
                   color: '#ffc107'
                 }}>
                   {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.passwordManager}
@@ -3134,10 +3182,10 @@ const Sidebar = React.memo(({
                 tooltipOptions={{ position: 'right' }}
                 style={{
                   margin: 0,
-                  width: 40,
-                  height: 40,
-                  minWidth: 40,
-                  minHeight: 40,
+                  width: collapsedIconSize,
+                  height: collapsedIconSize,
+                  minWidth: collapsedIconSize,
+                  minHeight: collapsedIconSize,
                   border: 'none',
                   display: 'flex !important',
                   alignItems: 'center',
@@ -3151,8 +3199,8 @@ const Sidebar = React.memo(({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: '20px',
-                  height: '20px',
+                  width: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
+                  height: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
                   color: 'var(--ui-sidebar-text)'
                 }}>
                   {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newGroup}
@@ -3167,10 +3215,10 @@ const Sidebar = React.memo(({
                 tooltipOptions={{ position: 'right' }}
                 style={{
                   margin: 0,
-                  width: 40,
-                  height: 40,
-                  minWidth: 40,
-                  minHeight: 40,
+                  width: collapsedIconSize,
+                  height: collapsedIconSize,
+                  minWidth: collapsedIconSize,
+                  minHeight: collapsedIconSize,
                   border: 'none',
                   display: 'flex !important',
                   alignItems: 'center',
@@ -3184,8 +3232,8 @@ const Sidebar = React.memo(({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: '20px',
-                  height: '20px',
+                  width: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
+                  height: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
                   color: '#06b6d4'
                 }}>
                   <i className="pi pi-wrench" style={{ fontSize: '1rem' }} />
@@ -3214,10 +3262,10 @@ const Sidebar = React.memo(({
                   tooltipOptions={{ position: 'right' }}
                   style={{
                     margin: 0,
-                    width: 40,
-                    height: 40,
-                    minWidth: 40,
-                    minHeight: 40,
+                    width: collapsedIconSize,
+                    height: collapsedIconSize,
+                    minWidth: collapsedIconSize,
+                    minHeight: collapsedIconSize,
                     border: 'none',
                     display: 'flex !important',
                     alignItems: 'center',
@@ -3227,7 +3275,7 @@ const Sidebar = React.memo(({
                     padding: 0
                   }}
                 >
-                  <AIClientBrandIcon tabType="opencode" size={22} />
+                  <AIClientBrandIcon tabType={collapsedIconSize > 32 ? "opencode" : "opencode"} size={Math.max(16, Math.floor(collapsedIconSize * 0.55))} />
                 </Button>
               )}
 
@@ -3239,10 +3287,10 @@ const Sidebar = React.memo(({
                   tooltipOptions={{ position: 'right' }}
                   style={{
                     margin: 0,
-                    width: 40,
-                    height: 40,
-                    minWidth: 40,
-                    minHeight: 40,
+                    width: collapsedIconSize,
+                    height: collapsedIconSize,
+                    minWidth: collapsedIconSize,
+                    minHeight: collapsedIconSize,
                     border: 'none',
                     display: 'flex !important',
                     alignItems: 'center',
@@ -3252,7 +3300,7 @@ const Sidebar = React.memo(({
                     padding: 0
                   }}
                 >
-                  <AIClientBrandIcon tabType="geminicli" size={22} />
+                  <AIClientBrandIcon tabType={collapsedIconSize > 32 ? "geminicli" : "geminicli"} size={Math.max(16, Math.floor(collapsedIconSize * 0.55))} />
                 </Button>
               )}
 
@@ -3264,10 +3312,10 @@ const Sidebar = React.memo(({
                   tooltipOptions={{ position: 'right' }}
                   style={{
                     margin: 0,
-                    width: 40,
-                    height: 40,
-                    minWidth: 40,
-                    minHeight: 40,
+                    width: collapsedIconSize,
+                    height: collapsedIconSize,
+                    minWidth: collapsedIconSize,
+                    minHeight: collapsedIconSize,
                     border: 'none',
                     display: 'flex !important',
                     alignItems: 'center',
@@ -3277,7 +3325,7 @@ const Sidebar = React.memo(({
                     padding: 0
                   }}
                 >
-                  <AIClientBrandIcon tabType="codexcli" size={22} />
+                  <AIClientBrandIcon tabType={collapsedIconSize > 32 ? "codexcli" : "codexcli"} size={Math.max(16, Math.floor(collapsedIconSize * 0.55))} />
                 </Button>
               )}
 
@@ -3289,10 +3337,10 @@ const Sidebar = React.memo(({
                   tooltipOptions={{ position: 'right' }}
                   style={{
                     margin: 0,
-                    width: 40,
-                    height: 40,
-                    minWidth: 40,
-                    minHeight: 40,
+                    width: collapsedIconSize,
+                    height: collapsedIconSize,
+                    minWidth: collapsedIconSize,
+                    minHeight: collapsedIconSize,
                     border: 'none',
                     display: 'flex !important',
                     alignItems: 'center',
@@ -3302,7 +3350,7 @@ const Sidebar = React.memo(({
                     padding: 0
                   }}
                 >
-                  <AIClientBrandIcon tabType="claude" size={22} />
+                  <AIClientBrandIcon tabType={collapsedIconSize > 32 ? "claude" : "claude"} size={Math.max(16, Math.floor(collapsedIconSize * 0.55))} />
                 </Button>
               )}
 
@@ -3341,11 +3389,12 @@ const Sidebar = React.memo(({
                   tooltipOptions={{ position: 'right' }}
                   style={{
                     margin: 0,
-                    width: 40,
-                    height: 40,
-                    minWidth: 40,
-                    minHeight: 40,
-                    fontSize: 18,
+                    width: collapsedIconSize,
+                    height: collapsedIconSize,
+                    minWidth: collapsedIconSize,
+                    minHeight: collapsedIconSize,
+                    flexShrink: 0,
+                    fontSize: Math.max(14, Math.floor(collapsedIconSize * 0.45)),
                     border: 'none',
                     display: 'flex !important',
                     alignItems: 'center',
@@ -3364,10 +3413,10 @@ const Sidebar = React.memo(({
                   tooltipOptions={{ position: 'right' }}
                   style={{
                     margin: 0,
-                    width: 40,
-                    height: 40,
-                    minWidth: 40,
-                    minHeight: 40,
+                    width: collapsedIconSize,
+                    height: collapsedIconSize,
+                    minWidth: collapsedIconSize,
+                    minHeight: collapsedIconSize,
                     border: 'none',
                     display: 'flex !important',
                     alignItems: 'center',
@@ -3377,7 +3426,7 @@ const Sidebar = React.memo(({
                     padding: 0
                   }}
                 >
-                  <AIClientBrandIcon tabType="anything-llm" size={22} />
+                  <AIClientBrandIcon tabType={collapsedIconSize > 32 ? "anything-llm" : "anything-llm"} size={Math.max(16, Math.floor(collapsedIconSize * 0.55))} />
                 </Button>
               )}
 
@@ -3389,10 +3438,10 @@ const Sidebar = React.memo(({
                   tooltipOptions={{ position: 'right' }}
                   style={{
                     margin: 0,
-                    width: 40,
-                    height: 40,
-                    minWidth: 40,
-                    minHeight: 40,
+                    width: collapsedIconSize,
+                    height: collapsedIconSize,
+                    minWidth: collapsedIconSize,
+                    minHeight: collapsedIconSize,
                     border: 'none',
                     display: 'flex !important',
                     alignItems: 'center',
@@ -3402,7 +3451,7 @@ const Sidebar = React.memo(({
                     padding: 0
                   }}
                 >
-                  <AIClientBrandIcon tabType="openwebui" size={22} />
+                  <AIClientBrandIcon tabType={collapsedIconSize > 32 ? "openwebui" : "openwebui"} size={Math.max(16, Math.floor(collapsedIconSize * 0.55))} />
                 </Button>
               )}
 
@@ -3414,10 +3463,10 @@ const Sidebar = React.memo(({
                   tooltipOptions={{ position: 'right' }}
                   style={{
                     margin: 0,
-                    width: 40,
-                    height: 40,
-                    minWidth: 40,
-                    minHeight: 40,
+                    width: collapsedIconSize,
+                    height: collapsedIconSize,
+                    minWidth: collapsedIconSize,
+                    minHeight: collapsedIconSize,
                     border: 'none',
                     display: 'flex !important',
                     alignItems: 'center',
@@ -3427,7 +3476,7 @@ const Sidebar = React.memo(({
                     padding: 0
                   }}
                 >
-                  <AIClientBrandIcon tabType="librechat" size={22} />
+                  <AIClientBrandIcon tabType={collapsedIconSize > 32 ? "librechat" : "librechat"} size={Math.max(16, Math.floor(collapsedIconSize * 0.55))} />
                 </Button>
               )}
 
@@ -3439,10 +3488,10 @@ const Sidebar = React.memo(({
                   tooltipOptions={{ position: 'right' }}
                   style={{
                     margin: 0,
-                    width: 40,
-                    height: 40,
-                    minWidth: 40,
-                    minHeight: 40,
+                    width: collapsedIconSize,
+                    height: collapsedIconSize,
+                    minWidth: collapsedIconSize,
+                    minHeight: collapsedIconSize,
                     border: 'none',
                     display: 'flex !important',
                     alignItems: 'center',
@@ -3452,7 +3501,7 @@ const Sidebar = React.memo(({
                     padding: 0
                   }}
                 >
-                  <AIClientBrandIcon tabType="agentzero" size={22} />
+                  <AIClientBrandIcon tabType={collapsedIconSize > 32 ? "agentzero" : "agentzero"} size={Math.max(16, Math.floor(collapsedIconSize * 0.55))} />
                 </Button>
               )}
 
@@ -3464,10 +3513,10 @@ const Sidebar = React.memo(({
                   tooltipOptions={{ position: 'right' }}
                   style={{
                     margin: 0,
-                    width: 40,
-                    height: 40,
-                    minWidth: 40,
-                    minHeight: 40,
+                    width: collapsedIconSize,
+                    height: collapsedIconSize,
+                    minWidth: collapsedIconSize,
+                    minHeight: collapsedIconSize,
                     border: 'none',
                     display: 'flex !important',
                     alignItems: 'center',
@@ -3477,7 +3526,7 @@ const Sidebar = React.memo(({
                     padding: 0
                   }}
                 >
-                  <AIClientBrandIcon tabType="openclaw" size={22} />
+                  <AIClientBrandIcon tabType={collapsedIconSize > 32 ? "openclaw" : "openclaw"} size={Math.max(16, Math.floor(collapsedIconSize * 0.55))} />
                 </Button>
               )}
 
@@ -3489,10 +3538,10 @@ const Sidebar = React.memo(({
                   tooltipOptions={{ position: 'right' }}
                   style={{
                     margin: 0,
-                    width: 40,
-                    height: 40,
-                    minWidth: 40,
-                    minHeight: 40,
+                    width: collapsedIconSize,
+                    height: collapsedIconSize,
+                    minWidth: collapsedIconSize,
+                    minHeight: collapsedIconSize,
                     border: 'none',
                     display: 'flex !important',
                     alignItems: 'center',
@@ -3502,7 +3551,7 @@ const Sidebar = React.memo(({
                     padding: 0
                   }}
                 >
-                  <AIClientBrandIcon tabType="open-notebook" size={22} />
+                  <AIClientBrandIcon tabType={collapsedIconSize > 32 ? "open-notebook" : "open-notebook"} size={Math.max(16, Math.floor(collapsedIconSize * 0.55))} />
                 </Button>
               )}
 
@@ -3532,10 +3581,10 @@ const Sidebar = React.memo(({
                   tooltipOptions={{ position: 'right' }}
                   style={{
                     margin: 0,
-                    width: 40,
-                    height: 40,
-                    minWidth: 40,
-                    minHeight: 40,
+                    width: collapsedIconSize,
+                    height: collapsedIconSize,
+                    minWidth: collapsedIconSize,
+                    minHeight: collapsedIconSize,
                     border: 'none',
                     display: 'flex !important',
                     alignItems: 'center',
@@ -3570,10 +3619,11 @@ const Sidebar = React.memo(({
                 tooltipOptions={{ position: 'right' }}
                 style={{
                   margin: 0,
-                  width: 40,
-                  height: 40,
-                  minWidth: 40,
-                  minHeight: 40,
+                  width: collapsedIconSize,
+                  height: collapsedIconSize,
+                  minWidth: collapsedIconSize,
+                  minHeight: collapsedIconSize,
+                  flexShrink: 0,
                   fontSize: 18,
                   border: 'none',
                   display: 'flex !important',
@@ -3596,7 +3646,7 @@ const Sidebar = React.memo(({
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: '8px',
+            gap: `${collapsedGap}px`,
             visibility: 'visible',
             opacity: 1,
             zIndex: 1000
@@ -3608,10 +3658,10 @@ const Sidebar = React.memo(({
               tooltipOptions={{ position: 'right' }}
               style={{
                 margin: 0,
-                width: 40,
-                height: 40,
-                minWidth: 40,
-                minHeight: 40,
+                width: collapsedIconSize,
+                height: collapsedIconSize,
+                minWidth: collapsedIconSize,
+                minHeight: collapsedIconSize,
                 border: 'none',
                 display: 'flex !important',
                 alignItems: 'center',
@@ -3625,8 +3675,8 @@ const Sidebar = React.memo(({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: '20px',
-                height: '20px',
+                width: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
+                height: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
                 color: 'var(--ui-sidebar-text)'
               }}>
                 {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.settings}
@@ -3641,10 +3691,10 @@ const Sidebar = React.memo(({
               tooltipOptions={{ position: 'right' }}
               style={{
                 margin: 0,
-                width: 40,
-                height: 40,
-                minWidth: 40,
-                minHeight: 40,
+                width: collapsedIconSize,
+                height: collapsedIconSize,
+                minWidth: collapsedIconSize,
+                minHeight: collapsedIconSize,
                 border: 'none',
                 display: 'flex !important',
                 alignItems: 'center',
@@ -3658,8 +3708,8 @@ const Sidebar = React.memo(({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: '20px',
-                height: '20px',
+                width: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
+                height: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
                 color: 'var(--ui-sidebar-text)'
               }}>
                 {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.menu}
