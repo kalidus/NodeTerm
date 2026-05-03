@@ -899,7 +899,7 @@ const AIClientsTab = ({ themeColors }) => {
     if (client.isLocalCli) {
       const s = getCliStatus(client.key);
       if (!s || s.loading) return null;
-      if (s.installed) return <span className="ai-status-label installed">{s.version ? `v${s.version}` : 'Instalado'}</span>;
+      if (s.installed) return <span className="ai-status-label installed">{s.version && s.version !== 'unknown' ? `v${s.version}` : 'Instalado'}</span>;
       return <span className="ai-status-label not-installed">No instalado</span>;
     }
     if (client.requiresDocker && clients[client.key]) {
@@ -1082,6 +1082,9 @@ const AIClientsTab = ({ themeColors }) => {
               {client.requiresDocker && status && !status.updateAvailable && !status.loading && !status.error && (
                 <Badge value="Actualizado" severity="success" style={{ marginRight: '0.3rem', fontSize: '0.6rem' }} />
               )}
+              {client.isLocalCli && getCliStatus(client.key)?.installed && (
+                <Badge value="Actualizado" severity="success" style={{ marginRight: '0.3rem', fontSize: '0.6rem' }} />
+              )}
             </div>
           </div>
           <div className="ai-client-toggle">
@@ -1165,6 +1168,9 @@ const AIClientsTab = ({ themeColors }) => {
               <Badge value="Nueva Versión" severity="warning" style={{ fontSize: '0.55rem', marginRight: '0.25rem' }} />
             )}
             {client.requiresDocker && dockerStatus[client.key] && !dockerStatus[client.key].updateAvailable && !dockerStatus[client.key].loading && !dockerStatus[client.key].error && (
+              <Badge value="Actualizado" severity="success" style={{ fontSize: '0.55rem', marginRight: '0.25rem' }} />
+            )}
+            {client.isLocalCli && getCliStatus(client.key)?.installed && (
               <Badge value="Actualizado" severity="success" style={{ fontSize: '0.55rem', marginRight: '0.25rem' }} />
             )}
           </div>
