@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { InputSwitch } from 'primereact/inputswitch';
 import { Badge } from 'primereact/badge';
 import { Button } from 'primereact/button';
 import { Password } from 'primereact/password';
 import { InputText } from 'primereact/inputtext';
+import { Toast } from 'primereact/toast';
 import AIClientBrandIcon from './AIClientBrandIcon';
 import '../styles/components/ai-clients-tab.css';
 
@@ -31,6 +32,7 @@ const AI_CLIENTS_STORAGE_KEY = 'ai_clients_enabled';
  * Permite activar/desactivar cada cliente de forma visual y elegante
  */
 const AIClientsTab = ({ themeColors }) => {
+  const toast = useRef(null);
   // Estado para cada cliente de IA
   const [clients, setClients] = useState({
     claude: false,
@@ -47,12 +49,12 @@ const AIClientsTab = ({ themeColors }) => {
 
   // Estado de carga para verificar servicios Docker
   const [dockerStatus, setDockerStatus] = useState({
-    anythingllm: { loading: false, running: false, error: null },
-    openwebui: { loading: false, running: false, error: null },
-    librechat: { loading: false, running: false, error: null },
-    agentzero: { loading: false, running: false, error: null },
-    openclaw: { loading: false, running: false, error: null },
-    opennotebook: { loading: false, running: false, error: null }
+    anythingllm: { loading: false, running: false, updateAvailable: false, error: null },
+    openwebui: { loading: false, running: false, updateAvailable: false, error: null },
+    librechat: { loading: false, running: false, updateAvailable: false, error: null },
+    agentzero: { loading: false, running: false, updateAvailable: false, error: null },
+    openclaw: { loading: false, running: false, updateAvailable: false, error: null },
+    opennotebook: { loading: false, running: false, updateAvailable: false, error: null }
   });
   const [claudeCliStatus, setClaudeCliStatus] = useState({
     loading: false,
@@ -618,6 +620,7 @@ const AIClientsTab = ({ themeColors }) => {
           [serviceKey]: {
             loading: false,
             running: result.status?.isRunning || false,
+            updateAvailable: result.status?.updateAvailable || false,
             error: null
           }
         }));
@@ -627,6 +630,7 @@ const AIClientsTab = ({ themeColors }) => {
           [serviceKey]: {
             loading: false,
             running: false,
+            updateAvailable: false,
             error: result.error || 'Error al verificar estado'
           }
         }));
@@ -637,8 +641,70 @@ const AIClientsTab = ({ themeColors }) => {
         [serviceKey]: {
           loading: false,
           running: false,
+          updateAvailable: false,
           error: error.message || 'Error de conexión'
         }
+      }));
+    }
+  };
+
+  const checkDockerUpdate = async (serviceId) => {
+    setDockerStatus(prev => ({
+      ...prev,
+      [serviceId]: { ...prev[serviceId], loading: true, error: null }
+    }));
+
+    try {
+      const result = await window.electron.ipcRenderer.invoke(`${serviceId}:check-update`);
+      if (result.success) {
+        const statusResult = await window.electron.ipcRenderer.invoke(`${serviceId}:get-status`);
+        setDockerStatus(prev => ({
+          ...prev,
+          [serviceId]: { 
+            ...prev[serviceId], 
+            loading: false, 
+            running: statusResult.status?.isRunning || false, 
+            updateAvailable: statusResult.status?.updateAvailable || false,
+            error: null 
+          }
+        }));
+        
+        if (statusResult.status?.updateAvailable) {
+          toast.current?.show({ severity: 'info', summary: 'Actualización Detectada', detail: `Hay una nueva versión para ${serviceId}`, life: 3000 });
+        } else {
+          toast.current?.show({ severity: 'success', summary: 'Actualizado', detail: `${serviceId} ya está en la última versión`, life: 2000 });
+        }
+      } else {
+        throw new Error(result.error || 'Error desconocido');
+      }
+    } catch (error) {
+      toast.current?.show({ severity: 'error', summary: 'Error', detail: `No se pudo verificar ${serviceId}: ${error.message}`, life: 3000 });
+      setDockerStatus(prev => ({
+        ...prev,
+        [serviceId]: { ...prev[serviceId], loading: false, error: error.message }
+      }));
+    }
+  };
+
+  const applyDockerUpdate = async (serviceId) => {
+    setDockerStatus(prev => ({
+      ...prev,
+      [serviceId]: { ...prev[serviceId], loading: true, error: null }
+    }));
+
+    try {
+      const result = await window.electron.ipcRenderer.invoke(`${serviceId}:apply-update`);
+      if (result.success) {
+        toast.current?.show({ severity: 'success', summary: 'Completado', detail: `${serviceId} se ha actualizado y reiniciado`, life: 5000 });
+        await checkDockerServiceStatus(serviceId);
+      } else {
+        throw new Error(result.error || 'Error en la actualización');
+      }
+    } catch (error) {
+      toast.current?.show({ severity: 'error', summary: 'Error en la actualización', detail: error.message, life: 5000 });
+      setDockerStatus(prev => ({
+        ...prev,
+        [serviceId]: { ...prev[serviceId], loading: false, error: error.message }
       }));
     }
   };
@@ -957,6 +1023,28 @@ const AIClientsTab = ({ themeColors }) => {
         </div>
       );
     }
+    if (client.requiresDocker) {
+      const status = dockerStatus[client.key];
+      const isBusy = status?.loading;
+      return (
+        <div className="adv-config-inner">
+          <div className="cli-status-row">
+            <i className="pi pi-docker" style={{ color: client.color }} />
+            <strong>Servidor Docker:</strong>{' '}
+            <span>{status?.updateAvailable ? 'Actualización disponible' : 'Actualizado a la última versión'}</span>
+          </div>
+          <div className="cli-action-row">
+            <Button label="Buscar actualización" icon="pi pi-search" className="p-button-secondary p-button-sm" onClick={() => checkDockerUpdate(client.key)} loading={isBusy} />
+            {status?.updateAvailable && (
+              <Button label="Actualizar ahora" icon="pi pi-download" className="p-button-success p-button-sm" onClick={() => applyDockerUpdate(client.key)} loading={isBusy} />
+            )}
+          </div>
+          <div style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--text-color-secondary)' }}>
+            Las actualizaciones descargarán la última imagen de Docker Hub y reiniciarán el contenedor automáticamente.
+          </div>
+        </div>
+      );
+    }
     return null;
   };
 
@@ -988,6 +1076,12 @@ const AIClientsTab = ({ themeColors }) => {
               {client.badges.map((badge, idx) => (
                 <Badge key={idx} value={badge.label} severity={badge.severity} style={{ marginRight: '0.3rem', fontSize: '0.6rem' }} />
               ))}
+              {client.requiresDocker && status?.updateAvailable && (
+                <Badge value="Nueva Versión" severity="warning" style={{ marginRight: '0.3rem', fontSize: '0.6rem' }} />
+              )}
+              {client.requiresDocker && status && !status.updateAvailable && !status.loading && !status.error && (
+                <Badge value="Actualizado" severity="success" style={{ marginRight: '0.3rem', fontSize: '0.6rem' }} />
+              )}
             </div>
           </div>
           <div className="ai-client-toggle">
@@ -1031,12 +1125,12 @@ const AIClientsTab = ({ themeColors }) => {
             </div>
           )}
 
-          {/* Acordeón de configuración avanzada (solo CLI local) */}
-          {client.isLocalCli && (
+          {/* Acordeón de configuración avanzada */}
+          {(client.isLocalCli || client.requiresDocker) && (
             <div className="config-accordion">
               <button className="config-accordion-toggle" onClick={() => toggleConfig(client.key)} style={{ color: client.color }}>
                 <i className={`pi pi-chevron-${isConfigOpen ? 'down' : 'right'}`} />
-                Configuración avanzada
+                {client.requiresDocker ? 'Actualizaciones (Docker)' : 'Configuración avanzada'}
               </button>
               {isConfigOpen && (
                 <div className="config-accordion-body">
@@ -1067,6 +1161,12 @@ const AIClientsTab = ({ themeColors }) => {
           <span className="ai-row-name">{client.name}</span>
           <div className="ai-row-badges">
             {client.badges.map((b, i) => <Badge key={i} value={b.label} severity={b.severity} style={{ fontSize: '0.55rem', marginRight: '0.25rem' }} />)}
+            {client.requiresDocker && dockerStatus[client.key]?.updateAvailable && (
+              <Badge value="Nueva Versión" severity="warning" style={{ fontSize: '0.55rem', marginRight: '0.25rem' }} />
+            )}
+            {client.requiresDocker && dockerStatus[client.key] && !dockerStatus[client.key].updateAvailable && !dockerStatus[client.key].loading && !dockerStatus[client.key].error && (
+              <Badge value="Actualizado" severity="success" style={{ fontSize: '0.55rem', marginRight: '0.25rem' }} />
+            )}
           </div>
         </div>
         <div className="ai-row-status">
@@ -1092,6 +1192,7 @@ const AIClientsTab = ({ themeColors }) => {
 
   return (
     <div className="ai-clients-tab">
+      <Toast ref={toast} />
       {/* ── Toolbar ─────────────────────────────────────────── */}
       <div className="ai-clients-toolbar">
         <div className="ai-toolbar-left">

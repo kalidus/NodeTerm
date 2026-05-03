@@ -20,7 +20,6 @@ import TabThemeSelector from './TabThemeSelector';
 import LayoutThemeSelector from './LayoutThemeSelector';
 import SyncSettingsDialog from './SyncSettingsDialog';
 import UpdatePanel from './UpdatePanel';
-import DockerUpdatePanel from './DockerUpdatePanel';
 import { themes } from '../themes';
 import { getVersionInfo, getFullVersionInfo } from '../version-info';
 import { iconThemes } from '../themes/icon-themes';
@@ -5353,44 +5352,27 @@ const SettingsDialog = ({
 
             <TabPanel header={t('updateChannels.updatesTitle')} leftIcon="pi pi-refresh" style={{ '--content-height': `${contentHeight}px` }}>
               <div style={{ height: `${contentHeight}px`, overflow: 'hidden' }}>
-                <TabView 
-                  activeIndex={updatesActiveIndex} 
-                  onTabChange={(e) => {
-                    setUpdatesActiveIndex(e.index);
-                    const subTabs = ['nodeterm', 'servidores-docker'];
-                    setActiveSubTab(subTabs[e.index]);
-                  }}
-                  className="settings-nested-tabview"
-                >
-                  <TabPanel header="NodeTerm">
-                    <AppUpdateTab 
-                      contentHeight={contentHeight - 45} // Ajuste para el header del TabView
-                      currentAppVersion={currentAppVersion}
-                      updateStatus={updateStatus}
-                      isCheckingUpdates={isCheckingUpdates}
-                      checkForUpdates={checkForUpdates}
-                      downloadProgress={downloadProgress}
-                      updateInfo={updateInfo}
-                      isDownloading={isDownloading}
-                      downloadUpdate={downloadUpdate}
-                      installUpdate={installUpdate}
-                      isInstalling={isInstalling}
-                      autoCheckEnabled={autoCheckEnabled}
-                      handleAutoCheckChange={handleAutoCheckChange}
-                      autoInstallEnabled={autoInstallEnabled}
-                      handleAutoInstallChange={handleAutoInstallChange}
-                      autoDownloadEnabled={autoDownloadEnabled}
-                      handleAutoDownloadChange={handleAutoDownloadChange}
-                      updateChannel={updateChannel}
-                      handleChannelChange={handleChannelChange}
-                    />
-                  </TabPanel>
-                  <TabPanel header="Servidores (Docker)">
-                    <div style={{ height: `${contentHeight - 45}px`, overflowY: 'auto' }}>
-                      <DockerUpdatePanel />
-                    </div>
-                  </TabPanel>
-                </TabView>
+                <AppUpdateTab 
+                  contentHeight={contentHeight}
+                  currentAppVersion={currentAppVersion}
+                  updateStatus={updateStatus}
+                  isCheckingUpdates={isCheckingUpdates}
+                  checkForUpdates={checkForUpdates}
+                  downloadProgress={downloadProgress}
+                  updateInfo={updateInfo}
+                  isDownloading={isDownloading}
+                  downloadUpdate={downloadUpdate}
+                  installUpdate={installUpdate}
+                  isInstalling={isInstalling}
+                  autoCheckEnabled={autoCheckEnabled}
+                  handleAutoCheckChange={handleAutoCheckChange}
+                  autoInstallEnabled={autoInstallEnabled}
+                  handleAutoInstallChange={handleAutoInstallChange}
+                  autoDownloadEnabled={autoDownloadEnabled}
+                  handleAutoDownloadChange={handleAutoDownloadChange}
+                  updateChannel={updateChannel}
+                  handleChannelChange={handleChannelChange}
+                />
               </div>
             </TabPanel>
 
