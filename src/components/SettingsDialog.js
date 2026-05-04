@@ -53,6 +53,78 @@ const LOCAL_POWERSHELL_THEME_STORAGE_KEY = 'localPowerShellTheme';
 const LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY = 'localLinuxTerminalTheme';
 const INTERACTIVE_ICON_STORAGE_KEY = 'nodeterm_interactive_icon';
 
+const SmoothIconSlider = ({ connectionIconSize, setConnectionIconSize }) => {
+  const [localSize, setLocalSize] = useState(connectionIconSize || 20);
+  const timeoutRef = useRef(null);
+  const isChangingRef = useRef(false);
+
+  // Sincronizar con el estado global solo cuando cambie externamente
+  useEffect(() => {
+    if (!isChangingRef.current) {
+      setLocalSize(connectionIconSize || 20);
+    }
+  }, [connectionIconSize]);
+
+  const updateGlobal = (val) => {
+    if (setConnectionIconSize && val !== undefined && val !== null) {
+      setConnectionIconSize(val);
+    }
+  };
+
+  const handleChange = (e) => {
+    const val = e.value;
+    if (val === null || val === undefined) return;
+    
+    setLocalSize(val);
+    isChangingRef.current = true;
+    
+    // Debounce para evitar lag en el renderizado global, pero manteniendo la UI local fluida
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      updateGlobal(val);
+      // Damos un margen para que el estado global se propague antes de permitir resincronización
+      setTimeout(() => {
+        isChangingRef.current = false;
+      }, 100);
+    }, 50);
+  };
+
+  const handleSlideEnd = (e) => {
+    const val = e.value;
+    if (val === null || val === undefined) return;
+    updateGlobal(val);
+    isChangingRef.current = false;
+  };
+
+  return (
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+      <Slider
+        value={localSize}
+        onChange={handleChange}
+        onSlideEnd={handleSlideEnd}
+        min={12}
+        max={32}
+        step={1}
+        style={{ flex: 1, minWidth: '100px' }} // Aumentado para mejor precisión táctil/ratón
+      />
+      <div style={{
+        background: 'rgba(var(--ui-button-primary-rgb), 0.1)',
+        padding: '2px 8px',
+        borderRadius: '6px',
+        border: '1px solid rgba(var(--ui-button-primary-rgb), 0.2)',
+        minWidth: '45px',
+        textAlign: 'center'
+      }}>
+        <span style={{
+          fontSize: '0.75rem',
+          color: 'var(--ui-button-primary)',
+          fontWeight: 700
+        }}>{localSize}</span>
+      </div>
+    </div>
+  );
+};
+
 const SettingsDialog = ({
   visible,
   onHide,
@@ -3776,7 +3848,7 @@ const SettingsDialog = ({
 
                           <div style={{
                             display: 'grid',
-                            gridTemplateColumns: '1fr 1fr',
+                            gridTemplateColumns: '1.2fr 1fr 1fr',
                             gap: '1rem'
                           }}>
                             {/* Fuente */}
@@ -3872,105 +3944,30 @@ const SettingsDialog = ({
                                 )}
                               </div>
                             </div>
-                          </div>
-                        </div>
 
-                        {/* ═══════════════════════════════════════════════════════════════
-                          FILA 3: TAMAÑO DE ICONOS (unificado)
-                          ═══════════════════════════════════════════════════════════════ */}
-                        <div style={{
-                          background: 'rgba(0, 0, 0, 0.08)',
-                          borderRadius: '10px',
-                          padding: '0.875rem 1rem',
-                          border: '1px solid rgba(255, 255, 255, 0.05)'
-                        }}>
-                          {/* Encabezado */}
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            marginBottom: '0.875rem'
-                          }}>
-                            <i className="pi pi-expand" style={{ fontSize: '0.875rem', color: 'var(--ui-button-primary)' }}></i>
-                            <span style={{
-                              fontSize: '0.875rem',
-                              fontWeight: 600,
-                              color: 'var(--ui-dialog-text)'
-                            }}>Tamaño de Iconos</span>
-                          </div>
-
-                          {/* Slider único + preview de iconos a escala real */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-
-                            {/* Preview de iconos a escala real */}
+                            {/* Tamaño de Iconos */}
                             <div style={{
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '0.5rem',
-                              minWidth: '56px',
-                              justifyContent: 'center'
+                              gap: '0.75rem'
                             }}>
-                              {iconThemes[iconThemeSidebar]?.icons.folder &&
-                                React.cloneElement(iconThemes[iconThemeSidebar].icons.folder, {
-                                  width: folderIconSize || 20,
-                                  height: folderIconSize || 20,
-                                  style: {
-                                    ...iconThemes[iconThemeSidebar].icons.folder.props.style,
-                                    width: `${folderIconSize || 20}px`,
-                                    height: `${folderIconSize || 20}px`,
-                                    flexShrink: 0,
-                                    transition: 'width 0.15s, height 0.15s'
-                                  }
-                                })
-                              }
-                              {iconThemes[iconThemeSidebar]?.icons.ssh &&
-                                React.cloneElement(iconThemes[iconThemeSidebar].icons.ssh, {
-                                  width: folderIconSize || 20,
-                                  height: folderIconSize || 20,
-                                  style: {
-                                    ...iconThemes[iconThemeSidebar].icons.ssh.props.style,
-                                    width: `${folderIconSize || 20}px`,
-                                    height: `${folderIconSize || 20}px`,
-                                    flexShrink: 0,
-                                    transition: 'width 0.15s, height 0.15s'
-                                  }
-                                })
-                              }
-                            </div>
-
-                            {/* Slider unificado */}
-                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                              <Slider
-                                value={folderIconSize || 20}
-                                onChange={(e) => {
-                                  // Un único cambio actualiza carpetas Y conexiones a la vez
-                                  if (setFolderIconSize) setFolderIconSize(e.value);
-                                  if (setConnectionIconSize) setConnectionIconSize(e.value);
-                                }}
-                                min={12}
-                                max={32}
-                                style={{ flex: 1 }}
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                minWidth: '50px'
+                              }}>
+                                <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>Iconos</span>
+                              </div>
+                              <SmoothIconSlider 
+                                connectionIconSize={connectionIconSize} 
+                                setConnectionIconSize={setConnectionIconSize} 
                               />
-                              <span style={{
-                                fontSize: '0.75rem',
-                                color: 'var(--ui-button-primary)',
-                                fontWeight: 600,
-                                minWidth: '40px',
-                                textAlign: 'right'
-                              }}>{folderIconSize || 20} px</span>
                             </div>
-                          </div>
 
-                          {/* Hint descriptivo */}
-                          <p style={{
-                            fontSize: '0.75rem',
-                            color: 'var(--text-color-secondary)',
-                            opacity: 0.6,
-                            margin: '0.6rem 0 0 0'
-                          }}>
-                            Ajusta el tamaño de todos los iconos del árbol de sesiones (carpetas y conexiones) de forma proporcional.
-                          </p>
+                          </div>
                         </div>
+
 
                         {/* ═══════════════════════════════════════════════════════════════
                           VISTA PREVIA DE ICONOS DE ACCIÓN
