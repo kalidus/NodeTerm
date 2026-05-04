@@ -173,6 +173,12 @@ const SettingsDialog = ({
   setLocalPowerShellTheme,
   localLinuxTerminalTheme,
   setLocalLinuxTerminalTheme,
+  localDockerTerminalTheme,
+  setLocalDockerTerminalTheme,
+  dockerFontFamily,
+  setDockerFontFamily,
+  dockerFontSize,
+  setDockerFontSize,
   exportTreeToJson,
   importTreeFromJson,
   sessionManager,
@@ -3456,6 +3462,12 @@ const SettingsDialog = ({
                     setLocalPowerShellTheme={setLocalPowerShellTheme}
                     localLinuxTerminalTheme={localLinuxTerminalTheme}
                     setLocalLinuxTerminalTheme={setLocalLinuxTerminalTheme}
+                    localDockerTerminalTheme={localDockerTerminalTheme}
+                    setLocalDockerTerminalTheme={setLocalDockerTerminalTheme}
+                    localDockerFontFamily={dockerFontFamily}
+                    setLocalDockerFontFamily={setDockerFontFamily}
+                    localDockerFontSize={dockerFontSize}
+                    setLocalDockerFontSize={setDockerFontSize}
                     defaultLocalTerminal={defaultLocalTerminal}
                     defaultTerminalOptions={defaultTerminalOptions}
                     onDefaultTerminalChange={handleDefaultTerminalChange}

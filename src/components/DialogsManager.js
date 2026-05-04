@@ -201,6 +201,12 @@ const DialogsManager = ({
   setLocalPowerShellTheme,
   localLinuxTerminalTheme,
   setLocalLinuxTerminalTheme,
+  localDockerTerminalTheme,
+  setLocalDockerTerminalTheme,
+  dockerFontFamily,
+  setDockerFontFamily,
+  dockerFontSize,
+  setDockerFontSize,
   uiTheme,
   setUiTheme,
   iconTheme,
@@ -433,6 +439,12 @@ const DialogsManager = ({
         setLocalPowerShellTheme={setLocalPowerShellTheme}
         localLinuxTerminalTheme={localLinuxTerminalTheme}
         setLocalLinuxTerminalTheme={setLocalLinuxTerminalTheme}
+        localDockerTerminalTheme={localDockerTerminalTheme}
+        setLocalDockerTerminalTheme={setLocalDockerTerminalTheme}
+        dockerFontFamily={dockerFontFamily}
+        setDockerFontFamily={setDockerFontFamily}
+        dockerFontSize={dockerFontSize}
+        setDockerFontSize={setDockerFontSize}
         uiTheme={uiTheme}
         setUiTheme={setUiTheme}
         iconTheme={iconTheme}

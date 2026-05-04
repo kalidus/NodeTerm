@@ -1235,6 +1235,9 @@ const App = () => {
     localFontFamily, setLocalFontFamily, localFontSize, setLocalFontSize,
     availableFonts, terminalTheme, setTerminalTheme, statusBarTheme, setStatusBarTheme,
     localPowerShellTheme, setLocalPowerShellTheme, localLinuxTerminalTheme, setLocalLinuxTerminalTheme,
+    localDockerTerminalTheme, setLocalDockerTerminalTheme,
+    dockerFontFamily, setDockerFontFamily,
+    dockerFontSize, setDockerFontSize,
     uiTheme, setUiTheme, availableThemes, iconTheme, setIconTheme,
     iconThemeSidebar, setIconThemeSidebar, iconSize, setIconSize,
     folderIconSize, setFolderIconSize, connectionIconSize, setConnectionIconSize,
@@ -1248,38 +1251,6 @@ const App = () => {
     reloadThemes
   } = useThemeManagement();
 
-  // Docker terminal theme state
-  const [localDockerTerminalTheme, setLocalDockerTerminalTheme] = useState(() => {
-    try {
-      return localStorage.getItem('localDockerTerminalTheme') || 'Default Dark';
-    } catch {
-      return 'Default Dark';
-    }
-  });
-
-  // Docker terminal font family state
-  const [dockerFontFamily, setDockerFontFamily] = useState(() => {
-    try {
-      const saved = localStorage.getItem('nodeterm_docker_font_family');
-      if (saved) return saved;
-      // Fallback to localFontFamily if available, otherwise default
-      return localFontFamily || 'Consolas';
-    } catch {
-      return 'Consolas';
-    }
-  });
-
-  // Docker terminal font size state
-  const [dockerFontSize, setDockerFontSize] = useState(() => {
-    try {
-      const saved = localStorage.getItem('nodeterm_docker_font_size');
-      if (saved) return parseInt(saved, 10);
-      // Fallback to localFontSize if available, otherwise default
-      return localFontSize || 14;
-    } catch {
-      return 14;
-    }
-  });
 
   // Listen for Docker settings changes
   useEffect(() => {
@@ -3155,6 +3126,12 @@ const App = () => {
           setLocalPowerShellTheme={setLocalPowerShellTheme}
           localLinuxTerminalTheme={localLinuxTerminalTheme}
           setLocalLinuxTerminalTheme={setLocalLinuxTerminalTheme}
+          localDockerTerminalTheme={localDockerTerminalTheme}
+          setLocalDockerTerminalTheme={setLocalDockerTerminalTheme}
+          dockerFontFamily={dockerFontFamily}
+          setDockerFontFamily={setDockerFontFamily}
+          dockerFontSize={dockerFontSize}
+          setDockerFontSize={setDockerFontSize}
           uiTheme={uiTheme}
           setUiTheme={setUiTheme}
           iconTheme={iconTheme}

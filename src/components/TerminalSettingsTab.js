@@ -87,6 +87,12 @@ const TerminalSettingsTab = ({
   setLocalPowerShellTheme,
   localLinuxTerminalTheme,
   setLocalLinuxTerminalTheme,
+  localDockerTerminalTheme,
+  setLocalDockerTerminalTheme,
+  localDockerFontFamily,
+  setLocalDockerFontFamily,
+  localDockerFontSize,
+  setLocalDockerFontSize,
   defaultLocalTerminal,
   defaultTerminalOptions = [],
   onDefaultTerminalChange
@@ -119,16 +125,6 @@ const TerminalSettingsTab = ({
     const saved = localStorage.getItem(STORAGE_KEYS.LINUX_FONT_SIZE);
     return saved ? parseInt(saved, 10) : localFontSize || 14;
   });
-  const [dockerFontFamily, setDockerFontFamily] = useState(() =>
-    localStorage.getItem(STORAGE_KEYS.DOCKER_FONT_FAMILY) || localFontFamily || 'Consolas'
-  );
-  const [dockerFontSize, setDockerFontSize] = useState(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.DOCKER_FONT_SIZE);
-    return saved ? parseInt(saved, 10) : localFontSize || 14;
-  });
-  const [dockerTheme, setDockerTheme] = useState(() =>
-    localStorage.getItem(STORAGE_KEYS.DOCKER_THEME) || 'Default Dark'
-  );
 
   // Preview settings
   const [activePreviewTab, setActivePreviewTab] = useState('ssh');
@@ -221,15 +217,15 @@ const TerminalSettingsTab = ({
         localStorage.setItem(STORAGE_KEYS.LINUX_FONT_FAMILY, font);
         break;
       case 'docker':
-        setDockerFontFamily(font);
+        setLocalDockerFontFamily(font);
         localStorage.setItem(STORAGE_KEYS.DOCKER_FONT_FAMILY, font);
-        // Dispatch custom event to notify App.js
+        // Dispatch custom event to notify other components
         window.dispatchEvent(new CustomEvent('localStorageChange', {
-          detail: { key: 'nodeterm_docker_font_family', value: font }
+          detail: { key: STORAGE_KEYS.DOCKER_FONT_FAMILY, value: font }
         }));
         // Also dispatch storage event for cross-tab sync
         window.dispatchEvent(new StorageEvent('storage', {
-          key: 'nodeterm_docker_font_family',
+          key: STORAGE_KEYS.DOCKER_FONT_FAMILY,
           newValue: font
         }));
         break;
@@ -252,15 +248,15 @@ const TerminalSettingsTab = ({
         localStorage.setItem(STORAGE_KEYS.LINUX_FONT_SIZE, size.toString());
         break;
       case 'docker':
-        setDockerFontSize(size);
+        setLocalDockerFontSize(size);
         localStorage.setItem(STORAGE_KEYS.DOCKER_FONT_SIZE, size.toString());
-        // Dispatch custom event to notify App.js
+        // Dispatch custom event to notify other components
         window.dispatchEvent(new CustomEvent('localStorageChange', {
-          detail: { key: 'nodeterm_docker_font_size', value: size.toString() }
+          detail: { key: STORAGE_KEYS.DOCKER_FONT_SIZE, value: size.toString() }
         }));
         // Also dispatch storage event for cross-tab sync
         window.dispatchEvent(new StorageEvent('storage', {
-          key: 'nodeterm_docker_font_size',
+          key: STORAGE_KEYS.DOCKER_FONT_SIZE,
           newValue: size.toString()
         }));
         break;
@@ -273,11 +269,10 @@ const TerminalSettingsTab = ({
     switch (type) {
       case 'ssh': return terminalTheme?.name || 'Default Dark';
       case 'powershell': return localPowerShellTheme || 'Default Dark';
-      case 'linux': return localLinuxTerminalTheme || 'Default Dark';
-      case 'docker': return dockerTheme;
+      case 'docker': return localDockerTerminalTheme;
       default: return 'Default Dark';
     }
-  }, [terminalTheme, localPowerShellTheme, localLinuxTerminalTheme, dockerTheme]);
+  }, [terminalTheme, localPowerShellTheme, localLinuxTerminalTheme, localDockerTerminalTheme]);
 
   const handleThemeChange = useCallback((type, themeName) => {
     const theme = themes[themeName];
@@ -289,27 +284,45 @@ const TerminalSettingsTab = ({
       case 'powershell':
         setLocalPowerShellTheme(themeName);
         localStorage.setItem(STORAGE_KEYS.POWERSHELL_THEME, themeName);
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(new CustomEvent('localStorageChange', {
+          detail: { key: STORAGE_KEYS.POWERSHELL_THEME, value: themeName }
+        }));
+        // Also dispatch storage event for cross-tab sync
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: STORAGE_KEYS.POWERSHELL_THEME,
+          newValue: themeName
+        }));
         break;
       case 'linux':
         setLocalLinuxTerminalTheme(themeName);
         localStorage.setItem(STORAGE_KEYS.LINUX_THEME, themeName);
-        break;
-      case 'docker':
-        setDockerTheme(themeName);
-        localStorage.setItem(STORAGE_KEYS.DOCKER_THEME, themeName);
-        // Dispatch custom event to notify App.js
+        // Dispatch custom event to notify other components
         window.dispatchEvent(new CustomEvent('localStorageChange', {
-          detail: { key: 'localDockerTerminalTheme', value: themeName }
+          detail: { key: STORAGE_KEYS.LINUX_THEME, value: themeName }
         }));
         // Also dispatch storage event for cross-tab sync
         window.dispatchEvent(new StorageEvent('storage', {
-          key: 'localDockerTerminalTheme',
+          key: STORAGE_KEYS.LINUX_THEME,
+          newValue: themeName
+        }));
+        break;
+      case 'docker':
+        setLocalDockerTerminalTheme(themeName);
+        localStorage.setItem(STORAGE_KEYS.DOCKER_THEME, themeName);
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(new CustomEvent('localStorageChange', {
+          detail: { key: STORAGE_KEYS.DOCKER_THEME, value: themeName }
+        }));
+        // Also dispatch storage event for cross-tab sync
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: STORAGE_KEYS.DOCKER_THEME,
           newValue: themeName
         }));
         break;
       default: break;
     }
-  }, [setTerminalTheme, setLocalPowerShellTheme, setLocalLinuxTerminalTheme]);
+  }, [setTerminalTheme, setLocalPowerShellTheme, setLocalLinuxTerminalTheme, setLocalDockerTerminalTheme, setLocalDockerFontFamily, setLocalDockerFontSize]);
 
 
   // Preview helpers
@@ -444,7 +457,7 @@ const TerminalSettingsTab = ({
         }
       });
     };
-  }, [getPreviewTheme, fontFamily, localFontFamily, linuxFontFamily, dockerFontFamily, terminalTheme, localPowerShellTheme, localLinuxTerminalTheme, dockerTheme]);
+  }, [getPreviewTheme, fontFamily, localFontFamily, linuxFontFamily, localDockerFontFamily, terminalTheme, localPowerShellTheme, localLinuxTerminalTheme, localDockerTerminalTheme]);
 
   return (
     <div className="terminal-settings-container">

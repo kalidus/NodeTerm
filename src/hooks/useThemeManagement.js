@@ -9,6 +9,8 @@ import { getAvailableFonts } from '../utils/fontsList';
 import { applyTabTheme } from '../utils/tabThemeLoader';
 import { presetManager } from '../utils/presetManager';
 import { ACTIVE_PRESET_STORAGE_KEY } from '../themes/presets/index';
+import localStorageSyncService from '../services/LocalStorageSyncService';
+
 
 export const useThemeManagement = () => {
   // Storage keys
@@ -69,6 +71,15 @@ export const useThemeManagement = () => {
   const [localDockerTerminalTheme, setLocalDockerTerminalTheme] = useState(() =>
     localStorage.getItem('localDockerTerminalTheme') || 'Default Dark'
   );
+
+  const [dockerFontFamily, setDockerFontFamily] = useState(() =>
+    localStorage.getItem('nodeterm_docker_font_family') || 'Consolas'
+  );
+
+  const [dockerFontSize, setDockerFontSize] = useState(() => {
+    const saved = localStorage.getItem('nodeterm_docker_font_size');
+    return saved ? parseInt(saved, 10) : 14;
+  });
 
   const [uiTheme, setUiTheme] = useState(() =>
     localStorage.getItem('ui_theme') || 'Light'
@@ -258,20 +269,49 @@ export const useThemeManagement = () => {
   // Auto-save effects
   useEffect(() => {
     localStorage.setItem(FONT_FAMILY_STORAGE_KEY, fontFamily);
+    localStorageSyncService.debouncedSync({ [FONT_FAMILY_STORAGE_KEY]: fontFamily });
   }, [fontFamily]);
 
   useEffect(() => {
     localStorage.setItem(FONT_SIZE_STORAGE_KEY, fontSize);
+    localStorageSyncService.debouncedSync({ [FONT_SIZE_STORAGE_KEY]: fontSize });
   }, [fontSize]);
 
   useEffect(() => {
     localStorage.setItem(THEME_STORAGE_KEY, terminalTheme.name);
+    localStorageSyncService.debouncedSync({ [THEME_STORAGE_KEY]: terminalTheme.name });
   }, [terminalTheme]);
 
   useEffect(() => {
     localStorage.setItem(STATUSBAR_THEME_STORAGE_KEY, statusBarTheme);
     statusBarThemeManager.applyTheme(statusBarTheme);
+    localStorageSyncService.debouncedSync({ [STATUSBAR_THEME_STORAGE_KEY]: statusBarTheme });
   }, [statusBarTheme]);
+
+  useEffect(() => {
+    localStorage.setItem(LOCAL_POWERSHELL_THEME_STORAGE_KEY, localPowerShellTheme);
+    localStorageSyncService.debouncedSync({ [LOCAL_POWERSHELL_THEME_STORAGE_KEY]: localPowerShellTheme });
+  }, [localPowerShellTheme]);
+
+  useEffect(() => {
+    localStorage.setItem(LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY, localLinuxTerminalTheme);
+    localStorageSyncService.debouncedSync({ [LOCAL_LINUX_TERMINAL_THEME_STORAGE_KEY]: localLinuxTerminalTheme });
+  }, [localLinuxTerminalTheme]);
+
+  useEffect(() => {
+    localStorage.setItem('localDockerTerminalTheme', localDockerTerminalTheme);
+    localStorageSyncService.debouncedSync({ 'localDockerTerminalTheme': localDockerTerminalTheme });
+  }, [localDockerTerminalTheme]);
+
+  useEffect(() => {
+    localStorage.setItem('nodeterm_docker_font_family', dockerFontFamily);
+    localStorageSyncService.debouncedSync({ 'nodeterm_docker_font_family': dockerFontFamily });
+  }, [dockerFontFamily]);
+
+  useEffect(() => {
+    localStorage.setItem('nodeterm_docker_font_size', dockerFontSize.toString());
+    localStorageSyncService.debouncedSync({ 'nodeterm_docker_font_size': dockerFontSize.toString() });
+  }, [dockerFontSize]);
 
   useEffect(() => {
     try {
@@ -564,10 +604,13 @@ export const useThemeManagement = () => {
     localPowerShellTheme,
     setLocalPowerShellTheme,
     localLinuxTerminalTheme,
-    localLinuxTerminalTheme,
     setLocalLinuxTerminalTheme,
     localDockerTerminalTheme,
     setLocalDockerTerminalTheme,
+    dockerFontFamily,
+    setDockerFontFamily,
+    dockerFontSize,
+    setDockerFontSize,
     uiTheme,
     setUiTheme,
     availableThemes,
