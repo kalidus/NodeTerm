@@ -166,15 +166,6 @@ export const useThemeManagement = () => {
     }
   });
 
-  const [iconSize, setIconSize] = useState(() => {
-    try {
-      const saved = localStorage.getItem('iconSize');
-      return saved ? parseInt(saved, 10) : 20;
-    } catch {
-      return 20;
-    }
-  });
-
   // ─── TAMAÑO UNIFICADO DE LA SIDEBAR ────────────────────────────────────────
   // Un solo valor controla proporcionalemente iconos Y tipografía.
   // Ratio fijo: fontSize = max(10, round(iconSize × 0.75))
@@ -184,13 +175,14 @@ export const useThemeManagement = () => {
   const SIDEBAR_FONT_RATIO = 0.75;
   const derivedFontSize = (iconSz) => Math.max(10, Math.round(iconSz * SIDEBAR_FONT_RATIO));
 
-  // Lee folderIconSize o connectionIconSize existentes para retrocompatibilidad
   const [sidebarIconSize, setSidebarIconSize] = useState(() => {
     try {
       const savedFolder = localStorage.getItem('folderIconSize');
       const savedConn = localStorage.getItem('connectionIconSize');
+      const savedIcon = localStorage.getItem('iconSize');
       if (savedFolder) return parseInt(savedFolder, 10);
       if (savedConn) return parseInt(savedConn, 10);
+      if (savedIcon) return parseInt(savedIcon, 10);
       return 20;
     } catch {
       return 20;
@@ -198,10 +190,12 @@ export const useThemeManagement = () => {
   });
 
   // Aliases derivados para compatibilidad con todos los consumidores existentes
+  const iconSize = sidebarIconSize;
   const folderIconSize = sidebarIconSize;
   const connectionIconSize = sidebarIconSize;
 
   // Setters unificados: cualquier setter actualiza el estado único
+  const setIconSize = setSidebarIconSize;
   const setFolderIconSize = setSidebarIconSize;
   const setConnectionIconSize = setSidebarIconSize;
 

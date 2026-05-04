@@ -3957,7 +3957,7 @@ const SettingsDialog = ({
                                 gap: '0.5rem',
                                 minWidth: '50px'
                               }}>
-                                <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>Iconos</span>
+                                <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>Iconos / Carpetas</span>
                               </div>
                               <SmoothIconSlider 
                                 connectionIconSize={connectionIconSize} 

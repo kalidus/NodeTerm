@@ -2868,7 +2868,7 @@ const Sidebar = React.memo(({
               </div>
             ) : (
               <Tree
-                key={`tree-${iconTheme}-${explorerFontSize}-${treeTheme}-${explorerFontColor || 'default'}`} // Forzar re-render cuando cambie el tema
+                key={`tree-${iconTheme}-${explorerFontSize}-${treeTheme}-${explorerFontColor || 'default'}-${folderIconSize}-${iconSize}`} // Forzar re-render cuando cambie el tema o el tamaño de iconos
                 value={nodes}
                 selectionMode="single"
                 selectionKeys={selectedNodeKey}
@@ -2918,6 +2918,7 @@ const Sidebar = React.memo(({
                   color: explorerFontColor || undefined,
                   '--icon-size': `${iconSize}px`,
                   '--sidebar-icon-size': `${folderIconSize || 20}px`,
+                  '--tree-node-padding': '2px 0',
                   ...(explorerFontColor ? {
                     '--ui-sidebar-text': explorerFontColor,
                     '--tree-text-color': explorerFontColor

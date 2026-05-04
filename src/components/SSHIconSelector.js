@@ -143,7 +143,7 @@ export const SSHIconRenderer = ({ preset, size = 'medium', pixelSize = null }) =
   
   if (pixelSize && typeof pixelSize === 'number') {
     containerSize = pixelSize;
-    emojiSize = Math.max(8, Math.round(pixelSize * 0.45));
+    emojiSize = Math.max(8, Math.round(pixelSize * 0.42));
   } else {
     const sizes = {
       small: { container: 40, emoji: 16 },
@@ -205,34 +205,34 @@ export const SSHIconRenderer = ({ preset, size = 'medium', pixelSize = null }) =
       </defs>
       
       {/* Terminal window background */}
-      <rect x="5" y="10" width="90" height="80" rx="8" ry="8" fill="#1a1a2e" stroke={preset.color} strokeWidth="2" opacity="0.95"/>
+      <rect x="10" y="20" width="80" height="70" rx="8" ry="8" fill="#1a1a2e" stroke={preset.color} strokeWidth="2" opacity="0.95"/>
       
       {/* Terminal header bar */}
-      <rect x="5" y="10" width="90" height="18" rx="8" ry="8" fill={`url(#ssh-grad-${preset.id})`}/>
-      <rect x="5" y="20" width="90" height="8" fill={`url(#ssh-grad-${preset.id})`}/>
+      <rect x="10" y="20" width="80" height="16" rx="8" ry="8" fill={`url(#ssh-grad-${preset.id})`}/>
+      <rect x="10" y="30" width="80" height="6" fill={`url(#ssh-grad-${preset.id})`}/>
       
       {/* Terminal buttons */}
-      <circle cx="16" cy="19" r="3.5" fill="#ff5f56"/>
-      <circle cx="28" cy="19" r="3.5" fill="#ffbd2e"/>
-      <circle cx="40" cy="19" r="3.5" fill="#27ca3f"/>
+      <circle cx="20" cy="28" r="3" fill="#ff5f56"/>
+      <circle cx="30" cy="28" r="3" fill="#ffbd2e"/>
+      <circle cx="40" cy="28" r="3" fill="#27ca3f"/>
       
       {/* Terminal content area */}
-      <rect x="10" y="32" width="80" height="53" rx="2" fill="#0d0d1a"/>
+      <rect x="15" y="42" width="70" height="42" rx="2" fill="#0d0d1a"/>
       
       {/* Command line indicator */}
-      <text x="15" y="48" fontSize="10" fill="#4ade80" fontFamily="monospace" fontWeight="bold">$</text>
-      <rect x="24" y="42" width="30" height="8" rx="1" fill={preset.color} opacity="0.6"/>
+      <text x="20" y="56" fontSize="9" fill="#4ade80" fontFamily="monospace" fontWeight="bold">$</text>
+      <rect x="28" y="50" width="25" height="7" rx="1" fill={preset.color} opacity="0.6"/>
       
       {/* Second line */}
-      <text x="15" y="62" fontSize="10" fill="#4ade80" fontFamily="monospace" fontWeight="bold">$</text>
-      <rect x="24" y="56" width="20" height="8" rx="1" fill={preset.color} opacity="0.4"/>
+      <text x="20" y="70" fontSize="9" fill="#4ade80" fontFamily="monospace" fontWeight="bold">$</text>
+      <rect x="28" y="64" width="15" height="7" rx="1" fill={preset.color} opacity="0.4"/>
       
       {/* Emoji badge */}
-      <circle cx="75" cy="70" r="18" fill="rgba(255,255,255,0.15)" filter={`url(#ssh-glow-${preset.id})`}/>
+      <circle cx="72" cy="72" r="18" fill="rgba(255,255,255,0.15)" filter={`url(#ssh-glow-${preset.id})`}/>
       
       {/* Emoji with optional scaling */}
       {emojiScale !== 1.0 ? (
-        <g transform="translate(75, 72)">
+        <g transform="translate(72, 74)">
           <text 
             x="0" 
             y="0" 
@@ -246,8 +246,8 @@ export const SSHIconRenderer = ({ preset, size = 'medium', pixelSize = null }) =
         </g>
       ) : (
         <text 
-          x="75" 
-          y="72" 
+          x="72" 
+          y="74" 
           fontSize={emojiFontSizeInViewBox} 
           textAnchor="middle" 
           dominantBaseline="central"
