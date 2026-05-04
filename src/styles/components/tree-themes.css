@@ -2185,3 +2185,40 @@
   transition: opacity 0.2s ease, background 0.2s ease;
 }
 
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ALINEACIÓN DINÁMICA BASADA EN TAMAÑO DE ICONO
+   Estas reglas tienen la máxima prioridad y sobrescriben los valores fijos
+   de cada tema (compact, connected-compact, etc.) usando la CSS custom
+   property --sidebar-icon-size inyectada desde Sidebar.js
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.sidebar-tree.sidebar-tree {
+  --_row-h: var(--sidebar-icon-size, 20px);
+}
+
+/* Fila del árbol: altura mínima y alineación vertical dinámicas */
+.sidebar-tree.sidebar-tree .p-treenode-content {
+  min-height: calc(var(--_row-h) + 6px) !important;
+  line-height: var(--_row-h) !important;
+  display: flex !important;
+  align-items: center !important;
+  box-sizing: border-box;
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+}
+
+/* Toggler (flecha ▶): centrado vertical proporcional al tamaño */
+.sidebar-tree.sidebar-tree .p-tree-toggler {
+  width: calc(var(--_row-h) * 0.8) !important;
+  height: calc(var(--_row-h) + 6px) !important;
+  min-width: calc(var(--_row-h) * 0.8) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Icono del toggler: escala proporcionalmente */
+.sidebar-tree.sidebar-tree .p-tree-toggler-icon {
+  font-size: calc(max(8px, var(--_row-h) * 0.5)) !important;
+}

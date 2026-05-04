@@ -2371,8 +2371,8 @@ const Sidebar = React.memo(({
           cursor: 'pointer',
           fontFamily: explorerFont,
           display: 'flex',
-          alignItems: 'flex-end',
-          gap: '6px'
+          alignItems: 'center',
+          gap: `${Math.max(4, Math.round((folderIconSize || 20) * 0.3))}px`
         }}
         title={title}
         data-connection-type={isSSH ? 'ssh' : (isRDP ? 'rdp' : (isVNC ? 'vnc' : (isSSHTunnel ? 'ssh-tunnel' : null)))}
@@ -2380,12 +2380,13 @@ const Sidebar = React.memo(({
         data-node-key={node.key}
       >
         <span style={{
-          minWidth: 20,
+          minWidth: isFolder ? (folderIconSize || 20) : (connectionIconSize || 20),
+          width: isFolder ? (folderIconSize || 20) : (connectionIconSize || 20),
           display: 'flex',
-          alignItems: 'flex-end',
+          alignItems: 'center',
           justifyContent: 'center',
-          height: '20px',
-          position: 'relative' // Para posicionar el tag SSH
+          height: `${isFolder ? (folderIconSize || 20) : (connectionIconSize || 20)}px`,
+          position: 'relative'
         }}>
           {icon}
           {/* Tag SSH superpuesto en la parte derecha inferior - Solo para tema Nodeterm Basic */}
@@ -2443,12 +2444,9 @@ const Sidebar = React.memo(({
         <span className="node-label" style={{
           flex: 1,
           marginLeft: (isSSH || isRDP || isVNC) && themeKey === 'nodetermbasic' ? '6px' : '0px',
-          lineHeight: '20px',
-          height: '20px',
-          display: 'block',
           margin: 0,
           padding: 0,
-          ...(hasCustomFolderIcon ? { transform: 'translateY(3px)' } : {})
+          lineHeight: 'normal'
         }}>{node.label}</span>
         {/* Botón de refresco SOLO para la carpeta raíz importada de Wallix (tiene wallixUrl en data) */}
         {node.importedFrom === 'Wallix' && node.droppable && node.data && node.data.wallixUrl ? (
@@ -2919,6 +2917,7 @@ const Sidebar = React.memo(({
                   fontSize: `${explorerFontSize}px`,
                   color: explorerFontColor || undefined,
                   '--icon-size': `${iconSize}px`,
+                  '--sidebar-icon-size': `${folderIconSize || 20}px`,
                   ...(explorerFontColor ? {
                     '--ui-sidebar-text': explorerFontColor,
                     '--tree-text-color': explorerFontColor

@@ -175,23 +175,35 @@ export const useThemeManagement = () => {
     }
   });
 
-  const [folderIconSize, setFolderIconSize] = useState(() => {
+  // ─── TAMAÑO UNIFICADO DE LA SIDEBAR ────────────────────────────────────────
+  // Un solo valor controla proporcionalemente iconos Y tipografía.
+  // Ratio fijo: fontSize = max(10, round(iconSize × 0.75))
+  //   iconSize 12 → fontSize 9 → clamp → 10
+  //   iconSize 20 → fontSize 15  (por defecto)
+  //   iconSize 32 → fontSize 24
+  const SIDEBAR_FONT_RATIO = 0.75;
+  const derivedFontSize = (iconSz) => Math.max(10, Math.round(iconSz * SIDEBAR_FONT_RATIO));
+
+  // Lee folderIconSize o connectionIconSize existentes para retrocompatibilidad
+  const [sidebarIconSize, setSidebarIconSize] = useState(() => {
     try {
-      const saved = localStorage.getItem('folderIconSize');
-      return saved ? parseInt(saved, 10) : 20;
+      const savedFolder = localStorage.getItem('folderIconSize');
+      const savedConn = localStorage.getItem('connectionIconSize');
+      if (savedFolder) return parseInt(savedFolder, 10);
+      if (savedConn) return parseInt(savedConn, 10);
+      return 20;
     } catch {
       return 20;
     }
   });
 
-  const [connectionIconSize, setConnectionIconSize] = useState(() => {
-    try {
-      const saved = localStorage.getItem('connectionIconSize');
-      return saved ? parseInt(saved, 10) : 20;
-    } catch {
-      return 20;
-    }
-  });
+  // Aliases derivados para compatibilidad con todos los consumidores existentes
+  const folderIconSize = sidebarIconSize;
+  const connectionIconSize = sidebarIconSize;
+
+  // Setters unificados: cualquier setter actualiza el estado único
+  const setFolderIconSize = setSidebarIconSize;
+  const setConnectionIconSize = setSidebarIconSize;
 
   const [explorerColorTheme, setExplorerColorTheme] = useState(() => {
     try {
@@ -209,8 +221,13 @@ export const useThemeManagement = () => {
     }
   });
 
+  // sidebarFontSize: se deriva de sidebarIconSize automáticamente.
+  // El estado se mantiene para que todos los consumidores sigan funcionando sin cambios.
   const [sidebarFontSize, setSidebarFontSize] = useState(() => {
     try {
+      // Inicializar desde iconSize si ya hay uno guardado (garantiza coherencia)
+      const savedIconSize = localStorage.getItem('folderIconSize');
+      if (savedIconSize) return derivedFontSize(parseInt(savedIconSize, 10));
       const saved = localStorage.getItem('sidebarFontSize');
       return saved ? parseInt(saved, 10) : 15;
     } catch {
@@ -282,17 +299,18 @@ export const useThemeManagement = () => {
     } catch { }
   }, [iconSize]);
 
+  // Persistir el tamaño unificado en ambas claves para retrocompatibilidad total
+  // y derivar el fontSize proporcional automáticamente
   useEffect(() => {
     try {
-      localStorage.setItem('folderIconSize', folderIconSize.toString());
+      localStorage.setItem('folderIconSize', sidebarIconSize.toString());
+      localStorage.setItem('connectionIconSize', sidebarIconSize.toString());
+      // Sincronizar font size con el ratio fijo
+      const derived = derivedFontSize(sidebarIconSize);
+      setSidebarFontSize(derived);
+      localStorage.setItem('sidebarFontSize', derived.toString());
     } catch { }
-  }, [folderIconSize]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('connectionIconSize', connectionIconSize.toString());
-    } catch { }
-  }, [connectionIconSize]);
+  }, [sidebarIconSize]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     try {
@@ -425,6 +443,7 @@ export const useThemeManagement = () => {
     const updatedIconSize = localStorage.getItem('iconSize');
     const updatedFolderIconSize = localStorage.getItem('folderIconSize');
     const updatedConnectionIconSize = localStorage.getItem('connectionIconSize');
+    const updatedSidebarIconSize = updatedFolderIconSize || updatedConnectionIconSize;
     const updatedIconTheme = localStorage.getItem('iconTheme') || 'nord';
     const updatedIconThemeSidebar = localStorage.getItem('iconThemeSidebar') || 'nord';
     const updatedTreeTheme = localStorage.getItem(TREE_THEME_STORAGE_KEY) || 'default';
@@ -449,8 +468,7 @@ export const useThemeManagement = () => {
     if (updatedSidebarFontSize) setSidebarFontSize(parseInt(updatedSidebarFontSize, 10));
     setSidebarFontColor(updatedSidebarFontColor);
     if (updatedIconSize) setIconSize(parseInt(updatedIconSize, 10));
-    if (updatedFolderIconSize) setFolderIconSize(parseInt(updatedFolderIconSize, 10));
-    if (updatedConnectionIconSize) setConnectionIconSize(parseInt(updatedConnectionIconSize, 10));
+    if (updatedSidebarIconSize) setSidebarIconSize(parseInt(updatedSidebarIconSize, 10));
     setIconTheme(updatedIconTheme);
     setIconThemeSidebar(updatedIconThemeSidebar);
     setTreeTheme(updatedTreeTheme);
@@ -567,6 +585,10 @@ export const useThemeManagement = () => {
     setIconThemeSidebar,
     iconSize,
     setIconSize,
+    // Estado unificado
+    sidebarIconSize,
+    setSidebarIconSize,
+    // Aliases de compatibilidad (apuntan al mismo valor unificado)
     folderIconSize,
     setFolderIconSize,
     connectionIconSize,

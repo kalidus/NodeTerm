@@ -3732,9 +3732,9 @@ const SettingsDialog = ({
                           </div>
                         </div>
 
-                        {/* ═══════════════════════════════════════════════════════════════
-                          FILA 2: TIPOGRAFÍA
-                          ═══════════════════════════════════════════════════════════════ */}
+                         {/* ═══════════════════════════════════════════════════════════════
+                           FILA 2: TIPOGRAFÍA
+                           ═══════════════════════════════════════════════════════════════ */}
                         <div style={{
                           background: 'rgba(0, 0, 0, 0.08)',
                           borderRadius: '10px',
@@ -3754,11 +3754,29 @@ const SettingsDialog = ({
                               fontWeight: 600,
                               color: 'var(--ui-dialog-text)'
                             }}>Tipografía</span>
+                            {/* Badge con el tamaño de fuente calculado automáticamente */}
+                            <span style={{
+                              fontSize: '0.7rem',
+                              color: 'var(--ui-button-primary)',
+                              background: 'rgba(var(--ui-button-primary-rgb, 0,172,193), 0.12)',
+                              border: '1px solid rgba(var(--ui-button-primary-rgb, 0,172,193), 0.25)',
+                              borderRadius: '999px',
+                              padding: '1px 8px',
+                              fontWeight: 600,
+                              letterSpacing: '0.02em',
+                              marginLeft: '0.25rem',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px'
+                            }}>
+                              <i className="pi pi-link" style={{ fontSize: '0.6rem', opacity: 0.8 }}></i>
+                              {sidebarFontSize} px · auto
+                            </span>
                           </div>
 
                           <div style={{
                             display: 'grid',
-                            gridTemplateColumns: '1fr 1fr 1fr',
+                            gridTemplateColumns: '1fr 1fr',
                             gap: '1rem'
                           }}>
                             {/* Fuente */}
@@ -3786,38 +3804,6 @@ const SettingsDialog = ({
                                   <span style={{ fontFamily: option.value }}>{option.label}</span>
                                 )}
                               />
-                            </div>
-
-                            {/* Tamaño de Fuente con Slider */}
-                            <div style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.75rem'
-                            }}>
-                              <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                minWidth: '60px'
-                              }}>
-                                <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>{t('appearance.homePage.fontSize')}</span>
-                              </div>
-                              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <Slider
-                                  value={sidebarFontSize}
-                                  onChange={(e) => handleSidebarFontSizeChange(e.value)}
-                                  min={8}
-                                  max={24}
-                                  style={{ flex: 1 }}
-                                />
-                                <span style={{
-                                  fontSize: '0.75rem',
-                                  color: 'var(--ui-button-primary)',
-                                  fontWeight: 600,
-                                  minWidth: '40px',
-                                  textAlign: 'right'
-                                }}>{sidebarFontSize} px</span>
-                              </div>
                             </div>
 
                             {/* Color de Fuente */}
@@ -3890,7 +3876,7 @@ const SettingsDialog = ({
                         </div>
 
                         {/* ═══════════════════════════════════════════════════════════════
-                          FILA 3: TAMAÑO DE ICONOS
+                          FILA 3: TAMAÑO DE ICONOS (unificado)
                           ═══════════════════════════════════════════════════════════════ */}
                         <div style={{
                           background: 'rgba(0, 0, 0, 0.08)',
@@ -3898,11 +3884,12 @@ const SettingsDialog = ({
                           padding: '0.875rem 1rem',
                           border: '1px solid rgba(255, 255, 255, 0.05)'
                         }}>
+                          {/* Encabezado */}
                           <div style={{
                             display: 'flex',
                             alignItems: 'center',
                             gap: '0.5rem',
-                            marginBottom: '0.75rem'
+                            marginBottom: '0.875rem'
                           }}>
                             <i className="pi pi-expand" style={{ fontSize: '0.875rem', color: 'var(--ui-button-primary)' }}></i>
                             <span style={{
@@ -3912,97 +3899,77 @@ const SettingsDialog = ({
                             }}>Tamaño de Iconos</span>
                           </div>
 
-                          <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: '1fr 1fr',
-                            gap: '1rem'
-                          }}>
-                            {/* Carpetas */}
+                          {/* Slider único + preview de iconos a escala real */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+
+                            {/* Preview de iconos a escala real */}
                             <div style={{
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '0.75rem'
+                              gap: '0.5rem',
+                              minWidth: '56px',
+                              justifyContent: 'center'
                             }}>
-                              <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                minWidth: '90px'
-                              }}>
-                                {iconThemes[iconThemeSidebar]?.icons.folder &&
-                                  React.cloneElement(iconThemes[iconThemeSidebar].icons.folder, {
-                                    width: 18,
-                                    height: 18,
-                                    style: {
-                                      ...iconThemes[iconThemeSidebar].icons.folder.props.style,
-                                      width: '18px',
-                                      height: '18px'
-                                    }
-                                  })
-                                }
-                                <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>Carpetas</span>
-                              </div>
-                              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <Slider
-                                  value={folderIconSize || 20}
-                                  onChange={(e) => setFolderIconSize && setFolderIconSize(e.value)}
-                                  min={12}
-                                  max={32}
-                                  style={{ flex: 1 }}
-                                />
-                                <span style={{
-                                  fontSize: '0.75rem',
-                                  color: 'var(--ui-button-primary)',
-                                  fontWeight: 600,
-                                  minWidth: '40px',
-                                  textAlign: 'right'
-                                }}>{folderIconSize || 20} px</span>
-                              </div>
+                              {iconThemes[iconThemeSidebar]?.icons.folder &&
+                                React.cloneElement(iconThemes[iconThemeSidebar].icons.folder, {
+                                  width: folderIconSize || 20,
+                                  height: folderIconSize || 20,
+                                  style: {
+                                    ...iconThemes[iconThemeSidebar].icons.folder.props.style,
+                                    width: `${folderIconSize || 20}px`,
+                                    height: `${folderIconSize || 20}px`,
+                                    flexShrink: 0,
+                                    transition: 'width 0.15s, height 0.15s'
+                                  }
+                                })
+                              }
+                              {iconThemes[iconThemeSidebar]?.icons.ssh &&
+                                React.cloneElement(iconThemes[iconThemeSidebar].icons.ssh, {
+                                  width: folderIconSize || 20,
+                                  height: folderIconSize || 20,
+                                  style: {
+                                    ...iconThemes[iconThemeSidebar].icons.ssh.props.style,
+                                    width: `${folderIconSize || 20}px`,
+                                    height: `${folderIconSize || 20}px`,
+                                    flexShrink: 0,
+                                    transition: 'width 0.15s, height 0.15s'
+                                  }
+                                })
+                              }
                             </div>
 
-                            {/* Conexiones */}
-                            <div style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.75rem'
-                            }}>
-                              <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                minWidth: '90px'
-                              }}>
-                                {iconThemes[iconThemeSidebar]?.icons.ssh &&
-                                  React.cloneElement(iconThemes[iconThemeSidebar].icons.ssh, {
-                                    width: 18,
-                                    height: 18,
-                                    style: {
-                                      ...iconThemes[iconThemeSidebar].icons.ssh.props.style,
-                                      width: '18px',
-                                      height: '18px'
-                                    }
-                                  })
-                                }
-                                <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>Conexiones</span>
-                              </div>
-                              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <Slider
-                                  value={connectionIconSize || 20}
-                                  onChange={(e) => setConnectionIconSize && setConnectionIconSize(e.value)}
-                                  min={12}
-                                  max={32}
-                                  style={{ flex: 1 }}
-                                />
-                                <span style={{
-                                  fontSize: '0.75rem',
-                                  color: 'var(--ui-button-primary)',
-                                  fontWeight: 600,
-                                  minWidth: '40px',
-                                  textAlign: 'right'
-                                }}>{connectionIconSize || 20} px</span>
-                              </div>
+                            {/* Slider unificado */}
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <Slider
+                                value={folderIconSize || 20}
+                                onChange={(e) => {
+                                  // Un único cambio actualiza carpetas Y conexiones a la vez
+                                  if (setFolderIconSize) setFolderIconSize(e.value);
+                                  if (setConnectionIconSize) setConnectionIconSize(e.value);
+                                }}
+                                min={12}
+                                max={32}
+                                style={{ flex: 1 }}
+                              />
+                              <span style={{
+                                fontSize: '0.75rem',
+                                color: 'var(--ui-button-primary)',
+                                fontWeight: 600,
+                                minWidth: '40px',
+                                textAlign: 'right'
+                              }}>{folderIconSize || 20} px</span>
                             </div>
                           </div>
+
+                          {/* Hint descriptivo */}
+                          <p style={{
+                            fontSize: '0.75rem',
+                            color: 'var(--text-color-secondary)',
+                            opacity: 0.6,
+                            margin: '0.6rem 0 0 0'
+                          }}>
+                            Ajusta el tamaño de todos los iconos del árbol de sesiones (carpetas y conexiones) de forma proporcional.
+                          </p>
                         </div>
 
                         {/* ═══════════════════════════════════════════════════════════════
