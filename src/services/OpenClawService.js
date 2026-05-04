@@ -7,6 +7,7 @@ const http = require('http');
 const util = require('util');
 
 const execAsync = util.promisify(exec);
+const { removeReplacedImageAfterUpdate } = require('../utils/dockerImageCleanup');
 const DOCKER_CHECK_TTL_MS = 20_000;
 
 /** Sube este valor si cambia la plantilla embebida de openclaw.json para forzar recreación del contenedor. */
@@ -584,6 +585,7 @@ class OpenClawService {
     this.status.phase = 'updating';
     this.status.message = 'Actualizando OpenClaw (esto puede tardar)...';
     try {
+      const priorImageId = await this.getImageId(this.imageName);
       // 1. Asegurar que tenemos la última imagen
       await execAsync(this.buildDockerCommand(`pull ${this.imageName}`));
       
@@ -595,6 +597,12 @@ class OpenClawService {
       
       // 4. Esperar a que esté listo
       await this.waitForHealth();
+
+      await removeReplacedImageAfterUpdate(
+        this.buildDockerCommand.bind(this),
+        this.imageName,
+        priorImageId
+      );
       
       this.status.updateAvailable = false;
       this.status.phase = 'ready';

@@ -7,6 +7,7 @@ const http = require('http');
 const util = require('util');
 
 const execAsync = util.promisify(exec);
+const { removeReplacedImageAfterUpdate } = require('../utils/dockerImageCleanup');
 const DOCKER_CHECK_TTL_MS = 20_000;
 
 let electronApp = null;
@@ -423,6 +424,7 @@ class OpenNotebookService {
     this.status.phase = 'updating';
     this.status.message = 'Actualizando Open Notebook (esto puede tardar)...';
     try {
+      const priorImageId = await this.getImageId(this.imageName);
       // 1. Asegurar que tenemos la última imagen
       await execAsync(this.buildDockerCommand(`pull ${this.imageName}`));
       
@@ -434,6 +436,12 @@ class OpenNotebookService {
       
       // 4. Esperar a que esté listo
       await this.waitForHealth();
+
+      await removeReplacedImageAfterUpdate(
+        this.buildDockerCommand.bind(this),
+        this.imageName,
+        priorImageId
+      );
       
       this.status.updateAvailable = false;
       this.status.phase = 'ready';

@@ -7,6 +7,7 @@ const util = require('util');
 const crypto = require('crypto');
 
 const execAsync = util.promisify(exec);
+const { removeReplacedImageAfterUpdate } = require('../utils/dockerImageCleanup');
 
 /** Ruta del template relativa a la raíz del repo / app.asar (no es el `librechat.yaml` generado en userData). */
 const LIBRECHAT_BUNDLE_YAML_REL = path.join('config', 'librechat.full.yaml');
@@ -673,6 +674,7 @@ class LibreChatService {
     this.status.phase = 'updating';
     this.status.message = 'Actualizando LibreChat (esto puede tardar)...';
     try {
+      const priorImageId = await this.getImageId(this.imageName);
       // 1. Asegurar que tenemos la última imagen
       await execAsync(this.buildDockerCommand(`pull ${this.imageName}`));
       
@@ -684,6 +686,12 @@ class LibreChatService {
       
       // 4. Esperar a que esté listo
       await this.waitForHealth();
+
+      await removeReplacedImageAfterUpdate(
+        this.buildDockerCommand.bind(this),
+        this.imageName,
+        priorImageId
+      );
       
       this.status.updateAvailable = false;
       this.status.phase = 'ready';

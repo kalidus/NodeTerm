@@ -6,6 +6,7 @@ const http = require('http');
 const util = require('util');
 
 const execAsync = util.promisify(exec);
+const { removeReplacedImageAfterUpdate } = require('../utils/dockerImageCleanup');
 
 let electronApp = null;
 try {
@@ -48,7 +49,8 @@ class OpenWebUIService {
       dataDir: null,
       lastError: null,
       updateAvailable: false,
-      lastCheck: null
+      lastCheck: null,
+      lastUpdateCheck: null
     };
 
     this.dataDir = this._resolveDataDir();
@@ -188,52 +190,6 @@ class OpenWebUIService {
     } catch (_) {
       this.status.message = 'Descargando imagen Open WebUI...';
       await execAsync(this.buildDockerCommand(`pull ${this.imageName}`));
-    }
-  }
-
-  async getImageId() {
-    try {
-      const { stdout } = await execAsync(this.buildDockerCommand(`image inspect --format "{{.Id}}" ${this.imageName}`));
-      return stdout.trim();
-    } catch (_) {
-      return null;
-    }
-  }
-
-  async checkForUpdate() {
-    this.status.message = 'Buscando actualizaciones...';
-    try {
-      const oldId = await this.getImageId();
-      await execAsync(this.buildDockerCommand(`pull ${this.imageName}`));
-      const newId = await this.getImageId();
-      
-      const hasUpdate = oldId !== null && newId !== null && oldId !== newId;
-      this.status.updateAvailable = hasUpdate;
-      this.status.lastUpdateCheck = new Date().toISOString();
-      
-      this.status.message = hasUpdate ? 'Actualización disponible' : 'Open WebUI al día';
-      return hasUpdate;
-    } catch (error) {
-      console.error('[OpenWebUI] Error buscando actualizaciones:', error);
-      this.status.message = 'Error al buscar actualizaciones';
-      return false;
-    }
-  }
-
-  async applyUpdate() {
-    this.status.phase = 'updating';
-    this.status.message = 'Aplicando actualización...';
-    try {
-      await this.removeContainer();
-      await this.startContainer();
-      await this.waitForHealth();
-      this.status.updateAvailable = false;
-      this.status.message = 'Actualización completada';
-      return true;
-    } catch (error) {
-      this.status.phase = 'error';
-      this.status.message = `Error actualizando: ${error.message}`;
-      throw error;
     }
   }
 
@@ -396,8 +352,9 @@ class OpenWebUIService {
       imageName: this.imageName,
       dataDir: this.dataDir,
       lastHealthCheck: this.lastHealthCheck,
-      updateAvailable: this.status.updateAvailable,
-      lastCheck: this.status.lastCheck,
+      updateAvailable: this.status.updateAvailable || false,
+      lastCheck: this.status.lastCheck || null,
+      lastUpdateCheck: this.status.lastUpdateCheck || this.status.lastCheck || null,
       lastError: this.status.lastError || (this.lastError && this.lastError.message) || null
     };
   }
@@ -419,7 +376,7 @@ class OpenWebUIService {
     return this.getStatus();
   }
 
-  async getImageId(imageName) {
+  async getImageId(imageName = this.imageName) {
     try {
       const { stdout } = await execAsync(this.buildDockerCommand(`image inspect ${imageName} --format "{{.Id}}"`));
       return stdout.trim();
@@ -442,7 +399,9 @@ class OpenWebUIService {
       const updateAvailable = currentImageId !== latestImageId;
       
       this.status.updateAvailable = updateAvailable;
-      this.status.lastCheck = new Date().toISOString();
+      const ts = new Date().toISOString();
+      this.status.lastCheck = ts;
+      this.status.lastUpdateCheck = ts;
       this.status.phase = 'idle';
       this.status.message = updateAvailable ? 'Actualización disponible' : 'Open WebUI está al día';
       
@@ -458,17 +417,24 @@ class OpenWebUIService {
     this.status.phase = 'updating';
     this.status.message = 'Actualizando Open WebUI (esto puede tardar)...';
     try {
+      const priorImageId = await this.getImageId(this.imageName);
       // 1. Asegurar que tenemos la última imagen
       await execAsync(this.buildDockerCommand(`pull ${this.imageName}`));
       
       // 2. Detener y eliminar contenedor actual
-      await this.removeContainer(this.containerName);
+      await this.removeContainer();
       
       // 3. Iniciar de nuevo (usará la nueva imagen)
       await this.startContainer();
       
       // 4. Esperar a que esté listo
       await this.waitForHealth();
+
+      await removeReplacedImageAfterUpdate(
+        this.buildDockerCommand.bind(this),
+        this.imageName,
+        priorImageId
+      );
       
       this.status.updateAvailable = false;
       this.status.phase = 'ready';
@@ -480,10 +446,6 @@ class OpenWebUIService {
       this.status.message = 'Error aplicando actualización';
       throw error;
     }
-  }
-
-  getDataDir() {
-    return this.dataDir;
   }
 }
 
