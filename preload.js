@@ -154,8 +154,36 @@ contextBridge.exposeInMainWorld('electron', {
     uninstallCli: () => ipcRenderer.invoke('codexcli:cli-uninstall')
   },
   ipcRenderer: {
-    send: (channel, data) => {
-      ipcRenderer.send(channel, data);
+    send: (channel, ...args) => {
+      const validSendChannels = [
+        'register-tab-events',
+        'ssh:connect',
+        'ssh:data',
+        'ssh:resize',
+        'ssh:disconnect',
+        'ssh:set-active-stats-tab',
+        'ssh:send-command',
+        'statusbar:set-polling-interval',
+        'app:save-ssh-connections-for-mcp',
+        'app:save-passwords-for-mcp',
+        'docker:resize',
+        /^powershell:(start|data|resize|stop):.+$/,
+        /^wsl:(start|data|resize|stop):.+$/,
+        /^ubuntu:(start|data|resize|stop):.+$/,
+        /^wsl-distro:(start|data|resize|stop):.+$/,
+        /^cygwin:(start|data|resize|stop):.+$/,
+        /^claude:(start|data|resize|stop):.+$/,
+        /^opencode:(start|data|resize|stop):.+$/,
+        /^geminicli:(start|data|resize|stop):.+$/,
+        /^codexcli:(start|data|resize|stop):.+$/,
+        /^docker:(start|data|stop):.+$/,
+        /^linux-terminal:data:.+$/,
+      ];
+      const allowed = validSendChannels.some((rule) =>
+        typeof rule === 'string' ? rule === channel : rule.test(channel)
+      );
+      if (!allowed) return;
+      ipcRenderer.send(channel, ...args);
     },
     invoke: (channel, ...args) => {
       const validChannels = [

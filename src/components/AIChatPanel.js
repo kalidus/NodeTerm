@@ -2816,7 +2816,7 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
       // Sanitizar
       const cleanHtml = DOMPurify.sanitize(processedHtml, {
         ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'code', 'pre', 'a', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr', 'span', 'div', 'button', 'i'],
-        ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'id', 'onclick', 'data-language', 'data-code-id', 'data-code'],
+        ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'id', 'data-language', 'data-code-id', 'data-code'],
         ALLOW_DATA_ATTR: true,
         ALLOW_UNKNOWN_PROTOCOLS: false,
         SANITIZE_DOM: false
@@ -2930,49 +2930,6 @@ const AIChatPanel = ({ showHistory = true, onToggleHistory, onExecuteCommandInTe
       }
     });
   }, []);
-
-  // Componente para bloques de código con formato ChatGPT-like
-  const CodeBlockWithCopy = ({ code, language }) => {
-    const [copied, setCopied] = useState(false);
-
-    const handleCopy = async () => {
-      try {
-        await navigator.clipboard.writeText(code);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      } catch (err) {
-        console.error('Error copying code:', err);
-        // Fallback para navegadores que no soportan clipboard API
-        const textArea = document.createElement('textarea');
-        textArea.value = code;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }
-    };
-
-    return (
-      <div className="ai-codeblock">
-        <pre className="hljs">
-          <code dangerouslySetInnerHTML={{ __html: code }} />
-        </pre>
-        <button 
-          className="ai-copy-btn" 
-          onClick={handleCopy} 
-          title={copied ? "¡Copiado!" : "Copiar código"}
-        >
-          <i className={copied ? 'pi pi-check' : 'pi pi-copy'} />
-          {copied ? 'Copiado' : 'Copiar'}
-        </button>
-        {language && (
-          <span className="ai-code-lang">{language}</span>
-        )}
-      </div>
-    );
-  };
 
   // 🎨 Componente para Tool Execution Card (Estilo ChatGPT/Claude)
   const ToolExecutionCard = ({ messageId, toolName, toolArgs, toolResult, isError = false, initialExpanded = false, messageMetadata = null }) => {
