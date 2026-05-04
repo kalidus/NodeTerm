@@ -593,8 +593,10 @@ export const useTabManagement = (toast, {
       // Manejar cierre de pestañas RDP
       // Opcional: desconectar la sesión RDP si es necesario
       if (window.electron && window.electron.ipcRenderer) {
-        // Intentar desconectar la sesión RDP
-        window.electron.ipcRenderer.invoke('rdp:disconnect-session', closedTab.rdpConfig);
+        // Intentar desconectar la sesión RDP (evitar promesa rechazada no manejada)
+        void window.electron.ipcRenderer
+          .invoke('rdp:disconnect-session', closedTab.rdpConfig)
+          .catch(() => {});
       }
       const newRdpTabs = rdpTabs.filter(t => t.key !== closedTab.key);
       setRdpTabs(newRdpTabs);

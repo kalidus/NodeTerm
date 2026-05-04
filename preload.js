@@ -6,14 +6,6 @@ contextBridge.exposeInMainWorld('electron', {
     writeText: (text) => ipcRenderer.invoke('clipboard:writeText', text),
     readText: () => ipcRenderer.invoke('clipboard:readText'),
   },
-  ipcRenderer: {
-    invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
-    on: (channel, callback) => {
-      const listener = (_event, ...args) => callback(...args);
-      ipcRenderer.on(channel, listener);
-      return () => ipcRenderer.removeListener(channel, listener);
-    },
-  },
   fileExplorer: {
     listFiles: (tabId, path, config) => {
       // Si tiene protocol, usar handlers de archivos; si no, usar SSH (compatibilidad)
@@ -228,6 +220,7 @@ contextBridge.exposeInMainWorld('electron', {
       })) {
         return ipcRenderer.invoke(channel, ...args);
       }
+      return Promise.reject(new Error(`Invalid IPC channel: ${String(channel)}`));
     },
     on: (channel, func) => {
       const validChannels = [
