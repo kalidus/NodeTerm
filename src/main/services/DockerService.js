@@ -215,23 +215,34 @@ async function startDockerSession(tabId, containerName, { cols, rows }) {
       return;
     }
 
-    // Validar que el contenedor existe
+    // ✅ SEGURIDAD: Validar que el contenedor existe usando argumentos separados (evita inyección)
     try {
-      execSync(`docker ps --filter "name=${containerName}" --format "{{.Names}}"`, {
+      const { spawnSync } = require('child_process');
+      const check = spawnSync('docker', ['ps', '--filter', `name=${containerName}`, '--format', '{{.Names}}'], {
         encoding: 'utf8',
-        stdio: 'pipe',
-        shell: true
+        timeout: 5000
       });
+      
+      if (check.error || check.status !== 0) {
+        throw new Error(check.error?.message || 'Error al verificar el contenedor');
+      }
+      
+      if (!check.stdout.trim()) {
+        throw new Error(`Contenedor '${containerName}' no encontrado o no está corriendo`);
+      }
     } catch (e) {
-      throw new Error(`Contenedor '${containerName}' no encontrado o no está corriendo`);
+      throw new Error(`Error de validación Docker: ${e.message}`);
     }
 
     // Comando para entrar al contenedor
     let cmd, args;
 
     if (os.platform() === 'win32') {
+      // ✅ SEGURIDAD Y COMPATIBILIDAD: Usamos PowerShell para que resuelva el PATH de Docker,
+      // pero escapamos el nombre del contenedor con comillas simples para evitar RCE.
       cmd = 'powershell.exe';
-      args = ['-Command', `docker exec -it ${containerName} /bin/bash`];
+      const safeContainerName = `'${containerName.replace(/'/g, "''")}'`;
+      args = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', `docker exec -it ${safeContainerName} /bin/bash`];
     } else {
       cmd = 'docker';
       args = ['exec', '-it', containerName, '/bin/bash'];
