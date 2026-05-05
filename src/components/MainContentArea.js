@@ -418,7 +418,14 @@ const MainContentArea = ({
       const { terminalType, distroInfo } = event.detail;
       console.log('Recibido evento create-local-terminal:', { terminalType, distroInfo });
 
-      // Forzar apertura en el terminal integrado del HomeTab (no en pestañas globales)
+      // Los CLIs de IA se abren siempre en pestañas globales, no en el HomeTab
+      const isAIClient = ['opencode', 'geminicli', 'codexcli', 'claude'].includes(terminalType);
+      if (isAIClient) {
+        createLocalTerminalTab(terminalType, distroInfo);
+        return;
+      }
+
+      // El resto de terminales locales (PowerShell, WSL, Docker) fuerzan apertura en el terminal integrado del HomeTab
       try {
         if (activeGroupId !== null) {
           const currentGroupKey = activeGroupId || 'no-group';
@@ -450,7 +457,7 @@ const MainContentArea = ({
     return () => {
       window.removeEventListener('create-local-terminal', handleCreateLocalTerminal);
     };
-  }, [activeGroupId, activeTabIndex, getTabsInGroup, setActiveGroupId, setGroupActiveIndices, setActiveTabIndex]);
+  }, [activeGroupId, activeTabIndex, getTabsInGroup, setActiveGroupId, setGroupActiveIndices, setActiveTabIndex, createLocalTerminalTab]);
 
   // Escuchar cambios en la configuración de terminal por defecto
   useEffect(() => {
