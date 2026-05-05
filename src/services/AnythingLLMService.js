@@ -76,6 +76,43 @@ class AnythingLLMService {
     return dir;
   }
 
+  /**
+   * Ejecuta un comando de Docker de forma segura sin usar el shell
+   * @param {string[]} args - Lista de argumentos
+   * @param {object} options - Opciones para child_process.spawn
+   */
+  async safeExecDocker(args, options = {}) {
+    const binary = this.resolveDockerCommand();
+    const { spawn } = require('child_process');
+    
+    return new Promise((resolve, reject) => {
+      const child = spawn(binary, args, {
+        ...options,
+        shell: false,
+        windowsHide: true
+      });
+
+      let stdout = '';
+      let stderr = '';
+
+      child.stdout?.on('data', (data) => { stdout += data.toString(); });
+      child.stderr?.on('data', (data) => { stderr += data.toString(); });
+
+      child.on('close', (code) => {
+        if (code === 0) {
+          resolve({ stdout, stderr });
+        } else {
+          const errorMsg = stderr.trim() || stdout.trim() || `Docker falló con código ${code}`;
+          reject(new Error(errorMsg));
+        }
+      });
+
+      child.on('error', (err) => {
+        reject(new Error(`Error iniciando proceso Docker: ${err.message}`));
+      });
+    });
+  }
+
   resolveDockerCommand() {
     if (this._dockerCommand) return this._dockerCommand;
     let candidate = 'docker';
@@ -97,14 +134,6 @@ class AnythingLLMService {
 
     this._dockerCommand = candidate;
     return this._dockerCommand;
-  }
-
-  buildDockerCommand(args) {
-    const binary = this.resolveDockerCommand();
-    const needsQuotes = /\s/.test(binary);
-    const quoted = needsQuotes ? `"${binary}"` : binary;
-    if (!args) return quoted;
-    return `${quoted} ${args}`.trim();
   }
 
   getBaseUrl() {
@@ -167,18 +196,13 @@ class AnythingLLMService {
     this.status.message = 'Verificando Docker Desktop';
 
     try {
-      await execAsync(this.buildDockerCommand('--version'));
-    } catch (_) {
-      try {
-        await execAsync('docker --version');
-        this._dockerCommand = 'docker';
-      } catch (error) {
-        throw new Error('Docker no está instalado o no se encuentra en el PATH.');
-      }
+      await this.safeExecDocker(['--version']);
+    } catch (error) {
+      throw new Error(`Docker no está disponible: ${error.message}`);
     }
 
     try {
-      await execAsync(this.buildDockerCommand('info'));
+      await this.safeExecDocker(['info']);
     } catch (error) {
       throw new Error('Docker Desktop no está en ejecución. Inícialo e inténtalo nuevamente.');
     }
@@ -188,10 +212,10 @@ class AnythingLLMService {
     this.status.phase = 'image';
     this.status.message = 'Verificando imagen AnythingLLM';
     try {
-      await execAsync(this.buildDockerCommand(`image inspect ${this.imageName}`));
+      await this.safeExecDocker(['image', 'inspect', this.imageName]);
     } catch (_) {
       this.status.message = 'Descargando imagen AnythingLLM...';
-      await execAsync(this.buildDockerCommand(`pull ${this.imageName}`));
+      await this.safeExecDocker(['pull', this.imageName]);
     }
   }
 
@@ -203,7 +227,7 @@ class AnythingLLMService {
 
   async isContainerRunning() {
     try {
-      const { stdout } = await execAsync(this.buildDockerCommand(`ps --filter "name=${this.containerName}" --format "{{.Names}}"`));
+      const { stdout } = await this.safeExecDocker(['ps', '--filter', `name=${this.containerName}`, '--format', '{{.Names}}']);
       return stdout.trim() === this.containerName;
     } catch (_) {
       return false;
@@ -212,7 +236,7 @@ class AnythingLLMService {
 
   async isContainerExisting() {
     try {
-      const { stdout } = await execAsync(this.buildDockerCommand(`ps -a --filter "name=${this.containerName}" --format "{{.Names}}"`));
+      const { stdout } = await this.safeExecDocker(['ps', '-a', '--filter', `name=${this.containerName}`, '--format', '{{.Names}}']);
       return stdout.trim() === this.containerName;
     } catch (_) {
       return false;
@@ -223,12 +247,12 @@ class AnythingLLMService {
     this.status.phase = 'cleanup';
     this.status.message = 'Eliminando contenedor previo';
     try {
-      await execAsync(this.buildDockerCommand(`stop ${this.containerName}`));
+      await this.safeExecDocker(['stop', this.containerName]);
     } catch (_) {
       // ignore
     }
     try {
-      await execAsync(this.buildDockerCommand(`rm -f ${this.containerName}`));
+      await this.safeExecDocker(['rm', '-f', this.containerName]);
     } catch (_) {
       // ignore
     }
@@ -274,7 +298,7 @@ class AnythingLLMService {
    * @returns {Promise<object>} Información del volumen añadido
    */
   async addVolumeMapping(hostPath, containerPath) {
-    // Normalizar ruta del host
+    // ✅ SEGURIDAD: Normalizar y resolver ruta del host
     const normalizedHostPath = path.resolve(hostPath);
     
     // Verificar que la ruta existe
@@ -285,6 +309,16 @@ class AnythingLLMService {
       }
     } catch (error) {
       throw new Error(`La ruta no existe o no es accesible: ${error.message}`);
+    }
+
+    // ✅ SEGURIDAD: Sanear ruta del contenedor para evitar inyecciones o rutas peligrosas
+    let safeContainerPath = containerPath;
+    if (!safeContainerPath) {
+      safeContainerPath = `/mnt/host/${path.basename(normalizedHostPath).toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+    } else {
+      // No permitir caracteres que puedan romper el comando o ser usados para inyección
+      safeContainerPath = safeContainerPath.replace(/[^a-zA-Z0-9\/\-_]/g, '');
+      if (!safeContainerPath.startsWith('/')) safeContainerPath = '/' + safeContainerPath;
     }
 
     // Verificar si ya existe un mapeo para esta ruta
@@ -300,7 +334,7 @@ class AnythingLLMService {
     const volumeMapping = {
       id: `vol_${Date.now()}`,
       hostPath: normalizedHostPath,
-      containerPath: containerPath || `/mnt/host/${path.basename(normalizedHostPath).toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+      containerPath: safeContainerPath,
       createdAt: new Date().toISOString()
     };
 
@@ -337,39 +371,39 @@ class AnythingLLMService {
     this.status.phase = 'starting';
     this.status.message = 'Iniciando contenedor AnythingLLM';
 
+    // Asegurar que la red nodeterm-network existe
+    try {
+      await this.safeExecDocker(['network', 'create', 'nodeterm-network']);
+    } catch (_) {}
+
     const volumeHostPath = process.platform === 'win32'
       ? this.dataDir
       : this.dataDir.replace(/\\/g, '/');
 
-    // Construir argumentos de volúmenes
-    const volumeArgs = [`-v "${volumeHostPath}:/app/server/storage"`];
+    // ✅ SEGURIDAD: Construir lista de argumentos para el comando 'run'
+    const args = [
+      'run', '-d',
+      '--name', this.containerName,
+      '--restart', 'unless-stopped',
+      '--network', 'nodeterm-network',
+      '-p', `${this.hostPort}:${this.containerPort}`,
+      '-v', `${volumeHostPath}:/app/server/storage`
+    ];
     
-    // Añadir volúmenes adicionales
+    // Añadir volúmenes adicionales de forma segura
     for (const vol of this.additionalVolumes) {
       const hostPath = process.platform === 'win32' 
         ? vol.hostPath 
         : vol.hostPath.replace(/\\/g, '/');
-      volumeArgs.push(`-v "${hostPath}:${vol.containerPath}"`);
+      args.push('-v', `${hostPath}:${vol.containerPath}`);
     }
 
-    // Asegurar que la red nodeterm-network existe
-    try {
-      await execAsync(this.buildDockerCommand('network create nodeterm-network'));
-    } catch (_) {}
+    // Variables de entorno y nombre de la imagen
+    args.push('-e', 'DISABLE_TELEMETRY=true');
+    args.push('-e', 'STORAGE_DIR=/app/server/storage');
+    args.push(this.imageName);
 
-    const args = [
-      'run -d',
-      `--name ${this.containerName}`,
-      '--restart unless-stopped',
-      '--network nodeterm-network',
-      `-p ${this.hostPort}:${this.containerPort}`,
-      ...volumeArgs,
-      '-e DISABLE_TELEMETRY=true',
-      '-e STORAGE_DIR=/app/server/storage',
-      this.imageName
-    ].join(' ');
-
-    await execAsync(this.buildDockerCommand(args));
+    await this.safeExecDocker(args);
   }
 
   async waitForHealth() {
@@ -413,7 +447,7 @@ class AnythingLLMService {
     this.status.phase = 'stopping';
     this.status.message = 'Deteniendo AnythingLLM';
     try {
-      await execAsync(this.buildDockerCommand(`stop ${this.containerName}`));
+      await this.safeExecDocker(['stop', this.containerName]);
     } catch (_) {
       // ignore errors when stopping
     }
@@ -426,7 +460,7 @@ class AnythingLLMService {
 
   async getImageId(imageName = this.imageName) {
     try {
-      const { stdout } = await execAsync(this.buildDockerCommand(`image inspect ${imageName} --format "{{.Id}}"`));
+      const { stdout } = await this.safeExecDocker(['image', 'inspect', imageName, '--format', '{{.Id}}']);
       return stdout.trim();
     } catch (_) {
       return null;
@@ -438,7 +472,7 @@ class AnythingLLMService {
     this.status.message = 'Buscando actualizaciones para AnythingLLM...';
     try {
       const currentImageId = await this.getImageId(this.imageName);
-      await execAsync(this.buildDockerCommand(`pull ${this.imageName}`));
+      await this.safeExecDocker(['pull', this.imageName]);
       const latestImageId = await this.getImageId(this.imageName);
       const updateAvailable = currentImageId !== latestImageId;
       this.status.updateAvailable = updateAvailable;
@@ -460,12 +494,12 @@ class AnythingLLMService {
     this.status.message = 'Actualizando AnythingLLM (esto puede tardar)...';
     try {
       const priorImageId = await this.getImageId(this.imageName);
-      await execAsync(this.buildDockerCommand(`pull ${this.imageName}`));
+      await this.safeExecDocker(['pull', this.imageName]);
       await this.removeContainer();
       await this.startContainer();
       await this.waitForHealth();
       await removeReplacedImageAfterUpdate(
-        this.buildDockerCommand.bind(this),
+        (args) => this.safeExecDocker(args.split(' ')), // Adaptador para cleanup script
         this.imageName,
         priorImageId
       );
@@ -506,7 +540,9 @@ class AnythingLLMService {
    * @returns {Promise<object>} Contenido del archivo JSON parseado
    */
   async readJsonFile(filename) {
-    const filePath = path.join(this.dataDir, filename);
+    // ✅ SEGURIDAD: Prevenir path traversal saneando el nombre del archivo
+    const safeFilename = path.basename(filename);
+    const filePath = path.join(this.dataDir, safeFilename);
     try {
       const content = await fs.promises.readFile(filePath, 'utf8');
       return JSON.parse(content);
@@ -515,7 +551,7 @@ class AnythingLLMService {
         // Archivo no existe, retornar objeto vacío
         return {};
       }
-      throw new Error(`Error leyendo ${filename}: ${error.message}`);
+      throw new Error(`Error leyendo ${safeFilename}: ${error.message}`);
     }
   }
 
@@ -526,14 +562,16 @@ class AnythingLLMService {
    * @returns {Promise<void>}
    */
   async writeJsonFile(filename, data) {
-    const filePath = path.join(this.dataDir, filename);
+    // ✅ SEGURIDAD: Prevenir path traversal saneando el nombre del archivo
+    const safeFilename = path.basename(filename);
+    const filePath = path.join(this.dataDir, safeFilename);
     try {
       // Asegurar que el directorio existe
       await fs.promises.mkdir(this.dataDir, { recursive: true });
       // Escribir con formato bonito (2 espacios de indentación)
       await fs.promises.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
     } catch (error) {
-      throw new Error(`Error escribiendo ${filename}: ${error.message}`);
+      throw new Error(`Error escribiendo ${safeFilename}: ${error.message}`);
     }
   }
 
