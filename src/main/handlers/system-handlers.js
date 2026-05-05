@@ -124,7 +124,16 @@ function registerSystemMonitoringHandlers() {
       if (!filePath || typeof filePath !== 'string' || filePath.trim() === '') {
         return { ok: false, error: 'filePath inválido o vacío' };
       }
-      const safePath = filePath.trim();
+      
+      const safePath = path.resolve(filePath.trim());
+      
+      // Verificación básica: No permitir leer archivos de configuración sensibles directamente si no es necesario
+      const fileName = path.basename(safePath).toLowerCase();
+      if (fileName === 'id_rsa' || fileName === '.env' || fileName === 'security.json') {
+        console.warn(`⚠️ [Security] Intento de lectura bloqueado para archivo sensible: ${fileName}`);
+        return { ok: false, error: 'Acceso denegado a archivos sensibles del sistema' };
+      }
+
       const data = fs.readFileSync(safePath, 'utf-8');
       return { ok: true, content: data };
     } catch (e) {
@@ -144,7 +153,16 @@ function registerSystemMonitoringHandlers() {
   // Handler para abrir URL externa
   ipcMain.handle('import:open-external', async (event, url) => {
     try {
-      await shell.openExternal(url);
+      // ✅ VALIDACIÓN DE SEGURIDAD: Solo permitir protocolos web seguros
+      if (!url || typeof url !== 'string') return { ok: false, error: 'URL inválida' };
+      
+      const trimmedUrl = url.trim();
+      if (!trimmedUrl.startsWith('http://') && !trimmedUrl.startsWith('https://')) {
+        console.warn('⚠️ [Security] Intento de abrir protocolo no seguro:', trimmedUrl);
+        return { ok: false, error: 'Solo se permiten protocolos http:// y https://' };
+      }
+
+      await shell.openExternal(trimmedUrl);
       return { ok: true };
     } catch (e) {
       return { ok: false, error: e?.message };
@@ -416,8 +434,10 @@ function registerSystemMonitoringHandlers() {
       const os = require('os');
       const fs = require('fs').promises;
 
+      // ✅ VALIDACIÓN DE SEGURIDAD: Sanear el nombre del archivo para evitar path traversal
+      const safeFileName = path.basename(fileName);
       const tempDir = os.tmpdir();
-      const tempFilePath = path.join(tempDir, `nodeterm-upload-${Date.now()}-${fileName}`);
+      const tempFilePath = path.join(tempDir, `nodeterm-upload-${Date.now()}-${safeFileName}`);
 
       // Convertir ArrayBuffer a Buffer y escribir
       const buffer = Buffer.from(arrayBuffer);

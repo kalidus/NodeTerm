@@ -100,7 +100,14 @@ async function listFiles(targetPath) {
             try {
                 // To avoid long execs in massive directories, limit timeout
                 if (files.length < 1000) {
-                    const { stdout } = await execPromise(`attrib /D "${path.join(safePath, '*')}"`, { timeout: 2000 }).catch(() => ({ stdout: '' }));
+                    // ✅ SEGURIDAD: Usar spawn en lugar de exec para evitar inyección de comandos
+                    const { spawn } = require('child_process');
+                    const child = spawn('attrib', ['/D', path.join(safePath, '*')], { timeout: 2000 });
+                    
+                    let stdout = '';
+                    for await (const chunk of child.stdout) {
+                      stdout += chunk;
+                    }
                     // Use regex that handles both CRLF and LF safely
                     const lines = stdout.split(/\r?\n/);
                     for (const line of lines) {
