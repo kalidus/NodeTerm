@@ -353,12 +353,18 @@ class SSHAuthService {
           sendToRenderer(sender, `ssh:data:${tabId}`, data.toString('utf-8'));
         });
 
+        // Guardar password en el objeto de conexión para uso interno (ej: SFTP)
+        // y NO enviarlo al renderer por seguridad.
+        if (manualPassword) {
+          conn.manualPassword = manualPassword;
+        }
+
         sendToRenderer(sender, `ssh:data:${tabId}`, '\r\n✅ Conectado exitosamente.\r\n');
         sendToRenderer(sender, `ssh:ready:${tabId}`);
         sendToRenderer(sender, 'ssh-connection-ready', {
           originalKey: conn.originalKey || tabId,
-          tabId: tabId,
-          password: manualPassword // Incluir password si se proporcionó manualmente
+          tabId: tabId
+          // 🛡️ SEGURIDAD: Ya no enviamos el password al renderer
         });
 
         // Callback de éxito

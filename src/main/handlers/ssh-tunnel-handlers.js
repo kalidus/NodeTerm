@@ -47,8 +47,35 @@ function getService() {
  * @param {Object} dependencies - Dependencias (mainWindow)
  */
 function registerSSHTunnelHandlers(dependencies = {}) {
-  const { mainWindow } = dependencies;
+  const { mainWindow, findSSHConnection } = dependencies;
   mainWindowRef = mainWindow;
+
+  /**
+   * ✅ SEGURIDAD: Resuelve las credenciales de una conexión.
+   * Si el renderer no envía password pero tenemos una conexión activa con password manual,
+   * inyectamos el password manual en la configuración para el túnel.
+   */
+  const resolveCredentials = async (tabId, config) => {
+    if (!config) return config;
+    
+    // Si ya tiene password o tiene llave privada, no hacemos nada
+    if (config.sshPassword || config.privateKeyPath) return config;
+
+    // Crear un objeto de config compatible con lo que espera findSSHConnection
+    const sshConfig = {
+      host: config.sshHost,
+      port: config.sshPort || 22,
+      username: config.sshUser
+    };
+
+    // Intentar encontrar una conexión activa para este tabId o servidor
+    const conn = await findSSHConnection(tabId, sshConfig);
+    if (conn && conn.manualPassword) {
+      return { ...config, sshPassword: conn.manualPassword };
+    }
+    
+    return config;
+  };
 
   // === CREAR/INICIAR TÚNEL ===
   ipcMain.handle('ssh-tunnel:start', async (event, config) => {
@@ -92,7 +119,10 @@ function registerSSHTunnelHandlers(dependencies = {}) {
       }
       
       const service = getService();
-      const result = await service.startTunnel(config);
+      
+      // 🛡️ SEGURIDAD: Resolver credenciales desde el main process si es posible
+      const secureConfig = await resolveCredentials(config.tabId, config);
+      const result = await service.startTunnel(secureConfig);
       
       return result;
     } catch (err) {

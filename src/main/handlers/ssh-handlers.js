@@ -162,6 +162,26 @@ function registerSSHHandlers(dependencies = {}) {
   const { findSSHConnection, sshConnections } = dependencies || {};
   const activeTransfers = new Map();
 
+  /**
+   * ✅ SEGURIDAD: Resuelve las credenciales de una conexión.
+   * Si el renderer no envía password pero tenemos una conexión activa con password manual,
+   * inyectamos el password manual en la configuración para la operación SFTP/SSH.
+   */
+  const resolveCredentials = async (tabId, sshConfig) => {
+    if (!sshConfig) return sshConfig;
+    
+    // Si ya tiene password o tiene llave privada, no hacemos nada
+    if (sshConfig.password || sshConfig.privateKey) return sshConfig;
+
+    // Intentar encontrar una conexión activa para este tabId o servidor
+    const conn = await findSSHConnection(tabId, sshConfig);
+    if (conn && conn.manualPassword) {
+      return { ...sshConfig, password: conn.manualPassword };
+    }
+    
+    return sshConfig;
+  };
+
   const markTransferDone = (transferId) => {
     if (!transferId) return;
     activeTransfers.delete(transferId);
@@ -193,7 +213,8 @@ function registerSSHHandlers(dependencies = {}) {
   // SSH: Obtener directorio home
   ipcMain.handle('ssh:get-home-directory', async (event, { tabId, sshConfig }) => {
     try {
-      if (sshConfig.useBastionWallix) {
+      const secureConfig = await resolveCredentials(tabId, sshConfig);
+      if (secureConfig.useBastionWallix) {
         // Buscar la conexión existente para bastion
         const existingConn = await findSSHConnection(tabId, sshConfig);
         if (existingConn && existingConn.ssh && existingConn.stream) {
@@ -227,10 +248,10 @@ function registerSSHHandlers(dependencies = {}) {
           const SftpClient = require('ssh2-sftp-client');
           const sftp = new SftpClient();
           const connectConfig = {
-            host: sshConfig.bastionHost,
-            port: sshConfig.port || 22,
-            username: sshConfig.bastionUser,
-            password: sshConfig.password,
+            host: secureConfig.bastionHost,
+            port: secureConfig.port || 22,
+            username: secureConfig.bastionUser,
+            password: secureConfig.password,
             readyTimeout: 20000,
             algorithms: {
               kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
@@ -246,7 +267,7 @@ function registerSSHHandlers(dependencies = {}) {
           return { success: true, home };
         }
       } else {
-        const ssh = new SSH2Promise(sshConfig);
+        const ssh = new SSH2Promise(secureConfig);
         await ssh.connect();
         const home = await ssh.exec('echo $HOME');
         await ssh.close();
@@ -260,6 +281,7 @@ function registerSSHHandlers(dependencies = {}) {
   // SSH: Listar archivos
   ipcMain.handle('ssh:list-files', async (event, { tabId, path, sshConfig }) => {
     try {
+      const secureConfig = await resolveCredentials(tabId, sshConfig);
       // Validación robusta de path
       let safePath = '/';
       if (typeof path === 'string') {
@@ -271,9 +293,9 @@ function registerSSHHandlers(dependencies = {}) {
       let ssh;
       let shouldCloseConnection = false;
 
-      if (sshConfig.useBastionWallix) {
+      if (secureConfig.useBastionWallix) {
         // Buscar la conexión existente para bastion
-        const existingConn = await findSSHConnection(tabId, sshConfig);
+        const existingConn = await findSSHConnection(tabId, secureConfig);
         if (existingConn && existingConn.ssh && existingConn.stream) {
           // Modo antiguo: usar stream interactivo si existe
           ssh = existingConn.ssh;
@@ -305,10 +327,10 @@ function registerSSHHandlers(dependencies = {}) {
           // Nuevo: usar SFTP para listar archivos si no hay stream interactivo
           const sftp = new SftpClient();
           const connectConfig = {
-            host: sshConfig.bastionHost,
-            port: sshConfig.port || 22,
-            username: sshConfig.bastionUser,
-            password: sshConfig.password,
+            host: secureConfig.bastionHost,
+            port: secureConfig.port || 22,
+            username: secureConfig.bastionUser,
+            password: secureConfig.password,
             readyTimeout: 20000,
             algorithms: {
               kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
@@ -334,7 +356,7 @@ function registerSSHHandlers(dependencies = {}) {
         }
       } else {
         // SSH directo: crear nueva conexión
-        ssh = new SSH2Promise(sshConfig);
+        ssh = new SSH2Promise(secureConfig);
         await ssh.connect();
         shouldCloseConnection = true;
         // ✅ SEGURIDAD: Escapar el path para prevenir command injection
@@ -355,9 +377,10 @@ function registerSSHHandlers(dependencies = {}) {
   // SSH: Verificar si un directorio existe
   ipcMain.handle('ssh:check-directory', async (event, { tabId, path, sshConfig }) => {
     try {
-      if (sshConfig.useBastionWallix) {
+      const secureConfig = await resolveCredentials(tabId, sshConfig);
+      if (secureConfig.useBastionWallix) {
         // Buscar la conexión existente para bastion
-        const existingConn = await findSSHConnection(tabId, sshConfig);
+        const existingConn = await findSSHConnection(tabId, secureConfig);
         if (!existingConn || !existingConn.ssh || !existingConn.stream) {
           return { success: false, error: 'No se encontró una conexión bastión activa para este tabId. Abre primero una terminal.' };
         }
@@ -385,7 +408,7 @@ function registerSSHHandlers(dependencies = {}) {
         }
       } else {
         // SSH directo
-        const ssh = new SSH2Promise(sshConfig);
+        const ssh = new SSH2Promise(secureConfig);
         await ssh.connect();
         // ✅ SEGURIDAD: Escapar el path para prevenir command injection
         const escapedPath = escapeShellPath(path);
@@ -406,6 +429,7 @@ function registerSSHHandlers(dependencies = {}) {
   ipcMain.handle('ssh:download-file', async (event, { tabId, remotePath, localPath, sshConfig, transferId }) => {
     let currentTransferId = transferId || `${tabId}-dl-${Date.now()}`;
     try {
+      const secureConfig = await resolveCredentials(tabId, sshConfig);
       // ✅ VALIDACIÓN CRÍTICA: Validar inputs antes de procesar
       if (!remotePath || typeof remotePath !== 'string' || remotePath.trim() === '') {
         return { success: false, error: 'remotePath inválido o vacío' };
@@ -413,7 +437,7 @@ function registerSSHHandlers(dependencies = {}) {
       if (!localPath || typeof localPath !== 'string' || localPath.trim() === '') {
         return { success: false, error: 'localPath inválido o vacío' };
       }
-      if (!sshConfig || typeof sshConfig !== 'object') {
+      if (!secureConfig || typeof secureConfig !== 'object') {
         return { success: false, error: 'sshConfig inválido' };
       }
 
@@ -488,13 +512,13 @@ function registerSSHHandlers(dependencies = {}) {
         markTransferDone(currentTransferId);
       };
 
-      if (sshConfig.useBastionWallix) {
+      if (secureConfig.useBastionWallix) {
         const sftp = new SftpClient();
         await makeDownloadTransfer(sftp, {
-          host: sshConfig.bastionHost,
-          port: sshConfig.port || 22,
-          username: sshConfig.bastionUser,
-          password: sshConfig.password,
+          host: secureConfig.bastionHost,
+          port: secureConfig.port || 22,
+          username: secureConfig.bastionUser,
+          password: secureConfig.password,
           readyTimeout: 20000,
           algorithms: {
             kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
@@ -507,10 +531,10 @@ function registerSSHHandlers(dependencies = {}) {
       } else {
         const sftp = new SftpClient();
         await makeDownloadTransfer(sftp, {
-          host: sshConfig.host,
-          port: sshConfig.port || 22,
-          username: sshConfig.username,
-          password: sshConfig.password,
+          host: secureConfig.host,
+          port: secureConfig.port || 22,
+          username: secureConfig.username,
+          password: secureConfig.password,
           readyTimeout: 30000,
           keepaliveInterval: 10000
         });
@@ -532,6 +556,7 @@ function registerSSHHandlers(dependencies = {}) {
   ipcMain.handle('ssh:upload-file', async (event, { tabId, localPath, remotePath, sshConfig, transferId }) => {
     let uploadTransferId = transferId || `${tabId}-ul-${Date.now()}`;
     try {
+      const secureConfig = await resolveCredentials(tabId, sshConfig);
       // ✅ VALIDACIÓN CRÍTICA: Validar inputs antes de procesar
       if (!localPath || typeof localPath !== 'string' || localPath.trim() === '') {
         return { success: false, error: 'localPath inválido o vacío' };
@@ -539,7 +564,7 @@ function registerSSHHandlers(dependencies = {}) {
       if (!remotePath || typeof remotePath !== 'string' || remotePath.trim() === '') {
         return { success: false, error: 'remotePath inválido o vacío' };
       }
-      if (!sshConfig || typeof sshConfig !== 'object') {
+      if (!secureConfig || typeof secureConfig !== 'object') {
         return { success: false, error: 'sshConfig inválido' };
       }
 
@@ -583,12 +608,12 @@ function registerSSHHandlers(dependencies = {}) {
       const sftp = new SftpClient();
       activeTransfers.set(uploadTransferId, { sftp, cancelled: false, type: 'upload', tabId, fileName: uploadFileName });
       let connectConfig;
-      if (sshConfig.useBastionWallix) {
+      if (secureConfig.useBastionWallix) {
         connectConfig = {
-          host: sshConfig.bastionHost,
-          port: sshConfig.port || 22,
-          username: sshConfig.bastionUser,
-          password: sshConfig.password,
+          host: secureConfig.bastionHost,
+          port: secureConfig.port || 22,
+          username: secureConfig.bastionUser,
+          password: secureConfig.password,
           readyTimeout: 20000,
           algorithms: {
             kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
@@ -599,10 +624,10 @@ function registerSSHHandlers(dependencies = {}) {
         };
       } else {
         connectConfig = {
-          host: sshConfig.host,
-          port: sshConfig.port || 22,
-          username: sshConfig.username,
-          password: sshConfig.password,
+          host: secureConfig.host,
+          port: secureConfig.port || 22,
+          username: secureConfig.username,
+          password: secureConfig.password,
           readyTimeout: 30000,
           keepaliveInterval: 10000
         };
@@ -633,14 +658,15 @@ function registerSSHHandlers(dependencies = {}) {
   // SSH: Eliminar archivo o directorio
   ipcMain.handle('ssh:delete-file', async (event, { tabId, remotePath, isDirectory, sshConfig }) => {
     try {
+      const secureConfig = await resolveCredentials(tabId, sshConfig);
       const sftp = new SftpClient();
       let connectConfig;
-      if (sshConfig.useBastionWallix) {
+      if (secureConfig.useBastionWallix) {
         connectConfig = {
-          host: sshConfig.bastionHost,
-          port: sshConfig.port || 22,
-          username: sshConfig.bastionUser,
-          password: sshConfig.password,
+          host: secureConfig.bastionHost,
+          port: secureConfig.port || 22,
+          username: secureConfig.bastionUser,
+          password: secureConfig.password,
           readyTimeout: 20000,
           algorithms: {
             kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
@@ -651,10 +677,10 @@ function registerSSHHandlers(dependencies = {}) {
         };
       } else {
         connectConfig = {
-          host: sshConfig.host,
-          port: sshConfig.port || 22,
-          username: sshConfig.username,
-          password: sshConfig.password,
+          host: secureConfig.host,
+          port: secureConfig.port || 22,
+          username: secureConfig.username,
+          password: secureConfig.password,
           readyTimeout: 20000,
         };
       }
@@ -683,14 +709,15 @@ function registerSSHHandlers(dependencies = {}) {
   // SSH: Crear directorio
   ipcMain.handle('ssh:create-directory', async (event, { tabId, remotePath, sshConfig }) => {
     try {
+      const secureConfig = await resolveCredentials(tabId, sshConfig);
       const sftp = new SftpClient();
       let connectConfig;
-      if (sshConfig.useBastionWallix) {
+      if (secureConfig.useBastionWallix) {
         connectConfig = {
-          host: sshConfig.bastionHost,
-          port: sshConfig.port || 22,
-          username: sshConfig.bastionUser,
-          password: sshConfig.password,
+          host: secureConfig.bastionHost,
+          port: secureConfig.port || 22,
+          username: secureConfig.bastionUser,
+          password: secureConfig.password,
           readyTimeout: 20000,
           algorithms: {
             kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
@@ -701,10 +728,10 @@ function registerSSHHandlers(dependencies = {}) {
         };
       } else {
         connectConfig = {
-          host: sshConfig.host,
-          port: sshConfig.port || 22,
-          username: sshConfig.username,
-          password: sshConfig.password,
+          host: secureConfig.host,
+          port: secureConfig.port || 22,
+          username: secureConfig.username,
+          password: secureConfig.password,
           readyTimeout: 20000,
         };
       }
@@ -720,14 +747,15 @@ function registerSSHHandlers(dependencies = {}) {
   // SSH: Renombrar/Mover archivo o directorio
   ipcMain.handle('ssh:rename-file', async (event, { tabId, oldPath, newPath, sshConfig }) => {
     try {
+      const secureConfig = await resolveCredentials(tabId, sshConfig);
       const sftp = new SftpClient();
       let connectConfig;
-      if (sshConfig.useBastionWallix) {
+      if (secureConfig.useBastionWallix) {
         connectConfig = {
-          host: sshConfig.bastionHost,
-          port: sshConfig.port || 22,
-          username: sshConfig.bastionUser,
-          password: sshConfig.password,
+          host: secureConfig.bastionHost,
+          port: secureConfig.port || 22,
+          username: secureConfig.bastionUser,
+          password: secureConfig.password,
           readyTimeout: 20000,
           algorithms: {
             kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group14-sha1', 'diffie-hellman-group1-sha1'],
@@ -738,10 +766,10 @@ function registerSSHHandlers(dependencies = {}) {
         };
       } else {
         connectConfig = {
-          host: sshConfig.host,
-          port: sshConfig.port || 22,
-          username: sshConfig.username,
-          password: sshConfig.password,
+          host: secureConfig.host,
+          port: secureConfig.port || 22,
+          username: secureConfig.username,
+          password: secureConfig.password,
           readyTimeout: 20000,
         };
       }

@@ -256,7 +256,7 @@ function registerSecondaryHandlers(dependencies) {
   getNextcloudHandlers().registerNextcloudHandlers();
 
   // Handlers de archivos (SFTP/FTP/SCP y Local)
-  getFileHandlers().registerFileHandlers();
+  getFileHandlers().registerFileHandlers(dependencies);
   getLocalFsHandlers().registerLocalFsHandlers();
 
   // Handlers de herramientas de red

@@ -16,6 +16,7 @@ const { app } = require('electron');
 const packageJson = require(path.join(__dirname, '../../../package.json'));
 const WebSearchNativeServer = require('./native/WebSearchNativeServer');
 const SSHTerminalNativeServer = require('./native/SSHTerminalNativeServer');
+const { maskSensitiveData } = require('../utils');
 
 // Note: En el main process no podemos usar import ES6, pero los logs irán al renderer
 // El logging detallado se hará en consola del main process
@@ -493,7 +494,7 @@ class MCPService {
    */
   handleJSONRPCMessage(serverId, message) {
     if (this.verboseLogs) {
-      console.log(`🔔 [MCP ${serverId}] Mensaje JSON-RPC recibido:`, JSON.stringify(message, null, 2));
+      console.log(`🔔 [MCP ${serverId}] Mensaje JSON-RPC recibido:`, JSON.stringify(maskSensitiveData(message), null, 2));
     } else {
       const id = message.id;
       const method = message.method || 'response';
@@ -561,7 +562,7 @@ class MCPService {
 
     if (this.verboseLogs) {
       console.log(`📤 [MCP ${serverId}] Enviando request #${id}: ${method}`);
-      console.log(`   Params:`, JSON.stringify(params, null, 2));
+      console.log(`   Params:`, JSON.stringify(maskSensitiveData(params), null, 2));
     }
 
     return new Promise((resolve, reject) => {
@@ -596,7 +597,7 @@ class MCPService {
 
     console.log(`📤 [MCP ${serverId}] (nativo) Ejecutando ${method}`);
     if (this.verboseLogs) {
-      console.log(`   Params:`, JSON.stringify(params, null, 2));
+      console.log(`   Params:`, JSON.stringify(maskSensitiveData(params), null, 2));
     }
 
     try {
@@ -891,7 +892,7 @@ class MCPService {
    */
   async installMCPServer(serverId, config) {
     console.log(`📦 [MCP Service] Instalando servidor: ${serverId}`);
-    console.log('   Config recibida:', JSON.stringify(config, null, 2));
+    console.log('   Config recibida:', JSON.stringify(maskSensitiveData(config), null, 2));
     
     if (this.mcpConfig.mcpServers[serverId]) {
       console.log(`⚠️ [MCP Service] ${serverId} ya está instalado`);
@@ -925,7 +926,7 @@ class MCPService {
       };
     }
 
-    console.log('   Config completa:', JSON.stringify(fullConfig, null, 2));
+    console.log('   Config completa:', JSON.stringify(maskSensitiveData(fullConfig), null, 2));
 
     this.mcpConfig.mcpServers[serverId] = fullConfig;
     await this.saveConfig();
@@ -1020,7 +1021,7 @@ class MCPService {
       };
     }
     
-    console.log(`💾 [MCP] Guardando configuración para ${serverId}:`, JSON.stringify(merged, null, 2));
+    console.log(`💾 [MCP] Guardando configuración para ${serverId}:`, JSON.stringify(maskSensitiveData(merged), null, 2));
     this.mcpConfig.mcpServers[serverId] = merged;
     await this.saveConfig();
 
@@ -1162,7 +1163,7 @@ class MCPService {
     }
 
     console.log(`🔧 [MCP ${serverId}] Llamando tool: ${toolName}`);
-    console.log(`   Argumentos:`, JSON.stringify(args, null, 2));
+    console.log(`   Argumentos:`, JSON.stringify(maskSensitiveData(args), null, 2));
     
     // 🔒 DEBUG: Validar que toolName no sea undefined
     if (!toolName || toolName === 'undefined') {
@@ -1178,7 +1179,7 @@ class MCPService {
         arguments: args || {}
       };
       
-      console.log(`📤 [MCP ${serverId}] Enviando request tools/call con:`, JSON.stringify(requestParams, null, 2));
+      console.log(`📤 [MCP ${serverId}] Enviando request tools/call con:`, JSON.stringify(maskSensitiveData(requestParams), null, 2));
       
       const result = await this.sendRequest(serverId, 'tools/call', requestParams, 60000); // 60s timeout para tools
 

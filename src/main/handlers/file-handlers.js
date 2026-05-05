@@ -715,47 +715,74 @@ async function renameFile(config, oldPath, newPath) {
 }
 
 /**
- * Registra todos los manejadores IPC relacionados con archivos (SFTP/FTP/SCP)
+ * Registra todos los manejadores IPC relacionados con archivos (SFTP/FTP/SCP y Local)
+ * @param {Object} dependencies - Dependencias necesarias (findSSHConnection, etc.)
  */
-function registerFileHandlers() {
+function registerFileHandlers(dependencies = {}) {
+  const { findSSHConnection } = dependencies;
+
+  /**
+   * ✅ SEGURIDAD: Resuelve las credenciales de una conexión.
+   */
+  const resolveCredentials = async (tabId, config) => {
+    if (!config || config.protocol === 'ftp') return config;
+    if (config.password || config.privateKey) return config;
+
+    if (typeof findSSHConnection === 'function') {
+      const conn = await findSSHConnection(tabId, config);
+      if (conn && conn.manualPassword) {
+        return { ...config, password: conn.manualPassword };
+      }
+    }
+    return config;
+  };
+
   // Obtener directorio home
   ipcMain.handle('file:get-home-directory', async (event, { tabId, config }) => {
-    return await getHomeDirectory(config);
+    const secureConfig = await resolveCredentials(tabId, config);
+    return await getHomeDirectory(secureConfig);
   });
 
   // Listar archivos
   ipcMain.handle('file:list-files', async (event, { tabId, path, config }) => {
-    return await listFiles(config, path);
+    const secureConfig = await resolveCredentials(tabId, config);
+    return await listFiles(secureConfig, path);
   });
 
   // Verificar directorio
   ipcMain.handle('file:check-directory', async (event, { tabId, path, config }) => {
-    return await checkDirectory(config, path);
+    const secureConfig = await resolveCredentials(tabId, config);
+    return await checkDirectory(secureConfig, path);
   });
 
   // Descargar archivo
   ipcMain.handle('file:download-file', async (event, { tabId, remotePath, localPath, config }) => {
-    return await downloadFile(config, remotePath, localPath, { event, tabId });
+    const secureConfig = await resolveCredentials(tabId, config);
+    return await downloadFile(secureConfig, remotePath, localPath, { event, tabId });
   });
 
   // Subir archivo
   ipcMain.handle('file:upload-file', async (event, { tabId, localPath, remotePath, config }) => {
-    return await uploadFile(config, localPath, remotePath, { event, tabId });
+    const secureConfig = await resolveCredentials(tabId, config);
+    return await uploadFile(secureConfig, localPath, remotePath, { event, tabId });
   });
 
   // Eliminar archivo/directorio
   ipcMain.handle('file:delete-file', async (event, { tabId, remotePath, isDirectory, config }) => {
-    return await deleteFile(config, remotePath, isDirectory);
+    const secureConfig = await resolveCredentials(tabId, config);
+    return await deleteFile(secureConfig, remotePath, isDirectory);
   });
 
   // Crear directorio
   ipcMain.handle('file:create-directory', async (event, { tabId, remotePath, config }) => {
-    return await createDirectory(config, remotePath);
+    const secureConfig = await resolveCredentials(tabId, config);
+    return await createDirectory(secureConfig, remotePath);
   });
 
   // Renombrar/Mover archivo o directorio
   ipcMain.handle('file:rename-file', async (event, { tabId, oldPath, newPath, config }) => {
-    return await renameFile(config, oldPath, newPath);
+    const secureConfig = await resolveCredentials(tabId, config);
+    return await renameFile(secureConfig, oldPath, newPath);
   });
 }
 

@@ -8,6 +8,7 @@
 const { parseDfOutput, parseNetDev } = require('./parsing-utils');
 const { getGuacdPrefPath } = require('./file-utils');
 const { sendToRenderer, cleanupOrphanedConnections } = require('./connection-utils');
+const { maskSensitiveData } = require('./security-utils');
 
 /**
  * Exporta todas las utilidades organizadas por categoría
@@ -30,10 +31,16 @@ module.exports = {
     cleanupOrphanedConnections
   },
   
+  // Utilidades de seguridad
+  security: {
+    maskSensitiveData
+  },
+  
   // Exportaciones directas para compatibilidad
   parseDfOutput,
   parseNetDev,
   getGuacdPrefPath,
   sendToRenderer,
-  cleanupOrphanedConnections
+  cleanupOrphanedConnections,
+  maskSensitiveData
 };
