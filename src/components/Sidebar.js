@@ -2155,47 +2155,55 @@ const Sidebar = React.memo(({
     let icon = null;
     const themeKey = (iconTheme || 'nord').toLowerCase();
     const themeIcons = iconThemes[themeKey]?.icons || iconThemes['nord'].icons;
+
+    // Helper para unificar el tamaño óptico de los iconos según el tema
+    const getNormalizedIcon = (rawIcon, size, key) => {
+      if (!rawIcon) return null;
+      
+      // Factores de escala correctores para temas con mucho padding interno
+      const SCALES = {
+        material: 1.12,
+        nord: 1.05,
+        cyberpunk: 1.04,
+        dracula: 1.08,
+        solarized: 1.08,
+        monokai: 1.08,
+        onedark: 1.08,
+        gruvbox: 1.06,
+        atom: 1.05,
+        vscode: 1.05,
+        linea: 1.06,
+        fluent: 1.0 // Ya es bastante grande
+      };
+
+      const scale = SCALES[key] || 1.0;
+      const finalSize = Math.round(size * scale);
+
+      return React.cloneElement(rawIcon, {
+        width: finalSize,
+        height: finalSize,
+        style: {
+          ...rawIcon.props.style,
+          width: `${finalSize}px`,
+          height: `${finalSize}px`,
+          flexShrink: 0,
+          display: 'block'
+        }
+      });
+    };
     if (isSSH) {
       // Verificar si tiene icono personalizado (ignorar 'default' para usar el icono del tema)
       if (node.data?.customIcon && node.data.customIcon !== 'default' && SSHIconPresets[node.data.customIcon.toUpperCase()]) {
         const preset = SSHIconPresets[node.data.customIcon.toUpperCase()];
         icon = <SSHIconRenderer preset={preset} pixelSize={connectionIconSize} />;
       } else {
-        // Usar icono del tema (comportamiento por defecto)
-        const sshIcon = themeIcons.ssh;
-        icon = sshIcon ? React.cloneElement(sshIcon, {
-          width: connectionIconSize,
-          height: connectionIconSize,
-          style: {
-            ...sshIcon.props.style,
-            width: `${connectionIconSize}px`,
-            height: `${connectionIconSize}px`
-          }
-        }) : sshIcon;
+        // Usar icono del tema unificado
+        icon = getNormalizedIcon(themeIcons.ssh, connectionIconSize, themeKey);
       }
     } else if (isRDP) {
-      const rdpIcon = themeIcons.rdp;
-      icon = rdpIcon ? React.cloneElement(rdpIcon, {
-        width: connectionIconSize,
-        height: connectionIconSize,
-        style: {
-          ...rdpIcon.props.style,
-          width: `${connectionIconSize}px`,
-          height: `${connectionIconSize}px`
-        }
-      }) : '🖥️'; // Icono RDP o fallback
+      icon = getNormalizedIcon(themeIcons.rdp, connectionIconSize, themeKey) || '🖥️';
     } else if (isVNC) {
-      // Usar icono VNC si existe, sino usar RDP como fallback
-      const vncIcon = themeIcons.vnc || themeIcons.rdp;
-      icon = vncIcon ? React.cloneElement(vncIcon, {
-        width: connectionIconSize,
-        height: connectionIconSize,
-        style: {
-          ...vncIcon.props.style,
-          width: `${connectionIconSize}px`,
-          height: `${connectionIconSize}px`
-        }
-      }) : '🖥️'; // Icono VNC o fallback
+      icon = getNormalizedIcon(themeIcons.vnc || themeIcons.rdp, connectionIconSize, themeKey) || '🖥️';
     } else if (isPassword) {
       icon = <span className="pi pi-key" style={{ color: '#ffc107', fontSize: `${connectionIconSize}px` }} />;
     } else if (isSSHTunnel) {
@@ -2225,91 +2233,35 @@ const Sidebar = React.memo(({
         </span>
       );
     } else if (isFileConnection) {
-      // Icono para conexiones de archivos (SFTP/FTP/SCP) usando el tema
       const protocol = node.data?.protocol || node.data?.type || 'sftp';
-
-      // Buscar icono en tema actual, con fallback a material
       const themeIcon = themeIcons[protocol] || iconThemes['material']?.icons?.[protocol];
-
+      
       if (themeIcon) {
         const connectionColor = getThemeDefaultColor(themeKey);
-        icon = modifySVGColors(
-          React.cloneElement(themeIcon, {
-            width: connectionIconSize,
-            height: connectionIconSize,
-            style: {
-              ...themeIcon.props.style,
-              width: `${connectionIconSize}px`,
-              height: `${connectionIconSize}px`
-            }
-          }),
-          connectionColor,
-          themeKey
-        );
+        // Normalizamos primero
+        const normalizedIcon = getNormalizedIcon(themeIcon, connectionIconSize, themeKey);
+        // Aplicamos colores después
+        icon = modifySVGColors(normalizedIcon, connectionColor, themeKey);
       } else {
-        // Último fallback si no hay icono en ningún tema
-        const fallbackColors = {
-          sftp: '#ff9800',
-          ftp: '#2196f3',
-          scp: '#4caf50'
-        };
-        icon = <span className="pi pi-folder" style={{ color: fallbackColors[protocol] || '#ff9800', fontSize: `${connectionIconSize}px` }} />;
+        icon = <span className="pi pi-folder" style={{ color: '#89b4fa', fontSize: `${connectionIconSize}px` }} />;
       }
     } else if (isFolder) {
-      // Verificar si tiene icono personalizado (ignorar 'general' como si fuera null)
-      if (node.folderIcon && node.folderIcon !== 'general' && FolderIconPresets[node.folderIcon.toUpperCase()]) {
-        const preset = FolderIconPresets[node.folderIcon.toUpperCase()];
+      if (node.data?.customIcon && node.data.customIcon !== 'default' && FolderIconPresets[node.data.customIcon.toUpperCase()]) {
+        const preset = FolderIconPresets[node.data.customIcon.toUpperCase()];
         icon = <FolderIconRenderer preset={preset} pixelSize={folderIconSize} />;
       } else {
-        // Lógica inteligente para determinar el color de la carpeta:
-        // 1. Si no tiene color asignado → usar color por defecto del tema actual
-        // 2. Si tiene color pero es un color por defecto de algún tema → usar color por defecto del tema actual
-        // 3. Si tiene color personalizado → mantener ese color
         const hasCustomColor = node.color && !isDefaultThemeColor(node.color);
         const folderColor = hasCustomColor ? node.color : getThemeDefaultColor(themeKey);
+        const baseIcon = options.expanded ? themeIcons.folderOpen : themeIcons.folder;
 
-        // Usar el icono del tema si existe, pero forzar el color
-        const themeIcon = options.expanded ? themeIcons.folderOpen : themeIcons.folder;
-
-        if (themeIcon) {
-          // Si hay un icono del tema, clonarlo y aplicar el color y tamaño
-          // Para SVG, necesitamos modificar los atributos fill, stroke y tamaño directamente
-          const modifiedIcon = React.cloneElement(themeIcon, {
-            width: folderIconSize,
-            height: folderIconSize,
-            style: {
-              ...themeIcon.props.style,
-              color: folderColor,
-              '--icon-color': folderColor,
-              width: `${folderIconSize}px`,
-              height: `${folderIconSize}px`
-            },
-            'data-folder-color': folderColor,
-            'data-debug': 'sidebar-theme-icon'
-          });
-
-          icon = modifySVGColors(modifiedIcon, folderColor, themeKey, 0);
+        if (baseIcon) {
+          const normalizedIcon = getNormalizedIcon(baseIcon, folderIconSize, themeKey);
+          icon = modifySVGColors(normalizedIcon, folderColor, themeKey, 0);
         } else {
-          // Fallback a iconos PrimeReact con color forzado
-          icon = options.expanded
-            ? <span
-              className="pi pi-folder-open"
-              style={{
-                color: folderColor,
-                '--icon-color': folderColor
-              }}
-              data-folder-color={folderColor}
-              data-debug="sidebar-fallback-open"
-            />
-            : <span
-              className="pi pi-folder"
-              style={{
-                color: folderColor,
-                '--icon-color': folderColor
-              }}
-              data-folder-color={folderColor}
-              data-debug="sidebar-fallback-closed"
-            />;
+          icon = <span 
+            className={options.expanded ? "pi pi-folder-open" : "pi pi-folder"} 
+            style={{ color: folderColor, fontSize: `${folderIconSize}px` }} 
+          />;
         }
       }
     } else {
@@ -2372,7 +2324,7 @@ const Sidebar = React.memo(({
           fontFamily: explorerFont,
           display: 'flex',
           alignItems: 'center',
-          gap: `${Math.max(4, Math.round((folderIconSize || 20) * 0.3))}px`
+          gap: `${Math.max(4, Math.round((folderIconSize || 20) * 0.25))}px`
         }}
         title={title}
         data-connection-type={isSSH ? 'ssh' : (isRDP ? 'rdp' : (isVNC ? 'vnc' : (isSSHTunnel ? 'ssh-tunnel' : null)))}

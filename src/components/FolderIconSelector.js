@@ -161,13 +161,13 @@ export const FolderIconRenderer = ({ preset, size = 'medium', pixelSize = null }
           <stop offset="100%" stopColor={preset.color} stopOpacity="0.7" />
         </linearGradient>
       </defs>
-      <g transform="translate(0, -12)">
-        <path d="M 10 35 L 30 20 L 40 20 L 40 35 Z" fill={`url(#grad-${preset.id})`} opacity="0.9" />
-        <path d="M 10 35 L 10 85 Q 10 90 15 90 L 85 90 Q 90 90 90 85 L 90 40 Q 90 35 85 35 L 40 35 L 40 30 Q 40 25 35 25 L 15 25 Q 10 25 10 30 Z" fill={`url(#grad-${preset.id})`} />
-        <path d="M 10 35 L 10 85 Q 10 90 15 90 L 85 90 Q 90 90 90 85 L 90 40 Q 90 35 85 35 L 40 35 L 40 30 Q 40 25 35 25 L 15 25 Q 10 25 10 30 Z" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+      <g transform="translate(0, -8)">
+        <path d="M 5 35 L 25 20 L 35 20 L 35 35 Z" fill={`url(#grad-${preset.id})`} opacity="0.9" />
+        <path d="M 5 35 L 5 85 Q 5 90 10 90 L 90 90 Q 95 90 95 85 L 95 40 Q 95 35 90 35 L 35 35 L 35 30 Q 35 25 30 25 L 10 25 Q 5 25 5 30 Z" fill={`url(#grad-${preset.id})`} />
+        <path d="M 5 35 L 5 85 Q 5 90 10 90 L 90 90 Q 95 90 95 85 L 95 40 Q 95 35 90 35 L 35 35 L 35 30 Q 35 25 30 25 L 10 25 Q 5 25 5 30 Z" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
         {/* Emoji con escalado solo para los que se ven más pequeños */}
         {emojiScale !== 1.0 ? (
-          <g transform={`translate(70, 75)`}>
+          <g transform={`translate(75, 75)`}>
             <text 
               x="0" 
               y="0" 
@@ -181,7 +181,7 @@ export const FolderIconRenderer = ({ preset, size = 'medium', pixelSize = null }
           </g>
         ) : (
           <text 
-            x="70" 
+            x="75" 
             y="75" 
             fontSize={emojiFontSizeInViewBox} 
             textAnchor="middle" 
@@ -191,7 +191,7 @@ export const FolderIconRenderer = ({ preset, size = 'medium', pixelSize = null }
             {preset.emoji}
           </text>
         )}
-        <circle cx="70" cy="70" r="22" fill="rgba(255,255,255,0.15)" opacity="0.6" />
+        <circle cx="75" cy="70" r="22" fill="rgba(255,255,255,0.15)" opacity="0.6" />
       </g>
     </svg>
   );
