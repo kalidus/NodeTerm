@@ -2986,5 +2986,847 @@ export const iconThemes = {
         </svg>
       )
     }
+  },
+
+  // ---------------------------------------------------------
+  // ULTRA PREMIUM THEMES
+  // ---------------------------------------------------------
+  holographic: {
+    name: 'Holographic',
+    icons: {
+      folder: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="holoFolder1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#ff9a9e" />
+              <stop offset="50%" stopColor="#fecfef" />
+              <stop offset="100%" stopColor="#a1c4fd" />
+            </linearGradient>
+            <linearGradient id="holoFolder2" x1="100%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#c2e9fb" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#8fd3f4" stopOpacity="0.2" />
+            </linearGradient>
+            <filter id="holoGlow">
+              <feDropShadow dx="0" dy="0" stdDeviation="2" floodColor="#fbc2eb" floodOpacity="0.5"/>
+            </filter>
+          </defs>
+          <path d="M2.5 7.5A2.5 2.5 0 0 1 5 5h4.5l2 2H20a2.5 2.5 0 0 1 2.5 2.5v9A2.5 2.5 0 0 1 20 21H5A2.5 2.5 0 0 1 2.5 18.5v-11z" fill="url(#holoFolder1)" filter="url(#holoGlow)"/>
+          <path d="M2.5 7.5A2.5 2.5 0 0 1 5 5h4.5l2 2H20a2.5 2.5 0 0 1 2.5 2.5v9A2.5 2.5 0 0 1 20 21H5A2.5 2.5 0 0 1 2.5 18.5v-11z" fill="url(#holoFolder2)" style={{mixBlendMode: 'overlay'}}/>
+          <path d="M3.5 8h17" stroke="#ffffff" strokeWidth="0.5" strokeOpacity="0.8"/>
+        </svg>
+      ),
+      folderOpen: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="holoFolderOpen1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#ff9a9e" />
+              <stop offset="50%" stopColor="#fecfef" />
+              <stop offset="100%" stopColor="#a1c4fd" />
+            </linearGradient>
+            <linearGradient id="holoFolderOpen2" x1="100%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#c2e9fb" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#8fd3f4" stopOpacity="0.2" />
+            </linearGradient>
+            <filter id="holoGlowOpen">
+              <feDropShadow dx="0" dy="0" stdDeviation="2" floodColor="#fbc2eb" floodOpacity="0.5"/>
+            </filter>
+          </defs>
+          <path d="M2 7.5A2.5 2.5 0 0 1 4.5 5h5l2 2h8A2.5 2.5 0 0 1 22 9.5v1.5H3L2 19V7.5z" fill="url(#holoFolderOpen1)" opacity="0.6"/>
+          <path d="M22 11H4l-1.5 8.5A2 2 0 0 0 4.5 22h16.5a2 2 0 0 0 2-2.5L22 11z" fill="url(#holoFolderOpen1)" filter="url(#holoGlowOpen)"/>
+          <path d="M22 11H4l-1.5 8.5A2 2 0 0 0 4.5 22h16.5a2 2 0 0 0 2-2.5L22 11z" fill="url(#holoFolderOpen2)" style={{mixBlendMode: 'overlay'}}/>
+          <path d="M3.5 12h17" stroke="#ffffff" strokeWidth="0.5" strokeOpacity="0.8"/>
+        </svg>
+      ),
+      ssh: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="holoSsh1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#a18cd1" />
+              <stop offset="100%" stopColor="#fbc2eb" />
+            </linearGradient>
+            <linearGradient id="holoSsh2" x1="100%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#84fab0" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#8fd3f4" stopOpacity="0.2" />
+            </linearGradient>
+            <filter id="holoSshGlow">
+              <feDropShadow dx="0" dy="0" stdDeviation="2" floodColor="#a18cd1" floodOpacity="0.5"/>
+            </filter>
+          </defs>
+          <rect x="2" y="3" width="20" height="14" rx="3" fill="url(#holoSsh1)" filter="url(#holoSshGlow)"/>
+          <rect x="2" y="3" width="20" height="14" rx="3" fill="url(#holoSsh2)" style={{mixBlendMode: 'overlay'}}/>
+          <path d="M7 8l3 3-3 3M13 14h4" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+      rdp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="holoRdp1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#43e97b" />
+              <stop offset="100%" stopColor="#38f9d7" />
+            </linearGradient>
+            <linearGradient id="holoRdp2" x1="100%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#fa709a" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#fee140" stopOpacity="0.2" />
+            </linearGradient>
+            <filter id="holoRdpGlow">
+              <feDropShadow dx="0" dy="0" stdDeviation="2" floodColor="#43e97b" floodOpacity="0.5"/>
+            </filter>
+          </defs>
+          <rect x="2" y="4" width="20" height="13" rx="3" fill="url(#holoRdp1)" filter="url(#holoRdpGlow)"/>
+          <rect x="2" y="4" width="20" height="13" rx="3" fill="url(#holoRdp2)" style={{mixBlendMode: 'overlay'}}/>
+          <path d="M8 21h8M12 17v4" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round"/>
+          <circle cx="12" cy="10.5" r="3" stroke="#ffffff" strokeWidth="1.5"/>
+        </svg>
+      ),
+      vnc: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="holoVnc1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#fa709a" />
+              <stop offset="100%" stopColor="#fee140" />
+            </linearGradient>
+            <linearGradient id="holoVnc2" x1="100%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#a18cd1" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#fbc2eb" stopOpacity="0.2" />
+            </linearGradient>
+            <filter id="holoVncGlow">
+              <feDropShadow dx="0" dy="0" stdDeviation="2" floodColor="#fa709a" floodOpacity="0.5"/>
+            </filter>
+          </defs>
+          <rect x="2" y="4" width="20" height="13" rx="3" fill="url(#holoVnc1)" filter="url(#holoVncGlow)"/>
+          <rect x="2" y="4" width="20" height="13" rx="3" fill="url(#holoVnc2)" style={{mixBlendMode: 'overlay'}}/>
+          <path d="M8 21h8M12 17v4" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round"/>
+          <ellipse cx="12" cy="10.5" rx="3.5" ry="2.5" stroke="#ffffff" strokeWidth="1.5"/>
+          <circle cx="12" cy="10.5" r="1" fill="#ffffff"/>
+        </svg>
+      ),
+      file: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="holoFile1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#c2e9fb" />
+              <stop offset="100%" stopColor="#a1c4fd" />
+            </linearGradient>
+            <linearGradient id="holoFile2" x1="100%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#ff9a9e" stopOpacity="0.6" />
+              <stop offset="100%" stopColor="#fecfef" stopOpacity="0.2" />
+            </linearGradient>
+            <filter id="holoFileGlow">
+              <feDropShadow dx="0" dy="0" stdDeviation="2" floodColor="#a1c4fd" floodOpacity="0.5"/>
+            </filter>
+          </defs>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="url(#holoFile1)" filter="url(#holoFileGlow)"/>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="url(#holoFile2)" style={{mixBlendMode: 'overlay'}}/>
+          <polyline points="14 2 14 8 20 8" stroke="#ffffff" strokeWidth="1.5" strokeLinejoin="round"/>
+        </svg>
+      ),
+      sftp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="holoSftp1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#ff9a9e" />
+              <stop offset="100%" stopColor="#fecfef" />
+            </linearGradient>
+            <linearGradient id="holoSftp2" x1="100%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#43e97b" stopOpacity="0.6" />
+              <stop offset="100%" stopColor="#38f9d7" stopOpacity="0.2" />
+            </linearGradient>
+            <filter id="holoSftpGlow">
+              <feDropShadow dx="0" dy="0" stdDeviation="2" floodColor="#ff9a9e" floodOpacity="0.5"/>
+            </filter>
+          </defs>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="url(#holoSftp1)" filter="url(#holoSftpGlow)"/>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="url(#holoSftp2)" style={{mixBlendMode: 'overlay'}}/>
+          <polyline points="14 2 14 8 20 8" stroke="#ffffff" strokeWidth="1.5"/>
+          <rect x="9" y="13" width="6" height="4" stroke="#ffffff" strokeWidth="1.5" rx="0.5"/>
+          <path d="M10 13v-1.5a2 2 0 1 1 4 0V13" stroke="#ffffff" strokeWidth="1.5"/>
+        </svg>
+      ),
+      ftp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="holoFtp1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#84fab0" />
+              <stop offset="100%" stopColor="#8fd3f4" />
+            </linearGradient>
+            <linearGradient id="holoFtp2" x1="100%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#a18cd1" stopOpacity="0.6" />
+              <stop offset="100%" stopColor="#fbc2eb" stopOpacity="0.2" />
+            </linearGradient>
+            <filter id="holoFtpGlow">
+              <feDropShadow dx="0" dy="0" stdDeviation="2" floodColor="#84fab0" floodOpacity="0.5"/>
+            </filter>
+          </defs>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="url(#holoFtp1)" filter="url(#holoFtpGlow)"/>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="url(#holoFtp2)" style={{mixBlendMode: 'overlay'}}/>
+          <polyline points="14 2 14 8 20 8" stroke="#ffffff" strokeWidth="1.5"/>
+          <path d="M12 12l-3 3 3 3M9 15h6" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+      scp: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="holoScp1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#e0c3fc" />
+              <stop offset="100%" stopColor="#8ec5fc" />
+            </linearGradient>
+            <linearGradient id="holoScp2" x1="100%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#fa709a" stopOpacity="0.6" />
+              <stop offset="100%" stopColor="#fee140" stopOpacity="0.2" />
+            </linearGradient>
+            <filter id="holoScpGlow">
+              <feDropShadow dx="0" dy="0" stdDeviation="2" floodColor="#e0c3fc" floodOpacity="0.5"/>
+            </filter>
+          </defs>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="url(#holoScp1)" filter="url(#holoScpGlow)"/>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="url(#holoScp2)" style={{mixBlendMode: 'overlay'}}/>
+          <polyline points="14 2 14 8 20 8" stroke="#ffffff" strokeWidth="1.5"/>
+          <path d="M9 15l3-3 3 3" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      )
+    }
+  },
+
+  cyber_blue: {
+    name: 'Cyber Blue',
+    icons: {
+      folder: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="cb_f_bg" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#1a2236" />
+              <stop offset="100%" stopColor="#0b0f19" />
+            </linearGradient>
+            <filter id="cb_f_glow">
+              <feGaussianBlur stdDeviation="1.5" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+          </defs>
+          {/* Cybernetic Geometric Folder Shape */}
+          <path d="M3 7l2-2h5l2 2h9v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" fill="url(#cb_f_bg)" stroke="#00f2fe" strokeWidth="1.5" filter="url(#cb_f_glow)" />
+          <path d="M3 9h18M3 11h18" stroke="#00f2fe" strokeWidth="0.5" opacity="0.2" />
+          <path d="M21 9l-2-2M3 9l2-2" stroke="#00f2fe" strokeWidth="1" />
+          <rect x="7" y="14" width="10" height="1" fill="#00f2fe" opacity="0.4" />
+        </svg>
+      ),
+      folderOpen: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="cb_fo_bg" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#1a2236" />
+              <stop offset="100%" stopColor="#0b0f19" />
+            </linearGradient>
+            <filter id="cb_fo_blur" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="1" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+          </defs>
+          <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v2H3V7z" fill="#0b0f19" opacity="0.5" />
+          <path d="M3 11l1.5 8.5A2 2 0 0 0 6.5 21h11a2 2 0 0 0 2-1.5L21 11H3z" fill="url(#cb_fo_bg)" stroke="#00f2fe" strokeWidth="1.5" filter="url(#cb_fo_blur)" />
+          <path d="M5 13h14" stroke="white" strokeWidth="0.5" opacity="0.1" />
+        </svg>
+      ),
+      ssh: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <filter id="cb_s_glow_v2">
+              <feGaussianBlur stdDeviation="1.5" result="blur" />
+              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+            </filter>
+          </defs>
+          <path d="M2 5l2-2h16l2 2v12l-2 2H4l-2-2V5z" fill="#0b0f19" stroke="#00f2fe" strokeWidth="1.5" filter="url(#cb_s_glow_v2)" />
+          <path d="M6 9l3 3-3 3M12 15h5" stroke="#00f2fe" strokeWidth="2" strokeLinecap="square" />
+          <path d="M2 7h20M2 17h20" stroke="#00f2fe" strokeWidth="0.5" opacity="0.3" />
+        </svg>
+      ),
+      rdp: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M3 4h18v13H3V4z" fill="#0b0f19" stroke="#00f2fe" strokeWidth="1.5" filter="url(#cb_s_glow_v2)" />
+          <path d="M3 7h18" stroke="#00f2fe" strokeWidth="0.5" opacity="0.3" />
+          <circle cx="12" cy="11" r="3" stroke="#00f2fe" strokeWidth="1" />
+          <path d="M9 21l2-4h2l2 4" stroke="#00f2fe" strokeWidth="1.5" />
+        </svg>
+      ),
+      vnc: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M3 4l18 0l0 13l-18 0l0-13z" fill="#0b0f19" stroke="#00f2fe" strokeWidth="1.5" filter="url(#cb_s_glow_v2)" />
+          <rect x="7" y="8" width="10" height="6" stroke="#00f2fe" strokeWidth="1" />
+          <circle cx="12" cy="11" r="1.5" fill="#00f2fe" />
+          <path d="M9 21l2-4h2l2 4" stroke="#00f2fe" strokeWidth="1.5" />
+        </svg>
+      ),
+      file: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M13 3H5v18h14V9l-6-6z" fill="#0b0f19" stroke="#00f2fe" strokeWidth="1.5" filter="url(#cb_s_glow_v2)" />
+          <path d="M13 3v6h6" stroke="#00f2fe" strokeWidth="1.5" />
+          <path d="M8 13h8M8 16h5" stroke="#00f2fe" strokeWidth="1" opacity="0.5" />
+        </svg>
+      ),
+      sftp: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M13 3H5v18h14V9l-6-6z" fill="#0b0f19" stroke="#00f2fe" strokeWidth="1.5" />
+          <path d="M9 14l3 3 3-3M12 11v6" stroke="#00f2fe" strokeWidth="1.5" />
+          <rect x="3" y="19" width="18" height="2" fill="#00f2fe" opacity="0.2" />
+        </svg>
+      ),
+      ftp: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M13 3H5v18h14V9l-6-6z" fill="#0b0f19" stroke="#00f2fe" strokeWidth="1.5" />
+          <path d="M12 12l-3 3 3 3M15 12l3 3-3 3" stroke="#00f2fe" strokeWidth="1.5" />
+        </svg>
+      ),
+      scp: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M13 3H5v18h14V9l-6-6z" fill="#0b0f19" stroke="#00f2fe" strokeWidth="1.5" />
+          <path d="M8 15l4-4 4 4" stroke="#00f2fe" strokeWidth="2" strokeLinecap="square" />
+        </svg>
+      ),
+      password: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M5 11h14v9H5v-9z" fill="#0b0f19" stroke="#00f2fe" strokeWidth="1.5" filter="url(#cb_s_glow_v2)" />
+          <path d="M8 11V7a4 4 0 0 1 8 0v4" stroke="#00f2fe" strokeWidth="1.5" />
+          <circle cx="12" cy="15.5" r="1" fill="#00f2fe" />
+        </svg>
+      ),
+      'ssh-tunnel': (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2l-8 5 8 5 8-5-8-5z" stroke="#00f2fe" strokeWidth="1.5" filter="url(#cb_s_glow_v2)" />
+          <path d="M4 12l8 4 8-4M4 17l8 4 8-4" stroke="#00f2fe" strokeWidth="1.5" opacity="0.5" />
+        </svg>
+      )
+    }
+  },
+
+  aurora: {
+    name: 'Aurora Borealis',
+    icons: {
+      folder: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="au_f_bg" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#1e1e4a" />
+              <stop offset="100%" stopColor="#0a0a26" />
+            </linearGradient>
+            <linearGradient id="au_f_grad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#8A2BE2" />
+              <stop offset="50%" stopColor="#00FFFF" />
+              <stop offset="100%" stopColor="#00FA9A" />
+            </linearGradient>
+            <filter id="au_f_glow">
+              <feGaussianBlur stdDeviation="2" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+          </defs>
+          {/* Organic Fluid Folder Shape */}
+          <path d="M4 7C4 5 6 4 8 4h3l3 3h6c2 0 3 1 3 3v8c0 2-1 3-3 3H7c-2 0-3-1-3-3V7z" fill="url(#au_f_bg)" stroke="url(#au_f_grad)" strokeWidth="1.8" filter="url(#au_f_glow)" />
+          <path d="M5 10c4-2 10 2 14 0" stroke="white" strokeWidth="0.5" opacity="0.3" strokeLinecap="round" />
+        </svg>
+      ),
+      folderOpen: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v2H3V7z" fill="#0a0a26" opacity="0.5" />
+          <path d="M3 11l1.5 8.5A2 2 0 0 0 6.5 21h11a2 2 0 0 0 2-1.5L21 11H3z" fill="url(#au_f_bg)" stroke="#00FFFF" strokeWidth="1.5" style={{filter: 'drop-shadow(0 0 4px #00FFFF)'}} />
+        </svg>
+      ),
+      ssh: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          {/* Organic Rounded Screen Shape */}
+          <path d="M4 6c0-2 2-3 4-3h8c2 0 4 1 4 3v10c0 2-2 3-4 3H8c-2 0-4-1-4-3V6z" fill="url(#au_f_bg)" stroke="url(#au_f_grad)" strokeWidth="1.8" filter="url(#au_f_glow)" />
+          <path d="M8 10l3 3-3 3M13 16h4" stroke="white" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      ),
+      rdp: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M5 5c0-2 2-2 4-2h6c2 0 4 0 4 2v9c0 2-2 2-4 2H9c-2 0-4 0-4-2V5z" fill="url(#au_f_bg)" stroke="url(#au_f_grad)" strokeWidth="1.5" />
+          <path d="M9 20c4-1 10 1 12 0" stroke="url(#au_f_grad)" strokeWidth="2" strokeLinecap="round" />
+          <circle cx="12" cy="10" r="3" stroke="white" strokeWidth="1.5" />
+        </svg>
+      ),
+      vnc: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M4 6c0-2 2-2 4-2h8c2 0 4 0 4 2v10c0 2-2 2-4 2H8c-2 0-4 0-4-2V6z" fill="url(#au_f_bg)" stroke="url(#au_f_grad)" strokeWidth="1.5" />
+          <ellipse cx="12" cy="11" rx="5" ry="3" stroke="white" strokeWidth="1.5" />
+          <path d="M12 20v-2" stroke="white" strokeWidth="1.5" />
+        </svg>
+      ),
+      file: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M14 3H7c-2 0-3 1-3 3v14c0 2 1 3 3 3h10c2 0 3-1 3-3V9l-6-6z" fill="url(#au_f_bg)" stroke="url(#au_f_grad)" strokeWidth="1.8" />
+          <path d="M14 3c0 2 1 6 6 6" stroke="white" strokeWidth="1.5" />
+        </svg>
+      ),
+      sftp: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M14 3H7c-2 0-3 1-3 3v14c0 2 1 3 3 3h10c2 0 3-1 3-3V9l-6-6z" fill="url(#au_f_bg)" stroke="url(#au_f_grad)" strokeWidth="1.5" />
+          <circle cx="12" cy="14" r="3" stroke="white" strokeWidth="1.5" />
+          <path d="M12 12v4M10 14h4" stroke="white" strokeWidth="1" />
+        </svg>
+      ),
+      ftp: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M14 3H7c-2 0-3 1-3 3v14c0 2 1 3 3 3h10c2 0 3-1 3-3V9l-6-6z" fill="url(#au_f_bg)" stroke="url(#au_f_grad)" strokeWidth="1.5" />
+          <path d="M9 13l3-3 3 3M12 10v6" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      ),
+      scp: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M14 3H7c-2 0-3 1-3 3v14c0 2 1 3 3 3h10c2 0 3-1 3-3V9l-6-6z" fill="url(#au_f_bg)" stroke="url(#au_f_grad)" strokeWidth="1.5" />
+          <path d="M8 15c2-2 6-2 8 0" stroke="white" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      ),
+      password: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M6 11c0-1 1-2 2-2h8c1 0 2 1 2 2v7c0 1-1 2-2 2H8c-1 0-2-1-2-2v-7z" fill="url(#au_f_bg)" stroke="url(#au_f_grad)" strokeWidth="1.8" />
+          <path d="M9 9V7c0-2 1-3 3-3s3 1 3 3v2" stroke="white" strokeWidth="1.5" />
+        </svg>
+      ),
+      'ssh-tunnel': (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="8" stroke="url(#au_f_grad)" strokeWidth="2" filter="url(#au_f_glow)" />
+        </svg>
+      )
+    }
+  },
+
+  ghost_ui: {
+    name: 'Ghost UI',
+    icons: {
+      folder: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <filter id="ghost_glow_v5" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="1.8" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+          </defs>
+          <path d="M5 6h4l2 2h8c1.1 0 2 .9 2 2v8c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V8c0-1.1.9-2 2-2z" stroke="white" strokeWidth="0.8" strokeLinejoin="round" filter="url(#ghost_glow_v5)" />
+        </svg>
+      ),
+      folderOpen: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M5 6h4l2 2h8c1.1 0 2 .9 2 2v2H3V8c0-1.1.9-2 2-2z" stroke="white" strokeWidth="0.5" opacity="0.3" />
+          <path d="M3 10l2 10h14l2-10H3z" fill="rgba(255,255,255,0.03)" stroke="white" strokeWidth="0.8" strokeLinejoin="round" style={{backdropFilter: 'blur(3px)'}} filter="url(#ghost_glow_v5)" />
+        </svg>
+      ),
+      ssh: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <rect x="4" y="5" width="16" height="12" rx="3" stroke="white" strokeWidth="0.8" filter="url(#ghost_glow_v5)" />
+          <path d="M8 10l2 2-2 2M13 14h3" stroke="white" strokeWidth="1" strokeLinecap="round" />
+        </svg>
+      ),
+      rdp: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <rect x="4" y="5" width="16" height="12" rx="3" stroke="white" strokeWidth="0.8" filter="url(#ghost_glow_v5)" />
+          <path d="M12 8v4M10 10l2 2 2-2" stroke="white" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round" />
+          <line x1="9" y1="14" x2="15" y2="14" stroke="white" strokeWidth="0.6" />
+        </svg>
+      ),
+      vnc: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <rect x="4" y="5" width="16" height="12" rx="3" stroke="white" strokeWidth="0.8" filter="url(#ghost_glow_v5)" />
+          <circle cx="12" cy="11" r="2.5" stroke="white" strokeWidth="0.8" />
+          <path d="M12 13.5V15M10 15h4" stroke="white" strokeWidth="0.6" />
+        </svg>
+      ),
+      file: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M14 4H6c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10l-6-6z" stroke="white" strokeWidth="0.8" strokeLinejoin="round" filter="url(#ghost_glow_v5)" />
+          <path d="M14 4v6h6" stroke="white" strokeWidth="0.6" opacity="0.4" />
+        </svg>
+      ),
+      sftp: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M14 4H6c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10l-6-6z" stroke="white" strokeWidth="0.6" opacity="0.3" />
+          <path d="M12 11v6M10 15l2 2 2-2" stroke="white" strokeWidth="0.8" strokeLinecap="round" filter="url(#ghost_glow_v5)" />
+        </svg>
+      ),
+      ftp: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M14 4H6c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10l-6-6z" stroke="white" strokeWidth="0.6" opacity="0.3" />
+          <path d="M12 17v-6M14 13.5l-2-2-2 2" stroke="white" strokeWidth="0.8" strokeLinecap="round" filter="url(#ghost_glow_v5)" />
+        </svg>
+      ),
+      scp: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M14 4H6c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10l-6-6z" stroke="white" strokeWidth="0.6" opacity="0.3" />
+          <path d="M10 14l2-2 2 2M12 12v5" stroke="white" strokeWidth="0.8" strokeLinecap="round" filter="url(#ghost_glow_v5)" />
+        </svg>
+      ),
+      password: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <rect x="6" y="11" width="12" height="8" rx="2" stroke="white" strokeWidth="0.8" filter="url(#ghost_glow_v5)" />
+          <path d="M9 11V8c0-1.7 1.3-3 3-3s3 1.3 3 3v3" stroke="white" strokeWidth="0.6" />
+        </svg>
+      ),
+      'ssh-tunnel': (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="8" stroke="white" strokeWidth="0.6" opacity="0.2" />
+          <path d="M12 4.5l7 7.5-7 7.5-7-7.5 7-7.5z" stroke="white" strokeWidth="1" filter="url(#ghost_glow_v5)" />
+        </svg>
+      )
+    }
+  },
+
+  neon_matrix: {
+    name: 'Neon Matrix',
+    icons: {
+      folder: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <filter id="nm_glow_new">
+              <feGaussianBlur stdDeviation="1" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          {/* Segmented Digital Folder Shape */}
+          <rect x="3" y="5" width="6" height="2" fill="#001500" stroke="#39ff14" strokeWidth="1" filter="url(#nm_glow_new)" />
+          <rect x="10" y="7" width="11" height="2" fill="#001500" stroke="#39ff14" strokeWidth="1" />
+          <rect x="3" y="9" width="18" height="11" fill="#001500" stroke="#39ff14" strokeWidth="1.5" filter="url(#nm_glow_new)" />
+          <rect x="5" y="12" width="1" height="1" fill="#39ff14" />
+          <rect x="7" y="12" width="1" height="1" fill="#39ff14" opacity="0.4" />
+        </svg>
+      ),
+      folderOpen: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="5" width="18" height="4" fill="#001500" stroke="#006400" strokeWidth="1.5" />
+          <rect x="3" y="10" width="18" height="10" fill="#001500" stroke="#39ff14" strokeWidth="2" filter="url(#nm_glow_new)" />
+          <path d="M5 13h14M5 16h14" stroke="#39ff14" strokeWidth="0.5" opacity="0.3" />
+        </svg>
+      ),
+      ssh: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          {/* Pixel Terminal Shape */}
+          <path d="M2 4h20v14H2V4z" fill="#001500" stroke="#39ff14" strokeWidth="1.5" filter="url(#nm_glow_new)" />
+          <rect x="5" y="7" width="2" height="2" fill="#39ff14" />
+          <rect x="7" y="9" width="2" height="2" fill="#39ff14" />
+          <rect x="5" y="11" width="2" height="2" fill="#39ff14" />
+          <rect x="11" y="13" width="6" height="2" fill="#39ff14" />
+      rdp: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M2 4h20v13H2V4z" fill="#001500" stroke="#39ff14" strokeWidth="1.5" filter="url(#nm_glow_new)" />
+          <rect x="10" y="8" width="4" height="4" stroke="#39ff14" strokeWidth="1" />
+          <path d="M5 21h14M12 17v4" stroke="#39ff14" strokeWidth="1.5" />
+        </svg>
+      ),
+      vnc: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M2 4h20v13H2V4z" fill="#001500" stroke="#39ff14" strokeWidth="1.5" filter="url(#nm_glow_new)" />
+          <rect x="7" y="8" width="10" height="6" stroke="#39ff14" strokeWidth="1" />
+          <rect x="11" y="10" width="2" height="2" fill="#39ff14" />
+        </svg>
+      ),
+      file: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M14 3H4v18h16V9l-6-6z" fill="#001500" stroke="#39ff14" strokeWidth="1.5" filter="url(#nm_glow_new)" />
+          <path d="M14 3v6h6" stroke="#39ff14" strokeWidth="1.5" />
+          <rect x="7" y="12" width="10" height="1" fill="#39ff14" opacity="0.3" />
+        </svg>
+      ),
+      sftp: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M14 3H4v18h16V9l-6-6z" fill="#001500" stroke="#39ff14" strokeWidth="1.5" />
+          <rect x="9" y="13" width="6" height="4" stroke="#39ff14" strokeWidth="1" />
+          <path d="M12 11v6" stroke="#39ff14" strokeWidth="1" />
+        </svg>
+      ),
+      ftp: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M14 3H4v18h16V9l-6-6z" fill="#001500" stroke="#39ff14" strokeWidth="1.5" />
+          <path d="M8 14h8M12 11v6" stroke="#39ff14" strokeWidth="1" />
+        </svg>
+      ),
+      scp: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M14 3H4v18h16V9l-6-6z" fill="#001500" stroke="#39ff14" strokeWidth="1.5" />
+          <path d="M9 16l3-3 3 3" stroke="#39ff14" strokeWidth="2" />
+        </svg>
+      ),
+      password: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <rect x="5" y="11" width="14" height="9" fill="#001500" stroke="#39ff14" strokeWidth="1.5" filter="url(#nm_glow_new)" />
+          <path d="M8 11V8h8v3" stroke="#39ff14" strokeWidth="1.5" />
+          <rect x="11" y="15" width="2" height="2" fill="#39ff14" />
+        </svg>
+      ),
+      'ssh-tunnel': (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2l10 5-10 5L2 7l10-5z" stroke="#39ff14" strokeWidth="1.5" filter="url(#nm_glow_new)" />
+          <path d="M2 12l10 5 10-5M2 17l10 5 10-5" stroke="#39ff14" strokeWidth="1" opacity="0.3" />
+        </svg>
+      )
+>
+        </svg>
+      )
+    }
+  },
+
+  obsidian_glass: {
+    name: 'Obsidian Glass',
+    icons: {
+      folder: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          {/* Heavy 3D Beveled Folder Shape */}
+          <path d="M4 6a2 2 0 0 1 2-2h3l3 3h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6z" fill="#050505" stroke="#444" strokeWidth="2.5" />
+          <path d="M4 6a2 2 0 0 1 2-2h3l3 3h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6z" stroke="rgba(255,255,255,0.4)" strokeWidth="1" />
+          <rect x="6" y="9" width="12" height="1" fill="white" opacity="0.1" />
+        </svg>
+      ),
+      folderOpen: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M4 6a2 2 0 0 1 2-2h3l3 3h8a2 2 0 0 1 2 2v2H4V6z" fill="#000" stroke="#333" strokeWidth="2" />
+          <path d="M4 10l2 10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1l2-10H4z" fill="#111" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" />
+        </svg>
+      ),
+      ssh: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="4" width="18" height="14" rx="1" fill="#0a0a0a" stroke="#444" strokeWidth="2" />
+          <rect x="3" y="4" width="18" height="14" rx="1" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+          <path d="M7 9l3 3-3 3M13 15h4" stroke="white" strokeWidth="2" />
+      rdp: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M4 4h16v13H4V4z" fill="#050505" stroke="#444" strokeWidth="2.5" />
+          <circle cx="12" cy="11" r="3" stroke="white" strokeWidth="1.5" />
+          <path d="M8 21h8" stroke="#444" strokeWidth="2" />
+        </svg>
+      ),
+      vnc: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M4 4h16v13H4V4z" fill="#050505" stroke="#444" strokeWidth="2.5" />
+          <ellipse cx="12" cy="11" rx="5" ry="3" stroke="white" strokeWidth="1.2" />
+          <path d="M12 17v4" stroke="#444" strokeWidth="2" />
+        </svg>
+      ),
+      file: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M14 3H6v18h12V7z" fill="#050505" stroke="#444" strokeWidth="2.5" />
+          <path d="M14 3v4h4" stroke="white" strokeWidth="1" opacity="0.3" />
+        </svg>
+      ),
+      sftp: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M14 3H6v18h12V7z" fill="#050505" stroke="#444" strokeWidth="2" />
+          <rect x="9" y="13" width="6" height="4" stroke="white" strokeWidth="1.5" />
+        </svg>
+      ),
+      ftp: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M14 3H6v18h12V7z" fill="#050505" stroke="#444" strokeWidth="2" />
+          <path d="M9 14h6M12 11l-3 3 3 3" stroke="white" strokeWidth="1.5" />
+        </svg>
+      ),
+      scp: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M14 3H6v18h12V7z" fill="#050505" stroke="#444" strokeWidth="2.5" />
+          <path d="M9 16l3-3 3 3" stroke="white" strokeWidth="2" />
+        </svg>
+      ),
+      password: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <rect x="5" y="11" width="14" height="9" fill="#050505" stroke="#444" strokeWidth="2.5" />
+          <path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="white" strokeWidth="1.5" />
+        </svg>
+      ),
+      'ssh-tunnel': (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M12 4L4 10l8 6 8-6-8-6z" fill="#050505" stroke="#444" strokeWidth="2.5" />
+          <path d="M4 14l8 6 8-6" stroke="#444" strokeWidth="2" />
+        </svg>
+      )
+>
+        </svg>
+      )
+    }
+  },
+
+  crimson_tech: {
+    name: 'Crimson Tech',
+    icons: {
+      folder: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="cr_f_bg" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#2a0505" />
+              <stop offset="100%" stopColor="#1a0000" />
+            </linearGradient>
+            <filter id="cr_f_glow_v2">
+              <feGaussianBlur stdDeviation="1" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          {/* Angular stealth folder shape */}
+          <path d="M2 8l4-4h6l4 4h6v12l-2 2H4l-2-2V8z" fill="url(#cr_f_bg)" stroke="#ff0844" strokeWidth="1.5" filter="url(#cr_f_glow_v2)" />
+          <path d="M2 10h20M2 14h20" stroke="#ff0844" strokeWidth="0.5" opacity="0.3" />
+          <path d="M6 4v4M12 4v4" stroke="#ff0844" strokeWidth="1" />
+        </svg>
+      ),
+      folderOpen: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M2 8l4-4h6l4 4h6v2H2V8z" fill="#1a0000" stroke="#ff0844" strokeWidth="1" />
+          <path d="M2 10l3 11h14l3-11H2z" fill="url(#cr_f_bg)" stroke="#ff0844" strokeWidth="2" filter="url(#cr_f_glow_v2)" />
+        </svg>
+      ),
+      ssh: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          {/* Tactical Terminal Shape */}
+          <path d="M3 4h18v14H3V4z" fill="#1a0505" stroke="#ff0844" strokeWidth="1.5" filter="url(#cr_f_glow_v2)" />
+          <path d="M7 9l4 3-4 3" stroke="#ffb199" strokeWidth="2" strokeLinecap="square" />
+          <rect x="12" y="14" width="5" height="2" fill="#ffb199" />
+          <path d="M3 6h18M3 16h18" stroke="#ff0844" strokeWidth="0.5" opacity="0.4" />
+      rdp: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M2 5h20v12H2V5z" fill="#1a0505" stroke="#ff0844" strokeWidth="1.5" filter="url(#cr_f_glow_v2)" />
+          <path d="M12 21l-3-4h6l-3 4z" fill="#ff0844" />
+          <circle cx="12" cy="11" r="3" stroke="#ffb199" strokeWidth="1.5" />
+        </svg>
+      ),
+      vnc: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M2 5h20v12H2V5z" fill="#1a0505" stroke="#ff0844" strokeWidth="1.5" filter="url(#cr_f_glow_v2)" />
+          <path d="M6 8l12 0l-6 6l-6-6z" fill="#ff0844" opacity="0.3" />
+          <rect x="11" y="10" width="2" height="2" fill="#ffb199" />
+        </svg>
+      ),
+      file: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M14 3H5l-3 3v15h16V9l-4-6z" fill="#1a0505" stroke="#ff0844" strokeWidth="1.5" filter="url(#cr_f_glow_v2)" />
+          <path d="M14 3v6h6" stroke="#ff0844" strokeWidth="1.5" />
+          <path d="M5 13h10M5 16h7" stroke="#ff0844" strokeWidth="0.5" opacity="0.4" />
+        </svg>
+      ),
+      sftp: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M14 3H5l-3 3v15h16V9l-4-6z" fill="#1a0505" stroke="#ff0844" strokeWidth="1.5" />
+          <rect x="9" y="13" width="6" height="4" stroke="#ffb199" strokeWidth="1.5" />
+          <path d="M12 11v6" stroke="#ffb199" strokeWidth="1.5" />
+        </svg>
+      ),
+      ftp: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M14 3H5l-3 3v15h16V9l-4-6z" fill="#1a0505" stroke="#ff0844" strokeWidth="1.5" />
+          <path d="M8 14h8M12 11l-3 3 3 3" stroke="#ffb199" strokeWidth="1.5" />
+        </svg>
+      ),
+      scp: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M14 3H5l-3 3v15h16V9l-4-6z" fill="#1a0505" stroke="#ff0844" strokeWidth="1.5" />
+          <path d="M9 16l3-3 3 3" stroke="#ffb199" strokeWidth="2" />
+        </svg>
+      ),
+      password: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M5 11h14v9H5v-9z" fill="#1a0505" stroke="#ff0844" strokeWidth="1.5" filter="url(#cr_f_glow_v2)" />
+          <path d="M8 11V7l4-3l4 3v4" stroke="#ffb199" strokeWidth="1.5" fill="none" />
+          <rect x="11" y="14" width="2" height="3" fill="#ffb199" />
+        </svg>
+      ),
+      'ssh-tunnel': (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L2 12l10 10l10-10L12 2z" stroke="#ff0844" strokeWidth="2" filter="url(#cr_f_glow_v2)" />
+          <path d="M6 12h12M12 6v12" stroke="#ff0844" strokeWidth="0.5" opacity="0.3" />
+        </svg>
+      )
+>
+        </svg>
+      )
+    }
+  },
+
+  synthwave: {
+    name: 'Synthwave',
+    icons: {
+      folder: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="synthFolderNew" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#ff007f" />
+              <stop offset="100%" stopColor="#7928ca" />
+            </linearGradient>
+            <filter id="synthGlowNew">
+              <feDropShadow dx="0" dy="0" stdDeviation="2" floodColor="#ff007f" />
+            </filter>
+          </defs>
+          {/* Sharp Retro 80s Folder Shape */}
+          <path d="M2 6h8l2 2h10v12H2V6z" fill="#120424" stroke="url(#synthFolderNew)" strokeWidth="2" filter="url(#synthGlowNew)" />
+          <path d="M2 10h20M2 13h20M2 16h20" stroke="#00d2ff" strokeWidth="0.5" opacity="0.3" />
+          <path d="M6 6v14M12 8v12M18 8v12" stroke="#ff007f" strokeWidth="0.2" opacity="0.2" />
+        </svg>
+      ),
+      folderOpen: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M2 6h8l2 2h10v2H2V6z" stroke="url(#synthFolderNew)" strokeWidth="1.5" />
+          <path d="M2 10l2 10h16l2-10H2z" fill="#120424" stroke="#ff007f" strokeWidth="2" filter="url(#synthGlowNew)" />
+          <circle cx="12" cy="15" r="3" stroke="#00d2ff" strokeWidth="0.5" opacity="0.5" />
+        </svg>
+      ),
+      ssh: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          {/* Retro Monitor Shape */}
+          <rect x="3" y="4" width="18" height="13" rx="1" fill="#120424" stroke="#7928ca" strokeWidth="2" filter="url(#synthGlowNew)" />
+          <path d="M3 7h18M3 10h18M3 13h18" stroke="#ff007f" strokeWidth="0.5" opacity="0.2" />
+          <path d="M8 9l2 2-2 2M12 13h4" stroke="#00d2ff" strokeWidth="1.5" />
+          <path d="M6 20h12M12 17v3" stroke="#7928ca" strokeWidth="1.5" />
+      rdp: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M4 4h16v13H4V4z" fill="#120424" stroke="#ff007f" strokeWidth="2" filter="url(#synthGlowNew)" />
+          <path d="M4 17l-2 4h20l-2-4H4z" fill="#7928ca" />
+          <circle cx="12" cy="10" r="3" stroke="#00d2ff" strokeWidth="1.5" />
+        </svg>
+      ),
+      vnc: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M4 4h16v13H4V4z" fill="#120424" stroke="#00d2ff" strokeWidth="2" filter="url(#synthGlowNew)" />
+          <path d="M12 17v4M8 21h8" stroke="#ff007f" strokeWidth="2" />
+          <ellipse cx="12" cy="10" rx="5" ry="3" stroke="#ff007f" strokeWidth="1.5" />
+        </svg>
+      ),
+      file: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M14 3H5v18h14V9l-5-6z" fill="#120424" stroke="#ff007f" strokeWidth="2" filter="url(#synthGlowNew)" />
+          <path d="M14 3v6h6" stroke="#00d2ff" strokeWidth="1.5" />
+          <path d="M8 13h8M8 16h5" stroke="#00d2ff" strokeWidth="1" opacity="0.4" />
+        </svg>
+      ),
+      sftp: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M14 3H5v18h14V9l-5-6z" fill="#120424" stroke="#7928ca" strokeWidth="2" />
+          <rect x="9" y="13" width="6" height="4" stroke="#00d2ff" strokeWidth="1.5" />
+          <path d="M12 11v6" stroke="#ff007f" strokeWidth="2" />
+        </svg>
+      ),
+      ftp: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M14 3H5v18h14V9l-5-6z" fill="#120424" stroke="#ff007f" strokeWidth="2" />
+          <path d="M9 14h6M12 11l-3 3 3 3" stroke="#00d2ff" strokeWidth="2" />
+        </svg>
+      ),
+      scp: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M14 3H5v18h14V9l-5-6z" fill="#120424" stroke="#00d2ff" strokeWidth="2" />
+          <path d="M9 16l3-3 3 3" stroke="#ff007f" strokeWidth="2.5" />
+        </svg>
+      ),
+      password: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M5 11h14v9H5v-9z" fill="#120424" stroke="#7928ca" strokeWidth="2" filter="url(#synthGlowNew)" />
+          <path d="M8 11V7a4 4 0 0 1 8 0v4" stroke="#ff007f" strokeWidth="2" />
+          <rect x="11" y="14" width="2" height="3" fill="#00d2ff" />
+        </svg>
+      ),
+      'ssh-tunnel': (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L2 12l10 10l10-10L12 2z" stroke="#ff007f" strokeWidth="2" filter="url(#synthGlowNew)" />
+          <circle cx="12" cy="12" r="5" stroke="#00d2ff" strokeWidth="1" strokeDasharray="2 2" />
+        </svg>
+      )
+>
+        </svg>
+      )
+    }
   }
 }; 
