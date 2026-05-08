@@ -11,6 +11,8 @@ import { ColorSelector } from './ColorSelector';
 import { InputTextarea } from 'primereact/inputtextarea';
 import { FileUpload } from 'primereact/fileupload';
 import { Message } from 'primereact/message';
+import { Tooltip } from 'primereact/tooltip';
+import { InputSwitch } from 'primereact/inputswitch';
 import { FolderIconSelectorModal, FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
 import { SSHIconSelectorModal, SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
 import { iconThemes } from '../themes/icon-themes';
@@ -628,42 +630,25 @@ export function EditSSHConnectionDialog({
   }, [setSSHIcon]);
 
   const headerTemplate = (
-    <div className="protocol-dialog-header-custom">
-      <button 
-        type="button"
-        onClick={() => setShowIconSelector(true)} 
-        className="protocol-dialog-header-icon-button"
-        title="Haz clic para cambiar el icono"
-        style={{ 
-          background: 'none', 
-          border: 'none', 
-          padding: 0, 
-          cursor: 'pointer',
-          borderRadius: '12px',
-          transition: 'transform 0.2s ease, box-shadow 0.2s ease'
-        }}
-      >
-        {currentIconPreset ? (
-          <SSHIconRenderer preset={currentIconPreset} size="medium" />
-        ) : (
-          <div className="protocol-dialog-header-icon" style={{ background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)', boxShadow: '0 2px 8px rgba(255, 152, 0, 0.3)' }}>
-            {themeSSHIcon ? (
-              React.cloneElement(themeSSHIcon, {
-                width: 28,
-                height: 28,
-                style: { 
-                  ...themeSSHIcon.props.style,
-                  width: '28px',
-                  height: '28px'
-                }
-              })
-            ) : (
+    <div className="terminal-header-compact">
+      <div className="flex align-items-center gap-2">
+        <button 
+          type="button"
+          onClick={() => setShowIconSelector(true)} 
+          className="terminal-header-icon-btn"
+          title="Cambiar Icono"
+        >
+          {currentIconPreset ? (
+            <SSHIconRenderer preset={currentIconPreset} size="small" />
+          ) : (
+            <div className="terminal-header-icon-mini">
               <i className="pi pi-terminal"></i>
-            )}
-          </div>
-        )}
-      </button>
-      <span className="protocol-dialog-header-title">{t('ssh.title.edit')}</span>
+            </div>
+          )}
+        </button>
+        <span className="terminal-header-title">{t('ssh.title.edit').toUpperCase()}</span>
+      </div>
+      <div className="terminal-header-accent"></div>
     </div>
   );
 
@@ -672,12 +657,13 @@ export function EditSSHConnectionDialog({
       <Dialog
         header={headerTemplate}
         visible={visible}
-        style={{ width: '90vw', maxWidth: '1200px', height: '90vh' }}
+        style={{ width: '100%', maxWidth: '600px' }}
         modal
-        resizable={true}
+        resizable={false}
         onHide={onHide}
-        contentStyle={{ padding: '0', overflow: 'hidden', background: 'var(--ui-dialog-bg)', color: 'var(--ui-dialog-text)' }}
-        className="edit-ssh-connection-dialog protocol-selection-dialog-new"
+        contentStyle={{ padding: '0', overflow: 'hidden', background: '#0a0e14' }}
+        className="terminal-pro-dialog"
+        closable={false}
       >
         <div style={{ marginTop: '10px', height: '100%', display: 'flex', flexDirection: 'column' }}>
           <EnhancedSSHForm
@@ -864,20 +850,9 @@ export function EditRDPConnectionDialog({
   }, []);
 
   const handleCheckboxChange = useCallback((field) => (e) => {
-    // PrimeReact Checkbox pasa el estado en e.checked (boolean)
-    const newValue = !!e.checked; // Asegurar que sea boolean
-    console.log(`[EditRDP] Checkbox ${field} cambiado:`, { 
-      checked: e.checked, 
-      newValue,
-      currentState: formData[field]
-    });
-    
-    setFormData(prev => {
-      const updated = { ...prev, [field]: newValue };
-      console.log(`[EditRDP] Estado actualizado:`, { field, oldValue: prev[field], newValue: updated[field] });
-      return updated;
-    });
-  }, [formData]);
+    const newValue = !!e.checked;
+    setFormData(prev => ({ ...prev, [field]: newValue }));
+  }, []);
 
   const handleSelectFolder = async () => {
     try {
@@ -898,16 +873,29 @@ export function EditRDPConnectionDialog({
     return formData.name.trim() !== '' && formData.server.trim() !== '' && formData.username.trim() !== '';
   }, [formData]);
 
+  const headerTemplate = (
+    <div className="terminal-header-compact">
+      <div className="flex align-items-center gap-2">
+        <div className="terminal-header-icon-mini" style={{ background: 'rgba(33, 150, 243, 0.1)', color: '#2196F3' }}>
+          <i className="pi pi-desktop"></i>
+        </div>
+        <span className="terminal-header-title">{t('rdp.title.edit').toUpperCase()}</span>
+      </div>
+      <div className="terminal-header-accent" style={{ background: '#2196F3', boxShadow: '0 0 8px #2196F3' }}></div>
+    </div>
+  );
+
   return (
     <Dialog
-      header={t('rdp.title.edit')}
+      header={headerTemplate}
       visible={visible}
       onHide={onHide}
-      style={{ width: '90vw', maxWidth: '1200px', height: '90vh' }}
+      style={{ width: '100%', maxWidth: '800px' }}
       modal
-      resizable={true}
-      contentStyle={{ padding: '0', overflow: 'auto' }}
-      className="edit-rdp-connection-dialog"
+      resizable={false}
+      contentStyle={{ padding: '0', overflow: 'auto', background: '#0a0e14' }}
+      className="terminal-pro-dialog"
+      closable={false}
     >
       <div className="p-fluid" style={{ padding: '12px', height: '100%', display: 'flex', flexDirection: 'column' }}>
         <div style={{ flex: '1 1 auto', overflowY: 'auto', padding: '2px' }}>
@@ -1669,384 +1657,376 @@ export function EnhancedSSHForm({
 
   // Render del formulario
   return (
-    <div className="general-settings-container" style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', paddingTop: '1rem' }}>
-      {/* Contenedor principal que se expande */}
-      <div style={{ flex: '1 1 auto', overflowY: 'auto', overflowX: 'hidden' }}>
-        {/* Grid de 2 columnas para las secciones */}
-        <div className="general-settings-content">
-          
-          {/* Sección: Conexión - Columna Izquierda */}
-          <div className="general-settings-section">
-            <div className="general-section-header">
-              <div className="general-section-icon">
-                <i className="pi pi-link"></i>
-              </div>
-              <h4 className="general-section-title">{t('ssh.sections.connection')}</h4>
-            </div>
-            
-            <div className="general-settings-options">
-              <div className="general-setting-card">
-                <div className="general-setting-content">
-                  <div className="general-setting-icon lock">
-                    <i className="pi pi-tag"></i>
-                  </div>
-                  <div className="general-setting-info">
-                    <label htmlFor="sshName" className="general-setting-label">
-                      {t('ssh.fields.name')} <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
-                    </label>
-                    <p className="general-setting-description">
-                      {t('ssh.descriptions.name')}
-                    </p>
-                  </div>
-                  <div className="general-setting-control">
-                    <InputText 
-                      id="sshName"
-                      value={sshName} 
-                      onChange={(e) => setSSHName(e.target.value)}
-                      placeholder={t('ssh.placeholders.name')}
-                      autoFocus={activeTabIndex === 0}
-                      className={validationErrors.name ? 'p-invalid' : ''}
-                      style={{ width: '100%', fontSize: '0.875rem' }}
-                    />
-                  </div>
-                </div>
-                {validationErrors.name && <small className="p-error" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem', marginLeft: '2.75rem' }}>{validationErrors.name}</small>}
-              </div>
-
-              <div className="general-setting-card">
-                <div className="general-setting-content">
-                  <div className="general-setting-icon lock">
-                    <i className="pi pi-file-edit"></i>
-                  </div>
-                  <div className="general-setting-info">
-                    <label htmlFor="sshDescription" className="general-setting-label">
-                      Description <span style={{ opacity: 0.6, fontSize: '0.9rem' }}>({tCommon('labels.optional')})</span>
-                    </label>
-                    <p className="general-setting-description">
-                      Descripción adicional de la conexión
-                    </p>
-                  </div>
-                  <div className="general-setting-control">
-                    <InputText 
-                      id="sshDescription"
-                      value={sshDescription} 
-                      onChange={(e) => setSSHDescription(e.target.value)}
-                      placeholder="My server"
-                      style={{ width: '100%', fontSize: '0.875rem' }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="general-setting-card">
-                <div className="general-setting-content">
-                  <div className="general-setting-icon lock">
-                    <i className="pi pi-server"></i>
-                  </div>
-                  <div className="general-setting-info">
-                    <label htmlFor="sshHost" className="general-setting-label">
-                      {t('ssh.fields.host')} <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
-                    </label>
-                    <p className="general-setting-description">
-                      {t('ssh.descriptions.host')}
-                    </p>
-                  </div>
-                  <div className="general-setting-control general-setting-control-inputs" style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', maxWidth: '280px', flex: '1 1 auto' }}>
-                    <InputText 
-                      id="sshHost"
-                      value={sshHost} 
-                      onChange={(e) => setSSHHost(e.target.value)}
-                      placeholder={t('ssh.placeholders.host')}
-                      className={validationErrors.host ? 'p-invalid' : ''}
-                      style={{ flex: '1 1 auto', minWidth: '120px', maxWidth: '200px', fontSize: '0.875rem' }}
-                    />
-                    <InputText 
-                      id="sshPort"
-                      value={sshPort} 
-                      onChange={(e) => setSSHPort(e.target.value)}
-                      placeholder={t('ssh.placeholders.port')}
-                      className={validationErrors.port ? 'p-invalid' : ''}
-                      style={{ width: '70px', flexShrink: 0, fontSize: '0.875rem' }}
-                    />
-                  </div>
-                </div>
-                {validationErrors.host && <small className="p-error" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem', marginLeft: '2.75rem' }}>{validationErrors.host}</small>}
-                {validationErrors.port && <small className="p-error" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem', marginLeft: '2.75rem' }}>{validationErrors.port}</small>}
-              </div>
-
-              <div className="general-setting-card">
-                <div className="general-setting-content">
-                  <div className="general-setting-icon lock">
-                    <i className="pi pi-user"></i>
-                  </div>
-                  <div className="general-setting-info">
-                    <label htmlFor="sshUser" className="general-setting-label">
-                      {t('ssh.fields.user')} <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
-                    </label>
-                    <p className="general-setting-description">
-                      {t('ssh.descriptions.user')}
-                    </p>
-                  </div>
-                  <div className="general-setting-control">
-                    <InputText 
-                      id="sshUser"
-                      value={sshUser} 
-                      onChange={(e) => setSSHUser(e.target.value)}
-                      placeholder={t('ssh.placeholders.user')}
-                      className={validationErrors.user ? 'p-invalid' : ''}
-                      style={{ width: '100%', fontSize: '0.875rem' }}
-                    />
-                  </div>
-                </div>
-                {validationErrors.user && <small className="p-error" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem', marginLeft: '2.75rem' }}>{validationErrors.user}</small>}
-              </div>
+    <div className="ssh-terminal-form" style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '0.75rem 1rem' }}>
+      <Tooltip target=".info-icon" position="top" />
+      
+      <div className="terminal-form-scroll-area" style={{ flex: '1 1 auto', overflowY: 'auto', paddingRight: '4px' }}>
+        
+        {/* Row: Host / Port */}
+        <div className="terminal-row grid grid-nogutter gap-3 mb-3">
+          <div className="col">
+            <label className="terminal-label">HOST / DIRECCIÓN IP</label>
+            <div className="terminal-input-wrap">
+              <i className="pi pi-server terminal-icon-left"></i>
+              <InputText 
+                value={sshHost} 
+                onChange={(e) => setSSHHost(e.target.value)}
+                placeholder="ssh.ejemplo.com"
+                className={`terminal-input ${validationErrors.host ? 'p-invalid' : ''}`}
+              />
+              <i className="pi pi-ellipsis-h terminal-icon-right opacity-30"></i>
             </div>
           </div>
-
-          {/* Sección: Autenticación - Columna Derecha */}
-          <div className="general-settings-section">
-            <div className="general-section-header">
-              <div className="general-section-icon">
-                <i className="pi pi-lock"></i>
-              </div>
-              <h4 className="general-section-title">{t('ssh.sections.authentication')}</h4>
-            </div>
-            
-            <div className="general-settings-options">
-              <div className="general-setting-card">
-                <div className="general-setting-content">
-                  <div className="general-setting-icon bolt">
-                    <i className="pi pi-key"></i>
-                  </div>
-                  <div className="general-setting-info">
-                    <label className="general-setting-label">
-                      {t('ssh.auth.method')}
-                    </label>
-                    <p className="general-setting-description">
-                      {t('ssh.auth.methodDescription')}
-                    </p>
-                  </div>
-                  <div className="general-setting-control" style={{ display: 'flex', gap: '1rem' }}>
-                    <div className="field-radiobutton">
-                      <RadioButton inputId="authPassword" name="authMethod" value="password" onChange={(e) => setAuthMethod(e.value)} checked={authMethod === 'password'} />
-                      <label htmlFor="authPassword" style={{ marginLeft: '0.5rem', cursor: 'pointer', fontSize: '0.8125rem' }}>{t('ssh.auth.password')}</label>
-                    </div>
-                    <div className="field-radiobutton">
-                      <RadioButton inputId="authKey" name="authMethod" value="key" onChange={(e) => setAuthMethod(e.value)} checked={authMethod === 'key'} />
-                      <label htmlFor="authKey" style={{ marginLeft: '0.5rem', cursor: 'pointer', fontSize: '0.8125rem' }}>{t('ssh.auth.key')}</label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {authMethod === 'password' && (
-                <>
-                  <div className="general-setting-card">
-                    <div className="general-setting-content">
-                      <div className="general-setting-icon lock">
-                        <i className="pi pi-lock"></i>
-                      </div>
-                      <div className="general-setting-info">
-                        <label htmlFor="sshPassword" className="general-setting-label">
-                          {t('ssh.fields.password')} <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
-                        </label>
-                        <p className="general-setting-description">
-                          {t('ssh.descriptions.password')}
-                        </p>
-                      </div>
-                      <div className="general-setting-control">
-                        <div className="p-inputgroup" style={{ width: '100%' }}>
-                          <InputText 
-                            id="sshPassword"
-                            type={showPassword ? "text" : "password"}
-                            value={sshPassword} 
-                            onChange={(e) => setSSHPassword(e.target.value)}
-                            placeholder={t('ssh.placeholders.password')}
-                            className={validationErrors.password ? 'p-invalid' : ''}
-                            style={{ width: '100%', fontSize: '0.875rem' }}
-                          />
-                          <Button 
-                            type="button" 
-                            icon={showPassword ? "pi pi-eye-slash" : "pi pi-eye"} 
-                            className="p-button-outlined"
-                            onClick={() => setShowPassword(!showPassword)}
-                            tooltip={showPassword ? t('ssh.tooltips.hidePassword') : t('ssh.tooltips.showPassword')}
-                            tooltipOptions={{ position: 'top' }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    {validationErrors.password && <small className="p-error" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem', marginLeft: '2.75rem' }}>{validationErrors.password}</small>}
-                  </div>
-
-                  <div className="general-setting-card">
-                    <div className="general-setting-content">
-                      <div className="general-setting-icon bolt">
-                        <i className="pi pi-copy"></i>
-                      </div>
-                      <div className="general-setting-info">
-                        <label htmlFor="autoCopyPassword" className="general-setting-label">
-                          {t('ssh.auth.autoCopyPassword')}
-                        </label>
-                        <p className="general-setting-description">
-                          {t('ssh.auth.autoCopyPasswordDescription')}
-                        </p>
-                      </div>
-                      <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
-                        <Checkbox 
-                          inputId="autoCopyPassword" 
-                          checked={autoCopyPassword} 
-                          onChange={(e) => handleAutoCopyToggle(e.checked)} 
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {authMethod === 'key' && (
-                <div className="general-setting-card general-setting-card-ssh-key">
-                  <div className="general-setting-content">
-                    <div className="general-setting-icon lock">
-                      <i className="pi pi-key"></i>
-                    </div>
-                    <div className="general-setting-info">
-                      <label htmlFor="sshPrivateKey" className="general-setting-label">
-                        {t('ssh.fields.privateKeySSH')} <span style={{ color: 'var(--ui-button-primary)' }}>*</span>
-                      </label>
-                      <p className="general-setting-description">
-                        {t('ssh.descriptions.privateKey')}
-                      </p>
-                    </div>
-                    <div className="general-setting-control general-setting-control-ssh-key" style={{ width: '100%', flexDirection: 'column', alignItems: 'stretch', gap: '0.5rem' }}>
-                      <FileUpload
-                        mode="basic"
-                        name="sshPrivateKey"
-                        accept=".pem,.key"
-                        maxFileSize={10000000}
-                        chooseLabel={t('ssh.auth.selectKeyFile')}
-                        onUpload={handleFileUpload}
-                        auto
-                        style={{ width: '100%' }}
-                      />
-                      {sshPrivateKey && (
-                        <InputTextarea
-                          id="sshPrivateKey"
-                          value={sshPrivateKey}
-                          onChange={(e) => setSSHPrivateKey(e.target.value)}
-                          rows={6}
-                          placeholder={t('ssh.auth.pasteKey')}
-                          className={validationErrors.privateKey ? 'p-invalid' : ''}
-                          style={{ fontFamily: 'monospace', fontSize: '12px', width: '100%' }}
-                        />
-                      )}
-                    </div>
-                  </div>
-                  {validationErrors.privateKey && <small className="p-error" style={{ display: 'block', marginTop: '0.25rem', fontSize: '0.75rem', marginLeft: '2.75rem' }}>{validationErrors.privateKey}</small>}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Sección: Carpetas - Ocupa ambas columnas */}
-          <div className="general-settings-section" style={{ gridColumn: '1 / -1' }}>
-            <div className="general-section-header">
-              <div className="general-section-icon">
-                <i className="pi pi-folder"></i>
-              </div>
-              <h4 className="general-section-title">{t('ssh.sections.folders')}</h4>
-            </div>
-            
-            <div className="general-settings-options">
-              <div className="general-setting-card">
-                <div className="general-setting-content">
-                  <div className="general-setting-icon collapse">
-                    <i className="pi pi-folder-open"></i>
-                  </div>
-                  <div className="general-setting-info">
-                    <label htmlFor="sshRemoteFolder" className="general-setting-label">
-                      {t('ssh.fields.remoteFolder')} <span style={{ opacity: 0.6, fontSize: '0.75rem' }}>({tCommon('labels.optional')})</span>
-                    </label>
-                    <p className="general-setting-description">
-                      {t('ssh.descriptions.remoteFolder')}
-                    </p>
-                  </div>
-                  <div className="general-setting-control">
-                    <InputText 
-                      id="sshRemoteFolder"
-                      value={sshRemoteFolder} 
-                      onChange={(e) => setSSHRemoteFolder(e.target.value)}
-                      placeholder={t('ssh.placeholders.remoteFolder')}
-                      style={{ width: '100%', fontSize: '0.875rem' }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="general-setting-card">
-                <div className="general-setting-content">
-                  <div className="general-setting-icon collapse">
-                    <i className="pi pi-folder"></i>
-                  </div>
-                  <div className="general-setting-info">
-                    <label htmlFor="sshTargetFolder" className="general-setting-label">
-                      {t('ssh.fields.targetFolder')} <span style={{ opacity: 0.6, fontSize: '0.75rem' }}>({tCommon('labels.optional')})</span>
-                    </label>
-                    <p className="general-setting-description">
-                      {t('ssh.descriptions.targetFolder')}
-                    </p>
-                  </div>
-                  <div className="general-setting-control">
-                    <Dropdown
-                      id="sshTargetFolder"
-                      value={sshTargetFolder}
-                      options={foldersOptions}
-                      onChange={(e) => setSSHTargetFolder(e.value)}
-                      placeholder={t('ssh.placeholders.targetFolder')}
-                      filter
-                      showClear
-                      style={{ width: '100%', fontSize: '0.875rem' }}
-                    />
-                  </div>
-                </div>
+          <div className="col-fixed" style={{ width: '100px' }}>
+            <label className="terminal-label">PUERTO</label>
+            <div className="terminal-input-wrap">
+              <InputText value={sshPort} onChange={(e) => setSSHPort(e.target.value)} placeholder="22" className="terminal-input text-center" />
+              <div className="terminal-port-arrows">
+                <i className="pi pi-chevron-up"></i>
+                <i className="pi pi-chevron-down"></i>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Row: Name / Description */}
+        <div className="terminal-row grid grid-nogutter gap-3 mb-3">
+          <div className="col">
+            <label className="terminal-label">NOMBRE DE CONEXIÓN</label>
+            <InputText value={sshName} onChange={(e) => setSSHName(e.target.value)} placeholder="Mi Servidor" className="terminal-input" />
+          </div>
+          <div className="col">
+            <label className="terminal-label">DESCRIPCIÓN</label>
+            <InputText value={sshDescription} onChange={(e) => setSSHDescription(e.target.value)} placeholder="..." className="terminal-input" />
+          </div>
+        </div>
+
+        {/* Row: Auth Type */}
+        <div className="terminal-row mb-3">
+          <label className="terminal-label">TIPO DE AUTENTICACIÓN</label>
+          <div className="terminal-auth-selector">
+            <div className={`terminal-auth-chip ${authMethod === 'password' ? 'active' : ''}`} onClick={() => setAuthMethod('password')}>
+              <i className="pi pi-lock"></i> Contraseña
+            </div>
+            <div className={`terminal-auth-chip ${authMethod === 'key' ? 'active' : ''}`} onClick={() => setAuthMethod('key')}>
+              <i className="pi pi-key"></i> Clave pública
+            </div>
+            <div className="terminal-auth-chip disabled">
+              <i className="pi pi-shield"></i> Ambos
+            </div>
+          </div>
+        </div>
+
+        {/* Row: User */}
+        <div className="terminal-row mb-3">
+          <label className="terminal-label">USUARIO</label>
+          <div className="terminal-input-wrap">
+            <i className="pi pi-user terminal-icon-left"></i>
+            <InputText value={sshUser} onChange={(e) => setSSHUser(e.target.value)} placeholder="admin_usuario" className="terminal-input" />
+          </div>
+        </div>
+
+        {/* Row: Password / Private Key */}
+        <div className="terminal-row grid grid-nogutter gap-3 mb-4">
+          <div className="col">
+            <label className="terminal-label">CONTRASEÑA</label>
+            <div className="terminal-input-wrap">
+              <i className="pi pi-lock terminal-icon-left"></i>
+              <InputText 
+                type={showPassword ? "text" : "password"}
+                value={sshPassword} 
+                onChange={(e) => setSSHPassword(e.target.value)}
+                placeholder="••••••••"
+                className="terminal-input"
+              />
+              <i className={`pi ${showPassword ? 'pi-eye-slash' : 'pi-eye'} terminal-icon-right cursor-pointer`} onClick={() => setShowPassword(!showPassword)}></i>
+            </div>
+          </div>
+          <div className="col">
+            <div className="flex justify-content-between align-items-center">
+              <label className="terminal-label">O CLAVE PRIVADA</label>
+              <i className="pi pi-info-circle text-xs opacity-50"></i>
+            </div>
+            <div className="terminal-input-wrap">
+              <i className="pi pi-file terminal-icon-left"></i>
+              <div className="terminal-file-display">
+                <span className="opacity-40 truncate" style={{ maxWidth: '100px' }}>{sshPrivateKey ? "Cargada" : "Archivo..."}</span>
+                <FileUpload mode="basic" chooseLabel="Examinar" className="terminal-upload-btn" onUpload={handleFileUpload} auto />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Options List with Dotted Lines */}
+        <div className="terminal-options-list mb-3">
+          <div className="terminal-option-item">
+            <div className="flex align-items-center">
+              <i className="pi pi-save terminal-option-icon"></i>
+              <span className="terminal-option-text">Copiar contraseña automáticamente</span>
+            </div>
+            <div className="terminal-dotted-spacer"></div>
+            <InputSwitch checked={sshAutoCopyPassword} onChange={(e) => setSSHAutoCopyPassword(e.value)} className="terminal-switch" />
+          </div>
+
+          <div className="terminal-option-item">
+            <div className="flex align-items-center">
+              <i className="pi pi-desktop terminal-option-icon"></i>
+              <span className="terminal-option-text">X11 Forwarding</span>
+            </div>
+            <div className="terminal-dotted-spacer"></div>
+            <InputSwitch checked={false} className="terminal-switch" />
+          </div>
+
+          <div className="terminal-option-item">
+            <div className="flex align-items-center">
+              <i className="pi pi-shield terminal-option-icon"></i>
+              <span className="terminal-option-text">Agent Forwarding</span>
+            </div>
+            <div className="terminal-dotted-spacer"></div>
+            <InputSwitch checked={false} className="terminal-switch" />
+          </div>
+        </div>
+
+        <div className="terminal-advanced-header mb-2">
+          <span className="terminal-label mb-0">OPCIONES AVANZADAS</span>
+          <i className="pi pi-chevron-down opacity-50"></i>
+        </div>
+
       </div>
 
-      {/* Botones */}
-      <div style={{ display: 'flex', gap: '12px', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--ui-dialog-border)', justifyContent: 'space-between', flexShrink: 0 }}>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          {onGoBack && (
-            <Button 
-              label={t('common.back')} 
-              icon="pi pi-arrow-left" 
-              className="p-button-text" 
-              onClick={onGoBack}
-              style={{ minWidth: '120px' }}
-            />
-          )}
-        </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <Button 
-            label={tCommon('buttons.cancel')} 
-            icon="pi pi-times" 
-            className="p-button-text" 
-            onClick={onHide}
-            style={{ minWidth: '120px' }}
-          />
-          <Button 
-            label={tCommon('buttons.save')} 
-            icon="pi pi-check" 
-            className="p-button-primary" 
-            onClick={handleSubmit}
-            disabled={!isFormValid()}
-            loading={sshLoading}
-            style={{ minWidth: '120px' }}
-          />
+      {/* Footer Terminal */}
+      <div className="terminal-footer">
+        <button className="terminal-btn-outline" onClick={() => {}}>
+          <i className="pi pi-sync mr-2"></i> PROBAR CONEXIÓN
+        </button>
+        <div className="flex gap-2">
+          <button className="terminal-btn-text" onClick={onHide}>CANCELAR</button>
+          <button className="terminal-btn-primary" onClick={handleSubmit} disabled={!isFormValid() || sshLoading}>
+            <i className={sshLoading ? "pi pi-spin pi-spinner mr-1" : "pi pi-angle-right mr-1"}></i> 
+            {sshLoading ? "_ CARGANDO..." : "_ CONECTAR"}
+          </button>
         </div>
       </div>
+      <style dangerouslySetInnerHTML={{ __html: `
+        .ssh-terminal-form {
+          font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+          background: #0a0e14;
+          color: #c9d1d9;
+        }
+        .terminal-label {
+          display: block;
+          font-size: 0.65rem;
+          font-weight: 700;
+          color: #4dd0e1;
+          margin-bottom: 0.5rem;
+          letter-spacing: 0.05em;
+        }
+        .terminal-input-wrap {
+          position: relative;
+          display: flex;
+          align-items: center;
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 4px;
+          padding: 0 0.5rem;
+          transition: all 0.2s ease;
+        }
+        .terminal-input-wrap:focus-within {
+          border-color: #00e5ff;
+          box-shadow: 0 0 10px rgba(0, 229, 255, 0.1);
+        }
+        .terminal-input {
+          background: transparent !important;
+          border: none !important;
+          color: #fff !important;
+          font-family: inherit !important;
+          font-size: 0.85rem !important;
+          padding: 0.5rem 0.25rem !important;
+          flex: 1;
+        }
+        .terminal-input:focus {
+          box-shadow: none !important;
+        }
+        .terminal-icon-left {
+          font-size: 0.9rem;
+          margin-right: 0.5rem;
+          opacity: 0.5;
+        }
+        .terminal-icon-right {
+          font-size: 0.9rem;
+          margin-left: 0.5rem;
+          opacity: 0.5;
+        }
+        .terminal-auth-selector {
+          display: flex;
+          gap: 1px;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 4px;
+          padding: 1px;
+        }
+        .terminal-auth-chip {
+          flex: 1;
+          text-align: center;
+          padding: 0.5rem;
+          font-size: 0.75rem;
+          cursor: pointer;
+          transition: all 0.2s;
+          color: rgba(255, 255, 255, 0.4);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+        }
+        .terminal-auth-chip i { font-size: 0.8rem; }
+        .terminal-auth-chip.active {
+          background: rgba(0, 229, 255, 0.1) !important;
+          color: #00e5ff !important;
+          border: 1px solid rgba(0, 229, 255, 0.3) !important;
+          border-radius: 4px;
+        }
+        .terminal-auth-chip.disabled {
+          opacity: 0.3;
+          cursor: not-allowed;
+        }
+        .terminal-file-display {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          width: 100%;
+          font-size: 0.75rem;
+        }
+        .terminal-upload-btn .p-button {
+          background: rgba(0, 229, 255, 0.1) !important;
+          border: 1px solid rgba(0, 229, 255, 0.3) !important;
+          color: #00e5ff !important;
+          padding: 0.2rem 0.6rem !important;
+          font-size: 0.7rem !important;
+          font-weight: 700 !important;
+          text-transform: uppercase;
+        }
+        .terminal-option-item {
+          display: flex;
+          align-items: center;
+          padding: 0.4rem 0;
+          font-size: 0.75rem;
+        }
+        .terminal-option-icon {
+          margin-right: 0.75rem;
+          color: #00e5ff;
+          opacity: 0.8;
+          font-size: 0.9rem;
+        }
+        .terminal-dotted-spacer {
+          flex: 1;
+          border-bottom: 1px dotted rgba(255, 255, 255, 0.1);
+          margin: 0 0.75rem;
+          align-self: flex-end;
+          height: 10px;
+        }
+        .terminal-switch .p-inputswitch-slider {
+          background: rgba(255, 255, 255, 0.1) !important;
+          transform: scale(0.7);
+        }
+        .terminal-switch.p-inputswitch-checked .p-inputswitch-slider {
+          background: #00e5ff !important;
+        }
+        .terminal-footer {
+          display: flex;
+          justify-content: space-between;
+          padding-top: 1rem;
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .terminal-btn-primary {
+          background: #0061ff !important;
+          color: white;
+          border: none;
+          padding: 0.6rem 1.5rem;
+          border-radius: 4px;
+          font-weight: 700;
+          font-size: 0.8rem;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+        }
+        .terminal-btn-outline {
+          background: transparent;
+          border: 1px solid rgba(0, 229, 255, 0.3);
+          color: #00e5ff;
+          padding: 0.6rem 1rem;
+          border-radius: 4px;
+          font-size: 0.75rem;
+          font-weight: 700;
+          cursor: pointer;
+        }
+        .terminal-btn-text {
+          background: transparent;
+          border: none;
+          color: rgba(255, 255, 255, 0.5);
+          padding: 0.6rem 1rem;
+          font-weight: 600;
+          font-size: 0.8rem;
+          cursor: pointer;
+        }
+        .terminal-btn-text:hover { color: #fff; }
+
+        /* Estilos del Header Terminal */
+        .terminal-header-compact {
+          background: #0d1117;
+          padding: 0.75rem 1.25rem;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          position: relative;
+        }
+        .terminal-header-title {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 0.8rem;
+          font-weight: 700;
+          color: #fff;
+          letter-spacing: 0.1em;
+        }
+        .terminal-header-icon-mini {
+          width: 24px;
+          height: 24px;
+          background: rgba(0, 229, 255, 0.1);
+          border-radius: 4px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #00e5ff;
+          font-size: 0.8rem;
+        }
+        .terminal-header-icon-btn {
+          background: none;
+          border: none;
+          padding: 0;
+          cursor: pointer;
+          transition: transform 0.2s;
+        }
+        .terminal-header-icon-btn:hover {
+          transform: scale(1.1);
+        }
+        .terminal-header-accent {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          width: 40px;
+          height: 2px;
+          background: #00e5ff;
+          box-shadow: 0 0 8px #00e5ff;
+        }
+        .terminal-pro-dialog .p-dialog-header {
+          padding: 0 !important;
+          background: #0d1117 !important;
+          border: none !important;
+        }
+        .terminal-pro-dialog .p-dialog-content {
+          background: #0a0e14 !important;
+          border: none !important;
+        }
+      `}} />
     </div>
   );
 }
@@ -2073,11 +2053,14 @@ export function NewSSHConnectionDialog({
   const { t } = useTranslation('dialogs');
   
   const headerTemplate = (
-    <div className="protocol-dialog-header-custom">
-      <div className="protocol-dialog-header-icon" style={{ background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)', boxShadow: '0 2px 8px rgba(255, 152, 0, 0.3)' }}>
-        <i className="pi pi-terminal"></i>
+    <div className="terminal-header-compact">
+      <div className="flex align-items-center gap-2">
+        <div className="terminal-header-icon-mini">
+          <i className="pi pi-terminal"></i>
+        </div>
+        <span className="terminal-header-title">{t('ssh.title.new').toUpperCase()}</span>
       </div>
-      <span className="protocol-dialog-header-title">{t('ssh.title.new')}</span>
+      <div className="terminal-header-accent"></div>
     </div>
   );
 
@@ -2085,12 +2068,13 @@ export function NewSSHConnectionDialog({
     <Dialog
       header={headerTemplate}
       visible={visible}
-      style={{ width: '90vw', maxWidth: '1200px', height: '90vh' }}
+      style={{ width: '100%', maxWidth: '600px' }}
       modal
-      resizable={true}
+      resizable={false}
       onHide={onHide}
-      contentStyle={{ padding: '0', overflow: 'hidden', background: 'var(--ui-dialog-bg)', color: 'var(--ui-dialog-text)' }}
-      className="new-ssh-connection-dialog protocol-selection-dialog-new"
+      contentStyle={{ padding: '0', overflow: 'hidden', background: '#0a0e14' }}
+      className="terminal-pro-dialog"
+      closable={false}
     >
       <div style={{ marginTop: '10px', height: '100%', display: 'flex', flexDirection: 'column' }}>
         <EnhancedSSHForm
@@ -2265,16 +2249,29 @@ export function NewRDPConnectionDialog({
     return formData.name.trim() !== '' && formData.server.trim() !== '' && formData.username.trim() !== '';
   }, [formData]);
 
+  const headerTemplate = (
+    <div className="terminal-header-compact">
+      <div className="flex align-items-center gap-2">
+        <div className="terminal-header-icon-mini" style={{ background: 'rgba(33, 150, 243, 0.1)', color: '#2196F3' }}>
+          <i className="pi pi-desktop"></i>
+        </div>
+        <span className="terminal-header-title">{t('rdp.title.new').toUpperCase()}</span>
+      </div>
+      <div className="terminal-header-accent" style={{ background: '#2196F3', boxShadow: '0 0 8px #2196F3' }}></div>
+    </div>
+  );
+
   return (
     <Dialog
-      header={t('rdp.title.new')}
+      header={headerTemplate}
       visible={visible}
-      style={{ width: '90vw', maxWidth: '1200px', height: '90vh' }}
-      modal
-      resizable={true}
       onHide={onHide}
-      contentStyle={{ padding: '0', overflow: 'auto' }}
-      className="new-rdp-connection-dialog"
+      style={{ width: '100%', maxWidth: '800px' }}
+      modal
+      resizable={false}
+      contentStyle={{ padding: '0', overflow: 'auto', background: '#0a0e14' }}
+      className="terminal-pro-dialog"
+      closable={false}
     >
       <div className="p-fluid" style={{ padding: '12px', height: '100%', display: 'flex', flexDirection: 'column' }}>
         <div style={{ flex: '1 1 auto', overflowY: 'auto', padding: '2px' }}>
@@ -2630,16 +2627,29 @@ export function NewVNCConnectionDialog({
     return formData.name.trim() !== '' && formData.server.trim() !== '';
   }, [formData]);
 
+  const headerTemplate = (
+    <div className="terminal-header-compact">
+      <div className="flex align-items-center gap-2">
+        <div className="terminal-header-icon-mini" style={{ background: 'rgba(255, 179, 0, 0.1)', color: '#ffb300' }}>
+          <i className="pi pi-globe"></i>
+        </div>
+        <span className="terminal-header-title">{t('vnc.title.new').toUpperCase()}</span>
+      </div>
+      <div className="terminal-header-accent" style={{ background: '#ffb300', boxShadow: '0 0 8px #ffb300' }}></div>
+    </div>
+  );
+
   return (
     <Dialog
-      header={t('vnc.title.new')}
+      header={headerTemplate}
       visible={visible}
-      style={{ width: '90vw', maxWidth: '1200px', height: '90vh' }}
-      modal
-      resizable={true}
       onHide={onHide}
-      contentStyle={{ padding: '0', overflow: 'auto' }}
-      className="new-vnc-connection-dialog"
+      style={{ width: '100%', maxWidth: '800px' }}
+      modal
+      resizable={false}
+      contentStyle={{ padding: '0', overflow: 'auto', background: '#0a0e14' }}
+      className="terminal-pro-dialog"
+      closable={false}
     >
       <div className="p-fluid" style={{ padding: '12px', height: '100%', display: 'flex', flexDirection: 'column' }}>
         <div style={{ flex: '1 1 auto', overflowY: 'auto', padding: '2px' }}>
@@ -2951,16 +2961,29 @@ export function EditVNCConnectionDialog({
     return formData.name.trim() !== '' && formData.server.trim() !== '';
   }, [formData]);
 
+  const headerTemplate = (
+    <div className="terminal-header-compact">
+      <div className="flex align-items-center gap-2">
+        <div className="terminal-header-icon-mini" style={{ background: 'rgba(255, 179, 0, 0.1)', color: '#ffb300' }}>
+          <i className="pi pi-globe"></i>
+        </div>
+        <span className="terminal-header-title">{t('vnc.title.edit').toUpperCase()}</span>
+      </div>
+      <div className="terminal-header-accent" style={{ background: '#ffb300', boxShadow: '0 0 8px #ffb300' }}></div>
+    </div>
+  );
+
   return (
     <Dialog
-      header={t('vnc.title.edit')}
+      header={headerTemplate}
       visible={visible}
-      style={{ width: '90vw', maxWidth: '1200px', height: '90vh' }}
-      modal
-      resizable={true}
       onHide={onHide}
-      contentStyle={{ padding: '0', overflow: 'auto' }}
-      className="edit-vnc-connection-dialog"
+      style={{ width: '100%', maxWidth: '800px' }}
+      modal
+      resizable={false}
+      contentStyle={{ padding: '0', overflow: 'auto', background: '#0a0e14' }}
+      className="terminal-pro-dialog"
+      closable={false}
     >
       <div className="p-fluid" style={{ padding: '12px', height: '100%', display: 'flex', flexDirection: 'column' }}>
         <div style={{ flex: '1 1 auto', overflowY: 'auto', padding: '2px' }}>
