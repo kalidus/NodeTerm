@@ -1662,9 +1662,9 @@ export function EnhancedSSHForm({
       
       <div className="terminal-form-scroll-area" style={{ flex: '1 1 auto', overflowY: 'auto', paddingRight: '4px' }}>
         
-        {/* Row: Host / Port */}
-        <div className="terminal-row grid grid-nogutter gap-3 mb-3">
-          <div className="col">
+        {/* Row: Host / Port — grid fijo para que el puerto no robe espacio al host */}
+        <div className="terminal-host-port-row mb-3">
+          <div className="terminal-host-port-host">
             <label className="terminal-label">HOST / DIRECCIÓN IP</label>
             <div className="terminal-input-wrap">
               <i className="pi pi-server terminal-icon-left"></i>
@@ -1677,14 +1677,15 @@ export function EnhancedSSHForm({
               <i className="pi pi-ellipsis-h terminal-icon-right opacity-30"></i>
             </div>
           </div>
-          <div className="col-fixed" style={{ width: '100px' }}>
+          <div className="terminal-host-port-port">
             <label className="terminal-label">PUERTO</label>
-            <div className="terminal-input-wrap">
-              <InputText value={sshPort} onChange={(e) => setSSHPort(e.target.value)} placeholder="22" className="terminal-input text-center" />
-              <div className="terminal-port-arrows">
-                <i className="pi pi-chevron-up"></i>
-                <i className="pi pi-chevron-down"></i>
-              </div>
+            <div className="terminal-input-wrap terminal-port-input-wrap">
+              <InputText
+                value={sshPort}
+                onChange={(e) => setSSHPort(e.target.value)}
+                placeholder="22"
+                className="terminal-input terminal-port-input text-center"
+              />
             </div>
           </div>
         </div>
@@ -1693,11 +1694,15 @@ export function EnhancedSSHForm({
         <div className="terminal-row grid grid-nogutter gap-3 mb-3">
           <div className="col">
             <label className="terminal-label">NOMBRE DE CONEXIÓN</label>
-            <InputText value={sshName} onChange={(e) => setSSHName(e.target.value)} placeholder="Mi Servidor" className="terminal-input" />
+            <div className="terminal-input-wrap">
+              <InputText value={sshName} onChange={(e) => setSSHName(e.target.value)} placeholder="Mi Servidor" className="terminal-input" />
+            </div>
           </div>
           <div className="col">
             <label className="terminal-label">DESCRIPCIÓN</label>
-            <InputText value={sshDescription} onChange={(e) => setSSHDescription(e.target.value)} placeholder="..." className="terminal-input" />
+            <div className="terminal-input-wrap">
+              <InputText value={sshDescription} onChange={(e) => setSSHDescription(e.target.value)} placeholder="..." className="terminal-input" />
+            </div>
           </div>
         </div>
 
@@ -1813,6 +1818,21 @@ export function EnhancedSSHForm({
           background: #0a0e14;
           color: #c9d1d9;
         }
+        .terminal-host-port-row {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) 7.5rem;
+          gap: 0.75rem;
+          align-items: start;
+          width: 100%;
+        }
+        .terminal-host-port-host {
+          min-width: 0;
+        }
+        .terminal-host-port-port {
+          min-width: 0;
+          width: 7.5rem;
+          max-width: 7.5rem;
+        }
         .terminal-label {
           display: block;
           font-size: 0.65rem;
@@ -1831,6 +1851,10 @@ export function EnhancedSSHForm({
           padding: 0 0.5rem;
           transition: all 0.2s ease;
         }
+        .terminal-port-input-wrap {
+          overflow: hidden;
+          padding: 0 0.35rem;
+        }
         .terminal-input-wrap:focus-within {
           border-color: #00e5ff;
           box-shadow: 0 0 10px rgba(0, 229, 255, 0.1);
@@ -1844,8 +1868,39 @@ export function EnhancedSSHForm({
           padding: 0.5rem 0.25rem !important;
           flex: 1;
         }
-        .terminal-input:focus {
+        .terminal-port-input {
+          width: 100% !important;
+          min-width: 0 !important;
+          text-align: center !important;
+          padding-left: 0 !important;
+          padding-right: 0 !important;
+        }
+        .terminal-input:focus,
+        .terminal-input:enabled:focus,
+        .terminal-input.p-focus {
           box-shadow: none !important;
+          outline: none !important;
+          border-color: transparent !important;
+        }
+        /* PrimeReact + tema cyberpunk: layouts.css fuerza un halo con !important */
+        body.layout-cyberpunk .ssh-terminal-form .p-inputtext,
+        .ssh-terminal-form .p-inputtext {
+          box-shadow: none !important;
+          outline: none !important;
+        }
+        body.layout-cyberpunk .ssh-terminal-form .p-inputtext:enabled:focus,
+        body.layout-cyberpunk .ssh-terminal-form .p-inputtext:enabled:focus-visible,
+        body.layout-cyberpunk .ssh-terminal-form .p-inputtext.p-focus,
+        .ssh-terminal-form .p-inputtext:enabled:focus,
+        .ssh-terminal-form .p-inputtext:enabled:focus-visible,
+        .ssh-terminal-form .p-inputtext.p-focus {
+          box-shadow: none !important;
+          outline: none !important;
+        }
+        /* En los inputs sin icono (nombre/descripcion), reforzar feedback visual de foco */
+        .ssh-terminal-form .terminal-row .terminal-input-wrap:focus-within {
+          border-color: #00e5ff !important;
+          box-shadow: 0 0 12px rgba(0, 229, 255, 0.16) !important;
         }
         .terminal-icon-left {
           font-size: 0.9rem;
