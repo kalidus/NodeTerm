@@ -2333,6 +2333,40 @@ export function EnhancedSSHForm({
           bottom: -2px !important;
           cursor: nwse-resize !important;
         }
+        .terminal-form-scroll-area {
+          scrollbar-width: thin;
+          scrollbar-color: var(--ui-dialog-border) transparent;
+        }
+        .terminal-form-scroll-area::-webkit-scrollbar {
+          width: 6px;
+        }
+        .terminal-form-scroll-area::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .terminal-form-scroll-area::-webkit-scrollbar-thumb {
+          background: var(--ui-dialog-border);
+          border-radius: 3px;
+        }
+        .terminal-form-scroll-area::-webkit-scrollbar-thumb:hover {
+          background: var(--ui-button-primary);
+        }
+        .ssh-connection-dialog .p-dialog-content {
+          scrollbar-width: thin;
+          scrollbar-color: var(--ui-dialog-border) transparent;
+        }
+        .ssh-connection-dialog .p-dialog-content::-webkit-scrollbar {
+          width: 6px;
+        }
+        .ssh-connection-dialog .p-dialog-content::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .ssh-connection-dialog .p-dialog-content::-webkit-scrollbar-thumb {
+          background: var(--ui-dialog-border);
+          border-radius: 3px;
+        }
+        .ssh-connection-dialog .p-dialog-content::-webkit-scrollbar-thumb:hover {
+          background: var(--ui-button-primary);
+        }
       `}} />
     </div>
   );
