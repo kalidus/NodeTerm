@@ -1,4 +1,5 @@
 import { helpers as connHelpers } from './connectionStore';
+import favoriteGroupsStore from './favoriteGroupsStore';
 
 export const FAVORITES_ROOT_KEY = '__favorites_root__';
 export const FAVORITES_VIEW_FOLDER_COLOR = '#FFC107';
@@ -70,6 +71,7 @@ function favoriteToOrphanNode(favorite, groupId = null) {
   return {
     key: shortcutKey,
     label: favorite.name || favorite.label || favorite.id,
+    draggable: true,
     droppable: false,
     leaf: true,
     isFavoriteShortcut: true,
@@ -97,6 +99,7 @@ function createShortcutFromFavorite(favorite, sourceNode, groupId = null) {
     return {
       ...sourceNode,
       key: shortcutKey,
+      draggable: true,
       droppable: false,
       leaf: true,
       children: undefined,
@@ -120,14 +123,49 @@ export function resolveFavoriteShortcutNode(node, nodes) {
   return node;
 }
 
+function sortNodesByFavoriteOrder(nodes, favoriteOrder) {
+  if (!Array.isArray(favoriteOrder) || favoriteOrder.length === 0) {
+    return nodes;
+  }
+
+  const orderIndex = new Map(favoriteOrder.map((favoriteId, index) => [favoriteId, index]));
+  return [...nodes].sort((left, right) => {
+    const leftIndex = orderIndex.has(left.favoriteId)
+      ? orderIndex.get(left.favoriteId)
+      : Number.MAX_SAFE_INTEGER;
+    const rightIndex = orderIndex.has(right.favoriteId)
+      ? orderIndex.get(right.favoriteId)
+      : Number.MAX_SAFE_INTEGER;
+    return leftIndex - rightIndex;
+  });
+}
+
+function collectFavoriteShortcutPlacements(nodes, parentGroupId = null, placements = []) {
+  for (const node of nodes || []) {
+    if (isFavoriteGroupFolderNode(node)) {
+      collectFavoriteShortcutPlacements(node.children, node.favoriteGroupId, placements);
+      continue;
+    }
+
+    if (isFavoriteShortcutNode(node) && node.favoriteId) {
+      placements.push({ favoriteId: node.favoriteId, groupId: parentGroupId });
+    }
+  }
+
+  return placements;
+}
+
 export function buildFavoritesSidebarTree({ nodes, favorites, groups, getFavoriteGroups }) {
   const nodeByFavoriteId = indexNodesByFavoriteId(nodes);
   const userGroups = (groups || []).filter((group) => !group.isDefault);
   const connectionFavorites = (favorites || []).filter((favorite) => favorite?.type !== 'group');
 
+  const memberOrder = favoriteGroupsStore.getFavoriteMemberOrder();
+
   const groupFolders = userGroups.map((group) => ({
     key: `${FAVORITE_GROUP_PREFIX}${group.id}`,
     label: group.name,
+    draggable: true,
     droppable: true,
     leaf: false,
     children: [],
@@ -159,12 +197,21 @@ export function buildFavoritesSidebarTree({ nodes, favorites, groups, getFavorit
     }
   }
 
+  for (const folder of groupFolders) {
+    folder.children = sortNodesByFavoriteOrder(
+      folder.children,
+      memberOrder.groups?.[folder.favoriteGroupId]
+    );
+  }
+
+  const orderedRootShortcuts = sortNodesByFavoriteOrder(rootShortcuts, memberOrder.root);
+
   return [{
     key: FAVORITES_ROOT_KEY,
     label: 'Favoritos',
     droppable: true,
     leaf: false,
-    children: [...groupFolders, ...rootShortcuts],
+    children: [...groupFolders, ...orderedRootShortcuts],
     uid: FAVORITES_ROOT_KEY,
     color: FAVORITES_VIEW_FOLDER_COLOR,
     folderIcon: 'favorites',
@@ -227,6 +274,65 @@ export function getDefaultFavoritesExpandedKeys(tree) {
     }
   }
   return expanded;
+}
+
+export function applyFavoritesTreeLayoutFromDrop(treeValue) {
+  const root = treeValue?.[0];
+  if (!root || !isFavoritesRootKey(root.key)) {
+    return false;
+  }
+
+  const children = root.children || [];
+  const rootShortcutIds = [];
+  const groupMemberOrder = {};
+  const orderedGroupIds = [];
+
+  for (const child of children) {
+    if (isFavoriteGroupFolderNode(child)) {
+      if (child.favoriteGroupId) {
+        orderedGroupIds.push(child.favoriteGroupId);
+        groupMemberOrder[child.favoriteGroupId] = (child.children || [])
+          .filter(isFavoriteShortcutNode)
+          .map((node) => node.favoriteId)
+          .filter(Boolean);
+      }
+      continue;
+    }
+
+    if (isFavoriteShortcutNode(child) && child.favoriteId) {
+      rootShortcutIds.push(child.favoriteId);
+    }
+  }
+
+  const groups = favoriteGroupsStore.getGroups();
+  const defaultGroups = groups.filter((group) => group.isDefault);
+  const userGroups = groups.filter((group) => !group.isDefault);
+  const userGroupsById = new Map(userGroups.map((group) => [group.id, group]));
+  const reorderedUserGroups = orderedGroupIds
+    .map((groupId) => userGroupsById.get(groupId))
+    .filter(Boolean);
+  const missingUserGroups = userGroups.filter((group) => !orderedGroupIds.includes(group.id));
+
+  if (reorderedUserGroups.length > 0) {
+    favoriteGroupsStore.reorderGroups([...defaultGroups, ...reorderedUserGroups, ...missingUserGroups]);
+  }
+
+  const placements = collectFavoriteShortcutPlacements(children);
+  for (const { favoriteId, groupId } of placements) {
+    if (!groupId) {
+      favoriteGroupsStore.assignFavoriteToGroups(favoriteId, []);
+      continue;
+    }
+
+    favoriteGroupsStore.assignFavoriteToGroups(favoriteId, [groupId]);
+  }
+
+  favoriteGroupsStore.setFavoriteMemberOrder({
+    root: rootShortcutIds,
+    groups: groupMemberOrder
+  });
+
+  return true;
 }
 
 export function countFavoriteShortcuts(tree) {

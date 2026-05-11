@@ -146,6 +146,7 @@ export function getGroupById(groupId) {
 // ============================================
 
 const ASSIGNMENTS_KEY = 'nodeterm_favorite_group_assignments';
+const MEMBER_ORDER_KEY = 'nodeterm_favorite_member_order';
 
 function loadAssignments() {
     return safeParse(localStorage.getItem(ASSIGNMENTS_KEY), {});
@@ -154,6 +155,30 @@ function loadAssignments() {
 function saveAssignments(assignments) {
     localStorage.setItem(ASSIGNMENTS_KEY, JSON.stringify(assignments));
     window.dispatchEvent(new CustomEvent(UPDATED_EVENT, { detail: { assignments } }));
+}
+
+function loadMemberOrder() {
+    return safeParse(localStorage.getItem(MEMBER_ORDER_KEY), { root: [], groups: {} });
+}
+
+function saveMemberOrder(order) {
+    localStorage.setItem(MEMBER_ORDER_KEY, JSON.stringify(order));
+    window.dispatchEvent(new CustomEvent(UPDATED_EVENT, { detail: { memberOrder: order } }));
+}
+
+export function getFavoriteMemberOrder() {
+    const order = loadMemberOrder();
+    return {
+        root: Array.isArray(order.root) ? order.root : [],
+        groups: order.groups && typeof order.groups === 'object' ? order.groups : {}
+    };
+}
+
+export function setFavoriteMemberOrder(order) {
+    saveMemberOrder({
+        root: Array.isArray(order?.root) ? order.root : [],
+        groups: order?.groups && typeof order.groups === 'object' ? order.groups : {}
+    });
 }
 
 // Get all groups for a specific favorite
@@ -397,5 +422,7 @@ export default {
     setFilterVisibility,
     reorderAllFilters,
     resetFilterConfig,
+    getFavoriteMemberOrder,
+    setFavoriteMemberOrder,
     PROTOCOL_FILTERS
 };

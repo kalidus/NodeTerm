@@ -23,6 +23,7 @@ import { getFavorites, onUpdate as onFavoritesUpdate } from '../utils/connection
 import favoriteGroupsStore from '../utils/favoriteGroupsStore';
 import {
   FAVORITES_ROOT_KEY,
+  applyFavoritesTreeLayoutFromDrop,
   buildFavoritesSidebarTree,
   countFavoriteShortcuts,
   filterFavoritesTree,
@@ -1664,33 +1665,20 @@ const Sidebar = React.memo(({
     });
   }
   const onFavoritesDragDrop = (event) => {
-    const { dragNode, dropNode, dropPoint } = event || {};
-    if (!isFavoriteShortcutNode(dragNode) || !dropNode || dropPoint !== 0 || !dropNode.droppable) {
+    const { dragNode, value } = event || {};
+    if (!dragNode || !Array.isArray(value) || value.length === 0) {
       return;
     }
 
-    const favoriteId = dragNode.favoriteId;
-    if (!favoriteId) return;
-
-    if (isFavoritesRootKey(dropNode.key)) {
-      favoriteGroupsStore.assignFavoriteToGroups(favoriteId, []);
-      bumpFavoritesRevision();
+    if (isFavoritesRootKey(dragNode.key)) {
       return;
     }
 
-    if (isFavoriteGroupFolderKey(dropNode.key)) {
-      const targetGroupId = getFavoriteGroupIdFromKey(dropNode.key);
-      if (!targetGroupId) return;
+    if (!isFavoriteShortcutNode(dragNode) && !isFavoriteGroupFolderNode(dragNode)) {
+      return;
+    }
 
-      const currentGroups = favoriteGroupsStore.getFavoriteGroups(favoriteId)
-        .filter((groupId) => groupId !== 'all');
-
-      if (!currentGroups.includes(targetGroupId)) {
-        favoriteGroupsStore.addFavoriteToGroup(favoriteId, targetGroupId);
-      } else {
-        favoriteGroupsStore.assignFavoriteToGroups(favoriteId, [targetGroupId]);
-      }
-
+    if (applyFavoritesTreeLayoutFromDrop(value)) {
       bumpFavoritesRevision();
     }
   };
