@@ -1686,7 +1686,7 @@ const App = () => {
     setEditingSSHTunnelNode,
     // Utilidades
     nodes, setNodes,
-    findNodeByKey, deepCopy, generateUniqueKey, parseWallixUser,
+    findNodeByKey, findParentNodeAndIndex, deepCopy, generateUniqueKey, parseWallixUser,
     rdpTabs, setRdpTabs
   });
 

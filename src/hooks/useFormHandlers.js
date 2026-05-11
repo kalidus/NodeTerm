@@ -20,7 +20,7 @@ export const useFormHandlers = ({
   setShowProtocolSelectionDialog,
 
   // Estados de formularios SSH
-  sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder, sshAutoCopyPassword, sshDescription, sshAuthMethod, sshPrivateKey,
+  sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder, setSSHTargetFolder, sshAutoCopyPassword, sshDescription, sshAuthMethod, sshPrivateKey,
   closeSSHDialogWithReset,
   
   // Estados de formularios Edit SSH  
@@ -87,7 +87,7 @@ export const useFormHandlers = ({
   
   // Funciones de gestión de datos
   nodes, setNodes,
-  findNodeByKey, deepCopy, generateUniqueKey, parseWallixUser,
+  findNodeByKey, findParentNodeAndIndex, deepCopy, generateUniqueKey, parseWallixUser,
   rdpTabs, setRdpTabs
 }) => {
 
@@ -671,6 +671,25 @@ export const useFormHandlers = ({
         const newConnection = connectionHelpers.fromSidebarNode(nodeToEdit);
         updateFavoriteOnEdit(oldConnection, newConnection);
       }
+
+      const { parentNode: currentParent, parentList, index } = findParentNodeAndIndex(nodesCopy, editSSHNode.key);
+      const currentParentKey = currentParent?.key ?? null;
+      const desiredParentKey = sshTargetFolder || null;
+
+      if (currentParentKey !== desiredParentKey && parentList && index !== -1) {
+        const [movedNode] = parentList.splice(index, 1);
+        if (desiredParentKey) {
+          const newParent = findNodeByKey(nodesCopy, desiredParentKey);
+          if (newParent) {
+            newParent.children = newParent.children || [];
+            newParent.children.unshift(movedNode);
+          } else {
+            nodesCopy.unshift(movedNode);
+          }
+        } else {
+          nodesCopy.unshift(movedNode);
+        }
+      }
     }
     
     setNodes(nodesCopy);
@@ -685,6 +704,7 @@ export const useFormHandlers = ({
     setEditSSHPort(22);
     setEditSSHDescription('');
     if (setEditSSHIcon) setEditSSHIcon(null);
+    if (setSSHTargetFolder) setSSHTargetFolder(null);
     
     toast.current.show({
       severity: 'success',
@@ -692,7 +712,7 @@ export const useFormHandlers = ({
       detail: `Sesión SSH actualizada`,
       life: 3000
     });
-  }, [editSSHName, editSSHHost, editSSHUser, editSSHPassword, editSSHPrivateKey, editSSHAuthMethod, editSSHRemoteFolder, editSSHPort, editSSHAutoCopyPassword, editSSHDescription, editSSHIcon, editSSHNode, nodes, setNodes, findNodeByKey, deepCopy, parseWallixUser, closeEditSSHDialogWithReset, setShowUnifiedConnectionDialog, setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, setEditSSHDescription, setEditSSHIcon, toast]);
+  }, [editSSHName, editSSHHost, editSSHUser, editSSHPassword, editSSHPrivateKey, editSSHAuthMethod, editSSHRemoteFolder, editSSHPort, editSSHAutoCopyPassword, editSSHDescription, editSSHIcon, editSSHNode, sshTargetFolder, nodes, setNodes, findNodeByKey, findParentNodeAndIndex, deepCopy, parseWallixUser, closeEditSSHDialogWithReset, setShowUnifiedConnectionDialog, setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, setEditSSHDescription, setEditSSHIcon, setSSHTargetFolder, toast]);
 
   /**
    * Guardar edición de carpeta
@@ -760,9 +780,13 @@ export const useFormHandlers = ({
     setEditSSHDescription(node.data?.description || '');
     // Cargar icono personalizado si existe
     if (setEditSSHIcon) setEditSSHIcon(node.data?.customIcon || null);
+    if (setSSHTargetFolder && findParentNodeAndIndex) {
+      const { parentNode } = findParentNodeAndIndex(nodes, node.key);
+      setSSHTargetFolder(parentNode?.key ?? null);
+    }
     // Usar el diálogo unificado en modo edición SSH
     setShowUnifiedConnectionDialog(true);
-  }, [setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHPrivateKey, setEditSSHAuthMethod, setEditSSHRemoteFolder, setEditSSHPort, setEditSSHDescription, setEditSSHIcon, setShowUnifiedConnectionDialog]);
+  }, [nodes, setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHPrivateKey, setEditSSHAuthMethod, setEditSSHRemoteFolder, setEditSSHPort, setEditSSHDescription, setEditSSHIcon, setSSHTargetFolder, findParentNodeAndIndex, setShowUnifiedConnectionDialog]);
 
   /**
    * Abrir diálogo de selección de protocolo para nueva conexión (limpia todos los estados de edición)

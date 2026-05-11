@@ -1816,6 +1816,29 @@ export function EnhancedSSHForm({
             <div className="terminal-dotted-spacer"></div>
             <InputSwitch checked={false} className="terminal-switch" />
           </div>
+
+              <div className="terminal-row mt-2">
+                <label className="terminal-label">
+                  {t('ssh.fields.targetFolder').toUpperCase()}{' '}
+                  <span className="opacity-50">({tCommon('labels.optional')})</span>
+                </label>
+                <div className="terminal-input-wrap terminal-folder-dropdown-wrap">
+                  <i className="pi pi-folder terminal-icon-left"></i>
+                  <Dropdown
+                    value={sshTargetFolder}
+                    options={foldersOptions}
+                    onChange={(e) => setSSHTargetFolder(e.value)}
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder={t('ssh.placeholders.targetFolder')}
+                    showClear
+                    filter
+                    filterPlaceholder={t('ssh.placeholders.targetFolder')}
+                    className="terminal-folder-dropdown"
+                    panelClassName="terminal-folder-dropdown-panel"
+                  />
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -2016,6 +2039,98 @@ export function EnhancedSSHForm({
         }
         .terminal-advanced-section .terminal-options-list {
           padding-top: 0.35rem;
+        }
+        .terminal-folder-dropdown-wrap {
+          padding: 0 0.35rem 0 0;
+          min-height: 2.25rem;
+          gap: 0.25rem;
+        }
+        .ssh-terminal-form .terminal-folder-dropdown-wrap:focus-within {
+          border-color: #00e5ff !important;
+          box-shadow: 0 0 12px rgba(0, 229, 255, 0.16) !important;
+        }
+        .ssh-terminal-form .terminal-folder-dropdown.p-dropdown {
+          width: 100%;
+          min-width: 0;
+          background: transparent !important;
+          border: none !important;
+          box-shadow: none !important;
+          font-family: inherit;
+        }
+        .ssh-terminal-form .terminal-folder-dropdown .p-dropdown-label {
+          color: #fff !important;
+          font-size: 0.85rem !important;
+          padding: 0.5rem 0.25rem !important;
+        }
+        .ssh-terminal-form .terminal-folder-dropdown .p-dropdown-label.p-placeholder {
+          color: rgba(255, 255, 255, 0.4) !important;
+        }
+        .ssh-terminal-form .terminal-folder-dropdown .p-dropdown-trigger {
+          color: rgba(0, 229, 255, 0.75);
+          width: 2rem;
+        }
+        .ssh-terminal-form .terminal-folder-dropdown .p-dropdown-clear-icon {
+          color: rgba(255, 255, 255, 0.45) !important;
+          right: 2rem;
+        }
+        .ssh-terminal-form .terminal-folder-dropdown .p-dropdown-clear-icon:hover {
+          color: #00e5ff !important;
+        }
+        .terminal-folder-dropdown-panel.p-dropdown-panel {
+          background: #0d1117 !important;
+          border: 1px solid rgba(0, 229, 255, 0.28) !important;
+          border-radius: 4px !important;
+          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45) !important;
+          font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+          color: #c9d1d9 !important;
+        }
+        .terminal-folder-dropdown-panel .p-dropdown-header {
+          background: transparent !important;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+          padding: 0.5rem !important;
+        }
+        .terminal-folder-dropdown-panel .p-dropdown-filter-container .p-dropdown-filter {
+          background: rgba(255, 255, 255, 0.03) !important;
+          border: 1px solid rgba(255, 255, 255, 0.12) !important;
+          color: #fff !important;
+          border-radius: 4px !important;
+          font-family: inherit !important;
+          font-size: 0.8rem !important;
+          padding: 0.45rem 0.5rem 0.45rem 2rem !important;
+          box-shadow: none !important;
+        }
+        .terminal-folder-dropdown-panel .p-dropdown-filter-container .p-dropdown-filter:enabled:focus {
+          border-color: #00e5ff !important;
+          box-shadow: 0 0 10px rgba(0, 229, 255, 0.12) !important;
+          outline: none !important;
+        }
+        .terminal-folder-dropdown-panel .p-dropdown-filter-icon {
+          color: rgba(0, 229, 255, 0.7) !important;
+          left: 0.65rem !important;
+        }
+        .terminal-folder-dropdown-panel .p-dropdown-items {
+          padding: 0.35rem !important;
+        }
+        .terminal-folder-dropdown-panel .p-dropdown-item {
+          color: rgba(255, 255, 255, 0.85) !important;
+          background: transparent !important;
+          border-radius: 4px !important;
+          font-size: 0.8rem !important;
+          padding: 0.45rem 0.6rem !important;
+          margin: 0.1rem 0 !important;
+        }
+        .terminal-folder-dropdown-panel .p-dropdown-item:not(.p-highlight):not(.p-disabled):hover {
+          background: rgba(0, 229, 255, 0.08) !important;
+          color: #fff !important;
+        }
+        .terminal-folder-dropdown-panel .p-dropdown-item.p-highlight {
+          background: rgba(0, 229, 255, 0.16) !important;
+          color: #00e5ff !important;
+        }
+        .terminal-folder-dropdown-panel .p-dropdown-empty-message {
+          color: rgba(255, 255, 255, 0.45) !important;
+          font-size: 0.8rem !important;
+          padding: 0.5rem 0.6rem !important;
         }
         .terminal-option-item {
           display: flex;
