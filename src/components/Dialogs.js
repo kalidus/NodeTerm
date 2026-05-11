@@ -664,7 +664,7 @@ export function EditSSHConnectionDialog({
         modal
         resizable={false}
         onHide={onHide}
-        contentStyle={{ padding: '0', overflow: 'hidden', background: '#0a0e14' }}
+        contentStyle={{ padding: '0', overflow: 'hidden', background: 'var(--ui-dialog-bg)' }}
         className="terminal-pro-dialog"
         closable={false}
       >
@@ -901,7 +901,7 @@ export function EditRDPConnectionDialog({
       style={{ width: '100%', maxWidth: '800px' }}
       modal
       resizable={false}
-      contentStyle={{ padding: '0', overflow: 'auto', background: '#0a0e14' }}
+      contentStyle={{ padding: '0', overflow: 'auto', background: 'var(--ui-dialog-bg)' }}
       className="terminal-pro-dialog"
       closable={false}
     >
@@ -1867,8 +1867,8 @@ export function EnhancedSSHForm({
       <style dangerouslySetInnerHTML={{ __html: `
         .ssh-terminal-form {
           font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
-          background: #0a0e14;
-          color: #c9d1d9;
+          background: var(--ui-dialog-bg);
+          color: var(--ui-dialog-text);
         }
         .terminal-host-port-row {
           display: grid;
@@ -1889,7 +1889,7 @@ export function EnhancedSSHForm({
           display: block;
           font-size: 0.65rem;
           font-weight: 700;
-          color: #4dd0e1;
+          color: var(--ui-button-primary);
           margin-bottom: 0.5rem;
           letter-spacing: 0.05em;
         }
@@ -1897,8 +1897,8 @@ export function EnhancedSSHForm({
           position: relative;
           display: flex;
           align-items: center;
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: color-mix(in srgb, var(--ui-dialog-text) 3%, transparent);
+          border: 1px solid var(--ui-dialog-border);
           border-radius: 4px;
           padding: 0 0.5rem;
           transition: all 0.2s ease;
@@ -1908,13 +1908,13 @@ export function EnhancedSSHForm({
           padding: 0 0.35rem;
         }
         .terminal-input-wrap:focus-within {
-          border-color: #00e5ff;
-          box-shadow: 0 0 10px rgba(0, 229, 255, 0.1);
+          border-color: var(--ui-button-primary);
+          box-shadow: 0 0 10px color-mix(in srgb, var(--ui-button-primary) 10%, transparent);
         }
         .terminal-input {
           background: transparent !important;
           border: none !important;
-          color: #fff !important;
+          color: var(--ui-dialog-text) !important;
           font-family: inherit !important;
           font-size: 0.85rem !important;
           padding: 0.5rem 0.25rem !important;
@@ -1951,8 +1951,8 @@ export function EnhancedSSHForm({
         }
         /* En los inputs sin icono (nombre/descripcion), reforzar feedback visual de foco */
         .ssh-terminal-form .terminal-row .terminal-input-wrap:focus-within {
-          border-color: #00e5ff !important;
-          box-shadow: 0 0 12px rgba(0, 229, 255, 0.16) !important;
+          border-color: var(--ui-button-primary) !important;
+          box-shadow: 0 0 12px color-mix(in srgb, var(--ui-button-primary) 16%, transparent) !important;
         }
         .terminal-icon-left {
           font-size: 0.9rem;
@@ -1967,8 +1967,8 @@ export function EnhancedSSHForm({
         .terminal-auth-selector {
           display: flex;
           gap: 1px;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: color-mix(in srgb, var(--ui-dialog-text) 5%, transparent);
+          border: 1px solid var(--ui-dialog-border);
           border-radius: 4px;
           padding: 1px;
         }
@@ -1979,7 +1979,7 @@ export function EnhancedSSHForm({
           font-size: 0.75rem;
           cursor: pointer;
           transition: all 0.2s;
-          color: rgba(255, 255, 255, 0.4);
+          color: color-mix(in srgb, var(--ui-dialog-text) 40%, transparent);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -1987,9 +1987,9 @@ export function EnhancedSSHForm({
         }
         .terminal-auth-chip i { font-size: 0.8rem; }
         .terminal-auth-chip.active {
-          background: rgba(0, 229, 255, 0.1) !important;
-          color: #00e5ff !important;
-          border: 1px solid rgba(0, 229, 255, 0.3) !important;
+          background: var(--ui-sidebar-button-bg) !important;
+          color: var(--ui-button-primary) !important;
+          border: 1px solid color-mix(in srgb, var(--ui-button-primary) 30%, transparent) !important;
           border-radius: 4px;
         }
         .terminal-auth-chip.disabled {
@@ -2010,8 +2010,8 @@ export function EnhancedSSHForm({
         }
         .terminal-key-file-btn {
           background: transparent;
-          border: 1px solid rgba(0, 229, 255, 0.3);
-          color: #00e5ff;
+          border: 1px solid color-mix(in srgb, var(--ui-button-primary) 30%, transparent);
+          color: var(--ui-button-primary);
           padding: 0.2rem 0.6rem;
           border-radius: 4px;
           font-size: 0.7rem;
@@ -2022,7 +2022,7 @@ export function EnhancedSSHForm({
           white-space: nowrap;
         }
         .terminal-key-file-btn:hover {
-          background: rgba(0, 229, 255, 0.1);
+          background: var(--ui-sidebar-button-bg);
         }
         .terminal-advanced-section {
           width: 100%;
@@ -2041,7 +2041,7 @@ export function EnhancedSSHForm({
           text-align: left;
         }
         .terminal-advanced-header:hover .terminal-label {
-          color: #00e5ff;
+          color: var(--ui-button-primary);
         }
         .terminal-advanced-section .terminal-options-list {
           padding-top: 0.35rem;
@@ -2075,41 +2075,41 @@ export function EnhancedSSHForm({
           outline: none !important;
         }
         .ssh-terminal-form .terminal-folder-dropdown .p-dropdown-label {
-          color: #fff !important;
+          color: var(--ui-dialog-text) !important;
           font-size: 0.85rem !important;
           padding: 0.5rem 0.25rem !important;
         }
         .ssh-terminal-form .terminal-folder-dropdown .p-dropdown-label.p-placeholder {
-          color: rgba(255, 255, 255, 0.4) !important;
+          color: color-mix(in srgb, var(--ui-dialog-text) 40%, transparent) !important;
         }
         .ssh-terminal-form .terminal-folder-dropdown .p-dropdown-trigger {
-          color: rgba(255, 255, 255, 0.5);
+          color: color-mix(in srgb, var(--ui-dialog-text) 50%, transparent);
           width: 2rem;
         }
         .ssh-terminal-form .terminal-folder-dropdown .p-dropdown-clear-icon {
-          color: rgba(255, 255, 255, 0.45) !important;
+          color: color-mix(in srgb, var(--ui-dialog-text) 45%, transparent) !important;
           right: 2rem;
         }
         .ssh-terminal-form .terminal-folder-dropdown .p-dropdown-clear-icon:hover {
-          color: #00e5ff !important;
+          color: var(--ui-button-primary) !important;
         }
         .terminal-folder-dropdown-panel.p-dropdown-panel {
-          background: #0d1117 !important;
-          border: 1px solid rgba(0, 229, 255, 0.28) !important;
+          background: var(--ui-dialog-bg) !important;
+          border: 1px solid color-mix(in srgb, var(--ui-button-primary) 28%, transparent) !important;
           border-radius: 4px !important;
-          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45) !important;
+          box-shadow: 0 12px 32px var(--ui-dialog-shadow) !important;
           font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
-          color: #c9d1d9 !important;
+          color: var(--ui-dialog-text) !important;
         }
         .terminal-folder-dropdown-panel .p-dropdown-header {
           background: transparent !important;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+          border-bottom: 1px solid var(--ui-dialog-border) !important;
           padding: 0.5rem !important;
         }
         .terminal-folder-dropdown-panel .p-dropdown-filter-container .p-dropdown-filter {
-          background: rgba(255, 255, 255, 0.03) !important;
-          border: 1px solid rgba(255, 255, 255, 0.12) !important;
-          color: #fff !important;
+          background: color-mix(in srgb, var(--ui-dialog-text) 3%, transparent) !important;
+          border: 1px solid var(--ui-dialog-border) !important;
+          color: var(--ui-dialog-text) !important;
           border-radius: 4px !important;
           font-family: inherit !important;
           font-size: 0.8rem !important;
@@ -2117,19 +2117,19 @@ export function EnhancedSSHForm({
           box-shadow: none !important;
         }
         .terminal-folder-dropdown-panel .p-dropdown-filter-container .p-dropdown-filter:enabled:focus {
-          border-color: #00e5ff !important;
-          box-shadow: 0 0 10px rgba(0, 229, 255, 0.12) !important;
+          border-color: var(--ui-button-primary) !important;
+          box-shadow: 0 0 10px color-mix(in srgb, var(--ui-button-primary) 12%, transparent) !important;
           outline: none !important;
         }
         .terminal-folder-dropdown-panel .p-dropdown-filter-icon {
-          color: rgba(0, 229, 255, 0.7) !important;
+          color: color-mix(in srgb, var(--ui-button-primary) 70%, transparent) !important;
           left: 0.65rem !important;
         }
         .terminal-folder-dropdown-panel .p-dropdown-items {
           padding: 0.35rem !important;
         }
         .terminal-folder-dropdown-panel .p-dropdown-item {
-          color: rgba(255, 255, 255, 0.85) !important;
+          color: color-mix(in srgb, var(--ui-dialog-text) 85%, transparent) !important;
           background: transparent !important;
           border-radius: 4px !important;
           font-size: 0.8rem !important;
@@ -2137,15 +2137,15 @@ export function EnhancedSSHForm({
           margin: 0.1rem 0 !important;
         }
         .terminal-folder-dropdown-panel .p-dropdown-item:not(.p-highlight):not(.p-disabled):hover {
-          background: rgba(0, 229, 255, 0.08) !important;
-          color: #fff !important;
+          background: color-mix(in srgb, var(--ui-button-primary) 8%, transparent) !important;
+          color: var(--ui-dialog-text) !important;
         }
         .terminal-folder-dropdown-panel .p-dropdown-item.p-highlight {
-          background: rgba(0, 229, 255, 0.16) !important;
-          color: #00e5ff !important;
+          background: color-mix(in srgb, var(--ui-button-primary) 16%, transparent) !important;
+          color: var(--ui-button-primary) !important;
         }
         .terminal-folder-dropdown-panel .p-dropdown-empty-message {
-          color: rgba(255, 255, 255, 0.45) !important;
+          color: color-mix(in srgb, var(--ui-dialog-text) 45%, transparent) !important;
           font-size: 0.8rem !important;
           padding: 0.5rem 0.6rem !important;
         }
@@ -2157,33 +2157,33 @@ export function EnhancedSSHForm({
         }
         .terminal-option-icon {
           margin-right: 0.75rem;
-          color: #00e5ff;
+          color: var(--ui-button-primary);
           opacity: 0.8;
           font-size: 0.9rem;
         }
         .terminal-dotted-spacer {
           flex: 1;
-          border-bottom: 1px dotted rgba(255, 255, 255, 0.1);
+          border-bottom: 1px dotted var(--ui-dialog-border);
           margin: 0 0.75rem;
           align-self: flex-end;
           height: 10px;
         }
         .terminal-switch .p-inputswitch-slider {
-          background: rgba(255, 255, 255, 0.1) !important;
+          background: color-mix(in srgb, var(--ui-dialog-text) 10%, transparent) !important;
           transform: scale(0.7);
         }
         .terminal-switch.p-inputswitch-checked .p-inputswitch-slider {
-          background: #00e5ff !important;
+          background: var(--ui-button-primary) !important;
         }
         .terminal-footer {
           display: flex;
           justify-content: space-between;
           padding-top: 1rem;
-          border-top: 1px solid rgba(255, 255, 255, 0.1);
+          border-top: 1px solid var(--ui-dialog-border);
         }
         .terminal-btn-primary {
-          background: #0061ff !important;
-          color: white;
+          background: var(--ui-button-primary) !important;
+          color: var(--ui-button-primary-text);
           border: none;
           padding: 0.6rem 1.5rem;
           border-radius: 4px;
@@ -2195,8 +2195,8 @@ export function EnhancedSSHForm({
         }
         .terminal-btn-outline {
           background: transparent;
-          border: 1px solid rgba(0, 229, 255, 0.3);
-          color: #00e5ff;
+          border: 1px solid color-mix(in srgb, var(--ui-button-primary) 30%, transparent);
+          color: var(--ui-button-primary);
           padding: 0.6rem 1rem;
           border-radius: 4px;
           font-size: 0.75rem;
@@ -2207,7 +2207,7 @@ export function EnhancedSSHForm({
           font-family: inherit;
         }
         .terminal-btn-outline:hover:not(:disabled) {
-          background: rgba(0, 229, 255, 0.08);
+          background: color-mix(in srgb, var(--ui-button-primary) 8%, transparent);
         }
         .terminal-btn-outline:disabled {
           opacity: 0.4;
@@ -2220,40 +2220,40 @@ export function EnhancedSSHForm({
         .terminal-btn-text {
           background: transparent;
           border: none;
-          color: rgba(255, 255, 255, 0.5);
+          color: color-mix(in srgb, var(--ui-dialog-text) 50%, transparent);
           padding: 0.6rem 1rem;
           font-weight: 600;
           font-size: 0.8rem;
           cursor: pointer;
         }
-        .terminal-btn-text:hover { color: #fff; }
+        .terminal-btn-text:hover { color: var(--ui-dialog-text); }
 
         /* Estilos del Header Terminal */
         .terminal-header-compact {
-          background: #0d1117;
+          background: var(--ui-dialog-bg);
           padding: 0.75rem 1.25rem;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          border-bottom: 1px solid var(--ui-dialog-border);
           position: relative;
         }
         .terminal-header-title {
           font-family: 'JetBrains Mono', monospace;
           font-size: 0.8rem;
           font-weight: 700;
-          color: #fff;
+          color: var(--ui-dialog-text);
           letter-spacing: 0.1em;
         }
         .terminal-header-icon-mini {
           width: 24px;
           height: 24px;
-          background: rgba(0, 229, 255, 0.1);
+          background: var(--ui-sidebar-button-bg);
           border-radius: 4px;
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #00e5ff;
+          color: var(--ui-button-primary);
           font-size: 0.8rem;
         }
         .terminal-header-icon-btn {
@@ -2272,16 +2272,16 @@ export function EnhancedSSHForm({
           left: 0;
           width: 40px;
           height: 2px;
-          background: #00e5ff;
-          box-shadow: 0 0 8px #00e5ff;
+          background: var(--ui-button-primary);
+          box-shadow: 0 0 8px var(--ui-button-primary);
         }
         .terminal-pro-dialog .p-dialog-header {
           padding: 0 !important;
-          background: #0d1117 !important;
+          background: var(--ui-dialog-bg) !important;
           border: none !important;
         }
         .terminal-pro-dialog .p-dialog-content {
-          background: #0a0e14 !important;
+          background: var(--ui-dialog-bg) !important;
           border: none !important;
         }
       `}} />
@@ -2332,7 +2332,7 @@ export function NewSSHConnectionDialog({
       modal
       resizable={false}
       onHide={onHide}
-      contentStyle={{ padding: '0', overflow: 'hidden', background: '#0a0e14' }}
+      contentStyle={{ padding: '0', overflow: 'hidden', background: 'var(--ui-dialog-bg)' }}
       className="terminal-pro-dialog"
       closable={false}
     >
@@ -2533,7 +2533,7 @@ export function NewRDPConnectionDialog({
       style={{ width: '100%', maxWidth: '800px' }}
       modal
       resizable={false}
-      contentStyle={{ padding: '0', overflow: 'auto', background: '#0a0e14' }}
+      contentStyle={{ padding: '0', overflow: 'auto', background: 'var(--ui-dialog-bg)' }}
       className="terminal-pro-dialog"
       closable={false}
     >
@@ -2911,7 +2911,7 @@ export function NewVNCConnectionDialog({
       style={{ width: '100%', maxWidth: '800px' }}
       modal
       resizable={false}
-      contentStyle={{ padding: '0', overflow: 'auto', background: '#0a0e14' }}
+      contentStyle={{ padding: '0', overflow: 'auto', background: 'var(--ui-dialog-bg)' }}
       className="terminal-pro-dialog"
       closable={false}
     >
@@ -3245,7 +3245,7 @@ export function EditVNCConnectionDialog({
       style={{ width: '100%', maxWidth: '800px' }}
       modal
       resizable={false}
-      contentStyle={{ padding: '0', overflow: 'auto', background: '#0a0e14' }}
+      contentStyle={{ padding: '0', overflow: 'auto', background: 'var(--ui-dialog-bg)' }}
       className="terminal-pro-dialog"
       closable={false}
     >
