@@ -49,14 +49,23 @@ export function SSHDialog({
         </div>
       }
       visible={visible} 
-      style={{ width: '600px', maxWidth: '95vw' }} 
+      style={{
+        width: '600px',
+        maxWidth: '95vw',
+        minWidth: '420px',
+        height: 'auto',
+        maxHeight: '90vh',
+        minHeight: '420px'
+      }} 
       modal 
+      resizable
       onHide={onHide}
       className="ssh-connection-dialog"
       contentStyle={{
         background: 'var(--ui-dialog-bg)',
         color: 'var(--ui-dialog-text)',
-        padding: '0'
+        padding: '0',
+        overflow: 'auto'
       }}
     >
       <div className="general-settings-container" style={{ padding: '2rem' }}>
@@ -660,11 +669,26 @@ export function EditSSHConnectionDialog({
       <Dialog
         header={headerTemplate}
         visible={visible}
-        style={{ width: '100%', maxWidth: '600px' }}
+        style={{
+          width: '600px',
+          maxWidth: '95vw',
+          minWidth: '420px',
+          height: 'auto',
+          maxHeight: '90vh',
+          minHeight: '480px'
+        }}
         modal
-        resizable={false}
+        resizable
         onHide={onHide}
-        contentStyle={{ padding: '0', overflow: 'hidden', background: 'var(--ui-dialog-bg)' }}
+        contentStyle={{
+          padding: '0',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          flex: '1',
+          minHeight: '0',
+          background: 'var(--ui-dialog-bg)'
+        }}
         className="terminal-pro-dialog"
         closable={false}
       >
@@ -2283,6 +2307,31 @@ export function EnhancedSSHForm({
         .terminal-pro-dialog .p-dialog-content {
           background: var(--ui-dialog-bg) !important;
           border: none !important;
+          flex: 1 1 auto;
+          min-height: 0;
+        }
+        .terminal-pro-dialog.p-dialog {
+          display: flex;
+          flex-direction: column;
+        }
+        .terminal-pro-dialog .p-resizable-handle {
+          background: transparent !important;
+          z-index: 1000 !important;
+        }
+        .terminal-pro-dialog .p-resizable-handle:hover {
+          background: rgba(33, 150, 243, 0.2) !important;
+        }
+        .terminal-pro-dialog .p-resizable-handle-e {
+          width: 12px !important;
+          right: -2px !important;
+          cursor: ew-resize !important;
+        }
+        .terminal-pro-dialog .p-resizable-handle-se {
+          width: 20px !important;
+          height: 20px !important;
+          right: -2px !important;
+          bottom: -2px !important;
+          cursor: nwse-resize !important;
         }
       `}} />
     </div>
@@ -2328,11 +2377,26 @@ export function NewSSHConnectionDialog({
     <Dialog
       header={headerTemplate}
       visible={visible}
-      style={{ width: '100%', maxWidth: '600px' }}
+      style={{
+        width: '600px',
+        maxWidth: '95vw',
+        minWidth: '420px',
+        height: 'auto',
+        maxHeight: '90vh',
+        minHeight: '480px'
+      }}
       modal
-      resizable={false}
+      resizable
       onHide={onHide}
-      contentStyle={{ padding: '0', overflow: 'hidden', background: 'var(--ui-dialog-bg)' }}
+      contentStyle={{
+        padding: '0',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        flex: '1',
+        minHeight: '0',
+        background: 'var(--ui-dialog-bg)'
+      }}
       className="terminal-pro-dialog"
       closable={false}
     >
