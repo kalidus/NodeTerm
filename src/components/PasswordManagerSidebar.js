@@ -40,7 +40,9 @@ const PasswordManagerSidebar = ({
   onShowImportDialog,
   sidebarFilter = '', // Filtro desde la TitleBar
   treeTheme = 'default', // Tema del árbol
-  sessionActionIconTheme = 'modern'
+  sessionActionIconTheme = 'modern',
+  showFavoritesView = false,
+  onToggleFavoritesView
 }) => {
   // Hook de internacionalización
   const { t } = useTranslation('dialogs');
@@ -1789,6 +1791,38 @@ const PasswordManagerSidebar = ({
               </svg>
             </span>
           </Button>
+          {onToggleFavoritesView && (
+            <Button
+              className={`p-button-rounded p-button-text sidebar-action-button glass-button ${showFavoritesView ? 'active' : ''}`}
+              onClick={onToggleFavoritesView}
+              tooltip={showFavoritesView ? tCommon('tooltips.showAllConnections') : tCommon('tooltips.showFavorites')}
+              tooltipOptions={{ position: 'bottom' }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '32px',
+                height: '32px',
+                padding: 0,
+                background: showFavoritesView ? 'rgba(255, 193, 7, 0.12)' : 'rgba(255, 255, 255, 0.05)',
+                border: showFavoritesView ? '1px solid rgba(255, 193, 7, 0.45)' : '1px solid rgba(255, 255, 255, 0.1)',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                borderRadius: '8px',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <span style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '20px',
+                height: '20px',
+                color: '#ffc107'
+              }}>
+                <i className={showFavoritesView ? 'pi pi-star-fill' : 'pi pi-star'} style={{ fontSize: '1rem' }} />
+              </span>
+            </Button>
+          )}
         </div>
       </div>
       

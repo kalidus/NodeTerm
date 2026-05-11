@@ -2470,8 +2470,14 @@ const Sidebar = React.memo(({
         icon = <span className="pi pi-folder" style={{ color: '#89b4fa', fontSize: `${connectionIconSize}px` }} />;
       }
     } else if (isFolder) {
-      if (node.data?.customIcon && node.data.customIcon !== 'default' && FolderIconPresets[node.data.customIcon.toUpperCase()]) {
+      const isFavoritesTreeView = showFavoritesView && viewMode === 'connections';
+      if (isFavoritesTreeView) {
+        icon = <FolderIconRenderer preset={FolderIconPresets.FAVORITES} pixelSize={folderIconSize} />;
+      } else if (node.data?.customIcon && node.data.customIcon !== 'default' && FolderIconPresets[node.data.customIcon.toUpperCase()]) {
         const preset = FolderIconPresets[node.data.customIcon.toUpperCase()];
+        icon = <FolderIconRenderer preset={preset} pixelSize={folderIconSize} />;
+      } else if (node.folderIcon && node.folderIcon !== 'general' && FolderIconPresets[node.folderIcon.toUpperCase()]) {
+        const preset = FolderIconPresets[node.folderIcon.toUpperCase()];
         icon = <FolderIconRenderer preset={preset} pixelSize={folderIconSize} />;
       } else {
         const hasCustomColor = node.color && !isDefaultThemeColor(node.color);
@@ -3135,7 +3141,7 @@ const Sidebar = React.memo(({
                     window.draggedSSHNodeRef.current = null;
                   }
                 }}
-                className={`sidebar-tree tree-theme-${treeTheme}`}
+                className={`sidebar-tree tree-theme-${treeTheme}${showFavoritesView && viewMode === 'connections' ? ' sidebar-tree-favorites-view' : ''}`}
                 data-icon-theme={iconTheme}
                 data-tree-theme={treeTheme}
                 data-font-color={explorerFontColor || ''}
@@ -3235,6 +3241,8 @@ const Sidebar = React.memo(({
           sessionActionIconTheme={sessionActionIconTheme}
           sidebarFilter={sidebarFilter}
           treeTheme={treeTheme}
+          showFavoritesView={showFavoritesView}
+          onToggleFavoritesView={toggleFavoritesView}
         />
       )}
     </>

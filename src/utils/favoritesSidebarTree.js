@@ -1,6 +1,7 @@
 import { helpers as connHelpers } from './connectionStore';
 
 export const FAVORITES_ROOT_KEY = '__favorites_root__';
+export const FAVORITES_VIEW_FOLDER_COLOR = '#FFC107';
 const FAVORITE_GROUP_PREFIX = '__fav_group__';
 const FAVORITE_SHORTCUT_PREFIX = '__fav_shortcut__';
 
@@ -131,7 +132,7 @@ export function buildFavoritesSidebarTree({ nodes, favorites, groups, getFavorit
     leaf: false,
     children: [],
     uid: `${FAVORITE_GROUP_PREFIX}${group.id}`,
-    color: group.color || '#4fc3f7',
+    color: FAVORITES_VIEW_FOLDER_COLOR,
     folderIcon: 'favorites',
     isFavoriteGroupFolder: true,
     favoriteGroupId: group.id
@@ -165,7 +166,7 @@ export function buildFavoritesSidebarTree({ nodes, favorites, groups, getFavorit
     leaf: false,
     children: [...groupFolders, ...rootShortcuts],
     uid: FAVORITES_ROOT_KEY,
-    color: '#FFC107',
+    color: FAVORITES_VIEW_FOLDER_COLOR,
     folderIcon: 'favorites',
     isFavoritesRoot: true
   }];
