@@ -795,6 +795,32 @@ body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents
     margin: 0 !important;
 }
 
+/* Home + barra derecha integrada: sin márgenes ni radios que dejen ver el fondo. */
+body.minimalist-terminal-mode .connection-history-root.has-flush-right-quick-bar .home-integrated-terminal-row {
+    margin: 0 !important;
+    height: 100%;
+}
+
+body.minimalist-terminal-mode .connection-history-root.has-flush-right-quick-bar .home-integrated-terminal-row .recents-terminal-frame {
+    margin: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+body.minimalist-terminal-mode .connection-history-root.has-flush-right-quick-bar .home-integrated-terminal-row .recents-terminal-header {
+    border-top-right-radius: 0 !important;
+}
+
+body.minimalist-terminal-mode .connection-history-root.has-flush-right-quick-bar .home-integrated-terminal-quickbar,
+body.minimalist-terminal-mode .connection-history-root.has-flush-right-quick-bar .home-integrated-terminal-quickbar > * {
+    border-radius: 0 !important;
+}
+
+body.minimalist-terminal-mode .home-terminal-flush-right,
+body.minimalist-terminal-mode .home-terminal-flush-right [data-split-container-wrapper="true"] {
+    background: var(--terminal-bg, #0a0f1f) !important;
+}
+
 /*
  * Home → vista solo terminal (solo minimalista): .hero-splash-header puede quedar vacío
  * (tarjeta Home oculta) y el padding del CSS inyectado dejaba franja del escritorio arriba.
