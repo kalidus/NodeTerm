@@ -697,6 +697,7 @@ export function EditSSHConnectionDialog({
             onSSHConfirm={onSSHConfirm}
             onHide={onHide}
             sshLoading={sshLoading}
+            isEditMode
           />
         </div>
       </Dialog>
@@ -1568,7 +1569,8 @@ export function EnhancedSSHForm({
   onSSHConfirm,
   onHide,
   onGoBack,
-  sshLoading = false
+  sshLoading = false,
+  isEditMode = false
 }) {
   // Hook de internacionalización
   const { t } = useTranslation('dialogs');
@@ -1852,9 +1854,13 @@ export function EnhancedSSHForm({
         </button>
         <div className="flex gap-2">
           <button className="terminal-btn-text" onClick={onHide}>CANCELAR</button>
-          <button className="terminal-btn-primary" onClick={handleSubmit} disabled={!isFormValid() || sshLoading}>
-            <i className={sshLoading ? "pi pi-spin pi-spinner mr-1" : "pi pi-angle-right mr-1"}></i> 
-            {sshLoading ? "_ CARGANDO..." : "_ CONECTAR"}
+          <button
+            className="terminal-btn-outline terminal-btn-submit"
+            onClick={handleSubmit}
+            disabled={!isFormValid() || sshLoading}
+          >
+            <i className={sshLoading ? 'pi pi-spin pi-spinner mr-2' : isEditMode ? 'pi pi-save mr-2' : 'pi pi-angle-right mr-2'}></i>
+            {sshLoading ? '_ CARGANDO...' : isEditMode ? tCommon('buttons.save').toUpperCase() : '_ CONECTAR'}
           </button>
         </div>
       </div>
@@ -2041,13 +2047,17 @@ export function EnhancedSSHForm({
           padding-top: 0.35rem;
         }
         .terminal-folder-dropdown-wrap {
-          padding: 0 0.35rem 0 0;
+          padding: 0 0.5rem;
           min-height: 2.25rem;
-          gap: 0.25rem;
+          gap: 0;
         }
-        .ssh-terminal-form .terminal-folder-dropdown-wrap:focus-within {
-          border-color: #00e5ff !important;
-          box-shadow: 0 0 12px rgba(0, 229, 255, 0.16) !important;
+        .ssh-terminal-form .terminal-folder-dropdown-wrap .terminal-icon-left {
+          flex-shrink: 0;
+          align-self: center;
+          margin-right: 0.5rem;
+          opacity: 0.5;
+          color: inherit;
+          line-height: 1;
         }
         .ssh-terminal-form .terminal-folder-dropdown.p-dropdown {
           width: 100%;
@@ -2056,6 +2066,13 @@ export function EnhancedSSHForm({
           border: none !important;
           box-shadow: none !important;
           font-family: inherit;
+        }
+        .ssh-terminal-form .terminal-folder-dropdown.p-dropdown.p-focus,
+        .ssh-terminal-form .terminal-folder-dropdown.p-dropdown:not(.p-disabled):hover,
+        body.layout-cyberpunk .ssh-terminal-form .terminal-folder-dropdown.p-dropdown:not(.p-disabled).p-focus {
+          border: none !important;
+          box-shadow: none !important;
+          outline: none !important;
         }
         .ssh-terminal-form .terminal-folder-dropdown .p-dropdown-label {
           color: #fff !important;
@@ -2066,7 +2083,7 @@ export function EnhancedSSHForm({
           color: rgba(255, 255, 255, 0.4) !important;
         }
         .ssh-terminal-form .terminal-folder-dropdown .p-dropdown-trigger {
-          color: rgba(0, 229, 255, 0.75);
+          color: rgba(255, 255, 255, 0.5);
           width: 2rem;
         }
         .ssh-terminal-form .terminal-folder-dropdown .p-dropdown-clear-icon {
@@ -2185,6 +2202,20 @@ export function EnhancedSSHForm({
           font-size: 0.75rem;
           font-weight: 700;
           cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          font-family: inherit;
+        }
+        .terminal-btn-outline:hover:not(:disabled) {
+          background: rgba(0, 229, 255, 0.08);
+        }
+        .terminal-btn-outline:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+        .terminal-btn-submit {
+          padding: 0.6rem 1.5rem;
+          font-size: 0.8rem;
         }
         .terminal-btn-text {
           background: transparent;
