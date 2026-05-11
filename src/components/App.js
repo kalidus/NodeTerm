@@ -1471,6 +1471,8 @@ const App = () => {
     sshTargetFolder, setSSHTargetFolder,
     sshAutoCopyPassword, setSSHAutoCopyPassword,
     sshDescription, setSSHDescription,
+    sshAuthMethod, setSSHAuthMethod,
+    sshPrivateKey, setSSHPrivateKey,
     // Estados de formularios Edit SSH
     editSSHNode, setEditSSHNode,
     editSSHName, setEditSSHName,
@@ -1482,6 +1484,8 @@ const App = () => {
     editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
     editSSHDescription, setEditSSHDescription,
     editSSHIcon, setEditSSHIcon,
+    editSSHAuthMethod, setEditSSHAuthMethod,
+    editSSHPrivateKey, setEditSSHPrivateKey,
     // Estados de formularios RDP
     rdpName, setRdpName,
     rdpServer, setRdpServer,
@@ -1632,6 +1636,7 @@ const App = () => {
     sshPort, setSSHPort, sshTargetFolder, setSSHTargetFolder,
     sshAutoCopyPassword, setSSHAutoCopyPassword,
     sshDescription,
+    sshAuthMethod, sshPrivateKey,
     closeSSHDialogWithReset,
     // Estados SSH para edición
     editSSHNode, setEditSSHNode,
@@ -1644,6 +1649,8 @@ const App = () => {
     editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
     editSSHDescription, setEditSSHDescription,
     editSSHIcon, setEditSSHIcon,
+    editSSHAuthMethod, setEditSSHAuthMethod,
+    editSSHPrivateKey, setEditSSHPrivateKey,
     closeEditSSHDialogWithReset,
     // Estados RDP
     rdpName, setRdpName,
@@ -3216,6 +3223,10 @@ const App = () => {
           setSSHAutoCopyPassword={setSSHAutoCopyPassword}
           sshDescription={sshDescription}
           setSSHDescription={setSSHDescription}
+          sshAuthMethod={sshAuthMethod}
+          setSSHAuthMethod={setSSHAuthMethod}
+          sshPrivateKey={sshPrivateKey}
+          setSSHPrivateKey={setSSHPrivateKey}
 
           // Estados de formularios Edit SSH
           editSSHName={editSSHName}
@@ -3236,6 +3247,10 @@ const App = () => {
           setEditSSHDescription={setEditSSHDescription}
           editSSHIcon={editSSHIcon}
           setEditSSHIcon={setEditSSHIcon}
+          editSSHAuthMethod={editSSHAuthMethod}
+          setEditSSHAuthMethod={setEditSSHAuthMethod}
+          editSSHPrivateKey={editSSHPrivateKey}
+          setEditSSHPrivateKey={setEditSSHPrivateKey}
 
           // Estados para modo edición
           editSSHNode={editSSHNode}

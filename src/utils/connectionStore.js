@@ -119,6 +119,8 @@ function toSerializable(connection) {
     lastConnected: new Date().toISOString(),
     // Guardar credenciales y configuración importante
     password: connection.password || '',
+    privateKey: connection.privateKey || '',
+    authMethod: connection.authMethod || undefined,
     clientType: connection.clientType || (type === 'rdp-guacamole' || type === 'vnc-guacamole' ? 'guacamole' : 'native'),
     // Campos adicionales para RDP
     domain: connection.domain || '',
@@ -194,6 +196,8 @@ function fromSidebarNode(node, typeOverride = null) {
     port: node.data?.port,
     // Incluir credenciales y configuración completa
     password: node.data?.password || '',
+    privateKey: node.data?.privateKey || '',
+    authMethod: node.data?.authMethod || undefined,
     clientType: node.data?.clientType || (isRDP ? 'guacamole' : 'native'),
     // Campos adicionales para RDP
     domain: node.data?.domain || '',

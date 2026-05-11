@@ -247,6 +247,8 @@ export const useConnectionManagement = ({
       // Para conexiones de favoritos, usar la información guardada directamente
       const favoriteData = {
         password: nodeOrConn.password || '',
+        privateKey: nodeOrConn.privateKey || '',
+        authMethod: nodeOrConn.authMethod || '',
         useBastionWallix: nodeOrConn.useBastionWallix || false,
         bastionHost: nodeOrConn.bastionHost || '',
         bastionUser: nodeOrConn.bastionUser || '',
@@ -255,7 +257,7 @@ export const useConnectionManagement = ({
       };
 
       // Solo si no hay información completa guardada, buscar en la sidebar como fallback
-      if (!favoriteData.password && !favoriteData.useBastionWallix) {
+      if (!favoriteData.password && !favoriteData.privateKey && !favoriteData.useBastionWallix) {
         const matchesConn = (node) => {
           if (!node || !node.data || node.data.type !== 'ssh') return false;
           const hostMatches = (node.data.host === conn.host) || (node.data.targetServer === conn.host) || (node.data.hostname === conn.host);
@@ -282,6 +284,10 @@ export const useConnectionManagement = ({
     // Obtener password y verificar si debe copiarse automáticamente
     // MOVED UP to be available for SFTP block
     const password = isSidebarNode ? nodeOrConn.data.password : (nodeOrConn.password || matchedSidebarNode?.data?.password || '');
+    const privateKey = isSidebarNode ? (nodeOrConn.data.privateKey || '') : (nodeOrConn.privateKey || matchedSidebarNode?.data?.privateKey || '');
+    const authMethod = isSidebarNode
+      ? (nodeOrConn.data.authMethod || (nodeOrConn.data.privateKey?.trim() ? 'key' : 'password'))
+      : (nodeOrConn.authMethod || matchedSidebarNode?.data?.authMethod || (privateKey?.trim() ? 'key' : 'password'));
     const autoCopyPassword = isSidebarNode ? (nodeOrConn.data.autoCopyPassword || false) : (matchedSidebarNode?.data?.autoCopyPassword || false);
 
     // Si es un favorito de tipo Explorer o de transferencia de archivos, abrir explorador
@@ -300,7 +306,9 @@ export const useConnectionManagement = ({
           port: conn.port,
           type: conn.type === 'explorer' ? 'ssh' : conn.type,
           protocol: conn.type === 'explorer' ? 'sftp' : conn.type,
-          password: password, // Explicitly set password
+          password: password,
+          privateKey: privateKey,
+          authMethod,
           ...conn // Include processed properties
         },
         key: conn.originalKey
@@ -341,6 +349,8 @@ export const useConnectionManagement = ({
         username: conn.username,
         port: conn.port,
         password: password,
+        privateKey: privateKey,
+        authMethod,
         useBastionWallix: isSidebarNode ? (nodeOrConn.data.useBastionWallix || false) : (nodeOrConn.useBastionWallix || matchedSidebarNode?.data?.useBastionWallix || false),
         bastionHost: isSidebarNode ? (nodeOrConn.data.bastionHost || '') : (nodeOrConn.bastionHost || matchedSidebarNode?.data?.bastionHost || ''),
         bastionUser: isSidebarNode ? (nodeOrConn.data.bastionUser || '') : (nodeOrConn.bastionUser || matchedSidebarNode?.data?.bastionUser || ''),
@@ -365,6 +375,8 @@ export const useConnectionManagement = ({
         host: conn.host,
         username: conn.username,
         password: password,
+        privateKey: privateKey,
+        authMethod,
         port: conn.port,
         originalKey: conn.originalKey,
         name: conn.name,

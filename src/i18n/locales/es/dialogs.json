@@ -39,6 +39,9 @@
       "autoCopyPassword": "Copiar contraseña automáticamente",
       "autoCopyPasswordDescription": "Copia la contraseña al portapapeles al conectar",
       "selectKeyFile": "Seleccionar archivo de clave",
+      "browseKeyFile": "Examinar",
+      "keyFilePlaceholder": "Archivo...",
+      "keyLoaded": "Cargada",
       "pasteKey": "O pegar la clave privada aquí"
     },
     "validation": {

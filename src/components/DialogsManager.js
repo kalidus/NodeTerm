@@ -74,6 +74,10 @@ const DialogsManager = ({
   setSSHAutoCopyPassword,
   sshDescription,
   setSSHDescription,
+  sshAuthMethod,
+  setSSHAuthMethod,
+  sshPrivateKey,
+  setSSHPrivateKey,
 
   // Estados de formularios Edit SSH
   editSSHName,
@@ -94,6 +98,10 @@ const DialogsManager = ({
   setEditSSHDescription,
   editSSHIcon,
   setEditSSHIcon,
+  editSSHAuthMethod,
+  setEditSSHAuthMethod,
+  editSSHPrivateKey,
+  setEditSSHPrivateKey,
 
   // Estados de formularios RDP
   rdpName,
@@ -599,8 +607,14 @@ const DialogsManager = ({
         setSSHRemoteFolder={setSSHRemoteFolder}
         sshTargetFolder={sshTargetFolder}
         setSSHTargetFolder={setSSHTargetFolder}
+        sshAuthMethod={sshAuthMethod}
+        setSSHAuthMethod={setSSHAuthMethod}
+        sshPrivateKey={sshPrivateKey}
+        setSSHPrivateKey={setSSHPrivateKey}
         sshAutoCopyPassword={sshAutoCopyPassword}
         setSSHAutoCopyPassword={setSSHAutoCopyPassword}
+        sshDescription={sshDescription}
+        setSSHDescription={setSSHDescription}
         foldersOptions={getAllFolders(nodes)}
         onSSHConfirm={handleCreateNewSSH}
         sshLoading={false}
@@ -638,6 +652,10 @@ const DialogsManager = ({
         setSSHRemoteFolder={editSSHNode ? setEditSSHRemoteFolder : setSSHRemoteFolder}
         sshTargetFolder={sshTargetFolder}
         setSSHTargetFolder={setSSHTargetFolder}
+        sshAuthMethod={editSSHNode ? editSSHAuthMethod : sshAuthMethod}
+        setSSHAuthMethod={editSSHNode ? setEditSSHAuthMethod : setSSHAuthMethod}
+        sshPrivateKey={editSSHNode ? editSSHPrivateKey : sshPrivateKey}
+        setSSHPrivateKey={editSSHNode ? setEditSSHPrivateKey : setSSHPrivateKey}
         sshAutoCopyPassword={editSSHNode ? editSSHAutoCopyPassword : sshAutoCopyPassword}
         setSSHAutoCopyPassword={editSSHNode ? setEditSSHAutoCopyPassword : setSSHAutoCopyPassword}
         sshDescription={editSSHNode ? editSSHDescription : sshDescription}

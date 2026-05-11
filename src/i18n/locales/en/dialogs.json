@@ -39,6 +39,9 @@
       "autoCopyPassword": "Copy password automatically",
       "autoCopyPasswordDescription": "Copies the password to the clipboard when connecting",
       "selectKeyFile": "Select key file",
+      "browseKeyFile": "Browse",
+      "keyFilePlaceholder": "File...",
+      "keyLoaded": "Loaded",
       "pasteKey": "Or paste the private key here"
     },
     "validation": {

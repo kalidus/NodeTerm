@@ -49,6 +49,8 @@ export const useDialogManagement = () => {
   const [sshTargetFolder, setSSHTargetFolder] = useState(null);
   const [sshAutoCopyPassword, setSSHAutoCopyPassword] = useState(false);
   const [sshDescription, setSSHDescription] = useState('');
+  const [sshAuthMethod, setSSHAuthMethod] = useState('password');
+  const [sshPrivateKey, setSSHPrivateKey] = useState('');
 
   // Editar SSH
   const [editSSHNode, setEditSSHNode] = useState(null);
@@ -61,6 +63,8 @@ export const useDialogManagement = () => {
   const [editSSHAutoCopyPassword, setEditSSHAutoCopyPassword] = useState(false);
   const [editSSHDescription, setEditSSHDescription] = useState('');
   const [editSSHIcon, setEditSSHIcon] = useState(null);
+  const [editSSHAuthMethod, setEditSSHAuthMethod] = useState('password');
+  const [editSSHPrivateKey, setEditSSHPrivateKey] = useState('');
 
   // ============ ESTADOS DE FORMULARIOS RDP ============
   
@@ -121,6 +125,8 @@ export const useDialogManagement = () => {
     setSSHTargetFolder(null);
     setSSHAutoCopyPassword(false);
     setSSHDescription('');
+    setSSHAuthMethod('password');
+    setSSHPrivateKey('');
   };
 
   // Resetear todos los campos RDP
@@ -171,6 +177,8 @@ export const useDialogManagement = () => {
     setEditSSHAutoCopyPassword(false);
     setEditSSHDescription('');
     setEditSSHIcon(null);
+    setEditSSHAuthMethod('password');
+    setEditSSHPrivateKey('');
   };
 
   // Resetear todos los campos Edit Folder
@@ -309,6 +317,8 @@ export const useDialogManagement = () => {
     sshTargetFolder, setSSHTargetFolder,
     sshAutoCopyPassword, setSSHAutoCopyPassword,
     sshDescription, setSSHDescription,
+    sshAuthMethod, setSSHAuthMethod,
+    sshPrivateKey, setSSHPrivateKey,
 
     // Estados de formularios Edit SSH
     editSSHNode, setEditSSHNode,
@@ -321,6 +331,8 @@ export const useDialogManagement = () => {
     editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
     editSSHDescription, setEditSSHDescription,
     editSSHIcon, setEditSSHIcon,
+    editSSHAuthMethod, setEditSSHAuthMethod,
+    editSSHPrivateKey, setEditSSHPrivateKey,
 
     // Estados de formularios RDP
     rdpName, setRdpName,

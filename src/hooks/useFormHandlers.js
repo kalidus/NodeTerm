@@ -20,7 +20,7 @@ export const useFormHandlers = ({
   setShowProtocolSelectionDialog,
 
   // Estados de formularios SSH
-  sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder, sshAutoCopyPassword, sshDescription,
+  sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder, sshAutoCopyPassword, sshDescription, sshAuthMethod, sshPrivateKey,
   closeSSHDialogWithReset,
   
   // Estados de formularios Edit SSH  
@@ -33,6 +33,8 @@ export const useFormHandlers = ({
   editSSHPort, setEditSSHPort,
   editSSHAutoCopyPassword, editSSHDescription, setEditSSHDescription,
   editSSHIcon, setEditSSHIcon,
+  editSSHAuthMethod, setEditSSHAuthMethod,
+  editSSHPrivateKey, setEditSSHPrivateKey,
   closeEditSSHDialogWithReset,
   
   // Estados de formularios RDP
@@ -198,13 +200,18 @@ export const useFormHandlers = ({
    * Crear nueva conexión SSH
    */
   const createNewSSH = useCallback(() => {
-    // Validar que los campos obligatorios existan y no estén vacíos
-    if (!sshName || !sshHost || !sshUser || !sshPassword || 
-        !sshName.trim() || !sshHost.trim() || !sshUser.trim() || !sshPassword.trim()) {
+    const authMethod = sshAuthMethod === 'key' ? 'key' : 'password';
+    const missingBaseFields = !sshName?.trim() || !sshHost?.trim() || !sshUser?.trim();
+    const missingPassword = authMethod === 'password' && !sshPassword?.trim();
+    const missingPrivateKey = authMethod === 'key' && !sshPrivateKey?.trim();
+
+    if (missingBaseFields || missingPassword || missingPrivateKey) {
       toast.current.show({
         severity: 'error',
         summary: 'Error',
-        detail: 'Todos los campos son obligatorios',
+        detail: authMethod === 'key'
+          ? 'Nombre, host, usuario y clave privada son obligatorios'
+          : 'Nombre, host, usuario y contraseña son obligatorios',
         life: 3000
       });
       return;
@@ -220,7 +227,9 @@ export const useFormHandlers = ({
       data: {
         host: sshHost.trim(),
         user: userInfo.isWallix ? userInfo.targetUser : sshUser.trim(),
-        password: sshPassword.trim(),
+        password: authMethod === 'password' ? sshPassword.trim() : '',
+        privateKey: authMethod === 'key' ? sshPrivateKey.trim() : '',
+        authMethod,
         remoteFolder: sshRemoteFolder ? sshRemoteFolder.trim() : '',
         port: sshPort,
         type: 'ssh',
@@ -263,7 +272,7 @@ export const useFormHandlers = ({
       detail: `Conexión SSH "${sshName}" añadida al árbol`,
       life: 3000
     });
-  }, [sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder, sshAutoCopyPassword, sshDescription, nodes, setNodes, findNodeByKey, deepCopy, generateUniqueKey, parseWallixUser, setShowUnifiedConnectionDialog, toast]);
+  }, [sshName, sshHost, sshUser, sshPassword, sshPrivateKey, sshAuthMethod, sshRemoteFolder, sshPort, sshTargetFolder, sshAutoCopyPassword, sshDescription, nodes, setNodes, findNodeByKey, deepCopy, generateUniqueKey, parseWallixUser, setShowUnifiedConnectionDialog, toast]);
 
   /**
    * Crear nueva conexión RDP
@@ -606,13 +615,18 @@ export const useFormHandlers = ({
    * Guardar edición SSH
    */
   const saveEditSSH = useCallback(() => {
-    // Validar que los campos obligatorios existan y no estén vacíos
-    if (!editSSHName || !editSSHHost || !editSSHUser || !editSSHPassword || 
-        !editSSHName.trim() || !editSSHHost.trim() || !editSSHUser.trim() || !editSSHPassword.trim()) {
+    const authMethod = editSSHAuthMethod === 'key' ? 'key' : 'password';
+    const missingBaseFields = !editSSHName?.trim() || !editSSHHost?.trim() || !editSSHUser?.trim();
+    const missingPassword = authMethod === 'password' && !editSSHPassword?.trim();
+    const missingPrivateKey = authMethod === 'key' && !editSSHPrivateKey?.trim();
+
+    if (missingBaseFields || missingPassword || missingPrivateKey) {
       toast.current.show({
         severity: 'error',
         summary: 'Error',
-        detail: 'Todos los campos son obligatorios excepto la carpeta remota',
+        detail: authMethod === 'key'
+          ? 'Nombre, host, usuario y clave privada son obligatorios'
+          : 'Nombre, host, usuario y contraseña son obligatorios',
         life: 3000
       });
       return;
@@ -632,7 +646,9 @@ export const useFormHandlers = ({
         ...nodeToEdit.data, 
         host: userInfo.isWallix ? userInfo.targetServer : editSSHHost.trim(), // Si es Wallix, el host real es el targetServer
         user: userInfo.isWallix ? userInfo.targetUser : editSSHUser.trim(),
-        password: editSSHPassword.trim(),
+        password: authMethod === 'password' ? editSSHPassword.trim() : '',
+        privateKey: authMethod === 'key' ? editSSHPrivateKey.trim() : '',
+        authMethod,
         remoteFolder: editSSHRemoteFolder ? editSSHRemoteFolder.trim() : '',
         port: editSSHPort,
         type: 'ssh',
@@ -676,7 +692,7 @@ export const useFormHandlers = ({
       detail: `Sesión SSH actualizada`,
       life: 3000
     });
-  }, [editSSHName, editSSHHost, editSSHUser, editSSHPassword, editSSHRemoteFolder, editSSHPort, editSSHAutoCopyPassword, editSSHDescription, editSSHIcon, editSSHNode, nodes, setNodes, findNodeByKey, deepCopy, parseWallixUser, closeEditSSHDialogWithReset, setShowUnifiedConnectionDialog, setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, setEditSSHDescription, setEditSSHIcon, toast]);
+  }, [editSSHName, editSSHHost, editSSHUser, editSSHPassword, editSSHPrivateKey, editSSHAuthMethod, editSSHRemoteFolder, editSSHPort, editSSHAutoCopyPassword, editSSHDescription, editSSHIcon, editSSHNode, nodes, setNodes, findNodeByKey, deepCopy, parseWallixUser, closeEditSSHDialogWithReset, setShowUnifiedConnectionDialog, setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, setEditSSHDescription, setEditSSHIcon, toast]);
 
   /**
    * Guardar edición de carpeta
@@ -733,6 +749,12 @@ export const useFormHandlers = ({
     // Mostrar el usuario original completo si es Wallix, o el usuario simple si es directo
     setEditSSHUser(node.data?.useBastionWallix ? node.data?.bastionUser || '' : node.data?.user || '');
     setEditSSHPassword(node.data?.password || '');
+    setEditSSHPrivateKey(node.data?.privateKey || '');
+    setEditSSHAuthMethod(
+      node.data?.authMethod === 'key' || node.data?.authMethod === 'password'
+        ? node.data.authMethod
+        : (node.data?.privateKey?.trim() ? 'key' : 'password')
+    );
     setEditSSHRemoteFolder(node.data?.remoteFolder || '');
     setEditSSHPort(node.data?.port || 22);
     setEditSSHDescription(node.data?.description || '');
@@ -740,7 +762,7 @@ export const useFormHandlers = ({
     if (setEditSSHIcon) setEditSSHIcon(node.data?.customIcon || null);
     // Usar el diálogo unificado en modo edición SSH
     setShowUnifiedConnectionDialog(true);
-  }, [setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, setEditSSHDescription, setEditSSHIcon, setShowUnifiedConnectionDialog]);
+  }, [setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHPrivateKey, setEditSSHAuthMethod, setEditSSHRemoteFolder, setEditSSHPort, setEditSSHDescription, setEditSSHIcon, setShowUnifiedConnectionDialog]);
 
   /**
    * Abrir diálogo de selección de protocolo para nueva conexión (limpia todos los estados de edición)

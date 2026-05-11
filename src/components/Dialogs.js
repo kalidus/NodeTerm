@@ -9,7 +9,6 @@ import { Fieldset } from 'primereact/fieldset';
 import { RadioButton } from 'primereact/radiobutton';
 import { ColorSelector } from './ColorSelector';
 import { InputTextarea } from 'primereact/inputtextarea';
-import { FileUpload } from 'primereact/fileupload';
 import { Message } from 'primereact/message';
 import { Tooltip } from 'primereact/tooltip';
 import { InputSwitch } from 'primereact/inputswitch';
@@ -571,6 +570,8 @@ export function EditSSHConnectionDialog({
   sshPort, setSSHPort,
   sshRemoteFolder, setSSHRemoteFolder,
   sshTargetFolder, setSSHTargetFolder,
+  sshAuthMethod = 'password', setSSHAuthMethod = () => {},
+  sshPrivateKey = '', setSSHPrivateKey = () => {},
   sshAutoCopyPassword = false, setSSHAutoCopyPassword = () => {},
   sshDescription = '', setSSHDescription = () => {},
   sshIcon = null, setSSHIcon = () => {},
@@ -607,6 +608,8 @@ export function EditSSHConnectionDialog({
       if (setSSHHost) setSSHHost(editNodeData.data?.bastionHost || editNodeData.data?.host || '');
       if (setSSHUser) setSSHUser(editNodeData.data?.useBastionWallix ? editNodeData.data?.bastionUser || '' : editNodeData.data?.user || '');
       if (setSSHPassword) setSSHPassword(editNodeData.data?.password || '');
+      if (setSSHAuthMethod) setSSHAuthMethod(deriveSSHAuthMethod(editNodeData.data));
+      if (setSSHPrivateKey) setSSHPrivateKey(editNodeData.data?.privateKey || '');
       if (setSSHRemoteFolder) setSSHRemoteFolder(editNodeData.data?.remoteFolder || '');
       if (setSSHPort) setSSHPort(editNodeData.data?.port || 22);
       if (setSSHAutoCopyPassword && typeof setSSHAutoCopyPassword === 'function') {
@@ -619,7 +622,7 @@ export function EditSSHConnectionDialog({
         setSSHIcon(editNodeData.data?.customIcon || null);
       }
     }
-  }, [editNodeData, visible, setSSHName, setSSHHost, setSSHUser, setSSHPassword, setSSHRemoteFolder, setSSHPort, setSSHAutoCopyPassword, setSSHDescription, setSSHIcon]);
+  }, [editNodeData, visible, setSSHName, setSSHHost, setSSHUser, setSSHPassword, setSSHAuthMethod, setSSHPrivateKey, setSSHRemoteFolder, setSSHPort, setSSHAutoCopyPassword, setSSHDescription, setSSHIcon]);
 
   // Handler para seleccionar icono
   const handleIconSelect = useCallback((iconId) => {
@@ -682,6 +685,10 @@ export function EditSSHConnectionDialog({
             setSSHRemoteFolder={setSSHRemoteFolder}
             sshTargetFolder={sshTargetFolder}
             setSSHTargetFolder={setSSHTargetFolder}
+            sshAuthMethod={sshAuthMethod}
+            setSSHAuthMethod={setSSHAuthMethod}
+            sshPrivateKey={sshPrivateKey}
+            setSSHPrivateKey={setSSHPrivateKey}
             sshAutoCopyPassword={sshAutoCopyPassword}
             setSSHAutoCopyPassword={setSSHAutoCopyPassword}
             sshDescription={sshDescription}
@@ -1534,6 +1541,15 @@ function PasswordCreateForm({ foldersOptions = [], onCreate }) {
 }
 
 
+function deriveSSHAuthMethod(nodeData) {
+  if (!nodeData) return 'password';
+  if (nodeData.authMethod === 'key' || nodeData.authMethod === 'password') {
+    return nodeData.authMethod;
+  }
+  if (nodeData.privateKey?.trim()) return 'key';
+  return 'password';
+}
+
 // --- EnhancedSSHForm: Formulario SSH mejorado con soporte para claves ---
 export function EnhancedSSHForm({
   activeTabIndex,
@@ -1544,6 +1560,8 @@ export function EnhancedSSHForm({
   sshPort, setSSHPort,
   sshRemoteFolder, setSSHRemoteFolder,
   sshTargetFolder, setSSHTargetFolder,
+  sshAuthMethod = 'password', setSSHAuthMethod = () => {},
+  sshPrivateKey = '', setSSHPrivateKey = () => {},
   sshAutoCopyPassword = false, setSSHAutoCopyPassword = () => {},
   sshDescription = '', setSSHDescription = () => {},
   foldersOptions = [],
@@ -1556,18 +1574,10 @@ export function EnhancedSSHForm({
   const { t } = useTranslation('dialogs');
   const { t: tCommon } = useTranslation('common');
   
-  const [authMethod, setAuthMethod] = useState('password'); // 'password' | 'key'
-  const [sshPrivateKey, setSSHPrivateKey] = useState('');
   const [validationErrors, setValidationErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
-  const [autoCopyPassword, setAutoCopyPassword] = useState(!!sshAutoCopyPassword);
-
-  // Sincronizar autoCopyPassword con el prop
-  useEffect(() => {
-    if (sshAutoCopyPassword !== undefined) {
-      setAutoCopyPassword(!!sshAutoCopyPassword);
-    }
-  }, [sshAutoCopyPassword]);
+  const [privateKeyFileName, setPrivateKeyFileName] = useState('');
+  const privateKeyInputRef = useRef(null);
 
   // Validación del formulario
   const validateForm = useCallback(() => {
@@ -1585,18 +1595,17 @@ export function EnhancedSSHForm({
       errors.user = t('ssh.validation.userRequired');
     }
     
-    if (authMethod === 'password' && !sshPassword?.trim()) {
+    if (sshAuthMethod === 'password' && !sshPassword?.trim()) {
       errors.password = t('ssh.validation.passwordRequired');
     }
     
-    if (authMethod === 'key' && !sshPrivateKey?.trim()) {
+    if (sshAuthMethod === 'key' && !sshPrivateKey?.trim()) {
       errors.privateKey = t('ssh.validation.privateKeyRequired');
     }
     
     return errors;
-  }, [sshName, sshHost, sshUser, sshPassword, authMethod, sshPrivateKey, t]);
+  }, [sshName, sshHost, sshUser, sshPassword, sshAuthMethod, sshPrivateKey, t]);
 
-  // Handler para enviar el formulario
   const handleSubmit = useCallback((e) => {
     if (e) e.preventDefault();
     
@@ -1608,51 +1617,28 @@ export function EnhancedSSHForm({
     
     setValidationErrors({});
     
-    // Preparar datos para enviar
-    const connectionData = {
-      name: sshName.trim(),
-      host: sshHost.trim(),
-      user: sshUser.trim(),
-      password: authMethod === 'password' ? sshPassword : '',
-      port: sshPort || 22,
-      remoteFolder: sshRemoteFolder || '',
-      targetFolder: sshTargetFolder || '',
-      autoCopyPassword: autoCopyPassword,
-      authMethod: authMethod,
-      privateKey: authMethod === 'key' ? sshPrivateKey : '',
-      description: sshDescription || ''
-    };
-    
     if (onSSHConfirm && typeof onSSHConfirm === 'function') {
-      onSSHConfirm(connectionData);
+      onSSHConfirm();
     }
-  }, [sshName, sshHost, sshUser, sshPassword, sshPort, sshRemoteFolder, sshTargetFolder, autoCopyPassword, authMethod, sshPrivateKey, sshDescription, validateForm, onSSHConfirm]);
+  }, [validateForm, onSSHConfirm]);
 
-  // Handler para subir archivo de clave privada
-  const handleFileUpload = (event) => {
-    const file = event.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setSSHPrivateKey(e.target.result);
-      };
-      reader.readAsText(file);
-    }
-  };
+  const handlePrivateKeyFileChange = useCallback((event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-  // Handler para toggle de autoCopyPassword
-  const handleAutoCopyToggle = useCallback((checked) => {
-    setAutoCopyPassword(checked);
-    if (setSSHAutoCopyPassword && typeof setSSHAutoCopyPassword === 'function') {
-      setSSHAutoCopyPassword(checked);
-    }
-  }, [setSSHAutoCopyPassword]);
+    setPrivateKeyFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (loadEvent) => {
+      setSSHPrivateKey(loadEvent.target?.result || '');
+    };
+    reader.readAsText(file);
+  }, [setSSHPrivateKey]);
 
   const isFormValid = () => {
     return sshName?.trim() && 
            sshHost?.trim() && 
            sshUser?.trim() &&
-           (authMethod === 'password' ? sshPassword?.trim() : sshPrivateKey?.trim());
+           (sshAuthMethod === 'password' ? sshPassword?.trim() : sshPrivateKey?.trim());
   };
 
   // Render del formulario
@@ -1708,16 +1694,26 @@ export function EnhancedSSHForm({
 
         {/* Row: Auth Type */}
         <div className="terminal-row mb-3">
-          <label className="terminal-label">TIPO DE AUTENTICACIÓN</label>
+          <label className="terminal-label">{t('ssh.auth.method').toUpperCase()}</label>
           <div className="terminal-auth-selector">
-            <div className={`terminal-auth-chip ${authMethod === 'password' ? 'active' : ''}`} onClick={() => setAuthMethod('password')}>
-              <i className="pi pi-lock"></i> Contraseña
+            <div
+              className={`terminal-auth-chip ${sshAuthMethod === 'password' ? 'active' : ''}`}
+              onClick={() => {
+                setSSHAuthMethod('password');
+                setSSHPrivateKey('');
+                setPrivateKeyFileName('');
+              }}
+            >
+              <i className="pi pi-lock"></i> {t('ssh.auth.password')}
             </div>
-            <div className={`terminal-auth-chip ${authMethod === 'key' ? 'active' : ''}`} onClick={() => setAuthMethod('key')}>
-              <i className="pi pi-key"></i> Clave pública
-            </div>
-            <div className="terminal-auth-chip disabled">
-              <i className="pi pi-shield"></i> Ambos
+            <div
+              className={`terminal-auth-chip ${sshAuthMethod === 'key' ? 'active' : ''}`}
+              onClick={() => {
+                setSSHAuthMethod('key');
+                setSSHPassword('');
+              }}
+            >
+              <i className="pi pi-key"></i> {t('ssh.auth.key')}
             </div>
           </div>
         </div>
@@ -1731,47 +1727,65 @@ export function EnhancedSSHForm({
           </div>
         </div>
 
-        {/* Row: Password / Private Key */}
-        <div className="terminal-row grid grid-nogutter gap-3 mb-4">
-          <div className="col">
-            <label className="terminal-label">CONTRASEÑA</label>
+        {sshAuthMethod === 'password' ? (
+          <div className="terminal-row mb-4">
+            <label className="terminal-label">{t('ssh.fields.password').toUpperCase()}</label>
             <div className="terminal-input-wrap">
               <i className="pi pi-lock terminal-icon-left"></i>
-              <InputText 
-                type={showPassword ? "text" : "password"}
-                value={sshPassword} 
+              <InputText
+                type={showPassword ? 'text' : 'password'}
+                value={sshPassword}
                 onChange={(e) => setSSHPassword(e.target.value)}
-                placeholder="••••••••"
-                className="terminal-input"
+                placeholder={t('ssh.placeholders.password')}
+                className={`terminal-input ${validationErrors.password ? 'p-invalid' : ''}`}
               />
-              <i className={`pi ${showPassword ? 'pi-eye-slash' : 'pi-eye'} terminal-icon-right cursor-pointer`} onClick={() => setShowPassword(!showPassword)}></i>
+              <i
+                className={`pi ${showPassword ? 'pi-eye-slash' : 'pi-eye'} terminal-icon-right cursor-pointer`}
+                onClick={() => setShowPassword(!showPassword)}
+              ></i>
             </div>
           </div>
-          <div className="col">
-            <div className="flex justify-content-between align-items-center">
-              <label className="terminal-label">O CLAVE PRIVADA</label>
-              <i className="pi pi-info-circle text-xs opacity-50"></i>
-            </div>
-            <div className="terminal-input-wrap">
+        ) : (
+          <div className="terminal-row mb-4">
+            <label className="terminal-label">{t('ssh.fields.privateKeySSH').toUpperCase()}</label>
+            <div className="terminal-input-wrap terminal-key-file-wrap">
               <i className="pi pi-file terminal-icon-left"></i>
-              <div className="terminal-file-display">
-                <span className="opacity-40 truncate" style={{ maxWidth: '100px' }}>{sshPrivateKey ? "Cargada" : "Archivo..."}</span>
-                <FileUpload mode="basic" chooseLabel="Examinar" className="terminal-upload-btn" onUpload={handleFileUpload} auto />
-              </div>
+              <span className="terminal-key-file-name opacity-60 truncate">
+                {privateKeyFileName || (sshPrivateKey ? t('ssh.auth.keyLoaded') : t('ssh.auth.keyFilePlaceholder'))}
+              </span>
+              <input
+                ref={privateKeyInputRef}
+                type="file"
+                accept=".pem,.key,.ppk,text/plain"
+                className="terminal-key-file-input"
+                onChange={handlePrivateKeyFileChange}
+              />
+              <button
+                type="button"
+                className="terminal-key-file-btn"
+                onClick={() => privateKeyInputRef.current?.click()}
+              >
+                {t('ssh.auth.browseKeyFile')}
+              </button>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Options List with Dotted Lines */}
         <div className="terminal-options-list mb-3">
           <div className="terminal-option-item">
-            <div className="flex align-items-center">
-              <i className="pi pi-save terminal-option-icon"></i>
-              <span className="terminal-option-text">Copiar contraseña automáticamente</span>
+              <div className="flex align-items-center">
+                <i className="pi pi-save terminal-option-icon"></i>
+                <span className="terminal-option-text">{t('ssh.auth.autoCopyPassword')}</span>
+              </div>
+              <div className="terminal-dotted-spacer"></div>
+              <InputSwitch
+                checked={sshAutoCopyPassword}
+                onChange={(e) => setSSHAutoCopyPassword(e.value)}
+                className="terminal-switch"
+                disabled={sshAuthMethod === 'key'}
+              />
             </div>
-            <div className="terminal-dotted-spacer"></div>
-            <InputSwitch checked={sshAutoCopyPassword} onChange={(e) => setSSHAutoCopyPassword(e.value)} className="terminal-switch" />
-          </div>
 
           <div className="terminal-option-item">
             <div className="flex align-items-center">
@@ -1944,21 +1958,33 @@ export function EnhancedSSHForm({
           opacity: 0.3;
           cursor: not-allowed;
         }
-        .terminal-file-display {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          width: 100%;
+        .terminal-key-file-wrap {
+          gap: 0.5rem;
+          min-height: 2.25rem;
+        }
+        .terminal-key-file-name {
+          flex: 1;
+          min-width: 0;
           font-size: 0.75rem;
         }
-        .terminal-upload-btn .p-button {
-          background: rgba(0, 229, 255, 0.1) !important;
-          border: 1px solid rgba(0, 229, 255, 0.3) !important;
-          color: #00e5ff !important;
-          padding: 0.2rem 0.6rem !important;
-          font-size: 0.7rem !important;
-          font-weight: 700 !important;
+        .terminal-key-file-input {
+          display: none;
+        }
+        .terminal-key-file-btn {
+          background: transparent;
+          border: 1px solid rgba(0, 229, 255, 0.3);
+          color: #00e5ff;
+          padding: 0.2rem 0.6rem;
+          border-radius: 4px;
+          font-size: 0.7rem;
+          font-weight: 700;
           text-transform: uppercase;
+          cursor: pointer;
+          font-family: inherit;
+          white-space: nowrap;
+        }
+        .terminal-key-file-btn:hover {
+          background: rgba(0, 229, 255, 0.1);
         }
         .terminal-option-item {
           display: flex;
@@ -2098,6 +2124,8 @@ export function NewSSHConnectionDialog({
   sshPort, setSSHPort,
   sshRemoteFolder, setSSHRemoteFolder,
   sshTargetFolder, setSSHTargetFolder,
+  sshAuthMethod = 'password', setSSHAuthMethod = () => {},
+  sshPrivateKey = '', setSSHPrivateKey = () => {},
   sshAutoCopyPassword = false, setSSHAutoCopyPassword = () => {},
   sshDescription = '', setSSHDescription = () => {},
   foldersOptions = [],
@@ -2148,6 +2176,10 @@ export function NewSSHConnectionDialog({
           setSSHRemoteFolder={setSSHRemoteFolder}
           sshTargetFolder={sshTargetFolder}
           setSSHTargetFolder={setSSHTargetFolder}
+          sshAuthMethod={sshAuthMethod}
+          setSSHAuthMethod={setSSHAuthMethod}
+          sshPrivateKey={sshPrivateKey}
+          setSSHPrivateKey={setSSHPrivateKey}
           sshAutoCopyPassword={sshAutoCopyPassword}
           setSSHAutoCopyPassword={setSSHAutoCopyPassword}
           sshDescription={sshDescription}
