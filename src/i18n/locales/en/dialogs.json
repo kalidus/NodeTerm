@@ -8,7 +8,7 @@
       "connection": "Connection",
       "authentication": "Authentication",
       "folders": "Folders",
-      "advanced": "Advanced"
+      "advanced": "Advanced options"
     },
     "fields": {
       "name": "Name",

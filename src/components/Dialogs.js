@@ -1577,6 +1577,7 @@ export function EnhancedSSHForm({
   const [validationErrors, setValidationErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [privateKeyFileName, setPrivateKeyFileName] = useState('');
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const privateKeyInputRef = useRef(null);
 
   // Validación del formulario
@@ -1771,8 +1772,19 @@ export function EnhancedSSHForm({
           </div>
         )}
 
-        {/* Options List with Dotted Lines */}
-        <div className="terminal-options-list mb-3">
+        <div className="terminal-advanced-section mb-3">
+          <button
+            type="button"
+            className="terminal-advanced-header"
+            onClick={() => setShowAdvancedOptions((open) => !open)}
+            aria-expanded={showAdvancedOptions}
+          >
+            <span className="terminal-label mb-0">{t('ssh.sections.advanced').toUpperCase()}</span>
+            <i className={`pi ${showAdvancedOptions ? 'pi-chevron-up' : 'pi-chevron-down'} opacity-50`}></i>
+          </button>
+
+          {showAdvancedOptions && (
+            <div className="terminal-options-list">
           <div className="terminal-option-item">
               <div className="flex align-items-center">
                 <i className="pi pi-save terminal-option-icon"></i>
@@ -1804,11 +1816,8 @@ export function EnhancedSSHForm({
             <div className="terminal-dotted-spacer"></div>
             <InputSwitch checked={false} className="terminal-switch" />
           </div>
-        </div>
-
-        <div className="terminal-advanced-header mb-2">
-          <span className="terminal-label mb-0">OPCIONES AVANZADAS</span>
-          <i className="pi pi-chevron-down opacity-50"></i>
+            </div>
+          )}
         </div>
 
       </div>
@@ -1985,6 +1994,28 @@ export function EnhancedSSHForm({
         }
         .terminal-key-file-btn:hover {
           background: rgba(0, 229, 255, 0.1);
+        }
+        .terminal-advanced-section {
+          width: 100%;
+        }
+        .terminal-advanced-header {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 0.75rem;
+          padding: 0.25rem 0;
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          color: inherit;
+          text-align: left;
+        }
+        .terminal-advanced-header:hover .terminal-label {
+          color: #00e5ff;
+        }
+        .terminal-advanced-section .terminal-options-list {
+          padding-top: 0.35rem;
         }
         .terminal-option-item {
           display: flex;
