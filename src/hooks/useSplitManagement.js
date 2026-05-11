@@ -62,7 +62,9 @@ export const useSplitManagement = ({
       name: sshNode.label,
       useBastionWallix: sshNode.data.useBastionWallix || false,
       bastionHost: sshNode.data.bastionHost || '',
-      bastionUser: sshNode.data.bastionUser || ''
+      bastionUser: sshNode.data.bastionUser || '',
+      x11Forwarding: sshNode.data.x11Forwarding || false,
+      agentForwarding: sshNode.data.agentForwarding || false
     };
 
     const newTerminal = {

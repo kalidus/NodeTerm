@@ -81,6 +81,13 @@ logTiming('SSHStatsService cargado');
 const sshAuthService = require('./src/main/services/SSHAuthService');
 logTiming('SSHAuthService cargado');
 
+const {
+  buildSshConnectOptions,
+  buildShellOptions,
+  appendForwardingFlagsToCacheKey,
+  getBastionForwardingWarning
+} = require('./src/utils/sshConnectOptions');
+
 // Servicio de limpieza de conexiones SSH
 const sshCleanupService = require('./src/main/services/SSHConnectionCleanupService');
 logTiming('SSHConnectionCleanupService cargado');
@@ -1638,11 +1645,17 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
   const hostName = config.name || config.label || config.host;
   sendToRenderer(event.sender, `ssh:data:${tabId}`, `Connecting to ${hostName}...\r\n`);
 
+  const bastionForwardingWarning = getBastionForwardingWarning(config);
+  if (bastionForwardingWarning) {
+    sendToRenderer(event.sender, `ssh:data:${tabId}`, `[WARN] ${bastionForwardingWarning}\r\n`);
+  }
+
   // Para bastiones: usar cacheKey único por destino (permite reutilización)
   // Para SSH directo: usar pooling normal para eficiencia
-  const cacheKey = config.useBastionWallix
+  const baseCacheKey = config.useBastionWallix
     ? `bastion-${config.bastionUser}@${config.bastionHost}->${config.username}@${config.host}:${config.port || 22}`
     : `${config.username}@${config.host}:${config.port || 22}`;
+  const cacheKey = appendForwardingFlagsToCacheKey(baseCacheKey, config);
 
   // Aplicar throttling solo para SSH directo (bastiones son únicos)
   if (!config.useBastionWallix) {
@@ -1759,7 +1772,68 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     });
     return;
   } else {
-    // SSH DIRECTO: Lógica de pooling normal
+    // SSH DIRECTO: pooling normal salvo cuando hay forwarding activo
+    const directConnect = buildSshConnectOptions(config);
+
+    if (directConnect.forwarding.requested) {
+      if (directConnect.agentForwardingRequestedButUnavailable) {
+        sendToRenderer(
+          event.sender,
+          `ssh:data:${tabId}`,
+          '[WARN] Agent Forwarding activo pero no se encontro un agente SSH local.\r\n'
+        );
+      }
+
+      const ssh2Client = new (getSSH2Client())();
+      sshConnections[tabId] = {
+        ssh: ssh2Client,
+        stream: null,
+        config,
+        cacheKey,
+        originalKey: config.originalKey || tabId,
+        previousCpu: null,
+        statsTimeout: null,
+        previousNet: null,
+        previousTime: null
+      };
+
+      sshAuthService.initializeAuthState(
+        sshConnections[tabId],
+        !!(config.password && config.password.trim())
+      );
+
+      sshAuthService.setupSSH2ClientListeners(
+        ssh2Client,
+        sshConnections[tabId],
+        tabId,
+        config,
+        event.sender,
+        {
+          onReady: (realHostname, finalDistroId) => {
+            setTimeout(() => {
+              if (sshConnections[tabId] && sshConnections[tabId].ssh) {
+                statsLoop(tabId, realHostname, finalDistroId, config.host);
+              }
+            }, 1000);
+          },
+          onError: null,
+          getSessionRecorder: () => getSessionRecorder()
+        }
+      );
+
+      if (!(config.password && config.password.trim())) {
+        sshAuthService.enableManualPasswordMode(
+          sshConnections[tabId],
+          event.sender,
+          tabId,
+          'Por favor, introduce el password'
+        );
+      }
+
+      ssh2Client.connect(directConnect.connectConfig);
+      return;
+    }
+
     const existingPoolConnection = sshConnectionPool[cacheKey];
     if (existingPoolConnection) {
       try {
@@ -1774,21 +1848,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       }
     }
     if (!ssh) {
-      const directConfig = {
-        host: config.host,
-        username: config.username,
-        port: config.port || 22
-      };
-
-      // Si hay password, usarlo. Si no, permitir autenticación interactiva
-      if (config.password && config.password.trim()) {
-        directConfig.password = config.password;
-      } else {
-        // Permitir autenticación interactiva (el usuario introducirá el password en la terminal)
-        directConfig.tryKeyboard = true;
-      }
-
-      ssh = new (getSSH2Promise())(directConfig);
+      ssh = new (getSSH2Promise())(directConnect.connectConfig);
       sshConnectionPool[cacheKey] = ssh;
     }
   }
@@ -1856,11 +1916,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
 
         } else {
           // Conexión SSH directa normal
-          stream = await ssh.shell({
-            term: 'xterm-256color',
-            cols: 80,
-            rows: 24
-          });
+          stream = await ssh.shell(buildShellOptions(config));
         }
 
         break;
@@ -2289,15 +2345,8 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
           password // Pasar password capturado manualmente
         );
 
-        // Conectar con password
-        ssh2Client.connect({
-          host: newConfig.host,
-          username: newConfig.username,
-          port: newConfig.port || 22,
-          password: password,
-          readyTimeout: 30000,
-          keepaliveInterval: 60000
-        });
+        const reconnectOptions = buildSshConnectOptions(newConfig, { includePassword: true });
+        ssh2Client.connect(reconnectOptions.connectConfig);
       }
     }
     return;

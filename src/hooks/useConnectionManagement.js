@@ -384,7 +384,9 @@ export const useConnectionManagement = ({
         bastionHost: isSidebarNode ? (nodeOrConn.data.bastionHost || '') : (nodeOrConn.bastionHost || matchedSidebarNode?.data?.bastionHost || ''),
         bastionUser: isSidebarNode ? (nodeOrConn.data.bastionUser || '') : (nodeOrConn.bastionUser || matchedSidebarNode?.data?.bastionUser || ''),
         targetServer: isSidebarNode ? (nodeOrConn.data.targetServer || '') : (nodeOrConn.targetServer || matchedSidebarNode?.data?.targetServer || ''),
-        remoteFolder: isSidebarNode ? (nodeOrConn.data.remoteFolder || '') : (nodeOrConn.remoteFolder || matchedSidebarNode?.data?.remoteFolder || '')
+        remoteFolder: isSidebarNode ? (nodeOrConn.data.remoteFolder || '') : (nodeOrConn.remoteFolder || matchedSidebarNode?.data?.remoteFolder || ''),
+        x11Forwarding: isSidebarNode ? (nodeOrConn.data.x11Forwarding || false) : (nodeOrConn.x11Forwarding || matchedSidebarNode?.data?.x11Forwarding || false),
+        agentForwarding: isSidebarNode ? (nodeOrConn.data.agentForwarding || false) : (nodeOrConn.agentForwarding || matchedSidebarNode?.data?.agentForwarding || false)
       };
       const newTab = {
         key: tabId,

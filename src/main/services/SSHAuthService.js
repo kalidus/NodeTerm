@@ -10,6 +10,11 @@
  */
 
 const { sendToRenderer } = require('../utils');
+const {
+  buildSshConnectOptions,
+  buildShellOptions,
+  setupX11ForwardingListener
+} = require('../../utils/sshConnectOptions');
 
 class SSHAuthService {
   constructor() {
@@ -208,27 +213,20 @@ class SSHAuthService {
    * Crea una configuración SSH con autenticación interactiva
    */
   createInteractiveSSHConfig(config, includePassword = false) {
-    const sshConfig = {
-      host: config.host,
-      username: config.username,
-      port: config.port || 22,
-      tryKeyboard: true, // Habilitar autenticación interactiva
-      readyTimeout: 30000,
-      keepaliveInterval: 30000, // Más frecuente para detectar drops antes
-      keepaliveCountMax: 3,
-      // Priorizar cifrados más rápidos para reducir latencia de cifrado
-      algorithms: {
-        cipher: ['aes128-gcm@openssh.com', 'aes256-gcm@openssh.com', 'aes128-ctr', 'aes192-ctr', 'aes256-ctr'],
-        compress: ['none'] // Sin compresión: menos CPU, menor latencia para datos pequeños
-      }
-    };
+    return buildSshConnectOptions(config, {
+      includePassword,
+      interactive: true
+    }).connectConfig;
+  }
 
-    // Solo incluir password si está disponible y se solicita
-    if (includePassword && config.password && config.password.trim()) {
-      sshConfig.password = config.password;
+  prepareSSH2Client(ssh2Client, config) {
+    if (!ssh2Client || !config) {
+      return;
     }
 
-    return sshConfig;
+    if (buildShellOptions(config).x11) {
+      setupX11ForwardingListener(ssh2Client);
+    }
   }
 
   /**
@@ -281,10 +279,11 @@ class SSHAuthService {
 
     // Configurar keyboard-interactive
     this.setupKeyboardInteractive(ssh2Client, conn, sender, tabId);
+    this.prepareSSH2Client(ssh2Client, config);
 
     // Evento ready
     ssh2Client.on('ready', () => {
-      ssh2Client.shell({ term: 'xterm-256color', cols: 80, rows: 24 }, async (err, shellStream) => {
+      ssh2Client.shell(buildShellOptions(config), async (err, shellStream) => {
         if (err) {
           sendToRenderer(sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${err.message || err}\r\n`);
           ssh2Client.end();

@@ -622,6 +622,8 @@ export function EditSSHConnectionDialog({
   sshAuthMethod = 'password', setSSHAuthMethod = () => {},
   sshPrivateKey = '', setSSHPrivateKey = () => {},
   sshAutoCopyPassword = false, setSSHAutoCopyPassword = () => {},
+  sshX11Forwarding = false, setSSHX11Forwarding = () => {},
+  sshAgentForwarding = false, setSSHAgentForwarding = () => {},
   sshDescription = '', setSSHDescription = () => {},
   sshIcon = null, setSSHIcon = () => {},
   foldersOptions = [],
@@ -657,6 +659,12 @@ export function EditSSHConnectionDialog({
       if (setSSHAutoCopyPassword && typeof setSSHAutoCopyPassword === 'function') {
         setSSHAutoCopyPassword(editNodeData.data?.autoCopyPassword || false);
       }
+      if (setSSHX11Forwarding && typeof setSSHX11Forwarding === 'function') {
+        setSSHX11Forwarding(editNodeData.data?.x11Forwarding || false);
+      }
+      if (setSSHAgentForwarding && typeof setSSHAgentForwarding === 'function') {
+        setSSHAgentForwarding(editNodeData.data?.agentForwarding || false);
+      }
       if (setSSHDescription && typeof setSSHDescription === 'function') {
         setSSHDescription(editNodeData.data?.description || '');
       }
@@ -664,7 +672,7 @@ export function EditSSHConnectionDialog({
         setSSHIcon(editNodeData.data?.customIcon || null);
       }
     }
-  }, [editNodeData, visible, setSSHName, setSSHHost, setSSHUser, setSSHPassword, setSSHAuthMethod, setSSHPrivateKey, setSSHRemoteFolder, setSSHPort, setSSHAutoCopyPassword, setSSHDescription, setSSHIcon]);
+  }, [editNodeData, visible, setSSHName, setSSHHost, setSSHUser, setSSHPassword, setSSHAuthMethod, setSSHPrivateKey, setSSHRemoteFolder, setSSHPort, setSSHAutoCopyPassword, setSSHX11Forwarding, setSSHAgentForwarding, setSSHDescription, setSSHIcon]);
 
   // Handler para seleccionar icono
   const handleIconSelect = useCallback((iconId) => {
@@ -741,6 +749,10 @@ export function EditSSHConnectionDialog({
             setSSHPrivateKey={setSSHPrivateKey}
             sshAutoCopyPassword={sshAutoCopyPassword}
             setSSHAutoCopyPassword={setSSHAutoCopyPassword}
+            sshX11Forwarding={sshX11Forwarding}
+            setSSHX11Forwarding={setSSHX11Forwarding}
+            sshAgentForwarding={sshAgentForwarding}
+            setSSHAgentForwarding={setSSHAgentForwarding}
             sshDescription={sshDescription}
             setSSHDescription={setSSHDescription}
             foldersOptions={foldersOptions}
@@ -1614,6 +1626,8 @@ export function EnhancedSSHForm({
   sshAuthMethod = 'password', setSSHAuthMethod = () => {},
   sshPrivateKey = '', setSSHPrivateKey = () => {},
   sshAutoCopyPassword = false, setSSHAutoCopyPassword = () => {},
+  sshX11Forwarding = false, setSSHX11Forwarding = () => {},
+  sshAgentForwarding = false, setSSHAgentForwarding = () => {},
   sshDescription = '', setSSHDescription = () => {},
   foldersOptions = [],
   onSSHConfirm,
@@ -1854,19 +1868,37 @@ export function EnhancedSSHForm({
           <div className="terminal-option-item">
             <div className="flex align-items-center">
               <i className="pi pi-desktop terminal-option-icon"></i>
-              <span className="terminal-option-text">X11 Forwarding</span>
+              <span
+                className="terminal-option-text info-icon"
+                data-pr-tooltip={t('ssh.auth.x11ForwardingDescription')}
+              >
+                {t('ssh.auth.x11Forwarding')}
+              </span>
             </div>
             <div className="terminal-dotted-spacer"></div>
-            <InputSwitch checked={false} className="terminal-switch" />
+            <InputSwitch
+              checked={sshX11Forwarding}
+              onChange={(e) => setSSHX11Forwarding(e.value)}
+              className="terminal-switch"
+            />
           </div>
 
           <div className="terminal-option-item">
             <div className="flex align-items-center">
               <i className="pi pi-shield terminal-option-icon"></i>
-              <span className="terminal-option-text">Agent Forwarding</span>
+              <span
+                className="terminal-option-text info-icon"
+                data-pr-tooltip={t('ssh.auth.agentForwardingDescription')}
+              >
+                {t('ssh.auth.agentForwarding')}
+              </span>
             </div>
             <div className="terminal-dotted-spacer"></div>
-            <InputSwitch checked={false} className="terminal-switch" />
+            <InputSwitch
+              checked={sshAgentForwarding}
+              onChange={(e) => setSSHAgentForwarding(e.value)}
+              className="terminal-switch"
+            />
           </div>
 
               <div className="terminal-row mt-2">
@@ -2413,6 +2445,8 @@ export function NewSSHConnectionDialog({
   sshAuthMethod = 'password', setSSHAuthMethod = () => {},
   sshPrivateKey = '', setSSHPrivateKey = () => {},
   sshAutoCopyPassword = false, setSSHAutoCopyPassword = () => {},
+  sshX11Forwarding = false, setSSHX11Forwarding = () => {},
+  sshAgentForwarding = false, setSSHAgentForwarding = () => {},
   sshDescription = '', setSSHDescription = () => {},
   sshIcon = null, setSSHIcon = () => {},
   foldersOptions = [],
@@ -2502,6 +2536,10 @@ export function NewSSHConnectionDialog({
           setSSHPrivateKey={setSSHPrivateKey}
           sshAutoCopyPassword={sshAutoCopyPassword}
           setSSHAutoCopyPassword={setSSHAutoCopyPassword}
+          sshX11Forwarding={sshX11Forwarding}
+          setSSHX11Forwarding={setSSHX11Forwarding}
+          sshAgentForwarding={sshAgentForwarding}
+          setSSHAgentForwarding={setSSHAgentForwarding}
           sshDescription={sshDescription}
           setSSHDescription={setSSHDescription}
           foldersOptions={foldersOptions}

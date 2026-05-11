@@ -1470,6 +1470,8 @@ const App = () => {
     sshPort, setSSHPort,
     sshTargetFolder, setSSHTargetFolder,
     sshAutoCopyPassword, setSSHAutoCopyPassword,
+    sshX11Forwarding, setSSHX11Forwarding,
+    sshAgentForwarding, setSSHAgentForwarding,
     sshDescription, setSSHDescription,
     sshIcon, setSSHIcon,
     sshAuthMethod, setSSHAuthMethod,
@@ -1483,6 +1485,8 @@ const App = () => {
     editSSHRemoteFolder, setEditSSHRemoteFolder,
     editSSHPort, setEditSSHPort,
     editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
+    editSSHX11Forwarding, setEditSSHX11Forwarding,
+    editSSHAgentForwarding, setEditSSHAgentForwarding,
     editSSHDescription, setEditSSHDescription,
     editSSHIcon, setEditSSHIcon,
     editSSHAuthMethod, setEditSSHAuthMethod,
@@ -1636,6 +1640,7 @@ const App = () => {
     sshPassword, setSSHPassword, sshRemoteFolder, setSSHRemoteFolder,
     sshPort, setSSHPort, sshTargetFolder, setSSHTargetFolder,
     sshAutoCopyPassword, setSSHAutoCopyPassword,
+    sshX11Forwarding, sshAgentForwarding,
     sshDescription,
     sshIcon,
     sshAuthMethod, sshPrivateKey,
@@ -1649,6 +1654,7 @@ const App = () => {
     editSSHRemoteFolder, setEditSSHRemoteFolder,
     editSSHPort, setEditSSHPort,
     editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
+    editSSHX11Forwarding, editSSHAgentForwarding,
     editSSHDescription, setEditSSHDescription,
     editSSHIcon, setEditSSHIcon,
     editSSHAuthMethod, setEditSSHAuthMethod,
@@ -2819,6 +2825,8 @@ const App = () => {
     sshRemoteFolder, setSSHRemoteFolder,
     sshTargetFolder, setSSHTargetFolder,
     sshAutoCopyPassword, setSSHAutoCopyPassword,
+    sshX11Forwarding, setSSHX11Forwarding,
+    sshAgentForwarding, setSSHAgentForwarding,
     sshDescription,
 
     // Estados de formularios Edit SSH
@@ -2829,6 +2837,8 @@ const App = () => {
     editSSHRemoteFolder, setEditSSHRemoteFolder,
     editSSHPort, setEditSSHPort,
     editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
+    editSSHX11Forwarding, setEditSSHX11Forwarding,
+    editSSHAgentForwarding, setEditSSHAgentForwarding,
     editSSHDescription, setEditSSHDescription,
     editSSHIcon, setEditSSHIcon,
 
@@ -2875,10 +2885,14 @@ const App = () => {
     sshName, setSSHName, sshHost, setSSHHost, sshUser, setSSHUser, sshPassword, setSSHPassword,
     sshPort, setSSHPort, sshRemoteFolder, setSSHRemoteFolder, sshTargetFolder, setSSHTargetFolder,
     sshAutoCopyPassword, setSSHAutoCopyPassword,
+    sshX11Forwarding, setSSHX11Forwarding,
+    sshAgentForwarding, setSSHAgentForwarding,
     sshDescription,
     editSSHName, setEditSSHName, editSSHHost, setEditSSHHost, editSSHUser, setEditSSHUser,
     editSSHPassword, setEditSSHPassword, editSSHRemoteFolder, setEditSSHRemoteFolder,
     editSSHPort, setEditSSHPort, editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
+    editSSHX11Forwarding, setEditSSHX11Forwarding,
+    editSSHAgentForwarding, setEditSSHAgentForwarding,
     editSSHDescription, setEditSSHDescription, editSSHIcon, setEditSSHIcon,
     editSSHNode, setEditSSHNode,
     rdpNodeData, setRdpNodeData, editingRdpNode, setEditingRdpNode,
@@ -3223,6 +3237,10 @@ const App = () => {
           setSSHTargetFolder={setSSHTargetFolder}
           sshAutoCopyPassword={sshAutoCopyPassword}
           setSSHAutoCopyPassword={setSSHAutoCopyPassword}
+          sshX11Forwarding={sshX11Forwarding}
+          setSSHX11Forwarding={setSSHX11Forwarding}
+          sshAgentForwarding={sshAgentForwarding}
+          setSSHAgentForwarding={setSSHAgentForwarding}
           sshDescription={sshDescription}
           setSSHDescription={setSSHDescription}
           sshIcon={sshIcon}
@@ -3247,6 +3265,10 @@ const App = () => {
           setEditSSHPort={setEditSSHPort}
           editSSHAutoCopyPassword={editSSHAutoCopyPassword}
           setEditSSHAutoCopyPassword={setEditSSHAutoCopyPassword}
+          editSSHX11Forwarding={editSSHX11Forwarding}
+          setEditSSHX11Forwarding={setEditSSHX11Forwarding}
+          editSSHAgentForwarding={editSSHAgentForwarding}
+          setEditSSHAgentForwarding={setEditSSHAgentForwarding}
           editSSHDescription={editSSHDescription}
           setEditSSHDescription={setEditSSHDescription}
           editSSHIcon={editSSHIcon}

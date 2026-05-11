@@ -72,6 +72,10 @@ const DialogsManager = ({
   setSSHTargetFolder,
   sshAutoCopyPassword,
   setSSHAutoCopyPassword,
+  sshX11Forwarding,
+  setSSHX11Forwarding,
+  sshAgentForwarding,
+  setSSHAgentForwarding,
   sshDescription,
   setSSHDescription,
   sshIcon,
@@ -96,6 +100,10 @@ const DialogsManager = ({
   setEditSSHPort,
   editSSHAutoCopyPassword,
   setEditSSHAutoCopyPassword,
+  editSSHX11Forwarding,
+  setEditSSHX11Forwarding,
+  editSSHAgentForwarding,
+  setEditSSHAgentForwarding,
   editSSHDescription,
   setEditSSHDescription,
   editSSHIcon,
@@ -615,6 +623,10 @@ const DialogsManager = ({
         setSSHPrivateKey={setSSHPrivateKey}
         sshAutoCopyPassword={sshAutoCopyPassword}
         setSSHAutoCopyPassword={setSSHAutoCopyPassword}
+        sshX11Forwarding={sshX11Forwarding}
+        setSSHX11Forwarding={setSSHX11Forwarding}
+        sshAgentForwarding={sshAgentForwarding}
+        setSSHAgentForwarding={setSSHAgentForwarding}
         sshDescription={sshDescription}
         setSSHDescription={setSSHDescription}
         sshIcon={sshIcon}
@@ -663,6 +675,10 @@ const DialogsManager = ({
         setSSHPrivateKey={editSSHNode ? setEditSSHPrivateKey : setSSHPrivateKey}
         sshAutoCopyPassword={editSSHNode ? editSSHAutoCopyPassword : sshAutoCopyPassword}
         setSSHAutoCopyPassword={editSSHNode ? setEditSSHAutoCopyPassword : setSSHAutoCopyPassword}
+        sshX11Forwarding={editSSHNode ? editSSHX11Forwarding : sshX11Forwarding}
+        setSSHX11Forwarding={editSSHNode ? setEditSSHX11Forwarding : setSSHX11Forwarding}
+        sshAgentForwarding={editSSHNode ? editSSHAgentForwarding : sshAgentForwarding}
+        setSSHAgentForwarding={editSSHNode ? setEditSSHAgentForwarding : setSSHAgentForwarding}
         sshDescription={editSSHNode ? editSSHDescription : sshDescription}
         setSSHDescription={editSSHNode ? setEditSSHDescription : setSSHDescription}
         sshIcon={editSSHIcon}

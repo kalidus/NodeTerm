@@ -48,6 +48,8 @@ export const useDialogManagement = () => {
   const [sshPort, setSSHPort] = useState(22);
   const [sshTargetFolder, setSSHTargetFolder] = useState(null);
   const [sshAutoCopyPassword, setSSHAutoCopyPassword] = useState(false);
+  const [sshX11Forwarding, setSSHX11Forwarding] = useState(false);
+  const [sshAgentForwarding, setSSHAgentForwarding] = useState(false);
   const [sshDescription, setSSHDescription] = useState('');
   const [sshIcon, setSSHIcon] = useState(null);
   const [sshAuthMethod, setSSHAuthMethod] = useState('password');
@@ -62,6 +64,8 @@ export const useDialogManagement = () => {
   const [editSSHRemoteFolder, setEditSSHRemoteFolder] = useState('');
   const [editSSHPort, setEditSSHPort] = useState(22);
   const [editSSHAutoCopyPassword, setEditSSHAutoCopyPassword] = useState(false);
+  const [editSSHX11Forwarding, setEditSSHX11Forwarding] = useState(false);
+  const [editSSHAgentForwarding, setEditSSHAgentForwarding] = useState(false);
   const [editSSHDescription, setEditSSHDescription] = useState('');
   const [editSSHIcon, setEditSSHIcon] = useState(null);
   const [editSSHAuthMethod, setEditSSHAuthMethod] = useState('password');
@@ -125,6 +129,8 @@ export const useDialogManagement = () => {
     setSSHPort(22);
     setSSHTargetFolder(null);
     setSSHAutoCopyPassword(false);
+    setSSHX11Forwarding(false);
+    setSSHAgentForwarding(false);
     setSSHDescription('');
     setSSHIcon(null);
     setSSHAuthMethod('password');
@@ -177,6 +183,8 @@ export const useDialogManagement = () => {
     setEditSSHRemoteFolder('');
     setEditSSHPort(22);
     setEditSSHAutoCopyPassword(false);
+    setEditSSHX11Forwarding(false);
+    setEditSSHAgentForwarding(false);
     setEditSSHDescription('');
     setEditSSHIcon(null);
     setEditSSHAuthMethod('password');
@@ -318,6 +326,8 @@ export const useDialogManagement = () => {
     sshPort, setSSHPort,
     sshTargetFolder, setSSHTargetFolder,
     sshAutoCopyPassword, setSSHAutoCopyPassword,
+    sshX11Forwarding, setSSHX11Forwarding,
+    sshAgentForwarding, setSSHAgentForwarding,
     sshDescription, setSSHDescription,
     sshIcon, setSSHIcon,
     sshAuthMethod, setSSHAuthMethod,
@@ -332,6 +342,8 @@ export const useDialogManagement = () => {
     editSSHRemoteFolder, setEditSSHRemoteFolder,
     editSSHPort, setEditSSHPort,
     editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
+    editSSHX11Forwarding, setEditSSHX11Forwarding,
+    editSSHAgentForwarding, setEditSSHAgentForwarding,
     editSSHDescription, setEditSSHDescription,
     editSSHIcon, setEditSSHIcon,
     editSSHAuthMethod, setEditSSHAuthMethod,

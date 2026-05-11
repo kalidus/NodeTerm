@@ -20,7 +20,7 @@ export const useFormHandlers = ({
   setShowProtocolSelectionDialog,
 
   // Estados de formularios SSH
-  sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder, setSSHTargetFolder, sshAutoCopyPassword, sshDescription, sshIcon, sshAuthMethod, sshPrivateKey,
+  sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder, setSSHTargetFolder, sshAutoCopyPassword, sshX11Forwarding, sshAgentForwarding, sshDescription, sshIcon, sshAuthMethod, sshPrivateKey,
   closeSSHDialogWithReset,
   
   // Estados de formularios Edit SSH  
@@ -31,7 +31,7 @@ export const useFormHandlers = ({
   editSSHPassword, setEditSSHPassword,
   editSSHRemoteFolder, setEditSSHRemoteFolder,
   editSSHPort, setEditSSHPort,
-  editSSHAutoCopyPassword, editSSHDescription, setEditSSHDescription,
+  editSSHAutoCopyPassword, editSSHX11Forwarding, editSSHAgentForwarding, editSSHDescription, setEditSSHDescription,
   editSSHIcon, setEditSSHIcon,
   editSSHAuthMethod, setEditSSHAuthMethod,
   editSSHPrivateKey, setEditSSHPrivateKey,
@@ -240,6 +240,8 @@ export const useFormHandlers = ({
         targetServer: userInfo.isWallix ? userInfo.targetServer : '',
         // Opción de copiar password automáticamente
         autoCopyPassword: sshAutoCopyPassword || false,
+        x11Forwarding: sshX11Forwarding || false,
+        agentForwarding: sshAgentForwarding || false,
         // Descripción de la conexión
         description: sshDescription || '',
         customIcon: sshIcon && sshIcon !== 'default' ? sshIcon : null
@@ -273,7 +275,7 @@ export const useFormHandlers = ({
       detail: `Conexión SSH "${sshName}" añadida al árbol`,
       life: 3000
     });
-  }, [sshName, sshHost, sshUser, sshPassword, sshPrivateKey, sshAuthMethod, sshRemoteFolder, sshPort, sshTargetFolder, sshAutoCopyPassword, sshDescription, sshIcon, nodes, setNodes, findNodeByKey, deepCopy, generateUniqueKey, parseWallixUser, setShowUnifiedConnectionDialog, toast]);
+  }, [sshName, sshHost, sshUser, sshPassword, sshPrivateKey, sshAuthMethod, sshRemoteFolder, sshPort, sshTargetFolder, sshAutoCopyPassword, sshX11Forwarding, sshAgentForwarding, sshDescription, sshIcon, nodes, setNodes, findNodeByKey, deepCopy, generateUniqueKey, parseWallixUser, setShowUnifiedConnectionDialog, toast]);
 
   /**
    * Crear nueva conexión RDP
@@ -660,6 +662,8 @@ export const useFormHandlers = ({
         targetServer: userInfo.isWallix ? userInfo.targetServer : '',
         // Opción de copiar password automáticamente
         autoCopyPassword: editSSHAutoCopyPassword || false,
+        x11Forwarding: editSSHX11Forwarding || false,
+        agentForwarding: editSSHAgentForwarding || false,
         // Descripción de la conexión
         description: editSSHDescription || '',
         // Icono personalizado (tratar 'default' como null para usar el icono del tema)
@@ -713,7 +717,7 @@ export const useFormHandlers = ({
       detail: `Sesión SSH actualizada`,
       life: 3000
     });
-  }, [editSSHName, editSSHHost, editSSHUser, editSSHPassword, editSSHPrivateKey, editSSHAuthMethod, editSSHRemoteFolder, editSSHPort, editSSHAutoCopyPassword, editSSHDescription, editSSHIcon, editSSHNode, sshTargetFolder, nodes, setNodes, findNodeByKey, findParentNodeAndIndex, deepCopy, parseWallixUser, closeEditSSHDialogWithReset, setShowUnifiedConnectionDialog, setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, setEditSSHDescription, setEditSSHIcon, setSSHTargetFolder, toast]);
+  }, [editSSHName, editSSHHost, editSSHUser, editSSHPassword, editSSHPrivateKey, editSSHAuthMethod, editSSHRemoteFolder, editSSHPort, editSSHAutoCopyPassword, editSSHX11Forwarding, editSSHAgentForwarding, editSSHDescription, editSSHIcon, editSSHNode, sshTargetFolder, nodes, setNodes, findNodeByKey, findParentNodeAndIndex, deepCopy, parseWallixUser, closeEditSSHDialogWithReset, setShowUnifiedConnectionDialog, setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, setEditSSHDescription, setEditSSHIcon, setSSHTargetFolder, toast]);
 
   /**
    * Guardar edición de carpeta

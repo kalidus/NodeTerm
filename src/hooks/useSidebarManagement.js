@@ -511,7 +511,9 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
               name: node.label,
               useBastionWallix: node.data.useBastionWallix || false,
               bastionHost: node.data.bastionHost || '',
-              bastionUser: node.data.bastionUser || ''
+              bastionUser: node.data.bastionUser || '',
+              x11Forwarding: node.data.x11Forwarding || false,
+              agentForwarding: node.data.agentForwarding || false
             };
             const newTab = {
               key: tabId,

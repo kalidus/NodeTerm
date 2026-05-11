@@ -195,7 +195,9 @@ export const useTabManagement = (toast, {
           name: session.label,
           useBastionWallix: session.useBastionWallix || matchedSidebarNode?.data?.useBastionWallix || false,
           bastionHost: session.bastionHost || matchedSidebarNode?.data?.bastionHost || '',
-          bastionUser: session.bastionUser || matchedSidebarNode?.data?.bastionUser || ''
+          bastionUser: session.bastionUser || matchedSidebarNode?.data?.bastionUser || '',
+          x11Forwarding: matchedSidebarNode?.data?.x11Forwarding || false,
+          agentForwarding: matchedSidebarNode?.data?.agentForwarding || false
         };
 
         const sshTab = {
