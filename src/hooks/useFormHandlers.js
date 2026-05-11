@@ -20,7 +20,7 @@ export const useFormHandlers = ({
   setShowProtocolSelectionDialog,
 
   // Estados de formularios SSH
-  sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder, setSSHTargetFolder, sshAutoCopyPassword, sshX11Forwarding, sshAgentForwarding, sshDescription, sshIcon, sshAuthMethod, sshPrivateKey,
+  sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder, setSSHTargetFolder, sshAutoCopyPassword, sshX11Forwarding, sshAgentForwarding, sshProxyJumpEnabled, sshJumpHost, sshJumpPort, sshJumpUser, sshJumpAuthMethod, sshJumpPassword, sshJumpPrivateKey, sshHostKeyPolicy, sshDescription, sshIcon, sshAuthMethod, sshPrivateKey,
   closeSSHDialogWithReset,
   
   // Estados de formularios Edit SSH  
@@ -31,7 +31,7 @@ export const useFormHandlers = ({
   editSSHPassword, setEditSSHPassword,
   editSSHRemoteFolder, setEditSSHRemoteFolder,
   editSSHPort, setEditSSHPort,
-  editSSHAutoCopyPassword, editSSHX11Forwarding, editSSHAgentForwarding, editSSHDescription, setEditSSHDescription,
+  editSSHAutoCopyPassword, editSSHX11Forwarding, editSSHAgentForwarding, editSSHProxyJumpEnabled, editSSHJumpHost, editSSHJumpPort, editSSHJumpUser, editSSHJumpAuthMethod, editSSHJumpPassword, editSSHJumpPrivateKey, editSSHHostKeyPolicy, editSSHDescription, setEditSSHDescription,
   editSSHIcon, setEditSSHIcon,
   editSSHAuthMethod, setEditSSHAuthMethod,
   editSSHPrivateKey, setEditSSHPrivateKey,
@@ -219,6 +219,37 @@ export const useFormHandlers = ({
     
     // Detectar automáticamente si es formato Wallix
     const userInfo = parseWallixUser(sshUser.trim());
+
+    if (!userInfo.isWallix && sshProxyJumpEnabled) {
+      const jumpAuthMethod = sshJumpAuthMethod === 'key' ? 'key' : 'password';
+      if (!sshJumpHost?.trim() || !sshJumpUser?.trim()) {
+        toast.current.show({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'ProxyJump requiere host y usuario de salto',
+          life: 3000
+        });
+        return;
+      }
+      if (jumpAuthMethod === 'password' && !sshJumpPassword?.trim()) {
+        toast.current.show({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'ProxyJump requiere contrasena de salto',
+          life: 3000
+        });
+        return;
+      }
+      if (jumpAuthMethod === 'key' && !sshJumpPrivateKey?.trim()) {
+        toast.current.show({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'ProxyJump requiere clave privada de salto',
+          life: 3000
+        });
+        return;
+      }
+    }
     
     const newKey = generateUniqueKey();
     const newSSHNode = {
@@ -242,6 +273,14 @@ export const useFormHandlers = ({
         autoCopyPassword: sshAutoCopyPassword || false,
         x11Forwarding: sshX11Forwarding || false,
         agentForwarding: sshAgentForwarding || false,
+        proxyJumpEnabled: !userInfo.isWallix && !!sshProxyJumpEnabled,
+        jumpHost: !userInfo.isWallix && sshProxyJumpEnabled ? sshJumpHost.trim() : '',
+        jumpPort: !userInfo.isWallix && sshProxyJumpEnabled ? (sshJumpPort || 22) : 22,
+        jumpUser: !userInfo.isWallix && sshProxyJumpEnabled ? sshJumpUser.trim() : '',
+        jumpAuthMethod: !userInfo.isWallix && sshProxyJumpEnabled ? (sshJumpAuthMethod === 'key' ? 'key' : 'password') : 'password',
+        jumpPassword: !userInfo.isWallix && sshProxyJumpEnabled && sshJumpAuthMethod !== 'key' ? sshJumpPassword.trim() : '',
+        jumpPrivateKey: !userInfo.isWallix && sshProxyJumpEnabled && sshJumpAuthMethod === 'key' ? sshJumpPrivateKey.trim() : '',
+        hostKeyPolicy: userInfo.isWallix ? 'warn_new' : (sshHostKeyPolicy || 'warn_new'),
         // Descripción de la conexión
         description: sshDescription || '',
         customIcon: sshIcon && sshIcon !== 'default' ? sshIcon : null
@@ -275,7 +314,7 @@ export const useFormHandlers = ({
       detail: `Conexión SSH "${sshName}" añadida al árbol`,
       life: 3000
     });
-  }, [sshName, sshHost, sshUser, sshPassword, sshPrivateKey, sshAuthMethod, sshRemoteFolder, sshPort, sshTargetFolder, sshAutoCopyPassword, sshX11Forwarding, sshAgentForwarding, sshDescription, sshIcon, nodes, setNodes, findNodeByKey, deepCopy, generateUniqueKey, parseWallixUser, setShowUnifiedConnectionDialog, toast]);
+  }, [sshName, sshHost, sshUser, sshPassword, sshPrivateKey, sshAuthMethod, sshRemoteFolder, sshPort, sshTargetFolder, sshAutoCopyPassword, sshX11Forwarding, sshAgentForwarding, sshProxyJumpEnabled, sshJumpHost, sshJumpPort, sshJumpUser, sshJumpAuthMethod, sshJumpPassword, sshJumpPrivateKey, sshHostKeyPolicy, sshDescription, sshIcon, nodes, setNodes, findNodeByKey, deepCopy, generateUniqueKey, parseWallixUser, setShowUnifiedConnectionDialog, toast]);
 
   /**
    * Crear nueva conexión RDP
@@ -637,6 +676,37 @@ export const useFormHandlers = ({
     
     // Detectar automáticamente si es formato Wallix
     const userInfo = parseWallixUser(editSSHUser.trim());
+
+    if (!userInfo.isWallix && editSSHProxyJumpEnabled) {
+      const jumpAuthMethod = editSSHJumpAuthMethod === 'key' ? 'key' : 'password';
+      if (!editSSHJumpHost?.trim() || !editSSHJumpUser?.trim()) {
+        toast.current.show({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'ProxyJump requiere host y usuario de salto',
+          life: 3000
+        });
+        return;
+      }
+      if (jumpAuthMethod === 'password' && !editSSHJumpPassword?.trim()) {
+        toast.current.show({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'ProxyJump requiere contrasena de salto',
+          life: 3000
+        });
+        return;
+      }
+      if (jumpAuthMethod === 'key' && !editSSHJumpPrivateKey?.trim()) {
+        toast.current.show({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'ProxyJump requiere clave privada de salto',
+          life: 3000
+        });
+        return;
+      }
+    }
     
     // Guardar datos antiguos para actualizar favoritos
     const oldConnection = connectionHelpers.fromSidebarNode(editSSHNode);
@@ -664,6 +734,14 @@ export const useFormHandlers = ({
         autoCopyPassword: editSSHAutoCopyPassword || false,
         x11Forwarding: editSSHX11Forwarding || false,
         agentForwarding: editSSHAgentForwarding || false,
+        proxyJumpEnabled: !userInfo.isWallix && !!editSSHProxyJumpEnabled,
+        jumpHost: !userInfo.isWallix && editSSHProxyJumpEnabled ? editSSHJumpHost.trim() : '',
+        jumpPort: !userInfo.isWallix && editSSHProxyJumpEnabled ? (editSSHJumpPort || 22) : 22,
+        jumpUser: !userInfo.isWallix && editSSHProxyJumpEnabled ? editSSHJumpUser.trim() : '',
+        jumpAuthMethod: !userInfo.isWallix && editSSHProxyJumpEnabled ? (editSSHJumpAuthMethod === 'key' ? 'key' : 'password') : 'password',
+        jumpPassword: !userInfo.isWallix && editSSHProxyJumpEnabled && editSSHJumpAuthMethod !== 'key' ? editSSHJumpPassword.trim() : '',
+        jumpPrivateKey: !userInfo.isWallix && editSSHProxyJumpEnabled && editSSHJumpAuthMethod === 'key' ? editSSHJumpPrivateKey.trim() : '',
+        hostKeyPolicy: userInfo.isWallix ? 'warn_new' : (editSSHHostKeyPolicy || 'warn_new'),
         // Descripción de la conexión
         description: editSSHDescription || '',
         // Icono personalizado (tratar 'default' como null para usar el icono del tema)
@@ -717,7 +795,7 @@ export const useFormHandlers = ({
       detail: `Sesión SSH actualizada`,
       life: 3000
     });
-  }, [editSSHName, editSSHHost, editSSHUser, editSSHPassword, editSSHPrivateKey, editSSHAuthMethod, editSSHRemoteFolder, editSSHPort, editSSHAutoCopyPassword, editSSHX11Forwarding, editSSHAgentForwarding, editSSHDescription, editSSHIcon, editSSHNode, sshTargetFolder, nodes, setNodes, findNodeByKey, findParentNodeAndIndex, deepCopy, parseWallixUser, closeEditSSHDialogWithReset, setShowUnifiedConnectionDialog, setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, setEditSSHDescription, setEditSSHIcon, setSSHTargetFolder, toast]);
+  }, [editSSHName, editSSHHost, editSSHUser, editSSHPassword, editSSHPrivateKey, editSSHAuthMethod, editSSHRemoteFolder, editSSHPort, editSSHAutoCopyPassword, editSSHX11Forwarding, editSSHAgentForwarding, editSSHProxyJumpEnabled, editSSHJumpHost, editSSHJumpPort, editSSHJumpUser, editSSHJumpAuthMethod, editSSHJumpPassword, editSSHJumpPrivateKey, editSSHHostKeyPolicy, editSSHDescription, editSSHIcon, editSSHNode, sshTargetFolder, nodes, setNodes, findNodeByKey, findParentNodeAndIndex, deepCopy, parseWallixUser, closeEditSSHDialogWithReset, setShowUnifiedConnectionDialog, setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, setEditSSHDescription, setEditSSHIcon, setSSHTargetFolder, toast]);
 
   /**
    * Guardar edición de carpeta

@@ -50,6 +50,14 @@ export const useDialogManagement = () => {
   const [sshAutoCopyPassword, setSSHAutoCopyPassword] = useState(false);
   const [sshX11Forwarding, setSSHX11Forwarding] = useState(false);
   const [sshAgentForwarding, setSSHAgentForwarding] = useState(false);
+  const [sshProxyJumpEnabled, setSSHProxyJumpEnabled] = useState(false);
+  const [sshJumpHost, setSSHJumpHost] = useState('');
+  const [sshJumpPort, setSSHJumpPort] = useState(22);
+  const [sshJumpUser, setSSHJumpUser] = useState('');
+  const [sshJumpAuthMethod, setSSHJumpAuthMethod] = useState('password');
+  const [sshJumpPassword, setSSHJumpPassword] = useState('');
+  const [sshJumpPrivateKey, setSSHJumpPrivateKey] = useState('');
+  const [sshHostKeyPolicy, setSSHHostKeyPolicy] = useState('warn_new');
   const [sshDescription, setSSHDescription] = useState('');
   const [sshIcon, setSSHIcon] = useState(null);
   const [sshAuthMethod, setSSHAuthMethod] = useState('password');
@@ -66,6 +74,14 @@ export const useDialogManagement = () => {
   const [editSSHAutoCopyPassword, setEditSSHAutoCopyPassword] = useState(false);
   const [editSSHX11Forwarding, setEditSSHX11Forwarding] = useState(false);
   const [editSSHAgentForwarding, setEditSSHAgentForwarding] = useState(false);
+  const [editSSHProxyJumpEnabled, setEditSSHProxyJumpEnabled] = useState(false);
+  const [editSSHJumpHost, setEditSSHJumpHost] = useState('');
+  const [editSSHJumpPort, setEditSSHJumpPort] = useState(22);
+  const [editSSHJumpUser, setEditSSHJumpUser] = useState('');
+  const [editSSHJumpAuthMethod, setEditSSHJumpAuthMethod] = useState('password');
+  const [editSSHJumpPassword, setEditSSHJumpPassword] = useState('');
+  const [editSSHJumpPrivateKey, setEditSSHJumpPrivateKey] = useState('');
+  const [editSSHHostKeyPolicy, setEditSSHHostKeyPolicy] = useState('warn_new');
   const [editSSHDescription, setEditSSHDescription] = useState('');
   const [editSSHIcon, setEditSSHIcon] = useState(null);
   const [editSSHAuthMethod, setEditSSHAuthMethod] = useState('password');
@@ -131,6 +147,14 @@ export const useDialogManagement = () => {
     setSSHAutoCopyPassword(false);
     setSSHX11Forwarding(false);
     setSSHAgentForwarding(false);
+    setSSHProxyJumpEnabled(false);
+    setSSHJumpHost('');
+    setSSHJumpPort(22);
+    setSSHJumpUser('');
+    setSSHJumpAuthMethod('password');
+    setSSHJumpPassword('');
+    setSSHJumpPrivateKey('');
+    setSSHHostKeyPolicy('warn_new');
     setSSHDescription('');
     setSSHIcon(null);
     setSSHAuthMethod('password');
@@ -185,6 +209,14 @@ export const useDialogManagement = () => {
     setEditSSHAutoCopyPassword(false);
     setEditSSHX11Forwarding(false);
     setEditSSHAgentForwarding(false);
+    setEditSSHProxyJumpEnabled(false);
+    setEditSSHJumpHost('');
+    setEditSSHJumpPort(22);
+    setEditSSHJumpUser('');
+    setEditSSHJumpAuthMethod('password');
+    setEditSSHJumpPassword('');
+    setEditSSHJumpPrivateKey('');
+    setEditSSHHostKeyPolicy('warn_new');
     setEditSSHDescription('');
     setEditSSHIcon(null);
     setEditSSHAuthMethod('password');
@@ -328,6 +360,14 @@ export const useDialogManagement = () => {
     sshAutoCopyPassword, setSSHAutoCopyPassword,
     sshX11Forwarding, setSSHX11Forwarding,
     sshAgentForwarding, setSSHAgentForwarding,
+    sshProxyJumpEnabled, setSSHProxyJumpEnabled,
+    sshJumpHost, setSSHJumpHost,
+    sshJumpPort, setSSHJumpPort,
+    sshJumpUser, setSSHJumpUser,
+    sshJumpAuthMethod, setSSHJumpAuthMethod,
+    sshJumpPassword, setSSHJumpPassword,
+    sshJumpPrivateKey, setSSHJumpPrivateKey,
+    sshHostKeyPolicy, setSSHHostKeyPolicy,
     sshDescription, setSSHDescription,
     sshIcon, setSSHIcon,
     sshAuthMethod, setSSHAuthMethod,
@@ -344,6 +384,14 @@ export const useDialogManagement = () => {
     editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
     editSSHX11Forwarding, setEditSSHX11Forwarding,
     editSSHAgentForwarding, setEditSSHAgentForwarding,
+    editSSHProxyJumpEnabled, setEditSSHProxyJumpEnabled,
+    editSSHJumpHost, setEditSSHJumpHost,
+    editSSHJumpPort, setEditSSHJumpPort,
+    editSSHJumpUser, setEditSSHJumpUser,
+    editSSHJumpAuthMethod, setEditSSHJumpAuthMethod,
+    editSSHJumpPassword, setEditSSHJumpPassword,
+    editSSHJumpPrivateKey, setEditSSHJumpPrivateKey,
+    editSSHHostKeyPolicy, setEditSSHHostKeyPolicy,
     editSSHDescription, setEditSSHDescription,
     editSSHIcon, setEditSSHIcon,
     editSSHAuthMethod, setEditSSHAuthMethod,

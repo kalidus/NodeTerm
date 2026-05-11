@@ -1472,6 +1472,14 @@ const App = () => {
     sshAutoCopyPassword, setSSHAutoCopyPassword,
     sshX11Forwarding, setSSHX11Forwarding,
     sshAgentForwarding, setSSHAgentForwarding,
+    sshProxyJumpEnabled, setSSHProxyJumpEnabled,
+    sshJumpHost, setSSHJumpHost,
+    sshJumpPort, setSSHJumpPort,
+    sshJumpUser, setSSHJumpUser,
+    sshJumpAuthMethod, setSSHJumpAuthMethod,
+    sshJumpPassword, setSSHJumpPassword,
+    sshJumpPrivateKey, setSSHJumpPrivateKey,
+    sshHostKeyPolicy, setSSHHostKeyPolicy,
     sshDescription, setSSHDescription,
     sshIcon, setSSHIcon,
     sshAuthMethod, setSSHAuthMethod,
@@ -1487,6 +1495,14 @@ const App = () => {
     editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
     editSSHX11Forwarding, setEditSSHX11Forwarding,
     editSSHAgentForwarding, setEditSSHAgentForwarding,
+    editSSHProxyJumpEnabled, setEditSSHProxyJumpEnabled,
+    editSSHJumpHost, setEditSSHJumpHost,
+    editSSHJumpPort, setEditSSHJumpPort,
+    editSSHJumpUser, setEditSSHJumpUser,
+    editSSHJumpAuthMethod, setEditSSHJumpAuthMethod,
+    editSSHJumpPassword, setEditSSHJumpPassword,
+    editSSHJumpPrivateKey, setEditSSHJumpPrivateKey,
+    editSSHHostKeyPolicy, setEditSSHHostKeyPolicy,
     editSSHDescription, setEditSSHDescription,
     editSSHIcon, setEditSSHIcon,
     editSSHAuthMethod, setEditSSHAuthMethod,
@@ -1641,6 +1657,7 @@ const App = () => {
     sshPort, setSSHPort, sshTargetFolder, setSSHTargetFolder,
     sshAutoCopyPassword, setSSHAutoCopyPassword,
     sshX11Forwarding, sshAgentForwarding,
+    sshProxyJumpEnabled, sshJumpHost, sshJumpPort, sshJumpUser, sshJumpAuthMethod, sshJumpPassword, sshJumpPrivateKey, sshHostKeyPolicy,
     sshDescription,
     sshIcon,
     sshAuthMethod, sshPrivateKey,
@@ -1655,6 +1672,7 @@ const App = () => {
     editSSHPort, setEditSSHPort,
     editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
     editSSHX11Forwarding, editSSHAgentForwarding,
+    editSSHProxyJumpEnabled, editSSHJumpHost, editSSHJumpPort, editSSHJumpUser, editSSHJumpAuthMethod, editSSHJumpPassword, editSSHJumpPrivateKey, editSSHHostKeyPolicy,
     editSSHDescription, setEditSSHDescription,
     editSSHIcon, setEditSSHIcon,
     editSSHAuthMethod, setEditSSHAuthMethod,
@@ -2827,6 +2845,14 @@ const App = () => {
     sshAutoCopyPassword, setSSHAutoCopyPassword,
     sshX11Forwarding, setSSHX11Forwarding,
     sshAgentForwarding, setSSHAgentForwarding,
+    sshProxyJumpEnabled, setSSHProxyJumpEnabled,
+    sshJumpHost, setSSHJumpHost,
+    sshJumpPort, setSSHJumpPort,
+    sshJumpUser, setSSHJumpUser,
+    sshJumpAuthMethod, setSSHJumpAuthMethod,
+    sshJumpPassword, setSSHJumpPassword,
+    sshJumpPrivateKey, setSSHJumpPrivateKey,
+    sshHostKeyPolicy, setSSHHostKeyPolicy,
     sshDescription,
 
     // Estados de formularios Edit SSH
@@ -2839,6 +2865,14 @@ const App = () => {
     editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
     editSSHX11Forwarding, setEditSSHX11Forwarding,
     editSSHAgentForwarding, setEditSSHAgentForwarding,
+    editSSHProxyJumpEnabled, setEditSSHProxyJumpEnabled,
+    editSSHJumpHost, setEditSSHJumpHost,
+    editSSHJumpPort, setEditSSHJumpPort,
+    editSSHJumpUser, setEditSSHJumpUser,
+    editSSHJumpAuthMethod, setEditSSHJumpAuthMethod,
+    editSSHJumpPassword, setEditSSHJumpPassword,
+    editSSHJumpPrivateKey, setEditSSHJumpPrivateKey,
+    editSSHHostKeyPolicy, setEditSSHHostKeyPolicy,
     editSSHDescription, setEditSSHDescription,
     editSSHIcon, setEditSSHIcon,
 
@@ -2887,12 +2921,21 @@ const App = () => {
     sshAutoCopyPassword, setSSHAutoCopyPassword,
     sshX11Forwarding, setSSHX11Forwarding,
     sshAgentForwarding, setSSHAgentForwarding,
+    sshProxyJumpEnabled, setSSHProxyJumpEnabled,
+    sshJumpHost, setSSHJumpHost, sshJumpPort, setSSHJumpPort, sshJumpUser, setSSHJumpUser,
+    sshJumpAuthMethod, setSSHJumpAuthMethod, sshJumpPassword, setSSHJumpPassword,
+    sshJumpPrivateKey, setSSHJumpPrivateKey, sshHostKeyPolicy, setSSHHostKeyPolicy,
     sshDescription,
     editSSHName, setEditSSHName, editSSHHost, setEditSSHHost, editSSHUser, setEditSSHUser,
     editSSHPassword, setEditSSHPassword, editSSHRemoteFolder, setEditSSHRemoteFolder,
     editSSHPort, setEditSSHPort, editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
     editSSHX11Forwarding, setEditSSHX11Forwarding,
     editSSHAgentForwarding, setEditSSHAgentForwarding,
+    editSSHProxyJumpEnabled, setEditSSHProxyJumpEnabled,
+    editSSHJumpHost, setEditSSHJumpHost, editSSHJumpPort, setEditSSHJumpPort,
+    editSSHJumpUser, setEditSSHJumpUser, editSSHJumpAuthMethod, setEditSSHJumpAuthMethod,
+    editSSHJumpPassword, setEditSSHJumpPassword, editSSHJumpPrivateKey, setEditSSHJumpPrivateKey,
+    editSSHHostKeyPolicy, setEditSSHHostKeyPolicy,
     editSSHDescription, setEditSSHDescription, editSSHIcon, setEditSSHIcon,
     editSSHNode, setEditSSHNode,
     rdpNodeData, setRdpNodeData, editingRdpNode, setEditingRdpNode,
@@ -3241,6 +3284,22 @@ const App = () => {
           setSSHX11Forwarding={setSSHX11Forwarding}
           sshAgentForwarding={sshAgentForwarding}
           setSSHAgentForwarding={setSSHAgentForwarding}
+          sshProxyJumpEnabled={sshProxyJumpEnabled}
+          setSSHProxyJumpEnabled={setSSHProxyJumpEnabled}
+          sshJumpHost={sshJumpHost}
+          setSSHJumpHost={setSSHJumpHost}
+          sshJumpPort={sshJumpPort}
+          setSSHJumpPort={setSSHJumpPort}
+          sshJumpUser={sshJumpUser}
+          setSSHJumpUser={setSSHJumpUser}
+          sshJumpAuthMethod={sshJumpAuthMethod}
+          setSSHJumpAuthMethod={setSSHJumpAuthMethod}
+          sshJumpPassword={sshJumpPassword}
+          setSSHJumpPassword={setSSHJumpPassword}
+          sshJumpPrivateKey={sshJumpPrivateKey}
+          setSSHJumpPrivateKey={setSSHJumpPrivateKey}
+          sshHostKeyPolicy={sshHostKeyPolicy}
+          setSSHHostKeyPolicy={setSSHHostKeyPolicy}
           sshDescription={sshDescription}
           setSSHDescription={setSSHDescription}
           sshIcon={sshIcon}
@@ -3269,6 +3328,22 @@ const App = () => {
           setEditSSHX11Forwarding={setEditSSHX11Forwarding}
           editSSHAgentForwarding={editSSHAgentForwarding}
           setEditSSHAgentForwarding={setEditSSHAgentForwarding}
+          editSSHProxyJumpEnabled={editSSHProxyJumpEnabled}
+          setEditSSHProxyJumpEnabled={setEditSSHProxyJumpEnabled}
+          editSSHJumpHost={editSSHJumpHost}
+          setEditSSHJumpHost={setEditSSHJumpHost}
+          editSSHJumpPort={editSSHJumpPort}
+          setEditSSHJumpPort={setEditSSHJumpPort}
+          editSSHJumpUser={editSSHJumpUser}
+          setEditSSHJumpUser={setEditSSHJumpUser}
+          editSSHJumpAuthMethod={editSSHJumpAuthMethod}
+          setEditSSHJumpAuthMethod={setEditSSHJumpAuthMethod}
+          editSSHJumpPassword={editSSHJumpPassword}
+          setEditSSHJumpPassword={setEditSSHJumpPassword}
+          editSSHJumpPrivateKey={editSSHJumpPrivateKey}
+          setEditSSHJumpPrivateKey={setEditSSHJumpPrivateKey}
+          editSSHHostKeyPolicy={editSSHHostKeyPolicy}
+          setEditSSHHostKeyPolicy={setEditSSHHostKeyPolicy}
           editSSHDescription={editSSHDescription}
           setEditSSHDescription={setEditSSHDescription}
           editSSHIcon={editSSHIcon}

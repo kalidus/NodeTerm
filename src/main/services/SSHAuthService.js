@@ -212,10 +212,11 @@ class SSHAuthService {
   /**
    * Crea una configuración SSH con autenticación interactiva
    */
-  createInteractiveSSHConfig(config, includePassword = false) {
+  createInteractiveSSHConfig(config, includePassword = false, extraOptions = {}) {
     return buildSshConnectOptions(config, {
       includePassword,
-      interactive: true
+      interactive: true,
+      ...extraOptions
     }).connectConfig;
   }
 
@@ -338,6 +339,12 @@ class SSHAuthService {
 
           if (conn && conn.statsTimeout) {
             clearTimeout(conn.statsTimeout);
+          }
+
+          if (conn?.jumpClient && typeof conn.jumpClient.end === 'function') {
+            try {
+              conn.jumpClient.end();
+            } catch (e) { /* noop */ }
           }
 
           sendToRenderer(sender, 'ssh-connection-disconnected', {

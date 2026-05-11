@@ -76,6 +76,22 @@ const DialogsManager = ({
   setSSHX11Forwarding,
   sshAgentForwarding,
   setSSHAgentForwarding,
+  sshProxyJumpEnabled,
+  setSSHProxyJumpEnabled,
+  sshJumpHost,
+  setSSHJumpHost,
+  sshJumpPort,
+  setSSHJumpPort,
+  sshJumpUser,
+  setSSHJumpUser,
+  sshJumpAuthMethod,
+  setSSHJumpAuthMethod,
+  sshJumpPassword,
+  setSSHJumpPassword,
+  sshJumpPrivateKey,
+  setSSHJumpPrivateKey,
+  sshHostKeyPolicy,
+  setSSHHostKeyPolicy,
   sshDescription,
   setSSHDescription,
   sshIcon,
@@ -104,6 +120,22 @@ const DialogsManager = ({
   setEditSSHX11Forwarding,
   editSSHAgentForwarding,
   setEditSSHAgentForwarding,
+  editSSHProxyJumpEnabled,
+  setEditSSHProxyJumpEnabled,
+  editSSHJumpHost,
+  setEditSSHJumpHost,
+  editSSHJumpPort,
+  setEditSSHJumpPort,
+  editSSHJumpUser,
+  setEditSSHJumpUser,
+  editSSHJumpAuthMethod,
+  setEditSSHJumpAuthMethod,
+  editSSHJumpPassword,
+  setEditSSHJumpPassword,
+  editSSHJumpPrivateKey,
+  setEditSSHJumpPrivateKey,
+  editSSHHostKeyPolicy,
+  setEditSSHHostKeyPolicy,
   editSSHDescription,
   setEditSSHDescription,
   editSSHIcon,
@@ -627,6 +659,22 @@ const DialogsManager = ({
         setSSHX11Forwarding={setSSHX11Forwarding}
         sshAgentForwarding={sshAgentForwarding}
         setSSHAgentForwarding={setSSHAgentForwarding}
+        sshProxyJumpEnabled={sshProxyJumpEnabled}
+        setSSHProxyJumpEnabled={setSSHProxyJumpEnabled}
+        sshJumpHost={sshJumpHost}
+        setSSHJumpHost={setSSHJumpHost}
+        sshJumpPort={sshJumpPort}
+        setSSHJumpPort={setSSHJumpPort}
+        sshJumpUser={sshJumpUser}
+        setSSHJumpUser={setSSHJumpUser}
+        sshJumpAuthMethod={sshJumpAuthMethod}
+        setSSHJumpAuthMethod={setSSHJumpAuthMethod}
+        sshJumpPassword={sshJumpPassword}
+        setSSHJumpPassword={setSSHJumpPassword}
+        sshJumpPrivateKey={sshJumpPrivateKey}
+        setSSHJumpPrivateKey={setSSHJumpPrivateKey}
+        sshHostKeyPolicy={sshHostKeyPolicy}
+        setSSHHostKeyPolicy={setSSHHostKeyPolicy}
         sshDescription={sshDescription}
         setSSHDescription={setSSHDescription}
         sshIcon={sshIcon}
@@ -679,6 +727,22 @@ const DialogsManager = ({
         setSSHX11Forwarding={editSSHNode ? setEditSSHX11Forwarding : setSSHX11Forwarding}
         sshAgentForwarding={editSSHNode ? editSSHAgentForwarding : sshAgentForwarding}
         setSSHAgentForwarding={editSSHNode ? setEditSSHAgentForwarding : setSSHAgentForwarding}
+        sshProxyJumpEnabled={editSSHNode ? editSSHProxyJumpEnabled : sshProxyJumpEnabled}
+        setSSHProxyJumpEnabled={editSSHNode ? setEditSSHProxyJumpEnabled : setSSHProxyJumpEnabled}
+        sshJumpHost={editSSHNode ? editSSHJumpHost : sshJumpHost}
+        setSSHJumpHost={editSSHNode ? setEditSSHJumpHost : setSSHJumpHost}
+        sshJumpPort={editSSHNode ? editSSHJumpPort : sshJumpPort}
+        setSSHJumpPort={editSSHNode ? setEditSSHJumpPort : setSSHJumpPort}
+        sshJumpUser={editSSHNode ? editSSHJumpUser : sshJumpUser}
+        setSSHJumpUser={editSSHNode ? setEditSSHJumpUser : setSSHJumpUser}
+        sshJumpAuthMethod={editSSHNode ? editSSHJumpAuthMethod : sshJumpAuthMethod}
+        setSSHJumpAuthMethod={editSSHNode ? setEditSSHJumpAuthMethod : setSSHJumpAuthMethod}
+        sshJumpPassword={editSSHNode ? editSSHJumpPassword : sshJumpPassword}
+        setSSHJumpPassword={editSSHNode ? setEditSSHJumpPassword : setSSHJumpPassword}
+        sshJumpPrivateKey={editSSHNode ? editSSHJumpPrivateKey : sshJumpPrivateKey}
+        setSSHJumpPrivateKey={editSSHNode ? setEditSSHJumpPrivateKey : setSSHJumpPrivateKey}
+        sshHostKeyPolicy={editSSHNode ? editSSHHostKeyPolicy : sshHostKeyPolicy}
+        setSSHHostKeyPolicy={editSSHNode ? setEditSSHHostKeyPolicy : setSSHHostKeyPolicy}
         sshDescription={editSSHNode ? editSSHDescription : sshDescription}
         setSSHDescription={editSSHNode ? setEditSSHDescription : setSSHDescription}
         sshIcon={editSSHIcon}

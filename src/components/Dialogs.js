@@ -624,6 +624,14 @@ export function EditSSHConnectionDialog({
   sshAutoCopyPassword = false, setSSHAutoCopyPassword = () => {},
   sshX11Forwarding = false, setSSHX11Forwarding = () => {},
   sshAgentForwarding = false, setSSHAgentForwarding = () => {},
+  sshProxyJumpEnabled = false, setSSHProxyJumpEnabled = () => {},
+  sshJumpHost = '', setSSHJumpHost = () => {},
+  sshJumpPort = 22, setSSHJumpPort = () => {},
+  sshJumpUser = '', setSSHJumpUser = () => {},
+  sshJumpAuthMethod = 'password', setSSHJumpAuthMethod = () => {},
+  sshJumpPassword = '', setSSHJumpPassword = () => {},
+  sshJumpPrivateKey = '', setSSHJumpPrivateKey = () => {},
+  sshHostKeyPolicy = 'warn_new', setSSHHostKeyPolicy = () => {},
   sshDescription = '', setSSHDescription = () => {},
   sshIcon = null, setSSHIcon = () => {},
   foldersOptions = [],
@@ -665,6 +673,30 @@ export function EditSSHConnectionDialog({
       if (setSSHAgentForwarding && typeof setSSHAgentForwarding === 'function') {
         setSSHAgentForwarding(editNodeData.data?.agentForwarding || false);
       }
+      if (setSSHProxyJumpEnabled && typeof setSSHProxyJumpEnabled === 'function') {
+        setSSHProxyJumpEnabled(editNodeData.data?.proxyJumpEnabled || false);
+      }
+      if (setSSHJumpHost && typeof setSSHJumpHost === 'function') {
+        setSSHJumpHost(editNodeData.data?.jumpHost || '');
+      }
+      if (setSSHJumpPort && typeof setSSHJumpPort === 'function') {
+        setSSHJumpPort(editNodeData.data?.jumpPort || 22);
+      }
+      if (setSSHJumpUser && typeof setSSHJumpUser === 'function') {
+        setSSHJumpUser(editNodeData.data?.jumpUser || '');
+      }
+      if (setSSHJumpAuthMethod && typeof setSSHJumpAuthMethod === 'function') {
+        setSSHJumpAuthMethod(editNodeData.data?.jumpAuthMethod === 'key' ? 'key' : 'password');
+      }
+      if (setSSHJumpPassword && typeof setSSHJumpPassword === 'function') {
+        setSSHJumpPassword(editNodeData.data?.jumpPassword || '');
+      }
+      if (setSSHJumpPrivateKey && typeof setSSHJumpPrivateKey === 'function') {
+        setSSHJumpPrivateKey(editNodeData.data?.jumpPrivateKey || '');
+      }
+      if (setSSHHostKeyPolicy && typeof setSSHHostKeyPolicy === 'function') {
+        setSSHHostKeyPolicy(editNodeData.data?.hostKeyPolicy || 'warn_new');
+      }
       if (setSSHDescription && typeof setSSHDescription === 'function') {
         setSSHDescription(editNodeData.data?.description || '');
       }
@@ -672,7 +704,7 @@ export function EditSSHConnectionDialog({
         setSSHIcon(editNodeData.data?.customIcon || null);
       }
     }
-  }, [editNodeData, visible, setSSHName, setSSHHost, setSSHUser, setSSHPassword, setSSHAuthMethod, setSSHPrivateKey, setSSHRemoteFolder, setSSHPort, setSSHAutoCopyPassword, setSSHX11Forwarding, setSSHAgentForwarding, setSSHDescription, setSSHIcon]);
+  }, [editNodeData, visible, setSSHName, setSSHHost, setSSHUser, setSSHPassword, setSSHAuthMethod, setSSHPrivateKey, setSSHRemoteFolder, setSSHPort, setSSHAutoCopyPassword, setSSHX11Forwarding, setSSHAgentForwarding, setSSHProxyJumpEnabled, setSSHJumpHost, setSSHJumpPort, setSSHJumpUser, setSSHJumpAuthMethod, setSSHJumpPassword, setSSHJumpPrivateKey, setSSHHostKeyPolicy, setSSHDescription, setSSHIcon]);
 
   // Handler para seleccionar icono
   const handleIconSelect = useCallback((iconId) => {
@@ -753,6 +785,22 @@ export function EditSSHConnectionDialog({
             setSSHX11Forwarding={setSSHX11Forwarding}
             sshAgentForwarding={sshAgentForwarding}
             setSSHAgentForwarding={setSSHAgentForwarding}
+            sshProxyJumpEnabled={sshProxyJumpEnabled}
+            setSSHProxyJumpEnabled={setSSHProxyJumpEnabled}
+            sshJumpHost={sshJumpHost}
+            setSSHJumpHost={setSSHJumpHost}
+            sshJumpPort={sshJumpPort}
+            setSSHJumpPort={setSSHJumpPort}
+            sshJumpUser={sshJumpUser}
+            setSSHJumpUser={setSSHJumpUser}
+            sshJumpAuthMethod={sshJumpAuthMethod}
+            setSSHJumpAuthMethod={setSSHJumpAuthMethod}
+            sshJumpPassword={sshJumpPassword}
+            setSSHJumpPassword={setSSHJumpPassword}
+            sshJumpPrivateKey={sshJumpPrivateKey}
+            setSSHJumpPrivateKey={setSSHJumpPrivateKey}
+            sshHostKeyPolicy={sshHostKeyPolicy}
+            setSSHHostKeyPolicy={setSSHHostKeyPolicy}
             sshDescription={sshDescription}
             setSSHDescription={setSSHDescription}
             foldersOptions={foldersOptions}
@@ -1613,6 +1661,10 @@ function deriveSSHAuthMethod(nodeData) {
   return 'password';
 }
 
+function isWallixUserString(userString) {
+  return /^(.+)@(.+)@(.+):(.+):(.+)$/.test((userString || '').trim());
+}
+
 // --- EnhancedSSHForm: Formulario SSH mejorado con soporte para claves ---
 export function EnhancedSSHForm({
   activeTabIndex,
@@ -1628,6 +1680,14 @@ export function EnhancedSSHForm({
   sshAutoCopyPassword = false, setSSHAutoCopyPassword = () => {},
   sshX11Forwarding = false, setSSHX11Forwarding = () => {},
   sshAgentForwarding = false, setSSHAgentForwarding = () => {},
+  sshProxyJumpEnabled = false, setSSHProxyJumpEnabled = () => {},
+  sshJumpHost = '', setSSHJumpHost = () => {},
+  sshJumpPort = 22, setSSHJumpPort = () => {},
+  sshJumpUser = '', setSSHJumpUser = () => {},
+  sshJumpAuthMethod = 'password', setSSHJumpAuthMethod = () => {},
+  sshJumpPassword = '', setSSHJumpPassword = () => {},
+  sshJumpPrivateKey = '', setSSHJumpPrivateKey = () => {},
+  sshHostKeyPolicy = 'warn_new', setSSHHostKeyPolicy = () => {},
   sshDescription = '', setSSHDescription = () => {},
   foldersOptions = [],
   onSSHConfirm,
@@ -1642,9 +1702,18 @@ export function EnhancedSSHForm({
   
   const [validationErrors, setValidationErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
+  const [showJumpPassword, setShowJumpPassword] = useState(false);
   const [privateKeyFileName, setPrivateKeyFileName] = useState('');
+  const [jumpPrivateKeyFileName, setJumpPrivateKeyFileName] = useState('');
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const privateKeyInputRef = useRef(null);
+  const jumpPrivateKeyInputRef = useRef(null);
+  const isWallixUser = useMemo(() => isWallixUserString(sshUser), [sshUser]);
+  const hostKeyPolicyOptions = useMemo(() => ([
+    { label: t('ssh.auth.hostKeyPolicies.warn_new'), value: 'warn_new' },
+    { label: t('ssh.auth.hostKeyPolicies.known_hosts'), value: 'known_hosts' },
+    { label: t('ssh.auth.hostKeyPolicies.strict'), value: 'strict' }
+  ]), [t]);
 
   // Validación del formulario
   const validateForm = useCallback(() => {
@@ -1700,6 +1769,18 @@ export function EnhancedSSHForm({
     };
     reader.readAsText(file);
   }, [setSSHPrivateKey]);
+
+  const handleJumpPrivateKeyFileChange = useCallback((event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setJumpPrivateKeyFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (loadEvent) => {
+      setSSHJumpPrivateKey(loadEvent.target?.result || '');
+    };
+    reader.readAsText(file);
+  }, [setSSHJumpPrivateKey]);
 
   const isFormValid = () => {
     return sshName?.trim() && 
@@ -1900,6 +1981,155 @@ export function EnhancedSSHForm({
               className="terminal-switch"
             />
           </div>
+
+          {!isWallixUser && (
+            <>
+              <div className="terminal-row mt-2">
+                <label
+                  className="terminal-label info-icon"
+                  data-pr-tooltip={t('ssh.auth.hostKeyPolicyDescription')}
+                >
+                  {t('ssh.auth.hostKeyPolicy').toUpperCase()}
+                </label>
+                <div className="terminal-input-wrap terminal-folder-dropdown-wrap">
+                  <Dropdown
+                    value={sshHostKeyPolicy}
+                    options={hostKeyPolicyOptions}
+                    onChange={(e) => setSSHHostKeyPolicy(e.value)}
+                    optionLabel="label"
+                    optionValue="value"
+                    className="terminal-folder-dropdown"
+                    panelClassName="terminal-folder-dropdown-panel"
+                  />
+                </div>
+              </div>
+
+              <div className="terminal-option-item">
+                <div className="flex align-items-center">
+                  <i className="pi pi-share-alt terminal-option-icon"></i>
+                  <span
+                    className="terminal-option-text info-icon"
+                    data-pr-tooltip={t('ssh.auth.proxyJumpDescription')}
+                  >
+                    {t('ssh.auth.proxyJump')}
+                  </span>
+                </div>
+                <div className="terminal-dotted-spacer"></div>
+                <InputSwitch
+                  checked={sshProxyJumpEnabled}
+                  onChange={(e) => setSSHProxyJumpEnabled(e.value)}
+                  className="terminal-switch"
+                />
+              </div>
+
+              {sshProxyJumpEnabled && (
+                <div className="terminal-row mt-2">
+                  <div className="terminal-host-port-row mb-3">
+                    <div className="terminal-host-port-host">
+                      <label className="terminal-label">{t('ssh.auth.jumpHost').toUpperCase()}</label>
+                      <div className="terminal-input-wrap">
+                        <InputText
+                          value={sshJumpHost}
+                          onChange={(e) => setSSHJumpHost(e.target.value)}
+                          placeholder="jump.ejemplo.com"
+                          className="terminal-input"
+                        />
+                      </div>
+                    </div>
+                    <div className="terminal-host-port-port">
+                      <label className="terminal-label">{t('ssh.auth.jumpPort').toUpperCase()}</label>
+                      <div className="terminal-input-wrap terminal-port-input-wrap">
+                        <InputText
+                          value={sshJumpPort}
+                          onChange={(e) => setSSHJumpPort(e.target.value)}
+                          placeholder="22"
+                          className="terminal-input terminal-port-input text-center"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="terminal-row mb-3">
+                    <label className="terminal-label">{t('ssh.auth.jumpUser').toUpperCase()}</label>
+                    <div className="terminal-input-wrap">
+                      <InputText
+                        value={sshJumpUser}
+                        onChange={(e) => setSSHJumpUser(e.target.value)}
+                        placeholder="jump_user"
+                        className="terminal-input"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="terminal-row mb-3">
+                    <label className="terminal-label">{t('ssh.auth.method').toUpperCase()}</label>
+                    <div className="terminal-auth-selector">
+                      <div
+                        className={`terminal-auth-chip ${sshJumpAuthMethod === 'password' ? 'active' : ''}`}
+                        onClick={() => {
+                          setSSHJumpAuthMethod('password');
+                          setSSHJumpPrivateKey('');
+                          setJumpPrivateKeyFileName('');
+                        }}
+                      >
+                        <i className="pi pi-lock"></i> {t('ssh.auth.password')}
+                      </div>
+                      <div
+                        className={`terminal-auth-chip ${sshJumpAuthMethod === 'key' ? 'active' : ''}`}
+                        onClick={() => {
+                          setSSHJumpAuthMethod('key');
+                          setSSHJumpPassword('');
+                        }}
+                      >
+                        <i className="pi pi-key"></i> {t('ssh.auth.key')}
+                      </div>
+                    </div>
+                  </div>
+
+                  {sshJumpAuthMethod === 'password' ? (
+                    <div className="terminal-row mb-2">
+                      <label className="terminal-label">{t('ssh.auth.jumpPassword').toUpperCase()}</label>
+                      <div className="terminal-input-wrap">
+                        <InputText
+                          type={showJumpPassword ? 'text' : 'password'}
+                          value={sshJumpPassword}
+                          onChange={(e) => setSSHJumpPassword(e.target.value)}
+                          className="terminal-input"
+                        />
+                        <i
+                          className={`pi ${showJumpPassword ? 'pi-eye-slash' : 'pi-eye'} terminal-icon-right cursor-pointer`}
+                          onClick={() => setShowJumpPassword(!showJumpPassword)}
+                        ></i>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="terminal-row mb-2">
+                      <label className="terminal-label">{t('ssh.auth.jumpPrivateKey').toUpperCase()}</label>
+                      <div className="terminal-input-wrap terminal-key-file-wrap">
+                        <span className="terminal-key-file-name opacity-60 truncate">
+                          {jumpPrivateKeyFileName || (sshJumpPrivateKey ? t('ssh.auth.keyLoaded') : t('ssh.auth.keyFilePlaceholder'))}
+                        </span>
+                        <input
+                          ref={jumpPrivateKeyInputRef}
+                          type="file"
+                          accept=".pem,.key,.ppk,text/plain"
+                          className="terminal-key-file-input"
+                          onChange={handleJumpPrivateKeyFileChange}
+                        />
+                        <button
+                          type="button"
+                          className="terminal-key-file-btn"
+                          onClick={() => jumpPrivateKeyInputRef.current?.click()}
+                        >
+                          {t('ssh.auth.browseKeyFile')}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
 
               <div className="terminal-row mt-2">
                 <label className="terminal-label">
@@ -2447,6 +2677,14 @@ export function NewSSHConnectionDialog({
   sshAutoCopyPassword = false, setSSHAutoCopyPassword = () => {},
   sshX11Forwarding = false, setSSHX11Forwarding = () => {},
   sshAgentForwarding = false, setSSHAgentForwarding = () => {},
+  sshProxyJumpEnabled = false, setSSHProxyJumpEnabled = () => {},
+  sshJumpHost = '', setSSHJumpHost = () => {},
+  sshJumpPort = 22, setSSHJumpPort = () => {},
+  sshJumpUser = '', setSSHJumpUser = () => {},
+  sshJumpAuthMethod = 'password', setSSHJumpAuthMethod = () => {},
+  sshJumpPassword = '', setSSHJumpPassword = () => {},
+  sshJumpPrivateKey = '', setSSHJumpPrivateKey = () => {},
+  sshHostKeyPolicy = 'warn_new', setSSHHostKeyPolicy = () => {},
   sshDescription = '', setSSHDescription = () => {},
   sshIcon = null, setSSHIcon = () => {},
   foldersOptions = [],
@@ -2540,6 +2778,22 @@ export function NewSSHConnectionDialog({
           setSSHX11Forwarding={setSSHX11Forwarding}
           sshAgentForwarding={sshAgentForwarding}
           setSSHAgentForwarding={setSSHAgentForwarding}
+          sshProxyJumpEnabled={sshProxyJumpEnabled}
+          setSSHProxyJumpEnabled={setSSHProxyJumpEnabled}
+          sshJumpHost={sshJumpHost}
+          setSSHJumpHost={setSSHJumpHost}
+          sshJumpPort={sshJumpPort}
+          setSSHJumpPort={setSSHJumpPort}
+          sshJumpUser={sshJumpUser}
+          setSSHJumpUser={setSSHJumpUser}
+          sshJumpAuthMethod={sshJumpAuthMethod}
+          setSSHJumpAuthMethod={setSSHJumpAuthMethod}
+          sshJumpPassword={sshJumpPassword}
+          setSSHJumpPassword={setSSHJumpPassword}
+          sshJumpPrivateKey={sshJumpPrivateKey}
+          setSSHJumpPrivateKey={setSSHJumpPrivateKey}
+          sshHostKeyPolicy={sshHostKeyPolicy}
+          setSSHHostKeyPolicy={setSSHHostKeyPolicy}
           sshDescription={sshDescription}
           setSSHDescription={setSSHDescription}
           foldersOptions={foldersOptions}

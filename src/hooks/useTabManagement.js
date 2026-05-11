@@ -197,7 +197,15 @@ export const useTabManagement = (toast, {
           bastionHost: session.bastionHost || matchedSidebarNode?.data?.bastionHost || '',
           bastionUser: session.bastionUser || matchedSidebarNode?.data?.bastionUser || '',
           x11Forwarding: matchedSidebarNode?.data?.x11Forwarding || false,
-          agentForwarding: matchedSidebarNode?.data?.agentForwarding || false
+          agentForwarding: matchedSidebarNode?.data?.agentForwarding || false,
+          proxyJumpEnabled: matchedSidebarNode?.data?.proxyJumpEnabled || false,
+          jumpHost: matchedSidebarNode?.data?.jumpHost || '',
+          jumpPort: matchedSidebarNode?.data?.jumpPort || 22,
+          jumpUser: matchedSidebarNode?.data?.jumpUser || '',
+          jumpAuthMethod: matchedSidebarNode?.data?.jumpAuthMethod || 'password',
+          jumpPassword: matchedSidebarNode?.data?.jumpPassword || '',
+          jumpPrivateKey: matchedSidebarNode?.data?.jumpPrivateKey || '',
+          hostKeyPolicy: matchedSidebarNode?.data?.hostKeyPolicy || 'warn_new'
         };
 
         const sshTab = {

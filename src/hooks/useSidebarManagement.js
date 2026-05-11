@@ -513,7 +513,15 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
               bastionHost: node.data.bastionHost || '',
               bastionUser: node.data.bastionUser || '',
               x11Forwarding: node.data.x11Forwarding || false,
-              agentForwarding: node.data.agentForwarding || false
+              agentForwarding: node.data.agentForwarding || false,
+              proxyJumpEnabled: node.data.proxyJumpEnabled || false,
+              jumpHost: node.data.jumpHost || '',
+              jumpPort: node.data.jumpPort || 22,
+              jumpUser: node.data.jumpUser || '',
+              jumpAuthMethod: node.data.jumpAuthMethod || 'password',
+              jumpPassword: node.data.jumpPassword || '',
+              jumpPrivateKey: node.data.jumpPrivateKey || '',
+              hostKeyPolicy: node.data.hostKeyPolicy || 'warn_new'
             };
             const newTab = {
               key: tabId,

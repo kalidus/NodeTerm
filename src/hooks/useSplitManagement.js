@@ -64,7 +64,15 @@ export const useSplitManagement = ({
       bastionHost: sshNode.data.bastionHost || '',
       bastionUser: sshNode.data.bastionUser || '',
       x11Forwarding: sshNode.data.x11Forwarding || false,
-      agentForwarding: sshNode.data.agentForwarding || false
+      agentForwarding: sshNode.data.agentForwarding || false,
+      proxyJumpEnabled: sshNode.data.proxyJumpEnabled || false,
+      jumpHost: sshNode.data.jumpHost || '',
+      jumpPort: sshNode.data.jumpPort || 22,
+      jumpUser: sshNode.data.jumpUser || '',
+      jumpAuthMethod: sshNode.data.jumpAuthMethod || 'password',
+      jumpPassword: sshNode.data.jumpPassword || '',
+      jumpPrivateKey: sshNode.data.jumpPrivateKey || '',
+      hostKeyPolicy: sshNode.data.hostKeyPolicy || 'warn_new'
     };
 
     const newTerminal = {

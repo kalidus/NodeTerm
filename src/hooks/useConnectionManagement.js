@@ -386,7 +386,15 @@ export const useConnectionManagement = ({
         targetServer: isSidebarNode ? (nodeOrConn.data.targetServer || '') : (nodeOrConn.targetServer || matchedSidebarNode?.data?.targetServer || ''),
         remoteFolder: isSidebarNode ? (nodeOrConn.data.remoteFolder || '') : (nodeOrConn.remoteFolder || matchedSidebarNode?.data?.remoteFolder || ''),
         x11Forwarding: isSidebarNode ? (nodeOrConn.data.x11Forwarding || false) : (nodeOrConn.x11Forwarding || matchedSidebarNode?.data?.x11Forwarding || false),
-        agentForwarding: isSidebarNode ? (nodeOrConn.data.agentForwarding || false) : (nodeOrConn.agentForwarding || matchedSidebarNode?.data?.agentForwarding || false)
+        agentForwarding: isSidebarNode ? (nodeOrConn.data.agentForwarding || false) : (nodeOrConn.agentForwarding || matchedSidebarNode?.data?.agentForwarding || false),
+        proxyJumpEnabled: isSidebarNode ? (nodeOrConn.data.proxyJumpEnabled || false) : (nodeOrConn.proxyJumpEnabled || matchedSidebarNode?.data?.proxyJumpEnabled || false),
+        jumpHost: isSidebarNode ? (nodeOrConn.data.jumpHost || '') : (nodeOrConn.jumpHost || matchedSidebarNode?.data?.jumpHost || ''),
+        jumpPort: isSidebarNode ? (nodeOrConn.data.jumpPort || 22) : (nodeOrConn.jumpPort || matchedSidebarNode?.data?.jumpPort || 22),
+        jumpUser: isSidebarNode ? (nodeOrConn.data.jumpUser || '') : (nodeOrConn.jumpUser || matchedSidebarNode?.data?.jumpUser || ''),
+        jumpAuthMethod: isSidebarNode ? (nodeOrConn.data.jumpAuthMethod || 'password') : (nodeOrConn.jumpAuthMethod || matchedSidebarNode?.data?.jumpAuthMethod || 'password'),
+        jumpPassword: isSidebarNode ? (nodeOrConn.data.jumpPassword || '') : (nodeOrConn.jumpPassword || matchedSidebarNode?.data?.jumpPassword || ''),
+        jumpPrivateKey: isSidebarNode ? (nodeOrConn.data.jumpPrivateKey || '') : (nodeOrConn.jumpPrivateKey || matchedSidebarNode?.data?.jumpPrivateKey || ''),
+        hostKeyPolicy: isSidebarNode ? (nodeOrConn.data.hostKeyPolicy || 'warn_new') : (nodeOrConn.hostKeyPolicy || matchedSidebarNode?.data?.hostKeyPolicy || 'warn_new')
       };
       const newTab = {
         key: tabId,

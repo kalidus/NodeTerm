@@ -84,16 +84,50 @@ function setupX11ForwardingListener(ssh2Client) {
   });
 }
 
+function normalizeHostKeyPolicy(policy) {
+  if (policy === 'strict' || policy === 'known_hosts' || policy === 'warn_new') {
+    return policy;
+  }
+  return 'warn_new';
+}
+
+function isProxyJumpEnabled(config) {
+  return !!(config && config.proxyJumpEnabled && config.jumpHost && config.jumpUser && !isWallixBastion(config));
+}
+
+function applyHostKeyPolicy(connectConfig, host, port, config, context = {}) {
+  if (isWallixBastion(config)) {
+    return connectConfig;
+  }
+
+  const { knownHostsService, notify } = context;
+  if (!knownHostsService || typeof knownHostsService.createHostVerifier !== 'function') {
+    return connectConfig;
+  }
+
+  const policy = normalizeHostKeyPolicy(config.hostKeyPolicy);
+  return {
+    ...connectConfig,
+    hostHash: 'sha256',
+    hostVerifier: knownHostsService.createHostVerifier(
+      host,
+      port || 22,
+      policy,
+      typeof notify === 'function' ? notify : () => {}
+    )
+  };
+}
+
 function buildSshConnectOptions(config, options = {}) {
-  const { includePassword = false, interactive = false } = options;
+  const { includePassword = false, interactive = false, knownHostsService, notify } = options;
   const forwarding = getEffectiveForwarding(config);
   const agentPath = resolveSshAgentPath();
 
-  const connectConfig = {
+  const connectConfig = applyHostKeyPolicy({
     host: config.host,
     username: config.username,
     port: config.port || 22
-  };
+  }, config.host, config.port || 22, config, { knownHostsService, notify });
 
   if (interactive) {
     connectConfig.tryKeyboard = true;
@@ -157,15 +191,29 @@ function buildShellOptions(config, overrides = {}) {
 }
 
 function appendForwardingFlagsToCacheKey(cacheKey, config) {
+  let nextKey = cacheKey;
   const forwarding = getRequestedForwarding(config);
-  if (!forwarding.requested) {
-    return cacheKey;
+  if (forwarding.requested) {
+    const parts = [];
+    if (forwarding.x11) parts.push('x11');
+    if (forwarding.agent) parts.push('agent');
+    nextKey = `${nextKey}|fwd:${parts.join('+')}`;
   }
 
-  const parts = [];
-  if (forwarding.x11) parts.push('x11');
-  if (forwarding.agent) parts.push('agent');
-  return `${cacheKey}|fwd:${parts.join('+')}`;
+  if (isProxyJumpEnabled(config)) {
+    nextKey = `${nextKey}|jump:${config.jumpUser}@${config.jumpHost}:${config.jumpPort || 22}`;
+  }
+
+  const policy = normalizeHostKeyPolicy(config.hostKeyPolicy);
+  if (!isWallixBastion(config) && policy !== 'warn_new') {
+    nextKey = `${nextKey}|hostkey:${policy}`;
+  }
+
+  return nextKey;
+}
+
+function requiresDedicatedSshSession(config) {
+  return getEffectiveForwarding(config).requested || isProxyJumpEnabled(config);
 }
 
 function getBastionForwardingWarning(config) {
@@ -183,6 +231,9 @@ function getBastionForwardingWarning(config) {
 
 module.exports = {
   isWallixBastion,
+  normalizeHostKeyPolicy,
+  isProxyJumpEnabled,
+  applyHostKeyPolicy,
   getRequestedForwarding,
   getEffectiveForwarding,
   resolveSshAgentPath,
@@ -191,5 +242,6 @@ module.exports = {
   buildSshConnectOptions,
   buildShellOptions,
   appendForwardingFlagsToCacheKey,
+  requiresDedicatedSshSession,
   getBastionForwardingWarning
 };

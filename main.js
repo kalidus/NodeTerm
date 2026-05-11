@@ -85,8 +85,13 @@ const {
   buildSshConnectOptions,
   buildShellOptions,
   appendForwardingFlagsToCacheKey,
-  getBastionForwardingWarning
+  getBastionForwardingWarning,
+  isProxyJumpEnabled,
+  requiresDedicatedSshSession,
+  applyHostKeyPolicy
 } = require('./src/utils/sshConnectOptions');
+const sshKnownHostsService = require('./src/main/services/SSHKnownHostsService');
+const { connectViaProxyJump } = require('./src/main/services/SSHProxyJumpService');
 
 // Servicio de limpieza de conexiones SSH
 const sshCleanupService = require('./src/main/services/SSHConnectionCleanupService');
@@ -1490,6 +1495,7 @@ ipcMain.handle('cygwin:install', async () => {
 
 app.on('ready', () => {
   logTiming('app ready event');
+  sshKnownHostsService.setUserDataPath(app.getPath('userData'));
   createWindow();
 });
 
@@ -1772,21 +1778,30 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     });
     return;
   } else {
-    // SSH DIRECTO: pooling normal salvo cuando hay forwarding activo
-    const directConnect = buildSshConnectOptions(config);
+    // SSH DIRECTO: pooling normal salvo cuando hay forwarding o ProxyJump activos
+    const connectHelpers = {
+      notify: (message) => sendToRenderer(event.sender, `ssh:data:${tabId}`, message),
+      connectOptionsContext: {
+        knownHostsService: sshKnownHostsService,
+        notify: (message) => sendToRenderer(event.sender, `ssh:data:${tabId}`, message)
+      },
+      applyHostKey: (connectConfig, host, port, sessionConfig) => applyHostKeyPolicy(
+        connectConfig,
+        host,
+        port,
+        sessionConfig,
+        {
+          knownHostsService: sshKnownHostsService,
+          notify: (message) => sendToRenderer(event.sender, `ssh:data:${tabId}`, message)
+        }
+      )
+    };
+    const directConnect = buildSshConnectOptions(config, connectHelpers.connectOptionsContext);
 
-    if (directConnect.forwarding.requested) {
-      if (directConnect.agentForwardingRequestedButUnavailable) {
-        sendToRenderer(
-          event.sender,
-          `ssh:data:${tabId}`,
-          '[WARN] Agent Forwarding activo pero no se encontro un agente SSH local.\r\n'
-        );
-      }
-
-      const ssh2Client = new (getSSH2Client())();
+    const beginDedicatedSshSession = (ssh2Client, jumpClient = null) => {
       sshConnections[tabId] = {
         ssh: ssh2Client,
+        jumpClient,
         stream: null,
         config,
         cacheKey,
@@ -1829,7 +1844,51 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
           'Por favor, introduce el password'
         );
       }
+    };
 
+    if (isProxyJumpEnabled(config)) {
+      sendToRenderer(
+        event.sender,
+        `ssh:data:${tabId}`,
+        `Connecting via jump ${config.jumpUser}@${config.jumpHost}:${config.jumpPort || 22}...\r\n`
+      );
+
+      try {
+        const { jumpClient, targetClient } = await connectViaProxyJump({
+          config,
+          Client: getSSH2Client(),
+          buildSshConnectOptions: (sessionConfig) => buildSshConnectOptions(
+            sessionConfig,
+            connectHelpers.connectOptionsContext
+          ),
+          applyHostKeyPolicy: connectHelpers.applyHostKey
+        });
+
+        beginDedicatedSshSession(targetClient, jumpClient);
+        return;
+      } catch (jumpError) {
+        const jumpMessage = jumpError?.message || jumpError || 'Error desconocido en ProxyJump';
+        sendToRenderer(event.sender, `ssh:error:${tabId}`, jumpMessage);
+        sendToRenderer(event.sender, 'ssh-connection-error', {
+          originalKey: config.originalKey || tabId,
+          tabId,
+          error: jumpMessage
+        });
+        return;
+      }
+    }
+
+    if (requiresDedicatedSshSession(config)) {
+      if (directConnect.agentForwardingRequestedButUnavailable) {
+        sendToRenderer(
+          event.sender,
+          `ssh:data:${tabId}`,
+          '[WARN] Agent Forwarding activo pero no se encontro un agente SSH local.\r\n'
+        );
+      }
+
+      const ssh2Client = new (getSSH2Client())();
+      beginDedicatedSshSession(ssh2Client);
       ssh2Client.connect(directConnect.connectConfig);
       return;
     }
@@ -2158,7 +2217,10 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         // ✅ REFACTORIZADO: Crear configuración SSH con SSHAuthService
         // NO incluir password si falló antes - forzar autenticación interactiva
         const includePassword = config.password && config.password.trim() && !isAuthError;
-        const connectConfig = sshAuthService.createInteractiveSSHConfig(config, includePassword);
+        const connectConfig = sshAuthService.createInteractiveSSHConfig(config, includePassword, {
+          knownHostsService: sshKnownHostsService,
+          notify: (message) => sendToRenderer(event.sender, `ssh:data:${tabId}`, message)
+        });
 
         // Si no hay password configurado, activar modo manual inmediatamente
         if (!config.password || !config.password.trim()) {
@@ -2345,7 +2407,11 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
           password // Pasar password capturado manualmente
         );
 
-        const reconnectOptions = buildSshConnectOptions(newConfig, { includePassword: true });
+        const reconnectOptions = buildSshConnectOptions(newConfig, {
+          includePassword: true,
+          knownHostsService: sshKnownHostsService,
+          notify: (message) => sendToRenderer(event.sender, `ssh:data:${tabId}`, message)
+        });
         ssh2Client.connect(reconnectOptions.connectConfig);
       }
     }
