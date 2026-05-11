@@ -56,6 +56,8 @@
     "deleted": "Deleted successfully",
     "copied": "Copied to clipboard",
     "noData": "No data available",
+    "favoritesEmpty": "No favorites yet. Star connections from the sidebar, home tab, or title bar.",
+    "favoritesFilteredEmpty": "No favorites match the current search.",
     "confirmDelete": "Are you sure you want to delete this item?",
     "unsavedChanges": "You have unsaved changes. Do you want to discard them?"
   },
@@ -88,6 +90,8 @@
     "appMenu": "Application menu",
     "newConnection": "New connection",
     "createFolder": "Create folder",
+    "showFavorites": "Show favorites",
+    "showAllConnections": "Show all connections",
     "passwordManager": "Password manager",
     "mcpExplorer": "MCP Explorer",
     "newPassword": "New password",

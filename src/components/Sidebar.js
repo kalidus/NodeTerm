@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Button } from 'primereact/button';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { Tree } from 'primereact/tree';
@@ -19,7 +19,21 @@ import ConnectionDetailsPanel from './ConnectionDetailsPanel';
 import { unblockAllInputs, detectBlockedInputs, resolveFormBlocking, emergencyUnblockForms } from '../utils/formDebugger';
 import ImportService from '../services/ImportService';
 import localStorageSyncService from '../services/LocalStorageSyncService';
-import { toggleFavorite as toggleFavoriteConn, helpers as connHelpers, isFavorite as isFavoriteConn } from '../utils/connectionStore';
+import { getFavorites, onUpdate as onFavoritesUpdate } from '../utils/connectionStore';
+import favoriteGroupsStore from '../utils/favoriteGroupsStore';
+import {
+  FAVORITES_ROOT_KEY,
+  buildFavoritesSidebarTree,
+  countFavoriteShortcuts,
+  filterFavoritesTree,
+  getDefaultFavoritesExpandedKeys,
+  getFavoriteGroupIdFromKey,
+  isFavoriteGroupFolderKey,
+  isFavoriteGroupFolderNode,
+  isFavoriteShortcutNode,
+  isFavoritesRootKey,
+  resolveFavoriteShortcutNode
+} from '../utils/favoritesSidebarTree';
 import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
 import { STORAGE_KEYS } from '../utils/constants';
 import { treeThemes, treeThemeOptions, getTreeTheme } from '../themes/tree-themes';
@@ -156,6 +170,8 @@ const Sidebar = React.memo(({
 
   // Estado para modo de visualización (conexiones, passwords, filesystem, localExplorer)
   const [viewMode, setViewMode] = useState('connections'); // 'connections' | 'passwords' | 'filesystem' | 'localExplorer'
+  const [showFavoritesView, setShowFavoritesView] = useState(false);
+  const [favoritesRevision, setFavoritesRevision] = useState(0);
 
   // Estado para el nodo seleccionado actualmente (para el panel de detalles)
   const [selectedNodeForDetails, setSelectedNodeForDetails] = useState(null);
@@ -1080,6 +1096,64 @@ const Sidebar = React.memo(({
     }
     return null;
   };
+
+  const bumpFavoritesRevision = useCallback(() => {
+    setFavoritesRevision((prev) => prev + 1);
+  }, []);
+
+  const favoritesTree = useMemo(() => buildFavoritesSidebarTree({
+    nodes,
+    favorites: getFavorites(),
+    groups: favoriteGroupsStore.getGroups(),
+    getFavoriteGroups: favoriteGroupsStore.getFavoriteGroups
+  }), [nodes, favoritesRevision]);
+
+  const filteredFavoritesTree = useMemo(
+    () => filterFavoritesTree(favoritesTree, sidebarFilter),
+    [favoritesTree, sidebarFilter]
+  );
+
+  const displayNodes = showFavoritesView && viewMode === 'connections'
+    ? filteredFavoritesTree
+    : nodes;
+
+  const totalFavoriteShortcutCount = useMemo(
+    () => countFavoriteShortcuts(favoritesTree),
+    [favoritesTree]
+  );
+
+  const visibleFavoriteShortcutCount = useMemo(
+    () => countFavoriteShortcuts(filteredFavoritesTree),
+    [filteredFavoritesTree]
+  );
+
+  const hasRenderableTreeNodes = showFavoritesView && viewMode === 'connections'
+    ? visibleFavoriteShortcutCount > 0
+    : displayNodes.length > 0;
+
+  useEffect(() => {
+    const unsubscribeFavorites = onFavoritesUpdate(() => bumpFavoritesRevision());
+    const unsubscribeGroups = favoriteGroupsStore.onGroupsUpdate(() => bumpFavoritesRevision());
+    return () => {
+      unsubscribeFavorites();
+      unsubscribeGroups();
+    };
+  }, [bumpFavoritesRevision]);
+
+  useEffect(() => {
+    if (!showFavoritesView || viewMode !== 'connections') return;
+    setExpandedKeys((prev) => ({
+      ...(prev || {}),
+      ...getDefaultFavoritesExpandedKeys(favoritesTree)
+    }));
+  }, [showFavoritesView, viewMode, favoritesTree]);
+
+  const toggleFavoritesView = useCallback(() => {
+    setViewMode('connections');
+    setShowFavoritesView((prev) => !prev);
+    setSidebarCollapsed(false);
+  }, [setSidebarCollapsed]);
+
   // Función para obtener todas las carpetas (fallback si no viene como prop)
   const getAllFoldersFallback = (nodes, prefix = '') => {
     let folders = [];
@@ -1463,6 +1537,56 @@ const Sidebar = React.memo(({
       return;
     }
 
+    if (showFavoritesView && viewMode === 'connections') {
+      try {
+        if (editingNode && isFavoriteGroupFolderNode(editingNode)) {
+          favoriteGroupsStore.updateGroup(editingNode.favoriteGroupId, {
+            name: folderName.trim(),
+            color: folderColor,
+            icon: 'pi-folder'
+          });
+          showToast && showToast({
+            severity: 'success',
+            summary: 'Éxito',
+            detail: `Carpeta "${folderName}" actualizada`,
+            life: 3000
+          });
+        } else {
+          favoriteGroupsStore.createGroup({
+            name: folderName.trim(),
+            color: folderColor,
+            icon: 'pi-folder'
+          });
+          showToast && showToast({
+            severity: 'success',
+            summary: 'Éxito',
+            detail: `Carpeta "${folderName}" creada en Favoritos`,
+            life: 3000
+          });
+        }
+        bumpFavoritesRevision();
+      } catch (error) {
+        showToast && showToast({
+          severity: 'error',
+          summary: 'Error',
+          detail: error?.message || 'No se pudo crear la carpeta de favoritos',
+          life: 3000
+        });
+        return;
+      }
+
+      setShowFolderDialog(false);
+      setFolderName('');
+      setFolderColor(getThemeDefaultColor(iconTheme?.toLowerCase() || 'nord'));
+      setFolderIcon(null);
+      setParentNodeKey(null);
+      setEditingNode(null);
+      setTimeout(() => {
+        try { unblockAllInputs(); } catch { }
+      }, 0);
+      return;
+    }
+
     const nodesCopy = deepCopy(nodes);
 
     if (editingNode) {
@@ -1539,8 +1663,45 @@ const Sidebar = React.memo(({
       return node;
     });
   }
+  const onFavoritesDragDrop = (event) => {
+    const { dragNode, dropNode, dropPoint } = event || {};
+    if (!isFavoriteShortcutNode(dragNode) || !dropNode || dropPoint !== 0 || !dropNode.droppable) {
+      return;
+    }
+
+    const favoriteId = dragNode.favoriteId;
+    if (!favoriteId) return;
+
+    if (isFavoritesRootKey(dropNode.key)) {
+      favoriteGroupsStore.assignFavoriteToGroups(favoriteId, []);
+      bumpFavoritesRevision();
+      return;
+    }
+
+    if (isFavoriteGroupFolderKey(dropNode.key)) {
+      const targetGroupId = getFavoriteGroupIdFromKey(dropNode.key);
+      if (!targetGroupId) return;
+
+      const currentGroups = favoriteGroupsStore.getFavoriteGroups(favoriteId)
+        .filter((groupId) => groupId !== 'all');
+
+      if (!currentGroups.includes(targetGroupId)) {
+        favoriteGroupsStore.addFavoriteToGroup(favoriteId, targetGroupId);
+      } else {
+        favoriteGroupsStore.assignFavoriteToGroups(favoriteId, [targetGroupId]);
+      }
+
+      bumpFavoritesRevision();
+    }
+  };
+
   // Drag and drop robusto para mover entre raíz/carpetas sin mutar estado previo.
   const onDragDrop = (event) => {
+    if (showFavoritesView && viewMode === 'connections') {
+      onFavoritesDragDrop(event);
+      return;
+    }
+
     const { dragNode, dropNode, dropPoint, value } = event || {};
     if (!dragNode || !dropNode) {
       if (Array.isArray(value)) setNodes(value);
@@ -1763,7 +1924,16 @@ const Sidebar = React.memo(({
       sidebarCallbacksRef.current = {
         ...sidebarCallbacksRef.current,
         createFolder: (parentKey) => {
+          if (isFavoritesRootKey(parentKey) || isFavoriteGroupFolderKey(parentKey)) {
+            setViewMode('connections');
+            setShowFavoritesView(true);
+            setParentNodeKey(FAVORITES_ROOT_KEY);
+            setEditingNode(null);
+            setShowFolderDialog(true);
+            return;
+          }
           setParentNodeKey(parentKey);
+          setEditingNode(null);
           setShowFolderDialog(true);
         },
 
@@ -2004,6 +2174,18 @@ const Sidebar = React.memo(({
         },
 
         editFolder: (node) => {
+          if (isFavoriteGroupFolderNode(node)) {
+            setViewMode('connections');
+            setShowFavoritesView(true);
+            setParentNodeKey(FAVORITES_ROOT_KEY);
+            setEditingNode(node);
+            setFolderName(node.label);
+            setFolderColor(node.color || getThemeDefaultColor(iconTheme?.toLowerCase() || 'nord'));
+            setFolderIcon(node.folderIcon || null);
+            setShowFolderDialog(true);
+            return;
+          }
+
           // Cargar datos de la carpeta para editar
           setFolderName(node.label);
           setFolderColor(node.color || '#5e81ac');
@@ -2029,6 +2211,47 @@ const Sidebar = React.memo(({
           setShowFolderDialog(true);
         },
         deleteNode: (nodeKey, nodeLabel) => {
+          if (isFavoritesRootKey(nodeKey)) {
+            return;
+          }
+
+          if (isFavoriteGroupFolderKey(nodeKey)) {
+            const groupId = getFavoriteGroupIdFromKey(nodeKey);
+            const executeFavoriteGroupDeletion = () => {
+              try {
+                favoriteGroupsStore.deleteGroup(groupId);
+                bumpFavoritesRevision();
+                showToast && showToast({
+                  severity: 'success',
+                  summary: 'Eliminado',
+                  detail: `"${nodeLabel}" ha sido eliminado`,
+                  life: 3000
+                });
+                if (hideContextMenu) hideContextMenu();
+              } catch (error) {
+                showToast && showToast({
+                  severity: 'error',
+                  summary: 'Error',
+                  detail: error?.message || `Error al eliminar "${nodeLabel}"`,
+                  life: 5000
+                });
+              }
+            };
+
+            const dialogToUse = confirmDialog || window.confirmDialog;
+            if (dialogToUse) {
+              dialogToUse({
+                message: `¿Eliminar la carpeta de favoritos "${nodeLabel}"?`,
+                header: 'Confirmar eliminación',
+                icon: 'pi pi-exclamation-triangle',
+                acceptClassName: 'p-button-danger',
+                accept: executeFavoriteGroupDeletion
+              });
+            } else if (window.confirm(`¿Eliminar la carpeta de favoritos "${nodeLabel}"?`)) {
+              executeFavoriteGroupDeletion();
+            }
+            return;
+          }
 
           // Buscar el nodo para determinar si tiene hijos
           const findNodeByKey = (nodes, targetKey) => {
@@ -2143,14 +2366,15 @@ const Sidebar = React.memo(({
   // };
   // nodeTemplate adaptado de App.js
   const nodeTemplate = (node, options) => {
+    const actionNode = isFavoriteShortcutNode(node) ? resolveFavoriteShortcutNode(node, nodes) : node;
     const hasChildren = Array.isArray(node.children) && node.children.length > 0;
     const isFolder = !!(node.droppable || hasChildren);
-    const isSSH = node.data && node.data.type === 'ssh';
-    const isRDP = node.data && node.data.type === 'rdp';
-    const isVNC = node.data && (node.data.type === 'vnc' || node.data.type === 'vnc-guacamole');
-    const isFileConnection = node.data && (node.data.type === 'sftp' || node.data.type === 'ftp' || node.data.type === 'scp');
-    const isPassword = node.data && node.data.type === 'password';
-    const isSSHTunnel = node.data && node.data.type === 'ssh-tunnel';
+    const isSSH = actionNode.data && actionNode.data.type === 'ssh';
+    const isRDP = actionNode.data && actionNode.data.type === 'rdp';
+    const isVNC = actionNode.data && (actionNode.data.type === 'vnc' || actionNode.data.type === 'vnc-guacamole');
+    const isFileConnection = actionNode.data && (actionNode.data.type === 'sftp' || actionNode.data.type === 'ftp' || actionNode.data.type === 'scp');
+    const isPassword = actionNode.data && actionNode.data.type === 'password';
+    const isSSHTunnel = actionNode.data && actionNode.data.type === 'ssh-tunnel';
     // Icono según tema seleccionado para la sidebar
     let icon = null;
     const themeKey = (iconTheme || 'nord').toLowerCase();
@@ -2304,19 +2528,25 @@ const Sidebar = React.memo(({
     return (
       <div className="flex align-items-center gap-1"
         onClick={handleFolderRowClick}
-        onContextMenu={options.onNodeContextMenu ? (e) => options.onNodeContextMenu(e, node) : undefined}
+        onContextMenu={options.onNodeContextMenu ? (e) => {
+          if (isFavoritesRootKey(node.key) || isFavoriteGroupFolderNode(node)) {
+            options.onNodeContextMenu(e, node);
+            return;
+          }
+          options.onNodeContextMenu(e, resolveFavoriteShortcutNode(node, nodes));
+        } : undefined}
         onDoubleClick={(e) => {
           e.stopPropagation();
           if (isSSH && onOpenSSHConnection) {
-            onOpenSSHConnection(node, nodes);
+            onOpenSSHConnection(actionNode, nodes);
           } else if (isRDP && sidebarCallbacksRef?.current?.connectRDP) {
-            sidebarCallbacksRef.current.connectRDP(node);
+            sidebarCallbacksRef.current.connectRDP(actionNode);
           } else if (isVNC && onOpenVncConnection) {
-            onOpenVncConnection(node, nodes);
+            onOpenVncConnection(actionNode, nodes);
           } else if (isFileConnection && sidebarCallbacksRef?.current?.openFileConnection) {
-            sidebarCallbacksRef.current.openFileConnection(node, nodes);
+            sidebarCallbacksRef.current.openFileConnection(actionNode, nodes);
           } else if (isSSHTunnel && sidebarCallbacksRef?.current?.openSSHTunnel) {
-            sidebarCallbacksRef.current.openSSHTunnel(node, nodes);
+            sidebarCallbacksRef.current.openSSHTunnel(actionNode, nodes);
           }
         }}
         style={{
@@ -2621,7 +2851,15 @@ const Sidebar = React.memo(({
               </Button>
               <Button
                 className="p-button-rounded p-button-text sidebar-action-button glass-button"
-                onClick={() => setShowFolderDialog(true)}
+                onClick={() => {
+                  if (showFavoritesView && viewMode === 'connections') {
+                    setParentNodeKey(FAVORITES_ROOT_KEY);
+                  } else {
+                    setParentNodeKey(null);
+                  }
+                  setEditingNode(null);
+                  setShowFolderDialog(true);
+                }}
                 tooltip={t('tooltips.createFolder')}
                 tooltipOptions={{ position: 'bottom' }}
                 style={{
@@ -2677,6 +2915,36 @@ const Sidebar = React.memo(({
                   color: 'var(--ui-sidebar-text)'
                 }}>
                   {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newGroup}
+                </span>
+              </Button>
+              <Button
+                className={`p-button-rounded p-button-text sidebar-action-button glass-button ${showFavoritesView ? 'active' : ''}`}
+                onClick={toggleFavoritesView}
+                tooltip={showFavoritesView ? t('tooltips.showAllConnections') : t('tooltips.showFavorites')}
+                tooltipOptions={{ position: 'bottom' }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '32px',
+                  height: '32px',
+                  padding: 0,
+                  background: showFavoritesView ? 'rgba(255, 193, 7, 0.12)' : 'rgba(255, 255, 255, 0.05)',
+                  border: showFavoritesView ? '1px solid rgba(255, 193, 7, 0.45)' : '1px solid rgba(255, 255, 255, 0.1)',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                  borderRadius: '8px',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <span style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '20px',
+                  height: '20px',
+                  color: '#ffc107'
+                }}>
+                  <i className={showFavoritesView ? 'pi pi-star-fill' : 'pi pi-star'} style={{ fontSize: '1rem' }} />
                 </span>
               </Button>
 
@@ -2814,14 +3082,22 @@ const Sidebar = React.memo(({
             onDragLeave={handleTreeContainerDragLeave}
             onDrop={stopTreeDragAutoScroll}
           >
-            {nodes.length === 0 ? (
+            {!hasRenderableTreeNodes ? (
               <div className="empty-tree-message" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
-                No hay elementos en el árbol.<br />Usa el botón "+" para crear una carpeta o conexión.
+                {showFavoritesView
+                  ? (totalFavoriteShortcutCount === 0
+                    ? t('messages.favoritesEmpty')
+                    : t('messages.favoritesFilteredEmpty'))
+                  : (
+                    <>
+                      No hay elementos en el árbol.<br />Usa el botón &quot;+&quot; para crear una carpeta o conexión.
+                    </>
+                  )}
               </div>
             ) : (
               <Tree
-                key={`tree-${iconTheme}-${explorerFontSize}-${treeTheme}-${explorerFontColor || 'default'}-${folderIconSize}-${iconSize}`} // Forzar re-render cuando cambie el tema o el tamaño de iconos
-                value={nodes}
+                key={`tree-${iconTheme}-${explorerFontSize}-${treeTheme}-${explorerFontColor || 'default'}-${folderIconSize}-${iconSize}-${showFavoritesView ? 'favorites' : 'all'}`} // Forzar re-render cuando cambie el tema o el tamaño de iconos
+                value={displayNodes}
                 selectionMode="single"
                 selectionKeys={selectedNodeKey}
                 onSelectionChange={e => {
@@ -2847,8 +3123,8 @@ const Sidebar = React.memo(({
                     selectedKey = Object.keys(e.value)[0];
                   }
 
-                  const node = selectedKey ? findNode(nodes, selectedKey) : null;
-                  setSelectedNodeForDetails(node);
+                  const node = selectedKey ? findNode(displayNodes, selectedKey) : null;
+                  setSelectedNodeForDetails(node ? resolveFavoriteShortcutNode(node, nodes) : null);
                 }}
                 expandedKeys={expandedKeys}
                 onToggle={e => setExpandedKeys(e.value)}
@@ -3059,6 +3335,7 @@ const Sidebar = React.memo(({
                 className="p-button-rounded p-button-text sidebar-action-button glass-button"
                 onClick={() => {
                   setViewMode('connections');
+                  setShowFavoritesView(false);
                   setSidebarCollapsed(false);
                 }}
                 tooltip={t('tooltips.connections')}
@@ -3087,6 +3364,38 @@ const Sidebar = React.memo(({
                   color: '#2196f3'
                 }}>
                   {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newConnection}
+                </span>
+              </Button>
+
+              <Button
+                className={`p-button-rounded p-button-text sidebar-action-button glass-button ${showFavoritesView ? 'active' : ''}`}
+                onClick={toggleFavoritesView}
+                tooltip={showFavoritesView ? t('tooltips.showAllConnections') : t('tooltips.showFavorites')}
+                tooltipOptions={{ position: 'right' }}
+                style={{
+                  margin: 0,
+                  width: collapsedIconSize,
+                  height: collapsedIconSize,
+                  minWidth: collapsedIconSize,
+                  minHeight: collapsedIconSize,
+                  border: showFavoritesView ? '1px solid rgba(255, 193, 7, 0.45)' : 'none',
+                  display: 'flex !important',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  visibility: 'visible !important',
+                  opacity: '1 !important',
+                  padding: 0
+                }}
+              >
+                <span style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
+                  height: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
+                  color: '#ffc107'
+                }}>
+                  <i className={showFavoritesView ? 'pi pi-star-fill' : 'pi pi-star'} style={{ fontSize: '1rem' }} />
                 </span>
               </Button>
 

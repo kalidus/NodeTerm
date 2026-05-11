@@ -56,6 +56,8 @@
     "deleted": "Eliminado correctamente",
     "copied": "Copiado al portapapeles",
     "noData": "No hay datos",
+    "favoritesEmpty": "No hay favoritos todavía. Marca conexiones desde la sidebar, la home tab o la barra superior.",
+    "favoritesFilteredEmpty": "No hay favoritos que coincidan con la búsqueda actual.",
     "confirmDelete": "¿Estás seguro de que deseas eliminar este elemento?",
     "unsavedChanges": "Tienes cambios sin guardar. ¿Deseas descartarlos?"
   },
@@ -88,6 +90,8 @@
     "appMenu": "Menú de la aplicación",
     "newConnection": "Nueva conexión",
     "createFolder": "Crear carpeta",
+    "showFavorites": "Mostrar favoritos",
+    "showAllConnections": "Mostrar todas las conexiones",
     "passwordManager": "Gestor de passwords",
     "mcpExplorer": "Explorador MCP",
     "newPassword": "Nuevo password",
