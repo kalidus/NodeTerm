@@ -20,7 +20,7 @@ export const useFormHandlers = ({
   setShowProtocolSelectionDialog,
 
   // Estados de formularios SSH
-  sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder, setSSHTargetFolder, sshAutoCopyPassword, sshDescription, sshAuthMethod, sshPrivateKey,
+  sshName, sshHost, sshUser, sshPassword, sshRemoteFolder, sshPort, sshTargetFolder, setSSHTargetFolder, sshAutoCopyPassword, sshDescription, sshIcon, sshAuthMethod, sshPrivateKey,
   closeSSHDialogWithReset,
   
   // Estados de formularios Edit SSH  
@@ -241,7 +241,8 @@ export const useFormHandlers = ({
         // Opción de copiar password automáticamente
         autoCopyPassword: sshAutoCopyPassword || false,
         // Descripción de la conexión
-        description: sshDescription || ''
+        description: sshDescription || '',
+        customIcon: sshIcon && sshIcon !== 'default' ? sshIcon : null
       },
       draggable: true,
       droppable: false, // Las sesiones SSH NO pueden contener otros elementos
@@ -272,7 +273,7 @@ export const useFormHandlers = ({
       detail: `Conexión SSH "${sshName}" añadida al árbol`,
       life: 3000
     });
-  }, [sshName, sshHost, sshUser, sshPassword, sshPrivateKey, sshAuthMethod, sshRemoteFolder, sshPort, sshTargetFolder, sshAutoCopyPassword, sshDescription, nodes, setNodes, findNodeByKey, deepCopy, generateUniqueKey, parseWallixUser, setShowUnifiedConnectionDialog, toast]);
+  }, [sshName, sshHost, sshUser, sshPassword, sshPrivateKey, sshAuthMethod, sshRemoteFolder, sshPort, sshTargetFolder, sshAutoCopyPassword, sshDescription, sshIcon, nodes, setNodes, findNodeByKey, deepCopy, generateUniqueKey, parseWallixUser, setShowUnifiedConnectionDialog, toast]);
 
   /**
    * Crear nueva conexión RDP

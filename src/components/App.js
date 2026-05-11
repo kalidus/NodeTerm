@@ -1471,6 +1471,7 @@ const App = () => {
     sshTargetFolder, setSSHTargetFolder,
     sshAutoCopyPassword, setSSHAutoCopyPassword,
     sshDescription, setSSHDescription,
+    sshIcon, setSSHIcon,
     sshAuthMethod, setSSHAuthMethod,
     sshPrivateKey, setSSHPrivateKey,
     // Estados de formularios Edit SSH
@@ -1636,6 +1637,7 @@ const App = () => {
     sshPort, setSSHPort, sshTargetFolder, setSSHTargetFolder,
     sshAutoCopyPassword, setSSHAutoCopyPassword,
     sshDescription,
+    sshIcon,
     sshAuthMethod, sshPrivateKey,
     closeSSHDialogWithReset,
     // Estados SSH para edición
@@ -3223,6 +3225,8 @@ const App = () => {
           setSSHAutoCopyPassword={setSSHAutoCopyPassword}
           sshDescription={sshDescription}
           setSSHDescription={setSSHDescription}
+          sshIcon={sshIcon}
+          setSSHIcon={setSSHIcon}
           sshAuthMethod={sshAuthMethod}
           setSSHAuthMethod={setSSHAuthMethod}
           sshPrivateKey={sshPrivateKey}

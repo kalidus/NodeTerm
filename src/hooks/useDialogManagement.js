@@ -49,6 +49,7 @@ export const useDialogManagement = () => {
   const [sshTargetFolder, setSSHTargetFolder] = useState(null);
   const [sshAutoCopyPassword, setSSHAutoCopyPassword] = useState(false);
   const [sshDescription, setSSHDescription] = useState('');
+  const [sshIcon, setSSHIcon] = useState(null);
   const [sshAuthMethod, setSSHAuthMethod] = useState('password');
   const [sshPrivateKey, setSSHPrivateKey] = useState('');
 
@@ -125,6 +126,7 @@ export const useDialogManagement = () => {
     setSSHTargetFolder(null);
     setSSHAutoCopyPassword(false);
     setSSHDescription('');
+    setSSHIcon(null);
     setSSHAuthMethod('password');
     setSSHPrivateKey('');
   };
@@ -317,6 +319,7 @@ export const useDialogManagement = () => {
     sshTargetFolder, setSSHTargetFolder,
     sshAutoCopyPassword, setSSHAutoCopyPassword,
     sshDescription, setSSHDescription,
+    sshIcon, setSSHIcon,
     sshAuthMethod, setSSHAuthMethod,
     sshPrivateKey, setSSHPrivateKey,
 

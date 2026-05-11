@@ -17,6 +17,46 @@ import { SSHIconSelectorModal, SSHIconRenderer, SSHIconPresets } from './SSHIcon
 import { iconThemes } from '../themes/icon-themes';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 
+const resolveSSHIconPreset = (iconId) => {
+  if (!iconId || iconId === 'default') return null;
+  const normalizedId = String(iconId).toLowerCase();
+  const presetById = Object.values(SSHIconPresets).find((preset) => preset.id === normalizedId);
+  if (presetById) return presetById;
+  return SSHIconPresets[String(iconId).toUpperCase()] || null;
+};
+
+const SSH_DIALOG_HEADER_ICON_SIZE = 24;
+
+const renderSSHDialogHeaderIconContent = (iconPreset, themeIcon, size = SSH_DIALOG_HEADER_ICON_SIZE) => {
+  if (iconPreset) {
+    return <SSHIconRenderer preset={iconPreset} pixelSize={size} />;
+  }
+
+  if (React.isValidElement(themeIcon)) {
+    return (
+      <div className="terminal-header-icon-mini" aria-hidden="true">
+        {React.cloneElement(themeIcon, {
+          width: size,
+          height: size,
+          style: {
+            ...(themeIcon.props?.style || {}),
+            width: `${size}px`,
+            height: `${size}px`,
+            display: 'block',
+            flexShrink: 0,
+          },
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <div className="terminal-header-icon-mini" aria-hidden="true">
+      <i className="pi pi-desktop"></i>
+    </div>
+  );
+};
+
 // --- SSHDialog: para crear o editar conexiones SSH ---
 export function SSHDialog({
   visible,
@@ -595,14 +635,7 @@ export function EditSSHConnectionDialog({
   // Estado para el modal del selector de iconos
   const [showIconSelector, setShowIconSelector] = useState(false);
   
-  // Obtener el preset del icono actual
-  const currentIconPreset = useMemo(() => {
-    // Ignorar 'default' y null para usar el icono del tema
-    if (sshIcon && sshIcon !== 'default' && SSHIconPresets[sshIcon.toUpperCase()]) {
-      return SSHIconPresets[sshIcon.toUpperCase()];
-    }
-    return null;
-  }, [sshIcon]);
+  const currentIconPreset = useMemo(() => resolveSSHIconPreset(sshIcon), [sshIcon]);
   
   // Obtener el icono SSH del tema actual
   const themeSSHIcon = useMemo(() => {
@@ -636,8 +669,7 @@ export function EditSSHConnectionDialog({
   // Handler para seleccionar icono
   const handleIconSelect = useCallback((iconId) => {
     if (setSSHIcon && typeof setSSHIcon === 'function') {
-      // Convertir 'default' a null para usar el icono del tema
-      setSSHIcon(iconId === 'default' ? null : iconId);
+      setSSHIcon(iconId === 'default' || iconId == null ? null : iconId);
     }
   }, [setSSHIcon]);
 
@@ -650,13 +682,7 @@ export function EditSSHConnectionDialog({
           className="terminal-header-icon-btn"
           title="Cambiar Icono"
         >
-          {currentIconPreset ? (
-            <SSHIconRenderer preset={currentIconPreset} size="small" />
-          ) : (
-            <div className="terminal-header-icon-mini">
-              <i className="pi pi-terminal"></i>
-            </div>
-          )}
+          {renderSSHDialogHeaderIconContent(currentIconPreset, themeSSHIcon)}
         </button>
         <span className="terminal-header-title">{t('ssh.title.edit').toUpperCase()}</span>
       </div>
@@ -730,7 +756,7 @@ export function EditSSHConnectionDialog({
       <SSHIconSelectorModal
         visible={showIconSelector}
         onHide={() => setShowIconSelector(false)}
-        selectedIconId={sshIcon}
+        selectedIconId={sshIcon ?? 'default'}
         onSelectIcon={handleIconSelect}
       />
     </>
@@ -2388,19 +2414,37 @@ export function NewSSHConnectionDialog({
   sshPrivateKey = '', setSSHPrivateKey = () => {},
   sshAutoCopyPassword = false, setSSHAutoCopyPassword = () => {},
   sshDescription = '', setSSHDescription = () => {},
+  sshIcon = null, setSSHIcon = () => {},
   foldersOptions = [],
   onSSHConfirm,
-  sshLoading = false
+  sshLoading = false,
+  iconTheme = 'material'
 }) {
-  // Hook de internacionalización
   const { t } = useTranslation('dialogs');
-  
+  const [showIconSelector, setShowIconSelector] = useState(false);
+  const currentIconPreset = useMemo(() => resolveSSHIconPreset(sshIcon), [sshIcon]);
+  const themeSSHIcon = useMemo(() => {
+    const theme = iconThemes[iconTheme] || iconThemes.material;
+    return theme?.icons?.ssh || null;
+  }, [iconTheme]);
+
+  const handleIconSelect = useCallback((iconId) => {
+    if (setSSHIcon && typeof setSSHIcon === 'function') {
+      setSSHIcon(iconId === 'default' || iconId == null ? null : iconId);
+    }
+  }, [setSSHIcon]);
+
   const headerTemplate = (
     <div className="terminal-header-compact">
       <div className="flex align-items-center gap-2">
-        <div className="terminal-header-icon-mini">
-          <i className="pi pi-terminal"></i>
-        </div>
+        <button
+          type="button"
+          onClick={() => setShowIconSelector(true)}
+          className="terminal-header-icon-btn"
+          title="Cambiar Icono"
+        >
+          {renderSSHDialogHeaderIconContent(currentIconPreset, themeSSHIcon)}
+        </button>
         <span className="terminal-header-title">{t('ssh.title.new').toUpperCase()}</span>
       </div>
       <div className="terminal-header-accent"></div>
@@ -2408,6 +2452,7 @@ export function NewSSHConnectionDialog({
   );
 
   return (
+    <>
     <Dialog
       header={headerTemplate}
       visible={visible}
@@ -2467,6 +2512,14 @@ export function NewSSHConnectionDialog({
         />
       </div>
     </Dialog>
+
+    <SSHIconSelectorModal
+      visible={showIconSelector}
+      onHide={() => setShowIconSelector(false)}
+      selectedIconId={sshIcon ?? 'default'}
+      onSelectIcon={handleIconSelect}
+    />
+    </>
   );
 }
 

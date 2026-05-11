@@ -74,6 +74,8 @@ const DialogsManager = ({
   setSSHAutoCopyPassword,
   sshDescription,
   setSSHDescription,
+  sshIcon,
+  setSSHIcon,
   sshAuthMethod,
   setSSHAuthMethod,
   sshPrivateKey,
@@ -615,9 +617,12 @@ const DialogsManager = ({
         setSSHAutoCopyPassword={setSSHAutoCopyPassword}
         sshDescription={sshDescription}
         setSSHDescription={setSSHDescription}
+        sshIcon={sshIcon}
+        setSSHIcon={setSSHIcon}
         foldersOptions={getAllFolders(nodes)}
         onSSHConfirm={handleCreateNewSSH}
         sshLoading={false}
+        iconTheme={iconTheme}
       />
 
       {/* Diálogo: Nueva Conexión RDP */}
