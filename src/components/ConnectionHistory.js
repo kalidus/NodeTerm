@@ -160,6 +160,48 @@ const expandNodePath = (nodePath, currentExpandedKeys = {}) => {
 	return newExpandedKeys;
 };
 
+const HomeIntegratedTerminalShell = ({
+	enabled,
+	terminalView,
+	rightQuickBar,
+	frameClassName,
+	frameBackground,
+	terminalFrameStyle,
+	children
+}) => {
+	const frame = (
+		<div
+			className={frameClassName}
+			style={{
+				display: enabled ? 'flex' : (terminalView ? 'flex' : 'none'),
+				background: frameBackground
+			}}
+		>
+			{children}
+		</div>
+	);
+
+	if (!enabled || !rightQuickBar) {
+		return frame;
+	}
+
+	return (
+		<div
+			className={`home-integrated-terminal-row${terminalFrameStyle ? ` home-integrated-terminal-row--${terminalFrameStyle}` : ''}`}
+			style={{
+				display: terminalView ? 'flex' : 'none',
+				flex: 1,
+				minHeight: 0
+			}}
+		>
+			{frame}
+			<div className="home-integrated-terminal-quickbar">
+				{rightQuickBar}
+			</div>
+		</div>
+	);
+};
+
 const ConnectionHistory = ({
 	onConnectToHistory,
 	recentConnections = [],
@@ -184,6 +226,8 @@ const ConnectionHistory = ({
 	onSwitchTerminal,
 	statusBarVisible = true,
 	homeCardVisible = true,
+	flushRightQuickBar = false,
+	rightQuickBar = null,
 	children
 }) => {
 	// Helper para ajustar la opacidad de los colores (Hex o RGBA)
@@ -1467,7 +1511,7 @@ const ConnectionHistory = ({
 	}, [themeColors]);
 
 	return (
-		<div className={`connection-history-root${terminalView ? ' is-terminal-view' : ''}`} style={{ background: 'transparent' }}>
+		<div className={`connection-history-root${terminalView ? ' is-terminal-view' : ''}${flushRightQuickBar ? ' has-flush-right-quick-bar' : ''}`} style={{ background: 'transparent' }}>
 			<style>{`
 				/* -- Custom Hero Splash Styles -- */
 				.connection-history-root { background: transparent !important; height: 100%; display: flex; flex-direction: column; color: ${themeColors.textPrimary || '#fff'}; }
@@ -3089,12 +3133,13 @@ const ConnectionHistory = ({
 			</style>
 
 			{/* EMBEDDED LOCAL TERMINAL - Always mounted to preserve session state, shown/hidden via display */}
-			<div
-				className={`recents-terminal-frame ${terminalFrameStyle}`}
-				style={{
-					display: terminalView ? 'flex' : 'none',
-					background: localTerminalBg
-				}}
+			<HomeIntegratedTerminalShell
+				enabled={flushRightQuickBar && !!rightQuickBar}
+				terminalView={terminalView}
+				rightQuickBar={rightQuickBar}
+				frameClassName={`recents-terminal-frame ${terminalFrameStyle}`}
+				frameBackground={localTerminalBg}
+				terminalFrameStyle={terminalFrameStyle}
 			>
 				{/* macOS-style header */}
 				<div className="recents-terminal-header">
@@ -3322,7 +3367,7 @@ const ConnectionHistory = ({
 						}}
 					/>
 				)}
-			</div>
+			</HomeIntegratedTerminalShell>
 
 			<OverlayPanel
 				ref={themePickerRef}

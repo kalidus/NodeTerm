@@ -993,6 +993,26 @@ const HomeTab = ({
 
 
 
+  const flushRightQuickBar = terminalView && rightColumnVisible && !showAIChat;
+
+  const homeRightQuickBar = rightColumnVisible ? (
+    <NodeTermStatus
+      variant="rightColumn"
+      collapsed={rightColumnCollapsed}
+      sshConnectionsCount={sshConnectionsCount}
+      foldersCount={foldersCount}
+      rdpConnectionsCount={rdpConnectionsCount}
+      themeColors={themeColors}
+      onOpenSettings={onOpenSettings}
+      onToggleTerminalVisibility={handleToggleTerminalVisibility}
+      onToggleAIChat={handleToggleAIChat}
+      onToggleStatusBar={handleToggleStatusBar}
+      onCollapse={handleToggleRightColumn}
+      showAIChat={showAIChat}
+      statusBarVisible={statusBarVisible}
+    />
+  ) : null;
+
   // Panel superior: Nuevo layout con 3 columnas (basado en redesigned pero con ConnectionHistory)
   const topPanel = (
     <>
@@ -1712,6 +1732,8 @@ const HomeTab = ({
                   onOpenHomeOptions={(e) => homeOptionsOverlayRef.current?.toggle(e)}
                   homeCardVisible={homeCardVisible}
                   statusBarVisible={statusBarVisible}
+                  flushRightQuickBar={flushRightQuickBar}
+                  rightQuickBar={flushRightQuickBar ? homeRightQuickBar : null}
                   onSwitchTerminal={(type, info) => {
                     if (showLocalTerminalTabs && embeddedTabbedTerminalRef.current?.addTerminalTab) {
                       embeddedTabbedTerminalRef.current.addTerminalTab(type, info);
@@ -1912,6 +1934,7 @@ const HomeTab = ({
   return (
     <div
       ref={containerRef}
+      className={flushRightQuickBar ? 'home-terminal-flush-right' : undefined}
       style={{
         height: '100%',
         width: '100%',
@@ -1996,23 +2019,7 @@ const HomeTab = ({
           </div>
 
           {/* Sidebar Area - Outside the vertical split to remain at full height */}
-          {rightColumnVisible && (
-            <NodeTermStatus
-              variant="rightColumn"
-              collapsed={rightColumnCollapsed}
-              sshConnectionsCount={sshConnectionsCount}
-              foldersCount={foldersCount}
-              rdpConnectionsCount={rdpConnectionsCount}
-              themeColors={themeColors}
-              onOpenSettings={onOpenSettings}
-              onToggleTerminalVisibility={handleToggleTerminalVisibility}
-              onToggleAIChat={handleToggleAIChat}
-              onToggleStatusBar={handleToggleStatusBar}
-              onCollapse={handleToggleRightColumn}
-              showAIChat={showAIChat}
-              statusBarVisible={statusBarVisible}
-            />
-          )}
+          {!flushRightQuickBar && homeRightQuickBar}
         </div>
       </div>
       <StandaloneStatusBar visible={statusBarVisible && !terminalView} />
