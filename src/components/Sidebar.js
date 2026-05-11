@@ -2917,36 +2917,6 @@ const Sidebar = React.memo(({
                   {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newGroup}
                 </span>
               </Button>
-              <Button
-                className={`p-button-rounded p-button-text sidebar-action-button glass-button ${showFavoritesView ? 'active' : ''}`}
-                onClick={toggleFavoritesView}
-                tooltip={showFavoritesView ? t('tooltips.showAllConnections') : t('tooltips.showFavorites')}
-                tooltipOptions={{ position: 'bottom' }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '32px',
-                  height: '32px',
-                  padding: 0,
-                  background: showFavoritesView ? 'rgba(255, 193, 7, 0.12)' : 'rgba(255, 255, 255, 0.05)',
-                  border: showFavoritesView ? '1px solid rgba(255, 193, 7, 0.45)' : '1px solid rgba(255, 255, 255, 0.1)',
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
-                  borderRadius: '8px',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <span style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '20px',
-                  height: '20px',
-                  color: '#ffc107'
-                }}>
-                  <i className={showFavoritesView ? 'pi pi-star-fill' : 'pi pi-star'} style={{ fontSize: '1rem' }} />
-                </span>
-              </Button>
 
               {/* SEPARADOR IDÉNTICO AL PRIMERO */}
               <div style={{
@@ -2987,8 +2957,36 @@ const Sidebar = React.memo(({
                   {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.passwordManager}
                 </span>
               </Button>
-
-
+              <Button
+                className={`p-button-rounded p-button-text sidebar-action-button glass-button ${showFavoritesView ? 'active' : ''}`}
+                onClick={toggleFavoritesView}
+                tooltip={showFavoritesView ? t('tooltips.showAllConnections') : t('tooltips.showFavorites')}
+                tooltipOptions={{ position: 'bottom' }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '32px',
+                  height: '32px',
+                  padding: 0,
+                  background: showFavoritesView ? 'rgba(255, 193, 7, 0.12)' : 'rgba(255, 255, 255, 0.05)',
+                  border: showFavoritesView ? '1px solid rgba(255, 193, 7, 0.45)' : '1px solid rgba(255, 255, 255, 0.1)',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                  borderRadius: '8px',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <span style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '20px',
+                  height: '20px',
+                  color: '#ffc107'
+                }}>
+                  <i className={showFavoritesView ? 'pi pi-star-fill' : 'pi pi-star'} style={{ fontSize: '1rem' }} />
+                </span>
+              </Button>
 
               {/* EXPLORADOR SSH A LA DERECHA DEL TODO */}
               {hasActiveSshSession && onOpenFileExplorer && (
@@ -3367,38 +3365,6 @@ const Sidebar = React.memo(({
                 </span>
               </Button>
 
-              <Button
-                className={`p-button-rounded p-button-text sidebar-action-button glass-button ${showFavoritesView ? 'active' : ''}`}
-                onClick={toggleFavoritesView}
-                tooltip={showFavoritesView ? t('tooltips.showAllConnections') : t('tooltips.showFavorites')}
-                tooltipOptions={{ position: 'right' }}
-                style={{
-                  margin: 0,
-                  width: collapsedIconSize,
-                  height: collapsedIconSize,
-                  minWidth: collapsedIconSize,
-                  minHeight: collapsedIconSize,
-                  border: showFavoritesView ? '1px solid rgba(255, 193, 7, 0.45)' : 'none',
-                  display: 'flex !important',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  visibility: 'visible !important',
-                  opacity: '1 !important',
-                  padding: 0
-                }}
-              >
-                <span style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
-                  height: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
-                  color: '#ffc107'
-                }}>
-                  <i className={showFavoritesView ? 'pi pi-star-fill' : 'pi pi-star'} style={{ fontSize: '1rem' }} />
-                </span>
-              </Button>
-
               {/* Botón de passwords */}
               <Button
                 className="p-button-rounded p-button-text sidebar-action-button glass-button"
@@ -3432,6 +3398,38 @@ const Sidebar = React.memo(({
                   color: '#ffc107'
                 }}>
                   {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.passwordManager}
+                </span>
+              </Button>
+
+              <Button
+                className={`p-button-rounded p-button-text sidebar-action-button glass-button ${showFavoritesView ? 'active' : ''}`}
+                onClick={toggleFavoritesView}
+                tooltip={showFavoritesView ? t('tooltips.showAllConnections') : t('tooltips.showFavorites')}
+                tooltipOptions={{ position: 'right' }}
+                style={{
+                  margin: 0,
+                  width: collapsedIconSize,
+                  height: collapsedIconSize,
+                  minWidth: collapsedIconSize,
+                  minHeight: collapsedIconSize,
+                  border: showFavoritesView ? '1px solid rgba(255, 193, 7, 0.45)' : 'none',
+                  display: 'flex !important',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  visibility: 'visible !important',
+                  opacity: '1 !important',
+                  padding: 0
+                }}
+              >
+                <span style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
+                  height: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
+                  color: '#ffc107'
+                }}>
+                  <i className={showFavoritesView ? 'pi pi-star-fill' : 'pi pi-star'} style={{ fontSize: '1rem' }} />
                 </span>
               </Button>
 
