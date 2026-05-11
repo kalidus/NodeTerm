@@ -993,7 +993,7 @@ const HomeTab = ({
 
 
 
-  const flushRightQuickBar = terminalView && rightColumnVisible && !showAIChat;
+  const flushRightQuickBar = rightColumnVisible && !showAIChat;
 
   const homeRightQuickBar = rightColumnVisible ? (
     <NodeTermStatus

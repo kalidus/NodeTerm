@@ -300,7 +300,7 @@
   gap: 2px !important;
 }
 
-.connection-history-root.is-terminal-view.has-flush-right-quick-bar .home-integrated-terminal-row {
+.connection-history-root.has-flush-right-quick-bar .home-integrated-terminal-row {
   display: flex;
   flex-direction: row;
   align-items: stretch;
@@ -309,7 +309,7 @@
   margin: 0 1rem 1rem 1rem;
 }
 
-.connection-history-root.is-terminal-view.has-flush-right-quick-bar .home-integrated-terminal-row .recents-terminal-frame {
+.connection-history-root.has-flush-right-quick-bar .home-integrated-terminal-row .recents-terminal-frame {
   margin: 0;
   flex: 1;
   min-width: 0;
@@ -317,11 +317,11 @@
   border-bottom-right-radius: 0;
 }
 
-.connection-history-root.is-terminal-view.has-flush-right-quick-bar .home-integrated-terminal-row .recents-terminal-header {
+.connection-history-root.has-flush-right-quick-bar .home-integrated-terminal-row .recents-terminal-header {
   border-top-right-radius: 0;
 }
 
-.connection-history-root.is-terminal-view.has-flush-right-quick-bar .home-integrated-terminal-quickbar {
+.connection-history-root.has-flush-right-quick-bar .home-integrated-terminal-quickbar {
   display: flex;
   flex-shrink: 0;
   align-self: stretch;
@@ -330,7 +330,7 @@
   border-bottom-right-radius: 12px;
 }
 
-.connection-history-root.is-terminal-view.has-flush-right-quick-bar .home-integrated-terminal-quickbar > * {
+.connection-history-root.has-flush-right-quick-bar .home-integrated-terminal-quickbar > * {
   height: 100%;
   min-height: 0;
   overflow: hidden;
@@ -340,14 +340,14 @@
   border-bottom-right-radius: 12px;
 }
 
-.connection-history-root.is-terminal-view.has-flush-right-quick-bar .home-integrated-terminal-row--modern .home-integrated-terminal-quickbar,
-.connection-history-root.is-terminal-view.has-flush-right-quick-bar .home-integrated-terminal-row--modern .home-integrated-terminal-quickbar > * {
+.connection-history-root.has-flush-right-quick-bar .home-integrated-terminal-row--modern .home-integrated-terminal-quickbar,
+.connection-history-root.has-flush-right-quick-bar .home-integrated-terminal-row--modern .home-integrated-terminal-quickbar > * {
   border-top-right-radius: 16px;
   border-bottom-right-radius: 16px;
 }
 
-.connection-history-root.is-terminal-view.has-flush-right-quick-bar .home-integrated-terminal-row--retro .home-integrated-terminal-quickbar,
-.connection-history-root.is-terminal-view.has-flush-right-quick-bar .home-integrated-terminal-row--retro .home-integrated-terminal-quickbar > * {
+.connection-history-root.has-flush-right-quick-bar .home-integrated-terminal-row--retro .home-integrated-terminal-quickbar,
+.connection-history-root.has-flush-right-quick-bar .home-integrated-terminal-row--retro .home-integrated-terminal-quickbar > * {
   border-top-right-radius: 20px;
   border-bottom-right-radius: 20px;
 }

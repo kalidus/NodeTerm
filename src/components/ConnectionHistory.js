@@ -162,7 +162,7 @@ const expandNodePath = (nodePath, currentExpandedKeys = {}) => {
 
 const HomeIntegratedTerminalShell = ({
 	enabled,
-	terminalView,
+	visible,
 	rightQuickBar,
 	frameClassName,
 	frameBackground,
@@ -173,8 +173,8 @@ const HomeIntegratedTerminalShell = ({
 		<div
 			className={frameClassName}
 			style={{
-				display: enabled ? 'flex' : (terminalView ? 'flex' : 'none'),
-				background: frameBackground
+				display: enabled ? 'flex' : (visible ? 'flex' : 'none'),
+				...(frameBackground ? { background: frameBackground } : {})
 			}}
 		>
 			{children}
@@ -189,7 +189,7 @@ const HomeIntegratedTerminalShell = ({
 		<div
 			className={`home-integrated-terminal-row${terminalFrameStyle ? ` home-integrated-terminal-row--${terminalFrameStyle}` : ''}`}
 			style={{
-				display: terminalView ? 'flex' : 'none',
+				display: visible ? 'flex' : 'none',
 				flex: 1,
 				minHeight: 0
 			}}
@@ -2794,7 +2794,13 @@ const ConnectionHistory = ({
 			{/* FAVORITES TABLE - Terminal-style frame for favorites */}
 			{
 				!terminalView && activeBottomView === 'favorites' && (
-					<div className={`recents-terminal-frame favorites-terminal-frame ${terminalFrameStyle}`}>
+					<HomeIntegratedTerminalShell
+						enabled={flushRightQuickBar && !!rightQuickBar}
+						visible
+						rightQuickBar={rightQuickBar}
+						frameClassName={`recents-terminal-frame favorites-terminal-frame ${terminalFrameStyle}`}
+						terminalFrameStyle={terminalFrameStyle}
+					>
 						{/* macOS-style header */}
 						<div className="recents-terminal-header">
 							<div className="traffic-lights">
@@ -2946,14 +2952,20 @@ const ConnectionHistory = ({
 								emptyMessage="# no favorite sessions found"
 							/>
 						</div>
-					</div>
+					</HomeIntegratedTerminalShell>
 				)
 			}
 
 			{/* RECIENTES TABLE - Terminal-style frame with grep rows */}
 			{
 				!terminalView && (activeBottomView === 'all' || activeBottomView === 'recent') && (
-					<div className={`recents-terminal-frame ${terminalFrameStyle}`}>
+					<HomeIntegratedTerminalShell
+						enabled={flushRightQuickBar && !!rightQuickBar}
+						visible
+						rightQuickBar={rightQuickBar}
+						frameClassName={`recents-terminal-frame ${terminalFrameStyle}`}
+						terminalFrameStyle={terminalFrameStyle}
+					>
 						{/* macOS-style header with filter on the right */}
 						<div className="recents-terminal-header">
 							<div className="traffic-lights">
@@ -3105,7 +3117,7 @@ const ConnectionHistory = ({
 								emptyMessage="# no recent sessions"
 							/>
 						</div>
-					</div>
+					</HomeIntegratedTerminalShell>
 				)
 			}
 
@@ -3135,7 +3147,7 @@ const ConnectionHistory = ({
 			{/* EMBEDDED LOCAL TERMINAL - Always mounted to preserve session state, shown/hidden via display */}
 			<HomeIntegratedTerminalShell
 				enabled={flushRightQuickBar && !!rightQuickBar}
-				terminalView={terminalView}
+				visible={terminalView}
 				rightQuickBar={rightQuickBar}
 				frameClassName={`recents-terminal-frame ${terminalFrameStyle}`}
 				frameBackground={localTerminalBg}
