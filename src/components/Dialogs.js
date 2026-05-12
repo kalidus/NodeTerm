@@ -16,6 +16,16 @@ import { FolderIconSelectorModal, FolderIconRenderer, FolderIconPresets } from '
 import { SSHIconSelectorModal, SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
 import { iconThemes } from '../themes/icon-themes';
 import { useTranslation } from '../i18n/hooks/useTranslation';
+import {
+  EnhancedRDPForm,
+  RdpTerminalDialogHeader,
+  createDefaultRdpFormData,
+  mapEditNodeDataToRdpFormData,
+  isRdpFormValid,
+  TERMINAL_PRO_DIALOG_STYLE,
+  TERMINAL_PRO_DIALOG_CONTENT_STYLE,
+  TERMINAL_PRO_DIALOG_FORM_WRAPPER_STYLE
+} from './EnhancedRDPForm';
 
 const resolveSSHIconPreset = (iconId) => {
   if (!iconId || iconId === 'default') return null;
@@ -836,455 +846,83 @@ export function EditRDPConnectionDialog({
   editNodeData,
   onSaveToSidebar
 }) {
-  // Hook de internacionalización
   const { t } = useTranslation('dialogs');
-  const { t: tCommon } = useTranslation('common');
-  
-  const [formData, setFormData] = useState({
-    name: '',
-    server: '',
-    username: '',
-    password: '',
-    port: 3389,
-    clientType: 'guacamole',
-    preset: 'default',
-    resolution: '1600x1000',
-    colorDepth: 32,
-    redirectFolders: true,
-    redirectClipboard: true,
-    redirectPrinters: false,
-    redirectAudio: false,
-    fullscreen: false,
-    smartSizing: true,
-    span: false,
-    admin: false,
-    public: false,
-    autoResize: true,
-    guacDpi: 96,
-    guacSecurity: 'any',
-    guacEnableWallpaper: true,
-    guacEnableDrive: false,
-    guacDriveHostDir: '',
-    guacEnableGfx: false,
-    guacEnableDesktopComposition: false,
-    guacEnableFontSmoothing: false,
-    guacEnableTheming: false,
-    guacEnableFullWindowDrag: false,
-    guacEnableMenuAnimations: false,
-    guacDisableGlyphCaching: false,
-    guacDisableOffscreenCaching: false,
-    guacDisableBitmapCaching: false,
-    guacDisableCopyRect: false
-  });
 
+  const [formData, setFormData] = useState(() => createDefaultRdpFormData());
   const [showRdpPassword, setShowRdpPassword] = useState(false);
 
-  // Precargar datos cuando se abre el diálogo
   useEffect(() => {
     if (editNodeData && visible) {
-      const data = editNodeData.data || {};
-      setFormData({
-        name: editNodeData.label || '',
-        server: data.server || data.hostname || '',
-        username: data.username || '',
-        password: data.password || '',
-        port: data.port || 3389,
-        clientType: data.clientType || 'guacamole',
-        preset: data.preset || 'default',
-        resolution: data.resolution || '1600x1000',
-        colorDepth: data.colorDepth || 32,
-        redirectFolders: data.redirectFolders !== undefined ? data.redirectFolders : true,
-        redirectClipboard: data.redirectClipboard !== undefined ? data.redirectClipboard : true,
-        redirectPrinters: data.redirectPrinters || false,
-        redirectAudio: data.redirectAudio !== undefined ? data.redirectAudio : true,
-        fullscreen: data.fullscreen || false,
-        smartSizing: data.smartSizing !== undefined ? data.smartSizing : true,
-        span: data.span || false,
-        admin: data.admin || false,
-        public: data.public || false,
-        autoResize: data.autoResize !== false,
-        guacDpi: data.guacDpi || 96,
-        guacSecurity: data.guacSecurity || 'any',
-        guacEnableWallpaper: data.guacEnableWallpaper || false,
-        guacEnableDrive: data.guacEnableDrive || false,
-        guacDriveHostDir: data.guacDriveHostDir || '',
-        guacEnableGfx: data.guacEnableGfx || false,
-        guacEnableDesktopComposition: data.guacEnableDesktopComposition || false,
-        guacEnableFontSmoothing: data.guacEnableFontSmoothing || false,
-        guacEnableTheming: data.guacEnableTheming || false,
-        guacEnableFullWindowDrag: data.guacEnableFullWindowDrag || false,
-        guacEnableMenuAnimations: data.guacEnableMenuAnimations || false,
-        guacDisableGlyphCaching: data.guacDisableGlyphCaching || false,
-        guacDisableOffscreenCaching: data.guacDisableOffscreenCaching || false,
-        guacDisableBitmapCaching: data.guacDisableBitmapCaching || false,
-        guacDisableCopyRect: data.guacDisableCopyRect || false
-      });
+      setFormData(mapEditNodeDataToRdpFormData(editNodeData));
     }
   }, [editNodeData, visible]);
 
-  // Resetear formulario al cerrar
   useEffect(() => {
     if (!visible) {
-      setFormData({
-        name: '',
-        server: '',
-        username: '',
-        password: '',
-        port: 3389,
-        clientType: 'guacamole',
-        preset: 'default',
-        resolution: '1600x1000',
-        colorDepth: 32,
-        redirectFolders: true,
-        redirectClipboard: true,
-        redirectPrinters: false,
-        redirectAudio: false,
-        fullscreen: false,
-        smartSizing: true,
-        span: false,
-        admin: false,
-        public: false,
-        autoResize: true,
-        guacDpi: 96,
-        guacSecurity: 'any',
-        guacEnableWallpaper: true,
-        guacEnableDrive: false,
-        guacDriveHostDir: '',
-        guacEnableGfx: false,
-        guacEnableDesktopComposition: false,
-        guacEnableFontSmoothing: false,
-        guacEnableTheming: false,
-        guacEnableFullWindowDrag: false,
-        guacEnableMenuAnimations: false,
-        guacDisableGlyphCaching: false,
-        guacDisableOffscreenCaching: false,
-        guacDisableBitmapCaching: false,
-        guacDisableCopyRect: false
-      });
+      setFormData(createDefaultRdpFormData());
       setShowRdpPassword(false);
     }
   }, [visible]);
 
-  const handleTextChange = useCallback((field) => (e) => {
-    setFormData(prev => ({ ...prev, [field]: e.target.value }));
+  const handleTextChange = useCallback((field) => (event) => {
+    setFormData((previous) => ({ ...previous, [field]: event.target.value }));
   }, []);
 
   const handleInputChange = useCallback((field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((previous) => ({ ...previous, [field]: value }));
   }, []);
 
-  const handleCheckboxChange = useCallback((field) => (e) => {
-    const newValue = !!e.checked;
-    setFormData(prev => ({ ...prev, [field]: newValue }));
-  }, []);
-
-  const handleSelectFolder = async () => {
+  const handleSelectFolder = useCallback(async () => {
     try {
       const result = await window.electron.dialog.showOpenDialog({
         properties: ['openDirectory'],
         title: t('rdp.tooltips.selectFolder')
       });
-      
+
       if (!result.canceled && result.filePaths && result.filePaths.length > 0) {
-        setFormData(prev => ({ ...prev, guacDriveHostDir: result.filePaths[0] }));
+        setFormData((previous) => ({ ...previous, guacDriveHostDir: result.filePaths[0] }));
       }
     } catch (error) {
       console.error('Error al abrir selector de carpeta:', error);
     }
-  };
+  }, [t]);
 
-  const isFormValid = useMemo(() => {
-    return formData.name.trim() !== '' && formData.server.trim() !== '' && formData.username.trim() !== '';
-  }, [formData]);
+  const handleSubmit = useCallback(() => {
+    if (!isRdpFormValid(formData)) {
+      return;
+    }
 
-  const headerTemplate = (
-    <div className="terminal-header-compact">
-      <div className="flex align-items-center gap-2">
-        <div className="terminal-header-icon-mini" style={{ background: 'rgba(33, 150, 243, 0.1)', color: '#2196F3' }}>
-          <i className="pi pi-desktop"></i>
-        </div>
-        <span className="terminal-header-title">{t('rdp.title.edit').toUpperCase()}</span>
-      </div>
-      <div className="terminal-header-accent" style={{ background: '#2196F3', boxShadow: '0 0 8px #2196F3' }}></div>
-    </div>
-  );
+    if (onSaveToSidebar) {
+      onSaveToSidebar(formData, true, editNodeData);
+    }
+    onHide();
+  }, [editNodeData, formData, onHide, onSaveToSidebar]);
 
   return (
     <Dialog
-      header={headerTemplate}
+      header={<RdpTerminalDialogHeader title={t('rdp.title.edit').toUpperCase()} />}
       visible={visible}
       onHide={onHide}
-      style={{ width: '100%', maxWidth: '800px' }}
+      style={TERMINAL_PRO_DIALOG_STYLE}
       modal
-      resizable={false}
-      contentStyle={{ padding: '0', overflow: 'auto', background: 'var(--ui-dialog-bg)' }}
+      resizable
+      contentStyle={TERMINAL_PRO_DIALOG_CONTENT_STYLE}
       className="terminal-pro-dialog"
       closable={false}
     >
-      <div className="p-fluid" style={{ padding: '12px', height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ flex: '1 1 auto', overflowY: 'auto', padding: '2px' }}>
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-            {/* --- COLUMNA IZQUIERDA: Conexión --- */}
-            <div style={{ flex: '1', minWidth: '320px' }}>
-              <Card title={`🔗 ${t('rdp.sections.connection')}`} className="mb-2">
-                <div className="formgrid grid">
-                  <div className="field col-12">
-                    <label htmlFor="name-edit-rdp">{t('rdp.fields.name')} *</label>
-                    <InputText
-                      id="name-edit-rdp"
-                      value={formData.name}
-                      onChange={handleTextChange('name')}
-                      placeholder={t('rdp.placeholders.name')}
-                      autoComplete="off"
-                    />
-                  </div>
-                  <div className="field col-8">
-                    <label htmlFor="server-edit-rdp">{t('rdp.fields.server')} *</label>
-                    <InputText
-                      id="server-edit-rdp"
-                      value={formData.server}
-                      onChange={handleTextChange('server')}
-                      placeholder={t('rdp.placeholders.server')}
-                      autoComplete="off"
-                    />
-                  </div>
-                  <div className="field col-4">
-                    <label htmlFor="port-edit-rdp">{t('rdp.fields.port')}</label>
-                    <InputText
-                      id="port-edit-rdp"
-                      type="number"
-                      value={formData.port}
-                      onChange={handleTextChange('port')}
-                      placeholder={t('rdp.placeholders.port')}
-                      autoComplete="off"
-                    />
-                  </div>
-                  <div className="field col-12">
-                    <label htmlFor="username-edit-rdp">{t('rdp.fields.username')} *</label>
-                    <InputText
-                      id="username-edit-rdp"
-                      value={formData.username}
-                      onChange={handleTextChange('username')}
-                      placeholder={t('rdp.placeholders.username')}
-                      autoComplete="off"
-                    />
-                  </div>
-                  <div className="field col-12">
-                    <label htmlFor="password-edit-rdp">{t('rdp.fields.password')}</label>
-                    <div className="p-inputgroup">
-                      <InputText
-                        id="password-edit-rdp"
-                        type={showRdpPassword ? "text" : "password"}
-                        value={formData.password}
-                        onChange={handleTextChange('password')}
-                        placeholder={t('rdp.placeholders.password')}
-                        autoComplete="off"
-                      />
-                      <Button
-                        type="button"
-                        icon={showRdpPassword ? "pi pi-eye-slash" : "pi pi-eye"}
-                        className="p-button-outlined"
-                        onClick={() => setShowRdpPassword(!showRdpPassword)}
-                        tooltip={showRdpPassword ? t('rdp.tooltips.hidePassword') : t('rdp.tooltips.showPassword')}
-                        tooltipOptions={{ position: 'top' }}
-                      />
-                    </div>
-                  </div>
-                  <div className="field col-12">
-                    <label htmlFor="clientType-edit-rdp">💻 {t('rdp.fields.client')}</label>
-                    <Dropdown
-                      id="clientType-edit-rdp"
-                      value={formData.clientType}
-                      options={[
-                        { label: t('rdp.clientTypes.mstsc'), value: 'mstsc' },
-                        { label: t('rdp.clientTypes.guacamole'), value: 'guacamole' }
-                      ]}
-                      onChange={(e) => handleInputChange('clientType', e.value)}
-                      placeholder={tCommon('labels.select')}
-                    />
-                  </div>
-                  {formData.clientType === 'guacamole' && (
-                    <div className="field col-12">
-                      <label htmlFor="guacSecurity-edit-rdp">🔒 {t('rdp.fields.security')}</label>
-                      <Dropdown
-                        id="guacSecurity-edit-rdp"
-                        value={formData.guacSecurity}
-                        options={[
-                          { label: `🛡️ ${t('rdp.securityOptions.any')}`, value: 'any' },
-                          { label: `🔐 ${t('rdp.securityOptions.rdp')}`, value: 'rdp' },
-                          { label: `🔒 ${t('rdp.securityOptions.tls')}`, value: 'tls' },
-                          { label: `🛡️ ${t('rdp.securityOptions.nla')}`, value: 'nla' }
-                        ]}
-                        onChange={(e) => handleInputChange('guacSecurity', e.value)}
-                        placeholder={tCommon('labels.select')}
-                      />
-                      <small>{t('rdp.descriptions.security')}</small>
-                    </div>
-                  )}
-                </div>
-              </Card>
-
-              {formData.clientType === 'guacamole' && formData.guacEnableDrive && (
-                <Card title={`📁 ${t('rdp.fields.sharedFolder')}`} className="mt-3">
-                  <div className="field">
-                    <label htmlFor="guacDriveHostDir-edit-rdp">{t('rdp.fields.localPath')}</label>
-                    <div className="p-inputgroup">
-                      <InputText
-                        id="guacDriveHostDir-edit-rdp"
-                        value={formData.guacDriveHostDir}
-                        onChange={handleTextChange('guacDriveHostDir')}
-                        placeholder={t('rdp.placeholders.localPath')}
-                      />
-                      <Button icon="pi pi-folder-open" className="p-button-secondary p-button-outlined" onClick={handleSelectFolder} tooltip={t('rdp.tooltips.selectFolder')} />
-                    </div>
-                    <small className="p-d-block mt-2 text-color-secondary">
-                      {t('rdp.descriptions.sharedFolder')}
-                    </small>
-                  </div>
-                </Card>
-              )}
-            </div>
-
-            {/* --- COLUMNA DERECHA: Ajustes de Sesión --- */}
-            <div style={{ flex: '1.5', minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {/* Card: Pantalla */}
-              <Card title={`🖥️ ${t('rdp.sections.screen')}`}>
-                <div className="formgrid grid">
-                  <div className="field col-6">
-                    <label htmlFor="preset-edit-rdp">{t('rdp.fields.preset')}</label>
-                    <Dropdown
-                      id="preset-edit-rdp"
-                      value={formData.preset}
-                      options={[
-                        { label: t('rdp.presets.default'), value: 'default' },
-                        { label: t('rdp.presets.performance'), value: 'performance' },
-                        { label: t('rdp.presets.quality'), value: 'quality' }
-                      ]}
-                      onChange={(e) => handleInputChange('preset', e.value)}
-                    />
-                  </div>
-                  <div className="field col-6">
-                    <label htmlFor="resolution-edit-rdp">{t('rdp.fields.resolution')}</label>
-                    <Dropdown
-                      id="resolution-edit-rdp"
-                      value={formData.resolution}
-                      options={[
-                        { label: t('rdp.resolutions.fullscreen'), value: 'fullscreen' },
-                        { label: '1920x1080', value: '1920x1080' },
-                        { label: '1600x1000', value: '1600x1000' },
-                        { label: '1366x768', value: '1366x768' },
-                        { label: '1024x768', value: '1024x768' }
-                      ]}
-                      onChange={(e) => handleInputChange('resolution', e.value)}
-                    />
-                  </div>
-                  <div className="field col-6">
-                    <label htmlFor="colorDepth-edit-rdp">{t('rdp.fields.color')}</label>
-                    <Dropdown
-                      id="colorDepth-edit-rdp"
-                      value={formData.colorDepth}
-                      options={[
-                        { label: t('rdp.colorDepths.32'), value: 32 },
-                        { label: t('rdp.colorDepths.24'), value: 24 },
-                        { label: t('rdp.colorDepths.16'), value: 16 },
-                        { label: t('rdp.colorDepths.15'), value: 15 }
-                      ]}
-                      onChange={(e) => handleInputChange('colorDepth', e.value)}
-                    />
-                  </div>
-                  <div className="field col-6">
-                    <label htmlFor="guacDpi-edit-rdp">{t('rdp.fields.dpi')}</label>
-                    <InputText
-                      id="guacDpi-edit-rdp"
-                      value={formData.guacDpi}
-                      onChange={handleTextChange('guacDpi')}
-                      placeholder={t('rdp.placeholders.dpi')}
-                    />
-                  </div>
-                </div>
-              </Card>
-
-              {/* Card: Opciones */}
-              <Card title={`⚙️ ${t('rdp.sections.options')}`}>
-                <div className="formgrid grid">
-                  {/* Opciones para MSTSC */}
-                  {formData.clientType === 'mstsc' && (
-                    <>
-                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectClipboard-edit-rdp" checked={formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} /><label htmlFor="mstsc-redirectClipboard-edit-rdp">📋 {t('rdp.options.clipboard')}</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectAudio-edit-rdp" checked={formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} /><label htmlFor="mstsc-redirectAudio-edit-rdp">🔊 {t('rdp.options.audio')}</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectPrinters-edit-rdp" checked={formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} /><label htmlFor="mstsc-redirectPrinters-edit-rdp">🖨️ {t('rdp.options.printers')}</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectFolders-edit-rdp" checked={formData.redirectFolders} onChange={handleCheckboxChange('redirectFolders')} /><label htmlFor="mstsc-redirectFolders-edit-rdp">📁 {t('rdp.options.folders')}</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-smartSizing-edit-rdp" checked={formData.smartSizing} onChange={handleCheckboxChange('smartSizing')} /><label htmlFor="mstsc-smartSizing-edit-rdp">📐 {t('rdp.options.smartSizing')}</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-fullscreen-edit-rdp" checked={formData.fullscreen} onChange={handleCheckboxChange('fullscreen')} /><label htmlFor="mstsc-fullscreen-edit-rdp">🖥️ {t('rdp.options.fullscreen')}</label></div>
-                    </>
-                  )}
-                  {/* Opciones para Guacamole */}
-                  {formData.clientType === 'guacamole' && (
-                    <>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectClipboard-edit-rdp" checked={!!formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} key={`clipboard-${formData.redirectClipboard}`} /><label htmlFor="guac-redirectClipboard-edit-rdp">📋 {t('rdp.options.clipboard')}</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectAudio-edit-rdp" checked={!!formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} key={`audio-${formData.redirectAudio}`} /><label htmlFor="guac-redirectAudio-edit-rdp">🔊 {t('rdp.options.audio')}</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-enableDrive-edit-rdp" checked={!!formData.guacEnableDrive} onChange={handleCheckboxChange('guacEnableDrive')} key={`drive-${formData.guacEnableDrive}`} /><label htmlFor="guac-enableDrive-edit-rdp">💾 {t('rdp.options.enableDrive')}</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-autoResize-edit-rdp" checked={!!formData.autoResize} onChange={handleCheckboxChange('autoResize')} key={`resize-${formData.autoResize}`} /><label htmlFor="guac-autoResize-edit-rdp">📐 {t('rdp.options.autoResize')}</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-enableWallpaper-edit-rdp" checked={!!formData.guacEnableWallpaper} onChange={handleCheckboxChange('guacEnableWallpaper')} key={`wallpaper-${formData.guacEnableWallpaper}`} /><label htmlFor="guac-enableWallpaper-edit-rdp">🖼️ {t('rdp.options.enableWallpaper')}</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectPrinters-edit-rdp" checked={!!formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} key={`printers-${formData.redirectPrinters}`} /><label htmlFor="guac-redirectPrinters-edit-rdp">🖨️ {t('rdp.options.printers')}</label></div>
-                    </>
-                  )}
-                </div>
-
-                {/* Fieldset: Opciones Avanzadas */}
-                {formData.clientType === 'guacamole' && (
-                  <div style={{ marginTop: '1rem', paddingTop: '1rem' }}>
-                    <Fieldset legend={`⚙️ ${t('rdp.sections.advanced')}`} toggleable collapsed className="advanced-fieldset">
-                      <div className="formgrid grid">
-                        <div className="col-4">
-                          <h5>{t('rdp.advanced.performance')}</h5>
-                          <div className="field-checkbox"><Checkbox inputId="guac-gfx-edit-rdp" checked={!!formData.guacEnableGfx} onChange={handleCheckboxChange('guacEnableGfx')} key={`gfx-${formData.guacEnableGfx}`} /><label htmlFor="guac-gfx-edit-rdp">🎨 {t('rdp.advanced.enableGfx')}</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-composition-edit-rdp" checked={!!formData.guacEnableDesktopComposition} onChange={handleCheckboxChange('guacEnableDesktopComposition')} key={`composition-${formData.guacEnableDesktopComposition}`} /><label htmlFor="guac-composition-edit-rdp">🖼️ {t('rdp.advanced.desktopComposition')}</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-font-edit-rdp" checked={!!formData.guacEnableFontSmoothing} onChange={handleCheckboxChange('guacEnableFontSmoothing')} key={`font-${formData.guacEnableFontSmoothing}`} /><label htmlFor="guac-font-edit-rdp">✨ {t('rdp.advanced.fontSmoothing')}</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-theming-edit-rdp" checked={!!formData.guacEnableTheming} onChange={handleCheckboxChange('guacEnableTheming')} key={`theming-${formData.guacEnableTheming}`} /><label htmlFor="guac-theming-edit-rdp">🎭 {t('rdp.advanced.theming')}</label></div>
-                        </div>
-                        <div className="col-4">
-                          <h5>{t('rdp.advanced.interface')}</h5>
-                          <div className="field-checkbox"><Checkbox inputId="guac-drag-edit-rdp" checked={!!formData.guacEnableFullWindowDrag} onChange={handleCheckboxChange('guacEnableFullWindowDrag')} key={`drag-${formData.guacEnableFullWindowDrag}`} /><label htmlFor="guac-drag-edit-rdp">🖱️ {t('rdp.advanced.fullWindowDrag')}</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-menu-edit-rdp" checked={!!formData.guacEnableMenuAnimations} onChange={handleCheckboxChange('guacEnableMenuAnimations')} key={`menu-${formData.guacEnableMenuAnimations}`} /><label htmlFor="guac-menu-edit-rdp">🎬 {t('rdp.advanced.menuAnimations')}</label></div>
-                        </div>
-                        <div className="col-4">
-                          <h5>{t('rdp.advanced.cache')}</h5>
-                          <div className="field-checkbox"><Checkbox inputId="guac-glyph-cache-edit-rdp" checked={!!(!formData.guacDisableGlyphCaching)} onChange={(e) => { const newValue = !!e.checked; handleInputChange('guacDisableGlyphCaching', !newValue); }} key={`glyph-${!formData.guacDisableGlyphCaching}`} /><label htmlFor="guac-glyph-cache-edit-rdp">🔤 {t('rdp.advanced.glyphCaching')}</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-offscreen-cache-edit-rdp" checked={!!(!formData.guacDisableOffscreenCaching)} onChange={(e) => { const newValue = !!e.checked; handleInputChange('guacDisableOffscreenCaching', !newValue); }} key={`offscreen-${!formData.guacDisableOffscreenCaching}`} /><label htmlFor="guac-offscreen-cache-edit-rdp">📱 {t('rdp.advanced.offscreenCaching')}</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-bitmap-cache-edit-rdp" checked={!!(!formData.guacDisableBitmapCaching)} onChange={(e) => { const newValue = !!e.checked; handleInputChange('guacDisableBitmapCaching', !newValue); }} key={`bitmap-${!formData.guacDisableBitmapCaching}`} /><label htmlFor="guac-bitmap-cache-edit-rdp">🖼️ {t('rdp.advanced.bitmapCaching')}</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-copy-rect-edit-rdp" checked={!!(!formData.guacDisableCopyRect)} onChange={(e) => { const newValue = !!e.checked; handleInputChange('guacDisableCopyRect', !newValue); }} key={`copyrect-${!formData.guacDisableCopyRect}`} /><label htmlFor="guac-copy-rect-edit-rdp">📋 {t('rdp.advanced.copyRect')}</label></div>
-                        </div>
-                      </div>
-                    </Fieldset>
-                  </div>
-                )}
-              </Card>
-            </div>
-          </div>
-        </div>
-        {/* Botones */}
-        <div className="p-field" style={{ display: 'flex', gap: 12, marginTop: 12, marginBottom: 0, justifyContent: 'flex-end', paddingTop: '12px' }}>
-          <Button
-            label={tCommon('buttons.cancel')}
-            icon="pi pi-times"
-            className="p-button-text"
-            onClick={onHide}
-            style={{ fontSize: '13px', padding: '8px 16px' }}
-          />
-          <Button
-            label={tCommon('buttons.save')}
-            icon="pi pi-check"
-            className="p-button-primary"
-            onClick={() => {
-              console.log('Guardar cambios RDP con datos:', formData);
-              onSaveToSidebar && onSaveToSidebar(formData, true, editNodeData);
-              onHide();
-            }}
-            disabled={!isFormValid}
-            style={{ fontSize: '13px', padding: '8px 16px' }}
-          />
-        </div>
+      <div style={TERMINAL_PRO_DIALOG_FORM_WRAPPER_STYLE}>
+        <EnhancedRDPForm
+          formData={formData}
+          handleTextChange={handleTextChange}
+          handleInputChange={handleInputChange}
+          showPassword={showRdpPassword}
+          setShowPassword={setShowRdpPassword}
+          onSelectFolder={handleSelectFolder}
+          isEditMode
+          onHide={onHide}
+          onSubmit={handleSubmit}
+          idPrefix="edit-rdp"
+        />
       </div>
     </Dialog>
   );
@@ -1831,7 +1469,7 @@ export function EnhancedSSHForm({
 
   // Render del formulario
   return (
-    <div className="ssh-terminal-form" style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '0.75rem 1rem' }}>
+    <div className="connection-terminal-form" style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '0.75rem 1rem' }}>
       <Tooltip target=".info-icon" position="top" />
       
       <div className="terminal-form-scroll-area" style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', paddingRight: '4px' }}>
@@ -2256,568 +1894,6 @@ export function EnhancedSSHForm({
           </button>
         </div>
       </div>
-      <style dangerouslySetInnerHTML={{ __html: `
-        .ssh-terminal-form {
-          font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
-          background: var(--ui-dialog-bg);
-          color: var(--ui-dialog-text);
-          min-height: 0;
-        }
-        .terminal-host-port-row {
-          display: grid;
-          grid-template-columns: minmax(0, 1fr) 7.5rem;
-          gap: 0.75rem;
-          align-items: start;
-          width: 100%;
-        }
-        .terminal-host-port-host {
-          min-width: 0;
-        }
-        .terminal-host-port-port {
-          min-width: 0;
-          width: 7.5rem;
-          max-width: 7.5rem;
-        }
-        .terminal-label {
-          display: block;
-          font-size: 0.65rem;
-          font-weight: 700;
-          color: var(--ui-button-primary);
-          margin-bottom: 0.5rem;
-          letter-spacing: 0.05em;
-        }
-        .terminal-input-wrap {
-          position: relative;
-          display: flex;
-          align-items: center;
-          background: color-mix(in srgb, var(--ui-dialog-text) 3%, transparent);
-          border: 1px solid var(--ui-dialog-border);
-          border-radius: 4px;
-          padding: 0 0.5rem;
-          transition: all 0.2s ease;
-        }
-        .terminal-port-input-wrap {
-          overflow: hidden;
-          padding: 0 0.35rem;
-        }
-        .terminal-input-wrap:focus-within {
-          border-color: var(--ui-button-primary);
-          box-shadow: 0 0 10px color-mix(in srgb, var(--ui-button-primary) 10%, transparent);
-        }
-        .terminal-input {
-          background: transparent !important;
-          border: none !important;
-          color: var(--ui-dialog-text) !important;
-          font-family: inherit !important;
-          font-size: 0.85rem !important;
-          padding: 0.5rem 0.25rem !important;
-          flex: 1;
-        }
-        .terminal-port-input {
-          width: 100% !important;
-          min-width: 0 !important;
-          text-align: center !important;
-          padding-left: 0 !important;
-          padding-right: 0 !important;
-        }
-        .terminal-input:focus,
-        .terminal-input:enabled:focus,
-        .terminal-input.p-focus {
-          box-shadow: none !important;
-          outline: none !important;
-          border-color: transparent !important;
-        }
-        /* PrimeReact + tema cyberpunk: layouts.css fuerza un halo con !important */
-        body.layout-cyberpunk .ssh-terminal-form .p-inputtext,
-        .ssh-terminal-form .p-inputtext {
-          box-shadow: none !important;
-          outline: none !important;
-        }
-        body.layout-cyberpunk .ssh-terminal-form .p-inputtext:enabled:focus,
-        body.layout-cyberpunk .ssh-terminal-form .p-inputtext:enabled:focus-visible,
-        body.layout-cyberpunk .ssh-terminal-form .p-inputtext.p-focus,
-        .ssh-terminal-form .p-inputtext:enabled:focus,
-        .ssh-terminal-form .p-inputtext:enabled:focus-visible,
-        .ssh-terminal-form .p-inputtext.p-focus {
-          box-shadow: none !important;
-          outline: none !important;
-        }
-        /* En los inputs sin icono (nombre/descripcion), reforzar feedback visual de foco */
-        .ssh-terminal-form .terminal-row .terminal-input-wrap:focus-within {
-          border-color: var(--ui-button-primary) !important;
-          box-shadow: 0 0 12px color-mix(in srgb, var(--ui-button-primary) 16%, transparent) !important;
-        }
-        .terminal-icon-left {
-          font-size: 0.9rem;
-          margin-right: 0.5rem;
-          opacity: 0.5;
-        }
-        .terminal-icon-right {
-          font-size: 0.9rem;
-          margin-left: 0.5rem;
-          opacity: 0.5;
-        }
-        .terminal-auth-selector {
-          display: flex;
-          gap: 1px;
-          background: color-mix(in srgb, var(--ui-dialog-text) 5%, transparent);
-          border: 1px solid var(--ui-dialog-border);
-          border-radius: 4px;
-          padding: 1px;
-        }
-        .terminal-auth-chip {
-          flex: 1;
-          text-align: center;
-          padding: 0.5rem;
-          font-size: 0.75rem;
-          cursor: pointer;
-          transition: all 0.2s;
-          color: color-mix(in srgb, var(--ui-dialog-text) 40%, transparent);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 0.5rem;
-        }
-        .terminal-auth-chip i { font-size: 0.8rem; }
-        .terminal-auth-chip.active {
-          background: var(--ui-sidebar-button-bg) !important;
-          color: var(--ui-button-primary) !important;
-          border: 1px solid color-mix(in srgb, var(--ui-button-primary) 30%, transparent) !important;
-          border-radius: 4px;
-        }
-        .terminal-auth-chip.disabled {
-          opacity: 0.3;
-          cursor: not-allowed;
-        }
-        .terminal-key-file-wrap {
-          gap: 0.5rem;
-          min-height: 2.25rem;
-        }
-        .terminal-key-file-name {
-          flex: 1;
-          min-width: 0;
-          font-size: 0.75rem;
-        }
-        .terminal-key-file-input {
-          display: none;
-        }
-        .terminal-key-file-btn {
-          background: transparent;
-          border: 1px solid color-mix(in srgb, var(--ui-button-primary) 30%, transparent);
-          color: var(--ui-button-primary);
-          padding: 0.2rem 0.6rem;
-          border-radius: 4px;
-          font-size: 0.7rem;
-          font-weight: 700;
-          text-transform: uppercase;
-          cursor: pointer;
-          font-family: inherit;
-          white-space: nowrap;
-        }
-        .terminal-key-file-btn:hover {
-          background: var(--ui-sidebar-button-bg);
-        }
-        .terminal-advanced-section {
-          width: 100%;
-        }
-        .terminal-advanced-header {
-          width: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 0.75rem;
-          padding: 0.25rem 0;
-          background: transparent;
-          border: none;
-          cursor: pointer;
-          color: inherit;
-          text-align: left;
-        }
-        .terminal-advanced-header:hover .terminal-label {
-          color: var(--ui-button-primary);
-        }
-        .terminal-advanced-section .terminal-options-list {
-          padding-top: 0.35rem;
-        }
-        .terminal-advanced-tabs {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 0.35rem;
-          margin-bottom: 0.65rem;
-        }
-        .terminal-advanced-tab {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.35rem;
-          padding: 0.35rem 0.55rem;
-          border: 1px solid var(--ui-dialog-border);
-          border-radius: 4px;
-          background: transparent;
-          color: color-mix(in srgb, var(--ui-dialog-text) 75%, transparent);
-          font-size: 0.68rem;
-          font-weight: 700;
-          text-transform: uppercase;
-          cursor: pointer;
-          font-family: inherit;
-          line-height: 1.2;
-        }
-        .terminal-advanced-tab .pi {
-          color: var(--ui-button-primary);
-          opacity: 0.85;
-          font-size: 0.8rem;
-        }
-        .terminal-advanced-tab.active {
-          border-color: var(--ui-button-primary);
-          color: var(--ui-button-primary);
-          background: color-mix(in srgb, var(--ui-button-primary) 8%, transparent);
-        }
-        .terminal-advanced-tab:hover:not(.active) {
-          border-color: color-mix(in srgb, var(--ui-button-primary) 35%, var(--ui-dialog-border));
-          color: var(--ui-dialog-text);
-        }
-        .terminal-advanced-panel-pane {
-          padding-top: 0.15rem;
-        }
-        .terminal-proxyjump-panel .terminal-label {
-          margin-bottom: 0.25rem;
-          font-size: 0.6rem;
-        }
-        .terminal-proxyjump-panel .terminal-host-port-row {
-          gap: 0.5rem;
-        }
-        .terminal-proxyjump-panel .terminal-input {
-          padding: 0.38rem 0.25rem !important;
-          font-size: 0.8rem !important;
-        }
-        .terminal-proxyjump-panel .terminal-input-wrap,
-        .terminal-proxyjump-panel .terminal-key-file-wrap {
-          min-height: 2rem;
-        }
-        .terminal-proxyjump-panel .terminal-auth-chip {
-          padding: 0.35rem 0.45rem;
-          font-size: 0.68rem;
-          gap: 0.35rem;
-        }
-        .terminal-proxyjump-panel .terminal-key-file-btn {
-          padding: 0.15rem 0.45rem;
-          font-size: 0.65rem;
-        }
-        .terminal-options-grid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 0.35rem 0.75rem;
-          margin-bottom: 0.35rem;
-        }
-        .terminal-options-grid .terminal-option-item {
-          min-width: 0;
-        }
-        .terminal-options-grid .terminal-option-text {
-          line-height: 1.2;
-        }
-        .terminal-folder-dropdown-wrap {
-          padding: 0 0.5rem;
-          min-height: 2.25rem;
-          gap: 0;
-        }
-        .ssh-terminal-form .terminal-folder-dropdown-wrap .terminal-icon-left {
-          flex-shrink: 0;
-          align-self: center;
-          margin-right: 0.5rem;
-          opacity: 0.5;
-          color: inherit;
-          line-height: 1;
-        }
-        .ssh-terminal-form .terminal-folder-dropdown.p-dropdown {
-          width: 100%;
-          min-width: 0;
-          background: transparent !important;
-          border: none !important;
-          box-shadow: none !important;
-          font-family: inherit;
-        }
-        .ssh-terminal-form .terminal-folder-dropdown.p-dropdown.p-focus,
-        .ssh-terminal-form .terminal-folder-dropdown.p-dropdown:not(.p-disabled):hover,
-        body.layout-cyberpunk .ssh-terminal-form .terminal-folder-dropdown.p-dropdown:not(.p-disabled).p-focus {
-          border: none !important;
-          box-shadow: none !important;
-          outline: none !important;
-        }
-        .ssh-terminal-form .terminal-folder-dropdown .p-dropdown-label {
-          color: var(--ui-dialog-text) !important;
-          font-size: 0.85rem !important;
-          padding: 0.5rem 0.25rem !important;
-        }
-        .ssh-terminal-form .terminal-folder-dropdown .p-dropdown-label.p-placeholder {
-          color: color-mix(in srgb, var(--ui-dialog-text) 40%, transparent) !important;
-        }
-        .ssh-terminal-form .terminal-folder-dropdown .p-dropdown-trigger {
-          color: color-mix(in srgb, var(--ui-dialog-text) 50%, transparent);
-          width: 2rem;
-        }
-        .ssh-terminal-form .terminal-folder-dropdown .p-dropdown-clear-icon {
-          color: color-mix(in srgb, var(--ui-dialog-text) 45%, transparent) !important;
-          right: 2rem;
-        }
-        .ssh-terminal-form .terminal-folder-dropdown .p-dropdown-clear-icon:hover {
-          color: var(--ui-button-primary) !important;
-        }
-        .terminal-folder-dropdown-panel.p-dropdown-panel {
-          background: var(--ui-dialog-bg) !important;
-          border: 1px solid color-mix(in srgb, var(--ui-button-primary) 28%, transparent) !important;
-          border-radius: 4px !important;
-          box-shadow: 0 12px 32px var(--ui-dialog-shadow) !important;
-          font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
-          color: var(--ui-dialog-text) !important;
-        }
-        .terminal-folder-dropdown-panel .p-dropdown-header {
-          background: transparent !important;
-          border-bottom: 1px solid var(--ui-dialog-border) !important;
-          padding: 0.5rem !important;
-        }
-        .terminal-folder-dropdown-panel .p-dropdown-filter-container .p-dropdown-filter {
-          background: color-mix(in srgb, var(--ui-dialog-text) 3%, transparent) !important;
-          border: 1px solid var(--ui-dialog-border) !important;
-          color: var(--ui-dialog-text) !important;
-          border-radius: 4px !important;
-          font-family: inherit !important;
-          font-size: 0.8rem !important;
-          padding: 0.45rem 0.5rem 0.45rem 2rem !important;
-          box-shadow: none !important;
-        }
-        .terminal-folder-dropdown-panel .p-dropdown-filter-container .p-dropdown-filter:enabled:focus {
-          border-color: var(--ui-button-primary) !important;
-          box-shadow: 0 0 10px color-mix(in srgb, var(--ui-button-primary) 12%, transparent) !important;
-          outline: none !important;
-        }
-        .terminal-folder-dropdown-panel .p-dropdown-filter-icon {
-          color: color-mix(in srgb, var(--ui-button-primary) 70%, transparent) !important;
-          left: 0.65rem !important;
-        }
-        .terminal-folder-dropdown-panel .p-dropdown-items {
-          padding: 0.35rem !important;
-        }
-        .terminal-folder-dropdown-panel .p-dropdown-item {
-          color: color-mix(in srgb, var(--ui-dialog-text) 85%, transparent) !important;
-          background: transparent !important;
-          border-radius: 4px !important;
-          font-size: 0.8rem !important;
-          padding: 0.45rem 0.6rem !important;
-          margin: 0.1rem 0 !important;
-        }
-        .terminal-folder-dropdown-panel .p-dropdown-item:not(.p-highlight):not(.p-disabled):hover {
-          background: color-mix(in srgb, var(--ui-button-primary) 8%, transparent) !important;
-          color: var(--ui-dialog-text) !important;
-        }
-        .terminal-folder-dropdown-panel .p-dropdown-item.p-highlight {
-          background: color-mix(in srgb, var(--ui-button-primary) 16%, transparent) !important;
-          color: var(--ui-button-primary) !important;
-        }
-        .terminal-folder-dropdown-panel .p-dropdown-empty-message {
-          color: color-mix(in srgb, var(--ui-dialog-text) 45%, transparent) !important;
-          font-size: 0.8rem !important;
-          padding: 0.5rem 0.6rem !important;
-        }
-        .terminal-option-item {
-          display: flex;
-          align-items: center;
-          padding: 0.4rem 0;
-          font-size: 0.75rem;
-        }
-        .terminal-option-icon {
-          margin-right: 0.75rem;
-          color: var(--ui-button-primary);
-          opacity: 0.8;
-          font-size: 0.9rem;
-        }
-        .terminal-dotted-spacer {
-          flex: 1;
-          border-bottom: 1px dotted var(--ui-dialog-border);
-          margin: 0 0.75rem;
-          align-self: flex-end;
-          height: 10px;
-        }
-        .terminal-switch .p-inputswitch-slider {
-          background: color-mix(in srgb, var(--ui-dialog-text) 10%, transparent) !important;
-          transform: scale(0.7);
-        }
-        .terminal-switch.p-inputswitch-checked .p-inputswitch-slider {
-          background: var(--ui-button-primary) !important;
-        }
-        .terminal-footer {
-          display: flex;
-          justify-content: space-between;
-          padding-top: 1rem;
-          border-top: 1px solid var(--ui-dialog-border);
-          flex-shrink: 0;
-        }
-        .terminal-btn-primary {
-          background: var(--ui-button-primary) !important;
-          color: var(--ui-button-primary-text);
-          border: none;
-          padding: 0.6rem 1.5rem;
-          border-radius: 4px;
-          font-weight: 700;
-          font-size: 0.8rem;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-        }
-        .terminal-btn-outline {
-          background: transparent;
-          border: 1px solid color-mix(in srgb, var(--ui-button-primary) 30%, transparent);
-          color: var(--ui-button-primary);
-          padding: 0.6rem 1rem;
-          border-radius: 4px;
-          font-size: 0.75rem;
-          font-weight: 700;
-          cursor: pointer;
-          display: inline-flex;
-          align-items: center;
-          font-family: inherit;
-        }
-        .terminal-btn-outline:hover:not(:disabled) {
-          background: color-mix(in srgb, var(--ui-button-primary) 8%, transparent);
-        }
-        .terminal-btn-outline:disabled {
-          opacity: 0.4;
-          cursor: not-allowed;
-        }
-        .terminal-btn-submit {
-          padding: 0.6rem 1.5rem;
-          font-size: 0.8rem;
-        }
-        .terminal-btn-text {
-          background: transparent;
-          border: none;
-          color: color-mix(in srgb, var(--ui-dialog-text) 50%, transparent);
-          padding: 0.6rem 1rem;
-          font-weight: 600;
-          font-size: 0.8rem;
-          cursor: pointer;
-        }
-        .terminal-btn-text:hover { color: var(--ui-dialog-text); }
-
-        /* Estilos del Header Terminal */
-        .terminal-header-compact {
-          background: var(--ui-dialog-bg);
-          padding: 0.75rem 1.25rem;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          border-bottom: 1px solid var(--ui-dialog-border);
-          position: relative;
-        }
-        .terminal-header-title {
-          font-family: 'JetBrains Mono', monospace;
-          font-size: 0.8rem;
-          font-weight: 700;
-          color: var(--ui-dialog-text);
-          letter-spacing: 0.1em;
-        }
-        .terminal-header-icon-mini {
-          width: 24px;
-          height: 24px;
-          background: var(--ui-sidebar-button-bg);
-          border-radius: 4px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: var(--ui-button-primary);
-          font-size: 0.8rem;
-        }
-        .terminal-header-icon-btn {
-          background: none;
-          border: none;
-          padding: 0;
-          cursor: pointer;
-          transition: transform 0.2s;
-        }
-        .terminal-header-icon-btn:hover {
-          transform: scale(1.1);
-        }
-        .terminal-header-accent {
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          width: 40px;
-          height: 2px;
-          background: var(--ui-button-primary);
-          box-shadow: 0 0 8px var(--ui-button-primary);
-        }
-        .terminal-pro-dialog .p-dialog-header {
-          padding: 0 !important;
-          background: var(--ui-dialog-bg) !important;
-          border: none !important;
-        }
-        .terminal-pro-dialog .p-dialog-content {
-          background: var(--ui-dialog-bg) !important;
-          border: none !important;
-          flex: 1 1 auto;
-          min-height: 0;
-        }
-        .terminal-pro-dialog.p-dialog {
-          display: flex;
-          flex-direction: column;
-          max-height: 90vh;
-          overflow: hidden;
-        }
-        .terminal-pro-dialog .p-resizable-handle {
-          background: transparent !important;
-          z-index: 1000 !important;
-        }
-        .terminal-pro-dialog .p-resizable-handle:hover {
-          background: rgba(33, 150, 243, 0.2) !important;
-        }
-        .terminal-pro-dialog .p-resizable-handle-e {
-          width: 12px !important;
-          right: -2px !important;
-          cursor: ew-resize !important;
-        }
-        .terminal-pro-dialog .p-resizable-handle-se {
-          width: 20px !important;
-          height: 20px !important;
-          right: -2px !important;
-          bottom: -2px !important;
-          cursor: nwse-resize !important;
-        }
-        .terminal-form-scroll-area {
-          min-height: 0;
-          overflow-y: auto;
-          overscroll-behavior: contain;
-          scrollbar-width: thin;
-          scrollbar-color: var(--ui-dialog-border) transparent;
-        }
-        .terminal-form-scroll-area::-webkit-scrollbar {
-          width: 6px;
-        }
-        .terminal-form-scroll-area::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .terminal-form-scroll-area::-webkit-scrollbar-thumb {
-          background: var(--ui-dialog-border);
-          border-radius: 3px;
-        }
-        .terminal-form-scroll-area::-webkit-scrollbar-thumb:hover {
-          background: var(--ui-button-primary);
-        }
-        .ssh-connection-dialog .p-dialog-content {
-          scrollbar-width: thin;
-          scrollbar-color: var(--ui-dialog-border) transparent;
-        }
-        .ssh-connection-dialog .p-dialog-content::-webkit-scrollbar {
-          width: 6px;
-        }
-        .ssh-connection-dialog .p-dialog-content::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .ssh-connection-dialog .p-dialog-content::-webkit-scrollbar-thumb {
-          background: var(--ui-dialog-border);
-          border-radius: 3px;
-        }
-        .ssh-connection-dialog .p-dialog-content::-webkit-scrollbar-thumb:hover {
-          background: var(--ui-button-primary);
-        }
-      `}} />
     </div>
   );
 }
@@ -2987,449 +2063,81 @@ export function NewRDPConnectionDialog({
   onGoBack,
   onSaveToSidebar
 }) {
-  // Hook de internacionalización
   const { t } = useTranslation('dialogs');
-  const { t: tCommon } = useTranslation('common');
-  
-  const [formData, setFormData] = useState({
-    name: '',
-    server: '',
-    username: '',
-    password: '',
-    port: 3389,
-    clientType: 'guacamole',
-    preset: 'default',
-    resolution: '1600x1000',
-    colorDepth: 32,
-    redirectFolders: true,
-    redirectClipboard: true,
-    redirectPrinters: false,
-    redirectAudio: false, // Desactivar audio por defecto
-    fullscreen: false,
-    smartSizing: true,
-    span: false,
-    admin: false,
-    public: false,
-    // Campos específicos para Guacamole
-    autoResize: true,
-    guacDpi: 96,
-    guacSecurity: 'any',
-    guacEnableWallpaper: true, // Activar mostrar fondo por defecto
-    guacEnableDrive: false,
-    guacDriveHostDir: '',
-    guacEnableGfx: false,
-    // Opciones avanzadas
-    guacEnableDesktopComposition: false,
-    guacEnableFontSmoothing: false,
-    guacEnableTheming: false,
-    guacEnableFullWindowDrag: false,
-    guacEnableMenuAnimations: false,
-    // Flags de prueba
-    guacDisableGlyphCaching: false,
-    guacDisableOffscreenCaching: false,
-    guacDisableBitmapCaching: false,
-    guacDisableCopyRect: false
-  });
 
-  // Handlers para RDP
-  const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
+  const [formData, setFormData] = useState(() => createDefaultRdpFormData());
+  const [showRdpPassword, setShowRdpPassword] = useState(false);
 
-  const handleTextChange = (field) => (e) => {
-    setFormData(prev => ({ ...prev, [field]: e.target.value }));
-  };
+  useEffect(() => {
+    if (!visible) {
+      setFormData(createDefaultRdpFormData());
+      setShowRdpPassword(false);
+    }
+  }, [visible]);
 
-  const handleCheckboxChange = (field) => (e) => {
-    // PrimeReact Checkbox pasa el estado en e.checked (boolean)
-    const newValue = !!e.checked; // Asegurar que sea boolean
-    console.log(`[NewRDP] Checkbox ${field} cambiado:`, { 
-      checked: e.checked, 
-      newValue,
-      currentState: formData[field]
-    });
-    
-    setFormData(prev => {
-      const updated = { ...prev, [field]: newValue };
-      console.log(`[NewRDP] Estado actualizado:`, { field, oldValue: prev[field], newValue: updated[field] });
-      return updated;
-    });
-  };
+  const handleTextChange = useCallback((field) => (event) => {
+    setFormData((previous) => ({ ...previous, [field]: event.target.value }));
+  }, []);
 
-  // Función para abrir el selector de carpeta
-  const handleSelectFolder = async () => {
+  const handleInputChange = useCallback((field, value) => {
+    setFormData((previous) => ({ ...previous, [field]: value }));
+  }, []);
+
+  const handleSelectFolder = useCallback(async () => {
     try {
       const result = await window.electron.dialog.showOpenDialog({
         properties: ['openDirectory'],
         title: t('rdp.tooltips.selectFolder')
       });
-      
+
       if (!result.canceled && result.filePaths && result.filePaths.length > 0) {
-        setFormData(prev => ({ ...prev, guacDriveHostDir: result.filePaths[0] }));
+        setFormData((previous) => ({ ...previous, guacDriveHostDir: result.filePaths[0] }));
       }
     } catch (error) {
       console.error('Error al abrir selector de carpeta:', error);
     }
-  };
+  }, [t]);
 
-  const [showRdpPassword, setShowRdpPassword] = useState(false);
-
-  // Resetear formulario al cerrar
-  useEffect(() => {
-    if (!visible) {
-      setFormData({
-        name: '',
-        server: '',
-        username: '',
-        password: '',
-        port: 3389,
-        clientType: 'guacamole',
-        preset: 'default',
-        resolution: '1600x1000',
-        colorDepth: 32,
-        redirectFolders: true,
-        redirectClipboard: true,
-        redirectPrinters: false,
-        redirectAudio: false,
-        fullscreen: false,
-        smartSizing: true,
-        span: false,
-        admin: false,
-        public: false,
-        autoResize: true,
-        guacDpi: 96,
-        guacSecurity: 'any',
-        guacEnableWallpaper: true,
-        guacEnableDrive: false,
-        guacDriveHostDir: '',
-        guacEnableGfx: false,
-        guacEnableDesktopComposition: false,
-        guacEnableFontSmoothing: false,
-        guacEnableTheming: false,
-        guacEnableFullWindowDrag: false,
-        guacEnableMenuAnimations: false,
-        guacDisableGlyphCaching: false,
-        guacDisableOffscreenCaching: false,
-        guacDisableBitmapCaching: false,
-        guacDisableCopyRect: false
-      });
-      setShowRdpPassword(false);
+  const handleSubmit = useCallback(() => {
+    if (!isRdpFormValid(formData)) {
+      return;
     }
-  }, [visible]);
 
-  const isFormValid = useMemo(() => {
-    return formData.name.trim() !== '' && formData.server.trim() !== '' && formData.username.trim() !== '';
-  }, [formData]);
-
-  const headerTemplate = (
-    <div className="terminal-header-compact">
-      <div className="flex align-items-center gap-2">
-        <div className="terminal-header-icon-mini" style={{ background: 'rgba(33, 150, 243, 0.1)', color: '#2196F3' }}>
-          <i className="pi pi-desktop"></i>
-        </div>
-        <span className="terminal-header-title">{t('rdp.title.new').toUpperCase()}</span>
-      </div>
-      <div className="terminal-header-accent" style={{ background: '#2196F3', boxShadow: '0 0 8px #2196F3' }}></div>
-    </div>
-  );
+    if (onSaveToSidebar) {
+      onSaveToSidebar(formData, false, null);
+    }
+    onHide();
+  }, [formData, onHide, onSaveToSidebar]);
 
   return (
     <Dialog
-      header={headerTemplate}
+      header={<RdpTerminalDialogHeader title={t('rdp.title.new').toUpperCase()} />}
       visible={visible}
       onHide={onHide}
-      style={{ width: '100%', maxWidth: '800px' }}
+      style={TERMINAL_PRO_DIALOG_STYLE}
       modal
-      resizable={false}
-      contentStyle={{ padding: '0', overflow: 'auto', background: 'var(--ui-dialog-bg)' }}
+      resizable
+      contentStyle={TERMINAL_PRO_DIALOG_CONTENT_STYLE}
       className="terminal-pro-dialog"
       closable={false}
     >
-      <div className="p-fluid" style={{ padding: '12px', height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ flex: '1 1 auto', overflowY: 'auto', padding: '2px' }}>
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-            {/* --- COLUMNA IZQUIERDA: Conexión --- */}
-            <div style={{ flex: '1', minWidth: '320px' }}>
-              <Card title={`🔗 ${t('rdp.sections.connection')}`} className="mb-2">
-                <div className="formgrid grid">
-                  <div className="field col-12">
-                    <label htmlFor="name-create-rdp">{t('rdp.fields.name')} *</label>
-                    <InputText
-                      id="name-create-rdp"
-                      value={formData.name}
-                      onChange={handleTextChange('name')}
-                      placeholder={t('rdp.placeholders.name')}
-                      autoComplete="off"
-                    />
-                  </div>
-                  <div className="field col-8">
-                    <label htmlFor="server-create-rdp">{t('rdp.fields.server')} *</label>
-                    <InputText
-                      id="server-create-rdp"
-                      value={formData.server}
-                      onChange={handleTextChange('server')}
-                      placeholder={t('rdp.placeholders.server')}
-                      autoComplete="off"
-                    />
-                  </div>
-                  <div className="field col-4">
-                    <label htmlFor="port-create-rdp">{t('rdp.fields.port')}</label>
-                    <InputText
-                      id="port-create-rdp"
-                      type="number"
-                      value={formData.port}
-                      onChange={handleTextChange('port')}
-                      placeholder={t('rdp.placeholders.port')}
-                      autoComplete="off"
-                    />
-                  </div>
-                  <div className="field col-12">
-                    <label htmlFor="username-create-rdp">{t('rdp.fields.username')} *</label>
-                    <InputText
-                      id="username-create-rdp"
-                      value={formData.username}
-                      onChange={handleTextChange('username')}
-                      placeholder={t('rdp.placeholders.username')}
-                      autoComplete="off"
-                    />
-                  </div>
-                  <div className="field col-12">
-                    <label htmlFor="password-create-rdp">{t('rdp.fields.password')}</label>
-                    <div className="p-inputgroup">
-                      <InputText
-                        id="password-create-rdp"
-                        type={showRdpPassword ? "text" : "password"}
-                        value={formData.password}
-                        onChange={handleTextChange('password')}
-                        placeholder={t('rdp.placeholders.password')}
-                        autoComplete="off"
-                      />
-                      <Button
-                        type="button"
-                        icon={showRdpPassword ? "pi pi-eye-slash" : "pi pi-eye"}
-                        className="p-button-outlined"
-                        onClick={() => setShowRdpPassword(!showRdpPassword)}
-                        tooltip={showRdpPassword ? t('rdp.tooltips.hidePassword') : t('rdp.tooltips.showPassword')}
-                        tooltipOptions={{ position: 'top' }}
-                      />
-                    </div>
-                  </div>
-                  <div className="field col-12">
-                    <label htmlFor="clientType-create-rdp">💻 {t('rdp.fields.client')}</label>
-                    <Dropdown
-                      id="clientType-create-rdp"
-                      value={formData.clientType}
-                      options={[
-                        { label: t('rdp.clientTypes.mstsc'), value: 'mstsc' },
-                        { label: t('rdp.clientTypes.guacamole'), value: 'guacamole' }
-                      ]}
-                      onChange={(e) => handleInputChange('clientType', e.value)}
-                      placeholder={tCommon('labels.select')}
-                    />
-                  </div>
-                  {formData.clientType === 'guacamole' && (
-                    <div className="field col-12">
-                      <label htmlFor="guacSecurity-create-rdp">🔒 {t('rdp.fields.security')}</label>
-                      <Dropdown
-                        id="guacSecurity-create-rdp"
-                        value={formData.guacSecurity}
-                        options={[
-                          { label: `🛡️ ${t('rdp.securityOptions.any')}`, value: 'any' },
-                          { label: `🔐 ${t('rdp.securityOptions.rdp')}`, value: 'rdp' },
-                          { label: `🔒 ${t('rdp.securityOptions.tls')}`, value: 'tls' },
-                          { label: `🛡️ ${t('rdp.securityOptions.nla')}`, value: 'nla' }
-                        ]}
-                        onChange={(e) => handleInputChange('guacSecurity', e.value)}
-                        placeholder={tCommon('labels.select')}
-                      />
-                      <small>{t('rdp.descriptions.security')}</small>
-                    </div>
-                  )}
-                </div>
-              </Card>
-
-              {formData.clientType === 'guacamole' && formData.guacEnableDrive && (
-                <Card title={`📁 ${t('rdp.fields.sharedFolder')}`} className="mt-3">
-                  <div className="field">
-                    <label htmlFor="guacDriveHostDir-create-rdp">{t('rdp.fields.localPath')}</label>
-                    <div className="p-inputgroup">
-                      <InputText
-                        id="guacDriveHostDir-create-rdp"
-                        value={formData.guacDriveHostDir}
-                        onChange={handleTextChange('guacDriveHostDir')}
-                        placeholder={t('rdp.placeholders.localPath')}
-                      />
-                      <Button icon="pi pi-folder-open" className="p-button-secondary p-button-outlined" onClick={handleSelectFolder} tooltip={t('rdp.tooltips.selectFolder')} />
-                    </div>
-                    <small className="p-d-block mt-2 text-color-secondary">
-                      {t('rdp.descriptions.sharedFolder')}
-                    </small>
-                  </div>
-                </Card>
-              )}
-            </div>
-
-            {/* --- COLUMNA DERECHA: Ajustes de Sesión --- */}
-            <div style={{ flex: '1.5', minWidth: '320px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {/* Card: Pantalla */}
-              <Card title={`🖥️ ${t('rdp.sections.screen')}`}>
-                <div className="formgrid grid">
-                  <div className="field col-6">
-                    <label htmlFor="preset-create-rdp">{t('rdp.fields.preset')}</label>
-                    <Dropdown
-                      id="preset-create-rdp"
-                      value={formData.preset}
-                      options={[
-                        { label: t('rdp.presets.default'), value: 'default' },
-                        { label: t('rdp.presets.performance'), value: 'performance' },
-                        { label: t('rdp.presets.quality'), value: 'quality' }
-                      ]}
-                      onChange={(e) => handleInputChange('preset', e.value)}
-                    />
-                  </div>
-                  <div className="field col-6">
-                    <label htmlFor="resolution-create-rdp">{t('rdp.fields.resolution')}</label>
-                    <Dropdown
-                      id="resolution-create-rdp"
-                      value={formData.resolution}
-                      options={[
-                        { label: t('rdp.resolutions.fullscreen'), value: 'fullscreen' },
-                        { label: '1920x1080', value: '1920x1080' },
-                        { label: '1600x1000', value: '1600x1000' },
-                        { label: '1366x768', value: '1366x768' },
-                        { label: '1024x768', value: '1024x768' }
-                      ]}
-                      onChange={(e) => handleInputChange('resolution', e.value)}
-                    />
-                  </div>
-                  <div className="field col-6">
-                    <label htmlFor="colorDepth-create-rdp">{t('rdp.fields.color')}</label>
-                    <Dropdown
-                      id="colorDepth-create-rdp"
-                      value={formData.colorDepth}
-                      options={[
-                        { label: t('rdp.colorDepths.32'), value: 32 },
-                        { label: t('rdp.colorDepths.24'), value: 24 },
-                        { label: t('rdp.colorDepths.16'), value: 16 },
-                        { label: t('rdp.colorDepths.15'), value: 15 }
-                      ]}
-                      onChange={(e) => handleInputChange('colorDepth', e.value)}
-                    />
-                  </div>
-                  <div className="field col-6">
-                    <label htmlFor="guacDpi-create-rdp">{t('rdp.fields.dpi')}</label>
-                    <InputText
-                      id="guacDpi-create-rdp"
-                      value={formData.guacDpi}
-                      onChange={handleTextChange('guacDpi')}
-                      placeholder={t('rdp.placeholders.dpi')}
-                    />
-                  </div>
-                </div>
-              </Card>
-
-              {/* Card: Opciones */}
-              <Card title={`⚙️ ${t('rdp.sections.options')}`}>
-                <div className="formgrid grid">
-                  {/* Opciones para MSTSC */}
-                  {formData.clientType === 'mstsc' && (
-                    <>
-                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectClipboard-create-rdp" checked={formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} /><label htmlFor="mstsc-redirectClipboard-create-rdp">📋 {t('rdp.options.clipboard')}</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectAudio-create-rdp" checked={formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} /><label htmlFor="mstsc-redirectAudio-create-rdp">🔊 {t('rdp.options.audio')}</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectPrinters-create-rdp" checked={formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} /><label htmlFor="mstsc-redirectPrinters-create-rdp">🖨️ {t('rdp.options.printers')}</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-redirectFolders-create-rdp" checked={formData.redirectFolders} onChange={handleCheckboxChange('redirectFolders')} /><label htmlFor="mstsc-redirectFolders-create-rdp">📁 {t('rdp.options.folders')}</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-smartSizing-create-rdp" checked={formData.smartSizing} onChange={handleCheckboxChange('smartSizing')} /><label htmlFor="mstsc-smartSizing-create-rdp">📐 {t('rdp.options.smartSizing')}</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="mstsc-fullscreen-create-rdp" checked={formData.fullscreen} onChange={handleCheckboxChange('fullscreen')} /><label htmlFor="mstsc-fullscreen-create-rdp">🖥️ {t('rdp.options.fullscreen')}</label></div>
-                    </>
-                  )}
-                  {/* Opciones para Guacamole */}
-                  {formData.clientType === 'guacamole' && (
-                    <>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectClipboard-create-rdp" checked={!!formData.redirectClipboard} onChange={handleCheckboxChange('redirectClipboard')} key={`clipboard-create-${formData.redirectClipboard}`} /><label htmlFor="guac-redirectClipboard-create-rdp">📋 {t('rdp.options.clipboard')}</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectAudio-create-rdp" checked={!!formData.redirectAudio} onChange={handleCheckboxChange('redirectAudio')} key={`audio-create-${formData.redirectAudio}`} /><label htmlFor="guac-redirectAudio-create-rdp">🔊 {t('rdp.options.audio')}</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-enableDrive-create-rdp" checked={!!formData.guacEnableDrive} onChange={handleCheckboxChange('guacEnableDrive')} key={`drive-create-${formData.guacEnableDrive}`} /><label htmlFor="guac-enableDrive-create-rdp">💾 {t('rdp.options.enableDrive')}</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-autoResize-create-rdp" checked={!!formData.autoResize} onChange={handleCheckboxChange('autoResize')} key={`resize-create-${formData.autoResize}`} /><label htmlFor="guac-autoResize-create-rdp">📐 {t('rdp.options.autoResize')}</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-enableWallpaper-create-rdp" checked={!!formData.guacEnableWallpaper} onChange={handleCheckboxChange('guacEnableWallpaper')} key={`wallpaper-create-${formData.guacEnableWallpaper}`} /><label htmlFor="guac-enableWallpaper-create-rdp">🖼️ {t('rdp.options.enableWallpaper')}</label></div>
-                      <div className="field-checkbox col-6"><Checkbox inputId="guac-redirectPrinters-create-rdp" checked={!!formData.redirectPrinters} onChange={handleCheckboxChange('redirectPrinters')} key={`printers-create-${formData.redirectPrinters}`} /><label htmlFor="guac-redirectPrinters-create-rdp">🖨️ {t('rdp.options.printers')}</label></div>
-                    </>
-                  )}
-                </div>
-
-                {/* Fieldset: Opciones Avanzadas */}
-                {formData.clientType === 'guacamole' && (
-                  <div style={{ marginTop: '1rem', paddingTop: '1rem' }}>
-                    <Fieldset legend={`⚙️ ${t('rdp.sections.advanced')}`} toggleable collapsed className="advanced-fieldset">
-                      <div className="formgrid grid">
-                        <div className="col-4">
-                          <h5>{t('rdp.advanced.performance')}</h5>
-                          <div className="field-checkbox"><Checkbox inputId="guac-gfx-create-rdp" checked={!!formData.guacEnableGfx} onChange={handleCheckboxChange('guacEnableGfx')} key={`gfx-create-${formData.guacEnableGfx}`} /><label htmlFor="guac-gfx-create-rdp">🎨 Habilitar GFX</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-composition-create-rdp" checked={!!formData.guacEnableDesktopComposition} onChange={handleCheckboxChange('guacEnableDesktopComposition')} key={`composition-create-${formData.guacEnableDesktopComposition}`} /><label htmlFor="guac-composition-create-rdp">🖼️ Desktop Composition</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-font-create-rdp" checked={!!formData.guacEnableFontSmoothing} onChange={handleCheckboxChange('guacEnableFontSmoothing')} key={`font-create-${formData.guacEnableFontSmoothing}`} /><label htmlFor="guac-font-create-rdp">✨ Font Smoothing</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-theming-create-rdp" checked={!!formData.guacEnableTheming} onChange={handleCheckboxChange('guacEnableTheming')} key={`theming-create-${formData.guacEnableTheming}`} /><label htmlFor="guac-theming-create-rdp">🎭 Theming</label></div>
-                        </div>
-                        <div className="col-4">
-                          <h5>{t('rdp.advanced.interface')}</h5>
-                          <div className="field-checkbox"><Checkbox inputId="guac-drag-create-rdp" checked={!!formData.guacEnableFullWindowDrag} onChange={handleCheckboxChange('guacEnableFullWindowDrag')} key={`drag-create-${formData.guacEnableFullWindowDrag}`} /><label htmlFor="guac-drag-create-rdp">🖱️ {t('rdp.advanced.fullWindowDrag')}</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-menu-create-rdp" checked={!!formData.guacEnableMenuAnimations} onChange={handleCheckboxChange('guacEnableMenuAnimations')} key={`menu-create-${formData.guacEnableMenuAnimations}`} /><label htmlFor="guac-menu-create-rdp">🎬 {t('rdp.advanced.menuAnimations')}</label></div>
-                        </div>
-                        <div className="col-4">
-                          <h5>{t('rdp.advanced.cache')}</h5>
-                          <div className="field-checkbox"><Checkbox inputId="guac-glyph-cache-create-rdp" checked={!!(!formData.guacDisableGlyphCaching)} onChange={(e) => { const newValue = !!e.checked; handleInputChange('guacDisableGlyphCaching', !newValue); }} key={`glyph-create-${!formData.guacDisableGlyphCaching}`} /><label htmlFor="guac-glyph-cache-create-rdp">🔤 Glyph Caching</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-offscreen-cache-create-rdp" checked={!!(!formData.guacDisableOffscreenCaching)} onChange={(e) => { const newValue = !!e.checked; handleInputChange('guacDisableOffscreenCaching', !newValue); }} key={`offscreen-create-${!formData.guacDisableOffscreenCaching}`} /><label htmlFor="guac-offscreen-cache-create-rdp">📱 Offscreen Caching</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-bitmap-cache-create-rdp" checked={!!(!formData.guacDisableBitmapCaching)} onChange={(e) => { const newValue = !!e.checked; handleInputChange('guacDisableBitmapCaching', !newValue); }} key={`bitmap-create-${!formData.guacDisableBitmapCaching}`} /><label htmlFor="guac-bitmap-cache-create-rdp">🖼️ Bitmap Caching</label></div>
-                          <div className="field-checkbox"><Checkbox inputId="guac-copy-rect-create-rdp" checked={!!(!formData.guacDisableCopyRect)} onChange={(e) => { const newValue = !!e.checked; handleInputChange('guacDisableCopyRect', !newValue); }} key={`copyrect-create-${!formData.guacDisableCopyRect}`} /><label htmlFor="guac-copy-rect-create-rdp">📋 Copy-Rect</label></div>
-                        </div>
-                      </div>
-                    </Fieldset>
-                  </div>
-                )}
-              </Card>
-            </div>
-          </div>
-        </div>
-        {/* Botones */}
-        <div className="p-field" style={{ display: 'flex', gap: 12, marginTop: 12, marginBottom: 0, justifyContent: 'space-between', paddingTop: '12px' }}>
-          <div style={{ display: 'flex', gap: 12 }}>
-            {onGoBack && (
-              <Button
-                label={t('common.back')}
-                icon="pi pi-arrow-left"
-                className="p-button-text"
-                onClick={onGoBack}
-                style={{ fontSize: '13px', padding: '8px 16px' }}
-              />
-            )}
-          </div>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <Button
-              label={tCommon('buttons.cancel')}
-              icon="pi pi-times"
-              className="p-button-text"
-              onClick={onHide}
-              style={{ fontSize: '13px', padding: '8px 16px' }}
-            />
-            <Button
-              label={tCommon('buttons.save')}
-              icon="pi pi-check"
-              className="p-button-primary"
-              onClick={() => {
-                console.log('Crear conexión RDP con datos:', formData);
-                onSaveToSidebar && onSaveToSidebar(formData, false, null);
-                onHide();
-              }}
-              disabled={!isFormValid}
-              style={{ fontSize: '13px', padding: '8px 16px' }}
-            />
-          </div>
-        </div>
+      <div style={TERMINAL_PRO_DIALOG_FORM_WRAPPER_STYLE}>
+        <EnhancedRDPForm
+          formData={formData}
+          handleTextChange={handleTextChange}
+          handleInputChange={handleInputChange}
+          showPassword={showRdpPassword}
+          setShowPassword={setShowRdpPassword}
+          onSelectFolder={handleSelectFolder}
+          onHide={onHide}
+          onGoBack={onGoBack}
+          onSubmit={handleSubmit}
+          idPrefix="create-rdp"
+        />
       </div>
     </Dialog>
   );
 }
-
-// Código residual eliminado - las funciones NewRDPConnectionDialog duplicadas fueron removidas
-
-// Código residual del UnifiedConnectionDialog eliminado completamente
 
 // --- NewVNCConnectionDialog: Diálogo simple para VNC ---
 export function NewVNCConnectionDialog({

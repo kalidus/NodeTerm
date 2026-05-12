@@ -1,0 +1,659 @@
+.connection-terminal-form {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+  background: var(--ui-dialog-bg);
+  color: var(--ui-dialog-text);
+  min-height: 0;
+}
+
+.terminal-host-port-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 7.5rem;
+  gap: 0.75rem;
+  align-items: start;
+  width: 100%;
+}
+
+.terminal-host-port-host {
+  min-width: 0;
+}
+
+.terminal-host-port-port {
+  min-width: 0;
+  width: 7.5rem;
+  max-width: 7.5rem;
+}
+
+.terminal-label {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--ui-button-primary);
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.05em;
+}
+
+.terminal-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: color-mix(in srgb, var(--ui-dialog-text) 3%, transparent);
+  border: 1px solid var(--ui-dialog-border);
+  border-radius: 4px;
+  padding: 0 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.terminal-port-input-wrap {
+  overflow: hidden;
+  padding: 0 0.35rem;
+}
+
+.terminal-input-wrap:focus-within {
+  border-color: var(--ui-button-primary);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--ui-button-primary) 10%, transparent);
+}
+
+.terminal-input {
+  background: transparent !important;
+  border: none !important;
+  color: var(--ui-dialog-text) !important;
+  font-family: inherit !important;
+  font-size: 0.85rem !important;
+  padding: 0.5rem 0.25rem !important;
+  flex: 1;
+}
+
+.terminal-port-input {
+  width: 100% !important;
+  min-width: 0 !important;
+  text-align: center !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.terminal-input:focus,
+.terminal-input:enabled:focus,
+.terminal-input.p-focus {
+  box-shadow: none !important;
+  outline: none !important;
+  border-color: transparent !important;
+}
+
+body.layout-cyberpunk .connection-terminal-form .p-inputtext,
+.connection-terminal-form .p-inputtext {
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+body.layout-cyberpunk .connection-terminal-form .p-inputtext:enabled:focus,
+body.layout-cyberpunk .connection-terminal-form .p-inputtext:enabled:focus-visible,
+body.layout-cyberpunk .connection-terminal-form .p-inputtext.p-focus,
+.connection-terminal-form .p-inputtext:enabled:focus,
+.connection-terminal-form .p-inputtext:enabled:focus-visible,
+.connection-terminal-form .p-inputtext.p-focus {
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.connection-terminal-form .terminal-row .terminal-input-wrap:focus-within {
+  border-color: var(--ui-button-primary) !important;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--ui-button-primary) 16%, transparent) !important;
+}
+
+.terminal-icon-left {
+  font-size: 0.9rem;
+  margin-right: 0.5rem;
+  opacity: 0.5;
+}
+
+.terminal-icon-right {
+  font-size: 0.9rem;
+  margin-left: 0.5rem;
+  opacity: 0.5;
+}
+
+.terminal-auth-selector {
+  display: flex;
+  gap: 1px;
+  background: color-mix(in srgb, var(--ui-dialog-text) 5%, transparent);
+  border: 1px solid var(--ui-dialog-border);
+  border-radius: 4px;
+  padding: 1px;
+}
+
+.terminal-auth-chip {
+  flex: 1;
+  text-align: center;
+  padding: 0.5rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: color-mix(in srgb, var(--ui-dialog-text) 40%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.terminal-auth-chip i {
+  font-size: 0.8rem;
+}
+
+.terminal-auth-chip.active {
+  background: var(--ui-sidebar-button-bg) !important;
+  color: var(--ui-button-primary) !important;
+  border: 1px solid color-mix(in srgb, var(--ui-button-primary) 30%, transparent) !important;
+  border-radius: 4px;
+}
+
+.terminal-auth-chip.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.terminal-key-file-wrap {
+  gap: 0.5rem;
+  min-height: 2.25rem;
+}
+
+.terminal-key-file-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.75rem;
+}
+
+.terminal-key-file-input {
+  display: none;
+}
+
+.terminal-key-file-btn {
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--ui-button-primary) 30%, transparent);
+  color: var(--ui-button-primary);
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.terminal-key-file-btn:hover {
+  background: var(--ui-sidebar-button-bg);
+}
+
+.terminal-advanced-section {
+  width: 100%;
+}
+
+.terminal-advanced-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.25rem 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  text-align: left;
+}
+
+.terminal-advanced-header:hover .terminal-label {
+  color: var(--ui-button-primary);
+}
+
+.terminal-advanced-section .terminal-options-list {
+  padding-top: 0.35rem;
+}
+
+.terminal-advanced-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.65rem;
+}
+
+.terminal-advanced-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid var(--ui-dialog-border);
+  border-radius: 4px;
+  background: transparent;
+  color: color-mix(in srgb, var(--ui-dialog-text) 75%, transparent);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1.2;
+}
+
+.terminal-advanced-tab .pi {
+  color: var(--ui-button-primary);
+  opacity: 0.85;
+  font-size: 0.8rem;
+}
+
+.terminal-advanced-tab.active {
+  border-color: var(--ui-button-primary);
+  color: var(--ui-button-primary);
+  background: color-mix(in srgb, var(--ui-button-primary) 8%, transparent);
+}
+
+.terminal-advanced-tab:hover:not(.active) {
+  border-color: color-mix(in srgb, var(--ui-button-primary) 35%, var(--ui-dialog-border));
+  color: var(--ui-dialog-text);
+}
+
+.terminal-advanced-panel-pane {
+  padding-top: 0.15rem;
+}
+
+.terminal-proxyjump-panel .terminal-label {
+  margin-bottom: 0.25rem;
+  font-size: 0.6rem;
+}
+
+.terminal-proxyjump-panel .terminal-host-port-row {
+  gap: 0.5rem;
+}
+
+.terminal-proxyjump-panel .terminal-input {
+  padding: 0.38rem 0.25rem !important;
+  font-size: 0.8rem !important;
+}
+
+.terminal-proxyjump-panel .terminal-input-wrap,
+.terminal-proxyjump-panel .terminal-key-file-wrap {
+  min-height: 2rem;
+}
+
+.terminal-proxyjump-panel .terminal-auth-chip {
+  padding: 0.35rem 0.45rem;
+  font-size: 0.68rem;
+  gap: 0.35rem;
+}
+
+.terminal-proxyjump-panel .terminal-key-file-btn {
+  padding: 0.15rem 0.45rem;
+  font-size: 0.65rem;
+}
+
+.terminal-options-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.terminal-options-grid .terminal-option-item {
+  min-width: 0;
+}
+
+.terminal-options-grid .terminal-option-text {
+  line-height: 1.2;
+}
+
+.terminal-folder-dropdown-wrap {
+  padding: 0 0.5rem;
+  min-height: 2.25rem;
+  gap: 0;
+}
+
+.connection-terminal-form .terminal-folder-dropdown-wrap .terminal-icon-left {
+  flex-shrink: 0;
+  align-self: center;
+  margin-right: 0.5rem;
+  opacity: 0.5;
+  color: inherit;
+  line-height: 1;
+}
+
+.connection-terminal-form .terminal-folder-dropdown.p-dropdown {
+  width: 100%;
+  min-width: 0;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  font-family: inherit;
+}
+
+.connection-terminal-form .terminal-folder-dropdown.p-dropdown.p-focus,
+.connection-terminal-form .terminal-folder-dropdown.p-dropdown:not(.p-disabled):hover,
+body.layout-cyberpunk .connection-terminal-form .terminal-folder-dropdown.p-dropdown:not(.p-disabled).p-focus {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.connection-terminal-form .terminal-folder-dropdown .p-dropdown-label {
+  color: var(--ui-dialog-text) !important;
+  font-size: 0.85rem !important;
+  padding: 0.5rem 0.25rem !important;
+}
+
+.connection-terminal-form .terminal-folder-dropdown .p-dropdown-label.p-placeholder {
+  color: color-mix(in srgb, var(--ui-dialog-text) 40%, transparent) !important;
+}
+
+.connection-terminal-form .terminal-folder-dropdown .p-dropdown-trigger {
+  color: color-mix(in srgb, var(--ui-dialog-text) 50%, transparent);
+  width: 2rem;
+}
+
+.connection-terminal-form .terminal-folder-dropdown .p-dropdown-clear-icon {
+  color: color-mix(in srgb, var(--ui-dialog-text) 45%, transparent) !important;
+  right: 2rem;
+}
+
+.connection-terminal-form .terminal-folder-dropdown .p-dropdown-clear-icon:hover {
+  color: var(--ui-button-primary) !important;
+}
+
+.terminal-folder-dropdown-panel.p-dropdown-panel {
+  background: var(--ui-dialog-bg) !important;
+  border: 1px solid color-mix(in srgb, var(--ui-button-primary) 28%, transparent) !important;
+  border-radius: 4px !important;
+  box-shadow: 0 12px 32px var(--ui-dialog-shadow) !important;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+  color: var(--ui-dialog-text) !important;
+}
+
+.terminal-folder-dropdown-panel .p-dropdown-header {
+  background: transparent !important;
+  border-bottom: 1px solid var(--ui-dialog-border) !important;
+  padding: 0.5rem !important;
+}
+
+.terminal-folder-dropdown-panel .p-dropdown-filter-container .p-dropdown-filter {
+  background: color-mix(in srgb, var(--ui-dialog-text) 3%, transparent) !important;
+  border: 1px solid var(--ui-dialog-border) !important;
+  color: var(--ui-dialog-text) !important;
+  border-radius: 4px !important;
+  font-family: inherit !important;
+  font-size: 0.8rem !important;
+  padding: 0.45rem 0.5rem 0.45rem 2rem !important;
+  box-shadow: none !important;
+}
+
+.terminal-folder-dropdown-panel .p-dropdown-filter-container .p-dropdown-filter:enabled:focus {
+  border-color: var(--ui-button-primary) !important;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--ui-button-primary) 12%, transparent) !important;
+  outline: none !important;
+}
+
+.terminal-folder-dropdown-panel .p-dropdown-filter-icon {
+  color: color-mix(in srgb, var(--ui-button-primary) 70%, transparent) !important;
+  left: 0.65rem !important;
+}
+
+.terminal-folder-dropdown-panel .p-dropdown-items {
+  padding: 0.35rem !important;
+}
+
+.terminal-folder-dropdown-panel .p-dropdown-item {
+  color: color-mix(in srgb, var(--ui-dialog-text) 85%, transparent) !important;
+  background: transparent !important;
+  border-radius: 4px !important;
+  font-size: 0.8rem !important;
+  padding: 0.45rem 0.6rem !important;
+  margin: 0.1rem 0 !important;
+}
+
+.terminal-folder-dropdown-panel .p-dropdown-item:not(.p-highlight):not(.p-disabled):hover {
+  background: color-mix(in srgb, var(--ui-button-primary) 8%, transparent) !important;
+  color: var(--ui-dialog-text) !important;
+}
+
+.terminal-folder-dropdown-panel .p-dropdown-item.p-highlight {
+  background: color-mix(in srgb, var(--ui-button-primary) 16%, transparent) !important;
+  color: var(--ui-button-primary) !important;
+}
+
+.terminal-folder-dropdown-panel .p-dropdown-empty-message {
+  color: color-mix(in srgb, var(--ui-dialog-text) 45%, transparent) !important;
+  font-size: 0.8rem !important;
+  padding: 0.5rem 0.6rem !important;
+}
+
+.terminal-option-item {
+  display: flex;
+  align-items: center;
+  padding: 0.4rem 0;
+  font-size: 0.75rem;
+}
+
+.terminal-option-icon {
+  margin-right: 0.75rem;
+  color: var(--ui-button-primary);
+  opacity: 0.8;
+  font-size: 0.9rem;
+}
+
+.terminal-dotted-spacer {
+  flex: 1;
+  border-bottom: 1px dotted var(--ui-dialog-border);
+  margin: 0 0.75rem;
+  align-self: flex-end;
+  height: 10px;
+}
+
+.terminal-switch .p-inputswitch-slider {
+  background: color-mix(in srgb, var(--ui-dialog-text) 10%, transparent) !important;
+  transform: scale(0.7);
+}
+
+.terminal-switch.p-inputswitch-checked .p-inputswitch-slider {
+  background: var(--ui-button-primary) !important;
+}
+
+.terminal-footer {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 1rem;
+  border-top: 1px solid var(--ui-dialog-border);
+  flex-shrink: 0;
+}
+
+.terminal-btn-primary {
+  background: var(--ui-button-primary) !important;
+  color: var(--ui-button-primary-text);
+  border: none;
+  padding: 0.6rem 1.5rem;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.terminal-btn-outline {
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--ui-button-primary) 30%, transparent);
+  color: var(--ui-button-primary);
+  padding: 0.6rem 1rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  font-family: inherit;
+}
+
+.terminal-btn-outline:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ui-button-primary) 8%, transparent);
+}
+
+.terminal-btn-outline:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.terminal-btn-submit {
+  padding: 0.6rem 1.5rem;
+  font-size: 0.8rem;
+}
+
+.terminal-btn-text {
+  background: transparent;
+  border: none;
+  color: color-mix(in srgb, var(--ui-dialog-text) 50%, transparent);
+  padding: 0.6rem 1rem;
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.terminal-btn-text:hover {
+  color: var(--ui-dialog-text);
+}
+
+.terminal-header-compact {
+  background: var(--ui-dialog-bg);
+  padding: 0.75rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--ui-dialog-border);
+  position: relative;
+}
+
+.terminal-header-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ui-dialog-text);
+  letter-spacing: 0.1em;
+}
+
+.terminal-header-icon-mini {
+  width: 24px;
+  height: 24px;
+  background: var(--ui-sidebar-button-bg);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ui-button-primary);
+  font-size: 0.8rem;
+}
+
+.terminal-header-icon-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.terminal-header-icon-btn:hover {
+  transform: scale(1.1);
+}
+
+.terminal-header-accent {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 40px;
+  height: 2px;
+  background: var(--ui-button-primary);
+  box-shadow: 0 0 8px var(--ui-button-primary);
+}
+
+.terminal-pro-dialog .p-dialog-header {
+  padding: 0 !important;
+  background: var(--ui-dialog-bg) !important;
+  border: none !important;
+}
+
+.terminal-pro-dialog .p-dialog-content {
+  background: var(--ui-dialog-bg) !important;
+  border: none !important;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.terminal-pro-dialog.p-dialog {
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  overflow: hidden;
+}
+
+.terminal-pro-dialog .p-resizable-handle {
+  background: transparent !important;
+  z-index: 1000 !important;
+}
+
+.terminal-pro-dialog .p-resizable-handle:hover {
+  background: rgba(33, 150, 243, 0.2) !important;
+}
+
+.terminal-pro-dialog .p-resizable-handle-e {
+  width: 12px !important;
+  right: -2px !important;
+  cursor: ew-resize !important;
+}
+
+.terminal-pro-dialog .p-resizable-handle-se {
+  width: 20px !important;
+  height: 20px !important;
+  right: -2px !important;
+  bottom: -2px !important;
+  cursor: nwse-resize !important;
+}
+
+.terminal-form-scroll-area {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ui-dialog-border) transparent;
+}
+
+.terminal-form-scroll-area::-webkit-scrollbar {
+  width: 6px;
+}
+
+.terminal-form-scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.terminal-form-scroll-area::-webkit-scrollbar-thumb {
+  background: var(--ui-dialog-border);
+  border-radius: 3px;
+}
+
+.terminal-form-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: var(--ui-button-primary);
+}
+
+.ssh-connection-dialog .p-dialog-content {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ui-dialog-border) transparent;
+}
+
+.ssh-connection-dialog .p-dialog-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ssh-connection-dialog .p-dialog-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ssh-connection-dialog .p-dialog-content::-webkit-scrollbar-thumb {
+  background: var(--ui-dialog-border);
+  border-radius: 3px;
+}
+
+.ssh-connection-dialog .p-dialog-content::-webkit-scrollbar-thumb:hover {
+  background: var(--ui-button-primary);
+}
