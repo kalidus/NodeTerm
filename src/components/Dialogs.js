@@ -1959,6 +1959,29 @@ export function EnhancedSSHForm({
           </div>
         )}
 
+        <div className="terminal-row mb-4">
+          <label className="terminal-label">
+            {t('ssh.fields.targetFolder').toUpperCase()}{' '}
+            <span className="opacity-50">({tCommon('labels.optional')})</span>
+          </label>
+          <div className="terminal-input-wrap terminal-folder-dropdown-wrap">
+            <i className="pi pi-folder terminal-icon-left"></i>
+            <Dropdown
+              value={sshTargetFolder}
+              options={foldersOptions}
+              onChange={(e) => setSSHTargetFolder(e.value)}
+              optionLabel="label"
+              optionValue="value"
+              placeholder={t('ssh.placeholders.targetFolder')}
+              showClear
+              filter
+              filterPlaceholder={t('ssh.placeholders.targetFolder')}
+              className="terminal-folder-dropdown"
+              panelClassName="terminal-folder-dropdown-panel"
+            />
+          </div>
+        </div>
+
         <div className="terminal-advanced-section mb-3">
           <button
             type="button"
@@ -2063,29 +2086,6 @@ export function EnhancedSSHForm({
                         checked={sshAutoRecording}
                         onChange={(e) => setSSHAutoRecording(e.value)}
                         className="terminal-switch"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="terminal-row mt-2">
-                    <label className="terminal-label">
-                      {t('ssh.fields.targetFolder').toUpperCase()}{' '}
-                      <span className="opacity-50">({tCommon('labels.optional')})</span>
-                    </label>
-                    <div className="terminal-input-wrap terminal-folder-dropdown-wrap">
-                      <i className="pi pi-folder terminal-icon-left"></i>
-                      <Dropdown
-                        value={sshTargetFolder}
-                        options={foldersOptions}
-                        onChange={(e) => setSSHTargetFolder(e.value)}
-                        optionLabel="label"
-                        optionValue="value"
-                        placeholder={t('ssh.placeholders.targetFolder')}
-                        showClear
-                        filter
-                        filterPlaceholder={t('ssh.placeholders.targetFolder')}
-                        className="terminal-folder-dropdown"
-                        panelClassName="terminal-folder-dropdown-panel"
                       />
                     </div>
                   </div>
