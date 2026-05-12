@@ -6,9 +6,9 @@ import { Tooltip } from 'primereact/tooltip';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 
 export const TERMINAL_PRO_DIALOG_STYLE = {
-  width: '600px',
+  width: '680px',
   maxWidth: '95vw',
-  minWidth: '420px',
+  minWidth: '460px',
   height: 'auto',
   maxHeight: '90vh',
   minHeight: '480px'
@@ -135,6 +135,17 @@ export function RdpTerminalDialogHeader({ title }) {
         <span className="terminal-header-title">{display}</span>
       </div>
       <div className="terminal-header-accent" aria-hidden="true"></div>
+    </div>
+  );
+}
+
+function TerminalOptionSection({ title, children }) {
+  return (
+    <div className="terminal-options-section">
+      <div className="terminal-options-section-title">{title}</div>
+      <div className="terminal-options-grid terminal-options-grid--single">
+        {children}
+      </div>
     </div>
   );
 }
@@ -649,10 +660,7 @@ export function EnhancedRDPForm({
                   aria-labelledby={`${p}-advanced-tab-guacamole`}
                   className="terminal-advanced-panel-pane"
                 >
-                  <div className="terminal-options-grid mb-3">
-                    <h5 className="w-full m-0 mb-2" style={{ fontSize: '0.75rem', color: 'var(--ui-button-primary)' }}>
-                      {t('rdp.advanced.performance')}
-                    </h5>
+                  <TerminalOptionSection title={t('rdp.advanced.performance')}>
                     <TerminalSwitchOption
                       iconClass="pi-palette"
                       labelText={t('rdp.advanced.enableGfx')}
@@ -681,11 +689,8 @@ export function EnhancedRDPForm({
                       onCheckedChange={(v) => handleInputChange('guacEnableTheming', v)}
                       inputId={`${p}-guac-theme`}
                     />
-                  </div>
-                  <div className="terminal-options-grid mb-3">
-                    <h5 className="w-full m-0 mb-2" style={{ fontSize: '0.75rem', color: 'var(--ui-button-primary)' }}>
-                      {t('rdp.advanced.interface')}
-                    </h5>
+                  </TerminalOptionSection>
+                  <TerminalOptionSection title={t('rdp.advanced.interface')}>
                     <TerminalSwitchOption
                       iconClass="pi-arrows-h"
                       labelText={t('rdp.advanced.fullWindowDrag')}
@@ -700,11 +705,8 @@ export function EnhancedRDPForm({
                       onCheckedChange={(v) => handleInputChange('guacEnableMenuAnimations', v)}
                       inputId={`${p}-guac-menu`}
                     />
-                  </div>
-                  <div className="terminal-options-grid">
-                    <h5 className="w-full m-0 mb-2" style={{ fontSize: '0.75rem', color: 'var(--ui-button-primary)' }}>
-                      {t('rdp.advanced.cache')}
-                    </h5>
+                  </TerminalOptionSection>
+                  <TerminalOptionSection title={t('rdp.advanced.cache')}>
                     <TerminalSwitchOption
                       iconClass="pi-font"
                       labelText={t('rdp.advanced.glyphCaching')}
@@ -733,7 +735,7 @@ export function EnhancedRDPForm({
                       onCheckedChange={(v) => handleInputChange('guacDisableCopyRect', !v)}
                       inputId={`${p}-guac-copy-rect`}
                     />
-                  </div>
+                  </TerminalOptionSection>
                 </div>
               ) : null}
 

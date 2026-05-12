@@ -749,30 +749,15 @@ export function EditSSHConnectionDialog({
       <Dialog
         header={headerTemplate}
         visible={visible}
-        style={{
-          width: '600px',
-          maxWidth: '95vw',
-          minWidth: '420px',
-          height: 'auto',
-          maxHeight: '90vh',
-          minHeight: '480px'
-        }}
+        style={TERMINAL_PRO_DIALOG_STYLE}
         modal
         resizable
         onHide={onHide}
-        contentStyle={{
-          padding: '0',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          flex: '1',
-          minHeight: '0',
-          background: 'var(--ui-dialog-bg)'
-        }}
+        contentStyle={TERMINAL_PRO_DIALOG_CONTENT_STYLE}
         className="terminal-pro-dialog"
         closable={false}
       >
-        <div style={{ marginTop: '10px', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={TERMINAL_PRO_DIALOG_FORM_WRAPPER_STYLE}>
           <EnhancedSSHForm
             activeTabIndex={0}
             sshName={sshName}
@@ -1967,30 +1952,15 @@ export function NewSSHConnectionDialog({
     <Dialog
       header={headerTemplate}
       visible={visible}
-      style={{
-        width: '600px',
-        maxWidth: '95vw',
-        minWidth: '420px',
-        height: 'auto',
-        maxHeight: '90vh',
-        minHeight: '480px'
-      }}
+      style={TERMINAL_PRO_DIALOG_STYLE}
       modal
       resizable
       onHide={onHide}
-      contentStyle={{
-        padding: '0',
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        flex: '1',
-        minHeight: '0',
-        background: 'var(--ui-dialog-bg)'
-      }}
+      contentStyle={TERMINAL_PRO_DIALOG_CONTENT_STYLE}
       className="terminal-pro-dialog"
       closable={false}
     >
-      <div style={{ marginTop: '10px', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={TERMINAL_PRO_DIALOG_FORM_WRAPPER_STYLE}>
         <EnhancedSSHForm
           activeTabIndex={0}
           sshName={sshName}

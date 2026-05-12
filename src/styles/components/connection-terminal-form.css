@@ -213,20 +213,20 @@ body.layout-cyberpunk .connection-terminal-form .p-inputtext.p-focus,
 .terminal-advanced-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-bottom: 0.65rem;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
 }
 
 .terminal-advanced-tab {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.35rem 0.55rem;
+  gap: 0.3rem;
+  padding: 0.3rem 0.45rem;
   border: 1px solid var(--ui-dialog-border);
   border-radius: 4px;
   background: transparent;
   color: color-mix(in srgb, var(--ui-dialog-text) 75%, transparent);
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   font-weight: 700;
   text-transform: uppercase;
   cursor: pointer;
@@ -288,12 +288,60 @@ body.layout-cyberpunk .connection-terminal-form .p-inputtext.p-focus,
 .terminal-options-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.35rem 0.75rem;
+  gap: 0.2rem 0.85rem;
+  margin-bottom: 0.25rem;
+}
+
+.terminal-options-grid--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.terminal-options-section + .terminal-options-section {
+  margin-top: 0.65rem;
+}
+
+.terminal-options-section-title {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ui-button-primary);
   margin-bottom: 0.35rem;
 }
 
 .terminal-options-grid .terminal-option-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 0.5rem;
+  padding: 0.25rem 0;
   min-width: 0;
+}
+
+.terminal-options-grid .terminal-option-item > .flex {
+  min-width: 0;
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.terminal-options-grid .terminal-option-item > .terminal-switch {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.terminal-options-grid .terminal-option-item .terminal-option-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.terminal-options-grid .terminal-dotted-spacer {
+  display: none;
+}
+
+.terminal-options-grid .terminal-switch {
+  justify-self: end;
+  flex-shrink: 0;
 }
 
 .terminal-options-grid .terminal-option-text {
