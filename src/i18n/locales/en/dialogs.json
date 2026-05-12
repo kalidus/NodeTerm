@@ -249,6 +249,11 @@
     "sections": {
       "connection": "Connection",
       "screen": "Screen",
+      "options": "Options",
+      "advanced": "Advanced options"
+    },
+    "advancedTabs": {
+      "screen": "Screen",
       "options": "Options"
     },
     "fields": {
@@ -293,6 +298,21 @@
     "tooltips": {
       "showPassword": "Show password",
       "hidePassword": "Hide password"
+    },
+    "help": {
+      "resolution": "Remote desktop size when connecting.",
+      "colorDepth": "Color depth for the VNC session.",
+      "dpi": "Pixel density for the Guacamole client.",
+      "imageQuality": "Image compression trade-off between quality and bandwidth.",
+      "readOnly": "Session does not accept keyboard or mouse input.",
+      "compression": "Reduces network traffic by compressing the image.",
+      "autoReconnect": "Retries the connection if the link is lost.",
+      "autoResize": "Adjusts remote resolution to the viewer size.",
+      "clipboard": "Synchronizes clipboard between local and remote."
+    },
+    "validation": {
+      "nameRequired": "Name is required.",
+      "serverRequired": "Server is required."
     }
   },
   "fileConnection": {

@@ -249,6 +249,11 @@
     "sections": {
       "connection": "Conexión",
       "screen": "Pantalla",
+      "options": "Opciones",
+      "advanced": "Opciones avanzadas"
+    },
+    "advancedTabs": {
+      "screen": "Pantalla",
       "options": "Opciones"
     },
     "fields": {
@@ -293,6 +298,21 @@
     "tooltips": {
       "showPassword": "Mostrar contraseña",
       "hidePassword": "Ocultar contraseña"
+    },
+    "help": {
+      "resolution": "Tamaño del escritorio remoto al conectar.",
+      "colorDepth": "Profundidad de color de la sesión VNC.",
+      "dpi": "Densidad de píxeles para el cliente Guacamole.",
+      "imageQuality": "Compresión de imagen entre calidad y ancho de banda.",
+      "readOnly": "La sesión no acepta entrada del teclado ni del ratón.",
+      "compression": "Reduce el tráfico de red comprimiendo la imagen.",
+      "autoReconnect": "Reintenta la conexión si se pierde el enlace.",
+      "autoResize": "Ajusta la resolución remota al tamaño del visor.",
+      "clipboard": "Sincroniza el portapapeles entre local y remoto."
+    },
+    "validation": {
+      "nameRequired": "El nombre es obligatorio.",
+      "serverRequired": "El servidor es obligatorio."
     }
   },
   "fileConnection": {
