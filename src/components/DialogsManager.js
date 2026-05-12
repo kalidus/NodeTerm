@@ -76,6 +76,8 @@ const DialogsManager = ({
   setSSHX11Forwarding,
   sshAgentForwarding,
   setSSHAgentForwarding,
+  sshAutoRecording,
+  setSSHAutoRecording,
   sshProxyJumpEnabled,
   setSSHProxyJumpEnabled,
   sshJumpHost,
@@ -120,6 +122,8 @@ const DialogsManager = ({
   setEditSSHX11Forwarding,
   editSSHAgentForwarding,
   setEditSSHAgentForwarding,
+  editSSHAutoRecording,
+  setEditSSHAutoRecording,
   editSSHProxyJumpEnabled,
   setEditSSHProxyJumpEnabled,
   editSSHJumpHost,
@@ -659,6 +663,8 @@ const DialogsManager = ({
         setSSHX11Forwarding={setSSHX11Forwarding}
         sshAgentForwarding={sshAgentForwarding}
         setSSHAgentForwarding={setSSHAgentForwarding}
+        sshAutoRecording={sshAutoRecording}
+        setSSHAutoRecording={setSSHAutoRecording}
         sshProxyJumpEnabled={sshProxyJumpEnabled}
         setSSHProxyJumpEnabled={setSSHProxyJumpEnabled}
         sshJumpHost={sshJumpHost}
@@ -727,6 +733,8 @@ const DialogsManager = ({
         setSSHX11Forwarding={editSSHNode ? setEditSSHX11Forwarding : setSSHX11Forwarding}
         sshAgentForwarding={editSSHNode ? editSSHAgentForwarding : sshAgentForwarding}
         setSSHAgentForwarding={editSSHNode ? setEditSSHAgentForwarding : setSSHAgentForwarding}
+        sshAutoRecording={editSSHNode ? editSSHAutoRecording : sshAutoRecording}
+        setSSHAutoRecording={editSSHNode ? setEditSSHAutoRecording : setSSHAutoRecording}
         sshProxyJumpEnabled={editSSHNode ? editSSHProxyJumpEnabled : sshProxyJumpEnabled}
         setSSHProxyJumpEnabled={editSSHNode ? setEditSSHProxyJumpEnabled : setSSHProxyJumpEnabled}
         sshJumpHost={editSSHNode ? editSSHJumpHost : sshJumpHost}

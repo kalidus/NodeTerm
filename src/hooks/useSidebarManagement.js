@@ -514,6 +514,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
               bastionUser: node.data.bastionUser || '',
               x11Forwarding: node.data.x11Forwarding || false,
               agentForwarding: node.data.agentForwarding || false,
+              autoRecording: node.data.autoRecording || false,
               proxyJumpEnabled: node.data.proxyJumpEnabled || false,
               jumpHost: node.data.jumpHost || '',
               jumpPort: node.data.jumpPort || 22,

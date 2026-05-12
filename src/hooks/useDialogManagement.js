@@ -50,6 +50,7 @@ export const useDialogManagement = () => {
   const [sshAutoCopyPassword, setSSHAutoCopyPassword] = useState(false);
   const [sshX11Forwarding, setSSHX11Forwarding] = useState(false);
   const [sshAgentForwarding, setSSHAgentForwarding] = useState(false);
+  const [sshAutoRecording, setSSHAutoRecording] = useState(false);
   const [sshProxyJumpEnabled, setSSHProxyJumpEnabled] = useState(false);
   const [sshJumpHost, setSSHJumpHost] = useState('');
   const [sshJumpPort, setSSHJumpPort] = useState(22);
@@ -74,6 +75,7 @@ export const useDialogManagement = () => {
   const [editSSHAutoCopyPassword, setEditSSHAutoCopyPassword] = useState(false);
   const [editSSHX11Forwarding, setEditSSHX11Forwarding] = useState(false);
   const [editSSHAgentForwarding, setEditSSHAgentForwarding] = useState(false);
+  const [editSSHAutoRecording, setEditSSHAutoRecording] = useState(false);
   const [editSSHProxyJumpEnabled, setEditSSHProxyJumpEnabled] = useState(false);
   const [editSSHJumpHost, setEditSSHJumpHost] = useState('');
   const [editSSHJumpPort, setEditSSHJumpPort] = useState(22);
@@ -147,6 +149,7 @@ export const useDialogManagement = () => {
     setSSHAutoCopyPassword(false);
     setSSHX11Forwarding(false);
     setSSHAgentForwarding(false);
+    setSSHAutoRecording(false);
     setSSHProxyJumpEnabled(false);
     setSSHJumpHost('');
     setSSHJumpPort(22);
@@ -209,6 +212,7 @@ export const useDialogManagement = () => {
     setEditSSHAutoCopyPassword(false);
     setEditSSHX11Forwarding(false);
     setEditSSHAgentForwarding(false);
+    setEditSSHAutoRecording(false);
     setEditSSHProxyJumpEnabled(false);
     setEditSSHJumpHost('');
     setEditSSHJumpPort(22);
@@ -360,6 +364,7 @@ export const useDialogManagement = () => {
     sshAutoCopyPassword, setSSHAutoCopyPassword,
     sshX11Forwarding, setSSHX11Forwarding,
     sshAgentForwarding, setSSHAgentForwarding,
+    sshAutoRecording, setSSHAutoRecording,
     sshProxyJumpEnabled, setSSHProxyJumpEnabled,
     sshJumpHost, setSSHJumpHost,
     sshJumpPort, setSSHJumpPort,
@@ -384,6 +389,7 @@ export const useDialogManagement = () => {
     editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
     editSSHX11Forwarding, setEditSSHX11Forwarding,
     editSSHAgentForwarding, setEditSSHAgentForwarding,
+    editSSHAutoRecording, setEditSSHAutoRecording,
     editSSHProxyJumpEnabled, setEditSSHProxyJumpEnabled,
     editSSHJumpHost, setEditSSHJumpHost,
     editSSHJumpPort, setEditSSHJumpPort,

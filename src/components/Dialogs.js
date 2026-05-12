@@ -624,6 +624,7 @@ export function EditSSHConnectionDialog({
   sshAutoCopyPassword = false, setSSHAutoCopyPassword = () => {},
   sshX11Forwarding = false, setSSHX11Forwarding = () => {},
   sshAgentForwarding = false, setSSHAgentForwarding = () => {},
+  sshAutoRecording = false, setSSHAutoRecording = () => {},
   sshProxyJumpEnabled = false, setSSHProxyJumpEnabled = () => {},
   sshJumpHost = '', setSSHJumpHost = () => {},
   sshJumpPort = 22, setSSHJumpPort = () => {},
@@ -673,6 +674,9 @@ export function EditSSHConnectionDialog({
       if (setSSHAgentForwarding && typeof setSSHAgentForwarding === 'function') {
         setSSHAgentForwarding(editNodeData.data?.agentForwarding || false);
       }
+      if (setSSHAutoRecording && typeof setSSHAutoRecording === 'function') {
+        setSSHAutoRecording(editNodeData.data?.autoRecording || false);
+      }
       if (setSSHProxyJumpEnabled && typeof setSSHProxyJumpEnabled === 'function') {
         setSSHProxyJumpEnabled(editNodeData.data?.proxyJumpEnabled || false);
       }
@@ -704,7 +708,7 @@ export function EditSSHConnectionDialog({
         setSSHIcon(editNodeData.data?.customIcon || null);
       }
     }
-  }, [editNodeData, visible, setSSHName, setSSHHost, setSSHUser, setSSHPassword, setSSHAuthMethod, setSSHPrivateKey, setSSHRemoteFolder, setSSHPort, setSSHAutoCopyPassword, setSSHX11Forwarding, setSSHAgentForwarding, setSSHProxyJumpEnabled, setSSHJumpHost, setSSHJumpPort, setSSHJumpUser, setSSHJumpAuthMethod, setSSHJumpPassword, setSSHJumpPrivateKey, setSSHHostKeyPolicy, setSSHDescription, setSSHIcon]);
+  }, [editNodeData, visible, setSSHName, setSSHHost, setSSHUser, setSSHPassword, setSSHAuthMethod, setSSHPrivateKey, setSSHRemoteFolder, setSSHPort, setSSHAutoCopyPassword, setSSHX11Forwarding, setSSHAgentForwarding, setSSHAutoRecording, setSSHProxyJumpEnabled, setSSHJumpHost, setSSHJumpPort, setSSHJumpUser, setSSHJumpAuthMethod, setSSHJumpPassword, setSSHJumpPrivateKey, setSSHHostKeyPolicy, setSSHDescription, setSSHIcon]);
 
   // Handler para seleccionar icono
   const handleIconSelect = useCallback((iconId) => {
@@ -785,6 +789,8 @@ export function EditSSHConnectionDialog({
             setSSHX11Forwarding={setSSHX11Forwarding}
             sshAgentForwarding={sshAgentForwarding}
             setSSHAgentForwarding={setSSHAgentForwarding}
+            sshAutoRecording={sshAutoRecording}
+            setSSHAutoRecording={setSSHAutoRecording}
             sshProxyJumpEnabled={sshProxyJumpEnabled}
             setSSHProxyJumpEnabled={setSSHProxyJumpEnabled}
             sshJumpHost={sshJumpHost}
@@ -1680,6 +1686,7 @@ export function EnhancedSSHForm({
   sshAutoCopyPassword = false, setSSHAutoCopyPassword = () => {},
   sshX11Forwarding = false, setSSHX11Forwarding = () => {},
   sshAgentForwarding = false, setSSHAgentForwarding = () => {},
+  sshAutoRecording = false, setSSHAutoRecording = () => {},
   sshProxyJumpEnabled = false, setSSHProxyJumpEnabled = () => {},
   sshJumpHost = '', setSSHJumpHost = () => {},
   sshJumpPort = 22, setSSHJumpPort = () => {},
@@ -1706,14 +1713,53 @@ export function EnhancedSSHForm({
   const [privateKeyFileName, setPrivateKeyFileName] = useState('');
   const [jumpPrivateKeyFileName, setJumpPrivateKeyFileName] = useState('');
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+  const [advancedOptionsTab, setAdvancedOptionsTab] = useState('general');
   const privateKeyInputRef = useRef(null);
   const jumpPrivateKeyInputRef = useRef(null);
   const isWallixUser = useMemo(() => isWallixUserString(sshUser), [sshUser]);
+  const advancedOptionTabs = useMemo(() => {
+    const tabs = [
+      {
+        id: 'general',
+        label: t('ssh.advancedTabs.general'),
+        icon: 'pi-sliders-h'
+      }
+    ];
+
+    if (!isWallixUser) {
+      tabs.push(
+        {
+          id: 'proxyJump',
+          label: t('ssh.auth.proxyJump'),
+          icon: 'pi-share-alt'
+        },
+        {
+          id: 'hostKey',
+          label: t('ssh.auth.hostKeyPolicy'),
+          icon: 'pi-shield'
+        }
+      );
+    }
+
+    tabs.push({
+      id: 'targetFolder',
+      label: t('ssh.fields.targetFolder'),
+      icon: 'pi-folder'
+    });
+
+    return tabs;
+  }, [isWallixUser, t]);
   const hostKeyPolicyOptions = useMemo(() => ([
     { label: t('ssh.auth.hostKeyPolicies.warn_new'), value: 'warn_new' },
     { label: t('ssh.auth.hostKeyPolicies.known_hosts'), value: 'known_hosts' },
     { label: t('ssh.auth.hostKeyPolicies.strict'), value: 'strict' }
   ]), [t]);
+
+  useEffect(() => {
+    if (!advancedOptionTabs.some((tab) => tab.id === advancedOptionsTab)) {
+      setAdvancedOptionsTab(advancedOptionTabs[0]?.id || 'general');
+    }
+  }, [advancedOptionTabs, advancedOptionsTab]);
 
   // Validación del formulario
   const validateForm = useCallback(() => {
@@ -1932,227 +1978,297 @@ export function EnhancedSSHForm({
 
           {showAdvancedOptions && (
             <div className="terminal-options-list">
-          <div className="terminal-option-item">
-              <div className="flex align-items-center">
-                <i className="pi pi-save terminal-option-icon"></i>
-                <span className="terminal-option-text">{t('ssh.auth.autoCopyPassword')}</span>
-              </div>
-              <div className="terminal-dotted-spacer"></div>
-              <InputSwitch
-                checked={sshAutoCopyPassword}
-                onChange={(e) => setSSHAutoCopyPassword(e.value)}
-                className="terminal-switch"
-                disabled={sshAuthMethod === 'key'}
-              />
-            </div>
-
-          <div className="terminal-option-item">
-            <div className="flex align-items-center">
-              <i className="pi pi-desktop terminal-option-icon"></i>
-              <span
-                className="terminal-option-text info-icon"
-                data-pr-tooltip={t('ssh.auth.x11ForwardingDescription')}
-              >
-                {t('ssh.auth.x11Forwarding')}
-              </span>
-            </div>
-            <div className="terminal-dotted-spacer"></div>
-            <InputSwitch
-              checked={sshX11Forwarding}
-              onChange={(e) => setSSHX11Forwarding(e.value)}
-              className="terminal-switch"
-            />
-          </div>
-
-          <div className="terminal-option-item">
-            <div className="flex align-items-center">
-              <i className="pi pi-shield terminal-option-icon"></i>
-              <span
-                className="terminal-option-text info-icon"
-                data-pr-tooltip={t('ssh.auth.agentForwardingDescription')}
-              >
-                {t('ssh.auth.agentForwarding')}
-              </span>
-            </div>
-            <div className="terminal-dotted-spacer"></div>
-            <InputSwitch
-              checked={sshAgentForwarding}
-              onChange={(e) => setSSHAgentForwarding(e.value)}
-              className="terminal-switch"
-            />
-          </div>
-
-          {!isWallixUser && (
-            <>
-              <div className="terminal-row mt-2">
-                <label
-                  className="terminal-label info-icon"
-                  data-pr-tooltip={t('ssh.auth.hostKeyPolicyDescription')}
-                >
-                  {t('ssh.auth.hostKeyPolicy').toUpperCase()}
-                </label>
-                <div className="terminal-input-wrap terminal-folder-dropdown-wrap">
-                  <Dropdown
-                    value={sshHostKeyPolicy}
-                    options={hostKeyPolicyOptions}
-                    onChange={(e) => setSSHHostKeyPolicy(e.value)}
-                    optionLabel="label"
-                    optionValue="value"
-                    className="terminal-folder-dropdown"
-                    panelClassName="terminal-folder-dropdown-panel"
-                  />
-                </div>
-              </div>
-
-              <div className="terminal-option-item">
-                <div className="flex align-items-center">
-                  <i className="pi pi-share-alt terminal-option-icon"></i>
-                  <span
-                    className="terminal-option-text info-icon"
-                    data-pr-tooltip={t('ssh.auth.proxyJumpDescription')}
+              <div className="terminal-advanced-tabs" role="tablist" aria-label={t('ssh.sections.advanced')}>
+                {advancedOptionTabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    id={`ssh-advanced-tab-${tab.id}`}
+                    aria-selected={advancedOptionsTab === tab.id}
+                    aria-controls={`ssh-advanced-panel-${tab.id}`}
+                    className={`terminal-advanced-tab${advancedOptionsTab === tab.id ? ' active' : ''}`}
+                    onClick={() => setAdvancedOptionsTab(tab.id)}
                   >
-                    {t('ssh.auth.proxyJump')}
-                  </span>
-                </div>
-                <div className="terminal-dotted-spacer"></div>
-                <InputSwitch
-                  checked={sshProxyJumpEnabled}
-                  onChange={(e) => setSSHProxyJumpEnabled(e.value)}
-                  className="terminal-switch"
-                />
+                    <i className={`pi ${tab.icon}`} aria-hidden="true"></i>
+                    <span>{tab.label}</span>
+                  </button>
+                ))}
               </div>
 
-              {sshProxyJumpEnabled && (
-                <div className="terminal-row mt-2">
-                  <div className="terminal-host-port-row mb-3">
-                    <div className="terminal-host-port-host">
-                      <label className="terminal-label">{t('ssh.auth.jumpHost').toUpperCase()}</label>
-                      <div className="terminal-input-wrap">
-                        <InputText
-                          value={sshJumpHost}
-                          onChange={(e) => setSSHJumpHost(e.target.value)}
-                          placeholder="jump.ejemplo.com"
-                          className="terminal-input"
-                        />
+              {advancedOptionsTab === 'general' && (
+                <div
+                  id="ssh-advanced-panel-general"
+                  role="tabpanel"
+                  aria-labelledby="ssh-advanced-tab-general"
+                  className="terminal-advanced-panel-pane"
+                >
+                  <div className="terminal-options-grid">
+                    <div className="terminal-option-item">
+                      <div className="flex align-items-center">
+                        <i className="pi pi-save terminal-option-icon"></i>
+                        <span className="terminal-option-text">{t('ssh.auth.autoCopyPassword')}</span>
                       </div>
+                      <div className="terminal-dotted-spacer"></div>
+                      <InputSwitch
+                        checked={sshAutoCopyPassword}
+                        onChange={(e) => setSSHAutoCopyPassword(e.value)}
+                        className="terminal-switch"
+                        disabled={sshAuthMethod === 'key'}
+                      />
                     </div>
-                    <div className="terminal-host-port-port">
-                      <label className="terminal-label">{t('ssh.auth.jumpPort').toUpperCase()}</label>
-                      <div className="terminal-input-wrap terminal-port-input-wrap">
-                        <InputText
-                          value={sshJumpPort}
-                          onChange={(e) => setSSHJumpPort(e.target.value)}
-                          placeholder="22"
-                          className="terminal-input terminal-port-input text-center"
-                        />
-                      </div>
-                    </div>
-                  </div>
 
-                  <div className="terminal-row mb-3">
-                    <label className="terminal-label">{t('ssh.auth.jumpUser').toUpperCase()}</label>
-                    <div className="terminal-input-wrap">
-                      <InputText
-                        value={sshJumpUser}
-                        onChange={(e) => setSSHJumpUser(e.target.value)}
-                        placeholder="jump_user"
-                        className="terminal-input"
+                    <div className="terminal-option-item">
+                      <div className="flex align-items-center">
+                        <i className="pi pi-desktop terminal-option-icon"></i>
+                        <span
+                          className="terminal-option-text info-icon"
+                          data-pr-tooltip={t('ssh.auth.x11ForwardingDescription')}
+                        >
+                          {t('ssh.auth.x11Forwarding')}
+                        </span>
+                      </div>
+                      <div className="terminal-dotted-spacer"></div>
+                      <InputSwitch
+                        checked={sshX11Forwarding}
+                        onChange={(e) => setSSHX11Forwarding(e.value)}
+                        className="terminal-switch"
+                      />
+                    </div>
+
+                    <div className="terminal-option-item">
+                      <div className="flex align-items-center">
+                        <i className="pi pi-shield terminal-option-icon"></i>
+                        <span
+                          className="terminal-option-text info-icon"
+                          data-pr-tooltip={t('ssh.auth.agentForwardingDescription')}
+                        >
+                          {t('ssh.auth.agentForwarding')}
+                        </span>
+                      </div>
+                      <div className="terminal-dotted-spacer"></div>
+                      <InputSwitch
+                        checked={sshAgentForwarding}
+                        onChange={(e) => setSSHAgentForwarding(e.value)}
+                        className="terminal-switch"
+                      />
+                    </div>
+
+                    <div className="terminal-option-item">
+                      <div className="flex align-items-center">
+                        <i className="pi pi-video terminal-option-icon"></i>
+                        <span
+                          className="terminal-option-text info-icon"
+                          data-pr-tooltip={t('ssh.auth.autoRecordingDescription')}
+                        >
+                          {t('ssh.auth.autoRecording')}
+                        </span>
+                      </div>
+                      <div className="terminal-dotted-spacer"></div>
+                      <InputSwitch
+                        checked={sshAutoRecording}
+                        onChange={(e) => setSSHAutoRecording(e.value)}
+                        className="terminal-switch"
                       />
                     </div>
                   </div>
+                </div>
+              )}
 
-                  <div className="terminal-row mb-3">
-                    <label className="terminal-label">{t('ssh.auth.method').toUpperCase()}</label>
-                    <div className="terminal-auth-selector">
-                      <div
-                        className={`terminal-auth-chip ${sshJumpAuthMethod === 'password' ? 'active' : ''}`}
-                        onClick={() => {
-                          setSSHJumpAuthMethod('password');
-                          setSSHJumpPrivateKey('');
-                          setJumpPrivateKeyFileName('');
-                        }}
+              {!isWallixUser && advancedOptionsTab === 'proxyJump' && (
+                <div
+                  id="ssh-advanced-panel-proxyJump"
+                  role="tabpanel"
+                  aria-labelledby="ssh-advanced-tab-proxyJump"
+                  className="terminal-advanced-panel-pane"
+                >
+                  <div className="terminal-option-item">
+                    <div className="flex align-items-center">
+                      <i className="pi pi-share-alt terminal-option-icon"></i>
+                      <span
+                        className="terminal-option-text info-icon"
+                        data-pr-tooltip={t('ssh.auth.proxyJumpDescription')}
                       >
-                        <i className="pi pi-lock"></i> {t('ssh.auth.password')}
-                      </div>
-                      <div
-                        className={`terminal-auth-chip ${sshJumpAuthMethod === 'key' ? 'active' : ''}`}
-                        onClick={() => {
-                          setSSHJumpAuthMethod('key');
-                          setSSHJumpPassword('');
-                        }}
-                      >
-                        <i className="pi pi-key"></i> {t('ssh.auth.key')}
-                      </div>
+                        {t('ssh.auth.proxyJump')}
+                      </span>
                     </div>
+                    <div className="terminal-dotted-spacer"></div>
+                    <InputSwitch
+                      checked={sshProxyJumpEnabled}
+                      onChange={(e) => setSSHProxyJumpEnabled(e.value)}
+                      className="terminal-switch"
+                    />
                   </div>
 
-                  {sshJumpAuthMethod === 'password' ? (
-                    <div className="terminal-row mb-2">
-                      <label className="terminal-label">{t('ssh.auth.jumpPassword').toUpperCase()}</label>
-                      <div className="terminal-input-wrap">
-                        <InputText
-                          type={showJumpPassword ? 'text' : 'password'}
-                          value={sshJumpPassword}
-                          onChange={(e) => setSSHJumpPassword(e.target.value)}
-                          className="terminal-input"
-                        />
-                        <i
-                          className={`pi ${showJumpPassword ? 'pi-eye-slash' : 'pi-eye'} terminal-icon-right cursor-pointer`}
-                          onClick={() => setShowJumpPassword(!showJumpPassword)}
-                        ></i>
+                  {sshProxyJumpEnabled && (
+                    <div className="terminal-row mt-2">
+                      <div className="terminal-host-port-row mb-3">
+                        <div className="terminal-host-port-host">
+                          <label className="terminal-label">{t('ssh.auth.jumpHost').toUpperCase()}</label>
+                          <div className="terminal-input-wrap">
+                            <InputText
+                              value={sshJumpHost}
+                              onChange={(e) => setSSHJumpHost(e.target.value)}
+                              placeholder="jump.ejemplo.com"
+                              className="terminal-input"
+                            />
+                          </div>
+                        </div>
+                        <div className="terminal-host-port-port">
+                          <label className="terminal-label">{t('ssh.auth.jumpPort').toUpperCase()}</label>
+                          <div className="terminal-input-wrap terminal-port-input-wrap">
+                            <InputText
+                              value={sshJumpPort}
+                              onChange={(e) => setSSHJumpPort(e.target.value)}
+                              placeholder="22"
+                              className="terminal-input terminal-port-input text-center"
+                            />
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="terminal-row mb-2">
-                      <label className="terminal-label">{t('ssh.auth.jumpPrivateKey').toUpperCase()}</label>
-                      <div className="terminal-input-wrap terminal-key-file-wrap">
-                        <span className="terminal-key-file-name opacity-60 truncate">
-                          {jumpPrivateKeyFileName || (sshJumpPrivateKey ? t('ssh.auth.keyLoaded') : t('ssh.auth.keyFilePlaceholder'))}
-                        </span>
-                        <input
-                          ref={jumpPrivateKeyInputRef}
-                          type="file"
-                          accept=".pem,.key,.ppk,text/plain"
-                          className="terminal-key-file-input"
-                          onChange={handleJumpPrivateKeyFileChange}
-                        />
-                        <button
-                          type="button"
-                          className="terminal-key-file-btn"
-                          onClick={() => jumpPrivateKeyInputRef.current?.click()}
-                        >
-                          {t('ssh.auth.browseKeyFile')}
-                        </button>
+
+                      <div className="terminal-row mb-3">
+                        <label className="terminal-label">{t('ssh.auth.jumpUser').toUpperCase()}</label>
+                        <div className="terminal-input-wrap">
+                          <InputText
+                            value={sshJumpUser}
+                            onChange={(e) => setSSHJumpUser(e.target.value)}
+                            placeholder="jump_user"
+                            className="terminal-input"
+                          />
+                        </div>
                       </div>
+
+                      <div className="terminal-row mb-3">
+                        <label className="terminal-label">{t('ssh.auth.method').toUpperCase()}</label>
+                        <div className="terminal-auth-selector">
+                          <div
+                            className={`terminal-auth-chip ${sshJumpAuthMethod === 'password' ? 'active' : ''}`}
+                            onClick={() => {
+                              setSSHJumpAuthMethod('password');
+                              setSSHJumpPrivateKey('');
+                              setJumpPrivateKeyFileName('');
+                            }}
+                          >
+                            <i className="pi pi-lock"></i> {t('ssh.auth.password')}
+                          </div>
+                          <div
+                            className={`terminal-auth-chip ${sshJumpAuthMethod === 'key' ? 'active' : ''}`}
+                            onClick={() => {
+                              setSSHJumpAuthMethod('key');
+                              setSSHJumpPassword('');
+                            }}
+                          >
+                            <i className="pi pi-key"></i> {t('ssh.auth.key')}
+                          </div>
+                        </div>
+                      </div>
+
+                      {sshJumpAuthMethod === 'password' ? (
+                        <div className="terminal-row mb-2">
+                          <label className="terminal-label">{t('ssh.auth.jumpPassword').toUpperCase()}</label>
+                          <div className="terminal-input-wrap">
+                            <InputText
+                              type={showJumpPassword ? 'text' : 'password'}
+                              value={sshJumpPassword}
+                              onChange={(e) => setSSHJumpPassword(e.target.value)}
+                              className="terminal-input"
+                            />
+                            <i
+                              className={`pi ${showJumpPassword ? 'pi-eye-slash' : 'pi-eye'} terminal-icon-right cursor-pointer`}
+                              onClick={() => setShowJumpPassword(!showJumpPassword)}
+                            ></i>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="terminal-row mb-2">
+                          <label className="terminal-label">{t('ssh.auth.jumpPrivateKey').toUpperCase()}</label>
+                          <div className="terminal-input-wrap terminal-key-file-wrap">
+                            <span className="terminal-key-file-name opacity-60 truncate">
+                              {jumpPrivateKeyFileName || (sshJumpPrivateKey ? t('ssh.auth.keyLoaded') : t('ssh.auth.keyFilePlaceholder'))}
+                            </span>
+                            <input
+                              ref={jumpPrivateKeyInputRef}
+                              type="file"
+                              accept=".pem,.key,.ppk,text/plain"
+                              className="terminal-key-file-input"
+                              onChange={handleJumpPrivateKeyFileChange}
+                            />
+                            <button
+                              type="button"
+                              className="terminal-key-file-btn"
+                              onClick={() => jumpPrivateKeyInputRef.current?.click()}
+                            >
+                              {t('ssh.auth.browseKeyFile')}
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               )}
-            </>
-          )}
 
-              <div className="terminal-row mt-2">
-                <label className="terminal-label">
-                  {t('ssh.fields.targetFolder').toUpperCase()}{' '}
-                  <span className="opacity-50">({tCommon('labels.optional')})</span>
-                </label>
-                <div className="terminal-input-wrap terminal-folder-dropdown-wrap">
-                  <i className="pi pi-folder terminal-icon-left"></i>
-                  <Dropdown
-                    value={sshTargetFolder}
-                    options={foldersOptions}
-                    onChange={(e) => setSSHTargetFolder(e.value)}
-                    optionLabel="label"
-                    optionValue="value"
-                    placeholder={t('ssh.placeholders.targetFolder')}
-                    showClear
-                    filter
-                    filterPlaceholder={t('ssh.placeholders.targetFolder')}
-                    className="terminal-folder-dropdown"
-                    panelClassName="terminal-folder-dropdown-panel"
-                  />
+              {!isWallixUser && advancedOptionsTab === 'hostKey' && (
+                <div
+                  id="ssh-advanced-panel-hostKey"
+                  role="tabpanel"
+                  aria-labelledby="ssh-advanced-tab-hostKey"
+                  className="terminal-advanced-panel-pane"
+                >
+                  <div className="terminal-row">
+                    <label
+                      className="terminal-label info-icon"
+                      data-pr-tooltip={t('ssh.auth.hostKeyPolicyDescription')}
+                    >
+                      {t('ssh.auth.hostKeyPolicy').toUpperCase()}
+                    </label>
+                    <div className="terminal-input-wrap terminal-folder-dropdown-wrap">
+                      <Dropdown
+                        value={sshHostKeyPolicy}
+                        options={hostKeyPolicyOptions}
+                        onChange={(e) => setSSHHostKeyPolicy(e.value)}
+                        optionLabel="label"
+                        optionValue="value"
+                        className="terminal-folder-dropdown"
+                        panelClassName="terminal-folder-dropdown-panel"
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {advancedOptionsTab === 'targetFolder' && (
+                <div
+                  id="ssh-advanced-panel-targetFolder"
+                  role="tabpanel"
+                  aria-labelledby="ssh-advanced-tab-targetFolder"
+                  className="terminal-advanced-panel-pane"
+                >
+                  <div className="terminal-row">
+                    <label className="terminal-label">
+                      {t('ssh.fields.targetFolder').toUpperCase()}{' '}
+                      <span className="opacity-50">({tCommon('labels.optional')})</span>
+                    </label>
+                    <div className="terminal-input-wrap terminal-folder-dropdown-wrap">
+                      <i className="pi pi-folder terminal-icon-left"></i>
+                      <Dropdown
+                        value={sshTargetFolder}
+                        options={foldersOptions}
+                        onChange={(e) => setSSHTargetFolder(e.value)}
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder={t('ssh.placeholders.targetFolder')}
+                        showClear
+                        filter
+                        filterPlaceholder={t('ssh.placeholders.targetFolder')}
+                        className="terminal-folder-dropdown"
+                        panelClassName="terminal-folder-dropdown-panel"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -2357,6 +2473,57 @@ export function EnhancedSSHForm({
         }
         .terminal-advanced-section .terminal-options-list {
           padding-top: 0.35rem;
+        }
+        .terminal-advanced-tabs {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.35rem;
+          margin-bottom: 0.65rem;
+        }
+        .terminal-advanced-tab {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.35rem;
+          padding: 0.35rem 0.55rem;
+          border: 1px solid var(--ui-dialog-border);
+          border-radius: 4px;
+          background: transparent;
+          color: color-mix(in srgb, var(--ui-dialog-text) 75%, transparent);
+          font-size: 0.68rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          cursor: pointer;
+          font-family: inherit;
+          line-height: 1.2;
+        }
+        .terminal-advanced-tab .pi {
+          color: var(--ui-button-primary);
+          opacity: 0.85;
+          font-size: 0.8rem;
+        }
+        .terminal-advanced-tab.active {
+          border-color: var(--ui-button-primary);
+          color: var(--ui-button-primary);
+          background: color-mix(in srgb, var(--ui-button-primary) 8%, transparent);
+        }
+        .terminal-advanced-tab:hover:not(.active) {
+          border-color: color-mix(in srgb, var(--ui-button-primary) 35%, var(--ui-dialog-border));
+          color: var(--ui-dialog-text);
+        }
+        .terminal-advanced-panel-pane {
+          padding-top: 0.15rem;
+        }
+        .terminal-options-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 0.35rem 0.75rem;
+          margin-bottom: 0.35rem;
+        }
+        .terminal-options-grid .terminal-option-item {
+          min-width: 0;
+        }
+        .terminal-options-grid .terminal-option-text {
+          line-height: 1.2;
         }
         .terminal-folder-dropdown-wrap {
           padding: 0 0.5rem;
@@ -2677,6 +2844,7 @@ export function NewSSHConnectionDialog({
   sshAutoCopyPassword = false, setSSHAutoCopyPassword = () => {},
   sshX11Forwarding = false, setSSHX11Forwarding = () => {},
   sshAgentForwarding = false, setSSHAgentForwarding = () => {},
+  sshAutoRecording = false, setSSHAutoRecording = () => {},
   sshProxyJumpEnabled = false, setSSHProxyJumpEnabled = () => {},
   sshJumpHost = '', setSSHJumpHost = () => {},
   sshJumpPort = 22, setSSHJumpPort = () => {},
@@ -2778,6 +2946,8 @@ export function NewSSHConnectionDialog({
           setSSHX11Forwarding={setSSHX11Forwarding}
           sshAgentForwarding={sshAgentForwarding}
           setSSHAgentForwarding={setSSHAgentForwarding}
+          sshAutoRecording={sshAutoRecording}
+          setSSHAutoRecording={setSSHAutoRecording}
           sshProxyJumpEnabled={sshProxyJumpEnabled}
           setSSHProxyJumpEnabled={setSSHProxyJumpEnabled}
           sshJumpHost={sshJumpHost}

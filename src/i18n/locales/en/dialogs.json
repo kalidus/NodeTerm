@@ -10,6 +10,9 @@
       "folders": "Folders",
       "advanced": "Advanced options"
     },
+    "advancedTabs": {
+      "general": "Options"
+    },
     "fields": {
       "name": "Name",
       "host": "Host",
@@ -42,6 +45,8 @@
       "x11ForwardingDescription": "Shows Linux GUI windows on your local X server",
       "agentForwarding": "Agent Forwarding",
       "agentForwardingDescription": "Lets the remote server use your local SSH keys",
+      "autoRecording": "Automatic recording",
+      "autoRecordingDescription": "Automatically records this SSH session when connecting",
       "proxyJump": "ProxyJump",
       "proxyJumpDescription": "Connect to the destination through a standard SSH jump host",
       "hostKeyPolicy": "Host key policy",

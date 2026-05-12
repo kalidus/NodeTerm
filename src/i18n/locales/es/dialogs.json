@@ -10,6 +10,9 @@
       "folders": "Carpetas",
       "advanced": "Opciones avanzadas"
     },
+    "advancedTabs": {
+      "general": "Opciones"
+    },
     "fields": {
       "name": "Nombre",
       "host": "Host",
@@ -42,6 +45,8 @@
       "x11ForwardingDescription": "Muestra ventanas gráficas Linux en tu servidor X local",
       "agentForwarding": "Agent Forwarding",
       "agentForwardingDescription": "Permite usar tus claves SSH locales desde el servidor remoto",
+      "autoRecording": "Grabación automática",
+      "autoRecordingDescription": "Graba automáticamente esta sesión SSH al conectar",
       "proxyJump": "ProxyJump",
       "proxyJumpDescription": "Conecta al destino a traves de un host de salto SSH estandar",
       "hostKeyPolicy": "Politica de host key",

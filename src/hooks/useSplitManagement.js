@@ -65,6 +65,7 @@ export const useSplitManagement = ({
       bastionUser: sshNode.data.bastionUser || '',
       x11Forwarding: sshNode.data.x11Forwarding || false,
       agentForwarding: sshNode.data.agentForwarding || false,
+      autoRecording: sshNode.data.autoRecording || false,
       proxyJumpEnabled: sshNode.data.proxyJumpEnabled || false,
       jumpHost: sshNode.data.jumpHost || '',
       jumpPort: sshNode.data.jumpPort || 22,

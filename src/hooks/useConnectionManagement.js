@@ -387,6 +387,7 @@ export const useConnectionManagement = ({
         remoteFolder: isSidebarNode ? (nodeOrConn.data.remoteFolder || '') : (nodeOrConn.remoteFolder || matchedSidebarNode?.data?.remoteFolder || ''),
         x11Forwarding: isSidebarNode ? (nodeOrConn.data.x11Forwarding || false) : (nodeOrConn.x11Forwarding || matchedSidebarNode?.data?.x11Forwarding || false),
         agentForwarding: isSidebarNode ? (nodeOrConn.data.agentForwarding || false) : (nodeOrConn.agentForwarding || matchedSidebarNode?.data?.agentForwarding || false),
+        autoRecording: isSidebarNode ? (nodeOrConn.data.autoRecording || false) : (nodeOrConn.autoRecording || matchedSidebarNode?.data?.autoRecording || false),
         proxyJumpEnabled: isSidebarNode ? (nodeOrConn.data.proxyJumpEnabled || false) : (nodeOrConn.proxyJumpEnabled || matchedSidebarNode?.data?.proxyJumpEnabled || false),
         jumpHost: isSidebarNode ? (nodeOrConn.data.jumpHost || '') : (nodeOrConn.jumpHost || matchedSidebarNode?.data?.jumpHost || ''),
         jumpPort: isSidebarNode ? (nodeOrConn.data.jumpPort || 22) : (nodeOrConn.jumpPort || matchedSidebarNode?.data?.jumpPort || 22),
@@ -407,8 +408,9 @@ export const useConnectionManagement = ({
         groupId: null
       };
 
-      // Iniciar grabación automática si está habilitada
-      const autoRecordingEnabled = localStorage.getItem('audit_auto_recording') === 'true';
+      // Iniciar grabación automática si está habilitada global o por conexión
+      const autoRecordingEnabled = sshConfig.autoRecording === true
+        || localStorage.getItem('audit_auto_recording') === 'true';
       if (autoRecordingEnabled && window.electron?.ipcRenderer) {
         const recordingQuality = localStorage.getItem('audit_recording_quality') || 'medium';
         const encryptRecordings = localStorage.getItem('audit_encrypt_recordings') === 'true';

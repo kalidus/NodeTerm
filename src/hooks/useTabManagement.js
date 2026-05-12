@@ -198,6 +198,7 @@ export const useTabManagement = (toast, {
           bastionUser: session.bastionUser || matchedSidebarNode?.data?.bastionUser || '',
           x11Forwarding: matchedSidebarNode?.data?.x11Forwarding || false,
           agentForwarding: matchedSidebarNode?.data?.agentForwarding || false,
+          autoRecording: matchedSidebarNode?.data?.autoRecording || false,
           proxyJumpEnabled: matchedSidebarNode?.data?.proxyJumpEnabled || false,
           jumpHost: matchedSidebarNode?.data?.jumpHost || '',
           jumpPort: matchedSidebarNode?.data?.jumpPort || 22,

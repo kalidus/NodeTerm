@@ -1472,6 +1472,7 @@ const App = () => {
     sshAutoCopyPassword, setSSHAutoCopyPassword,
     sshX11Forwarding, setSSHX11Forwarding,
     sshAgentForwarding, setSSHAgentForwarding,
+    sshAutoRecording, setSSHAutoRecording,
     sshProxyJumpEnabled, setSSHProxyJumpEnabled,
     sshJumpHost, setSSHJumpHost,
     sshJumpPort, setSSHJumpPort,
@@ -1495,6 +1496,7 @@ const App = () => {
     editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
     editSSHX11Forwarding, setEditSSHX11Forwarding,
     editSSHAgentForwarding, setEditSSHAgentForwarding,
+    editSSHAutoRecording, setEditSSHAutoRecording,
     editSSHProxyJumpEnabled, setEditSSHProxyJumpEnabled,
     editSSHJumpHost, setEditSSHJumpHost,
     editSSHJumpPort, setEditSSHJumpPort,
@@ -1656,7 +1658,7 @@ const App = () => {
     sshPassword, setSSHPassword, sshRemoteFolder, setSSHRemoteFolder,
     sshPort, setSSHPort, sshTargetFolder, setSSHTargetFolder,
     sshAutoCopyPassword, setSSHAutoCopyPassword,
-    sshX11Forwarding, sshAgentForwarding,
+    sshX11Forwarding, sshAgentForwarding, sshAutoRecording,
     sshProxyJumpEnabled, sshJumpHost, sshJumpPort, sshJumpUser, sshJumpAuthMethod, sshJumpPassword, sshJumpPrivateKey, sshHostKeyPolicy,
     sshDescription,
     sshIcon,
@@ -1671,7 +1673,7 @@ const App = () => {
     editSSHRemoteFolder, setEditSSHRemoteFolder,
     editSSHPort, setEditSSHPort,
     editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
-    editSSHX11Forwarding, editSSHAgentForwarding,
+    editSSHX11Forwarding, editSSHAgentForwarding, editSSHAutoRecording,
     editSSHProxyJumpEnabled, editSSHJumpHost, editSSHJumpPort, editSSHJumpUser, editSSHJumpAuthMethod, editSSHJumpPassword, editSSHJumpPrivateKey, editSSHHostKeyPolicy,
     editSSHDescription, setEditSSHDescription,
     editSSHIcon, setEditSSHIcon,
@@ -2845,6 +2847,7 @@ const App = () => {
     sshAutoCopyPassword, setSSHAutoCopyPassword,
     sshX11Forwarding, setSSHX11Forwarding,
     sshAgentForwarding, setSSHAgentForwarding,
+    sshAutoRecording, setSSHAutoRecording,
     sshProxyJumpEnabled, setSSHProxyJumpEnabled,
     sshJumpHost, setSSHJumpHost,
     sshJumpPort, setSSHJumpPort,
@@ -2865,6 +2868,7 @@ const App = () => {
     editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
     editSSHX11Forwarding, setEditSSHX11Forwarding,
     editSSHAgentForwarding, setEditSSHAgentForwarding,
+    editSSHAutoRecording, setEditSSHAutoRecording,
     editSSHProxyJumpEnabled, setEditSSHProxyJumpEnabled,
     editSSHJumpHost, setEditSSHJumpHost,
     editSSHJumpPort, setEditSSHJumpPort,
@@ -2921,6 +2925,7 @@ const App = () => {
     sshAutoCopyPassword, setSSHAutoCopyPassword,
     sshX11Forwarding, setSSHX11Forwarding,
     sshAgentForwarding, setSSHAgentForwarding,
+    sshAutoRecording, setSSHAutoRecording,
     sshProxyJumpEnabled, setSSHProxyJumpEnabled,
     sshJumpHost, setSSHJumpHost, sshJumpPort, setSSHJumpPort, sshJumpUser, setSSHJumpUser,
     sshJumpAuthMethod, setSSHJumpAuthMethod, sshJumpPassword, setSSHJumpPassword,
@@ -2931,6 +2936,7 @@ const App = () => {
     editSSHPort, setEditSSHPort, editSSHAutoCopyPassword, setEditSSHAutoCopyPassword,
     editSSHX11Forwarding, setEditSSHX11Forwarding,
     editSSHAgentForwarding, setEditSSHAgentForwarding,
+    editSSHAutoRecording, setEditSSHAutoRecording,
     editSSHProxyJumpEnabled, setEditSSHProxyJumpEnabled,
     editSSHJumpHost, setEditSSHJumpHost, editSSHJumpPort, setEditSSHJumpPort,
     editSSHJumpUser, setEditSSHJumpUser, editSSHJumpAuthMethod, setEditSSHJumpAuthMethod,
@@ -3284,6 +3290,8 @@ const App = () => {
           setSSHX11Forwarding={setSSHX11Forwarding}
           sshAgentForwarding={sshAgentForwarding}
           setSSHAgentForwarding={setSSHAgentForwarding}
+          sshAutoRecording={sshAutoRecording}
+          setSSHAutoRecording={setSSHAutoRecording}
           sshProxyJumpEnabled={sshProxyJumpEnabled}
           setSSHProxyJumpEnabled={setSSHProxyJumpEnabled}
           sshJumpHost={sshJumpHost}
@@ -3328,6 +3336,8 @@ const App = () => {
           setEditSSHX11Forwarding={setEditSSHX11Forwarding}
           editSSHAgentForwarding={editSSHAgentForwarding}
           setEditSSHAgentForwarding={setEditSSHAgentForwarding}
+          editSSHAutoRecording={editSSHAutoRecording}
+          setEditSSHAutoRecording={setEditSSHAutoRecording}
           editSSHProxyJumpEnabled={editSSHProxyJumpEnabled}
           setEditSSHProxyJumpEnabled={setEditSSHProxyJumpEnabled}
           editSSHJumpHost={editSSHJumpHost}
