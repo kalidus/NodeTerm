@@ -2,6 +2,31 @@ import { useCallback } from 'react';
 import { iconThemes } from '../themes/icon-themes';
 import { updateFavoriteOnEdit, helpers as connectionHelpers } from '../utils/connectionStore';
 
+function getProxyJumpFormState({
+  isWallix,
+  jumpHost,
+  jumpUser,
+  jumpPassword,
+  jumpPrivateKey
+}) {
+  if (isWallix) {
+    return { active: false, started: false, host: '', user: '' };
+  }
+
+  const host = jumpHost?.trim() || '';
+  const user = jumpUser?.trim() || '';
+  const password = jumpPassword?.trim() || '';
+  const privateKey = jumpPrivateKey?.trim() || '';
+  const started = !!(host || user || password || privateKey);
+
+  return {
+    active: !!(host && user),
+    started,
+    host,
+    user
+  };
+}
+
 /**
  * Hook para manejar todas las operaciones de formularios de la aplicación
  * Incluye: creación, edición y validación de SSH, RDP, carpetas
@@ -219,18 +244,26 @@ export const useFormHandlers = ({
     
     // Detectar automáticamente si es formato Wallix
     const userInfo = parseWallixUser(sshUser.trim());
+    const proxyJumpState = getProxyJumpFormState({
+      isWallix: userInfo.isWallix,
+      jumpHost: sshJumpHost,
+      jumpUser: sshJumpUser,
+      jumpPassword: sshJumpPassword,
+      jumpPrivateKey: sshJumpPrivateKey
+    });
 
-    if (!userInfo.isWallix && sshProxyJumpEnabled) {
+    if (proxyJumpState.started && !proxyJumpState.active) {
+      toast.current.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'ProxyJump requiere host y usuario de salto',
+        life: 3000
+      });
+      return;
+    }
+
+    if (proxyJumpState.active) {
       const jumpAuthMethod = sshJumpAuthMethod === 'key' ? 'key' : 'password';
-      if (!sshJumpHost?.trim() || !sshJumpUser?.trim()) {
-        toast.current.show({
-          severity: 'error',
-          summary: 'Error',
-          detail: 'ProxyJump requiere host y usuario de salto',
-          life: 3000
-        });
-        return;
-      }
       if (jumpAuthMethod === 'password' && !sshJumpPassword?.trim()) {
         toast.current.show({
           severity: 'error',
@@ -274,13 +307,13 @@ export const useFormHandlers = ({
         x11Forwarding: sshX11Forwarding || false,
         agentForwarding: sshAgentForwarding || false,
         autoRecording: sshAutoRecording || false,
-        proxyJumpEnabled: !userInfo.isWallix && !!sshProxyJumpEnabled,
-        jumpHost: !userInfo.isWallix && sshProxyJumpEnabled ? sshJumpHost.trim() : '',
-        jumpPort: !userInfo.isWallix && sshProxyJumpEnabled ? (sshJumpPort || 22) : 22,
-        jumpUser: !userInfo.isWallix && sshProxyJumpEnabled ? sshJumpUser.trim() : '',
-        jumpAuthMethod: !userInfo.isWallix && sshProxyJumpEnabled ? (sshJumpAuthMethod === 'key' ? 'key' : 'password') : 'password',
-        jumpPassword: !userInfo.isWallix && sshProxyJumpEnabled && sshJumpAuthMethod !== 'key' ? sshJumpPassword.trim() : '',
-        jumpPrivateKey: !userInfo.isWallix && sshProxyJumpEnabled && sshJumpAuthMethod === 'key' ? sshJumpPrivateKey.trim() : '',
+        proxyJumpEnabled: proxyJumpState.active,
+        jumpHost: proxyJumpState.active ? proxyJumpState.host : '',
+        jumpPort: proxyJumpState.active ? (sshJumpPort || 22) : 22,
+        jumpUser: proxyJumpState.active ? proxyJumpState.user : '',
+        jumpAuthMethod: proxyJumpState.active ? (sshJumpAuthMethod === 'key' ? 'key' : 'password') : 'password',
+        jumpPassword: proxyJumpState.active && sshJumpAuthMethod !== 'key' ? sshJumpPassword.trim() : '',
+        jumpPrivateKey: proxyJumpState.active && sshJumpAuthMethod === 'key' ? sshJumpPrivateKey.trim() : '',
         hostKeyPolicy: userInfo.isWallix ? 'warn_new' : (sshHostKeyPolicy || 'warn_new'),
         // Descripción de la conexión
         description: sshDescription || '',
@@ -677,18 +710,26 @@ export const useFormHandlers = ({
     
     // Detectar automáticamente si es formato Wallix
     const userInfo = parseWallixUser(editSSHUser.trim());
+    const proxyJumpState = getProxyJumpFormState({
+      isWallix: userInfo.isWallix,
+      jumpHost: editSSHJumpHost,
+      jumpUser: editSSHJumpUser,
+      jumpPassword: editSSHJumpPassword,
+      jumpPrivateKey: editSSHJumpPrivateKey
+    });
 
-    if (!userInfo.isWallix && editSSHProxyJumpEnabled) {
+    if (proxyJumpState.started && !proxyJumpState.active) {
+      toast.current.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'ProxyJump requiere host y usuario de salto',
+        life: 3000
+      });
+      return;
+    }
+
+    if (proxyJumpState.active) {
       const jumpAuthMethod = editSSHJumpAuthMethod === 'key' ? 'key' : 'password';
-      if (!editSSHJumpHost?.trim() || !editSSHJumpUser?.trim()) {
-        toast.current.show({
-          severity: 'error',
-          summary: 'Error',
-          detail: 'ProxyJump requiere host y usuario de salto',
-          life: 3000
-        });
-        return;
-      }
       if (jumpAuthMethod === 'password' && !editSSHJumpPassword?.trim()) {
         toast.current.show({
           severity: 'error',
@@ -736,13 +777,13 @@ export const useFormHandlers = ({
         x11Forwarding: editSSHX11Forwarding || false,
         agentForwarding: editSSHAgentForwarding || false,
         autoRecording: editSSHAutoRecording || false,
-        proxyJumpEnabled: !userInfo.isWallix && !!editSSHProxyJumpEnabled,
-        jumpHost: !userInfo.isWallix && editSSHProxyJumpEnabled ? editSSHJumpHost.trim() : '',
-        jumpPort: !userInfo.isWallix && editSSHProxyJumpEnabled ? (editSSHJumpPort || 22) : 22,
-        jumpUser: !userInfo.isWallix && editSSHProxyJumpEnabled ? editSSHJumpUser.trim() : '',
-        jumpAuthMethod: !userInfo.isWallix && editSSHProxyJumpEnabled ? (editSSHJumpAuthMethod === 'key' ? 'key' : 'password') : 'password',
-        jumpPassword: !userInfo.isWallix && editSSHProxyJumpEnabled && editSSHJumpAuthMethod !== 'key' ? editSSHJumpPassword.trim() : '',
-        jumpPrivateKey: !userInfo.isWallix && editSSHProxyJumpEnabled && editSSHJumpAuthMethod === 'key' ? editSSHJumpPrivateKey.trim() : '',
+        proxyJumpEnabled: proxyJumpState.active,
+        jumpHost: proxyJumpState.active ? proxyJumpState.host : '',
+        jumpPort: proxyJumpState.active ? (editSSHJumpPort || 22) : 22,
+        jumpUser: proxyJumpState.active ? proxyJumpState.user : '',
+        jumpAuthMethod: proxyJumpState.active ? (editSSHJumpAuthMethod === 'key' ? 'key' : 'password') : 'password',
+        jumpPassword: proxyJumpState.active && editSSHJumpAuthMethod !== 'key' ? editSSHJumpPassword.trim() : '',
+        jumpPrivateKey: proxyJumpState.active && editSSHJumpAuthMethod === 'key' ? editSSHJumpPrivateKey.trim() : '',
         hostKeyPolicy: userInfo.isWallix ? 'warn_new' : (editSSHHostKeyPolicy || 'warn_new'),
         // Descripción de la conexión
         description: editSSHDescription || '',

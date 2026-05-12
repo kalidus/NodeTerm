@@ -1741,12 +1741,6 @@ export function EnhancedSSHForm({
       );
     }
 
-    tabs.push({
-      id: 'targetFolder',
-      label: t('ssh.fields.targetFolder'),
-      icon: 'pi-folder'
-    });
-
     return tabs;
   }, [isWallixUser, t]);
   const hostKeyPolicyOptions = useMemo(() => ([
@@ -2072,6 +2066,29 @@ export function EnhancedSSHForm({
                       />
                     </div>
                   </div>
+
+                  <div className="terminal-row mt-2">
+                    <label className="terminal-label">
+                      {t('ssh.fields.targetFolder').toUpperCase()}{' '}
+                      <span className="opacity-50">({tCommon('labels.optional')})</span>
+                    </label>
+                    <div className="terminal-input-wrap terminal-folder-dropdown-wrap">
+                      <i className="pi pi-folder terminal-icon-left"></i>
+                      <Dropdown
+                        value={sshTargetFolder}
+                        options={foldersOptions}
+                        onChange={(e) => setSSHTargetFolder(e.value)}
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder={t('ssh.placeholders.targetFolder')}
+                        showClear
+                        filter
+                        filterPlaceholder={t('ssh.placeholders.targetFolder')}
+                        className="terminal-folder-dropdown"
+                        panelClassName="terminal-folder-dropdown-panel"
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -2082,28 +2099,8 @@ export function EnhancedSSHForm({
                   aria-labelledby="ssh-advanced-tab-proxyJump"
                   className="terminal-advanced-panel-pane"
                 >
-                  <div className="terminal-option-item">
-                    <div className="flex align-items-center">
-                      <i className="pi pi-share-alt terminal-option-icon"></i>
-                      <span
-                        className="terminal-option-text info-icon"
-                        data-pr-tooltip={t('ssh.auth.proxyJumpDescription')}
-                      >
-                        {t('ssh.auth.proxyJump')}
-                      </span>
-                    </div>
-                    <div className="terminal-dotted-spacer"></div>
-                    <InputSwitch
-                      checked={sshProxyJumpEnabled}
-                      onChange={(e) => setSSHProxyJumpEnabled(e.value)}
-                      className="terminal-switch"
-                    />
-                  </div>
-
-                  {sshProxyJumpEnabled && (
-                    <div className="terminal-row mt-2">
-                      <div className="terminal-host-port-row mb-3">
-                        <div className="terminal-host-port-host">
+                  <div className="terminal-host-port-row mb-3">
+                    <div className="terminal-host-port-host">
                           <label className="terminal-label">{t('ssh.auth.jumpHost').toUpperCase()}</label>
                           <div className="terminal-input-wrap">
                             <InputText
@@ -2204,8 +2201,6 @@ export function EnhancedSSHForm({
                           </div>
                         </div>
                       )}
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -2238,37 +2233,6 @@ export function EnhancedSSHForm({
                 </div>
               )}
 
-              {advancedOptionsTab === 'targetFolder' && (
-                <div
-                  id="ssh-advanced-panel-targetFolder"
-                  role="tabpanel"
-                  aria-labelledby="ssh-advanced-tab-targetFolder"
-                  className="terminal-advanced-panel-pane"
-                >
-                  <div className="terminal-row">
-                    <label className="terminal-label">
-                      {t('ssh.fields.targetFolder').toUpperCase()}{' '}
-                      <span className="opacity-50">({tCommon('labels.optional')})</span>
-                    </label>
-                    <div className="terminal-input-wrap terminal-folder-dropdown-wrap">
-                      <i className="pi pi-folder terminal-icon-left"></i>
-                      <Dropdown
-                        value={sshTargetFolder}
-                        options={foldersOptions}
-                        onChange={(e) => setSSHTargetFolder(e.value)}
-                        optionLabel="label"
-                        optionValue="value"
-                        placeholder={t('ssh.placeholders.targetFolder')}
-                        showClear
-                        filter
-                        filterPlaceholder={t('ssh.placeholders.targetFolder')}
-                        className="terminal-folder-dropdown"
-                        panelClassName="terminal-folder-dropdown-panel"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </div>

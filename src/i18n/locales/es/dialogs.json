@@ -39,7 +39,7 @@
       "methodDescription": "Selecciona cómo autenticarte en el servidor",
       "password": "Contraseña",
       "key": "Clave SSH",
-      "autoCopyPassword": "Copiar contraseña automáticamente",
+      "autoCopyPassword": "Copiar contraseña",
       "autoCopyPasswordDescription": "Copia la contraseña al portapapeles al conectar",
       "x11Forwarding": "X11 Forwarding",
       "x11ForwardingDescription": "Muestra ventanas gráficas Linux en tu servidor X local",

@@ -39,7 +39,7 @@
       "methodDescription": "Select how to authenticate on the server",
       "password": "Password",
       "key": "SSH Key",
-      "autoCopyPassword": "Copy password automatically",
+      "autoCopyPassword": "Copy password",
       "autoCopyPasswordDescription": "Copies the password to the clipboard when connecting",
       "x11Forwarding": "X11 Forwarding",
       "x11ForwardingDescription": "Shows Linux GUI windows on your local X server",
