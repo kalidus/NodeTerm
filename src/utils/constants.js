@@ -16,7 +16,8 @@ export const STORAGE_KEYS = {
   HOME_TAB_LOCAL_TERMINAL_WORKSPACE: 'homeTab_localTerminalWorkspace',
   TERMINAL_FRAME_STYLE: 'nodeterm_terminal_frame_style',
   MAIN_FRAME_HEADER_START_COLLAPSED: 'nodeterm_main_frame_header_start_collapsed',
-  MINIMAL_MODE: 'nodeterm_minimal_mode'
+  MINIMAL_MODE: 'nodeterm_minimal_mode',
+  CONNECTION_SEARCH_SHORTCUT: 'nodeterm_connection_search_shortcut'
 };
 
 // Constantes de grupos

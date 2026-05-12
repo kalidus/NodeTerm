@@ -56,6 +56,14 @@
         "mainFrameHeaderStartCollapsed": {
           "label": "Top Frame Initially Collapsed",
           "description": "Start the application with the terminal top frame collapsed"
+        },
+        "connectionSearchShortcut": {
+          "label": "Search shortcut",
+          "description": "Opens the centered connection search while NodeTerm is focused.",
+          "hint": "On Windows the default is Ctrl+Space because the Windows key is usually reserved by the system.",
+          "capturePlaceholder": "Press a key combination...",
+          "change": "Change shortcut",
+          "reset": "Restore default"
         }
       },
       "visual": {

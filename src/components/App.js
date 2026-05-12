@@ -68,6 +68,12 @@ import SecureStorage from '../services/SecureStorage';
 
 
 import UnlockDialog from './UnlockDialog';
+import ConnectionSearchPalette from './ConnectionSearchPalette';
+import {
+  getConnectionSearchShortcut,
+  matchesShortcut,
+  shouldIgnoreShortcutTarget,
+} from '../utils/keyboardShortcuts';
 import { detectBlockedInputs } from '../utils/formDebugger';
 // import '../assets/form-fixes.css';
 import '../styles/layout/sidebar.css';
@@ -1400,6 +1406,103 @@ const App = () => {
     getFilteredTabs, openFileExplorer, openInSplit, onOpenRdpConnection, onOpenVncConnection,
     homeTabs, fileExplorerTabs, sshTabs
   });
+
+  const [connectionSearchPaletteOpen, setConnectionSearchPaletteOpen] = React.useState(false);
+  const connectionSearchPaletteOpenRef = useRef(false);
+  const connectionSearchShortcutRef = useRef(getConnectionSearchShortcut());
+  const lastConnectionSearchToggleAtRef = useRef(0);
+  connectionSearchPaletteOpenRef.current = connectionSearchPaletteOpen;
+
+  const closeConnectionSearchPalette = useCallback(() => {
+    setConnectionSearchPaletteOpen(false);
+    setSidebarFilter('');
+  }, [setSidebarFilter]);
+
+  const toggleConnectionSearchPalette = useCallback(() => {
+    const now = Date.now();
+    if (now - lastConnectionSearchToggleAtRef.current < 200) {
+      return;
+    }
+    lastConnectionSearchToggleAtRef.current = now;
+
+    setConnectionSearchPaletteOpen((open) => {
+      if (open) {
+        setSidebarFilter('');
+      }
+      return !open;
+    });
+  }, [setSidebarFilter]);
+
+  React.useEffect(() => {
+    const syncShortcut = () => {
+      const shortcut = getConnectionSearchShortcut();
+      connectionSearchShortcutRef.current = shortcut;
+      window.electron?.setConnectionSearchShortcut?.(shortcut);
+    };
+
+    syncShortcut();
+    window.addEventListener('settings-updated', syncShortcut);
+    const handleStorage = (event) => {
+      if (event.key === STORAGE_KEYS.CONNECTION_SEARCH_SHORTCUT) {
+        syncShortcut();
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      window.removeEventListener('settings-updated', syncShortcut);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, []);
+
+  React.useEffect(() => {
+    const isShortcutCaptureActive = () => (
+      document.body.dataset.capturingShortcut === 'true'
+      || document.querySelector('[data-capturing-shortcut="true"]')
+    );
+
+    const handleKeyDown = (event) => {
+      if (isShortcutCaptureActive()) {
+        return;
+      }
+
+      if (!matchesShortcut(event, connectionSearchShortcutRef.current)) {
+        return;
+      }
+
+      const paletteOpen = connectionSearchPaletteOpenRef.current;
+      if (!paletteOpen && shouldIgnoreShortcutTarget(event.target, event)) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      toggleConnectionSearchPalette();
+    };
+
+    const handleShortcutFromMain = () => {
+      if (isShortcutCaptureActive()) {
+        return;
+      }
+
+      const target = document.activeElement;
+      const paletteOpen = connectionSearchPaletteOpenRef.current;
+      if (!paletteOpen && shouldIgnoreShortcutTarget(target, null)) {
+        return;
+      }
+
+      toggleConnectionSearchPalette();
+    };
+
+    let shortcutFromMainListener;
+    shortcutFromMainListener = window.electron?.onConnectionSearchShortcut?.(handleShortcutFromMain);
+    window.addEventListener('keydown', handleKeyDown, true);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, true);
+      window.electron?.offConnectionSearchShortcut?.(shortcutFromMainListener);
+    };
+  }, [toggleConnectionSearchPalette]);
 
 
 
@@ -3051,6 +3154,24 @@ const App = () => {
           visible={needsUnlock}
           onSuccess={handleUnlockSuccess}
           secureStorage={secureStorage}
+        />
+
+        <ConnectionSearchPalette
+          open={connectionSearchPaletteOpen && !needsUnlock}
+          onClose={closeConnectionSearchPalette}
+          sidebarFilter={sidebarFilter}
+          setSidebarFilter={setSidebarFilter}
+          allNodes={nodes}
+          findAllConnections={findAllConnections}
+          onOpenSSHConnection={onOpenSSHConnection}
+          onOpenRdpConnection={onOpenRdpConnection}
+          onOpenVncConnection={onOpenVncConnection}
+          openEditSSHDialog={openEditSSHDialog}
+          openEditRdpDialog={openEditRdpDialog}
+          expandedKeys={expandedKeys}
+          masterKey={masterKey}
+          secureStorage={secureStorage}
+          iconTheme={iconTheme}
         />
 
         {/* TitleBar superior - se puede ocultar */}

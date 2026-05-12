@@ -400,6 +400,73 @@ const { getRecordingsDirectory } = require('./src/main/utils/recording-utils');
 // Ver getAnythingLLMService() y getOpenWebUIService() arriba
 
 let mainWindow;
+
+function getDefaultConnectionSearchShortcut() {
+  if (process.platform === 'darwin') {
+    return { meta: true, ctrl: false, alt: false, shift: false, code: 'Space' };
+  }
+
+  return { meta: false, ctrl: true, alt: false, shift: false, code: 'Space' };
+}
+
+const DEFAULT_CONNECTION_SEARCH_SHORTCUT = getDefaultConnectionSearchShortcut();
+let connectionSearchShortcut = { ...DEFAULT_CONNECTION_SEARCH_SHORTCUT };
+let connectionSearchShortcutBridgeReady = false;
+
+function normalizeConnectionSearchShortcut(shortcut = DEFAULT_CONNECTION_SEARCH_SHORTCUT) {
+  return {
+    meta: !!(shortcut && shortcut.meta),
+    ctrl: !!(shortcut && shortcut.ctrl),
+    alt: !!(shortcut && shortcut.alt),
+    shift: !!(shortcut && shortcut.shift),
+    code: shortcut && typeof shortcut.code === 'string' && shortcut.code
+      ? shortcut.code
+      : DEFAULT_CONNECTION_SEARCH_SHORTCUT.code,
+  };
+}
+
+function matchesConnectionSearchInput(input, shortcut) {
+  if (!input || input.type !== 'keyDown') {
+    return false;
+  }
+
+  const config = normalizeConnectionSearchShortcut(shortcut);
+  const codeMatches = input.code === config.code
+    || (config.code === 'Space' && (input.code === 'Space' || input.key === ' '));
+  return (
+    !!input.meta === config.meta
+    && !!input.control === config.ctrl
+    && !!input.alt === config.alt
+    && !!input.shift === config.shift
+    && codeMatches
+  );
+}
+
+function setupConnectionSearchShortcutBridge(windowInstance) {
+  if (!connectionSearchShortcutBridgeReady) {
+    connectionSearchShortcutBridgeReady = true;
+    ipcMain.on('connection-search:set-shortcut', (event, shortcut) => {
+      if (!mainWindow || event.sender !== mainWindow.webContents) {
+        return;
+      }
+      connectionSearchShortcut = normalizeConnectionSearchShortcut(shortcut);
+    });
+  }
+
+  windowInstance.webContents.on('before-input-event', (event, input) => {
+    if (!windowInstance.isFocused() || windowInstance.isDestroyed()) {
+      return;
+    }
+
+    if (!matchesConnectionSearchInput(input, connectionSearchShortcut)) {
+      return;
+    }
+
+    event.preventDefault();
+    windowInstance.webContents.send('connection-search:toggle');
+  });
+}
+
 const isAppQuitting = { value: false }; // Flag para evitar operaciones durante el cierre
 let appCleanupInProgress = false;
 let appCleanupCompleted = false;
@@ -939,6 +1006,7 @@ function createWindow() {
     }
   });
   logTiming('BrowserWindow creado');
+  setupConnectionSearchShortcutBridge(mainWindow);
 
   // Cierre instantaneo al usar la X de la ventana.
   mainWindow.on('close', () => {

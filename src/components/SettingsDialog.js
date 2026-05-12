@@ -31,6 +31,14 @@ import {
   FaFolder, FaFile, FaFilePdf, FaFileWord, FaFileExcel
 } from 'react-icons/fa';
 import { STORAGE_KEYS } from '../utils/constants';
+import {
+  getConnectionSearchShortcut,
+  setConnectionSearchShortcut,
+  resetConnectionSearchShortcut,
+  formatShortcutLabel,
+  shortcutFromKeyboardEvent,
+  isValidShortcut,
+} from '../utils/keyboardShortcuts';
 import { homeTabIcons, setHomeTabIcon, getHomeTabIconGroups } from '../themes/home-tab-icons';
 import { groupTabIcons, setGroupTabIcon } from '../themes/group-tab-icons';
 import AIClientsTab from './AIClientsTab';
@@ -473,7 +481,6 @@ const SettingsDialog = ({
     }
   });
 
-  // Configuración para el marco superior inicialmente colapsado
   const [mainFrameHeaderCollapsed, setMainFrameHeaderCollapsed] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.MAIN_FRAME_HEADER_START_COLLAPSED);
@@ -482,6 +489,59 @@ const SettingsDialog = ({
       return false;
     }
   });
+
+  const [connectionSearchShortcut, setConnectionSearchShortcutState] = useState(() => getConnectionSearchShortcut());
+  const [isCapturingConnectionSearchShortcut, setIsCapturingConnectionSearchShortcut] = useState(false);
+  const connectionSearchShortcutInputRef = useRef(null);
+
+  const persistConnectionSearchShortcut = useCallback((shortcut) => {
+    const saved = setConnectionSearchShortcut(shortcut);
+    setConnectionSearchShortcutState(saved);
+    window.dispatchEvent(new Event('settings-updated'));
+    return saved;
+  }, []);
+
+  const handleResetConnectionSearchShortcut = useCallback(() => {
+    const saved = resetConnectionSearchShortcut();
+    setConnectionSearchShortcutState(saved);
+    setIsCapturingConnectionSearchShortcut(false);
+    window.dispatchEvent(new Event('settings-updated'));
+  }, []);
+
+  const startConnectionSearchShortcutCapture = useCallback(() => {
+    setIsCapturingConnectionSearchShortcut(true);
+    requestAnimationFrame(() => {
+      connectionSearchShortcutInputRef.current?.focus?.();
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!isCapturingConnectionSearchShortcut) {
+      delete document.body.dataset.capturingShortcut;
+      return undefined;
+    }
+
+    document.body.dataset.capturingShortcut = 'true';
+
+    const handleCapture = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const shortcut = shortcutFromKeyboardEvent(event);
+      if (!shortcut || !isValidShortcut(shortcut)) {
+        return;
+      }
+
+      persistConnectionSearchShortcut(shortcut);
+      setIsCapturingConnectionSearchShortcut(false);
+    };
+
+    window.addEventListener('keydown', handleCapture, true);
+    return () => {
+      window.removeEventListener('keydown', handleCapture, true);
+      delete document.body.dataset.capturingShortcut;
+    };
+  }, [isCapturingConnectionSearchShortcut, persistConnectionSearchShortcut]);
 
   // Sincronizar mainFrameHeaderCollapsed con App y persistencia
   useEffect(() => {
@@ -2411,6 +2471,53 @@ const SettingsDialog = ({
                                 id="main-frame-header-start-collapsed"
                                 checked={mainFrameHeaderCollapsed}
                                 onChange={(e) => setMainFrameHeaderCollapsed(e.checked)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="general-setting-card general-setting-card--shortcut">
+                          <div className="general-setting-content general-setting-content--shortcut">
+                            <div className="general-setting-icon">
+                              <i className="pi pi-search"></i>
+                            </div>
+                            <div className="general-setting-info">
+                              <label htmlFor="connection-search-shortcut" className="general-setting-label">
+                                {t('general.sections.behavior.connectionSearchShortcut.label')}
+                              </label>
+                              <p className="general-setting-description">
+                                {t('general.sections.behavior.connectionSearchShortcut.description')}
+                              </p>
+                              <p className="general-setting-description general-setting-hint">
+                                {t('general.sections.behavior.connectionSearchShortcut.hint')}
+                              </p>
+                            </div>
+                            <div
+                              className="general-setting-control general-setting-control--shortcut"
+                              data-capturing-shortcut={isCapturingConnectionSearchShortcut ? 'true' : 'false'}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <InputText
+                                id="connection-search-shortcut"
+                                ref={connectionSearchShortcutInputRef}
+                                readOnly
+                                value={isCapturingConnectionSearchShortcut
+                                  ? t('general.sections.behavior.connectionSearchShortcut.capturePlaceholder')
+                                  : formatShortcutLabel(connectionSearchShortcut, locale)}
+                                onBlur={() => setIsCapturingConnectionSearchShortcut(false)}
+                                className="general-setting-shortcut-input"
+                              />
+                              <Button
+                                type="button"
+                                label={t('general.sections.behavior.connectionSearchShortcut.change')}
+                                className="p-button-sm"
+                                onClick={startConnectionSearchShortcutCapture}
+                              />
+                              <Button
+                                type="button"
+                                label={t('general.sections.behavior.connectionSearchShortcut.reset')}
+                                className="p-button-sm p-button-text"
+                                onClick={handleResetConnectionSearchShortcut}
                               />
                             </div>
                           </div>

@@ -73,6 +73,17 @@ contextBridge.exposeInMainWorld('electron', {
     getVersionInfo: () => ipcRenderer.invoke('get-version-info'),
     quit: () => ipcRenderer.send('app-quit')
   },
+  setConnectionSearchShortcut: (shortcut) => ipcRenderer.send('connection-search:set-shortcut', shortcut),
+  onConnectionSearchShortcut: (handler) => {
+    const listener = () => handler();
+    ipcRenderer.on('connection-search:toggle', listener);
+    return listener;
+  },
+  offConnectionSearchShortcut: (listener) => {
+    if (listener) {
+      ipcRenderer.removeListener('connection-search:toggle', listener);
+    }
+  },
   // pdfProcessor: DESHABILITADO - pdf-parse eliminado
   // pdfProcessor: {
   //   processPDF: (filePath) => ipcRenderer.invoke('process-pdf', filePath),

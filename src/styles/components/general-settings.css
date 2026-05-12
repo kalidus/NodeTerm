@@ -827,6 +827,39 @@ body .general-setting-control .p-checkbox .p-checkbox-box[style*="background"] {
   overflow: hidden;
 }
 
+.general-setting-card--shortcut {
+  cursor: default;
+}
+
+.general-setting-content--shortcut {
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.general-setting-content--shortcut .general-setting-info {
+  flex: 1 1 calc(100% - var(--settings-icon-setting) - 0.5rem);
+  min-width: 0;
+}
+
+.general-setting-content--shortcut .general-setting-hint {
+  opacity: 0.7;
+}
+
+.general-setting-control--shortcut {
+  flex: 1 1 100%;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-left: calc(var(--settings-icon-setting) + 0.5rem);
+  padding-top: 0.25rem;
+}
+
+.general-setting-shortcut-input {
+  min-width: 180px;
+  max-width: 100%;
+  text-align: center;
+}
+
 /* Mejorar el espaciado en el grid de 2 columnas */
 .general-settings-container > div[style*="gridTemplateColumns"] {
   box-sizing: border-box;

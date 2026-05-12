@@ -48,6 +48,29 @@ const VARIANT_STYLES = {
     },
     emptyLabelColor: 'var(--ui-sidebar-text, #a9b1d6)',
   },
+  palette: {
+    container: {
+      minWidth: '100%',
+      maxWidth: '100%',
+      width: '100%',
+    },
+    input: {
+      width: '100%',
+      paddingLeft: 16,
+      paddingRight: 16,
+      height: 44,
+      borderRadius: 10,
+      border: '1px solid rgba(255,255,255,0.14)',
+      fontSize: 15,
+      background: 'rgba(0,0,0,0.28)',
+      color: 'var(--ui-titlebar-text, #fff)',
+      fontWeight: 500,
+      textAlign: 'left',
+    },
+    emptyLabelColor: 'var(--ui-sidebar-text, #a9b1d6)',
+    dropdownMaxHeight: 360,
+    dropdownZIndex: 10051,
+  },
 };
 
 const ConnectionSearchBar = ({
@@ -512,16 +535,16 @@ const ConnectionSearchBar = ({
       {!sidebarFilter ? (
         <span style={{
           position: 'absolute',
-          left: '50%',
+          left: variant === 'palette' ? 16 : '50%',
           top: '50%',
-          transform: 'translate(-50%, -50%)',
+          transform: variant === 'palette' ? 'translateY(-50%)' : 'translate(-50%, -50%)',
           color: variantStyles.emptyLabelColor,
           pointerEvents: 'none',
-          fontSize: variant === 'main-frame' ? 12 : 13,
+          fontSize: variant === 'main-frame' ? 12 : (variant === 'palette' ? 14 : 13),
           display: 'flex',
           alignItems: 'center',
           gap: 8,
-          opacity: variant === 'main-frame' ? 0.75 : 1,
+          opacity: variant === 'main-frame' || variant === 'palette' ? 0.75 : 1,
           zIndex: 2
         }}>
           <FaSearch />
@@ -564,6 +587,9 @@ const ConnectionSearchBar = ({
           }
         }}
         onBlur={() => {
+          if (variant === 'palette') {
+            return;
+          }
           if (!sidebarFilter.trim()) {
             setTimeout(() => {
               setShowDropdown(false);
@@ -584,12 +610,12 @@ const ConnectionSearchBar = ({
             width: dropdownPosition.width,
             minWidth: variantStyles.container.minWidth,
             maxWidth: variantStyles.container.maxWidth,
-            maxHeight: 300,
+            maxHeight: variantStyles.dropdownMaxHeight || 300,
             background: 'var(--ui-dialog-bg, #232629)',
             color: 'var(--ui-dialog-text, #fff)',
-            borderRadius: 6,
-            boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
-            zIndex: 9999,
+            borderRadius: variant === 'palette' ? 10 : 6,
+            boxShadow: variant === 'palette' ? '0 12px 40px rgba(0,0,0,0.35)' : '0 4px 16px rgba(0,0,0,0.18)',
+            zIndex: variantStyles.dropdownZIndex || 9999,
             overflowY: 'auto',
             border: '1px solid var(--ui-dialog-border, #444)',
             WebkitAppRegion: 'no-drag',

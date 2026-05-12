@@ -56,6 +56,14 @@
         "mainFrameHeaderStartCollapsed": {
           "label": "Marco Superior Inicialmente Colapsado",
           "description": "Inicia la aplicación con el marco superior del terminal colapsado"
+        },
+        "connectionSearchShortcut": {
+          "label": "Atajo del buscador",
+          "description": "Abre el buscador centrado de conexiones mientras NodeTerm está en foco.",
+          "hint": "En Windows el predeterminado es Ctrl+Espacio: la tecla Windows suele quedar reservada por el sistema.",
+          "capturePlaceholder": "Pulsa una combinación...",
+          "change": "Cambiar atajo",
+          "reset": "Restaurar predeterminado"
         }
       },
       "visual": {
