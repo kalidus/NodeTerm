@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
 import { InputSwitch } from 'primereact/inputswitch';
-import { Tooltip } from 'primereact/tooltip';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import {
   RDP_COLOR_DEPTHS,
@@ -326,8 +325,6 @@ export function EnhancedRDPForm({
       onSubmit={handleFormSubmit}
       noValidate
     >
-      <Tooltip target=".rdp-form-tip" />
-
       <div className="terminal-form-scroll-area" style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', paddingRight: '4px' }}>
         <div className="terminal-host-port-row mb-3">
           <div className="terminal-host-port-host">
@@ -472,13 +469,6 @@ export function EnhancedRDPForm({
               onChange={(v) => handleInputChange('guacSecurity', v)}
               placeholder={tCommon('labels.select')}
             />
-            <p
-              className="rdp-form-tip mt-0 mb-3 opacity-60"
-              style={{ fontSize: '0.7rem' }}
-              data-pr-tooltip={t('rdp.descriptions.security')}
-            >
-              {t('rdp.descriptions.security')}
-            </p>
           </>
         ) : null}
 
