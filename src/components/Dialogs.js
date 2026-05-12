@@ -10,8 +10,8 @@ import { RadioButton } from 'primereact/radiobutton';
 import { ColorSelector } from './ColorSelector';
 import { InputTextarea } from 'primereact/inputtextarea';
 import { Message } from 'primereact/message';
-import { Tooltip } from 'primereact/tooltip';
 import { InputSwitch } from 'primereact/inputswitch';
+import { TerminalOptionHelp } from './TerminalOptionHelp';
 import { FolderIconSelectorModal, FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
 import { SSHIconSelectorModal, SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
 import { iconThemes } from '../themes/icon-themes';
@@ -1460,8 +1460,6 @@ export function EnhancedSSHForm({
   // Render del formulario
   return (
     <div className="connection-terminal-form" style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '0.75rem 1rem' }}>
-      <Tooltip target=".info-icon" position="top" />
-      
       <div className="terminal-form-scroll-area" style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', paddingRight: '4px' }}>
         
         {/* Row: Host / Port — grid fijo para que el puerto no robe espacio al host */}
@@ -1653,6 +1651,7 @@ export function EnhancedSSHForm({
                       <div className="flex align-items-center">
                         <i className="pi pi-save terminal-option-icon"></i>
                         <span className="terminal-option-text">{t('ssh.auth.autoCopyPassword')}</span>
+                        <TerminalOptionHelp text={t('ssh.auth.autoCopyPasswordDescription')} />
                       </div>
                       <div className="terminal-dotted-spacer"></div>
                       <InputSwitch
@@ -1666,12 +1665,8 @@ export function EnhancedSSHForm({
                     <div className="terminal-option-item">
                       <div className="flex align-items-center">
                         <i className="pi pi-desktop terminal-option-icon"></i>
-                        <span
-                          className="terminal-option-text info-icon"
-                          data-pr-tooltip={t('ssh.auth.x11ForwardingDescription')}
-                        >
-                          {t('ssh.auth.x11Forwarding')}
-                        </span>
+                        <span className="terminal-option-text">{t('ssh.auth.x11Forwarding')}</span>
+                        <TerminalOptionHelp text={t('ssh.auth.x11ForwardingDescription')} />
                       </div>
                       <div className="terminal-dotted-spacer"></div>
                       <InputSwitch
@@ -1684,12 +1679,8 @@ export function EnhancedSSHForm({
                     <div className="terminal-option-item">
                       <div className="flex align-items-center">
                         <i className="pi pi-shield terminal-option-icon"></i>
-                        <span
-                          className="terminal-option-text info-icon"
-                          data-pr-tooltip={t('ssh.auth.agentForwardingDescription')}
-                        >
-                          {t('ssh.auth.agentForwarding')}
-                        </span>
+                        <span className="terminal-option-text">{t('ssh.auth.agentForwarding')}</span>
+                        <TerminalOptionHelp text={t('ssh.auth.agentForwardingDescription')} />
                       </div>
                       <div className="terminal-dotted-spacer"></div>
                       <InputSwitch
@@ -1702,12 +1693,8 @@ export function EnhancedSSHForm({
                     <div className="terminal-option-item">
                       <div className="flex align-items-center">
                         <i className="pi pi-video terminal-option-icon"></i>
-                        <span
-                          className="terminal-option-text info-icon"
-                          data-pr-tooltip={t('ssh.auth.autoRecordingDescription')}
-                        >
-                          {t('ssh.auth.autoRecording')}
-                        </span>
+                        <span className="terminal-option-text">{t('ssh.auth.autoRecording')}</span>
+                        <TerminalOptionHelp text={t('ssh.auth.autoRecordingDescription')} />
                       </div>
                       <div className="terminal-dotted-spacer"></div>
                       <InputSwitch
@@ -1727,6 +1714,10 @@ export function EnhancedSSHForm({
                   aria-labelledby="ssh-advanced-tab-proxyJump"
                   className="terminal-advanced-panel-pane terminal-proxyjump-panel"
                 >
+                  <p className="terminal-proxyjump-intro">
+                    <i className="pi pi-question-circle terminal-proxyjump-intro-icon" aria-hidden="true"></i>
+                    <span>{t('ssh.auth.proxyJumpDescription')}</span>
+                  </p>
                   <div className="terminal-host-port-row mb-2">
                     <div className="terminal-host-port-host">
                       <label className="terminal-label">{t('ssh.auth.jumpHost').toUpperCase()}</label>
@@ -1840,11 +1831,9 @@ export function EnhancedSSHForm({
                   className="terminal-advanced-panel-pane"
                 >
                   <div className="terminal-row">
-                    <label
-                      className="terminal-label info-icon"
-                      data-pr-tooltip={t('ssh.auth.hostKeyPolicyDescription')}
-                    >
-                      {t('ssh.auth.hostKeyPolicy').toUpperCase()}
+                    <label className="terminal-label terminal-label-with-help">
+                      <span>{t('ssh.auth.hostKeyPolicy').toUpperCase()}</span>
+                      <TerminalOptionHelp text={t('ssh.auth.hostKeyPolicyDescription')} />
                     </label>
                     <div className="terminal-input-wrap terminal-folder-dropdown-wrap">
                       <Dropdown

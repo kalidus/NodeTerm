@@ -342,6 +342,24 @@ body.layout-cyberpunk .connection-terminal-form .p-inputtext.p-focus,
   font-size: 0.6rem;
 }
 
+.terminal-proxyjump-intro {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  margin: 0 0 0.75rem;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--ui-dialog-text) 68%, transparent);
+}
+
+.terminal-proxyjump-intro-icon {
+  flex-shrink: 0;
+  margin-top: 0.08rem;
+  font-size: 0.78rem;
+  color: color-mix(in srgb, var(--ui-button-primary) 72%, var(--ui-dialog-text));
+  opacity: 0.85;
+}
+
 .terminal-proxyjump-panel .terminal-host-port-row {
   gap: 0.5rem;
 }
@@ -425,6 +443,54 @@ body.layout-cyberpunk .connection-terminal-form .p-inputtext.p-focus,
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.terminal-label-with-help {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.terminal-option-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  margin-left: 0.2rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: color-mix(in srgb, var(--ui-button-primary) 70%, var(--ui-dialog-text));
+  opacity: 0.55;
+  cursor: help;
+  flex-shrink: 0;
+  transition: opacity 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.terminal-option-help .pi {
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
+.terminal-option-help:hover,
+.terminal-option-help:focus-visible {
+  opacity: 1;
+  color: var(--ui-button-primary);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.connection-terminal-form .p-tooltip .p-tooltip-text {
+  max-width: 16rem;
+  line-height: 1.45;
+  font-size: 0.72rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--ui-dialog-bg) 92%, var(--ui-dialog-text) 8%);
+  border: 1px solid color-mix(in srgb, var(--ui-button-primary) 22%, var(--ui-dialog-border));
+  color: var(--ui-dialog-text);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--ui-dialog-shadow) 80%, transparent);
 }
 
 .terminal-options-grid .terminal-dotted-spacer {

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
 import { InputSwitch } from 'primereact/inputswitch';
+import { TerminalOptionHelp } from './TerminalOptionHelp';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import {
   RDP_COLOR_DEPTHS,
@@ -154,12 +155,13 @@ function TerminalOptionSection({ title, children }) {
   );
 }
 
-function TerminalSwitchOption({ iconClass, labelText, checked, onCheckedChange, disabled, inputId }) {
+function TerminalSwitchOption({ iconClass, labelText, checked, onCheckedChange, disabled, inputId, helpText }) {
   return (
     <div className="terminal-option-item">
       <div className="flex align-items-center">
         {iconClass ? <i className={`pi ${iconClass} terminal-option-icon`} aria-hidden="true"></i> : null}
         <span className="terminal-option-text">{labelText}</span>
+        <TerminalOptionHelp text={helpText} />
       </div>
       <div className="terminal-dotted-spacer"></div>
       <InputSwitch
@@ -173,11 +175,12 @@ function TerminalSwitchOption({ iconClass, labelText, checked, onCheckedChange, 
   );
 }
 
-function TerminalDropdownField({ id, labelNode, value, options, onChange, placeholder, className, rowClassName = 'terminal-row mb-3' }) {
+function TerminalDropdownField({ id, labelNode, value, options, onChange, placeholder, className, rowClassName = 'terminal-row mb-3', helpText }) {
   return (
     <div className={rowClassName}>
-      <label className="terminal-label" htmlFor={id}>
-        {labelNode}
+      <label className="terminal-label terminal-label-with-help" htmlFor={id}>
+        <span>{labelNode}</span>
+        <TerminalOptionHelp text={helpText} />
       </label>
       <div className="terminal-input-wrap terminal-folder-dropdown-wrap">
         <Dropdown
@@ -468,6 +471,7 @@ export function EnhancedRDPForm({
               options={guacSecurityOptions}
               onChange={(v) => handleInputChange('guacSecurity', v)}
               placeholder={tCommon('labels.select')}
+              helpText={t('rdp.help.security')}
             />
           </>
         ) : null}
@@ -519,6 +523,7 @@ export function EnhancedRDPForm({
                       options={presetOptions}
                       onChange={handlePresetChange}
                       placeholder={tCommon('labels.select')}
+                      helpText={t('rdp.help.preset')}
                     />
                     <TerminalDropdownField
                       id={`${p}-resolution`}
@@ -528,6 +533,7 @@ export function EnhancedRDPForm({
                       options={resolutionOptions}
                       onChange={(v) => handleInputChange('resolution', v)}
                       placeholder={tCommon('labels.select')}
+                      helpText={t('rdp.help.resolution')}
                     />
                     <TerminalDropdownField
                       id={`${p}-colorDepth`}
@@ -537,10 +543,12 @@ export function EnhancedRDPForm({
                       options={colorDepthOptions}
                       onChange={(v) => handleInputChange('colorDepth', v)}
                       placeholder={tCommon('labels.select')}
+                      helpText={t('rdp.help.color')}
                     />
                     <div className="terminal-row">
-                      <label className="terminal-label" htmlFor={`${p}-guacDpi`}>
-                        {t('rdp.fields.dpi').toUpperCase()}
+                      <label className="terminal-label terminal-label-with-help" htmlFor={`${p}-guacDpi`}>
+                        <span>{t('rdp.fields.dpi').toUpperCase()}</span>
+                        <TerminalOptionHelp text={t('rdp.help.dpi')} />
                       </label>
                       <div className="terminal-input-wrap terminal-port-input-wrap">
                         <InputText
@@ -573,6 +581,7 @@ export function EnhancedRDPForm({
                           checked={formData.redirectClipboard}
                           onCheckedChange={(v) => handleInputChange('redirectClipboard', v)}
                           inputId={`${p}-mstsc-clipboard`}
+                          helpText={t('rdp.help.clipboard')}
                         />
                         <TerminalSwitchOption
                           iconClass="pi-volume-up"
@@ -580,6 +589,7 @@ export function EnhancedRDPForm({
                           checked={formData.redirectAudio}
                           onCheckedChange={(v) => handleInputChange('redirectAudio', v)}
                           inputId={`${p}-mstsc-audio`}
+                          helpText={t('rdp.help.audio')}
                         />
                         <TerminalSwitchOption
                           iconClass="pi-print"
@@ -587,6 +597,7 @@ export function EnhancedRDPForm({
                           checked={formData.redirectPrinters}
                           onCheckedChange={(v) => handleInputChange('redirectPrinters', v)}
                           inputId={`${p}-mstsc-printers`}
+                          helpText={t('rdp.help.printers')}
                         />
                         <TerminalSwitchOption
                           iconClass="pi-folder"
@@ -594,6 +605,7 @@ export function EnhancedRDPForm({
                           checked={formData.redirectFolders}
                           onCheckedChange={(v) => handleInputChange('redirectFolders', v)}
                           inputId={`${p}-mstsc-folders`}
+                          helpText={t('rdp.help.folders')}
                         />
                         <TerminalSwitchOption
                           iconClass="pi-arrows-alt"
@@ -601,6 +613,7 @@ export function EnhancedRDPForm({
                           checked={formData.smartSizing}
                           onCheckedChange={(v) => handleInputChange('smartSizing', v)}
                           inputId={`${p}-mstsc-smart`}
+                          helpText={t('rdp.help.smartSizing')}
                         />
                         <TerminalSwitchOption
                           iconClass="pi-window-maximize"
@@ -608,6 +621,7 @@ export function EnhancedRDPForm({
                           checked={formData.fullscreen}
                           onCheckedChange={(v) => handleInputChange('fullscreen', v)}
                           inputId={`${p}-mstsc-fullscreen`}
+                          helpText={t('rdp.help.fullscreen')}
                         />
                       </>
                     ) : (
@@ -618,6 +632,7 @@ export function EnhancedRDPForm({
                           checked={formData.redirectClipboard}
                           onCheckedChange={(v) => handleInputChange('redirectClipboard', v)}
                           inputId={`${p}-guac-clipboard`}
+                          helpText={t('rdp.help.clipboard')}
                         />
                         <TerminalSwitchOption
                           iconClass="pi-volume-up"
@@ -625,6 +640,7 @@ export function EnhancedRDPForm({
                           checked={formData.redirectAudio}
                           onCheckedChange={(v) => handleInputChange('redirectAudio', v)}
                           inputId={`${p}-guac-audio`}
+                          helpText={t('rdp.help.audio')}
                         />
                         <TerminalSwitchOption
                           iconClass="pi-database"
@@ -632,6 +648,7 @@ export function EnhancedRDPForm({
                           checked={formData.guacEnableDrive}
                           onCheckedChange={(v) => handleInputChange('guacEnableDrive', v)}
                           inputId={`${p}-guac-drive`}
+                          helpText={t('rdp.help.enableDrive')}
                         />
                         <TerminalSwitchOption
                           iconClass="pi-arrows-alt"
@@ -639,6 +656,7 @@ export function EnhancedRDPForm({
                           checked={formData.autoResize}
                           onCheckedChange={(v) => handleInputChange('autoResize', v)}
                           inputId={`${p}-guac-resize`}
+                          helpText={t('rdp.help.autoResize')}
                         />
                         <TerminalSwitchOption
                           iconClass="pi-image"
@@ -646,6 +664,7 @@ export function EnhancedRDPForm({
                           checked={formData.guacEnableWallpaper}
                           onCheckedChange={(v) => handleInputChange('guacEnableWallpaper', v)}
                           inputId={`${p}-guac-wallpaper`}
+                          helpText={t('rdp.help.enableWallpaper')}
                         />
                         <TerminalSwitchOption
                           iconClass="pi-print"
@@ -653,6 +672,7 @@ export function EnhancedRDPForm({
                           checked={formData.redirectPrinters}
                           onCheckedChange={(v) => handleInputChange('redirectPrinters', v)}
                           inputId={`${p}-guac-printers`}
+                          helpText={t('rdp.help.printers')}
                         />
                       </>
                     )}
@@ -674,6 +694,7 @@ export function EnhancedRDPForm({
                       checked={formData.guacEnableGfx}
                       onCheckedChange={(v) => handleInputChange('guacEnableGfx', v)}
                       inputId={`${p}-guac-gfx`}
+                      helpText={t('rdp.help.enableGfx')}
                     />
                     <TerminalSwitchOption
                       iconClass="pi-image"
@@ -681,6 +702,7 @@ export function EnhancedRDPForm({
                       checked={formData.guacEnableDesktopComposition}
                       onCheckedChange={(v) => handleInputChange('guacEnableDesktopComposition', v)}
                       inputId={`${p}-guac-composition`}
+                      helpText={t('rdp.help.desktopComposition')}
                     />
                     <TerminalSwitchOption
                       iconClass="pi-star"
@@ -688,6 +710,7 @@ export function EnhancedRDPForm({
                       checked={formData.guacEnableFontSmoothing}
                       onCheckedChange={(v) => handleInputChange('guacEnableFontSmoothing', v)}
                       inputId={`${p}-guac-font`}
+                      helpText={t('rdp.help.fontSmoothing')}
                     />
                     <TerminalSwitchOption
                       iconClass="pi-tags"
@@ -695,6 +718,7 @@ export function EnhancedRDPForm({
                       checked={formData.guacEnableTheming}
                       onCheckedChange={(v) => handleInputChange('guacEnableTheming', v)}
                       inputId={`${p}-guac-theme`}
+                      helpText={t('rdp.help.theming')}
                     />
                   </TerminalOptionSection>
                   <TerminalOptionSection title={t('rdp.advanced.interface')}>
@@ -704,6 +728,7 @@ export function EnhancedRDPForm({
                       checked={formData.guacEnableFullWindowDrag}
                       onCheckedChange={(v) => handleInputChange('guacEnableFullWindowDrag', v)}
                       inputId={`${p}-guac-drag`}
+                      helpText={t('rdp.help.fullWindowDrag')}
                     />
                     <TerminalSwitchOption
                       iconClass="pi-bars"
@@ -711,6 +736,7 @@ export function EnhancedRDPForm({
                       checked={formData.guacEnableMenuAnimations}
                       onCheckedChange={(v) => handleInputChange('guacEnableMenuAnimations', v)}
                       inputId={`${p}-guac-menu`}
+                      helpText={t('rdp.help.menuAnimations')}
                     />
                   </TerminalOptionSection>
                   <TerminalOptionSection title={t('rdp.advanced.cache')}>
@@ -720,6 +746,7 @@ export function EnhancedRDPForm({
                       checked={!formData.guacDisableGlyphCaching}
                       onCheckedChange={(v) => handleInputChange('guacDisableGlyphCaching', !v)}
                       inputId={`${p}-guac-glyph-cache`}
+                      helpText={t('rdp.help.glyphCaching')}
                     />
                     <TerminalSwitchOption
                       iconClass="pi-mobile"
@@ -727,6 +754,7 @@ export function EnhancedRDPForm({
                       checked={!formData.guacDisableOffscreenCaching}
                       onCheckedChange={(v) => handleInputChange('guacDisableOffscreenCaching', !v)}
                       inputId={`${p}-guac-offscreen-cache`}
+                      helpText={t('rdp.help.offscreenCaching')}
                     />
                     <TerminalSwitchOption
                       iconClass="pi-images"
@@ -734,6 +762,7 @@ export function EnhancedRDPForm({
                       checked={!formData.guacDisableBitmapCaching}
                       onCheckedChange={(v) => handleInputChange('guacDisableBitmapCaching', !v)}
                       inputId={`${p}-guac-bitmap-cache`}
+                      helpText={t('rdp.help.bitmapCaching')}
                     />
                     <TerminalSwitchOption
                       iconClass="pi-clone"
@@ -741,6 +770,7 @@ export function EnhancedRDPForm({
                       checked={!formData.guacDisableCopyRect}
                       onCheckedChange={(v) => handleInputChange('guacDisableCopyRect', !v)}
                       inputId={`${p}-guac-copy-rect`}
+                      helpText={t('rdp.help.copyRect')}
                     />
                   </TerminalOptionSection>
                 </div>
@@ -754,8 +784,9 @@ export function EnhancedRDPForm({
                   className="terminal-advanced-panel-pane"
                 >
                   <div className="terminal-row mb-0">
-                    <label className="terminal-label" htmlFor={`${p}-guacDriveHostDir`}>
-                      {t('rdp.fields.localPath').toUpperCase()}
+                    <label className="terminal-label terminal-label-with-help" htmlFor={`${p}-guacDriveHostDir`}>
+                      <span>{t('rdp.fields.localPath').toUpperCase()}</span>
+                      <TerminalOptionHelp text={t('rdp.help.localPath')} />
                     </label>
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'stretch' }}>
                       <div className="terminal-input-wrap" style={{ flex: 1 }}>
