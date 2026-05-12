@@ -1177,6 +1177,7 @@ function createWindow() {
   const isMac = process.platform === 'darwin';
   const template = [
     ...(isMac ? [{ role: 'appMenu' }] : []),
+    { role: 'editMenu' },
     {
       label: 'Ver',
       submenu: [
@@ -1189,6 +1190,19 @@ function createWindow() {
         { role: 'zoomout' },
         { type: 'separator' },
         { role: 'togglefullscreen' }
+      ]
+    },
+    { role: 'windowMenu' },
+    {
+      role: 'help',
+      submenu: [
+        {
+          label: 'Learn More',
+          click: async () => {
+            const { shell } = require('electron');
+            await shell.openExternal('https://electronjs.org');
+          }
+        }
       ]
     }
   ];
