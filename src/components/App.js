@@ -3571,6 +3571,21 @@ const App = () => {
           // Active sessions info
           activeIds={activeIds}
 
+          // Global connection search
+          sidebarFilter={sidebarFilter}
+          setSidebarFilter={setSidebarFilter}
+          allNodes={nodes}
+          findAllConnections={findAllConnections}
+          onOpenSSHConnection={onOpenSSHConnection}
+          onOpenRdpConnection={onOpenRdpConnection}
+          onOpenVncConnection={onOpenVncConnection}
+          openEditSSHDialog={openEditSSHDialog}
+          openEditRdpDialog={openEditRdpDialog}
+          expandedKeys={expandedKeys}
+          masterKey={masterKey}
+          secureStorage={secureStorage}
+          iconTheme={iconTheme}
+
           // Sync settings props
           updateThemesFromSync={reloadThemes}
           updateStatusBarFromSync={updateStatusBarFromSync}

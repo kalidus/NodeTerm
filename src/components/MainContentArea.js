@@ -12,12 +12,14 @@ import {
   FaRedhat,
   FaCentos,
   FaFedora,
-  FaBrain
+  FaBrain,
+  FaSearch
 } from 'react-icons/fa';
 import { SiAnthropic, SiDebian, SiDocker, SiGooglegemini, SiOpenai } from 'react-icons/si';
 import AIClientBrandIcon from './AIClientBrandIcon';
 import Sidebar from './Sidebar';
 import TerminalFrame from './TerminalFrame';
+import ConnectionSearchBar from './ConnectionSearchBar';
 import TabHeader from './TabHeader';
 import TabContentRenderer from './TabContentRenderer';
 import TabContextMenu from './contextmenus/TabContextMenu';
@@ -135,6 +137,21 @@ const MainContentArea = ({
   // Active sessions info
   activeIds,
 
+  // Global connection search
+  sidebarFilter,
+  setSidebarFilter,
+  allNodes,
+  findAllConnections,
+  onOpenSSHConnection,
+  onOpenRdpConnection,
+  onOpenVncConnection,
+  openEditSSHDialog,
+  openEditRdpDialog,
+  expandedKeys,
+  masterKey,
+  secureStorage,
+  iconTheme,
+
   // TitleBar state
   titleBarCollapsed,
 
@@ -153,11 +170,17 @@ const MainContentArea = ({
   const mainFrameHeaderCollapsedRef = useRef(mainFrameHeaderCollapsed);
   const isMinimalModeRef = useRef(isMinimalMode);
   const [sidebarSettingsView, setSidebarSettingsView] = useState('choice'); // 'choice', 'tree', 'icons'
+  const [frameSearchOpen, setFrameSearchOpen] = useState(false);
   const treeThemePanelRef = useRef(null);
 
   titleBarCollapsedRef.current = titleBarCollapsed;
   mainFrameHeaderCollapsedRef.current = mainFrameHeaderCollapsed;
   isMinimalModeRef.current = isMinimalMode;
+
+  const handleFrameSearchClose = useCallback(() => {
+    setFrameSearchOpen(false);
+    setSidebarFilter('');
+  }, [setSidebarFilter]);
 
   // Estado para el panel SSH System Monitor
   const [sshSystemMonitorTabId, setSshSystemMonitorTabId] = useState(null);
@@ -3019,15 +3042,80 @@ const MainContentArea = ({
             hideHeader={mainFrameHeaderCollapsed || isMinimalMode}
             showFloatingHeaderExtra={false}
             title={
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontWeight: 'bold', color: 'var(--ui-titlebar-text, #fff)' }}>NodeTerm</span>
-                <span style={{ opacity: 0.5 }}>·</span>
-                <span style={{ opacity: 0.9 }}>~/sessions</span>
-                <span style={{ opacity: 0.5 }}>·</span>
-                <span style={{ color: '#81c784', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
-                  {(activeIds && typeof activeIds.size === 'number') ? activeIds.size : 0} sessions
-                </span>
-              </span>
+              <div
+                className="main-content-frame-title"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  width: '100%',
+                  pointerEvents: 'auto',
+                  WebkitAppRegion: 'no-drag',
+                }}
+              >
+                {frameSearchOpen ? (
+                  <ConnectionSearchBar
+                    variant="main-frame"
+                    sidebarFilter={sidebarFilter}
+                    setSidebarFilter={setSidebarFilter}
+                    allNodes={allNodes}
+                    findAllConnections={findAllConnections}
+                    onOpenSSHConnection={onOpenSSHConnection}
+                    onOpenRdpConnection={onOpenRdpConnection}
+                    onOpenVncConnection={onOpenVncConnection}
+                    openEditSSHDialog={openEditSSHDialog}
+                    openEditRdpDialog={openEditRdpDialog}
+                    expandedKeys={expandedKeys}
+                    masterKey={masterKey}
+                    secureStorage={secureStorage}
+                    iconTheme={iconTheme}
+                    autoFocus
+                    onRequestClose={handleFrameSearchClose}
+                  />
+                ) : (
+                  <>
+                    <span style={{ fontWeight: 'bold', color: 'var(--ui-titlebar-text, #fff)' }}>NodeTerm</span>
+                    <span style={{ opacity: 0.5 }}>·</span>
+                    <span style={{ opacity: 0.9 }}>~/sessions</span>
+                    <span style={{ opacity: 0.5 }}>·</span>
+                    <button
+                      type="button"
+                      title="Buscar conexiones"
+                      aria-label="Buscar conexiones"
+                      onClick={() => setFrameSearchOpen(true)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 22,
+                        height: 22,
+                        padding: 0,
+                        border: 'none',
+                        borderRadius: 6,
+                        background: 'transparent',
+                        color: 'var(--ui-sidebar-text, #a9b1d6)',
+                        cursor: 'pointer',
+                        transition: 'background 0.2s ease, color 0.2s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                        e.currentTarget.style.color = 'var(--ui-titlebar-text, #fff)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.color = 'var(--ui-sidebar-text, #a9b1d6)';
+                      }}
+                    >
+                      <FaSearch size={12} />
+                    </button>
+                    <span style={{ opacity: 0.5 }}>·</span>
+                    <span style={{ color: '#81c784', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+                      {(activeIds && typeof activeIds.size === 'number') ? activeIds.size : 0} sessions
+                    </span>
+                  </>
+                )}
+              </div>
             }
             headerExtra={null}
           >

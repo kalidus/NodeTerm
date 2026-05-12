@@ -422,6 +422,11 @@
     pointer-events: none;
 }
 
+.terminal-frame.main-content-frame .terminal-frame-title {
+    opacity: 1;
+    pointer-events: auto;
+}
+
 .terminal-frame-content {
     flex-grow: 1;
     overflow: hidden;
