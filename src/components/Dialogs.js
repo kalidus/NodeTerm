@@ -762,7 +762,7 @@ export function EditSSHConnectionDialog({
         className="terminal-pro-dialog"
         closable={false}
       >
-        <div style={{ marginTop: '10px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ marginTop: '10px', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <EnhancedSSHForm
             activeTabIndex={0}
             sshName={sshName}
@@ -1831,10 +1831,10 @@ export function EnhancedSSHForm({
 
   // Render del formulario
   return (
-    <div className="ssh-terminal-form" style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '0.75rem 1rem' }}>
+    <div className="ssh-terminal-form" style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '0.75rem 1rem' }}>
       <Tooltip target=".info-icon" position="top" />
       
-      <div className="terminal-form-scroll-area" style={{ flex: '1 1 auto', overflowY: 'auto', paddingRight: '4px' }}>
+      <div className="terminal-form-scroll-area" style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', paddingRight: '4px' }}>
         
         {/* Row: Host / Port — grid fijo para que el puerto no robe espacio al host */}
         <div className="terminal-host-port-row mb-3">
@@ -2261,6 +2261,7 @@ export function EnhancedSSHForm({
           font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
           background: var(--ui-dialog-bg);
           color: var(--ui-dialog-text);
+          min-height: 0;
         }
         .terminal-host-port-row {
           display: grid;
@@ -2623,6 +2624,7 @@ export function EnhancedSSHForm({
           justify-content: space-between;
           padding-top: 1rem;
           border-top: 1px solid var(--ui-dialog-border);
+          flex-shrink: 0;
         }
         .terminal-btn-primary {
           background: var(--ui-button-primary) !important;
@@ -2732,6 +2734,8 @@ export function EnhancedSSHForm({
         .terminal-pro-dialog.p-dialog {
           display: flex;
           flex-direction: column;
+          max-height: 90vh;
+          overflow: hidden;
         }
         .terminal-pro-dialog .p-resizable-handle {
           background: transparent !important;
@@ -2753,6 +2757,9 @@ export function EnhancedSSHForm({
           cursor: nwse-resize !important;
         }
         .terminal-form-scroll-area {
+          min-height: 0;
+          overflow-y: auto;
+          overscroll-behavior: contain;
           scrollbar-width: thin;
           scrollbar-color: var(--ui-dialog-border) transparent;
         }
@@ -2883,7 +2890,7 @@ export function NewSSHConnectionDialog({
       className="terminal-pro-dialog"
       closable={false}
     >
-      <div style={{ marginTop: '10px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ marginTop: '10px', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <EnhancedSSHForm
           activeTabIndex={0}
           sshName={sshName}
