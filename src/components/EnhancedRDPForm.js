@@ -4,6 +4,11 @@ import { Dropdown } from 'primereact/dropdown';
 import { InputSwitch } from 'primereact/inputswitch';
 import { Tooltip } from 'primereact/tooltip';
 import { useTranslation } from '../i18n/hooks/useTranslation';
+import {
+  RDP_COLOR_DEPTHS,
+  RDP_RESOLUTION_VALUES,
+  buildRdpPresetFormPatch
+} from '../utils/rdpScreenConfig';
 
 export const TERMINAL_PRO_DIALOG_STYLE = {
   width: '680px',
@@ -202,7 +207,8 @@ export function EnhancedRDPForm({
   onGoBack,
   onSubmit,
   loading,
-  idPrefix = 'rdp'
+  idPrefix = 'rdp',
+  applyFormPatch
 }) {
   const { t } = useTranslation('dialogs');
   const { t: tCommon } = useTranslation('common');
@@ -220,25 +226,31 @@ export function EnhancedRDPForm({
   );
 
   const resolutionOptions = useMemo(
-    () => [
-      { label: t('rdp.resolutions.fullscreen'), value: 'fullscreen' },
-      { label: '1920x1080', value: '1920x1080' },
-      { label: '1600x1000', value: '1600x1000' },
-      { label: '1366x768', value: '1366x768' },
-      { label: '1024x768', value: '1024x768' }
-    ],
+    () => RDP_RESOLUTION_VALUES.map((value) => ({
+      label: value === 'fullscreen' ? t('rdp.resolutions.fullscreen') : value,
+      value
+    })),
     [t]
   );
 
   const colorDepthOptions = useMemo(
-    () => [
-      { label: t('rdp.colorDepths.32'), value: 32 },
-      { label: t('rdp.colorDepths.24'), value: 24 },
-      { label: t('rdp.colorDepths.16'), value: 16 },
-      { label: t('rdp.colorDepths.15'), value: 15 }
-    ],
+    () => RDP_COLOR_DEPTHS.map((value) => ({
+      label: t(`rdp.colorDepths.${value}`),
+      value
+    })),
     [t]
   );
+
+  const handlePresetChange = (presetId) => {
+    const patch = buildRdpPresetFormPatch(presetId, formData);
+    if (typeof applyFormPatch === 'function') {
+      applyFormPatch(patch);
+      return;
+    }
+    Object.entries(patch).forEach(([field, value]) => {
+      handleInputChange(field, value);
+    });
+  };
 
   const guacSecurityOptions = useMemo(
     () => [
@@ -515,7 +527,7 @@ export function EnhancedRDPForm({
                       labelNode={t('rdp.fields.preset').toUpperCase()}
                       value={formData.preset}
                       options={presetOptions}
-                      onChange={(v) => handleInputChange('preset', v)}
+                      onChange={handlePresetChange}
                       placeholder={tCommon('labels.select')}
                     />
                     <TerminalDropdownField

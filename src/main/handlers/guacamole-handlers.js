@@ -12,6 +12,10 @@ const { saveGuacdInactivityTimeout, loadGuacdInactivityTimeout } = require('../u
 // Was previously inline inside the IPC handler, causing synchronous module resolution on every token creation.
 const crypto = require('crypto');
 const Crypt = require('guacamole-lite/lib/Crypt.js');
+const {
+  normalizeRdpColorDepth,
+  resolveRdpScreenDimensions
+} = require('../../utils/rdpScreenConfig');
 
 
 /**
@@ -281,29 +285,22 @@ function registerGuacamoleHandlers({
         && config.username.includes('@')
         && config.username.includes(':');
 
-      // Calcular resolución final: priorizar width/height, luego parsear resolution
-      let finalWidth = config.width || 1024;
-      let finalHeight = config.height || 768;
+      let finalWidth = parseInt(config.width, 10) || 0;
+      let finalHeight = parseInt(config.height, 10) || 0;
 
-      // Si no hay width/height específicos pero sí resolution, parsearla
-      if (!config.width && !config.height && config.resolution) {
-        const [width, height] = config.resolution.split('x');
-        if (width && height) {
-          finalWidth = parseInt(width);
-          finalHeight = parseInt(height);
-          console.log(`🔄 [MAIN] Parseando resolution "${config.resolution}" → ${finalWidth}x${finalHeight}`);
+      if (!finalWidth || !finalHeight) {
+        const screen = resolveRdpScreenDimensions(config, {
+          width: config.viewportWidth || 1024,
+          height: config.viewportHeight || 768
+        });
+        finalWidth = screen.width;
+        finalHeight = screen.height;
+        if (screen.resolution && screen.resolution !== 'fullscreen') {
+          console.log(`🔄 [MAIN] Resolviendo pantalla "${config.resolution || 'auto'}" → ${finalWidth}x${finalHeight}`);
         }
       }
 
-      // Normalizar profundidad de color
-      let normalizedColorDepth = 32;
-      try {
-        const candidateDepth = parseInt(config.colorDepth, 10);
-        const allowedDepths = [8, 16, 24, 32];
-        if (allowedDepths.includes(candidateDepth)) {
-          normalizedColorDepth = candidateDepth;
-        }
-      } catch { }
+      const normalizedColorDepth = normalizeRdpColorDepth(config.colorDepth, 32);
 
 
       // Obtener el estado actual del servidor usando las funciones getter

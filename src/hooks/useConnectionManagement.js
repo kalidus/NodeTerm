@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import connectionStore from '../utils/connectionStore';
+import { normalizeRdpColorDepth, resolveRdpScreenDimensions } from '../utils/rdpScreenConfig';
 
 export const useConnectionManagement = ({
   // Estados del hook de pestañas
@@ -614,28 +615,21 @@ export const useConnectionManagement = ({
     } catch (e) { /* noop */ }
 
     if (isGuacamoleRDP) {
-      // === NUEVA LÓGICA: RDP-Guacamole como pestañas independientes ===
-      // Calcular resolución dinámica si autoResize está activado
-      let dynamicWidth = parseInt(baseRdp.resolution?.split('x')[0]) || 1024;
-      let dynamicHeight = parseInt(baseRdp.resolution?.split('x')[1]) || 768;
+      const screen = resolveRdpScreenDimensions(baseRdp, {
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
 
-      if (baseRdp.autoResize) {
-        // Usar dimensiones dinámicas basadas en la ventana
-        dynamicWidth = Math.floor(window.innerWidth * 0.8);
-        dynamicHeight = Math.floor(window.innerHeight * 0.7);
-      }
-
-
-      // Ensure username is set in rdpConfig, falling back to empty string if undefined
       const rdpConfig = {
         hostname: baseRdp.server || baseRdp.host || baseRdp.hostname,
         username: baseRdp.username || baseRdp.user,
         password: baseRdp.password || 'password', // En producción desde vault
         port: baseRdp.port || 3389,
-        width: dynamicWidth,  // ← NÚMEROS, no string
-        height: dynamicHeight, // ← NÚMEROS, no string
+        width: screen.width,
+        height: screen.height,
+        resolution: screen.resolution,
         dpi: baseRdp.guacDpi || 96,
-        colorDepth: baseRdp.colorDepth || 32,
+        colorDepth: normalizeRdpColorDepth(baseRdp.colorDepth, 32),
         enableDrive: baseRdp.guacEnableDrive === true,
         driveHostDir: baseRdp.guacDriveHostDir || undefined,
         enableWallpaper: baseRdp.guacEnableWallpaper === true,
@@ -658,7 +652,7 @@ export const useConnectionManagement = ({
         redirectClipboard: baseRdp.redirectClipboard === true,
         redirectPrinters: baseRdp.redirectPrinters === true,
         redirectAudio: baseRdp.redirectAudio === true,
-        fullscreen: baseRdp.fullscreen === true,
+        fullscreen: screen.fullscreen || baseRdp.fullscreen === true,
         span: baseRdp.span === true
       };
 
@@ -712,8 +706,9 @@ export const useConnectionManagement = ({
       password: baseRdp.password,
       port: baseRdp.port || 3389,
       clientType: baseRdp.clientType || 'guacamole',
+      preset: baseRdp.preset || 'default',
       resolution: baseRdp.resolution || '1920x1080',
-      colorDepth: baseRdp.colorDepth || baseRdp.colors || 32,
+      colorDepth: normalizeRdpColorDepth(baseRdp.colorDepth || baseRdp.colors, 32),
       redirectFolders: baseRdp.redirectFolders === true,
       redirectClipboard: baseRdp.redirectClipboard === true,
       redirectPrinters: baseRdp.redirectPrinters === true,

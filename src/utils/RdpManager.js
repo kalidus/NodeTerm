@@ -3,6 +3,8 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
+const { RDP_SCREEN_PRESETS, normalizeRdpColorDepth } = require('./rdpScreenConfig');
+
 class RdpManager {
   constructor() {
     this.activeConnections = new Map();
@@ -210,7 +212,7 @@ class RdpManager {
       'redirectcomports:i:0',
       'redirectposdevices:i:0',
       'redirectdirectx:i:1',
-      'session bpp:i:32',
+      `session bpp:i:${normalizeRdpColorDepth(config.colorDepth, 32)}`,
       'allow font smoothing:i:1',
       'promptcredentialonce:i:1'
     ];
@@ -387,75 +389,7 @@ class RdpManager {
    * Obtener presets comunes de configuración
    */
   getPresets() {
-    return {
-      default: {
-        resolution: '1600x1000',
-        colorDepth: 32,
-        redirectFolders: true,
-        redirectClipboard: true,
-        redirectPrinters: false,
-        redirectAudio: true,
-        fullscreen: false,
-        smartSizing: true,
-        connectionTimeout: 60000
-      },
-      performance: {
-        resolution: '1280x800',
-        colorDepth: 16,
-        redirectFolders: false,
-        redirectClipboard: true,
-        redirectPrinters: false,
-        redirectAudio: false,
-        fullscreen: false,
-        smartSizing: true,
-        connectionTimeout: 90000
-      },
-      fullFeature: {
-        resolution: '1920x1080',
-        colorDepth: 32,
-        redirectFolders: true,
-        redirectClipboard: true,
-        redirectPrinters: true,
-        redirectAudio: true,
-        fullscreen: true,
-        span: true,
-        smartSizing: false,
-        connectionTimeout: 120000
-      },
-      qhd: {
-        resolution: '2560x1440',
-        colorDepth: 32,
-        redirectFolders: true,
-        redirectClipboard: true,
-        redirectPrinters: false,
-        redirectAudio: true,
-        fullscreen: false,
-        smartSizing: true,
-        connectionTimeout: 60000
-      },
-      ultrawide: {
-        resolution: '3440x1440',
-        colorDepth: 32,
-        redirectFolders: true,
-        redirectClipboard: true,
-        redirectPrinters: false,
-        redirectAudio: true,
-        fullscreen: false,
-        smartSizing: true,
-        connectionTimeout: 60000
-      },
-      uhd: {
-        resolution: '3840x2160',
-        colorDepth: 32,
-        redirectFolders: true,
-        redirectClipboard: true,
-        redirectPrinters: false,
-        redirectAudio: true,
-        fullscreen: false,
-        smartSizing: true,
-        connectionTimeout: 60000
-      }
-    };
+    return RDP_SCREEN_PRESETS;
   }
 }
 

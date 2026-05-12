@@ -210,6 +210,23 @@ body.layout-cyberpunk .connection-terminal-form .p-inputtext.p-focus,
   padding-top: 0.35rem;
 }
 
+.terminal-advanced-section .terminal-options-list > .terminal-advanced-tabs {
+  margin-bottom: 0.65rem;
+}
+
+.terminal-advanced-section .terminal-advanced-panel-pane {
+  padding: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--ui-dialog-border) 88%, transparent);
+  border-radius: 6px;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--ui-dialog-text) 4%, transparent) 0%,
+      color-mix(in srgb, var(--ui-dialog-text) 2%, transparent) 100%
+    );
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ui-dialog-text) 6%, transparent);
+}
+
 .terminal-advanced-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -221,10 +238,10 @@ body.layout-cyberpunk .connection-terminal-form .p-inputtext.p-focus,
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  padding: 0.3rem 0.45rem;
+  padding: 0.35rem 0.55rem;
   border: 1px solid var(--ui-dialog-border);
-  border-radius: 4px;
-  background: transparent;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--ui-dialog-text) 2%, transparent);
   color: color-mix(in srgb, var(--ui-dialog-text) 75%, transparent);
   font-size: 0.62rem;
   font-weight: 700;
@@ -232,6 +249,11 @@ body.layout-cyberpunk .connection-terminal-form .p-inputtext.p-focus,
   cursor: pointer;
   font-family: inherit;
   line-height: 1.2;
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .terminal-advanced-tab .pi {
@@ -241,9 +263,12 @@ body.layout-cyberpunk .connection-terminal-form .p-inputtext.p-focus,
 }
 
 .terminal-advanced-tab.active {
-  border-color: var(--ui-button-primary);
+  border-color: color-mix(in srgb, var(--ui-button-primary) 55%, var(--ui-dialog-border));
   color: var(--ui-button-primary);
-  background: color-mix(in srgb, var(--ui-button-primary) 8%, transparent);
+  background: color-mix(in srgb, var(--ui-button-primary) 10%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--ui-button-primary) 12%, transparent),
+    0 6px 16px color-mix(in srgb, var(--ui-button-primary) 10%, transparent);
 }
 
 .terminal-advanced-tab:hover:not(.active) {
@@ -258,7 +283,7 @@ body.layout-cyberpunk .connection-terminal-form .p-inputtext.p-focus,
 .terminal-screen-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.55rem 0.85rem;
+  gap: 0.7rem 0.9rem;
 }
 
 .terminal-screen-grid .terminal-row {
@@ -267,16 +292,43 @@ body.layout-cyberpunk .connection-terminal-form .p-inputtext.p-focus,
 
 .terminal-screen-grid .terminal-label {
   margin-bottom: 0.35rem;
+  color: color-mix(in srgb, var(--ui-button-primary) 88%, var(--ui-dialog-text));
 }
 
 .terminal-screen-grid .terminal-input-wrap,
 .terminal-screen-grid .terminal-folder-dropdown-wrap {
-  min-height: 2.1rem;
+  min-height: 2.25rem;
+  border-radius: 6px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--ui-dialog-text) 3%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ui-dialog-text) 5%, transparent);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.terminal-screen-grid .terminal-input-wrap:focus-within,
+.terminal-screen-grid .terminal-folder-dropdown-wrap:has(.p-dropdown.p-focus),
+.terminal-screen-grid .terminal-folder-dropdown-wrap:has(.p-dropdown:not(.p-disabled):hover) {
+  border-color: color-mix(in srgb, var(--ui-button-primary) 55%, var(--ui-dialog-border));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--ui-dialog-text) 8%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--ui-button-primary) 12%, transparent),
+    0 0 14px color-mix(in srgb, var(--ui-button-primary) 14%, transparent);
 }
 
 .terminal-screen-grid .terminal-folder-dropdown .p-dropdown-label {
   font-size: 0.8rem !important;
-  padding: 0.42rem 0.25rem !important;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 0.45rem 0.35rem !important;
+}
+
+.terminal-screen-grid .terminal-input {
+  font-size: 0.8rem !important;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 @media (max-width: 560px) {
@@ -389,9 +441,10 @@ body.layout-cyberpunk .connection-terminal-form .p-inputtext.p-focus,
 }
 
 .terminal-folder-dropdown-wrap {
-  padding: 0 0.5rem;
+  padding: 0 0 0 0.55rem;
   min-height: 2.25rem;
   gap: 0;
+  overflow: hidden;
 }
 
 .connection-terminal-form .terminal-folder-dropdown-wrap .terminal-icon-left {
@@ -410,6 +463,15 @@ body.layout-cyberpunk .connection-terminal-form .p-inputtext.p-focus,
   border: none !important;
   box-shadow: none !important;
   font-family: inherit;
+  display: flex;
+  align-items: stretch;
+}
+
+.connection-terminal-form .terminal-folder-dropdown .p-dropdown-label,
+.connection-terminal-form .terminal-folder-dropdown .p-dropdown-label.p-inputtext {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .connection-terminal-form .terminal-folder-dropdown.p-dropdown.p-focus,
@@ -423,16 +485,51 @@ body.layout-cyberpunk .connection-terminal-form .terminal-folder-dropdown.p-drop
 .connection-terminal-form .terminal-folder-dropdown .p-dropdown-label {
   color: var(--ui-dialog-text) !important;
   font-size: 0.85rem !important;
-  padding: 0.5rem 0.25rem !important;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 0.5rem 0.35rem !important;
+  display: flex;
+  align-items: center;
 }
 
 .connection-terminal-form .terminal-folder-dropdown .p-dropdown-label.p-placeholder {
   color: color-mix(in srgb, var(--ui-dialog-text) 40%, transparent) !important;
+  font-weight: 500;
 }
 
 .connection-terminal-form .terminal-folder-dropdown .p-dropdown-trigger {
-  color: color-mix(in srgb, var(--ui-dialog-text) 50%, transparent);
-  width: 2rem;
+  color: color-mix(in srgb, var(--ui-button-primary) 72%, var(--ui-dialog-text));
+  width: 2.15rem;
+  flex-shrink: 0;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.15rem;
+  border-left: 1px solid color-mix(in srgb, var(--ui-dialog-border) 88%, transparent);
+  background: transparent;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.connection-terminal-form .terminal-folder-dropdown:not(.p-disabled):hover .p-dropdown-trigger,
+.connection-terminal-form .terminal-folder-dropdown.p-dropdown.p-focus .p-dropdown-trigger {
+  color: var(--ui-button-primary);
+  border-left-color: color-mix(in srgb, var(--ui-button-primary) 28%, var(--ui-dialog-border));
+  background: color-mix(in srgb, var(--ui-dialog-text) 4%, transparent);
+}
+
+.connection-terminal-form .terminal-folder-dropdown .p-dropdown-trigger .p-dropdown-trigger-icon {
+  font-size: 0.72rem;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  opacity: 0.82;
+}
+
+.connection-terminal-form .terminal-folder-dropdown.p-dropdown.p-focus .p-dropdown-trigger .p-dropdown-trigger-icon {
+  transform: rotate(180deg);
+  opacity: 1;
 }
 
 .connection-terminal-form .terminal-folder-dropdown .p-dropdown-clear-icon {
@@ -445,12 +542,28 @@ body.layout-cyberpunk .connection-terminal-form .terminal-folder-dropdown.p-drop
 }
 
 .terminal-folder-dropdown-panel.p-dropdown-panel {
-  background: var(--ui-dialog-bg) !important;
+  background: color-mix(in srgb, var(--ui-dialog-bg) 96%, var(--ui-dialog-text) 4%) !important;
   border: 1px solid color-mix(in srgb, var(--ui-button-primary) 28%, transparent) !important;
-  border-radius: 4px !important;
-  box-shadow: 0 12px 32px var(--ui-dialog-shadow) !important;
+  border-radius: 8px !important;
+  box-shadow:
+    0 16px 36px color-mix(in srgb, var(--ui-dialog-shadow) 88%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--ui-button-primary) 8%, transparent) !important;
   font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
   color: var(--ui-dialog-text) !important;
+  overflow: hidden;
+  animation: terminal-dropdown-panel-in 0.16s ease-out;
+}
+
+@keyframes terminal-dropdown-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .terminal-folder-dropdown-panel .p-dropdown-header {
@@ -482,26 +595,33 @@ body.layout-cyberpunk .connection-terminal-form .terminal-folder-dropdown.p-drop
 }
 
 .terminal-folder-dropdown-panel .p-dropdown-items {
-  padding: 0.35rem !important;
+  padding: 0.4rem !important;
 }
 
 .terminal-folder-dropdown-panel .p-dropdown-item {
   color: color-mix(in srgb, var(--ui-dialog-text) 85%, transparent) !important;
   background: transparent !important;
-  border-radius: 4px !important;
+  border-radius: 6px !important;
   font-size: 0.8rem !important;
-  padding: 0.45rem 0.6rem !important;
-  margin: 0.1rem 0 !important;
+  font-weight: 500;
+  padding: 0.5rem 0.65rem !important;
+  margin: 0.08rem 0 !important;
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease,
+    transform 0.16s ease;
 }
 
 .terminal-folder-dropdown-panel .p-dropdown-item:not(.p-highlight):not(.p-disabled):hover {
-  background: color-mix(in srgb, var(--ui-button-primary) 8%, transparent) !important;
+  background: color-mix(in srgb, var(--ui-button-primary) 10%, transparent) !important;
   color: var(--ui-dialog-text) !important;
+  transform: translateX(1px);
 }
 
 .terminal-folder-dropdown-panel .p-dropdown-item.p-highlight {
-  background: color-mix(in srgb, var(--ui-button-primary) 16%, transparent) !important;
+  background: color-mix(in srgb, var(--ui-button-primary) 18%, transparent) !important;
   color: var(--ui-button-primary) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ui-button-primary) 18%, transparent);
 }
 
 .terminal-folder-dropdown-panel .p-dropdown-empty-message {

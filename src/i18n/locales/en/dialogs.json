@@ -180,8 +180,7 @@
     "colorDepths": {
       "32": "32 bits",
       "24": "24 bits",
-      "16": "16 bits",
-      "15": "15 bits"
+      "16": "16 bits"
     },
     "options": {
       "clipboard": "Clipboard",

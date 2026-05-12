@@ -857,6 +857,10 @@ export function EditRDPConnectionDialog({
     setFormData((previous) => ({ ...previous, [field]: value }));
   }, []);
 
+  const applyFormPatch = useCallback((patch) => {
+    setFormData((previous) => ({ ...previous, ...patch }));
+  }, []);
+
   const handleSelectFolder = useCallback(async () => {
     try {
       const result = await window.electron.dialog.showOpenDialog({
@@ -900,6 +904,7 @@ export function EditRDPConnectionDialog({
           formData={formData}
           handleTextChange={handleTextChange}
           handleInputChange={handleInputChange}
+          applyFormPatch={applyFormPatch}
           showPassword={showRdpPassword}
           setShowPassword={setShowRdpPassword}
           onSelectFolder={handleSelectFolder}
@@ -2053,6 +2058,10 @@ export function NewRDPConnectionDialog({
     setFormData((previous) => ({ ...previous, [field]: value }));
   }, []);
 
+  const applyFormPatch = useCallback((patch) => {
+    setFormData((previous) => ({ ...previous, ...patch }));
+  }, []);
+
   const handleSelectFolder = useCallback(async () => {
     try {
       const result = await window.electron.dialog.showOpenDialog({
@@ -2096,6 +2105,7 @@ export function NewRDPConnectionDialog({
           formData={formData}
           handleTextChange={handleTextChange}
           handleInputChange={handleInputChange}
+          applyFormPatch={applyFormPatch}
           showPassword={showRdpPassword}
           setShowPassword={setShowRdpPassword}
           onSelectFolder={handleSelectFolder}

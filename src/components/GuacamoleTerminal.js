@@ -3,6 +3,7 @@ import { Button } from 'primereact/button';
 import Guacamole from 'guacamole-common-js';
 import ResizeController from '../utils/ResizeController';
 import ErrorMapper from '../utils/guacamoleErrorMapper';
+import { normalizeRdpColorDepth } from '../utils/rdpScreenConfig';
 
 const GuacamoleTerminal = forwardRef(({
     tabId = 'default',
@@ -296,6 +297,7 @@ const GuacamoleTerminal = forwardRef(({
                         const parsed = parseInt(rdpConfig.colorDepth, 10);
                         if (!isNaN(parsed)) rdpConfig.colorDepth = parsed;
                     }
+                    rdpConfig.colorDepth = normalizeRdpColorDepth(rdpConfig.colorDepth, 32);
                 } catch { }
 
                 // Crear token de conexión
