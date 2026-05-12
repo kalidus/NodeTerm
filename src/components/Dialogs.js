@@ -2097,34 +2097,34 @@ export function EnhancedSSHForm({
                   id="ssh-advanced-panel-proxyJump"
                   role="tabpanel"
                   aria-labelledby="ssh-advanced-tab-proxyJump"
-                  className="terminal-advanced-panel-pane"
+                  className="terminal-advanced-panel-pane terminal-proxyjump-panel"
                 >
-                  <div className="terminal-host-port-row mb-3">
+                  <div className="terminal-host-port-row mb-2">
                     <div className="terminal-host-port-host">
-                          <label className="terminal-label">{t('ssh.auth.jumpHost').toUpperCase()}</label>
-                          <div className="terminal-input-wrap">
-                            <InputText
-                              value={sshJumpHost}
-                              onChange={(e) => setSSHJumpHost(e.target.value)}
-                              placeholder="jump.ejemplo.com"
-                              className="terminal-input"
-                            />
-                          </div>
-                        </div>
-                        <div className="terminal-host-port-port">
-                          <label className="terminal-label">{t('ssh.auth.jumpPort').toUpperCase()}</label>
-                          <div className="terminal-input-wrap terminal-port-input-wrap">
-                            <InputText
-                              value={sshJumpPort}
-                              onChange={(e) => setSSHJumpPort(e.target.value)}
-                              placeholder="22"
-                              className="terminal-input terminal-port-input text-center"
-                            />
-                          </div>
-                        </div>
+                      <label className="terminal-label">{t('ssh.auth.jumpHost').toUpperCase()}</label>
+                      <div className="terminal-input-wrap">
+                        <InputText
+                          value={sshJumpHost}
+                          onChange={(e) => setSSHJumpHost(e.target.value)}
+                          placeholder="jump.ejemplo.com"
+                          className="terminal-input"
+                        />
                       </div>
+                    </div>
+                    <div className="terminal-host-port-port">
+                      <label className="terminal-label">{t('ssh.auth.jumpPort').toUpperCase()}</label>
+                      <div className="terminal-input-wrap terminal-port-input-wrap">
+                        <InputText
+                          value={sshJumpPort}
+                          onChange={(e) => setSSHJumpPort(e.target.value)}
+                          placeholder="22"
+                          className="terminal-input terminal-port-input text-center"
+                        />
+                      </div>
+                    </div>
+                  </div>
 
-                      <div className="terminal-row mb-3">
+                  <div className="terminal-row mb-2">
                         <label className="terminal-label">{t('ssh.auth.jumpUser').toUpperCase()}</label>
                         <div className="terminal-input-wrap">
                           <InputText
@@ -2136,7 +2136,7 @@ export function EnhancedSSHForm({
                         </div>
                       </div>
 
-                      <div className="terminal-row mb-3">
+                      <div className="terminal-row mb-2">
                         <label className="terminal-label">{t('ssh.auth.method').toUpperCase()}</label>
                         <div className="terminal-auth-selector">
                           <div
@@ -2162,7 +2162,7 @@ export function EnhancedSSHForm({
                       </div>
 
                       {sshJumpAuthMethod === 'password' ? (
-                        <div className="terminal-row mb-2">
+                        <div className="terminal-row mb-0">
                           <label className="terminal-label">{t('ssh.auth.jumpPassword').toUpperCase()}</label>
                           <div className="terminal-input-wrap">
                             <InputText
@@ -2178,7 +2178,7 @@ export function EnhancedSSHForm({
                           </div>
                         </div>
                       ) : (
-                        <div className="terminal-row mb-2">
+                        <div className="terminal-row mb-0">
                           <label className="terminal-label">{t('ssh.auth.jumpPrivateKey').toUpperCase()}</label>
                           <div className="terminal-input-wrap terminal-key-file-wrap">
                             <span className="terminal-key-file-name opacity-60 truncate">
@@ -2477,6 +2477,30 @@ export function EnhancedSSHForm({
         }
         .terminal-advanced-panel-pane {
           padding-top: 0.15rem;
+        }
+        .terminal-proxyjump-panel .terminal-label {
+          margin-bottom: 0.25rem;
+          font-size: 0.6rem;
+        }
+        .terminal-proxyjump-panel .terminal-host-port-row {
+          gap: 0.5rem;
+        }
+        .terminal-proxyjump-panel .terminal-input {
+          padding: 0.38rem 0.25rem !important;
+          font-size: 0.8rem !important;
+        }
+        .terminal-proxyjump-panel .terminal-input-wrap,
+        .terminal-proxyjump-panel .terminal-key-file-wrap {
+          min-height: 2rem;
+        }
+        .terminal-proxyjump-panel .terminal-auth-chip {
+          padding: 0.35rem 0.45rem;
+          font-size: 0.68rem;
+          gap: 0.35rem;
+        }
+        .terminal-proxyjump-panel .terminal-key-file-btn {
+          padding: 0.15rem 0.45rem;
+          font-size: 0.65rem;
         }
         .terminal-options-grid {
           display: grid;
