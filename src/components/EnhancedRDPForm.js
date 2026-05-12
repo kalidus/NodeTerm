@@ -143,7 +143,7 @@ function TerminalOptionSection({ title, children }) {
   return (
     <div className="terminal-options-section">
       <div className="terminal-options-section-title">{title}</div>
-      <div className="terminal-options-grid terminal-options-grid--single">
+      <div className="terminal-options-grid">
         {children}
       </div>
     </div>
@@ -169,9 +169,9 @@ function TerminalSwitchOption({ iconClass, labelText, checked, onCheckedChange, 
   );
 }
 
-function TerminalDropdownField({ id, labelNode, value, options, onChange, placeholder, className }) {
+function TerminalDropdownField({ id, labelNode, value, options, onChange, placeholder, className, rowClassName = 'terminal-row mb-3' }) {
   return (
-    <div className="terminal-row mb-3">
+    <div className={rowClassName}>
       <label className="terminal-label" htmlFor={id}>
         {labelNode}
       </label>
@@ -508,43 +508,48 @@ export function EnhancedRDPForm({
                   aria-labelledby={`${p}-advanced-tab-screen`}
                   className="terminal-advanced-panel-pane"
                 >
-                  <TerminalDropdownField
-                    id={`${p}-preset`}
-                    labelNode={t('rdp.fields.preset').toUpperCase()}
-                    value={formData.preset}
-                    options={presetOptions}
-                    onChange={(v) => handleInputChange('preset', v)}
-                    placeholder={tCommon('labels.select')}
-                  />
-                  <TerminalDropdownField
-                    id={`${p}-resolution`}
-                    labelNode={t('rdp.fields.resolution').toUpperCase()}
-                    value={formData.resolution}
-                    options={resolutionOptions}
-                    onChange={(v) => handleInputChange('resolution', v)}
-                    placeholder={tCommon('labels.select')}
-                  />
-                  <TerminalDropdownField
-                    id={`${p}-colorDepth`}
-                    labelNode={t('rdp.fields.color').toUpperCase()}
-                    value={formData.colorDepth}
-                    options={colorDepthOptions}
-                    onChange={(v) => handleInputChange('colorDepth', v)}
-                    placeholder={tCommon('labels.select')}
-                  />
-                  <div className="terminal-row mb-3">
-                    <label className="terminal-label" htmlFor={`${p}-guacDpi`}>
-                      {t('rdp.fields.dpi').toUpperCase()}
-                    </label>
-                    <div className="terminal-input-wrap">
-                      <InputText
-                        id={`${p}-guacDpi`}
-                        value={formData.guacDpi}
-                        onChange={handleTextChange('guacDpi')}
-                        placeholder={t('rdp.placeholders.dpi')}
-                        className="terminal-input"
-                        autoComplete="off"
-                      />
+                  <div className="terminal-screen-grid">
+                    <TerminalDropdownField
+                      id={`${p}-preset`}
+                      rowClassName="terminal-row"
+                      labelNode={t('rdp.fields.preset').toUpperCase()}
+                      value={formData.preset}
+                      options={presetOptions}
+                      onChange={(v) => handleInputChange('preset', v)}
+                      placeholder={tCommon('labels.select')}
+                    />
+                    <TerminalDropdownField
+                      id={`${p}-resolution`}
+                      rowClassName="terminal-row"
+                      labelNode={t('rdp.fields.resolution').toUpperCase()}
+                      value={formData.resolution}
+                      options={resolutionOptions}
+                      onChange={(v) => handleInputChange('resolution', v)}
+                      placeholder={tCommon('labels.select')}
+                    />
+                    <TerminalDropdownField
+                      id={`${p}-colorDepth`}
+                      rowClassName="terminal-row"
+                      labelNode={t('rdp.fields.color').toUpperCase()}
+                      value={formData.colorDepth}
+                      options={colorDepthOptions}
+                      onChange={(v) => handleInputChange('colorDepth', v)}
+                      placeholder={tCommon('labels.select')}
+                    />
+                    <div className="terminal-row">
+                      <label className="terminal-label" htmlFor={`${p}-guacDpi`}>
+                        {t('rdp.fields.dpi').toUpperCase()}
+                      </label>
+                      <div className="terminal-input-wrap terminal-port-input-wrap">
+                        <InputText
+                          id={`${p}-guacDpi`}
+                          value={formData.guacDpi}
+                          onChange={handleTextChange('guacDpi')}
+                          placeholder={t('rdp.placeholders.dpi')}
+                          className="terminal-input terminal-port-input text-center"
+                          autoComplete="off"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -255,6 +255,36 @@ body.layout-cyberpunk .connection-terminal-form .p-inputtext.p-focus,
   padding-top: 0.15rem;
 }
 
+.terminal-screen-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem 0.85rem;
+}
+
+.terminal-screen-grid .terminal-row {
+  margin-bottom: 0;
+}
+
+.terminal-screen-grid .terminal-label {
+  margin-bottom: 0.35rem;
+}
+
+.terminal-screen-grid .terminal-input-wrap,
+.terminal-screen-grid .terminal-folder-dropdown-wrap {
+  min-height: 2.1rem;
+}
+
+.terminal-screen-grid .terminal-folder-dropdown .p-dropdown-label {
+  font-size: 0.8rem !important;
+  padding: 0.42rem 0.25rem !important;
+}
+
+@media (max-width: 560px) {
+  .terminal-screen-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .terminal-proxyjump-panel .terminal-label {
   margin-bottom: 0.25rem;
   font-size: 0.6rem;
@@ -307,6 +337,16 @@ body.layout-cyberpunk .connection-terminal-form .p-inputtext.p-focus,
   text-transform: uppercase;
   color: var(--ui-button-primary);
   margin-bottom: 0.35rem;
+}
+
+.terminal-options-section .terminal-options-grid {
+  gap: 0.2rem 0.75rem;
+}
+
+@media (max-width: 560px) {
+  .terminal-options-section .terminal-options-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .terminal-options-grid .terminal-option-item {
