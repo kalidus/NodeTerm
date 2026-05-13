@@ -1671,14 +1671,14 @@ export function EnhancedSSHForm({
 
                     <div className="terminal-option-item">
                       <div className="flex align-items-center">
-                        <i className="pi pi-desktop terminal-option-icon"></i>
-                        <span className="terminal-option-text">{t('ssh.auth.x11Forwarding')}</span>
-                        <TerminalOptionHelp text={t('ssh.auth.x11ForwardingDescription')} />
+                        <i className="pi pi-video terminal-option-icon"></i>
+                        <span className="terminal-option-text">{t('ssh.auth.autoRecording')}</span>
+                        <TerminalOptionHelp text={t('ssh.auth.autoRecordingDescription')} />
                       </div>
                       <div className="terminal-dotted-spacer"></div>
                       <InputSwitch
-                        checked={sshX11Forwarding}
-                        onChange={(e) => setSSHX11Forwarding(e.value)}
+                        checked={sshAutoRecording}
+                        onChange={(e) => setSSHAutoRecording(e.value)}
                         className="terminal-switch"
                       />
                     </div>
@@ -1699,14 +1699,14 @@ export function EnhancedSSHForm({
 
                     <div className="terminal-option-item">
                       <div className="flex align-items-center">
-                        <i className="pi pi-video terminal-option-icon"></i>
-                        <span className="terminal-option-text">{t('ssh.auth.autoRecording')}</span>
-                        <TerminalOptionHelp text={t('ssh.auth.autoRecordingDescription')} />
+                        <i className="pi pi-desktop terminal-option-icon"></i>
+                        <span className="terminal-option-text">{t('ssh.auth.x11Forwarding')}</span>
+                        <TerminalOptionHelp text={t('ssh.auth.x11ForwardingDescription')} />
                       </div>
                       <div className="terminal-dotted-spacer"></div>
                       <InputSwitch
-                        checked={sshAutoRecording}
-                        onChange={(e) => setSSHAutoRecording(e.value)}
+                        checked={sshX11Forwarding}
+                        onChange={(e) => setSSHX11Forwarding(e.value)}
                         className="terminal-switch"
                       />
                     </div>
