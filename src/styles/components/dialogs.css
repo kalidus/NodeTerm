@@ -1043,6 +1043,11 @@
   flex-shrink: 0;
 }
 
+.protocol-selection-picker-compact .protocol-option-row-icon--themed {
+  background: transparent;
+  border: 1px solid var(--ui-dialog-border);
+}
+
 .protocol-selection-picker-compact .protocol-option-row-main {
   flex: 1;
   min-width: 0;
@@ -1117,6 +1122,30 @@
   background: rgba(255, 152, 0, 0.15);
   color: #ffb74d;
   border: 1px solid rgba(255, 152, 0, 0.35);
+}
+
+.protocol-selection-picker-compact .protocol-option-row-pill--vault {
+  background: rgba(236, 72, 153, 0.16);
+  color: #f9a8d4;
+  border: 1px solid rgba(236, 72, 153, 0.4);
+}
+
+.protocol-selection-picker-compact .protocol-option-row-pill--bip39 {
+  background: rgba(251, 191, 36, 0.16);
+  color: #fcd34d;
+  border: 1px solid rgba(251, 191, 36, 0.42);
+}
+
+.protocol-selection-picker-compact .protocol-option-row-pill--api {
+  background: rgba(34, 211, 238, 0.16);
+  color: #67e8f9;
+  border: 1px solid rgba(34, 211, 238, 0.4);
+}
+
+.protocol-selection-picker-compact .protocol-option-row-pill--notes {
+  background: rgba(196, 181, 253, 0.16);
+  color: #ddd6fe;
+  border: 1px solid rgba(196, 181, 253, 0.4);
 }
 
 .protocol-selection-picker-compact .protocol-option-row-pill--neutral {

@@ -837,6 +837,7 @@ const DialogsManager = ({
         visible={showProtocolSelectionDialog}
         onHide={() => setShowProtocolSelectionDialog(false)}
         onSelectProtocol={handleProtocolSelect}
+        iconTheme={iconThemeSidebar || iconTheme}
         initialCategory={protocolSelectionInitialCategory}
       />
 

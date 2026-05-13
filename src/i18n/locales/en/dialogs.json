@@ -533,7 +533,11 @@
       "recommended": "Recommended",
       "insecure": "Not secure",
       "windows": "Windows",
-      "crossPlatform": "Cross-platform"
+      "crossPlatform": "Cross-platform",
+      "vault": "Vault",
+      "bip39": "BIP-39",
+      "api": "API",
+      "notes": "Notes"
     }
   },
   "sshTunnel": {
