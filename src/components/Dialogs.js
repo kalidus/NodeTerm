@@ -2257,191 +2257,202 @@ export function EditVNCConnectionDialog({
 }
 
 
-// --- ProtocolSelectionDialog: diálogo de selección de protocolo con diseño de dos paneles ---
+const PROTOCOL_SECTION_KEYS = ['remoteAccess', 'fileTransfer', 'secrets'];
+
+const PROTOCOL_PICKER_DIALOG_STYLE = {
+  ...TERMINAL_PRO_DIALOG_STYLE,
+  minHeight: '320px',
+  maxHeight: '90vh'
+};
+
+// --- ProtocolSelectionDialog: categorías + lista compacta (alineado con diálogos terminal-pro) ---
 export function ProtocolSelectionDialog({
   visible,
   onHide,
-  onSelectProtocol, // Callback: (protocol) => void
-  initialCategory = null // Categoría inicial a seleccionar
+  onSelectProtocol,
+  initialCategory = null // 'remoteAccess' | 'fileTransfer' | 'secrets'
 }) {
-  // Hook de internacionalización
   const { t } = useTranslation('dialogs');
-  
-  const remoteAccessCategory = t('protocolSelection.categories.remoteAccess');
-  const passwordManagementCategory = t('protocolSelection.categories.passwordManagement');
-  const [selectedCategory, setSelectedCategory] = useState(initialCategory || remoteAccessCategory);
 
-  // Resetear categoría cuando se abre el diálogo
+  const [selectedCategoryKey, setSelectedCategoryKey] = useState('remoteAccess');
+
   useEffect(() => {
-    if (visible) {
-      setSelectedCategory(initialCategory || remoteAccessCategory);
-    }
-  }, [visible, remoteAccessCategory, initialCategory]);
-
-  const protocolSections = [
-    {
-      id: remoteAccessCategory,
-      title: remoteAccessCategory,
-      protocols: [
-        {
-          id: 'ssh',
-          name: t('protocolSelection.protocols.ssh.name'),
-          fullName: t('protocolSelection.protocols.ssh.name'),
-          description: t('protocolSelection.protocols.ssh.description'),
-          icon: 'pi pi-server',
-          iconColor: '#2196F3',
-          advantages: t('protocolSelection.protocols.ssh.advantages'),
-          badges: [t('protocolSelection.badges.secure')]
-        },
-        {
-          id: 'rdp',
-          name: t('protocolSelection.protocols.rdp.name'),
-          fullName: t('protocolSelection.protocols.rdp.name'),
-          description: t('protocolSelection.protocols.rdp.description'),
-          icon: 'pi pi-desktop',
-          iconColor: '#4CAF50',
-          advantages: t('protocolSelection.protocols.rdp.advantages'),
-          badges: [t('protocolSelection.badges.windows')]
-        },
-        {
-          id: 'vnc',
-          name: t('protocolSelection.protocols.vnc.name'),
-          fullName: t('protocolSelection.protocols.vnc.name'),
-          description: t('protocolSelection.protocols.vnc.description'),
-          icon: 'pi pi-eye',
-          iconColor: '#FF5722',
-          advantages: t('protocolSelection.protocols.vnc.advantages'),
-          badges: [t('protocolSelection.badges.crossPlatform')]
-        },
-        {
-          id: 'ssh-tunnel',
-          name: t('protocolSelection.protocols.sshTunnel.name') || 'SSH Tunnel',
-          fullName: t('protocolSelection.protocols.sshTunnel.fullName') || 'SSH Tunnel / Port Forwarding',
-          description: t('protocolSelection.protocols.sshTunnel.description') || 'Crea túneles SSH para redirigir puertos de forma segura',
-          icon: 'pi pi-share-alt',
-          iconColor: '#89b4fa',
-          advantages: t('protocolSelection.protocols.sshTunnel.advantages') || 'Acceso seguro a servicios internos, proxy SOCKS, bypass de firewalls',
-          badges: [t('protocolSelection.badges.secure')]
-        }
-      ]
-    },
-    {
-      id: t('protocolSelection.categories.fileTransfer'),
-      title: t('protocolSelection.categories.fileTransfer'),
-      protocols: [
-        {
-          id: 'sftp',
-          name: t('protocolSelection.protocols.sftp.name'),
-          fullName: t('protocolSelection.protocols.sftp.fullName'),
-          description: t('protocolSelection.protocols.sftp.description'),
-          icon: 'pi pi-folder-open',
-          iconColor: '#FF9800',
-          advantages: t('protocolSelection.protocols.sftp.advantages'),
-          isRecommended: true,
-          badges: [t('protocolSelection.badges.secure'), t('protocolSelection.badges.recommended')]
-        },
-        {
-          id: 'ftp',
-          name: t('protocolSelection.protocols.ftp.name'),
-          fullName: t('protocolSelection.protocols.ftp.fullName'),
-          description: t('protocolSelection.protocols.ftp.description'),
-          icon: 'pi pi-cloud-upload',
-          iconColor: '#9C27B0',
-          advantages: t('protocolSelection.protocols.ftp.advantages'),
-          isInsecure: true,
-          badges: [t('protocolSelection.badges.insecure')]
-        },
-        {
-          id: 'scp',
-          name: t('protocolSelection.protocols.scp.name'),
-          fullName: t('protocolSelection.protocols.scp.fullName'),
-          description: t('protocolSelection.protocols.scp.description'),
-          icon: 'pi pi-copy',
-          iconColor: '#00BCD4',
-          advantages: t('protocolSelection.protocols.scp.advantages'),
-          badges: [t('protocolSelection.badges.secure')]
-        }
-      ]
-    },
-    {
-      id: t('protocolSelection.categories.secretsManagement'),
-      title: t('protocolSelection.categories.secretsManagement'),
-      protocols: [
-        {
-          id: 'password',
-          name: t('protocolSelection.protocols.password.name'),
-          fullName: t('protocolSelection.protocols.password.name'),
-          description: t('protocolSelection.protocols.password.description'),
-          icon: 'pi pi-lock',
-          iconColor: '#E91E63',
-          advantages: t('protocolSelection.protocols.password.advantages'),
-          badges: [t('protocolSelection.badges.secure')]
-        },
-        {
-          id: 'crypto_wallet',
-          name: t('protocolSelection.protocols.crypto_wallet.name'),
-          fullName: t('protocolSelection.protocols.crypto_wallet.name'),
-          description: t('protocolSelection.protocols.crypto_wallet.description'),
-          icon: 'pi pi-wallet',
-          iconColor: '#F7931A',
-          advantages: t('protocolSelection.protocols.crypto_wallet.advantages'),
-          badges: [t('protocolSelection.badges.secure')]
-        },
-        {
-          id: 'api_key',
-          name: t('protocolSelection.protocols.api_key.name'),
-          fullName: t('protocolSelection.protocols.api_key.name'),
-          description: t('protocolSelection.protocols.api_key.description'),
-          icon: 'pi pi-key',
-          iconColor: '#00BCD4',
-          advantages: t('protocolSelection.protocols.api_key.advantages'),
-          badges: [t('protocolSelection.badges.secure')]
-        },
-        {
-          id: 'secure_note',
-          name: t('protocolSelection.protocols.secure_note.name'),
-          fullName: t('protocolSelection.protocols.secure_note.name'),
-          description: t('protocolSelection.protocols.secure_note.description'),
-          icon: 'pi pi-file-edit',
-          iconColor: '#9C27B0',
-          advantages: t('protocolSelection.protocols.secure_note.advantages'),
-          badges: [t('protocolSelection.badges.secure')]
-        }
-      ]
-    }
-  ];
-
-  const handleProtocolSelect = (protocolId) => {
-    // Tipos de secretos: abrir el gestor de secretos y luego el diálogo correspondiente
-    const secretTypes = ['password', 'crypto_wallet', 'api_key', 'secure_note'];
-    
-    if (secretTypes.includes(protocolId)) {
-      // Cambiar a la vista de secretos
-      window.dispatchEvent(new CustomEvent('open-password-manager'));
-      // Pequeño delay para asegurar que la vista cambie antes de abrir el diálogo
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('open-new-secret-dialog', { 
-          detail: { secretType: protocolId } 
-        }));
-      }, 100);
-      onHide();
+    if (!visible) {
       return;
     }
-    
-    if (onSelectProtocol) {
-      onSelectProtocol(protocolId);
-    }
-    onHide();
-  };
+    const key =
+      initialCategory && PROTOCOL_SECTION_KEYS.includes(initialCategory)
+        ? initialCategory
+        : 'remoteAccess';
+    setSelectedCategoryKey(key);
+  }, [visible, initialCategory]);
 
-  const currentSection = protocolSections.find(section => section.id === selectedCategory) || protocolSections[0];
+  const protocolSections = useMemo(
+    () => [
+      {
+        sectionKey: 'remoteAccess',
+        title: t('protocolSelection.categories.remoteAccess'),
+        protocols: [
+          {
+            id: 'ssh',
+            listTitle: t('protocolSelection.protocols.ssh.listTitle'),
+            tagline: t('protocolSelection.protocols.ssh.tagline'),
+            icon: 'pi pi-server',
+            iconColor: '#2196F3',
+            isRecommended: false,
+            isInsecure: false
+          },
+          {
+            id: 'rdp',
+            listTitle: t('protocolSelection.protocols.rdp.listTitle'),
+            tagline: t('protocolSelection.protocols.rdp.tagline'),
+            icon: 'pi pi-desktop',
+            iconColor: '#4CAF50',
+            isRecommended: false,
+            isInsecure: false
+          },
+          {
+            id: 'vnc',
+            listTitle: t('protocolSelection.protocols.vnc.listTitle'),
+            tagline: t('protocolSelection.protocols.vnc.tagline'),
+            icon: 'pi pi-eye',
+            iconColor: '#FF5722',
+            isRecommended: false,
+            isInsecure: false
+          },
+          {
+            id: 'ssh-tunnel',
+            listTitle: t('protocolSelection.protocols.sshTunnel.listTitle'),
+            tagline: t('protocolSelection.protocols.sshTunnel.tagline'),
+            icon: 'pi pi-share-alt',
+            iconColor: '#89b4fa',
+            isRecommended: false,
+            isInsecure: false
+          }
+        ]
+      },
+      {
+        sectionKey: 'fileTransfer',
+        title: t('protocolSelection.categories.fileTransfer'),
+        protocols: [
+          {
+            id: 'sftp',
+            listTitle: t('protocolSelection.protocols.sftp.listTitle'),
+            tagline: t('protocolSelection.protocols.sftp.tagline'),
+            icon: 'pi pi-folder-open',
+            iconColor: '#FF9800',
+            isRecommended: true,
+            isInsecure: false
+          },
+          {
+            id: 'ftp',
+            listTitle: t('protocolSelection.protocols.ftp.listTitle'),
+            tagline: t('protocolSelection.protocols.ftp.tagline'),
+            icon: 'pi pi-cloud-upload',
+            iconColor: '#9C27B0',
+            isRecommended: false,
+            isInsecure: true
+          },
+          {
+            id: 'scp',
+            listTitle: t('protocolSelection.protocols.scp.listTitle'),
+            tagline: t('protocolSelection.protocols.scp.tagline'),
+            icon: 'pi pi-copy',
+            iconColor: '#00BCD4',
+            isRecommended: false,
+            isInsecure: false
+          }
+        ]
+      },
+      {
+        sectionKey: 'secrets',
+        title: t('protocolSelection.categories.secretsManagement'),
+        protocols: [
+          {
+            id: 'password',
+            listTitle: t('protocolSelection.protocols.password.listTitle'),
+            tagline: t('protocolSelection.protocols.password.tagline'),
+            icon: 'pi pi-lock',
+            iconColor: '#E91E63',
+            isRecommended: false,
+            isInsecure: false
+          },
+          {
+            id: 'crypto_wallet',
+            listTitle: t('protocolSelection.protocols.crypto_wallet.listTitle'),
+            tagline: t('protocolSelection.protocols.crypto_wallet.tagline'),
+            icon: 'pi pi-wallet',
+            iconColor: '#F7931A',
+            isRecommended: false,
+            isInsecure: false
+          },
+          {
+            id: 'api_key',
+            listTitle: t('protocolSelection.protocols.api_key.listTitle'),
+            tagline: t('protocolSelection.protocols.api_key.tagline'),
+            icon: 'pi pi-key',
+            iconColor: '#00BCD4',
+            isRecommended: false,
+            isInsecure: false
+          },
+          {
+            id: 'secure_note',
+            listTitle: t('protocolSelection.protocols.secure_note.listTitle'),
+            tagline: t('protocolSelection.protocols.secure_note.tagline'),
+            icon: 'pi pi-file-edit',
+            iconColor: '#9C27B0',
+            isRecommended: false,
+            isInsecure: false
+          }
+        ]
+      }
+    ],
+    [t]
+  );
+
+  const handleProtocolSelect = useCallback(
+    (protocolId) => {
+      const secretTypes = ['password', 'crypto_wallet', 'api_key', 'secure_note'];
+
+      if (secretTypes.includes(protocolId)) {
+        window.dispatchEvent(new CustomEvent('open-password-manager'));
+        setTimeout(() => {
+          window.dispatchEvent(
+            new CustomEvent('open-new-secret-dialog', {
+              detail: { secretType: protocolId }
+            })
+          );
+        }, 100);
+        onHide();
+        return;
+      }
+
+      if (onSelectProtocol) {
+        onSelectProtocol(protocolId);
+      }
+      onHide();
+    },
+    [onHide, onSelectProtocol]
+  );
+
+  const currentSection = useMemo(
+    () =>
+      protocolSections.find((section) => section.sectionKey === selectedCategoryKey) ||
+      protocolSections[0],
+    [protocolSections, selectedCategoryKey]
+  );
+
+  const headerTitle = String(t('protocolSelection.headerTitle') || t('protocolSelection.title')).toUpperCase();
 
   const headerTemplate = (
-    <div className="protocol-dialog-header-custom">
-      <div className="protocol-dialog-header-icon">
-        <i className="pi pi-plus-circle"></i>
+    <div className="terminal-header-compact">
+      <div className="flex align-items-center gap-2">
+        <div className="terminal-header-icon-mini">
+          <i className="pi pi-plus" aria-hidden="true" />
+        </div>
+        <span className="terminal-header-title">{headerTitle}</span>
       </div>
-      <span className="protocol-dialog-header-title">{t('protocolSelection.title')}</span>
+      <div className="terminal-header-accent" aria-hidden="true" />
     </div>
   );
 
@@ -2450,79 +2461,78 @@ export function ProtocolSelectionDialog({
       header={headerTemplate}
       visible={visible}
       onHide={onHide}
-      style={{ width: '70vw', maxWidth: '95vw', minWidth: '600px', height: 'auto', maxHeight: '90vh' }}
+      style={PROTOCOL_PICKER_DIALOG_STYLE}
       modal
       resizable
-      className="protocol-selection-dialog-new"
-      contentStyle={{ padding: '0', overflow: 'hidden', display: 'flex', flexDirection: 'column', flex: '1', minHeight: '0' }}
+      className="terminal-pro-dialog protocol-selection-dialog-new protocol-selection-picker-compact"
+      contentStyle={TERMINAL_PRO_DIALOG_CONTENT_STYLE}
+      closable={false}
     >
       <div className="protocol-selection-layout">
-        {/* Panel izquierdo: Categorías */}
-        <div className="protocol-categories-panel">
+        <div className="protocol-categories-panel" role="tablist" aria-label={t('protocolSelection.title')}>
           {protocolSections.map((section) => (
             <div
-              key={section.id}
-              className={`protocol-category-item ${selectedCategory === section.id ? 'active' : ''}`}
-              data-category={section.id}
-              onClick={() => setSelectedCategory(section.id)}
+              key={section.sectionKey}
+              role="tab"
+              tabIndex={0}
+              aria-selected={selectedCategoryKey === section.sectionKey}
+              className={`protocol-category-item ${selectedCategoryKey === section.sectionKey ? 'active' : ''}`}
+              data-section-key={section.sectionKey}
+              onClick={() => setSelectedCategoryKey(section.sectionKey)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setSelectedCategoryKey(section.sectionKey);
+                }
+              }}
             >
               <span className="protocol-category-title">{section.title}</span>
             </div>
           ))}
         </div>
 
-        {/* Panel derecho: Protocolos */}
-        <div className="protocol-options-panel">
+        <div className="protocol-options-panel protocol-options-panel--compact" role="tabpanel">
           {currentSection.protocols.map((protocol) => (
-            <div 
-              key={protocol.id} 
-              className="protocol-option-card" 
+            <div
+              key={protocol.id}
+              role="button"
+              tabIndex={0}
+              className="protocol-option-row"
               data-protocol={protocol.id}
               onClick={() => handleProtocolSelect(protocol.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleProtocolSelect(protocol.id);
+                }
+              }}
             >
-              <div className="protocol-option-icon" style={{ backgroundColor: protocol.iconColor }}>
-                <i className={protocol.icon}></i>
+              <div
+                className="protocol-option-row-icon"
+                style={{ backgroundColor: protocol.iconColor }}
+                aria-hidden
+              >
+                <i className={protocol.icon} />
               </div>
-              <div className="protocol-option-content">
-                <div className="protocol-option-header">
-                  <h3 className="protocol-option-title">{protocol.fullName || protocol.name}</h3>
-                  {protocol.badges && protocol.badges.length > 0 && (
-                    <div className="protocol-badges-container">
-                      {protocol.badges.map((badge, idx) => {
-                        const secureBadge = t('protocolSelection.badges.secure');
-                        const recommendedBadge = t('protocolSelection.badges.recommended');
-                        const insecureBadge = t('protocolSelection.badges.insecure');
-                        const windowsBadge = t('protocolSelection.badges.windows');
-                        const crossPlatformBadge = t('protocolSelection.badges.crossPlatform');
-                        
-                        return (
-                          <span 
-                            key={idx} 
-                            className={`protocol-badge protocol-badge-${badge.toLowerCase().replace(/\s+/g, '-')}`}
-                          >
-                            {badge === secureBadge && '🛡️'}
-                            {badge === recommendedBadge && '⭐'}
-                            {badge === insecureBadge && '⚠️'}
-                            {badge === windowsBadge && '🖥️'}
-                            {badge === crossPlatformBadge && '🌐'}
-                            <span className="protocol-badge-text">{badge}</span>
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-                <p className="protocol-option-description">{protocol.description}</p>
-                <div className="protocol-option-advantages">
-                  <div className="protocol-advantages-badges">
-                    {protocol.advantages.map((advantage, idx) => (
-                      <span key={idx} className="protocol-advantage-badge">
-                        {advantage}
+              <div className="protocol-option-row-main">
+                <div className="protocol-option-row-titleline">
+                  <span className="protocol-option-row-title">{protocol.listTitle}</span>
+                  <span className="protocol-option-row-pills">
+                    {protocol.isInsecure ? (
+                      <span className="protocol-option-row-pill protocol-option-row-pill--warn">
+                        {t('protocolSelection.badges.insecure')}
                       </span>
-                    ))}
-                  </div>
+                    ) : null}
+                    {protocol.isRecommended ? (
+                      <span className="protocol-option-row-pill protocol-option-row-pill--info">
+                        {t('protocolSelection.badges.recommended')}
+                      </span>
+                    ) : null}
+                  </span>
                 </div>
+                <div className="protocol-option-row-tagline">{protocol.tagline}</div>
               </div>
+              <i className="pi pi-angle-right protocol-option-row-chevron" aria-hidden />
             </div>
           ))}
         </div>

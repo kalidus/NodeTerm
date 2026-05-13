@@ -405,6 +405,7 @@
   },
   "protocolSelection": {
     "title": "New Connection Setup",
+    "headerTitle": "New connection",
     "categories": {
       "remoteAccess": "Remote Access",
       "fileTransfer": "File Transfer",
@@ -413,6 +414,8 @@
     "protocols": {
       "ssh": {
         "name": "SSH (Secure Shell)",
+        "listTitle": "SSH",
+        "tagline": "Encrypted remote terminal",
         "description": "Secure access to remote system command lines (Linux/Unix). Essential for server administration and development.",
         "advantages": [
           "High security",
@@ -421,6 +424,8 @@
       },
       "rdp": {
         "name": "RDP (Remote Desktop Protocol)",
+        "listTitle": "RDP",
+        "tagline": "Windows remote desktop",
         "description": "Full graphical access to Windows desktops. Allows visual control of a remote PC.",
         "advantages": [
           "Familiar user experience for Windows environments",
@@ -429,6 +434,8 @@
       },
       "vnc": {
         "name": "VNC (Virtual Network Computing)",
+        "listTitle": "VNC",
+        "tagline": "Cross-platform remote desktop",
         "description": "Cross-platform remote access to graphical desktops. Compatible with Linux, Windows, macOS and embedded systems.",
         "advantages": [
           "Cross-platform (Linux, Windows, macOS)",
@@ -438,6 +445,8 @@
       "sftp": {
         "name": "SFTP",
         "fullName": "SFTP (SSH File Transfer Protocol)",
+        "listTitle": "SFTP",
+        "tagline": "File transfer over SSH",
         "description": "The most recommended way to move files encrypted, using SSH security channels.",
         "advantages": [
           "Encrypted and secure transfer",
@@ -447,6 +456,8 @@
       "ftp": {
         "name": "FTP",
         "fullName": "FTP (File Transfer Protocol)",
+        "listTitle": "FTP",
+        "tagline": "Unencrypted — legacy or trusted networks only",
         "description": "Classic transfer protocol. Fast, but *does not encrypt* data (not recommended for sensitive information).",
         "advantages": [
           "Fast and efficient",
@@ -456,6 +467,8 @@
       "scp": {
         "name": "SCP",
         "fullName": "SCP (Secure Copy Protocol)",
+        "listTitle": "SCP",
+        "tagline": "Secure copy over SSH",
         "description": "Fast and secure tool for copying files and directories between remote hosts (SSH-based).",
         "advantages": [
           "Secure and fast",
@@ -464,6 +477,8 @@
       },
       "password": {
         "name": "Password",
+        "listTitle": "Password",
+        "tagline": "Secret vault entry",
         "description": "Store passwords securely. AES-256-GCM encryption with optional master password.",
         "advantages": [
           "Secure AES-256-GCM encryption",
@@ -472,6 +487,8 @@
       },
       "crypto_wallet": {
         "name": "Crypto Wallet",
+        "listTitle": "Crypto wallet",
+        "tagline": "Seeds and keys with BIP-39 validation",
         "description": "Store seed phrases, private keys and cryptocurrency addresses. BIP-39 validation included.",
         "advantages": [
           "Support for 12+ networks (Bitcoin, Ethereum, Solana...)",
@@ -480,6 +497,8 @@
       },
       "api_key": {
         "name": "API Key",
+        "listTitle": "API key",
+        "tagline": "Tokens and service credentials",
         "description": "Store API keys, access tokens and external service credentials securely.",
         "advantages": [
           "Organization by service",
@@ -488,6 +507,8 @@
       },
       "secure_note": {
         "name": "Secure Note",
+        "listTitle": "Secure note",
+        "tagline": "Encrypted rich text",
         "description": "Store notes, documents and confidential text with full encryption.",
         "advantages": [
           "Rich text",
@@ -497,6 +518,8 @@
       "sshTunnel": {
         "name": "SSH Tunnel",
         "fullName": "SSH Tunnel / Port Forwarding",
+        "listTitle": "SSH tunnel",
+        "tagline": "Port forwarding and SOCKS proxy",
         "description": "Create SSH tunnels to forward ports securely. Access internal services, create SOCKS proxies and traverse firewalls.",
         "advantages": [
           "Secure access to internal services",

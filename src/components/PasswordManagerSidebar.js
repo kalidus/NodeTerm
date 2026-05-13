@@ -47,10 +47,7 @@ const PasswordManagerSidebar = ({
   // Hook de internacionalización
   const { t } = useTranslation('dialogs');
   const { t: tCommon } = useTranslation('common');
-  
-  // Obtener la categoría de Gestión de Secretos para el diálogo
-  const secretsManagementCategory = t('protocolSelection.categories.secretsManagement');
-  
+
   // Estado separado para passwords - no usar el árbol principal de conexiones
   const [passwordNodes, setPasswordNodes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -1632,7 +1629,7 @@ const PasswordManagerSidebar = ({
             onClick={() => {
               // Abrir diálogo de selección de protocolo directamente en la categoría de Gestión de Secretos
               window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog', {
-                detail: { initialCategory: secretsManagementCategory }
+                detail: { initialCategory: 'secrets' }
               }));
             }} 
             tooltip={tCommon('tooltips.newConnection')} 

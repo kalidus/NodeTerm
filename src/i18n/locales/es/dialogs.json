@@ -405,6 +405,7 @@
   },
   "protocolSelection": {
     "title": "Configuración de Nueva Conexión",
+    "headerTitle": "Nueva conexión",
     "categories": {
       "remoteAccess": "Acceso Remoto",
       "fileTransfer": "Transferencia de Archivos",
@@ -413,6 +414,8 @@
     "protocols": {
       "ssh": {
         "name": "SSH (Secure Shell)",
+        "listTitle": "SSH",
+        "tagline": "Terminal remota cifrada",
         "description": "Acceso seguro a la línea de comandos de sistemas remotos (Linux/Unix). Esencial para administración de servidores y desarrollo.",
         "advantages": [
           "Alta seguridad",
@@ -421,6 +424,8 @@
       },
       "rdp": {
         "name": "RDP (Remote Desktop Protocol)",
+        "listTitle": "RDP",
+        "tagline": "Escritorio remoto Windows",
         "description": "Acceso gráfico completo a escritorios de Windows. Permite control visual de un PC remoto.",
         "advantages": [
           "Experiencia de usuario familiar para entornos Windows",
@@ -429,6 +434,8 @@
       },
       "vnc": {
         "name": "VNC (Virtual Network Computing)",
+        "listTitle": "VNC",
+        "tagline": "Escritorio remoto multiplataforma",
         "description": "Acceso remoto multiplataforma a escritorios gráficos. Compatible con Linux, Windows, macOS y sistemas embebidos.",
         "advantages": [
           "Multiplataforma (Linux, Windows, macOS)",
@@ -438,6 +445,8 @@
       "sftp": {
         "name": "SFTP",
         "fullName": "SFTP (SSH File Transfer Protocol)",
+        "listTitle": "SFTP",
+        "tagline": "Archivos por canal SSH",
         "description": "La forma más recomendada para mover archivos de forma encriptada, utilizando vías de seguridad de SSH.",
         "advantages": [
           "Transferencia encriptada y segura",
@@ -447,6 +456,8 @@
       "ftp": {
         "name": "FTP",
         "fullName": "FTP (File Transfer Protocol)",
+        "listTitle": "FTP",
+        "tagline": "Sin cifrado — solo legado o redes de confianza",
         "description": "Protocolo clásico de transferencia. Rápido, pero *no encripta* los datos (no recomendado para información sensible).",
         "advantages": [
           "Rápido y eficiente",
@@ -456,6 +467,8 @@
       "scp": {
         "name": "SCP",
         "fullName": "SCP (Secure Copy Protocol)",
+        "listTitle": "SCP",
+        "tagline": "Copia de archivos por SSH",
         "description": "Herramienta rápida y segura para copiar archivos y directorios entre hosts remotos (basado en SSH).",
         "advantages": [
           "Seguro y rápido",
@@ -464,6 +477,8 @@
       },
       "password": {
         "name": "Contraseña",
+        "listTitle": "Contraseña",
+        "tagline": "Entrada en el almacén de secretos",
         "description": "Almacena contraseñas de forma segura. Encriptación AES-256-GCM con master password opcional.",
         "advantages": [
           "Encriptación segura AES-256-GCM",
@@ -472,6 +487,8 @@
       },
       "crypto_wallet": {
         "name": "Billetera Crypto",
+        "listTitle": "Billetera crypto",
+        "tagline": "Seeds y claves con validación BIP-39",
         "description": "Guarda seed phrases, claves privadas y direcciones de criptomonedas. Validación BIP-39 incluida.",
         "advantages": [
           "Soporte para 12+ redes (Bitcoin, Ethereum, Solana...)",
@@ -480,6 +497,8 @@
       },
       "api_key": {
         "name": "Clave de API",
+        "listTitle": "Clave de API",
+        "tagline": "Tokens y credenciales de servicios",
         "description": "Almacena claves de API, tokens de acceso y credenciales de servicios externos de forma segura.",
         "advantages": [
           "Organización por servicio",
@@ -488,6 +507,8 @@
       },
       "secure_note": {
         "name": "Nota Segura",
+        "listTitle": "Nota segura",
+        "tagline": "Texto enriquecido cifrado",
         "description": "Almacena notas, documentos y textos confidenciales con encriptación completa.",
         "advantages": [
           "Texto enriquecido",
@@ -497,6 +518,8 @@
       "sshTunnel": {
         "name": "SSH Tunnel",
         "fullName": "SSH Tunnel / Port Forwarding",
+        "listTitle": "Túnel SSH",
+        "tagline": "Reenvío de puertos y proxy SOCKS",
         "description": "Crea túneles SSH para redirigir puertos de forma segura. Accede a servicios internos, crea proxies SOCKS y atraviesa firewalls.",
         "advantages": [
           "Acceso seguro a servicios internos",
