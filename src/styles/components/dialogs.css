@@ -1101,6 +1101,30 @@
   border: 1px solid rgba(33, 150, 243, 0.3);
 }
 
+.protocol-selection-picker-compact .protocol-option-row-pill--secure {
+  background: rgba(76, 175, 80, 0.15);
+  color: #81c784;
+  border: 1px solid rgba(76, 175, 80, 0.35);
+}
+
+.protocol-selection-picker-compact .protocol-option-row-pill--windows {
+  background: rgba(33, 150, 243, 0.15);
+  color: #64b5f6;
+  border: 1px solid rgba(33, 150, 243, 0.35);
+}
+
+.protocol-selection-picker-compact .protocol-option-row-pill--cross {
+  background: rgba(255, 152, 0, 0.15);
+  color: #ffb74d;
+  border: 1px solid rgba(255, 152, 0, 0.35);
+}
+
+.protocol-selection-picker-compact .protocol-option-row-pill--neutral {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ui-dialog-text, var(--ui-text-primary));
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
 .protocol-selection-picker-compact .protocol-option-row-chevron {
   font-size: 0.85rem;
   opacity: 0.35;

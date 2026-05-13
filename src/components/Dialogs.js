@@ -2261,7 +2261,9 @@ const PROTOCOL_SECTION_KEYS = ['remoteAccess', 'fileTransfer', 'secrets'];
 
 const PROTOCOL_PICKER_DIALOG_STYLE = {
   ...TERMINAL_PRO_DIALOG_STYLE,
-  minHeight: '320px',
+  width: '760px',
+  minWidth: '560px',
+  minHeight: '380px',
   maxHeight: '90vh'
 };
 
@@ -2299,6 +2301,8 @@ export function ProtocolSelectionDialog({
             tagline: t('protocolSelection.protocols.ssh.tagline'),
             icon: 'pi pi-server',
             iconColor: '#2196F3',
+            infoBadge: t('protocolSelection.badges.secure'),
+            infoBadgeTone: 'secure',
             isRecommended: false,
             isInsecure: false
           },
@@ -2308,6 +2312,8 @@ export function ProtocolSelectionDialog({
             tagline: t('protocolSelection.protocols.rdp.tagline'),
             icon: 'pi pi-desktop',
             iconColor: '#4CAF50',
+            infoBadge: t('protocolSelection.badges.windows'),
+            infoBadgeTone: 'windows',
             isRecommended: false,
             isInsecure: false
           },
@@ -2317,6 +2323,8 @@ export function ProtocolSelectionDialog({
             tagline: t('protocolSelection.protocols.vnc.tagline'),
             icon: 'pi pi-eye',
             iconColor: '#FF5722',
+            infoBadge: t('protocolSelection.badges.crossPlatform'),
+            infoBadgeTone: 'cross',
             isRecommended: false,
             isInsecure: false
           },
@@ -2326,6 +2334,8 @@ export function ProtocolSelectionDialog({
             tagline: t('protocolSelection.protocols.sshTunnel.tagline'),
             icon: 'pi pi-share-alt',
             iconColor: '#89b4fa',
+            infoBadge: t('protocolSelection.badges.secure'),
+            infoBadgeTone: 'secure',
             isRecommended: false,
             isInsecure: false
           }
@@ -2341,6 +2351,8 @@ export function ProtocolSelectionDialog({
             tagline: t('protocolSelection.protocols.sftp.tagline'),
             icon: 'pi pi-folder-open',
             iconColor: '#FF9800',
+            infoBadge: t('protocolSelection.badges.secure'),
+            infoBadgeTone: 'secure',
             isRecommended: true,
             isInsecure: false
           },
@@ -2359,6 +2371,8 @@ export function ProtocolSelectionDialog({
             tagline: t('protocolSelection.protocols.scp.tagline'),
             icon: 'pi pi-copy',
             iconColor: '#00BCD4',
+            infoBadge: t('protocolSelection.badges.secure'),
+            infoBadgeTone: 'secure',
             isRecommended: false,
             isInsecure: false
           }
@@ -2374,6 +2388,8 @@ export function ProtocolSelectionDialog({
             tagline: t('protocolSelection.protocols.password.tagline'),
             icon: 'pi pi-lock',
             iconColor: '#E91E63',
+            infoBadge: t('protocolSelection.badges.secure'),
+            infoBadgeTone: 'secure',
             isRecommended: false,
             isInsecure: false
           },
@@ -2383,6 +2399,8 @@ export function ProtocolSelectionDialog({
             tagline: t('protocolSelection.protocols.crypto_wallet.tagline'),
             icon: 'pi pi-wallet',
             iconColor: '#F7931A',
+            infoBadge: t('protocolSelection.badges.secure'),
+            infoBadgeTone: 'secure',
             isRecommended: false,
             isInsecure: false
           },
@@ -2392,6 +2410,8 @@ export function ProtocolSelectionDialog({
             tagline: t('protocolSelection.protocols.api_key.tagline'),
             icon: 'pi pi-key',
             iconColor: '#00BCD4',
+            infoBadge: t('protocolSelection.badges.secure'),
+            infoBadgeTone: 'secure',
             isRecommended: false,
             isInsecure: false
           },
@@ -2401,6 +2421,8 @@ export function ProtocolSelectionDialog({
             tagline: t('protocolSelection.protocols.secure_note.tagline'),
             icon: 'pi pi-file-edit',
             iconColor: '#9C27B0',
+            infoBadge: t('protocolSelection.badges.secure'),
+            infoBadgeTone: 'secure',
             isRecommended: false,
             isInsecure: false
           }
@@ -2466,7 +2488,7 @@ export function ProtocolSelectionDialog({
       resizable
       className="terminal-pro-dialog protocol-selection-dialog-new protocol-selection-picker-compact"
       contentStyle={TERMINAL_PRO_DIALOG_CONTENT_STYLE}
-      closable={false}
+      closable
     >
       <div className="protocol-selection-layout">
         <div className="protocol-categories-panel" role="tablist" aria-label={t('protocolSelection.title')}>
@@ -2526,6 +2548,13 @@ export function ProtocolSelectionDialog({
                     {protocol.isRecommended ? (
                       <span className="protocol-option-row-pill protocol-option-row-pill--info">
                         {t('protocolSelection.badges.recommended')}
+                      </span>
+                    ) : null}
+                    {protocol.infoBadge ? (
+                      <span
+                        className={`protocol-option-row-pill protocol-option-row-pill--${protocol.infoBadgeTone || 'neutral'}`}
+                      >
+                        {protocol.infoBadge}
                       </span>
                     ) : null}
                   </span>
