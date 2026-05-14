@@ -246,7 +246,7 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
         codeBlock: false,
       }),
       Placeholder.configure({
-        placeholder: 'Empieza a escribir tu documento...',
+        placeholder: 'Empieza a escribir tu nota...',
       }),
       Underline,
       Highlight,

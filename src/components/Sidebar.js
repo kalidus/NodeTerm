@@ -2955,7 +2955,7 @@ const Sidebar = React.memo(({
               <Button
                 className="p-button-rounded p-button-text sidebar-action-button glass-button"
                 onClick={() => setViewMode('documents')}
-                tooltip="Documentos"
+                tooltip="Notas"
                 tooltipOptions={{ position: 'bottom' }}
                 style={{
                   display: 'flex',
@@ -3452,14 +3452,14 @@ const Sidebar = React.memo(({
                 </span>
               </Button>
 
-              {/* Botón de documentos */}
+              {/* Botón de notas */}
               <Button
                 className="p-button-rounded p-button-text sidebar-action-button glass-button"
                 onClick={() => {
                   setViewMode('documents');
                   setSidebarCollapsed(false);
                 }}
-                tooltip="Documentos"
+                tooltip="Notas"
                 tooltipOptions={{ position: 'right' }}
                 style={{
                   margin: 0,

@@ -176,8 +176,8 @@ const DocumentsSidebar = ({
     setParentKeyForNew(null);
     showToast?.({
       severity: 'success',
-      summary: 'Documento creado',
-      detail: `"${newDoc.label}" creado correctamente`,
+      summary: 'Nota creada',
+      detail: `"${newDoc.label}" creada correctamente`,
       life: 3000
     });
   };
@@ -214,7 +214,7 @@ const DocumentsSidebar = ({
     const isFolder = node.droppable || node.data?.type === 'document-folder';
     const message = isFolder
       ? `¿Eliminar la carpeta "${node.label}" y todo su contenido?`
-      : `¿Eliminar el documento "${node.label}"?`;
+      : `¿Eliminar la nota "${node.label}"?`;
 
     if (confirmDialog) {
       confirmDialog({
@@ -247,7 +247,7 @@ const DocumentsSidebar = ({
     if (isFolder) {
       items.push(
         {
-          label: 'Nuevo documento',
+          label: 'Nueva nota',
           icon: 'pi pi-file',
           command: () => {
             setParentKeyForNew(node.key);
@@ -268,7 +268,7 @@ const DocumentsSidebar = ({
       );
     } else {
       items.push({
-        label: 'Abrir documento',
+        label: 'Abrir nota',
         icon: 'pi pi-external-link',
         command: () => handleOpenDocument(node)
       });
@@ -503,7 +503,7 @@ const DocumentsSidebar = ({
           <Button
             className="p-button-rounded p-button-text sidebar-action-button glass-button"
             onClick={openNewDocumentDialog}
-            tooltip="Nuevo documento"
+            tooltip="Nueva nota"
             tooltipOptions={{ position: 'bottom' }}
             style={DOC_HEADER_GLASS_BTN}
           >
@@ -581,12 +581,12 @@ const DocumentsSidebar = ({
         {isLoading ? (
           <div className="documents-empty-state">
             <i className="pi pi-spin pi-spinner" />
-            <p>Cargando documentos...</p>
+            <p>Cargando notas...</p>
           </div>
         ) : documentNodes.length === 0 ? (
           <div className="documents-empty-state">
             <i className="pi pi-file-edit" />
-            <p>No hay documentos. Usa el icono de documento nuevo en la cabecera.</p>
+            <p>No hay notas. Usa el icono de nueva nota en la cabecera.</p>
           </div>
         ) : (
           <Tree
@@ -629,9 +629,9 @@ const DocumentsSidebar = ({
 
       <ContextMenu model={contextMenuItems} ref={contextMenuRef} />
 
-      {/* New Document Dialog */}
+      {/* Diálogo nueva nota */}
       <Dialog
-        header="Nuevo documento"
+        header="Nueva nota"
         visible={showNewDocDialog}
         onHide={() => setShowNewDocDialog(false)}
         style={{ width: '380px' }}
@@ -644,12 +644,12 @@ const DocumentsSidebar = ({
         }
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <label htmlFor="doc-name" style={{ fontWeight: 600, fontSize: '0.875rem' }}>Nombre del documento</label>
+          <label htmlFor="doc-name" style={{ fontWeight: 600, fontSize: '0.875rem' }}>Nombre de la nota</label>
           <InputText
             id="doc-name"
             value={newItemName}
             onChange={(e) => setNewItemName(e.target.value)}
-            placeholder="Mi documento..."
+            placeholder="Mi nota..."
             autoFocus
             onKeyDown={(e) => e.key === 'Enter' && handleCreateDocument()}
           />

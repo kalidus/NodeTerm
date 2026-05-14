@@ -4350,7 +4350,7 @@ const SettingsDialog = ({
                                       overflow: 'hidden',
                                       textOverflow: 'ellipsis',
                                       whiteSpace: 'nowrap'
-                                    }}>Documentos</div>
+                                    }}>Notas</div>
                                     <div style={{
                                       fontSize: `${Math.max(explorerFontSize - 2, 10)}px`,
                                       color: previewText,

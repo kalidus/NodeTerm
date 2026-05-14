@@ -2259,7 +2259,7 @@ const App = () => {
     return () => window.removeEventListener('open-password-folder-tab', handler);
   }, [getAllTabs]);
 
-  // Crear y activar pestaña de documento desde el sidebar de documentos
+  // Crear y activar pestaña de nota desde el sidebar de notas
   useEffect(() => {
     const handler = (e) => {
       const info = e.detail || {};
