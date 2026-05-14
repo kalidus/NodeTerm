@@ -455,6 +455,29 @@ class SyncManager {
         }
       }
       
+      // Notas/documentos: archivo dedicado (más fiable que solo nodeterm-settings.json; evita clientes antiguos o merges sin estas claves)
+      let documentsResult = null;
+      try {
+        const docKeys = ['documents_encrypted', 'documentManagerNodes', 'documents_expanded_keys'];
+        const docPayload = {};
+        docKeys.forEach((k) => {
+          const v = localStorage.getItem(k);
+          if (v != null) docPayload[k] = v;
+        });
+        if (Object.keys(docPayload).length > 0) {
+          await this.nextcloudService.uploadFile(
+            'nodeterm-documents.json',
+            JSON.stringify(docPayload, null, 2)
+          );
+          documentsResult = { success: true, keys: Object.keys(docPayload).length };
+        } else {
+          documentsResult = { success: true, skipped: true };
+        }
+      } catch (err) {
+        console.warn('[SYNC] Error subiendo nodeterm-documents.json:', err);
+        documentsResult = { success: false, error: err.message };
+      }
+
       // Actualizar tiempo de sincronización
       this.lastSyncTime = new Date();
       this.saveSyncConfig();
@@ -465,7 +488,8 @@ class SyncManager {
         timestamp: this.lastSyncTime,
         itemsCount: Object.keys(localData).length - 2, // Excluir metadatos
         sessions: sessionsResult,
-        passwords: passwordsResult
+        passwords: passwordsResult,
+        documents: documentsResult
       };
     } finally {
       this.syncInProgress = false;
@@ -499,6 +523,24 @@ class SyncManager {
       
       // Aplicar datos localmente (esto ya incluye la recarga de temas)
       const appliedItems = this.applyRemoteData(remoteData);
+
+      // Notas/documentos: aplicar archivo dedicado si existe (sobrescribe claves; fuente de verdad tras sync)
+      try {
+        const docsRaw = await this.nextcloudService.downloadFile('nodeterm-documents.json');
+        if (docsRaw) {
+          const docs = JSON.parse(docsRaw);
+          if (docs && typeof docs === 'object' && !Array.isArray(docs)) {
+            const docKeys = ['documents_encrypted', 'documentManagerNodes', 'documents_expanded_keys'];
+            docKeys.forEach((k) => {
+              if (!Object.prototype.hasOwnProperty.call(docs, k) || docs[k] == null) return;
+              const val = docs[k];
+              localStorage.setItem(k, typeof val === 'string' ? val : JSON.stringify(val));
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('[SYNC] nodeterm-documents.json (descarga):', e.message);
+      }
 
       // Sincronizar sesiones cifradas si hay clave maestra
       let sessionsResult = null;
