@@ -3242,6 +3242,9 @@ const Sidebar = React.memo(({
           confirmDialog={confirmDialog}
           uiTheme={uiTheme}
           onBackToConnections={() => setViewMode('connections')}
+          onOpenPasswords={() => setViewMode('passwords')}
+          showFavoritesView={showFavoritesView}
+          onToggleFavoritesView={toggleFavoritesView}
           sidebarCollapsed={sidebarCollapsed}
           setSidebarCollapsed={setSidebarCollapsed}
           explorerFont={explorerFont}
@@ -3251,6 +3254,11 @@ const Sidebar = React.memo(({
           sessionActionIconTheme={sessionActionIconTheme}
           sidebarFilter={sidebarFilter}
           treeTheme={treeTheme}
+          setShowSettingsDialog={setShowSettingsDialog}
+          onShowImportDialog={onShowImportDialog || setShowImportDialog}
+          onShowExportDialog={onShowExportDialog}
+          onShowImportExportDialog={onShowImportExportDialog}
+          onShowImportWizard={onShowImportWizard}
         />
       ) : (
         // Vista de passwords

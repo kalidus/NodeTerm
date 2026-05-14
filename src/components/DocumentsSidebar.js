@@ -1,10 +1,13 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
 import { Dialog } from 'primereact/dialog';
 import { Tree } from 'primereact/tree';
 import { ContextMenu } from 'primereact/contextmenu';
+import SidebarFooter from './SidebarFooter';
 import { sessionActionIconThemes } from '../themes/session-action-icons';
+import { FUTURISTIC_UI_KEYS } from '../themes/ui-themes';
+import { useTranslation } from '../i18n/hooks/useTranslation';
 import {
   loadDocumentTree,
   saveDocumentTree,
@@ -12,16 +15,89 @@ import {
   createFolderNode,
   addNodeToTree,
   removeNodeFromTree,
-  updateNodeInTree,
-  filterDocumentTree
+  updateNodeInTree
 } from '../utils/documentStore';
 import '../styles/components/documents.css';
+
+/** PrimeReact Tree ya muestra icono vía node.icon; el nodeTemplate añade el propio — quitamos duplicados (también en datos guardados). */
+function stripTreeNodeIcons(nodes) {
+  if (!nodes?.length) return nodes || [];
+  return nodes.map((n) => {
+    const { icon, expandedIcon, collapsedIcon, children, ...rest } = n;
+    return {
+      ...rest,
+      ...(children?.length ? { children: stripTreeNodeIcons(children) } : {})
+    };
+  });
+}
+
+function collectDocumentFolderKeys(nodes, acc = []) {
+  if (!nodes?.length) return acc;
+  for (const n of nodes) {
+    const isFolder = n.droppable || n.data?.type === 'document-folder';
+    if (isFolder && n.children?.length) {
+      acc.push(n.key);
+      collectDocumentFolderKeys(n.children, acc);
+    }
+  }
+  return acc;
+}
+
+/** Mismo icono de red que en el gestor de passwords (ir al árbol de conexiones). */
+function ConnectionsNavIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+      <circle cx="12" cy="12" r="2.5" fill="currentColor" />
+      <circle cx="6" cy="6" r="2" fill="currentColor" />
+      <circle cx="18" cy="6" r="2" fill="currentColor" />
+      <circle cx="6" cy="18" r="2" fill="currentColor" />
+      <circle cx="18" cy="18" r="2" fill="currentColor" />
+      <circle cx="12" cy="4" r="1.5" fill="currentColor" />
+      <circle cx="12" cy="20" r="1.5" fill="currentColor" />
+      <circle cx="4" cy="12" r="1.5" fill="currentColor" />
+      <circle cx="20" cy="12" r="1.5" fill="currentColor" />
+      <line x1="12" y1="12" x2="6" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6" />
+      <line x1="12" y1="12" x2="18" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6" />
+      <line x1="12" y1="12" x2="6" y2="18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6" />
+      <line x1="12" y1="12" x2="18" y2="18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6" />
+      <line x1="12" y1="12" x2="12" y2="4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6" />
+      <line x1="12" y1="12" x2="12" y2="20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6" />
+      <line x1="12" y1="12" x2="4" y2="12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6" />
+      <line x1="12" y1="12" x2="20" y2="12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.6" />
+    </svg>
+  );
+}
+
+const DOC_HEADER_GLASS_BTN = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '32px',
+  height: '32px',
+  padding: 0,
+  background: 'rgba(255, 255, 255, 0.05)',
+  border: '1px solid rgba(255, 255, 255, 0.1)',
+  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+  borderRadius: '8px',
+  transition: 'all 0.2s ease'
+};
+
+const DOC_HEADER_ICON_WRAP = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '20px',
+  height: '20px'
+};
 
 const DocumentsSidebar = ({
   showToast,
   confirmDialog,
   uiTheme = 'Light',
   onBackToConnections,
+  onOpenPasswords,
+  showFavoritesView = false,
+  onToggleFavoritesView,
   sidebarCollapsed,
   setSidebarCollapsed,
   explorerFont,
@@ -30,13 +106,18 @@ const DocumentsSidebar = ({
   secureStorage,
   sessionActionIconTheme = 'modern',
   sidebarFilter = '',
-  treeTheme = 'default'
+  treeTheme = 'default',
+  setShowSettingsDialog,
+  onShowImportDialog,
+  onShowExportDialog,
+  onShowImportExportDialog,
+  onShowImportWizard
 }) => {
+  const { t: tCommon } = useTranslation('common');
   const [documentNodes, setDocumentNodes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedKeys, setExpandedKeys] = useState({});
   const [selectedNodeKey, setSelectedNodeKey] = useState(null);
-  const [searchText, setSearchText] = useState('');
 
   const [showNewDocDialog, setShowNewDocDialog] = useState(false);
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
@@ -249,9 +330,29 @@ const DocumentsSidebar = ({
     setDocumentNodes(updatedNodes);
   };
 
-  const displayNodes = searchText
-    ? filterDocumentTree(documentNodes, searchText)
-    : documentNodes;
+  const treeValue = useMemo(
+    () => stripTreeNodeIcons(documentNodes),
+    [documentNodes]
+  );
+
+  const folderKeysAll = useMemo(
+    () => collectDocumentFolderKeys(documentNodes, []),
+    [documentNodes]
+  );
+
+  const allDocTreeExpanded = useMemo(() => {
+    if (!folderKeysAll.length) return true;
+    return folderKeysAll.every((k) => expandedKeys[k]);
+  }, [folderKeysAll, expandedKeys]);
+
+  const toggleExpandAllDocuments = useCallback(() => {
+    if (!folderKeysAll.length) return;
+    if (allDocTreeExpanded) {
+      setExpandedKeys({});
+    } else {
+      setExpandedKeys(Object.fromEntries(folderKeysAll.map((k) => [k, true])));
+    }
+  }, [folderKeysAll, allDocTreeExpanded]);
 
   const nodeTemplate = (node) => {
     const isFolder = node.droppable || node.data?.type === 'document-folder';
@@ -298,8 +399,34 @@ const DocumentsSidebar = ({
     return () => window.removeEventListener('document-content-updated', handler);
   }, []);
 
+  const openNewDocumentDialog = () => {
+    setParentKeyForNew(null);
+    setNewItemName('');
+    setShowNewDocDialog(true);
+  };
+
+  const openNewFolderDialog = () => {
+    setParentKeyForNew(null);
+    setNewItemName('');
+    setShowNewFolderDialog(true);
+  };
+
   return (
-    <>
+    <div className="documents-sidebar-root">
+      {FUTURISTIC_UI_KEYS.includes(uiTheme) && (
+        <div style={{
+          width: '100%',
+          height: '0.5px',
+          backgroundColor: 'var(--ui-sidebar-border)',
+          opacity: 0.6,
+          margin: 0,
+          padding: 0,
+          boxSizing: 'border-box',
+          border: 'none',
+          outline: 'none',
+          flexShrink: 0
+        }} />
+      )}
       <div className="sidebar-header-glass-stack" style={{
         display: 'flex',
         alignItems: 'center',
@@ -310,7 +437,6 @@ const DocumentsSidebar = ({
         margin: 0,
         border: 'none',
         boxShadow: 'none',
-        width: '100%',
         position: 'relative'
       }}>
         <div style={{
@@ -324,7 +450,7 @@ const DocumentsSidebar = ({
         <Button
           className="p-button-rounded p-button-text sidebar-action-button glass-button"
           onClick={() => setSidebarCollapsed && setSidebarCollapsed(v => !v)}
-          tooltip={sidebarCollapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
+          tooltip={sidebarCollapsed ? tCommon('tooltips.expandSidebar') : tCommon('tooltips.collapseSidebar')}
           tooltipOptions={{ position: 'bottom' }}
           style={{
             marginRight: 4,
@@ -376,70 +502,24 @@ const DocumentsSidebar = ({
         }}>
           <Button
             className="p-button-rounded p-button-text sidebar-action-button glass-button"
-            onClick={() => {
-              setParentKeyForNew(null);
-              setNewItemName('');
-              setShowNewDocDialog(true);
-            }}
+            onClick={openNewDocumentDialog}
             tooltip="Nuevo documento"
             tooltipOptions={{ position: 'bottom' }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '32px',
-              height: '32px',
-              padding: 0,
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
-              borderRadius: '8px',
-              transition: 'all 0.2s ease'
-            }}
+            style={DOC_HEADER_GLASS_BTN}
           >
-            <span style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '20px',
-              height: '20px',
-              color: 'var(--ui-sidebar-text)'
-            }}>
+            <span style={{ ...DOC_HEADER_ICON_WRAP, color: 'var(--ui-sidebar-text)' }}>
               <i className="pi pi-file-plus" style={{ fontSize: '1rem' }} />
             </span>
           </Button>
 
           <Button
             className="p-button-rounded p-button-text sidebar-action-button glass-button"
-            onClick={() => {
-              setParentKeyForNew(null);
-              setNewItemName('');
-              setShowNewFolderDialog(true);
-            }}
-            tooltip="Nueva carpeta"
+            onClick={openNewFolderDialog}
+            tooltip={tCommon('tooltips.newFolder')}
             tooltipOptions={{ position: 'bottom' }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '32px',
-              height: '32px',
-              padding: 0,
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
-              borderRadius: '8px',
-              transition: 'all 0.2s ease'
-            }}
+            style={DOC_HEADER_GLASS_BTN}
           >
-            <span style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '20px',
-              height: '20px',
-              color: 'var(--ui-sidebar-text)'
-            }}>
+            <span style={{ ...DOC_HEADER_ICON_WRAP, color: 'var(--ui-sidebar-text)' }}>
               {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}
             </span>
           </Button>
@@ -453,46 +533,47 @@ const DocumentsSidebar = ({
           }} />
 
           <Button
-            className="p-button-rounded p-button-text sidebar-action-button glass-button"
-            onClick={onBackToConnections}
-            tooltip="Volver a conexiones"
+            className="p-button-rounded p-button-text sidebar-action-button glass-button key-button"
+            onClick={() => onOpenPasswords?.()}
+            tooltip={tCommon('tooltips.passwordManager')}
             tooltipOptions={{ position: 'bottom' }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '32px',
-              height: '32px',
-              padding: 0,
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
-              borderRadius: '8px',
-              transition: 'all 0.2s ease'
-            }}
+            style={DOC_HEADER_GLASS_BTN}
           >
-            <span style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '20px',
-              height: '20px',
-              color: '#64b5f6'
-            }}>
-              <i className="pi pi-arrow-left" style={{ fontSize: '1rem' }} />
+            <span style={{ ...DOC_HEADER_ICON_WRAP, color: '#ffc107' }}>
+              {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.passwordManager}
+            </span>
+          </Button>
+
+          {onToggleFavoritesView && (
+            <Button
+              className={`p-button-rounded p-button-text sidebar-action-button glass-button ${showFavoritesView ? 'active' : ''}`}
+              onClick={onToggleFavoritesView}
+              tooltip={showFavoritesView ? tCommon('tooltips.showAllConnections') : tCommon('tooltips.showFavorites')}
+              tooltipOptions={{ position: 'bottom' }}
+              style={{
+                ...DOC_HEADER_GLASS_BTN,
+                background: showFavoritesView ? 'rgba(255, 193, 7, 0.12)' : DOC_HEADER_GLASS_BTN.background,
+                border: showFavoritesView ? '1px solid rgba(255, 193, 7, 0.45)' : DOC_HEADER_GLASS_BTN.border
+              }}
+            >
+              <span style={{ ...DOC_HEADER_ICON_WRAP, color: '#ffc107' }}>
+                <i className={showFavoritesView ? 'pi pi-star-fill' : 'pi pi-star'} style={{ fontSize: '1rem' }} />
+              </span>
+            </Button>
+          )}
+
+          <Button
+            className="p-button-rounded p-button-text sidebar-action-button glass-button"
+            onClick={() => onBackToConnections?.()}
+            tooltip={tCommon('tooltips.goToConnections')}
+            tooltipOptions={{ position: 'bottom' }}
+            style={DOC_HEADER_GLASS_BTN}
+          >
+            <span style={{ ...DOC_HEADER_ICON_WRAP, color: '#10b981' }}>
+              <ConnectionsNavIcon />
             </span>
           </Button>
         </div>
-      </div>
-
-      {/* Search */}
-      <div className="documents-search-box">
-        <InputText
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          placeholder="Buscar documentos..."
-          style={{ width: '100%' }}
-        />
       </div>
 
       {/* Tree */}
@@ -502,18 +583,14 @@ const DocumentsSidebar = ({
             <i className="pi pi-spin pi-spinner" />
             <p>Cargando documentos...</p>
           </div>
-        ) : displayNodes.length === 0 ? (
+        ) : documentNodes.length === 0 ? (
           <div className="documents-empty-state">
             <i className="pi pi-file-edit" />
-            <p>
-              {searchText
-                ? 'No se encontraron documentos'
-                : 'No hay documentos. Crea uno nuevo con el botón de arriba.'}
-            </p>
+            <p>No hay documentos. Usa el icono de documento nuevo en la cabecera.</p>
           </div>
         ) : (
           <Tree
-            value={displayNodes}
+            value={treeValue}
             expandedKeys={expandedKeys}
             onToggle={(e) => setExpandedKeys(e.value)}
             selectionMode="single"
@@ -534,6 +611,20 @@ const DocumentsSidebar = ({
             }}
           />
         )}
+      </div>
+
+      <div style={{ flexShrink: 0, width: '100%' }}>
+        <SidebarFooter
+          onConfigClick={() => setShowSettingsDialog?.(true)}
+          allExpanded={allDocTreeExpanded}
+          toggleExpandAll={toggleExpandAllDocuments}
+          collapsed={!!sidebarCollapsed}
+          onShowImportDialog={onShowImportDialog}
+          onShowExportDialog={onShowExportDialog}
+          onShowImportExportDialog={onShowImportExportDialog}
+          onShowImportWizard={onShowImportWizard}
+          sessionActionIconTheme={sessionActionIconTheme}
+        />
       </div>
 
       <ContextMenu model={contextMenuItems} ref={contextMenuRef} />
@@ -617,7 +708,7 @@ const DocumentsSidebar = ({
           />
         </div>
       </Dialog>
-    </>
+    </div>
   );
 };
 

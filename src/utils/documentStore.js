@@ -52,7 +52,6 @@ export function createDocumentNode(label) {
     key: generateDocumentId(),
     label,
     type: 'document',
-    icon: 'pi pi-file',
     data: {
       type: 'document',
       content: '',
@@ -68,7 +67,6 @@ export function createFolderNode(label) {
     key: generateFolderId(),
     label,
     type: 'document-folder',
-    icon: 'pi pi-folder',
     droppable: true,
     children: [],
     data: {
