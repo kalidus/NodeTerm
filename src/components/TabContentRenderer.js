@@ -26,6 +26,7 @@ import AgentZeroTab from './AgentZeroTab';
 import OpenClawTab from './OpenClawTab';
 import OpenNotebookTab from './OpenNotebookTab';
 import SSHTunnelTab from './SSHTunnelTab';
+import TiptapDocumentEditor from './TiptapDocumentEditor';
 import { themes } from '../themes';
 import { TAB_TYPES } from '../utils/constants';
 import { recordRecentPassword } from '../utils/connectionStore';
@@ -203,6 +204,16 @@ const TabContentRenderer = React.memo(({
         explorerFont={explorerFont}
         explorerColorTheme={explorerColorTheme}
         explorerFontSize={explorerFontSize}
+      />
+    );
+  }
+
+  // Document editor tab
+  if (tab.type === TAB_TYPES.DOCUMENT && tab.documentData) {
+    return (
+      <TiptapDocumentEditor
+        documentKey={tab.documentData.key}
+        documentData={tab.documentData}
       />
     );
   }

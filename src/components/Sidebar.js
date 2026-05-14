@@ -12,6 +12,7 @@ import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
 import { sessionActionIconThemes, getDefaultSessionActionIconTheme } from '../themes/session-action-icons';
 import ImportDialog from './ImportDialog';
 import PasswordManagerSidebar from './PasswordManagerSidebar';
+import DocumentsSidebar from './DocumentsSidebar';
 import SidebarFilesystemExplorer from './SidebarFilesystemExplorer';
 import LocalFileExplorerSidebar from './LocalFileExplorerSidebar';
 import AIClientBrandIcon from './AIClientBrandIcon';
@@ -170,7 +171,7 @@ const Sidebar = React.memo(({
   const [showFolderDialog, setShowFolderDialog] = useState(false);
 
   // Estado para modo de visualización (conexiones, passwords, filesystem, localExplorer)
-  const [viewMode, setViewMode] = useState('connections'); // 'connections' | 'passwords' | 'filesystem' | 'localExplorer'
+  const [viewMode, setViewMode] = useState('connections'); // 'connections' | 'passwords' | 'documents' | 'filesystem' | 'localExplorer'
   const [showFavoritesView, setShowFavoritesView] = useState(false);
   const [favoritesRevision, setFavoritesRevision] = useState(0);
 
@@ -2952,6 +2953,36 @@ const Sidebar = React.memo(({
                 </span>
               </Button>
               <Button
+                className="p-button-rounded p-button-text sidebar-action-button glass-button"
+                onClick={() => setViewMode('documents')}
+                tooltip="Documentos"
+                tooltipOptions={{ position: 'bottom' }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '32px',
+                  height: '32px',
+                  padding: 0,
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                  borderRadius: '8px',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <span style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '20px',
+                  height: '20px',
+                  color: '#64b5f6'
+                }}>
+                  <i className="pi pi-file-edit" style={{ fontSize: '1rem' }} />
+                </span>
+              </Button>
+              <Button
                 className={`p-button-rounded p-button-text sidebar-action-button glass-button ${showFavoritesView ? 'active' : ''}`}
                 onClick={toggleFavoritesView}
                 tooltip={showFavoritesView ? t('tooltips.showAllConnections') : t('tooltips.showFavorites')}
@@ -3205,6 +3236,22 @@ const Sidebar = React.memo(({
           iconSize={iconSize}
           folderIconSize={folderIconSize}
         />
+      ) : viewMode === 'documents' ? (
+        <DocumentsSidebar
+          showToast={showToast}
+          confirmDialog={confirmDialog}
+          uiTheme={uiTheme}
+          onBackToConnections={() => setViewMode('connections')}
+          sidebarCollapsed={sidebarCollapsed}
+          setSidebarCollapsed={setSidebarCollapsed}
+          explorerFont={explorerFont}
+          explorerFontSize={explorerFontSize}
+          masterKey={masterKey}
+          secureStorage={secureStorage}
+          sessionActionIconTheme={sessionActionIconTheme}
+          sidebarFilter={sidebarFilter}
+          treeTheme={treeTheme}
+        />
       ) : (
         // Vista de passwords
         <PasswordManagerSidebar
@@ -3394,6 +3441,42 @@ const Sidebar = React.memo(({
                   color: '#ffc107'
                 }}>
                   {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.passwordManager}
+                </span>
+              </Button>
+
+              {/* Botón de documentos */}
+              <Button
+                className="p-button-rounded p-button-text sidebar-action-button glass-button"
+                onClick={() => {
+                  setViewMode('documents');
+                  setSidebarCollapsed(false);
+                }}
+                tooltip="Documentos"
+                tooltipOptions={{ position: 'right' }}
+                style={{
+                  margin: 0,
+                  width: collapsedIconSize,
+                  height: collapsedIconSize,
+                  minWidth: collapsedIconSize,
+                  minHeight: collapsedIconSize,
+                  border: 'none',
+                  display: 'flex !important',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  visibility: 'visible !important',
+                  opacity: '1 !important',
+                  padding: 0
+                }}
+              >
+                <span style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
+                  height: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
+                  color: '#64b5f6'
+                }}>
+                  <i className="pi pi-file-edit" style={{ fontSize: '1rem' }} />
                 </span>
               </Button>
 

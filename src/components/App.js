@@ -2259,6 +2259,55 @@ const App = () => {
     return () => window.removeEventListener('open-password-folder-tab', handler);
   }, [getAllTabs]);
 
+  // Crear y activar pestaña de documento desde el sidebar de documentos
+  useEffect(() => {
+    const handler = (e) => {
+      const info = e.detail || {};
+      const tabId = `doc_${info.key}_${Date.now()}`;
+
+      const existingTabs = getAllTabs();
+      const existingTab = existingTabs.find(t => t.type === TAB_TYPES.DOCUMENT && t.documentData?.key === info.key);
+      if (existingTab) {
+        const tabIndex = existingTabs.findIndex(t => t.key === existingTab.key);
+        if (tabIndex !== -1) {
+          setActiveTabIndex(tabIndex);
+          setGroupActiveIndices(prev => ({ ...prev, 'no-group': tabIndex }));
+        }
+        return;
+      }
+
+      const documentData = {
+        key: info.key,
+        label: info.label,
+        content: info.data?.content || '',
+        markdownSource: info.data?.markdownSource || '',
+        createdAt: info.data?.createdAt,
+        updatedAt: info.data?.updatedAt
+      };
+
+      const newTab = {
+        key: tabId,
+        label: `📝 ${info.label}`,
+        type: TAB_TYPES.DOCUMENT,
+        documentData,
+        createdAt: Date.now()
+      };
+      setSshTabs(prev => [newTab, ...prev]);
+      setTimeout(() => {
+        setLastOpenedTabKey(tabId);
+        setOnCreateActivateTabKey(tabId);
+        const allTabs = getAllTabs();
+        const tabIndex = allTabs.findIndex(t => t.key === tabId);
+        if (tabIndex !== -1) {
+          setActiveTabIndex(tabIndex);
+          setGroupActiveIndices(prev => ({ ...prev, 'no-group': tabIndex }));
+        }
+      }, 0);
+    };
+    window.addEventListener('open-document-tab', handler);
+    return () => window.removeEventListener('open-document-tab', handler);
+  }, [getAllTabs]);
+
   // Escuchar eventos de expansión de nodos desde el buscador
   useEffect(() => {
     const findNodePathByKey = (nodeList, targetKey, currentPath = []) => {

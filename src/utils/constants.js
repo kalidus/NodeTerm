@@ -54,7 +54,9 @@ export const TAB_TYPES = {
   GUACAMOLE: 'guacamole',
   EXPLORER: 'explorer',
   PASSWORD: 'password',
-  PASSWORD_FOLDER: 'password-folder'
+  PASSWORD_FOLDER: 'password-folder',
+  DOCUMENT: 'document',
+  DOCUMENT_FOLDER: 'document-folder'
 };
 
 // Constantes de estados de conexión
