@@ -598,6 +598,14 @@ class ExportImportService {
       'passwordManagerNodes',
       'IMPORT_SOURCES',
       'nodeterm_favorite_connections',
+      'nodeterm_favorite_groups',
+      'nodeterm_favorite_group_assignments',
+      'nodeterm_favorite_member_order',
+      'nodeterm_filter_config',
+      'nodeterm_group_assignments',
+      'passwords_expanded_keys',
+      'passwords_all_expanded',
+      'passwords_count',
       'ai_clients_enabled',
       'selectedMcpServers',
       'nodeterm_default_local_terminal',
@@ -646,11 +654,20 @@ class ExportImportService {
         // Backup mínimo solo con las claves más críticas
         const minimalBackup = {
           'basicapp2_tree_data': backup['basicapp2_tree_data'],
+          'connections_encrypted': backup['connections_encrypted'],
           'passwords_encrypted': backup['passwords_encrypted'],
           'passwordManagerNodes': backup['passwordManagerNodes'],
           'documents_encrypted': backup['documents_encrypted'],
           'documentManagerNodes': backup['documentManagerNodes'],
-          'documents_expanded_keys': backup['documents_expanded_keys']
+          'documents_expanded_keys': backup['documents_expanded_keys'],
+          'nodeterm_favorite_connections': backup['nodeterm_favorite_connections'],
+          'nodeterm_favorite_groups': backup['nodeterm_favorite_groups'],
+          'nodeterm_favorite_group_assignments': backup['nodeterm_favorite_group_assignments'],
+          'nodeterm_favorite_member_order': backup['nodeterm_favorite_member_order'],
+          'nodeterm_filter_config': backup['nodeterm_filter_config'],
+          'passwords_expanded_keys': backup['passwords_expanded_keys'],
+          'passwords_all_expanded': backup['passwords_all_expanded'],
+          'passwords_count': backup['passwords_count']
         };
         localStorage.setItem(backupKey, JSON.stringify(minimalBackup));
       } else {

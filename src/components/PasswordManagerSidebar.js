@@ -284,9 +284,8 @@ const PasswordManagerSidebar = ({
   // Escuchar sincronización desde Nextcloud
   useEffect(() => {
     const handler = async (e) => {
-      const { count } = e.detail || {};
+      const { count, silent } = e.detail || {};
       try {
-        // Recargar passwords desde localStorage
         if (masterKey && secureStorage) {
           const encryptedData = localStorage.getItem('passwords_encrypted');
           if (encryptedData) {
@@ -295,21 +294,56 @@ const PasswordManagerSidebar = ({
               masterKey
             );
             setPasswordNodes(decrypted);
-            showToast && showToast({ 
-              severity: 'success', 
-              summary: 'Sincronizado', 
-              detail: `${count} password(s) descargado(s) desde Nextcloud`, 
-              life: 3000 
+            if (!silent) {
+              showToast && showToast({
+                severity: 'success',
+                summary: 'Sincronizado',
+                detail:
+                  count != null
+                    ? `${count} password(s) descargado(s) desde Nextcloud`
+                    : 'Contraseñas actualizadas desde la nube',
+                life: 3000
+              });
+            }
+          } else {
+            const plainData = localStorage.getItem('passwordManagerNodes');
+            if (plainData) {
+              setPasswordNodes(JSON.parse(plainData));
+            } else {
+              setPasswordNodes([]);
+            }
+            if (!silent) {
+              showToast && showToast({
+                severity: 'success',
+                summary: 'Sincronizado',
+                detail: 'Contraseñas actualizadas desde la nube',
+                life: 3000
+              });
+            }
+          }
+        } else {
+          const saved = localStorage.getItem('passwordManagerNodes');
+          if (saved) {
+            setPasswordNodes(JSON.parse(saved));
+          } else {
+            setPasswordNodes([]);
+          }
+          if (!silent) {
+            showToast && showToast({
+              severity: 'success',
+              summary: 'Sincronizado',
+              detail: 'Contraseñas actualizadas desde la nube',
+              life: 3000
             });
           }
         }
       } catch (err) {
         console.error('Error recargando passwords sincronizados:', err);
-        showToast && showToast({ 
-          severity: 'error', 
-          summary: 'Error', 
-          detail: 'No se pudieron cargar los passwords sincronizados', 
-          life: 4000 
+        showToast && showToast({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'No se pudieron cargar los passwords sincronizados',
+          life: 4000
         });
       }
     };

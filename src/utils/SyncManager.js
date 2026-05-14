@@ -6,6 +6,65 @@ import SessionManager from '../services/SessionManager';
 import { themeManager } from './themeManager';
 import { statusBarThemeManager } from './statusBarThemeManager';
 
+/** Claves empaquetadas en JSON en Nextcloud (mismos nombres en localStorage) */
+const NC_BUNDLE_DOCUMENTS = ['documents_encrypted', 'documentManagerNodes', 'documents_expanded_keys'];
+const NC_BUNDLE_FAVORITES = [
+  'nodeterm_favorite_connections',
+  'nodeterm_favorite_groups',
+  'nodeterm_favorite_group_assignments',
+  'nodeterm_favorite_member_order',
+  'nodeterm_filter_config',
+  'nodeterm_group_assignments'
+];
+const NC_BUNDLE_PASSWORDS_META = [
+  'passwordManagerNodes',
+  'passwords_expanded_keys',
+  'passwords_all_expanded',
+  'passwords_count'
+];
+
+function ncBuildPayload(keys) {
+  const payload = {};
+  keys.forEach((k) => {
+    const v = localStorage.getItem(k);
+    if (v != null) payload[k] = v;
+  });
+  return payload;
+}
+
+/** skipKey: mapa nombreClave -> () => true para no escribir esa clave */
+function ncApplyPayload(data, keys, skipKey = {}) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return false;
+  let applied = false;
+  keys.forEach((k) => {
+    if (!Object.prototype.hasOwnProperty.call(data, k) || data[k] == null) return;
+    if (skipKey[k]?.()) return;
+    const val = data[k];
+    localStorage.setItem(k, typeof val === 'string' ? val : JSON.stringify(val));
+    applied = true;
+  });
+  return applied;
+}
+
+async function ncUploadJsonBundle(nextcloudService, filename, keys) {
+  const payload = ncBuildPayload(keys);
+  if (Object.keys(payload).length === 0) return { skipped: true };
+  await nextcloudService.uploadFile(filename, JSON.stringify(payload, null, 2));
+  return { success: true, keys: Object.keys(payload).length };
+}
+
+async function ncDownloadJsonBundle(nextcloudService, filename, keys, skipKey = {}) {
+  const raw = await nextcloudService.downloadFile(filename);
+  if (!raw) return false;
+  try {
+    const data = JSON.parse(raw);
+    return ncApplyPayload(data, keys, skipKey);
+  } catch (e) {
+    console.warn(`[SYNC] JSON inválido en ${filename}:`, e.message);
+    return false;
+  }
+}
+
 class SyncManager {
   constructor(sessionManager) {
     this.nextcloudService = new NextcloudService();
@@ -455,27 +514,31 @@ class SyncManager {
         }
       }
       
-      // Notas/documentos: archivo dedicado (más fiable que solo nodeterm-settings.json; evita clientes antiguos o merges sin estas claves)
+      // Notas, favoritos y metadatos de passwords: JSON dedicados (no depender solo de nodeterm-settings.json)
       let documentsResult = null;
+      let favoritesResult = null;
+      let passwordsMetaResult = null;
       try {
-        const docKeys = ['documents_encrypted', 'documentManagerNodes', 'documents_expanded_keys'];
-        const docPayload = {};
-        docKeys.forEach((k) => {
-          const v = localStorage.getItem(k);
-          if (v != null) docPayload[k] = v;
-        });
-        if (Object.keys(docPayload).length > 0) {
-          await this.nextcloudService.uploadFile(
-            'nodeterm-documents.json',
-            JSON.stringify(docPayload, null, 2)
-          );
-          documentsResult = { success: true, keys: Object.keys(docPayload).length };
-        } else {
-          documentsResult = { success: true, skipped: true };
-        }
+        documentsResult = await ncUploadJsonBundle(this.nextcloudService, 'nodeterm-documents.json', NC_BUNDLE_DOCUMENTS);
       } catch (err) {
         console.warn('[SYNC] Error subiendo nodeterm-documents.json:', err);
         documentsResult = { success: false, error: err.message };
+      }
+      try {
+        favoritesResult = await ncUploadJsonBundle(this.nextcloudService, 'nodeterm-favorites.json', NC_BUNDLE_FAVORITES);
+      } catch (err) {
+        console.warn('[SYNC] Error subiendo nodeterm-favorites.json:', err);
+        favoritesResult = { success: false, error: err.message };
+      }
+      try {
+        passwordsMetaResult = await ncUploadJsonBundle(
+          this.nextcloudService,
+          'nodeterm-passwords-meta.json',
+          NC_BUNDLE_PASSWORDS_META
+        );
+      } catch (err) {
+        console.warn('[SYNC] Error subiendo nodeterm-passwords-meta.json:', err);
+        passwordsMetaResult = { success: false, error: err.message };
       }
 
       // Actualizar tiempo de sincronización
@@ -489,7 +552,9 @@ class SyncManager {
         itemsCount: Object.keys(localData).length - 2, // Excluir metadatos
         sessions: sessionsResult,
         passwords: passwordsResult,
-        documents: documentsResult
+        documents: documentsResult,
+        favorites: favoritesResult,
+        passwordsMeta: passwordsMetaResult
       };
     } finally {
       this.syncInProgress = false;
@@ -524,22 +589,23 @@ class SyncManager {
       // Aplicar datos localmente (esto ya incluye la recarga de temas)
       const appliedItems = this.applyRemoteData(remoteData);
 
-      // Notas/documentos: aplicar archivo dedicado si existe (sobrescribe claves; fuente de verdad tras sync)
+      // Bundles JSON dedicados (documentos, favoritos, metadatos passwords)
       try {
-        const docsRaw = await this.nextcloudService.downloadFile('nodeterm-documents.json');
-        if (docsRaw) {
-          const docs = JSON.parse(docsRaw);
-          if (docs && typeof docs === 'object' && !Array.isArray(docs)) {
-            const docKeys = ['documents_encrypted', 'documentManagerNodes', 'documents_expanded_keys'];
-            docKeys.forEach((k) => {
-              if (!Object.prototype.hasOwnProperty.call(docs, k) || docs[k] == null) return;
-              const val = docs[k];
-              localStorage.setItem(k, typeof val === 'string' ? val : JSON.stringify(val));
-            });
-          }
-        }
+        await ncDownloadJsonBundle(this.nextcloudService, 'nodeterm-documents.json', NC_BUNDLE_DOCUMENTS);
       } catch (e) {
         console.warn('[SYNC] nodeterm-documents.json (descarga):', e.message);
+      }
+      try {
+        const favApplied = await ncDownloadJsonBundle(
+          this.nextcloudService,
+          'nodeterm-favorites.json',
+          NC_BUNDLE_FAVORITES
+        );
+        if (favApplied && typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('favorite-groups-updated', { detail: { source: 'nextcloud-sync' } }));
+        }
+      } catch (e) {
+        console.warn('[SYNC] nodeterm-favorites.json (descarga):', e.message);
       }
 
       // Sincronizar sesiones cifradas si hay clave maestra
@@ -589,6 +655,7 @@ class SyncManager {
       
       // Sincronizar passwords cifrados si hay clave maestra
       let passwordsResult = null;
+      let passwordsVaultFileApplied = false;
       if (this.secureStorage.hasSavedMasterKey()) {
         try {
           const masterKey = await this.secureStorage.getMasterKey();
@@ -596,6 +663,7 @@ class SyncManager {
             // Intentar descargar passwords cifrados
             const passwordsData = await this.nextcloudService.downloadFile('nodeterm-passwords.enc');
             if (passwordsData) {
+              passwordsVaultFileApplied = true;
               // Guardar passwords encriptados en localStorage
               localStorage.setItem('passwords_encrypted', passwordsData);
               
@@ -623,10 +691,9 @@ class SyncManager {
                     message: `Descargados ${counts.total} secreto(s) desde Nextcloud`
                   };
                   
-                  // Disparar evento para recargar passwords en el sidebar
                   if (typeof window !== 'undefined') {
                     window.dispatchEvent(new CustomEvent('passwords-synced-from-cloud', {
-                      detail: { count: counts.total }
+                      detail: { count: counts.total, silent: false }
                     }));
                   }
                 } else {
@@ -659,6 +726,28 @@ class SyncManager {
             error: error.message
           };
         }
+      }
+
+      // Metadatos y árbol plano de passwords (complemento de nodeterm-passwords.enc; sin master key el árbol va aquí)
+      let passwordsMetaApplied = false;
+      try {
+        passwordsMetaApplied = await ncDownloadJsonBundle(
+          this.nextcloudService,
+          'nodeterm-passwords-meta.json',
+          NC_BUNDLE_PASSWORDS_META,
+          {
+            passwordManagerNodes: () => !!localStorage.getItem('passwords_encrypted')
+          }
+        );
+        if (passwordsMetaApplied && typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('passwords-synced-from-cloud', {
+              detail: { count: null, silent: passwordsVaultFileApplied }
+            })
+          );
+        }
+      } catch (e) {
+        console.warn('[SYNC] nodeterm-passwords-meta.json (descarga):', e.message);
       }
       
       // Actualizar tiempo de sincronización
