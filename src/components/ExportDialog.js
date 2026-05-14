@@ -23,6 +23,7 @@ const ExportDialog = ({ visible, onHide, showToast }) => {
     passwords: true,
     conversations: true,
     config: true,
+    documents: true,
     recordings: false
   });
 
@@ -148,6 +149,7 @@ const ExportDialog = ({ visible, onHide, showToast }) => {
         passwords: true,
         conversations: true,
         config: true,
+        documents: true,
         recordings: false
       });
       setUseEncryption(false);
@@ -169,6 +171,7 @@ const ExportDialog = ({ visible, onHide, showToast }) => {
     if (options.passwords) size += 50;
     if (options.conversations) size += 500;
     if (options.config) size += 20;
+    if (options.documents) size += 80;
     if (options.recordings) size += 1000;
     
     if (size < 1024) return `~${size} KB`;
@@ -294,6 +297,21 @@ const ExportDialog = ({ visible, onHide, showToast }) => {
                 <strong>{t('export.config') || 'Configuraciones'}</strong>
                 <div style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>
                   {t('export.configDesc') || 'Temas, fuentes, terminal por defecto, MCPs, etc.'}
+                </div>
+              </label>
+            </div>
+
+            <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Checkbox
+                inputId="opt-documents"
+                checked={options.documents}
+                onChange={() => handleOptionChange('documents')}
+                disabled={exporting}
+              />
+              <label htmlFor="opt-documents" style={{ margin: 0, cursor: 'pointer' }}>
+                <strong>{t('export.documents') || 'Notas / documentos'}</strong>
+                <div style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>
+                  {t('export.documentsDesc') || 'Árbol de notas, carpetas y contenido'}
                 </div>
               </label>
             </div>

@@ -1,7 +1,7 @@
 /**
  * ExportImportService - Servicio para exportar/importar todos los datos de NodeTerm
  * Características:
- * - Exporta conexiones, contraseñas, conversaciones, configuraciones
+ * - Exporta conexiones, contraseñas, conversaciones, configuraciones, notas/documentos
  * - Encriptación AES-256-GCM opcional con contraseña
  * - Validación de integridad de datos
  * - NO exporta la master key por seguridad
@@ -76,6 +76,7 @@ class ExportImportService {
    * @param {boolean} options.conversations - Incluir conversaciones IA
    * @param {boolean} options.config - Incluir configuraciones
    * @param {boolean} options.recordings - Incluir grabaciones (metadata)
+   * @param {boolean} options.documents - Incluir notas/documentos (árbol Tiptap)
    * @param {string} options.encryptPassword - Contraseña para encriptar (opcional)
    * @returns {Promise<Object>} Datos exportados
    */
@@ -86,6 +87,7 @@ class ExportImportService {
       conversations = true,
       config = true,
       recordings = false,
+      documents = true,
       encryptPassword = null
     } = options;
 
@@ -100,7 +102,8 @@ class ExportImportService {
         passwords: passwords,
         conversations: conversations,
         config: config,
-        recordings: recordings
+        recordings: recordings,
+        documents: documents
       },
       data: {}
     };
@@ -262,7 +265,16 @@ class ExportImportService {
         exportData.data.config = configData;
       }
 
-      // === 5. GRABACIONES (solo metadata) ===
+      // === 5. NOTAS / DOCUMENTOS ===
+      if (documents) {
+        exportData.data.documents = {
+          encrypted: this.safeGetItem('documents_encrypted'),
+          nodes: this.safeGetItem('documentManagerNodes'),
+          expandedKeys: this.safeGetItem('documents_expanded_keys')
+        };
+      }
+
+      // === 6. GRABACIONES (solo metadata) ===
       if (recordings) {
         const recordingKeys = this.getKeysWithPrefix('recording_');
         const recordingMetadata = {};
@@ -274,14 +286,14 @@ class ExportImportService {
         exportData.data.recordings = recordingMetadata;
       }
 
-      // === 6. ENCRIPTAR SI SE SOLICITA ===
+      // === 7. ENCRIPTAR SI SE SOLICITA ===
       if (encryptPassword) {
         const encryptedData = await this.encryptData(exportData.data, encryptPassword);
         exportData.data = encryptedData;
         exportData.encrypted = true;
       }
 
-      // === 7. METADATA FINAL ===
+      // === 8. METADATA FINAL ===
       exportData.dataSize = JSON.stringify(exportData.data).length;
       exportData.checksum = await this.generateChecksum(exportData.data);
 
@@ -496,7 +508,7 @@ class ExportImportService {
     const {
       merge = false,
       replace = false,
-      categories = ['connections', 'passwords', 'conversations', 'config'],
+      categories = ['connections', 'passwords', 'conversations', 'config', 'documents'],
       decryptPassword = null
     } = options;
 
@@ -526,7 +538,8 @@ class ExportImportService {
         passwords: 0,
         conversations: 0,
         config: 0,
-        recordings: 0
+        recordings: 0,
+        documents: 0
       };
 
       // 4. Importar por categorías
@@ -553,6 +566,11 @@ class ExportImportService {
       if (categories.includes('recordings') && dataToImport.recordings) {
         await this.importRecordings(dataToImport.recordings, { merge, replace });
         importStats.recordings = Object.keys(dataToImport.recordings || {}).length;
+      }
+
+      if (categories.includes('documents') && dataToImport.documents) {
+        await this.importDocuments(dataToImport.documents, { merge, replace });
+        importStats.documents = this.countImportedDocuments(dataToImport.documents);
       }
 
       return {
@@ -594,7 +612,10 @@ class ExportImportService {
       'iconThemeSidebar',
       'actionBarIconTheme',
       'sessionActionIconTheme',
-      'treeTheme'
+      'treeTheme',
+      'documents_encrypted',
+      'documentManagerNodes',
+      'documents_expanded_keys'
     ];
     
     const backup = {};
@@ -626,7 +647,10 @@ class ExportImportService {
         const minimalBackup = {
           'basicapp2_tree_data': backup['basicapp2_tree_data'],
           'passwords_encrypted': backup['passwords_encrypted'],
-          'passwordManagerNodes': backup['passwordManagerNodes']
+          'passwordManagerNodes': backup['passwordManagerNodes'],
+          'documents_encrypted': backup['documents_encrypted'],
+          'documentManagerNodes': backup['documentManagerNodes'],
+          'documents_expanded_keys': backup['documents_expanded_keys']
         };
         localStorage.setItem(backupKey, JSON.stringify(minimalBackup));
       } else {
@@ -794,7 +818,68 @@ class ExportImportService {
   }
 
   /**
-   * Fusiona árboles de conexiones
+   * Importa notas/documentos (árbol en localStorage).
+   * Fusión de árbol en claro con mergeTreeData; con blob cifrado no se puede fusionar por nodo sin master key — sustituye el blob importado.
+   */
+  async importDocuments(documentsData, options) {
+    if (!documentsData || typeof documentsData !== 'object') return;
+
+    if (options.replace) {
+      localStorage.removeItem('documents_encrypted');
+      localStorage.removeItem('documentManagerNodes');
+      localStorage.removeItem('documents_expanded_keys');
+    }
+
+    if (documentsData.encrypted) {
+      localStorage.setItem('documents_encrypted', JSON.stringify(documentsData.encrypted));
+      localStorage.removeItem('documentManagerNodes');
+    } else if (documentsData.nodes != null) {
+      const nodesArray = Array.isArray(documentsData.nodes) ? documentsData.nodes : null;
+      if (nodesArray) {
+        if (options.merge && localStorage.getItem('documentManagerNodes')) {
+          try {
+            const existing = JSON.parse(localStorage.getItem('documentManagerNodes'));
+            if (Array.isArray(existing)) {
+              const merged = this.mergeTreeData(existing, nodesArray);
+              localStorage.setItem('documentManagerNodes', JSON.stringify(merged));
+            } else {
+              localStorage.setItem('documentManagerNodes', JSON.stringify(nodesArray));
+            }
+          } catch {
+            localStorage.setItem('documentManagerNodes', JSON.stringify(nodesArray));
+          }
+        } else {
+          localStorage.setItem('documentManagerNodes', JSON.stringify(nodesArray));
+        }
+      }
+      localStorage.removeItem('documents_encrypted');
+    }
+
+    if (documentsData.expandedKeys != null) {
+      const incomingExpanded =
+        typeof documentsData.expandedKeys === 'string'
+          ? JSON.parse(documentsData.expandedKeys)
+          : documentsData.expandedKeys;
+      if (options.merge && localStorage.getItem('documents_expanded_keys')) {
+        try {
+          const existing = JSON.parse(localStorage.getItem('documents_expanded_keys'));
+          const merged = { ...existing, ...incomingExpanded };
+          localStorage.setItem('documents_expanded_keys', JSON.stringify(merged));
+        } catch {
+          localStorage.setItem('documents_expanded_keys', JSON.stringify(incomingExpanded));
+        }
+      } else {
+        localStorage.setItem('documents_expanded_keys', JSON.stringify(incomingExpanded));
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('documents-storage-updated'));
+    }
+  }
+
+  /**
+   * Fusiona árboles de nodos (conexiones, documentos, etc.)
    */
   mergeTreeData(existing, imported) {
     // Implementación simple: concatenar y eliminar duplicados por key
@@ -889,6 +974,39 @@ class ExportImportService {
   }
 
   /**
+   * Cuenta notas (documentos hoja) en el árbol importado
+   */
+  countImportedDocuments(documentsData) {
+    if (!documentsData || typeof documentsData !== 'object') {
+      return 0;
+    }
+
+    let count = 0;
+
+    if (documentsData.nodes && Array.isArray(documentsData.nodes)) {
+      const countNodes = (nodes) => {
+        if (!Array.isArray(nodes)) return;
+        nodes.forEach((node) => {
+          const isDoc =
+            node &&
+            (node.type === 'document' || node.data?.type === 'document');
+          if (isDoc) count++;
+          if (node.children && Array.isArray(node.children)) {
+            countNodes(node.children);
+          }
+        });
+      };
+      countNodes(documentsData.nodes);
+    }
+
+    if (count === 0 && documentsData.encrypted) {
+      return -1;
+    }
+
+    return count;
+  }
+
+  /**
    * Obtiene preview de los datos del archivo
    */
   async getExportPreview(exportData) {
@@ -910,6 +1028,7 @@ class ExportImportService {
       // Analizar datos
       const connectionsCount = this.countImportedConnections(dataToAnalyze.connections || {});
       const passwordsCount = this.countImportedPasswords(dataToAnalyze.passwords || {});
+      const documentsCount = this.countImportedDocuments(dataToAnalyze.documents || {});
       
       console.log('[ExportImportService] Preview stats:', {
         connectionsCount,
@@ -934,6 +1053,8 @@ class ExportImportService {
           conversations: Object.keys(dataToAnalyze.conversations?.conversations || {}).length,
           configItems: Object.keys(dataToAnalyze.config || {}).filter(k => dataToAnalyze.config[k] !== null).length,
           recordings: Object.keys(dataToAnalyze.recordings || {}).length,
+          documents: documentsCount >= 0 ? documentsCount : 0,
+          documentsEncryptedUnknown: documentsCount === -1,
           // Flags para indicar si hay datos encriptados
           hasEncryptedConnections: connectionsCount === -1,
           hasEncryptedPasswords: passwordsCount === -1

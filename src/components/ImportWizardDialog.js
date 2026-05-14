@@ -161,6 +161,7 @@ const ImportWizardDialog = ({
         passwords: true,
         conversations: true,
         config: true,
+        documents: true,
         recordings: false
     });
 
@@ -206,6 +207,7 @@ const ImportWizardDialog = ({
             passwords: true,
             conversations: true,
             config: true,
+            documents: true,
             recordings: false
         });
         setPreviewData(null);
@@ -1104,6 +1106,7 @@ const ImportWizardDialog = ({
                         { key: 'passwords', label: 'Contraseñas guardadas', icon: 'pi pi-key' },
                         { key: 'conversations', label: 'Conversaciones IA', icon: 'pi pi-comments' },
                         { key: 'config', label: 'Configuración', icon: 'pi pi-cog' },
+                        { key: 'documents', label: 'Notas / documentos', icon: 'pi pi-file-edit' },
                         { key: 'recordings', label: 'Grabaciones (metadata)', icon: 'pi pi-video' }
                     ].map(opt => (
                         <div key={opt.key} className="import-wizard-checkbox">

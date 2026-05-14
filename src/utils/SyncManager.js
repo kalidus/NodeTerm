@@ -164,6 +164,11 @@ class SyncManager {
       // Historial de conexiones
       connectionHistory: localStorage.getItem('nodeterm_connection_history'),
       favoriteConnections: localStorage.getItem('nodeterm_favorite_connections'),
+
+      // Notas / documentos (mismos nombres que localStorage para applyRemoteData)
+      documents_encrypted: localStorage.getItem('documents_encrypted'),
+      documentManagerNodes: localStorage.getItem('documentManagerNodes'),
+      documents_expanded_keys: localStorage.getItem('documents_expanded_keys'),
       
       // Metadatos de sincronización
       syncTimestamp: new Date().toISOString(),
@@ -617,6 +622,10 @@ class SyncManager {
       // Actualizar tiempo de sincronización
       this.lastSyncTime = new Date();
       this.saveSyncConfig();
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('documents-storage-updated'));
+      }
       
       return {
         success: true,

@@ -39,6 +39,7 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
     passwords: true,
     conversations: true,
     config: true,
+    documents: true,
     recordings: true
   });
 
@@ -209,7 +210,11 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
           
           // Detectar si hay datos encriptados dentro del archivo (passwords_encrypted, connections_encrypted)
           // incluso si el archivo completo no está encriptado
-          const hasEncryptedData = !!(content.data?.passwords?.encrypted || content.data?.connections?.encrypted);
+          const hasEncryptedData = !!(
+            content.data?.passwords?.encrypted ||
+            content.data?.connections?.encrypted ||
+            content.data?.documents?.encrypted
+          );
           setNeedsMasterKey(hasEncryptedData && !content.encrypted);
           
           console.log('[ImportExportDialog] Detección de datos encriptados:', {
@@ -228,11 +233,14 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
               
               // Asegurar que al menos una categoría esté seleccionada si hay datos
               if (preview.stats) {
-                const hasData = preview.stats.connections > 0 || 
-                               preview.stats.passwords > 0 || 
-                               preview.stats.conversations > 0 || 
-                               preview.stats.configItems > 0;
-                
+                const hasData =
+                  preview.stats.connections > 0 ||
+                  preview.stats.passwords > 0 ||
+                  preview.stats.conversations > 0 ||
+                  preview.stats.configItems > 0 ||
+                  preview.stats.documents > 0 ||
+                  preview.stats.documentsEncryptedUnknown;
+
                 if (hasData) {
                   // Si no hay ninguna categoría seleccionada, seleccionar las que tienen datos
                   const currentSelection = Object.values(categories).some(v => v === true);
@@ -242,6 +250,7 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
                       passwords: preview.stats.passwords > 0,
                       conversations: preview.stats.conversations > 0,
                       config: preview.stats.configItems > 0,
+                      documents: preview.stats.documents > 0 || preview.stats.documentsEncryptedUnknown,
                       recordings: (preview.stats.recordings || 0) > 0
                     });
                   }
@@ -396,6 +405,26 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
           throw new Error('Master Key incorrecta o datos corruptos en conexiones');
         }
       }
+
+      if (fileData.data.documents?.encrypted) {
+        try {
+          const encryptedDocs =
+            typeof fileData.data.documents.encrypted === 'string'
+              ? JSON.parse(fileData.data.documents.encrypted)
+              : fileData.data.documents.encrypted;
+
+          const decryptedDocs = await secureStorage.decryptData(encryptedDocs, masterKey);
+
+          decryptedData.documents = {
+            ...fileData.data.documents,
+            nodes: decryptedDocs,
+            encrypted: null
+          };
+        } catch (error) {
+          console.error('[ImportExportDialog] Error desencriptando documentos:', error);
+          throw new Error('Master Key incorrecta o datos corruptos en notas/documentos');
+        }
+      }
       
       // Generar preview con datos desencriptados
       const preview = await exportImportService.getExportPreview({
@@ -409,11 +438,14 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
       
       // Asegurar que al menos una categoría esté seleccionada si hay datos
       if (preview.stats) {
-        const hasData = preview.stats.connections > 0 || 
-                       preview.stats.passwords > 0 || 
-                       preview.stats.conversations > 0 || 
-                       preview.stats.configItems > 0;
-        
+        const hasData =
+          preview.stats.connections > 0 ||
+          preview.stats.passwords > 0 ||
+          preview.stats.conversations > 0 ||
+          preview.stats.configItems > 0 ||
+          preview.stats.documents > 0 ||
+          preview.stats.documentsEncryptedUnknown;
+
         if (hasData) {
           const currentSelection = Object.values(categories).some(v => v === true);
           if (!currentSelection) {
@@ -422,6 +454,7 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
               passwords: preview.stats.passwords > 0,
               conversations: preview.stats.conversations > 0,
               config: preview.stats.configItems > 0,
+              documents: preview.stats.documents > 0 || preview.stats.documentsEncryptedUnknown,
               recordings: (preview.stats.recordings || 0) > 0
             });
           }
@@ -515,7 +548,7 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
       showToast?.({
         severity: 'success',
         summary: t('import.success') || 'Importación exitosa',
-        detail: `${t('import.imported') || 'Importado'}: ${result.stats.connections} conexiones, ${result.stats.passwords} contraseñas, ${result.stats.conversations} conversaciones`,
+        detail: `${t('import.imported') || 'Importado'}: ${result.stats.connections} ${t('import.connections') || 'conexiones'}, ${result.stats.passwords} ${t('import.passwords') || 'contraseñas'}, ${result.stats.conversations} ${t('import.conversations') || 'conversaciones'}, ${result.stats.documents ?? 0} ${t('import.documents') || 'notas'}`,
         life: 5000
       });
 
@@ -578,6 +611,7 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
         passwords: true,
         conversations: true,
         config: true,
+        documents: true,
         recordings: true
       });
       setImportMode('merge');
@@ -656,10 +690,24 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
                   <i className="pi pi-cog" style={{ color: 'var(--primary-color)' }}></i>
                   <span><strong>{filePreview.stats.configItems}</strong> {t('import.configItems') || 'configs'}</span>
                 </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <i className="pi pi-file-edit" style={{ color: 'var(--primary-color)' }}></i>
+                  <span>
+                    <strong>
+                      {filePreview.stats.documentsEncryptedUnknown
+                        ? '∗'
+                        : filePreview.stats.documents}
+                    </strong>{' '}
+                    {t('import.documents') || 'notas'}
+                  </span>
+                </div>
               </div>
               
               {/* Advertencia sobre master key */}
-              {(filePreview.stats.passwords > 0 || filePreview.stats.connections > 0) && (
+              {(filePreview.stats.passwords > 0 ||
+                filePreview.stats.connections > 0 ||
+                filePreview.stats.documents > 0 ||
+                filePreview.stats.documentsEncryptedUnknown) && (
                 <Message
                   severity="info"
                   text={t('import.masterKeyNote') || '🔑 Nota: Los datos encriptados (contraseñas/conexiones) se importan tal cual. Necesitarás la misma Master Key del sistema origen para desencriptarlos. Si no tienes la Master Key, esos datos no serán accesibles.'}
@@ -933,6 +981,21 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
                   />
                   <label htmlFor="cat-config" style={{ margin: 0, cursor: 'pointer' }}>
                     <strong>{t('import.config') || 'Configuraciones'}</strong> ({filePreview?.stats?.configItems || 0})
+                  </label>
+                </div>
+                <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Checkbox
+                    inputId="cat-documents"
+                    checked={categories.documents}
+                    onChange={() => handleCategoryChange('documents')}
+                    disabled={importing}
+                  />
+                  <label htmlFor="cat-documents" style={{ margin: 0, cursor: 'pointer' }}>
+                    <strong>{t('export.documents') || 'Notas / documentos'}</strong> (
+                    {filePreview?.stats?.documentsEncryptedUnknown
+                      ? '∗'
+                      : filePreview?.stats?.documents ?? 0}
+                    )
                   </label>
                 </div>
                 {filePreview?.stats?.recordings > 0 && (

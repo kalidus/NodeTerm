@@ -17,6 +17,7 @@ import {
   removeNodeFromTree,
   updateNodeInTree
 } from '../utils/documentStore';
+import localStorageSyncService from '../services/LocalStorageSyncService';
 import '../styles/components/documents.css';
 
 /** PrimeReact Tree ya muestra icono vía node.icon; el nodeTemplate añade el propio — quitamos duplicados (también en datos guardados). */
@@ -137,8 +138,25 @@ const DocumentsSidebar = ({
   }, []);
 
   useEffect(() => {
+    const reloadFromStorage = async () => {
+      setIsLoading(true);
+      try {
+        const savedExp = localStorage.getItem('documents_expanded_keys');
+        if (savedExp) setExpandedKeys(JSON.parse(savedExp));
+      } catch {}
+      const tree = await loadDocumentTree(secureStorage, masterKey);
+      setDocumentNodes(tree);
+      setIsLoading(false);
+    };
+    window.addEventListener('documents-storage-updated', reloadFromStorage);
+    return () => window.removeEventListener('documents-storage-updated', reloadFromStorage);
+  }, [masterKey, secureStorage]);
+
+  useEffect(() => {
     try {
-      localStorage.setItem('documents_expanded_keys', JSON.stringify(expandedKeys));
+      const s = JSON.stringify(expandedKeys);
+      localStorage.setItem('documents_expanded_keys', s);
+      localStorageSyncService.debouncedSync({ documents_expanded_keys: s });
     } catch {}
   }, [expandedKeys]);
 

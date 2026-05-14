@@ -123,7 +123,12 @@ const SYNC_KEYS = [
     'aichat_model_config',
 
     'nodeterm_remember_password',
-    'ai_clients_enabled'
+    'ai_clients_enabled',
+
+    // Notas / documentos
+    'documents_encrypted',
+    'documentManagerNodes',
+    'documents_expanded_keys'
 ];
 
 class LocalStorageSyncService {
@@ -217,6 +222,11 @@ class LocalStorageSyncService {
             window.dispatchEvent(new CustomEvent('settings-updated', {
                 detail: { source: 'sync', count: importedCount }
             }));
+        }
+
+        const docKeys = ['documents_encrypted', 'documentManagerNodes', 'documents_expanded_keys'];
+        if (docKeys.some((k) => data[k] !== undefined && data[k] !== null)) {
+            window.dispatchEvent(new CustomEvent('documents-storage-updated'));
         }
     }
 

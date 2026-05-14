@@ -110,7 +110,12 @@ const SYNC_KEYS = [
     'actionBarIconTheme',
     
     // AI Clients configuration
-    'ai_clients_enabled'
+    'ai_clients_enabled',
+
+    // Notas / documentos
+    'documents_encrypted',
+    'documentManagerNodes',
+    'documents_expanded_keys'
 ];
 
 /**

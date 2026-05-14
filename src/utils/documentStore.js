@@ -1,3 +1,5 @@
+import localStorageSyncService from '../services/LocalStorageSyncService';
+
 const STORAGE_KEY_TREE = 'documents_encrypted';
 const STORAGE_KEY_TREE_PLAIN = 'documentManagerNodes';
 
@@ -37,10 +39,14 @@ export async function saveDocumentTree(tree, secureStorage, masterKey) {
   try {
     if (masterKey && secureStorage) {
       const encrypted = await secureStorage.encryptData(tree, masterKey);
-      localStorage.setItem(STORAGE_KEY_TREE, JSON.stringify(encrypted));
+      const encStr = JSON.stringify(encrypted);
+      localStorage.setItem(STORAGE_KEY_TREE, encStr);
       localStorage.removeItem(STORAGE_KEY_TREE_PLAIN);
+      localStorageSyncService.debouncedSync({ documents_encrypted: encStr });
     } else {
-      localStorage.setItem(STORAGE_KEY_TREE_PLAIN, JSON.stringify(tree));
+      const plainStr = JSON.stringify(tree);
+      localStorage.setItem(STORAGE_KEY_TREE_PLAIN, plainStr);
+      localStorageSyncService.debouncedSync({ documentManagerNodes: plainStr });
     }
   } catch (error) {
     console.error('Error saving documents:', error);
