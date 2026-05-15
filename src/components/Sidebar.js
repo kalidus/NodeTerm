@@ -178,6 +178,78 @@ const Sidebar = React.memo(({
   // Estado para el nodo seleccionado actualmente (para el panel de detalles)
   const [selectedNodeForDetails, setSelectedNodeForDetails] = useState(null);
 
+  // Estado para la barra de herramientas flotante arrastrable
+  const [fabPos, setFabPos] = useState({ x: 0, y: 0 });
+  const [isDraggingFab, setIsDraggingFab] = useState(false);
+  const dragStartPos = useRef({ x: 0, y: 0 });
+  const fabRef = useRef(null);
+
+  const handleFabMouseDown = (e) => {
+    if (e.button !== 0) return;
+    if (e.target.closest('button')) return; // No arrastrar si se hace clic en un botón
+    setIsDraggingFab(true);
+    dragStartPos.current = {
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      fabX: fabPos.x,
+      fabY: fabPos.y
+    };
+    e.preventDefault();
+  };
+
+  useEffect(() => {
+    if (!isDraggingFab) return;
+    const handleMouseMove = (e) => {
+      if (!sidebarRef.current || !fabRef.current) return;
+
+      const sidebarRect = sidebarRef.current.getBoundingClientRect();
+      const fabRect = fabRef.current.getBoundingClientRect();
+      
+      const dx = e.clientX - dragStartPos.current.mouseX;
+      const dy = e.clientY - dragStartPos.current.mouseY;
+
+      let nextX = dragStartPos.current.fabX + dx;
+      let nextY = dragStartPos.current.fabY + dy;
+
+      const margin = 12;
+      const sidebarW = sidebarRect.width;
+      const sidebarH = sidebarRect.height;
+      const fabW = fabRect.width;
+      const fabH = fabRect.height;
+
+      // Clamping Horizontal (centrado en el 50%)
+      const minX = -(sidebarW / 2) + (fabW / 2) + margin;
+      const maxX = (sidebarW / 2) - (fabW / 2) - margin;
+      nextX = Math.max(minX, Math.min(maxX, nextX));
+
+      // Clamping Vertical (respecto al bottom: 64px inicial)
+      // La posición inicial del top es: sidebarRect.bottom - 64 - fabH
+      const initialBottomOffset = 64;
+      const initialTopRelToSidebarTop = sidebarH - initialBottomOffset - fabH;
+      
+      // Limite superior: nextTop >= margin
+      // nextTop = initialTopRelToSidebarTop + nextY
+      const minY = margin - initialTopRelToSidebarTop;
+      
+      // Limite inferior: nextBottom <= sidebarH - margin
+      // nextBottom = (sidebarH - initialBottomOffset) + nextY
+      const maxY = (sidebarH - margin) - (sidebarH - initialBottomOffset);
+
+      nextY = Math.max(minY, Math.min(maxY, nextY));
+
+      setFabPos({ x: nextX, y: nextY });
+    };
+    const handleMouseUp = () => {
+      setIsDraggingFab(false);
+    };
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDraggingFab]);
+
   // Función para actualizar un nodo en el árbol
   const updateNodeInTree = useCallback((updatedNode) => {
     const findAndUpdateNode = (nodeList, targetKey) => {
@@ -2824,24 +2896,34 @@ const Sidebar = React.memo(({
 
   // ── Floating Action Bottom Bar (Layout 3) ──────────────────────────────
   const floatingActionBottomBar = (activeTab !== null) && !sidebarCollapsed && (
-    <div className="floating-action-bar" style={{
-      position: 'absolute',
-      bottom: '64px', /* Above the footer */
-      left: '50%',
-      transform: 'translateX(-50%)',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '6px',
-      background: 'rgba(20,20,20,0.7)',
-      backdropFilter: 'blur(16px)',
-      WebkitBackdropFilter: 'blur(16px)',
-      padding: '8px 16px',
-      borderRadius: '32px',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15)',
-      border: '1px solid rgba(255,255,255,0.1)',
-      zIndex: 100,
-      transition: 'all 0.3s ease'
+    <div className="floating-action-bar" 
+      ref={fabRef}
+      onMouseDown={handleFabMouseDown}
+      style={{
+        position: 'absolute',
+        bottom: '64px', /* Above the footer */
+        left: '50%',
+        transform: `translate(calc(-50% + ${fabPos.x}px), ${fabPos.y}px)`,
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        background: 'rgba(20,20,20,0.7)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        padding: '8px 16px 8px 10px',
+        borderRadius: '32px',
+        boxShadow: isDraggingFab ? '0 12px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.2)' : '0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15)',
+        border: '1px solid rgba(255,255,255,0.1)',
+        zIndex: 100,
+        transition: isDraggingFab ? 'none' : 'all 0.3s ease',
+        cursor: isDraggingFab ? 'grabbing' : 'grab',
+        userSelect: 'none'
     }}>
+      {/* Drag handle */}
+      <div style={{ display: 'flex', alignItems: 'center', color: 'rgba(255,255,255,0.3)', marginRight: '2px' }}>
+        <i className="pi pi-bars" style={{ fontSize: '0.85rem' }} />
+      </div>
+      <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.1)' }} />
       {/* ── CONEXIONES toolbar ── */}
       {activeTab === 'connections' && (<>
         <button
