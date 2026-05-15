@@ -112,7 +112,8 @@ const DocumentsSidebar = ({
   onShowImportDialog,
   onShowExportDialog,
   onShowImportExportDialog,
-  onShowImportWizard
+  onShowImportWizard,
+  hideHeader = false
 }) => {
   const { t: tCommon } = useTranslation('common');
   const [documentNodes, setDocumentNodes] = useState([]);
@@ -429,9 +430,25 @@ const DocumentsSidebar = ({
     setShowNewFolderDialog(true);
   };
 
+  // Listen to events from the unified sidebar toolbar when hideHeader=true
+  useEffect(() => {
+    if (!hideHeader) return;
+    const onNewDoc = () => openNewDocumentDialog();
+    const onNewFolder = () => openNewFolderDialog();
+    const onToggleExpand = () => toggleExpandAllDocuments();
+    window.addEventListener('documents-sidebar:new-doc', onNewDoc);
+    window.addEventListener('documents-sidebar:new-folder', onNewFolder);
+    window.addEventListener('documents-sidebar:toggle-expand', onToggleExpand);
+    return () => {
+      window.removeEventListener('documents-sidebar:new-doc', onNewDoc);
+      window.removeEventListener('documents-sidebar:new-folder', onNewFolder);
+      window.removeEventListener('documents-sidebar:toggle-expand', onToggleExpand);
+    };
+  }, [hideHeader, toggleExpandAllDocuments]);
+
   return (
     <div className="documents-sidebar-root">
-      {FUTURISTIC_UI_KEYS.includes(uiTheme) && (
+      {!hideHeader && FUTURISTIC_UI_KEYS.includes(uiTheme) && (
         <div style={{
           width: '100%',
           height: '0.5px',
@@ -445,100 +462,57 @@ const DocumentsSidebar = ({
           flexShrink: 0
         }} />
       )}
-      <div className="sidebar-header-glass-stack" style={{
-        display: 'flex',
-        alignItems: 'center',
-        padding: '6px 8px',
-        background: 'var(--ui-sidebar-bg)',
-        backdropFilter: 'none',
-        borderRadius: 0,
-        margin: 0,
-        border: 'none',
-        boxShadow: 'none',
-        position: 'relative'
-      }}>
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          borderRadius: 0,
-          background: 'transparent',
-          pointerEvents: 'none'
-        }} />
-
-        <Button
-          className="p-button-rounded p-button-text sidebar-action-button glass-button"
-          onClick={() => setSidebarCollapsed && setSidebarCollapsed(v => !v)}
-          tooltip={sidebarCollapsed ? tCommon('tooltips.expandSidebar') : tCommon('tooltips.collapseSidebar')}
-          tooltipOptions={{ position: 'bottom' }}
-          style={{
-            marginRight: 4,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '38px',
-            height: '38px',
-            minWidth: '38px',
-            flexShrink: 0,
-            padding: 0,
-            transition: 'all 0.3s ease'
-          }}
-        >
-          <span style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '24px',
-            height: '24px',
-            color: 'var(--ui-sidebar-text)',
-            opacity: 0.9
-          }}>
-            {sidebarCollapsed
-              ? sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.expandRight
-              : sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.collapseLeft}
-          </span>
-        </Button>
-
-        <div style={{
-          width: '1px',
-          height: '24px',
-          background: 'linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.15), transparent)',
-          margin: '0 8px',
-          boxShadow: '0 0 5px rgba(255, 255, 255, 0.05)',
-          flexShrink: 0
-        }} />
-
-        <div className="sidebar-action-glass-group" style={{
+      {!hideHeader && (
+        <div className="sidebar-header-glass-stack" style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 6,
-          marginLeft: '0',
-          position: 'relative',
-          zIndex: 2,
-          flexShrink: 1,
-          minWidth: 0,
-          overflow: 'hidden'
+          padding: '6px 8px',
+          background: 'var(--ui-sidebar-bg)',
+          backdropFilter: 'none',
+          borderRadius: 0,
+          margin: 0,
+          border: 'none',
+          boxShadow: 'none',
+          position: 'relative'
         }}>
-          <Button
-            className="p-button-rounded p-button-text sidebar-action-button glass-button"
-            onClick={openNewDocumentDialog}
-            tooltip="Nueva nota"
-            tooltipOptions={{ position: 'bottom' }}
-            style={DOC_HEADER_GLASS_BTN}
-          >
-            <span style={{ ...DOC_HEADER_ICON_WRAP, color: 'var(--ui-sidebar-text)' }}>
-              <i className="pi pi-file-plus" style={{ fontSize: '1rem' }} />
-            </span>
-          </Button>
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            borderRadius: 0,
+            background: 'transparent',
+            pointerEvents: 'none'
+          }} />
 
           <Button
             className="p-button-rounded p-button-text sidebar-action-button glass-button"
-            onClick={openNewFolderDialog}
-            tooltip={tCommon('tooltips.newFolder')}
+            onClick={() => setSidebarCollapsed && setSidebarCollapsed(v => !v)}
+            tooltip={sidebarCollapsed ? tCommon('tooltips.expandSidebar') : tCommon('tooltips.collapseSidebar')}
             tooltipOptions={{ position: 'bottom' }}
-            style={DOC_HEADER_GLASS_BTN}
+            style={{
+              marginRight: 4,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '38px',
+              height: '38px',
+              minWidth: '38px',
+              flexShrink: 0,
+              padding: 0,
+              transition: 'all 0.3s ease'
+            }}
           >
-            <span style={{ ...DOC_HEADER_ICON_WRAP, color: 'var(--ui-sidebar-text)' }}>
-              {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}
+            <span style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '24px',
+              height: '24px',
+              color: 'var(--ui-sidebar-text)',
+              opacity: 0.9
+            }}>
+              {sidebarCollapsed
+                ? sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.expandRight
+                : sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.collapseLeft}
             </span>
           </Button>
 
@@ -547,52 +521,97 @@ const DocumentsSidebar = ({
             height: '24px',
             background: 'linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.15), transparent)',
             margin: '0 8px',
-            boxShadow: '0 0 5px rgba(255, 255, 255, 0.05)'
+            boxShadow: '0 0 5px rgba(255, 255, 255, 0.05)',
+            flexShrink: 0
           }} />
 
-          <Button
-            className="p-button-rounded p-button-text sidebar-action-button glass-button key-button"
-            onClick={() => onOpenPasswords?.()}
-            tooltip={tCommon('tooltips.passwordManager')}
-            tooltipOptions={{ position: 'bottom' }}
-            style={DOC_HEADER_GLASS_BTN}
-          >
-            <span style={{ ...DOC_HEADER_ICON_WRAP, color: '#ffc107' }}>
-              {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.passwordManager}
-            </span>
-          </Button>
-
-          {onToggleFavoritesView && (
+          <div className="sidebar-action-glass-group" style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            marginLeft: '0',
+            position: 'relative',
+            zIndex: 2,
+            flexShrink: 1,
+            minWidth: 0,
+            overflow: 'hidden'
+          }}>
             <Button
-              className={`p-button-rounded p-button-text sidebar-action-button glass-button ${showFavoritesView ? 'active' : ''}`}
-              onClick={onToggleFavoritesView}
-              tooltip={showFavoritesView ? tCommon('tooltips.showAllConnections') : tCommon('tooltips.showFavorites')}
+              className="p-button-rounded p-button-text sidebar-action-button glass-button"
+              onClick={openNewDocumentDialog}
+              tooltip="Nueva nota"
               tooltipOptions={{ position: 'bottom' }}
-              style={{
-                ...DOC_HEADER_GLASS_BTN,
-                background: showFavoritesView ? 'rgba(255, 193, 7, 0.12)' : DOC_HEADER_GLASS_BTN.background,
-                border: showFavoritesView ? '1px solid rgba(255, 193, 7, 0.45)' : DOC_HEADER_GLASS_BTN.border
-              }}
+              style={DOC_HEADER_GLASS_BTN}
             >
-              <span style={{ ...DOC_HEADER_ICON_WRAP, color: '#ffc107' }}>
-                <i className={showFavoritesView ? 'pi pi-star-fill' : 'pi pi-star'} style={{ fontSize: '1rem' }} />
+              <span style={{ ...DOC_HEADER_ICON_WRAP, color: 'var(--ui-sidebar-text)' }}>
+                <i className="pi pi-file-plus" style={{ fontSize: '1rem' }} />
               </span>
             </Button>
-          )}
 
-          <Button
-            className="p-button-rounded p-button-text sidebar-action-button glass-button"
-            onClick={() => onBackToConnections?.()}
-            tooltip={tCommon('tooltips.goToConnections')}
-            tooltipOptions={{ position: 'bottom' }}
-            style={DOC_HEADER_GLASS_BTN}
-          >
-            <span style={{ ...DOC_HEADER_ICON_WRAP, color: '#10b981' }}>
-              <ConnectionsNavIcon />
-            </span>
-          </Button>
+            <Button
+              className="p-button-rounded p-button-text sidebar-action-button glass-button"
+              onClick={openNewFolderDialog}
+              tooltip={tCommon('tooltips.newFolder')}
+              tooltipOptions={{ position: 'bottom' }}
+              style={DOC_HEADER_GLASS_BTN}
+            >
+              <span style={{ ...DOC_HEADER_ICON_WRAP, color: 'var(--ui-sidebar-text)' }}>
+                {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}
+              </span>
+            </Button>
+
+            <div style={{
+              width: '1px',
+              height: '24px',
+              background: 'linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.15), transparent)',
+              margin: '0 8px',
+              boxShadow: '0 0 5px rgba(255, 255, 255, 0.05)'
+            }} />
+
+            <Button
+              className="p-button-rounded p-button-text sidebar-action-button glass-button key-button"
+              onClick={() => onOpenPasswords?.()}
+              tooltip={tCommon('tooltips.passwordManager')}
+              tooltipOptions={{ position: 'bottom' }}
+              style={DOC_HEADER_GLASS_BTN}
+            >
+              <span style={{ ...DOC_HEADER_ICON_WRAP, color: '#ffc107' }}>
+                {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.passwordManager}
+              </span>
+            </Button>
+
+            {onToggleFavoritesView && (
+              <Button
+                className={`p-button-rounded p-button-text sidebar-action-button glass-button ${showFavoritesView ? 'active' : ''}`}
+                onClick={onToggleFavoritesView}
+                tooltip={showFavoritesView ? tCommon('tooltips.showAllConnections') : tCommon('tooltips.showFavorites')}
+                tooltipOptions={{ position: 'bottom' }}
+                style={{
+                  ...DOC_HEADER_GLASS_BTN,
+                  background: showFavoritesView ? 'rgba(255, 193, 7, 0.12)' : DOC_HEADER_GLASS_BTN.background,
+                  border: showFavoritesView ? '1px solid rgba(255, 193, 7, 0.45)' : DOC_HEADER_GLASS_BTN.border
+                }}
+              >
+                <span style={{ ...DOC_HEADER_ICON_WRAP, color: '#ffc107' }}>
+                  <i className={showFavoritesView ? 'pi pi-star-fill' : 'pi pi-star'} style={{ fontSize: '1rem' }} />
+                </span>
+              </Button>
+            )}
+
+            <Button
+              className="p-button-rounded p-button-text sidebar-action-button glass-button"
+              onClick={() => onBackToConnections?.()}
+              tooltip={tCommon('tooltips.goToConnections')}
+              tooltipOptions={{ position: 'bottom' }}
+              style={DOC_HEADER_GLASS_BTN}
+            >
+              <span style={{ ...DOC_HEADER_ICON_WRAP, color: '#10b981' }}>
+                <ConnectionsNavIcon />
+              </span>
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Tree */}
       <div className="documents-sidebar-content" style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>

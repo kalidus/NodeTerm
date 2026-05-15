@@ -42,7 +42,8 @@ const PasswordManagerSidebar = ({
   treeTheme = 'default', // Tema del árbol
   sessionActionIconTheme = 'modern',
   showFavoritesView = false,
-  onToggleFavoritesView
+  onToggleFavoritesView,
+  hideHeader = false
 }) => {
   // Hook de internacionalización
   const { t } = useTranslation('dialogs');
@@ -1580,9 +1581,18 @@ const PasswordManagerSidebar = ({
     }
   };
 
+  // Listen to toolbar events from unified header when hideHeader=true
+  useEffect(() => {
+    if (!hideHeader) return;
+    const onNewFolder = () => handleNewFolder();
+    window.addEventListener('passwords-sidebar:new-folder', onNewFolder);
+    return () => window.removeEventListener('passwords-sidebar:new-folder', onNewFolder);
+  }, [hideHeader]);
+
   return (
     <>
-      <div className="sidebar-header-glass-stack" style={{
+      {!hideHeader && (
+        <div className="sidebar-header-glass-stack" style={{
         display: 'flex',
         alignItems: 'center',
         padding: '6px 8px',
@@ -1855,8 +1865,9 @@ const PasswordManagerSidebar = ({
             </Button>
           )}
         </div>
-      </div>
-      
+        </div>
+      )}
+
       {/* Árbol de passwords - igual que la sidebar de conexiones */}
       <div 
         className="tree-container"

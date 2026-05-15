@@ -1024,3 +1024,74 @@
   fill: var(--ui-sidebar-text) !important;
   color: var(--ui-sidebar-text) !important;
 }
+
+/* ═══════════════════════════════════════════════════════
+   UNIFIED TABBED SIDEBAR HEADER
+   ═══════════════════════════════════════════════════════ */
+.sidebar-unified-header {
+  flex-shrink: 0;
+  user-select: none;
+}
+
+/* Tab row */
+.sidebar-unified-header > div:first-child {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Individual tab buttons */
+.sidebar-unified-header button {
+  position: relative;
+  font-family: inherit;
+  min-width: 0;
+}
+
+.sidebar-unified-header button:hover {
+  color: rgba(255, 255, 255, 0.75) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+.sidebar-unified-header button:focus {
+  outline: none;
+}
+
+/* Toolbar row — flat, no pill glass background */
+.sidebar-unified-header .sidebar-action-glass-group {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 4px 8px 5px !important;
+}
+
+/* Toolbar buttons in unified header keep the individual glass pill style */
+.sidebar-unified-header .sidebar-action-glass-group .p-button.sidebar-action-button.glass-button {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+  border-radius: 8px !important;
+  transition: all 0.18s ease !important;
+}
+
+.sidebar-unified-header .sidebar-action-glass-group .p-button.sidebar-action-button.glass-button:hover {
+  background: rgba(255, 255, 255, 0.10) !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  transform: translateY(-1px) !important;
+  opacity: 1 !important;
+}
+
+/* Active state for toolbar buttons */
+.sidebar-unified-header .sidebar-action-glass-group .p-button.sidebar-action-button.glass-button.active {
+  background: rgba(139, 195, 74, 0.12) !important;
+  border-color: rgba(139, 195, 74, 0.35) !important;
+}
+
+/* Hide the tabs and toolbar when the sidebar is collapsed */
+.sidebar-container[style*="width: 44px"] .sidebar-unified-header > div:last-child {
+  display: none !important;
+}
+
+/* Ensure the collapse button spans the full width when collapsed */
+.sidebar-container[style*="width: 44px"] .sidebar-unified-header > div:first-child {
+  border-right: none !important;
+  width: 100% !important;
+}

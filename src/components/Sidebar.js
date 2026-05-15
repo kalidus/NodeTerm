@@ -2710,382 +2710,287 @@ const Sidebar = React.memo(({
     }
   };
 
+
+  // ── Determine active tab from viewMode + showFavoritesView ──────────────
+  // 'connections' | 'favorites' | 'documents' | 'passwords'
+  const activeTab = (() => {
+    if (viewMode === 'filesystem' || viewMode === 'localExplorer') return null; // estos modos ocultan las pestañas
+    if (viewMode === 'documents') return 'documents';
+    if (viewMode === 'passwords') return 'passwords';
+    if (showFavoritesView) return 'favorites';
+    return 'connections';
+  })();
+
+  // Helper button style for toolbar
+  const TB_BTN = {
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    width: '32px', height: '32px', padding: 0,
+    background: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+    borderRadius: '8px', transition: 'all 0.2s ease'
+  };
+  const TB_ICON = {
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    width: '20px', height: '20px'
+  };
+  const TB_SEP = (
+    <div style={{
+      width: '1px', height: '24px',
+      background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.15), transparent)',
+      margin: '0 6px', boxShadow: '0 0 5px rgba(255,255,255,0.05)'
+    }} />
+  );
+
+  // ── Unified header (tabs row + toolbar row) ──────────────────────────────
+  const unifiedHeader = (activeTab !== null) && (
+    <div className="sidebar-unified-header" style={{
+      display: 'flex',
+      alignItems: 'stretch',
+      background: 'var(--ui-sidebar-bg)',
+      borderBottom: '1px solid rgba(255,255,255,0.07)',
+      flexShrink: 0,
+      minHeight: '68px'
+    }}>
+      {/* LEFT COLUMN: Collapse button spanning full height */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '0 4px',
+        borderRight: '1px solid rgba(255,255,255,0.05)'
+      }}>
+        <Button
+          className="p-button-rounded p-button-text sidebar-action-button glass-button"
+          onClick={toggleSidebar}
+          tooltip={sidebarCollapsed ? t('tooltips.expandSidebar') : t('tooltips.collapseSidebar')}
+          tooltipOptions={{ position: 'right' }}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: '36px', height: '100%', minHeight: '48px',
+            padding: 0, flexShrink: 0,
+            transition: 'all 0.3s ease', border: 'none', background: 'transparent'
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '24px', height: '24px', color: 'var(--ui-sidebar-text)', opacity: 0.9 }}>
+            {sidebarCollapsed
+              ? sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.expandRight
+              : sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.collapseLeft}
+          </span>
+        </Button>
+      </div>
+
+      {/* RIGHT COLUMN: Tabs and Toolbar */}
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+        {/* ROW 1: Tabs */}
+        <div style={{
+          display: 'flex', alignItems: 'center',
+          padding: '4px 6px 0 6px', gap: 2,
+          borderBottom: '1px solid rgba(255,255,255,0.06)'
+        }}>
+          {[
+            { id: 'connections', label: 'Conexiones', icon: 'pi pi-server', color: '#4fc3f7' },
+            { id: 'passwords',   label: 'Claves',     icon: 'pi pi-shield', color: '#ef9a9a' },
+            { id: 'documents',   label: 'Notas',      icon: 'pi pi-file', color: '#64b5f6' },
+            { id: 'favorites',   label: 'Favoritos',  icon: 'pi pi-star-fill', color: '#ffc107' }
+          ].map(tab => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  if (tab.id === 'connections') { setViewMode('connections'); setShowFavoritesView(false); setSidebarCollapsed(false); }
+                  else if (tab.id === 'favorites') { setViewMode('connections'); setShowFavoritesView(true); setSidebarCollapsed(false); }
+                  else if (tab.id === 'documents') { setViewMode('documents'); setShowFavoritesView(false); setSidebarCollapsed(false); }
+                  else if (tab.id === 'passwords') { setViewMode('passwords'); setShowFavoritesView(false); setSidebarCollapsed(false); }
+                }}
+                title={tab.label}
+                style={{
+                  flex: 1, border: 'none', outline: 'none', cursor: 'pointer',
+                  background: 'transparent', padding: '6px 2px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                  color: isActive ? tab.color : 'rgba(255,255,255,0.45)',
+                  borderBottom: isActive ? `2px solid ${tab.color}` : '2px solid transparent',
+                  borderRadius: 0, transition: 'all 0.18s ease'
+                }}
+              >
+                <i className={tab.icon} style={{ fontSize: '1.05rem', filter: isActive ? 'drop-shadow(0 0 4px rgba(255,255,255,0.2))' : 'none' }} />
+              </button>
+            );
+          })}
+        </div>
+
+      {/* ROW 2: contextual action toolbar */}
+      <div className="sidebar-action-glass-group" style={{
+        display: 'flex', alignItems: 'center',
+        padding: '4px 8px 5px',
+        gap: 4, minWidth: 0, overflow: 'hidden'
+      }}>
+        {/* ── CONEXIONES toolbar ── */}
+        {activeTab === 'connections' && (<>
+          <Button className="p-button-rounded p-button-text sidebar-action-button glass-button"
+            onClick={() => {
+              if (sidebarCallbacksRef?.current?.showProtocolSelection) {
+                sidebarCallbacksRef.current.showProtocolSelection();
+              } else {
+                window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'));
+              }
+            }}
+            tooltip={t('tooltips.newConnection')} tooltipOptions={{ position: 'bottom' }}
+            style={TB_BTN}
+          >
+            <span style={{ ...TB_ICON, color: 'var(--ui-sidebar-text)' }}>
+              {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newConnection}
+            </span>
+          </Button>
+          <Button className="p-button-rounded p-button-text sidebar-action-button glass-button"
+            onClick={() => { setParentNodeKey(null); setEditingNode(null); setShowFolderDialog(true); }}
+            tooltip={t('tooltips.createFolder')} tooltipOptions={{ position: 'bottom' }}
+            style={TB_BTN}
+          >
+            <span style={{ ...TB_ICON, color: 'var(--ui-sidebar-text)' }}>
+              {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}
+            </span>
+          </Button>
+          <Button className="p-button-rounded p-button-text sidebar-action-button glass-button"
+            onClick={() => setShowCreateGroupDialog(true)}
+            tooltip={t('tooltips.createGroup')} tooltipOptions={{ position: 'bottom' }}
+            style={TB_BTN}
+          >
+            <span style={{ ...TB_ICON, color: 'var(--ui-sidebar-text)' }}>
+              {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newGroup}
+            </span>
+          </Button>
+          {TB_SEP}
+          <Button className="p-button-rounded p-button-text sidebar-action-button glass-button"
+            onClick={() => window.dispatchEvent(new CustomEvent('open-network-tools-dialog'))}
+            tooltip="Herramientas" tooltipOptions={{ position: 'bottom' }}
+            style={TB_BTN}
+          >
+            <span style={{ ...TB_ICON, color: '#06b6d4' }}>
+              <i className="pi pi-wrench" style={{ fontSize: '0.9rem' }} />
+            </span>
+          </Button>
+          {hasActiveSshSession && onOpenFileExplorer && (
+            <Button className="p-button-rounded p-button-text sidebar-action-button glass-button"
+              onClick={() => onOpenFileExplorer()}
+              tooltip="Explorador SSH" tooltipOptions={{ position: 'bottom' }}
+              style={TB_BTN}
+            >
+              <span style={{ ...TB_ICON }}>
+                <i className="pi pi-folder-open" style={{ color: '#eab308', fontSize: '0.95rem' }} />
+              </span>
+            </Button>
+          )}
+          {(filesystemAvailable && isAIChatActive) && (
+            <Button icon="pi pi-folder-open"
+              className={`p-button-rounded p-button-text sidebar-action-button glass-button ${viewMode === 'filesystem' ? 'active' : ''}`}
+              onClick={() => setViewMode('filesystem')}
+              tooltip={t('tooltips.mcpExplorer')} tooltipOptions={{ position: 'bottom' }}
+              style={{ ...TB_BTN, borderColor: viewMode === 'filesystem' ? 'var(--ui-primary-color,#8bc34a)' : undefined, color: viewMode === 'filesystem' ? 'var(--ui-primary-color,#8bc34a)' : undefined }}
+            />
+          )}
+          {isAIChatActive && onToggleLocalTerminalForAIChat && (
+            <Button icon="pi pi-desktop"
+              className="p-button-rounded p-button-text sidebar-action-button glass-button"
+              onClick={() => onToggleLocalTerminalForAIChat()}
+              tooltip={t('tooltips.localTerminal')} tooltipOptions={{ position: 'bottom' }}
+              style={{ ...TB_BTN, color: '#90caf9' }}
+            />
+          )}
+        </>)}
+
+        {/* ── FAVORITOS toolbar ── */}
+        {activeTab === 'favorites' && (<>
+          <Button className="p-button-rounded p-button-text sidebar-action-button glass-button"
+            onClick={() => { setParentNodeKey(FAVORITES_ROOT_KEY); setEditingNode(null); setShowFolderDialog(true); }}
+            tooltip="Nueva carpeta de favoritos" tooltipOptions={{ position: 'bottom' }}
+            style={TB_BTN}
+          >
+            <span style={{ ...TB_ICON, color: '#ffc107' }}>
+              {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}
+            </span>
+          </Button>
+          {TB_SEP}
+          <Button className="p-button-rounded p-button-text sidebar-action-button glass-button"
+            onClick={toggleExpandAll}
+            tooltip={allExpanded ? 'Colapsar todo' : 'Expandir todo'} tooltipOptions={{ position: 'bottom' }}
+            style={TB_BTN}
+          >
+            <span style={{ ...TB_ICON, color: 'var(--ui-sidebar-text)' }}>
+              <i className={allExpanded ? 'pi pi-minus-circle' : 'pi pi-plus-circle'} style={{ fontSize: '0.9rem' }} />
+            </span>
+          </Button>
+        </>)}
+
+        {/* ── NOTAS toolbar ── */}
+        {activeTab === 'documents' && (<>
+          <Button className="p-button-rounded p-button-text sidebar-action-button glass-button"
+            onClick={() => window.dispatchEvent(new CustomEvent('documents-sidebar:new-doc'))}
+            tooltip="Nueva nota" tooltipOptions={{ position: 'bottom' }}
+            style={TB_BTN}
+          >
+            <span style={{ ...TB_ICON, color: '#64b5f6' }}>
+              <i className="pi pi-file-plus" style={{ fontSize: '0.9rem' }} />
+            </span>
+          </Button>
+          <Button className="p-button-rounded p-button-text sidebar-action-button glass-button"
+            onClick={() => window.dispatchEvent(new CustomEvent('documents-sidebar:new-folder'))}
+            tooltip="Nueva carpeta" tooltipOptions={{ position: 'bottom' }}
+            style={TB_BTN}
+          >
+            <span style={{ ...TB_ICON, color: 'var(--ui-sidebar-text)' }}>
+              {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}
+            </span>
+          </Button>
+          {TB_SEP}
+          <Button className="p-button-rounded p-button-text sidebar-action-button glass-button"
+            onClick={() => window.dispatchEvent(new CustomEvent('documents-sidebar:toggle-expand'))}
+            tooltip="Expandir/Colapsar todo" tooltipOptions={{ position: 'bottom' }}
+            style={TB_BTN}
+          >
+            <span style={{ ...TB_ICON, color: 'var(--ui-sidebar-text)' }}>
+              <i className="pi pi-list" style={{ fontSize: '0.9rem' }} />
+            </span>
+          </Button>
+        </>)}
+
+        {/* ── SECRETOS toolbar ── */}
+        {activeTab === 'passwords' && (<>
+          <Button className="p-button-rounded p-button-text sidebar-action-button glass-button"
+            onClick={() => window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog', { detail: { initialCategory: 'secrets' } }))}
+            tooltip="Nuevo secreto" tooltipOptions={{ position: 'bottom' }}
+            style={TB_BTN}
+          >
+            <span style={{ ...TB_ICON, color: '#ef9a9a' }}>
+              {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newConnection}
+            </span>
+          </Button>
+          <Button className="p-button-rounded p-button-text sidebar-action-button glass-button"
+            onClick={() => window.dispatchEvent(new CustomEvent('passwords-sidebar:new-folder'))}
+            tooltip="Nueva carpeta" tooltipOptions={{ position: 'bottom' }}
+            style={TB_BTN}
+          >
+            <span style={{ ...TB_ICON, color: 'var(--ui-sidebar-text)' }}>
+              {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}
+            </span>
+          </Button>
+        </>)}
+      </div>
+      {/* End Right Column */}
+      </div>
+    </div>
+  );
+
   const fullSidebar = (
     // Sidebar completa
     <>
+      {/* Header unificado con pestañas — solo si no estamos en modos filesystem/localExplorer */}
+      {unifiedHeader}
+
       {viewMode === 'connections' ? (
         // Vista de conexiones (árbol normal)
         <>
-          {FUTURISTIC_UI_KEYS.includes(uiTheme) && (
-            <div style={{
-              width: '100%',
-              height: '0.5px',
-              backgroundColor: 'var(--ui-sidebar-border)',
-              opacity: 0.6,
-              margin: 0,
-              padding: 0,
-              boxSizing: 'border-box',
-              border: 'none',
-              outline: 'none'
-            }} />
-          )}
-          <div className="sidebar-header-glass-stack" style={{
-            display: 'flex',
-            alignItems: 'center',
-            padding: '6px 8px',
-            background: 'var(--ui-sidebar-bg)',
-            backdropFilter: 'none',
-            borderRadius: 0,
-            margin: 0,
-            border: 'none',
-            boxShadow: 'none',
-            position: 'relative'
-          }}>
-            {/* Brillo de profundidad 3D */}
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              borderRadius: 0,
-              background: 'transparent',
-              pointerEvents: 'none'
-            }} />
-            {/* Eliminamos el indicador de estado neón de la opción anterior */}
-            <Button
-              className="p-button-rounded p-button-text sidebar-action-button glass-button"
-              onClick={toggleSidebar}
-              tooltip={sidebarCollapsed ? t('tooltips.expandSidebar') : t('tooltips.collapseSidebar')}
-              tooltipOptions={{ position: 'bottom' }}
-              style={{
-                marginRight: 4,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '38px',
-                height: '38px',
-                minWidth: '38px',
-                flexShrink: 0,
-                padding: 0,
-                transition: 'all 0.3s ease'
-              }}
-            >
-              <span style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '24px',
-                height: '24px',
-                color: 'var(--ui-sidebar-text)',
-                opacity: 0.9
-              }}>
-                {sidebarCollapsed
-                  ? sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.expandRight
-                  : sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.collapseLeft
-                }
-              </span>
-            </Button>
-
-            {/* SEPARADOR TIPO GLASS */}
-            <div style={{
-              width: '1px',
-              height: '24px',
-              background: 'linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.15), transparent)',
-              margin: '0 8px',
-              boxShadow: '0 0 5px rgba(255, 255, 255, 0.05)',
-              flexShrink: 0
-            }} />
-
-            {/* BARRA DE ACCIONES: GLASS STACK EFFECT */}
-            <div className="sidebar-action-glass-group" style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              marginLeft: '0',
-              position: 'relative',
-              zIndex: 2,
-              flexShrink: 1,
-              minWidth: 0,
-              overflow: 'hidden'
-            }}>
-              <Button
-                className="p-button-rounded p-button-text sidebar-action-button glass-button"
-                onClick={() => {
-                  // Abrir diálogo de selección de protocolo
-                  if (sidebarCallbacksRef?.current?.showProtocolSelection) {
-                    sidebarCallbacksRef.current.showProtocolSelection();
-                  } else {
-                    // Fallback: usar evento personalizado
-                    window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'));
-                  }
-                }}
-                tooltip={t('tooltips.newConnection')}
-                tooltipOptions={{ position: 'bottom' }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '32px',
-                  height: '32px',
-                  padding: 0,
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
-                  borderRadius: '8px',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <span style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '20px',
-                  height: '20px',
-                  color: 'var(--ui-sidebar-text)'
-                }}>
-                  {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newConnection}
-                </span>
-              </Button>
-              <Button
-                className="p-button-rounded p-button-text sidebar-action-button glass-button"
-                onClick={() => {
-                  if (showFavoritesView && viewMode === 'connections') {
-                    setParentNodeKey(FAVORITES_ROOT_KEY);
-                  } else {
-                    setParentNodeKey(null);
-                  }
-                  setEditingNode(null);
-                  setShowFolderDialog(true);
-                }}
-                tooltip={t('tooltips.createFolder')}
-                tooltipOptions={{ position: 'bottom' }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '32px',
-                  height: '32px',
-                  padding: 0,
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
-                  borderRadius: '8px',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <span style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '20px',
-                  height: '20px',
-                  color: 'var(--ui-sidebar-text)'
-                }}>
-                  {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}
-                </span>
-              </Button>
-              <Button
-                className="p-button-rounded p-button-text sidebar-action-button glass-button"
-                onClick={() => setShowCreateGroupDialog(true)}
-                tooltip={t('tooltips.createGroup')}
-                tooltipOptions={{ position: 'bottom' }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '32px',
-                  height: '32px',
-                  padding: 0,
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
-                  borderRadius: '8px',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <span style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '20px',
-                  height: '20px',
-                  color: 'var(--ui-sidebar-text)'
-                }}>
-                  {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newGroup}
-                </span>
-              </Button>
-
-              {/* SEPARADOR IDÉNTICO AL PRIMERO */}
-              <div style={{
-                width: '1px',
-                height: '24px',
-                background: 'linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.15), transparent)',
-                margin: '0 8px',
-                boxShadow: '0 0 5px rgba(255, 255, 255, 0.05)'
-              }} />
-
-              <Button
-                className="p-button-rounded p-button-text sidebar-action-button glass-button key-button"
-                onClick={() => setViewMode('passwords')}
-                tooltip={t('tooltips.passwordManager')}
-                tooltipOptions={{ position: 'bottom' }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '32px',
-                  height: '32px',
-                  padding: 0,
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
-                  borderRadius: '8px',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <span style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '20px',
-                  height: '20px',
-                  color: '#ffc107'
-                }}>
-                  {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.passwordManager}
-                </span>
-              </Button>
-              <Button
-                className="p-button-rounded p-button-text sidebar-action-button glass-button"
-                onClick={() => setViewMode('documents')}
-                tooltip="Notas"
-                tooltipOptions={{ position: 'bottom' }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '32px',
-                  height: '32px',
-                  padding: 0,
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
-                  borderRadius: '8px',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <span style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '20px',
-                  height: '20px',
-                  color: '#64b5f6'
-                }}>
-                  <i className="pi pi-file-edit" style={{ fontSize: '1rem' }} />
-                </span>
-              </Button>
-              <Button
-                className={`p-button-rounded p-button-text sidebar-action-button glass-button ${showFavoritesView ? 'active' : ''}`}
-                onClick={toggleFavoritesView}
-                tooltip={showFavoritesView ? t('tooltips.showAllConnections') : t('tooltips.showFavorites')}
-                tooltipOptions={{ position: 'bottom' }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '32px',
-                  height: '32px',
-                  padding: 0,
-                  background: showFavoritesView ? 'rgba(255, 193, 7, 0.12)' : 'rgba(255, 255, 255, 0.05)',
-                  border: showFavoritesView ? '1px solid rgba(255, 193, 7, 0.45)' : '1px solid rgba(255, 255, 255, 0.1)',
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
-                  borderRadius: '8px',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <span style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '20px',
-                  height: '20px',
-                  color: '#ffc107'
-                }}>
-                  <i className={showFavoritesView ? 'pi pi-star-fill' : 'pi pi-star'} style={{ fontSize: '1rem' }} />
-                </span>
-              </Button>
-
-              {/* EXPLORADOR SSH A LA DERECHA DEL TODO */}
-              {hasActiveSshSession && onOpenFileExplorer && (
-                <Button
-                  className="p-button-rounded p-button-text sidebar-action-button glass-button"
-                  onClick={() => onOpenFileExplorer()}
-                  tooltip="Explorador SSH"
-                  tooltipOptions={{ position: 'bottom' }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '32px',
-                    height: '32px',
-                    padding: 0,
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
-                    borderRadius: '8px',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  <span style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '20px',
-                    height: '20px',
-                    color: 'var(--ui-sidebar-text)'
-                  }}>
-                    <i className="pi pi-folder-open" style={{ color: '#eab308', fontSize: '1.2rem' }} />
-                  </span>
-                </Button>
-              )}
-            </div>
-            {(filesystemAvailable && isAIChatActive) || (isAIChatActive && onToggleLocalTerminalForAIChat) ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 8 }}>
-                {filesystemAvailable && isAIChatActive && (
-                  <Button
-                    icon="pi pi-folder-open"
-                    className={`p-button-rounded p-button-text sidebar-action-button glass-button ${viewMode === 'filesystem' ? 'active' : ''}`}
-                    onClick={() => setViewMode('filesystem')}
-                    tooltip={t('tooltips.mcpExplorer')}
-                    tooltipOptions={{ position: 'bottom' }}
-                    style={{
-                      width: '36px',
-                      height: '36px',
-                      borderColor: viewMode === 'filesystem' ? 'var(--ui-primary-color, #8bc34a)' : 'transparent',
-                      color: viewMode === 'filesystem' ? 'var(--ui-primary-color, #8bc34a)' : undefined,
-                      background: 'rgba(255, 255, 255, 0.03)'
-                    }}
-                  />
-                )}
-                {isAIChatActive && onToggleLocalTerminalForAIChat && (
-                  <Button
-                    icon="pi pi-desktop"
-                    className="p-button-rounded p-button-text sidebar-action-button glass-button"
-                    onClick={() => onToggleLocalTerminalForAIChat()}
-                    tooltip={t('tooltips.localTerminal')}
-                    tooltipOptions={{ position: 'bottom' }}
-                    style={{
-                      width: '36px',
-                      height: '36px',
-                      borderColor: 'transparent',
-                      color: '#90caf9',
-                      background: 'rgba(255, 255, 255, 0.03)'
-                    }}
-                  />
-                )}
-              </div>
-            ) : null}
-          </div>
-          {/* Eliminamos el Divider ya que la Línea Técnica actúa como separador */}
-
           <div
             ref={treeContainerRef}
             style={{
@@ -3259,6 +3164,7 @@ const Sidebar = React.memo(({
           onShowExportDialog={onShowExportDialog}
           onShowImportExportDialog={onShowImportExportDialog}
           onShowImportWizard={onShowImportWizard}
+          hideHeader={true}
         />
       ) : (
         // Vista de passwords
@@ -3286,6 +3192,7 @@ const Sidebar = React.memo(({
           treeTheme={treeTheme}
           showFavoritesView={showFavoritesView}
           onToggleFavoritesView={toggleFavoritesView}
+          hideHeader={true}
         />
       )}
     </>
