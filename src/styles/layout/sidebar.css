@@ -1033,9 +1033,9 @@
   user-select: none;
 }
 
-/* Tab row */
+/* Tab row (legacy) */
 .sidebar-unified-header > div:first-child {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: none;
 }
 
 /* Individual tab buttons */

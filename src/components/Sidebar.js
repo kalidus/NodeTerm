@@ -2747,10 +2747,11 @@ const Sidebar = React.memo(({
       alignItems: 'center',
       justifyContent: 'center',
       background: 'transparent',
-      padding: '12px 8px 4px 8px',
-      minHeight: '48px',
+      padding: '6px 8px 2px 8px', // Menos padding superior para subirlo
+      minHeight: '40px', // Menos altura mínima
       position: 'relative',
-      zIndex: 10
+      zIndex: 10,
+      borderBottom: 'none' // Forzar sin borde por si acaso
     }}>
       {/* Collapse button (Left Absolute) */}
       <div style={{ position: 'absolute', left: '8px' }}>
@@ -2761,12 +2762,12 @@ const Sidebar = React.memo(({
           tooltipOptions={{ position: 'right' }}
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: '28px', height: '28px', minHeight: '28px',
+            width: '32px', height: '32px', minHeight: '32px', // Botón más grande
             padding: 0, flexShrink: 0,
             transition: 'all 0.3s ease', border: 'none', background: 'transparent'
           }}
         >
-          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '18px', height: '18px', color: 'var(--ui-sidebar-text)', opacity: 0.7 }}>
+          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', color: 'var(--ui-sidebar-text)', opacity: 0.7 }}>
             {sidebarCollapsed
               ? sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.expandRight
               : sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.collapseLeft}
