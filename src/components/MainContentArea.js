@@ -2726,8 +2726,8 @@ const MainContentArea = ({
   // Umbral en píxeles: por debajo de esto la sidebar se replegará sola al soltar
   const SIDEBAR_COLLAPSE_THRESHOLD_PX = 100;
   const SIDEBAR_EXPAND_THRESHOLD_PX = 60;
-  // Ancho fijo cuando está colapsada (mismo valor que el botón de colapsar)
-  const SIDEBAR_COLLAPSED_WIDTH_PX = 60;
+  // Ancho fijo cuando está colapsada (solo IconRail visible: 48px + padding)
+  const SIDEBAR_COLLAPSED_WIDTH_PX = 64;
 
   const handleResizeOnly = () => {
     // Sin lógica durante el arrastre; el colapso se aplica al soltar en handleResizeEndWithAutoCollapse
@@ -2820,9 +2820,9 @@ const MainContentArea = ({
         }}
       >
         <SplitterPanel
-          size={isMinimalMode ? 0 : (sidebarCollapsed ? 4 : 15)}
-          minSize={isMinimalMode ? 0 : (sidebarCollapsed ? 4 : 3)}
-          maxSize={isMinimalMode ? 0 : (sidebarCollapsed ? 4 : 35)}
+          size={isMinimalMode ? 0 : (sidebarCollapsed ? 5 : 15)}
+          minSize={isMinimalMode ? 0 : (sidebarCollapsed ? 5 : 5)}
+          maxSize={isMinimalMode ? 0 : (sidebarCollapsed ? 5 : 35)}
           className="terminal-frame-container"
           style={isMinimalMode
             ? { display: 'none', width: 0, minWidth: 0, maxWidth: 0, padding: 0, overflow: 'hidden' }
@@ -2833,7 +2833,7 @@ const MainContentArea = ({
         >
           <TerminalFrame
             className={sidebarCollapsed ? 'sidebar-collapsed' : ''}
-            showControls={!sidebarCollapsed}
+            showControls={true}
             hideHeader={mainFrameHeaderCollapsed}
             headerExtra={!sidebarCollapsed && (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>

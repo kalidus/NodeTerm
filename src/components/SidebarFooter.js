@@ -25,39 +25,7 @@ const SidebarFooter = ({ onConfigClick, allExpanded, toggleExpandAll, collapsed,
     return () => { if (typeof unsubscribe === 'function') unsubscribe(); };
   }, []);
   if (collapsed) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
-        <Button
-          className="p-button-rounded p-button-text sidebar-action-button glass-button"
-          onClick={onConfigClick}
-          tooltip={t('tooltips.settings')}
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: '50%',
-            background: 'var(--ui-sidebar-footer-bg, #223)',
-            border: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            margin: 4,
-            padding: 0
-          }}
-        >
-          <span style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '20px',
-            height: '20px',
-            color: 'var(--ui-sidebar-footer-fg, #fff)'
-          }}>
-            {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.settings}
-          </span>
-        </Button>
-      </div>
-    );
+    return null;
   }
   const handleAppMenuClick = (event) => {
     // Handle app menu click

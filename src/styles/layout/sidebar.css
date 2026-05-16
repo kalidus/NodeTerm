@@ -3,8 +3,10 @@
 /* Forzar estilos de sidebar con máxima prioridad */
 .sidebar-container {
   background: var(--ui-sidebar-bg) !important;
-  border-right: 1px solid var(--ui-sidebar-border) !important;
   color: var(--ui-sidebar-text) !important;
+}
+.sidebar-container:not(.sidebar-root) {
+  border-right: 1px solid var(--ui-sidebar-border) !important;
 }
 
 /* Contenedor del árbol */
@@ -768,25 +770,6 @@
   background: var(--ui-hover-bg, rgba(255, 255, 255, 0.1)) !important;
 }
 
-/* === ESTILOS PARA SIDEBAR COLAPSADA === */
-/* Contenedor principal de la sidebar colapsada */
-.sidebar-container[style*="width: 44px"] {
-  overflow: visible !important;
-}
-
-/* Forzar visibilidad de todos los botones en sidebar colapsada */
-.sidebar-container[style*="width: 44px"] .sidebar-action-button,
-.sidebar-container[style*="width: 44px"] .p-button {
-  display: flex !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  pointer-events: auto !important;
-  position: relative !important;
-  z-index: 1000 !important;
-}
-
-/* Botón de colapsar alineado a la izquierda */
-
 /* === Filesystem explorer estilos === */
 .filesystem-tree-root {
   background: transparent !important;
@@ -829,45 +812,6 @@
 }
 .filesystem-tree .pi-folder {
   color: #8bc34a;
-}
-.sidebar-container[style*="width: 44px"] > div:first-child > div:first-child {
-  justify-content: flex-start !important;
-  padding-left: 2px !important;
-  display: flex !important;
-  visibility: visible !important;
-}
-
-/* Contenedor de botones del footer */
-.sidebar-container[style*="width: 44px"] > div:first-child > div:last-child {
-  display: flex !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  gap: 6px !important;
-  padding-bottom: 4px;
-}
-
-/* Botones del footer de la sidebar colapsada */
-.sidebar-container[style*="width: 44px"] .sidebar-action-button {
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  background-color: var(--ui-sidebar-button-bg, var(--ui-sidebar-bg)) !important;
-  color: var(--ui-sidebar-button-text, var(--ui-sidebar-text)) !important;
-  border: 1px solid var(--ui-sidebar-border) !important;
-}
-
-.sidebar-container[style*="width: 44px"] .sidebar-action-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-  background-color: var(--ui-sidebar-hover) !important;
-}
-
-/* Asegurar que los iconos sean visibles */
-.sidebar-container[style*="width: 44px"] .sidebar-action-button .p-button-icon,
-.sidebar-container[style*="width: 44px"] .sidebar-action-button i {
-  display: inline-block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  color: var(--ui-sidebar-button-text, var(--ui-sidebar-text)) !important;
 }
 
 /* === ESTILOS DE SCROLL === */
@@ -1085,13 +1029,169 @@
   border-color: rgba(139, 195, 74, 0.35) !important;
 }
 
-/* Hide the tabs and toolbar when the sidebar is collapsed */
-.sidebar-container[style*="width: 44px"] .sidebar-unified-header > div:last-child {
-  display: none !important;
+/* ═══════════════════════════════════════════════════════
+   SIDEBAR ICON RAIL (Activity Bar)
+   ═══════════════════════════════════════════════════════ */
+.sidebar-root {
+  display: flex !important;
+  flex-direction: row !important;
+  border-right: none !important;
 }
 
-/* Ensure the collapse button spans the full width when collapsed */
-.sidebar-container[style*="width: 44px"] .sidebar-unified-header > div:first-child {
-  border-right: none !important;
-  width: 100% !important;
+.sidebar-icon-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 48px;
+  min-width: 48px;
+  max-width: 48px;
+  height: 100%;
+  background: var(--ui-sidebar-bg) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 8px 0;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  z-index: 5;
+}
+.sidebar-icon-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.sidebar-icon-rail-sections,
+.sidebar-icon-rail-ai,
+.sidebar-icon-rail-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  gap: 2px;
+}
+
+.sidebar-icon-rail-bottom {
+  padding-bottom: 4px;
+}
+
+.sidebar-icon-rail-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.5));
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0;
+  outline: none;
+  opacity: 0.55;
+  flex-shrink: 0;
+}
+
+.sidebar-icon-rail-item:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.06);
+  transform: scale(1.08);
+}
+
+.sidebar-icon-rail-item.active {
+  opacity: 1;
+  color: var(--rail-item-color, var(--ui-sidebar-text));
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-icon-rail-item.active::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  border-radius: 0 3px 3px 0;
+  background: var(--rail-item-color, #4fc3f7);
+  box-shadow: 0 0 8px var(--rail-item-color, #4fc3f7);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-icon-rail-separator {
+  width: 24px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 8px auto;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+.sidebar-icon-rail-separator.mini {
+  width: 18px;
+  margin: 4px auto;
+  opacity: 0.5;
+}
+
+/* ═══════════════════════════════════════════════════════
+   SIDEBAR PANEL (Collapsible Content)
+   ═══════════════════════════════════════════════════════ */
+.sidebar-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--ui-sidebar-bg) !important;
+  transition: flex 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.2s ease;
+}
+
+.sidebar-panel-collapsed {
+  flex: 0 0 0px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+}
+
+/* Smooth border between rail and panel */
+.sidebar-icon-rail + .sidebar-panel:not(.sidebar-panel-collapsed) {
+  border-left: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* Hover glow effect on icon rail items */
+.sidebar-icon-rail-item:hover {
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.04);
+}
+
+.sidebar-icon-rail-item.active {
+  box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.03);
+}
+
+/* Active indicator animation on mount */
+.sidebar-icon-rail-item.active::before {
+  animation: railIndicatorIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes railIndicatorIn {
+  from {
+    height: 0;
+    opacity: 0;
+  }
+  to {
+    height: 20px;
+    opacity: 1;
+  }
+}
+
+/* Panel content fade-in when switching sections */
+.sidebar-panel > * {
+  transition: opacity 0.15s ease;
+}
+
+/* Ensure the floating action bar respects the new layout */
+.sidebar-panel .floating-action-bar {
+  left: 50% !important;
 }

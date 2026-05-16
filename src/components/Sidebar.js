@@ -17,6 +17,7 @@ import SidebarFilesystemExplorer from './SidebarFilesystemExplorer';
 import LocalFileExplorerSidebar from './LocalFileExplorerSidebar';
 import AIClientBrandIcon from './AIClientBrandIcon';
 import ConnectionDetailsPanel from './ConnectionDetailsPanel';
+import SidebarIconRail from './SidebarIconRail';
 import { unblockAllInputs, detectBlockedInputs, resolveFormBlocking, emergencyUnblockForms } from '../utils/formDebugger';
 import ImportService from '../services/ImportService';
 import localStorageSyncService from '../services/LocalStorageSyncService';
@@ -3086,9 +3087,6 @@ const Sidebar = React.memo(({
   const fullSidebar = (
     // Sidebar completa
     <>
-      {/* Header unificado con pestañas — solo si no estamos en modos filesystem/localExplorer */}
-      {unifiedHeader}
-
       {viewMode === 'connections' ? (
         // Vista de conexiones (árbol normal)
         <>
@@ -3302,804 +3300,130 @@ const Sidebar = React.memo(({
     </>
   );
 
+  const handleIconRailSectionClick = useCallback((sectionId) => {
+    if (sectionId === 'favorites') {
+      if (!sidebarCollapsed && showFavoritesView && viewMode === 'connections') {
+        setSidebarCollapsed(true);
+      } else {
+        setViewMode('connections');
+        setShowFavoritesView(true);
+        setSidebarCollapsed(false);
+      }
+      return;
+    }
+
+    const sectionToViewMode = {
+      connections: 'connections',
+      passwords: 'passwords',
+      documents: 'documents',
+    };
+    const targetViewMode = sectionToViewMode[sectionId] || 'connections';
+
+    if (!sidebarCollapsed && viewMode === targetViewMode && (sectionId !== 'connections' || !showFavoritesView)) {
+      setSidebarCollapsed(true);
+    } else {
+      setViewMode(targetViewMode);
+      if (sectionId === 'connections') setShowFavoritesView(false);
+      setSidebarCollapsed(false);
+    }
+  }, [sidebarCollapsed, viewMode, showFavoritesView, setSidebarCollapsed]);
+
+  const handleOpenAIClient = useCallback((clientId) => {
+    const openers = {
+      opencode: openOpenCodeTab,
+      geminicli: openGeminiCliTab,
+      codexcli: openCodexCliTab,
+      claude: openClaudeTab,
+      nodeterm: () => {
+        const newAITab = {
+          key: `ai-chat-${Date.now()}`,
+          label: 'Chat IA',
+          type: 'ai-chat',
+          createdAt: Date.now(),
+          groupId: null
+        };
+        window.dispatchEvent(new CustomEvent('create-ai-tab', { detail: { tab: newAITab } }));
+      },
+      anythingllm: openAnythingLLMTab,
+      openwebui: openOpenWebUITab,
+      librechat: openLibreChatTab,
+      agentzero: openAgentZeroTab,
+      openclaw: openOpenClawTab,
+      opennotebook: openOpenNotebookTab,
+    };
+    if (openers[clientId]) openers[clientId]();
+  }, []);
+
+  const handleFilesystemClick = useCallback(() => {
+    setViewMode('filesystem');
+    setSidebarCollapsed(false);
+  }, [setSidebarCollapsed]);
+
+  const activeIconRailSection = (() => {
+    if (sidebarCollapsed) return null;
+    if (viewMode === 'documents') return 'documents';
+    if (viewMode === 'passwords') return 'passwords';
+    if (showFavoritesView && viewMode === 'connections') return 'favorites';
+    if (viewMode === 'connections') return 'connections';
+    return null;
+  })();
+
   return (
     <div
       ref={sidebarRef}
-      className={`sidebar-container${disableFirstExpandTransition ? ' sidebar-no-transition' : ''}`}
+      className="sidebar-container sidebar-root"
       style={{
-        transition: disableFirstExpandTransition ? 'none' : 'all 0.15s ease-out',
-        width: sidebarCollapsed ? 44 : '100%',
-        minWidth: sidebarCollapsed ? 44 : 0,
-        maxWidth: sidebarCollapsed ? 44 : undefined,
         padding: 0,
         height: '100%',
         boxSizing: 'border-box',
         overflow: 'hidden',
         position: 'relative',
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'row',
         fontFamily: explorerFont,
         fontSize: `${explorerFontSize}px`,
         color: explorerFontColor || undefined,
+        width: '100%',
         ...(explorerFontColor ? { '--ui-sidebar-text': explorerFontColor } : {})
       }}>
-      {sidebarCollapsed ? (
-        /* Layout colapsado - encima del contenido expandido */
-        <div style={{
-          flex: 1,
+
+      {/* Icon Rail - Always visible */}
+      <SidebarIconRail
+        activeSection={activeIconRailSection}
+        panelOpen={!sidebarCollapsed}
+        onSectionClick={handleIconRailSectionClick}
+        onSettingsClick={() => setShowSettingsDialog(true)}
+        sessionActionIconTheme={sessionActionIconTheme}
+        aiClientsEnabled={aiClientsEnabled}
+        onOpenAIClient={handleOpenAIClient}
+        filesystemAvailable={filesystemAvailable}
+        isAIChatActive={isAIChatActive}
+        onFilesystemClick={handleFilesystemClick}
+        viewMode={viewMode}
+        onToggleLocalTerminalForAIChat={isAIChatActive ? onToggleLocalTerminalForAIChat : undefined}
+        onShowImportDialog={onShowImportDialog || setShowImportDialog}
+        onShowExportDialog={onShowExportDialog}
+        onShowImportExportDialog={onShowImportExportDialog}
+        onShowImportWizard={onShowImportWizard}
+      />
+
+      {/* Panel - Collapsible content area */}
+      <div
+        className={`sidebar-panel${sidebarCollapsed ? ' sidebar-panel-collapsed' : ''}`}
+        style={{
+          flex: sidebarCollapsed ? '0 0 0px' : 1,
+          minWidth: 0,
           display: 'flex',
           flexDirection: 'column',
-          width: '100%',
+          overflow: 'hidden',
           height: '100%',
-          position: 'relative',
-          zIndex: 10
+          transition: 'flex 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease',
+          opacity: sidebarCollapsed ? 0 : 1,
+          pointerEvents: sidebarCollapsed ? 'none' : 'auto',
         }}>
-          {/* Botones superiores: colapsar, nueva conexión, nuevo grupo */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            padding: `8px 2px ${collapsedIconSize > 32 ? '100px' : '90px'} 2px`,
-            width: '100%',
-            visibility: 'visible',
-            opacity: 1,
-            zIndex: 1000,
-            gap: `${collapsedGap}px`,
-            boxSizing: 'border-box'
-          }}>
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-start',
-              gap: `${collapsedGap}px`,
-              width: '100%'
-            }}>
-              {/* Botón de colapsar */}
-              <Button
-                className="p-button-rounded p-button-text sidebar-action-button glass-button"
-                onClick={toggleSidebar}
-                tooltip={sidebarCollapsed ? t('tooltips.expandSidebar') : t('tooltips.collapseSidebar')}
-                tooltipOptions={{ position: 'right' }}
-                style={{
-                  margin: 0,
-                  width: collapsedIconSize,
-                  height: collapsedIconSize,
-                  minWidth: collapsedIconSize,
-                  minHeight: collapsedIconSize,
-                  border: 'none',
-                  display: 'flex !important',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  visibility: 'visible !important',
-                  opacity: '1 !important',
-                  padding: 0
-                }}
-              >
-                <span style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
-                  height: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
-                  color: 'var(--ui-sidebar-text)'
-                }}>
-                  {sidebarCollapsed
-                    ? sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.expandRight
-                    : sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.collapseLeft
-                  }
-                </span>
-              </Button>
+        {fullSidebar}
+      </div>
 
-              {/* Botón de conexiones */}
-              <Button
-                className="p-button-rounded p-button-text sidebar-action-button glass-button"
-                onClick={() => {
-                  setViewMode('connections');
-                  setShowFavoritesView(false);
-                  setSidebarCollapsed(false);
-                }}
-                tooltip={t('tooltips.connections')}
-                tooltipOptions={{ position: 'right' }}
-                style={{
-                  margin: 0,
-                  width: collapsedIconSize,
-                  height: collapsedIconSize,
-                  minWidth: collapsedIconSize,
-                  minHeight: collapsedIconSize,
-                  border: 'none',
-                  display: 'flex !important',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  visibility: 'visible !important',
-                  opacity: '1 !important',
-                  padding: 0
-                }}
-              >
-                <span style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
-                  height: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
-                  color: '#2196f3'
-                }}>
-                  {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newConnection}
-                </span>
-              </Button>
-
-              {/* Botón de passwords */}
-              <Button
-                className="p-button-rounded p-button-text sidebar-action-button glass-button"
-                onClick={() => {
-                  setViewMode('passwords');
-                  setSidebarCollapsed(false);
-                }}
-                tooltip={t('tooltips.passwords')}
-                tooltipOptions={{ position: 'right' }}
-                style={{
-                  margin: 0,
-                  width: collapsedIconSize,
-                  height: collapsedIconSize,
-                  minWidth: collapsedIconSize,
-                  minHeight: collapsedIconSize,
-                  border: 'none',
-                  display: 'flex !important',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  visibility: 'visible !important',
-                  opacity: '1 !important',
-                  padding: 0
-                }}
-              >
-                <span style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
-                  height: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
-                  color: '#ffc107'
-                }}>
-                  {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.passwordManager}
-                </span>
-              </Button>
-
-              {/* Botón de notas */}
-              <Button
-                className="p-button-rounded p-button-text sidebar-action-button glass-button"
-                onClick={() => {
-                  setViewMode('documents');
-                  setSidebarCollapsed(false);
-                }}
-                tooltip="Notas"
-                tooltipOptions={{ position: 'right' }}
-                style={{
-                  margin: 0,
-                  width: collapsedIconSize,
-                  height: collapsedIconSize,
-                  minWidth: collapsedIconSize,
-                  minHeight: collapsedIconSize,
-                  border: 'none',
-                  display: 'flex !important',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  visibility: 'visible !important',
-                  opacity: '1 !important',
-                  padding: 0
-                }}
-              >
-                <span style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
-                  height: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
-                  color: '#64b5f6'
-                }}>
-                  <i className="pi pi-file-edit" style={{ fontSize: '1rem' }} />
-                </span>
-              </Button>
-
-              <Button
-                className={`p-button-rounded p-button-text sidebar-action-button glass-button ${showFavoritesView ? 'active' : ''}`}
-                onClick={toggleFavoritesView}
-                tooltip={showFavoritesView ? t('tooltips.showAllConnections') : t('tooltips.showFavorites')}
-                tooltipOptions={{ position: 'right' }}
-                style={{
-                  margin: 0,
-                  width: collapsedIconSize,
-                  height: collapsedIconSize,
-                  minWidth: collapsedIconSize,
-                  minHeight: collapsedIconSize,
-                  border: showFavoritesView ? '1px solid rgba(255, 193, 7, 0.45)' : 'none',
-                  display: 'flex !important',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  visibility: 'visible !important',
-                  opacity: '1 !important',
-                  padding: 0
-                }}
-              >
-                <span style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
-                  height: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
-                  color: '#ffc107'
-                }}>
-                  <i className={showFavoritesView ? 'pi pi-star-fill' : 'pi pi-star'} style={{ fontSize: '1rem' }} />
-                </span>
-              </Button>
-
-              {/* Botón de nuevo grupo */}
-              <Button
-                className="p-button-rounded p-button-text sidebar-action-button glass-button"
-                onClick={() => setShowCreateGroupDialog(true)}
-                tooltip={t('tooltips.createGroup')}
-                tooltipOptions={{ position: 'right' }}
-                style={{
-                  margin: 0,
-                  width: collapsedIconSize,
-                  height: collapsedIconSize,
-                  minWidth: collapsedIconSize,
-                  minHeight: collapsedIconSize,
-                  border: 'none',
-                  display: 'flex !important',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  visibility: 'visible !important',
-                  opacity: '1 !important',
-                  padding: 0
-                }}
-              >
-                <span style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
-                  height: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
-                  color: 'var(--ui-sidebar-text)'
-                }}>
-                  {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newGroup}
-                </span>
-              </Button>
-
-              {/* Botón de herramientas */}
-              <Button
-                className="p-button-rounded p-button-text sidebar-action-button glass-button"
-                onClick={() => window.dispatchEvent(new CustomEvent('open-network-tools-dialog'))}
-                tooltip="Herramientas"
-                tooltipOptions={{ position: 'right' }}
-                style={{
-                  margin: 0,
-                  width: collapsedIconSize,
-                  height: collapsedIconSize,
-                  minWidth: collapsedIconSize,
-                  minHeight: collapsedIconSize,
-                  border: 'none',
-                  display: 'flex !important',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  visibility: 'visible !important',
-                  opacity: '1 !important',
-                  padding: 0
-                }}
-              >
-                <span style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
-                  height: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
-                  color: '#06b6d4'
-                }}>
-                  <i className="pi pi-wrench" style={{ fontSize: '1rem' }} />
-                </span>
-              </Button>
-
-              {/* Separador para clientes de IA */}
-              {Object.values(aiClientsEnabled).some(v => v === true) && (
-                <div style={{
-                  width: '28px',
-                  height: '1px',
-                  backgroundColor: 'var(--ui-sidebar-border, rgba(255, 255, 255, 0.1))',
-                  margin: '10px auto',
-                  borderRadius: '0.5px',
-                  opacity: 0.6,
-                  flexShrink: 0
-                }} />
-              )}
-
-              {/* CLIs de IA (Primero) */}
-              {aiClientsEnabled.opencode && (
-                <Button
-                  className="p-button-rounded p-button-text sidebar-action-button"
-                  onClick={openOpenCodeTab}
-                  tooltip={t('tooltips.openCode')}
-                  tooltipOptions={{ position: 'right' }}
-                  style={{
-                    margin: 0,
-                    width: collapsedIconSize,
-                    height: collapsedIconSize,
-                    minWidth: collapsedIconSize,
-                    minHeight: collapsedIconSize,
-                    border: 'none',
-                    display: 'flex !important',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    visibility: 'visible !important',
-                    opacity: '1 !important',
-                    padding: 0
-                  }}
-                >
-                  <AIClientBrandIcon tabType={collapsedIconSize > 32 ? "opencode" : "opencode"} size={Math.max(16, Math.floor(collapsedIconSize * 0.55))} />
-                </Button>
-              )}
-
-              {aiClientsEnabled.geminicli && (
-                <Button
-                  className="p-button-rounded p-button-text sidebar-action-button"
-                  onClick={openGeminiCliTab}
-                  tooltip={t('tooltips.geminiCLI')}
-                  tooltipOptions={{ position: 'right' }}
-                  style={{
-                    margin: 0,
-                    width: collapsedIconSize,
-                    height: collapsedIconSize,
-                    minWidth: collapsedIconSize,
-                    minHeight: collapsedIconSize,
-                    border: 'none',
-                    display: 'flex !important',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    visibility: 'visible !important',
-                    opacity: '1 !important',
-                    padding: 0
-                  }}
-                >
-                  <AIClientBrandIcon tabType={collapsedIconSize > 32 ? "geminicli" : "geminicli"} size={Math.max(16, Math.floor(collapsedIconSize * 0.55))} />
-                </Button>
-              )}
-
-              {aiClientsEnabled.codexcli && (
-                <Button
-                  className="p-button-rounded p-button-text sidebar-action-button"
-                  onClick={openCodexCliTab}
-                  tooltip={t('tooltips.codexCLI')}
-                  tooltipOptions={{ position: 'right' }}
-                  style={{
-                    margin: 0,
-                    width: collapsedIconSize,
-                    height: collapsedIconSize,
-                    minWidth: collapsedIconSize,
-                    minHeight: collapsedIconSize,
-                    border: 'none',
-                    display: 'flex !important',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    visibility: 'visible !important',
-                    opacity: '1 !important',
-                    padding: 0
-                  }}
-                >
-                  <AIClientBrandIcon tabType={collapsedIconSize > 32 ? "codexcli" : "codexcli"} size={Math.max(16, Math.floor(collapsedIconSize * 0.55))} />
-                </Button>
-              )}
-
-              {aiClientsEnabled.claude && (
-                <Button
-                  className="p-button-rounded p-button-text sidebar-action-button"
-                  onClick={openClaudeTab}
-                  tooltip={t('tooltips.claudeCode')}
-                  tooltipOptions={{ position: 'right' }}
-                  style={{
-                    margin: 0,
-                    width: collapsedIconSize,
-                    height: collapsedIconSize,
-                    minWidth: collapsedIconSize,
-                    minHeight: collapsedIconSize,
-                    border: 'none',
-                    display: 'flex !important',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    visibility: 'visible !important',
-                    opacity: '1 !important',
-                    padding: 0
-                  }}
-                >
-                  <AIClientBrandIcon tabType={collapsedIconSize > 32 ? "claude" : "claude"} size={Math.max(16, Math.floor(collapsedIconSize * 0.55))} />
-                </Button>
-              )}
-
-              {/* Separador entre CLIs de IA y Apps de IA */}
-              {((aiClientsEnabled.nodeterm || aiClientsEnabled.anythingllm || aiClientsEnabled.openwebui || aiClientsEnabled.librechat || aiClientsEnabled.agentzero || aiClientsEnabled.openclaw || aiClientsEnabled.opennotebook) && 
-                (aiClientsEnabled.opencode || aiClientsEnabled.geminicli || aiClientsEnabled.codexcli || aiClientsEnabled.claude)) && (
-                <div style={{
-                  width: '24px',
-                  height: '1px',
-                  backgroundColor: 'var(--ui-sidebar-border, rgba(255, 255, 255, 0.1))',
-                  margin: '8px auto',
-                  borderRadius: '0.5px',
-                  opacity: 0.4,
-                  flexShrink: 0
-                }} />
-              )}
-
-              {/* Apps de IA (Después) */}
-              {aiClientsEnabled.nodeterm && (
-                <Button
-                  icon="pi pi-comments"
-                  className="p-button-rounded p-button-text sidebar-action-button"
-                  onClick={() => {
-                    const newAITab = {
-                      key: `ai-chat-${Date.now()}`,
-                      label: 'Chat IA',
-                      type: 'ai-chat',
-                      createdAt: Date.now(),
-                      groupId: null
-                    };
-                    window.dispatchEvent(new CustomEvent('create-ai-tab', {
-                      detail: { tab: newAITab }
-                    }));
-                  }}
-                  tooltip={t('tooltips.aiChat')}
-                  tooltipOptions={{ position: 'right' }}
-                  style={{
-                    margin: 0,
-                    width: collapsedIconSize,
-                    height: collapsedIconSize,
-                    minWidth: collapsedIconSize,
-                    minHeight: collapsedIconSize,
-                    flexShrink: 0,
-                    fontSize: Math.max(14, Math.floor(collapsedIconSize * 0.45)),
-                    border: 'none',
-                    display: 'flex !important',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    visibility: 'visible !important',
-                    opacity: '1 !important'
-                  }}
-                />
-              )}
-
-              {aiClientsEnabled.anythingllm && (
-                <Button
-                  className="p-button-rounded p-button-text sidebar-action-button"
-                  onClick={openAnythingLLMTab}
-                  tooltip={t('tooltips.anythingLLM')}
-                  tooltipOptions={{ position: 'right' }}
-                  style={{
-                    margin: 0,
-                    width: collapsedIconSize,
-                    height: collapsedIconSize,
-                    minWidth: collapsedIconSize,
-                    minHeight: collapsedIconSize,
-                    border: 'none',
-                    display: 'flex !important',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    visibility: 'visible !important',
-                    opacity: '1 !important',
-                    padding: 0
-                  }}
-                >
-                  <AIClientBrandIcon tabType={collapsedIconSize > 32 ? "anything-llm" : "anything-llm"} size={Math.max(16, Math.floor(collapsedIconSize * 0.55))} />
-                </Button>
-              )}
-
-              {aiClientsEnabled.openwebui && (
-                <Button
-                  className="p-button-rounded p-button-text sidebar-action-button"
-                  onClick={openOpenWebUITab}
-                  tooltip={t('tooltips.openWebUI')}
-                  tooltipOptions={{ position: 'right' }}
-                  style={{
-                    margin: 0,
-                    width: collapsedIconSize,
-                    height: collapsedIconSize,
-                    minWidth: collapsedIconSize,
-                    minHeight: collapsedIconSize,
-                    border: 'none',
-                    display: 'flex !important',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    visibility: 'visible !important',
-                    opacity: '1 !important',
-                    padding: 0
-                  }}
-                >
-                  <AIClientBrandIcon tabType={collapsedIconSize > 32 ? "openwebui" : "openwebui"} size={Math.max(16, Math.floor(collapsedIconSize * 0.55))} />
-                </Button>
-              )}
-
-              {aiClientsEnabled.librechat && (
-                <Button
-                  className="p-button-rounded p-button-text sidebar-action-button"
-                  onClick={openLibreChatTab}
-                  tooltip={t('tooltips.libreChat')}
-                  tooltipOptions={{ position: 'right' }}
-                  style={{
-                    margin: 0,
-                    width: collapsedIconSize,
-                    height: collapsedIconSize,
-                    minWidth: collapsedIconSize,
-                    minHeight: collapsedIconSize,
-                    border: 'none',
-                    display: 'flex !important',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    visibility: 'visible !important',
-                    opacity: '1 !important',
-                    padding: 0
-                  }}
-                >
-                  <AIClientBrandIcon tabType={collapsedIconSize > 32 ? "librechat" : "librechat"} size={Math.max(16, Math.floor(collapsedIconSize * 0.55))} />
-                </Button>
-              )}
-
-              {aiClientsEnabled.agentzero && (
-                <Button
-                  className="p-button-rounded p-button-text sidebar-action-button"
-                  onClick={openAgentZeroTab}
-                  tooltip="Agent Zero"
-                  tooltipOptions={{ position: 'right' }}
-                  style={{
-                    margin: 0,
-                    width: collapsedIconSize,
-                    height: collapsedIconSize,
-                    minWidth: collapsedIconSize,
-                    minHeight: collapsedIconSize,
-                    border: 'none',
-                    display: 'flex !important',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    visibility: 'visible !important',
-                    opacity: '1 !important',
-                    padding: 0
-                  }}
-                >
-                  <AIClientBrandIcon tabType={collapsedIconSize > 32 ? "agentzero" : "agentzero"} size={Math.max(16, Math.floor(collapsedIconSize * 0.55))} />
-                </Button>
-              )}
-
-              {aiClientsEnabled.openclaw && (
-                <Button
-                  className="p-button-rounded p-button-text sidebar-action-button"
-                  onClick={openOpenClawTab}
-                  tooltip="OpenClaw"
-                  tooltipOptions={{ position: 'right' }}
-                  style={{
-                    margin: 0,
-                    width: collapsedIconSize,
-                    height: collapsedIconSize,
-                    minWidth: collapsedIconSize,
-                    minHeight: collapsedIconSize,
-                    border: 'none',
-                    display: 'flex !important',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    visibility: 'visible !important',
-                    opacity: '1 !important',
-                    padding: 0
-                  }}
-                >
-                  <AIClientBrandIcon tabType={collapsedIconSize > 32 ? "openclaw" : "openclaw"} size={Math.max(16, Math.floor(collapsedIconSize * 0.55))} />
-                </Button>
-              )}
-
-              {aiClientsEnabled.opennotebook && (
-                <Button
-                  className="p-button-rounded p-button-text sidebar-action-button"
-                  onClick={openOpenNotebookTab}
-                  tooltip="Open Notebook"
-                  tooltipOptions={{ position: 'right' }}
-                  style={{
-                    margin: 0,
-                    width: collapsedIconSize,
-                    height: collapsedIconSize,
-                    minWidth: collapsedIconSize,
-                    minHeight: collapsedIconSize,
-                    border: 'none',
-                    display: 'flex !important',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    visibility: 'visible !important',
-                    opacity: '1 !important',
-                    padding: 0
-                  }}
-                >
-                  <AIClientBrandIcon tabType={collapsedIconSize > 32 ? "open-notebook" : "open-notebook"} size={Math.max(16, Math.floor(collapsedIconSize * 0.55))} />
-                </Button>
-              )}
-
-            </div>
-
-            <div style={{ flexGrow: 1 }} />
-
-            {filesystemAvailable && isAIChatActive && (
-              <>
-                <div
-                  style={{
-                    width: '60%',
-                    height: 1,
-                    backgroundColor: 'var(--ui-sidebar-border, rgba(255,255,255,0.18))',
-                    opacity: 0.6,
-                    margin: '4px 0 6px 0',
-                    alignSelf: 'center'
-                  }}
-                />
-                <Button
-                  className="p-button-rounded p-button-text sidebar-action-button glass-button"
-                  onClick={() => {
-                    setViewMode('filesystem');
-                    setSidebarCollapsed(false);
-                  }}
-                  tooltip={t('tooltips.filesystemMCP')}
-                  tooltipOptions={{ position: 'right' }}
-                  style={{
-                    margin: 0,
-                    width: collapsedIconSize,
-                    height: collapsedIconSize,
-                    minWidth: collapsedIconSize,
-                    minHeight: collapsedIconSize,
-                    border: 'none',
-                    display: 'flex !important',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    visibility: 'visible !important',
-                    opacity: '1 !important',
-                    padding: 0
-                  }}
-                >
-                  <span style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '20px',
-                    height: '20px',
-                    color: viewMode === 'filesystem' ? '#8bc34a' : '#cfd8dc'
-                  }}>
-                    {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}
-                  </span>
-                </Button>
-              </>
-            )}
-
-            {isAIChatActive && onToggleLocalTerminalForAIChat && (
-              <Button
-                icon="pi pi-desktop"
-                className="p-button-rounded p-button-text sidebar-action-button"
-                onClick={() => {
-                  onToggleLocalTerminalForAIChat();
-                }}
-                tooltip={t('tooltips.localTerminal')}
-                tooltipOptions={{ position: 'right' }}
-                style={{
-                  margin: 0,
-                  width: collapsedIconSize,
-                  height: collapsedIconSize,
-                  minWidth: collapsedIconSize,
-                  minHeight: collapsedIconSize,
-                  flexShrink: 0,
-                  fontSize: 18,
-                  border: 'none',
-                  display: 'flex !important',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  visibility: 'visible !important',
-                  opacity: '1 !important',
-                  color: '#90caf9'
-                }}
-              />
-            )}
-          </div>
-
-          {/* Botones de menú de aplicación y configuración en la parte inferior */}
-          <div style={{
-            position: 'absolute',
-            bottom: 8,
-            left: 0,
-            width: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: `${collapsedGap}px`,
-            visibility: 'visible',
-            opacity: 1,
-            zIndex: 1000
-          }}>
-            <Button
-              className="p-button-rounded p-button-text sidebar-action-button glass-button"
-              onClick={() => setShowSettingsDialog(true)}
-              tooltip={t('tooltips.settings')}
-              tooltipOptions={{ position: 'right' }}
-              style={{
-                margin: 0,
-                width: collapsedIconSize,
-                height: collapsedIconSize,
-                minWidth: collapsedIconSize,
-                minHeight: collapsedIconSize,
-                border: 'none',
-                display: 'flex !important',
-                alignItems: 'center',
-                justifyContent: 'center',
-                visibility: 'visible !important',
-                opacity: '1 !important',
-                padding: 0
-              }}
-            >
-              <span style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
-                height: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
-                color: 'var(--ui-sidebar-text)'
-              }}>
-                {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.settings}
-              </span>
-            </Button>
-            <Button
-              className="p-button-rounded p-button-text sidebar-action-button glass-button"
-              onClick={(e) => {
-                handleAppMenuClick(e);
-              }}
-              tooltip={t('tooltips.appMenu')}
-              tooltipOptions={{ position: 'right' }}
-              style={{
-                margin: 0,
-                width: collapsedIconSize,
-                height: collapsedIconSize,
-                minWidth: collapsedIconSize,
-                minHeight: collapsedIconSize,
-                border: 'none',
-                display: 'flex !important',
-                alignItems: 'center',
-                justifyContent: 'center',
-                visibility: 'visible !important',
-                opacity: '1 !important',
-                padding: 0
-              }}
-            >
-              <span style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
-                height: Math.max(16, Math.floor(collapsedIconSize * 0.5)),
-                color: 'var(--ui-sidebar-text)'
-              }}>
-                {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.menu}
-              </span>
-            </Button>
-          </div>
-        </div>
-      ) : null}
-      {/* Contenido expandido: siempre montado; solo translateX para mostrar/ocultar (sin reflow, GPU) */}
-      {(expandedContentReady || !sidebarCollapsed) && (
-        <div
-          ref={expandedContentRef}
-          aria-hidden={!!sidebarCollapsed}
-          style={{
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            width: '100%',
-            height: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            minHeight: 0,
-            overflow: 'hidden',
-            transform: sidebarCollapsed ? 'translateX(-100%)' : 'translateX(0)',
-            /* Colapsar: sin transición (evita flash de items). Expandir: animación suave, salvo 1ª vez */
-            transition: sidebarCollapsed ? 'none' : (disableFirstExpandTransition ? 'none' : 'transform 0.15s ease-out'),
-            pointerEvents: sidebarCollapsed ? 'none' : 'auto',
-            zIndex: sidebarCollapsed ? 0 : 1
-          }}
-        >
-          {fullSidebar}
-        </div>
-      )}
 
       <FolderDialog
         visible={showFolderDialog}
