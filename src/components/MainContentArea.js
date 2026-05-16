@@ -2726,8 +2726,8 @@ const MainContentArea = ({
   // Umbral en píxeles: por debajo de esto la sidebar se replegará sola al soltar
   const SIDEBAR_COLLAPSE_THRESHOLD_PX = 100;
   const SIDEBAR_EXPAND_THRESHOLD_PX = 60;
-  // Ancho fijo cuando está colapsada (solo IconRail visible: 48px, sin padding)
-  const SIDEBAR_COLLAPSED_WIDTH_PX = 48;
+  // Ancho fijo cuando está colapsada (IconRail 48px + 8px margen izquierdo)
+  const SIDEBAR_COLLAPSED_WIDTH_PX = 56;
 
   const handleResizeOnly = () => {
     // Sin lógica durante el arrastre; el colapso se aplica al soltar en handleResizeEndWithAutoCollapse
@@ -2827,7 +2827,7 @@ const MainContentArea = ({
           style={isMinimalMode
             ? { display: 'none', width: 0, minWidth: 0, maxWidth: 0, padding: 0, overflow: 'hidden' }
             : sidebarCollapsed
-              ? { width: SIDEBAR_COLLAPSED_WIDTH_PX, minWidth: SIDEBAR_COLLAPSED_WIDTH_PX, maxWidth: SIDEBAR_COLLAPSED_WIDTH_PX, padding: '8px 0', height: '100%', transition: 'none', display: 'flex', flexDirection: 'column', overflow: 'hidden' }
+              ? { width: SIDEBAR_COLLAPSED_WIDTH_PX, minWidth: SIDEBAR_COLLAPSED_WIDTH_PX, maxWidth: SIDEBAR_COLLAPSED_WIDTH_PX, padding: '8px 0 8px 8px', height: '100%', transition: 'none', display: 'flex', flexDirection: 'column', overflow: 'hidden' }
               : { padding: '8px 2px 8px 8px', height: '100%', transition: 'none', display: 'flex', flexDirection: 'column' }
           }
         >
