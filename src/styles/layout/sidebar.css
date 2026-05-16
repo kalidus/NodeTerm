@@ -1191,7 +1191,54 @@
   transition: opacity 0.15s ease;
 }
 
-/* Ensure the floating action bar respects the new layout */
-.sidebar-panel .floating-action-bar {
-  left: 50% !important;
+/* ═══════════════════════════════════════════════════════
+   SIDEBAR PANEL TOOLBAR (Header with contextual actions)
+   ═══════════════════════════════════════════════════════ */
+.sidebar-panel-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  min-height: 38px;
+  padding: 6px 10px;
+  background: var(--ui-sidebar-bg) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  user-select: none;
+  gap: 4px;
+}
+
+.sidebar-panel-toolbar-left,
+.sidebar-panel-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.sidebar-panel-toolbar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.6));
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0;
+  outline: none;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.sidebar-panel-toolbar-btn:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.08);
+  transform: scale(1.1);
+}
+
+.sidebar-panel-toolbar-btn:active {
+  transform: scale(0.95);
+  opacity: 0.9;
 }

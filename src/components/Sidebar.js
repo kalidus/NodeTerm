@@ -179,78 +179,6 @@ const Sidebar = React.memo(({
   // Estado para el nodo seleccionado actualmente (para el panel de detalles)
   const [selectedNodeForDetails, setSelectedNodeForDetails] = useState(null);
 
-  // Estado para la barra de herramientas flotante arrastrable
-  const [fabPos, setFabPos] = useState({ x: 0, y: 0 });
-  const [isDraggingFab, setIsDraggingFab] = useState(false);
-  const dragStartPos = useRef({ x: 0, y: 0 });
-  const fabRef = useRef(null);
-
-  const handleFabMouseDown = (e) => {
-    if (e.button !== 0) return;
-    if (e.target.closest('button')) return; // No arrastrar si se hace clic en un botón
-    setIsDraggingFab(true);
-    dragStartPos.current = {
-      mouseX: e.clientX,
-      mouseY: e.clientY,
-      fabX: fabPos.x,
-      fabY: fabPos.y
-    };
-    e.preventDefault();
-  };
-
-  useEffect(() => {
-    if (!isDraggingFab) return;
-    const handleMouseMove = (e) => {
-      if (!sidebarRef.current || !fabRef.current) return;
-
-      const sidebarRect = sidebarRef.current.getBoundingClientRect();
-      const fabRect = fabRef.current.getBoundingClientRect();
-      
-      const dx = e.clientX - dragStartPos.current.mouseX;
-      const dy = e.clientY - dragStartPos.current.mouseY;
-
-      let nextX = dragStartPos.current.fabX + dx;
-      let nextY = dragStartPos.current.fabY + dy;
-
-      const margin = 12;
-      const sidebarW = sidebarRect.width;
-      const sidebarH = sidebarRect.height;
-      const fabW = fabRect.width;
-      const fabH = fabRect.height;
-
-      // Clamping Horizontal (centrado en el 50%)
-      const minX = -(sidebarW / 2) + (fabW / 2) + margin;
-      const maxX = (sidebarW / 2) - (fabW / 2) - margin;
-      nextX = Math.max(minX, Math.min(maxX, nextX));
-
-      // Clamping Vertical (respecto al bottom: 64px inicial)
-      // La posición inicial del top es: sidebarRect.bottom - 64 - fabH
-      const initialBottomOffset = 64;
-      const initialTopRelToSidebarTop = sidebarH - initialBottomOffset - fabH;
-      
-      // Limite superior: nextTop >= margin
-      // nextTop = initialTopRelToSidebarTop + nextY
-      const minY = margin - initialTopRelToSidebarTop;
-      
-      // Limite inferior: nextBottom <= sidebarH - margin
-      // nextBottom = (sidebarH - initialBottomOffset) + nextY
-      const maxY = (sidebarH - margin) - (sidebarH - initialBottomOffset);
-
-      nextY = Math.max(minY, Math.min(maxY, nextY));
-
-      setFabPos({ x: nextX, y: nextY });
-    };
-    const handleMouseUp = () => {
-      setIsDraggingFab(false);
-    };
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDraggingFab]);
-
   // Función para actualizar un nodo en el árbol
   const updateNodeInTree = useCallback((updatedNode) => {
     const findAndUpdateNode = (nodeList, targetKey) => {
@@ -2814,279 +2742,133 @@ const Sidebar = React.memo(({
   );
 
   // ── Unified header (tabs row ONLY) ──────────────────────────────
-  const unifiedHeader = (activeTab !== null) && (
-    <div className="sidebar-unified-header" style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'transparent',
-      padding: '6px 8px 2px 8px', // Menos padding superior para subirlo
-      minHeight: '40px', // Menos altura mínima
-      position: 'relative',
-      zIndex: 10,
-      borderBottom: 'none' // Forzar sin borde por si acaso
-    }}>
-      {/* Collapse button (Left Absolute) */}
-      <div style={{ position: 'absolute', left: '8px' }}>
-        <Button
-          className="p-button-rounded p-button-text sidebar-action-button glass-button"
-          onClick={toggleSidebar}
-          tooltip={sidebarCollapsed ? t('tooltips.expandSidebar') : t('tooltips.collapseSidebar')}
-          tooltipOptions={{ position: 'right' }}
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: '32px', height: '32px', minHeight: '32px', // Botón más grande
-            padding: 0, flexShrink: 0,
-            transition: 'all 0.3s ease', border: 'none', background: 'transparent'
-          }}
+  // ── Panel Toolbar Header (fixed at top of panel) ──────────────────────
+  const panelToolbarHeader = (activeTab !== null) && (
+    <div className="sidebar-panel-toolbar">
+      {/* Left actions */}
+      <div className="sidebar-panel-toolbar-left">
+        {/* ── CONEXIONES ── */}
+        {activeTab === 'connections' && (<>
+          <button
+            className="sidebar-panel-toolbar-btn"
+            onClick={() => {
+              if (sidebarCallbacksRef?.current?.showProtocolSelection) {
+                sidebarCallbacksRef.current.showProtocolSelection();
+              } else {
+                window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'));
+              }
+            }}
+            title={t('tooltips.newConnection')}
+          >
+            <span style={TB_ICON}>{sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newConnection}</span>
+          </button>
+          <button
+            className="sidebar-panel-toolbar-btn"
+            onClick={() => { setParentNodeKey(null); setEditingNode(null); setShowFolderDialog(true); }}
+            title={t('tooltips.createFolder')}
+          >
+            <span style={TB_ICON}>{sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}</span>
+          </button>
+          <button
+            className="sidebar-panel-toolbar-btn"
+            onClick={() => setShowCreateGroupDialog(true)}
+            title={t('tooltips.createGroup')}
+          >
+            <span style={TB_ICON}>{sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newGroup}</span>
+          </button>
+        </>)}
+
+        {/* ── FAVORITOS ── */}
+        {activeTab === 'favorites' && (<>
+          <button
+            className="sidebar-panel-toolbar-btn"
+            onClick={() => { setParentNodeKey(FAVORITES_ROOT_KEY); setEditingNode(null); setShowFolderDialog(true); }}
+            title="Nueva carpeta de favoritos"
+          >
+            <span style={TB_ICON}>{sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}</span>
+          </button>
+        </>)}
+
+        {/* ── NOTAS ── */}
+        {activeTab === 'documents' && (<>
+          <button
+            className="sidebar-panel-toolbar-btn"
+            onClick={() => window.dispatchEvent(new CustomEvent('documents-sidebar:new-doc'))}
+            title="Nueva nota"
+          >
+            <span style={TB_ICON}><i className="pi pi-file-plus" style={{ fontSize: '0.85rem' }} /></span>
+          </button>
+          <button
+            className="sidebar-panel-toolbar-btn"
+            onClick={() => window.dispatchEvent(new CustomEvent('documents-sidebar:new-folder'))}
+            title="Nueva carpeta"
+          >
+            <span style={TB_ICON}>{sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}</span>
+          </button>
+        </>)}
+
+        {/* ── SECRETOS ── */}
+        {activeTab === 'passwords' && (<>
+          <button
+            className="sidebar-panel-toolbar-btn"
+            onClick={() => window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog', { detail: { initialCategory: 'secrets' } }))}
+            title="Nuevo secreto"
+          >
+            <span style={TB_ICON}>{sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newConnection}</span>
+          </button>
+          <button
+            className="sidebar-panel-toolbar-btn"
+            onClick={() => window.dispatchEvent(new CustomEvent('passwords-sidebar:new-folder'))}
+            title="Nueva carpeta"
+          >
+            <span style={TB_ICON}>{sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}</span>
+          </button>
+        </>)}
+      </div>
+
+      {/* Right actions */}
+      <div className="sidebar-panel-toolbar-right">
+        {activeTab === 'connections' && (
+          <button
+            className="sidebar-panel-toolbar-btn"
+            onClick={() => window.dispatchEvent(new CustomEvent('open-network-tools-dialog'))}
+            title="Herramientas"
+          >
+            <span style={TB_ICON}><i className="pi pi-wrench" style={{ fontSize: '0.85rem' }} /></span>
+          </button>
+        )}
+        {(activeTab === 'favorites' || activeTab === 'documents') && (
+          <button
+            className="sidebar-panel-toolbar-btn"
+            onClick={activeTab === 'documents'
+              ? () => window.dispatchEvent(new CustomEvent('documents-sidebar:toggle-expand'))
+              : toggleExpandAll}
+            title={activeTab === 'favorites' ? (allExpanded ? 'Colapsar todo' : 'Expandir todo') : 'Expandir/Colapsar'}
+          >
+            <span style={TB_ICON}>
+              <i className={allExpanded ? 'pi pi-minus-circle' : 'pi pi-plus-circle'} style={{ fontSize: '0.85rem' }} />
+            </span>
+          </button>
+        )}
+        <button
+          className="sidebar-panel-toolbar-btn"
+          onClick={() => setShowSettingsDialog(true)}
+          title={t('tooltips.settings')}
         >
-          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', color: 'var(--ui-sidebar-text)', opacity: 0.7 }}>
-            {sidebarCollapsed
-              ? sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.expandRight
-              : sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.collapseLeft}
+          <span style={TB_ICON}>
+            {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.settings}
           </span>
-        </Button>
+        </button>
       </div>
-
-      {/* Segmented Control Tabs (Centered) */}
-      <div style={{
-        display: 'flex', alignItems: 'center',
-        background: 'rgba(0,0,0,0.3)',
-        borderRadius: '24px',
-        padding: '3px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
-        border: '1px solid rgba(255,255,255,0.05)',
-        gap: '2px'
-      }}>
-        {[
-          { id: 'connections', label: 'Conexiones', icon: 'pi pi-server', color: '#4fc3f7' },
-          { id: 'passwords',   label: 'Claves',     icon: 'pi pi-shield', color: '#ef9a9a' },
-          { id: 'documents',   label: 'Notas',      icon: 'pi pi-file', color: '#64b5f6' },
-          { id: 'favorites',   label: 'Favoritos',  icon: 'pi pi-star-fill', color: '#ffc107' }
-        ].map(tab => {
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => {
-                if (tab.id === 'connections') { setViewMode('connections'); setShowFavoritesView(false); setSidebarCollapsed(false); }
-                else if (tab.id === 'favorites') { setViewMode('connections'); setShowFavoritesView(true); setSidebarCollapsed(false); }
-                else if (tab.id === 'documents') { setViewMode('documents'); setShowFavoritesView(false); setSidebarCollapsed(false); }
-                else if (tab.id === 'passwords') { setViewMode('passwords'); setShowFavoritesView(false); setSidebarCollapsed(false); }
-              }}
-              title={tab.label}
-              onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
-              onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
-              style={{
-                border: 'none', outline: 'none', cursor: 'pointer',
-                background: isActive ? 'rgba(255,255,255,0.15)' : 'transparent',
-                padding: '6px 16px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: isActive ? tab.color : 'rgba(255,255,255,0.4)',
-                borderRadius: '20px', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                boxShadow: isActive ? '0 2px 4px rgba(0,0,0,0.2)' : 'none'
-              }}
-            >
-              <i className={tab.icon} style={{ fontSize: '0.9rem', filter: isActive ? `drop-shadow(0 0 4px ${tab.color}60)` : 'none' }} />
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-
-  // ── Floating Action Bottom Bar (Layout 3) ──────────────────────────────
-  const floatingActionBottomBar = (activeTab !== null) && !sidebarCollapsed && (
-    <div className="floating-action-bar" 
-      ref={fabRef}
-      onMouseDown={handleFabMouseDown}
-      style={{
-        position: 'absolute',
-        bottom: '64px', /* Above the footer */
-        left: '50%',
-        transform: `translate(calc(-50% + ${fabPos.x}px), ${fabPos.y}px)`,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        background: 'rgba(20,20,20,0.7)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        padding: '8px 16px 8px 10px',
-        borderRadius: '32px',
-        boxShadow: isDraggingFab ? '0 12px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.2)' : '0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15)',
-        border: '1px solid rgba(255,255,255,0.1)',
-        zIndex: 100,
-        transition: isDraggingFab ? 'none' : 'all 0.3s ease',
-        cursor: isDraggingFab ? 'grabbing' : 'grab',
-        userSelect: 'none'
-    }}>
-      {/* Drag handle */}
-      <div style={{ display: 'flex', alignItems: 'center', color: 'rgba(255,255,255,0.3)', marginRight: '2px' }}>
-        <i className="pi pi-bars" style={{ fontSize: '0.85rem' }} />
-      </div>
-      <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.1)' }} />
-      {/* ── CONEXIONES toolbar ── */}
-      {activeTab === 'connections' && (<>
-        <button
-          onClick={() => {
-            if (sidebarCallbacksRef?.current?.showProtocolSelection) {
-              sidebarCallbacksRef.current.showProtocolSelection();
-            } else {
-              window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'));
-            }
-          }}
-          title={t('tooltips.newConnection')}
-          style={TB_BTN}
-          onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#4fc3f7'; e.currentTarget.style.transform = 'scale(1.1)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; e.currentTarget.style.color = 'var(--ui-sidebar-text)'; e.currentTarget.style.transform = 'scale(1)'; }}
-        >
-          <span style={{ ...TB_ICON }}>{sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newConnection}</span>
-        </button>
-        <button
-          onClick={() => { setParentNodeKey(null); setEditingNode(null); setShowFolderDialog(true); }}
-          title={t('tooltips.createFolder')}
-          style={TB_BTN}
-          onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'scale(1.1)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; e.currentTarget.style.transform = 'scale(1)'; }}
-        >
-          <span style={{ ...TB_ICON }}>{sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}</span>
-        </button>
-        <button
-          onClick={() => setShowCreateGroupDialog(true)}
-          title={t('tooltips.createGroup')}
-          style={TB_BTN}
-          onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'scale(1.1)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; e.currentTarget.style.transform = 'scale(1)'; }}
-        >
-          <span style={{ ...TB_ICON }}>{sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newGroup}</span>
-        </button>
-        <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.1)', margin: '0 4px' }} />
-        <button
-          onClick={() => window.dispatchEvent(new CustomEvent('open-network-tools-dialog'))}
-          title="Herramientas"
-          style={TB_BTN}
-          onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#06b6d4'; e.currentTarget.style.transform = 'scale(1.1)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; e.currentTarget.style.color = 'var(--ui-sidebar-text)'; e.currentTarget.style.transform = 'scale(1)'; }}
-        >
-          <span style={{ ...TB_ICON }}><i className="pi pi-wrench" style={{ fontSize: '0.85rem' }} /></span>
-        </button>
-        {hasActiveSshSession && onOpenFileExplorer && (
-          <button
-            onClick={() => onOpenFileExplorer()}
-            title="Explorador SSH"
-            style={TB_BTN}
-            onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#eab308'; e.currentTarget.style.transform = 'scale(1.1)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; e.currentTarget.style.color = 'var(--ui-sidebar-text)'; e.currentTarget.style.transform = 'scale(1)'; }}
-          >
-            <span style={{ ...TB_ICON }}><i className="pi pi-folder-open" style={{ fontSize: '0.85rem' }} /></span>
-          </button>
-        )}
-        {(filesystemAvailable && isAIChatActive) && (
-          <button
-            onClick={() => setViewMode('filesystem')}
-            title={t('tooltips.mcpExplorer')}
-            style={{ ...TB_BTN, color: viewMode === 'filesystem' ? '#8bc34a' : 'var(--ui-sidebar-text)', opacity: viewMode === 'filesystem' ? 1 : 0.7 }}
-            onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#8bc34a'; e.currentTarget.style.transform = 'scale(1.1)'; }}
-            onMouseLeave={(e) => { if(viewMode !== 'filesystem') { e.currentTarget.style.opacity = '0.7'; e.currentTarget.style.color = 'var(--ui-sidebar-text)'; } e.currentTarget.style.transform = 'scale(1)'; }}
-          >
-            <span style={{ ...TB_ICON }}><i className="pi pi-folder-open" style={{ fontSize: '0.85rem' }} /></span>
-          </button>
-        )}
-        {isAIChatActive && onToggleLocalTerminalForAIChat && (
-          <button
-            onClick={() => onToggleLocalTerminalForAIChat()}
-            title={t('tooltips.localTerminal')}
-            style={TB_BTN}
-            onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#90caf9'; e.currentTarget.style.transform = 'scale(1.1)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; e.currentTarget.style.color = 'var(--ui-sidebar-text)'; e.currentTarget.style.transform = 'scale(1)'; }}
-          >
-            <span style={{ ...TB_ICON }}><i className="pi pi-desktop" style={{ fontSize: '0.85rem' }} /></span>
-          </button>
-        )}
-      </>)}
-
-      {/* ── FAVORITOS toolbar ── */}
-      {activeTab === 'favorites' && (<>
-        <button
-          onClick={() => { setParentNodeKey(FAVORITES_ROOT_KEY); setEditingNode(null); setShowFolderDialog(true); }}
-          title="Nueva carpeta de favoritos"
-          style={TB_BTN}
-          onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#ffc107'; e.currentTarget.style.transform = 'scale(1.1)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; e.currentTarget.style.color = 'var(--ui-sidebar-text)'; e.currentTarget.style.transform = 'scale(1)'; }}
-        >
-          <span style={{ ...TB_ICON }}>{sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}</span>
-        </button>
-        <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.1)', margin: '0 4px' }} />
-        <button
-          onClick={toggleExpandAll}
-          title={allExpanded ? 'Colapsar todo' : 'Expandir todo'}
-          style={TB_BTN}
-          onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'scale(1.1)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; e.currentTarget.style.transform = 'scale(1)'; }}
-        >
-          <span style={{ ...TB_ICON }}><i className={allExpanded ? 'pi pi-minus-circle' : 'pi pi-plus-circle'} style={{ fontSize: '0.85rem' }} /></span>
-        </button>
-      </>)}
-
-      {/* ── NOTAS toolbar ── */}
-      {activeTab === 'documents' && (<>
-        <button
-          onClick={() => window.dispatchEvent(new CustomEvent('documents-sidebar:new-doc'))}
-          title="Nueva nota"
-          style={TB_BTN}
-          onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#64b5f6'; e.currentTarget.style.transform = 'scale(1.1)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; e.currentTarget.style.color = 'var(--ui-sidebar-text)'; e.currentTarget.style.transform = 'scale(1)'; }}
-        >
-          <span style={{ ...TB_ICON }}><i className="pi pi-file-plus" style={{ fontSize: '0.85rem' }} /></span>
-        </button>
-        <button
-          onClick={() => window.dispatchEvent(new CustomEvent('documents-sidebar:new-folder'))}
-          title="Nueva carpeta"
-          style={TB_BTN}
-          onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'scale(1.1)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; e.currentTarget.style.transform = 'scale(1)'; }}
-        >
-          <span style={{ ...TB_ICON }}>{sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}</span>
-        </button>
-        <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.1)', margin: '0 4px' }} />
-        <button
-          onClick={() => window.dispatchEvent(new CustomEvent('documents-sidebar:toggle-expand'))}
-          title="Expandir/Colapsar todo"
-          style={TB_BTN}
-          onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'scale(1.1)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; e.currentTarget.style.transform = 'scale(1)'; }}
-        >
-          <span style={{ ...TB_ICON }}><i className="pi pi-list" style={{ fontSize: '0.85rem' }} /></span>
-        </button>
-      </>)}
-
-      {/* ── SECRETOS toolbar ── */}
-      {activeTab === 'passwords' && (<>
-        <button
-          onClick={() => window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog', { detail: { initialCategory: 'secrets' } }))}
-          title="Nuevo secreto"
-          style={TB_BTN}
-          onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#ef9a9a'; e.currentTarget.style.transform = 'scale(1.1)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; e.currentTarget.style.color = 'var(--ui-sidebar-text)'; e.currentTarget.style.transform = 'scale(1)'; }}
-        >
-          <span style={{ ...TB_ICON }}>{sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newConnection}</span>
-        </button>
-        <button
-          onClick={() => window.dispatchEvent(new CustomEvent('passwords-sidebar:new-folder'))}
-          title="Nueva carpeta"
-          style={TB_BTN}
-          onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'scale(1.1)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; e.currentTarget.style.transform = 'scale(1)'; }}
-        >
-          <span style={{ ...TB_ICON }}>{sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}</span>
-        </button>
-      </>)}
     </div>
   );
 
   const fullSidebar = (
     // Sidebar completa
     <>
+      {/* Panel toolbar header with contextual actions */}
+      {panelToolbarHeader}
+
       {viewMode === 'connections' ? (
         // Vista de conexiones (árbol normal)
         <>
@@ -3295,8 +3077,6 @@ const Sidebar = React.memo(({
         />
       )}
       
-      {/* Floating Bottom Bar */}
-      {floatingActionBottomBar}
     </>
   );
 
