@@ -1035,6 +1035,7 @@
 .sidebar-root {
   display: flex !important;
   flex-direction: row !important;
+  border: none !important;
   border-right: none !important;
 }
 
@@ -1048,7 +1049,7 @@
   max-width: 48px;
   height: 100%;
   background: var(--ui-sidebar-bg) !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  border-right: none;
   padding: 8px 0;
   box-sizing: border-box;
   overflow-y: auto;
@@ -1151,14 +1152,19 @@
 
 .sidebar-panel-collapsed {
   flex: 0 0 0px !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
   opacity: 0 !important;
   pointer-events: none !important;
   overflow: hidden !important;
+  border: none !important;
+  padding: 0 !important;
 }
 
-/* Smooth border between rail and panel */
+/* Subtle border between rail and panel only when panel is open */
 .sidebar-icon-rail + .sidebar-panel:not(.sidebar-panel-collapsed) {
-  border-left: 1px solid rgba(255, 255, 255, 0.04);
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 /* Hover glow effect on icon rail items */

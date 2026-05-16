@@ -3190,16 +3190,24 @@ const Sidebar = React.memo(({
       {/* Panel - Collapsible content area */}
       <div
         className={`sidebar-panel${sidebarCollapsed ? ' sidebar-panel-collapsed' : ''}`}
-        style={{
-          flex: sidebarCollapsed ? '0 0 0px' : 1,
+        style={sidebarCollapsed ? {
+          flex: '0 0 0px',
+          width: 0,
+          minWidth: 0,
+          maxWidth: 0,
+          opacity: 0,
+          overflow: 'hidden',
+          pointerEvents: 'none',
+          border: 'none',
+          padding: 0,
+        } : {
+          flex: 1,
           minWidth: 0,
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
           height: '100%',
           transition: 'flex 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease',
-          opacity: sidebarCollapsed ? 0 : 1,
-          pointerEvents: sidebarCollapsed ? 'none' : 'auto',
         }}>
         {fullSidebar}
       </div>
