@@ -9,7 +9,7 @@ import { FolderDialog } from './Dialogs';
 import { iconThemes } from '../themes/icon-themes';
 import { FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
 import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
-import { sessionActionIconThemes, getDefaultSessionActionIconTheme } from '../themes/session-action-icons';
+import { sessionActionIconThemes, getDefaultSessionActionIconTheme, newDocumentToolbarIcon } from '../themes/session-action-icons';
 import ImportDialog from './ImportDialog';
 import PasswordManagerSidebar from './PasswordManagerSidebar';
 import DocumentsSidebar from './DocumentsSidebar';
@@ -2722,34 +2722,33 @@ const Sidebar = React.memo(({
     return 'connections';
   })();
 
-  // Helper button style for toolbar (macOS Style Segmented Actions)
-  const TB_BTN = {
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    background: 'transparent', border: 'none', padding: '2px 4px',
-    color: 'var(--ui-sidebar-text)', opacity: 0.6, cursor: 'pointer',
-    transition: 'opacity 0.2s, transform 0.1s', borderRadius: '4px'
-  };
   const TB_ICON = {
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     width: '16px', height: '16px'
   };
-  const TB_SEP = (
-    <div style={{
-      width: '1px', height: '12px',
-      background: 'rgba(255,255,255,0.15)',
-      margin: '0 4px'
-    }} />
+  const sessionIcons = sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons;
+
+  const createTabGroupBtn = (
+    <button
+      type="button"
+      className="sidebar-panel-toolbar-btn"
+      onClick={() => setShowCreateGroupDialog(true)}
+      title={t('tooltips.createGroup')}
+    >
+      <span style={TB_ICON}>{sessionIcons?.newGroup}</span>
+    </button>
   );
 
-  // ── Unified header (tabs row ONLY) ──────────────────────────────
-  // ── Panel Toolbar Header (fixed at top of panel) ──────────────────────
+  // ── Panel Toolbar Header (acciones fijas por sección) ─────────────────
+  const newNoteIcon = sessionIcons?.newDocument ?? newDocumentToolbarIcon;
+
   const panelToolbarHeader = (activeTab !== null) && (
     <div className="sidebar-panel-toolbar">
-      {/* Left actions */}
       <div className="sidebar-panel-toolbar-left">
         {/* ── CONEXIONES ── */}
         {activeTab === 'connections' && (<>
           <button
+            type="button"
             className="sidebar-panel-toolbar-btn"
             onClick={() => {
               if (sidebarCallbacksRef?.current?.showProtocolSelection) {
@@ -2760,105 +2759,73 @@ const Sidebar = React.memo(({
             }}
             title={t('tooltips.newConnection')}
           >
-            <span style={TB_ICON}>{sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newConnection}</span>
+            <span style={TB_ICON}>{sessionIcons?.newConnection}</span>
           </button>
           <button
+            type="button"
             className="sidebar-panel-toolbar-btn"
             onClick={() => { setParentNodeKey(null); setEditingNode(null); setShowFolderDialog(true); }}
             title={t('tooltips.createFolder')}
           >
-            <span style={TB_ICON}>{sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}</span>
+            <span style={TB_ICON}>{sessionIcons?.newFolder}</span>
           </button>
-          <button
-            className="sidebar-panel-toolbar-btn"
-            onClick={() => setShowCreateGroupDialog(true)}
-            title={t('tooltips.createGroup')}
-          >
-            <span style={TB_ICON}>{sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newGroup}</span>
-          </button>
+          {createTabGroupBtn}
         </>)}
 
         {/* ── FAVORITOS ── */}
         {activeTab === 'favorites' && (<>
           <button
+            type="button"
             className="sidebar-panel-toolbar-btn"
             onClick={() => { setParentNodeKey(FAVORITES_ROOT_KEY); setEditingNode(null); setShowFolderDialog(true); }}
-            title="Nueva carpeta de favoritos"
+            title={t('tooltips.createFolder')}
           >
-            <span style={TB_ICON}>{sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}</span>
+            <span style={TB_ICON}>{sessionIcons?.newFolder}</span>
           </button>
+          {createTabGroupBtn}
         </>)}
 
         {/* ── NOTAS ── */}
         {activeTab === 'documents' && (<>
           <button
+            type="button"
             className="sidebar-panel-toolbar-btn"
             onClick={() => window.dispatchEvent(new CustomEvent('documents-sidebar:new-doc'))}
             title="Nueva nota"
           >
-            <span style={TB_ICON}><i className="pi pi-file-plus" style={{ fontSize: '0.85rem' }} /></span>
+            <span style={TB_ICON}>{newNoteIcon}</span>
           </button>
           <button
+            type="button"
             className="sidebar-panel-toolbar-btn"
             onClick={() => window.dispatchEvent(new CustomEvent('documents-sidebar:new-folder'))}
-            title="Nueva carpeta"
+            title={t('tooltips.createFolder')}
           >
-            <span style={TB_ICON}>{sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}</span>
+            <span style={TB_ICON}>{sessionIcons?.newFolder}</span>
           </button>
+          {createTabGroupBtn}
         </>)}
 
         {/* ── SECRETOS ── */}
         {activeTab === 'passwords' && (<>
           <button
+            type="button"
             className="sidebar-panel-toolbar-btn"
             onClick={() => window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog', { detail: { initialCategory: 'secrets' } }))}
             title="Nuevo secreto"
           >
-            <span style={TB_ICON}>{sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newConnection}</span>
+            <span style={TB_ICON}>{sessionIcons?.newConnection}</span>
           </button>
           <button
+            type="button"
             className="sidebar-panel-toolbar-btn"
             onClick={() => window.dispatchEvent(new CustomEvent('passwords-sidebar:new-folder'))}
-            title="Nueva carpeta"
+            title={t('tooltips.createFolder')}
           >
-            <span style={TB_ICON}>{sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}</span>
+            <span style={TB_ICON}>{sessionIcons?.newFolder}</span>
           </button>
+          {createTabGroupBtn}
         </>)}
-      </div>
-
-      {/* Right actions */}
-      <div className="sidebar-panel-toolbar-right">
-        {activeTab === 'connections' && (
-          <button
-            className="sidebar-panel-toolbar-btn"
-            onClick={() => window.dispatchEvent(new CustomEvent('open-network-tools-dialog'))}
-            title="Herramientas"
-          >
-            <span style={TB_ICON}><i className="pi pi-wrench" style={{ fontSize: '0.85rem' }} /></span>
-          </button>
-        )}
-        {(activeTab === 'favorites' || activeTab === 'documents') && (
-          <button
-            className="sidebar-panel-toolbar-btn"
-            onClick={activeTab === 'documents'
-              ? () => window.dispatchEvent(new CustomEvent('documents-sidebar:toggle-expand'))
-              : toggleExpandAll}
-            title={activeTab === 'favorites' ? (allExpanded ? 'Colapsar todo' : 'Expandir todo') : 'Expandir/Colapsar'}
-          >
-            <span style={TB_ICON}>
-              <i className={allExpanded ? 'pi pi-minus-circle' : 'pi pi-plus-circle'} style={{ fontSize: '0.85rem' }} />
-            </span>
-          </button>
-        )}
-        <button
-          className="sidebar-panel-toolbar-btn"
-          onClick={() => setShowSettingsDialog(true)}
-          title={t('tooltips.settings')}
-        >
-          <span style={TB_ICON}>
-            {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.settings}
-          </span>
-        </button>
       </div>
     </div>
   );

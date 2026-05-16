@@ -1248,3 +1248,15 @@
   transform: scale(0.95);
   opacity: 0.9;
 }
+
+.sidebar-panel-toolbar-btn svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.sidebar-panel-toolbar-btn .pi {
+  font-size: 1rem;
+  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.85));
+}

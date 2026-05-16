@@ -435,16 +435,13 @@ const DocumentsSidebar = ({
     if (!hideHeader) return;
     const onNewDoc = () => openNewDocumentDialog();
     const onNewFolder = () => openNewFolderDialog();
-    const onToggleExpand = () => toggleExpandAllDocuments();
     window.addEventListener('documents-sidebar:new-doc', onNewDoc);
     window.addEventListener('documents-sidebar:new-folder', onNewFolder);
-    window.addEventListener('documents-sidebar:toggle-expand', onToggleExpand);
     return () => {
       window.removeEventListener('documents-sidebar:new-doc', onNewDoc);
       window.removeEventListener('documents-sidebar:new-folder', onNewFolder);
-      window.removeEventListener('documents-sidebar:toggle-expand', onToggleExpand);
     };
-  }, [hideHeader, toggleExpandAllDocuments]);
+  }, [hideHeader]);
 
   return (
     <div className="documents-sidebar-root">

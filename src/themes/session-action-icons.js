@@ -37,6 +37,35 @@ export const sessionActionIconThemes = {
           <line x1="8" y1="12" x2="16" y2="12" stroke="url(#modernConnectionGrad)" strokeWidth="2" strokeLinecap="round" filter="url(#modernShadow)"/>
         </svg>
       ),
+      // Icono de nueva nota/documento
+      newDocument: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="modernDocumentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#64b5f6" />
+              <stop offset="100%" stopColor="#42a5f5" />
+            </linearGradient>
+            <filter id="modernDocumentShadow">
+              <feGaussianBlur in="SourceAlpha" stdDeviation="1.5"/>
+              <feOffset dx="0" dy="2" result="offsetblur"/>
+              <feComponentTransfer>
+                <feFuncA type="linear" slope="0.3"/>
+              </feComponentTransfer>
+              <feMerge>
+                <feMergeNode/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"
+                fill="url(#modernDocumentGrad)" opacity="0.15" filter="url(#modernDocumentShadow)"/>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"
+                stroke="url(#modernDocumentGrad)" strokeWidth="1.8" strokeLinejoin="round"/>
+          <path d="M14 2v6h6" stroke="url(#modernDocumentGrad)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          <line x1="12" y1="18" x2="12" y2="12" stroke="url(#modernDocumentGrad)" strokeWidth="1.8" strokeLinecap="round"/>
+          <line x1="9" y1="15" x2="15" y2="15" stroke="url(#modernDocumentGrad)" strokeWidth="1.8" strokeLinecap="round"/>
+        </svg>
+      ),
       // Icono de nueva carpeta
       newFolder: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -2246,6 +2275,9 @@ export const sessionActionIconThemes = {
 /**
  * Obtiene el tema de iconos de acción por defecto
  */
+/** Icono de nueva nota para la barra de la sidebar (fallback si el tema no define newDocument). */
+export const newDocumentToolbarIcon = sessionActionIconThemes.modern.icons.newDocument;
+
 export const getDefaultSessionActionIconTheme = () => {
   try {
     return localStorage.getItem('sessionActionIconTheme') || 'modern';
