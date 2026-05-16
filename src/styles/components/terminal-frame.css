@@ -23,6 +23,18 @@
     background: transparent !important;
 }
 
+/* Sidebar colapsada: el marco y el padding del panel usan el mismo fondo que la app
+   (evita ver el body negro en márgenes y esquinas redondeadas). */
+.main-splitter > .p-splitter-panel:first-child:has(.sidebar-collapsed) {
+    background: var(--ui-sidebar-bg, #0a0f1f) !important;
+}
+
+.main-splitter .terminal-frame.sidebar-collapsed {
+    background: var(--ui-sidebar-bg, #0a0f1f) !important;
+    border-color: rgba(255, 255, 255, 0.05) !important;
+    box-shadow: none !important;
+}
+
 .terminal-frame-header {
     display: flex;
     align-items: center;

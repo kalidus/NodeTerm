@@ -2,6 +2,10 @@
   border: none;
 }
 
+.main-splitter {
+  background: var(--ui-sidebar-bg, #0a0f1f);
+}
+
 .p-splitter-panel h3 {
   font-size: 0.95rem;
   margin: 0.3rem 0;

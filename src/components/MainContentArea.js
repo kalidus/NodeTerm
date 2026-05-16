@@ -2801,9 +2801,9 @@ const MainContentArea = ({
   }, [sidebarCollapsed, sidebarSizePercent]);
 
   return (
-    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row', width: '100%', background: 'transparent' }}>
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row', width: '100%', background: 'var(--ui-sidebar-bg, #0a0f1f)' }}>
       <Splitter
-        style={{ height: '100%', width: '100%', background: 'transparent' }}
+        style={{ height: '100%', width: '100%', background: 'var(--ui-sidebar-bg, #0a0f1f)' }}
         onResizeEnd={handleResizeEndWithAutoCollapse}
         onResize={handleResizeOnly} // Sin colapso durante arrastre
         disabled={false}
@@ -2827,7 +2827,7 @@ const MainContentArea = ({
           style={isMinimalMode
             ? { display: 'none', width: 0, minWidth: 0, maxWidth: 0, padding: 0, overflow: 'hidden' }
             : sidebarCollapsed
-              ? { width: SIDEBAR_COLLAPSED_WIDTH_PX, minWidth: SIDEBAR_COLLAPSED_WIDTH_PX, maxWidth: SIDEBAR_COLLAPSED_WIDTH_PX, padding: '8px 0 8px 8px', height: '100%', transition: 'none', display: 'flex', flexDirection: 'column', overflow: 'hidden' }
+              ? { width: SIDEBAR_COLLAPSED_WIDTH_PX, minWidth: SIDEBAR_COLLAPSED_WIDTH_PX, maxWidth: SIDEBAR_COLLAPSED_WIDTH_PX, padding: '8px 0 8px 8px', height: '100%', transition: 'none', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--ui-sidebar-bg, #0a0f1f)' }
               : { padding: '8px 2px 8px 8px', height: '100%', transition: 'none', display: 'flex', flexDirection: 'column' }
           }
         >
