@@ -9,7 +9,6 @@ import { ContextMenu } from 'primereact/contextmenu';
 import { Dropdown } from 'primereact/dropdown';
 import { Message } from 'primereact/message';
 import { FolderDialog } from './Dialogs';
-import SidebarFooter from './SidebarFooter';
 import { iconThemes } from '../themes/icon-themes';
 import { FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
 import { useTranslation } from '../i18n/hooks/useTranslation';
@@ -1585,9 +1584,21 @@ const PasswordManagerSidebar = ({
   useEffect(() => {
     if (!hideHeader) return;
     const onNewFolder = () => handleNewFolder();
+    const onToggleExpandAll = () => toggleExpandAll();
     window.addEventListener('passwords-sidebar:new-folder', onNewFolder);
-    return () => window.removeEventListener('passwords-sidebar:new-folder', onNewFolder);
+    window.addEventListener('passwords-sidebar:toggle-expand-all', onToggleExpandAll);
+    return () => {
+      window.removeEventListener('passwords-sidebar:new-folder', onNewFolder);
+      window.removeEventListener('passwords-sidebar:toggle-expand-all', onToggleExpandAll);
+    };
   }, [hideHeader]);
+
+  useEffect(() => {
+    if (!hideHeader) return;
+    window.dispatchEvent(new CustomEvent('passwords-sidebar:expand-state', {
+      detail: { allExpanded }
+    }));
+  }, [hideHeader, allExpanded]);
 
   return (
     <>
@@ -1913,15 +1924,6 @@ const PasswordManagerSidebar = ({
                   />
         )}
       </div>
-
-      <SidebarFooter
-        onConfigClick={() => setShowSettingsDialog && setShowSettingsDialog(true)}
-        allExpanded={allExpanded}
-        toggleExpandAll={toggleExpandAll}
-        collapsed={false}
-        onShowImportDialog={onShowImportDialog}
-        sessionActionIconTheme={sessionActionIconTheme}
-      />
 
       {/* Dialog para crear/editar secreto */}
       <Dialog

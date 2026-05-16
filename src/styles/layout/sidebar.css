@@ -1220,6 +1220,24 @@
   gap: 2px;
 }
 
+.sidebar-panel-toolbar-right {
+  flex: 1;
+  min-width: 0;
+  justify-content: flex-end;
+}
+
+.sidebar-panel-toolbar-right-spacer {
+  flex: 1;
+  min-width: 4px;
+}
+
+.sidebar-panel-toolbar-right-end {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
 .sidebar-panel-toolbar-btn {
   display: flex;
   align-items: center;
@@ -1259,4 +1277,12 @@
 .sidebar-panel-toolbar-btn .pi {
   font-size: 1rem;
   color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.85));
+}
+
+.sidebar-panel-toolbar-btn--appearance {
+  opacity: 1 !important;
+}
+
+.sidebar-panel-toolbar-btn--appearance:hover {
+  opacity: 1 !important;
 }

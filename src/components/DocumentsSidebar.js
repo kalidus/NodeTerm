@@ -4,7 +4,6 @@ import { InputText } from 'primereact/inputtext';
 import { Dialog } from 'primereact/dialog';
 import { Tree } from 'primereact/tree';
 import { ContextMenu } from 'primereact/contextmenu';
-import SidebarFooter from './SidebarFooter';
 import { sessionActionIconThemes } from '../themes/session-action-icons';
 import { FUTURISTIC_UI_KEYS } from '../themes/ui-themes';
 import { useTranslation } from '../i18n/hooks/useTranslation';
@@ -435,13 +434,23 @@ const DocumentsSidebar = ({
     if (!hideHeader) return;
     const onNewDoc = () => openNewDocumentDialog();
     const onNewFolder = () => openNewFolderDialog();
+    const onToggleExpandAll = () => toggleExpandAllDocuments();
     window.addEventListener('documents-sidebar:new-doc', onNewDoc);
     window.addEventListener('documents-sidebar:new-folder', onNewFolder);
+    window.addEventListener('documents-sidebar:toggle-expand-all', onToggleExpandAll);
     return () => {
       window.removeEventListener('documents-sidebar:new-doc', onNewDoc);
       window.removeEventListener('documents-sidebar:new-folder', onNewFolder);
+      window.removeEventListener('documents-sidebar:toggle-expand-all', onToggleExpandAll);
     };
-  }, [hideHeader]);
+  }, [hideHeader, toggleExpandAllDocuments]);
+
+  useEffect(() => {
+    if (!hideHeader) return;
+    window.dispatchEvent(new CustomEvent('documents-sidebar:expand-state', {
+      detail: { allExpanded: allDocTreeExpanded }
+    }));
+  }, [hideHeader, allDocTreeExpanded]);
 
   return (
     <div className="documents-sidebar-root">
@@ -645,20 +654,6 @@ const DocumentsSidebar = ({
             }}
           />
         )}
-      </div>
-
-      <div style={{ flexShrink: 0, width: '100%' }}>
-        <SidebarFooter
-          onConfigClick={() => setShowSettingsDialog?.(true)}
-          allExpanded={allDocTreeExpanded}
-          toggleExpandAll={toggleExpandAllDocuments}
-          collapsed={!!sidebarCollapsed}
-          onShowImportDialog={onShowImportDialog}
-          onShowExportDialog={onShowExportDialog}
-          onShowImportExportDialog={onShowImportExportDialog}
-          onShowImportWizard={onShowImportWizard}
-          sessionActionIconTheme={sessionActionIconTheme}
-        />
       </div>
 
       <ContextMenu model={contextMenuItems} ref={contextMenuRef} />

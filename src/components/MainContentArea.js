@@ -32,10 +32,6 @@ import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
 import { presetManager } from '../utils/presetManager';
 import { applyTabTheme, getTabThemeList, applyTabLayout, getTabLayoutList, loadSavedTabLayout } from '../utils/tabThemeLoader';
-import { OverlayPanel } from 'primereact/overlaypanel';
-import { treeThemes, treeThemeOptions } from '../themes/tree-themes';
-import { sessionActionIconThemes } from '../themes/session-action-icons';
-import '../styles/components/tree-themes.css';
 
 const TAB_THEME_STORAGE_KEY = 'nodeterm_tab_theme';
 const TAB_LAYOUT_STORAGE_KEY = 'nodeterm_tab_layout';
@@ -48,10 +44,6 @@ const MainContentArea = ({
   handleResize,
   handleResizeThrottled,
   memoizedSidebarProps,
-  treeTheme,
-  setTreeTheme,
-  sessionActionIconTheme,
-  setSessionActionIconTheme,
 
   // Tab management props
   homeTabs,
@@ -169,9 +161,7 @@ const MainContentArea = ({
   const titleBarCollapsedRef = useRef(titleBarCollapsed);
   const mainFrameHeaderCollapsedRef = useRef(mainFrameHeaderCollapsed);
   const isMinimalModeRef = useRef(isMinimalMode);
-  const [sidebarSettingsView, setSidebarSettingsView] = useState('choice'); // 'choice', 'tree', 'icons'
   const [frameSearchOpen, setFrameSearchOpen] = useState(false);
-  const treeThemePanelRef = useRef(null);
 
   titleBarCollapsedRef.current = titleBarCollapsed;
   mainFrameHeaderCollapsedRef.current = mainFrameHeaderCollapsed;
@@ -2835,28 +2825,6 @@ const MainContentArea = ({
             className={sidebarCollapsed ? 'sidebar-collapsed' : ''}
             showControls={true}
             hideHeader={mainFrameHeaderCollapsed}
-            headerExtra={!sidebarCollapsed && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                <Button 
-                  icon="pi pi-palette" 
-                  className="p-button-rounded p-button-text p-button-plain" 
-                  style={{ 
-                    width: '18px', 
-                    height: '18px', 
-                    padding: 0, 
-                    color: 'var(--ui-sidebar-text, rgba(255,255,255,0.7))',
-                    fontSize: '0.75rem',
-                    background: 'transparent',
-                    border: 'none',
-                    boxShadow: 'none',
-                    opacity: 0.6
-                  }} 
-                  onClick={(e) => treeThemePanelRef.current?.toggle(e)}
-                  tooltip="Tema del Árbol"
-                  tooltipOptions={{ position: 'bottom' }}
-                />
-              </div>
-            )}
           >
             <Sidebar
               {...memoizedSidebarProps}
@@ -2865,161 +2833,6 @@ const MainContentArea = ({
               sidebarCollapsed={sidebarCollapsed}
             />
           </TerminalFrame>
-
-          {/* Overlay Panel para selección de temas de la sidebar (Árbol + Iconos) */}
-          <OverlayPanel 
-            ref={treeThemePanelRef} 
-            id="sidebar_appearance_panel" 
-            style={{ 
-              width: '280px', 
-              background: 'var(--ui-dialog-bg, #1a1a1e)', 
-              border: '1px solid var(--ui-tab-border, rgba(255,255,255,0.1))', 
-              borderRadius: '12px', 
-              boxShadow: '0 15px 50px rgba(0,0,0,0.8)', 
-              backdropFilter: 'blur(30px)', 
-              zIndex: 10001,
-              marginTop: '5px'
-            }}
-            className="glass-panel tree-theme-overlay-fix"
-            appendTo={document.body}
-            onHide={() => setSidebarSettingsView('choice')}
-          >
-            <div style={{ padding: '8px' }}>
-              {/* VISTA: ELECCIÓN PRINCIPAL */}
-              {sidebarSettingsView === 'choice' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', padding: '0 8px' }}>
-                    <i className="pi pi-palette" style={{ color: 'var(--primary-color)', fontSize: '1rem' }}></i>
-                    <span style={{ fontWeight: '600', fontSize: '0.95rem', color: 'var(--ui-sidebar-text)', letterSpacing: '0.5px' }}>Apariencia Sidebar</span>
-                  </div>
-                  
-                  <div 
-                    onClick={() => setSidebarSettingsView('tree')}
-                    className="theme-item"
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '10px',
-                      cursor: 'pointer', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)'
-                    }}
-                  >
-                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(33, 150, 243, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <i className="pi pi-sitemap" style={{ color: '#2196f3' }} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--ui-sidebar-text)' }}>Temas del Árbol</div>
-                      <div style={{ fontSize: '0.7rem', opacity: 0.5, color: 'var(--ui-sidebar-text)' }}>Estilo de líneas y conectores</div>
-                    </div>
-                    <i className="pi pi-chevron-right" style={{ fontSize: '0.7rem', opacity: 0.5 }} />
-                  </div>
-
-                  <div 
-                    onClick={() => setSidebarSettingsView('icons')}
-                    className="theme-item"
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '10px',
-                      cursor: 'pointer', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)'
-                    }}
-                  >
-                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(156, 39, 176, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <i className="pi pi-th-large" style={{ color: '#9c27b0' }} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--ui-sidebar-text)' }}>Temas de Iconos</div>
-                      <div style={{ fontSize: '0.7rem', opacity: 0.5, color: 'var(--ui-sidebar-text)' }}>Estilo de botones de acción</div>
-                    </div>
-                    <i className="pi pi-chevron-right" style={{ fontSize: '0.7rem', opacity: 0.5 }} />
-                  </div>
-                </div>
-              )}
-
-              {/* VISTA: TEMAS DEL ÁRBOL */}
-              {sidebarSettingsView === 'tree' && (
-                <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                    <Button icon="pi pi-arrow-left" className="p-button-text p-button-sm" style={{ padding: '4px', width: '24px', height: '24px' }} onClick={() => setSidebarSettingsView('choice')} />
-                    <span style={{ fontWeight: '600', fontSize: '0.85rem', color: 'var(--ui-sidebar-text)', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.8 }}>Temas del Árbol</span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '350px', overflowY: 'auto', paddingRight: '4px', scrollbarWidth: 'thin' }}>
-                    {treeThemeOptions.map((opt) => {
-                      const theme = treeThemes[opt.value] || {};
-                      const isActive = treeTheme === opt.value;
-                      return (
-                        <div 
-                          key={opt.value}
-                          onClick={() => setTreeTheme?.(opt.value)}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px', borderRadius: '8px',
-                            cursor: 'pointer', background: isActive ? 'rgba(var(--primary-rgb, 33, 150, 243), 0.15)' : 'transparent',
-                            border: '1px solid', borderColor: isActive ? 'rgba(var(--primary-rgb, 33, 150, 243), 0.3)' : 'transparent',
-                            transition: 'all 0.15s'
-                          }}
-                          className="theme-item"
-                        >
-                          <div style={{ width: '30px', height: '30px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.2)', fontSize: '1.1rem', flexShrink: 0 }}>
-                            {opt.value === 'default' && <i className="pi pi-sitemap" style={{ color: '#4fc3f7' }} />}
-                            {opt.value === 'minimal' && <i className="pi pi-minus" style={{ color: '#90a4ae' }} />}
-                            {opt.value === 'connected' && <i className="pi pi-share-alt" style={{ color: '#81c784' }} />}
-                            {opt.value === 'compact' && <i className="pi pi-align-justify" style={{ color: '#ce93d8' }} />}
-                            {opt.value === 'neon' && <i className="pi pi-bolt" style={{ color: '#ff4081' }} />}
-                            {opt.value === 'cyber' && <i className="pi pi-code" style={{ color: '#00e5ff' }} />}
-                            {opt.value === 'modern' && <i className="pi pi-objects-column" style={{ color: '#ffb74d' }} />}
-                            {opt.value === 'dotted' && <i className="pi pi-ellipsis-v" style={{ color: '#fff176' }} />}
-                            {opt.value === 'matrix' && <i className="pi pi-microsoft" style={{ color: '#4caf50' }} />}
-                            {opt.value.includes('Compact') && <i className="pi pi-compress" style={{ color: '#90caf9' }} />}
-                            {!['default', 'minimal', 'connected', 'compact', 'neon', 'cyber', 'modern', 'dotted', 'matrix'].includes(opt.value) && !opt.value.includes('Compact') && <i className="pi pi-folder" style={{ color: 'var(--primary-color)' }} />}
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1, lineHeight: '1.2' }}>
-                            <div style={{ fontSize: '0.8rem', fontWeight: isActive ? '600' : '500', color: isActive ? 'var(--primary-color)' : 'var(--ui-sidebar-text)' }}>{opt.label}</div>
-                            <div style={{ fontSize: '0.65rem', opacity: 0.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--ui-sidebar-text)' }}>{theme.description || ''}</div>
-                          </div>
-                          {isActive && <i className="pi pi-check" style={{ color: 'var(--primary-color)', fontSize: '0.75rem' }} />}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-
-              {/* VISTA: TEMAS DE ICONOS */}
-              {sidebarSettingsView === 'icons' && (
-                <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                    <Button icon="pi pi-arrow-left" className="p-button-text p-button-sm" style={{ padding: '4px', width: '24px', height: '24px' }} onClick={() => setSidebarSettingsView('choice')} />
-                    <span style={{ fontWeight: '600', fontSize: '0.85rem', color: 'var(--ui-sidebar-text)', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.8 }}>Temas de Iconos</span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '350px', overflowY: 'auto', paddingRight: '4px', scrollbarWidth: 'thin' }}>
-                    {Object.entries(sessionActionIconThemes).map(([id, theme]) => {
-                      const isActive = sessionActionIconTheme === id;
-                      return (
-                        <div 
-                          key={id}
-                          onClick={() => setSessionActionIconTheme?.(id)}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '8px',
-                            cursor: 'pointer', background: isActive ? 'rgba(var(--primary-rgb, 33, 150, 243), 0.15)' : 'transparent',
-                            border: '1px solid', borderColor: isActive ? 'rgba(var(--primary-rgb, 33, 150, 243), 0.3)' : 'transparent',
-                            transition: 'all 0.15s'
-                          }}
-                          className="theme-item"
-                        >
-                          <div style={{ width: '30px', height: '30px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.2)', flexShrink: 0 }}>
-                            {/* Mostrar icon preview (newConnection as representative) */}
-                            <div style={{ transform: 'scale(0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              {theme.icons.newConnection}
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1, lineHeight: '1.2' }}>
-                            <div style={{ fontSize: '0.8rem', fontWeight: isActive ? '600' : '500', color: isActive ? 'var(--primary-color)' : 'var(--ui-sidebar-text)' }}>{theme.name}</div>
-                            <div style={{ fontSize: '0.65rem', opacity: 0.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--ui-sidebar-text)' }}>{theme.description || ''}</div>
-                          </div>
-                          {isActive && <i className="pi pi-check" style={{ color: 'var(--primary-color)', fontSize: '0.75rem' }} />}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-            </div>
-          </OverlayPanel>
         </SplitterPanel>
 
         <SplitterPanel

@@ -5,7 +5,6 @@ import { ProgressSpinner } from 'primereact/progressspinner';
 import { Divider } from 'primereact/divider';
 import { uiThemes } from '../themes/ui-themes';
 import { iconThemes } from '../themes/icon-themes';
-import SidebarFooter from './SidebarFooter';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import { 
   FaFolder, FaFolderOpen, FaFile, FaFilePdf, FaFileWord, FaFileExcel, 
@@ -679,21 +678,6 @@ const LocalFileExplorerSidebar = ({
         )}
       </div>
 
-      <div style={{ flexShrink: 0, width: '100%' }}>
-        <SidebarFooter
-          onConfigClick={() => {
-            if (setShowSettingsDialog) {
-              setShowSettingsDialog(true);
-            }
-          }}
-          allExpanded={false}
-          toggleExpandAll={() => {
-            // No hay funcionalidad de expandir/colapsar todo en el explorador local
-          }}
-          collapsed={sidebarCollapsed}
-          sessionActionIconTheme={sessionActionIconTheme}
-        />
-      </div>
     </div>
   );
 };

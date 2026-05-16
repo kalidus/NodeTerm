@@ -8,7 +8,6 @@ import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
 import { uiThemes } from '../themes/ui-themes';
 import mcpClient from '../services/MCPClientService';
-import SidebarFooter from './SidebarFooter';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import { sessionActionIconThemes } from '../themes/session-action-icons';
 
@@ -841,6 +840,27 @@ const SidebarFilesystemExplorer = ({
             disabled={globalLoading}
             style={{ flexShrink: 0 }}
           />
+          <Button
+            className="p-button-rounded p-button-text sidebar-action-button glass-button"
+            onClick={handleToggleExpandAllGlobal}
+            tooltip={allExpanded ? t('tooltips.collapseAll') : t('tooltips.expandAll')}
+            tooltipOptions={{ position: 'bottom' }}
+            disabled={globalLoading}
+            style={{ flexShrink: 0, width: 40, height: 40, padding: 0 }}
+          >
+            <span style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 20,
+              height: 20,
+              color: 'var(--ui-sidebar-text)'
+            }}>
+              {allExpanded
+                ? sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.collapseAll
+                : sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.expandAll}
+            </span>
+          </Button>
         </div>
       </div>
       
@@ -895,14 +915,6 @@ const SidebarFilesystemExplorer = ({
         )}
       </div>
 
-      <SidebarFooter
-        onConfigClick={openConfigDialog}
-        allExpanded={allExpanded}
-        toggleExpandAll={handleToggleExpandAllGlobal}
-        collapsed={sidebarCollapsed}
-        onShowImportDialog={() => {}}
-        sessionActionIconTheme={sessionActionIconTheme}
-      />
       <Dialog
         header="Nueva carpeta"
         visible={createDialogVisible}

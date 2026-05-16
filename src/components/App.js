@@ -3051,6 +3051,7 @@ const App = () => {
 
     // Tema de iconos de acción
     sessionActionIconTheme,
+    setSessionActionIconTheme,
 
     // Callbacks para diálogos de importar/exportar
     onShowImportDialog: setShowImportDialog,
@@ -3066,7 +3067,7 @@ const App = () => {
   }), [
     nodes, setNodes, sidebarCollapsed, setSidebarCollapsed, allExpanded, toggleExpandAll,
     expandedKeys, setExpandedKeys, setShowCreateGroupDialog, setShowSettingsDialog,
-    iconThemeSidebar, iconSize, sidebarFont, sidebarFontSize, sidebarFontColor, terminalTheme, treeTheme, setTreeTheme, sessionActionIconTheme,
+    iconThemeSidebar, iconSize, sidebarFont, sidebarFontSize, sidebarFontColor, terminalTheme, treeTheme, setTreeTheme, sessionActionIconTheme, setSessionActionIconTheme,
     toast, confirmDialog, onOpenSSHConnection, onNodeContextMenu, onTreeAreaContextMenu, hideContextMenu,
     sidebarCallbacksRef, selectedNodeKey, setSelectedNodeKey, activeTab, openFileExplorer,
 
@@ -3652,10 +3653,6 @@ const App = () => {
           handleResize={handleResize}
           handleResizeThrottled={handleResizeThrottled}
           memoizedSidebarProps={memoizedSidebarProps}
-          treeTheme={treeTheme}
-          setTreeTheme={setTreeTheme}
-          sessionActionIconTheme={sessionActionIconTheme}
-          setSessionActionIconTheme={setSessionActionIconTheme}
 
           // Tab management props
           homeTabs={homeTabs}

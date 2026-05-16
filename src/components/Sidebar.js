@@ -3,7 +3,8 @@ import { Button } from 'primereact/button';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { Tree } from 'primereact/tree';
 import { Divider } from 'primereact/divider';
-import SidebarFooter from './SidebarFooter';
+import SidebarUpdateIndicator from './SidebarUpdateIndicator';
+import SidebarAppearanceMenu from './SidebarAppearanceMenu';
 import { uiThemes, FUTURISTIC_UI_KEYS } from '../themes/ui-themes';
 import { FolderDialog } from './Dialogs';
 import { iconThemes } from '../themes/icon-themes';
@@ -151,6 +152,7 @@ const Sidebar = React.memo(({
 
   // Tema de iconos de acción
   sessionActionIconTheme = 'modern',
+  setSessionActionIconTheme,
 
   // Callbacks para diálogos de importar/exportar
   onShowImportDialog,
@@ -2728,6 +2730,45 @@ const Sidebar = React.memo(({
   };
   const sessionIcons = sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons;
 
+  const [documentsTreeAllExpanded, setDocumentsTreeAllExpanded] = useState(true);
+  const [passwordsTreeAllExpanded, setPasswordsTreeAllExpanded] = useState(false);
+
+  useEffect(() => {
+    const onDocExpandState = (e) => {
+      if (typeof e.detail?.allExpanded === 'boolean') setDocumentsTreeAllExpanded(e.detail.allExpanded);
+    };
+    const onPassExpandState = (e) => {
+      if (typeof e.detail?.allExpanded === 'boolean') setPasswordsTreeAllExpanded(e.detail.allExpanded);
+    };
+    window.addEventListener('documents-sidebar:expand-state', onDocExpandState);
+    window.addEventListener('passwords-sidebar:expand-state', onPassExpandState);
+    return () => {
+      window.removeEventListener('documents-sidebar:expand-state', onDocExpandState);
+      window.removeEventListener('passwords-sidebar:expand-state', onPassExpandState);
+    };
+  }, []);
+
+  const toolbarAllExpanded = activeTab === 'documents'
+    ? documentsTreeAllExpanded
+    : activeTab === 'passwords'
+      ? passwordsTreeAllExpanded
+      : allExpanded;
+
+  const handleToolbarExpandAll = useCallback(() => {
+    if (activeTab === 'documents') {
+      window.dispatchEvent(new CustomEvent('documents-sidebar:toggle-expand-all'));
+    } else if (activeTab === 'passwords') {
+      window.dispatchEvent(new CustomEvent('passwords-sidebar:toggle-expand-all'));
+    } else if (activeTab === 'connections' || activeTab === 'favorites') {
+      toggleExpandAll();
+    }
+  }, [activeTab, toggleExpandAll]);
+
+  const showToolbarExpandAll = activeTab === 'connections'
+    || activeTab === 'favorites'
+    || activeTab === 'documents'
+    || activeTab === 'passwords';
+
   const createTabGroupBtn = (
     <button
       type="button"
@@ -2826,6 +2867,35 @@ const Sidebar = React.memo(({
           </button>
           {createTabGroupBtn}
         </>)}
+      </div>
+      <div className="sidebar-panel-toolbar-right">
+        <SidebarUpdateIndicator
+          onConfigClick={() => setShowSettingsDialog(true)}
+        />
+        <span className="sidebar-panel-toolbar-right-spacer" aria-hidden="true" />
+        <div className="sidebar-panel-toolbar-right-end">
+          {showToolbarExpandAll && (
+            <button
+              type="button"
+              className="sidebar-panel-toolbar-btn"
+              onClick={handleToolbarExpandAll}
+              title={toolbarAllExpanded ? t('tooltips.collapseAll') : t('tooltips.expandAll')}
+            >
+              <span style={TB_ICON}>
+                {toolbarAllExpanded ? sessionIcons?.collapseAll : sessionIcons?.expandAll}
+              </span>
+            </button>
+          )}
+          {activeTab !== null && setTreeTheme && (
+            <SidebarAppearanceMenu
+              treeTheme={treeTheme}
+              setTreeTheme={setTreeTheme}
+              sessionActionIconTheme={sessionActionIconTheme}
+              setSessionActionIconTheme={setSessionActionIconTheme}
+              tooltip="Apariencia del árbol"
+            />
+          )}
+        </div>
       </div>
     </div>
   );
@@ -2942,18 +3012,6 @@ const Sidebar = React.memo(({
             onNodeUpdate={updateNodeInTree}
             onOpenSSHConnection={onOpenSSHConnection}
             onOpenVncConnection={onOpenVncConnection}
-          />
-
-          <SidebarFooter
-            onConfigClick={() => setShowSettingsDialog(true)}
-            allExpanded={allExpanded}
-            toggleExpandAll={toggleExpandAll}
-            collapsed={sidebarCollapsed}
-            onShowImportDialog={onShowImportDialog || setShowImportDialog}
-            onShowExportDialog={onShowExportDialog}
-            onShowImportExportDialog={onShowImportExportDialog}
-            onShowImportWizard={onShowImportWizard}
-            sessionActionIconTheme={sessionActionIconTheme}
           />
         </>
       ) : viewMode === 'filesystem' ? (

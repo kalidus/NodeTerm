@@ -1,6 +1,6 @@
 /**
  * Utilidades para el menú de aplicación unificado
- * Se usa tanto en Sidebar como en SidebarFooter
+ * Se usa en la barra vertical de iconos (SidebarIconRail)
  */
 
 import { getVersionInfo } from '../version-info';
