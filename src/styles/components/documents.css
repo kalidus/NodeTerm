@@ -16,27 +16,10 @@
   background: var(--ui-sidebar-bg, transparent);
 }
 
-.documents-sidebar-content {
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-}
-
-.documents-sidebar-content::-webkit-scrollbar {
-  width: 6px;
-}
-
-.documents-sidebar-content::-webkit-scrollbar-track {
-  background: var(--surface-ground);
-}
-
-.documents-sidebar-content::-webkit-scrollbar-thumb {
-  background: var(--surface-border);
-  border-radius: 3px;
-}
-
-.documents-sidebar-content::-webkit-scrollbar-thumb:hover {
-  background: var(--text-color-secondary);
+/* Alinear con el resto de árboles de la sidebar (sin padding extra del contenedor) */
+.documents-sidebar-root .tree-container .sidebar-tree .p-tree-container {
+  padding: 0;
+  margin: 0;
 }
 
 .documents-empty-state {

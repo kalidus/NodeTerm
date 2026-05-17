@@ -381,21 +381,40 @@ const DocumentsSidebar = ({
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 8,
+          gap: 6,
           cursor: isFolder ? 'default' : 'pointer',
-          fontSize: `${explorerFontSize}px`,
           fontFamily: explorerFont || 'inherit',
-          padding: '2px 0'
+          width: '100%'
         }}
       >
-        <i
-          className={isFolder ? 'pi pi-folder' : 'pi pi-file'}
+        <span
           style={{
-            fontSize: '0.9rem',
-            color: isFolder ? '#ffc107' : '#64b5f6'
+            minWidth: 20,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: 20
           }}
-        />
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        >
+          <i
+            className={isFolder ? 'pi pi-folder' : 'pi pi-file'}
+            style={{
+              fontSize: '0.9rem',
+              color: isFolder ? '#ffc107' : '#64b5f6'
+            }}
+          />
+        </span>
+        <span
+          className="node-label"
+          style={{
+            flex: 1,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            lineHeight: '20px',
+            height: 20
+          }}
+        >
           {node.label}
         </span>
       </span>
@@ -619,8 +638,18 @@ const DocumentsSidebar = ({
         </div>
       )}
 
-      {/* Tree */}
-      <div className="documents-sidebar-content" style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+      {/* Tree — mismo contenedor que conexiones/passwords para alinear márgenes */}
+      <div
+        className="tree-container"
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          position: 'relative',
+          fontSize: `${explorerFontSize}px`
+        }}
+      >
         {isLoading ? (
           <div className="documents-empty-state">
             <i className="pi pi-spin pi-spinner" />
@@ -649,8 +678,7 @@ const DocumentsSidebar = ({
               fontSize: `${explorerFontSize}px`,
               fontFamily: explorerFont || 'inherit',
               border: 'none',
-              background: 'transparent',
-              padding: '0 4px'
+              background: 'transparent'
             }}
           />
         )}
