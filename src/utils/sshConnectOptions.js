@@ -108,7 +108,8 @@ function applyHostKeyPolicy(connectConfig, host, port, config, context = {}) {
   const policy = normalizeHostKeyPolicy(config.hostKeyPolicy);
   return {
     ...connectConfig,
-    hostHash: 'sha256',
+    // Sin hostHash: ssh2 entrega la clave publica en bruto (Buffer). Con hostHash,
+    // ssh2 hashea en hex y no coincide con las huellas base64 de known_hosts.
     hostVerifier: knownHostsService.createHostVerifier(
       host,
       port || 22,

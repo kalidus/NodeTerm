@@ -1,7 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { utils } = require('ssh2');
 
 class SSHKnownHostsService {
   constructor() {
@@ -32,7 +31,12 @@ class SSHKnownHostsService {
 
     try {
       const content = await fs.promises.readFile(this.filePath, 'utf8');
+      const before = content;
       this.parseContent(content);
+      const after = this.serializeKnownHostsContent();
+      if (after !== before.replace(/\r\n/g, '\n')) {
+        await fs.promises.writeFile(this.filePath, after, 'utf8');
+      }
     } catch (error) {
       if (error.code !== 'ENOENT') {
         throw error;
@@ -74,6 +78,10 @@ class SSHKnownHostsService {
       }
 
       const [hostsPart, keyType, keyData] = parts;
+      if (!this.isValidStoredKeyData(keyType, keyData)) {
+        continue;
+      }
+
       const fingerprint = this.fingerprintFromStored(keyType, keyData);
       if (!fingerprint) {
         continue;
@@ -84,18 +92,153 @@ class SSHKnownHostsService {
         if (!hostAlias) {
           continue;
         }
-        this.entries.set(hostAlias, {
-          keyType,
-          keyData,
-          fingerprint
-        });
+
+        const canonical = this.toCanonicalHostLabel(hostAlias);
+        const match = canonical && canonical.match(/^\[([^\]]+)\]:(\d+)$/);
+        if (match) {
+          this.rememberHostEntry(match[1], match[2], keyType, keyData, fingerprint);
+        } else {
+          this.entries.set(hostAlias, { keyType, keyData, fingerprint });
+        }
       }
     }
   }
 
+  decodeStoredKeyData(keyData) {
+    try {
+      return Buffer.from(keyData, 'base64');
+    } catch (error) {
+      return null;
+    }
+  }
+
+  isValidHostKeyBlob(keyBuffer) {
+    if (!keyBuffer || keyBuffer.length < 40) {
+      return false;
+    }
+
+    try {
+      const typeLen = keyBuffer.readUInt32BE(0);
+      if (typeLen < 4 || typeLen > 64 || 4 + typeLen > keyBuffer.length) {
+        return false;
+      }
+
+      const keyType = keyBuffer.toString('utf8', 4, 4 + typeLen);
+      const validTypes = new Set([
+        'ssh-rsa',
+        'ssh-dss',
+        'ssh-ed25519',
+        'ecdsa-sha2-nistp256',
+        'ecdsa-sha2-nistp384',
+        'ecdsa-sha2-nistp521',
+        'rsa-sha2-256',
+        'rsa-sha2-512'
+      ]);
+
+      return validTypes.has(keyType);
+    } catch (error) {
+      return false;
+    }
+  }
+
+  isValidStoredKeyData(keyType, keyData) {
+    if (!keyType || !keyData) {
+      return false;
+    }
+
+    // Entradas corruptas del bug hostHash: huella SHA256 hex guardada como clave
+    if (/^[0-9a-f]{64}$/i.test(keyData)) {
+      return false;
+    }
+
+    const keyBuffer = this.decodeStoredKeyData(keyData);
+    return this.isValidHostKeyBlob(keyBuffer);
+  }
+
+  isValidStoredEntry(entry) {
+    return !!(entry && this.isValidStoredKeyData(entry.keyType, entry.keyData));
+  }
+
+  serializeKnownHostsContent() {
+    const lines = [];
+    const seen = new Set();
+
+    for (const [hostAlias, entry] of this.entries.entries()) {
+      if (!this.isValidStoredEntry(entry)) {
+        continue;
+      }
+
+      const hostLabel = this.toCanonicalHostLabel(hostAlias);
+      if (!hostLabel) {
+        continue;
+      }
+
+      const lineKey = `${hostLabel}\t${entry.keyType}\t${entry.keyData}`;
+      if (seen.has(lineKey)) {
+        continue;
+      }
+      seen.add(lineKey);
+      lines.push(`${hostLabel} ${entry.keyType} ${entry.keyData}`);
+    }
+
+    return lines.length ? `${lines.join('\n')}\n` : '';
+  }
+
+  toCanonicalHostLabel(alias) {
+    if (!alias) {
+      return null;
+    }
+
+    const bracketed = alias.match(/^\[([^\]]+)\]:(\d+)$/);
+    if (bracketed) {
+      return `[${bracketed[1]}]:${bracketed[2]}`;
+    }
+
+    const plain = alias.match(/^([^:]+):(\d+)$/);
+    if (plain) {
+      return `[${plain[1]}]:${plain[2]}`;
+    }
+
+    return `[${alias}]:22`;
+  }
+
+  rememberHostEntry(host, port, keyType, keyData, fingerprint) {
+    const entry = { keyType, keyData, fingerprint };
+    for (const alias of this.getHostAliases(host, port)) {
+      this.entries.set(alias, entry);
+    }
+  }
+
+  async rewriteKnownHostsFile() {
+    await fs.promises.writeFile(this.filePath, this.serializeKnownHostsContent(), 'utf8');
+  }
+
+  async removeHost(host, port = 22) {
+    await this.ensureLoaded();
+
+    const aliases = this.getHostAliases(host, port);
+    let removed = false;
+
+    for (const alias of aliases) {
+      if (this.entries.delete(alias)) {
+        removed = true;
+      }
+    }
+
+    if (!removed) {
+      return false;
+    }
+
+    await this.rewriteKnownHostsFile();
+    return true;
+  }
+
   fingerprintFromStored(keyType, keyData) {
     try {
-      const keyBuffer = Buffer.from(keyData, 'base64');
+      const keyBuffer = this.decodeStoredKeyData(keyData);
+      if (!this.isValidHostKeyBlob(keyBuffer)) {
+        return null;
+      }
       return this.fingerprint(keyBuffer);
     } catch (error) {
       return null;
@@ -108,10 +251,31 @@ class SSHKnownHostsService {
     }
 
     if (typeof keyBuffer === 'string') {
-      return keyBuffer.toLowerCase();
+      return this.canonicalFingerprint(keyBuffer);
     }
 
     return crypto.createHash('sha256').update(keyBuffer).digest('base64');
+  }
+
+  canonicalFingerprint(value) {
+    if (!value) {
+      return null;
+    }
+
+    const raw = String(value).replace(/^sha256:/i, '');
+    const hexCandidate = raw.toLowerCase();
+    if (/^[0-9a-f]{64}$/.test(hexCandidate)) {
+      return Buffer.from(hexCandidate, 'hex').toString('base64');
+    }
+
+    // Huellas base64 (OpenSSH / known_hosts): conservar mayusculas/minusculas
+    return raw;
+  }
+
+  fingerprintsMatch(stored, incoming) {
+    const left = this.canonicalFingerprint(stored);
+    const right = this.canonicalFingerprint(incoming);
+    return !!(left && right && left === right);
   }
 
   normalizeIncomingKey(key) {
@@ -125,7 +289,7 @@ class SSHKnownHostsService {
     if (typeof key === 'string') {
       return {
         buffer: null,
-        fingerprint: key.toLowerCase()
+        fingerprint: this.canonicalFingerprint(key)
       };
     }
 
@@ -153,18 +317,19 @@ class SSHKnownHostsService {
     }
 
     const incoming = this.normalizeIncomingKey(key);
-    return !!(incoming.fingerprint && existing.fingerprint === incoming.fingerprint);
+    return this.fingerprintsMatch(existing.fingerprint, incoming.fingerprint);
   }
 
   getKeyType(keyBuffer) {
     try {
-      const parsed = utils.parseKey(keyBuffer);
-      if (!parsed) {
-        return 'ssh-rsa';
+      if (!this.isValidHostKeyBlob(keyBuffer)) {
+        return null;
       }
-      return parsed.type || 'ssh-rsa';
+
+      const typeLen = keyBuffer.readUInt32BE(0);
+      return keyBuffer.toString('utf8', 4, 4 + typeLen);
     } catch (error) {
-      return 'ssh-rsa';
+      return null;
     }
   }
 
@@ -180,18 +345,20 @@ class SSHKnownHostsService {
       return true;
     }
 
-    const keyBuffer = incoming.buffer || Buffer.from(String(key), 'base64');
-    const keyType = this.getKeyType(keyBuffer);
-    const keyData = keyBuffer.toString('base64');
-    const hostLabel = `[${host}]:${Number(port) || 22}`;
-    const line = `${hostLabel} ${keyType} ${keyData}\n`;
+    if (!incoming.buffer) {
+      return false;
+    }
 
-    await fs.promises.appendFile(this.filePath, line, 'utf8');
-    this.entries.set(hostLabel, {
-      keyType,
-      keyData,
-      fingerprint: incoming.fingerprint
-    });
+    const keyBuffer = incoming.buffer;
+    const keyType = this.getKeyType(keyBuffer);
+    if (!keyType) {
+      return false;
+    }
+
+    const keyData = keyBuffer.toString('base64');
+    this.rememberHostEntry(host, port, keyType, keyData, incoming.fingerprint);
+    await this.rewriteKnownHostsFile();
+    return true;
   }
 
   async verifyHostKey(host, port, key, policy, notify = () => {}) {
@@ -203,11 +370,16 @@ class SSHKnownHostsService {
       return false;
     }
 
-    const existing = this.lookup(host, port);
+    let existing = this.lookup(host, port);
     const label = `${host}:${Number(port) || 22}`;
 
+    if (existing && !this.isValidStoredEntry(existing)) {
+      await this.removeHost(host, port);
+      existing = null;
+    }
+
     if (existing) {
-      if (existing.fingerprint === incoming.fingerprint) {
+      if (this.fingerprintsMatch(existing.fingerprint, incoming.fingerprint)) {
         return true;
       }
 
