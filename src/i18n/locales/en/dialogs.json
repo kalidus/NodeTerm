@@ -52,7 +52,7 @@
       "hostKeyPolicy": "Host key policy",
       "hostKeyPolicyDescription": "Controls how server host keys are validated on direct SSH",
       "hostKeyPolicies": {
-        "warn_new": "Warn and save new host",
+        "warn_new": "Accept and save new host",
         "known_hosts": "Known hosts only",
         "strict": "Strict"
       },

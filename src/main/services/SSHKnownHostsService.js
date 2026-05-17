@@ -388,7 +388,6 @@ class SSHKnownHostsService {
     }
 
     if (policy === 'warn_new') {
-      notify(`[WARN] Host nuevo ${label}. Huella SHA256:${incoming.fingerprint}\r\n`);
       await this.append(host, port, key);
       return true;
     }
