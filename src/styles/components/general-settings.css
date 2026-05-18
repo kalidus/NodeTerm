@@ -51,6 +51,65 @@
   overflow-y: auto !important;
   overflow-x: hidden !important;
   box-sizing: border-box !important;
+  
+  /* Scrollbar visible y premium */
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(255, 255, 255, 0.15) rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Scrollbar para WebKit (Chrome, Safari, Edge) */
+.general-settings-container::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+  display: block !important;
+}
+
+.general-settings-container::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1) !important;
+  border-radius: 8px !important;
+}
+
+.general-settings-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-radius: 8px !important;
+  border: 2px solid transparent !important;
+  background-clip: padding-box !important;
+  transition: all 0.2s ease !important;
+}
+
+.general-settings-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25) !important;
+  border: 2px solid transparent !important;
+  background-clip: padding-box !important;
+}
+
+/* Evitar scroll en wrapper externo de PrimeReact */
+.settings-dialog .settings-dialog-tabview .p-tabview-panel > .settings-tab-outer-wrapper,
+.p-dialog.settings-dialog .settings-dialog-tabview .p-tabview-panel > .settings-tab-outer-wrapper {
+  overflow: hidden !important;
+  overflow-y: hidden !important;
+}
+
+/* Columnas de configuración general para balancear la UI */
+.general-settings-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1400px) {
+  .general-settings-column {
+    gap: 1.25rem;
+  }
+}
+
+@media (max-width: 1000px) {
+  .general-settings-column {
+    gap: 1.5rem;
+  }
 }
 
 /* Asegurar que el contenedor respete la altura del panel padre */

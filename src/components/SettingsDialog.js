@@ -2357,7 +2357,7 @@ const SettingsDialog = ({
             className="settings-dialog-tabview"
           >
             <TabPanel header={t('tabs.general')} leftIcon="pi pi-sliders-h" style={{ '--content-height': `${contentHeight}px` }}>
-              <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
+              <div className="settings-tab-outer-wrapper" style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
                 <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: '8px', bottom: 0, width: 'calc(100% - 8px)' }}>
                   {/* Header */}
                   <div className="general-settings-header-wrapper" style={{ flexShrink: 0 }}>
@@ -2374,274 +2374,280 @@ const SettingsDialog = ({
 
                   {/* Grid de 2 columnas para las secciones */}
                   <div className="general-settings-content">
-                    {/* Sección de Comportamiento */}
-                    <div className="general-settings-section">
-                      <div className="general-section-header">
-                        <div className="general-section-icon">
-                          <i className="pi pi-sliders-h"></i>
-                        </div>
-                        <h4 className="general-section-title">{t('general.sections.behavior.title')}</h4>
-                      </div>
-
-                      <div className="general-settings-options">
-                        <div className="general-setting-card" onClick={() => setLockHomeButton(!lockHomeButton)}>
-                          <div className="general-setting-content">
-                            <div className="general-setting-icon lock">
-                              <i className="pi pi-lock"></i>
-                            </div>
-                            <div className="general-setting-info">
-                              <label htmlFor="lock-home-button" className="general-setting-label">
-                                {t('general.sections.behavior.lockHomeButton.label')}
-                              </label>
-                              <p className="general-setting-description">
-                                {t('general.sections.behavior.lockHomeButton.description')}
-                              </p>
-                            </div>
-                            <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
-                              <Checkbox
-                                id="lock-home-button"
-                                checked={lockHomeButton}
-                                onChange={(e) => setLockHomeButton(e.checked)}
-                              />
-                            </div>
+                    {/* Columna Izquierda: Comportamiento */}
+                    <div className="general-settings-column">
+                      {/* Sección de Comportamiento */}
+                      <div className="general-settings-section">
+                        <div className="general-section-header">
+                          <div className="general-section-icon">
+                            <i className="pi pi-sliders-h"></i>
                           </div>
+                          <h4 className="general-section-title">{t('general.sections.behavior.title')}</h4>
                         </div>
 
-                        <div className="general-setting-card" onClick={() => setInteractiveIcon(!interactiveIcon)}>
-                          <div className="general-setting-content">
-                            <div className="general-setting-icon bolt">
-                              <i className="pi pi-bolt"></i>
-                            </div>
-                            <div className="general-setting-info">
-                              <label htmlFor="interactive-icon" className="general-setting-label">
-                                {t('general.sections.behavior.interactiveIcon.label')}
-                              </label>
-                              <p className="general-setting-description">
-                                {t('general.sections.behavior.interactiveIcon.description')}
-                              </p>
-                            </div>
-                            <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
-                              <Checkbox
-                                id="interactive-icon"
-                                checked={interactiveIcon}
-                                onChange={(e) => setInteractiveIcon(e.checked)}
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="general-setting-card" onClick={() => setSidebarStartCollapsed(!sidebarStartCollapsed)}>
-                          <div className="general-setting-content">
-                            <div className="general-setting-icon collapse">
-                              <i className="pi pi-angle-left"></i>
-                            </div>
-                            <div className="general-setting-info">
-                              <label htmlFor="sidebar-start-collapsed" className="general-setting-label">
-                                {t('general.sections.behavior.sidebarStartCollapsed.label')}
-                              </label>
-                              <p className="general-setting-description">
-                                {t('general.sections.behavior.sidebarStartCollapsed.description')}
-                              </p>
-                            </div>
-                            <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
-                              <Checkbox
-                                id="sidebar-start-collapsed"
-                                checked={sidebarStartCollapsed}
-                                onChange={(e) => setSidebarStartCollapsed(e.checked)}
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="general-setting-card" onClick={() => setMainFrameHeaderCollapsed(!mainFrameHeaderCollapsed)}>
-                          <div className="general-setting-content">
-                            <div className="general-setting-icon">
-                              <i className="pi pi-window-maximize"></i>
-                            </div>
-                            <div className="general-setting-info">
-                              <label htmlFor="main-frame-header-start-collapsed" className="general-setting-label">
-                                {t('general.sections.behavior.mainFrameHeaderStartCollapsed.label')}
-                              </label>
-                              <p className="general-setting-description">
-                                {t('general.sections.behavior.mainFrameHeaderStartCollapsed.description')}
-                              </p>
-                            </div>
-                            <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
-                              <Checkbox
-                                id="main-frame-header-start-collapsed"
-                                checked={mainFrameHeaderCollapsed}
-                                onChange={(e) => setMainFrameHeaderCollapsed(e.checked)}
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="general-setting-card general-setting-card--shortcut">
-                          <div className="general-setting-content general-setting-content--shortcut">
-                            <div className="general-setting-icon">
-                              <i className="pi pi-search"></i>
-                            </div>
-                            <div className="general-setting-info">
-                              <label htmlFor="connection-search-shortcut" className="general-setting-label">
-                                {t('general.sections.behavior.connectionSearchShortcut.label')}
-                              </label>
-                              <p className="general-setting-description">
-                                {t('general.sections.behavior.connectionSearchShortcut.description')}
-                              </p>
-                              <p className="general-setting-description general-setting-hint">
-                                {t('general.sections.behavior.connectionSearchShortcut.hint')}
-                              </p>
-                            </div>
-                            <div
-                              className="general-setting-control general-setting-control--shortcut"
-                              data-capturing-shortcut={isCapturingConnectionSearchShortcut ? 'true' : 'false'}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <InputText
-                                id="connection-search-shortcut"
-                                ref={connectionSearchShortcutInputRef}
-                                readOnly
-                                value={isCapturingConnectionSearchShortcut
-                                  ? t('general.sections.behavior.connectionSearchShortcut.capturePlaceholder')
-                                  : formatShortcutLabel(connectionSearchShortcut, locale)}
-                                onBlur={() => setIsCapturingConnectionSearchShortcut(false)}
-                                className="general-setting-shortcut-input"
-                              />
-                              <Button
-                                type="button"
-                                label={t('general.sections.behavior.connectionSearchShortcut.change')}
-                                className="p-button-sm"
-                                onClick={startConnectionSearchShortcutCapture}
-                              />
-                              <Button
-                                type="button"
-                                label={t('general.sections.behavior.connectionSearchShortcut.reset')}
-                                className="p-button-sm p-button-text"
-                                onClick={handleResetConnectionSearchShortcut}
-                              />
-                            </div>
-                          </div>
-                        </div>
-
-                        {defaultLocalTerminal !== undefined && handleDefaultTerminalChange && (
-                          <div className="general-setting-card">
+                        <div className="general-settings-options">
+                          <div className="general-setting-card" onClick={() => setLockHomeButton(!lockHomeButton)}>
                             <div className="general-setting-content">
-                              <div className="general-setting-icon">
-                                <i className="pi pi-terminal"></i>
+                              <div className="general-setting-icon lock">
+                                <i className="pi pi-lock"></i>
                               </div>
                               <div className="general-setting-info">
-                                <label htmlFor="default-terminal" className="general-setting-label">
-                                  Terminal por Defecto
+                                <label htmlFor="lock-home-button" className="general-setting-label">
+                                  {t('general.sections.behavior.lockHomeButton.label')}
                                 </label>
                                 <p className="general-setting-description">
-                                  Selecciona el terminal que se abrirá por defecto al crear una nueva pestaña local
+                                  {t('general.sections.behavior.lockHomeButton.description')}
                                 </p>
                               </div>
                               <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
-                                <Dropdown
-                                  id="default-terminal"
-                                  value={defaultLocalTerminal}
-                                  options={defaultTerminalOptions.length > 0 ? defaultTerminalOptions : [{ label: 'PowerShell', value: 'powershell' }]}
-                                  onChange={(e) => handleDefaultTerminalChange(e.value)}
-                                  placeholder="Seleccionar terminal"
-                                  style={{ minWidth: '200px' }}
-                                  disabled={defaultTerminalOptions.length === 0}
+                                <Checkbox
+                                  id="lock-home-button"
+                                  checked={lockHomeButton}
+                                  onChange={(e) => setLockHomeButton(e.checked)}
                                 />
                               </div>
                             </div>
                           </div>
-                        )}
 
+                          <div className="general-setting-card" onClick={() => setInteractiveIcon(!interactiveIcon)}>
+                            <div className="general-setting-content">
+                              <div className="general-setting-icon bolt">
+                                <i className="pi pi-bolt"></i>
+                              </div>
+                              <div className="general-setting-info">
+                                <label htmlFor="interactive-icon" className="general-setting-label">
+                                  {t('general.sections.behavior.interactiveIcon.label')}
+                                </label>
+                                <p className="general-setting-description">
+                                  {t('general.sections.behavior.interactiveIcon.description')}
+                                </p>
+                              </div>
+                              <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                                <Checkbox
+                                  id="interactive-icon"
+                                  checked={interactiveIcon}
+                                  onChange={(e) => setInteractiveIcon(e.checked)}
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="general-setting-card" onClick={() => setSidebarStartCollapsed(!sidebarStartCollapsed)}>
+                            <div className="general-setting-content">
+                              <div className="general-setting-icon collapse">
+                                <i className="pi pi-angle-left"></i>
+                              </div>
+                              <div className="general-setting-info">
+                                <label htmlFor="sidebar-start-collapsed" className="general-setting-label">
+                                  {t('general.sections.behavior.sidebarStartCollapsed.label')}
+                                </label>
+                                <p className="general-setting-description">
+                                  {t('general.sections.behavior.sidebarStartCollapsed.description')}
+                                </p>
+                              </div>
+                              <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                                <Checkbox
+                                  id="sidebar-start-collapsed"
+                                  checked={sidebarStartCollapsed}
+                                  onChange={(e) => setSidebarStartCollapsed(e.checked)}
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="general-setting-card" onClick={() => setMainFrameHeaderCollapsed(!mainFrameHeaderCollapsed)}>
+                            <div className="general-setting-content">
+                              <div className="general-setting-icon">
+                                <i className="pi pi-window-maximize"></i>
+                              </div>
+                              <div className="general-setting-info">
+                                <label htmlFor="main-frame-header-start-collapsed" className="general-setting-label">
+                                  {t('general.sections.behavior.mainFrameHeaderStartCollapsed.label')}
+                                </label>
+                                <p className="general-setting-description">
+                                  {t('general.sections.behavior.mainFrameHeaderStartCollapsed.description')}
+                                </p>
+                              </div>
+                              <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                                <Checkbox
+                                  id="main-frame-header-start-collapsed"
+                                  checked={mainFrameHeaderCollapsed}
+                                  onChange={(e) => setMainFrameHeaderCollapsed(e.checked)}
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="general-setting-card general-setting-card--shortcut">
+                            <div className="general-setting-content general-setting-content--shortcut">
+                              <div className="general-setting-icon">
+                                <i className="pi pi-search"></i>
+                              </div>
+                              <div className="general-setting-info">
+                                <label htmlFor="connection-search-shortcut" className="general-setting-label">
+                                  {t('general.sections.behavior.connectionSearchShortcut.label')}
+                                </label>
+                                <p className="general-setting-description">
+                                  {t('general.sections.behavior.connectionSearchShortcut.description')}
+                                </p>
+                                <p className="general-setting-description general-setting-hint">
+                                  {t('general.sections.behavior.connectionSearchShortcut.hint')}
+                                </p>
+                              </div>
+                              <div
+                                className="general-setting-control general-setting-control--shortcut"
+                                data-capturing-shortcut={isCapturingConnectionSearchShortcut ? 'true' : 'false'}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <InputText
+                                  id="connection-search-shortcut"
+                                  ref={connectionSearchShortcutInputRef}
+                                  readOnly
+                                  value={isCapturingConnectionSearchShortcut
+                                    ? t('general.sections.behavior.connectionSearchShortcut.capturePlaceholder')
+                                    : formatShortcutLabel(connectionSearchShortcut, locale)}
+                                  onBlur={() => setIsCapturingConnectionSearchShortcut(false)}
+                                  className="general-setting-shortcut-input"
+                                />
+                                <Button
+                                  type="button"
+                                  label={t('general.sections.behavior.connectionSearchShortcut.change')}
+                                  className="p-button-sm"
+                                  onClick={startConnectionSearchShortcutCapture}
+                                />
+                                <Button
+                                  type="button"
+                                  label={t('general.sections.behavior.connectionSearchShortcut.reset')}
+                                  className="p-button-sm p-button-text"
+                                  onClick={handleResetConnectionSearchShortcut}
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {defaultLocalTerminal !== undefined && handleDefaultTerminalChange && (
+                            <div className="general-setting-card">
+                              <div className="general-setting-content">
+                                <div className="general-setting-icon">
+                                  <i className="pi pi-terminal"></i>
+                                </div>
+                                <div className="general-setting-info">
+                                  <label htmlFor="default-terminal" className="general-setting-label">
+                                    Terminal por Defecto
+                                  </label>
+                                  <p className="general-setting-description">
+                                    Selecciona el terminal que se abrirá por defecto al crear una nueva pestaña local
+                                  </p>
+                                </div>
+                                <div className="general-setting-control" onClick={(e) => e.stopPropagation()}>
+                                  <Dropdown
+                                    id="default-terminal"
+                                    value={defaultLocalTerminal}
+                                    options={defaultTerminalOptions.length > 0 ? defaultTerminalOptions : [{ label: 'PowerShell', value: 'powershell' }]}
+                                    onChange={(e) => handleDefaultTerminalChange(e.value)}
+                                    placeholder="Seleccionar terminal"
+                                    style={{ minWidth: '200px' }}
+                                    disabled={defaultTerminalOptions.length === 0}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                        </div>
                       </div>
                     </div>
 
-                    {/* Sección de Idioma */}
-                    <div className="general-settings-section">
-                      <div className="general-section-header">
-                        <div className="general-section-icon">
-                          <i className="pi pi-globe"></i>
+                    {/* Columna Derecha: Idioma & Personalización Visual */}
+                    <div className="general-settings-column">
+                      {/* Sección de Idioma */}
+                      <div className="general-settings-section">
+                        <div className="general-section-header">
+                          <div className="general-section-icon">
+                            <i className="pi pi-globe"></i>
+                          </div>
+                          <h4 className="general-section-title">{t('language.title')}</h4>
                         </div>
-                        <h4 className="general-section-title">{t('language.title')}</h4>
+
+                        <div className="general-settings-options">
+                          <div className="general-setting-card">
+                            <div className="general-setting-content">
+                              <div className="general-setting-icon" style={{ background: 'linear-gradient(135deg, #4CAF50 0%, #2196F3 100%)' }}>
+                                <i className="pi pi-language"></i>
+                              </div>
+                              <div className="general-setting-info">
+                                <label htmlFor="language-select" className="general-setting-label">
+                                  {t('language.select')}
+                                </label>
+                                <p className="general-setting-description">
+                                  {t('language.description')}
+                                </p>
+                              </div>
+                              <div className="general-setting-control" onClick={(e) => e.stopPropagation()} style={{ minWidth: '180px' }}>
+                                <Dropdown
+                                  id="language-select"
+                                  value={locale}
+                                  options={availableLocales.map(loc => ({
+                                    label: `${loc.flag} ${loc.name}`,
+                                    value: loc.code
+                                  }))}
+                                  onChange={(e) => setLocale(e.value)}
+                                  style={{ width: '100%' }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="general-settings-options">
-                        <div className="general-setting-card">
-                          <div className="general-setting-content">
-                            <div className="general-setting-icon" style={{ background: 'linear-gradient(135deg, #4CAF50 0%, #2196F3 100%)' }}>
-                              <i className="pi pi-language"></i>
+                      {/* Sección de Personalización Visual */}
+                      <div className="general-settings-section">
+                        <div className="general-section-header">
+                          <div className="general-section-icon">
+                            <i className="pi pi-palette"></i>
+                          </div>
+                          <h4 className="general-section-title">{t('general.sections.visual.title')}</h4>
+                        </div>
+
+                        {/* Selector de Icono de Pestaña de Inicio */}
+                        <div className="general-icon-selector-section">
+                          <div className="general-selector-row-expandable">
+                            <div className="general-selector-info-group">
+                              <div className="general-selector-icon-compact">
+                                <i className="pi pi-home"></i>
+                              </div>
+                              <div className="general-selector-text-group">
+                                <span className="general-selector-title-compact">{t('general.sections.visual.homeTabIcon.title')}</span>
+                                <span className="general-selector-description-compact">{t('general.sections.visual.homeTabIcon.description')}</span>
+                              </div>
                             </div>
-                            <div className="general-setting-info">
-                              <label htmlFor="language-select" className="general-setting-label">
-                                {t('language.select')}
-                              </label>
-                              <p className="general-setting-description">
-                                {t('language.description')}
-                              </p>
-                            </div>
-                            <div className="general-setting-control" onClick={(e) => e.stopPropagation()} style={{ minWidth: '180px' }}>
-                              <Dropdown
-                                id="language-select"
-                                value={locale}
-                                options={availableLocales.map(loc => ({
-                                  label: `${loc.flag} ${loc.name}`,
-                                  value: loc.code
-                                }))}
-                                onChange={(e) => setLocale(e.value)}
-                                style={{ width: '100%' }}
+                            <div className="general-selector-action-wrapper">
+                              <HomeIconSelectorGrid
+                                selected={selectedHomeIcon}
+                                onSelect={setSelectedHomeIcon}
                               />
                             </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
 
-                    {/* Sección de Personalización Visual */}
-                    <div className="general-settings-section">
-                      <div className="general-section-header">
-                        <div className="general-section-icon">
-                          <i className="pi pi-palette"></i>
-                        </div>
-                        <h4 className="general-section-title">{t('general.sections.visual.title')}</h4>
-                      </div>
-
-                      {/* Selector de Icono de Pestaña de Inicio */}
-                      <div className="general-icon-selector-section">
-                        <div className="general-selector-row-expandable">
-                          <div className="general-selector-info-group">
-                            <div className="general-selector-icon-compact">
-                              <i className="pi pi-home"></i>
+                        {/* Selector de Icono de Grupos */}
+                        <div className="general-icon-selector-section">
+                          <div className="general-selector-row-expandable">
+                            <div className="general-selector-info-group">
+                              <div className="general-selector-icon-compact">
+                                <i className="pi pi-th-large"></i>
+                              </div>
+                              <div className="general-selector-text-group">
+                                <span className="general-selector-title-compact">{t('general.sections.visual.groupTabIcon.title')}</span>
+                                <span className="general-selector-description-compact">{t('general.sections.visual.groupTabIcon.description')}</span>
+                              </div>
                             </div>
-                            <div className="general-selector-text-group">
-                              <span className="general-selector-title-compact">{t('general.sections.visual.homeTabIcon.title')}</span>
-                              <span className="general-selector-description-compact">{t('general.sections.visual.homeTabIcon.description')}</span>
+                            <div className="general-selector-action-wrapper">
+                              <GroupIconSelectorGrid
+                                selected={selectedGroupIcon}
+                                onSelect={setSelectedGroupIcon}
+                              />
                             </div>
-                          </div>
-                          <div className="general-selector-action-wrapper">
-                            <HomeIconSelectorGrid
-                              selected={selectedHomeIcon}
-                              onSelect={setSelectedHomeIcon}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Selector de Icono de Grupos */}
-                      <div className="general-icon-selector-section">
-                        <div className="general-selector-row-expandable">
-                          <div className="general-selector-info-group">
-                            <div className="general-selector-icon-compact">
-                              <i className="pi pi-th-large"></i>
-                            </div>
-                            <div className="general-selector-text-group">
-                              <span className="general-selector-title-compact">{t('general.sections.visual.groupTabIcon.title')}</span>
-                              <span className="general-selector-description-compact">{t('general.sections.visual.groupTabIcon.description')}</span>
-                            </div>
-                          </div>
-                          <div className="general-selector-action-wrapper">
-                            <GroupIconSelectorGrid
-                              selected={selectedGroupIcon}
-                              onSelect={setSelectedGroupIcon}
-                            />
                           </div>
                         </div>
                       </div>
