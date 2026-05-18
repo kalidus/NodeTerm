@@ -2719,6 +2719,7 @@ const Sidebar = React.memo(({
   // 'connections' | 'favorites' | 'documents' | 'passwords'
   const activeTab = (() => {
     if (viewMode === 'filesystem' || viewMode === 'localExplorer') return null; // estos modos ocultan las pestañas
+    if (viewMode === 'tools') return 'tools';
     if (viewMode === 'documents') return 'documents';
     if (viewMode === 'passwords') return 'passwords';
     if (showFavoritesView) return 'favorites';
@@ -2733,6 +2734,7 @@ const Sidebar = React.memo(({
 
   const [documentsTreeAllExpanded, setDocumentsTreeAllExpanded] = useState(true);
   const [passwordsTreeAllExpanded, setPasswordsTreeAllExpanded] = useState(false);
+  const [toolsTreeAllExpanded, setToolsTreeAllExpanded] = useState(true);
 
   useEffect(() => {
     const onDocExpandState = (e) => {
@@ -2741,11 +2743,16 @@ const Sidebar = React.memo(({
     const onPassExpandState = (e) => {
       if (typeof e.detail?.allExpanded === 'boolean') setPasswordsTreeAllExpanded(e.detail.allExpanded);
     };
+    const onToolsExpandState = (e) => {
+      if (typeof e.detail?.allExpanded === 'boolean') setToolsTreeAllExpanded(e.detail.allExpanded);
+    };
     window.addEventListener('documents-sidebar:expand-state', onDocExpandState);
     window.addEventListener('passwords-sidebar:expand-state', onPassExpandState);
+    window.addEventListener('tools-sidebar:expand-state', onToolsExpandState);
     return () => {
       window.removeEventListener('documents-sidebar:expand-state', onDocExpandState);
       window.removeEventListener('passwords-sidebar:expand-state', onPassExpandState);
+      window.removeEventListener('tools-sidebar:expand-state', onToolsExpandState);
     };
   }, []);
 
@@ -2753,13 +2760,17 @@ const Sidebar = React.memo(({
     ? documentsTreeAllExpanded
     : activeTab === 'passwords'
       ? passwordsTreeAllExpanded
-      : allExpanded;
+      : activeTab === 'tools'
+        ? toolsTreeAllExpanded
+        : allExpanded;
 
   const handleToolbarExpandAll = useCallback(() => {
     if (activeTab === 'documents') {
       window.dispatchEvent(new CustomEvent('documents-sidebar:toggle-expand-all'));
     } else if (activeTab === 'passwords') {
       window.dispatchEvent(new CustomEvent('passwords-sidebar:toggle-expand-all'));
+    } else if (activeTab === 'tools') {
+      window.dispatchEvent(new CustomEvent('tools-sidebar:toggle-expand-all'));
     } else if (activeTab === 'connections' || activeTab === 'favorites') {
       toggleExpandAll();
     }
@@ -2768,7 +2779,8 @@ const Sidebar = React.memo(({
   const showToolbarExpandAll = activeTab === 'connections'
     || activeTab === 'favorites'
     || activeTab === 'documents'
-    || activeTab === 'passwords';
+    || activeTab === 'passwords'
+    || activeTab === 'tools';
 
   const createTabGroupBtn = (
     <button
@@ -2887,7 +2899,16 @@ const Sidebar = React.memo(({
               </span>
             </button>
           )}
-          {activeTab !== null && setTreeTheme && (
+          {activeTab === 'tools' ? (
+            <button
+              type="button"
+              className="sidebar-panel-toolbar-btn"
+              onClick={() => setShowSettingsDialog(true)}
+              title={t('tooltips.settings')}
+            >
+              <span style={TB_ICON}>{sessionIcons?.settings}</span>
+            </button>
+          ) : activeTab !== null && setTreeTheme && (
             <SidebarAppearanceMenu
               treeTheme={treeTheme}
               setTreeTheme={setTreeTheme}

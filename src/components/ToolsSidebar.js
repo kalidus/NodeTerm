@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { InputText } from 'primereact/inputtext';
+import React, { useState, useEffect, useCallback } from 'react';
 
 const TOOL_CATEGORIES = [
   {
@@ -62,60 +61,43 @@ const ToolsSidebar = ({ onOpenTool }) => {
   const [expandedCategories, setExpandedCategories] = useState(
     TOOL_CATEGORIES.reduce((acc, cat) => ({ ...acc, [cat.id]: true }), {})
   );
-  const [searchQuery, setSearchQuery] = useState('');
   const [hoveredTool, setHoveredTool] = useState(null);
 
   const toggleCategory = (categoryId) => {
     setExpandedCategories(prev => ({ ...prev, [categoryId]: !prev[categoryId] }));
   };
 
-  const filteredCategories = TOOL_CATEGORIES.map(cat => ({
-    ...cat,
-    tools: searchQuery
-      ? cat.tools.filter(t =>
-          t.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          t.description.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-      : cat.tools
-  })).filter(cat => cat.tools.length > 0);
+  const notifyExpandState = useCallback((state) => {
+    const allExpanded = Object.values(state).every(Boolean);
+    window.dispatchEvent(new CustomEvent('tools-sidebar:expand-state', {
+      detail: { allExpanded }
+    }));
+  }, []);
+
+  useEffect(() => {
+    notifyExpandState(expandedCategories);
+  }, [expandedCategories, notifyExpandState]);
+
+  useEffect(() => {
+    const handleToggleExpandAll = () => {
+      setExpandedCategories(prev => {
+        const allExpanded = Object.values(prev).every(Boolean);
+        const next = TOOL_CATEGORIES.reduce((acc, cat) => ({
+          ...acc,
+          [cat.id]: !allExpanded
+        }), {});
+        return next;
+      });
+    };
+    window.addEventListener('tools-sidebar:toggle-expand-all', handleToggleExpandAll);
+    return () => window.removeEventListener('tools-sidebar:toggle-expand-all', handleToggleExpandAll);
+  }, []);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      {/* Header */}
-      <div style={{
-        padding: '0.75rem',
-        borderBottom: '1px solid rgba(255,255,255,0.08)',
-        flexShrink: 0
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-          <i className="pi pi-wrench" style={{ color: '#06b6d4', fontSize: '0.9rem' }} />
-          <span style={{ fontWeight: '600', fontSize: '0.85rem', color: 'var(--text-color)' }}>Herramientas</span>
-        </div>
-        <span className="p-input-icon-left" style={{ width: '100%' }}>
-          <i className="pi pi-search" style={{ fontSize: '0.75rem' }} />
-          <InputText
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar herramienta..."
-            style={{
-              width: '100%',
-              fontSize: '0.8rem',
-              padding: '0.35rem 0.5rem 0.35rem 1.75rem',
-              height: '28px',
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.12)',
-              borderRadius: '6px',
-              color: 'var(--text-color)'
-            }}
-          />
-        </span>
-      </div>
-
-      {/* Lista de categorías y herramientas */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '0.25rem 0' }}>
-        {filteredCategories.map(category => (
+        {TOOL_CATEGORIES.map(category => (
           <div key={category.id}>
-            {/* Header de categoría */}
             <div
               onClick={() => toggleCategory(category.id)}
               style={{
@@ -152,7 +134,6 @@ const ToolsSidebar = ({ onOpenTool }) => {
               </span>
             </div>
 
-            {/* Herramientas de la categoría */}
             {expandedCategories[category.id] && category.tools.map(tool => (
               <div
                 key={tool.id}
@@ -188,13 +169,6 @@ const ToolsSidebar = ({ onOpenTool }) => {
             ))}
           </div>
         ))}
-
-        {filteredCategories.length === 0 && (
-          <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-color-secondary)', fontSize: '0.8rem' }}>
-            <i className="pi pi-search" style={{ fontSize: '1.5rem', marginBottom: '0.5rem', display: 'block', opacity: 0.4 }} />
-            No se encontraron herramientas
-          </div>
-        )}
       </div>
     </div>
   );
