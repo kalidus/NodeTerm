@@ -25,6 +25,32 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
   // Cache para passwords y conexiones aplanados
   const [cachedAllItems, setCachedAllItems] = useState([]);
 
+  // Debounced search state
+  const [localFilter, setLocalFilter] = useState(sidebarFilter || '');
+  const debounceTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    setLocalFilter(sidebarFilter || '');
+  }, [sidebarFilter]);
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleFilterChange = (val) => {
+    setLocalFilter(val);
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    debounceTimeoutRef.current = setTimeout(() => {
+      setSidebarFilter(val);
+    }, 200);
+  };
+
 
 
 
@@ -1211,7 +1237,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
       </div>
       <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 10, flex: 1, justifyContent: 'center' }}>
         <div style={{ position: 'relative', minWidth: 350, maxWidth: 600, width: '35vw', WebkitAppRegion: 'no-drag' }}>
-          {!sidebarFilter ? (
+          {!localFilter ? (
             <span style={{
               position: 'absolute',
               left: '50%',
@@ -1246,8 +1272,8 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
             </span>
           )}
           <InputText
-            value={sidebarFilter}
-            onChange={e => setSidebarFilter(e.target.value)}
+            value={localFilter}
+            onChange={e => handleFilterChange(e.target.value)}
             onKeyDown={handleSearchKeyDown}
             placeholder=""
             className="search-input"
@@ -1273,7 +1299,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
             onFocus={handleInputFocus}
             onBlur={() => {
               // Solo ocultar el dropdown si no hay texto en el filtro
-              if (!sidebarFilter.trim()) {
+              if (!localFilter.trim()) {
                 setTimeout(() => {
                   setShowDropdown(false);
                 }, 150);

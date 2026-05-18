@@ -1885,7 +1885,7 @@ const PasswordManagerSidebar = ({
         style={{ 
           flex: 1, 
           minHeight: 0, 
-          overflowY: 'auto', 
+          overflowY: 'hidden', 
           overflowX: 'auto',
           position: 'relative',
           fontSize: `${explorerFontSize}px`
@@ -1916,7 +1916,10 @@ const PasswordManagerSidebar = ({
                     className={`sidebar-tree tree-theme-${treeTheme}`}
                     data-icon-theme={iconTheme}
                     data-tree-theme={treeTheme}
+                    scrollHeight="100%"
+                    virtualScrollerOptions={{ itemSize: Math.max(folderIconSize || 20, explorerFontSize || 13) + 12 }}
                     style={{ 
+                      height: '100%',
                       fontSize: `${explorerFontSize}px`,
                       '--icon-size': `${iconSize}px`
                     }}

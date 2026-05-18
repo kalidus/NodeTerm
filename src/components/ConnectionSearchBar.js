@@ -106,6 +106,32 @@ const ConnectionSearchBar = ({
   const MIN_SEARCH_CHARS = 3;
   const variantStyles = VARIANT_STYLES[variant] || VARIANT_STYLES.titlebar;
 
+  // Debounced search state
+  const [localFilter, setLocalFilter] = useState(sidebarFilter || '');
+  const debounceTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    setLocalFilter(sidebarFilter || '');
+  }, [sidebarFilter]);
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleFilterChange = (val) => {
+    setLocalFilter(val);
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    debounceTimeoutRef.current = setTimeout(() => {
+      setSidebarFilter(val);
+    }, 200);
+  };
+
   useEffect(() => {
     const loadPasswords = async () => {
       try {
@@ -532,7 +558,7 @@ const ConnectionSearchBar = ({
         ...variantStyles.container,
       }}
     >
-      {!sidebarFilter ? (
+      {!localFilter ? (
         <span style={{
           position: 'absolute',
           left: variant === 'palette' ? 16 : '50%',
@@ -568,8 +594,8 @@ const ConnectionSearchBar = ({
       )}
       <InputText
         ref={inputRef}
-        value={sidebarFilter}
-        onChange={(e) => setSidebarFilter(e.target.value)}
+        value={localFilter}
+        onChange={(e) => handleFilterChange(e.target.value)}
         onKeyDown={handleSearchKeyDown}
         placeholder=""
         className="search-input"
@@ -590,7 +616,7 @@ const ConnectionSearchBar = ({
           if (variant === 'palette') {
             return;
           }
-          if (!sidebarFilter.trim()) {
+          if (!localFilter.trim()) {
             setTimeout(() => {
               setShowDropdown(false);
               onRequestClose?.();

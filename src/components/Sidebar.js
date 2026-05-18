@@ -2926,7 +2926,7 @@ const Sidebar = React.memo(({
             style={{
               flex: 1,
               minHeight: 0,
-              overflowY: 'auto',
+              overflowY: 'hidden',
               overflowX: 'auto',
               position: 'relative',
               fontSize: `${explorerFontSize}px`,
@@ -2999,7 +2999,10 @@ const Sidebar = React.memo(({
                 data-icon-theme={iconTheme}
                 data-tree-theme={treeTheme}
                 data-font-color={explorerFontColor || ''}
+                scrollHeight="100%"
+                virtualScrollerOptions={{ itemSize: Math.max(folderIconSize || 20, explorerFontSize || 13) + 12 }}
                 style={{
+                  height: '100%',
                   fontSize: `${explorerFontSize}px`,
                   color: explorerFontColor || undefined,
                   '--icon-size': `${iconSize}px`,
