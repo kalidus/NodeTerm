@@ -1,12 +1,6 @@
 import React, { useEffect, useRef, useImperativeHandle, forwardRef, useState, useMemo } from 'react';
 import { useStatusBarSessionHistory } from '../hooks/useStatusBarSessionHistory';
-import { Terminal } from '@xterm/xterm';
-import { FitAddon } from '@xterm/addon-fit';
-import { WebLinksAddon } from '@xterm/addon-web-links';
-import { Unicode11Addon } from '@xterm/addon-unicode11';
-import { WebglAddon } from '@xterm/addon-webgl';
-// import { ImageAddon } from '@xterm/addon-image'; // Comentado temporalmente por errores de require
-import '@xterm/xterm/css/xterm.css';
+import { loadXtermModules } from '../utils/xtermLoader';
 import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { themes } from '../themes';
@@ -103,6 +97,15 @@ const TerminalComponent = forwardRef(({
     const terminalRef = useRef(null);
     const term = useRef(null);
     const fitAddon = useRef(null);
+    const [xtermLib, setXtermLib] = useState(null);
+
+    useEffect(() => {
+      let cancelled = false;
+      loadXtermModules().then((lib) => {
+        if (!cancelled) setXtermLib(lib);
+      }).catch((err) => console.error('[Terminal] Error cargando xterm:', err));
+      return () => { cancelled = true; };
+    }, []);
 
     // Build CSS variable overrides for StatusBar
     const getScopedStatusBarCssVars = () => {
@@ -197,7 +200,8 @@ const TerminalComponent = forwardRef(({
     }));
 
     useEffect(() => {
-        if (!tabId) return;
+        if (!tabId || !xtermLib) return;
+        const { Terminal, FitAddon, WebLinksAddon, Unicode11Addon, WebglAddon } = xtermLib;
 
         // Cancelar timer de desconexi??n pendiente si existe
         // Esto evita desconectar la sesi??n SSH cuando el componente se remonta r??pidamente
@@ -586,7 +590,7 @@ const TerminalComponent = forwardRef(({
                 }
             };
         }
-    }, [tabId, sshConfig]);
+    }, [tabId, sshConfig, xtermLib]);
 
     // Effect to update font family dynamically
     useEffect(() => {
@@ -648,6 +652,14 @@ const TerminalComponent = forwardRef(({
             return () => clearTimeout(timer);
         }
     }, []); // Solo al montar
+
+    if (!xtermLib) {
+        return (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', opacity: 0.6 }}>
+                <i className="pi pi-spin pi-spinner" style={{ marginRight: 8 }} />
+            </div>
+        );
+    }
 
     return (
         <div

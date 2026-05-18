@@ -66,12 +66,33 @@ logTiming('Utils cargados');
 // Nota: Docker se importará después de que se carguen fs y path
 let Docker = null;
 
-const { WSL, PowerShell, Cygwin, Claude, OpenCode, GeminiCli, CodexCli } = require('./src/main/services');
+const {
+  getWSL, getPowerShell, getCygwin, getClaude, getOpenCode, getGeminiCli, getCodexCli
+} = require('./src/main/services/lazy-services');
+
+function createServiceProxy(getter) {
+  return new Proxy({}, {
+    get(_target, prop) {
+      const mod = getter();
+      const val = mod[prop];
+      return typeof val === 'function' ? val.bind(mod) : val;
+    }
+  });
+}
+
+const WSL = createServiceProxy(getWSL);
+const PowerShell = createServiceProxy(getPowerShell);
+const Cygwin = createServiceProxy(getCygwin);
+const Claude = createServiceProxy(getClaude);
+const OpenCode = createServiceProxy(getOpenCode);
+const GeminiCli = createServiceProxy(getGeminiCli);
+const CodexCli = createServiceProxy(getCodexCli);
+
 const { getClaudeConfig } = require('./src/main/handlers/claude-handlers');
 const { getOpenCodeConfig } = require('./src/main/handlers/opencode-handlers');
-const { getGeminiCliConfig, registerGeminiCliHandlers } = require('./src/main/handlers/geminicli-handlers');
+const { getGeminiCliConfig } = require('./src/main/handlers/geminicli-handlers');
 const { getCodexCliConfig } = require('./src/main/handlers/codexcli-handlers');
-logTiming('Servicios WSL/PowerShell/Cygwin/Claude cargados');
+logTiming('Proxies de servicios terminal/CLI registrados (carga diferida)');
 
 // Servicio de estadísticas SSH
 const sshStatsService = require('./src/main/services/SSHStatsService');
@@ -149,7 +170,8 @@ const os = require('os');
 const fs = require('fs');
 
 const { migrateDataFromHomeDir, getNodeTermDataDir } = require('./src/main/utils/file-utils');
-migrateDataFromHomeDir();
+// Migración en background (no bloquea app.ready)
+setImmediate(() => migrateDataFromHomeDir());
 
 // ============================================================================
 // 🔒 MULTI-INSTANCE SUPPORT (Fix for "Cache Lock" errors)
@@ -1036,30 +1058,15 @@ function createWindow() {
       sshConnections,
       cleanupOrphanedConnections,
       isAppQuitting,
-      anythingLLMService: getAnythingLLMService(),
-      openWebUIService: getOpenWebUIService(),
-      libreChatService: getLibreChatService(),
-      agentZeroService: getAgentZeroService(),
-      openClawService: getOpenClawService(),
-      openNotebookService: getOpenNotebookService()
+      anythingLLMService: createServiceProxy(getAnythingLLMService),
+      openWebUIService: createServiceProxy(getOpenWebUIService),
+      libreChatService: createServiceProxy(getLibreChatService),
+      agentZeroService: createServiceProxy(getAgentZeroService),
+      openClawService: createServiceProxy(getOpenClawService),
+      openNotebookService: createServiceProxy(getOpenNotebookService)
     });
   } catch (err) {
     console.error('❌ Error registrando handlers críticos:', err);
-  }
-
-  // Registro directo de Gemini CLI handlers como garantía (por si el lazy loader falla)
-  try {
-    registerGeminiCliHandlers();
-  } catch (_) {
-    // Si ya están registrados (hot-reload), el removeHandler en geminicli-handlers.js ya lo gestiona
-  }
-
-  // Registro directo de Codex CLI handlers como garantía (por si el lazy loader falla)
-  try {
-    const { registerCodexCliHandlers } = require('./src/main/handlers/codexcli-handlers');
-    registerCodexCliHandlers();
-  } catch (_) {
-    // Si ya están registrados (hot-reload), el removeHandler en codexcli-handlers.js ya lo gestiona
   }
 
   // 🚀 OPTIMIZACIÓN: Precalentamiento de guacd DIFERIDO hasta después de ready-to-show
@@ -1073,6 +1080,9 @@ function createWindow() {
     }
 
     const distPath = path.join(__dirname, 'dist', 'index.html');
+    if (fs.existsSync(distPath)) {
+      return true;
+    }
     const startTime = Date.now();
 
     return new Promise((resolve) => {
@@ -1189,12 +1199,12 @@ function createWindow() {
         guacamoleServerReadyAt,
         sendToRenderer,
         guacdInactivityTimeoutMs,
-        anythingLLMService: getAnythingLLMService(),
-        openWebUIService: getOpenWebUIService(),
-        libreChatService: getLibreChatService(),
-        agentZeroService: getAgentZeroService(),
-        openClawService: getOpenClawService(),
-        openNotebookService: getOpenNotebookService(),
+        anythingLLMService: createServiceProxy(getAnythingLLMService),
+        openWebUIService: createServiceProxy(getOpenWebUIService),
+        libreChatService: createServiceProxy(getLibreChatService),
+        agentZeroService: createServiceProxy(getAgentZeroService),
+        openClawService: createServiceProxy(getOpenClawService),
+        openNotebookService: createServiceProxy(getOpenNotebookService),
         packageJson,
         sshConnections,
         sshConnectionPool,

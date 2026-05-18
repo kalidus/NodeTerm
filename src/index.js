@@ -1,16 +1,22 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './components/App';
-import { fontLoader } from './utils/fontLoader';
-import { presetManager } from './utils/presetManager';
-import { builtinPresets } from './themes/presets/index';
+import { markStartup } from './utils/startup-renderer-profiler';
+
+markStartup('index.js evaluado');
 
 // PrimeReact - Los CSS se cargan normalmente (webpack los optimiza)
 // 🚀 OPTIMIZACIÓN: Estos imports son necesarios pero webpack los procesa eficientemente
 import "primereact/resources/themes/lara-light-indigo/theme.css";
 import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
-import "primeflex/primeflex.css";
+// primeflex diferido (no bloquea primer paint)
+const loadPrimeFlex = () => import('primeflex/primeflex.css').catch(() => {});
+if (typeof requestIdleCallback === 'function') {
+  requestIdleCallback(loadPrimeFlex, { timeout: 3000 });
+} else {
+  setTimeout(loadPrimeFlex, 0);
+}
 import './styles/base/base.css'; // Importamos la nueva base de estilos
 import PrimeReact from 'primereact/api';
 
@@ -94,16 +100,9 @@ applyEarlyBootTheme();
 // Habilitar el modo "ripple" para los componentes de PrimeReact
 PrimeReact.ripple = true;
 
-// 🚀 OPTIMIZACIÓN: Función para inicializar temas globalmente DIFERIDA después del render
-// Esto evita bloquear el render inicial con múltiples accesos a localStorage
+// Claves mínimas en arranque (defaults solo si faltan, sin importar presets pesados)
 const initializeGlobalThemes = () => {
   try {
-    // Inicialización global de temas
-
-    // Asegurar que las variables CSS básicas estén definidas
-    const root = document.documentElement;
-
-    // Aplicar tema por defecto si no hay ninguno guardado
     const hasUITheme = localStorage.getItem('ui_theme');
     const hasStatusBarTheme = localStorage.getItem('basicapp_statusbar_theme');
     const hasTabTheme = localStorage.getItem('nodeterm_tab_theme');
@@ -115,13 +114,27 @@ const initializeGlobalThemes = () => {
     const hasLinuxTerminalTheme = localStorage.getItem('localLinuxTerminalTheme');
 
     if (!hasUITheme) {
-      console.log('[THEME] Primer arranque detectado. Aplicando preset Pro Ocean por defecto...');
-      const proOcean = builtinPresets.find(p => p.id === 'pro-ocean');
-      if (proOcean) {
-        presetManager.applyPreset(proOcean);
+      // Primer arranque: preset completo en idle (no bloquear root.render)
+      const applyFirstRunPreset = () => {
+        import('./utils/presetManager').then(({ presetManager }) => {
+          import('./themes/presets/index').then(({ builtinPresets }) => {
+            const proOcean = builtinPresets.find(p => p.id === 'pro-ocean');
+            if (proOcean) {
+              presetManager.applyPreset(proOcean);
+            } else {
+              localStorage.setItem('ui_theme', 'Pro Ocean');
+            }
+            markStartup('preset Pro Ocean aplicado (idle)');
+          });
+        }).catch((err) => {
+          console.warn('[THEME] Error aplicando preset inicial:', err);
+          localStorage.setItem('ui_theme', 'Pro Ocean');
+        });
+      };
+      if (typeof requestIdleCallback === 'function') {
+        requestIdleCallback(applyFirstRunPreset, { timeout: 2000 });
       } else {
-        // Fallback si por alguna razón no se encuentra el preset
-        localStorage.setItem('ui_theme', 'Pro Ocean');
+        setTimeout(applyFirstRunPreset, 0);
       }
     } else {
       // Solo aplicar defaults individuales si ya existe un tema (no es el primer arranque)
@@ -194,24 +207,32 @@ const root = createRoot(container);
 // 🚀 MULTI-INSTANCIA: Sincronización de localStorage en SEGUNDO PLANO
 // Esto permite que React renderice inmediatamente con los datos locales existentes
 // Si hay cambios en el archivo compartido, se aplicarán asíncronamente (trigger de settings-updated)
+const hideBootSplashEarly = () => {
+  requestAnimationFrame(() => {
+    const splash = document.getElementById('boot-splash');
+    if (splash) splash.classList.add('hidden');
+    markStartup('boot-splash oculto');
+  });
+};
+
 const initAndRender = () => {
-  // 1. Iniciar sincronización en background (sin await)
+  markStartup('initAndRender inicio');
   localStorageSyncService.initialize().catch(err => {
     console.warn('[Index] Error en sincronización inicial (background):', err);
   });
 
-  // 2. Inicializar temas globales inmediatamente (usando datos locales)
   initializeGlobalThemes();
 
-  // 3. Renderizar React inmediatamente
   root.render(<App />);
+  markStartup('React root.render');
 
-  // 4. Marcar que React está renderizado y asignar plataforma para CSS
   requestAnimationFrame(() => {
     document.documentElement.classList.add('app-ready');
     if (window.electron && window.electron.platform) {
       document.documentElement.classList.add(`platform-${window.electron.platform}`);
     }
+    hideBootSplashEarly();
+    markStartup('app-ready');
   });
 };
 

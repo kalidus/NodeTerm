@@ -267,31 +267,17 @@ const App = () => {
             statusBarThemeManager.loadSavedTheme();
           }
 
-          // 4. Verificar que los temas se aplicaron correctamente
-          setTimeout(() => {
-            const rootStyles = getComputedStyle(document.documentElement);
-            const dialogBg = rootStyles.getPropertyValue('--ui-dialog-bg');
-            const sidebarBg = rootStyles.getPropertyValue('--ui-sidebar-bg');
+          // 4. Verificar que los temas se aplicaron (boot-splash ya oculto en index.js)
+          const rootStyles = getComputedStyle(document.documentElement);
+          const dialogBg = rootStyles.getPropertyValue('--ui-dialog-bg');
+          const sidebarBg = rootStyles.getPropertyValue('--ui-sidebar-bg');
 
-            // Si los temas no se aplicaron correctamente, forzar re-aplicación
-            if (!dialogBg || dialogBg === 'initial' || dialogBg === '' ||
-              !sidebarBg || sidebarBg === 'initial' || sidebarBg === '') {
-              console.warn('[Theme] Failsafe: Tema no cargado, aplicando Nord');
-              themeManager.applyTheme('Nord');
-              statusBarThemeManager.applyTheme('Night Owl');
-            }
-
-            // 5. Ocultar boot-splash cuando el tema esté completamente aplicado
-            // Esperar un frame adicional para asegurar que todo está renderizado
-            requestAnimationFrame(() => {
-              requestAnimationFrame(() => {
-                const splash = document.getElementById('boot-splash');
-                if (splash) {
-                  splash.classList.add('hidden');
-                }
-              });
-            });
-          }, 800); // Aumentado a 800ms para dar tiempo al IPC
+          if (!dialogBg || dialogBg === 'initial' || dialogBg === '' ||
+            !sidebarBg || sidebarBg === 'initial' || sidebarBg === '') {
+            console.warn('[Theme] Failsafe: Tema no cargado, aplicando Nord');
+            themeManager.applyTheme('Nord');
+            statusBarThemeManager.applyTheme('Night Owl');
+          }
         };
 
         // Diferir carga pesada usando requestIdleCallback si está disponible
@@ -312,13 +298,6 @@ const App = () => {
 
       } catch (error) {
         console.error('[THEME] Error inicializando temas:', error);
-        // En caso de error, ocultar splash después de un tiempo razonable
-        setTimeout(() => {
-          const splash = document.getElementById('boot-splash');
-          if (splash) {
-            splash.classList.add('hidden');
-          }
-        }, 1000);
       }
     };
 

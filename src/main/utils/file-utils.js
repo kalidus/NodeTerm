@@ -34,66 +34,66 @@ function getNodeTermDataDir() {
  * y borra la carpeta antigua una vez finalizado el proceso de migración.
  */
 function migrateDataFromHomeDir() {
+  migrateDataFromHomeDirAsync().catch((err) => {
+    console.error(`❌ [Migration] Error crítico durante migración:`, err.message);
+  });
+}
+
+/**
+ * Migración en background (no bloquea app.ready).
+ */
+async function migrateDataFromHomeDirAsync() {
+  const oldDir = path.join(os.homedir(), '.nodeterm');
+  const newDir = getNodeTermDataDir();
+
+  if (oldDir === newDir) return;
   try {
-    const oldDir = path.join(os.homedir(), '.nodeterm');
-    const newDir = getNodeTermDataDir();
+    await fs.promises.access(oldDir);
+  } catch {
+    return;
+  }
 
-    // Si los directorios coinciden, no hay nada que migrar
-    if (oldDir === newDir) return;
-    
-    // Si no existe la carpeta antigua, no hay nada que migrar
-    if (!fs.existsSync(oldDir)) return;
+  console.log(`📦 [Migration] Migrando datos de NodeTerm desde: ${oldDir} hacia: ${newDir}`);
 
-    console.log(`📦 [Migration] Migrando datos de NodeTerm desde: ${oldDir} hacia: ${newDir}`);
+  await fs.promises.mkdir(newDir, { recursive: true });
 
-    // Asegurar que el nuevo directorio existe
-    if (!fs.existsSync(newDir)) {
-      fs.mkdirSync(newDir, { recursive: true });
-    }
-
-    // Función auxiliar para copiar recursivamente
-    const copyRecursive = (src, dest) => {
-      const stats = fs.statSync(src);
-      if (stats.isDirectory()) {
-        if (!fs.existsSync(dest)) {
-          fs.mkdirSync(dest, { recursive: true });
-        }
-        const children = fs.readdirSync(src);
-        for (const child of children) {
-          copyRecursive(path.join(src, child), path.join(dest, child));
-        }
-      } else if (stats.isFile()) {
-        // Copiar solo si no existe en el destino para evitar sobreescribir datos más nuevos
-        if (!fs.existsSync(dest)) {
-          fs.copyFileSync(src, dest);
-        }
+  const copyRecursive = async (src, dest) => {
+    const stats = await fs.promises.stat(src);
+    if (stats.isDirectory()) {
+      await fs.promises.mkdir(dest, { recursive: true });
+      const children = await fs.promises.readdir(src);
+      for (const child of children) {
+        await copyRecursive(path.join(src, child), path.join(dest, child));
       }
-    };
-
-    const files = fs.readdirSync(oldDir);
-    for (const file of files) {
-      const srcPath = path.join(oldDir, file);
-      const destPath = path.join(newDir, file);
+    } else if (stats.isFile()) {
       try {
-        copyRecursive(srcPath, destPath);
-        console.log(`📦 [Migration] Migrado: ${file}`);
-      } catch (err) {
-        console.error(`❌ [Migration] Error migrando ${file}:`, err.message);
+        await fs.promises.access(dest);
+      } catch {
+        await fs.promises.copyFile(src, dest);
       }
     }
+  };
 
-    // Una vez migrado con éxito, borramos la carpeta antigua recursivamente
+  const files = await fs.promises.readdir(oldDir);
+  for (const file of files) {
+    const srcPath = path.join(oldDir, file);
+    const destPath = path.join(newDir, file);
     try {
-      fs.rmSync(oldDir, { recursive: true, force: true });
-      console.log(`🧹 [Migration] Carpeta antigua ${oldDir} eliminada con éxito.`);
-    } catch (cleanupErr) {
-      console.warn(`⚠️ [Migration] No se pudo borrar la carpeta antigua, renombrando...`);
-      try {
-        fs.renameSync(oldDir, `${oldDir}.bak`);
-      } catch (_) {}
+      await copyRecursive(srcPath, destPath);
+      console.log(`📦 [Migration] Migrado: ${file}`);
+    } catch (err) {
+      console.error(`❌ [Migration] Error migrando ${file}:`, err.message);
     }
-  } catch (globalErr) {
-    console.error(`❌ [Migration] Error crítico durante migración:`, globalErr.message);
+  }
+
+  try {
+    await fs.promises.rm(oldDir, { recursive: true, force: true });
+    console.log(`🧹 [Migration] Carpeta antigua ${oldDir} eliminada con éxito.`);
+  } catch {
+    console.warn(`⚠️ [Migration] No se pudo borrar la carpeta antigua, renombrando...`);
+    try {
+      await fs.promises.rename(oldDir, `${oldDir}.bak`);
+    } catch (_) { /* noop */ }
   }
 }
 
@@ -245,6 +245,7 @@ module.exports = {
   loadGuacdInactivityTimeout,
   getNodeTermDataDir,
   migrateDataFromHomeDir,
+  migrateDataFromHomeDirAsync,
   encryptStringSecurely,
   decryptStringSecurely
 };

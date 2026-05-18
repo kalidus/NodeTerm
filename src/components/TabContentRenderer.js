@@ -1,32 +1,35 @@
-import React from 'react';
-import HomeTab from './HomeTab';
-import FileExplorer from './FileExplorer';
-import SplitLayout from './SplitLayout';
-import RdpSessionTab from './RdpSessionTab';
-import GuacamoleTerminal from './GuacamoleTerminal';
-import GuacamoleTab from './GuacamoleTab';
-import TerminalComponent from './TerminalComponent';
-import PowerShellTerminal from './PowerShellTerminal';
-import WSLTerminal from './WSLTerminal';
-import UbuntuTerminal from './UbuntuTerminal';
-import CygwinTerminal from './CygwinTerminal';
-import DockerTerminal from './DockerTerminal';
-import ClaudeTerminal from './ClaudeTerminal';
-import OpenCodeTerminal from './OpenCodeTerminal';
-import GeminiCliTerminal from './GeminiCliTerminal';
-import CodexCliTerminal from './CodexCliTerminal';
-import AuditTab from './AuditTab';
-import RecordingPlayerTab from './RecordingPlayerTab';
-import GlobalAuditTab from './GlobalAuditTab';
-import AnythingLLMTab from './AnythingLLMTab';
-import OpenWebUITab from './OpenWebUITab';
-import LibreChatTab from './LibreChatTab';
-import AgentZeroTab from './AgentZeroTab';
-import OpenClawTab from './OpenClawTab';
-import OpenNotebookTab from './OpenNotebookTab';
-import SSHTunnelTab from './SSHTunnelTab';
-import NetworkToolTab from './NetworkToolTab';
-import TiptapDocumentEditor from './TiptapDocumentEditor';
+import React, { Suspense } from 'react';
+import {
+  LazyHomeTab,
+  LazyFileExplorer,
+  LazySplitLayout,
+  LazyRdpSessionTab,
+  LazyGuacamoleTerminal,
+  LazyGuacamoleTab,
+  LazyTerminalComponent,
+  LazyPowerShellTerminal,
+  LazyWSLTerminal,
+  LazyUbuntuTerminal,
+  LazyCygwinTerminal,
+  LazyDockerTerminal,
+  LazyClaudeTerminal,
+  LazyOpenCodeTerminal,
+  LazyGeminiCliTerminal,
+  LazyCodexCliTerminal,
+  LazyAuditTab,
+  LazyRecordingPlayerTab,
+  LazyGlobalAuditTab,
+  LazyAnythingLLMTab,
+  LazyOpenWebUITab,
+  LazyLibreChatTab,
+  LazyAgentZeroTab,
+  LazyOpenClawTab,
+  LazyOpenNotebookTab,
+  LazySSHTunnelTab,
+  LazyNetworkToolTab,
+  LazyTiptapDocumentEditor,
+  TabChunkFallback
+} from './tabLoaders';
 import { themes } from '../themes';
 import { TAB_TYPES } from '../utils/constants';
 import { recordRecentPassword } from '../utils/connectionStore';
@@ -34,7 +37,7 @@ import { getNetworkById } from '../utils/cryptoNetworks';
 
 import { countConnections } from '../utils/connectionCounter';
 
-const TabContentRenderer = React.memo(({
+const TabContentRendererInner = React.memo(({
   tab,
   isActiveTab,
   // HomeTab props
@@ -113,7 +116,7 @@ const TabContentRenderer = React.memo(({
 
   if (tab.type === 'home') {
     return (
-      <HomeTab
+      <LazyHomeTab
         isActiveTab={isActiveTab}
         activeIds={activeIds}
         isMinimalMode={isMinimalMode}
@@ -197,7 +200,7 @@ const TabContentRenderer = React.memo(({
 
   if (tab.type === 'explorer' || tab.isExplorerInSSH) {
     return (
-      <FileExplorer
+      <LazyFileExplorer
         sshConfig={tab.sshConfig}
         tabId={tab.key}
         iconTheme={iconTheme}
@@ -211,7 +214,7 @@ const TabContentRenderer = React.memo(({
   // Document editor tab
   if (tab.type === TAB_TYPES.DOCUMENT && tab.documentData) {
     return (
-      <TiptapDocumentEditor
+      <LazyTiptapDocumentEditor
         documentKey={tab.documentData.key}
         documentData={tab.documentData}
       />
@@ -1239,7 +1242,7 @@ const TabContentRenderer = React.memo(({
 
   if (tab.type === 'split') {
     return (
-      <SplitLayout
+      <LazySplitLayout
         // Nuevo sistema: árbol de splits anidados
         first={tab.first}
         second={tab.second}
@@ -1274,7 +1277,7 @@ const TabContentRenderer = React.memo(({
 
   if (tab.type === 'rdp') {
     return (
-      <RdpSessionTab
+      <LazyRdpSessionTab
         rdpConfig={tab.rdpConfig}
         tabId={tab.key}
         connectionStatus={tab.connectionStatus}
@@ -1319,7 +1322,7 @@ const TabContentRenderer = React.memo(({
 
   if (tab.type === 'rdp-guacamole' || tab.type === 'vnc-guacamole') {
     return (
-      <GuacamoleTerminal
+      <LazyGuacamoleTerminal
         ref={el => terminalRefs.current[tab.key] = el}
         tabId={tab.key}
         rdpConfig={tab.rdpConfig}
@@ -1330,7 +1333,7 @@ const TabContentRenderer = React.memo(({
 
   if (tab.type === 'guacamole') {
     return (
-      <GuacamoleTab
+      <LazyGuacamoleTab
         config={tab.config}
         tabId={tab.tabId}
       />
@@ -1343,7 +1346,7 @@ const TabContentRenderer = React.memo(({
     const dockerTheme = themes[localDockerTerminalTheme]?.theme || themes['Default Dark']?.theme;
 
     return (
-      <DockerTerminal
+      <LazyDockerTerminal
         ref={el => terminalRefs.current[tab.key] = el}
         tabId={tab.key}
         fontFamily={dockerFontFamily}
@@ -1365,7 +1368,7 @@ const TabContentRenderer = React.memo(({
       const powerShellTheme = themes[localPowerShellTheme]?.theme || themes['Default Dark']?.theme;
 
       return (
-        <PowerShellTerminal
+        <LazyPowerShellTerminal
           ref={el => terminalRefs.current[tab.key] = el}
           tabId={tab.key}
           fontFamily={localFontFamily}
@@ -1383,7 +1386,7 @@ const TabContentRenderer = React.memo(({
       const linuxTheme = themes[localLinuxTerminalTheme]?.theme || themes['Default Dark']?.theme;
 
       return (
-        <WSLTerminal
+        <LazyWSLTerminal
           ref={el => terminalRefs.current[tab.key] = el}
           tabId={tab.key}
           fontFamily={localFontFamily}
@@ -1401,7 +1404,7 @@ const TabContentRenderer = React.memo(({
       const linuxTheme = themes[localLinuxTerminalTheme]?.theme || themes['Default Dark']?.theme;
 
       return (
-        <UbuntuTerminal
+        <LazyUbuntuTerminal
           ref={el => terminalRefs.current[tab.key] = el}
           tabId={tab.key}
           fontFamily={localFontFamily}
@@ -1419,7 +1422,7 @@ const TabContentRenderer = React.memo(({
       const linuxTheme = themes[localLinuxTerminalTheme]?.theme || themes['Default Dark']?.theme;
 
       return (
-        <CygwinTerminal
+        <LazyCygwinTerminal
           ref={el => terminalRefs.current[tab.key] = el}
           tabId={tab.key}
           fontFamily={localFontFamily}
@@ -1434,7 +1437,7 @@ const TabContentRenderer = React.memo(({
     if (terminalType === 'claude') {
       const powerShellTheme = themes[localPowerShellTheme]?.theme || themes['Default Dark']?.theme;
       return (
-        <ClaudeTerminal
+        <LazyClaudeTerminal
           ref={el => terminalRefs.current[tab.key] = el}
           tabId={tab.key}
           fontFamily={localFontFamily}
@@ -1449,7 +1452,7 @@ const TabContentRenderer = React.memo(({
     if (terminalType === 'opencode') {
       const powerShellTheme = themes[localPowerShellTheme]?.theme || themes['Default Dark']?.theme;
       return (
-        <OpenCodeTerminal
+        <LazyOpenCodeTerminal
           ref={el => terminalRefs.current[tab.key] = el}
           tabId={tab.key}
           fontFamily={localFontFamily}
@@ -1462,7 +1465,7 @@ const TabContentRenderer = React.memo(({
     if (terminalType === 'geminicli') {
       const powerShellTheme = themes[localPowerShellTheme]?.theme || themes['Default Dark']?.theme;
       return (
-        <GeminiCliTerminal
+        <LazyGeminiCliTerminal
           ref={el => terminalRefs.current[tab.key] = el}
           tabId={tab.key}
           fontFamily={localFontFamily}
@@ -1475,7 +1478,7 @@ const TabContentRenderer = React.memo(({
     if (terminalType === 'codexcli') {
       const powerShellTheme = themes[localPowerShellTheme]?.theme || themes['Default Dark']?.theme;
       return (
-        <CodexCliTerminal
+        <LazyCodexCliTerminal
           ref={el => terminalRefs.current[tab.key] = el}
           tabId={tab.key}
           fontFamily={localFontFamily}
@@ -1489,7 +1492,7 @@ const TabContentRenderer = React.memo(({
     const powerShellTheme = themes[localPowerShellTheme]?.theme || themes['Default Dark']?.theme;
 
     return (
-      <PowerShellTerminal
+      <LazyPowerShellTerminal
         ref={el => terminalRefs.current[tab.key] = el}
         tabId={tab.key}
         fontFamily={localFontFamily}
@@ -1504,7 +1507,7 @@ const TabContentRenderer = React.memo(({
   // Tab de auditoría global de grabaciones
   if (tab.type === 'audit-global' && tab.recordings) {
     return (
-      <GlobalAuditTab
+      <LazyGlobalAuditTab
         recordings={tab.recordings}
         onPlayRecording={(recording) => {
           // Crear nueva pestaña para reproducir la grabación
@@ -1550,7 +1553,7 @@ const TabContentRenderer = React.memo(({
   // Tab de auditoría de grabaciones
   if (tab.type === 'audit' && tab.connectionInfo) {
     return (
-      <AuditTab
+      <LazyAuditTab
         connectionInfo={tab.connectionInfo}
         onPlayRecording={(recording) => {
           // Crear nueva pestaña para reproducir la grabación
@@ -1596,7 +1599,7 @@ const TabContentRenderer = React.memo(({
   // Tab de reproducción de grabaciones
   if (tab.type === 'recording-player' && tab.recording) {
     return (
-      <RecordingPlayerTab
+      <LazyRecordingPlayerTab
         recording={tab.recording}
         fontFamily={fontFamily}
         fontSize={fontSize}
@@ -1608,7 +1611,7 @@ const TabContentRenderer = React.memo(({
   // Tab de túnel SSH
   if (tab.type === 'ssh-tunnel') {
     return (
-      <SSHTunnelTab
+      <LazySSHTunnelTab
         key={tab.key}
         tunnelConfig={tab.tunnelConfig}
         tunnelId={tab.tunnelId}
@@ -1625,7 +1628,7 @@ const TabContentRenderer = React.memo(({
   // Terminal SSH (type: 'terminal' con sshConfig)
   if (tab.type === 'terminal' && tab.sshConfig) {
     return (
-      <TerminalComponent
+      <LazyTerminalComponent
         key={tab.key}
         ref={el => terminalRefs.current[tab.key] = el}
         tabId={tab.key}
@@ -1713,32 +1716,32 @@ const TabContentRenderer = React.memo(({
   }
 
   if (tab.type === 'anything-llm') {
-    return <AnythingLLMTab />;
+    return <LazyAnythingLLMTab />;
   }
 
   if (tab.type === 'openwebui') {
-    return <OpenWebUITab />;
+    return <LazyOpenWebUITab />;
   }
 
   if (tab.type === 'librechat') {
-    return <LibreChatTab />;
+    return <LazyLibreChatTab />;
   }
 
   if (tab.type === 'agentzero') {
-    return <AgentZeroTab />;
+    return <LazyAgentZeroTab />;
   }
 
   if (tab.type === 'openclaw') {
-    return <OpenClawTab />;
+    return <LazyOpenClawTab />;
   }
 
   if (tab.type === 'open-notebook') {
-    return <OpenNotebookTab />;
+    return <LazyOpenNotebookTab />;
   }
 
   // Herramienta de red (network-tool)
   if (tab.type === 'network-tool') {
-    return <NetworkToolTab tab={tab} />;
+    return <LazyNetworkToolTab tab={tab} />;
   }
 
   // Si llegamos aquí y no es SSH, mostrar error
@@ -1776,5 +1779,11 @@ const TabContentRenderer = React.memo(({
     </div>
   );
 });
+
+const TabContentRenderer = (props) => (
+  <Suspense fallback={<TabChunkFallback />}>
+    <TabContentRendererInner {...props} />
+  </Suspense>
+);
 
 export default TabContentRenderer;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
 import { Button } from 'primereact/button';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { Tree } from 'primereact/tree';
@@ -11,15 +11,17 @@ import { iconThemes } from '../themes/icon-themes';
 import { FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
 import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
 import { sessionActionIconThemes, getDefaultSessionActionIconTheme, newDocumentToolbarIcon } from '../themes/session-action-icons';
-import ImportDialog from './ImportDialog';
-import PasswordManagerSidebar from './PasswordManagerSidebar';
-import DocumentsSidebar from './DocumentsSidebar';
 import SidebarFilesystemExplorer from './SidebarFilesystemExplorer';
-import LocalFileExplorerSidebar from './LocalFileExplorerSidebar';
 import AIClientBrandIcon from './AIClientBrandIcon';
 import ConnectionDetailsPanel from './ConnectionDetailsPanel';
 import SidebarIconRail from './SidebarIconRail';
-import ToolsSidebar from './ToolsSidebar';
+import { TabChunkFallback } from './tabLoaders';
+
+const LazyImportDialog = React.lazy(() => import('./ImportDialog'));
+const LazyPasswordManagerSidebar = React.lazy(() => import('./PasswordManagerSidebar'));
+const LazyDocumentsSidebar = React.lazy(() => import('./DocumentsSidebar'));
+const LazyLocalFileExplorerSidebar = React.lazy(() => import('./LocalFileExplorerSidebar'));
+const LazyToolsSidebar = React.lazy(() => import('./ToolsSidebar'));
 import { unblockAllInputs, detectBlockedInputs, resolveFormBlocking, emergencyUnblockForms } from '../utils/formDebugger';
 import ImportService from '../services/ImportService';
 import localStorageSyncService from '../services/LocalStorageSyncService';
@@ -3044,7 +3046,8 @@ const Sidebar = React.memo(({
           onPathNavigated={() => setInitialFilesystemPath(null)}
         />
       ) : viewMode === 'localExplorer' ? (
-        <LocalFileExplorerSidebar
+        <Suspense fallback={<TabChunkFallback />}>
+        <LazyLocalFileExplorerSidebar
           initialPath={localExplorerPath}
           onBackToConnections={() => {
             setViewMode('connections');
@@ -3062,16 +3065,20 @@ const Sidebar = React.memo(({
           iconSize={iconSize}
           folderIconSize={folderIconSize}
         />
+        </Suspense>
       ) : viewMode === 'tools' ? (
-        <ToolsSidebar
+        <Suspense fallback={<TabChunkFallback />}>
+        <LazyToolsSidebar
           onOpenTool={(toolId, toolLabel) => {
             window.dispatchEvent(new CustomEvent('open-network-tool', {
               detail: { toolId, toolLabel }
             }));
           }}
         />
+        </Suspense>
       ) : viewMode === 'documents' ? (
-        <DocumentsSidebar
+        <Suspense fallback={<TabChunkFallback />}>
+        <LazyDocumentsSidebar
           showToast={showToast}
           confirmDialog={confirmDialog}
           uiTheme={uiTheme}
@@ -3095,9 +3102,11 @@ const Sidebar = React.memo(({
           onShowImportWizard={onShowImportWizard}
           hideHeader={true}
         />
+        </Suspense>
       ) : (
         // Vista de passwords
-        <PasswordManagerSidebar
+        <Suspense fallback={<TabChunkFallback />}>
+        <LazyPasswordManagerSidebar
           nodes={nodes}
           setNodes={setNodes}
           showToast={showToast}
@@ -3123,6 +3132,7 @@ const Sidebar = React.memo(({
           onToggleFavoritesView={toggleFavoritesView}
           hideHeader={true}
         />
+        </Suspense>
       )}
       
     </>
@@ -3287,12 +3297,16 @@ const Sidebar = React.memo(({
 
 
 
-      <ImportDialog
-        visible={showImportDialog}
-        onHide={() => setShowImportDialog(false)}
-        onImportComplete={handleImportComplete}
-        showToast={showToast}
-      />
+      {showImportDialog && (
+        <Suspense fallback={null}>
+          <LazyImportDialog
+            visible={showImportDialog}
+            onHide={() => setShowImportDialog(false)}
+            onImportComplete={handleImportComplete}
+            showToast={showToast}
+          />
+        </Suspense>
+      )}
 
     </div>
   );

@@ -172,16 +172,7 @@ class FontLoader {
 // Crear instancia singleton
 export const fontLoader = new FontLoader();
 
-// Auto-precargar fuentes comunes al importar
-if (typeof window !== 'undefined') {
-  // Esperar a que el DOM esté listo
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      fontLoader.preloadCommonFonts();
-    });
-  } else {
-    fontLoader.preloadCommonFonts();
-  }
-}
+// Precarga bajo demanda: index.html ya carga fuentes; evitar duplicar red al arranque.
+// Llamar fontLoader.preloadCommonFonts() desde ajustes de tipografía si hace falta.
 
 export default FontLoader;
