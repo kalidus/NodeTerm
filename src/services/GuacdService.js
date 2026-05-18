@@ -5,31 +5,10 @@ const path = require('path');
 const os = require('os');
 
 // Electron app handle (may be undefined in non-Electron contexts)
-let electronApp = null;
-try {
-  // Lazy require to avoid issues in non-Electron contexts
-  // eslint-disable-next-line global-require
-  electronApp = require('electron').app;
-} catch (_) {
-  electronApp = null;
-}
-
-function fileExistsSync(targetPath) {
-  try {
-    return fs.existsSync(targetPath);
-  } catch (_) {
-    return false;
-  }
-}
+const { getNodeTermDataDir } = require('../main/utils/file-utils');
 
 function getUserDataDir() {
-  try {
-    if (electronApp && typeof electronApp.getPath === 'function') {
-      return electronApp.getPath('userData');
-    }
-  } catch (_) { }
-  // Fallback para contextos sin Electron: usar carpeta en el home
-  return path.join(os.homedir(), '.nodeterm');
+  return getNodeTermDataDir();
 }
 
 /**

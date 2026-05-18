@@ -6,6 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { getNodeTermDataDir, encryptStringSecurely, decryptStringSecurely } = require('../utils/file-utils');
 
 let connectionHistory = {
   recent: [],
@@ -15,11 +16,12 @@ let connectionHistory = {
 // Cargar historial de conexiones
 function loadConnectionHistory(retries = 3) {
   try {
-    const historyPath = path.join(os.homedir(), '.nodeterm', 'connection_history.json');
+    const historyPath = path.join(getNodeTermDataDir(), 'connection_history.json');
     if (fs.existsSync(historyPath)) {
       const data = fs.readFileSync(historyPath, 'utf8');
       try {
-        connectionHistory = JSON.parse(data);
+        const decrypted = decryptStringSecurely(data);
+        connectionHistory = JSON.parse(decrypted);
       } catch (parseError) {
         console.warn('⚠️ Error parseando historial, archivo corrupto?', parseError);
         // Si el archivo está corrupto (vacío), mantener defaults
@@ -41,16 +43,13 @@ function loadConnectionHistory(retries = 3) {
 // Guardar historial de conexiones
 function saveConnectionHistory() {
   try {
-    const historyDir = path.join(os.homedir(), '.nodeterm');
-    if (!fs.existsSync(historyDir)) {
-      fs.mkdirSync(historyDir, { recursive: true });
-    }
-
+    const historyDir = getNodeTermDataDir();
     const historyPath = path.join(historyDir, 'connection_history.json');
     const tempPath = path.join(historyDir, `connection_history.${Date.now()}.tmp`);
 
-    // Escritura atómica: escribir a temp, luego renombrar
-    fs.writeFileSync(tempPath, JSON.stringify(connectionHistory, null, 2));
+    // Escritura atómica encriptada: escribir a temp, luego renombrar
+    const encrypted = encryptStringSecurely(JSON.stringify(connectionHistory, null, 2));
+    fs.writeFileSync(tempPath, encrypted, 'utf8');
 
     // Retry rename loop
     let retries = 5;

@@ -148,6 +148,9 @@ const url = require('url');
 const os = require('os');
 const fs = require('fs');
 
+const { migrateDataFromHomeDir, getNodeTermDataDir } = require('./src/main/utils/file-utils');
+migrateDataFromHomeDir();
+
 // ============================================================================
 // 🔒 MULTI-INSTANCE SUPPORT (Fix for "Cache Lock" errors)
 // ============================================================================
@@ -165,6 +168,14 @@ const fs = require('fs');
 if (!app) {
   console.error('❌ [CRITICAL] Electron "app" object is undefined. Ensure you are running with "electron ."');
   process.exit(1);
+}
+
+// Establecer el directorio userData centralizado a nodeterm (minúsculas)
+try {
+  app.setPath('userData', getNodeTermDataDir());
+  console.log(`✅ [MAIN] UserData principal configurado en: ${getNodeTermDataDir()}`);
+} catch (err) {
+  console.error('❌ [MAIN] Error configurando UserData principal:', err);
 }
 
 const gotTheLock = app.requestSingleInstanceLock();
@@ -554,9 +565,9 @@ async function getOrCreateGuacamoleSecretKey() {
   const fs = require('fs').promises;
   const os = require('os');
 
-  // Usar path persistente en .nodeterm para compartir clave entre instancias
+  // Usar path persistente centralizado en AppData para compartir clave entre instancias
   // (app.getPath('userData') cambia en instancias secundarias)
-  const configDir = path.join(os.homedir(), '.nodeterm');
+  const configDir = getNodeTermDataDir();
 
   // Asegurar que el directorio existe
   try {

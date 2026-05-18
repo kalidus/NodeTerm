@@ -2,6 +2,7 @@ const { ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const { getNodeTermDataDir } = require('../utils/file-utils');
 
 /**
  * Handlers para persistencia de seguridad (Master Key)
@@ -10,7 +11,7 @@ const os = require('os');
  */
 
 // Ruta al archivo de seguridad compartido
-const SECURITY_CONFIG_PATH = path.join(os.homedir(), '.nodeterm', 'security.json');
+const SECURITY_CONFIG_PATH = path.join(getNodeTermDataDir(), 'security.json');
 
 function registerSecurityHandlers(dependencies) {
     // Handler para obtener la clave maestra guardada (encriptada)
@@ -36,11 +37,7 @@ function registerSecurityHandlers(dependencies) {
     // Handler para guardar la clave maestra (encriptada)
     ipcMain.handle('security:save-master-key', async (event, encryptedMasterKey) => {
         try {
-            const dir = os.homedir();
-            const configDir = path.join(dir, '.nodeterm');
-            if (!fs.existsSync(configDir)) {
-                fs.mkdirSync(configDir, { recursive: true });
-            }
+            const configDir = getNodeTermDataDir();
 
             let config = {};
             if (fs.existsSync(SECURITY_CONFIG_PATH)) {

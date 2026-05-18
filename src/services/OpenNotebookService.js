@@ -10,20 +10,10 @@ const execAsync = util.promisify(exec);
 const { removeReplacedImageAfterUpdate } = require('../utils/dockerImageCleanup');
 const DOCKER_CHECK_TTL_MS = 20_000;
 
-let electronApp = null;
-try {
-  electronApp = require('electron').app;
-} catch (_) {
-  electronApp = null;
-}
+const { getNodeTermDataDir } = require('../main/utils/file-utils');
 
 function getUserDataDir() {
-  try {
-    if (electronApp && typeof electronApp.getPath === 'function') {
-      return electronApp.getPath('userData');
-    }
-  } catch (_) {}
-  return path.join(os.homedir(), '.nodeterm');
+  return getNodeTermDataDir();
 }
 
 class OpenNotebookService {

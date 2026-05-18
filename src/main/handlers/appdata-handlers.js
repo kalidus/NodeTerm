@@ -12,9 +12,10 @@ const { ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const { getNodeTermDataDir, encryptStringSecurely, decryptStringSecurely } = require('../utils/file-utils');
 
 // Ruta al archivo de datos compartidos
-const APP_DATA_PATH = path.join(os.homedir(), '.nodeterm', 'app-data.json');
+const APP_DATA_PATH = path.join(getNodeTermDataDir(), 'app-data.json');
 
 // Lista de claves de localStorage que deben sincronizarse entre instancias
 const SYNC_KEYS = [
@@ -130,7 +131,8 @@ function registerAppDataHandlers(dependencies) {
                 if (fs.existsSync(APP_DATA_PATH)) {
                     const data = fs.readFileSync(APP_DATA_PATH, 'utf8');
                     try {
-                        return JSON.parse(data);
+                        const decrypted = decryptStringSecurely(data);
+                        return JSON.parse(decrypted);
                     } catch (e) {
                         console.warn(`⚠️ [AppData] Error parseando app-data.json (intento ${4 - retries}):`, e);
                         // Si el archivo está corrupto o vacío, podría ser porque se está escribiendo
@@ -152,10 +154,7 @@ function registerAppDataHandlers(dependencies) {
     // Handler para guardar todos los datos sincronizados
     ipcMain.handle('appdata:save-all', async (event, data) => {
         try {
-            const configDir = path.join(os.homedir(), '.nodeterm');
-            if (!fs.existsSync(configDir)) {
-                fs.mkdirSync(configDir, { recursive: true });
-            }
+            const configDir = getNodeTermDataDir();
 
             // Añadir timestamp para saber cuándo se sincronizó
             const dataWithMeta = {
@@ -168,7 +167,8 @@ function registerAppDataHandlers(dependencies) {
             const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
             const tempPath = path.join(path.dirname(APP_DATA_PATH), `app-data.${uniqueId}.tmp`);
 
-            fs.writeFileSync(tempPath, JSON.stringify(dataWithMeta, null, 2), 'utf8');
+            const encrypted = encryptStringSecurely(JSON.stringify(dataWithMeta, null, 2));
+            fs.writeFileSync(tempPath, encrypted, 'utf8');
 
             let renameRetries = 5;
             let success = false;

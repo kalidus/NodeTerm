@@ -127,7 +127,7 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "NodeTerm",
-      "deleteAppDataOnUninstall": false,
+      "deleteAppDataOnUninstall": true,
       "differentialPackage": false,
       "warningsAsErrors": false
     },

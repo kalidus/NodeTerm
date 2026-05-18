@@ -1,6 +1,7 @@
 const path = require('path');
 const fs = require('fs');
-const { app } = require('electron');
+const os = require('os');
+const { app, safeStorage } = require('electron');
 
 /**
  * Utilidades para manejo de archivos y rutas
@@ -9,12 +10,142 @@ const { app } = require('electron');
  */
 
 /**
+ * Obtiene el directorio de datos centralizado de NodeTerm en la carpeta estándar de AppData
+ * @returns {string} Ruta absoluta del directorio de datos
+ */
+function getNodeTermDataDir() {
+  try {
+    const dir = path.join(app.getPath('appData'), 'nodeterm');
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    return dir;
+  } catch (e) {
+    const fallbackDir = path.join(os.homedir(), '.nodeterm');
+    if (!fs.existsSync(fallbackDir)) {
+      fs.mkdirSync(fallbackDir, { recursive: true });
+    }
+    return fallbackDir;
+  }
+}
+
+/**
+ * Migra los datos de la carpeta antigua (~/.nodeterm) a la nueva (%APPDATA%/nodeterm)
+ * y borra la carpeta antigua una vez finalizado el proceso de migración.
+ */
+function migrateDataFromHomeDir() {
+  try {
+    const oldDir = path.join(os.homedir(), '.nodeterm');
+    const newDir = getNodeTermDataDir();
+
+    // Si los directorios coinciden, no hay nada que migrar
+    if (oldDir === newDir) return;
+    
+    // Si no existe la carpeta antigua, no hay nada que migrar
+    if (!fs.existsSync(oldDir)) return;
+
+    console.log(`📦 [Migration] Migrando datos de NodeTerm desde: ${oldDir} hacia: ${newDir}`);
+
+    // Asegurar que el nuevo directorio existe
+    if (!fs.existsSync(newDir)) {
+      fs.mkdirSync(newDir, { recursive: true });
+    }
+
+    // Función auxiliar para copiar recursivamente
+    const copyRecursive = (src, dest) => {
+      const stats = fs.statSync(src);
+      if (stats.isDirectory()) {
+        if (!fs.existsSync(dest)) {
+          fs.mkdirSync(dest, { recursive: true });
+        }
+        const children = fs.readdirSync(src);
+        for (const child of children) {
+          copyRecursive(path.join(src, child), path.join(dest, child));
+        }
+      } else if (stats.isFile()) {
+        // Copiar solo si no existe en el destino para evitar sobreescribir datos más nuevos
+        if (!fs.existsSync(dest)) {
+          fs.copyFileSync(src, dest);
+        }
+      }
+    };
+
+    const files = fs.readdirSync(oldDir);
+    for (const file of files) {
+      const srcPath = path.join(oldDir, file);
+      const destPath = path.join(newDir, file);
+      try {
+        copyRecursive(srcPath, destPath);
+        console.log(`📦 [Migration] Migrado: ${file}`);
+      } catch (err) {
+        console.error(`❌ [Migration] Error migrando ${file}:`, err.message);
+      }
+    }
+
+    // Una vez migrado con éxito, borramos la carpeta antigua recursivamente
+    try {
+      fs.rmSync(oldDir, { recursive: true, force: true });
+      console.log(`🧹 [Migration] Carpeta antigua ${oldDir} eliminada con éxito.`);
+    } catch (cleanupErr) {
+      console.warn(`⚠️ [Migration] No se pudo borrar la carpeta antigua, renombrando...`);
+      try {
+        fs.renameSync(oldDir, `${oldDir}.bak`);
+      } catch (_) {}
+    }
+  } catch (globalErr) {
+    console.error(`❌ [Migration] Error crítico durante migración:`, globalErr.message);
+  }
+}
+
+/**
+ * Encripta un string de forma segura usando safeStorage si está disponible
+ * @param {string} str - Texto plano a encriptar
+ * @returns {string} Datos encriptados codificados en base64
+ */
+function encryptStringSecurely(str) {
+  if (!str) return '';
+  if (safeStorage && safeStorage.isEncryptionAvailable()) {
+    try {
+      const encryptedBuffer = safeStorage.encryptString(str);
+      return encryptedBuffer.toString('base64');
+    } catch (err) {
+      console.error('❌ [Security] Falló la encriptación de safeStorage:', err.message);
+      return str;
+    }
+  }
+  return str;
+}
+
+/**
+ * Decodifica y desencripta un string usando safeStorage si está disponible
+ * @param {string} str - Datos encriptados codificados en base64 o texto plano
+ * @returns {string} Texto desencriptado
+ */
+function decryptStringSecurely(str) {
+  if (!str) return '';
+  if (safeStorage && safeStorage.isEncryptionAvailable()) {
+    try {
+      const buffer = Buffer.from(str, 'base64');
+      try {
+        return safeStorage.decryptString(buffer);
+      } catch (decryptionError) {
+        // Si no se puede desencriptar, probablemente sea texto plano (legacy)
+        return str;
+      }
+    } catch (e) {
+      return str;
+    }
+  }
+  return str;
+}
+
+/**
  * Obtiene la ruta del archivo de preferencias de Guacd
  * @returns {string|null} Ruta del archivo de preferencias o null si hay error
  */
 function getGuacdPrefPath() {
   try {
-    return path.join(app.getPath('userData'), 'guacd-preferences.json');
+    return path.join(getNodeTermDataDir(), 'guacd-preferences.json');
   } catch {
     return null;
   }
@@ -111,5 +242,9 @@ module.exports = {
   savePreferredGuacdMethod,
   loadPreferredGuacdMethod,
   saveGuacdInactivityTimeout,
-  loadGuacdInactivityTimeout
+  loadGuacdInactivityTimeout,
+  getNodeTermDataDir,
+  migrateDataFromHomeDir,
+  encryptStringSecurely,
+  decryptStringSecurely
 };

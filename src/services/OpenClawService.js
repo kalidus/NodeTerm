@@ -13,20 +13,10 @@ const DOCKER_CHECK_TTL_MS = 20_000;
 /** Sube este valor si cambia la plantilla embebida de openclaw.json para forzar recreación del contenedor. */
 const OPENCLAW_EMBEDDED_CONFIG_REVISION = 2;
 
-let electronApp = null;
-try {
-  electronApp = require('electron').app;
-} catch (_) {
-  electronApp = null;
-}
+const { getNodeTermDataDir } = require('../main/utils/file-utils');
 
 function getUserDataDir() {
-  try {
-    if (electronApp && typeof electronApp.getPath === 'function') {
-      return electronApp.getPath('userData');
-    }
-  } catch (_) {}
-  return path.join(os.homedir(), '.nodeterm');
+  return getNodeTermDataDir();
 }
 
 class OpenClawService {

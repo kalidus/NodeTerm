@@ -9,8 +9,10 @@ const os = require('os');
  * sin depender de localStorage (que no se comparte en instancias secundarias)
  */
 
+const { getNodeTermDataDir } = require('../utils/file-utils');
+
 // Ruta al archivo de configuración de tema compartido
-const THEME_CONFIG_PATH = path.join(os.homedir(), '.nodeterm', 'theme.json');
+const THEME_CONFIG_PATH = path.join(getNodeTermDataDir(), 'theme.json');
 
 function registerThemeHandlers(dependencies) {
     // Handler para obtener el tema actual
@@ -42,11 +44,7 @@ function registerThemeHandlers(dependencies) {
     // Handler para guardar el tema actual
     ipcMain.handle('theme:save', async (event, themeConfig) => {
         try {
-            const dir = os.homedir(); // Ensure .nodeterm exists (should exist)
-            const configDir = path.join(dir, '.nodeterm');
-            if (!fs.existsSync(configDir)) {
-                fs.mkdirSync(configDir, { recursive: true });
-            }
+            const configDir = getNodeTermDataDir();
 
             // Escritura atómica simple: Escribir a un archivo temporal y luego renombrar
             const tempPath = `${THEME_CONFIG_PATH}.tmp`;

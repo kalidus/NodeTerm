@@ -3,8 +3,9 @@ const os = require('os');
 const path = require('path');
 const fs = require('fs');
 const { execFile, exec } = require('child_process');
+const { getNodeTermDataDir } = require('../utils/file-utils');
 
-const CONFIG_DIR = path.join(os.homedir(), '.nodeterm');
+const CONFIG_DIR = getNodeTermDataDir();
 const OPENCODE_CONFIG_PATH = path.join(CONFIG_DIR, 'opencode-config.json');
 
 function ensureConfigDir() {

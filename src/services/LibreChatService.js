@@ -15,20 +15,10 @@ const LIBRECHAT_BUNDLE_YAML_REL = path.join('config', 'librechat.full.yaml');
 /** Sube este número cuando cambies `config/librechat.full.yaml` para forzar la copia al YAML usado por Docker. */
 const LIBRECHAT_YAML_REVISION = 6;
 
-let electronApp = null;
-try {
-  electronApp = require('electron').app;
-} catch (_) {
-  electronApp = null;
-}
+const { getNodeTermDataDir } = require('../main/utils/file-utils');
 
 function getUserDataDir() {
-  try {
-    if (electronApp && typeof electronApp.getPath === 'function') {
-      return electronApp.getPath('userData');
-    }
-  } catch (_) {}
-  return path.join(os.homedir(), '.nodeterm');
+  return getNodeTermDataDir();
 }
 
 class LibreChatService {
