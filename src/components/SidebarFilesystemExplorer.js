@@ -609,17 +609,6 @@ const SidebarFilesystemExplorer = ({
     window.dispatchEvent(new CustomEvent('open-ai-config', { detail: { tab: 'mcp-manager', selectServer: 'filesystem' } }));
   }, []);
 
-  const openChatTab = useCallback(() => {
-    const newAITab = {
-      key: `ai-chat-${Date.now()}`,
-      label: 'Chat IA',
-      type: 'ai-chat',
-      createdAt: Date.now(),
-      groupId: null
-    };
-    window.dispatchEvent(new CustomEvent('create-ai-tab', { detail: { tab: newAITab } }));
-  }, []);
-
   const openCreateGroupDialog = useCallback(() => {
     window.dispatchEvent(new CustomEvent('open-create-group-dialog'));
   }, []);
@@ -806,14 +795,6 @@ const SidebarFilesystemExplorer = ({
           flexShrink: 0,
           overflow: 'visible'
         }}>
-          <Button 
-            icon="pi pi-comments" 
-            className="p-button-rounded p-button-text sidebar-action-button glass-button" 
-            onClick={openChatTab} 
-            tooltip={t('tooltips.aiChat')} 
-            tooltipOptions={{ position: 'bottom' }}
-            style={{ flexShrink: 0 }}
-          />
           <Button 
             icon="pi pi-folder" 
             className="p-button-rounded p-button-text sidebar-action-button glass-button" 

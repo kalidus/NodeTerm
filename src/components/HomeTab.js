@@ -9,7 +9,6 @@ import { getVersionInfo } from '../version-info';
 import TabbedTerminal from './TabbedTerminal';
 import ConnectionHistory from './ConnectionHistory';
 import NodeTermStatus from './NodeTermStatus';
-import AIChatWithHistory from './AIChatWithHistory';
 import StandaloneStatusBar from './StandaloneStatusBar';
 import { uiThemes } from '../themes/ui-themes';
 import { themeManager } from '../utils/themeManager';
@@ -86,7 +85,7 @@ const HomeTab = ({
   const [favType, setFavType] = useState('all'); // Nuevo estado para filtros
   const [recentConnections, setRecentConnections] = useState([]); // Estado para conexiones recientes
   const [recentPasswords, setRecentPasswords] = useState([]); // Estado para passwords recientes
-  const [showAIChat, setShowAIChat] = useState(false); // Estado para mostrar/ocultar chat de IA
+  const showAIChat = false; // Estado para mostrar/ocultar chat de IA
   const [iconThemeKey, setIconThemeKey] = useState(0); // Para forzar re-render cuando cambia el tema de iconos
   const [statusBarVisible, setStatusBarVisible] = useState(() => {
     // Cargar preferencia desde localStorage, por defecto visible
@@ -425,20 +424,6 @@ const HomeTab = ({
     return () => window.removeEventListener('storage', updateTerminalTitle);
   }, []);
 
-  useEffect(() => {
-    window.dispatchEvent(new CustomEvent('ai-chat-home-visibility', {
-      detail: { visible: showAIChat }
-    }));
-  }, [showAIChat]);
-
-  useEffect(() => {
-    return () => {
-      window.dispatchEvent(new CustomEvent('ai-chat-home-visibility', {
-        detail: { visible: false }
-      }));
-    };
-  }, []);
-
   // Evita que el panel de opciones quede visible al cambiar de vista/layout.
   useEffect(() => {
     try {
@@ -448,7 +433,7 @@ const HomeTab = ({
     } catch {
       // Ignorar fallos del overlay al desmontar o en cambios rápidos de vista
     }
-  }, [terminalView, showAIChat, terminalHidden, homeCardVisible, rightColumnVisible]);
+  }, [terminalView, terminalHidden, homeCardVisible, rightColumnVisible]);
 
   const RECENTS_LIMIT = 50;
 
@@ -854,9 +839,7 @@ const HomeTab = ({
   };
 
   // Funci\u00F3n para toggle del chat de IA
-  const handleToggleAIChat = () => {
-    setShowAIChat(prev => !prev);
-  };
+  const handleToggleAIChat = () => {};
 
   // Funci\u00F3n para toggle de la status bar
   const handleToggleStatusBar = () => {
@@ -902,16 +885,7 @@ const HomeTab = ({
     });
   };
 
-  useEffect(() => {
-    const handleExternalToggle = () => {
-      if (!showAIChat) return;
-      handleToggleTerminalVisibility();
-    };
-    window.addEventListener('ai-chat-home-toggle-terminal', handleExternalToggle);
-    return () => {
-      window.removeEventListener('ai-chat-home-toggle-terminal', handleExternalToggle);
-    };
-  }, [showAIChat, handleToggleTerminalVisibility]);
+
 
   // Escuchar cambios de storage para statusBarVisible desde SettingsDialog
   useEffect(() => {
@@ -1681,35 +1655,7 @@ const HomeTab = ({
           }}>
             {/* \u00C1reas central */}
             <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              {/* Mostrar Chat de IA o contenido normal */}
-              {showAIChat ? (
-                // Panel de Chat de IA
-                <div style={{
-                  flex: 1,
-                  padding: '1rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  height: '100%',
-                  overflow: 'hidden'
-                }}>
-                  <div style={{
-                    flex: 1,
-                    background: `linear-gradient(135deg,
-                  rgba(16, 20, 28, 0.6) 0%,
-                  rgba(16, 20, 28, 0.4) 100%)`,
-                    backdropFilter: 'blur(8px) saturate(140%)',
-                    WebkitBackdropFilter: 'blur(8px) saturate(140%)',
-                    border: `1px solid ${themeColors.cardBorder}`,
-                    borderRadius: '12px',
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
-                    overflow: 'hidden'
-                  }}>
-                    <AIChatWithHistory />
-                  </div>
-                </div>
-              ) : (
-                // Contenido normal: ConnectionHistory maneja todo, incluido el terminal si terminalView
-                <ConnectionHistory
+              <ConnectionHistory
                   onConnectToHistory={handleConnectToHistory}
                   recentConnections={recentConnections}
                   activeIds={activeIds}
@@ -1760,7 +1706,6 @@ const HomeTab = ({
                     />
                   </div>
                 </ConnectionHistory>
-              )}
             </div>
           </div>
         </div >

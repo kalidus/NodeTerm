@@ -761,9 +761,8 @@ const Sidebar = React.memo(({
     }
   }, [explorerFontColor]);
 
-  // Estado para controlar la visibilidad de los botones de clientes de IA
   const [aiClientsEnabled, setAiClientsEnabled] = React.useState({
-    nodeterm: true,
+    nodeterm: false,
     claude: false,
     opencode: false,
     geminicli: false,
@@ -784,7 +783,7 @@ const Sidebar = React.memo(({
         if (config) {
           const parsed = JSON.parse(config);
           setAiClientsEnabled({
-            nodeterm: parsed.nodeterm === true,
+            nodeterm: false,
             claude: parsed.claude === true,
             opencode: parsed.opencode === true,
             geminicli: parsed.geminicli === true,
@@ -799,7 +798,7 @@ const Sidebar = React.memo(({
         } else {
           // Si no hay configuración, todos desactivados por defecto
           setAiClientsEnabled({
-            nodeterm: true,
+            nodeterm: false,
             claude: false,
             opencode: false,
             geminicli: false,

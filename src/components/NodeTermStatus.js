@@ -329,7 +329,7 @@ const NodeTermStatus = ({
 				if (saved) {
 					const parsed = JSON.parse(saved);
 					setAiClientsState({
-						nodeterm: parsed.nodeterm || false,
+						nodeterm: false,
 						anythingllm: { enabled: parsed.anythingllm || false, running: false },
 						openwebui: { enabled: parsed.openwebui || false, running: false }
 					});
@@ -351,7 +351,7 @@ const NodeTermStatus = ({
 			if (e.detail?.config) {
 				const config = e.detail.config;
 				setAiClientsState(prev => ({
-					nodeterm: config.nodeterm || false,
+					nodeterm: false,
 					anythingllm: { enabled: config.anythingllm || false, running: prev.anythingllm?.running || false },
 					openwebui: { enabled: config.openwebui || false, running: prev.openwebui?.running || false }
 				}));
@@ -1252,8 +1252,7 @@ const NodeTermStatus = ({
 
 	// Calcular si hay clientes de IA activos (fuera del bloque condicional para que siempre se calcule)
 	const hasActiveAIClients = useMemo(() => {
-		const result = aiClientsState.nodeterm ||
-			(aiClientsState.anythingllm && aiClientsState.anythingllm.enabled) ||
+		const result = (aiClientsState.anythingllm && aiClientsState.anythingllm.enabled) ||
 			(aiClientsState.openwebui && aiClientsState.openwebui.enabled);
 
 		// Debug: Log del estado de IA (temporal para depuración)

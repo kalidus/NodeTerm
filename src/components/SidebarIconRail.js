@@ -45,14 +45,14 @@ const SidebarIconRail = React.memo(({
   }, [onShowImportDialog, onShowExportDialog, onShowImportExportDialog, onShowImportWizard, t]);
 
   const cliClients = ['opencode', 'geminicli', 'codexcli', 'claude'];
-  const appClients = ['nodeterm', 'anythingllm', 'openwebui', 'librechat', 'agentzero', 'openclaw', 'opennotebook'];
+  const appClients = ['anythingllm', 'openwebui', 'librechat', 'agentzero', 'openclaw', 'opennotebook'];
 
   const hasAnyCli = cliClients.some(c => aiClientsEnabled[c]);
   const hasAnyApp = appClients.some(c => aiClientsEnabled[c]);
   const hasAnyAI = hasAnyCli || hasAnyApp;
 
   const aiClientTabTypes = {
-    nodeterm: 'ai-chat',
+
     opencode: 'opencode',
     geminicli: 'geminicli',
     codexcli: 'codexcli',
@@ -66,7 +66,7 @@ const SidebarIconRail = React.memo(({
   };
 
   const aiClientTooltips = {
-    nodeterm: 'tooltips.aiChat',
+
     opencode: 'tooltips.openCode',
     geminicli: 'tooltips.geminiCLI',
     codexcli: 'tooltips.codexCLI',
@@ -131,18 +131,7 @@ const SidebarIconRail = React.memo(({
             const tooltipKey = aiClientTooltips[clientId];
             const tooltip = tooltipKey ? t(tooltipKey) : clientId;
 
-            if (clientId === 'nodeterm') {
-              return (
-                <button
-                  key={clientId}
-                  className="sidebar-icon-rail-item"
-                  onClick={() => onOpenAIClient(clientId)}
-                  title={tooltip}
-                >
-                  <i className="pi pi-comments" style={{ fontSize: `${Math.round(ICON_SIZE * 0.75)}px` }} />
-                </button>
-              );
-            }
+
 
             return (
               <button

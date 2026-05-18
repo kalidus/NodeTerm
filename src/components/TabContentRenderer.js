@@ -18,7 +18,6 @@ import CodexCliTerminal from './CodexCliTerminal';
 import AuditTab from './AuditTab';
 import RecordingPlayerTab from './RecordingPlayerTab';
 import GlobalAuditTab from './GlobalAuditTab';
-import AIChatTab from './AIChatTab';
 import AnythingLLMTab from './AnythingLLMTab';
 import OpenWebUITab from './OpenWebUITab';
 import LibreChatTab from './LibreChatTab';
@@ -1709,20 +1708,6 @@ const TabContentRenderer = React.memo(({
         handleToggleBroadcastTarget={handleToggleBroadcastTarget}
         getAllTabs={getAllTabs}
         onBroadcastData={handleBroadcastData}
-      />
-    );
-  }
-
-  // Pestaña de Chat de IA
-  if (tab.type === 'ai-chat') {
-    return (
-      <AIChatTab
-        tab={tab}
-        isActiveTab={isActiveTab}
-        localFontFamily={localFontFamily}
-        localFontSize={localFontSize}
-        localPowerShellTheme={localPowerShellTheme}
-        localLinuxTerminalTheme={localLinuxTerminalTheme}
       />
     );
   }

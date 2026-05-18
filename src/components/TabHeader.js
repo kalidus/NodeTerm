@@ -361,10 +361,7 @@ const TabHeader = React.memo(({
       {/* Icono específico para terminales locales - usar misma lógica que NodeTermStatus */}
       {(tab.type === 'local-terminal' || tab.type === 'docker') && getLocalTerminalIcon(tab)}
 
-      {/* Iconos de marca: Chat IA integrado y clientes embebidos (logos oficiales) */}
-      {tab.type === 'ai-chat' && (
-        <i className="pi pi-comments" style={{ fontSize: '12px', marginRight: '6px', color: primaryColor, flexShrink: 0 }} />
-      )}
+      {/* Iconos de marca: clientes embebidos (logos oficiales) */}
       {tab.type === 'anything-llm' && (
         <AIClientBrandIcon tabType="anything-llm" size={12} style={{ marginRight: '6px', flexShrink: 0 }} />
       )}
