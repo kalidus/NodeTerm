@@ -2899,16 +2899,7 @@ const Sidebar = React.memo(({
               </span>
             </button>
           )}
-          {activeTab === 'tools' ? (
-            <button
-              type="button"
-              className="sidebar-panel-toolbar-btn"
-              onClick={() => setShowSettingsDialog(true)}
-              title={t('tooltips.settings')}
-            >
-              <span style={TB_ICON}>{sessionIcons?.settings}</span>
-            </button>
-          ) : activeTab !== null && setTreeTheme && (
+          {activeTab !== null && setTreeTheme && (
             <SidebarAppearanceMenu
               treeTheme={treeTheme}
               setTreeTheme={setTreeTheme}
