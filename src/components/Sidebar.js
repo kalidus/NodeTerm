@@ -73,7 +73,34 @@ function safeUnblockForms(showToast) {
   }
 }
 
+// Skeleton loader para simular árbol de directorios de forma premium
+const SidebarSkeleton = () => {
+  return (
+    <div className="sidebar-skeleton">
+      {[...Array(6)].map((_, idx) => {
+        let indent = '0px';
+        if (idx === 1 || idx === 4) indent = '16px';
+        else if (idx === 2) indent = '32px';
+        
+        let width = '70%';
+        if (idx === 1) width = '50%';
+        else if (idx === 2) width = '60%';
+        else if (idx === 4) width = '55%';
+        else if (idx === 5) width = '40%';
+        
+        return (
+          <div key={idx} className="sidebar-skeleton-item" style={{ paddingLeft: indent }}>
+            <div className="sidebar-skeleton-icon" />
+            <div className="sidebar-skeleton-text" style={{ width }} />
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 const Sidebar = React.memo(({
+  isLoading = false,
   nodes,
   setNodes,
   sidebarCollapsed,
@@ -2920,118 +2947,183 @@ const Sidebar = React.memo(({
       {/* Panel toolbar header with contextual actions */}
       {panelToolbarHeader}
 
-      {viewMode === 'connections' ? (
-        // Vista de conexiones (árbol normal)
-        <>
-          <div
-            ref={treeContainerRef}
-            style={{
-              flex: 1,
-              minHeight: 0,
-              overflowY: 'hidden',
-              overflowX: 'auto',
-              position: 'relative',
-              fontSize: `${explorerFontSize}px`,
-              color: explorerFontColor || undefined,
-              ...(explorerFontColor ? { '--ui-sidebar-text': explorerFontColor } : {})
-            }}
-            onContextMenu={onTreeAreaContextMenu}
-            className="tree-container"
-            onDragStart={handleExternalDragStart}
-            onDragOver={handleTreeContainerDragOver}
-            onDragLeave={handleTreeContainerDragLeave}
-            onDrop={stopTreeDragAutoScroll}
-          >
-            {!hasRenderableTreeNodes ? (
-              <div className="empty-tree-message" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
-                {showFavoritesView
-                  ? (totalFavoriteShortcutCount === 0
-                    ? t('messages.favoritesEmpty')
-                    : t('messages.favoritesFilteredEmpty'))
-                  : (
-                    <>
-                      No hay elementos en el árbol.<br />Usa el botón &quot;+&quot; para crear una carpeta o conexión.
-                    </>
-                  )}
-              </div>
-            ) : (
-              <Tree
-                key={`tree-${iconTheme}-${explorerFontSize}-${treeTheme}-${explorerFontColor || 'default'}-${folderIconSize}-${iconSize}-${showFavoritesView ? 'favorites' : 'all'}`} // Forzar re-render cuando cambie el tema o el tamaño de iconos
-                value={displayNodes}
-                selectionMode="single"
-                selectionKeys={selectedNodeKey}
-                onSelectionChange={e => {
-                  setSelectedNodeKey(e.value);
+      {/* Vista de Conexiones (Mantenida montada para evitar flashes) */}
+      <div style={{ display: viewMode === 'connections' ? 'flex' : 'none', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+        <div
+          ref={treeContainerRef}
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: 'hidden',
+            overflowX: 'auto',
+            position: 'relative',
+            fontSize: `${explorerFontSize}px`,
+            color: explorerFontColor || undefined,
+            ...(explorerFontColor ? { '--ui-sidebar-text': explorerFontColor } : {})
+          }}
+          onContextMenu={onTreeAreaContextMenu}
+          className="tree-container"
+          onDragStart={handleExternalDragStart}
+          onDragOver={handleTreeContainerDragOver}
+          onDragLeave={handleTreeContainerDragLeave}
+          onDrop={stopTreeDragAutoScroll}
+        >
+          {isLoading ? (
+            <SidebarSkeleton />
+          ) : !hasRenderableTreeNodes ? (
+            <div className="empty-tree-message" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
+              {showFavoritesView
+                ? (totalFavoriteShortcutCount === 0
+                  ? t('messages.favoritesEmpty')
+                  : t('messages.favoritesFilteredEmpty'))
+                : (
+                  <>
+                    No hay elementos en el árbol.<br />Usa el botón &quot;+&quot; para crear una carpeta o conexión.
+                  </>
+                )}
+            </div>
+          ) : (
+            <Tree
+              key={`tree-${iconTheme}-${explorerFontSize}-${treeTheme}-${explorerFontColor || 'default'}-${folderIconSize}-${iconSize}-${showFavoritesView ? 'favorites' : 'all'}`} // Forzar re-render cuando cambie el tema o el tamaño de iconos
+              value={displayNodes}
+              selectionMode="single"
+              selectionKeys={selectedNodeKey}
+              onSelectionChange={e => {
+                setSelectedNodeKey(e.value);
 
-                  // Encontrar el nodo completo para el panel de detalles
-                  const findNode = (nodeList, key) => {
-                    for (const node of nodeList) {
-                      if (node.key === key) return node;
-                      if (node.children) {
-                        const found = findNode(node.children, key);
-                        if (found) return found;
-                      }
+                // Encontrar el nodo completo para el panel de detalles
+                const findNode = (nodeList, key) => {
+                  for (const node of nodeList) {
+                    if (node.key === key) return node;
+                    if (node.children) {
+                      const found = findNode(node.children, key);
+                      if (found) return found;
                     }
-                    return null;
-                  };
-
-                  // e.value puede ser un objeto { "key": true } o directamente un string "key"
-                  let selectedKey = null;
-                  if (typeof e.value === 'string') {
-                    selectedKey = e.value;
-                  } else if (e.value && typeof e.value === 'object') {
-                    selectedKey = Object.keys(e.value)[0];
                   }
+                  return null;
+                };
 
-                  const node = selectedKey ? findNode(displayNodes, selectedKey) : null;
-                  setSelectedNodeForDetails(node ? resolveFavoriteShortcutNode(node, nodes) : null);
-                }}
-                expandedKeys={expandedKeys}
-                onToggle={e => setExpandedKeys(e.value)}
-                dragdropScope="sidebar"
-                onDragDrop={onDragDrop}
-                onDragEnd={() => {
-                  stopTreeDragAutoScroll();
-                  // Limpiar el nodo SSH arrastrado al finalizar el drag
-                  if (window.draggedSSHNodeRef) {
-                    window.draggedSSHNodeRef.current = null;
-                  }
-                }}
-                className={`sidebar-tree tree-theme-${treeTheme}${showFavoritesView && viewMode === 'connections' ? ' sidebar-tree-favorites-view' : ''}`}
-                data-icon-theme={iconTheme}
-                data-tree-theme={treeTheme}
-                data-font-color={explorerFontColor || ''}
-                scrollHeight="100%"
-                virtualScrollerOptions={{ itemSize: Math.max(folderIconSize || 20, explorerFontSize || 13) + 12 }}
-                style={{
-                  height: '100%',
-                  fontSize: `${explorerFontSize}px`,
-                  color: explorerFontColor || undefined,
-                  '--icon-size': `${iconSize}px`,
-                  '--sidebar-icon-size': `${folderIconSize || 20}px`,
-                  '--tree-node-padding': '2px 0',
-                  ...(explorerFontColor ? {
-                    '--ui-sidebar-text': explorerFontColor,
-                    '--tree-text-color': explorerFontColor
-                  } : {})
-                }}
-                nodeTemplate={(node, options) => nodeTemplate(node, { ...options, onNodeContextMenu })}
-              />
-            )}
-          </div>
+                // e.value puede ser un objeto { "key": true } o directamente un string "key"
+                let selectedKey = null;
+                if (typeof e.value === 'string') {
+                  selectedKey = e.value;
+                } else if (e.value && typeof e.value === 'object') {
+                  selectedKey = Object.keys(e.value)[0];
+                }
 
-          {/* Panel de detalles de conexión */}
-          <ConnectionDetailsPanel
-            selectedNode={selectedNodeForDetails}
+                const node = selectedKey ? findNode(displayNodes, selectedKey) : null;
+                setSelectedNodeForDetails(node ? resolveFavoriteShortcutNode(node, nodes) : null);
+              }}
+              expandedKeys={expandedKeys}
+              onToggle={e => setExpandedKeys(e.value)}
+              dragdropScope="sidebar"
+              onDragDrop={onDragDrop}
+              onDragEnd={() => {
+                stopTreeDragAutoScroll();
+                // Limpiar el nodo SSH arrastrado al finalizar el drag
+                if (window.draggedSSHNodeRef) {
+                  window.draggedSSHNodeRef.current = null;
+                }
+              }}
+              className={`sidebar-tree tree-theme-${treeTheme}${showFavoritesView && viewMode === 'connections' ? ' sidebar-tree-favorites-view' : ''}`}
+              data-icon-theme={iconTheme}
+              data-tree-theme={treeTheme}
+              data-font-color={explorerFontColor || ''}
+              scrollHeight="100%"
+              virtualScrollerOptions={{ itemSize: Math.max(folderIconSize || 20, explorerFontSize || 13) + 12 }}
+              style={{
+                height: '100%',
+                fontSize: `${explorerFontSize}px`,
+                color: explorerFontColor || undefined,
+                '--icon-size': `${iconSize}px`,
+                '--sidebar-icon-size': `${folderIconSize || 20}px`,
+                '--tree-node-padding': '2px 0',
+                ...(explorerFontColor ? {
+                  '--ui-sidebar-text': explorerFontColor,
+                  '--tree-text-color': explorerFontColor
+                } : {})
+              }}
+              nodeTemplate={(node, options) => nodeTemplate(node, { ...options, onNodeContextMenu })}
+            />
+          )}
+        </div>
+
+        {/* Panel de detalles de conexión */}
+        <ConnectionDetailsPanel
+          selectedNode={selectedNodeForDetails}
+          uiTheme={uiTheme}
+          iconTheme={iconTheme}
+          sessionActionIconTheme={sessionActionIconTheme}
+          onNodeUpdate={updateNodeInTree}
+          onOpenSSHConnection={onOpenSSHConnection}
+          onOpenVncConnection={onOpenVncConnection}
+        />
+      </div>
+
+      {/* Vista de Passwords (Mantenida montada para evitar flashes de descifrado scrypt) */}
+      <div style={{ display: viewMode === 'passwords' ? 'flex' : 'none', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+        <Suspense fallback={<TabChunkFallback />}>
+          <LazyPasswordManagerSidebar
+            nodes={nodes}
+            setNodes={setNodes}
+            showToast={showToast}
+            confirmDialog={confirmDialog}
             uiTheme={uiTheme}
+            onBackToConnections={() => setViewMode('connections')}
+            sidebarCollapsed={sidebarCollapsed}
+            setSidebarCollapsed={setSidebarCollapsed}
             iconTheme={iconTheme}
+            iconSize={iconSize}
+            folderIconSize={folderIconSize}
+            connectionIconSize={connectionIconSize}
+            explorerFont={explorerFont}
+            explorerFontSize={explorerFontSize}
+            masterKey={masterKey}
+            secureStorage={secureStorage}
+            setShowSettingsDialog={setShowSettingsDialog}
+            onShowImportDialog={setShowImportDialog}
             sessionActionIconTheme={sessionActionIconTheme}
-            onNodeUpdate={updateNodeInTree}
-            onOpenSSHConnection={onOpenSSHConnection}
-            onOpenVncConnection={onOpenVncConnection}
+            sidebarFilter={sidebarFilter}
+            treeTheme={treeTheme}
+            showFavoritesView={showFavoritesView}
+            onToggleFavoritesView={toggleFavoritesView}
+            hideHeader={true}
           />
-        </>
-      ) : viewMode === 'filesystem' ? (
+        </Suspense>
+      </div>
+
+      {/* Vista de Documents (Mantenida montada para consistencia y cero lag) */}
+      <div style={{ display: viewMode === 'documents' ? 'flex' : 'none', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+        <Suspense fallback={<TabChunkFallback />}>
+          <LazyDocumentsSidebar
+            showToast={showToast}
+            confirmDialog={confirmDialog}
+            uiTheme={uiTheme}
+            onBackToConnections={() => setViewMode('connections')}
+            onOpenPasswords={() => setViewMode('passwords')}
+            showFavoritesView={showFavoritesView}
+            onToggleFavoritesView={toggleFavoritesView}
+            sidebarCollapsed={sidebarCollapsed}
+            setSidebarCollapsed={setSidebarCollapsed}
+            explorerFont={explorerFont}
+            explorerFontSize={explorerFontSize}
+            masterKey={masterKey}
+            secureStorage={secureStorage}
+            sessionActionIconTheme={sessionActionIconTheme}
+            sidebarFilter={sidebarFilter}
+            treeTheme={treeTheme}
+            setShowSettingsDialog={setShowSettingsDialog}
+            onShowImportDialog={onShowImportDialog || setShowImportDialog}
+            onShowExportDialog={onShowExportDialog}
+            onShowImportExportDialog={onShowImportExportDialog}
+            onShowImportWizard={onShowImportWizard}
+            hideHeader={true}
+          />
+        </Suspense>
+      </div>
+
+      {/* Otras vistas dinámicas que no requieren persistencia de estado de carga */}
+      {viewMode === 'filesystem' && (
         <SidebarFilesystemExplorer
           status={filesystemStatus}
           onBackToConnections={() => setViewMode('connections')}
@@ -3045,93 +3137,40 @@ const Sidebar = React.memo(({
           initialPath={initialFilesystemPath}
           onPathNavigated={() => setInitialFilesystemPath(null)}
         />
-      ) : viewMode === 'localExplorer' ? (
+      )}
+
+      {viewMode === 'localExplorer' && (
         <Suspense fallback={<TabChunkFallback />}>
-        <LazyLocalFileExplorerSidebar
-          initialPath={localExplorerPath}
-          onBackToConnections={() => {
-            setViewMode('connections');
-            setLocalExplorerPath(null);
-          }}
-          sidebarCollapsed={sidebarCollapsed}
-          setSidebarCollapsed={setSidebarCollapsed}
-          explorerFont={explorerFont}
-          explorerFontSize={explorerFontSize}
-          uiTheme={uiTheme}
-          showToast={showToast}
-          setShowSettingsDialog={setShowSettingsDialog}
-          sessionActionIconTheme={sessionActionIconTheme}
-          iconTheme={iconTheme}
-          iconSize={iconSize}
-          folderIconSize={folderIconSize}
-        />
+          <LazyLocalFileExplorerSidebar
+            initialPath={localExplorerPath}
+            onBackToConnections={() => {
+              setViewMode('connections');
+              setLocalExplorerPath(null);
+            }}
+            sidebarCollapsed={sidebarCollapsed}
+            setSidebarCollapsed={setSidebarCollapsed}
+            explorerFont={explorerFont}
+            explorerFontSize={explorerFontSize}
+            uiTheme={uiTheme}
+            showToast={showToast}
+            setShowSettingsDialog={setShowSettingsDialog}
+            sessionActionIconTheme={sessionActionIconTheme}
+            iconTheme={iconTheme}
+            iconSize={iconSize}
+            folderIconSize={folderIconSize}
+          />
         </Suspense>
-      ) : viewMode === 'tools' ? (
+      )}
+
+      {viewMode === 'tools' && (
         <Suspense fallback={<TabChunkFallback />}>
-        <LazyToolsSidebar
-          onOpenTool={(toolId, toolLabel) => {
-            window.dispatchEvent(new CustomEvent('open-network-tool', {
-              detail: { toolId, toolLabel }
-            }));
-          }}
-        />
-        </Suspense>
-      ) : viewMode === 'documents' ? (
-        <Suspense fallback={<TabChunkFallback />}>
-        <LazyDocumentsSidebar
-          showToast={showToast}
-          confirmDialog={confirmDialog}
-          uiTheme={uiTheme}
-          onBackToConnections={() => setViewMode('connections')}
-          onOpenPasswords={() => setViewMode('passwords')}
-          showFavoritesView={showFavoritesView}
-          onToggleFavoritesView={toggleFavoritesView}
-          sidebarCollapsed={sidebarCollapsed}
-          setSidebarCollapsed={setSidebarCollapsed}
-          explorerFont={explorerFont}
-          explorerFontSize={explorerFontSize}
-          masterKey={masterKey}
-          secureStorage={secureStorage}
-          sessionActionIconTheme={sessionActionIconTheme}
-          sidebarFilter={sidebarFilter}
-          treeTheme={treeTheme}
-          setShowSettingsDialog={setShowSettingsDialog}
-          onShowImportDialog={onShowImportDialog || setShowImportDialog}
-          onShowExportDialog={onShowExportDialog}
-          onShowImportExportDialog={onShowImportExportDialog}
-          onShowImportWizard={onShowImportWizard}
-          hideHeader={true}
-        />
-        </Suspense>
-      ) : (
-        // Vista de passwords
-        <Suspense fallback={<TabChunkFallback />}>
-        <LazyPasswordManagerSidebar
-          nodes={nodes}
-          setNodes={setNodes}
-          showToast={showToast}
-          confirmDialog={confirmDialog}
-          uiTheme={uiTheme}
-          onBackToConnections={() => setViewMode('connections')}
-          sidebarCollapsed={sidebarCollapsed}
-          setSidebarCollapsed={setSidebarCollapsed}
-          iconTheme={iconTheme}
-          iconSize={iconSize}
-          folderIconSize={folderIconSize}
-          connectionIconSize={connectionIconSize}
-          explorerFont={explorerFont}
-          explorerFontSize={explorerFontSize}
-          masterKey={masterKey}
-          secureStorage={secureStorage}
-          setShowSettingsDialog={setShowSettingsDialog}
-          onShowImportDialog={setShowImportDialog}
-          sessionActionIconTheme={sessionActionIconTheme}
-          sidebarFilter={sidebarFilter}
-          treeTheme={treeTheme}
-          showFavoritesView={showFavoritesView}
-          onToggleFavoritesView={toggleFavoritesView}
-          hideHeader={true}
-        />
+          <LazyToolsSidebar
+            onOpenTool={(toolId, toolLabel) => {
+              window.dispatchEvent(new CustomEvent('open-network-tool', {
+                detail: { toolId, toolLabel }
+              }));
+            }}
+          />
         </Suspense>
       )}
       

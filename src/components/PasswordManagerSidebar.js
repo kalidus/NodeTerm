@@ -18,6 +18,32 @@ import { validateSeedPhrase, countWords } from '../utils/bip39Validator';
 import '../styles/components/password-manager-sidebar.css';
 import '../styles/components/tree-themes.css';
 
+// Skeleton loader para simular árbol de passwords de forma premium
+const PasswordSkeleton = () => {
+  return (
+    <div className="sidebar-skeleton">
+      {[...Array(5)].map((_, idx) => {
+        let indent = '0px';
+        if (idx === 1 || idx === 3) indent = '16px';
+        else if (idx === 2) indent = '32px';
+        
+        let width = '70%';
+        if (idx === 1) width = '55%';
+        else if (idx === 2) width = '45%';
+        else if (idx === 3) width = '60%';
+        else if (idx === 4) width = '40%';
+        
+        return (
+          <div key={idx} className="sidebar-skeleton-item" style={{ paddingLeft: indent }}>
+            <div className="sidebar-skeleton-icon" />
+            <div className="sidebar-skeleton-text" style={{ width }} />
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 const PasswordManagerSidebar = ({ 
   nodes, 
   setNodes,
@@ -1892,7 +1918,9 @@ const PasswordManagerSidebar = ({
         }}
         onContextMenu={onTreeAreaContextMenu}
       >
-        {filteredPasswordNodes.length === 0 ? (
+        {isLoading ? (
+          <PasswordSkeleton />
+        ) : filteredPasswordNodes.length === 0 ? (
           <div className="empty-tree-message" style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
             No hay passwords guardados.<br/>Usa el botón "+" para crear uno.
           </div>

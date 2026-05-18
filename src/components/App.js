@@ -116,6 +116,7 @@ const App = () => {
   const resizeTimeoutRef = useRef(null);
   const [showImportWizard, setShowImportWizard] = React.useState(false);
   const [isAppReady, setIsAppReady] = React.useState(false);
+  const [isLoadingConnections, setIsLoadingConnections] = React.useState(true);
   const [importPreset, setImportPreset] = React.useState(null);
 
   // Estado para mostrar/ocultar la titlebar superior
@@ -1958,6 +1959,14 @@ const App = () => {
     } catch (error) {
       console.error('Error loading nodes:', error);
       setNodes(getDefaultNodes());
+    } finally {
+      // Si el servicio de sync aún no se ha inicializado y estamos en electron,
+      // no quitar el loading todavía (esperar al evento settings-updated)
+      if (window.electron?.appdata && !localStorageSyncService._initialized) {
+        // Seguir en loading
+      } else {
+        setIsLoadingConnections(false);
+      }
     }
   }, [masterKey, secureStorage, getDefaultNodes]);
 
@@ -2018,16 +2027,26 @@ const App = () => {
     saveNodes();
   }, [nodes, masterKey, secureStorage, updateTreeHash, isExternalReloadRef]);
 
-  // Escuchar eventos de sincronización externa para datos encriptados
+  // Escuchar eventos de sincronización externa para datos encriptados y configuración
   useEffect(() => {
     const handleSync = () => {
         loadNodes();
     };
+
+    const handleSettingsUpdated = (e) => {
+      if (e.detail?.source === 'sync') {
+        loadNodes();
+      }
+    };
+
     window.addEventListener('encryption-data-synced', handleSync);
     window.addEventListener('connections-synced-from-cloud', handleSync);
+    window.addEventListener('settings-updated', handleSettingsUpdated);
+    
     return () => {
       window.removeEventListener('encryption-data-synced', handleSync);
       window.removeEventListener('connections-synced-from-cloud', handleSync);
+      window.removeEventListener('settings-updated', handleSettingsUpdated);
     };
   }, [loadNodes]);
 
@@ -2989,6 +3008,7 @@ const App = () => {
   // === PROPS MEMOIZADAS PARA SIDEBAR ===
   // Memoizar props que no cambian frecuentemente
   const memoizedSidebarProps = useMemo(() => ({
+    isLoading: isLoadingConnections,
     nodes,
     setNodes,
     sidebarCollapsed,
@@ -3106,7 +3126,7 @@ const App = () => {
       setShowWallixRefreshDialog(true);
     }
   }), [
-    nodes, setNodes, sidebarCollapsed, setSidebarCollapsed, allExpanded, toggleExpandAll,
+    isLoadingConnections, nodes, setNodes, sidebarCollapsed, setSidebarCollapsed, allExpanded, toggleExpandAll,
     expandedKeys, setExpandedKeys, setShowCreateGroupDialog, setShowSettingsDialog,
     iconThemeSidebar, iconSize, sidebarFont, sidebarFontSize, sidebarFontColor, terminalTheme, treeTheme, setTreeTheme, sessionActionIconTheme, setSessionActionIconTheme,
     toast, confirmDialog, onOpenSSHConnection, onNodeContextMenu, onTreeAreaContextMenu, hideContextMenu,
