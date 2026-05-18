@@ -2457,6 +2457,38 @@ const App = () => {
     };
   }, [setExpandedKeys, nodes]);
 
+  // Abrir herramienta de red como pestaña (o enfocar si ya está abierta)
+  useEffect(() => {
+    const handleOpenNetworkTool = (event) => {
+      const { toolId, toolLabel } = event.detail || {};
+      if (!toolId) return;
+
+      const allTabs = getAllTabs();
+      const existing = allTabs.find(t => t.type === 'network-tool' && t.toolId === toolId);
+
+      if (existing) {
+        setOnCreateActivateTabKey(existing.key);
+      } else {
+        const newTab = {
+          key: `network-tool-${toolId}-${Date.now()}`,
+          label: toolLabel || toolId,
+          type: 'network-tool',
+          toolId,
+          groupId: null,
+          createdAt: Date.now()
+        };
+        setSshTabs(prev => [newTab, ...prev]);
+        setLastOpenedTabKey(newTab.key);
+        setOnCreateActivateTabKey(newTab.key);
+      }
+    };
+
+    window.addEventListener('open-network-tool', handleOpenNetworkTool);
+    return () => {
+      window.removeEventListener('open-network-tool', handleOpenNetworkTool);
+    };
+  }, [getAllTabs, setSshTabs, setLastOpenedTabKey, setOnCreateActivateTabKey]);
+
   // Configurar callbacks RDP para el sidebar
   useEffect(() => {
     // Asegurar que el ref esté inicializado

@@ -12,6 +12,7 @@ const SECTIONS = [
   { id: 'passwords',  icon: 'pi pi-shield',  color: '#ef9a9a', labelKey: 'tooltips.passwords' },
   { id: 'documents',  icon: 'pi pi-file',    color: '#64b5f6', labelKey: null, label: 'Notas' },
   { id: 'favorites',  icon: 'pi pi-star-fill', color: '#ffc107', labelKey: 'tooltips.showFavorites' },
+  { id: 'tools',      icon: 'pi pi-wrench',  color: '#06b6d4', labelKey: null, label: 'Herramientas' },
 ];
 
 const SidebarIconRail = React.memo(({

@@ -26,6 +26,7 @@ import AgentZeroTab from './AgentZeroTab';
 import OpenClawTab from './OpenClawTab';
 import OpenNotebookTab from './OpenNotebookTab';
 import SSHTunnelTab from './SSHTunnelTab';
+import NetworkToolTab from './NetworkToolTab';
 import TiptapDocumentEditor from './TiptapDocumentEditor';
 import { themes } from '../themes';
 import { TAB_TYPES } from '../utils/constants';
@@ -1748,6 +1749,11 @@ const TabContentRenderer = React.memo(({
 
   if (tab.type === 'open-notebook') {
     return <OpenNotebookTab />;
+  }
+
+  // Herramienta de red (network-tool)
+  if (tab.type === 'network-tool') {
+    return <NetworkToolTab tab={tab} />;
   }
 
   // Si llegamos aquí y no es SSH, mostrar error

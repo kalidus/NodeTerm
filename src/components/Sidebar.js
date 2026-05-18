@@ -19,6 +19,7 @@ import LocalFileExplorerSidebar from './LocalFileExplorerSidebar';
 import AIClientBrandIcon from './AIClientBrandIcon';
 import ConnectionDetailsPanel from './ConnectionDetailsPanel';
 import SidebarIconRail from './SidebarIconRail';
+import ToolsSidebar from './ToolsSidebar';
 import { unblockAllInputs, detectBlockedInputs, resolveFormBlocking, emergencyUnblockForms } from '../utils/formDebugger';
 import ImportService from '../services/ImportService';
 import localStorageSyncService from '../services/LocalStorageSyncService';
@@ -3047,6 +3048,14 @@ const Sidebar = React.memo(({
           iconSize={iconSize}
           folderIconSize={folderIconSize}
         />
+      ) : viewMode === 'tools' ? (
+        <ToolsSidebar
+          onOpenTool={(toolId, toolLabel) => {
+            window.dispatchEvent(new CustomEvent('open-network-tool', {
+              detail: { toolId, toolLabel }
+            }));
+          }}
+        />
       ) : viewMode === 'documents' ? (
         <DocumentsSidebar
           showToast={showToast}
@@ -3121,6 +3130,7 @@ const Sidebar = React.memo(({
       connections: 'connections',
       passwords: 'passwords',
       documents: 'documents',
+      tools: 'tools',
     };
     const targetViewMode = sectionToViewMode[sectionId] || 'connections';
 
@@ -3168,6 +3178,7 @@ const Sidebar = React.memo(({
     if (sidebarCollapsed) return null;
     if (viewMode === 'documents') return 'documents';
     if (viewMode === 'passwords') return 'passwords';
+    if (viewMode === 'tools') return 'tools';
     if (showFavoritesView && viewMode === 'connections') return 'favorites';
     if (viewMode === 'connections') return 'connections';
     return null;

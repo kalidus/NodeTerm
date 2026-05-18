@@ -96,10 +96,19 @@ const DNS_RECORD_TYPES = [
   { label: 'Todos', value: 'ALL' }
 ];
 
-const NetworkToolsDialog = ({ visible, onHide }) => {
+const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null }) => {
   // Estados principales
-  const [selectedCategory, setSelectedCategory] = useState('connectivity');
-  const [selectedTool, setSelectedTool] = useState('ping');
+  const [selectedCategory, setSelectedCategory] = useState(() => {
+    if (standalone && toolId) {
+      const cat = TOOL_CATEGORIES.find(c => c.tools.some(t => t.id === toolId));
+      return cat?.id || 'connectivity';
+    }
+    return 'connectivity';
+  });
+  const [selectedTool, setSelectedTool] = useState(() => {
+    if (standalone && toolId) return toolId;
+    return 'ping';
+  });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -198,6 +207,10 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
 
   // Cargar interfaces de red al abrir y centrar el diálogo
   useEffect(() => {
+    if (standalone) {
+      loadNetworkInterfaces();
+      return;
+    }
     if (visible) {
       loadNetworkInterfaces();
       
@@ -221,11 +234,11 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
         }
       }, 100);
     }
-  }, [visible, dialogSize]);
+  }, [visible, dialogSize, standalone]);
 
   // Escuchar eventos de progreso en tiempo real
   useEffect(() => {
-    if (!visible) return;
+    if (!standalone && !visible) return;
 
     const handleProgress = (data) => {
       const { tool, data: outputData } = data;
@@ -247,10 +260,11 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
         }
       };
     }
-  }, [visible, selectedTool]);
+  }, [visible, selectedTool, standalone]);
 
   // Detectar cambios en el tamaño de la ventana y del diálogo para layout responsive
   useEffect(() => {
+    if (standalone) return;
     if (!visible) return;
 
     // Función para actualizar el estado según el ancho del diálogo
@@ -2375,6 +2389,187 @@ const NetworkToolsDialog = ({ visible, onHide }) => {
       </div>
     </div>
   );
+
+  // Render en modo standalone (dentro de una pestaña)
+  if (standalone) {
+    return (
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--surface-ground)' }}>
+        <style>{`
+          .network-tools-sidebar::-webkit-scrollbar,
+          .network-tools-form::-webkit-scrollbar,
+          .network-tools-results::-webkit-scrollbar { width: 6px; }
+          .network-tools-sidebar::-webkit-scrollbar-track,
+          .network-tools-form::-webkit-scrollbar-track,
+          .network-tools-results::-webkit-scrollbar-track { background: transparent; }
+          .network-tools-sidebar::-webkit-scrollbar-thumb,
+          .network-tools-form::-webkit-scrollbar-thumb,
+          .network-tools-results::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+          .network-tools-standalone .network-tools-main {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+          }
+          .network-tools-standalone .network-tools-form-results {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+          }
+          .network-tools-standalone .network-tools-results {
+            flex: 1;
+            overflow-y: auto;
+          }
+        `}</style>
+        <div className="network-tools-standalone" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+          <div className="network-tools-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            {currentTool && (
+              <div style={{
+                padding: '1rem 1.5rem',
+                borderBottom: '1px solid rgba(255,255,255,0.1)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem',
+                background: 'rgba(0,0,0,0.1)',
+                flexShrink: 0
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    background: `linear-gradient(135deg, ${currentTool.categoryColor}30 0%, ${currentTool.categoryColor}15 100%)`,
+                    border: `1px solid ${currentTool.categoryColor}50`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <i className={currentTool.icon} style={{ color: currentTool.categoryColor, fontSize: '0.9rem' }} />
+                  </div>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '600' }}>{currentTool.label}</h4>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-color-secondary)' }}>{currentTool.description}</span>
+                  </div>
+                </div>
+                {/* Formularios inline de cada herramienta */}
+                {selectedTool === 'ssl-check' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span style={{ color: '#06b6d4', fontSize: '0.75rem', fontWeight: '600' }}>Host:</span>
+                    <InputText value={sslCheckHost} onChange={(e) => setSslCheckHost(e.target.value)} placeholder="ejemplo.com" onKeyPress={(e) => e.key === 'Enter' && executeTool()} style={{ width: '200px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(6,182,212,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} />
+                    <span style={{ color: '#06b6d4', fontSize: '0.75rem', fontWeight: '600' }}>Puerto:</span>
+                    <InputNumber value={sslCheckPort} onValueChange={(e) => setSslCheckPort(e.value)} min={1} max={65535} showButtons={false} inputStyle={{ width: '60px', padding: '0.35rem', height: '30px', fontSize: '0.8rem', textAlign: 'center', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(6,182,212,0.3)', borderRadius: '6px', color: 'var(--text-color)' }} />
+                    <Button label="Ejecutar" icon="pi pi-play" onClick={executeTool} disabled={loading} style={{ background: `linear-gradient(135deg, ${currentTool.categoryColor} 0%, ${currentTool.categoryColor}cc 100%)`, border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem' }} />
+                  </div>
+                )}
+                {selectedTool === 'ping' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span style={{ color: '#22c55e', fontSize: '0.75rem', fontWeight: '600' }}>Host:</span>
+                    <InputText value={pingHost} onChange={(e) => setPingHost(e.target.value)} placeholder="ejemplo.com o 192.168.1.1" onKeyPress={(e) => e.key === 'Enter' && executeTool()} style={{ width: '280px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} />
+                    <Button label="Ejecutar" icon="pi pi-play" onClick={executeTool} disabled={loading} style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem' }} />
+                  </div>
+                )}
+                {selectedTool === 'traceroute' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span style={{ color: '#22c55e', fontSize: '0.75rem', fontWeight: '600' }}>Host:</span>
+                    <InputText value={tracerouteHost} onChange={(e) => setTracerouteHost(e.target.value)} placeholder="ejemplo.com o 8.8.8.8" onKeyPress={(e) => e.key === 'Enter' && executeTool()} style={{ width: '280px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} />
+                    <Button label="Ejecutar" icon="pi pi-play" onClick={executeTool} disabled={loading} style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem' }} />
+                  </div>
+                )}
+                {selectedTool === 'port-scan' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span style={{ color: '#f59e0b', fontSize: '0.75rem', fontWeight: '600' }}>Host:</span>
+                    <InputText value={portScanHost} onChange={(e) => setPortScanHost(e.target.value)} placeholder="ejemplo.com o 192.168.1.1" onKeyPress={(e) => e.key === 'Enter' && executeTool()} style={{ width: '280px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} />
+                    <span style={{ color: '#f59e0b', fontSize: '0.75rem', fontWeight: '600' }}>Puertos:</span>
+                    <InputText value={portScanPorts} onChange={(e) => setPortScanPorts(e.target.value)} placeholder="80,443,22" style={{ width: '220px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} />
+                    <Button label="Escanear" icon="pi pi-search" onClick={executeTool} disabled={loading} style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem' }} />
+                  </div>
+                )}
+                {selectedTool === 'network-scan' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span style={{ color: '#f59e0b', fontSize: '0.75rem', fontWeight: '600' }}>Subred:</span>
+                    <InputText value={networkScanSubnet} onChange={(e) => setNetworkScanSubnet(e.target.value)} placeholder="192.168.1.0/24" onKeyPress={(e) => e.key === 'Enter' && executeTool()} style={{ width: '200px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} />
+                    <Button label="Escanear" icon="pi pi-search" onClick={executeTool} disabled={loading} style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem' }} />
+                  </div>
+                )}
+                {selectedTool === 'dns-lookup' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span style={{ color: '#3b82f6', fontSize: '0.75rem', fontWeight: '600' }}>Dominio:</span>
+                    <InputText value={dnsLookupDomain} onChange={(e) => setDnsLookupDomain(e.target.value)} placeholder="ejemplo.com" onKeyPress={(e) => e.key === 'Enter' && executeTool()} style={{ width: '220px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} />
+                    <span style={{ color: '#3b82f6', fontSize: '0.75rem', fontWeight: '600' }}>Tipo:</span>
+                    <Dropdown value={dnsLookupType} options={DNS_RECORD_TYPES} onChange={(e) => setDnsLookupType(e.value)} style={{ height: '30px', border: '1px solid rgba(59,130,246,0.3)', background: 'rgba(255,255,255,0.08)', fontSize: '0.8rem', minWidth: '130px' }} />
+                    <Button label="Consultar" icon="pi pi-search" onClick={executeTool} disabled={loading} style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem' }} />
+                  </div>
+                )}
+                {selectedTool === 'reverse-dns' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span style={{ color: '#3b82f6', fontSize: '0.75rem', fontWeight: '600' }}>IP:</span>
+                    <InputText value={reverseDnsIp} onChange={(e) => setReverseDnsIp(e.target.value)} placeholder="8.8.8.8" onKeyPress={(e) => e.key === 'Enter' && executeTool()} style={{ width: '200px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} />
+                    <Button label="Consultar" icon="pi pi-search" onClick={executeTool} disabled={loading} style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem' }} />
+                  </div>
+                )}
+                {selectedTool === 'http-headers' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span style={{ color: '#ef4444', fontSize: '0.75rem', fontWeight: '600' }}>URL:</span>
+                    <InputText value={httpHeadersUrl} onChange={(e) => setHttpHeadersUrl(e.target.value)} placeholder="https://ejemplo.com" onKeyPress={(e) => e.key === 'Enter' && executeTool()} style={{ width: '320px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} />
+                    <Button label="Analizar" icon="pi pi-search" onClick={executeTool} disabled={loading} style={{ background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem' }} />
+                  </div>
+                )}
+                {selectedTool === 'whois' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span style={{ color: '#8b5cf6', fontSize: '0.75rem', fontWeight: '600' }}>Dominio:</span>
+                    <InputText value={whoisDomain} onChange={(e) => setWhoisDomain(e.target.value)} placeholder="ejemplo.com" onKeyPress={(e) => e.key === 'Enter' && executeTool()} style={{ width: '220px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} />
+                    <Button label="Consultar" icon="pi pi-search" onClick={executeTool} disabled={loading} style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem' }} />
+                  </div>
+                )}
+                {selectedTool === 'subnet-calc' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span style={{ color: '#8b5cf6', fontSize: '0.75rem', fontWeight: '600' }}>CIDR:</span>
+                    <InputText value={subnetCalcCidr} onChange={(e) => setSubnetCalcCidr(e.target.value)} placeholder="192.168.1.0/24" onKeyPress={(e) => e.key === 'Enter' && executeTool()} style={{ width: '200px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} />
+                    <Button label="Calcular" icon="pi pi-calculator" onClick={executeTool} disabled={loading} style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem' }} />
+                  </div>
+                )}
+                {selectedTool === 'wake-on-lan' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span style={{ color: '#8b5cf6', fontSize: '0.75rem', fontWeight: '600' }}>MAC:</span>
+                    <InputText value={wolMac} onChange={(e) => setWolMac(e.target.value)} placeholder="AA:BB:CC:DD:EE:FF" onKeyPress={(e) => e.key === 'Enter' && executeTool()} style={{ width: '180px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} />
+                    <span style={{ color: '#8b5cf6', fontSize: '0.75rem', fontWeight: '600' }}>Broadcast:</span>
+                    <InputText value={wolBroadcast} onChange={(e) => setWolBroadcast(e.target.value)} placeholder="255.255.255.255" style={{ width: '150px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} />
+                    <Button label="Enviar" icon="pi pi-power-off" onClick={executeTool} disabled={loading} style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem' }} />
+                  </div>
+                )}
+                {selectedTool === 'host-vuln-scan' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span style={{ color: '#ef4444', fontSize: '0.75rem', fontWeight: '600' }}>Host:</span>
+                    <InputText value={hostVulnHost} onChange={(e) => setHostVulnHost(e.target.value)} placeholder="192.168.1.1" onKeyPress={(e) => e.key === 'Enter' && executeTool()} style={{ width: '200px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} />
+                    <Button label="Escanear" icon="pi pi-exclamation-triangle" onClick={executeTool} disabled={loading} style={{ background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem' }} />
+                  </div>
+                )}
+                {selectedTool === 'web-security-scan' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span style={{ color: '#22c55e', fontSize: '0.75rem', fontWeight: '600' }}>URL:</span>
+                    <InputText value={webSecurityUrl} onChange={(e) => setWebSecurityUrl(e.target.value)} placeholder="https://ejemplo.com" onKeyPress={(e) => e.key === 'Enter' && executeTool()} style={{ width: '320px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} />
+                    <Button label="Analizar" icon="pi pi-shield" onClick={executeTool} disabled={loading} style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem' }} />
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="network-tools-form-results" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+              {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'http-headers', 'whois', 'subnet-calc', 'wake-on-lan', 'host-vuln-scan', 'web-security-scan', 'cvss-calculator'].includes(selectedTool) && (
+                <div className="network-tools-form" style={{ padding: '1rem', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                  {renderToolForm()}
+                </div>
+              )}
+              <div className="network-tools-results" style={{ flex: 1, overflowY: 'auto', padding: '1rem', background: 'rgba(0,0,0,0.1)' }}>
+                {renderResults()}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
