@@ -68,6 +68,7 @@ import SecureStorage from '../services/SecureStorage';
 
 
 import UnlockDialog from './UnlockDialog';
+import CloudRestoreMasterKeyDialog from './CloudRestoreMasterKeyDialog';
 import ConnectionSearchPalette from './ConnectionSearchPalette';
 import {
   getConnectionSearchShortcut,
@@ -237,6 +238,8 @@ const App = () => {
   const [secureStorage] = useState(() => new SecureStorage());
   const [needsUnlock, setNeedsUnlock] = useState(false);
   const [masterKey, setMasterKey] = useState(null);
+  const [showCloudRestoreMasterKey, setShowCloudRestoreMasterKey] = useState(false);
+  const [cloudRestoreVaults, setCloudRestoreVaults] = useState(null);
 
   // 🚀 OPTIMIZACIÓN: Cargar tema de pestañas de forma diferida para no bloquear el render inicial
   useEffect(() => {
@@ -474,6 +477,40 @@ const App = () => {
 
     updatePasswordsCount();
   }, [masterKey, secureStorage]);
+
+  // Tras descarga de Nextcloud: pedir clave maestra si hay vaults cifrados y no está configurada
+  useEffect(() => {
+    const onCloudRestoreNeedsKey = (e) => {
+      const { vaultsDownloaded } = e.detail || {};
+      const hasVault =
+        localStorage.getItem('connections_encrypted') ||
+        localStorage.getItem('passwords_encrypted');
+      if (!hasVault) return;
+      setCloudRestoreVaults(vaultsDownloaded || {
+        connections: !!localStorage.getItem('connections_encrypted'),
+        passwords: !!localStorage.getItem('passwords_encrypted')
+      });
+      setShowCloudRestoreMasterKey(true);
+    };
+    window.addEventListener('cloud-restore-requires-master-key', onCloudRestoreNeedsKey);
+    return () => window.removeEventListener('cloud-restore-requires-master-key', onCloudRestoreNeedsKey);
+  }, []);
+
+  const handleCloudRestoreMasterKeySuccess = useCallback((key) => {
+    setMasterKey(key);
+    setNeedsUnlock(false);
+    setShowCloudRestoreMasterKey(false);
+    window.dispatchEvent(new CustomEvent('connections-synced-from-cloud', { detail: { unlocked: true } }));
+    window.dispatchEvent(new CustomEvent('passwords-synced-from-cloud', { detail: { silent: false } }));
+    if (toast.current) {
+      toast.current.show({
+        severity: 'success',
+        summary: 'Backup desbloqueado',
+        detail: 'Conexiones y contraseñas restauradas con tu clave maestra.',
+        life: 4000
+      });
+    }
+  }, []);
 
   // Handler cuando se configura master password desde Settings
   const handleMasterPasswordConfigured = useCallback((key) => {
@@ -1961,6 +1998,11 @@ const App = () => {
         return;
       }
 
+      // Vault cifrado en disco: no sobrescribir con árbol en claro hasta desbloquear clave maestra
+      if (!masterKey && localStorage.getItem('connections_encrypted')) {
+        return;
+      }
+
       try {
         const nodesStr = JSON.stringify(nodes);
         
@@ -2003,7 +2045,11 @@ const App = () => {
         loadNodes();
     };
     window.addEventListener('encryption-data-synced', handleSync);
-    return () => window.removeEventListener('encryption-data-synced', handleSync);
+    window.addEventListener('connections-synced-from-cloud', handleSync);
+    return () => {
+      window.removeEventListener('encryption-data-synced', handleSync);
+      window.removeEventListener('connections-synced-from-cloud', handleSync);
+    };
   }, [loadNodes]);
 
 
@@ -2698,20 +2744,22 @@ const App = () => {
       };
 
       const migratedNodes = migrateNodes(nodes);
+      const hasEncryptedVault = !!localStorage.getItem('connections_encrypted');
 
-      // Actualizar el estado de los nodos
+      isExternalReloadRef.current = true;
       setNodes(migratedNodes);
 
-      // Guardar en localStorage
-      localStorage.setItem(STORAGE_KEYS.TREE_DATA, JSON.stringify(migratedNodes));
+      // Si hay vault cifrado, la estructura viene del árbol; las credenciales del vault al desbloquear
+      if (!hasEncryptedVault) {
+        localStorage.setItem(STORAGE_KEYS.TREE_DATA, JSON.stringify(migratedNodes));
+      }
 
-      // Árbol importado correctamente
       return true;
     } catch (error) {
       console.error('[SYNC] Error importando árbol:', error);
       throw new Error(`Error importando árbol: ${error.message}`);
     }
-  }, [setNodes]);
+  }, [setNodes, isExternalReloadRef]);
 
   // === FUNCIONES MEMOIZADAS PARA OPTIMIZAR RENDERS ===
   // Estas funciones se crean una sola vez y no cambian entre renders
@@ -3218,6 +3266,14 @@ const App = () => {
           visible={needsUnlock}
           onSuccess={handleUnlockSuccess}
           secureStorage={secureStorage}
+        />
+
+        <CloudRestoreMasterKeyDialog
+          visible={showCloudRestoreMasterKey && !needsUnlock}
+          secureStorage={secureStorage}
+          vaultsDownloaded={cloudRestoreVaults}
+          onSuccess={handleCloudRestoreMasterKeySuccess}
+          onHide={() => setShowCloudRestoreMasterKey(false)}
         />
 
         <ConnectionSearchPalette

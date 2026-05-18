@@ -197,31 +197,27 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
 
     try {
       let result;
+      let securityNotice = null;
       
       switch (direction) {
-        case 'upload':
-          // Subir árbol completo de nodos
+        case 'upload': {
           let treeJson = null;
           if (exportTreeToJson) {
             treeJson = exportTreeToJson();
-            await syncManager.nextcloudService.uploadFile('nodeterm-tree.json', treeJson);
-            // Árbol exportado a la nube
-            // Listar archivos tras la subida
-            const files = await syncManager.nextcloudService.listFiles();
-            // Log de debug removido para limpiar la consola
-            // --- Sincronizar sesiones SSH con SessionManager ---
-            const nodes = JSON.parse(treeJson);
-            const sshSessions = extractAllSshSessions(nodes);
-            // Logs de debug removidos para limpiar la consola
             if (sessionManager && typeof sessionManager.loadSessionsFromArray === 'function') {
-              sessionManager.loadSessionsFromArray(sshSessions);
-              // Log de debug removido para limpiar la consola
+              try {
+                const parsed = JSON.parse(treeJson);
+                const nodes = Array.isArray(parsed) ? parsed : parsed?.nodes;
+                if (Array.isArray(nodes)) {
+                  sessionManager.loadSessionsFromArray(extractAllSshSessions(nodes));
+                }
+              } catch (_) { /* árbol opcional para sesiones */ }
             }
           }
           result = await syncManager.syncToCloud(treeJson);
           break;
-        case 'download':
-          // Descargar y restaurar árbol completo de nodos
+        }
+        case 'download': {
           result = await syncManager.syncFromCloud();
           if (importTreeFromJson) {
             let treeJson = null;
@@ -234,12 +230,28 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
               console.error('[SYNC] Error descargando árbol:', err);
             }
             if (treeJson) {
-              const ok = importTreeFromJson(treeJson);
+              importTreeFromJson(treeJson);
             } else {
               setMessage({ severity: 'warn', summary: 'Sin datos', detail: 'No se encontró árbol remoto en la nube.' });
             }
           }
+          if (result?.security?.requiresMasterKey && !result.security.canUnlockSecrets) {
+            securityNotice = {
+              severity: 'warn',
+              summary: 'Clave maestra necesaria',
+              detail:
+                'Se descargaron vaults cifrados (conexiones y/o contraseñas). La clave maestra no se sincroniza por seguridad: configúrala en este equipo con la misma clave del origen para ver credenciales.'
+            };
+          } else if (result?.security?.legacyPlainTreePossible) {
+            securityNotice = {
+              severity: 'info',
+              summary: 'Backup anterior detectado',
+              detail:
+                'Este backup puede incluir credenciales en nodeterm-tree.json sin cifrar. Tras configurar la clave maestra, vuelve a subir a la nube para migrar al formato seguro.'
+            };
+          }
           break;
+        }
         case 'smart':
           result = await syncManager.smartSync();
           break;
@@ -247,11 +259,15 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
           throw new Error('Dirección de sincronización inválida');
       }
 
-      setMessage({ 
-        severity: 'success', 
-        summary: 'Sincronización completa', 
-        detail: `${result.message} (${result.itemsCount} elementos)` 
-      });
+      if (securityNotice) {
+        setMessage(securityNotice);
+      } else {
+        setMessage({
+          severity: 'success',
+          summary: 'Sincronización completa',
+          detail: `${result.message} (${result.itemsCount} elementos)`
+        });
+      }
       updateSyncStatus();
 
       // Quitar el refresco visual forzado del árbol

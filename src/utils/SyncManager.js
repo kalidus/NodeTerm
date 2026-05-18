@@ -17,11 +17,116 @@ const NC_BUNDLE_FAVORITES = [
   'nodeterm_group_assignments'
 ];
 const NC_BUNDLE_PASSWORDS_META = [
+  'passwords_encrypted',
   'passwordManagerNodes',
   'passwords_expanded_keys',
   'passwords_all_expanded',
   'passwords_count'
 ];
+
+const NC_FILE_CONNECTIONS_VAULT = 'nodeterm-connections.enc';
+const NC_FILE_SYNC_MANIFEST = 'nodeterm-sync-manifest.json';
+
+/** Campos de node.data que nunca deben subirse en nodeterm-tree.json si hay vault cifrado */
+const SENSITIVE_NODE_DATA_KEYS = [
+  'password',
+  'privateKey',
+  'passphrase',
+  'sshPassword',
+  'privateKeyPath',
+  'secret',
+  'token',
+  'apiKey',
+  'apiSecret',
+  'seedPhrase',
+  'accessToken',
+  'refreshToken'
+];
+
+function dispatchPasswordsSyncedFromCloud(detail = {}) {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('passwords-synced-from-cloud', { detail }));
+  }
+}
+
+function dispatchConnectionsSyncedFromCloud(detail = {}) {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('connections-synced-from-cloud', { detail }));
+  }
+}
+
+function dispatchCloudRestoreRequiresMasterKey(detail = {}) {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('cloud-restore-requires-master-key', { detail }));
+  }
+}
+
+function parseTreeJsonToNodes(treeJson) {
+  const treeData = JSON.parse(treeJson);
+  if (Array.isArray(treeData)) return treeData;
+  if (treeData?.nodes && Array.isArray(treeData.nodes)) return treeData.nodes;
+  throw new Error('Estructura del árbol inválida');
+}
+
+function sanitizeConnectionNodes(nodes) {
+  if (!Array.isArray(nodes)) return nodes;
+  return nodes.map((node) => {
+    const copy = { ...node };
+    if (copy.data && typeof copy.data === 'object') {
+      copy.data = { ...copy.data };
+      SENSITIVE_NODE_DATA_KEYS.forEach((key) => {
+        if (copy.data[key] != null && copy.data[key] !== '') {
+          copy.data[key] = '';
+        }
+      });
+    }
+    if (Array.isArray(copy.children) && copy.children.length > 0) {
+      copy.children = sanitizeConnectionNodes(copy.children);
+    }
+    return copy;
+  });
+}
+
+/**
+ * Prepara el JSON del árbol para Nextcloud: si hay vault local cifrado, quita secretos del JSON.
+ */
+export function prepareTreeJsonForCloudUpload(treeJson) {
+  if (!treeJson || typeof treeJson !== 'string') {
+    return { treeJson: treeJson || '[]', sanitized: false };
+  }
+  const hasEncryptedVault = !!localStorage.getItem('connections_encrypted');
+  if (!hasEncryptedVault) {
+    return { treeJson, sanitized: false };
+  }
+  try {
+    const nodes = parseTreeJsonToNodes(treeJson);
+    const payload = {
+      nodes: sanitizeConnectionNodes(nodes),
+      timestamp: new Date().toISOString(),
+      version: '2.0',
+      sanitized: true
+    };
+    return { treeJson: JSON.stringify(payload, null, 2), sanitized: true };
+  } catch (e) {
+    console.warn('[SYNC] No se pudo sanitizar árbol; se sube tal cual:', e.message);
+    return { treeJson, sanitized: false };
+  }
+}
+
+function buildSyncManifest({ connectionsVault, passwordsVault, treeSanitized }) {
+  return {
+    schemaVersion: 2,
+    updatedAt: new Date().toISOString(),
+    masterKeyExported: false,
+    requiresMasterKeyForSecrets: !!(connectionsVault || passwordsVault),
+    vaults: {
+      connections: !!connectionsVault,
+      passwords: !!passwordsVault,
+      sessions: false
+    },
+    treeSanitized: !!treeSanitized
+  };
+}
 
 function ncBuildPayload(keys) {
   const payload = {};
@@ -377,9 +482,17 @@ class SyncManager {
           treeJson = '[]';
         }
       }
-      // Subir árbol visual
-      const uploadTreeResult = await this.nextcloudService.uploadFile('nodeterm-tree.json', treeJson);
-      // Árbol subido a la nube
+      // Árbol visual: sin credenciales en JSON si existe vault cifrado local
+      const { treeJson: cloudTreeJson, sanitized: treeSanitized } = prepareTreeJsonForCloudUpload(treeJson);
+      await this.nextcloudService.uploadFile('nodeterm-tree.json', cloudTreeJson);
+
+      // Vault de conexiones (blob ya cifrado; no exporta la clave maestra)
+      let connectionsVaultUploaded = false;
+      const connectionsEncrypted = localStorage.getItem('connections_encrypted');
+      if (connectionsEncrypted) {
+        await this.nextcloudService.uploadFile(NC_FILE_CONNECTIONS_VAULT, connectionsEncrypted);
+        connectionsVaultUploaded = true;
+      }
       // Obtener datos locales
       const localData = this.getAllLocalData();
       // Exportando datos locales
@@ -424,94 +537,77 @@ class SyncManager {
         }
       }
       
-      // Sincronizar passwords cifrados si hay clave maestra
+      // Sincronizar passwords (el blob cifrado no requiere clave en memoria; la clave solo para migrar/contar)
       let passwordsResult = null;
-      if (this.secureStorage.hasSavedMasterKey()) {
-        try {
+      try {
+        const encryptedPasswordsData = localStorage.getItem('passwords_encrypted');
+        if (encryptedPasswordsData) {
+          await this.nextcloudService.uploadFile('nodeterm-passwords.enc', encryptedPasswordsData);
+          passwordsResult = {
+            success: true,
+            count: 'unknown',
+            message: 'Vault de contraseñas subido a Nextcloud'
+          };
           const masterKey = await this.secureStorage.getMasterKey();
           if (masterKey) {
-            // Obtener passwords encriptados de localStorage
-            const encryptedPasswordsData = localStorage.getItem('passwords_encrypted');
-            if (encryptedPasswordsData) {
-              // Subir passwords ya encriptados
-              await this.nextcloudService.uploadFile('nodeterm-passwords.enc', encryptedPasswordsData);
-              
-              // Contar passwords recursivamente
-              try {
-                const encryptedObj = JSON.parse(encryptedPasswordsData);
-                const decryptedPasswords = await this.secureStorage.decryptData(encryptedObj, masterKey);
-                
-                if (Array.isArray(decryptedPasswords)) {
-                  const counts = this.countAllSecretsRecursively(decryptedPasswords);
-                  
-                  console.log('[SYNC] Secretos subidos a Nextcloud:', {
-                    total: counts.total,
-                    porTipo: counts.byType,
-                    estructura: 'Árbol completo con carpetas y secretos'
-                  });
-                  
-                  passwordsResult = {
-                    success: true,
-                    count: counts.total,
-                    byType: counts.byType,
-                    message: `Subidos ${counts.total} secreto(s) a Nextcloud`
-                  };
-                } else {
-                  passwordsResult = {
-                    success: true,
-                    count: 0,
-                    message: 'Estructura de datos inválida'
-                  };
-                }
-              } catch (countError) {
-                console.warn('Error contando passwords:', countError);
-                passwordsResult = {
-                  success: true,
-                  count: 'unknown',
-                  message: 'Subidos correctamente (error al contar)'
-                };
-              }
-            } else {
-              // No hay passwords encriptados, verificar si hay sin encriptar
-              const plainPasswords = localStorage.getItem('passwordManagerNodes');
-              if (plainPasswords) {
-                // Encriptar y subir
-                const passwordNodes = JSON.parse(plainPasswords);
-                
-                // Contar antes de encriptar
-                const counts = this.countAllSecretsRecursively(passwordNodes);
-                
-                console.log('[SYNC] Secretos a subir a Nextcloud:', {
+            try {
+              const encryptedObj = JSON.parse(encryptedPasswordsData);
+              const decryptedPasswords = await this.secureStorage.decryptData(encryptedObj, masterKey);
+              if (Array.isArray(decryptedPasswords)) {
+                const counts = this.countAllSecretsRecursively(decryptedPasswords);
+                console.log('[SYNC] Secretos subidos a Nextcloud:', {
                   total: counts.total,
                   porTipo: counts.byType,
                   estructura: 'Árbol completo con carpetas y secretos'
                 });
-                
-                const encrypted = await this.secureStorage.encryptData(passwordNodes, masterKey);
-                await this.nextcloudService.uploadFile('nodeterm-passwords.enc', JSON.stringify(encrypted, null, 2));
-                
                 passwordsResult = {
                   success: true,
                   count: counts.total,
                   byType: counts.byType,
                   message: `Subidos ${counts.total} secreto(s) a Nextcloud`
                 };
-              } else {
-                passwordsResult = {
-                  success: true,
-                  count: 0,
-                  message: 'No hay passwords para sincronizar'
-                };
               }
+            } catch (countError) {
+              console.warn('Error contando passwords al subir:', countError);
             }
           }
-        } catch (error) {
-          console.warn('Error sincronizando passwords cifrados:', error);
-          passwordsResult = {
-            success: false,
-            error: error.message
-          };
+        } else {
+          const plainPasswords = localStorage.getItem('passwordManagerNodes');
+          if (plainPasswords) {
+            const masterKey = await this.secureStorage.getMasterKey();
+            if (masterKey) {
+              const passwordNodes = JSON.parse(plainPasswords);
+              const counts = this.countAllSecretsRecursively(passwordNodes);
+              const encrypted = await this.secureStorage.encryptData(passwordNodes, masterKey);
+              const encryptedJson = JSON.stringify(encrypted, null, 2);
+              await this.nextcloudService.uploadFile('nodeterm-passwords.enc', encryptedJson);
+              passwordsResult = {
+                success: true,
+                count: counts.total,
+                byType: counts.byType,
+                message: `Subidos ${counts.total} secreto(s) a Nextcloud`
+              };
+            } else {
+              passwordsResult = {
+                success: true,
+                count: 'unknown',
+                message: 'Contraseñas en texto plano incluidas en nodeterm-passwords-meta.json'
+              };
+            }
+          } else {
+            passwordsResult = {
+              success: true,
+              count: 0,
+              message: 'No hay passwords para sincronizar'
+            };
+          }
         }
+      } catch (error) {
+        console.warn('Error sincronizando passwords:', error);
+        passwordsResult = {
+          success: false,
+          error: error.message
+        };
       }
       
       // Notas, favoritos y metadatos de passwords: JSON dedicados (no depender solo de nodeterm-settings.json)
@@ -541,6 +637,20 @@ class SyncManager {
         passwordsMetaResult = { success: false, error: err.message };
       }
 
+      try {
+        const manifest = buildSyncManifest({
+          connectionsVault: connectionsVaultUploaded,
+          passwordsVault: !!localStorage.getItem('passwords_encrypted'),
+          treeSanitized
+        });
+        await this.nextcloudService.uploadFile(
+          NC_FILE_SYNC_MANIFEST,
+          JSON.stringify(manifest, null, 2)
+        );
+      } catch (err) {
+        console.warn('[SYNC] Error subiendo manifiesto de sincronización:', err);
+      }
+
       // Actualizar tiempo de sincronización
       this.lastSyncTime = new Date();
       this.saveSyncConfig();
@@ -551,6 +661,7 @@ class SyncManager {
         timestamp: this.lastSyncTime,
         itemsCount: Object.keys(localData).length - 2, // Excluir metadatos
         sessions: sessionsResult,
+        connections: { vaultUploaded: connectionsVaultUploaded, treeSanitized },
         passwords: passwordsResult,
         documents: documentsResult,
         favorites: favoritesResult,
@@ -608,6 +719,30 @@ class SyncManager {
         console.warn('[SYNC] nodeterm-favorites.json (descarga):', e.message);
       }
 
+      // Vault de conexiones (cifrado con clave maestra del usuario; la clave no viaja a la nube)
+      let connectionsResult = null;
+      let connectionsVaultApplied = false;
+      try {
+        const connectionsData = await this.nextcloudService.downloadFile(NC_FILE_CONNECTIONS_VAULT);
+        if (connectionsData) {
+          connectionsVaultApplied = true;
+          localStorage.setItem('connections_encrypted', connectionsData);
+          localStorage.removeItem('basicapp2_tree_data');
+
+          const masterKey = await this.secureStorage.getMasterKey();
+          connectionsResult = {
+            success: true,
+            message: masterKey
+              ? 'Conexiones descargadas desde vault cifrado'
+              : 'Vault de conexiones descargado; configura la misma clave maestra para ver credenciales'
+          };
+          dispatchConnectionsSyncedFromCloud({ unlocked: !!masterKey });
+        }
+      } catch (error) {
+        console.warn('Error descargando vault de conexiones:', error);
+        connectionsResult = { success: false, error: error.message };
+      }
+
       // Sincronizar sesiones cifradas si hay clave maestra
       let sessionsResult = null;
       if (this.secureStorage.hasSavedMasterKey()) {
@@ -653,82 +788,79 @@ class SyncManager {
         }
       }
       
-      // Sincronizar passwords cifrados si hay clave maestra
+      // Descargar vault de passwords (siempre; el blob ya está cifrado con la clave maestra del usuario)
       let passwordsResult = null;
       let passwordsVaultFileApplied = false;
-      if (this.secureStorage.hasSavedMasterKey()) {
-        try {
+      try {
+        const passwordsData = await this.nextcloudService.downloadFile('nodeterm-passwords.enc');
+        if (passwordsData) {
+          passwordsVaultFileApplied = true;
+          localStorage.setItem('passwords_encrypted', passwordsData);
+          localStorage.removeItem('passwordManagerNodes');
+
+          let importCount = null;
           const masterKey = await this.secureStorage.getMasterKey();
           if (masterKey) {
-            // Intentar descargar passwords cifrados
-            const passwordsData = await this.nextcloudService.downloadFile('nodeterm-passwords.enc');
-            if (passwordsData) {
-              passwordsVaultFileApplied = true;
-              // Guardar passwords encriptados en localStorage
-              localStorage.setItem('passwords_encrypted', passwordsData);
-              
-              // Eliminar passwords sin encriptar si existen
-              localStorage.removeItem('passwordManagerNodes');
-              
-              // Contar passwords importados recursivamente
-              try {
-                const encryptedObj = JSON.parse(passwordsData);
-                const decryptedPasswords = await this.secureStorage.decryptData(encryptedObj, masterKey);
-                
-                if (Array.isArray(decryptedPasswords)) {
-                  const counts = this.countAllSecretsRecursively(decryptedPasswords);
-                  
-                  console.log('[SYNC] Secretos descargados desde Nextcloud:', {
-                    total: counts.total,
-                    porTipo: counts.byType,
-                    estructura: 'Árbol completo con carpetas y secretos'
-                  });
-                  
-                  passwordsResult = {
-                    success: true,
-                    passwordsImported: counts.total,
-                    byType: counts.byType,
-                    message: `Descargados ${counts.total} secreto(s) desde Nextcloud`
-                  };
-                  
-                  if (typeof window !== 'undefined') {
-                    window.dispatchEvent(new CustomEvent('passwords-synced-from-cloud', {
-                      detail: { count: counts.total, silent: false }
-                    }));
-                  }
-                } else {
-                  passwordsResult = {
-                    success: true,
-                    passwordsImported: 0,
-                    message: 'Estructura de datos inválida'
-                  };
-                }
-              } catch (countError) {
-                console.warn('Error contando passwords importados:', countError);
+            try {
+              const encryptedObj = JSON.parse(passwordsData);
+              const decryptedPasswords = await this.secureStorage.decryptData(encryptedObj, masterKey);
+              if (Array.isArray(decryptedPasswords)) {
+                const counts = this.countAllSecretsRecursively(decryptedPasswords);
+                importCount = counts.total;
+                console.log('[SYNC] Secretos descargados desde Nextcloud:', {
+                  total: counts.total,
+                  porTipo: counts.byType,
+                  estructura: 'Árbol completo con carpetas y secretos'
+                });
                 passwordsResult = {
                   success: true,
-                  passwordsImported: 'unknown',
-                  message: 'Descargados correctamente (error al contar)'
+                  passwordsImported: counts.total,
+                  byType: counts.byType,
+                  message: `Descargados ${counts.total} secreto(s) desde Nextcloud`
+                };
+              } else {
+                passwordsResult = {
+                  success: true,
+                  passwordsImported: 0,
+                  message: 'Vault descargado; estructura inválida al descifrar'
                 };
               }
-            } else {
+            } catch (countError) {
+              console.warn('Error contando passwords importados:', countError);
               passwordsResult = {
                 success: true,
-                passwordsImported: 0,
-                message: 'No se encontraron passwords en la nube'
+                passwordsImported: 'unknown',
+                message: 'Vault descargado (desbloquea la clave maestra para ver los secretos)'
               };
             }
+          } else {
+            passwordsResult = {
+              success: true,
+              passwordsImported: 'unknown',
+              message: 'Vault descargado; desbloquea la clave maestra para ver los secretos'
+            };
           }
-        } catch (error) {
-          console.warn('Error sincronizando passwords desde la nube:', error);
+
+          dispatchPasswordsSyncedFromCloud({
+            count: importCount,
+            silent: false
+          });
+        } else {
           passwordsResult = {
-            success: false,
-            error: error.message
+            success: true,
+            passwordsImported: 0,
+            message: 'No se encontró nodeterm-passwords.enc en la nube'
           };
         }
+      } catch (error) {
+        console.warn('Error sincronizando passwords desde la nube:', error);
+        passwordsResult = {
+          success: false,
+          error: error.message
+        };
       }
 
-      // Metadatos y árbol plano de passwords (complemento de nodeterm-passwords.enc; sin master key el árbol va aquí)
+      // Metadatos, árbol plano y copia del vault en JSON (respaldo si falta el .enc)
       let passwordsMetaApplied = false;
       try {
         passwordsMetaApplied = await ncDownloadJsonBundle(
@@ -736,15 +868,14 @@ class SyncManager {
           'nodeterm-passwords-meta.json',
           NC_BUNDLE_PASSWORDS_META,
           {
-            passwordManagerNodes: () => !!localStorage.getItem('passwords_encrypted')
+            passwordManagerNodes: () => !!localStorage.getItem('passwords_encrypted'),
+            passwords_encrypted: () => passwordsVaultFileApplied
           }
         );
-        if (passwordsMetaApplied && typeof window !== 'undefined') {
-          window.dispatchEvent(
-            new CustomEvent('passwords-synced-from-cloud', {
-              detail: { count: null, silent: passwordsVaultFileApplied }
-            })
-          );
+        if (passwordsMetaApplied && !passwordsVaultFileApplied) {
+          dispatchPasswordsSyncedFromCloud({ count: null, silent: false });
+        } else if (passwordsMetaApplied && passwordsVaultFileApplied) {
+          dispatchPasswordsSyncedFromCloud({ count: null, silent: true });
         }
       } catch (e) {
         console.warn('[SYNC] nodeterm-passwords-meta.json (descarga):', e.message);
@@ -757,6 +888,18 @@ class SyncManager {
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('documents-storage-updated'));
       }
+
+      const security = await this.buildDownloadSecuritySummary({
+        connectionsVaultApplied,
+        passwordsVaultApplied: passwordsVaultFileApplied
+      });
+
+      if (security.requiresMasterKey && !security.canUnlockSecrets) {
+        dispatchCloudRestoreRequiresMasterKey({
+          vaultsDownloaded: security.vaultsDownloaded,
+          legacyPlainTreePossible: security.legacyPlainTreePossible
+        });
+      }
       
       return {
         success: true,
@@ -765,7 +908,9 @@ class SyncManager {
         itemsCount: appliedItems.length,
         appliedItems,
         sessions: sessionsResult,
-        passwords: passwordsResult
+        connections: connectionsResult,
+        passwords: passwordsResult,
+        security
       };
     } finally {
       this.syncInProgress = false;
@@ -804,6 +949,50 @@ class SyncManager {
       console.error('Error en sincronización inteligente:', error);
       throw error;
     }
+  }
+
+  /**
+   * Indica si en este dispositivo se puede descifrar lo descargado de la nube
+   */
+  async canUnlockCloudSecrets() {
+    const hasKey = await this.secureStorage.checkHasSavedMasterKey();
+    if (!hasKey) return false;
+    const masterKey = await this.secureStorage.getMasterKey();
+    return !!masterKey;
+  }
+
+  async readCloudSyncManifest() {
+    try {
+      const raw = await this.nextcloudService.downloadFile(NC_FILE_SYNC_MANIFEST);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async buildDownloadSecuritySummary({ connectionsVaultApplied, passwordsVaultApplied }) {
+    const manifest = await this.readCloudSyncManifest();
+    const hasLocalVaults = !!(
+      localStorage.getItem('connections_encrypted') ||
+      localStorage.getItem('passwords_encrypted')
+    );
+    const requiresMasterKey = !!(
+      connectionsVaultApplied ||
+      passwordsVaultApplied ||
+      hasLocalVaults ||
+      manifest?.requiresMasterKeyForSecrets
+    );
+    const canUnlockSecrets = requiresMasterKey ? await this.canUnlockCloudSecrets() : true;
+    return {
+      requiresMasterKey,
+      canUnlockSecrets,
+      vaultsDownloaded: {
+        connections: connectionsVaultApplied,
+        passwords: passwordsVaultApplied
+      },
+      masterKeyNeverSynced: true,
+      legacyPlainTreePossible: manifest ? !manifest.treeSanitized : !connectionsVaultApplied
+    };
   }
 
   /**
