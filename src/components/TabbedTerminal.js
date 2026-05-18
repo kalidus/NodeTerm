@@ -1,20 +1,23 @@
-import React, { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle, Suspense } from 'react';
 import { Button } from 'primereact/button';
 import { Menu } from 'primereact/menu';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { FaWindows, FaUbuntu, FaLinux, FaBrain } from 'react-icons/fa';
 import { SiAnthropic, SiDebian, SiDocker, SiGooglegemini, SiOpenai } from 'react-icons/si';
 import AIClientBrandIcon from './AIClientBrandIcon';
-import PowerShellTerminal from './PowerShellTerminal';
-import WSLTerminal from './WSLTerminal';
-import UbuntuTerminal from './UbuntuTerminal';
-import CygwinTerminal from './CygwinTerminal';
-import DockerTerminal from './DockerTerminal';
-import ClaudeTerminal from './ClaudeTerminal';
-import OpenCodeTerminal from './OpenCodeTerminal';
-import GeminiCliTerminal from './GeminiCliTerminal';
-import CodexCliTerminal from './CodexCliTerminal';
-import GuacamoleTerminal from './GuacamoleTerminal';
+import {
+    LazyPowerShellTerminal,
+    LazyWSLTerminal,
+    LazyUbuntuTerminal,
+    LazyCygwinTerminal,
+    LazyDockerTerminal,
+    LazyClaudeTerminal,
+    LazyOpenCodeTerminal,
+    LazyGeminiCliTerminal,
+    LazyCodexCliTerminal,
+    LazyGuacamoleTerminal,
+    TabChunkFallback
+} from './tabLoaders';
 import { themes } from '../themes';
 import { uiThemes } from '../themes/ui-themes';
 import { themeManager } from '../utils/themeManager';
@@ -1951,8 +1954,9 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                             left: 0
                         }}
                     >
+                        <Suspense fallback={<TabChunkFallback />}>
                         {tab.type === 'powershell' && (
-                            <PowerShellTerminal
+                            <LazyPowerShellTerminal
                                 key={`${tab.id}-terminal-powershell`}
                                 ref={(ref) => {
                                     if (ref) terminalRefs.current[tab.id] = ref;
@@ -1966,7 +1970,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                             />
                         )}
                         {tab.type === 'wsl' && (
-                            <WSLTerminal
+                            <LazyWSLTerminal
                                 key={`${tab.id}-terminal-wsl`}
                                 ref={(ref) => {
                                     if (ref) terminalRefs.current[tab.id] = ref;
@@ -1978,7 +1982,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                             />
                         )}
                         {(tab.type === 'ubuntu' || tab.type === 'debian' || tab.type === 'wsl-distro') && (
-                            <UbuntuTerminal
+                            <LazyUbuntuTerminal
                                 key={`${tab.id}-terminal-${tab.type}`}
                                 ref={(ref) => {
                                     if (ref) terminalRefs.current[tab.id] = ref;
@@ -1994,7 +1998,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                             />
                         )}
                         {tab.type === 'cygwin' && (
-                            <CygwinTerminal
+                            <LazyCygwinTerminal
                                 key={`${tab.id}-terminal`}
                                 ref={(ref) => {
                                     if (ref) terminalRefs.current[tab.id] = ref;
@@ -2008,7 +2012,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                             />
                         )}
                         {tab.type === 'docker' && (
-                            <DockerTerminal
+                            <LazyDockerTerminal
                                 key={`${tab.id}-terminal`}
                                 ref={(ref) => {
                                     if (ref) terminalRefs.current[tab.id] = ref;
@@ -2023,7 +2027,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                             />
                         )}
                         {tab.type === 'claude' && (
-                            <ClaudeTerminal
+                            <LazyClaudeTerminal
                                 key={`${tab.id}-terminal`}
                                 ref={(ref) => {
                                     if (ref) terminalRefs.current[tab.id] = ref;
@@ -2036,7 +2040,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                             />
                         )}
                         {tab.type === 'opencode' && (
-                            <OpenCodeTerminal
+                            <LazyOpenCodeTerminal
                                 key={`${tab.id}-terminal`}
                                 ref={(ref) => {
                                     if (ref) terminalRefs.current[tab.id] = ref;
@@ -2049,7 +2053,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                             />
                         )}
                         {tab.type === 'geminicli' && (
-                            <GeminiCliTerminal
+                            <LazyGeminiCliTerminal
                                 key={`${tab.id}-terminal`}
                                 ref={(ref) => {
                                     if (ref) terminalRefs.current[tab.id] = ref;
@@ -2062,7 +2066,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                             />
                         )}
                         {tab.type === 'codexcli' && (
-                            <CodexCliTerminal
+                            <LazyCodexCliTerminal
                                 key={`${tab.id}-terminal`}
                                 ref={(ref) => {
                                     if (ref) terminalRefs.current[tab.id] = ref;
@@ -2075,7 +2079,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                             />
                         )}
                         {tab.type === 'rdp-guacamole' && (
-                            <GuacamoleTerminal
+                            <LazyGuacamoleTerminal
                                 key={`${tab.id}-terminal`}
                                 ref={(ref) => {
                                     if (ref) terminalRefs.current[tab.id] = ref;
@@ -2084,6 +2088,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 rdpConfig={tab.rdpConfig}
                             />
                         )}
+                        </Suspense>
                     </div>
                 ))}
             </div>
