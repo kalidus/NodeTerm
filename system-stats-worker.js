@@ -302,6 +302,9 @@ let shouldGenerateStats = true;
 
 process.on('message', async (msg) => {
   if (msg === 'get-stats') {
+    if (!shouldGenerateStats) {
+      return;
+    }
     try {
       const stats = await getSystemStats();
       if (process.connected) {

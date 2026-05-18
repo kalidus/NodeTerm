@@ -1944,10 +1944,9 @@ const PasswordManagerSidebar = ({
                     className={`sidebar-tree tree-theme-${treeTheme}`}
                     data-icon-theme={iconTheme}
                     data-tree-theme={treeTheme}
-                    scrollHeight="100%"
-                    virtualScrollerOptions={{ itemSize: Math.max(folderIconSize || 20, explorerFontSize || 13) + 12 }}
-                    style={{ 
+                    style={{
                       height: '100%',
+                      overflow: 'auto',
                       fontSize: `${explorerFontSize}px`,
                       '--icon-size': `${iconSize}px`
                     }}

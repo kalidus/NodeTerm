@@ -674,10 +674,9 @@ const DocumentsSidebar = ({
             nodeTemplate={nodeTemplate}
             className={`sidebar-tree tree-theme-${treeTheme}`}
             data-tree-theme={treeTheme}
-            scrollHeight="100%"
-            virtualScrollerOptions={{ itemSize: Math.max(20, explorerFontSize || 13) + 12 }}
             style={{
               height: '100%',
+              overflow: 'auto',
               fontSize: `${explorerFontSize}px`,
               fontFamily: explorerFont || 'inherit',
               border: 'none',

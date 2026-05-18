@@ -9,7 +9,6 @@ import { toggleFavorite, helpers } from '../utils/connectionStore';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 
 const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnections, onOpenSSHConnection, onOpenRdpConnection, onOpenVncConnection, onShowImportDialog, onShowExportDialog, onShowImportExportDialog, onShowImportWizard, onOpenImportWithSource, onQuickImportFromSource, iconTheme = 'material', openEditSSHDialog, openEditRdpDialog, expandedKeys, masterKey, secureStorage, onToggleTitleBar }) => {
-  console.log('TitleBar Render - onToggleTitleBar present:', !!onToggleTitleBar);
   // Hook de internacionalización
   const { t } = useTranslation('common');
 
@@ -612,7 +611,6 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
       if (connection) {
         toggleFavorite(connection);
         // Opcional: mostrar notificación de éxito
-        console.log('Favorito actualizado:', connection.name);
       }
     } catch (error) {
       console.error('Error al actualizar favorito:', error);
@@ -681,7 +679,6 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
 
   // Función para manejar el menú de aplicación del TitleBar
   const handleAppMenuClick = (event) => {
-    console.log('handleAppMenuClick TitleBar ejecutado - menú unificado');
     const menuStructure = createAppMenu(onShowImportDialog, onShowExportDialog, onShowImportExportDialog, t, onShowImportWizard);
     createContextMenu(event, menuStructure, 'app-context-menu-unified');
     return;
@@ -1671,7 +1668,6 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         <button
           title="Menú"
           onClick={(event) => {
-            console.log('Click en menú TitleBar detectado');
             handleAppMenuClick(event);
           }}
           style={{

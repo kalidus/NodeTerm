@@ -21,8 +21,8 @@ import { useTreeManagement } from '../hooks/useTreeManagement';
 import { useFormHandlers } from '../hooks/useFormHandlers';
 import { useSplitManagement } from '../hooks/useSplitManagement';
 import { useTreeOperations } from '../hooks/useTreeOperations';
-import { useNodeTemplate } from '../hooks/useNodeTemplate';
 import { useTabRendering } from '../hooks/useTabRendering';
+import { getAllFolders } from '../utils/treeFolders';
 import { useRecordingManagement } from '../hooks/useRecordingManagement';
 import { Splitter, SplitterPanel } from 'primereact/splitter';
 import { Card } from 'primereact/card';
@@ -32,11 +32,9 @@ import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
 import { TabView, TabPanel } from 'primereact/tabview';
 
 import { ContextMenu } from 'primereact/contextmenu';
-import TerminalComponent from './TerminalComponent';
 // FileExplorer ahora usa lazy loading arriba
 import WallixRefreshDialog from './WallixRefreshDialog';
 import Sidebar from './Sidebar';
-import SplitLayout from './SplitLayout';
 import { themes } from '../themes';
 import { iconThemes } from '../themes/icon-themes';
 import { FUTURISTIC_UI_KEYS } from '../themes/ui-themes';
@@ -60,7 +58,6 @@ const FileExplorer = lazy(() => import('./FileExplorer'));
 
 // Componentes críticos (se cargan inmediatamente)
 import TitleBar from './TitleBar';
-import HomeTab from './HomeTab';
 import { SSHDialog, FolderDialog, GroupDialog } from './Dialogs';
 import ImportService from '../services/ImportService';
 import { unblockAllInputs, resolveFormBlocking, emergencyUnblockForms } from '../utils/formDebugger';
@@ -1836,41 +1833,6 @@ const App = () => {
     nodes, setNodes,
     findNodeByKey, findParentNodeAndIndex, deepCopy, generateUniqueKey, parseWallixUser,
     rdpTabs, setRdpTabs
-  });
-
-  // Node template hook
-  const {
-    nodeTemplate,
-    getAllFolders,
-    openEditFolderDialog
-  } = useNodeTemplate({
-    sshConnectionStatus,
-    activeGroupId,
-    setActiveGroupId,
-    activeTabIndex,
-    setActiveTabIndex,
-    setGroupActiveIndices,
-    setSshTabs,
-    setLastOpenedTabKey,
-    setOnCreateActivateTabKey,
-    homeTabs,
-    onOpenRdpConnection,
-    onOpenVncConnection,
-    iconThemes,
-    iconThemeSidebar,
-    sidebarFont,
-    folderIconSize,
-    setEditFolderNode,
-    setEditFolderName,
-    setEditFolderColor,
-    setEditFolderIcon,
-    setShowEditFolderDialog,
-    onNodeContextMenu,
-    onTreeAreaContextMenu,
-    onOpenWallixRefresh: (node) => {
-      setWallixRefreshNode(node);
-      setShowWallixRefreshDialog(true);
-    }
   });
 
   // Tab rendering hook

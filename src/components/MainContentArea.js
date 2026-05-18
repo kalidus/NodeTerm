@@ -200,32 +200,25 @@ const MainContentArea = ({
   const getLastLocalTerminalType = () => {
     // Usar el estado actual de sshTabs en lugar de getTabsInGroup para evitar problemas de sincronización
     const allTabs = [...homeTabs, ...sshTabs, ...fileExplorerTabs];
-    console.log('Todas las pestañas (estado actual):', allTabs.map(tab => ({ key: tab.key, type: tab.type, terminalType: tab.terminalType, label: tab.label })));
 
     // Buscar la última pestaña de terminal local (tipo 'local-terminal')
     const localTerminalTabs = allTabs.filter(tab => tab.type === 'local-terminal');
-    console.log('Pestañas de terminal local encontradas:', localTerminalTabs.length);
 
     if (localTerminalTabs.length > 0) {
       // Ordenar por fecha de creación y tomar la más reciente
       const lastLocalTab = localTerminalTabs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
-      console.log('Última pestaña local:', lastLocalTab);
 
       if (lastLocalTab.terminalType === 'ubuntu' || lastLocalTab.terminalType === 'wsl-distro') {
         // Si tiene información de distribución específica, usar esa distribución
         if (lastLocalTab.distroInfo && lastLocalTab.distroInfo.name) {
-          console.log('Usando distribución específica:', `wsl-${lastLocalTab.distroInfo.name}`);
           return `wsl-${lastLocalTab.distroInfo.name}`;
         }
-        console.log('Usando WSL genérico');
         return 'wsl'; // Fallback a WSL genérico
       }
-      console.log('Usando tipo de terminal:', lastLocalTab.terminalType || 'powershell');
       return lastLocalTab.terminalType || 'powershell';
     }
 
     // Si no hay terminales locales, usar el último tipo guardado
-    console.log('No hay terminales locales, usando último tipo guardado:', lastLocalTerminalType);
     return lastLocalTerminalType;
   };
 
@@ -429,7 +422,6 @@ const MainContentArea = ({
   useEffect(() => {
     const handleCreateLocalTerminal = (event) => {
       const { terminalType, distroInfo } = event.detail;
-      console.log('Recibido evento create-local-terminal:', { terminalType, distroInfo });
 
       // Los CLIs de IA se abren siempre en pestañas globales, no en el HomeTab
       const isAIClient = ['opencode', 'geminicli', 'codexcli', 'claude'].includes(terminalType);
@@ -534,7 +526,6 @@ const MainContentArea = ({
   const loadAIClientsConfig = React.useCallback(() => {
     try {
       const config = localStorage.getItem('ai_clients_enabled');
-      console.log('[MainContentArea] loading AI clients config from localStorage:', config);
       if (!config) {
         setAiClientsEnabled(defaultAiClientsEnabled);
         return;
@@ -544,7 +535,6 @@ const MainContentArea = ({
         acc[key] = parsed?.[key] === true;
         return acc;
       }, {});
-      console.log('[MainContentArea] setting aiClientsEnabled state:', normalized);
       setAiClientsEnabled(normalized);
     } catch (error) {
       console.error('[MainContentArea] Error al cargar configuración de clientes IA:', error);
@@ -563,14 +553,12 @@ const MainContentArea = ({
     loadAIClientsConfig();
 
     // Escuchar cambios
-    const handleConfigChange = (e) => {
-      console.log('[MainContentArea] Received ai-clients-config-changed event', e.detail);
+    const handleConfigChange = () => {
       loadAIClientsConfig();
     };
     window.addEventListener('ai-clients-config-changed', handleConfigChange);
     
     const handleSettingsUpdated = () => {
-      console.log('[MainContentArea] Received settings-updated event');
       loadAIClientsConfig();
     };
     window.addEventListener('settings-updated', handleSettingsUpdated);
@@ -578,7 +566,6 @@ const MainContentArea = ({
     // Escuchar cambios de storage (otro window/proceso si comparten DB)
     const handleStorageChange = (e) => {
       if (e.key === 'ai_clients_enabled') {
-        console.log('[MainContentArea] Received storage event for ai_clients_enabled');
         loadAIClientsConfig();
       }
     };
@@ -1065,7 +1052,6 @@ const MainContentArea = ({
 
       setTerminalMenuItems(linuxMenuItems);
     }
-    console.log('[MainContentArea] Re-generating terminalMenuItems. aiClientsEnabled:', aiClientsEnabled);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wslDistributions, dockerContainers, dispatchAnythingLLMTab, dispatchOpenWebUITab, dispatchLibreChatTab, dispatchAgentZeroTab, dispatchOpenClawTab, dispatchOpenNotebookTab, aiClientsEnabled]);
 
@@ -1096,11 +1082,6 @@ const MainContentArea = ({
 
   // Efecto para añadir botones fijos a la derecha del nav container (fuera del área scrollable)
   useEffect(() => {
-    // Log de dependencias para depuración
-    console.log('[MainContentArea] Effect 1078 (Tab Bar) re-running.', {
-      terminalMenuItemsCount: terminalMenuItems.length,
-      aiClientsEnabled: JSON.stringify(aiClientsEnabled)
-    });
     const navContainer = tabsContainerRef.current;
     if (!navContainer) return;
 
@@ -1512,7 +1493,6 @@ const MainContentArea = ({
       };
 
       const groups = Array.isArray(terminalMenuItemsRef.current) ? terminalMenuItemsRef.current : [];
-      console.log('[MainContentArea] Grid Launcher opened. Item count:', groups.flatMap(g => g.items || []).length);
 
       const renderGroups = (query = '') => {
         const normalized = (query || '').trim().toLowerCase();

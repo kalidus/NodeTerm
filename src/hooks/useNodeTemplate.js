@@ -1,5 +1,6 @@
 import React, { useCallback, useRef, useEffect } from 'react';
 import { FolderIconRenderer, FolderIconPresets } from '../components/FolderIconSelector';
+import { getAllFolders as getAllFoldersFromTree } from '../utils/treeFolders';
 
 export const useNodeTemplate = ({
   // Estados
@@ -31,19 +32,7 @@ export const useNodeTemplate = ({
   onOpenWallixRefresh
 }) => {
   
-  // Función recursiva para obtener todas las carpetas del árbol
-  const getAllFolders = useCallback((nodes, prefix = '') => {
-    let folders = [];
-    for (const node of nodes) {
-      if (node.droppable) {
-        folders.push({ label: prefix + node.label, value: node.key });
-        if (node.children && node.children.length > 0) {
-          folders = folders.concat(getAllFolders(node.children, prefix + node.label + ' / '));
-        }
-      }
-    }
-    return folders;
-  }, []);
+  const getAllFolders = useCallback((nodes, prefix = '') => getAllFoldersFromTree(nodes, prefix), []);
 
   // Función para abrir el diálogo de edición de carpeta
   const openEditFolderDialog = useCallback((node) => {
@@ -58,18 +47,11 @@ export const useNodeTemplate = ({
   const nodeTemplate = useCallback((node, options) => {
     const isFolder = node.droppable;
     // Debug: loguear carpetas para verificar metadatos
-    if (isFolder) {
-      console.log('📁 Folder node:', node.label, '| importedFrom:', node.importedFrom, '| data:', JSON.stringify(node.data || {}));
-    }
     const isSSH = node.data && node.data.type === 'ssh';
     const isRDP = node.data && node.data.type === 'rdp';
     const isVNC = node.data && (node.data.type === 'vnc' || node.data.type === 'vnc-guacamole');
     const isPassword = node.data && node.data.type === 'password';
     
-    // Debug log para verificar tipo de nodo
-    if (node.data && node.data.type) {
-      console.log('🔍 Node type detected:', node.data.type, 'isPassword:', isPassword, node);
-    }
     
     // Icono según tema seleccionado para la sidebar
     let icon = null;
@@ -260,7 +242,6 @@ export const useNodeTemplate = ({
             onOpenVncConnection(node);
           } else if (isPassword) {
             // Delegar a App para crear/activar la pestaña
-            console.log('🔑 Password double-click detected:', node);
             const payload = {
               key: node.key,
               label: node.label,
@@ -272,7 +253,6 @@ export const useNodeTemplate = ({
                 notes: node.data?.notes || ''
               }
             };
-            console.log('🔑 Dispatching open-password-tab event:', payload);
             window.dispatchEvent(new CustomEvent('open-password-tab', { detail: payload }));
           }
         } : undefined}
