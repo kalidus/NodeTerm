@@ -336,10 +336,34 @@ const Sidebar = React.memo(({
   const dragAutoScrollSpeedRef = useRef(0);
   const dragAutoScrollActiveRef = useRef(false);
 
-  // Forzar layout del contenido pre-montado lo antes posible para reducir lag en 1ª expansión
+  const [isWarmingUp, setIsWarmingUp] = useState(false);
+  const hasWarmedUpRef = useRef(false);
+
+  // Forzar layout del contenido pre-montado a tamaño completo off-screen en el inicio
   useEffect(() => {
-    if (!sidebarCollapsed) return;
-    const warmup = () => {
+    // Si la sidebar no está colapsada, ya está visible, no hace falta calentar
+    if (!sidebarCollapsed) {
+      hasWarmedUpRef.current = true;
+      return;
+    }
+    // Esperar a que los nodos estén cargados y no estemos en modo de carga (skeleton)
+    if (isLoading || !nodes || nodes.length === 0) {
+      return;
+    }
+    // Si ya se calentó, no hacer nada
+    if (hasWarmedUpRef.current) {
+      return;
+    }
+
+    // Iniciar calentamiento (render off-screen a tamaño completo para forzar layout y paint en la GPU)
+    setIsWarmingUp(true);
+    hasWarmedUpRef.current = true;
+
+    // Usamos un doble frame para asegurar que el navegador ha renderizado el árbol
+    let rafId1, rafId2;
+    rafId1 = requestAnimationFrame(() => {
+      // Primer frame: el componente se renderiza off-screen con ancho de 280px.
+      // Forzamos al navegador a calcular el layout (reflow) accediendo a offsetHeight.
       const el = expandedContentRef.current;
       if (el) {
         try {
@@ -348,26 +372,33 @@ const Sidebar = React.memo(({
           if (tree) void tree.offsetHeight;
         } catch (_) {}
       }
+
+      rafId2 = requestAnimationFrame(() => {
+        // Segundo frame: volvemos a colapsar la sidebar a su estado normal.
+        setIsWarmingUp(false);
+      });
+    });
+
+    return () => {
+      if (rafId1) cancelAnimationFrame(rafId1);
+      if (rafId2) cancelAnimationFrame(rafId2);
     };
-    // Doble rAF: layout en siguiente frame; más agresivo que idle para que esté listo antes del primer expand
-    const rafId = requestAnimationFrame(() => requestAnimationFrame(warmup));
-    return () => cancelAnimationFrame(rafId);
+  }, [sidebarCollapsed, isLoading, nodes]);
+
+  useEffect(() => {
+    if (!sidebarCollapsed && !hasEverExpandedRef.current) {
+      hasEverExpandedRef.current = true;
+      setDisableFirstExpandTransition(true);
+      if (firstExpandTimeoutRef.current) clearTimeout(firstExpandTimeoutRef.current);
+      firstExpandTimeoutRef.current = setTimeout(() => {
+        setDisableFirstExpandTransition(false);
+        firstExpandTimeoutRef.current = null;
+      }, 50);
+    }
   }, [sidebarCollapsed]);
 
   const toggleSidebar = useCallback(() => {
-    setSidebarCollapsed(prev => {
-      const next = !prev;
-      if (prev && !next && !hasEverExpandedRef.current) {
-        hasEverExpandedRef.current = true;
-        setDisableFirstExpandTransition(true);
-        if (firstExpandTimeoutRef.current) clearTimeout(firstExpandTimeoutRef.current);
-        firstExpandTimeoutRef.current = setTimeout(() => {
-          setDisableFirstExpandTransition(false);
-          firstExpandTimeoutRef.current = null;
-        }, 50);
-      }
-      return next;
-    });
+    setSidebarCollapsed(prev => !prev);
   }, [setSidebarCollapsed]);
 
   useEffect(() => {
@@ -3371,7 +3402,7 @@ const Sidebar = React.memo(({
   return (
     <div
       ref={sidebarRef}
-      className="sidebar-container sidebar-root"
+      className={`sidebar-container sidebar-root${disableFirstExpandTransition ? ' sidebar-no-transition' : ''}`}
       style={{
         padding: 0,
         height: '100%',
@@ -3409,8 +3440,20 @@ const Sidebar = React.memo(({
 
       {/* Panel - Collapsible content area */}
       <div
-        className={`sidebar-panel${sidebarCollapsed ? ' sidebar-panel-collapsed' : ''}`}
-        style={sidebarCollapsed ? {
+        ref={expandedContentRef}
+        className={`sidebar-panel${(sidebarCollapsed && !isWarmingUp) ? ' sidebar-panel-collapsed' : ''}${disableFirstExpandTransition ? ' sidebar-no-transition' : ''}`}
+        style={isWarmingUp ? {
+          position: 'absolute',
+          left: '-9999px',
+          width: '280px',
+          height: '100%',
+          opacity: 0,
+          pointerEvents: 'none',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          zIndex: -9999,
+        } : sidebarCollapsed ? {
           flex: '0 0 0px',
           width: 0,
           minWidth: 0,
@@ -3427,9 +3470,11 @@ const Sidebar = React.memo(({
           flexDirection: 'column',
           overflow: 'hidden',
           height: '100%',
-          transition: 'flex 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease',
+          transition: 'opacity 0.08s ease',
         }}>
-        {fullSidebar}
+        <div className="sidebar-panel-content-wrapper" style={{ width: '100%', minWidth: '232px', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {fullSidebar}
+        </div>
       </div>
 
 

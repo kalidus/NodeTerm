@@ -38,16 +38,22 @@
   transition: none !important; /* Sin transición durante el arrastre para fluidez */
 }
 
-/* Transición suave solo cuando no se está redimensionando */
-.sidebar-container {
-  transition: all 0.15s ease-out !important;
+/* Transición suave del panel del splitter cuando se colapsa/expande */
+.main-splitter-transitioning > .p-splitter-panel {
+  transition: flex-basis 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              width 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              min-width 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              max-width 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 /* Primera expansión: sin transiciones en sidebar Y panel para evitar lag (override !important) */
-.sidebar-container.sidebar-no-transition {
+.sidebar-container.sidebar-no-transition,
+.sidebar-container.sidebar-no-transition .sidebar-panel {
   transition: none !important;
 }
-.main-splitter:has(.sidebar-container.sidebar-no-transition) .p-splitter-panel:first-child {
+.main-splitter:has(.sidebar-container.sidebar-no-transition) .p-splitter-panel:first-child,
+.main-splitter:has(.sidebar-container.sidebar-no-transition) .terminal-frame,
+.main-splitter-transitioning:has(.sidebar-container.sidebar-no-transition) > .p-splitter-panel {
   transition: none !important;
 }
 

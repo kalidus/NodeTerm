@@ -2585,6 +2585,20 @@ const MainContentArea = ({
   const FIXED_EXPANDED_SIZE = 18; // 18% - ancho inicial cuando se abre la app
   // Estado de tamaño actual del sidebar (en %), usado cuando está expandido
   const [sidebarSizePercent, setSidebarSizePercent] = React.useState(FIXED_EXPANDED_SIZE);
+  const [isTransitioningSidebar, setIsTransitioningSidebar] = React.useState(false);
+  const prevCollapsedRef = React.useRef(sidebarCollapsed);
+
+  React.useEffect(() => {
+    if (prevCollapsedRef.current !== sidebarCollapsed) {
+      prevCollapsedRef.current = sidebarCollapsed;
+      setIsTransitioningSidebar(true);
+      const timer = setTimeout(() => {
+        setIsTransitioningSidebar(false);
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [sidebarCollapsed]);
+
   const splitterDragStateRef = useRef({ isPointerDown: false, hasMoved: false, startX: 0, startY: 0 });
   const SPLITTER_DRAG_THRESHOLD_PX = 3;
 
@@ -2777,7 +2791,7 @@ const MainContentArea = ({
         onResizeEnd={handleResizeEndWithAutoCollapse}
         onResize={handleResizeOnly} // Sin colapso durante arrastre
         disabled={false}
-        className="main-splitter"
+        className={`main-splitter ${isTransitioningSidebar ? 'main-splitter-transitioning' : ''}`}
         pt={{
           gutter: {
             onMouseDown: markSplitterPointerDown,
