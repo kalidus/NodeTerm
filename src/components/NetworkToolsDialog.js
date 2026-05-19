@@ -2393,7 +2393,7 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
   // Render en modo standalone (dentro de una pestaña)
   if (standalone) {
     return (
-      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--surface-ground)' }}>
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: themeColors.background, color: themeColors.textPrimary }}>
         <style>{`
           .network-tools-sidebar::-webkit-scrollbar,
           .network-tools-form::-webkit-scrollbar,
@@ -2780,7 +2780,8 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
       contentStyle={{ 
         padding: 0,
         paddingBottom: '1rem',
-        background: 'var(--surface-ground)',
+        background: themeColors.background,
+        color: themeColors.textPrimary,
         borderRadius: '0',
         overflow: 'hidden',
         display: 'flex',
@@ -2790,8 +2791,9 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
         maxHeight: 'calc(95vh - 60px)'
       }}
       headerStyle={{
-        background: 'var(--surface-card)',
-        borderBottom: '1px solid var(--surface-border)',
+        background: themeColors.cardBackground,
+        borderBottom: '1px solid ' + themeColors.borderColor,
+        color: themeColors.textPrimary,
         padding: '1rem 1.5rem',
         flexShrink: 0,
         cursor: 'move'
