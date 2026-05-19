@@ -3504,7 +3504,7 @@ const ConnectionHistory = ({
 						letterSpacing: '0.5px'
 					}}>
 						<span>Temas de Interfaz</span>
-						<i className="pi pi-sparkles" style={{ color: 'var(--ui-button-primary)', opacity: 0.9 }} />
+						<i className="pi pi-palette" style={{ color: 'var(--ui-button-primary)', opacity: 0.9 }} />
 					</div>
 
 					{UI_CATEGORIES.map(category => (

@@ -17,6 +17,9 @@ import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import { common, createLowlight } from 'lowlight';
 import TurndownService from 'turndown';
 import { marked } from 'marked';
+import { FaBold, FaItalic, FaUnderline } from 'react-icons/fa';
+import { HiSparkles } from 'react-icons/hi';
+import { FiMaximize2, FiMinimize2 } from 'react-icons/fi';
 import '../styles/components/documents.css';
 
 const lowlight = createLowlight(common);
@@ -137,21 +140,21 @@ const EditorToolbar = ({
           isActive={editor.isActive('bold')}
           title="Negrita (Ctrl+B)"
         >
-          <i className="pi pi-bold" />
+          <FaBold size={13} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleItalic().run()}
           isActive={editor.isActive('italic')}
           title="Cursiva (Ctrl+I)"
         >
-          <i className="pi pi-italic" />
+          <FaItalic size={13} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleUnderline().run()}
           isActive={editor.isActive('underline')}
           title="Subrayado (Ctrl+U)"
         >
-          <i className="pi pi-underline" />
+          <FaUnderline size={13} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleStrike().run()}
@@ -377,7 +380,7 @@ const EditorToolbar = ({
             background: 'rgba(156, 39, 176, 0.05)'
           }}
         >
-          <i className="pi pi-sparkles" />
+          <i style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><HiSparkles size={14} /></i>
         </button>
 
         {/* Imprimir */}
@@ -407,7 +410,9 @@ const EditorToolbar = ({
             background: isZenMode ? 'rgba(16, 185, 129, 0.15)' : 'transparent'
           }}
         >
-          <i className={isZenMode ? "pi pi-eye-slash" : "pi pi-expand"} />
+          <i style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+            {isZenMode ? <FiMinimize2 size={14} /> : <FiMaximize2 size={14} />}
+          </i>
         </button>
       </div>
     </div>
@@ -1136,7 +1141,9 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
         <div className="ai-assistant-floating-panel">
           <div className="ai-panel-header">
             <div className="ai-panel-title">
-              <i className="pi pi-sparkles glow-purple" />
+              <i className="glow-purple" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                <HiSparkles size={15} />
+              </i>
               <span>Asistente de Escritura IA</span>
             </div>
             <button className="ai-panel-close" onClick={() => setShowAiPanel(false)}>&times;</button>
