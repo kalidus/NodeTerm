@@ -381,6 +381,30 @@ const TabHeader = React.memo(({
         <AIClientBrandIcon tabType="open-notebook" size={12} style={{ marginRight: '6px', flexShrink: 0 }} />
       )}
 
+      {/* Icono específico para herramientas de red */}
+      {tab.type === 'network-tool' && (() => {
+        const toolsMap = {
+          'ping': { icon: 'pi pi-clock', color: '#22c55e' },
+          'traceroute': { icon: 'pi pi-sitemap', color: '#22c55e' },
+          'port-scan': { icon: 'pi pi-th-large', color: '#f59e0b' },
+          'network-scan': { icon: 'pi pi-globe', color: '#f59e0b' },
+          'dns-lookup': { icon: 'pi pi-search-plus', color: '#3b82f6' },
+          'reverse-dns': { icon: 'pi pi-replay', color: '#3b82f6' },
+          'ssl-check': { icon: 'pi pi-lock', color: '#ef4444' },
+          'http-headers': { icon: 'pi pi-file', color: '#ef4444' },
+          'host-vuln-scan': { icon: 'pi pi-exclamation-triangle', color: '#ef4444' },
+          'web-security-scan': { icon: 'pi pi-globe', color: '#ef4444' },
+          'cvss-calculator': { icon: 'pi pi-chart-bar', color: '#ef4444' },
+          'whois': { icon: 'pi pi-id-card', color: '#8b5cf6' },
+          'subnet-calc': { icon: 'pi pi-calculator', color: '#8b5cf6' },
+          'wake-on-lan': { icon: 'pi pi-power-off', color: '#8b5cf6' }
+        };
+        const tool = toolsMap[tab.toolId];
+        const icon = tool ? tool.icon : 'pi pi-cog';
+        const color = tool ? tool.color : '#8b5cf6';
+        return <i className={icon} style={{ fontSize: '12px', marginRight: '6px', color: color, flexShrink: 0 }}></i>;
+      })()}
+
       {/* Mostrar label solo si NO es pestaña de inicio (las pestañas de inicio nunca muestran texto) */}
       {!isHomeTab && (
         <span style={{ 
