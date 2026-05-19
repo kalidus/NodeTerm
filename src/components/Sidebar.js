@@ -236,8 +236,19 @@ const Sidebar = React.memo(({
     return treeNodes.map(node => {
       const hasChildren = Array.isArray(node.children) && node.children.length > 0;
       if (hasChildren) {
+        // Optimización clave: si la carpeta está colapsada, no procesamos sus hijos en el DOM virtual.
+        // Esto reduce drásticamente el tamaño del árbol en render y diffing de React.
+        const isExpanded = allExpanded || (expandedKeys && expandedKeys[node.key] === true);
+        if (!isExpanded) {
+          return {
+            ...node,
+            leaf: false,
+            children: []
+          };
+        }
+
         const totalChildren = node.children.length;
-        const currentLimit = folderLimits[node.key] || 100;
+        const currentLimit = folderLimits[node.key] || 30;
         
         // Slicing first to keep recursion extremely fast and avoid rendering non-visible nodes
         const visibleChildren = node.children.slice(0, currentLimit);
@@ -262,7 +273,7 @@ const Sidebar = React.memo(({
       }
       return node;
     });
-  }, [folderLimits]);
+  }, [folderLimits, allExpanded, expandedKeys]);
 
   // Estado para el nodo seleccionado actualmente (para el panel de detalles)
   const [selectedNodeForDetails, setSelectedNodeForDetails] = useState(null);

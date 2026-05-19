@@ -103,6 +103,11 @@ import {
   CONNECTION_STATUS
 } from '../utils/constants';
 
+// Caché en memoria para evitar desencriptar / parsear la base de datos de conexiones repetidamente
+let lastDecryptedDataStr = null;
+let lastDecryptedKey = null;
+let lastDecryptedResult = null;
+
 const App = () => {
   const toast = useRef(null);
   const [showImportDialog, setShowImportDialog] = React.useState(false);
@@ -1887,11 +1892,31 @@ const App = () => {
   // Función para cargar nodos (centralizada para permitir recargas externas)
   const loadNodes = useCallback(async () => {
     try {
+      const encryptedData = localStorage.getItem('connections_encrypted');
+      const isCacheHit = encryptedData && 
+                         encryptedData === lastDecryptedDataStr && 
+                         masterKey === lastDecryptedKey && 
+                         lastDecryptedResult;
+
+      // Mostrar esqueleto de carga únicamente si no es un hit en caché
+      if (!isCacheHit) {
+        setIsLoadingConnections(true);
+      }
+
       if (masterKey) {
         // MODO ENCRIPTADO: Cargar desde connections_encrypted
-        const encryptedData = localStorage.getItem('connections_encrypted');
         if (encryptedData) {
-          const decrypted = await secureStorage.decryptData(JSON.parse(encryptedData), masterKey);
+          let decrypted;
+          if (isCacheHit) {
+            decrypted = lastDecryptedResult;
+          } else {
+            decrypted = await secureStorage.decryptData(JSON.parse(encryptedData), masterKey);
+            if (decrypted) {
+              lastDecryptedDataStr = encryptedData;
+              lastDecryptedKey = masterKey;
+              lastDecryptedResult = decrypted;
+            }
+          }
           if (decrypted) {
             setNodes(decrypted);
           } else {
@@ -1937,11 +1962,18 @@ const App = () => {
       setNodes(getDefaultNodes());
     } finally {
       // Si el servicio de sync aún no se ha inicializado y estamos en electron,
-      // no quitar el loading todavía (esperar al evento settings-updated)
+      // no quitar el loading todavía (esperar a que esté listo)
       if (window.electron?.appdata && !localStorageSyncService._initialized) {
         // Seguir en loading
       } else {
-        setIsLoadingConnections(false);
+        // Si hay vault cifrado pero no tenemos masterKey, no podemos mostrar las conexiones aún.
+        // Mantenemos el estado de carga (skeleton) para evitar un flash del árbol vacío/default
+        const hasEncrypted = localStorage.getItem('connections_encrypted');
+        if (hasEncrypted && !masterKey) {
+          // Seguir en loading hasta desbloquear
+        } else {
+          setIsLoadingConnections(false);
+        }
       }
     }
   }, [masterKey, secureStorage, getDefaultNodes]);
@@ -1971,11 +2003,16 @@ const App = () => {
         const nodesStr = JSON.stringify(nodes);
         
         if (masterKey) {
-          // CON master key: Guardar encriptado
+           // CON master key: Guardar encriptado
           const encrypted = await secureStorage.encryptData(nodes, masterKey);
           const encryptedStr = JSON.stringify(encrypted);
           localStorage.setItem('connections_encrypted', encryptedStr);
           localStorage.removeItem(STORAGE_KEYS.TREE_DATA);
+
+          // Actualizar caché para evitar re-desencriptar en la siguiente comprobación
+          lastDecryptedDataStr = encryptedStr;
+          lastDecryptedKey = masterKey;
+          lastDecryptedResult = nodes;
 
           // Sincronizar cambios cifrados
           localStorageSyncService.updateCache('connections_encrypted', encryptedStr);
@@ -2018,11 +2055,13 @@ const App = () => {
     window.addEventListener('encryption-data-synced', handleSync);
     window.addEventListener('connections-synced-from-cloud', handleSync);
     window.addEventListener('settings-updated', handleSettingsUpdated);
+    window.addEventListener('localstorage-sync-ready', handleSync);
     
     return () => {
       window.removeEventListener('encryption-data-synced', handleSync);
       window.removeEventListener('connections-synced-from-cloud', handleSync);
       window.removeEventListener('settings-updated', handleSettingsUpdated);
+      window.removeEventListener('localstorage-sync-ready', handleSync);
     };
   }, [loadNodes]);
 
