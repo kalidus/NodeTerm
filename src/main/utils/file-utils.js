@@ -97,17 +97,27 @@ async function migrateDataFromHomeDirAsync() {
   }
 }
 
+const APP_DATA_ENC_PREFIX = 'NTENC:';
+
+function trimBom(str) {
+  return str.replace(/^\uFEFF/, '').trim();
+}
+
+function isLikelyJsonText(str) {
+  const t = trimBom(str);
+  return t.startsWith('{') || t.startsWith('[');
+}
+
 /**
- * Encripta un string de forma segura usando safeStorage si está disponible
- * @param {string} str - Texto plano a encriptar
- * @returns {string} Datos encriptados codificados en base64
+ * Cifrado con safeStorage (válido solo dentro del mismo userData / instancia primaria).
+ * No usar para app-data.json compartido entre instancias.
  */
 function encryptStringSecurely(str) {
   if (!str) return '';
   if (safeStorage && safeStorage.isEncryptionAvailable()) {
     try {
       const encryptedBuffer = safeStorage.encryptString(str);
-      return encryptedBuffer.toString('base64');
+      return APP_DATA_ENC_PREFIX + encryptedBuffer.toString('base64');
     } catch (err) {
       console.error('❌ [Security] Falló la encriptación de safeStorage:', err.message);
       return str;
@@ -116,27 +126,84 @@ function encryptStringSecurely(str) {
   return str;
 }
 
-/**
- * Decodifica y desencripta un string usando safeStorage si está disponible
- * @param {string} str - Datos encriptados codificados en base64 o texto plano
- * @returns {string} Texto desencriptado
- */
 function decryptStringSecurely(str) {
   if (!str) return '';
-  if (safeStorage && safeStorage.isEncryptionAvailable()) {
-    try {
-      const buffer = Buffer.from(str, 'base64');
-      try {
-        return safeStorage.decryptString(buffer);
-      } catch (decryptionError) {
-        // Si no se puede desencriptar, probablemente sea texto plano (legacy)
-        return str;
-      }
-    } catch (e) {
-      return str;
-    }
+  const trimmed = trimBom(str);
+
+  if (isLikelyJsonText(trimmed)) {
+    return trimmed;
   }
-  return str;
+
+  let payload = trimmed;
+  if (payload.startsWith(APP_DATA_ENC_PREFIX)) {
+    payload = payload.slice(APP_DATA_ENC_PREFIX.length);
+  }
+
+  if (safeStorage && safeStorage.isEncryptionAvailable()) {
+    const buffer = Buffer.from(payload, 'base64');
+    const decrypted = safeStorage.decryptString(buffer);
+    if (!isLikelyJsonText(decrypted)) {
+      throw new Error('Contenido desencriptado no es JSON válido');
+    }
+    return decrypted;
+  }
+
+  throw new Error('No se pudo desencriptar con safeStorage');
+}
+
+/**
+ * Serializa app-data.json en JSON plano (legible por todas las instancias).
+ * Los valores sensibles ya van cifrados dentro del payload (connections_encrypted, etc.).
+ */
+function serializeAppDataFile(data) {
+  return JSON.stringify(data, null, 2);
+}
+
+/**
+ * Intenta descifrar formato legacy (safeStorage) — solo la instancia primaria puede hacerlo.
+ */
+function decryptLegacySafeStoragePayload(trimmed) {
+  let payload = trimmed;
+  if (payload.startsWith(APP_DATA_ENC_PREFIX)) {
+    payload = payload.slice(APP_DATA_ENC_PREFIX.length);
+  }
+  if (!safeStorage || !safeStorage.isEncryptionAvailable()) {
+    throw new Error('safeStorage no disponible para formato legacy');
+  }
+  const buffer = Buffer.from(payload, 'base64');
+  const decrypted = safeStorage.decryptString(buffer);
+  if (!isLikelyJsonText(decrypted)) {
+    throw new Error('Contenido legacy desencriptado no es JSON');
+  }
+  return decrypted;
+}
+
+function isAppDataPlainJson(raw) {
+  return isLikelyJsonText(trimBom(raw));
+}
+
+/**
+ * Lee y parsea app-data.json (JSON plano compartido; legacy safeStorage solo en instancia primaria).
+ */
+function parseAppDataFileContent(raw) {
+  const trimmed = trimBom(raw);
+  if (!trimmed) {
+    throw new Error('app-data vacío');
+  }
+
+  if (isLikelyJsonText(trimmed)) {
+    return JSON.parse(trimmed);
+  }
+
+  const isSecondary = process.env.NODETERM_IS_SECONDARY_INSTANCE === 'true';
+  if (isSecondary) {
+    throw new Error(
+      'app-data en formato legacy (safeStorage). Abre primero la ventana principal para migrar el archivo.'
+    );
+  }
+
+  const plaintext = decryptLegacySafeStoragePayload(trimmed);
+  return JSON.parse(plaintext);
 }
 
 /**
@@ -247,5 +314,9 @@ module.exports = {
   migrateDataFromHomeDir,
   migrateDataFromHomeDirAsync,
   encryptStringSecurely,
-  decryptStringSecurely
+  decryptStringSecurely,
+  serializeAppDataFile,
+  parseAppDataFileContent,
+  isAppDataPlainJson,
+  APP_DATA_ENC_PREFIX
 };

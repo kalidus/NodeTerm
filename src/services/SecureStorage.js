@@ -117,25 +117,54 @@ class SecureStorage {
   /**
    * Guarda la clave maestra cifrada en localStorage
    */
-  async saveMasterKey(masterKey, sessionPassword = null) {
+  async saveMasterKey(masterKey, sessionPassword = null, rememberPassword = null) {
     const protectionKey = sessionPassword || this.generateDeviceFingerprint();
     const encrypted = await this.encryptData(
       { masterKey, savedAt: Date.now() },
       protectionKey
     );
 
-    // Guardar en archivo compartido (Multi-Instance support)
+    const remember =
+      rememberPassword !== null
+        ? rememberPassword
+        : localStorage.getItem('nodeterm_remember_password') === 'true';
+
     if (window.electron && window.electron.security) {
       try {
-        await window.electron.security.saveMasterKey(encrypted);
+        await window.electron.security.saveMasterKey(encrypted, remember);
       } catch (e) { console.error('Error saving master key to file:', e); }
     }
 
-    // Mantener backup en localStorage
     localStorage.setItem('nodeterm_master_key', JSON.stringify(encrypted));
 
     this.masterKeyCache = masterKey;
     this.resetTimeout();
+  }
+
+  async isRememberPasswordEnabled() {
+    if (window.electron?.security?.getRememberPassword) {
+      try {
+        if (await window.electron.security.getRememberPassword()) {
+          return true;
+        }
+      } catch (e) { /* fallback localStorage */ }
+    }
+    return localStorage.getItem('nodeterm_remember_password') === 'true';
+  }
+
+  async setRememberPassword(remember) {
+    if (remember) {
+      localStorage.setItem('nodeterm_remember_password', 'true');
+    } else {
+      localStorage.removeItem('nodeterm_remember_password');
+    }
+    if (window.electron?.security?.setRememberPassword) {
+      try {
+        await window.electron.security.setRememberPassword(remember);
+      } catch (e) {
+        console.warn('Error guardando rememberPassword en security.json:', e);
+      }
+    }
   }
 
   /**

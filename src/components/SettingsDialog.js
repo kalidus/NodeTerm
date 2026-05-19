@@ -2792,12 +2792,11 @@ const SettingsDialog = ({
                                     <Checkbox
                                       inputId="remember-password-settings"
                                       checked={localStorage.getItem('nodeterm_remember_password') === 'true'}
-                                      onChange={(e) => {
+                                      onChange={async (e) => {
+                                        await secureStorage.setRememberPassword(!!e.checked);
                                         if (e.checked) {
-                                          localStorage.setItem('nodeterm_remember_password', 'true');
                                           showToast('success', 'Configurado', 'La contraseña se recordará en este dispositivo');
                                         } else {
-                                          localStorage.removeItem('nodeterm_remember_password');
                                           showToast('info', 'Configurado', 'Se pedirá la contraseña al iniciar la app');
                                         }
                                       }}

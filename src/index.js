@@ -204,9 +204,7 @@ import localStorageSyncService from './services/LocalStorageSyncService';
 const container = document.getElementById('root');
 const root = createRoot(container);
 
-// 🚀 MULTI-INSTANCIA: Sincronización de localStorage en SEGUNDO PLANO
-// Esto permite que React renderice inmediatamente con los datos locales existentes
-// Si hay cambios en el archivo compartido, se aplicarán asíncronamente (trigger de settings-updated)
+// Multi-instancia: cargar app-data.json compartido antes del primer render
 const hideBootSplashEarly = () => {
   requestAnimationFrame(() => {
     const splash = document.getElementById('boot-splash');
@@ -215,11 +213,13 @@ const hideBootSplashEarly = () => {
   });
 };
 
-const initAndRender = () => {
+const initAndRender = async () => {
   markStartup('initAndRender inicio');
-  localStorageSyncService.initialize().catch(err => {
-    console.warn('[Index] Error en sincronización inicial (background):', err);
-  });
+  try {
+    await localStorageSyncService.initialize();
+  } catch (err) {
+    console.warn('[Index] Error en sincronización inicial:', err);
+  }
 
   initializeGlobalThemes();
 
@@ -236,5 +236,4 @@ const initAndRender = () => {
   });
 };
 
-// Ejecutar inicialización y render
 initAndRender();

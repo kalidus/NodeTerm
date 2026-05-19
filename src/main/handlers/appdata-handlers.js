@@ -1,218 +1,130 @@
 /**
  * Handlers para sincronización de localStorage entre instancias
- * 
+ *
  * Problema: Las instancias secundarias usan un UserData temporal y no tienen acceso
  * al localStorage de la instancia principal.
- * 
- * Solución: Sincronizar datos críticos a un archivo compartido (~/.nodeterm/app-data.json)
+ *
+ * Solución: Sincronizar datos críticos a un archivo compartido (%APPDATA%/nodeterm/app-data.json)
  * La instancia secundaria carga estos datos al iniciar.
  */
 
 const { ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const os = require('os');
-const { getNodeTermDataDir, encryptStringSecurely, decryptStringSecurely } = require('../utils/file-utils');
+const {
+  getNodeTermDataDir,
+  serializeAppDataFile,
+  parseAppDataFileContent,
+  isAppDataPlainJson
+} = require('../utils/file-utils');
+const { SYNC_KEYS } = require('../../shared/sync-keys');
 
-// Ruta al archivo de datos compartidos
 const APP_DATA_PATH = path.join(getNodeTermDataDir(), 'app-data.json');
 
-// Lista de claves de localStorage que deben sincronizarse entre instancias
-const SYNC_KEYS = [
-    // Conexiones encriptadas
-    'connections_encrypted',
-    'passwords_encrypted',
-    'nodeterm_secure_sessions',
+const READ_MAX_RETRIES = 8;
 
-    // Historial y favoritos
-    'nodeterm_connection_history',
-    'nodeterm_favorite_connections',
+function readAppDataFromDisk() {
+  if (!fs.existsSync(APP_DATA_PATH)) {
+    return null;
+  }
+  const raw = fs.readFileSync(APP_DATA_PATH, 'utf8');
+  const parsed = parseAppDataFileContent(raw);
 
-    // Árbol de datos (conexiones organizadas)
-    'basicapp2_tree_data',
+  if (!isAppDataPlainJson(raw) && process.env.NODETERM_IS_SECONDARY_INSTANCE !== 'true') {
+    try {
+      fs.writeFileSync(APP_DATA_PATH, serializeAppDataFile(parsed), 'utf8');
+      console.log('✅ [AppData] Migrado app-data.json a JSON plano (multi-instancia)');
+    } catch (migrateErr) {
+      console.warn('⚠️ [AppData] No se pudo migrar a JSON plano:', migrateErr.message);
+    }
+  }
 
-    // Configuración de sincronización
-    'nodeterm_sync_config',
+  return parsed;
+}
 
-    // Temas y configuración visual
-    'ui_theme',
-    'basicapp_statusbar_theme',
-    'basicapp_terminal_theme',
-    'iconTheme',
-    'iconThemeSidebar',
-    'sessionActionIconTheme',
-    'nodeterm_tab_theme', // Tema de pestañas
-    'nodeterm_tab_layout', // Layout de pestañas
-    'nodeterm_expanded_keys', // Estado de expansión del sidebar
-    'explorerFont',
-    'explorerFontSize',
-    'explorerColorTheme',
-    'sidebarFont',
-    'sidebarFontSize',
-    'sidebarFontColor',
-    'iconSize',
-    'folderIconSize',
-    'connectionIconSize',
-
-    // Configuración de terminal
-    'basicapp_statusbar_height',
-    'basicapp_local_terminal_font_family',
-    'basicapp_local_terminal_font_size',
-    'basicapp_local_powershell_theme',
-    'basicapp_local_linux_terminal_theme',
-
-    // Grupos de favoritos
-    'nodeterm_favorite_groups',
-    'nodeterm_group_assignments',
-    'nodeterm_filter_config',
-
-    // Configuración específica de terminales (Docker/Linux)
-    'localDockerTerminalTheme',
-    'nodeterm_docker_font_family',
-    'nodeterm_docker_font_size',
-    'nodeterm_linux_font_family',
-    'nodeterm_linux_font_size',
-
-    // Master key (backup)
-    'nodeterm_master_key',
-
-    // Configuración General y UI
-    'lock_home_button',
-    'home_tab_icon',
-    'sidebar_start_collapsed',
-    'nodeterm_default_local_terminal',
-    'nodeterm_ui_anim_speed',
-    'nodeterm_language',
-    'nodeterm_ai_provider',
-    'nodeterm_ai_model',
-    'nodeterm_guacd_preferred_method',
-    'rdp_freeze_timeout_ms',
-    'update_auto_check',
-    'update_channel',
-    'nodeterm_remember_password',
-
-    // Configuración de Auditoría
-    'audit_auto_recording',
-    'audit_recording_quality',
-    'audit_encrypt_recordings',
-    'audit_auto_cleanup',
-    'audit_retention_days',
-    'audit_max_storage_size',
-    'audit_cleanup_on_startup',
-    'audit_cleanup_frequency',
-
-    // Configuración HomeTab
-    'homeTab_localTerminalVisible',
-    'homeTab_localTerminalTabsVisible',
-    'homeTab_localTerminalWorkspace',
-    'homeTab_statusBarVisible',
-    'homeTabFont',
-    'homeTabFontSize',
-    'actionBarIconTheme',
-    
-    // AI Clients configuration
-    'ai_clients_enabled',
-
-    // Notas / documentos
-    'documents_encrypted',
-    'documentManagerNodes',
-    'documents_expanded_keys'
-];
+function backoffMs(attemptIndex, totalRetries) {
+  const attempt = totalRetries - attemptIndex;
+  return Math.min(50 * attempt, 400);
+}
 
 /**
  * Registra los handlers de sincronización de datos de aplicación
  */
 function registerAppDataHandlers(dependencies) {
-    // Handler para obtener todos los datos sincronizados
-    ipcMain.handle('appdata:get-all', async () => {
-        let retries = 3;
-        while (retries > 0) {
-            try {
-                if (fs.existsSync(APP_DATA_PATH)) {
-                    const data = fs.readFileSync(APP_DATA_PATH, 'utf8');
-                    try {
-                        const decrypted = decryptStringSecurely(data);
-                        return JSON.parse(decrypted);
-                    } catch (e) {
-                        console.warn(`⚠️ [AppData] Error parseando app-data.json (intento ${4 - retries}):`, e);
-                        // Si el archivo está corrupto o vacío, podría ser porque se está escribiendo
-                        retries--;
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                        continue;
-                    }
-                }
-                return null;
-            } catch (error) {
-                console.warn(`⚠️ [AppData] Error leyendo datos (intento ${4 - retries}):`, error.message);
-                retries--;
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
+  ipcMain.handle('appdata:get-all', async () => {
+    let retries = READ_MAX_RETRIES;
+    while (retries > 0) {
+      try {
+        if (!fs.existsSync(APP_DATA_PATH)) {
+          return null;
         }
-        return null;
-    });
+        return readAppDataFromDisk();
+      } catch (e) {
+        console.warn(
+          `⚠️ [AppData] Error parseando app-data.json (intento ${READ_MAX_RETRIES - retries + 1}/${READ_MAX_RETRIES}):`,
+          e.message || e
+        );
+        retries--;
+        if (retries > 0) {
+          await new Promise((resolve) => setTimeout(resolve, backoffMs(retries, READ_MAX_RETRIES)));
+        }
+      }
+    }
+    return null;
+  });
 
-    // Handler para guardar todos los datos sincronizados
-    ipcMain.handle('appdata:save-all', async (event, data) => {
+  ipcMain.handle('appdata:save-all', async (event, data) => {
+    try {
+      const dataWithMeta = {
+        ...data,
+        _syncedAt: new Date().toISOString()
+      };
+
+      const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const tempPath = path.join(path.dirname(APP_DATA_PATH), `app-data.${uniqueId}.tmp`);
+
+            const serialized = serializeAppDataFile(dataWithMeta);
+            fs.writeFileSync(tempPath, serialized, 'utf8');
+
+      let renameRetries = 5;
+      let success = false;
+      while (renameRetries > 0 && !success) {
         try {
-            const configDir = getNodeTermDataDir();
-
-            // Añadir timestamp para saber cuándo se sincronizó
-            const dataWithMeta = {
-                ...data,
-                _syncedAt: new Date().toISOString()
-            };
-
-            // ESCRITURA ATÓMICA CON RETINTENTOS:
-            // En Windows, renameSync puede fallar si otro proceso tiene abierto el archivo
-            const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-            const tempPath = path.join(path.dirname(APP_DATA_PATH), `app-data.${uniqueId}.tmp`);
-
-            const encrypted = encryptStringSecurely(JSON.stringify(dataWithMeta, null, 2));
-            fs.writeFileSync(tempPath, encrypted, 'utf8');
-
-            let renameRetries = 5;
-            let success = false;
-            while (renameRetries > 0 && !success) {
-                try {
-                    fs.renameSync(tempPath, APP_DATA_PATH);
-                    success = true;
-                } catch (err) {
-                    renameRetries--;
-                    if (renameRetries === 0) {
-                        try { fs.unlinkSync(tempPath); } catch (e) {}
-                        throw err;
-                    }
-                    await new Promise(resolve => setTimeout(resolve, 200));
-                }
-            }
-
-            return { success: true };
-        } catch (error) {
-            console.error('❌ [AppData] Error guardando datos:', error.message);
-            return { success: false, error: error.message };
+          fs.renameSync(tempPath, APP_DATA_PATH);
+          success = true;
+        } catch (err) {
+          renameRetries--;
+          if (renameRetries === 0) {
+            try { fs.unlinkSync(tempPath); } catch (unlinkErr) { /* noop */ }
+            throw err;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 200));
         }
-    });
+      }
 
-    // Handler para obtener la última fecha de modificación del archivo
-    ipcMain.handle('appdata:get-last-modified', async () => {
-        try {
-            if (fs.existsSync(APP_DATA_PATH)) {
-                return fs.statSync(APP_DATA_PATH).mtimeMs;
-            }
-            return 0;
-        } catch (error) {
-            console.error('Error obteniendo mtime:', error);
-            return 0;
-        }
-    });
+      return { success: true };
+    } catch (error) {
+      console.error('❌ [AppData] Error guardando datos:', error.message);
+      return { success: false, error: error.message };
+    }
+  });
 
-    // Handler para obtener la lista de claves que deben sincronizarse
-    ipcMain.handle('appdata:get-sync-keys', async () => {
-        return SYNC_KEYS;
-    });
+  ipcMain.handle('appdata:get-last-modified', async () => {
+    try {
+      if (fs.existsSync(APP_DATA_PATH)) {
+        return fs.statSync(APP_DATA_PATH).mtimeMs;
+      }
+      return 0;
+    } catch (error) {
+      console.error('Error obteniendo mtime:', error);
+      return 0;
+    }
+  });
+
+  ipcMain.handle('appdata:get-sync-keys', async () => SYNC_KEYS);
 }
 
 module.exports = {
-    registerAppDataHandlers,
-    SYNC_KEYS
+  registerAppDataHandlers,
+  SYNC_KEYS
 };

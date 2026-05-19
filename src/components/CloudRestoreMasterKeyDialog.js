@@ -73,8 +73,8 @@ const CloudRestoreMasterKeyDialog = ({ visible, onSuccess, onHide, secureStorage
 
     try {
       await verifyAgainstVaults(password);
-      await secureStorage.saveMasterKey(password);
-      localStorage.setItem('nodeterm_remember_password', 'true');
+      await secureStorage.saveMasterKey(password, null, true);
+      await secureStorage.setRememberPassword(true);
       resetForm();
       onSuccess(password);
     } catch (err) {

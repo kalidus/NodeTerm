@@ -319,19 +319,29 @@ const App = () => {
 
   // Detectar si necesita unlock al iniciar (o auto-unlock si está recordado)
   useEffect(() => {
+    const waitForSyncReady = () => new Promise((resolve) => {
+      if (localStorageSyncService.isSyncReady()) {
+        resolve();
+        return;
+      }
+      const onReady = () => {
+        window.removeEventListener('localstorage-sync-ready', onReady);
+        resolve();
+      };
+      window.addEventListener('localstorage-sync-ready', onReady);
+    });
+
     const initializeApp = async () => {
-      // console.log('[App] ✅ initializeApp() iniciado');
+      await waitForSyncReady();
 
-      // NOTA: La sincronización de localStorage se hace en index.js ANTES del render
-      // para asegurar que los datos estén disponibles cuando los hooks se inicializan
+      if (localStorage.getItem('nodeterm_remember_password') === 'true') {
+        await secureStorage.setRememberPassword(true);
+      }
 
-
-      // Usar verificación asíncrona compatible con multi-instancia (archivo compartido)
       const hasKey = await secureStorage.checkHasSavedMasterKey();
 
       if (hasKey) {
-        // Verificar si el usuario marcó "recordar contraseña"
-        const rememberPassword = localStorage.getItem('nodeterm_remember_password') === 'true';
+        const rememberPassword = await secureStorage.isRememberPasswordEnabled();
 
         if (rememberPassword) {
           // Intentar auto-unlock
@@ -389,9 +399,13 @@ const App = () => {
   }, []);
 
   // Handler para unlock exitoso
-  const handleUnlockSuccess = useCallback((key) => {
+  const handleUnlockSuccess = useCallback(async (key) => {
+    if (!localStorage.getItem('connections_encrypted')) {
+      await localStorageSyncService.reloadFromSharedFile();
+    }
     setMasterKey(key);
     setNeedsUnlock(false);
+    window.dispatchEvent(new CustomEvent('encryption-data-synced'));
   }, []);
 
   // Inicializar window.toast para acceso global

@@ -39,11 +39,7 @@ const UnlockDialog = ({ visible, onSuccess, secureStorage }) => {
 
       // Password correcto - guardar preferencia de recordar
       console.log('[UnlockDialog] Password correcto, guardando preferencias...');
-      if (rememberPassword) {
-        localStorage.setItem('nodeterm_remember_password', 'true');
-      } else {
-        localStorage.removeItem('nodeterm_remember_password');
-      }
+      await secureStorage.setRememberPassword(rememberPassword);
 
       // Devolver la master key
       console.log('[UnlockDialog] ✅ Llamando onSuccess...');

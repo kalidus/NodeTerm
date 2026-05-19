@@ -170,8 +170,6 @@ const os = require('os');
 const fs = require('fs');
 
 const { migrateDataFromHomeDir, getNodeTermDataDir } = require('./src/main/utils/file-utils');
-// Migración en background (no bloquea app.ready)
-setImmediate(() => migrateDataFromHomeDir());
 
 // ============================================================================
 // 🔒 MULTI-INSTANCE SUPPORT (Fix for "Cache Lock" errors)
@@ -201,6 +199,11 @@ try {
 }
 
 const gotTheLock = app.requestSingleInstanceLock();
+process.env.NODETERM_IS_SECONDARY_INSTANCE = gotTheLock ? 'false' : 'true';
+
+if (gotTheLock) {
+  setImmediate(() => migrateDataFromHomeDir());
+}
 
 if (!gotTheLock) {
   console.log('⚠️ [MAIN] Instancia secundaria detectada (Lock no obtenido)');

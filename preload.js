@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electron', {
   platform: process.platform,
+  isSecondaryInstance: process.env.NODETERM_IS_SECONDARY_INSTANCE === 'true',
   clipboard: {
     writeText: (text) => ipcRenderer.invoke('clipboard:writeText', text),
     readText: () => ipcRenderer.invoke('clipboard:readText'),
@@ -122,8 +123,14 @@ contextBridge.exposeInMainWorld('electron', {
   },
   security: {
     getMasterKey: () => ipcRenderer.invoke('security:get-master-key'),
-    saveMasterKey: (key) => ipcRenderer.invoke('security:save-master-key', key),
+    saveMasterKey: (encryptedMasterKey, rememberPassword) =>
+      ipcRenderer.invoke('security:save-master-key', {
+        encryptedMasterKey,
+        rememberPassword
+      }),
     hasMasterKey: () => ipcRenderer.invoke('security:has-master-key'),
+    getRememberPassword: () => ipcRenderer.invoke('security:get-remember-password'),
+    setRememberPassword: (remember) => ipcRenderer.invoke('security:set-remember-password', remember),
     clearMasterKey: () => ipcRenderer.invoke('security:clear-master-key')
   },
   appdata: {
