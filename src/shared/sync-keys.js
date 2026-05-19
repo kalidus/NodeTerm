@@ -52,7 +52,8 @@ const SYNC_KEYS = [
 
   // Grupos de favoritos
   'nodeterm_favorite_groups',
-  'nodeterm_group_assignments',
+  'nodeterm_favorite_group_assignments',
+  'nodeterm_favorite_member_order',
   'nodeterm_filter_config',
 
   // Terminales Docker/Linux

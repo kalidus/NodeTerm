@@ -146,10 +146,23 @@ export function getGroupById(groupId) {
 // ============================================
 
 const ASSIGNMENTS_KEY = 'nodeterm_favorite_group_assignments';
+const LEGACY_ASSIGNMENTS_KEY = 'nodeterm_group_assignments';
 const MEMBER_ORDER_KEY = 'nodeterm_favorite_member_order';
 
 function loadAssignments() {
-    return safeParse(localStorage.getItem(ASSIGNMENTS_KEY), {});
+    const saved = localStorage.getItem(ASSIGNMENTS_KEY);
+    if (saved) {
+        return safeParse(saved, {});
+    }
+
+    const legacy = localStorage.getItem(LEGACY_ASSIGNMENTS_KEY);
+    if (legacy) {
+        localStorage.setItem(ASSIGNMENTS_KEY, legacy);
+        localStorage.removeItem(LEGACY_ASSIGNMENTS_KEY);
+        return safeParse(legacy, {});
+    }
+
+    return {};
 }
 
 function saveAssignments(assignments) {

@@ -11,6 +11,19 @@ const EXTRA_FETCH_DELAY_MS = 300;
 const SECONDARY_EXTRA_ROUNDS = 12;
 const SECONDARY_FETCH_DELAY_MS = 500;
 
+/** Clave legacy (sync-keys antiguo); migrar a nodeterm_favorite_group_assignments */
+const LEGACY_FAVORITE_ASSIGNMENTS_KEY = 'nodeterm_group_assignments';
+const FAVORITE_ASSIGNMENTS_KEY = 'nodeterm_favorite_group_assignments';
+
+const FAVORITE_SYNC_KEYS = [
+    'nodeterm_favorite_connections',
+    'nodeterm_favorite_groups',
+    FAVORITE_ASSIGNMENTS_KEY,
+    'nodeterm_favorite_member_order',
+    'nodeterm_filter_config',
+    LEGACY_FAVORITE_ASSIGNMENTS_KEY
+];
+
 class LocalStorageSyncService {
     constructor() {
         this._initialized = false;
@@ -130,19 +143,50 @@ class LocalStorageSyncService {
         return true;
     }
 
+    _normalizeFavoriteSyncPayload(data) {
+        if (!data || typeof data !== 'object') {
+            return data;
+        }
+
+        const legacy = data[LEGACY_FAVORITE_ASSIGNMENTS_KEY];
+        const current = data[FAVORITE_ASSIGNMENTS_KEY];
+
+        if (legacy && !current) {
+            data[FAVORITE_ASSIGNMENTS_KEY] = legacy;
+        }
+
+        return data;
+    }
+
+    _migrateLegacyFavoriteAssignmentsInLocalStorage() {
+        const legacy = localStorage.getItem(LEGACY_FAVORITE_ASSIGNMENTS_KEY);
+        const current = localStorage.getItem(FAVORITE_ASSIGNMENTS_KEY);
+
+        if (legacy && !current) {
+            localStorage.setItem(FAVORITE_ASSIGNMENTS_KEY, legacy);
+        }
+
+        if (legacy) {
+            localStorage.removeItem(LEGACY_FAVORITE_ASSIGNMENTS_KEY);
+        }
+    }
+
     /**
      * Importa datos del archivo compartido a localStorage
      */
     _importToLocalStorage(data) {
+        const normalized = this._normalizeFavoriteSyncPayload({ ...data });
         let importedCount = 0;
 
         for (const key of SYNC_KEYS) {
-            if (data[key] !== undefined && data[key] !== null) {
+            if (normalized[key] !== undefined && normalized[key] !== null) {
                 // Sobrescribir siempre al inicializar para asegurar sync
-                localStorage.setItem(key, data[key]);
+                localStorage.setItem(key, normalized[key]);
                 importedCount++;
             }
         }
+
+        this._migrateLegacyFavoriteAssignmentsInLocalStorage();
 
         // console.log(`[LocalStorageSync] Importados ${importedCount} items a localStorage`);
 
@@ -153,8 +197,14 @@ class LocalStorageSyncService {
             }));
         }
 
+        if (FAVORITE_SYNC_KEYS.some((k) => normalized[k] !== undefined && normalized[k] !== null)) {
+            window.dispatchEvent(new CustomEvent('favorite-groups-updated', {
+                detail: { source: 'sync' }
+            }));
+        }
+
         const docKeys = ['documents_encrypted', 'documentManagerNodes', 'documents_expanded_keys'];
-        if (docKeys.some((k) => data[k] !== undefined && data[k] !== null)) {
+        if (docKeys.some((k) => normalized[k] !== undefined && normalized[k] !== null)) {
             window.dispatchEvent(new CustomEvent('documents-storage-updated'));
         }
     }
