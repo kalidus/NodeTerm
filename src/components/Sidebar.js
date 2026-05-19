@@ -227,6 +227,43 @@ const Sidebar = React.memo(({
   const [showFavoritesView, setShowFavoritesView] = useState(false);
   const [favoritesRevision, setFavoritesRevision] = useState(0);
 
+  // Límites de visualización de hijos por carpeta para optimizar renderizado de directorios muy grandes
+  const [folderLimits, setFolderLimits] = useState({});
+
+  const limitTreeNodes = useCallback((treeNodes) => {
+    if (!treeNodes) return [];
+    
+    return treeNodes.map(node => {
+      const hasChildren = Array.isArray(node.children) && node.children.length > 0;
+      if (hasChildren) {
+        const totalChildren = node.children.length;
+        const currentLimit = folderLimits[node.key] || 100;
+        
+        // Slicing first to keep recursion extremely fast and avoid rendering non-visible nodes
+        const visibleChildren = node.children.slice(0, currentLimit);
+        const processedChildren = limitTreeNodes(visibleChildren);
+        
+        if (totalChildren > currentLimit) {
+          processedChildren.push({
+            key: `${node.key}-show-more`,
+            label: `Mostrar más (${currentLimit} de ${totalChildren})...`,
+            icon: 'pi pi-plus',
+            data: { isShowMoreBtn: true, parentKey: node.key, targetLimit: currentLimit + 100 },
+            droppable: false,
+            selectable: false,
+            style: { color: '#89b4fa', fontStyle: 'italic', cursor: 'pointer' }
+          });
+        }
+        
+        return {
+          ...node,
+          children: processedChildren
+        };
+      }
+      return node;
+    });
+  }, [folderLimits]);
+
   // Estado para el nodo seleccionado actualmente (para el panel de detalles)
   const [selectedNodeForDetails, setSelectedNodeForDetails] = useState(null);
 
@@ -1182,6 +1219,11 @@ const Sidebar = React.memo(({
     ? filteredFavoritesTree
     : nodes;
 
+  const processedNodes = useMemo(
+    () => limitTreeNodes(displayNodes),
+    [displayNodes, limitTreeNodes]
+  );
+
   const totalFavoriteShortcutCount = useMemo(
     () => countFavoriteShortcuts(favoritesTree),
     [favoritesTree]
@@ -1194,7 +1236,7 @@ const Sidebar = React.memo(({
 
   const hasRenderableTreeNodes = showFavoritesView && viewMode === 'connections'
     ? visibleFavoriteShortcutCount > 0
-    : displayNodes.length > 0;
+    : processedNodes.length > 0;
 
   useEffect(() => {
     const unsubscribeFavorites = onFavoritesUpdate(() => bumpFavoritesRevision());
@@ -2418,6 +2460,31 @@ const Sidebar = React.memo(({
   // };
   // nodeTemplate adaptado de App.js
   const nodeTemplate = (node, options) => {
+    if (node.data?.isShowMoreBtn) {
+      return (
+        <div 
+          className="flex align-items-center gap-2 p-1" 
+          style={{ 
+            color: '#89b4fa', 
+            fontStyle: 'italic', 
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            paddingLeft: '4px',
+            width: '100%'
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            setFolderLimits(prev => ({
+              ...prev,
+              [node.data.parentKey]: node.data.targetLimit
+            }));
+          }}
+        >
+          <span className="pi pi-plus-circle" style={{ fontSize: '14px' }} />
+          <span>{node.label}</span>
+        </div>
+      );
+    }
     const actionNode = isFavoriteShortcutNode(node) ? resolveFavoriteShortcutNode(node, nodes) : node;
     const hasChildren = Array.isArray(node.children) && node.children.length > 0;
     const isFolder = !!(node.droppable || hasChildren);
@@ -3029,7 +3096,7 @@ const Sidebar = React.memo(({
           ) : (
             <Tree
               key={`tree-${iconTheme}-${explorerFontSize}-${treeTheme}-${explorerFontColor || 'default'}-${folderIconSize}-${iconSize}-${showFavoritesView ? 'favorites' : 'all'}`} // Forzar re-render cuando cambie el tema o el tamaño de iconos
-              value={displayNodes}
+              value={processedNodes}
               selectionMode="single"
               selectionKeys={selectedNodeKey}
               onSelectionChange={e => {
