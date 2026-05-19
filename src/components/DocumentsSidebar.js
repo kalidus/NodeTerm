@@ -377,7 +377,7 @@ const DocumentsSidebar = ({
     return (
       <span
         className="document-tree-node"
-        onDoubleClick={() => !isFolder && handleOpenDocument(node)}
+        onClick={() => !isFolder && handleOpenDocument(node)}
         style={{
           display: 'flex',
           alignItems: 'center',
