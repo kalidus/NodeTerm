@@ -2154,8 +2154,20 @@ const App = () => {
   useEffect(() => {
     const handler = (e) => {
       const info = e.detail || {};
-      const tabId = `${info.key}_${Date.now()}`;
       const secretType = info.type || info.data?.type || 'password';
+
+      const existingTabs = getAllTabs();
+      const existingTab = existingTabs.find(t => t.type === TAB_TYPES.PASSWORD && t.passwordData?.id === info.key);
+      if (existingTab) {
+        const tabIndex = existingTabs.findIndex(t => t.key === existingTab.key);
+        if (tabIndex !== -1) {
+          setActiveTabIndex(tabIndex);
+          setGroupActiveIndices(prev => ({ ...prev, 'no-group': tabIndex }));
+        }
+        return;
+      }
+
+      const tabId = `${info.key}_${Date.now()}`;
 
       // Construir passwordData con todos los campos según el tipo
       const passwordData = {
@@ -2231,12 +2243,25 @@ const App = () => {
     return () => window.removeEventListener('open-password-tab', handler);
   }, [getAllTabs]);
 
-  // Crear y activar pestaña de carpeta de passwords desde doble clic
+  // Crear y activar pestaña de carpeta de passwords
   useEffect(() => {
     const handler = (e) => {
       const info = e.detail || {};
+
+      const existingTabs = getAllTabs();
+      const existingTab = existingTabs.find(t => t.type === TAB_TYPES.PASSWORD_FOLDER && t.folderData?.folderKey === info.folderKey);
+      if (existingTab) {
+        const tabIndex = existingTabs.findIndex(t => t.key === existingTab.key);
+        if (tabIndex !== -1) {
+          setActiveTabIndex(tabIndex);
+          setGroupActiveIndices(prev => ({ ...prev, 'no-group': tabIndex }));
+        }
+        return;
+      }
+
       const tabId = `${info.folderKey}_${Date.now()}`;
       const folderData = {
+        folderKey: info.folderKey,
         folderLabel: info.folderLabel,
         passwords: info.passwords || []
       };

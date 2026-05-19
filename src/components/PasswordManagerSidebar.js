@@ -1169,7 +1169,7 @@ const PasswordManagerSidebar = ({
       <div 
         className="flex align-items-center gap-1"
         onContextMenu={options.onNodeContextMenu ? (e) => options.onNodeContextMenu(e, node) : undefined}
-        onDoubleClick={(e) => {
+        onClick={(e) => {
           e.stopPropagation();
           if (isSecret) {
             handleOpenPassword(node);
