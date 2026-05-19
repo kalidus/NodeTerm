@@ -99,6 +99,19 @@ const SidebarSkeleton = () => {
   );
 };
 
+// Caché global para optimizar el renderizado de iconos en el árbol y evitar bloqueos/congelamientos
+const iconCache = new Map();
+const defaultColorCache = new Map();
+
+const getCachedIcon = (key, creatorFn) => {
+  if (iconCache.has(key)) {
+    return iconCache.get(key);
+  }
+  const result = creatorFn();
+  iconCache.set(key, result);
+  return result;
+};
+
 const Sidebar = React.memo(({
   isLoading = false,
   nodes,
@@ -197,6 +210,12 @@ const Sidebar = React.memo(({
 }) => {
   // Hook de internacionalización
   const { t } = useTranslation('common');
+
+  // Limpiar caché de iconos cuando cambian temas o tamaños de iconos para evitar fugas de memoria o iconos obsoletos
+  useEffect(() => {
+    iconCache.clear();
+    defaultColorCache.clear();
+  }, [iconTheme, folderIconSize, connectionIconSize]);
   
 
 
@@ -642,6 +661,11 @@ const Sidebar = React.memo(({
   const isDefaultThemeColor = (color) => {
     if (!color || typeof color !== 'string') return false;
 
+    const lowerColor = color.toLowerCase();
+    if (defaultColorCache.has(lowerColor)) {
+      return defaultColorCache.get(lowerColor);
+    }
+
     // 1. Verificar contra lista explícita de colores de temas
     const defaultThemeColors = [
       '#007ad9', '#42a5f5', '#1976d2', '#2196f3', // Material
@@ -654,16 +678,23 @@ const Sidebar = React.memo(({
       '#6c7086', '#808080', '#999999', '#7f8c8d', '#95a5a6' // Minimal / Grises comunes
     ];
 
-    if (defaultThemeColors.includes(color.toLowerCase())) return true;
+    if (defaultThemeColors.includes(lowerColor)) {
+      defaultColorCache.set(lowerColor, true);
+      return true;
+    }
 
     // 2. Heurística: Cualquier color con saturación muy baja (< 15%) se trata como gris/default
     try {
       const [h, s, l] = hexToHsl(color);
-      if (s < 15) return true;
+      if (s < 15) {
+        defaultColorCache.set(lowerColor, true);
+        return true;
+      }
     } catch (e) {
       // Ignorar errores de parseo
     }
 
+    defaultColorCache.set(lowerColor, false);
     return false;
   };
 
@@ -2440,80 +2471,93 @@ const Sidebar = React.memo(({
       // Verificar si tiene icono personalizado (ignorar 'default' para usar el icono del tema)
       if (node.data?.customIcon && node.data.customIcon !== 'default' && SSHIconPresets[node.data.customIcon.toUpperCase()]) {
         const preset = SSHIconPresets[node.data.customIcon.toUpperCase()];
-        icon = <SSHIconRenderer preset={preset} pixelSize={connectionIconSize} />;
+        const cacheKey = `ssh-custom-${node.data.customIcon}-${connectionIconSize}`;
+        icon = getCachedIcon(cacheKey, () => <SSHIconRenderer preset={preset} pixelSize={connectionIconSize} />);
       } else {
         // Usar icono del tema unificado
-        icon = getNormalizedIcon(themeIcons.ssh, connectionIconSize, themeKey);
+        const cacheKey = `ssh-default-${connectionIconSize}-${themeKey}`;
+        icon = getCachedIcon(cacheKey, () => getNormalizedIcon(themeIcons.ssh, connectionIconSize, themeKey));
       }
     } else if (isRDP) {
-      icon = getNormalizedIcon(themeIcons.rdp, connectionIconSize, themeKey) || '🖥️';
+      const cacheKey = `rdp-${connectionIconSize}-${themeKey}`;
+      icon = getCachedIcon(cacheKey, () => getNormalizedIcon(themeIcons.rdp, connectionIconSize, themeKey) || '🖥️');
     } else if (isVNC) {
-      icon = getNormalizedIcon(themeIcons.vnc || themeIcons.rdp, connectionIconSize, themeKey) || '🖥️';
+      const cacheKey = `vnc-${connectionIconSize}-${themeKey}`;
+      icon = getCachedIcon(cacheKey, () => getNormalizedIcon(themeIcons.vnc || themeIcons.rdp, connectionIconSize, themeKey) || '🖥️');
     } else if (isPassword) {
-      icon = <span className="pi pi-key" style={{ color: '#ffc107', fontSize: `${connectionIconSize}px` }} />;
+      const cacheKey = `password-${connectionIconSize}`;
+      icon = getCachedIcon(cacheKey, () => <span className="pi pi-key" style={{ color: '#ffc107', fontSize: `${connectionIconSize}px` }} />);
     } else if (isSSHTunnel) {
       // Icono para túneles SSH con indicador de estado
       const tunnelStatus = node.data?.tunnelStatus || 'stopped';
-      const statusColors = {
-        active: '#a6e3a1',
-        connecting: '#89b4fa',
-        error: '#f38ba8',
-        stopped: '#6c7086'
-      };
-      icon = (
-        <span style={{ position: 'relative', display: 'inline-flex' }}>
-          <span className="pi pi-share-alt" style={{ color: statusColors[tunnelStatus] || '#89b4fa', fontSize: `${connectionIconSize}px` }} />
-          {tunnelStatus === 'active' && (
-            <span style={{
-              position: 'absolute',
-              bottom: '-2px',
-              right: '-2px',
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              background: '#a6e3a1',
-              border: '1px solid #1e1e2e'
-            }} />
-          )}
-        </span>
-      );
+      const cacheKey = `ssh-tunnel-${tunnelStatus}-${connectionIconSize}`;
+      icon = getCachedIcon(cacheKey, () => {
+        const statusColors = {
+          active: '#a6e3a1',
+          connecting: '#89b4fa',
+          error: '#f38ba8',
+          stopped: '#6c7086'
+        };
+        return (
+          <span style={{ position: 'relative', display: 'inline-flex' }}>
+            <span className="pi pi-share-alt" style={{ color: statusColors[tunnelStatus] || '#89b4fa', fontSize: `${connectionIconSize}px` }} />
+            {tunnelStatus === 'active' && (
+              <span style={{
+                position: 'absolute',
+                bottom: '-2px',
+                right: '-2px',
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                background: '#a6e3a1',
+                border: '1px solid #1e1e2e'
+              }} />
+            )}
+          </span>
+        );
+      });
     } else if (isFileConnection) {
       const protocol = node.data?.protocol || node.data?.type || 'sftp';
-      const themeIcon = themeIcons[protocol] || iconThemes['material']?.icons?.[protocol];
-      
-      if (themeIcon) {
-        const connectionColor = getThemeDefaultColor(themeKey);
-        // Normalizamos primero
-        const normalizedIcon = getNormalizedIcon(themeIcon, connectionIconSize, themeKey);
-        // Aplicamos colores después
-        icon = modifySVGColors(normalizedIcon, connectionColor, themeKey);
-      } else {
-        icon = <span className="pi pi-folder" style={{ color: '#89b4fa', fontSize: `${connectionIconSize}px` }} />;
-      }
+      const cacheKey = `file-${protocol}-${connectionIconSize}-${themeKey}`;
+      icon = getCachedIcon(cacheKey, () => {
+        const themeIcon = themeIcons[protocol] || iconThemes['material']?.icons?.[protocol];
+        if (themeIcon) {
+          const connectionColor = getThemeDefaultColor(themeKey);
+          const normalizedIcon = getNormalizedIcon(themeIcon, connectionIconSize, themeKey);
+          return modifySVGColors(normalizedIcon, connectionColor, themeKey);
+        } else {
+          return <span className="pi pi-folder" style={{ color: '#89b4fa', fontSize: `${connectionIconSize}px` }} />;
+        }
+      });
     } else if (isFolder) {
       const isFavoritesTreeView = showFavoritesView && viewMode === 'connections';
       if (isFavoritesTreeView) {
-        icon = <FolderIconRenderer preset={FolderIconPresets.FAVORITES} pixelSize={folderIconSize} />;
+        const cacheKey = `fav-folder-${folderIconSize}`;
+        icon = getCachedIcon(cacheKey, () => <FolderIconRenderer preset={FolderIconPresets.FAVORITES} pixelSize={folderIconSize} />);
       } else if (node.data?.customIcon && node.data.customIcon !== 'default' && FolderIconPresets[node.data.customIcon.toUpperCase()]) {
         const preset = FolderIconPresets[node.data.customIcon.toUpperCase()];
-        icon = <FolderIconRenderer preset={preset} pixelSize={folderIconSize} />;
+        const cacheKey = `folder-custom-${node.data.customIcon}-${folderIconSize}`;
+        icon = getCachedIcon(cacheKey, () => <FolderIconRenderer preset={preset} pixelSize={folderIconSize} />);
       } else if (node.folderIcon && node.folderIcon !== 'general' && FolderIconPresets[node.folderIcon.toUpperCase()]) {
         const preset = FolderIconPresets[node.folderIcon.toUpperCase()];
-        icon = <FolderIconRenderer preset={preset} pixelSize={folderIconSize} />;
+        const cacheKey = `folder-custom-${node.folderIcon}-${folderIconSize}`;
+        icon = getCachedIcon(cacheKey, () => <FolderIconRenderer preset={preset} pixelSize={folderIconSize} />);
       } else {
         const hasCustomColor = node.color && !isDefaultThemeColor(node.color);
         const folderColor = hasCustomColor ? node.color : getThemeDefaultColor(themeKey);
-        const baseIcon = options.expanded ? themeIcons.folderOpen : themeIcons.folder;
-
-        if (baseIcon) {
-          const normalizedIcon = getNormalizedIcon(baseIcon, folderIconSize, themeKey);
-          icon = modifySVGColors(normalizedIcon, folderColor, themeKey, 0);
-        } else {
-          icon = <span 
-            className={options.expanded ? "pi pi-folder-open" : "pi pi-folder"} 
-            style={{ color: folderColor, fontSize: `${folderIconSize}px` }} 
-          />;
-        }
+        const cacheKey = `folder-default-${themeKey}-${folderColor}-${folderIconSize}-${options.expanded ? 'open' : 'closed'}`;
+        icon = getCachedIcon(cacheKey, () => {
+          const baseIcon = options.expanded ? themeIcons.folderOpen : themeIcons.folder;
+          if (baseIcon) {
+            const normalizedIcon = getNormalizedIcon(baseIcon, folderIconSize, themeKey);
+            return modifySVGColors(normalizedIcon, folderColor, themeKey, 0);
+          } else {
+            return <span 
+              className={options.expanded ? "pi pi-folder-open" : "pi pi-folder"} 
+              style={{ color: folderColor, fontSize: `${folderIconSize}px` }} 
+            />;
+          }
+        });
       }
     } else {
       icon = themeIcons.file;
