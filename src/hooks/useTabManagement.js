@@ -641,6 +641,14 @@ export const useTabManagement = (toast, {
       // Cerrar pestañas de carpetas de contraseñas (almacenadas en sshTabs)
       const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
       setSshTabs(newSshTabs);
+    } else if (closedTab.type === 'document') {
+      // Cerrar pestañas de notas/documentos (almacenadas en sshTabs)
+      const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
+      setSshTabs(newSshTabs);
+    } else if (closedTab.type === 'network-tool') {
+      // Cerrar pestañas de herramientas de red (almacenadas en sshTabs)
+      const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
+      setSshTabs(newSshTabs);
     } else if (isAuditTab) {
       // Cerrar pestañas de auditoría y reproductor de grabaciones (almacenadas en sshTabs)
       const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
