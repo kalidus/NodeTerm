@@ -326,9 +326,6 @@ const Sidebar = React.memo(({
   const sshSyncHandleRef = useRef(null); // idle callback id o timeout id
   const sidebarResizeRafRef = useRef(null);
   const sidebarResizeBucketRef = useRef(null); // 'wide' | 'narrow' | 'tiny'
-  const hasEverExpandedRef = useRef(!sidebarCollapsed);
-  const [disableFirstExpandTransition, setDisableFirstExpandTransition] = useState(false);
-  const firstExpandTimeoutRef = useRef(null);
   const expandedContentReady = true;
   const expandedContentRef = useRef(null);
   const treeContainerRef = useRef(null);
@@ -385,30 +382,9 @@ const Sidebar = React.memo(({
     };
   }, [sidebarCollapsed, isLoading, nodes]);
 
-  useEffect(() => {
-    if (!sidebarCollapsed && !hasEverExpandedRef.current) {
-      hasEverExpandedRef.current = true;
-      setDisableFirstExpandTransition(true);
-      if (firstExpandTimeoutRef.current) clearTimeout(firstExpandTimeoutRef.current);
-      firstExpandTimeoutRef.current = setTimeout(() => {
-        setDisableFirstExpandTransition(false);
-        firstExpandTimeoutRef.current = null;
-      }, 50);
-    }
-  }, [sidebarCollapsed]);
-
   const toggleSidebar = useCallback(() => {
     setSidebarCollapsed(prev => !prev);
   }, [setSidebarCollapsed]);
-
-  useEffect(() => {
-    return () => {
-      if (firstExpandTimeoutRef.current) {
-        clearTimeout(firstExpandTimeoutRef.current);
-        firstExpandTimeoutRef.current = null;
-      }
-    };
-  }, []);
 
   // 🔗 Sincronizar conexiones SSH a window para que AIChatPanel las acceda
   useEffect(() => {
@@ -3402,7 +3378,7 @@ const Sidebar = React.memo(({
   return (
     <div
       ref={sidebarRef}
-      className={`sidebar-container sidebar-root${disableFirstExpandTransition ? ' sidebar-no-transition' : ''}`}
+      className="sidebar-container sidebar-root"
       style={{
         padding: 0,
         height: '100%',
@@ -3441,7 +3417,7 @@ const Sidebar = React.memo(({
       {/* Panel - Collapsible content area */}
       <div
         ref={expandedContentRef}
-        className={`sidebar-panel${(sidebarCollapsed && !isWarmingUp) ? ' sidebar-panel-collapsed' : ''}${disableFirstExpandTransition ? ' sidebar-no-transition' : ''}`}
+        className={`sidebar-panel${(sidebarCollapsed && !isWarmingUp) ? ' sidebar-panel-collapsed' : ''}`}
         style={isWarmingUp ? {
           position: 'absolute',
           left: '-9999px',
