@@ -162,6 +162,20 @@ function getCodexCliHandlers() {
 }
 
 /**
+ * Handlers IPC de clientes IA (AnythingLLM, Open WebUI, LibreChat, etc.).
+ * Solo registra canales; los servicios Docker se cargan con lazy proxy.
+ */
+function registerAIClientHandlers(dependencies) {
+  if (!dependencies) return;
+  getAnythingLLMHandlers().registerAnythingLLMHandlers(dependencies);
+  getOpenWebUIHandlers().registerOpenWebUIHandlers(dependencies);
+  getLibreChatHandlers().registerLibreChatHandlers(dependencies);
+  getAgentZeroHandlers().registerAgentZeroHandlers(dependencies);
+  getOpenClawHandlers().registerOpenClawHandlers(dependencies);
+  getOpenNotebookHandlers().registerOpenNotebookHandlers(dependencies);
+}
+
+/**
  * Registra handlers CRÍTICOS inmediatamente (necesarios para mostrar la UI)
  */
 function registerCriticalHandlers(dependencies) {
@@ -196,6 +210,9 @@ function registerCriticalHandlers(dependencies) {
   // El REGISTRO es ligero (solo IPC), lo PESADO es la EJECUCIÓN (que es on-demand)
   // Esto evita errores de "No handler registered" cuando el frontend los llama
   getSystemHandlers().registerSystemMonitoringHandlers();
+
+  // Clientes IA (Docker): el renderer invoca get-status al montar, antes de ready-to-show
+  registerAIClientHandlers(dependencies);
 
   // 🚀 CRÍTICO: System stats handler debe estar disponible INMEDIATAMENTE
   // porque TODOS los componentes del frontend lo llaman al cargar
@@ -254,14 +271,7 @@ function registerSecondaryHandlers(dependencies) {
   // Handlers de herramientas de red
   getNetworkToolsHandlers().registerNetworkToolsHandlers();
 
-  // Servicios de IA (diferidos: no necesarios para el primer frame de UI)
-  getAnythingLLMHandlers().registerAnythingLLMHandlers(dependencies);
-  getOpenWebUIHandlers().registerOpenWebUIHandlers(dependencies);
-  getLibreChatHandlers().registerLibreChatHandlers(dependencies);
-  getAgentZeroHandlers().registerAgentZeroHandlers(dependencies);
-  getOpenClawHandlers().registerOpenClawHandlers(dependencies);
-  getOpenNotebookHandlers().registerOpenNotebookHandlers(dependencies);
-
+  // NOTA: Handlers de clientes IA en registerAIClientHandlers() (fase crítica)
   // NOTA: Theme handlers ahora se registran en registerCriticalHandlers()
 
   // 🚀 OPTIMIZACIÓN: Handlers de túneles SSH se registran DESPUÉS de ready-to-show
@@ -306,6 +316,7 @@ function registerAllHandlers(dependencies) {
 module.exports = {
   registerAllHandlers,
   registerCriticalHandlers,
+  registerAIClientHandlers,
   registerSecondaryHandlers,
   registerSSHTunnelHandlers, // 🚀 Nueva función para registrar handlers de túnel SSH después de ready-to-show
   // Getters para acceso individual a handlers (lazy loading)
