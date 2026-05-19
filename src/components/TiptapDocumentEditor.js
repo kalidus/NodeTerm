@@ -114,7 +114,7 @@ const EditorToolbar = ({
   onToggleZen,
   onPrint
 }) => {
-  if (!editor) return null;
+  if (!editor || editor.isDestroyed || !editor.schema) return null;
 
   const addImage = () => {
     const url = window.prompt('URL de la imagen:');
@@ -478,7 +478,7 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
 
   // Calculate Metrics in real time
   const updateMetrics = (editorInstance) => {
-    if (!editorInstance) return;
+    if (!editorInstance || editorInstance.isDestroyed || !editorInstance.schema) return;
     const text = editorInstance.getText() || '';
     const cleanText = text.trim();
     const words = cleanText ? cleanText.split(/\s+/).filter(w => w.length > 0).length : 0;
@@ -500,14 +500,14 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
   };
 
   useEffect(() => {
-    if (editor) {
+    if (editor && !editor.isDestroyed && editor.schema) {
       updateMetrics(editor);
     }
   }, [editor]);
 
   const saveContent = useCallback((editorInstance) => {
     const ed = editorInstance || editor;
-    if (!ed) return;
+    if (!ed || ed.isDestroyed || !ed.schema) return;
 
     const html = ed.getHTML();
     if (html === lastSavedContentRef.current) {
@@ -539,7 +539,7 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
   useEffect(() => {
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      if (editor && !editor.isDestroyed) {
+      if (editor && !editor.isDestroyed && editor.schema) {
         const html = editor.getHTML();
         if (html !== lastSavedContentRef.current) {
           const md = turndownService.turndown(html);
@@ -555,7 +555,7 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
   }, [editor, documentKey]);
 
   const switchToMarkdown = useCallback(() => {
-    if (editor) {
+    if (editor && !editor.isDestroyed && editor.schema) {
       const html = editor.getHTML();
       const md = turndownService.turndown(html);
       setMarkdownSource(md);
@@ -564,7 +564,7 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
   }, [editor]);
 
   const switchToWysiwyg = useCallback(() => {
-    if (editor && markdownSource) {
+    if (editor && !editor.isDestroyed && editor.schema && markdownSource) {
       const html = marked(markdownSource);
       editor.commands.setContent(html);
       updateMetrics(editor);
@@ -608,7 +608,7 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
 
   // Note templates insertion handler
   const handleInsertTemplate = (templateHtml) => {
-    if (!editor) return;
+    if (!editor || editor.isDestroyed || !editor.schema) return;
     
     const confirmText = '¿Estás seguro de insertar la plantilla? Esto reemplazará el contenido actual de tu nota.';
     if (editor.getText().trim().length > 0 && !window.confirm(confirmText)) {
@@ -635,7 +635,7 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
 
   // TTS - Lector por voz
   const handleToggleSpeech = () => {
-    if (!editor) return;
+    if (!editor || editor.isDestroyed || !editor.schema) return;
 
     if (isPlayingSpeech) {
       synthRef.current.cancel();
@@ -699,7 +699,7 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
 
   // AI Assistant processing with beautiful local parsers
   const handleAiAction = (actionType) => {
-    if (!editor) return;
+    if (!editor || editor.isDestroyed || !editor.schema) return;
     
     setAiLoading(true);
     setAiActionType(actionType);
@@ -833,7 +833,7 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
 
   // Insert AI Result directly into the editor
   const handleInsertAiResult = () => {
-    if (!editor || !aiResult) return;
+    if (!editor || editor.isDestroyed || !editor.schema || !aiResult) return;
     
     // Convert markdown response to HTML using marked
     const formattedHtml = marked(aiResult);
@@ -854,7 +854,7 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
 
   const handleExportMarkdown = () => {
     let md = markdownSource;
-    if (viewMode === 'wysiwyg' && editor) {
+    if (viewMode === 'wysiwyg' && editor && !editor.isDestroyed && editor.schema) {
       md = turndownService.turndown(editor.getHTML());
     }
     const blob = new Blob([md], { type: 'text/markdown' });
@@ -867,7 +867,7 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
   };
 
   const handleExportHtml = () => {
-    if (!editor) return;
+    if (!editor || editor.isDestroyed || !editor.schema) return;
     const html = editor.getHTML();
     const styledHtml = `
 <!DOCTYPE html>
@@ -918,7 +918,7 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
       reader.onload = (ev) => {
         const text = ev.target.result;
         const html = marked(text);
-        if (editor) {
+        if (editor && !editor.isDestroyed && editor.schema) {
           editor.commands.setContent(html);
           updateMetrics(editor);
         }
@@ -933,7 +933,7 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
   // Copy Options
   const handleCopyMarkdown = () => {
     let md = markdownSource;
-    if (viewMode === 'wysiwyg' && editor) {
+    if (viewMode === 'wysiwyg' && editor && !editor.isDestroyed && editor.schema) {
       md = turndownService.turndown(editor.getHTML());
     }
     navigator.clipboard.writeText(md);
@@ -943,7 +943,7 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
   };
 
   const handleCopyHtml = () => {
-    if (!editor) return;
+    if (!editor || editor.isDestroyed || !editor.schema) return;
     navigator.clipboard.writeText(editor.getHTML());
     if (window.toast?.current?.show) {
       window.toast.current.show({ severity: 'success', summary: 'Copiado', detail: 'Código HTML copiado', life: 1500 });
