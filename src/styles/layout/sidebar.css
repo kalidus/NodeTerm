@@ -200,9 +200,14 @@
   color: #495057;
   background: #fff;
   border: none;
-  padding: 0.2rem 0;
+  padding: 0.1rem 0;
   width: 100%;
   box-sizing: border-box;
+  /* Densidad tipo VS Code / Cursor */
+  --sidebar-row-pad-y: 0px;
+  --sidebar-row-pad-x: 0.4rem;
+  --sidebar-row-min-h: calc(var(--sidebar-icon-size, 20px) + 2px);
+  --tree-indent: 12px;
 }
 .sidebar-tree .p-treenode {
   margin: 0 !important;
@@ -214,13 +219,13 @@
 }
 .sidebar-tree .p-treenode-content {
   position: relative;
-  padding: 0.08rem 0.5rem !important;
-  min-height: 20px !important;
-  line-height: 20px !important;
+  padding: var(--sidebar-row-pad-y) var(--sidebar-row-pad-x) !important;
+  min-height: var(--sidebar-row-min-h) !important;
+  line-height: normal !important;
   border-radius: 0;
   display: flex !important;
   align-items: center !important;
-  gap: 0.12rem;
+  gap: 2px;
   width: 100%;
   box-sizing: border-box;
   border: none !important;
@@ -312,9 +317,11 @@
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
-  line-height: 20px !important;
-  height: 20px !important;
-  display: block !important;
+  line-height: 1.15 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  display: flex !important;
+  align-items: center !important;
   margin: 0 !important;
   padding: 0 !important;
 }
@@ -330,10 +337,12 @@
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
   font-size: inherit !important;
-  line-height: 20px !important;
-  height: 20px !important;
+  line-height: 1.25 !important;
+  height: auto !important;
+  min-height: 0 !important;
   padding: 0 !important;
-  display: block !important;
+  display: flex !important;
+  align-items: center !important;
   margin: 0 !important;
 }
 .node-action-button .p-button-icon {
@@ -395,23 +404,28 @@
   color: #ffc107; /* Amarillo */
 }
 
-/* Ajuste para aumentar el espacio entre grupos en el árbol lateral */
+/* Sin hueco extra entre filas (como el explorador de Cursor) */
 .sidebar-tree .p-treenode {
-  margin-bottom: 3px;
-  /* Aumenta el espacio entre nodos */
+  margin-bottom: 0 !important;
 }
 
-/* Aumentar espaciado entre conexiones (SSH y RDP) */
-/* Selector para nodos que contienen conexiones SSH o RDP */
-.sidebar-tree .p-treenode[data-node-type="connection"] {
-  margin-bottom: 3px; /* Espaciado aumentado entre conexiones */
+/* Contenedor del template: alineación uniforme */
+.sidebar-tree .p-treenode-content > div[data-node-type] {
+  width: 100%;
+  min-height: 0;
+  align-items: center !important;
 }
 
-/* Reducir también el padding interno de las conexiones para mayor compactación */
-.sidebar-tree .p-treenode[data-node-type="connection"] .p-treenode-content {
-  padding: 0.02rem 0.25rem !important; /* Padding más pequeño para conexiones */
-  min-height: 16px !important; /* Altura mínima reducida */
-  line-height: 16px !important; /* Line height reducido */
+.sidebar-tree .p-treenode-content > div[data-node-type="folder"] > span:first-child {
+  width: var(--sidebar-folder-icon-size, var(--sidebar-icon-size, 20px)) !important;
+  min-width: var(--sidebar-folder-icon-size, var(--sidebar-icon-size, 20px)) !important;
+  height: var(--sidebar-folder-icon-size, var(--sidebar-icon-size, 20px)) !important;
+}
+
+.sidebar-tree .p-treenode-content > div[data-node-type="connection"] > span:first-child {
+  width: var(--sidebar-connection-icon-size, var(--sidebar-icon-size, 20px)) !important;
+  min-width: var(--sidebar-connection-icon-size, var(--sidebar-icon-size, 20px)) !important;
+  height: var(--sidebar-connection-icon-size, var(--sidebar-icon-size, 20px)) !important;
 }
 
 /* === TAG SSH PARA CONEXIONES - Solo para tema Nodeterm Basic === */
@@ -703,7 +717,7 @@
 }
 
 :root {
-  --tree-indent: 20px; /* ancho flecha+icono ajustado */
+  --tree-indent: 12px;
 }
 
 /* Indentación visual en el contenido de la fila, no en el ul (ver tree-themes.css full-bleed) */

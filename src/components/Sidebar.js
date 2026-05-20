@@ -2719,7 +2719,7 @@ const Sidebar = React.memo(({
           fontFamily: explorerFont,
           display: 'flex',
           alignItems: 'center',
-          gap: `${Math.max(4, Math.round((folderIconSize || 20) * 0.25))}px`
+          gap: `${Math.max(3, Math.round((folderIconSize || 20) * 0.12))}px`
         }}
         title={title}
         data-connection-type={isSSH ? 'ssh' : (isRDP ? 'rdp' : (isVNC ? 'vnc' : (isSSHTunnel ? 'ssh-tunnel' : null)))}
@@ -3173,8 +3173,12 @@ const Sidebar = React.memo(({
                 fontSize: `${explorerFontSize}px`,
                 color: explorerFontColor || undefined,
                 '--icon-size': `${iconSize}px`,
-                '--sidebar-icon-size': `${folderIconSize || 20}px`,
-                '--tree-node-padding': '2px 0',
+                '--sidebar-folder-icon-size': `${folderIconSize || 20}px`,
+                '--sidebar-connection-icon-size': `${connectionIconSize || 20}px`,
+                '--sidebar-icon-size': `${Math.max(folderIconSize || 20, connectionIconSize || 20)}px`,
+                '--sidebar-row-min-h': `${Math.max(folderIconSize || 20, connectionIconSize || 20) + 2}px`,
+                '--sidebar-row-pad-y': '0px',
+                '--tree-node-padding': '0',
                 ...(explorerFontColor ? {
                   '--ui-sidebar-text': explorerFontColor,
                   '--tree-text-color': explorerFontColor

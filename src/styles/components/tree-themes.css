@@ -11,9 +11,9 @@
   --tree-line-color: var(--ui-sidebar-border, rgba(255, 255, 255, 0.15));
   --tree-line-opacity: 0.5;
   --tree-line-width: 1px;
-  --tree-indent: 20px;
+  --tree-indent: 12px;
   --tree-node-spacing: 0px;
-  --tree-border-radius: 4px;
+  --tree-border-radius: 0;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -2193,38 +2193,42 @@
    property --sidebar-icon-size inyectada desde Sidebar.js
    ═══════════════════════════════════════════════════════════════════════════════ */
 
-.sidebar-tree.sidebar-tree {
-  --_row-h: var(--sidebar-icon-size, 20px);
+.sidebar-tree {
+  --_row-h: var(--sidebar-row-min-h, calc(var(--sidebar-icon-size, 20px) + 2px));
 }
 
-.sidebar-tree.sidebar-tree .p-treenode {
-  margin-bottom: 0px !important;
+.sidebar-tree .p-treenode {
+  margin-bottom: 0 !important;
 }
 
-/* Fila del árbol: altura mínima y alineación vertical dinámicas */
-.sidebar-tree.sidebar-tree .p-treenode-content {
+/* Fila compacta unificada (carpetas y conexiones) */
+.sidebar-tree .p-treenode-content {
   min-height: var(--_row-h) !important;
-  line-height: var(--_row-h) !important;
+  max-height: var(--_row-h) !important;
+  line-height: 1.2 !important;
   display: flex !important;
   align-items: center !important;
   box-sizing: border-box;
-  padding-top: 0px !important;
-  padding-bottom: 0px !important;
+  padding-top: var(--sidebar-row-pad-y, 0px) !important;
+  padding-bottom: var(--sidebar-row-pad-y, 0px) !important;
 }
 
-/* Toggler (flecha ▶): centrado vertical proporcional al tamaño */
-.sidebar-tree.sidebar-tree .p-tree-toggler {
-  width: calc(var(--_row-h) * 0.8) !important;
-  height: var(--_row-h) !important;
-  min-width: calc(var(--_row-h) * 0.8) !important;
+/* Toggler: altura del icono, no de toda la fila (evita filas de carpeta más altas) */
+.sidebar-tree .p-tree-toggler {
+  width: calc(var(--sidebar-icon-size, 20px) * 0.75) !important;
+  height: var(--sidebar-icon-size, 20px) !important;
+  min-width: calc(var(--sidebar-icon-size, 20px) * 0.75) !important;
+  max-height: var(--sidebar-icon-size, 20px) !important;
+  margin: 0 !important;
+  padding: 0 2px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
 }
 
 /* Icono del toggler: escala proporcionalmente */
-.sidebar-tree.sidebar-tree .p-tree-toggler-icon {
-  font-size: calc(max(8px, var(--_row-h) * 0.5)) !important;
+.sidebar-tree .p-tree-toggler-icon {
+  font-size: calc(max(8px, var(--sidebar-icon-size, 20px) * 0.5)) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
