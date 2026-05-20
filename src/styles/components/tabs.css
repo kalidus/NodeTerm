@@ -4,7 +4,7 @@
 }
 
 :root {
-  --tab-bar-height: 38px;
+  --tab-bar-height: 36px;
 }
 :root[data-tab-layout="compact"] {
   --tab-bar-height: 26px;

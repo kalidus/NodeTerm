@@ -516,8 +516,8 @@
 /* --- Marco principal: nav container como única barra (dots + tabs + botones en una fila) --- */
 
 .terminal-frame.main-content-frame .p-tabview-nav-container {
-    height: 36px !important;
-    min-height: 36px !important;
+    height: var(--tab-bar-height, 36px) !important;
+    min-height: var(--tab-bar-height, 36px) !important;
     flex-shrink: 0;
     background: var(--ui-tab-bar-bg, var(--ui-sidebar-bg, #1a1b26)) !important;
     border-bottom: 1px solid var(--ui-tabgroup-border, rgba(255, 255, 255, 0.06)) !important;
@@ -551,8 +551,8 @@
 }
 
 .terminal-frame.main-content-frame .main-tab-view .p-tabview-nav {
-    height: 36px !important;
-    min-height: 36px !important;
+    height: var(--tab-bar-height, 36px) !important;
+    min-height: var(--tab-bar-height, 36px) !important;
     background: var(--ui-tab-bar-bg, var(--ui-sidebar-bg, #1a1b26)) !important;
     border: none !important;
     padding: 0 6px 0 10px !important;
@@ -564,8 +564,6 @@
 /* Ajustes específicos cuando el layout de pestañas es VSCode:
    Las pestañas deben ir totalmente pegadas a la parte superior e inferior, sin línea extra. */
 :root[data-tab-layout="vscode"] .terminal-frame.main-content-frame .p-tabview-nav-container {
-    height: 28px !important;
-    min-height: 28px !important;
     padding-top: 0 !important;
     border-bottom: 0 !important; /* Elimina la línea separadora para VSCode */
 }
@@ -579,8 +577,6 @@
 }
 
 :root[data-tab-layout="vscode"] .terminal-frame.main-content-frame .main-tab-view .p-tabview-nav {
-    height: 28px !important;
-    min-height: 28px !important;
     align-items: stretch !important;
     padding: 0 6px 0 0 !important; /* Home lo más a la izquierda posible */
 }
