@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useImperativeHandle, forwardRef, useState, useMemo } from 'react';
 import { useStatusBarSessionHistory } from '../hooks/useStatusBarSessionHistory';
-import { loadXtermModules } from '../utils/xtermLoader';
+import { loadXtermModules, getCachedXtermModules } from '../utils/xtermLoader';
 import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { themes } from '../themes';
@@ -97,15 +97,21 @@ const TerminalComponent = forwardRef(({
     const terminalRef = useRef(null);
     const term = useRef(null);
     const fitAddon = useRef(null);
-    const [xtermLib, setXtermLib] = useState(null);
+    const activeRef = useRef(active);
+    const [xtermLib, setXtermLib] = useState(() => getCachedXtermModules());
 
     useEffect(() => {
+        activeRef.current = active;
+    }, [active]);
+
+    useEffect(() => {
+      if (xtermLib) return undefined;
       let cancelled = false;
       loadXtermModules().then((lib) => {
         if (!cancelled) setXtermLib(lib);
       }).catch((err) => console.error('[Terminal] Error cargando xterm:', err));
       return () => { cancelled = true; };
-    }, []);
+    }, [xtermLib]);
 
     // Build CSS variable overrides for StatusBar
     const getScopedStatusBarCssVars = () => {
@@ -275,6 +281,12 @@ const TerminalComponent = forwardRef(({
 
         term.current.open(terminalRef.current);
         fitAddon.current.fit();
+
+        if (activeRef.current) {
+            try {
+                term.current.focus();
+            } catch (_) { /* noop */ }
+        }
 
         // Restaurar el buffer preservado si existe (cuando el componente se remonta)
         if (window.__terminalBuffers && window.__terminalBuffers[tabId]) {
@@ -635,13 +647,28 @@ const TerminalComponent = forwardRef(({
         }
     }, [effectiveTheme, isIntegrated]);
 
-    // Focus autom??tico cuando la pesta??a se vuelve activa
+    // Focus automático cuando la pestaña está activa y el terminal (o xterm) queda listo
     useEffect(() => {
-        if (active && term.current) {
-            term.current.focus();
-            setForceUpdateCounter(c => c + 1); // <-- Forzar re-render StatusBar
-        }
-    }, [active]);
+        if (!active || !xtermLib) return;
+
+        const ensureFocus = () => {
+            if (!term.current) return;
+            try {
+                term.current.focus();
+                setForceUpdateCounter((c) => c + 1);
+            } catch (_) { /* noop */ }
+        };
+
+        ensureFocus();
+        const t1 = setTimeout(ensureFocus, 50);
+        const t2 = setTimeout(ensureFocus, 150);
+        const t3 = setTimeout(ensureFocus, 300);
+        return () => {
+            clearTimeout(t1);
+            clearTimeout(t2);
+            clearTimeout(t3);
+        };
+    }, [active, xtermLib]);
 
     // Forzar fit tras el primer render (por si el layout cambia despu??s del render)
     useEffect(() => {
@@ -655,9 +682,14 @@ const TerminalComponent = forwardRef(({
 
     if (!xtermLib) {
         return (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', opacity: 0.6 }}>
-                <i className="pi pi-spin pi-spinner" style={{ marginRight: 8 }} />
-            </div>
+            <div
+                style={{
+                    height: '100%',
+                    width: '100%',
+                    background: isIntegrated ? 'transparent' : (theme?.background || '#1e1e1e'),
+                }}
+                aria-hidden="true"
+            />
         );
     }
 

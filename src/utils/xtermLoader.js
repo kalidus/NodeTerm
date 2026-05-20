@@ -3,6 +3,11 @@
  */
 let cached = null;
 
+/** Módulos xterm ya cargados (p. ej. tras precalentado). */
+export function getCachedXtermModules() {
+  return cached;
+}
+
 export function loadXtermModules() {
   if (cached) return Promise.resolve(cached);
   return Promise.all([

@@ -16,8 +16,7 @@ import {
     LazyGeminiCliTerminal,
     LazyCodexCliTerminal,
     LazyAntigravityCliTerminal,
-    LazyGuacamoleTerminal,
-    TabChunkFallback
+    LazyGuacamoleTerminal
 } from './tabLoaders';
 import { themes } from '../themes';
 import { uiThemes } from '../themes/ui-themes';
@@ -1968,7 +1967,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                             left: 0
                         }}
                     >
-                        <Suspense fallback={<TabChunkFallback />}>
+                        <Suspense fallback={null}>
                         {tab.type === 'powershell' && (
                             <LazyPowerShellTerminal
                                 key={`${tab.id}-terminal-powershell`}

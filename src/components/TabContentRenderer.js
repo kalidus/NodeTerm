@@ -28,8 +28,7 @@ import {
   LazyOpenNotebookTab,
   LazySSHTunnelTab,
   LazyNetworkToolTab,
-  LazyTiptapDocumentEditor,
-  TabChunkFallback
+  LazyTiptapDocumentEditor
 } from './tabLoaders';
 import { themes } from '../themes';
 import { TAB_TYPES } from '../utils/constants';
@@ -1795,7 +1794,7 @@ const TabContentRendererInner = React.memo(({
 });
 
 const TabContentRenderer = (props) => (
-  <Suspense fallback={<TabChunkFallback />}>
+  <Suspense fallback={null}>
     <TabContentRendererInner {...props} />
   </Suspense>
 );

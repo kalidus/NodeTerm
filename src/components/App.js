@@ -101,6 +101,8 @@ import {
   TAB_TYPES,
   CONNECTION_STATUS
 } from '../utils/constants';
+import { preloadHeavyTabChunks } from './tabLoaders';
+import { loadXtermModules } from '../utils/xtermLoader';
 
 // Caché en memoria para evitar desencriptar / parsear la base de datos de conexiones repetidamente
 let lastDecryptedDataStr = null;
@@ -372,6 +374,17 @@ const App = () => {
 
     initializeApp();
   }, [secureStorage]);
+
+  // Refuerzo de precalentado en cuanto la app está lista (el módulo tabLoaders ya arranca en microtask)
+  useEffect(() => {
+    if (!isAppReady) return;
+    preloadHeavyTabChunks().catch((err) => {
+      console.warn('[App] Precalentado de pestañas:', err);
+    });
+    loadXtermModules().catch((err) => {
+      console.warn('[App] Precalentado xterm:', err);
+    });
+  }, [isAppReady]);
 
   // Inicializar preferencias de Guacamole desde localStorage sincronizado
   useEffect(() => {
