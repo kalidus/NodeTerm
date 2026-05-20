@@ -214,7 +214,13 @@ body.layout-unified .terminal-frame {
 }
 
 body.layout-unified .terminal-frame-header {
+  background: var(--ui-chrome-header-bg, var(--ui-sidebar-bg, #0e1116)) !important;
   border-bottom: 1px solid var(--ui-sidebar-border, rgba(255, 255, 255, 0.05)) !important;
+}
+
+body.layout-unified .terminal-frame-title {
+  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.85)) !important;
+  opacity: 0.9 !important;
 }
 
 /* Style TitleBar to be flush at the top and integrated */
@@ -225,7 +231,7 @@ body.layout-unified .title-bar {
   border-right: none !important;
   border-top: none !important;
   border-bottom: 1px solid var(--ui-sidebar-border, rgba(255, 255, 255, 0.05)) !important;
-  background: var(--ui-sidebar-bg, #0e1116) !important;
+  background: var(--ui-chrome-header-bg, var(--ui-sidebar-bg, #0e1116)) !important;
   box-shadow: none !important;
 }
 
@@ -266,7 +272,7 @@ body.layout-unified .sidebar-container {
 /* Main content frame tab bar - flush top */
 body.layout-unified .terminal-frame.main-content-frame .p-tabview-nav-container {
   border-bottom: 1px solid var(--ui-sidebar-border, rgba(255, 255, 255, 0.05)) !important;
-  background: var(--ui-sidebar-bg, #0e1116) !important;
+  background: var(--ui-chrome-header-bg, var(--ui-sidebar-bg, #0e1116)) !important;
 }
 
 /* Tab panels and terminal area border-less */

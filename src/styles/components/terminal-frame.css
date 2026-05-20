@@ -41,9 +41,9 @@
     padding: 8px 14px;
     min-height: 30px;
     max-height: 30px;
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--ui-chrome-header-bg, rgba(0, 0, 0, 0.12));
     user-select: none;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid var(--ui-sidebar-border, rgba(255, 255, 255, 0.05));
 }
 
 .terminal-frame-controls {

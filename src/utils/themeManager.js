@@ -225,6 +225,23 @@ class ThemeManager {
         --ui-tab-border: ${colors.tabBorder};
         --ui-tab-close-hover: ${colors.tabCloseHover};
         --ui-tab-bar-bg: var(--ui-sidebar-rail-bg);
+        --ui-chrome-header-bg: ${(() => {
+          const sb = colors.sidebarBackground;
+          const isSolidHex = (c) => c && typeof c === 'string' && c.startsWith('#');
+          if (isSolidHex(colors.tabGroupBackground) && colors.tabGroupBackground !== sb) {
+            return colors.tabGroupBackground;
+          }
+          if (isSolidHex(colors.tabHoverBackground) && colors.tabHoverBackground !== sb) {
+            return colors.tabHoverBackground;
+          }
+          if (isSolidHex(colors.tabBackground) && colors.tabBackground !== sb) {
+            return colors.tabBackground;
+          }
+          if (isSolidHex(sb)) {
+            return adjustColorBrightness(sb, 4);
+          }
+          return sb;
+        })()};
         
         /* Tab groups now use the same theme variables as the main tabs bar */
         --ui-tabgroup-bg: ${colors.tabBackground};

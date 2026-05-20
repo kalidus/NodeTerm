@@ -73,7 +73,7 @@ const LayoutThemeSelector = () => {
           overflow: 'hidden'
         }}>
           {/* Titlebar mockup */}
-          <div style={{ width: '100%', height: '18px', backgroundColor: 'var(--ui-sidebar-bg)', borderBottom: '1px solid var(--ui-sidebar-border, rgba(255,255,255,0.08))', display: 'flex', alignItems: 'center', padding: '0 8px' }}>
+          <div style={{ width: '100%', height: '18px', backgroundColor: 'var(--ui-chrome-header-bg, var(--ui-sidebar-bg))', borderBottom: '1px solid var(--ui-sidebar-border, rgba(255,255,255,0.08))', display: 'flex', alignItems: 'center', padding: '0 8px' }}>
             <div style={{ width: '28px', height: '4px', backgroundColor: 'var(--ui-sidebar-text, rgba(255,255,255,0.3))', borderRadius: '2px' }}></div>
           </div>
           {/* Main Area mockup */}
