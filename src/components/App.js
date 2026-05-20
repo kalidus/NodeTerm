@@ -37,7 +37,6 @@ import WallixRefreshDialog from './WallixRefreshDialog';
 import Sidebar from './Sidebar';
 import { themes } from '../themes';
 import { iconThemes } from '../themes/icon-themes';
-import { FUTURISTIC_UI_KEYS } from '../themes/ui-themes';
 
 
 // 🚀 OPTIMIZACIÓN: Lazy loading de componentes pesados
@@ -3438,21 +3437,6 @@ const App = () => {
             iconTheme={iconTheme}
             expandedKeys={expandedKeys}
           />
-        )}
-
-        {/* Línea separadora debajo de la titlebar - Solo en temas futuristas */}
-        {!titleBarCollapsed && !isMinimalMode && FUTURISTIC_UI_KEYS.includes(uiTheme) && (
-          <div style={{
-            height: '0.5px',
-            background: 'var(--ui-tabgroup-border, #444)',
-            opacity: 0.6,
-            width: '100%',
-            margin: 0,
-            padding: 0,
-            boxSizing: 'border-box',
-            border: 'none',
-            outline: 'none'
-          }} />
         )}
 
         <DialogsManager

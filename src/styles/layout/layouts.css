@@ -64,6 +64,11 @@ body.layout-cyberpunk *::-webkit-scrollbar-thumb:hover {
   box-shadow: 0 0 10px var(--ui-button-primary, #6366f1) !important;
 }
 
+/* Sin línea bajo la titlebar (todos los layouts/temas) */
+.title-bar {
+  border-bottom: none !important;
+}
+
 /* --- Global application of layout variables --- */
 
 /* Font Family Overrides for Cyberpunk */
@@ -107,6 +112,7 @@ body.layout-cyberpunk .title-bar {
   border-left: none !important;
   border-right: none !important;
   border-top: none !important;
+  border-bottom: none !important;
   letter-spacing: 1px;
 }
 
@@ -230,7 +236,7 @@ body.layout-unified .title-bar {
   border-left: none !important;
   border-right: none !important;
   border-top: none !important;
-  border-bottom: 1px solid var(--ui-sidebar-border, rgba(255, 255, 255, 0.05)) !important;
+  border-bottom: none !important;
   background: var(--ui-chrome-header-bg, var(--ui-sidebar-bg, #0e1116)) !important;
   box-shadow: none !important;
 }
@@ -246,11 +252,6 @@ body.layout-unified .title-bar .title-cursor-blink {
 
 body.layout-unified .title-bar svg path {
   stroke: var(--ui-sidebar-text, rgba(255, 255, 255, 0.85)) !important;
-}
-
-/* Hide futuristic layout border line under TitleBar in unified mode */
-body.layout-unified .app-container > div[style*="height: 0.5px"] {
-  display: none !important;
 }
 
 /* Splitter pane divider: completely seamless in unified layout */
