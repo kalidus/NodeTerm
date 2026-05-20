@@ -516,8 +516,8 @@
 /* --- Marco principal: nav container como única barra (dots + tabs + botones en una fila) --- */
 
 .terminal-frame.main-content-frame .p-tabview-nav-container {
-    height: var(--tab-bar-height, 36px) !important;
-    min-height: var(--tab-bar-height, 36px) !important;
+    height: var(--tab-bar-height, 34px) !important;
+    min-height: var(--tab-bar-height, 34px) !important;
     flex-shrink: 0;
     background: var(--ui-tab-bar-bg, var(--ui-sidebar-bg, #1a1b26)) !important;
     border-bottom: 1px solid var(--ui-tabgroup-border, rgba(255, 255, 255, 0.06)) !important;
@@ -551,8 +551,8 @@
 }
 
 .terminal-frame.main-content-frame .main-tab-view .p-tabview-nav {
-    height: var(--tab-bar-height, 36px) !important;
-    min-height: var(--tab-bar-height, 36px) !important;
+    height: var(--tab-bar-height, 34px) !important;
+    min-height: var(--tab-bar-height, 34px) !important;
     background: var(--ui-tab-bar-bg, var(--ui-sidebar-bg, #1a1b26)) !important;
     border: none !important;
     padding: 0 6px 0 10px !important;
