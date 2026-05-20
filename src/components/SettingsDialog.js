@@ -26,6 +26,7 @@ import { iconThemes } from '../themes/icon-themes';
 import { explorerFonts } from '../themes';
 import { uiThemes } from '../themes/ui-themes';
 import SecureStorage from '../services/SecureStorage';
+import localStorageSyncService from '../services/LocalStorageSyncService';
 import FontPreview, { MonospaceFontPreview } from './FontPreview';
 import {
   FaFolder, FaFile, FaFilePdf, FaFileWord, FaFileExcel
@@ -4053,6 +4054,10 @@ const SettingsDialog = ({
                                       console.log('[SettingsDialog] Restaurando color por defecto');
                                       try {
                                         localStorage.removeItem('sidebarFontColorSource');
+                                        localStorage.removeItem('sidebarFontColor');
+                                        // Force immediate sync so the deletion is written to
+                                        // app-data.json before a possible app restart
+                                        localStorageSyncService.forceSync();
                                       } catch { }
                                       setSidebarFontColor('');
                                     }}

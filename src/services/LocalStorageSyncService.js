@@ -220,6 +220,17 @@ class LocalStorageSyncService {
     }
 
     /**
+     * Forces an immediate sync to app-data.json, bypassing the change-detection
+     * snapshot. Use this when you know keys were deleted from localStorage and want
+     * to guarantee those deletions are written before a possible app restart.
+     */
+    async forceSync() {
+        // Reset the snapshot so the change-detection check does not skip the write
+        this._lastSyncDataStr = null;
+        return this.syncToFile();
+    }
+
+    /**
      * Exporta localStorage a archivo compartido
      * @param {Object} explicitOverrides - Datos explícitos para sincronizar (tienen prioridad sobre localStorage)
      */

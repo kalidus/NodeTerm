@@ -7,6 +7,7 @@ import {
   PRESET_SETTINGS_KEYS,
   builtinPresets
 } from '../themes/presets/index';
+import localStorageSyncService from '../services/LocalStorageSyncService';
 
 /**
  * PresetManager handles saving, loading, and applying appearance presets.
@@ -245,6 +246,14 @@ class PresetManager {
     }
 
     this._notifyChange();
+
+    // 7. Force an immediate sync to app-data.json so that any deleted keys
+    // (e.g. sidebarFontColor cleared when switching presets) are persisted
+    // before the user can restart the app. The debounced sync (2s) is too slow.
+    // forceSync() resets the change-detection snapshot to guarantee the write.
+    try {
+      localStorageSyncService.forceSync();
+    } catch { }
   }
 
   // ─── Listeners ───────────────────────────────────────────────────────────────
