@@ -65,7 +65,7 @@ class ThemeManager {
         if (sharedConfig && sharedConfig.themeName) {
           // console.log('[ThemeManager] Cargando tema compartido:', sharedConfig.themeName);
           // Aplicar sin guardar para evitar bucle infinito si fuera bidireccional
-          this._applyThemeInternal(sharedConfig.themeName, false);
+          this._applyThemeInternal(sharedConfig.themeName, false, { preserveSidebarFontColor: true });
           return;
         }
       }
@@ -76,7 +76,7 @@ class ThemeManager {
     // Fallback a localStorage si no hay compartido
     const savedTheme = localStorage.getItem('ui_theme');
     if (savedTheme) {
-      this.applyTheme(savedTheme);
+      this.applyTheme(savedTheme, { preserveSidebarFontColor: true });
     }
   }
 
@@ -1099,7 +1099,7 @@ class ThemeManager {
 
   loadSavedTheme() {
     const savedTheme = localStorage.getItem('ui_theme') || 'Light';
-    this.applyTheme(savedTheme);
+    this.applyTheme(savedTheme, { preserveSidebarFontColor: true });
     return savedTheme;
   }
 

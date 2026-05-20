@@ -437,7 +437,7 @@ export const useThemeManagement = () => {
           // Si los temas no se aplicaron, forzar aplicación
           if (!dialogBg || dialogBg === 'initial' || dialogBg === '' ||
             !sidebarBg || sidebarBg === 'initial' || sidebarBg === '') {
-            themeManager.applyTheme('Nord');
+            themeManager.applyTheme('Nord', { preserveSidebarFontColor: true });
             statusBarThemeManager.applyTheme('Night Owl');
           }
         }, 100);

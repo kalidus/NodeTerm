@@ -34,6 +34,7 @@ const SYNC_KEYS = [
   'sidebarFont',
   'sidebarFontSize',
   'sidebarFontColor',
+  'sidebarFontColorSource',
   'iconSize',
   'folderIconSize',
   'connectionIconSize',
