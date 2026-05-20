@@ -716,6 +716,10 @@
   overflow: visible;
   display: flex !important;
   align-items: center !important;
+  height: var(--tab-bar-height, 38px) !important;
+  min-height: var(--tab-bar-height, 38px) !important;
+  box-sizing: border-box !important;
+  padding: 0 8px !important;
 }
 
 .sidebar-action-glass-group {
@@ -848,6 +852,12 @@
   -webkit-backdrop-filter: none !important;
   box-shadow: none !important;
   filter: none !important;
+  height: var(--tab-bar-height, 38px) !important;
+  min-height: var(--tab-bar-height, 38px) !important;
+  box-sizing: border-box !important;
+  padding: 0 10px !important;
+  display: flex !important;
+  align-items: center !important;
 }
 
 .sidebar-action-button.glass-button:hover {
@@ -1206,8 +1216,10 @@
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
-  min-height: 38px;
-  padding: 6px 10px;
+  height: var(--tab-bar-height, 38px) !important;
+  min-height: var(--tab-bar-height, 38px) !important;
+  box-sizing: border-box !important;
+  padding: 0 10px;
   background: var(--ui-sidebar-bg) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   user-select: none;
@@ -1243,8 +1255,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: calc(var(--tab-bar-height, 38px) - 10px) !important;
+  height: calc(var(--tab-bar-height, 38px) - 10px) !important;
+  max-width: 28px !important;
+  max-height: 28px !important;
+  min-width: 20px !important;
+  min-height: 20px !important;
   border: none;
   border-radius: 6px;
   background: transparent;

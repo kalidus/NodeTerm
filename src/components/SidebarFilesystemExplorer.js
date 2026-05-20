@@ -745,29 +745,23 @@ const SidebarFilesystemExplorer = ({
       />
       
       <div
-        className="sidebar-top-toolbar"
+        className="sidebar-panel-toolbar sidebar-top-toolbar"
         style={{ 
           display: 'flex', 
           alignItems: 'center', 
-          padding: '0.5rem 0.5rem 0.25rem 0.5rem',
           width: '100%',
           boxSizing: 'border-box',
           overflow: 'visible'
         }}
       >
         <Button 
-          className="p-button-rounded p-button-text sidebar-action-button glass-button" 
+          className="p-button-rounded p-button-text sidebar-panel-toolbar-btn sidebar-action-button glass-button" 
           onClick={() => setSidebarCollapsed(v => !v)} 
           tooltip={sidebarCollapsed ? 'Expandir panel lateral' : 'Colapsar panel lateral'} 
           tooltipOptions={{ position: 'bottom' }} 
           style={{ 
             marginRight: 8, 
             flexShrink: 0,
-            width: '40px',
-            height: '40px',
-            minWidth: '40px',
-            padding: 0,
-            minHeight: '40px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center'
@@ -777,8 +771,8 @@ const SidebarFilesystemExplorer = ({
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center',
-            width: '20px',
-            height: '20px',
+            width: '16px',
+            height: '16px',
             color: 'var(--ui-sidebar-text)'
           }}>
             {sidebarCollapsed 
@@ -797,7 +791,7 @@ const SidebarFilesystemExplorer = ({
         }}>
           <Button 
             icon="pi pi-folder" 
-            className="p-button-rounded p-button-text sidebar-action-button glass-button" 
+            className="p-button-rounded p-button-text sidebar-panel-toolbar-btn sidebar-action-button glass-button" 
             onClick={openCreateFolderDialog} 
             tooltip={t('tooltips.newFolder')} 
             tooltipOptions={{ position: 'bottom' }}
@@ -806,7 +800,7 @@ const SidebarFilesystemExplorer = ({
           />
           <Button 
             icon="pi pi-th-large" 
-            className="p-button-rounded p-button-text sidebar-action-button glass-button" 
+            className="p-button-rounded p-button-text sidebar-panel-toolbar-btn sidebar-action-button glass-button" 
             onClick={openCreateGroupDialog} 
             tooltip={t('tooltips.createGroup')} 
             tooltipOptions={{ position: 'bottom' }}
@@ -814,7 +808,7 @@ const SidebarFilesystemExplorer = ({
           />
           <Button 
             icon="pi pi-refresh" 
-            className="p-button-rounded p-button-text sidebar-action-button glass-button" 
+            className="p-button-rounded p-button-text sidebar-panel-toolbar-btn sidebar-action-button glass-button" 
             onClick={() => handleRefreshNode()} 
             tooltip={t('tooltips.reloadFolder')} 
             tooltipOptions={{ position: 'bottom' }}
@@ -822,19 +816,19 @@ const SidebarFilesystemExplorer = ({
             style={{ flexShrink: 0 }}
           />
           <Button
-            className="p-button-rounded p-button-text sidebar-action-button glass-button"
+            className="p-button-rounded p-button-text sidebar-panel-toolbar-btn sidebar-action-button glass-button"
             onClick={handleToggleExpandAllGlobal}
             tooltip={allExpanded ? t('tooltips.collapseAll') : t('tooltips.expandAll')}
             tooltipOptions={{ position: 'bottom' }}
             disabled={globalLoading}
-            style={{ flexShrink: 0, width: 40, height: 40, padding: 0 }}
+            style={{ flexShrink: 0 }}
           >
             <span style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: 20,
-              height: 20,
+              width: '16px',
+              height: '16px',
               color: 'var(--ui-sidebar-text)'
             }}>
               {allExpanded

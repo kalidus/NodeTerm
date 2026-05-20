@@ -224,6 +224,7 @@ class ThemeManager {
         --ui-tab-active-text: ${colors.tabActiveText};
         --ui-tab-border: ${colors.tabBorder};
         --ui-tab-close-hover: ${colors.tabCloseHover};
+        --ui-tab-bar-bg: var(--ui-sidebar-rail-bg);
         
         /* Tab groups now use the same theme variables as the main tabs bar */
         --ui-tabgroup-bg: ${colors.tabBackground};
