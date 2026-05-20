@@ -1048,7 +1048,7 @@
   min-width: 48px;
   max-width: 48px;
   height: 100%;
-  background: var(--ui-sidebar-bg) !important;
+  background: var(--ui-sidebar-rail-bg, var(--ui-sidebar-bg)) !important;
   border-right: none;
   padding: 8px 0;
   box-sizing: border-box;
@@ -1165,7 +1165,7 @@
 
 /* Subtle border between rail and panel only when panel is open */
 .sidebar-icon-rail + .sidebar-panel:not(.sidebar-panel-collapsed) {
-  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  border-left: 1px solid var(--ui-sidebar-border, rgba(255, 255, 255, 0.06));
 }
 
 /* Hover glow effect on icon rail items */

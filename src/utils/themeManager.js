@@ -194,6 +194,19 @@ class ThemeManager {
         --ui-sidebar-hover: ${colors.sidebarHover};
         --ui-sidebar-selected: ${colors.sidebarSelected};
         --ui-sidebar-gutter-bg: ${colors.sidebarGutter};
+        --ui-sidebar-rail-bg: ${(() => {
+          let railBg = colors.sidebarRailBackground || colors.menuBarBackground || colors.sidebarBackground;
+          if (railBg === colors.sidebarBackground) {
+            if (colors.tabGroupBackground && colors.tabGroupBackground !== colors.sidebarBackground) {
+              railBg = colors.tabGroupBackground;
+            } else if (colors.tabBackground && colors.tabBackground !== colors.sidebarBackground) {
+              railBg = colors.tabBackground;
+            } else {
+              railBg = adjustColorBrightness(colors.sidebarBackground, 6);
+            }
+          }
+          return railBg;
+        })()};
         
         --ui-menubar-bg: ${colors.menuBarBackground};
         --ui-menubar-text: ${colors.menuBarText};
