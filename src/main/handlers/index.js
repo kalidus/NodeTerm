@@ -214,6 +214,10 @@ function registerCriticalHandlers(dependencies) {
   // Clientes IA (Docker): el renderer invoca get-status al montar, antes de ready-to-show
   registerAIClientHandlers(dependencies);
 
+  // 🚀 CRÍTICO: Registrar handlers de Guacamole inmediatamente para evitar errores de
+  // "No handler registered" si el frontend los invoca al inicio antes de ready-to-show
+  getGuacamoleHandlers().registerGuacamoleHandlers(dependencies);
+
   // 🚀 CRÍTICO: System stats handler debe estar disponible INMEDIATAMENTE
   // porque TODOS los componentes del frontend lo llaman al cargar
   const { ipcMain } = require('electron');
@@ -253,9 +257,6 @@ function registerSecondaryHandlers(dependencies) {
 
   // Handlers RDP (Remote Desktop Protocol)
   getRdpHandlers().registerRdpHandlers(dependencies);
-
-  // Handlers de Guacamole
-  getGuacamoleHandlers().registerGuacamoleHandlers(dependencies);
 
   // Handlers SSH
   getSSHHandlers()(dependencies);

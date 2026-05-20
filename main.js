@@ -1066,7 +1066,19 @@ function createWindow() {
       libreChatService: createServiceProxy(getLibreChatService),
       agentZeroService: createServiceProxy(getAgentZeroService),
       openClawService: createServiceProxy(getOpenClawService),
-      openNotebookService: createServiceProxy(getOpenNotebookService)
+      openNotebookService: createServiceProxy(getOpenNotebookService),
+      // Guacamole dependencies for critical phase registration
+      guacdService: getGuacdService(),
+      guacamoleServer,
+      guacamoleServerReadyAt,
+      sendToRenderer,
+      guacdInactivityTimeoutMs,
+      getGuacamoleServer: () => guacamoleServer,
+      getGuacamoleServerReadyAt: () => guacamoleServerReadyAt,
+      getOrCreateGuacamoleSecretKey: getOrCreateGuacamoleSecretKey,
+      isGuacamoleInitializing: () => guacamoleInitializing,
+      isGuacamoleInitialized: () => guacamoleInitialized,
+      getGuacamoleWebSocketPort: () => (guacamoleServer ? guacamoleServer.port : null)
     });
   } catch (err) {
     console.error('❌ Error registrando handlers críticos:', err);
