@@ -19,7 +19,7 @@
   scroll-behavior: smooth;
   /* Asegurar que el scroll funcione con la rueda del mouse */
   overflow-y: auto !important;
-  overflow-x: hidden !important;
+  overflow-x: visible !important;
 }
 
 .tree-container.drag-autoscroll-active {
@@ -48,20 +48,20 @@
 }
 
 .sidebar-tree .p-treenode-content {
-  background: var(--ui-sidebar-bg) !important;
+  background: transparent !important;
   color: var(--ui-sidebar-text) !important;
 }
 
-.sidebar-tree .p-treenode-content:hover {
+.sidebar-tree .p-treenode-content:hover::after {
   background: var(--ui-sidebar-hover) !important;
 }
 
-.sidebar-tree .p-treenode-content.p-highlight {
-  background: transparent !important;
+.sidebar-tree .p-treenode-content.p-highlight::after {
+  background: var(--ui-sidebar-selected) !important;
 }
 
-.sidebar-tree .p-treenode-content.p-highlight:hover {
-  background: var(--ui-sidebar-hover) !important;
+.sidebar-tree .p-treenode-content.p-highlight:hover::after {
+  background: var(--ui-sidebar-selected) !important;
 }
 
 /* Botones de acción de la sidebar */
@@ -190,57 +190,83 @@
 }
 
 /* === PrimeReact Tree Style Matching === */
+.sidebar-tree .p-tree-container {
+  width: 100%;
+  box-sizing: border-box;
+}
 .sidebar-tree {
   font-family: "Segoe UI", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
   font-size: 0.75rem;
   color: #495057;
   background: #fff;
   border: none;
-  padding: 0.2rem 0.5rem 0.2rem 0.5rem;
+  padding: 0.2rem 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 .sidebar-tree .p-treenode {
   margin: 0 !important;
   padding: 0 !important;
-  border-radius: 4px;
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 0;
   transition: background 0.2s;
 }
 .sidebar-tree .p-treenode-content {
-  padding: 0.08rem 0.35rem !important;
+  position: relative;
+  padding: 0.08rem 0.5rem !important;
   min-height: 20px !important;
   line-height: 20px !important;
-  border-radius: 4px;
+  border-radius: 0;
   display: flex !important;
   align-items: center !important;
   gap: 0.12rem;
-  transition: background 0.2s;
   width: 100%;
+  box-sizing: border-box;
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
-  margin-left: 0 !important;
-  padding-left: 0 !important;
   font-size: inherit !important;
+  background: transparent !important;
+  isolation: isolate;
+}
+/* Fondo full-bleed en pseudo-elemento (no pisa ::before de líneas del tema) */
+.sidebar-tree .p-treenode-content::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: -1;
+  border-radius: 0;
+  pointer-events: none;
+  transition: background 0.2s ease;
+}
+.sidebar-tree .p-treenode-content > * {
+  position: relative;
+  z-index: 1;
 }
 .sidebar-tree .p-treenode-content.p-highlight {
-  background: transparent !important;
   color: var(--ui-sidebar-text);
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
+}
+.sidebar-tree .p-treenode-content.p-highlight::after {
+  background: var(--ui-sidebar-selected) !important;
 }
 .sidebar-tree .p-treenode-content:hover {
-  background: var(--ui-sidebar-hover) !important;
   color: var(--ui-sidebar-text);
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
 }
-.sidebar-tree .p-treenode-content.p-highlight:hover {
+.sidebar-tree .p-treenode-content:hover::after {
   background: var(--ui-sidebar-hover) !important;
-  color: var(--ui-sidebar-text);
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
+}
+.sidebar-tree .p-treenode-content.p-highlight:hover::after {
+  background: var(--ui-sidebar-selected) !important;
 }
 
 /* Eliminar bordes en todos los estados de los nodos */
@@ -261,7 +287,7 @@
   color: #6c757d;
 }
 .sidebar-tree .p-treenode-children {
-  padding-left: 0.5rem !important;
+  padding-left: var(--tree-indent, 20px) !important;
 }
 .sidebar-tree .p-treenode-content::before,
 .sidebar-tree .p-treenode::before,
@@ -680,19 +706,9 @@
   --tree-indent: 20px; /* ancho flecha+icono ajustado */
 }
 
-/* Alineación: cada nivel mantiene padding y compensa margen */
-.sidebar-tree .p-treenode-children {
-  padding-left: var(--tree-indent) !important;
-  border-left: none !important;
-}
+/* Indentación visual en el contenido de la fila, no en el ul (ver tree-themes.css full-bleed) */
 .sidebar-tree .p-treenode-icon {
   margin: 0 0.1rem 0 0 !important; /* icono más cerca del texto */
-}
-
-/* Alinear nodos hoja con su carpeta padre */
-.sidebar-tree .p-treenode-leaf > .p-treenode-content {
-  margin-left: calc(-0.4rem); /* compensa padding del ul */
-  padding-left: 0.4rem;       /* mantiene espacio para icono */
 }
 .p-splitter.p-splitter-resizing .sidebar-container {
   transition: none !important;
@@ -783,32 +799,31 @@
 }
 .filesystem-tree .p-treenode {
   margin: 0 !important;
+  width: 100%;
+  box-sizing: border-box;
 }
 .filesystem-tree .p-treenode-content {
   padding: 0 !important;
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 0;
   background: transparent !important;
   border: none !important;
-  transition: background 0.15s ease;
 }
 .filesystem-tree .p-treenode-icon {
   display: none !important;
 }
 .filesystem-tree .filesystem-node {
   background: transparent;
-}
-.filesystem-tree .filesystem-node:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-.filesystem-tree .p-treenode-content.p-highlight .filesystem-node {
-  background: rgba(134, 182, 255, 0.18);
-  border-radius: 4px;
+  width: 100%;
+  box-sizing: border-box;
 }
 .filesystem-tree .p-treenode-content:focus-visible {
   outline: none !important;
   box-shadow: none !important;
 }
 .filesystem-tree .p-treenode-children {
-  margin: 0 !important;
+  padding-left: var(--tree-indent, 20px) !important;
 }
 .filesystem-tree .pi-folder,
 .filesystem-tree .pi-file {

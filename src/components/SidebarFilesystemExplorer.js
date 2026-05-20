@@ -689,9 +689,7 @@ const SidebarFilesystemExplorer = ({
           flexDirection: 'column',
           gap: '0.15rem',
           width: '100%',
-          padding: '0.15rem 0.25rem',
-          borderRadius: '4px',
-          transition: 'background 0.2s ease',
+          padding: '0.15rem 0.5rem',
           cursor: 'pointer'
         }}
         className="filesystem-node"

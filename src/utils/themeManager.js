@@ -304,11 +304,15 @@ class ThemeManager {
         color: var(--ui-sidebar-text) !important;
       }
 
-      .sidebar-tree .p-treenode-content:hover {
+      .sidebar-tree .p-treenode-content:hover::after {
         background: var(--ui-sidebar-hover) !important;
       }
 
-      .sidebar-tree .p-treenode-content.p-highlight {
+      .sidebar-tree .p-treenode-content.p-highlight::after {
+        background: var(--ui-sidebar-selected) !important;
+      }
+
+      .sidebar-tree .p-treenode-content.p-highlight:hover::after {
         background: var(--ui-sidebar-selected) !important;
       }
 

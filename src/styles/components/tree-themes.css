@@ -2226,3 +2226,80 @@
 .sidebar-tree.sidebar-tree .p-tree-toggler-icon {
   font-size: calc(max(8px, var(--_row-h) * 0.5)) !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   FULL-BLEED ROW HIGHLIGHT (::after) — mantiene indentación en .p-treenode-children
+   Extiende el fondo hacia la izquierda según profundidad de anidación.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.sidebar-tree .p-treenode-children > .p-treenode > .p-treenode-content::after {
+  left: calc(-1 * var(--tree-indent));
+}
+
+.sidebar-tree .p-treenode-children .p-treenode-children > .p-treenode > .p-treenode-content::after {
+  left: calc(-2 * var(--tree-indent));
+}
+
+.sidebar-tree .p-treenode-children .p-treenode-children .p-treenode-children > .p-treenode > .p-treenode-content::after {
+  left: calc(-3 * var(--tree-indent));
+}
+
+.sidebar-tree .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children > .p-treenode > .p-treenode-content::after {
+  left: calc(-4 * var(--tree-indent));
+}
+
+.sidebar-tree .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children > .p-treenode > .p-treenode-content::after {
+  left: calc(-5 * var(--tree-indent));
+}
+
+.sidebar-tree .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children > .p-treenode > .p-treenode-content::after {
+  left: calc(-6 * var(--tree-indent));
+}
+
+.sidebar-tree .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children > .p-treenode > .p-treenode-content::after {
+  left: calc(-7 * var(--tree-indent));
+}
+
+.sidebar-tree .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children > .p-treenode > .p-treenode-content::after {
+  left: calc(-8 * var(--tree-indent));
+}
+
+.sidebar-tree .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children > .p-treenode > .p-treenode-content::after {
+  left: calc(-9 * var(--tree-indent));
+}
+
+.sidebar-tree .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children > .p-treenode > .p-treenode-content::after {
+  left: calc(-10 * var(--tree-indent));
+}
+
+.sidebar-tree .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children > .p-treenode > .p-treenode-content::after {
+  left: calc(-11 * var(--tree-indent));
+}
+
+.sidebar-tree .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children .p-treenode-children > .p-treenode > .p-treenode-content::after {
+  left: calc(-12 * var(--tree-indent));
+}
+
+/* Los temas pintan :hover en la fila; el highlight va en ::after */
+.sidebar-tree[class*="tree-theme-"] .p-treenode-content:hover,
+.sidebar-tree[class*="tree-theme-"] .p-treenode-content.p-highlight {
+  background: transparent !important;
+  border-radius: 0 !important;
+}
+
+.sidebar-tree[class*="tree-theme-"] .p-treenode-content:hover::after {
+  background: var(--ui-sidebar-hover) !important;
+  border-radius: 0 !important;
+}
+
+.sidebar-tree[class*="tree-theme-"] .p-treenode-content.p-highlight::after,
+.sidebar-tree[class*="tree-theme-"] .p-treenode-content.p-highlight:hover::after {
+  background: var(--ui-sidebar-selected) !important;
+  border-radius: 0 !important;
+}
+
+.sidebar-tree .p-tree-container,
+.sidebar-tree .p-treenode,
+.sidebar-tree .p-treenode-content {
+  overflow: visible;
+}
