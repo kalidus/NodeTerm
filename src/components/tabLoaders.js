@@ -21,6 +21,7 @@ export const LazyClaudeTerminal = lazy(() => import('./ClaudeTerminal'));
 export const LazyOpenCodeTerminal = lazy(() => import('./OpenCodeTerminal'));
 export const LazyGeminiCliTerminal = lazy(() => import('./GeminiCliTerminal'));
 export const LazyCodexCliTerminal = lazy(() => import('./CodexCliTerminal'));
+export const LazyAntigravityCliTerminal = lazy(() => import('./AntigravityCliTerminal'));
 export const LazyAuditTab = lazy(() => import('./AuditTab'));
 export const LazyRecordingPlayerTab = lazy(() => import('./RecordingPlayerTab'));
 export const LazyGlobalAuditTab = lazy(() => import('./GlobalAuditTab'));

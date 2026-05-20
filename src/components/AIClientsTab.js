@@ -14,7 +14,7 @@ const CATEGORIES = [
     label: 'CLI Local',
     emoji: '🖥️',
     description: 'Herramientas de IA que se ejecutan como proceso local en tu terminal',
-    clients: ['claude', 'opencode', 'geminicli', 'codexcli']
+    clients: ['claude', 'opencode', 'geminicli', 'codexcli', 'antigravitycli']
   },
   {
     key: 'webapps',
@@ -39,6 +39,7 @@ const AIClientsTab = ({ themeColors }) => {
     opencode: false,
     geminicli: false,
     codexcli: false,
+    antigravitycli: false,
     anythingllm: false,
     openwebui: false,
     librechat: false,
@@ -92,12 +93,21 @@ const AIClientsTab = ({ themeColors }) => {
   });
   const [codexApiKeyInput, setCodexApiKeyInput] = useState('');
   const [codexApiKeySaved, setCodexApiKeySaved] = useState(false);
+  const [antigravityCliStatus, setAntigravityCliStatus] = useState({
+    loading: false,
+    installed: false,
+    installing: false,
+    version: null,
+    binaryPath: null,
+    error: null
+  });
 
   // Estados para configuración detallada de los CLIs
   const [claudeConfig, setClaudeConfig] = useState({ binaryPath: '', defaultModel: '', extraArgs: '', authToken: '' });
   const [openCodeConfig, setOpenCodeConfig] = useState({ binaryPath: '', extraArgs: '' });
   const [geminiCliConfig, setGeminiCliConfig] = useState({ binaryPath: '', extraArgs: '', apiKey: '' });
   const [codexCliConfig, setCodexCliConfig] = useState({ binaryPath: '', extraArgs: '', apiKey: '' });
+  const [antigravityCliConfig, setAntigravityCliConfig] = useState({ binaryPath: '', extraArgs: '' });
 
   // UI state — categorías colapsables, búsqueda, vista
   const [collapsedSections, setCollapsedSections] = useState({});
@@ -140,21 +150,27 @@ const AIClientsTab = ({ themeColors }) => {
     checkCodexCliStatus();
   }, []);
 
+  useEffect(() => {
+    checkAntigravityCliStatus();
+  }, []);
+
   // Cargar configuraciones detalladas desde el proceso principal
   useEffect(() => {
     const loadConfigs = async () => {
       try {
-        const [claude, opencode, gemini, codex] = await Promise.all([
+        const [claude, opencode, gemini, codex, antigravity] = await Promise.all([
           window.electron?.claude?.getConfig?.(),
           window.electron?.opencode?.getConfig?.(),
           window.electron?.geminicli?.getConfig?.(),
-          window.electron?.codexcli?.getConfig?.()
+          window.electron?.codexcli?.getConfig?.(),
+          window.electron?.antigravitycli?.getConfig?.()
         ]);
 
         if (claude) setClaudeConfig({ ...claude, authToken: '' });
         if (opencode) setOpenCodeConfig(opencode);
         if (gemini) setGeminiCliConfig({ ...gemini, apiKey: '' });
         if (codex) setCodexCliConfig({ ...codex, apiKey: '' });
+        if (antigravity) setAntigravityCliConfig(antigravity);
       } catch (error) {
         console.error('[AIClientsTab] Error al cargar configuraciones detaladas:', error);
       }
@@ -429,6 +445,56 @@ const AIClientsTab = ({ themeColors }) => {
     }
   };
 
+  const checkAntigravityCliStatus = async () => {
+    setAntigravityCliStatus(prev => ({ ...prev, loading: true, error: null }));
+    try {
+      const result = await window.electron?.antigravitycli?.getCliStatus?.();
+      if (result?.success) {
+        setAntigravityCliStatus({
+          loading: false,
+          installed: !!result.installed,
+          installing: false,
+          version: result.version || null,
+          binaryPath: result.binaryPath || null,
+          error: null
+        });
+      } else {
+        setAntigravityCliStatus(prev => ({
+          ...prev,
+          loading: false,
+          installing: false,
+          error: result?.error || 'No se pudo verificar Antigravity CLI'
+        }));
+      }
+    } catch (error) {
+      setAntigravityCliStatus(prev => ({
+        ...prev,
+        loading: false,
+        installing: false,
+        error: error.message || 'No se pudo verificar Antigravity CLI'
+      }));
+    }
+  };
+
+  const installAntigravityCli = async () => {
+    setAntigravityCliStatus(prev => ({ ...prev, installing: true, error: null }));
+    try {
+      const result = await window.electron?.antigravitycli?.installCli?.();
+      if (!result?.success) {
+        throw new Error(result?.error || 'No se pudo instalar Antigravity CLI');
+      }
+      await checkAntigravityCliStatus();
+      return true;
+    } catch (error) {
+      setAntigravityCliStatus(prev => ({
+        ...prev,
+        installing: false,
+        error: error.message || 'No se pudo instalar Antigravity CLI'
+      }));
+      return false;
+    }
+  };
+
   const saveCodexApiKey = async () => {
     try {
       const current = await window.electron?.codexcli?.getConfig?.();
@@ -517,6 +583,26 @@ const AIClientsTab = ({ themeColors }) => {
     }
   };
 
+  const handleSaveAntigravityCliConfig = async () => {
+    try {
+      const validation = await window.electron?.antigravitycli?.validateConfig?.(antigravityCliConfig);
+      if (validation && validation.valid === false) {
+        setAntigravityCliStatus(prev => ({ ...prev, error: validation.error || 'Configuración inválida' }));
+        return;
+      }
+
+      const result = await window.electron?.antigravitycli?.setConfig?.(antigravityCliConfig);
+      if (result?.success) {
+        setAntigravityCliStatus(prev => ({ ...prev, error: null }));
+        await checkAntigravityCliStatus();
+      } else {
+        setAntigravityCliStatus(prev => ({ ...prev, error: result?.error || 'Error al guardar' }));
+      }
+    } catch (error) {
+      setAntigravityCliStatus(prev => ({ ...prev, error: error.message }));
+    }
+  };
+
   const handleSaveCodexCliConfig = async () => {
     try {
       const validation = await window.electron?.codexcli?.validateConfig?.(codexCliConfig);
@@ -581,6 +667,25 @@ const AIClientsTab = ({ themeColors }) => {
       }
       const newClients = { ...clients, codexcli: willEnable };
       saveClientsConfig(newClients);
+      return;
+    }
+
+    if (clientKey === 'antigravitycli') {
+      const willEnable = !clients.antigravitycli;
+      const newClients = { ...clients, antigravitycli: willEnable };
+      saveClientsConfig(newClients);
+
+      if (willEnable && !antigravityCliStatus.installed) {
+        const ok = await installAntigravityCli();
+        if (!ok) {
+          toast.current?.show({
+            severity: 'warn',
+            summary: 'Antigravity CLI activado',
+            detail: 'El cliente quedó habilitado, pero la instalación automática falló. Expande la configuración avanzada y pulsa "Instalar CLI", o indica la ruta de agy/antigravity.',
+            life: 7000
+          });
+        }
+      }
       return;
     }
 
@@ -764,6 +869,7 @@ const AIClientsTab = ({ themeColors }) => {
     opencode: 'opencode',
     geminicli: 'geminicli',
     codexcli: 'codexcli',
+    antigravitycli: 'antigravitycli',
     anythingllm: 'anything-llm',
     openwebui: 'openwebui',
     librechat: 'librechat',
@@ -808,6 +914,15 @@ const AIClientsTab = ({ themeColors }) => {
       description: 'CLI de OpenAI Codex. Agente de codificación ligero y open-source que ejecuta comandos y lee archivos.',
       features: ['OpenAI Codex', 'Open Source', 'Terminal dedicada'],
       badges: [{ label: 'LOCAL CLI', severity: 'warning' }, { label: 'OPENAI', severity: 'success' }],
+      requiresDocker: false, isLocalCli: true
+    },
+    {
+      key: 'antigravitycli', category: 'cli',
+      name: 'Antigravity CLI', shortName: 'Antigravity CLI',
+      color: '#4285f4',
+      description: 'CLI terminal de Google Antigravity. Agentes en paralelo, subagentes y login con cuenta Google. Sucesor recomendado de Gemini CLI.',
+      features: ['Google Antigravity', 'Subagentes', 'Terminal dedicada'],
+      badges: [{ label: 'LOCAL CLI', severity: 'warning' }, { label: 'GOOGLE', severity: 'info' }],
       requiresDocker: false, isLocalCli: true
     },
     {
@@ -872,6 +987,7 @@ const AIClientsTab = ({ themeColors }) => {
     if (key === 'opencode') return openCodeCliStatus;
     if (key === 'geminicli') return geminiCliStatus;
     if (key === 'codexcli') return codexCliStatus;
+    if (key === 'antigravitycli') return antigravityCliStatus;
     return null;
   };
 
@@ -990,6 +1106,32 @@ const AIClientsTab = ({ themeColors }) => {
             {geminiApiKeySaved && <span style={{ color: '#93c5fd', fontSize: '0.85rem', alignSelf: 'center' }}>API key guardada</span>}
           </div>
           {geminiCliStatus.error && <div className="config-error"><i className="pi pi-times-circle" /> {geminiCliStatus.error}</div>}
+        </div>
+      );
+    }
+    if (key === 'antigravitycli') {
+      return (
+        <div className="adv-config-inner">
+          <div className="cli-status-row">
+            <i className="pi pi-info-circle" style={{ color: '#4285f4' }} />
+            <strong>Estado CLI:</strong>{' '}
+            <span>{antigravityCliStatus.loading ? 'verificando...' : antigravityCliStatus.installed ? `instalado${antigravityCliStatus.version ? ` (${antigravityCliStatus.version})` : ''}` : 'no instalado'}</span>
+            {antigravityCliStatus.binaryPath && <code className="cli-path">{antigravityCliStatus.binaryPath}</code>}
+          </div>
+          <div className="cli-action-row">
+            {!antigravityCliStatus.installed && <Button label="Instalar CLI" icon="pi pi-download" className="p-button-sm" style={{ background: '#4285f4', border: 'none' }} onClick={installAntigravityCli} loading={antigravityCliStatus.installing} />}
+            {antigravityCliStatus.installed && <Button label="Reinstalar" icon="pi pi-refresh" className="p-button-secondary p-button-sm" onClick={installAntigravityCli} loading={antigravityCliStatus.installing} />}
+            <Button label="Verificar" icon="pi pi-search" className="p-button-secondary p-button-sm" onClick={checkAntigravityCliStatus} loading={antigravityCliStatus.loading} />
+          </div>
+          <div className="config-grid">
+            <div className="config-field"><label>Ruta binario</label><InputText value={antigravityCliConfig.binaryPath} onChange={(e) => setAntigravityCliConfig(p => ({ ...p, binaryPath: e.target.value }))} placeholder="%LOCALAPPDATA%\\agy\\bin\\agy.exe" className="p-inputtext-sm" style={{ width: '100%' }} /></div>
+            <div className="config-field"><label>Args extra</label><InputText value={antigravityCliConfig.extraArgs} onChange={(e) => setAntigravityCliConfig(p => ({ ...p, extraArgs: e.target.value }))} placeholder="" className="p-inputtext-sm" style={{ width: '100%' }} /></div>
+          </div>
+          <Button label="Guardar Configuración" icon="pi pi-save" className="p-button-sm p-button-text" style={{ marginTop: '0.5rem', color: '#4285f4' }} onClick={handleSaveAntigravityCliConfig} />
+          <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', opacity: 0.85 }}>
+            La autenticación se realiza dentro del CLI con tu cuenta Google. Tras instalar, reinicia NodeTerm si no se detecta el binario.
+          </p>
+          {antigravityCliStatus.error && <div className="config-error"><i className="pi pi-times-circle" /> {antigravityCliStatus.error}</div>}
         </div>
       );
     }

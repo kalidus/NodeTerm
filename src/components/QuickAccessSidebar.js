@@ -61,6 +61,7 @@ const QuickAccessSidebar = ({
   const [openCodeEnabled, setOpenCodeEnabled] = useState(false);
   const [geminiCliEnabled, setGeminiCliEnabled] = useState(false);
   const [codexCliEnabled, setCodexCliEnabled] = useState(false);
+  const [antigravityCliEnabled, setAntigravityCliEnabled] = useState(false);
 
   // Ref para el botón de Docker
   const dockerButtonRef = React.useRef(null);
@@ -271,11 +272,13 @@ const QuickAccessSidebar = ({
         setOpenCodeEnabled(cfg.opencode === true);
         setGeminiCliEnabled(cfg.geminicli === true);
         setCodexCliEnabled(cfg.codexcli === true);
+        setAntigravityCliEnabled(cfg.antigravitycli === true);
       } catch {
         setClaudeEnabled(false);
         setOpenCodeEnabled(false);
         setGeminiCliEnabled(false);
         setCodexCliEnabled(false);
+        setAntigravityCliEnabled(false);
       }
     };
     syncClaudeEnabled();
@@ -338,6 +341,16 @@ const QuickAccessSidebar = ({
           icon: 'pi pi-bolt',
           color: '#10b981',
           action: () => handleOpenTerminal('codexcli')
+        });
+      }
+
+      if (antigravityCliEnabled) {
+        terminals.push({
+          label: 'Antigravity CLI',
+          value: 'antigravitycli',
+          icon: 'pi pi-sparkles',
+          color: '#4285f4',
+          action: () => handleOpenTerminal('antigravitycli')
         });
       }
 
@@ -421,6 +434,15 @@ const QuickAccessSidebar = ({
           action: () => handleOpenTerminal('codexcli')
         });
       }
+      if (antigravityCliEnabled) {
+        terminals.push({
+          label: 'Antigravity CLI',
+          value: 'antigravitycli',
+          icon: 'pi pi-sparkles',
+          color: '#4285f4',
+          action: () => handleOpenTerminal('antigravitycli')
+        });
+      }
     } else {
       terminals.push({
         label: 'Terminal',
@@ -465,10 +487,19 @@ const QuickAccessSidebar = ({
           action: () => handleOpenTerminal('codexcli')
         });
       }
+      if (antigravityCliEnabled) {
+        terminals.push({
+          label: 'Antigravity CLI',
+          value: 'antigravitycli',
+          icon: 'pi pi-sparkles',
+          color: '#4285f4',
+          action: () => handleOpenTerminal('antigravitycli')
+        });
+      }
     }
 
     setAvailableTerminals(terminals);
-  }, [wslDistributions, cygwinAvailable, dockerContainers, claudeEnabled, openCodeEnabled, geminiCliEnabled, codexCliEnabled]);
+  }, [wslDistributions, cygwinAvailable, dockerContainers, claudeEnabled, openCodeEnabled, geminiCliEnabled, codexCliEnabled, antigravityCliEnabled]);
 
   // Configurar acciones principales
   useEffect(() => {

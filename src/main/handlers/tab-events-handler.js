@@ -23,6 +23,7 @@ function registerTabEvents(tabId, dependencies) {
     OpenCode,
     GeminiCli,
     CodexCli,
+    AntigravityCli,
     startUbuntuSession,
     handleUbuntuData,
     handleUbuntuResize,
@@ -237,6 +238,28 @@ function registerTabEvents(tabId, dependencies) {
 
   ipcMain.on(`codexcli:stop:${tabId}`, (event) => {
     CodexCli.CodexCliHandlers.stop(tabId);
+  });
+
+  // ========== Antigravity CLI Events ==========
+  ipcMain.removeAllListeners(`antigravitycli:start:${tabId}`);
+  ipcMain.removeAllListeners(`antigravitycli:data:${tabId}`);
+  ipcMain.removeAllListeners(`antigravitycli:resize:${tabId}`);
+  ipcMain.removeAllListeners(`antigravitycli:stop:${tabId}`);
+
+  ipcMain.on(`antigravitycli:start:${tabId}`, (event, data) => {
+    AntigravityCli.AntigravityCliHandlers.start(tabId, data || {});
+  });
+
+  ipcMain.on(`antigravitycli:data:${tabId}`, (event, data) => {
+    AntigravityCli.AntigravityCliHandlers.data(tabId, data);
+  });
+
+  ipcMain.on(`antigravitycli:resize:${tabId}`, (event, data) => {
+    AntigravityCli.AntigravityCliHandlers.resize(tabId, data);
+  });
+
+  ipcMain.on(`antigravitycli:stop:${tabId}`, (event) => {
+    AntigravityCli.AntigravityCliHandlers.stop(tabId);
   });
 
   // ========== Docker Events (lazy loading) ==========

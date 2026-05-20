@@ -13,7 +13,7 @@ import { STORAGE_KEYS } from '../utils/constants';
 import { actionBarThemes } from '../themes/action-bar-themes';
 
 /** CLI de IA en la columna derecha de HomeTab (un solo grupo desplegable) */
-const RIGHT_COLUMN_AI_CLI_VALUES = new Set(['claude', 'opencode', 'geminicli', 'codexcli']);
+const RIGHT_COLUMN_AI_CLI_VALUES = new Set(['claude', 'opencode', 'geminicli', 'codexcli', 'antigravitycli']);
 
 const NodeTermStatus = ({
 	sshConnectionsCount = 0,
@@ -88,6 +88,7 @@ const NodeTermStatus = ({
 	const [openCodeEnabled, setOpenCodeEnabled] = useState(false);
 	const [geminiCliEnabled, setGeminiCliEnabled] = useState(false);
 	const [codexCliEnabled, setCodexCliEnabled] = useState(false);
+	const [antigravityCliEnabled, setAntigravityCliEnabled] = useState(false);
 	const [dockerMenuOpen, setDockerMenuOpen] = useState(false);
 	const [dockerMenuPosition, setDockerMenuPosition] = useState({ top: 0, left: 0 });
 	const [ubuntuMenuOpen, setUbuntuMenuOpen] = useState(false);
@@ -729,6 +730,11 @@ const NodeTermStatus = ({
 		return <i className="pi pi-bolt" style={{ color: terminal.color || '#10b981', fontSize: `${codexIconSize}px`, fontWeight: 'bold' }} />;
 	}
 
+	if (value === 'antigravitycli') {
+		const agyIconSize = Math.round(baseIconSizePx * 1.3);
+		return <i className="pi pi-sparkles" style={{ color: terminal.color || '#4285f4', fontSize: `${agyIconSize}px`, fontWeight: 'bold' }} />;
+	}
+
 		// Detectar WSL genérico (usar pingüino de Linux) - debe ser exactamente 'wsl' sin distribuciones específicas - aumentar tamaño
 		if (value === 'wsl' && !value.includes('ubuntu') && !value.includes('debian') && !value.includes('kali')) {
 			const wslIconSize = Math.round(baseIconSizePx * 1.3);
@@ -859,11 +865,13 @@ const NodeTermStatus = ({
 			setOpenCodeEnabled(cfg.opencode === true);
 			setGeminiCliEnabled(cfg.geminicli === true);
 			setCodexCliEnabled(cfg.codexcli === true);
+			setAntigravityCliEnabled(cfg.antigravitycli === true);
 		} catch {
 			setClaudeEnabled(false);
 			setOpenCodeEnabled(false);
 			setGeminiCliEnabled(false);
 			setCodexCliEnabled(false);
+			setAntigravityCliEnabled(false);
 		}
 		};
 		syncClaudeEnabled();
@@ -926,6 +934,16 @@ const NodeTermStatus = ({
 				icon: 'pi pi-bolt',
 				color: '#10b981',
 				action: () => handleOpenTerminal('codexcli')
+			});
+		}
+
+		if (antigravityCliEnabled) {
+			terminals.push({
+				label: 'Antigravity CLI',
+				value: 'antigravitycli',
+				icon: 'pi pi-sparkles',
+				color: '#4285f4',
+				action: () => handleOpenTerminal('antigravitycli')
 			});
 		}
 
@@ -1026,6 +1044,15 @@ const NodeTermStatus = ({
 				action: () => handleOpenTerminal('codexcli')
 			});
 		}
+		if (antigravityCliEnabled) {
+			terminals.push({
+				label: 'Antigravity CLI',
+				value: 'antigravitycli',
+				icon: 'pi pi-sparkles',
+				color: '#4285f4',
+				action: () => handleOpenTerminal('antigravitycli')
+			});
+		}
 	} else {
 		terminals.push({
 			label: 'Terminal',
@@ -1070,10 +1097,19 @@ const NodeTermStatus = ({
 				action: () => handleOpenTerminal('codexcli')
 			});
 		}
+		if (antigravityCliEnabled) {
+			terminals.push({
+				label: 'Antigravity CLI',
+				value: 'antigravitycli',
+				icon: 'pi pi-sparkles',
+				color: '#4285f4',
+				action: () => handleOpenTerminal('antigravitycli')
+			});
+		}
 	}
 
 	setAvailableTerminals(terminals);
-	}, [wslDistributions, cygwinAvailable, horizontal, compact, variant, claudeEnabled, openCodeEnabled, geminiCliEnabled, codexCliEnabled]);
+	}, [wslDistributions, cygwinAvailable, horizontal, compact, variant, claudeEnabled, openCodeEnabled, geminiCliEnabled, codexCliEnabled, antigravityCliEnabled]);
 
 	const getRelativeTime = (date) => {
 		try {
@@ -1369,6 +1405,7 @@ const NodeTermStatus = ({
 								if (t.value === 'opencode') return <i className="pi pi-code" style={{ color: t.color || '#6366f1', fontSize }} />;
 								if (t.value === 'geminicli') return <i className="pi pi-star" style={{ color: t.color || '#1a73e8', fontSize }} />;
 								if (t.value === 'codexcli') return <i className="pi pi-bolt" style={{ color: t.color || '#10b981', fontSize }} />;
+								if (t.value === 'antigravitycli') return <i className="pi pi-sparkles" style={{ color: t.color || '#4285f4', fontSize }} />;
 								return <i className={t.icon || 'pi pi-terminal'} style={{ color: t.color || '#8b5cf6', fontSize }} />;
 							};
 							/** pi-sparkles no está en PrimeIcons 6.x (dependencia del proyecto) */
@@ -2143,6 +2180,7 @@ const NodeTermStatus = ({
 							if (it.terminalType === 'opencode') return <i className="pi pi-code" style={{ color: it.color, fontSize: '1rem' }} />;
 							if (it.terminalType === 'geminicli') return <i className="pi pi-star" style={{ color: it.color, fontSize: '1rem' }} />;
 							if (it.terminalType === 'codexcli') return <i className="pi pi-bolt" style={{ color: it.color, fontSize: '1rem' }} />;
+							if (it.terminalType === 'antigravitycli') return <i className="pi pi-sparkles" style={{ color: it.color, fontSize: '1rem' }} />;
 							if (it.terminalType === 'powershell') return <FaWindows style={{ color: it.color, fontSize: '1rem' }} />;
 							if (it.terminalType === 'ubuntu' || (it.distroInfo && (it.distroInfo.category === 'ubuntu' || (it.distroInfo.name || '').toLowerCase().includes('ubuntu')))) return <FaUbuntu style={{ color: it.color, fontSize: '1rem' }} />;
 							if (it.terminalType === 'debian' || (it.distroInfo && (it.distroInfo.category === 'debian' || (it.distroInfo.name || '').toLowerCase().includes('debian')))) return <SiDebian style={{ color: it.color, fontSize: '1rem' }} />;

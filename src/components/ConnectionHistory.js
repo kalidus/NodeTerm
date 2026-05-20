@@ -283,7 +283,7 @@ const ConnectionHistory = ({
 			'debian',
 			'wsl-distro'
 		]);
-		const aiCliValues = new Set(['claude', 'opencode', 'geminicli', 'codexcli']);
+		const aiCliValues = new Set(['claude', 'opencode', 'geminicli', 'codexcli', 'antigravitycli']);
 
 		const groups = [
 			{ label: 'Shells', icon: 'pi pi-desktop', items: [] },
@@ -442,6 +442,9 @@ const ConnectionHistory = ({
 					if (aiClientsCfg.codexcli === true) {
 						shells.push({ label: 'Codex CLI', value: 'codexcli', icon: <SiOpenai style={{ color: '#10A37F' }} /> });
 					}
+					if (aiClientsCfg.antigravitycli === true) {
+						shells.push({ label: 'Antigravity CLI', value: 'antigravitycli', icon: <SiGooglegemini style={{ color: '#4285F4' }} /> });
+					}
 
 					// WSL
 					if (window.electron && window.electron.ipcRenderer) {
@@ -491,6 +494,9 @@ const ConnectionHistory = ({
 					}
 					if (aiClientsCfg.codexcli === true) {
 						shells.push({ label: 'Codex CLI', value: 'codexcli', icon: <SiOpenai style={{ color: '#10A37F' }} /> });
+					}
+					if (aiClientsCfg.antigravitycli === true) {
+						shells.push({ label: 'Antigravity CLI', value: 'antigravitycli', icon: <SiGooglegemini style={{ color: '#4285F4' }} /> });
 					}
 				}
 

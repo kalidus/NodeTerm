@@ -8,6 +8,7 @@ let _Claude = null;
 let _OpenCode = null;
 let _GeminiCli = null;
 let _CodexCli = null;
+let _AntigravityCli = null;
 
 function getWSL() {
   if (!_WSL) _WSL = require('./WSLService');
@@ -37,6 +38,10 @@ function getCodexCli() {
   if (!_CodexCli) _CodexCli = require('./CodexCliService');
   return _CodexCli;
 }
+function getAntigravityCli() {
+  if (!_AntigravityCli) _AntigravityCli = require('./AntigravityCliService');
+  return _AntigravityCli;
+}
 
 module.exports = {
   getWSL,
@@ -45,5 +50,6 @@ module.exports = {
   getClaude,
   getOpenCode,
   getGeminiCli,
-  getCodexCli
+  getCodexCli,
+  getAntigravityCli
 };

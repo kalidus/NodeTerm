@@ -20,7 +20,8 @@ const BRAND_BY_TAB_TYPE = {
   'open-notebook': { src: openNotebookSvg, alt: 'Open Notebook' },
   claude: { component: SiAnthropic, color: '#D97706', alt: 'Claude' },
   geminicli: { component: SiGooglegemini, color: '#8E75B2', alt: 'Gemini' },
-  codexcli: { component: SiOpenai, color: '#10A37F', alt: 'Codex' }
+  codexcli: { component: SiOpenai, color: '#10A37F', alt: 'Codex' },
+  antigravitycli: { component: SiGooglegemini, color: '#4285F4', alt: 'Antigravity' }
 };
 
 /**

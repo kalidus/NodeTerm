@@ -15,6 +15,7 @@ import {
     LazyOpenCodeTerminal,
     LazyGeminiCliTerminal,
     LazyCodexCliTerminal,
+    LazyAntigravityCliTerminal,
     LazyGuacamoleTerminal,
     TabChunkFallback
 } from './tabLoaders';
@@ -47,7 +48,8 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         claude: false,
         opencode: false,
         geminicli: false,
-        codexcli: false
+        codexcli: false,
+        antigravitycli: false
     });
 
     useEffect(() => {
@@ -58,7 +60,8 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     claude: cfg.claude === true,
                     opencode: cfg.opencode === true,
                     geminicli: cfg.geminicli === true,
-                    codexcli: cfg.codexcli === true
+                    codexcli: cfg.codexcli === true,
+                    antigravitycli: cfg.antigravitycli === true
                 });
             } catch {
                 /* noop */
@@ -136,6 +139,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 'opencode': 'OpenCode',
                 'geminicli': 'Gemini CLI',
                 'codexcli': 'Codex CLI',
+                'antigravitycli': 'Antigravity CLI',
                 'linux-terminal': platform === 'darwin' ? 'Terminal macOS' : 'Terminal Linux'
             };
 
@@ -714,6 +718,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 'opencode': 'OpenCode',
                 'geminicli': 'Gemini CLI',
                 'codexcli': 'Codex CLI',
+                'antigravitycli': 'Antigravity CLI',
                 'linux-terminal': isMac ? 'Terminal macOS' : 'Terminal Linux'
             };
 
@@ -878,6 +883,8 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     window.electron.ipcRenderer.send(`geminicli:data:${tabId}`, finalCommand);
                 } else if (terminalType === 'codexcli') {
                     window.electron.ipcRenderer.send(`codexcli:data:${tabId}`, finalCommand);
+                } else if (terminalType === 'antigravitycli') {
+                    window.electron.ipcRenderer.send(`antigravitycli:data:${tabId}`, finalCommand);
                 }
                 console.log('✅ Comando enviado al canal IPC');
             } else {
@@ -1372,6 +1379,9 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         if (aiClientsEnabled.codexcli) {
             aiClis.push({ label: 'Codex CLI', value: 'codexcli', icon: <SiOpenai style={{ color: '#10A37F' }} /> });
         }
+        if (aiClientsEnabled.antigravitycli) {
+            aiClis.push({ label: 'Antigravity CLI', value: 'antigravitycli', icon: <SiGooglegemini style={{ color: '#4285F4' }} /> });
+        }
 
         if (aiClis.length > 0) {
             groups.push({ label: 'AI CLIs', icon: 'pi pi-bolt', items: aiClis });
@@ -1590,6 +1600,9 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         } else if (terminalTypeToUse === 'codexcli') {
             title = 'Codex CLI';
             terminalType = 'codexcli';
+        } else if (terminalTypeToUse === 'antigravitycli') {
+            title = 'Antigravity CLI';
+            terminalType = 'antigravitycli';
         } else {
             title = 'Terminal';
             terminalType = terminalTypeToUse;
@@ -1733,7 +1746,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     };
 
     // Determinar el tema de la terminal actual para inyectar colores dinámicos
-    const terminalTheme = activeTab?.type === 'powershell' || activeTab?.type === 'cygwin' || activeTab?.type === 'claude' || activeTab?.type === 'opencode' || activeTab?.type === 'geminicli' || activeTab?.type === 'codexcli'
+    const terminalTheme = activeTab?.type === 'powershell' || activeTab?.type === 'cygwin' || activeTab?.type === 'claude' || activeTab?.type === 'opencode' || activeTab?.type === 'geminicli' || activeTab?.type === 'codexcli' || activeTab?.type === 'antigravitycli'
         ? (themes[localPowerShellTheme]?.theme || powershellXtermTheme)
         : (themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme);
 
@@ -1872,6 +1885,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                                     tab.type === 'opencode' ? 'pi pi-code cyber-tab-icon' :
                                                     tab.type === 'geminicli' ? 'pi pi-star cyber-tab-icon' :
                                                     tab.type === 'codexcli' ? 'pi pi-bolt cyber-tab-icon' :
+                                                    tab.type === 'antigravitycli' ? 'pi pi-sparkles cyber-tab-icon' :
                                                     tab.type === 'docker' ? 'pi pi-box cyber-tab-icon' : 'pi pi-desktop cyber-tab-icon'}
                                             style={{ 
                                                 color: tab.active ? 'var(--terminal-tab-accent)' : 'inherit'
@@ -2067,6 +2081,19 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                         )}
                         {tab.type === 'codexcli' && (
                             <LazyCodexCliTerminal
+                                key={`${tab.id}-terminal`}
+                                ref={(ref) => {
+                                    if (ref) terminalRefs.current[tab.id] = ref;
+                                }}
+                                tabId={tab.id}
+                                fontFamily={localFontFamily}
+                                fontSize={localFontSize}
+                                theme={themes[localPowerShellTheme]?.theme || powershellXtermTheme}
+                                isIntegrated={isIntegrated}
+                            />
+                        )}
+                        {tab.type === 'antigravitycli' && (
+                            <LazyAntigravityCliTerminal
                                 key={`${tab.id}-terminal`}
                                 ref={(ref) => {
                                     if (ref) terminalRefs.current[tab.id] = ref;

@@ -82,6 +82,7 @@
     "agentZero": "Agent Zero",
     "geminiCLI": "Gemini CLI",
     "codexCLI": "Codex CLI",
+    "antigravityCLI": "Antigravity CLI",
     "openCode": "OpenCode",
     "claudeCode": "Claude Code",
     "filesystemMCP": "Filesystem MCP",

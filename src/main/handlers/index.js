@@ -35,6 +35,7 @@ let _claudeHandlers = null;
 let _opencodeHandlers = null;
 let _geminicliHandlers = null;
 let _codexcliHandlers = null;
+let _antigravitycliHandlers = null;
 
 function getAppHandlers() {
   if (!_appHandlers) _appHandlers = require('./app-handlers');
@@ -161,6 +162,11 @@ function getCodexCliHandlers() {
   return _codexcliHandlers;
 }
 
+function getAntigravityCliHandlers() {
+  if (!_antigravitycliHandlers) _antigravitycliHandlers = require('./antigravitycli-handlers');
+  return _antigravitycliHandlers;
+}
+
 /**
  * Handlers IPC de clientes IA (AnythingLLM, Open WebUI, LibreChat, etc.).
  * Solo registra canales; los servicios Docker se cargan con lazy proxy.
@@ -205,6 +211,9 @@ function registerCriticalHandlers(dependencies) {
 
   // Handlers de Codex CLI (configuración gestionada por app)
   getCodexCliHandlers().registerCodexCliHandlers();
+
+  // Handlers de Antigravity CLI (configuración gestionada por app)
+  getAntigravityCliHandlers().registerAntigravityCliHandlers();
 
   // 🚀 CRÍTICO: Registrar handlers de monitoreo INMEDIATAMENTE
   // El REGISTRO es ligero (solo IPC), lo PESADO es la EJECUCIÓN (que es on-demand)
@@ -345,5 +354,6 @@ module.exports = {
   getClaudeHandlers,
   getOpenCodeHandlers,
   getGeminiCliHandlers,
-  getCodexCliHandlers
+  getCodexCliHandlers,
+  getAntigravityCliHandlers
 };

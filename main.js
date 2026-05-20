@@ -67,7 +67,7 @@ logTiming('Utils cargados');
 let Docker = null;
 
 const {
-  getWSL, getPowerShell, getCygwin, getClaude, getOpenCode, getGeminiCli, getCodexCli
+  getWSL, getPowerShell, getCygwin, getClaude, getOpenCode, getGeminiCli, getCodexCli, getAntigravityCli
 } = require('./src/main/services/lazy-services');
 
 function createServiceProxy(getter) {
@@ -87,11 +87,13 @@ const Claude = createServiceProxy(getClaude);
 const OpenCode = createServiceProxy(getOpenCode);
 const GeminiCli = createServiceProxy(getGeminiCli);
 const CodexCli = createServiceProxy(getCodexCli);
+const AntigravityCli = createServiceProxy(getAntigravityCli);
 
 const { getClaudeConfig } = require('./src/main/handlers/claude-handlers');
 const { getOpenCodeConfig } = require('./src/main/handlers/opencode-handlers');
 const { getGeminiCliConfig } = require('./src/main/handlers/geminicli-handlers');
 const { getCodexCliConfig } = require('./src/main/handlers/codexcli-handlers');
+const { getAntigravityCliConfig } = require('./src/main/handlers/antigravitycli-handlers');
 logTiming('Proxies de servicios terminal/CLI registrados (carga diferida)');
 
 // Servicio de estadísticas SSH
@@ -1372,6 +1374,12 @@ function createWindow() {
           getPty,
           isAppQuitting,
           getCodexCliConfig
+        });
+        AntigravityCli.setDependencies({
+          mainWindow,
+          getPty,
+          isAppQuitting,
+          getAntigravityCliConfig
         });
         const docker = getDocker();
         if (docker && docker.setMainWindow) {
@@ -3145,6 +3153,7 @@ function registerTabEventsWrapper(tabId) {
     OpenCode,
     GeminiCli,
     CodexCli,
+    AntigravityCli,
     startUbuntuSession,
     handleUbuntuData,
     handleUbuntuResize,
@@ -3206,6 +3215,12 @@ app.on('before-quit', (event) => {
     CodexCli.cleanup();
   } catch (error) {
     console.error('Error cleaning up CodexCli processes on quit:', error);
+  }
+
+  try {
+    AntigravityCli.cleanup();
+  } catch (error) {
+    console.error('Error cleaning up AntigravityCli processes on quit:', error);
   }
 });
 

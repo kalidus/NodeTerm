@@ -882,6 +882,7 @@ const Sidebar = React.memo(({
     opencode: false,
     geminicli: false,
     codexcli: false,
+    antigravitycli: false,
     anythingllm: false,
     openwebui: false,
     librechat: false,
@@ -903,6 +904,7 @@ const Sidebar = React.memo(({
             opencode: parsed.opencode === true,
             geminicli: parsed.geminicli === true,
             codexcli: parsed.codexcli === true,
+            antigravitycli: parsed.antigravitycli === true,
             anythingllm: parsed.anythingllm === true,
             openwebui: parsed.openwebui === true,
             librechat: parsed.librechat === true,
@@ -918,6 +920,7 @@ const Sidebar = React.memo(({
             opencode: false,
             geminicli: false,
             codexcli: false,
+    antigravitycli: false,
             anythingllm: false,
             openwebui: false,
             librechat: false,
@@ -977,7 +980,7 @@ const Sidebar = React.memo(({
         if (enabledClients > 0) count += 1; // separador de clientes
         // separador entre CLIs y Apps
         if ((aiClientsEnabled.nodeterm || aiClientsEnabled.anythingllm || aiClientsEnabled.openwebui || aiClientsEnabled.librechat || aiClientsEnabled.agentzero || aiClientsEnabled.openclaw || aiClientsEnabled.opennotebook) && 
-            (aiClientsEnabled.opencode || aiClientsEnabled.geminicli || aiClientsEnabled.codexcli || aiClientsEnabled.claude)) {
+            (aiClientsEnabled.opencode || aiClientsEnabled.geminicli || aiClientsEnabled.codexcli || aiClientsEnabled.antigravitycli || aiClientsEnabled.claude)) {
           count += 1;
         }
       }
@@ -1021,6 +1024,12 @@ const Sidebar = React.memo(({
   const openCodexCliTab = () => {
     window.dispatchEvent(new CustomEvent('create-local-terminal', {
       detail: { terminalType: 'codexcli' }
+    }));
+  };
+
+  const openAntigravityCliTab = () => {
+    window.dispatchEvent(new CustomEvent('create-local-terminal', {
+      detail: { terminalType: 'antigravitycli' }
     }));
   };
 
@@ -3339,6 +3348,7 @@ const Sidebar = React.memo(({
       opencode: openOpenCodeTab,
       geminicli: openGeminiCliTab,
       codexcli: openCodexCliTab,
+      antigravitycli: openAntigravityCliTab,
       claude: openClaudeTab,
       nodeterm: () => {
         const newAITab = {

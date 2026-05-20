@@ -265,6 +265,15 @@ const SettingsDialog = ({
     }
   });
 
+  const [antigravityCliClientEnabled, setAntigravityCliClientEnabled] = useState(() => {
+    try {
+      const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
+      return cfg.antigravitycli === true;
+    } catch {
+      return false;
+    }
+  });
+
   // Hook para redimensionamiento del diálogo
   // storageKey: null para que siempre se abra con el tamaño por defecto
   const { dialogRef, size, startResize } = useDialogResize(
@@ -1273,11 +1282,21 @@ const SettingsDialog = ({
       }
     };
 
+    const syncAntigravityCliClientState = () => {
+      try {
+        const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
+        setAntigravityCliClientEnabled(cfg.antigravitycli === true);
+      } catch {
+        setAntigravityCliClientEnabled(false);
+      }
+    };
+
     const onAiClientsConfigChanged = () => {
       syncClaudeClientState();
       syncOpenCodeClientState();
       syncGeminiCliClientState();
       syncCodexCliClientState();
+      syncAntigravityCliClientState();
     };
     const onStorage = (e) => {
       if (e.key === 'ai_clients_enabled') {
@@ -1285,6 +1304,7 @@ const SettingsDialog = ({
         syncOpenCodeClientState();
         syncGeminiCliClientState();
         syncCodexCliClientState();
+        syncAntigravityCliClientState();
       }
     };
 
@@ -1307,6 +1327,7 @@ const SettingsDialog = ({
       if (openCodeClientEnabled) options.push({ label: 'OpenCode', value: 'opencode' });
       if (geminiCliClientEnabled) options.push({ label: 'Gemini CLI', value: 'geminicli' });
       if (codexCliClientEnabled) options.push({ label: 'Codex CLI', value: 'codexcli' });
+      if (antigravityCliClientEnabled) options.push({ label: 'Antigravity CLI', value: 'antigravitycli' });
 
       // WSL genérico
       options.push({ label: 'WSL', value: 'wsl' });
@@ -1341,7 +1362,8 @@ const SettingsDialog = ({
         ...(claudeClientEnabled ? [{ label: 'Claude Code', value: 'claude' }] : []),
         ...(openCodeClientEnabled ? [{ label: 'OpenCode', value: 'opencode' }] : []),
         ...(geminiCliClientEnabled ? [{ label: 'Gemini CLI', value: 'geminicli' }] : []),
-        ...(codexCliClientEnabled ? [{ label: 'Codex CLI', value: 'codexcli' }] : [])
+        ...(codexCliClientEnabled ? [{ label: 'Codex CLI', value: 'codexcli' }] : []),
+        ...(antigravityCliClientEnabled ? [{ label: 'Antigravity CLI', value: 'antigravitycli' }] : [])
       );
     } else {
       // Fallback
@@ -1351,12 +1373,13 @@ const SettingsDialog = ({
         ...(claudeClientEnabled ? [{ label: 'Claude Code', value: 'claude' }] : []),
         ...(openCodeClientEnabled ? [{ label: 'OpenCode', value: 'opencode' }] : []),
         ...(geminiCliClientEnabled ? [{ label: 'Gemini CLI', value: 'geminicli' }] : []),
-        ...(codexCliClientEnabled ? [{ label: 'Codex CLI', value: 'codexcli' }] : [])
+        ...(codexCliClientEnabled ? [{ label: 'Codex CLI', value: 'codexcli' }] : []),
+        ...(antigravityCliClientEnabled ? [{ label: 'Antigravity CLI', value: 'antigravitycli' }] : [])
       );
     }
 
     return options;
-  }, [platform, wslDistributions, cygwinAvailable, dockerContainers, claudeClientEnabled, openCodeClientEnabled, geminiCliClientEnabled, codexCliClientEnabled]);
+  }, [platform, wslDistributions, cygwinAvailable, dockerContainers, claudeClientEnabled, openCodeClientEnabled, geminiCliClientEnabled, codexCliClientEnabled, antigravityCliClientEnabled]);
 
   // Handler para cambiar terminal por defecto
   const handleDefaultTerminalChange = useCallback((terminalType) => {

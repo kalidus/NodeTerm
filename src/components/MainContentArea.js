@@ -424,7 +424,7 @@ const MainContentArea = ({
       const { terminalType, distroInfo } = event.detail;
 
       // Los CLIs de IA se abren siempre en pestañas globales, no en el HomeTab
-      const isAIClient = ['opencode', 'geminicli', 'codexcli', 'claude'].includes(terminalType);
+      const isAIClient = ['opencode', 'geminicli', 'codexcli', 'antigravitycli', 'claude'].includes(terminalType);
       if (isAIClient) {
         createLocalTerminalTab(terminalType, distroInfo);
         return;
@@ -494,6 +494,7 @@ const MainContentArea = ({
     opencode: false,
     geminicli: false,
     codexcli: false,
+    antigravitycli: false,
     anythingllm: false,
     openwebui: false,
     librechat: false,
@@ -514,6 +515,7 @@ const MainContentArea = ({
     opencode: false,
     geminicli: false,
     codexcli: false,
+    antigravitycli: false,
     anythingllm: false,
     openwebui: false,
     librechat: false,
@@ -674,6 +676,11 @@ const MainContentArea = ({
         return <SiOpenai style={{ fontSize: `${baseIconSize}px`, color: '#10A37F', marginRight: iconMarginRight }} />;
       }
 
+      // Antigravity CLI
+      if (terminalType === 'antigravitycli') {
+        return <AIClientBrandIcon tabType="antigravitycli" size={baseIconSize + 4} style={{ marginRight: iconMarginRight }} />;
+      }
+
       // WSL genérico (sin distribución específica)
       if (terminalType === 'wsl' && !distroInfo) {
         return <FaLinux style={{ fontSize: `${baseIconSize}px`, color: primaryColor, marginRight: iconMarginRight }} />;
@@ -813,6 +820,18 @@ const MainContentArea = ({
             setLastLocalTerminalType('codexcli');
             if (createLocalTerminalTabRef.current) {
               createLocalTerminalTabRef.current('codexcli');
+            }
+          }
+        });
+      }
+      if (aiClientsEnabled.antigravitycli) {
+        aiClis.push({
+          label: 'Antigravity CLI',
+          icon: getTerminalMenuIcon('antigravitycli'),
+          command: () => {
+            setLastLocalTerminalType('antigravitycli');
+            if (createLocalTerminalTabRef.current) {
+              createLocalTerminalTabRef.current('antigravitycli');
             }
           }
         });
@@ -2353,6 +2372,19 @@ const MainContentArea = ({
       }
     }
 
+    if (terminalType === 'antigravitycli') {
+      try {
+        const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
+        if (cfg.antigravitycli !== true) {
+          window.alert('Antigravity CLI está desactivado. Actívalo en Configuración -> Clientes de IA.');
+          return;
+        }
+      } catch {
+        window.alert('Antigravity CLI está desactivado. Actívalo en Configuración -> Clientes de IA.');
+        return;
+      }
+    }
+
     if (activeGroupId !== null) {
       const currentGroupKey = activeGroupId || 'no-group';
       setGroupActiveIndices(prev => ({
@@ -2380,7 +2412,7 @@ const MainContentArea = ({
       let finalDistroInfo = distroInfo;
 
       // Si no vino distroInfo, intentar resolver distribución WSL por nombre/label directo usando ref (estado más fresco)
-      if (!finalDistroInfo && terminalType !== 'claude' && terminalType !== 'opencode' && terminalType !== 'geminicli' && terminalType !== 'codexcli' && !terminalType.startsWith('docker-')) {
+      if (!finalDistroInfo && terminalType !== 'claude' && terminalType !== 'opencode' && terminalType !== 'geminicli' && terminalType !== 'codexcli' && terminalType !== 'antigravitycli' && !terminalType.startsWith('docker-')) {
         const distros = wslDistributionsRef.current || [];
         const distro = distros.find(d =>
           d.name === terminalType ||
@@ -2430,6 +2462,10 @@ const MainContentArea = ({
           case 'codexcli':
             label = 'Codex CLI';
             finalTerminalType = 'codexcli';
+            break;
+          case 'antigravitycli':
+            label = 'Antigravity CLI';
+            finalTerminalType = 'antigravitycli';
             break;
           case 'wsl':
             label = 'WSL';

@@ -171,6 +171,14 @@ contextBridge.exposeInMainWorld('electron', {
     installCli: () => ipcRenderer.invoke('codexcli:cli-install'),
     uninstallCli: () => ipcRenderer.invoke('codexcli:cli-uninstall')
   },
+  antigravitycli: {
+    getConfig: () => ipcRenderer.invoke('antigravitycli:get-config'),
+    setConfig: (config) => ipcRenderer.invoke('antigravitycli:set-config', config),
+    validateConfig: (config) => ipcRenderer.invoke('antigravitycli:validate-config', config),
+    getCliStatus: () => ipcRenderer.invoke('antigravitycli:cli-status'),
+    installCli: () => ipcRenderer.invoke('antigravitycli:cli-install'),
+    uninstallCli: () => ipcRenderer.invoke('antigravitycli:cli-uninstall')
+  },
   ipcRenderer: {
     send: (channel, ...args) => {
       const validSendChannels = [
@@ -194,6 +202,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^opencode:(start|data|resize|stop):.+$/,
         /^geminicli:(start|data|resize|stop):.+$/,
         /^codexcli:(start|data|resize|stop):.+$/,
+        /^antigravitycli:(start|data|resize|stop):.+$/,
         /^docker:(start|data|stop):.+$/,
         /^linux-terminal:data:.+$/,
       ];
@@ -240,6 +249,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^opencode:.*$/,
         /^geminicli:.*$/,
         /^codexcli:.*$/,
+        /^antigravitycli:.*$/,
         // 'process-pdf', // DESHABILITADO - pdf-parse eliminado
         // 'process-pdf-buffer', // DESHABILITADO
         // 'create-temp-file', // DESHABILITADO
@@ -289,6 +299,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^opencode:.*$/,
         /^geminicli:.*$/,
         /^codexcli:.*$/,
+        /^antigravitycli:.*$/,
         /^rdp:.*$/,
         /^guacamole:.*$/,
         /^anythingllm:.*$/,
@@ -330,6 +341,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^opencode:.*$/,
         /^geminicli:.*$/,
         /^codexcli:.*$/,
+        /^antigravitycli:.*$/,
         /^rdp:.*$/,
         /^librechat:.*$/,
         /^agentzero:.*$/,
