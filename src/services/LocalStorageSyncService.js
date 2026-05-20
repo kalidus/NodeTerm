@@ -255,11 +255,14 @@ class LocalStorageSyncService {
                         this._memoryCache[key] = value; // Actualizar caché
                         count++;
                     }
-                    // TERCERO: Fallback a caché en memoria (para evitar borrados accidentales si localStorage falla)
-                    else if (this._memoryCache[key] !== undefined) {
+                    // TERCERO: Fallback a caché en memoria (para evitar borrados accidentales si localStorage falla antes de inicializar)
+                    else if (!this._initialized && this._memoryCache[key] !== undefined) {
                         data[key] = this._memoryCache[key];
                         count++;
                         // console.log(`[LocalStorageSync] ⚠️ Usando caché en memoria para clave perdida: ${key}`);
+                    } else if (this._initialized) {
+                        // Si está inicializado y no está en localStorage, lo eliminamos de la caché en memoria para permitir su borrado en app-data.json
+                        delete this._memoryCache[key];
                     }
                 }
             }
