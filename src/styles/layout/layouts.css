@@ -247,22 +247,15 @@ body.layout-unified .app-container > div[style*="height: 0.5px"] {
   display: none !important;
 }
 
-/* Splitter pane divider: 1px subtle line */
+/* Splitter pane divider: completely seamless in unified layout */
 body.layout-unified .p-splitter-gutter {
-  background: var(--ui-sidebar-bg, #0e1116) !important;
+  background: transparent !important;
   position: relative !important;
   width: 4px !important;
 }
 
 body.layout-unified .p-splitter-gutter::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 1px;
-  height: 100%;
-  background: var(--ui-sidebar-border, rgba(255, 255, 255, 0.08)) !important;
+  display: none !important;
 }
 
 /* Sidebar overrides */
