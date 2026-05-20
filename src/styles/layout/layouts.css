@@ -181,3 +181,103 @@ body.layout-cyberpunk .ai-md code:not(pre code) {
   color: #fff !important;
   border: 1px solid var(--ui-button-primary) !important;
 }
+
+/* =========================================
+   LAYOUT: UNIFIED (SEAMLESS)
+   ========================================= */
+body.layout-unified {
+  --layout-border-radius-main: 0px !important;
+  --layout-border-radius-sm: 0px !important;
+  --layout-border-radius-lg: 0px !important;
+  --border-radius: 0px !important;
+  --layout-panel-shadow: none !important;
+  --layout-border-width: 0px !important;
+}
+
+/* Eliminate margins and paddings around the window */
+body.layout-unified .app-container {
+  background: var(--ui-sidebar-bg, #0e1116) !important;
+}
+
+body.layout-unified .p-splitter-panel {
+  padding: 0px !important;
+}
+
+body.layout-unified .terminal-frame-container {
+  padding: 0px !important;
+}
+
+body.layout-unified .terminal-frame {
+  border-radius: 0px !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+body.layout-unified .terminal-frame-header {
+  border-bottom: 1px solid var(--ui-sidebar-border, rgba(255, 255, 255, 0.05)) !important;
+}
+
+/* Style TitleBar to be flush at the top and integrated */
+body.layout-unified .title-bar {
+  margin: 0px !important;
+  border-radius: 0px !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-top: none !important;
+  border-bottom: 1px solid var(--ui-sidebar-border, rgba(255, 255, 255, 0.05)) !important;
+  background: var(--ui-sidebar-bg, #0e1116) !important;
+  box-shadow: none !important;
+}
+
+/* Ensure title bar texts and icons match sidebar contrast in unified layout */
+body.layout-unified .title-bar,
+body.layout-unified .title-bar span,
+body.layout-unified .title-bar svg,
+body.layout-unified .title-bar .title-cursor-blink {
+  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.85)) !important;
+  fill: var(--ui-sidebar-text, rgba(255, 255, 255, 0.85)) !important;
+}
+
+body.layout-unified .title-bar svg path {
+  stroke: var(--ui-sidebar-text, rgba(255, 255, 255, 0.85)) !important;
+}
+
+/* Hide futuristic layout border line under TitleBar in unified mode */
+body.layout-unified .app-container > div[style*="height: 0.5px"] {
+  display: none !important;
+}
+
+/* Splitter pane divider: 1px subtle line */
+body.layout-unified .p-splitter-gutter {
+  background: var(--ui-sidebar-bg, #0e1116) !important;
+  position: relative !important;
+  width: 4px !important;
+}
+
+body.layout-unified .p-splitter-gutter::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1px;
+  height: 100%;
+  background: var(--ui-sidebar-border, rgba(255, 255, 255, 0.08)) !important;
+}
+
+/* Sidebar overrides */
+body.layout-unified .sidebar-container {
+  border-right: none !important;
+}
+
+/* Main content frame tab bar - flush top */
+body.layout-unified .terminal-frame.main-content-frame .p-tabview-nav-container {
+  border-bottom: 1px solid var(--ui-sidebar-border, rgba(255, 255, 255, 0.05)) !important;
+  background: var(--ui-sidebar-bg, #0e1116) !important;
+}
+
+/* Tab panels and terminal area border-less */
+body.layout-unified .main-content-frame-content {
+  padding: 0 !important;
+}
+

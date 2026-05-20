@@ -24,7 +24,7 @@ const LayoutThemeSelector = () => {
     }
     
     // Update body classes
-    document.body.classList.remove('layout-default', 'layout-cyberpunk');
+    document.body.classList.remove('layout-default', 'layout-cyberpunk', 'layout-unified');
     document.body.classList.add(`layout-${layoutId}`);
   }, []);
 
@@ -51,6 +51,40 @@ const LayoutThemeSelector = () => {
           <div style={{ width: '100%', height: '40px', backgroundColor: 'var(--ui-tab-bg)', borderRadius: '8px', border: '1px solid var(--ui-tab-border)' }}></div>
           <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
             <div style={{ padding: '4px 12px', backgroundColor: 'var(--ui-button-primary)', borderRadius: '4px', fontSize: '10px', color: '#fff' }}>Boton</div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'unified',
+      name: 'Unificado (Seamless)',
+      description: 'Estilo continuo sin bordes ni márgenes. La barra de título, la barra lateral y la pantalla de contenido se integran.',
+      icon: 'pi-window-minimize',
+      preview: () => (
+        <div style={{
+          width: '100%',
+          height: '120px',
+          backgroundColor: 'var(--ui-content-bg)',
+          borderRadius: '0px',
+          border: '1px solid var(--ui-sidebar-border, rgba(255,255,255,0.08))',
+          padding: '0',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
+        }}>
+          {/* Titlebar mockup */}
+          <div style={{ width: '100%', height: '18px', backgroundColor: 'var(--ui-sidebar-bg)', borderBottom: '1px solid var(--ui-sidebar-border, rgba(255,255,255,0.08))', display: 'flex', alignItems: 'center', padding: '0 8px' }}>
+            <div style={{ width: '28px', height: '4px', backgroundColor: 'var(--ui-sidebar-text, rgba(255,255,255,0.3))', borderRadius: '2px' }}></div>
+          </div>
+          {/* Main Area mockup */}
+          <div style={{ display: 'flex', flex: 1 }}>
+            {/* Sidebar mockup */}
+            <div style={{ width: '25%', height: '100%', backgroundColor: 'var(--ui-sidebar-bg)', borderRight: '1px solid var(--ui-sidebar-border, rgba(255,255,255,0.08))' }}></div>
+            {/* Content mockup */}
+            <div style={{ flex: 1, height: '100%', backgroundColor: 'var(--ui-content-bg)', padding: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ width: '100%', height: '12px', backgroundColor: 'var(--ui-tab-bg, rgba(255,255,255,0.05))', border: '1px solid var(--ui-tab-border, rgba(255,255,255,0.1))' }}></div>
+              <div style={{ width: '100%', flex: 1, backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid var(--ui-tab-border, rgba(255,255,255,0.05))' }}></div>
+            </div>
           </div>
         </div>
       )
