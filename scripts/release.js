@@ -64,7 +64,7 @@ function printHelp() {
     console.log('  --prepare                 Ejecutar preparación de versión');
     console.log('  --release-type <tipo>     keep|patch|minor|major');
     console.log('  --merge-main              Hacer merge a main antes de compilar');
-    console.log('  --update-changelog        Actualizar encabezado en CHANGELOG');
+    console.log('  --update-changelog        Actualizar encabezado en CHANGELOG (fuente de verdad para GitHub)');
     console.log('  --commit-prep             Commit automático de preparación');
     console.log('  --tag-strategy <modo>     ask|move|skip|cancel (si tag existe y no apunta a HEAD)');
     console.log('  --skip-ssl                Fuerza NODE_TLS_REJECT_UNAUTHORIZED=0 para target mac');
@@ -213,6 +213,7 @@ function getReleaseNotesFromReleaseFile(version) {
     return match ? match[0].trim() : '';
 }
 
+/** Publica en GitHub: sección ## [version] de CHANGELOG.md (fuente de verdad). RELEASE_NOTES.md solo si no hay changelog. */
 function buildReleaseNotes(version) {
     const changelogNotes = getReleaseNotes(version);
     if (changelogNotes) {

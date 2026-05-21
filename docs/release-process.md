@@ -1,40 +1,80 @@
-# Proceso de Release Profesional - NodeTerm
+# Proceso de release ? NodeTerm
 
-Este documento detalla el flujo de trabajo estándar para realizar lanzamientos oficiales de NodeTerm utilizando el asistente automatizado.
+Flujo para publicar versiones con el asistente `npm run release` y una sola fuente de verdad para los cambios.
 
-## Flujo de Release Estándar
+## Archivos y roles
 
-El proceso se divide en tres etapas lógicas para asegurar que el código publicado sea estable y esté correctamente documentado.
+| Archivo | Rol |
+|---------|-----|
+| **`CHANGELOG.md`** | Fuente de verdad ([Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/)). Todo cambio notable va aqu?. |
+| **`RELEASE_NOTES.md`** | Borrador **opcional** solo de la versi?n en curso (tono usuario). No duplicar historial. |
+| **`README.md`** | Badge, resumen corto de la ?ltima versi?n publicada y enlaces a changelog/releases. **Sin** changelog embebido. |
+| **`package.json`** | Versi?n de la app; webpack y electron-builder la propagan. |
 
-### Etapa 1: Preparación (En tu rama de trabajo)
-En esta fase se deja el código listo para ser integrado en la versión oficial.
-*   **Verificación de Git**: Se asegura que no haya cambios accidentales.
-*   **Versionado Semántico**: Se elige el tipo de incremento (`Patch`, `Minor` o `Major`).
-*   **CHANGELOG.md**: Se actualiza el historial de cambios con la nueva versión y fecha.
-*   **Commit de Release**: Se crea un commit que marca el fin del desarrollo de esa versión.
+GitHub Release recibe el texto de la secci?n `## [x.y.z]` de **`CHANGELOG.md`** (v?a `scripts/release.js`).
 
-### Etapa 2: Integración (Merge a Main)
-Nada se publica si no está consolidado en la rama principal.
-*   **Merge**: Se fusionan los cambios de tu rama en `main`. Esto garantiza que `main` siempre sea el reflejo exacto de lo que está en producción.
+## Flujo est?ndar
 
-### Etapa 3: Despliegue (En la rama Main)
-Una vez el código está en `main`, se procede a la construcción y entrega.
-*   **Build Unificado**: El script compila el código y genera los ejecutables en un solo paso eficiente, evitando compilaciones duplicadas.
-*   **Artefactos**: Se genera el **Instalador** (`-Setup.exe`) y la **Versión Portable** (`.exe` sin Setup).
-*   **GitHub Publishing**: Sube binarios y el archivo de actualización (**`latest.yml`**) directamente. Si no tienes el token configurado, el script te lo pedirá.
-*   **Git Tag**: Crea una etiqueta oficial (ej. `v1.6.5`) y la sube al repositorio.
+### 1. Preparaci?n (rama `release/x.y.z`)
 
----
+```bash
+git checkout -b release/1.6.8   # ejemplo
+npm version patch --no-git-tag-version
+```
 
-## Cómo ejecutar el asistente
+- A?adir en `CHANGELOG.md`:
 
-Simplemente ejecuta el siguiente comando y sigue las instrucciones en pantalla:
+  ```markdown
+  ## [1.6.8] - YYYY-MM-DD
+
+  ### Added / Changed / Fixed ...
+  ```
+
+- Opcional: redactar resumen en `RELEASE_NOTES.md` (solo esta versi?n).
+- Actualizar `README.md`: badge, tabla de versi?n y 1 p?rrafo de resumen (sin listar versiones antiguas).
+- Commit: `release: preparaci?n v1.6.8`
+
+Durante el desarrollo, ir a?adiendo bullets bajo esa secci?n del changelog.
+
+### 2. Integraci?n
+
+- Merge de `release/x.y.z` ? `main` cuando el c?digo est? listo para publicar.
+- Cerrar fecha en `CHANGELOG.md` y quitar entradas tipo ?En preparaci?n? si ya no aplican.
+
+### 3. Publicaci?n (normalmente en `main`)
 
 ```bash
 npm run release
 ```
 
-### Consejos para un buen release:
-1.  **GH_TOKEN**: El script te permite pegar el token en el momento, no es necesario configurar variables de entorno antes.
-2.  **Timeouts**: Si la subida a GitHub falla por tiempo de espera (debido al tamaño del archivo), el script te informará; en ese caso, puedes intentar relanzar la Etapa 3.
-3.  **Archivos**: Todos los archivos finales se encuentran en la carpeta `dist/`.
+El asistente puede:
+
+- Compilar y generar instaladores en `dist/`
+- Crear tag `vX.Y.Z` y subir a GitHub
+- Publicar notas desde **`CHANGELOG.md`**
+- Subir `latest.yml` y artefactos
+
+Si las notas en GitHub salen mal codificadas en Windows:
+
+```bash
+npm run fix-release-notes
+```
+
+### 4. Tras publicar
+
+- En `main`: README con la versi?n **ya publicada** (no la rama en curso).
+- Borrador de `RELEASE_NOTES.md` listo para la **siguiente** versi?n o vac?o con la plantilla.
+
+## Checklist antes del tag
+
+- [ ] `package.json` / `package-lock.json` con la versi?n correcta
+- [ ] `CHANGELOG.md` con secci?n completa y fecha
+- [ ] `README.md`: badge y resumen alineados con la release publicada
+- [ ] `RELEASE_NOTES.md` (opcional): solo borrador de esta versi?n, sin historial apilado
+- [ ] `npm run build` si quieres verificar la versi?n en la UI
+
+## Consejos
+
+1. **GH_TOKEN**: el script puede usar `gh auth token` o pedir el token al vuelo.
+2. **Timeouts**: si falla la subida por tama?o, reintentar la etapa de publicaci?n.
+3. **No mantener tres changelogs**: detalle solo en `CHANGELOG.md`; README y GitHub resumen o enlazan.
