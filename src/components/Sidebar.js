@@ -128,6 +128,7 @@ const Sidebar = React.memo(({
   setShowUnifiedConnectionDialog,
 
   iconTheme,
+  setIconTheme,
   iconSize = 20,
   folderIconSize = 20,
   connectionIconSize = 20,
@@ -3065,10 +3066,12 @@ const Sidebar = React.memo(({
               </span>
             </button>
           )}
-          {activeTab !== null && setTreeTheme && (
+          {activeTab !== null && (setTreeTheme || setIconTheme || setSessionActionIconTheme) && (
             <SidebarAppearanceMenu
               treeTheme={treeTheme}
               setTreeTheme={setTreeTheme}
+              iconTheme={iconTheme}
+              setIconTheme={setIconTheme}
               sessionActionIconTheme={sessionActionIconTheme}
               setSessionActionIconTheme={setSessionActionIconTheme}
               tooltip="Apariencia del árbol"

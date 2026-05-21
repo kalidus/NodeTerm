@@ -3074,6 +3074,7 @@ const App = () => {
     showUnifiedConnectionDialog,
     setShowUnifiedConnectionDialog,
     iconTheme: iconThemeSidebar,
+    setIconTheme: setIconThemeSidebar,
     iconSize: iconSize,
     folderIconSize: folderIconSize,
     connectionIconSize: connectionIconSize,
@@ -3180,7 +3181,7 @@ const App = () => {
   }), [
     isLoadingConnections, nodes, setNodes, sidebarCollapsed, setSidebarCollapsed, allExpanded, toggleExpandAll,
     expandedKeys, setExpandedKeys, setShowCreateGroupDialog, setShowSettingsDialog,
-    iconThemeSidebar, iconSize, sidebarFont, sidebarFontSize, sidebarFontColor, terminalTheme, treeTheme, setTreeTheme, sessionActionIconTheme, setSessionActionIconTheme,
+    iconThemeSidebar, setIconThemeSidebar, iconSize, sidebarFont, sidebarFontSize, sidebarFontColor, terminalTheme, treeTheme, setTreeTheme, sessionActionIconTheme, setSessionActionIconTheme,
     toast, confirmDialog, onOpenSSHConnection, onNodeContextMenu, onTreeAreaContextMenu, hideContextMenu,
     sidebarCallbacksRef, selectedNodeKey, setSelectedNodeKey, activeTab, openFileExplorer,
 
