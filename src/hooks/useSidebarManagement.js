@@ -454,6 +454,38 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
     return result;
   }, []);
 
+  // === Claves de nodos del sidebar con al menos una pestaña abierta ===
+  const getOpenSessionNodeKeys = useCallback((sshTabs, rdpTabs, guacamoleTabs, fileExplorerTabs) => {
+    const result = new Set();
+
+    const processTabNode = (node) => {
+      if (!node) return;
+
+      if (node.type === 'split') {
+        processTabNode(node.first);
+        processTabNode(node.second);
+        if (node.leftTerminal) processTabNode(node.leftTerminal);
+        if (node.rightTerminal) processTabNode(node.rightTerminal);
+        return;
+      }
+
+      if (node.originalKey) {
+        result.add(node.originalKey);
+      }
+    };
+
+    try {
+      if (Array.isArray(sshTabs)) sshTabs.forEach(processTabNode);
+      if (Array.isArray(rdpTabs)) rdpTabs.forEach(processTabNode);
+      if (Array.isArray(guacamoleTabs)) guacamoleTabs.forEach(processTabNode);
+      if (Array.isArray(fileExplorerTabs)) fileExplorerTabs.forEach(processTabNode);
+    } catch (e) {
+      console.error('[getOpenSessionNodeKeys] Error:', e);
+    }
+
+    return result;
+  }, []);
+
   // === Función para buscar conexiones en el árbol de nodos ===
   const findAllConnections = useCallback((nodes) => {
     let results = [];
@@ -1248,6 +1280,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
     // Funciones auxiliares
     parseWallixUser,
     getActiveConnectionIds,
+    getOpenSessionNodeKeys,
     findAllConnections,
 
     // Funciones de menú contextual

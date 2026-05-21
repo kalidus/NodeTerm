@@ -207,7 +207,8 @@ const Sidebar = React.memo(({
   updateTreeHash,      // Nuevo prop para actualizar hash tras cambios locales
   hasActiveSshSession = false,
   onOpenFileExplorer,
-  onOpenWallixRefresh  // callback para refrescar carpetas importadas de Wallix
+  onOpenWallixRefresh,  // callback para refrescar carpetas importadas de Wallix
+  openSessionNodeKeys = new Set()
 }) => {
   // Hook de internacionalización
   const { t } = useTranslation('common');
@@ -326,7 +327,7 @@ const Sidebar = React.memo(({
   // Refs de rendimiento: evitar trabajo repetido durante transiciones/resize
   const sshSyncHandleRef = useRef(null); // idle callback id o timeout id
   const sidebarResizeRafRef = useRef(null);
-  const sidebarResizeBucketRef = useRef(null); // 'wide' | 'narrow' | 'tiny'
+  const sidebarResizeWidthRef = useRef(null);
   const expandedContentReady = true;
   const expandedContentRef = useRef(null);
   const treeContainerRef = useRef(null);
@@ -1129,55 +1130,45 @@ const Sidebar = React.memo(({
     createContextMenu(event, menuStructure, 'app-context-menu-sidebar');
   };
 
-  // Efecto para manejar la visibilidad de botones durante el redimensionamiento
+  // Compactación progresiva al redimensionar (iconos fijos, texto/acciones se desvanecen con transición)
   useEffect(() => {
     if (!sidebarRef.current || sidebarCollapsed) {
-      // Si está colapsado, limpiar el bucket para que se reaplique al expandir
-      sidebarResizeBucketRef.current = null;
+      sidebarResizeWidthRef.current = null;
+      sidebarRef.current?.style.removeProperty('--sidebar-compact');
+      sidebarRef.current?.style.removeProperty('--sidebar-panel-width');
+      sidebarRef.current?.classList.remove('sidebar-width-tiny', 'sidebar-width-narrow');
       return;
     }
 
     const sidebarElement = sidebarRef.current;
+    const panelElement = expandedContentRef.current;
 
-    const applyBucketStyles = (bucket) => {
-      // Re-probar los elementos en cada llamada para asegurar que tenemos los actuales (ej: tras cambio de vista)
-      const headerElement = sidebarElement.querySelector('.sidebar-header-glass-stack');
-      const buttonsContainer = headerElement?.querySelector('.sidebar-action-glass-group');
-      
-      if (!buttonsContainer) return;
-
-      // Si el bucket es el mismo, no hacemos nada (optimización)
-      // Pero si cambiamos de vista, necesitamos forzar una aplicación inicial
-      if (sidebarResizeBucketRef.current === bucket) return;
-      sidebarResizeBucketRef.current = bucket;
-
-      if (bucket === 'tiny') {
-        buttonsContainer.style.opacity = '0.3';
-        buttonsContainer.style.transform = 'scale(0.8)';
-        buttonsContainer.style.pointerEvents = 'none';
-        buttonsContainer.style.display = 'none';
-        return;
-      }
-
-      if (bucket === 'narrow') {
-        buttonsContainer.style.opacity = '0.3';
-        buttonsContainer.style.transform = 'scale(0.8)';
-        buttonsContainer.style.pointerEvents = 'none';
-        buttonsContainer.style.display = 'flex';
-        return;
-      }
-
-      // wide
-      buttonsContainer.style.opacity = '1';
-      buttonsContainer.style.transform = 'scale(1)';
-      buttonsContainer.style.pointerEvents = 'auto';
-      buttonsContainer.style.display = 'flex';
+    const compactFromWidth = (width) => {
+      const w = Math.max(0, width);
+      if (w >= 240) return 0;
+      if (w <= 100) return 1;
+      return (240 - w) / 140;
     };
 
-    const widthToBucket = (w) => {
-      if (w <= 80) return 'tiny';
-      if (w <= 120) return 'narrow';
-      return 'wide';
+    const applyResizeStyles = (width) => {
+      const rounded = Math.round(width);
+      if (sidebarResizeWidthRef.current === rounded) return;
+      sidebarResizeWidthRef.current = rounded;
+
+      const compact = compactFromWidth(width);
+      sidebarElement.style.setProperty('--sidebar-compact', compact.toFixed(3));
+      sidebarElement.style.setProperty('--sidebar-panel-width', `${rounded}px`);
+
+      sidebarElement.classList.toggle('sidebar-width-tiny', width <= 92);
+      sidebarElement.classList.toggle('sidebar-width-narrow', width > 92 && width < 170);
+
+      const buttonsContainer = sidebarElement.querySelector('.sidebar-action-glass-group');
+      if (buttonsContainer) {
+        buttonsContainer.style.removeProperty('opacity');
+        buttonsContainer.style.removeProperty('transform');
+        buttonsContainer.style.removeProperty('pointer-events');
+        buttonsContainer.style.removeProperty('display');
+      }
     };
 
     const scheduleUpdate = (width) => {
@@ -1186,23 +1177,26 @@ const Sidebar = React.memo(({
       }
       sidebarResizeRafRef.current = requestAnimationFrame(() => {
         sidebarResizeRafRef.current = null;
-        applyBucketStyles(widthToBucket(width));
+        applyResizeStyles(width);
       });
     };
 
-    // Al cambiar de vista, resetear el bucket para forzar aplicación de estilos al nuevo DOM
-    sidebarResizeBucketRef.current = null;
+    const measureWidth = () => {
+      const panelWidth = panelElement?.getBoundingClientRect?.().width ?? 0;
+      if (panelWidth > 0) return panelWidth;
+      return sidebarElement.getBoundingClientRect().width;
+    };
 
-    // Observar cambios en el tamaño de la sidebar
-    const resizeObserver = new ResizeObserver((entries) => {
-      const entry = entries?.[0];
-      const width = entry?.contentRect?.width ?? sidebarElement.getBoundingClientRect().width;
-      scheduleUpdate(width);
+    sidebarResizeWidthRef.current = null;
+
+    const resizeObserver = new ResizeObserver(() => {
+      scheduleUpdate(measureWidth());
     });
-    resizeObserver.observe(sidebarElement);
 
-    // Llamar una vez al inicio
-    scheduleUpdate(sidebarElement.getBoundingClientRect().width);
+    resizeObserver.observe(sidebarElement);
+    if (panelElement) resizeObserver.observe(panelElement);
+
+    scheduleUpdate(measureWidth());
 
     return () => {
       if (sidebarResizeRafRef.current) {
@@ -1210,6 +1204,9 @@ const Sidebar = React.memo(({
         sidebarResizeRafRef.current = null;
       }
       resizeObserver.disconnect();
+      sidebarElement.style.removeProperty('--sidebar-compact');
+      sidebarElement.style.removeProperty('--sidebar-panel-width');
+      sidebarElement.classList.remove('sidebar-width-tiny', 'sidebar-width-narrow');
     };
   }, [sidebarCollapsed, viewMode]);
 
@@ -2594,21 +2591,7 @@ const Sidebar = React.memo(({
           stopped: '#6c7086'
         };
         return (
-          <span style={{ position: 'relative', display: 'inline-flex' }}>
-            <span className="pi pi-share-alt" style={{ color: statusColors[tunnelStatus] || '#89b4fa', fontSize: `${connectionIconSize}px` }} />
-            {tunnelStatus === 'active' && (
-              <span style={{
-                position: 'absolute',
-                bottom: '-2px',
-                right: '-2px',
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                background: '#a6e3a1',
-                border: '1px solid #1e1e2e'
-              }} />
-            )}
-          </span>
+          <span className="pi pi-share-alt" style={{ color: statusColors[tunnelStatus] || '#89b4fa', fontSize: `${connectionIconSize}px` }} />
         );
       });
     } else if (isFileConnection) {
@@ -2673,6 +2656,16 @@ const Sidebar = React.memo(({
 
     // Detectar si tiene icono personalizado (para ajustar alineación del texto)
     const hasCustomFolderIcon = isFolder && node.folderIcon && node.folderIcon !== 'general' && FolderIconPresets[node.folderIcon.toUpperCase()];
+    const isWallixFolder = isFolder && node.importedFrom === 'Wallix' && node.droppable;
+    const isConnection = !isFolder && (isSSH || isRDP || isVNC || isFileConnection || isSSHTunnel);
+    const hasOpenSession = isConnection && openSessionNodeKeys?.has?.(actionNode.key);
+    const iconSlotUsesBadge = hasCustomFolderIcon || isWallixFolder;
+    const showTunnelActiveDot = isSSHTunnel && node.data?.tunnelStatus === 'active';
+    const iconSlotSize = isFolder ? (folderIconSize || 20) : (connectionIconSize || 20);
+    const iconSlotClass = [
+      'sidebar-node-icon-slot',
+      iconSlotUsesBadge ? 'sidebar-node-icon-slot--badge' : ''
+    ].filter(Boolean).join(' ');
 
     const handleFolderRowClick = (e) => {
       if (!isFolder) return;
@@ -2692,7 +2685,7 @@ const Sidebar = React.memo(({
 
     // Render básico, puedes añadir acciones/contextual aquí
     return (
-      <div className="flex align-items-center gap-1"
+      <div className="sidebar-tree-node-row flex align-items-center gap-1"
         onClick={handleFolderRowClick}
         onContextMenu={options.onNodeContextMenu ? (e) => {
           if (isFavoritesRootKey(node.key) || isFavoriteGroupFolderNode(node)) {
@@ -2727,15 +2720,19 @@ const Sidebar = React.memo(({
         data-node-type={isFolder ? 'folder' : 'connection'}
         data-node-key={node.key}
       >
-        <span style={{
-          minWidth: isFolder ? (folderIconSize || 20) : (connectionIconSize || 20),
-          width: isFolder ? (folderIconSize || 20) : (connectionIconSize || 20),
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: `${isFolder ? (folderIconSize || 20) : (connectionIconSize || 20)}px`,
-          position: 'relative'
-        }}>
+        <span
+          className={iconSlotClass}
+          style={{
+            minWidth: iconSlotUsesBadge ? undefined : iconSlotSize,
+            width: iconSlotUsesBadge ? undefined : iconSlotSize,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: `${iconSlotSize}px`,
+            position: 'relative',
+            '--sidebar-icon-slot-size': `${iconSlotSize}px`
+          }}
+        >
           {icon}
           {/* Tag SSH superpuesto en la parte derecha inferior - Solo para tema Nodeterm Basic */}
           {isSSH && themeKey === 'nodetermbasic' && (
@@ -2788,6 +2785,7 @@ const Sidebar = React.memo(({
               RDP
             </span>
           )}
+
         </span>
         <span className="node-label" style={{
           flex: 1,
@@ -2796,11 +2794,18 @@ const Sidebar = React.memo(({
           padding: 0,
           lineHeight: 'normal'
         }}>{node.label}</span>
+        {/* Indicador derecho: misma columna que el refresco Wallix */}
+        {(hasOpenSession || showTunnelActiveDot) && (
+          <span
+            className={`session-active-dot${showTunnelActiveDot ? ' session-active-dot--tunnel' : ''}`}
+            title={showTunnelActiveDot ? 'Túnel activo' : 'Sesión abierta'}
+          />
+        )}
         {/* Botón de refresco SOLO para la carpeta raíz importada de Wallix (tiene wallixUrl en data) */}
         {node.importedFrom === 'Wallix' && node.droppable && node.data && node.data.wallixUrl ? (
           <span
-            className="pi pi-refresh"
-            style={{ fontSize: '0.8rem', marginLeft: '6px', cursor: 'pointer', opacity: 0.7 }}
+            className="pi pi-refresh wallix-refresh-btn"
+            style={{ fontSize: '0.8rem', marginLeft: '6px', cursor: 'pointer' }}
             title="Refrescar conexiones desde Wallix"
             onClick={(e) => {
               e.stopPropagation();
@@ -3463,9 +3468,9 @@ const Sidebar = React.memo(({
           flexDirection: 'column',
           overflow: 'hidden',
           height: '100%',
-          transition: 'opacity 0.08s ease',
+          transition: 'opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1), flex 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
         }}>
-        <div className="sidebar-panel-content-wrapper" style={{ width: '100%', minWidth: '232px', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div className="sidebar-panel-content-wrapper" style={{ width: '100%', minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           {fullSidebar}
         </div>
       </div>

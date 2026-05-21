@@ -1438,6 +1438,7 @@ const App = () => {
     sidebarCallbacksRef,
     parseWallixUser,
     getActiveConnectionIds,
+    getOpenSessionNodeKeys,
     findAllConnections,
     getTreeContextMenuItems,
     getGeneralTreeContextMenuItems,
@@ -3057,6 +3058,14 @@ const App = () => {
     }
   }, [getAllTabs, activeTab]);
 
+  // Claves de nodos del sidebar con al menos una pestaña abierta
+  const openSessionNodeKeys = useMemo(() => {
+    if (getOpenSessionNodeKeys) {
+      return getOpenSessionNodeKeys(sshTabs, rdpTabs, guacamoleTabs, fileExplorerTabs);
+    }
+    return new Set();
+  }, [getOpenSessionNodeKeys, sshTabs, rdpTabs, guacamoleTabs, fileExplorerTabs]);
+
   // === PROPS MEMOIZADAS PARA SIDEBAR ===
   // Memoizar props que no cambian frecuentemente
   const memoizedSidebarProps = useMemo(() => ({
@@ -3094,6 +3103,7 @@ const App = () => {
     setSelectedNodeKey,
     hasActiveSshSession: activeTab && (activeTab.type === 'terminal' || activeTab.type === 'split'),
     onOpenFileExplorer: openFileExplorer,
+    openSessionNodeKeys,
 
     // Props para conexiones
     getAllFolders,
@@ -3183,7 +3193,7 @@ const App = () => {
     expandedKeys, setExpandedKeys, setShowCreateGroupDialog, setShowSettingsDialog,
     iconThemeSidebar, setIconThemeSidebar, iconSize, sidebarFont, sidebarFontSize, sidebarFontColor, terminalTheme, treeTheme, setTreeTheme, sessionActionIconTheme, setSessionActionIconTheme,
     toast, confirmDialog, onOpenSSHConnection, onNodeContextMenu, onTreeAreaContextMenu, hideContextMenu,
-    sidebarCallbacksRef, selectedNodeKey, setSelectedNodeKey, activeTab, openFileExplorer,
+    sidebarCallbacksRef, selectedNodeKey, setSelectedNodeKey, activeTab, openFileExplorer, openSessionNodeKeys,
 
     // Dependencias para conexiones
     getAllFolders, createNewSSH, saveEditSSH, openEditSSHDialog, handleSaveRdpToSidebar,

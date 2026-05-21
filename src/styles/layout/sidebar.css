@@ -413,19 +413,153 @@
 .sidebar-tree .p-treenode-content > div[data-node-type] {
   width: 100%;
   min-height: 0;
+  min-width: 0;
   align-items: center !important;
 }
 
-.sidebar-tree .p-treenode-content > div[data-node-type="folder"] > span:first-child {
+/* Fila del árbol: iconos anclados, texto y acciones se comprimen con suavidad */
+.sidebar-tree .sidebar-tree-node-row {
+  width: 100%;
+  min-width: 0;
+  flex-wrap: nowrap;
+  transition: gap 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-tree .sidebar-tree-node-row .sidebar-node-icon-slot {
+  flex-shrink: 0;
+  transition: margin 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-tree .sidebar-tree-node-row .node-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              max-width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: calc(1 - max(0, var(--sidebar-compact, 0) - 0.35) * 1.15);
+  max-width: calc(100% - (var(--sidebar-compact, 0) * 12px));
+}
+
+.sidebar-tree .sidebar-tree-node-row .wallix-refresh-btn {
+  flex-shrink: 0;
+  opacity: calc(0.7 * (1 - max(0, var(--sidebar-compact, 0) - 0.55) * 1.8));
+  max-width: calc(24px * (1 - max(0, var(--sidebar-compact, 0) - 0.7)));
+  overflow: hidden;
+  transition: opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+              max-width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+              margin 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-container.sidebar-width-narrow .sidebar-tree .sidebar-tree-node-row .node-label {
+  opacity: calc(1 - var(--sidebar-compact, 0) * 0.5);
+}
+
+.sidebar-container.sidebar-width-tiny .sidebar-action-glass-group {
+  opacity: 0;
+  transform: scale(0.88);
+  pointer-events: none;
+  max-height: 0;
+  overflow: hidden;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.sidebar-container.sidebar-width-tiny .sidebar-tree .sidebar-tree-node-row .wallix-refresh-btn {
+  opacity: 0;
+  max-width: 0;
+  margin-left: 0 !important;
+  pointer-events: none;
+}
+
+/* Panel toolbar: acciones secundarias se desvanecen antes que los iconos principales */
+.sidebar-panel-toolbar {
+  transition: padding 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-panel-toolbar-right-end {
+  transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              max-width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: calc(1 - max(0, var(--sidebar-compact, 0) - 0.25) * 1.1);
+  transform: translateX(calc(var(--sidebar-compact, 0) * -4px));
+  max-width: calc(120px * (1 - var(--sidebar-compact, 0) * 0.85));
+  overflow: hidden;
+}
+
+.sidebar-panel-content-wrapper {
+  min-width: 0 !important;
+  width: 100%;
+  transition: opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-tree .p-treenode-content > div[data-node-type="folder"] > span.sidebar-node-icon-slot:first-child {
   width: var(--sidebar-folder-icon-size, var(--sidebar-icon-size, 20px)) !important;
   min-width: var(--sidebar-folder-icon-size, var(--sidebar-icon-size, 20px)) !important;
   height: var(--sidebar-folder-icon-size, var(--sidebar-icon-size, 20px)) !important;
 }
 
-.sidebar-tree .p-treenode-content > div[data-node-type="connection"] > span:first-child {
+.sidebar-tree .p-treenode-content > div[data-node-type="connection"] > span.sidebar-node-icon-slot:first-child {
   width: var(--sidebar-connection-icon-size, var(--sidebar-icon-size, 20px)) !important;
   min-width: var(--sidebar-connection-icon-size, var(--sidebar-icon-size, 20px)) !important;
   height: var(--sidebar-connection-icon-size, var(--sidebar-icon-size, 20px)) !important;
+}
+
+/* Slot ampliado para badges (FolderIconRenderer, Wallix, sesión activa) */
+.sidebar-tree .sidebar-node-icon-slot {
+  overflow: visible !important;
+  flex-shrink: 0;
+}
+
+.sidebar-tree .sidebar-node-icon-slot--badge {
+  width: auto !important;
+  min-width: calc(var(--sidebar-icon-slot-size, var(--sidebar-icon-size, 20px)) + 6px) !important;
+  margin-right: 3px !important;
+}
+
+.sidebar-tree .p-treenode-content > div[data-node-type="folder"] > span.sidebar-node-icon-slot--badge:first-child {
+  width: auto !important;
+  min-width: calc(var(--sidebar-folder-icon-size, var(--sidebar-icon-size, 20px)) + 6px) !important;
+}
+
+.sidebar-tree .p-treenode-content > div[data-node-type="connection"] > span.sidebar-node-icon-slot--badge:first-child {
+  width: auto !important;
+  min-width: calc(var(--sidebar-connection-icon-size, var(--sidebar-icon-size, 20px)) + 6px) !important;
+}
+
+.sidebar-tree .p-treenode-content > div[data-node-type="folder"] {
+  padding-left: 2px;
+}
+
+/* Punto de sesión activa: extremo derecho de la fila (alineado con refresco Wallix) */
+.sidebar-tree .sidebar-tree-node-row .session-active-dot {
+  flex-shrink: 0;
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-left: 6px;
+  margin-right: 2px;
+  border-radius: 50%;
+  background: #22c55e;
+  border: 1.5px solid rgba(30, 30, 46, 0.92);
+  box-shadow: 0 0 4px rgba(34, 197, 94, 0.45);
+  pointer-events: none;
+  align-self: center;
+  opacity: calc(1 - max(0, var(--sidebar-compact, 0) - 0.55) * 1.8);
+  transition: opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+              margin 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-tree .sidebar-tree-node-row .session-active-dot--tunnel {
+  background: #a6e3a1;
+  box-shadow: 0 0 4px rgba(166, 227, 161, 0.45);
+}
+
+.sidebar-container.sidebar-width-tiny .sidebar-tree .sidebar-tree-node-row .session-active-dot {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin-left: 0;
+  margin-right: 0;
+  border-width: 0;
 }
 
 /* === TAG SSH PARA CONEXIONES - Solo para tema Nodeterm Basic === */
@@ -743,12 +877,23 @@
   padding: 0 8px !important;
 }
 
+/* Ratio 0 = ancho cómodo, 1 = panel muy estrecho (transición continua al redimensionar) */
+.sidebar-container {
+  --sidebar-compact: 0;
+  --sidebar-panel-width: 280px;
+}
+
 .sidebar-action-glass-group {
   display: flex !important;
   align-items: center !important;
   gap: 6px;
   margin-left: 0 !important;
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition: opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+              max-width 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: calc(1 - var(--sidebar-compact, 0) * 0.92);
+  transform: scale(calc(1 - var(--sidebar-compact, 0) * 0.12));
+  max-width: calc(100% - 8px);
   padding: 4px 8px !important;
   border-radius: 10px !important;
   background: linear-gradient(
@@ -1176,9 +1321,11 @@
   height: 100%;
   overflow: hidden;
   background: var(--ui-sidebar-bg) !important;
-  transition: opacity 0.08s ease;
   will-change: opacity;
   backface-visibility: hidden;
+  transition: opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              flex 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-panel-collapsed {
