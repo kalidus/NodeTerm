@@ -694,22 +694,13 @@
   border: none !important;
   outline: none !important;
 }
-.sidebar-tree .p-tree-toggler:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
-  border-radius: 2px !important;
-}
-.sidebar-tree .p-tree-toggler:focus {
-  background: transparent !important;
-  border-radius: 2px !important;
-  outline: none !important;
-  box-shadow: none !important;
-}
-.sidebar-tree .p-tree-toggler:focus:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
-}
+.sidebar-tree .p-tree-toggler:hover,
+.sidebar-tree .p-tree-toggler:focus,
+.sidebar-tree .p-tree-toggler:focus:hover,
 .sidebar-tree .p-tree-toggler:active {
-  background: rgba(255, 255, 255, 0.05) !important;
-  border-radius: 2px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
 }
 .sidebar-tree .p-tree-toggler-icon {
   font-size: 0.5rem !important; /* flecha ligeramente más grande */

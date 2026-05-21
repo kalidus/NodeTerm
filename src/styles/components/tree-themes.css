@@ -2307,3 +2307,17 @@
 .sidebar-tree .p-treenode-content {
   overflow: visible;
 }
+
+/* Sin caja de hover en la flecha ▶: solo el highlight de la fila (::after) */
+.sidebar-tree .p-tree-toggler,
+.sidebar-tree .p-tree-toggler:hover,
+.sidebar-tree .p-tree-toggler:focus,
+.sidebar-tree .p-tree-toggler:focus:hover,
+.sidebar-tree .p-tree-toggler:active,
+.sidebar-tree .p-treenode-content:hover .p-tree-toggler,
+.sidebar-tree .p-treenode-content:hover .p-tree-toggler:hover,
+.sidebar-tree[class*="tree-theme-"] .p-tree-toggler:hover {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
