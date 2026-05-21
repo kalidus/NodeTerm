@@ -104,6 +104,10 @@ class LocalStorageSyncService {
             if (sharedData) {
                 this._importToLocalStorage(sharedData);
                 this._snapshotSyncState();
+                // Instancia principal: volcar claves locales que aún no estén en app-data.json
+                if (!window.electron?.isSecondaryInstance) {
+                    await this.forceSync();
+                }
             } else {
                 const hasLocalTheme = localStorage.getItem('ui_theme');
                 const hasLocalHistory = localStorage.getItem('nodeterm_connection_history');

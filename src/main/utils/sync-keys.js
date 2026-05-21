@@ -20,6 +20,12 @@ const SYNC_KEYS = [
 
   // Temas y configuración visual
   'ui_theme',
+  'ui_layout',
+  'nodeterm_tree_theme',
+  'nodeterm_active_preset',
+  'titlebar_color_mode',
+  'custom_titlebar_color',
+  'use_primary_colors_titlebar',
   'basicapp_statusbar_theme',
   'basicapp_terminal_theme',
   'iconTheme',

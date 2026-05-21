@@ -10,6 +10,7 @@ import { applyTabTheme } from '../utils/tabThemeLoader';
 import { presetManager } from '../utils/presetManager';
 import { ACTIVE_PRESET_STORAGE_KEY } from '../themes/presets/index';
 import localStorageSyncService from '../services/LocalStorageSyncService';
+import { applyUILayoutFromStorage } from '../utils/appearanceLayout';
 
 
 export const useThemeManagement = () => {
@@ -484,8 +485,10 @@ export const useThemeManagement = () => {
     const updatedIconThemeSidebar = localStorage.getItem('iconThemeSidebar') || 'nord';
     const updatedTreeTheme = localStorage.getItem(TREE_THEME_STORAGE_KEY) || 'default';
     const updatedSessionActionIconTheme = localStorage.getItem('sessionActionIconTheme') || 'modern';
+    const updatedUiTheme = localStorage.getItem('ui_theme') || 'Light';
 
     // Actualizar estados
+    setUiTheme(updatedUiTheme);
     setStatusBarTheme(updatedStatusBarTheme);
     setLocalFontFamily(updatedLocalFontFamily);
     if (updatedLocalFontSize) setLocalFontSize(parseInt(updatedLocalFontSize, 10));
@@ -537,6 +540,11 @@ export const useThemeManagement = () => {
 
       // Temas
       statusBarThemeManager.applyTheme(updatedStatusBarTheme);
+      if (themeManager && updatedUiTheme) {
+        themeManager._applyThemeInternal(updatedUiTheme, false, { preserveSidebarFontColor: true });
+      }
+      applyUILayoutFromStorage();
+      themeManager?.refreshTitlebarForCurrentLayout?.();
       // Aplicar tema de iconos si cambió
       window.dispatchEvent(new Event('icon-theme-changed'));
 
@@ -546,6 +554,7 @@ export const useThemeManagement = () => {
         applyTabTheme(updatedTabTheme);
         window.dispatchEvent(new CustomEvent('tab-theme-changed', { detail: updatedTabTheme }));
       }
+      window.dispatchEvent(new Event('layout-changed'));
     } catch (e) {
       console.error('[THEME] Error aplicando estilos forzados:', e);
     }
@@ -568,20 +577,19 @@ export const useThemeManagement = () => {
 
   // Listener para actualizaciones de configuración desde sincronización
   useEffect(() => {
-    const handleSettingsUpdate = (event) => {
-      if (event.detail?.source === 'sync' || event.detail?.source === 'preset' || event.key) {
-        updateThemesFromSync();
-        const newPresetId = localStorage.getItem(ACTIVE_PRESET_STORAGE_KEY) || null;
-        setActivePresetId(newPresetId);
-      }
+    const handleSettingsUpdate = () => {
+      updateThemesFromSync();
+      const newPresetId = localStorage.getItem(ACTIVE_PRESET_STORAGE_KEY) || null;
+      setActivePresetId(newPresetId);
     };
 
     window.addEventListener('settings-updated', handleSettingsUpdate);
-    // Escuchar cambios directos en storage para mayor reactividad
+    window.addEventListener('localstorage-sync-ready', handleSettingsUpdate);
     window.addEventListener('storage', handleSettingsUpdate);
 
     return () => {
       window.removeEventListener('settings-updated', handleSettingsUpdate);
+      window.removeEventListener('localstorage-sync-ready', handleSettingsUpdate);
       window.removeEventListener('storage', handleSettingsUpdate);
     };
   }, []);

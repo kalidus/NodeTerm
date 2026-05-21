@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './components/App';
 import { markStartup } from './utils/startup-renderer-profiler';
 import { applyFirstRunHomeTabDefaults } from './utils/homeTabDefaults';
+import { applyUILayoutFromStorage } from './utils/appearanceLayout';
 
 markStartup('index.js evaluado');
 
@@ -91,9 +92,7 @@ const applyEarlyBootTheme = () => {
     // Esto debe coincidir con el color de fondo del tema para ser imperceptible
     document.body.style.backgroundColor = isLight ? '#ffffff' : '#0e1116';
 
-    // Apply layout class
-    const savedLayout = localStorage.getItem('ui_layout') || 'default';
-    document.body.classList.add(`layout-${savedLayout}`);
+    applyUILayoutFromStorage();
   } catch { }
 };
 applyEarlyBootTheme();
@@ -114,7 +113,10 @@ const initializeGlobalThemes = () => {
     const hasPowerShellStatusBarTheme = localStorage.getItem('localPowerShellStatusBarTheme');
     const hasLinuxTerminalTheme = localStorage.getItem('localLinuxTerminalTheme');
 
-    if (!hasUITheme) {
+    const isSecondaryInstance =
+      typeof window !== 'undefined' && window.electron?.isSecondaryInstance === true;
+
+    if (!hasUITheme && !isSecondaryInstance) {
       applyFirstRunHomeTabDefaults();
       // Primer arranque: preset completo en idle (no bloquear root.render)
       const applyFirstRunPreset = () => {
@@ -222,6 +224,9 @@ const initAndRender = async () => {
   } catch (err) {
     console.warn('[Index] Error en sincronización inicial:', err);
   }
+
+  // Reaplicar splash/layout/tema tras importar app-data (instancia secundaria)
+  applyEarlyBootTheme();
 
   initializeGlobalThemes();
 

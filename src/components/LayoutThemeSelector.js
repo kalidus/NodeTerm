@@ -1,18 +1,30 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import { themeManager } from '../utils/themeManager';
+import { applyUILayoutFromStorage, UI_LAYOUT_STORAGE_KEY } from '../utils/appearanceLayout';
+import { persistSyncedSetting } from '../utils/persistSyncedSetting';
 import '../styles/components/theme-selector.css';
 
 const LayoutThemeSelector = () => {
   const [currentLayout, setCurrentLayout] = useState('default');
 
-  useEffect(() => {
-    const savedLayout = localStorage.getItem('ui_layout') || 'default';
-    setCurrentLayout(savedLayout);
+  const syncLayoutFromStorage = useCallback(() => {
+    const layoutId = applyUILayoutFromStorage();
+    setCurrentLayout(layoutId);
   }, []);
+
+  useEffect(() => {
+    syncLayoutFromStorage();
+    window.addEventListener('localstorage-sync-ready', syncLayoutFromStorage);
+    window.addEventListener('settings-updated', syncLayoutFromStorage);
+    return () => {
+      window.removeEventListener('localstorage-sync-ready', syncLayoutFromStorage);
+      window.removeEventListener('settings-updated', syncLayoutFromStorage);
+    };
+  }, [syncLayoutFromStorage]);
 
   const handleLayoutChange = useCallback((layoutId) => {
     setCurrentLayout(layoutId);
-    localStorage.setItem('ui_layout', layoutId);
+    persistSyncedSetting(UI_LAYOUT_STORAGE_KEY, layoutId);
     
     // Auto-sync icon theme for Cyberpunk
     if (layoutId === 'cyberpunk') {
@@ -24,8 +36,7 @@ const LayoutThemeSelector = () => {
       }));
     }
     
-    document.body.classList.remove('layout-default', 'layout-cyberpunk', 'layout-unified');
-    document.body.classList.add(`layout-${layoutId}`);
+    applyUILayoutFromStorage();
 
     themeManager.refreshTitlebarForCurrentLayout();
     window.dispatchEvent(new Event('layout-changed'));
