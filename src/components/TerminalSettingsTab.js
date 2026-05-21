@@ -188,20 +188,20 @@ const TerminalSettingsTab = ({
       case 'ssh': return fontFamily || 'Consolas';
       case 'powershell': return localFontFamily || 'Consolas';
       case 'linux': return linuxFontFamily;
-      case 'docker': return dockerFontFamily;
+      case 'docker': return localDockerFontFamily;
       default: return 'Consolas';
     }
-  }, [fontFamily, localFontFamily, linuxFontFamily, dockerFontFamily]);
+  }, [fontFamily, localFontFamily, linuxFontFamily, localDockerFontFamily]);
 
   const getFontSizeForType = useCallback((type) => {
     switch (type) {
       case 'ssh': return fontSize || 14;
       case 'powershell': return localFontSize || 14;
       case 'linux': return linuxFontSize;
-      case 'docker': return dockerFontSize;
+      case 'docker': return localDockerFontSize;
       default: return 14;
     }
-  }, [fontSize, localFontSize, linuxFontSize, dockerFontSize]);
+  }, [fontSize, localFontSize, linuxFontSize, localDockerFontSize]);
 
   const handleFontChange = useCallback((type, font) => {
     switch (type) {
