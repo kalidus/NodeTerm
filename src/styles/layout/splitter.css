@@ -38,12 +38,11 @@
   transition: none !important; /* Sin transición durante el arrastre para fluidez */
 }
 
-/* Transición suave del panel del splitter cuando se colapsa/expande */
 .main-splitter-transitioning > .p-splitter-panel {
-  transition: flex-basis 0.15s cubic-bezier(0.4, 0, 0.2, 1),
-              width 0.15s cubic-bezier(0.4, 0, 0.2, 1),
-              min-width 0.15s cubic-bezier(0.4, 0, 0.2, 1),
-              max-width 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition: flex-basis 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              width 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              min-width 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              max-width 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 /* Primera expansión: sin transiciones en sidebar Y panel para evitar lag (override !important) */

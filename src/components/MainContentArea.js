@@ -2623,15 +2623,24 @@ const MainContentArea = ({
   const [sidebarSizePercent, setSidebarSizePercent] = React.useState(FIXED_EXPANDED_SIZE);
   const [isTransitioningSidebar, setIsTransitioningSidebar] = React.useState(false);
   const prevCollapsedRef = React.useRef(sidebarCollapsed);
+  const hasEverExpandedSplitterRef = React.useRef(!sidebarCollapsed);
 
   React.useEffect(() => {
     if (prevCollapsedRef.current !== sidebarCollapsed) {
+      const wasFirstExpand = !hasEverExpandedSplitterRef.current && !sidebarCollapsed;
       prevCollapsedRef.current = sidebarCollapsed;
-      setIsTransitioningSidebar(true);
-      const timer = setTimeout(() => {
+      if (!sidebarCollapsed) hasEverExpandedSplitterRef.current = true;
+
+      if (wasFirstExpand) {
+        // Primera expansión: sin transición, el panel aparece instantáneamente
         setIsTransitioningSidebar(false);
-      }, 200);
-      return () => clearTimeout(timer);
+      } else {
+        setIsTransitioningSidebar(true);
+        const timer = setTimeout(() => {
+          setIsTransitioningSidebar(false);
+        }, 250);
+        return () => clearTimeout(timer);
+      }
     }
   }, [sidebarCollapsed]);
 
@@ -2861,6 +2870,7 @@ const MainContentArea = ({
               onOpenFileExplorer={handleSidebarOpenFileExplorer}
               setSidebarCollapsed={handleSidebarToggle}
               sidebarCollapsed={sidebarCollapsed}
+              isTransitioningSidebar={isTransitioningSidebar}
             />
           </TerminalFrame>
         </SplitterPanel>

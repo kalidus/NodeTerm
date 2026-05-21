@@ -208,7 +208,8 @@ const Sidebar = React.memo(({
   hasActiveSshSession = false,
   onOpenFileExplorer,
   onOpenWallixRefresh,  // callback para refrescar carpetas importadas de Wallix
-  openSessionNodeKeys = new Set()
+  openSessionNodeKeys = new Set(),
+  isTransitioningSidebar = false
 }) => {
   // Hook de internacionalización
   const { t } = useTranslation('common');
@@ -337,12 +338,15 @@ const Sidebar = React.memo(({
 
   const [isWarmingUp, setIsWarmingUp] = useState(false);
   const hasWarmedUpRef = useRef(false);
+  const hasEverExpandedRef = useRef(!sidebarCollapsed);
 
   // Forzar layout del contenido pre-montado a tamaño completo off-screen en el inicio
   useEffect(() => {
     // Si la sidebar no está colapsada, ya está visible, no hace falta calentar
     if (!sidebarCollapsed) {
       hasWarmedUpRef.current = true;
+      hasEverExpandedRef.current = true;
+      setIsWarmingUp(false); // Reset state safely
       return;
     }
     // Esperar a que los nodos estén cargados y no estemos en modo de carga (skeleton)
@@ -357,6 +361,12 @@ const Sidebar = React.memo(({
     // Iniciar calentamiento (render off-screen a tamaño completo para forzar layout y paint en la GPU)
     setIsWarmingUp(true);
     hasWarmedUpRef.current = true;
+
+    // Precargar chunks de componentes lazy para que estén listos en la primera expansión
+    import('./PasswordManagerSidebar').catch(() => {});
+    import('./DocumentsSidebar').catch(() => {});
+    import('./ToolsSidebar').catch(() => {});
+    import('./LocalFileExplorerSidebar').catch(() => {});
 
     // Usamos un doble frame para asegurar que el navegador ha renderizado el árbol
     let rafId1, rafId2;
@@ -1143,6 +1153,13 @@ const Sidebar = React.memo(({
     const sidebarElement = sidebarRef.current;
     const panelElement = expandedContentRef.current;
 
+    if (isTransitioningSidebar) {
+      sidebarResizeWidthRef.current = null;
+      sidebarElement.style.setProperty('--sidebar-compact', '0');
+      sidebarElement.classList.remove('sidebar-width-tiny', 'sidebar-width-narrow');
+      return;
+    }
+
     const compactFromWidth = (width) => {
       const w = Math.max(0, width);
       if (w >= 240) return 0;
@@ -1208,7 +1225,7 @@ const Sidebar = React.memo(({
       sidebarElement.style.removeProperty('--sidebar-panel-width');
       sidebarElement.classList.remove('sidebar-width-tiny', 'sidebar-width-narrow');
     };
-  }, [sidebarCollapsed, viewMode]);
+  }, [sidebarCollapsed, viewMode, isTransitioningSidebar]);
 
   // Helpers
   const deepCopy = (obj) => JSON.parse(JSON.stringify(obj));
@@ -3440,7 +3457,7 @@ const Sidebar = React.memo(({
       <div
         ref={expandedContentRef}
         className={`sidebar-panel${(sidebarCollapsed && !isWarmingUp) ? ' sidebar-panel-collapsed' : ''}`}
-        style={isWarmingUp ? {
+        style={(isWarmingUp && sidebarCollapsed) ? {
           position: 'absolute',
           left: '-9999px',
           width: '280px',
@@ -3461,16 +3478,21 @@ const Sidebar = React.memo(({
           pointerEvents: 'none',
           border: 'none',
           padding: 0,
-        } : {
-          flex: 1,
-          minWidth: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          height: '100%',
-          transition: 'opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1), flex 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
-        }}>
-        <div className="sidebar-panel-content-wrapper" style={{ width: '100%', minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        } : (() => {
+          const isFirstExpand = !hasEverExpandedRef.current;
+          if (isFirstExpand) hasEverExpandedRef.current = true;
+          return {
+            flex: 1,
+            minWidth: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            height: '100%',
+            opacity: isFirstExpand ? 1 : undefined,
+            transition: isFirstExpand ? 'none' : 'opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1), flex 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+          };
+        })()}>
+        <div className="sidebar-panel-content-wrapper" style={{ width: '100%', minWidth: isTransitioningSidebar ? '240px' : 0, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           {fullSidebar}
         </div>
       </div>
