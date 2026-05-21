@@ -315,15 +315,16 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
   // Banner para detectar cambios en fuentes vinculadas (usuario inicia revalidación bajo demanda)
   const [importBanner, setImportBanner] = useState(null);
 
-  // Sincronizar color personalizado de titlebar al montar y tras cambios de tema
+  // Sincronizar titlebar al montar y tras cambio de tema o estilo de apariencia
   useEffect(() => {
-    const syncTitlebarColors = () => {
-      const colors = themeManager.currentTheme?.colors;
-      if (colors) themeManager.applyTitlebarColorVars(colors);
-    };
+    const syncTitlebarColors = () => themeManager.refreshTitlebarForCurrentLayout();
     syncTitlebarColors();
     window.addEventListener('theme-changed', syncTitlebarColors);
-    return () => window.removeEventListener('theme-changed', syncTitlebarColors);
+    window.addEventListener('layout-changed', syncTitlebarColors);
+    return () => {
+      window.removeEventListener('theme-changed', syncTitlebarColors);
+      window.removeEventListener('layout-changed', syncTitlebarColors);
+    };
   }, []);
 
   // Efecto para crear copos de nieve dinámicamente para el tema Winter Snowfall

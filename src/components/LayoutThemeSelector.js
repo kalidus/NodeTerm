@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
+import { themeManager } from '../utils/themeManager';
 import '../styles/components/theme-selector.css';
 
 const LayoutThemeSelector = () => {
@@ -23,9 +24,11 @@ const LayoutThemeSelector = () => {
       }));
     }
     
-    // Update body classes
     document.body.classList.remove('layout-default', 'layout-cyberpunk', 'layout-unified');
     document.body.classList.add(`layout-${layoutId}`);
+
+    themeManager.refreshTitlebarForCurrentLayout();
+    window.dispatchEvent(new Event('layout-changed'));
   }, []);
 
   const layouts = [

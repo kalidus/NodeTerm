@@ -1,5 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
-import { themeManager, getTitlebarColorConfig } from '../utils/themeManager';
+import {
+  themeManager,
+  getTitlebarColorConfig,
+  getThemeTitlebarPalette,
+  migrateTitlebarStorage,
+  isUserCustomTitlebar,
+  TITLEBAR_COLOR_MODE_KEY,
+} from '../utils/themeManager';
 import { uiThemes, CLASSIC_UI_KEYS, FUTURISTIC_UI_KEYS, MODERN_UI_KEYS, ANIMATED_UI_KEYS, NATURE_UI_KEYS } from '../themes/ui-themes';
 import '../styles/components/theme-selector.css';
 
@@ -51,7 +58,9 @@ const THEME_DESCRIPTIONS = {
 
 const ThemeSelector = ({ showPreview = false }) => {
   const [currentTheme, setCurrentTheme] = useState('Light');
+  const [usePrimaryColorsForTitlebar, setUsePrimaryColorsForTitlebar] = useState(false);
   const [customTitlebarColor, setCustomTitlebarColor] = useState(null);
+  const [titlebarPaletteOpen, setTitlebarPaletteOpen] = useState(false);
   const [animSpeed, setAnimSpeed] = useState('normal');
   const [reducedMotion, setReducedMotion] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -61,16 +70,11 @@ const ThemeSelector = ({ showPreview = false }) => {
     const savedTheme = localStorage.getItem('ui_theme') || 'Light';
     setCurrentTheme(savedTheme);
 
-    let savedTitlebarColor = localStorage.getItem(TITLEBAR_COLOR_KEY);
-    if (!savedTitlebarColor && localStorage.getItem(LEGACY_TITLEBAR_KEY) === 'true') {
-      const themeColors = uiThemes[savedTheme]?.colors;
-      if (themeColors) {
-        savedTitlebarColor = getTitlebarColorConfig(themeColors).accent;
-        localStorage.setItem(TITLEBAR_COLOR_KEY, savedTitlebarColor);
-        localStorage.removeItem(LEGACY_TITLEBAR_KEY);
-      }
-    }
-    setCustomTitlebarColor(savedTitlebarColor || null);
+    migrateTitlebarStorage();
+    const hasCustomTitlebar = isUserCustomTitlebar();
+    setUsePrimaryColorsForTitlebar(localStorage.getItem(LEGACY_TITLEBAR_KEY) === 'true');
+    setCustomTitlebarColor(hasCustomTitlebar ? localStorage.getItem(TITLEBAR_COLOR_KEY) : null);
+    setTitlebarPaletteOpen(hasCustomTitlebar);
 
     const savedSpeed = localStorage.getItem(ANIM_SPEED_KEY) || 'normal';
     setAnimSpeed(savedSpeed);
@@ -103,7 +107,8 @@ const ThemeSelector = ({ showPreview = false }) => {
 
   useEffect(() => {
     const syncTitlebarColorState = () => {
-      setCustomTitlebarColor(localStorage.getItem(TITLEBAR_COLOR_KEY) || null);
+      setUsePrimaryColorsForTitlebar(localStorage.getItem(LEGACY_TITLEBAR_KEY) === 'true');
+      setCustomTitlebarColor(isUserCustomTitlebar() ? localStorage.getItem(TITLEBAR_COLOR_KEY) : null);
     };
     window.addEventListener('theme-changed', syncTitlebarColorState);
     return () => window.removeEventListener('theme-changed', syncTitlebarColorState);
@@ -111,24 +116,35 @@ const ThemeSelector = ({ showPreview = false }) => {
 
   const handleThemeChange = useCallback((themeName) => {
     setCurrentTheme(themeName);
-    setCustomTitlebarColor(null);
+    if (!isUserCustomTitlebar()) {
+      setCustomTitlebarColor(null);
+      localStorage.removeItem(TITLEBAR_COLOR_KEY);
+      localStorage.setItem(TITLEBAR_COLOR_MODE_KEY, 'theme');
+    }
     themeManager.applyTheme(themeName);
   }, []);
 
-  const handleTitlebarColorChange = useCallback((e) => {
-    const color = e.target.value;
+  const handleTitlebarColorPreferenceChange = useCallback(() => {
+    const newValue = !usePrimaryColorsForTitlebar;
+    setUsePrimaryColorsForTitlebar(newValue);
+    localStorage.setItem(LEGACY_TITLEBAR_KEY, newValue.toString());
+    setCustomTitlebarColor(null);
+    localStorage.removeItem(TITLEBAR_COLOR_KEY);
+    localStorage.setItem(TITLEBAR_COLOR_MODE_KEY, 'theme');
+    themeManager.applyTheme(localStorage.getItem('ui_theme') || currentTheme);
+  }, [usePrimaryColorsForTitlebar, currentTheme]);
+
+  const handleTitlebarPaletteSelect = useCallback((color) => {
     setCustomTitlebarColor(color);
+    localStorage.setItem(TITLEBAR_COLOR_MODE_KEY, 'custom');
     localStorage.setItem(TITLEBAR_COLOR_KEY, color);
-    localStorage.removeItem(LEGACY_TITLEBAR_KEY);
     themeManager.applyTitlebarColors(localStorage.getItem('ui_theme') || currentTheme);
   }, [currentTheme]);
 
-  const handleTitlebarColorReset = useCallback((e) => {
-    e.stopPropagation();
+  const handleTitlebarUseThemeDefault = useCallback(() => {
     setCustomTitlebarColor(null);
+    localStorage.setItem(TITLEBAR_COLOR_MODE_KEY, 'theme');
     localStorage.removeItem(TITLEBAR_COLOR_KEY);
-    localStorage.removeItem(LEGACY_TITLEBAR_KEY);
-    themeManager.applyTitlebarColors(localStorage.getItem('ui_theme') || currentTheme);
     themeManager.applyTheme(localStorage.getItem('ui_theme') || currentTheme);
   }, [currentTheme]);
 
@@ -167,10 +183,22 @@ const ThemeSelector = ({ showPreview = false }) => {
     return uiThemes[CLASSIC_UI_KEYS[0]];
   }, [currentTheme]);
 
-  const displayTitlebarColor = useMemo(() => {
-    if (customTitlebarColor) return customTitlebarColor;
-    return getTitlebarColorConfig(activeTheme.colors).accent;
-  }, [customTitlebarColor, activeTheme]);
+  const titlebarPalette = useMemo(
+    () => getThemeTitlebarPalette(activeTheme.colors),
+    [activeTheme]
+  );
+
+  const titlebarModeLabel = useMemo(() => {
+    if (customTitlebarColor) {
+      const match = titlebarPalette.find(
+        (s) => s.color.toLowerCase() === customTitlebarColor.toLowerCase()
+      );
+      return match ? `Paleta: ${match.label}` : 'Color de paleta';
+    }
+    return usePrimaryColorsForTitlebar ? 'Acento del tema' : 'Automático (sidebar)';
+  }, [customTitlebarColor, usePrimaryColorsForTitlebar, titlebarPalette]);
+
+  const normalizedCustomTitlebar = customTitlebarColor?.toLowerCase() || null;
 
   // Obtener temas filtrados (memoizado para evitar recálculos durante resize)
   const themes = useMemo(() => {
@@ -394,57 +422,80 @@ const ThemeSelector = ({ showPreview = false }) => {
                 </div>
               </div>
 
-              {/* Color personalizado de la titlebar */}
-              <div className="theme-titlebar-wrapper">
-                <div
-                  className={`theme-titlebar-btn ${customTitlebarColor ? 'active' : ''}`}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => document.getElementById('theme-titlebar-color-input')?.click()}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      document.getElementById('theme-titlebar-color-input')?.click();
-                    }
-                  }}
-                  title="Elige el color de fondo de la barra de título"
-                >
-                  <i className="pi pi-window-maximize"></i>
-                  <div className="theme-titlebar-text-container">
-                    <span>Titlebar</span>
-                    <span className="theme-option-hint">
-                      {customTitlebarColor ? 'Color personalizado' : 'Automático (tema)'}
-                    </span>
-                  </div>
-                  <div
-                    className="theme-titlebar-controls"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {customTitlebarColor && (
-                      <button
-                        type="button"
-                        className="theme-titlebar-reset"
-                        onClick={handleTitlebarColorReset}
-                        title="Volver al color automático del tema"
-                        aria-label="Restablecer color de titlebar"
-                      >
-                        <i className="pi pi-refresh" />
-                      </button>
-                    )}
-                    <label
-                      className="theme-titlebar-color-swatch"
-                      style={{ backgroundColor: displayTitlebarColor }}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <input
-                        id="theme-titlebar-color-input"
-                        type="color"
-                        value={displayTitlebarColor}
-                        onChange={handleTitlebarColorChange}
-                      />
-                    </label>
-                  </div>
+              {/* Titlebar: modo + paleta del tema */}
+              <div className="theme-titlebar-card">
+                <div className="theme-titlebar-card-header">
+                  <span className="theme-titlebar-card-title">
+                    <i className="pi pi-window-maximize" />
+                    Titlebar
+                  </span>
                 </div>
+
+                <button
+                  type="button"
+                  className={`theme-titlebar-mode-row ${!customTitlebarColor ? 'active' : ''}`}
+                  onClick={handleTitlebarColorPreferenceChange}
+                  disabled={!!customTitlebarColor}
+                  title={
+                    usePrimaryColorsForTitlebar
+                      ? 'Usa el acento definido en el tema'
+                      : 'Usa el tono de la sidebar (comportamiento por defecto)'
+                  }
+                >
+                  <div className="theme-titlebar-text-container">
+                    <span>Modo automático</span>
+                    <span className="theme-option-hint">{titlebarModeLabel}</span>
+                  </div>
+                  <div className={`theme-mini-toggle ${usePrimaryColorsForTitlebar && !customTitlebarColor ? 'on' : ''}`} />
+                </button>
+
+                <button
+                  type="button"
+                  className={`theme-titlebar-palette-toggle ${titlebarPaletteOpen ? 'open' : ''}`}
+                  onClick={() => setTitlebarPaletteOpen((open) => !open)}
+                  aria-expanded={titlebarPaletteOpen}
+                  title="Mostrar colores de la paleta del tema activo"
+                >
+                  <i className="pi pi-palette" />
+                  <span>Paleta del tema</span>
+                  <i className={`pi ${titlebarPaletteOpen ? 'pi-chevron-up' : 'pi-chevron-down'}`} />
+                </button>
+
+                {titlebarPaletteOpen && (
+                  <div className="theme-titlebar-palette-panel">
+                    <div className="theme-titlebar-palette-grid" role="list">
+                      {titlebarPalette.map((swatch) => (
+                        <button
+                          key={swatch.id}
+                          type="button"
+                          role="listitem"
+                          className={`theme-titlebar-palette-item ${
+                            normalizedCustomTitlebar === swatch.color.toLowerCase() ? 'selected' : ''
+                          }`}
+                          title={`${swatch.label} (${swatch.color})`}
+                          aria-label={`${swatch.label}: ${swatch.color}`}
+                          aria-pressed={normalizedCustomTitlebar === swatch.color.toLowerCase()}
+                          onClick={() => handleTitlebarPaletteSelect(swatch.color)}
+                        >
+                          <span
+                            className="theme-titlebar-palette-swatch"
+                            style={{ backgroundColor: swatch.color }}
+                          />
+                          <span className="theme-titlebar-palette-label">{swatch.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      className={`theme-titlebar-default-btn ${!customTitlebarColor ? 'active' : ''}`}
+                      onClick={handleTitlebarUseThemeDefault}
+                      title="Quitar color fijo y volver al modo automático"
+                    >
+                      <i className="pi pi-replay" />
+                      <span>Por defecto del tema</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
             <div className="theme-hero-badge">

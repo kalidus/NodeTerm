@@ -69,6 +69,35 @@ body.layout-cyberpunk *::-webkit-scrollbar-thumb:hover {
   border-bottom: none !important;
 }
 
+/* Titlebar: color del tema en todos los estilos de apariencia */
+body.layout-default .title-bar,
+body.layout-cyberpunk .title-bar,
+body.layout-unified .title-bar {
+  background: var(--ui-titlebar-accent, var(--ui-chrome-header-bg, var(--ui-sidebar-bg, #0e1116))) !important;
+}
+
+body.layout-default .title-bar,
+body.layout-default .title-bar span,
+body.layout-default .title-bar svg,
+body.layout-default .title-bar .title-cursor-blink,
+body.layout-cyberpunk .title-bar,
+body.layout-cyberpunk .title-bar span,
+body.layout-cyberpunk .title-bar svg,
+body.layout-cyberpunk .title-bar .title-cursor-blink,
+body.layout-unified .title-bar,
+body.layout-unified .title-bar span,
+body.layout-unified .title-bar svg,
+body.layout-unified .title-bar .title-cursor-blink {
+  color: var(--ui-titlebar-text, var(--ui-sidebar-text, rgba(255, 255, 255, 0.85))) !important;
+  fill: var(--ui-titlebar-text, var(--ui-sidebar-text, rgba(255, 255, 255, 0.85))) !important;
+}
+
+body.layout-default .title-bar svg path,
+body.layout-cyberpunk .title-bar svg path,
+body.layout-unified .title-bar svg path {
+  stroke: var(--ui-titlebar-text, var(--ui-sidebar-text, rgba(255, 255, 255, 0.85))) !important;
+}
+
 /* --- Global application of layout variables --- */
 
 /* Font Family Overrides for Cyberpunk */
@@ -229,7 +258,7 @@ body.layout-unified .terminal-frame-title {
   opacity: 0.9 !important;
 }
 
-/* Style TitleBar to be flush at the top and integrated */
+/* Unificado: titlebar a ras de ventana */
 body.layout-unified .title-bar {
   margin: 0px !important;
   border-radius: 0px !important;
@@ -237,36 +266,32 @@ body.layout-unified .title-bar {
   border-right: none !important;
   border-top: none !important;
   border-bottom: none !important;
-  background: var(--ui-titlebar-accent, var(--ui-chrome-header-bg, var(--ui-sidebar-bg, #0e1116))) !important;
   box-shadow: none !important;
 }
 
-/* Ensure title bar texts and icons match sidebar contrast in unified layout */
-body.layout-unified .title-bar,
-body.layout-unified .title-bar span,
-body.layout-unified .title-bar svg,
-body.layout-unified .title-bar .title-cursor-blink {
-  color: var(--ui-titlebar-text, var(--ui-sidebar-text, rgba(255, 255, 255, 0.85))) !important;
-  fill: var(--ui-titlebar-text, var(--ui-sidebar-text, rgba(255, 255, 255, 0.85))) !important;
-}
-
-body.layout-unified .title-bar svg path {
-  stroke: var(--ui-titlebar-text, var(--ui-sidebar-text, rgba(255, 255, 255, 0.85))) !important;
-}
-
-/* Color personalizado: prioridad sobre gradientes de temas animados */
+/* Color personalizado / paleta: prioridad sobre gradientes de temas animados */
 html[data-custom-titlebar="true"] .title-bar[data-animation] {
   background: var(--ui-titlebar-accent) !important;
 }
 
+html[data-custom-titlebar="true"] body.layout-default .title-bar,
+html[data-custom-titlebar="true"] body.layout-cyberpunk .title-bar,
 html[data-custom-titlebar="true"] body.layout-unified .title-bar,
+html[data-custom-titlebar="true"] body.layout-default .title-bar span,
+html[data-custom-titlebar="true"] body.layout-cyberpunk .title-bar span,
 html[data-custom-titlebar="true"] body.layout-unified .title-bar span,
+html[data-custom-titlebar="true"] body.layout-default .title-bar svg,
+html[data-custom-titlebar="true"] body.layout-cyberpunk .title-bar svg,
 html[data-custom-titlebar="true"] body.layout-unified .title-bar svg,
+html[data-custom-titlebar="true"] body.layout-default .title-bar .title-cursor-blink,
+html[data-custom-titlebar="true"] body.layout-cyberpunk .title-bar .title-cursor-blink,
 html[data-custom-titlebar="true"] body.layout-unified .title-bar .title-cursor-blink {
   color: var(--ui-titlebar-text) !important;
   fill: var(--ui-titlebar-text) !important;
 }
 
+html[data-custom-titlebar="true"] body.layout-default .title-bar svg path,
+html[data-custom-titlebar="true"] body.layout-cyberpunk .title-bar svg path,
 html[data-custom-titlebar="true"] body.layout-unified .title-bar svg path {
   stroke: var(--ui-titlebar-text) !important;
 }

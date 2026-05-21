@@ -56,10 +56,65 @@ function isColorLight(hex) {
   return (0.299 * r + 0.587 * g + 0.114 * b) > 186;
 }
 
-/** Resuelve colores de la titlebar según preferencia guardada en localStorage. */
+export const TITLEBAR_COLOR_MODE_KEY = 'titlebar_color_mode';
+
+/** Solo true si el usuario eligió explícitamente un color personalizado. */
+export function isUserCustomTitlebar() {
+  return (
+    localStorage.getItem(TITLEBAR_COLOR_MODE_KEY) === 'custom' &&
+    !!normalizeHexColor(localStorage.getItem('custom_titlebar_color'))
+  );
+}
+
+/** Elimina solo custom_titlebar_color huérfano (sin modo "custom"). */
+export function migrateTitlebarStorage() {
+  if (!isUserCustomTitlebar()) {
+    localStorage.removeItem('custom_titlebar_color');
+    if (localStorage.getItem(TITLEBAR_COLOR_MODE_KEY) !== 'custom') {
+      localStorage.setItem(TITLEBAR_COLOR_MODE_KEY, 'theme');
+    }
+  }
+}
+
+/** Colores de la paleta del tema ofrecidos para la titlebar (sin duplicados). */
+export function getThemeTitlebarPalette(themeColors) {
+  if (!themeColors) return [];
+
+  const candidates = [
+    { id: 'primary', label: 'Primario', color: themeColors.buttonPrimary },
+    { id: 'accent', label: 'Acento', color: themeColors['--ui-titlebar-accent'] },
+    { id: 'status', label: 'Estado', color: themeColors.statusBarBackground },
+    { id: 'tabs', label: 'Pestañas', color: themeColors.tabActiveText },
+    { id: 'selected', label: 'Selección', color: themeColors.sidebarSelected },
+    { id: 'menu', label: 'Menú', color: themeColors.menuBarBackground },
+    { id: 'hover', label: 'Hover', color: themeColors.buttonHover },
+    { id: 'secondary', label: 'Secundario', color: themeColors.buttonSecondary },
+  ];
+
+  const seen = new Set();
+  const palette = [];
+  for (const entry of candidates) {
+    const hex = normalizeHexColor(entry.color);
+    if (!hex || seen.has(hex)) continue;
+    seen.add(hex);
+    palette.push({ id: entry.id, label: entry.label, color: hex });
+  }
+  return palette;
+}
+
+/**
+ * Lógica histórica de titlebar (pre-selector manual de color).
+ * - Toggle OFF: fondo = sidebar aclarado; texto = buttonPrimary
+ * - Toggle ON: fondo = --ui-titlebar-accent; texto = --ui-titlebar-text
+ */
 export function getTitlebarColorConfig(themeColors) {
-  const customTitlebarColor = normalizeHexColor(localStorage.getItem('custom_titlebar_color'));
-  const usePrimaryColorsForTitlebar = localStorage.getItem('use_primary_colors_titlebar') === 'true';
+  if (!themeColors) {
+    return { accent: '#1976d2', text: '#fff', isCustom: false };
+  }
+
+  const customTitlebarColor = isUserCustomTitlebar()
+    ? normalizeHexColor(localStorage.getItem('custom_titlebar_color'))
+    : null;
 
   if (customTitlebarColor) {
     return {
@@ -69,16 +124,25 @@ export function getTitlebarColorConfig(themeColors) {
     };
   }
 
+  const usePrimaryColorsForTitlebar =
+    localStorage.getItem('use_primary_colors_titlebar') === 'true';
+
   if (usePrimaryColorsForTitlebar) {
     return {
-      accent: themeColors['--ui-titlebar-accent'] || themeColors.buttonPrimary || '#1976d2',
+      accent:
+        themeColors['--ui-titlebar-accent'] ||
+        themeColors.buttonPrimary ||
+        '#1976d2',
       text: themeColors['--ui-titlebar-text'] || '#fff',
       isCustom: false,
     };
   }
 
   return {
-    accent: adjustColorBrightness(themeColors.sidebarBackground, 8) || themeColors.buttonPrimary || '#1976d2',
+    accent:
+      adjustColorBrightness(themeColors.sidebarBackground, 8) ||
+      themeColors.buttonPrimary ||
+      '#1976d2',
     text: themeColors.buttonPrimary || '#fff',
     isCustom: false,
   };
@@ -86,6 +150,9 @@ export function getTitlebarColorConfig(themeColors) {
 
 class ThemeManager {
   constructor() {
+    if (typeof window !== 'undefined') {
+      migrateTitlebarStorage();
+    }
     this.currentTheme = null;
     this.styleElement = null;
     this.checkboxObserver = null;
@@ -116,7 +183,6 @@ class ThemeManager {
           // Aplicar sin guardar para evitar bucle infinito si fuera bidireccional
           this._applyThemeInternal(sharedConfig.themeName, false, {
             preserveSidebarFontColor: true,
-            preserveTitlebarColor: true,
           });
           return;
         }
@@ -130,7 +196,6 @@ class ThemeManager {
     if (savedTheme) {
       this.applyTheme(savedTheme, {
         preserveSidebarFontColor: true,
-        preserveTitlebarColor: true,
       });
     }
   }
@@ -153,10 +218,9 @@ class ThemeManager {
       return;
     }
 
-    const preserveTitlebarColor = options.preserveTitlebarColor === true || save === false;
-    if (!preserveTitlebarColor) {
+    if (save && !isUserCustomTitlebar()) {
       localStorage.removeItem('custom_titlebar_color');
-      localStorage.removeItem('use_primary_colors_titlebar');
+      localStorage.setItem(TITLEBAR_COLOR_MODE_KEY, 'theme');
     }
 
     this.currentTheme = theme;
@@ -192,7 +256,6 @@ class ThemeManager {
     // Aplicar animaciones si es un tema animado
     this.applyAnimations(theme);
 
-    // Tras animaciones/layouts (usan !important), reaplicar color personalizado de titlebar
     this.applyTitlebarColorVars(theme.colors);
 
     // Aplicar configuración del icono interactivo
@@ -231,6 +294,10 @@ class ThemeManager {
     this.applyTitlebarColorVars(theme.colors);
   }
 
+  /**
+   * Publica --ui-titlebar-accent/text en :root (todos los layouts los consumen vía CSS).
+   * Con color de paleta manual añade inline !important para vencer animaciones.
+   */
   applyTitlebarColorVars(themeColors) {
     if (!themeColors || typeof document === 'undefined') return;
 
@@ -240,14 +307,9 @@ class ThemeManager {
     root.style.setProperty('--ui-titlebar-accent', titlebarColors.accent);
     root.style.setProperty('--ui-titlebar-text', titlebarColors.text);
 
-    if (titlebarColors.isCustom) {
-      root.setAttribute('data-custom-titlebar', 'true');
-    } else {
-      root.removeAttribute('data-custom-titlebar');
-    }
-
     document.querySelectorAll('.title-bar').forEach((bar) => {
       if (titlebarColors.isCustom) {
+        root.setAttribute('data-custom-titlebar', 'true');
         bar.setAttribute('data-custom-titlebar', 'true');
         bar.style.setProperty('background', titlebarColors.accent, 'important');
         bar.style.setProperty('color', titlebarColors.text, 'important');
@@ -257,6 +319,21 @@ class ThemeManager {
         bar.style.removeProperty('color');
       }
     });
+
+    if (!titlebarColors.isCustom) {
+      root.removeAttribute('data-custom-titlebar');
+    }
+  }
+
+  /** Reaplica titlebar tras cambio de estilo de apariencia (moderno / cyberpunk / unificado). */
+  refreshTitlebarForCurrentLayout() {
+    const colors = this.currentTheme?.colors;
+    if (colors) {
+      this.applyTitlebarColorVars(colors);
+      return;
+    }
+    const themeName = localStorage.getItem('ui_theme') || 'Light';
+    this.applyTitlebarColors(themeName);
   }
 
   generateCSS(theme) {
@@ -1222,9 +1299,9 @@ class ThemeManager {
 
   loadSavedTheme() {
     const savedTheme = localStorage.getItem('ui_theme') || 'Light';
+    migrateTitlebarStorage();
     this.applyTheme(savedTheme, {
       preserveSidebarFontColor: true,
-      preserveTitlebarColor: true,
     });
     return savedTheme;
   }

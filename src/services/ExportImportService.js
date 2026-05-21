@@ -219,6 +219,7 @@ class ExportImportService {
           
           // === CONFIGURACIONES DE UI ===
           custom_titlebar_color: this.safeGetItem('custom_titlebar_color'),
+          titlebar_color_mode: this.safeGetItem('titlebar_color_mode'),
           use_primary_colors_titlebar: this.safeGetItem('use_primary_colors_titlebar'),
           nodeterm_ui_anim_speed: this.safeGetItem('nodeterm_ui_anim_speed'),
           nodeterm_ui_reduced_motion: this.safeGetItem('nodeterm_ui_reduced_motion'),
