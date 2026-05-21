@@ -14,7 +14,7 @@ function hexToRgba(hex, alpha) {
 }
 
 // Función para ajustar el brillo de un color hex
-function adjustColorBrightness(hex, percent) {
+export function adjustColorBrightness(hex, percent) {
   if (!hex || typeof hex !== 'string' || !hex.startsWith('#')) return hex;
 
   let r = parseInt(hex.slice(1, 3), 16);
