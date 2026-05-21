@@ -1,3 +1,24 @@
+# 🚀 NodeTerm v1.6.8 - Release Notes
+
+**Fecha de Release**: 2026-05-21  
+**Tipo de Release**: En preparación  
+**Versión Anterior**: v1.6.7
+
+---
+
+## 🎉 ¡Bienvenido a NodeTerm v1.6.8!
+
+Esta versión está en preparación. Se ha creado la rama de release y actualizado la versión base a **v1.6.8**. En esta sección se irán consolidando los cambios finales antes de la publicación. Debajo conservamos las notas de **v1.6.7** y anteriores como referencia.
+
+---
+
+## ✨ Características principales (v1.6.8)
+
+### 🚧 Pendiente
+- Los cambios de esta versión se documentarán aquí antes del release final.
+
+---
+
 # 🚀 NodeTerm v1.6.7 - Release Notes
 
 **Fecha de Release**: 2026-05-21  

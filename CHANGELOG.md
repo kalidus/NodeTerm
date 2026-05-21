@@ -8,6 +8,12 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ## [Unreleased]
 
+## [1.6.8] - 2026-05-21
+
+### 🚧 En preparación
+- Rama de release `release/1.6.8` creada y versión base actualizada a `1.6.8`.
+- Pendiente consolidar los cambios finales de esta versión antes de publicar.
+
 ## [1.6.7] - 2026-05-21
 
 ### 🧭 Sidebar y navegación

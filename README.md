@@ -5,7 +5,7 @@
   <br>
   <b>Cliente SSH moderno y multiplataforma para administradores y devs</b>
   <br><br>
-  <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/badge/version-1.6.5-blue.svg"/></a>
+  <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/badge/version-1.6.8-blue.svg"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg"/></a>
   <a href="https://www.electronjs.org/"><img src="https://img.shields.io/badge/electron-latest-brightgreen.svg"/></a>
   <a href="#donaciones"><img src="https://img.shields.io/badge/💰-Donate_Crypto-yellow.svg"/></a>
@@ -138,7 +138,25 @@ npm run build:win
 
 ---
 
-## 🎉 Versión Actual: v1.6.5 (21 Marzo 2026)
+## 🎉 Versión Actual: v1.6.8 (21 Mayo 2026) — en preparación
+
+### 🚧 Próximo release
+- Rama `release/1.6.8` activa; cambios y notas se consolidarán antes de publicar en GitHub.
+
+---
+
+## 🎉 Versión publicada: v1.6.7 (21 Mayo 2026)
+
+### 🧭 Sidebar, notas, conexiones e IA
+- **Sidebar rediseñada**: Pestañas por sección, favoritos virtuales, lazy loading y tema Cursor opcional.
+- **Notas**: Editor Tiptap, sync Nextcloud y gestión alineada con conexiones.
+- **Conexiones**: Diálogos SSH/RDP/VNC unificados; ProxyJump, host keys, grabación por sesión.
+- **IA**: Clientes Claude, Gemini, OpenCode, Codex, Antigravity y Open Notebook en pestañas.
+- **Seguridad y rendimiento**: Endurecimiento IPC/Docker, calculadora CVSS y arranque más rápido.
+
+---
+
+## 🎉 Versión Anterior: v1.6.5 (21 Marzo 2026)
 
 ### 🎨 Presets, sidebar y terminal
 - **Presets de tema e iconos**: Configuración desde la barra lateral con panel usable y mejoras por versiones.
@@ -280,7 +298,10 @@ NodeTerm/
 
 | Versión | Características | Estado |
 |---------|----------------|--------|
-| **v1.6.5** | 🎨 Presets, sidebar rápida y fixes de UI | ✅ Actual |
+| **v1.6.8** | 🚧 Próximo release (rama en preparación) | 🔄 En curso |
+| **v1.6.7** | 🧭 Sidebar, notas, conexiones e IA | ✅ Actual |
+| **v1.6.6** | 🚧 Release intermedia | ✅ Completado |
+| **v1.6.5** | 🎨 Presets, sidebar rápida y fixes de UI | ✅ Completado |
 | **v1.6.4** | 🔧 Fixes y Mejoras de Release | ✅ Completado |
 | **v1.6.3** | 🔄 Múltiples Instancias e Importación | ✅ Completado |
 | **v1.6.1** | 🐛 Fix de Conexión WALLIX | ✅ Completado |
@@ -297,7 +318,17 @@ NodeTerm/
 
 ## 📝 Changelog
 
-### v1.6.5 (21 Marzo 2026) - ACTUAL
+### v1.6.8 (21 Mayo 2026) - EN PREPARACIÓN
+- 🚧 Rama `release/1.6.8`; notas y changelog se completarán antes del tag en GitHub
+
+### v1.6.7 (21 Mayo 2026)
+- 🧭 **Sidebar y navegación** - Pestañas por sección, favoritos, lazy loading y búsqueda mejorada
+- 📝 **Notas** - Editor Tiptap, Zen Mode, TTS y sync Nextcloud
+- 🔌 **Conexiones** - Diálogos SSH/RDP/VNC unificados y opciones avanzadas SSH
+- 🤖 **IA** - Clientes CLI locales y Open Notebook; retirado chat IA legacy
+- 🔐 **Seguridad** - IPC endurecido, CVSS y mitigaciones Docker/AnythingLLM
+
+### v1.6.5 (21 Marzo 2026)
 - 🎨 **Presets y sidebar** - Presets de tema/iconos, acciones rápidas, opción Ocean Pro (marco colapsado)
 - 🖥️ **Terminal** - Mejoras de tema, sombras e iconos por defecto
 - 🐛 **Sidebar** - Menos lag, color difuminado y redimensionado corregidos; alternancia preset/temas
