@@ -105,11 +105,16 @@ const SYNC_KEYS = [
   'homeTab_localTerminalTabsVisible',
   'homeTab_localTerminalWorkspace',
   'homeTab_statusBarVisible',
+  'homeTab_cardVisible',
+  'homeTab_rightColumnVisible',
+  'homeTab_rightColumnCollapsed',
+  'homeTab_rightColumn_sections',
   'homeTabFont',
   'homeTabFontSize',
   'actionBarIconTheme',
-  'homeTab_rightColumnCollapsed',
-  'homeTab_rightColumn_sections',
+  'nodeterm_terminal_opacity',
+  'nodeterm_terminal_frame_style',
+  'nodeterm_minimal_mode',
 
   // RDP/Guacamole
   'rdp_idle_timeout_minutes',

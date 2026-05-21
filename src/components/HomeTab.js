@@ -15,6 +15,12 @@ import { themeManager } from '../utils/themeManager';
 import { themes } from '../themes';
 import { getRecents, onUpdate, getRecentPasswords, subscribeRecents } from '../utils/connectionStore';
 import { STORAGE_KEYS } from '../utils/constants';
+import {
+  persistHomeTabSetting,
+  readBoolSetting,
+  readFloatSetting,
+  readStringSetting
+} from '../utils/homeTabSync';
 
 /** Opciones de marco del terminal local (Home); mismas claves que `TERMINAL_FRAME_STYLE` en ConnectionHistory. */
 const HOME_TERMINAL_FRAME_STYLE_OPTIONS = [
@@ -64,12 +70,7 @@ const HomeTab = ({
   });
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.TERMINAL_FRAME_STYLE, terminalFrameStyle);
-    } catch {
-      // Ignorar errores de persistencia
-    }
-
+    persistHomeTabSetting(STORAGE_KEYS.TERMINAL_FRAME_STYLE, terminalFrameStyle);
     try {
       window.dispatchEvent(new CustomEvent('terminal-frame-style-changed', {
         detail: { style: terminalFrameStyle }
@@ -142,33 +143,34 @@ const HomeTab = ({
   });
 
   useEffect(() => {
-    localStorage.setItem('nodeterm_terminal_opacity', terminalOpacity.toString());
+    persistHomeTabSetting('nodeterm_terminal_opacity', terminalOpacity.toString());
   }, [terminalOpacity]);
 
-  // Sincronizar opacidad cuando se cambia desde fuera (ej: preset o di??logo de ajustes)
+  const syncHomeOptionsFromStorage = React.useCallback(() => {
+    setTerminalOpacity(readFloatSetting('nodeterm_terminal_opacity', 1.0));
+    setTerminalFrameStyle(readStringSetting(STORAGE_KEYS.TERMINAL_FRAME_STYLE, 'macos'));
+    setShowLocalTerminalTabs(readBoolSetting(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_TABS_VISIBLE, false));
+    setStatusBarVisible(readBoolSetting(STORAGE_KEYS.HOME_TAB_STATUS_BAR_VISIBLE, true));
+    setRightColumnVisible(readBoolSetting(STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_VISIBLE, true));
+    setRightColumnCollapsed(readBoolSetting(STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_COLLAPSED, true));
+    setHomeCardVisible(readBoolSetting(STORAGE_KEYS.HOME_TAB_CARD_VISIBLE, true));
+    const linuxTheme = localStorage.getItem('localLinuxTerminalTheme');
+    if (linuxTheme && setLocalLinuxTerminalTheme) {
+      setLocalLinuxTerminalTheme(linuxTheme);
+    }
+  }, [setLocalLinuxTerminalTheme]);
+
+  // Sincronizar opciones Home cuando llegan datos de otra instancia
   useEffect(() => {
-    const syncOpacity = () => {
-      try {
-        const saved = localStorage.getItem('nodeterm_terminal_opacity');
-        if (saved !== null) {
-          const val = parseFloat(saved);
-          if (!isNaN(val) && Math.abs(val - terminalOpacity) > 0.001) {
-            setTerminalOpacity(val);
-          }
-        } else if (terminalOpacity !== 1.0) {
-          // Si se elimina de localStorage (ej: por otro preset), volver al valor por defecto
-          setTerminalOpacity(1.0);
-        }
-      } catch (err) { }
-    };
-
-    window.addEventListener('settings-updated', syncOpacity);
-    window.addEventListener('storage', syncOpacity);
+    window.addEventListener('settings-updated', syncHomeOptionsFromStorage);
+    window.addEventListener('localstorage-sync-ready', syncHomeOptionsFromStorage);
+    window.addEventListener('storage', syncHomeOptionsFromStorage);
     return () => {
-      window.removeEventListener('settings-updated', syncOpacity);
-      window.removeEventListener('storage', syncOpacity);
+      window.removeEventListener('settings-updated', syncHomeOptionsFromStorage);
+      window.removeEventListener('localstorage-sync-ready', syncHomeOptionsFromStorage);
+      window.removeEventListener('storage', syncHomeOptionsFromStorage);
     };
-  }, [terminalOpacity]);
+  }, [syncHomeOptionsFromStorage]);
 
   // Configuraci\u00F3n de tipograf\u00EDa de HomeTab
   const [homeTabFont, setHomeTabFont] = useState(() => {
@@ -207,16 +209,16 @@ const HomeTab = ({
   const [embeddedTerminalHeight, setEmbeddedTerminalHeight] = useState(360);
 
   useEffect(() => {
+    persistHomeTabSetting(
+      STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_TABS_VISIBLE,
+      showLocalTerminalTabs.toString()
+    );
     try {
-      localStorage.setItem(
-        STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_TABS_VISIBLE,
-        showLocalTerminalTabs.toString()
-      );
       window.dispatchEvent(new CustomEvent('home-tab-local-terminal-tabs-visibility-changed', {
         detail: { visible: showLocalTerminalTabs }
       }));
     } catch {
-      // Ignorar errores de persistencia
+      // Ignorar errores al despachar el evento
     }
   }, [showLocalTerminalTabs]);
 
@@ -808,7 +810,7 @@ const HomeTab = ({
     setTerminalHidden(true);
     setTerminalView(true); // Mostrar integrada al cerrar la flotante
     try {
-      localStorage.setItem(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE, 'false');
+      persistHomeTabSetting(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE, 'false');
       // Despachar evento para sincronizar con otros componentes (como SettingsDialog)
       window.dispatchEvent(new CustomEvent('home-tab-local-terminal-visibility-changed'));
     } catch (e) {
@@ -822,7 +824,7 @@ const HomeTab = ({
       const newHidden = !prev;
       // Guardar preferencia en localStorage
       try {
-        localStorage.setItem(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE, (!newHidden).toString());
+        persistHomeTabSetting(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE, (!newHidden).toString());
         // Despachar evento para sincronizar
         window.dispatchEvent(new CustomEvent('home-tab-local-terminal-visibility-changed'));
       } catch (e) {
@@ -848,7 +850,7 @@ const HomeTab = ({
       const newValue = !prev;
       // Guardar preferencia en localStorage
       try {
-        localStorage.setItem(STORAGE_KEYS.HOME_TAB_STATUS_BAR_VISIBLE, newValue.toString());
+        persistHomeTabSetting(STORAGE_KEYS.HOME_TAB_STATUS_BAR_VISIBLE, newValue.toString());
       } catch (e) {
         console.error('Error guardando preferencia de status bar:', e);
       }
@@ -859,9 +861,7 @@ const HomeTab = ({
   const handleToggleRightColumn = () => {
     setRightColumnCollapsed(prev => {
       const next = !prev;
-      try {
-        localStorage.setItem(STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_COLLAPSED, next.toString());
-      } catch (e) { }
+      persistHomeTabSetting(STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_COLLAPSED, next.toString());
       return next;
     });
   };
@@ -869,9 +869,7 @@ const HomeTab = ({
   const handleToggleRightColumnVisibility = () => {
     setRightColumnVisible(prev => {
       const next = !prev;
-      try {
-        localStorage.setItem(STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_VISIBLE, next.toString());
-      } catch (e) { }
+      persistHomeTabSetting(STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_VISIBLE, next.toString());
       return next;
     });
   };
@@ -879,9 +877,7 @@ const HomeTab = ({
   const handleToggleHomeCardVisibility = () => {
     setHomeCardVisible(prev => {
       const next = !prev;
-      try {
-        localStorage.setItem(STORAGE_KEYS.HOME_TAB_CARD_VISIBLE, next.toString());
-      } catch (e) { }
+      persistHomeTabSetting(STORAGE_KEYS.HOME_TAB_CARD_VISIBLE, next.toString());
       return next;
     });
   };
@@ -918,7 +914,7 @@ const HomeTab = ({
       setTerminalView(true);
       setTerminalHidden(true);
       try {
-        localStorage.setItem(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE, 'false');
+        persistHomeTabSetting(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE, 'false');
       } catch (err) {
         // Ignorar errores de persistencia
       }
@@ -945,7 +941,7 @@ const HomeTab = ({
       // Ocultar terminal flotante para evitar duplicidad si el integrado se muestra
       setTerminalHidden(true);
       try {
-        localStorage.setItem(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE, 'false');
+        persistHomeTabSetting(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE, 'false');
       } catch (e) { }
 
       if (addNewTab && embeddedTabbedTerminalRef.current?.addTerminalTab) {

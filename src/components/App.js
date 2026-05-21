@@ -213,9 +213,7 @@ const App = () => {
 
   // Persistir y sincronizar clase CSS global
   React.useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.MINIMAL_MODE, isMinimalMode.toString());
-    } catch { }
+    persistSyncedSetting(STORAGE_KEYS.MINIMAL_MODE, isMinimalMode.toString());
     // Añadir/quitar clase global para reglas CSS que lo necesiten
     if (isMinimalMode) {
       document.body.classList.add('minimalist-terminal-mode');
@@ -223,6 +221,20 @@ const App = () => {
       document.body.classList.remove('minimalist-terminal-mode');
     }
   }, [isMinimalMode]);
+
+  React.useEffect(() => {
+    const reloadMinimalMode = () => {
+      try {
+        setIsMinimalMode(localStorage.getItem(STORAGE_KEYS.MINIMAL_MODE) === 'true');
+      } catch { /* noop */ }
+    };
+    window.addEventListener('localstorage-sync-ready', reloadMinimalMode);
+    window.addEventListener('settings-updated', reloadMinimalMode);
+    return () => {
+      window.removeEventListener('localstorage-sync-ready', reloadMinimalMode);
+      window.removeEventListener('settings-updated', reloadMinimalMode);
+    };
+  }, []);
 
   // Escuchar evento de toggle desde cualquier componente
   React.useEffect(() => {
