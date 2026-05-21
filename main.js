@@ -1083,7 +1083,8 @@ function createWindow() {
       getGuacamoleWebSocketPort: () => (guacamoleServer ? guacamoleServer.port : null)
     });
   } catch (err) {
-    console.error('❌ Error registrando handlers críticos:', err);
+    console.error('❌ Error registrando handlers críticos:', err?.message || err);
+    if (err?.stack) console.error(err.stack);
   }
 
   // 🚀 OPTIMIZACIÓN: Precalentamiento de guacd DIFERIDO hasta después de ready-to-show

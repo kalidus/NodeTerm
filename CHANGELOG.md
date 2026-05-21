@@ -77,6 +77,7 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 - **Cierre de app**: Salida instantánea desde la X del sistema.
 
 ### 🔧 Correcciones destacadas
+- **Build Windows**: Incluir `src/shared/sync-keys.js` en el empaquetado de electron-builder; sin ello fallaban los handlers IPC (`appdata:*`, `get-system-stats`, clientes IA) y la sidebar no cargaba conexiones tras actualizar.
 - Referencias indefinidas en ajustes Docker (`dockerFontFamily` / `dockerFontSize`).
 - Sincronización de temas del terminal local y persistencia vía Electron.
 - Docker: terminal de contenedor, prioridad en TabbedTerminal y limpieza de imagen tras actualizar.

@@ -33,6 +33,7 @@
       "system-stats-worker.js",
       "package.json",
       "src/main/**",
+      "src/shared/**",
       "src/services/**",
       "src/utils/**",
       "src/components/bastion-ssh.js",
