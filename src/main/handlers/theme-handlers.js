@@ -14,9 +14,17 @@ const { getNodeTermDataDir } = require('../utils/file-utils');
 // Ruta al archivo de configuración de tema compartido
 const THEME_CONFIG_PATH = path.join(getNodeTermDataDir(), 'theme.json');
 
+function safeHandle(channel, handler) {
+  try {
+    ipcMain.removeHandler(channel);
+  } catch (_) {
+    /* noop */
+  }
+  ipcMain.handle(channel, handler);
+}
+
 function registerThemeHandlers(dependencies) {
-    // Handler para obtener el tema actual
-    ipcMain.handle('theme:get', async () => {
+    safeHandle('theme:get', async () => {
         let retries = 3;
         while (retries > 0) {
             try {
@@ -41,8 +49,7 @@ function registerThemeHandlers(dependencies) {
         return null;
     });
 
-    // Handler para guardar el tema actual
-    ipcMain.handle('theme:save', async (event, themeConfig) => {
+    safeHandle('theme:save', async (event, themeConfig) => {
         try {
             const configDir = getNodeTermDataDir();
 

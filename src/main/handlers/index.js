@@ -215,6 +215,8 @@ function registerSystemStatsIpcHandler() {
 function registerBootstrapIpcHandlers() {
   runHandlerStep('appdata IPC', () => getAppDataHandlers().registerAppDataHandlers({}));
   runHandlerStep('get-system-stats IPC', registerSystemStatsIpcHandler);
+  runHandlerStep('theme IPC', () => getThemeHandlers().registerThemeHandlers({}));
+  runHandlerStep('security IPC', () => getSecurityHandlers().registerSecurityHandlers({}));
 }
 
 /**

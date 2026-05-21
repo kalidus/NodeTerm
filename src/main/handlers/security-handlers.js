@@ -21,8 +21,17 @@ function writeSecurityConfig(config) {
   fs.writeFileSync(SECURITY_CONFIG_PATH, JSON.stringify(config, null, 2), 'utf8');
 }
 
+function safeHandle(channel, handler) {
+  try {
+    ipcMain.removeHandler(channel);
+  } catch (_) {
+    /* noop */
+  }
+  ipcMain.handle(channel, handler);
+}
+
 function registerSecurityHandlers(dependencies) {
-  ipcMain.handle('security:get-master-key', async () => {
+  safeHandle('security:get-master-key', async () => {
     try {
       const config = readSecurityConfig();
       return config.masterKey || null;
@@ -32,7 +41,7 @@ function registerSecurityHandlers(dependencies) {
     }
   });
 
-  ipcMain.handle('security:save-master-key', async (event, payload) => {
+  safeHandle('security:save-master-key', async (event, payload) => {
     try {
       let encryptedMasterKey = payload;
       let rememberPassword;
@@ -63,7 +72,7 @@ function registerSecurityHandlers(dependencies) {
     }
   });
 
-  ipcMain.handle('security:has-master-key', async () => {
+  safeHandle('security:has-master-key', async () => {
     try {
       const config = readSecurityConfig();
       return !!config.masterKey;
@@ -72,7 +81,7 @@ function registerSecurityHandlers(dependencies) {
     }
   });
 
-  ipcMain.handle('security:get-remember-password', async () => {
+  safeHandle('security:get-remember-password', async () => {
     try {
       const config = readSecurityConfig();
       return config.rememberPassword === true;
@@ -81,7 +90,7 @@ function registerSecurityHandlers(dependencies) {
     }
   });
 
-  ipcMain.handle('security:set-remember-password', async (event, remember) => {
+  safeHandle('security:set-remember-password', async (event, remember) => {
     try {
       const config = readSecurityConfig();
       config.rememberPassword = !!remember;
@@ -94,7 +103,7 @@ function registerSecurityHandlers(dependencies) {
     }
   });
 
-  ipcMain.handle('security:clear-master-key', async () => {
+  safeHandle('security:clear-master-key', async () => {
     try {
       const config = readSecurityConfig();
       delete config.masterKey;
