@@ -28,6 +28,8 @@ function parseCliArgs(argv) {
         platform: '', // win|mac|linux|all|current|wm|ml|...
         tagStrategy: 'ask', // ask|move|skip|cancel
         token: '',
+        fixNotes: false,
+        version: '',
         help: false
     };
 
@@ -46,6 +48,8 @@ function parseCliArgs(argv) {
         else if (a === '--platform' && argv[i + 1]) args.platform = String(argv[++i]).toLowerCase();
         else if (a === '--tag-strategy' && argv[i + 1]) args.tagStrategy = String(argv[++i]).toLowerCase();
         else if (a === '--token' && argv[i + 1]) args.token = String(argv[++i]);
+        else if (a === '--fix-notes') args.fixNotes = true;
+        else if (a === '--version' && argv[i + 1]) args.version = String(argv[++i]);
     }
     return args;
 }
@@ -65,6 +69,8 @@ function printHelp() {
     console.log('  --tag-strategy <modo>     ask|move|skip|cancel (si tag existe y no apunta a HEAD)');
     console.log('  --skip-ssl                Fuerza NODE_TLS_REJECT_UNAUTHORIZED=0 para target mac');
     console.log('  --token <gh_token>        Token para publicar (alternativa a variable GH_TOKEN)');
+    console.log('  --fix-notes               Solo republicar notas UTF-8 de la release (sin compilar)');
+    console.log('  --version <x.y.z>         Versión para --fix-notes (por defecto package.json)');
     console.log('  --help, -h                Mostrar esta ayuda\n');
     console.log('Ejemplo: node scripts/release.js --yes --publish --platform win --merge-main --tag-strategy move\n');
 }
@@ -216,9 +222,34 @@ function buildReleaseNotes(version) {
     return releaseFileNotes || '';
 }
 
+function getGithubRepo() {
+    const pkg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
+    const pub = pkg.build && pkg.build.publish ? pkg.build.publish : {};
+    return {
+        owner: pub.owner || 'kalidus',
+        repo: pub.repo || 'NodeTerm'
+    };
+}
+
+/** Usa GH_TOKEN o el token de `gh auth login` si está disponible. */
+function ensureGhToken() {
+    if (process.env.GH_TOKEN) return true;
+    if (!commandExists('gh --version')) return false;
+    const token = getOutput('gh auth token 2>nul');
+    if (token) {
+        process.env.GH_TOKEN = token;
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Publica notas vía REST API (JSON UTF-8). En Windows, `gh release edit --notes-file`
+ * puede corromper acentos y emojis al leer el archivo con la code page del sistema.
+ */
 async function upsertGithubRelease(tagName, targetBranch, version, notes) {
-    if (!process.env.GH_TOKEN) {
-        console.log('\x1b[33mℹ️  Sin GH_TOKEN: se omite actualización de release notes por API.\x1b[0m');
+    if (!ensureGhToken()) {
+        console.log('\x1b[33mℹ️  Sin GH_TOKEN ni sesión de gh: se omite actualización de release notes por API.\x1b[0m');
         return false;
     }
     if (!commandExists('gh --version')) {
@@ -230,20 +261,45 @@ async function upsertGithubRelease(tagName, targetBranch, version, notes) {
         return false;
     }
 
-    const tmpFile = path.join(os.tmpdir(), `nodeterm-release-notes-${tagName}.md`);
-    fs.writeFileSync(tmpFile, notes, 'utf8');
+    const { owner, repo } = getGithubRepo();
+    const inputPath = path.join(os.tmpdir(), `nodeterm-release-${tagName}.json`);
     const hasRelease = !!getOutput(`gh release view ${tagName} --json tagName 2>nul`);
 
     if (hasRelease) {
+        const releaseId = getOutput(`gh api repos/${owner}/${repo}/releases/tags/${tagName} --jq .id 2>nul`);
+        if (!releaseId) {
+            console.log(`\x1b[31m❌ No se encontró la release ${tagName} en ${owner}/${repo}.\x1b[0m`);
+            return false;
+        }
+        fs.writeFileSync(
+            inputPath,
+            JSON.stringify({
+                body: notes,
+                draft: false,
+                name: `NodeTerm ${tagName}`
+            }),
+            'utf8'
+        );
         return await runCommand(
-            `gh release edit ${tagName} --title "NodeTerm ${tagName}" --target ${targetBranch} --draft=false --notes-file "${tmpFile}"`,
-            `Actualizando release ${tagName} en GitHub`
+            `gh api repos/${owner}/${repo}/releases/${releaseId} -X PATCH --input "${inputPath}"`,
+            `Actualizando release ${tagName} en GitHub (UTF-8)`
         );
     }
 
+    fs.writeFileSync(
+        inputPath,
+        JSON.stringify({
+            tag_name: tagName,
+            target_commitish: targetBranch,
+            body: notes,
+            draft: false,
+            name: `NodeTerm ${tagName}`
+        }),
+        'utf8'
+    );
     return await runCommand(
-        `gh release create ${tagName} --title "NodeTerm ${tagName}" --target ${targetBranch} --notes-file "${tmpFile}"`,
-        `Creando release ${tagName} en GitHub`
+        `gh api repos/${owner}/${repo}/releases -X POST --input "${inputPath}"`,
+        `Creando release ${tagName} en GitHub (UTF-8)`
     );
 }
 
@@ -304,6 +360,21 @@ async function main() {
         process.env.GH_TOKEN = cli.token;
     }
     const nonInteractive = cli.yes;
+
+    if (cli.fixNotes) {
+        const pkgPathEarly = path.join(REPO_ROOT, 'package.json');
+        const fixVersion = cli.version || JSON.parse(fs.readFileSync(pkgPathEarly, 'utf8')).version;
+        const tagName = fixVersion.startsWith('v') ? fixVersion : `v${fixVersion}`;
+        const branch = getOutput('git rev-parse --abbrev-ref HEAD') || 'main';
+        const notes = buildReleaseNotes(fixVersion.replace(/^v/, ''));
+        if (!notes.trim()) {
+            console.log('\x1b[31m❌ No hay notas en CHANGELOG.md ni RELEASE_NOTES.md para esa versión.\x1b[0m');
+            process.exit(1);
+        }
+        const ok = await upsertGithubRelease(tagName, branch, fixVersion.replace(/^v/, ''), notes);
+        rl.close();
+        process.exit(ok ? 0 : 1);
+    }
 
     console.log('\n\x1b[1m\x1b[35m═══════════════════════════════════════════════════\x1b[0m');
     console.log('\x1b[1m\x1b[35m       ASISTENTE DE RELEASE PROFESIONAL (v2.2)     \x1b[0m');
