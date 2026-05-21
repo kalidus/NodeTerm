@@ -1871,6 +1871,7 @@ const HomeTab = ({
           localLinuxTerminalTheme={localLinuxTerminalTheme}
           hideStatusBar={true}
           isIntegrated={false}
+          preferDefaultOnStartup={true}
           onTabChange={(tab) => setTerminalTitle(tab.title)}
         />
       </div>

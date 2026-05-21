@@ -41,6 +41,27 @@ export const useWindowManagement = ({ getFilteredTabs, activeTabIndex, resizeTer
     };
   }, [sidebarCollapsed]);
 
+  // Releer preferencia tras sync desde app-data.json o cambios en Ajustes
+  useEffect(() => {
+    const reloadSidebarCollapsed = () => {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEYS.SIDEBAR_START_COLLAPSED);
+        if (saved !== null) {
+          setSidebarCollapsed(JSON.parse(saved));
+        }
+      } catch {
+        /* noop */
+      }
+    };
+
+    window.addEventListener('localstorage-sync-ready', reloadSidebarCollapsed);
+    window.addEventListener('settings-updated', reloadSidebarCollapsed);
+    return () => {
+      window.removeEventListener('localstorage-sync-ready', reloadSidebarCollapsed);
+      window.removeEventListener('settings-updated', reloadSidebarCollapsed);
+    };
+  }, []);
+
   // ============ FUNCIONES DE RESIZE ============
 
   // Función principal de resize (optimizada para fluidez)

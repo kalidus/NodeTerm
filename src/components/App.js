@@ -5,6 +5,7 @@ import { useSidebarManagement } from '../hooks/useSidebarManagement';
 import { useThemeManagement } from '../hooks/useThemeManagement';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
 import localStorageSyncService from '../services/LocalStorageSyncService';
+import { persistSyncedSetting } from '../utils/persistSyncedSetting';
 
 import { loadSavedTabTheme } from '../utils/tabThemeLoader';
 import i18n from '../i18n';
@@ -161,8 +162,10 @@ const App = () => {
 
   React.useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEYS.MAIN_FRAME_HEADER_START_COLLAPSED, mainFrameHeaderCollapsed.toString());
-      // Despachar evento para sincronizar con SettingsDialog si es necesario
+      persistSyncedSetting(
+        STORAGE_KEYS.MAIN_FRAME_HEADER_START_COLLAPSED,
+        mainFrameHeaderCollapsed.toString()
+      );
       window.dispatchEvent(new CustomEvent('main-frame-header-visibility-changed', {
         detail: { collapsed: mainFrameHeaderCollapsed }
       }));

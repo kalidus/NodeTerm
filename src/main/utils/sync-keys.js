@@ -72,6 +72,8 @@ const SYNC_KEYS = [
   'lock_home_button',
   'home_tab_icon',
   'sidebar_start_collapsed',
+  'nodeterm_main_frame_header_start_collapsed',
+  'nodeterm_connection_search_shortcut',
   'nodeterm_default_local_terminal',
   'nodeterm_ui_anim_speed',
   'nodeterm_language',

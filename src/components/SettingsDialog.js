@@ -33,6 +33,12 @@ import {
 } from 'react-icons/fa';
 import { STORAGE_KEYS } from '../utils/constants';
 import {
+  buildDefaultTerminalOptions,
+  getPlatformDefaultTerminalType,
+  sanitizeAndPersistDefaultTerminal
+} from '../utils/defaultLocalTerminal';
+import { persistSyncedSetting } from '../utils/persistSyncedSetting';
+import {
   getConnectionSearchShortcut,
   setConnectionSearchShortcut,
   resetConnectionSearchShortcut,
@@ -207,22 +213,22 @@ const SettingsDialog = ({
   const { t, locale, setLocale, availableLocales } = useTranslation('settings');
 
   // Estados para terminal por defecto
-  const getDefaultTerminalType = () => {
-    const platform = window.electron?.platform || 'unknown';
-    if (platform === 'linux' || platform === 'darwin') {
-      return 'linux-terminal';
-    }
-    return 'powershell';
-  };
-
   const [defaultLocalTerminal, setDefaultLocalTerminal] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.DEFAULT_LOCAL_TERMINAL);
     if (saved) return saved;
-    return getDefaultTerminalType();
+    return getPlatformDefaultTerminalType();
   });
 
   // Estados para detectar terminales disponibles
   const [wslDistributions, setWslDistributions] = useState([]);
+  const [wslDistributionsLoaded, setWslDistributionsLoaded] = useState(() => {
+    const p = window.electron?.platform || 'unknown';
+    return p !== 'win32';
+  });
+  const [cygwinDetectionDone, setCygwinDetectionDone] = useState(() => {
+    const p = window.electron?.platform || 'unknown';
+    return p !== 'win32';
+  });
   const [dockerContainers, setDockerContainers] = useState([]);
   const [cygwinAvailable, setCygwinAvailable] = useState(false);
   const [platform, setPlatform] = useState(() => {
@@ -512,6 +518,10 @@ const SettingsDialog = ({
   const persistConnectionSearchShortcut = useCallback((shortcut) => {
     const saved = setConnectionSearchShortcut(shortcut);
     setConnectionSearchShortcutState(saved);
+    persistSyncedSetting(
+      STORAGE_KEYS.CONNECTION_SEARCH_SHORTCUT,
+      JSON.stringify(saved)
+    );
     window.dispatchEvent(new Event('settings-updated'));
     return saved;
   }, []);
@@ -520,6 +530,7 @@ const SettingsDialog = ({
     const saved = resetConnectionSearchShortcut();
     setConnectionSearchShortcutState(saved);
     setIsCapturingConnectionSearchShortcut(false);
+    persistSyncedSetting(STORAGE_KEYS.CONNECTION_SEARCH_SHORTCUT, null);
     window.dispatchEvent(new Event('settings-updated'));
   }, []);
 
@@ -560,7 +571,8 @@ const SettingsDialog = ({
 
   // Sincronizar mainFrameHeaderCollapsed con App y persistencia
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.MAIN_FRAME_HEADER_START_COLLAPSED, mainFrameHeaderCollapsed.toString());
+    const value = mainFrameHeaderCollapsed.toString();
+    persistSyncedSetting(STORAGE_KEYS.MAIN_FRAME_HEADER_START_COLLAPSED, value);
     window.dispatchEvent(new CustomEvent('main-frame-header-toggle', {
       detail: { collapsed: mainFrameHeaderCollapsed }
     }));
@@ -1155,9 +1167,16 @@ const SettingsDialog = ({
     checkMasterKey();
   }, [secureStorage]);
 
+  const lockHomeButtonPersistReady = useRef(false);
+
   // Persistir configuración del botón de inicio
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.LOCK_HOME_BUTTON, JSON.stringify(lockHomeButton));
+    persistSyncedSetting(STORAGE_KEYS.LOCK_HOME_BUTTON, JSON.stringify(lockHomeButton));
+    if (lockHomeButtonPersistReady.current) {
+      window.dispatchEvent(new Event('settings-updated'));
+    } else {
+      lockHomeButtonPersistReady.current = true;
+    }
   }, [lockHomeButton]);
 
   // Detectar plataforma
@@ -1169,6 +1188,7 @@ const SettingsDialog = ({
 
   // Detectar distribuciones WSL
   useEffect(() => {
+    setWslDistributionsLoaded(platform !== 'win32');
     const detectWSLDistributions = async () => {
       try {
         if (platform === 'win32' && window.electron && window.electron.ipcRenderer) {
@@ -1184,6 +1204,8 @@ const SettingsDialog = ({
       } catch (error) {
         console.error('Error en detección de distribuciones WSL:', error);
         setWslDistributions([]);
+      } finally {
+        setWslDistributionsLoaded(true);
       }
     };
 
@@ -1192,21 +1214,24 @@ const SettingsDialog = ({
 
   // Detectar disponibilidad de Cygwin
   useEffect(() => {
+    setCygwinDetectionDone(platform !== 'win32');
     const detectCygwin = async () => {
-      if (platform === 'win32' && window.electronAPI) {
-        try {
+      try {
+        if (platform === 'win32' && window.electronAPI) {
           const result = await window.electronAPI.invoke('cygwin:detect');
           if (result && typeof result.available === 'boolean') {
             setCygwinAvailable(result.available);
           } else {
             setCygwinAvailable(false);
           }
-        } catch (error) {
-          console.error('Error detectando Cygwin:', error);
+        } else {
           setCygwinAvailable(false);
         }
-      } else {
+      } catch (error) {
+        console.error('Error detectando Cygwin:', error);
         setCygwinAvailable(false);
+      } finally {
+        setCygwinDetectionDone(true);
       }
     };
 
@@ -1321,77 +1346,76 @@ const SettingsDialog = ({
     };
   }, []);
 
-  // Opciones de terminal por defecto basadas en plataforma
-  const defaultTerminalOptions = useMemo(() => {
-    const options = [];
+  const aiClientsEnabledForDefault = useMemo(() => ({
+    claude: claudeClientEnabled,
+    opencode: openCodeClientEnabled,
+    geminicli: geminiCliClientEnabled,
+    codexcli: codexCliClientEnabled,
+    antigravitycli: antigravityCliClientEnabled
+  }), [claudeClientEnabled, openCodeClientEnabled, geminiCliClientEnabled, codexCliClientEnabled, antigravityCliClientEnabled]);
 
-    if (platform === 'win32') {
-      // PowerShell siempre disponible
-      options.push({ label: 'PowerShell', value: 'powershell' });
-      if (claudeClientEnabled) options.push({ label: 'Claude Code', value: 'claude' });
-      if (openCodeClientEnabled) options.push({ label: 'OpenCode', value: 'opencode' });
-      if (geminiCliClientEnabled) options.push({ label: 'Gemini CLI', value: 'geminicli' });
-      if (codexCliClientEnabled) options.push({ label: 'Codex CLI', value: 'codexcli' });
-      if (antigravityCliClientEnabled) options.push({ label: 'Antigravity CLI', value: 'antigravitycli' });
+  const defaultTerminalOptions = useMemo(() => buildDefaultTerminalOptions({
+    platform,
+    wslDistributions,
+    cygwinAvailable,
+    aiClientsEnabled: aiClientsEnabledForDefault
+  }), [platform, wslDistributions, cygwinAvailable, aiClientsEnabledForDefault]);
 
-      // WSL genérico
-      options.push({ label: 'WSL', value: 'wsl' });
+  const terminalOptionsReady = platform !== 'win32' || (wslDistributionsLoaded && cygwinDetectionDone);
 
-      // Agregar distribuciones WSL específicas
-      if (wslDistributions && wslDistributions.length > 0) {
-        wslDistributions.forEach(distro => {
-          options.push({
-            label: distro.label || distro.name,
-            value: distro.name
-          });
-        });
-      }
-
-      // Cygwin si está disponible
-      if (cygwinAvailable) {
-        options.push({ label: 'Cygwin', value: 'cygwin' });
-      }
-
-      // Agregar contenedores Docker si están disponibles
-      if (dockerContainers && dockerContainers.length > 0) {
-        dockerContainers.forEach(container => {
-          options.push({
-            label: `🐳 ${container.name}`,
-            value: `docker-${container.name}`
-          });
-        });
-      }
-    } else if (platform === 'linux' || platform === 'darwin') {
-      options.push(
-        { label: 'Terminal Linux/macOS', value: 'linux-terminal' },
-        ...(claudeClientEnabled ? [{ label: 'Claude Code', value: 'claude' }] : []),
-        ...(openCodeClientEnabled ? [{ label: 'OpenCode', value: 'opencode' }] : []),
-        ...(geminiCliClientEnabled ? [{ label: 'Gemini CLI', value: 'geminicli' }] : []),
-        ...(codexCliClientEnabled ? [{ label: 'Codex CLI', value: 'codexcli' }] : []),
-        ...(antigravityCliClientEnabled ? [{ label: 'Antigravity CLI', value: 'antigravitycli' }] : [])
-      );
-    } else {
-      // Fallback
-      options.push(
-        { label: 'PowerShell', value: 'powershell' },
-        { label: 'Terminal', value: 'linux-terminal' },
-        ...(claudeClientEnabled ? [{ label: 'Claude Code', value: 'claude' }] : []),
-        ...(openCodeClientEnabled ? [{ label: 'OpenCode', value: 'opencode' }] : []),
-        ...(geminiCliClientEnabled ? [{ label: 'Gemini CLI', value: 'geminicli' }] : []),
-        ...(codexCliClientEnabled ? [{ label: 'Codex CLI', value: 'codexcli' }] : []),
-        ...(antigravityCliClientEnabled ? [{ label: 'Antigravity CLI', value: 'antigravitycli' }] : [])
-      );
+  useEffect(() => {
+    if (!terminalOptionsReady || defaultTerminalOptions.length === 0) return;
+    const saved = localStorage.getItem(STORAGE_KEYS.DEFAULT_LOCAL_TERMINAL);
+    const { value, changed } = sanitizeAndPersistDefaultTerminal(saved, defaultTerminalOptions, platform, {
+      terminalOptionsReady: true
+    });
+    if (changed) {
+      setDefaultLocalTerminal(value);
+      persistSyncedSetting(STORAGE_KEYS.DEFAULT_LOCAL_TERMINAL, value, { immediate: true });
+      window.dispatchEvent(new CustomEvent('default-terminal-changed', {
+        detail: { terminalType: value }
+      }));
+    } else if (saved && defaultLocalTerminal !== saved) {
+      setDefaultLocalTerminal(saved);
     }
+  }, [defaultTerminalOptions, platform, terminalOptionsReady]);
 
-    return options;
-  }, [platform, wslDistributions, cygwinAvailable, dockerContainers, claudeClientEnabled, openCodeClientEnabled, geminiCliClientEnabled, codexCliClientEnabled, antigravityCliClientEnabled]);
+  useEffect(() => {
+    const reloadBehaviorFromStorage = () => {
+      try {
+        const lock = localStorage.getItem(STORAGE_KEYS.LOCK_HOME_BUTTON);
+        if (lock !== null) {
+          try {
+            setLockHomeButton(JSON.parse(lock));
+          } catch {
+            setLockHomeButton(lock === 'true');
+          }
+        }
+        const icon = localStorage.getItem(INTERACTIVE_ICON_STORAGE_KEY);
+        if (icon !== null) setInteractiveIcon(JSON.parse(icon));
+        const sidebar = localStorage.getItem(STORAGE_KEYS.SIDEBAR_START_COLLAPSED);
+        if (sidebar !== null) setSidebarStartCollapsed(JSON.parse(sidebar));
+        const header = localStorage.getItem(STORAGE_KEYS.MAIN_FRAME_HEADER_START_COLLAPSED);
+        if (header !== null) setMainFrameHeaderCollapsed(header === 'true');
+        const terminal = localStorage.getItem(STORAGE_KEYS.DEFAULT_LOCAL_TERMINAL);
+        if (terminal) setDefaultLocalTerminal(terminal);
+        setConnectionSearchShortcutState(getConnectionSearchShortcut());
+      } catch {
+        /* noop */
+      }
+    };
+    window.addEventListener('localstorage-sync-ready', reloadBehaviorFromStorage);
+    window.addEventListener('settings-updated', reloadBehaviorFromStorage);
+    return () => {
+      window.removeEventListener('localstorage-sync-ready', reloadBehaviorFromStorage);
+      window.removeEventListener('settings-updated', reloadBehaviorFromStorage);
+    };
+  }, []);
 
-  // Handler para cambiar terminal por defecto
   const handleDefaultTerminalChange = useCallback((terminalType) => {
-    console.log('🔧 Cambiando terminal por defecto a:', terminalType);
+    if (!terminalType || typeof terminalType !== 'string') return;
     setDefaultLocalTerminal(terminalType);
-    localStorage.setItem(STORAGE_KEYS.DEFAULT_LOCAL_TERMINAL, terminalType);
-    // Dispatch event to notify other components
+    persistSyncedSetting(STORAGE_KEYS.DEFAULT_LOCAL_TERMINAL, terminalType, { immediate: true });
     window.dispatchEvent(new CustomEvent('default-terminal-changed', {
       detail: { terminalType }
     }));
@@ -1401,7 +1425,7 @@ const SettingsDialog = ({
 
   // Persistir configuración del icono interactivo
   useEffect(() => {
-    localStorage.setItem(INTERACTIVE_ICON_STORAGE_KEY, JSON.stringify(interactiveIcon));
+    persistSyncedSetting(INTERACTIVE_ICON_STORAGE_KEY, JSON.stringify(interactiveIcon));
     // Aplicar inmediatamente el cambio
     const titleBar = document.querySelector('.title-bar');
     if (titleBar) {
@@ -1415,7 +1439,8 @@ const SettingsDialog = ({
 
   // Persistir configuración de sidebar colapsada
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SIDEBAR_START_COLLAPSED, JSON.stringify(sidebarStartCollapsed));
+    persistSyncedSetting(STORAGE_KEYS.SIDEBAR_START_COLLAPSED, JSON.stringify(sidebarStartCollapsed));
+    window.dispatchEvent(new Event('settings-updated'));
   }, [sidebarStartCollapsed]);
 
   // Persistir configuración del icono de inicio
@@ -2573,10 +2598,12 @@ const SettingsDialog = ({
                                     id="default-terminal"
                                     value={defaultLocalTerminal}
                                     options={defaultTerminalOptions.length > 0 ? defaultTerminalOptions : [{ label: 'PowerShell', value: 'powershell' }]}
+                                    optionLabel="label"
+                                    optionValue="value"
                                     onChange={(e) => handleDefaultTerminalChange(e.value)}
                                     placeholder="Seleccionar terminal"
                                     style={{ minWidth: '200px' }}
-                                    disabled={defaultTerminalOptions.length === 0}
+                                    disabled={!terminalOptionsReady || defaultTerminalOptions.length === 0}
                                   />
                                 </div>
                               </div>

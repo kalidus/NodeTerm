@@ -1,17 +1,12 @@
 import { STORAGE_KEYS } from './constants';
+import { getPlatformDefaultTerminalType } from './defaultLocalTerminal';
 
 /**
  * Terminal local por defecto según plataforma (misma lógica que SettingsDialog).
  * @returns {'powershell' | 'linux-terminal'}
  */
 export function getDefaultLocalTerminalType() {
-  const platform = typeof window !== 'undefined' && window.electron?.platform
-    ? window.electron.platform
-    : 'unknown';
-  if (platform === 'linux' || platform === 'darwin') {
-    return 'linux-terminal';
-  }
-  return 'powershell';
+  return getPlatformDefaultTerminalType();
 }
 
 /**

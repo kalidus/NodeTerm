@@ -22,6 +22,11 @@ import { themes } from '../themes';
 import { uiThemes } from '../themes/ui-themes';
 import { themeManager } from '../utils/themeManager';
 import { applyTabTheme, loadSavedTabTheme } from '../utils/tabThemeLoader';
+import {
+    resolveInitialTabFromDefault,
+    resolveTabUpdateFromDefault,
+    isExplicitNonWslDefault
+} from '../utils/defaultLocalTerminal';
 
 // Utilidad para ajustar brillo de un color hex
 function adjustColorBrightness(hex, percent) {
@@ -106,140 +111,14 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         });
     };
 
-    // Determinar la pestaña inicial según el SO y configuración
     const getInitialTab = (useCygwin = false, availableDistributions = []) => {
-        // Leer configuración de terminal por defecto
         const defaultTerminal = localStorage.getItem('nodeterm_default_local_terminal');
         const platform = window.electron?.platform || 'unknown';
-        const looksLikeWslDistro = (value) => {
-            if (!value || typeof value !== 'string') return false;
-            const normalized = value.toLowerCase();
-            return normalized.startsWith('wsl-') ||
-                normalized.includes('ubuntu') ||
-                normalized.includes('debian') ||
-                normalized.includes('kali') ||
-                normalized.includes('linux') ||
-                normalized.includes('wsl');
-        };
-        const inferWslCategory = (value) => {
-            const normalized = String(value || '').toLowerCase();
-            if (normalized.includes('ubuntu')) return 'ubuntu';
-            if (normalized.includes('debian')) return 'debian';
-            return 'wsl';
-        };
-
-        // Si hay configuración guardada, usarla
-        if (defaultTerminal) {
-            const terminalTitles = {
-                'powershell': 'Windows PowerShell',
-                'wsl': 'WSL',
-                'cygwin': 'Cygwin',
-                'claude': 'Claude Code',
-                'opencode': 'OpenCode',
-                'geminicli': 'Gemini CLI',
-                'codexcli': 'Codex CLI',
-                'antigravitycli': 'Antigravity CLI',
-                'linux-terminal': platform === 'darwin' ? 'Terminal macOS' : 'Terminal Linux'
-            };
-
-            // Si es Docker
-            if (defaultTerminal.startsWith('docker-')) {
-                return {
-                    id: 'tab-1',
-                    title: `🐳 ${defaultTerminal.replace('docker-', '')}`,
-                    type: 'docker',
-                    active: true
-                };
-            }
-
-            // Si es una distribución WSL (puede ser nombre directo como "Ubuntu-24.04")
-            // Buscar en las distribuciones WSL disponibles (si están disponibles)
-            if (availableDistributions && availableDistributions.length > 0) {
-                const wslDistro = availableDistributions.find(d =>
-                    d.name === defaultTerminal ||
-                    d.label === defaultTerminal ||
-                    d.name.toLowerCase() === defaultTerminal.toLowerCase() ||
-                    d.label.toLowerCase() === defaultTerminal.toLowerCase()
-                );
-                if (wslDistro) {
-                    return {
-                        id: 'tab-1',
-                        title: wslDistro.label || wslDistro.name,
-                        type: wslDistro.category === 'ubuntu' ? 'ubuntu' : (wslDistro.category === 'debian' ? 'debian' : 'wsl-distro'),
-                        distroInfo: wslDistro, // Agregar información completa de la distribución
-                        active: true
-                    };
-                }
-            }
-
-            // Si es un tipo de terminal conocido
-            if (terminalTitles[defaultTerminal]) {
-                const title = defaultTerminal === 'linux-terminal'
-                    ? (platform === 'darwin' ? 'Terminal macOS' : 'Terminal Linux')
-                    : terminalTitles[defaultTerminal];
-                return {
-                    id: 'tab-1',
-                    title: title,
-                    type: defaultTerminal === 'linux-terminal' ? 'powershell' : defaultTerminal,
-                    active: true
-                };
-            }
-
-            // Fallback: usar el valor tal cual
-            // Si parece una distro WSL, arrancar directamente como WSL para evitar
-            // el parpadeo PowerShell -> distro al cargar las distribuciones.
-            if (looksLikeWslDistro(defaultTerminal)) {
-                const inferredCategory = inferWslCategory(defaultTerminal);
-                return {
-                    id: 'tab-1',
-                    title: defaultTerminal,
-                    type: inferredCategory === 'ubuntu' ? 'ubuntu' : (inferredCategory === 'debian' ? 'debian' : 'wsl-distro'),
-                    distroInfo: {
-                        name: defaultTerminal,
-                        label: defaultTerminal,
-                        category: inferredCategory
-                    },
-                    active: true
-                };
-            }
-
-            return {
-                id: 'tab-1',
-                title: defaultTerminal,
-                type: 'powershell', // Fallback seguro
-                active: true
-            };
-        }
-        if (platform === 'linux') {
-            return {
-                id: 'tab-1',
-                title: 'Terminal Linux',
-                type: 'powershell', // Reutilizar la lógica de PowerShell
-                active: true
-            };
-        } else if (platform === 'darwin') {
-            return {
-                id: 'tab-1',
-                title: 'Terminal macOS',
-                type: 'powershell', // Reutilizar la lógica de PowerShell
-                active: true
-            };
-        }
-        // Si Cygwin está disponible, usarlo como predeterminado en Windows
-        if (useCygwin) {
-            return {
-                id: 'tab-1',
-                title: 'Cygwin',
-                type: 'cygwin',
-                active: true
-            };
-        }
-        return {
-            id: 'tab-1',
-            title: 'Windows PowerShell',
-            type: 'powershell',
-            active: true
-        };
+        return resolveInitialTabFromDefault(defaultTerminal, {
+            platform,
+            wslDistributions: availableDistributions,
+            useCygwin
+        });
     };
 
     const getInitialWorkspace = () => {
@@ -295,6 +174,10 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     useEffect(() => {
         const defaultTerminal = localStorage.getItem('nodeterm_default_local_terminal');
 
+        if (isExplicitNonWslDefault(defaultTerminal)) {
+            return;
+        }
+
         // Si no hay distribuciones WSL o no hay pestañas, esperar
         if (wslDistributions.length === 0 || tabs.length === 0 || tabs[0].id !== 'tab-1') {
             // if (wslDistributions.length === 0) {
@@ -326,7 +209,10 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         if (defaultTerminal && typeof defaultTerminal === 'string') {
             searchTerms.push(defaultTerminal);
         }
-        if (firstTab.title && typeof firstTab.title === 'string' && firstTab.title !== 'Windows PowerShell') {
+        if (!isExplicitNonWslDefault(defaultTerminal) &&
+            firstTab.title &&
+            typeof firstTab.title === 'string' &&
+            firstTab.title !== 'Windows PowerShell') {
             searchTerms.push(firstTab.title);
         }
 
@@ -424,6 +310,10 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
 
         const firstTab = tabs[0];
         const defaultTerminal = localStorage.getItem('nodeterm_default_local_terminal');
+
+        if (isExplicitNonWslDefault(defaultTerminal)) {
+            return;
+        }
 
         // Si la pestaña ya tiene distroInfo correcto Y el tipo es correcto, no hacer nada
         if (firstTab.distroInfo &&
@@ -533,51 +423,46 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     useEffect(() => {
         const handleDefaultTerminalChange = (e) => {
             const newDefaultTerminal = e.detail?.terminalType;
-            console.log('📢 Evento default-terminal-changed recibido:', newDefaultTerminal);
-            if (newDefaultTerminal) {
-                setSelectedTerminalType(newDefaultTerminal);
+            if (!newDefaultTerminal) return;
 
-                // Buscar la distribución WSL correspondiente
-                const findAndUpdateDistro = () => {
-                    if (wslDistributions.length > 0 && tabs.length > 0 && tabs[0].id === 'tab-1') {
-                        const wslDistro = wslDistributions.find(d =>
-                            d.name === newDefaultTerminal ||
-                            d.label === newDefaultTerminal ||
-                            d.name.toLowerCase() === newDefaultTerminal.toLowerCase() ||
-                            d.label.toLowerCase() === newDefaultTerminal.toLowerCase()
-                        );
+            setSelectedTerminalType(newDefaultTerminal);
 
-                        if (wslDistro) {
-                            const expectedType = wslDistro.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
-                            const expectedTitle = wslDistro.label || wslDistro.name;
-                            console.log('🔄 Actualizando pestaña por evento:', {
-                                expectedType,
-                                expectedTitle,
-                                distroInfo: wslDistro,
-                                currentType: tabs[0].type,
-                                currentTitle: tabs[0].title
-                            });
-                            setTabs(prevTabs => {
-                                const updatedTab = {
-                                    ...prevTabs[0],
-                                    title: expectedTitle,
-                                    type: wslDistro.category === 'ubuntu' ? 'ubuntu' : (wslDistro.category === 'debian' ? 'debian' : 'wsl-distro'), // Corregido: incluir debian
-                                    distroInfo: wslDistro // Agregar información completa de la distribución
-                                };
-                                console.log('✅ Pestaña actualizada por evento:', updatedTab);
-                                return [updatedTab, ...prevTabs.slice(1)];
-                            });
-                        } else {
-                            console.warn('⚠️ No se encontró distribución WSL para:', newDefaultTerminal);
-                        }
-                    } else if (wslDistributions.length === 0) {
-                        // Si aún no se han cargado las distribuciones, esperar un poco
-                        console.log('⏳ Esperando a que se carguen las distribuciones WSL...');
-                        setTimeout(findAndUpdateDistro, 500);
+            const applyTabUpdate = () => {
+                setTabs((prevTabs) => {
+                    if (prevTabs.length === 0 || prevTabs[0].id !== 'tab-1') {
+                        return prevTabs;
                     }
-                };
+                    const platform = window.electron?.platform || 'unknown';
+                    const tabUpdate = resolveTabUpdateFromDefault(newDefaultTerminal, {
+                        platform,
+                        wslDistributions
+                    });
+                    if (!tabUpdate) return prevTabs;
 
-                findAndUpdateDistro();
+                    const updatedTab = {
+                        ...prevTabs[0],
+                        title: tabUpdate.title,
+                        type: tabUpdate.type,
+                        _updateKey: Date.now()
+                    };
+                    if (tabUpdate.distroInfo) {
+                        updatedTab.distroInfo = tabUpdate.distroInfo;
+                    } else {
+                        delete updatedTab.distroInfo;
+                    }
+                    return [updatedTab, ...prevTabs.slice(1)];
+                });
+            };
+
+            if (isExplicitNonWslDefault(newDefaultTerminal)) {
+                applyTabUpdate();
+                return;
+            }
+
+            if (wslDistributions.length > 0) {
+                applyTabUpdate();
+            } else {
+                setTimeout(applyTabUpdate, 500);
             }
         };
 
@@ -585,7 +470,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         return () => {
             window.removeEventListener('default-terminal-changed', handleDefaultTerminalChange);
         };
-    }, [wslDistributions, tabs]);
+    }, [wslDistributions]);
     const [activeTabKey, setActiveTabKey] = useState(0); // Para forzar re-render
     const [wslDistributions, setWSLDistributions] = useState([]);
     const [cygwinAvailable, setCygwinAvailable] = useState(false); // Estado para Cygwin
@@ -941,47 +826,39 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                             // para asegurar que el estado se haya actualizado
                             setTimeout(() => {
                                 const defaultTerminal = localStorage.getItem('nodeterm_default_local_terminal');
-                                if (defaultTerminal && distributions.length > 0) {
-                                    setTabs(prevTabs => {
-                                        if (prevTabs.length === 0 || prevTabs[0].id !== 'tab-1') {
-                                            return prevTabs;
-                                        }
-                                        const firstTab = prevTabs[0];
-                                        // Si ya está correcto, no hacer nada
-                                        if (firstTab.distroInfo &&
-                                            (firstTab.type === 'ubuntu' || firstTab.type === 'wsl-distro') &&
-                                            firstTab.type !== 'powershell') {
-                                            return prevTabs;
-                                        }
-                                        // Buscar distribución
-                                        const wslDistro = distributions.find(d =>
-                                            d.name === defaultTerminal ||
-                                            d.label === defaultTerminal ||
-                                            d.name === firstTab.title ||
-                                            d.label === firstTab.title ||
-                                            d.name.toLowerCase() === defaultTerminal.toLowerCase() ||
-                                            d.label.toLowerCase() === defaultTerminal.toLowerCase() ||
-                                            (firstTab.title && d.name.toLowerCase() === firstTab.title.toLowerCase()) ||
-                                            (firstTab.title && d.label.toLowerCase() === firstTab.title.toLowerCase())
-                                        );
-                                        if (wslDistro && (firstTab.type === 'powershell' || !firstTab.distroInfo || firstTab.distroInfo.name !== wslDistro.name)) {
-                                            const expectedType = wslDistro.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
-                                            const expectedTitle = wslDistro.label || wslDistro.name;
-                                            // console.log('🔧 [Detectar WSL] Actualización inmediata de pestaña:', {
-                                            //     antes: { type: firstTab.type, title: firstTab.title },
-                                            //     despues: { type: expectedType, title: expectedTitle }
-                                            // });
-                                            return [{
-                                                ...firstTab,
-                                                type: wslDistro.category === 'ubuntu' ? 'ubuntu' : (wslDistro.category === 'debian' ? 'debian' : 'wsl-distro'),
-                                                title: expectedTitle,
-                                                distroInfo: wslDistro,
-                                                _updateKey: Date.now()
-                                            }, ...prevTabs.slice(1)];
-                                        }
-                                        return prevTabs;
-                                    });
+                                if (!defaultTerminal || isExplicitNonWslDefault(defaultTerminal)) {
+                                    return;
                                 }
+                                const platform = window.electron?.platform || 'unknown';
+                                const tabUpdate = resolveTabUpdateFromDefault(defaultTerminal, {
+                                    platform,
+                                    wslDistributions: distributions
+                                });
+                                if (!tabUpdate) return;
+
+                                setTabs((prevTabs) => {
+                                    if (prevTabs.length === 0 || prevTabs[0].id !== 'tab-1') {
+                                        return prevTabs;
+                                    }
+                                    const firstTab = prevTabs[0];
+                                    if (firstTab.type === tabUpdate.type &&
+                                        firstTab.title === tabUpdate.title &&
+                                        firstTab.distroInfo?.name === tabUpdate.distroInfo?.name) {
+                                        return prevTabs;
+                                    }
+                                    const syncedTab = {
+                                        ...firstTab,
+                                        type: tabUpdate.type,
+                                        title: tabUpdate.title,
+                                        _updateKey: Date.now()
+                                    };
+                                    if (tabUpdate.distroInfo) {
+                                        syncedTab.distroInfo = tabUpdate.distroInfo;
+                                    } else {
+                                        delete syncedTab.distroInfo;
+                                    }
+                                    return [syncedTab, ...prevTabs.slice(1)];
+                                });
                             }, 100);
                         } else {
                             console.warn('⚠️ [Detectar WSL] Respuesta no es un array, fallback a array vacío. Tipo recibido:', typeof distributions);
