@@ -17,7 +17,7 @@ const {
   parseAppDataFileContent,
   isAppDataPlainJson
 } = require('../utils/file-utils');
-const { SYNC_KEYS } = require('../../shared/sync-keys');
+const { SYNC_KEYS } = require('../utils/sync-keys');
 
 const APP_DATA_PATH = path.join(getNodeTermDataDir(), 'app-data.json');
 
@@ -50,8 +50,17 @@ function backoffMs(attemptIndex, totalRetries) {
 /**
  * Registra los handlers de sincronización de datos de aplicación
  */
+function safeHandle(channel, handler) {
+  try {
+    ipcMain.removeHandler(channel);
+  } catch (_) {
+    /* noop */
+  }
+  ipcMain.handle(channel, handler);
+}
+
 function registerAppDataHandlers(dependencies) {
-  ipcMain.handle('appdata:get-all', async () => {
+  safeHandle('appdata:get-all', async () => {
     let retries = READ_MAX_RETRIES;
     while (retries > 0) {
       try {
@@ -73,7 +82,7 @@ function registerAppDataHandlers(dependencies) {
     return null;
   });
 
-  ipcMain.handle('appdata:save-all', async (event, data) => {
+  safeHandle('appdata:save-all', async (event, data) => {
     try {
       const dataWithMeta = {
         ...data,
@@ -109,7 +118,7 @@ function registerAppDataHandlers(dependencies) {
     }
   });
 
-  ipcMain.handle('appdata:get-last-modified', async () => {
+  safeHandle('appdata:get-last-modified', async () => {
     try {
       if (fs.existsSync(APP_DATA_PATH)) {
         return fs.statSync(APP_DATA_PATH).mtimeMs;
@@ -121,7 +130,7 @@ function registerAppDataHandlers(dependencies) {
     }
   });
 
-  ipcMain.handle('appdata:get-sync-keys', async () => SYNC_KEYS);
+  safeHandle('appdata:get-sync-keys', async () => SYNC_KEYS);
 }
 
 module.exports = {

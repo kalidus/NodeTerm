@@ -167,6 +167,56 @@ function getAntigravityCliHandlers() {
   return _antigravitycliHandlers;
 }
 
+function runHandlerStep(label, fn) {
+  try {
+    fn();
+  } catch (err) {
+    console.error(`[Handlers] Error en ${label}:`, err?.message || err);
+    if (err?.stack) console.error(err.stack);
+  }
+}
+
+/**
+ * Handlers mínimos para arranque (sidebar, stats, sync localStorage).
+ * Se registran en app.on('ready') antes de createWindow y son idempotentes.
+ */
+function registerSystemStatsIpcHandler() {
+  const { ipcMain } = require('electron');
+  try {
+    ipcMain.removeHandler('get-system-stats');
+  } catch (_) {
+    /* noop */
+  }
+  ipcMain.handle('get-system-stats', async () => {
+    try {
+      const StatsWorkerService = require('../services/StatsWorkerService');
+      const stats = await StatsWorkerService.getSystemStats();
+      if (stats && !stats.hostname) {
+        stats.hostname = require('os').hostname();
+      }
+      return stats;
+    } catch (error) {
+      const os = require('os');
+      return {
+        cpu: { usage: 0, cores: 0 },
+        memory: { total: 0, used: 0, free: 0 },
+        disks: [],
+        network: { download: 0, upload: 0 },
+        hostname: os.hostname(),
+        platform: process.platform,
+        arch: os.arch(),
+        kernel: os.release(),
+        osVersion: (typeof os.version === 'function' ? os.version() : '')
+      };
+    }
+  });
+}
+
+function registerBootstrapIpcHandlers() {
+  runHandlerStep('appdata IPC', () => getAppDataHandlers().registerAppDataHandlers({}));
+  runHandlerStep('get-system-stats IPC', registerSystemStatsIpcHandler);
+}
+
 /**
  * Handlers IPC de clientes IA (AnythingLLM, Open WebUI, LibreChat, etc.).
  * Solo registra canales; los servicios Docker se cargan con lazy proxy.
@@ -185,76 +235,23 @@ function registerAIClientHandlers(dependencies) {
  * Registra handlers CRÍTICOS inmediatamente (necesarios para mostrar la UI)
  */
 function registerCriticalHandlers(dependencies) {
-  // Handlers de aplicación (UI, versión, cierre) - CRÍTICOS
-  getAppHandlers().registerAppHandlers(dependencies);
+  // Siempre primero: sidebar y stats no deben depender del resto de handlers
+  registerBootstrapIpcHandlers();
 
-  // Handlers del sistema - CRÍTICOS (clipboard y dialog)
-  getSystemHandlers().registerSystemHandlers();
-
-  // Handlers de seguridad - CRÍTICOS (Master Key)
-  getSecurityHandlers().registerSecurityHandlers(dependencies);
-
-  // Handlers de tema - CRÍTICOS (necesarios para cargar el tema al inicio)
-  getThemeHandlers().registerThemeHandlers(dependencies);
-
-  // Handlers de datos de aplicación - CRÍTICOS (sincronización localStorage entre instancias)
-  getAppDataHandlers().registerAppDataHandlers(dependencies);
-
-  // Handlers de Claude Code (configuración gestionada por app)
-  getClaudeHandlers().registerClaudeHandlers();
-
-  // Handlers de OpenCode (configuración gestionada por app)
-  getOpenCodeHandlers().registerOpenCodeHandlers();
-
-  // Handlers de Gemini CLI (configuración gestionada por app)
-  getGeminiCliHandlers().registerGeminiCliHandlers();
-
-  // Handlers de Codex CLI (configuración gestionada por app)
-  getCodexCliHandlers().registerCodexCliHandlers();
-
-  // Handlers de Antigravity CLI (configuración gestionada por app)
-  getAntigravityCliHandlers().registerAntigravityCliHandlers();
-
-  // 🚀 CRÍTICO: Registrar handlers de monitoreo INMEDIATAMENTE
-  // El REGISTRO es ligero (solo IPC), lo PESADO es la EJECUCIÓN (que es on-demand)
-  // Esto evita errores de "No handler registered" cuando el frontend los llama
-  getSystemHandlers().registerSystemMonitoringHandlers();
-
-  // Clientes IA (Docker): el renderer invoca get-status al montar, antes de ready-to-show
-  registerAIClientHandlers(dependencies);
-
-  // 🚀 CRÍTICO: Registrar handlers de Guacamole inmediatamente para evitar errores de
-  // "No handler registered" si el frontend los invoca al inicio antes de ready-to-show
-  getGuacamoleHandlers().registerGuacamoleHandlers(dependencies);
-
-  // 🚀 CRÍTICO: System stats handler debe estar disponible INMEDIATAMENTE
-  // porque TODOS los componentes del frontend lo llaman al cargar
-  const { ipcMain } = require('electron');
-  ipcMain.handle('get-system-stats', async () => {
-    try {
-      const StatsWorkerService = require('../services/StatsWorkerService');
-      const stats = await StatsWorkerService.getSystemStats();
-      // Asegurar que hostname esté presente (fallback si el worker no lo envió)
-      if (stats && !stats.hostname) {
-        stats.hostname = require('os').hostname();
-      }
-      return stats;
-    } catch (error) {
-      // Devolver stats vacías si el worker aún no está listo
-      const os = require('os');
-      return {
-        cpu: { usage: 0, cores: 0 },
-        memory: { total: 0, used: 0, free: 0 },
-        disks: [],
-        network: { download: 0, upload: 0 },
-        hostname: os.hostname(),
-        platform: process.platform,
-        arch: os.arch(),
-        kernel: os.release(),
-        osVersion: (typeof os.version === 'function' ? os.version() : '')
-      };
-    }
-  });
+  runHandlerStep('app IPC', () => getAppHandlers().registerAppHandlers(dependencies));
+  runHandlerStep('system IPC', () => getSystemHandlers().registerSystemHandlers());
+  runHandlerStep('security IPC', () => getSecurityHandlers().registerSecurityHandlers(dependencies));
+  runHandlerStep('theme IPC', () => getThemeHandlers().registerThemeHandlers(dependencies));
+  runHandlerStep('appdata IPC', () => getAppDataHandlers().registerAppDataHandlers(dependencies));
+  runHandlerStep('claude IPC', () => getClaudeHandlers().registerClaudeHandlers());
+  runHandlerStep('opencode IPC', () => getOpenCodeHandlers().registerOpenCodeHandlers());
+  runHandlerStep('gemini CLI IPC', () => getGeminiCliHandlers().registerGeminiCliHandlers());
+  runHandlerStep('codex CLI IPC', () => getCodexCliHandlers().registerCodexCliHandlers());
+  runHandlerStep('antigravity CLI IPC', () => getAntigravityCliHandlers().registerAntigravityCliHandlers());
+  runHandlerStep('system monitoring IPC', () => getSystemHandlers().registerSystemMonitoringHandlers());
+  runHandlerStep('AI clients IPC', () => registerAIClientHandlers(dependencies));
+  runHandlerStep('guacamole IPC', () => getGuacamoleHandlers().registerGuacamoleHandlers(dependencies));
+  runHandlerStep('get-system-stats IPC', registerSystemStatsIpcHandler);
 }
 
 /**
@@ -325,6 +322,7 @@ function registerAllHandlers(dependencies) {
 
 module.exports = {
   registerAllHandlers,
+  registerBootstrapIpcHandlers,
   registerCriticalHandlers,
   registerAIClientHandlers,
   registerSecondaryHandlers,

@@ -1623,6 +1623,14 @@ ipcMain.handle('cygwin:install', async () => {
 app.on('ready', () => {
   logTiming('app ready event');
   sshKnownHostsService.setUserDataPath(app.getPath('userData'));
+  try {
+    const { registerBootstrapIpcHandlers } = require('./src/main/handlers');
+    registerBootstrapIpcHandlers();
+    logTiming('Bootstrap IPC handlers registrados');
+  } catch (err) {
+    console.error('❌ Error registrando bootstrap IPC handlers:', err?.message || err);
+    if (err?.stack) console.error(err.stack);
+  }
   createWindow();
 });
 
