@@ -218,6 +218,7 @@ class ExportImportService {
           nodeterm_docker_font_size: this.safeGetItem('nodeterm_docker_font_size'),
           
           // === CONFIGURACIONES DE UI ===
+          custom_titlebar_color: this.safeGetItem('custom_titlebar_color'),
           use_primary_colors_titlebar: this.safeGetItem('use_primary_colors_titlebar'),
           nodeterm_ui_anim_speed: this.safeGetItem('nodeterm_ui_anim_speed'),
           nodeterm_ui_reduced_motion: this.safeGetItem('nodeterm_ui_reduced_motion'),

@@ -7,6 +7,7 @@ import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
 import { iconThemes } from '../themes/icon-themes';
 import { toggleFavorite, helpers } from '../utils/connectionStore';
 import { useTranslation } from '../i18n/hooks/useTranslation';
+import { themeManager } from '../utils/themeManager';
 
 const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnections, onOpenSSHConnection, onOpenRdpConnection, onOpenVncConnection, onShowImportDialog, onShowExportDialog, onShowImportExportDialog, onShowImportWizard, onOpenImportWithSource, onQuickImportFromSource, iconTheme = 'material', openEditSSHDialog, openEditRdpDialog, expandedKeys, masterKey, secureStorage, onToggleTitleBar }) => {
   // Hook de internacionalización
@@ -313,6 +314,17 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
 
   // Banner para detectar cambios en fuentes vinculadas (usuario inicia revalidación bajo demanda)
   const [importBanner, setImportBanner] = useState(null);
+
+  // Sincronizar color personalizado de titlebar al montar y tras cambios de tema
+  useEffect(() => {
+    const syncTitlebarColors = () => {
+      const colors = themeManager.currentTheme?.colors;
+      if (colors) themeManager.applyTitlebarColorVars(colors);
+    };
+    syncTitlebarColors();
+    window.addEventListener('theme-changed', syncTitlebarColors);
+    return () => window.removeEventListener('theme-changed', syncTitlebarColors);
+  }, []);
 
   // Efecto para crear copos de nieve dinámicamente para el tema Winter Snowfall
   useEffect(() => {

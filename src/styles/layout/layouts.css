@@ -237,7 +237,7 @@ body.layout-unified .title-bar {
   border-right: none !important;
   border-top: none !important;
   border-bottom: none !important;
-  background: var(--ui-chrome-header-bg, var(--ui-sidebar-bg, #0e1116)) !important;
+  background: var(--ui-titlebar-accent, var(--ui-chrome-header-bg, var(--ui-sidebar-bg, #0e1116))) !important;
   box-shadow: none !important;
 }
 
@@ -246,12 +246,29 @@ body.layout-unified .title-bar,
 body.layout-unified .title-bar span,
 body.layout-unified .title-bar svg,
 body.layout-unified .title-bar .title-cursor-blink {
-  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.85)) !important;
-  fill: var(--ui-sidebar-text, rgba(255, 255, 255, 0.85)) !important;
+  color: var(--ui-titlebar-text, var(--ui-sidebar-text, rgba(255, 255, 255, 0.85))) !important;
+  fill: var(--ui-titlebar-text, var(--ui-sidebar-text, rgba(255, 255, 255, 0.85))) !important;
 }
 
 body.layout-unified .title-bar svg path {
-  stroke: var(--ui-sidebar-text, rgba(255, 255, 255, 0.85)) !important;
+  stroke: var(--ui-titlebar-text, var(--ui-sidebar-text, rgba(255, 255, 255, 0.85))) !important;
+}
+
+/* Color personalizado: prioridad sobre gradientes de temas animados */
+html[data-custom-titlebar="true"] .title-bar[data-animation] {
+  background: var(--ui-titlebar-accent) !important;
+}
+
+html[data-custom-titlebar="true"] body.layout-unified .title-bar,
+html[data-custom-titlebar="true"] body.layout-unified .title-bar span,
+html[data-custom-titlebar="true"] body.layout-unified .title-bar svg,
+html[data-custom-titlebar="true"] body.layout-unified .title-bar .title-cursor-blink {
+  color: var(--ui-titlebar-text) !important;
+  fill: var(--ui-titlebar-text) !important;
+}
+
+html[data-custom-titlebar="true"] body.layout-unified .title-bar svg path {
+  stroke: var(--ui-titlebar-text) !important;
 }
 
 /* Splitter pane divider: completely seamless in unified layout */

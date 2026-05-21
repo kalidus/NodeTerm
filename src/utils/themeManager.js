@@ -35,6 +35,55 @@ function adjustColorBrightness(hex, percent) {
   return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 }
 
+function normalizeHexColor(hex) {
+  if (!hex || typeof hex !== 'string') return null;
+  let c = hex.trim();
+  if (!c.startsWith('#')) c = `#${c}`;
+  if (!/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(c)) return null;
+  if (c.length === 4) {
+    c = `#${c[1]}${c[1]}${c[2]}${c[2]}${c[3]}${c[3]}`;
+  }
+  return c.toLowerCase();
+}
+
+function isColorLight(hex) {
+  const normalized = normalizeHexColor(hex);
+  if (!normalized) return false;
+  const num = parseInt(normalized.slice(1), 16);
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+  return (0.299 * r + 0.587 * g + 0.114 * b) > 186;
+}
+
+/** Resuelve colores de la titlebar según preferencia guardada en localStorage. */
+export function getTitlebarColorConfig(themeColors) {
+  const customTitlebarColor = normalizeHexColor(localStorage.getItem('custom_titlebar_color'));
+  const usePrimaryColorsForTitlebar = localStorage.getItem('use_primary_colors_titlebar') === 'true';
+
+  if (customTitlebarColor) {
+    return {
+      accent: customTitlebarColor,
+      text: isColorLight(customTitlebarColor) ? '#222' : '#fff',
+      isCustom: true,
+    };
+  }
+
+  if (usePrimaryColorsForTitlebar) {
+    return {
+      accent: themeColors['--ui-titlebar-accent'] || themeColors.buttonPrimary || '#1976d2',
+      text: themeColors['--ui-titlebar-text'] || '#fff',
+      isCustom: false,
+    };
+  }
+
+  return {
+    accent: adjustColorBrightness(themeColors.sidebarBackground, 8) || themeColors.buttonPrimary || '#1976d2',
+    text: themeColors.buttonPrimary || '#fff',
+    isCustom: false,
+  };
+}
+
 class ThemeManager {
   constructor() {
     this.currentTheme = null;
@@ -65,7 +114,10 @@ class ThemeManager {
         if (sharedConfig && sharedConfig.themeName) {
           // console.log('[ThemeManager] Cargando tema compartido:', sharedConfig.themeName);
           // Aplicar sin guardar para evitar bucle infinito si fuera bidireccional
-          this._applyThemeInternal(sharedConfig.themeName, false, { preserveSidebarFontColor: true });
+          this._applyThemeInternal(sharedConfig.themeName, false, {
+            preserveSidebarFontColor: true,
+            preserveTitlebarColor: true,
+          });
           return;
         }
       }
@@ -76,7 +128,10 @@ class ThemeManager {
     // Fallback a localStorage si no hay compartido
     const savedTheme = localStorage.getItem('ui_theme');
     if (savedTheme) {
-      this.applyTheme(savedTheme, { preserveSidebarFontColor: true });
+      this.applyTheme(savedTheme, {
+        preserveSidebarFontColor: true,
+        preserveTitlebarColor: true,
+      });
     }
   }
 
@@ -96,6 +151,12 @@ class ThemeManager {
     if (!theme) {
       console.warn(`[THEME] Theme "${themeName}" not found. Available themes:`, Object.keys(uiThemes));
       return;
+    }
+
+    const preserveTitlebarColor = options.preserveTitlebarColor === true || save === false;
+    if (!preserveTitlebarColor) {
+      localStorage.removeItem('custom_titlebar_color');
+      localStorage.removeItem('use_primary_colors_titlebar');
     }
 
     this.currentTheme = theme;
@@ -131,6 +192,9 @@ class ThemeManager {
     // Aplicar animaciones si es un tema animado
     this.applyAnimations(theme);
 
+    // Tras animaciones/layouts (usan !important), reaplicar color personalizado de titlebar
+    this.applyTitlebarColorVars(theme.colors);
+
     // Aplicar configuración del icono interactivo
     this.applyInteractiveIcon();
 
@@ -150,10 +214,49 @@ class ThemeManager {
       // Usar setTimeout para asegurar que el tema se haya aplicado completamente
       setTimeout(() => {
         window.dispatchEvent(new Event('theme-changed'));
-        // Aplicar estilos de checkboxes directamente al DOM
+        this.applyTitlebarColorVars(theme.colors);
         this.applyCheckboxStyles();
       }, 50);
     }
+  }
+
+  /** Aplica color de titlebar sin cambiar el tema UI completo. */
+  applyTitlebarColors(themeName) {
+    const name = themeName || localStorage.getItem('ui_theme') || 'Light';
+    const theme = uiThemes[name];
+    if (!theme) {
+      console.warn(`[THEME] applyTitlebarColors: theme "${name}" not found`);
+      return;
+    }
+    this.applyTitlebarColorVars(theme.colors);
+  }
+
+  applyTitlebarColorVars(themeColors) {
+    if (!themeColors || typeof document === 'undefined') return;
+
+    const titlebarColors = getTitlebarColorConfig(themeColors);
+    const root = document.documentElement;
+
+    root.style.setProperty('--ui-titlebar-accent', titlebarColors.accent);
+    root.style.setProperty('--ui-titlebar-text', titlebarColors.text);
+
+    if (titlebarColors.isCustom) {
+      root.setAttribute('data-custom-titlebar', 'true');
+    } else {
+      root.removeAttribute('data-custom-titlebar');
+    }
+
+    document.querySelectorAll('.title-bar').forEach((bar) => {
+      if (titlebarColors.isCustom) {
+        bar.setAttribute('data-custom-titlebar', 'true');
+        bar.style.setProperty('background', titlebarColors.accent, 'important');
+        bar.style.setProperty('color', titlebarColors.text, 'important');
+      } else {
+        bar.removeAttribute('data-custom-titlebar');
+        bar.style.removeProperty('background');
+        bar.style.removeProperty('color');
+      }
+    });
   }
 
   generateCSS(theme) {
@@ -173,8 +276,7 @@ class ThemeManager {
     const sidebarButtonText = colors.sidebarText;
     const palette = theme.statusBarPalette || {};
 
-    // Verificar si se debe usar colores primarios para titlebar
-    const usePrimaryColorsForTitlebar = localStorage.getItem('use_primary_colors_titlebar') === 'true';
+    const titlebarColors = getTitlebarColorConfig(colors);
     const css = `
       :root {
         --statusbar-bg: ${palette.fondo || colors.statusBarBackground};
@@ -279,8 +381,8 @@ class ThemeManager {
         --ui-file-button-text: ${colors.sidebarText};
         --ui-file-button-hover: ${colors.buttonHover};
         --ui-file-button-bg: transparent;
-        --ui-titlebar-accent: ${usePrimaryColorsForTitlebar ? (colors['--ui-titlebar-accent'] || colors.buttonPrimary || '#1976d2') : (adjustColorBrightness(colors.sidebarBackground, 8) || colors.buttonPrimary || '#1976d2')};
-        --ui-titlebar-text: ${usePrimaryColorsForTitlebar ? (colors['--ui-titlebar-text'] || '#fff') : (colors.buttonPrimary || '#fff')};
+        --ui-titlebar-accent: ${titlebarColors.accent};
+        --ui-titlebar-text: ${titlebarColors.text};
         
         /* Primary color - usado por checkboxes y otros componentes */
         --primary-color: ${colors.buttonPrimary};
@@ -1120,7 +1222,10 @@ class ThemeManager {
 
   loadSavedTheme() {
     const savedTheme = localStorage.getItem('ui_theme') || 'Light';
-    this.applyTheme(savedTheme, { preserveSidebarFontColor: true });
+    this.applyTheme(savedTheme, {
+      preserveSidebarFontColor: true,
+      preserveTitlebarColor: true,
+    });
     return savedTheme;
   }
 
