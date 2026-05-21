@@ -441,6 +441,7 @@
 
 .sidebar-tree .sidebar-tree-node-row .wallix-refresh-btn {
   flex-shrink: 0;
+  margin-right: 2px;
   opacity: calc(0.7 * (1 - max(0, var(--sidebar-compact, 0) - 0.55) * 1.8));
   max-width: calc(24px * (1 - max(0, var(--sidebar-compact, 0) - 0.7)));
   overflow: hidden;

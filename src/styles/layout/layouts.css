@@ -312,6 +312,17 @@ body.layout-unified .sidebar-container {
   border-right: none !important;
 }
 
+/* Sin borde derecho: compensar espacio para indicadores (sesión activa, Wallix, etc.) */
+body.layout-unified .sidebar-tree .p-treenode-content {
+  padding-right: 10px !important;
+}
+
+body.layout-unified .sidebar-tree .sidebar-tree-node-row .session-active-dot,
+body.layout-unified .sidebar-tree .sidebar-tree-node-row .wallix-refresh-btn,
+body.layout-unified .sidebar-tree .p-treenode-content .connection-indicator {
+  margin-right: 6px;
+}
+
 /* Main content frame tab bar - flush top */
 body.layout-unified .terminal-frame.main-content-frame .p-tabview-nav-container {
   border-bottom: 1px solid var(--ui-sidebar-border, rgba(255, 255, 255, 0.05)) !important;
