@@ -28,6 +28,7 @@ import OverflowMenu from './contextmenus/OverflowMenu';
 import SSHSystemMonitorPanel from './SSHSystemMonitorPanel';
 import SSHFileExplorerPanel from './SSHFileExplorerPanel';
 import { TAB_TYPES } from '../utils/constants';
+import { isHomeButtonLocked as readHomeButtonLocked } from '../utils/homeTabDefaults';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
 import { presetManager } from '../utils/presetManager';
@@ -357,9 +358,7 @@ const MainContentArea = ({
   const [dockerContainers, setDockerContainers] = useState([]);
 
   // Estado para forzar re-render cuando cambie lock_home_button
-  const [homeButtonLocked, setHomeButtonLocked] = useState(() => {
-    return localStorage.getItem('lock_home_button') === 'true';
-  });
+  const [homeButtonLocked, setHomeButtonLocked] = useState(readHomeButtonLocked);
 
   // 🚀 OPTIMIZACIÓN: Detectar contenedores Docker DIFERIDO
   useEffect(() => {
@@ -399,14 +398,14 @@ const MainContentArea = ({
   useEffect(() => {
     const handleStorageChange = (e) => {
       if (e.key === 'lock_home_button') {
-        setHomeButtonLocked(e.newValue === 'true');
+        setHomeButtonLocked(readHomeButtonLocked());
       }
     };
 
     window.addEventListener('storage', handleStorageChange);
 
     const interval = setInterval(() => {
-      const currentValue = localStorage.getItem('lock_home_button') === 'true';
+      const currentValue = readHomeButtonLocked();
       if (currentValue !== homeButtonLocked) {
         setHomeButtonLocked(currentValue);
       }

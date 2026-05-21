@@ -153,9 +153,9 @@ const App = () => {
   const [mainFrameHeaderCollapsed, setMainFrameHeaderCollapsed] = React.useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.MAIN_FRAME_HEADER_START_COLLAPSED);
-      return saved === 'true';
+      return saved !== null ? saved === 'true' : true;
     } catch {
-      return false;
+      return true;
     }
   });
 

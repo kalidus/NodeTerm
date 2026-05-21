@@ -408,7 +408,12 @@ const SettingsDialog = ({
   // Configuración para bloquear el botón de inicio
   const [lockHomeButton, setLockHomeButton] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.LOCK_HOME_BUTTON);
-    return saved ? JSON.parse(saved) : false;
+    if (saved === null) return true;
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return saved === 'true';
+    }
   });
 
   const [interactiveIcon, setInteractiveIcon] = useState(() => {
@@ -494,9 +499,9 @@ const SettingsDialog = ({
   const [mainFrameHeaderCollapsed, setMainFrameHeaderCollapsed] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.MAIN_FRAME_HEADER_START_COLLAPSED);
-      return saved === 'true';
+      return saved !== null ? saved === 'true' : true;
     } catch {
-      return false;
+      return true;
     }
   });
 

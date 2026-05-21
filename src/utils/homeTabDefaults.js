@@ -15,6 +15,23 @@ export function getDefaultLocalTerminalType() {
 }
 
 /**
+ * Lee si el botón de inicio está bloqueado (misma semántica que SettingsDialog).
+ */
+export function isHomeButtonLocked() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEYS.LOCK_HOME_BUTTON);
+    if (saved === null) return true;
+    try {
+      return JSON.parse(saved) === true;
+    } catch {
+      return saved === 'true';
+    }
+  } catch {
+    return true;
+  }
+}
+
+/**
  * Aplica preferencias de homepage solo en primer arranque (claves ausentes).
  * No sobrescribe valores ya guardados por el usuario o importaciones.
  */
@@ -26,7 +43,9 @@ export function applyFirstRunHomeTabDefaults() {
     [STORAGE_KEYS.HOME_TAB_STATUS_BAR_VISIBLE]: 'true',
     [STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_TABS_VISIBLE]: 'false',
     [STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE]: 'false',
-    [STORAGE_KEYS.DEFAULT_LOCAL_TERMINAL]: getDefaultLocalTerminalType()
+    [STORAGE_KEYS.DEFAULT_LOCAL_TERMINAL]: getDefaultLocalTerminalType(),
+    [STORAGE_KEYS.LOCK_HOME_BUTTON]: 'true',
+    [STORAGE_KEYS.MAIN_FRAME_HEADER_START_COLLAPSED]: 'true'
   };
 
   try {

@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import connectionStore from '../utils/connectionStore';
+import { isHomeButtonLocked as readHomeButtonLocked } from '../utils/homeTabDefaults';
 
 export const useTabManagement = (toast, {
   cleanupTabDistro: externalCleanupTabDistro,
@@ -63,7 +64,7 @@ export const useTabManagement = (toast, {
     const nonHome = pool.filter(t => t.type !== 'home');
 
     // Verificar si el botón de inicio está bloqueado
-    const isHomeButtonLocked = localStorage.getItem('lock_home_button') === 'true';
+    const isHomeButtonLocked = readHomeButtonLocked();
 
     if (isHomeButtonLocked) {
       // Si está bloqueado, mantener las pestañas de inicio al principio
@@ -710,7 +711,7 @@ export const useTabManagement = (toast, {
 
   // Función para actualizar openTabOrder basado en la configuración de bloqueo
   const updateOpenTabOrderForHomeButton = useCallback(() => {
-    const isHomeButtonLocked = localStorage.getItem('lock_home_button') === 'true';
+    const isHomeButtonLocked = readHomeButtonLocked();
 
     if (!isHomeButtonLocked) {
       // Si no está bloqueado, incluir las pestañas de inicio en openTabOrder para permitir reordenamiento

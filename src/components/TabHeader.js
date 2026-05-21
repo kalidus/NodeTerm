@@ -7,6 +7,7 @@ import AIClientBrandIcon from './AIClientBrandIcon';
 import { getHomeTabIcon } from '../themes/home-tab-icons';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
+import { isHomeButtonLocked as readHomeButtonLocked } from '../utils/homeTabDefaults';
 
 const TabHeader = React.memo(({
   // Props básicas de PrimeReact
@@ -47,7 +48,7 @@ const TabHeader = React.memo(({
   const [themeVersion, setThemeVersion] = useState(0);
 
   // Verificar si el botón de inicio está bloqueado
-  const [isHomeButtonLocked, setIsHomeButtonLocked] = useState(() => localStorage.getItem('lock_home_button') === 'true');
+  const [isHomeButtonLocked, setIsHomeButtonLocked] = useState(readHomeButtonLocked);
 
   // Escuchar cambios en el icono de inicio y bloqueo
   useEffect(() => {
@@ -56,7 +57,7 @@ const TabHeader = React.memo(({
     };
 
     const handleSettingsUpdate = () => {
-      setIsHomeButtonLocked(localStorage.getItem('lock_home_button') === 'true');
+      setIsHomeButtonLocked(readHomeButtonLocked());
     };
 
     window.addEventListener('home-icon-changed', handleHomeIconChange);
