@@ -2,6 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './components/App';
 import { markStartup } from './utils/startup-renderer-profiler';
+import { applyFirstRunHomeTabDefaults } from './utils/homeTabDefaults';
 
 markStartup('index.js evaluado');
 
@@ -114,6 +115,7 @@ const initializeGlobalThemes = () => {
     const hasLinuxTerminalTheme = localStorage.getItem('localLinuxTerminalTheme');
 
     if (!hasUITheme) {
+      applyFirstRunHomeTabDefaults();
       // Primer arranque: preset completo en idle (no bloquear root.render)
       const applyFirstRunPreset = () => {
         import('./utils/presetManager').then(({ presetManager }) => {

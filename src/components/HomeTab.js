@@ -108,9 +108,10 @@ const HomeTab = ({
 
   const [rightColumnCollapsed, setRightColumnCollapsed] = useState(() => {
     try {
-      return localStorage.getItem(STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_COLLAPSED) === 'true';
+      const saved = localStorage.getItem(STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_COLLAPSED);
+      return saved !== null ? saved === 'true' : true;
     } catch {
-      return false;
+      return true;
     }
   });
   const [rightColumnVisible, setRightColumnVisible] = useState(() => {
