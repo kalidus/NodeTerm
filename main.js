@@ -165,6 +165,12 @@ if (process.env.NODE_ENV === 'development') {
 
 const { app, BrowserWindow, ipcMain, clipboard, dialog, Menu, powerMonitor, screen } = require('electron');
 logTiming('Electron cargado');
+
+// Windows: mismo ID que build.appId — barra de tareas correcta tras auto-update NSIS
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.electron.nodeterm');
+}
+
 const path = require('path');
 const url = require('url');
 
