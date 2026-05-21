@@ -58,6 +58,27 @@ export const treeThemes = {
     cssClass: 'tree-theme-minimal'
   },
 
+  cursor: {
+    name: 'Cursor',
+    description: 'Compacto sin líneas, estilo explorador Cursor/VS Code',
+    lineStyle: 'none',
+    lineColor: 'transparent',
+    lineOpacity: 0,
+    lineWidth: 0,
+    nodeSpacing: 'compact',
+    indentSize: 8,
+    borderRadius: 0,
+    hoverStyle: 'subtle',
+    connectorChars: {
+      vertical: '',
+      horizontal: '',
+      branch: '',
+      lastBranch: '',
+      space: ''
+    },
+    cssClass: 'tree-theme-cursor'
+  },
+
   connected: {
     name: 'Líneas Conectadas',
     description: 'Líneas CSS continuas estilo VSCode',

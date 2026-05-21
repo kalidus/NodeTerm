@@ -92,6 +92,46 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
+   TEMA: CURSOR (Explorador Cursor / VS Code)
+   Sin líneas, indentación compacta; hover/selección vía reglas globales ::after
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.sidebar-tree.tree-theme-cursor {
+  --tree-indent: 8px;
+  --tree-node-spacing: 0px;
+  --tree-border-radius: 0;
+}
+
+.sidebar-tree.tree-theme-cursor .tree-connector {
+  display: none !important;
+}
+
+.sidebar-tree.tree-theme-cursor .p-treenode-children {
+  padding-left: 8px !important;
+  border-left: none !important;
+}
+
+.sidebar-tree.tree-theme-cursor .p-treenode-content {
+  padding-left: 2px !important;
+}
+
+.sidebar-tree.tree-theme-cursor .p-treenode-children .p-treenode-content {
+  background: transparent !important;
+}
+
+.sidebar-tree.tree-theme-cursor .p-tree-toggler {
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  margin-right: 0 !important;
+}
+
+.sidebar-tree.tree-theme-cursor .p-tree-toggler-icon {
+  color: var(--ui-sidebar-text) !important;
+  opacity: 0.7;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
    TEMA: CONNECTED (Líneas CSS continuas)
    Estilo VSCode con líneas verticales y horizontales
    ═══════════════════════════════════════════════════════════════════════════════ */
