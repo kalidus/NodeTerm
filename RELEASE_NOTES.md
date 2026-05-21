@@ -1,14 +1,84 @@
+# 🚀 NodeTerm v1.6.7 - Release Notes
+
+**Fecha de Release**: 2026-05-21  
+**Tipo de Release**: Feature & UX Release  
+**Versión Anterior**: v1.6.6
+
+---
+
+## 🎉 ¡Bienvenido a NodeTerm v1.6.7!
+
+Esta es una release mayor de producto: **sidebar rediseñada**, **notas con editor rico**, **diálogos SSH/RDP/VNC unificados**, **nuevos clientes de IA en terminal**, **seguridad reforzada** y **mucho trabajo de rendimiento** en arranque y árbol de conexiones. Ideal si vienes de v1.6.6 y quieres la experiencia más completa hasta la fecha.
+
+---
+
+## ✨ Características principales (v1.6.7)
+
+### 🧭 Sidebar y navegación
+- **Nueva navegación por pestañas** en la parte superior de la sidebar, con toolbar contextual por sección (Conexiones, Herramientas, Notas, etc.).
+- **Vista Favoritos** dedicada: gestiona favoritos sin mezclarlos con el árbol principal; reordena y mueve entre carpetas.
+- **Mucho más fluida** en carpetas grandes: carga progresiva, caché de iconos y menos parpadeos al expandir por primera vez.
+- **Indicador de sesión activa**, resize más suave y **tema Cursor** opcional para el árbol.
+
+### 📝 Notas
+- **Editor Tiptap** con plantillas, modo Zen, métricas y lectura en voz alta (TTS).
+- Abre notas con **un solo clic**; la sección se llama **Notas** en toda la interfaz.
+- **Sincronización Nextcloud** de notas junto con favoritos y metadatos de contraseñas.
+
+### 🔌 Conexiones
+- **Diálogo SSH** renovado: más compacto, redimensionable, ProxyJump, host keys, X11, agent forwarding y grabación automática por sesión.
+- **RDP y VNC** alineados al mismo estilo visual y flujo que SSH.
+- **Buscador global** con atajo configurable y búsqueda contextual en el marco de sesiones.
+
+### 🤖 IA
+- Retirado el **chat IA local antiguo**; la IA vive en **clientes dedicados** (pestañas y Docker).
+- Nuevos terminales: **Claude Code**, **Gemini CLI**, **OpenCode**, **Codex**, **Antigravity CLI** y **Open Notebook** (Docker).
+- Pestaña **Clientes de IA** rediseñada con categorías, búsqueda y actualizaciones Docker por servicio.
+
+### 🏠 Home y terminal local
+- **Layouts / estilos** de marco, **modo minimalista** y **launcher en grid** para elegir terminal o cliente IA.
+- Menú rápido de **temas y presets** desde apariencia.
+
+### 🔐 Seguridad
+- Correcciones críticas en servicios Docker e IPC; **lista blanca IPC** y preload endurecido.
+- **Calculadora CVSS** integrada en herramientas de seguridad.
+
+### 📡 SSH y Wallix
+- **Estación de transferencias** mejorada (más rápida, historial persistente, mejor UI).
+- **Importación Wallix API** con inventario y sincronización inteligente.
+
+### 🔄 Multi-instancia
+- Varias ventanas de NodeTerm comparten **favoritos, app-data y desbloqueo** de forma coherente.
+
+### ⚡ Rendimiento
+- **Arranque más rápido** (splash temprano, carga diferida de módulos pesados).
+- Menos flashes al abrir la **primera pestaña** tras optimizaciones de lazy loading.
+
+### 📊 Barra de estado
+- Popovers con **GPU, red, disco** y panel de detalle al pasar el ratón por la IP del host.
+- **Monitor SSH** con subpestaña de servicios.
+
+### 🎨 Apariencia
+- **Color personalizado de la titlebar** con selector visual; layout unificado sin líneas de separación molestas.
+- Fondos diferenciados para **pestañas** y **rail** de la sidebar en todos los temas.
+
+### 🛠️ Otros
+- Pestaña **Actualizaciones** de la aplicación.
+- En **macOS**, menús estándar para copiar/pegar con atajos del sistema.
+
+---
+
 # 🚀 NodeTerm v1.6.6 - Release Notes
 
 **Fecha de Release**: 2026-04-07  
-**Tipo de Release**: En preparación  
+**Tipo de Release**: Feature Release  
 **Versión Anterior**: v1.6.5
 
 ---
 
 ## 🎉 ¡Bienvenido a NodeTerm v1.6.6!
 
-Esta versión está en preparación. Se ha creado la rama de release y actualizado la versión base a **v1.6.6**. En esta sección se irán consolidando los cambios finales antes de la publicación. Debajo conservamos las notas de **v1.6.5** y anteriores como referencia.
+Release centrada en **presets**, **barra lateral**, **LibreChat** y mejoras de empaquetado. Debajo, notas de versiones anteriores como referencia.
 
 ---
 

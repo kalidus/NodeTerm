@@ -8,10 +8,80 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ## [Unreleased]
 
-## [1.6.7] - 2026-04-20
+## [1.6.7] - 2026-05-21
 
-### 🚧 En preparación
-- Preparación para la nueva versión `1.6.7`.
+### 🧭 Sidebar y navegación
+- **Rediseño de la sidebar**: Pestañas superiores por sección, toolbar contextual unificada y nueva organización de Herramientas.
+- **Vista Favoritos**: Árbol virtual de favoritos con reordenación y asignación a carpetas desde la sidebar.
+- **Rendimiento del árbol**: Lazy loading de chunks, caché de iconos, chunking progresivo en carpetas grandes, virtual scroll y búsquedas con debounce.
+- **Sesión y estética**: Indicador de sesión activa, resize más suave, tema opcional estilo Cursor, iconos del árbol editables desde Apariencia y escalado dinámico en modo colapsado.
+- **Búsqueda en sidebar**: Auto-expansión de rutas coincidentes desde Home y barra de título; scroll suave al arrastrar nodos.
+
+### 📝 Notas
+- **Editor Tiptap**: Plantillas, reproductor TTS, métricas, Zen Mode y toolbar modernizado.
+- **Gestión alineada con conexiones**: Sidebar de notas con apertura en un clic; UI renombrada de Documentos a Notas.
+- **Sync y backup**: Notas en export/import y Nextcloud (`nodeterm-documents.json`); bundles Nextcloud para favoritos y meta de contraseñas.
+
+### 🔌 Conexiones (SSH, RDP, VNC)
+- **Diálogo SSH renovado**: Layout tipo terminal-pro, redimensionable, acordeón/pestañas en opciones avanzadas, carpeta destino en sidebar.
+- **SSH avanzado**: ProxyJump, política de host keys, X11, agent forwarding, grabación automática por conexión y verificación de `known_hosts`.
+- **RDP y VNC**: Diálogos unificados con SSH; opciones de pantalla y seguridad compactadas; ayudas contextuales en opciones avanzadas.
+- **Selector de nueva conexión**: Badges de contexto, iconos alineados al tema y categorías SSH SVG de alta calidad.
+
+### 🤖 IA y clientes
+- **Eliminado**: Chat de IA local legacy y componentes asociados obsoletos.
+- **Nuevos CLIs locales**: Claude Code, Gemini CLI, OpenCode, Codex CLI y Antigravity CLI como terminales gestionados en pestañas.
+- **Open Notebook**: Cliente Docker nativo integrado en la pestaña de clientes de IA.
+- **Pestaña AI Clients**: Rediseño con categorías, búsqueda y UI glassmorphism; actualizaciones Docker centralizadas por cliente.
+- **Launcher y visibilidad**: Grid/cyber launcher, sincronización de visibilidad entre instancias e iconos oficiales en historial y sidebar colapsada.
+
+### 🏠 Home, layouts y terminal local
+- **Layouts y estilos**: Nuevos estilos de marco, menú unificado de pestañas de configuración y selector de apariencia rápido (temas/presets).
+- **Modo minimalista**: Toggle en menú de apariencia; Home y terminal integrado adaptados al modo compacto.
+- **Terminal local**: Launcher agrupado por grid, pestañas compactas en Home, subpestaña de monitor en sesiones SSH y corrección de arranque con una sola pestaña.
+
+### 🔐 Seguridad
+- **Endurecimiento de servicios**: Mitigación de RCE e inyección de comandos en Docker/AnythingLLM y handlers IPC.
+- **Superficie Electron**: Lista blanca de canales IPC, preload sin duplicados y DOMPurify reforzado en chat.
+- **Credenciales**: Enmascaramiento en logs y manejo más seguro de secretos.
+- **Calculadora CVSS**: Flujo completo de métricas y puntuación en herramientas de seguridad.
+
+### 📡 SSH, transferencias e importación
+- **Estación de transferencias**: UI en grid, historial persistente por host, `fastGet`/`fastPut` paralelos y toggle de estación en explorador SSH.
+- **Wallix API**: Importación de inventario con refresh inteligente y prioridad de session rights.
+- **Import wizard**: Barra de progreso en vista previa; correcciones en iconos Wallix y semántica RDP.
+
+### 🔄 Multi-instancia y sincronización
+- **Ventanas múltiples**: Sync de `app-data`, auto-unlock, favoritos/carpetas y orden de miembros entre instancias.
+- **Nube cifrada**: Vaults cifrados en restauración Nextcloud y diálogo de clave maestra tras import.
+
+### ⚡ Rendimiento y arranque
+- **Arranque**: Splash temprano, registro diferido de handlers pesados, lazy loading en App y TabbedTerminal.
+- **Race conditions**: Handlers Guacamole, clientes IA y registro IPC antes de `ready-to-show`.
+- **Sidebar**: Menos flash al expandir por primera vez; primera pestaña sin retardo tras lazy loading.
+
+### 📊 Status bar y búsqueda global
+- **Paneles en hover**: Detalle de SO en IP local y bastiones; popovers de GPU, red, disco y gráficos de sesión.
+- **Monitor SSH**: Subpestaña de servicios en el monitor integrado.
+- **Búsqueda global**: Atajo configurable y palette/buscador en el marco de sesiones.
+
+### 🎨 Tema y titlebar
+- **Titlebar personalizable**: Selector de color con rejilla popover; configuración en una línea; reset al cambiar de tema.
+- **Layout unificado**: Chrome de cabeceras con paleta del tema; sin separador inferior en titlebar; splitter vertical eliminado en layout unificado.
+- **Presets**: `forceSync` y propagación de borrados de `localStorage` a `app-data.json`.
+
+### 🛠️ Otros
+- **Pestaña de actualizaciones**: Nueva `AppUpdateTab` para gestionar actualizaciones de la app.
+- **macOS**: Menús Edit, Window y Help estándar para atajos de copiar/pegar.
+- **Pestañas**: Iconos y colores en herramientas de red; cierre correcto de notas y network tools.
+- **Cierre de app**: Salida instantánea desde la X del sistema.
+
+### 🔧 Correcciones destacadas
+- Referencias indefinidas en ajustes Docker (`dockerFontFamily` / `dockerFontSize`).
+- Sincronización de temas del terminal local y persistencia vía Electron.
+- Docker: terminal de contenedor, prioridad en TabbedTerminal y limpieza de imagen tras actualizar.
+- Favoritos, drag & drop del árbol, nodos de carpeta y inserción al tope de carpetas.
+- ConPTY habilitado para OpenCode (colores TUI).
 
 ## [1.6.6] - 2026-04-20
 
