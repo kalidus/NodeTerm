@@ -166,9 +166,9 @@ if (process.env.NODE_ENV === 'development') {
 const { app, BrowserWindow, ipcMain, clipboard, dialog, Menu, powerMonitor, screen } = require('electron');
 logTiming('Electron cargado');
 
-// Windows: mismo ID que build.appId — barra de tareas correcta tras auto-update NSIS
+// Windows: mismo ID que build.appId en prod (barra tras auto-update NSIS); ID distinto en dev
 if (process.platform === 'win32') {
-  app.setAppUserModelId('com.electron.nodeterm');
+  app.setAppUserModelId(app.isPackaged ? 'com.electron.nodeterm' : 'com.electron.nodeterm.dev');
 }
 
 const path = require('path');
