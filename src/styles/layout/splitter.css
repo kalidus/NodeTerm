@@ -38,6 +38,18 @@
   transition: none !important; /* Sin transición durante el arrastre para fluidez */
 }
 
+/* === FIX: Webviews capturan eventos del mouse durante el resize del splitter ===
+   Las <webview> de Electron (usadas por clientes de IA: OpenWebUI, AnythingLLM,
+   LibreChat, AgentZero, OpenClaw, OpenNotebook) "tragan" los eventos mousemove
+   cuando el cursor pasa sobre ellas durante el arrastre del gutter, causando que
+   el splitter se congele/vaya a trompicones. Deshabilitamos pointer-events en
+   webviews e iframes durante el redimensionamiento para que todos los eventos
+   lleguen al documento padre y el arrastre sea fluido. */
+.p-splitter.p-splitter-resizing webview,
+.p-splitter.p-splitter-resizing iframe {
+  pointer-events: none !important;
+}
+
 .main-splitter-transitioning > .p-splitter-panel {
   transition: flex-basis 0.22s cubic-bezier(0.4, 0, 0.2, 1),
               width 0.22s cubic-bezier(0.4, 0, 0.2, 1),
