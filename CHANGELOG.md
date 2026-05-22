@@ -13,9 +13,18 @@ Borrador opcional para usuarios: `RELEASE_NOTES.md` (solo la versión en curso).
 
 ## [1.6.8] - 2026-05-21
 
-### 🚧 En preparación
-- Rama de release `release/1.6.8` creada y versión base actualizada a `1.6.8`.
-- Pendiente consolidar los cambios finales de esta versión antes de publicar.
+### 🤖 IA y clientes
+- **Eliminado**: Chat de IA integrado en NodeTerm (`AIService`, historial de conversaciones, subida de archivos para RAG local y UI asociada en Home/sidebar).
+- **Eliminado**: MCP nativo de NodeTerm (`MCPManagerTab`, catálogo MCP, procesos `filesystem`/`ssh-terminal` en main y explorador de archivos MCP en la sidebar).
+- **Conservado**: Configuración MCP de **AnythingLLM** desde la pestaña del cliente (diálogo con servidores populares, personalizado, diagnóstico y editor JSON); también configurable en la UI web (Agent Skills → MCP Servers → Refresh).
+- **Barra de estado**: Sin sondeo periódico a Ollama (`localhost:11434`); menos ruido en consola en desarrollo.
+- **Clientes IA**: Sin cambios en Docker/CLI (Open WebUI, LibreChat, Claude Code, OpenCode, etc.) ni en la pestaña **Clientes IA** de ajustes.
+
+### 🔄 Multi-instancia y sincronización
+- **Sync**: Dejan de sincronizarse `aichat_history`, `aichat_model_config`, `nodeterm_ai_provider` y `nodeterm_ai_model` (datos del chat integrado retirado).
+
+### ⚡ Rendimiento y arranque
+- **Bundle y main**: Menos código en renderer (~30k líneas) y sin registro de handlers/procesos MCP nativos al arrancar.
 
 ## [1.6.7] - 2026-05-21
 
