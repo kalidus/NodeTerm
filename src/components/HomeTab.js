@@ -132,6 +132,15 @@ const HomeTab = ({
     }
   });
 
+  const [localTerminalMaximized, setLocalTerminalMaximized] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_MAXIMIZED);
+      return saved !== null ? saved === 'true' : false;
+    } catch {
+      return false;
+    }
+  });
+
   const [terminalOpacity, setTerminalOpacity] = useState(() => {
     try {
       const saved = localStorage.getItem('nodeterm_terminal_opacity');
@@ -153,6 +162,7 @@ const HomeTab = ({
     setRightColumnVisible(readBoolSetting(STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_VISIBLE, true));
     setRightColumnCollapsed(readBoolSetting(STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_COLLAPSED, true));
     setHomeCardVisible(readBoolSetting(STORAGE_KEYS.HOME_TAB_CARD_VISIBLE, true));
+    setLocalTerminalMaximized(readBoolSetting(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_MAXIMIZED, false));
     const linuxTheme = localStorage.getItem('localLinuxTerminalTheme');
     if (linuxTheme && setLocalLinuxTerminalTheme) {
       setLocalLinuxTerminalTheme(linuxTheme);
@@ -956,13 +966,25 @@ const HomeTab = ({
     }
   }, []);
 
+  const handleToggleLocalTerminalMaximized = React.useCallback(() => {
+    setLocalTerminalMaximized(prev => {
+      const newVal = !prev;
+      try {
+        persistHomeTabSetting(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_MAXIMIZED, newVal ? 'true' : 'false');
+      } catch (e) {}
+      
+      // Dispatch resize event to force xterm.js to fit
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+      }, 100);
+      
+      return newVal;
+    });
+  }, []);
 
+  const flushRightQuickBar = rightColumnVisible && !localTerminalMaximized;
 
-
-
-  const flushRightQuickBar = rightColumnVisible;
-
-  const homeRightQuickBar = rightColumnVisible ? (
+  const homeRightQuickBar = (rightColumnVisible && !localTerminalMaximized) ? (
     <NodeTermStatus
       variant="rightColumn"
       collapsed={rightColumnCollapsed}
@@ -1671,6 +1693,8 @@ const HomeTab = ({
                   statusBarVisible={statusBarVisible}
                   flushRightQuickBar={flushRightQuickBar}
                   rightQuickBar={flushRightQuickBar ? homeRightQuickBar : null}
+                  localTerminalMaximized={localTerminalMaximized}
+                  onToggleLocalTerminalMaximized={handleToggleLocalTerminalMaximized}
                   onSwitchTerminal={(type, info) => {
                     if (showLocalTerminalTabs && embeddedTabbedTerminalRef.current?.addTerminalTab) {
                       embeddedTabbedTerminalRef.current.addTerminalTab(type, info);

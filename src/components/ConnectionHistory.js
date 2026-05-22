@@ -228,6 +228,8 @@ const ConnectionHistory = ({
 	homeCardVisible = true,
 	flushRightQuickBar = false,
 	rightQuickBar = null,
+	localTerminalMaximized = false,
+	onToggleLocalTerminalMaximized = () => {},
 	children
 }) => {
 	// Helper para ajustar la opacidad de los colores (Hex o RGBA)
@@ -1517,7 +1519,7 @@ const ConnectionHistory = ({
 	}, [themeColors]);
 
 	return (
-		<div className={`connection-history-root${terminalView ? ' is-terminal-view' : ''}${flushRightQuickBar ? ' has-flush-right-quick-bar' : ''}`} style={{ background: 'transparent' }}>
+		<div className={`connection-history-root${terminalView ? ' is-terminal-view' : ''}${flushRightQuickBar ? ' has-flush-right-quick-bar' : ''}${localTerminalMaximized ? ' is-terminal-maximized' : ''}`} style={{ background: 'transparent' }}>
 			<style>{`
 				/* -- Custom Hero Splash Styles -- */
 				.connection-history-root { background: transparent !important; height: 100%; display: flex; flex-direction: column; color: ${themeColors.textPrimary || '#fff'}; }
@@ -2306,6 +2308,71 @@ const ConnectionHistory = ({
 					background: rgba(255, 255, 255, 0.3);
 					border: 2px solid transparent;
 					background-clip: padding-box;
+				}
+
+				/* Override rules for maximized local terminal in HomeTab */
+				.connection-history-root.is-terminal-maximized {
+					height: 100% !important;
+					max-height: 100% !important;
+					overflow: hidden !important;
+				}
+
+				.connection-history-root.is-terminal-maximized .hero-splash-header {
+					display: none !important;
+				}
+
+				.connection-history-root.is-terminal-maximized .home-integrated-terminal-row {
+					margin: 0 !important;
+					padding: 0 !important;
+					height: 100% !important;
+					width: 100% !important;
+				}
+
+				.connection-history-root.is-terminal-maximized .recents-terminal-frame {
+					margin: 0 !important;
+					border-radius: 0 !important;
+					box-shadow: none !important;
+					border: none !important;
+					height: 100% !important;
+					width: 100% !important;
+					flex: 1 !important;
+				}
+
+				.connection-history-root.is-terminal-maximized .recents-terminal-frame.futuristic {
+					clip-path: none !important;
+					border: none !important;
+					box-shadow: none !important;
+					padding: 0 !important;
+				}
+
+				.connection-history-root.is-terminal-maximized .recents-terminal-frame.modern {
+					border-radius: 0 !important;
+					border: none !important;
+				}
+
+				.connection-history-root.is-terminal-maximized .recents-terminal-frame.retro {
+					border: none !important;
+					border-radius: 0 !important;
+					box-shadow: none !important;
+				}
+
+				.connection-history-root.is-terminal-maximized .recents-terminal-frame.matcha {
+					border-top: none !important;
+					border-radius: 0 !important;
+				}
+
+				.connection-history-root.is-terminal-maximized .recents-terminal-header {
+					border-radius: 0 !important;
+				}
+
+				.connection-history-root.is-terminal-maximized .recents-terminal-body {
+					border-radius: 0 !important;
+					border-bottom-left-radius: 0 !important;
+					border-bottom-right-radius: 0 !important;
+				}
+
+				.connection-history-root.is-terminal-maximized .home-integrated-terminal-quickbar {
+					display: none !important;
 				}
 			`}</style>
 
@@ -3160,7 +3227,7 @@ const ConnectionHistory = ({
 				terminalFrameStyle={terminalFrameStyle}
 			>
 				{/* macOS-style header */}
-				<div className="recents-terminal-header">
+				<div className="recents-terminal-header" onDoubleClick={onToggleLocalTerminalMaximized} style={{ cursor: 'pointer' }}>
 					<div className="traffic-lights">
 						{terminalFrameStyle === 'minimal' ? null : terminalFrameStyle === 'macos' ? (
 							<>
@@ -3174,10 +3241,21 @@ const ConnectionHistory = ({
 									title="Ocultar Terminal"
 								/>
 								<div className="traffic-dot yellow" />
-								<div className="traffic-dot green" />
+								<div
+									className="traffic-dot green"
+									onClick={onToggleLocalTerminalMaximized}
+									title={localTerminalMaximized ? "Restaurar tamaño" : "Maximizar Terminal"}
+								/>
 							</>
 						) : terminalFrameStyle === 'gnome' ? (
-							<div className="gnome-controls">
+							<div className="gnome-controls" style={{ display: 'flex', gap: '6px' }}>
+								<div
+									className="gnome-dot"
+									title={localTerminalMaximized ? "Restaurar" : "Maximizar"}
+									onClick={onToggleLocalTerminalMaximized}
+								>
+									<i className={localTerminalMaximized ? "pi pi-window-minimize" : "pi pi-window-maximize"} style={{ fontSize: '9px' }} />
+								</div>
 								<div
 									className="gnome-dot close"
 									title="Cerrar"
@@ -3192,7 +3270,13 @@ const ConnectionHistory = ({
 						) : terminalFrameStyle === 'kde' ? (
 							<div className="kde-controls">
 								<div className="kde-dot minimize" title="Minimizar"><div className="custom-icon icon-min" /></div>
-								<div className="kde-dot maximize" title="Maximizar"><div className="custom-icon icon-max" /></div>
+								<div
+									className="kde-dot maximize"
+									title={localTerminalMaximized ? "Restaurar" : "Maximizar"}
+									onClick={onToggleLocalTerminalMaximized}
+								>
+									<div className="custom-icon icon-max" />
+								</div>
 								<div
 									className="kde-dot close"
 									title="Cerrar"
@@ -3207,7 +3291,13 @@ const ConnectionHistory = ({
 						) : terminalFrameStyle === 'windows' ? (
 							<div className="windows-controls">
 								<div className="win-dot minimize" title="Minimizar"><div className="custom-icon icon-min" /></div>
-								<div className="win-dot maximize" title="Maximizar"><div className="custom-icon icon-max" /></div>
+								<div
+									className="win-dot maximize"
+									title={localTerminalMaximized ? "Restaurar" : "Maximizar"}
+									onClick={onToggleLocalTerminalMaximized}
+								>
+									<div className="custom-icon icon-max" />
+								</div>
 								<div
 									className="win-dot close"
 									title="Cerrar"
@@ -3220,21 +3310,49 @@ const ConnectionHistory = ({
 								</div>
 							</div>
 						) : terminalFrameStyle === 'orchis' ? (
-							<div className="orchis-controls">
+							<div className="orchis-controls" style={{ display: 'flex', gap: '6px' }}>
+								<div
+									className="orchis-dot"
+									onClick={onToggleLocalTerminalMaximized}
+									title={localTerminalMaximized ? "Restaurar" : "Maximizar"}
+									style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+								>
+									<i className={localTerminalMaximized ? "pi pi-window-minimize" : "pi pi-window-maximize"} style={{ fontSize: '9px' }} />
+								</div>
 								<div className="orchis-dot" onClick={() => { if (onTerminalToggle) onTerminalToggle(false); setActiveBottomView('recent'); }} title="Cerrar"><i className="pi pi-times" /></div>
 							</div>
 						) : terminalFrameStyle === 'fluent' ? (
 							<div className="fluent-controls">
 								<div className="fluent-dot"><i className="pi pi-minus" /></div>
-								<div className="fluent-dot"><i className="pi pi-stop" /></div>
+								<div
+									className="fluent-dot"
+									title={localTerminalMaximized ? "Restaurar" : "Maximizar"}
+									onClick={onToggleLocalTerminalMaximized}
+								>
+									<i className="pi pi-stop" />
+								</div>
 								<div className="fluent-dot" onClick={() => { if (onTerminalToggle) onTerminalToggle(false); setActiveBottomView('recent'); }} title="Cerrar"><i className="pi pi-times" /></div>
 							</div>
 						) : terminalFrameStyle === 'matcha' ? (
 							<div className="matcha-controls">
+								<div
+									className="matcha-dot"
+									title={localTerminalMaximized ? "Restaurar" : "Maximizar"}
+									onClick={onToggleLocalTerminalMaximized}
+								>
+									<i className={localTerminalMaximized ? "pi pi-window-minimize" : "pi pi-window-maximize"} style={{ fontSize: '9px' }} />
+								</div>
 								<div className="matcha-dot" onClick={() => { if (onTerminalToggle) onTerminalToggle(false); setActiveBottomView('recent'); }} title="Cerrar"><i className="pi pi-times" /></div>
 							</div>
 						) : terminalFrameStyle === 'futuristic' ? (
-							<div className="futuristic-controls">
+							<div className="futuristic-controls" style={{ display: 'flex', gap: '6px' }}>
+								<div
+									className="cyber-dot"
+									title={localTerminalMaximized ? "Restaurar" : "Maximizar"}
+									onClick={onToggleLocalTerminalMaximized}
+								>
+									{localTerminalMaximized ? "RST" : "MAX"}
+								</div>
 								<div
 									className="cyber-dot"
 									title="Cerrar"
@@ -3247,7 +3365,14 @@ const ConnectionHistory = ({
 								</div>
 							</div>
 						) : terminalFrameStyle === 'modern' ? (
-							<div className="modern-controls">
+							<div className="modern-controls" style={{ display: 'flex', gap: '6px' }}>
+								<div
+									className="glass-dot"
+									title={localTerminalMaximized ? "Restaurar" : "Maximizar"}
+									onClick={onToggleLocalTerminalMaximized}
+								>
+									<i className={localTerminalMaximized ? "pi pi-window-minimize" : "pi pi-window-maximize"} style={{ fontSize: '10px' }} />
+								</div>
 								<div
 									className="glass-dot"
 									title="Cerrar"
@@ -3262,7 +3387,16 @@ const ConnectionHistory = ({
 						) : terminalFrameStyle === 'minimal' ? (
 							<div className="minimal-controls" />
 						) : (
-							<div className="retro-controls">
+							<div className="retro-controls" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+								<div
+									className={`retro-switch ${localTerminalMaximized ? 'on' : ''}`}
+									title={localTerminalMaximized ? "Restaurar CRT" : "Maximizar CRT"}
+									onClick={onToggleLocalTerminalMaximized}
+									style={{ border: '2px solid #0f0' }}
+								/>
+								<span style={{ fontSize: '9px', color: '#0f0', fontFamily: 'monospace' }}>
+									{localTerminalMaximized ? "MAX" : "NORM"}
+								</span>
 								<div
 									className="retro-switch on"
 									title="OFF"
@@ -3360,6 +3494,24 @@ const ConnectionHistory = ({
 							}}
 							onMouseEnter={(e) => { if (!isDetectingTerminals) e.currentTarget.style.opacity = '1'; }}
 							onMouseLeave={(e) => { if (!isDetectingTerminals) e.currentTarget.style.opacity = '0.6'; }}
+						/>
+						<i
+							className={`pi ${localTerminalMaximized ? 'pi-window-minimize' : 'pi-window-maximize'}`}
+							style={{
+								fontSize: '0.9rem',
+								color: terminalTheme.foreground || '#c9d1d9',
+								opacity: 0.6,
+								cursor: 'pointer',
+								padding: '4px',
+								transition: 'all 0.2s'
+							}}
+							title={localTerminalMaximized ? "Restaurar Terminal" : "Maximizar Terminal"}
+							onClick={(e) => {
+								e.stopPropagation();
+								if (onToggleLocalTerminalMaximized) onToggleLocalTerminalMaximized();
+							}}
+							onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+							onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.6'; }}
 						/>
 					</div>
 				</div>
