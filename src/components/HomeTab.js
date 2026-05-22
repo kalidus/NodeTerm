@@ -86,7 +86,6 @@ const HomeTab = ({
   const [favType, setFavType] = useState('all'); // Nuevo estado para filtros
   const [recentConnections, setRecentConnections] = useState([]); // Estado para conexiones recientes
   const [recentPasswords, setRecentPasswords] = useState([]); // Estado para passwords recientes
-  const showAIChat = false; // Estado para mostrar/ocultar chat de IA
   const [iconThemeKey, setIconThemeKey] = useState(0); // Para forzar re-render cuando cambia el tema de iconos
   const [statusBarVisible, setStatusBarVisible] = useState(() => {
     // Cargar preferencia desde localStorage, por defecto visible
@@ -841,9 +840,6 @@ const HomeTab = ({
     });
   };
 
-  // Funci\u00F3n para toggle del chat de IA
-  const handleToggleAIChat = () => {};
-
   // Funci\u00F3n para toggle de la status bar
   const handleToggleStatusBar = () => {
     setStatusBarVisible(prev => {
@@ -964,7 +960,7 @@ const HomeTab = ({
 
 
 
-  const flushRightQuickBar = rightColumnVisible && !showAIChat;
+  const flushRightQuickBar = rightColumnVisible;
 
   const homeRightQuickBar = rightColumnVisible ? (
     <NodeTermStatus
@@ -976,10 +972,8 @@ const HomeTab = ({
       themeColors={themeColors}
       onOpenSettings={onOpenSettings}
       onToggleTerminalVisibility={handleToggleTerminalVisibility}
-      onToggleAIChat={handleToggleAIChat}
       onToggleStatusBar={handleToggleStatusBar}
       onCollapse={handleToggleRightColumn}
-      showAIChat={showAIChat}
       statusBarVisible={statusBarVisible}
     />
   ) : null;

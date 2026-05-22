@@ -184,8 +184,6 @@ const Sidebar = React.memo(({
   masterKey,
   secureStorage,
 
-  isAIChatActive = false,
-  onToggleLocalTerminalForAIChat,
 
   // Filtro de búsqueda desde TitleBar
   sidebarFilter = '',
@@ -565,10 +563,10 @@ const Sidebar = React.memo(({
   // Permitir modo filesystem si se solicita explícitamente desde FileExplorer
   // incluso sin AI Chat activo, pero solo si hay un path inicial establecido
   useEffect(() => {
-    if (!isAIChatActive && viewMode === 'filesystem' && !initialFilesystemPath) {
+    if (viewMode === 'filesystem' && !initialFilesystemPath) {
       setViewMode('connections');
     }
-  }, [isAIChatActive, viewMode, setViewMode, initialFilesystemPath]);
+  }, [viewMode, setViewMode, initialFilesystemPath]);
 
   // --- Utilidades para manipulación de colores en SVGs ---
 
@@ -889,7 +887,6 @@ const Sidebar = React.memo(({
   }, [explorerFontColor]);
 
   const [aiClientsEnabled, setAiClientsEnabled] = React.useState({
-    nodeterm: false,
     claude: false,
     opencode: false,
     geminicli: false,
@@ -911,7 +908,6 @@ const Sidebar = React.memo(({
         if (config) {
           const parsed = JSON.parse(config);
           setAiClientsEnabled({
-            nodeterm: false,
             claude: parsed.claude === true,
             opencode: parsed.opencode === true,
             geminicli: parsed.geminicli === true,
@@ -927,7 +923,6 @@ const Sidebar = React.memo(({
         } else {
           // Si no hay configuración, todos desactivados por defecto
           setAiClientsEnabled({
-            nodeterm: false,
             claude: false,
             opencode: false,
             geminicli: false,
@@ -991,13 +986,11 @@ const Sidebar = React.memo(({
         count += enabledClients;
         if (enabledClients > 0) count += 1; // separador de clientes
         // separador entre CLIs y Apps
-        if ((aiClientsEnabled.nodeterm || aiClientsEnabled.anythingllm || aiClientsEnabled.openwebui || aiClientsEnabled.librechat || aiClientsEnabled.agentzero || aiClientsEnabled.openclaw || aiClientsEnabled.opennotebook) && 
+        if ((aiClientsEnabled.anythingllm || aiClientsEnabled.openwebui || aiClientsEnabled.librechat || aiClientsEnabled.agentzero || aiClientsEnabled.openclaw || aiClientsEnabled.opennotebook) && 
             (aiClientsEnabled.opencode || aiClientsEnabled.geminicli || aiClientsEnabled.codexcli || aiClientsEnabled.antigravitycli || aiClientsEnabled.claude)) {
           count += 1;
         }
       }
-      
-      if (filesystemAvailable && isAIChatActive) count += 2.5; // terminal, filesystem, separador
       
       // Altura disponible aproximada (restando márgenes)
       const availableHeight = window.innerHeight - 60;
@@ -1016,7 +1009,7 @@ const Sidebar = React.memo(({
     calculateSizes();
     window.addEventListener('resize', calculateSizes);
     return () => window.removeEventListener('resize', calculateSizes);
-  }, [sidebarCollapsed, aiClientsEnabled, filesystemAvailable, isAIChatActive]);
+  }, [sidebarCollapsed, aiClientsEnabled, filesystemAvailable]);
 
   // Ref para el contenedor de la sidebar
   const sidebarRef = useRef(null);
@@ -3379,16 +3372,6 @@ const Sidebar = React.memo(({
       codexcli: openCodexCliTab,
       antigravitycli: openAntigravityCliTab,
       claude: openClaudeTab,
-      nodeterm: () => {
-        const newAITab = {
-          key: `ai-chat-${Date.now()}`,
-          label: 'Chat IA',
-          type: 'ai-chat',
-          createdAt: Date.now(),
-          groupId: null
-        };
-        window.dispatchEvent(new CustomEvent('create-ai-tab', { detail: { tab: newAITab } }));
-      },
       anythingllm: openAnythingLLMTab,
       openwebui: openOpenWebUITab,
       librechat: openLibreChatTab,
@@ -3443,10 +3426,8 @@ const Sidebar = React.memo(({
         aiClientsEnabled={aiClientsEnabled}
         onOpenAIClient={handleOpenAIClient}
         filesystemAvailable={filesystemAvailable}
-        isAIChatActive={isAIChatActive}
         onFilesystemClick={handleFilesystemClick}
         viewMode={viewMode}
-        onToggleLocalTerminalForAIChat={isAIChatActive ? onToggleLocalTerminalForAIChat : undefined}
         onShowImportDialog={onShowImportDialog || setShowImportDialog}
         onShowExportDialog={onShowExportDialog}
         onShowImportExportDialog={onShowImportExportDialog}

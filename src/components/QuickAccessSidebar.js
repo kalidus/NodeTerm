@@ -14,9 +14,7 @@ const QuickAccessSidebar = ({
   sshConnectionsCount = 0,
   foldersCount = 0,
   onToggleTerminalVisibility,
-  onToggleAIChat,
   onToggleStatusBar,
-  showAIChat = false,
   statusBarVisible = true
 }) => {
   // 🚀 OPTIMIZACIÓN: Usar hook centralizado con delay para no bloquear render
@@ -1020,101 +1018,6 @@ const QuickAccessSidebar = ({
               height: '16px',
               borderRadius: '50%',
               background: 'radial-gradient(circle, rgba(79, 195, 247, 0.4) 0%, transparent 60%)',
-              filter: 'blur(1px)',
-              opacity: '0.6'
-            }} />
-          </div>
-        </div>
-
-        {/* Botón de Chat de IA */}
-        <div
-          title={showAIChat ? 'Ocultar chat de IA' : 'Mostrar chat de IA'}
-          style={{
-            cursor: 'pointer',
-            transition: 'all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-            background: showAIChat
-              ? `linear-gradient(135deg, rgba(138, 43, 226, 0.3) 0%, rgba(138, 43, 226, 0.2) 50%, rgba(138, 43, 226, 0.1) 100%)`
-              : activeActionBarTheme.button.background,
-            backdropFilter: activeActionBarTheme.button.backdropFilter || 'none',
-            WebkitBackdropFilter: activeActionBarTheme.button.backdropFilter || 'none',
-            border: showAIChat
-              ? '1px solid rgba(138, 43, 226, 0.5)'
-              : activeActionBarTheme.button.border,
-            position: 'relative',
-            width: '100%',
-            height: '48px',
-            minHeight: '48px',
-            maxHeight: '48px',
-            borderRadius: '12px',
-            boxShadow: showAIChat
-              ? '0 4px 16px rgba(138, 43, 226, 0.3), 0 2px 8px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.2)'
-              : activeActionBarTheme.button.boxShadow,
-            overflow: 'hidden',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '0.75rem',
-            marginBottom: '0.125rem',
-            flexShrink: 0,
-            boxSizing: 'border-box',
-            opacity: 1,
-            transform: 'scale(1)'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-1px)';
-            e.currentTarget.style.background = showAIChat
-              ? `linear-gradient(135deg, rgba(138, 43, 226, 0.4) 0%, rgba(138, 43, 226, 0.3) 50%, rgba(138, 43, 226, 0.2) 100%)`
-              : activeActionBarTheme.buttonHover.background;
-            e.currentTarget.style.boxShadow = showAIChat
-              ? '0 6px 20px rgba(138, 43, 226, 0.4), 0 3px 10px rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.25)'
-              : activeActionBarTheme.buttonHover.boxShadow;
-            e.currentTarget.style.borderColor = showAIChat ? 'rgba(138, 43, 226, 0.6)' : activeActionBarTheme.buttonHover.border;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.background = showAIChat
-              ? `linear-gradient(135deg, rgba(138, 43, 226, 0.3) 0%, rgba(138, 43, 226, 0.2) 50%, rgba(138, 43, 226, 0.1) 100%)`
-              : activeActionBarTheme.button.background;
-            e.currentTarget.style.boxShadow = showAIChat
-              ? '0 4px 16px rgba(138, 43, 226, 0.3), 0 2px 8px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.2)'
-              : activeActionBarTheme.button.boxShadow;
-            e.currentTarget.style.borderColor = showAIChat ? 'rgba(138, 43, 226, 0.5)' : activeActionBarTheme.button.border;
-          }}
-          onClick={onToggleAIChat}
-        >
-          <div style={{
-            width: '28px',
-            height: '28px',
-            borderRadius: activeActionBarTheme.iconBox.borderRadius,
-            background: 'linear-gradient(135deg, #8A2BE2 0%, #8A2BE2dd 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 2px 8px rgba(138, 43, 226, 0.4), 0 1px 3px rgba(138, 43, 226, 0.3), inset 0 1px 0 rgba(255,255,255,0.25)',
-            border: '1px solid rgba(138, 43, 226, 0.7)',
-            position: 'relative',
-            overflow: 'hidden'
-          }}>
-            <i
-              className={showAIChat ? 'pi pi-times' : 'pi pi-comments'}
-              style={{
-                fontSize: '1rem',
-                color: 'white',
-                textShadow: '0 1px 3px rgba(0,0,0,0.4)',
-                filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))',
-                position: 'relative',
-                zIndex: 1
-              }}
-            />
-            <div style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: '16px',
-              height: '16px',
-              borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(138, 43, 226, 0.4) 0%, transparent 60%)',
               filter: 'blur(1px)',
               opacity: '0.6'
             }} />

@@ -24,10 +24,8 @@ const SidebarIconRail = React.memo(({
   aiClientsEnabled = {},
   onOpenAIClient,
   filesystemAvailable = false,
-  isAIChatActive = false,
   onFilesystemClick,
   viewMode,
-  onToggleLocalTerminalForAIChat,
   onShowImportDialog,
   onShowExportDialog,
   onShowImportExportDialog,
@@ -147,33 +145,6 @@ const SidebarIconRail = React.memo(({
             );
           })}
         </div>
-      )}
-
-      {/* Filesystem + Local Terminal (conditional) */}
-      {filesystemAvailable && isAIChatActive && (
-        <>
-          <div className="sidebar-icon-rail-separator" />
-          <button
-            className={`sidebar-icon-rail-item${viewMode === 'filesystem' ? ' active' : ''}`}
-            onClick={onFilesystemClick}
-            title={t('tooltips.filesystemMCP')}
-            style={{ '--rail-item-color': '#8bc34a' }}
-          >
-            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: ICON_SIZE, height: ICON_SIZE }}>
-              {sessionActionIconThemes[sessionActionIconTheme]?.icons.newFolder}
-            </span>
-          </button>
-          {onToggleLocalTerminalForAIChat && (
-            <button
-              className="sidebar-icon-rail-item"
-              onClick={onToggleLocalTerminalForAIChat}
-              title={t('tooltips.localTerminal')}
-              style={{ '--rail-item-color': '#90caf9' }}
-            >
-              <i className="pi pi-desktop" style={{ fontSize: `${Math.round(ICON_SIZE * 0.75)}px` }} />
-            </button>
-          )}
-        </>
       )}
 
       {/* Spacer */}

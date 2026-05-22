@@ -2519,10 +2519,6 @@ const App = () => {
       setOpenTabOrder(prev => [tab.key, ...prev.filter(k => k !== tab.key)]);
     };
 
-    const handleCreateAITab = (event) => {
-      insertPinnedTab(event.detail?.tab);
-    };
-
     const handleCreateAnythingLLMTab = (event) => {
       insertPinnedTab(event.detail?.tab);
     };
@@ -2547,7 +2543,6 @@ const App = () => {
       insertPinnedTab(event.detail?.tab);
     };
 
-    window.addEventListener('create-ai-tab', handleCreateAITab);
     window.addEventListener('create-anythingllm-tab', handleCreateAnythingLLMTab);
     window.addEventListener('create-openwebui-tab', handleCreateOpenWebUITab);
     window.addEventListener('create-librechat-tab', handleCreateLibreChatTab);
@@ -2559,7 +2554,6 @@ const App = () => {
       window.removeEventListener('expand-node-path', handleExpandNodePath);
       window.removeEventListener('create-audit-tab', handleCreateAuditTab);
       window.removeEventListener('create-terminal-tab', handleCreateTerminalTab);
-      window.removeEventListener('create-ai-tab', handleCreateAITab);
       window.removeEventListener('create-anythingllm-tab', handleCreateAnythingLLMTab);
       window.removeEventListener('create-openwebui-tab', handleCreateOpenWebUITab);
       window.removeEventListener('create-librechat-tab', handleCreateLibreChatTab);
@@ -3002,10 +2996,6 @@ const App = () => {
 
   const activeTab = filteredTabs[activeTabIndex] || null;
 
-  const isAIChatActive = false;
-
-  const handleToggleLocalTerminalForAIChat = useCallback(() => {}, []);
-
   // Implementación de Broadcast
   const handleBroadcastData = useCallback((originTabId, data) => {
     if (!originTabId || !data) return;
@@ -3181,8 +3171,6 @@ const App = () => {
     // Encriptación
     masterKey,
     secureStorage,
-    isAIChatActive,
-    onToggleLocalTerminalForAIChat: handleToggleLocalTerminalForAIChat,
 
     // Tema del árbol
     treeTheme,
@@ -3240,7 +3228,6 @@ const App = () => {
 
     // Dependencias de encriptación
     masterKey, secureStorage,
-    isAIChatActive, handleToggleLocalTerminalForAIChat,
 
     // Dependencias de diálogos
     setShowImportDialog, setShowExportDialog, setShowImportExportDialog, setShowImportWizard,

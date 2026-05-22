@@ -606,7 +606,7 @@ const SidebarFilesystemExplorer = ({
   }, [collectDirectoryKeys, expandedKeys, nodes]);
 
   const openConfigDialog = useCallback(() => {
-    window.dispatchEvent(new CustomEvent('open-ai-config', { detail: { tab: 'mcp-manager', selectServer: 'filesystem' } }));
+    window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'ai' } }));
   }, []);
 
   const openCreateGroupDialog = useCallback(() => {

@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import { getVersionInfo } from '../version-info';
 import SyncManager from '../utils/SyncManager';
 import SecureStorage from '../services/SecureStorage';
-import { aiService } from '../services/AIService';
 import { FaWindows, FaUbuntu, FaLinux, FaRedhat, FaCentos, FaFedora } from 'react-icons/fa';
 import { SiDebian, SiDocker } from 'react-icons/si';
 import { TbLayoutSidebarRightCollapse, TbLayoutSidebarRightExpand, TbChevronsLeft, TbChevronsRight } from 'react-icons/tb';
@@ -27,10 +26,8 @@ const NodeTermStatus = ({
 	onCreateFolder,
 	onOpenSettings,
 	onToggleTerminalVisibility,
-	onToggleAIChat,
 	onToggleStatusBar,
 	onCollapse, // colapsar columna derecha (solo variant rightColumn)
-	showAIChat = false,
 	statusBarVisible = true,
 	collapsed = false
 }) => {
@@ -38,7 +35,6 @@ const NodeTermStatus = ({
 	const [syncState, setSyncState] = useState({ configured: false, enabled: false, lastSync: null, connectivity: 'unknown' });
 	const [guacdState, setGuacdState] = useState({ isRunning: false, method: 'unknown', host: '127.0.0.1', port: 4822 });
 	const [vaultState, setVaultState] = useState({ configured: false, unlocked: false });
-	const [ollamaState, setOllamaState] = useState({ isRunning: false, url: 'http://localhost:11434', isRemote: false });
 	const [homeTabFont, setHomeTabFont] = useState(() => {
 		try {
 			return localStorage.getItem('homeTabFont') || localStorage.getItem('sidebarFont') || '"Segoe UI", "SF Pro Display", "Helvetica Neue", Arial, sans-serif';
@@ -76,7 +72,6 @@ const NodeTermStatus = ({
 		return actionBarThemes[actionBarThemeId] || actionBarThemes.default;
 	}, [actionBarThemeId]);
 	const [aiClientsState, setAiClientsState] = useState({
-		nodeterm: false,
 		anythingllm: { enabled: false, running: false },
 		openwebui: { enabled: false, running: false }
 	});
@@ -225,34 +220,6 @@ const NodeTermStatus = ({
 		}, 2000);
 		intervalId = setInterval(fetchGuacd, 10000); // Reducido de 5000ms a 10000ms para ahorrar CPU/RAM
 
-		// Estado Ollama
-		const fetchOllama = async () => {
-			try {
-				const ollamaUrl = aiService.getOllamaUrl();
-				const isRemote = !!aiService.remoteOllamaUrl;
-				const controller = new AbortController();
-				const timeoutId = setTimeout(() => controller.abort(), 3000);
-
-				const response = await fetch(`${ollamaUrl}/api/tags`, {
-					method: 'GET',
-					signal: controller.signal
-				});
-				clearTimeout(timeoutId);
-
-				if (response.ok) {
-					setOllamaState({ isRunning: true, url: ollamaUrl, isRemote });
-				} else {
-					setOllamaState({ isRunning: false, url: ollamaUrl, isRemote });
-				}
-			} catch (error) {
-				const ollamaUrl = aiService.getOllamaUrl();
-				const isRemote = !!aiService.remoteOllamaUrl;
-				setOllamaState({ isRunning: false, url: ollamaUrl, isRemote });
-			}
-		};
-		fetchOllama();
-		const ollamaIntervalId = setInterval(fetchOllama, 10000); // Reducido de 5000ms a 10000ms para ahorrar CPU/RAM
-
 		// Verificar estado de servicios Docker de IA
 		const checkAIDockerServices = async () => {
 			try {
@@ -330,7 +297,6 @@ const NodeTermStatus = ({
 				if (saved) {
 					const parsed = JSON.parse(saved);
 					setAiClientsState({
-						nodeterm: false,
 						anythingllm: { enabled: parsed.anythingllm || false, running: false },
 						openwebui: { enabled: parsed.openwebui || false, running: false }
 					});
@@ -352,7 +318,6 @@ const NodeTermStatus = ({
 			if (e.detail?.config) {
 				const config = e.detail.config;
 				setAiClientsState(prev => ({
-					nodeterm: false,
 					anythingllm: { enabled: config.anythingllm || false, running: prev.anythingllm?.running || false },
 					openwebui: { enabled: config.openwebui || false, running: prev.openwebui?.running || false }
 				}));
@@ -450,7 +415,6 @@ const NodeTermStatus = ({
 		return () => {
 			window.removeEventListener('action-bar-theme-changed', handleActionBarThemeChange);
 			if (intervalId) clearInterval(intervalId);
-			if (ollamaIntervalId) clearInterval(ollamaIntervalId);
 			if (aiServicesIntervalId) clearInterval(aiServicesIntervalId);
 			if (fontCheckInterval) clearInterval(fontCheckInterval);
 			window.removeEventListener('ai-clients-config-changed', handleAIClientsConfigChange);
@@ -1303,7 +1267,7 @@ const NodeTermStatus = ({
 		}
 
 		return result;
-	}, [aiClientsState.nodeterm, aiClientsState.anythingllm?.enabled, aiClientsState.openwebui?.enabled, variant]);
+	}, [aiClientsState.anythingllm?.enabled, aiClientsState.openwebui?.enabled, variant]);
 
 	// Layout columna derecha (variant rightColumn) - sustituye barra superior en HomeTab
 	if (variant === 'rightColumn') {
@@ -2369,13 +2333,6 @@ const NodeTermStatus = ({
 						<SectionHeader id="ia" label="IA" />
 						{!sc.ia && (
 							<div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-								{/* Chat IA NodeTerm */}
-								{aiClientsState.nodeterm && (
-									<button style={btnStyle()} onClick={onToggleAIChat} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; e.currentTarget.style.border = activeActionBarTheme.buttonHover.border; e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow; }} onMouseLeave={e => { e.currentTarget.style.background = activeActionBarTheme.button.background; e.currentTarget.style.border = activeActionBarTheme.button.border; e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow; }}>
-										<i className="pi pi-comments" style={{ color: '#8b5cf6', fontSize: '1rem' }} /><span>Chat IA</span>
-									</button>
-								)}
-
 								{/* AnythingLLM */}
 								{aiClientsState.anythingllm && aiClientsState.anythingllm.enabled && (
 									<button
@@ -2485,9 +2442,6 @@ const NodeTermStatus = ({
 							</button>
 							<button style={cardStyle()} onClick={() => { onOpenSettings?.(); setTimeout(() => { try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'rdp' } })); } catch (e) { } }, 100); }} title={`Guacd: ${guacdState.isRunning ? 'En ejecución' : 'Detenido'}`} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; e.currentTarget.style.border = activeActionBarTheme.buttonHover.border; e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow; }} onMouseLeave={e => { e.currentTarget.style.background = activeActionBarTheme.button.background; e.currentTarget.style.border = activeActionBarTheme.button.border; e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow; }}>
 								<i className={guacdState.method === 'docker' ? 'pi pi-box' : 'pi pi-window-maximize'} style={{ color: guacdState.isRunning ? '#22c55e' : '#ef4444', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Guacd</span>
-							</button>
-							<button style={cardStyle()} onClick={() => { onOpenSettings?.(); setTimeout(() => { try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'ai' } })); } catch (e) { } }, 100); }} title={`Ollama: ${ollamaState.isRunning ? 'En ejecución' : 'Detenido'}`} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; e.currentTarget.style.border = activeActionBarTheme.buttonHover.border; e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow; }} onMouseLeave={e => { e.currentTarget.style.background = activeActionBarTheme.button.background; e.currentTarget.style.border = activeActionBarTheme.button.border; e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow; }}>
-								<i className="pi pi-bolt" style={{ color: ollamaState.isRunning ? '#22c55e' : '#ef4444', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Ollama</span>
 							</button>
 							<button style={cardStyle()} onClick={() => { onOpenSettings?.(); setTimeout(() => { try { window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'sync' } })); } catch (e) { } }, 100); }} title={`Nextcloud: ${syncState.configured ? (syncState.connectivity === 'ok' ? 'Conectado' : 'Configurado') : 'No configurado'}`} onMouseEnter={e => { e.currentTarget.style.background = activeActionBarTheme.buttonHover.background; e.currentTarget.style.border = activeActionBarTheme.buttonHover.border; e.currentTarget.style.boxShadow = activeActionBarTheme.buttonHover.boxShadow; }} onMouseLeave={e => { e.currentTarget.style.background = activeActionBarTheme.button.background; e.currentTarget.style.border = activeActionBarTheme.button.border; e.currentTarget.style.boxShadow = activeActionBarTheme.button.boxShadow; }}>
 								<i className="pi pi-cloud" style={{ color: syncState.configured ? (syncState.connectivity === 'error' ? '#ef4444' : '#60a5fa') : '#9ca3af', fontSize: '1.25rem' }} /><span style={{ fontSize: '0.75rem', color: themeColors.textPrimary }}>Nextcloud</span>
@@ -3715,8 +3669,7 @@ const NodeTermStatus = ({
 
 					{/* Separador vertical decorativo */}
 					{(() => {
-						const hasActiveAIClients = aiClientsState.nodeterm ||
-							aiClientsState.anythingllm.enabled ||
+						const hasActiveAIClients = aiClientsState.anythingllm.enabled ||
 							aiClientsState.openwebui.enabled;
 
 						if (!hasActiveAIClients) return null;
@@ -3736,8 +3689,7 @@ const NodeTermStatus = ({
 
 					{/* SECCIÓN 4: CLIENTES DE IA */}
 					{(() => {
-						const hasActiveAIClients = aiClientsState.nodeterm ||
-							aiClientsState.anythingllm.enabled ||
+						const hasActiveAIClients = aiClientsState.anythingllm.enabled ||
 							aiClientsState.openwebui.enabled;
 
 						if (!hasActiveAIClients) return null;
@@ -3763,58 +3715,6 @@ const NodeTermStatus = ({
 									overflow: 'visible',
 									width: 'auto'
 								}}>
-									{/* NodeTerm AI */}
-									{aiClientsState.nodeterm && (
-										<div style={{
-											display: 'flex',
-											flexDirection: 'column',
-											alignItems: 'center',
-											gap: '0.25rem',
-											flexShrink: 0
-										}}>
-											<div
-												title="NodeTerm AI: Activo"
-												onClick={() => {
-													const tabId = `ai-chat-${Date.now()}`;
-													const newAITab = {
-														key: tabId,
-														label: 'Chat IA',
-														type: 'ai-chat',
-														createdAt: Date.now(),
-														groupId: null
-													};
-													window.dispatchEvent(new CustomEvent('create-ai-chat-tab', {
-														detail: { tab: newAITab }
-													}));
-												}}
-												style={{
-													position: 'relative',
-													width: `${compactBar.serviceSize}px`,
-													height: `${compactBar.serviceSize}px`,
-													borderRadius: '50%',
-													background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.25) 0%, rgba(139, 92, 246, 0.15) 100%)',
-													border: '2px solid rgba(139, 92, 246, 0.50)',
-													display: 'flex',
-													alignItems: 'center',
-													justifyContent: 'center',
-													boxShadow: '0 1px 4px rgba(139, 92, 246, 0.20)',
-													cursor: 'pointer',
-													transition: 'all 0.2s ease'
-												}}
-												onMouseEnter={(e) => {
-													e.currentTarget.style.transform = 'translateY(-1px) scale(1.1)';
-													e.currentTarget.style.boxShadow = '0 3px 8px rgba(139, 92, 246, 0.30)';
-												}}
-												onMouseLeave={(e) => {
-													e.currentTarget.style.transform = 'translateY(0) scale(1)';
-													e.currentTarget.style.boxShadow = '0 1px 4px rgba(139, 92, 246, 0.20)';
-												}}
-											>
-												<i className="pi pi-desktop" style={{ color: '#8b5cf6', fontSize: compactBar.serviceIconSize }} />
-											</div>
-										</div>
-									)}
-
 									{/* AnythingLLM */}
 									{aiClientsState.anythingllm.enabled && (
 										<div style={{
@@ -4475,69 +4375,6 @@ const NodeTermStatus = ({
 								);
 							})()}
 
-							{/* Ollama */}
-							{(() => {
-								const ollamaColor = ollamaState.isRunning ? '#22c55e' : '#ef4444';
-								const ollamaStatus = ollamaState.isRunning ? 'En ejecución' : 'Detenido';
-								return (
-									<div style={{
-										display: 'flex',
-										flexDirection: 'column',
-										alignItems: 'center',
-										gap: '0.25rem',
-										flexShrink: 0
-									}}>
-										<button
-											onClick={() => {
-												if (onOpenSettings) {
-													onOpenSettings();
-													setTimeout(() => {
-														try {
-															window.dispatchEvent(new CustomEvent('open-settings-dialog', {
-																detail: { tab: 'ai' }
-															}));
-														} catch (e) { }
-													}, 100);
-												} else {
-													try {
-														window.dispatchEvent(new CustomEvent('open-settings-dialog', {
-															detail: { tab: 'ai' }
-														}));
-													} catch (e) { }
-												}
-											}}
-											title={`Ollama: ${ollamaStatus}${ollamaState.isRemote ? ' (Remoto)' : ''}`}
-											style={{
-												cursor: 'pointer',
-												display: 'flex',
-												alignItems: 'center',
-												justifyContent: 'center',
-												width: `${compactBar.buttonSize}px`,
-												height: `${compactBar.buttonSize}px`,
-												padding: '0',
-												borderRadius: `${compactBar.buttonRadius}px`,
-												background: `linear-gradient(135deg, rgba(${parseInt(ollamaColor.slice(1, 3), 16)}, ${parseInt(ollamaColor.slice(3, 5), 16)}, ${parseInt(ollamaColor.slice(5, 7), 16)}, 0.25) 0%, rgba(${parseInt(ollamaColor.slice(1, 3), 16)}, ${parseInt(ollamaColor.slice(3, 5), 16)}, ${parseInt(ollamaColor.slice(5, 7), 16)}, 0.15) 100%)`,
-												border: `1px solid rgba(${parseInt(ollamaColor.slice(1, 3), 16)}, ${parseInt(ollamaColor.slice(3, 5), 16)}, ${parseInt(ollamaColor.slice(5, 7), 16)}, 0.35)`,
-												boxShadow: `0 1px 4px rgba(${parseInt(ollamaColor.slice(1, 3), 16)}, ${parseInt(ollamaColor.slice(3, 5), 16)}, ${parseInt(ollamaColor.slice(5, 7), 16)}, 0.2)`,
-												transition: 'all 0.2s ease',
-												position: 'relative'
-											}}
-											onMouseEnter={(e) => {
-												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(ollamaColor.slice(1, 3), 16)}, ${parseInt(ollamaColor.slice(3, 5), 16)}, ${parseInt(ollamaColor.slice(5, 7), 16)}, 0.35) 0%, rgba(${parseInt(ollamaColor.slice(1, 3), 16)}, ${parseInt(ollamaColor.slice(3, 5), 16)}, ${parseInt(ollamaColor.slice(5, 7), 16)}, 0.25) 100%)`;
-												e.currentTarget.style.transform = 'translateY(-1px) scale(1.05)';
-												e.currentTarget.style.boxShadow = `0 3px 8px rgba(${parseInt(ollamaColor.slice(1, 3), 16)}, ${parseInt(ollamaColor.slice(3, 5), 16)}, ${parseInt(ollamaColor.slice(5, 7), 16)}, 0.3)`;
-											}}
-											onMouseLeave={(e) => {
-												e.currentTarget.style.background = `linear-gradient(135deg, rgba(${parseInt(ollamaColor.slice(1, 3), 16)}, ${parseInt(ollamaColor.slice(3, 5), 16)}, ${parseInt(ollamaColor.slice(5, 7), 16)}, 0.25) 0%, rgba(${parseInt(ollamaColor.slice(1, 3), 16)}, ${parseInt(ollamaColor.slice(3, 5), 16)}, ${parseInt(ollamaColor.slice(5, 7), 16)}, 0.15) 100%)`;
-												e.currentTarget.style.transform = 'translateY(0) scale(1)';
-												e.currentTarget.style.boxShadow = `0 1px 4px rgba(${parseInt(ollamaColor.slice(1, 3), 16)}, ${parseInt(ollamaColor.slice(3, 5), 16)}, ${parseInt(ollamaColor.slice(5, 7), 16)}, 0.2)`;
-											}}
-										>
-											<i className="pi pi-desktop" style={{ color: ollamaColor, fontSize: compactBar.serviceIconSize }} />
-										</button>
-									</div>
-								);
-							})()}
 						</div>
 					</div>
 				</div>
