@@ -22,7 +22,6 @@ let _agentZeroHandlers = null;
 let _openClawHandlers = null;
 let _openNotebookHandlers = null;
 let _sshHandlers = null;
-let _mcpHandlers = null;
 let _nextcloudHandlers = null;
 let _fileHandlers = null;
 let _networkToolsHandlers = null;
@@ -95,11 +94,6 @@ function getOpenNotebookHandlers() {
 function getSSHHandlers() {
   if (!_sshHandlers) _sshHandlers = require('./ssh-handlers');
   return _sshHandlers;
-}
-
-function getMCPHandlers() {
-  if (!_mcpHandlers) _mcpHandlers = require('./mcp-handlers');
-  return _mcpHandlers;
 }
 
 function getNextcloudHandlers() {
@@ -269,8 +263,7 @@ function registerSecondaryHandlers(dependencies) {
   // Handlers SSH
   getSSHHandlers()(dependencies);
 
-  // Handlers MCP y Nextcloud (no críticos para el arranque)
-  getMCPHandlers().registerMCPHandlers();
+  // Handlers Nextcloud (no críticos para el arranque)
   getNextcloudHandlers().registerNextcloudHandlers();
 
   // Handlers de archivos (SFTP/FTP/SCP y Local)
@@ -342,7 +335,6 @@ module.exports = {
   getOpenClawHandlers,
   getOpenNotebookHandlers,
   getSSHHandlers,
-  getMCPHandlers,
   getNextcloudHandlers,
   getFileHandlers,
   getNetworkToolsHandlers,

@@ -83,8 +83,6 @@ const SYNC_KEYS = [
   'nodeterm_default_local_terminal',
   'nodeterm_ui_anim_speed',
   'nodeterm_language',
-  'nodeterm_ai_provider',
-  'nodeterm_ai_model',
   'nodeterm_guacd_preferred_method',
   'rdp_freeze_timeout_ms',
   'update_auto_check',
@@ -123,9 +121,7 @@ const SYNC_KEYS = [
   'rdp_resize_ack_timeout_ms',
   'rdp_guacd_inactivity_ms',
 
-  // AI
-  'aichat_history',
-  'aichat_model_config',
+  // Clientes IA (Docker/CLI)
   'ai_clients_enabled',
 
   // Notas / documentos

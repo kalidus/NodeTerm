@@ -11,7 +11,6 @@ import { iconThemes } from '../themes/icon-themes';
 import { FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
 import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
 import { sessionActionIconThemes, getDefaultSessionActionIconTheme, newDocumentToolbarIcon } from '../themes/session-action-icons';
-import SidebarFilesystemExplorer from './SidebarFilesystemExplorer';
 import AIClientBrandIcon from './AIClientBrandIcon';
 import ConnectionDetailsPanel from './ConnectionDetailsPanel';
 import SidebarIconRail from './SidebarIconRail';
@@ -223,8 +222,8 @@ const Sidebar = React.memo(({
   // Estado para diálogos
   const [showFolderDialog, setShowFolderDialog] = useState(false);
 
-  // Estado para modo de visualización (conexiones, passwords, filesystem, localExplorer)
-  const [viewMode, setViewMode] = useState('connections'); // 'connections' | 'passwords' | 'documents' | 'filesystem' | 'localExplorer'
+  // Estado para modo de visualización (conexiones, passwords, localExplorer, tools)
+  const [viewMode, setViewMode] = useState('connections'); // 'connections' | 'passwords' | 'documents' | 'localExplorer' | 'tools'
   const [showFavoritesView, setShowFavoritesView] = useState(false);
   const [favoritesRevision, setFavoritesRevision] = useState(0);
 
@@ -313,14 +312,6 @@ const Sidebar = React.memo(({
       }
     }
   }, [nodes, setNodes, showToast]);
-  const [filesystemStatus, setFilesystemStatus] = useState({
-    active: false,
-    allowedPaths: [],
-    defaultPath: null,
-    server: null,
-    conversationId: null
-  });
-  const [initialFilesystemPath, setInitialFilesystemPath] = useState(null);
   const [localExplorerPath, setLocalExplorerPath] = useState(null);
 
   // Refs de rendimiento: evitar trabajo repetido durante transiciones/resize
@@ -526,21 +517,6 @@ const Sidebar = React.memo(({
     };
   }, []);
 
-  useEffect(() => {
-    const handleFilesystemStatus = (event) => {
-      const detail = event?.detail || {};
-      if (detail.type !== 'filesystem') return;
-      setFilesystemStatus(detail);
-      if (!detail.active) {
-        setViewMode(prev => (prev === 'filesystem' ? 'connections' : prev));
-      }
-    };
-    window.addEventListener('filesystem-mcp-status', handleFilesystemStatus);
-    return () => {
-      window.removeEventListener('filesystem-mcp-status', handleFilesystemStatus);
-    };
-  }, []);
-
   // Listener simple para mostrar explorador local en sidebar
   useEffect(() => {
     const handleShowLocalExplorer = (event) => {
@@ -557,16 +533,6 @@ const Sidebar = React.memo(({
       window.removeEventListener('show-local-file-explorer', handleShowLocalExplorer);
     };
   }, []);
-
-  const filesystemAvailable = !!filesystemStatus?.active;
-
-  // Permitir modo filesystem si se solicita explícitamente desde FileExplorer
-  // incluso sin AI Chat activo, pero solo si hay un path inicial establecido
-  useEffect(() => {
-    if (viewMode === 'filesystem' && !initialFilesystemPath) {
-      setViewMode('connections');
-    }
-  }, [viewMode, setViewMode, initialFilesystemPath]);
 
   // --- Utilidades para manipulación de colores en SVGs ---
 
@@ -1009,7 +975,7 @@ const Sidebar = React.memo(({
     calculateSizes();
     window.addEventListener('resize', calculateSizes);
     return () => window.removeEventListener('resize', calculateSizes);
-  }, [sidebarCollapsed, aiClientsEnabled, filesystemAvailable]);
+  }, [sidebarCollapsed, aiClientsEnabled]);
 
   // Ref para el contenedor de la sidebar
   const sidebarRef = useRef(null);
@@ -2900,7 +2866,7 @@ const Sidebar = React.memo(({
   // ── Determine active tab from viewMode + showFavoritesView ──────────────
   // 'connections' | 'favorites' | 'documents' | 'passwords'
   const activeTab = (() => {
-    if (viewMode === 'filesystem' || viewMode === 'localExplorer') return null; // estos modos ocultan las pestañas
+    if (viewMode === 'localExplorer') return null; // este modo oculta las pestañas
     if (viewMode === 'tools') return 'tools';
     if (viewMode === 'documents') return 'documents';
     if (viewMode === 'passwords') return 'passwords';
@@ -3282,22 +3248,6 @@ const Sidebar = React.memo(({
       </div>
 
       {/* Otras vistas dinámicas que no requieren persistencia de estado de carga */}
-      {viewMode === 'filesystem' && (
-        <SidebarFilesystemExplorer
-          status={filesystemStatus}
-          onBackToConnections={() => setViewMode('connections')}
-          sidebarCollapsed={sidebarCollapsed}
-          setSidebarCollapsed={setSidebarCollapsed}
-          explorerFont={explorerFont}
-          explorerFontSize={explorerFontSize}
-          uiTheme={uiTheme}
-          showToast={showToast}
-          sessionActionIconTheme={sessionActionIconTheme}
-          initialPath={initialFilesystemPath}
-          onPathNavigated={() => setInitialFilesystemPath(null)}
-        />
-      )}
-
       {viewMode === 'localExplorer' && (
         <Suspense fallback={<TabChunkFallback />}>
           <LazyLocalFileExplorerSidebar
@@ -3382,11 +3332,6 @@ const Sidebar = React.memo(({
     if (openers[clientId]) openers[clientId]();
   }, []);
 
-  const handleFilesystemClick = useCallback(() => {
-    setViewMode('filesystem');
-    setSidebarCollapsed(false);
-  }, [setSidebarCollapsed]);
-
   const activeIconRailSection = (() => {
     if (sidebarCollapsed) return null;
     if (viewMode === 'documents') return 'documents';
@@ -3425,8 +3370,6 @@ const Sidebar = React.memo(({
         sessionActionIconTheme={sessionActionIconTheme}
         aiClientsEnabled={aiClientsEnabled}
         onOpenAIClient={handleOpenAIClient}
-        filesystemAvailable={filesystemAvailable}
-        onFilesystemClick={handleFilesystemClick}
         viewMode={viewMode}
         onShowImportDialog={onShowImportDialog || setShowImportDialog}
         onShowExportDialog={onShowExportDialog}

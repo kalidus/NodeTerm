@@ -23,8 +23,6 @@ const SidebarIconRail = React.memo(({
   sessionActionIconTheme = 'modern',
   aiClientsEnabled = {},
   onOpenAIClient,
-  filesystemAvailable = false,
-  onFilesystemClick,
   viewMode,
   onShowImportDialog,
   onShowExportDialog,

@@ -782,33 +782,6 @@ function registerSSHHandlers(dependencies = {}) {
     }
   });
 
-  // MCP: Obtener hosts SSH desde la aplicación (NodeTerm sidebar)
-  ipcMain.handle('mcp:get-ssh-hosts-from-app', async (event) => {
-    try {
-      // Nota: Este handler es llamado desde el MCP process (que es el main process)
-      // No tenemos acceso directo a localStorage, así que retornamos un mensaje
-      // indicando que debe ser llamado desde el renderer.
-      // Sin embargo, si estamos en el main process y tenemos acceso a persistencia,
-      // podríamos leer el archivo de configuración.
-
-      // De momento, devolvemos un indicador para que se maneje correctamente
-      return {
-        success: false,
-        reason: 'Handler debe recibir datos desde el renderer',
-        message: 'Use ipcRenderer.invoke(\'app:get-ssh-connections-for-mcp\') desde el renderer'
-      };
-    } catch (error) {
-      console.error('[MCP SSH] Error obteniendo hosts:', error);
-      return {
-        success: false,
-        error: error.message
-      };
-    }
-  });
-
-  // Nota: El handler 'app:save-ssh-connections-for-mcp' está registrado directamente en main.js
-  // para asegurar que se cargue correctamente sin depender de registerSSHHandlers
-
   // SSH: Obtener lista de procesos para System Monitor
   ipcMain.handle('ssh:get-processes', async (event, { tabId }) => {
     try {
