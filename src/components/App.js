@@ -121,6 +121,7 @@ const App = () => {
   const [showImportWizard, setShowImportWizard] = React.useState(false);
   const [isAppReady, setIsAppReady] = React.useState(false);
   const [isLoadingConnections, setIsLoadingConnections] = React.useState(true);
+  const hasLoadedNodesRef = useRef(false);
   const [importPreset, setImportPreset] = React.useState(null);
 
   // Estado para mostrar/ocultar la titlebar superior
@@ -1926,8 +1927,8 @@ const App = () => {
                          masterKey === lastDecryptedKey && 
                          lastDecryptedResult;
 
-      // Mostrar esqueleto de carga únicamente si no es un hit en caché
-      if (!isCacheHit) {
+      // Mostrar esqueleto de carga únicamente si no es un hit en caché y no hay nodos cargados previamente
+      if (!isCacheHit && !hasLoadedNodesRef.current) {
         setIsLoadingConnections(true);
       }
 
@@ -1946,7 +1947,9 @@ const App = () => {
             }
           }
           if (decrypted) {
+            isExternalReloadRef.current = true;
             setNodes(decrypted);
+            hasLoadedNodesRef.current = true;
           } else {
             console.error('[loadNodes] Decryption failed');
           }
@@ -1960,9 +1963,13 @@ const App = () => {
             const encrypted = await secureStorage.encryptData(migratedNodes, masterKey);
             localStorage.setItem('connections_encrypted', JSON.stringify(encrypted));
             localStorage.removeItem(STORAGE_KEYS.TREE_DATA);
+            isExternalReloadRef.current = true;
             setNodes(migratedNodes);
+            hasLoadedNodesRef.current = true;
           } else {
+            isExternalReloadRef.current = true;
             setNodes(getDefaultNodes());
+            hasLoadedNodesRef.current = true;
           }
         }
       } else {
@@ -1980,14 +1987,20 @@ const App = () => {
               return migratedNode;
             });
           };
+          isExternalReloadRef.current = true;
           setNodes(migrateNodes(loadedNodes));
+          hasLoadedNodesRef.current = true;
         } else {
+          isExternalReloadRef.current = true;
           setNodes(getDefaultNodes());
+          hasLoadedNodesRef.current = true;
         }
       }
     } catch (error) {
       console.error('Error loading nodes:', error);
+      isExternalReloadRef.current = true;
       setNodes(getDefaultNodes());
+      hasLoadedNodesRef.current = true;
     } finally {
       // Si el servicio de sync aún no se ha inicializado y estamos en electron,
       // no quitar el loading todavía (esperar a que esté listo)
@@ -2008,8 +2021,11 @@ const App = () => {
 
   // Carga inicial y cuando cambia la masterKey
   useEffect(() => {
+    if (!masterKey) {
+      hasLoadedNodesRef.current = false;
+    }
     loadNodes();
-  }, [loadNodes]);
+  }, [loadNodes, masterKey]);
 
   // Save nodes to localStorage whenever they change (CON ENCRIPTACIÓN Y SYNC)
   useEffect(() => {
