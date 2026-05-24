@@ -79,6 +79,27 @@ export const treeThemes = {
     cssClass: 'tree-theme-cursor'
   },
 
+  cursorCompact: {
+    name: 'Cursor Compacto',
+    description: 'Estilo explorador Cursor con espaciado vertical mínimo',
+    lineStyle: 'none',
+    lineColor: 'transparent',
+    lineOpacity: 0,
+    lineWidth: 0,
+    nodeSpacing: 'compact',
+    indentSize: 8,
+    borderRadius: 0,
+    hoverStyle: 'subtle',
+    connectorChars: {
+      vertical: '',
+      horizontal: '',
+      branch: '',
+      lastBranch: '',
+      space: ''
+    },
+    cssClass: 'tree-theme-cursor-compact'
+  },
+
   connected: {
     name: 'Líneas Conectadas',
     description: 'Líneas CSS continuas estilo VSCode',
@@ -346,9 +367,9 @@ export const treeThemeOptions = Object.entries(treeThemes).map(([key, theme]) =>
   description: theme.description
 }));
 
-// Obtener tema por clave, con fallback a 'default'
+// Obtener tema por clave, con fallback a 'cursorCompact'
 export const getTreeTheme = (themeKey) => {
-  return treeThemes[themeKey] || treeThemes.default;
+  return treeThemes[themeKey] || treeThemes.cursorCompact;
 };
 
 // Clave de localStorage
@@ -366,10 +387,10 @@ export const saveTreeTheme = (themeKey) => {
 // Cargar tema guardado
 export const loadTreeTheme = () => {
   try {
-    return localStorage.getItem(TREE_THEME_STORAGE_KEY) || 'default';
+    return localStorage.getItem(TREE_THEME_STORAGE_KEY) || 'cursorCompact';
   } catch (e) {
     console.warn('No se pudo cargar el tema del árbol:', e);
-    return 'default';
+    return 'cursorCompact';
   }
 };
 

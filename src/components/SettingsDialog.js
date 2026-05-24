@@ -199,7 +199,7 @@ const SettingsDialog = ({
   sessionManager,
   onMasterPasswordConfigured,
   onMasterPasswordChanged,
-  treeTheme = 'default',
+  treeTheme = 'cursorCompact',
   setTreeTheme,
   sessionActionIconTheme = 'modern',
   setSessionActionIconTheme,

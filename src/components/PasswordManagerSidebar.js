@@ -64,7 +64,7 @@ const PasswordManagerSidebar = ({
   setShowSettingsDialog,
   onShowImportDialog,
   sidebarFilter = '', // Filtro desde la TitleBar
-  treeTheme = 'default', // Tema del árbol
+  treeTheme = 'cursorCompact', // Tema del árbol
   sessionActionIconTheme = 'modern',
   showFavoritesView = false,
   onToggleFavoritesView,

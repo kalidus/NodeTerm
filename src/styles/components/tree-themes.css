@@ -132,6 +132,63 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
+   TEMA: CURSOR COMPACT (Explorador Cursor / VS Code Compacto)
+   Sin líneas, indentación compacta y espaciado vertical mínimo
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.sidebar-tree.tree-theme-cursor-compact,
+.sidebar-tree.tree-theme-cursorCompact {
+  --tree-indent: 8px;
+  --tree-node-spacing: -2px;
+  --tree-border-radius: 0;
+}
+
+.sidebar-tree.tree-theme-cursor-compact .tree-connector,
+.sidebar-tree.tree-theme-cursorCompact .tree-connector {
+  display: none !important;
+}
+
+.sidebar-tree.tree-theme-cursor-compact .p-treenode,
+.sidebar-tree.tree-theme-cursorCompact .p-treenode {
+  margin-bottom: -2px !important;
+}
+
+.sidebar-tree.tree-theme-cursor-compact .p-treenode-children,
+.sidebar-tree.tree-theme-cursorCompact .p-treenode-children {
+  padding-left: 8px !important;
+  border-left: none !important;
+}
+
+.sidebar-tree.tree-theme-cursor-compact .p-treenode-content,
+.sidebar-tree.tree-theme-cursorCompact .p-treenode-content {
+  padding-top: 0.02rem !important;
+  padding-bottom: 0.02rem !important;
+  padding-left: 2px !important;
+  padding-right: 0.25rem !important;
+  min-height: 18px !important;
+  line-height: 18px !important;
+}
+
+.sidebar-tree.tree-theme-cursor-compact .p-treenode-children .p-treenode-content,
+.sidebar-tree.tree-theme-cursorCompact .p-treenode-children .p-treenode-content {
+  background: transparent !important;
+}
+
+.sidebar-tree.tree-theme-cursor-compact .p-tree-toggler,
+.sidebar-tree.tree-theme-cursorCompact .p-tree-toggler {
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  margin-right: 0 !important;
+}
+
+.sidebar-tree.tree-theme-cursor-compact .p-tree-toggler-icon,
+.sidebar-tree.tree-theme-cursorCompact .p-tree-toggler-icon {
+  color: var(--ui-sidebar-text) !important;
+  opacity: 0.7;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
    TEMA: CONNECTED (Líneas CSS continuas)
    Estilo VSCode con líneas verticales y horizontales
    ═══════════════════════════════════════════════════════════════════════════════ */
@@ -485,6 +542,40 @@
 
 .tree-preview-container.tree-theme-minimal .tree-preview-node {
   padding-left: 0 !important;
+}
+
+/* Preview: Cursor */
+.tree-preview-container.tree-theme-cursor {
+  line-height: 1.6;
+}
+.tree-preview-container.tree-theme-cursor .tree-preview-connector {
+  display: none;
+}
+.tree-preview-container.tree-theme-cursor .tree-preview-children {
+  padding-left: 8px;
+}
+.tree-preview-container.tree-theme-cursor .tree-preview-node {
+  padding-left: 2px !important;
+}
+
+/* Preview: Cursor Compact */
+.tree-preview-container.tree-theme-cursor-compact,
+.tree-preview-container.tree-theme-cursorCompact {
+  line-height: 1.4;
+}
+.tree-preview-container.tree-theme-cursor-compact .tree-preview-connector,
+.tree-preview-container.tree-theme-cursorCompact .tree-preview-connector {
+  display: none;
+}
+.tree-preview-container.tree-theme-cursor-compact .tree-preview-children,
+.tree-preview-container.tree-theme-cursorCompact .tree-preview-children {
+  padding-left: 8px;
+}
+.tree-preview-container.tree-theme-cursor-compact .tree-preview-node,
+.tree-preview-container.tree-theme-cursorCompact .tree-preview-node {
+  padding-left: 2px !important;
+  padding-top: 1px !important;
+  padding-bottom: 1px !important;
 }
 
 /* Preview: Tema Connected */

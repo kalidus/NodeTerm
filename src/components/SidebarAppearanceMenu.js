@@ -165,8 +165,10 @@ const SidebarAppearanceMenu = ({
                         {opt.value === 'modern' && <i className="pi pi-objects-column" style={{ color: '#ffb74d' }} />}
                         {opt.value === 'dotted' && <i className="pi pi-ellipsis-v" style={{ color: '#fff176' }} />}
                         {opt.value === 'matrix' && <i className="pi pi-microsoft" style={{ color: '#4caf50' }} />}
-                        {opt.value.includes('Compact') && <i className="pi pi-compress" style={{ color: '#90caf9' }} />}
-                        {!['default', 'minimal', 'connected', 'compact', 'neon', 'cyber', 'modern', 'dotted', 'matrix'].includes(opt.value) && !opt.value.includes('Compact') && <i className="pi pi-folder" style={{ color: 'var(--primary-color)' }} />}
+                        {opt.value === 'cursor' && <i className="pi pi-folder" style={{ color: '#2196f3' }} />}
+                        {opt.value === 'cursorCompact' && <i className="pi pi-folder" style={{ color: '#64b5f6' }} />}
+                        {opt.value.includes('Compact') && opt.value !== 'cursorCompact' && <i className="pi pi-compress" style={{ color: '#90caf9' }} />}
+                        {!['default', 'minimal', 'connected', 'compact', 'neon', 'cyber', 'modern', 'dotted', 'matrix', 'cursor'].includes(opt.value) && !opt.value.includes('Compact') && <i className="pi pi-folder" style={{ color: 'var(--primary-color)' }} />}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1, lineHeight: '1.2' }}>
                         <div style={{ fontSize: '0.8rem', fontWeight: isActive ? '600' : '500', color: isActive ? 'var(--primary-color)' : 'var(--ui-sidebar-text)' }}>{opt.label}</div>

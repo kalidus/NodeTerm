@@ -254,9 +254,9 @@ export const useThemeManagement = () => {
   // Tree theme state
   const [treeTheme, setTreeTheme] = useState(() => {
     try {
-      return localStorage.getItem(TREE_THEME_STORAGE_KEY) || 'default';
+      return localStorage.getItem(TREE_THEME_STORAGE_KEY) || 'cursorCompact';
     } catch {
-      return 'default';
+      return 'cursorCompact';
     }
   });
 
@@ -483,7 +483,7 @@ export const useThemeManagement = () => {
     const updatedSidebarIconSize = updatedFolderIconSize || updatedConnectionIconSize;
     const updatedIconTheme = localStorage.getItem('iconTheme') || 'nord';
     const updatedIconThemeSidebar = localStorage.getItem('iconThemeSidebar') || 'nord';
-    const updatedTreeTheme = localStorage.getItem(TREE_THEME_STORAGE_KEY) || 'default';
+    const updatedTreeTheme = localStorage.getItem(TREE_THEME_STORAGE_KEY) || 'cursorCompact';
     const updatedSessionActionIconTheme = localStorage.getItem('sessionActionIconTheme') || 'modern';
     const updatedUiTheme = localStorage.getItem('ui_theme') || 'Light';
 

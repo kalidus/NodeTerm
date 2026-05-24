@@ -106,7 +106,7 @@ const DocumentsSidebar = ({
   secureStorage,
   sessionActionIconTheme = 'modern',
   sidebarFilter = '',
-  treeTheme = 'default',
+  treeTheme = 'cursorCompact',
   setShowSettingsDialog,
   onShowImportDialog,
   onShowExportDialog,

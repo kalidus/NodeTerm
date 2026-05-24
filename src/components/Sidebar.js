@@ -188,7 +188,7 @@ const Sidebar = React.memo(({
   sidebarFilter = '',
 
   // Tema del árbol
-  treeTheme = 'default',
+  treeTheme = 'cursorCompact',
   setTreeTheme,
 
   // Tema de iconos de acción
