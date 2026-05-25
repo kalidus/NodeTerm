@@ -1,0 +1,223 @@
+/* ==========================================================================
+   LAYOUT THEME SELECTOR STYLES (PREMIUM REDESIGN)
+   ========================================================================== */
+
+.layout-selector-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Explore Section / Outer Wrapper */
+.layout-selector-explore {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Header style aligning with Settings dialog sections */
+.layout-selector-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--ui-dialog-border, rgba(255, 255, 255, 0.08));
+  background: rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+}
+
+.layout-selector-header i {
+  font-size: 1.25rem;
+  color: var(--ui-button-primary, #6366f1);
+  text-shadow: 0 0 10px rgba(var(--ui-button-primary-rgb, 99, 102, 241), 0.3);
+}
+
+.layout-selector-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--ui-dialog-text, #ffffff);
+  letter-spacing: 0.3px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Main scrollable container */
+.layout-selector-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.75rem 1.5rem;
+  box-sizing: border-box;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 3-column Grid for Layout Cards */
+.layout-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Responsive Wrap */
+@media (max-width: 1100px) {
+  .layout-selector-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+  }
+}
+
+@media (max-width: 680px) {
+  .layout-selector-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+}
+
+/* Base Card Design (Glassmorphism & Elevate Effect) */
+.layout-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--ui-dialog-border, rgba(255, 255, 255, 0.08));
+  border-radius: 12px;
+  padding: 1.25rem;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.layout-card:hover {
+  transform: translateY(-5px);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(var(--ui-button-primary-rgb, 99, 102, 241), 0.4);
+  box-shadow: 
+    0 12px 28px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(var(--ui-button-primary-rgb, 99, 102, 241), 0.1);
+}
+
+/* Selected Layout Card State */
+.layout-card.active {
+  border-color: var(--ui-button-primary, #6366f1);
+  background: rgba(var(--ui-button-primary-rgb, 99, 102, 241), 0.04);
+  box-shadow: 
+    0 0 0 3px rgba(var(--ui-button-primary-rgb, 99, 102, 241), 0.2),
+    0 12px 30px rgba(0, 0, 0, 0.35);
+}
+
+/* Preview Area Box */
+.layout-preview-wrapper {
+  width: 100%;
+  height: 125px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  margin-bottom: 1.25rem;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.layout-card:hover .layout-preview-wrapper {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.layout-card.active .layout-preview-wrapper {
+  border-color: rgba(var(--ui-button-primary-rgb, 99, 102, 241), 0.25);
+}
+
+/* Circular Selection Checkmark Badge */
+.layout-check-badge {
+  position: absolute;
+  top: 0.875rem;
+  right: 0.875rem;
+  width: 22px;
+  height: 22px;
+  background: var(--ui-button-primary, #6366f1);
+  color: var(--ui-button-primary-text, #ffffff);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6875rem;
+  z-index: 5;
+  box-shadow: 
+    0 3px 8px rgba(0, 0, 0, 0.4),
+    0 0 0 2px rgba(var(--ui-button-primary-rgb, 99, 102, 241), 0.2);
+  animation: layoutScaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes layoutScaleIn {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Card details (Text Info) */
+.layout-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: left;
+  flex: 1;
+}
+
+.layout-name {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--ui-dialog-text, #ffffff);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.layout-name i {
+  color: var(--ui-button-primary, #6366f1);
+  font-size: 0.95rem;
+}
+
+.layout-description {
+  font-size: 0.8125rem;
+  color: var(--ui-dialog-text, #ffffff);
+  opacity: 0.65;
+  line-height: 1.45;
+  margin: 0;
+  white-space: normal; /* Allow descriptions to wrap */
+  overflow: visible;
+  text-overflow: clip;
+}
+
+/* Scrollbar Customization for layout selector content */
+.layout-selector-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.layout-selector-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.layout-selector-content::-webkit-scrollbar-thumb {
+  background: var(--ui-dialog-border, rgba(255, 255, 255, 0.08));
+  border-radius: 3px;
+}
+
+.layout-selector-content::-webkit-scrollbar-thumb:hover {
+  background: var(--ui-button-primary, #6366f1);
+}
