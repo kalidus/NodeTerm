@@ -393,7 +393,7 @@ const StatusBarSettingsTab = ({
         <div className="statusbar-section-content">
           <div className="statusbar-global-row">
             <div className="statusbar-setting-group">
-              <span className="statusbar-mini-label">Altura</span>
+              <span className="statusbar-mini-label">Altura de la Barra</span>
               <div className="statusbar-height-control">
                 <Slider
                   value={statusBarHeight}
@@ -427,10 +427,9 @@ const StatusBarSettingsTab = ({
                   className="statusbar-update-dropdown"
                   placeholder="Seleccionar"
                 />
-                <span className="statusbar-setting-description">Intervalo de actualización de estadísticas</span>
               </div>
             </div>
-            <div className="statusbar-setting-group">
+            <div className="statusbar-setting-group statusbar-toggle-group">
               <span className="statusbar-mini-label statusbar-label-normal">Mostrar discos de red</span>
               <div className="statusbar-network-disks-control">
                 <div
@@ -440,7 +439,7 @@ const StatusBarSettingsTab = ({
                 />
               </div>
             </div>
-            <div className="statusbar-setting-group">
+            <div className="statusbar-setting-group statusbar-toggle-group">
               <span className="statusbar-mini-label statusbar-label-normal">Mostrar barra de estado</span>
               <div className="statusbar-network-disks-control">
                 <div
@@ -454,90 +453,72 @@ const StatusBarSettingsTab = ({
         </div>
       </div>
 
-      {/* Sección 2: Configuración por Tipo de Terminal */}
-      <div className="statusbar-settings-section">
+      {/* Sección 2: Configuración y Vista Previa Unificadas */}
+      <div className="statusbar-settings-section statusbar-unified-section">
         <div className="statusbar-section-header">
           <div className="statusbar-section-icon">
             <i className="pi pi-palette"></i>
           </div>
           <div className="statusbar-section-info">
-            <h3 className="statusbar-section-title">Tema por Tipo de Terminal</h3>
+            <h3 className="statusbar-section-title">Temas y Vista Previa por Terminal</h3>
           </div>
         </div>
-        <div className="statusbar-section-content">
-          <div className="statusbar-themes-grid">
-            {TERMINAL_TYPES.map((type) => (
-              <div key={type.id} className={`statusbar-theme-card ${type.iconClass}`}>
-                <div className="statusbar-theme-card-header">
-                  <div className={`statusbar-theme-icon ${type.iconClass}`}>
-                    <i className={type.icon}></i>
-                  </div>
-                  <span className="statusbar-theme-name">{type.name}</span>
-                </div>
-                <div className="statusbar-theme-controls">
-                  <div className="statusbar-theme-controls-row">
-                    <div className="statusbar-theme-selector color-selector">
-                      <span className="statusbar-selector-label">Colores</span>
-                      <Dropdown
-                        value={getThemeForType(type.id)}
-                        options={themeOptions}
-                        onChange={(e) => handleThemeChange(type.id, e.value)}
-                        placeholder="Tema"
-                      />
-                      <ColorPaletteMini themeName={getThemeForType(type.id)} />
-                    </div>
-                    <div className="statusbar-theme-selector icon-selector">
-                      <span className="statusbar-selector-label">Iconos</span>
-                      <Dropdown
-                        value={getIconThemeForType(type.id)}
-                        options={iconThemeOptions}
-                        onChange={(e) => handleIconThemeChange(type.id, e.value)}
-                        placeholder="Iconos"
-                      />
-                      <IconThemeMini iconThemeName={getIconThemeForType(type.id)} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Sección 3: Vista Previa */}
-      <div className="statusbar-settings-section statusbar-preview-section">
-        <div className="statusbar-section-header">
-          <div className="statusbar-section-icon">
-            <i className="pi pi-eye"></i>
-          </div>
-          <div className="statusbar-section-info">
-            <h3 className="statusbar-section-title">Vista Previa</h3>
-          </div>
-        </div>
-        <div className="statusbar-section-content">
+        <div className="statusbar-section-content no-padding">
+          {/* Selector de Pestañas de Terminales */}
           <div className="statusbar-preview-tabs">
-            {PREVIEW_TABS.map((tab) => (
+            {TERMINAL_TYPES.map((tab) => (
               <button
                 key={tab.id}
                 className={`statusbar-preview-tab ${activePreviewTab === tab.id ? 'active' : ''}`}
                 onClick={() => setActivePreviewTab(tab.id)}
               >
                 <i className={tab.icon}></i>
-                {tab.label}
+                {tab.name}
               </button>
             ))}
           </div>
+
           <div className="statusbar-preview-content">
+            {/* Vista Previa de la Barra */}
             <StatusBarPreview type={activePreviewTab} />
+
+            {/* Controles de Configuración del Terminal Activo */}
+            <div className="statusbar-active-config-row">
+              <div className="statusbar-theme-selector color-selector">
+                <span className="statusbar-selector-label">Paleta de Colores</span>
+                <Dropdown
+                  value={getThemeForType(activePreviewTab)}
+                  options={themeOptions}
+                  onChange={(e) => handleThemeChange(activePreviewTab, e.value)}
+                  placeholder="Seleccionar Tema"
+                  className="statusbar-dropdown-compact"
+                />
+                <ColorPaletteMini themeName={getThemeForType(activePreviewTab)} />
+              </div>
+
+              <div className="statusbar-theme-selector icon-selector">
+                <span className="statusbar-selector-label">Estilo de Iconos</span>
+                <Dropdown
+                  value={getIconThemeForType(activePreviewTab)}
+                  options={iconThemeOptions}
+                  onChange={(e) => handleIconThemeChange(activePreviewTab, e.value)}
+                  placeholder="Seleccionar Iconos"
+                  className="statusbar-dropdown-compact"
+                />
+                <IconThemeMini iconThemeName={getIconThemeForType(activePreviewTab)} />
+              </div>
+            </div>
+
+            {/* Detalle de Colores de la Paleta */}
             <div className="statusbar-preview-info">
               <div className="statusbar-preview-info-left">
                 <span>
                   <i className="pi pi-palette"></i>
-                  {getThemeForType(activePreviewTab)}
+                  Tema: {getThemeForType(activePreviewTab)}
                 </span>
                 <span>
                   <i className="pi pi-star"></i>
-                  {statusBarIconThemes[getIconThemeForType(activePreviewTab)]?.name || 'Clásico'}
+                  Iconos: {statusBarIconThemes[getIconThemeForType(activePreviewTab)]?.name || 'Clásico'}
                 </span>
               </div>
               <div className="statusbar-preview-palette">
