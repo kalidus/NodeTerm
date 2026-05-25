@@ -28,7 +28,8 @@ import {
   LazyOpenNotebookTab,
   LazySSHTunnelTab,
   LazyNetworkToolTab,
-  LazyTiptapDocumentEditor
+  LazyTiptapDocumentEditor,
+  LazySettingsContent
 } from './tabLoaders';
 import { themes } from '../themes';
 import { TAB_TYPES } from '../utils/constants';
@@ -106,7 +107,8 @@ const TabContentRendererInner = React.memo(({
   onStopRecording,
   isRecordingTab,
   onToggleBroadcast,
-  isMinimalMode
+  isMinimalMode,
+  settingsTabProps
 }) => {
   // 🚀 OPTIMIZACIÓN: Calcular conteos una sola vez cuando cambian los nodos o pestañas RDP
   const counts = React.useMemo(() => {
@@ -1755,6 +1757,18 @@ const TabContentRendererInner = React.memo(({
   // Herramienta de red (network-tool)
   if (tab.type === 'network-tool') {
     return <LazyNetworkToolTab tab={tab} />;
+  }
+
+  // Configuración (settings)
+  if (tab.type === 'settings') {
+    return (
+      <LazySettingsContent
+        isEmbedded={true}
+        propMainTab={tab.mainTab}
+        propSubTab={tab.subTab}
+        {...settingsTabProps}
+      />
+    );
   }
 
   // Si llegamos aquí y no es SSH, mostrar error

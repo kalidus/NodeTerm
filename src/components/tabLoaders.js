@@ -45,6 +45,7 @@ export const LazyOpenNotebookTab = lazy(() => getChunk('OpenNotebookTab', () => 
 export const LazySSHTunnelTab = lazy(() => getChunk('SSHTunnelTab', () => import('./SSHTunnelTab')));
 export const LazyNetworkToolTab = lazy(() => getChunk('NetworkToolTab', () => import('./NetworkToolTab')));
 export const LazyTiptapDocumentEditor = lazy(() => getChunk('TiptapDocumentEditor', () => import('./TiptapDocumentEditor')));
+export const LazySettingsContent = lazy(() => getChunk('SettingsContent', () => import('./SettingsDialog').then(m => ({ default: m.SettingsContent }))));
 
 const PRIORITY_CHUNK_KEYS = [
   'TerminalComponent',
@@ -99,6 +100,7 @@ const CHUNK_LOADERS = {
   SSHTunnelTab: () => import('./SSHTunnelTab'),
   NetworkToolTab: () => import('./NetworkToolTab'),
   TiptapDocumentEditor: () => import('./TiptapDocumentEditor'),
+  SettingsContent: () => import('./SettingsDialog').then(m => ({ default: m.SettingsContent })),
 };
 
 let tabChunksPreloadStarted = false;

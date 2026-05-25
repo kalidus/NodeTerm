@@ -58,7 +58,8 @@ export const TAB_TYPES = {
   PASSWORD_FOLDER: 'password-folder',
   DOCUMENT: 'document',
   DOCUMENT_FOLDER: 'document-folder',
-  NETWORK_TOOL: 'network-tool'
+  NETWORK_TOOL: 'network-tool',
+  SETTINGS: 'settings'
 };
 
 // Constantes de estados de conexión

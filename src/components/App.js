@@ -2611,6 +2611,40 @@ const App = () => {
     };
   }, [getAllTabs, setSshTabs, setLastOpenedTabKey, setOnCreateActivateTabKey]);
 
+  // Abrir configuración como pestaña (o enfocar si ya está abierta y cambiar sección)
+  useEffect(() => {
+    const handleOpenSettingsTab = (event) => {
+      const { mainTab, subTab } = event.detail || {};
+      const allTabs = getAllTabs();
+      const existing = allTabs.find(t => t.type === 'settings');
+
+      if (existing) {
+        // Actualizar sección activa de la pestaña existente
+        setSshTabs(prev => prev.map(t => t.key === existing.key ? { ...t, mainTab, subTab } : t));
+        setOnCreateActivateTabKey(existing.key);
+      } else {
+        const tabLabel = i18n.t('tooltips.settings') || 'Configuración';
+        const newTab = {
+          key: `settings-tab-${Date.now()}`,
+          label: tabLabel,
+          type: 'settings',
+          mainTab,
+          subTab,
+          groupId: null,
+          createdAt: Date.now()
+        };
+        setSshTabs(prev => [newTab, ...prev]);
+        setLastOpenedTabKey(newTab.key);
+        setOnCreateActivateTabKey(newTab.key);
+      }
+    };
+
+    window.addEventListener('open-settings-tab', handleOpenSettingsTab);
+    return () => {
+      window.removeEventListener('open-settings-tab', handleOpenSettingsTab);
+    };
+  }, [getAllTabs, setSshTabs, setLastOpenedTabKey, setOnCreateActivateTabKey]);
+
   // Configurar callbacks RDP para el sidebar
   useEffect(() => {
     // Asegurar que el ref esté inicializado
@@ -3334,6 +3368,85 @@ const App = () => {
     masterKey, secureStorage
   ]);
 
+  // Memoizar props para la pestaña de configuración
+  const settingsTabProps = useMemo(() => ({
+    availableThemes,
+    availableFonts,
+    fontFamily,
+    setFontFamily,
+    fontSize,
+    setFontSize,
+    localFontFamily,
+    setLocalFontFamily,
+    localFontSize,
+    setLocalFontSize,
+    terminalTheme,
+    setTerminalTheme,
+    statusBarTheme,
+    setStatusBarTheme,
+    localPowerShellTheme,
+    setLocalPowerShellTheme,
+    localLinuxTerminalTheme,
+    setLocalLinuxTerminalTheme,
+    localDockerTerminalTheme,
+    dockerFontFamily,
+    setDockerFontFamily,
+    dockerFontSize,
+    setDockerFontSize,
+    uiTheme,
+    setUiTheme,
+    iconTheme,
+    setIconTheme,
+    iconThemeSidebar,
+    setIconThemeSidebar,
+    iconSize,
+    setIconSize,
+    folderIconSize,
+    setFolderIconSize,
+    connectionIconSize,
+    setConnectionIconSize,
+    explorerFont,
+    setExplorerFont,
+    explorerFontSize,
+    setExplorerFontSize,
+    explorerColorTheme,
+    setExplorerColorTheme,
+    sidebarFont,
+    setSidebarFont,
+    sidebarFontSize,
+    setSidebarFontSize,
+    sidebarFontColor,
+    setSidebarFontColor,
+    treeTheme,
+    setTreeTheme,
+    sessionActionIconTheme,
+    setSessionActionIconTheme,
+    statusBarIconTheme,
+    setStatusBarIconTheme,
+    statusBarPollingInterval,
+    setStatusBarPollingInterval,
+    exportTreeToJson,
+    importTreeFromJson,
+    sessionManager,
+    onMasterPasswordConfigured: handleMasterPasswordConfigured,
+    nodes,
+    onUpdateUserPassword: handleUpdateUserPassword,
+    onEditConnection: handleEditConnectionFromUsers,
+  }), [
+    availableThemes, availableFonts, fontFamily, setFontFamily, fontSize, setFontSize,
+    localFontFamily, setLocalFontFamily, localFontSize, setLocalFontSize, terminalTheme, setTerminalTheme,
+    statusBarTheme, setStatusBarTheme, localPowerShellTheme, setLocalPowerShellTheme,
+    localLinuxTerminalTheme, setLocalLinuxTerminalTheme, localDockerTerminalTheme, dockerFontFamily, setDockerFontFamily,
+    dockerFontSize, setDockerFontSize, uiTheme, setUiTheme, iconTheme, setIconTheme,
+    iconThemeSidebar, setIconThemeSidebar, iconSize, setIconSize, folderIconSize, setFolderIconSize,
+    connectionIconSize, setConnectionIconSize, explorerFont, setExplorerFont, explorerFontSize, setExplorerFontSize,
+    explorerColorTheme, setExplorerColorTheme, sidebarFont, setSidebarFont, sidebarFontSize, setSidebarFontSize,
+    sidebarFontColor, setSidebarFontColor, treeTheme, setTreeTheme, sessionActionIconTheme, setSessionActionIconTheme,
+    statusBarIconTheme, setStatusBarIconTheme, statusBarPollingInterval, setStatusBarPollingInterval,
+    exportTreeToJson, importTreeFromJson, sessionManager, handleMasterPasswordConfigured, nodes,
+    handleUpdateUserPassword, handleEditConnectionFromUsers
+  ]);
+
   if (!isAppReady) {
     return <div style={{ background: '#1e1e1e', height: '100vh', width: '100vw' }} />;
   }
@@ -3781,6 +3894,7 @@ const App = () => {
           style={{ zIndex: 99999 }}
         />
         <MainContentArea
+          settingsTabProps={settingsTabProps}
           // Sidebar props
           sidebarCollapsed={sidebarCollapsed}
           setSidebarCollapsed={setSidebarCollapsed}

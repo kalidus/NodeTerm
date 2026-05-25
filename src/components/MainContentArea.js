@@ -76,6 +76,7 @@ const MainContentArea = ({
 
   // Content renderer props
   memoizedContentRendererProps,
+  settingsTabProps,
   sshStatsByTabId,
 
   // Context menu props
@@ -3289,6 +3290,7 @@ const MainContentArea = ({
                             isActiveTab={isActiveTab}
                             // Props memoizadas
                             {...memoizedContentRendererProps}
+                            settingsTabProps={settingsTabProps}
                             isMinimalMode={isMinimalMode}
                             // Terminal props (específicas)
                             sshStatsByTabId={sshStatsByTabId}

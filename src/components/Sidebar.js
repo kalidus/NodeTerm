@@ -21,6 +21,7 @@ const LazyPasswordManagerSidebar = React.lazy(() => import('./PasswordManagerSid
 const LazyDocumentsSidebar = React.lazy(() => import('./DocumentsSidebar'));
 const LazyLocalFileExplorerSidebar = React.lazy(() => import('./LocalFileExplorerSidebar'));
 const LazyToolsSidebar = React.lazy(() => import('./ToolsSidebar'));
+const LazySettingsSidebar = React.lazy(() => import('./SettingsSidebar'));
 import { unblockAllInputs, detectBlockedInputs, resolveFormBlocking, emergencyUnblockForms } from '../utils/formDebugger';
 import ImportService from '../services/ImportService';
 import localStorageSyncService from '../services/LocalStorageSyncService';
@@ -223,7 +224,7 @@ const Sidebar = React.memo(({
   const [showFolderDialog, setShowFolderDialog] = useState(false);
 
   // Estado para modo de visualización (conexiones, passwords, localExplorer, tools)
-  const [viewMode, setViewMode] = useState('connections'); // 'connections' | 'passwords' | 'documents' | 'localExplorer' | 'tools'
+  const [viewMode, setViewMode] = useState('connections'); // 'connections' | 'passwords' | 'documents' | 'localExplorer' | 'tools' | 'settings'
   const [showFavoritesView, setShowFavoritesView] = useState(false);
   const [favoritesRevision, setFavoritesRevision] = useState(0);
 
@@ -3282,6 +3283,12 @@ const Sidebar = React.memo(({
           />
         </Suspense>
       )}
+
+      {viewMode === 'settings' && (
+        <Suspense fallback={<TabChunkFallback />}>
+          <LazySettingsSidebar />
+        </Suspense>
+      )}
       
     </>
   );
@@ -3303,6 +3310,7 @@ const Sidebar = React.memo(({
       passwords: 'passwords',
       documents: 'documents',
       tools: 'tools',
+      settings: 'settings',
     };
     const targetViewMode = sectionToViewMode[sectionId] || 'connections';
 
@@ -3337,6 +3345,7 @@ const Sidebar = React.memo(({
     if (viewMode === 'documents') return 'documents';
     if (viewMode === 'passwords') return 'passwords';
     if (viewMode === 'tools') return 'tools';
+    if (viewMode === 'settings') return 'settings';
     if (showFavoritesView && viewMode === 'connections') return 'favorites';
     if (viewMode === 'connections') return 'connections';
     return null;
@@ -3367,6 +3376,7 @@ const Sidebar = React.memo(({
         panelOpen={!sidebarCollapsed}
         onSectionClick={handleIconRailSectionClick}
         onSettingsClick={() => setShowSettingsDialog(true)}
+        onSettingsDialogClick={() => setShowSettingsDialog(true)}
         sessionActionIconTheme={sessionActionIconTheme}
         aiClientsEnabled={aiClientsEnabled}
         onOpenAIClient={handleOpenAIClient}

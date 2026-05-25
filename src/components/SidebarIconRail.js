@@ -151,10 +151,10 @@ const SidebarIconRail = React.memo(({
       {/* Bottom actions */}
       <div className="sidebar-icon-rail-bottom">
         <button
-          className="sidebar-icon-rail-item"
-          onClick={onSettingsClick}
+          className={`sidebar-icon-rail-item${panelOpen && activeSection === 'settings' ? ' active' : ''}`}
+          onClick={() => onSectionClick('settings')}
           title={t('tooltips.settings')}
-          style={{ '--rail-item-color': 'var(--ui-sidebar-text)' }}
+          style={{ '--rail-item-color': '#a78bfa' }}
         >
           <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: ICON_SIZE, height: ICON_SIZE }}>
             {sessionActionIconThemes[sessionActionIconTheme]?.icons.settings}

@@ -718,3 +718,26 @@
   border-bottom-right-radius: 8px;
 }
 
+/* ========================================
+   EMBEDDED SETTINGS TAB OVERRIDES
+   ======================================== */
+
+.settings-embedded,
+.settings-embedded.settings-dialog-vertical,
+.settings-embedded .settings-dialog-vertical,
+.settings-embedded .settings-content-wrapper,
+.settings-embedded .settings-dialog-tabview,
+.settings-embedded .p-tabview-panels,
+.settings-embedded .p-tabview-panel,
+.settings-embedded .settings-tab-outer-wrapper,
+.settings-embedded .apariencia-tab-container,
+.settings-embedded .p-tabview-panel > div {
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 100% !important;
+}
+
+.settings-embedded {
+  background: var(--ui-dialog-bg) !important;
+}
+

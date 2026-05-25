@@ -140,8 +140,11 @@ const SmoothIconSlider = ({ connectionIconSize, setConnectionIconSize }) => {
   );
 };
 
-const SettingsDialog = ({
-  visible,
+const SettingsContent = ({
+  isEmbedded = false,
+  propMainTab = null,
+  propSubTab = null,
+  visible = true,
   onHide,
   fontFamily,
   setFontFamily,
@@ -300,6 +303,18 @@ const SettingsDialog = ({
   // Estados para navegación con sidebar vertical
   const [activeMainTab, setActiveMainTab] = useState('general');
   const [activeSubTab, setActiveSubTab] = useState(null);
+
+  // Sincronizar sección activa desde props si está embebido
+  useEffect(() => {
+    if (isEmbedded && propMainTab) {
+      setActiveMainTab(propMainTab);
+      if (propSubTab) {
+        setActiveSubTab(propSubTab);
+      } else {
+        setActiveSubTab(null);
+      }
+    }
+  }, [isEmbedded, propMainTab, propSubTab]);
 
   // Estados para TabViews ANIDADOS (dentro de Seguridad, Apariencia, etc.)
   const [securityActiveIndex, setSecurityActiveIndex] = useState(0);
@@ -2167,185 +2182,151 @@ const SettingsDialog = ({
     return () => clearTimeout(timeoutId);
   }, [contentHeight, visible, getDialogElement]);
 
-  return (
-    <Dialog
-      ref={dialogRef}
-      header={
-        <div className="settings-dialog-header-custom" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div className="settings-dialog-header-icon">
-            <i className="pi pi-cog"></i>
-          </div>
-          <span className="settings-dialog-header-title">{t('title')}</span>
-        </div>
-      }
-      visible={visible}
-      className="settings-dialog"
-      style={{
-        maxWidth: '98vw',
-        maxHeight: '98vh',
-        minWidth: '1000px',
-        minHeight: '600px',
-        height: `${size.height}px`,
-        width: `${size.width}px`
-      }}
-      contentStyle={{
-        background: 'var(--ui-dialog-bg)',
-        color: 'var(--ui-dialog-text)',
-        display: 'flex',
-        flexDirection: 'column',
-        height: `${contentHeight}px`,
-        maxHeight: `${contentHeight}px`,
-        minHeight: `${contentHeight}px`,
-        padding: '0',
-        overflow: 'hidden',
-        position: 'relative'
-      }}
-      headerStyle={{
-        background: 'rgba(0, 0, 0, 0.3) !important',
-        color: 'var(--ui-dialog-text)',
-        borderBottom: '1px solid var(--ui-dialog-border)'
-      }}
-      onHide={onHide}
-      modal
-      maximizable
-    >
+  const content = (
+    <>
       <Toast ref={toastRef} />
 
       {/* Handles de redimensionamiento - cobertura total */}
-      {/* Borde Derecho */}
-      <div
-        className="resize-handle resize-handle-right"
-        onMouseDown={(e) => startResize(e, 'right')}
-        style={{
-          position: 'absolute',
-          right: '-5px',
-          top: 0,
-          bottom: 0,
-          width: '10px',
-          cursor: 'ew-resize',
-          zIndex: 1002,
-          backgroundColor: 'transparent'
-        }}
-      />
-      {/* Borde Izquierdo - Nuevo */}
-      <div
-        className="resize-handle resize-handle-left"
-        onMouseDown={(e) => startResize(e, 'left')}
-        style={{
-          position: 'absolute',
-          left: '-5px',
-          top: 0,
-          bottom: 0,
-          width: '10px',
-          cursor: 'ew-resize',
-          zIndex: 1002,
-          backgroundColor: 'transparent'
-        }}
-      />
-      {/* Borde Inferior */}
-      <div
-        className="resize-handle resize-handle-bottom"
-        onMouseDown={(e) => startResize(e, 'bottom')}
-        style={{
-          position: 'absolute',
-          bottom: '-5px',
-          left: 0,
-          right: 0,
-          height: '10px',
-          cursor: 'ns-resize',
-          zIndex: 1002,
-          backgroundColor: 'transparent'
-        }}
-      />
-      {/* Borde Superior - Nuevo */}
-      <div
-        className="resize-handle resize-handle-top"
-        onMouseDown={(e) => startResize(e, 'top')}
-        style={{
-          position: 'absolute',
-          top: '-5px',
-          left: 0,
-          right: 0,
-          height: '10px',
-          cursor: 'ns-resize',
-          zIndex: 1002,
-          backgroundColor: 'transparent'
-        }}
-      />
+      {!isEmbedded && (
+        <>
+          {/* Borde Derecho */}
+          <div
+            className="resize-handle resize-handle-right"
+            onMouseDown={(e) => startResize(e, 'right')}
+            style={{
+              position: 'absolute',
+              right: '-5px',
+              top: 0,
+              bottom: 0,
+              width: '10px',
+              cursor: 'ew-resize',
+              zIndex: 1002,
+              backgroundColor: 'transparent'
+            }}
+          />
+          {/* Borde Izquierdo - Nuevo */}
+          <div
+            className="resize-handle resize-handle-left"
+            onMouseDown={(e) => startResize(e, 'left')}
+            style={{
+              position: 'absolute',
+              left: '-5px',
+              top: 0,
+              bottom: 0,
+              width: '10px',
+              cursor: 'ew-resize',
+              zIndex: 1002,
+              backgroundColor: 'transparent'
+            }}
+          />
+          {/* Borde Inferior */}
+          <div
+            className="resize-handle resize-handle-bottom"
+            onMouseDown={(e) => startResize(e, 'bottom')}
+            style={{
+              position: 'absolute',
+              bottom: '-5px',
+              left: 0,
+              right: 0,
+              height: '10px',
+              cursor: 'ns-resize',
+              zIndex: 1002,
+              backgroundColor: 'transparent'
+            }}
+          />
+          {/* Borde Superior - Nuevo */}
+          <div
+            className="resize-handle resize-handle-top"
+            onMouseDown={(e) => startResize(e, 'top')}
+            style={{
+              position: 'absolute',
+              top: '-5px',
+              left: 0,
+              right: 0,
+              height: '10px',
+              cursor: 'ns-resize',
+              zIndex: 1002,
+              backgroundColor: 'transparent'
+            }}
+          />
 
-      {/* Esquina Inferior Derecha */}
-      <div
-        className="resize-handle resize-handle-bottom-right"
-        onMouseDown={(e) => startResize(e, 'bottom-right')}
-        style={{
-          position: 'absolute',
-          bottom: '-5px',
-          right: '-5px',
-          width: '15px',
-          height: '15px',
-          cursor: 'se-resize',
-          zIndex: 1003,
-          backgroundColor: 'transparent'
-        }}
-      />
-      {/* Esquina Inferior Izquierda - Nuevo */}
-      <div
-        className="resize-handle resize-handle-bottom-left"
-        onMouseDown={(e) => startResize(e, 'bottom-left')}
-        style={{
-          position: 'absolute',
-          bottom: '-5px',
-          left: '-5px',
-          width: '15px',
-          height: '15px',
-          cursor: 'sw-resize',
-          zIndex: 1003,
-          backgroundColor: 'transparent'
-        }}
-      />
-      {/* Esquina Superior Derecha - Nuevo */}
-      <div
-        className="resize-handle resize-handle-top-right"
-        onMouseDown={(e) => startResize(e, 'top-right')}
-        style={{
-          position: 'absolute',
-          top: '-5px',
-          right: '-5px',
-          width: '15px',
-          height: '15px',
-          cursor: 'ne-resize',
-          zIndex: 1003,
-          backgroundColor: 'transparent'
-        }}
-      />
-      {/* Esquina Superior Izquierda - Nuevo */}
-      <div
-        className="resize-handle resize-handle-top-left"
-        onMouseDown={(e) => startResize(e, 'top-left')}
-        style={{
-          position: 'absolute',
-          top: '-5px',
-          left: '-5px',
-          width: '15px',
-          height: '15px',
-          cursor: 'nw-resize',
-          zIndex: 1003,
-          backgroundColor: 'transparent'
-        }}
-      />
+          {/* Esquina Inferior Derecha */}
+          <div
+            className="resize-handle resize-handle-bottom-right"
+            onMouseDown={(e) => startResize(e, 'bottom-right')}
+            style={{
+              position: 'absolute',
+              bottom: '-5px',
+              right: '-5px',
+              width: '15px',
+              height: '15px',
+              cursor: 'se-resize',
+              zIndex: 1003,
+              backgroundColor: 'transparent'
+            }}
+          />
+          {/* Esquina Inferior Izquierda - Nuevo */}
+          <div
+            className="resize-handle resize-handle-bottom-left"
+            onMouseDown={(e) => startResize(e, 'bottom-left')}
+            style={{
+              position: 'absolute',
+              bottom: '-5px',
+              left: '-5px',
+              width: '15px',
+              height: '15px',
+              cursor: 'sw-resize',
+              zIndex: 1003,
+              backgroundColor: 'transparent'
+            }}
+          />
+          {/* Esquina Superior Derecha - Nuevo */}
+          <div
+            className="resize-handle resize-handle-top-right"
+            onMouseDown={(e) => startResize(e, 'top-right')}
+            style={{
+              position: 'absolute',
+              top: '-5px',
+              right: '-5px',
+              width: '15px',
+              height: '15px',
+              cursor: 'ne-resize',
+              zIndex: 1003,
+              backgroundColor: 'transparent'
+            }}
+          />
+          {/* Esquina Superior Izquierda - Nuevo */}
+          <div
+            className="resize-handle resize-handle-top-left"
+            onMouseDown={(e) => startResize(e, 'top-left')}
+            style={{
+              position: 'absolute',
+              top: '-5px',
+              left: '-5px',
+              width: '15px',
+              height: '15px',
+              cursor: 'nw-resize',
+              zIndex: 1003,
+              backgroundColor: 'transparent'
+            }}
+          />
+        </>
+      )}
 
       {/* Layout con Sidebar Vertical */}
-      <div className="settings-dialog-vertical">
+      <div className={`settings-dialog-vertical ${isEmbedded ? 'settings-embedded' : ''}`} style={isEmbedded ? { display: 'flex', flex: 1, height: '100%', overflow: 'hidden' } : undefined}>
         {/* Sidebar Navigation */}
-        <SettingsSidebarNav
-          activeMainTab={activeMainTab}
-          activeSubTab={activeSubTab}
-          onMainTabChange={setActiveMainTab}
-          onSubTabChange={setActiveSubTab}
-        />
+        {!isEmbedded && (
+          <SettingsSidebarNav
+            activeMainTab={activeMainTab}
+            activeSubTab={activeSubTab}
+            onMainTabChange={setActiveMainTab}
+            onSubTabChange={setActiveSubTab}
+          />
+        )}
 
         {/* Contenedor de Contenido */}
-        <div className="settings-content-wrapper">
+        <div className="settings-content-wrapper" style={isEmbedded ? { display: 'flex', flexDirection: 'column', flex: 1, height: '100%', overflow: 'hidden' } : undefined}>
           {/* TabView renderizado dinámicamente */}
           <style>{`
             .settings-dialog-tabview .p-tabview-nav {
@@ -5768,8 +5749,67 @@ const SettingsDialog = ({
         importTreeFromJson={importTreeFromJson}
         sessionManager={sessionManager}
       />
+    </>
+  );
+
+  if (isEmbedded) {
+    return (
+      <div className="settings-tab-container settings-embedded" style={{ height: '100%', width: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <Dialog
+      ref={dialogRef}
+      header={
+        <div className="settings-dialog-header-custom" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div className="settings-dialog-header-icon">
+            <i className="pi pi-cog"></i>
+          </div>
+          <span className="settings-dialog-header-title">{t('title')}</span>
+        </div>
+      }
+      visible={visible}
+      className="settings-dialog"
+      style={{
+        maxWidth: '98vw',
+        maxHeight: '98vh',
+        minWidth: '1000px',
+        minHeight: '600px',
+        height: `${size.height}px`,
+        width: `${size.width}px`
+      }}
+      contentStyle={{
+        background: 'var(--ui-dialog-bg)',
+        color: 'var(--ui-dialog-text)',
+        display: 'flex',
+        flexDirection: 'column',
+        height: `${contentHeight}px`,
+        maxHeight: `${contentHeight}px`,
+        minHeight: `${contentHeight}px`,
+        padding: '0',
+        overflow: 'hidden',
+        position: 'relative'
+      }}
+      headerStyle={{
+        background: 'rgba(0, 0, 0, 0.3) !important',
+        color: 'var(--ui-dialog-text)',
+        borderBottom: '1px solid var(--ui-dialog-border)'
+      }}
+      onHide={onHide}
+      modal
+      maximizable
+    >
+      {content}
     </Dialog>
   );
 };
 
+const SettingsDialog = (props) => {
+  return <SettingsContent {...props} isEmbedded={false} />;
+};
+
+export { SettingsContent };
 export default SettingsDialog; 
