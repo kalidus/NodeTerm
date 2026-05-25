@@ -316,7 +316,6 @@ export function createStatusBarItemRenderers(ctx) {
         key="settings"
         className="status-bar-section settings-section"
         style={{
-          marginLeft: '15px',
           cursor: 'pointer',
           opacity: 0.5,
           transition: 'opacity 0.2s',

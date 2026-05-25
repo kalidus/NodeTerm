@@ -169,12 +169,13 @@ const StatusBar = ({
     op
   });
 
-  const renderOrder = [...visibleOrder, 'settings'];
-
   return (
     <div className="status-bar">
-      <div className="status-group" style={{ flex: 1 }}>
-        {renderOrder.map((id) => renderers[id]?.()).filter(Boolean)}
+      <div className="status-group status-bar-metrics">
+        {visibleOrder.map((id) => renderers[id]?.()).filter(Boolean)}
+      </div>
+      <div className="status-group status-bar-actions">
+        {renderers.settings?.()}
       </div>
 
       {popOpen?.type === 'cpu' && (

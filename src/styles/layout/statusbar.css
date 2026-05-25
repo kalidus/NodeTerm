@@ -22,6 +22,16 @@
   gap: calc(var(--statusbar-height, 40px) * 0.375);
 }
 
+.status-bar-metrics {
+  flex: 1;
+  min-width: 0;
+}
+
+.status-bar-actions {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
 .status-bar-section {
   display: flex;
   align-items: center;
