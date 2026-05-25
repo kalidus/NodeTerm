@@ -337,6 +337,11 @@ const TabHeader = React.memo(({
         </span>
       )}
 
+      {/* Icono específico para configuración */}
+      {tab.type === 'settings' && (
+        <i className="pi pi-cog" style={{ fontSize: '12px', marginRight: '6px', color: primaryColor, flexShrink: 0 }}></i>
+      )}
+
       {/* Icono específico para splits */}
       {tab.type === 'split' && (
         <i className="pi pi-window-maximize" style={{ fontSize: '12px', marginRight: '6px', color: '#007ad9', flexShrink: 0 }}></i>
