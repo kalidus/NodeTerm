@@ -8,6 +8,7 @@ import { InputNumber } from 'primereact/inputnumber';
 import { Dropdown } from 'primereact/dropdown';
 import { Toast } from 'primereact/toast';
 import AIClientBrandIcon from './AIClientBrandIcon';
+import { useTranslation } from '../i18n/hooks/useTranslation';
 import '../styles/components/ai-clients-tab.css';
 import '../styles/components/apps-tab.css';
 
@@ -67,6 +68,7 @@ const AppsTab = ({
   handleResetRdpDefaults,
   methodOptions
 }) => {
+  const { t } = useTranslation('settings');
   const toast = useRef(null);
 
   // Estado para cada cliente de IA
@@ -1067,101 +1069,161 @@ const AppsTab = ({
 
   // Render para config avanzada de RDP
   const renderRdpAdvancedConfig = () => {
+    const isRunning = guacdStatus?.isRunning;
+    const statusClass = isRunning ? 'rdp-status-active' : 'rdp-status-inactive';
+    const statusText = isRunning ? t('rdp.guacdStatus.active') : t('rdp.guacdStatus.inactive');
+    const activeMethodLabel = methodOptions.find(o => o.value === guacdPreferredMethod)?.label || guacdPreferredMethod;
+
     return (
-      <div className="adv-config-inner" style={{ borderLeft: '3px solid #3b82f6' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          {/* Fila: Método backend guacd */}
-          <div className="config-grid" style={{ gridTemplateColumns: '1fr' }}>
+      <div className="rdp-config-container">
+        {/* Tarjeta 1: Estado del Servidor Backend (Guacd) */}
+        <div className="rdp-config-card rdp-backend-card">
+          <div className="rdp-card-header">
+            <div className="rdp-card-icon-wrapper">
+              <i className="pi pi-server rdp-card-icon" />
+            </div>
+            <div className="rdp-card-header-text">
+              <h3>{t('rdp.backendTitle') || 'Backend Guacamole'}</h3>
+              <p className="rdp-card-subtitle">Servicio de túnel y protocolo RDP</p>
+            </div>
+          </div>
+
+          <div className="rdp-card-content">
+            <div className="rdp-status-display">
+              <div className="rdp-status-main">
+                <span className={`rdp-status-indicator ${statusClass}`}></span>
+                <span className="rdp-status-text">
+                  Estado: <strong>{statusText}</strong>
+                </span>
+              </div>
+              <div className="rdp-status-technical">
+                <span className="rdp-tech-label">Dirección:</span>
+                <code className="rdp-tech-code">
+                  guacd://{guacdStatus?.host || '127.0.0.1'}:{guacdStatus?.port || 4822}
+                </code>
+              </div>
+              <div className="rdp-status-technical">
+                <span className="rdp-tech-label">Método actual:</span>
+                <span className="rdp-tech-value">{activeMethodLabel}</span>
+              </div>
+            </div>
+
             <div className="config-field">
-              <label htmlFor="guacd-preferred-method" style={{ fontWeight: 'bold' }}>Método Backend Guacd Preferido</label>
+              <label htmlFor="guacd-preferred-method" style={{ fontWeight: 'bold' }}>{t('rdp.guacdMethod') || 'Método backend Guacd preferido'}</label>
               <Dropdown
                 id="guacd-preferred-method"
                 value={guacdPreferredMethod}
                 options={methodOptions}
                 onChange={(e) => setGuacdPreferredMethod(e.value)}
                 style={{ width: '100%' }}
+                className="rdp-dropdown-premium"
               />
-              <small style={{ color: 'var(--text-color-secondary)', fontSize: '0.7rem', marginTop: '2px' }}>
-                Preferencia → alternativa (Windows: Docker/WSL, Linux: Docker/Nativo)
+              <small className="rdp-field-hint">
+                {t('rdp.guacdMethodHint') || 'Preferencia → alternativa (Windows: Docker/WSL, Linux: Docker/Nativo)'}
               </small>
             </div>
-          </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.25rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{
-                width: 8, height: 8, borderRadius: '50%',
-                background: guacdStatus?.isRunning ? '#22c55e' : '#ef4444',
-                boxShadow: guacdStatus?.isRunning ? '0 0 0 2px rgba(34,197,94,0.2)' : '0 0 0 2px rgba(239,68,68,0.2)'
-              }}></span>
-              <strong style={{ fontSize: '0.75rem' }}>Estado Guacd:</strong>{' '}
-              <span style={{ fontSize: '0.72rem', color: guacdStatus?.isRunning ? '#22c55e' : '#ef4444' }}>
-                {guacdStatus?.isRunning ? 'En ejecución' : 'Inactivo'}
-              </span>
-            </div>
             <Button
-              label={guacdRestarting ? "Reiniciando..." : "Reiniciar Guacd"}
+              label={guacdRestarting ? "Reiniciando..." : (t('rdp.restartGuacd') || "Reiniciar Guacd")}
               icon={guacdRestarting ? "pi pi-spin pi-spinner" : "pi pi-refresh"}
-              className="p-button-secondary p-button-sm"
+              className={`rdp-restart-btn p-button-sm ${isRunning ? 'p-button-secondary' : 'p-button-warning'}`}
               onClick={handleRestartGuacd}
               disabled={guacdRestarting}
             />
           </div>
+        </div>
 
-          <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '0.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <strong style={{ fontSize: '0.75rem' }}>Parámetros de Sesión RDP</strong>
-              <Button
-                label="Restaurar por defecto"
-                icon="pi pi-refresh"
-                className="p-button-text p-button-secondary p-button-sm"
-                onClick={handleResetRdpDefaults}
-              />
+        {/* Tarjeta 2: Parámetros de Sesión y Rendimiento */}
+        <div className="rdp-config-card rdp-params-card">
+          <div className="rdp-card-header">
+            <div className="rdp-card-icon-wrapper params-icon">
+              <i className="pi pi-sliders-h rdp-card-icon" />
             </div>
-            
-            <div className="config-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
-              <div className="config-field">
-                <label htmlFor="rdp-session-activity-min">Inactividad de Sesión (min)</label>
+            <div className="rdp-card-header-text">
+              <h3>{t('rdp.title') || 'Parámetros de Sesión RDP'}</h3>
+              <p className="rdp-card-subtitle">Rendimiento, optimización y tiempos límite</p>
+            </div>
+            <Button
+              icon="pi pi-undo"
+              title={t('rdp.resetDefaults') || "Restaurar por defecto"}
+              aria-label="Restaurar valores por defecto"
+              className="p-button-rounded p-button-text p-button-sm rdp-reset-btn"
+              onClick={handleResetRdpDefaults}
+            />
+          </div>
+
+          <div className="rdp-card-content">
+            <div className="rdp-params-grid">
+              {/* Field 1: Inactividad de sesión */}
+              <div className="rdp-param-field">
+                <label htmlFor="rdp-session-activity-min">
+                  {t('rdp.sessionActivity') || 'Inactividad de Sesión (min)'}
+                </label>
                 <InputNumber
                   id="rdp-session-activity-min"
                   value={rdpSessionActivityMinutes}
                   onValueChange={e => setRdpSessionActivityMinutes(Math.max(1, Math.min(1440, e.value || 1)))}
                   min={1} max={1440} showButtons buttonLayout="horizontal"
                   style={{ width: '100%' }} inputStyle={{ padding: '0.35rem 0.5rem' }}
+                  className="rdp-inputnumber-premium"
                 />
+                <span className="rdp-param-desc">
+                  {t('rdp.sessionActivityHint') || 'Tiempo máximo de sesión antes de reconexión.'}
+                </span>
               </div>
 
-              <div className="config-field">
-                <label htmlFor="rdp-idle-min">Umbral de Inactividad (min)</label>
+              {/* Field 2: Umbral de inactividad */}
+              <div className="rdp-param-field">
+                <label htmlFor="rdp-idle-min">
+                  {t('rdp.idleMinutes') || 'Umbral de Inactividad (min)'}
+                </label>
                 <InputNumber
                   id="rdp-idle-min"
                   value={rdpIdleMinutes}
                   onValueChange={e => setRdpIdleMinutes(Math.max(1, Math.min(1440, e.value || 1)))}
                   min={1} max={1440} showButtons buttonLayout="horizontal"
                   style={{ width: '100%' }} inputStyle={{ padding: '0.35rem 0.5rem' }}
+                  className="rdp-inputnumber-premium"
                 />
+                <span className="rdp-param-desc">
+                  {t('rdp.idleMinutesHint') || 'Pausa la conexión tras inactividad para ahorrar recursos.'}
+                </span>
               </div>
 
-              <div className="config-field">
-                <label htmlFor="rdp-resize-debounce">Debounce de Redimensión (ms)</label>
+              {/* Field 3: Debounce de redimensión */}
+              <div className="rdp-param-field">
+                <label htmlFor="rdp-resize-debounce">
+                  {t('rdp.resizeDebounce') || 'Debounce de Redimensión (ms)'}
+                </label>
                 <InputNumber
                   id="rdp-resize-debounce"
                   value={rdpResizeDebounceMs}
                   onValueChange={e => setRdpResizeDebounceMs(Math.max(100, Math.min(2000, e.value || 300)))}
                   min={100} max={2000} showButtons buttonLayout="horizontal"
                   style={{ width: '100%' }} inputStyle={{ padding: '0.35rem 0.5rem' }}
+                  className="rdp-inputnumber-premium"
                 />
+                <span className="rdp-param-desc">
+                  {t('rdp.resizeDebounceHint') || 'Espera antes de enviar el nuevo tamaño al servidor.'}
+                </span>
               </div>
 
-              <div className="config-field">
-                <label htmlFor="rdp-resize-ack-timeout">Timeout de ACK (ms)</label>
+              {/* Field 4: Timeout ACK */}
+              <div className="rdp-param-field">
+                <label htmlFor="rdp-resize-ack-timeout">
+                  {t('rdp.resizeAckTimeout') || 'Timeout de ACK (ms)'}
+                </label>
                 <InputNumber
                   id="rdp-resize-ack-timeout"
                   value={rdpResizeAckTimeoutMs}
                   onValueChange={e => setRdpResizeAckTimeoutMs(Math.max(600, Math.min(5000, e.value || 1500)))}
                   min={600} max={5000} showButtons buttonLayout="horizontal"
                   style={{ width: '100%' }} inputStyle={{ padding: '0.35rem 0.5rem' }}
+                  className="rdp-inputnumber-premium"
                 />
+                <span className="rdp-param-desc">
+                  {t('rdp.resizeAckTimeoutHint') || 'Espera de confirmación de pantalla antes de permitir otra redimensión.'}
+                </span>
               </div>
             </div>
           </div>
@@ -1432,7 +1494,7 @@ const AppsTab = ({
     if (!client) return null;
     const isEnabled = isClientEnabled(client);
     const status = dockerStatus[client.key];
-    const showDockerActions = client.requiresDocker && isEnabled;
+    const showDockerActions = client.requiresDocker && isEnabled && !client.isRdp;
 
     return (
       <div key={client.key} className="apps-detail-content">
