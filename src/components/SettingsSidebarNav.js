@@ -57,15 +57,9 @@ const SettingsSidebarNav = ({
       ]
     },
     {
-      id: 'rdp',
-      label: t('sidebar.rdp'),
-      icon: 'pi pi-desktop',
-      subitems: []
-    },
-    {
-      id: 'clientes-ia',
-      label: t('sidebar.aiClients'),
-      icon: 'pi pi-comments',
+      id: 'apps',
+      label: t('sidebar.apps') || 'Apps',
+      icon: 'pi pi-th-large',
       subitems: []
     },
     {

@@ -48,7 +48,7 @@ import {
 } from '../utils/keyboardShortcuts';
 import { homeTabIcons, setHomeTabIcon, getHomeTabIconGroups } from '../themes/home-tab-icons';
 import { groupTabIcons, setGroupTabIcon } from '../themes/group-tab-icons';
-import AIClientsTab from './AIClientsTab';
+import AppsTab from './AppsTab';
 import AppUpdateTab from './AppUpdateTab';
 import SettingsSidebarNav from './SettingsSidebarNav';
 import TerminalSettingsTab from './TerminalSettingsTab';
@@ -307,11 +307,19 @@ const SettingsContent = ({
   // Sincronizar sección activa desde props si está embebido
   useEffect(() => {
     if (isEmbedded && propMainTab) {
-      setActiveMainTab(propMainTab);
-      if (propSubTab) {
-        setActiveSubTab(propSubTab);
+      if (propMainTab === 'rdp') {
+        setActiveMainTab('apps');
+        setActiveSubTab('rdp');
+      } else if (propMainTab === 'clientes-ia') {
+        setActiveMainTab('apps');
+        setActiveSubTab('ai');
       } else {
-        setActiveSubTab(null);
+        setActiveMainTab(propMainTab);
+        if (propSubTab) {
+          setActiveSubTab(propSubTab);
+        } else {
+          setActiveSubTab(null);
+        }
       }
     }
   }, [isEmbedded, propMainTab, propSubTab]);
@@ -330,11 +338,12 @@ const SettingsContent = ({
       'seguridad': 1,
       'usuarios': 2,
       'apariencia': 3,
+      'apps': 4,
       'rdp': 4,
-      'clientes-ia': 5,
-      'actualizaciones': 6,
-      'sincronizacion': 7,
-      'informacion': 8
+      'clientes-ia': 4,
+      'actualizaciones': 5,
+      'sincronizacion': 6,
+      'informacion': 7
     };
     return mainTabMap[mainTab] || 0;
   };
@@ -5195,277 +5204,29 @@ const SettingsContent = ({
               </div>
             </TabPanel>
 
-            <TabPanel header={<span><i className="pi pi-desktop" style={{ marginRight: 8 }}></i>RDP</span>} style={{ '--content-height': `${contentHeight}px` }}>
+            <TabPanel header={<span><i className="pi pi-th-large" style={{ marginRight: 8 }}></i>{t('sidebar.apps') || 'Apps'}</span>} style={{ '--content-height': `${contentHeight}px` }}>
               <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
-                <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: '8px', bottom: 0, width: 'calc(100% - 8px)' }}>
-                  {/* Header */}
-                  <div className="general-settings-header-wrapper" style={{ flexShrink: 0 }}>
-                    <div className="general-header-content">
-                      <span className="general-header-icon protocol-dialog-header-icon">
-                        <i className="pi pi-desktop"></i>
-                      </span>
-                      <div className="general-header-text">
-                        <h3 className="general-header">{t('rdp.title')}</h3>
-                        <p className="general-description">Personaliza el comportamiento, conectividad y rendimiento de las sesiones RDP</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Grid de 2 columnas para las secciones */}
-                  <div className="general-settings-content">
-                    {/* Sección: Backend Guacamole */}
-                    <div className="general-settings-section">
-                      <div className="general-section-header">
-                        <div className="general-section-icon">
-                          <i className="pi pi-sitemap"></i>
-                        </div>
-                        <h4 className="general-section-title">{t('rdp.backendTitle')}</h4>
-                      </div>
-
-                      <div className="general-settings-options" style={{ padding: '0.75rem 1.25rem', gap: '0.5rem' }}>
-                        <div>
-                          <label htmlFor="guacd-preferred-method" style={{ display: 'block', marginBottom: '0.35rem', fontWeight: 'bold', fontSize: '0.85rem' }}>
-                            {t('rdp.guacdMethod')}
-                          </label>
-                          <Dropdown
-                            id="guacd-preferred-method"
-                            value={guacdPreferredMethod}
-                            options={methodOptions}
-                            onChange={(e) => setGuacdPreferredMethod(e.value)}
-                            style={{ width: '100%' }}
-                          />
-                          <small style={{ display: 'block', marginTop: 4, color: 'var(--text-color-secondary)', fontSize: '0.75rem' }}>
-                            {t('rdp.guacdMethodHint')}
-                          </small>
-                        </div>
-
-                        <div style={{
-                          marginTop: '0.5rem',
-                          border: `1px solid ${guacdStatus.isRunning ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
-                          borderRadius: 6,
-                          padding: '0.5rem 0.75rem',
-                          background: guacdStatus.isRunning ? 'rgba(34, 197, 94, 0.08)' : 'rgba(239, 68, 68, 0.08)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: 8,
-                          fontSize: '0.75rem'
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span
-                              title={guacdStatus.isRunning ? 'Activo' : 'Inactivo'}
-                              style={{
-                                width: 8,
-                                height: 8,
-                                borderRadius: '50%',
-                                background: guacdStatus.isRunning ? 'var(--green-500)' : 'var(--red-500)',
-                                boxShadow: guacdStatus.isRunning ? '0 0 0 2px rgba(34,197,94,0.2)' : '0 0 0 2px rgba(239,68,68,0.2)',
-                                flexShrink: 0
-                              }}
-                            ></span>
-                            <strong style={{ color: guacdStatus.isRunning ? 'var(--green-500)' : 'var(--red-500)', fontSize: '0.75rem', fontWeight: 600 }}>Guacd</strong>
-                            <span style={{ color: guacdStatus.isRunning ? 'var(--green-500)' : 'var(--red-500)', fontSize: '0.7rem', fontWeight: 500 }}>
-                              {guacdStatus.isRunning ? '● Activo' : '● Inactivo'}
-                            </span>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                            <div style={{ color: 'var(--text-color-secondary)', fontSize: '0.7rem', textAlign: 'right' }}>
-                              <div style={{ textTransform: 'uppercase', fontWeight: 500, fontSize: '0.65rem' }}>{guacdStatus.method || '—'}</div>
-                              <div style={{ fontFamily: 'monospace', fontSize: '0.6rem' }}>{guacdStatus.host}:{guacdStatus.port}</div>
-                            </div>
-                            <button
-                              onClick={handleRestartGuacd}
-                              disabled={guacdRestarting}
-                              title={t('rdp.restartGuacd') || 'Reiniciar Guacd'}
-                              style={{
-                                background: 'rgba(255, 255, 255, 0.1)',
-                                border: '1px solid rgba(255, 255, 255, 0.2)',
-                                borderRadius: 4,
-                                padding: '0.25rem 0.5rem',
-                                cursor: guacdRestarting ? 'wait' : 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                minWidth: 28,
-                                height: 28,
-                                transition: 'all 0.2s ease',
-                                opacity: guacdRestarting ? 0.7 : 1
-                              }}
-                              onMouseEnter={(e) => {
-                                if (!guacdRestarting) {
-                                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
-                                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-                                }
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-                              }}
-                            >
-                              <i
-                                className={guacdRestarting ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'}
-                                style={{
-                                  fontSize: '0.75rem',
-                                  color: 'var(--text-color-secondary)'
-                                }}
-                              ></i>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Sección: RDP Settings (todas juntas) */}
-                    <div className="general-settings-section">
-                      <div className="general-section-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <div className="general-section-icon">
-                            <i className="pi pi-cog"></i>
-                          </div>
-                          <h4 className="general-section-title">RDP Settings</h4>
-                        </div>
-                        <button
-                          onClick={handleResetRdpDefaults}
-                          title={t('rdp.resetDefaults') || 'Restaurar valores por defecto'}
-                          style={{
-                            background: 'rgba(255, 255, 255, 0.1)',
-                            border: '1px solid rgba(255, 255, 255, 0.2)',
-                            borderRadius: 4,
-                            padding: '0.35rem 0.75rem',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            fontSize: '0.75rem',
-                            color: 'var(--text-color-secondary)',
-                            transition: 'all 0.2s ease'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
-                            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-                            e.currentTarget.style.color = 'var(--text-color)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-                            e.currentTarget.style.color = 'var(--text-color-secondary)';
-                          }}
-                        >
-                          <i className="pi pi-refresh" style={{ fontSize: '0.7rem' }}></i>
-                          <span>{t('rdp.resetDefaults') || 'Restaurar'}</span>
-                        </button>
-                      </div>
-
-                      <div className="general-settings-options" style={{ padding: '0.5rem 1.25rem', gap: '0.5rem' }}>
-                        {/* Actividad de sesión */}
-                        <div>
-                          <label htmlFor="rdp-session-activity-min" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', fontSize: '0.8rem' }}>
-                            {t('rdp.sessionActivity')}
-                          </label>
-                          <small style={{ display: 'block', marginBottom: 4, color: 'var(--text-color-secondary)', fontSize: '0.7rem' }}>
-                            {t('rdp.sessionActivityHint')}
-                          </small>
-                          <InputNumber
-                            id="rdp-session-activity-min"
-                            value={rdpSessionActivityMinutes}
-                            onValueChange={e => setRdpSessionActivityMinutes(Math.max(1, Math.min(1440, e.value || 1)))}
-                            min={1}
-                            max={1440}
-                            showButtons
-                            buttonLayout="horizontal"
-                            style={{ width: '100%', fontSize: '0.85rem' }}
-                            inputStyle={{ fontSize: '0.85rem', padding: '0.35rem 0.5rem' }}
-                          />
-                        </div>
-
-                        <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                          <label htmlFor="rdp-resize-debounce" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', fontSize: '0.8rem' }}>
-                            {t('rdp.resizeDebounce')}
-                          </label>
-                          <small style={{ display: 'block', marginBottom: 4, color: 'var(--text-color-secondary)', fontSize: '0.7rem' }}>
-                            {t('rdp.resizeDebounceHint')}
-                          </small>
-                          <InputNumber
-                            id="rdp-resize-debounce"
-                            value={rdpResizeDebounceMs}
-                            onValueChange={e => setRdpResizeDebounceMs(Math.max(100, Math.min(2000, e.value || 300)))}
-                            min={100}
-                            max={2000}
-                            showButtons
-                            buttonLayout="horizontal"
-                            style={{ width: '100%', fontSize: '0.85rem' }}
-                            inputStyle={{ fontSize: '0.85rem', padding: '0.35rem 0.5rem' }}
-                          />
-                        </div>
-
-                        <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                          <label htmlFor="rdp-idle-min" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', fontSize: '0.8rem' }}>
-                            {t('rdp.idleMinutes')}
-                          </label>
-                          <small style={{ display: 'block', marginBottom: 4, color: 'var(--text-color-secondary)', fontSize: '0.7rem' }}>
-                            {t('rdp.idleMinutesHint')}
-                          </small>
-                          <InputNumber
-                            id="rdp-idle-min"
-                            value={rdpIdleMinutes}
-                            onValueChange={e => setRdpIdleMinutes(Math.max(1, Math.min(1440, e.value || 1)))}
-                            min={1}
-                            max={1440}
-                            showButtons
-                            buttonLayout="horizontal"
-                            style={{ width: '100%', fontSize: '0.85rem' }}
-                            inputStyle={{ fontSize: '0.85rem', padding: '0.35rem 0.5rem' }}
-                          />
-                        </div>
-
-                        <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                          <label htmlFor="rdp-resize-ack-timeout" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: 'bold', fontSize: '0.8rem' }}>
-                            {t('rdp.resizeAckTimeout')}
-                          </label>
-                          <small style={{ display: 'block', marginBottom: 4, color: 'var(--text-color-secondary)', fontSize: '0.7rem' }}>
-                            {t('rdp.resizeAckTimeoutHint')}
-                          </small>
-                          <InputNumber
-                            id="rdp-resize-ack-timeout"
-                            value={rdpResizeAckTimeoutMs}
-                            onValueChange={e => setRdpResizeAckTimeoutMs(Math.max(600, Math.min(5000, e.value || 1500)))}
-                            min={600}
-                            max={5000}
-                            showButtons
-                            buttonLayout="horizontal"
-                            style={{ width: '100%', fontSize: '0.85rem' }}
-                            inputStyle={{ fontSize: '0.85rem', padding: '0.35rem 0.5rem' }}
-                          />
-                        </div>
-
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </TabPanel>
-
-            <TabPanel header="Clientes de IA" leftIcon="pi pi-comments" style={{ '--content-height': `${contentHeight}px` }}>
-              <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
-                <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: '8px', bottom: 0, width: 'calc(100% - 8px)' }}>
-                  {/* Header */}
-                  <div className="general-settings-header-wrapper" style={{ flexShrink: 0 }}>
-                    <div className="general-header-content">
-                      <span className="general-header-icon protocol-dialog-header-icon">
-                        <i className="pi pi-comments"></i>
-                      </span>
-                      <div className="general-header-text">
-                        <h3 className="general-header">Clientes de IA</h3>
-                        <p className="general-description">Configura tus clientes de IA y modelos locales para el procesamiento inteligente</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Contenido - sin general-settings-content para permitir grid responsivo */}
-                  <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
-                    <AIClientsTab themeColors={{ primary: 'var(--primary-color)' }} />
-                  </div>
-                </div>
+                <AppsTab
+                  themeColors={{ primary: 'var(--primary-color)' }}
+                  activeSubTab={activeSubTab}
+                  rdpIdleMinutes={rdpIdleMinutes}
+                  setRdpIdleMinutes={setRdpIdleMinutes}
+                  rdpSessionActivityMinutes={rdpSessionActivityMinutes}
+                  setRdpSessionActivityMinutes={setRdpSessionActivityMinutes}
+                  rdpResizeDebounceMs={rdpResizeDebounceMs}
+                  setRdpResizeDebounceMs={setRdpResizeDebounceMs}
+                  rdpResizeAckTimeoutMs={rdpResizeAckTimeoutMs}
+                  setRdpResizeAckTimeoutMs={setRdpResizeAckTimeoutMs}
+                  rdpGuacdInactivityMs={rdpGuacdInactivityMs}
+                  setRdpGuacdInactivityMs={setRdpGuacdInactivityMs}
+                  guacdPreferredMethod={guacdPreferredMethod}
+                  setGuacdPreferredMethod={setGuacdPreferredMethod}
+                  guacdStatus={guacdStatus}
+                  guacdRestarting={guacdRestarting}
+                  handleRestartGuacd={handleRestartGuacd}
+                  handleResetRdpDefaults={handleResetRdpDefaults}
+                  methodOptions={methodOptions}
+                />
               </div>
             </TabPanel>
 

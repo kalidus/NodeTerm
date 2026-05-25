@@ -51,17 +51,10 @@ const SETTINGS_SECTIONS = [
     ]
   },
   {
-    id: 'rdp',
-    labelKey: 'sidebar.rdp',
-    icon: 'pi pi-desktop',
-    color: '#06b6d4',
-    subitems: []
-  },
-  {
-    id: 'clientes-ia',
-    labelKey: 'sidebar.aiClients',
-    icon: 'pi pi-comments',
-    color: '#22c55e',
+    id: 'apps',
+    labelKey: 'sidebar.apps',
+    icon: 'pi pi-th-large',
+    color: '#3b82f6',
     subitems: []
   },
   {
