@@ -1,0 +1,613 @@
+/* ===================================
+   Apps Tab — Master-Detail (Settings)
+   Colores: variables del tema UI (--ui-*)
+   =================================== */
+
+.apps-tab {
+  padding: 0;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background: var(--ui-dialog-bg) !important;
+  color: var(--ui-dialog-text, var(--text-color, #e0e0e0));
+}
+
+/* Banner de estado global */
+.apps-status-banner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.45rem 0.875rem;
+  background: var(--ui-content-bg, var(--ui-dialog-bg));
+  border-bottom: 1px solid var(--ui-dialog-border, var(--ui-content-border));
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.apps-status-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.68rem;
+  color: color-mix(in srgb, var(--ui-dialog-text, #ccc) 72%, transparent);
+}
+
+.apps-status-stat strong {
+  color: var(--ui-dialog-text, var(--text-color));
+  font-weight: 600;
+}
+
+.apps-status-stat .apps-stat-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.apps-status-stat .apps-stat-dot.ok { background: #22c55e; }
+.apps-status-stat .apps-stat-dot.warn { background: #f59e0b; }
+.apps-status-stat .apps-stat-dot.muted { background: #94a3b8; }
+
+/* Shell master-detail */
+.apps-tab-shell {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--ui-dialog-bg);
+}
+
+/* Panel izquierdo (lista) */
+.apps-master {
+  width: 240px;
+  min-width: 200px;
+  max-width: 280px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--ui-dialog-border, var(--ui-content-border));
+  background: var(--ui-content-bg, var(--ui-dialog-bg));
+  min-height: 0;
+}
+
+.apps-master-toolbar {
+  padding: 0.5rem 0.625rem;
+  border-bottom: 1px solid var(--ui-dialog-border, var(--ui-content-border));
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  flex-shrink: 0;
+  background: var(--ui-content-bg, var(--ui-dialog-bg));
+}
+
+.apps-master-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--ui-dialog-text, var(--text-color));
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.apps-master-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.apps-master-search .pi-search {
+  position: absolute;
+  left: 0.45rem;
+  font-size: 0.65rem;
+  color: color-mix(in srgb, var(--ui-dialog-text, #aaa) 55%, transparent);
+  pointer-events: none;
+}
+
+.apps-master-search input {
+  width: 100%;
+  padding: 0.35rem 1.5rem 0.35rem 1.65rem;
+  border-radius: var(--settings-radius-input, 6px);
+  border: 1px solid var(--ui-content-border, var(--ui-dialog-border));
+  background: var(--ui-dialog-bg);
+  color: var(--ui-dialog-text, var(--text-color));
+  font-size: 0.7rem;
+  outline: none;
+}
+
+.apps-master-search input::placeholder {
+  color: color-mix(in srgb, var(--ui-dialog-text, #888) 45%, transparent);
+}
+
+.apps-master-search input:focus {
+  border-color: var(--ui-button-primary, var(--primary-color, #6366f1));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ui-button-primary, #6366f1) 35%, transparent);
+}
+
+.apps-master-search-clear {
+  position: absolute;
+  right: 0.3rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: color-mix(in srgb, var(--ui-dialog-text, #aaa) 55%, transparent);
+  padding: 0;
+  font-size: 0.6rem;
+}
+
+.apps-master-search-clear:hover {
+  color: var(--ui-dialog-text);
+}
+
+/* Pills de categoría */
+.apps-category-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.apps-pill {
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--ui-content-border, var(--ui-dialog-border));
+  background: var(--ui-dialog-bg);
+  color: color-mix(in srgb, var(--ui-dialog-text, #bbb) 75%, transparent);
+  font-size: 0.62rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.apps-pill:hover {
+  background: var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.06));
+  color: var(--ui-dialog-text);
+  border-color: var(--ui-button-primary, var(--primary-color));
+}
+
+.apps-pill.active {
+  background: var(--ui-button-primary, var(--primary-color, #6366f1));
+  border-color: var(--ui-button-primary, var(--primary-color, #6366f1));
+  color: var(--ui-button-primary-text, #fff);
+}
+
+/* Lista scrollable */
+.apps-master-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0.25rem 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb, rgba(255, 255, 255, 0.2)) transparent;
+}
+
+.apps-master-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.apps-master-list::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb, rgba(255, 255, 255, 0.15));
+  border-radius: 4px;
+}
+
+.apps-list-group-label {
+  padding: 0.5rem 0.625rem 0.2rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: color-mix(in srgb, var(--ui-dialog-text, #999) 55%, transparent);
+}
+
+.apps-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.625rem;
+  margin: 0 0.25rem;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.12s, border-color 0.12s;
+  user-select: none;
+}
+
+.apps-list-item:hover {
+  background: var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.06));
+}
+
+.apps-list-item.selected {
+  background: color-mix(in srgb, var(--ui-sidebar-selected, var(--ui-button-primary)) 18%, transparent);
+  border-color: color-mix(in srgb, var(--ui-sidebar-selected, var(--ui-button-primary)) 45%, transparent);
+}
+
+.apps-list-item.disabled-app {
+  opacity: 0.55;
+}
+
+.apps-list-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.apps-list-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.apps-list-name {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ui-dialog-text, var(--text-color));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.apps-list-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 14px;
+}
+
+.apps-list-toggle {
+  flex-shrink: 0;
+  transform: scale(0.85);
+  transform-origin: center right;
+}
+
+.apps-list-toggle .p-inputswitch {
+  pointer-events: auto;
+}
+
+/* Panel derecho (detalle) */
+.apps-detail {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--ui-dialog-bg);
+}
+
+.apps-detail-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1rem 1.125rem 1.5rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb, rgba(255, 255, 255, 0.2)) transparent;
+}
+
+.apps-detail-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.apps-detail-scroll::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb, rgba(255, 255, 255, 0.12));
+  border-radius: 4px;
+}
+
+.apps-detail-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: color-mix(in srgb, var(--ui-dialog-text, #aaa) 60%, transparent);
+  padding: 2rem;
+  text-align: center;
+}
+
+.apps-detail-empty i {
+  font-size: 2.5rem;
+  opacity: 0.25;
+}
+
+.apps-detail-empty p {
+  margin: 0;
+  font-size: 0.8rem;
+  max-width: 280px;
+}
+
+/* Cabecera del detalle */
+.apps-detail-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--ui-dialog-border, var(--ui-content-border));
+}
+
+.apps-detail-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.apps-detail-header-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.apps-detail-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.apps-detail-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ui-dialog-text, var(--text-color));
+  line-height: 1.2;
+}
+
+.apps-detail-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-bottom: 0.5rem;
+}
+
+.apps-detail-desc {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--ui-dialog-text, #bbb) 72%, transparent);
+}
+
+.apps-detail-header-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.apps-detail-enable-label {
+  font-size: 0.65rem;
+  color: color-mix(in srgb, var(--ui-dialog-text, #aaa) 65%, transparent);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Features */
+.apps-detail-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.apps-detail-feature {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  background: var(--ui-content-bg, var(--ui-dialog-bg));
+  border: 1px solid var(--ui-content-border, var(--ui-dialog-border));
+  color: var(--ui-dialog-text, var(--text-color));
+}
+
+.apps-detail-feature i {
+  font-size: 0.55rem;
+}
+
+/* Acciones rápidas (Docker / web) */
+.apps-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+  padding: 0.65rem 0.75rem;
+  background: var(--ui-content-bg, var(--ui-dialog-bg));
+  border: 1px solid var(--ui-content-border, var(--ui-dialog-border));
+  border-radius: var(--settings-radius-card, 8px);
+}
+
+.apps-detail-url {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1;
+  min-width: 180px;
+  font-size: 0.72rem;
+}
+
+.apps-detail-url code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.68rem;
+  color: var(--ui-dialog-text, var(--text-color));
+}
+
+.apps-detail-port {
+  padding: 0.12rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  font-family: monospace;
+}
+
+.apps-detail-docker-error {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  color: #ef4444;
+  margin-top: 0.35rem;
+}
+
+/* Sección configuración */
+.apps-detail-config {
+  margin-top: 0.25rem;
+}
+
+.apps-detail-config-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--ui-dialog-text, var(--text-color));
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.65rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--ui-dialog-border, var(--ui-content-border));
+}
+
+.apps-detail-config-title i {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+/* Sin resultados en lista */
+.apps-master-empty {
+  padding: 1.5rem 0.75rem;
+  text-align: center;
+  font-size: 0.72rem;
+  color: color-mix(in srgb, var(--ui-dialog-text, #999) 55%, transparent);
+}
+
+/* Animación */
+@keyframes appsDetailIn {
+  from { opacity: 0; transform: translateX(6px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.apps-detail-content {
+  animation: appsDetailIn 0.2s ease-out;
+}
+
+/* ── Config avanzada (hereda ai-clients-tab) con tema UI ── */
+.apps-tab .adv-config-inner {
+  background: var(--ui-content-bg, var(--ui-dialog-bg)) !important;
+  border: 1px solid var(--ui-content-border, var(--ui-dialog-border)) !important;
+  color: var(--ui-dialog-text, var(--text-color));
+}
+
+.apps-tab .config-field label {
+  color: color-mix(in srgb, var(--ui-dialog-text, #bbb) 72%, transparent) !important;
+}
+
+.apps-tab .config-field small {
+  color: color-mix(in srgb, var(--ui-dialog-text, #999) 55%, transparent) !important;
+}
+
+.apps-tab .cli-path {
+  background: var(--ui-dialog-bg) !important;
+  border-color: var(--ui-content-border, var(--ui-dialog-border)) !important;
+  color: var(--ui-dialog-text) !important;
+}
+
+.apps-tab .cli-status-row,
+.apps-tab .cli-status-row strong,
+.apps-tab .cli-status-row span {
+  color: var(--ui-dialog-text, var(--text-color));
+}
+
+.apps-tab .p-dropdown,
+.apps-tab .p-dropdown .p-dropdown-label,
+.apps-tab .p-dropdown .p-dropdown-trigger {
+  background: var(--ui-dialog-bg) !important;
+  border-color: var(--ui-content-border, var(--ui-dialog-border)) !important;
+  color: var(--ui-dialog-text) !important;
+}
+
+.apps-tab .p-dropdown-panel {
+  background: var(--ui-dialog-bg) !important;
+  border-color: var(--ui-dialog-border) !important;
+  color: var(--ui-dialog-text) !important;
+}
+
+.apps-tab .p-dropdown-item {
+  color: var(--ui-dialog-text) !important;
+}
+
+.apps-tab .p-dropdown-item.p-highlight,
+.apps-tab .p-dropdown-item:hover {
+  background: var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.08)) !important;
+  color: var(--ui-dialog-text) !important;
+}
+
+.apps-tab .p-inputtext,
+.apps-tab .p-inputnumber-input,
+.apps-tab .p-password input {
+  background: var(--ui-dialog-bg) !important;
+  border-color: var(--ui-content-border, var(--ui-dialog-border)) !important;
+  color: var(--ui-dialog-text) !important;
+}
+
+.apps-tab .p-inputnumber-button {
+  background: var(--ui-button-secondary, var(--ui-content-bg)) !important;
+  border-color: var(--ui-content-border) !important;
+  color: var(--ui-button-secondary-text, var(--ui-dialog-text)) !important;
+}
+
+.apps-tab .p-inputnumber-button:hover {
+  background: var(--ui-button-hover, var(--ui-tab-hover-bg)) !important;
+}
+
+.apps-tab .p-button.p-button-secondary {
+  background: var(--ui-button-secondary) !important;
+  border-color: var(--ui-content-border) !important;
+  color: var(--ui-button-secondary-text) !important;
+}
+
+.apps-tab .p-button.p-button-secondary:hover {
+  background: var(--ui-button-hover) !important;
+}
+
+.apps-tab .p-button.p-button-success {
+  background: var(--ui-button-primary) !important;
+  border-color: var(--ui-button-primary) !important;
+  color: var(--ui-button-primary-text) !important;
+}
+
+.apps-tab .p-button.p-button-text {
+  color: var(--ui-dialog-text) !important;
+}
+
+.apps-tab .ai-status-label {
+  color: inherit;
+}
+
+@media (max-width: 720px) {
+  .apps-tab-shell {
+    flex-direction: column;
+  }
+
+  .apps-master {
+    width: 100%;
+    max-width: none;
+    max-height: 42%;
+    border-right: none;
+    border-bottom: 1px solid var(--ui-dialog-border, var(--ui-content-border));
+  }
+}
