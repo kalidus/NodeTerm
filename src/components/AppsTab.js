@@ -1070,41 +1070,41 @@ const AppsTab = ({
   // Render para config avanzada de RDP
   const renderRdpAdvancedConfig = () => {
     const isRunning = guacdStatus?.isRunning;
-    const statusClass = isRunning ? 'rdp-status-active' : 'rdp-status-inactive';
+    const statusClass = isRunning ? 'apps-status-active' : 'apps-status-inactive';
     const statusText = isRunning ? t('rdp.guacdStatus.active') : t('rdp.guacdStatus.inactive');
     const activeMethodLabel = methodOptions.find(o => o.value === guacdPreferredMethod)?.label || guacdPreferredMethod;
 
     return (
-      <div className="rdp-config-container">
+      <div className="apps-config-container">
         {/* Tarjeta 1: Estado del Servidor Backend (Guacd) */}
-        <div className="rdp-config-card rdp-backend-card">
-          <div className="rdp-card-header">
-            <div className="rdp-card-icon-wrapper">
-              <i className="pi pi-server rdp-card-icon" />
+        <div className="apps-config-card apps-backend-card">
+          <div className="apps-card-header">
+            <div className="apps-card-icon-wrapper">
+              <i className="pi pi-server apps-card-icon" />
             </div>
-            <div className="rdp-card-header-text">
+            <div className="apps-card-header-text">
               <h3>{t('rdp.backendTitle') || 'Backend Guacamole'}</h3>
-              <p className="rdp-card-subtitle">Servicio de túnel y protocolo RDP</p>
+              <p className="apps-card-subtitle">Servicio de túnel y protocolo RDP</p>
             </div>
           </div>
 
-          <div className="rdp-card-content">
-            <div className="rdp-status-display">
-              <div className="rdp-status-main">
-                <span className={`rdp-status-indicator ${statusClass}`}></span>
-                <span className="rdp-status-text">
+          <div className="apps-card-content">
+            <div className="apps-status-display">
+              <div className="apps-status-main">
+                <span className={`apps-status-indicator ${statusClass}`}></span>
+                <span className="apps-status-text">
                   Estado: <strong>{statusText}</strong>
                 </span>
               </div>
-              <div className="rdp-status-technical">
-                <span className="rdp-tech-label">Dirección:</span>
-                <code className="rdp-tech-code">
+              <div className="apps-status-technical">
+                <span className="apps-tech-label">Dirección:</span>
+                <code className="apps-tech-code">
                   guacd://{guacdStatus?.host || '127.0.0.1'}:{guacdStatus?.port || 4822}
                 </code>
               </div>
-              <div className="rdp-status-technical">
-                <span className="rdp-tech-label">Método actual:</span>
-                <span className="rdp-tech-value">{activeMethodLabel}</span>
+              <div className="apps-status-technical">
+                <span className="apps-tech-label">Método actual:</span>
+                <span className="apps-tech-value">{activeMethodLabel}</span>
               </div>
             </div>
 
@@ -1118,7 +1118,7 @@ const AppsTab = ({
                 style={{ width: '100%' }}
                 className="rdp-dropdown-premium"
               />
-              <small className="rdp-field-hint">
+              <small className="apps-field-hint">
                 {t('rdp.guacdMethodHint') || 'Preferencia → alternativa (Windows: Docker/WSL, Linux: Docker/Nativo)'}
               </small>
             </div>
@@ -1134,14 +1134,14 @@ const AppsTab = ({
         </div>
 
         {/* Tarjeta 2: Parámetros de Sesión y Rendimiento */}
-        <div className="rdp-config-card rdp-params-card">
-          <div className="rdp-card-header">
-            <div className="rdp-card-icon-wrapper params-icon">
-              <i className="pi pi-sliders-h rdp-card-icon" />
+        <div className="apps-config-card apps-params-card">
+          <div className="apps-card-header">
+            <div className="apps-card-icon-wrapper params-icon">
+              <i className="pi pi-sliders-h apps-card-icon" />
             </div>
-            <div className="rdp-card-header-text">
+            <div className="apps-card-header-text">
               <h3>{t('rdp.title') || 'Parámetros de Sesión RDP'}</h3>
-              <p className="rdp-card-subtitle">Rendimiento, optimización y tiempos límite</p>
+              <p className="apps-card-subtitle">Rendimiento, optimización y tiempos límite</p>
             </div>
             <Button
               icon="pi pi-undo"
@@ -1152,10 +1152,10 @@ const AppsTab = ({
             />
           </div>
 
-          <div className="rdp-card-content">
-            <div className="rdp-params-grid">
+          <div className="apps-card-content">
+            <div className="apps-params-grid">
               {/* Field 1: Inactividad de sesión */}
-              <div className="rdp-param-field">
+              <div className="apps-param-field">
                 <label htmlFor="rdp-session-activity-min">
                   {t('rdp.sessionActivity') || 'Inactividad de Sesión (min)'}
                 </label>
@@ -1167,13 +1167,13 @@ const AppsTab = ({
                   style={{ width: '100%' }} inputStyle={{ padding: '0.35rem 0.5rem' }}
                   className="rdp-inputnumber-premium"
                 />
-                <span className="rdp-param-desc">
+                <span className="apps-param-desc">
                   {t('rdp.sessionActivityHint') || 'Tiempo máximo de sesión antes de reconexión.'}
                 </span>
               </div>
 
               {/* Field 2: Umbral de inactividad */}
-              <div className="rdp-param-field">
+              <div className="apps-param-field">
                 <label htmlFor="rdp-idle-min">
                   {t('rdp.idleMinutes') || 'Umbral de Inactividad (min)'}
                 </label>
@@ -1185,13 +1185,13 @@ const AppsTab = ({
                   style={{ width: '100%' }} inputStyle={{ padding: '0.35rem 0.5rem' }}
                   className="rdp-inputnumber-premium"
                 />
-                <span className="rdp-param-desc">
+                <span className="apps-param-desc">
                   {t('rdp.idleMinutesHint') || 'Pausa la conexión tras inactividad para ahorrar recursos.'}
                 </span>
               </div>
 
               {/* Field 3: Debounce de redimensión */}
-              <div className="rdp-param-field">
+              <div className="apps-param-field">
                 <label htmlFor="rdp-resize-debounce">
                   {t('rdp.resizeDebounce') || 'Debounce de Redimensión (ms)'}
                 </label>
@@ -1203,13 +1203,13 @@ const AppsTab = ({
                   style={{ width: '100%' }} inputStyle={{ padding: '0.35rem 0.5rem' }}
                   className="rdp-inputnumber-premium"
                 />
-                <span className="rdp-param-desc">
+                <span className="apps-param-desc">
                   {t('rdp.resizeDebounceHint') || 'Espera antes de enviar el nuevo tamaño al servidor.'}
                 </span>
               </div>
 
               {/* Field 4: Timeout ACK */}
-              <div className="rdp-param-field">
+              <div className="apps-param-field">
                 <label htmlFor="rdp-resize-ack-timeout">
                   {t('rdp.resizeAckTimeout') || 'Timeout de ACK (ms)'}
                 </label>
@@ -1221,7 +1221,7 @@ const AppsTab = ({
                   style={{ width: '100%' }} inputStyle={{ padding: '0.35rem 0.5rem' }}
                   className="rdp-inputnumber-premium"
                 />
-                <span className="rdp-param-desc">
+                <span className="apps-param-desc">
                   {t('rdp.resizeAckTimeoutHint') || 'Espera de confirmación de pantalla antes de permitir otra redimensión.'}
                 </span>
               </div>
@@ -1238,158 +1238,286 @@ const AppsTab = ({
     if (client.isRdp) {
       return renderRdpAdvancedConfig();
     }
-    if (key === 'claude') {
+    
+    if (client.isLocalCli) {
+      const status = getCliStatus(key);
+      const isInstalled = status?.installed;
+      const cliStatusClass = isInstalled ? 'apps-status-active' : 'apps-status-inactive';
+      const cliStatusText = status?.loading 
+        ? 'verificando...' 
+        : isInstalled 
+          ? `Listo${status.version && status.version !== 'unknown' ? ` (v${status.version})` : ''}` 
+          : 'No instalado';
+      
+      // Determine dynamic functions, configs and save handlers based on key
+      let config, setConfig, installFn, checkFn, saveFn, brandClass, brandColor;
+      if (key === 'claude') {
+        config = claudeConfig; setConfig = setClaudeConfig;
+        installFn = installClaudeCli; checkFn = checkClaudeCliStatus; saveFn = handleSaveClaudeConfig;
+        brandClass = 'btn-brand-claude'; brandColor = '#f59e0b';
+      } else if (key === 'opencode') {
+        config = openCodeConfig; setConfig = setOpenCodeConfig;
+        installFn = installOpenCodeCli; checkFn = checkOpenCodeCliStatus; saveFn = handleSaveOpenCodeConfig;
+        brandClass = 'btn-brand-opencode'; brandColor = '#6366f1';
+      } else if (key === 'geminicli') {
+        config = geminiCliConfig; setConfig = setGeminiCliConfig;
+        installFn = installGeminiCli; checkFn = checkGeminiCliStatus; saveFn = handleSaveGeminiCliConfig;
+        brandClass = 'btn-brand-gemini'; brandColor = '#1a73e8';
+      } else if (key === 'antigravitycli') {
+        config = antigravityCliConfig; setConfig = setAntigravityCliConfig;
+        installFn = installAntigravityCli; checkFn = checkAntigravityCliStatus; saveFn = handleSaveAntigravityCliConfig;
+        brandClass = 'btn-brand-antigravity'; brandColor = '#4285f4';
+      } else if (key === 'codexcli') {
+        config = codexCliConfig; setConfig = setCodexCliConfig;
+        installFn = installCodexCli; checkFn = checkCodexCliStatus; saveFn = handleSaveCodexCliConfig;
+        brandClass = 'btn-brand-codex'; brandColor = '#10b981';
+      }
+
       return (
-        <div className="adv-config-inner">
-          <div className="cli-status-row">
-            <i className="pi pi-info-circle" style={{ color: '#f59e0b' }} />
-            <strong>Estado CLI:</strong>{' '}
-            <span>{claudeCliStatus.loading ? 'verificando...' : claudeCliStatus.installed ? `instalado${claudeCliStatus.version ? ` (${claudeCliStatus.version})` : ''}` : 'no instalado'}</span>
-            {claudeCliStatus.binaryPath && <code className="cli-path">{claudeCliStatus.binaryPath}</code>}
+        <div className="apps-config-container">
+          {/* Tarjeta 1: Estado del CLI y Acciones */}
+          <div className="apps-config-card apps-cli-status-card" style={{ borderColor: `${brandColor}25` }}>
+            <div className="apps-card-header">
+              <div className="apps-card-icon-wrapper" style={{ background: `${brandColor}12`, borderColor: `${brandColor}25`, color: brandColor }}>
+                <i className="pi pi-info-circle apps-card-icon" />
+              </div>
+              <div className="apps-card-header-text">
+                <h3>Estado del CLI</h3>
+                <p className="apps-card-subtitle">Verificación e instalación del binario</p>
+              </div>
+            </div>
+
+            <div className="apps-card-content">
+              <div className="apps-status-display">
+                <div className="apps-status-main">
+                  <span className={`apps-status-indicator ${cliStatusClass}`}></span>
+                  <span className="apps-status-text">
+                    Estado: <strong>{cliStatusText}</strong>
+                  </span>
+                </div>
+                {status?.binaryPath && (
+                  <div className="apps-status-technical">
+                    <span className="apps-tech-label">Binario:</span>
+                    <code className="apps-tech-code">{status.binaryPath}</code>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem' }}>
+                {!isInstalled && (
+                  <Button 
+                    label="Instalar CLI" 
+                    icon="pi pi-download" 
+                    className={`apps-restart-btn p-button-sm ${brandClass}`} 
+                    onClick={installFn} 
+                    loading={status?.installing} 
+                  />
+                )}
+                {isInstalled && (
+                  <Button 
+                    label="Reinstalar" 
+                    icon="pi pi-refresh" 
+                    className="apps-restart-btn p-button-secondary p-button-sm" 
+                    onClick={installFn} 
+                    loading={status?.installing} 
+                  />
+                )}
+                <Button 
+                  label="Verificar Estado" 
+                  icon="pi pi-search" 
+                  className="apps-restart-btn p-button-secondary p-button-sm" 
+                  onClick={checkFn} 
+                  loading={status?.loading} 
+                />
+              </div>
+              
+              {key === 'antigravitycli' && (
+                <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.66rem', opacity: 0.8, color: 'var(--text-color-secondary)', lineHeight: 1.35 }}>
+                  La autenticación se realiza dentro del CLI con tu cuenta Google. Tras instalar, reinicia NodeTerm si no se detecta el binario.
+                </p>
+              )}
+              {status?.error && (
+                <div className="apps-detail-docker-error" style={{ marginTop: '0.5rem' }}>
+                  <i className="pi pi-times-circle" />
+                  <span>{status.error}</span>
+                </div>
+              )}
+            </div>
           </div>
-          <div className="cli-action-row">
-            {!claudeCliStatus.installed && <Button label="Instalar CLI" icon="pi pi-download" className="p-button-warning p-button-sm" onClick={installClaudeCli} loading={claudeCliStatus.installing} />}
-            {claudeCliStatus.installed && <Button label="Reinstalar" icon="pi pi-refresh" className="p-button-secondary p-button-sm" onClick={installClaudeCli} loading={claudeCliStatus.installing} />}
-            <Button label="Verificar" icon="pi pi-search" className="p-button-secondary p-button-sm" onClick={checkClaudeCliStatus} loading={claudeCliStatus.loading} />
+
+          {/* Tarjeta 2: Configuración de Ejecución */}
+          <div className="apps-config-card apps-cli-params-card" style={{ borderColor: `${brandColor}25` }}>
+            <div className="apps-card-header">
+              <div className="apps-card-icon-wrapper" style={{ background: `${brandColor}12`, borderColor: `${brandColor}25`, color: brandColor }}>
+                <i className="pi pi-cog apps-card-icon" />
+              </div>
+              <div className="apps-card-header-text">
+                <h3>Configuración</h3>
+                <p className="apps-card-subtitle">Parámetros y credenciales del proceso</p>
+              </div>
+            </div>
+
+            <div className="apps-card-content">
+              <div className="apps-params-grid">
+                <div className="apps-param-field" style={{ gridColumn: 'span 2' }}>
+                  <label htmlFor={`${key}-binary-path`}>Ruta Binario</label>
+                  <InputText 
+                    id={`${key}-binary-path`}
+                    value={config.binaryPath} 
+                    onChange={(e) => setConfig(p => ({ ...p, binaryPath: e.target.value }))} 
+                    placeholder={key === 'claude' ? 'npx @anthropic-ai/claude-code' : key === 'antigravitycli' ? '%LOCALAPPDATA%\\agy\\bin\\agy.exe' : key} 
+                    className="p-inputtext-sm" 
+                    style={{ width: '100%' }} 
+                  />
+                </div>
+
+                {key === 'claude' && (
+                  <div className="apps-param-field">
+                    <label htmlFor="claude-model">Modelo por defecto</label>
+                    <InputText 
+                      id="claude-model"
+                      value={claudeConfig.defaultModel} 
+                      onChange={(e) => setConfig(p => ({ ...p, defaultModel: e.target.value }))} 
+                      placeholder="claude-3-7-sonnet-latest" 
+                      className="p-inputtext-sm" 
+                      style={{ width: '100%' }} 
+                    />
+                  </div>
+                )}
+
+                <div className="apps-param-field" style={{ gridColumn: key !== 'claude' ? 'span 2' : 'span 1' }}>
+                  <label htmlFor={`${key}-extra-args`}>Argumentos Extra</label>
+                  <InputText 
+                    id={`${key}-extra-args`}
+                    value={config.extraArgs} 
+                    onChange={(e) => setConfig(p => ({ ...p, extraArgs: e.target.value }))} 
+                    placeholder={key === 'claude' ? '--no-interactive' : ''} 
+                    className="p-inputtext-sm" 
+                    style={{ width: '100%' }} 
+                  />
+                </div>
+
+                {key === 'claude' && (
+                  <div className="apps-param-field" style={{ gridColumn: 'span 2' }}>
+                    <label htmlFor="claude-auth-token">Auth Token</label>
+                    <Password 
+                      id="claude-auth-token"
+                      value={claudeConfig.authToken} 
+                      onChange={(e) => setConfig(p => ({ ...p, authToken: e.target.value }))} 
+                      feedback={false} 
+                      toggleMask 
+                      placeholder="Token opcional" 
+                      className="p-inputtext-sm" 
+                      style={{ width: '100%' }} 
+                      inputStyle={{ width: '100%' }} 
+                    />
+                  </div>
+                )}
+              </div>
+
+              {(key === 'geminicli' || key === 'codexcli') && (
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.85rem', marginTop: '0.25rem' }}>
+                  <div className="apps-param-field">
+                    <label htmlFor={`${key}-api-key`}>{key === 'geminicli' ? 'API Key de Gemini' : 'API Key de OpenAI'}</label>
+                    <Password 
+                      id={`${key}-api-key`}
+                      value={key === 'geminicli' ? geminiApiKeyInput : codexApiKeyInput} 
+                      onChange={(e) => key === 'geminicli' ? setGeminiApiKeyInput(e.target.value) : setCodexApiKeyInput(e.target.value)} 
+                      feedback={false} 
+                      toggleMask 
+                      placeholder={key === 'geminicli' 
+                        ? (geminiApiKeySaved ? 'API key guardada (escribe para reemplazar)' : 'Pegar API key Gemini') 
+                        : (codexApiKeySaved ? 'API key guardada (escribe para reemplazar)' : 'Pegar API key OpenAI')
+                      } 
+                      style={{ width: '100%' }} 
+                      inputStyle={{ width: '100%' }} 
+                    />
+                  </div>
+                  <div style={{ marginTop: '0.65rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <Button 
+                      label={(key === 'geminicli' ? geminiApiKeyInput : codexApiKeyInput).trim() ? 'Guardar API key' : 'Eliminar API key'} 
+                      icon="pi pi-key" 
+                      className="p-button-secondary p-button-sm" 
+                      onClick={key === 'geminicli' ? saveGeminiApiKey : saveCodexApiKey} 
+                    />
+                    {((key === 'geminicli' && geminiApiKeySaved) || (key === 'codexcli' && codexApiKeySaved)) && (
+                      <span style={{ color: '#22c55e', fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <i className="pi pi-check" /> Guardada
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <Button 
+                label="Guardar Configuración" 
+                icon="pi pi-save" 
+                className={`p-button-sm p-button-text ${brandClass}`}
+                style={{ marginTop: '0.5rem', color: brandColor, alignSelf: 'flex-start' }} 
+                onClick={saveFn} 
+              />
+            </div>
           </div>
-          <div className="config-grid">
-            <div className="config-field"><label>Ruta binario</label><InputText value={claudeConfig.binaryPath} onChange={(e) => setClaudeConfig(p => ({ ...p, binaryPath: e.target.value }))} placeholder="npx @anthropic-ai/claude-code" className="p-inputtext-sm" style={{ width: '100%' }} /></div>
-            <div className="config-field"><label>Modelo</label><InputText value={claudeConfig.defaultModel} onChange={(e) => setClaudeConfig(p => ({ ...p, defaultModel: e.target.value }))} placeholder="claude-3-7-sonnet-latest" className="p-inputtext-sm" style={{ width: '100%' }} /></div>
-            <div className="config-field"><label>Args extra</label><InputText value={claudeConfig.extraArgs} onChange={(e) => setClaudeConfig(p => ({ ...p, extraArgs: e.target.value }))} placeholder="--no-interactive" className="p-inputtext-sm" style={{ width: '100%' }} /></div>
-            <div className="config-field"><label>Auth Token</label><Password value={claudeConfig.authToken} onChange={(e) => setClaudeConfig(p => ({ ...p, authToken: e.target.value }))} feedback={false} toggleMask placeholder="Token opcional" className="p-inputtext-sm" style={{ width: '100%' }} inputStyle={{ width: '100%' }} /></div>
-          </div>
-          <Button label="Guardar Configuración" icon="pi pi-save" className="p-button-warning p-button-sm p-button-text" style={{ marginTop: '0.5rem' }} onClick={handleSaveClaudeConfig} />
-          {claudeCliStatus.error && <div className="config-error"><i className="pi pi-times-circle" /> {claudeCliStatus.error}</div>}
         </div>
       );
     }
-    if (key === 'opencode') {
-      return (
-        <div className="adv-config-inner">
-          <div className="cli-status-row">
-            <i className="pi pi-info-circle" style={{ color: '#6366f1' }} />
-            <strong>Estado CLI:</strong>{' '}
-            <span>{openCodeCliStatus.loading ? 'verificando...' : openCodeCliStatus.installed ? `instalado${openCodeCliStatus.version ? ` (${openCodeCliStatus.version})` : ''}` : 'no instalado'}</span>
-            {openCodeCliStatus.binaryPath && <code className="cli-path">{openCodeCliStatus.binaryPath}</code>}
-          </div>
-          <div className="cli-action-row">
-            {!openCodeCliStatus.installed && <Button label="Instalar CLI" icon="pi pi-download" className="p-button-sm" style={{ background: '#6366f1', border: 'none' }} onClick={installOpenCodeCli} loading={openCodeCliStatus.installing} />}
-            {openCodeCliStatus.installed && <Button label="Reinstalar" icon="pi pi-refresh" className="p-button-secondary p-button-sm" onClick={installOpenCodeCli} loading={openCodeCliStatus.installing} />}
-            <Button label="Verificar" icon="pi pi-search" className="p-button-secondary p-button-sm" onClick={checkOpenCodeCliStatus} loading={openCodeCliStatus.loading} />
-          </div>
-          <div className="config-grid">
-            <div className="config-field"><label>Ruta binario</label><InputText value={openCodeConfig.binaryPath} onChange={(e) => setOpenCodeConfig(p => ({ ...p, binaryPath: e.target.value }))} placeholder="opencode" className="p-inputtext-sm" style={{ width: '100%' }} /></div>
-            <div className="config-field"><label>Args extra</label><InputText value={openCodeConfig.extraArgs} onChange={(e) => setOpenCodeConfig(p => ({ ...p, extraArgs: e.target.value }))} placeholder="" className="p-inputtext-sm" style={{ width: '100%' }} /></div>
-          </div>
-          <Button label="Guardar Configuración" icon="pi pi-save" className="p-button-sm p-button-text" style={{ marginTop: '0.5rem', color: '#6366f1' }} onClick={handleSaveOpenCodeConfig} />
-          {openCodeCliStatus.error && <div className="config-error"><i className="pi pi-times-circle" /> {openCodeCliStatus.error}</div>}
-        </div>
-      );
-    }
-    if (key === 'geminicli') {
-      return (
-        <div className="adv-config-inner">
-          <div className="cli-status-row">
-            <i className="pi pi-info-circle" style={{ color: '#1a73e8' }} />
-            <strong>Estado CLI:</strong>{' '}
-            <span>{geminiCliStatus.loading ? 'verificando...' : geminiCliStatus.installed ? `instalado${geminiCliStatus.version ? ` (${geminiCliStatus.version})` : ''}` : 'no instalado'}</span>
-            {geminiCliStatus.binaryPath && <code className="cli-path">{geminiCliStatus.binaryPath}</code>}
-          </div>
-          <div className="cli-action-row">
-            {!geminiCliStatus.installed && <Button label="Instalar CLI" icon="pi pi-download" className="p-button-sm" style={{ background: '#1a73e8', border: 'none' }} onClick={installGeminiCli} loading={geminiCliStatus.installing} />}
-            {geminiCliStatus.installed && <Button label="Reinstalar" icon="pi pi-refresh" className="p-button-secondary p-button-sm" onClick={installGeminiCli} loading={geminiCliStatus.installing} />}
-            <Button label="Verificar" icon="pi pi-search" className="p-button-secondary p-button-sm" onClick={checkGeminiCliStatus} loading={geminiCliStatus.loading} />
-          </div>
-          <div className="config-grid">
-            <div className="config-field"><label>Ruta binario</label><InputText value={geminiCliConfig.binaryPath} onChange={(e) => setGeminiCliConfig(p => ({ ...p, binaryPath: e.target.value }))} placeholder="gemini" className="p-inputtext-sm" style={{ width: '100%' }} /></div>
-            <div className="config-field"><label>Args extra</label><InputText value={geminiCliConfig.extraArgs} onChange={(e) => setGeminiCliConfig(p => ({ ...p, extraArgs: e.target.value }))} placeholder="--model gemini-1.5-flash" className="p-inputtext-sm" style={{ width: '100%' }} /></div>
-          </div>
-          <Button label="Guardar Configuración" icon="pi pi-save" className="p-button-sm p-button-text" style={{ marginTop: '0.5rem', color: '#1a73e8' }} onClick={handleSaveGeminiCliConfig} />
-          <div style={{ marginTop: '0.75rem' }}>
-            <Password value={geminiApiKeyInput} onChange={(e) => setGeminiApiKeyInput(e.target.value)} feedback={false} toggleMask placeholder={geminiApiKeySaved ? 'API key guardada (escribe para reemplazar)' : 'Pegar API key Gemini'} style={{ width: '100%', maxWidth: '420px' }} inputStyle={{ width: '100%' }} />
-          </div>
-          <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <Button label={geminiApiKeyInput.trim() ? 'Guardar API key' : 'Eliminar API key'} icon="pi pi-key" className="p-button-secondary p-button-sm" onClick={saveGeminiApiKey} />
-            {geminiApiKeySaved && <span style={{ color: '#93c5fd', fontSize: '0.85rem', alignSelf: 'center' }}>API key guardada</span>}
-          </div>
-          {geminiCliStatus.error && <div className="config-error"><i className="pi pi-times-circle" /> {geminiCliStatus.error}</div>}
-        </div>
-      );
-    }
-    if (key === 'antigravitycli') {
-      return (
-        <div className="adv-config-inner">
-          <div className="cli-status-row">
-            <i className="pi pi-info-circle" style={{ color: '#4285f4' }} />
-            <strong>Estado CLI:</strong>{' '}
-            <span>{antigravityCliStatus.loading ? 'verificando...' : antigravityCliStatus.installed ? `instalado${antigravityCliStatus.version ? ` (${antigravityCliStatus.version})` : ''}` : 'no instalado'}</span>
-            {antigravityCliStatus.binaryPath && <code className="cli-path">{antigravityCliStatus.binaryPath}</code>}
-          </div>
-          <div className="cli-action-row">
-            {!antigravityCliStatus.installed && <Button label="Instalar CLI" icon="pi pi-download" className="p-button-sm" style={{ background: '#4285f4', border: 'none' }} onClick={installAntigravityCli} loading={antigravityCliStatus.installing} />}
-            {antigravityCliStatus.installed && <Button label="Reinstalar" icon="pi pi-refresh" className="p-button-secondary p-button-sm" onClick={installAntigravityCli} loading={antigravityCliStatus.installing} />}
-            <Button label="Verificar" icon="pi pi-search" className="p-button-secondary p-button-sm" onClick={checkAntigravityCliStatus} loading={antigravityCliStatus.loading} />
-          </div>
-          <div className="config-grid">
-            <div className="config-field"><label>Ruta binario</label><InputText value={antigravityCliConfig.binaryPath} onChange={(e) => setAntigravityCliConfig(p => ({ ...p, binaryPath: e.target.value }))} placeholder="%LOCALAPPDATA%\\agy\\bin\\agy.exe" className="p-inputtext-sm" style={{ width: '100%' }} /></div>
-            <div className="config-field"><label>Args extra</label><InputText value={antigravityCliConfig.extraArgs} onChange={(e) => setAntigravityCliConfig(p => ({ ...p, extraArgs: e.target.value }))} placeholder="" className="p-inputtext-sm" style={{ width: '100%' }} /></div>
-          </div>
-          <Button label="Guardar Configuración" icon="pi pi-save" className="p-button-sm p-button-text" style={{ marginTop: '0.5rem', color: '#4285f4' }} onClick={handleSaveAntigravityCliConfig} />
-          <p style={{ marginTop: '0.5rem', fontSize: '0.72rem', opacity: 0.85, color: 'var(--text-color-secondary)' }}>
-            La autenticación se realiza dentro del CLI con tu cuenta Google. Tras instalar, reinicia NodeTerm si no se detecta el binario.
-          </p>
-          {antigravityCliStatus.error && <div className="config-error"><i className="pi pi-times-circle" /> {antigravityCliStatus.error}</div>}
-        </div>
-      );
-    }
-    if (key === 'codexcli') {
-      return (
-        <div className="adv-config-inner">
-          <div className="cli-status-row">
-            <i className="pi pi-info-circle" style={{ color: '#10b981' }} />
-            <strong>Estado CLI:</strong>{' '}
-            <span>{codexCliStatus.loading ? 'verificando...' : codexCliStatus.installed ? `instalado${codexCliStatus.version ? ` (${codexCliStatus.version})` : ''}` : 'no instalado'}</span>
-            {codexCliStatus.binaryPath && <code className="cli-path">{codexCliStatus.binaryPath}</code>}
-          </div>
-          <div className="cli-action-row">
-            {!codexCliStatus.installed && <Button label="Instalar CLI" icon="pi pi-download" className="p-button-sm" style={{ background: '#10b981', border: 'none' }} onClick={installCodexCli} loading={codexCliStatus.installing} />}
-            {codexCliStatus.installed && <Button label="Reinstalar" icon="pi pi-refresh" className="p-button-secondary p-button-sm" onClick={installCodexCli} loading={codexCliStatus.installing} />}
-            <Button label="Verificar" icon="pi pi-search" className="p-button-secondary p-button-sm" onClick={checkCodexCliStatus} loading={codexCliStatus.loading} />
-          </div>
-          <div className="config-grid">
-            <div className="config-field"><label>Ruta binario</label><InputText value={codexCliConfig.binaryPath} onChange={(e) => setCodexCliConfig(p => ({ ...p, binaryPath: e.target.value }))} placeholder="codex" className="p-inputtext-sm" style={{ width: '100%' }} /></div>
-            <div className="config-field"><label>Args extra</label><InputText value={codexCliConfig.extraArgs} onChange={(e) => setCodexCliConfig(p => ({ ...p, extraArgs: e.target.value }))} placeholder="" className="p-inputtext-sm" style={{ width: '100%' }} /></div>
-          </div>
-          <Button label="Guardar Configuración" icon="pi pi-save" className="p-button-sm p-button-text" style={{ marginTop: '0.5rem', color: '#10b981' }} onClick={handleSaveCodexCliConfig} />
-          <div style={{ marginTop: '0.75rem' }}>
-            <Password value={codexApiKeyInput} onChange={(e) => setCodexApiKeyInput(e.target.value)} feedback={false} toggleMask placeholder={codexApiKeySaved ? 'API key guardada (escribe para reemplazar)' : 'Pegar API key OpenAI'} style={{ width: '100%', maxWidth: '420px' }} inputStyle={{ width: '100%' }} />
-          </div>
-          <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <Button label={codexApiKeyInput.trim() ? 'Guardar API key' : 'Eliminar API key'} icon="pi pi-key" className="p-button-secondary p-button-sm" onClick={saveCodexApiKey} />
-            {codexApiKeySaved && <span style={{ color: '#93c5fd', fontSize: '0.85rem', alignSelf: 'center' }}>API key guardada</span>}
-          </div>
-          {codexCliStatus.error && <div className="config-error"><i className="pi pi-times-circle" /> {codexCliStatus.error}</div>}
-        </div>
-      );
-    }
+    
     if (client.requiresDocker) {
       const status = dockerStatus[client.key];
       const isBusy = status?.loading;
+      const dockerStatusClass = status?.running ? 'apps-status-active' : 'apps-status-inactive';
+      
       return (
-        <div className="adv-config-inner">
-          <div className="cli-status-row">
-            <i className="pi pi-docker" style={{ color: client.color }} />
-            <strong>Servidor Docker:</strong>{' '}
-            <span>{status?.updateAvailable ? 'Actualización disponible' : 'Actualizado a la última versión'}</span>
-          </div>
-          <div className="cli-action-row">
-            <Button label="Buscar actualización" icon="pi pi-search" className="p-button-secondary p-button-sm" onClick={() => checkDockerUpdate(client.key)} loading={isBusy} />
-            {status?.updateAvailable && (
-              <Button label="Actualizar ahora" icon="pi pi-download" className="p-button-success p-button-sm" onClick={() => applyDockerUpdate(client.key)} loading={isBusy} />
-            )}
-          </div>
-          <div style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: 'var(--text-color-secondary)' }}>
-            Las actualizaciones descargarán la última imagen de Docker Hub y reiniciarán el contenedor automáticamente.
+        <div className="apps-config-container" style={{ gridTemplateColumns: '1fr' }}>
+          <div className="apps-config-card apps-docker-card" style={{ borderColor: `${client.color}25` }}>
+            <div className="apps-card-header">
+              <div className="apps-card-icon-wrapper" style={{ background: `${client.color}12`, borderColor: `${client.color}25`, color: client.color }}>
+                <i className="pi pi-docker apps-card-icon" />
+              </div>
+              <div className="apps-card-header-text">
+                <h3>Servidor Docker</h3>
+                <p className="apps-card-subtitle">Administración de imagen y actualizaciones del contenedor</p>
+              </div>
+            </div>
+
+            <div className="apps-card-content">
+              <div className="apps-status-display">
+                <div className="apps-status-main">
+                  <span className={`apps-status-indicator ${dockerStatusClass}`}></span>
+                  <span className="apps-status-text">
+                    Estado del contenedor: <strong>{status?.running ? 'En ejecución' : 'Detenido'}</strong>
+                  </span>
+                </div>
+                <div className="apps-status-technical">
+                  <span className="apps-tech-label">Imagen:</span>
+                  <span className="apps-tech-value" style={{ color: status?.updateAvailable ? '#eab308' : '#22c55e', fontWeight: 600 }}>
+                    {status?.updateAvailable ? 'Actualización disponible' : 'Actualizado a la última versión'}
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+                <Button 
+                  label="Buscar actualización" 
+                  icon="pi pi-search" 
+                  className="p-button-secondary p-button-sm" 
+                  onClick={() => checkDockerUpdate(client.key)} 
+                  loading={isBusy} 
+                />
+                {status?.updateAvailable && (
+                  <Button 
+                    label="Actualizar ahora" 
+                    icon="pi pi-download" 
+                    className="p-button-success p-button-sm" 
+                    onClick={() => applyDockerUpdate(client.key)} 
+                    loading={isBusy} 
+                  />
+                )}
+              </div>
+              <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.68rem', color: 'var(--text-color-secondary)', lineHeight: 1.35 }}>
+                Las actualizaciones descargarán la última imagen de Docker Hub y reiniciarán el contenedor automáticamente.
+              </p>
+            </div>
           </div>
         </div>
       );
