@@ -1607,6 +1607,8 @@ const App = () => {
     setStatusBarIconTheme,
     statusBarPollingInterval,
     setStatusBarPollingInterval,
+    statusBarLayout,
+    setStatusBarLayout,
     updateStatusBarFromSync
   } = useStatusBarSettings();
 
@@ -3425,6 +3427,8 @@ const App = () => {
     setStatusBarIconTheme,
     statusBarPollingInterval,
     setStatusBarPollingInterval,
+    statusBarLayout,
+    setStatusBarLayout,
     exportTreeToJson,
     importTreeFromJson,
     sessionManager,
@@ -3443,6 +3447,7 @@ const App = () => {
     explorerColorTheme, setExplorerColorTheme, sidebarFont, setSidebarFont, sidebarFontSize, setSidebarFontSize,
     sidebarFontColor, setSidebarFontColor, treeTheme, setTreeTheme, sessionActionIconTheme, setSessionActionIconTheme,
     statusBarIconTheme, setStatusBarIconTheme, statusBarPollingInterval, setStatusBarPollingInterval,
+    statusBarLayout, setStatusBarLayout,
     exportTreeToJson, importTreeFromJson, sessionManager, handleMasterPasswordConfigured, nodes,
     handleUpdateUserPassword, handleEditConnectionFromUsers
   ]);
@@ -3655,6 +3660,8 @@ const App = () => {
           setStatusBarIconTheme={setStatusBarIconTheme}
           statusBarPollingInterval={statusBarPollingInterval}
           setStatusBarPollingInterval={setStatusBarPollingInterval}
+          statusBarLayout={statusBarLayout}
+          setStatusBarLayout={setStatusBarLayout}
 
           // Estados de diálogos
           showSSHDialog={showSSHDialog}

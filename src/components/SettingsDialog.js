@@ -179,6 +179,8 @@ const SettingsContent = ({
   setExplorerFontSize,
   statusBarPollingInterval,
   setStatusBarPollingInterval,
+  statusBarLayout,
+  setStatusBarLayout,
   statusBarIconTheme,
   setStatusBarIconTheme,
   localFontFamily,
@@ -3639,6 +3641,8 @@ const SettingsContent = ({
                     setStatusBarIconTheme={setStatusBarIconTheme}
                     statusBarPollingInterval={statusBarPollingInterval}
                     setStatusBarPollingInterval={setStatusBarPollingInterval}
+                    statusBarLayout={statusBarLayout}
+                    setStatusBarLayout={setStatusBarLayout}
                   />
                 )}
                 {activeSubTab === 'explorador-sesiones' && (

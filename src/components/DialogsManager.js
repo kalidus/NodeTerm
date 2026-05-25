@@ -293,6 +293,8 @@ const DialogsManager = ({
   setStatusBarIconTheme,
   statusBarPollingInterval,
   setStatusBarPollingInterval,
+  statusBarLayout,
+  setStatusBarLayout,
 
   // Sync settings props
   updateThemesFromSync,
@@ -531,6 +533,8 @@ const DialogsManager = ({
         setStatusBarIconTheme={setStatusBarIconTheme}
         statusBarPollingInterval={statusBarPollingInterval}
         setStatusBarPollingInterval={setStatusBarPollingInterval}
+        statusBarLayout={statusBarLayout}
+        setStatusBarLayout={setStatusBarLayout}
         exportTreeToJson={exportTreeToJson}
         importTreeFromJson={importTreeFromJson}
         sessionManager={sessionManager}

@@ -34,9 +34,6 @@ const WSLTerminal = forwardRef(({
     const [linuxKernel, setLinuxKernel] = useState('');
     const [linuxArch, setLinuxArch] = useState('');
     const [linuxPrettyName, setLinuxPrettyName] = useState('');
-    const [showNetworkDisks, setShowNetworkDisks] = useState(() => {
-        try { return (localStorage.getItem('localShowNetworkDisks') || 'true') === 'true'; } catch { return true; }
-    });
 
     const getScopedStatusBarCssVars = () => {
         const themeObj = statusBarThemes[localStatusBarThemeName] || statusBarThemes['Default Dark'];
@@ -132,17 +129,11 @@ const WSLTerminal = forwardRef(({
                     : [];
                 const rxBytesPerSec = ((systemStats.network?.download || 0) * 1000000) / 8;
                 const txBytesPerSec = ((systemStats.network?.upload || 0) * 1000000) / 8;
-                const showNet = (() => { try { return (localStorage.getItem('localShowNetworkDisks') || 'true') === 'true'; } catch { return true; } })();
-                const displayDisk = showNet ? disk : disk.filter(d => {
-                    const id = String((d && (d.fs || d.name || d.mount)) || '');
-                    const isUNC = id.startsWith('\\\\') || id.startsWith('//');
-                    return !(d && (d.isNetwork || isUNC));
-                });
                 const memFreeBytes = (systemStats.memory?.free || 0) * 1024 * 1024 * 1024;
                 const payload = {
                     cpu: Math.round((systemStats.cpu?.usage || 0) * 10) / 10,
                     mem: { total: memTotalBytes, used: memUsedBytes, free: memFreeBytes },
-                    disk: displayDisk,
+                    disk,
                     network: { rx_speed: rxBytesPerSec, tx_speed: txBytesPerSec },
                     networkInterfaces: Array.isArray(systemStats.networkInterfaces) ? systemStats.networkInterfaces : [],
                     hostname: systemStats.hostname || undefined,
@@ -183,7 +174,6 @@ const WSLTerminal = forwardRef(({
             if (!e) return;
             if (e.key === 'basicapp_statusbar_icon_theme') setStatusBarIconTheme(e.newValue || 'classic');
             if (e.key === 'localLinuxStatusBarTheme') setLocalStatusBarThemeName(e.newValue || 'Default Dark');
-            if (e.key === 'localShowNetworkDisks') setShowNetworkDisks((e.newValue || 'true') === 'true');
         };
         const onThemeChanged = (e) => {
             if (e.detail && e.detail.terminalType === 'linux') {
@@ -541,7 +531,6 @@ const WSLTerminal = forwardRef(({
                     stats={{ ...(statusStats || {}), cpuHistory: sessionHistory.map(s => s.cpu), sessionHistory }}
                     active={true}
                     statusBarIconTheme={statusBarIconTheme}
-                    showNetworkDisks={showNetworkDisks}
                     isLoading={isLoadingStats}
                     terminalType="linux"
                 />

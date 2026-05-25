@@ -30,9 +30,6 @@ const DockerTerminal = forwardRef(({
     const [localStatusBarThemeName, setLocalStatusBarThemeName] = useState(() => {
         try { return localStorage.getItem('localDockerStatusBarTheme') || 'Default Dark'; } catch { return 'Default Dark'; }
     });
-    const [showNetworkDisks, setShowNetworkDisks] = useState(() => {
-        try { return (localStorage.getItem('localShowNetworkDisks') || 'true') === 'true'; } catch { return true; }
-    });
 
     const getScopedStatusBarCssVars = () => {
         const themeObj = statusBarThemes[localStatusBarThemeName] || statusBarThemes['Default Dark'];
@@ -68,18 +65,12 @@ const DockerTerminal = forwardRef(({
                     : [];
                 const rxBytesPerSec = ((systemStats.network?.download || 0) * 1000000) / 8;
                 const txBytesPerSec = ((systemStats.network?.upload || 0) * 1000000) / 8;
-                const showNet = (() => { try { return (localStorage.getItem('localShowNetworkDisks') || 'true') === 'true'; } catch { return true; } })();
-                const displayDisk = showNet ? disk : disk.filter(d => {
-                    const id = String((d && (d.fs || d.name || d.mount)) || '');
-                    const isUNC = id.startsWith('\\\\') || id.startsWith('//');
-                    return !(d && (d.isNetwork || isUNC));
-                });
 
                 const memFreeBytes = (systemStats.memory?.free || 0) * 1024 * 1024 * 1024;
                 const payload = {
                     cpu: Math.round((systemStats.cpu?.usage || 0) * 10) / 10,
                     mem: { total: memTotalBytes, used: memUsedBytes, free: memFreeBytes },
-                    disk: displayDisk,
+                    disk,
                     network: { rx_speed: rxBytesPerSec, tx_speed: txBytesPerSec },
                     networkInterfaces: Array.isArray(systemStats.networkInterfaces) ? systemStats.networkInterfaces : [],
                     hostname: systemStats.hostname || undefined,
@@ -274,8 +265,6 @@ const DockerTerminal = forwardRef(({
                 setStatusBarIconTheme(e.newValue || 'classic');
             } else if (e.key === 'localDockerStatusBarTheme') {
                 setLocalStatusBarThemeName(e.newValue || 'Default Dark');
-            } else if (e.key === 'localShowNetworkDisks') {
-                setShowNetworkDisks((e.newValue || 'true') === 'true');
             }
         };
         window.addEventListener('storage', onStorage);
@@ -371,7 +360,6 @@ const DockerTerminal = forwardRef(({
                     isLoading={isLoadingStats}
                     active={true}
                     statusBarIconTheme={statusBarIconTheme}
-                    showNetworkDisks={showNetworkDisks}
                     terminalType="docker"
                 />
             )}

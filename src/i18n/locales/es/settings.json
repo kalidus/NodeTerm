@@ -332,5 +332,36 @@
     "confirmDelete": "¿Eliminar?",
     "update": "Actualizar con config actual",
     "confirmUpdate": "¿Sobrescribir?"
+  },
+  "statusBar": {
+    "itemsSectionTitle": "Elementos visibles",
+    "itemsSectionHint": "Clic en la etiqueta para mostrar u ocultar · flechas para orden",
+    "resetLayout": "Restaurar orden",
+    "moveUp": "Mover antes",
+    "moveDown": "Mover después",
+    "items": {
+      "host": "Host / distro",
+      "cpu": "CPU",
+      "memory": "Memoria",
+      "gpu": "GPU",
+      "network": "Red",
+      "diskLocal": "Disco local",
+      "diskNetwork": "Disco de red",
+      "uptime": "Tiempo activo",
+      "ip": "IP",
+      "version": "Versión"
+    },
+    "itemsShort": {
+      "host": "Host",
+      "cpu": "CPU",
+      "memory": "RAM",
+      "gpu": "GPU",
+      "network": "Red",
+      "diskLocal": "Disco",
+      "diskNetwork": "Red Δ",
+      "uptime": "Up",
+      "ip": "IP",
+      "version": "Ver"
+    }
   }
 }

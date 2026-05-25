@@ -1,12 +1,16 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Dropdown } from 'primereact/dropdown';
-import { InputNumber } from 'primereact/inputnumber';
-import { Checkbox } from 'primereact/checkbox';
 import { Slider } from 'primereact/slider';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { statusBarIconThemes } from '../themes/statusbar-icon-themes';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMicrochip, faMemory, faHdd, faClock, faArrowDown, faArrowUp, faServer } from '@fortawesome/free-solid-svg-icons';
+import { faClock, faArrowDown, faArrowUp, faServer } from '@fortawesome/free-solid-svg-icons';
+import { useTranslation } from '../i18n/hooks/useTranslation';
+import {
+  STATUSBAR_CONFIGURABLE_ITEMS,
+  getVisibleStatusBarOrder,
+  DEFAULT_STATUSBAR_LAYOUT
+} from '../config/statusBarItems';
 import '../styles/components/status-bar-settings.css';
 
 // Storage keys
@@ -14,7 +18,6 @@ const STORAGE_KEYS = {
   // Global
   HEIGHT: 'basicapp_statusbar_height',
   POLLING_INTERVAL: 'statusBarPollingInterval',
-  SHOW_NETWORK_DISKS: 'localShowNetworkDisks',
   STATUSBAR_VISIBLE: 'homeTab_statusBarVisible',
   // SSH
   SSH_THEME: 'basicapp_statusbar_theme',
@@ -57,16 +60,16 @@ const StatusBarSettingsTab = ({
   statusBarIconTheme,
   setStatusBarIconTheme,
   statusBarPollingInterval,
-  setStatusBarPollingInterval
+  setStatusBarPollingInterval,
+  statusBarLayout = DEFAULT_STATUSBAR_LAYOUT,
+  setStatusBarLayout
 }) => {
+  const { t } = useTranslation('settings');
+
   // Global settings
   const [statusBarHeight, setStatusBarHeight] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.HEIGHT);
     return saved ? parseInt(saved, 10) : 32;
-  });
-  const [showNetworkDisks, setShowNetworkDisks] = useState(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.SHOW_NETWORK_DISKS);
-    return saved ? JSON.parse(saved) : true;
   });
   const [statusBarVisible, setStatusBarVisible] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.STATUSBAR_VISIBLE);
@@ -132,14 +135,38 @@ const StatusBarSettingsTab = ({
     localStorage.setItem(STORAGE_KEYS.POLLING_INTERVAL, clampedValue.toString());
   }, [setStatusBarPollingInterval]);
 
-  const handleShowNetworkDisksChange = useCallback((checked) => {
-    setShowNetworkDisks(checked);
-    localStorage.setItem(STORAGE_KEYS.SHOW_NETWORK_DISKS, JSON.stringify(checked));
-    window.dispatchEvent(new StorageEvent('storage', {
-      key: STORAGE_KEYS.SHOW_NETWORK_DISKS,
-      newValue: JSON.stringify(checked)
-    }));
-  }, []);
+  const hiddenSet = useMemo(() => new Set(statusBarLayout.hidden || []), [statusBarLayout.hidden]);
+
+  const handleToggleStatusBarItem = useCallback((itemId) => {
+    if (!setStatusBarLayout) return;
+    setStatusBarLayout((prev) => {
+      const hidden = new Set(prev.hidden || []);
+      if (hidden.has(itemId)) {
+        hidden.delete(itemId);
+      } else {
+        hidden.add(itemId);
+      }
+      return { ...prev, hidden: [...hidden] };
+    });
+  }, [setStatusBarLayout]);
+
+  const handleMoveStatusBarItem = useCallback((itemId, direction) => {
+    if (!setStatusBarLayout) return;
+    setStatusBarLayout((prev) => {
+      const order = [...(prev.order || DEFAULT_STATUSBAR_LAYOUT.order)];
+      const index = order.indexOf(itemId);
+      if (index === -1) return prev;
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= order.length) return prev;
+      [order[index], order[targetIndex]] = [order[targetIndex], order[index]];
+      return { ...prev, order };
+    });
+  }, [setStatusBarLayout]);
+
+  const handleResetStatusBarLayout = useCallback(() => {
+    if (!setStatusBarLayout) return;
+    setStatusBarLayout({ ...DEFAULT_STATUSBAR_LAYOUT });
+  }, [setStatusBarLayout]);
 
   const handleStatusBarVisibleChange = useCallback((checked) => {
     setStatusBarVisible(checked);
@@ -300,13 +327,12 @@ const StatusBarSettingsTab = ({
     );
   };
 
-  // Status Bar Preview Component
-  const StatusBarPreview = ({ type }) => {
-    const theme = getPreviewTheme(type);
-    const iconTheme = getPreviewIconTheme(type);
-    if (!theme || !theme.colors) return null;
-    const colors = theme.colors;
+  const previewVisibleOrder = useMemo(
+    () => getVisibleStatusBarOrder(statusBarLayout),
+    [statusBarLayout]
+  );
 
+  const renderPreviewItem = useCallback((itemId, type, colors, iconTheme) => {
     const hostnames = {
       ssh: 'server-01',
       powershell: 'DESKTOP-PC',
@@ -314,6 +340,92 @@ const StatusBarSettingsTab = ({
       docker: 'container-01',
       cygwin: 'cygwin@win'
     };
+    switch (itemId) {
+      case 'host':
+        return (
+          <div key="host" className="statusbar-preview-item">
+            <span style={{ color: colors.iconColor }}>🐧</span>
+            <span>{hostnames[type]}</span>
+          </div>
+        );
+      case 'cpu':
+        return (
+          <div key="cpu" className="statusbar-preview-item">
+            <span style={{ color: iconTheme.colors.cpu }}>{iconTheme.icons.cpu}</span>
+            <span>45%</span>
+            <div
+              className="statusbar-preview-gauge"
+              style={{ background: `linear-gradient(to right, ${colors.cpuBarColor} 45%, ${colors.border} 45%)` }}
+            />
+          </div>
+        );
+      case 'memory':
+        return (
+          <div key="memory" className="statusbar-preview-item">
+            <span style={{ color: iconTheme.colors.memory }}>{iconTheme.icons.memory}</span>
+            <span>2.1GB / 8GB</span>
+          </div>
+        );
+      case 'gpu':
+        return (
+          <div key="gpu" className="statusbar-preview-item">
+            <span style={{ color: iconTheme.colors.memory }}>GPU</span>
+            <span>4GB / 8GB</span>
+          </div>
+        );
+      case 'network':
+        return (
+          <div key="network" className="statusbar-preview-item">
+            <FontAwesomeIcon icon={faArrowDown} style={{ color: colors.networkDownColor, fontSize: '9px' }} />
+            <span>1.2MB/s</span>
+            <FontAwesomeIcon icon={faArrowUp} style={{ color: colors.networkUpColor, fontSize: '9px' }} />
+            <span>256KB/s</span>
+          </div>
+        );
+      case 'diskLocal':
+        return (
+          <div key="diskLocal" className="statusbar-preview-item">
+            <span style={{ color: iconTheme.colors.disk }}>{iconTheme.icons.disk}</span>
+            <span>Local 67%</span>
+          </div>
+        );
+      case 'diskNetwork':
+        return (
+          <div key="diskNetwork" className="statusbar-preview-item">
+            <span style={{ color: iconTheme.colors.disk }}>{iconTheme.icons.disk}</span>
+            <span>Red 42%</span>
+          </div>
+        );
+      case 'uptime':
+        return (
+          <div key="uptime" className="statusbar-preview-item">
+            <FontAwesomeIcon icon={faClock} style={{ color: colors.iconColor, fontSize: '10px' }} />
+            <span>3d 12h</span>
+          </div>
+        );
+      case 'ip':
+        return (
+          <div key="ip" className="statusbar-preview-item">
+            <FontAwesomeIcon icon={faServer} style={{ color: colors.iconColor, fontSize: '10px' }} />
+            <span>192.168.1.100</span>
+          </div>
+        );
+      case 'version':
+        return (
+          <div key="version" className="statusbar-preview-item">
+            <span>v1.0.0</span>
+          </div>
+        );
+      default:
+        return null;
+    }
+  }, []);
+
+  const StatusBarPreview = ({ type }) => {
+    const theme = getPreviewTheme(type);
+    const iconTheme = getPreviewIconTheme(type);
+    if (!theme || !theme.colors) return null;
+    const colors = theme.colors;
 
     return (
       <div
@@ -325,75 +437,26 @@ const StatusBarSettingsTab = ({
           height: `${statusBarHeight}px`
         }}
       >
-        {/* Hostname */}
-        <div className="statusbar-preview-item">
-          <span style={{ color: colors.iconColor }}>🐧</span>
-          <span>{hostnames[type]}</span>
-        </div>
-
-        {/* CPU */}
-        <div className="statusbar-preview-item">
-          <span style={{ color: iconTheme.colors.cpu }}>{iconTheme.icons.cpu}</span>
-          <span>45%</span>
-          <div
-            className="statusbar-preview-gauge"
-            style={{
-              background: `linear-gradient(to right, ${colors.cpuBarColor} 45%, ${colors.border} 45%)`
-            }}
-          />
-        </div>
-
-        {/* Memory */}
-        <div className="statusbar-preview-item">
-          <span style={{ color: iconTheme.colors.memory }}>{iconTheme.icons.memory}</span>
-          <span>2.1GB / 8GB</span>
-        </div>
-
-        {/* Network */}
-        <div className="statusbar-preview-item">
-          <FontAwesomeIcon icon={faArrowDown} style={{ color: colors.networkDownColor, fontSize: '9px' }} />
-          <span>1.2MB/s</span>
-          <FontAwesomeIcon icon={faArrowUp} style={{ color: colors.networkUpColor, fontSize: '9px' }} />
-          <span>256KB/s</span>
-        </div>
-
-        {/* Disk */}
-        <div className="statusbar-preview-item">
-          <span style={{ color: iconTheme.colors.disk }}>{iconTheme.icons.disk}</span>
-          <span>/: 67%</span>
-        </div>
-
-        {/* Uptime */}
-        <div className="statusbar-preview-item">
-          <FontAwesomeIcon icon={faClock} style={{ color: colors.iconColor, fontSize: '10px' }} />
-          <span>3d 12h</span>
-        </div>
-
-        {/* IP */}
-        <div className="statusbar-preview-item">
-          <FontAwesomeIcon icon={faServer} style={{ color: colors.iconColor, fontSize: '10px' }} />
-          <span>192.168.1.100</span>
-        </div>
+        {previewVisibleOrder.map((itemId) => renderPreviewItem(itemId, type, colors, iconTheme))}
       </div>
     );
   };
 
   return (
     <div className="statusbar-settings-container">
-      {/* Sección 1: Configuración Global */}
-      <div className="statusbar-settings-section">
-        <div className="statusbar-section-header">
+      <div className="statusbar-settings-section statusbar-unified-section">
+        <div className="statusbar-section-header statusbar-section-header-compact">
           <div className="statusbar-section-icon">
-            <i className="pi pi-cog"></i>
+            <i className="pi pi-sliders-h"></i>
           </div>
           <div className="statusbar-section-info">
-            <h3 className="statusbar-section-title">Configuración Global</h3>
+            <h3 className="statusbar-section-title">Barra de estado</h3>
           </div>
         </div>
-        <div className="statusbar-section-content">
-          <div className="statusbar-global-row">
+        <div className="statusbar-section-content statusbar-section-content-integrated">
+          <div className="statusbar-global-row statusbar-global-row-inline">
             <div className="statusbar-setting-group">
-              <span className="statusbar-mini-label">Altura de la Barra</span>
+              <span className="statusbar-mini-label">Altura</span>
               <div className="statusbar-height-control">
                 <Slider
                   value={statusBarHeight}
@@ -430,17 +493,7 @@ const StatusBarSettingsTab = ({
               </div>
             </div>
             <div className="statusbar-setting-group statusbar-toggle-group">
-              <span className="statusbar-mini-label statusbar-label-normal">Mostrar discos de red</span>
-              <div className="statusbar-network-disks-control">
-                <div
-                  className={`statusbar-toggle-switch ${showNetworkDisks ? 'active' : ''}`}
-                  onClick={() => handleShowNetworkDisksChange(!showNetworkDisks)}
-                  title={showNetworkDisks ? 'Ocultar discos de red' : 'Mostrar discos de red'}
-                />
-              </div>
-            </div>
-            <div className="statusbar-setting-group statusbar-toggle-group">
-              <span className="statusbar-mini-label statusbar-label-normal">Mostrar barra de estado</span>
+              <span className="statusbar-mini-label statusbar-label-normal">Visible en inicio</span>
               <div className="statusbar-network-disks-control">
                 <div
                   className={`statusbar-toggle-switch ${statusBarVisible ? 'active' : ''}`}
@@ -450,20 +503,8 @@ const StatusBarSettingsTab = ({
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Sección 2: Configuración y Vista Previa Unificadas */}
-      <div className="statusbar-settings-section statusbar-unified-section">
-        <div className="statusbar-section-header">
-          <div className="statusbar-section-icon">
-            <i className="pi pi-palette"></i>
-          </div>
-          <div className="statusbar-section-info">
-            <h3 className="statusbar-section-title">Temas y Vista Previa por Terminal</h3>
-          </div>
-        </div>
-        <div className="statusbar-section-content no-padding">
+          <div className="statusbar-integrated-panel">
           {/* Selector de Pestañas de Terminales */}
           <div className="statusbar-preview-tabs">
             {TERMINAL_TYPES.map((tab) => (
@@ -479,8 +520,68 @@ const StatusBarSettingsTab = ({
           </div>
 
           <div className="statusbar-preview-content">
-            {/* Vista Previa de la Barra */}
             <StatusBarPreview type={activePreviewTab} />
+
+            <div className="statusbar-items-editor">
+              <div className="statusbar-items-editor-head">
+                <span className="statusbar-items-editor-title">{t('statusBar.itemsSectionTitle')}</span>
+                <span className="statusbar-items-editor-hint">{t('statusBar.itemsSectionHint')}</span>
+                {setStatusBarLayout && (
+                  <button
+                    type="button"
+                    className="statusbar-items-reset-btn"
+                    onClick={handleResetStatusBarLayout}
+                    title={t('statusBar.resetLayout')}
+                  >
+                    <i className="pi pi-refresh" />
+                    {t('statusBar.resetLayout')}
+                  </button>
+                )}
+              </div>
+              <div className="statusbar-items-chips" role="list">
+                {(statusBarLayout.order || DEFAULT_STATUSBAR_LAYOUT.order).map((itemId, index, orderArr) => {
+                  const meta = STATUSBAR_CONFIGURABLE_ITEMS.find((item) => item.id === itemId);
+                  if (!meta) return null;
+                  const isVisible = !hiddenSet.has(itemId);
+                  const shortKey = meta.shortLabelKey || meta.labelKey;
+                  return (
+                    <div
+                      key={itemId}
+                      className={`statusbar-item-chip ${isVisible ? 'is-on' : 'is-off'}`}
+                      role="listitem"
+                      title={t(meta.labelKey)}
+                    >
+                      <button
+                        type="button"
+                        className="statusbar-item-chip-nudge"
+                        disabled={index === 0}
+                        onClick={() => handleMoveStatusBarItem(itemId, 'up')}
+                        aria-label={t('statusBar.moveUp')}
+                      >
+                        <i className="pi pi-chevron-left" />
+                      </button>
+                      <button
+                        type="button"
+                        className="statusbar-item-chip-label"
+                        onClick={() => handleToggleStatusBarItem(itemId)}
+                        aria-pressed={isVisible}
+                      >
+                        {t(shortKey)}
+                      </button>
+                      <button
+                        type="button"
+                        className="statusbar-item-chip-nudge"
+                        disabled={index === orderArr.length - 1}
+                        onClick={() => handleMoveStatusBarItem(itemId, 'down')}
+                        aria-label={t('statusBar.moveDown')}
+                      >
+                        <i className="pi pi-chevron-right" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
 
             {/* Controles de Configuración del Terminal Activo */}
             <div className="statusbar-active-config-row">
@@ -547,6 +648,7 @@ const StatusBarSettingsTab = ({
                 })()}
               </div>
             </div>
+          </div>
           </div>
         </div>
       </div>

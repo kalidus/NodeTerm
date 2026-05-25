@@ -50,6 +50,7 @@ const SYNC_KEYS = [
   'basicapp_font_family',
   'basicapp_font_size',
   'basicapp_statusbar_height',
+  'basicapp_statusbar_layout',
   'basicapp_local_terminal_font_family',
   'basicapp_local_terminal_font_size',
   'basicapp_local_powershell_theme',

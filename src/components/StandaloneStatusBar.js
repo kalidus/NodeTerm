@@ -10,9 +10,6 @@ const StandaloneStatusBar = ({ visible = true, style = {} }) => {
     const [statusBarIconTheme, setStatusBarIconTheme] = useState(() => {
         try { return localStorage.getItem('basicapp_statusbar_icon_theme') || 'classic'; } catch { return 'classic'; }
     });
-    const [showNetworkDisks, setShowNetworkDisks] = useState(() => {
-        try { return (localStorage.getItem('localShowNetworkDisks') || 'true') === 'true'; } catch { return true; }
-    });
     const [localStatusBarThemeName, setLocalStatusBarThemeName] = useState(() => {
         try { return localStorage.getItem('localLinuxStatusBarTheme') || localStorage.getItem('basicapp_statusbar_theme') || 'Default Dark'; } catch { return 'Default Dark'; }
     });
@@ -71,13 +68,6 @@ const StandaloneStatusBar = ({ visible = true, style = {} }) => {
                     : [];
                 const rxBytesPerSec = ((systemStats.network?.download || 0) * 1000000) / 8;
                 const txBytesPerSec = ((systemStats.network?.upload || 0) * 1000000) / 8;
-                const showNet = (() => { try { return (localStorage.getItem('localShowNetworkDisks') || 'true') === 'true'; } catch { return true; } })();
-                const displayDisk = showNet ? disk : disk.filter(d => {
-                    const id = String((d && (d.fs || d.name || d.mount)) || '');
-                    const isUNC = id.startsWith('\\\\') || id.startsWith('//');
-                    return !(d && (d.isNetwork || isUNC));
-                });
-
                 try {
                     const gpuData = await window.electron.system?.getGPUStats();
                     setGpuStats(gpuData && gpuData.ok ? gpuData : null);
@@ -88,7 +78,7 @@ const StandaloneStatusBar = ({ visible = true, style = {} }) => {
                 const statsPayload = {
                     cpu: Math.round((systemStats.cpu?.usage || 0) * 10) / 10,
                     mem: { total: memTotalBytes, used: memUsedBytes, free: memFreeBytes },
-                    disk: displayDisk,
+                    disk,
                     network: { rx_speed: rxBytesPerSec, tx_speed: txBytesPerSec },
                     networkInterfaces: Array.isArray(systemStats.networkInterfaces) ? systemStats.networkInterfaces : [],
                     hostname: systemStats.hostname,
@@ -118,8 +108,6 @@ const StandaloneStatusBar = ({ visible = true, style = {} }) => {
                 setStatusBarIconTheme(e.newValue || 'classic');
             } else if (e.key === 'localLinuxStatusBarTheme' || e.key === 'basicapp_statusbar_theme') {
                 setLocalStatusBarThemeName(e.newValue || 'Default Dark');
-            } else if (e.key === 'localShowNetworkDisks') {
-                setShowNetworkDisks((e.newValue || 'true') === 'true');
             }
         };
         const onThemeChanged = (e) => {
@@ -161,7 +149,6 @@ const StandaloneStatusBar = ({ visible = true, style = {} }) => {
                 gpuStats={gpuStats}
                 active={true}
                 statusBarIconTheme={statusBarIconTheme}
-                showNetworkDisks={showNetworkDisks}
                 isLoading={isLoadingStats}
                 terminalType="linux"
             />

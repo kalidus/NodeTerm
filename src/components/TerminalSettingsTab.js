@@ -34,7 +34,6 @@ const STORAGE_KEYS = {
   DOCKER_FONT_SIZE: 'nodeterm_docker_font_size',
   DOCKER_THEME: 'localDockerTerminalTheme',
   // Misc
-  SHOW_NETWORK_DISKS: 'localShowNetworkDisks'
 };
 
 // Cursor styles

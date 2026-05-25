@@ -29,9 +29,6 @@ const UbuntuTerminal = forwardRef(({
     const [statusBarIconTheme, setStatusBarIconTheme] = useState(() => {
         try { return localStorage.getItem('basicapp_statusbar_icon_theme') || 'classic'; } catch { return 'classic'; }
     });
-    const [showNetworkDisks, setShowNetworkDisks] = useState(() => {
-        try { return (localStorage.getItem('localShowNetworkDisks') || 'true') === 'true'; } catch { return true; }
-    });
     const [localStatusBarThemeName, setLocalStatusBarThemeName] = useState(() => {
         try { return localStorage.getItem('localLinuxStatusBarTheme') || localStorage.getItem('basicapp_statusbar_theme') || 'Default Dark'; } catch { return 'Default Dark'; }
     });
@@ -109,17 +106,11 @@ const UbuntuTerminal = forwardRef(({
                     : [];
                 const rxBytesPerSec = ((systemStats.network?.download || 0) * 1000000) / 8;
                 const txBytesPerSec = ((systemStats.network?.upload || 0) * 1000000) / 8;
-                const showNet = (() => { try { return (localStorage.getItem('localShowNetworkDisks') || 'true') === 'true'; } catch { return true; } })();
-                const displayDisk = showNet ? disk : disk.filter(d => {
-                    const id = String((d && (d.fs || d.name || d.mount)) || '');
-                    const isUNC = id.startsWith('\\\\') || id.startsWith('//');
-                    return !(d && (d.isNetwork || isUNC));
-                });
                 const memFreeBytes = (systemStats.memory?.free || 0) * 1024 * 1024 * 1024;
                 const payload = {
                     cpu: Math.round((systemStats.cpu?.usage || 0) * 10) / 10,
                     mem: { total: memTotalBytes, used: memUsedBytes, free: memFreeBytes },
-                    disk: displayDisk,
+                    disk,
                     network: { rx_speed: rxBytesPerSec, tx_speed: txBytesPerSec },
                     networkInterfaces: Array.isArray(systemStats.networkInterfaces) ? systemStats.networkInterfaces : [],
                     hostname: systemStats.hostname,
@@ -157,7 +148,6 @@ const UbuntuTerminal = forwardRef(({
         const onStorage = (e) => {
             if (!e) return;
             if (e.key === 'basicapp_statusbar_icon_theme') setStatusBarIconTheme(e.newValue || 'classic');
-            if (e.key === 'localShowNetworkDisks') setShowNetworkDisks((e.newValue || 'true') === 'true');
             if (e.key === 'localLinuxStatusBarTheme') setLocalStatusBarThemeName(e.newValue || 'Default Dark');
         };
         const onThemeChanged = (e) => {
@@ -598,7 +588,6 @@ const UbuntuTerminal = forwardRef(({
                     stats={{ ...(statusStats || {}), cpuHistory: sessionHistory.map(s => s.cpu), sessionHistory }}
                     active={true}
                     statusBarIconTheme={statusBarIconTheme}
-                    showNetworkDisks={showNetworkDisks}
                     isLoading={isLoadingStats}
                     terminalType="linux"
                 />

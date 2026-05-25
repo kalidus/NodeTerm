@@ -1,29 +1,58 @@
-import { useEffect } from 'react';
-import { useLocalStorageString, useLocalStorageNumber } from './useLocalStorage';
+import { useEffect, useCallback } from 'react';
+import { useLocalStorage, useLocalStorageString, useLocalStorageNumber } from './useLocalStorage';
+import {
+  STATUSBAR_LAYOUT_STORAGE_KEY,
+  DEFAULT_STATUSBAR_LAYOUT,
+  loadStatusBarLayout,
+  normalizeStatusBarLayout,
+  saveStatusBarLayout
+} from '../config/statusBarItems';
 
 export const useStatusBarSettings = () => {
-  // StatusBar icon theme usando useLocalStorage
   const [statusBarIconTheme, setStatusBarIconTheme] = useLocalStorageString('basicapp_statusbar_icon_theme', 'classic');
-  
-  // Estado global para el intervalo de polling de la status bar usando useLocalStorage  
-  const [statusBarPollingInterval, setStatusBarPollingInterval] = useLocalStorageNumber('statusBarPollingInterval', 3); // Reducido de 5s a 3s por defecto
+  const [statusBarPollingInterval, setStatusBarPollingInterval] = useLocalStorageNumber('statusBarPollingInterval', 3);
+  const [statusBarLayout, setStatusBarLayoutState] = useLocalStorage(
+    STATUSBAR_LAYOUT_STORAGE_KEY,
+    loadStatusBarLayout()
+  );
 
-  // Enviar al backend cuando cambie el intervalo (localStorage ya se maneja automáticamente)
+  const setStatusBarLayout = useCallback((updater) => {
+    setStatusBarLayoutState((prev) => {
+      const normalizedPrev = normalizeStatusBarLayout(prev);
+      return typeof updater === 'function'
+        ? normalizeStatusBarLayout(updater(normalizedPrev))
+        : normalizeStatusBarLayout(updater);
+    });
+  }, [setStatusBarLayoutState]);
+
+  useEffect(() => {
+    const normalized = normalizeStatusBarLayout(statusBarLayout);
+    window.dispatchEvent(new CustomEvent('statusbar-layout-changed', { detail: normalized }));
+  }, [statusBarLayout]);
+
   useEffect(() => {
     if (window?.electron?.ipcRenderer) {
       window.electron.ipcRenderer.send('statusbar:set-polling-interval', statusBarPollingInterval);
     }
   }, [statusBarPollingInterval]);
 
-  // Función para actualizar configuración desde sincronización
+  useEffect(() => {
+    const normalized = normalizeStatusBarLayout(statusBarLayout);
+    if (JSON.stringify(normalized) !== JSON.stringify(statusBarLayout)) {
+      setStatusBarLayoutState(normalized);
+    }
+  }, [statusBarLayout, setStatusBarLayoutState]);
+
   const updateStatusBarFromSync = () => {
     const updatedStatusBarIconTheme = localStorage.getItem('basicapp_statusbar_icon_theme') || 'classic';
     const updatedStatusBarPollingInterval = localStorage.getItem('statusBarPollingInterval');
-    
+
     setStatusBarIconTheme(updatedStatusBarIconTheme);
     if (updatedStatusBarPollingInterval) {
       setStatusBarPollingInterval(parseInt(updatedStatusBarPollingInterval, 10));
     }
+
+    setStatusBarLayoutState(loadStatusBarLayout());
   };
 
   return {
@@ -31,6 +60,10 @@ export const useStatusBarSettings = () => {
     setStatusBarIconTheme,
     statusBarPollingInterval,
     setStatusBarPollingInterval,
+    statusBarLayout: normalizeStatusBarLayout(statusBarLayout),
+    setStatusBarLayout,
     updateStatusBarFromSync
   };
 };
+
+export { DEFAULT_STATUSBAR_LAYOUT, loadStatusBarLayout, saveStatusBarLayout };
