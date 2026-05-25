@@ -156,7 +156,7 @@ const SidebarAppearanceMenu = ({
                       }}
                     >
                       <div style={{ width: '30px', height: '30px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.2)', fontSize: '1.1rem', flexShrink: 0 }}>
-                        {opt.value === 'default' && <i className="pi pi-sitemap" style={{ color: '#4fc3f7' }} />}
+                        {opt.value === 'default' && <i className="pi pi-folder" style={{ color: '#64b5f6' }} />}
                         {opt.value === 'minimal' && <i className="pi pi-minus" style={{ color: '#90a4ae' }} />}
                         {opt.value === 'connected' && <i className="pi pi-share-alt" style={{ color: '#81c784' }} />}
                         {opt.value === 'compact' && <i className="pi pi-align-justify" style={{ color: '#ce93d8' }} />}

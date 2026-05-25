@@ -18,21 +18,21 @@
 export const treeThemes = {
   default: {
     name: 'Default',
-    description: 'Estilo clásico con líneas ASCII',
-    lineStyle: 'ascii',
-    lineColor: 'var(--text-color-secondary)',
-    lineOpacity: 0.5,
-    lineWidth: 1,
-    nodeSpacing: 'normal',
-    indentSize: 20,
-    borderRadius: 4,
+    description: 'Estilo explorador Cursor con espaciado vertical mínimo',
+    lineStyle: 'none',
+    lineColor: 'transparent',
+    lineOpacity: 0,
+    lineWidth: 0,
+    nodeSpacing: 'compact',
+    indentSize: 8,
+    borderRadius: 0,
     hoverStyle: 'subtle',
     connectorChars: {
-      vertical: '│',
-      horizontal: '──',
-      branch: '├',
-      lastBranch: '└',
-      space: ' '
+      vertical: '',
+      horizontal: '',
+      branch: '',
+      lastBranch: '',
+      space: ''
     },
     cssClass: 'tree-theme-default'
   },

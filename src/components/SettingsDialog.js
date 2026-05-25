@@ -3744,9 +3744,7 @@ const SettingsDialog = ({
                               {/* Subcarpeta 1: Servidores Web */}
                               <div className="tree-preview-child">
                                 <div className="tree-preview-node" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                  {treeTheme === 'default' && (
-                                    <span className="tree-preview-connector">├──</span>
-                                  )}
+
                                   {iconThemes[iconThemeSidebar]?.icons.folder &&
                                     React.cloneElement(iconThemes[iconThemeSidebar].icons.folder, {
                                       width: folderIconSize || 20,
@@ -3766,9 +3764,7 @@ const SettingsDialog = ({
                                 <div className="tree-preview-children">
                                   <div className="tree-preview-child">
                                     <div className="tree-preview-node" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                      {treeTheme === 'default' && (
-                                        <span className="tree-preview-connector">├──</span>
-                                      )}
+
                                       {iconThemes[iconThemeSidebar]?.icons.ssh &&
                                         React.cloneElement(iconThemes[iconThemeSidebar].icons.ssh, {
                                           width: connectionIconSize || 20,
@@ -3786,9 +3782,7 @@ const SettingsDialog = ({
                                   </div>
                                   <div className="tree-preview-child">
                                     <div className="tree-preview-node" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                      {treeTheme === 'default' && (
-                                        <span className="tree-preview-connector">└──</span>
-                                      )}
+
                                       {iconThemes[iconThemeSidebar]?.icons.ssh &&
                                         React.cloneElement(iconThemes[iconThemeSidebar].icons.ssh, {
                                           width: connectionIconSize || 20,
@@ -3810,9 +3804,7 @@ const SettingsDialog = ({
                               {/* Subcarpeta 2: Bases de Datos */}
                               <div className="tree-preview-child">
                                 <div className="tree-preview-node" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                  {treeTheme === 'default' && (
-                                    <span className="tree-preview-connector">└──</span>
-                                  )}
+
                                   {iconThemes[iconThemeSidebar]?.icons.folder &&
                                     React.cloneElement(iconThemes[iconThemeSidebar].icons.folder, {
                                       width: folderIconSize || 20,
@@ -3832,9 +3824,7 @@ const SettingsDialog = ({
                                 <div className="tree-preview-children">
                                   <div className="tree-preview-child">
                                     <div className="tree-preview-node" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                      {treeTheme === 'default' && (
-                                        <span className="tree-preview-connector">└──</span>
-                                      )}
+
                                       {iconThemes[iconThemeSidebar]?.icons.rdp &&
                                         React.cloneElement(iconThemes[iconThemeSidebar].icons.rdp, {
                                           width: connectionIconSize || 20,

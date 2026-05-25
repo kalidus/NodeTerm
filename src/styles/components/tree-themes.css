@@ -21,32 +21,7 @@
    Estilo clásico con caracteres ASCII ├── └──
    ═══════════════════════════════════════════════════════════════════════════════ */
 
-.sidebar-tree.tree-theme-default {
-  --tree-indent: 20px;
-  --tree-node-spacing: 0px;
-  --tree-border-radius: 4px;
-}
-
-.sidebar-tree.tree-theme-default .tree-connector {
-  display: inline-flex;
-  align-items: center;
-  color: var(--text-color-secondary);
-  opacity: 0.5;
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-  font-size: 0.75em;
-  margin-right: 4px;
-  user-select: none;
-  min-width: 20px;
-}
-
-.sidebar-tree.tree-theme-default .p-treenode-content:hover {
-  background: var(--ui-sidebar-hover) !important;
-}
-
-.sidebar-tree.tree-theme-default .p-tree-toggler-icon {
-  color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.9)) !important;
-  opacity: 0.95;
-}
+/* El tema default ha sido sobrescrito con el estilo de cursorCompact */
 
 /* ═══════════════════════════════════════════════════════════════════════════════
    TEMA: MINIMAL (Sin líneas)
@@ -136,6 +111,7 @@
    Sin líneas, indentación compacta y espaciado vertical mínimo
    ═══════════════════════════════════════════════════════════════════════════════ */
 
+.sidebar-tree.tree-theme-default,
 .sidebar-tree.tree-theme-cursor-compact,
 .sidebar-tree.tree-theme-cursorCompact {
   --tree-indent: 8px;
@@ -143,22 +119,26 @@
   --tree-border-radius: 0;
 }
 
+.sidebar-tree.tree-theme-default .tree-connector,
 .sidebar-tree.tree-theme-cursor-compact .tree-connector,
 .sidebar-tree.tree-theme-cursorCompact .tree-connector {
   display: none !important;
 }
 
+.sidebar-tree.tree-theme-default .p-treenode,
 .sidebar-tree.tree-theme-cursor-compact .p-treenode,
 .sidebar-tree.tree-theme-cursorCompact .p-treenode {
   margin-bottom: -2px !important;
 }
 
+.sidebar-tree.tree-theme-default .p-treenode-children,
 .sidebar-tree.tree-theme-cursor-compact .p-treenode-children,
 .sidebar-tree.tree-theme-cursorCompact .p-treenode-children {
   padding-left: 8px !important;
   border-left: none !important;
 }
 
+.sidebar-tree.tree-theme-default .p-treenode-content,
 .sidebar-tree.tree-theme-cursor-compact .p-treenode-content,
 .sidebar-tree.tree-theme-cursorCompact .p-treenode-content {
   padding-top: 0.02rem !important;
@@ -169,11 +149,13 @@
   line-height: 18px !important;
 }
 
+.sidebar-tree.tree-theme-default .p-treenode-children .p-treenode-content,
 .sidebar-tree.tree-theme-cursor-compact .p-treenode-children .p-treenode-content,
 .sidebar-tree.tree-theme-cursorCompact .p-treenode-children .p-treenode-content {
   background: transparent !important;
 }
 
+.sidebar-tree.tree-theme-default .p-tree-toggler,
 .sidebar-tree.tree-theme-cursor-compact .p-tree-toggler,
 .sidebar-tree.tree-theme-cursorCompact .p-tree-toggler {
   width: 16px !important;
@@ -182,6 +164,7 @@
   margin-right: 0 !important;
 }
 
+.sidebar-tree.tree-theme-default .p-tree-toggler-icon,
 .sidebar-tree.tree-theme-cursor-compact .p-tree-toggler-icon,
 .sidebar-tree.tree-theme-cursorCompact .p-tree-toggler-icon {
   color: var(--ui-sidebar-text) !important;
@@ -525,14 +508,7 @@
 
 /* Preview: Tema Default (ASCII) */
 .tree-preview-container.tree-theme-default .tree-preview-connector {
-  display: inline-flex;
-  align-items: center;
-  color: var(--text-color-secondary);
-  opacity: 0.5;
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-  font-size: 0.85em;
-  margin-right: 6px;
-  user-select: none;
+  display: none !important;
 }
 
 /* Preview: Tema Minimal */
