@@ -1463,9 +1463,16 @@ const SettingsContent = ({
     }
   }, [interactiveIcon]);
 
-  // Persistir configuración de sidebar colapsada
+  const sidebarStartCollapsedUserChangeRef = useRef(false);
+
+  // Persistir configuración de sidebar colapsada (solo aplica al panel si el usuario cambia esta opción)
   useEffect(() => {
     persistSyncedSetting(STORAGE_KEYS.SIDEBAR_START_COLLAPSED, JSON.stringify(sidebarStartCollapsed));
+    if (sidebarStartCollapsedUserChangeRef.current) {
+      window.dispatchEvent(new CustomEvent('apply-sidebar-start-collapsed', {
+        detail: { collapsed: sidebarStartCollapsed }
+      }));
+    }
     window.dispatchEvent(new Event('settings-updated'));
   }, [sidebarStartCollapsed]);
 
@@ -2478,7 +2485,10 @@ const SettingsContent = ({
                             </div>
                           </div>
 
-                          <div className="general-setting-card" onClick={() => setSidebarStartCollapsed(!sidebarStartCollapsed)}>
+                          <div className="general-setting-card" onClick={() => {
+                            sidebarStartCollapsedUserChangeRef.current = true;
+                            setSidebarStartCollapsed(!sidebarStartCollapsed);
+                          }}>
                             <div className="general-setting-content">
                               <div className="general-setting-icon collapse">
                                 <i className="pi pi-angle-left"></i>
@@ -2495,7 +2505,10 @@ const SettingsContent = ({
                                 <Checkbox
                                   id="sidebar-start-collapsed"
                                   checked={sidebarStartCollapsed}
-                                  onChange={(e) => setSidebarStartCollapsed(e.checked)}
+                                  onChange={(e) => {
+                                    sidebarStartCollapsedUserChangeRef.current = true;
+                                    setSidebarStartCollapsed(e.checked);
+                                  }}
                                 />
                               </div>
                             </div>

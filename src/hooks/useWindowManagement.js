@@ -41,7 +41,7 @@ export const useWindowManagement = ({ getFilteredTabs, activeTabIndex, resizeTer
     };
   }, [sidebarCollapsed]);
 
-  // Releer preferencia tras sync desde app-data.json o cambios en Ajustes
+  // Releer preferencia tras sync desde app-data.json (solo al iniciar / sincronizar)
   useEffect(() => {
     const reloadSidebarCollapsed = () => {
       try {
@@ -55,10 +55,23 @@ export const useWindowManagement = ({ getFilteredTabs, activeTabIndex, resizeTer
     };
 
     window.addEventListener('localstorage-sync-ready', reloadSidebarCollapsed);
-    window.addEventListener('settings-updated', reloadSidebarCollapsed);
     return () => {
       window.removeEventListener('localstorage-sync-ready', reloadSidebarCollapsed);
-      window.removeEventListener('settings-updated', reloadSidebarCollapsed);
+    };
+  }, []);
+
+  // Aplicar "sidebar colapsada al iniciar" solo cuando el usuario cambia esa opción en Ajustes
+  useEffect(() => {
+    const handleApplySidebarStartCollapsed = (event) => {
+      const collapsed = event?.detail?.collapsed;
+      if (typeof collapsed === 'boolean') {
+        setSidebarCollapsed(collapsed);
+      }
+    };
+
+    window.addEventListener('apply-sidebar-start-collapsed', handleApplySidebarStartCollapsed);
+    return () => {
+      window.removeEventListener('apply-sidebar-start-collapsed', handleApplySidebarStartCollapsed);
     };
   }, []);
 

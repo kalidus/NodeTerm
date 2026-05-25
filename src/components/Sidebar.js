@@ -518,6 +518,19 @@ const Sidebar = React.memo(({
     };
   }, []);
 
+  // Mantener el panel de configuración visible al elegir una sección
+  useEffect(() => {
+    const handleOpenSettingsTab = () => {
+      setViewMode('settings');
+      setSidebarCollapsed(false);
+    };
+
+    window.addEventListener('open-settings-tab', handleOpenSettingsTab);
+    return () => {
+      window.removeEventListener('open-settings-tab', handleOpenSettingsTab);
+    };
+  }, [setSidebarCollapsed]);
+
   // Listener simple para mostrar explorador local en sidebar
   useEffect(() => {
     const handleShowLocalExplorer = (event) => {
@@ -3314,7 +3327,12 @@ const Sidebar = React.memo(({
     };
     const targetViewMode = sectionToViewMode[sectionId] || 'connections';
 
-    if (!sidebarCollapsed && viewMode === targetViewMode && (sectionId !== 'connections' || !showFavoritesView)) {
+    if (
+      !sidebarCollapsed
+      && viewMode === targetViewMode
+      && sectionId !== 'settings'
+      && (sectionId !== 'connections' || !showFavoritesView)
+    ) {
       setSidebarCollapsed(true);
     } else {
       setViewMode(targetViewMode);

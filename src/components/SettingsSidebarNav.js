@@ -106,6 +106,7 @@ const SettingsSidebarNav = ({
   };
 
   const handleSubItemClick = (subitemId, parentId) => {
+    setExpandedItems(prev => ({ ...prev, [parentId]: true }));
     // Primero cambiar al tab principal (para que se abra el TabPanel padre)
     onMainTabChange(parentId);
     // Luego cambiar al subitem
