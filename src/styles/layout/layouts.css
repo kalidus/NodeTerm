@@ -300,7 +300,8 @@ html[data-custom-titlebar="true"] body.layout-unified .title-bar svg path {
 body.layout-unified .p-splitter-gutter {
   background: transparent !important;
   position: relative !important;
-  width: 4px !important;
+  width: 12px !important;
+  margin: 0 -6px !important;
 }
 
 body.layout-unified .p-splitter-gutter::after {
@@ -314,6 +315,14 @@ body.layout-unified .p-splitter.p-splitter-resizing .p-splitter-gutter::after {
 }
 
 /* Sidebar overrides */
+body.layout-unified .main-splitter > .p-splitter-panel:first-child:has(.sidebar-collapsed) {
+  flex: 0 0 44px !important;
+  flex-basis: 44px !important;
+  width: 44px !important;
+  min-width: 44px !important;
+  max-width: 44px !important;
+}
+
 body.layout-unified .sidebar-container {
   border-right: none !important;
 }
