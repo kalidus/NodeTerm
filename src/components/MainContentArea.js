@@ -78,6 +78,7 @@ const MainContentArea = ({
   memoizedContentRendererProps,
   settingsTabProps,
   sshStatsByTabId,
+  openInSplit,
 
   // Context menu props
   tabContextMenu,
@@ -3222,6 +3223,7 @@ const MainContentArea = ({
                     getAllTabs={getAllTabs}
                     onShowSystemMonitor={(tabKey) => setSshSystemMonitorTabId(tabKey)}
                     onShowFileExplorer={(tabKey) => setSshFileExplorerTabId(tabKey)}
+                    openInSplit={openInSplit}
                     isSSHSession={terminalContextMenu ? (() => {
                       const allT = getAllTabs ? getAllTabs() : [];
                       const tab = allT.find(t => t.key === terminalContextMenu.tabKey);

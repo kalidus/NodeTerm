@@ -15,7 +15,8 @@ const TerminalContextMenu = ({
   getAllTabs,
   onShowSystemMonitor,
   onShowFileExplorer,
-  isSSHSession = false
+  isSSHSession = false,
+  openInSplit
 }) => {
   const menuRef = useRef(null);
   const [position, setPosition] = useState({ left: -9999, top: -9999 });
@@ -99,6 +100,75 @@ const TerminalContextMenu = ({
     } else {
       onStartRecording && onStartRecording(terminalContextMenu.tabKey);
     }
+  };
+
+  const findTerminalInTab = (node, key) => {
+    if (!node) return null;
+    if (node.key === key) return node;
+    if (node.type === 'split') {
+      if (node.first || node.second) {
+        return findTerminalInTab(node.first, key) || findTerminalInTab(node.second, key);
+      }
+      if (node.leftTerminal || node.rightTerminal) {
+        return findTerminalInTab(node.leftTerminal, key) || findTerminalInTab(node.rightTerminal, key);
+      }
+      if (Array.isArray(node.terminals)) {
+        for (const t of node.terminals) {
+          const found = findTerminalInTab(t, key);
+          if (found) return found;
+        }
+      }
+    }
+    return null;
+  };
+
+  const activeTerminal = (() => {
+    if (!terminalContextMenu) return null;
+    for (const tab of allTabs) {
+      const found = findTerminalInTab(tab, terminalContextMenu.tabKey);
+      if (found) return found;
+    }
+    return null;
+  })();
+
+  const hasSSHConfig = activeTerminal && activeTerminal.sshConfig;
+
+  const handleOpenInSplit = (orientation) => {
+    if (!activeTerminal || !activeTerminal.sshConfig) {
+      console.warn('No active terminal or sshConfig found for split');
+      setTerminalContextMenu(null);
+      return;
+    }
+
+    const sshNode = {
+      key: activeTerminal.originalKey || activeTerminal.sshConfig.originalKey || activeTerminal.key,
+      label: activeTerminal.label || activeTerminal.sshConfig.name || 'Terminal',
+      data: {
+        host: activeTerminal.sshConfig.host,
+        user: activeTerminal.sshConfig.username,
+        password: activeTerminal.sshConfig.password,
+        port: activeTerminal.sshConfig.port,
+        useBastionWallix: activeTerminal.sshConfig.useBastionWallix || false,
+        bastionHost: activeTerminal.sshConfig.bastionHost || '',
+        bastionUser: activeTerminal.sshConfig.bastionUser || '',
+        x11Forwarding: activeTerminal.sshConfig.x11Forwarding || false,
+        agentForwarding: activeTerminal.sshConfig.agentForwarding || false,
+        autoRecording: activeTerminal.sshConfig.autoRecording || false,
+        proxyJumpEnabled: activeTerminal.sshConfig.proxyJumpEnabled || false,
+        jumpHost: activeTerminal.sshConfig.jumpHost || '',
+        jumpPort: activeTerminal.sshConfig.jumpPort || 22,
+        jumpUser: activeTerminal.sshConfig.jumpUser || '',
+        jumpAuthMethod: activeTerminal.sshConfig.jumpAuthMethod || 'password',
+        jumpPassword: activeTerminal.sshConfig.jumpPassword || '',
+        jumpPrivateKey: activeTerminal.sshConfig.jumpPrivateKey || '',
+        hostKeyPolicy: activeTerminal.sshConfig.hostKeyPolicy || 'warn_new'
+      }
+    };
+
+    if (openInSplit) {
+      openInSplit(sshNode, { key: terminalContextMenu.tabKey }, orientation);
+    }
+    setTerminalContextMenu(null);
   };
 
   const extractTerminals = (tab) => {
@@ -328,6 +398,47 @@ const TerminalContextMenu = ({
             >
               <i className="pi pi-folder-open" style={{ width: '16px', color: '#eab308' }} />
               Explorar Archivos
+            </div>
+          </>
+        )}
+
+        {/* SSH Split Option */}
+        {hasSSHConfig && openInSplit && (
+          <>
+            <div className="menu-separator" style={{ height: '1px', margin: '4px 0' }} />
+            <div
+              className="menu-item"
+              style={{
+                padding: '8px 12px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                color: '#38bdf8'
+              }}
+              onClick={() => {
+                handleOpenInSplit('vertical');
+              }}
+            >
+              <i className="pi pi-arrows-v" style={{ width: '16px', color: '#38bdf8' }} />
+              Abrir en Split (Vertical)
+            </div>
+            <div
+              className="menu-item"
+              style={{
+                padding: '8px 12px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                color: '#38bdf8'
+              }}
+              onClick={() => {
+                handleOpenInSplit('horizontal');
+              }}
+            >
+              <i className="pi pi-arrows-h" style={{ width: '16px', color: '#38bdf8' }} />
+              Abrir en Split (Horizontal)
             </div>
           </>
         )}

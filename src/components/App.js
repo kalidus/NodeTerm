@@ -3902,6 +3902,7 @@ const App = () => {
         />
         <MainContentArea
           settingsTabProps={settingsTabProps}
+          openInSplit={openInSplit}
           // Sidebar props
           sidebarCollapsed={sidebarCollapsed}
           setSidebarCollapsed={setSidebarCollapsed}
