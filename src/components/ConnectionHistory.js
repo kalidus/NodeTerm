@@ -785,7 +785,7 @@ const ConnectionHistory = ({
 			}));
 		}
 
-		const isPassword = node.data && node.data.type === 'password';
+		const isPassword = node.data && ['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note'].includes(node.data.type);
 		if (isPassword) {
 			const payload = {
 				key: node.key,

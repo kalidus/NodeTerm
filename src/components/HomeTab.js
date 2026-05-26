@@ -13,7 +13,7 @@ import StandaloneStatusBar from './StandaloneStatusBar';
 import { uiThemes } from '../themes/ui-themes';
 import { themeManager } from '../utils/themeManager';
 import { themes } from '../themes';
-import { getRecents, onUpdate, getRecentPasswords, subscribeRecents } from '../utils/connectionStore';
+import { getRecents, onUpdate, getRecentPasswords, subscribeRecents, recordRecentPassword } from '../utils/connectionStore';
 import { STORAGE_KEYS } from '../utils/constants';
 import {
   persistHomeTabSetting,
@@ -776,6 +776,14 @@ const HomeTab = ({
       // Manejar t\u00FAneles SSH
       if (onOpenSSHTunnel) {
         onOpenSSHTunnel(connection);
+      }
+    } else if (['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note'].includes(connection.type)) {
+      // Manejar secretos (passwords)
+      openPasswordTab(connection);
+      try {
+        recordRecentPassword(connection);
+      } catch (err) {
+        console.error('Error actualizando reciente de password:', err);
       }
     } else if (onCreateSSHConnection) {
       // Manejar conexiones SSH tradicionales
