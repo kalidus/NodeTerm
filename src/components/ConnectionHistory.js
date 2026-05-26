@@ -1159,6 +1159,12 @@ const ConnectionHistory = ({
 				}
 				return { ...fav, isFavorite: true };
 			});
+			// Ordenar por lastConnected descendente para mostrar los últimos conectados primero
+			syncedFavs.sort((a, b) => {
+				const timeA = a.lastConnected ? new Date(a.lastConnected).getTime() : 0;
+				const timeB = b.lastConnected ? new Date(b.lastConnected).getTime() : 0;
+				return timeB - timeA;
+			});
 			setFavoriteConnections(syncedFavs);
 		} catch (e) {
 			console.error('Error cargando favoritos:', e);
