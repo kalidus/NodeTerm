@@ -494,6 +494,7 @@ const HomeTab = ({
     }
   }, [isActiveTab, loadRecentConnections, loadRecentPasswords]);
 
+
   // Funciones auxiliares para tipos de passwords
   const getPasswordTypeIcon = (type) => {
     // Si no hay tipo definido, intentar inferirlo del nombre o usar icono por defecto
@@ -1913,12 +1914,12 @@ const HomeTab = ({
         data-split-container-wrapper="true"
       >
         <div style={{
-          height: '100%',
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'row',
-          overflow: 'hidden'
-        }}>
+            height: '100%',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'row',
+            overflow: 'hidden'
+          }}>
           {/* Main area with Dashboard and Terminal */}
           <div
             ref={mainAreaRef}

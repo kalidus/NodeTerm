@@ -264,6 +264,42 @@ const ConnectionHistory = ({
 	const MIN_SEARCH_CHARS = 3;
 	const lastAutoExpandedSignatureRef = useRef('');
 	const [activeBottomView, setActiveBottomView] = useState('all');
+
+	// Split panel dentro del marco del terminal integrado
+	const [splitOpen, setSplitOpen] = useState(false);
+	const [splitView, setSplitView] = useState('recent'); // 'recent' | 'favorites'
+	const [splitWidth, setSplitWidth] = useState(null); // px o null (= 25% dinámico)
+	const splitBodyRef = useRef(null);
+
+	const handleSplitDragStart = useCallback((e) => {
+		e.preventDefault();
+		const container = splitBodyRef.current;
+		if (!container) return;
+		const startX = e.clientX;
+		const containerW = container.getBoundingClientRect().width;
+		const startW = splitWidth !== null ? splitWidth : containerW * 0.25;
+		// Panel está a la derecha: arrastrar hacia la izquierda lo agranda
+		const onMove = (mv) => {
+			const delta = startX - mv.clientX;
+			setSplitWidth(Math.min(containerW * 0.6, Math.max(160, startW + delta)));
+		};
+		const onUp = () => {
+			window.removeEventListener('mousemove', onMove);
+			window.removeEventListener('mouseup', onUp);
+		};
+		window.addEventListener('mousemove', onMove);
+		window.addEventListener('mouseup', onUp);
+	}, [splitWidth]);
+
+	const handleToggleSplit = useCallback((view) => {
+		setSplitOpen(prev => {
+			if (!prev) return true;
+			if (splitView === view) return false;
+			return true;
+		});
+		setSplitView(view);
+	}, [splitView]);
+
 	const themePickerRef = useRef(null);
 	const uiThemePickerRef = useRef(null);
 
@@ -2532,24 +2568,30 @@ const ConnectionHistory = ({
 							>
 								<i className="pi pi-plus-circle" /> Terminal
 							</button>
-							<button
-								className={`hero-action-btn ${activeBottomView === 'recent' && !terminalView ? 'active' : ''}`}
-								onClick={() => {
-									if (terminalView && onTerminalToggle) onTerminalToggle(false);
+						<button
+							className={`hero-action-btn ${terminalView ? (splitOpen && splitView === 'recent' ? 'active' : '') : (activeBottomView === 'recent' && !terminalView ? 'active' : '')}`}
+							onClick={() => {
+								if (terminalView) {
+									handleToggleSplit('recent');
+								} else {
 									setActiveBottomView('recent');
-								}}
-							>
-								<i className="pi pi-clock" /> Recientes
-							</button>
-							<button
-								className={`hero-action-btn ${activeBottomView === 'favorites' && !terminalView ? 'active' : ''}`}
-								onClick={() => {
-									if (terminalView && onTerminalToggle) onTerminalToggle(false);
+								}
+							}}
+						>
+							<i className="pi pi-clock" /> Recientes
+						</button>
+						<button
+							className={`hero-action-btn ${terminalView ? (splitOpen && splitView === 'favorites' ? 'active' : '') : (activeBottomView === 'favorites' && !terminalView ? 'active' : '')}`}
+							onClick={() => {
+								if (terminalView) {
+									handleToggleSplit('favorites');
+								} else {
 									setActiveBottomView('favorites');
-								}}
-							>
-								<i className="pi pi-star" /> Favoritos
-							</button>
+								}
+							}}
+						>
+							<i className="pi pi-star" /> Favoritos
+						</button>
 						</div>
 					</div>
 				</div>
@@ -3416,39 +3458,31 @@ const ConnectionHistory = ({
 							className="pi pi-clock"
 							style={{
 								fontSize: '0.86rem',
-								color: terminalTheme.foreground || '#c9d1d9',
-								opacity: 0.7,
+								color: splitOpen && splitView === 'recent' ? (terminalTheme.green || '#3fb950') : (terminalTheme.foreground || '#c9d1d9'),
+								opacity: splitOpen && splitView === 'recent' ? 1 : 0.7,
 								cursor: 'pointer',
 								padding: '4px',
 								transition: 'all 0.2s'
 							}}
-							title="Ir a Recientes"
-							onClick={(e) => {
-								e.stopPropagation();
-								setActiveBottomView('recent');
-								if (onTerminalToggle) onTerminalToggle(false);
-							}}
+							title="Recientes — split con terminal (clic para activar/desactivar)"
+							onClick={(e) => { e.stopPropagation(); handleToggleSplit('recent'); }}
 							onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
-							onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; }}
+							onMouseLeave={(e) => { e.currentTarget.style.opacity = splitOpen && splitView === 'recent' ? 1 : 0.7; }}
 						/>
 						<i
 							className="pi pi-star"
 							style={{
 								fontSize: '0.86rem',
-								color: terminalTheme.foreground || '#c9d1d9',
-								opacity: 0.7,
+								color: splitOpen && splitView === 'favorites' ? '#FFD700' : (terminalTheme.foreground || '#c9d1d9'),
+								opacity: splitOpen && splitView === 'favorites' ? 1 : 0.7,
 								cursor: 'pointer',
 								padding: '4px',
 								transition: 'all 0.2s'
 							}}
-							title="Ir a Favoritos"
-							onClick={(e) => {
-								e.stopPropagation();
-								setActiveBottomView('favorites');
-								if (onTerminalToggle) onTerminalToggle(false);
-							}}
+							title="Favoritos — split con terminal (clic para activar/desactivar)"
+							onClick={(e) => { e.stopPropagation(); handleToggleSplit('favorites'); }}
 							onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
-							onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; }}
+							onMouseLeave={(e) => { e.currentTarget.style.opacity = splitOpen && splitView === 'favorites' ? 1 : 0.7; }}
 						/>
 						<div
 							aria-hidden="true"
@@ -3518,8 +3552,133 @@ const ConnectionHistory = ({
 
 
 
-				{/* Terminal Body - always kept alive */}
-				{children}
+			{/* Terminal Body — con split opcional de Recientes / Favoritos (derecha) */}
+			<div
+				ref={splitBodyRef}
+				style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}
+			>
+				{/* Terminal real (izquierda, ocupa el espacio restante) */}
+				<div style={{ flex: 1, minWidth: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+					{children}
+				</div>
+
+				{splitOpen && (() => {
+					const splitConnections = splitView === 'favorites' ? filteredFavorites : filteredRecentsForDisplay;
+					const panelW = splitWidth !== null
+						? splitWidth
+						: (splitBodyRef.current ? splitBodyRef.current.getBoundingClientRect().width * 0.25 : 220);
+					return (
+						<>
+							{/* divisor arrastrable */}
+							<div
+								onMouseDown={handleSplitDragStart}
+								style={{
+									width: 4, height: '100%', cursor: 'col-resize', flexShrink: 0,
+									background: 'rgba(255,255,255,0.06)', transition: 'background 0.15s',
+								}}
+								onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+								onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+								title="Arrastrar para redimensionar"
+							/>
+							{/* Panel derecho — sin marco */}
+							<div style={{
+								width: panelW,
+								minWidth: 160,
+								maxWidth: '60%',
+								flexShrink: 0,
+								display: 'flex',
+								flexDirection: 'column',
+								overflow: 'hidden',
+							}}>
+								{/* barra de tabs */}
+								<div style={{
+									display: 'flex',
+									alignItems: 'center',
+									gap: 2,
+									padding: '4px 8px',
+									borderBottom: `1px solid rgba(255,255,255,0.06)`,
+									flexShrink: 0,
+								}}>
+									<button
+										onClick={() => setSplitView('recent')}
+										style={{
+											flex: 1, padding: '3px 5px', border: 'none', borderRadius: 3,
+											cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'inherit',
+											background: splitView === 'recent' ? 'rgba(79,195,247,0.14)' : 'transparent',
+											color: splitView === 'recent' ? '#4fc3f7' : 'rgba(255,255,255,0.35)',
+											fontWeight: splitView === 'recent' ? 700 : 400,
+											display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3,
+										}}
+									>
+										<i className="pi pi-clock" style={{ fontSize: '0.65rem' }} /> Recientes
+									</button>
+									<button
+										onClick={() => setSplitView('favorites')}
+										style={{
+											flex: 1, padding: '3px 5px', border: 'none', borderRadius: 3,
+											cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'inherit',
+											background: splitView === 'favorites' ? 'rgba(255,215,0,0.1)' : 'transparent',
+											color: splitView === 'favorites' ? '#FFD700' : 'rgba(255,255,255,0.35)',
+											fontWeight: splitView === 'favorites' ? 700 : 400,
+											display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3,
+										}}
+									>
+										<i className="pi pi-star" style={{ fontSize: '0.65rem' }} /> Favoritos
+									</button>
+									<button
+										onClick={() => setSplitOpen(false)}
+										title="Cerrar split"
+										style={{
+											padding: '3px 5px', border: 'none', borderRadius: 3,
+											cursor: 'pointer', background: 'transparent',
+											color: 'rgba(255,255,255,0.2)', fontSize: '0.6rem', flexShrink: 0,
+										}}
+										onMouseEnter={e => e.currentTarget.style.color = '#ff5f56'}
+										onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.2)'}
+									>
+										<i className="pi pi-times" />
+									</button>
+								</div>
+								{/* path bar */}
+								<div style={{
+									padding: '2px 8px',
+									fontSize: '0.62rem',
+									color: 'rgba(255,255,255,0.25)',
+									fontFamily: "'Fira Code', monospace",
+									borderBottom: `1px solid rgba(255,255,255,0.04)`,
+									flexShrink: 0,
+								}}>
+									<span style={{ color: 'rgba(255,255,255,0.4)' }}>~</span>/{splitView === 'favorites' ? 'favorites' : 'recent'} · {splitConnections.length}
+								</div>
+								{/* lista de conexiones */}
+								<div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+									{splitConnections.length === 0 ? (
+										<div style={{
+											display: 'flex', flexDirection: 'column', alignItems: 'center',
+											justifyContent: 'center', height: '100%', gap: 8,
+											color: 'rgba(255,255,255,0.2)', fontSize: '0.75rem',
+											padding: 16, textAlign: 'center',
+										}}>
+											<i className={splitView === 'favorites' ? 'pi pi-star' : 'pi pi-clock'} style={{ fontSize: '1.3rem', opacity: 0.3 }} />
+											<span>No hay {splitView === 'favorites' ? 'favoritos' : 'recientes'}</span>
+										</div>
+									) : splitConnections.map(conn => (
+										<ConnectionRow
+											key={conn.id}
+											connection={conn}
+											isPinned={isFavorite(conn)}
+											isActive={activeIds.has(activeKey(conn))}
+											onConnect={onConnectToHistory}
+											onEdit={onEdit}
+											onToggleFav={handleToggleFavoriteWithGroup}
+										/>
+									))}
+								</div>
+							</div>
+						</>
+					);
+				})()}
+			</div>
 
 				{/* Integrated Status Bar */}
 				{statusBarVisible && (
