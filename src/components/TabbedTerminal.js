@@ -16,6 +16,7 @@ import {
     LazyGeminiCliTerminal,
     LazyCodexCliTerminal,
     LazyAntigravityCliTerminal,
+    LazyHermesCliTerminal,
     LazyGuacamoleTerminal
 } from './tabLoaders';
 import { themes } from '../themes';
@@ -53,7 +54,8 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         opencode: false,
         geminicli: false,
         codexcli: false,
-        antigravitycli: false
+        antigravitycli: false,
+        hermescli: false
     });
 
     useEffect(() => {
@@ -65,7 +67,8 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     opencode: cfg.opencode === true,
                     geminicli: cfg.geminicli === true,
                     codexcli: cfg.codexcli === true,
-                    antigravitycli: cfg.antigravitycli === true
+                    antigravitycli: cfg.antigravitycli === true,
+                    hermescli: cfg.hermescli === true
                 });
             } catch {
                 /* noop */
@@ -603,6 +606,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 'geminicli': 'Gemini CLI',
                 'codexcli': 'Codex CLI',
                 'antigravitycli': 'Antigravity CLI',
+                'hermescli': 'Hermes Agent',
                 'linux-terminal': isMac ? 'Terminal macOS' : 'Terminal Linux'
             };
 
@@ -769,6 +773,8 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     window.electron.ipcRenderer.send(`codexcli:data:${tabId}`, finalCommand);
                 } else if (terminalType === 'antigravitycli') {
                     window.electron.ipcRenderer.send(`antigravitycli:data:${tabId}`, finalCommand);
+                } else if (terminalType === 'hermescli') {
+                    window.electron.ipcRenderer.send(`hermescli:data:${tabId}`, finalCommand);
                 }
                 console.log('✅ Comando enviado al canal IPC');
             } else {
@@ -1258,6 +1264,9 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         if (aiClientsEnabled.antigravitycli) {
             aiClis.push({ label: 'Antigravity CLI', value: 'antigravitycli', icon: <SiGooglegemini style={{ color: '#4285F4' }} /> });
         }
+        if (aiClientsEnabled.hermescli) {
+            aiClis.push({ label: 'Hermes Agent', value: 'hermescli', icon: <AIClientBrandIcon tabType="hermescli" size={14} /> });
+        }
 
         if (aiClis.length > 0) {
             groups.push({ label: 'AI CLIs', icon: 'pi pi-bolt', items: aiClis });
@@ -1479,6 +1488,9 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         } else if (terminalTypeToUse === 'antigravitycli') {
             title = 'Antigravity CLI';
             terminalType = 'antigravitycli';
+        } else if (terminalTypeToUse === 'hermescli') {
+            title = 'Hermes Agent';
+            terminalType = 'hermescli';
         } else {
             title = 'Terminal';
             terminalType = terminalTypeToUse;
@@ -1622,7 +1634,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     };
 
     // Determinar el tema de la terminal actual para inyectar colores dinámicos
-    const terminalTheme = activeTab?.type === 'powershell' || activeTab?.type === 'cygwin' || activeTab?.type === 'claude' || activeTab?.type === 'opencode' || activeTab?.type === 'geminicli' || activeTab?.type === 'codexcli' || activeTab?.type === 'antigravitycli'
+    const terminalTheme = activeTab?.type === 'powershell' || activeTab?.type === 'cygwin' || activeTab?.type === 'claude' || activeTab?.type === 'opencode' || activeTab?.type === 'geminicli' || activeTab?.type === 'codexcli' || activeTab?.type === 'antigravitycli' || activeTab?.type === 'hermescli'
         ? (themes[localPowerShellTheme]?.theme || powershellXtermTheme)
         : (themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme);
 
@@ -1762,6 +1774,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                                     tab.type === 'geminicli' ? 'pi pi-star cyber-tab-icon' :
                                                     tab.type === 'codexcli' ? 'pi pi-bolt cyber-tab-icon' :
                                                     tab.type === 'antigravitycli' ? 'pi pi-sparkles cyber-tab-icon' :
+                                                    tab.type === 'hermescli' ? 'pi pi-bolt cyber-tab-icon' :
                                                     tab.type === 'docker' ? 'pi pi-box cyber-tab-icon' : 'pi pi-desktop cyber-tab-icon'}
                                             style={{ 
                                                 color: tab.active ? 'var(--terminal-tab-accent)' : 'inherit'
@@ -1970,6 +1983,19 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                         )}
                         {tab.type === 'antigravitycli' && (
                             <LazyAntigravityCliTerminal
+                                key={`${tab.id}-terminal`}
+                                ref={(ref) => {
+                                    if (ref) terminalRefs.current[tab.id] = ref;
+                                }}
+                                tabId={tab.id}
+                                fontFamily={localFontFamily}
+                                fontSize={localFontSize}
+                                theme={themes[localPowerShellTheme]?.theme || powershellXtermTheme}
+                                isIntegrated={isIntegrated}
+                            />
+                        )}
+                        {tab.type === 'hermescli' && (
+                            <LazyHermesCliTerminal
                                 key={`${tab.id}-terminal`}
                                 ref={(ref) => {
                                     if (ref) terminalRefs.current[tab.id] = ref;

@@ -8,7 +8,8 @@ const TERMINAL_TITLES = {
   opencode: 'OpenCode',
   geminicli: 'Gemini CLI',
   codexcli: 'Codex CLI',
-  antigravitycli: 'Antigravity CLI'
+  antigravitycli: 'Antigravity CLI',
+  hermescli: 'Hermes Agent'
 };
 
 const AI_CLIENT_OPTIONS = [
@@ -16,7 +17,8 @@ const AI_CLIENT_OPTIONS = [
   { key: 'opencode', label: 'OpenCode', value: 'opencode' },
   { key: 'geminicli', label: 'Gemini CLI', value: 'geminicli' },
   { key: 'codexcli', label: 'Codex CLI', value: 'codexcli' },
-  { key: 'antigravitycli', label: 'Antigravity CLI', value: 'antigravitycli' }
+  { key: 'antigravitycli', label: 'Antigravity CLI', value: 'antigravitycli' },
+  { key: 'hermescli', label: 'Hermes Agent', value: 'hermescli' }
 ];
 
 /**

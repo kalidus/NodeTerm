@@ -9,7 +9,8 @@ const TerminalTypeSelector = ({ value, onChange }) => {
         opencode: false,
         geminicli: false,
         codexcli: false,
-        antigravitycli: false
+        antigravitycli: false,
+        hermescli: false
     });
 
     useEffect(() => {
@@ -21,7 +22,8 @@ const TerminalTypeSelector = ({ value, onChange }) => {
                     opencode: cfg.opencode === true,
                     geminicli: cfg.geminicli === true,
                     codexcli: cfg.codexcli === true,
-                    antigravitycli: cfg.antigravitycli === true
+                    antigravitycli: cfg.antigravitycli === true,
+                    hermescli: cfg.hermescli === true
                 });
             } catch {
                 setAiClientsEnabled({
@@ -29,7 +31,8 @@ const TerminalTypeSelector = ({ value, onChange }) => {
                     opencode: false,
                     geminicli: false,
                     codexcli: false,
-        antigravitycli: false
+                    antigravitycli: false,
+                    hermescli: false
                 });
             }
         };
@@ -50,7 +53,8 @@ const TerminalTypeSelector = ({ value, onChange }) => {
         ...(aiClientsEnabled.opencode ? [{ label: 'OpenCode', value: 'opencode', icon: 'pi pi-code', color: '#6366f1' }] : []),
         ...(aiClientsEnabled.geminicli ? [{ label: 'Gemini CLI', value: 'geminicli', icon: 'pi pi-star', color: '#1a73e8' }] : []),
         ...(aiClientsEnabled.codexcli ? [{ label: 'Codex CLI', value: 'codexcli', icon: 'pi pi-bolt', color: '#10b981' }] : []),
-        ...(aiClientsEnabled.antigravitycli ? [{ label: 'Antigravity CLI', value: 'antigravitycli', icon: 'pi pi-sparkles', color: '#4285f4' }] : [])
+        ...(aiClientsEnabled.antigravitycli ? [{ label: 'Antigravity CLI', value: 'antigravitycli', icon: 'pi pi-sparkles', color: '#4285f4' }] : []),
+        ...(aiClientsEnabled.hermescli ? [{ label: 'Hermes Agent', value: 'hermescli', icon: 'pi pi-bolt', color: '#14b8a6' }] : [])
     ];
 
     return (
@@ -85,7 +89,9 @@ const TerminalTypeSelector = ({ value, onChange }) => {
                                             ? 'rgba(16, 185, 129, 0.15)'
                                         : (option.value === 'antigravitycli'
                                             ? 'rgba(66, 133, 244, 0.15)'
-                                        : (option.value === 'wsl' ? 'rgba(138, 226, 52, 0.1)' : 'rgba(79, 195, 247, 0.1)')))))
+                                        : (option.value === 'hermescli'
+                                            ? 'rgba(20, 184, 166, 0.15)'
+                                        : (option.value === 'wsl' ? 'rgba(138, 226, 52, 0.1)' : 'rgba(79, 195, 247, 0.1)'))))))
                                 : 'transparent',
                             fontSize: '12px',
                             padding: '4px 8px',

@@ -35,6 +35,7 @@ let _opencodeHandlers = null;
 let _geminicliHandlers = null;
 let _codexcliHandlers = null;
 let _antigravitycliHandlers = null;
+let _hermescliHandlers = null;
 
 function getAppHandlers() {
   if (!_appHandlers) _appHandlers = require('./app-handlers');
@@ -161,6 +162,11 @@ function getAntigravityCliHandlers() {
   return _antigravitycliHandlers;
 }
 
+function getHermesCliHandlers() {
+  if (!_hermescliHandlers) _hermescliHandlers = require('./hermescli-handlers');
+  return _hermescliHandlers;
+}
+
 function runHandlerStep(label, fn) {
   try {
     fn();
@@ -244,6 +250,7 @@ function registerCriticalHandlers(dependencies) {
   runHandlerStep('gemini CLI IPC', () => getGeminiCliHandlers().registerGeminiCliHandlers());
   runHandlerStep('codex CLI IPC', () => getCodexCliHandlers().registerCodexCliHandlers());
   runHandlerStep('antigravity CLI IPC', () => getAntigravityCliHandlers().registerAntigravityCliHandlers());
+  runHandlerStep('hermes CLI IPC', () => getHermesCliHandlers().registerHermesCliHandlers());
   runHandlerStep('system monitoring IPC', () => getSystemHandlers().registerSystemMonitoringHandlers());
   runHandlerStep('AI clients IPC', () => registerAIClientHandlers(dependencies));
   runHandlerStep('guacamole IPC', () => getGuacamoleHandlers().registerGuacamoleHandlers(dependencies));
@@ -347,5 +354,6 @@ module.exports = {
   getOpenCodeHandlers,
   getGeminiCliHandlers,
   getCodexCliHandlers,
-  getAntigravityCliHandlers
+  getAntigravityCliHandlers,
+  getHermesCliHandlers
 };

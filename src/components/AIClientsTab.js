@@ -14,7 +14,7 @@ const CATEGORIES = [
     label: 'CLI Local',
     emoji: '🖥️',
     description: 'Herramientas de IA que se ejecutan como proceso local en tu terminal',
-    clients: ['claude', 'opencode', 'geminicli', 'codexcli', 'antigravitycli']
+    clients: ['claude', 'opencode', 'geminicli', 'codexcli', 'antigravitycli', 'hermescli']
   },
   {
     key: 'webapps',
@@ -40,6 +40,7 @@ const AIClientsTab = ({ themeColors }) => {
     geminicli: false,
     codexcli: false,
     antigravitycli: false,
+    hermescli: false,
     anythingllm: false,
     openwebui: false,
     librechat: false,
@@ -101,6 +102,14 @@ const AIClientsTab = ({ themeColors }) => {
     binaryPath: null,
     error: null
   });
+  const [hermesCliStatus, setHermesCliStatus] = useState({
+    loading: false,
+    installed: false,
+    installing: false,
+    version: null,
+    binaryPath: null,
+    error: null
+  });
 
   // Estados para configuración detallada de los CLIs
   const [claudeConfig, setClaudeConfig] = useState({ binaryPath: '', defaultModel: '', extraArgs: '', authToken: '' });
@@ -108,6 +117,7 @@ const AIClientsTab = ({ themeColors }) => {
   const [geminiCliConfig, setGeminiCliConfig] = useState({ binaryPath: '', extraArgs: '', apiKey: '' });
   const [codexCliConfig, setCodexCliConfig] = useState({ binaryPath: '', extraArgs: '', apiKey: '' });
   const [antigravityCliConfig, setAntigravityCliConfig] = useState({ binaryPath: '', extraArgs: '' });
+  const [hermesCliConfig, setHermesCliConfig] = useState({ binaryPath: '', extraArgs: '' });
 
   // UI state — categorías colapsables, búsqueda, vista
   const [collapsedSections, setCollapsedSections] = useState({});
@@ -154,16 +164,21 @@ const AIClientsTab = ({ themeColors }) => {
     checkAntigravityCliStatus();
   }, []);
 
+  useEffect(() => {
+    checkHermesCliStatus();
+  }, []);
+
   // Cargar configuraciones detalladas desde el proceso principal
   useEffect(() => {
     const loadConfigs = async () => {
       try {
-        const [claude, opencode, gemini, codex, antigravity] = await Promise.all([
+        const [claude, opencode, gemini, codex, antigravity, hermes] = await Promise.all([
           window.electron?.claude?.getConfig?.(),
           window.electron?.opencode?.getConfig?.(),
           window.electron?.geminicli?.getConfig?.(),
           window.electron?.codexcli?.getConfig?.(),
-          window.electron?.antigravitycli?.getConfig?.()
+          window.electron?.antigravitycli?.getConfig?.(),
+          window.electron?.hermescli?.getConfig?.()
         ]);
 
         if (claude) setClaudeConfig({ ...claude, authToken: '' });
@@ -171,6 +186,7 @@ const AIClientsTab = ({ themeColors }) => {
         if (gemini) setGeminiCliConfig({ ...gemini, apiKey: '' });
         if (codex) setCodexCliConfig({ ...codex, apiKey: '' });
         if (antigravity) setAntigravityCliConfig(antigravity);
+        if (hermes) setHermesCliConfig(hermes);
       } catch (error) {
         console.error('[AIClientsTab] Error al cargar configuraciones detaladas:', error);
       }
@@ -495,6 +511,56 @@ const AIClientsTab = ({ themeColors }) => {
     }
   };
 
+  const checkHermesCliStatus = async () => {
+    setHermesCliStatus(prev => ({ ...prev, loading: true, error: null }));
+    try {
+      const result = await window.electron?.hermescli?.getCliStatus?.();
+      if (result?.success) {
+        setHermesCliStatus({
+          loading: false,
+          installed: !!result.installed,
+          installing: false,
+          version: result.version || null,
+          binaryPath: result.binaryPath || null,
+          error: null
+        });
+      } else {
+        setHermesCliStatus(prev => ({
+          ...prev,
+          loading: false,
+          installing: false,
+          error: result?.error || 'No se pudo verificar Hermes CLI'
+        }));
+      }
+    } catch (error) {
+      setHermesCliStatus(prev => ({
+        ...prev,
+        loading: false,
+        installing: false,
+        error: error.message || 'No se pudo verificar Hermes CLI'
+      }));
+    }
+  };
+
+  const installHermesCli = async () => {
+    setHermesCliStatus(prev => ({ ...prev, installing: true, error: null }));
+    try {
+      const result = await window.electron?.hermescli?.installCli?.();
+      if (!result?.success) {
+        throw new Error(result?.error || 'No se pudo instalar Hermes CLI');
+      }
+      await checkHermesCliStatus();
+      return true;
+    } catch (error) {
+      setHermesCliStatus(prev => ({
+        ...prev,
+        installing: false,
+        error: error.message || 'No se pudo instalar Hermes CLI'
+      }));
+      return false;
+    }
+  };
+
   const saveCodexApiKey = async () => {
     try {
       const current = await window.electron?.codexcli?.getConfig?.();
@@ -603,6 +669,26 @@ const AIClientsTab = ({ themeColors }) => {
     }
   };
 
+  const handleSaveHermesCliConfig = async () => {
+    try {
+      const validation = await window.electron?.hermescli?.validateConfig?.(hermesCliConfig);
+      if (validation && validation.valid === false) {
+        setHermesCliStatus(prev => ({ ...prev, error: validation.error || 'Configuración inválida' }));
+        return;
+      }
+
+      const result = await window.electron?.hermescli?.setConfig?.(hermesCliConfig);
+      if (result?.success) {
+        setHermesCliStatus(prev => ({ ...prev, error: null }));
+        await checkHermesCliStatus();
+      } else {
+        setHermesCliStatus(prev => ({ ...prev, error: result?.error || 'Error al guardar' }));
+      }
+    } catch (error) {
+      setHermesCliStatus(prev => ({ ...prev, error: error.message }));
+    }
+  };
+
   const handleSaveCodexCliConfig = async () => {
     try {
       const validation = await window.electron?.codexcli?.validateConfig?.(codexCliConfig);
@@ -682,6 +768,25 @@ const AIClientsTab = ({ themeColors }) => {
             severity: 'warn',
             summary: 'Antigravity CLI activado',
             detail: 'El cliente quedó habilitado, pero la instalación automática falló. Expande la configuración avanzada y pulsa "Instalar CLI", o indica la ruta de agy/antigravity.',
+            life: 7000
+          });
+        }
+      }
+      return;
+    }
+
+    if (clientKey === 'hermescli') {
+      const willEnable = !clients.hermescli;
+      const newClients = { ...clients, hermescli: willEnable };
+      saveClientsConfig(newClients);
+
+      if (willEnable && !hermesCliStatus.installed) {
+        const ok = await installHermesCli();
+        if (!ok) {
+          toast.current?.show({
+            severity: 'warn',
+            summary: 'Hermes Agent activado',
+            detail: 'El cliente quedó habilitado, pero la instalación automática falló. Expande la configuración avanzada y pulsa "Instalar CLI", o indica la ruta de hermes.exe.',
             life: 7000
           });
         }
@@ -870,6 +975,7 @@ const AIClientsTab = ({ themeColors }) => {
     geminicli: 'geminicli',
     codexcli: 'codexcli',
     antigravitycli: 'antigravitycli',
+    hermescli: 'hermescli',
     anythingllm: 'anything-llm',
     openwebui: 'openwebui',
     librechat: 'librechat',
@@ -923,6 +1029,15 @@ const AIClientsTab = ({ themeColors }) => {
       description: 'CLI terminal de Google Antigravity. Agentes en paralelo, subagentes y login con cuenta Google. Sucesor recomendado de Gemini CLI.',
       features: ['Google Antigravity', 'Subagentes', 'Terminal dedicada'],
       badges: [{ label: 'LOCAL CLI', severity: 'warning' }, { label: 'GOOGLE', severity: 'info' }],
+      requiresDocker: false, isLocalCli: true
+    },
+    {
+      key: 'hermescli', category: 'cli',
+      name: 'Hermes Agent', shortName: 'Hermes',
+      color: '#14b8a6',
+      description: 'Agente IA autónomo de Nous Research con memoria persistente, habilidades y TUI interactivo. Configura el modelo con hermes model o hermes setup en la primera sesión.',
+      features: ['Memoria persistente', 'Skills auto-creadas', 'TUI interactivo'],
+      badges: [{ label: 'LOCAL CLI', severity: 'warning' }, { label: 'BETA WIN', severity: 'info' }],
       requiresDocker: false, isLocalCli: true
     },
     {
@@ -988,6 +1103,7 @@ const AIClientsTab = ({ themeColors }) => {
     if (key === 'geminicli') return geminiCliStatus;
     if (key === 'codexcli') return codexCliStatus;
     if (key === 'antigravitycli') return antigravityCliStatus;
+    if (key === 'hermescli') return hermesCliStatus;
     return null;
   };
 
@@ -1132,6 +1248,32 @@ const AIClientsTab = ({ themeColors }) => {
             La autenticación se realiza dentro del CLI con tu cuenta Google. Tras instalar, reinicia NodeTerm si no se detecta el binario.
           </p>
           {antigravityCliStatus.error && <div className="config-error"><i className="pi pi-times-circle" /> {antigravityCliStatus.error}</div>}
+        </div>
+      );
+    }
+    if (key === 'hermescli') {
+      return (
+        <div className="adv-config-inner">
+          <div className="cli-status-row">
+            <i className="pi pi-info-circle" style={{ color: '#14b8a6' }} />
+            <strong>Estado CLI:</strong>{' '}
+            <span>{hermesCliStatus.loading ? 'verificando...' : hermesCliStatus.installed ? `instalado${hermesCliStatus.version ? ` (${hermesCliStatus.version})` : ''}` : 'no instalado'}</span>
+            {hermesCliStatus.binaryPath && <code className="cli-path">{hermesCliStatus.binaryPath}</code>}
+          </div>
+          <div className="cli-action-row">
+            {!hermesCliStatus.installed && <Button label="Instalar CLI" icon="pi pi-download" className="p-button-sm" style={{ background: '#14b8a6', border: 'none' }} onClick={installHermesCli} loading={hermesCliStatus.installing} />}
+            {hermesCliStatus.installed && <Button label="Reinstalar" icon="pi pi-refresh" className="p-button-secondary p-button-sm" onClick={installHermesCli} loading={hermesCliStatus.installing} />}
+            <Button label="Verificar" icon="pi pi-search" className="p-button-secondary p-button-sm" onClick={checkHermesCliStatus} loading={hermesCliStatus.loading} />
+          </div>
+          <div className="config-grid">
+            <div className="config-field"><label>Ruta binario</label><InputText value={hermesCliConfig.binaryPath} onChange={(e) => setHermesCliConfig(p => ({ ...p, binaryPath: e.target.value }))} placeholder="%LOCALAPPDATA%\\hermes\\bin\\hermes.exe" className="p-inputtext-sm" style={{ width: '100%' }} /></div>
+            <div className="config-field"><label>Args extra</label><InputText value={hermesCliConfig.extraArgs} onChange={(e) => setHermesCliConfig(p => ({ ...p, extraArgs: e.target.value }))} placeholder="--tui" className="p-inputtext-sm" style={{ width: '100%' }} /></div>
+          </div>
+          <Button label="Guardar Configuración" icon="pi pi-save" className="p-button-sm p-button-text" style={{ marginTop: '0.5rem', color: '#14b8a6' }} onClick={handleSaveHermesCliConfig} />
+          <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', opacity: 0.85 }}>
+            Hermes en Windows nativo está en beta. Tras instalar, ejecuta hermes model o hermes setup en la terminal. Para multilínea usa Ctrl+J.
+          </p>
+          {hermesCliStatus.error && <div className="config-error"><i className="pi pi-times-circle" /> {hermesCliStatus.error}</div>}
         </div>
       );
     }

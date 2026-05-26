@@ -83,6 +83,7 @@
     "geminiCLI": "Gemini CLI",
     "codexCLI": "Codex CLI",
     "antigravityCLI": "Antigravity CLI",
+    "hermesCLI": "Hermes Agent",
     "openCode": "OpenCode",
     "claudeCode": "Claude Code",
     "filesystemMCP": "Filesystem MCP",

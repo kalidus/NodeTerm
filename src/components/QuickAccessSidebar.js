@@ -60,6 +60,7 @@ const QuickAccessSidebar = ({
   const [geminiCliEnabled, setGeminiCliEnabled] = useState(false);
   const [codexCliEnabled, setCodexCliEnabled] = useState(false);
   const [antigravityCliEnabled, setAntigravityCliEnabled] = useState(false);
+  const [hermesCliEnabled, setHermesCliEnabled] = useState(false);
 
   // Ref para el botón de Docker
   const dockerButtonRef = React.useRef(null);
@@ -271,12 +272,14 @@ const QuickAccessSidebar = ({
         setGeminiCliEnabled(cfg.geminicli === true);
         setCodexCliEnabled(cfg.codexcli === true);
         setAntigravityCliEnabled(cfg.antigravitycli === true);
+        setHermesCliEnabled(cfg.hermescli === true);
       } catch {
         setClaudeEnabled(false);
         setOpenCodeEnabled(false);
         setGeminiCliEnabled(false);
         setCodexCliEnabled(false);
         setAntigravityCliEnabled(false);
+        setHermesCliEnabled(false);
       }
     };
     syncClaudeEnabled();
@@ -349,6 +352,16 @@ const QuickAccessSidebar = ({
           icon: 'pi pi-sparkles',
           color: '#4285f4',
           action: () => handleOpenTerminal('antigravitycli')
+        });
+      }
+
+      if (hermesCliEnabled) {
+        terminals.push({
+          label: 'Hermes Agent',
+          value: 'hermescli',
+          icon: 'pi pi-bolt',
+          color: '#14b8a6',
+          action: () => handleOpenTerminal('hermescli')
         });
       }
 
@@ -441,6 +454,15 @@ const QuickAccessSidebar = ({
           action: () => handleOpenTerminal('antigravitycli')
         });
       }
+      if (hermesCliEnabled) {
+        terminals.push({
+          label: 'Hermes Agent',
+          value: 'hermescli',
+          icon: 'pi pi-bolt',
+          color: '#14b8a6',
+          action: () => handleOpenTerminal('hermescli')
+        });
+      }
     } else {
       terminals.push({
         label: 'Terminal',
@@ -494,10 +516,19 @@ const QuickAccessSidebar = ({
           action: () => handleOpenTerminal('antigravitycli')
         });
       }
+      if (hermesCliEnabled) {
+        terminals.push({
+          label: 'Hermes Agent',
+          value: 'hermescli',
+          icon: 'pi pi-bolt',
+          color: '#14b8a6',
+          action: () => handleOpenTerminal('hermescli')
+        });
+      }
     }
 
     setAvailableTerminals(terminals);
-  }, [wslDistributions, cygwinAvailable, dockerContainers, claudeEnabled, openCodeEnabled, geminiCliEnabled, codexCliEnabled, antigravityCliEnabled]);
+  }, [wslDistributions, cygwinAvailable, dockerContainers, claudeEnabled, openCodeEnabled, geminiCliEnabled, codexCliEnabled, antigravityCliEnabled, hermesCliEnabled]);
 
   // Configurar acciones principales
   useEffect(() => {

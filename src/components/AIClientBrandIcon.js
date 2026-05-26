@@ -6,6 +6,7 @@ import openclawPng from '../assets/ai-clients/openclaw.png';
 import openCodeSvg from '../assets/ai-clients/opencode.svg';
 import agentZeroSvg from '../assets/ai-clients/agent-zero.svg';
 import openNotebookSvg from '../assets/ai-clients/open-notebook.svg';
+import hermesSvg from '../assets/ai-clients/hermes.svg';
 
 import { SiAnthropic, SiGooglegemini, SiOpenai } from 'react-icons/si';
 
@@ -21,7 +22,8 @@ const BRAND_BY_TAB_TYPE = {
   claude: { component: SiAnthropic, color: '#D97706', alt: 'Claude' },
   geminicli: { component: SiGooglegemini, color: '#8E75B2', alt: 'Gemini' },
   codexcli: { component: SiOpenai, color: '#10A37F', alt: 'Codex' },
-  antigravitycli: { component: SiGooglegemini, color: '#4285F4', alt: 'Antigravity' }
+  antigravitycli: { component: SiGooglegemini, color: '#4285F4', alt: 'Antigravity' },
+  hermescli: { src: hermesSvg, alt: 'Hermes Agent' }
 };
 
 /**

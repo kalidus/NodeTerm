@@ -24,6 +24,7 @@ function registerTabEvents(tabId, dependencies) {
     GeminiCli,
     CodexCli,
     AntigravityCli,
+    HermesCli,
     startUbuntuSession,
     handleUbuntuData,
     handleUbuntuResize,
@@ -260,6 +261,28 @@ function registerTabEvents(tabId, dependencies) {
 
   ipcMain.on(`antigravitycli:stop:${tabId}`, (event) => {
     AntigravityCli.AntigravityCliHandlers.stop(tabId);
+  });
+
+  // ========== Hermes CLI Events ==========
+  ipcMain.removeAllListeners(`hermescli:start:${tabId}`);
+  ipcMain.removeAllListeners(`hermescli:data:${tabId}`);
+  ipcMain.removeAllListeners(`hermescli:resize:${tabId}`);
+  ipcMain.removeAllListeners(`hermescli:stop:${tabId}`);
+
+  ipcMain.on(`hermescli:start:${tabId}`, (event, data) => {
+    HermesCli.HermesCliHandlers.start(tabId, data || {});
+  });
+
+  ipcMain.on(`hermescli:data:${tabId}`, (event, data) => {
+    HermesCli.HermesCliHandlers.data(tabId, data);
+  });
+
+  ipcMain.on(`hermescli:resize:${tabId}`, (event, data) => {
+    HermesCli.HermesCliHandlers.resize(tabId, data);
+  });
+
+  ipcMain.on(`hermescli:stop:${tabId}`, (event) => {
+    HermesCli.HermesCliHandlers.stop(tabId);
   });
 
   // ========== Docker Events (lazy loading) ==========

@@ -425,7 +425,7 @@ const MainContentArea = ({
       const { terminalType, distroInfo } = event.detail;
 
       // Los CLIs de IA se abren siempre en pestañas globales, no en el HomeTab
-      const isAIClient = ['opencode', 'geminicli', 'codexcli', 'antigravitycli', 'claude'].includes(terminalType);
+      const isAIClient = ['opencode', 'geminicli', 'codexcli', 'antigravitycli', 'hermescli', 'claude'].includes(terminalType);
       if (isAIClient) {
         createLocalTerminalTab(terminalType, distroInfo);
         return;
@@ -496,6 +496,7 @@ const MainContentArea = ({
     geminicli: false,
     codexcli: false,
     antigravitycli: false,
+    hermescli: false,
     anythingllm: false,
     openwebui: false,
     librechat: false,
@@ -517,6 +518,7 @@ const MainContentArea = ({
     geminicli: false,
     codexcli: false,
     antigravitycli: false,
+    hermescli: false,
     anythingllm: false,
     openwebui: false,
     librechat: false,
@@ -682,6 +684,10 @@ const MainContentArea = ({
         return <AIClientBrandIcon tabType="antigravitycli" size={baseIconSize + 4} style={{ marginRight: iconMarginRight }} />;
       }
 
+      if (terminalType === 'hermescli') {
+        return <AIClientBrandIcon tabType="hermescli" size={baseIconSize + 4} style={{ marginRight: iconMarginRight }} />;
+      }
+
       // WSL genérico (sin distribución específica)
       if (terminalType === 'wsl' && !distroInfo) {
         return <FaLinux style={{ fontSize: `${baseIconSize}px`, color: primaryColor, marginRight: iconMarginRight }} />;
@@ -833,6 +839,18 @@ const MainContentArea = ({
             setLastLocalTerminalType('antigravitycli');
             if (createLocalTerminalTabRef.current) {
               createLocalTerminalTabRef.current('antigravitycli');
+            }
+          }
+        });
+      }
+      if (aiClientsEnabled.hermescli) {
+        aiClis.push({
+          label: 'Hermes Agent',
+          icon: getTerminalMenuIcon('hermescli'),
+          command: () => {
+            setLastLocalTerminalType('hermescli');
+            if (createLocalTerminalTabRef.current) {
+              createLocalTerminalTabRef.current('hermescli');
             }
           }
         });
@@ -2386,6 +2404,19 @@ const MainContentArea = ({
       }
     }
 
+    if (terminalType === 'hermescli') {
+      try {
+        const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
+        if (cfg.hermescli !== true) {
+          window.alert('Hermes Agent está desactivado. Actívalo en Configuración -> Clientes de IA.');
+          return;
+        }
+      } catch {
+        window.alert('Hermes Agent está desactivado. Actívalo en Configuración -> Clientes de IA.');
+        return;
+      }
+    }
+
     if (activeGroupId !== null) {
       const currentGroupKey = activeGroupId || 'no-group';
       setGroupActiveIndices(prev => ({
@@ -2413,7 +2444,7 @@ const MainContentArea = ({
       let finalDistroInfo = distroInfo;
 
       // Si no vino distroInfo, intentar resolver distribución WSL por nombre/label directo usando ref (estado más fresco)
-      if (!finalDistroInfo && terminalType !== 'claude' && terminalType !== 'opencode' && terminalType !== 'geminicli' && terminalType !== 'codexcli' && terminalType !== 'antigravitycli' && !terminalType.startsWith('docker-')) {
+      if (!finalDistroInfo && terminalType !== 'claude' && terminalType !== 'opencode' && terminalType !== 'geminicli' && terminalType !== 'codexcli' && terminalType !== 'antigravitycli' && terminalType !== 'hermescli' && !terminalType.startsWith('docker-')) {
         const distros = wslDistributionsRef.current || [];
         const distro = distros.find(d =>
           d.name === terminalType ||
@@ -2467,6 +2498,10 @@ const MainContentArea = ({
           case 'antigravitycli':
             label = 'Antigravity CLI';
             finalTerminalType = 'antigravitycli';
+            break;
+          case 'hermescli':
+            label = 'Hermes Agent';
+            finalTerminalType = 'hermescli';
             break;
           case 'wsl':
             label = 'WSL';

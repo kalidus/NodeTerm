@@ -285,6 +285,15 @@ const SettingsContent = ({
     }
   });
 
+  const [hermesCliClientEnabled, setHermesCliClientEnabled] = useState(() => {
+    try {
+      const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
+      return cfg.hermescli === true;
+    } catch {
+      return false;
+    }
+  });
+
   // Hook para redimensionamiento del diálogo
   // storageKey: null para que siempre se abra con el tamaño por defecto
   const { dialogRef, size, startResize } = useDialogResize(
@@ -1347,12 +1356,22 @@ const SettingsContent = ({
       }
     };
 
+    const syncHermesCliClientState = () => {
+      try {
+        const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
+        setHermesCliClientEnabled(cfg.hermescli === true);
+      } catch {
+        setHermesCliClientEnabled(false);
+      }
+    };
+
     const onAiClientsConfigChanged = () => {
       syncClaudeClientState();
       syncOpenCodeClientState();
       syncGeminiCliClientState();
       syncCodexCliClientState();
       syncAntigravityCliClientState();
+      syncHermesCliClientState();
     };
     const onStorage = (e) => {
       if (e.key === 'ai_clients_enabled') {
@@ -1361,6 +1380,7 @@ const SettingsContent = ({
         syncGeminiCliClientState();
         syncCodexCliClientState();
         syncAntigravityCliClientState();
+        syncHermesCliClientState();
       }
     };
 
@@ -1377,8 +1397,9 @@ const SettingsContent = ({
     opencode: openCodeClientEnabled,
     geminicli: geminiCliClientEnabled,
     codexcli: codexCliClientEnabled,
-    antigravitycli: antigravityCliClientEnabled
-  }), [claudeClientEnabled, openCodeClientEnabled, geminiCliClientEnabled, codexCliClientEnabled, antigravityCliClientEnabled]);
+    antigravitycli: antigravityCliClientEnabled,
+    hermescli: hermesCliClientEnabled
+  }), [claudeClientEnabled, openCodeClientEnabled, geminiCliClientEnabled, codexCliClientEnabled, antigravityCliClientEnabled, hermesCliClientEnabled]);
 
   const defaultTerminalOptions = useMemo(() => buildDefaultTerminalOptions({
     platform,

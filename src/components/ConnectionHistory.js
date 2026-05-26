@@ -321,7 +321,7 @@ const ConnectionHistory = ({
 			'debian',
 			'wsl-distro'
 		]);
-		const aiCliValues = new Set(['claude', 'opencode', 'geminicli', 'codexcli', 'antigravitycli']);
+		const aiCliValues = new Set(['claude', 'opencode', 'geminicli', 'codexcli', 'antigravitycli', 'hermescli']);
 
 		const groups = [
 			{ label: 'Shells', icon: 'pi pi-desktop', items: [] },
@@ -483,6 +483,9 @@ const ConnectionHistory = ({
 					if (aiClientsCfg.antigravitycli === true) {
 						shells.push({ label: 'Antigravity CLI', value: 'antigravitycli', icon: <SiGooglegemini style={{ color: '#4285F4' }} /> });
 					}
+					if (aiClientsCfg.hermescli === true) {
+						shells.push({ label: 'Hermes Agent', value: 'hermescli', icon: <AIClientBrandIcon tabType="hermescli" size={14} /> });
+					}
 
 					// WSL
 					if (window.electron && window.electron.ipcRenderer) {
@@ -535,6 +538,9 @@ const ConnectionHistory = ({
 					}
 					if (aiClientsCfg.antigravitycli === true) {
 						shells.push({ label: 'Antigravity CLI', value: 'antigravitycli', icon: <SiGooglegemini style={{ color: '#4285F4' }} /> });
+					}
+					if (aiClientsCfg.hermescli === true) {
+						shells.push({ label: 'Hermes Agent', value: 'hermescli', icon: <AIClientBrandIcon tabType="hermescli" size={14} /> });
 					}
 				}
 

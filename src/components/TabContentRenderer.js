@@ -17,6 +17,7 @@ import {
   LazyGeminiCliTerminal,
   LazyCodexCliTerminal,
   LazyAntigravityCliTerminal,
+  LazyHermesCliTerminal,
   LazyAuditTab,
   LazyRecordingPlayerTab,
   LazyGlobalAuditTab,
@@ -1494,6 +1495,19 @@ const TabContentRendererInner = React.memo(({
       const powerShellTheme = themes[localPowerShellTheme]?.theme || themes['Default Dark']?.theme;
       return (
         <LazyAntigravityCliTerminal
+          ref={el => terminalRefs.current[tab.key] = el}
+          tabId={tab.key}
+          fontFamily={localFontFamily}
+          fontSize={localFontSize}
+          theme={powerShellTheme}
+        />
+      );
+    }
+
+    if (terminalType === 'hermescli') {
+      const powerShellTheme = themes[localPowerShellTheme]?.theme || themes['Default Dark']?.theme;
+      return (
+        <LazyHermesCliTerminal
           ref={el => terminalRefs.current[tab.key] = el}
           tabId={tab.key}
           fontFamily={localFontFamily}

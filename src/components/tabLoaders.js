@@ -33,6 +33,7 @@ export const LazyOpenCodeTerminal = lazy(() => getChunk('OpenCodeTerminal', () =
 export const LazyGeminiCliTerminal = lazy(() => getChunk('GeminiCliTerminal', () => import('./GeminiCliTerminal')));
 export const LazyCodexCliTerminal = lazy(() => getChunk('CodexCliTerminal', () => import('./CodexCliTerminal')));
 export const LazyAntigravityCliTerminal = lazy(() => getChunk('AntigravityCliTerminal', () => import('./AntigravityCliTerminal')));
+export const LazyHermesCliTerminal = lazy(() => getChunk('HermesCliTerminal', () => import('./HermesCliTerminal')));
 export const LazyAuditTab = lazy(() => getChunk('AuditTab', () => import('./AuditTab')));
 export const LazyRecordingPlayerTab = lazy(() => getChunk('RecordingPlayerTab', () => import('./RecordingPlayerTab')));
 export const LazyGlobalAuditTab = lazy(() => getChunk('GlobalAuditTab', () => import('./GlobalAuditTab')));
@@ -67,6 +68,7 @@ const SECONDARY_CHUNK_KEYS = [
   'GeminiCliTerminal',
   'CodexCliTerminal',
   'AntigravityCliTerminal',
+  'HermesCliTerminal',
   'SSHTunnelTab',
 ];
 
@@ -88,6 +90,7 @@ const CHUNK_LOADERS = {
   GeminiCliTerminal: () => import('./GeminiCliTerminal'),
   CodexCliTerminal: () => import('./CodexCliTerminal'),
   AntigravityCliTerminal: () => import('./AntigravityCliTerminal'),
+  HermesCliTerminal: () => import('./HermesCliTerminal'),
   AuditTab: () => import('./AuditTab'),
   RecordingPlayerTab: () => import('./RecordingPlayerTab'),
   GlobalAuditTab: () => import('./GlobalAuditTab'),

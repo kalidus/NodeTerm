@@ -872,6 +872,7 @@ const Sidebar = React.memo(({
     geminicli: false,
     codexcli: false,
     antigravitycli: false,
+    hermescli: false,
     anythingllm: false,
     openwebui: false,
     librechat: false,
@@ -893,6 +894,7 @@ const Sidebar = React.memo(({
             geminicli: parsed.geminicli === true,
             codexcli: parsed.codexcli === true,
             antigravitycli: parsed.antigravitycli === true,
+            hermescli: parsed.hermescli === true,
             anythingllm: parsed.anythingllm === true,
             openwebui: parsed.openwebui === true,
             librechat: parsed.librechat === true,
@@ -907,7 +909,8 @@ const Sidebar = React.memo(({
             opencode: false,
             geminicli: false,
             codexcli: false,
-    antigravitycli: false,
+            antigravitycli: false,
+            hermescli: false,
             anythingllm: false,
             openwebui: false,
             librechat: false,
@@ -967,7 +970,7 @@ const Sidebar = React.memo(({
         if (enabledClients > 0) count += 1; // separador de clientes
         // separador entre CLIs y Apps
         if ((aiClientsEnabled.anythingllm || aiClientsEnabled.openwebui || aiClientsEnabled.librechat || aiClientsEnabled.agentzero || aiClientsEnabled.openclaw || aiClientsEnabled.opennotebook) && 
-            (aiClientsEnabled.opencode || aiClientsEnabled.geminicli || aiClientsEnabled.codexcli || aiClientsEnabled.antigravitycli || aiClientsEnabled.claude)) {
+            (aiClientsEnabled.opencode || aiClientsEnabled.geminicli || aiClientsEnabled.codexcli || aiClientsEnabled.antigravitycli || aiClientsEnabled.hermescli || aiClientsEnabled.claude)) {
           count += 1;
         }
       }
@@ -1015,6 +1018,12 @@ const Sidebar = React.memo(({
   const openAntigravityCliTab = () => {
     window.dispatchEvent(new CustomEvent('create-local-terminal', {
       detail: { terminalType: 'antigravitycli' }
+    }));
+  };
+
+  const openHermesCliTab = () => {
+    window.dispatchEvent(new CustomEvent('create-local-terminal', {
+      detail: { terminalType: 'hermescli' }
     }));
   };
 
@@ -3361,6 +3370,7 @@ const Sidebar = React.memo(({
       geminicli: openGeminiCliTab,
       codexcli: openCodexCliTab,
       antigravitycli: openAntigravityCliTab,
+      hermescli: openHermesCliTab,
       claude: openClaudeTab,
       anythingllm: openAnythingLLMTab,
       openwebui: openOpenWebUITab,

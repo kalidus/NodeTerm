@@ -181,6 +181,9 @@ const TabHeader = React.memo(({
     if (terminalType === 'antigravitycli') {
       return <AIClientBrandIcon tabType="antigravitycli" size={baseIconSize} style={{ marginRight: '6px', flexShrink: 0 }} />;
     }
+    if (terminalType === 'hermescli') {
+      return <AIClientBrandIcon tabType="hermescli" size={baseIconSize} style={{ marginRight: '6px', flexShrink: 0 }} />;
+    }
     if (terminalType === 'opencode') {
       return <AIClientBrandIcon tabType="opencode" size={baseIconSize + 2} style={{ marginRight: '6px', flexShrink: 0 }} />;
     }

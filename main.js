@@ -67,7 +67,7 @@ logTiming('Utils cargados');
 let Docker = null;
 
 const {
-  getWSL, getPowerShell, getCygwin, getClaude, getOpenCode, getGeminiCli, getCodexCli, getAntigravityCli
+  getWSL, getPowerShell, getCygwin, getClaude, getOpenCode, getGeminiCli, getCodexCli, getAntigravityCli, getHermesCli
 } = require('./src/main/services/lazy-services');
 
 function createServiceProxy(getter) {
@@ -88,12 +88,14 @@ const OpenCode = createServiceProxy(getOpenCode);
 const GeminiCli = createServiceProxy(getGeminiCli);
 const CodexCli = createServiceProxy(getCodexCli);
 const AntigravityCli = createServiceProxy(getAntigravityCli);
+const HermesCli = createServiceProxy(getHermesCli);
 
 const { getClaudeConfig } = require('./src/main/handlers/claude-handlers');
 const { getOpenCodeConfig } = require('./src/main/handlers/opencode-handlers');
 const { getGeminiCliConfig } = require('./src/main/handlers/geminicli-handlers');
 const { getCodexCliConfig } = require('./src/main/handlers/codexcli-handlers');
 const { getAntigravityCliConfig } = require('./src/main/handlers/antigravitycli-handlers');
+const { getHermesCliConfig } = require('./src/main/handlers/hermescli-handlers');
 logTiming('Proxies de servicios terminal/CLI registrados (carga diferida)');
 
 // Servicio de estadísticas SSH
@@ -1410,6 +1412,12 @@ function createWindow() {
           getPty,
           isAppQuitting,
           getAntigravityCliConfig
+        });
+        HermesCli.setDependencies({
+          mainWindow,
+          getPty,
+          isAppQuitting,
+          getHermesCliConfig
         });
         const docker = getDocker();
         if (docker && docker.setMainWindow) {
@@ -3192,6 +3200,7 @@ function registerTabEventsWrapper(tabId) {
     GeminiCli,
     CodexCli,
     AntigravityCli,
+    HermesCli,
     startUbuntuSession,
     handleUbuntuData,
     handleUbuntuResize,
@@ -3259,6 +3268,12 @@ app.on('before-quit', (event) => {
     AntigravityCli.cleanup();
   } catch (error) {
     console.error('Error cleaning up AntigravityCli processes on quit:', error);
+  }
+
+  try {
+    HermesCli.cleanup();
+  } catch (error) {
+    console.error('Error cleaning up HermesCli processes on quit:', error);
   }
 });
 
