@@ -1466,12 +1466,51 @@ const ConnectionHistory = ({
 	const customGroups = favoriteGroups.filter(g => !g.isDefault);
 
 	// Componente interno para las filas de conexión
-	const ConnectionRow = ({ connection, isPinned, isActive, onConnect, onEdit, onToggleFav }) => {
+	const ConnectionRow = ({ connection, isPinned, isActive, onConnect, onEdit, onToggleFav, isSplit = false }) => {
 		const typeColor = getConnectionTypeColor(connection.type);
 		const protocolLabel = getProtocolLabel(connection.type);
 		const hostLabel = buildHostLabel(connection);
 		const timeStr = formatRelativeTime(connection.lastConnected);
 		const fav = isPinned || isFavorite(connection);
+
+		if (isSplit) {
+			return (
+				<div
+					className={`split-recent-card ${isActive ? 'active-row' : ''}`}
+					onClick={() => onConnect?.(connection)}
+					style={{ '--row-accent': typeColor }}
+					onContextMenu={(e) => {
+						e.preventDefault();
+						e.stopPropagation();
+						onEdit?.(connection);
+					}}
+					title={`${connection.name} (${hostLabel})`}
+				>
+					<div className="src-left-border" style={{ backgroundColor: typeColor }} />
+					<div className="src-content">
+						<div className="src-first-row">
+							<span className="src-name">{connection.name}</span>
+							<span className="src-protocol-badge" style={{ color: typeColor, borderColor: typeColor + '44' }}>
+								{protocolLabel}
+							</span>
+						</div>
+						<div className="src-second-row">
+							<span className="src-host">{hostLabel}</span>
+							{timeStr && <span className="src-time">· {timeStr}</span>}
+						</div>
+					</div>
+					<div className="src-actions" onClick={(e) => e.stopPropagation()}>
+						<button
+							className={`glass-action-btn ${fav ? 'fav-active' : ''}`}
+							onClick={(e) => { e.stopPropagation(); onToggleFav(connection); }}
+							title={fav ? "Quitar de Favoritos" : "Marcar como Favorito"}
+						>
+							<i className={fav ? 'pi pi-star-fill' : 'pi pi-star'} />
+						</button>
+					</div>
+				</div>
+			);
+		}
 
 		return (
 			<div
@@ -2213,6 +2252,100 @@ const ConnectionHistory = ({
 				.hero-recent-card.active-row {
 					border-left-color: var(--row-accent) !important;
 					background: ${terminalTheme.selectionBackground || 'rgba(255,255,255,0.06)'} !important;
+				}
+				/* --- Split / Sidebar compact connections --- */
+				.split-recent-card {
+					display: flex !important;
+					position: relative !important;
+					align-items: center !important;
+					padding: 6px 12px 6px 8px !important;
+					height: 46px !important;
+					background: transparent !important;
+					border: none !important;
+					border-bottom: 1px solid rgba(255,255,255,0.03) !important;
+					cursor: pointer !important;
+					transition: background 0.15s !important;
+					overflow: hidden !important;
+					min-width: 0 !important;
+					width: 100% !important;
+				}
+				.split-recent-card:hover {
+					background: ${terminalTheme.selectionBackground || 'rgba(255,255,255,0.08)'} !important;
+				}
+				.split-recent-card.active-row {
+					background: ${terminalTheme.selectionBackground || 'rgba(255,255,255,0.06)'} !important;
+				}
+				.src-left-border {
+					width: 3px !important;
+					height: 24px !important;
+					border-radius: 2px !important;
+					margin-right: 8px !important;
+					flex-shrink: 0 !important;
+				}
+				.src-content {
+					display: flex !important;
+					flex-direction: column !important;
+					flex: 1 !important;
+					min-width: 0 !important;
+					gap: 2px !important;
+				}
+				.src-first-row {
+					display: flex !important;
+					align-items: center !important;
+					justify-content: space-between !important;
+					gap: 6px !important;
+					min-width: 0 !important;
+				}
+				.src-name {
+					color: ${terminalTheme.foreground || '#ffffff'} !important;
+					font-weight: 600 !important;
+					font-size: 0.82rem !important;
+					white-space: nowrap !important;
+					overflow: hidden !important;
+					text-overflow: ellipsis !important;
+					letter-spacing: 0.1px !important;
+				}
+				.src-protocol-badge {
+					font-size: 0.6rem !important;
+					font-weight: bold !important;
+					padding: 1px 4px !important;
+					border-radius: 3px !important;
+					border: 1px solid currentColor !important;
+					opacity: 0.8 !important;
+					font-family: 'Fira Code', 'Cascadia Code', monospace !important;
+					flex-shrink: 0 !important;
+				}
+				.src-second-row {
+					display: flex !important;
+					align-items: center !important;
+					color: rgba(255,255,255,0.38) !important;
+					font-size: 0.7rem !important;
+					min-width: 0 !important;
+					gap: 4px !important;
+					font-family: 'Fira Code', 'Cascadia Code', monospace !important;
+				}
+				.src-host {
+					white-space: nowrap !important;
+					overflow: hidden !important;
+					text-overflow: ellipsis !important;
+					flex: 1 !important;
+				}
+				.src-time {
+					white-space: nowrap !important;
+					opacity: 0.7 !important;
+					flex-shrink: 0 !important;
+				}
+				.src-actions {
+					display: flex !important;
+					align-items: center !important;
+					justify-content: flex-end !important;
+					opacity: 0 !important;
+					transition: opacity 0.15s !important;
+					margin-left: 6px !important;
+					flex-shrink: 0 !important;
+				}
+				.split-recent-card:hover .src-actions {
+					opacity: 1 !important;
 				}
 				.hrc-prompt { color: ${terminalTheme.green || '#3fb950'}; font-weight: bold; font-size: 0.9rem; }
 				.hrc-protocol-tag { font-weight: 700; font-size: 0.75rem; letter-spacing: 0.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -3469,21 +3602,6 @@ const ConnectionHistory = ({
 							onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
 							onMouseLeave={(e) => { e.currentTarget.style.opacity = splitOpen && splitView === 'recent' ? 1 : 0.7; }}
 						/>
-						<i
-							className="pi pi-star"
-							style={{
-								fontSize: '0.86rem',
-								color: splitOpen && splitView === 'favorites' ? '#FFD700' : (terminalTheme.foreground || '#c9d1d9'),
-								opacity: splitOpen && splitView === 'favorites' ? 1 : 0.7,
-								cursor: 'pointer',
-								padding: '4px',
-								transition: 'all 0.2s'
-							}}
-							title="Favoritos — split con terminal (clic para activar/desactivar)"
-							onClick={(e) => { e.stopPropagation(); handleToggleSplit('favorites'); }}
-							onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
-							onMouseLeave={(e) => { e.currentTarget.style.opacity = splitOpen && splitView === 'favorites' ? 1 : 0.7; }}
-						/>
 						<div
 							aria-hidden="true"
 							style={{
@@ -3671,6 +3789,7 @@ const ConnectionHistory = ({
 											onConnect={onConnectToHistory}
 											onEdit={onEdit}
 											onToggleFav={handleToggleFavoriteWithGroup}
+											isSplit={true}
 										/>
 									))}
 								</div>
