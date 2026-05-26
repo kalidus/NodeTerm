@@ -227,6 +227,17 @@ body.layout-unified {
   --border-radius: 0px !important;
   --layout-panel-shadow: none !important;
   --layout-border-width: 0px !important;
+  --layout-font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif !important;
+}
+
+/* Font Family and Size Overrides for Unified layout */
+body.layout-unified *:not(.pi):not(.xterm):not(.xterm *):not(code):not(pre):not(pre *) {
+  font-family: var(--layout-font-family) !important;
+  font-size: 12px !important;
+}
+
+body.layout-unified .pi {
+  font-family: 'primeicons' !important;
 }
 
 /* Eliminate margins and paddings around the window */

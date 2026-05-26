@@ -28,8 +28,22 @@ const LayoutThemeSelector = () => {
     
     // Auto-sync icon theme for Cyberpunk
     if (layoutId === 'cyberpunk') {
-      localStorage.setItem('iconTheme', 'cyberpunk');
-      localStorage.setItem('iconThemeSidebar', 'cyberpunk');
+      localStorage.setItem('iconTheme', 'cyber_blue');
+      localStorage.setItem('iconThemeSidebar', 'cyber_blue');
+      // Dispatch event to notify useThemeManagement and other components
+      window.dispatchEvent(new CustomEvent('settings-updated', { 
+        detail: { source: 'layout-sync' } 
+      }));
+    } else if (layoutId === 'unified') {
+      localStorage.setItem('iconTheme', 'cupertino');
+      localStorage.setItem('iconThemeSidebar', 'cupertino');
+      // Dispatch event to notify useThemeManagement and other components
+      window.dispatchEvent(new CustomEvent('settings-updated', { 
+        detail: { source: 'layout-sync' } 
+      }));
+    } else if (layoutId === 'default') {
+      localStorage.setItem('iconTheme', 'ghost_ui');
+      localStorage.setItem('iconThemeSidebar', 'ghost_ui');
       // Dispatch event to notify useThemeManagement and other components
       window.dispatchEvent(new CustomEvent('settings-updated', { 
         detail: { source: 'layout-sync' } 
