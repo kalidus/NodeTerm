@@ -271,7 +271,30 @@ let _GuacamoleLite = null;
 
 // Getters para módulos con lazy loading
 function getSSH2Promise() {
-  if (!_SSH2Promise) _SSH2Promise = require('ssh2-promise');
+  if (!_SSH2Promise) {
+    _SSH2Promise = require('ssh2-promise');
+    try {
+      const SSHConnection = _SSH2Promise.SSH;
+      if (SSHConnection && SSHConnection.prototype && typeof SSHConnection.prototype.shell === 'function') {
+        SSHConnection.prototype.shell = function (wndopts = {}, opts) {
+          return this.connect().then(() => {
+            return new Promise((resolve, reject) => {
+              let finalWndopts = wndopts;
+              let finalOpts = opts;
+              if (wndopts && (wndopts.x11 !== undefined || wndopts.env !== undefined) && !opts) {
+                const { x11, env, ...rest } = wndopts;
+                finalWndopts = rest;
+                finalOpts = { x11, env };
+              }
+              this.sshConnection.shell(finalWndopts, finalOpts, (err, stream) => err ? reject(err) : resolve(stream));
+            });
+          });
+        };
+      }
+    } catch (e) {
+      console.error('[SSH PATCH] Error patching SSHConnection.shell:', e);
+    }
+  }
   return _SSH2Promise;
 }
 

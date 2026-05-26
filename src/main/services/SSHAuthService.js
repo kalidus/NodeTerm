@@ -284,7 +284,18 @@ class SSHAuthService {
 
     // Evento ready
     ssh2Client.on('ready', () => {
-      ssh2Client.shell(buildShellOptions(config), async (err, shellStream) => {
+      const shellOptions = buildShellOptions(config);
+      const wndOpts = {
+        term: shellOptions.term,
+        cols: shellOptions.cols,
+        rows: shellOptions.rows
+      };
+      const extraOpts = {};
+      if (shellOptions.x11) {
+        extraOpts.x11 = shellOptions.x11;
+      }
+
+      ssh2Client.shell(wndOpts, extraOpts, async (err, shellStream) => {
         if (err) {
           sendToRenderer(sender, `ssh:data:${tabId}`, `\r\n[SSH ERROR]: ${err.message || err}\r\n`);
           ssh2Client.end();
