@@ -2863,7 +2863,7 @@ const MainContentArea = ({
         >
           <TerminalFrame
             className={sidebarCollapsed ? 'sidebar-collapsed' : ''}
-            showControls={true}
+            showControls={false}
             hideHeader={mainFrameHeaderCollapsed}
           >
             <Sidebar

@@ -307,6 +307,12 @@ body.layout-unified .p-splitter-gutter::after {
   display: none !important;
 }
 
+body.layout-unified .p-splitter-gutter:hover::after,
+body.layout-unified .p-splitter-gutter:active::after,
+body.layout-unified .p-splitter.p-splitter-resizing .p-splitter-gutter::after {
+  display: block !important;
+}
+
 /* Sidebar overrides */
 body.layout-unified .sidebar-container {
   border-right: none !important;

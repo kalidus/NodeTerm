@@ -922,10 +922,9 @@ class ThemeManager {
       .p-splitter-gutter {
         background-color: transparent !important;
         border: none !important;
-        transition: background-color 0.2s;
       }
-      .p-splitter-gutter:hover {
-        background-color: var(--ui-sidebar-hover) !important;
+      .main-splitter .p-splitter-gutter::after {
+        background-color: ${colors.buttonPrimary} !important;
       }
 
       /* === DIVIDER STYLES === */

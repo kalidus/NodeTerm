@@ -359,6 +359,7 @@ const ConnectionDetailsPanel = ({
       )}
       <TerminalFrame
         style={{ height: '100%', width: '100%' }}
+        showControls={false}
         title={
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
             {iconNode}
