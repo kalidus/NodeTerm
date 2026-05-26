@@ -1673,7 +1673,7 @@ const MainContentArea = ({
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      -webkit-app-region: ${ (titleBarCollapsed && mainFrameHeaderCollapsed) ? 'no-drag' : 'inherit' };
+      -webkit-app-region: no-drag !important;
     `;
     appearanceButton.addEventListener('mouseenter', () => { appearanceIcon.style.opacity = '1'; });
     appearanceButton.addEventListener('mouseleave', () => { appearanceIcon.style.opacity = '0.6'; });
