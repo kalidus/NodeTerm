@@ -1919,6 +1919,43 @@ export function NewSSHConnectionDialog({
 }) {
   const { t } = useTranslation('dialogs');
   const [showIconSelector, setShowIconSelector] = useState(false);
+
+  // Reset fields on dialog open
+  useEffect(() => {
+    if (visible) {
+      if (setSSHName) setSSHName('');
+      if (setSSHHost) setSSHHost('');
+      if (setSSHUser) setSSHUser('');
+      if (setSSHPassword) setSSHPassword('');
+      if (setSSHRemoteFolder) setSSHRemoteFolder('');
+      if (setSSHPort) setSSHPort(22);
+      if (setSSHTargetFolder) setSSHTargetFolder(null);
+      if (setSSHAutoCopyPassword) setSSHAutoCopyPassword(false);
+      if (setSSHX11Forwarding) setSSHX11Forwarding(false);
+      if (setSSHAgentForwarding) setSSHAgentForwarding(false);
+      if (setSSHAutoRecording) setSSHAutoRecording(false);
+      if (setSSHProxyJumpEnabled) setSSHProxyJumpEnabled(false);
+      if (setSSHJumpHost) setSSHJumpHost('');
+      if (setSSHJumpPort) setSSHJumpPort(22);
+      if (setSSHJumpUser) setSSHJumpUser('');
+      if (setSSHJumpAuthMethod) setSSHJumpAuthMethod('password');
+      if (setSSHJumpPassword) setSSHJumpPassword('');
+      if (setSSHJumpPrivateKey) setSSHJumpPrivateKey('');
+      if (setSSHHostKeyPolicy) setSSHHostKeyPolicy('warn_new');
+      if (setSSHDescription) setSSHDescription('');
+      if (setSSHIcon) setSSHIcon(null);
+      if (setSSHAuthMethod) setSSHAuthMethod('password');
+      if (setSSHPrivateKey) setSSHPrivateKey('');
+    }
+  }, [
+    visible,
+    setSSHName, setSSHHost, setSSHUser, setSSHPassword, setSSHRemoteFolder, setSSHPort,
+    setSSHTargetFolder, setSSHAutoCopyPassword, setSSHX11Forwarding, setSSHAgentForwarding,
+    setSSHAutoRecording, setSSHProxyJumpEnabled, setSSHJumpHost, setSSHJumpPort, setSSHJumpUser,
+    setSSHJumpAuthMethod, setSSHJumpPassword, setSSHJumpPrivateKey, setSSHHostKeyPolicy,
+    setSSHDescription, setSSHIcon, setSSHAuthMethod, setSSHPrivateKey
+  ]);
+
   const currentIconPreset = useMemo(() => resolveSSHIconPreset(sshIcon), [sshIcon]);
   const themeSSHIcon = useMemo(() => {
     const theme = iconThemes[iconTheme] || iconThemes.material;
