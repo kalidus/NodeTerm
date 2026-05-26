@@ -2,11 +2,7 @@
    SETTINGS DIALOG SIDEBAR - VERTICAL LAYOUT
    ======================================== */
 
-/* Estilos para el Dialog de Configuración */
-.settings-dialog {
-  /* Los tamaños ahora se controlan dinámicamente desde el componente */
-  /* width y height se establecen inline desde useDialogResize */
-}
+/* Estilos para el Dialog de Configuración (Los tamaños se controlan dinámicamente desde el componente inline desde useDialogResize) */
 
 .settings-dialog .p-dialog-content {
   display: flex !important;
