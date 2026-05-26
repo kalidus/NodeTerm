@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 
 /**
@@ -92,6 +92,34 @@ const SettingsSidebar = () => {
   const toggleCategory = useCallback((categoryId) => {
     setExpandedCategories(prev => ({ ...prev, [categoryId]: !prev[categoryId] }));
   }, []);
+
+  const allExpanded = useMemo(() => {
+    return Object.values(expandedCategories).every(v => v === true);
+  }, [expandedCategories]);
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('settings-sidebar:expand-state', {
+      detail: { allExpanded }
+    }));
+  }, [allExpanded]);
+
+  useEffect(() => {
+    const handleToggleAll = () => {
+      setExpandedCategories(prev => {
+        const nextState = !allExpanded;
+        const updated = {};
+        Object.keys(prev).forEach(key => {
+          updated[key] = nextState;
+        });
+        return updated;
+      });
+    };
+
+    window.addEventListener('settings-sidebar:toggle-expand-all', handleToggleAll);
+    return () => {
+      window.removeEventListener('settings-sidebar:toggle-expand-all', handleToggleAll);
+    };
+  }, [allExpanded]);
 
   const openSettingsSection = useCallback((mainTab, subTab) => {
     window.dispatchEvent(new CustomEvent('open-settings-tab', {

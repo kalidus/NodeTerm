@@ -2878,12 +2878,13 @@ const Sidebar = React.memo(({
 
 
   // ── Determine active tab from viewMode + showFavoritesView ──────────────
-  // 'connections' | 'favorites' | 'documents' | 'passwords'
+  // 'connections' | 'favorites' | 'documents' | 'passwords' | 'settings'
   const activeTab = (() => {
     if (viewMode === 'localExplorer') return null; // este modo oculta las pestañas
     if (viewMode === 'tools') return 'tools';
     if (viewMode === 'documents') return 'documents';
     if (viewMode === 'passwords') return 'passwords';
+    if (viewMode === 'settings') return 'settings';
     if (showFavoritesView) return 'favorites';
     return 'connections';
   })();
@@ -2897,6 +2898,7 @@ const Sidebar = React.memo(({
   const [documentsTreeAllExpanded, setDocumentsTreeAllExpanded] = useState(true);
   const [passwordsTreeAllExpanded, setPasswordsTreeAllExpanded] = useState(false);
   const [toolsTreeAllExpanded, setToolsTreeAllExpanded] = useState(true);
+  const [settingsTreeAllExpanded, setSettingsTreeAllExpanded] = useState(true);
 
   useEffect(() => {
     const onDocExpandState = (e) => {
@@ -2908,13 +2910,18 @@ const Sidebar = React.memo(({
     const onToolsExpandState = (e) => {
       if (typeof e.detail?.allExpanded === 'boolean') setToolsTreeAllExpanded(e.detail.allExpanded);
     };
+    const onSettingsExpandState = (e) => {
+      if (typeof e.detail?.allExpanded === 'boolean') setSettingsTreeAllExpanded(e.detail.allExpanded);
+    };
     window.addEventListener('documents-sidebar:expand-state', onDocExpandState);
     window.addEventListener('passwords-sidebar:expand-state', onPassExpandState);
     window.addEventListener('tools-sidebar:expand-state', onToolsExpandState);
+    window.addEventListener('settings-sidebar:expand-state', onSettingsExpandState);
     return () => {
       window.removeEventListener('documents-sidebar:expand-state', onDocExpandState);
       window.removeEventListener('passwords-sidebar:expand-state', onPassExpandState);
       window.removeEventListener('tools-sidebar:expand-state', onToolsExpandState);
+      window.removeEventListener('settings-sidebar:expand-state', onSettingsExpandState);
     };
   }, []);
 
@@ -2924,7 +2931,9 @@ const Sidebar = React.memo(({
       ? passwordsTreeAllExpanded
       : activeTab === 'tools'
         ? toolsTreeAllExpanded
-        : allExpanded;
+        : activeTab === 'settings'
+          ? settingsTreeAllExpanded
+          : allExpanded;
 
   const handleToolbarExpandAll = useCallback(() => {
     if (activeTab === 'documents') {
@@ -2933,6 +2942,8 @@ const Sidebar = React.memo(({
       window.dispatchEvent(new CustomEvent('passwords-sidebar:toggle-expand-all'));
     } else if (activeTab === 'tools') {
       window.dispatchEvent(new CustomEvent('tools-sidebar:toggle-expand-all'));
+    } else if (activeTab === 'settings') {
+      window.dispatchEvent(new CustomEvent('settings-sidebar:toggle-expand-all'));
     } else if (activeTab === 'connections' || activeTab === 'favorites') {
       toggleExpandAll();
     }
@@ -2942,7 +2953,8 @@ const Sidebar = React.memo(({
     || activeTab === 'favorites'
     || activeTab === 'documents'
     || activeTab === 'passwords'
-    || activeTab === 'tools';
+    || activeTab === 'tools'
+    || activeTab === 'settings';
 
   const createTabGroupBtn = (
     <button
@@ -3044,9 +3056,11 @@ const Sidebar = React.memo(({
         </>)}
       </div>
       <div className="sidebar-panel-toolbar-right">
-        <SidebarUpdateIndicator
-          onConfigClick={() => setShowSettingsDialog(true)}
-        />
+        {activeTab !== 'settings' && (
+          <SidebarUpdateIndicator
+            onConfigClick={() => setShowSettingsDialog(true)}
+          />
+        )}
         <span className="sidebar-panel-toolbar-right-spacer" aria-hidden="true" />
         <div className="sidebar-panel-toolbar-right-end">
           {showToolbarExpandAll && (
@@ -3061,7 +3075,7 @@ const Sidebar = React.memo(({
               </span>
             </button>
           )}
-          {activeTab !== null && (setTreeTheme || setIconTheme || setSessionActionIconTheme) && (
+          {activeTab !== null && activeTab !== 'settings' && activeTab !== 'tools' && (setTreeTheme || setIconTheme || setSessionActionIconTheme) && (
             <SidebarAppearanceMenu
               treeTheme={treeTheme}
               setTreeTheme={setTreeTheme}
