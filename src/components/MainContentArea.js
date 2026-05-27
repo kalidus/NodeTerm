@@ -2654,7 +2654,7 @@ const MainContentArea = ({
   }, [filteredTabs]);
 
   // Ancho fijo para restauración del botón (ancho inicial de la app)
-  const FIXED_EXPANDED_SIZE = 18; // 18% - ancho inicial cuando se abre la app
+  const FIXED_EXPANDED_SIZE = 22; // 22% - ancho inicial cuando se abre la app
   // Estado de tamaño actual del sidebar (en %), usado cuando está expandido
   const [sidebarSizePercent, setSidebarSizePercent] = React.useState(FIXED_EXPANDED_SIZE);
   const [isTransitioningSidebar, setIsTransitioningSidebar] = React.useState(false);
@@ -2885,7 +2885,7 @@ const MainContentArea = ({
         }}
       >
         <SplitterPanel
-          size={isMinimalMode ? 0 : (sidebarCollapsed ? 5 : 15)}
+          size={isMinimalMode ? 0 : (sidebarCollapsed ? 5 : 22)}
           minSize={isMinimalMode ? 0 : (sidebarCollapsed ? 5 : 5)}
           maxSize={isMinimalMode ? 0 : (sidebarCollapsed ? 5 : 35)}
           className="terminal-frame-container"
