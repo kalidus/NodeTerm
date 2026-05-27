@@ -27,6 +27,7 @@ import ImportService from '../services/ImportService';
 import localStorageSyncService from '../services/LocalStorageSyncService';
 import { getFavorites, onUpdate as onFavoritesUpdate } from '../utils/connectionStore';
 import favoriteGroupsStore from '../utils/favoriteGroupsStore';
+import { buildSidebarFontStack } from '../utils/sidebarFontStack';
 import {
   FAVORITES_ROOT_KEY,
   applyFavoritesTreeLayoutFromDrop,
@@ -2476,6 +2477,16 @@ const Sidebar = React.memo(({
 
 
   const colors = uiThemes[uiTheme]?.colors || uiThemes['Light'].colors;
+
+  const sidebarTypographyStyle = useMemo(() => {
+    const stack = buildSidebarFontStack(explorerFont);
+    return {
+      '--sidebar-font-family': stack,
+      '--sidebar-font-size': `${explorerFontSize}px`,
+      fontFamily: stack
+    };
+  }, [explorerFont, explorerFontSize]);
+
   // Función interna para el menú contextual del área del árbol
   // const onTreeAreaContextMenu = (event) => {
   //   event.preventDefault();
@@ -2709,7 +2720,7 @@ const Sidebar = React.memo(({
         }}
         style={{
           cursor: 'pointer',
-          fontFamily: explorerFont,
+          ...sidebarTypographyStyle,
           display: 'flex',
           alignItems: 'center',
           gap: `${Math.max(3, Math.round((folderIconSize || 20) * 0.12))}px`
@@ -2791,7 +2802,9 @@ const Sidebar = React.memo(({
           marginLeft: (isSSH || isRDP || isVNC) && themeKey === 'nodetermbasic' ? '6px' : '0px',
           margin: 0,
           padding: 0,
-          lineHeight: 'normal'
+          lineHeight: 'normal',
+          fontFamily: sidebarTypographyStyle.fontFamily,
+          fontSize: sidebarTypographyStyle['--sidebar-font-size']
         }}>{node.label}</span>
         {/* Indicador derecho: misma columna que el refresco Wallix */}
         {(hasOpenSession || showTunnelActiveDot) && (
@@ -3118,6 +3131,7 @@ const Sidebar = React.memo(({
             position: 'relative',
             fontSize: `${explorerFontSize}px`,
             color: explorerFontColor || undefined,
+            ...sidebarTypographyStyle,
             ...(explorerFontColor ? { '--ui-sidebar-text': explorerFontColor } : {})
           }}
           onContextMenu={onTreeAreaContextMenu}
@@ -3143,7 +3157,7 @@ const Sidebar = React.memo(({
             </div>
           ) : (
             <Tree
-              key={`tree-${iconTheme}-${explorerFontSize}-${treeTheme}-${explorerFontColor || 'default'}-${folderIconSize}-${iconSize}-${showFavoritesView ? 'favorites' : 'all'}`} // Forzar re-render cuando cambie el tema o el tamaño de iconos
+              key={`tree-${iconTheme}-${explorerFont}-${explorerFontSize}-${treeTheme}-${explorerFontColor || 'default'}-${folderIconSize}-${iconSize}-${showFavoritesView ? 'favorites' : 'all'}`}
               value={processedNodes}
               selectionMode="single"
               selectionKeys={selectedNodeKey}
@@ -3193,6 +3207,7 @@ const Sidebar = React.memo(({
                 overflow: 'auto',
                 fontSize: `${explorerFontSize}px`,
                 color: explorerFontColor || undefined,
+                ...sidebarTypographyStyle,
                 '--icon-size': `${iconSize}px`,
                 '--sidebar-folder-icon-size': `${folderIconSize || 20}px`,
                 '--sidebar-connection-icon-size': `${connectionIconSize || 20}px`,
@@ -3405,10 +3420,10 @@ const Sidebar = React.memo(({
         position: 'relative',
         display: 'flex',
         flexDirection: 'row',
-        fontFamily: explorerFont,
         fontSize: `${explorerFontSize}px`,
         color: explorerFontColor || undefined,
         width: '100%',
+        ...sidebarTypographyStyle,
         ...(explorerFontColor ? { '--ui-sidebar-text': explorerFontColor } : {})
       }}>
 

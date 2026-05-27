@@ -4,6 +4,7 @@ import App from './components/App';
 import { markStartup } from './utils/startup-renderer-profiler';
 import { applyFirstRunHomeTabDefaults } from './utils/homeTabDefaults';
 import { applyUILayoutFromStorage } from './utils/appearanceLayout';
+import { applySidebarTypographyCssVariables } from './utils/sidebarFontStack';
 
 markStartup('index.js evaluado');
 
@@ -93,6 +94,19 @@ const applyEarlyBootTheme = () => {
     document.body.style.backgroundColor = isLight ? '#ffffff' : '#0e1116';
 
     applyUILayoutFromStorage();
+
+    try {
+      const sidebarFont = localStorage.getItem('sidebarFont');
+      const sidebarFontSize = localStorage.getItem('sidebarFontSize');
+      const explorerFont = localStorage.getItem('explorerFont');
+      const explorerFontSize = localStorage.getItem('explorerFontSize');
+      applySidebarTypographyCssVariables({
+        sidebarFont: sidebarFont || undefined,
+        sidebarFontSize: sidebarFontSize ? parseInt(sidebarFontSize, 10) : undefined,
+        explorerFont: explorerFont || undefined,
+        explorerFontSize: explorerFontSize ? parseInt(explorerFontSize, 10) : undefined
+      });
+    } catch { /* ignore */ }
   } catch { }
 };
 applyEarlyBootTheme();

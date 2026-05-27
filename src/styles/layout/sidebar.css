@@ -158,10 +158,12 @@
 }
 
 .sidebar-tree .p-treenode-label {
+  font-family: inherit !important;
   font-size: inherit !important;
 }
 
 .sidebar-tree .p-tree .p-treenode-content .p-treenode-label {
+  font-family: inherit !important;
   font-size: inherit !important;
 }
 
@@ -182,6 +184,7 @@
 }
 
 .sidebar-tree .node-label {
+  font-family: inherit !important;
   font-size: inherit !important;
 }
 
@@ -195,8 +198,8 @@
   box-sizing: border-box;
 }
 .sidebar-tree {
-  font-family: "Segoe UI", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
-  font-size: 0.75rem;
+  font-family: var(--sidebar-font-family, system-ui, sans-serif);
+  font-size: var(--sidebar-font-size, 0.75rem);
   color: #495057;
   background: #fff;
   border: none;
@@ -283,8 +286,9 @@
   box-shadow: none !important;
 }
 .sidebar-tree .p-treenode-label {
-  font-size: 0.75rem;
-  color: #495057;
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--ui-sidebar-text, #495057);
   font-weight: 400;
 }
 .sidebar-tree .pi {

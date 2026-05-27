@@ -11,6 +11,11 @@ import { presetManager } from '../utils/presetManager';
 import { ACTIVE_PRESET_STORAGE_KEY } from '../themes/presets/index';
 import localStorageSyncService from '../services/LocalStorageSyncService';
 import { applyUILayoutFromStorage } from '../utils/appearanceLayout';
+import {
+  applySidebarTypographyCssVariables,
+  shouldLoadWebFontForSidebar
+} from '../utils/sidebarFontStack';
+import { fontLoader } from '../utils/fontLoader';
 
 
 export const useThemeManagement = () => {
@@ -390,6 +395,21 @@ export const useThemeManagement = () => {
   }, [sidebarFontColor]);
 
   useEffect(() => {
+    applySidebarTypographyCssVariables({
+      sidebarFont,
+      sidebarFontSize,
+      explorerFont,
+      explorerFontSize
+    });
+    if (shouldLoadWebFontForSidebar(sidebarFont)) {
+      fontLoader.loadGoogleFont(sidebarFont).catch(() => {});
+    }
+    if (shouldLoadWebFontForSidebar(explorerFont) && explorerFont !== sidebarFont) {
+      fontLoader.loadGoogleFont(explorerFont).catch(() => {});
+    }
+  }, [sidebarFont, sidebarFontSize, explorerFont, explorerFontSize]);
+
+  useEffect(() => {
     try {
       localStorage.setItem('iconSize', iconSize.toString());
     } catch { }
@@ -527,11 +547,12 @@ export const useThemeManagement = () => {
       root.style.setProperty('--ui-font-family', updatedFontFamily);
       if (updatedFontSize) root.style.setProperty('--ui-font-size', `${updatedFontSize}px`);
 
-      root.style.setProperty('--explorer-font-family', updatedExplorerFont);
-      if (updatedExplorerFontSize) root.style.setProperty('--explorer-font-size', `${updatedExplorerFontSize}px`);
-
-      root.style.setProperty('--sidebar-font-family', updatedSidebarFont);
-      if (updatedSidebarFontSize) root.style.setProperty('--sidebar-font-size', `${updatedSidebarFontSize}px`);
+      applySidebarTypographyCssVariables({
+        sidebarFont: updatedSidebarFont,
+        sidebarFontSize: updatedSidebarFontSize ? parseInt(updatedSidebarFontSize, 10) : undefined,
+        explorerFont: updatedExplorerFont,
+        explorerFontSize: updatedExplorerFontSize ? parseInt(updatedExplorerFontSize, 10) : undefined
+      });
       if (updatedSidebarFontColor) {
         root.style.setProperty('--ui-sidebar-text', updatedSidebarFontColor);
       } else {
