@@ -24,6 +24,7 @@ import { themes } from '../themes';
 import { getVersionInfo, getFullVersionInfo } from '../version-info';
 import { iconThemes } from '../themes/icon-themes';
 import { explorerFonts } from '../themes';
+import { buildSidebarFontStack } from '../utils/sidebarFontStack';
 import { uiThemes } from '../themes/ui-themes';
 import SecureStorage from '../services/SecureStorage';
 import localStorageSyncService from '../services/LocalStorageSyncService';
@@ -3745,7 +3746,7 @@ const SettingsContent = ({
                           <div
                             className={`tree-preview-container tree-theme-${treeTheme}`}
                             style={{
-                              fontFamily: sidebarFont,
+                              fontFamily: buildSidebarFontStack(sidebarFont),
                               fontSize: `${sidebarFontSize}px`,
                               color: sidebarFontColor || 'var(--ui-dialog-text)'
                             }}
@@ -4071,7 +4072,7 @@ const SettingsContent = ({
                                 placeholder={t('appearance.sessionExplorer.selectFont')}
                                 style={{ flex: 1 }}
                                 itemTemplate={option => (
-                                  <span style={{ fontFamily: option.value }}>{option.label}</span>
+                                  <span style={{ fontFamily: buildSidebarFontStack(option.value) }}>{option.label}</span>
                                 )}
                               />
                             </div>
@@ -4393,8 +4394,9 @@ const SettingsContent = ({
 
                               {/* Vista Previa del Explorador de Archivos - Estilo Material Design Cards */}
                               <div
+                                className="explorer-preview-container"
                                 style={{
-                                  fontFamily: explorerFont,
+                                  fontFamily: buildSidebarFontStack(explorerFont),
                                   fontSize: `${explorerFontSize}px`,
                                   background: previewBg,
                                   borderRadius: '8px',
@@ -4704,7 +4706,7 @@ const SettingsContent = ({
                                 placeholder={t('appearance.sessionExplorer.selectFont')}
                                 style={{ flex: 1 }}
                                 itemTemplate={option => (
-                                  <span style={{ fontFamily: option.value }}>{option.label}</span>
+                                  <span style={{ fontFamily: buildSidebarFontStack(option.value) }}>{option.label}</span>
                                 )}
                               />
                             </div>
@@ -4839,7 +4841,7 @@ const SettingsContent = ({
                                 placeholder={t('appearance.sessionExplorer.selectFont')}
                                 style={{ flex: 1 }}
                                 itemTemplate={option => (
-                                  <span style={{ fontFamily: option.value }}>{option.label}</span>
+                                  <span style={{ fontFamily: buildSidebarFontStack(option.value) }}>{option.label}</span>
                                 )}
                               />
                             </div>
