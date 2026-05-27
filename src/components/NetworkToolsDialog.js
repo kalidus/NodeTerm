@@ -165,6 +165,25 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
   
   const [wolMac, setWolMac] = useState('');
   const [wolBroadcast, setWolBroadcast] = useState('255.255.255.255');
+  const [isSavingDevice, setIsSavingDevice] = useState(false);
+  const [saveDeviceName, setSaveDeviceName] = useState('');
+  const [wolDevices, setWolDevices] = useState(() => {
+    try {
+      const saved = localStorage.getItem('nodeterm_wol_devices');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error('Error loading WoL devices:', e);
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('nodeterm_wol_devices', JSON.stringify(wolDevices));
+    } catch (e) {
+      console.error('Error saving WoL devices:', e);
+    }
+  }, [wolDevices]);
   
   // Host Vulnerability Scanner
   const [hostVulnHost, setHostVulnHost] = useState('');
@@ -399,6 +418,235 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
       console.error('Error loading network interfaces:', err);
       setNetworkInterfaces([]);
     }
+  };
+
+  // Guardar dispositivo WoL en localStorage
+  const handleSaveDevice = () => {
+    if (!saveDeviceName.trim()) {
+      return;
+    }
+    if (!wolMac.trim()) {
+      return;
+    }
+    
+    const cleanMac = wolMac.replace(/[:-]/g, '').toUpperCase();
+    if (!/^[0-9A-F]{12}$/.test(cleanMac)) {
+      setError('Formato de MAC inválido. Use XX:XX:XX:XX:XX:XX');
+      setIsSavingDevice(false);
+      return;
+    }
+
+    const newDevice = {
+      name: saveDeviceName.trim(),
+      mac: wolMac.trim(),
+      broadcast: wolBroadcast.trim() || '255.255.255.255',
+      port: 9
+    };
+
+    setWolDevices(prev => {
+      const filtered = prev.filter(d => d.mac.replace(/[:-]/g, '').toUpperCase() !== cleanMac);
+      return [...filtered, newDevice];
+    });
+
+    setIsSavingDevice(false);
+    setSaveDeviceName('');
+  };
+
+  // Cargar un dispositivo guardado en los inputs
+  const handleLoadDevice = (device) => {
+    setWolMac(device.mac);
+    setWolBroadcast(device.broadcast || '255.255.255.255');
+  };
+
+  // Eliminar un dispositivo guardado
+  const handleDeleteDevice = (mac) => {
+    setWolDevices(prev => prev.filter(d => d.mac !== mac));
+  };
+
+  // Despertar un dispositivo directamente desde la lista
+  const handleQuickWake = async (device) => {
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    setLiveOutput('');
+    
+    // Cargar en inputs para que el usuario vea qué se está ejecutando
+    setWolMac(device.mac);
+    setWolBroadcast(device.broadcast || '255.255.255.255');
+    
+    try {
+      const ipc = window?.electron?.ipcRenderer;
+      if (!ipc) {
+        throw new Error('IPC no disponible');
+      }
+      
+      const response = await ipc.invoke('network-tools:wake-on-lan', {
+        mac: device.mac,
+        broadcast: device.broadcast || '255.255.255.255',
+        port: device.port || 9
+      });
+      
+      if (response && response.success) {
+        setResult(response);
+      } else {
+        setError(response?.error || 'No se pudo enviar el magic packet');
+      }
+    } catch (err) {
+      setError(err.message || 'Error al ejecutar Wake on LAN');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Renderizar la lista de dispositivos WoL guardados
+  const renderWolDevicesList = () => {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', marginTop: '0.5rem' }}>
+        <style>{`
+          .wol-device-card {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+          }
+          .wol-device-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(139, 92, 246, 0.5) !important;
+            box-shadow: 0 6px 16px rgba(139, 92, 246, 0.15) !important;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(139, 92, 246, 0.02) 100%) !important;
+          }
+          .quick-wake-btn {
+            transition: all 0.2s ease !important;
+          }
+          .quick-wake-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.35) 0%, rgba(139, 92, 246, 0.25) 100%) !important;
+            border-color: rgba(139, 92, 246, 0.7) !important;
+            color: #d8b4fe !important;
+          }
+        `}</style>
+        
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <i className="pi pi-list" style={{ color: '#8b5cf6', fontSize: '0.9rem' }} />
+            <span style={{ fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-color-secondary)' }}>
+              Dispositivos Guardados
+            </span>
+          </div>
+          <Badge value={wolDevices.length} style={{ background: 'rgba(139, 92, 246, 0.2)', color: '#c084fc', border: '1px solid rgba(139, 92, 246, 0.4)' }} />
+        </div>
+
+        {wolDevices.length === 0 ? (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '2.5rem',
+            background: 'rgba(255,255,255,0.02)',
+            border: '1px dashed rgba(139, 92, 246, 0.25)',
+            borderRadius: '8px',
+            color: 'var(--text-color-secondary)',
+            textAlign: 'center'
+          }}>
+            <i className="pi pi-info-circle" style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: '#8b5cf6', opacity: 0.6 }} />
+            <span style={{ fontSize: '0.8rem', fontWeight: '500' }}>No hay dispositivos guardados</span>
+            <span style={{ fontSize: '0.7rem', marginTop: '0.25rem', opacity: 0.6, maxWidth: '280px' }}>
+              Introduce una MAC y Broadcast arriba y haz clic en "Guardar" para conservarla.
+            </span>
+          </div>
+        ) : (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+            gap: '0.75rem'
+          }}>
+            {wolDevices.map((device, idx) => (
+              <div 
+                key={idx}
+                style={{
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  borderRadius: '8px',
+                  padding: '0.75rem 0.85rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem',
+                  boxShadow: '0 4px 10px rgba(0,0,0,0.15)',
+                }}
+                className="wol-device-card"
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', maxWidth: '75%', overflow: 'hidden' }}>
+                    <i className="pi pi-desktop" style={{ color: '#8b5cf6', fontSize: '0.8rem' }} />
+                    <span 
+                      style={{ 
+                        fontWeight: '600', 
+                        fontSize: '0.8rem', 
+                        overflow: 'hidden', 
+                        textOverflow: 'ellipsis', 
+                        whiteSpace: 'nowrap',
+                        color: 'var(--text-color)'
+                      }}
+                      title={device.name}
+                    >
+                      {device.name}
+                    </span>
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '0.15rem' }}>
+                    <Button 
+                      icon="pi pi-pencil" 
+                      onClick={() => handleLoadDevice(device)}
+                      className="p-button-text p-button-sm"
+                      style={{ width: '22px', height: '22px', padding: 0, color: 'rgba(255,255,255,0.5)', border: 'none', background: 'transparent' }}
+                      tooltip="Cargar"
+                      tooltipOptions={{ position: 'top' }}
+                    />
+                    <Button 
+                      icon="pi pi-trash" 
+                      onClick={() => handleDeleteDevice(device.mac)}
+                      className="p-button-text p-button-danger p-button-sm"
+                      style={{ width: '22px', height: '22px', padding: 0, color: 'rgba(239, 68, 68, 0.7)', border: 'none', background: 'transparent' }}
+                      tooltip="Eliminar"
+                      tooltipOptions={{ position: 'top' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-color-secondary)', fontFamily: 'monospace', display: 'flex', flexDirection: 'column', gap: '0.15rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.35rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>MAC:</span>
+                    <span style={{ color: 'var(--text-color)' }}>{device.mac}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Broadcast:</span>
+                    <span style={{ color: 'var(--text-color)' }}>{device.broadcast || '255.255.255.255'}</span>
+                  </div>
+                </div>
+
+                <Button 
+                  label="Despertar"
+                  icon="pi pi-power-off"
+                  onClick={() => handleQuickWake(device)}
+                  disabled={loading}
+                  style={{
+                    background: 'rgba(139, 92, 246, 0.12)',
+                    border: '1px solid rgba(139, 92, 246, 0.3)',
+                    borderRadius: '6px',
+                    padding: '0.3rem 0.5rem',
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    color: '#c084fc',
+                    marginTop: '0.2rem',
+                    width: '100%',
+                    justifyContent: 'center',
+                    height: '28px'
+                  }}
+                  className="quick-wake-btn"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   // Handler genérico para ejecutar herramientas
@@ -727,12 +975,23 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
     }
 
     if (error) {
+      if (selectedTool === 'wake-on-lan') {
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', width: '100%' }}>
+            <Message severity="error" text={error} style={{ width: '100%' }} />
+            {renderWolDevicesList()}
+          </div>
+        );
+      }
       return (
         <Message severity="error" text={error} style={{ width: '100%' }} />
       );
     }
 
     if (!result) {
+      if (selectedTool === 'wake-on-lan') {
+        return renderWolDevicesList();
+      }
       return (
         <div style={{ 
           display: 'flex', 
@@ -2324,21 +2583,48 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
 
       case 'wake-on-lan':
         return (
-          <div style={resultBoxStyle}>
-            <div style={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              padding: '2rem'
-            }}>
-              <i className="pi pi-check-circle" style={{ fontSize: '3rem', color: '#22c55e', marginBottom: '1rem' }} />
-              <strong style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Magic Packet Enviado</strong>
-              <span style={{ color: 'var(--text-color-secondary)' }}>MAC: {result.mac}</span>
-              <span style={{ color: 'var(--text-color-secondary)', fontSize: '0.85rem' }}>
-                Broadcast: {result.broadcast}:{result.port}
-              </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', width: '100%' }}>
+            <div style={resultBoxStyle}>
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                padding: '1.5rem 1rem'
+              }}>
+                <i className="pi pi-check-circle" style={{ fontSize: '2.5rem', color: '#22c55e', marginBottom: '0.75rem' }} />
+                <strong style={{ fontSize: '1.1rem', marginBottom: '0.5rem', color: '#22c55e' }}>Magic Packet Enviado</strong>
+                <span style={{ color: 'var(--text-color-secondary)', fontSize: '0.85rem' }}>MAC: {result.mac}</span>
+                <span style={{ color: 'var(--text-color-secondary)', fontSize: '0.8rem', marginBottom: '0.5rem' }}>
+                  Broadcast: {result.broadcast} · Puerto: {result.port}
+                </span>
+                
+                {result.details && Array.isArray(result.details) && (
+                  <div style={{ 
+                    marginTop: '0.75rem', 
+                    fontSize: '0.75rem', 
+                    color: 'var(--text-color-secondary)', 
+                    width: '100%', 
+                    borderTop: '1px solid rgba(255,255,255,0.06)', 
+                    paddingTop: '0.5rem',
+                    textAlign: 'left'
+                  }}>
+                    <div style={{ fontWeight: '600', marginBottom: '0.35rem', color: 'var(--text-color)', textAlign: 'center' }}>
+                      Detalles del envío por interfaz:
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', fontFamily: 'monospace' }}>
+                      {result.details.map((d, index) => (
+                        <div key={index} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.1rem 0' }}>
+                          <span>{d.localIp} → {d.broadcastIp}</span>
+                          <span style={{ color: d.success ? '#22c55e' : '#ef4444' }}>{d.success ? '✓ Éxito' : '✗ Fallo'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
+            {renderWolDevicesList()}
           </div>
         );
 
@@ -2530,13 +2816,26 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                     <Button label="Calcular" icon="pi pi-calculator" onClick={executeTool} disabled={loading} style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem' }} />
                   </div>
                 )}
-                {selectedTool === 'wake-on-lan' && (
+                {selectedTool === 'wake-on-lan' && isSavingDevice && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span style={{ color: '#8b5cf6', fontSize: '0.75rem', fontWeight: '600' }}>Nombre del dispositivo:</span>
+                    <InputText value={saveDeviceName} onChange={(e) => setSaveDeviceName(e.target.value)} placeholder="Ej: NAS Synology" onKeyPress={(e) => e.key === 'Enter' && handleSaveDevice()} style={{ width: '180px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} autoFocus />
+                    <Button label="Guardar" icon="pi pi-check" onClick={handleSaveDevice} style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem' }} />
+                    <Button label="Cancelar" icon="pi pi-times" onClick={() => setIsSavingDevice(false)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem', color: 'var(--text-color)' }} />
+                  </div>
+                )}
+                {selectedTool === 'wake-on-lan' && !isSavingDevice && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <span style={{ color: '#8b5cf6', fontSize: '0.75rem', fontWeight: '600' }}>MAC:</span>
                     <InputText value={wolMac} onChange={(e) => setWolMac(e.target.value)} placeholder="AA:BB:CC:DD:EE:FF" onKeyPress={(e) => e.key === 'Enter' && executeTool()} style={{ width: '180px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} />
                     <span style={{ color: '#8b5cf6', fontSize: '0.75rem', fontWeight: '600' }}>Broadcast:</span>
                     <InputText value={wolBroadcast} onChange={(e) => setWolBroadcast(e.target.value)} placeholder="255.255.255.255" style={{ width: '150px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} />
                     <Button label="Enviar" icon="pi pi-power-off" onClick={executeTool} disabled={loading} style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem' }} />
+                    <Button label="Guardar" icon="pi pi-bookmark" onClick={() => {
+                      if (!wolMac.trim()) return;
+                      setSaveDeviceName('');
+                      setIsSavingDevice(true);
+                    }} disabled={loading || !wolMac.trim()} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem', color: 'var(--text-color)' }} />
                   </div>
                 )}
                 {selectedTool === 'host-vuln-scan' && (
@@ -3618,7 +3917,7 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
               )}
 
               {/* Card para Wake on LAN */}
-              {selectedTool === 'wake-on-lan' && (
+              {selectedTool === 'wake-on-lan' && isSavingDevice && (
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -3631,6 +3930,71 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                   maxWidth: '700px',
                   boxShadow: '0 2px 12px rgba(139, 92, 246, 0.15)'
                 }}>
+                  <span style={{ color: '#8b5cf6', fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                    Nombre del dispositivo:
+                  </span>
+                  <InputText
+                    value={saveDeviceName}
+                    onChange={(e) => setSaveDeviceName(e.target.value)}
+                    placeholder="Ej: NAS Synology"
+                    style={{
+                      width: '180px',
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(139, 92, 246, 0.3)',
+                      borderRadius: '6px',
+                      color: 'var(--text-color)',
+                      padding: '0.35rem 0.5rem',
+                      fontSize: '0.8rem',
+                      height: '30px'
+                    }}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSaveDevice()}
+                    autoFocus
+                  />
+                  <Button
+                    label="Guardar"
+                    icon="pi pi-check"
+                    onClick={handleSaveDevice}
+                    style={{
+                      background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '0.35rem 0.75rem',
+                      height: '30px',
+                      fontSize: '0.75rem',
+                      fontWeight: '600'
+                    }}
+                  />
+                  <Button
+                    label="Cancelar"
+                    icon="pi pi-times"
+                    onClick={() => setIsSavingDevice(false)}
+                    style={{
+                      background: 'rgba(255,255,255,0.1)',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '0.35rem 0.75rem',
+                      height: '30px',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                      color: 'var(--text-color)'
+                    }}
+                  />
+                </div>
+              )}
+              {selectedTool === 'wake-on-lan' && !isSavingDevice && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(139, 92, 246, 0.04) 100%)',
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1.5px solid rgba(139, 92, 246, 0.35)',
+                  width: 'fit-content',
+                  maxWidth: '850px',
+                  boxShadow: '0 2px 12px rgba(139, 92, 246, 0.15)',
+                  flexWrap: 'wrap'
+                }}>
                   {/* MAC */}
                   <span style={{ color: '#8b5cf6', fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
                     MAC:
@@ -3640,7 +4004,7 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                     onChange={(e) => setWolMac(e.target.value)}
                     placeholder="AA:BB:CC:DD:EE:FF"
                     style={{
-                      width: '300px',
+                      width: '180px',
                       background: 'rgba(255,255,255,0.08)',
                       border: '1px solid rgba(139, 92, 246, 0.3)',
                       borderRadius: '6px',
@@ -3650,6 +4014,26 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                       height: '30px'
                     }}
                     onKeyPress={(e) => e.key === 'Enter' && executeTool()}
+                  />
+                  
+                  {/* Broadcast */}
+                  <span style={{ color: '#8b5cf6', fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                    Broadcast:
+                  </span>
+                  <InputText
+                    value={wolBroadcast}
+                    onChange={(e) => setWolBroadcast(e.target.value)}
+                    placeholder="255.255.255.255"
+                    style={{
+                      width: '150px',
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(139, 92, 246, 0.3)',
+                      borderRadius: '6px',
+                      color: 'var(--text-color)',
+                      padding: '0.35rem 0.5rem',
+                      fontSize: '0.8rem',
+                      height: '30px'
+                    }}
                   />
                   
                   {/* Botón Enviar */}
@@ -3667,6 +4051,29 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                       fontSize: '0.75rem',
                       fontWeight: '600',
                       boxShadow: '0 2px 8px rgba(139, 92, 246, 0.3)',
+                      marginLeft: '0.25rem'
+                    }}
+                  />
+
+                  {/* Botón Guardar */}
+                  <Button
+                    label="Guardar"
+                    icon="pi pi-bookmark"
+                    onClick={() => {
+                      if (!wolMac.trim()) return;
+                      setSaveDeviceName('');
+                      setIsSavingDevice(true);
+                    }}
+                    disabled={loading || !wolMac.trim()}
+                    style={{
+                      background: 'rgba(255,255,255,0.1)',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '0.35rem 0.75rem',
+                      height: '30px',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                      color: 'var(--text-color)',
                       marginLeft: '0.25rem'
                     }}
                   />

@@ -1549,51 +1549,114 @@ class NetworkToolsService {
       return { success: false, error: 'Formato de MAC inválido. Use XX:XX:XX:XX:XX:XX o XX-XX-XX-XX-XX-XX' };
     }
 
-    return new Promise((resolve) => {
+    // Create magic packet
+    const macBuffer = Buffer.from(cleanMac, 'hex');
+    const magicPacket = Buffer.alloc(102);
+
+    // First 6 bytes are 0xFF
+    for (let i = 0; i < 6; i++) {
+      magicPacket[i] = 0xFF;
+    }
+
+    // Repeat MAC address 16 times
+    for (let i = 0; i < 16; i++) {
+      macBuffer.copy(magicPacket, 6 + i * 6);
+    }
+
+    const sendTargets = [];
+
+    if (broadcast && broadcast !== '255.255.255.255') {
+      // If user specified a specific broadcast IP, we just use it
+      sendTargets.push({ localIp: '0.0.0.0', broadcastIp: broadcast });
+    } else {
+      // Get all network interfaces to broadcast on all of them
       try {
-        // Create magic packet
-        const macBuffer = Buffer.from(cleanMac, 'hex');
-        const magicPacket = Buffer.alloc(102);
-
-        // First 6 bytes are 0xFF
-        for (let i = 0; i < 6; i++) {
-          magicPacket[i] = 0xFF;
-        }
-
-        // Repeat MAC address 16 times
-        for (let i = 0; i < 16; i++) {
-          macBuffer.copy(magicPacket, 6 + i * 6);
-        }
-
-        // Create UDP socket and send
-        const socket = dgram.createSocket('udp4');
-
-        socket.on('error', (err) => {
-          socket.close();
-          resolve({ success: false, error: err.message });
-        });
-
-        socket.bind(() => {
-          socket.setBroadcast(true);
-          socket.send(magicPacket, 0, magicPacket.length, port, broadcast, (err) => {
-            socket.close();
-            if (err) {
-              resolve({ success: false, error: err.message });
-            } else {
-              resolve({
-                success: true,
-                mac: mac,
-                broadcast: broadcast,
-                port: port,
-                message: 'Magic packet enviado correctamente'
-              });
+        const interfaces = os.networkInterfaces();
+        for (const [name, addrs] of Object.entries(interfaces)) {
+          if (!addrs) continue;
+          for (const addr of addrs) {
+            if (addr.family === 'IPv4' && !addr.internal) {
+              const localIp = addr.address;
+              let calcBroadcast = '255.255.255.255';
+              
+              if (addr.cidr) {
+                const subnetInfo = this.subnetCalc(addr.cidr);
+                if (subnetInfo && subnetInfo.success && subnetInfo.broadcastAddress) {
+                  calcBroadcast = subnetInfo.broadcastAddress;
+                }
+              } else if (addr.netmask) {
+                try {
+                  const ipInt = this._ipToInt(localIp);
+                  const maskInt = this._ipToInt(addr.netmask);
+                  const broadcastInt = (ipInt & maskInt) | (~maskInt >>> 0);
+                  calcBroadcast = this._intToIp(broadcastInt);
+                } catch (e) {
+                  calcBroadcast = '255.255.255.255';
+                }
+              }
+              
+              // Send both to global broadcast and subnet broadcast for this interface
+              sendTargets.push({ localIp, broadcastIp: '255.255.255.255' });
+              if (calcBroadcast && calcBroadcast !== '255.255.255.255') {
+                sendTargets.push({ localIp, broadcastIp: calcBroadcast });
+              }
             }
-          });
-        });
+          }
+        }
       } catch (err) {
-        resolve({ success: false, error: err.message });
+        console.error('Error listing interfaces for WoL:', err);
       }
+
+      // Add a fallback default 0.0.0.0 -> 255.255.255.255 in case no interfaces were resolved
+      if (sendTargets.length === 0) {
+        sendTargets.push({ localIp: '0.0.0.0', broadcastIp: '255.255.255.255' });
+      }
+    }
+
+    // Send the packet to all targets
+    const sendPromises = sendTargets.map(({ localIp, broadcastIp }) => {
+      return new Promise((resolve) => {
+        try {
+          const socket = dgram.createSocket('udp4');
+          socket.on('error', (err) => {
+            console.error(`WoL socket error on interface ${localIp}:`, err);
+            socket.close();
+            resolve({ success: false, localIp, broadcastIp, error: err.message });
+          });
+
+          socket.bind(0, localIp, () => {
+            socket.setBroadcast(true);
+            socket.send(magicPacket, 0, magicPacket.length, port, broadcastIp, (err) => {
+              socket.close();
+              if (err) {
+                resolve({ success: false, localIp, broadcastIp, error: err.message });
+              } else {
+                resolve({ success: true, localIp, broadcastIp });
+              }
+            });
+          });
+        } catch (err) {
+          resolve({ success: false, localIp, broadcastIp, error: err.message });
+        }
+      });
     });
+
+    const results = await Promise.all(sendPromises);
+    const sentCount = results.filter(r => r.success).length;
+
+    if (sentCount === 0) {
+      const firstError = results.find(r => r.error)?.error || 'Error desconocido';
+      return { success: false, error: `No se pudo enviar el paquete mágico: ${firstError}` };
+    }
+
+    return {
+      success: true,
+      mac: mac,
+      broadcast: broadcast,
+      port: port,
+      details: results,
+      message: `Paquete mágico enviado correctamente a través de ${sentCount} interfaces/direcciones.`
+    };
   }
 
   /**
