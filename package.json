@@ -168,7 +168,7 @@
     }
   },
   "engines": {
-    "node": ">=20 <23"
+    "node": ">=24 <25"
   },
   "keywords": [],
   "author": "",

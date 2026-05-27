@@ -49,7 +49,7 @@ https://github.com/kalidus/NodeTerm/releases
 git clone https://github.com/kalidus/NodeTerm.git
 cd NodeTerm
 
-# Node.js 22 LTS recomendado (nvm: nvm install && nvm use)
+# Node.js 24 LTS recomendado (nvm: nvm install && nvm use)
 # Linux (Arch/CachyOS): sudo pacman -S --needed base-devel python
 
 # Instalar dependencias (sin sudo)
