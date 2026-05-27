@@ -95,7 +95,7 @@ const ToolsSidebar = ({ onOpenTool }) => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0.25rem 0' }}>
+      <div className="tools-sidebar-scroll-container" style={{ flex: 1, overflowY: 'auto', padding: '0.25rem 0' }}>
         {TOOL_CATEGORIES.map(category => (
           <div key={category.id}>
             <div

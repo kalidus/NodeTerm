@@ -31,6 +31,15 @@
   display: none !important;
 }
 
+/* Ocultar scrollbar de herramientas (ToolsSidebar) */
+.tools-sidebar-scroll-container {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE 10+ */
+}
+.tools-sidebar-scroll-container::-webkit-scrollbar {
+  display: none !important; /* WebKit (Chrome, Safari, Edge) */
+}
+
 /* Árbol de la sidebar */
 .sidebar-tree {
   background: var(--ui-sidebar-bg) !important;
