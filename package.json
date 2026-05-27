@@ -7,6 +7,8 @@
     "start:cold": "node -e \"try{require('fs').rmSync('.cold-cache',{recursive:true,force:true})}catch(e){}\" && electron . --user-data-dir=.cold-cache",
     "download-fonts": "node scripts/download-fonts.js",
     "build": "npm run download-fonts && webpack --mode production",
+    "postinstall": "node scripts/ensure-electron-binary.js",
+    "predev": "node scripts/ensure-electron-binary.js",
     "dev": "cross-env NODE_OPTIONS=--no-deprecation concurrently --kill-others \"webpack --watch --mode development\" \"wait-on dist/index.html -t 60000 && cross-env NODE_OPTIONS=--no-deprecation electron .\"",
     "rm-cpu-features": "node -e \"const fs=require('fs'),path=require('path'),r=process.cwd();[path.join(r,'node_modules','cpu-features'),path.join(r,'node_modules','ssh2','node_modules','cpu-features')].forEach(p=>{try{fs.rmSync(p,{recursive:true,force:true})}catch(e){}})\"",
     "pack": "npm run build && npm run rm-cpu-features && electron-builder --dir",
@@ -164,6 +166,9 @@
       "icon": "src/assets/app-icon.png",
       "category": "public.app-category.utilities"
     }
+  },
+  "engines": {
+    "node": ">=20 <23"
   },
   "keywords": [],
   "author": "",

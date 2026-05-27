@@ -49,7 +49,10 @@ https://github.com/kalidus/NodeTerm/releases
 git clone https://github.com/kalidus/NodeTerm.git
 cd NodeTerm
 
-# Instalar dependencias
+# Node.js 22 LTS recomendado (nvm: nvm install && nvm use)
+# Linux (Arch/CachyOS): sudo pacman -S --needed base-devel python
+
+# Instalar dependencias (sin sudo)
 npm install
 
 # Modo desarrollo
@@ -58,6 +61,8 @@ npm run dev
 # Construir ejecutable
 npm run build:win
 ```
+
+En Linux, `npm install` ejecuta automáticamente la reparación del binario de Electron si la instalación quedó incompleta. No uses `sudo npm install` dentro del proyecto.
 
 </details>
 
