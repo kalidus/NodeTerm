@@ -176,6 +176,8 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
       return [];
     }
   });
+  const [saveDeviceIp, setSaveDeviceIp] = useState('');
+  const [deviceStatuses, setDeviceStatuses] = useState({});
 
   useEffect(() => {
     try {
@@ -440,6 +442,7 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
       name: saveDeviceName.trim(),
       mac: wolMac.trim(),
       broadcast: wolBroadcast.trim() || '255.255.255.255',
+      ip: saveDeviceIp.trim(),
       port: 9
     };
 
@@ -450,17 +453,24 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
 
     setIsSavingDevice(false);
     setSaveDeviceName('');
+    setSaveDeviceIp('');
   };
 
   // Cargar un dispositivo guardado en los inputs
   const handleLoadDevice = (device) => {
     setWolMac(device.mac);
     setWolBroadcast(device.broadcast || '255.255.255.255');
+    setSaveDeviceIp(device.ip || '');
   };
 
   // Eliminar un dispositivo guardado
   const handleDeleteDevice = (mac) => {
     setWolDevices(prev => prev.filter(d => d.mac !== mac));
+    setDeviceStatuses(prev => {
+      const next = { ...prev };
+      delete next[mac];
+      return next;
+    });
   };
 
   // Despertar un dispositivo directamente desde la lista
@@ -473,6 +483,7 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
     // Cargar en inputs para que el usuario vea qué se está ejecutando
     setWolMac(device.mac);
     setWolBroadcast(device.broadcast || '255.255.255.255');
+    setSaveDeviceIp(device.ip || '');
     
     try {
       const ipc = window?.electron?.ipcRenderer;
@@ -488,6 +499,10 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
       
       if (response && response.success) {
         setResult(response);
+        // Esperar un par de segundos y verificar el estado
+        setTimeout(() => {
+          checkDeviceStatus(device);
+        }, 3000);
       } else {
         setError(response?.error || 'No se pudo enviar el magic packet');
       }
@@ -495,6 +510,130 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
       setError(err.message || 'Error al ejecutar Wake on LAN');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Verificar el estado de un dispositivo individual (ping)
+  const checkDeviceStatus = async (device) => {
+    setDeviceStatuses(prev => ({ ...prev, [device.mac]: 'checking' }));
+    
+    let targetIp = device.ip || '';
+    const ipc = window?.electron?.ipcRenderer;
+    
+    if (!targetIp && ipc) {
+      try {
+        const arpResult = await ipc.invoke('network-tools:resolve-mac-ip', { mac: device.mac });
+        if (arpResult && arpResult.success && arpResult.ip) {
+          targetIp = arpResult.ip;
+        }
+      } catch (e) {
+        console.warn('Error resolviendo IP por ARP:', e);
+      }
+    }
+    
+    if (!targetIp || !ipc) {
+      setDeviceStatuses(prev => ({ ...prev, [device.mac]: 'unknown' }));
+      return;
+    }
+    
+    try {
+      const pingResult = await ipc.invoke('network-tools:ping', {
+        host: targetIp,
+        count: 1,
+        timeout: 1
+      });
+      
+      const isOnline = pingResult && pingResult.success && pingResult.received > 0;
+      setDeviceStatuses(prev => ({
+        ...prev,
+        [device.mac]: isOnline ? 'online' : 'offline'
+      }));
+    } catch (e) {
+      setDeviceStatuses(prev => ({ ...prev, [device.mac]: 'offline' }));
+    }
+  };
+
+  // Verificar el estado de todos los dispositivos
+  const checkAllDevicesStatus = useCallback(() => {
+    if (selectedTool !== 'wake-on-lan' || wolDevices.length === 0) return;
+    wolDevices.forEach(device => {
+      checkDeviceStatus(device);
+    });
+  }, [selectedTool, wolDevices]);
+
+  // Ejecutar verificación de estado periódica
+  useEffect(() => {
+    if (selectedTool === 'wake-on-lan') {
+      checkAllDevicesStatus();
+      
+      const interval = setInterval(() => {
+        checkAllDevicesStatus();
+      }, 15000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [selectedTool, wolDevices]);
+
+  // Renderizar la etiqueta de estado online/offline
+  const renderStatusBadge = (mac) => {
+    const status = deviceStatuses[mac] || 'unknown';
+    
+    switch (status) {
+      case 'online':
+        return (
+          <span style={{
+            background: 'rgba(34, 197, 94, 0.15)',
+            color: '#4ade80',
+            border: '1px solid rgba(34, 197, 94, 0.3)',
+            borderRadius: '4px',
+            padding: '1px 5px',
+            fontSize: '0.65rem',
+            fontWeight: '600',
+            marginLeft: '0.35rem',
+            whiteSpace: 'nowrap'
+          }}>
+            Activo
+          </span>
+        );
+      case 'offline':
+        return (
+          <span style={{
+            background: 'rgba(239, 68, 68, 0.15)',
+            color: '#f87171',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: '4px',
+            padding: '1px 5px',
+            fontSize: '0.65rem',
+            fontWeight: '600',
+            marginLeft: '0.35rem',
+            whiteSpace: 'nowrap'
+          }}>
+            Inactivo
+          </span>
+        );
+      case 'checking':
+        return (
+          <span style={{
+            background: 'rgba(59, 130, 246, 0.15)',
+            color: '#60a5fa',
+            border: '1px solid rgba(59, 130, 246, 0.3)',
+            borderRadius: '4px',
+            padding: '1px 5px',
+            fontSize: '0.65rem',
+            fontWeight: '600',
+            marginLeft: '0.35rem',
+            whiteSpace: 'nowrap',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '3px'
+          }}>
+            <i className="pi pi-spin pi-spinner" style={{ fontSize: '0.6rem' }} />
+            Verificando
+          </span>
+        );
+      case 'unknown':
+      default:
+        return null;
     }
   };
 
@@ -529,6 +668,14 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
               Dispositivos Guardados
             </span>
           </div>
+          <Button 
+            icon="pi pi-refresh" 
+            onClick={checkAllDevicesStatus} 
+            className="p-button-text p-button-sm" 
+            style={{ width: '24px', height: '24px', color: '#c084fc', border: 'none', background: 'transparent', padding: 0 }}
+            tooltip="Refrescar estados"
+            tooltipOptions={{ position: 'left' }}
+          />
           <Badge value={wolDevices.length} style={{ background: 'rgba(139, 92, 246, 0.2)', color: '#c084fc', border: '1px solid rgba(139, 92, 246, 0.4)' }} />
         </div>
 
@@ -548,7 +695,7 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
             <i className="pi pi-info-circle" style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: '#8b5cf6', opacity: 0.6 }} />
             <span style={{ fontSize: '0.8rem', fontWeight: '500' }}>No hay dispositivos guardados</span>
             <span style={{ fontSize: '0.7rem', marginTop: '0.25rem', opacity: 0.6, maxWidth: '280px' }}>
-              Introduce una MAC y Broadcast arriba y haz clic en "Guardar" para conservarla.
+              Introduce una MAC, IP y Broadcast arriba y haz clic en "Guardar" para conservarla.
             </span>
           </div>
         ) : (
@@ -588,6 +735,7 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                     >
                       {device.name}
                     </span>
+                    {renderStatusBadge(device.mac)}
                   </div>
                   
                   <div style={{ display: 'flex', gap: '0.15rem' }}>
@@ -615,6 +763,12 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                     <span>MAC:</span>
                     <span style={{ color: 'var(--text-color)' }}>{device.mac}</span>
                   </div>
+                  {device.ip && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>IP/Host:</span>
+                      <span style={{ color: 'var(--text-color)' }}>{device.ip}</span>
+                    </div>
+                  )}
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span>Broadcast:</span>
                     <span style={{ color: 'var(--text-color)' }}>{device.broadcast || '255.255.255.255'}</span>
@@ -2818,8 +2972,10 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                 )}
                 {selectedTool === 'wake-on-lan' && isSavingDevice && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <span style={{ color: '#8b5cf6', fontSize: '0.75rem', fontWeight: '600' }}>Nombre del dispositivo:</span>
-                    <InputText value={saveDeviceName} onChange={(e) => setSaveDeviceName(e.target.value)} placeholder="Ej: NAS Synology" onKeyPress={(e) => e.key === 'Enter' && handleSaveDevice()} style={{ width: '180px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} autoFocus />
+                    <span style={{ color: '#8b5cf6', fontSize: '0.75rem', fontWeight: '600' }}>Nombre:</span>
+                    <InputText value={saveDeviceName} onChange={(e) => setSaveDeviceName(e.target.value)} placeholder="Ej: NAS" style={{ width: '130px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} autoFocus />
+                    <span style={{ color: '#8b5cf6', fontSize: '0.75rem', fontWeight: '600' }}>IP / Host (opcional):</span>
+                    <InputText value={saveDeviceIp} onChange={(e) => setSaveDeviceIp(e.target.value)} placeholder="Ej: 192.168.1.50" onKeyPress={(e) => e.key === 'Enter' && handleSaveDevice()} style={{ width: '150px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} />
                     <Button label="Guardar" icon="pi pi-check" onClick={handleSaveDevice} style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem' }} />
                     <Button label="Cancelar" icon="pi pi-times" onClick={() => setIsSavingDevice(false)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem', color: 'var(--text-color)' }} />
                   </div>
@@ -3927,18 +4083,38 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                   borderRadius: '8px',
                   border: '1.5px solid rgba(139, 92, 246, 0.35)',
                   width: 'fit-content',
-                  maxWidth: '700px',
-                  boxShadow: '0 2px 12px rgba(139, 92, 246, 0.15)'
+                  maxWidth: '850px',
+                  boxShadow: '0 2px 12px rgba(139, 92, 246, 0.15)',
+                  flexWrap: 'wrap'
                 }}>
                   <span style={{ color: '#8b5cf6', fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
-                    Nombre del dispositivo:
+                    Nombre:
                   </span>
                   <InputText
                     value={saveDeviceName}
                     onChange={(e) => setSaveDeviceName(e.target.value)}
-                    placeholder="Ej: NAS Synology"
+                    placeholder="Ej: NAS"
                     style={{
-                      width: '180px',
+                      width: '130px',
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(139, 92, 246, 0.3)',
+                      borderRadius: '6px',
+                      color: 'var(--text-color)',
+                      padding: '0.35rem 0.5rem',
+                      fontSize: '0.8rem',
+                      height: '30px'
+                    }}
+                    autoFocus
+                  />
+                  <span style={{ color: '#8b5cf6', fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                    IP / Host (opcional):
+                  </span>
+                  <InputText
+                    value={saveDeviceIp}
+                    onChange={(e) => setSaveDeviceIp(e.target.value)}
+                    placeholder="Ej: 192.168.1.50"
+                    style={{
+                      width: '150px',
                       background: 'rgba(255,255,255,0.08)',
                       border: '1px solid rgba(139, 92, 246, 0.3)',
                       borderRadius: '6px',
@@ -3948,7 +4124,6 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                       height: '30px'
                     }}
                     onKeyPress={(e) => e.key === 'Enter' && handleSaveDevice()}
-                    autoFocus
                   />
                   <Button
                     label="Guardar"

@@ -3057,6 +3057,41 @@ class NetworkToolsService {
       };
     }
   }
+
+  /**
+   * Encontrar IP a partir de una dirección MAC buscando en la tabla ARP
+   * @param {string} mac - MAC Address
+   * @returns {Promise<Object>} IP address resolved
+   */
+  async findIpByMac(mac) {
+    if (!mac || typeof mac !== 'string') {
+      return { success: false, error: 'MAC inválida' };
+    }
+    const cleanMac = mac.replace(/[:-]/g, '').toUpperCase();
+
+    return new Promise((resolve) => {
+      exec('arp -a', { timeout: 5000 }, (err, stdout, stderr) => {
+        if (err) {
+          return resolve({ success: false, error: err.message });
+        }
+
+        const lines = stdout.split('\n');
+        for (const line of lines) {
+          const trimmed = line.trim().toLowerCase();
+          const cleanLine = trimmed.replace(/[:-]/g, '');
+
+          if (cleanLine.includes(cleanMac.toLowerCase())) {
+            const ipMatch = trimmed.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
+            if (ipMatch) {
+              return resolve({ success: true, ip: ipMatch[1] });
+            }
+          }
+        }
+
+        resolve({ success: false, error: 'No se encontró la dirección IP en la tabla ARP' });
+      });
+    });
+  }
 }
 
 module.exports = NetworkToolsService;

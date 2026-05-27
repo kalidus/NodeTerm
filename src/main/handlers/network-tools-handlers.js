@@ -241,6 +241,21 @@ function registerNetworkToolsHandlers() {
     }
   });
 
+  // === RESOLVE MAC TO IP (ARP) ===
+  ipcMain.handle('network-tools:resolve-mac-ip', async (event, { mac }) => {
+    try {
+      if (!mac) {
+        return { success: false, error: 'MAC es requerida' };
+      }
+      const service = getService();
+      const result = await service.findIpByMac(mac);
+      return result;
+    } catch (err) {
+      console.error('[network-tools:resolve-mac-ip] Error:', err);
+      return { success: false, error: err?.message || 'Error al resolver MAC' };
+    }
+  });
+
   // === NETWORK SCAN ===
   ipcMain.handle('network-tools:network-scan', async (event, { subnet, timeout = 1000 }) => {
     try {
