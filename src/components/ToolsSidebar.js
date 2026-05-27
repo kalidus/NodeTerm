@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Tree } from 'primereact/tree';
+import { iconThemes } from '../themes/icon-themes';
 
 const TOOL_CATEGORIES = [
   {
@@ -57,15 +59,76 @@ const TOOL_CATEGORIES = [
   }
 ];
 
-const ToolsSidebar = ({ onOpenTool }) => {
-  const [expandedCategories, setExpandedCategories] = useState(
+// Helper para obtener el color por defecto de las carpetas según el tema
+const getThemeDefaultColor = (themeName) => {
+  const theme = iconThemes[themeName?.toLowerCase() || 'nord'];
+  if (!theme || !theme.icons || !theme.icons.folder) return '#5e81ac';
+
+  const folderIcon = theme.icons.folder;
+
+  if (folderIcon.props && folderIcon.props.fill && folderIcon.props.fill !== 'none') {
+    return folderIcon.props.fill;
+  }
+  if (folderIcon.props && folderIcon.props.stroke) {
+    return folderIcon.props.stroke;
+  }
+  if (folderIcon.props && folderIcon.props.children) {
+    const children = Array.isArray(folderIcon.props.children)
+      ? folderIcon.props.children
+      : [folderIcon.props.children];
+
+    for (const child of children) {
+      if (child.props && child.props.fill && child.props.fill !== 'none') {
+        return child.props.fill;
+      }
+      if (child.props && child.props.stroke) {
+        return child.props.stroke;
+      }
+    }
+  }
+  return '#5e81ac';
+};
+
+const ToolsSidebar = ({
+  onOpenTool,
+  iconTheme,
+  iconSize = 20,
+  folderIconSize = 20,
+  connectionIconSize = 20,
+  explorerFont,
+  explorerFontSize = 14,
+  treeTheme = 'cursorCompact',
+  explorerFontColor
+}) => {
+  const [expandedKeys, setExpandedKeys] = useState(
     TOOL_CATEGORIES.reduce((acc, cat) => ({ ...acc, [cat.id]: true }), {})
   );
   const [hoveredTool, setHoveredTool] = useState(null);
+  const [selectedToolKey, setSelectedToolKey] = useState(null);
 
-  const toggleCategory = (categoryId) => {
-    setExpandedCategories(prev => ({ ...prev, [categoryId]: !prev[categoryId] }));
-  };
+  // Mapear TOOL_CATEGORIES al formato compatible con Tree de PrimeReact
+  const treeNodes = useMemo(() => {
+    return TOOL_CATEGORIES.map(category => ({
+      key: category.id,
+      label: category.label,
+      icon: null,
+      categoryIcon: category.icon,
+      color: category.color,
+      droppable: false,
+      selectable: false,
+      children: category.tools.map(tool => ({
+        key: tool.id,
+        label: tool.label,
+        icon: null,
+        toolIcon: tool.icon,
+        description: tool.description,
+        color: category.color,
+        droppable: false,
+        selectable: true,
+        isLeaf: true
+      }))
+    }));
+  }, []);
 
   const notifyExpandState = useCallback((state) => {
     const allExpanded = Object.values(state).every(Boolean);
@@ -75,12 +138,12 @@ const ToolsSidebar = ({ onOpenTool }) => {
   }, []);
 
   useEffect(() => {
-    notifyExpandState(expandedCategories);
-  }, [expandedCategories, notifyExpandState]);
+    notifyExpandState(expandedKeys);
+  }, [expandedKeys, notifyExpandState]);
 
   useEffect(() => {
     const handleToggleExpandAll = () => {
-      setExpandedCategories(prev => {
+      setExpandedKeys(prev => {
         const allExpanded = Object.values(prev).every(Boolean);
         const next = TOOL_CATEGORIES.reduce((acc, cat) => ({
           ...acc,
@@ -93,82 +156,196 @@ const ToolsSidebar = ({ onOpenTool }) => {
     return () => window.removeEventListener('tools-sidebar:toggle-expand-all', handleToggleExpandAll);
   }, []);
 
+  const nodeTemplate = (node, options) => {
+    const isFolder = !node.isLeaf;
+
+    if (isFolder) {
+      return (
+        <div 
+          onClick={(e) => {
+            e.stopPropagation();
+            setExpandedKeys(prev => ({
+              ...prev,
+              [node.key]: !prev[node.key]
+            }));
+          }}
+          className="flex align-items-center"
+          style={{ 
+            cursor: 'pointer', 
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            userSelect: 'none',
+            width: '100%',
+            fontWeight: '600',
+            fontSize: '0.8rem',
+            fontFamily: explorerFont || 'inherit',
+          }}
+        >
+          {/* Icono de la Sección (usado en lugar de la carpeta genérica) */}
+          <span className={node.categoryIcon} style={{ 
+            color: node.color, 
+            fontSize: `${folderIconSize}px`,
+            marginRight: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minWidth: 16
+          }} />
+
+          {/* Nombre de la Sección */}
+          <span className="node-label" style={{
+            lineHeight: '20px',
+            color: node.color,
+            fontSize: '0.78rem',
+            fontWeight: '600',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px'
+          }}>{node.label}</span>
+
+          {/* Contador de Herramientas */}
+          <span style={{
+            marginLeft: 'auto',
+            background: `${node.color}15`,
+            color: node.color,
+            borderRadius: '10px',
+            padding: '0 6px',
+            fontSize: '0.65rem',
+            fontWeight: '700',
+            border: `1px solid ${node.color}30`
+          }}>
+            {node.children.length}
+          </span>
+        </div>
+      );
+    } else {
+      const isHovered = hoveredTool === node.key;
+      return (
+        <div 
+          onClick={() => onOpenTool && onOpenTool(node.key, node.label)}
+          onMouseEnter={() => setHoveredTool(node.key)}
+          onMouseLeave={() => setHoveredTool(null)}
+          className="flex align-items-center"
+          style={{
+            padding: '0.1rem 0.25rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            width: '100%',
+            fontFamily: explorerFont || 'inherit',
+            transition: 'all 0.12s ease',
+          }}
+          title={node.description}
+        >
+          {/* Icono de la Herramienta */}
+          <i 
+            className={node.toolIcon} 
+            style={{ 
+              fontSize: `${connectionIconSize}px`, 
+              color: isHovered ? node.color : 'var(--ui-sidebar-text)',
+              opacity: isHovered ? 1 : 0.7,
+              transition: 'all 0.12s ease',
+              flexShrink: 0 
+            }}
+          />
+
+          {/* Texto y Descripción */}
+          <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ 
+              fontSize: '0.82rem', 
+              fontWeight: '500', 
+              overflow: 'hidden', 
+              textOverflow: 'ellipsis', 
+              whiteSpace: 'nowrap',
+              color: 'var(--ui-sidebar-text)',
+              opacity: isHovered ? 1 : 0.9,
+              transition: 'opacity 0.12s ease'
+            }}>
+              {node.label}
+            </div>
+            <div style={{ 
+              fontSize: '0.7rem', 
+              color: 'var(--ui-sidebar-text)', 
+              overflow: 'hidden', 
+              textOverflow: 'ellipsis', 
+              whiteSpace: 'nowrap', 
+              opacity: isHovered ? 0.85 : 0.55,
+              transition: 'opacity 0.12s ease'
+            }}>
+              {node.description}
+            </div>
+          </div>
+
+          {/* Flecha al pasar el ratón */}
+          {isHovered && (
+            <i className="pi pi-arrow-right animate-fade-in" style={{ fontSize: '0.65rem', color: node.color, flexShrink: 0, marginRight: '4px' }} />
+          )}
+        </div>
+      );
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      {/* Sobrescribimos estilos del árbol para esta sección para permitir la doble línea sin colisiones y ocultar conector en raíz */}
+      <style>{`
+        .tools-tree .p-treenode-leaf > .p-treenode-content {
+          min-height: 38px !important;
+          height: auto !important;
+          line-height: normal !important;
+          padding-top: 4px !important;
+          padding-bottom: 4px !important;
+        }
+        .tools-tree .p-treenode:not(.p-treenode-leaf) > .p-treenode-content {
+          min-height: 26px !important;
+          height: auto !important;
+          line-height: normal !important;
+          padding-top: 4px !important;
+          padding-bottom: 4px !important;
+        }
+        .tools-tree .p-treenode-label {
+          width: 100% !important;
+          display: flex !important;
+          align-items: center !important;
+          overflow: hidden !important;
+        }
+        /* Ocultar el guión conector horizontal (-) en los nodos raíz (Categorías) */
+        .tools-tree > .p-tree-container > .p-treenode > .p-treenode-content::before {
+          display: none !important;
+        }
+      `}</style>
       <div className="tools-sidebar-scroll-container" style={{ flex: 1, overflowY: 'auto', padding: '0.25rem 0' }}>
-        {TOOL_CATEGORIES.map(category => (
-          <div key={category.id}>
-            <div
-              onClick={() => toggleCategory(category.id)}
-              style={{
-                padding: '0.5rem 0.75rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                cursor: 'pointer',
-                userSelect: 'none',
-                color: category.color,
-                fontWeight: '600',
-                fontSize: '0.75rem',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-                opacity: 0.9
-              }}
-            >
-              <i
-                className={expandedCategories[category.id] ? 'pi pi-chevron-down' : 'pi pi-chevron-right'}
-                style={{ fontSize: '0.65rem', transition: 'transform 0.15s ease' }}
-              />
-              <i className={category.icon} style={{ fontSize: '0.8rem' }} />
-              <span>{category.label}</span>
-              <span style={{
-                marginLeft: 'auto',
-                background: `${category.color}25`,
-                color: category.color,
-                borderRadius: '10px',
-                padding: '0 5px',
-                fontSize: '0.65rem',
-                fontWeight: '700'
-              }}>
-                {category.tools.length}
-              </span>
-            </div>
-
-            {expandedCategories[category.id] && category.tools.map(tool => (
-              <div
-                key={tool.id}
-                onClick={() => onOpenTool && onOpenTool(tool.id, tool.label)}
-                onMouseEnter={() => setHoveredTool(tool.id)}
-                onMouseLeave={() => setHoveredTool(null)}
-                style={{
-                  padding: '0.45rem 0.75rem 0.45rem 2rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  background: hoveredTool === tool.id ? 'rgba(255,255,255,0.07)' : 'transparent',
-                  borderLeft: `2px solid ${hoveredTool === tool.id ? category.color : 'transparent'}`,
-                  transition: 'all 0.12s ease',
-                  color: hoveredTool === tool.id ? 'var(--text-color)' : 'var(--text-color-secondary)'
-                }}
-                title={tool.description}
-              >
-                <i className={tool.icon} style={{ fontSize: '0.8rem', color: hoveredTool === tool.id ? category.color : undefined, flexShrink: 0 }} />
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontSize: '0.82rem', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {tool.label}
-                  </div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-color-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', opacity: 0.75 }}>
-                    {tool.description}
-                  </div>
-                </div>
-                {hoveredTool === tool.id && (
-                  <i className="pi pi-arrow-right" style={{ fontSize: '0.65rem', color: category.color, flexShrink: 0 }} />
-                )}
-              </div>
-            ))}
-          </div>
-        ))}
+        <Tree
+          key={`tools-tree-${iconTheme}-${explorerFont}-${explorerFontSize}-${treeTheme}-${folderIconSize}-${iconSize}`}
+          value={treeNodes}
+          selectionMode="single"
+          selectionKeys={selectedToolKey}
+          onSelectionChange={e => setSelectedToolKey(e.value)}
+          expandedKeys={expandedKeys}
+          onToggle={e => setExpandedKeys(e.value)}
+          className={`sidebar-tree tree-theme-${treeTheme} tools-tree`}
+          data-icon-theme={iconTheme}
+          data-tree-theme={treeTheme}
+          style={{
+            height: '100%',
+            overflow: 'auto',
+            fontSize: `${explorerFontSize}px`,
+            fontFamily: explorerFont || 'inherit',
+            '--icon-size': `${iconSize}px`,
+            '--sidebar-folder-icon-size': `${folderIconSize}px`,
+            '--sidebar-connection-icon-size': `${connectionIconSize}px`,
+            '--sidebar-icon-size': `${Math.max(folderIconSize, connectionIconSize)}px`,
+            '--sidebar-row-min-h': `${Math.max(folderIconSize, connectionIconSize) + 2}px`,
+            '--sidebar-row-pad-y': '0px',
+            '--tree-node-padding': '0',
+            ...(explorerFontColor ? {
+              '--ui-sidebar-text': explorerFontColor,
+              '--tree-text-color': explorerFontColor
+            } : {})
+          }}
+          nodeTemplate={nodeTemplate}
+        />
       </div>
     </div>
   );
