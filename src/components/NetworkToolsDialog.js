@@ -96,6 +96,19 @@ const DNS_RECORD_TYPES = [
   { label: 'Todos', value: 'ALL' }
 ];
 
+// Helper to convert hex colors to rgba with opacity
+const hexToRgba = (hex, alpha) => {
+  if (!hex) return 'transparent';
+  hex = hex.replace('#', '');
+  if (hex.length === 3) {
+    hex = hex.split('').map(char => char + char).join('');
+  }
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
 const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null }) => {
   // Estados principales
   const [selectedCategory, setSelectedCategory] = useState(() => {
@@ -582,50 +595,58 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
       case 'online':
         return (
           <span style={{
-            background: 'rgba(34, 197, 94, 0.15)',
+            background: 'rgba(34, 197, 94, 0.1)',
             color: '#4ade80',
-            border: '1px solid rgba(34, 197, 94, 0.3)',
-            borderRadius: '4px',
-            padding: '1px 5px',
+            border: '1px solid rgba(34, 197, 94, 0.25)',
+            borderRadius: '20px',
+            padding: '2px 8px',
             fontSize: '0.65rem',
             fontWeight: '600',
-            marginLeft: '0.35rem',
-            whiteSpace: 'nowrap'
+            marginLeft: '0.5rem',
+            whiteSpace: 'nowrap',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '5px'
           }}>
+            <span className="wol-status-dot online" />
             Activo
           </span>
         );
       case 'offline':
         return (
           <span style={{
-            background: 'rgba(239, 68, 68, 0.15)',
+            background: 'rgba(239, 68, 68, 0.1)',
             color: '#f87171',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
-            borderRadius: '4px',
-            padding: '1px 5px',
+            border: '1px solid rgba(239, 68, 68, 0.25)',
+            borderRadius: '20px',
+            padding: '2px 8px',
             fontSize: '0.65rem',
             fontWeight: '600',
-            marginLeft: '0.35rem',
-            whiteSpace: 'nowrap'
+            marginLeft: '0.5rem',
+            whiteSpace: 'nowrap',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '5px'
           }}>
+            <span className="wol-status-dot offline" />
             Inactivo
           </span>
         );
       case 'checking':
         return (
           <span style={{
-            background: 'rgba(59, 130, 246, 0.15)',
+            background: 'rgba(59, 130, 246, 0.1)',
             color: '#60a5fa',
-            border: '1px solid rgba(59, 130, 246, 0.3)',
-            borderRadius: '4px',
-            padding: '1px 5px',
+            border: '1px solid rgba(59, 130, 246, 0.25)',
+            borderRadius: '20px',
+            padding: '2px 8px',
             fontSize: '0.65rem',
             fontWeight: '600',
-            marginLeft: '0.35rem',
+            marginLeft: '0.5rem',
             whiteSpace: 'nowrap',
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '3px'
+            gap: '5px'
           }}>
             <i className="pi pi-spin pi-spinner" style={{ fontSize: '0.6rem' }} />
             Verificando
@@ -644,39 +665,109 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
         <style>{`
           .wol-device-card {
             transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            background: rgba(30, 25, 45, 0.18) !important;
+            border: 1px solid ${hexToRgba(themeColors.primaryColor, 0.12)} !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
           }
           .wol-device-card:hover {
             transform: translateY(-2px);
-            border-color: rgba(139, 92, 246, 0.5) !important;
-            box-shadow: 0 6px 16px rgba(139, 92, 246, 0.15) !important;
-            background: linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(139, 92, 246, 0.02) 100%) !important;
+            border-color: ${hexToRgba(themeColors.primaryColor, 0.4)} !important;
+            box-shadow: 0 8px 24px ${hexToRgba(themeColors.primaryColor, 0.15)} !important;
+            background: linear-gradient(135deg, ${hexToRgba(themeColors.primaryColor, 0.06)} 0%, rgba(30, 25, 45, 0.02) 100%) !important;
           }
-          .quick-wake-btn {
+          .wol-action-btn {
+            background: ${hexToRgba(themeColors.primaryColor, 0.08)} !important;
+            border: 1px solid ${hexToRgba(themeColors.primaryColor, 0.25)} !important;
+            color: ${themeColors.primaryColor} !important;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+          }
+          .wol-action-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, ${themeColors.primaryColor} 0%, ${hexToRgba(themeColors.primaryColor, 0.8)} 100%) !important;
+            border-color: transparent !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 12px ${hexToRgba(themeColors.primaryColor, 0.35)} !important;
+          }
+          .wol-control-btn {
+            color: rgba(255, 255, 255, 0.4) !important;
             transition: all 0.2s ease !important;
+            border-radius: 6px !important;
+            width: 26px !important;
+            height: 26px !important;
+            border: none !important;
+            background: transparent !important;
+            padding: 0 !important;
           }
-          .quick-wake-btn:hover:not(:disabled) {
-            background: linear-gradient(135deg, rgba(139, 92, 246, 0.35) 0%, rgba(139, 92, 246, 0.25) 100%) !important;
-            border-color: rgba(139, 92, 246, 0.7) !important;
-            color: #d8b4fe !important;
+          .wol-control-btn:hover {
+            background: rgba(255, 255, 255, 0.08) !important;
+            color: var(--text-color) !important;
+          }
+          .wol-control-btn-danger:hover {
+            background: rgba(239, 68, 68, 0.12) !important;
+            color: #f87171 !important;
+          }
+          .wol-refresh-btn {
+            transition: all 0.2s ease !important;
+            color: var(--text-color-secondary) !important;
+            border: none !important;
+            background: transparent !important;
+            width: 22px !important;
+            height: 22px !important;
+            padding: 0 !important;
+          }
+          .wol-refresh-btn:hover:not(:disabled) {
+            color: ${themeColors.primaryColor} !important;
+            background: rgba(255, 255, 255, 0.05) !important;
+          }
+          @keyframes wol-pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { box-shadow: 0 0 0 5px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+          }
+          @keyframes wol-pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+          }
+          .wol-status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            display: inline-block;
+          }
+          .wol-status-dot.online {
+            background-color: #22c55e;
+            animation: wol-pulse-green 2s infinite;
+          }
+          .wol-status-dot.offline {
+            background-color: #ef4444;
+            animation: wol-pulse-red 2s infinite;
           }
         `}</style>
         
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <i className="pi pi-list" style={{ color: '#8b5cf6', fontSize: '0.9rem' }} />
-            <span style={{ fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-color-secondary)' }}>
-              Dispositivos Guardados
-            </span>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.15rem' }}>
+          <i className="pi pi-server" style={{ color: themeColors.primaryColor, fontSize: '0.85rem' }} />
+          <span style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-color-secondary)' }}>
+            Dispositivos guardados
+          </span>
+          <span style={{ 
+            background: hexToRgba(themeColors.primaryColor, 0.08), 
+            color: themeColors.primaryColor, 
+            border: `1px solid ${hexToRgba(themeColors.primaryColor, 0.2)}`,
+            borderRadius: '12px',
+            padding: '1px 5px',
+            fontSize: '0.65rem',
+            fontWeight: '600',
+            lineHeight: 1
+          }}>
+            {wolDevices.length}
+          </span>
           <Button 
             icon="pi pi-refresh" 
             onClick={checkAllDevicesStatus} 
-            className="p-button-text p-button-sm" 
-            style={{ width: '24px', height: '24px', color: '#c084fc', border: 'none', background: 'transparent', padding: 0 }}
+            className="wol-refresh-btn" 
             tooltip="Refrescar estados"
-            tooltipOptions={{ position: 'left' }}
+            tooltipOptions={{ position: 'right' }}
           />
-          <Badge value={wolDevices.length} style={{ background: 'rgba(139, 92, 246, 0.2)', color: '#c084fc', border: '1px solid rgba(139, 92, 246, 0.4)' }} />
         </div>
 
         {wolDevices.length === 0 ? (
@@ -687,12 +778,12 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
             justifyContent: 'center',
             padding: '2.5rem',
             background: 'rgba(255,255,255,0.02)',
-            border: '1px dashed rgba(139, 92, 246, 0.25)',
+            border: `1px dashed ${hexToRgba(themeColors.primaryColor, 0.25)}`,
             borderRadius: '8px',
             color: 'var(--text-color-secondary)',
             textAlign: 'center'
           }}>
-            <i className="pi pi-info-circle" style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: '#8b5cf6', opacity: 0.6 }} />
+            <i className="pi pi-info-circle" style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: themeColors.primaryColor, opacity: 0.6 }} />
             <span style={{ fontSize: '0.8rem', fontWeight: '500' }}>No hay dispositivos guardados</span>
             <span style={{ fontSize: '0.7rem', marginTop: '0.25rem', opacity: 0.6, maxWidth: '280px' }}>
               Introduce una MAC, IP y Broadcast arriba y haz clic en "Guardar" para conservarla.
@@ -701,77 +792,90 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
         ) : (
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-            gap: '0.75rem'
+            gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+            gap: '1rem'
           }}>
             {wolDevices.map((device, idx) => (
               <div 
                 key={idx}
                 style={{
-                  background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  borderRadius: '8px',
-                  padding: '0.75rem 0.85rem',
+                  borderRadius: '10px',
+                  padding: '0.85rem 1rem',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '0.5rem',
-                  boxShadow: '0 4px 10px rgba(0,0,0,0.15)',
+                  gap: '0.6rem',
                 }}
                 className="wol-device-card"
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', maxWidth: '75%', overflow: 'hidden' }}>
-                    <i className="pi pi-desktop" style={{ color: '#8b5cf6', fontSize: '0.8rem' }} />
+                    <i className="pi pi-desktop" style={{ color: themeColors.primaryColor, fontSize: '0.85rem', opacity: 0.9 }} />
                     <span 
                       style={{ 
                         fontWeight: '600', 
-                        fontSize: '0.8rem', 
+                        fontSize: '0.85rem', 
                         overflow: 'hidden', 
                         textOverflow: 'ellipsis', 
                         whiteSpace: 'nowrap',
-                        color: 'var(--text-color)'
+                        color: '#ffffff'
                       }}
                       title={device.name}
                     >
                       {device.name}
                     </span>
-                    {renderStatusBadge(device.mac)}
                   </div>
                   
-                  <div style={{ display: 'flex', gap: '0.15rem' }}>
+                  <div style={{ display: 'flex', gap: '0.2rem', alignItems: 'center' }}>
                     <Button 
                       icon="pi pi-pencil" 
                       onClick={() => handleLoadDevice(device)}
-                      className="p-button-text p-button-sm"
-                      style={{ width: '22px', height: '22px', padding: 0, color: 'rgba(255,255,255,0.5)', border: 'none', background: 'transparent' }}
+                      className="wol-control-btn"
                       tooltip="Cargar"
                       tooltipOptions={{ position: 'top' }}
                     />
                     <Button 
                       icon="pi pi-trash" 
                       onClick={() => handleDeleteDevice(device.mac)}
-                      className="p-button-text p-button-danger p-button-sm"
-                      style={{ width: '22px', height: '22px', padding: 0, color: 'rgba(239, 68, 68, 0.7)', border: 'none', background: 'transparent' }}
+                      className="wol-control-btn wol-control-btn-danger"
                       tooltip="Eliminar"
                       tooltipOptions={{ position: 'top' }}
                     />
                   </div>
                 </div>
 
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-color-secondary)', fontFamily: 'monospace', display: 'flex', flexDirection: 'column', gap: '0.15rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '0.35rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>MAC:</span>
-                    <span style={{ color: 'var(--text-color)' }}>{device.mac}</span>
+                <div style={{ display: 'flex', alignItems: 'center', minHeight: '22px' }}>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-color-secondary)' }}>Estado:</span>
+                  {renderStatusBadge(device.mac) || (
+                    <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', marginLeft: '0.5rem', fontStyle: 'italic' }}>
+                      Sin verificar
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ 
+                  fontSize: '0.7rem', 
+                  color: 'var(--text-color-secondary)', 
+                  fontFamily: 'monospace', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: '0.25rem', 
+                  borderTop: '1px solid rgba(255,255,255,0.05)', 
+                  paddingTop: '0.5rem',
+                  marginTop: '0.25rem'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.45)' }}>MAC:</span>
+                    <span style={{ color: themeColors.textPrimary, fontWeight: '500' }}>{device.mac}</span>
                   </div>
                   {device.ip && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span>IP/Host:</span>
-                      <span style={{ color: 'var(--text-color)' }}>{device.ip}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: 'rgba(255,255,255,0.45)' }}>IP/Host:</span>
+                      <span style={{ color: '#ffffff' }}>{device.ip}</span>
                     </div>
                   )}
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Broadcast:</span>
-                    <span style={{ color: 'var(--text-color)' }}>{device.broadcast || '255.255.255.255'}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.45)' }}>Broadcast:</span>
+                    <span style={{ color: 'rgba(255,255,255,0.8)' }}>{device.broadcast || '255.255.255.255'}</span>
                   </div>
                 </div>
 
@@ -781,19 +885,16 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                   onClick={() => handleQuickWake(device)}
                   disabled={loading}
                   style={{
-                    background: 'rgba(139, 92, 246, 0.12)',
-                    border: '1px solid rgba(139, 92, 246, 0.3)',
                     borderRadius: '6px',
-                    padding: '0.3rem 0.5rem',
+                    padding: '0.35rem 0.5rem',
                     fontSize: '0.75rem',
                     fontWeight: '600',
-                    color: '#c084fc',
-                    marginTop: '0.2rem',
+                    marginTop: '0.4rem',
                     width: '100%',
                     justifyContent: 'center',
-                    height: '28px'
+                    height: '30px'
                   }}
-                  className="quick-wake-btn"
+                  className="wol-action-btn"
                 />
               </div>
             ))}
@@ -2970,28 +3071,52 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                     <Button label="Calcular" icon="pi pi-calculator" onClick={executeTool} disabled={loading} style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem' }} />
                   </div>
                 )}
-                {selectedTool === 'wake-on-lan' && isSavingDevice && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <span style={{ color: '#8b5cf6', fontSize: '0.75rem', fontWeight: '600' }}>Nombre:</span>
-                    <InputText value={saveDeviceName} onChange={(e) => setSaveDeviceName(e.target.value)} placeholder="Ej: NAS" style={{ width: '130px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} autoFocus />
-                    <span style={{ color: '#8b5cf6', fontSize: '0.75rem', fontWeight: '600' }}>IP / Host (opcional):</span>
-                    <InputText value={saveDeviceIp} onChange={(e) => setSaveDeviceIp(e.target.value)} placeholder="Ej: 192.168.1.50" onKeyPress={(e) => e.key === 'Enter' && handleSaveDevice()} style={{ width: '150px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} />
-                    <Button label="Guardar" icon="pi pi-check" onClick={handleSaveDevice} style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem' }} />
-                    <Button label="Cancelar" icon="pi pi-times" onClick={() => setIsSavingDevice(false)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem', color: 'var(--text-color)' }} />
+                 {selectedTool === 'wake-on-lan' && isSavingDevice && (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    background: `linear-gradient(135deg, ${hexToRgba(themeColors.primaryColor, 0.15)} 0%, rgba(30, 25, 45, 0.6) 100%)`,
+                    padding: '0.6rem 1rem',
+                    borderRadius: '10px',
+                    border: `1px solid ${hexToRgba(themeColors.primaryColor, 0.25)}`,
+                    width: 'fit-content',
+                    maxWidth: '850px',
+                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+                    flexWrap: 'wrap'
+                  }}>
+                    <span style={{ color: themeColors.primaryColor, fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>Nombre:</span>
+                    <InputText value={saveDeviceName} onChange={(e) => setSaveDeviceName(e.target.value)} placeholder="Ej: NAS" style={{ width: '130px', background: 'rgba(255,255,255,0.06)', border: `1px solid ${hexToRgba(themeColors.primaryColor, 0.25)}`, borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '32px' }} autoFocus />
+                    <span style={{ color: themeColors.primaryColor, fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>IP / Host (opcional):</span>
+                    <InputText value={saveDeviceIp} onChange={(e) => setSaveDeviceIp(e.target.value)} placeholder="Ej: 192.168.1.50" onKeyPress={(e) => e.key === 'Enter' && handleSaveDevice()} style={{ width: '150px', background: 'rgba(255,255,255,0.06)', border: `1px solid ${hexToRgba(themeColors.primaryColor, 0.25)}`, borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '32px' }} />
+                    <Button label="Guardar" icon="pi pi-check" onClick={handleSaveDevice} style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '32px', fontSize: '0.75rem', fontWeight: '600', boxShadow: '0 2px 8px rgba(34, 197, 94, 0.3)' }} />
+                    <Button label="Cancelar" icon="pi pi-times" onClick={() => setIsSavingDevice(false)} style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255, 255, 255, 0.15)', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '32px', fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-color)' }} />
                   </div>
                 )}
                 {selectedTool === 'wake-on-lan' && !isSavingDevice && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <span style={{ color: '#8b5cf6', fontSize: '0.75rem', fontWeight: '600' }}>MAC:</span>
-                    <InputText value={wolMac} onChange={(e) => setWolMac(e.target.value)} placeholder="AA:BB:CC:DD:EE:FF" onKeyPress={(e) => e.key === 'Enter' && executeTool()} style={{ width: '180px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} />
-                    <span style={{ color: '#8b5cf6', fontSize: '0.75rem', fontWeight: '600' }}>Broadcast:</span>
-                    <InputText value={wolBroadcast} onChange={(e) => setWolBroadcast(e.target.value)} placeholder="255.255.255.255" style={{ width: '150px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} />
-                    <Button label="Enviar" icon="pi pi-power-off" onClick={executeTool} disabled={loading} style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem' }} />
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    background: `linear-gradient(135deg, ${hexToRgba(themeColors.primaryColor, 0.15)} 0%, rgba(30, 25, 45, 0.6) 100%)`,
+                    padding: '0.6rem 1rem',
+                    borderRadius: '10px',
+                    border: `1px solid ${hexToRgba(themeColors.primaryColor, 0.25)}`,
+                    width: 'fit-content',
+                    maxWidth: '850px',
+                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+                    flexWrap: 'wrap'
+                  }}>
+                    <span style={{ color: themeColors.primaryColor, fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>MAC:</span>
+                    <InputText value={wolMac} onChange={(e) => setWolMac(e.target.value)} placeholder="AA:BB:CC:DD:EE:FF" onKeyPress={(e) => e.key === 'Enter' && executeTool()} style={{ width: '180px', background: 'rgba(255,255,255,0.06)', border: `1px solid ${hexToRgba(themeColors.primaryColor, 0.25)}`, borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '32px' }} />
+                    <span style={{ color: themeColors.primaryColor, fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>Broadcast:</span>
+                    <InputText value={wolBroadcast} onChange={(e) => setWolBroadcast(e.target.value)} placeholder="255.255.255.255" style={{ width: '150px', background: 'rgba(255,255,255,0.06)', border: `1px solid ${hexToRgba(themeColors.primaryColor, 0.25)}`, borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '32px' }} />
+                    <Button label="Enviar" icon="pi pi-power-off" onClick={executeTool} disabled={loading} style={{ background: `linear-gradient(135deg, ${themeColors.primaryColor} 0%, ${hexToRgba(themeColors.primaryColor, 0.8)} 100%)`, border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '32px', fontSize: '0.75rem', fontWeight: '600', boxShadow: `0 2px 8px ${hexToRgba(themeColors.primaryColor, 0.35)}`, marginLeft: '0.25rem' }} />
                     <Button label="Guardar" icon="pi pi-bookmark" onClick={() => {
                       if (!wolMac.trim()) return;
                       setSaveDeviceName('');
                       setIsSavingDevice(true);
-                    }} disabled={loading || !wolMac.trim()} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem', color: 'var(--text-color)' }} />
+                    }} disabled={loading || !wolMac.trim()} style={{ background: hexToRgba(themeColors.primaryColor, 0.08), border: `1px solid ${hexToRgba(themeColors.primaryColor, 0.3)}`, borderRadius: '6px', padding: '0.35rem 0.75rem', height: '32px', fontSize: '0.75rem', fontWeight: '600', color: themeColors.primaryColor, marginLeft: '0.25rem' }} />
                   </div>
                 )}
                 {selectedTool === 'host-vuln-scan' && (
@@ -4077,17 +4202,17 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem',
-                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(139, 92, 246, 0.04) 100%)',
-                  padding: '0.5rem 0.75rem',
-                  borderRadius: '8px',
-                  border: '1.5px solid rgba(139, 92, 246, 0.35)',
+                  gap: '0.75rem',
+                  background: `linear-gradient(135deg, ${hexToRgba(themeColors.primaryColor, 0.15)} 0%, rgba(30, 25, 45, 0.6) 100%)`,
+                  padding: '0.6rem 1rem',
+                  borderRadius: '10px',
+                  border: `1px solid ${hexToRgba(themeColors.primaryColor, 0.25)}`,
                   width: 'fit-content',
                   maxWidth: '850px',
-                  boxShadow: '0 2px 12px rgba(139, 92, 246, 0.15)',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
                   flexWrap: 'wrap'
                 }}>
-                  <span style={{ color: '#8b5cf6', fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                  <span style={{ color: themeColors.primaryColor, fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
                     Nombre:
                   </span>
                   <InputText
@@ -4096,17 +4221,17 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                     placeholder="Ej: NAS"
                     style={{
                       width: '130px',
-                      background: 'rgba(255,255,255,0.08)',
-                      border: '1px solid rgba(139, 92, 246, 0.3)',
+                      background: 'rgba(255,255,255,0.06)',
+                      border: `1px solid ${hexToRgba(themeColors.primaryColor, 0.25)}`,
                       borderRadius: '6px',
                       color: 'var(--text-color)',
                       padding: '0.35rem 0.5rem',
                       fontSize: '0.8rem',
-                      height: '30px'
+                      height: '32px'
                     }}
                     autoFocus
                   />
-                  <span style={{ color: '#8b5cf6', fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                  <span style={{ color: themeColors.primaryColor, fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
                     IP / Host (opcional):
                   </span>
                   <InputText
@@ -4115,13 +4240,13 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                     placeholder="Ej: 192.168.1.50"
                     style={{
                       width: '150px',
-                      background: 'rgba(255,255,255,0.08)',
-                      border: '1px solid rgba(139, 92, 246, 0.3)',
+                      background: 'rgba(255,255,255,0.06)',
+                      border: `1px solid ${hexToRgba(themeColors.primaryColor, 0.25)}`,
                       borderRadius: '6px',
                       color: 'var(--text-color)',
                       padding: '0.35rem 0.5rem',
                       fontSize: '0.8rem',
-                      height: '30px'
+                      height: '32px'
                     }}
                     onKeyPress={(e) => e.key === 'Enter' && handleSaveDevice()}
                   />
@@ -4134,9 +4259,10 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                       border: 'none',
                       borderRadius: '6px',
                       padding: '0.35rem 0.75rem',
-                      height: '30px',
+                      height: '32px',
                       fontSize: '0.75rem',
-                      fontWeight: '600'
+                      fontWeight: '600',
+                      boxShadow: '0 2px 8px rgba(34, 197, 94, 0.3)'
                     }}
                   />
                   <Button
@@ -4144,11 +4270,11 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                     icon="pi pi-times"
                     onClick={() => setIsSavingDevice(false)}
                     style={{
-                      background: 'rgba(255,255,255,0.1)',
-                      border: 'none',
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
                       borderRadius: '6px',
                       padding: '0.35rem 0.75rem',
-                      height: '30px',
+                      height: '32px',
                       fontSize: '0.75rem',
                       fontWeight: '600',
                       color: 'var(--text-color)'
@@ -4160,18 +4286,18 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.5rem',
-                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(139, 92, 246, 0.04) 100%)',
-                  padding: '0.5rem 0.75rem',
-                  borderRadius: '8px',
-                  border: '1.5px solid rgba(139, 92, 246, 0.35)',
+                  gap: '0.75rem',
+                  background: `linear-gradient(135deg, ${hexToRgba(themeColors.primaryColor, 0.15)} 0%, rgba(30, 25, 45, 0.6) 100%)`,
+                  padding: '0.6rem 1rem',
+                  borderRadius: '10px',
+                  border: `1px solid ${hexToRgba(themeColors.primaryColor, 0.25)}`,
                   width: 'fit-content',
                   maxWidth: '850px',
-                  boxShadow: '0 2px 12px rgba(139, 92, 246, 0.15)',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
                   flexWrap: 'wrap'
                 }}>
                   {/* MAC */}
-                  <span style={{ color: '#8b5cf6', fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                  <span style={{ color: themeColors.primaryColor, fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
                     MAC:
                   </span>
                   <InputText
@@ -4180,19 +4306,19 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                     placeholder="AA:BB:CC:DD:EE:FF"
                     style={{
                       width: '180px',
-                      background: 'rgba(255,255,255,0.08)',
-                      border: '1px solid rgba(139, 92, 246, 0.3)',
+                      background: 'rgba(255,255,255,0.06)',
+                      border: `1px solid ${hexToRgba(themeColors.primaryColor, 0.25)}`,
                       borderRadius: '6px',
                       color: 'var(--text-color)',
                       padding: '0.35rem 0.5rem',
                       fontSize: '0.8rem',
-                      height: '30px'
+                      height: '32px'
                     }}
                     onKeyPress={(e) => e.key === 'Enter' && executeTool()}
                   />
                   
                   {/* Broadcast */}
-                  <span style={{ color: '#8b5cf6', fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                  <span style={{ color: themeColors.primaryColor, fontSize: '0.75rem', fontWeight: '600', whiteSpace: 'nowrap' }}>
                     Broadcast:
                   </span>
                   <InputText
@@ -4201,13 +4327,13 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                     placeholder="255.255.255.255"
                     style={{
                       width: '150px',
-                      background: 'rgba(255,255,255,0.08)',
-                      border: '1px solid rgba(139, 92, 246, 0.3)',
+                      background: 'rgba(255,255,255,0.06)',
+                      border: `1px solid ${hexToRgba(themeColors.primaryColor, 0.25)}`,
                       borderRadius: '6px',
                       color: 'var(--text-color)',
                       padding: '0.35rem 0.5rem',
                       fontSize: '0.8rem',
-                      height: '30px'
+                      height: '32px'
                     }}
                   />
                   
@@ -4218,14 +4344,14 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                     onClick={executeTool}
                     disabled={loading}
                     style={{
-                      background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                      background: `linear-gradient(135deg, ${themeColors.primaryColor} 0%, ${hexToRgba(themeColors.primaryColor, 0.8)} 100%)`,
                       border: 'none',
                       borderRadius: '6px',
                       padding: '0.35rem 0.75rem',
-                      height: '30px',
+                      height: '32px',
                       fontSize: '0.75rem',
                       fontWeight: '600',
-                      boxShadow: '0 2px 8px rgba(139, 92, 246, 0.3)',
+                      boxShadow: `0 2px 8px ${hexToRgba(themeColors.primaryColor, 0.35)}`,
                       marginLeft: '0.25rem'
                     }}
                   />
@@ -4241,14 +4367,14 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                     }}
                     disabled={loading || !wolMac.trim()}
                     style={{
-                      background: 'rgba(255,255,255,0.1)',
-                      border: 'none',
+                      background: hexToRgba(themeColors.primaryColor, 0.08),
+                      border: `1px solid ${hexToRgba(themeColors.primaryColor, 0.3)}`,
                       borderRadius: '6px',
                       padding: '0.35rem 0.75rem',
-                      height: '30px',
+                      height: '32px',
                       fontSize: '0.75rem',
                       fontWeight: '600',
-                      color: 'var(--text-color)',
+                      color: themeColors.primaryColor,
                       marginLeft: '0.25rem'
                     }}
                   />
