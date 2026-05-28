@@ -21,7 +21,7 @@ module.exports = {
     filename: '[name].bundle.js',
     chunkFilename: '[name].chunk.js',
     path: path.resolve(__dirname, 'dist'),
-    clean: true,
+    clean: process.env.NODE_ENV === 'production',
   },
   // 🚀 OPTIMIZACIÓN: Code splitting para reducir bundle inicial
   optimization: {

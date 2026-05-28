@@ -358,6 +358,7 @@ const Sidebar = React.memo(({
     import('./DocumentsSidebar').catch(() => {});
     import('./ToolsSidebar').catch(() => {});
     import('./LocalFileExplorerSidebar').catch(() => {});
+    import('./SettingsSidebar').catch(() => {});
 
     // Usamos un doble frame para asegurar que el navegador ha renderizado el árbol
     let rafId1, rafId2;
