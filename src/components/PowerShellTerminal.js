@@ -102,6 +102,7 @@ const PowerShellTerminal = forwardRef(({
                     platform: systemStats.platform || window.electron?.platform || '',
                     arch: systemStats.arch || '',
                     osPrettyName: systemStats.osPrettyName || '',
+                    uptime: systemStats.uptime || '',
                     cpuMeta: {
                         cores: systemStats.cpu?.cores || 0,
                         model: systemStats.cpu?.model || '',

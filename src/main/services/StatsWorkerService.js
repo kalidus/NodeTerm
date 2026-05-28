@@ -54,7 +54,8 @@ function getFallbackStats(model = 'NoData') {
     arch: os.arch(),
     kernel: os.release(),
     osVersion: (typeof os.version === 'function' ? os.version() : ''),
-    osPrettyName: ''
+    osPrettyName: '',
+    uptime: ''
   };
 }
 

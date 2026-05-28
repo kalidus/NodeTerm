@@ -144,6 +144,7 @@ const WSLTerminal = forwardRef(({
                     platform: 'linux',
                     arch: linuxArch || systemStats.arch || '',
                     osPrettyName: linuxPrettyName || '',
+                    uptime: systemStats.uptime || '',
                     cpuMeta: {
                         cores: systemStats.cpu?.cores || 0,
                         model: systemStats.cpu?.model || '',

@@ -29,10 +29,27 @@ let lastValidStats = {
   arch: os.arch(),
   kernel: os.release(),
   osVersion: (typeof os.version === 'function' ? os.version() : ''),
-  osPrettyName: ''
+  osPrettyName: '',
+  uptime: ''
 };
 
 async function getSystemStats() {
+  // Uptime
+  let uptime = '';
+  try {
+    const uptimeSeconds = os.uptime();
+    const d = Math.floor(uptimeSeconds / (3600 * 24));
+    const h = Math.floor((uptimeSeconds % (3600 * 24)) / 3600);
+    const m = Math.floor((uptimeSeconds % 3600) / 60);
+    if (d > 0) {
+      uptime = `${d} ${d === 1 ? 'day' : 'days'}, ${h}:${String(m).padStart(2, '0')}`;
+    } else {
+      uptime = `${h}:${String(m).padStart(2, '0')}`;
+    }
+  } catch (error) {
+    uptime = '';
+  }
+
   // Comenzar con los últimos valores válidos conocidos
   const stats = {
     cpu: { ...lastValidStats.cpu },
@@ -47,7 +64,8 @@ async function getSystemStats() {
     arch: os.arch(),
     kernel: os.release(),
     osVersion: (typeof os.version === 'function' ? os.version() : ''),
-    osPrettyName: lastValidStats.osPrettyName || ''
+    osPrettyName: lastValidStats.osPrettyName || '',
+    uptime: uptime
   };
 
   // Memoria (siempre disponible, actualizar directamente)
@@ -291,7 +309,8 @@ async function getSystemStats() {
     arch: stats.arch,
     kernel: stats.kernel,
     osVersion: stats.osVersion,
-    osPrettyName: stats.osPrettyName
+    osPrettyName: stats.osPrettyName,
+    uptime: stats.uptime
   };
 
   return stats;

@@ -267,7 +267,8 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
                         : [],
                     hostname: systemStats.hostname,
                     ip: systemStats.ip,
-                    distro: window.electron?.platform === 'darwin' ? 'macos' : (window.electron?.platform === 'win32' ? 'windows' : 'linux')
+                    distro: window.electron?.platform === 'darwin' ? 'macos' : (window.electron?.platform === 'win32' ? 'windows' : 'linux'),
+                    uptime: systemStats.uptime || ''
                 };
                 setLocalStats(adapted);
             }
