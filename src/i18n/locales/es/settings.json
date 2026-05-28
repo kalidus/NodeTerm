@@ -37,6 +37,25 @@
     "sync": "Sincronización",
     "info": "Información"
   },
+  "sidebarDescriptions": {
+    "general": "Ajustes globales de comportamiento",
+    "masterKey": "Gestiona cifrado y clave maestra",
+    "audit": "Configura registro y auditoría",
+    "users": "Gestión de usuarios y accesos",
+    "interface": "Personaliza la interfaz principal",
+    "layouts": "Define estilo visual general",
+    "tabs": "Opciones de pestañas y navegación",
+    "homePage": "Configura la página de inicio",
+    "terminal": "Preferencias del terminal integrado",
+    "statusBar": "Elementos visibles de la barra",
+    "sessionExplorer": "Ajustes del explorador de sesiones",
+    "fileExplorer": "Ajustes del explorador de archivos",
+    "presets": "Guarda o aplica presets visuales",
+    "apps": "Integraciones y aplicaciones",
+    "updates": "Canales y revisión de versiones",
+    "sync": "Sincroniza ajustes en la nube",
+    "info": "Versión y datos técnicos"
+  },
   "general": {
     "title": "Configuración General",
     "sections": {

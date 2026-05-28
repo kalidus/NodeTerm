@@ -37,6 +37,25 @@
     "sync": "Sync",
     "info": "Information"
   },
+  "sidebarDescriptions": {
+    "general": "Global behavior preferences",
+    "masterKey": "Manage encryption and master key",
+    "audit": "Configure logs and auditing",
+    "users": "User and access management",
+    "interface": "Customize the main interface",
+    "layouts": "Set overall visual style",
+    "tabs": "Tabs and navigation options",
+    "homePage": "Configure the home page",
+    "terminal": "Integrated terminal preferences",
+    "statusBar": "Visible status bar items",
+    "sessionExplorer": "Session explorer settings",
+    "fileExplorer": "File explorer settings",
+    "presets": "Save or apply visual presets",
+    "apps": "Apps and integrations",
+    "updates": "Channels and version checks",
+    "sync": "Sync settings to cloud",
+    "info": "Version and technical details"
+  },
   "general": {
     "title": "General Settings",
     "sections": {

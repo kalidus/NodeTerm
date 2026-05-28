@@ -3346,7 +3346,16 @@ const Sidebar = React.memo(({
 
       {viewMode === 'settings' && (
         <Suspense fallback={<TabChunkFallback />}>
-          <LazySettingsSidebar />
+          <LazySettingsSidebar
+            iconTheme={iconTheme}
+            iconSize={iconSize}
+            folderIconSize={folderIconSize}
+            connectionIconSize={connectionIconSize}
+            explorerFont={explorerFont}
+            explorerFontSize={explorerFontSize}
+            treeTheme={treeTheme}
+            explorerFontColor={explorerFontColor}
+          />
         </Suspense>
       )}
       
