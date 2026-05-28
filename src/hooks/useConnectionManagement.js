@@ -86,6 +86,7 @@ export const useConnectionManagement = ({
       originalKey: fileNode.key,
       sshConfig: config, // Mantener nombre sshConfig para compatibilidad
       type: 'explorer',
+      customIcon: fileNode.data?.customIcon || null,
       createdAt: nowTs,
       needsOwnConnection: false,
       isExplorerInSSH: true,
@@ -684,6 +685,7 @@ export const useConnectionManagement = ({
           originalKey: originalKey,
           rdpConfig: rdpConfig,
           type: 'rdp-guacamole',
+          customIcon: node.data?.customIcon || null,
           groupId: null
         };
         // Marcar y activar usando la clave REAL creada y registrar orden de apertura
@@ -753,6 +755,7 @@ export const useConnectionManagement = ({
         originalKey: node.key,
         rdpConfig: rdpConfig,
         type: 'rdp',
+        customIcon: node.data?.customIcon || null,
         node: node,
         groupId: null
       };
@@ -973,6 +976,7 @@ export const useConnectionManagement = ({
           originalKey: originalKey,
           rdpConfig: vncConfig, // Reutilizar rdpConfig para mantener compatibilidad con GuacamoleTerminal
           type: 'vnc-guacamole',
+          customIcon: node.data?.customIcon || null,
           groupId: null
         };
         // Marcar y activar usando la clave REAL creada y registrar orden de apertura

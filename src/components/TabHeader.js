@@ -5,6 +5,8 @@ import { SiDebian, SiDocker } from 'react-icons/si';
 import DistroIcon from './DistroIcon';
 import AIClientBrandIcon from './AIClientBrandIcon';
 import { getHomeTabIcon } from '../themes/home-tab-icons';
+import { iconThemes } from '../themes/icon-themes';
+import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
 import { isHomeButtonLocked as readHomeButtonLocked } from '../utils/homeTabDefaults';
@@ -46,6 +48,7 @@ const TabHeader = React.memo(({
   const isHomeTab = tab.type === 'home';
   const [homeIconVersion, setHomeIconVersion] = useState(0);
   const [themeVersion, setThemeVersion] = useState(0);
+  const [sidebarIconThemeVersion, setSidebarIconThemeVersion] = useState(0);
 
   // Verificar si el botón de inicio está bloqueado
   const [isHomeButtonLocked, setIsHomeButtonLocked] = useState(readHomeButtonLocked);
@@ -79,6 +82,21 @@ const TabHeader = React.memo(({
     };
     window.addEventListener('theme-changed', handleThemeChange);
     return () => window.removeEventListener('theme-changed', handleThemeChange);
+  }, []);
+
+  // Escuchar cambios del tema de iconos de la sidebar
+  useEffect(() => {
+    const handleSidebarIconThemeUpdate = () => {
+      setSidebarIconThemeVersion(v => v + 1);
+    };
+
+    window.addEventListener('settings-updated', handleSidebarIconThemeUpdate);
+    window.addEventListener('storage', handleSidebarIconThemeUpdate);
+
+    return () => {
+      window.removeEventListener('settings-updated', handleSidebarIconThemeUpdate);
+      window.removeEventListener('storage', handleSidebarIconThemeUpdate);
+    };
   }, []);
 
   // Obtener datos del tema actual
@@ -271,6 +289,79 @@ const TabHeader = React.memo(({
     return <i className="pi pi-desktop" style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: '#4fc3f7', flexShrink: 0 }}></i>;
   };
 
+  const connectionTabIconSize = 16;
+  const tabIconCommonStyle = {
+    marginRight: '6px',
+    flexShrink: 0,
+    width: `${connectionTabIconSize}px`,
+    height: `${connectionTabIconSize}px`,
+    display: 'block'
+  };
+
+  const getSidebarThemeKey = () => {
+    try {
+      return (localStorage.getItem('iconThemeSidebar') || 'nord').toLowerCase();
+    } catch {
+      return 'nord';
+    }
+  };
+
+  const getSidebarConnectionIcon = (connectionType) => {
+    void sidebarIconThemeVersion;
+    const sidebarThemeKey = getSidebarThemeKey();
+    const themeIcons = iconThemes[sidebarThemeKey]?.icons || iconThemes['nord']?.icons || {};
+    const SCALES = {
+      material: 1.12,
+      nord: 1.05,
+      cyberpunk: 1.04,
+      dracula: 1.08,
+      solarized: 1.08,
+      monokai: 1.08,
+      onedark: 1.08,
+      gruvbox: 1.06,
+      atom: 1.05,
+      vscode: 1.05,
+      linea: 1.06,
+      fluent: 1.0
+    };
+
+    const customIconId = tab?.customIcon;
+    if (customIconId && customIconId !== 'default' && SSHIconPresets[customIconId.toUpperCase()]) {
+      return (
+        <SSHIconRenderer
+          preset={SSHIconPresets[customIconId.toUpperCase()]}
+          pixelSize={connectionTabIconSize}
+        />
+      );
+    }
+
+    const iconByType = {
+      explorer: themeIcons.sftp || themeIcons.folderOpen || themeIcons.folder,
+      rdp: themeIcons.rdp,
+      'rdp-guacamole': themeIcons.rdp,
+      vnc: themeIcons.vnc || themeIcons.rdp,
+      'vnc-guacamole': themeIcons.vnc || themeIcons.rdp
+    };
+
+    const themedIcon = iconByType[connectionType];
+    if (themedIcon) {
+      const scale = SCALES[sidebarThemeKey] || 1.0;
+      const finalSize = Math.round(connectionTabIconSize * scale);
+      return React.cloneElement(themedIcon, {
+        width: finalSize,
+        height: finalSize,
+        style: {
+          ...(themedIcon.props?.style || {}),
+          ...tabIconCommonStyle,
+          width: `${finalSize}px`,
+          height: `${finalSize}px`
+        }
+      });
+    }
+
+    return null;
+  };
+
   return (
     <div
       className={`${className} ${isDragging ? 'tab-dragging' : ''} ${isDragOver ? 'tab-drop-zone' : ''}`}
@@ -352,16 +443,25 @@ const TabHeader = React.memo(({
 
       {/* Icono específico para exploradores */}
       {(tab.type === 'explorer' || tab.isExplorerInSSH) && (
+        getSidebarConnectionIcon('explorer') ||
         <i className="pi pi-folder-open" style={{ fontSize: '12px', marginRight: '6px', flexShrink: 0 }}></i>
       )}
 
       {/* Icono específico para pestañas RDP */}
       {tab.type === 'rdp' && (
+        getSidebarConnectionIcon('rdp') ||
         <i className="pi pi-desktop" style={{ fontSize: '12px', marginRight: '6px', color: '#007ad9', flexShrink: 0 }}></i>
       )}
 
       {/* Icono específico para pestañas RDP-Guacamole */}
       {tab.type === 'rdp-guacamole' && (
+        getSidebarConnectionIcon('rdp-guacamole') ||
+        <i className="pi pi-desktop" style={{ fontSize: '12px', marginRight: '6px', color: '#ff6b35', flexShrink: 0 }}></i>
+      )}
+
+      {/* Icono específico para pestañas VNC-Guacamole */}
+      {tab.type === 'vnc-guacamole' && (
+        getSidebarConnectionIcon('vnc-guacamole') ||
         <i className="pi pi-desktop" style={{ fontSize: '12px', marginRight: '6px', color: '#ff6b35', flexShrink: 0 }}></i>
       )}
 
