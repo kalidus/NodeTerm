@@ -2855,7 +2855,7 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                 </span>
                 
                 {result.details && Array.isArray(result.details) && (
-                  <div style={{ 
+                  <details style={{ 
                     marginTop: '0.75rem', 
                     fontSize: '0.75rem', 
                     color: 'var(--text-color-secondary)', 
@@ -2864,10 +2864,17 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                     paddingTop: '0.5rem',
                     textAlign: 'left'
                   }}>
-                    <div style={{ fontWeight: '600', marginBottom: '0.35rem', color: 'var(--text-color)', textAlign: 'center' }}>
-                      Detalles del envío por interfaz:
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', fontFamily: 'monospace' }}>
+                    <summary style={{ 
+                      fontWeight: '600', 
+                      marginBottom: '0.35rem', 
+                      color: 'var(--text-color)', 
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      userSelect: 'none'
+                    }}>
+                      Detalles del envío por interfaz (Click para expandir)
+                    </summary>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', fontFamily: 'monospace', marginTop: '0.5rem' }}>
                       {result.details.map((d, index) => (
                         <div key={index} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.1rem 0' }}>
                           <span>{d.localIp} → {d.broadcastIp}</span>
@@ -2875,7 +2882,7 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                         </div>
                       ))}
                     </div>
-                  </div>
+                  </details>
                 )}
               </div>
             </div>
