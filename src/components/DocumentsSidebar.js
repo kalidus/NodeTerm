@@ -14,9 +14,11 @@ import {
   createFolderNode,
   addNodeToTree,
   removeNodeFromTree,
-  updateNodeInTree
+  updateNodeInTree,
+  findNodeInTree
 } from '../utils/documentStore';
 import localStorageSyncService from '../services/LocalStorageSyncService';
+import DocumentDetailsPanel from './DocumentDetailsPanel';
 import '../styles/components/documents.css';
 
 /** PrimeReact Tree ya muestra icono vía node.icon; el nodeTemplate añade el propio — quitamos duplicados (también en datos guardados). */
@@ -119,6 +121,23 @@ const DocumentsSidebar = ({
   const [isLoading, setIsLoading] = useState(true);
   const [expandedKeys, setExpandedKeys] = useState({});
   const [selectedNodeKey, setSelectedNodeKey] = useState(null);
+
+  const selectedNodeForDetails = useMemo(() => {
+    if (!selectedNodeKey) return null;
+    let selectedKey = null;
+    if (typeof selectedNodeKey === 'string') {
+      selectedKey = selectedNodeKey;
+    } else if (selectedNodeKey && typeof selectedNodeKey === 'object') {
+      selectedKey = Object.keys(selectedNodeKey)[0];
+    }
+    return selectedKey ? findNodeInTree(documentNodes, selectedKey) : null;
+  }, [selectedNodeKey, documentNodes]);
+
+  const handleNodeUpdate = useCallback((updatedNode) => {
+    setDocumentNodes(prev =>
+      updateNodeInTree(prev, updatedNode.key, updatedNode)
+    );
+  }, []);
 
   const [showNewDocDialog, setShowNewDocDialog] = useState(false);
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
@@ -377,7 +396,12 @@ const DocumentsSidebar = ({
     return (
       <span
         className="document-tree-node"
-        onClick={() => !isFolder && handleOpenDocument(node)}
+        onDoubleClick={(e) => {
+          if (!isFolder) {
+            e.stopPropagation();
+            handleOpenDocument(node);
+          }
+        }}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -685,6 +709,13 @@ const DocumentsSidebar = ({
           />
         )}
       </div>
+
+      <DocumentDetailsPanel
+        selectedNode={selectedNodeForDetails}
+        uiTheme={uiTheme}
+        onNodeUpdate={handleNodeUpdate}
+        onOpenDocument={handleOpenDocument}
+      />
 
       <ContextMenu model={contextMenuItems} ref={contextMenuRef} />
 
