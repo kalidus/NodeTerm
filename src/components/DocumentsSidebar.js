@@ -164,6 +164,21 @@ const DocumentsSidebar = ({
         if (savedExp) setExpandedKeys(JSON.parse(savedExp));
       } catch {}
       const tree = await loadDocumentTree(secureStorage, masterKey);
+      const hasQuickNote = tree.some(node => node.key === 'quick_note');
+      if (!hasQuickNote) {
+        tree.unshift({
+          key: 'quick_note',
+          label: 'Notas rápidas',
+          type: 'document',
+          data: {
+            type: 'document',
+            content: '',
+            markdownSource: '',
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+          }
+        });
+      }
       setDocumentNodes(tree);
       setIsLoading(false);
     };
@@ -182,6 +197,21 @@ const DocumentsSidebar = ({
   useEffect(() => {
     const load = async () => {
       const tree = await loadDocumentTree(secureStorage, masterKey);
+      const hasQuickNote = tree.some(node => node.key === 'quick_note');
+      if (!hasQuickNote) {
+        tree.unshift({
+          key: 'quick_note',
+          label: 'Notas rápidas',
+          type: 'document',
+          data: {
+            type: 'document',
+            content: '',
+            markdownSource: '',
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+          }
+        });
+      }
       setDocumentNodes(tree);
       setIsLoading(false);
     };
@@ -367,9 +397,13 @@ const DocumentsSidebar = ({
     setDocumentNodes(updatedNodes);
   };
 
+  const filteredDocumentNodes = useMemo(() => {
+    return documentNodes.filter(node => node.key !== 'quick_note');
+  }, [documentNodes]);
+
   const treeValue = useMemo(
-    () => stripTreeNodeIcons(documentNodes),
-    [documentNodes]
+    () => stripTreeNodeIcons(filteredDocumentNodes),
+    [filteredDocumentNodes]
   );
 
   const folderKeysAll = useMemo(
@@ -396,9 +430,10 @@ const DocumentsSidebar = ({
     return (
       <span
         className="document-tree-node"
-        onDoubleClick={(e) => {
+        onClick={(e) => {
           if (!isFolder) {
             e.stopPropagation();
+            setSelectedNodeKey(node.key);
             handleOpenDocument(node);
           }
         }}
@@ -679,34 +714,66 @@ const DocumentsSidebar = ({
             <i className="pi pi-spin pi-spinner" />
             <p>Cargando notas...</p>
           </div>
-        ) : documentNodes.length === 0 ? (
-          <div className="documents-empty-state">
-            <i className="pi pi-file-edit" />
-            <p>No hay notas. Usa el icono de nueva nota en la cabecera.</p>
-          </div>
         ) : (
-          <Tree
-            value={treeValue}
-            expandedKeys={expandedKeys}
-            onToggle={(e) => setExpandedKeys(e.value)}
-            selectionMode="single"
-            selectionKeys={selectedNodeKey}
-            onSelectionChange={(e) => setSelectedNodeKey(e.value)}
-            onContextMenu={onContextMenu}
-            dragdropScope="documents"
-            onDragDrop={onDragDrop}
-            nodeTemplate={nodeTemplate}
-            className={`sidebar-tree tree-theme-${treeTheme}`}
-            data-tree-theme={treeTheme}
-            style={{
-              height: '100%',
-              overflow: 'auto',
-              fontSize: `${explorerFontSize}px`,
-              fontFamily: explorerFont || 'inherit',
-              border: 'none',
-              background: 'transparent'
-            }}
-          />
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            {/* Pinned Quick Note Row */}
+            <div 
+              className={`pinned-quick-note-row ${selectedNodeKey === 'quick_note' ? 'selected' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedNodeKey('quick_note');
+                const quickNode = documentNodes.find(node => node.key === 'quick_note');
+                if (quickNode) handleOpenDocument(quickNode);
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '6px 8px 6px 18px',
+                cursor: 'pointer',
+                fontFamily: explorerFont || 'inherit',
+                fontSize: `${explorerFontSize}px`,
+                transition: 'background-color 0.2s',
+                minHeight: '26px',
+                position: 'relative'
+              }}
+            >
+              <span style={{ minWidth: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', height: 20 }}>
+                <i className="pi pi-bolt" style={{ fontSize: '0.9rem', color: '#ffc107' }} />
+              </span>
+              <span className="node-label" style={{ flex: 1, fontWeight: 'bold', color: 'var(--ui-primary-color, #64b5f6)' }}>
+                Notas rápidas
+              </span>
+            </div>
+
+            {filteredDocumentNodes.length === 0 ? (
+              <div className="documents-empty-state" style={{ flex: 1 }}>
+                <i className="pi pi-file-edit" />
+                <p>No hay notas creadas en el árbol.</p>
+              </div>
+            ) : (
+              <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+                <Tree
+                  value={treeValue}
+                  expandedKeys={expandedKeys}
+                  onToggle={(e) => setExpandedKeys(e.value)}
+                  selectionMode="single"
+                  selectionKeys={selectedNodeKey}
+                  onSelectionChange={(e) => setSelectedNodeKey(e.value)}
+                  onContextMenu={onContextMenu}
+                  dragdropScope="documents"
+                  onDragDrop={onDragDrop}
+                  nodeTemplate={nodeTemplate}
+                  className={`sidebar-tree tree-theme-${treeTheme}`}
+                  data-tree-theme={treeTheme}
+                  style={{
+                    border: 'none',
+                    background: 'transparent'
+                  }}
+                />
+              </div>
+            )}
+          </div>
         )}
       </div>
 

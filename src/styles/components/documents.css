@@ -1192,4 +1192,22 @@
   font-size: 0.85rem;
 }
 
+/* Pinned Quick Note Row */
+.pinned-quick-note-row {
+  border-bottom: 1px solid var(--ui-sidebar-border, rgba(255, 255, 255, 0.05));
+  background-color: rgba(255, 255, 255, 0.01);
+  box-sizing: border-box;
+}
+
+.pinned-quick-note-row:hover {
+  background-color: var(--ui-sidebar-hover, rgba(255, 255, 255, 0.04));
+}
+
+.pinned-quick-note-row.selected {
+  background-color: var(--ui-sidebar-selected, rgba(59, 130, 246, 0.15)) !important;
+  border-left: 3px solid var(--ui-primary-color, #3b82f6);
+  padding-left: 15px !important; /* Ajustar padding por el borde izquierdo de 3px */
+}
+
+
 
