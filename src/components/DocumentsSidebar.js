@@ -713,7 +713,6 @@ const DocumentsSidebar = ({
       <DocumentDetailsPanel
         selectedNode={selectedNodeForDetails}
         uiTheme={uiTheme}
-        onNodeUpdate={handleNodeUpdate}
         onOpenDocument={handleOpenDocument}
       />
 

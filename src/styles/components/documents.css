@@ -1055,35 +1055,141 @@
   background-color: var(--ui-sidebar-bg);
 }
 
-.document-details-panel .note-preview-box {
-  grid-column: 1 / -1;
-  margin-top: 4px;
-  padding: 6px;
-  background-color: rgba(0, 0, 0, 0.15);
-  border-radius: 4px;
-  max-height: 120px;
-  overflow-y: auto;
-  font-family: inherit;
-  font-size: 11px;
-  line-height: 1.4;
-  border-left: 2px solid var(--ui-sidebar-border);
-  color: var(--ui-sidebar-text);
+.document-details-panel .details-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0 !important; /* Quitamos padding para que la vista previa ocupe todo */
+  overflow: hidden; /* El scroll lo manejará el preview container */
 }
 
-.document-details-panel .note-preview-box p {
-  margin: 0 0 4px 0;
+.document-details-panel .note-preview-container {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  background-color: var(--ui-sidebar-bg);
+  color: var(--ui-sidebar-text, #e0e0e0);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.85rem;
+  line-height: 1.6;
 }
-.document-details-panel .note-preview-box p:last-child {
+
+/* Scrollbar fina para la vista previa */
+.document-details-panel .note-preview-container::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.document-details-panel .note-preview-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+.document-details-panel .note-preview-container::-webkit-scrollbar-thumb {
+  background-color: var(--ui-sidebar-border, rgba(255, 255, 255, 0.1));
+  border-radius: 3px;
+}
+.document-details-panel .note-preview-container::-webkit-scrollbar-thumb:hover {
+  background-color: var(--ui-primary-color, #64b5f6);
+}
+
+/* Estilos de contenido Tiptap en la vista previa */
+.document-details-panel .note-preview-content {
+  word-break: break-word;
+  white-space: normal;
+}
+
+.document-details-panel .note-preview-content p {
+  margin: 0 0 8px 0;
+}
+.document-details-panel .note-preview-content p:last-child {
   margin-bottom: 0;
 }
 
-[data-theme="light"] .document-details-panel .note-preview-box {
-  background-color: rgba(0, 0, 0, 0.04);
+.document-details-panel .note-preview-content h1,
+.document-details-panel .note-preview-content h2,
+.document-details-panel .note-preview-content h3 {
+  margin: 12px 0 6px 0;
+  font-weight: 600;
+  color: var(--ui-primary-color, #64b5f6);
+  line-height: 1.3;
 }
 
-.document-details-panel .note-preview-box.empty-preview {
+.document-details-panel .note-preview-content h1 { font-size: 1.2rem; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 3px; }
+.document-details-panel .note-preview-content h2 { font-size: 1.05rem; }
+.document-details-panel .note-preview-content h3 { font-size: 0.95rem; }
+
+.document-details-panel .note-preview-content ul,
+.document-details-panel .note-preview-content ol {
+  padding-left: 18px;
+  margin: 6px 0;
+}
+
+.document-details-panel .note-preview-content li {
+  margin: 3px 0;
+}
+
+.document-details-panel .note-preview-content pre {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin: 8px 0;
+  overflow-x: auto;
+  font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.document-details-panel .note-preview-content code {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 0.8em;
+  color: #f48fb1;
+}
+
+.document-details-panel .note-preview-content pre code {
+  background: none;
+  padding: 0;
+  color: #e0e0e0;
+}
+
+.document-details-panel .note-preview-content blockquote {
+  border-left: 3px solid rgba(100, 181, 246, 0.5);
+  padding-left: 10px;
+  margin: 8px 0;
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+}
+
+.document-details-panel .note-preview-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 8px 0;
+  font-size: 0.8rem;
+}
+
+.document-details-panel .note-preview-content table th,
+.document-details-panel .note-preview-content table td {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 4px 6px;
+}
+
+.document-details-panel .note-preview-content table th {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.document-details-panel .note-preview-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--ui-sidebar-text);
   opacity: 0.5;
   font-style: italic;
+  font-size: 0.85rem;
 }
 
 
