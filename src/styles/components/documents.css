@@ -1208,6 +1208,263 @@
   border-left: 3px solid var(--ui-primary-color, #3b82f6);
   padding-left: 15px !important; /* Ajustar padding por el borde izquierdo de 3px */
 }
+/* ================================
+   QUICK NOTES SIDE PANEL (Joplin style)
+   ================================ */
 
+/* El panel ocupa una columna a la derecha del sidebar principal */
+.quick-notes-side-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--ui-sidebar-bg, #1a1a2e);
+  border-left: 1px solid var(--ui-sidebar-border, rgba(255, 255, 255, 0.08));
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.35), 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  z-index: 10000;
+  overflow: hidden;
+  /* Estado inicial: oculto */
+  opacity: 0;
+  transform: translateX(-8px);
+  pointer-events: none;
+  transition:
+    opacity 0.26s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+}
 
+.quick-notes-side-panel.open {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: all;
+}
+
+/* Header del panel */
+.qnp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--ui-sidebar-border, rgba(255, 255, 255, 0.07));
+  background: rgba(255, 193, 7, 0.04);
+  flex-shrink: 0;
+  min-height: 38px;
+  box-sizing: border-box;
+}
+
+.qnp-header-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.3px;
+  color: var(--ui-sidebar-text, #e0e0e0);
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.qnp-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.qnp-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ui-sidebar-text, #aaa);
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: all 0.18s ease;
+  opacity: 0.6;
+}
+
+.qnp-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.qnp-icon-btn:hover i.pi-plus {
+  color: #ffc107;
+}
+
+.qnp-close-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444 !important;
+  opacity: 1 !important;
+}
+
+/* Lista de notas */
+.qnp-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 6px 0;
+}
+
+.qnp-list::-webkit-scrollbar {
+  width: 4px;
+}
+.qnp-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.qnp-list::-webkit-scrollbar-thumb {
+  background: var(--ui-sidebar-border, rgba(255, 255, 255, 0.1));
+  border-radius: 2px;
+}
+.qnp-list::-webkit-scrollbar-thumb:hover {
+  background: var(--ui-primary-color, #64b5f6);
+}
+
+/* Ítem de nota */
+.qnp-note-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 10px;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  position: relative;
+}
+
+.qnp-note-item:hover {
+  background: var(--ui-sidebar-hover, rgba(255, 255, 255, 0.05));
+  border-left-color: rgba(255, 193, 7, 0.5);
+}
+
+.qnp-note-item:hover .qnp-delete-btn {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.qnp-note-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.qnp-note-title {
+  flex: 1;
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--ui-sidebar-text, #e0e0e0);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.3;
+}
+
+.qnp-note-date {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--ui-sidebar-text, #888);
+  opacity: 0.55;
+  line-height: 1.2;
+}
+
+.qnp-note-preview {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--ui-sidebar-text, #aaa);
+  opacity: 0.6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+/* Botón eliminar (se muestra en hover del ítem) */
+.qnp-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #ef4444;
+  cursor: pointer;
+  font-size: 0.65rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, background 0.15s ease, transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.qnp-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  transform: scale(1.15);
+}
+
+/* Estado vacío */
+.qnp-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  gap: 10px;
+  color: var(--ui-sidebar-text, #888);
+  opacity: 0.6;
+  text-align: center;
+}
+
+.qnp-empty-state p {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.qnp-create-first-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: 6px;
+  background: rgba(255, 193, 7, 0.06);
+  color: #ffc107;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  opacity: 0.9;
+}
+
+.qnp-create-first-btn:hover {
+  background: rgba(255, 193, 7, 0.14);
+  border-color: rgba(255, 193, 7, 0.55);
+  opacity: 1;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.15);
+}
+
+/* Badge de contador en la fila de Notas rápidas */
+.qnp-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: rgba(255, 193, 7, 0.18);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  color: #ffc107;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-right: 2px;
+}
 

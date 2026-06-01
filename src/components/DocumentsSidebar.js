@@ -19,6 +19,7 @@ import {
 } from '../utils/documentStore';
 import localStorageSyncService from '../services/LocalStorageSyncService';
 import DocumentDetailsPanel from './DocumentDetailsPanel';
+import QuickNotesSidePanel from './QuickNotesSidePanel';
 import '../styles/components/documents.css';
 
 /** PrimeReact Tree ya muestra icono vía node.icon; el nodeTemplate añade el propio — quitamos duplicados (también en datos guardados). */
@@ -140,6 +141,7 @@ const DocumentsSidebar = ({
   const [isLoading, setIsLoading] = useState(true);
   const [expandedKeys, setExpandedKeys] = useState({});
   const [selectedNodeKey, setSelectedNodeKey] = useState(null);
+  const [quickNotesPanelOpen, setQuickNotesPanelOpen] = useState(false);
 
   const selectedNodeForDetails = useMemo(() => {
     if (!selectedNodeKey) return null;
@@ -168,6 +170,7 @@ const DocumentsSidebar = ({
 
   const contextMenuRef = useRef(null);
   const inlineRenameInputRef = useRef(null);
+  const sidebarRootRef = useRef(null);
   const [contextMenuItems, setContextMenuItems] = useState([]);
 
   useEffect(() => {
@@ -190,15 +193,29 @@ const DocumentsSidebar = ({
         tree.unshift({
           key: 'quick_note',
           label: 'Notas rápidas',
-          type: 'document',
-          data: {
-            type: 'document',
-            content: '',
-            markdownSource: '',
-            createdAt: Date.now(),
-            updatedAt: Date.now()
-          }
+          type: 'quick-notes-group',
+          droppable: false,
+          children: []
         });
+      } else {
+        // Migrar nodo antiguo de nota única a contenedor
+        const qn = tree.find(n => n.key === 'quick_note');
+        if (qn && qn.type !== 'quick-notes-group') {
+          qn.type = 'quick-notes-group';
+          // Si tenía contenido, preservarlo como primer hijo
+          if (qn.data?.content && qn.data.content.trim() && qn.data.content.trim() !== '<p></p>') {
+            const migratedChild = {
+              key: `quick_note_child_${Date.now()}`,
+              label: 'Nota rápida',
+              type: 'document',
+              data: { ...qn.data }
+            };
+            qn.children = [migratedChild, ...(qn.children || [])];
+          } else {
+            qn.children = qn.children || [];
+          }
+          delete qn.data;
+        }
       }
       setDocumentNodes(tree);
       setIsLoading(false);
@@ -223,15 +240,28 @@ const DocumentsSidebar = ({
         tree.unshift({
           key: 'quick_note',
           label: 'Notas rápidas',
-          type: 'document',
-          data: {
-            type: 'document',
-            content: '',
-            markdownSource: '',
-            createdAt: Date.now(),
-            updatedAt: Date.now()
-          }
+          type: 'quick-notes-group',
+          droppable: false,
+          children: []
         });
+      } else {
+        // Migrar nodo antiguo de nota única a contenedor
+        const qn = tree.find(n => n.key === 'quick_note');
+        if (qn && qn.type !== 'quick-notes-group') {
+          qn.type = 'quick-notes-group';
+          if (qn.data?.content && qn.data.content.trim() && qn.data.content.trim() !== '<p></p>') {
+            const migratedChild = {
+              key: `quick_note_child_${Date.now()}`,
+              label: 'Nota rápida',
+              type: 'document',
+              data: { ...qn.data }
+            };
+            qn.children = [migratedChild, ...(qn.children || [])];
+          } else {
+            qn.children = qn.children || [];
+          }
+          delete qn.data;
+        }
       }
       setDocumentNodes(tree);
       setIsLoading(false);
@@ -290,6 +320,71 @@ const DocumentsSidebar = ({
       setInlineRenameValue(newDoc.label);
     }
   }, []);
+
+  // Crea una nueva nota dentro del contenedor de notas rápidas
+  const createNewQuickNote = useCallback(() => {
+    const newNote = createDocumentNode('Nueva nota rápida');
+    setDocumentNodes(prev => {
+      return prev.map(node => {
+        if (node.key === 'quick_note') {
+          return {
+            ...node,
+            children: [newNote, ...(node.children || [])]
+          };
+        }
+        return node;
+      });
+    });
+    // Abrir la nueva nota en el editor principal
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('open-document-tab', {
+        detail: {
+          key: newNote.key,
+          label: newNote.label,
+          data: newNote.data
+        }
+      }));
+    }, 50);
+  }, []);
+
+  // Elimina una nota del contenedor de notas rápidas
+  const deleteQuickNote = useCallback((noteNode) => {
+    if (confirmDialog) {
+      confirmDialog({
+        message: `¿Eliminar la nota rápida "${noteNode.label}"?`,
+        header: 'Confirmar eliminación',
+        icon: 'pi pi-exclamation-triangle',
+        acceptClassName: 'p-button-danger',
+        accept: () => {
+          setDocumentNodes(prev => prev.map(node => {
+            if (node.key === 'quick_note') {
+              return {
+                ...node,
+                children: (node.children || []).filter(c => c.key !== noteNode.key)
+              };
+            }
+            return node;
+          }));
+          showToast?.({
+            severity: 'info',
+            summary: 'Eliminada',
+            detail: `"${noteNode.label}" eliminada`,
+            life: 3000
+          });
+        }
+      });
+    } else {
+      setDocumentNodes(prev => prev.map(node => {
+        if (node.key === 'quick_note') {
+          return {
+            ...node,
+            children: (node.children || []).filter(c => c.key !== noteNode.key)
+          };
+        }
+        return node;
+      }));
+    }
+  }, [confirmDialog, showToast]);
 
   const handleCreateNewNote = useCallback(() => {
     createNewDocumentInTree(getParentKeyForNewNote());
@@ -622,8 +717,28 @@ const DocumentsSidebar = ({
     }));
   }, [hideHeader, allDocTreeExpanded]);
 
+  // Obtener las notas rápidas (hijos del nodo quick_note)
+  const quickNotes = useMemo(() => {
+    const qn = documentNodes.find(n => n.key === 'quick_note');
+    return qn?.children || [];
+  }, [documentNodes]);
+
+  // Abrir una nota rápida en el editor principal
+  const handleOpenQuickNote = useCallback((node) => {
+    window.dispatchEvent(new CustomEvent('open-document-tab', {
+      detail: {
+        key: node.key,
+        label: node.label,
+        data: node.data
+      }
+    }));
+  }, []);
+
   return (
-    <div className="documents-sidebar-root">
+    <div
+      ref={sidebarRootRef}
+      className={`documents-sidebar-root${quickNotesPanelOpen ? ' qnp-panel-open' : ''}`}
+    >
       {!hideHeader && FUTURISTIC_UI_KEYS.includes(uiTheme) && (
         <div style={{
           width: '100%',
@@ -810,12 +925,11 @@ const DocumentsSidebar = ({
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             {/* Pinned Quick Note Row */}
             <div 
-              className={`pinned-quick-note-row ${selectedNodeKey === 'quick_note' ? 'selected' : ''}`}
+              className={`pinned-quick-note-row ${(selectedNodeKey === 'quick_note' || quickNotesPanelOpen) ? 'selected' : ''}`}
               onClick={(e) => {
                 e.stopPropagation();
                 setSelectedNodeKey('quick_note');
-                const quickNode = documentNodes.find(node => node.key === 'quick_note');
-                if (quickNode) handleOpenDocument(quickNode);
+                setQuickNotesPanelOpen(prev => !prev);
               }}
               style={{
                 display: 'flex',
@@ -836,6 +950,18 @@ const DocumentsSidebar = ({
               <span className="node-label" style={{ flex: 1, fontWeight: 'bold', color: 'var(--ui-primary-color, #64b5f6)' }}>
                 Notas rápidas
               </span>
+              {/* Indicador del número de notas rápidas */}
+              {(() => {
+                const qn = documentNodes.find(n => n.key === 'quick_note');
+                const count = qn?.children?.length || 0;
+                return count > 0 ? (
+                  <span className="qnp-count-badge">{count}</span>
+                ) : null;
+              })()}
+              <i
+                className={`pi ${quickNotesPanelOpen ? 'pi-chevron-left' : 'pi-chevron-right'}`}
+                style={{ fontSize: '0.7rem', opacity: 0.5, marginRight: 4 }}
+              />
             </div>
 
             {filteredDocumentNodes.length === 0 ? (
@@ -851,7 +977,11 @@ const DocumentsSidebar = ({
                   onToggle={(e) => setExpandedKeys(e.value)}
                   selectionMode="single"
                   selectionKeys={selectedNodeKey}
-                  onSelectionChange={(e) => setSelectedNodeKey(e.value)}
+                  onSelectionChange={(e) => {
+                    setSelectedNodeKey(e.value);
+                    // Cerrar el panel de notas rápidas al seleccionar otra nota
+                    setQuickNotesPanelOpen(false);
+                  }}
                   onContextMenu={onContextMenu}
                   dragdropScope="documents"
                   onDragDrop={onDragDrop}
@@ -873,6 +1003,19 @@ const DocumentsSidebar = ({
         selectedNode={selectedNodeForDetails}
         uiTheme={uiTheme}
         onOpenDocument={handleOpenDocument}
+      />
+
+      {/* Panel lateral de Notas Rápidas (estilo Joplin) */}
+      <QuickNotesSidePanel
+        isOpen={quickNotesPanelOpen}
+        anchorRef={sidebarRootRef}
+        notes={quickNotes}
+        onClose={() => setQuickNotesPanelOpen(false)}
+        onOpenNote={handleOpenQuickNote}
+        onCreateNote={createNewQuickNote}
+        onDeleteNote={deleteQuickNote}
+        explorerFont={explorerFont}
+        explorerFontSize={explorerFontSize}
       />
 
       <ContextMenu model={contextMenuItems} ref={contextMenuRef} />
