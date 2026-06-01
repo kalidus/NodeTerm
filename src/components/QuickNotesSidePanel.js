@@ -53,6 +53,9 @@ const QuickNotesSidePanel = ({
   onDeleteNote,
   explorerFont,
   explorerFontSize = 14,
+  title = 'Notas rápidas',
+  iconClass = 'pi pi-bolt',
+  iconColor = '#ffc107',
 }) => {
   const [rect, setRect] = useState(null);
 
@@ -115,8 +118,8 @@ const QuickNotesSidePanel = ({
       {/* Header */}
       <div className="qnp-header">
         <div className="qnp-header-title">
-          <i className="pi pi-bolt" style={{ color: '#ffc107', fontSize: '0.95rem' }} />
-          <span>Notas rápidas</span>
+          <i className={iconClass} style={{ color: iconColor, fontSize: '0.95rem' }} />
+          <span>{title}</span>
         </div>
         <div className="qnp-header-actions">
           <button

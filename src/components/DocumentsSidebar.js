@@ -717,11 +717,41 @@ const DocumentsSidebar = ({
     }));
   }, [hideHeader, allDocTreeExpanded]);
 
-  // Obtener las notas rápidas (hijos del nodo quick_note)
-  const quickNotes = useMemo(() => {
-    const qn = documentNodes.find(n => n.key === 'quick_note');
-    return qn?.children || [];
-  }, [documentNodes]);
+  const isFolderSelected = useMemo(() => {
+    const node = selectedNodeForDetails;
+    return node && (node.droppable || node.data?.type === 'document-folder');
+  }, [selectedNodeForDetails]);
+
+  const isQuickNoteSelected = useMemo(() => {
+    return selectedNodeKey === 'quick_note';
+  }, [selectedNodeKey]);
+
+  const activePanelTitle = useMemo(() => {
+    if (isQuickNoteSelected) return 'Notas rápidas';
+    if (isFolderSelected && selectedNodeForDetails) return selectedNodeForDetails.label;
+    return 'Notas';
+  }, [isQuickNoteSelected, isFolderSelected, selectedNodeForDetails]);
+
+  const activePanelIconClass = useMemo(() => {
+    return isQuickNoteSelected ? 'pi pi-bolt' : 'pi pi-folder';
+  }, [isQuickNoteSelected]);
+
+  const activePanelIconColor = useMemo(() => {
+    return isQuickNoteSelected ? '#ffc107' : '#ffc107';
+  }, [isQuickNoteSelected]);
+
+  const activePanelNotes = useMemo(() => {
+    if (isQuickNoteSelected) {
+      const qn = documentNodes.find(n => n.key === 'quick_note');
+      return qn?.children || [];
+    }
+    if (isFolderSelected && selectedNodeForDetails) {
+      return (selectedNodeForDetails.children || []).filter(
+        c => !(c.droppable || c.data?.type === 'document-folder')
+      );
+    }
+    return [];
+  }, [isQuickNoteSelected, isFolderSelected, selectedNodeForDetails, documentNodes]);
 
   // Abrir una nota rápida en el editor principal
   const handleOpenQuickNote = useCallback((node) => {
@@ -733,6 +763,40 @@ const DocumentsSidebar = ({
       }
     }));
   }, []);
+
+  const handleCreateNoteInPanel = useCallback(() => {
+    if (isQuickNoteSelected) {
+      createNewQuickNote();
+    } else if (isFolderSelected && selectedNodeForDetails) {
+      const folderKey = selectedNodeForDetails.key;
+      let newDoc;
+      setDocumentNodes(prev => {
+        const label = getUniqueNoteLabel(prev, 'Nueva nota');
+        newDoc = createDocumentNode(label);
+        return addNodeToTree(prev, folderKey, newDoc);
+      });
+      setExpandedKeys(prev => ({ ...prev, [folderKey]: true }));
+      setTimeout(() => {
+        if (newDoc) {
+          window.dispatchEvent(new CustomEvent('open-document-tab', {
+            detail: {
+              key: newDoc.key,
+              label: newDoc.label,
+              data: newDoc.data
+            }
+          }));
+        }
+      }, 50);
+    }
+  }, [isQuickNoteSelected, isFolderSelected, selectedNodeForDetails, createNewQuickNote]);
+
+  const handleDeleteNoteInPanel = useCallback((noteNode) => {
+    if (isQuickNoteSelected) {
+      deleteQuickNote(noteNode);
+    } else {
+      handleDelete(noteNode);
+    }
+  }, [isQuickNoteSelected, deleteQuickNote, handleDelete]);
 
   return (
     <div
@@ -979,8 +1043,18 @@ const DocumentsSidebar = ({
                   selectionKeys={selectedNodeKey}
                   onSelectionChange={(e) => {
                     setSelectedNodeKey(e.value);
-                    // Cerrar el panel de notas rápidas al seleccionar otra nota
-                    setQuickNotesPanelOpen(false);
+                    const selectedKey = typeof e.value === 'string' ? e.value : (e.value ? Object.keys(e.value)[0] : null);
+                    if (selectedKey) {
+                      const node = findNodeInTree(documentNodes, selectedKey);
+                      const isFolder = node?.droppable || node?.data?.type === 'document-folder';
+                      if (isFolder) {
+                        setQuickNotesPanelOpen(true);
+                      } else {
+                        setQuickNotesPanelOpen(false);
+                      }
+                    } else {
+                      setQuickNotesPanelOpen(false);
+                    }
                   }}
                   onContextMenu={onContextMenu}
                   dragdropScope="documents"
@@ -1009,13 +1083,16 @@ const DocumentsSidebar = ({
       <QuickNotesSidePanel
         isOpen={quickNotesPanelOpen}
         anchorRef={sidebarRootRef}
-        notes={quickNotes}
+        notes={activePanelNotes}
         onClose={() => setQuickNotesPanelOpen(false)}
         onOpenNote={handleOpenQuickNote}
-        onCreateNote={createNewQuickNote}
-        onDeleteNote={deleteQuickNote}
+        onCreateNote={handleCreateNoteInPanel}
+        onDeleteNote={handleDeleteNoteInPanel}
         explorerFont={explorerFont}
         explorerFontSize={explorerFontSize}
+        title={activePanelTitle}
+        iconClass={activePanelIconClass}
+        iconColor={activePanelIconColor}
       />
 
       <ContextMenu model={contextMenuItems} ref={contextMenuRef} />
