@@ -3019,10 +3019,9 @@ const MainContentArea = ({
                 height: '100%',
                 background: isHomeTabActive ? 'var(--ui-content-bg, #1a1b26)' : undefined
               }}>
-                {/* Barra de grupos como TabView scrollable */}
-                {renderGroupTabs()}
-
-                <div style={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
+                <div style={{ width: '100%', minWidth: 0, overflow: 'hidden', position: 'relative' }}>
+                  {/* Pills de grupos: siempre visibles, incluso cuando el grupo está vacío */}
+                  {renderGroupTabs()}
                   {/* Solo mostrar TabView de pestañas si el grupo no está vacío */}
                   {!(activeGroupId !== null && getTabsInGroup(activeGroupId).length === 0) && (
                     <div style={{ position: 'relative' }}>

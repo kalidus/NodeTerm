@@ -478,205 +478,212 @@
   transition: transform 0.2s ease-out;
 }
 
-/* --- Grupos de Pestañas --- */
-.group-delete-x {
-  opacity: 0.6;
-  pointer-events: auto;
-  transition: opacity 0.2s;
+
+
+
+/* === BARRA DE GRUPOS — Pills integrados en la barra de pestañas === */
+
+/**
+ * Los pills se posicionan ABSOLUTAMENTE en el extremo izquierdo de la
+ * barra de pestañas. El TabView recibe padding-left dinámico vía JS o
+ * se desplaza automáticamente porque los pills están dentro del mismo
+ * contenedor position:relative que el TabView.
+ *
+ * Diseño: fila horizontal compacta, altura = var(--tab-bar-height).
+ * Los pills se alinean verticalmente al centro de la barra.
+ */
+
+/* ── Contenedor ────────────────────────────────────────────────────── */
+.groups-pill-bar {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 6px 0 8px;
+  height: var(--tab-bar-height, 34px);
+  background: var(--ui-tab-bar-bg, var(--ui-sidebar-bg));
+  border-bottom: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.07));
+  flex-shrink: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-/* Mostrar X al hacer hover sobre el grupo */
-.group-hover:hover .group-delete-x,
-.group-hover .group-delete-x:hover {
-  opacity: 1 !important;
-  pointer-events: auto !important;
+.groups-pill-bar::-webkit-scrollbar {
+  display: none;
 }
 
-/* Regla adicional para asegurar visibilidad en grupos */
-.tabview-groups-bar .p-tabview-nav li:not(:first-child) .group-delete-x {
-  opacity: 0.8 !important;
-  pointer-events: auto !important;
-}
-
-.tabview-groups-bar .p-tabview-nav li:not(:first-child):hover .group-delete-x {
-  opacity: 1 !important;
-}
-
-/* Estilo para el botón X personalizado */
-.custom-delete-button {
-  position: relative !important;
-  z-index: 1000 !important;
-  pointer-events: auto !important;
-}
-
-
-/* === BARRA DE GRUPOS — Estilo compacto, fusionada con la barra de pestañas === */
-
-/* Los paneles del groups-bar no deben ocupar espacio — son solo navegación */
-.tabview-groups-bar .p-tabview-panels {
-  display: none !important;
-}
-
-/* Contenedor raíz del TabView de grupos */
-.tabview-groups-bar {
+/* ── Divisor vertical ──────────────────────────────────────────────── */
+.groups-pill-divider {
+  display: inline-block;
+  width: 1px;
+  height: 16px;
+  background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.14), transparent);
+  margin: 0 4px;
   flex-shrink: 0;
 }
 
-/* Barra de navegación de grupos: misma altura que main, misma apariencia base */
-.tabview-groups-bar .p-tabview-nav {
-  height: 28px !important;
-  min-height: 28px !important;
-  background: var(--ui-tab-bar-bg, var(--ui-sidebar-bg)) !important;
-  border-bottom: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.07)) !important;
-  margin-bottom: 0 !important;
-  padding: 0 4px !important;
-  align-items: center !important; /* Centrado vertical como la barra principal */
-  z-index: 2;
-  position: relative;
+/* El divisor final lleva algo más de margen a la derecha */
+.groups-pill-divider--end {
+  margin-right: 6px;
 }
 
-/* Ink bar oculta en toda la groups-bar */
-.tabview-groups-bar .p-tabview-nav .p-tabview-ink-bar,
-.tabview-groups-bar.home-active .p-tabview-nav .p-tabview-ink-bar {
-  display: none !important;
-}
-
-/* Ítems de grupo */
-.tabview-groups-bar .p-tabview-nav li {
-  height: 24px !important;
-  min-width: 80px !important;
-  max-width: 140px !important;
-  margin-bottom: 0 !important;
-  align-self: flex-end !important;
-}
-
-/* Primer ítem (icono de "sin grupo / home") — alineado con home-tab de la barra principal */
-.tabview-groups-bar .p-tabview-nav li:first-child {
-  min-width: 42px !important;
-  max-width: 42px !important;
-  margin-right: 4px !important;
-}
-
-/* Links de los grupos: siguen el estilo de las pestañas principales (TerminalFrame) */
-.tabview-groups-bar .p-tabview-nav .p-tabview-nav-link {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: flex-start !important;
-  height: 24px !important;
-  min-height: 24px !important;
-  border-radius: 6px !important; /* Igual que en terminal-frame.css */
-  border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.22)) !important;
-  padding: 0 9px !important;
-  font-size: 0.72rem !important;
-  overflow: hidden;
-  position: relative;
-  background: var(--ui-tab-bg, rgba(255, 255, 255, 0.05)) !important;
-  color: var(--ui-tab-text, rgba(255, 255, 255, 0.85)) !important;
-  opacity: 0.85; /* Un poco menos opacas las inactivas */
-  transition: all 0.2s ease;
-  margin: 0 1px;
-}
-
-/* Hover en grupo inactivo */
-.tabview-groups-bar .p-tabview-nav li:not(.p-highlight) .p-tabview-nav-link:hover {
-  opacity: 0.85 !important;
-  background-color: var(--tab-bg-color, rgba(255, 255, 255, 0.10)) !important;
-}
-
-/* Grupo activo: sigue el estilo de realce de la pestaña principal activa */
-.tabview-groups-bar .p-tabview-nav li.p-highlight .p-tabview-nav-link {
-  opacity: 1 !important;
-  background: var(--ui-tab-active-bg, rgba(255, 255, 255, 0.15)) !important;
-  color: var(--ui-tab-active-text, #fff) !important;
-  border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.4)) !important;
-  height: 24px !important;
-  margin-bottom: 0 !important;
-}
-
-/* Indicador de color del grupo: ahora sutil en la parte inferior o un punto lateral */
-.tabview-groups-bar .p-tabview-nav li.p-highlight .p-tabview-nav-link::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 3px;
-  right: 3px;
-  height: 2px;
-  background: var(--group-indicator-color, var(--primary-color, rgba(255, 255, 255, 0.5)));
-  border-radius: 2px 2px 0 0;
-}
-
-/* Centrar el botón Home en la primera pestaña */
-.tabview-groups-bar .p-tabview-nav li:first-child .p-tabview-nav-link {
-  justify-content: center !important;
-  padding-left: 0 !important;
-  padding-right: 0 !important;
-}
-
-.tabview-groups-bar .p-tabview-nav li:first-child .p-tabview-nav-link > span {
-  justify-content: center !important;
-  align-items: center !important;
-  width: 100% !important;
-}
-
-/* Texto del grupo truncado */
-.tabview-groups-bar .p-tabview-nav .p-tabview-nav-link > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* ── Pill base ─────────────────────────────────────────────────────── */
+.group-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 8px 0 7px;
+  border-radius: 999px;                  /* Forma pill/cápsula */
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.2px;
   white-space: nowrap;
-  flex: 1;
-  min-width: 0;
-}
-
-/* Botón X del grupo: posicionado relativo al flexbox */
-.tabview-groups-bar .group-delete-x {
+  cursor: pointer;
+  user-select: none;
   flex-shrink: 0;
-  margin-left: 2px;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.12s ease;
+  outline: none;
+  position: relative;
 }
 
-/* Botón X simple - usar los estilos por defecto de PrimeReact */
-.group-delete-x {
-  opacity: 0.7;
-  pointer-events: auto;
-  transition: opacity 0.2s;
+.group-pill:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.9);
+  transform: translateY(-0.5px);
 }
 
-.group-hover:hover .group-delete-x,
-.group-delete-x:hover {
-  opacity: 1 !important;
+/* ── Pill activo ───────────────────────────────────────────────────── */
+.group-pill--active {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: var(--gp-color, var(--primary-color, rgba(255,255,255,0.4))) !important;
+  color: #fff !important;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--gp-color, var(--primary-color, #fff)) 30%, transparent),
+    0 2px 8px rgba(0, 0, 0, 0.2);
+  transform: translateY(0) !important;
 }
 
-/* Pestaña activa en la barra principal */
-.p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
-  background: var(--ui-tab-active-bg) !important;
-  color: var(--ui-tab-active-text) !important;
-  border: 1px solid var(--ui-tab-border) !important;
-  opacity: 1 !important;
+/* ── Pill Home (icono) ─────────────────────────────────────────────── */
+.group-pill--home {
+  padding: 0;
+  width: 28px;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-/* Grupo activo: sigue el mismo tema que la pestaña activa principal */
-.tabview-groups-bar .p-tabview-nav li.p-highlight .p-tabview-nav-link {
-  background: var(--ui-tab-active-bg, rgba(255, 255, 255, 0.13)) !important;
-  color: var(--ui-tab-active-text, #fff) !important;
-  border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.4)) !important;
-  opacity: 1 !important;
+.group-pill--home.group-pill--active {
+  border-color: var(--ui-home-tab-accent, var(--primary-color, rgba(255,255,255,0.4))) !important;
+  box-shadow:
+    0 0 0 1px var(--ui-home-tab-accent-subtle, rgba(0,0,0,0.15)),
+    0 2px 8px rgba(0, 0, 0, 0.2) !important;
 }
 
-/* Icono principal de grupos (No Group) - Mismo estilo que el Home Tab de main */
-.tabview-groups-bar .p-tabview-nav li:first-child .p-tabview-nav-link {
-  background: var(--home-tab-theme-bg, rgba(255, 255, 255, 0.04)) !important;
-  border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.22)) !important;
-  border-radius: 6px !important;
-  opacity: 0.8;
+.group-pill--home svg,
+.group-pill--home i {
+  opacity: 0.75;
+  transition: opacity 0.15s ease;
 }
 
-.tabview-groups-bar .p-tabview-nav li:first-child.p-highlight .p-tabview-nav-link {
-  border-color: var(--ui-home-tab-accent, var(--primary-color)) !important;
-  background: var(--home-tab-active-bg, var(--ui-tab-active-bg, rgba(255, 255, 255, 0.06))) !important;
-  box-shadow: 0 0 0 1px var(--ui-home-tab-accent-subtle, rgba(0,0,0,0.15)) !important;
+.group-pill--home:hover svg,
+.group-pill--home:hover i,
+.group-pill--home.group-pill--active svg,
+.group-pill--home.group-pill--active i {
   opacity: 1;
 }
 
-/* === ESTILOS PARA FLECHAS DE NAVEGACIÓN DE PESTAÑAS === */
+/* ── Dot de color del grupo ────────────────────────────────────────── */
+.group-pill__dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.group-pill--active .group-pill__dot {
+  transform: scale(1.2);
+}
+
+/* ── Etiqueta del grupo ────────────────────────────────────────────── */
+.group-pill__label {
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Botón cerrar (×) ──────────────────────────────────────────────── */
+.group-pill__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  margin-left: 1px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, background 0.15s ease;
+  cursor: pointer;
+}
+
+.group-pill__close .pi {
+  font-size: 0.5rem;
+  line-height: 1;
+  color: currentColor;
+}
+
+/* Mostrar el × al hacer hover sobre el pill */
+.group-pill:hover .group-pill__close {
+  opacity: 0.6;
+  pointer-events: auto;
+}
+
+.group-pill__close:hover {
+  opacity: 1 !important;
+  background: rgba(239, 68, 68, 0.25);
+}
+
+/* ── Adaptaciones por layout de pestañas ──────────────────────────── */
+
+/* En layout compact: pills más pequeños */
+:root[data-tab-layout="compact"] .group-pill {
+  height: 19px;
+  font-size: 0.65rem;
+  padding: 0 6px 0 5px;
+}
+
+:root[data-tab-layout="compact"] .group-pill--home {
+  width: 24px;
+  padding: 0;
+}
+
+/* En layout spacious: pills un poco más grandes */
+:root[data-tab-layout="spacious"] .group-pill {
+  height: 24px;
+  font-size: 0.72rem;
+}
+
+:root[data-tab-layout="spacious"] .group-pill--home {
+  width: 30px;
+  padding: 0;
+}
+
+/* Pestaña activa en la barra principal */
+
 /* Forzar el color correcto de las flechas de navegación */
 .tab-nav-arrow {
   color: var(--ui-tab-text) !important;

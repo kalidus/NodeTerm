@@ -567,27 +567,10 @@ class ThemeManager {
         color: white !important;
       }
 
-      /* === TAB GROUP STYLES === */
-      .tabview-groups-bar {
-        background: var(--ui-sidebar-bg) !important;
+      /* === TAB GROUP PILLS STYLES === */
+      .groups-pill-bar {
+        background: var(--ui-tab-bar-bg, var(--ui-sidebar-bg)) !important;
         border-bottom: 1px solid var(--ui-tabgroup-border) !important;
-      }
-
-      .tabview-groups-bar .p-tabview-nav {
-         background: var(--ui-sidebar-bg) !important;
-      }
-
-      .tabview-groups-bar .p-tabview-nav li .p-tabview-nav-link {
-        background: var(--ui-tab-bg) !important;
-        color: var(--ui-tab-text) !important;
-        border: 1px solid var(--ui-tab-border) !important;
-        opacity: 0.7;
-      }
-
-      .tabview-groups-bar .p-tabview-nav li.p-highlight .p-tabview-nav-link {
-        background: var(--ui-tab-active-bg) !important;
-        color: var(--ui-tab-active-text) !important;
-        opacity: 1;
       }
 
       /* === CONTENT AREA === */
