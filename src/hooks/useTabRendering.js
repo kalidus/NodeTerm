@@ -100,18 +100,22 @@ export const useTabRendering = ({
         style={{ WebkitAppRegion: isDraggable ? 'drag' : 'inherit' }}
       >
         {/* Pill de "Sin grupo / Home" */}
-        <button
-          className={`group-pill group-pill--home${activeGroupId === null ? ' group-pill--active' : ''}`}
-          onClick={() => switchGroup(null)}
-          title="Todas las pestañas (sin grupo)"
-          aria-label="Sin grupo"
-          style={{ WebkitAppRegion: isDraggable ? 'no-drag' : 'inherit' }}
-        >
-          {getGroupTabIcon(13)}
-        </button>
+        {activeGroupId !== null && (
+          <>
+            <button
+              className={`group-pill group-pill--home${activeGroupId === null ? ' group-pill--active' : ''}`}
+              onClick={() => switchGroup(null)}
+              title="Todas las pestañas (sin grupo)"
+              aria-label="Sin grupo"
+              style={{ WebkitAppRegion: isDraggable ? 'no-drag' : 'inherit' }}
+            >
+              {getGroupTabIcon(13)}
+            </button>
 
-        {/* Divisor vertical */}
-        <span className="groups-pill-divider" aria-hidden="true" />
+            {/* Divisor vertical */}
+            <span className="groups-pill-divider" aria-hidden="true" />
+          </>
+        )}
 
         {/* Pills de cada grupo */}
         {tabGroups.map((group) => {
