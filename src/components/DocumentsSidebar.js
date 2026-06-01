@@ -990,7 +990,7 @@ const DocumentsSidebar = ({
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             {/* Pinned Quick Note Row */}
             <div 
-              className={`pinned-quick-note-row ${(selectedNodeKey === 'quick_note' || quickNotesPanelOpen) ? 'selected' : ''}`}
+              className={`pinned-quick-note-row ${selectedNodeKey === 'quick_note' ? 'selected' : ''}`}
               onClick={(e) => {
                 e.stopPropagation();
                 setSelectedNodeKey('quick_note');
