@@ -599,6 +599,7 @@ const DocumentsSidebar = ({
           if (!isFolder) {
             e.stopPropagation();
             setSelectedNodeKey(node.key);
+            setQuickNotesPanelOpen(false);
             handleOpenDocument(node);
           }
         }}
