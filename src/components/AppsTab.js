@@ -6,41 +6,18 @@ import { Password } from 'primereact/password';
 import { InputText } from 'primereact/inputtext';
 import { InputNumber } from 'primereact/inputnumber';
 import { Dropdown } from 'primereact/dropdown';
+import { Accordion, AccordionTab } from 'primereact/accordion';
 import { Toast } from 'primereact/toast';
 import AIClientBrandIcon from './AIClientBrandIcon';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import '../styles/components/ai-clients-tab.css';
 import '../styles/components/apps-tab.css';
 
-const CATEGORIES = [
-  {
-    key: 'connectivity',
-    label: 'Conectividad & Sistemas',
-    emoji: '🔌',
-    description: 'Herramientas de conexión remota y virtualización de terminales',
-    clients: ['rdp']
-  },
-  {
-    key: 'cli',
-    label: 'CLI Local',
-    emoji: '🖥️',
-    description: 'Herramientas de IA que se ejecutan como proceso local en tu terminal',
-    clients: ['claude', 'opencode', 'geminicli', 'codexcli', 'antigravitycli', 'hermescli']
-  },
-  {
-    key: 'webapps',
-    label: 'Aplicaciones Web de IA',
-    emoji: '🌐',
-    description: 'Interfaces web completas que se ejecutan en contenedores Docker',
-    clients: ['anythingllm', 'openwebui', 'librechat', 'agentzero', 'openclaw', 'opennotebook']
-  }
-];
-
 const AI_CLIENTS_STORAGE_KEY = 'ai_clients_enabled';
 
 /**
  * AppsTab — configuración unificada de aplicaciones (RDP, CLI, Web Docker).
- * Layout master-detail integrado en el diálogo de ajustes.
+ * Layout hero + galería (estilo tienda) integrado en el diálogo de ajustes.
  */
 const SUBTAB_DEFAULT_APP = {
   rdp: 'rdp',
@@ -134,7 +111,7 @@ const AppsTab = ({
   // UI state — master-detail
   const [selectedAppKey, setSelectedAppKey] = useState('rdp');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [advancedAccordionIndex, setAdvancedAccordionIndex] = useState(null);
 
   // Cargar configuración desde localStorage al montar
   useEffect(() => {
@@ -1097,17 +1074,11 @@ const AppsTab = ({
   ];
 
   const visibleClients = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
     return clientsDefinition.filter((c) => {
       if (categoryFilter !== 'all' && c.category !== categoryFilter) return false;
-      if (!q) return true;
-      return (
-        c.name.toLowerCase().includes(q) ||
-        c.shortName.toLowerCase().includes(q) ||
-        c.description.toLowerCase().includes(q)
-      );
+      return true;
     });
-  }, [clientsDefinition, categoryFilter, searchQuery]);
+  }, [clientsDefinition, categoryFilter]);
 
   useEffect(() => {
     if (visibleClients.length === 0) return;
@@ -1687,108 +1658,117 @@ const AppsTab = ({
     return extras;
   };
 
-  const renderListItem = (client) => {
-    const isEnabled = isClientEnabled(client);
-    const isSelected = selectedAppKey === client.key;
-    return (
-      <div
-        key={client.key}
-        id={`app-list-${client.key}`}
-        role="button"
-        tabIndex={0}
-        className={`apps-list-item ${isSelected ? 'selected' : ''} ${!isEnabled ? 'disabled-app' : ''}`}
-        onClick={() => setSelectedAppKey(client.key)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            setSelectedAppKey(client.key);
-          }
-        }}
-      >
-        <div
-          className="apps-list-icon"
-          style={{ background: `${client.color}18`, border: `1px solid ${client.color}35` }}
-        >
-          {renderAppIcon(client, 18)}
-        </div>
-        <div className="apps-list-body">
-          <span className="apps-list-name">{client.shortName}</span>
-          <div className="apps-list-meta">
-            <StatusDot client={client} />
-            <StatusLabel client={client} />
-          </div>
-        </div>
-        <div
-          className="apps-list-toggle"
-          onClick={(e) => e.stopPropagation()}
-          onKeyDown={(e) => e.stopPropagation()}
-        >
-          <InputSwitch
-            checked={isEnabled}
-            onChange={() => handleToggleClient(client.key)}
-            disabled={client.isRdp && guacdRestarting}
-          />
-        </div>
-      </div>
-    );
+  const getThumbnailStatus = (client) => {
+    if (client.isRdp) {
+      if (guacdRestarting) return { text: 'Reiniciando…', className: 'stopped' };
+      if (guacdStatus?.isRunning) return { text: 'Activo', className: 'running' };
+      return { text: 'Inactivo', className: 'stopped' };
+    }
+    if (client.isLocalCli) {
+      const s = getCliStatus(client.key);
+      if (!s || s.loading) return { text: '…', className: 'stopped' };
+      if (s.installed) {
+        const ver = s.version && s.version !== 'unknown' ? ` v${s.version}` : '';
+        return { text: `Instalado${ver}`, className: 'installed' };
+      }
+      return { text: 'No instalado', className: 'not-installed' };
+    }
+    if (client.requiresDocker && clients[client.key]) {
+      const s = dockerStatus[client.key];
+      if (!s || s.loading) return { text: '…', className: 'stopped' };
+      if (s.running) return { text: 'En ejecución', className: 'running' };
+      if (s.error) return { text: 'Error', className: 'error' };
+      return { text: 'Detenido', className: 'stopped' };
+    }
+    if (!clients[client.key] && client.requiresDocker) {
+      return { text: 'Desactivada', className: 'stopped' };
+    }
+    return null;
   };
 
-  const renderDetailPanel = (client) => {
-    if (!client) return null;
+  const getCliInstallHandler = (key) => {
+    const handlers = {
+      claude: { installFn: installClaudeCli, brandClass: 'btn-brand-claude' },
+      opencode: { installFn: installOpenCodeCli, brandClass: 'btn-brand-opencode' },
+      geminicli: { installFn: installGeminiCli, brandClass: 'btn-brand-gemini' },
+      codexcli: { installFn: installCodexCli, brandClass: 'btn-brand-codex' },
+      antigravitycli: { installFn: installAntigravityCli, brandClass: 'btn-brand-antigravity' },
+      hermescli: { installFn: installHermesCli, brandClass: 'btn-brand-hermes' }
+    };
+    return handlers[key] || null;
+  };
+
+  const renderHeroCtas = (client) => {
     const isEnabled = isClientEnabled(client);
+    if (!isEnabled) return null;
+
+    const ctas = [];
+
+    if (client.isLocalCli) {
+      const s = getCliStatus(client.key);
+      const h = getCliInstallHandler(client.key);
+      if (h && !s?.installed) {
+        ctas.push(
+          <Button
+            key="install"
+            label="Instalar"
+            icon="pi pi-download"
+            className={`p-button-sm ${h.brandClass}`}
+            onClick={h.installFn}
+            loading={s?.installing}
+          />
+        );
+      }
+    }
+
+    if (client.requiresDocker) {
+      const status = dockerStatus[client.key];
+      if (status?.running) {
+        ctas.push(
+          <Button
+            key="open"
+            label="Abrir"
+            icon="pi pi-external-link"
+            className="p-button-sm"
+            onClick={() => openWebAppUrl(client.url)}
+          />
+        );
+      } else if (!status?.loading) {
+        ctas.push(
+          <Button
+            key="start"
+            label="Iniciar"
+            icon="pi pi-play"
+            className="p-button-success p-button-sm"
+            onClick={() => handleStartDockerService(client.key)}
+          />
+        );
+      }
+    }
+
+    if (client.isRdp) {
+      ctas.push(
+        <Button
+          key="guacd"
+          label={guacdRestarting ? 'Reiniciando…' : 'Reiniciar Guacd'}
+          icon={guacdRestarting ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'}
+          className="p-button-secondary p-button-sm"
+          onClick={handleRestartGuacd}
+          disabled={guacdRestarting}
+        />
+      );
+    }
+
+    return ctas.length > 0 ? <div className="apps-hero-cta-row">{ctas}</div> : null;
+  };
+
+  const renderAdvancedAccordionContent = (client) => {
     const status = dockerStatus[client.key];
-    const showDockerActions = client.requiresDocker && isEnabled && !client.isRdp;
+    const showDockerUrl = client.requiresDocker && isClientEnabled(client);
 
     return (
-      <div key={client.key} className="apps-detail-content">
-        <header className="apps-detail-header">
-          <div
-            className="apps-detail-icon"
-            style={{
-              background: `linear-gradient(135deg, ${client.color}22, ${client.color}08)`,
-              border: `1.5px solid ${client.color}40`
-            }}
-          >
-            {renderAppIcon(client, 30)}
-          </div>
-          <div className="apps-detail-header-text">
-            <div className="apps-detail-title-row">
-              <h2 className="apps-detail-title">{client.name}</h2>
-              <StatusDot client={client} />
-              <StatusLabel client={client} />
-            </div>
-            <div className="apps-detail-badges">
-              {client.badges.map((badge, idx) => (
-                <Badge key={idx} value={badge.label} severity={badge.severity} style={{ fontSize: '0.62rem' }} />
-              ))}
-              {renderExtraBadges(client)}
-            </div>
-            <p className="apps-detail-desc">{client.description}</p>
-          </div>
-          <div className="apps-detail-header-actions">
-            <span className="apps-detail-enable-label">{isEnabled ? 'Activada' : 'Desactivada'}</span>
-            <InputSwitch
-              checked={isEnabled}
-              onChange={() => handleToggleClient(client.key)}
-              disabled={client.isRdp && guacdRestarting}
-            />
-          </div>
-        </header>
-
-        <div className="apps-detail-features">
-          {client.features.map((f, idx) => (
-            <span
-              key={idx}
-              className="apps-detail-feature"
-              style={{ borderColor: `${client.color}45` }}
-            >
-              <i className="pi pi-check" style={{ color: client.color }} />
-              {f}
-            </span>
-          ))}
-        </div>
-
-        {showDockerActions && (
+      <>
+        {showDockerUrl && (
           <div className="apps-detail-actions">
             <div className="apps-detail-url">
               <i className="pi pi-link" style={{ color: client.color }} />
@@ -1800,22 +1780,6 @@ const AppsTab = ({
                 :{client.port}
               </span>
             </div>
-            {status?.running && (
-              <Button
-                label="Abrir"
-                icon="pi pi-external-link"
-                className="p-button-sm"
-                onClick={() => openWebAppUrl(client.url)}
-              />
-            )}
-            {!status?.running && !status?.loading && (
-              <Button
-                label="Iniciar"
-                icon="pi pi-play"
-                className="p-button-success p-button-sm"
-                onClick={() => handleStartDockerService(client.key)}
-              />
-            )}
             <Button
               label="Verificar"
               icon="pi pi-refresh"
@@ -1831,21 +1795,142 @@ const AppsTab = ({
             )}
           </div>
         )}
+        {renderAdvancedConfig(client)}
+      </>
+    );
+  };
 
-        {(client.isLocalCli || client.requiresDocker || client.isRdp) && (
-          <section className="apps-detail-config">
-            <div className="apps-detail-config-title" style={{ color: client.color }}>
-              <i className="pi pi-cog" />
-              {client.isRdp
-                ? 'Backend y conexión'
-                : client.requiresDocker
-                  ? 'Actualizaciones Docker'
-                  : 'Configuración avanzada'}
-            </div>
-            {renderAdvancedConfig(client)}
-          </section>
+  const renderAppThumbnail = (client) => {
+    const isEnabled = isClientEnabled(client);
+    const isSelected = selectedAppKey === client.key;
+    const thumbStatus = getThumbnailStatus(client);
+
+    return (
+      <div
+        key={client.key}
+        id={`app-thumb-${client.key}`}
+        role="button"
+        tabIndex={0}
+        className={`apps-thumbnail ${isSelected ? 'selected' : ''} ${!isEnabled ? 'disabled-app' : ''}`}
+        style={isSelected ? { borderColor: client.color } : undefined}
+        onClick={() => {
+          setSelectedAppKey(client.key);
+          setAdvancedAccordionIndex(null);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setSelectedAppKey(client.key);
+            setAdvancedAccordionIndex(null);
+          }
+        }}
+      >
+        <div
+          className="apps-thumbnail-toggle"
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
+          <InputSwitch
+            checked={isEnabled}
+            onChange={() => handleToggleClient(client.key)}
+            disabled={client.isRdp && guacdRestarting}
+          />
+        </div>
+        <div
+          className="apps-thumbnail-icon"
+          style={{ background: `${client.color}18`, border: `1px solid ${client.color}35` }}
+        >
+          {renderAppIcon(client, 36)}
+        </div>
+        <span className="apps-thumbnail-name">{client.shortName}</span>
+        {thumbStatus && (
+          <span className={`apps-thumbnail-status ${thumbStatus.className}`}>
+            <StatusDot client={client} />
+            {thumbStatus.text}
+          </span>
         )}
       </div>
+    );
+  };
+
+  const renderHeroSection = (client) => {
+    if (!client) return null;
+    const isEnabled = isClientEnabled(client);
+    const hasAdvanced = client.isLocalCli || client.requiresDocker || client.isRdp;
+    const advancedTitle = client.isRdp
+      ? 'Backend y conexión'
+      : client.requiresDocker
+        ? 'Docker y actualizaciones'
+        : 'Opciones avanzadas';
+
+    return (
+      <section key={client.key} className="apps-hero-section" aria-label={client.name}>
+        <div className="apps-hero-content">
+          <div
+            className="apps-hero-preview"
+            style={{
+              background: `linear-gradient(135deg, ${client.color}28, ${client.color}08)`,
+              border: `1.5px solid ${client.color}45`
+            }}
+          >
+            {renderAppIcon(client, 44)}
+          </div>
+
+          <div className="apps-hero-info">
+            <div className="apps-hero-title-row">
+              <h2 className="apps-hero-title">{client.name}</h2>
+              <StatusDot client={client} />
+            </div>
+            <div className="apps-hero-status-line">
+              <StatusLabel client={client} />
+            </div>
+            <div className="apps-hero-badges">
+              {client.badges.map((badge, idx) => (
+                <Badge key={idx} value={badge.label} severity={badge.severity} style={{ fontSize: '0.62rem' }} />
+              ))}
+              {renderExtraBadges(client)}
+            </div>
+            <p className="apps-hero-desc">{client.description}</p>
+            <div className="apps-hero-features">
+              {client.features.slice(0, 3).map((f, idx) => (
+                <span
+                  key={idx}
+                  className="apps-hero-feature"
+                  style={{ borderColor: `${client.color}45` }}
+                >
+                  <i className="pi pi-check" style={{ color: client.color }} />
+                  {f}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="apps-hero-actions">
+            <div className="apps-hero-enable">
+              <span className="apps-hero-enable-label">{isEnabled ? 'Activada' : 'Desactivada'}</span>
+              <InputSwitch
+                checked={isEnabled}
+                onChange={() => handleToggleClient(client.key)}
+                disabled={client.isRdp && guacdRestarting}
+              />
+            </div>
+            {renderHeroCtas(client)}
+          </div>
+        </div>
+
+        {hasAdvanced && (
+          <div className="apps-hero-advanced">
+            <Accordion
+              activeIndex={advancedAccordionIndex}
+              onTabChange={(e) => setAdvancedAccordionIndex(e.index)}
+            >
+              <AccordionTab header={advancedTitle}>
+                {renderAdvancedAccordionContent(client)}
+              </AccordionTab>
+            </Accordion>
+          </div>
+        )}
+      </section>
     );
   };
 
@@ -1856,108 +1941,71 @@ const AppsTab = ({
     { key: 'webapps', label: 'Web' }
   ];
 
-  const groupedForList = CATEGORIES.map((cat) => ({
-    cat,
-    items: visibleClients.filter((c) => c.category === cat.key)
-  })).filter((g) => g.items.length > 0);
-
-  const listShowsGroups = categoryFilter === 'all' && !searchQuery.trim();
+  const categoryCounts = {
+    all: clientsDefinition.length,
+    connectivity: clientsDefinition.filter((c) => c.category === 'connectivity').length,
+    cli: clientsDefinition.filter((c) => c.category === 'cli').length,
+    webapps: clientsDefinition.filter((c) => c.category === 'webapps').length
+  };
 
   return (
     <div className="apps-tab ai-clients-tab">
       <Toast ref={toast} />
 
-      <div className="apps-status-banner">
-        <span className="apps-status-stat">
-          <span className="apps-stat-dot ok" />
-          <strong>{totalActive}</strong> activas de {totalCount}
-        </span>
-        <span className="apps-status-stat">
-          <span className={`apps-stat-dot ${guacdStatus?.isRunning ? 'ok' : 'warn'}`} />
-          Guacd {guacdStatus?.isRunning ? 'activo' : 'inactivo'}
-        </span>
-        {dockerEnabledCount > 0 && (
-          <span className="apps-status-stat">
-            <span className={`apps-stat-dot ${dockerRunningCount > 0 ? 'ok' : 'muted'}`} />
-            Docker {dockerRunningCount}/{dockerEnabledCount} en ejecución
-          </span>
-        )}
-        <span className="apps-status-stat">
-          <span className={`apps-stat-dot ${cliInstalledCount > 0 ? 'ok' : 'muted'}`} />
-          {cliInstalledCount} CLI instalados
-        </span>
-      </div>
+      {selectedClient && renderHeroSection(selectedClient)}
 
-      <div className="apps-tab-shell">
-        <aside className="apps-master">
-          <div className="apps-master-toolbar">
-            <span className="apps-master-title">Aplicaciones</span>
-            <div className="apps-master-search">
-              <i className="pi pi-search" />
-              <input
-                type="search"
-                placeholder="Buscar..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                aria-label="Buscar aplicación"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  className="apps-master-search-clear"
-                  onClick={() => setSearchQuery('')}
-                  aria-label="Limpiar búsqueda"
-                >
-                  <i className="pi pi-times" />
-                </button>
+      <section className="apps-explore-section" aria-label="Explorar aplicaciones">
+        <div className="apps-explore-header">
+          <div className="apps-explore-header-left">
+            <div className="apps-explore-title">
+              <i className="pi pi-th-large" />
+              Explorar aplicaciones
+            </div>
+            <div className="apps-explore-stats">
+              <span className="apps-explore-stat">
+                <span className="apps-stat-dot ok" />
+                <strong>{totalActive}</strong>/{totalCount} activas
+              </span>
+              <span className="apps-explore-stat">
+                <span className={`apps-stat-dot ${guacdStatus?.isRunning ? 'ok' : 'warn'}`} />
+                Guacd {guacdStatus?.isRunning ? 'activo' : 'inactivo'}
+              </span>
+              {dockerEnabledCount > 0 && (
+                <span className="apps-explore-stat">
+                  <span className={`apps-stat-dot ${dockerRunningCount > 0 ? 'ok' : 'muted'}`} />
+                  Docker {dockerRunningCount}/{dockerEnabledCount}
+                </span>
               )}
             </div>
-            <div className="apps-category-pills">
-              {CATEGORY_PILLS.map((pill) => (
-                <button
-                  key={pill.key}
-                  type="button"
-                  className={`apps-pill ${categoryFilter === pill.key ? 'active' : ''}`}
-                  onClick={() => setCategoryFilter(pill.key)}
-                >
-                  {pill.label}
-                </button>
-              ))}
-            </div>
           </div>
+          <div className="apps-category-filters">
+            {CATEGORY_PILLS.map((pill) => (
+              <button
+                key={pill.key}
+                type="button"
+                className={`apps-category-pill ${categoryFilter === pill.key ? 'active' : ''}`}
+                onClick={() => setCategoryFilter(pill.key)}
+              >
+                {pill.label}
+                <span className="apps-category-pill-count">{categoryCounts[pill.key]}</span>
+              </button>
+            ))}
+          </div>
+        </div>
 
-          <div className="apps-master-list">
+        <div className="apps-thumbnails-container">
+          <div className="apps-thumbnails-grid">
             {visibleClients.length === 0 ? (
-              <div className="apps-master-empty">
-                <i className="pi pi-search" style={{ display: 'block', marginBottom: '0.5rem', opacity: 0.4 }} />
-                Sin resultados
+              <div className="apps-explore-empty">
+                <i className="pi pi-inbox" style={{ display: 'block', marginBottom: '0.5rem', opacity: 0.4 }} />
+                No hay aplicaciones en esta categoría
               </div>
-            ) : listShowsGroups ? (
-              groupedForList.map(({ cat, items }) => (
-                <div key={cat.key}>
-                  <div className="apps-list-group-label">{cat.label}</div>
-                  {items.map((c) => renderListItem(c))}
-                </div>
-              ))
             ) : (
-              visibleClients.map((c) => renderListItem(c))
+              visibleClients.map((c) => renderAppThumbnail(c))
             )}
           </div>
-        </aside>
-
-        <main className="apps-detail">
-          <div className="apps-detail-scroll">
-            {selectedClient ? (
-              renderDetailPanel(selectedClient)
-            ) : (
-              <div className="apps-detail-empty">
-                <i className="pi pi-th-large" />
-                <p>Selecciona una aplicación de la lista para ver su configuración.</p>
-              </div>
-            )}
-          </div>
-        </main>
-      </div>
+        </div>
+      </section>
     </div>
   );
 };
