@@ -15,6 +15,25 @@ import '../styles/components/apps-tab.css';
 
 const AI_CLIENTS_STORAGE_KEY = 'ai_clients_enabled';
 
+const APP_CATEGORY_META = {
+  connectivity: { label: 'Nativo', mod: 'nativo' },
+  cli: { label: 'IA CLI', mod: 'ia-cli' },
+  webapps: { label: 'IA WEB', mod: 'ia-web' }
+};
+
+const CategoryTypeBadge = ({ category, size = 'md' }) => {
+  const meta = APP_CATEGORY_META[category];
+  if (!meta) return null;
+  return (
+    <span
+      className={`apps-type-badge apps-type-badge--${meta.mod} apps-type-badge--${size}`}
+      title={meta.label}
+    >
+      {meta.label}
+    </span>
+  );
+};
+
 /**
  * AppsTab — configuración unificada de aplicaciones (RDP, CLI, Web Docker).
  * Layout hero + galería (estilo tienda) integrado en el diálogo de ajustes.
@@ -1825,6 +1844,9 @@ const AppsTab = ({
           }
         }}
       >
+        <span className="apps-thumbnail-type">
+          <CategoryTypeBadge category={client.category} size="xs" />
+        </span>
         <div
           className="apps-thumbnail-toggle"
           onClick={(e) => e.stopPropagation()}
@@ -1878,6 +1900,7 @@ const AppsTab = ({
 
           <div className="apps-hero-info">
             <div className="apps-hero-title-row">
+              <CategoryTypeBadge category={client.category} size="md" />
               <h2 className="apps-hero-title">{client.name}</h2>
               <StatusDot client={client} />
             </div>
@@ -1936,9 +1959,9 @@ const AppsTab = ({
 
   const CATEGORY_PILLS = [
     { key: 'all', label: 'Todas' },
-    { key: 'connectivity', label: 'Conectividad' },
-    { key: 'cli', label: 'CLI' },
-    { key: 'webapps', label: 'Web' }
+    { key: 'connectivity', label: 'Nativo' },
+    { key: 'cli', label: 'IA CLI' },
+    { key: 'webapps', label: 'IA WEB' }
   ];
 
   const categoryCounts = {
