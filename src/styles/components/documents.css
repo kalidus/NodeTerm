@@ -1340,6 +1340,11 @@
   border-left-color: rgba(255, 193, 7, 0.5);
 }
 
+.qnp-note-item.selected {
+  background: var(--ui-sidebar-selected, rgba(59, 130, 246, 0.15)) !important;
+  border-left-color: var(--ui-primary-color, #ffc107) !important;
+}
+
 .qnp-note-item:hover .qnp-delete-btn {
   opacity: 1;
   pointer-events: all;

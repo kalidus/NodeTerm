@@ -58,7 +58,7 @@ const DocumentDetailsPanel = ({
 
   const data = selectedNode?.data;
   const label = selectedNode?.label;
-  const isFolder = selectedNode?.droppable || selectedNode?.type === 'document-folder';
+  const isFolder = selectedNode?.droppable || selectedNode?.type === 'document-folder' || selectedNode?.type === 'quick-notes-group';
 
   const handleOpenClick = useCallback((e) => {
     e.stopPropagation();

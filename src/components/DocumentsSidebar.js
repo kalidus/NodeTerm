@@ -724,8 +724,13 @@ const DocumentsSidebar = ({
   }, [selectedNodeForDetails]);
 
   const isQuickNoteSelected = useMemo(() => {
-    return selectedNodeKey === 'quick_note';
-  }, [selectedNodeKey]);
+    if (selectedNodeKey === 'quick_note') return true;
+    const qn = documentNodes.find(n => n.key === 'quick_note');
+    if (qn && qn.children) {
+      return qn.children.some(child => child.key === selectedNodeKey);
+    }
+    return false;
+  }, [selectedNodeKey, documentNodes]);
 
   const activePanelTitle = useMemo(() => {
     if (isQuickNoteSelected) return 'Notas rápidas';
@@ -756,6 +761,7 @@ const DocumentsSidebar = ({
 
   // Abrir una nota rápida en el editor principal
   const handleOpenQuickNote = useCallback((node) => {
+    setSelectedNodeKey(node.key);
     window.dispatchEvent(new CustomEvent('open-document-tab', {
       detail: {
         key: node.key,
@@ -1094,6 +1100,7 @@ const DocumentsSidebar = ({
         title={activePanelTitle}
         iconClass={activePanelIconClass}
         iconColor={activePanelIconColor}
+        selectedNoteKey={selectedNodeKey}
       />
 
       <ContextMenu model={contextMenuItems} ref={contextMenuRef} />

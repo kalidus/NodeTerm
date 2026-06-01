@@ -56,6 +56,7 @@ const QuickNotesSidePanel = ({
   title = 'Notas rápidas',
   iconClass = 'pi pi-bolt',
   iconColor = '#ffc107',
+  selectedNoteKey = null,
 }) => {
   const [rect, setRect] = useState(null);
 
@@ -156,10 +157,11 @@ const QuickNotesSidePanel = ({
           notes.map((note) => {
             const preview = htmlToPlainText(note.data?.content);
             const updatedAt = note.data?.updatedAt || note.data?.createdAt;
+            const isSelected = selectedNoteKey === note.key;
             return (
               <div
                 key={note.key}
-                className="qnp-note-item"
+                className={`qnp-note-item${isSelected ? ' selected' : ''}`}
                 onClick={(e) => handleNoteClick(e, note)}
                 title={note.label}
               >
