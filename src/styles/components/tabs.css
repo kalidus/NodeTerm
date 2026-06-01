@@ -501,7 +501,7 @@
   padding: 0 6px 0 8px;
   height: var(--tab-bar-height, 34px);
   background: var(--ui-tab-bar-bg, var(--ui-sidebar-bg));
-  border-bottom: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.07));
+  border-bottom: 1px solid var(--ui-tabgroup-border, var(--ui-tab-border, rgba(255, 255, 255, 0.07)));
   flex-shrink: 0;
   overflow-x: auto;
   overflow-y: hidden;
@@ -518,7 +518,12 @@
   display: inline-block;
   width: 1px;
   height: 16px;
-  background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.14), transparent);
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in srgb, var(--ui-tabgroup-border, var(--ui-tab-border)) 55%, transparent),
+    transparent
+  );
   margin: 0 4px;
   flex-shrink: 0;
 }
@@ -536,9 +541,9 @@
   height: 22px;
   padding: 0 8px 0 7px;
   border-radius: 999px;                  /* Forma pill/cápsula */
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.65);
+  border: 1px solid var(--ui-tabgroup-border, var(--ui-tab-border, rgba(255, 255, 255, 0.12)));
+  background: var(--ui-tabgroup-bg, var(--ui-tab-bg, rgba(255, 255, 255, 0.04)));
+  color: var(--ui-tabgroup-text, var(--ui-tab-text, rgba(255, 255, 255, 0.65)));
   font-size: 0.7rem;
   font-weight: 500;
   letter-spacing: 0.2px;
@@ -557,17 +562,21 @@
 }
 
 .group-pill:hover {
-  background: rgba(255, 255, 255, 0.09);
-  border-color: rgba(255, 255, 255, 0.22);
-  color: rgba(255, 255, 255, 0.9);
+  background: var(--ui-tabgroup-hover-bg, var(--ui-tab-hover-bg, rgba(255, 255, 255, 0.09)));
+  border-color: var(--ui-tab-border, rgba(255, 255, 255, 0.22));
+  color: var(--ui-tab-text, var(--ui-tabgroup-text));
   transform: translateY(-0.5px);
 }
 
 /* ── Pill activo ───────────────────────────────────────────────────── */
 .group-pill--active {
-  background: rgba(255, 255, 255, 0.12) !important;
-  border-color: var(--gp-color, var(--primary-color, rgba(255,255,255,0.4))) !important;
-  color: #fff !important;
+  background: var(--ui-tab-active-bg, rgba(255, 255, 255, 0.12)) !important;
+  border-color: color-mix(
+    in srgb,
+    var(--gp-color, var(--primary-color, var(--ui-tab-border))) 55%,
+    var(--ui-tab-border, var(--ui-tabgroup-border))
+  ) !important;
+  color: var(--ui-tab-active-text, var(--ui-tabgroup-text, #fff)) !important;
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--gp-color, var(--primary-color, #fff)) 30%, transparent),
     0 2px 8px rgba(0, 0, 0, 0.2);

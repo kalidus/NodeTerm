@@ -1449,6 +1449,48 @@ export const getTabThemeList = () =>
     })
     .sort((a, b) => a.name.localeCompare(b.name));
 
+const GROUP_PILL_THEME_CSS = `
+      .groups-pill-bar {
+        background: var(--ui-tab-bar-bg, var(--ui-sidebar-bg)) !important;
+        border-bottom: 1px solid var(--ui-tabgroup-border, var(--ui-tab-border)) !important;
+      }
+
+      .groups-pill-divider {
+        background: linear-gradient(
+          to bottom,
+          transparent,
+          color-mix(in srgb, var(--ui-tabgroup-border, var(--ui-tab-border)) 55%, transparent),
+          transparent
+        ) !important;
+      }
+
+      .group-pill {
+        background: var(--ui-tabgroup-bg, var(--ui-tab-bg)) !important;
+        color: var(--ui-tabgroup-text, var(--ui-tab-text)) !important;
+        border-color: var(--ui-tabgroup-border, var(--ui-tab-border)) !important;
+      }
+
+      .group-pill:hover {
+        background: var(--ui-tabgroup-hover-bg, var(--ui-tab-hover-bg)) !important;
+        border-color: var(--ui-tab-border) !important;
+        color: var(--ui-tab-text, var(--ui-tabgroup-text)) !important;
+      }
+
+      .group-pill--active {
+        background: var(--ui-tab-active-bg) !important;
+        color: var(--ui-tab-active-text) !important;
+        border-color: color-mix(
+          in srgb,
+          var(--gp-color, var(--primary-color)) 55%,
+          var(--ui-tab-border)
+        ) !important;
+      }
+
+      .group-pill--home.group-pill--active {
+        border-color: var(--ui-home-tab-accent, var(--primary-color)) !important;
+      }
+`;
+
 // Función para aplicar el tema de pestañas
 export const applyTabTheme = (themeName) => {
   const theme = tabThemes[themeName];
@@ -1475,6 +1517,7 @@ export const applyTabTheme = (themeName) => {
         transition: var(--tab-transition, all 0.2s ease) !important;
         backdrop-filter: var(--tab-backdrop-filter, none) !important;
       }
+      ${GROUP_PILL_THEME_CSS}
     `;
   } else {
     // Para temas personalizados, aplicar estilos específicos
@@ -1534,6 +1577,7 @@ export const applyTabTheme = (themeName) => {
       .p-tabview .p-tabview-nav li .p-tabview-nav-link .p-tabview-nav-link-close:hover {
         color: var(--ui-tab-close-hover) !important;
       }
+      ${GROUP_PILL_THEME_CSS}
     `;
   }
 

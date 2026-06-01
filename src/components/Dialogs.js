@@ -540,11 +540,11 @@ export function GroupDialog({
                   height: 28,
                   borderRadius: '50%',
                   background: color,
-                  border: groupColor === color ? '3px solid #1976d2' : '2px solid #23272f',
-                  boxShadow: groupColor === color ? '0 0 0 4px #1976d2aa' : '0 1px 4px rgba(0,0,0,0.10)',
+                  border: groupColor === color ? '3px solid var(--primary-color, #1976d2)' : '2px solid var(--ui-dialog-border, #23272f)',
+                  boxShadow: groupColor === color ? '0 0 0 4px color-mix(in srgb, var(--primary-color, #1976d2) 65%, transparent)' : '0 1px 4px rgba(0,0,0,0.10)',
                   cursor: 'pointer',
                   transition: 'box-shadow 0.2s, border 0.2s',
-                  outline: groupColor === color ? '2px solid #1976d2' : 'none',
+                  outline: groupColor === color ? '2px solid var(--primary-color, #1976d2)' : 'none',
                   margin: 0,
                   position: 'relative',
                   display: 'flex',
@@ -560,7 +560,7 @@ export function GroupDialog({
                     fontSize: 16,
                     fontWeight: 900,
                     pointerEvents: 'none',
-                    textShadow: '0 1px 4px #1976d2, 0 0 2px #23272f'
+                    textShadow: '0 1px 4px var(--primary-color, #1976d2), 0 0 2px var(--ui-dialog-border, #23272f)'
                   }}>✓</span>
                 )}
               </div>
@@ -572,9 +572,9 @@ export function GroupDialog({
                 width: 28,
                 height: 28,
                 borderRadius: '50%',
-                background: groupColor && !colorOptions.includes(groupColor) ? groupColor : '#23272f',
-                border: !colorOptions.includes(groupColor) ? '3px solid #1976d2' : '2px dashed #888',
-                boxShadow: !colorOptions.includes(groupColor) ? '0 0 0 4px #1976d2aa' : '0 1px 4px rgba(0,0,0,0.10)',
+                background: groupColor && !colorOptions.includes(groupColor) ? groupColor : 'var(--ui-dialog-border, #23272f)',
+                border: !colorOptions.includes(groupColor) ? '3px solid var(--primary-color, #1976d2)' : '2px dashed var(--ui-dialog-text, #888)',
+                boxShadow: !colorOptions.includes(groupColor) ? '0 0 0 4px color-mix(in srgb, var(--primary-color, #1976d2) 65%, transparent)' : '0 1px 4px rgba(0,0,0,0.10)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -585,7 +585,7 @@ export function GroupDialog({
               }}
               title={t('group.color.custom')}
             >
-              <span style={{ fontSize: 16, color: !colorOptions.includes(groupColor) ? '#fff' : '#1976d2', pointerEvents: 'none', userSelect: 'none' }}>🎨</span>
+              <span style={{ fontSize: 16, color: !colorOptions.includes(groupColor) ? '#fff' : 'var(--primary-color, #1976d2)', pointerEvents: 'none', userSelect: 'none' }}>🎨</span>
               <input
                 id="custom-group-color-input"
                 type="color"
@@ -600,7 +600,7 @@ export function GroupDialog({
                   fontSize: 16,
                   fontWeight: 900,
                   pointerEvents: 'none',
-                  textShadow: '0 1px 4px #1976d2, 0 0 2px #23272f',
+                  textShadow: '0 1px 4px var(--primary-color, #1976d2), 0 0 2px var(--ui-dialog-border, #23272f)',
                   left: 0, right: 0, top: 0, bottom: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center'
                 }}>✓</span>

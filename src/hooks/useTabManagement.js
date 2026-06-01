@@ -1,6 +1,11 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import connectionStore from '../utils/connectionStore';
 import { isHomeButtonLocked as readHomeButtonLocked } from '../utils/homeTabDefaults';
+import {
+  themeManager,
+  getThemeGroupColorPalette,
+  getDefaultGroupColor
+} from '../utils/themeManager';
 
 export const useTabManagement = (toast, {
   cleanupTabDistro: externalCleanupTabDistro,
@@ -35,7 +40,9 @@ export const useTabManagement = (toast, {
   const [groupActiveIndices, setGroupActiveIndices] = useState({});
   const [showCreateGroupDialog, setShowCreateGroupDialog] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
-  const [selectedGroupColor, setSelectedGroupColor] = useState('#1976d2'); // Color por defecto
+  const [selectedGroupColor, setSelectedGroupColor] = useState(() =>
+    getDefaultGroupColor(themeManager.getCurrentTheme()?.colors)
+  );
   const [tabContextMenu, setTabContextMenu] = useState(null);
 
   // === ESTADO DE TRACKING ===
@@ -43,15 +50,36 @@ export const useTabManagement = (toast, {
   const activeListenersRef = useRef(new Set());
   const terminalRefs = useRef({});
 
-  // === CONSTANTES ===
-  const GROUP_COLORS = [
-    '#1976d2', '#43a047', '#fbc02d', '#d32f2f', '#7b1fa2', '#0097a7', '#ff9800', '#607d8b', '#cfd8dc', '#ff5722', '#8d6e63', '#00bcd4'
-  ];
+  const [groupColorPalette, setGroupColorPalette] = useState(() =>
+    getThemeGroupColorPalette(themeManager.getCurrentTheme()?.colors)
+  );
+
+  useEffect(() => {
+    const syncGroupColorsFromTheme = () => {
+      const colors = themeManager.getCurrentTheme()?.colors;
+      const palette = getThemeGroupColorPalette(colors);
+      setGroupColorPalette(palette);
+      setSelectedGroupColor((prev) => {
+        if (prev === '#1976d2') {
+          return palette[0] || getDefaultGroupColor(colors);
+        }
+        return prev;
+      });
+    };
+    syncGroupColorsFromTheme();
+    window.addEventListener('theme-changed', syncGroupColorsFromTheme);
+    return () => window.removeEventListener('theme-changed', syncGroupColorsFromTheme);
+  }, []);
+
+  const GROUP_COLORS = useMemo(() => groupColorPalette, [groupColorPalette]);
 
   // === FUNCIONES AUXILIARES ===
   const getNextGroupColor = useCallback(() => {
+    if (GROUP_COLORS.length === 0) {
+      return getDefaultGroupColor(themeManager.getCurrentTheme()?.colors);
+    }
     return GROUP_COLORS[tabGroups.length % GROUP_COLORS.length];
-  }, [tabGroups.length]);
+  }, [tabGroups.length, GROUP_COLORS]);
 
   const getAllTabs = useCallback(() => {
     return [...homeTabs, ...sshTabs, ...rdpTabs, ...guacamoleTabs, ...fileExplorerTabs];
@@ -374,7 +402,7 @@ export const useTabManagement = (toast, {
     };
     setTabGroups(prev => [...prev, newGroup]);
     setNewGroupName('');
-    setSelectedGroupColor('#1976d2'); // Reset al color por defecto
+    setSelectedGroupColor(getDefaultGroupColor(themeManager.getCurrentTheme()?.colors));
     setShowCreateGroupDialog(false);
     toast.current.show({
       severity: 'success',

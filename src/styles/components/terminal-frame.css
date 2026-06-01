@@ -534,7 +534,7 @@
 /* Groups bar en layout VSCode: misma altura compacta */
 :root[data-tab-layout="vscode"] .terminal-frame.main-content-frame .groups-pill-bar {
     height: 28px !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
+    border-bottom: 1px solid var(--ui-tabgroup-border, rgba(255, 255, 255, 0.07)) !important;
 }
 
 .terminal-frame.main-content-frame .main-tab-view .p-tabview-nav {
@@ -560,7 +560,7 @@
     height: 28px !important;
     min-height: 28px !important;
     padding-top: 0 !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
+    border-bottom: 1px solid var(--ui-tabgroup-border, rgba(255, 255, 255, 0.07)) !important;
 }
 
 :root[data-tab-layout="vscode"] .terminal-frame.main-content-frame .main-tab-view .p-tabview-nav {

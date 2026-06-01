@@ -56,6 +56,79 @@ function isColorLight(hex) {
   return (0.299 * r + 0.587 * g + 0.114 * b) > 186;
 }
 
+function hexToHsl(hex) {
+  const normalized = normalizeHexColor(hex);
+  if (!normalized) return { h: 210, s: 60, l: 45 };
+  const num = parseInt(normalized.slice(1), 16);
+  let r = (num >> 16) & 255;
+  let g = (num >> 8) & 255;
+  let b = num & 255;
+  r /= 255;
+  g /= 255;
+  b /= 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0;
+  let s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      default: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+  return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+}
+
+function hslToHex(h, s, l) {
+  const hh = ((h % 360) + 360) % 360;
+  const ss = Math.max(0, Math.min(100, s)) / 100;
+  const ll = Math.max(0, Math.min(100, l)) / 100;
+  const c = (1 - Math.abs(2 * ll - 1)) * ss;
+  const x = c * (1 - Math.abs(((hh / 60) % 2) - 1));
+  const m = ll - c / 2;
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  if (hh < 60) { r = c; g = x; }
+  else if (hh < 120) { r = x; g = c; }
+  else if (hh < 180) { g = c; b = x; }
+  else if (hh < 240) { g = x; b = c; }
+  else if (hh < 300) { r = x; b = c; }
+  else { r = c; b = x; }
+  const toHex = (n) => Math.round((n + m) * 255).toString(16).padStart(2, '0');
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+const FALLBACK_GROUP_COLORS = [
+  '#1976d2', '#43a047', '#fbc02d', '#d32f2f', '#7b1fa2', '#0097a7',
+  '#ff9800', '#607d8b', '#ff5722', '#8d6e63', '#00bcd4', '#5c6bc0'
+];
+
+/** Paleta de colores para grupos de pestañas derivada del tema UI activo. */
+export function getThemeGroupColorPalette(themeColors) {
+  if (!themeColors) return [...FALLBACK_GROUP_COLORS];
+  const accent =
+    normalizeHexColor(themeColors.buttonPrimary) ||
+    normalizeHexColor(themeColors.tabGroupText) ||
+    normalizeHexColor(themeColors.tabText) ||
+    normalizeHexColor(themeColors.sidebarText);
+  if (!accent) return [...FALLBACK_GROUP_COLORS];
+  const { h, s, l } = hexToHsl(accent);
+  const hueOffsets = [0, 28, 55, 95, 140, 185, 220, 265, 310, 340];
+  const sat = Math.min(78, Math.max(42, s));
+  const light = Math.min(62, Math.max(38, l));
+  return hueOffsets.map((offset) => hslToHex(h + offset, sat, light));
+}
+
+export function getDefaultGroupColor(themeColors) {
+  const palette = getThemeGroupColorPalette(themeColors);
+  return palette[0] || FALLBACK_GROUP_COLORS[0];
+}
+
 export const TITLEBAR_COLOR_MODE_KEY = 'titlebar_color_mode';
 
 /** Solo true si el usuario eligió explícitamente un color personalizado. */
@@ -422,10 +495,20 @@ class ThemeManager {
           return sb;
         })()};
         
-        /* Tab groups now use the same theme variables as the main tabs bar */
-        --ui-tabgroup-bg: ${colors.tabBackground};
-        --ui-tabgroup-text: ${colors.tabText};
-        --ui-tabgroup-border: ${colors.tabBorder};
+        --ui-tabgroup-bg: ${(() => {
+          const tg = colors.tabGroupBackground;
+          if (tg && tg !== 'transparent') return tg;
+          return colors.tabBackground;
+        })()};
+        --ui-tabgroup-text: ${colors.tabGroupText || colors.tabText};
+        --ui-tabgroup-border: ${colors.tabGroupBorder || colors.tabBorder};
+        --ui-tabgroup-hover-bg: ${(() => {
+          const tg = colors.tabGroupBackground;
+          if (tg && typeof tg === 'string' && tg.startsWith('#')) {
+            return adjustColorBrightness(tg, 8);
+          }
+          return colors.tabHoverBackground;
+        })()};
         
         --ui-content-bg: ${colors.contentBackground};
         --ui-content-border: ${colors.contentBorder};
