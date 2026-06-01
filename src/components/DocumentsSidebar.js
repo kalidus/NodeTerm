@@ -45,6 +45,25 @@ function collectDocumentFolderKeys(nodes, acc = []) {
   return acc;
 }
 
+function collectDocumentLabels(nodes, acc = []) {
+  if (!nodes?.length) return acc;
+  for (const n of nodes) {
+    if (n.key === 'quick_note') continue;
+    const isFolder = n.droppable || n.data?.type === 'document-folder';
+    if (!isFolder) acc.push(n.label);
+    if (n.children?.length) collectDocumentLabels(n.children, acc);
+  }
+  return acc;
+}
+
+function getUniqueNoteLabel(tree, base = 'Nueva nota') {
+  const labels = collectDocumentLabels(tree);
+  if (!labels.includes(base)) return base;
+  let i = 2;
+  while (labels.includes(`${base} (${i})`)) i += 1;
+  return `${base} (${i})`;
+}
+
 /** Mismo icono de red que en el gestor de passwords (ir al árbol de conexiones). */
 function ConnectionsNavIcon() {
   return (
@@ -139,14 +158,16 @@ const DocumentsSidebar = ({
     );
   }, []);
 
-  const [showNewDocDialog, setShowNewDocDialog] = useState(false);
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
   const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [parentKeyForNew, setParentKeyForNew] = useState(null);
   const [renamingNode, setRenamingNode] = useState(null);
+  const [inlineRenamingKey, setInlineRenamingKey] = useState(null);
+  const [inlineRenameValue, setInlineRenameValue] = useState('');
 
   const contextMenuRef = useRef(null);
+  const inlineRenameInputRef = useRef(null);
   const [contextMenuItems, setContextMenuItems] = useState([]);
 
   useEffect(() => {
@@ -234,20 +255,68 @@ const DocumentsSidebar = ({
     }));
   }, []);
 
-  const handleCreateDocument = () => {
-    if (!newItemName.trim()) return;
-    const newDoc = createDocumentNode(newItemName.trim());
-    setDocumentNodes(prev => addNodeToTree(prev, parentKeyForNew, newDoc));
-    setShowNewDocDialog(false);
-    setNewItemName('');
-    setParentKeyForNew(null);
-    showToast?.({
-      severity: 'success',
-      summary: 'Nota creada',
-      detail: `"${newDoc.label}" creada correctamente`,
-      life: 3000
+  const resolveSelectedKey = useCallback(() => {
+    if (!selectedNodeKey) return null;
+    if (typeof selectedNodeKey === 'string') return selectedNodeKey;
+    if (typeof selectedNodeKey === 'object') {
+      const keys = Object.keys(selectedNodeKey);
+      return keys[0] || null;
+    }
+    return null;
+  }, [selectedNodeKey]);
+
+  const getParentKeyForNewNote = useCallback(() => {
+    const key = resolveSelectedKey();
+    if (!key || key === 'quick_note') return null;
+    const node = findNodeInTree(documentNodes, key);
+    if (!node) return null;
+    const isFolder = node.droppable || node.data?.type === 'document-folder';
+    return isFolder ? key : null;
+  }, [documentNodes, resolveSelectedKey]);
+
+  const createNewDocumentInTree = useCallback((parentKey = null) => {
+    let newDoc;
+    setDocumentNodes(prev => {
+      const label = getUniqueNoteLabel(prev);
+      newDoc = createDocumentNode(label);
+      return addNodeToTree(prev, parentKey, newDoc);
     });
-  };
+    if (parentKey) {
+      setExpandedKeys(prev => ({ ...prev, [parentKey]: true }));
+    }
+    if (newDoc) {
+      setSelectedNodeKey(newDoc.key);
+      setInlineRenamingKey(newDoc.key);
+      setInlineRenameValue(newDoc.label);
+    }
+  }, []);
+
+  const handleCreateNewNote = useCallback(() => {
+    createNewDocumentInTree(getParentKeyForNewNote());
+  }, [createNewDocumentInTree, getParentKeyForNewNote]);
+
+  const commitInlineRename = useCallback(() => {
+    if (!inlineRenamingKey) return;
+    const trimmed = inlineRenameValue.trim() || 'Nueva nota';
+    setDocumentNodes(prev =>
+      updateNodeInTree(prev, inlineRenamingKey, { label: trimmed })
+    );
+    setInlineRenamingKey(null);
+    setInlineRenameValue('');
+  }, [inlineRenamingKey, inlineRenameValue]);
+
+  const cancelInlineRename = useCallback(() => {
+    setInlineRenamingKey(null);
+    setInlineRenameValue('');
+  }, []);
+
+  useEffect(() => {
+    if (!inlineRenamingKey) return;
+    const input = inlineRenameInputRef.current;
+    if (!input) return;
+    input.focus();
+    input.select();
+  }, [inlineRenamingKey]);
 
   const handleCreateFolder = () => {
     if (!newItemName.trim()) return;
@@ -316,11 +385,7 @@ const DocumentsSidebar = ({
         {
           label: 'Nueva nota',
           icon: 'pi pi-file',
-          command: () => {
-            setParentKeyForNew(node.key);
-            setNewItemName('');
-            setShowNewDocDialog(true);
-          }
+          command: () => createNewDocumentInTree(node.key)
         },
         {
           label: 'Nueva subcarpeta',
@@ -427,10 +492,15 @@ const DocumentsSidebar = ({
 
   const nodeTemplate = (node) => {
     const isFolder = node.droppable || node.data?.type === 'document-folder';
+    const isInlineRenaming = inlineRenamingKey === node.key;
     return (
       <span
         className="document-tree-node"
         onClick={(e) => {
+          if (isInlineRenaming) {
+            e.stopPropagation();
+            return;
+          }
           if (!isFolder) {
             e.stopPropagation();
             setSelectedNodeKey(node.key);
@@ -463,19 +533,47 @@ const DocumentsSidebar = ({
             }}
           />
         </span>
-        <span
-          className="node-label"
-          style={{
-            flex: 1,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            lineHeight: '20px',
-            height: 20
-          }}
-        >
-          {node.label}
-        </span>
+        {isInlineRenaming ? (
+          <InputText
+            ref={inlineRenamingKey === node.key ? inlineRenameInputRef : null}
+            value={inlineRenameValue}
+            onChange={(e) => setInlineRenameValue(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                commitInlineRename();
+              } else if (e.key === 'Escape') {
+                e.preventDefault();
+                cancelInlineRename();
+              }
+            }}
+            onBlur={commitInlineRename}
+            className="document-inline-rename-input"
+            style={{
+              flex: 1,
+              height: 22,
+              padding: '0 4px',
+              fontSize: 'inherit',
+              fontFamily: 'inherit'
+            }}
+          />
+        ) : (
+          <span
+            className="node-label"
+            style={{
+              flex: 1,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              lineHeight: '20px',
+              height: 20
+            }}
+          >
+            {node.label}
+          </span>
+        )}
       </span>
     );
   };
@@ -495,12 +593,6 @@ const DocumentsSidebar = ({
     return () => window.removeEventListener('document-content-updated', handler);
   }, []);
 
-  const openNewDocumentDialog = () => {
-    setParentKeyForNew(null);
-    setNewItemName('');
-    setShowNewDocDialog(true);
-  };
-
   const openNewFolderDialog = () => {
     setParentKeyForNew(null);
     setNewItemName('');
@@ -510,7 +602,7 @@ const DocumentsSidebar = ({
   // Listen to events from the unified sidebar toolbar when hideHeader=true
   useEffect(() => {
     if (!hideHeader) return;
-    const onNewDoc = () => openNewDocumentDialog();
+    const onNewDoc = () => handleCreateNewNote();
     const onNewFolder = () => openNewFolderDialog();
     const onToggleExpandAll = () => toggleExpandAllDocuments();
     window.addEventListener('documents-sidebar:new-doc', onNewDoc);
@@ -521,7 +613,7 @@ const DocumentsSidebar = ({
       window.removeEventListener('documents-sidebar:new-folder', onNewFolder);
       window.removeEventListener('documents-sidebar:toggle-expand-all', onToggleExpandAll);
     };
-  }, [hideHeader, toggleExpandAllDocuments]);
+  }, [hideHeader, toggleExpandAllDocuments, handleCreateNewNote]);
 
   useEffect(() => {
     if (!hideHeader) return;
@@ -622,7 +714,7 @@ const DocumentsSidebar = ({
           }}>
             <Button
               className="p-button-rounded p-button-text sidebar-action-button glass-button"
-              onClick={openNewDocumentDialog}
+              onClick={handleCreateNewNote}
               tooltip="Nueva nota"
               tooltipOptions={{ position: 'bottom' }}
               style={DOC_HEADER_GLASS_BTN}
@@ -784,33 +876,6 @@ const DocumentsSidebar = ({
       />
 
       <ContextMenu model={contextMenuItems} ref={contextMenuRef} />
-
-      {/* Diálogo nueva nota */}
-      <Dialog
-        header="Nueva nota"
-        visible={showNewDocDialog}
-        onHide={() => setShowNewDocDialog(false)}
-        style={{ width: '380px' }}
-        modal
-        footer={
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            <Button label="Cancelar" className="p-button-text" onClick={() => setShowNewDocDialog(false)} />
-            <Button label="Crear" icon="pi pi-check" onClick={handleCreateDocument} disabled={!newItemName.trim()} />
-          </div>
-        }
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <label htmlFor="doc-name" style={{ fontWeight: 600, fontSize: '0.875rem' }}>Nombre de la nota</label>
-          <InputText
-            id="doc-name"
-            value={newItemName}
-            onChange={(e) => setNewItemName(e.target.value)}
-            placeholder="Mi nota..."
-            autoFocus
-            onKeyDown={(e) => e.key === 'Enter' && handleCreateDocument()}
-          />
-        </div>
-      </Dialog>
 
       {/* New Folder Dialog */}
       <Dialog
