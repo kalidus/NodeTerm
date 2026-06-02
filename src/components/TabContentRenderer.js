@@ -30,7 +30,8 @@ import {
   LazySSHTunnelTab,
   LazyNetworkToolTab,
   LazyTiptapDocumentEditor,
-  LazySettingsContent
+  LazySettingsContent,
+  LazyBrowserTab
 } from './tabLoaders';
 import { themes } from '../themes';
 import { TAB_TYPES } from '../utils/constants';
@@ -220,6 +221,16 @@ const TabContentRendererInner = React.memo(({
       <LazyTiptapDocumentEditor
         documentKey={tab.documentData.key}
         documentData={tab.documentData}
+      />
+    );
+  }
+
+  // Browser tab
+  if (tab.type === TAB_TYPES.BROWSER && tab.browserData) {
+    return (
+      <LazyBrowserTab
+        tabId={tab.key}
+        browserData={tab.browserData}
       />
     );
   }

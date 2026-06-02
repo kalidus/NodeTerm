@@ -2342,6 +2342,58 @@ const App = () => {
     return () => window.removeEventListener('open-password-tab', handler);
   }, [getAllTabs]);
 
+  // Crear y activar pestaña de navegador integrado (con soporte de autofill)
+  useEffect(() => {
+    const handler = (e) => {
+      const info = e.detail || {};
+      const { url, username, password, title } = info;
+      if (!url) return;
+
+      const existingTabs = getAllTabs();
+      // Buscar si ya hay un browser tab con esta URL
+      const existingTab = existingTabs.find(t => t.type === TAB_TYPES.BROWSER && t.browserData?.url === url);
+      if (existingTab) {
+        const tabIndex = existingTabs.findIndex(t => t.key === existingTab.key);
+        if (tabIndex !== -1) {
+          setActiveTabIndex(tabIndex);
+          setGroupActiveIndices(prev => ({ ...prev, 'no-group': tabIndex }));
+        }
+        return;
+      }
+
+      const tabId = `browser_${Date.now()}`;
+      const browserData = {
+        url,
+        username,
+        password,
+        title
+      };
+
+      const newTab = {
+        key: tabId,
+        label: `🌐 ${title || 'Navegador'}`,
+        type: TAB_TYPES.BROWSER,
+        browserData,
+        createdAt: Date.now()
+      };
+
+      setSshTabs(prev => [newTab, ...prev]);
+      setTimeout(() => {
+        setLastOpenedTabKey(tabId);
+        setOnCreateActivateTabKey(tabId);
+        const allTabs = getAllTabs();
+        const tabIndex = allTabs.findIndex(t => t.key === tabId);
+        if (tabIndex !== -1) {
+          setActiveTabIndex(tabIndex);
+          setGroupActiveIndices(prev => ({ ...prev, 'no-group': tabIndex }));
+        }
+      }, 0);
+    };
+
+    window.addEventListener('open-browser-tab', handler);
+    return () => window.removeEventListener('open-browser-tab', handler);
+  }, [getAllTabs]);
+
   // Crear y activar pestaña de carpeta de passwords
   useEffect(() => {
     const handler = (e) => {

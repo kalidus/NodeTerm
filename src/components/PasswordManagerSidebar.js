@@ -1442,21 +1442,196 @@ const PasswordManagerSidebar = ({
             }
           },
           {
-            label: 'Abrir URL',
-            icon: 'pi pi-external-link',
-            command: () => {
-              const url = node.data?.url || '';
-              if (url) {
-                handleOpenUrl(url);
-              } else {
-                showToast && showToast({
-                  severity: 'warn',
-                  summary: 'Sin URL',
-                  detail: 'Este password no tiene URL configurada',
-                  life: 2000
-                });
+            label: 'URL(s)',
+            icon: 'pi pi-globe',
+            items: [
+              {
+                label: 'Abrir en Navegador Integrado (Autocompletar)',
+                icon: 'pi pi-desktop',
+                command: () => {
+                  const url = node.data?.url || '';
+                  if (url) {
+                    window.dispatchEvent(new CustomEvent('open-browser-tab', {
+                      detail: {
+                        url,
+                        username: node.data?.username || '',
+                        password: node.data?.password || '',
+                        title: node.label
+                      }
+                    }));
+                  } else {
+                    showToast && showToast({
+                      severity: 'warn',
+                      summary: 'Sin URL',
+                      detail: 'Este password no tiene URL configurada',
+                      life: 2000
+                    });
+                  }
+                }
+              },
+              {
+                label: 'Copiar URL',
+                icon: 'pi pi-copy',
+                command: () => {
+                  const url = node.data?.url || '';
+                  if (url) {
+                    handleCopyToClipboard(url, 'URL');
+                  } else {
+                    showToast && showToast({
+                      severity: 'warn',
+                      summary: 'Sin URL',
+                      detail: 'Este password no tiene URL configurada',
+                      life: 2000
+                    });
+                  }
+                }
+              },
+              { separator: true },
+              {
+                label: 'Abrir con Google Chrome',
+                icon: 'pi pi-external-link',
+                command: () => {
+                  const url = node.data?.url || '';
+                  if (url) {
+                    const password = node.data?.password || '';
+                    if (password) {
+                      handleCopyToClipboard(password, 'Password');
+                      showToast && showToast({
+                        severity: 'info',
+                        summary: 'Contraseña copiada',
+                        detail: 'Se copió la contraseña para pegar (Ctrl+V) en Chrome',
+                        life: 3000
+                      });
+                    }
+                    window.electron?.system?.openWithBrowser(url, 'chrome', false);
+                  } else {
+                    showToast && showToast({
+                      severity: 'warn',
+                      summary: 'Sin URL',
+                      detail: 'Este password no tiene URL configurada',
+                      life: 2000
+                    });
+                  }
+                }
+              },
+              {
+                label: 'Abrir con Google Chrome (Incógnito)',
+                icon: 'pi pi-eye-slash',
+                command: () => {
+                  const url = node.data?.url || '';
+                  if (url) {
+                    const password = node.data?.password || '';
+                    if (password) {
+                      handleCopyToClipboard(password, 'Password');
+                    }
+                    window.electron?.system?.openWithBrowser(url, 'chrome', true);
+                  } else {
+                    showToast && showToast({
+                      severity: 'warn',
+                      summary: 'Sin URL',
+                      detail: 'Este password no tiene URL configurada',
+                      life: 2000
+                    });
+                  }
+                }
+              },
+              {
+                label: 'Abrir con Firefox',
+                icon: 'pi pi-external-link',
+                command: () => {
+                  const url = node.data?.url || '';
+                  if (url) {
+                    const password = node.data?.password || '';
+                    if (password) {
+                      handleCopyToClipboard(password, 'Password');
+                      showToast && showToast({
+                        severity: 'info',
+                        summary: 'Contraseña copiada',
+                        detail: 'Se copió la contraseña para pegar (Ctrl+V) en Firefox',
+                        life: 3000
+                      });
+                    }
+                    window.electron?.system?.openWithBrowser(url, 'firefox', false);
+                  } else {
+                    showToast && showToast({
+                      severity: 'warn',
+                      summary: 'Sin URL',
+                      detail: 'Este password no tiene URL configurada',
+                      life: 2000
+                    });
+                  }
+                }
+              },
+              {
+                label: 'Abrir con Firefox (Privado)',
+                icon: 'pi pi-eye-slash',
+                command: () => {
+                  const url = node.data?.url || '';
+                  if (url) {
+                    const password = node.data?.password || '';
+                    if (password) {
+                      handleCopyToClipboard(password, 'Password');
+                    }
+                    window.electron?.system?.openWithBrowser(url, 'firefox', true);
+                  } else {
+                    showToast && showToast({
+                      severity: 'warn',
+                      summary: 'Sin URL',
+                      detail: 'Este password no tiene URL configurada',
+                      life: 2000
+                    });
+                  }
+                }
+              },
+              {
+                label: 'Abrir con Microsoft Edge',
+                icon: 'pi pi-external-link',
+                command: () => {
+                  const url = node.data?.url || '';
+                  if (url) {
+                    const password = node.data?.password || '';
+                    if (password) {
+                      handleCopyToClipboard(password, 'Password');
+                      showToast && showToast({
+                        severity: 'info',
+                        summary: 'Contraseña copiada',
+                        detail: 'Se copió la contraseña para pegar (Ctrl+V) en Edge',
+                        life: 3000
+                      });
+                    }
+                    window.electron?.system?.openWithBrowser(url, 'edge', false);
+                  } else {
+                    showToast && showToast({
+                      severity: 'warn',
+                      summary: 'Sin URL',
+                      detail: 'Este password no tiene URL configurada',
+                      life: 2000
+                    });
+                  }
+                }
+              },
+              {
+                label: 'Abrir con Microsoft Edge (InPrivate)',
+                icon: 'pi pi-eye-slash',
+                command: () => {
+                  const url = node.data?.url || '';
+                  if (url) {
+                    const password = node.data?.password || '';
+                    if (password) {
+                      handleCopyToClipboard(password, 'Password');
+                    }
+                    window.electron?.system?.openWithBrowser(url, 'edge', true);
+                  } else {
+                    showToast && showToast({
+                      severity: 'warn',
+                      summary: 'Sin URL',
+                      detail: 'Este password no tiene URL configurada',
+                      life: 2000
+                    });
+                  }
+                }
               }
-            }
+            ]
           }
         );
       } else if (secretType === 'crypto_wallet') {

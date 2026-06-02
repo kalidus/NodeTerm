@@ -796,6 +796,50 @@ function registerSystemMonitoringHandlers() {
       return { success: false, error: err.message };
     }
   });
+
+  // Handler para abrir URL en navegadores específicos
+  ipcMain.handle('system:open-with-browser', async (event, { url, browser, privateMode }) => {
+    try {
+      if (!url || typeof url !== 'string') return { ok: false, error: 'URL inválida' };
+      const trimmedUrl = url.trim();
+      if (!trimmedUrl.startsWith('http://') && !trimmedUrl.startsWith('https://')) {
+        console.warn('⚠️ [Security] Intento de abrir protocolo no seguro:', trimmedUrl);
+        return { ok: false, error: 'Solo se permiten protocolos http:// y https://' };
+      }
+
+      // Evitar caracteres maliciosos para inyección de comandos
+      if (/["`;|&]/.test(trimmedUrl)) {
+        return { ok: false, error: 'URL contiene caracteres no permitidos' };
+      }
+
+      if (process.platform === 'win32') {
+        let command = '';
+        if (browser === 'chrome') {
+          command = privateMode ? `start chrome --incognito "${trimmedUrl}"` : `start chrome "${trimmedUrl}"`;
+        } else if (browser === 'firefox') {
+          command = privateMode ? `start firefox -private-window "${trimmedUrl}"` : `start firefox "${trimmedUrl}"`;
+        } else if (browser === 'edge') {
+          command = privateMode ? `start msedge -inprivate "${trimmedUrl}"` : `start msedge "${trimmedUrl}"`;
+        } else {
+          await shell.openExternal(trimmedUrl);
+          return { ok: true };
+        }
+
+        exec(`cmd.exe /c ${command}`, (err) => {
+          if (err) {
+            console.error(`Error opening browser ${browser}:`, err);
+          }
+        });
+        return { ok: true };
+      } else {
+        // En Linux/macOS, abrir con navegador por defecto
+        await shell.openExternal(trimmedUrl);
+        return { ok: true };
+      }
+    } catch (e) {
+      return { ok: false, error: e?.message };
+    }
+  });
 }
 
 module.exports = {

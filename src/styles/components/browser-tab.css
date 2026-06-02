@@ -1,0 +1,129 @@
+.browser-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--ui-content-bg);
+  overflow: hidden;
+}
+
+.browser-toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  align-items: center;
+  background: var(--ui-dialog-bg);
+  border-bottom: 1px solid var(--ui-content-border);
+  z-index: 5;
+}
+
+.browser-nav-group {
+  display: flex;
+  gap: 4px;
+}
+
+.browser-address-container {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  background: var(--ui-content-bg);
+  border: 1px solid var(--ui-content-border);
+  border-radius: 6px;
+  padding: 0 10px;
+  gap: 8px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.browser-address-container:focus-within {
+  border-color: var(--ui-button-primary);
+  box-shadow: 0 0 0 2px rgba(94, 129, 172, 0.2);
+}
+
+.browser-address-icon {
+  color: var(--ui-dialog-text);
+  opacity: 0.5;
+  font-size: 14px;
+}
+
+.browser-address-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 6px 0;
+  outline: none;
+  color: var(--ui-dialog-text);
+  font-size: 13px;
+  font-family: var(--font-family-monospace, monospace);
+  width: 100%;
+}
+
+.browser-webview-container {
+  flex: 1;
+  position: relative;
+  background: var(--ui-dialog-bg);
+  border: 1px solid var(--ui-content-border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.browser-webview-container webview {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: white; /* default fallback for loaded websites */
+}
+
+.browser-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 34, 0.85);
+  backdrop-filter: blur(4px);
+  z-index: 10;
+  color: #ffffff;
+  transition: opacity 0.3s ease;
+}
+
+.browser-overlay.fading {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.browser-overlay p {
+  margin-top: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.browser-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 12px;
+  background: var(--ui-dialog-bg);
+  border-top: 1px solid var(--ui-content-border);
+  font-size: 11px;
+  color: var(--ui-dialog-text);
+  opacity: 0.7;
+}
+
+.browser-credential-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(94, 129, 172, 0.15);
+  border: 1px solid rgba(94, 129, 172, 0.3);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 11px;
+  color: var(--ui-button-primary);
+  font-weight: 500;
+}

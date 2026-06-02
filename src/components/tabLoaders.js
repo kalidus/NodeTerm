@@ -47,6 +47,7 @@ export const LazySSHTunnelTab = lazy(() => getChunk('SSHTunnelTab', () => import
 export const LazyNetworkToolTab = lazy(() => getChunk('NetworkToolTab', () => import('./NetworkToolTab')));
 export const LazyTiptapDocumentEditor = lazy(() => getChunk('TiptapDocumentEditor', () => import('./TiptapDocumentEditor')));
 export const LazySettingsContent = lazy(() => getChunk('SettingsContent', () => import('./SettingsDialog').then(m => ({ default: m.SettingsContent }))));
+export const LazyBrowserTab = lazy(() => getChunk('BrowserTab', () => import('./BrowserTab')));
 
 const PRIORITY_CHUNK_KEYS = [
   'TerminalComponent',
@@ -70,6 +71,7 @@ const SECONDARY_CHUNK_KEYS = [
   'AntigravityCliTerminal',
   'HermesCliTerminal',
   'SSHTunnelTab',
+  'BrowserTab',
 ];
 
 const CHUNK_LOADERS = {
@@ -104,6 +106,7 @@ const CHUNK_LOADERS = {
   NetworkToolTab: () => import('./NetworkToolTab'),
   TiptapDocumentEditor: () => import('./TiptapDocumentEditor'),
   SettingsContent: () => import('./SettingsDialog').then(m => ({ default: m.SettingsContent })),
+  BrowserTab: () => import('./BrowserTab'),
 };
 
 let tabChunksPreloadStarted = false;

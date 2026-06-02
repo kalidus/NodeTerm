@@ -59,7 +59,8 @@ export const TAB_TYPES = {
   DOCUMENT: 'document',
   DOCUMENT_FOLDER: 'document-folder',
   NETWORK_TOOL: 'network-tool',
-  SETTINGS: 'settings'
+  SETTINGS: 'settings',
+  BROWSER: 'browser'
 };
 
 // Constantes de estados de conexión
