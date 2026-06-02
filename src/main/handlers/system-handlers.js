@@ -812,8 +812,8 @@ function registerSystemMonitoringHandlers() {
         return { ok: false, error: 'URL contiene caracteres no permitidos' };
       }
 
+      let command = '';
       if (process.platform === 'win32') {
-        let command = '';
         if (browser === 'chrome') {
           command = privateMode ? `start chrome --incognito "${trimmedUrl}"` : `start chrome "${trimmedUrl}"`;
         } else if (browser === 'firefox') {
@@ -825,16 +825,42 @@ function registerSystemMonitoringHandlers() {
           if (username) clipboard.writeText(username);
           return { ok: true };
         }
+      } else if (process.platform === 'darwin') {
+        if (browser === 'chrome') {
+          command = privateMode ? `open -a "Google Chrome" --args --incognito "${trimmedUrl}"` : `open -a "Google Chrome" "${trimmedUrl}"`;
+        } else if (browser === 'firefox') {
+          command = privateMode ? `open -a "Firefox" --args -private-window "${trimmedUrl}"` : `open -a "Firefox" "${trimmedUrl}"`;
+        } else if (browser === 'edge') {
+          command = privateMode ? `open -a "Microsoft Edge" --args -inprivate "${trimmedUrl}"` : `open -a "Microsoft Edge" "${trimmedUrl}"`;
+        } else {
+          await shell.openExternal(trimmedUrl);
+          if (username) clipboard.writeText(username);
+          return { ok: true };
+        }
+      } else { // linux
+        if (browser === 'chrome') {
+          command = privateMode ? `google-chrome --incognito "${trimmedUrl}"` : `google-chrome "${trimmedUrl}"`;
+        } else if (browser === 'firefox') {
+          command = privateMode ? `firefox -private-window "${trimmedUrl}"` : `firefox "${trimmedUrl}"`;
+        } else if (browser === 'edge') {
+          command = privateMode ? `microsoft-edge -inprivate "${trimmedUrl}"` : `microsoft-edge "${trimmedUrl}"`;
+        } else {
+          await shell.openExternal(trimmedUrl);
+          if (username) clipboard.writeText(username);
+          return { ok: true };
+        }
+      }
 
-        // Ejecutar apertura del navegador
-        exec(`cmd.exe /c ${command}`, (err) => {
-          if (err) {
-            console.error(`Error opening browser ${browser}:`, err);
-          }
-        });
+      // Ejecutar apertura del navegador
+      exec(process.platform === 'win32' ? `cmd.exe /c ${command}` : command, (err) => {
+        if (err) {
+          console.error(`Error opening browser ${browser}:`, err);
+        }
+      });
 
-        // Ejecutar Auto-Type en segundo plano si hay credenciales
-        if (username || password) {
+      // Ejecutar Auto-Type en segundo plano si hay credenciales
+      if (username || password) {
+        if (process.platform === 'win32') {
           const escapeSendKeys = (text) => {
             if (!text) return '';
             return text.replace(/([+^%~{}()\[\]])/g, '{$1}');
@@ -845,49 +871,80 @@ function registerSystemMonitoringHandlers() {
             return text.replace(/'/g, "''");
           };
 
-          const escapedUser = escapePowerShellSingleQuote(escapeSendKeys(username));
-          const escapedPass = escapePowerShellSingleQuote(escapeSendKeys(password));
+          const mapUser = escapePowerShellSingleQuote(escapeSendKeys(username));
+          const mapPass = escapePowerShellSingleQuote(escapeSendKeys(password));
 
-          // Construir script de PowerShell para simular el teclado
           let psScript = 'Add-Type -AssemblyName System.Windows.Forms;\nStart-Sleep -Seconds 3;\n';
-          
-          if (username) {
-            psScript += `[System.Windows.Forms.SendKeys]::SendWait('${escapedUser}');\n`;
-          }
-          
-          if (username && password) {
-            psScript += `[System.Windows.Forms.SendKeys]::SendWait('{TAB}');\n`;
-          }
-          
-          if (password) {
-            psScript += `[System.Windows.Forms.SendKeys]::SendWait('${escapedPass}');\n`;
-          }
-          
-          if (password) {
-            psScript += `[System.Windows.Forms.SendKeys]::SendWait('{ENTER}');\n`;
-          }
-          
+          if (username) psScript += `[System.Windows.Forms.SendKeys]::SendWait('${mapUser}');\n`;
+          if (username && password) psScript += `[System.Windows.Forms.SendKeys]::SendWait('{TAB}');\n`;
+          if (password) psScript += `[System.Windows.Forms.SendKeys]::SendWait('${mapPass}');\n`;
+          if (password) psScript += `[System.Windows.Forms.SendKeys]::SendWait('{ENTER}');\n`;
           psScript += 'exit\n';
 
-          // Ejecutar PowerShell de forma asíncrona mediante stdin para evitar colisión de comillas
           const { spawn } = require('child_process');
           const child = spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', '-']);
-
           child.stdin.write(psScript);
           child.stdin.end();
-
           child.on('error', (err) => {
             console.error('Failed to start PowerShell process for Auto-Type:', err);
           });
-        }
+        } else if (process.platform === 'darwin') {
+          const escapeAppleScript = (str) => {
+            if (!str) return '';
+            return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+          };
+          const userEscaped = escapeAppleScript(username);
+          const passEscaped = escapeAppleScript(password);
 
-        return { ok: true };
-      } else {
-        // En Linux/macOS, abrir con navegador por defecto y copiar usuario
-        if (username) clipboard.writeText(username);
-        await shell.openExternal(trimmedUrl);
-        return { ok: true };
+          let appleScript = 'delay 3\ntell application "System Events"\n';
+          if (username) appleScript += `keystroke "${userEscaped}"\n`;
+          if (username && password) appleScript += `key code 48\n`; // Tab
+          if (password) appleScript += `keystroke "${passEscaped}"\n`;
+          if (password) appleScript += `key code 36\n`; // Return (Enter)
+          appleScript += 'end tell\n';
+
+          const { spawn } = require('child_process');
+          const child = spawn('osascript', []);
+          let stderr = '';
+          child.stderr.on('data', (data) => {
+            stderr += data.toString();
+          });
+          child.on('close', (code) => {
+            if (code !== 0) {
+              console.error(`osascript exited with code ${code}. Stderr: ${stderr}`);
+              if (username) clipboard.writeText(username);
+            }
+          });
+          child.stdin.write(appleScript);
+          child.stdin.end();
+          child.on('error', (err) => {
+            console.error('Failed to start osascript process for Auto-Type:', err);
+            if (username) clipboard.writeText(username);
+          });
+        } else if (process.platform === 'linux') {
+          const escapeLinux = (str) => {
+            if (!str) return '';
+            return str.replace(/'/g, "'\\''");
+          };
+          const userEscaped = escapeLinux(username);
+          const passEscaped = escapeLinux(password);
+
+          let bashCommand = 'sleep 3; ';
+          if (username) bashCommand += `xdotool type --delay 10 '${userEscaped}'; `;
+          if (username && password) bashCommand += `xdotool key Tab; `;
+          if (password) bashCommand += `xdotool type --delay 10 '${passEscaped}'; `;
+          if (password) bashCommand += `xdotool key Return; `;
+
+          exec(bashCommand, (err) => {
+            if (err) {
+              console.warn('Error executing Auto-Type via xdotool (¿está instalado xdotool?):', err);
+              if (username) clipboard.writeText(username);
+            }
+          });
+        }
       }
+
+      return { ok: true };
     } catch (e) {
       return { ok: false, error: e?.message };
     }
