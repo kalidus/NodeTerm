@@ -672,18 +672,24 @@ function registerSystemMonitoringHandlers() {
         // Apple Silicon (Metal) - 🚀 OPTIMIZACIÓN: Si ya se detectó, no volver a ejecutar system_profiler
         if (platform === 'darwin') {
           try {
+            const totalMemory = os.totalmem();
+            const freeMemory = os.freemem();
+            const usedMemory = totalMemory - freeMemory;
+            const totalMB = Math.round(totalMemory / 1024 / 1024);
+            const usedMB = Math.round(usedMemory / 1024 / 1024);
+
             if (detectedGpuType === 'apple-metal' && detectedGpuName) {
               const stats = {
                 ok: true,
                 type: 'apple-metal',
                 name: detectedGpuName,
-                totalMB: null,
-                usedMB: null,
-                freeMB: null,
-                usagePercent: null,
+                totalMB: totalMB,
+                usedMB: usedMB,
+                freeMB: totalMB - usedMB,
+                usagePercent: Math.round((usedMB / totalMB) * 100),
                 gpuUtilization: null,
                 temperature: null,
-                note: 'Apple Metal no expone datos de VRAM'
+                note: 'Apple Metal comparte memoria de sistema unificada'
               };
               cachedGpuStats = stats;
               lastGpuCheck = now;
@@ -710,13 +716,13 @@ function registerSystemMonitoringHandlers() {
                 ok: true,
                 type: 'apple-metal',
                 name: gpuName,
-                totalMB: null,
-                usedMB: null,
-                freeMB: null,
-                usagePercent: null,
+                totalMB: totalMB,
+                usedMB: usedMB,
+                freeMB: totalMB - usedMB,
+                usagePercent: Math.round((usedMB / totalMB) * 100),
                 gpuUtilization: null,
                 temperature: null,
-                note: 'Apple Metal no expone datos de VRAM'
+                note: 'Apple Metal comparte memoria de sistema unificada'
               };
               cachedGpuStats = stats;
               lastGpuCheck = now;
