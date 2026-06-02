@@ -797,8 +797,8 @@ function registerSystemMonitoringHandlers() {
     }
   });
 
-  // Handler para abrir URL en navegadores específicos
-  ipcMain.handle('system:open-with-browser', async (event, { url, browser, privateMode }) => {
+  // Handler para abrir URL en navegadores específicos con Auto-Type automático en Windows
+  ipcMain.handle('system:open-with-browser', async (event, { url, browser, privateMode, username, password }) => {
     try {
       if (!url || typeof url !== 'string') return { ok: false, error: 'URL inválida' };
       const trimmedUrl = url.trim();
@@ -822,17 +822,69 @@ function registerSystemMonitoringHandlers() {
           command = privateMode ? `start msedge -inprivate "${trimmedUrl}"` : `start msedge "${trimmedUrl}"`;
         } else {
           await shell.openExternal(trimmedUrl);
+          if (username) clipboard.writeText(username);
           return { ok: true };
         }
 
+        // Ejecutar apertura del navegador
         exec(`cmd.exe /c ${command}`, (err) => {
           if (err) {
             console.error(`Error opening browser ${browser}:`, err);
           }
         });
+
+        // Ejecutar Auto-Type en segundo plano si hay credenciales
+        if (username || password) {
+          const escapeSendKeys = (text) => {
+            if (!text) return '';
+            return text.replace(/([+^%~{}()\[\]])/g, '{$1}');
+          };
+
+          const escapePowerShellSingleQuote = (text) => {
+            if (!text) return '';
+            return text.replace(/'/g, "''");
+          };
+
+          const escapedUser = escapePowerShellSingleQuote(escapeSendKeys(username));
+          const escapedPass = escapePowerShellSingleQuote(escapeSendKeys(password));
+
+          // Construir script de PowerShell para simular el teclado
+          let psScript = 'Add-Type -AssemblyName System.Windows.Forms;\nStart-Sleep -Seconds 3;\n';
+          
+          if (username) {
+            psScript += `[System.Windows.Forms.SendKeys]::SendWait('${escapedUser}');\n`;
+          }
+          
+          if (username && password) {
+            psScript += `[System.Windows.Forms.SendKeys]::SendWait('{TAB}');\n`;
+          }
+          
+          if (password) {
+            psScript += `[System.Windows.Forms.SendKeys]::SendWait('${escapedPass}');\n`;
+          }
+          
+          if (password) {
+            psScript += `[System.Windows.Forms.SendKeys]::SendWait('{ENTER}');\n`;
+          }
+          
+          psScript += 'exit\n';
+
+          // Ejecutar PowerShell de forma asíncrona mediante stdin para evitar colisión de comillas
+          const { spawn } = require('child_process');
+          const child = spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', '-']);
+
+          child.stdin.write(psScript);
+          child.stdin.end();
+
+          child.on('error', (err) => {
+            console.error('Failed to start PowerShell process for Auto-Type:', err);
+          });
+        }
+
         return { ok: true };
       } else {
-        // En Linux/macOS, abrir con navegador por defecto
+        // En Linux/macOS, abrir con navegador por defecto y copiar usuario
+        if (username) clipboard.writeText(username);
         await shell.openExternal(trimmedUrl);
         return { ok: true };
       }

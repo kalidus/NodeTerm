@@ -1493,17 +1493,15 @@ const PasswordManagerSidebar = ({
                 command: () => {
                   const url = node.data?.url || '';
                   if (url) {
-                    const password = node.data?.password || '';
-                    if (password) {
-                      handleCopyToClipboard(password, 'Password');
+                    if (node.data?.username || node.data?.password) {
                       showToast && showToast({
                         severity: 'info',
-                        summary: 'Contraseña copiada',
-                        detail: 'Se copió la contraseña para pegar (Ctrl+V) en Chrome',
-                        life: 3000
+                        summary: 'Auto-completado iniciado',
+                        detail: 'Abriendo Chrome... El usuario y la contraseña se escribirán automáticamente en 3 segundos.',
+                        life: 5000
                       });
                     }
-                    window.electron?.system?.openWithBrowser(url, 'chrome', false);
+                    window.electron?.system?.openWithBrowser(url, 'chrome', false, node.data?.username || '', node.data?.password || '');
                   } else {
                     showToast && showToast({
                       severity: 'warn',
@@ -1520,11 +1518,15 @@ const PasswordManagerSidebar = ({
                 command: () => {
                   const url = node.data?.url || '';
                   if (url) {
-                    const password = node.data?.password || '';
-                    if (password) {
-                      handleCopyToClipboard(password, 'Password');
+                    if (node.data?.username || node.data?.password) {
+                      showToast && showToast({
+                        severity: 'info',
+                        summary: 'Auto-completado iniciado',
+                        detail: 'Abriendo Chrome... El usuario y la contraseña se escribirán automáticamente en 3 segundos.',
+                        life: 5000
+                      });
                     }
-                    window.electron?.system?.openWithBrowser(url, 'chrome', true);
+                    window.electron?.system?.openWithBrowser(url, 'chrome', true, node.data?.username || '', node.data?.password || '');
                   } else {
                     showToast && showToast({
                       severity: 'warn',
@@ -1541,17 +1543,15 @@ const PasswordManagerSidebar = ({
                 command: () => {
                   const url = node.data?.url || '';
                   if (url) {
-                    const password = node.data?.password || '';
-                    if (password) {
-                      handleCopyToClipboard(password, 'Password');
+                    if (node.data?.username || node.data?.password) {
                       showToast && showToast({
                         severity: 'info',
-                        summary: 'Contraseña copiada',
-                        detail: 'Se copió la contraseña para pegar (Ctrl+V) en Firefox',
-                        life: 3000
+                        summary: 'Auto-completado iniciado',
+                        detail: 'Abriendo Firefox... El usuario y la contraseña se escribirán automáticamente en 3 segundos.',
+                        life: 5000
                       });
                     }
-                    window.electron?.system?.openWithBrowser(url, 'firefox', false);
+                    window.electron?.system?.openWithBrowser(url, 'firefox', false, node.data?.username || '', node.data?.password || '');
                   } else {
                     showToast && showToast({
                       severity: 'warn',
@@ -1568,11 +1568,15 @@ const PasswordManagerSidebar = ({
                 command: () => {
                   const url = node.data?.url || '';
                   if (url) {
-                    const password = node.data?.password || '';
-                    if (password) {
-                      handleCopyToClipboard(password, 'Password');
+                    if (node.data?.username || node.data?.password) {
+                      showToast && showToast({
+                        severity: 'info',
+                        summary: 'Auto-completado iniciado',
+                        detail: 'Abriendo Firefox... El usuario y la contraseña se escribirán automáticamente en 3 segundos.',
+                        life: 5000
+                      });
                     }
-                    window.electron?.system?.openWithBrowser(url, 'firefox', true);
+                    window.electron?.system?.openWithBrowser(url, 'firefox', true, node.data?.username || '', node.data?.password || '');
                   } else {
                     showToast && showToast({
                       severity: 'warn',
@@ -1589,17 +1593,15 @@ const PasswordManagerSidebar = ({
                 command: () => {
                   const url = node.data?.url || '';
                   if (url) {
-                    const password = node.data?.password || '';
-                    if (password) {
-                      handleCopyToClipboard(password, 'Password');
+                    if (node.data?.username || node.data?.password) {
                       showToast && showToast({
                         severity: 'info',
-                        summary: 'Contraseña copiada',
-                        detail: 'Se copió la contraseña para pegar (Ctrl+V) en Edge',
-                        life: 3000
+                        summary: 'Auto-completado iniciado',
+                        detail: 'Abriendo Edge... El usuario y la contraseña se escribirán automáticamente en 3 segundos.',
+                        life: 5000
                       });
                     }
-                    window.electron?.system?.openWithBrowser(url, 'edge', false);
+                    window.electron?.system?.openWithBrowser(url, 'edge', false, node.data?.username || '', node.data?.password || '');
                   } else {
                     showToast && showToast({
                       severity: 'warn',
@@ -1616,11 +1618,15 @@ const PasswordManagerSidebar = ({
                 command: () => {
                   const url = node.data?.url || '';
                   if (url) {
-                    const password = node.data?.password || '';
-                    if (password) {
-                      handleCopyToClipboard(password, 'Password');
+                    if (node.data?.username || node.data?.password) {
+                      showToast && showToast({
+                        severity: 'info',
+                        summary: 'Auto-completado iniciado',
+                        detail: 'Abriendo Edge... El usuario y la contraseña se escribirán automáticamente en 3 segundos.',
+                        life: 5000
+                      });
                     }
-                    window.electron?.system?.openWithBrowser(url, 'edge', true);
+                    window.electron?.system?.openWithBrowser(url, 'edge', true, node.data?.username || '', node.data?.password || '');
                   } else {
                     showToast && showToast({
                       severity: 'warn',

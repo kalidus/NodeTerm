@@ -95,7 +95,7 @@ contextBridge.exposeInMainWorld('electron', {
   system: {
     getMemoryStats: () => ipcRenderer.invoke('system:get-memory-stats'),
     getGPUStats: () => ipcRenderer.invoke('system:get-gpu-stats'),
-    openWithBrowser: (url, browser, privateMode) => ipcRenderer.invoke('system:open-with-browser', { url, browser, privateMode })
+    openWithBrowser: (url, browser, privateMode, username, password) => ipcRenderer.invoke('system:open-with-browser', { url, browser, privateMode, username, password })
   },
   sshMonitor: {
     getListeningPorts: (tabId) => ipcRenderer.invoke('ssh:get-listening-ports', { tabId }),
