@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
 import { InputTextarea } from 'primereact/inputtextarea';
@@ -84,7 +84,8 @@ const PasswordManagerSidebar = ({
   const [expandedKeys, setExpandedKeys] = useState({});
   const [selectedNodeKey, setSelectedNodeKey] = useState(null);
   const [allExpanded, setAllExpanded] = useState(false);
-  
+  const [folderLimits, setFolderLimits] = useState({});
+
   // Restaurar estado de expansión desde localStorage
   useEffect(() => {
     try {
@@ -826,7 +827,56 @@ const PasswordManagerSidebar = ({
     }).filter(Boolean);
   };
 
-  const filteredPasswordNodes = filterNodes(passwordNodes, sidebarFilter);
+  const filteredPasswordNodes = useMemo(
+    () => filterNodes(passwordNodes, sidebarFilter),
+    [passwordNodes, sidebarFilter]
+  );
+
+  const limitPasswordTreeNodes = useCallback((treeNodes) => {
+    if (!treeNodes) return [];
+
+    return treeNodes.map(node => {
+      const hasChildren = Array.isArray(node.children) && node.children.length > 0;
+      if (hasChildren) {
+        const isExpanded = allExpanded || (expandedKeys && expandedKeys[node.key] === true);
+        if (!isExpanded) {
+          return {
+            ...node,
+            leaf: false,
+            children: []
+          };
+        }
+
+        const totalChildren = node.children.length;
+        const currentLimit = folderLimits[node.key] || 30;
+        const visibleChildren = node.children.slice(0, currentLimit);
+        const processedChildren = limitPasswordTreeNodes(visibleChildren);
+
+        if (totalChildren > currentLimit) {
+          processedChildren.push({
+            key: `${node.key}-show-more`,
+            label: `Mostrar más (${currentLimit} de ${totalChildren})...`,
+            icon: 'pi pi-plus',
+            data: { isShowMoreBtn: true, parentKey: node.key, targetLimit: currentLimit + 100 },
+            droppable: false,
+            selectable: false,
+            style: { color: '#89b4fa', fontStyle: 'italic', cursor: 'pointer' }
+          });
+        }
+
+        return {
+          ...node,
+          children: processedChildren
+        };
+      }
+      return node;
+    });
+  }, [folderLimits, allExpanded, expandedKeys]);
+
+  const processedPasswordNodes = useMemo(
+    () => limitPasswordTreeNodes(filteredPasswordNodes),
+    [filteredPasswordNodes, limitPasswordTreeNodes]
+  );
 
   // Expandir/plegar todas las carpetas del árbol
   const toggleExpandAll = () => {
@@ -858,6 +908,7 @@ const PasswordManagerSidebar = ({
     const { dragNode, dropNode, dropIndex } = event;
     
     if (!dragNode || !dropNode) return;
+    if (dragNode.data?.isShowMoreBtn || dropNode.data?.isShowMoreBtn) return;
     
     // No permitir arrastrar un nodo sobre sí mismo
     if (dragNode.key === dropNode.key) return;
@@ -1014,6 +1065,32 @@ const PasswordManagerSidebar = ({
 
   // Node template para el árbol de passwords - igual que la sidebar de conexiones
   const nodeTemplate = (node, options) => {
+    if (node.data?.isShowMoreBtn) {
+      return (
+        <div
+          className="flex align-items-center gap-2 p-1"
+          style={{
+            color: '#89b4fa',
+            fontStyle: 'italic',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            paddingLeft: '4px',
+            width: '100%'
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            setFolderLimits(prev => ({
+              ...prev,
+              [node.data.parentKey]: node.data.targetLimit
+            }));
+          }}
+        >
+          <span className="pi pi-plus-circle" style={{ fontSize: '14px' }} />
+          <span>{node.label}</span>
+        </div>
+      );
+    }
+
     const isFolder = node.droppable;
     const secretType = node.data?.type || 'password';
     const isSecret = node.data && ['password', 'crypto_wallet', 'api_key', 'secure_note'].includes(secretType);
@@ -1221,7 +1298,7 @@ const PasswordManagerSidebar = ({
         }}
         data-connection-type={isSecret ? secretType : null}
         data-node-type={isFolder ? 'folder' : 'connection'}
-        draggable={true}
+        draggable={!node.data?.isShowMoreBtn}
       >
         <span style={{ 
           minWidth: 20,
@@ -1417,6 +1494,7 @@ const PasswordManagerSidebar = ({
 
   // Menú contextual para passwords usando ContextMenu nativo
   const onNodeContextMenu = (event, node) => {
+    if (node.data?.isShowMoreBtn) return;
     event.preventDefault();
     event.stopPropagation();
     setSelectedNodeKey({ [node.key]: true });
@@ -2143,7 +2221,7 @@ const PasswordManagerSidebar = ({
         ) : (
                   <Tree
                     key={`password-tree-${iconTheme}-${explorerFontSize}-${treeTheme}`}
-                    value={filteredPasswordNodes}
+                    value={processedPasswordNodes}
                     selectionMode="single"
                     selectionKeys={selectedNodeKey}
                     onSelectionChange={e => setSelectedNodeKey(e.value)}
