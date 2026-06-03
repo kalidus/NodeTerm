@@ -9,6 +9,7 @@ import { ContextMenu } from 'primereact/contextmenu';
 import { Dropdown } from 'primereact/dropdown';
 import { Message } from 'primereact/message';
 import { FolderDialog } from './Dialogs';
+import PasswordDetailsPanel from './PasswordDetailsPanel';
 import { iconThemes } from '../themes/icon-themes';
 import { FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
 import { useTranslation } from '../i18n/hooks/useTranslation';
@@ -16,6 +17,7 @@ import { sessionActionIconThemes } from '../themes/session-action-icons';
 import { CRYPTO_NETWORK_OPTIONS, getNetworkById } from '../utils/cryptoNetworks';
 import { validateSeedPhrase, countWords } from '../utils/bip39Validator';
 import {
+  findNodeInTree,
   isDescendantInFullTree,
   isShowMoreTreeNode,
   moveNodeFromTreeEvent
@@ -88,6 +90,13 @@ const PasswordManagerSidebar = ({
   const [editingFolder, setEditingFolder] = useState(null);
   const [expandedKeys, setExpandedKeys] = useState({});
   const [selectedNodeKey, setSelectedNodeKey] = useState(null);
+  const selectedNodeForDetails = useMemo(() => {
+    if (!selectedNodeKey) return null;
+    const key = typeof selectedNodeKey === 'string'
+      ? selectedNodeKey
+      : Object.keys(selectedNodeKey)[0];
+    return key ? findNodeInTree(passwordNodes, key) : null;
+  }, [selectedNodeKey, passwordNodes]);
   const [allExpanded, setAllExpanded] = useState(false);
   const [folderLimits, setFolderLimits] = useState({});
 
@@ -1220,11 +1229,20 @@ const PasswordManagerSidebar = ({
         className="flex align-items-center gap-1"
         onContextMenu={options.onNodeContextMenu ? (e) => options.onNodeContextMenu(e, node) : undefined}
         onClick={(e) => {
+          if (isSecret) {
+            e.stopPropagation();
+            setSelectedNodeKey({ [node.key]: true });
+            return;
+          }
+          e.stopPropagation();
+          if (isFolder) {
+            handleOpenFolder(node);
+          }
+        }}
+        onDoubleClick={(e) => {
           e.stopPropagation();
           if (isSecret) {
             handleOpenPassword(node);
-          } else if (isFolder) {
-            handleOpenFolder(node);
           }
         }}
         style={{ 
@@ -1859,7 +1877,7 @@ const PasswordManagerSidebar = ({
   }, [hideHeader, allExpanded]);
 
   return (
-    <>
+    <div className="password-manager-sidebar-root">
       {!hideHeader && (
         <div className="sidebar-header-glass-stack" style={{
         display: 'flex',
@@ -2186,6 +2204,11 @@ const PasswordManagerSidebar = ({
                   />
         )}
       </div>
+
+      <PasswordDetailsPanel
+        selectedNode={selectedNodeForDetails}
+        onCopy={handleCopyToClipboard}
+      />
 
       {/* Dialog para crear/editar secreto */}
       <Dialog
@@ -2708,7 +2731,7 @@ const PasswordManagerSidebar = ({
         appendTo={document.body}
       />
 
-    </>
+    </div>
   );
 };
 
