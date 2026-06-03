@@ -694,15 +694,26 @@
 .sidebar-tree .p-treenode-droppoint {
   height: 2px !important;
   min-height: 2px !important;
+  position: relative;
+  z-index: 5;
+  flex-shrink: 0;
 }
 .sidebar-tree .p-treenode-droppoint::before {
   display: none !important;
 }
+/* Temas compactos usan margin-bottom negativo; sin esto el droppoint queda tapado */
+.sidebar-tree[class*="tree-theme-"] .p-treenode:has(+ .p-treenode-droppoint) {
+  margin-bottom: 0 !important;
+}
 /* Mostrar línea resaltada solo durante dragover */
 .sidebar-tree .p-treenode-droppoint-active {
   height: 4px !important; /* ligeramente más alto para ver el indicador */
+  min-height: 4px !important;
+  margin: 1px 0 !important;
   background-color: var(--ui-sidebar-selected, #007ad9) !important;
   border-radius: 2px !important;
+  z-index: 10;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ui-sidebar-selected, #007ad9) 40%, transparent);
 }
 
 /* Colores de iconos personalizados */
