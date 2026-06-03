@@ -1092,31 +1092,66 @@ const PasswordManagerSidebar = ({
           return renderStandardIcon(Number(node.data.iconId), connectionIconSize);
         }
         
+        const themeColor = getThemeDefaultColor(iconTheme);
+        
         // Icono por defecto según tipo
         switch (secretType) {
           case 'crypto_wallet':
-            const network = node.data?.network;
-            const networkColors = {
-              bitcoin: '#F7931A',
-              ethereum: '#627EEA',
-              solana: '#9945FF',
-              polygon: '#8247E5',
-              bnb: '#F3BA2F',
-              cardano: '#0033AD',
-              avalanche: '#E84142',
-              cosmos: '#2E3148',
-              polkadot: '#E6007A',
-              arbitrum: '#28A0F0',
-              xrp: '#23292F',
-              tron: '#FF0013'
-            };
-            return <span className="pi pi-wallet" style={{ color: networkColors[network] || '#F7931A', fontSize: `${connectionIconSize}px` }} />;
+            return (
+              <svg width={connectionIconSize} height={connectionIconSize} viewBox="0 0 24 24" fill="none" stroke={themeColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h14v4" />
+                <path d="M4 6v12a2 2 0 0 0 2 2h14v-4" />
+                <path d="M18 12a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h4v-6h-4z" />
+              </svg>
+            );
           case 'api_key':
-            return <span className="pi pi-key" style={{ color: '#00BCD4', fontSize: `${connectionIconSize}px` }} />;
+            return (
+              <svg width={connectionIconSize} height={connectionIconSize} viewBox="0 0 24 24" fill="none" stroke={themeColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+              </svg>
+            );
           case 'secure_note':
-            return <span className="pi pi-file-edit" style={{ color: '#9C27B0', fontSize: `${connectionIconSize}px` }} />;
+            if (themeIcons.file) {
+              return React.cloneElement(themeIcons.file, {
+                width: connectionIconSize,
+                height: connectionIconSize,
+                style: {
+                  ...themeIcons.file.props.style,
+                  color: themeColor,
+                  width: `${connectionIconSize}px`,
+                  height: `${connectionIconSize}px`,
+                  flexShrink: 0
+                }
+              });
+            }
+            return (
+              <svg width={connectionIconSize} height={connectionIconSize} viewBox="0 0 24 24" fill="none" stroke={themeColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+              </svg>
+            );
           default: // password
-            return <span className="pi pi-lock" style={{ color: '#E91E63', fontSize: `${connectionIconSize}px` }} />;
+            if (themeIcons.password) {
+              return React.cloneElement(themeIcons.password, {
+                width: connectionIconSize,
+                height: connectionIconSize,
+                style: {
+                  ...themeIcons.password.props.style,
+                  color: themeColor,
+                  width: `${connectionIconSize}px`,
+                  height: `${connectionIconSize}px`,
+                  flexShrink: 0
+                }
+              });
+            }
+            return (
+              <svg width={connectionIconSize} height={connectionIconSize} viewBox="0 0 24 24" fill="none" stroke={themeColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+            );
         }
       };
       icon = getSecretIcon();
