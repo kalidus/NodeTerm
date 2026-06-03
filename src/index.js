@@ -1,3 +1,8 @@
+// Polyfill para runtime de webpack / dependencias que esperan `global` en el renderer
+if (typeof globalThis !== 'undefined' && typeof globalThis.global === 'undefined') {
+  globalThis.global = globalThis;
+}
+
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './components/App';

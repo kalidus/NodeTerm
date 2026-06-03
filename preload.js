@@ -232,6 +232,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^openclaw:.*$/,
         /^opennotebook:.*$/,
         /^import:.*$/,
+        /^browser-import:.*$/,
         /^updater:.*$/,
         /^system:.*$/,
         /^file:.*$/,
@@ -403,6 +404,11 @@ contextBridge.exposeInMainWorld('electron', {
     openExternal: (url) => ipcRenderer.invoke('import:open-external', url),
     getDownloadsPath: () => ipcRenderer.invoke('import:get-downloads-path'),
     findLatestXmlDownload: (params) => ipcRenderer.invoke('import:find-latest-xml-download', params)
+  },
+  browserImport: {
+    listProfiles: () => ipcRenderer.invoke('browser-import:list-profiles'),
+    importChromium: (opts) => ipcRenderer.invoke('browser-import:import-chromium', opts),
+    importFirefox: (opts) => ipcRenderer.invoke('browser-import:import-firefox', opts)
   },
   // File utilities for drag and drop
   fileUtils: {

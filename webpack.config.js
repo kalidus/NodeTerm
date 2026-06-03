@@ -22,6 +22,8 @@ module.exports = {
     chunkFilename: '[name].chunk.js',
     path: path.resolve(__dirname, 'dist'),
     clean: process.env.NODE_ENV === 'production',
+    // electron-renderer no define `global`; sin esto el runtime de chunks falla al cargar
+    globalObject: 'globalThis',
   },
   // 🚀 OPTIMIZACIÓN: Code splitting para reducir bundle inicial
   optimization: {
@@ -119,8 +121,8 @@ module.exports = {
       'process.env.REACT_APP_VERSION': JSON.stringify(packageJson.version),
       'process.env.REACT_APP_NAME': JSON.stringify(packageJson.name),
       'process.env.REACT_APP_BUILD_DATE': JSON.stringify(new Date().toLocaleDateString()),
-      'global': 'window.global',
-      'globalThis': 'window'
+      'global': 'globalThis',
+      'globalThis': 'globalThis'
     }),
     new webpack.ProvidePlugin({
       process: 'process/browser.js',

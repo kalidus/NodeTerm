@@ -36,6 +36,12 @@ let _geminicliHandlers = null;
 let _codexcliHandlers = null;
 let _antigravitycliHandlers = null;
 let _hermescliHandlers = null;
+let _browserImportHandlers = null;
+
+function getBrowserImportHandlers() {
+  if (!_browserImportHandlers) _browserImportHandlers = require('./browser-import-handlers');
+  return _browserImportHandlers;
+}
 
 function getAppHandlers() {
   if (!_appHandlers) _appHandlers = require('./app-handlers');
@@ -252,6 +258,7 @@ function registerCriticalHandlers(dependencies) {
   runHandlerStep('antigravity CLI IPC', () => getAntigravityCliHandlers().registerAntigravityCliHandlers());
   runHandlerStep('hermes CLI IPC', () => getHermesCliHandlers().registerHermesCliHandlers());
   runHandlerStep('system monitoring IPC', () => getSystemHandlers().registerSystemMonitoringHandlers());
+  runHandlerStep('browser import IPC', () => getBrowserImportHandlers().registerBrowserImportHandlers());
   runHandlerStep('AI clients IPC', () => registerAIClientHandlers(dependencies));
   runHandlerStep('guacamole IPC', () => getGuacamoleHandlers().registerGuacamoleHandlers(dependencies));
   runHandlerStep('get-system-stats IPC', registerSystemStatsIpcHandler);
@@ -355,5 +362,6 @@ module.exports = {
   getGeminiCliHandlers,
   getCodexCliHandlers,
   getAntigravityCliHandlers,
-  getHermesCliHandlers
+  getHermesCliHandlers,
+  getBrowserImportHandlers
 };

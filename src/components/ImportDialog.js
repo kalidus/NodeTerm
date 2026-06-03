@@ -6,6 +6,7 @@ import { ProgressBar } from 'primereact/progressbar';
 import { Divider } from 'primereact/divider';
 import { TabView, TabPanel } from 'primereact/tabview';
 import KeePassImportPanel from './KeePassImportPanel';
+import BrowserImportPanel from './BrowserImportPanel';
 import { Message } from 'primereact/message';
 import { Dropdown } from 'primereact/dropdown';
 import { InputText } from 'primereact/inputtext';
@@ -1453,14 +1454,33 @@ const ImportDialog = ({
             </TabPanel>
 
             <TabPanel header="Passwords">
-              <KeePassImportPanel
-                defaultContainerName={`KeePass imported - ${new Date().toLocaleDateString()}`}
-                showToast={(opts) => showToast ? showToast(opts) : toast.current?.show && toast.current.show(opts)}
-                onImportPasswordsComplete={(payload) => {
-                  // Emitimos un evento para PasswordManagerSidebar
-                  window.dispatchEvent(new CustomEvent('import-passwords-to-manager', { detail: payload }));
-                }}
-              />
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h5 style={{ margin: '0 0 12px 0', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <i className="pi pi-globe" style={{ color: 'var(--primary-color)' }} />
+                  Navegador web (Chrome, Edge, Brave, Firefox)
+                </h5>
+                <BrowserImportPanel
+                  defaultContainerName={`Browser imported - ${new Date().toLocaleDateString()}`}
+                  showToast={(opts) => showToast ? showToast(opts) : toast.current?.show && toast.current.show(opts)}
+                  onImportPasswordsComplete={(payload) => {
+                    window.dispatchEvent(new CustomEvent('import-passwords-to-manager', { detail: payload }));
+                  }}
+                />
+              </div>
+              <Divider />
+              <div style={{ marginTop: '1.5rem' }}>
+                <h5 style={{ margin: '0 0 12px 0', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <i className="pi pi-key" style={{ color: 'var(--primary-color)' }} />
+                  KeePass (.kdbx)
+                </h5>
+                <KeePassImportPanel
+                  defaultContainerName={`KeePass imported - ${new Date().toLocaleDateString()}`}
+                  showToast={(opts) => showToast ? showToast(opts) : toast.current?.show && toast.current.show(opts)}
+                  onImportPasswordsComplete={(payload) => {
+                    window.dispatchEvent(new CustomEvent('import-passwords-to-manager', { detail: payload }));
+                  }}
+                />
+              </div>
             </TabPanel>
           </TabView>
         </div>

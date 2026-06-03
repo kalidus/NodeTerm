@@ -23,6 +23,7 @@ import { Message } from 'primereact/message';
 import { Tree } from 'primereact/tree';
 import ImportService from '../services/ImportService';
 import exportImportService from '../services/ExportImportService';
+import { mapBrowserEntriesToNodes } from '../utils/passwordImportMapper';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 
 // Definición de fuentes de importación
@@ -90,6 +91,16 @@ const IMPORT_SOURCES = {
         implemented: true,
         defaultFolder: 'Importados/KeePass'
     },
+    browser: {
+        id: 'browser',
+        category: 'passwords',
+        label: 'Navegador web',
+        description: 'Chrome, Edge, Brave o Firefox',
+        icon: 'pi pi-globe',
+        extension: '',
+        implemented: true,
+        defaultFolder: 'Importados/Navegador'
+    },
     onepassword: {
         id: 'onepassword',
         category: 'passwords',
@@ -155,6 +166,11 @@ const ImportWizardDialog = ({
     const [wallixUrl, setWallixUrl] = useState('');
     const [wallixUsername, setWallixUsername] = useState('');
 
+    // Importación desde navegador
+    const [browserProfiles, setBrowserProfiles] = useState([]);
+    const [selectedBrowserProfileId, setSelectedBrowserProfileId] = useState(null);
+    const [firefoxMasterPassword, setFirefoxMasterPassword] = useState('');
+
     // Opciones específicas para NodeTerm
     const [nodetermOptions, setNodeTermOptions] = useState({
         connections: true,
@@ -202,6 +218,9 @@ const ImportWizardDialog = ({
         setImportMode('merge');
         setWallixUrl('');
         setWallixUsername('');
+        setBrowserProfiles([]);
+        setSelectedBrowserProfileId(null);
+        setFirefoxMasterPassword('');
         setNodeTermOptions({
             connections: true,
             passwords: true,
@@ -249,12 +268,32 @@ const ImportWizardDialog = ({
     }, [selectedSource]);
 
     // Manejar selección de fuente
+    const loadBrowserProfiles = useCallback(async () => {
+        if (!window.electron?.browserImport?.listProfiles) {
+            setBrowserProfiles([]);
+            return;
+        }
+        try {
+            const res = await window.electron.browserImport.listProfiles();
+            const list = res?.profiles || [];
+            setBrowserProfiles(list);
+            if (list.length) setSelectedBrowserProfileId(list[0].id);
+        } catch {
+            setBrowserProfiles([]);
+        }
+    }, []);
+
     const handleSourceSelect = (sourceId) => {
         const source = IMPORT_SOURCES[sourceId];
         if (source && source.implemented) {
             setSelectedSource(sourceId);
+            if (sourceId === 'browser') {
+                loadBrowserProfiles();
+            }
         }
     };
+
+    const selectedBrowserProfile = browserProfiles.find((p) => p.id === selectedBrowserProfileId) || null;
 
     // Drag & Drop handlers
     const handleDragOver = (e) => {
@@ -336,6 +375,9 @@ const ImportWizardDialog = ({
                 if (selectedSource === 'wallix') {
                     return wallixUrl && wallixUsername && password;
                 }
+                if (selectedSource === 'browser') {
+                    return !!selectedBrowserProfileId;
+                }
                 if (!selectedFile) return false;
                 // Para KeePass, necesita contraseña o key file
                 if (selectedSource === 'keepass' && !password && !selectedKeyFile) return false;
@@ -380,7 +422,7 @@ const ImportWizardDialog = ({
 
     // Generar vista previa
     const generatePreview = async () => {
-        if (selectedSource !== 'wallix' && !selectedFile) return;
+        if (selectedSource !== 'wallix' && selectedSource !== 'browser' && !selectedFile) return;
         if (!selectedSource) return;
 
         setPreviewLoading(true);
@@ -397,6 +439,9 @@ const ImportWizardDialog = ({
                     break;
                 case 'keepass':
                     await generateKeePassPreview();
+                    break;
+                case 'browser':
+                    await generateBrowserPreview();
                     break;
                 case 'wallix':
                     await generateWallixPreview();
@@ -480,6 +525,41 @@ const ImportWizardDialog = ({
         } catch (error) {
             throw error;
         }
+    };
+
+    const generateBrowserPreview = async () => {
+        if (!selectedBrowserProfile) {
+            throw new Error('Seleccione un perfil de navegador');
+        }
+        setPreviewStatus('Leyendo credenciales del navegador...');
+        let res;
+        if (selectedBrowserProfile.type === 'firefox') {
+            res = await window.electron.browserImport.importFirefox({
+                profilePath: selectedBrowserProfile.profilePath,
+                masterPassword: firefoxMasterPassword
+            });
+        } else {
+            res = await window.electron.browserImport.importChromium({
+                browserId: selectedBrowserProfile.browserId,
+                userDataPath: selectedBrowserProfile.userDataPath,
+                profileDir: selectedBrowserProfile.profileDir
+            });
+        }
+        if (!res?.ok) {
+            throw new Error(res?.error || 'Error al leer el perfil del navegador');
+        }
+        const entries = res.entries || [];
+        const stats = res.stats || { imported: entries.length, skipped: 0 };
+        setPreviewData({
+            type: 'browser',
+            entries,
+            stats: {
+                entries: stats.imported ?? entries.length,
+                skipped: stats.skipped ?? 0,
+                skippedAbe: stats.skippedAbe ?? 0
+            },
+            sampleUrls: entries.slice(0, 5).map((e) => e.url).filter(Boolean)
+        });
     };
 
     const generateKeePassPreview = async () => {
@@ -579,6 +659,9 @@ const ImportWizardDialog = ({
                     break;
                 case 'keepass':
                     await importKeePass();
+                    break;
+                case 'browser':
+                    await importBrowser();
                     break;
                 case 'wallix':
                     await importWallix();
@@ -721,6 +804,46 @@ const ImportWizardDialog = ({
             severity: 'success',
             summary: 'Importación exitosa',
             detail: `Se importaron ${previewData.stats.connections} conexiones de Wallix`,
+            life: 5000
+        });
+    };
+
+    const importBrowser = async () => {
+        setImportStatus('Procesando contraseñas del navegador...');
+        setImportProgress(40);
+
+        const nodes = mapBrowserEntriesToNodes(previewData.entries || []);
+
+        setImportProgress(70);
+        setImportStatus('Guardando...');
+
+        const payload = {
+            nodes,
+            createContainerFolder: createContainerFolder,
+            containerFolderName: containerFolderName
+        };
+
+        if (onImportPasswordsComplete) {
+            onImportPasswordsComplete(payload);
+        } else {
+            window.dispatchEvent(new CustomEvent('import-passwords-to-manager', { detail: payload }));
+        }
+
+        setImportProgress(100);
+        setImportStatus('Completado');
+
+        setImportResult({
+            success: true,
+            stats: {
+                entries: previewData.stats?.entries ?? nodes.length,
+                skipped: previewData.stats?.skipped ?? 0
+            }
+        });
+
+        showToastSafe({
+            severity: 'success',
+            summary: 'Importación exitosa',
+            detail: `Se importaron ${nodes.length} contraseñas del navegador`,
             life: 5000
         });
     };
@@ -965,7 +1088,7 @@ const ImportWizardDialog = ({
                     Gestores de Contraseñas
                 </h5>
                 <div className="import-wizard-source-grid">
-                    {['keepass', 'onepassword', 'bitwarden'].map(id => (
+                    {['browser', 'keepass', 'onepassword', 'bitwarden'].map(id => (
                         <SourceCard
                             key={id}
                             source={IMPORT_SOURCES[id]}
@@ -1009,7 +1132,7 @@ const ImportWizardDialog = ({
                 </h4>
 
                 {/* Dropzone */}
-                {selectedSource !== 'wallix' && (
+                {selectedSource !== 'wallix' && selectedSource !== 'browser' && (
                     <>
                         <div
                             className={`import-wizard-dropzone ${isDragOver ? 'drag-over' : ''} ${selectedFile ? 'has-file' : ''}`}
@@ -1071,6 +1194,7 @@ const ImportWizardDialog = ({
                 {selectedSource === 'nodeterm' && renderNodeTermConfig()}
                 {selectedSource === 'mremoteng' && renderMRemoteNGConfig()}
                 {selectedSource === 'keepass' && renderKeePassConfig()}
+                {selectedSource === 'browser' && renderBrowserConfig()}
                 {selectedSource === 'wallix' && renderWallixConfig()}
             </div>
         );
@@ -1168,6 +1292,79 @@ const ImportWizardDialog = ({
             )}
         </div>
     );
+
+    const renderBrowserConfig = () => {
+        const profileOptions = browserProfiles.map((p) => ({
+            label: `${p.browserLabel} — ${p.profileLabel}`,
+            value: p.id
+        }));
+
+        return (
+            <div className="import-wizard-options">
+                <Message
+                    severity="info"
+                    className="w-full mb-3"
+                    text="Cierra el navegador si la lectura falla. En Chrome 127+ algunas contraseñas pueden omitirse (cifrado App-Bound)."
+                />
+                <div className="import-wizard-field">
+                    <label>
+                        <i className="pi pi-globe" />
+                        Perfil del navegador
+                    </label>
+                    <Dropdown
+                        value={selectedBrowserProfileId}
+                        options={profileOptions}
+                        onChange={(e) => setSelectedBrowserProfileId(e.value)}
+                        placeholder={profileOptions.length ? 'Seleccionar perfil' : 'No se detectaron perfiles'}
+                        style={{ width: '100%' }}
+                    />
+                    <Button
+                        icon="pi pi-refresh"
+                        className="p-button-text p-button-sm mt-2"
+                        onClick={loadBrowserProfiles}
+                        label="Actualizar perfiles"
+                    />
+                </div>
+                {selectedBrowserProfile?.type === 'firefox' && (
+                    <div className="import-wizard-field">
+                        <label>
+                            <i className="pi pi-lock" />
+                            Contraseña maestra de Firefox (opcional)
+                        </label>
+                        <Password
+                            value={firefoxMasterPassword}
+                            onChange={(e) => setFirefoxMasterPassword(e.target.value)}
+                            toggleMask
+                            feedback={false}
+                            placeholder="Solo si configuraste una en Firefox"
+                            inputStyle={{ width: '100%' }}
+                        />
+                    </div>
+                )}
+                <div className="import-wizard-checkbox">
+                    <Checkbox
+                        inputId="browser-create-container"
+                        checked={createContainerFolder}
+                        onChange={(e) => setCreateContainerFolder(e.checked)}
+                    />
+                    <label htmlFor="browser-create-container">
+                        <i className="pi pi-folder-open" />
+                        Crear carpeta contenedora
+                    </label>
+                </div>
+                {createContainerFolder && (
+                    <div className="import-wizard-field" style={{ marginLeft: '28px' }}>
+                        <InputText
+                            value={containerFolderName}
+                            onChange={(e) => setContainerFolderName(e.target.value)}
+                            placeholder="Nombre de la carpeta"
+                            style={{ width: '100%' }}
+                        />
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     const renderKeePassConfig = () => (
         <div className="import-wizard-options">
@@ -1375,6 +1572,17 @@ const ImportWizardDialog = ({
                     {renderPreviewStats()}
                 </div>
 
+                {previewData.type === 'browser' && previewData.sampleUrls?.length > 0 && (
+                    <div className="import-wizard-tree" style={{ marginTop: '1rem' }}>
+                        <h5>URLs de ejemplo:</h5>
+                        <ul style={{ fontSize: 13, marginLeft: 16, color: 'var(--text-color-secondary)' }}>
+                            {previewData.sampleUrls.map((url, i) => (
+                                <li key={i} style={{ wordBreak: 'break-all' }}>{url}</li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+
                 {/* Árbol de estructura (solo para mRemoteNG) */}
                 {previewData.type === 'mremoteng' && previewData.treeNodes && (
                     <div className="import-wizard-tree">
@@ -1428,6 +1636,16 @@ const ImportWizardDialog = ({
                     <div className="import-wizard-stats-grid">
                         <StatCard icon="pi pi-key" label="Contraseñas" value={previewData.stats.entries} color="var(--green-500)" />
                         <StatCard icon="pi pi-folder" label="Grupos" value={previewData.stats.groups} color="var(--orange-500)" />
+                    </div>
+                );
+            case 'browser':
+                return (
+                    <div className="import-wizard-stats-grid">
+                        <StatCard icon="pi pi-key" label="Contraseñas" value={previewData.stats.entries} color="var(--green-500)" />
+                        <StatCard icon="pi pi-ban" label="Omitidas" value={previewData.stats.skipped} color="var(--orange-500)" />
+                        {(previewData.stats.skippedAbe ?? 0) > 0 && (
+                            <StatCard icon="pi pi-shield" label="App-Bound" value={previewData.stats.skippedAbe} color="var(--red-500)" />
+                        )}
                     </div>
                 );
             default:
