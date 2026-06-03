@@ -162,6 +162,23 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
   
   const [networkScanSubnet, setNetworkScanSubnet] = useState('');
   
+  // Cyberpunk Network Scan states
+  const [cyberpunkMode, setCyberpunkMode] = useState(true);
+  const [selectedCyberHost, setSelectedCyberHost] = useState(null);
+  const [cyberSubScanLoading, setCyberSubScanLoading] = useState(false);
+  const [cyberSubScanResult, setCyberSubScanResult] = useState(null);
+  const [cyberActiveTab, setCyberActiveTab] = useState('details');
+  const [cyberPingResults, setCyberPingResults] = useState([]);
+  const [cyberScanType, setCyberScanType] = useState('radar');
+  const cyberConsoleRef = React.useRef(null);
+
+  // Auto-scroll para la consola cyberpunk
+  useEffect(() => {
+    if (cyberpunkMode && cyberConsoleRef.current) {
+      cyberConsoleRef.current.scrollTop = cyberConsoleRef.current.scrollHeight;
+    }
+  }, [liveOutput, cyberpunkMode]);
+  
   const [dnsLookupDomain, setDnsLookupDomain] = useState('');
   const [dnsLookupType, setDnsLookupType] = useState('A');
   
@@ -904,6 +921,150 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
     );
   };
 
+  // Cyberpunk Scan Auto-detect & Scan trigger
+  const autoDetectAndScan = async () => {
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    setLiveOutput('');
+    setSelectedCyberHost(null);
+    setCyberSubScanResult(null);
+    
+    try {
+      const ipc = window?.electron?.ipcRenderer;
+      if (!ipc) throw new Error('IPC no disponible');
+      
+      const result = await ipc.invoke('network-tools:get-interfaces');
+      let targetSubnet = networkScanSubnet;
+      
+      if (result && Array.isArray(result.interfaces) && result.interfaces.length > 0) {
+        setNetworkInterfaces(result.interfaces);
+        // Buscar primera interfaz IPv4 activa y no interna
+        const activeInterface = result.interfaces.find(i => i.family === 'IPv4' && !i.internal) || result.interfaces.find(i => i.family === 'IPv4');
+        if (activeInterface && activeInterface.cidr) {
+          targetSubnet = activeInterface.cidr;
+          setNetworkScanSubnet(activeInterface.cidr);
+        }
+      }
+      
+      if (!targetSubnet) {
+        throw new Error('No se pudo detectar una interfaz de red local IPv4 activa. Por favor, escribe la subred manualmente.');
+      }
+      
+      setCyberpunkMode(true);
+      
+      // Iniciar el escaneo con el IPC
+      const response = await ipc.invoke('network-tools:network-scan', { 
+        subnet: targetSubnet.trim(),
+        timeout: 1000 
+      });
+      
+      if (!response || response.success === false) {
+        throw new Error(response?.error || 'Error ejecutando el escaneo de red');
+      }
+      
+      setResult(response);
+    } catch (err) {
+      console.error('Error in autoDetectAndScan:', err);
+      setError(err?.message || 'Error al autodetectar e iniciar el escaneo');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Cyberpunk Sub-scan: Port Scan
+  const cyberScanPorts = async (hostIp) => {
+    setCyberSubScanLoading(true);
+    setCyberSubScanResult(null);
+    setCyberActiveTab('ports');
+    try {
+      const ipc = window?.electron?.ipcRenderer;
+      if (!ipc) throw new Error('IPC no disponible');
+      
+      const response = await ipc.invoke('network-tools:port-scan', { 
+        host: hostIp, 
+        ports: '21,22,23,25,53,80,110,135,139,143,443,445,1433,3306,3389,8080',
+        timeout: 1000
+      });
+      setCyberSubScanResult(response);
+    } catch (err) {
+      console.error(err);
+      setCyberSubScanResult({ success: false, error: err.message });
+    } finally {
+      setCyberSubScanLoading(false);
+    }
+  };
+
+  // Cyberpunk Sub-scan: Live Ping
+  const [cyberPingActive, setCyberPingActive] = useState(false);
+  const cyberPingIntervalRef = React.useRef(null);
+
+  const toggleCyberPing = (hostIp) => {
+    if (cyberPingActive) {
+      if (cyberPingIntervalRef.current) {
+        clearInterval(cyberPingIntervalRef.current);
+        cyberPingIntervalRef.current = null;
+      }
+      setCyberPingActive(false);
+    } else {
+      setCyberPingActive(true);
+      setCyberActiveTab('ping');
+      setCyberPingResults([]);
+      
+      const pingFn = async () => {
+        try {
+          const ipc = window?.electron?.ipcRenderer;
+          if (!ipc) return;
+          const start = Date.now();
+          const response = await ipc.invoke('network-tools:ping', { 
+            host: hostIp, 
+            count: 1, 
+            timeout: 2 
+          });
+          const time = Date.now() - start;
+          const latency = response && response.success && response.times && response.times.length > 0 
+            ? response.times[0] 
+            : (response.success ? time : null);
+            
+          setCyberPingResults(prev => {
+            const next = [...prev, latency === null ? -1 : latency];
+            if (next.length > 15) next.shift();
+            return next;
+          });
+        } catch (e) {
+          setCyberPingResults(prev => {
+            const next = [...prev, -1];
+            if (next.length > 15) next.shift();
+            return next;
+          });
+        }
+      };
+      
+      pingFn();
+      cyberPingIntervalRef.current = setInterval(pingFn, 1500);
+    }
+  };
+
+  // Limpieza de intervalos
+  useEffect(() => {
+    return () => {
+      if (cyberPingIntervalRef.current) {
+        clearInterval(cyberPingIntervalRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (cyberPingIntervalRef.current) {
+      clearInterval(cyberPingIntervalRef.current);
+      cyberPingIntervalRef.current = null;
+      setCyberPingActive(false);
+    }
+    setCyberSubScanResult(null);
+    setCyberActiveTab('details');
+    setCyberPingResults([]);
+  }, [selectedCyberHost]);
+
   // Handler genérico para ejecutar herramientas
   const executeTool = useCallback(async () => {
     setLoading(true);
@@ -1159,6 +1320,710 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
       default:
         return <div>Selecciona una herramienta</div>;
     }
+  };
+
+  // Estilos CSS para el Modo Cyberpunk
+  const cyberpunkStyles = `
+    @keyframes cyber-flicker {
+      0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 0.99; filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.8)); }
+      20%, 24%, 55% { opacity: 0.4; filter: none; }
+    }
+    @keyframes cyber-radar-sweep {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @keyframes pulse-green {
+      0% { transform: scale(1); opacity: 1; filter: drop-shadow(0 0 3px #39ff14); }
+      50% { transform: scale(1.3); opacity: 0.8; filter: drop-shadow(0 0 10px #39ff14); }
+      100% { transform: scale(1); opacity: 1; filter: drop-shadow(0 0 3px #39ff14); }
+    }
+    @keyframes pulse-pink {
+      0% { transform: scale(1); opacity: 1; filter: drop-shadow(0 0 3px #ff007f); }
+      50% { transform: scale(1.3); opacity: 0.8; filter: drop-shadow(0 0 10px #ff007f); }
+      100% { transform: scale(1); opacity: 1; filter: drop-shadow(0 0 3px #ff007f); }
+    }
+    @keyframes scanline-anim {
+      0% { transform: translateY(-100%); }
+      100% { transform: translateY(100%); }
+    }
+    .cyber-hud {
+      font-family: 'Courier New', Courier, monospace;
+      background-color: #03080e;
+      color: #00f0ff;
+      position: relative;
+      overflow: hidden;
+      border: 2px solid #00f0ff;
+      border-radius: 8px;
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.25);
+    }
+    .cyber-hud::before {
+      content: " ";
+      display: block;
+      position: absolute;
+      top: 0; left: 0; bottom: 0; right: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+      background-size: 100% 4px;
+      z-index: 99;
+      pointer-events: none;
+    }
+    .cyber-scanline {
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 3px;
+      background: rgba(0, 240, 255, 0.3);
+      box-shadow: 0 0 8px #00f0ff;
+      animation: scanline-anim 6s linear infinite;
+      pointer-events: none;
+      z-index: 99;
+    }
+    .cyber-grid-container {
+      background-image: 
+        linear-gradient(rgba(0, 240, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 240, 255, 0.05) 1px, transparent 1px);
+      background-size: 30px 30px;
+    }
+    .cyber-text-neon {
+      color: #00f0ff;
+      text-shadow: 0 0 8px rgba(0, 240, 255, 0.7);
+      animation: cyber-flicker 5s infinite;
+    }
+    .cyber-text-green {
+      color: #39ff14;
+      text-shadow: 0 0 8px rgba(57, 255, 20, 0.7);
+    }
+    .cyber-text-pink {
+      color: #ff007f;
+      text-shadow: 0 0 8px rgba(255, 0, 127, 0.7);
+    }
+    .cyber-card {
+      background: rgba(4, 15, 26, 0.75);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      border-radius: 4px;
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .cyber-card:hover {
+      background: rgba(6, 28, 48, 0.9);
+      border-color: #00f0ff;
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+      transform: translateY(-1px);
+    }
+    .cyber-card-active {
+      background: rgba(30, 6, 20, 0.85) !important;
+      border-color: #ff007f !important;
+      box-shadow: 0 0 12px rgba(255, 0, 127, 0.4) !important;
+    }
+    .cyber-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0; right: 0;
+      width: 6px; height: 6px;
+      background: #00f0ff;
+      clip-path: polygon(100% 0, 0 100%, 100% 100%);
+    }
+    .cyber-card-active::after {
+      background: #ff007f;
+    }
+    .cyber-panel-border {
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      background: rgba(0, 5, 10, 0.6);
+      position: relative;
+    }
+    .cyber-console-logs {
+      background: #010408;
+      border: 1px solid rgba(0, 240, 255, 0.25);
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.75rem;
+      color: #39ff14;
+      overflow-y: auto;
+      padding: 0.5rem;
+      white-space: pre-wrap;
+      text-shadow: 0 0 3px rgba(57, 255, 20, 0.3);
+    }
+    .cyber-corner-accent::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; width: 10px; height: 2px; background: #00f0ff;
+    }
+    .cyber-corner-accent::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; width: 2px; height: 10px; background: #00f0ff;
+    }
+  `;
+
+  // Parser para extraer hosts del liveOutput en tiempo real
+  const parseActiveHostsFromLiveOutput = (outputText) => {
+    if (!outputText) return [];
+    const lines = outputText.split('\n');
+    const hosts = [];
+    lines.forEach(line => {
+      // Formato: "✓ 192.168.1.1 - ACTIVO (2ms) [1/254] 0.4%"
+      const matchActive = line.match(/✓\s+(\d+\.\d+\.\d+\.\d+)\s+-\s+ACTIVO\s+\((\d+)ms\)/);
+      if (matchActive) {
+        const ip = matchActive[1];
+        const responseTime = parseInt(matchActive[2]);
+        if (!hosts.some(h => h.ip === ip)) {
+          hosts.push({ ip, responseTime, hostname: null });
+        }
+      }
+      
+      // Formato: "  192.168.1.1 -> hostname"
+      const matchHostname = line.match(/\s+(\d+\.\d+\.\d+\.\d+)\s+->\s+(.+)/);
+      if (matchHostname) {
+        const ip = matchHostname[1];
+        const hostname = matchHostname[2].trim();
+        const existing = hosts.find(h => h.ip === ip);
+        if (existing) {
+          existing.hostname = hostname;
+        } else {
+          hosts.push({ ip, responseTime: 0, hostname });
+        }
+      }
+    });
+    return hosts;
+  };
+
+  // Renderizador de Gráfica de Latencia ASCII para Ping Continuo
+  const renderPingGraph = () => {
+    if (cyberPingResults.length === 0) {
+      return <div style={{ color: 'rgba(0, 240, 255, 0.4)', fontStyle: 'italic', padding: '0.5rem' }}>Esperando señales de ping...</div>;
+    }
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', padding: '5px', border: '1px dashed rgba(0, 240, 255, 0.25)', background: '#02060b', borderRadius: '4px' }}>
+        {cyberPingResults.map((t, idx) => {
+          if (t === -1) {
+            return (
+              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: '#ff0055' }}>
+                <span>TRACE #{idx+1}:</span>
+                <span>LOST / REQUEST TIMEOUT</span>
+              </div>
+            );
+          }
+          const barCount = Math.min(15, Math.max(1, Math.round(t / 10)));
+          const bars = "█".repeat(barCount) + "░".repeat(15 - barCount);
+          return (
+            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: t < 15 ? '#39ff14' : t < 60 ? '#00f0ff' : '#ffb700' }}>
+              <span>TRACE #{idx+1}: {t}ms</span>
+              <span style={{ fontFamily: 'monospace' }}>|{bars}|</span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // Renderizador de la vista de topología física de red interactiva
+  const renderTopologyView = () => {
+    const currentHosts = result ? (result.hosts || []) : parseActiveHostsFromLiveOutput(liveOutput);
+    if (currentHosts.length === 0) {
+      return (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '150px', color: 'rgba(0, 240, 255, 0.4)', fontStyle: 'italic' }}>
+          [NO ACTIVE NODES DETECTED]
+        </div>
+      );
+    }
+    
+    const activeSubnet = result ? result.subnet : networkScanSubnet;
+    const gatewayIp = activeSubnet.replace(/\/\d+$/, '').split('.').slice(0, 3).join('.') + '.1';
+    
+    const otherHosts = currentHosts.filter(h => h.ip !== gatewayIp);
+    const totalNodes = otherHosts.length;
+    
+    const width = 200;
+    const height = Math.max(160, totalNodes * 28 + 40);
+    const centerX = width / 2;
+    const gatewayY = 20;
+    
+    return (
+      <div style={{ 
+        width: '100%', 
+        maxHeight: '180px', 
+        overflowY: 'auto', 
+        border: '1px solid rgba(0, 240, 255, 0.15)', 
+        background: 'rgba(0, 5, 10, 0.4)', 
+        borderRadius: '4px', 
+        padding: '5px',
+        boxSizing: 'border-box'
+      }}>
+        <svg width={width} height={height} style={{ display: 'block', margin: '0 auto' }}>
+          {/* Cables de Red */}
+          {otherHosts.map((host, idx) => {
+            const nodeY = 55 + idx * 26;
+            const isSelected = selectedCyberHost?.ip === host.ip;
+            return (
+              <path
+                key={`path-${host.ip}`}
+                d={`M ${centerX} ${gatewayY} L ${centerX - 35} ${nodeY} L ${centerX + 15} ${nodeY}`}
+                fill="none"
+                stroke={isSelected ? '#ff007f' : 'rgba(0, 240, 255, 0.25)'}
+                strokeWidth="1.2"
+                strokeDasharray={isSelected ? "3 1" : "none"}
+              />
+            );
+          })}
+          
+          {/* Nodo central del Gateway */}
+          <g style={{ cursor: 'pointer' }} onClick={() => setSelectedCyberHost(currentHosts.find(h => h.ip === gatewayIp) || { ip: gatewayIp, responseTime: 1, hostname: 'Gateway' })}>
+            <circle cx={centerX} cy={gatewayY} r="6" fill="#00f0ff" filter="drop-shadow(0 0 3px #00f0ff)" />
+            <text x={centerX} y={gatewayY - 8} textAnchor="middle" fill="#00f0ff" fontSize="7" fontWeight="bold" fontFamily="monospace">GW .1</text>
+          </g>
+          
+          {/* Dispositivos hijos */}
+          {otherHosts.map((host, idx) => {
+            const nodeY = 55 + idx * 26;
+            const nodeX = centerX - 35;
+            const isSelected = selectedCyberHost?.ip === host.ip;
+            const lastOctet = host.ip.split('.').pop();
+            
+            return (
+              <g key={`node-${host.ip}`} style={{ cursor: 'pointer' }} onClick={() => setSelectedCyberHost(host)}>
+                <circle cx={nodeX} cy={nodeY} r="3.5" fill={isSelected ? "#ff007f" : "#39ff14"} style={{ animation: isSelected ? 'pulse-pink 2s infinite' : 'pulse-green 2s infinite' }} />
+                <circle cx={nodeX} cy={nodeY} r="7" fill="transparent" />
+                <text x={nodeX + 8} y={nodeY + 3} fill={isSelected ? "#ff007f" : "#ffffff"} fontSize="7" fontFamily="monospace">
+                  .{lastOctet} {host.hostname ? `(${host.hostname.substring(0, 8)})` : ''}
+                </text>
+                <text x={nodeX - 8} y={nodeY + 3} textAnchor="end" fill="rgba(0, 240, 255, 0.5)" fontSize="6" fontFamily="monospace">
+                  {host.responseTime}ms
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+    );
+  };
+
+  // Renderizador principal del HUD Cyberpunk (utilizado tanto en ejecución como en resultados finales)
+  const renderCyberpunkHUD = (isScanning) => {
+    const currentHosts = result ? (result.hosts || []) : parseActiveHostsFromLiveOutput(liveOutput);
+    
+    let progressPercent = 0;
+    if (isScanning && liveOutput) {
+      const matchPercent = liveOutput.match(/(\d+\.\d+)%/g);
+      if (matchPercent && matchPercent.length > 0) {
+        const last = matchPercent[matchPercent.length - 1];
+        progressPercent = parseFloat(last);
+      }
+    } else if (!isScanning) {
+      progressPercent = 100;
+    }
+
+    return (
+      <div className="cyber-hud cyber-grid-container" style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        minHeight: '480px',
+        padding: '1rem',
+        gap: '1rem',
+        position: 'relative',
+        boxSizing: 'border-box'
+      }}>
+        <style>{cyberpunkStyles}</style>
+        
+        <div className="cyber-scanline"></div>
+        
+        {/* Cabecera del Cyber HUD */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          borderBottom: '2px solid rgba(0, 240, 255, 0.4)',
+          paddingBottom: '0.5rem',
+          flexShrink: 0
+        }}>
+          <div>
+            <span className="cyber-text-neon" style={{ fontWeight: 'bold', fontSize: '1.1rem', letterSpacing: '2px' }}>
+              NET_DECRYPTOR // SUBNET_MAP: {result ? result.subnet : networkScanSubnet}
+            </span>
+            <div style={{ fontSize: '0.65rem', color: 'rgba(0, 240, 255, 0.6)', marginTop: '2px' }}>
+              STATUS: {isScanning ? 'DECRYPTING_RANGE...' : 'SYSTEMS_RESOLVED_SECURE'}
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '0.65rem', color: 'rgba(0, 240, 255, 0.6)' }}>FOUND_NODES</div>
+              <span className="cyber-text-green" style={{ fontSize: '1rem', fontWeight: 'bold' }}>
+                {currentHosts.length} ACTIVE
+              </span>
+            </div>
+            {isScanning && (
+              <div style={{
+                width: '60px',
+                height: '4px',
+                background: 'rgba(0, 240, 255, 0.1)',
+                border: '1px solid #00f0ff',
+                borderRadius: '2px',
+                overflow: 'hidden'
+              }}>
+                <div style={{ width: `${progressPercent}%`, height: '100%', background: '#00f0ff', boxShadow: '0 0 5px #00f0ff' }}></div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Grid de Contenidos */}
+        <div style={{
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: '1rem',
+          flex: 1,
+          minHeight: 0
+        }}>
+          {/* Columna Izquierda: Radar / Topología */}
+          <div className="cyber-panel-border cyber-corner-accent" style={{
+            flex: '1.2',
+            display: 'flex',
+            flexDirection: 'column',
+            padding: '0.75rem',
+            position: 'relative',
+            minHeight: '260px'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '0.5rem',
+              borderBottom: '1px dashed rgba(0, 240, 255, 0.2)',
+              paddingBottom: '0.25rem',
+              flexShrink: 0
+            }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#00f0ff' }}>
+                [SENSORS_FEED: {cyberScanType.toUpperCase()}]
+              </span>
+              <div style={{ display: 'flex', gap: '0.25rem' }}>
+                <button 
+                  onClick={() => setCyberScanType('radar')} 
+                  style={{ 
+                    background: cyberScanType === 'radar' ? '#00f0ff' : 'transparent',
+                    color: cyberScanType === 'radar' ? '#000' : '#00f0ff',
+                    border: '1px solid #00f0ff',
+                    padding: '2px 6px',
+                    fontSize: '0.65rem',
+                    cursor: 'pointer',
+                    borderRadius: '3px'
+                  }}
+                >
+                  RADAR
+                </button>
+                <button 
+                  onClick={() => setCyberScanType('topology')} 
+                  style={{ 
+                    background: cyberScanType === 'topology' ? '#00f0ff' : 'transparent',
+                    color: cyberScanType === 'topology' ? '#000' : '#00f0ff',
+                    border: '1px solid #00f0ff',
+                    padding: '2px 6px',
+                    fontSize: '0.65rem',
+                    cursor: 'pointer',
+                    borderRadius: '3px'
+                  }}
+                >
+                  MAPA
+                </button>
+              </div>
+            </div>
+            
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0 }}>
+              {cyberScanType === 'radar' ? (
+                <svg viewBox="0 0 200 200" style={{ width: '100%', height: '100%', maxWidth: '200px', maxHeight: '200px' }}>
+                  <circle cx="100" cy="100" r="90" fill="none" stroke="rgba(0, 240, 255, 0.15)" strokeWidth="1" />
+                  <circle cx="100" cy="100" r="60" fill="none" stroke="rgba(0, 240, 255, 0.15)" strokeWidth="1" />
+                  <circle cx="100" cy="100" r="30" fill="none" stroke="rgba(0, 240, 255, 0.15)" strokeWidth="1" />
+                  <line x1="10" y1="100" x2="190" y2="100" stroke="rgba(0, 240, 255, 0.15)" strokeWidth="1" />
+                  <line x1="100" y1="10" x2="100" y2="190" stroke="rgba(0, 240, 255, 0.15)" strokeWidth="1" />
+                  <line x1="100" y1="100" x2="100" y2="10" stroke="#00f0ff" strokeWidth="1.5" style={{ transformOrigin: '100px 100px', animation: 'cyber-radar-sweep 4s linear infinite' }} />
+                  
+                  {currentHosts.map((host) => {
+                    const lastOctet = parseInt(host.ip.split('.').pop()) || 1;
+                    const angle = (lastOctet * 17.5) * (Math.PI / 180);
+                    const radius = 25 + (lastOctet % 5) * 12;
+                    const x = 100 + radius * Math.cos(angle);
+                    const y = 100 + radius * Math.sin(angle);
+                    const isSelected = selectedCyberHost?.ip === host.ip;
+                    return (
+                      <g key={host.ip} style={{ cursor: 'pointer' }} onClick={() => setSelectedCyberHost(host)}>
+                        <circle cx={x} cy={y} r={isSelected ? "5" : "3"} fill={isSelected ? "#ff007f" : "#39ff14"} style={{ animation: isSelected ? 'pulse-pink 2s infinite' : 'pulse-green 2s infinite' }} />
+                        <circle cx={x} cy={y} r="8" fill="transparent" />
+                      </g>
+                    );
+                  })}
+                </svg>
+              ) : (
+                renderTopologyView()
+              )}
+            </div>
+          </div>
+
+          {/* Columna Central: Lista de Hosts y Terminal Logs */}
+          <div style={{
+            flex: '1.5',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.75rem',
+            minHeight: '260px'
+          }}>
+            <div className="cyber-panel-border" style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              padding: '0.75rem',
+              overflow: 'hidden'
+            }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#00f0ff', marginBottom: '0.5rem', borderBottom: '1px dashed rgba(0, 240, 255, 0.2)', paddingBottom: '0.25rem', flexShrink: 0 }}>
+                [DETECTED_HOSTS]
+              </div>
+              <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.4rem', paddingRight: '2px' }}>
+                {currentHosts.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '2rem', color: 'rgba(0, 240, 255, 0.4)', fontStyle: 'italic', fontSize: '0.8rem' }}>
+                    {isScanning ? 'Buscando dispositivos activos...' : 'No se encontraron hosts activos en la red.'}
+                  </div>
+                ) : (
+                  currentHosts.map(host => {
+                    const isSelected = selectedCyberHost?.ip === host.ip;
+                    return (
+                      <div 
+                        key={host.ip}
+                        className={`cyber-card ${isSelected ? 'cyber-card-active' : ''}`}
+                        onClick={() => setSelectedCyberHost(host)}
+                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                      >
+                        <div>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: isSelected ? '#ff007f' : '#ffffff' }}>
+                            IP: {host.ip}
+                          </div>
+                          <div style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.5)', marginTop: '2px' }}>
+                            Host: {host.hostname || 'Desconocido'}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <span className="cyber-badge" style={{ 
+                            borderColor: host.responseTime <= 20 ? '#39ff14' : host.responseTime <= 100 ? '#00f0ff' : '#ffb700',
+                            color: host.responseTime <= 20 ? '#39ff14' : host.responseTime <= 100 ? '#00f0ff' : '#ffb700',
+                            background: 'rgba(0, 0, 0, 0.4)'
+                          }}>
+                            {host.responseTime} ms
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            <div style={{ height: '110px', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+              <div style={{ fontSize: '0.65rem', color: '#39ff14', marginBottom: '2px', fontWeight: 'bold' }}>
+                LIVE_FEED:
+              </div>
+              <div ref={cyberConsoleRef} className="cyber-console-logs" style={{ flex: 1 }}>
+                {liveOutput || 'LOG_PROBE: Esperando señales de red...'}
+              </div>
+            </div>
+          </div>
+
+          {/* Columna Derecha: Inspector / Panel Lateral de Control */}
+          <div className="cyber-panel-border" style={{
+            flex: '1.3',
+            display: 'flex',
+            flexDirection: 'column',
+            padding: '0.75rem',
+            border: '1px solid rgba(0, 240, 255, 0.3)',
+            background: 'rgba(4, 12, 22, 0.8)',
+            minHeight: '260px'
+          }}>
+            {!selectedCyberHost ? (
+              <div style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'rgba(0, 240, 255, 0.45)',
+                fontSize: '0.75rem',
+                textAlign: 'center',
+                padding: '1rem',
+                border: '1px dashed rgba(0, 240, 255, 0.2)'
+              }}>
+                <i className="pi pi-lock" style={{ fontSize: '1.5rem', marginBottom: '0.5rem', animation: 'cyber-flicker 4s infinite' }} />
+                <span>SELECCIONA UN NODO DE RED</span>
+                <span style={{ fontSize: '0.6rem', marginTop: '5px', opacity: 0.8 }}>[AGUARDANDO ANALIZADOR HUD]</span>
+              </div>
+            ) : (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                <div style={{ borderBottom: '1px solid rgba(0, 240, 255, 0.3)', paddingBottom: '0.5rem', marginBottom: '0.5rem', flexShrink: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span className="cyber-text-pink" style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>
+                      NODE_INSPECTION
+                    </span>
+                    <button 
+                      onClick={() => setSelectedCyberHost(null)} 
+                      style={{ background: 'transparent', border: 'none', color: '#ff007f', cursor: 'pointer', fontSize: '0.75rem' }}
+                    >
+                      Cerrar
+                    </button>
+                  </div>
+                  <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#ffffff', marginTop: '0.25rem', fontFamily: 'monospace' }}>
+                    {selectedCyberHost.ip}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', borderBottom: '1px solid rgba(0, 240, 255, 0.2)', marginBottom: '0.5rem', flexShrink: 0 }}>
+                  {['details', 'ports', 'ping'].map(tab => (
+                    <button
+                      key={tab}
+                      onClick={() => {
+                        setCyberActiveTab(tab);
+                        setCyberSubScanResult(null);
+                      }}
+                      style={{
+                        flex: 1,
+                        background: cyberActiveTab === tab ? 'rgba(0, 240, 255, 0.15)' : 'transparent',
+                        border: 'none',
+                        borderBottom: cyberActiveTab === tab ? '2px solid #00f0ff' : 'none',
+                        color: cyberActiveTab === tab ? '#00f0ff' : 'rgba(255, 255, 255, 0.6)',
+                        padding: '4px 0',
+                        fontSize: '0.65rem',
+                        cursor: 'pointer',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      {tab.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+
+                <div style={{ flex: 1, overflowY: 'auto', fontSize: '0.75rem', display: 'flex', flexDirection: 'column' }}>
+                  {cyberActiveTab === 'details' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
+                      <div style={{ background: 'rgba(0, 240, 255, 0.05)', padding: '0.5rem', borderRadius: '4px', border: '1px solid rgba(0, 240, 255, 0.15)' }}>
+                        <div style={{ color: 'rgba(0, 240, 255, 0.6)', fontSize: '0.6rem' }}>RESOLVED_HOSTNAME</div>
+                        <div style={{ fontWeight: 'bold', color: '#fff', fontSize: '0.8rem' }}>{selectedCyberHost.hostname || '[NONE]'}</div>
+                      </div>
+                      
+                      <div style={{ background: 'rgba(0, 240, 255, 0.05)', padding: '0.5rem', borderRadius: '4px', border: '1px solid rgba(0, 240, 255, 0.15)' }}>
+                        <div style={{ color: 'rgba(0, 240, 255, 0.6)', fontSize: '0.6rem' }}>LATENCY_HEALTH</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '3px' }}>
+                          <span style={{ fontWeight: 'bold', color: selectedCyberHost.responseTime < 30 ? '#39ff14' : '#ffb700' }}>
+                            {selectedCyberHost.responseTime}ms
+                          </span>
+                          <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+                            <div style={{ 
+                              width: `${Math.max(5, 100 - selectedCyberHost.responseTime)}%`, 
+                              height: '100%', 
+                              background: selectedCyberHost.responseTime < 30 ? '#39ff14' : '#ffb700' 
+                            }}></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                        <Button 
+                          label="Analizar Puertos 🔓" 
+                          icon="pi pi-shield" 
+                          onClick={() => cyberScanPorts(selectedCyberHost.ip)}
+                          disabled={cyberSubScanLoading}
+                          style={{
+                            background: 'linear-gradient(135deg, #00f0ff 0%, #0072ff 100%)',
+                            border: 'none',
+                            borderRadius: '4px',
+                            padding: '0.4rem',
+                            fontSize: '0.7rem',
+                            fontWeight: 'bold',
+                            color: '#000',
+                            width: '100%',
+                            boxShadow: '0 0 5px rgba(0, 240, 255, 0.3)'
+                          }}
+                        />
+                        
+                        <Button 
+                          label={cyberPingActive ? "Detener Ping ⏹" : "Ping Continuo ⚡"} 
+                          icon={cyberPingActive ? "pi pi-stop" : "pi pi-play"} 
+                          onClick={() => toggleCyberPing(selectedCyberHost.ip)}
+                          style={{
+                            background: cyberPingActive ? '#ff007f' : 'rgba(255,255,255,0.06)',
+                            border: cyberPingActive ? 'none' : '1px solid rgba(255,255,255,0.15)',
+                            borderRadius: '4px',
+                            padding: '0.4rem',
+                            fontSize: '0.7rem',
+                            fontWeight: 'bold',
+                            color: '#fff',
+                            width: '100%'
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {cyberActiveTab === 'ports' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
+                      {cyberSubScanLoading ? (
+                        <div style={{ textAlign: 'center', padding: '1.5rem', color: '#00f0ff' }}>
+                          <ProgressSpinner style={{ width: '20px', height: '20px', marginBottom: '0.5rem' }} />
+                          <div>DESENCRIPTANDO PUERTOS...</div>
+                        </div>
+                      ) : cyberSubScanResult ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                          <div style={{ fontSize: '0.65rem', color: '#ff007f', fontWeight: 'bold' }}>
+                            [OPEN_TCP_PORTS_FOUND]
+                          </div>
+                          {cyberSubScanResult.success && cyberSubScanResult.openPorts && cyberSubScanResult.openPorts.length > 0 ? (
+                            cyberSubScanResult.openPorts.map(p => (
+                              <div key={p.port} style={{ 
+                                display: 'flex', 
+                                justifyContent: 'space-between', 
+                                padding: '4px 6px', 
+                                background: 'rgba(57, 255, 20, 0.08)', 
+                                border: '1px solid rgba(57, 255, 20, 0.2)',
+                                borderRadius: '3px',
+                                color: '#39ff14'
+                              }}>
+                                <span>PORT {p.port}</span>
+                                <span style={{ fontWeight: 'bold' }}>{p.service.toUpperCase()}</span>
+                              </div>
+                            ))
+                          ) : (
+                            <div style={{ 
+                              padding: '8px', 
+                              background: 'rgba(255, 0, 127, 0.08)', 
+                              border: '1px solid rgba(255, 0, 127, 0.2)',
+                              borderRadius: '3px',
+                              color: '#ff007f',
+                              textAlign: 'center',
+                              fontStyle: 'italic'
+                            }}>
+                              [NO OPEN PORTS DETECTED]
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div style={{ textAlign: 'center', padding: '1rem', color: 'rgba(255, 255, 255, 0.4)', fontStyle: 'italic' }}>
+                          Presiona "Analizar Puertos" en la pestaña anterior para iniciar el escaneo local.
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {cyberActiveTab === 'ping' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px', borderBottom: '1px dashed rgba(0, 240, 255, 0.2)', paddingBottom: '3px' }}>
+                        <span style={{ fontSize: '0.65rem', color: '#00f0ff', fontWeight: 'bold' }}>[LATENCY_TRACE_HUD]</span>
+                        <span style={{ fontSize: '0.65rem', color: '#ff007f', cursor: 'pointer' }} onClick={() => toggleCyberPing(selectedCyberHost.ip)}>
+                          {cyberPingActive ? '[DETENER]' : '[PROBAR]'}
+                        </span>
+                      </div>
+                      {renderPingGraph()}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // Renderizar resultados según la herramienta
@@ -1501,6 +2366,9 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
         );
 
       case 'network-scan':
+        if (cyberpunkMode) {
+          return renderCyberpunkHUD(false);
+        }
         return (
           <div style={resultBoxStyle}>
             <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -3037,8 +3905,24 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                 {selectedTool === 'network-scan' && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <span style={{ color: '#f59e0b', fontSize: '0.75rem', fontWeight: '600' }}>Subred:</span>
-                    <InputText value={networkScanSubnet} onChange={(e) => setNetworkScanSubnet(e.target.value)} placeholder="192.168.1.0/24" onKeyPress={(e) => e.key === 'Enter' && executeTool()} style={{ width: '200px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} />
+                    <InputText value={networkScanSubnet} onChange={(e) => setNetworkScanSubnet(e.target.value)} placeholder="192.168.1.0/24" onKeyPress={(e) => e.key === 'Enter' && executeTool()} style={{ width: '160px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} />
                     <Button label="Escanear" icon="pi pi-search" onClick={executeTool} disabled={loading} style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem' }} />
+                    <Button label="Cyber-Escaneo ⚡" icon="pi pi-bolt" onClick={autoDetectAndScan} disabled={loading} style={{ background: 'linear-gradient(135deg, #00f0ff 0%, #ff007f 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem', fontWeight: 'bold', boxShadow: '0 0 10px rgba(0, 240, 255, 0.4)', color: '#fff' }} />
+                    <Button 
+                      label={cyberpunkMode ? "Cyber: ON 🕶️" : "Cyber: OFF 🕶️"} 
+                      icon={cyberpunkMode ? "pi pi-eye" : "pi pi-eye-slash"}
+                      onClick={() => setCyberpunkMode(!cyberpunkMode)} 
+                      style={{ 
+                        background: cyberpunkMode ? 'linear-gradient(135deg, rgba(255,0,127,0.2) 0%, rgba(124,0,255,0.2) 100%)' : 'rgba(255,255,255,0.06)',
+                        border: cyberpunkMode ? '1px solid #ff007f' : '1px solid rgba(255,255,255,0.15)',
+                        borderRadius: '6px', 
+                        padding: '0.35rem 0.6rem', 
+                        height: '30px', 
+                        fontSize: '0.75rem',
+                        color: cyberpunkMode ? '#ff007f' : 'var(--text-color-secondary)',
+                        boxShadow: cyberpunkMode ? '0 0 8px rgba(255,0,127,0.2)' : 'none'
+                      }} 
+                    />
                   </div>
                 )}
                 {selectedTool === 'dns-lookup' && (
@@ -3879,7 +4763,7 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                   borderRadius: '8px',
                   border: '1.5px solid rgba(245, 158, 11, 0.35)',
                   width: 'fit-content',
-                  maxWidth: '700px',
+                  maxWidth: '750px',
                   boxShadow: '0 2px 12px rgba(245, 158, 11, 0.15)'
                 }}>
                   {/* Subred */}
@@ -3891,7 +4775,7 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                     onChange={(e) => setNetworkScanSubnet(e.target.value)}
                     placeholder="192.168.1.0/24"
                     style={{
-                      width: '300px',
+                      width: '200px',
                       background: 'rgba(255,255,255,0.08)',
                       border: '1px solid rgba(245, 158, 11, 0.3)',
                       borderRadius: '6px',
@@ -3920,6 +4804,42 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                       boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)',
                       marginLeft: '0.25rem'
                     }}
+                  />
+
+                  <Button
+                    label="Cyber-Escaneo ⚡"
+                    icon="pi pi-bolt"
+                    onClick={autoDetectAndScan}
+                    disabled={loading}
+                    style={{
+                      background: 'linear-gradient(135deg, #00f0ff 0%, #ff007f 100%)',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '0.35rem 0.75rem',
+                      height: '30px',
+                      fontSize: '0.75rem',
+                      fontWeight: 'bold',
+                      boxShadow: '0 0 10px rgba(0, 240, 255, 0.4)',
+                      color: '#fff',
+                      marginLeft: '0.25rem'
+                    }}
+                  />
+                  
+                  <Button 
+                    label={cyberpunkMode ? "Cyber: ON 🕶️" : "Cyber: OFF 🕶️"} 
+                    icon={cyberpunkMode ? "pi pi-eye" : "pi pi-eye-slash"}
+                    onClick={() => setCyberpunkMode(!cyberpunkMode)} 
+                    style={{ 
+                      background: cyberpunkMode ? 'linear-gradient(135deg, rgba(255,0,127,0.2) 0%, rgba(124,0,255,0.2) 100%)' : 'rgba(255,255,255,0.06)',
+                      border: cyberpunkMode ? '1px solid #ff007f' : '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: '6px', 
+                      padding: '0.35rem 0.6rem', 
+                      height: '30px', 
+                      fontSize: '0.75rem',
+                      color: cyberpunkMode ? '#ff007f' : 'var(--text-color-secondary)',
+                      boxShadow: cyberpunkMode ? '0 0 8px rgba(255,0,127,0.2)' : 'none',
+                      marginLeft: '0.25rem'
+                    }} 
                   />
                 </div>
               )}
