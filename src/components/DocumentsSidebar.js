@@ -17,6 +17,11 @@ import {
   updateNodeInTree,
   findNodeInTree
 } from '../utils/documentStore';
+import {
+  isDescendantInFullTree,
+  isShowMoreTreeNode,
+  moveNodeFromTreeEvent
+} from '../utils/treeDragDrop';
 import localStorageSyncService from '../services/LocalStorageSyncService';
 import DocumentDetailsPanel from './DocumentDetailsPanel';
 import QuickNotesSidePanel from './QuickNotesSidePanel';
@@ -524,37 +529,24 @@ const DocumentsSidebar = ({
   };
 
   const onDragDrop = (event) => {
-    const { dragNode, dropNode, dropIndex, value } = event || {};
-    if (!dragNode) return;
+    const { dragNode, dropNode, dropPoint, dropIndex } = event || {};
+    if (!dragNode?.key || dragNode.key === 'quick_note') return;
+    if (isShowMoreTreeNode(dragNode) || isShowMoreTreeNode(dropNode)) return;
 
-    let updatedNodes = removeNodeFromTree(documentNodes, dragNode.key);
-
-    if (dropNode && (dropNode.droppable || dropNode.data?.type === 'document-folder')) {
-      updatedNodes = addNodeToTree(updatedNodes, dropNode.key, dragNode);
-    } else if (dropNode) {
-      const findParent = (nodes, key) => {
-        for (const n of nodes) {
-          if (n.children?.some(c => c.key === key)) return n;
-          if (n.children) {
-            const found = findParent(n.children, key);
-            if (found) return found;
-          }
-        }
-        return null;
-      };
-      const parent = findParent(updatedNodes, dropNode.key);
-      if (parent) {
-        const idx = parent.children.findIndex(c => c.key === dropNode.key);
-        parent.children.splice(idx + 1, 0, dragNode);
-      } else {
-        const rootIdx = updatedNodes.findIndex(n => n.key === dropNode.key);
-        updatedNodes.splice(rootIdx + 1, 0, dragNode);
-      }
-    } else {
-      updatedNodes.push(dragNode);
+    if (dropNode?.key && isDescendantInFullTree(documentNodes, dragNode.key, dropNode.key)) {
+      return;
     }
 
-    setDocumentNodes(updatedNodes);
+    setDocumentNodes((prevNodes) => {
+      const result = moveNodeFromTreeEvent(prevNodes || [], {
+        dragNode,
+        dropNode,
+        dropPoint,
+        dropIndex,
+        value: event?.value
+      });
+      return result?.nodes ?? prevNodes;
+    });
   };
 
   const filteredDocumentNodes = useMemo(() => {

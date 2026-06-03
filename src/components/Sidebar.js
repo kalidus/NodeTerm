@@ -49,7 +49,7 @@ import {
   isDescendantInFullTree,
   isShowMoreTreeNode,
   isTreeFolderNode,
-  moveNodeInFullTree
+  moveNodeFromTreeEvent
 } from '../utils/treeDragDrop';
 import { treeThemes, treeThemeOptions, getTreeTheme } from '../themes/tree-themes';
 import { useTranslation } from '../i18n/hooks/useTranslation';
@@ -1861,11 +1861,12 @@ const Sidebar = React.memo(({
     }
 
     setNodes((prevNodes) => {
-      const result = moveNodeInFullTree(prevNodes || [], {
-        dragKey: dragNode.key,
-        dropKey: dropNode?.key,
+      const result = moveNodeFromTreeEvent(prevNodes || [], {
+        dragNode,
+        dropNode,
         dropPoint,
-        dropIndex
+        dropIndex,
+        value: event?.value
       });
       return result?.nodes ?? prevNodes;
     });

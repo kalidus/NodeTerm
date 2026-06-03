@@ -18,7 +18,7 @@ import { validateSeedPhrase, countWords } from '../utils/bip39Validator';
 import {
   isDescendantInFullTree,
   isShowMoreTreeNode,
-  moveNodeInFullTree
+  moveNodeFromTreeEvent
 } from '../utils/treeDragDrop';
 import '../styles/components/password-manager-sidebar.css';
 import '../styles/components/tree-themes.css';
@@ -921,11 +921,12 @@ const PasswordManagerSidebar = ({
 
     let didMove = false;
     setPasswordNodes((prevNodes) => {
-      const result = moveNodeInFullTree(prevNodes || [], {
-        dragKey: dragNode.key,
-        dropKey: dropNode?.key,
+      const result = moveNodeFromTreeEvent(prevNodes || [], {
+        dragNode,
+        dropNode,
         dropPoint,
-        dropIndex
+        dropIndex,
+        value: event?.value
       });
       if (result?.nodes) {
         didMove = true;
