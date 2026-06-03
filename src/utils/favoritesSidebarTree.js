@@ -1,5 +1,6 @@
 import { helpers as connHelpers } from './connectionStore';
 import favoriteGroupsStore from './favoriteGroupsStore';
+import { extractDragPlacement, isShowMoreTreeNode } from './treeDragDrop';
 
 export const FAVORITES_ROOT_KEY = '__favorites_root__';
 export const FAVORITES_VIEW_FOLDER_COLOR = '#FFC107';
@@ -206,12 +207,43 @@ export function buildFavoritesSidebarTree({ nodes, favorites, groups, getFavorit
 
   const orderedRootShortcuts = sortNodesByFavoriteOrder(rootShortcuts, memberOrder.root);
 
+  const groupByKey = new Map(groupFolders.map((folder) => [folder.key, folder]));
+  const rootShortcutByKey = new Map(orderedRootShortcuts.map((node) => [node.key, node]));
+  const savedRootKeys = Array.isArray(memberOrder.rootKeys) ? memberOrder.rootKeys : [];
+  let rootChildren;
+
+  if (savedRootKeys.length > 0) {
+    rootChildren = [];
+    const usedKeys = new Set();
+
+    for (const key of savedRootKeys) {
+      const node = groupByKey.get(key) || rootShortcutByKey.get(key);
+      if (node) {
+        rootChildren.push(node);
+        usedKeys.add(key);
+      }
+    }
+
+    for (const folder of groupFolders) {
+      if (!usedKeys.has(folder.key)) {
+        rootChildren.push(folder);
+      }
+    }
+    for (const shortcut of orderedRootShortcuts) {
+      if (!usedKeys.has(shortcut.key)) {
+        rootChildren.push(shortcut);
+      }
+    }
+  } else {
+    rootChildren = [...groupFolders, ...orderedRootShortcuts];
+  }
+
   return [{
     key: FAVORITES_ROOT_KEY,
     label: 'Favoritos',
     droppable: true,
     leaf: false,
-    children: [...groupFolders, ...orderedRootShortcuts],
+    children: rootChildren,
     uid: FAVORITES_ROOT_KEY,
     color: FAVORITES_VIEW_FOLDER_COLOR,
     folderIcon: 'favorites',
@@ -276,22 +308,32 @@ export function getDefaultFavoritesExpandedKeys(tree) {
   return expanded;
 }
 
+function filterDisplayChildren(nodes) {
+  return (nodes || []).filter((node) => !isShowMoreTreeNode(node));
+}
+
+/**
+ * Persiste el layout tras un drop usando el `value` que calcula PrimeReact (misma idea que conexiones).
+ */
 export function applyFavoritesTreeLayoutFromDrop(treeValue) {
   const root = treeValue?.[0];
   if (!root || !isFavoritesRootKey(root.key)) {
     return false;
   }
 
-  const children = root.children || [];
+  const children = filterDisplayChildren(root.children);
+  const rootKeys = [];
   const rootShortcutIds = [];
   const groupMemberOrder = {};
   const orderedGroupIds = [];
 
   for (const child of children) {
+    rootKeys.push(child.key);
+
     if (isFavoriteGroupFolderNode(child)) {
       if (child.favoriteGroupId) {
         orderedGroupIds.push(child.favoriteGroupId);
-        groupMemberOrder[child.favoriteGroupId] = (child.children || [])
+        groupMemberOrder[child.favoriteGroupId] = filterDisplayChildren(child.children)
           .filter(isFavoriteShortcutNode)
           .map((node) => node.favoriteId)
           .filter(Boolean);
@@ -329,10 +371,50 @@ export function applyFavoritesTreeLayoutFromDrop(treeValue) {
 
   favoriteGroupsStore.setFavoriteMemberOrder({
     root: rootShortcutIds,
-    groups: groupMemberOrder
+    groups: groupMemberOrder,
+    rootKeys
   });
 
   return true;
+}
+
+/**
+ * Valida y aplica un drop del Tree en la vista de favoritos (mismo contrato que el resto de secciones).
+ */
+export function applyFavoritesDragDropFromEvent(event) {
+  const { dragNode, dropNode, value } = event || {};
+  if (!dragNode?.key || !Array.isArray(value) || value.length === 0) {
+    return false;
+  }
+
+  if (isFavoritesRootKey(dragNode.key)) {
+    return false;
+  }
+
+  if (!isFavoriteShortcutNode(dragNode) && !isFavoriteGroupFolderNode(dragNode)) {
+    return false;
+  }
+
+  const placement = extractDragPlacement(value, dragNode.key);
+  if (isFavoriteGroupFolderNode(dragNode)) {
+    if (placement?.parentKey && placement.parentKey !== FAVORITES_ROOT_KEY) {
+      return false;
+    }
+    if (dropNode?.key && dragNode.key === dropNode.key) {
+      return false;
+    }
+  }
+
+  if (
+    isFavoriteShortcutNode(dragNode) &&
+    dropNode?.key &&
+    dragNode.favoriteId &&
+    dropNode.favoriteId === dragNode.favoriteId
+  ) {
+    return false;
+  }
+
+  return applyFavoritesTreeLayoutFromDrop(value);
 }
 
 export function countFavoriteShortcuts(tree) {

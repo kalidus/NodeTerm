@@ -183,14 +183,16 @@ export function getFavoriteMemberOrder() {
     const order = loadMemberOrder();
     return {
         root: Array.isArray(order.root) ? order.root : [],
-        groups: order.groups && typeof order.groups === 'object' ? order.groups : {}
+        groups: order.groups && typeof order.groups === 'object' ? order.groups : {},
+        rootKeys: Array.isArray(order.rootKeys) ? order.rootKeys : []
     };
 }
 
 export function setFavoriteMemberOrder(order) {
     saveMemberOrder({
         root: Array.isArray(order?.root) ? order.root : [],
-        groups: order?.groups && typeof order.groups === 'object' ? order.groups : {}
+        groups: order?.groups && typeof order.groups === 'object' ? order.groups : {},
+        rootKeys: Array.isArray(order?.rootKeys) ? order.rootKeys : []
     });
 }
 

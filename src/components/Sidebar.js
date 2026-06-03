@@ -30,7 +30,7 @@ import favoriteGroupsStore from '../utils/favoriteGroupsStore';
 import { buildSidebarFontStack } from '../utils/sidebarFontStack';
 import {
   FAVORITES_ROOT_KEY,
-  applyFavoritesTreeLayoutFromDrop,
+  applyFavoritesDragDropFromEvent,
   buildFavoritesSidebarTree,
   countFavoriteShortcuts,
   filterFavoritesTree,
@@ -1252,10 +1252,12 @@ const Sidebar = React.memo(({
     ? filteredFavoritesTree
     : nodes;
 
-  const processedNodes = useMemo(
-    () => limitTreeNodes(displayNodes),
-    [displayNodes, limitTreeNodes]
-  );
+  const processedNodes = useMemo(() => {
+    if (showFavoritesView && viewMode === 'connections') {
+      return displayNodes;
+    }
+    return limitTreeNodes(displayNodes);
+  }, [displayNodes, limitTreeNodes, showFavoritesView, viewMode]);
 
   const totalFavoriteShortcutCount = useMemo(
     () => countFavoriteShortcuts(favoritesTree),
@@ -1804,20 +1806,7 @@ const Sidebar = React.memo(({
     });
   }
   const onFavoritesDragDrop = (event) => {
-    const { dragNode, value } = event || {};
-    if (!dragNode || !Array.isArray(value) || value.length === 0) {
-      return;
-    }
-
-    if (isFavoritesRootKey(dragNode.key)) {
-      return;
-    }
-
-    if (!isFavoriteShortcutNode(dragNode) && !isFavoriteGroupFolderNode(dragNode)) {
-      return;
-    }
-
-    if (applyFavoritesTreeLayoutFromDrop(value)) {
+    if (applyFavoritesDragDropFromEvent(event)) {
       bumpFavoritesRevision();
     }
   };
