@@ -263,6 +263,7 @@
     "previewDetail": "{{imported}} credentials · {{skipped}} skipped",
     "previewStats": "Importable: {{imported}} · Skipped: {{skipped}}",
     "skippedAbe": "{{count}} skipped due to App-Bound encryption (Chrome 127+)",
+    "usernameOnlyHint": "{{count}} with username and URL; if the password is missing, export CSV from the browser.",
     "confirmImport": "Confirm import",
     "noEntries": "No entries to import",
     "importedCount": "{{count}} passwords imported",

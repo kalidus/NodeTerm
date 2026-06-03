@@ -22,9 +22,13 @@ export function mapBrowserEntriesToNodes(entries = [], options = {}) {
     return {
       key,
       label,
+      username,
+      password,
+      url,
       data: {
         type: 'password',
         username,
+        user: username,
         password,
         url,
         group: group || '',

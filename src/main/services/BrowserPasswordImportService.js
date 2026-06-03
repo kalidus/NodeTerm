@@ -54,6 +54,11 @@ const CHROMIUM_BROWSERS = [
 const SKIP_ABE = 'app_bound_encryption';
 const SKIP_EMPTY = 'empty_or_unknown';
 const SKIP_DECRYPT = 'decrypt_failed';
+const CHROMIUM_MIN_ENCRYPTED_BLOB = 31;
+const NOTE_ABE_PASSWORD =
+  'Contraseña no importada (cifrado App-Bound del navegador). Exporta CSV desde el navegador o usa un perfil antiguo.';
+const NOTE_PASSWORD_UNAVAILABLE =
+  'Contraseña no descifrada; el usuario y la URL sí se importaron.';
 
 function getLocalAppData() {
   return process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
@@ -112,9 +117,74 @@ function getChromiumMasterKey(localStatePath) {
   return decrypted;
 }
 
-function decryptChromiumValue(encrypted, masterKey) {
+/** Clave alternativa (Edge/Chrome recientes); puede fallar sin privilegios elevados. */
+function getChromiumAppBoundKey(localStatePath) {
+  if (!isDpapiSupported) return null;
+  try {
+    const state = JSON.parse(fs.readFileSync(localStatePath, 'utf8'));
+    const encKeyB64 = state?.os_crypt?.app_bound_encrypted_key;
+    if (!encKeyB64) return null;
+
+    let encKey = Buffer.from(encKeyB64, 'base64');
+    const head4 = encKey.slice(0, 4).toString('utf8');
+    if (head4 === 'APPB') encKey = encKey.slice(4);
+    const head5 = encKey.slice(0, 5).toString('utf8');
+    if (head5 === 'DPAPI') encKey = encKey.slice(5);
+
+    let decrypted = dpapiUnprotect(encKey);
+    if (decrypted.length > 32) {
+      try {
+        let inner = decrypted;
+        if (inner.slice(0, 5).toString('utf8') === 'DPAPI') inner = inner.slice(5);
+        decrypted = dpapiUnprotect(inner);
+      } catch {
+        /* usar primer descifrado */
+      }
+    }
+    return decrypted.length >= 16 ? decrypted : null;
+  } catch {
+    return null;
+  }
+}
+
+function getChromiumDecryptionKeys(localStatePath) {
+  const keys = [];
+  const seen = new Set();
+  const add = (key) => {
+    if (!key || key.length < 16) return;
+    const sig = key.toString('hex');
+    if (seen.has(sig)) return;
+    seen.add(sig);
+    keys.push(key);
+  };
+  add(getChromiumMasterKey(localStatePath));
+  add(getChromiumAppBoundKey(localStatePath));
+  return keys;
+}
+
+function isChromiumEncryptedBlob(buf) {
+  if (!buf || buf.length < CHROMIUM_MIN_ENCRYPTED_BLOB) return false;
+  const version = buf.slice(0, 3).toString('utf8');
+  return version === 'v10' || version === 'v11' || version === 'v20';
+}
+
+function decryptChromiumAesGcm(buf, key) {
+  const iv = buf.slice(3, 15);
+  const payload = buf.slice(15);
+  const tag = payload.slice(-16);
+  const ciphertext = payload.slice(0, -16);
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(tag);
+  const plain = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+  return plain.toString('utf8');
+}
+
+function decryptChromiumValue(encrypted, decryptionKeys) {
+  const keys = Array.isArray(decryptionKeys) ? decryptionKeys : [decryptionKeys];
   if (!encrypted || encrypted.length === 0) return { value: '', skipped: null };
-  const buf = Buffer.isBuffer(encrypted) ? encrypted : Buffer.from(encrypted);
+  const buf = chromiumRawToBuffer(encrypted);
+  if (buf.length === 0) return { value: '', skipped: null };
+
   const version = buf.slice(0, 3).toString('utf8');
 
   if (version === 'v20') {
@@ -122,21 +192,19 @@ function decryptChromiumValue(encrypted, masterKey) {
   }
 
   if (version === 'v10' || version === 'v11') {
-    if (!masterKey || masterKey.length === 0) {
+    if (!keys.length) {
       return { value: null, skipped: SKIP_DECRYPT };
     }
-    try {
-      const iv = buf.slice(3, 15);
-      const payload = buf.slice(15);
-      const tag = payload.slice(-16);
-      const ciphertext = payload.slice(0, -16);
-      const decipher = crypto.createDecipheriv('aes-256-gcm', masterKey, iv);
-      decipher.setAuthTag(tag);
-      const plain = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
-      return { value: plain.toString('utf8'), skipped: null };
-    } catch {
-      return { value: null, skipped: SKIP_DECRYPT };
+    for (const key of keys) {
+      if (!key || key.length < 16) continue;
+      try {
+        const value = decryptChromiumAesGcm(buf, key);
+        return { value, skipped: null };
+      } catch {
+        /* siguiente clave */
+      }
     }
+    return { value: null, skipped: SKIP_DECRYPT };
   }
 
   // Legacy: DPAPI directo sobre el blob
@@ -150,6 +218,63 @@ function decryptChromiumValue(encrypted, masterKey) {
   }
 
   return { value: null, skipped: SKIP_EMPTY };
+}
+
+/** Convierte un campo SQLite (texto o BLOB) a Buffer para inspección/descifrado. */
+function chromiumRawToBuffer(raw) {
+  if (raw == null) return Buffer.alloc(0);
+  if (Buffer.isBuffer(raw)) return raw;
+  if (typeof raw === 'string') return Buffer.from(raw, 'latin1');
+  return Buffer.from(String(raw), 'latin1');
+}
+
+/** Texto en claro desde username_value (UTF-8, UTF-16 LE o cadena SQLite). */
+function decodeChromiumPlaintext(raw) {
+  if (raw == null || raw === '') return '';
+  const buf = chromiumRawToBuffer(raw);
+  if (buf.length === 0) return '';
+
+  if (buf.length >= 4 && buf.length % 2 === 0) {
+    const utf16 = buf.toString('utf16le').replace(/\0/g, '').trim();
+    const highNulls = buf.filter((b, i) => i % 2 === 1 && b === 0).length;
+    if (utf16 && highNulls >= Math.floor(buf.length / 4)) return utf16;
+  }
+
+  if (Buffer.isBuffer(raw)) {
+    return raw.toString('utf8').replace(/\0/g, '').trim();
+  }
+  return String(raw).replace(/\0/g, '').trim();
+}
+
+/**
+ * Descifra username_value / password_value de Chromium.
+ * Los valores en claro (sin prefijo v10/v11/v20) se devuelven tal cual.
+ */
+function decryptChromiumField(raw, decryptionKeys) {
+  if (raw == null || raw === '') return '';
+  const buf = chromiumRawToBuffer(raw);
+  if (buf.length === 0) return '';
+
+  if (isChromiumEncryptedBlob(buf)) {
+    const { value } = decryptChromiumValue(buf, decryptionKeys);
+    if (value != null && value !== '') return value;
+    return decodeChromiumPlaintext(raw);
+  }
+
+  return decodeChromiumPlaintext(raw);
+}
+
+function extractChromiumUsername(row, decryptionKeys) {
+  const fromField = decryptChromiumField(row.username_value, decryptionKeys);
+  if (fromField) return fromField;
+
+  const displayName = row.display_name != null ? String(row.display_name).trim() : '';
+  if (displayName) return displayName;
+
+  const senderEmail = row.sender_email != null ? String(row.sender_email).trim() : '';
+  if (senderEmail) return senderEmail;
+
+  return '';
 }
 
 function listChromiumProfiles(userDataPath, browserId, browserLabel) {
@@ -447,7 +572,8 @@ class BrowserPasswordImportService {
     if (!Database || !isDpapiSupported) {
       return {
         ok: false,
-        error: 'better-sqlite3 no está compilado para Electron. Cierra la app y ejecuta: npm run rebuild:native'
+        error:
+          'Módulos nativos no listos para Electron. Cierra NodeTerm y en la carpeta del proyecto ejecuta: npm install (o npm run rebuild:native si la app estaba abierta durante la instalación).'
       };
     }
 
@@ -468,9 +594,9 @@ class BrowserPasswordImportService {
 
     let tmpDir = null;
     try {
-      let masterKey;
+      let decryptionKeys;
       try {
-        masterKey = getChromiumMasterKey(localStatePath);
+        decryptionKeys = getChromiumDecryptionKeys(localStatePath);
       } catch (e) {
         return { ok: false, error: `No se pudo obtener la clave maestra: ${e.message}` };
       }
@@ -480,28 +606,74 @@ class BrowserPasswordImportService {
 
       const db = new Database(copied.dest, { readonly: true, fileMustExist: true });
       const rows = db.prepare(
-        'SELECT origin_url, username_value, password_value, date_created FROM logins WHERE password_value IS NOT NULL'
+        `SELECT origin_url, username_value, password_value, display_name, sender_email, date_created
+         FROM logins
+         WHERE password_value IS NOT NULL`
       ).all();
       db.close();
 
       const entries = [];
-      const stats = { imported: 0, skipped: 0, skippedAbe: 0, skippedDecrypt: 0, skippedEmpty: 0 };
+      const stats = {
+        imported: 0,
+        skipped: 0,
+        skippedAbe: 0,
+        skippedDecrypt: 0,
+        skippedEmpty: 0,
+        importedUsernameOnly: 0
+      };
 
       for (const row of rows) {
         const url = row.origin_url || '';
-        const username = row.username_value || '';
-        const pwdBuf = row.password_value;
-        const { value: password, skipped } = decryptChromiumValue(pwdBuf, masterKey);
+        const username = extractChromiumUsername(row, decryptionKeys);
+        const pwdBuf = chromiumRawToBuffer(row.password_value);
+        const { value: password, skipped } = decryptChromiumValue(pwdBuf, decryptionKeys);
 
-        if (skipped === SKIP_ABE) {
+        const hasPassword = password != null && password !== '';
+        const hasIdentity = !!(username || url);
+
+        if (!hasIdentity && !hasPassword) {
           stats.skipped++;
-          stats.skippedAbe++;
+          stats.skippedEmpty++;
           continue;
         }
-        if (skipped || password === null) {
-          stats.skipped++;
-          if (skipped === SKIP_DECRYPT) stats.skippedDecrypt++;
-          else stats.skippedEmpty++;
+
+        if (skipped === SKIP_ABE || skipped === SKIP_DECRYPT || password === null) {
+          if (!username) {
+            stats.skipped++;
+            if (skipped === SKIP_ABE) stats.skippedAbe++;
+            else stats.skippedDecrypt++;
+            continue;
+          }
+          let title = url;
+          try {
+            if (url) title = new URL(url).hostname || url;
+          } catch {
+            title = url || username || '(Sin título)';
+          }
+          const notes = skipped === SKIP_ABE ? NOTE_ABE_PASSWORD : NOTE_PASSWORD_UNAVAILABLE;
+          entries.push({ url, username, password: '', title, notes });
+          stats.imported++;
+          stats.importedUsernameOnly++;
+          if (skipped === SKIP_ABE) stats.skippedAbe++;
+          else stats.skippedDecrypt++;
+          continue;
+        }
+
+        if (!hasPassword) {
+          if (!username) {
+            stats.skipped++;
+            stats.skippedEmpty++;
+            continue;
+          }
+          let title = url;
+          try {
+            if (url) title = new URL(url).hostname || url;
+          } catch {
+            title = url || username || '(Sin título)';
+          }
+          entries.push({ url, username, password: '', title, notes: '' });
+          stats.imported++;
+          stats.importedUsernameOnly++;
           continue;
         }
 
@@ -524,7 +696,8 @@ class BrowserPasswordImportService {
           skipped: stats.skipped,
           skippedAbe: stats.skippedAbe,
           skippedDecrypt: stats.skippedDecrypt,
-          skippedEmpty: stats.skippedEmpty
+          skippedEmpty: stats.skippedEmpty,
+          importedUsernameOnly: stats.importedUsernameOnly
         }
       };
     } catch (e) {

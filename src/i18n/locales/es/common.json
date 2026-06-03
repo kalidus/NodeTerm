@@ -263,6 +263,7 @@
     "previewDetail": "{{imported}} credenciales · {{skipped}} omitidas",
     "previewStats": "Importables: {{imported}} · Omitidas: {{skipped}}",
     "skippedAbe": "{{count}} omitidas por cifrado App-Bound (Chrome 127+)",
+    "usernameOnlyHint": "{{count}} con usuario y URL; si falta la contraseña, exporta CSV desde el navegador.",
     "confirmImport": "Confirmar importación",
     "noEntries": "No hay entradas para importar",
     "importedCount": "{{count}} contraseñas importadas",

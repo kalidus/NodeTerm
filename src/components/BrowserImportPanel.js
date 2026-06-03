@@ -130,11 +130,17 @@ const BrowserImportPanel = ({
       const entries = res.entries || [];
       const stats = res.stats || {};
       const sampleUrls = entries.slice(0, 5).map((e) => e.url).filter(Boolean);
+      const sampleUsers = entries
+        .filter((e) => e.username)
+        .slice(0, 5)
+        .map((e) => `${e.username} — ${e.url || e.title}`)
+        .filter(Boolean);
 
       setPreview({
         entries,
         stats,
-        sampleUrls
+        sampleUrls,
+        sampleUsers
       });
       setProgress(100);
 
@@ -274,12 +280,27 @@ const BrowserImportPanel = ({
                   </span>
                 )}
               </div>
-              {preview.sampleUrls?.length > 0 && (
+              {preview.sampleUsers?.length > 0 && (
+                <ul style={{ fontSize: 12, margin: '8px 0 0 16px', color: 'var(--text-color-secondary)' }}>
+                  {preview.sampleUsers.map((line, i) => (
+                    <li key={`u-${i}`} style={{ wordBreak: 'break-all' }}>{line}</li>
+                  ))}
+                </ul>
+              )}
+              {!preview.sampleUsers?.length && preview.sampleUrls?.length > 0 && (
                 <ul style={{ fontSize: 12, margin: '8px 0 0 16px', color: 'var(--text-color-secondary)' }}>
                   {preview.sampleUrls.map((url, i) => (
                     <li key={i} style={{ wordBreak: 'break-all' }}>{url}</li>
                   ))}
                 </ul>
+              )}
+              {(preview.stats?.importedUsernameOnly ?? 0) > 0 && (
+                <div style={{ fontSize: 12, marginTop: 8, color: 'var(--orange-500)' }}>
+                  {t('browserImport.usernameOnlyHint', {
+                    count: preview.stats.importedUsernameOnly
+                  }) ||
+                    `${preview.stats.importedUsernameOnly} entradas con usuario/URL; la contraseña puede requerir exportar CSV del navegador.`}
+                </div>
               )}
               <Button
                 label={t('browserImport.confirmImport') || 'Confirmar importación'}
