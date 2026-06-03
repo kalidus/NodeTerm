@@ -35,6 +35,7 @@ import {
   countFavoriteShortcuts,
   filterFavoritesTree,
   getDefaultFavoritesExpandedKeys,
+  getFavoritesTreeDisplayNodes,
   getFavoriteGroupIdFromKey,
   isFavoriteGroupFolderKey,
   isFavoriteGroupFolderNode,
@@ -1254,7 +1255,7 @@ const Sidebar = React.memo(({
 
   const processedNodes = useMemo(() => {
     if (showFavoritesView && viewMode === 'connections') {
-      return displayNodes;
+      return getFavoritesTreeDisplayNodes(displayNodes);
     }
     return limitTreeNodes(displayNodes);
   }, [displayNodes, limitTreeNodes, showFavoritesView, viewMode]);

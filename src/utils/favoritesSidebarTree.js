@@ -295,6 +295,28 @@ export function filterFavoritesTree(tree, query) {
   return [{ ...root, children: filteredChildren }];
 }
 
+/** Hijos del contenedor Favoritos para mostrar en el Tree (sin el nodo raíz virtual). */
+export function getFavoritesTreeDisplayNodes(tree) {
+  const root = tree?.[0];
+  if (!root || !isFavoritesRootKey(root.key)) return [];
+  return root.children || [];
+}
+
+/** Reconstruye el value con raíz para persistir tras un drop en vista plana. */
+export function wrapFavoritesDisplayValue(displayValue) {
+  return [{
+    key: FAVORITES_ROOT_KEY,
+    label: 'Favoritos',
+    droppable: true,
+    leaf: false,
+    children: displayValue || [],
+    uid: FAVORITES_ROOT_KEY,
+    color: FAVORITES_VIEW_FOLDER_COLOR,
+    folderIcon: 'favorites',
+    isFavoritesRoot: true
+  }];
+}
+
 export function getDefaultFavoritesExpandedKeys(tree) {
   const root = tree?.[0];
   if (!root) return {};
@@ -387,6 +409,10 @@ export function applyFavoritesDragDropFromEvent(event) {
     return false;
   }
 
+  const treeValue = isFavoritesRootKey(value[0]?.key)
+    ? value
+    : wrapFavoritesDisplayValue(value);
+
   if (isFavoritesRootKey(dragNode.key)) {
     return false;
   }
@@ -395,7 +421,7 @@ export function applyFavoritesDragDropFromEvent(event) {
     return false;
   }
 
-  const placement = extractDragPlacement(value, dragNode.key);
+  const placement = extractDragPlacement(treeValue, dragNode.key);
   if (isFavoriteGroupFolderNode(dragNode)) {
     if (placement?.parentKey && placement.parentKey !== FAVORITES_ROOT_KEY) {
       return false;
@@ -414,7 +440,7 @@ export function applyFavoritesDragDropFromEvent(event) {
     return false;
   }
 
-  return applyFavoritesTreeLayoutFromDrop(value);
+  return applyFavoritesTreeLayoutFromDrop(treeValue);
 }
 
 export function countFavoriteShortcuts(tree) {
