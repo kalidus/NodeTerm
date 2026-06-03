@@ -44,6 +44,13 @@ import {
 } from '../utils/favoritesSidebarTree';
 import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
 import { STORAGE_KEYS } from '../utils/constants';
+import {
+  findNodeInTree,
+  isDescendantInFullTree,
+  isShowMoreTreeNode,
+  isTreeFolderNode,
+  moveNodeInFullTree
+} from '../utils/treeDragDrop';
 import { treeThemes, treeThemeOptions, getTreeTheme } from '../themes/tree-themes';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import '../styles/components/tree-themes.css';
@@ -1815,106 +1822,53 @@ const Sidebar = React.memo(({
     }
   };
 
-  // Drag and drop robusto para mover entre raíz/carpetas sin mutar estado previo.
+  // Drag and drop: solo muta el árbol completo en estado (nunca el value truncado del Tree).
   const onDragDrop = (event) => {
     if (showFavoritesView && viewMode === 'connections') {
       onFavoritesDragDrop(event);
       return;
     }
 
-    const { dragNode, dropNode, dropPoint, value } = event || {};
-    if (!dragNode || !dropNode) {
-      if (Array.isArray(value)) setNodes(value);
+    const { dragNode, dropNode, dropPoint, dropIndex } = event || {};
+    if (isShowMoreTreeNode(dragNode) || isShowMoreTreeNode(dropNode)) {
+      return;
+    }
+    if (!dragNode?.key) {
       return;
     }
 
-    const isDropOverNode = dropPoint === 0;
-    const isDropTargetFolder = !!(dropNode && dropNode.droppable === true);
-
-    // Reordenado estándar (antes/después del nodo destino)
-    if (!isDropOverNode || !isDropTargetFolder) {
-      if (Array.isArray(value)) {
-        setNodes(value);
+    if (dropNode?.key) {
+      const dropInFull = findNodeInTree(nodes, dropNode.key);
+      if (dropPoint === 0 && dropInFull && !isTreeFolderNode(dropInFull)) {
+        showToast && showToast({
+          severity: 'warn',
+          summary: 'Operación no permitida',
+          detail: 'No se puede arrastrar elementos dentro de una sesión. Solo las carpetas pueden contener otros elementos.',
+          life: 3000
+        });
+        return;
       }
-      return;
+
+      if (isDescendantInFullTree(nodes, dragNode.key, dropNode.key)) {
+        showToast && showToast({
+          severity: 'warn',
+          summary: 'Operación no permitida',
+          detail: 'No puedes mover una carpeta dentro de sí misma.',
+          life: 2500
+        });
+        return;
+      }
     }
 
-    // Evitar mover un nodo dentro de sí mismo o de su propio subárbol.
-    const isDescendantKey = (node, targetKey) => {
-      if (!node || !Array.isArray(node.children)) return false;
-      for (const child of node.children) {
-        if (child.key === targetKey) return true;
-        if (isDescendantKey(child, targetKey)) return true;
-      }
-      return false;
-    };
-
-    if (dragNode.key === dropNode.key || isDescendantKey(dragNode, dropNode.key)) {
-      showToast && showToast({
-        severity: 'warn',
-        summary: 'Operación no permitida',
-        detail: 'No puedes mover una carpeta dentro de sí misma.',
-        life: 2500
+    setNodes((prevNodes) => {
+      const result = moveNodeInFullTree(prevNodes || [], {
+        dragKey: dragNode.key,
+        dropKey: dropNode?.key,
+        dropPoint,
+        dropIndex
       });
-      return;
-    }
-
-    // Remover de forma inmutable y devolver también el nodo removido.
-    const removeNodeByKey = (list, key) => {
-      let removed = null;
-      const next = [];
-      for (const currentNode of list || []) {
-        if (currentNode.key === key) {
-          removed = currentNode;
-          continue;
-        }
-
-        if (Array.isArray(currentNode.children) && currentNode.children.length > 0) {
-          const childResult = removeNodeByKey(currentNode.children, key);
-          if (childResult.removed) removed = childResult.removed;
-          next.push({ ...currentNode, children: childResult.nodes });
-        } else {
-          next.push(currentNode);
-        }
-      }
-      return { nodes: next, removed };
-    };
-
-    const insertIntoFolder = (list, targetKey, nodeToInsert) => {
-      let inserted = false;
-      const next = (list || []).map((currentNode) => {
-        if (currentNode.key === targetKey) {
-          inserted = true;
-          const currentChildren = Array.isArray(currentNode.children) ? currentNode.children : [];
-          // Insertar al inicio para mantener comportamiento previo.
-          return { ...currentNode, children: [nodeToInsert, ...currentChildren] };
-        }
-
-        if (Array.isArray(currentNode.children) && currentNode.children.length > 0) {
-          const updatedChildren = insertIntoFolder(currentNode.children, targetKey, nodeToInsert);
-          if (updatedChildren.inserted) inserted = true;
-          return { ...currentNode, children: updatedChildren.nodes };
-        }
-        return currentNode;
-      });
-
-      return { nodes: next, inserted };
-    };
-
-    const clonedTree = JSON.parse(JSON.stringify(nodes || []));
-    const removedResult = removeNodeByKey(clonedTree, dragNode.key);
-    if (!removedResult.removed) {
-      if (Array.isArray(value)) setNodes(value);
-      return;
-    }
-
-    const insertedResult = insertIntoFolder(removedResult.nodes, dropNode.key, removedResult.removed);
-    if (!insertedResult.inserted) {
-      if (Array.isArray(value)) setNodes(value);
-      return;
-    }
-
-    setNodes(insertedResult.nodes);
+      return result?.nodes ?? prevNodes;
+    });
   };
 
   const stopTreeDragAutoScroll = useCallback(() => {

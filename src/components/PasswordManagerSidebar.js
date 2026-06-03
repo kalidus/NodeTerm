@@ -15,6 +15,11 @@ import { useTranslation } from '../i18n/hooks/useTranslation';
 import { sessionActionIconThemes } from '../themes/session-action-icons';
 import { CRYPTO_NETWORK_OPTIONS, getNetworkById } from '../utils/cryptoNetworks';
 import { validateSeedPhrase, countWords } from '../utils/bip39Validator';
+import {
+  isDescendantInFullTree,
+  isShowMoreTreeNode,
+  moveNodeInFullTree
+} from '../utils/treeDragDrop';
 import '../styles/components/password-manager-sidebar.css';
 import '../styles/components/tree-themes.css';
 
@@ -903,109 +908,41 @@ const PasswordManagerSidebar = ({
     }
   };
 
-  // Funcionalidad de drag & drop para passwords
+  // Drag & drop sobre el árbol completo (ignora value truncado del Tree de visualización).
   const onDragDrop = (event) => {
-    const { dragNode, dropNode, dropIndex } = event;
-    
-    if (!dragNode || !dropNode) return;
-    if (dragNode.data?.isShowMoreBtn || dropNode.data?.isShowMoreBtn) return;
-    
-    // No permitir arrastrar un nodo sobre sí mismo
-    if (dragNode.key === dropNode.key) return;
-    
-    // No permitir arrastrar un nodo dentro de sus propios hijos
-    const isDescendant = (parent, child) => {
-      if (parent.children) {
-        for (const node of parent.children) {
-          if (node.key === child.key) return true;
-          if (isDescendant(node, child)) return true;
-        }
+    const { dragNode, dropNode, dropPoint, dropIndex } = event || {};
+
+    if (!dragNode?.key) return;
+    if (isShowMoreTreeNode(dragNode) || isShowMoreTreeNode(dropNode)) return;
+
+    if (dropNode?.key && isDescendantInFullTree(passwordNodes, dragNode.key, dropNode.key)) {
+      return;
+    }
+
+    let didMove = false;
+    setPasswordNodes((prevNodes) => {
+      const result = moveNodeInFullTree(prevNodes || [], {
+        dragKey: dragNode.key,
+        dropKey: dropNode?.key,
+        dropPoint,
+        dropIndex
+      });
+      if (result?.nodes) {
+        didMove = true;
+        return result.nodes;
       }
-      return false;
-    };
-    
-    if (isDescendant(dragNode, dropNode)) return;
-    
-    const passwordNodesCopy = JSON.parse(JSON.stringify(passwordNodes));
-    
-    // Función para remover el nodo arrastrado de su ubicación actual
-    const removeNodeFromTree = (nodeList, targetKey) => {
-      return nodeList.filter(node => {
-        if (node.key === targetKey) {
-          return false;
-        }
-        if (node.children) {
-          node.children = removeNodeFromTree(node.children, targetKey);
-        }
-        return true;
-      });
-    };
-    
-    // Función para añadir el nodo en su nueva ubicación
-    const addNodeToTree = (nodeList, targetKey, newNode, index = 0) => {
-      return nodeList.map(node => {
-        if (node.key === targetKey) {
-          const newChildren = [...(node.children || [])];
-          newChildren.splice(index, 0, newNode);
-          return { ...node, children: newChildren };
-        }
-        if (node.children) {
-          return { ...node, children: addNodeToTree(node.children, targetKey, newNode, index) };
-        }
-        return node;
-      });
-    };
-    
-    // Determinar si el dropNode es una carpeta
-    const isDroppingOnFolder = dropNode.droppable;
-    
-    if (isDroppingOnFolder) {
-      // Arrastrar a una carpeta
-      const updatedNodes = removeNodeFromTree(passwordNodesCopy, dragNode.key);
-      const finalNodes = addNodeToTree(updatedNodes, dropNode.key, dragNode);
-      setPasswordNodes(finalNodes);
-      
+      return prevNodes;
+    });
+
+    if (didMove) {
+      const movedLabel = dragNode.label || 'Elemento';
+      const dropLabel = dropNode?.label;
       showToast && showToast({
         severity: 'success',
         summary: 'Movido',
-        detail: `"${dragNode.label}" movido a "${dropNode.label}"`,
-        life: 3000
-      });
-    } else {
-      // Arrastrar a un password (mover al mismo nivel)
-      const updatedNodes = removeNodeFromTree(passwordNodesCopy, dragNode.key);
-      
-      // Encontrar el padre del dropNode
-      const findParent = (nodeList, targetKey) => {
-        for (const node of nodeList) {
-          if (node.children) {
-            for (const child of node.children) {
-              if (child.key === targetKey) {
-                return node;
-              }
-            }
-            const found = findParent(node.children, targetKey);
-            if (found) return found;
-          }
-        }
-        return null;
-      };
-      
-      const parent = findParent(updatedNodes, dropNode.key);
-      if (parent) {
-        const finalNodes = addNodeToTree(updatedNodes, parent.key, dragNode, dropIndex);
-        setPasswordNodes(finalNodes);
-      } else {
-        // Si no hay padre, mover a la raíz
-        const rootIndex = updatedNodes.findIndex(node => node.key === dropNode.key);
-        updatedNodes.splice(rootIndex + 1, 0, dragNode);
-        setPasswordNodes(updatedNodes);
-      }
-      
-      showToast && showToast({
-        severity: 'success',
-        summary: 'Movido',
-        detail: `"${dragNode.label}" reorganizado`,
+        detail: dropLabel
+          ? `"${movedLabel}" movido a "${dropLabel}"`
+          : `"${movedLabel}" reorganizado`,
         life: 3000
       });
     }
