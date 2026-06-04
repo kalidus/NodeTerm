@@ -72,7 +72,8 @@ contextBridge.exposeInMainWorld('electron', {
   },
   app: {
     getVersionInfo: () => ipcRenderer.invoke('get-version-info'),
-    quit: () => ipcRenderer.send('app-quit')
+    quit: () => ipcRenderer.send('app-quit'),
+    openSplashPreview: (style) => ipcRenderer.invoke('app:open-splash-preview', style)
   },
   setConnectionSearchShortcut: (shortcut) => ipcRenderer.send('connection-search:set-shortcut', shortcut),
   onConnectionSearchShortcut: (handler) => {
@@ -103,7 +104,9 @@ contextBridge.exposeInMainWorld('electron', {
   },
   theme: {
     get: () => ipcRenderer.invoke('theme:get'),
-    save: (config) => ipcRenderer.invoke('theme:save', config)
+    save: (config) => ipcRenderer.invoke('theme:save', config),
+    getSplashStyle: () => ipcRenderer.invoke('theme:get-splash-style'),
+    saveSplashStyle: (style) => ipcRenderer.invoke('theme:save-splash-style', style)
   },
   security: {
     getMasterKey: () => ipcRenderer.invoke('security:get-master-key'),
@@ -174,6 +177,7 @@ contextBridge.exposeInMainWorld('electron', {
   ipcRenderer: {
     send: (channel, ...args) => {
       const validSendChannels = [
+        'app:renderer-ready',
         'register-tab-events',
         'ssh:connect',
         'ssh:data',
@@ -205,6 +209,7 @@ contextBridge.exposeInMainWorld('electron', {
     },
     invoke: (channel, ...args) => {
       const validChannels = [
+        /^app:.*$/,
         'get-version-info',
         'get-system-stats',
         'get-connection-history',

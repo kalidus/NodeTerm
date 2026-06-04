@@ -9,7 +9,7 @@ const os = require('os');
  * sin depender de localStorage (que no se comparte en instancias secundarias)
  */
 
-const { getNodeTermDataDir } = require('../utils/file-utils');
+const { getNodeTermDataDir, savePreferredSplashStyle, loadPreferredSplashStyle } = require('../utils/file-utils');
 
 // Ruta al archivo de configuración de tema compartido
 const THEME_CONFIG_PATH = path.join(getNodeTermDataDir(), 'theme.json');
@@ -63,6 +63,15 @@ function registerThemeHandlers(dependencies) {
             console.error('❌ [Theme] Error guardando configuración de tema:', error.message);
             return { success: false, error: error.message };
         }
+    });
+
+    safeHandle('theme:get-splash-style', async () => {
+        return await loadPreferredSplashStyle();
+    });
+
+    safeHandle('theme:save-splash-style', async (event, style) => {
+        const success = await savePreferredSplashStyle(style);
+        return { success };
     });
 }
 

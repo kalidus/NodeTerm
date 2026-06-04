@@ -1,247 +1,441 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-    <meta charset="utf-8">
-    <title>NodeTerm Splash - Preview</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+  <meta charset="utf-8">
+  <title>NodeTerm Splash - Interactive Preview</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+    }
+    
+    /* COMMON LAYOUT */
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      transition: background 0.3s ease;
+    }
+    
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      z-index: 2;
+      padding: 24px;
+      width: 100%;
+      max-width: 400px;
+    }
+    
+    .logo-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      text-align: center;
+    }
+    
+    .logo-wrapper {
+      width: 80px;
+      height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .logo-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: monospace;
+      transition: all 0.3s ease;
+    }
+    
+    .brand {
+      font-weight: 700;
+      font-size: 28px;
+      letter-spacing: -0.5px;
+      margin-top: 4px;
+      transition: all 0.3s ease;
+    }
+    
+    .tagline {
+      font-size: 11px;
+      letter-spacing: 1px;
+      font-weight: 500;
+      text-transform: uppercase;
+      opacity: 0.6;
+    }
 
-        html,
-        body {
-            height: 100%;
-            background: linear-gradient(180deg, #1a2332 0%, #0f1722 50%, #0a0f18 100%);
-            color: #e3f2fd;
-            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            position: relative;
-        }
+    /* PROGRESS BAR */
+    .progress-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+      margin-top: 8px;
+    }
+    
+    .progress-container {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .progress-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      opacity: 0.8;
+    }
+    
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .status-icon {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      animation: spin 0.7s linear infinite;
+    }
+    
+    .progress-percent {
+      font-weight: bold;
+    }
 
-        .container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 24px;
-            z-index: 1;
-            padding: 32px 24px;
-            width: 100%;
-            max-width: 100%;
-        }
+    /* GRID & DECORATIONS */
+    .cyber-grid {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
 
-        /* Logo section */
-        .logo-section {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 12px;
-            text-align: center;
-        }
+    /* HUD FRAME & TICKER */
+    .hud-frame {
+      display: none;
+      width: 100%;
+      height: 65px;
+      border: 1px solid transparent;
+      position: relative;
+      padding: 6px 12px;
+      font-family: 'Fira Code', 'Courier New', monospace;
+      font-size: 10px;
+      overflow: hidden;
+      margin-top: 4px;
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+    }
+    
+    .terminal-ticker {
+      width: 100%;
+      height: 100%;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      scrollbar-width: none;
+    }
+    .terminal-ticker::-webkit-scrollbar { display: none; }
+    
+    .ticker-line {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      opacity: 0.85;
+    }
 
-        .logo-wrapper {
-            width: 100px;
-            height: 100px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-        .logo-icon {
-            width: 100px;
-            height: 100px;
-            background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
-            border-radius: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            box-shadow:
-                0 0 0 1px rgba(100, 116, 139, 0.3),
-                inset 0 1px 0 rgba(255, 255, 255, 0.05),
-                0 4px 12px rgba(0, 0, 0, 0.3);
-        }
+    /* ==========================================
+       THEMES DEFINITIONS
+       ========================================== */
 
-        .prompt {
-            color: #4ade80;
-            font-size: 24px;
-            font-weight: bold;
-            font-family: 'Consolas', 'Monaco', monospace;
-        }
+    /* 1. CLASSIC THEME */
+    body.theme-classic {
+      background: linear-gradient(180deg, #1a2332 0%, #0f1722 50%, #0a0f18 100%);
+      color: #e3f2fd;
+    }
+    body.theme-classic .logo-icon {
+      background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
+      box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.3), inset 0 1px 0 rgba(255,255,255,0.05), 0 4px 12px rgba(0,0,0,0.3);
+    }
+    body.theme-classic .prompt { color: #4ade80; font-size: 22px; font-weight: bold; }
+    body.theme-classic .code { color: #64748b; font-size: 16px; font-weight: bold; margin-top: 2px; }
+    body.theme-classic .brand { color: #ffffff; }
+    body.theme-classic .progress-container { background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(59, 130, 246, 0.2); }
+    body.theme-classic .progress-bar { background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 50%, #3b82f6 100%); }
+    body.theme-classic .status-icon { border: 2px solid rgba(59, 130, 246, 0.4); border-top-color: #3b82f6; }
 
-        .code {
-            color: #64748b;
-            font-size: 18px;
-            font-weight: bold;
-            font-family: 'Consolas', 'Monaco', monospace;
-            margin-top: 4px;
-        }
+    /* 2. HOLOGRAM HUD THEME */
+    body.theme-hologram-hud {
+      background: #06040d;
+      color: #bbf7ff;
+    }
+    body.theme-hologram-hud .cyber-grid {
+      opacity: 1;
+      background-image: 
+        linear-gradient(rgba(0, 242, 254, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 242, 254, 0.03) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+    body.theme-hologram-hud .logo-icon {
+      background: rgba(13, 10, 31, 0.8);
+      border: 1px solid #00f2fe;
+      box-shadow: 0 0 15px rgba(0, 242, 254, 0.3), inset 0 0 10px rgba(0, 242, 254, 0.2);
+    }
+    body.theme-hologram-hud .prompt { color: #00f2fe; font-size: 22px; font-weight: bold; text-shadow: 0 0 8px rgba(0, 242, 254, 0.6); }
+    body.theme-hologram-hud .code { color: #9d4edd; font-size: 16px; font-weight: bold; text-shadow: 0 0 8px rgba(157, 78, 221, 0.6); margin-top: 2px; }
+    body.theme-hologram-hud .brand { color: #00f2fe; text-shadow: 0 0 12px rgba(0, 242, 254, 0.5); }
+    body.theme-hologram-hud .tagline { color: #9d4edd; text-shadow: 0 0 8px rgba(157, 78, 221, 0.4); }
+    body.theme-hologram-hud .hud-frame {
+      display: block;
+      border: 1px solid rgba(0, 242, 254, 0.2);
+      background: rgba(0, 242, 254, 0.02);
+      color: #00f2fe;
+    }
+    body.theme-hologram-hud .progress-container { background: rgba(0, 242, 254, 0.08); border: 1px solid rgba(0, 242, 254, 0.3); }
+    body.theme-hologram-hud .progress-bar { background: #00f2fe; box-shadow: 0 0 8px #00f2fe; }
+    body.theme-hologram-hud .status-icon { border: 2px solid rgba(0, 242, 254, 0.2); border-top-color: #00f2fe; }
 
-        .brand {
-            font-weight: 600;
-            font-size: 32px;
-            color: #ffffff;
-            letter-spacing: -0.5px;
-            margin-top: 6px;
-        }
+    /* 3. SYNTHWAVE OUTRUN THEME */
+    body.theme-synthwave-outrun {
+      background: #0f021a;
+      color: #ff9de2;
+    }
+    body.theme-synthwave-outrun .cyber-grid {
+      opacity: 1;
+      background-image: linear-gradient(rgba(255, 0, 127, 0.04) 1px, transparent 1px);
+      background-size: 100% 12px;
+    }
+    body.theme-synthwave-outrun .logo-icon {
+      background: rgba(20, 2, 33, 0.8);
+      border: 1px solid #ff007f;
+      box-shadow: 0 0 15px rgba(255, 0, 127, 0.4), inset 0 0 8px rgba(255, 0, 127, 0.2);
+    }
+    body.theme-synthwave-outrun .prompt { color: #ff007f; font-size: 22px; font-weight: bold; text-shadow: 0 0 8px rgba(255, 0, 127, 0.6); }
+    body.theme-synthwave-outrun .code { color: #ffea00; font-size: 16px; font-weight: bold; text-shadow: 0 0 8px rgba(255, 234, 0, 0.6); margin-top: 2px; }
+    body.theme-synthwave-outrun .brand { color: #ff007f; text-shadow: 0 0 12px rgba(255, 0, 127, 0.5); }
+    body.theme-synthwave-outrun .tagline { color: #ffea00; text-shadow: 0 0 8px rgba(255, 234, 0, 0.4); }
+    body.theme-synthwave-outrun .hud-frame {
+      display: block;
+      border: 1px solid rgba(255, 0, 127, 0.2);
+      background: rgba(255, 0, 127, 0.02);
+      color: #ff9de2;
+    }
+    body.theme-synthwave-outrun .progress-container { background: rgba(255, 0, 127, 0.08); border: 1px solid rgba(255, 0, 127, 0.3); }
+    body.theme-synthwave-outrun .progress-bar { background: linear-gradient(90deg, #ff007f 0%, #ffea00 100%); box-shadow: 0 0 8px #ff007f; }
+    body.theme-synthwave-outrun .status-icon { border: 2px solid rgba(255, 0, 127, 0.2); border-top-color: #ff007f; }
 
-        /* Corporate tagline */
-        .tagline {
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.5);
-            letter-spacing: 1.5px;
-            font-weight: 400;
-            text-transform: uppercase;
-        }
+    /* 4. TERMINAL MINIMALIST THEME */
+    body.theme-terminal-minimalist {
+      background: #000000;
+      color: #00ff66;
+      font-family: 'Fira Code', 'Courier New', monospace;
+    }
+    body.theme-terminal-minimalist .logo-icon {
+      background: #000000;
+      border: 1px solid #00ff66;
+      box-shadow: 0 0 10px rgba(0, 255, 102, 0.2);
+    }
+    body.theme-terminal-minimalist .prompt { color: #00ff66; font-size: 22px; font-weight: bold; text-shadow: 0 0 6px rgba(0, 255, 102, 0.5); }
+    body.theme-terminal-minimalist .code { color: #008833; font-size: 16px; font-weight: bold; margin-top: 2px; }
+    body.theme-terminal-minimalist .brand { color: #00ff66; text-shadow: 0 0 8px rgba(0, 255, 102, 0.4); }
+    body.theme-terminal-minimalist .tagline { color: #00aa44; }
+    body.theme-terminal-minimalist .hud-frame {
+      display: block;
+      border: 1px solid rgba(0, 255, 102, 0.2);
+      background: rgba(0, 255, 102, 0.01);
+      color: #00ff66;
+    }
+    body.theme-terminal-minimalist .progress-container { background: #000000; border: 1px solid rgba(0, 255, 102, 0.4); }
+    body.theme-terminal-minimalist .progress-bar { background: #00ff66; box-shadow: 0 0 6px #00ff66; }
+    body.theme-terminal-minimalist .status-icon { border: 2px solid rgba(0, 255, 102, 0.2); border-top-color: #00ff66; }
 
-        /* Progress section */
-        .progress-section {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 12px;
-            width: 100%;
-            max-width: 320px;
-            margin-top: 16px;
-        }
-
-        .progress-container {
-            width: 100%;
-            height: 5px;
-            background: rgba(30, 41, 59, 0.8);
-            border-radius: 3px;
-            overflow: hidden;
-            position: relative;
-            box-shadow:
-                inset 0 1px 3px rgba(0, 0, 0, 0.4),
-                0 1px 0 rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(59, 130, 246, 0.2);
-        }
-
-        .progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 50%, #3b82f6 100%);
-            border-radius: 3px;
-            width: 0%;
-            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            box-shadow:
-                0 0 16px rgba(59, 130, 246, 0.6),
-                0 0 32px rgba(59, 130, 246, 0.3);
-        }
-
-        /* Progress percentage */
-        .progress-percent {
-            font-size: 13px;
-            color: rgba(255, 255, 255, 0.6);
-            font-weight: 500;
-            font-variant-numeric: tabular-nums;
-        }
-
-        /* Status text */
-        .status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 13px;
-            color: rgba(255, 255, 255, 0.6);
-            font-weight: 400;
-            min-height: 18px;
-        }
-
-        .status-icon {
-            width: 12px;
-            height: 12px;
-            border: 2px solid rgba(59, 130, 246, 0.4);
-            border-top-color: #3b82f6;
-            border-radius: 50%;
-            animation: spin 0.7s linear infinite;
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        /* Version badge */
-        .version {
-            position: fixed;
-            bottom: 20px;
-            font-size: 11px;
-            color: rgba(255, 255, 255, 0.35);
-            letter-spacing: 0.5px;
-            font-weight: 400;
-        }
-    </style>
+    /* CONTROLS OVERLAY FOR SANDBOX */
+    .controls {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      z-index: 10000;
+      background: rgba(10, 10, 20, 0.75);
+      padding: 6px 12px;
+      border-radius: 24px;
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+    .controls button {
+      background: transparent;
+      border: none;
+      color: rgba(255, 255, 255, 0.6);
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 16px;
+      transition: all 0.2s ease;
+    }
+    .controls button:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .controls button.active {
+      color: #000;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(255, 255, 255, 0.2);
+    }
+  </style>
 </head>
+<body class="theme-classic">
+  <div class="controls" id="themeControls">
+    <button onclick="setTheme('classic')" id="btn-classic">Classic</button>
+    <button onclick="setTheme('hologram-hud')" id="btn-hologram-hud">Hologram HUD</button>
+    <button onclick="setTheme('synthwave-outrun')" id="btn-synthwave-outrun">Synthwave Outrun</button>
+    <button onclick="setTheme('terminal-minimalist')" id="btn-terminal-minimalist">Terminal Minimalist</button>
+  </div>
 
-<body>
-    <div class="container">
-        <div class="logo-section">
-            <div class="logo-wrapper">
-                <div class="logo-icon">
-                    <span class="prompt">&gt;_</span>
-                    <span class="code">&lt;/&gt;_</span>
-                </div>
-            </div>
-            <div>
-                <div class="brand">NodeTerm</div>
-                <div class="tagline">Secure. Reliable. Connected.</div>
-            </div>
+  <div class="cyber-grid"></div>
+  <div class="container">
+    <div class="logo-section">
+      <div class="logo-wrapper">
+        <div class="logo-icon">
+          <span class="prompt">&gt;_</span>
+          <span class="code">&lt;/&gt;_</span>
         </div>
-        <div class="progress-section">
-            <div class="progress-container">
-                <div class="progress-bar" id="progressBar"></div>
-            </div>
-            <div class="progress-percent" id="progressPercent">0%</div>
-            <div class="status" id="status">
-                <div class="status-icon"></div>
-                <span class="status-text" id="statusText">Iniciando NodeTerm...</span>
-            </div>
-        </div>
+      </div>
+      <div>
+        <div class="brand">NodeTerm</div>
+        <div class="tagline">Secure. Reliable. Connected.</div>
+      </div>
     </div>
-    <div class="version" id="version">v1.6.8</div>
+    
+    <div class="hud-frame">
+      <div class="terminal-ticker" id="ticker">
+        <div class="ticker-line">&gt;&gt; BOOTING NODETERM SHELL PROTOCOLS...</div>
+      </div>
+    </div>
 
-    <script>
-        // Demo animation for preview
-        const steps = [
-            { percent: 25, text: 'Iniciando NodeTerm...' },
-            { percent: 50, text: 'Preparando ventana...' },
-            { percent: 75, text: 'Cargando interfaz...' },
-            { percent: 100, text: 'Listo' }
-        ];
+    <div class="progress-section">
+      <div class="progress-container">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      <div class="progress-row">
+        <div class="status" id="status">
+          <div class="status-icon"></div>
+          <span id="statusText">Iniciando...</span>
+        </div>
+        <div class="progress-percent" id="progressPercent">0%</div>
+      </div>
+    </div>
+  </div>
 
-        let currentStep = 0;
+  <script>
+    // Demo settings
+    const steps = [
+      { percent: 25, text: 'Iniciando NodeTerm' },
+      { percent: 50, text: 'Preparando ventana' },
+      { percent: 75, text: 'Cargando interfaz' },
+      { percent: 100, text: 'Listo' }
+    ];
 
-        function updateProgress() {
-            const step = steps[currentStep];
-            document.getElementById('progressBar').style.width = step.percent + '%';
-            document.getElementById('progressPercent').textContent = step.percent + '%';
-            document.getElementById('statusText').textContent = step.text;
+    let currentStep = 0;
+    let animTimeout = null;
 
-            currentStep = (currentStep + 1) % steps.length;
-            if (currentStep === 0) {
-                // Reset after completing all steps
-                setTimeout(() => {
-                    document.getElementById('progressBar').style.width = '0%';
-                    document.getElementById('progressPercent').textContent = '0%';
-                    setTimeout(updateProgress, 500);
-                }, 1500);
-            } else {
-                setTimeout(updateProgress, 1200);
-            }
-        }
+    function setTheme(themeId) {
+      // Remover clases anteriores
+      document.body.className = '';
+      document.body.classList.add('theme-' + themeId);
+      
+      // Actualizar botones activos
+      const buttons = document.querySelectorAll('#themeControls button');
+      buttons.forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById('btn-' + themeId);
+      if (activeBtn) activeBtn.classList.add('active');
 
-        // Start demo
-        setTimeout(updateProgress, 500);
-    </script>
+      // Resetear ticker
+      const ticker = document.getElementById('ticker');
+      if (ticker) {
+        ticker.innerHTML = '<div class="ticker-line">&gt;&gt; BOOTING NODETERM SHELL PROTOCOLS...</div>';
+      }
+
+      // Reiniciar animación
+      if (animTimeout) clearTimeout(animTimeout);
+      currentStep = 0;
+      document.getElementById('progressBar').style.width = '0%';
+      document.getElementById('progressPercent').textContent = '0%';
+      document.getElementById('statusText').textContent = 'Iniciando...';
+      
+      setTimeout(runStep, 500);
+    }
+
+    function runStep() {
+      if (currentStep >= steps.length) {
+        // Reset en bucle
+        animTimeout = setTimeout(() => {
+          setTheme(document.body.classList[0].replace('theme-', ''));
+        }, 3000);
+        return;
+      }
+
+      const step = steps[currentStep];
+      const bar = document.getElementById('progressBar');
+      const pct = document.getElementById('progressPercent');
+      const txt = document.getElementById('statusText');
+
+      if (bar) bar.style.width = step.percent + '%';
+      if (pct) pct.textContent = step.percent + '%';
+      if (txt) txt.textContent = step.text + '...';
+
+      // Agregar línea a ticker
+      const ticker = document.getElementById('ticker');
+      if (ticker) {
+        const line = document.createElement('div');
+        line.className = 'ticker-line';
+        line.textContent = '>> ' + step.text.toUpperCase() + '... OK';
+        ticker.appendChild(line);
+        ticker.scrollTop = ticker.scrollHeight;
+      }
+
+      currentStep++;
+      animTimeout = setTimeout(runStep, 1500);
+    }
+
+    // Inicializar desde Hash o clásico por defecto
+    window.addEventListener('DOMContentLoaded', () => {
+      let initialTheme = 'classic';
+      const hash = window.location.hash.replace('#', '');
+      if (['classic', 'hologram-hud', 'synthwave-outrun', 'terminal-minimalist'].includes(hash)) {
+        initialTheme = hash;
+      }
+      setTheme(initialTheme);
+    });
+  </script>
 </body>
-
 </html>

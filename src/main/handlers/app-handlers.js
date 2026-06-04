@@ -5,7 +5,8 @@
  * - Cierre de aplicación
  */
 
-const { ipcMain, BrowserWindow, app } = require('electron');
+const { ipcMain, BrowserWindow, app, shell } = require('electron');
+const path = require('path');
 
 /**
  * Registra todos los handlers de aplicación
@@ -111,6 +112,19 @@ function registerAppHandlers(dependencies) {
     isAppQuitting.value = true;
     // Salida inmediata solicitada por UX: no esperar cleanup async.
     app.exit(0);
+  });
+
+  // Handler para abrir la previsualización del splash screen en el navegador predeterminado
+  ipcMain.handle('app:open-splash-preview', async (event, style) => {
+    try {
+      const previewPath = path.join(app.getAppPath(), 'testing', 'splash-preview.html');
+      const fileUrl = `file://${previewPath.replace(/\\/g, '/')}${style ? '#' + style : ''}`;
+      await shell.openExternal(fileUrl);
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Error al abrir la previsualización del splash:', error);
+      return { success: false, error: error.message };
+    }
   });
 }
 

@@ -50,7 +50,8 @@ const SETTINGS_SECTIONS = [
       { id: 'status-bar', labelKey: 'sidebar.statusBar', descriptionKey: 'sidebarDescriptions.statusBar', icon: 'pi pi-sliders-h' },
       { id: 'explorador-sesiones', labelKey: 'sidebar.sessionExplorer', descriptionKey: 'sidebarDescriptions.sessionExplorer', icon: 'pi pi-sitemap' },
       { id: 'explorador-archivos', labelKey: 'sidebar.fileExplorer', descriptionKey: 'sidebarDescriptions.fileExplorer', icon: 'pi pi-folder-open' },
-      { id: 'presets', labelKey: 'sidebar.presets', descriptionKey: 'sidebarDescriptions.presets', icon: 'pi pi-star' }
+      { id: 'presets', labelKey: 'sidebar.presets', descriptionKey: 'sidebarDescriptions.presets', icon: 'pi pi-star' },
+      { id: 'splash-screen', labelKey: 'sidebar.splashScreen', descriptionKey: 'sidebarDescriptions.splashScreen', icon: 'pi pi-bolt' }
     ]
   },
   {

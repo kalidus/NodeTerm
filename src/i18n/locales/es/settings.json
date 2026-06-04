@@ -35,7 +35,8 @@
     "updates": "Actualizaciones",
     "users": "Usuarios",
     "sync": "Sincronización",
-    "info": "Información"
+    "info": "Información",
+    "splashScreen": "Pantalla de Inicio"
   },
   "sidebarDescriptions": {
     "general": "Ajustes globales de comportamiento",
@@ -54,7 +55,8 @@
     "apps": "Integraciones y aplicaciones",
     "updates": "Canales y revisión de versiones",
     "sync": "Sincroniza ajustes en la nube",
-    "info": "Versión y datos técnicos"
+    "info": "Versión y datos técnicos",
+    "splashScreen": "Personaliza la pantalla de carga"
   },
   "general": {
     "title": "Configuración General",

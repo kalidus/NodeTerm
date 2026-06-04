@@ -35,7 +35,8 @@
     "updates": "Updates",
     "users": "Users",
     "sync": "Sync",
-    "info": "Information"
+    "info": "Information",
+    "splashScreen": "Splash Screen"
   },
   "sidebarDescriptions": {
     "general": "Global behavior preferences",
@@ -54,7 +55,8 @@
     "apps": "Apps and integrations",
     "updates": "Channels and version checks",
     "sync": "Sync settings to cloud",
-    "info": "Version and technical details"
+    "info": "Version and technical details",
+    "splashScreen": "Customize the startup loading window"
   },
   "general": {
     "title": "General Settings",

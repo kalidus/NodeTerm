@@ -304,6 +304,63 @@ async function loadGuacdInactivityTimeout() {
   }
 }
 
+/**
+ * Obtiene la ruta del archivo de preferencias de Splash Screen
+ * @returns {string|null} Ruta del archivo de preferencias o null si hay error
+ */
+function getSplashPrefPath() {
+  try {
+    return path.join(getNodeTermDataDir(), 'splash-preferences.json');
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Guarda la preferencia de estilo de Splash Screen
+ * @param {string} style - Estilo preferido (classic|hologram-hud|synthwave-outrun|terminal-minimalist)
+ * @returns {Promise<boolean>} true si se guardó exitosamente
+ */
+async function savePreferredSplashStyle(style) {
+  const prefPath = getSplashPrefPath();
+  if (!prefPath) return false;
+  try {
+    const dir = path.dirname(prefPath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(prefPath, JSON.stringify({ preferredStyle: style }, null, 2), 'utf8');
+    return true;
+  } catch { 
+    return false; 
+  }
+}
+
+/**
+ * Carga la preferencia de estilo de Splash Screen
+ * @returns {Promise<string>} Estilo preferido o 'classic' por defecto
+ */
+async function loadPreferredSplashStyle() {
+  return loadPreferredSplashStyleSync();
+}
+
+/**
+ * Carga de forma síncrona el estilo de Splash Screen
+ * @returns {string} Estilo preferido o 'classic' por defecto
+ */
+function loadPreferredSplashStyleSync() {
+  const prefPath = getSplashPrefPath();
+  if (!prefPath) return 'classic';
+  try {
+    if (!fs.existsSync(prefPath)) return 'classic';
+    const raw = fs.readFileSync(prefPath, 'utf8');
+    const json = JSON.parse(raw || '{}');
+    const style = String(json.preferredStyle || '').toLowerCase();
+    const validStyles = ['classic', 'hologram-hud', 'synthwave-outrun', 'terminal-minimalist'];
+    return validStyles.includes(style) ? style : 'classic';
+  } catch { 
+    return 'classic'; 
+  }
+}
+
 module.exports = {
   getGuacdPrefPath,
   savePreferredGuacdMethod,
@@ -318,5 +375,9 @@ module.exports = {
   serializeAppDataFile,
   parseAppDataFileContent,
   isAppDataPlainJson,
+  savePreferredSplashStyle,
+  loadPreferredSplashStyle,
+  loadPreferredSplashStyleSync,
   APP_DATA_ENC_PREFIX
 };
+

@@ -857,7 +857,7 @@ const {
 
 // 🚀 OPTIMIZACIÓN: Splash inline para evitar I/O del disco en arranque frío
 // Esto elimina el delay de 13+ segundos al cargar desde disco en primer arranque
-const SPLASH_HTML = `<!DOCTYPE html>
+const getSplashHtml = (style) => `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
@@ -865,122 +865,276 @@ const SPLASH_HTML = `<!DOCTYPE html>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
       height: 100%;
-      background: linear-gradient(180deg, #1a2332 0%, #0f1722 50%, #0a0f18 100%);
-      color: #e3f2fd;
+      overflow: hidden;
       font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+    }
+    
+    /* COMMON LAYOUT */
+    body {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      overflow: hidden;
       position: relative;
     }
+    
     .container {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 24px;
-      z-index: 1;
-      padding: 32px 24px;
+      gap: 20px;
+      z-index: 2;
+      padding: 24px;
       width: 100%;
+      max-width: 400px;
     }
+    
     .logo-section {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 12px;
+      gap: 8px;
       text-align: center;
     }
+    
     .logo-wrapper {
-      width: 100px;
-      height: 100px;
+      width: 80px;
+      height: 80px;
       display: flex;
       align-items: center;
       justify-content: center;
     }
+    
     .logo-icon {
-      width: 100px;
-      height: 100px;
-      background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
-      border-radius: 20px;
+      width: 80px;
+      height: 80px;
+      border-radius: 16px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      box-shadow: 
-        0 0 0 1px rgba(100, 116, 139, 0.3),
-        inset 0 1px 0 rgba(255,255,255,0.05),
-        0 4px 12px rgba(0,0,0,0.3);
+      font-family: monospace;
+      transition: all 0.3s ease;
     }
-    .prompt { color: #4ade80; font-size: 24px; font-weight: bold; font-family: monospace; }
-    .code { color: #64748b; font-size: 18px; font-weight: bold; font-family: monospace; margin-top: 4px; }
+    
     .brand {
-      font-weight: 600;
-      font-size: 32px;
-      color: #ffffff;
+      font-weight: 700;
+      font-size: 28px;
       letter-spacing: -0.5px;
-      margin-top: 6px;
+      margin-top: 4px;
+      transition: all 0.3s ease;
     }
+    
     .tagline {
-      font-size: 12px;
-      color: rgba(255, 255, 255, 0.5);
-      letter-spacing: 1.5px;
-      font-weight: 400;
+      font-size: 11px;
+      letter-spacing: 1px;
+      font-weight: 500;
       text-transform: uppercase;
+      opacity: 0.6;
     }
+
+    /* PROGRESS BAR */
     .progress-section {
       display: flex;
       flex-direction: column;
-      align-items: center;
-      gap: 12px;
+      gap: 8px;
       width: 100%;
-      max-width: 320px;
-      margin-top: 16px;
+      margin-top: 8px;
     }
+    
     .progress-container {
       width: 100%;
-      height: 5px;
-      background: rgba(30, 41, 59, 0.8);
+      height: 6px;
       border-radius: 3px;
       overflow: hidden;
-      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 0 rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(59, 130, 246, 0.2);
+      position: relative;
     }
+    
     .progress-bar {
       height: 100%;
-      background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 50%, #3b82f6 100%);
-      border-radius: 3px;
       width: 0%;
-      transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 0 16px rgba(59, 130, 246, 0.6), 0 0 32px rgba(59, 130, 246, 0.3);
+      transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    .progress-percent {
-      font-size: 13px;
-      color: rgba(255, 255, 255, 0.6);
-      font-weight: 500;
-      font-variant-numeric: tabular-nums;
+    
+    .progress-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      opacity: 0.8;
     }
+    
     .status {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 13px;
-      color: rgba(255, 255, 255, 0.6);
-      font-weight: 400;
-      min-height: 18px;
+      gap: 6px;
     }
+    
     .status-icon {
-      width: 12px;
-      height: 12px;
-      border: 2px solid rgba(59, 130, 246, 0.4);
-      border-top-color: #3b82f6;
+      width: 10px;
+      height: 10px;
       border-radius: 50%;
+      border: 2px solid transparent;
       animation: spin 0.7s linear infinite;
     }
+    
+    .progress-percent {
+      font-weight: bold;
+    }
+
+    /* GRID & DECORATIONS */
+    .cyber-grid {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+
+    /* HUD FRAME & TICKER */
+    .hud-frame {
+      display: none;
+      width: 100%;
+      height: 65px;
+      border: 1px solid transparent;
+      position: relative;
+      padding: 6px 12px;
+      font-family: 'Fira Code', 'Courier New', monospace;
+      font-size: 10px;
+      overflow: hidden;
+      margin-top: 4px;
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+    }
+    
+    .terminal-ticker {
+      width: 100%;
+      height: 100%;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      scrollbar-width: none;
+    }
+    .terminal-ticker::-webkit-scrollbar { display: none; }
+    
+    .ticker-line {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      opacity: 0.85;
+    }
+
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ==========================================
+       THEMES DEFINITIONS
+       ========================================== */
+
+    /* 1. CLASSIC THEME */
+    body.theme-classic {
+      background: linear-gradient(180deg, #1a2332 0%, #0f1722 50%, #0a0f18 100%);
+      color: #e3f2fd;
+    }
+    body.theme-classic .logo-icon {
+      background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
+      box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.3), inset 0 1px 0 rgba(255,255,255,0.05), 0 4px 12px rgba(0,0,0,0.3);
+    }
+    body.theme-classic .prompt { color: #4ade80; font-size: 22px; font-weight: bold; }
+    body.theme-classic .code { color: #64748b; font-size: 16px; font-weight: bold; margin-top: 2px; }
+    body.theme-classic .brand { color: #ffffff; }
+    body.theme-classic .progress-container { background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(59, 130, 246, 0.2); }
+    body.theme-classic .progress-bar { background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 50%, #3b82f6 100%); }
+    body.theme-classic .status-icon { border: 2px solid rgba(59, 130, 246, 0.4); border-top-color: #3b82f6; }
+
+    /* 2. HOLOGRAM HUD THEME */
+    body.theme-hologram-hud {
+      background: #06040d;
+      color: #bbf7ff;
+    }
+    body.theme-hologram-hud .cyber-grid {
+      opacity: 1;
+      background-image: 
+        linear-gradient(rgba(0, 242, 254, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 242, 254, 0.03) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+    body.theme-hologram-hud .logo-icon {
+      background: rgba(13, 10, 31, 0.8);
+      border: 1px solid #00f2fe;
+      box-shadow: 0 0 15px rgba(0, 242, 254, 0.3), inset 0 0 10px rgba(0, 242, 254, 0.2);
+    }
+    body.theme-hologram-hud .prompt { color: #00f2fe; font-size: 22px; font-weight: bold; text-shadow: 0 0 8px rgba(0, 242, 254, 0.6); }
+    body.theme-hologram-hud .code { color: #9d4edd; font-size: 16px; font-weight: bold; text-shadow: 0 0 8px rgba(157, 78, 221, 0.6); margin-top: 2px; }
+    body.theme-hologram-hud .brand { color: #00f2fe; text-shadow: 0 0 12px rgba(0, 242, 254, 0.5); }
+    body.theme-hologram-hud .tagline { color: #9d4edd; text-shadow: 0 0 8px rgba(157, 78, 221, 0.4); }
+    body.theme-hologram-hud .hud-frame {
+      display: block;
+      border: 1px solid rgba(0, 242, 254, 0.2);
+      background: rgba(0, 242, 254, 0.02);
+      color: #00f2fe;
+    }
+    body.theme-hologram-hud .progress-container { background: rgba(0, 242, 254, 0.08); border: 1px solid rgba(0, 242, 254, 0.3); }
+    body.theme-hologram-hud .progress-bar { background: #00f2fe; box-shadow: 0 0 8px #00f2fe; }
+    body.theme-hologram-hud .status-icon { border: 2px solid rgba(0, 242, 254, 0.2); border-top-color: #00f2fe; }
+
+    /* 3. SYNTHWAVE OUTRUN THEME */
+    body.theme-synthwave-outrun {
+      background: #0f021a;
+      color: #ff9de2;
+    }
+    body.theme-synthwave-outrun .cyber-grid {
+      opacity: 1;
+      background-image: linear-gradient(rgba(255, 0, 127, 0.04) 1px, transparent 1px);
+      background-size: 100% 12px;
+    }
+    body.theme-synthwave-outrun .logo-icon {
+      background: rgba(20, 2, 33, 0.8);
+      border: 1px solid #ff007f;
+      box-shadow: 0 0 15px rgba(255, 0, 127, 0.4), inset 0 0 8px rgba(255, 0, 127, 0.2);
+    }
+    body.theme-synthwave-outrun .prompt { color: #ff007f; font-size: 22px; font-weight: bold; text-shadow: 0 0 8px rgba(255, 0, 127, 0.6); }
+    body.theme-synthwave-outrun .code { color: #ffea00; font-size: 16px; font-weight: bold; text-shadow: 0 0 8px rgba(255, 234, 0, 0.6); margin-top: 2px; }
+    body.theme-synthwave-outrun .brand { color: #ff007f; text-shadow: 0 0 12px rgba(255, 0, 127, 0.5); }
+    body.theme-synthwave-outrun .tagline { color: #ffea00; text-shadow: 0 0 8px rgba(255, 234, 0, 0.4); }
+    body.theme-synthwave-outrun .hud-frame {
+      display: block;
+      border: 1px solid rgba(255, 0, 127, 0.2);
+      background: rgba(255, 0, 127, 0.02);
+      color: #ff9de2;
+    }
+    body.theme-synthwave-outrun .progress-container { background: rgba(255, 0, 127, 0.08); border: 1px solid rgba(255, 0, 127, 0.3); }
+    body.theme-synthwave-outrun .progress-bar { background: linear-gradient(90deg, #ff007f 0%, #ffea00 100%); box-shadow: 0 0 8px #ff007f; }
+    body.theme-synthwave-outrun .status-icon { border: 2px solid rgba(255, 0, 127, 0.2); border-top-color: #ff007f; }
+
+    /* 4. TERMINAL MINIMALIST THEME */
+    body.theme-terminal-minimalist {
+      background: #000000;
+      color: #00ff66;
+      font-family: 'Fira Code', 'Courier New', monospace;
+    }
+    body.theme-terminal-minimalist .logo-icon {
+      background: #000000;
+      border: 1px solid #00ff66;
+      box-shadow: 0 0 10px rgba(0, 255, 102, 0.2);
+    }
+    body.theme-terminal-minimalist .prompt { color: #00ff66; font-size: 22px; font-weight: bold; text-shadow: 0 0 6px rgba(0, 255, 102, 0.5); }
+    body.theme-terminal-minimalist .code { color: #008833; font-size: 16px; font-weight: bold; margin-top: 2px; }
+    body.theme-terminal-minimalist .brand { color: #00ff66; text-shadow: 0 0 8px rgba(0, 255, 102, 0.4); }
+    body.theme-terminal-minimalist .tagline { color: #00aa44; }
+    body.theme-terminal-minimalist .hud-frame {
+      display: block;
+      border: 1px solid rgba(0, 255, 102, 0.2);
+      background: rgba(0, 255, 102, 0.01);
+      color: #00ff66;
+    }
+    body.theme-terminal-minimalist .progress-container { background: #000000; border: 1px solid rgba(0, 255, 102, 0.4); }
+    body.theme-terminal-minimalist .progress-bar { background: #00ff66; box-shadow: 0 0 6px #00ff66; }
+    body.theme-terminal-minimalist .status-icon { border: 2px solid rgba(0, 255, 102, 0.2); border-top-color: #00ff66; }
   </style>
 </head>
-<body>
+<body class="theme-${style}">
+  <div class="cyber-grid"></div>
   <div class="container">
     <div class="logo-section">
       <div class="logo-wrapper">
@@ -994,14 +1148,23 @@ const SPLASH_HTML = `<!DOCTYPE html>
         <div class="tagline">Secure. Reliable. Connected.</div>
       </div>
     </div>
+    
+    <div class="hud-frame">
+      <div class="terminal-ticker" id="ticker">
+        <div class="ticker-line">&gt;&gt; BOOTING NODETERM SHELL PROTOCOLS...</div>
+      </div>
+    </div>
+
     <div class="progress-section">
       <div class="progress-container">
         <div class="progress-bar" id="progressBar"></div>
       </div>
-      <div class="progress-percent" id="progressPercent">0%</div>
-      <div class="status" id="status">
-        <div class="status-icon"></div>
-        <span id="statusText">Iniciando...</span>
+      <div class="progress-row">
+        <div class="status" id="status">
+          <div class="status-icon"></div>
+          <span id="statusText">Iniciando...</span>
+        </div>
+        <div class="progress-percent" id="progressPercent">0%</div>
       </div>
     </div>
   </div>
@@ -1010,6 +1173,9 @@ const SPLASH_HTML = `<!DOCTYPE html>
 
 function createWindow() {
   logTiming('createWindow() iniciado');
+
+  const { loadPreferredSplashStyleSync } = require('./src/main/utils/file-utils');
+  const style = loadPreferredSplashStyleSync();
 
   // 🚀 SPLASH PRIMERO: antes que la main para no ver ni un frame en negro
   let splashWindow = null;
@@ -1030,6 +1196,15 @@ function createWindow() {
         if(bar) bar.style.width = '${percent}%';
         if(pct) pct.textContent = '${percent}%';
         if(txt) txt.textContent = ${JSON.stringify(text)};
+        
+        var ticker = document.getElementById('ticker');
+        if (ticker) {
+          var line = document.createElement('div');
+          line.className = 'ticker-line';
+          line.textContent = '>> ' + ${JSON.stringify(text.toUpperCase())} + '... ' + (${done} ? 'OK' : 'IN_PROGRESS');
+          ticker.appendChild(line);
+          ticker.scrollTop = ticker.scrollHeight;
+        }
       })();`
     ).catch(() => { });
   };
@@ -1043,14 +1218,14 @@ function createWindow() {
       x, y, width: W, height: H,
       frame: false,
       transparent: false,
-      backgroundColor: '#0a0f18',
+      backgroundColor: style === 'terminal-minimalist' ? '#000000' : (style === 'hologram-hud' ? '#06040d' : (style === 'synthwave-outrun' ? '#0f021a' : '#0a0f18')),
       show: true,
       resizable: false,
       alwaysOnTop: true,
       webPreferences: { contextIsolation: true, nodeIntegration: false }
     });
     // 🚀 OPTIMIZACIÓN: loadURL con data URI es instantáneo (no I/O de disco)
-    splashWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(SPLASH_HTML)}`);
+    splashWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(getSplashHtml(style))}`);
     splashWindow.focus();
   } catch (e) {
     console.warn('[SPLASH] No se pudo crear ventana de splash:', e?.message);
@@ -1153,7 +1328,7 @@ function createWindow() {
           // Revisar cada 500ms
           setTimeout(checkFile, 500);
         } catch (error) {
-          console.error('❌ Error verificando archivo compilado:', error.message);
+          console.error('❌ Error verificado archivo compilado:', error.message);
           resolve(false);
         }
       }
@@ -1210,11 +1385,17 @@ function createWindow() {
     }
   })();
 
-  // Mostrar ventana cuando esté lista para mostrar
-  mainWindow.once('ready-to-show', () => {
-    logTiming('🎯 ready-to-show - VENTANA VISIBLE');
-    if (splashWindow && !splashWindow.isDestroyed()) { try { splashWindow.setAlwaysOnTop(false); } catch (_) { } }
-    if (mainWindow) mainWindow.show();
+  let hasShownMainWindow = false;
+  const showMainWindow = () => {
+    if (hasShownMainWindow) return;
+    hasShownMainWindow = true;
+    logTiming('🎯 Showing main window - React App ready');
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      try { splashWindow.setAlwaysOnTop(false); } catch (_) {}
+    }
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show();
+    }
     closeSplash();
 
     // 🚀 OPTIMIZACIÓN: Inicializar servicios pesados DESPUÉS de mostrar la ventana
@@ -1224,6 +1405,21 @@ function createWindow() {
         console.error('❌ [POST-SHOW] Error en initializeServicesAfterShow:', err);
       });
     });
+  };
+
+  // Escuchar evento de sincronización del React renderer
+  ipcMain.once('app:renderer-ready', () => {
+    showMainWindow();
+  });
+
+  // Mostrar ventana cuando esté lista para mostrar (con timer de seguridad fallback)
+  mainWindow.once('ready-to-show', () => {
+    logTiming('🎯 ready-to-show - VENTANA LISTA (Esperando renderer o timeout)');
+    
+    // Timer de seguridad fallback (5 segundos) por si el renderer tiene un error fatal o tarda demasiado
+    setTimeout(() => {
+      showMainWindow();
+    }, 5000);
   });
 
   // 🚀 OPTIMIZACIÓN: Función para inicializar servicios pesados después del arranque

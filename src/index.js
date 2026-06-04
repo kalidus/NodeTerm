@@ -259,6 +259,9 @@ const initAndRender = async () => {
     }
     hideBootSplashEarly();
     markStartup('app-ready');
+    if (window.electron && window.electron.ipcRenderer) {
+      window.electron.ipcRenderer.send('app:renderer-ready');
+    }
   });
 };
 

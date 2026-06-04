@@ -29,7 +29,9 @@ const SettingsContentRenderer = ({
       'status-bar': 2.3,
       'explorador-sesiones': 2.4,
       'explorador-archivos': 2.5,
-      'pestanas': 2.6
+      'pestanas': 2.6,
+      'presets': 2.65,
+      'splash-screen': 2.7
     };
 
     return activeSubTab ? tabMap[activeSubTab] : tabMap[activeMainTab];
