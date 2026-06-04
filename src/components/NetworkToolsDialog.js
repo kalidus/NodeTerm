@@ -959,7 +959,8 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
       // Iniciar el escaneo con el IPC
       const response = await ipc.invoke('network-tools:network-scan', { 
         subnet: targetSubnet.trim(),
-        timeout: 1000 
+        timeout: 400,
+        mode: 'quick'
       });
       
       if (!response || response.success === false) {
@@ -967,9 +968,6 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
       }
       
       setResult(response);
-      if (response.hosts?.length > 0) {
-        scanCyberPortsForHosts(response.hosts);
-      }
     } catch (err) {
       console.error('Error in autoDetectAndScan:', err);
       setError(err?.message || 'Error al autodetectar e iniciar el escaneo');
@@ -1093,7 +1091,8 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
   }, [selectedCyberHost, cyberScanPorts, cyberPortsCache]);
 
   // Handler genérico para ejecutar herramientas
-  const executeTool = useCallback(async () => {
+  const executeTool = useCallback(async (options = {}) => {
+    const networkScanMode = options.networkScanMode === 'full' ? 'full' : 'quick';
     setLoading(true);
     setError(null);
     setResult(null);
@@ -1144,7 +1143,8 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
           if (!networkScanSubnet.trim()) throw new Error('Subred es requerida');
           response = await ipc.invoke('network-tools:network-scan', { 
             subnet: networkScanSubnet.trim(),
-            timeout: 1000 
+            timeout: networkScanMode === 'quick' ? 400 : 1000,
+            mode: networkScanMode
           });
           break;
 
@@ -1246,7 +1246,11 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
         }
         setResult(finalResult);
         setError(null);
-        if (selectedTool === 'network-scan' && finalResult.hosts?.length > 0) {
+        if (
+          selectedTool === 'network-scan' &&
+          finalResult.hosts?.length > 0 &&
+          (finalResult.scanMode || networkScanMode) === 'full'
+        ) {
           scanCyberPortsForHosts(finalResult.hosts);
         }
       }
@@ -1382,6 +1386,32 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
       0% { transform: translateY(-100%); }
       100% { transform: translateY(100%); }
     }
+    @keyframes cyber-link-flow {
+      0% { stroke-dashoffset: 24; opacity: 0.35; }
+      50% { opacity: 0.85; }
+      100% { stroke-dashoffset: 0; opacity: 0.35; }
+    }
+    @keyframes cyber-node-glow {
+      0%, 100% { filter: drop-shadow(0 0 4px currentColor); }
+      50% { filter: drop-shadow(0 0 12px currentColor); }
+    }
+    .cyber-topology-map {
+      width: 100%;
+      height: 100%;
+      min-height: 320px;
+      max-height: min(72vh, 620px);
+      border: 1px solid rgba(0, 240, 255, 0.2);
+      background: radial-gradient(ellipse at center, rgba(0, 40, 60, 0.35) 0%, rgba(0, 5, 12, 0.9) 70%);
+      border-radius: 6px;
+      overflow: auto;
+      padding: 4px;
+      box-sizing: border-box;
+    }
+    .cyber-topology-map svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
     .cyber-hud {
       font-family: 'Courier New', Courier, monospace;
       background-color: #03080e;
@@ -1434,11 +1464,13 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
       background: rgba(4, 15, 26, 0.75);
       border: 1px solid rgba(0, 240, 255, 0.3);
       border-radius: 4px;
-      padding: 8px 12px;
+      padding: 10px 12px;
       cursor: pointer;
       transition: all 0.2s ease;
       position: relative;
-      overflow: hidden;
+      overflow: visible;
+      box-sizing: border-box;
+      flex-shrink: 0;
     }
     .cyber-card:hover {
       background: rgba(6, 28, 48, 0.9);
@@ -1451,6 +1483,64 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
       border-color: #ff007f !important;
       box-shadow: 0 0 12px rgba(255, 0, 127, 0.4) !important;
     }
+    .cyber-host-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.65rem;
+      min-height: 78px;
+      padding: 10px 12px 10px 12px;
+    }
+    .cyber-host-card-body {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      line-height: 1.4;
+      padding-top: 1px;
+    }
+    .cyber-host-ip {
+      font-size: 0.8rem;
+      font-weight: bold;
+      line-height: 1.45;
+      word-break: break-all;
+    }
+    .cyber-host-name {
+      font-size: 0.72rem;
+      color: rgba(255, 255, 255, 0.65);
+      line-height: 1.35;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .cyber-host-meta {
+      font-size: 0.65rem;
+      color: rgba(0, 240, 255, 0.55);
+      line-height: 1.35;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .cyber-host-mac {
+      font-size: 0.62rem;
+      color: rgba(0, 240, 255, 0.4);
+      line-height: 1.35;
+      font-family: 'Courier New', Courier, monospace;
+      word-break: break-all;
+    }
+    .cyber-host-latency {
+      flex-shrink: 0;
+      align-self: center;
+      padding: 3px 7px;
+      border: 1px solid;
+      border-radius: 4px;
+      font-size: 0.68rem;
+      font-weight: bold;
+      font-family: 'Courier New', Courier, monospace;
+      background: rgba(0, 0, 0, 0.45);
+      white-space: nowrap;
+    }
     .cyber-card::after {
       content: '';
       position: absolute;
@@ -1458,6 +1548,7 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
       width: 6px; height: 6px;
       background: #00f0ff;
       clip-path: polygon(100% 0, 0 100%, 100% 100%);
+      pointer-events: none;
     }
     .cyber-card-active::after {
       background: #ff007f;
@@ -1566,82 +1657,370 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
     );
   };
 
+  const getCyberDeviceKind = (host, isGateway = false) => {
+    if (isGateway) return 'gateway';
+    const os = `${host.os || ''}`.toLowerCase();
+    const vendor = `${host.vendor || ''}`.toLowerCase();
+    const name = `${host.hostname || host.netbiosName || ''}`.toLowerCase();
+    if (os.includes('windows') || name.includes('desktop') || name.includes('pc-')) return 'windows';
+    if (os.includes('android') || name.includes('pixel') || name.includes('phone') || vendor.includes('google')) return 'mobile';
+    if (os.includes('linux') || os.includes('unix') || name.includes('kepler') || name.includes('server')) return 'server';
+    if (name.includes('nest') || name.includes('audio') || name.includes('iot') || vendor.includes('nest')) return 'iot';
+    if (vendor.includes('asus') || vendor.includes('router') || vendor.includes('netgear') || name.includes('rt-')) return 'router';
+    return 'device';
+  };
+
+  const getCyberLatencyColor = (ms) => {
+    if (!ms || ms <= 0) return '#6b7b8a';
+    if (ms < 50) return '#39ff14';
+    if (ms < 120) return '#00f0ff';
+    if (ms < 250) return '#ffb700';
+    return '#ff5a5a';
+  };
+
+  const renderCyberDeviceIcon = (kind, x, y, size, color) => {
+    const s = size;
+    const icons = {
+      gateway: (
+        <g transform={`translate(${x - s / 2}, ${y - s / 2})`} stroke={color} strokeWidth="1.2" fill="rgba(0, 240, 255, 0.15)">
+          <polygon points={`${s / 2},2 ${s - 2},${s / 2} ${s / 2},${s - 2} 2,${s / 2}`} />
+          <line x1={s / 2} y1={s / 2} x2={s / 2} y2={s - 4} stroke={color} />
+        </g>
+      ),
+      router: (
+        <g transform={`translate(${x - s / 2}, ${y - s / 2})`} fill="none" stroke={color} strokeWidth="1.2">
+          <rect x="3" y="6" width={s - 6} height={s - 10} rx="2" />
+          <line x1="6" y1="4" x2="6" y2="6" /><line x1={s / 2} y1="4" x2={s / 2} y2="6" /><line x1={s - 6} y1="4" x2={s - 6} y2="6" />
+        </g>
+      ),
+      server: (
+        <g transform={`translate(${x - s / 2}, ${y - s / 2})`} fill="none" stroke={color} strokeWidth="1.2">
+          <rect x="4" y="3" width={s - 8} height={s - 6} rx="1" />
+          <line x1="6" y1="7" x2={s - 6} y2="7" /><line x1="6" y1="11" x2={s - 6} y2="11" />
+        </g>
+      ),
+      windows: (
+        <g transform={`translate(${x - s / 2}, ${y - s / 2})`} fill={color} opacity="0.85">
+          <rect x="3" y="3" width={(s - 5) / 2} height={(s - 5) / 2} />
+          <rect x={s / 2 + 1} y="3" width={(s - 5) / 2} height={(s - 5) / 2} />
+          <rect x="3" y={s / 2 + 1} width={(s - 5) / 2} height={(s - 5) / 2} />
+          <rect x={s / 2 + 1} y={s / 2 + 1} width={(s - 5) / 2} height={(s - 5) / 2} />
+        </g>
+      ),
+      mobile: (
+        <g transform={`translate(${x - s / 2}, ${y - s / 2})`} fill="none" stroke={color} strokeWidth="1.2">
+          <rect x="5" y="2" width={s - 10} height={s - 4} rx="2" />
+          <circle cx={s / 2} cy={s - 5} r="1.2" fill={color} />
+        </g>
+      ),
+      iot: (
+        <g transform={`translate(${x - s / 2}, ${y - s / 2})`} fill="none" stroke={color} strokeWidth="1.2">
+          <circle cx={s / 2} cy={s / 2} r={s / 2 - 3} />
+          <circle cx={s / 2} cy={s / 2} r="2" fill={color} />
+        </g>
+      ),
+      device: (
+        <g transform={`translate(${x - s / 2}, ${y - s / 2})`} fill="none" stroke={color} strokeWidth="1.2">
+          <rect x="4" y="5" width={s - 8} height={s - 9} rx="3" />
+        </g>
+      )
+    };
+    return icons[kind] || icons.device;
+  };
+
+  const computeCyberTopologyLayout = (peripheralHosts, nodeW, nodeH, gwW, gwH) => {
+    const n = peripheralHosts.length;
+    const sorted = [...peripheralHosts].sort((a, b) => {
+      const ao = parseInt(a.ip.split('.').pop(), 10) || 0;
+      const bo = parseInt(b.ip.split('.').pop(), 10) || 0;
+      return ao - bo;
+    });
+
+    const nodeR = Math.hypot(nodeW, nodeH) / 2 + 18;
+    const gwR = Math.hypot(gwW, gwH) / 2 + 22;
+    const originX = 0;
+    const originY = 0;
+    const ringCount = n <= 5 ? 1 : n <= 11 ? 2 : 3;
+    const rings = Array.from({ length: ringCount }, () => []);
+
+    if (ringCount === 1) {
+      rings[0] = sorted;
+    } else if (ringCount === 2) {
+      const innerN = Math.ceil(n / 2);
+      rings[0] = sorted.slice(0, innerN);
+      rings[1] = sorted.slice(innerN);
+    } else {
+      const chunk = Math.ceil(n / 3);
+      rings[0] = sorted.slice(0, chunk);
+      rings[1] = sorted.slice(chunk, chunk * 2);
+      rings[2] = sorted.slice(chunk * 2);
+    }
+
+    const particles = [];
+    let prevRingRadius = gwR + nodeR + 28;
+
+    rings.forEach((ringHosts, ringIdx) => {
+      const count = ringHosts.length;
+      if (!count) return;
+      const arcRadius = count === 1 ? 100 : (count * (nodeW + 44)) / (2 * Math.PI);
+      const ringRadius = Math.max(arcRadius, prevRingRadius + (ringIdx > 0 ? nodeR * 2.5 + 32 : 0));
+      prevRingRadius = ringRadius;
+      const angleOffset = ringIdx % 2 === 1 ? Math.PI / count : 0;
+      ringHosts.forEach((host, i) => {
+        const angle = angleOffset + (i / count) * Math.PI * 2 - Math.PI / 2;
+        particles.push({
+          host,
+          x: originX + ringRadius * Math.cos(angle),
+          y: originY + ringRadius * Math.sin(angle),
+          r: nodeR,
+          ringRadius
+        });
+      });
+    });
+
+    const gateway = { x: originX, y: originY, r: gwR, fixed: true };
+
+    const resolveCollisions = () => {
+      let moved = false;
+      const all = [gateway, ...particles];
+      for (let i = 0; i < all.length; i++) {
+        for (let j = i + 1; j < all.length; j++) {
+          const a = all[i];
+          const b = all[j];
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const dist = Math.max(Math.hypot(dx, dy), 1);
+          const overlap = a.r + b.r + 14 - dist;
+          if (overlap > 0) {
+            const ux = dx / dist;
+            const uy = dy / dist;
+            const push = overlap * 0.52;
+            if (!a.fixed) {
+              a.x -= ux * push;
+              a.y -= uy * push;
+              moved = true;
+            }
+            if (!b.fixed) {
+              b.x += ux * push;
+              b.y += uy * push;
+              moved = true;
+            }
+          }
+        }
+      }
+      return moved;
+    };
+
+    for (let pass = 0; pass < 6; pass++) {
+      for (let iter = 0; iter < 80; iter++) {
+        if (!resolveCollisions() && iter > 24) break;
+      }
+      particles.forEach((p) => {
+        const dx = p.x - originX;
+        const dy = p.y - originY;
+        const dist = Math.max(Math.hypot(dx, dy), 1);
+        const pull = (dist - p.ringRadius) * 0.07;
+        p.x -= (dx / dist) * pull;
+        p.y -= (dy / dist) * pull;
+      });
+    }
+
+    const halfW = nodeW / 2 + 8;
+    const halfH = nodeH / 2 + 8;
+    let minX = -gwR;
+    let maxX = gwR;
+    let minY = -gwR;
+    let maxY = gwR;
+    particles.forEach((p) => {
+      minX = Math.min(minX, p.x - halfW);
+      maxX = Math.max(maxX, p.x + halfW);
+      minY = Math.min(minY, p.y - halfH);
+      maxY = Math.max(maxY, p.y + halfH);
+    });
+
+    const pad = 36;
+    const contentW = maxX - minX;
+    const contentH = maxY - minY;
+    const vb = Math.ceil(Math.max(440, Math.max(contentW, contentH) + pad * 2 + 24));
+    const shiftX = pad - minX + (vb - contentW - pad * 2) / 2;
+    const shiftY = pad - minY + (vb - contentH - pad * 2 - 18) / 2;
+
+    return {
+      vb,
+      pad,
+      cx: originX + shiftX,
+      cy: originY + shiftY,
+      orbitRadii: [...new Set(particles.map((p) => p.ringRadius))].sort((a, b) => a - b),
+      positions: particles.map((p) => ({
+        host: p.host,
+        x: p.x + shiftX,
+        y: p.y + shiftY
+      }))
+    };
+  };
+
   // Renderizador de la vista de topología física de red interactiva
   const renderTopologyView = () => {
     const currentHosts = result ? (result.hosts || []) : parseActiveHostsFromLiveOutput(liveOutput);
     if (currentHosts.length === 0) {
       return (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '150px', color: 'rgba(0, 240, 255, 0.4)', fontStyle: 'italic' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', minHeight: '200px', color: 'rgba(0, 240, 255, 0.4)', fontStyle: 'italic' }}>
           [NO ACTIVE NODES DETECTED]
         </div>
       );
     }
-    
+
     const activeSubnet = result ? result.subnet : networkScanSubnet;
     const gatewayIp = activeSubnet.replace(/\/\d+$/, '').split('.').slice(0, 3).join('.') + '.1';
-    
-    const otherHosts = currentHosts.filter(h => h.ip !== gatewayIp);
-    const totalNodes = otherHosts.length;
-    
-    const width = 200;
-    const height = Math.max(160, totalNodes * 28 + 40);
-    const centerX = width / 2;
-    const gatewayY = 20;
-    
+    const gatewayHost = currentHosts.find(h => h.ip === gatewayIp) || { ip: gatewayIp, responseTime: 1, hostname: 'Gateway' };
+    const peripheralHosts = currentHosts.filter(h => h.ip !== gatewayIp);
+
+    const nodeW = 96;
+    const nodeH = 52;
+    const gwW = 76;
+    const gwH = 54;
+    const { vb, pad, cx, cy, positions: hostPositions, orbitRadii } = computeCyberTopologyLayout(
+      peripheralHosts,
+      nodeW,
+      nodeH,
+      gwW,
+      gwH
+    );
+
+    const truncateLabel = (text, max = 14) => {
+      if (!text) return '';
+      return text.length > max ? `${text.slice(0, max)}…` : text;
+    };
+
+    const renderNetworkNode = (host, x, y, isGateway = false) => {
+      const isSelected = selectedCyberHost?.ip === host.ip;
+      const kind = getCyberDeviceKind(host, isGateway);
+      const latencyColor = getCyberLatencyColor(host.responseTime);
+      const accent = isSelected ? '#ff007f' : latencyColor;
+      const lastOctet = host.ip.split('.').pop();
+      const displayName = truncateLabel(host.hostname || host.netbiosName || host.vendor, 14);
+      const w = isGateway ? gwW : nodeW;
+      const h = isGateway ? gwH : nodeH;
+      const latencyLabel = host.responseTime > 0 ? `${host.responseTime}ms` : '—';
+
+      return (
+        <g
+          key={`node-${host.ip}`}
+          style={{ cursor: 'pointer' }}
+          onClick={() => setSelectedCyberHost(host)}
+          transform={`translate(${x - w / 2}, ${y - h / 2})`}
+        >
+          {isSelected && (
+            <rect x="-5" y="-5" width={w + 10} height={h + 10} rx="8" fill="none" stroke="#ff007f" strokeWidth="1.5" opacity="0.55" />
+          )}
+          <rect
+            x="0" y="0" width={w} height={h} rx="7"
+            fill={isSelected ? 'rgba(40, 8, 28, 0.95)' : 'rgba(4, 18, 32, 0.94)'}
+            stroke={accent}
+            strokeWidth={isSelected ? 2 : 1.2}
+          />
+          <rect x="1" y="1" width={w - 2} height="4" rx="3" fill={accent} opacity="0.9" />
+          {isGateway ? (
+            <>
+              {renderCyberDeviceIcon(kind, w / 2, 22, 24, accent)}
+              <text x={w / 2} y={38} textAnchor="middle" fill="#00f0ff" fontSize="9" fontWeight="bold" fontFamily="monospace" dominantBaseline="middle">
+                GATEWAY ·{lastOctet}
+              </text>
+            </>
+          ) : (
+            <>
+              {renderCyberDeviceIcon(kind, 20, h / 2 + 4, 20, accent)}
+              <text x={38} y={22} textAnchor="start" fill="#00f0ff" fontSize="9" fontWeight="bold" fontFamily="monospace" dominantBaseline="middle">
+                ·{lastOctet}
+              </text>
+              <text x={38} y={38} textAnchor="start" fill="#e8f4ff" fontSize="8" fontFamily="monospace" dominantBaseline="middle">
+                {displayName || host.ip}
+              </text>
+            </>
+          )}
+          {host.responseTime > 0 && (
+            <>
+              <rect
+                x={isGateway ? (w - 40) / 2 : w - 44}
+                y={h - 18}
+                width="40"
+                height="14"
+                rx="4"
+                fill="rgba(0, 8, 16, 0.85)"
+                stroke={latencyColor}
+                strokeWidth="0.8"
+              />
+              <text
+                x={isGateway ? w / 2 : w - 24}
+                y={h - 9}
+                textAnchor="middle"
+                fill={latencyColor}
+                fontSize="7"
+                fontWeight="bold"
+                fontFamily="monospace"
+                dominantBaseline="middle"
+              >
+                {latencyLabel}
+              </text>
+            </>
+          )}
+        </g>
+      );
+    };
+
     return (
-      <div style={{ 
-        width: '100%', 
-        maxHeight: '180px', 
-        overflowY: 'auto', 
-        border: '1px solid rgba(0, 240, 255, 0.15)', 
-        background: 'rgba(0, 5, 10, 0.4)', 
-        borderRadius: '4px', 
-        padding: '5px',
-        boxSizing: 'border-box'
-      }}>
-        <svg width={width} height={height} style={{ display: 'block', margin: '0 auto' }}>
-          {/* Cables de Red */}
-          {otherHosts.map((host, idx) => {
-            const nodeY = 55 + idx * 26;
+      <div className="cyber-topology-map">
+        <svg viewBox={`0 0 ${vb} ${vb}`} preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <radialGradient id="cyber-topo-bg" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="rgba(0, 80, 120, 0.12)" />
+              <stop offset="100%" stopColor="rgba(0, 0, 0, 0)" />
+            </radialGradient>
+            <filter id="cyber-link-glow">
+              <feGaussianBlur stdDeviation="1.5" result="blur" />
+              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+            </filter>
+          </defs>
+
+          <rect x={pad / 2} y={pad / 2} width={vb - pad} height={vb - pad - 14} fill="url(#cyber-topo-bg)" rx="8" />
+          {orbitRadii.map((r, i) => (
+            <circle
+              key={`orbit-${r}-${i}`}
+              cx={cx}
+              cy={cy}
+              r={r}
+              fill="none"
+              stroke={i === 0 ? 'rgba(0, 240, 255, 0.1)' : 'rgba(0, 240, 255, 0.05)'}
+              strokeWidth="1"
+              strokeDasharray={i === 0 ? '4 6' : '3 8'}
+            />
+          ))}
+          <circle cx={cx} cy={cy} r="4" fill="#00f0ff" opacity="0.35" />
+
+          {hostPositions.map(({ host, x, y }) => {
             const isSelected = selectedCyberHost?.ip === host.ip;
+            const linkColor = isSelected ? '#ff007f' : 'rgba(0, 240, 255, 0.35)';
             return (
-              <path
-                key={`path-${host.ip}`}
-                d={`M ${centerX} ${gatewayY} L ${centerX - 35} ${nodeY} L ${centerX + 15} ${nodeY}`}
-                fill="none"
-                stroke={isSelected ? '#ff007f' : 'rgba(0, 240, 255, 0.25)'}
-                strokeWidth="1.2"
-                strokeDasharray={isSelected ? "3 1" : "none"}
+              <line
+                key={`link-${host.ip}`}
+                x1={cx}
+                y1={cy}
+                x2={x}
+                y2={y}
+                stroke={linkColor}
+                strokeWidth={isSelected ? 2 : 1}
+                strokeDasharray={isSelected ? '6 4' : 'none'}
+                style={isSelected ? { animation: 'cyber-link-flow 1.5s linear infinite' } : undefined}
               />
             );
           })}
-          
-          {/* Nodo central del Gateway */}
-          <g style={{ cursor: 'pointer' }} onClick={() => setSelectedCyberHost(currentHosts.find(h => h.ip === gatewayIp) || { ip: gatewayIp, responseTime: 1, hostname: 'Gateway' })}>
-            <circle cx={centerX} cy={gatewayY} r="6" fill="#00f0ff" filter="drop-shadow(0 0 3px #00f0ff)" />
-            <text x={centerX} y={gatewayY - 8} textAnchor="middle" fill="#00f0ff" fontSize="7" fontWeight="bold" fontFamily="monospace">GW .1</text>
-          </g>
-          
-          {/* Dispositivos hijos */}
-          {otherHosts.map((host, idx) => {
-            const nodeY = 55 + idx * 26;
-            const nodeX = centerX - 35;
-            const isSelected = selectedCyberHost?.ip === host.ip;
-            const lastOctet = host.ip.split('.').pop();
-            
-            return (
-              <g key={`node-${host.ip}`} style={{ cursor: 'pointer' }} onClick={() => setSelectedCyberHost(host)}>
-                <circle cx={nodeX} cy={nodeY} r="3.5" fill={isSelected ? "#ff007f" : "#39ff14"} style={{ animation: isSelected ? 'pulse-pink 2s infinite' : 'pulse-green 2s infinite' }} />
-                <circle cx={nodeX} cy={nodeY} r="7" fill="transparent" />
-                <text x={nodeX + 8} y={nodeY + 3} fill={isSelected ? "#ff007f" : "#ffffff"} fontSize="7" fontFamily="monospace">
-                  .{lastOctet} {host.hostname ? `(${host.hostname.substring(0, 8)})` : ''}
-                </text>
-                <text x={nodeX - 8} y={nodeY + 3} textAnchor="end" fill="rgba(0, 240, 255, 0.5)" fontSize="6" fontFamily="monospace">
-                  {host.responseTime}ms
-                </text>
-              </g>
-            );
-          })}
+
+          {renderNetworkNode(gatewayHost, cx, cy, true)}
+          {hostPositions.map(({ host, x, y }) => renderNetworkNode(host, x, y, false))}
+
+          <text x={cx} y={vb - pad + 4} textAnchor="middle" fill="rgba(0, 240, 255, 0.45)" fontSize="8" fontFamily="monospace">
+            {peripheralHosts.length} NODO{peripheralHosts.length !== 1 ? 'S' : ''} · CLICK PARA INSPECCIONAR
+          </text>
         </svg>
       </div>
     );
@@ -1737,12 +2116,12 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
         }}>
           {/* Columna Izquierda: Radar / Topología */}
           <div className="cyber-panel-border cyber-corner-accent" style={{
-            flex: '1.2',
+            flex: cyberScanType === 'topology' ? '1.6' : '1.2',
             display: 'flex',
             flexDirection: 'column',
             padding: '0.75rem',
             position: 'relative',
-            minHeight: '260px'
+            minHeight: cyberScanType === 'topology' ? '420px' : '260px'
           }}>
             <div style={{
               display: 'flex',
@@ -1788,16 +2167,29 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
               </div>
             </div>
             
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0 }}>
+            <div style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'stretch',
+              justifyContent: 'center',
+              minHeight: cyberScanType === 'topology' ? '380px' : 0
+            }}>
               {cyberScanType === 'radar' ? (
-                <svg viewBox="0 0 200 200" style={{ width: '100%', height: '100%', maxWidth: '200px', maxHeight: '200px' }}>
-                  <circle cx="100" cy="100" r="90" fill="none" stroke="rgba(0, 240, 255, 0.15)" strokeWidth="1" />
+                <svg viewBox="0 0 200 200" style={{ width: '100%', height: '100%', maxWidth: '240px', maxHeight: '240px', margin: 'auto' }}>
+                  <defs>
+                    <radialGradient id="cyber-radar-fill" cx="50%" cy="50%" r="50%">
+                      <stop offset="0%" stopColor="rgba(0, 240, 255, 0.08)" />
+                      <stop offset="100%" stopColor="rgba(0, 0, 0, 0)" />
+                    </radialGradient>
+                  </defs>
+                  <circle cx="100" cy="100" r="90" fill="url(#cyber-radar-fill)" stroke="rgba(0, 240, 255, 0.2)" strokeWidth="1" />
                   <circle cx="100" cy="100" r="60" fill="none" stroke="rgba(0, 240, 255, 0.15)" strokeWidth="1" />
                   <circle cx="100" cy="100" r="30" fill="none" stroke="rgba(0, 240, 255, 0.15)" strokeWidth="1" />
                   <line x1="10" y1="100" x2="190" y2="100" stroke="rgba(0, 240, 255, 0.15)" strokeWidth="1" />
                   <line x1="100" y1="10" x2="100" y2="190" stroke="rgba(0, 240, 255, 0.15)" strokeWidth="1" />
+                  <path d="M 100 100 L 100 10 A 90 90 0 0 1 190 100 Z" fill="rgba(0, 240, 255, 0.06)" style={{ transformOrigin: '100px 100px', animation: 'cyber-radar-sweep 4s linear infinite' }} />
                   <line x1="100" y1="100" x2="100" y2="10" stroke="#00f0ff" strokeWidth="1.5" style={{ transformOrigin: '100px 100px', animation: 'cyber-radar-sweep 4s linear infinite' }} />
-                  
+
                   {currentHosts.map((host) => {
                     const lastOctet = parseInt(host.ip.split('.').pop()) || 1;
                     const angle = (lastOctet * 17.5) * (Math.PI / 180);
@@ -1805,10 +2197,25 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                     const x = 100 + radius * Math.cos(angle);
                     const y = 100 + radius * Math.sin(angle);
                     const isSelected = selectedCyberHost?.ip === host.ip;
+                    const dotColor = isSelected ? '#ff007f' : getCyberLatencyColor(host.responseTime);
+                    const label = host.hostname || host.netbiosName;
                     return (
                       <g key={host.ip} style={{ cursor: 'pointer' }} onClick={() => setSelectedCyberHost(host)}>
-                        <circle cx={x} cy={y} r={isSelected ? "5" : "3"} fill={isSelected ? "#ff007f" : "#39ff14"} style={{ animation: isSelected ? 'pulse-pink 2s infinite' : 'pulse-green 2s infinite' }} />
-                        <circle cx={x} cy={y} r="8" fill="transparent" />
+                        <circle cx={x} cy={y} r={isSelected ? 7 : 4} fill={dotColor} style={{ animation: isSelected ? 'pulse-pink 2s infinite' : 'pulse-green 2s infinite' }} />
+                        <circle cx={x} cy={y} r="12" fill="transparent" />
+                        {(isSelected || label) && (
+                          <text
+                            x={x}
+                            y={y - 10}
+                            textAnchor="middle"
+                            fill={isSelected ? '#ff007f' : '#e8f4ff'}
+                            fontSize="7"
+                            fontFamily="monospace"
+                            opacity={isSelected ? 1 : 0.75}
+                          >
+                            .{lastOctet}{label ? ` ${String(label).slice(0, 8)}` : ''}
+                          </text>
+                        )}
                       </g>
                     );
                   })}
@@ -1845,35 +2252,27 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                 ) : (
                   currentHosts.map(host => {
                     const isSelected = selectedCyberHost?.ip === host.ip;
+                    const latencyColor = getCyberLatencyColor(host.responseTime);
                     return (
-                      <div 
+                      <div
                         key={host.ip}
-                        className={`cyber-card ${isSelected ? 'cyber-card-active' : ''}`}
+                        className={`cyber-card cyber-host-card ${isSelected ? 'cyber-card-active' : ''}`}
                         onClick={() => setSelectedCyberHost(host)}
-                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                       >
-                        <div>
-                          <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: isSelected ? '#ff007f' : '#ffffff' }}>
+                        <div className="cyber-host-card-body">
+                          <div className="cyber-host-ip" style={{ color: isSelected ? '#ff007f' : '#ffffff' }}>
                             IP: {host.ip}
                           </div>
-                          <div style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.5)', marginTop: '2px' }}>
-                            {formatHostSubtitle(host)}
-                          </div>
-                          {(host.os || host.mac) && (
-                            <div style={{ fontSize: '0.6rem', color: 'rgba(0, 240, 255, 0.45)', marginTop: '1px' }}>
-                              {[host.os, host.mac].filter(Boolean).join(' · ')}
-                            </div>
-                          )}
+                          <div className="cyber-host-name">{formatHostSubtitle(host)}</div>
+                          {host.os && <div className="cyber-host-meta">{host.os}</div>}
+                          {host.mac && <div className="cyber-host-mac">{host.mac}</div>}
                         </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <span className="cyber-badge" style={{ 
-                            borderColor: host.responseTime <= 20 ? '#39ff14' : host.responseTime <= 100 ? '#00f0ff' : '#ffb700',
-                            color: host.responseTime <= 20 ? '#39ff14' : host.responseTime <= 100 ? '#00f0ff' : '#ffb700',
-                            background: 'rgba(0, 0, 0, 0.4)'
-                          }}>
-                            {host.responseTime} ms
-                          </span>
-                        </div>
+                        <span
+                          className="cyber-host-latency"
+                          style={{ borderColor: latencyColor, color: latencyColor }}
+                        >
+                          {host.responseTime > 0 ? `${host.responseTime} ms` : '—'}
+                        </span>
                       </div>
                     );
                   })
@@ -2491,8 +2890,12 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
         }
         return (
           <div style={resultBoxStyle}>
-            <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
               <strong>Red: {result.subnet}</strong>
+              <Badge
+                value={result.scanMode === 'quick' ? 'Escaneo rápido' : 'Escaneo completo'}
+                severity={result.scanMode === 'quick' ? 'info' : 'warning'}
+              />
               <Badge value={`${result.hosts?.length || 0} hosts encontrados`} severity="success" />
               <span style={{ color: 'var(--text-color-secondary)', fontSize: '0.8rem' }}>
                 ({(result.scanTime / 1000).toFixed(1)}s)
@@ -4028,9 +4431,10 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                 {selectedTool === 'network-scan' && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <span style={{ color: '#f59e0b', fontSize: '0.75rem', fontWeight: '600' }}>Subred:</span>
-                    <InputText value={networkScanSubnet} onChange={(e) => setNetworkScanSubnet(e.target.value)} placeholder="192.168.1.0/24" onKeyPress={(e) => e.key === 'Enter' && executeTool()} style={{ width: '160px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} />
-                    <Button label="Escanear" icon="pi pi-search" onClick={executeTool} disabled={loading} style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem' }} />
-                    <Button label="Cyber-Escaneo ⚡" icon="pi pi-bolt" onClick={autoDetectAndScan} disabled={loading} style={{ background: 'linear-gradient(135deg, #00f0ff 0%, #ff007f 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem', fontWeight: 'bold', boxShadow: '0 0 10px rgba(0, 240, 255, 0.4)', color: '#fff' }} />
+                    <InputText value={networkScanSubnet} onChange={(e) => setNetworkScanSubnet(e.target.value)} placeholder="192.168.1.0/24" onKeyPress={(e) => e.key === 'Enter' && executeTool({ networkScanMode: 'quick' })} style={{ width: '160px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} />
+                    <Button label="Rápido" icon="pi pi-bolt" onClick={() => executeTool({ networkScanMode: 'quick' })} disabled={loading} title="Descubre hosts activos (ARP + DNS). Mucho más rápido." style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem' }} />
+                    <Button label="Completo" icon="pi pi-search" onClick={() => executeTool({ networkScanMode: 'full' })} disabled={loading} title="Incluye nmap, NetBIOS, SO y sondeo de puertos por host." style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem' }} />
+                    <Button label="Cyber ⚡" icon="pi pi-bolt" onClick={autoDetectAndScan} disabled={loading} title="Auto-detecta subred y escaneo rápido en vista cyber." style={{ background: 'linear-gradient(135deg, #00f0ff 0%, #ff007f 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem', fontWeight: 'bold', boxShadow: '0 0 10px rgba(0, 240, 255, 0.4)', color: '#fff' }} />
                     <Button 
                       label={cyberpunkMode ? "Cyber: ON 🕶️" : "Cyber: OFF 🕶️"} 
                       icon={cyberpunkMode ? "pi pi-eye" : "pi pi-eye-slash"}
@@ -4907,15 +5311,34 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                       fontSize: '0.8rem',
                       height: '30px'
                     }}
-                    onKeyPress={(e) => e.key === 'Enter' && executeTool()}
+                    onKeyPress={(e) => e.key === 'Enter' && executeTool({ networkScanMode: 'quick' })}
                   />
                   
-                  {/* Botón Escanear */}
                   <Button
-                    label="Escanear"
-                    icon="pi pi-search"
-                    onClick={executeTool}
+                    label="Rápido"
+                    icon="pi pi-bolt"
+                    onClick={() => executeTool({ networkScanMode: 'quick' })}
                     disabled={loading}
+                    title="Descubre hosts activos (ARP + DNS). Mucho más rápido."
+                    style={{
+                      background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                      border: 'none',
+                      borderRadius: '6px',
+                      padding: '0.35rem 0.75rem',
+                      height: '30px',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                      boxShadow: '0 2px 8px rgba(34, 197, 94, 0.3)',
+                      marginLeft: '0.25rem'
+                    }}
+                  />
+
+                  <Button
+                    label="Completo"
+                    icon="pi pi-search"
+                    onClick={() => executeTool({ networkScanMode: 'full' })}
+                    disabled={loading}
+                    title="Incluye nmap, NetBIOS, SO y sondeo de puertos por host."
                     style={{
                       background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
                       border: 'none',
@@ -4930,10 +5353,11 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                   />
 
                   <Button
-                    label="Cyber-Escaneo ⚡"
+                    label="Cyber ⚡"
                     icon="pi pi-bolt"
                     onClick={autoDetectAndScan}
                     disabled={loading}
+                    title="Auto-detecta subred y escaneo rápido en vista cyber."
                     style={{
                       background: 'linear-gradient(135deg, #00f0ff 0%, #ff007f 100%)',
                       border: 'none',

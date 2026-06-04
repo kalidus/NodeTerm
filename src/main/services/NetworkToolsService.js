@@ -2482,13 +2482,63 @@ class NetworkToolsService {
   }
 
   /**
+   * Enriquecimiento ligero (modo rápido): ARP, DNS inverso y hostname básico.
+   * @private
+   */
+  async _enrichDiscoveredHostQuick(host, neighborTable, onProgress) {
+    host.hostnames = host.hostnames || (host.hostname ? [host.hostname] : []);
+    host.openPorts = host.openPorts || [];
+
+    const addHostname = (name) => {
+      if (!name || name === host.ip) return;
+      if (!host.hostname) host.hostname = name;
+      if (!host.hostnames.includes(name)) host.hostnames.push(name);
+    };
+
+    if (neighborTable[host.ip]) {
+      host.mac = neighborTable[host.ip];
+      host.vendor = this._lookupMacVendor(host.mac);
+    }
+
+    try {
+      const reverseDns = await this.reverseDns(host.ip);
+      if (reverseDns.success && reverseDns.hostnames.length > 0) {
+        reverseDns.hostnames.forEach(addHostname);
+      }
+    } catch { /* ignore */ }
+
+    if (this.platform === 'win32' && !host.hostname) {
+      try {
+        const nsName = await this._resolveHostnameNslookup(host.ip);
+        if (nsName) addHostname(nsName);
+      } catch { /* ignore */ }
+    }
+
+    if (host.mac && !host.vendor) {
+      host.vendor = this._lookupMacVendor(host.mac);
+    }
+
+    if (!host.os) host.os = 'Desconocido';
+
+    if (onProgress && typeof onProgress === 'function') {
+      const parts = [
+        host.hostname || 'sin nombre',
+        host.mac ? `MAC ${host.mac}` : null,
+        host.vendor || null
+      ].filter(Boolean);
+      onProgress(`  ${host.ip} → ${parts.join(' | ')}\n`);
+    }
+  }
+
+  /**
    * Network scan - Discover hosts in a subnet
    * @param {string} subnet - Subnet in CIDR notation (e.g., "192.168.1.0/24")
    * @param {number} timeout - Timeout per host in ms (default: 1000)
    * @param {Function} onProgress - Callback para actualizaciones en tiempo real (data: string)
+   * @param {Object} options - { mode: 'quick' | 'full' }
    * @returns {Promise<Object>} Discovered hosts
    */
-  async networkScan(subnet, timeout = 1000, onProgress = null) {
+  async networkScan(subnet, timeout = 1000, onProgress = null, options = {}) {
     const subnetInfo = this.subnetCalc(subnet);
     if (!subnetInfo.success) {
       return subnetInfo;
@@ -2502,19 +2552,24 @@ class NetworkToolsService {
       };
     }
 
+    const scanMode = options.mode === 'quick' ? 'quick' : 'full';
+    const isQuick = scanMode === 'quick';
+    const pingTimeout = isQuick ? Math.min(timeout, 450) : timeout;
+
     const results = {
       success: true,
       subnet: subnet,
       subnetInfo: subnetInfo,
       hosts: [],
       scanTime: 0,
-      scannedCount: 0
+      scannedCount: 0,
+      scanMode
     };
 
     const startTime = Date.now();
     const startIp = this._ipToInt(subnetInfo.firstHost);
     const endIp = this._ipToInt(subnetInfo.lastHost);
-    const concurrency = 50;
+    const concurrency = isQuick ? 90 : 50;
 
     const ipList = [];
     for (let ip = startIp; ip <= endIp; ip++) {
@@ -2522,16 +2577,16 @@ class NetworkToolsService {
     }
 
     if (onProgress && typeof onProgress === 'function') {
-      onProgress(`Iniciando escaneo de red: ${subnet}\n`);
+      onProgress(`Iniciando escaneo de red (${isQuick ? 'RÁPIDO' : 'COMPLETO'}): ${subnet}\n`);
       onProgress(`Rango: ${subnetInfo.firstHost} - ${subnetInfo.lastHost} (${ipList.length} hosts)\n`);
-      onProgress(`Escaneando en lotes de ${concurrency}...\n\n`);
+      onProgress(`Timeout: ${pingTimeout}ms · Lotes de ${concurrency}...\n\n`);
     }
 
     // Scan in batches
     for (let i = 0; i < ipList.length; i += concurrency) {
       const batch = ipList.slice(i, i + concurrency);
       const batchResults = await Promise.all(
-        batch.map(ip => this._quickPing(ip, timeout))
+        batch.map(ip => this._quickPing(ip, pingTimeout, { fast: isQuick }))
       );
 
       batchResults.forEach((result, index) => {
@@ -2571,29 +2626,44 @@ class NetworkToolsService {
     results.scanTime = Date.now() - startTime;
 
     if (onProgress && typeof onProgress === 'function') {
-      onProgress(`\nEscaneo de red completado: ${results.hosts.length} hosts activos encontrados de ${ipList.length} escaneados (${(results.scanTime / 1000).toFixed(2)}s)\n`);
-      const nmapPath = await this._getNmapPath();
-      onProgress(`Resolviendo MAC, hostname y SO${nmapPath ? ' (nmap + sistema)' : ' (sistema)'}...\n`);
-    }
-
-    const pingBatch = 8;
-    for (let i = 0; i < results.hosts.length; i += pingBatch) {
-      await Promise.all(
-        results.hosts.slice(i, i + pingBatch).map(h => this._pingHostNative(h.ip, 1000))
-      );
+      onProgress(`\nDescubrimiento completado: ${results.hosts.length} hosts activos de ${ipList.length} (${(results.scanTime / 1000).toFixed(2)}s)\n`);
+      if (isQuick) {
+        onProgress(`Enriquecimiento rápido (ARP + DNS)...\n`);
+      } else {
+        const nmapPath = await this._getNmapPath();
+        onProgress(`Resolviendo MAC, hostname y SO${nmapPath ? ' (nmap + sistema)' : ' (sistema)'}...\n`);
+      }
     }
 
     const neighborTable = await this._readNeighborTable();
-    const enrichConcurrency = 2;
-    for (let i = 0; i < results.hosts.length; i += enrichConcurrency) {
-      const batch = results.hosts.slice(i, i + enrichConcurrency);
-      await Promise.all(
-        batch.map(host => this._enrichDiscoveredHost(host, neighborTable, onProgress))
-      );
+
+    if (isQuick) {
+      const enrichConcurrency = 10;
+      for (let i = 0; i < results.hosts.length; i += enrichConcurrency) {
+        const batch = results.hosts.slice(i, i + enrichConcurrency);
+        await Promise.all(
+          batch.map(host => this._enrichDiscoveredHostQuick(host, neighborTable, onProgress))
+        );
+      }
+    } else {
+      const pingBatch = 8;
+      for (let i = 0; i < results.hosts.length; i += pingBatch) {
+        await Promise.all(
+          results.hosts.slice(i, i + pingBatch).map(h => this._pingHostNative(h.ip, 1000))
+        );
+      }
+
+      const enrichConcurrency = 2;
+      for (let i = 0; i < results.hosts.length; i += enrichConcurrency) {
+        const batch = results.hosts.slice(i, i + enrichConcurrency);
+        await Promise.all(
+          batch.map(host => this._enrichDiscoveredHost(host, neighborTable, onProgress))
+        );
+      }
     }
 
     if (onProgress && typeof onProgress === 'function') {
-      onProgress(`\nEscaneo finalizado.\n`);
+      onProgress(`\nEscaneo ${isQuick ? 'rápido' : 'completo'} finalizado.\n`);
     }
 
     return results;
@@ -2699,7 +2769,30 @@ class NetworkToolsService {
    * Quick ping using hybrid TCP and ICMP methods
    * @private
    */
-  _quickPing(ip, timeout) {
+  _quickPing(ip, timeout, options = {}) {
+    if (options.fast) {
+      return new Promise((resolve) => {
+        let settled = false;
+        const finishAlive = (result) => {
+          if (settled || !result?.alive) return;
+          settled = true;
+          clearTimeout(timer);
+          resolve(result);
+        };
+        const timer = setTimeout(() => {
+          if (!settled) {
+            settled = true;
+            resolve({ alive: false, time: null });
+          }
+        }, timeout);
+
+        this._pingHostNative(ip, timeout).then(finishAlive);
+        [80, 443, 445, 135].forEach((port) => {
+          this._checkTcpPort(ip, port, Math.min(timeout, 320)).then(finishAlive);
+        });
+      });
+    }
+
     return new Promise(async (resolve) => {
       let resolved = false;
       const done = (result) => {
@@ -2710,13 +2803,11 @@ class NetworkToolsService {
         }
       };
 
-      // 1. Native ICMP Ping
       const icmpPromise = this._pingHostNative(ip, timeout).then(res => {
         done(res);
         return res;
       });
 
-      // 2. TCP checks on common ports (run in parallel)
       const commonPorts = [80, 443, 22, 135, 445, 5357];
       const tcpPromises = commonPorts.map(port => {
         return this._checkTcpPort(ip, port, timeout).then(res => {
@@ -2725,7 +2816,6 @@ class NetworkToolsService {
         });
       });
 
-      // Wait for all to finish. If none succeeded, resolve false.
       await Promise.all([icmpPromise, ...tcpPromises]);
       if (!resolved) {
         resolve({ alive: false, time: null });

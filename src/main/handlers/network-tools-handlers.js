@@ -257,12 +257,16 @@ function registerNetworkToolsHandlers() {
   });
 
   // === NETWORK SCAN ===
-  ipcMain.handle('network-tools:network-scan', async (event, { subnet, timeout = 1000 }) => {
+  ipcMain.handle('network-tools:network-scan', async (event, { subnet, timeout = 1000, mode = 'full' }) => {
     try {
       if (!subnet) {
         return { success: false, error: 'Subred es requerida' };
       }
       const service = getService();
+      const scanMode = mode === 'quick' ? 'quick' : 'full';
+      const scanTimeout = typeof timeout === 'number'
+        ? timeout
+        : (scanMode === 'quick' ? 400 : 1000);
       
       // Callback para enviar actualizaciones en tiempo real
       const onProgress = (data) => {
@@ -271,7 +275,7 @@ function registerNetworkToolsHandlers() {
         }
       };
       
-      const result = await service.networkScan(subnet, timeout, onProgress);
+      const result = await service.networkScan(subnet, scanTimeout, onProgress, { mode: scanMode });
       if (!result || typeof result !== 'object') {
         return { success: false, error: 'Respuesta inválida del servicio' };
       }
