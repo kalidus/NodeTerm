@@ -10,6 +10,7 @@
  */
 
 const { exec, spawn } = require('child_process');
+const fs = require('fs');
 const net = require('net');
 const dns = require('dns').promises;
 const tls = require('tls');
@@ -25,6 +26,7 @@ class NetworkToolsService {
   constructor() {
     this.platform = process.platform;
     this.commandCache = new Map(); // Cache para comandos disponibles
+    this._nmapPathCache = undefined;
   }
 
   /**
@@ -1660,6 +1662,826 @@ class NetworkToolsService {
   }
 
   /**
+   * Ruta a nmap.exe si está instalado
+   * @private
+   */
+  async _getNmapPath() {
+    if (this._nmapPathCache !== undefined) {
+      return this._nmapPathCache;
+    }
+
+    const candidates = [
+      'C:\\Program Files (x86)\\Nmap\\nmap.exe',
+      'C:\\Program Files\\Nmap\\nmap.exe'
+    ];
+
+    for (const candidate of candidates) {
+      try {
+        if (fs.existsSync(candidate)) {
+          this._nmapPathCache = candidate;
+          return candidate;
+        }
+      } catch { /* ignore */ }
+    }
+
+    try {
+      const { stdout } = await execAsync('where nmap', { timeout: 3000, shell: true });
+      const line = stdout?.split(/\r?\n/).find(l => l.trim().toLowerCase().endsWith('nmap.exe'));
+      if (line) {
+        this._nmapPathCache = line.trim();
+        return this._nmapPathCache;
+      }
+    } catch { /* ignore */ }
+
+    if (await this._isCommandAvailable('nmap')) {
+      this._nmapPathCache = 'nmap';
+      return 'nmap';
+    }
+
+    this._nmapPathCache = null;
+    return null;
+  }
+
+  /**
+   * Tabla vecinos Windows vía Get-NetNeighbor (más fiable que arp -a)
+   * @private
+   */
+  async _readWindowsNeighborTable() {
+    const table = {};
+    const ps = [
+      'Get-NetNeighbor -AddressFamily IPv4',
+      '| Where-Object { $_.IPAddress -match \'^\\d+\\.\\d+\\.\\d+\\.\\d+$\' -and $_.LinkLayerAddress }',
+      '| ForEach-Object { "$($_.IPAddress)|$($_.LinkLayerAddress)" }'
+    ].join(' ');
+
+    try {
+      const { stdout } = await execAsync(
+        `powershell -NoProfile -NonInteractive -Command "${ps}"`,
+        { timeout: 20000, shell: true, maxBuffer: 4 * 1024 * 1024 }
+      );
+      for (const line of stdout.split(/\r?\n/)) {
+        const [ip, macRaw] = line.trim().split('|');
+        if (!ip || !macRaw) continue;
+        const mac = this._normalizeMacAddress(macRaw);
+        if (mac && !this._isInvalidMac(mac)) {
+          table[ip] = mac;
+        }
+      }
+    } catch { /* ignore */ }
+
+    return table;
+  }
+
+  /**
+   * MAC de un IP concreto (PowerShell)
+   * @private
+   */
+  async _getMacFromNetNeighbor(ip) {
+    if (this.platform !== 'win32') return null;
+    const ps = `Get-NetNeighbor -IPAddress '${ip}' -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty LinkLayerAddress`;
+    try {
+      const { stdout } = await execAsync(
+        `powershell -NoProfile -NonInteractive -Command "${ps}"`,
+        { timeout: 8000, shell: true }
+      );
+      const mac = this._normalizeMacAddress(stdout.trim());
+      return mac && !this._isInvalidMac(mac) ? mac : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Lee tabla ARP clásica (arp -a / ip neigh)
+   * @private
+   */
+  async _readArpTableClassic() {
+    return new Promise((resolve) => {
+      const cmd = this.platform === 'linux' ? 'ip neigh' : 'arp -a';
+      exec(cmd, { timeout: 8000 }, (err, stdout) => {
+        const table = {};
+        if (err || !stdout) {
+          return resolve(table);
+        }
+
+        const lines = stdout.split('\n');
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+
+          const winMatch = trimmed.match(/^(\d{1,3}(?:\.\d{1,3}){3})\s+([0-9a-f]{2}(?:[-:][0-9a-f]{2}){5})\s+/i);
+          if (winMatch) {
+            const mac = this._normalizeMacAddress(winMatch[2]);
+            if (mac && !this._isInvalidMac(mac)) {
+              table[winMatch[1]] = mac;
+            }
+            continue;
+          }
+
+          const ipNeigh = trimmed.match(/^(\d{1,3}(?:\.\d{1,3}){3})\s+dev\s+\S+\s+lladdr\s+([0-9a-f:]+)/i);
+          if (ipNeigh) {
+            const mac = this._normalizeMacAddress(ipNeigh[2]);
+            if (mac && !this._isInvalidMac(mac)) {
+              table[ipNeigh[1]] = mac;
+            }
+            continue;
+          }
+
+          const unixMatch = trimmed.match(/\((\d{1,3}(?:\.\d{1,3}){3})\)\s+at\s+([0-9a-f:]{11,17})/i);
+          if (unixMatch) {
+            const mac = this._normalizeMacAddress(unixMatch[2]);
+            if (mac && !this._isInvalidMac(mac)) {
+              table[unixMatch[1]] = mac;
+            }
+          }
+        }
+
+        resolve(table);
+      });
+    });
+  }
+
+  /**
+   * Tabla IP -> MAC combinando todas las fuentes del SO
+   * @private
+   */
+  async _readNeighborTable() {
+    const merged = {};
+
+    if (this.platform === 'win32') {
+      Object.assign(merged, await this._readWindowsNeighborTable());
+    }
+
+    Object.assign(merged, await this._readArpTableClassic());
+    return merged;
+  }
+
+  /** @private */
+  async _readArpTable() {
+    return this._readNeighborTable();
+  }
+
+  /**
+   * Hostname vía nslookup (Windows / entornos AD)
+   * @private
+   */
+  async _resolveHostnameNslookup(ip) {
+    try {
+      const { stdout } = await execAsync(`nslookup ${ip}`, { timeout: 6000, shell: true });
+      const nameMatch = stdout.match(/^\s*Nombre:\s*(.+)$/im) || stdout.match(/^\s*Name:\s*(.+)$/im);
+      if (!nameMatch) return null;
+      const name = nameMatch[1].trim().replace(/\.$/, '');
+      if (!name || name === ip || /servidor|server|address/i.test(name)) return null;
+      return name;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Enriquecimiento con nmap (MAC, fabricante, SO, hostname)
+   * @private
+   */
+  async _nmapEnrichHost(ip) {
+    const nmap = await this._getNmapPath();
+    if (!nmap) return null;
+
+    const quoted = nmap.includes(' ') ? `"${nmap}"` : nmap;
+    const cmd = [
+      quoted,
+      '-sn', '-PR', '-Pn', '-n',
+      '-O', '--osscan-guess', '--max-os-tries', '1',
+      '-F', '--host-timeout', '12s',
+      ip
+    ].join(' ');
+
+    try {
+      const { stdout } = await execAsync(cmd, {
+        timeout: 20000,
+        shell: true,
+        maxBuffer: 2 * 1024 * 1024
+      });
+      return this._parseNmapHostOutput(stdout, ip);
+    } catch {
+      try {
+        const { stdout } = await execAsync(
+          `${quoted} -sn -PR -Pn -n ${ip}`,
+          { timeout: 10000, shell: true }
+        );
+        return this._parseNmapHostOutput(stdout, ip);
+      } catch {
+        return null;
+      }
+    }
+  }
+
+  /**
+   * @private
+   */
+  _parseNmapHostOutput(stdout, ip) {
+    if (!stdout) return null;
+    const result = { mac: null, vendor: null, os: null, osDetails: null, hostname: null, deviceType: null };
+
+    const macMatch = stdout.match(/MAC Address:\s*([0-9A-Fa-f:]+)\s*(?:\(([^)]+)\))?/);
+    if (macMatch) {
+      result.mac = this._normalizeMacAddress(macMatch[1]);
+      result.vendor = macMatch[2]?.trim() || this._lookupMacVendor(result.mac);
+    }
+
+    const osDetails = stdout.match(/OS details:\s*(.+)/i);
+    const running = stdout.match(/Running:\s*(.+)/i);
+    const deviceType = stdout.match(/Device type:\s*(.+)/i);
+    if (osDetails) {
+      result.os = osDetails[1].trim();
+      result.osDetails = result.os;
+    } else if (running) {
+      result.os = running[1].trim();
+      result.osDetails = result.os;
+    }
+    if (deviceType) {
+      result.deviceType = deviceType[1].trim();
+    }
+
+    const hostLine = stdout.match(new RegExp(`Nmap scan report for (.+?)(?:\\s+\\(${ip.replace(/\./g, '\\.')}\\)|\\s*$)`, 'im'));
+    if (hostLine) {
+      let name = hostLine[1].trim();
+      if (name && name !== ip && !/^\d+\.\d+\.\d+\.\d+$/.test(name)) {
+        result.hostname = name;
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Resuelve MAC (ping + vecinos + nmap)
+   * @private
+   */
+  async _resolveMacForHost(ip, neighborTable) {
+    let mac = neighborTable[ip] || null;
+
+    if (!mac) {
+      await this._pingHostNative(ip, 1200);
+      mac = await this._getMacFromNetNeighbor(ip);
+      if (!mac) {
+        const refreshed = await this._readNeighborTable();
+        mac = refreshed[ip] || null;
+        Object.assign(neighborTable, refreshed);
+      }
+    }
+
+    let vendor = mac ? this._lookupMacVendor(mac) : null;
+
+    if (!mac) {
+      const nmapData = await this._nmapEnrichHost(ip);
+      if (nmapData?.mac) {
+        mac = nmapData.mac;
+        vendor = nmapData.vendor || vendor;
+        return { mac, vendor, nmapData };
+      }
+    }
+
+    return { mac, vendor, nmapData: null };
+  }
+
+  /**
+   * @private
+   */
+  _normalizeMacAddress(mac) {
+    if (!mac) return null;
+    const clean = mac.replace(/[^0-9a-f]/gi, '').toUpperCase();
+    if (clean.length !== 12) return null;
+    return clean.match(/.{2}/g).join(':');
+  }
+
+  /**
+   * @private
+   */
+  _isInvalidMac(mac) {
+    if (!mac) return true;
+    const clean = mac.replace(/[^0-9A-F]/g, '');
+    return clean === '000000000000' || clean === 'FFFFFFFFFFFF' || clean.startsWith('01005E');
+  }
+
+  /**
+   * Lookup fabricante por prefijo OUI (MAC)
+   * @private
+   */
+  _lookupMacVendor(mac) {
+    if (!mac) return null;
+    const prefix = mac.replace(/[^0-9A-F]/gi, '').substring(0, 6).toUpperCase();
+    const vendors = this._getOuiVendorMap();
+    return vendors[prefix] || null;
+  }
+
+  /**
+   * @private
+   */
+  _getOuiVendorMap() {
+    return {
+      '000C29': 'VMware',
+      '005056': 'VMware',
+      '001C42': 'Parallels',
+      '080027': 'VirtualBox',
+      '525400': 'QEMU/KVM',
+      '00155D': 'Microsoft Hyper-V',
+      '001A2B': 'Cisco',
+      '001B63': 'Apple',
+      '001E52': 'Apple',
+      '001EC2': 'Apple',
+      '0026BB': 'Apple',
+      'F01898': 'Apple',
+      'A45E60': 'Apple',
+      'DCA632': 'Raspberry Pi',
+      'B827EB': 'Raspberry Pi',
+      'E45F01': 'Raspberry Pi',
+      '000D3A': 'Microsoft',
+      '001DD8': 'Microsoft',
+      '001F3A': 'Microsoft',
+      '002248': 'Microsoft',
+      '001B21': 'Intel',
+      '001E67': 'Intel',
+      '3C970E': 'Intel',
+      '001CF0': 'Intel',
+      '001D7E': 'Cisco',
+      '000142': 'Cisco',
+      '000E08': 'Cisco',
+      '001A70': 'Cisco',
+      '00163E': 'Cisco',
+      '0019E7': 'Cisco',
+      '0016C7': 'Cisco',
+      '001731': 'Belkin',
+      '001D0F': 'TP-Link',
+      '50C7BF': 'TP-Link',
+      'A42BB0': 'TP-Link',
+      '001E58': 'D-Link',
+      '001CF0': 'D-Link',
+      '00179A': 'D-Link',
+      '001B11': 'D-Link',
+      '001E4A': 'D-Link',
+      '002191': 'D-Link',
+      '001E2A': 'Netgear',
+      '001B2F': 'Netgear',
+      '0026F2': 'Netgear',
+      '9C3DCF': 'Netgear',
+      '001A92': 'ASUS',
+      '001731': 'ASUS',
+      '1C872C': 'ASUS',
+      '2C56DC': 'ASUS',
+      '001E8C': 'ASUS',
+      '000E35': 'Intel',
+      '001B38': 'Intel',
+      '001E64': 'Intel',
+      '0022FA': 'Intel',
+      '001CC0': 'Intel',
+      '001E65': 'Intel',
+      '001B77': 'Intel',
+      '0002B3': 'Intel',
+      '001B21': 'Intel',
+      '001517': 'Hewlett-Packard',
+      '001871': 'Hewlett-Packard',
+      '002264': 'Hewlett-Packard',
+      '000423': 'Intel',
+      '001B21': 'Intel',
+      '001CC0': 'Intel',
+      '001E67': 'Intel',
+      '001731': 'Intel',
+      '000D0B': 'Realtek',
+      '001E37': 'Realtek',
+      '0013D3': 'Realtek',
+      '0018FE': 'Realtek',
+      '001CF0': 'Realtek',
+      '001E4C': 'Realtek',
+      '001731': 'Realtek',
+      '000E2E': 'Edimax',
+      '001D0F': 'Ubiquiti',
+      '002722': 'Ubiquiti',
+      '04181F': 'Ubiquiti',
+      '24A43C': 'Ubiquiti',
+      '788A20': 'Ubiquiti',
+      'FCFAF7': 'Ubiquiti',
+      'B4FBE4': 'Ubiquiti',
+      '001A11': 'Google',
+      'DA0B66': 'Google',
+      'F4F5D8': 'Google',
+      'F4F5E8': 'Google',
+      '3C5AB4': 'Google',
+      '001A11': 'Google',
+      '001A92': 'Samsung',
+      '002566': 'Samsung',
+      '001632': 'Samsung',
+      '0015B9': 'Samsung',
+      '001EE2': 'Samsung',
+      '0019E2': 'Samsung',
+      '001DF6': 'Samsung',
+      '0016DB': 'Samsung',
+      '001D25': 'Samsung',
+      '001E75': 'Samsung',
+      '001FCC': 'Samsung',
+      '002491': 'Samsung',
+      '0019E0': 'Samsung',
+      '0016B9': 'Samsung',
+      '001D25': 'Samsung',
+      '0242AC': 'Docker',
+      '0242AC1': 'Docker',
+      '000569': 'Docker',
+      '00163E': 'Docker',
+      '00155D': 'Microsoft',
+      '001DD8': 'Microsoft',
+      '001F3A': 'Microsoft',
+      '001A2B': 'Microsoft',
+      '00125A': 'Microsoft',
+      '001D0F': 'Microsoft',
+      '001731': 'Microsoft',
+      '001E4C': 'Microsoft',
+      '001CF0': 'Microsoft',
+      '001B21': 'Microsoft',
+      '001E67': 'Microsoft',
+      '001CC0': 'Microsoft',
+      '001731': 'Microsoft',
+      '001A2B': 'Microsoft',
+      '001DD8': 'Microsoft',
+      '001F3A': 'Microsoft',
+      '00125A': 'Microsoft',
+      '001D0F': 'Microsoft',
+      '001731': 'Microsoft',
+      '001E4C': 'Microsoft',
+      '001CF0': 'Microsoft',
+      '001B21': 'Microsoft',
+      '001E67': 'Microsoft',
+      '001CC0': 'Microsoft'
+    };
+  }
+
+  /**
+   * @private
+   */
+  _extractTtlFromPingOutput(output) {
+    if (!output) return null;
+    const match = output.match(/TTL[=<]\s*(\d+)/i) || output.match(/ttl[=<]\s*(\d+)/i);
+    return match ? parseInt(match[1], 10) : null;
+  }
+
+  /**
+   * Sonda rápida de puertos comunes para fingerprint
+   * @private
+   */
+  async _quickProbePorts(ip, ports = [22, 80, 135, 139, 443, 445, 3389, 548, 5357], timeout = 600) {
+    const open = [];
+    const results = await Promise.all(
+      ports.map(async (port) => {
+        const r = await this._scanPort(ip, port, timeout);
+        return { port, ...r };
+      })
+    );
+    for (const r of results) {
+      if (r.status === 'open') open.push(r.port);
+    }
+    return open;
+  }
+
+  /**
+   * NetBIOS / nbtstat (Windows)
+   * @private
+   */
+  async _getNetbiosInfo(ip) {
+    if (this.platform !== 'win32') {
+      return { name: null, group: null, mac: null };
+    }
+
+    return new Promise((resolve) => {
+      exec(`nbtstat -A ${ip}`, { timeout: 25000, maxBuffer: 1024 * 1024, encoding: 'buffer' }, (err, stdoutBuf) => {
+        const stdout = stdoutBuf
+          ? stdoutBuf.toString('latin1')
+          : '';
+
+        if (!stdout) {
+          return resolve({ name: null, group: null, mac: null });
+        }
+
+        if (/Host no encontrado|host not found/i.test(stdout) && !/<00>/i.test(stdout)) {
+          return resolve({ name: null, group: null, mac: null });
+        }
+
+        let name = null;
+        let group = null;
+        let mac = null;
+
+        for (const line of stdout.split(/\r?\n/)) {
+          const entry = line.match(/^\s*([^\s<]+)\s+<00>\s+/i);
+          if (!entry) continue;
+          const entryName = entry[1].trim();
+          if (entryName.startsWith('__') || entryName.length < 2) continue;
+
+          if (/grupo|group/i.test(line)) {
+            if (!group) group = entryName;
+          } else if (!name) {
+            name = entryName;
+          }
+        }
+
+        const macMatch = stdout.match(/(?:MAC Address|Direcci[oó]n física)\s*[=:]\s*([0-9A-Fa-f-]+)/i);
+        if (macMatch) {
+          mac = this._normalizeMacAddress(macMatch[1]);
+        }
+
+        resolve({ name, group, mac });
+      });
+    });
+  }
+
+  /**
+   * Obtiene banners ligeros para inferir SO
+   * @private
+   */
+  async _probeOsBanners(ip, openPorts) {
+    const hints = { ssh: null, http: null, smb: null };
+    const timeout = 1500;
+
+    if (openPorts.includes(22)) {
+      const banner = await this._grabBanner(ip, 22, timeout);
+      if (banner.success && banner.banner) {
+        hints.ssh = banner.banner.split('\n')[0].trim();
+      }
+    }
+
+    if (openPorts.includes(80) || openPorts.includes(8080)) {
+      const port = openPorts.includes(80) ? 80 : 8080;
+      const banner = await this._grabBanner(ip, port, timeout);
+      if (banner.success && banner.banner) {
+        const serverMatch = banner.banner.match(/Server:\s*([^\r\n]+)/i);
+        hints.http = serverMatch ? serverMatch[1].trim() : banner.banner.split('\n')[0].trim();
+      }
+    }
+
+    return hints;
+  }
+
+  /**
+   * Infiere sistema operativo a partir de señales recolectadas
+   * @private
+   */
+  _guessOperatingSystem({ ttl, openPorts = [], vendor, netbiosName, banners = {} }) {
+    const signals = [];
+    let os = null;
+    let deviceType = null;
+
+    const has = (p) => openPorts.includes(p);
+
+    if (ttl !== null && ttl !== undefined) {
+      if (ttl >= 240) {
+        signals.push(`TTL ${ttl} (red/IoT)`);
+        os = os || 'Dispositivo de red';
+        deviceType = deviceType || 'Router/Switch';
+      } else if (ttl >= 120) {
+        signals.push(`TTL ${ttl} (Windows)`);
+        os = 'Windows';
+      } else if (ttl >= 60 && ttl < 120) {
+        signals.push(`TTL ${ttl} (Unix/Linux/macOS)`);
+        os = os || 'Linux/Unix';
+      }
+    }
+
+    if (has(3389) || (has(445) && has(135))) {
+      signals.push('RDP/SMB');
+      os = 'Windows';
+      deviceType = deviceType || 'PC/Servidor Windows';
+    } else if (has(445) || has(139) || has(135)) {
+      signals.push('SMB/NetBIOS');
+      os = os || 'Windows';
+    }
+
+    if (has(548)) {
+      signals.push('AFP');
+      os = 'macOS';
+      deviceType = 'Mac';
+    }
+
+    if (has(22) && !has(3389)) {
+      signals.push('SSH');
+      if (!os || os === 'Linux/Unix') os = 'Linux';
+      deviceType = deviceType || 'Servidor Linux';
+    }
+
+    if (has(62078)) {
+      os = 'iOS';
+      deviceType = 'iPhone/iPad';
+      signals.push('puerto 62078');
+    }
+
+    if (banners.ssh) {
+      const ssh = banners.ssh;
+      if (/ubuntu|debian|linux/i.test(ssh)) {
+        os = 'Linux';
+        signals.push(`SSH: ${ssh.substring(0, 60)}`);
+      } else if (/darwin|macos/i.test(ssh)) {
+        os = 'macOS';
+        signals.push(`SSH: ${ssh.substring(0, 60)}`);
+      } else if (/windows/i.test(ssh)) {
+        os = 'Windows';
+        signals.push(`SSH: ${ssh.substring(0, 60)}`);
+      }
+    }
+
+    if (banners.http) {
+      const http = banners.http;
+      if (/microsoft-iis|win32|asp\.net/i.test(http)) {
+        os = 'Windows';
+        signals.push(`HTTP: ${http.substring(0, 50)}`);
+      } else if (/ubuntu|debian|linux/i.test(http)) {
+        os = os || 'Linux';
+        signals.push(`HTTP: ${http.substring(0, 50)}`);
+      } else if (/darwin|macos/i.test(http)) {
+        os = 'macOS';
+        signals.push(`HTTP: ${http.substring(0, 50)}`);
+      }
+    }
+
+    if (netbiosName) {
+      signals.push(`NetBIOS: ${netbiosName}`);
+      os = os || 'Windows';
+    }
+
+    if (vendor) {
+      const v = vendor.toLowerCase();
+      if (/vmware|virtualbox|qemu|parallels|hyper-v|docker/i.test(v)) {
+        deviceType = deviceType || 'Máquina virtual';
+      } else if (/apple|raspberry/i.test(v)) {
+        if (!os) os = /raspberry/i.test(v) ? 'Linux (Raspberry Pi OS)' : 'macOS/iOS';
+        deviceType = deviceType || (/raspberry/i.test(v) ? 'Raspberry Pi' : 'Apple');
+      } else if (/cisco|ubiquiti|tp-link|netgear|d-link|asus/i.test(v)) {
+        deviceType = deviceType || 'Dispositivo de red';
+        os = os || 'Firmware embebido';
+      }
+    }
+
+    if (!os) {
+      if (has(80) || has(443)) os = 'Desconocido (servidor web)';
+      else os = 'Desconocido';
+    }
+
+    return {
+      os,
+      deviceType: deviceType || null,
+      confidence: signals.length >= 2 ? 'alta' : signals.length === 1 ? 'media' : 'baja',
+      signals
+    };
+  }
+
+  /**
+   * Enriquece un host descubierto con MAC, hostname, SO, etc.
+   * @private
+   */
+  async _enrichDiscoveredHost(host, neighborTable, onProgress) {
+    host.hostnames = host.hostnames || (host.hostname ? [host.hostname] : []);
+    host.netbiosName = host.netbiosName || null;
+    host.netbiosGroup = host.netbiosGroup || null;
+    host.ttl = host.ttl ?? null;
+    host.os = host.os || null;
+    host.deviceType = host.deviceType || null;
+    host.osSignals = host.osSignals || [];
+    host.openPorts = host.openPorts || [];
+    host.enrichmentSource = host.enrichmentSource || [];
+
+    const addSource = (s) => {
+      if (s && !host.enrichmentSource.includes(s)) host.enrichmentSource.push(s);
+    };
+
+    const addHostname = (name) => {
+      if (!name || name === host.ip) return;
+      if (!host.hostname) host.hostname = name;
+      if (!host.hostnames.includes(name)) host.hostnames.push(name);
+    };
+
+    try {
+      const pingResult = await this._pingHostNative(host.ip, 2000);
+      if (pingResult.ttl) host.ttl = pingResult.ttl;
+      addSource('ping');
+    } catch { /* ignore */ }
+
+    try {
+      const { mac, vendor, nmapData } = await this._resolveMacForHost(host.ip, neighborTable);
+      if (mac) {
+        host.mac = mac;
+        neighborTable[host.ip] = mac;
+        addSource('neighbor/arp');
+      }
+      if (vendor) host.vendor = vendor;
+
+      if (nmapData) {
+        if (nmapData.mac && !host.mac) host.mac = nmapData.mac;
+        if (nmapData.vendor) host.vendor = nmapData.vendor;
+        if (nmapData.os) {
+          host.os = nmapData.os;
+          host.osDetails = nmapData.osDetails;
+          addSource('nmap-os');
+        }
+        if (nmapData.deviceType) host.deviceType = nmapData.deviceType;
+        if (nmapData.hostname) addHostname(nmapData.hostname);
+        addSource('nmap');
+      }
+    } catch { /* ignore */ }
+
+    if (!host.os) {
+      try {
+        const nmapOnly = await this._nmapEnrichHost(host.ip);
+        if (nmapOnly) {
+          if (nmapOnly.mac && !host.mac) host.mac = nmapOnly.mac;
+          if (nmapOnly.vendor) host.vendor = nmapOnly.vendor;
+          else if (nmapOnly.mac && !host.vendor) host.vendor = this._lookupMacVendor(nmapOnly.mac);
+          if (nmapOnly.os) {
+            host.os = nmapOnly.os;
+            host.osDetails = nmapOnly.osDetails;
+            addSource('nmap-os');
+          }
+          if (nmapOnly.deviceType) host.deviceType = nmapOnly.deviceType;
+          if (nmapOnly.hostname) addHostname(nmapOnly.hostname);
+          addSource('nmap');
+        }
+      } catch { /* ignore */ }
+    }
+
+    try {
+      const reverseDns = await this.reverseDns(host.ip);
+      if (reverseDns.success && reverseDns.hostnames.length > 0) {
+        reverseDns.hostnames.forEach(addHostname);
+        addSource('dns-ptr');
+      }
+    } catch { /* ignore */ }
+
+    if (this.platform === 'win32') {
+      try {
+        const nsName = await this._resolveHostnameNslookup(host.ip);
+        if (nsName) {
+          addHostname(nsName);
+          addSource('nslookup');
+        }
+      } catch { /* ignore */ }
+    }
+
+    if (this.platform === 'win32' && !host.hostname) {
+      try {
+        const nb = await this._getNetbiosInfo(host.ip);
+        if (nb.name) {
+          host.netbiosName = nb.name;
+          addHostname(nb.name);
+          addSource('netbios');
+        }
+        if (nb.group) host.netbiosGroup = nb.group;
+        if (nb.mac && !host.mac) {
+          host.mac = nb.mac;
+          host.vendor = host.vendor || this._lookupMacVendor(host.mac);
+          neighborTable[host.ip] = nb.mac;
+        }
+      } catch { /* ignore */ }
+    }
+
+    if (!host.mac && neighborTable[host.ip]) {
+      host.mac = neighborTable[host.ip];
+      host.vendor = host.vendor || this._lookupMacVendor(host.mac);
+    }
+
+    try {
+      host.openPorts = await this._quickProbePorts(host.ip);
+      if (host.openPorts.length > 0) addSource('port-probe');
+    } catch { /* ignore */ }
+
+    if (!host.os || host.os === 'Desconocido') {
+      try {
+        const banners = await this._probeOsBanners(host.ip, host.openPorts);
+        const osGuess = this._guessOperatingSystem({
+          ttl: host.ttl,
+          openPorts: host.openPorts,
+          vendor: host.vendor,
+          netbiosName: host.netbiosName,
+          banners
+        });
+        if (!host.os || host.os === 'Desconocido' || osGuess.confidence !== 'baja') {
+          host.os = osGuess.os;
+          host.deviceType = host.deviceType || osGuess.deviceType;
+          host.osConfidence = osGuess.confidence;
+          host.osSignals = osGuess.signals;
+          addSource('heuristic');
+        }
+      } catch { /* ignore */ }
+    }
+
+    if (host.mac && !host.vendor) {
+      host.vendor = this._lookupMacVendor(host.mac);
+    }
+
+    if (onProgress && typeof onProgress === 'function') {
+      const parts = [
+        host.hostname || host.netbiosName || 'sin nombre',
+        host.mac ? `MAC ${host.mac}` : null,
+        host.vendor ? host.vendor : null,
+        host.os ? host.os : null
+      ].filter(Boolean);
+      onProgress(`  ${host.ip} → ${parts.join(' | ')}\n`);
+    }
+  }
+
+  /**
    * Network scan - Discover hosts in a subnet
    * @param {string} subnet - Subnet in CIDR notation (e.g., "192.168.1.0/24")
    * @param {number} timeout - Timeout per host in ms (default: 1000)
@@ -1731,7 +2553,16 @@ class NetworkToolsService {
           results.hosts.push({
             ip: currentIp,
             responseTime: result.time,
-            hostname: null // Could add reverse DNS lookup here
+            hostname: null,
+            hostnames: [],
+            mac: null,
+            vendor: null,
+            os: null,
+            deviceType: null,
+            ttl: null,
+            netbiosName: null,
+            netbiosGroup: null,
+            openPorts: []
           });
         }
       });
@@ -1741,23 +2572,24 @@ class NetworkToolsService {
 
     if (onProgress && typeof onProgress === 'function') {
       onProgress(`\nEscaneo de red completado: ${results.hosts.length} hosts activos encontrados de ${ipList.length} escaneados (${(results.scanTime / 1000).toFixed(2)}s)\n`);
-      onProgress(`Obteniendo nombres de host...\n`);
+      const nmapPath = await this._getNmapPath();
+      onProgress(`Resolviendo MAC, hostname y SO${nmapPath ? ' (nmap + sistema)' : ' (sistema)'}...\n`);
     }
 
-    // Try to get hostnames for discovered hosts (optional, async)
-    for (let i = 0; i < results.hosts.length; i++) {
-      const host = results.hosts[i];
-      try {
-        const reverseDns = await this.reverseDns(host.ip);
-        if (reverseDns.success && reverseDns.hostnames.length > 0) {
-          host.hostname = reverseDns.hostnames[0];
-          if (onProgress && typeof onProgress === 'function') {
-            onProgress(`  ${host.ip} -> ${host.hostname}\n`);
-          }
-        }
-      } catch {
-        // Ignore reverse DNS errors
-      }
+    const pingBatch = 8;
+    for (let i = 0; i < results.hosts.length; i += pingBatch) {
+      await Promise.all(
+        results.hosts.slice(i, i + pingBatch).map(h => this._pingHostNative(h.ip, 1000))
+      );
+    }
+
+    const neighborTable = await this._readNeighborTable();
+    const enrichConcurrency = 2;
+    for (let i = 0; i < results.hosts.length; i += enrichConcurrency) {
+      const batch = results.hosts.slice(i, i + enrichConcurrency);
+      await Promise.all(
+        batch.map(host => this._enrichDiscoveredHost(host, neighborTable, onProgress))
+      );
     }
 
     if (onProgress && typeof onProgress === 'function') {
@@ -1802,14 +2634,15 @@ class NetworkToolsService {
 
       child.on('close', (code) => {
         const duration = Date.now() - startTime;
+        const ttl = this._extractTtlFromPingOutput(output);
         if (code === 0) {
           const isAlive = /TTL=/i.test(output) || /ttl=/i.test(output) || /time=/i.test(output) || /tiempo=/i.test(output);
           if (isAlive) {
-            resolve({ alive: true, time: duration });
+            resolve({ alive: true, time: duration, ttl });
             return;
           }
         }
-        resolve({ alive: false, time: null });
+        resolve({ alive: false, time: null, ttl: null });
       });
 
       child.on('error', () => {

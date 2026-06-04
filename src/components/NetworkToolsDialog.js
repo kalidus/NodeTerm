@@ -165,8 +165,9 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
   // Cyberpunk Network Scan states
   const [cyberpunkMode, setCyberpunkMode] = useState(true);
   const [selectedCyberHost, setSelectedCyberHost] = useState(null);
-  const [cyberSubScanLoading, setCyberSubScanLoading] = useState(false);
-  const [cyberSubScanResult, setCyberSubScanResult] = useState(null);
+  const [cyberPortsCache, setCyberPortsCache] = useState({});
+  const [cyberPortsScanning, setCyberPortsScanning] = useState({});
+  const cyberPortsScanningRef = React.useRef(new Set());
   const [cyberActiveTab, setCyberActiveTab] = useState('details');
   const [cyberPingResults, setCyberPingResults] = useState([]);
   const [cyberScanType, setCyberScanType] = useState('radar');
@@ -928,7 +929,9 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
     setResult(null);
     setLiveOutput('');
     setSelectedCyberHost(null);
-    setCyberSubScanResult(null);
+    setCyberPortsCache({});
+    setCyberPortsScanning({});
+    cyberPortsScanningRef.current.clear();
     
     try {
       const ipc = window?.electron?.ipcRenderer;
@@ -964,6 +967,9 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
       }
       
       setResult(response);
+      if (response.hosts?.length > 0) {
+        scanCyberPortsForHosts(response.hosts);
+      }
     } catch (err) {
       console.error('Error in autoDetectAndScan:', err);
       setError(err?.message || 'Error al autodetectar e iniciar el escaneo');
@@ -972,28 +978,47 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
     }
   };
 
-  // Cyberpunk Sub-scan: Port Scan
-  const cyberScanPorts = async (hostIp) => {
-    setCyberSubScanLoading(true);
-    setCyberSubScanResult(null);
-    setCyberActiveTab('ports');
+  const CYBER_SCAN_PORTS = '21,22,23,25,53,80,110,135,139,143,443,445,1433,3306,3389,8080';
+
+  // Cyberpunk Sub-scan: Port Scan (con caché por host)
+  const cyberScanPorts = useCallback(async (hostIp, { switchToPortsTab = false } = {}) => {
+    if (!hostIp || cyberPortsScanningRef.current.has(hostIp)) return;
+    cyberPortsScanningRef.current.add(hostIp);
+    setCyberPortsScanning(prev => ({ ...prev, [hostIp]: true }));
+    if (switchToPortsTab) setCyberActiveTab('ports');
     try {
       const ipc = window?.electron?.ipcRenderer;
       if (!ipc) throw new Error('IPC no disponible');
       
       const response = await ipc.invoke('network-tools:port-scan', { 
         host: hostIp, 
-        ports: '21,22,23,25,53,80,110,135,139,143,443,445,1433,3306,3389,8080',
+        ports: CYBER_SCAN_PORTS,
         timeout: 1000
       });
-      setCyberSubScanResult(response);
+      setCyberPortsCache(prev => ({ ...prev, [hostIp]: response }));
     } catch (err) {
       console.error(err);
-      setCyberSubScanResult({ success: false, error: err.message });
+      setCyberPortsCache(prev => ({ ...prev, [hostIp]: { success: false, error: err.message } }));
     } finally {
-      setCyberSubScanLoading(false);
+      cyberPortsScanningRef.current.delete(hostIp);
+      setCyberPortsScanning(prev => {
+        const next = { ...prev };
+        delete next[hostIp];
+        return next;
+      });
     }
-  };
+  }, []);
+
+  const scanCyberPortsForHosts = useCallback(async (hosts) => {
+    if (!hosts?.length) return;
+    const ips = [...new Set(hosts.map(h => h.ip).filter(Boolean))];
+    const concurrency = 2;
+    for (let i = 0; i < ips.length; i += concurrency) {
+      await Promise.all(
+        ips.slice(i, i + concurrency).map(ip => cyberScanPorts(ip))
+      );
+    }
+  }, [cyberScanPorts]);
 
   // Cyberpunk Sub-scan: Live Ping
   const [cyberPingActive, setCyberPingActive] = useState(false);
@@ -1060,10 +1085,12 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
       cyberPingIntervalRef.current = null;
       setCyberPingActive(false);
     }
-    setCyberSubScanResult(null);
     setCyberActiveTab('details');
     setCyberPingResults([]);
-  }, [selectedCyberHost]);
+    if (selectedCyberHost?.ip && !cyberPortsCache[selectedCyberHost.ip] && !cyberPortsScanningRef.current.has(selectedCyberHost.ip)) {
+      cyberScanPorts(selectedCyberHost.ip);
+    }
+  }, [selectedCyberHost, cyberScanPorts, cyberPortsCache]);
 
   // Handler genérico para ejecutar herramientas
   const executeTool = useCallback(async () => {
@@ -1071,6 +1098,12 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
     setError(null);
     setResult(null);
     setLiveOutput(''); // Limpiar salida anterior
+    if (selectedTool === 'network-scan') {
+      setCyberPortsCache({});
+      setCyberPortsScanning({});
+      cyberPortsScanningRef.current.clear();
+      setSelectedCyberHost(null);
+    }
 
     try {
       let response;
@@ -1213,6 +1246,9 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
         }
         setResult(finalResult);
         setError(null);
+        if (selectedTool === 'network-scan' && finalResult.hosts?.length > 0) {
+          scanCyberPortsForHosts(finalResult.hosts);
+        }
       }
     } catch (err) {
       console.error('Error ejecutando herramienta:', err);
@@ -1229,7 +1265,7 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
       portScanHost, portScanPorts, networkScanSubnet, dnsLookupDomain, dnsLookupType,
       reverseDnsIp, sslCheckHost, sslCheckPort, httpHeadersUrl, whoisDomain,
       subnetCalcCidr, wolMac, wolBroadcast, liveOutput,
-      hostVulnHost, hostVulnPorts, hostVulnUseOnline, webSecurityUrl]);
+      hostVulnHost, hostVulnPorts, hostVulnUseOnline, webSecurityUrl, scanCyberPortsForHosts]);
 
   // Cambiar herramienta seleccionada
   const handleToolSelect = (categoryId, toolId) => {
@@ -1470,16 +1506,31 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
         }
       }
       
-      // Formato: "  192.168.1.1 -> hostname"
-      const matchHostname = line.match(/\s+(\d+\.\d+\.\d+\.\d+)\s+->\s+(.+)/);
+      // Formato: "  192.168.1.1 -> hostname" o "  192.168.1.1 → name | MAC | OS"
+      const matchHostname = line.match(/\s+(\d+\.\d+\.\d+\.\d+)\s+(?:->|→)\s+(.+)/);
       if (matchHostname) {
         const ip = matchHostname[1];
-        const hostname = matchHostname[2].trim();
+        const info = matchHostname[2].trim();
+        const parts = info.split('|').map(s => s.trim());
+        const hostname = parts[0] && parts[0] !== 'sin nombre' ? parts[0] : null;
         const existing = hosts.find(h => h.ip === ip);
+        const macPart = parts.find(p => /^MAC\s/i.test(p));
+        const osPart = parts.length > 1 ? parts[parts.length - 1] : null;
+        const vendorPart = parts.find(p => p && !/^MAC\s/i.test(p) && p !== hostname && p !== osPart && !/^(sin nombre|Desconocido)/i.test(p));
         if (existing) {
-          existing.hostname = hostname;
+          if (hostname) existing.hostname = hostname;
+          if (macPart) existing.mac = macPart.replace(/^MAC\s*/i, '').trim();
+          if (vendorPart) existing.vendor = vendorPart;
+          if (osPart && osPart !== hostname) existing.os = osPart;
         } else {
-          hosts.push({ ip, responseTime: 0, hostname });
+          hosts.push({
+            ip,
+            responseTime: 0,
+            hostname,
+            mac: macPart ? macPart.replace(/^MAC\s*/i, '').trim() : null,
+            vendor: vendorPart || null,
+            os: osPart && osPart !== hostname ? osPart : null
+          });
         }
       }
     });
@@ -1599,6 +1650,17 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
   // Renderizador principal del HUD Cyberpunk (utilizado tanto en ejecución como en resultados finales)
   const renderCyberpunkHUD = (isScanning) => {
     const currentHosts = result ? (result.hosts || []) : parseActiveHostsFromLiveOutput(liveOutput);
+    const activeHost = selectedCyberHost?.ip
+      ? (currentHosts.find(h => h.ip === selectedCyberHost.ip) || selectedCyberHost)
+      : null;
+
+    const formatHostSubtitle = (host) => {
+      if (host.hostname) return host.hostname;
+      if (host.netbiosName) return host.netbiosName;
+      if (host.os && host.os !== 'Desconocido') return host.os;
+      if (host.vendor) return host.vendor;
+      return 'Desconocido';
+    };
     
     let progressPercent = 0;
     if (isScanning && liveOutput) {
@@ -1795,8 +1857,13 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                             IP: {host.ip}
                           </div>
                           <div style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.5)', marginTop: '2px' }}>
-                            Host: {host.hostname || 'Desconocido'}
+                            {formatHostSubtitle(host)}
                           </div>
+                          {(host.os || host.mac) && (
+                            <div style={{ fontSize: '0.6rem', color: 'rgba(0, 240, 255, 0.45)', marginTop: '1px' }}>
+                              {[host.os, host.mac].filter(Boolean).join(' · ')}
+                            </div>
+                          )}
                         </div>
                         <div style={{ textAlign: 'right' }}>
                           <span className="cyber-badge" style={{ 
@@ -1834,7 +1901,7 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
             background: 'rgba(4, 12, 22, 0.8)',
             minHeight: '260px'
           }}>
-            {!selectedCyberHost ? (
+            {!activeHost ? (
               <div style={{
                 flex: 1,
                 display: 'flex',
@@ -1866,7 +1933,7 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                     </button>
                   </div>
                   <div style={{ fontSize: '1rem', fontWeight: 'bold', color: '#ffffff', marginTop: '0.25rem', fontFamily: 'monospace' }}>
-                    {selectedCyberHost.ip}
+                    {activeHost.ip}
                   </div>
                 </div>
 
@@ -1874,10 +1941,7 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                   {['details', 'ports', 'ping'].map(tab => (
                     <button
                       key={tab}
-                      onClick={() => {
-                        setCyberActiveTab(tab);
-                        setCyberSubScanResult(null);
-                      }}
+                      onClick={() => setCyberActiveTab(tab)}
                       style={{
                         flex: 1,
                         background: cyberActiveTab === tab ? 'rgba(0, 240, 255, 0.15)' : 'transparent',
@@ -1900,31 +1964,85 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
                       <div style={{ background: 'rgba(0, 240, 255, 0.05)', padding: '0.5rem', borderRadius: '4px', border: '1px solid rgba(0, 240, 255, 0.15)' }}>
                         <div style={{ color: 'rgba(0, 240, 255, 0.6)', fontSize: '0.6rem' }}>RESOLVED_HOSTNAME</div>
-                        <div style={{ fontWeight: 'bold', color: '#fff', fontSize: '0.8rem' }}>{selectedCyberHost.hostname || '[NONE]'}</div>
+                        <div style={{ fontWeight: 'bold', color: '#fff', fontSize: '0.8rem' }}>
+                          {activeHost.hostname || activeHost.netbiosName || '[NONE]'}
+                        </div>
+                        {activeHost.hostnames?.length > 1 && (
+                          <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.45)', marginTop: '3px' }}>
+                            {activeHost.hostnames.filter(n => n !== activeHost.hostname).join(', ')}
+                          </div>
+                        )}
                       </div>
+
+                      <div style={{ background: 'rgba(0, 240, 255, 0.05)', padding: '0.5rem', borderRadius: '4px', border: '1px solid rgba(0, 240, 255, 0.15)' }}>
+                        <div style={{ color: 'rgba(0, 240, 255, 0.6)', fontSize: '0.6rem' }}>MAC_ADDRESS</div>
+                        <div style={{ fontWeight: 'bold', color: '#fff', fontSize: '0.75rem', fontFamily: 'monospace' }}>
+                          {activeHost.mac || '[NO RESUELTA]'}
+                        </div>
+                        {activeHost.vendor && (
+                          <div style={{ fontSize: '0.6rem', color: '#ffb700', marginTop: '2px' }}>{activeHost.vendor}</div>
+                        )}
+                      </div>
+
+                      <div style={{ background: 'rgba(0, 240, 255, 0.05)', padding: '0.5rem', borderRadius: '4px', border: '1px solid rgba(0, 240, 255, 0.15)' }}>
+                        <div style={{ color: 'rgba(0, 240, 255, 0.6)', fontSize: '0.6rem' }}>OPERATING_SYSTEM</div>
+                        <div style={{ fontWeight: 'bold', color: '#39ff14', fontSize: '0.8rem' }}>{activeHost.os || 'Desconocido'}</div>
+                        {activeHost.deviceType && (
+                          <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>{activeHost.deviceType}</div>
+                        )}
+                        {(activeHost.osDetails || activeHost.osSignals?.length > 0) && (
+                          <div style={{ fontSize: '0.55rem', color: 'rgba(0, 240, 255, 0.4)', marginTop: '4px', lineHeight: 1.3 }}>
+                            {activeHost.osDetails || activeHost.osSignals.join(' · ')}
+                          </div>
+                        )}
+                      </div>
+
+                      {(activeHost.netbiosName || activeHost.netbiosGroup || activeHost.ttl) && (
+                        <div style={{ background: 'rgba(255, 0, 127, 0.05)', padding: '0.5rem', borderRadius: '4px', border: '1px solid rgba(255, 0, 127, 0.15)' }}>
+                          <div style={{ color: 'rgba(255, 0, 127, 0.6)', fontSize: '0.6rem' }}>NET_IDENTITY</div>
+                          {activeHost.netbiosName && (
+                            <div style={{ fontSize: '0.7rem', color: '#fff' }}>NetBIOS: {activeHost.netbiosName}</div>
+                          )}
+                          {activeHost.netbiosGroup && (
+                            <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)' }}>Grupo: {activeHost.netbiosGroup}</div>
+                          )}
+                          {activeHost.ttl != null && (
+                            <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)' }}>TTL: {activeHost.ttl}</div>
+                          )}
+                        </div>
+                      )}
                       
                       <div style={{ background: 'rgba(0, 240, 255, 0.05)', padding: '0.5rem', borderRadius: '4px', border: '1px solid rgba(0, 240, 255, 0.15)' }}>
                         <div style={{ color: 'rgba(0, 240, 255, 0.6)', fontSize: '0.6rem' }}>LATENCY_HEALTH</div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '3px' }}>
-                          <span style={{ fontWeight: 'bold', color: selectedCyberHost.responseTime < 30 ? '#39ff14' : '#ffb700' }}>
-                            {selectedCyberHost.responseTime}ms
+                          <span style={{ fontWeight: 'bold', color: activeHost.responseTime < 30 ? '#39ff14' : '#ffb700' }}>
+                            {activeHost.responseTime}ms
                           </span>
                           <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
                             <div style={{ 
-                              width: `${Math.max(5, 100 - selectedCyberHost.responseTime)}%`, 
+                              width: `${Math.max(5, 100 - activeHost.responseTime)}%`, 
                               height: '100%', 
-                              background: selectedCyberHost.responseTime < 30 ? '#39ff14' : '#ffb700' 
+                              background: activeHost.responseTime < 30 ? '#39ff14' : '#ffb700' 
                             }}></div>
                           </div>
                         </div>
                       </div>
 
+                      {activeHost.openPorts?.length > 0 && (
+                        <div style={{ background: 'rgba(57, 255, 20, 0.05)', padding: '0.5rem', borderRadius: '4px', border: '1px solid rgba(57, 255, 20, 0.15)' }}>
+                          <div style={{ color: 'rgba(57, 255, 20, 0.6)', fontSize: '0.6rem' }}>QUICK_PROBE_PORTS</div>
+                          <div style={{ fontSize: '0.65rem', color: '#39ff14', fontFamily: 'monospace' }}>
+                            {activeHost.openPorts.join(', ')}
+                          </div>
+                        </div>
+                      )}
+
                       <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                         <Button 
                           label="Analizar Puertos 🔓" 
                           icon="pi pi-shield" 
-                          onClick={() => cyberScanPorts(selectedCyberHost.ip)}
-                          disabled={cyberSubScanLoading}
+                          onClick={() => cyberScanPorts(activeHost.ip, { switchToPortsTab: true })}
+                          disabled={!!cyberPortsScanning[activeHost.ip]}
                           style={{
                             background: 'linear-gradient(135deg, #00f0ff 0%, #0072ff 100%)',
                             border: 'none',
@@ -1941,7 +2059,7 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                         <Button 
                           label={cyberPingActive ? "Detener Ping ⏹" : "Ping Continuo ⚡"} 
                           icon={cyberPingActive ? "pi pi-stop" : "pi pi-play"} 
-                          onClick={() => toggleCyberPing(selectedCyberHost.ip)}
+                          onClick={() => toggleCyberPing(activeHost.ip)}
                           style={{
                             background: cyberPingActive ? '#ff007f' : 'rgba(255,255,255,0.06)',
                             border: cyberPingActive ? 'none' : '1px solid rgba(255,255,255,0.15)',
@@ -1959,18 +2077,18 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
 
                   {cyberActiveTab === 'ports' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
-                      {cyberSubScanLoading ? (
+                      {cyberPortsScanning[activeHost.ip] ? (
                         <div style={{ textAlign: 'center', padding: '1.5rem', color: '#00f0ff' }}>
                           <ProgressSpinner style={{ width: '20px', height: '20px', marginBottom: '0.5rem' }} />
                           <div>DESENCRIPTANDO PUERTOS...</div>
                         </div>
-                      ) : cyberSubScanResult ? (
+                      ) : cyberPortsCache[activeHost.ip] ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                           <div style={{ fontSize: '0.65rem', color: '#ff007f', fontWeight: 'bold' }}>
                             [OPEN_TCP_PORTS_FOUND]
                           </div>
-                          {cyberSubScanResult.success && cyberSubScanResult.openPorts && cyberSubScanResult.openPorts.length > 0 ? (
-                            cyberSubScanResult.openPorts.map(p => (
+                          {cyberPortsCache[activeHost.ip].success && cyberPortsCache[activeHost.ip].openPorts?.length > 0 ? (
+                            cyberPortsCache[activeHost.ip].openPorts.map(p => (
                               <div key={p.port} style={{ 
                                 display: 'flex', 
                                 justifyContent: 'space-between', 
@@ -2000,7 +2118,9 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                         </div>
                       ) : (
                         <div style={{ textAlign: 'center', padding: '1rem', color: 'rgba(255, 255, 255, 0.4)', fontStyle: 'italic' }}>
-                          Presiona "Analizar Puertos" en la pestaña anterior para iniciar el escaneo local.
+                          {loading || Object.keys(cyberPortsScanning).length > 0
+                            ? 'Escaneando puertos de los hosts detectados...'
+                            : 'No hay datos de puertos para este nodo.'}
                         </div>
                       )}
                     </div>
@@ -2010,7 +2130,7 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px', borderBottom: '1px dashed rgba(0, 240, 255, 0.2)', paddingBottom: '3px' }}>
                         <span style={{ fontSize: '0.65rem', color: '#00f0ff', fontWeight: 'bold' }}>[LATENCY_TRACE_HUD]</span>
-                        <span style={{ fontSize: '0.65rem', color: '#ff007f', cursor: 'pointer' }} onClick={() => toggleCyberPing(selectedCyberHost.ip)}>
+                        <span style={{ fontSize: '0.65rem', color: '#ff007f', cursor: 'pointer' }} onClick={() => toggleCyberPing(activeHost.ip)}>
                           {cyberPingActive ? '[DETENER]' : '[PROBAR]'}
                         </span>
                       </div>
@@ -2380,10 +2500,13 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
             </div>
             {result.hosts && result.hosts.length > 0 ? (
               <DataTable value={result.hosts} size="small" stripedRows>
-                <Column field="ip" header="IP" style={{ width: '150px' }} />
-                <Column field="hostname" header="Hostname" body={(row) => row.hostname || '-'} />
+                <Column field="ip" header="IP" style={{ width: '130px' }} />
+                <Column field="hostname" header="Hostname" body={(row) => row.hostname || row.netbiosName || '-'} />
+                <Column field="mac" header="MAC" body={(row) => row.mac || '-'} style={{ width: '140px' }} />
+                <Column field="vendor" header="Fabricante" body={(row) => row.vendor || '-'} style={{ width: '110px' }} />
+                <Column field="os" header="Sistema" body={(row) => row.os || '-'} style={{ width: '120px' }} />
                 <Column field="responseTime" header="Respuesta" 
-                        body={(row) => `${row.responseTime}ms`} style={{ width: '100px' }} />
+                        body={(row) => `${row.responseTime}ms`} style={{ width: '90px' }} />
               </DataTable>
             ) : (
               <Message severity="info" text="No se encontraron hosts activos" />
