@@ -217,6 +217,28 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
       console.error('Error saving WoL devices:', e);
     }
   }, [wolDevices]);
+
+  // Estados para Network Scan guardados
+  const [isSavingScan, setIsSavingScan] = useState(false);
+  const [saveScanName, setSaveScanName] = useState('');
+  const [savedScans, setSavedScans] = useState(() => {
+    try {
+      const saved = localStorage.getItem('nodeterm_saved_network_scans');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error('Error loading saved network scans:', e);
+      return [];
+    }
+  });
+  const [viewingSavedScan, setViewingSavedScan] = useState(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('nodeterm_saved_network_scans', JSON.stringify(savedScans));
+    } catch (e) {
+      console.error('Error saving network scans:', e);
+    }
+  }, [savedScans]);
   
   // Host Vulnerability Scanner
   const [hostVulnHost, setHostVulnHost] = useState('');
@@ -453,6 +475,76 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
     }
   };
 
+  // Guardar escaneo de red en localStorage
+  const handleSaveScan = () => {
+    if (!saveScanName.trim()) {
+      return;
+    }
+    if (!networkScanSubnet.trim()) {
+      return;
+    }
+
+    const currentScanResults = (result && selectedTool === 'network-scan' && result.subnet === networkScanSubnet.trim())
+      ? {
+          hosts: result.hosts || [],
+          scanMode: result.scanMode || 'quick',
+          scanTime: result.scanTime || 0,
+          timestamp: Date.now()
+        }
+      : null;
+
+    const newScan = {
+      id: Date.now().toString(),
+      name: saveScanName.trim(),
+      subnet: networkScanSubnet.trim(),
+      lastResult: currentScanResults
+    };
+
+    setSavedScans(prev => {
+      const filtered = prev.filter(s => s.subnet !== newScan.subnet);
+      return [...filtered, newScan];
+    });
+
+    setIsSavingScan(false);
+    setSaveScanName('');
+  };
+
+  // Cargar un escaneo guardado
+  const handleLoadScan = (scan) => {
+    setNetworkScanSubnet(scan.subnet);
+    if (scan.lastResult) {
+      setResult({
+        subnet: scan.subnet,
+        hosts: scan.lastResult.hosts,
+        scanMode: scan.lastResult.scanMode,
+        scanTime: scan.lastResult.scanTime,
+        cached: true,
+        timestamp: scan.lastResult.timestamp
+      });
+      setViewingSavedScan(scan);
+      setError(null);
+    } else {
+      setResult(null);
+      setViewingSavedScan(null);
+    }
+  };
+
+  // Eliminar un escaneo guardado
+  const handleDeleteSavedScan = (id) => {
+    setSavedScans(prev => prev.filter(s => s.id !== id));
+    if (viewingSavedScan && viewingSavedScan.id === id) {
+      setViewingSavedScan(null);
+      setResult(null);
+    }
+  };
+
+  // Iniciar un escaneo inmediato desde la subred de un escaneo guardado
+  const handleQuickScan = (scan, mode = 'quick') => {
+    setNetworkScanSubnet(scan.subnet);
+    setViewingSavedScan(null);
+    executeTool({ subnet: scan.subnet, networkScanMode: mode });
+  };
+
   // Guardar dispositivo WoL en localStorage
   const handleSaveDevice = () => {
     if (!saveDeviceName.trim()) {
@@ -674,6 +766,224 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
       default:
         return null;
     }
+  };
+
+  // Renderizar la lista de escaneos de red guardados
+  const renderSavedScansList = () => {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', marginTop: '1rem' }}>
+        <style>{`
+          .scan-card {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            background: rgba(30, 25, 45, 0.18) !important;
+            border: 1px solid ${hexToRgba(themeColors.primaryColor, 0.12)} !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+            border-radius: 10px;
+            padding: 0.85rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+          }
+          .scan-card:hover {
+            transform: translateY(-2px);
+            border-color: ${hexToRgba(themeColors.primaryColor, 0.4)} !important;
+            box-shadow: 0 8px 24px ${hexToRgba(themeColors.primaryColor, 0.15)} !important;
+            background: linear-gradient(135deg, ${hexToRgba(themeColors.primaryColor, 0.06)} 0%, rgba(30, 25, 45, 0.02) 100%) !important;
+          }
+          .scan-action-btn {
+            background: ${hexToRgba(themeColors.primaryColor, 0.08)} !important;
+            border: 1px solid ${hexToRgba(themeColors.primaryColor, 0.25)} !important;
+            color: ${themeColors.primaryColor} !important;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+          }
+          .scan-action-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, ${themeColors.primaryColor} 0%, ${hexToRgba(themeColors.primaryColor, 0.8)} 100%) !important;
+            border-color: transparent !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 12px ${hexToRgba(themeColors.primaryColor, 0.35)} !important;
+          }
+        `}</style>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.15rem' }}>
+          <i className="pi pi-globe" style={{ color: themeColors.primaryColor, fontSize: '0.85rem' }} />
+          <span style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-color-secondary)' }}>
+            Escaneos guardados
+          </span>
+          <span style={{ 
+            background: hexToRgba(themeColors.primaryColor, 0.08), 
+            color: themeColors.primaryColor, 
+            border: `1px solid ${hexToRgba(themeColors.primaryColor, 0.2)}`,
+            borderRadius: '12px',
+            padding: '1px 5px',
+            fontSize: '0.65rem',
+            fontWeight: '600',
+            lineHeight: 1
+          }}>
+            {savedScans.length}
+          </span>
+        </div>
+
+        {savedScans.length === 0 ? (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '2rem',
+            background: 'rgba(255,255,255,0.02)',
+            border: `1px dashed ${hexToRgba(themeColors.primaryColor, 0.25)}`,
+            borderRadius: '8px',
+            color: 'var(--text-color-secondary)',
+            textAlign: 'center'
+          }}>
+            <i className="pi pi-info-circle" style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: themeColors.primaryColor, opacity: 0.6 }} />
+            <span style={{ fontSize: '0.8rem', fontWeight: '500' }}>No hay escaneos guardados</span>
+            <span style={{ fontSize: '0.7rem', marginTop: '0.25rem', opacity: 0.6, maxWidth: '320px' }}>
+              Escribe una subred arriba, realiza un escaneo y haz clic en "Guardar Escaneo" para conservarlo y ver su historial.
+            </span>
+          </div>
+        ) : (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+            gap: '1rem'
+          }}>
+            {savedScans.map((scan) => {
+              const dateStr = scan.lastResult?.timestamp 
+                ? new Date(scan.lastResult.timestamp).toLocaleString()
+                : 'Nunca escaneado';
+              const hostsCount = scan.lastResult?.hosts?.length ?? 0;
+              const isCurrentlyViewing = viewingSavedScan?.id === scan.id;
+
+              return (
+                <div 
+                  key={scan.id}
+                  className="scan-card"
+                  style={{
+                    border: isCurrentlyViewing ? `1.5px solid ${themeColors.primaryColor}` : undefined,
+                    boxShadow: isCurrentlyViewing ? `0 0 12px ${hexToRgba(themeColors.primaryColor, 0.3)}` : undefined
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', maxWidth: '75%', overflow: 'hidden' }}>
+                      <i className="pi pi-folder" style={{ color: themeColors.primaryColor, fontSize: '0.85rem', opacity: 0.9 }} />
+                      <span 
+                        style={{ 
+                          fontWeight: '600', 
+                          fontSize: '0.85rem', 
+                          overflow: 'hidden', 
+                          textOverflow: 'ellipsis', 
+                          whiteSpace: 'nowrap',
+                          color: '#ffffff'
+                        }}
+                        title={scan.name}
+                      >
+                        {scan.name}
+                      </span>
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: '0.2rem', alignItems: 'center' }}>
+                      <Button 
+                        icon="pi pi-pencil" 
+                        onClick={() => {
+                          setNetworkScanSubnet(scan.subnet);
+                          setViewingSavedScan(null);
+                        }}
+                        className="wol-control-btn"
+                        tooltip="Cargar subred"
+                        tooltipOptions={{ position: 'top' }}
+                      />
+                      <Button 
+                        icon="pi pi-trash" 
+                        onClick={() => handleDeleteSavedScan(scan.id)}
+                        className="wol-control-btn wol-control-btn-danger"
+                        tooltip="Eliminar"
+                        tooltipOptions={{ position: 'top' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ 
+                    fontSize: '0.7rem', 
+                    color: 'var(--text-color-secondary)', 
+                    fontFamily: 'monospace', 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: '0.25rem', 
+                    borderTop: '1px solid rgba(255,255,255,0.05)', 
+                    paddingTop: '0.5rem',
+                    marginTop: '0.25rem'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: 'rgba(255,255,255,0.45)' }}>Subred:</span>
+                      <span style={{ color: themeColors.textPrimary, fontWeight: '500' }}>{scan.subnet}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: 'rgba(255,255,255,0.45)' }}>Último escaneo:</span>
+                      <span style={{ color: 'rgba(255,255,255,0.8)' }}>{dateStr}</span>
+                    </div>
+                    {scan.lastResult && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.45)' }}>Dispositivos:</span>
+                        <span style={{ 
+                          color: '#22c55e', 
+                          fontWeight: 'bold',
+                          background: 'rgba(34, 197, 94, 0.1)',
+                          padding: '1px 6px',
+                          borderRadius: '10px',
+                          fontSize: '0.65rem'
+                        }}>
+                          {hostsCount} activos
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.4rem' }}>
+                    {scan.lastResult && (
+                      <Button 
+                        label={isCurrentlyViewing ? "Viendo caché" : "Ver caché"}
+                        icon="pi pi-eye"
+                        onClick={() => handleLoadScan(scan)}
+                        disabled={isCurrentlyViewing}
+                        style={{
+                          borderRadius: '6px',
+                          padding: '0.35rem 0.5rem',
+                          fontSize: '0.7rem',
+                          fontWeight: '600',
+                          flex: 1,
+                          justifyContent: 'center',
+                          height: '28px',
+                          background: isCurrentlyViewing ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.08)',
+                          border: isCurrentlyViewing ? `1px solid ${hexToRgba(themeColors.primaryColor, 0.4)}` : '1px solid rgba(255,255,255,0.15)',
+                          color: isCurrentlyViewing ? themeColors.primaryColor : 'var(--text-color)'
+                        }}
+                      />
+                    )}
+                    <Button 
+                      label="Escanear"
+                      icon="pi pi-play"
+                      onClick={() => handleQuickScan(scan, 'quick')}
+                      disabled={loading}
+                      style={{
+                        borderRadius: '6px',
+                        padding: '0.35rem 0.5rem',
+                        fontSize: '0.7rem',
+                        fontWeight: '600',
+                        flex: 1,
+                        justifyContent: 'center',
+                        height: '28px'
+                      }}
+                      className="scan-action-btn"
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
   };
 
   // Renderizar la lista de dispositivos WoL guardados
@@ -1140,9 +1450,10 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
           break;
 
         case 'network-scan':
-          if (!networkScanSubnet.trim()) throw new Error('Subred es requerida');
+          const subnetToScan = (options.subnet || networkScanSubnet).trim();
+          if (!subnetToScan) throw new Error('Subred es requerida');
           response = await ipc.invoke('network-tools:network-scan', { 
-            subnet: networkScanSubnet.trim(),
+            subnet: subnetToScan,
             timeout: networkScanMode === 'quick' ? 400 : 1000,
             mode: networkScanMode
           });
@@ -1246,6 +1557,28 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
         }
         setResult(finalResult);
         setError(null);
+
+        // Actualizar la caché de escaneos guardados si esta subred está guardada
+        if (selectedTool === 'network-scan') {
+          const scannedSubnet = (finalResult.subnet || options.subnet || networkScanSubnet).trim();
+          setSavedScans(prev => {
+            return prev.map(s => {
+              if (s.subnet === scannedSubnet) {
+                return {
+                  ...s,
+                  lastResult: {
+                    hosts: finalResult.hosts || [],
+                    scanMode: finalResult.scanMode || networkScanMode,
+                    scanTime: finalResult.scanTime || 0,
+                    timestamp: Date.now()
+                  }
+                };
+              }
+              return s;
+            });
+          });
+        }
+
         if (
           selectedTool === 'network-scan' &&
           finalResult.hosts?.length > 0 &&
@@ -2622,6 +2955,14 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
           </div>
         );
       }
+      if (selectedTool === 'network-scan') {
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', width: '100%' }}>
+            <Message severity="error" text={error} style={{ width: '100%' }} />
+            {renderSavedScansList()}
+          </div>
+        );
+      }
       return (
         <Message severity="error" text={error} style={{ width: '100%' }} />
       );
@@ -2630,6 +2971,28 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
     if (!result) {
       if (selectedTool === 'wake-on-lan') {
         return renderWolDevicesList();
+      }
+      if (selectedTool === 'network-scan') {
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              padding: '2rem',
+              color: 'var(--text-color-secondary)',
+              textAlign: 'center',
+              background: 'rgba(255,255,255,0.01)',
+              borderRadius: '8px',
+              border: '1px solid rgba(255,255,255,0.03)'
+            }}>
+              <i className="pi pi-info-circle" style={{ fontSize: '2rem', marginBottom: '1rem', opacity: 0.5 }} />
+              <span>Configura los parámetros y haz clic en "Ejecutar"</span>
+            </div>
+            {renderSavedScansList()}
+          </div>
+        );
       }
       return (
         <div style={{ 
@@ -2889,31 +3252,70 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
           return renderCyberpunkHUD(false);
         }
         return (
-          <div style={resultBoxStyle}>
-            <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-              <strong>Red: {result.subnet}</strong>
-              <Badge
-                value={result.scanMode === 'quick' ? 'Escaneo rápido' : 'Escaneo completo'}
-                severity={result.scanMode === 'quick' ? 'info' : 'warning'}
-              />
-              <Badge value={`${result.hosts?.length || 0} hosts encontrados`} severity="success" />
-              <span style={{ color: 'var(--text-color-secondary)', fontSize: '0.8rem' }}>
-                ({(result.scanTime / 1000).toFixed(1)}s)
-              </span>
-            </div>
-            {result.hosts && result.hosts.length > 0 ? (
-              <DataTable value={result.hosts} size="small" stripedRows>
-                <Column field="ip" header="IP" style={{ width: '130px' }} />
-                <Column field="hostname" header="Hostname" body={(row) => row.hostname || row.netbiosName || '-'} />
-                <Column field="mac" header="MAC" body={(row) => row.mac || '-'} style={{ width: '140px' }} />
-                <Column field="vendor" header="Fabricante" body={(row) => row.vendor || '-'} style={{ width: '110px' }} />
-                <Column field="os" header="Sistema" body={(row) => row.os || '-'} style={{ width: '120px' }} />
-                <Column field="responseTime" header="Respuesta" 
-                        body={(row) => `${row.responseTime}ms`} style={{ width: '90px' }} />
-              </DataTable>
-            ) : (
-              <Message severity="info" text="No se encontraron hosts activos" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', width: '100%' }}>
+            {viewingSavedScan && (
+              <div style={{
+                background: 'rgba(33, 150, 243, 0.1)',
+                border: '1px solid rgba(33, 150, 243, 0.3)',
+                padding: '0.5rem 1rem',
+                borderRadius: '6px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                fontSize: '0.8rem',
+                color: '#64b5f6'
+              }}>
+                <span>
+                  <i className="pi pi-info-circle" style={{ marginRight: '0.5rem' }} />
+                  Mostrando resultados guardados de <strong>{viewingSavedScan.name}</strong> ({new Date(viewingSavedScan.lastResult.timestamp).toLocaleString()})
+                </span>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <Button 
+                    label="Escanear ahora" 
+                    icon="pi pi-refresh" 
+                    onClick={() => handleQuickScan(viewingSavedScan, 'quick')}
+                    className="p-button-text p-button-sm"
+                    style={{ padding: '2px 8px', fontSize: '0.75rem', color: '#64b5f6', background: 'transparent', border: 'none' }}
+                  />
+                  <Button 
+                    icon="pi pi-times" 
+                    onClick={() => {
+                      setViewingSavedScan(null);
+                      setResult(null);
+                    }}
+                    className="p-button-text p-button-sm p-button-secondary"
+                    style={{ padding: '2px', fontSize: '0.75rem', width: '24px', height: '24px', background: 'transparent', border: 'none' }}
+                  />
+                </div>
+              </div>
             )}
+            <div style={resultBoxStyle}>
+              <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                <strong>Red: {result.subnet}</strong>
+                <Badge
+                  value={result.scanMode === 'quick' ? 'Escaneo rápido' : 'Escaneo completo'}
+                  severity={result.scanMode === 'quick' ? 'info' : 'warning'}
+                />
+                {result.cached && <Badge value="Caché" severity="secondary" />}
+                <Badge value={`${result.hosts?.length || 0} hosts encontrados`} severity="success" />
+                <span style={{ color: 'var(--text-color-secondary)', fontSize: '0.8rem' }}>
+                  ({(result.scanTime / 1000).toFixed(1)}s)
+                </span>
+              </div>
+              {result.hosts && result.hosts.length > 0 ? (
+                <DataTable value={result.hosts} size="small" stripedRows>
+                  <Column field="ip" header="IP" style={{ width: '130px' }} />
+                  <Column field="hostname" header="Hostname" body={(row) => row.hostname || row.netbiosName || '-'} />
+                  <Column field="mac" header="MAC" body={(row) => row.mac || '-'} style={{ width: '140px' }} />
+                  <Column field="vendor" header="Fabricante" body={(row) => row.vendor || '-'} style={{ width: '110px' }} />
+                  <Column field="os" header="Sistema" body={(row) => row.os || '-'} style={{ width: '120px' }} />
+                  <Column field="responseTime" header="Respuesta" 
+                          body={(row) => `${row.responseTime}ms`} style={{ width: '90px' }} />
+                </DataTable>
+              ) : (
+                <Message severity="info" text="No se encontraron hosts activos" />
+              )}
+            </div>
           </div>
         );
 
@@ -4428,7 +4830,24 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                     <Button label="Escanear" icon="pi pi-search" onClick={executeTool} disabled={loading} style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem' }} />
                   </div>
                 )}
-                {selectedTool === 'network-scan' && (
+                {selectedTool === 'network-scan' && isSavingScan && (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    flexWrap: 'wrap',
+                    background: 'rgba(245, 158, 11, 0.1)',
+                    padding: '0.3rem 0.6rem',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(245, 158, 11, 0.2)'
+                  }}>
+                    <span style={{ color: '#f59e0b', fontSize: '0.75rem', fontWeight: '600' }}>Nombre:</span>
+                    <InputText value={saveScanName} onChange={(e) => setSaveScanName(e.target.value)} placeholder="Ej: Red Hogar" style={{ width: '130px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} autoFocus onKeyPress={(e) => e.key === 'Enter' && handleSaveScan()} />
+                    <Button label="Guardar" icon="pi pi-check" onClick={handleSaveScan} style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem', fontWeight: '600' }} />
+                    <Button label="Cancelar" icon="pi pi-times" onClick={() => setIsSavingScan(false)} style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255, 255, 255, 0.15)', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem', color: 'var(--text-color)' }} />
+                  </div>
+                )}
+                {selectedTool === 'network-scan' && !isSavingScan && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <span style={{ color: '#f59e0b', fontSize: '0.75rem', fontWeight: '600' }}>Subred:</span>
                     <InputText value={networkScanSubnet} onChange={(e) => setNetworkScanSubnet(e.target.value)} placeholder="192.168.1.0/24" onKeyPress={(e) => e.key === 'Enter' && executeTool({ networkScanMode: 'quick' })} style={{ width: '160px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} />
@@ -4450,6 +4869,45 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                         boxShadow: cyberpunkMode ? '0 0 8px rgba(255,0,127,0.2)' : 'none'
                       }} 
                     />
+                    <Button 
+                      label="Guardar" 
+                      icon="pi pi-bookmark" 
+                      onClick={() => {
+                        if (!networkScanSubnet.trim()) return;
+                        setSaveScanName('');
+                        setIsSavingScan(true);
+                      }} 
+                      disabled={loading || !networkScanSubnet.trim()} 
+                      style={{ 
+                        background: 'rgba(245,158,11,0.08)', 
+                        border: '1px solid rgba(245,158,11,0.3)', 
+                        borderRadius: '6px', 
+                        padding: '0.35rem 0.6rem', 
+                        height: '30px', 
+                        fontSize: '0.75rem', 
+                        color: '#f59e0b'
+                      }} 
+                    />
+                    {result && (
+                      <Button 
+                        label="Ver Guardados" 
+                        icon="pi pi-list" 
+                        onClick={() => {
+                          setResult(null);
+                          setViewingSavedScan(null);
+                        }}
+                        style={{ 
+                          background: 'rgba(255,255,255,0.06)', 
+                          border: '1px solid rgba(255,255,255,0.15)',
+                          borderRadius: '6px', 
+                          padding: '0.35rem 0.6rem', 
+                          height: '30px', 
+                          fontSize: '0.75rem', 
+                          color: 'var(--text-color-secondary)',
+                          marginLeft: '0.25rem'
+                        }} 
+                      />
+                    )}
                   </div>
                 )}
                 {selectedTool === 'dns-lookup' && (
@@ -5280,7 +5738,7 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
               )}
 
               {/* Card para Network Scan */}
-              {selectedTool === 'network-scan' && (
+              {selectedTool === 'network-scan' && isSavingScan && (
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -5291,6 +5749,70 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                   border: '1.5px solid rgba(245, 158, 11, 0.35)',
                   width: 'fit-content',
                   maxWidth: '750px',
+                  boxShadow: '0 2px 12px rgba(245, 158, 11, 0.15)'
+                }}>
+                  <span style={{ color: '#f59e0b', fontSize: '0.75rem', fontWeight: '600' }}>Nombre:</span>
+                  <InputText 
+                    value={saveScanName} 
+                    onChange={(e) => setSaveScanName(e.target.value)} 
+                    placeholder="Ej: Red Hogar" 
+                    style={{ 
+                      width: '180px', 
+                      background: 'rgba(255,255,255,0.08)', 
+                      border: '1px solid rgba(245, 158, 11, 0.3)', 
+                      borderRadius: '6px', 
+                      color: 'var(--text-color)', 
+                      padding: '0.35rem 0.5rem', 
+                      fontSize: '0.8rem', 
+                      height: '30px' 
+                    }} 
+                    autoFocus 
+                    onKeyPress={(e) => e.key === 'Enter' && handleSaveScan()} 
+                  />
+                  <Button 
+                    label="Guardar" 
+                    icon="pi pi-check" 
+                    onClick={handleSaveScan} 
+                    style={{ 
+                      background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', 
+                      border: 'none', 
+                      borderRadius: '6px', 
+                      padding: '0.35rem 0.75rem', 
+                      height: '30px', 
+                      fontSize: '0.75rem', 
+                      fontWeight: '600',
+                      boxShadow: '0 2px 8px rgba(34, 197, 94, 0.3)',
+                      marginLeft: '0.25rem'
+                    }} 
+                  />
+                  <Button 
+                    label="Cancelar" 
+                    icon="pi pi-times" 
+                    onClick={() => setIsSavingScan(false)} 
+                    style={{ 
+                      background: 'rgba(255,255,255,0.08)', 
+                      border: '1px solid rgba(255, 255, 255, 0.15)', 
+                      borderRadius: '6px', 
+                      padding: '0.35rem 0.75rem', 
+                      height: '30px', 
+                      fontSize: '0.75rem', 
+                      color: 'var(--text-color)',
+                      marginLeft: '0.25rem'
+                    }} 
+                  />
+                </div>
+              )}
+              {selectedTool === 'network-scan' && !isSavingScan && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(245, 158, 11, 0.04) 100%)',
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1.5px solid rgba(245, 158, 11, 0.35)',
+                  width: 'fit-content',
+                  maxWidth: '850px',
                   boxShadow: '0 2px 12px rgba(245, 158, 11, 0.15)'
                 }}>
                   {/* Subred */}
@@ -5388,6 +5910,49 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                       marginLeft: '0.25rem'
                     }} 
                   />
+
+                  <Button 
+                    label="Guardar" 
+                    icon="pi pi-bookmark" 
+                    onClick={() => {
+                      if (!networkScanSubnet.trim()) return;
+                      setSaveScanName('');
+                      setIsSavingScan(true);
+                    }} 
+                    disabled={loading || !networkScanSubnet.trim()} 
+                    style={{ 
+                      background: 'rgba(245,158,11,0.08)', 
+                      border: '1px solid rgba(245,158,11,0.3)', 
+                      borderRadius: '6px', 
+                      padding: '0.35rem 0.75rem', 
+                      height: '30px', 
+                      fontSize: '0.75rem', 
+                      fontWeight: '600',
+                      color: '#f59e0b',
+                      marginLeft: '0.25rem'
+                    }} 
+                  />
+                  {result && (
+                    <Button 
+                      label="Ver Guardados" 
+                      icon="pi pi-list" 
+                      onClick={() => {
+                        setResult(null);
+                        setViewingSavedScan(null);
+                      }}
+                      style={{ 
+                        background: 'rgba(255,255,255,0.06)', 
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        borderRadius: '6px', 
+                        padding: '0.35rem 0.75rem', 
+                        height: '30px', 
+                        fontSize: '0.75rem', 
+                        fontWeight: '600',
+                        color: 'var(--text-color-secondary)',
+                        marginLeft: '0.25rem'
+                      }} 
+                    />
+                  )}
                 </div>
               )}
 
