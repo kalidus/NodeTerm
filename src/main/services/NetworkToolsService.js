@@ -1771,12 +1771,72 @@ class NetworkToolsService {
    * Quick ping using TCP connection (faster than ICMP ping)
    * @private
    */
-  _quickPing(ip, timeout) {
+  /**
+   * Ping a host using the OS ping command
+   * @private
+   */
+  _pingHostNative(ip, timeoutMs) {
+    return new Promise((resolve) => {
+      let command;
+      let args;
+
+      if (this.platform === 'win32') {
+        command = 'ping';
+        args = ['-n', '1', '-w', timeoutMs.toString(), ip];
+      } else if (this.platform === 'darwin') {
+        command = 'ping';
+        args = ['-c', '1', '-W', timeoutMs.toString(), ip];
+      } else {
+        // Linux ping -W takes seconds, so convert timeoutMs to seconds
+        const timeoutSeconds = Math.max(1, Math.round(timeoutMs / 1000));
+        command = 'ping';
+        args = ['-c', '1', '-W', timeoutSeconds.toString(), ip];
+      }
+
+      const startTime = Date.now();
+      const child = spawn(command, args);
+      
+      let output = '';
+      child.stdout.on('data', (data) => { output += data.toString(); });
+      child.stderr.on('data', () => {});
+
+      child.on('close', (code) => {
+        const duration = Date.now() - startTime;
+        if (code === 0) {
+          const isAlive = /TTL=/i.test(output) || /ttl=/i.test(output) || /time=/i.test(output) || /tiempo=/i.test(output);
+          if (isAlive) {
+            resolve({ alive: true, time: duration });
+            return;
+          }
+        }
+        resolve({ alive: false, time: null });
+      });
+
+      child.on('error', () => {
+        resolve({ alive: false, time: null });
+      });
+
+      // Security timeout
+      setTimeout(() => {
+        if (!child.killed) {
+          try {
+            child.kill();
+          } catch (e) {}
+        }
+      }, timeoutMs + 500);
+    });
+  }
+
+  /**
+   * Quick check on a TCP port
+   * @private
+   */
+  _checkTcpPort(ip, port, timeoutMs) {
     return new Promise((resolve) => {
       const startTime = Date.now();
       const socket = new net.Socket();
 
-      socket.setTimeout(timeout);
+      socket.setTimeout(timeoutMs);
 
       socket.on('connect', () => {
         const time = Date.now() - startTime;
@@ -1786,7 +1846,6 @@ class NetworkToolsService {
 
       socket.on('error', (err) => {
         socket.destroy();
-        // ECONNREFUSED means host is up but port is closed
         if (err.code === 'ECONNREFUSED') {
           resolve({ alive: true, time: Date.now() - startTime });
         } else {
@@ -1799,8 +1858,45 @@ class NetworkToolsService {
         resolve({ alive: false, time: null });
       });
 
-      // Try common ports
-      socket.connect(80, ip);
+      socket.connect(port, ip);
+    });
+  }
+
+  /**
+   * Quick ping using hybrid TCP and ICMP methods
+   * @private
+   */
+  _quickPing(ip, timeout) {
+    return new Promise(async (resolve) => {
+      let resolved = false;
+      const done = (result) => {
+        if (resolved) return;
+        if (result.alive) {
+          resolved = true;
+          resolve(result);
+        }
+      };
+
+      // 1. Native ICMP Ping
+      const icmpPromise = this._pingHostNative(ip, timeout).then(res => {
+        done(res);
+        return res;
+      });
+
+      // 2. TCP checks on common ports (run in parallel)
+      const commonPorts = [80, 443, 22, 135, 445, 5357];
+      const tcpPromises = commonPorts.map(port => {
+        return this._checkTcpPort(ip, port, timeout).then(res => {
+          done(res);
+          return res;
+        });
+      });
+
+      // Wait for all to finish. If none succeeded, resolve false.
+      await Promise.all([icmpPromise, ...tcpPromises]);
+      if (!resolved) {
+        resolve({ alive: false, time: null });
+      }
     });
   }
 
@@ -3043,6 +3139,40 @@ class NetworkToolsService {
           });
         }
       }
+
+      // Smart sorting to put the primary active physical interface first
+      result.sort((a, b) => {
+        const nameA = a.name.toLowerCase();
+        const nameB = b.name.toLowerCase();
+
+        // 1. Penalize virtual interfaces
+        const virtualKeywords = ['virtual', 'vbox', 'vmware', 'wsl', 'docker', 'vethernet', 'tap', 'tun', 'vpn', 'loopback', 'br-', 'veth', 'host-only'];
+        const isVirtualA = virtualKeywords.some(kw => nameA.includes(kw));
+        const isVirtualB = virtualKeywords.some(kw => nameB.includes(kw));
+
+        if (isVirtualA && !isVirtualB) return 1;
+        if (!isVirtualA && isVirtualB) return -1;
+
+        // 2. Prefer IPv4 over IPv6
+        if (a.family === 'IPv4' && b.family !== 'IPv4') return -1;
+        if (a.family !== 'IPv4' && b.family === 'IPv4') return 1;
+
+        // 3. Prefer names that resemble Wi-Fi or Ethernet
+        const physicalKeywords = ['wi-fi', 'wifi', 'wlan', 'ethernet', 'eth', 'en', 'wl', 'conexi'];
+        const isPhysicalA = physicalKeywords.some(kw => nameA.includes(kw));
+        const isPhysicalB = physicalKeywords.some(kw => nameB.includes(kw));
+
+        if (isPhysicalA && !isPhysicalB) return -1;
+        if (!isPhysicalA && isPhysicalB) return 1;
+
+        // 4. Prefer standard home LAN range (192.168.x.x)
+        const isCommonA = a.address.startsWith('192.168.');
+        const isCommonB = b.address.startsWith('192.168.');
+        if (isCommonA && !isCommonB) return -1;
+        if (!isCommonA && isCommonB) return 1;
+
+        return 0;
+      });
 
       return {
         success: true,
