@@ -3074,17 +3074,20 @@ const App = () => {
         // Encontrar el nodo para obtener su info completa (opcional, connectionStore suele basarse en ID)
         const node = findNodeByKey(nodes, originalKey);
         if (node && node.data) {
-          // Actualizar favorito si existe
-          connectionStore.updateFavoriteOnEdit(originalKey, {
-            ...node.data,
-            password: password
+          const oldConnection = connectionStore.helpers.fromSidebarNode(node);
+          const newConnection = connectionStore.helpers.fromSidebarNode({
+            ...node,
+            data: {
+              ...node.data,
+              password: password
+            }
           });
 
+          // Actualizar favorito si existe
+          connectionStore.updateFavoriteOnEdit(oldConnection, newConnection);
+
           // Registrar como reciente (esto actualizará el password en la lista de recientes)
-          connectionStore.recordRecent({
-            ...node.data,
-            password: password
-          });
+          connectionStore.recordRecent(newConnection);
         }
       } catch (e) {
         console.warn('Error actualizando stores de conexión tras password manual:', e);
