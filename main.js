@@ -996,7 +996,7 @@ const getSplashHtml = (style) => `<!DOCTYPE html>
     .hud-frame {
       display: none;
       width: 100%;
-      height: 65px;
+      height: 85px;
       border: 1px solid transparent;
       position: relative;
       padding: 6px 12px;
