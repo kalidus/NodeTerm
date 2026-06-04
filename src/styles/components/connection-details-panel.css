@@ -213,8 +213,16 @@
   background-color: rgba(255, 255, 255, 0.03);
 }
 
-.editable-input {
+.detail-row.editing .detail-value--editing {
+  min-width: 0;
+  flex: 1;
+}
+
+.detail-row.editing .editable-input,
+.detail-row.editing .editable-input.p-inputtext {
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   font-size: 11.5px !important;
   padding: 2px 6px !important;
   background-color: var(--ui-bg) !important;
@@ -222,10 +230,12 @@
   color: var(--ui-text) !important;
   border-radius: 3px !important;
   height: 22px !important;
+  min-height: 22px !important;
   line-height: 1 !important;
 }
 
-.editable-input:focus {
+.editable-input:focus,
+.detail-row.editing .editable-input:focus {
   box-shadow: 0 0 0 1px rgba(var(--ui-primary-color-rgb), 0.2) !important;
 }
 

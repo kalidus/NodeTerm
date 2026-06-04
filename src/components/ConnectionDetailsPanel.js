@@ -1,13 +1,66 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
-import { Password } from 'primereact/password';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import '../styles/components/connection-details-panel.css';
 import { iconThemes } from '../themes/icon-themes';
 import { FolderIconPresets, FolderIconRenderer } from './FolderIconSelector';
 import { SSHIconPresets, SSHIconRenderer } from './SSHIconSelector';
 import TerminalFrame from './TerminalFrame';
+
+// Wrapper estable (no definir componentes dentro del render — remonta hijos y pierde foco al escribir)
+const DetailsPanelWrapper = ({
+  collapsed,
+  isResizing,
+  panelHeight,
+  panelRef,
+  onResizeStart,
+  label,
+  iconNode,
+  rightButtons,
+  children,
+  onMinimize,
+  onMaximize,
+  onClose
+}) => (
+  <div
+    className={`connection-details-panel ${collapsed ? 'collapsed' : ''} ${isResizing ? 'resizing' : ''}`}
+    style={!collapsed ? { height: `${panelHeight}px`, maxHeight: `${panelHeight}px` } : {}}
+    ref={panelRef}
+  >
+    {!collapsed && (
+      <div
+        className="panel-resizer"
+        onMouseDown={onResizeStart}
+        style={{ zIndex: 100, top: '-2px', height: '6px' }}
+      />
+    )}
+    <TerminalFrame
+      style={{ height: '100%', width: '100%' }}
+      showControls={false}
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+          {iconNode}
+          <span>{label}</span>
+        </div>
+      }
+      headerExtra={
+        <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+          {rightButtons}
+        </div>
+      }
+      onMinimize={onMinimize}
+      onMaximize={onMaximize}
+      onClose={onClose}
+    >
+      {!collapsed && (
+        <div className="details-content">
+          {children}
+        </div>
+      )}
+    </TerminalFrame>
+  </div>
+);
 
 // Componente para campos editables
 const EditableField = ({
@@ -18,18 +71,33 @@ const EditableField = ({
   editValue,
   onValueChange,
   onSave,
-  onCancel,
   onKeyDown,
-  fieldKey,
-  inputRefs,
   isPassword = false,
   onCopy = null,
   copyValue = null
 }) => {
-  const inputRef = (el) => {
-    if (el && fieldKey) {
-      inputRefs.current[fieldKey] = el;
-    }
+  const rowRef = useRef(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (!isEditing) return;
+    const timer = requestAnimationFrame(() => {
+      const el = inputRef.current;
+      const input = el?.input || el?.querySelector?.('input') || el;
+      if (input?.focus) {
+        input.focus();
+        input.select?.();
+      }
+    });
+    return () => cancelAnimationFrame(timer);
+  }, [isEditing]);
+
+  const handleBlur = () => {
+    requestAnimationFrame(() => {
+      if (!rowRef.current?.contains(document.activeElement)) {
+        onSave();
+      }
+    });
   };
 
   const handleCopy = (e) => {
@@ -41,31 +109,19 @@ const EditableField = ({
 
   if (isEditing) {
     return (
-      <div className="detail-row editing">
+      <div className="detail-row editing" ref={rowRef}>
         <div className="detail-label">{label}</div>
-        <div className="detail-value">
-          {isPassword ? (
-            <Password
-              ref={inputRef}
-              value={editValue}
-              onChange={(e) => onValueChange(e.target.value)}
-              onKeyDown={onKeyDown}
-              onBlur={onSave}
-              feedback={false}
-              className="editable-input"
-              style={{ width: '100%' }}
-            />
-          ) : (
-            <InputText
-              ref={inputRef}
-              value={editValue}
-              onChange={(e) => onValueChange(e.target.value)}
-              onKeyDown={onKeyDown}
-              onBlur={onSave}
-              className="editable-input"
-              style={{ width: '100%' }}
-            />
-          )}
+        <div className="detail-value detail-value--editing">
+          <InputText
+            ref={inputRef}
+            type={isPassword ? 'password' : 'text'}
+            value={editValue}
+            onChange={(e) => onValueChange(e.target.value)}
+            onKeyDown={onKeyDown}
+            onBlur={handleBlur}
+            className="editable-input"
+            autoComplete="off"
+          />
         </div>
       </div>
     );
@@ -121,7 +177,6 @@ const ConnectionDetailsPanel = ({
   const panelRef = useRef(null);
   const resizeStartY = useRef(0);
   const resizeStartHeight = useRef(0);
-  const inputRefs = useRef({});
 
   // Handlers para redimensionamiento
   const handleResizeStart = useCallback((e) => {
@@ -163,20 +218,6 @@ const ConnectionDetailsPanel = ({
       };
     }
   }, [isResizing, handleResizeMove, handleResizeEnd]);
-
-  // Focus en el input cuando se activa la edición
-  useEffect(() => {
-    if (editingField) {
-      const fieldKey = `${editingField.section}-${editingField.field}`;
-      const input = inputRefs.current[fieldKey];
-      if (input) {
-        setTimeout(() => {
-          input.focus();
-          input.select();
-        }, 10);
-      }
-    }
-  }, [editingField]);
 
   // Función para iniciar edición
   const startEdit = useCallback((section, field, currentValue) => {
@@ -343,46 +384,11 @@ const ConnectionDetailsPanel = ({
     return null;
   }
 
-  // Define shared wrapper
-  const Wrapper = ({ children, iconNode, rightButtons }) => (
-    <div
-      className={`connection-details-panel ${collapsed ? 'collapsed' : ''} ${isResizing ? 'resizing' : ''}`}
-      style={!collapsed ? { height: `${panelHeight}px`, maxHeight: `${panelHeight}px` } : {}}
-      ref={panelRef}
-    >
-      {!collapsed && (
-        <div
-          className="panel-resizer"
-          onMouseDown={handleResizeStart}
-          style={{ zIndex: 100, top: '-2px', height: '6px' }}
-        />
-      )}
-      <TerminalFrame
-        style={{ height: '100%', width: '100%' }}
-        showControls={false}
-        title={
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-            {iconNode}
-            <span>{label}</span>
-          </div>
-        }
-        headerExtra={
-          <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-            {rightButtons}
-          </div>
-        }
-        onMinimize={(e) => { e?.stopPropagation(); setCollapsed(true); }}
-        onMaximize={(e) => { e?.stopPropagation(); setCollapsed(false); }}
-        onClose={(e) => { e?.stopPropagation(); setCollapsed(true); }}
-      >
-        {!collapsed && (
-          <div className="details-content">
-            {children}
-          </div>
-        )}
-      </TerminalFrame>
-    </div>
-  );
+  const frameControls = {
+    onMinimize: (e) => { e?.stopPropagation(); setCollapsed(true); },
+    onMaximize: (e) => { e?.stopPropagation(); setCollapsed(false); },
+    onClose: (e) => { e?.stopPropagation(); setCollapsed(true); }
+  };
 
   const chevronBtn = (
     <Button
@@ -395,9 +401,16 @@ const ConnectionDetailsPanel = ({
   // Si es una carpeta, mostrar información básica
   if (isFolder) {
     return (
-      <Wrapper
+      <DetailsPanelWrapper
+        collapsed={collapsed}
+        isResizing={isResizing}
+        panelHeight={panelHeight}
+        panelRef={panelRef}
+        onResizeStart={handleResizeStart}
+        label={label}
         iconNode={<i className="pi pi-folder" style={{ fontSize: '14px', color: selectedNode.color || 'var(--ui-folder-color, #ffa726)' }}></i>}
         rightButtons={chevronBtn}
+        {...frameControls}
       >
         <div className="details-section">
           <div className="section-title">Display</div>
@@ -427,16 +440,23 @@ const ConnectionDetailsPanel = ({
             </div>
           )}
         </div>
-      </Wrapper>
+      </DetailsPanelWrapper>
     );
   }
 
   // Si es un password, mostrar información del password manager
   if (isPassword) {
     return (
-      <Wrapper
+      <DetailsPanelWrapper
+        collapsed={collapsed}
+        isResizing={isResizing}
+        panelHeight={panelHeight}
+        panelRef={panelRef}
+        onResizeStart={handleResizeStart}
+        label={label}
         iconNode={<i className="pi pi-key" style={{ fontSize: '14px', color: '#ffc107' }}></i>}
         rightButtons={chevronBtn}
+        {...frameControls}
       >
         <div className="details-section">
           <div className="section-title">Display</div>
@@ -463,7 +483,7 @@ const ConnectionDetailsPanel = ({
             </div>
           )}
         </div>
-      </Wrapper>
+      </DetailsPanelWrapper>
     );
   }
 
@@ -524,8 +544,15 @@ const ConnectionDetailsPanel = ({
 
   // Para conexiones SSH, RDP, VNC
   return (
-    <Wrapper
+    <DetailsPanelWrapper
+      collapsed={collapsed}
+      isResizing={isResizing}
+      panelHeight={panelHeight}
+      panelRef={panelRef}
+      onResizeStart={handleResizeStart}
+      label={label}
       iconNode={getNodeIcon()}
+      {...frameControls}
       rightButtons={
         <>
           <Button
@@ -551,10 +578,7 @@ const ConnectionDetailsPanel = ({
               editValue={editValue}
               onValueChange={setEditValue}
               onSave={saveEdit}
-              onCancel={cancelEdit}
               onKeyDown={handleKeyDown}
-              fieldKey="display-name"
-              inputRefs={inputRefs}
             />
             <EditableField
               label="Description"
@@ -564,10 +588,7 @@ const ConnectionDetailsPanel = ({
               editValue={editValue}
               onValueChange={setEditValue}
               onSave={saveEdit}
-              onCancel={cancelEdit}
               onKeyDown={handleKeyDown}
-              fieldKey="display-description"
-              inputRefs={inputRefs}
             />
           </div>
 
@@ -582,10 +603,7 @@ const ConnectionDetailsPanel = ({
               editValue={editValue}
               onValueChange={setEditValue}
               onSave={saveEdit}
-              onCancel={cancelEdit}
               onKeyDown={handleKeyDown}
-              fieldKey="connection-hostname"
-              inputRefs={inputRefs}
               onCopy={copyToClipboard}
               copyValue={data?.useBastionWallix ? data?.targetServer : (data?.host || data?.hostname || data?.server || '')}
             />
@@ -597,10 +615,7 @@ const ConnectionDetailsPanel = ({
               editValue={editValue}
               onValueChange={setEditValue}
               onSave={saveEdit}
-              onCancel={cancelEdit}
               onKeyDown={handleKeyDown}
-              fieldKey="connection-username"
-              inputRefs={inputRefs}
               onCopy={copyToClipboard}
               copyValue={data?.user || data?.username || ''}
             />
@@ -612,10 +627,7 @@ const ConnectionDetailsPanel = ({
               editValue={editValue}
               onValueChange={setEditValue}
               onSave={saveEdit}
-              onCancel={cancelEdit}
               onKeyDown={handleKeyDown}
-              fieldKey="connection-password"
-              inputRefs={inputRefs}
               isPassword={true}
               onCopy={copyToClipboard}
               copyValue={data?.password || ''}
@@ -629,10 +641,7 @@ const ConnectionDetailsPanel = ({
                 editValue={editValue}
                 onValueChange={setEditValue}
                 onSave={saveEdit}
-                onCancel={cancelEdit}
                 onKeyDown={handleKeyDown}
-                fieldKey="connection-domain"
-                inputRefs={inputRefs}
               />
             )}
           </div>
@@ -654,10 +663,7 @@ const ConnectionDetailsPanel = ({
               editValue={editValue}
               onValueChange={setEditValue}
               onSave={saveEdit}
-              onCancel={cancelEdit}
               onKeyDown={handleKeyDown}
-              fieldKey="protocol-port"
-              inputRefs={inputRefs}
             />
 
             {isRDP && (
@@ -734,10 +740,7 @@ const ConnectionDetailsPanel = ({
                 editValue={editValue}
                 onValueChange={setEditValue}
                 onSave={saveEdit}
-                onCancel={cancelEdit}
                 onKeyDown={handleKeyDown}
-                fieldKey="folders-remote"
-                inputRefs={inputRefs}
               />
               <EditableField
                 label="Target Folder"
@@ -747,10 +750,7 @@ const ConnectionDetailsPanel = ({
                 editValue={editValue}
                 onValueChange={setEditValue}
                 onSave={saveEdit}
-                onCancel={cancelEdit}
                 onKeyDown={handleKeyDown}
-                fieldKey="folders-target"
-                inputRefs={inputRefs}
               />
             </div>
           )}
@@ -769,7 +769,7 @@ const ConnectionDetailsPanel = ({
               </div>
             </div>
           )}
-    </Wrapper>
+    </DetailsPanelWrapper>
   );
 };
 
