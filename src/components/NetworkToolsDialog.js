@@ -1819,18 +1819,18 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
     .cyber-host-card {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
+      align-items: center;
       gap: 0.65rem;
-      min-height: 78px;
-      padding: 10px 12px 10px 12px;
+      min-height: unset;
+      padding: 6px 12px;
     }
     .cyber-host-card-body {
       flex: 1;
       min-width: 0;
       display: flex;
       flex-direction: column;
-      gap: 4px;
-      line-height: 1.4;
+      gap: 2px;
+      line-height: 1.35;
       padding-top: 1px;
     }
     .cyber-host-ip {
@@ -2593,12 +2593,23 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                         onClick={() => setSelectedCyberHost(host)}
                       >
                         <div className="cyber-host-card-body">
-                          <div className="cyber-host-ip" style={{ color: isSelected ? '#ff007f' : '#ffffff' }}>
-                            IP: {host.ip}
+                          <div className="cyber-host-ip" style={{ color: isSelected ? '#ff007f' : '#ffffff', display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                            <span>IP: {host.ip}</span>
+                            {host.mac && (
+                              <span className="cyber-host-mac" style={{ color: isSelected ? 'rgba(255, 0, 127, 0.65)' : 'rgba(0, 240, 255, 0.55)', fontSize: '0.65rem' }}>
+                                ({host.mac})
+                              </span>
+                            )}
                           </div>
-                          <div className="cyber-host-name">{formatHostSubtitle(host)}</div>
-                          {host.os && <div className="cyber-host-meta">{host.os}</div>}
-                          {host.mac && <div className="cyber-host-mac">{host.mac}</div>}
+                          <div className="cyber-host-name" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                            <span style={{ fontWeight: '500' }}>{formatHostSubtitle(host)}</span>
+                            {host.os && host.os !== 'Desconocido' && host.os !== formatHostSubtitle(host) && (
+                              <span className="cyber-host-meta" style={{ fontSize: '0.65rem' }}>({host.os})</span>
+                            )}
+                            {host.vendor && host.vendor !== 'Desconocido' && host.vendor !== formatHostSubtitle(host) && (
+                              <span className="cyber-host-meta" style={{ fontSize: '0.65rem' }}>[{host.vendor}]</span>
+                            )}
+                          </div>
                         </div>
                         <span
                           className="cyber-host-latency"
