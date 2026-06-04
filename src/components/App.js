@@ -104,6 +104,7 @@ import {
 } from '../utils/constants';
 import { preloadHeavyTabChunks } from './tabLoaders';
 import { loadXtermModules } from '../utils/xtermLoader';
+import { isHomeButtonLocked as readHomeButtonLocked } from '../utils/homeTabDefaults';
 
 // Caché en memoria para evitar desencriptar / parsear la base de datos de conexiones repetidamente
 let lastDecryptedDataStr = null;
@@ -2249,6 +2250,51 @@ const App = () => {
     return () => window.removeEventListener('open-password-tab-in-dialog', handler);
   }, []);
 
+  const getTargetIndexForTab = useCallback((tabKey) => {
+    const isHomeButtonLocked = readHomeButtonLocked();
+    if (isHomeButtonLocked) {
+      const homeTabsInGroup = homeTabs.filter(t => activeGroupId ? t.groupId === activeGroupId : !t.groupId).length;
+      return homeTabsInGroup;
+    } else {
+      return 0;
+    }
+  }, [homeTabs, activeGroupId]);
+
+  const promoteAndActivateTab = useCallback((tabKey, optSshTabsUpdater = null) => {
+    setOpenTabOrder(prev => [tabKey, ...prev.filter(k => k !== tabKey)]);
+    setSshTabs(prev => {
+      const base = optSshTabsUpdater ? optSshTabsUpdater(prev) : prev;
+      const idx = base.findIndex(t => t.key === tabKey);
+      if (idx <= 0) return base;
+      const next = [...base];
+      const [moved] = next.splice(idx, 1);
+      return [moved, ...next];
+    });
+    setLastOpenedTabKey(tabKey);
+    
+    const targetIdx = getTargetIndexForTab(tabKey);
+    setActiveTabIndex(targetIdx);
+    
+    const currentGroupKey = activeGroupId || 'no-group';
+    setGroupActiveIndices(prev => ({
+      ...prev,
+      [currentGroupKey]: targetIdx
+    }));
+  }, [setOpenTabOrder, setSshTabs, setLastOpenedTabKey, getTargetIndexForTab, setActiveTabIndex, activeGroupId, setGroupActiveIndices]);
+
+  const activateTabSynchronously = useCallback((tabKey) => {
+    const allTabs = getAllTabs();
+    const tabIndex = allTabs.findIndex(t => t.key === tabKey);
+    if (tabIndex !== -1) {
+      setActiveTabIndex(tabIndex);
+      const currentGroupKey = activeGroupId || 'no-group';
+      setGroupActiveIndices(prev => ({
+        ...prev,
+        [currentGroupKey]: tabIndex
+      }));
+    }
+  }, [getAllTabs, setActiveTabIndex, activeGroupId, setGroupActiveIndices]);
+
   // Crear y activar pestaña de info de secreto (password, crypto_wallet, api_key, secure_note)
   const PASSWORD_PREVIEW_TAB_KEY = 'password-preview-view';
   useEffect(() => {
@@ -2281,28 +2327,6 @@ const App = () => {
         case 'secure_note': return '📝';
         default: return '🔐';
       }
-    };
-
-    const activateTab = (tabKey) => {
-      const allTabs = getAllTabs();
-      const tabIndex = allTabs.findIndex(t => t.key === tabKey);
-      if (tabIndex !== -1) {
-        setActiveTabIndex(tabIndex);
-        setGroupActiveIndices(prev => ({ ...prev, 'no-group': tabIndex }));
-      }
-    };
-
-    const promoteTabToFront = (tabKey) => {
-      setOpenTabOrder(prev => [tabKey, ...prev.filter(k => k !== tabKey)]);
-      setSshTabs(prev => {
-        const idx = prev.findIndex(t => t.key === tabKey);
-        if (idx <= 0) return prev;
-        const next = [...prev];
-        const [moved] = next.splice(idx, 1);
-        return [moved, ...next];
-      });
-      setLastOpenedTabKey(tabKey);
-      setOnCreateActivateTabKey(tabKey);
     };
 
     const recordRecent = (info, passwordData, secretType) => {
@@ -2340,20 +2364,13 @@ const App = () => {
         );
 
         if (previewTab) {
-          setSshTabs(prev => {
-            const updated = prev.map(t =>
+          promoteAndActivateTab(previewTab.key, (prev) =>
+            prev.map(t =>
               t.key === previewTab.key
                 ? { ...t, label: tabLabel, passwordData }
                 : t
-            );
-            const idx = updated.findIndex(t => t.key === previewTab.key);
-            if (idx <= 0) return updated;
-            const next = [...updated];
-            const [moved] = next.splice(idx, 1);
-            return [moved, ...next];
-          });
-          promoteTabToFront(previewTab.key);
-          setTimeout(() => activateTab(previewTab.key), 0);
+            )
+          );
           return;
         }
 
@@ -2365,9 +2382,7 @@ const App = () => {
           isPreview: true,
           createdAt: Date.now()
         };
-        setSshTabs(prev => [newTab, ...prev]);
-        promoteTabToFront(PASSWORD_PREVIEW_TAB_KEY);
-        setTimeout(() => activateTab(PASSWORD_PREVIEW_TAB_KEY), 0);
+        promoteAndActivateTab(PASSWORD_PREVIEW_TAB_KEY, (prev) => [newTab, ...prev]);
         return;
       }
 
@@ -2375,7 +2390,7 @@ const App = () => {
         t => t.type === TAB_TYPES.PASSWORD && !t.isPreview && t.passwordData?.id === info.key
       );
       if (existingPermanent) {
-        activateTab(existingPermanent.key);
+        activateTabSynchronously(existingPermanent.key);
         return;
       }
 
@@ -2387,16 +2402,11 @@ const App = () => {
         passwordData,
         createdAt: Date.now()
       };
-      setSshTabs(prev => [newTab, ...prev]);
-      setTimeout(() => {
-        setLastOpenedTabKey(tabId);
-        setOnCreateActivateTabKey(tabId);
-        activateTab(tabId);
-      }, 0);
+      promoteAndActivateTab(tabId, (prev) => [newTab, ...prev]);
     };
     window.addEventListener('open-password-tab', handler);
     return () => window.removeEventListener('open-password-tab', handler);
-  }, [getAllTabs, setOpenTabOrder, setSshTabs, setLastOpenedTabKey, setOnCreateActivateTabKey, setActiveTabIndex, setGroupActiveIndices]);
+  }, [getAllTabs, promoteAndActivateTab, activateTabSynchronously]);
 
   // Crear y activar pestaña de navegador integrado (con soporte de autofill)
   useEffect(() => {
@@ -2409,11 +2419,7 @@ const App = () => {
       // Buscar si ya hay un browser tab con esta URL
       const existingTab = existingTabs.find(t => t.type === TAB_TYPES.BROWSER && t.browserData?.url === url);
       if (existingTab) {
-        const tabIndex = existingTabs.findIndex(t => t.key === existingTab.key);
-        if (tabIndex !== -1) {
-          setActiveTabIndex(tabIndex);
-          setGroupActiveIndices(prev => ({ ...prev, 'no-group': tabIndex }));
-        }
+        activateTabSynchronously(existingTab.key);
         return;
       }
 
@@ -2433,22 +2439,12 @@ const App = () => {
         createdAt: Date.now()
       };
 
-      setSshTabs(prev => [newTab, ...prev]);
-      setTimeout(() => {
-        setLastOpenedTabKey(tabId);
-        setOnCreateActivateTabKey(tabId);
-        const allTabs = getAllTabs();
-        const tabIndex = allTabs.findIndex(t => t.key === tabId);
-        if (tabIndex !== -1) {
-          setActiveTabIndex(tabIndex);
-          setGroupActiveIndices(prev => ({ ...prev, 'no-group': tabIndex }));
-        }
-      }, 0);
+      promoteAndActivateTab(tabId, (prev) => [newTab, ...prev]);
     };
 
     window.addEventListener('open-browser-tab', handler);
     return () => window.removeEventListener('open-browser-tab', handler);
-  }, [getAllTabs]);
+  }, [getAllTabs, promoteAndActivateTab, activateTabSynchronously]);
 
   // Una sola pestaña de exploración de carpetas de passwords; se actualiza al cambiar de carpeta
   const PASSWORD_FOLDER_TAB_KEY = 'password-folder-view';
@@ -2464,43 +2460,14 @@ const App = () => {
       const existingTabs = getAllTabs();
       const existingTab = existingTabs.find(t => t.type === TAB_TYPES.PASSWORD_FOLDER);
 
-      const activateTab = (tabKey) => {
-        const allTabs = getAllTabs();
-        const tabIndex = allTabs.findIndex(t => t.key === tabKey);
-        if (tabIndex !== -1) {
-          setActiveTabIndex(tabIndex);
-          setGroupActiveIndices(prev => ({ ...prev, 'no-group': tabIndex }));
-        }
-      };
-
-      const promoteTabToFront = (tabKey) => {
-        setOpenTabOrder(prev => [tabKey, ...prev.filter(k => k !== tabKey)]);
-        setSshTabs(prev => {
-          const idx = prev.findIndex(t => t.key === tabKey);
-          if (idx <= 0) return prev;
-          const next = [...prev];
-          const [moved] = next.splice(idx, 1);
-          return [moved, ...next];
-        });
-        setLastOpenedTabKey(tabKey);
-        setOnCreateActivateTabKey(tabKey);
-      };
-
       if (existingTab) {
-        setSshTabs(prev => {
-          const updated = prev.map(t =>
+        promoteAndActivateTab(existingTab.key, (prev) =>
+          prev.map(t =>
             t.key === existingTab.key
               ? { ...t, label: `📁 ${info.folderLabel}`, folderData }
               : t
-          );
-          const idx = updated.findIndex(t => t.key === existingTab.key);
-          if (idx <= 0) return updated;
-          const next = [...updated];
-          const [moved] = next.splice(idx, 1);
-          return [moved, ...next];
-        });
-        promoteTabToFront(existingTab.key);
-        setTimeout(() => activateTab(existingTab.key), 0);
+          )
+        );
         return;
       }
 
@@ -2511,13 +2478,11 @@ const App = () => {
         folderData,
         createdAt: Date.now()
       };
-      setSshTabs(prev => [newTab, ...prev]);
-      promoteTabToFront(PASSWORD_FOLDER_TAB_KEY);
-      setTimeout(() => activateTab(PASSWORD_FOLDER_TAB_KEY), 0);
+      promoteAndActivateTab(PASSWORD_FOLDER_TAB_KEY, (prev) => [newTab, ...prev]);
     };
     window.addEventListener('open-password-folder-tab', handler);
     return () => window.removeEventListener('open-password-folder-tab', handler);
-  }, [getAllTabs, setOpenTabOrder, setSshTabs, setLastOpenedTabKey, setOnCreateActivateTabKey, setActiveTabIndex, setGroupActiveIndices]);
+  }, [getAllTabs, promoteAndActivateTab]);
 
   // Crear y activar pestaña de nota desde el sidebar de notas
   useEffect(() => {
@@ -2528,11 +2493,7 @@ const App = () => {
       const existingTabs = getAllTabs();
       const existingTab = existingTabs.find(t => t.type === TAB_TYPES.DOCUMENT && t.documentData?.key === info.key);
       if (existingTab) {
-        const tabIndex = existingTabs.findIndex(t => t.key === existingTab.key);
-        if (tabIndex !== -1) {
-          setActiveTabIndex(tabIndex);
-          setGroupActiveIndices(prev => ({ ...prev, 'no-group': tabIndex }));
-        }
+        activateTabSynchronously(existingTab.key);
         return;
       }
 
@@ -2552,21 +2513,11 @@ const App = () => {
         documentData,
         createdAt: Date.now()
       };
-      setSshTabs(prev => [newTab, ...prev]);
-      setTimeout(() => {
-        setLastOpenedTabKey(tabId);
-        setOnCreateActivateTabKey(tabId);
-        const allTabs = getAllTabs();
-        const tabIndex = allTabs.findIndex(t => t.key === tabId);
-        if (tabIndex !== -1) {
-          setActiveTabIndex(tabIndex);
-          setGroupActiveIndices(prev => ({ ...prev, 'no-group': tabIndex }));
-        }
-      }, 0);
+      promoteAndActivateTab(tabId, (prev) => [newTab, ...prev]);
     };
     window.addEventListener('open-document-tab', handler);
     return () => window.removeEventListener('open-document-tab', handler);
-  }, [getAllTabs]);
+  }, [getAllTabs, promoteAndActivateTab, activateTabSynchronously]);
 
   // Escuchar eventos de expansión de nodos desde el buscador
   useEffect(() => {

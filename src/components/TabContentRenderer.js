@@ -42,6 +42,11 @@ import { countConnections } from '../utils/connectionCounter';
 
 const PasswordDetailRow = ({ label, value, copy, masked = false, mono = true, onCopy }) => {
   const [showValue, setShowValue] = React.useState(!masked);
+
+  React.useEffect(() => {
+    setShowValue(!masked);
+  }, [value, masked]);
+
   const displayValue = masked && !showValue ? '••••••••••••' : value;
 
   return (
@@ -133,6 +138,11 @@ const PasswordDetailRow = ({ label, value, copy, masked = false, mono = true, on
 
 const WalletSeedPhraseSection = ({ seedPhrase, onCopyFull }) => {
   const [showSeedPhrase, setShowSeedPhrase] = React.useState(false);
+
+  React.useEffect(() => {
+    setShowSeedPhrase(false);
+  }, [seedPhrase]);
+
   const words = seedPhrase.trim().split(/\s+/).filter(w => w.length > 0);
   const wordCount = words.length;
 
@@ -555,7 +565,6 @@ const TabContentRendererInner = React.memo(({
 
     return (
       <div
-        key={p.id}
         style={{
           padding: '24px',
           background: 'var(--ui-content-bg)',
