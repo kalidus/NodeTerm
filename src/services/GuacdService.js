@@ -1513,13 +1513,21 @@ class GuacdService {
         try {
           await execAsync(`${dockerCommand} stop nodeterm-guacd`);
         } catch (error) {
-          console.error('Error deteniendo contenedor Docker:', error?.message);
-          // Intentar con comando genérico si falla
-          if (dockerCommand !== 'docker') {
-            try {
-              await execAsync('docker stop nodeterm-guacd');
-            } catch (error2) {
-              console.error('Error deteniendo contenedor Docker (genérico):', error2?.message);
+          if (error?.message?.includes('No such container') || error?.message?.includes('not running')) {
+            console.log('[GuacdService] Contenedor Docker no estaba corriendo o ya fue eliminado');
+          } else {
+            console.error('Error deteniendo contenedor Docker:', error?.message);
+            // Intentar con comando genérico si falla
+            if (dockerCommand !== 'docker') {
+              try {
+                await execAsync('docker stop nodeterm-guacd');
+              } catch (error2) {
+                if (error2?.message?.includes('No such container') || error2?.message?.includes('not running')) {
+                  console.log('[GuacdService] Contenedor Docker (genérico) no estaba corriendo o ya fue eliminado');
+                } else {
+                  console.error('Error deteniendo contenedor Docker (genérico):', error2?.message);
+                }
+              }
             }
           }
         }
