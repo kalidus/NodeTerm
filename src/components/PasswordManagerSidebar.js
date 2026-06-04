@@ -20,6 +20,7 @@ import {
   findNodeInTree,
   isDescendantInFullTree,
   isShowMoreTreeNode,
+  isTreeFolderNode,
   moveNodeFromTreeEvent
 } from '../utils/treeDragDrop';
 import '../styles/components/password-manager-sidebar.css';
@@ -988,8 +989,7 @@ const PasswordManagerSidebar = ({
               type: secretType,
               ...child.data
             });
-          } else if (child.droppable) {
-            // Si es una subcarpeta, recolectar recursivamente
+          } else if (isTreeFolderNode(child)) {
             collectRecursive(child);
           }
         });
@@ -1001,10 +1001,12 @@ const PasswordManagerSidebar = ({
   };
 
   const handleOpenFolder = (node) => {
-    const passwords = collectPasswordsFromFolder(node);
+    // Usar el árbol completo: processedPasswordNodes oculta hijos de carpetas colapsadas
+    const fullNode = findNodeInTree(passwordNodes, node.key) || node;
+    const passwords = collectPasswordsFromFolder(fullNode);
     const payload = {
-      folderKey: node.key,
-      folderLabel: node.label,
+      folderKey: fullNode.key,
+      folderLabel: fullNode.label,
       passwords: passwords
     };
     window.dispatchEvent(new CustomEvent('open-password-folder-tab', { detail: payload }));
