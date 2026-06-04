@@ -266,6 +266,21 @@ function registerGuacamoleHandlers({
 
   ipcMain.handle('guacamole:create-token', async (event, config) => {
     try {
+      // Verificar si el servicio guacd responde. Si está configurado como corriendo pero no responde,
+      // re-inicializarlo/reiniciarlo para levantarlo de nuevo de manera segura (autocuración).
+      if (guacdService) {
+        const status = guacdService.getStatus ? guacdService.getStatus() : { method: 'unknown' };
+        if (status.method !== 'mock') {
+          const isInitializing = !!(guacdService._initializePromise || guacdService._recreationPromise);
+          if (!isInitializing) {
+            const isHealthy = await guacdService._checkGuacdConnection();
+            if (!isHealthy) {
+              console.warn('⚠️ [Guacamole Handlers] guacd no responde en puerto 4822. Re-inicializando/reiniciando de manera autocurativa...');
+              await guacdService.restart();
+            }
+          }
+        }
+      }
 
       // Si guacd está en modo mock, informar al usuario y rechazar
       try {

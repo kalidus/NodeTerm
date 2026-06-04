@@ -583,19 +583,20 @@ class GuacdService {
   }
 
   /**
-   * Inicia el health check periódico para WSL
+   * Inicia el health check periódico para WSL o Docker
    * Verifica que guacd sigue vivo y accesible con una conexión TCP real
    */
   _startHealthCheck() {
-    // Solo para WSL
-    if (this.detectedMethod !== 'wsl') return;
+    // Solo para WSL y Docker
+    if (this.detectedMethod !== 'wsl' && this.detectedMethod !== 'docker') return;
 
     // Limpiar intervalo anterior si existe
     if (this._healthCheckInterval) {
       clearInterval(this._healthCheckInterval);
     }
 
-    console.log('🏥 [GuacdService] Health check para WSL iniciado (cada 15s)');
+    const methodUpper = this.detectedMethod.toUpperCase();
+    console.log(`🏥 [GuacdService] Health check para ${methodUpper} iniciado (cada 15s)`);
 
     this._healthCheckInterval = setInterval(async () => {
       try {
@@ -607,12 +608,16 @@ class GuacdService {
           console.warn(`⚠️ [GuacdService] Health check fallido (${this._healthCheckFailures}/2): guacd no responde`);
 
           if (this._healthCheckFailures >= 2) {
-            console.error('🚨 [GuacdService] guacd en WSL dejó de responder. Reiniciando...');
+            console.error(`🚨 [GuacdService] guacd en ${methodUpper} dejó de responder. Reiniciando...`);
             this._healthCheckFailures = 0;
 
-            // Intentar reiniciar guacd en WSL
+            // Intentar reiniciar guacd según el método
             try {
-              await this._restartGuacdInWSL();
+              if (this.detectedMethod === 'wsl') {
+                await this._restartGuacdInWSL();
+              } else if (this.detectedMethod === 'docker') {
+                await this.restart();
+              }
             } catch (e) {
               console.error('❌ [GuacdService] Error reiniciando guacd:', e?.message);
             }
@@ -831,13 +836,31 @@ class GuacdService {
         for (const method of orderedMethods) {
           try {
             if (method === 'docker') {
-              if (await this.startWithDocker()) { this.detectedMethod = 'docker'; console.log('🔌 Conectado con DOCKER'); return true; }
+              if (await this.startWithDocker()) {
+                this.detectedMethod = 'docker';
+                console.log('🔌 Conectado con DOCKER');
+                this._startHealthCheck();
+                return true;
+              }
             } else if (method === 'wsl') {
-              if (await this.startWithWSL()) { this.detectedMethod = 'wsl'; console.log('🔌 Conectado con WSL'); return true; }
+              if (await this.startWithWSL()) {
+                this.detectedMethod = 'wsl';
+                console.log('🔌 Conectado con WSL');
+                this._startHealthCheck();
+                return true;
+              }
             } else if (method === 'native') {
-              if (await this.startWithNative()) { this.detectedMethod = 'native'; console.log('🔌 Conectado con NATIVE'); return true; }
+              if (await this.startWithNative()) {
+                this.detectedMethod = 'native';
+                console.log('🔌 Conectado con NATIVE');
+                return true;
+              }
             } else if (method === 'mock') {
-              if (await this.startMockMode()) { this.detectedMethod = 'mock'; console.log('🔌 Conectado con MOCK'); return true; }
+              if (await this.startMockMode()) {
+                this.detectedMethod = 'mock';
+                console.log('🔌 Conectado con MOCK');
+                return true;
+              }
             }
           } catch (e) {
             // Error intentando método
