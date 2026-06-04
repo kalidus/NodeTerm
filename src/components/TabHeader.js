@@ -525,7 +525,8 @@ const TabHeader = React.memo(({
           textOverflow: 'ellipsis', 
           whiteSpace: 'nowrap',
           minWidth: 0, /* Crucial para que el label se encoja antes que los iconos */
-          marginRight: '4px'
+          marginRight: '4px',
+          fontStyle: tab.isPreview ? 'italic' : 'normal'
         }}>
           {tab.label}
         </span>

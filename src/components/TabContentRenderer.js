@@ -40,6 +40,264 @@ import { getNetworkById } from '../utils/cryptoNetworks';
 
 import { countConnections } from '../utils/connectionCounter';
 
+const PasswordDetailRow = ({ label, value, copy, masked = false, mono = true, onCopy }) => {
+  const [showValue, setShowValue] = React.useState(!masked);
+  const displayValue = masked && !showValue ? '••••••••••••' : value;
+
+  return (
+    <div style={{
+      display: 'flex',
+      gap: 12,
+      alignItems: 'center',
+      padding: '12px 0',
+      borderBottom: '1px solid var(--ui-content-border)'
+    }}>
+      <div style={{
+        width: 140,
+        color: 'var(--ui-dialog-text)',
+        fontWeight: '500',
+        fontSize: '14px'
+      }}>
+        {label}
+      </div>
+      <div style={{
+        flex: 1,
+        color: 'var(--ui-dialog-text)',
+        fontFamily: mono ? 'monospace' : 'inherit',
+        fontSize: '14px',
+        wordBreak: 'break-all',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px'
+      }}>
+        {displayValue || '-'}
+        {masked && value && (
+          <button
+            onClick={() => setShowValue(!showValue)}
+            style={{
+              padding: '4px',
+              borderRadius: '50%',
+              border: 'none',
+              background: 'transparent',
+              color: '#9C27B0',
+              cursor: 'pointer',
+              fontSize: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '24px',
+              height: '24px',
+              transition: 'all 0.2s'
+            }}
+            onMouseOver={(e) => {
+              e.target.style.background = 'rgba(156, 39, 176, 0.1)';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.background = 'transparent';
+            }}
+          >
+            {showValue ? '👁️' : '👁️‍🗨️'}
+          </button>
+        )}
+      </div>
+      {copy && value && onCopy && (
+        <button
+          onClick={() => onCopy(value, label)}
+          style={{
+            padding: '6px 16px',
+            borderRadius: 6,
+            border: '1px solid var(--ui-content-border)',
+            background: 'var(--ui-button-secondary)',
+            color: 'var(--ui-button-secondary-text)',
+            cursor: 'pointer',
+            fontSize: '13px',
+            fontWeight: '500',
+            transition: 'all 0.2s',
+            minWidth: '70px'
+          }}
+          onMouseOver={(e) => {
+            e.target.style.background = 'var(--ui-button-hover)';
+            e.target.style.borderColor = 'var(--ui-button-primary)';
+          }}
+          onMouseOut={(e) => {
+            e.target.style.background = 'var(--ui-button-secondary)';
+            e.target.style.borderColor = 'var(--ui-content-border)';
+          }}
+        >
+          Copiar
+        </button>
+      )}
+    </div>
+  );
+};
+
+const WalletSeedPhraseSection = ({ seedPhrase, onCopyFull }) => {
+  const [showSeedPhrase, setShowSeedPhrase] = React.useState(false);
+  const words = seedPhrase.trim().split(/\s+/).filter(w => w.length > 0);
+  const wordCount = words.length;
+
+  const copyWord = async (word, index) => {
+    if (!word) return;
+    try {
+      if (window.electron?.clipboard?.writeText) {
+        await window.electron.clipboard.writeText(word);
+      } else {
+        await navigator.clipboard.writeText(word);
+      }
+      if (window.toast?.current?.show) {
+        window.toast.current.show({
+          severity: 'success',
+          summary: 'Copiado',
+          detail: `Palabra ${index + 1} copiada`,
+          life: 1500
+        });
+      }
+    } catch (err) {
+      console.error('Error copiando:', err);
+    }
+  };
+
+  return (
+    <div style={{ padding: '12px 0', borderBottom: '1px solid var(--ui-content-border)' }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: '12px'
+      }}>
+        <div style={{
+          width: 140,
+          color: 'var(--ui-dialog-text)',
+          fontWeight: '500',
+          fontSize: '14px'
+        }}>
+          Seed Phrase
+        </div>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button
+            onClick={() => setShowSeedPhrase(!showSeedPhrase)}
+            style={{
+              padding: '4px',
+              borderRadius: '50%',
+              border: 'none',
+              background: 'transparent',
+              color: '#9C27B0',
+              cursor: 'pointer',
+              fontSize: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '24px',
+              height: '24px',
+              transition: 'all 0.2s'
+            }}
+            onMouseOver={(e) => {
+              e.target.style.background = 'rgba(156, 39, 176, 0.1)';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.background = 'transparent';
+            }}
+          >
+            {showSeedPhrase ? '👁️' : '👁️‍🗨️'}
+          </button>
+          <button
+            onClick={() => onCopyFull(seedPhrase, 'Seed Phrase')}
+            style={{
+              padding: '6px 16px',
+              borderRadius: 6,
+              border: '1px solid var(--ui-content-border)',
+              background: 'var(--ui-button-secondary)',
+              color: 'var(--ui-button-secondary-text)',
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontWeight: '500',
+              transition: 'all 0.2s',
+              minWidth: '70px'
+            }}
+            onMouseOver={(e) => {
+              e.target.style.background = 'var(--ui-button-hover)';
+              e.target.style.borderColor = 'var(--ui-button-primary)';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.background = 'var(--ui-button-secondary)';
+              e.target.style.borderColor = 'var(--ui-content-border)';
+            }}
+          >
+            Copiar
+          </button>
+        </div>
+      </div>
+
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: '8px'
+      }}>
+        {Array(wordCount).fill(null).map((_, index) => (
+          <div key={index} style={{ position: 'relative' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              marginBottom: '4px'
+            }}>
+              <span style={{
+                color: 'var(--ui-button-primary)',
+                fontWeight: '600',
+                fontSize: '12px',
+                minWidth: '24px'
+              }}>
+                {index + 1}.
+              </span>
+              <button
+                onClick={() => copyWord(words[index], index)}
+                style={{
+                  padding: '2px 4px',
+                  borderRadius: '4px',
+                  border: 'none',
+                  background: 'transparent',
+                  color: 'var(--ui-button-primary)',
+                  cursor: 'pointer',
+                  fontSize: '0.7rem',
+                  minWidth: 'auto',
+                  height: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.background = 'rgba(var(--ui-button-primary-rgb), 0.1)';
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.background = 'transparent';
+                }}
+                title={`Copiar palabra ${index + 1}`}
+              >
+                📋
+              </button>
+            </div>
+            <div style={{
+              padding: '10px 12px',
+              borderRadius: '8px',
+              border: '1px solid var(--ui-content-border)',
+              background: 'var(--ui-dialog-bg)',
+              color: 'var(--ui-dialog-text)',
+              fontFamily: 'monospace',
+              fontSize: '13px',
+              minHeight: '40px',
+              display: 'flex',
+              alignItems: 'center',
+              wordBreak: 'break-word'
+            }}>
+              {showSeedPhrase ? (words[index] || '-') : '••••••'}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const TabContentRendererInner = React.memo(({
   tab,
   isActiveTab,
@@ -276,96 +534,7 @@ const TabContentRendererInner = React.memo(({
       }
     };
 
-    const Row = ({ label, value, copy, masked = false, mono = true }) => {
-      const [showValue, setShowValue] = React.useState(!masked);
-      const displayValue = masked && !showValue ? '••••••••••••' : value;
-
-      return (
-        <div style={{
-          display: 'flex',
-          gap: 12,
-          alignItems: 'center',
-          padding: '12px 0',
-          borderBottom: '1px solid var(--ui-content-border)'
-        }}>
-          <div style={{
-            width: 140,
-            color: 'var(--ui-dialog-text)',
-            fontWeight: '500',
-            fontSize: '14px'
-          }}>
-            {label}
-          </div>
-          <div style={{
-            flex: 1,
-            color: 'var(--ui-dialog-text)',
-            fontFamily: mono ? 'monospace' : 'inherit',
-            fontSize: '14px',
-            wordBreak: 'break-all',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            {displayValue || '-'}
-            {masked && value && (
-              <button
-                onClick={() => setShowValue(!showValue)}
-                style={{
-                  padding: '4px',
-                  borderRadius: '50%',
-                  border: 'none',
-                  background: 'transparent',
-                  color: '#9C27B0',
-                  cursor: 'pointer',
-                  fontSize: '16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '24px',
-                  height: '24px',
-                  transition: 'all 0.2s'
-                }}
-                onMouseOver={(e) => {
-                  e.target.style.background = 'rgba(156, 39, 176, 0.1)';
-                }}
-                onMouseOut={(e) => {
-                  e.target.style.background = 'transparent';
-                }}
-              >
-                {showValue ? '👁️' : '👁️‍🗨️'}
-              </button>
-            )}
-          </div>
-          {copy && value && (
-            <button
-              onClick={() => copyToClipboard(value, label)}
-              style={{
-                padding: '6px 16px',
-                borderRadius: 6,
-                border: '1px solid var(--ui-content-border)',
-                background: 'var(--ui-button-secondary)',
-                color: 'var(--ui-button-secondary-text)',
-                cursor: 'pointer',
-                fontSize: '13px',
-                fontWeight: '500',
-                transition: 'all 0.2s',
-                minWidth: '70px'
-              }}
-              onMouseOver={(e) => {
-                e.target.style.background = 'var(--ui-button-hover)';
-                e.target.style.borderColor = 'var(--ui-button-primary)';
-              }}
-              onMouseOut={(e) => {
-                e.target.style.background = 'var(--ui-button-secondary)';
-                e.target.style.borderColor = 'var(--ui-content-border)';
-              }}
-            >
-              Copiar
-            </button>
-          )}
-        </div>
-      );
-    };
+    const Row = (props) => <PasswordDetailRow {...props} onCopy={copyToClipboard} />;
 
     // Determinar icono y color según tipo
     const getIconInfo = () => {
@@ -385,12 +554,15 @@ const TabContentRendererInner = React.memo(({
     const iconInfo = getIconInfo();
 
     return (
-      <div style={{
-        padding: '24px',
-        background: 'var(--ui-content-bg)',
-        height: '100%',
-        overflow: 'auto'
-      }}>
+      <div
+        key={p.id}
+        style={{
+          padding: '24px',
+          background: 'var(--ui-content-bg)',
+          height: '100%',
+          overflow: 'auto'
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
           <span className={iconInfo.icon} style={{ fontSize: '24px', color: iconInfo.color }}></span>
           <h2 style={{ margin: 0, color: 'var(--ui-dialog-text)', fontSize: '24px', fontWeight: '600' }}>{p.title}</h2>
@@ -433,174 +605,12 @@ const TabContentRendererInner = React.memo(({
               <Row label="Red" value={getNetworkById(p.network)?.name || p.network} mono={false} />
               {p.address && <Row label="Dirección" value={p.address} copy />}
 
-              {/* Seed Phrase en campos individuales */}
-              {p.seedPhrase && (() => {
-                const words = p.seedPhrase.trim().split(/\s+/).filter(w => w.length > 0);
-                const wordCount = words.length;
-                const [showSeedPhrase, setShowSeedPhrase] = React.useState(false);
-
-                return (
-                  <div style={{ padding: '12px 0', borderBottom: '1px solid var(--ui-content-border)' }}>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      marginBottom: '12px'
-                    }}>
-                      <div style={{
-                        width: 140,
-                        color: 'var(--ui-dialog-text)',
-                        fontWeight: '500',
-                        fontSize: '14px'
-                      }}>
-                        Seed Phrase
-                      </div>
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <button
-                          onClick={() => setShowSeedPhrase(!showSeedPhrase)}
-                          style={{
-                            padding: '4px',
-                            borderRadius: '50%',
-                            border: 'none',
-                            background: 'transparent',
-                            color: '#9C27B0',
-                            cursor: 'pointer',
-                            fontSize: '16px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: '24px',
-                            height: '24px',
-                            transition: 'all 0.2s'
-                          }}
-                          onMouseOver={(e) => {
-                            e.target.style.background = 'rgba(156, 39, 176, 0.1)';
-                          }}
-                          onMouseOut={(e) => {
-                            e.target.style.background = 'transparent';
-                          }}
-                        >
-                          {showSeedPhrase ? '👁️' : '👁️‍🗨️'}
-                        </button>
-                        <button
-                          onClick={() => copyToClipboard(p.seedPhrase, 'Seed Phrase')}
-                          style={{
-                            padding: '6px 16px',
-                            borderRadius: 6,
-                            border: '1px solid var(--ui-content-border)',
-                            background: 'var(--ui-button-secondary)',
-                            color: 'var(--ui-button-secondary-text)',
-                            cursor: 'pointer',
-                            fontSize: '13px',
-                            fontWeight: '500',
-                            transition: 'all 0.2s',
-                            minWidth: '70px'
-                          }}
-                          onMouseOver={(e) => {
-                            e.target.style.background = 'var(--ui-button-hover)';
-                            e.target.style.borderColor = 'var(--ui-button-primary)';
-                          }}
-                          onMouseOut={(e) => {
-                            e.target.style.background = 'var(--ui-button-secondary)';
-                            e.target.style.borderColor = 'var(--ui-content-border)';
-                          }}
-                        >
-                          Copiar
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Grid de palabras */}
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(3, 1fr)',
-                      gap: '8px'
-                    }}>
-                      {Array(wordCount).fill(null).map((_, index) => (
-                        <div key={index} style={{ position: 'relative' }}>
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            marginBottom: '4px'
-                          }}>
-                            <span style={{
-                              color: 'var(--ui-button-primary)',
-                              fontWeight: '600',
-                              fontSize: '12px',
-                              minWidth: '24px'
-                            }}>
-                              {index + 1}.
-                            </span>
-                            <button
-                              onClick={async () => {
-                                const word = words[index];
-                                if (word) {
-                                  try {
-                                    if (window.electron?.clipboard?.writeText) {
-                                      await window.electron.clipboard.writeText(word);
-                                    } else {
-                                      await navigator.clipboard.writeText(word);
-                                    }
-                                    if (window.toast?.current?.show) {
-                                      window.toast.current.show({
-                                        severity: 'success',
-                                        summary: 'Copiado',
-                                        detail: `Palabra ${index + 1} copiada`,
-                                        life: 1500
-                                      });
-                                    }
-                                  } catch (err) {
-                                    console.error('Error copiando:', err);
-                                  }
-                                }
-                              }}
-                              style={{
-                                padding: '2px 4px',
-                                borderRadius: '4px',
-                                border: 'none',
-                                background: 'transparent',
-                                color: 'var(--ui-button-primary)',
-                                cursor: 'pointer',
-                                fontSize: '0.7rem',
-                                minWidth: 'auto',
-                                height: '20px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                              }}
-                              onMouseOver={(e) => {
-                                e.target.style.background = 'rgba(var(--ui-button-primary-rgb), 0.1)';
-                              }}
-                              onMouseOut={(e) => {
-                                e.target.style.background = 'transparent';
-                              }}
-                              title={`Copiar palabra ${index + 1}`}
-                            >
-                              📋
-                            </button>
-                          </div>
-                          <div style={{
-                            padding: '10px 12px',
-                            borderRadius: '8px',
-                            border: '1px solid var(--ui-content-border)',
-                            background: 'var(--ui-dialog-bg)',
-                            color: 'var(--ui-dialog-text)',
-                            fontFamily: 'monospace',
-                            fontSize: '13px',
-                            minHeight: '40px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            wordBreak: 'break-word'
-                          }}>
-                            {showSeedPhrase ? (words[index] || '-') : '••••••'}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
+              {p.seedPhrase && (
+                <WalletSeedPhraseSection
+                  seedPhrase={p.seedPhrase}
+                  onCopyFull={copyToClipboard}
+                />
+              )}
 
               {p.passphrase && <Row label="Passphrase" value={p.passphrase} masked />}
               {p.privateKey && <Row label="Clave Privada" value={p.privateKey} copy masked />}

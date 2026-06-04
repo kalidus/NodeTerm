@@ -2250,53 +2250,62 @@ const App = () => {
   }, []);
 
   // Crear y activar pestaña de info de secreto (password, crypto_wallet, api_key, secure_note)
+  const PASSWORD_PREVIEW_TAB_KEY = 'password-preview-view';
   useEffect(() => {
-    const handler = (e) => {
-      const info = e.detail || {};
-      const secretType = info.type || info.data?.type || 'password';
+    const buildPasswordData = (info, secretType) => ({
+      id: info.key,
+      title: info.label || info.title,
+      type: secretType,
+      notes: info.notes || info.data?.notes || '',
+      username: info.username || info.data?.username || '',
+      password: info.password || info.data?.password || '',
+      url: info.url || info.data?.url || '',
+      group: info.group || info.data?.group || '',
+      network: info.network || info.data?.network || '',
+      address: info.address || info.data?.address || '',
+      seedPhrase: info.seedPhrase || info.data?.seedPhrase || '',
+      seedWordsCount: info.seedWordsCount || info.data?.seedWordsCount || 24,
+      privateKey: info.privateKey || info.data?.privateKey || '',
+      passphrase: info.passphrase || info.data?.passphrase || '',
+      apiKey: info.apiKey || info.data?.apiKey || '',
+      apiSecret: info.apiSecret || info.data?.apiSecret || '',
+      endpoint: info.endpoint || info.data?.endpoint || '',
+      serviceName: info.serviceName || info.data?.serviceName || '',
+      noteContent: info.noteContent || info.data?.noteContent || ''
+    });
 
-      const existingTabs = getAllTabs();
-      const existingTab = existingTabs.find(t => t.type === TAB_TYPES.PASSWORD && t.passwordData?.id === info.key);
-      if (existingTab) {
-        const tabIndex = existingTabs.findIndex(t => t.key === existingTab.key);
-        if (tabIndex !== -1) {
-          setActiveTabIndex(tabIndex);
-          setGroupActiveIndices(prev => ({ ...prev, 'no-group': tabIndex }));
-        }
-        return;
+    const getTabIcon = (secretType) => {
+      switch (secretType) {
+        case 'crypto_wallet': return '💰';
+        case 'api_key': return '🔑';
+        case 'secure_note': return '📝';
+        default: return '🔐';
       }
+    };
 
-      const tabId = `${info.key}_${Date.now()}`;
+    const activateTab = (tabKey) => {
+      const allTabs = getAllTabs();
+      const tabIndex = allTabs.findIndex(t => t.key === tabKey);
+      if (tabIndex !== -1) {
+        setActiveTabIndex(tabIndex);
+        setGroupActiveIndices(prev => ({ ...prev, 'no-group': tabIndex }));
+      }
+    };
 
-      // Construir passwordData con todos los campos según el tipo
-      const passwordData = {
-        id: info.key,
-        title: info.label || info.title,
-        type: secretType,
-        // Campos comunes
-        notes: info.notes || info.data?.notes || '',
-        // Campos para password
-        username: info.username || info.data?.username || '',
-        password: info.password || info.data?.password || '',
-        url: info.url || info.data?.url || '',
-        group: info.group || info.data?.group || '',
-        // Campos para crypto_wallet
-        network: info.network || info.data?.network || '',
-        address: info.address || info.data?.address || '',
-        seedPhrase: info.seedPhrase || info.data?.seedPhrase || '',
-        seedWordsCount: info.seedWordsCount || info.data?.seedWordsCount || 24,
-        privateKey: info.privateKey || info.data?.privateKey || '',
-        passphrase: info.passphrase || info.data?.passphrase || '',
-        // Campos para api_key
-        apiKey: info.apiKey || info.data?.apiKey || '',
-        apiSecret: info.apiSecret || info.data?.apiSecret || '',
-        endpoint: info.endpoint || info.data?.endpoint || '',
-        serviceName: info.serviceName || info.data?.serviceName || '',
-        // Campos para secure_note
-        noteContent: info.noteContent || info.data?.noteContent || ''
-      };
+    const promoteTabToFront = (tabKey) => {
+      setOpenTabOrder(prev => [tabKey, ...prev.filter(k => k !== tabKey)]);
+      setSshTabs(prev => {
+        const idx = prev.findIndex(t => t.key === tabKey);
+        if (idx <= 0) return prev;
+        const next = [...prev];
+        const [moved] = next.splice(idx, 1);
+        return [moved, ...next];
+      });
+      setLastOpenedTabKey(tabKey);
+      setOnCreateActivateTabKey(tabKey);
+    };
 
-      // Registrar como reciente para TODOS los tipos de secretos (password, wallet, api_key, etc.)
+    const recordRecent = (info, passwordData, secretType) => {
       try {
         recordRecentPassword({
           id: info.key,
@@ -2306,41 +2315,88 @@ const App = () => {
           url: passwordData.url,
           group: passwordData.group,
           notes: passwordData.notes,
-          type: secretType, // password, crypto_wallet, api_key, secure_note
+          type: secretType,
           icon: info.data?.icon || 'pi-key'
         }, 5);
-      } catch (e) {
-        console.warn('Error registrando secreto reciente:', e);
+      } catch (err) {
+        console.warn('Error registrando secreto reciente:', err);
+      }
+    };
+
+    const handler = (e) => {
+      const info = e.detail || {};
+      const secretType = info.type || info.data?.type || 'password';
+      const mode = info.mode === 'preview' ? 'preview' : 'permanent';
+      const passwordData = buildPasswordData(info, secretType);
+      const tabLabel = `${getTabIcon(secretType)} ${info.label || info.title}`;
+
+      recordRecent(info, passwordData, secretType);
+
+      const existingTabs = getAllTabs();
+
+      if (mode === 'preview') {
+        const previewTab = existingTabs.find(
+          t => t.type === TAB_TYPES.PASSWORD && t.isPreview === true
+        );
+
+        if (previewTab) {
+          setSshTabs(prev => {
+            const updated = prev.map(t =>
+              t.key === previewTab.key
+                ? { ...t, label: tabLabel, passwordData }
+                : t
+            );
+            const idx = updated.findIndex(t => t.key === previewTab.key);
+            if (idx <= 0) return updated;
+            const next = [...updated];
+            const [moved] = next.splice(idx, 1);
+            return [moved, ...next];
+          });
+          promoteTabToFront(previewTab.key);
+          setTimeout(() => activateTab(previewTab.key), 0);
+          return;
+        }
+
+        const newTab = {
+          key: PASSWORD_PREVIEW_TAB_KEY,
+          label: tabLabel,
+          type: TAB_TYPES.PASSWORD,
+          passwordData,
+          isPreview: true,
+          createdAt: Date.now()
+        };
+        setSshTabs(prev => [newTab, ...prev]);
+        promoteTabToFront(PASSWORD_PREVIEW_TAB_KEY);
+        setTimeout(() => activateTab(PASSWORD_PREVIEW_TAB_KEY), 0);
+        return;
       }
 
-      // Determinar icono según tipo para la etiqueta de la pestaña
-      const getTabIcon = () => {
-        switch (secretType) {
-          case 'crypto_wallet': return '💰';
-          case 'api_key': return '🔑';
-          case 'secure_note': return '📝';
-          default: return '🔐';
-        }
-      };
+      const existingPermanent = existingTabs.find(
+        t => t.type === TAB_TYPES.PASSWORD && !t.isPreview && t.passwordData?.id === info.key
+      );
+      if (existingPermanent) {
+        activateTab(existingPermanent.key);
+        return;
+      }
 
-      // Usar TAB_TYPES.PASSWORD para que coincida con el renderer
-      const newTab = { key: tabId, label: `${getTabIcon()} ${info.label}`, type: TAB_TYPES.PASSWORD, passwordData, createdAt: Date.now() };
+      const tabId = `${info.key}_${Date.now()}`;
+      const newTab = {
+        key: tabId,
+        label: tabLabel,
+        type: TAB_TYPES.PASSWORD,
+        passwordData,
+        createdAt: Date.now()
+      };
       setSshTabs(prev => [newTab, ...prev]);
-      // Activar la nueva pestaña usando la misma lógica que otras pestañas
       setTimeout(() => {
         setLastOpenedTabKey(tabId);
         setOnCreateActivateTabKey(tabId);
-        const allTabs = getAllTabs();
-        const tabIndex = allTabs.findIndex(t => t.key === tabId);
-        if (tabIndex !== -1) {
-          setActiveTabIndex(tabIndex);
-          setGroupActiveIndices(prev => ({ ...prev, 'no-group': tabIndex }));
-        }
+        activateTab(tabId);
       }, 0);
     };
     window.addEventListener('open-password-tab', handler);
     return () => window.removeEventListener('open-password-tab', handler);
-  }, [getAllTabs]);
+  }, [getAllTabs, setOpenTabOrder, setSshTabs, setLastOpenedTabKey, setOnCreateActivateTabKey, setActiveTabIndex, setGroupActiveIndices]);
 
   // Crear y activar pestaña de navegador integrado (con soporte de autofill)
   useEffect(() => {
@@ -2417,13 +2473,34 @@ const App = () => {
         }
       };
 
+      const promoteTabToFront = (tabKey) => {
+        setOpenTabOrder(prev => [tabKey, ...prev.filter(k => k !== tabKey)]);
+        setSshTabs(prev => {
+          const idx = prev.findIndex(t => t.key === tabKey);
+          if (idx <= 0) return prev;
+          const next = [...prev];
+          const [moved] = next.splice(idx, 1);
+          return [moved, ...next];
+        });
+        setLastOpenedTabKey(tabKey);
+        setOnCreateActivateTabKey(tabKey);
+      };
+
       if (existingTab) {
-        setSshTabs(prev => prev.map(t =>
-          t.key === existingTab.key
-            ? { ...t, label: `📁 ${info.folderLabel}`, folderData }
-            : t
-        ));
-        activateTab(existingTab.key);
+        setSshTabs(prev => {
+          const updated = prev.map(t =>
+            t.key === existingTab.key
+              ? { ...t, label: `📁 ${info.folderLabel}`, folderData }
+              : t
+          );
+          const idx = updated.findIndex(t => t.key === existingTab.key);
+          if (idx <= 0) return updated;
+          const next = [...updated];
+          const [moved] = next.splice(idx, 1);
+          return [moved, ...next];
+        });
+        promoteTabToFront(existingTab.key);
+        setTimeout(() => activateTab(existingTab.key), 0);
         return;
       }
 
@@ -2435,15 +2512,12 @@ const App = () => {
         createdAt: Date.now()
       };
       setSshTabs(prev => [newTab, ...prev]);
-      setTimeout(() => {
-        setLastOpenedTabKey(PASSWORD_FOLDER_TAB_KEY);
-        setOnCreateActivateTabKey(PASSWORD_FOLDER_TAB_KEY);
-        activateTab(PASSWORD_FOLDER_TAB_KEY);
-      }, 0);
+      promoteTabToFront(PASSWORD_FOLDER_TAB_KEY);
+      setTimeout(() => activateTab(PASSWORD_FOLDER_TAB_KEY), 0);
     };
     window.addEventListener('open-password-folder-tab', handler);
     return () => window.removeEventListener('open-password-folder-tab', handler);
-  }, [getAllTabs]);
+  }, [getAllTabs, setOpenTabOrder, setSshTabs, setLastOpenedTabKey, setOnCreateActivateTabKey, setActiveTabIndex, setGroupActiveIndices]);
 
   // Crear y activar pestaña de nota desde el sidebar de notas
   useEffect(() => {

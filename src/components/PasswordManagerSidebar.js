@@ -123,6 +123,15 @@ const PasswordManagerSidebar = ({
   
   // Referencias y estados para el menú contextual
   const contextMenuRef = useRef(null);
+  const passwordClickTimerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (passwordClickTimerRef.current) {
+        clearTimeout(passwordClickTimerRef.current);
+      }
+    };
+  }, []);
   const [contextMenuItems, setContextMenuItems] = useState([]);
   const [currentContextNode, setCurrentContextNode] = useState(null);
   
@@ -959,17 +968,17 @@ const PasswordManagerSidebar = ({
     }
   };
 
-  const handleOpenPassword = (node) => {
+  const dispatchPasswordTab = useCallback((node, mode = 'permanent') => {
     const payload = {
       key: node.key,
       label: node.label,
       title: node.label,
       type: node.data?.type || 'password',
-      // Incluir todos los campos posibles según el tipo
+      mode,
       ...node.data
     };
     window.dispatchEvent(new CustomEvent('open-password-tab', { detail: payload }));
-  };
+  }, []);
 
   // Función para recolectar todos los passwords de una carpeta recursivamente
   const collectPasswordsFromFolder = (node) => {
@@ -1234,6 +1243,13 @@ const PasswordManagerSidebar = ({
           if (isSecret) {
             e.stopPropagation();
             setSelectedNodeKey({ [node.key]: true });
+            if (passwordClickTimerRef.current) {
+              clearTimeout(passwordClickTimerRef.current);
+            }
+            passwordClickTimerRef.current = setTimeout(() => {
+              passwordClickTimerRef.current = null;
+              dispatchPasswordTab(node, 'preview');
+            }, 250);
             return;
           }
           e.stopPropagation();
@@ -1244,7 +1260,12 @@ const PasswordManagerSidebar = ({
         onDoubleClick={(e) => {
           e.stopPropagation();
           if (isSecret) {
-            handleOpenPassword(node);
+            if (passwordClickTimerRef.current) {
+              clearTimeout(passwordClickTimerRef.current);
+              passwordClickTimerRef.current = null;
+            }
+            setSelectedNodeKey({ [node.key]: true });
+            dispatchPasswordTab(node, 'permanent');
           }
         }}
         style={{ 
@@ -1469,7 +1490,7 @@ const PasswordManagerSidebar = ({
           label: 'Ver detalles',
           icon: 'pi pi-eye',
           command: () => {
-            handleOpenPassword(node);
+            dispatchPasswordTab(node, 'permanent');
           }
         },
         { separator: true }
