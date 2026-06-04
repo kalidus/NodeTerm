@@ -5,6 +5,10 @@ const path = require('path');
 const os = require('os');
 
 // Electron app handle (may be undefined in non-Electron contexts)
+let electronApp = null;
+try {
+  electronApp = require('electron').app;
+} catch (_) {}
 const { getNodeTermDataDir } = require('../main/utils/file-utils');
 
 function getUserDataDir() {
@@ -566,6 +570,7 @@ class GuacdService {
     this.debug = process.env.NODETERM_DEBUG_GUACD === '1';
     // Mutex: evitar inicializaciones concurrentes
     this._initializePromise = null;
+    this._recreationPromise = null;
     this.driveHostDir = ensureDriveHostDir();
     // Health check interval para WSL (cada 30 segundos)
     this._healthCheckInterval = null;
@@ -773,24 +778,23 @@ class GuacdService {
             }
             // Continuar con el inicio normal más abajo
           } else {
-            // El proceso está bien configurado y accesible
-            this.isRunning = true;
-            const methodLabel = (this.detectedMethod || 'unknown').toUpperCase();
-            console.log(`✅ guacd ya está corriendo y accesible en puerto ${this.port} (método: ${methodLabel})`);
+            // Verificar si el proceso detectado realmente responde a una conexión TCP
+            const isAlive = await this._checkGuacdConnection();
+            if (isAlive) {
+              this.isRunning = true;
+              const methodLabel = (this.detectedMethod || 'unknown').toUpperCase();
+              console.log(`✅ guacd ya está corriendo y accesible en puerto ${this.port} (método: ${methodLabel})`);
 
-            // Si hay una preferencia explícita y lo detectado no coincide, intentar cambiar
-            const desired = (this.preferredMethod === 'wsl') ? 'wsl' : (this.preferredMethod === 'docker' ? 'docker' : null);
-            if (desired && this.detectedMethod && this.detectedMethod !== desired) {
-              console.log(`🔁 Preferencia actual: ${desired}. Método preexistente detectado: ${this.detectedMethod}. Reiniciando según preferencia...`);
-              try {
-                await this.stop();
-              } catch { }
-              // Continuar con el inicio normal más abajo
-            } else {
-              // Verificar una vez más que realmente sea accesible
-              const finalCheck = await this.isPortAvailable(this.port);
-              if (!finalCheck) {
-                console.log(`🔌 Conectado con ${methodLabel} (preexistente)`);
+              // Si hay una preferencia explícita y lo detectado no coincide, intentar cambiar
+              const desired = (this.preferredMethod === 'wsl') ? 'wsl' : (this.preferredMethod === 'docker' ? 'docker' : null);
+              if (desired && this.detectedMethod && this.detectedMethod !== desired) {
+                console.log(`🔁 Preferencia actual: ${desired}. Método preexistente detectado: ${this.detectedMethod}. Reiniciando según preferencia...`);
+                try {
+                  await this.stop();
+                } catch { }
+                // Continuar con el inicio normal más abajo
+              } else {
+                console.log(`🔌 Conectado con ${methodLabel} (preexistente y activo)`);
 
                 // Iniciar health check para WSL preexistente
                 if (this.detectedMethod === 'wsl') {
@@ -798,10 +802,15 @@ class GuacdService {
                 }
 
                 return true;
-              } else {
-                console.log('⚠️ El proceso parece haberse detenido, continuando con inicio normal...');
-                // Continuar con el inicio normal más abajo
               }
+            } else {
+              const methodLabel = (this.detectedMethod || 'unknown').toUpperCase();
+              console.log(`⚠️ guacd (${methodLabel}) detectado en puerto ${this.port} pero no responde a la conexión TCP. Forzando detención y reinicio...`);
+              this.isRunning = true; // Marcar temporalmente como corriendo para permitir detener
+              try {
+                await this.stop();
+              } catch { }
+              // Continuar con el inicio normal más abajo
             }
           }
         }
@@ -984,36 +993,47 @@ class GuacdService {
    * Fuerza la recreación del contenedor Docker con la nueva carpeta
    */
   async _forceDockerContainerRecreation() {
-    try {
-      console.log('[GuacdService] Deteniendo contenedor Docker existente...');
-
-      // Detener y eliminar el contenedor existente
-      const { exec } = require('child_process');
-      const util = require('util');
-      const execAsync = util.promisify(exec);
-
-      try {
-        await execAsync('docker stop nodeterm-guacd');
-        console.log('[GuacdService] Contenedor detenido exitosamente');
-      } catch (error) {
-        console.log('[GuacdService] Contenedor no estaba corriendo o ya fue eliminado');
-      }
-
-      try {
-        await execAsync('docker rm nodeterm-guacd');
-        console.log('[GuacdService] Contenedor eliminado exitosamente');
-      } catch (error) {
-        console.log('[GuacdService] Contenedor no existía o ya fue eliminado');
-      }
-
-      // Reiniciar guacd con la nueva configuración
-      console.log('[GuacdService] Reiniciando guacd con nueva carpeta:', this.driveHostDir);
-      this.isRunning = false;
-      await this.startWithDocker();
-
-    } catch (error) {
-      console.error('[GuacdService] Error recreando contenedor Docker:', error);
+    if (this._recreationPromise) {
+      console.log('[GuacdService] Recreación del contenedor Docker ya en progreso. Esperando...');
+      return this._recreationPromise;
     }
+
+    this._recreationPromise = (async () => {
+      try {
+        console.log('[GuacdService] Deteniendo contenedor Docker existente...');
+
+        // Detener y eliminar el contenedor existente
+        const { exec } = require('child_process');
+        const util = require('util');
+        const execAsync = util.promisify(exec);
+
+        try {
+          await execAsync('docker stop nodeterm-guacd');
+          console.log('[GuacdService] Contenedor detenido exitosamente');
+        } catch (error) {
+          console.log('[GuacdService] Contenedor no estaba corriendo o ya fue eliminado');
+        }
+
+        try {
+          await execAsync('docker rm nodeterm-guacd');
+          console.log('[GuacdService] Contenedor eliminado exitosamente');
+        } catch (error) {
+          console.log('[GuacdService] Contenedor no existía o ya fue eliminado');
+        }
+
+        // Reiniciar guacd con la nueva configuración
+        console.log('[GuacdService] Reiniciando guacd con nueva carpeta:', this.driveHostDir);
+        this.isRunning = false;
+        await this.startWithDocker();
+
+      } catch (error) {
+        console.error('[GuacdService] Error recreando contenedor Docker:', error);
+      } finally {
+        this._recreationPromise = null;
+      }
+    })();
+
+    return this._recreationPromise;
   }
 
   /**
@@ -1443,9 +1463,6 @@ class GuacdService {
     return true;
   }
 
-  /**
-   * Detiene el servicio guacd
-   */
   async stop() {
     // Detener health check si está activo
     this._stopHealthCheck();
@@ -1466,28 +1483,39 @@ class GuacdService {
             'docker.exe' :
             'docker';
 
-        exec(`${dockerCommand} stop nodeterm-guacd`, (error) => {
-          if (error) {
-            console.error('Error deteniendo contenedor Docker:', error);
-            // Intentar con comando genérico si falla
-            if (dockerCommand !== 'docker') {
-              exec('docker stop nodeterm-guacd', (error2) => {
-                if (error2) {
-                  console.error('Error deteniendo contenedor Docker (genérico):', error2);
-                }
-              });
+        const { exec } = require('child_process');
+        const util = require('util');
+        const execAsync = util.promisify(exec);
+
+        try {
+          await execAsync(`${dockerCommand} stop nodeterm-guacd`);
+        } catch (error) {
+          console.error('Error deteniendo contenedor Docker:', error?.message);
+          // Intentar con comando genérico si falla
+          if (dockerCommand !== 'docker') {
+            try {
+              await execAsync('docker stop nodeterm-guacd');
+            } catch (error2) {
+              console.error('Error deteniendo contenedor Docker (genérico):', error2?.message);
             }
           }
-        });
+        }
       } else if (this.detectedMethod === 'wsl') {
         // Intentar detener guacd dentro de WSL
+        const { execFile } = require('child_process');
+        const util = require('util');
+        const execFileAsync = util.promisify(execFile);
         const args = this.wslDistro ? ['-d', this.wslDistro, '--', 'sh', '-lc', 'pkill -f guacd || true'] : ['--', 'sh', '-lc', 'pkill -f guacd || true'];
-        execFile('wsl.exe', args, (error) => {
-          // guacd detenido en WSL
-        });
+        try {
+          await execFileAsync('wsl.exe', args);
+        } catch (error) {
+          // Ignore error
+        }
       } else if (this.guacdProcess) {
         // Detener proceso nativo
         this.guacdProcess.kill('SIGTERM');
+        // Pequeña espera para permitir al proceso cerrarse
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
     } catch (error) {
       console.error('Error deteniendo guacd:', error);
@@ -1702,7 +1730,7 @@ class GuacdService {
    * 
    * NUEVO: Valida automáticamente rutas incompatibles con el SO actual y las corrige.
    */
-  resolveDrivePath(hostDir) {
+  async resolveDrivePath(hostDir) {
     const method = this.detectedMethod || this.preferredMethod || '';
 
     // NUEVA VALIDACIÓN: Normalizar ruta para el SO actual
@@ -1724,7 +1752,7 @@ class GuacdService {
         this.driveHostDir = dir;
 
         // Forzar recreación del contenedor Docker con la nueva carpeta
-        this._forceDockerContainerRecreation();
+        await this._forceDockerContainerRecreation();
       } else {
         console.log('[GuacdService] No se detectó cambio de carpeta o ya está actualizada');
       }

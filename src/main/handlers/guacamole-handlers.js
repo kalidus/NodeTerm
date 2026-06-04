@@ -332,7 +332,7 @@ function registerGuacamoleHandlers({
             // Si llega una carpeta de host desde UI, resolverla según método actual
             let resolvedDrivePath = null;
             if (config.driveHostDir && typeof config.driveHostDir === 'string' && config.driveHostDir.trim().length > 0 && typeof guacdService.resolveDrivePath === 'function') {
-              resolvedDrivePath = guacdService.resolveDrivePath(config.driveHostDir);
+              resolvedDrivePath = await guacdService.resolveDrivePath(config.driveHostDir);
             } else if (typeof guacdService.getDrivePathForCurrentMethod === 'function') {
               resolvedDrivePath = guacdService.getDrivePathForCurrentMethod();
             }
