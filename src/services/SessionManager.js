@@ -264,6 +264,7 @@ class SessionManager {
       
       if (decryptedData.sessions) {
         this.loadSessionsFromArray(decryptedData.sessions);
+        await this.saveSecurely(masterKey);
       }
 
       return {

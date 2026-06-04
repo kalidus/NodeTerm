@@ -2988,13 +2988,16 @@ const App = () => {
       const migratedNodes = migrateNodes(nodes);
       const hasEncryptedVault = !!localStorage.getItem('connections_encrypted');
 
+      // El árbol en Nextcloud está sanitizado (sin contraseñas); las credenciales están en connections_encrypted
+      if (hasEncryptedVault) {
+        isExternalReloadRef.current = true;
+        window.dispatchEvent(new CustomEvent('connections-synced-from-cloud', { detail: { source: 'tree-import-skipped' } }));
+        return true;
+      }
+
       isExternalReloadRef.current = true;
       setNodes(migratedNodes);
-
-      // Si hay vault cifrado, la estructura viene del árbol; las credenciales del vault al desbloquear
-      if (!hasEncryptedVault) {
-        localStorage.setItem(STORAGE_KEYS.TREE_DATA, JSON.stringify(migratedNodes));
-      }
+      localStorage.setItem(STORAGE_KEYS.TREE_DATA, JSON.stringify(migratedNodes));
 
       return true;
     } catch (error) {

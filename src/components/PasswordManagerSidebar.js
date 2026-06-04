@@ -124,6 +124,7 @@ const PasswordManagerSidebar = ({
   // Referencias y estados para el menú contextual
   const contextMenuRef = useRef(null);
   const passwordClickTimerRef = useRef(null);
+  const skipSaveFromCloudRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -260,6 +261,16 @@ const PasswordManagerSidebar = ({
     const savePasswords = async () => {
       if (isLoading) return;
 
+      if (skipSaveFromCloudRef.current) {
+        skipSaveFromCloudRef.current = false;
+        return;
+      }
+
+      // Vault cifrado en disco: no sobrescribir con estado en claro tras descarga de Nextcloud
+      if (!masterKey && localStorage.getItem('passwords_encrypted')) {
+        return;
+      }
+
       try {
         if (masterKey && secureStorage) {
           // CON master key: Guardar encriptado
@@ -344,6 +355,7 @@ const PasswordManagerSidebar = ({
               JSON.parse(encryptedData),
               masterKey
             );
+            skipSaveFromCloudRef.current = true;
             setPasswordNodes(decrypted);
             if (!silent) {
               showToast && showToast({

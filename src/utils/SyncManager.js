@@ -506,7 +506,7 @@ class SyncManager {
       
       // Sincronizar sesiones cifradas si hay clave maestra
       let sessionsResult = null;
-      if (this.secureStorage.hasSavedMasterKey()) {
+      if (await this.secureStorage.checkHasSavedMasterKey()) {
         try {
           const sessionManager = await this.getSessionManager();
           if (sessionManager) {
@@ -745,7 +745,7 @@ class SyncManager {
 
       // Sincronizar sesiones cifradas si hay clave maestra
       let sessionsResult = null;
-      if (this.secureStorage.hasSavedMasterKey()) {
+      if (await this.secureStorage.checkHasSavedMasterKey()) {
         try {
           const sessionManager = await this.getSessionManager();
           if (sessionManager) {
