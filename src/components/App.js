@@ -2394,47 +2394,51 @@ const App = () => {
     return () => window.removeEventListener('open-browser-tab', handler);
   }, [getAllTabs]);
 
-  // Crear y activar pestaña de carpeta de passwords
+  // Una sola pestaña de exploración de carpetas de passwords; se actualiza al cambiar de carpeta
+  const PASSWORD_FOLDER_TAB_KEY = 'password-folder-view';
   useEffect(() => {
     const handler = (e) => {
       const info = e.detail || {};
-
-      const existingTabs = getAllTabs();
-      const existingTab = existingTabs.find(t => t.type === TAB_TYPES.PASSWORD_FOLDER && t.folderData?.folderKey === info.folderKey);
-      if (existingTab) {
-        const tabIndex = existingTabs.findIndex(t => t.key === existingTab.key);
-        if (tabIndex !== -1) {
-          setActiveTabIndex(tabIndex);
-          setGroupActiveIndices(prev => ({ ...prev, 'no-group': tabIndex }));
-        }
-        return;
-      }
-
-      const tabId = `${info.folderKey}_${Date.now()}`;
       const folderData = {
         folderKey: info.folderKey,
         folderLabel: info.folderLabel,
         passwords: info.passwords || []
       };
-      // Usar TAB_TYPES.PASSWORD_FOLDER para el nuevo tipo de pestaña
+
+      const existingTabs = getAllTabs();
+      const existingTab = existingTabs.find(t => t.type === TAB_TYPES.PASSWORD_FOLDER);
+
+      const activateTab = (tabKey) => {
+        const allTabs = getAllTabs();
+        const tabIndex = allTabs.findIndex(t => t.key === tabKey);
+        if (tabIndex !== -1) {
+          setActiveTabIndex(tabIndex);
+          setGroupActiveIndices(prev => ({ ...prev, 'no-group': tabIndex }));
+        }
+      };
+
+      if (existingTab) {
+        setSshTabs(prev => prev.map(t =>
+          t.key === existingTab.key
+            ? { ...t, label: `📁 ${info.folderLabel}`, folderData }
+            : t
+        ));
+        activateTab(existingTab.key);
+        return;
+      }
+
       const newTab = {
-        key: tabId,
+        key: PASSWORD_FOLDER_TAB_KEY,
         label: `📁 ${info.folderLabel}`,
         type: TAB_TYPES.PASSWORD_FOLDER,
         folderData,
         createdAt: Date.now()
       };
       setSshTabs(prev => [newTab, ...prev]);
-      // Activar la nueva pestaña usando la misma lógica que otras pestañas
       setTimeout(() => {
-        setLastOpenedTabKey(tabId);
-        setOnCreateActivateTabKey(tabId);
-        const allTabs = getAllTabs();
-        const tabIndex = allTabs.findIndex(t => t.key === tabId);
-        if (tabIndex !== -1) {
-          setActiveTabIndex(tabIndex);
-          setGroupActiveIndices(prev => ({ ...prev, 'no-group': tabIndex }));
-        }
+        setLastOpenedTabKey(PASSWORD_FOLDER_TAB_KEY);
+        setOnCreateActivateTabKey(PASSWORD_FOLDER_TAB_KEY);
+        activateTab(PASSWORD_FOLDER_TAB_KEY);
       }, 0);
     };
     window.addEventListener('open-password-folder-tab', handler);

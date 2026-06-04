@@ -734,11 +734,6 @@ const TabContentRendererInner = React.memo(({
     const endIndex = startIndex + ITEMS_PER_PAGE;
     const currentPasswords = passwords.slice(startIndex, endIndex);
 
-    // Resetear página cuando cambie la carpeta
-    React.useEffect(() => {
-      setCurrentPage(1);
-    }, [tab.key]);
-
     const copyToClipboard = async (text, fieldName, passwordData = null) => {
       try {
         if (window.electron?.clipboard?.writeText) {
@@ -777,6 +772,12 @@ const TabContentRendererInner = React.memo(({
 
     // Estado para fila seleccionada
     const [selectedRowIndex, setSelectedRowIndex] = React.useState(null);
+
+    // Resetear página y selección cuando cambie la carpeta
+    React.useEffect(() => {
+      setCurrentPage(1);
+      setSelectedRowIndex(null);
+    }, [tab.folderData?.folderKey]);
 
     // Función para truncar texto
     const truncateText = (text, maxLength = 40) => {
