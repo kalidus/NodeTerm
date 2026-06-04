@@ -996,7 +996,7 @@ const getSplashHtml = (style) => `<!DOCTYPE html>
     .hud-frame {
       display: none;
       width: 100%;
-      height: 85px;
+      height: 115px;
       border: 1px solid transparent;
       position: relative;
       padding: 6px 12px;
@@ -1211,7 +1211,7 @@ function createWindow() {
   try {
     const d = screen.getPrimaryDisplay();
     const r = d.workArea || d.bounds;
-    const W = 420, H = 320;
+    const W = 420, H = 400;
     const x = Math.round(r.x + (r.width - W) / 2);
     const y = Math.round(r.y + (r.height - H) / 2);
     splashWindow = new BrowserWindow({
