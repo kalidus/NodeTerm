@@ -159,6 +159,25 @@ const DocumentsSidebar = ({
     return selectedKey ? findNodeInTree(documentNodes, selectedKey) : null;
   }, [selectedNodeKey, documentNodes]);
 
+  const countNotesInFolder = useCallback((folderNode) => {
+    let count = 0;
+    const traverse = (node) => {
+      if (node.children) {
+        node.children.forEach(child => {
+          const isChildFolder = child.droppable || child.data?.type === 'document-folder';
+          if (isChildFolder) {
+            traverse(child);
+          } else {
+            count++;
+          }
+        });
+      }
+    };
+    const fullNode = findNodeInTree(documentNodes, folderNode.key) || folderNode;
+    traverse(fullNode);
+    return count;
+  }, [documentNodes]);
+
   const handleNodeUpdate = useCallback((updatedNode) => {
     setDocumentNodes(prev =>
       updateNodeInTree(prev, updatedNode.key, updatedNode)
@@ -662,6 +681,12 @@ const DocumentsSidebar = ({
             {node.label}
           </span>
         )}
+        {!isInlineRenaming && isFolder && (() => {
+          const count = countNotesInFolder(node);
+          return count > 0 ? (
+            <span className="qnp-count-badge" style={{ marginLeft: 'auto', marginRight: '4px' }}>{count}</span>
+          ) : null;
+        })()}
       </span>
     );
   };
