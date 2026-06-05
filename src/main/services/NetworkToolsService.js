@@ -1917,7 +1917,7 @@ class NetworkToolsService {
    * Resuelve MAC (ping + vecinos + nmap)
    * @private
    */
-  async _resolveMacForHost(ip, neighborTable) {
+  async _resolveMacForHost(ip, neighborTable, nmapEnabled = true) {
     let mac = neighborTable[ip] || null;
 
     if (!mac) {
@@ -1932,7 +1932,7 @@ class NetworkToolsService {
 
     let vendor = mac ? this._lookupMacVendor(mac) : null;
 
-    if (!mac) {
+    if (!mac && nmapEnabled) {
       const nmapData = await this._nmapEnrichHost(ip);
       if (nmapData?.mac) {
         mac = nmapData.mac;
@@ -2332,7 +2332,7 @@ class NetworkToolsService {
    * Enriquece un host descubierto con MAC, hostname, SO, etc.
    * @private
    */
-  async _enrichDiscoveredHost(host, neighborTable, onProgress) {
+  async _enrichDiscoveredHost(host, neighborTable, onProgress, options = {}) {
     host.hostnames = host.hostnames || (host.hostname ? [host.hostname] : []);
     host.netbiosName = host.netbiosName || null;
     host.netbiosGroup = host.netbiosGroup || null;
@@ -2360,7 +2360,7 @@ class NetworkToolsService {
     } catch { /* ignore */ }
 
     try {
-      const { mac, vendor, nmapData } = await this._resolveMacForHost(host.ip, neighborTable);
+      const { mac, vendor, nmapData } = await this._resolveMacForHost(host.ip, neighborTable, options.nmapEnabled !== false);
       if (mac) {
         host.mac = mac;
         neighborTable[host.ip] = mac;
@@ -2382,7 +2382,7 @@ class NetworkToolsService {
       }
     } catch { /* ignore */ }
 
-    if (!host.os) {
+    if (!host.os && options.nmapEnabled !== false) {
       try {
         const nmapOnly = await this._nmapEnrichHost(host.ip);
         if (nmapOnly) {
@@ -2419,7 +2419,7 @@ class NetworkToolsService {
       } catch { /* ignore */ }
     }
 
-    if (this.platform === 'win32' && !host.hostname) {
+    if (this.platform === 'win32' && !host.hostname && options.netbiosEnabled !== false) {
       try {
         const nb = await this._getNetbiosInfo(host.ip);
         if (nb.name) {
@@ -2442,7 +2442,8 @@ class NetworkToolsService {
     }
 
     try {
-      host.openPorts = await this._quickProbePorts(host.ip);
+      const customPorts = options.portsToScan ? this._parsePorts(options.portsToScan) : undefined;
+      host.openPorts = await this._quickProbePorts(host.ip, customPorts);
       if (host.openPorts.length > 0) addSource('port-probe');
     } catch { /* ignore */ }
 
@@ -2554,7 +2555,7 @@ class NetworkToolsService {
 
     const scanMode = options.mode === 'quick' ? 'quick' : 'full';
     const isQuick = scanMode === 'quick';
-    const pingTimeout = isQuick ? Math.min(timeout, 450) : timeout;
+    const pingTimeout = options.pingTimeout || (isQuick ? Math.min(timeout, 450) : timeout);
 
     const results = {
       success: true,
@@ -2569,7 +2570,7 @@ class NetworkToolsService {
     const startTime = Date.now();
     const startIp = this._ipToInt(subnetInfo.firstHost);
     const endIp = this._ipToInt(subnetInfo.lastHost);
-    const concurrency = isQuick ? 90 : 50;
+    const concurrency = options.concurrency || (isQuick ? 90 : 50);
 
     const ipList = [];
     for (let ip = startIp; ip <= endIp; ip++) {
@@ -2657,7 +2658,7 @@ class NetworkToolsService {
       for (let i = 0; i < results.hosts.length; i += enrichConcurrency) {
         const batch = results.hosts.slice(i, i + enrichConcurrency);
         await Promise.all(
-          batch.map(host => this._enrichDiscoveredHost(host, neighborTable, onProgress))
+          batch.map(host => this._enrichDiscoveredHost(host, neighborTable, onProgress, options))
         );
       }
     }

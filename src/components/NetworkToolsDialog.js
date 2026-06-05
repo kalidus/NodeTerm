@@ -161,6 +161,14 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
   const [portScanPorts, setPortScanPorts] = useState('21,22,23,25,53,80,110,143,443,993,995,3306,3389,5432,8080');
   
   const [networkScanSubnet, setNetworkScanSubnet] = useState('');
+
+  // Configuración de escaneo de red
+  const [showScanConfig, setShowScanConfig] = useState(false);
+  const [scanPingTimeout, setScanPingTimeout] = useState(1000);
+  const [scanConcurrency, setScanConcurrency] = useState(50);
+  const [scanPortsToScan, setScanPortsToScan] = useState('22,80,135,139,443,445,3389,548,5357');
+  const [scanNmapEnabled, setScanNmapEnabled] = useState(true);
+  const [scanNetbiosEnabled, setScanNetbiosEnabled] = useState(true);
   
   // Cyberpunk Network Scan states
   const [cyberpunkMode, setCyberpunkMode] = useState(true);
@@ -1539,8 +1547,13 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
           if (!subnetToScan) throw new Error('Subred es requerida');
           response = await ipc.invoke('network-tools:network-scan', { 
             subnet: subnetToScan,
-            timeout: networkScanMode === 'quick' ? 400 : 1000,
-            mode: networkScanMode
+            timeout: networkScanMode === 'quick' ? 400 : (options.pingTimeout || scanPingTimeout),
+            mode: networkScanMode,
+            pingTimeout: networkScanMode === 'quick' ? undefined : (options.pingTimeout || scanPingTimeout),
+            concurrency: networkScanMode === 'quick' ? undefined : (options.concurrency || scanConcurrency),
+            portsToScan: networkScanMode === 'quick' ? undefined : (options.portsToScan !== undefined ? options.portsToScan : scanPortsToScan),
+            nmapEnabled: networkScanMode === 'quick' ? undefined : (options.nmapEnabled !== undefined ? options.nmapEnabled : scanNmapEnabled),
+            netbiosEnabled: networkScanMode === 'quick' ? undefined : (options.netbiosEnabled !== undefined ? options.netbiosEnabled : scanNetbiosEnabled)
           });
           break;
 
@@ -5362,65 +5375,175 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                   </div>
                 )}
                 {selectedTool === 'network-scan' && !isSavingScan && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <span style={{ color: '#f59e0b', fontSize: '0.75rem', fontWeight: '600' }}>Subred:</span>
-                    <InputText value={networkScanSubnet} onChange={(e) => setNetworkScanSubnet(e.target.value)} placeholder="192.168.1.0/24" onKeyPress={(e) => e.key === 'Enter' && executeTool({ networkScanMode: 'quick' })} style={{ width: '160px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} />
-                    <Button label="Rápido" icon="pi pi-bolt" onClick={() => executeTool({ networkScanMode: 'quick' })} disabled={loading} title="Descubre hosts activos (ARP + DNS). Mucho más rápido." style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem' }} />
-                    <Button label="Completo" icon="pi pi-search" onClick={() => executeTool({ networkScanMode: 'full' })} disabled={loading} title="Incluye nmap, NetBIOS, SO y sondeo de puertos por host." style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem' }} />
-                    <Button label="Cyber ⚡" icon="pi pi-bolt" onClick={autoDetectAndScan} disabled={loading} title="Auto-detecta subred y escaneo rápido en vista cyber." style={{ background: 'linear-gradient(135deg, #00f0ff 0%, #ff007f 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem', fontWeight: 'bold', boxShadow: '0 0 10px rgba(0, 240, 255, 0.4)', color: '#fff' }} />
-                    <Button 
-                      label={cyberpunkMode ? "Cyber: ON 🕶️" : "Cyber: OFF 🕶️"} 
-                      icon={cyberpunkMode ? "pi pi-eye" : "pi pi-eye-slash"}
-                      onClick={() => setCyberpunkMode(!cyberpunkMode)} 
-                      style={{ 
-                        background: cyberpunkMode ? 'linear-gradient(135deg, rgba(255,0,127,0.2) 0%, rgba(124,0,255,0.2) 100%)' : 'rgba(255,255,255,0.06)',
-                        border: cyberpunkMode ? '1px solid #ff007f' : '1px solid rgba(255,255,255,0.15)',
-                        borderRadius: '6px', 
-                        padding: '0.35rem 0.6rem', 
-                        height: '30px', 
-                        fontSize: '0.75rem',
-                        color: cyberpunkMode ? '#ff007f' : 'var(--text-color-secondary)',
-                        boxShadow: cyberpunkMode ? '0 0 8px rgba(255,0,127,0.2)' : 'none'
-                      }} 
-                    />
-                    <Button 
-                      label="Guardar" 
-                      icon="pi pi-bookmark" 
-                      onClick={() => {
-                        if (!networkScanSubnet.trim()) return;
-                        setSaveScanName('');
-                        setIsSavingScan(true);
-                      }} 
-                      disabled={loading || !networkScanSubnet.trim()} 
-                      style={{ 
-                        background: 'rgba(245,158,11,0.08)', 
-                        border: '1px solid rgba(245,158,11,0.3)', 
-                        borderRadius: '6px', 
-                        padding: '0.35rem 0.6rem', 
-                        height: '30px', 
-                        fontSize: '0.75rem', 
-                        color: '#f59e0b'
-                      }} 
-                    />
-                    {result && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <span style={{ color: '#f59e0b', fontSize: '0.75rem', fontWeight: '600' }}>Subred:</span>
+                      <InputText value={networkScanSubnet} onChange={(e) => setNetworkScanSubnet(e.target.value)} placeholder="192.168.1.0/24" onKeyPress={(e) => e.key === 'Enter' && executeTool({ networkScanMode: 'quick' })} style={{ width: '160px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '6px', color: 'var(--text-color)', padding: '0.35rem 0.5rem', fontSize: '0.8rem', height: '30px' }} />
+                      <Button label="Rápido" icon="pi pi-bolt" onClick={() => executeTool({ networkScanMode: 'quick' })} disabled={loading} title="Descubre hosts activos (ARP + DNS). Mucho más rápido." style={{ background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem' }} />
+                      <Button label="Completo" icon="pi pi-search" onClick={() => executeTool({ networkScanMode: 'full' })} disabled={loading} title="Incluye nmap, NetBIOS, SO y sondeo de puertos por host." style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem' }} />
                       <Button 
-                        label="Ver Guardados" 
-                        icon="pi pi-list" 
-                        onClick={() => {
-                          setResult(null);
-                          setViewingSavedScan(null);
-                        }}
+                        icon="pi pi-cog" 
+                        onClick={() => setShowScanConfig(!showScanConfig)} 
                         style={{ 
-                          background: 'rgba(255,255,255,0.06)', 
-                          border: '1px solid rgba(255,255,255,0.15)',
+                          background: showScanConfig ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.06)',
+                          border: showScanConfig ? '1px solid #f59e0b' : '1px solid rgba(255,255,255,0.15)',
+                          borderRadius: '6px', 
+                          padding: '0.35rem', 
+                          height: '30px', 
+                          width: '30px',
+                          fontSize: '0.75rem', 
+                          color: showScanConfig ? '#f59e0b' : 'var(--text-color-secondary)'
+                        }} 
+                        title="Configuración de escaneo completo"
+                      />
+                      <Button label="Cyber ⚡" icon="pi pi-bolt" onClick={autoDetectAndScan} disabled={loading} title="Auto-detecta subred y escaneo rápido en vista cyber." style={{ background: 'linear-gradient(135deg, #00f0ff 0%, #ff007f 100%)', border: 'none', borderRadius: '6px', padding: '0.35rem 0.75rem', height: '30px', fontSize: '0.75rem', fontWeight: 'bold', boxShadow: '0 0 10px rgba(0, 240, 255, 0.4)', color: '#fff' }} />
+                      <Button 
+                        label={cyberpunkMode ? "Cyber: ON 🕶️" : "Cyber: OFF 🕶️"} 
+                        icon={cyberpunkMode ? "pi pi-eye" : "pi pi-eye-slash"}
+                        onClick={() => setCyberpunkMode(!cyberpunkMode)} 
+                        style={{ 
+                          background: cyberpunkMode ? 'linear-gradient(135deg, rgba(255,0,127,0.2) 0%, rgba(124,0,255,0.2) 100%)' : 'rgba(255,255,255,0.06)',
+                          border: cyberpunkMode ? '1px solid #ff007f' : '1px solid rgba(255,255,255,0.15)',
+                          borderRadius: '6px', 
+                          padding: '0.35rem 0.6rem', 
+                          height: '30px', 
+                          fontSize: '0.75rem',
+                          color: cyberpunkMode ? '#ff007f' : 'var(--text-color-secondary)',
+                          boxShadow: cyberpunkMode ? '0 0 8px rgba(255,0,127,0.2)' : 'none'
+                        }} 
+                      />
+                      <Button 
+                        label="Guardar" 
+                        icon="pi pi-bookmark" 
+                        onClick={() => {
+                          if (!networkScanSubnet.trim()) return;
+                          setSaveScanName('');
+                          setIsSavingScan(true);
+                        }} 
+                        disabled={loading || !networkScanSubnet.trim()} 
+                        style={{ 
+                          background: 'rgba(245,158,11,0.08)', 
+                          border: '1px solid rgba(245,158,11,0.3)', 
                           borderRadius: '6px', 
                           padding: '0.35rem 0.6rem', 
                           height: '30px', 
                           fontSize: '0.75rem', 
-                          color: 'var(--text-color-secondary)',
-                          marginLeft: '0.25rem'
+                          color: '#f59e0b'
                         }} 
                       />
+                      {result && (
+                        <Button 
+                          label="Ver Guardados" 
+                          icon="pi pi-list" 
+                          onClick={() => {
+                            setResult(null);
+                            setViewingSavedScan(null);
+                          }}
+                          style={{ 
+                            background: 'rgba(255,255,255,0.06)', 
+                            border: '1px solid rgba(255,255,255,0.15)',
+                            borderRadius: '6px', 
+                            padding: '0.35rem 0.6rem', 
+                            height: '30px', 
+                            fontSize: '0.75rem', 
+                            color: 'var(--text-color-secondary)',
+                            marginLeft: '0.25rem'
+                          }} 
+                        />
+                      )}
+                    </div>
+                    {showScanConfig && (
+                      <div style={{
+                        marginTop: '0.5rem',
+                        background: 'rgba(30, 25, 45, 0.4)',
+                        border: '1px solid rgba(245,158,11,0.2)',
+                        borderRadius: '8px',
+                        padding: '0.75rem 1rem',
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                        gap: '1rem',
+                        width: '100%',
+                        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.35)'
+                      }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                          <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#f59e0b' }}>Puertos a sondear:</span>
+                          <InputText 
+                            value={scanPortsToScan} 
+                            onChange={(e) => setScanPortsToScan(e.target.value)} 
+                            placeholder="Ej: 22,80,443" 
+                            style={{ 
+                              background: 'rgba(255,255,255,0.05)', 
+                              border: '1px solid rgba(255,255,255,0.15)', 
+                              borderRadius: '6px', 
+                              color: 'var(--text-color)', 
+                              padding: '0.35rem 0.5rem', 
+                              fontSize: '0.75rem',
+                              height: '28px'
+                            }} 
+                          />
+                          <span style={{ fontSize: '0.6rem', color: 'var(--text-color-secondary)' }}>Lista o rango (ej: 1-1024). Vacío para ninguno.</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                          <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#f59e0b' }}>Timeout Ping (ms):</span>
+                          <InputNumber 
+                            value={scanPingTimeout} 
+                            onValueChange={(e) => setScanPingTimeout(e.value || 1000)} 
+                            min={100}
+                            max={10000}
+                            showButtons={false}
+                            inputStyle={{ 
+                              background: 'rgba(255,255,255,0.05)', 
+                              border: '1px solid rgba(255,255,255,0.15)', 
+                              borderRadius: '6px', 
+                              color: 'var(--text-color)', 
+                              padding: '0.35rem 0.5rem', 
+                              fontSize: '0.75rem',
+                              height: '28px',
+                              width: '100%'
+                            }} 
+                          />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                          <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#f59e0b' }}>Concurrencia (hosts):</span>
+                          <InputNumber 
+                            value={scanConcurrency} 
+                            onValueChange={(e) => setScanConcurrency(e.value || 50)} 
+                            min={1}
+                            max={254}
+                            showButtons={false}
+                            inputStyle={{ 
+                              background: 'rgba(255,255,255,0.05)', 
+                              border: '1px solid rgba(255,255,255,0.15)', 
+                              borderRadius: '6px', 
+                              color: 'var(--text-color)', 
+                              padding: '0.35rem 0.5rem', 
+                              fontSize: '0.75rem',
+                              height: '28px',
+                              width: '100%'
+                            }} 
+                          />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', justifyContent: 'center' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.75rem', color: '#e8f4ff' }}>
+                            <input 
+                              type="checkbox" 
+                              checked={scanNmapEnabled} 
+                              onChange={(e) => setScanNmapEnabled(e.checked ?? e.target.checked)} 
+                              style={{ accentColor: '#f59e0b', cursor: 'pointer' }}
+                            />
+                            Detección avanzada SO (Nmap)
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.75rem', color: '#e8f4ff' }}>
+                            <input 
+                              type="checkbox" 
+                              checked={scanNetbiosEnabled} 
+                              onChange={(e) => setScanNetbiosEnabled(e.checked ?? e.target.checked)} 
+                              style={{ accentColor: '#f59e0b', cursor: 'pointer' }}
+                            />
+                            Resolución NetBIOS
+                          </label>
+                        </div>
+                      </div>
                     )}
                   </div>
                 )}

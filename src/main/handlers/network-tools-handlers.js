@@ -257,7 +257,7 @@ function registerNetworkToolsHandlers() {
   });
 
   // === NETWORK SCAN ===
-  ipcMain.handle('network-tools:network-scan', async (event, { subnet, timeout = 1000, mode = 'full' }) => {
+  ipcMain.handle('network-tools:network-scan', async (event, { subnet, timeout = 1000, mode = 'full', pingTimeout, concurrency, portsToScan, nmapEnabled, netbiosEnabled }) => {
     try {
       if (!subnet) {
         return { success: false, error: 'Subred es requerida' };
@@ -275,7 +275,14 @@ function registerNetworkToolsHandlers() {
         }
       };
       
-      const result = await service.networkScan(subnet, scanTimeout, onProgress, { mode: scanMode });
+      const result = await service.networkScan(subnet, scanTimeout, onProgress, { 
+        mode: scanMode,
+        pingTimeout,
+        concurrency,
+        portsToScan,
+        nmapEnabled,
+        netbiosEnabled
+      });
       if (!result || typeof result !== 'object') {
         return { success: false, error: 'Respuesta inválida del servicio' };
       }
