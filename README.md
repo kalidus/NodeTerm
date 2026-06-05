@@ -149,11 +149,10 @@ El historial detallado vive solo en **[CHANGELOG.md](CHANGELOG.md)**. Las [GitHu
 
 | | |
 |--|--|
-| **En desarrollo** | **v1.6.8** — rama `release/1.6.8` |
-| **Última publicada** | **[v1.6.7](https://github.com/kalidus/NodeTerm/releases)** (21 mayo 2026) |
+| **Última publicada** | **[v1.6.8](https://github.com/kalidus/NodeTerm/releases/tag/v1.6.8)** (5 junio 2026) |
 | **Instaladores** | [Descargas en Releases](https://github.com/kalidus/NodeTerm/releases) |
 
-**Resumen de v1.6.7:** sidebar con pestañas y favoritos; notas con Tiptap; diálogos SSH/RDP/VNC unificados; clientes de IA en terminal; seguridad y arranque mejorados.
+**Resumen de v1.6.8:** retira el chat de IA integrado y el MCP nativo de NodeTerm; mantiene clientes IA dedicados (AnythingLLM, CLI, Docker); menos carga en arranque y sync más limpio entre instancias.
 
 ---
 
@@ -239,7 +238,7 @@ NodeTerm/
 
 | Versión | Foco | Estado |
 |---------|------|--------|
-| **v1.6.8** | Cambios en esta rama | 🔄 En preparación |
+| **v1.6.8** | Limpieza IA/MCP, rendimiento | ✅ Publicada |
 | **v1.6.7** | Sidebar, notas, conexiones, IA | ✅ Publicada |
 | **v1.7.0** | Llaves SSH y autenticación mejorada | 📋 Planificado |
 | **v1.8.0** | Terminal multi-shell integrado | 💭 Concepto |
