@@ -3188,33 +3188,129 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                                 </div>
                               )}
 
-                              {/* Web Security checks failed */}
-                              {webSecRes.success && webSecRes.checks && webSecRes.checks.length > 0 && (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.25rem' }}>
+                              {/* Web Security Expanded Details */}
+                              {webSecRes.success && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.25rem' }}>
                                   <div style={{ fontSize: '0.65rem', color: '#00f0ff', fontWeight: 'bold', borderBottom: '1px dashed rgba(0, 240, 255, 0.2)', paddingBottom: '2px' }}>
-                                    [CHECKS_WEB_FALLIDOS]
+                                    [ANÁLISIS_SEGURIDAD_WEB]
                                   </div>
-                                  {webSecRes.checks.filter(c => !c.passed).slice(0, 4).map((check, cIdx) => (
-                                    <div key={cIdx} style={{
-                                      padding: '0.3rem',
-                                      background: 'rgba(239, 68, 68, 0.08)',
-                                      border: '1px solid rgba(239, 68, 68, 0.2)',
-                                      borderRadius: '4px',
-                                      fontSize: '0.65rem'
-                                    }}>
-                                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', color: '#ef4444', marginBottom: '2px' }}>
-                                        <span>{check.name}</span>
-                                        <span>-{check.scoreImpact} pts</span>
+
+                                  {/* SSL/TLS Details */}
+                                  {webSecRes.ssl && webSecRes.ssl.success && (
+                                    <details style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '4px', padding: '0.4rem' }}>
+                                      <summary style={{ cursor: 'pointer', fontWeight: 'bold', fontSize: '0.65rem', color: '#00f0ff', display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>🔒 CERTIFICADO SSL/TLS</span>
+                                        <span style={{ color: webSecRes.ssl.certificate?.isValid ? '#22c55e' : '#ef4444' }}>
+                                          {webSecRes.ssl.certificate?.isValid ? 'VÁLIDO' : 'INVÁLIDO'}
+                                        </span>
+                                      </summary>
+                                      <div style={{ marginTop: '0.4rem', fontSize: '0.6rem', display: 'flex', flexDirection: 'column', gap: '0.2rem', paddingLeft: '0.5rem' }}>
+                                        {webSecRes.ssl.certificate && (
+                                          <>
+                                            <div><strong>Emisor:</strong> {webSecRes.ssl.certificate.issuer?.O || webSecRes.ssl.certificate.issuer?.CN || (typeof webSecRes.ssl.certificate.issuer === 'string' ? webSecRes.ssl.certificate.issuer : 'N/A')}</div>
+                                            <div><strong>Expira:</strong> {webSecRes.ssl.certificate.validTo || 'N/A'} ({webSecRes.ssl.certificate.daysUntilExpiry || 0} días restantes)</div>
+                                            <div><strong>Sujeto:</strong> {webSecRes.ssl.certificate.subject?.CN || webSecRes.ssl.certificate.subject?.O || (typeof webSecRes.ssl.certificate.subject === 'string' ? webSecRes.ssl.certificate.subject : 'N/A')}</div>
+                                          </>
+                                        )}
+                                        {webSecRes.ssl.supportedProtocols && webSecRes.ssl.supportedProtocols.length > 0 && (
+                                          <div style={{ marginTop: '3px' }}>
+                                            <strong>Protocolos Soportados:</strong>{' '}
+                                            {webSecRes.ssl.supportedProtocols.map((p, idx) => (
+                                              <Badge 
+                                                key={idx} 
+                                                value={p.name} 
+                                                severity={p.deprecated ? 'danger' : 'success'} 
+                                                style={{ fontSize: '0.5rem', marginRight: '2px', padding: '0.1rem 0.25rem' }} 
+                                              />
+                                            ))}
+                                          </div>
+                                        )}
                                       </div>
-                                      <div style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.6rem' }}>
-                                        {check.description}
+                                    </details>
+                                  )}
+
+                                  {/* HTTP Headers */}
+                                  {webSecRes.headers && Object.keys(webSecRes.headers).length > 0 && (
+                                    <details style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '4px', padding: '0.4rem' }}>
+                                      <summary style={{ cursor: 'pointer', fontWeight: 'bold', fontSize: '0.65rem', color: '#00f0ff', display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>📋 CABECERAS HTTP DETECTADAS</span>
+                                        <span style={{ color: 'rgba(255,255,255,0.4)' }}>
+                                          {Object.keys(webSecRes.headers).length}
+                                        </span>
+                                      </summary>
+                                      <div style={{ marginTop: '0.4rem', fontSize: '0.6rem', display: 'flex', flexDirection: 'column', gap: '0.2rem', paddingLeft: '0.5rem', maxHeight: '150px', overflowY: 'auto' }}>
+                                        {Object.entries(webSecRes.headers).map(([key, val]) => (
+                                          <div key={key} style={{ borderBottom: '1px dashed rgba(255,255,255,0.03)', paddingBottom: '2px', wordBreak: 'break-all' }}>
+                                            <strong style={{ color: '#ffb700' }}>{key}:</strong> {String(val)}
+                                          </div>
+                                        ))}
                                       </div>
-                                    </div>
-                                  ))}
-                                  {webSecRes.checks.filter(c => !c.passed).length === 0 && (
-                                    <div style={{ fontSize: '0.65rem', color: '#22c55e', fontStyle: 'italic' }}>
-                                      ✓ Aprobó todos los checks de cabeceras/cookies.
-                                    </div>
+                                    </details>
+                                  )}
+
+                                  {/* Cookies Security */}
+                                  {webSecRes.cookies && webSecRes.cookies.length > 0 && (
+                                    <details style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '4px', padding: '0.4rem' }}>
+                                      <summary style={{ cursor: 'pointer', fontWeight: 'bold', fontSize: '0.65rem', color: '#00f0ff', display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>🍪 COOKIES DE SESIÓN</span>
+                                        <span style={{ color: 'rgba(255,255,255,0.4)' }}>{webSecRes.cookies.length}</span>
+                                      </summary>
+                                      <div style={{ marginTop: '0.4rem', fontSize: '0.6rem', display: 'flex', flexDirection: 'column', gap: '0.3rem', paddingLeft: '0.5rem' }}>
+                                        {webSecRes.cookies.map((cookie, idx) => (
+                                          <div key={idx} style={{ background: 'rgba(0,0,0,0.15)', padding: '0.25rem', borderRadius: '3px' }}>
+                                            <div style={{ fontWeight: 'bold', color: '#fff' }}>{cookie.name}</div>
+                                            <div style={{ display: 'flex', gap: '0.25rem', marginTop: '2px' }}>
+                                              <Badge value="HttpOnly" severity={cookie.httpOnly ? 'success' : 'danger'} style={{ fontSize: '0.5rem', padding: '0.1rem 0.25rem' }} />
+                                              <Badge value="Secure" severity={cookie.secure ? 'success' : 'danger'} style={{ fontSize: '0.5rem', padding: '0.1rem 0.25rem' }} />
+                                              {cookie.sameSite && <Badge value={`SameSite: ${cookie.sameSite}`} severity="info" style={{ fontSize: '0.5rem', padding: '0.1rem 0.25rem' }} />}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </details>
+                                  )}
+
+                                  {/* Failed Checks (Score Deductions) */}
+                                  {webSecRes.checks && webSecRes.checks.length > 0 && (
+                                    <details open style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '4px', padding: '0.4rem' }}>
+                                      <summary style={{ cursor: 'pointer', fontWeight: 'bold', fontSize: '0.65rem', color: '#ef4444', display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>⚠️ ALERTAS DE SEGURIDAD WEB</span>
+                                        <span>{webSecRes.checks.filter(c => c.status !== 'PASS').length} alertas</span>
+                                      </summary>
+                                      <div style={{ marginTop: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                                        {webSecRes.checks.filter(c => c.status !== 'PASS').slice(0, 5).map((check, cIdx) => (
+                                          <div key={cIdx} style={{
+                                            padding: '0.4rem',
+                                            background: check.status === 'FAIL' ? 'rgba(239, 68, 68, 0.08)' : 'rgba(234, 179, 8, 0.08)',
+                                            border: `1px solid ${check.status === 'FAIL' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(234, 179, 8, 0.2)'}`,
+                                            borderRadius: '4px',
+                                            fontSize: '0.65rem'
+                                          }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', color: check.status === 'FAIL' ? '#ef4444' : '#eab308', marginBottom: '2px' }}>
+                                              <span>{check.check}</span>
+                                              <Badge 
+                                                value={check.severity.toUpperCase()} 
+                                                severity={check.severity === 'critical' || check.severity === 'high' ? 'danger' : 'warning'} 
+                                                style={{ fontSize: '0.55rem', padding: '0.1rem 0.3rem' }}
+                                              />
+                                            </div>
+                                            <div style={{ color: 'rgba(255, 255, 255, 0.75)', fontSize: '0.6rem', lineHeight: '1.2' }}>
+                                              {check.details}
+                                            </div>
+                                            {check.recommendation && (
+                                              <div style={{ color: '#fbbf24', fontSize: '0.55rem', marginTop: '3px', fontStyle: 'italic' }}>
+                                                💡 {check.recommendation}
+                                              </div>
+                                            )}
+                                          </div>
+                                        ))}
+                                        {webSecRes.checks.filter(c => c.status !== 'PASS').length === 0 && (
+                                          <div style={{ fontSize: '0.65rem', color: '#22c55e', fontStyle: 'italic' }}>
+                                            ✓ Aprobó todos los checks de cabeceras/cookies.
+                                          </div>
+                                        )}
+                                      </div>
+                                    </details>
                                   )}
                                 </div>
                               )}
