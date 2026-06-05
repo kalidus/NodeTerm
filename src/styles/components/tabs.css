@@ -547,7 +547,8 @@
   border: none !important;
 }
 
-/* Separadores verticales entre pestañas inactivas */
+/* Separadores verticales entre pestañas inactivas - Eliminados a petición para evitar líneas extra y solapamiento con el botón (+) */
+/*
 :root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li:not(.p-highlight):not(.home-tab)::after {
   content: "" !important;
   position: absolute !important;
@@ -561,13 +562,13 @@
   z-index: 2 !important;
 }
 
-/* Ocultar el separador si la pestaña está activa, hovered o si la pestaña siguiente está activa o hovered */
 :root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li.p-highlight::after,
 :root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li:not(.p-highlight):hover::after,
 :root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li:has(+ li.p-highlight)::after,
 :root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li:has(+ li:hover)::after {
   opacity: 0 !important;
 }
+*/
 
 /* Ajuste del botón de cerrar pestaña en layout Chrome */
 :root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li .close-tab-btn {
