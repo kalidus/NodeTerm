@@ -238,6 +238,8 @@ const Sidebar = React.memo(({
   const loadTrash = () => { try { return JSON.parse(localStorage.getItem(TRASH_STORAGE_KEY) || '[]'); } catch { return []; } };
   const [showTrashModal, setShowTrashModal] = useState(false);
   const [trashedConnections, setTrashedConnections] = useState(loadTrash);
+  // null | { type: 'empty' } | { type: 'single', id, label }
+  const [trashConfirm, setTrashConfirm] = useState(null);
 
   // Persistir papelera cada vez que cambia
   useEffect(() => {
@@ -266,20 +268,24 @@ const Sidebar = React.memo(({
   }, [trashedConnections, setNodes, showToast]);
 
   const deleteFromTrashPermanently = useCallback((trashId, label) => {
-    const dialogToUse = confirmDialog || window.confirmDialog;
-    const doDelete = () => setTrashedConnections(prev => prev.filter(i => i.id !== trashId));
-    if (dialogToUse) {
-      dialogToUse({ message: `¿Eliminar permanentemente "${label}"? Esta acción no se puede deshacer.`, header: 'Eliminar permanentemente', icon: 'pi pi-exclamation-triangle', acceptClassName: 'p-button-danger', accept: doDelete });
-    } else { doDelete(); }
-  }, [confirmDialog]);
+    // Mostrar confirmación inline (sin depender del diálogo global)
+    setTrashConfirm({ type: 'single', id: trashId, label });
+  }, []);
 
   const emptyTrash = useCallback(() => {
-    const dialogToUse = confirmDialog || window.confirmDialog;
-    const doEmpty = () => setTrashedConnections([]);
-    if (dialogToUse) {
-      dialogToUse({ message: '¿Vaciar toda la papelera? Esta acción no se puede deshacer.', header: 'Vaciar papelera', icon: 'pi pi-exclamation-triangle', acceptClassName: 'p-button-danger', accept: doEmpty });
-    } else { doEmpty(); }
-  }, [confirmDialog]);
+    // Mostrar confirmación inline
+    setTrashConfirm({ type: 'empty' });
+  }, []);
+
+  const executeTrashConfirm = useCallback(() => {
+    if (!trashConfirm) return;
+    if (trashConfirm.type === 'empty') {
+      setTrashedConnections([]);
+    } else if (trashConfirm.type === 'single') {
+      setTrashedConnections(prev => prev.filter(i => i.id !== trashConfirm.id));
+    }
+    setTrashConfirm(null);
+  }, [trashConfirm]);
   // ────────────────────────────────────────────────────────────────────────────
 
   // Estado para modo de visualización (conexiones, passwords, localExplorer, tools)
@@ -3583,7 +3589,7 @@ const Sidebar = React.memo(({
             WebkitBackdropFilter: 'blur(6px)',
             animation: 'trashModalIn 0.18s ease',
           }}
-          onClick={e => { if (e.target === e.currentTarget) setShowTrashModal(false); }}
+          onClick={e => { if (e.target === e.currentTarget) { setShowTrashModal(false); setTrashConfirm(null); } }}
         >
           <style>{`
             @keyframes trashModalIn { from { opacity:0; transform:scale(0.95); } to { opacity:1; transform:scale(1); } }
@@ -3628,13 +3634,43 @@ const Sidebar = React.memo(({
                 </div>
               </div>
               <button
-                onClick={() => setShowTrashModal(false)}
+                onClick={() => { setShowTrashModal(false); setTrashConfirm(null); }}
                 style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', color: '#94a3b8', width: '28px', height: '28px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '12px' }}
                 title="Cerrar"
               >
                 <i className="pi pi-times" />
               </button>
             </div>
+
+            {/* ─ Confirmación inline */}
+            {trashConfirm && (
+              <div style={{
+                margin: '0', padding: '12px 16px',
+                background: 'rgba(239,68,68,0.12)',
+                borderBottom: '1px solid rgba(239,68,68,0.25)',
+                display: 'flex', alignItems: 'center', gap: '10px',
+              }}>
+                <i className="pi pi-exclamation-triangle" style={{ color: '#f87171', fontSize: '14px', flexShrink: 0 }} />
+                <span style={{ flex: 1, fontSize: '12px', color: '#fca5a5', lineHeight: 1.4 }}>
+                  {trashConfirm.type === 'empty'
+                    ? '¿Vaciar toda la papelera? No se puede deshacer.'
+                    : `¿Eliminar permanentemente «${trashConfirm.label}»?`
+                  }
+                </span>
+                <button
+                  onClick={executeTrashConfirm}
+                  style={{ background: '#ef4444', border: 'none', color: '#fff', borderRadius: '7px', padding: '5px 12px', fontSize: '11px', cursor: 'pointer', fontWeight: 700, flexShrink: 0 }}
+                >
+                  Confirmar
+                </button>
+                <button
+                  onClick={() => setTrashConfirm(null)}
+                  style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8', borderRadius: '7px', padding: '5px 10px', fontSize: '11px', cursor: 'pointer', flexShrink: 0 }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            )}
 
             {/* ─ Toolbar */}
             {trashedConnections.length > 0 && (
