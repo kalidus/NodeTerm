@@ -5,7 +5,7 @@
   <br>
   <b>Cliente SSH moderno y multiplataforma para administradores y devs</b>
   <br><br>
-  <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/badge/version-1.6.8-blue.svg"/></a>
+  <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/badge/version-1.6.9-blue.svg"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg"/></a>
   <a href="https://www.electronjs.org/"><img src="https://img.shields.io/badge/electron-latest-brightgreen.svg"/></a>
   <a href="#donaciones"><img src="https://img.shields.io/badge/💰-Donate_Crypto-yellow.svg"/></a>
@@ -149,7 +149,7 @@ El historial detallado vive solo en **[CHANGELOG.md](CHANGELOG.md)**. Las [GitHu
 
 | | |
 |--|--|
-| **Última publicada** | **[v1.6.8](https://github.com/kalidus/NodeTerm/releases/tag/v1.6.8)** (5 junio 2026) |
+| **Última publicada** | **[v1.6.9](https://github.com/kalidus/NodeTerm/releases/tag/v1.6.9)** (5 junio 2026) |
 | **Instaladores** | [Descargas en Releases](https://github.com/kalidus/NodeTerm/releases) |
 
 **Resumen de v1.6.8:** retira el chat de IA integrado y el MCP nativo de NodeTerm; mantiene clientes IA dedicados (AnythingLLM, CLI, Docker); menos carga en arranque y sync más limpio entre instancias.
@@ -238,6 +238,7 @@ NodeTerm/
 
 | Versión | Foco | Estado |
 |---------|------|--------|
+| **v1.6.9** | Actualización de captura y versión | ✅ Publicada |
 | **v1.6.8** | Limpieza IA/MCP, rendimiento | ✅ Publicada |
 | **v1.6.7** | Sidebar, notas, conexiones, IA | ✅ Publicada |
 | **v1.7.0** | Llaves SSH y autenticación mejorada | 📋 Planificado |

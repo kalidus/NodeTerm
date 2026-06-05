@@ -11,6 +11,12 @@ Borrador opcional para usuarios: `RELEASE_NOTES.md` (solo la versión en curso).
 
 ## [Unreleased]
 
+## [1.6.9] - 2026-06-05
+
+### 📝 Documentación
+- **Captura**: Sustituida la captura principal (`screenshot-main.png`) en el `README.md`.
+- **Versión**: Actualizada la versión del proyecto a `1.6.9` en `package.json`, `package-lock.json` y `README.md`.
+
 ## [1.6.8] - 2026-05-21
 
 ### 🤖 IA y clientes
