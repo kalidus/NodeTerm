@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import ReactDOM from 'react-dom';
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
 import { Dialog } from 'primereact/dialog';
@@ -465,31 +466,57 @@ const DocumentsSidebar = ({
     setRenamingNode(null);
   };
 
-  const handleDelete = (node) => {
-    const isFolder = node.droppable || node.data?.type === 'document-folder';
-    const message = isFolder
-      ? `¿Eliminar la carpeta "${node.label}" y todo su contenido?`
-      : `¿Eliminar la nota "${node.label}"?`;
+  // ── Papelera de notas/documentos ─────────────────────────────────────────────────────
+  const DOC_TRASH_KEY = 'nodeterm_trash_documents';
+  const loadDocTrash = () => { try { return JSON.parse(localStorage.getItem(DOC_TRASH_KEY) || '[]'); } catch { return []; } };
+  const [showDocTrashModal, setShowDocTrashModal] = useState(false);
+  const [trashedDocuments, setTrashedDocuments] = useState(loadDocTrash);
+  const [docTrashConfirm, setDocTrashConfirm] = useState(null);
 
-    if (confirmDialog) {
-      confirmDialog({
-        message,
-        header: 'Confirmar eliminación',
-        icon: 'pi pi-exclamation-triangle',
-        acceptClassName: 'p-button-danger',
-        accept: () => {
-          setDocumentNodes(prev => removeNodeFromTree(prev, node.key));
-          showToast?.({
-            severity: 'info',
-            summary: 'Eliminado',
-            detail: `"${node.label}" eliminado`,
-            life: 3000
-          });
-        }
-      });
-    } else {
-      setDocumentNodes(prev => removeNodeFromTree(prev, node.key));
+  useEffect(() => {
+    try { localStorage.setItem(DOC_TRASH_KEY, JSON.stringify(trashedDocuments)); } catch(e) { console.warn('Error guardando papelera docs:', e); }
+  }, [trashedDocuments]);
+
+  const restoreDocumentFromTrash = useCallback((trashId) => {
+    const item = trashedDocuments.find(i => i.id === trashId);
+    if (!item || !item.nodeData) return;
+    setDocumentNodes(prev => [item.nodeData, ...prev]);
+    setTrashedDocuments(prev => prev.filter(i => i.id !== trashId));
+    showToast && showToast({ severity: 'success', summary: 'Restaurado', detail: `"${item.label}" restaurado`, life: 3000 });
+  }, [trashedDocuments, showToast]);
+
+  const executeDocTrashConfirm = useCallback(() => {
+    if (!docTrashConfirm) return;
+    if (docTrashConfirm.type === 'empty') {
+      setTrashedDocuments([]);
+    } else if (docTrashConfirm.type === 'single') {
+      setTrashedDocuments(prev => prev.filter(i => i.id !== docTrashConfirm.id));
     }
+    setDocTrashConfirm(null);
+  }, [docTrashConfirm]);
+  // ────────────────────────────────────────────────────────────────────────────
+
+  const handleDelete = (node) => {
+    // Guardar copia del nodo antes de eliminar
+    const nodeCopy = JSON.parse(JSON.stringify(node));
+    // Eliminar del árbol
+    setDocumentNodes(prev => removeNodeFromTree(prev, node.key));
+    // Mover a papelera
+    const trashItem = {
+      id: `dtrash_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+      key: node.key,
+      label: node.label || 'Sin nombre',
+      isFolder: !!(node.droppable || node.data?.type === 'document-folder'),
+      deletedAt: new Date().toISOString(),
+      nodeData: nodeCopy,
+    };
+    setTrashedDocuments(prev => [trashItem, ...prev]);
+    showToast?.({
+      severity: 'success',
+      summary: 'Movido a la papelera',
+      detail: `"${node.label}" movido a la papelera`,
+      life: 3000
+    });
   };
 
   const onContextMenu = (event) => {
@@ -823,9 +850,11 @@ const DocumentsSidebar = ({
   }, [isQuickNoteSelected, deleteQuickNote, handleDelete]);
 
   return (
+    <>
     <div
       ref={sidebarRootRef}
       className={`documents-sidebar-root${quickNotesPanelOpen ? ' qnp-panel-open' : ''}`}
+      style={{ position: 'relative' }}
     >
       {!hideHeader && FUTURISTIC_UI_KEYS.includes(uiTheme) && (
         <div style={{
@@ -1174,7 +1203,112 @@ const DocumentsSidebar = ({
           />
         </div>
       </Dialog>
+      {/* ─ Botón flotante papelera docs ─ */}
+      <button
+        id="doc-trash-btn"
+        onClick={() => setShowDocTrashModal(true)}
+        title={`Papelera (${trashedDocuments.length})`}
+        style={{
+          position: 'absolute', bottom: '12px', right: '10px',
+          width: '30px', height: '30px', borderRadius: '8px', border: 'none',
+          background: trashedDocuments.length > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(120,120,140,0.12)',
+          color: trashedDocuments.length > 0 ? '#f87171' : '#888',
+          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '13px', zIndex: 10, transition: 'background 0.2s, transform 0.15s',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.background = trashedDocuments.length > 0 ? 'rgba(239,68,68,0.28)' : 'rgba(120,120,140,0.22)'; e.currentTarget.style.transform = 'scale(1.1)'; }}
+        onMouseLeave={e => { e.currentTarget.style.background = trashedDocuments.length > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(120,120,140,0.12)'; e.currentTarget.style.transform = 'scale(1)'; }}
+      >
+        <i className="pi pi-trash" style={{ fontSize: '13px' }} />
+        {trashedDocuments.length > 0 && (
+          <span style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#ef4444', color: '#fff', borderRadius: '50%', width: '14px', height: '14px', fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+            {trashedDocuments.length > 9 ? '9+' : trashedDocuments.length}
+          </span>
+        )}
+      </button>
     </div>
+
+    {/* ─ Portal modal papelera documentos ─ */}
+    {showDocTrashModal && ReactDOM.createPortal(
+      <div
+        style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', animation: 'trashModalIn 0.18s ease' }}
+        onClick={e => { if (e.target === e.currentTarget) { setShowDocTrashModal(false); setDocTrashConfirm(null); } }}
+      >
+        <style>{`@keyframes trashModalIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}} .dtrash-item:hover{background:rgba(255,255,255,0.06)!important} .dtrash-restore:hover{background:rgba(34,197,94,0.22)!important} .dtrash-del:hover{background:rgba(239,68,68,0.22)!important}`}</style>
+        <div style={{ background: 'linear-gradient(145deg,#1a1b2e,#16213e)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '16px', width: '460px', maxHeight: '560px', display: 'flex', flexDirection: 'column', boxShadow: '0 32px 80px rgba(0,0,0,0.6)', overflow: 'hidden', fontFamily: 'system-ui,-apple-system,sans-serif' }}>
+          {/* Header */}
+          <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(239,68,68,0.06)' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <i className="pi pi-trash" style={{ color: '#f87171', fontSize: '16px' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: '15px', color: '#f1f5f9' }}>Papelera de notas</div>
+              <div style={{ fontSize: '11px', color: '#64748b', marginTop: '1px' }}>
+                {trashedDocuments.length === 0 ? 'Vacía' : `${trashedDocuments.length} elemento${trashedDocuments.length !== 1 ? 's' : ''} • Se pueden restaurar`}
+              </div>
+            </div>
+            <button onClick={() => { setShowDocTrashModal(false); setDocTrashConfirm(null); }} style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', color: '#94a3b8', width: '28px', height: '28px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>
+              <i className="pi pi-times" />
+            </button>
+          </div>
+          {/* Confirmación inline */}
+          {docTrashConfirm && (
+            <div style={{ padding: '12px 16px', background: 'rgba(239,68,68,0.12)', borderBottom: '1px solid rgba(239,68,68,0.25)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <i className="pi pi-exclamation-triangle" style={{ color: '#f87171', fontSize: '14px', flexShrink: 0 }} />
+              <span style={{ flex: 1, fontSize: '12px', color: '#fca5a5', lineHeight: 1.4 }}>
+                {docTrashConfirm.type === 'empty' ? '¿Vaciar toda la papelera? No se puede deshacer.' : `¿Eliminar permanentemente «${docTrashConfirm.label}»?`}
+              </span>
+              <button onClick={executeDocTrashConfirm} style={{ background: '#ef4444', border: 'none', color: '#fff', borderRadius: '7px', padding: '5px 12px', fontSize: '11px', cursor: 'pointer', fontWeight: 700, flexShrink: 0 }}>Confirmar</button>
+              <button onClick={() => setDocTrashConfirm(null)} style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8', borderRadius: '7px', padding: '5px 10px', fontSize: '11px', cursor: 'pointer', flexShrink: 0 }}>Cancelar</button>
+            </div>
+          )}
+          {/* Toolbar */}
+          {trashedDocuments.length > 0 && (
+            <div style={{ padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.15)' }}>
+              <span style={{ fontSize: '11px', color: '#475569' }}>Haz clic en «Restaurar» para recuperar</span>
+              <button onClick={() => setDocTrashConfirm({ type: 'empty' })} style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', borderRadius: '7px', padding: '5px 12px', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 600 }}>
+                <i className="pi pi-trash" style={{ fontSize: '10px' }} /> Vaciar todo
+              </button>
+            </div>
+          )}
+          {/* Lista */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '6px 0' }}>
+            {trashedDocuments.length === 0 ? (
+              <div style={{ padding: '50px 20px', textAlign: 'center' }}>
+                <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                  <i className="pi pi-check" style={{ fontSize: '24px', color: '#4ade80' }} />
+                </div>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: '#94a3b8', marginBottom: '6px' }}>Papelera vacía</div>
+                <div style={{ fontSize: '12px', color: '#475569' }}>Las notas eliminadas aparecerán aquí</div>
+              </div>
+            ) : trashedDocuments.map((item, idx) => (
+              <div key={item.id} className="dtrash-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', borderBottom: idx < trashedDocuments.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', flexShrink: 0, background: 'rgba(100,116,139,0.15)', border: '1px solid rgba(100,116,139,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <i className={`pi ${item.isFolder ? 'pi-folder' : 'pi-file'}`} style={{ color: '#64748b', fontSize: '13px' }} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</div>
+                  <div style={{ fontSize: '10px', color: '#475569', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <i className="pi pi-clock" style={{ fontSize: '9px' }} />
+                    {new Date(item.deletedAt).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                  <button className="dtrash-restore" onClick={() => restoreDocumentFromTrash(item.id)} style={{ background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.25)', color: '#4ade80', borderRadius: '7px', padding: '5px 10px', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+                    <i className="pi pi-undo" style={{ fontSize: '10px' }} /> Restaurar
+                  </button>
+                  <button className="dtrash-del" onClick={() => setDocTrashConfirm({ type: 'single', id: item.id, label: item.label })} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.22)', color: '#f87171', borderRadius: '7px', padding: '5px 8px', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                    <i className="pi pi-times" style={{ fontSize: '10px' }} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>,
+      document.body
+    )}
+    </>
   );
 };
 

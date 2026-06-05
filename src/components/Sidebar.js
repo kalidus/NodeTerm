@@ -3509,8 +3509,8 @@ const Sidebar = React.memo(({
         <div className="sidebar-panel-content-wrapper" style={{ width: '100%', minWidth: isTransitioningSidebar ? '240px' : 0, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
           {fullSidebar}
 
-          {/* ── Botón flotante de papelera ── */}
-          {!sidebarCollapsed && (
+          {/* ── Botón flotante de papelera (solo en pestaña conexiones) ── */}
+          {!sidebarCollapsed && viewMode === 'connections' && (
             <button
               id="sidebar-trash-btn"
               onClick={() => setShowTrashModal(true)}

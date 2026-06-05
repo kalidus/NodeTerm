@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
 import { InputTextarea } from 'primereact/inputtextarea';
@@ -759,45 +760,67 @@ const PasswordManagerSidebar = ({
     resetForm();
   };
 
+  // ── Papelera de contraseñas ──────────────────────────────────────────────────
+  const PWD_TRASH_KEY = 'nodeterm_trash_passwords';
+  const loadPwdTrash = () => { try { return JSON.parse(localStorage.getItem(PWD_TRASH_KEY) || '[]'); } catch { return []; } };
+  const [showPwdTrashModal, setShowPwdTrashModal] = useState(false);
+  const [trashedPasswords, setTrashedPasswords] = useState(loadPwdTrash);
+  const [pwdTrashConfirm, setPwdTrashConfirm] = useState(null);
+
+  useEffect(() => {
+    try { localStorage.setItem(PWD_TRASH_KEY, JSON.stringify(trashedPasswords)); } catch(e) { console.warn('Error guardando papelera passwords:', e); }
+  }, [trashedPasswords]);
+
+  const restorePasswordFromTrash = useCallback((trashId) => {
+    const item = trashedPasswords.find(i => i.id === trashId);
+    if (!item || !item.nodeData) return;
+    setPasswordNodes(prev => [item.nodeData, ...prev]);
+    setTrashedPasswords(prev => prev.filter(i => i.id !== trashId));
+    showToast && showToast({ severity: 'success', summary: 'Restaurado', detail: `"${item.label}" restaurado`, life: 3000 });
+  }, [trashedPasswords, setPasswordNodes, showToast]);
+
+  const executePasswordTrashConfirm = useCallback(() => {
+    if (!pwdTrashConfirm) return;
+    if (pwdTrashConfirm.type === 'empty') {
+      setTrashedPasswords([]);
+    } else if (pwdTrashConfirm.type === 'single') {
+      setTrashedPasswords(prev => prev.filter(i => i.id !== pwdTrashConfirm.id));
+    }
+    setPwdTrashConfirm(null);
+  }, [pwdTrashConfirm]);
+  // ────────────────────────────────────────────────────────────────────────────
+
   const handleDeletePassword = (password) => {
-    const executeDelete = () => {
-      const passwordNodesCopy = JSON.parse(JSON.stringify(passwordNodes));
+    // Mover a papelera en vez de eliminar permanentemente
+    const passwordNodesCopy = JSON.parse(JSON.stringify(passwordNodes));
+    const findNode = (list, key) => {
+      for (const n of list) {
+        if (n.key === key) return n;
+        if (n.children) { const f = findNode(n.children, key); if (f) return f; }
+      }
+      return null;
+    };
+    const deletedNode = findNode(passwordNodesCopy, password.key) || password;
 
-      const removePasswordFromTree = (nodeList) => {
-        return nodeList.filter(node => {
-          if (node.key === password.key) {
-            return false;
-          }
-          if (node.children && node.children.length > 0) {
-            node.children = removePasswordFromTree(node.children);
-          }
-          return true;
-        });
-      };
-
-      const updatedPasswordNodes = removePasswordFromTree(passwordNodesCopy);
-      setPasswordNodes(updatedPasswordNodes);
-
-      showToast && showToast({
-        severity: 'success',
-        summary: 'Eliminado',
-        detail: `Password "${password.label || password.title}" eliminado`,
-        life: 3000
+    const removePasswordFromTree = (nodeList) => {
+      return nodeList.filter(node => {
+        if (node.key === password.key) return false;
+        if (node.children && node.children.length > 0) node.children = removePasswordFromTree(node.children);
+        return true;
       });
     };
+    setPasswordNodes(removePasswordFromTree(passwordNodesCopy));
 
-    const dialogToUse = confirmDialog || window.confirmDialog;
-    if (dialogToUse) {
-      dialogToUse({
-        message: `¿Estás seguro de que deseas eliminar el password "${password.label || password.title}"?`,
-        header: 'Confirmar eliminación',
-        icon: 'pi pi-exclamation-triangle',
-        acceptClassName: 'p-button-danger',
-        accept: executeDelete
-      });
-    } else {
-      executeDelete();
-    }
+    const trashItem = {
+      id: `ptrash_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+      key: password.key,
+      label: password.label || password.title || 'Sin nombre',
+      deletedAt: new Date().toISOString(),
+      nodeData: deletedNode,
+    };
+    setTrashedPasswords(prev => [trashItem, ...prev]);
+
+    showToast && showToast({ severity: 'success', summary: 'Movido a la papelera', detail: `"${trashItem.label}" movido a la papelera`, life: 3000 });
   };
 
 
@@ -1912,7 +1935,8 @@ const PasswordManagerSidebar = ({
   }, [hideHeader, allExpanded]);
 
   return (
-    <div className="password-manager-sidebar-root">
+    <>
+    <div className="password-manager-sidebar-root" style={{ position: 'relative' }}>
       {!hideHeader && (
         <div className="sidebar-header-glass-stack" style={{
         display: 'flex',
@@ -2765,10 +2789,114 @@ const PasswordManagerSidebar = ({
         ref={contextMenuRef}
         appendTo={document.body}
       />
+      {/* ─ Botón flotante papelera passwords ─ */}
+      <button
+        id="pwd-trash-btn"
+        onClick={() => setShowPwdTrashModal(true)}
+        title={`Papelera (${trashedPasswords.length})`}
+        style={{
+          position: 'absolute', bottom: '12px', right: '10px',
+          width: '30px', height: '30px', borderRadius: '8px', border: 'none',
+          background: trashedPasswords.length > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(120,120,140,0.12)',
+          color: trashedPasswords.length > 0 ? '#f87171' : '#888',
+          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '13px', zIndex: 10, transition: 'background 0.2s, transform 0.15s',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.background = trashedPasswords.length > 0 ? 'rgba(239,68,68,0.28)' : 'rgba(120,120,140,0.22)'; e.currentTarget.style.transform = 'scale(1.1)'; }}
+        onMouseLeave={e => { e.currentTarget.style.background = trashedPasswords.length > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(120,120,140,0.12)'; e.currentTarget.style.transform = 'scale(1)'; }}
+      >
+        <i className="pi pi-trash" style={{ fontSize: '13px' }} />
+        {trashedPasswords.length > 0 && (
+          <span style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#ef4444', color: '#fff', borderRadius: '50%', width: '14px', height: '14px', fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+            {trashedPasswords.length > 9 ? '9+' : trashedPasswords.length}
+          </span>
+        )}
+      </button>
 
     </div>
+
+    {/* ─ Portal modal papelera contraseñas ─ */}
+    {showPwdTrashModal && ReactDOM.createPortal(
+      <div
+        style={{ position: 'fixed', inset: 0, zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', animation: 'trashModalIn 0.18s ease' }}
+        onClick={e => { if (e.target === e.currentTarget) { setShowPwdTrashModal(false); setPwdTrashConfirm(null); } }}
+      >
+        <style>{`@keyframes trashModalIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}} .ptrash-item:hover{background:rgba(255,255,255,0.06)!important} .ptrash-restore:hover{background:rgba(34,197,94,0.22)!important} .ptrash-del:hover{background:rgba(239,68,68,0.22)!important}`}</style>
+        <div style={{ background: 'linear-gradient(145deg,#1a1b2e,#16213e)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '16px', width: '460px', maxHeight: '560px', display: 'flex', flexDirection: 'column', boxShadow: '0 32px 80px rgba(0,0,0,0.6)', overflow: 'hidden', fontFamily: 'system-ui,-apple-system,sans-serif' }}>
+          {/* Header */}
+          <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(239,68,68,0.06)' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <i className="pi pi-trash" style={{ color: '#f87171', fontSize: '16px' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: '15px', color: '#f1f5f9' }}>Papelera de contraseñas</div>
+              <div style={{ fontSize: '11px', color: '#64748b', marginTop: '1px' }}>
+                {trashedPasswords.length === 0 ? 'Vacía' : `${trashedPasswords.length} elemento${trashedPasswords.length !== 1 ? 's' : ''} • Se pueden restaurar`}
+              </div>
+            </div>
+            <button onClick={() => { setShowPwdTrashModal(false); setPwdTrashConfirm(null); }} style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', color: '#94a3b8', width: '28px', height: '28px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>
+              <i className="pi pi-times" />
+            </button>
+          </div>
+          {/* Confirmación inline */}
+          {pwdTrashConfirm && (
+            <div style={{ padding: '12px 16px', background: 'rgba(239,68,68,0.12)', borderBottom: '1px solid rgba(239,68,68,0.25)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <i className="pi pi-exclamation-triangle" style={{ color: '#f87171', fontSize: '14px', flexShrink: 0 }} />
+              <span style={{ flex: 1, fontSize: '12px', color: '#fca5a5', lineHeight: 1.4 }}>
+                {pwdTrashConfirm.type === 'empty' ? '¿Vaciar toda la papelera? No se puede deshacer.' : `¿Eliminar permanentemente «${pwdTrashConfirm.label}»?`}
+              </span>
+              <button onClick={executePasswordTrashConfirm} style={{ background: '#ef4444', border: 'none', color: '#fff', borderRadius: '7px', padding: '5px 12px', fontSize: '11px', cursor: 'pointer', fontWeight: 700, flexShrink: 0 }}>Confirmar</button>
+              <button onClick={() => setPwdTrashConfirm(null)} style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8', borderRadius: '7px', padding: '5px 10px', fontSize: '11px', cursor: 'pointer', flexShrink: 0 }}>Cancelar</button>
+            </div>
+          )}
+          {/* Toolbar */}
+          {trashedPasswords.length > 0 && (
+            <div style={{ padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.15)' }}>
+              <span style={{ fontSize: '11px', color: '#475569' }}>Haz clic en «Restaurar» para recuperar</span>
+              <button onClick={() => setPwdTrashConfirm({ type: 'empty' })} style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', borderRadius: '7px', padding: '5px 12px', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 600 }}>
+                <i className="pi pi-trash" style={{ fontSize: '10px' }} /> Vaciar todo
+              </button>
+            </div>
+          )}
+          {/* Lista */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '6px 0' }}>
+            {trashedPasswords.length === 0 ? (
+              <div style={{ padding: '50px 20px', textAlign: 'center' }}>
+                <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                  <i className="pi pi-check" style={{ fontSize: '24px', color: '#4ade80' }} />
+                </div>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: '#94a3b8', marginBottom: '6px' }}>Papelera vacía</div>
+                <div style={{ fontSize: '12px', color: '#475569' }}>Los elementos eliminados aparecerán aquí</div>
+              </div>
+            ) : trashedPasswords.map((item, idx) => (
+              <div key={item.id} className="ptrash-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', borderBottom: idx < trashedPasswords.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', flexShrink: 0, background: 'rgba(100,116,139,0.15)', border: '1px solid rgba(100,116,139,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <i className="pi pi-key" style={{ color: '#64748b', fontSize: '13px' }} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</div>
+                  <div style={{ fontSize: '10px', color: '#475569', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <i className="pi pi-clock" style={{ fontSize: '9px' }} />
+                    {new Date(item.deletedAt).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                  <button className="ptrash-restore" onClick={() => restorePasswordFromTrash(item.id)} style={{ background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.25)', color: '#4ade80', borderRadius: '7px', padding: '5px 10px', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+                    <i className="pi pi-undo" style={{ fontSize: '10px' }} /> Restaurar
+                  </button>
+                  <button className="ptrash-del" onClick={() => setPwdTrashConfirm({ type: 'single', id: item.id, label: item.label })} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.22)', color: '#f87171', borderRadius: '7px', padding: '5px 8px', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                    <i className="pi pi-times" style={{ fontSize: '10px' }} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>,
+      document.body
+    )}
+    </>
   );
 };
 
 export default PasswordManagerSidebar;
-
