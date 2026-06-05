@@ -103,8 +103,6 @@
   z-index: 10;
 }
 
-.main-splitter .p-splitter-gutter:hover::after,
-.main-splitter .p-splitter-gutter:active::after,
 .p-splitter.p-splitter-resizing .p-splitter-gutter::after {
   opacity: 0.7;
 }
