@@ -359,6 +359,8 @@
   border-bottom: none !important;
   padding-top: 5px !important;
   padding-bottom: 0 !important;
+  padding-left: 6px !important;
+  padding-right: 6px !important;
   box-sizing: border-box !important;
   overflow: visible !important;
   align-items: stretch !important;
@@ -399,35 +401,79 @@
 }
 
 /* Pestaña de inicio: mantener separada y redonda sin solapar */
-:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li.home-tab {
-  margin-right: 8px !important;
-  margin-left: 4px !important;
-  flex: 0 0 32px !important;
-  width: 32px !important;
-  min-width: 32px !important;
-  max-width: 32px !important;
+:root[data-tab-layout="chrome"] .terminal-frame .main-tab-view .p-tabview-nav li.home-tab {
+  margin-right: -6px !important;
+  margin-left: 0 !important;
+  position: relative !important;
+  border: none !important;
+  background: transparent !important;
   overflow: visible !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
+  flex: 0 0 50px !important;
+  width: 50px !important;
+  min-width: 50px !important;
+  max-width: 50px !important;
+  align-self: auto !important;
 }
 
-:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li.home-tab .p-tabview-nav-link {
-  border-radius: 50% !important;
-  margin-top: 1px !important;
-  height: 28px !important;
-  width: 28px !important;
+:root[data-tab-layout="chrome"] .terminal-frame .main-tab-view .p-tabview-nav li.home-tab .p-tabview-nav-link {
+  height: 100% !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  border-radius: 8px 8px 0 0 !important;
+  border: none !important;
+  background: transparent !important;
   padding: 0 !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  background: var(--home-tab-theme-bg, rgba(255, 255, 255, 0.1)) !important;
-  border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.15)) !important;
+  position: relative !important;
+  overflow: visible !important;
+  z-index: 1 !important;
+  box-shadow: none !important;
+  margin-top: 0 !important;
+  align-self: auto !important;
 }
 
-:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li.home-tab.p-highlight .p-tabview-nav-link {
-  background: var(--home-tab-active-bg, var(--ui-tab-active-bg, rgba(255, 255, 255, 0.15))) !important;
-  border-color: var(--ui-home-tab-accent, var(--ui-button-primary, var(--primary-color))) !important;
+/* Hover en Home inactivo */
+:root[data-tab-layout="chrome"] .terminal-frame .main-tab-view .p-tabview-nav li.home-tab:not(.p-highlight) .p-tabview-nav-link:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  z-index: 2 !important;
+}
+
+/* Home activo */
+:root[data-tab-layout="chrome"] .terminal-frame .main-tab-view .p-tabview-nav li.home-tab.p-highlight .p-tabview-nav-link {
+  background: var(--ui-tab-active-bg, var(--ui-content-bg, #1e1e1e)) !important;
+  position: relative !important;
+  z-index: 5 !important;
+}
+
+/* Curvas inferiores (ears) para Home activo */
+:root[data-tab-layout="chrome"] .terminal-frame .main-tab-view .p-tabview-nav li.home-tab.p-highlight .p-tabview-nav-link::before {
+  content: "" !important;
+  position: absolute !important;
+  bottom: 0 !important;
+  left: -8px !important;
+  width: 8px !important;
+  height: 8px !important;
+  background: var(--ui-tab-active-bg, var(--ui-content-bg, #1e1e1e)) !important;
+  -webkit-mask-image: radial-gradient(circle at 0 0, transparent 7.5px, #000 8px) !important;
+  mask-image: radial-gradient(circle at 0 0, transparent 7.5px, #000 8px) !important;
+  pointer-events: none !important;
+  z-index: 5 !important;
+}
+
+:root[data-tab-layout="chrome"] .terminal-frame .main-tab-view .p-tabview-nav li.home-tab.p-highlight .p-tabview-nav-link::after {
+  content: "" !important;
+  position: absolute !important;
+  bottom: 0 !important;
+  right: -8px !important;
+  width: 8px !important;
+  height: 8px !important;
+  background: var(--ui-tab-active-bg, var(--ui-content-bg, #1e1e1e)) !important;
+  -webkit-mask-image: radial-gradient(circle at 100% 0, transparent 7.5px, #000 8px) !important;
+  mask-image: radial-gradient(circle at 100% 0, transparent 7.5px, #000 8px) !important;
+  pointer-events: none !important;
+  z-index: 5 !important;
 }
 
 /* Pestaña normal (inactiva) - no aplicar a home-tab */
@@ -453,12 +499,12 @@
   z-index: 2 !important;
 }
 
-/* Pestaña activa (p.highlight) */
-:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li.p-highlight {
+/* Pestaña activa (p.highlight) - Excluir Home */
+:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li.p-highlight:not(.home-tab) {
   z-index: 5 !important;
 }
 
-:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li.p-highlight:not(.home-tab) .p-tabview-nav-link {
   background: var(--ui-tab-active-bg, var(--ui-content-bg, #1e1e1e)) !important;
   color: var(--ui-tab-active-text, #ffffff) !important;
   border-radius: 8px 8px 0 0 !important;
@@ -471,8 +517,8 @@
   overflow: visible !important;
 }
 
-/* Curvas inferiores (ears) para la pestaña activa */
-:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link::before {
+/* Curvas inferiores (ears) para la pestaña activa - Excluir Home */
+:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li.p-highlight:not(.home-tab) .p-tabview-nav-link::before {
   content: "" !important;
   position: absolute !important;
   bottom: 0 !important;
@@ -486,7 +532,7 @@
   z-index: 5 !important;
 }
 
-:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link::after {
+:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li.p-highlight:not(.home-tab) .p-tabview-nav-link::after {
   content: "" !important;
   position: absolute !important;
   bottom: 0 !important;
@@ -498,6 +544,7 @@
   mask-image: radial-gradient(circle at 100% 0, transparent 7.5px, #000 8px) !important;
   pointer-events: none !important;
   z-index: 5 !important;
+  border: none !important;
 }
 
 /* Separadores verticales entre pestañas inactivas */
