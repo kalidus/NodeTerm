@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
+import ReactDOM from 'react-dom';
 import { Button } from 'primereact/button';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { Tree } from 'primereact/tree';
@@ -231,6 +232,55 @@ const Sidebar = React.memo(({
 
   // Estado para diálogos
   const [showFolderDialog, setShowFolderDialog] = useState(false);
+
+  // ── Papelera de conexiones ──────────────────────────────────────────────────
+  const TRASH_STORAGE_KEY = 'nodeterm_trash_connections';
+  const loadTrash = () => { try { return JSON.parse(localStorage.getItem(TRASH_STORAGE_KEY) || '[]'); } catch { return []; } };
+  const [showTrashModal, setShowTrashModal] = useState(false);
+  const [trashedConnections, setTrashedConnections] = useState(loadTrash);
+
+  // Persistir papelera cada vez que cambia
+  useEffect(() => {
+    try { localStorage.setItem(TRASH_STORAGE_KEY, JSON.stringify(trashedConnections)); } catch(e) { console.warn('Error guardando papelera:', e); }
+  }, [trashedConnections]);
+
+  const moveToTrash = useCallback((nodeKey, nodeLabel, nodeData) => {
+    const trashItem = {
+      id: `trash_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+      key: nodeKey,
+      label: nodeLabel,
+      type: 'connection',
+      deletedAt: new Date().toISOString(),
+      nodeData: nodeData, // Nodo completo con su subárbol
+    };
+    setTrashedConnections(prev => [trashItem, ...prev]);
+  }, []);
+
+  const restoreFromTrash = useCallback((trashId) => {
+    const item = trashedConnections.find(i => i.id === trashId);
+    if (!item || !item.nodeData) return;
+    // Reinsertar en la raíz del árbol de conexiones
+    setNodes(prev => [item.nodeData, ...prev]);
+    setTrashedConnections(prev => prev.filter(i => i.id !== trashId));
+    showToast && showToast({ severity: 'success', summary: 'Restaurado', detail: `"${item.label}" restaurado al árbol`, life: 3000 });
+  }, [trashedConnections, setNodes, showToast]);
+
+  const deleteFromTrashPermanently = useCallback((trashId, label) => {
+    const dialogToUse = confirmDialog || window.confirmDialog;
+    const doDelete = () => setTrashedConnections(prev => prev.filter(i => i.id !== trashId));
+    if (dialogToUse) {
+      dialogToUse({ message: `¿Eliminar permanentemente "${label}"? Esta acción no se puede deshacer.`, header: 'Eliminar permanentemente', icon: 'pi pi-exclamation-triangle', acceptClassName: 'p-button-danger', accept: doDelete });
+    } else { doDelete(); }
+  }, [confirmDialog]);
+
+  const emptyTrash = useCallback(() => {
+    const dialogToUse = confirmDialog || window.confirmDialog;
+    const doEmpty = () => setTrashedConnections([]);
+    if (dialogToUse) {
+      dialogToUse({ message: '¿Vaciar toda la papelera? Esta acción no se puede deshacer.', header: 'Vaciar papelera', icon: 'pi pi-exclamation-triangle', acceptClassName: 'p-button-danger', accept: doEmpty });
+    } else { doEmpty(); }
+  }, [confirmDialog]);
+  // ────────────────────────────────────────────────────────────────────────────
 
   // Estado para modo de visualización (conexiones, passwords, localExplorer, tools)
   const [viewMode, setViewMode] = useState('connections'); // 'connections' | 'passwords' | 'documents' | 'localExplorer' | 'tools' | 'settings'
@@ -2335,7 +2385,7 @@ const Sidebar = React.memo(({
           const targetNode = findNodeByKey(nodes, nodeKey);
           const hasChildren = targetNode && targetNode.children && targetNode.children.length > 0;
 
-          // Función para ejecutar la eliminación
+          // Función para ejecutar la eliminación (mueve a papelera)
           const executeDeletion = () => {
 
             const removeNodeFromTree = (nodes, targetKey) => {
@@ -2357,13 +2407,17 @@ const Sidebar = React.memo(({
 
             try {
               const nodesCopy = JSON.parse(JSON.stringify(nodes));
+              // Guardar el nodo completo en la papelera antes de eliminarlo
+              const deletedNode = targetNode ? JSON.parse(JSON.stringify(targetNode)) : null;
+              moveToTrash(nodeKey, nodeLabel, deletedNode);
+
               const newNodes = removeNodeFromTree(nodesCopy, nodeKey);
               setNodes(() => logSetNodes('Sidebar-Delete', newNodes));
 
               showToast && showToast({
                 severity: 'success',
-                summary: 'Eliminado',
-                detail: `"${nodeLabel}" ha sido eliminado`,
+                summary: 'Movido a la papelera',
+                detail: `"${nodeLabel}" movido a la papelera`,
                 life: 3000
               });
 
@@ -3446,8 +3500,51 @@ const Sidebar = React.memo(({
             transition: isFirstExpand ? 'none' : 'opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1), flex 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
           };
         })()}>
-        <div className="sidebar-panel-content-wrapper" style={{ width: '100%', minWidth: isTransitioningSidebar ? '240px' : 0, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div className="sidebar-panel-content-wrapper" style={{ width: '100%', minWidth: isTransitioningSidebar ? '240px' : 0, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
           {fullSidebar}
+
+          {/* ── Botón flotante de papelera ── */}
+          {!sidebarCollapsed && (
+            <button
+              id="sidebar-trash-btn"
+              onClick={() => setShowTrashModal(true)}
+              title={`Papelera (${trashedConnections.length})`}
+              style={{
+                position: 'absolute',
+                bottom: '12px',
+                right: '10px',
+                width: '30px',
+                height: '30px',
+                borderRadius: '8px',
+                border: 'none',
+                background: trashedConnections.length > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(120,120,140,0.12)',
+                color: trashedConnections.length > 0 ? '#f87171' : 'var(--ui-sidebar-text, #888)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '13px',
+                transition: 'background 0.2s, color 0.2s, transform 0.15s',
+                backdropFilter: 'blur(4px)',
+                zIndex: 10,
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = trashedConnections.length > 0 ? 'rgba(239,68,68,0.28)' : 'rgba(120,120,140,0.22)'; e.currentTarget.style.transform = 'scale(1.1)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = trashedConnections.length > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(120,120,140,0.12)'; e.currentTarget.style.transform = 'scale(1)'; }}
+            >
+              <i className="pi pi-trash" style={{ fontSize: '13px' }} />
+              {trashedConnections.length > 0 && (
+                <span style={{
+                  position: 'absolute', top: '-4px', right: '-4px',
+                  background: '#ef4444', color: '#fff', borderRadius: '50%',
+                  width: '14px', height: '14px', fontSize: '9px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: 700, lineHeight: 1,
+                }}>
+                  {trashedConnections.length > 9 ? '9+' : trashedConnections.length}
+                </span>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -3475,6 +3572,167 @@ const Sidebar = React.memo(({
       {/* Los diálogos de edición SSH y RDP ahora se manejan en DialogsManager */}
 
 
+      {/* ── Modal Papelera (portal → document.body para escapar overflow:hidden) ── */}
+      {showTrashModal && ReactDOM.createPortal(
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 99999,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)',
+            animation: 'trashModalIn 0.18s ease',
+          }}
+          onClick={e => { if (e.target === e.currentTarget) setShowTrashModal(false); }}
+        >
+          <style>{`
+            @keyframes trashModalIn { from { opacity:0; transform:scale(0.95); } to { opacity:1; transform:scale(1); } }
+            .trash-item-row { transition: background 0.15s ease; }
+            .trash-item-row:hover { background: rgba(255,255,255,0.06) !important; }
+            .trash-restore-btn:hover { background: rgba(34,197,94,0.22) !important; }
+            .trash-delete-btn:hover { background: rgba(239,68,68,0.22) !important; }
+            .trash-empty-btn:hover { background: rgba(239,68,68,0.25) !important; }
+          `}</style>
+          <div style={{
+            background: 'linear-gradient(145deg, #1a1b2e 0%, #16213e 100%)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: '16px',
+            width: '460px',
+            maxHeight: '560px',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)',
+            overflow: 'hidden',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+          }}>
+
+            {/* ─ Header */}
+            <div style={{
+              padding: '18px 20px 14px',
+              borderBottom: '1px solid rgba(255,255,255,0.08)',
+              display: 'flex', alignItems: 'center', gap: '12px',
+              background: 'rgba(239,68,68,0.06)',
+            }}>
+              <div style={{
+                width: '36px', height: '36px', borderRadius: '10px',
+                background: 'rgba(239,68,68,0.15)',
+                border: '1px solid rgba(239,68,68,0.3)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                <i className="pi pi-trash" style={{ color: '#f87171', fontSize: '16px' }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: '15px', color: '#f1f5f9', letterSpacing: '0.01em' }}>Papelera de conexiones</div>
+                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '1px' }}>
+                  {trashedConnections.length === 0 ? 'Vacía' : `${trashedConnections.length} elemento${trashedConnections.length !== 1 ? 's' : ''} • Se pueden restaurar`}
+                </div>
+              </div>
+              <button
+                onClick={() => setShowTrashModal(false)}
+                style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', color: '#94a3b8', width: '28px', height: '28px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '12px' }}
+                title="Cerrar"
+              >
+                <i className="pi pi-times" />
+              </button>
+            </div>
+
+            {/* ─ Toolbar */}
+            {trashedConnections.length > 0 && (
+              <div style={{ padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.15)' }}>
+                <span style={{ fontSize: '11px', color: '#475569' }}>Haz clic en «Restaurar» para recuperar un elemento</span>
+                <button
+                  className="trash-empty-btn"
+                  onClick={emptyTrash}
+                  style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', borderRadius: '7px', padding: '5px 12px', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 600 }}
+                >
+                  <i className="pi pi-trash" style={{ fontSize: '10px' }} /> Vaciar todo
+                </button>
+              </div>
+            )}
+
+            {/* ─ Lista */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '6px 0' }}>
+              {trashedConnections.length === 0 ? (
+                <div style={{ padding: '50px 20px', textAlign: 'center' }}>
+                  <div style={{
+                    width: '64px', height: '64px', borderRadius: '50%',
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    margin: '0 auto 16px',
+                  }}>
+                    <i className="pi pi-check" style={{ fontSize: '24px', color: '#4ade80' }} />
+                  </div>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#94a3b8', marginBottom: '6px' }}>Papelera vacía</div>
+                  <div style={{ fontSize: '12px', color: '#475569' }}>Los elementos eliminados aparecerán aquí</div>
+                </div>
+              ) : (
+                trashedConnections.map((item, idx) => (
+                  <div
+                    key={item.id}
+                    className="trash-item-row"
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '12px',
+                      padding: '10px 16px',
+                      borderBottom: idx < trashedConnections.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                    }}
+                  >
+                    {/* Icono tipo nodo */}
+                    <div style={{
+                      width: '32px', height: '32px', borderRadius: '8px', flexShrink: 0,
+                      background: 'rgba(100,116,139,0.15)',
+                      border: '1px solid rgba(100,116,139,0.2)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <i className="pi pi-server" style={{ color: '#64748b', fontSize: '13px' }} />
+                    </div>
+
+                    {/* Info */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {item.label}
+                      </div>
+                      <div style={{ fontSize: '10px', color: '#475569', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <i className="pi pi-clock" style={{ fontSize: '9px' }} />
+                        {new Date(item.deletedAt).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+
+                    {/* Acciones */}
+                    <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                      <button
+                        className="trash-restore-btn"
+                        onClick={() => restoreFromTrash(item.id)}
+                        title="Restaurar al árbol"
+                        style={{
+                          background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.25)',
+                          color: '#4ade80', borderRadius: '7px', padding: '5px 10px',
+                          fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600,
+                        }}
+                      >
+                        <i className="pi pi-undo" style={{ fontSize: '10px' }} /> Restaurar
+                      </button>
+                      <button
+                        className="trash-delete-btn"
+                        onClick={() => deleteFromTrashPermanently(item.id, item.label)}
+                        title="Eliminar permanentemente"
+                        style={{
+                          background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.22)',
+                          color: '#f87171', borderRadius: '7px', padding: '5px 8px',
+                          fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                        }}
+                      >
+                        <i className="pi pi-times" style={{ fontSize: '10px' }} />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {showImportDialog && (
         <Suspense fallback={null}>
