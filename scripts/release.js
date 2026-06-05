@@ -21,6 +21,7 @@ function parseCliArgs(argv) {
         publish: false,
         prepare: false,
         mergeMain: false,
+        noMergeMain: false,
         changelog: false,
         commitPrep: false,
         skipSsl: false,
@@ -41,6 +42,7 @@ function parseCliArgs(argv) {
         else if (a === '--local') args.publish = false;
         else if (a === '--prepare') args.prepare = true;
         else if (a === '--merge-main') args.mergeMain = true;
+        else if (a === '--no-merge-main') args.noMergeMain = true;
         else if (a === '--update-changelog') args.changelog = true;
         else if (a === '--commit-prep') args.commitPrep = true;
         else if (a === '--skip-ssl') args.skipSsl = true;
@@ -63,7 +65,8 @@ function printHelp() {
     console.log('  --platform <valor>        win|mac|linux|all|current|wm|ml|wml');
     console.log('  --prepare                 Ejecutar preparación de versión');
     console.log('  --release-type <tipo>     keep|patch|minor|major');
-    console.log('  --merge-main              Hacer merge a main antes de compilar');
+    console.log('  --merge-main              Forzar merge a main antes de compilar');
+    console.log('  --no-merge-main           Omitir merge automático desde release/*');
     console.log('  --update-changelog        Actualizar encabezado en CHANGELOG (fuente de verdad para GitHub)');
     console.log('  --commit-prep             Commit automático de preparación');
     console.log('  --tag-strategy <modo>     ask|move|skip|cancel (si tag existe y no apunta a HEAD)');
@@ -72,11 +75,23 @@ function printHelp() {
     console.log('  --fix-notes               Solo republicar notas UTF-8 de la release (sin compilar)');
     console.log('  --version <x.y.z>         Versión para --fix-notes (por defecto package.json)');
     console.log('  --help, -h                Mostrar esta ayuda\n');
-    console.log('Ejemplo: node scripts/release.js --yes --publish --platform win --merge-main --tag-strategy move\n');
+    console.log('Ejemplo: node scripts/release.js --yes --publish --platform win --tag-strategy move\n');
 }
 
 function isYes(value) {
     return YES_VALUES.has(String(value || '').trim().toLowerCase());
+}
+
+function isReleaseBranch(branch) {
+    return /^release\//.test(branch || '');
+}
+
+function shouldMergeToMain({ currentBranch, cli }) {
+    if (currentBranch === 'main' || currentBranch === 'master') return false;
+    if (cli.noMergeMain) return false;
+    if (cli.mergeMain) return true;
+    if (cli.publish && isReleaseBranch(currentBranch)) return true;
+    return false;
 }
 
 function resolvePlatforms(platChoice) {
@@ -473,9 +488,21 @@ async function main() {
     if (currentBranch === 'main' || currentBranch === 'master') {
         console.log('  ℹ️ Ya estás en la rama principal.');
     } else {
-        console.log('\x1b[33m💡 Si quieres probar solo en esta rama, elige "n".\x1b[0m');
-        const doMerge = nonInteractive ? (cli.mergeMain ? 's' : 'n') : await question(`\n¿Mezclar "${currentBranch}" en "main" antes de compilar? (s/N): `);
-        if (isYes(doMerge)) {
+        const autoMerge = shouldMergeToMain({ currentBranch, cli });
+        const onRelease = isReleaseBranch(currentBranch);
+        if (autoMerge) {
+            console.log(`\x1b[32m✓ Merge automático: "${currentBranch}" → main\x1b[0m`);
+        } else if (onRelease) {
+            console.log('\x1b[33m💡 Rama release/*: por defecto se integra en main al publicar. Usa --no-merge-main para omitir.\x1b[0m');
+        } else {
+            console.log('\x1b[33m💡 Si quieres probar solo en esta rama, elige "n".\x1b[0m');
+        }
+        const mergePrompt = onRelease ? '(S/n)' : '(s/N)';
+        const doMerge = nonInteractive
+            ? (autoMerge ? 's' : 'n')
+            : await question(`\n¿Mezclar "${currentBranch}" en "main" antes de compilar? ${mergePrompt}: `);
+        const mergeAccepted = isYes(doMerge) || (onRelease && !nonInteractive && doMerge.trim() === '');
+        if (mergeAccepted) {
             if (await runCommand('git checkout main', 'Cambiando a main')) {
                 if (await runCommand(`git merge ${currentBranch}`, 'Fusionando cambios')) {
                     console.log('\x1b[32m✅ Integración completada.\x1b[0m');

@@ -39,12 +39,13 @@ Durante el desarrollo, ir a?adiendo bullets bajo esa secci?n del changelog.
 ### 2. Integraci?n
 
 - Merge de `release/x.y.z` ? `main` cuando el c?digo est? listo para publicar.
+- Con `npm run release -- --yes --publish` desde `release/*`, el script hace este merge **autom?ticamente** (opt-out: `--no-merge-main`).
 - Cerrar fecha en `CHANGELOG.md` y quitar entradas tipo ?En preparaci?n? si ya no aplican.
 
 ### 3. Publicaci?n (normalmente en `main`)
 
 ```bash
-npm run release
+npm run release -- --yes --publish --platform win --tag-strategy move
 ```
 
 El asistente puede:
