@@ -2000,18 +2000,19 @@ const MainContentArea = ({
           const isRetroPreview = previewBorderStyle === 'retro';
           const isPillsPreview = previewBorderStyle === 'pills';
           const isClassicBrowserPreview = previewBorderStyle === 'classicBrowser';
+          const isChromePreview = previewBorderStyle === 'chrome';
           swatch.style.cssText = `
             width: 28px;
             height: ${preview?.tabHeight || '30px'};
             flex-shrink: 0;
             border-radius: ${preview?.borderRadius || '4px 4px 0 0'};
-            border: ${isVscodePreview ? 'none' : '1px solid var(--ui-tab-border, rgba(255,255,255,0.25))'};
+            border: ${isVscodePreview || isChromePreview ? 'none' : '1px solid var(--ui-tab-border, rgba(255,255,255,0.25))'};
             border-right: ${isVscodePreview ? '1px solid var(--ui-tab-border, rgba(255,255,255,0.25))' : 'none'};
-            border-top: ${isVscodePreview ? '2px solid var(--primary-color, #2196f3)' : '1px solid var(--ui-tab-border, rgba(255,255,255,0.25))'};
+            border-top: ${isVscodePreview ? '2px solid var(--primary-color, #2196f3)' : (isChromePreview ? 'none' : '1px solid var(--ui-tab-border, rgba(255,255,255,0.25))')};
             background: ${isMinimalPreview ? 'transparent' : 'var(--ui-tab-bg, rgba(255,255,255,0.05))'};
             box-shadow: ${isBoxedPreview ? 'inset 0 0 0 1px var(--ui-tab-border, rgba(255,255,255,0.35))' : 'none'};
-            border-bottom: ${isUnderlinePreview ? '2px solid var(--primary-color, #2196f3)' : (isClassicBrowserPreview ? 'none' : '1px solid var(--ui-tab-border, rgba(255,255,255,0.25))')};
-            margin-top: ${isBrowserPreview ? '2px' : '0'};
+            border-bottom: ${isUnderlinePreview ? '2px solid var(--primary-color, #2196f3)' : (isClassicBrowserPreview || isChromePreview ? 'none' : '1px solid var(--ui-tab-border, rgba(255,255,255,0.25))')};
+            margin-top: ${isBrowserPreview || isChromePreview ? '2px' : '0'};
             font-family: ${isRetroPreview ? '"Consolas","Courier New",monospace' : 'inherit'};
             border-radius: ${isPillsPreview ? '999px' : (preview?.borderRadius || '4px 4px 0 0')};
           `;

@@ -27,6 +27,9 @@
 :root[data-tab-layout="arcPills"] {
   --tab-bar-height: 34px;
 }
+:root[data-tab-layout="chrome"] {
+  --tab-bar-height: 36px;
+}
 
 .main-tab-view {
   flex-shrink: 0 !important; /* Solución preventiva: Evita que el componente TabView se estire */
@@ -344,6 +347,201 @@
 
 :root[data-tab-layout="arcPills"] .p-tabview .p-tabview-nav li.home-tab .p-tabview-nav-link {
   margin: 2px 0 !important;
+}
+
+/* ==========================================================================
+   Chrome Tab Layout Styling
+   ========================================================================== */
+
+/* Fondo e integración de la barra de pestañas */
+:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav {
+  background: var(--ui-tab-bar-bg, #1e1e24) !important;
+  border-bottom: none !important;
+  padding-top: 5px !important;
+  padding-bottom: 0 !important;
+  box-sizing: border-box !important;
+  overflow: visible !important;
+  align-items: stretch !important;
+}
+
+/* Quitar borde inferior del contenedor en layout Chrome */
+:root[data-tab-layout="chrome"] .terminal-frame.main-content-frame .p-tabview-nav-container {
+  border-bottom: none !important;
+  margin-bottom: 0 !important;
+}
+
+/* Quitar borde superior del panel de contenidos en layout Chrome */
+:root[data-tab-layout="chrome"] .terminal-frame .main-tab-view .p-tabview-panels {
+  border-top: none !important;
+}
+
+/* Dibujar la línea base de las pestañas en el propio ul.p-tabview-nav por debajo de la pestaña activa */
+:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav::after {
+  content: "" !important;
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 1px !important;
+  background-color: var(--ui-tab-border, rgba(255, 255, 255, 0.08)) !important;
+  z-index: 1 !important;
+  pointer-events: none !important;
+}
+
+/* Solapamiento y espaciado de pestañas */
+:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li {
+  margin-right: -6px !important;
+  margin-left: 0 !important;
+  position: relative !important;
+  border: none !important;
+  background: transparent !important;
+  overflow: visible !important;
+}
+
+/* Pestaña de inicio: mantener separada y redonda sin solapar */
+:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li.home-tab {
+  margin-right: 8px !important;
+  margin-left: 4px !important;
+  flex: 0 0 32px !important;
+  width: 32px !important;
+  min-width: 32px !important;
+  max-width: 32px !important;
+  overflow: visible !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li.home-tab .p-tabview-nav-link {
+  border-radius: 50% !important;
+  margin-top: 1px !important;
+  height: 28px !important;
+  width: 28px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: var(--home-tab-theme-bg, rgba(255, 255, 255, 0.1)) !important;
+  border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.15)) !important;
+}
+
+:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li.home-tab.p-highlight .p-tabview-nav-link {
+  background: var(--home-tab-active-bg, var(--ui-tab-active-bg, rgba(255, 255, 255, 0.15))) !important;
+  border-color: var(--ui-home-tab-accent, var(--ui-button-primary, var(--primary-color))) !important;
+}
+
+/* Pestaña normal (inactiva) - no aplicar a home-tab */
+:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li:not(.home-tab) .p-tabview-nav-link {
+  height: 100% !important;
+  border-radius: 8px 8px 0 0 !important;
+  border: none !important;
+  background: transparent !important;
+  padding: 0 16px !important;
+  color: var(--ui-tab-text, rgba(255, 255, 255, 0.65)) !important;
+  font-size: 0.8rem !important;
+  transition: background 0.15s ease, color 0.15s ease !important;
+  margin-top: 0 !important;
+  position: relative !important;
+  overflow: visible !important;
+  z-index: 1 !important;
+}
+
+/* Hover en pestaña inactiva */
+:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li:not(.p-highlight) .p-tabview-nav-link:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--ui-tab-text-hover, #ffffff) !important;
+  z-index: 2 !important;
+}
+
+/* Pestaña activa (p.highlight) */
+:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li.p-highlight {
+  z-index: 5 !important;
+}
+
+:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+  background: var(--ui-tab-active-bg, var(--ui-content-bg, #1e1e1e)) !important;
+  color: var(--ui-tab-active-text, #ffffff) !important;
+  border-radius: 8px 8px 0 0 !important;
+  box-shadow: none !important;
+  position: relative !important;
+  bottom: 0 !important;
+  height: 100% !important;
+  z-index: 5 !important;
+  border: none !important;
+  overflow: visible !important;
+}
+
+/* Curvas inferiores (ears) para la pestaña activa */
+:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link::before {
+  content: "" !important;
+  position: absolute !important;
+  bottom: 0 !important;
+  left: -8px !important;
+  width: 8px !important;
+  height: 8px !important;
+  background: var(--ui-tab-active-bg, var(--ui-content-bg, #1e1e1e)) !important;
+  -webkit-mask-image: radial-gradient(circle at 0 0, transparent 7.5px, #000 8px) !important;
+  mask-image: radial-gradient(circle at 0 0, transparent 7.5px, #000 8px) !important;
+  pointer-events: none !important;
+  z-index: 5 !important;
+}
+
+:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link::after {
+  content: "" !important;
+  position: absolute !important;
+  bottom: 0 !important;
+  right: -8px !important;
+  width: 8px !important;
+  height: 8px !important;
+  background: var(--ui-tab-active-bg, var(--ui-content-bg, #1e1e1e)) !important;
+  -webkit-mask-image: radial-gradient(circle at 100% 0, transparent 7.5px, #000 8px) !important;
+  mask-image: radial-gradient(circle at 100% 0, transparent 7.5px, #000 8px) !important;
+  pointer-events: none !important;
+  z-index: 5 !important;
+}
+
+/* Separadores verticales entre pestañas inactivas */
+:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li:not(.p-highlight):not(.home-tab)::after {
+  content: "" !important;
+  position: absolute !important;
+  right: -3px !important;
+  top: 25% !important;
+  bottom: 25% !important;
+  width: 1px !important;
+  background-color: var(--ui-tab-border, rgba(255, 255, 255, 0.15)) !important;
+  transition: opacity 0.15s ease !important;
+  pointer-events: none !important;
+  z-index: 2 !important;
+}
+
+/* Ocultar el separador si la pestaña está activa, hovered o si la pestaña siguiente está activa o hovered */
+:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li.p-highlight::after,
+:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li:not(.p-highlight):hover::after,
+:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li:has(+ li.p-highlight)::after,
+:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li:has(+ li:hover)::after {
+  opacity: 0 !important;
+}
+
+/* Ajuste del botón de cerrar pestaña en layout Chrome */
+:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li .close-tab-btn {
+  opacity: 0.6 !important;
+  transition: opacity 0.15s, background-color 0.15s !important;
+}
+
+:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li:hover .close-tab-btn,
+:root[data-tab-layout="chrome"] .p-tabview .p-tabview-nav li.p-highlight .close-tab-btn {
+  opacity: 1 !important;
+}
+
+/* Botón de nueva pestaña (+) y dropdown terminales en layout Chrome */
+:root[data-tab-layout="chrome"] .local-terminal-buttons .tab-action-button {
+  border-radius: 50% !important;
+  border: none !important;
+  background: transparent !important;
+}
+
+:root[data-tab-layout="chrome"] .local-terminal-buttons .tab-action-button:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
 }
 
 /* Barra de tinta para la pestaña activa */

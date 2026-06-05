@@ -102,6 +102,15 @@ const tabLayouts = {
       borderRadius: '6px 6px 0 0',
       borderStyle: 'classicBrowser'
     }
+  },
+  chrome: {
+    name: 'Google Chrome',
+    description: 'Estilo Google Chrome con curvas fluidas',
+    preview: {
+      tabHeight: '34px',
+      borderRadius: '8px 8px 0 0',
+      borderStyle: 'chrome'
+    }
   }
 };
 
