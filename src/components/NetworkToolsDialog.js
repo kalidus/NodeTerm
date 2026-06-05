@@ -168,6 +168,9 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
   const [cyberPortsCache, setCyberPortsCache] = useState({});
   const [cyberPortsScanning, setCyberPortsScanning] = useState({});
   const cyberPortsScanningRef = React.useRef(new Set());
+  const [cyberVulnsCache, setCyberVulnsCache] = useState({});
+  const [cyberVulnsScanning, setCyberVulnsScanning] = useState({});
+  const cyberVulnsScanningRef = React.useRef(new Set());
   const [cyberActiveTab, setCyberActiveTab] = useState('details');
   const [cyberPingResults, setCyberPingResults] = useState([]);
   const [cyberScanType, setCyberScanType] = useState('radar');
@@ -1242,6 +1245,9 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
     setCyberPortsCache({});
     setCyberPortsScanning({});
     cyberPortsScanningRef.current.clear();
+    setCyberVulnsCache({});
+    setCyberVulnsScanning({});
+    cyberVulnsScanningRef.current.clear();
     
     try {
       const ipc = window?.electron?.ipcRenderer;
@@ -1328,6 +1334,73 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
     }
   }, [cyberScanPorts]);
 
+  const cyberScanVulns = useCallback(async (hostIp, activeHostRef = null) => {
+    if (!hostIp || cyberVulnsScanningRef.current.has(hostIp)) return;
+    cyberVulnsScanningRef.current.add(hostIp);
+    setCyberVulnsScanning(prev => ({ ...prev, [hostIp]: true }));
+
+    try {
+      const ipc = window?.electron?.ipcRenderer;
+      if (!ipc) throw new Error('IPC no disponible');
+
+      // Determine ports to scan
+      const knownPorts = [];
+      if (activeHostRef?.openPorts) {
+        knownPorts.push(...activeHostRef.openPorts);
+      }
+      const cachedPortsObj = cyberPortsCache[hostIp];
+      if (cachedPortsObj?.success && cachedPortsObj.openPorts) {
+        knownPorts.push(...cachedPortsObj.openPorts.map(p => p.port));
+      }
+      const uniquePorts = [...new Set(knownPorts)];
+      const portsToScan = uniquePorts.length > 0 ? uniquePorts.map(Number).join(',') : '21,22,23,25,53,80,110,143,443,445,993,995,1433,1521,3306,3389,5432,5900,6379,8080,8443,27017';
+
+      // 1. Run Host Vulnerability Scan
+      const hostVulnResponse = await ipc.invoke('network-tools:host-vuln-scan', {
+        host: hostIp,
+        ports: portsToScan,
+        timeout: 5000,
+        useOnline: true
+      });
+
+      // 2. Check if web scan is applicable
+      let webSecurityResponse = null;
+      const hasWebPorts = uniquePorts.map(Number).some(p => p === 80 || p === 443 || p === 8080 || p === 8443);
+      if (hasWebPorts) {
+        const protocol = uniquePorts.map(Number).some(p => p === 443 || p === 8443) ? 'https' : 'http';
+        webSecurityResponse = await ipc.invoke('network-tools:web-security-scan', {
+          url: `${protocol}://${hostIp}`,
+          timeout: 10000
+        });
+      }
+
+      setCyberVulnsCache(prev => ({
+        ...prev,
+        [hostIp]: {
+          success: true,
+          vulns: hostVulnResponse,
+          webSecurity: webSecurityResponse
+        }
+      }));
+    } catch (err) {
+      console.error('Error scanning vulnerabilities:', err);
+      setCyberVulnsCache(prev => ({
+        ...prev,
+        [hostIp]: {
+          success: false,
+          error: err.message
+        }
+      }));
+    } finally {
+      cyberVulnsScanningRef.current.delete(hostIp);
+      setCyberVulnsScanning(prev => {
+        const next = { ...prev };
+        delete next[hostIp];
+        return next;
+      });
+    }
+  }, [cyberPortsCache]);
+
   // Cyberpunk Sub-scan: Live Ping
   const [cyberPingActive, setCyberPingActive] = useState(false);
   const cyberPingIntervalRef = React.useRef(null);
@@ -1395,10 +1468,19 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
     }
     setCyberActiveTab('details');
     setCyberPingResults([]);
-    if (selectedCyberHost?.ip && !cyberPortsCache[selectedCyberHost.ip] && !cyberPortsScanningRef.current.has(selectedCyberHost.ip)) {
-      cyberScanPorts(selectedCyberHost.ip);
+    if (selectedCyberHost?.ip) {
+      if (!cyberPortsCache[selectedCyberHost.ip] && !cyberPortsScanningRef.current.has(selectedCyberHost.ip)) {
+        cyberScanPorts(selectedCyberHost.ip);
+      }
+      
+      const isFull = result && (result.scanMode === 'full' || (viewingSavedScan && viewingSavedScan.lastResult?.scanMode === 'full'));
+      if (isFull && !cyberVulnsCache[selectedCyberHost.ip] && !cyberVulnsScanningRef.current.has(selectedCyberHost.ip)) {
+        const currentHosts = result ? (result.hosts || []) : [];
+        const activeHostObj = currentHosts.find(h => h.ip === selectedCyberHost.ip) || selectedCyberHost;
+        cyberScanVulns(selectedCyberHost.ip, activeHostObj);
+      }
     }
-  }, [selectedCyberHost, cyberScanPorts, cyberPortsCache]);
+  }, [selectedCyberHost, cyberScanPorts, cyberPortsCache, result, viewingSavedScan, cyberVulnsCache, cyberScanVulns]);
 
   // Handler genérico para ejecutar herramientas
   const executeTool = useCallback(async (options = {}) => {
@@ -1411,6 +1493,9 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
       setCyberPortsCache({});
       setCyberPortsScanning({});
       cyberPortsScanningRef.current.clear();
+      setCyberVulnsCache({});
+      setCyberVulnsScanning({});
+      cyberVulnsScanningRef.current.clear();
       setSelectedCyberHost(null);
     }
 
@@ -2681,25 +2766,37 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                 </div>
 
                 <div style={{ display: 'flex', borderBottom: '1px solid rgba(0, 240, 255, 0.2)', marginBottom: '0.5rem', flexShrink: 0 }}>
-                  {['details', 'ports', 'ping'].map(tab => (
-                    <button
-                      key={tab}
-                      onClick={() => setCyberActiveTab(tab)}
-                      style={{
-                        flex: 1,
-                        background: cyberActiveTab === tab ? 'rgba(0, 240, 255, 0.15)' : 'transparent',
-                        border: 'none',
-                        borderBottom: cyberActiveTab === tab ? '2px solid #00f0ff' : 'none',
-                        color: cyberActiveTab === tab ? '#00f0ff' : 'rgba(255, 255, 255, 0.6)',
-                        padding: '4px 0',
-                        fontSize: '0.65rem',
-                        cursor: 'pointer',
-                        fontWeight: 'bold'
-                      }}
-                    >
-                      {tab.toUpperCase()}
-                    </button>
-                  ))}
+                  {(() => {
+                    const tabs = ['details', 'ports', 'ping'];
+                    const isFullScan = result && (result.scanMode === 'full' || (viewingSavedScan && viewingSavedScan.lastResult?.scanMode === 'full'));
+                    if (isFullScan) {
+                      tabs.push('vulns');
+                    }
+                    return tabs.map(tab => (
+                      <button
+                        key={tab}
+                        onClick={() => {
+                          setCyberActiveTab(tab);
+                          if (tab === 'vulns' && activeHost?.ip && !cyberVulnsCache[activeHost.ip] && !cyberVulnsScanning[activeHost.ip]) {
+                            cyberScanVulns(activeHost.ip, activeHost);
+                          }
+                        }}
+                        style={{
+                          flex: 1,
+                          background: cyberActiveTab === tab ? 'rgba(0, 240, 255, 0.15)' : 'transparent',
+                          border: 'none',
+                          borderBottom: cyberActiveTab === tab ? '2px solid #00f0ff' : 'none',
+                          color: cyberActiveTab === tab ? '#00f0ff' : 'rgba(255, 255, 255, 0.6)',
+                          padding: '4px 0',
+                          fontSize: '0.65rem',
+                          cursor: 'pointer',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        {tab === 'vulns' ? 'VULNS' : tab.toUpperCase()}
+                      </button>
+                    ));
+                  })()}
                 </div>
 
                 <div style={{ flex: 1, overflowY: 'auto', fontSize: '0.75rem', display: 'flex', flexDirection: 'column' }}>
@@ -2878,6 +2975,316 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
                         </span>
                       </div>
                       {renderPingGraph()}
+                    </div>
+                  )}
+
+                  {cyberActiveTab === 'vulns' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
+                      {cyberVulnsScanning[activeHost.ip] ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', gap: '1rem', flex: 1 }}>
+                          <ProgressSpinner style={{ width: '20px', height: '20px' }} />
+                          <div style={{ color: '#00f0ff', fontSize: '0.75rem', fontWeight: 'bold', letterSpacing: '1px', textAlign: 'center' }}>
+                            ANALIZANDO VULNERABILIDADES...
+                          </div>
+                          <div style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '0.65rem', fontStyle: 'italic', textAlign: 'center' }}>
+                            Analizando puertos y consultando base de datos de CVEs
+                          </div>
+                        </div>
+                      ) : cyberVulnsCache[activeHost.ip] ? (
+                        (() => {
+                          const data = cyberVulnsCache[activeHost.ip];
+                          if (!data.success) {
+                            return (
+                              <div style={{ padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '6px', color: '#ef4444' }}>
+                                <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>Error al escanear:</div>
+                                <div>{data.error || 'Error desconocido'}</div>
+                                <Button
+                                  label="Reintentar escaneo"
+                                  icon="pi pi-refresh"
+                                  onClick={() => cyberScanVulns(activeHost.ip, activeHost)}
+                                  style={{
+                                    marginTop: '0.75rem',
+                                    width: '100%',
+                                    fontSize: '0.7rem',
+                                    padding: '0.3rem',
+                                    background: 'transparent',
+                                    border: '1px solid #ef4444',
+                                    color: '#ef4444'
+                                  }}
+                                />
+                              </div>
+                            );
+                          }
+
+                          const vulnRes = data.vulns || {};
+                          const webSecRes = data.webSecurity || {};
+                          const vulnSummary = vulnRes.summary || {};
+                          const vulnIssues = vulnSummary.vulnerabilities || {};
+                          const webSummary = webSecRes.summary || {};
+
+                          const riskColors = {
+                            0: '#22c55e',
+                            25: '#84cc16',
+                            50: '#f59e0b',
+                            75: '#ef4444',
+                            100: '#991b1b'
+                          };
+                          const getRiskColor = (score) => {
+                            if (score <= 25) return riskColors[0];
+                            if (score <= 50) return riskColors[25];
+                            if (score <= 75) return riskColors[50];
+                            return riskColors[75];
+                          };
+
+                          return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', flex: 1 }}>
+                              {/* Risk Score & Web security Grade Row */}
+                              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                {/* Risk Score Card */}
+                                <div style={{
+                                  flex: 1,
+                                  background: 'linear-gradient(135deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 100%)',
+                                  borderRadius: '8px',
+                                  padding: '0.5rem',
+                                  textAlign: 'center',
+                                  border: `1px solid ${getRiskColor(vulnSummary.riskScore || 0)}40`
+                                }}>
+                                  <div style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.5)', marginBottom: '0.15rem' }}>SCORE RIESGO</div>
+                                  <div style={{ 
+                                    fontSize: '1.4rem', 
+                                    fontWeight: 'bold', 
+                                    color: getRiskColor(vulnSummary.riskScore || 0),
+                                    lineHeight: 1
+                                  }}>
+                                    {vulnSummary.riskScore || 0}
+                                  </div>
+                                  <div style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>/ 100</div>
+                                </div>
+
+                                {/* Web security Grade Card */}
+                                {webSecRes.success && (
+                                  <div style={{
+                                    flex: 1,
+                                    background: 'linear-gradient(135deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 100%)',
+                                    borderRadius: '8px',
+                                    padding: '0.5rem',
+                                    textAlign: 'center',
+                                    border: '1px solid rgba(0, 240, 255, 0.2)'
+                                  }}>
+                                    <div style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.5)', marginBottom: '0.15rem' }}>GRADO WEB</div>
+                                    <div style={{ 
+                                      fontSize: '1.4rem', 
+                                      fontWeight: 'bold', 
+                                      color: webSummary.grade === 'A' || webSummary.grade === 'B' ? '#22c55e' : webSummary.grade === 'C' ? '#eab308' : '#ef4444',
+                                      lineHeight: 1
+                                    }}>
+                                      {webSummary.grade || 'F'}
+                                    </div>
+                                    <div style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>Score: {webSummary.score || 0}</div>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Vulnerabilities Count Indicators */}
+                              <div style={{ 
+                                display: 'grid', 
+                                gridTemplateColumns: 'repeat(4, 1fr)', 
+                                gap: '0.25rem',
+                                background: 'rgba(0,0,0,0.15)',
+                                padding: '0.4rem',
+                                borderRadius: '6px',
+                                border: '1px solid rgba(255,255,255,0.05)'
+                              }}>
+                                <div style={{ textAlign: 'center' }}>
+                                  <div style={{ fontSize: '0.5rem', color: '#ef4444' }}>CRIT</div>
+                                  <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: vulnIssues.critical > 0 ? '#ef4444' : '#666' }}>
+                                    {vulnIssues.critical || 0}
+                                  </div>
+                                </div>
+                                <div style={{ textAlign: 'center' }}>
+                                  <div style={{ fontSize: '0.5rem', color: '#f97316' }}>ALTA</div>
+                                  <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: vulnIssues.high > 0 ? '#f97316' : '#666' }}>
+                                    {vulnIssues.high || 0}
+                                  </div>
+                                </div>
+                                <div style={{ textAlign: 'center' }}>
+                                  <div style={{ fontSize: '0.5rem', color: '#eab308' }}>MED</div>
+                                  <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: vulnIssues.medium > 0 ? '#eab308' : '#666' }}>
+                                    {vulnIssues.medium || 0}
+                                  </div>
+                                </div>
+                                <div style={{ textAlign: 'center' }}>
+                                  <div style={{ fontSize: '0.5rem', color: '#22c55e' }}>BAJA</div>
+                                  <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: vulnIssues.low > 0 ? '#22c55e' : '#666' }}>
+                                    {vulnIssues.low || 0}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Open Ports details */}
+                              {vulnRes.ports && vulnRes.ports.length > 0 ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                                  <div style={{ fontSize: '0.65rem', color: '#00f0ff', fontWeight: 'bold', borderBottom: '1px dashed rgba(0, 240, 255, 0.2)', paddingBottom: '2px' }}>
+                                    [VULNERABILIDADES_POR_PUERTO]
+                                  </div>
+                                  {vulnRes.ports.map((port, pIdx) => {
+                                    const hasVulns = port.vulnerabilities && port.vulnerabilities.length > 0;
+                                    return (
+                                      <div key={pIdx} style={{ 
+                                        background: 'rgba(255,255,255,0.02)', 
+                                        border: '1px solid rgba(255,255,255,0.05)', 
+                                        borderRadius: '4px',
+                                        padding: '0.4rem'
+                                      }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                                          <span style={{ fontWeight: 'bold', color: '#fff', fontSize: '0.7rem' }}>
+                                            PORT {port.port} ({port.service})
+                                          </span>
+                                          {port.version && (
+                                            <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)' }}>
+                                              v{port.version}
+                                            </span>
+                                          )}
+                                        </div>
+
+                                        {hasVulns ? (
+                                          port.vulnerabilities.map((vuln, vIdx) => (
+                                            <div key={vIdx} style={{
+                                              padding: '0.3rem',
+                                              background: vuln.severity === 'CRITICAL' ? 'rgba(239, 68, 68, 0.12)' : 
+                                                         vuln.severity === 'HIGH' ? 'rgba(249, 115, 22, 0.12)' :
+                                                         vuln.severity === 'MEDIUM' ? 'rgba(234, 179, 8, 0.12)' : 'rgba(34, 197, 94, 0.08)',
+                                              borderLeft: `2px solid ${vuln.severity === 'CRITICAL' ? '#ef4444' : vuln.severity === 'HIGH' ? '#f97316' : vuln.severity === 'MEDIUM' ? '#eab308' : '#22c55e'}`,
+                                              borderRadius: '2px',
+                                              marginBottom: '0.25rem',
+                                              fontSize: '0.65rem'
+                                            }}>
+                                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                                                <span style={{ fontWeight: 'bold', color: '#fff' }}>{vuln.cve}</span>
+                                                <span style={{ 
+                                                  fontWeight: 'bold', 
+                                                  color: vuln.severity === 'CRITICAL' ? '#ef4444' : vuln.severity === 'HIGH' ? '#f97316' : vuln.severity === 'MEDIUM' ? '#eab308' : '#22c55e'
+                                                }}>
+                                                  {vuln.severity} ({vuln.score || 'N/A'})
+                                                </span>
+                                              </div>
+                                              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.6rem', lineHeight: '1.2' }}>
+                                                {vuln.description}
+                                              </div>
+                                            </div>
+                                          ))
+                                        ) : (
+                                          <div style={{ fontSize: '0.6rem', color: '#22c55e', fontStyle: 'italic' }}>
+                                            ✓ Sin vulnerabilidades conocidas
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <div style={{ textAlign: 'center', padding: '1rem', color: '#22c55e', background: 'rgba(34, 197, 94, 0.05)', borderRadius: '4px', border: '1px solid rgba(34, 197, 94, 0.2)' }}>
+                                  ✓ Sin puertos vulnerables activos.
+                                </div>
+                              )}
+
+                              {/* Web Security checks failed */}
+                              {webSecRes.success && webSecRes.checks && webSecRes.checks.length > 0 && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.25rem' }}>
+                                  <div style={{ fontSize: '0.65rem', color: '#00f0ff', fontWeight: 'bold', borderBottom: '1px dashed rgba(0, 240, 255, 0.2)', paddingBottom: '2px' }}>
+                                    [CHECKS_WEB_FALLIDOS]
+                                  </div>
+                                  {webSecRes.checks.filter(c => !c.passed).slice(0, 4).map((check, cIdx) => (
+                                    <div key={cIdx} style={{
+                                      padding: '0.3rem',
+                                      background: 'rgba(239, 68, 68, 0.08)',
+                                      border: '1px solid rgba(239, 68, 68, 0.2)',
+                                      borderRadius: '4px',
+                                      fontSize: '0.65rem'
+                                    }}>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', color: '#ef4444', marginBottom: '2px' }}>
+                                        <span>{check.name}</span>
+                                        <span>-{check.scoreImpact} pts</span>
+                                      </div>
+                                      <div style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.6rem' }}>
+                                        {check.description}
+                                      </div>
+                                    </div>
+                                  ))}
+                                  {webSecRes.checks.filter(c => !c.passed).length === 0 && (
+                                    <div style={{ fontSize: '0.65rem', color: '#22c55e', fontStyle: 'italic' }}>
+                                      ✓ Aprobó todos los checks de cabeceras/cookies.
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Recommendations */}
+                              {vulnRes.recommendations && vulnRes.recommendations.length > 0 && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginTop: '0.25rem' }}>
+                                  <div style={{ fontSize: '0.65rem', color: '#fbbf24', fontWeight: 'bold', borderBottom: '1px dashed rgba(251, 191, 36, 0.2)', paddingBottom: '2px' }}>
+                                    [RECOMENDACIONES_SEGURIDAD]
+                                  </div>
+                                  {vulnRes.recommendations.slice(0, 3).map((rec, rIdx) => (
+                                    <div key={rIdx} style={{
+                                      padding: '0.3rem',
+                                      background: 'rgba(251, 191, 36, 0.06)',
+                                      border: '1px solid rgba(251, 191, 36, 0.15)',
+                                      borderRadius: '4px',
+                                      fontSize: '0.6rem',
+                                      color: 'rgba(255,255,255,0.85)'
+                                    }}>
+                                      <strong style={{ color: '#fbbf24' }}>[{rec.priority}]</strong> {rec.text}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Manual Scan button */}
+                              <Button 
+                                label="Volver a Analizar 🔄" 
+                                icon="pi pi-shield" 
+                                onClick={() => cyberScanVulns(activeHost.ip, activeHost)}
+                                disabled={!!cyberVulnsScanning[activeHost.ip]}
+                                style={{
+                                  background: 'transparent',
+                                  border: '1px solid rgba(0, 240, 255, 0.4)',
+                                  borderRadius: '4px',
+                                  padding: '0.4rem',
+                                  fontSize: '0.65rem',
+                                  fontWeight: 'bold',
+                                  color: '#00f0ff',
+                                  width: '100%',
+                                  marginTop: '0.5rem',
+                                  cursor: 'pointer'
+                                }}
+                              />
+                            </div>
+                          );
+                        })()
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', gap: '1rem', flex: 1, border: '1px dashed rgba(0, 240, 255, 0.2)', borderRadius: '6px' }}>
+                          <i className="pi pi-shield" style={{ fontSize: '1.5rem', color: '#00f0ff' }} />
+                          <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.7)', textAlign: 'center' }}>
+                            No se han analizado las vulnerabilidades para este nodo.
+                          </div>
+                          <Button 
+                            label="Analizar Vulnerabilidades 🔓" 
+                            icon="pi pi-shield" 
+                            onClick={() => cyberScanVulns(activeHost.ip, activeHost)}
+                            style={{
+                              background: 'linear-gradient(135deg, #00f0ff 0%, #0072ff 100%)',
+                              border: 'none',
+                              borderRadius: '4px',
+                              padding: '0.4rem 0.8rem',
+                              fontSize: '0.7rem',
+                              fontWeight: 'bold',
+                              color: '#000',
+                              cursor: 'pointer'
+                            }}
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
