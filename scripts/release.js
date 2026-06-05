@@ -558,6 +558,9 @@ async function main() {
 
     if (isPublish) {
         if (!process.env.GH_TOKEN) {
+            ensureGhToken();
+        }
+        if (!process.env.GH_TOKEN) {
             console.log('\n\x1b[33m⚠️  No se detectó GH_TOKEN.\x1b[0m');
             if (!nonInteractive) {
                 const token = await question('Pega tu GitHub Personal Access Token (Enter para omitir subida): ');
