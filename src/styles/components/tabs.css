@@ -582,6 +582,10 @@
 }
 
 /* Botón de nueva pestaña (+) y dropdown terminales en layout Chrome */
+:root[data-tab-layout="chrome"] .local-terminal-buttons {
+  margin-left: 12px !important;
+}
+
 :root[data-tab-layout="chrome"] .local-terminal-buttons .tab-action-button {
   border-radius: 50% !important;
   border: none !important;
@@ -591,6 +595,7 @@
 :root[data-tab-layout="chrome"] .local-terminal-buttons .tab-action-button:hover {
   background: rgba(255, 255, 255, 0.12) !important;
 }
+
 
 /* Barra de tinta para la pestaña activa */
 .p-tabview .p-tabview-nav .p-tabview-ink-bar {

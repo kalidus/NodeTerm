@@ -669,6 +669,9 @@
     margin-left: 6px !important;
     align-self: center !important;
 }
+:root[data-tab-layout="chrome"] .terminal-frame .main-tab-view .p-tabview-nav-container .local-terminal-buttons {
+    margin-left: 12px !important;
+}
 .terminal-frame .main-tab-view .p-tabview-nav-container .local-terminal-buttons .tab-action-button {
     width: 20px !important;
     min-width: 20px !important;
