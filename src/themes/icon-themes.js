@@ -2810,61 +2810,22 @@ export const iconThemes = {
     icons: {
       folder: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <defs>
-            <linearGradient id="cupFolderBack" x1="0" y1="0" x2="0" y2="24">
-              <stop offset="0%" stopColor="#41A2E3" />
-              <stop offset="100%" stopColor="#2585C8" />
-            </linearGradient>
-            <linearGradient id="cupFolderFront" x1="0" y1="0" x2="0" y2="24">
-              <stop offset="0%" stopColor="#7CC0EF" />
-              <stop offset="100%" stopColor="#3092D6" />
-            </linearGradient>
-            <filter id="cupShadow" x="-10%" y="-10%" width="120%" height="120%">
-              <feDropShadow dx="0" dy="2" stdDeviation="1" floodOpacity="0.25"/>
-            </filter>
-          </defs>
-          <path d="M3 6C3 4.89543 3.89543 4 5 4H9.5L12 6.5H19C20.1046 6.5 21 7.39543 21 8.5V18C21 19.1046 20.1046 20 19 20H5C3.89543 20 3 19.1046 3 18V6Z" fill="url(#cupFolderBack)" filter="url(#cupShadow)"/>
-          <path d="M3 10C3 8.89543 3.89543 8 5 8H19C20.1046 8 21 8.89543 21 10V18C21 19.1046 20.1046 20 19 20H5C3.89543 20 3 19.1046 3 18V10Z" fill="url(#cupFolderFront)"/>
-          <path d="M3 10C3 8.89543 3.89543 8 5 8H19C20.1046 8 21 8.89543 21 10V10.5C21 9.39543 20.1046 8.5 19 8.5H5C3.89543 8.5 3 9.39543 3 10.5V10Z" fill="#ffffff" fillOpacity="0.4"/>
+          <path d="M2 5a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5z" fill="#2585C8" />
+          <path d="M2 8h20v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8z" fill="#3092D6" />
+          <path d="M2 8c0-.5.5-1 1-1h18c.5 0 1 .5 1 1v0.5H2V8z" fill="#ffffff" fillOpacity="0.15" />
         </svg>
       ),
       folderOpen: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <defs>
-            <linearGradient id="cupFolderOpenBack" x1="0" y1="0" x2="0" y2="24">
-              <stop offset="0%" stopColor="#41A2E3" />
-              <stop offset="100%" stopColor="#2585C8" />
-            </linearGradient>
-            <linearGradient id="cupFolderOpenFront" x1="0" y1="0" x2="0" y2="24">
-              <stop offset="0%" stopColor="#7CC0EF" />
-              <stop offset="100%" stopColor="#3092D6" />
-            </linearGradient>
-            <filter id="cupShadowOpen" x="-10%" y="-10%" width="120%" height="120%">
-              <feDropShadow dx="0" dy="2" stdDeviation="1.5" floodOpacity="0.25"/>
-            </filter>
-          </defs>
-          <path d="M3 6C3 4.89543 3.89543 4 5 4H9.5L12 6.5H19C20.1046 6.5 21 7.39543 21 8.5V12H3V6Z" fill="url(#cupFolderOpenBack)"/>
-          <path d="M22.5 11.5H3.5L2 20C2 21.1046 2.89543 22 4 22H19C20.1046 22 21 21.1046 21 20L22.5 11.5Z" fill="url(#cupFolderOpenFront)" filter="url(#cupShadowOpen)"/>
-          <path d="M22.5 11.5H3.5L3.2 12.5H22.2L22.5 11.5Z" fill="#ffffff" fillOpacity="0.4"/>
+          <path d="M2 5a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5z" fill="#2585C8" />
+          <path d="M2 10h20v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V10z" fill="#3092D6" />
+          <path d="M2 10c0-.5.5-1 1-1h18c.5 0 1 .5 1 1v0.5H2V10z" fill="#ffffff" fillOpacity="0.15" />
         </svg>
       ),
       ssh: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <defs>
-            <linearGradient id="cupSsh" x1="0" y1="0" x2="0" y2="24">
-              <stop offset="0%" stopColor="#2B2D30" />
-              <stop offset="100%" stopColor="#1B1C1F" />
-            </linearGradient>
-            <linearGradient id="cupSshTop" x1="0" y1="0" x2="0" y2="24">
-              <stop offset="0%" stopColor="#4E5157" />
-              <stop offset="100%" stopColor="#2B2D30" />
-            </linearGradient>
-            <filter id="cupShadowSsh" x="-10%" y="-10%" width="120%" height="120%">
-              <feDropShadow dx="0" dy="2" stdDeviation="1.5" floodOpacity="0.3"/>
-            </filter>
-          </defs>
-          <rect x="2" y="3" width="20" height="16" rx="4" fill="url(#cupSsh)" filter="url(#cupShadowSsh)"/>
-          <path d="M2 7C2 4.79086 3.79086 3 6 3H18C20.2091 3 22 4.79086 22 7V8H2V7Z" fill="url(#cupSshTop)"/>
+          <rect x="2" y="3" width="20" height="16" rx="4" fill="#1B1C1F" />
+          <path d="M2 7C2 4.79086 3.79086 3 6 3H18C20.2091 3 22 4.79086 22 7V8H2V7Z" fill="#2B2D30"/>
           <circle cx="5" cy="5.5" r="1.5" fill="#FF5F56"/>
           <circle cx="9" cy="5.5" r="1.5" fill="#FFBD2E"/>
           <circle cx="13" cy="5.5" r="1.5" fill="#27C93F"/>
@@ -2873,21 +2834,8 @@ export const iconThemes = {
       ),
       rdp: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <defs>
-            <linearGradient id="cupRdpBack" x1="0" y1="0" x2="0" y2="24">
-              <stop offset="0%" stopColor="#E5E7EB" />
-              <stop offset="100%" stopColor="#9CA3AF" />
-            </linearGradient>
-            <linearGradient id="cupRdpScreen" x1="0" y1="0" x2="0" y2="24">
-              <stop offset="0%" stopColor="#111827" />
-              <stop offset="100%" stopColor="#374151" />
-            </linearGradient>
-            <filter id="cupShadowRdp" x="-10%" y="-10%" width="120%" height="120%">
-              <feDropShadow dx="0" dy="2" stdDeviation="1" floodOpacity="0.2"/>
-            </filter>
-          </defs>
-          <rect x="2" y="3" width="20" height="14" rx="3" fill="url(#cupRdpBack)" filter="url(#cupShadowRdp)"/>
-          <rect x="3" y="4" width="18" height="12" rx="2" fill="url(#cupRdpScreen)"/>
+          <rect x="2" y="3" width="20" height="14" rx="3" fill="#9CA3AF" />
+          <rect x="3" y="4" width="18" height="12" rx="2" fill="#1F2937"/>
           <path d="M8 21H16M12 17V21" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round"/>
           <path d="M2 6C2 4.34315 3.34315 3 5 3H19C20.6569 3 22 4.34315 22 6V6.5C22 4.84315 20.6569 3.5 19 3.5H5C3.34315 3.5 2 4.84315 2 6.5V6Z" fill="#ffffff" fillOpacity="0.8"/>
           <circle cx="12" cy="10" r="2.5" fill="#3B82F6"/>
@@ -2895,21 +2843,8 @@ export const iconThemes = {
       ),
       vnc: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <defs>
-            <linearGradient id="cupVncBack" x1="0" y1="0" x2="0" y2="24">
-              <stop offset="0%" stopColor="#E5E7EB" />
-              <stop offset="100%" stopColor="#9CA3AF" />
-            </linearGradient>
-            <linearGradient id="cupVncScreen" x1="0" y1="0" x2="0" y2="24">
-              <stop offset="0%" stopColor="#064E3B" />
-              <stop offset="100%" stopColor="#047857" />
-            </linearGradient>
-            <filter id="cupShadowVnc" x="-10%" y="-10%" width="120%" height="120%">
-              <feDropShadow dx="0" dy="2" stdDeviation="1" floodOpacity="0.2"/>
-            </filter>
-          </defs>
-          <rect x="2" y="3" width="20" height="14" rx="3" fill="url(#cupVncBack)" filter="url(#cupShadowVnc)"/>
-          <rect x="3" y="4" width="18" height="12" rx="2" fill="url(#cupVncScreen)"/>
+          <rect x="2" y="3" width="20" height="14" rx="3" fill="#9CA3AF" />
+          <rect x="3" y="4" width="18" height="12" rx="2" fill="#047857"/>
           <path d="M8 21H16M12 17V21" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round"/>
           <path d="M2 6C2 4.34315 3.34315 3 5 3H19C20.6569 3 22 4.34315 22 6V6.5C22 4.84315 20.6569 3.5 19 3.5H5C3.34315 3.5 2 4.84315 2 6.5V6Z" fill="#ffffff" fillOpacity="0.8"/>
           <ellipse cx="12" cy="10" rx="4" ry="3" fill="#10B981" />
@@ -2918,70 +2853,30 @@ export const iconThemes = {
       ),
       file: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <defs>
-            <linearGradient id="cupFile" x1="0" y1="0" x2="0" y2="24">
-              <stop offset="0%" stopColor="#ffffff" />
-              <stop offset="100%" stopColor="#E5E7EB" />
-            </linearGradient>
-            <filter id="cupShadowFile" x="-10%" y="-10%" width="120%" height="120%">
-              <feDropShadow dx="0" dy="1.5" stdDeviation="1" floodOpacity="0.15"/>
-            </filter>
-          </defs>
-          <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" fill="url(#cupFile)" filter="url(#cupShadowFile)"/>
-          <path d="M14 2V8H20" fill="#E5E7EB"/>
-          <path d="M14 2L20 8H14V2Z" fill="#ffffff"/>
-          <path d="M6 4C6 2.89543 6.89543 2 8 2H14V2.5H8C6.89543 2.5 6 3.39543 6 4.5V4Z" fill="#ffffff" fillOpacity="0.8"/>
+          <rect x="4" y="2" width="16" height="20" rx="2" fill="#F3F4F6" />
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="none" stroke="#E5E7EB" strokeWidth="1" />
+          <polygon points="14 2 20 8 14 8" fill="#D1D5DB" />
         </svg>
       ),
       sftp: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <defs>
-            <linearGradient id="cupSftp" x1="0" y1="0" x2="0" y2="24">
-              <stop offset="0%" stopColor="#FDE047" />
-              <stop offset="100%" stopColor="#EAB308" />
-            </linearGradient>
-            <filter id="cupShadowSftp" x="-10%" y="-10%" width="120%" height="120%">
-              <feDropShadow dx="0" dy="1.5" stdDeviation="1" floodOpacity="0.15"/>
-            </filter>
-          </defs>
-          <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" fill="url(#cupSftp)" filter="url(#cupShadowSftp)"/>
-          <path d="M14 2V8H20" fill="#FDE047"/>
-          <path d="M14 2L20 8H14V2Z" fill="#FEF08A"/>
+          <rect x="4" y="2" width="16" height="20" rx="2" fill="#EAB308" />
+          <polygon points="14 2 20 8 14 8" fill="#FDE047" />
           <rect x="9" y="13" width="6" height="5" rx="1" fill="#713F12"/>
           <path d="M10 13v-1.5a2 2 0 1 1 4 0V13" stroke="#713F12" strokeWidth="1.5"/>
         </svg>
       ),
       ftp: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <defs>
-            <linearGradient id="cupFtp" x1="0" y1="0" x2="0" y2="24">
-              <stop offset="0%" stopColor="#93C5FD" />
-              <stop offset="100%" stopColor="#3B82F6" />
-            </linearGradient>
-            <filter id="cupShadowFtp" x="-10%" y="-10%" width="120%" height="120%">
-              <feDropShadow dx="0" dy="1.5" stdDeviation="1" floodOpacity="0.15"/>
-            </filter>
-          </defs>
-          <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" fill="url(#cupFtp)" filter="url(#cupShadowFtp)"/>
-          <path d="M14 2V8H20" fill="#93C5FD"/>
-          <path d="M14 2L20 8H14V2Z" fill="#BFDBFE"/>
+          <rect x="4" y="2" width="16" height="20" rx="2" fill="#3B82F6" />
+          <polygon points="14 2 20 8 14 8" fill="#93C5FD" />
           <path d="M12 12l-3 3 3 3M9 15h6" stroke="#1E3A8A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       ),
       scp: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <defs>
-            <linearGradient id="cupScp" x1="0" y1="0" x2="0" y2="24">
-              <stop offset="0%" stopColor="#A7F3D0" />
-              <stop offset="100%" stopColor="#10B981" />
-            </linearGradient>
-            <filter id="cupShadowScp" x="-10%" y="-10%" width="120%" height="120%">
-              <feDropShadow dx="0" dy="1.5" stdDeviation="1" floodOpacity="0.15"/>
-            </filter>
-          </defs>
-          <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" fill="url(#cupScp)" filter="url(#cupShadowScp)"/>
-          <path d="M14 2V8H20" fill="#A7F3D0"/>
-          <path d="M14 2L20 8H14V2Z" fill="#D1FAE5"/>
+          <rect x="4" y="2" width="16" height="20" rx="2" fill="#10B981" />
+          <polygon points="14 2 20 8 14 8" fill="#A7F3D0" />
           <path d="M9 15l3-3 3 3" stroke="#064E3B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       )

@@ -199,6 +199,9 @@ export const NotebookIcon = ({ themeKey = 'nord', isOpen = false, size = 18 }) =
   } else if (key === 'fluent') {
     coverColor = '#0078d4';
     spiralColor = '#50e6ff';
+  } else if (key === 'cupertino') {
+    coverColor = '#3092D6';
+    spiralColor = '#7CC0EF';
   } else if (key === 'solarized') {
     coverColor = '#b58900';
     spiralColor = '#268bd2';
