@@ -6,10 +6,21 @@ import TerminalFrame from './TerminalFrame';
 const DocumentDetailsPanel = ({
   selectedNode,
   uiTheme = 'Light',
-  onOpenDocument = null
+  onOpenDocument = null,
+  collapsed: controlledCollapsed,
+  onCollapseChange
 }) => {
   const { t } = useTranslation('common');
-  const [collapsed, setCollapsed] = useState(false);
+  const [localCollapsed, setLocalCollapsed] = useState(false);
+  const isControlled = controlledCollapsed !== undefined;
+  const collapsed = isControlled ? controlledCollapsed : localCollapsed;
+  const setCollapsed = (val) => {
+    if (isControlled) {
+      onCollapseChange?.(val);
+    } else {
+      setLocalCollapsed(val);
+    }
+  };
   const [panelHeight, setPanelHeight] = useState(() => {
     const saved = localStorage.getItem('documentDetailsPanelHeight');
     return saved ? parseInt(saved, 10) : 200;

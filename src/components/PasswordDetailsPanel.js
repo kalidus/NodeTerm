@@ -64,9 +64,20 @@ const getSecretIcon = (secretType) => {
 
 const PasswordDetailsPanel = ({
   selectedNode,
-  onCopy = null
+  onCopy = null,
+  collapsed: controlledCollapsed,
+  onCollapseChange
 }) => {
-  const [collapsed, setCollapsed] = useState(false);
+  const [localCollapsed, setLocalCollapsed] = useState(false);
+  const isControlled = controlledCollapsed !== undefined;
+  const collapsed = isControlled ? controlledCollapsed : localCollapsed;
+  const setCollapsed = (val) => {
+    if (isControlled) {
+      onCollapseChange?.(val);
+    } else {
+      setLocalCollapsed(val);
+    }
+  };
   const [panelHeight, setPanelHeight] = useState(() => {
     const saved = localStorage.getItem('passwordDetailsPanelHeight');
     return saved ? parseInt(saved, 10) : 200;

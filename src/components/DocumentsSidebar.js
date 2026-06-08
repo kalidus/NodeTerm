@@ -352,6 +352,16 @@ const DocumentsSidebar = ({
     return selectedKey ? findNodeInTree(documentNodes, selectedKey) : null;
   }, [selectedNodeKey, documentNodes]);
 
+  const [detailsCollapsed, setDetailsCollapsed] = useState(false);
+
+  const isDetailsPanelVisible = useMemo(() => {
+    if (!selectedNodeForDetails) return false;
+    const data = selectedNodeForDetails.data;
+    const isFolder = selectedNodeForDetails.droppable || data?.type === 'document-folder';
+    const isNote = data && (data.type === 'document' || data.type === 'quick-note');
+    return !isFolder && !data?.isShowMoreBtn && isNote;
+  }, [selectedNodeForDetails]);
+
   const countNotesInFolder = useCallback((folderNode) => {
     let count = 0;
     const traverse = (node) => {
@@ -1363,6 +1373,8 @@ const DocumentsSidebar = ({
         selectedNode={selectedNodeForDetails}
         uiTheme={uiTheme}
         onOpenDocument={handleOpenDocument}
+        collapsed={detailsCollapsed}
+        onCollapseChange={setDetailsCollapsed}
       />
 
       {/* Panel lateral de Notas Rápidas (estilo Joplin) */}
@@ -1442,12 +1454,22 @@ const DocumentsSidebar = ({
         onClick={() => setShowDocTrashModal(true)}
         title={`Papelera (${trashedDocuments.length})`}
         style={{
-          position: 'absolute', bottom: '12px', right: '10px',
-          width: '30px', height: '30px', borderRadius: '8px', border: 'none',
+          position: 'absolute',
+          bottom: isDetailsPanelVisible && detailsCollapsed ? '44px' : '12px',
+          right: '10px',
+          width: '30px',
+          height: '30px',
+          borderRadius: '8px',
+          border: 'none',
           background: trashedDocuments.length > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(120,120,140,0.12)',
           color: trashedDocuments.length > 0 ? '#f87171' : '#888',
-          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '13px', zIndex: 10, transition: 'background 0.2s, transform 0.15s',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '13px',
+          zIndex: 10,
+          transition: 'background 0.2s, transform 0.15s, bottom 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
         }}
         onMouseEnter={e => { e.currentTarget.style.background = trashedDocuments.length > 0 ? 'rgba(239,68,68,0.28)' : 'rgba(120,120,140,0.22)'; e.currentTarget.style.transform = 'scale(1.1)'; }}
         onMouseLeave={e => { e.currentTarget.style.background = trashedDocuments.length > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(120,120,140,0.12)'; e.currentTarget.style.transform = 'scale(1)'; }}

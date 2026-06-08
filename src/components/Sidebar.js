@@ -343,6 +343,12 @@ const Sidebar = React.memo(({
 
   // Estado para el nodo seleccionado actualmente (para el panel de detalles)
   const [selectedNodeForDetails, setSelectedNodeForDetails] = useState(null);
+  const [detailsCollapsed, setDetailsCollapsed] = useState(false);
+
+  const isDetailsPanelVisible = useMemo(() => {
+    if (!selectedNodeForDetails) return false;
+    return !!(selectedNodeForDetails.data || selectedNodeForDetails.droppable);
+  }, [selectedNodeForDetails]);
 
   // Función para actualizar un nodo en el árbol
   const updateNodeInTree = useCallback((updatedNode) => {
@@ -3240,6 +3246,8 @@ const Sidebar = React.memo(({
           onNodeUpdate={updateNodeInTree}
           onOpenSSHConnection={onOpenSSHConnection}
           onOpenVncConnection={onOpenVncConnection}
+          collapsed={detailsCollapsed}
+          onCollapseChange={setDetailsCollapsed}
         />
       </div>
 
@@ -3518,7 +3526,7 @@ const Sidebar = React.memo(({
               title={`Papelera (${trashedConnections.length})`}
               style={{
                 position: 'absolute',
-                bottom: '12px',
+                bottom: isDetailsPanelVisible && detailsCollapsed ? '44px' : '12px',
                 right: '10px',
                 width: '30px',
                 height: '30px',
@@ -3531,7 +3539,7 @@ const Sidebar = React.memo(({
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: '13px',
-                transition: 'background 0.2s, color 0.2s, transform 0.15s',
+                transition: 'background 0.2s, color 0.2s, transform 0.15s, bottom 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
                 backdropFilter: 'blur(4px)',
                 zIndex: 10,
               }}

@@ -161,11 +161,22 @@ const ConnectionDetailsPanel = ({
   sessionActionIconTheme = 'modern',
   onNodeUpdate = null, // Función para actualizar el nodo
   onOpenSSHConnection,
-  onOpenVncConnection
+  onOpenVncConnection,
+  collapsed: controlledCollapsed,
+  onCollapseChange
 }) => {
   // TODOS LOS HOOKS DEBEN IR AL PRINCIPIO, ANTES DE CUALQUIER RETORNO CONDICIONAL
   const { t } = useTranslation('common');
-  const [collapsed, setCollapsed] = useState(false);
+  const [localCollapsed, setLocalCollapsed] = useState(false);
+  const isControlled = controlledCollapsed !== undefined;
+  const collapsed = isControlled ? controlledCollapsed : localCollapsed;
+  const setCollapsed = (val) => {
+    if (isControlled) {
+      onCollapseChange?.(val);
+    } else {
+      setLocalCollapsed(val);
+    }
+  };
   const [panelHeight, setPanelHeight] = useState(() => {
     // Cargar altura guardada del localStorage
     const saved = localStorage.getItem('connectionDetailsPanelHeight');

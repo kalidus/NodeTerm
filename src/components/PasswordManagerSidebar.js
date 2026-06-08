@@ -99,6 +99,18 @@ const PasswordManagerSidebar = ({
       : Object.keys(selectedNodeKey)[0];
     return key ? findNodeInTree(passwordNodes, key) : null;
   }, [selectedNodeKey, passwordNodes]);
+
+  const [detailsCollapsed, setDetailsCollapsed] = useState(false);
+
+  const isDetailsPanelVisible = useMemo(() => {
+    if (!selectedNodeForDetails) return false;
+    const data = selectedNodeForDetails.data;
+    const secretType = data?.type || 'password';
+    const isFolder = selectedNodeForDetails.droppable || data?.type === 'password-folder';
+    const isSecret = data && ['password', 'crypto_wallet', 'api_key', 'secure_note'].includes(secretType);
+    return !isFolder && !data?.isShowMoreBtn && isSecret;
+  }, [selectedNodeForDetails]);
+
   const [allExpanded, setAllExpanded] = useState(false);
   const [folderLimits, setFolderLimits] = useState({});
 
@@ -2267,6 +2279,8 @@ const PasswordManagerSidebar = ({
       <PasswordDetailsPanel
         selectedNode={selectedNodeForDetails}
         onCopy={handleCopyToClipboard}
+        collapsed={detailsCollapsed}
+        onCollapseChange={setDetailsCollapsed}
       />
 
       {/* Dialog para crear/editar secreto */}
@@ -2795,12 +2809,22 @@ const PasswordManagerSidebar = ({
         onClick={() => setShowPwdTrashModal(true)}
         title={`Papelera (${trashedPasswords.length})`}
         style={{
-          position: 'absolute', bottom: '12px', right: '10px',
-          width: '30px', height: '30px', borderRadius: '8px', border: 'none',
+          position: 'absolute',
+          bottom: isDetailsPanelVisible && detailsCollapsed ? '44px' : '12px',
+          right: '10px',
+          width: '30px',
+          height: '30px',
+          borderRadius: '8px',
+          border: 'none',
           background: trashedPasswords.length > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(120,120,140,0.12)',
           color: trashedPasswords.length > 0 ? '#f87171' : '#888',
-          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '13px', zIndex: 10, transition: 'background 0.2s, transform 0.15s',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '13px',
+          zIndex: 10,
+          transition: 'background 0.2s, transform 0.15s, bottom 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
         }}
         onMouseEnter={e => { e.currentTarget.style.background = trashedPasswords.length > 0 ? 'rgba(239,68,68,0.28)' : 'rgba(120,120,140,0.22)'; e.currentTarget.style.transform = 'scale(1.1)'; }}
         onMouseLeave={e => { e.currentTarget.style.background = trashedPasswords.length > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(120,120,140,0.12)'; e.currentTarget.style.transform = 'scale(1)'; }}
