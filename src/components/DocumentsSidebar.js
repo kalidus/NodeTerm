@@ -523,6 +523,9 @@ const DocumentsSidebar = ({
     const node = event.node;
     if (!node) return;
 
+    event.originalEvent?.stopPropagation();
+    event.originalEvent?.preventDefault();
+
     const isFolder = node.droppable || node.data?.type === 'document-folder';
     const items = [];
 
@@ -572,6 +575,31 @@ const DocumentsSidebar = ({
 
     setContextMenuItems(items);
     contextMenuRef.current?.show(event.originalEvent);
+  };
+
+  const handleEmptySpaceContextMenu = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const items = [
+      {
+        label: 'Nueva nota',
+        icon: 'pi pi-file',
+        command: () => handleCreateNewNote()
+      },
+      {
+        label: 'Nueva carpeta',
+        icon: 'pi pi-folder',
+        command: () => {
+          setParentKeyForNew(null);
+          setNewItemName('');
+          setShowNewFolderDialog(true);
+        }
+      }
+    ];
+
+    setContextMenuItems(items);
+    contextMenuRef.current?.show(e);
   };
 
   const onDragDrop = (event) => {
@@ -1024,6 +1052,7 @@ const DocumentsSidebar = ({
       {/* Tree — mismo contenedor que conexiones/passwords para alinear márgenes */}
       <div
         className="tree-container"
+        onContextMenu={handleEmptySpaceContextMenu}
         style={{
           flex: 1,
           minHeight: 0,
