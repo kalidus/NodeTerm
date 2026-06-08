@@ -1,7 +1,7 @@
 /** Clave localStorage del estilo de apariencia (layout global de la UI). */
 export const UI_LAYOUT_STORAGE_KEY = 'ui_layout';
 
-const LAYOUT_BODY_CLASSES = ['layout-default', 'layout-cyberpunk', 'layout-unified'];
+const LAYOUT_BODY_CLASSES = ['layout-default', 'layout-cyberpunk', 'layout-unified', 'layout-modern-custom'];
 
 /**
  * Aplica en <body> el layout guardado (moderno / cyberpunk / unificado).

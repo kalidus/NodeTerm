@@ -18,6 +18,55 @@ body.layout-default {
   --layout-font-family: inherit; /* Use theme font */
 }
 
+body.layout-modern-custom {
+  --layout-border-radius-main: 12px;
+  --layout-border-radius-sm: 6px;
+  --layout-border-radius-lg: 16px;
+  
+  --layout-border-width: 1px;
+  --layout-panel-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  
+  --layout-font-family: inherit;
+}
+
+html,
+body.layout-modern-custom,
+body.layout-modern-custom #root,
+body.layout-modern-custom .app-container,
+body.layout-modern-custom .workspace-container,
+body.layout-modern-custom .main-splitter {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+body.layout-modern-custom .sidebar-container {
+  background: var(--ui-sidebar-bg, #101216) !important;
+  box-shadow: var(--layout-panel-shadow) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+body.layout-modern-custom .terminal-frame {
+  background: var(--ui-sidebar-bg, #1a1b26) !important;
+  box-shadow: var(--layout-panel-shadow) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+body.layout-modern-custom .title-bar {
+  background: rgba(14, 17, 22, 0.45) !important;
+  backdrop-filter: blur(12px) !important;
+}
+
+html[data-custom-titlebar="true"] body.layout-modern-custom .title-bar {
+  background: color-mix(in srgb, var(--ui-titlebar-accent) 55%, transparent) !important;
+  backdrop-filter: blur(12px) !important;
+}
+
+body.layout-modern-custom .status-bar {
+  background: rgba(14, 17, 22, 0.45) !important;
+  backdrop-filter: blur(12px) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
 /* =========================================
    LAYOUT: CYBERPUNK
    ========================================= */
@@ -71,6 +120,7 @@ body.layout-cyberpunk *::-webkit-scrollbar-thumb:hover {
 
 /* Titlebar: color del tema en todos los estilos de apariencia */
 body.layout-default .title-bar,
+body.layout-modern-custom .title-bar,
 body.layout-cyberpunk .title-bar,
 body.layout-unified .title-bar {
   background: var(--ui-titlebar-accent, var(--ui-chrome-header-bg, var(--ui-sidebar-bg, #0e1116))) !important;
@@ -80,6 +130,10 @@ body.layout-default .title-bar,
 body.layout-default .title-bar span,
 body.layout-default .title-bar svg,
 body.layout-default .title-bar .title-cursor-blink,
+body.layout-modern-custom .title-bar,
+body.layout-modern-custom .title-bar span,
+body.layout-modern-custom .title-bar svg,
+body.layout-modern-custom .title-bar .title-cursor-blink,
 body.layout-cyberpunk .title-bar,
 body.layout-cyberpunk .title-bar span,
 body.layout-cyberpunk .title-bar svg,
@@ -93,6 +147,7 @@ body.layout-unified .title-bar .title-cursor-blink {
 }
 
 body.layout-default .title-bar svg path,
+body.layout-modern-custom .title-bar svg path,
 body.layout-cyberpunk .title-bar svg path,
 body.layout-unified .title-bar svg path {
   stroke: var(--ui-titlebar-text, var(--ui-sidebar-text, rgba(255, 255, 255, 0.85))) !important;
@@ -286,15 +341,19 @@ html[data-custom-titlebar="true"] .title-bar[data-animation] {
 }
 
 html[data-custom-titlebar="true"] body.layout-default .title-bar,
+html[data-custom-titlebar="true"] body.layout-modern-custom .title-bar,
 html[data-custom-titlebar="true"] body.layout-cyberpunk .title-bar,
 html[data-custom-titlebar="true"] body.layout-unified .title-bar,
 html[data-custom-titlebar="true"] body.layout-default .title-bar span,
+html[data-custom-titlebar="true"] body.layout-modern-custom .title-bar span,
 html[data-custom-titlebar="true"] body.layout-cyberpunk .title-bar span,
 html[data-custom-titlebar="true"] body.layout-unified .title-bar span,
 html[data-custom-titlebar="true"] body.layout-default .title-bar svg,
+html[data-custom-titlebar="true"] body.layout-modern-custom .title-bar svg,
 html[data-custom-titlebar="true"] body.layout-cyberpunk .title-bar svg,
 html[data-custom-titlebar="true"] body.layout-unified .title-bar svg,
 html[data-custom-titlebar="true"] body.layout-default .title-bar .title-cursor-blink,
+html[data-custom-titlebar="true"] body.layout-modern-custom .title-bar .title-cursor-blink,
 html[data-custom-titlebar="true"] body.layout-cyberpunk .title-bar .title-cursor-blink,
 html[data-custom-titlebar="true"] body.layout-unified .title-bar .title-cursor-blink {
   color: var(--ui-titlebar-text) !important;
@@ -302,6 +361,7 @@ html[data-custom-titlebar="true"] body.layout-unified .title-bar .title-cursor-b
 }
 
 html[data-custom-titlebar="true"] body.layout-default .title-bar svg path,
+html[data-custom-titlebar="true"] body.layout-modern-custom .title-bar svg path,
 html[data-custom-titlebar="true"] body.layout-cyberpunk .title-bar svg path,
 html[data-custom-titlebar="true"] body.layout-unified .title-bar svg path {
   stroke: var(--ui-titlebar-text) !important;
@@ -365,6 +425,10 @@ html body.layout-default .sidebar-container.sidebar-root,
 html body.layout-default .sidebar-container.sidebar-root .sidebar-tree,
 html body.layout-default .sidebar-tree .p-treenode-content .sidebar-tree-node-row,
 html body.layout-default .sidebar-tree .node-label,
+html body.layout-modern-custom .sidebar-container.sidebar-root,
+html body.layout-modern-custom .sidebar-container.sidebar-root .sidebar-tree,
+html body.layout-modern-custom .sidebar-tree .p-treenode-content .sidebar-tree-node-row,
+html body.layout-modern-custom .sidebar-tree .node-label,
 html body.layout-cyberpunk .sidebar-container.sidebar-root,
 html body.layout-cyberpunk .sidebar-container.sidebar-root .sidebar-tree,
 html body.layout-cyberpunk .sidebar-tree .p-treenode-content .sidebar-tree-node-row,

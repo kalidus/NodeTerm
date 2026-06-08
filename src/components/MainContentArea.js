@@ -2867,7 +2867,7 @@ const MainContentArea = ({
   }, [sidebarCollapsed, sidebarSizePercent]);
 
   return (
-    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row', width: '100%', background: 'var(--ui-sidebar-bg, #0a0f1f)' }}>
+    <div className="workspace-container" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'row', width: '100%', background: 'var(--ui-sidebar-bg, #0a0f1f)' }}>
       <Splitter
         style={{ height: '100%', width: '100%', background: 'var(--ui-sidebar-bg, #0a0f1f)' }}
         onResizeEnd={handleResizeEndWithAutoCollapse}

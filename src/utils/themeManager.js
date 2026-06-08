@@ -384,7 +384,11 @@ class ThemeManager {
       if (titlebarColors.isCustom) {
         root.setAttribute('data-custom-titlebar', 'true');
         bar.setAttribute('data-custom-titlebar', 'true');
-        bar.style.setProperty('background', titlebarColors.accent, 'important');
+        const isModernCustom = document.body && document.body.classList.contains('layout-modern-custom');
+        const bgVal = isModernCustom
+          ? `color-mix(in srgb, ${titlebarColors.accent} 55%, transparent)`
+          : titlebarColors.accent;
+        bar.style.setProperty('background', bgVal, 'important');
         bar.style.setProperty('color', titlebarColors.text, 'important');
       } else {
         bar.removeAttribute('data-custom-titlebar');

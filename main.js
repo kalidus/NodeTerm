@@ -1239,7 +1239,8 @@ function createWindow() {
     title: 'NodeTerm',
     frame: false,
     show: false,
-    backgroundColor: '#0e1116',
+    transparent: true,
+    backgroundColor: '#00000000',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

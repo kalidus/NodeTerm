@@ -116,6 +116,7 @@
       "select": "Selecciona un Layout",
       "options": {
         "default": "Moderno (Redondeado)",
+        "modern-custom": "Moderno (Personalizado)",
         "cyberpunk": "Cyberpunk (Angular)"
       }
     },
