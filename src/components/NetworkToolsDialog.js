@@ -25,6 +25,7 @@ import { Tooltip } from 'primereact/tooltip';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
 import CvssCalculatorPanel from './network-tools/CvssCalculatorPanel';
+import localStorageSyncService from '../services/LocalStorageSyncService';
 
 // Categorías de herramientas
 const TOOL_CATEGORIES = [
@@ -223,7 +224,9 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
 
   useEffect(() => {
     try {
-      localStorage.setItem('nodeterm_wol_devices', JSON.stringify(wolDevices));
+      const serialized = JSON.stringify(wolDevices);
+      localStorage.setItem('nodeterm_wol_devices', serialized);
+      localStorageSyncService.debouncedSync({ nodeterm_wol_devices: serialized });
     } catch (e) {
       console.error('Error saving WoL devices:', e);
     }
@@ -245,11 +248,49 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
 
   useEffect(() => {
     try {
-      localStorage.setItem('nodeterm_saved_network_scans', JSON.stringify(savedScans));
+      const serialized = JSON.stringify(savedScans);
+      localStorage.setItem('nodeterm_saved_network_scans', serialized);
+      localStorageSyncService.debouncedSync({ nodeterm_saved_network_scans: serialized });
     } catch (e) {
       console.error('Error saving network scans:', e);
     }
   }, [savedScans]);
+
+  // Escuchar actualizaciones externas de settings (sincronización entre instancias)
+  useEffect(() => {
+    const handleSettingsUpdated = () => {
+      try {
+        const savedWol = localStorage.getItem('nodeterm_wol_devices');
+        if (savedWol) {
+          const parsed = JSON.parse(savedWol);
+          setWolDevices(prev => {
+            if (JSON.stringify(prev) !== savedWol) {
+              return parsed;
+            }
+            return prev;
+          });
+        }
+        
+        const savedScansData = localStorage.getItem('nodeterm_saved_network_scans');
+        if (savedScansData) {
+          const parsedScans = JSON.parse(savedScansData);
+          setSavedScans(prev => {
+            if (JSON.stringify(prev) !== savedScansData) {
+              return parsedScans;
+            }
+            return prev;
+          });
+        }
+      } catch (err) {
+        console.error('Error reloading network tools data from localStorage on settings-updated:', err);
+      }
+    };
+
+    window.addEventListener('settings-updated', handleSettingsUpdated);
+    return () => {
+      window.removeEventListener('settings-updated', handleSettingsUpdated);
+    };
+  }, []);
   
   // Host Vulnerability Scanner
   const [hostVulnHost, setHostVulnHost] = useState('');

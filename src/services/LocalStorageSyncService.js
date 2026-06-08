@@ -24,6 +24,15 @@ const FAVORITE_SYNC_KEYS = [
     LEGACY_FAVORITE_ASSIGNMENTS_KEY
 ];
 
+const isEmptyValue = (val) => {
+    if (val === null || val === undefined) return true;
+    if (typeof val === 'string') {
+        const trimmed = val.trim();
+        return trimmed === '' || trimmed === '[]' || trimmed === '{}';
+    }
+    return false;
+};
+
 class LocalStorageSyncService {
     constructor() {
         this._initialized = false;
@@ -181,13 +190,25 @@ class LocalStorageSyncService {
     _importToLocalStorage(data) {
         const normalized = this._normalizeFavoriteSyncPayload({ ...data });
         let importedCount = 0;
+        let needsWriteBack = false;
 
         for (const key of SYNC_KEYS) {
             if (normalized[key] !== undefined && normalized[key] !== null) {
+                const localVal = localStorage.getItem(key);
+                if (isEmptyValue(normalized[key]) && !isEmptyValue(localVal)) {
+                    // Evitar que un valor vacío compartido sobrescriba un valor local no vacío
+                    needsWriteBack = true;
+                    continue;
+                }
                 // Sobrescribir siempre al inicializar para asegurar sync
                 localStorage.setItem(key, normalized[key]);
                 importedCount++;
             }
+        }
+
+        if (needsWriteBack) {
+            this._lastSyncDataStr = null;
+            this.debouncedSync();
         }
 
         this._migrateLegacyFavoriteAssignmentsInLocalStorage();

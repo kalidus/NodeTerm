@@ -128,7 +128,11 @@ const SYNC_KEYS = [
   // Notas / documentos
   'documents_encrypted',
   'documentManagerNodes',
-  'documents_expanded_keys'
+  'documents_expanded_keys',
+
+  // Herramientas de red (Wake on LAN y escaneos de red guardados)
+  'nodeterm_wol_devices',
+  'nodeterm_saved_network_scans'
 ];
 
 module.exports = { SYNC_KEYS };
