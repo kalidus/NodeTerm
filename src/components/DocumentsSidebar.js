@@ -6,6 +6,7 @@ import { Dialog } from 'primereact/dialog';
 import { Tree } from 'primereact/tree';
 import { ContextMenu } from 'primereact/contextmenu';
 import { sessionActionIconThemes } from '../themes/session-action-icons';
+import { iconThemes } from '../themes/icon-themes';
 import { FUTURISTIC_UI_KEYS } from '../themes/ui-themes';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import {
@@ -118,6 +119,190 @@ const DOC_HEADER_ICON_WRAP = {
   height: '20px'
 };
 
+// Componente para renderizar la libreta con estilo adaptado al tema de iconos activo
+export const NotebookIcon = ({ themeKey = 'nord', isOpen = false, size = 18 }) => {
+  const key = themeKey.toLowerCase();
+  
+  if (key === 'cyberpunk') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#00ff41" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ filter: 'url(#cyberGlow)' }}>
+        <rect x="5" y="3" width="15" height="18" rx="1" />
+        <path d="M2 6h3M2 10h3M2 14h3M2 18h3" stroke="#ff0080" />
+        <path d="M9 7h7M9 12h7" stroke="#00ff41" strokeWidth="1" opacity="0.7" />
+      </svg>
+    );
+  }
+  
+  if (key === 'synthwave') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="#120424" stroke="#ff007f" strokeWidth="2" style={{ filter: 'url(#synthGlowNew)' }}>
+        <rect x="5" y="3" width="15" height="18" rx="1" />
+        <path d="M2 6h3M2 10h3M2 14h3M2 18h3" stroke="#00d2ff" />
+        <path d="M9 7h7M9 12h7" stroke="#ff007f" strokeWidth="1" opacity="0.7" />
+      </svg>
+    );
+  }
+
+  if (key === 'neon_matrix') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="#001500" stroke="#39ff14" strokeWidth="1.5" style={{ filter: 'url(#nm_glow_new)' }}>
+        <rect x="5" y="3" width="15" height="18" rx="1" />
+        <path d="M2 6h3M2 10h3M2 14h3M2 18h3" stroke="#39ff14" />
+        <rect x="9" y="7" width="7" height="1" fill="#39ff14" opacity="0.5" />
+        <rect x="9" y="11" width="7" height="1" fill="#39ff14" opacity="0.3" />
+      </svg>
+    );
+  }
+
+  if (key === 'ghost_ui') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="0.8" style={{ filter: 'url(#ghost_glow_v5)' }}>
+        <rect x="5" y="3" width="15" height="18" rx="2" />
+        <path d="M2 6h3M2 10h3M2 14h3M2 18h3" stroke="white" strokeWidth="1" />
+        <path d="M9 7h7M9 12h7" stroke="white" opacity="0.4" />
+      </svg>
+    );
+  }
+
+  if (key === 'minimal') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.5">
+        <rect x="5" y="3" width="15" height="18" rx="1" />
+        <path d="M2 6h3M2 10h3M2 14h3M2 18h3" />
+      </svg>
+    );
+  }
+
+  if (key === 'linea') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#ff9800" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="5" y="3" width="15" height="18" rx="1" />
+        <path d="M2 6h3M2 10h3M2 14h3M2 18h3" stroke="#007ad9" />
+      </svg>
+    );
+  }
+
+  let coverColor = '#5e81ac';
+  let spiralColor = '#88c0d0';
+  let pageLineColor = 'rgba(255,255,255,0.4)';
+  let extraElement = null;
+
+  if (key === 'nord') {
+    coverColor = '#5e81ac';
+    spiralColor = '#88c0d0';
+  } else if (key === 'dracula') {
+    coverColor = '#bd93f9';
+    spiralColor = '#ff79c6';
+  } else if (key === 'material') {
+    coverColor = '#1976d2';
+    spiralColor = '#ffb74d';
+  } else if (key === 'fluent') {
+    coverColor = '#0078d4';
+    spiralColor = '#50e6ff';
+  } else if (key === 'solarized') {
+    coverColor = '#b58900';
+    spiralColor = '#268bd2';
+  } else if (key === 'vscode') {
+    coverColor = '#dcb67a';
+    spiralColor = '#f5d18a';
+  } else if (key === 'atom') {
+    coverColor = '#4fc3f7';
+    spiralColor = '#81d4fa';
+  } else if (key === 'monokai') {
+    coverColor = '#f92672';
+    spiralColor = '#fd971f';
+  } else if (key === 'onedark') {
+    coverColor = '#61afef';
+    spiralColor = '#e5c07b';
+  } else if (key === 'gruvbox') {
+    coverColor = '#b16286';
+    spiralColor = '#fabd2f';
+  } else if (key === 'tokyonight') {
+    coverColor = '#bb9af7';
+    spiralColor = '#9aa5ce';
+  } else if (key === 'palenight') {
+    coverColor = '#c792ea';
+    spiralColor = '#ffcb6b';
+  } else if (key === 'nodetermbasic') {
+    coverColor = '#42a5f5';
+    spiralColor = '#64b5f6';
+  } else if (key === 'retro gaming' || key === 'retrogaming') {
+    coverColor = '#ff00ff';
+    spiralColor = '#00ffff';
+    extraElement = <rect x="9" y="10" width="6" height="4" fill="#ffff00" />;
+  } else if (key === 'corporate') {
+    coverColor = '#1e3a8a';
+    spiralColor = '#3b82f6';
+  } else if (key === 'nature') {
+    coverColor = '#4ade80';
+    spiralColor = '#fbbf24';
+  } else if (key === 'space') {
+    coverColor = '#1e1b4b';
+    spiralColor = '#3b82f6';
+    extraElement = (
+      <>
+        <circle cx="9" cy="8" r="0.5" fill="#ffffff" />
+        <circle cx="14" cy="12" r="0.5" fill="#ffffff" />
+      </>
+    );
+  } else if (key === 'ocean') {
+    coverColor = '#0ea5e9';
+    spiralColor = '#06b6d4';
+  } else if (key === 'fire') {
+    coverColor = '#ef4444';
+    spiralColor = '#f97316';
+  } else if (key === 'ice') {
+    coverColor = '#0ea5e9';
+    spiralColor = '#ffffff';
+  } else if (key === 'forest') {
+    coverColor = '#16a34a';
+    spiralColor = '#22c55e';
+  } else if (key === 'cyber_blue') {
+    coverColor = '#1a2236';
+    spiralColor = '#00f2fe';
+    extraElement = <rect x="9" y="12" width="6" height="1" fill="#00f2fe" opacity="0.5" />;
+  } else if (key === 'aurora') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <rect x="5" y="3" width="15" height="18" rx="2" fill="url(#au_f_bg)" stroke="url(#au_f_grad)" strokeWidth="1.8" style={{ filter: 'url(#au_f_glow)' }} />
+        <path d="M2 6h3M2 10h3M2 14h3M2 18h3" stroke="#00FFFF" strokeWidth="1.5" />
+      </svg>
+    );
+  } else if (key === 'obsidian_glass') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <rect x="5" y="3" width="15" height="18" rx="2" fill="#050505" stroke="#444" strokeWidth="2.5" />
+        <rect x="5" y="3" width="15" height="18" rx="2" stroke="rgba(255,255,255,0.4)" strokeWidth="1" />
+        <path d="M2 6h3M2 10h3M2 14h3M2 18h3" stroke="white" opacity="0.3" strokeWidth="1.5" />
+      </svg>
+    );
+  } else if (key === 'crimson_tech') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <rect x="5" y="3" width="15" height="18" rx="1" fill="url(#cr_f_bg)" stroke="#ff0844" strokeWidth="1.5" style={{ filter: 'url(#cr_f_glow_v2)' }} />
+        <path d="M2 6h3M2 10h3M2 14h3M2 18h3" stroke="#ffb199" strokeWidth="1.5" />
+      </svg>
+    );
+  } else if (key === 'holo') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <rect x="5" y="3" width="15" height="18" rx="2" fill="url(#holoFolder1)" style={{ filter: 'url(#holoGlow)' }} />
+        <rect x="5" y="3" width="15" height="18" rx="2" fill="url(#holoFolder2)" style={{ mixBlendMode: 'overlay' }} />
+        <path d="M2 6h3M2 10h3M2 14h3M2 18h3" stroke="#ffffff" strokeWidth="1.5" strokeOpacity="0.8" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <rect x="5" y="3" width="15" height="18" rx="2" fill={coverColor} />
+      <path d="M2 6h3M2 10h3M2 14h3M2 18h3" stroke={spiralColor} strokeWidth="2" strokeLinecap="round" />
+      <path d="M9 7h7M9 12h7M9 17h7" stroke={pageLineColor} strokeWidth="1" opacity="0.3" />
+      {extraElement}
+    </svg>
+  );
+};
+
 const DocumentsSidebar = ({
   showToast,
   confirmDialog,
@@ -135,6 +320,7 @@ const DocumentsSidebar = ({
   sessionActionIconTheme = 'modern',
   sidebarFilter = '',
   treeTheme = 'cursorCompact',
+  iconTheme = 'nord',
   setShowSettingsDialog,
   onShowImportDialog,
   onShowExportDialog,
@@ -148,6 +334,9 @@ const DocumentsSidebar = ({
   const [expandedKeys, setExpandedKeys] = useState({});
   const [selectedNodeKey, setSelectedNodeKey] = useState(null);
   const [quickNotesPanelOpen, setQuickNotesPanelOpen] = useState(false);
+
+  const themeKey = (iconTheme || 'nord').toLowerCase();
+  const themeIcons = iconThemes[themeKey]?.icons || iconThemes['nord'].icons;
 
   const selectedNodeForDetails = useMemo(() => {
     if (!selectedNodeKey) return null;
@@ -450,7 +639,7 @@ const DocumentsSidebar = ({
     setParentKeyForNew(null);
     showToast?.({
       severity: 'success',
-      summary: 'Carpeta creada',
+      summary: 'Libreta creada',
       detail: `"${newFolder.label}" creada correctamente`,
       life: 3000
     });
@@ -537,8 +726,8 @@ const DocumentsSidebar = ({
           command: () => createNewDocumentInTree(node.key)
         },
         {
-          label: 'Nueva subcarpeta',
-          icon: 'pi pi-folder',
+          label: 'Nueva sublibreta',
+          icon: 'pi pi-book',
           command: () => {
             setParentKeyForNew(node.key);
             setNewItemName('');
@@ -588,8 +777,8 @@ const DocumentsSidebar = ({
         command: () => handleCreateNewNote()
       },
       {
-        label: 'Nueva carpeta',
-        icon: 'pi pi-folder',
+        label: 'Nueva libreta',
+        icon: 'pi pi-book',
         command: () => {
           setParentKeyForNew(null);
           setNewItemName('');
@@ -687,13 +876,25 @@ const DocumentsSidebar = ({
             height: 20
           }}
         >
-          <i
-            className={isFolder ? 'pi pi-folder' : 'pi pi-file'}
-            style={{
-              fontSize: '0.9rem',
-              color: isFolder ? '#ffc107' : '#64b5f6'
-            }}
-          />
+          {isFolder ? (
+            <NotebookIcon themeKey={iconTheme} isOpen={node.expanded} size={18} />
+          ) : (
+            themeIcons.file ? (
+              React.cloneElement(themeIcons.file, {
+                width: 18,
+                height: 18,
+                style: { ...themeIcons.file.props.style, width: '18px', height: '18px' }
+              })
+            ) : (
+              <i
+                className="pi pi-file"
+                style={{
+                  fontSize: '0.9rem',
+                  color: '#64b5f6'
+                }}
+              />
+            )
+          )}
         </span>
         {isInlineRenaming ? (
           <InputText
@@ -987,12 +1188,12 @@ const DocumentsSidebar = ({
             <Button
               className="p-button-rounded p-button-text sidebar-action-button glass-button"
               onClick={openNewFolderDialog}
-              tooltip={tCommon('tooltips.newFolder')}
+              tooltip="Nueva libreta"
               tooltipOptions={{ position: 'bottom' }}
               style={DOC_HEADER_GLASS_BTN}
             >
               <span style={{ ...DOC_HEADER_ICON_WRAP, color: 'var(--ui-sidebar-text)' }}>
-                {sessionActionIconThemes[sessionActionIconTheme || 'modern']?.icons.newFolder}
+                <i className="pi pi-book" style={{ fontSize: '1.05rem' }} />
               </span>
             </Button>
 
@@ -1182,7 +1383,7 @@ const DocumentsSidebar = ({
 
       {/* New Folder Dialog */}
       <Dialog
-        header="Nueva carpeta"
+        header="Nueva libreta"
         visible={showNewFolderDialog}
         onHide={() => setShowNewFolderDialog(false)}
         style={{ width: '380px' }}
@@ -1195,12 +1396,12 @@ const DocumentsSidebar = ({
         }
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <label htmlFor="folder-name" style={{ fontWeight: 600, fontSize: '0.875rem' }}>Nombre de la carpeta</label>
+          <label htmlFor="notebook-name" style={{ fontWeight: 600, fontSize: '0.875rem' }}>Nombre de la libreta</label>
           <InputText
-            id="folder-name"
+            id="notebook-name"
             value={newItemName}
             onChange={(e) => setNewItemName(e.target.value)}
-            placeholder="Mi carpeta..."
+            placeholder="Mi libreta..."
             autoFocus
             onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
           />
@@ -1313,7 +1514,7 @@ const DocumentsSidebar = ({
             ) : trashedDocuments.map((item, idx) => (
               <div key={item.id} className="dtrash-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', borderBottom: idx < trashedDocuments.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
                 <div style={{ width: '32px', height: '32px', borderRadius: '8px', flexShrink: 0, background: 'rgba(100,116,139,0.15)', border: '1px solid rgba(100,116,139,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <i className={`pi ${item.isFolder ? 'pi-folder' : 'pi-file'}`} style={{ color: '#64748b', fontSize: '13px' }} />
+                  <i className={`pi ${item.isFolder ? 'pi-book' : 'pi-file'}`} style={{ color: '#64748b', fontSize: '13px' }} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: '13px', fontWeight: 600, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</div>

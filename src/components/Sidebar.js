@@ -3055,7 +3055,7 @@ const Sidebar = React.memo(({
             type="button"
             className="sidebar-panel-toolbar-btn"
             onClick={() => window.dispatchEvent(new CustomEvent('documents-sidebar:new-folder'))}
-            title={t('tooltips.createFolder')}
+            title="Nueva libreta"
           >
             <span style={TB_ICON}>{sessionIcons?.newFolder}</span>
           </button>
@@ -3295,6 +3295,7 @@ const Sidebar = React.memo(({
             sessionActionIconTheme={sessionActionIconTheme}
             sidebarFilter={sidebarFilter}
             treeTheme={treeTheme}
+            iconTheme={iconTheme}
             setShowSettingsDialog={setShowSettingsDialog}
             onShowImportDialog={onShowImportDialog || setShowImportDialog}
             onShowExportDialog={onShowExportDialog}
