@@ -682,6 +682,10 @@ export const useTabManagement = (toast, {
       // Cerrar pestaña de configuración (almacenada en sshTabs)
       const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
       setSshTabs(newSshTabs);
+    } else if (closedTab.type === 'edit-connection') {
+      // Cerrar pestaña de edición de conexión (almacenada en sshTabs)
+      const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);
+      setSshTabs(newSshTabs);
     } else if (isAuditTab) {
       // Cerrar pestañas de auditoría y reproductor de grabaciones (almacenadas en sshTabs)
       const newSshTabs = sshTabs.filter(t => t.key !== closedTab.key);

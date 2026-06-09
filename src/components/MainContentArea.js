@@ -3319,7 +3319,7 @@ const MainContentArea = ({
                             visibility: isActiveTab ? 'visible' : 'hidden',
                             zIndex: isActiveTab ? 1 : 0,
                             pointerEvents: isActiveTab ? 'auto' : 'none',
-                            background: (tab.type === TAB_TYPES.HOME && isActiveTab) ? 'var(--ui-content-bg, #1a1b26)' : 'transparent'
+                            background: ((tab.type === TAB_TYPES.HOME || tab.type === 'edit-connection') && isActiveTab) ? 'var(--ui-content-bg, #1a1b26)' : 'transparent'
                           }}
                         >
                           <TabContentRenderer

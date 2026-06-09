@@ -841,6 +841,245 @@ export const useFormHandlers = ({
   }, [editSSHName, editSSHHost, editSSHUser, editSSHPassword, editSSHPrivateKey, editSSHAuthMethod, editSSHRemoteFolder, editSSHPort, editSSHAutoCopyPassword, editSSHX11Forwarding, editSSHAgentForwarding, editSSHAutoRecording, editSSHProxyJumpEnabled, editSSHJumpHost, editSSHJumpPort, editSSHJumpUser, editSSHJumpAuthMethod, editSSHJumpPassword, editSSHJumpPrivateKey, editSSHHostKeyPolicy, editSSHDescription, editSSHIcon, editSSHNode, sshTargetFolder, nodes, setNodes, findNodeByKey, findParentNodeAndIndex, deepCopy, parseWallixUser, closeEditSSHDialogWithReset, setShowUnifiedConnectionDialog, setEditSSHNode, setEditSSHName, setEditSSHHost, setEditSSHUser, setEditSSHPassword, setEditSSHRemoteFolder, setEditSSHPort, setEditSSHDescription, setEditSSHIcon, setSSHTargetFolder, toast]);
 
   /**
+   * Guardar SSH en sidebar desde tab
+   */
+  const handleSaveSshToSidebar = useCallback((sshData, isEditing = false, originalNode = null) => {
+    if (!sshData) return;
+
+    const name = sshData.name || '';
+    const host = sshData.host || '';
+    const user = sshData.user || '';
+    const password = sshData.password || '';
+    const port = sshData.port || 22;
+    const remoteFolder = sshData.remoteFolder || '';
+    const authMethod = sshData.authMethod || 'password';
+    const privateKey = sshData.privateKey || '';
+    const autoCopyPassword = sshData.autoCopyPassword || false;
+    const x11Forwarding = sshData.x11Forwarding || false;
+    const agentForwarding = sshData.agentForwarding || false;
+    const autoRecording = sshData.autoRecording || false;
+    const proxyJumpEnabled = sshData.proxyJumpEnabled || false;
+    const jumpHost = sshData.jumpHost || '';
+    const jumpPort = sshData.jumpPort || 22;
+    const jumpUser = sshData.jumpUser || '';
+    const jumpAuthMethod = sshData.jumpAuthMethod || 'password';
+    const jumpPassword = sshData.jumpPassword || '';
+    const jumpPrivateKey = sshData.jumpPrivateKey || '';
+    const hostKeyPolicy = sshData.hostKeyPolicy || 'warn_new';
+    const description = sshData.description || '';
+    const customIcon = sshData.customIcon || null;
+    const targetFolder = sshData.targetFolder || null;
+
+    const missingBaseFields = !name.trim() || !host.trim() || !user.trim();
+    const missingPassword = authMethod === 'password' && !password.trim();
+    const missingPrivateKey = authMethod === 'key' && !privateKey.trim();
+
+    if (missingBaseFields || missingPassword || missingPrivateKey) {
+      toast.current.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: authMethod === 'key'
+          ? 'Nombre, host, usuario y clave privada son obligatorios'
+          : 'Nombre, host, usuario y contraseña son obligatorios',
+        life: 3000
+      });
+      return;
+    }
+
+    const userInfo = parseWallixUser(user.trim());
+    const proxyJumpState = getProxyJumpFormState({
+      isWallix: userInfo.isWallix,
+      jumpHost,
+      jumpUser,
+      jumpPassword,
+      jumpPrivateKey
+    });
+
+    if (proxyJumpState.started && !proxyJumpState.active) {
+      toast.current.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'ProxyJump requiere host y usuario de salto',
+        life: 3000
+      });
+      return;
+    }
+
+    if (proxyJumpState.active) {
+      const jumpAuth = jumpAuthMethod === 'key' ? 'key' : 'password';
+      if (jumpAuth === 'password' && !jumpPassword.trim()) {
+        toast.current.show({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'ProxyJump requiere contrasena de salto',
+          life: 3000
+        });
+        return;
+      }
+      if (jumpAuth === 'key' && !jumpPrivateKey.trim()) {
+        toast.current.show({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'ProxyJump requiere clave privada de salto',
+          life: 3000
+        });
+        return;
+      }
+    }
+
+    if (isEditing && originalNode) {
+      const oldConnection = connectionHelpers.fromSidebarNode(originalNode);
+      const nodesCopy = deepCopy(nodes);
+      const nodeToEdit = findNodeByKey(nodesCopy, originalNode.key);
+
+      if (nodeToEdit) {
+        nodeToEdit.label = name.trim();
+        nodeToEdit.data = {
+          ...nodeToEdit.data,
+          host: userInfo.isWallix ? userInfo.targetServer : host.trim(),
+          user: userInfo.isWallix ? userInfo.targetUser : user.trim(),
+          password: authMethod === 'password' ? password.trim() : '',
+          privateKey: authMethod === 'key' ? privateKey.trim() : '',
+          authMethod,
+          remoteFolder: remoteFolder ? remoteFolder.trim() : '',
+          port,
+          type: 'ssh',
+          useBastionWallix: userInfo.isWallix,
+          bastionHost: userInfo.isWallix ? host.trim() : '',
+          bastionUser: userInfo.isWallix ? userInfo.bastionUser : '',
+          targetServer: userInfo.isWallix ? userInfo.targetServer : '',
+          autoCopyPassword,
+          x11Forwarding,
+          agentForwarding,
+          autoRecording,
+          proxyJumpEnabled: proxyJumpState.active,
+          jumpHost: proxyJumpState.active ? proxyJumpState.host : '',
+          jumpPort: proxyJumpState.active ? (jumpPort || 22) : 22,
+          jumpUser: proxyJumpState.active ? proxyJumpState.user : '',
+          jumpAuthMethod: proxyJumpState.active ? (jumpAuthMethod === 'key' ? 'key' : 'password') : 'password',
+          jumpPassword: proxyJumpState.active && jumpAuthMethod !== 'key' ? jumpPassword.trim() : '',
+          jumpPrivateKey: proxyJumpState.active && jumpAuthMethod === 'key' ? jumpPrivateKey.trim() : '',
+          hostKeyPolicy: userInfo.isWallix ? 'warn_new' : (hostKeyPolicy || 'warn_new'),
+          description,
+          customIcon: customIcon && customIcon !== 'default' ? customIcon : null
+        };
+        nodeToEdit.droppable = false;
+
+        if (oldConnection) {
+          const newConnection = connectionHelpers.fromSidebarNode(nodeToEdit);
+          updateFavoriteOnEdit(oldConnection, newConnection);
+        }
+
+        const { parentNode: currentParent, parentList, index } = findParentNodeAndIndex(nodesCopy, originalNode.key);
+        const currentParentKey = currentParent?.key ?? null;
+        const desiredParentKey = targetFolder || null;
+
+        if (currentParentKey !== desiredParentKey && parentList && index !== -1) {
+          const [movedNode] = parentList.splice(index, 1);
+          if (desiredParentKey) {
+            const newParent = findNodeByKey(nodesCopy, desiredParentKey);
+            if (newParent) {
+              newParent.children = newParent.children || [];
+              newParent.children.unshift(movedNode);
+            } else {
+              nodesCopy.unshift(movedNode);
+            }
+          } else {
+            nodesCopy.unshift(movedNode);
+          }
+        }
+      }
+      setNodes(nodesCopy);
+    }
+
+    toast.current.show({
+      severity: 'success',
+      summary: 'SSH editada',
+      detail: `Sesión SSH actualizada`,
+      life: 3000
+    });
+  }, [nodes, setNodes, findNodeByKey, findParentNodeAndIndex, deepCopy, parseWallixUser, toast]);
+
+  /**
+   * Guardar túnel SSH en sidebar desde tab
+   */
+  const handleSaveSSHTunnelToSidebar = useCallback((tunnelData, isEditing = false, originalNode = null) => {
+    if (!tunnelData) return;
+
+    if (!tunnelData.name || !tunnelData.sshHost || !tunnelData.sshUser) {
+      toast.current.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Nombre, servidor SSH y usuario son obligatorios',
+        life: 3000
+      });
+      return;
+    }
+    
+    if (tunnelData.authType === 'password' && !tunnelData.sshPassword) {
+      toast.current.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'La contraseña es obligatoria',
+        life: 3000
+      });
+      return;
+    }
+    
+    if (tunnelData.authType === 'key' && !tunnelData.privateKeyPath) {
+      toast.current.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'La ruta de la clave privada es obligatoria',
+        life: 3000
+      });
+      return;
+    }
+    
+    const nodesCopy = deepCopy(nodes);
+    
+    if (isEditing && originalNode) {
+      const nodeToEdit = findNodeByKey(nodesCopy, originalNode.key);
+      if (nodeToEdit) {
+        const oldConnection = connectionHelpers.fromSidebarNode(originalNode);
+
+        nodeToEdit.label = tunnelData.name.trim();
+        nodeToEdit.data = {
+          ...nodeToEdit.data,
+          type: 'ssh-tunnel',
+          tunnelType: tunnelData.tunnelType,
+          sshHost: tunnelData.sshHost.trim(),
+          sshPort: tunnelData.sshPort || 22,
+          sshUser: tunnelData.sshUser.trim(),
+          sshPassword: tunnelData.sshPassword || '',
+          authType: tunnelData.authType || 'password',
+          privateKeyPath: tunnelData.privateKeyPath || '',
+          passphrase: tunnelData.passphrase || '',
+          localHost: tunnelData.localHost || '127.0.0.1',
+          localPort: tunnelData.localPort || 0,
+          remoteHost: tunnelData.remoteHost || '',
+          remotePort: tunnelData.remotePort || 0,
+          bindHost: tunnelData.bindHost || '0.0.0.0'
+        };
+
+        if (oldConnection) {
+          const newConnection = connectionHelpers.fromSidebarNode(nodeToEdit);
+          updateFavoriteOnEdit(oldConnection, newConnection);
+        }
+        
+        setNodes(nodesCopy);
+        
+        toast.current.show({
+          severity: 'success',
+          summary: 'Túnel SSH actualizado',
+          detail: `Túnel "${tunnelData.name}" actualizado en el árbol`,
+          life: 3000
+        });
+      }
+    }
+  }, [nodes, setNodes, findNodeByKey, deepCopy, toast]);
+
+  /**
    * Guardar edición de carpeta
    */
   const saveEditFolder = useCallback(() => {
@@ -1426,6 +1665,8 @@ export const useFormHandlers = ({
 
     // Funciones de edición
     saveEditSSH,
+    handleSaveSshToSidebar,
+    handleSaveSSHTunnelToSidebar,
     saveEditFolder,
 
     // Funciones de diálogos

@@ -1796,22 +1796,24 @@ const App = () => {
     createNewSSH,
     createNewRdp,
     createNewSSHTunnel,
-    openEditSSHTunnelDialog,
+    openEditSSHTunnelDialog: originalOpenEditSSHTunnelDialog,
     duplicateSSHTunnel,
     saveEditSSH,
     saveEditFolder,
-    openEditSSHDialog,
+    openEditSSHDialog: originalOpenEditSSHDialog,
     openNewRdpDialog,
     openNewVncDialog,
     closeRdpDialog,
-    openEditRdpDialog,
-    openEditVncDialog,
+    openEditRdpDialog: originalOpenEditRdpDialog,
+    openEditVncDialog: originalOpenEditVncDialog,
     handleSaveRdpToSidebar,
     handleSaveVncToSidebar,
     handleSaveFileConnectionToSidebar,
-    openEditFileConnectionDialog,
+    openEditFileConnectionDialog: originalOpenEditFileConnectionDialog,
     openNewUnifiedConnectionDialog,
-    createNewPasswordEntry
+    createNewPasswordEntry,
+    handleSaveSshToSidebar,
+    handleSaveSSHTunnelToSidebar
   } = useFormHandlers({
     toast,
     setShowRdpDialog,
@@ -2294,6 +2296,32 @@ const App = () => {
       }));
     }
   }, [getAllTabs, setActiveTabIndex, activeGroupId, setGroupActiveIndices]);
+
+  const handleOpenEditConnectionTab = useCallback((node) => {
+    if (!node) return;
+    const tabKey = `edit_connection_${node.key}`;
+    const allTabs = getAllTabs();
+    const existingTab = allTabs.find(t => t.key === tabKey);
+    if (existingTab) {
+      promoteAndActivateTab(tabKey);
+      return;
+    }
+    
+    const newTab = {
+      key: tabKey,
+      label: `Editar: ${node.label || node.name || 'Conexión'}`,
+      type: 'edit-connection',
+      node: node,
+      createdAt: Date.now()
+    };
+    promoteAndActivateTab(tabKey, (prev) => [newTab, ...prev]);
+  }, [getAllTabs, promoteAndActivateTab]);
+
+  const openEditSSHDialog = handleOpenEditConnectionTab;
+  const openEditRdpDialog = handleOpenEditConnectionTab;
+  const openEditVncDialog = handleOpenEditConnectionTab;
+  const openEditFileConnectionDialog = handleOpenEditConnectionTab;
+  const openEditSSHTunnelDialog = handleOpenEditConnectionTab;
 
   // Crear y activar pestaña de info de secreto (password, crypto_wallet, api_key, secure_note)
   const PASSWORD_PREVIEW_TAB_KEY = 'password-preview-view';
@@ -3445,7 +3473,14 @@ const App = () => {
     handleToggleBroadcastTarget,
     handleBroadcastData,
     masterKey,
-    secureStorage
+    secureStorage,
+    // Edit connection tab handlers
+    handleSaveSshToSidebar,
+    handleSaveRdpToSidebar,
+    handleSaveVncToSidebar,
+    handleSaveFileConnectionToSidebar,
+    handleSaveSSHTunnelToSidebar,
+    handleTabClose
   }), [
     onOpenSSHConnection, openFolderDialog, onOpenRdpConnection, onOpenVncConnection, handleLoadGroupFromFavorites,
     openEditRdpDialog, openEditSSHDialog, nodes, localFontFamily, localFontSize,
@@ -3454,7 +3489,9 @@ const App = () => {
     handleTerminalContextMenu, showTerminalContextMenu, sshStatsByTabId,
     terminalRefs, statusBarIconTheme, handleCloseSplitPanel, openInSplit, rdpTabs, findNodeByKey,
     setSshTabs, activeIds, handleToggleBroadcast, handleToggleBroadcastTarget, handleBroadcastData,
-    masterKey, secureStorage
+    masterKey, secureStorage,
+    handleSaveSshToSidebar, handleSaveRdpToSidebar, handleSaveVncToSidebar,
+    handleSaveFileConnectionToSidebar, handleSaveSSHTunnelToSidebar, handleTabClose
   ]);
 
   // Memoizar props para la pestaña de configuración

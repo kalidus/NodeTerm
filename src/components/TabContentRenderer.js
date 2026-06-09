@@ -39,6 +39,7 @@ import { recordRecentPassword } from '../utils/connectionStore';
 import { getNetworkById } from '../utils/cryptoNetworks';
 
 import { countConnections } from '../utils/connectionCounter';
+import EditConnectionTabContent from './EditConnectionTabContent';
 
 const PasswordDetailRow = ({ label, value, copy, masked = false, mono = true, onCopy }) => {
   const [showValue, setShowValue] = React.useState(!masked);
@@ -378,7 +379,14 @@ const TabContentRendererInner = React.memo(({
   isRecordingTab,
   onToggleBroadcast,
   isMinimalMode,
-  settingsTabProps
+  settingsTabProps,
+  // Edit connection tab handlers
+  handleSaveSshToSidebar,
+  handleSaveRdpToSidebar,
+  handleSaveVncToSidebar,
+  handleSaveFileConnectionToSidebar,
+  handleSaveSSHTunnelToSidebar,
+  handleTabClose
 }) => {
   // 🚀 OPTIMIZACIÓN: Calcular conteos una sola vez cuando cambian los nodos o pestañas RDP
   const counts = React.useMemo(() => {
@@ -1802,6 +1810,23 @@ const TabContentRendererInner = React.memo(({
   // Herramienta de red (network-tool)
   if (tab.type === 'network-tool') {
     return <LazyNetworkToolTab tab={tab} />;
+  }
+
+  // Editar conexión (edit-connection)
+  if (tab.type === 'edit-connection') {
+    return (
+      <EditConnectionTabContent
+        tab={tab}
+        nodes={nodes}
+        handleSaveSshToSidebar={handleSaveSshToSidebar}
+        handleSaveRdpToSidebar={handleSaveRdpToSidebar}
+        handleSaveVncToSidebar={handleSaveVncToSidebar}
+        handleSaveFileConnectionToSidebar={handleSaveFileConnectionToSidebar}
+        handleSaveSSHTunnelToSidebar={handleSaveSSHTunnelToSidebar}
+        handleTabClose={handleTabClose}
+        iconTheme={iconTheme}
+      />
+    );
   }
 
   // Configuración (settings)
