@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
 
@@ -921,7 +922,7 @@ export const SSHIconSelectorModal = ({ visible, onHide, selectedIconId, onSelect
 
   if (!visible) return null;
 
-  return (
+  return createPortal(
     <div
       onClick={onHide}
       style={{
@@ -1081,6 +1082,7 @@ export const SSHIconSelectorModal = ({ visible, onHide, selectedIconId, onSelect
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

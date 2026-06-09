@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
 
@@ -258,36 +259,35 @@ export const FolderIconSelectorModal = ({ visible, onHide, selectedIconId, onSel
 
   if (!visible) return null;
 
-  return (
-    <>
+  return createPortal(
+    <div
+      onClick={onHide}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        zIndex: 10000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}
+    >
       <div
-        onClick={onHide}
+        onClick={(e) => e.stopPropagation()}
         style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          zIndex: 1090,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}
-      >
-        <div
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            backgroundColor: themeColors.dialogBg,
-            color: themeColors.dialogText,
-            borderRadius: '16px',
-            border: `1px solid ${themeColors.border}`,
-            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)',
-            width: '700px',
-            maxWidth: '95vw',
-            maxHeight: '90vh',
-            overflowY: 'auto',
-            zIndex: 1100,
+          backgroundColor: themeColors.dialogBg,
+          color: themeColors.dialogText,
+          borderRadius: '16px',
+          border: `1px solid ${themeColors.border}`,
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4)',
+          width: '700px',
+          maxWidth: '95vw',
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          zIndex: 10001,
             pointerEvents: 'auto'
           }}
         >
@@ -412,9 +412,9 @@ export const FolderIconSelectorModal = ({ visible, onHide, selectedIconId, onSel
               Cerrar
             </button>
           </div>
-        </div>
       </div>
-    </>
+    </div>,
+    document.body
   );
 };
 
