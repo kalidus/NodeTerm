@@ -29,6 +29,18 @@ export default function EditConnectionTabContent({
   const node = tab?.node;
   const connectionType = node?.data?.type || node?.type;
 
+  const [layoutMode, setLayoutMode] = useState(() => {
+    const saved = localStorage.getItem('node-term-edit-layout');
+    if (saved === 'tabbed' || saved === 'sidebar') return 'hud-badges';
+    return saved || 'hud-badges';
+  });
+
+  const changeLayoutMode = (mode) => {
+    setLayoutMode(mode);
+    localStorage.setItem('node-term-edit-layout', mode);
+  };
+
+
   // --- SSH STATES ---
   const [sshName, setSSHName] = useState('');
   const [sshHost, setSSHHost] = useState('');
@@ -330,6 +342,7 @@ export default function EditConnectionTabContent({
             onSSHConfirm={handleSave}
             onHide={handleCancel}
             isEditMode
+            layoutMode={layoutMode}
           />
         );
 
@@ -347,6 +360,7 @@ export default function EditConnectionTabContent({
             onHide={handleCancel}
             onSubmit={handleSave}
             idPrefix="tab-edit-rdp"
+            layoutMode={layoutMode}
           />
         );
 
@@ -363,6 +377,7 @@ export default function EditConnectionTabContent({
             onHide={handleCancel}
             onSubmit={handleSave}
             idPrefix="tab-edit-vnc"
+            layoutMode={layoutMode}
           />
         );
 
@@ -372,108 +387,112 @@ export default function EditConnectionTabContent({
         return (
           <div className="p-fluid">
             <Card title={`🔗 ${t('fileConnection.sections.connection')}`} className="mb-2" style={{ background: 'transparent', border: 'none', boxShadow: 'none' }}>
-              <div className="formgrid grid">
-                <div className="field col-12" style={{ marginBottom: '1rem' }}>
-                  <label htmlFor="file-name" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>{t('fileConnection.fields.name')} *</label>
-                  <InputText
-                    id="file-name"
-                    value={fileName}
-                    onChange={(e) => setFileName(e.target.value)}
-                    placeholder={t('fileConnection.placeholders.name')}
-                    style={{ width: '100%' }}
-                  />
+              <div className={(layoutMode === 'split' || layoutMode === 'sidebar') ? "grid" : "formgrid grid"}>
+                <div className={(layoutMode === 'split' || layoutMode === 'sidebar') ? "col-6" : "col-12"} style={{ padding: '0 0.5rem' }}>
+                  <div className="field col-12" style={{ marginBottom: '1rem' }}>
+                    <label htmlFor="file-name" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>{t('fileConnection.fields.name')} *</label>
+                    <InputText
+                      id="file-name"
+                      value={fileName}
+                      onChange={(e) => setFileName(e.target.value)}
+                      placeholder={t('fileConnection.placeholders.name')}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+
+                  <div className="grid col-12" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', padding: '0 0.5rem', marginBottom: '1rem' }}>
+                    <div className="field">
+                      <label htmlFor="file-protocol" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>{t('fileConnection.fields.protocol')} *</label>
+                      <Dropdown
+                        id="file-protocol"
+                        value={fileProtocol}
+                        options={[
+                          { label: t('fileConnection.protocols.sftp'), value: 'sftp' },
+                          { label: t('fileConnection.protocols.ftp'), value: 'ftp' },
+                          { label: t('fileConnection.protocols.scp'), value: 'scp' }
+                        ]}
+                        onChange={(e) => {
+                          setFileProtocol(e.value);
+                          setFilePort(e.value === 'ftp' ? 21 : 22);
+                        }}
+                        placeholder={tCommon('labels.select')}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+
+                    <div className="field">
+                      <label htmlFor="file-host" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>{t('fileConnection.fields.host')} *</label>
+                      <InputText
+                        id="file-host"
+                        value={fileHost}
+                        onChange={(e) => setFileHost(e.target.value)}
+                        placeholder={t('fileConnection.placeholders.host')}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid col-12" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', padding: '0 0.5rem', marginBottom: '1rem' }}>
+                    <div className="field">
+                      <label htmlFor="file-user" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>{t('fileConnection.fields.user')} *</label>
+                      <InputText
+                        id="file-user"
+                        value={fileUser}
+                        onChange={(e) => setFileUser(e.target.value)}
+                        placeholder={t('fileConnection.placeholders.user')}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+
+                    <div className="field">
+                      <label htmlFor="file-port" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>{t('fileConnection.fields.port')}</label>
+                      <InputText
+                        id="file-port"
+                        type="number"
+                        value={filePort}
+                        onChange={(e) => setFilePort(parseInt(e.target.value) || (fileProtocol === 'ftp' ? 21 : 22))}
+                        placeholder={fileProtocol === 'ftp' ? '21' : '22'}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <div className="grid col-12" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', padding: '0 0.5rem', marginBottom: '1rem' }}>
-                  <div className="field">
-                    <label htmlFor="file-protocol" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>{t('fileConnection.fields.protocol')} *</label>
+                <div className={(layoutMode === 'split' || layoutMode === 'sidebar') ? "col-6" : "col-12"} style={{ padding: '0 0.5rem' }}>
+                  <div className="field col-12" style={{ marginBottom: '1rem' }}>
+                    <label htmlFor="file-password" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>{t('fileConnection.fields.password')}</label>
+                    <InputText
+                      id="file-password"
+                      type="password"
+                      value={filePassword}
+                      onChange={(e) => setFilePassword(e.target.value)}
+                      placeholder={t('fileConnection.placeholders.password')}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+
+                  <div className="field col-12" style={{ marginBottom: '1rem' }}>
+                    <label htmlFor="file-remote-folder" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>{t('fileConnection.fields.remoteFolder')} ({tCommon('labels.optional')})</label>
+                    <InputText
+                      id="file-remote-folder"
+                      value={fileRemoteFolder}
+                      onChange={(e) => setFileRemoteFolder(e.target.value)}
+                      placeholder={t('fileConnection.placeholders.remoteFolder')}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+
+                  <div className="field col-12" style={{ marginBottom: '1.5rem' }}>
+                    <label htmlFor="file-target-folder" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>{t('fileConnection.fields.targetFolder')} ({tCommon('labels.optional')})</label>
                     <Dropdown
-                      id="file-protocol"
-                      value={fileProtocol}
-                      options={[
-                        { label: t('fileConnection.protocols.sftp'), value: 'sftp' },
-                        { label: t('fileConnection.protocols.ftp'), value: 'ftp' },
-                        { label: t('fileConnection.protocols.scp'), value: 'scp' }
-                      ]}
-                      onChange={(e) => {
-                        setFileProtocol(e.value);
-                        setFilePort(e.value === 'ftp' ? 21 : 22);
-                      }}
+                      id="file-target-folder"
+                      value={fileTargetFolder}
+                      options={folderOptionsList}
+                      onChange={(e) => setFileTargetFolder(e.value)}
                       placeholder={tCommon('labels.select')}
                       style={{ width: '100%' }}
                     />
                   </div>
-
-                  <div className="field">
-                    <label htmlFor="file-host" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>{t('fileConnection.fields.host')} *</label>
-                    <InputText
-                      id="file-host"
-                      value={fileHost}
-                      onChange={(e) => setFileHost(e.target.value)}
-                      placeholder={t('fileConnection.placeholders.host')}
-                      style={{ width: '100%' }}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid col-12" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', padding: '0 0.5rem', marginBottom: '1rem' }}>
-                  <div className="field">
-                    <label htmlFor="file-user" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>{t('fileConnection.fields.user')} *</label>
-                    <InputText
-                      id="file-user"
-                      value={fileUser}
-                      onChange={(e) => setFileUser(e.target.value)}
-                      placeholder={t('fileConnection.placeholders.user')}
-                      style={{ width: '100%' }}
-                    />
-                  </div>
-
-                  <div className="field">
-                    <label htmlFor="file-port" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>{t('fileConnection.fields.port')}</label>
-                    <InputText
-                      id="file-port"
-                      type="number"
-                      value={filePort}
-                      onChange={(e) => setFilePort(parseInt(e.target.value) || (fileProtocol === 'ftp' ? 21 : 22))}
-                      placeholder={fileProtocol === 'ftp' ? '21' : '22'}
-                      style={{ width: '100%' }}
-                    />
-                  </div>
-                </div>
-
-                <div className="field col-12" style={{ marginBottom: '1rem' }}>
-                  <label htmlFor="file-password" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>{t('fileConnection.fields.password')}</label>
-                  <InputText
-                    id="file-password"
-                    type="password"
-                    value={filePassword}
-                    onChange={(e) => setFilePassword(e.target.value)}
-                    placeholder={t('fileConnection.placeholders.password')}
-                    style={{ width: '100%' }}
-                  />
-                </div>
-
-                <div className="field col-12" style={{ marginBottom: '1rem' }}>
-                  <label htmlFor="file-remote-folder" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>{t('fileConnection.fields.remoteFolder')} ({tCommon('labels.optional')})</label>
-                  <InputText
-                    id="file-remote-folder"
-                    value={fileRemoteFolder}
-                    onChange={(e) => setFileRemoteFolder(e.target.value)}
-                    placeholder={t('fileConnection.placeholders.remoteFolder')}
-                    style={{ width: '100%' }}
-                  />
-                </div>
-
-                <div className="field col-12" style={{ marginBottom: '1.5rem' }}>
-                  <label htmlFor="file-target-folder" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>{t('fileConnection.fields.targetFolder')} ({tCommon('labels.optional')})</label>
-                  <Dropdown
-                    id="file-target-folder"
-                    value={fileTargetFolder}
-                    options={folderOptionsList}
-                    onChange={(e) => setFileTargetFolder(e.value)}
-                    placeholder={tCommon('labels.select')}
-                    style={{ width: '100%' }}
-                  />
                 </div>
               </div>
             </Card>
@@ -500,7 +519,7 @@ export default function EditConnectionTabContent({
       case 'ssh-tunnel':
         return (
           <div className="p-fluid">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: layoutMode === 'standard' ? '1fr' : '1fr 1fr', gap: '1.5rem' }}>
               {/* Configuración Local */}
               <div>
                 <h4 style={{ marginBottom: '1rem', color: 'var(--ui-dialog-text)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -790,33 +809,80 @@ export default function EditConnectionTabContent({
           borderBottom: '1px solid var(--ui-content-border, rgba(255, 255, 255, 0.08))',
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'space-between',
           gap: '1rem',
           background: 'rgba(0, 0, 0, 0.15)'
         }}
       >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div
+            style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '8px',
+              background: 'linear-gradient(135deg, #89b4fa 0%, #cba6f7 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#fff',
+              fontSize: '1.1rem',
+              boxShadow: '0 4px 12px rgba(137, 180, 250, 0.25)'
+            }}
+          >
+            <i className="pi pi-pencil"></i>
+          </div>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: 'var(--ui-dialog-text, #cdd6f4)' }}>
+              Editar Conexión
+            </h3>
+            <span style={{ fontSize: '0.8rem', color: 'var(--ui-dialog-text, #cdd6f4)', opacity: 0.5 }}>
+              {connectionType?.toUpperCase()} : {node?.label}
+            </span>
+          </div>
+        </div>
+
+        {/* Layout switcher */}
         <div
+          className="layout-mode-switcher"
           style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '8px',
-            background: 'linear-gradient(135deg, #89b4fa 0%, #cba6f7 100%)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            color: '#fff',
-            fontSize: '1.1rem',
-            boxShadow: '0 4px 12px rgba(137, 180, 250, 0.25)'
+            gap: '0.25rem',
+            background: 'rgba(255, 255, 255, 0.04)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            padding: '2px',
+            borderRadius: '8px'
           }}
         >
-          <i className="pi pi-pencil"></i>
-        </div>
-        <div>
-          <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: 'var(--ui-dialog-text, #cdd6f4)' }}>
-            Editar Conexión
-          </h3>
-          <span style={{ fontSize: '0.8rem', color: 'var(--ui-dialog-text, #cdd6f4)', opacity: 0.5 }}>
-            {connectionType?.toUpperCase()} : {node?.label}
-          </span>
+          {[
+            { id: 'hud-badges', icon: 'pi-tags', label: 'Panel HUD' },
+            { id: 'sidebar', icon: 'pi-clone', label: 'Lateral' },
+            { id: 'split', icon: 'pi-th-large', label: 'Columnas' },
+            { id: 'standard', icon: 'pi-align-justify', label: 'Estándar' }
+          ].map((mode) => (
+            <button
+              key={mode.id}
+              onClick={() => changeLayoutMode(mode.id)}
+              style={{
+                background: layoutMode === mode.id ? 'var(--ui-button-primary, #6366f1)' : 'transparent',
+                color: layoutMode === mode.id ? '#ffffff' : 'rgba(255, 255, 255, 0.6)',
+                border: 'none',
+                padding: '0.4rem 0.8rem',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                transition: 'all 0.2s ease'
+              }}
+              title={mode.label}
+            >
+              <i className={`pi ${mode.icon}`} style={{ fontSize: '0.85rem' }}></i>
+              <span className="hidden md:inline">{mode.label}</span>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -834,13 +900,14 @@ export default function EditConnectionTabContent({
       >
         <div
           style={{
-            maxWidth: '800px',
+            maxWidth: layoutMode === 'standard' ? '720px' : (layoutMode === 'sidebar' ? '100%' : '1100px'),
             width: '100%',
             margin: '0 auto',
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
-            minHeight: 0
+            minHeight: 0,
+            transition: 'max-width 0.25s ease'
           }}
         >
           {renderForm()}
