@@ -122,7 +122,9 @@ body.layout-cyberpunk *::-webkit-scrollbar-thumb:hover {
 body.layout-default .title-bar,
 body.layout-modern-custom .title-bar,
 body.layout-cyberpunk .title-bar,
-body.layout-unified .title-bar {
+body.layout-unified .title-bar,
+body.layout-unified-rounded .title-bar,
+body.layout-unified-app-rounded .title-bar {
   background: var(--ui-titlebar-accent, var(--ui-chrome-header-bg, var(--ui-sidebar-bg, #0e1116))) !important;
 }
 
@@ -141,7 +143,15 @@ body.layout-cyberpunk .title-bar .title-cursor-blink,
 body.layout-unified .title-bar,
 body.layout-unified .title-bar span,
 body.layout-unified .title-bar svg,
-body.layout-unified .title-bar .title-cursor-blink {
+body.layout-unified .title-bar .title-cursor-blink,
+body.layout-unified-rounded .title-bar,
+body.layout-unified-rounded .title-bar span,
+body.layout-unified-rounded .title-bar svg,
+body.layout-unified-rounded .title-bar .title-cursor-blink,
+body.layout-unified-app-rounded .title-bar,
+body.layout-unified-app-rounded .title-bar span,
+body.layout-unified-app-rounded .title-bar svg,
+body.layout-unified-app-rounded .title-bar .title-cursor-blink {
   color: var(--ui-titlebar-text, var(--ui-sidebar-text, rgba(255, 255, 255, 0.85))) !important;
   fill: var(--ui-titlebar-text, var(--ui-sidebar-text, rgba(255, 255, 255, 0.85))) !important;
 }
@@ -149,7 +159,9 @@ body.layout-unified .title-bar .title-cursor-blink {
 body.layout-default .title-bar svg path,
 body.layout-modern-custom .title-bar svg path,
 body.layout-cyberpunk .title-bar svg path,
-body.layout-unified .title-bar svg path {
+body.layout-unified .title-bar svg path,
+body.layout-unified-rounded .title-bar svg path,
+body.layout-unified-app-rounded .title-bar svg path {
   stroke: var(--ui-titlebar-text, var(--ui-sidebar-text, rgba(255, 255, 255, 0.85))) !important;
 }
 
@@ -285,47 +297,113 @@ body.layout-unified {
   --layout-font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif !important;
 }
 
+/* =========================================
+   LAYOUT: UNIFIED (ROUNDED CORNERS)
+   ========================================= */
+body.layout-unified-rounded {
+  --layout-border-radius-main: 10px !important;
+  --layout-border-radius-sm: 5px !important;
+  --layout-border-radius-lg: 14px !important;
+  --border-radius: 10px !important;
+  --layout-panel-shadow: 0 4px 20px rgba(0, 0, 0, 0.2) !important;
+  --layout-border-width: 1px !important;
+  --layout-font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif !important;
+}
+
+/* =========================================
+   LAYOUT: UNIFIED (APP WINDOW ROUNDED CORNERS ONLY)
+   ========================================= */
+body.layout-unified-app-rounded {
+  --layout-border-radius-main: 0px !important;
+  --layout-border-radius-sm: 0px !important;
+  --layout-border-radius-lg: 0px !important;
+  --border-radius: 0px !important;
+  --layout-panel-shadow: none !important;
+  --layout-border-width: 0px !important;
+  --layout-font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif !important;
+}
+
+html:has(body.layout-unified-app-rounded),
+body.layout-unified-app-rounded,
+body.layout-unified-app-rounded #root {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+body.layout-unified-app-rounded .app-container {
+  background: var(--ui-sidebar-bg, #0e1116) !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  border: 1px solid var(--ui-sidebar-border, rgba(255, 255, 255, 0.08)) !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5) !important;
+}
+
 /* Font Family and Size Overrides for Unified layout (session explorer, previews, and font options excluded) */
-body.layout-unified *:not(.pi):not(.xterm):not(.xterm *):not(code):not(pre):not(pre *):not(.sidebar-container):not(.sidebar-container *):not(.tree-container):not(.tree-container *):not(.tree-preview-container):not(.tree-preview-container *):not(.explorer-preview-container):not(.explorer-preview-container *):not(.p-dropdown-item):not(.p-dropdown-item *) {
+body.layout-unified *:not(.pi):not(.xterm):not(.xterm *):not(code):not(pre):not(pre *):not(.sidebar-container):not(.sidebar-container *):not(.tree-container):not(.tree-container *):not(.tree-preview-container):not(.tree-preview-container *):not(.explorer-preview-container):not(.explorer-preview-container *):not(.p-dropdown-item):not(.p-dropdown-item *),
+body.layout-unified-rounded *:not(.pi):not(.xterm):not(.xterm *):not(code):not(pre):not(pre *):not(.sidebar-container):not(.sidebar-container *):not(.tree-container):not(.tree-container *):not(.tree-preview-container):not(.tree-preview-container *):not(.explorer-preview-container):not(.explorer-preview-container *):not(.p-dropdown-item):not(.p-dropdown-item *),
+body.layout-unified-app-rounded *:not(.pi):not(.xterm):not(.xterm *):not(code):not(pre):not(pre *):not(.sidebar-container):not(.sidebar-container *):not(.tree-container):not(.tree-container *):not(.tree-preview-container):not(.tree-preview-container *):not(.explorer-preview-container):not(.explorer-preview-container *):not(.p-dropdown-item):not(.p-dropdown-item *) {
   font-family: var(--layout-font-family) !important;
   font-size: 12px !important;
 }
 
-body.layout-unified .pi {
+body.layout-unified .pi,
+body.layout-unified-rounded .pi,
+body.layout-unified-app-rounded .pi {
   font-family: 'primeicons' !important;
 }
 
 /* Eliminate margins and paddings around the window */
-body.layout-unified .app-container {
+body.layout-unified .app-container,
+body.layout-unified-rounded .app-container {
   background: var(--ui-sidebar-bg, #0e1116) !important;
 }
 
-body.layout-unified .p-splitter-panel {
+body.layout-unified .p-splitter-panel,
+body.layout-unified-rounded .p-splitter-panel,
+body.layout-unified-app-rounded .p-splitter-panel {
   padding: 0px !important;
 }
 
-body.layout-unified .terminal-frame-container {
+body.layout-unified .terminal-frame-container,
+body.layout-unified-app-rounded .terminal-frame-container {
   padding: 0px !important;
 }
 
-body.layout-unified .terminal-frame {
+body.layout-unified-rounded .terminal-frame-container {
+  padding: 6px !important;
+}
+
+body.layout-unified .terminal-frame,
+body.layout-unified-app-rounded .terminal-frame {
   border-radius: 0px !important;
   border: none !important;
   box-shadow: none !important;
 }
 
-body.layout-unified .terminal-frame-header {
+body.layout-unified-rounded .terminal-frame {
+  border-radius: 10px !important;
+  border: 1px solid var(--ui-sidebar-border, rgba(255, 255, 255, 0.05)) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25) !important;
+}
+
+body.layout-unified .terminal-frame-header,
+body.layout-unified-rounded .terminal-frame-header,
+body.layout-unified-app-rounded .terminal-frame-header {
   background: var(--ui-chrome-header-bg, var(--ui-sidebar-bg, #0e1116)) !important;
   border-bottom: 1px solid var(--ui-sidebar-border, rgba(255, 255, 255, 0.05)) !important;
 }
 
-body.layout-unified .terminal-frame-title {
+body.layout-unified .terminal-frame-title,
+body.layout-unified-rounded .terminal-frame-title,
+body.layout-unified-app-rounded .terminal-frame-title {
   color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.85)) !important;
   opacity: 0.9 !important;
 }
 
 /* Unificado: titlebar a ras de ventana */
-body.layout-unified .title-bar {
+body.layout-unified .title-bar,
+body.layout-unified-rounded .title-bar,
+body.layout-unified-app-rounded .title-bar {
   margin: 0px !important;
   border-radius: 0px !important;
   border-left: none !important;
@@ -344,18 +422,26 @@ html[data-custom-titlebar="true"] body.layout-default .title-bar,
 html[data-custom-titlebar="true"] body.layout-modern-custom .title-bar,
 html[data-custom-titlebar="true"] body.layout-cyberpunk .title-bar,
 html[data-custom-titlebar="true"] body.layout-unified .title-bar,
+html[data-custom-titlebar="true"] body.layout-unified-rounded .title-bar,
+html[data-custom-titlebar="true"] body.layout-unified-app-rounded .title-bar,
 html[data-custom-titlebar="true"] body.layout-default .title-bar span,
 html[data-custom-titlebar="true"] body.layout-modern-custom .title-bar span,
 html[data-custom-titlebar="true"] body.layout-cyberpunk .title-bar span,
 html[data-custom-titlebar="true"] body.layout-unified .title-bar span,
+html[data-custom-titlebar="true"] body.layout-unified-rounded .title-bar span,
+html[data-custom-titlebar="true"] body.layout-unified-app-rounded .title-bar span,
 html[data-custom-titlebar="true"] body.layout-default .title-bar svg,
 html[data-custom-titlebar="true"] body.layout-modern-custom .title-bar svg,
 html[data-custom-titlebar="true"] body.layout-cyberpunk .title-bar svg,
 html[data-custom-titlebar="true"] body.layout-unified .title-bar svg,
+html[data-custom-titlebar="true"] body.layout-unified-rounded .title-bar svg,
+html[data-custom-titlebar="true"] body.layout-unified-app-rounded .title-bar svg,
 html[data-custom-titlebar="true"] body.layout-default .title-bar .title-cursor-blink,
 html[data-custom-titlebar="true"] body.layout-modern-custom .title-bar .title-cursor-blink,
 html[data-custom-titlebar="true"] body.layout-cyberpunk .title-bar .title-cursor-blink,
-html[data-custom-titlebar="true"] body.layout-unified .title-bar .title-cursor-blink {
+html[data-custom-titlebar="true"] body.layout-unified .title-bar .title-cursor-blink,
+html[data-custom-titlebar="true"] body.layout-unified-rounded .title-bar .title-cursor-blink,
+html[data-custom-titlebar="true"] body.layout-unified-app-rounded .title-bar .title-cursor-blink {
   color: var(--ui-titlebar-text) !important;
   fill: var(--ui-titlebar-text) !important;
 }
@@ -363,30 +449,44 @@ html[data-custom-titlebar="true"] body.layout-unified .title-bar .title-cursor-b
 html[data-custom-titlebar="true"] body.layout-default .title-bar svg path,
 html[data-custom-titlebar="true"] body.layout-modern-custom .title-bar svg path,
 html[data-custom-titlebar="true"] body.layout-cyberpunk .title-bar svg path,
-html[data-custom-titlebar="true"] body.layout-unified .title-bar svg path {
+html[data-custom-titlebar="true"] body.layout-unified .title-bar svg path,
+html[data-custom-titlebar="true"] body.layout-unified-rounded .title-bar svg path,
+html[data-custom-titlebar="true"] body.layout-unified-app-rounded .title-bar svg path {
   stroke: var(--ui-titlebar-text) !important;
 }
 
 /* Splitter pane divider: completely seamless in unified layout */
-body.layout-unified .p-splitter-gutter {
+body.layout-unified .p-splitter-gutter,
+body.layout-unified-rounded .p-splitter-gutter,
+body.layout-unified-app-rounded .p-splitter-gutter {
   background: transparent !important;
   position: relative !important;
   width: 12px !important;
   margin: 0 -6px !important;
 }
 
-body.layout-unified .p-splitter-gutter::after {
+body.layout-unified .p-splitter-gutter::after,
+body.layout-unified-rounded .p-splitter-gutter::after,
+body.layout-unified-app-rounded .p-splitter-gutter::after {
   display: none !important;
 }
 
 body.layout-unified .p-splitter-gutter:hover::after,
 body.layout-unified .p-splitter-gutter:active::after,
-body.layout-unified .p-splitter.p-splitter-resizing .p-splitter-gutter::after {
+body.layout-unified.p-splitter.p-splitter-resizing .p-splitter-gutter::after,
+body.layout-unified-rounded .p-splitter-gutter:hover::after,
+body.layout-unified-rounded .p-splitter-gutter:active::after,
+body.layout-unified-rounded.p-splitter.p-splitter-resizing .p-splitter-gutter::after,
+body.layout-unified-app-rounded .p-splitter-gutter:hover::after,
+body.layout-unified-app-rounded .p-splitter-gutter:active::after,
+body.layout-unified-app-rounded.p-splitter.p-splitter-resizing .p-splitter-gutter::after {
   display: block !important;
 }
 
 /* Sidebar overrides */
-body.layout-unified .main-splitter > .p-splitter-panel:first-child:has(.sidebar-collapsed) {
+body.layout-unified .main-splitter > .p-splitter-panel:first-child:has(.sidebar-collapsed),
+body.layout-unified-rounded .main-splitter > .p-splitter-panel:first-child:has(.sidebar-collapsed),
+body.layout-unified-app-rounded .main-splitter > .p-splitter-panel:first-child:has(.sidebar-collapsed) {
   flex: 0 0 44px !important;
   flex-basis: 44px !important;
   width: 44px !important;
@@ -394,29 +494,43 @@ body.layout-unified .main-splitter > .p-splitter-panel:first-child:has(.sidebar-
   max-width: 44px !important;
 }
 
-body.layout-unified .sidebar-container {
+body.layout-unified .sidebar-container,
+body.layout-unified-rounded .sidebar-container,
+body.layout-unified-app-rounded .sidebar-container {
   border-right: none !important;
 }
 
 /* Sin borde derecho: compensar espacio para indicadores (sesión activa, Wallix, etc.) */
-body.layout-unified .sidebar-tree .p-treenode-content {
+body.layout-unified .sidebar-tree .p-treenode-content,
+body.layout-unified-rounded .sidebar-tree .p-treenode-content,
+body.layout-unified-app-rounded .sidebar-tree .p-treenode-content {
   padding-right: 10px !important;
 }
 
 body.layout-unified .sidebar-tree .sidebar-tree-node-row .session-active-dot,
 body.layout-unified .sidebar-tree .sidebar-tree-node-row .wallix-refresh-btn,
-body.layout-unified .sidebar-tree .p-treenode-content .connection-indicator {
+body.layout-unified .sidebar-tree .p-treenode-content .connection-indicator,
+body.layout-unified-rounded .sidebar-tree .sidebar-tree-node-row .session-active-dot,
+body.layout-unified-rounded .sidebar-tree .sidebar-tree-node-row .wallix-refresh-btn,
+body.layout-unified-rounded .sidebar-tree .p-treenode-content .connection-indicator,
+body.layout-unified-app-rounded .sidebar-tree .sidebar-tree-node-row .session-active-dot,
+body.layout-unified-app-rounded .sidebar-tree .sidebar-tree-node-row .wallix-refresh-btn,
+body.layout-unified-app-rounded .sidebar-tree .p-treenode-content .connection-indicator {
   margin-right: 6px;
 }
 
 /* Main content frame tab bar - flush top */
-body.layout-unified .terminal-frame.main-content-frame .p-tabview-nav-container {
+body.layout-unified .terminal-frame.main-content-frame .p-tabview-nav-container,
+body.layout-unified-rounded .terminal-frame.main-content-frame .p-tabview-nav-container,
+body.layout-unified-app-rounded .terminal-frame.main-content-frame .p-tabview-nav-container {
   border-bottom: 1px solid var(--ui-sidebar-border, rgba(255, 255, 255, 0.05)) !important;
   background: var(--ui-chrome-header-bg, var(--ui-sidebar-bg, #0e1116)) !important;
 }
 
 /* Tab panels and terminal area border-less */
-body.layout-unified .main-content-frame-content {
+body.layout-unified .main-content-frame-content,
+body.layout-unified-rounded .main-content-frame-content,
+body.layout-unified-app-rounded .main-content-frame-content {
   padding: 0 !important;
 }
 
@@ -437,7 +551,17 @@ html body.layout-unified .sidebar-container.sidebar-root,
 html body.layout-unified .sidebar-container.sidebar-root .sidebar-tree,
 html body.layout-unified .sidebar-tree .p-treenode-content .sidebar-tree-node-row,
 html body.layout-unified .sidebar-tree .node-label,
-html body.layout-unified .sidebar-tree .p-treenode-label {
+html body.layout-unified .sidebar-tree .p-treenode-label,
+html body.layout-unified-rounded .sidebar-container.sidebar-root,
+html body.layout-unified-rounded .sidebar-container.sidebar-root .sidebar-tree,
+html body.layout-unified-rounded .sidebar-tree .p-treenode-content .sidebar-tree-node-row,
+html body.layout-unified-rounded .sidebar-tree .node-label,
+html body.layout-unified-rounded .sidebar-tree .p-treenode-label,
+html body.layout-unified-app-rounded .sidebar-container.sidebar-root,
+html body.layout-unified-app-rounded .sidebar-container.sidebar-root .sidebar-tree,
+html body.layout-unified-app-rounded .sidebar-tree .p-treenode-content .sidebar-tree-node-row,
+html body.layout-unified-app-rounded .sidebar-tree .node-label,
+html body.layout-unified-app-rounded .sidebar-tree .p-treenode-label {
   font-family: var(--sidebar-font-family, system-ui, sans-serif) !important;
   font-size: var(--sidebar-font-size, inherit) !important;
 }
@@ -446,7 +570,17 @@ html body.layout-unified .sidebar-container.sidebar-root,
 html body.layout-unified .sidebar-container.sidebar-root .sidebar-tree,
 html body.layout-unified .sidebar-tree .p-treenode-content .sidebar-tree-node-row,
 html body.layout-unified .sidebar-tree .node-label,
-html body.layout-unified .sidebar-tree .p-treenode-label {
+html body.layout-unified .sidebar-tree .p-treenode-label,
+html body.layout-unified-rounded .sidebar-container.sidebar-root,
+html body.layout-unified-rounded .sidebar-container.sidebar-root .sidebar-tree,
+html body.layout-unified-rounded .sidebar-tree .p-treenode-content .sidebar-tree-node-row,
+html body.layout-unified-rounded .sidebar-tree .node-label,
+html body.layout-unified-rounded .sidebar-tree .p-treenode-label,
+html body.layout-unified-app-rounded .sidebar-container.sidebar-root,
+html body.layout-unified-app-rounded .sidebar-container.sidebar-root .sidebar-tree,
+html body.layout-unified-app-rounded .sidebar-tree .p-treenode-content .sidebar-tree-node-row,
+html body.layout-unified-app-rounded .sidebar-tree .node-label,
+html body.layout-unified-app-rounded .sidebar-tree .p-treenode-label {
   font-size: var(--sidebar-font-size, 12px) !important;
 }
 

@@ -34,7 +34,7 @@ const LayoutThemeSelector = () => {
       window.dispatchEvent(new CustomEvent('settings-updated', { 
         detail: { source: 'layout-sync' } 
       }));
-    } else if (layoutId === 'unified') {
+    } else if (layoutId === 'unified' || layoutId === 'unified-rounded' || layoutId === 'unified-app-rounded') {
       localStorage.setItem('iconTheme', 'cupertino');
       localStorage.setItem('iconThemeSidebar', 'cupertino');
       // Dispatch event to notify useThemeManagement and other components
@@ -242,8 +242,8 @@ const LayoutThemeSelector = () => {
               boxSizing: 'border-box'
             }}>
               <div style={{ width: '80%', height: '4px', backgroundColor: 'var(--ui-button-primary, #6366f1)', borderRadius: '1px' }}></div>
-              <div style={{ width: '70%', height: '3px', backgroundColor: 'rgba(255,255,255,0.2)' }}></div>
-              <div style={{ width: '60%', height: '3px', backgroundColor: 'rgba(255,255,255,0.2)' }}></div>
+              <div style={{ width: '70%', height: '3px', backgroundColor: 'rgba(255, 255, 255, 0.2)' }}></div>
+              <div style={{ width: '60%', height: '3px', backgroundColor: 'rgba(255, 255, 255, 0.2)' }}></div>
             </div>
             {/* Seamless Content (No outer border, integrated directly) */}
             <div style={{
@@ -261,6 +261,156 @@ const LayoutThemeSelector = () => {
               {/* Terminal Workspace */}
               <div style={{ flex: 1, padding: '4px' }}>
                 <div style={{ width: '100%', height: '100%', backgroundColor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255, 255, 255, 0.03)' }}></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'unified-rounded',
+      name: 'Unificado (Esquinas Redondeadas)',
+      description: 'Estilo continuo basado en el unificado, pero manteniendo las esquinas redondeadas en las pantallas para un toque elegante.',
+      icon: 'pi-stop',
+      preview: () => (
+        <div style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          backgroundColor: '#0a0f1d',
+          boxSizing: 'border-box'
+        }}>
+          {/* Seamless Header */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            padding: '3px 8px',
+            backgroundColor: '#111827',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+            height: '16px'
+          }}>
+            <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#ef4444' }}></div>
+            <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#f59e0b' }}></div>
+            <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#10b981' }}></div>
+            <div style={{ flex: 1, height: '4px', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: '2px', marginLeft: '6px', maxWidth: '80px' }}></div>
+          </div>
+          {/* Integrated Workspace */}
+          <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+            {/* Seamless Sidebar */}
+            <div style={{
+              width: '25%',
+              backgroundColor: '#111827',
+              borderRight: '1px solid rgba(255, 255, 255, 0.06)',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: '4px',
+              gap: '3px',
+              boxSizing: 'border-box'
+            }}>
+              <div style={{ width: '80%', height: '4px', backgroundColor: 'var(--ui-button-primary, #6366f1)', borderRadius: '1px' }}></div>
+              <div style={{ width: '70%', height: '3px', backgroundColor: 'rgba(255, 255, 255, 0.2)' }}></div>
+              <div style={{ width: '60%', height: '3px', backgroundColor: 'rgba(255, 255, 255, 0.2)' }}></div>
+            </div>
+            {/* Content with rounded screen corners */}
+            <div style={{
+              flex: 1,
+              backgroundColor: '#0a0f1d',
+              display: 'flex',
+              flexDirection: 'column',
+              boxSizing: 'border-box',
+              padding: '4px'
+            }}>
+              <div style={{
+                flex: 1,
+                backgroundColor: '#111827',
+                borderRadius: '6px',
+                border: '1px solid rgba(255, 255, 255, 0.05)',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden'
+              }}>
+                {/* Integrated tabs */}
+                <div style={{ display: 'flex', backgroundColor: '#111827', height: '10px', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                  <div style={{ width: '30%', backgroundColor: '#0a0f1d', borderRight: '1px solid rgba(255, 255, 255, 0.05)' }}></div>
+                  <div style={{ width: '25%', backgroundColor: '#111827' }}></div>
+                </div>
+                {/* Terminal Workspace */}
+                <div style={{ flex: 1, padding: '4px' }}>
+                  <div style={{ width: '100%', height: '100%', backgroundColor: 'rgba(255,255,255,0.01)' }}></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'unified-app-rounded',
+      name: 'Unificado (Ventana Redondeada)',
+      description: 'Estilo continuo sin bordes internos, pero con las esquinas exteriores de la ventana de la aplicación redondeadas.',
+      icon: 'pi-window-maximize',
+      preview: () => (
+        <div style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          backgroundColor: '#0a0f1d',
+          boxSizing: 'border-box',
+          borderRadius: '8px',
+          overflow: 'hidden',
+          border: '1px solid rgba(255, 255, 255, 0.1)'
+        }}>
+          {/* Seamless Header */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            padding: '3px 8px',
+            backgroundColor: '#111827',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+            height: '16px'
+          }}>
+            <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#ef4444' }}></div>
+            <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#f59e0b' }}></div>
+            <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#10b981' }}></div>
+            <div style={{ flex: 1, height: '4px', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: '2px', marginLeft: '6px', maxWidth: '80px' }}></div>
+          </div>
+          {/* Integrated Workspace */}
+          <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+            {/* Seamless Sidebar */}
+            <div style={{
+              width: '25%',
+              backgroundColor: '#111827',
+              borderRight: '1px solid rgba(255, 255, 255, 0.06)',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: '4px',
+              gap: '3px',
+              boxSizing: 'border-box'
+            }}>
+              <div style={{ width: '80%', height: '4px', backgroundColor: 'var(--ui-button-primary, #6366f1)', borderRadius: '1px' }}></div>
+              <div style={{ width: '70%', height: '3px', backgroundColor: 'rgba(255, 255, 255, 0.2)' }}></div>
+              <div style={{ width: '60%', height: '3px', backgroundColor: 'rgba(255, 255, 255, 0.2)' }}></div>
+            </div>
+            {/* Flat Content */}
+            <div style={{
+              flex: 1,
+              backgroundColor: '#0a0f1d',
+              display: 'flex',
+              flexDirection: 'column',
+              boxSizing: 'border-box'
+            }}>
+              {/* Integrated tabs */}
+              <div style={{ display: 'flex', backgroundColor: '#111827', height: '10px', borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                <div style={{ width: '30%', backgroundColor: '#0a0f1d', borderRight: '1px solid rgba(255, 255, 255, 0.05)' }}></div>
+                <div style={{ width: '25%', backgroundColor: '#111827' }}></div>
+              </div>
+              {/* Terminal Workspace */}
+              <div style={{ flex: 1, padding: '4px' }}>
+                <div style={{ width: '100%', height: '100%', backgroundColor: 'rgba(255,255,255,0.01)' }}></div>
               </div>
             </div>
           </div>
