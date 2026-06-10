@@ -24,6 +24,7 @@ import {
   isTreeFolderNode,
   moveNodeFromTreeEvent
 } from '../utils/treeDragDrop';
+import connectionStore from '../utils/connectionStore';
 import '../styles/components/password-manager-sidebar.css';
 import '../styles/components/tree-themes.css';
 
@@ -1819,8 +1820,29 @@ const PasswordManagerSidebar = ({
         }
       }
 
+      const secretConnection = {
+        id: node.key,
+        type: node.data?.type || 'password',
+        name: node.label,
+        ...node.data
+      };
+      const isFav = connectionStore.isFavorite(secretConnection);
+
       // Opciones comunes
       menuItems.push(
+        {
+          label: isFav ? 'Quitar de favoritos' : 'Añadir a favoritos',
+          icon: isFav ? 'pi pi-star-fill' : 'pi pi-star',
+          command: () => {
+            connectionStore.toggleFavorite(secretConnection);
+            showToast && showToast({
+              severity: 'success',
+              summary: isFav ? 'Quitado de favoritos' : 'Añadido a favoritos',
+              detail: `"${node.label}" ${isFav ? 'quitado de' : 'añadido a'} favoritos`,
+              life: 3000
+            });
+          }
+        },
         { separator: true },
         {
           label: 'Editar',

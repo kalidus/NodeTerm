@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from 'primereact/button';
 import TerminalFrame from './TerminalFrame';
 import { getNetworkById } from '../utils/cryptoNetworks';
+import { isFavorite, toggleFavorite } from '../utils/connectionStore';
 import '../styles/components/connection-details-panel.css';
 
 const SECRET_TYPES = ['password', 'crypto_wallet', 'api_key', 'secure_note'];
@@ -128,6 +129,40 @@ const PasswordDetailsPanel = ({
   const secretType = data?.type || 'password';
   const isFolder = selectedNode?.droppable || data?.type === 'password-folder';
   const isSecret = data && SECRET_TYPES.includes(secretType);
+
+  const [favStatus, setFavStatus] = useState(false);
+  const secretConnection = selectedNode ? {
+    id: selectedNode.key,
+    type: selectedNode.data?.type || 'password',
+    name: selectedNode.label,
+    ...selectedNode.data
+  } : null;
+
+  useEffect(() => {
+    if (secretConnection) {
+      setFavStatus(isFavorite(secretConnection));
+    }
+  }, [selectedNode]);
+
+  useEffect(() => {
+    const handleFavsUpdate = () => {
+      if (secretConnection) {
+        setFavStatus(isFavorite(secretConnection));
+      }
+    };
+    window.addEventListener('connections-updated', handleFavsUpdate);
+    return () => {
+      window.removeEventListener('connections-updated', handleFavsUpdate);
+    };
+  }, [selectedNode]);
+
+  const handleToggleFav = (e) => {
+    e.stopPropagation();
+    if (secretConnection) {
+      toggleFavorite(secretConnection);
+      setFavStatus(isFavorite(secretConnection));
+    }
+  };
 
   if (!selectedNode || isFolder || data?.isShowMoreBtn || !isSecret) {
     return null;
@@ -319,6 +354,13 @@ const PasswordDetailsPanel = ({
         }
         headerExtra={
           <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+            <Button
+              icon={favStatus ? 'pi pi-star-fill' : 'pi pi-star'}
+              className="p-button-text p-button-sm panel-toggle-button"
+              onClick={handleToggleFav}
+              style={{ color: favStatus ? '#ffd700' : undefined }}
+              tooltip={favStatus ? "Quitar de favoritos" : "Añadir a favoritos"}
+            />
             {chevronBtn}
           </div>
         }
