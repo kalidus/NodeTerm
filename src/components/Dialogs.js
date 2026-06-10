@@ -1337,7 +1337,8 @@ export function EnhancedSSHForm({
   onGoBack,
   sshLoading = false,
   isEditMode = false,
-  layoutMode = 'standard'
+  layoutMode = 'standard',
+  hideFooter = false
 }) {
   // Hook de internacionalización
   const { t } = useTranslation('dialogs');
@@ -2381,23 +2382,25 @@ export function EnhancedSSHForm({
         </div>
 
         {/* Footer */}
-        <div className="terminal-footer" style={{ marginTop: '0.5rem' }}>
-          <button type="button" className="terminal-btn-outline" onClick={() => {}}>
-            <i className="pi pi-sync mr-2"></i> PROBAR CONEXIÓN
-          </button>
-          <div className="flex gap-2">
-            <button type="button" className="terminal-btn-text" onClick={onHide}>CANCELAR</button>
-            <button
-              type="button"
-              className="terminal-btn-outline terminal-btn-submit"
-              onClick={handleSubmit}
-              disabled={!isFormValid() || sshLoading}
-            >
-              <i className={sshLoading ? 'pi pi-spin pi-spinner mr-2' : isEditMode ? 'pi pi-save mr-2' : 'pi pi-angle-right mr-2'}></i>
-              {sshLoading ? '_ CARGANDO...' : isEditMode ? tCommon('buttons.save').toUpperCase() : '_ CONECTAR'}
+        {!hideFooter && (
+          <div className="terminal-footer" style={{ marginTop: '0.5rem' }}>
+            <button type="button" className="terminal-btn-outline" onClick={() => {}}>
+              <i className="pi pi-sync mr-2"></i> PROBAR CONEXIÓN
             </button>
+            <div className="flex gap-2">
+              <button type="button" className="terminal-btn-text" onClick={onHide}>CANCELAR</button>
+              <button
+                type="button"
+                className="terminal-btn-outline terminal-btn-submit"
+                onClick={handleSubmit}
+                disabled={!isFormValid() || sshLoading}
+              >
+                <i className={sshLoading ? 'pi pi-spin pi-spinner mr-2' : isEditMode ? 'pi pi-save mr-2' : 'pi pi-angle-right mr-2'}></i>
+                {sshLoading ? '_ CARGANDO...' : isEditMode ? tCommon('buttons.save').toUpperCase() : '_ CONECTAR'}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     );
   }
@@ -2639,23 +2642,25 @@ export function EnhancedSSHForm({
         </div>
 
         {/* Footer Terminal */}
-        <div className="terminal-footer">
-          <button type="button" className="terminal-btn-outline" onClick={() => {}}>
-            <i className="pi pi-sync mr-2"></i> PROBAR CONEXIÓN
-          </button>
-          <div className="flex gap-2">
-            <button type="button" className="terminal-btn-text" onClick={onHide}>CANCELAR</button>
-            <button
-              type="button"
-              className="terminal-btn-outline terminal-btn-submit"
-              onClick={handleSubmit}
-              disabled={!isFormValid() || sshLoading}
-            >
-              <i className={sshLoading ? 'pi pi-spin pi-spinner mr-2' : isEditMode ? 'pi pi-save mr-2' : 'pi pi-angle-right mr-2'}></i>
-              {sshLoading ? '_ CARGANDO...' : isEditMode ? tCommon('buttons.save').toUpperCase() : '_ CONECTAR'}
+        {!hideFooter && (
+          <div className="terminal-footer">
+            <button type="button" className="terminal-btn-outline" onClick={() => {}}>
+              <i className="pi pi-sync mr-2"></i> PROBAR CONEXIÓN
             </button>
+            <div className="flex gap-2">
+              <button type="button" className="terminal-btn-text" onClick={onHide}>CANCELAR</button>
+              <button
+                type="button"
+                className="terminal-btn-outline terminal-btn-submit"
+                onClick={handleSubmit}
+                disabled={!isFormValid() || sshLoading}
+              >
+                <i className={sshLoading ? 'pi pi-spin pi-spinner mr-2' : isEditMode ? 'pi pi-save mr-2' : 'pi pi-angle-right mr-2'}></i>
+                {sshLoading ? '_ CARGANDO...' : isEditMode ? tCommon('buttons.save').toUpperCase() : '_ CONECTAR'}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     );
   }
@@ -2764,22 +2769,24 @@ export function EnhancedSSHForm({
       </div>
 
       {/* Footer Terminal */}
-      <div className="terminal-footer">
-        <button className="terminal-btn-outline" onClick={() => {}}>
-          <i className="pi pi-sync mr-2"></i> PROBAR CONEXIÓN
-        </button>
-        <div className="flex gap-2">
-          <button className="terminal-btn-text" onClick={onHide}>CANCELAR</button>
-          <button
-            className="terminal-btn-outline terminal-btn-submit"
-            onClick={handleSubmit}
-            disabled={!isFormValid() || sshLoading}
-          >
-            <i className={sshLoading ? 'pi pi-spin pi-spinner mr-2' : isEditMode ? 'pi pi-save mr-2' : 'pi pi-angle-right mr-2'}></i>
-            {sshLoading ? '_ CARGANDO...' : isEditMode ? tCommon('buttons.save').toUpperCase() : '_ CONECTAR'}
+      {!hideFooter && (
+        <div className="terminal-footer">
+          <button className="terminal-btn-outline" onClick={() => {}}>
+            <i className="pi pi-sync mr-2"></i> PROBAR CONEXIÓN
           </button>
+          <div className="flex gap-2">
+            <button className="terminal-btn-text" onClick={onHide}>CANCELAR</button>
+            <button
+              className="terminal-btn-outline terminal-btn-submit"
+              onClick={handleSubmit}
+              disabled={!isFormValid() || sshLoading}
+            >
+              <i className={sshLoading ? 'pi pi-spin pi-spinner mr-2' : isEditMode ? 'pi pi-save mr-2' : 'pi pi-angle-right mr-2'}></i>
+              {sshLoading ? '_ CARGANDO...' : isEditMode ? tCommon('buttons.save').toUpperCase() : '_ CONECTAR'}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -843,7 +843,7 @@ export const useFormHandlers = ({
   /**
    * Guardar SSH en sidebar desde tab
    */
-  const handleSaveSshToSidebar = useCallback((sshData, isEditing = false, originalNode = null) => {
+  const handleSaveSshToSidebar = useCallback((sshData, isEditing = false, originalNode = null, silent = false) => {
     if (!sshData) return;
 
     const name = sshData.name || '';
@@ -992,18 +992,20 @@ export const useFormHandlers = ({
       setNodes(nodesCopy);
     }
 
-    toast.current.show({
-      severity: 'success',
-      summary: 'SSH editada',
-      detail: `Sesión SSH actualizada`,
-      life: 3000
-    });
+    if (!silent) {
+      toast.current.show({
+        severity: 'success',
+        summary: 'SSH editada',
+        detail: `Sesión SSH actualizada`,
+        life: 3000
+      });
+    }
   }, [nodes, setNodes, findNodeByKey, findParentNodeAndIndex, deepCopy, parseWallixUser, toast]);
 
   /**
    * Guardar túnel SSH en sidebar desde tab
    */
-  const handleSaveSSHTunnelToSidebar = useCallback((tunnelData, isEditing = false, originalNode = null) => {
+  const handleSaveSSHTunnelToSidebar = useCallback((tunnelData, isEditing = false, originalNode = null, silent = false) => {
     if (!tunnelData) return;
 
     if (!tunnelData.name || !tunnelData.sshHost || !tunnelData.sshUser) {
@@ -1069,12 +1071,14 @@ export const useFormHandlers = ({
         
         setNodes(nodesCopy);
         
-        toast.current.show({
-          severity: 'success',
-          summary: 'Túnel SSH actualizado',
-          detail: `Túnel "${tunnelData.name}" actualizado en el árbol`,
-          life: 3000
-        });
+        if (!silent) {
+          toast.current.show({
+            severity: 'success',
+            summary: 'Túnel SSH actualizado',
+            detail: `Túnel "${tunnelData.name}" actualizado en el árbol`,
+            life: 3000
+          });
+        }
       }
     }
   }, [nodes, setNodes, findNodeByKey, deepCopy, toast]);
@@ -1212,7 +1216,7 @@ export const useFormHandlers = ({
   /**
    * Guardar RDP en sidebar
    */
-  const handleSaveRdpToSidebar = useCallback((rdpData, isEditing = false, originalNode = null) => {
+  const handleSaveRdpToSidebar = useCallback((rdpData, isEditing = false, originalNode = null, silent = false) => {
     if (isEditing && originalNode) {
       // Guardar datos antiguos para actualizar favoritos
       const oldConnection = connectionHelpers.fromSidebarNode(originalNode);
@@ -1422,7 +1426,7 @@ export const useFormHandlers = ({
   /**
    * Guardar VNC en sidebar
    */
-  const handleSaveVncToSidebar = useCallback((vncData, isEditing = false, originalNode = null) => {
+  const handleSaveVncToSidebar = useCallback((vncData, isEditing = false, originalNode = null, silent = false) => {
     if (isEditing && originalNode) {
       // Guardar datos antiguos para actualizar favoritos
       const oldConnection = connectionHelpers.fromSidebarNode(originalNode);
@@ -1544,7 +1548,7 @@ export const useFormHandlers = ({
   /**
    * Guardar conexión de archivos (SFTP/FTP/SCP) en sidebar
    */
-  const handleSaveFileConnectionToSidebar = useCallback((fileData, isEditing = false, originalNode = null) => {
+  const handleSaveFileConnectionToSidebar = useCallback((fileData, isEditing = false, originalNode = null, silent = false) => {
     // Validar que fileData existe y tiene los campos requeridos
     if (!fileData) {
       console.error('❌ handleSaveFileConnectionToSidebar: fileData es undefined');
@@ -1625,13 +1629,14 @@ export const useFormHandlers = ({
       });
     }
 
-    // Mostrar toast de éxito
-    toast.current?.show({
-      severity: 'success',
-      summary: isEditing ? 'Conexión actualizada' : 'Conexión añadida',
-      detail: `Conexión "${fileData.name}" ${isEditing ? 'actualizada' : 'añadida'} al árbol`,
-      life: 3000
-    });
+    if (!silent) {
+      toast.current?.show({
+        severity: 'success',
+        summary: isEditing ? 'Conexión actualizada' : 'Conexión añadida',
+        detail: `Conexión "${fileData.name}" ${isEditing ? 'actualizada' : 'añadida'} al árbol`,
+        life: 3000
+      });
+    }
 
     setShowFileConnectionDialog(false); // Cerrar diálogo de archivos
   }, [setNodes, findNodeByKey, setShowFileConnectionDialog, toast]);

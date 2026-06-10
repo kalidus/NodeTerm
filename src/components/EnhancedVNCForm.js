@@ -125,7 +125,8 @@ export function EnhancedVNCForm({
   onSubmit,
   loading,
   idPrefix = 'vnc',
-  layoutMode = 'standard'
+  layoutMode = 'standard',
+  hideFooter = false
 }) {
   const { t } = useTranslation('dialogs');
   const { t: tCommon } = useTranslation('common');
@@ -708,32 +709,34 @@ export function EnhancedVNCForm({
         </div>
 
         {/* Footer */}
-        <div className="terminal-footer" style={{ flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
-          <div className="flex gap-2 align-items-center" style={{ flexWrap: 'wrap' }}>
-            {typeof onGoBack === 'function' ? (
-              <button type="button" className="terminal-btn-text" onClick={onGoBack} disabled={busy}>
-                {tCommon('buttons.back').toUpperCase()}
+        {!hideFooter && (
+          <div className="terminal-footer" style={{ flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
+            <div className="flex gap-2 align-items-center" style={{ flexWrap: 'wrap' }}>
+              {typeof onGoBack === 'function' ? (
+                <button type="button" className="terminal-btn-text" onClick={onGoBack} disabled={busy}>
+                  {tCommon('buttons.back').toUpperCase()}
+                </button>
+              ) : null}
+            </div>
+            <div className="flex gap-2 align-items-center" style={{ flexWrap: 'wrap', marginLeft: 'auto' }}>
+              <button type="button" className="terminal-btn-text" onClick={onHide} disabled={busy}>
+                {tCommon('buttons.cancel').toUpperCase()}
               </button>
-            ) : null}
+              <button
+                type="submit"
+                className="terminal-btn-outline terminal-btn-submit"
+                disabled={!valid || busy}
+              >
+                <i className={busy ? 'pi pi-spin pi-spinner mr-2' : isEditMode ? 'pi pi-save mr-2' : 'pi pi-check mr-2'} aria-hidden="true"></i>
+                {busy
+                  ? tCommon('labels.loading')
+                  : isEditMode
+                    ? tCommon('buttons.save').toUpperCase()
+                    : tCommon('buttons.connect').toUpperCase()}
+              </button>
+            </div>
           </div>
-          <div className="flex gap-2 align-items-center" style={{ flexWrap: 'wrap', marginLeft: 'auto' }}>
-            <button type="button" className="terminal-btn-text" onClick={onHide} disabled={busy}>
-              {tCommon('buttons.cancel').toUpperCase()}
-            </button>
-            <button
-              type="submit"
-              className="terminal-btn-outline terminal-btn-submit"
-              disabled={!valid || busy}
-            >
-              <i className={busy ? 'pi pi-spin pi-spinner mr-2' : isEditMode ? 'pi pi-save mr-2' : 'pi pi-check mr-2'} aria-hidden="true"></i>
-              {busy
-                ? tCommon('labels.loading')
-                : isEditMode
-                  ? tCommon('buttons.save').toUpperCase()
-                  : tCommon('buttons.connect').toUpperCase()}
-            </button>
-          </div>
-        </div>
+        )}
       </form>
     );
   }
@@ -774,35 +777,37 @@ export function EnhancedVNCForm({
           </div>
         </div>
 
-        <div className="terminal-footer" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
-          <div className="flex gap-2 align-items-center" style={{ flexWrap: 'wrap' }}>
-            {typeof onGoBack === 'function' ? (
-              <button type="button" className="terminal-btn-text" onClick={onGoBack} disabled={busy}>
-                {tCommon('buttons.back').toUpperCase()}
+        {!hideFooter && (
+          <div className="terminal-footer" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div className="flex gap-2 align-items-center" style={{ flexWrap: 'wrap' }}>
+              {typeof onGoBack === 'function' ? (
+                <button type="button" className="terminal-btn-text" onClick={onGoBack} disabled={busy}>
+                  {tCommon('buttons.back').toUpperCase()}
+                </button>
+              ) : null}
+            </div>
+            <div className="flex gap-2 align-items-center" style={{ flexWrap: 'wrap', marginLeft: 'auto' }}>
+              <button type="button" className="terminal-btn-text" onClick={onHide} disabled={busy}>
+                {tCommon('buttons.cancel').toUpperCase()}
               </button>
-            ) : null}
+              <button
+                type="submit"
+                className="terminal-btn-outline terminal-btn-submit"
+                disabled={!valid || busy}
+              >
+                <i
+                  className={busy ? 'pi pi-spin pi-spinner mr-2' : isEditMode ? 'pi pi-save mr-2' : 'pi pi-check mr-2'}
+                  aria-hidden="true"
+                ></i>
+                {busy
+                  ? tCommon('labels.loading')
+                  : isEditMode
+                    ? tCommon('buttons.save').toUpperCase()
+                    : tCommon('buttons.connect').toUpperCase()}
+              </button>
+            </div>
           </div>
-          <div className="flex gap-2 align-items-center" style={{ flexWrap: 'wrap', marginLeft: 'auto' }}>
-            <button type="button" className="terminal-btn-text" onClick={onHide} disabled={busy}>
-              {tCommon('buttons.cancel').toUpperCase()}
-            </button>
-            <button
-              type="submit"
-              className="terminal-btn-outline terminal-btn-submit"
-              disabled={!valid || busy}
-            >
-              <i
-                className={busy ? 'pi pi-spin pi-spinner mr-2' : isEditMode ? 'pi pi-save mr-2' : 'pi pi-check mr-2'}
-                aria-hidden="true"
-              ></i>
-              {busy
-                ? tCommon('labels.loading')
-                : isEditMode
-                  ? tCommon('buttons.save').toUpperCase()
-                  : tCommon('buttons.connect').toUpperCase()}
-            </button>
-          </div>
-        </div>
+        )}
       </form>
     );
   }
@@ -872,35 +877,37 @@ export function EnhancedVNCForm({
 
       </div>
 
-      <div className="terminal-footer" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
-        <div className="flex gap-2 align-items-center" style={{ flexWrap: 'wrap' }}>
-          {typeof onGoBack === 'function' ? (
-            <button type="button" className="terminal-btn-text" onClick={onGoBack} disabled={busy}>
-              {tCommon('buttons.back').toUpperCase()}
+      {!hideFooter && (
+        <div className="terminal-footer" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div className="flex gap-2 align-items-center" style={{ flexWrap: 'wrap' }}>
+            {typeof onGoBack === 'function' ? (
+              <button type="button" className="terminal-btn-text" onClick={onGoBack} disabled={busy}>
+                {tCommon('buttons.back').toUpperCase()}
+              </button>
+            ) : null}
+          </div>
+          <div className="flex gap-2 align-items-center" style={{ flexWrap: 'wrap', marginLeft: 'auto' }}>
+            <button type="button" className="terminal-btn-text" onClick={onHide} disabled={busy}>
+              {tCommon('buttons.cancel').toUpperCase()}
             </button>
-          ) : null}
+            <button
+              type="submit"
+              className="terminal-btn-outline terminal-btn-submit"
+              disabled={!valid || busy}
+            >
+              <i
+                className={busy ? 'pi pi-spin pi-spinner mr-2' : isEditMode ? 'pi pi-save mr-2' : 'pi pi-check mr-2'}
+                aria-hidden="true"
+              ></i>
+              {busy
+                ? tCommon('labels.loading')
+                : isEditMode
+                  ? tCommon('buttons.save').toUpperCase()
+                  : tCommon('buttons.connect').toUpperCase()}
+            </button>
+          </div>
         </div>
-        <div className="flex gap-2 align-items-center" style={{ flexWrap: 'wrap', marginLeft: 'auto' }}>
-          <button type="button" className="terminal-btn-text" onClick={onHide} disabled={busy}>
-            {tCommon('buttons.cancel').toUpperCase()}
-          </button>
-          <button
-            type="submit"
-            className="terminal-btn-outline terminal-btn-submit"
-            disabled={!valid || busy}
-          >
-            <i
-              className={busy ? 'pi pi-spin pi-spinner mr-2' : isEditMode ? 'pi pi-save mr-2' : 'pi pi-check mr-2'}
-              aria-hidden="true"
-            ></i>
-            {busy
-              ? tCommon('labels.loading')
-              : isEditMode
-                ? tCommon('buttons.save').toUpperCase()
-                : tCommon('buttons.connect').toUpperCase()}
-          </button>
-        </div>
-      </div>
+      )}
     </form>
   );
 }

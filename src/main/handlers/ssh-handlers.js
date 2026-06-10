@@ -210,6 +210,36 @@ function registerSSHHandlers(dependencies = {}) {
     }
   });
 
+  // SSH: Probar conexión
+  ipcMain.handle('ssh:test-connection', async (event, { sshConfig }) => {
+    try {
+      if (!sshConfig) return { success: false, error: 'Configuración SSH no provista' };
+      const config = {
+        host: sshConfig.bastionHost || sshConfig.host || sshConfig.sshHost,
+        port: parseInt(sshConfig.port || sshConfig.sshPort) || 22,
+        username: sshConfig.bastionUser || sshConfig.user || sshConfig.username || sshConfig.sshUser,
+        password: sshConfig.password || sshConfig.sshPassword,
+        privateKey: sshConfig.privateKey || sshConfig.sshPrivateKey || sshConfig.privateKeyPath,
+        readyTimeout: 10000
+      };
+
+      if (config.privateKey && typeof config.privateKey === 'string' && (config.privateKey.startsWith('/') || config.privateKey.includes(':') || config.privateKey.includes('\\'))) {
+        try {
+          if (fs.existsSync(config.privateKey)) {
+            config.privateKey = fs.readFileSync(config.privateKey, 'utf8');
+          }
+        } catch (_) {}
+      }
+
+      const ssh = new SSH2Promise(config);
+      await ssh.connect();
+      await ssh.close();
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message || String(err) };
+    }
+  });
+
   // SSH: Obtener directorio home
   ipcMain.handle('ssh:get-home-directory', async (event, { tabId, sshConfig }) => {
     try {
