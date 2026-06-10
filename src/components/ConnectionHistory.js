@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import ReactDOM from 'react-dom';
-import { getFavorites, toggleFavorite, onUpdate, isFavorite, reorderFavorites, helpers } from '../utils/connectionStore';
+import { getFavorites, toggleFavorite, onUpdate, isFavorite, reorderFavorites, helpers, clearRecents } from '../utils/connectionStore';
 import { iconThemes } from '../themes/icon-themes';
 import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
 import favoriteGroupsStore from '../utils/favoriteGroupsStore';
@@ -3771,6 +3771,9 @@ const ConnectionHistory = ({
 								</div>
 								{/* path bar */}
 								<div style={{
+									display: 'flex',
+									alignItems: 'center',
+									justifyContent: 'space-between',
 									padding: '2px 8px',
 									fontSize: '0.62rem',
 									color: 'rgba(255,255,255,0.25)',
@@ -3778,8 +3781,109 @@ const ConnectionHistory = ({
 									borderBottom: `1px solid rgba(255,255,255,0.04)`,
 									flexShrink: 0,
 								}}>
-									<span style={{ color: 'rgba(255,255,255,0.4)' }}>~</span>/{splitView === 'favorites' ? 'favorites' : 'recent'} · {splitConnections.length}
+									<div>
+										<span style={{ color: 'rgba(255,255,255,0.4)' }}>~</span>/{splitView === 'favorites' ? 'favorites' : 'recent'} · {splitConnections.length}
+									</div>
+									<div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+										{/* Filter Button */}
+										<button
+											className="split-header-filter-btn"
+											onClick={(e) => {
+												e.stopPropagation();
+												setFilterContext(splitView === 'favorites' ? 'favorites' : 'recents');
+												setFilterPanelOpen(true);
+											}}
+											style={{
+												background: 'transparent',
+												border: 'none',
+												color: getActiveFilterCount(splitView === 'favorites' ? activeFavFilters : activeRecentFilters) > 0 ? '#4fc3f7' : 'rgba(255,255,255,0.4)',
+												cursor: 'pointer',
+												padding: '2px',
+												display: 'flex',
+												alignItems: 'center',
+												transition: 'color 0.2s',
+											}}
+											title="Filtrar por protocolo"
+											onMouseEnter={e => e.currentTarget.style.color = '#4fc3f7'}
+											onMouseLeave={e => e.currentTarget.style.color = getActiveFilterCount(splitView === 'favorites' ? activeFavFilters : activeRecentFilters) > 0 ? '#4fc3f7' : 'rgba(255,255,255,0.4)'}
+										>
+											<i className={getActiveFilterCount(splitView === 'favorites' ? activeFavFilters : activeRecentFilters) > 0 ? "pi pi-filter-fill" : "pi pi-filter"} style={{ fontSize: '0.65rem' }} />
+										</button>
+
+										{/* Clear Recents Button */}
+										{splitView === 'recent' && (
+											<button
+												onClick={(e) => {
+													e.stopPropagation();
+													if (confirm('¿Estás seguro de que deseas limpiar el historial de recientes?')) {
+														clearRecents();
+													}
+												}}
+												style={{
+													background: 'transparent',
+													border: 'none',
+													color: 'rgba(255,255,255,0.4)',
+													cursor: 'pointer',
+													padding: '2px',
+													display: 'flex',
+													alignItems: 'center',
+													transition: 'color 0.2s',
+												}}
+												title="Limpiar panel de recientes"
+												onMouseEnter={e => e.currentTarget.style.color = '#ff5f56'}
+												onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}
+											>
+												<i className="pi pi-trash" style={{ fontSize: '0.65rem' }} />
+											</button>
+										)}
+									</div>
 								</div>
+								{/* active filters badges in split view */}
+								{getActiveFilterCount(splitView === 'favorites' ? activeFavFilters : activeRecentFilters) > 0 && (
+									<div style={{
+										display: 'flex',
+										flexWrap: 'wrap',
+										gap: '4px',
+										padding: '4px 8px',
+										borderBottom: `1px solid rgba(255,255,255,0.04)`,
+										background: 'rgba(255,255,255,0.02)',
+										flexShrink: 0
+									}}>
+										{(splitView === 'favorites' ? activeFavFilters : activeRecentFilters).protocols?.map(filterId => (
+											<FilterBadge
+												key={`protocol-${filterId}`}
+												label={getFilterLabel('protocols', filterId)}
+												color={getFilterColor('protocols', filterId)}
+												icon={getFilterIcon('protocols', filterId)}
+												type="protocol"
+												onRemove={() => handleRemoveFilter(splitView === 'favorites' ? 'favorites' : 'recents', 'protocols', filterId)}
+												compact
+											/>
+										))}
+										{(splitView === 'favorites' ? activeFavFilters : activeRecentFilters).groups?.map(filterId => (
+											<FilterBadge
+												key={`group-${filterId}`}
+												label={getFilterLabel('groups', filterId)}
+												color={getFilterColor('groups', filterId)}
+												icon={getFilterIcon('groups', filterId)}
+												type="group"
+												onRemove={() => handleRemoveFilter(splitView === 'favorites' ? 'favorites' : 'recents', 'groups', filterId)}
+												compact
+											/>
+										))}
+										{(splitView === 'favorites' ? activeFavFilters : activeRecentFilters).states?.map(filterId => (
+											<FilterBadge
+												key={`state-${filterId}`}
+												label={getFilterLabel('states', filterId)}
+												color={getFilterColor('states', filterId)}
+												icon={getFilterIcon('states', filterId)}
+												type="state"
+												onRemove={() => handleRemoveFilter(splitView === 'favorites' ? 'favorites' : 'recents', 'states', filterId)}
+												compact
+											/>
+										))}
+									</div>
+								)}
 								{/* lista de conexiones */}
 								<div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
 									{splitConnections.length === 0 ? (
