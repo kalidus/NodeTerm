@@ -1195,6 +1195,8 @@ const ConnectionHistory = ({
 			case 'crypto_wallet':
 			case 'api_key':
 			case 'secure_note': return 'pi pi-key';
+			case 'document':
+			case 'quick-note': return 'pi pi-file';
 			default: return 'pi pi-circle';
 		}
 	};
@@ -1240,6 +1242,8 @@ const ConnectionHistory = ({
 			case 'crypto_wallet': return '#FF9800';
 			case 'api_key': return '#9C27B0';
 			case 'secure_note': return '#607D8B';
+			case 'document':
+			case 'quick-note': return '#64b5f6';
 			default: return '#9E9E9E';
 		}
 	};
@@ -1261,6 +1265,8 @@ const ConnectionHistory = ({
 			case 'crypto_wallet': return 'WALLET';
 			case 'api_key': return 'API KEY';
 			case 'secure_note': return 'NOTE';
+			case 'document':
+			case 'quick-note': return 'NOTA';
 			default: return 'SSH';
 		}
 	};
@@ -1270,7 +1276,7 @@ const ConnectionHistory = ({
 		if (filter === 'vnc-guacamole') return items.filter(c => c.type === 'vnc-guacamole' || c.type === 'vnc');
 		if (filter === 'rdp-guacamole') return items.filter(c => c.type === 'rdp-guacamole' || c.type === 'rdp');
 		if (filter === 'sftp') return items.filter(c => ['sftp', 'explorer', 'ftp', 'scp'].includes(c.type));
-		if (filter === 'secret') return items.filter(c => ['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note'].includes(c.type));
+		if (filter === 'secret') return items.filter(c => ['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note', 'document', 'quick-note'].includes(c.type));
 		return items.filter(c => c.type === filter);
 	};
 

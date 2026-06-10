@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from 'primereact/button';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import TerminalFrame from './TerminalFrame';
+import { isFavorite, toggleFavorite } from '../utils/connectionStore';
 
 const DocumentDetailsPanel = ({
   selectedNode,
@@ -78,6 +79,40 @@ const DocumentDetailsPanel = ({
     }
   }, [selectedNode, onOpenDocument]);
 
+  const [favStatus, setFavStatus] = useState(false);
+  const noteConnection = selectedNode ? {
+    id: selectedNode.key,
+    type: selectedNode.data?.type || 'document',
+    name: selectedNode.label,
+    ...selectedNode.data
+  } : null;
+
+  useEffect(() => {
+    if (noteConnection) {
+      setFavStatus(isFavorite(noteConnection));
+    }
+  }, [selectedNode]);
+
+  useEffect(() => {
+    const handleFavsUpdate = () => {
+      if (noteConnection) {
+        setFavStatus(isFavorite(noteConnection));
+      }
+    };
+    window.addEventListener('connections-updated', handleFavsUpdate);
+    return () => {
+      window.removeEventListener('connections-updated', handleFavsUpdate);
+    };
+  }, [selectedNode]);
+
+  const handleToggleFav = (e) => {
+    e.stopPropagation();
+    if (noteConnection) {
+      toggleFavorite(noteConnection);
+      setFavStatus(isFavorite(noteConnection));
+    }
+  };
+
   // Si no hay nodo seleccionado o es una carpeta, no mostramos el panel
   if (!selectedNode || isFolder) {
     return null;
@@ -139,6 +174,13 @@ const DocumentDetailsPanel = ({
       iconNode={<i className="pi pi-file" style={{ fontSize: '14px', color: '#64b5f6' }}></i>}
       rightButtons={
         <>
+          <Button
+            icon={favStatus ? 'pi pi-star-fill' : 'pi pi-star'}
+            className="p-button-text p-button-sm panel-toggle-button"
+            onClick={handleToggleFav}
+            style={{ color: favStatus ? '#ffd700' : undefined }}
+            tooltip={favStatus ? "Quitar de favoritos" : "Añadir a favoritos"}
+          />
           <Button
             icon="pi pi-external-link"
             className="p-button-text p-button-sm panel-toggle-button"

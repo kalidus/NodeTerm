@@ -2543,6 +2543,7 @@ const Sidebar = React.memo(({
     const isCryptoWallet = actionNode.data && actionNode.data.type === 'crypto_wallet';
     const isApiKey = actionNode.data && actionNode.data.type === 'api_key';
     const isSecureNote = actionNode.data && actionNode.data.type === 'secure_note';
+    const isDocument = actionNode.data && (actionNode.data.type === 'document' || actionNode.data.type === 'quick-note');
     const isSSHTunnel = actionNode.data && actionNode.data.type === 'ssh-tunnel';
     // Icono según tema seleccionado para la sidebar
     let icon = null;
@@ -2613,6 +2614,9 @@ const Sidebar = React.memo(({
     } else if (isSecureNote) {
       const cacheKey = `secure_note-${connectionIconSize}`;
       icon = getCachedIcon(cacheKey, () => <span className="pi pi-file-edit" style={{ color: '#9C27B0', fontSize: `${connectionIconSize}px` }} />);
+    } else if (isDocument) {
+      const cacheKey = `document-${connectionIconSize}`;
+      icon = getCachedIcon(cacheKey, () => <span className="pi pi-file" style={{ color: '#64b5f6', fontSize: `${connectionIconSize}px` }} />);
     } else if (isSSHTunnel) {
       // Icono para túneles SSH con indicador de estado
       const tunnelStatus = node.data?.tunnelStatus || 'stopped';
@@ -2750,6 +2754,14 @@ const Sidebar = React.memo(({
               ...actionNode.data
             };
             window.dispatchEvent(new CustomEvent('open-password-tab', { detail: payload }));
+          } else if (actionNode.data && ['document', 'quick-note'].includes(actionNode.data.type)) {
+            window.dispatchEvent(new CustomEvent('open-document-tab', {
+              detail: {
+                key: actionNode.key || actionNode.id,
+                label: actionNode.label || actionNode.name,
+                data: actionNode.data
+              }
+            }));
           }
         }}
         style={{

@@ -79,8 +79,8 @@ function toSerializable(connection) {
     };
   }
 
-  // Si es un secreto (password, wallet, api_key, etc.), usar estructura especial
-  if (['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note'].includes(type)) {
+  // Si es un secreto o documento (password, wallet, api_key, etc.), usar estructura especial
+  if (['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note', 'document', 'quick-note'].includes(type)) {
     return {
       id: connection.id || `secret_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       type: type,
@@ -90,7 +90,8 @@ function toSerializable(connection) {
       url: connection.url || '',
       group: connection.group || '',
       notes: connection.notes || '',
-      icon: connection.icon || 'pi-key',
+      content: connection.content || '',
+      icon: connection.icon || (['document', 'quick-note'].includes(type) ? 'pi-file' : 'pi-key'),
       lastConnected: new Date().toISOString(),
       lastAccessed: connection.lastAccessed || new Date().toISOString()
     };

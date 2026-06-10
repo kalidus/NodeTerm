@@ -25,6 +25,7 @@ import {
   moveNodeFromTreeEvent
 } from '../utils/treeDragDrop';
 import localStorageSyncService from '../services/LocalStorageSyncService';
+import connectionStore from '../utils/connectionStore';
 import DocumentDetailsPanel from './DocumentDetailsPanel';
 import QuickNotesSidePanel from './QuickNotesSidePanel';
 import '../styles/components/documents.css';
@@ -750,10 +751,31 @@ const DocumentsSidebar = ({
         { separator: true }
       );
     } else {
+      const noteConnection = {
+        id: node.key,
+        type: node.data?.type || 'document',
+        name: node.label,
+        ...node.data
+      };
+      const isFav = connectionStore.isFavorite(noteConnection);
+
       items.push({
         label: 'Abrir nota',
         icon: 'pi pi-external-link',
         command: () => handleOpenDocument(node)
+      });
+      items.push({
+        label: isFav ? 'Quitar de favoritos' : 'Añadir a favoritos',
+        icon: isFav ? 'pi pi-star-fill' : 'pi pi-star',
+        command: () => {
+          connectionStore.toggleFavorite(noteConnection);
+          showToast && showToast({
+            severity: 'success',
+            summary: isFav ? 'Quitado de favoritos' : 'Añadido a favoritos',
+            detail: `"${node.label}" ${isFav ? 'quitado de' : 'añadido a'} favoritos`,
+            life: 3000
+          });
+        }
       });
       items.push({ separator: true });
     }

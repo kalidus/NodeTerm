@@ -785,6 +785,14 @@ const HomeTab = ({
       } catch (err) {
         console.error('Error actualizando reciente de password:', err);
       }
+    } else if (['document', 'quick-note'].includes(connection.type)) {
+      window.dispatchEvent(new CustomEvent('open-document-tab', {
+        detail: {
+          key: connection.key || connection.id,
+          label: connection.label || connection.name,
+          data: connection
+        }
+      }));
     } else if (onCreateSSHConnection) {
       // Manejar conexiones SSH tradicionales
       onCreateSSHConnection(connection);
