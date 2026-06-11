@@ -542,10 +542,10 @@ let appCleanupCompleted = false;
 
 // Los handlers SSH se registrarán después de definir findSSHConnection
 
-// Manejador global para errores no capturados relacionados con ConPTY
+// Manejador global para errores no capturados relacionados con ConPTY y SSH
 process.on('uncaughtException', (error) => {
-  if (error.message && error.message.includes('AttachConsole failed')) {
-    console.warn('Error AttachConsole capturado y suprimido:', error.message);
+  if (error.message && (error.message.includes('AttachConsole failed') || error.message.includes('Malformed DISCONNECT packet'))) {
+    console.warn('Error capturado y suprimido:', error.message);
     return; // Suprimir el error sin crashear la aplicación
   }
 
@@ -556,9 +556,9 @@ process.on('uncaughtException', (error) => {
 
 // Manejador para promesas rechazadas no capturadas
 process.on('unhandledRejection', (reason, promise) => {
-  // Suprimir errores conocidos de ConPTY
-  if (reason && reason.message && reason.message.includes('AttachConsole failed')) {
-    console.warn('Promise rechazada con error AttachConsole capturado:', reason.message);
+  // Suprimir errores conocidos de ConPTY y SSH
+  if (reason && reason.message && (reason.message.includes('AttachConsole failed') || reason.message.includes('Malformed DISCONNECT packet'))) {
+    console.warn('Promise rechazada con error capturado y suprimido:', reason.message);
     return; // Suprimir el error
   }
 
