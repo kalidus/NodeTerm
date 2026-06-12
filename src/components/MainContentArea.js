@@ -3358,6 +3358,10 @@ const MainContentArea = ({
                               tab={tab}
                               sshConfig={tab.sshConfig}
                               onClose={() => setSshFileExplorerTabId(null)}
+                              iconTheme={memoizedContentRendererProps?.iconTheme}
+                              explorerFont={memoizedContentRendererProps?.explorerFont}
+                              explorerColorTheme={memoizedContentRendererProps?.explorerColorTheme}
+                              explorerFontSize={memoizedContentRendererProps?.explorerFontSize}
                             />
                           )}
                         </div>

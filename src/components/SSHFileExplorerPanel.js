@@ -7,7 +7,14 @@ import { ProgressBar } from 'primereact/progressbar';
 import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
 import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
+import { uiThemes } from '../themes/ui-themes';
 import '../styles/ssh-monitor.css';
+
+// Helper para obtener colores del tema
+const getThemeColors = (themeName) => {
+    const theme = uiThemes[themeName] || uiThemes['Light'];
+    return theme?.colors || {};
+};
 
 const getSyncPath = (fromSide, currentPathA, newPathA, currentPathB) => {
     if (!currentPathA || !newPathA || !currentPathB) return null;
@@ -45,7 +52,7 @@ const getSyncPath = (fromSide, currentPathA, newPathA, currentPathB) => {
     return null;
 };
 
-const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
+const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', explorerFont = 'Segoe UI', explorerColorTheme = 'Light', explorerFontSize = 15 }) => {
     // ---- Remote State ----
     const [remoteNodes, setRemoteNodes] = useState([]);
     const [remoteExpandedKeys, setRemoteExpandedKeys] = useState({});
@@ -2065,6 +2072,8 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
     };
 
 
+    const themeColors = getThemeColors(explorerColorTheme);
+
     return (
         <div
             className="ssh-monitor-overlay"
@@ -2087,7 +2096,21 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                 onMouseDown={handleMouseDownResizer}
             />
 
-            <div className={`ssh-monitor-panel ${hasMounted || isResizing ? 'no-animation' : ''}`} style={{ display: 'flex', flexDirection: 'column' }}>
+            <div 
+                className={`ssh-monitor-panel ${hasMounted || isResizing ? 'no-animation' : ''}`} 
+                style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    fontFamily: explorerFont,
+                    fontSize: `${explorerFontSize}px`,
+                    '--explorer-bg': themeColors.contentBackground || '#0d1117',
+                    '--explorer-text': themeColors.dialogText || '#e6edf3',
+                    '--explorer-border': themeColors.contentBorder || '#30363d',
+                    '--explorer-hover': themeColors.sidebarHover || 'rgba(139, 148, 158, 0.1)',
+                    '--explorer-selected': themeColors.sidebarSelected || 'rgba(88, 166, 255, 0.12)',
+                    '--explorer-accent': themeColors.buttonPrimary || '#58a6ff'
+                }}
+            >
 
                 {/* ── Header ────────────────────────────────────────────────── */}
                 <div className="ssh-monitor-header">

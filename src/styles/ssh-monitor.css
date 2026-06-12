@@ -44,23 +44,6 @@
     }
 }
 
-.ssh-monitor-panel {
-    width: 100%;
-    height: 100%;
-    background: rgba(13, 17, 23, var(--ssh-monitor-opacity, 0.9));
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: none;
-    border-left: 1px solid #30363d;
-    border-radius: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.6);
-    font-family: 'Consolas', 'Courier New', monospace;
-    animation: ssh-monitor-slide-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
 .ssh-monitor-panel.no-animation {
     animation: none !important;
 }
@@ -77,7 +60,23 @@
     }
 }
 
-/* ---- Header ---- */
+.ssh-monitor-panel {
+    width: 100%;
+    height: 100%;
+    background: var(--explorer-bg, rgba(13, 17, 23, var(--ssh-monitor-opacity, 0.9)));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: none;
+    border-left: 1px solid var(--explorer-border, #30363d);
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.6);
+    font-family: var(--explorer-font, 'Consolas', 'Courier New', monospace);
+    color: var(--explorer-text, #e6edf3);
+    animation: ssh-monitor-slide-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
 
 .ssh-monitor-header {
     display: flex;
@@ -1373,7 +1372,7 @@
     background: transparent !important;
     border: none !important;
     padding: 0 !important;
-    color: #e6edf3 !important;
+    color: var(--explorer-text, #e6edf3) !important;
 }
 
 /* ---- ALL node content: force transparent ---- */
@@ -1382,7 +1381,7 @@
     padding: 1px 2px !important;
     border-radius: 5px !important;
     background: transparent !important;
-    color: #e6edf3 !important;
+    color: var(--explorer-text, #e6edf3) !important;
     box-shadow: none !important;
     border: none !important;
     outline: none !important;
@@ -1392,8 +1391,8 @@
 /* ---- Hover ---- */
 .ssh-monitor-panel .ssh-monitor-tree .p-treenode-content:hover,
 .ssh-monitor-panel .ssh-monitor-tree .p-tree-node-content:hover {
-    background: rgba(139, 148, 158, 0.1) !important;
-    color: #e6edf3 !important;
+    background: var(--explorer-hover, rgba(139, 148, 158, 0.1)) !important;
+    color: var(--explorer-text, #e6edf3) !important;
 }
 
 /* ---- Focus: kill all focus rings ---- */
@@ -1414,9 +1413,9 @@
 .remote-pane .ssh-monitor-tree .p-tree-node-content.p-highlight,
 .remote-pane .ssh-monitor-tree .p-treenode-content.p-highlight:hover,
 .remote-pane .ssh-monitor-tree .p-tree-node-content.p-highlight:hover {
-    background: rgba(88, 166, 255, 0.12) !important;
-    color: #e6edf3 !important;
-    border-left: 2px solid #58a6ff !important;
+    background: var(--explorer-selected, rgba(88, 166, 255, 0.12)) !important;
+    color: var(--explorer-text, #e6edf3) !important;
+    border-left: 2px solid var(--explorer-accent, #58a6ff) !important;
     border-radius: 0 5px 5px 0 !important;
     box-shadow: none !important;
 }
@@ -1426,9 +1425,9 @@
 .local-pane .ssh-monitor-tree .p-tree-node-content.p-highlight,
 .local-pane .ssh-monitor-tree .p-treenode-content.p-highlight:hover,
 .local-pane .ssh-monitor-tree .p-tree-node-content.p-highlight:hover {
-    background: rgba(63, 185, 80, 0.12) !important;
-    color: #e6edf3 !important;
-    border-left: 2px solid #3fb950 !important;
+    background: var(--explorer-selected, rgba(63, 185, 80, 0.12)) !important;
+    color: var(--explorer-text, #e6edf3) !important;
+    border-left: 2px solid var(--explorer-accent, #3fb950) !important;
     border-radius: 0 5px 5px 0 !important;
     box-shadow: none !important;
 }
