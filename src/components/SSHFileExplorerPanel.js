@@ -606,6 +606,21 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                 const localFs = window.electron?.localFs;
                 if (!invoke || !localFs) return;
 
+                // Load saved default paths if any
+                const pathsKey = sshConfig && sshConfig.host 
+                    ? `ssh_explorer_default_paths_${sshConfig.host}_${sshConfig.username || 'root'}` 
+                    : `ssh_explorer_default_paths_${tabId}`;
+                
+                let savedPaths = null;
+                try {
+                    const saved = localStorage.getItem(pathsKey);
+                    if (saved) {
+                        savedPaths = JSON.parse(saved);
+                    }
+                } catch (e) {
+                    console.error('Error loading default paths', e);
+                }
+
                 // 1. Initialize Remote
                 const remoteResult = await invoke('ssh:get-home-directory', { tabId, sshConfig });
                 if (remoteResult && remoteResult.success && remoteResult.home) {
@@ -623,9 +638,23 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                             icon: 'pi pi-hdd', droppable: true, leaf: false, children: []
                         });
                     }
+
+                    let initialRemotePath = homePath;
+                    if (savedPaths?.remotePath) {
+                        initialRemotePath = savedPaths.remotePath;
+                        if (initialRemotePath !== homePath && initialRemotePath !== '/') {
+                            rNodes.push({
+                                key: makeKey(initialRemotePath),
+                                label: initialRemotePath,
+                                data: { path: initialRemotePath, type: 'directory', parentPath: null, isRoot: true },
+                                icon: 'pi pi-star-fill', droppable: true, leaf: false, children: []
+                            });
+                        }
+                    }
+
                     setRemoteNodes(rNodes);
-                    setRemoteCurrentPath(homePath);
-                    await loadRemoteDirectory(homePath, { keepExpanded: true });
+                    setRemoteCurrentPath(initialRemotePath);
+                    await loadRemoteDirectory(initialRemotePath, { keepExpanded: true });
                 }
 
                 // 2. Initialize Local
@@ -656,15 +685,25 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                     });
                 }
 
+                let initialLocalPath = homeDir || (lNodes.length > 0 ? lNodes[0].data.path : null);
+                if (savedPaths?.localPath) {
+                    initialLocalPath = savedPaths.localPath;
+                    const exists = lNodes.some(n => n.data.path.toLowerCase() === initialLocalPath.toLowerCase());
+                    if (!exists) {
+                        lNodes.push({
+                            key: makeKey(initialLocalPath),
+                            label: initialLocalPath,
+                            data: { path: initialLocalPath, type: 'directory', parentPath: null, isRoot: true },
+                            icon: 'pi pi-star-fill', droppable: true, leaf: false, children: []
+                        });
+                    }
+                }
+
                 setLocalNodes(lNodes);
 
-                if (homeDir) {
-                    setLocalCurrentPath(homeDir);
-                    await loadLocalDirectory(homeDir, { keepExpanded: true });
-                } else if (lNodes.length > 0) {
-                    const firstPath = lNodes[0].data.path;
-                    setLocalCurrentPath(firstPath);
-                    await loadLocalDirectory(firstPath, { keepExpanded: true });
+                if (initialLocalPath) {
+                    setLocalCurrentPath(initialLocalPath);
+                    await loadLocalDirectory(initialLocalPath, { keepExpanded: true });
                 }
             } catch (error) {
                 notify('error', 'Error de inicialización', error?.message || 'Error al conectar las unidades');
@@ -674,6 +713,24 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
         };
         initSystems();
     }, [tabId, sshConfig, loadRemoteDirectory, loadLocalDirectory, makeKey, notify]);
+
+    const handleSaveDefaultPaths = useCallback(() => {
+        if (!remoteCurrentPath || !localCurrentPath) {
+            notify('warn', 'Rutas no disponibles', 'Ambas rutas (local y remota) deben estar cargadas para guardarse.');
+            return;
+        }
+
+        const pathsKey = sshConfig && sshConfig.host 
+            ? `ssh_explorer_default_paths_${sshConfig.host}_${sshConfig.username || 'root'}` 
+            : `ssh_explorer_default_paths_${tabId}`;
+            
+        localStorage.setItem(pathsKey, JSON.stringify({
+            remotePath: remoteCurrentPath,
+            localPath: localCurrentPath
+        }));
+
+        notify('success', 'Predeterminado guardado', 'Se han guardado las rutas actuales como predeterminadas.');
+    }, [remoteCurrentPath, localCurrentPath, sshConfig, tabId, notify]);
 
     // Close on Escape key
     useEffect(() => {
@@ -1863,6 +1920,16 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                             <h2>Explorador SSH</h2>
                         </div>
                         <div className="ssh-monitor-header-actions">
+                            <button
+                                className="ssh-monitor-transfer-toggle"
+                                onClick={handleSaveDefaultPaths}
+                                title="Guardar rutas actuales como predeterminadas"
+                                style={{ marginRight: '4px', display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 10px' }}
+                            >
+                                <i className="pi pi-bookmark" style={{ fontSize: '12px' }} />
+                                <span style={{ fontSize: '11px', fontWeight: 600 }}>Guardar predeterminado</span>
+                            </button>
+
                             <button
                                 className={`ssh-monitor-transfer-toggle ${showTransferStationManual ? 'active' : ''} ${activeTransfer ? 'has-active-transfer' : ''}`}
                                 onClick={() => {
