@@ -107,35 +107,36 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 16px 10px;
+    padding: 6px 14px 6px;
 }
 
 .ssh-monitor-server-title {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     min-width: 0;
 }
 
 .ssh-monitor-title-icon {
-    font-size: 16px;
+    font-size: 14px;
     color: #58a6ff;
     flex-shrink: 0;
 }
 
 .ssh-monitor-title-text {
     display: flex;
-    flex-direction: column;
-    gap: 1px;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
     min-width: 0;
 }
 
 .ssh-monitor-server-title h2 {
     margin: 0;
-    font-size: 14px;
+    font-size: 12.5px;
     font-weight: 700;
     color: #e6edf3;
-    letter-spacing: 0.2px;
+    letter-spacing: 0.1px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -144,29 +145,29 @@
 .ssh-monitor-server-badge {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    font-size: 10px;
+    gap: 4px;
+    font-size: 9.5px;
     font-family: 'Consolas', monospace;
     color: #8b949e;
-    background: rgba(48, 54, 61, 0.5);
-    padding: 1px 6px;
+    background: rgba(48, 54, 61, 0.4);
+    padding: 1px 5px;
     border-radius: 3px;
-    border: 1px solid rgba(48, 54, 61, 0.8);
+    border: 1px solid rgba(48, 54, 61, 0.6);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 220px;
+    max-width: 250px;
 }
 
 .ssh-monitor-server-badge i {
-    font-size: 8px;
+    font-size: 7px;
     color: #3fb950;
     flex-shrink: 0;
 }
 
 .ssh-monitor-server-ip {
     color: #8b949e;
-    font-size: 12px;
+    font-size: 11px;
     font-family: 'Consolas', monospace;
 }
 
@@ -180,7 +181,7 @@
 /* Action group separator */
 .ssh-monitor-header-sep {
     width: 1px;
-    height: 18px;
+    height: 12px;
     background: #30363d;
     margin: 0 4px;
     flex-shrink: 0;
@@ -190,23 +191,23 @@
 .ssh-explorer-sync-pill {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    padding: 3px 9px;
+    gap: 4px;
+    padding: 2px 6px;
     border-radius: 20px;
     border: 1px solid #30363d;
     background: rgba(33, 38, 45, 0.6);
     color: #8b949e;
     cursor: pointer;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
     font-family: inherit;
     transition: all 0.2s ease;
-    height: 26px;
+    height: 22px;
     white-space: nowrap;
 }
 
 .ssh-explorer-sync-pill i {
-    font-size: 11px;
+    font-size: 9.5px;
     transition: transform 0.3s ease;
 }
 
@@ -237,9 +238,9 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
     border: 1px solid transparent;
     background: transparent;
     color: #8b949e;
@@ -303,15 +304,15 @@
 .ssh-monitor-close {
     background: transparent;
     border: 1px solid #30363d;
-    border-radius: 6px;
+    border-radius: 4px;
     color: #8b949e;
     cursor: pointer;
-    width: 28px;
-    height: 28px;
+    width: 22px;
+    height: 22px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
+    font-size: 10px;
     transition: all 0.15s ease;
     flex-shrink: 0;
 }
