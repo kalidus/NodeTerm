@@ -3450,6 +3450,7 @@ const App = () => {
     iconTheme,
     explorerFont,
     explorerColorTheme,
+    setExplorerColorTheme,
     explorerFontSize,
     // SplitLayout props
     fontFamily,
@@ -3485,7 +3486,7 @@ const App = () => {
     onOpenSSHConnection, openFolderDialog, onOpenRdpConnection, onOpenVncConnection, handleLoadGroupFromFavorites,
     openEditRdpDialog, openEditSSHDialog, nodes, localFontFamily, localFontSize,
     localLinuxTerminalTheme, setLocalLinuxTerminalTheme, localPowerShellTheme, setLocalPowerShellTheme, localDockerTerminalTheme, dockerFontFamily, dockerFontSize, iconTheme, explorerFont,
-    explorerColorTheme, explorerFontSize, fontFamily, fontSize, terminalTheme,
+    explorerColorTheme, setExplorerColorTheme, explorerFontSize, fontFamily, fontSize, terminalTheme,
     handleTerminalContextMenu, showTerminalContextMenu, sshStatsByTabId,
     terminalRefs, statusBarIconTheme, handleCloseSplitPanel, openInSplit, rdpTabs, findNodeByKey,
     setSshTabs, activeIds, handleToggleBroadcast, handleToggleBroadcastTarget, handleBroadcastData,

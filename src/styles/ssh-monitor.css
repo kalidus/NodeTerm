@@ -2236,3 +2236,75 @@
 .transfer-log-entry:nth-child(even):hover {
     background: rgba(139, 148, 158, 0.06);
 }
+
+/* ---- Theme Selector Popover ---- */
+.ssh-monitor-theme-container {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.ssh-monitor-theme-popover {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 6px;
+    background: var(--explorer-bg, #0d1117);
+    border: 1px solid var(--explorer-border, #30363d);
+    border-radius: 6px;
+    padding: 6px 0;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    min-width: 160px;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.ssh-monitor-theme-popover::-webkit-scrollbar {
+    width: 4px;
+}
+
+.ssh-monitor-theme-popover::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.ssh-monitor-theme-popover::-webkit-scrollbar-thumb {
+    background: var(--explorer-border, #30363d);
+    border-radius: 2px;
+}
+
+.ssh-monitor-theme-title {
+    padding: 6px 12px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--explorer-accent, #58a6ff);
+    border-bottom: 1px solid var(--explorer-border, #30363d);
+    margin-bottom: 4px;
+}
+
+.ssh-monitor-theme-option {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    color: var(--explorer-text, #e6edf3);
+    padding: 7px 14px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+    font-family: var(--explorer-font, inherit);
+}
+
+.ssh-monitor-theme-option:hover {
+    background: var(--explorer-hover, rgba(139, 148, 158, 0.1));
+    color: var(--explorer-accent, #58a6ff);
+}
+
+.ssh-monitor-theme-option.active {
+    background: var(--explorer-selected, rgba(88, 166, 255, 0.12));
+    color: var(--explorer-accent, #58a6ff);
+    font-weight: 600;
+}

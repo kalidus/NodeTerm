@@ -3361,6 +3361,7 @@ const MainContentArea = ({
                               iconTheme={memoizedContentRendererProps?.iconTheme}
                               explorerFont={memoizedContentRendererProps?.explorerFont}
                               explorerColorTheme={memoizedContentRendererProps?.explorerColorTheme}
+                              setExplorerColorTheme={memoizedContentRendererProps?.setExplorerColorTheme}
                               explorerFontSize={memoizedContentRendererProps?.explorerFontSize}
                             />
                           )}

@@ -52,7 +52,7 @@ const getSyncPath = (fromSide, currentPathA, newPathA, currentPathB) => {
     return null;
 };
 
-const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', explorerFont = 'Segoe UI', explorerColorTheme = 'Light', explorerFontSize = 15 }) => {
+const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', explorerFont = 'Segoe UI', explorerColorTheme = 'Light', setExplorerColorTheme, explorerFontSize = 15 }) => {
     // ---- Remote State ----
     const [remoteNodes, setRemoteNodes] = useState([]);
     const [remoteExpandedKeys, setRemoteExpandedKeys] = useState({});
@@ -112,6 +112,21 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose, iconTheme = 'mat
     });
     const [isOpacityMenuOpen, setIsOpacityMenuOpen] = useState(false);
     const opacityMenuRef = useRef(null);
+    const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
+    const themeMenuRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (opacityMenuRef.current && !opacityMenuRef.current.contains(event.target)) {
+                setIsOpacityMenuOpen(false);
+            }
+            if (themeMenuRef.current && !themeMenuRef.current.contains(event.target)) {
+                setIsThemeMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const [showHidden, setShowHidden] = useState(() => {
         const saved = localStorage.getItem('ssh_file_explorer_show_hidden');
@@ -2189,6 +2204,35 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose, iconTheme = 'mat
                                             value={opacity}
                                             onChange={handleOpacityChange}
                                         />
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Theme selector */}
+                            <div className="ssh-monitor-theme-container" ref={themeMenuRef}>
+                                <button
+                                    className={`ssh-explorer-icon-btn ${isThemeMenuOpen ? 'active' : ''}`}
+                                    onClick={() => setIsThemeMenuOpen(!isThemeMenuOpen)}
+                                    title="Seleccionar tema del explorador"
+                                >
+                                    <i className="pi pi-palette" style={{ fontSize: '12px' }} />
+                                </button>
+
+                                {isThemeMenuOpen && (
+                                    <div className="ssh-monitor-theme-popover">
+                                        <div className="ssh-monitor-theme-title">Temas</div>
+                                        {Object.keys(uiThemes).map((name) => (
+                                            <button
+                                                key={name}
+                                                className={`ssh-monitor-theme-option ${name === explorerColorTheme ? 'active' : ''}`}
+                                                onClick={() => {
+                                                    setExplorerColorTheme?.(name);
+                                                    setIsThemeMenuOpen(false);
+                                                }}
+                                            >
+                                                {name}
+                                            </button>
+                                        ))}
                                     </div>
                                 )}
                             </div>
