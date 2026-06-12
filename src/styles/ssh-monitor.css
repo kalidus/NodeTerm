@@ -82,36 +82,86 @@
 .ssh-monitor-header {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding: 12px 18px 10px;
+    gap: 0;
+    padding: 0;
     background: rgba(255, 255, 255, 0.02);
-    border-bottom: 1px solid rgba(48, 54, 61, 0.5);
+    border-bottom: 1px solid rgba(48, 54, 61, 0.6);
     flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Subtle top accent line on header */
+.ssh-monitor-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #1f6feb 0%, #58a6ff 50%, #3fb950 100%);
+    opacity: 0.7;
 }
 
 .ssh-monitor-header-main {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    padding: 10px 16px 10px;
 }
 
 .ssh-monitor-server-title {
     display: flex;
     align-items: center;
     gap: 10px;
+    min-width: 0;
 }
 
 .ssh-monitor-title-icon {
     font-size: 16px;
     color: #58a6ff;
+    flex-shrink: 0;
+}
+
+.ssh-monitor-title-text {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
 }
 
 .ssh-monitor-server-title h2 {
     margin: 0;
-    font-size: 16px;
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: 700;
     color: #e6edf3;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ssh-monitor-server-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    font-family: 'Consolas', monospace;
+    color: #8b949e;
+    background: rgba(48, 54, 61, 0.5);
+    padding: 1px 6px;
+    border-radius: 3px;
+    border: 1px solid rgba(48, 54, 61, 0.8);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 220px;
+}
+
+.ssh-monitor-server-badge i {
+    font-size: 8px;
+    color: #3fb950;
+    flex-shrink: 0;
 }
 
 .ssh-monitor-server-ip {
@@ -123,7 +173,99 @@
 .ssh-monitor-header-actions {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+/* Action group separator */
+.ssh-monitor-header-sep {
+    width: 1px;
+    height: 18px;
+    background: #30363d;
+    margin: 0 4px;
+    flex-shrink: 0;
+}
+
+/* Sync toggle pill */
+.ssh-explorer-sync-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    border: 1px solid #30363d;
+    background: rgba(33, 38, 45, 0.6);
+    color: #8b949e;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    height: 26px;
+    white-space: nowrap;
+}
+
+.ssh-explorer-sync-pill i {
+    font-size: 11px;
+    transition: transform 0.3s ease;
+}
+
+.ssh-explorer-sync-pill:hover {
+    background: #21262d;
+    color: #c9d1d9;
+    border-color: #484f58;
+}
+
+.ssh-explorer-sync-pill.active {
+    background: rgba(63, 185, 80, 0.12);
+    border-color: rgba(63, 185, 80, 0.5);
+    color: #3fb950;
+    box-shadow: 0 0 8px rgba(63, 185, 80, 0.15);
+}
+
+.ssh-explorer-sync-pill.active i {
+    animation: spin-slow 3s linear infinite;
+}
+
+@keyframes spin-slow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Icon-only action buttons in header */
+.ssh-explorer-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #8b949e;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+    font-family: inherit;
+}
+
+.ssh-explorer-icon-btn:hover {
+    background: rgba(139, 148, 158, 0.12);
+    border-color: #30363d;
+    color: #e6edf3;
+}
+
+.ssh-explorer-icon-btn.active {
+    background: rgba(88, 166, 255, 0.12);
+    border-color: rgba(88, 166, 255, 0.4);
+    color: #58a6ff;
+}
+
+.ssh-explorer-icon-btn.has-active-transfer {
+    color: #58a6ff;
+    border-color: rgba(88, 166, 255, 0.5);
+    box-shadow: 0 0 8px rgba(88, 166, 255, 0.2);
+    animation: ssh-monitor-pulse-blue 2s ease infinite;
 }
 
 .ssh-monitor-header-sub {
@@ -900,6 +1042,267 @@
     animation: ssh-monitor-pulse-blue 2s ease infinite;
 }
 
+/* ============================================================
+   Pane Toolbar — Breadcrumb + toolbar groups
+   ============================================================ */
+
+.explorer-pane-toolbar {
+    padding: 5px 10px;
+    border-bottom: 1px solid #21262d;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.explorer-pane-toolbar-top {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.explorer-panel-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+    padding: 0 4px;
+}
+
+.explorer-panel-label-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.explorer-panel-label-icon {
+    font-size: 0.7rem;
+    flex-shrink: 0;
+}
+
+.explorer-panel-label-text {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.explorer-toolbar-divider {
+    width: 1px;
+    height: 14px;
+    background: #21262d;
+    margin: 0 2px;
+    flex-shrink: 0;
+}
+
+.explorer-toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    background: rgba(13, 17, 23, 0.3);
+    border-radius: 6px;
+    padding: 1px 2px;
+    border: 1px solid rgba(48, 54, 61, 0.4);
+}
+
+/* Breadcrumb row */
+.explorer-breadcrumb-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: rgba(13, 17, 23, 0.4);
+    border: 1px solid #30363d;
+    border-radius: 5px;
+    padding: 0 6px;
+    min-height: 26px;
+    flex: 1;
+    overflow: hidden;
+    cursor: default;
+    transition: border-color 0.15s ease;
+    position: relative;
+}
+
+.explorer-breadcrumb-row:hover {
+    border-color: #484f58;
+}
+
+.explorer-breadcrumb-row.editing {
+    border-color: #388bfd;
+    box-shadow: 0 0 0 2px rgba(56, 139, 253, 0.1);
+}
+
+.explorer-breadcrumb-scroll {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex: 1;
+    overflow: hidden;
+    min-width: 0;
+}
+
+.explorer-breadcrumb-icon {
+    font-size: 10px;
+    color: #8b949e;
+    flex-shrink: 0;
+    margin-right: 5px;
+}
+
+.explorer-breadcrumb-part {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.explorer-breadcrumb-seg {
+    font-size: 0.73rem;
+    font-family: 'Consolas', monospace;
+    color: #8b949e;
+    padding: 1px 3px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: color 0.12s ease, background 0.12s ease;
+    letter-spacing: -0.2px;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.explorer-breadcrumb-seg:hover {
+    color: #e6edf3;
+    background: rgba(88, 166, 255, 0.1);
+}
+
+.explorer-breadcrumb-seg.last-seg {
+    color: #c9d1d9;
+    font-weight: 600;
+    cursor: default;
+}
+
+.explorer-breadcrumb-seg.last-seg:hover {
+    background: transparent;
+    color: #c9d1d9;
+}
+
+.explorer-breadcrumb-chevron {
+    color: #484f58;
+    font-size: 8px;
+    margin: 0 1px;
+    flex-shrink: 0;
+}
+
+.explorer-breadcrumb-ellipsis {
+    font-size: 0.73rem;
+    color: #484f58;
+    padding: 0 4px;
+    cursor: pointer;
+    letter-spacing: 1px;
+}
+
+.explorer-breadcrumb-ellipsis:hover {
+    color: #8b949e;
+}
+
+.explorer-breadcrumb-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #e6edf3;
+    font-size: 0.73rem;
+    font-family: 'Consolas', monospace;
+    letter-spacing: -0.3px;
+    padding: 0;
+    width: 100%;
+    min-width: 40px;
+}
+
+.explorer-breadcrumb-input::placeholder {
+    color: #484f58;
+}
+
+/* Selection action bar */
+.explorer-selection-bar {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-bottom: 1px solid #21262d;
+    flex-shrink: 0;
+    min-height: 28px;
+    animation: fadeInDown 0.15s ease;
+}
+
+@keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.explorer-sel-count {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 10px;
+}
+
+.explorer-sel-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 5px;
+    border: 1px solid;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    flex-shrink: 0;
+}
+
+.explorer-sel-action-btn.transfer {
+    border-color: transparent;
+    background: rgba(88, 166, 255, 0.1);
+    color: #58a6ff;
+}
+
+.explorer-sel-action-btn.transfer.green {
+    background: rgba(63, 185, 80, 0.1);
+    color: #3fb950;
+}
+
+.explorer-sel-action-btn.transfer:hover {
+    background: rgba(88, 166, 255, 0.2);
+    border-color: rgba(88, 166, 255, 0.3);
+}
+
+.explorer-sel-action-btn.transfer.green:hover {
+    background: rgba(63, 185, 80, 0.2);
+    border-color: rgba(63, 185, 80, 0.3);
+}
+
+.explorer-sel-action-btn.danger {
+    border-color: transparent;
+    background: rgba(248, 81, 73, 0.08);
+    color: #f85149;
+}
+
+.explorer-sel-action-btn.danger:hover {
+    background: rgba(248, 81, 73, 0.2);
+    border-color: rgba(248, 81, 73, 0.3);
+}
+
+.explorer-sel-action-btn.clear {
+    border-color: transparent;
+    background: rgba(110, 118, 129, 0.1);
+    color: #8b949e;
+}
+
+.explorer-sel-action-btn.clear:hover {
+    background: rgba(110, 118, 129, 0.2);
+}
+
 @keyframes ssh-monitor-pulse-blue {
     0%, 100% { box-shadow: 0 0 4px rgba(88, 166, 255, 0.1); }
     50% { box-shadow: 0 0 12px rgba(88, 166, 255, 0.4); }
@@ -1053,17 +1456,19 @@
     border: none;
     color: #8b949e;
     cursor: pointer;
-    padding: 6px;
+    padding: 4px 5px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 4px;
-    transition: background 0.15s ease, color 0.15s ease;
+    transition: background 0.12s ease, color 0.12s ease;
     outline: none;
+    min-width: 24px;
+    height: 24px;
 }
 
 .pane-toolbar-btn i {
-    font-size: 13px;
+    font-size: 12px;
 }
 
 .pane-toolbar-btn:hover {
@@ -1077,7 +1482,7 @@
 
 /* ---- Scrollbar for pane content areas ---- */
 .ssh-file-explorer-content::-webkit-scrollbar {
-    width: 5px;
+    width: 4px;
 }
 
 .ssh-file-explorer-content::-webkit-scrollbar-track {
@@ -1085,12 +1490,241 @@
 }
 
 .ssh-file-explorer-content::-webkit-scrollbar-thumb {
-    background: #30363d;
-    border-radius: 3px;
+    background: #21262d;
+    border-radius: 2px;
 }
 
 .ssh-file-explorer-content::-webkit-scrollbar-thumb:hover {
-    background: #484f58;
+    background: #30363d;
+}
+
+/* ============================================================
+   File List Rows — Enhanced nodes
+   ============================================================ */
+
+.filesystem-node {
+    position: relative;
+    user-select: none;
+}
+
+/* Left accent bar on hover */
+.filesystem-node::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 4px;
+    bottom: 4px;
+    width: 2px;
+    border-radius: 2px;
+    background: transparent;
+    transition: background 0.12s ease, transform 0.12s ease;
+    transform: scaleY(0.4);
+    opacity: 0;
+}
+
+.fs-node-remote:hover::before {
+    background: #58a6ff;
+    transform: scaleY(1);
+    opacity: 0.7;
+}
+
+.fs-node-local:hover::before {
+    background: #3fb950;
+    transform: scaleY(1);
+    opacity: 0.7;
+}
+
+.fs-node-remote.fs-node-selected::before {
+    background: #58a6ff;
+    transform: scaleY(1);
+    opacity: 1;
+}
+
+.fs-node-local.fs-node-selected::before {
+    background: #3fb950;
+    transform: scaleY(1);
+    opacity: 1;
+}
+
+/* File icon badge wrapper */
+.fs-icon-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    transition: transform 0.12s ease;
+}
+
+.filesystem-node:hover .fs-icon-badge {
+    transform: scale(1.1);
+}
+
+.fs-icon-badge.directory {
+    background: rgba(88, 166, 255, 0.1);
+}
+
+.fs-icon-badge.directory.green {
+    background: rgba(63, 185, 80, 0.1);
+}
+
+.fs-icon-badge.file {
+    background: rgba(110, 118, 129, 0.08);
+}
+
+.fs-icon-badge i {
+    font-size: 0.78rem;
+}
+
+/* Dotfile italic style */
+.is-hidden-node .fs-node-label {
+    font-style: italic;
+}
+
+.fs-node-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.82rem;
+    letter-spacing: 0.01em;
+    transition: color 0.1s ease;
+}
+
+/* Size badge */
+.fs-size-badge {
+    font-size: 0.62rem;
+    color: #6e7681;
+    background: rgba(110, 118, 129, 0.1);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+    transition: opacity 0.12s ease;
+    border: 1px solid rgba(110, 118, 129, 0.1);
+}
+
+.filesystem-node:hover .fs-size-badge {
+    opacity: 1;
+}
+
+/* Folder / file section separator */
+.fs-section-separator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 4px 4px;
+    margin-top: 2px;
+}
+
+.fs-section-separator-line {
+    flex: 1;
+    height: 1px;
+    background: rgba(48, 54, 61, 0.5);
+}
+
+.fs-section-separator-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #484f58;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Empty state enhanced */
+.explorer-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+    text-align: center;
+    color: #8b949e;
+    height: 100%;
+    min-height: 160px;
+}
+
+.explorer-empty-state-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+    font-size: 22px;
+    background: rgba(48, 54, 61, 0.4);
+    border: 1px solid rgba(48, 54, 61, 0.7);
+    color: #484f58;
+}
+
+.explorer-empty-state-title {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #8b949e;
+    margin-bottom: 4px;
+}
+
+.explorer-empty-state-sub {
+    font-size: 0.72rem;
+    color: #484f58;
+    line-height: 1.5;
+}
+
+/* ---- Skeleton Loader ---- */
+.explorer-skeleton-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 12px;
+}
+
+.explorer-skeleton-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 32px;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.explorer-skeleton-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: #21262d;
+    flex-shrink: 0;
+    animation: skeleton-shimmer 1.5s infinite;
+}
+
+.explorer-skeleton-label {
+    height: 10px;
+    border-radius: 4px;
+    background: #21262d;
+    animation: skeleton-shimmer 1.5s infinite;
+    animation-delay: var(--delay, 0ms);
+}
+
+.explorer-skeleton-size {
+    height: 10px;
+    width: 36px;
+    border-radius: 4px;
+    background: #21262d;
+    animation: skeleton-shimmer 1.5s infinite;
+    margin-left: auto;
+    flex-shrink: 0;
+    animation-delay: var(--delay, 0ms);
+}
+
+@keyframes skeleton-shimmer {
+    0% { background-color: #161b22; }
+    50% { background-color: #21262d; }
+    100% { background-color: #161b22; }
 }
 
 /* ════════════════════════════════════════════════════════
@@ -1119,13 +1753,49 @@
 
 .transfer-station {
     flex-shrink: 0;
-    background: #0b0f14;
+    background: linear-gradient(180deg, #0d1117 0%, #0b0f14 100%);
     border-top: 1px solid #21262d;
     display: flex;
     flex-direction: column;
     min-height: 96px;
     max-height: 620px;
     overflow: hidden;
+    position: relative;
+}
+
+/* Transfer station header bar */
+.transfer-station-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px 5px;
+    border-bottom: 1px solid rgba(33, 38, 45, 0.8);
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.015);
+}
+
+.transfer-station-title {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #484f58;
+    flex: 1;
+}
+
+.transfer-station-title-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #30363d;
+    flex-shrink: 0;
+    transition: background 0.3s ease;
+}
+
+.transfer-station-title-dot.active {
+    background: #3fb950;
+    box-shadow: 0 0 6px rgba(63, 185, 80, 0.5);
+    animation: ssh-monitor-pulse 1.5s ease infinite;
 }
 
 .transfer-station-resizer {
@@ -1272,14 +1942,33 @@
 }
 
 .transfer-stats-row {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr auto auto;
     align-items: center;
-    justify-content: space-between;
     gap: 10px;
     font-size: 0.68rem;
     color: #6e7681;
     font-variant-numeric: tabular-nums;
     min-height: 16px;
+}
+
+.transfer-stat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(48, 54, 61, 0.4);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: #8b949e;
+    flex-shrink: 0;
+}
+
+.transfer-stat-chip i {
+    font-size: 8px;
+    opacity: 0.7;
 }
 
 .transfer-pct {
@@ -1493,8 +2182,57 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: 16px 20px;
     color: #8b949e;
     text-align: center;
-    background: rgba(13, 17, 23, 0.2);
+    background: transparent;
+    gap: 6px;
+}
+
+.transfer-empty-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(48, 54, 61, 0.3);
+    border: 1px solid rgba(48, 54, 61, 0.5);
+    color: #484f58;
+    font-size: 15px;
+    margin-bottom: 4px;
+    flex-shrink: 0;
+}
+
+/* Shimmer on active progress bar */
+.transfer-progress-bar.upload .p-progressbar-value,
+.transfer-progress-bar.download .p-progressbar-value {
+    position: relative;
+    overflow: hidden;
+}
+
+.transfer-progress-bar.upload .p-progressbar-value::after,
+.transfer-progress-bar.download .p-progressbar-value::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -60%;
+    width: 40%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    animation: progress-shimmer 1.8s ease infinite;
+}
+
+@keyframes progress-shimmer {
+    from { left: -60%; }
+    to { left: 120%; }
+}
+
+/* Transfer log alternate row bg */
+.transfer-log-entry:nth-child(even) {
+    background: rgba(22, 27, 34, 0.3);
+}
+
+.transfer-log-entry:nth-child(even):hover {
+    background: rgba(139, 148, 158, 0.06);
 }

@@ -157,6 +157,11 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
     const [pausedTransfer, setPausedTransfer] = useState(null);
     // { message: string, loading: boolean }
 
+    // Breadcrumb editing states
+    const [isEditingRemotePath, setIsEditingRemotePath] = useState(false);
+    const [isEditingLocalPath, setIsEditingLocalPath] = useState(false);
+
+
     // Refs for speed/timing (avoid stale closures)
     const activeTransferMetaRef = useRef(null);
     const transferStartTimeRef = useRef(null);
@@ -1706,29 +1711,39 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                 onContextMenu={(e) => handleContextMenu(e, node, side)}
                 style={{
                     display: 'flex', flexDirection: 'row', alignItems: 'center',
-                    gap: '0.5rem', width: '100%', padding: '0.25rem 0.4rem',
-                    borderRadius: '5px', transition: 'background 0.12s ease, box-shadow 0.12s ease',
-                    cursor: 'pointer', minHeight: '28px', opacity: isHidden ? 0.3 : 1,
+                    gap: '7px', width: '100%', padding: '4px 8px 4px 10px',
+                    borderRadius: '5px', transition: 'background 0.1s ease, box-shadow 0.1s ease',
+                    cursor: 'pointer', minHeight: '32px', opacity: isHidden ? 0.4 : 1,
                     background: bgColor, boxShadow: bsVal,
                 }}
                 className={`filesystem-node fs-node-${side} ${isHidden ? 'is-hidden-node' : ''} ${isSelected ? 'fs-node-selected' : ''}`}
             >
-                <span className={iconClass} style={{ color: iconColor, fontSize: '0.8rem', width: '13px', flexShrink: 0, textAlign: 'center' }} />
+                {/* Icon badge */}
+                <span
+                    className={`fs-icon-badge ${isDirectory ? 'directory' : 'file'} ${isDirectory && side === 'local' ? 'green' : ''}`}
+                    style={isDirectory ? { background: `rgba(${accentRgb},0.1)` } : (iconInfo?.color ? { background: `${iconInfo.color}12` } : undefined)}
+                >
+                    <i
+                        className={iconClass}
+                        style={{ color: iconColor, fontSize: '0.78rem' }}
+                    />
+                </span>
 
-                <span style={{
-                    flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    color: isSelected ? accentColor : '#e6edf3',
-                    fontSize: '0.82rem', letterSpacing: '0.01em',
-                    fontWeight: isSelected ? 600 : 400,
-                }}>
+                {/* Label */}
+                <span
+                    className="fs-node-label"
+                    style={{
+                        color: isSelected ? accentColor : isHidden ? '#8b949e' : '#e6edf3',
+                        fontWeight: isSelected ? 600 : (isDirectory ? 500 : 400),
+                    }}
+                >
                     {node.label}
                 </span>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', flexShrink: 0 }}>
+                {/* Meta: size + loading */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, marginLeft: 'auto' }}>
                     {formattedSize && (
-                        <span style={{ fontSize: '0.65rem', color: '#6e7681', background: 'rgba(110,118,129,0.12)', padding: '1px 5px', borderRadius: '3px', fontVariantNumeric: 'tabular-nums' }}>
-                            {formattedSize}
-                        </span>
+                        <span className="fs-size-badge">{formattedSize}</span>
                     )}
                     {isLoading && (
                         <ProgressSpinner style={{ width: '10px', height: '10px' }} strokeWidth="3" fill="transparent" animationDuration=".6s" />
@@ -1793,10 +1808,13 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
         const currentPath = isRemote ? remoteCurrentPath : localCurrentPath;
         const tempPath = isRemote ? tempRemotePath : tempLocalPath;
         const setTempPath = isRemote ? setTempRemotePath : setTempLocalPath;
+        const isEditingPath = isRemote ? isEditingRemotePath : isEditingLocalPath;
+        const setIsEditingPath = isRemote ? setIsEditingRemotePath : setIsEditingLocalPath;
         const nodes = isRemote ? remoteNodes : localNodes;
         const defaultRoot = isRemote ? '/' : 'C:\\';
         const separator = isRemote ? '/' : '\\';
         const accentColor = isRemote ? '#58a6ff' : '#3fb950';
+        const accentRgb = isRemote ? '88,166,255' : '63,185,80';
 
         const handleUpLevel = () => {
             if (!currentPath || currentPath === defaultRoot || currentPath === '/') return;
@@ -1814,11 +1832,9 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                 }
             } else {
                 if (lastIndex < 0) return;
-                // If it's C:\, we can't go higher
                 if (temp.toLowerCase().endsWith(':\\')) {
                     if (temp.length <= 3) return;
                 }
-
                 const parent = temp.substring(0, lastIndex === 2 ? 3 : lastIndex);
                 handleNavigate(parent, 'local');
             }
@@ -1850,117 +1866,173 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
             openCreateFolderDialog({ data: { path: currentPath, type: 'directory' } }, side);
         };
 
+        // Parse path into breadcrumb segments
+        const parseBreadcrumbs = (path) => {
+            if (!path) return [];
+            if (isRemote) {
+                // Unix path: /home/user/docs => ['/', 'home', 'user', 'docs']
+                const parts = path.split('/').filter(p => p !== '');
+                return [{ label: '/', fullPath: '/' }, ...parts.map((part, i) => ({
+                    label: part,
+                    fullPath: '/' + parts.slice(0, i + 1).join('/')
+                }))];
+            } else {
+                // Windows path: C:\Users\foo => ['C:\\', 'Users', 'foo']
+                const sep = '\\';
+                const normalized = path.endsWith(sep) && path.length > 3 ? path.slice(0, -1) : path;
+                const parts = normalized.split(sep).filter(p => p !== '');
+                return parts.map((part, i) => ({
+                    label: i === 0 ? part + '\\' : part,
+                    fullPath: i === 0 ? part + '\\' : parts.slice(0, i + 1).join(sep)
+                }));
+            }
+        };
+
+        const segments = parseBreadcrumbs(currentPath);
+        // Show at most last 3 segments, collapse with ellipsis if more
+        const maxVisible = 3;
+        const hasEllipsis = segments.length > maxVisible;
+        const visibleSegments = hasEllipsis ? segments.slice(segments.length - maxVisible) : segments;
+        const hiddenSegments = hasEllipsis ? segments.slice(0, segments.length - maxVisible) : [];
+
         const selectedKeys = isRemote ? remoteSelectedKeys : localSelectedKeys;
 
         return (
             <>
                 {/* Main toolbar */}
-                <div style={{
-                    padding: '6px 10px',
-                    borderBottom: '1px solid #21262d',
-                    background: isRemote ? 'rgba(88,166,255,0.05)' : 'rgba(63,185,80,0.05)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    flexShrink: 0
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginRight: '4px' }}>
-                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: accentColor, flexShrink: 0 }} />
-                        <i className={isRemote ? "pi pi-server" : "pi pi-desktop"} style={{ fontSize: '0.7rem', color: accentColor }} />
-                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: accentColor, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                            {isRemote ? 'Remoto' : 'Local'}
-                        </span>
+                <div className="explorer-pane-toolbar">
+                    <div className="explorer-pane-toolbar-top">
+                        {/* Panel label */}
+                        <div className="explorer-panel-label">
+                            <span className="explorer-panel-label-dot" style={{ background: accentColor }} />
+                            <i className={isRemote ? 'pi pi-server explorer-panel-label-icon' : 'pi pi-desktop explorer-panel-label-icon'} style={{ color: accentColor }} />
+                            <span className="explorer-panel-label-text" style={{ color: accentColor }}>
+                                {isRemote ? 'Remoto' : 'Local'}
+                            </span>
+                        </div>
+
+                        <div className="explorer-toolbar-divider" />
+
+                        {/* Nav button group */}
+                        <div className="explorer-toolbar-group">
+                            <button className="pane-toolbar-btn" onClick={handleToggleHidden} title={showHidden ? 'Ocultar archivos ocultos' : 'Mostrar archivos ocultos'}>
+                                <i className={`pi ${showHidden ? 'pi-eye' : 'pi-eye-slash'}`} />
+                            </button>
+                            <button className="pane-toolbar-btn" onClick={handleUpLevel} title="Subir un nivel">
+                                <i className="pi pi-arrow-up" />
+                            </button>
+                            <button className="pane-toolbar-btn" onClick={handleHome} title="Directorio raíz">
+                                <i className="pi pi-home" />
+                            </button>
+                            <button className="pane-toolbar-btn" onClick={handleNewFolder} title="Nueva carpeta">
+                                <i className="pi pi-folder-plus" />
+                            </button>
+                        </div>
+
+                        <div className="explorer-toolbar-divider" />
+
+                        {/* Breadcrumb / path bar */}
+                        <div
+                            className={`explorer-breadcrumb-row ${isEditingPath ? 'editing' : ''}`}
+                            onClick={() => { if (!isEditingPath) { setIsEditingPath(true); setTempPath(currentPath || ''); } }}
+                        >
+                            {isEditingPath ? (
+                                <>
+                                    <i className="pi pi-folder-open explorer-breadcrumb-icon" />
+                                    <input
+                                        className="explorer-breadcrumb-input"
+                                        autoFocus
+                                        type="text"
+                                        value={tempPath}
+                                        onChange={(e) => setTempPath(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                setIsEditingPath(false);
+                                                handleNavigate(tempPath, side);
+                                            } else if (e.key === 'Escape') {
+                                                setIsEditingPath(false);
+                                                setTempPath(currentPath || '');
+                                            }
+                                        }}
+                                        onBlur={() => {
+                                            setIsEditingPath(false);
+                                            setTempPath(currentPath || '');
+                                        }}
+                                        onClick={(e) => e.stopPropagation()}
+                                    />
+                                </>
+                            ) : (
+                                <div className="explorer-breadcrumb-scroll">
+                                    <i className="pi pi-folder-open explorer-breadcrumb-icon" />
+                                    {hasEllipsis && (
+                                        <span
+                                            className="explorer-breadcrumb-ellipsis"
+                                            title={hiddenSegments.map(s => s.label).join(isRemote ? '/' : '\\')}
+                                        >…</span>
+                                    )}
+                                    {hasEllipsis && (
+                                        <i className="pi pi-angle-right explorer-breadcrumb-chevron" />
+                                    )}
+                                    {visibleSegments.map((seg, i) => (
+                                        <span key={seg.fullPath} className="explorer-breadcrumb-part">
+                                            {i > 0 && <i className="pi pi-angle-right explorer-breadcrumb-chevron" />}
+                                            <span
+                                                className={`explorer-breadcrumb-seg ${i === visibleSegments.length - 1 ? 'last-seg' : ''}`}
+                                                title={seg.fullPath}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (i !== visibleSegments.length - 1) {
+                                                        handleNavigate(seg.fullPath, side);
+                                                    }
+                                                }}
+                                            >
+                                                {seg.label}
+                                            </span>
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="explorer-toolbar-divider" />
+
+                        <button className="pane-toolbar-btn" onClick={handleRefresh} title="Actualizar">
+                            <i className="pi pi-refresh" />
+                        </button>
                     </div>
-                    <div style={{ width: '1px', height: '14px', background: '#30363d', margin: '0 2px' }} />
-                    <button className="ssh-monitor-action-btn pane-toolbar-btn" onClick={handleToggleHidden} title={showHidden ? "Ocultar ocultos" : "Mostrar ocultos"}>
-                        <i className={`pi ${showHidden ? 'pi-eye' : 'pi-eye-slash'}`} />
-                    </button>
-                    <button className="ssh-monitor-action-btn pane-toolbar-btn" onClick={handleUpLevel} title="Subir nivel">
-                        <i className="pi pi-arrow-up" />
-                    </button>
-                    <button className="ssh-monitor-action-btn pane-toolbar-btn" onClick={handleHome} title="Inicio">
-                        <i className="pi pi-home" />
-                    </button>
-                    <button className="ssh-monitor-action-btn pane-toolbar-btn" onClick={handleNewFolder} title="Nueva carpeta">
-                        <i className="pi pi-plus-circle" />
-                    </button>
-                    <div style={{ flex: 1, margin: '0 4px', display: 'flex', alignItems: 'center', background: 'rgba(13, 17, 23, 0.4)', padding: '2px 8px', borderRadius: '4px', border: '1px solid #30363d' }}>
-                        <i className="pi pi-folder-open" style={{ color: '#8b949e', fontSize: '11px', marginRight: '6px' }} />
-                        <input
-                            type="text"
-                            value={tempPath}
-                            onChange={(e) => setTempPath(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    handleNavigate(tempPath, side);
-                                }
-                            }}
-                            onBlur={() => {
-                                setTempPath(currentPath || '');
-                            }}
-                            style={{
-                                flex: 1,
-                                background: 'transparent',
-                                border: 'none',
-                                outline: 'none',
-                                color: '#e6edf3',
-                                fontSize: '0.75rem',
-                                fontFamily: 'Consolas, monospace',
-                                letterSpacing: '-0.3px',
-                                padding: '0',
-                                width: '100%'
-                            }}
-                        />
-                    </div>
-                    <button className="ssh-monitor-action-btn pane-toolbar-btn" onClick={handleRefresh} title="Actualizar">
-                        <i className="pi pi-refresh" />
-                    </button>
                 </div>
 
                 {/* Selection action bar — only shown when items are selected */}
                 {selectedKeys.size > 0 && (
-                    <div style={{
-                        display: 'flex', alignItems: 'center', gap: '6px',
-                        padding: '3px 10px', borderBottom: '1px solid #21262d',
-                        background: isRemote ? 'rgba(88,166,255,0.07)' : 'rgba(63,185,80,0.07)',
-                        flexShrink: 0, minHeight: '28px',
-                    }}>
-                        <span style={{ fontSize: '0.7rem', color: accentColor, fontWeight: 700 }}>
+                    <div
+                        className="explorer-selection-bar"
+                        style={{ background: `rgba(${accentRgb},0.05)`, borderBottom: `1px solid rgba(${accentRgb},0.15)` }}
+                    >
+                        <span
+                            className="explorer-sel-count"
+                            style={{ background: `rgba(${accentRgb},0.15)`, color: accentColor }}
+                        >
                             {selectedKeys.size} sel.
                         </span>
                         <div style={{ flex: 1 }} />
                         <button
+                            className={`explorer-sel-action-btn transfer ${isRemote ? '' : 'green'}`}
                             onClick={() => handleCopySelectedCrossSide(side)}
                             title={`Copiar al panel ${isRemote ? 'local' : 'remoto'}`}
-                            style={{
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                width: '28px', height: '28px', borderRadius: '5px', border: 'none',
-                                background: `rgba(${isRemote ? '88,166,255' : '63,185,80'},0.15)`,
-                                color: accentColor, cursor: 'pointer', transition: 'background 0.12s',
-                            }}
                         >
-                            <i className={`pi ${isRemote ? 'pi-arrow-right' : 'pi-arrow-left'}`} style={{ fontSize: '12px' }} />
+                            <i className={`pi ${isRemote ? 'pi-arrow-right' : 'pi-arrow-left'}`} style={{ fontSize: '11px' }} />
                         </button>
                         <button
+                            className="explorer-sel-action-btn danger"
                             onClick={() => handleDeleteSelected(side)}
                             title={`Eliminar ${selectedKeys.size} elemento(s)`}
-                            style={{
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                width: '28px', height: '28px', borderRadius: '5px', border: 'none',
-                                background: 'rgba(248,81,73,0.12)',
-                                color: '#f85149', cursor: 'pointer', transition: 'background 0.12s',
-                            }}
                         >
-                            <i className="pi pi-trash" style={{ fontSize: '11px' }} />
+                            <i className="pi pi-trash" style={{ fontSize: '10px' }} />
                         </button>
                         <button
+                            className="explorer-sel-action-btn clear"
                             onClick={() => (isRemote ? setRemoteSelectedKeys : setLocalSelectedKeys)(new Set())}
                             title="Limpiar selección"
-                            style={{
-                                display: 'flex', alignItems: 'center', padding: '2px 6px',
-                                borderRadius: '5px', border: 'none', background: 'rgba(110,118,129,0.12)',
-                                color: '#8b949e', cursor: 'pointer',
-                            }}
                         >
                             <i className="pi pi-times" style={{ fontSize: '9px' }} />
                         </button>
@@ -1969,6 +2041,7 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
             </>
         );
     };
+
 
     return (
         <div
@@ -2006,61 +2079,72 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                             ) : (
                                 <i className="pi pi-folder-open ssh-monitor-title-icon" style={{ color: '#58a6ff' }} />
                             )}
-                            <h2>Explorador SSH</h2>
+                            <div className="ssh-monitor-title-text">
+                                <h2>Explorador SSH</h2>
+                                {sshConfig?.host && (
+                                    <span className="ssh-monitor-server-badge">
+                                        <i className="pi pi-circle-fill" />
+                                        {sshConfig.username ? `${sshConfig.username}@` : ''}{sshConfig.host}{sshConfig.port && sshConfig.port !== 22 ? `:${sshConfig.port}` : ''}
+                                    </span>
+                                )}
+                            </div>
                         </div>
                         <div className="ssh-monitor-header-actions">
+                            {/* Save defaults */}
                             <button
-                                className="ssh-monitor-transfer-toggle"
+                                className="ssh-explorer-icon-btn"
                                 onClick={handleSaveDefaultPaths}
                                 title="Guardar rutas actuales como predeterminadas"
-                                style={{ marginRight: '4px', display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 10px' }}
                             >
                                 <i className="pi pi-bookmark" style={{ fontSize: '12px' }} />
-                                <span style={{ fontSize: '11px', fontWeight: 600 }}>Guardar predeterminado</span>
                             </button>
 
+                            <div className="ssh-monitor-header-sep" />
+
+                            {/* Sync navigation pill */}
                             <button
-                                className={`ssh-monitor-transfer-toggle ${syncNavigation ? 'active' : ''}`}
+                                className={`ssh-explorer-sync-pill ${syncNavigation ? 'active' : ''}`}
                                 onClick={() => {
                                     const next = !syncNavigation;
                                     setSyncNavigation(next);
                                     localStorage.setItem('ssh_file_explorer_sync_navigation', String(next));
                                     notify('info', next ? 'Navegación sincronizada activa' : 'Navegación sincronizada inactiva', next ? 'Se intentará replicar los cambios de directorio en ambos paneles.' : 'Los paneles se navegarán de forma independiente.');
                                 }}
-                                title="Habilitar/Deshabilitar Navegación Sincronizada (como FileZilla)"
-                                style={{ marginRight: '4px', display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 10px' }}
+                                title="Habilitar/Deshabilitar Navegación Sincronizada"
                             >
-                                <i className="pi pi-sync" style={{ fontSize: '12px' }} />
-                                <span style={{ fontSize: '11px', fontWeight: 600 }}>Navegación sinc.</span>
+                                <i className="pi pi-sync" />
+                                <span>Sinc.</span>
                             </button>
 
+                            <div className="ssh-monitor-header-sep" />
+
+                            {/* Transfer station toggle */}
                             <button
-                                className={`ssh-monitor-transfer-toggle ${showTransferStationManual ? 'active' : ''} ${activeTransfer ? 'has-active-transfer' : ''}`}
+                                className={`ssh-explorer-icon-btn ${showTransferStationManual ? 'active' : ''} ${activeTransfer ? 'has-active-transfer' : ''}`}
                                 onClick={() => {
                                     const next = !showTransferStationManual;
                                     setShowTransferStationManual(next);
                                     localStorage.setItem('ssh_file_explorer_show_transfer_station', String(next));
                                 }}
-                                title={showTransferStationManual ? "Ocultar panel de transferencias" : "Mostrar panel de transferencias"}
-                                style={{ marginRight: '4px' }}
+                                title={showTransferStationManual ? 'Ocultar panel de transferencias' : 'Mostrar panel de transferencias'}
                             >
                                 <i className={`pi ${activeTransfer ? 'pi-spin pi-spinner' : (showTransferStationManual ? 'pi-chevron-down' : 'pi-history')}`} style={{ fontSize: '12px' }} />
-                                {activeTransfer && <span style={{ fontSize: '9px', marginLeft: '6px', fontWeight: 700 }}>{Math.min(99, Math.round((activeTransfer.transferred / (activeTransfer.total || 1)) * 100))}%</span>}
+                                {activeTransfer && <span style={{ fontSize: '9px', marginLeft: '4px', fontWeight: 700 }}>{Math.min(99, Math.round((activeTransfer.transferred / (activeTransfer.total || 1)) * 100))}%</span>}
                             </button>
 
+                            {/* Opacity control */}
                             <div className="ssh-monitor-opacity-container" ref={opacityMenuRef}>
                                 <button
-                                    className={`ssh-monitor-opacity-toggle ${isOpacityMenuOpen ? 'active' : ''}`}
+                                    className={`ssh-explorer-icon-btn ${isOpacityMenuOpen ? 'active' : ''}`}
                                     onClick={() => setIsOpacityMenuOpen(!isOpacityMenuOpen)}
                                     title="Ajustar opacidad"
                                 >
                                     <i className="pi pi-clone" style={{ fontSize: '12px', transform: 'rotate(45deg)' }} />
-                                    <span className="ssh-monitor-opacity-val-text">{Math.round(opacity * 100)}%</span>
                                 </button>
 
                                 {isOpacityMenuOpen && (
                                     <div className="ssh-monitor-opacity-popover">
-                                        <span className="ssh-monitor-opacity-label">Opacidad</span>
+                                        <span className="ssh-monitor-opacity-label">Opacidad — {Math.round(opacity * 100)}%</span>
                                         <input
                                             type="range"
                                             className="ssh-monitor-opacity-slider"
@@ -2073,6 +2157,9 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                                     </div>
                                 )}
                             </div>
+
+                            <div className="ssh-monitor-header-sep" />
+
                             <button className="ssh-monitor-close" onClick={onClose} title="Cerrar (Esc)">✕</button>
                         </div>
                     </div>
@@ -2089,24 +2176,76 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                         onDrop={(e) => handleDrop(e, 'remote')}
                     >
                         {renderPaneToolbar('remote')}
-                        <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px' }}>
+                        <div style={{ flex: 1, overflowY: 'auto', padding: '6px 8px' }}>
                             {(remoteLoadingPaths[remoteCurrentPath] || globalLoading) && (!activeRemoteNodes || activeRemoteNodes.length === 0) ? (
-                                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                                    <ProgressSpinner style={{ width: '36px', height: '36px' }} strokeWidth="3" fill="transparent" animationDuration=".5s" />
+                                <div className="explorer-skeleton-list">
+                                    {[0.9, 0.7, 0.85, 0.6, 0.75, 0.8, 0.5].map((w, i) => (
+                                        <div key={i} className="explorer-skeleton-row">
+                                            <div className="explorer-skeleton-icon" style={{ '--delay': `${i * 80}ms` }} />
+                                            <div className="explorer-skeleton-label" style={{ width: `${w * 100}%`, '--delay': `${i * 80}ms` }} />
+                                            {i % 2 === 0 && <div className="explorer-skeleton-size" style={{ '--delay': `${i * 80}ms` }} />}
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : activeRemoteNodes && activeRemoteNodes.length === 0 && !remoteCurrentPath ? (
+                                <div className="explorer-empty-state">
+                                    <div className="explorer-empty-state-icon">
+                                        <i className="pi pi-server" />
+                                    </div>
+                                    <span className="explorer-empty-state-title">Sin conexión remota</span>
+                                    <span className="explorer-empty-state-sub">Conecta una sesión SSH para explorar los archivos del servidor</span>
+                                </div>
+                            ) : activeRemoteNodes && activeRemoteNodes.length === 0 ? (
+                                <div className="explorer-empty-state">
+                                    <div className="explorer-empty-state-icon">
+                                        <i className="pi pi-folder-open" />
+                                    </div>
+                                    <span className="explorer-empty-state-title">Carpeta vacía</span>
+                                    <span className="explorer-empty-state-sub">Este directorio no contiene archivos</span>
                                 </div>
                             ) : (
-                                <Tree
-                                    value={activeRemoteNodes}
-                                    expandedKeys={{}}
-                                    selectionMode="single"
-                                    selectionKeys={remoteSelectedKey}
-                                    onSelectionChange={(e) => setRemoteSelectedKey(e.value)}
-                                    className="ssh-monitor-tree list-view-tree"
-                                    loading={remoteLoadingPaths[remoteCurrentPath]}
-                                    nodeTemplate={remoteNodeRenderer}
-                                    emptyMessage=""
-                                    style={{ background: 'transparent', border: 'none', color: '#e6edf3' }}
-                                />
+                                (() => {
+                                    // Inject folder/file separator
+                                    const folderCount = activeRemoteNodes.filter(n => n.data?.type === 'directory').length;
+                                    const fileCount = activeRemoteNodes.length - folderCount;
+                                    const showSep = folderCount > 0 && fileCount > 0;
+                                    return (
+                                        <>
+                                            <Tree
+                                                value={showSep ? activeRemoteNodes.slice(0, folderCount) : activeRemoteNodes}
+                                                expandedKeys={{}}
+                                                selectionMode="single"
+                                                selectionKeys={remoteSelectedKey}
+                                                onSelectionChange={(e) => setRemoteSelectedKey(e.value)}
+                                                className="ssh-monitor-tree list-view-tree"
+                                                loading={remoteLoadingPaths[remoteCurrentPath]}
+                                                nodeTemplate={remoteNodeRenderer}
+                                                emptyMessage=""
+                                                style={{ background: 'transparent', border: 'none', color: '#e6edf3' }}
+                                            />
+                                            {showSep && (
+                                                <div className="fs-section-separator">
+                                                    <div className="fs-section-separator-line" />
+                                                    <span className="fs-section-separator-label">{fileCount} archivo{fileCount !== 1 ? 's' : ''}</span>
+                                                    <div className="fs-section-separator-line" />
+                                                </div>
+                                            )}
+                                            {showSep && (
+                                                <Tree
+                                                    value={activeRemoteNodes.slice(folderCount)}
+                                                    expandedKeys={{}}
+                                                    selectionMode="single"
+                                                    selectionKeys={remoteSelectedKey}
+                                                    onSelectionChange={(e) => setRemoteSelectedKey(e.value)}
+                                                    className="ssh-monitor-tree list-view-tree"
+                                                    nodeTemplate={remoteNodeRenderer}
+                                                    emptyMessage=""
+                                                    style={{ background: 'transparent', border: 'none', color: '#e6edf3' }}
+                                                />
+                                            )}
+                                        </>
+                                    );
+                                })()
                             )}
                         </div>
                     </div>
@@ -2119,24 +2258,67 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                         onDrop={(e) => handleDrop(e, 'local')}
                     >
                         {renderPaneToolbar('local')}
-                        <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px' }}>
+                        <div style={{ flex: 1, overflowY: 'auto', padding: '6px 8px' }}>
                             {(localLoadingPaths[localCurrentPath] || globalLoading) && (!activeLocalNodes || activeLocalNodes.length === 0) ? (
-                                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                                    <ProgressSpinner style={{ width: '36px', height: '36px' }} strokeWidth="3" fill="transparent" animationDuration=".5s" />
+                                <div className="explorer-skeleton-list">
+                                    {[0.8, 0.6, 0.9, 0.7, 0.55, 0.85, 0.65].map((w, i) => (
+                                        <div key={i} className="explorer-skeleton-row">
+                                            <div className="explorer-skeleton-icon" style={{ '--delay': `${i * 80}ms` }} />
+                                            <div className="explorer-skeleton-label" style={{ width: `${w * 100}%`, '--delay': `${i * 80}ms` }} />
+                                            {i % 2 !== 0 && <div className="explorer-skeleton-size" style={{ '--delay': `${i * 80}ms` }} />}
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : activeLocalNodes && activeLocalNodes.length === 0 ? (
+                                <div className="explorer-empty-state">
+                                    <div className="explorer-empty-state-icon" style={{ background: 'rgba(63,185,80,0.08)', border: '1px solid rgba(63,185,80,0.2)', color: '#3fb950' }}>
+                                        <i className="pi pi-folder-open" />
+                                    </div>
+                                    <span className="explorer-empty-state-title">Carpeta vacía</span>
+                                    <span className="explorer-empty-state-sub">Este directorio local no contiene archivos</span>
                                 </div>
                             ) : (
-                                <Tree
-                                    value={activeLocalNodes}
-                                    expandedKeys={{}}
-                                    selectionMode="single"
-                                    selectionKeys={localSelectedKey}
-                                    onSelectionChange={(e) => setLocalSelectedKey(e.value)}
-                                    className="ssh-monitor-tree list-view-tree"
-                                    loading={localLoadingPaths[localCurrentPath]}
-                                    nodeTemplate={localNodeRenderer}
-                                    emptyMessage=""
-                                    style={{ background: 'transparent', border: 'none', color: '#e6edf3' }}
-                                />
+                                (() => {
+                                    const folderCount = activeLocalNodes.filter(n => n.data?.type === 'directory').length;
+                                    const fileCount = activeLocalNodes.length - folderCount;
+                                    const showSep = folderCount > 0 && fileCount > 0;
+                                    return (
+                                        <>
+                                            <Tree
+                                                value={showSep ? activeLocalNodes.slice(0, folderCount) : activeLocalNodes}
+                                                expandedKeys={{}}
+                                                selectionMode="single"
+                                                selectionKeys={localSelectedKey}
+                                                onSelectionChange={(e) => setLocalSelectedKey(e.value)}
+                                                className="ssh-monitor-tree list-view-tree"
+                                                loading={localLoadingPaths[localCurrentPath]}
+                                                nodeTemplate={localNodeRenderer}
+                                                emptyMessage=""
+                                                style={{ background: 'transparent', border: 'none', color: '#e6edf3' }}
+                                            />
+                                            {showSep && (
+                                                <div className="fs-section-separator">
+                                                    <div className="fs-section-separator-line" />
+                                                    <span className="fs-section-separator-label">{fileCount} archivo{fileCount !== 1 ? 's' : ''}</span>
+                                                    <div className="fs-section-separator-line" />
+                                                </div>
+                                            )}
+                                            {showSep && (
+                                                <Tree
+                                                    value={activeLocalNodes.slice(folderCount)}
+                                                    expandedKeys={{}}
+                                                    selectionMode="single"
+                                                    selectionKeys={localSelectedKey}
+                                                    onSelectionChange={(e) => setLocalSelectedKey(e.value)}
+                                                    className="ssh-monitor-tree list-view-tree"
+                                                    nodeTemplate={localNodeRenderer}
+                                                    emptyMessage=""
+                                                    style={{ background: 'transparent', border: 'none', color: '#e6edf3' }}
+                                                />
+                                            )}
+                                        </>
+                                    );
+                                })()
                             )}
                         </div>
                     </div>
@@ -2154,12 +2336,25 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                         title="Arrastra para redimensionar panel de transferencias"
                     />
 
+                    {/* Transfer station header */}
+                    <div className="transfer-station-header">
+                        <span className={`transfer-station-title-dot ${activeTransfer ? 'active' : ''}`} />
+                        <span className="transfer-station-title">Centro de transferencias</span>
+                        {transferLog.length > 0 && (
+                            <span style={{ fontSize: '0.6rem', color: '#484f58', fontVariantNumeric: 'tabular-nums' }}>
+                                {transferLog.filter(e => e.success).length}/{transferLog.length} completadas
+                            </span>
+                        )}
+                    </div>
+
                     {/* Empty state if nothing is active and no log exists */}
                     {!activeTransfer && transferLog.length === 0 && (
                         <div className="transfer-empty-state">
-                            <i className="pi pi-info-circle" style={{ fontSize: '1.2rem', marginBottom: '8px', opacity: 0.5 }} />
-                            <span style={{ fontSize: '0.8rem', opacity: 0.7, fontWeight: 600 }}>No hay transferencias recientes</span>
-                            <span style={{ fontSize: '0.72rem', opacity: 0.4, marginTop: '4px' }}>Las subidas y descargas de esta sesión aparecerán aquí</span>
+                            <div className="transfer-empty-icon">
+                                <i className="pi pi-arrow-right-arrow-left" />
+                            </div>
+                            <span style={{ fontSize: '0.78rem', opacity: 0.7, fontWeight: 600 }}>No hay transferencias recientes</span>
+                            <span style={{ fontSize: '0.7rem', opacity: 0.4, marginTop: '2px' }}>Las subidas y descargas de esta sesión aparecerán aquí</span>
                         </div>
                     )}
 
@@ -2199,21 +2394,25 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                                         value={Math.min(100, Math.round((activeTransfer.transferred / activeTransfer.total) * 100))}
                                         className={`transfer-progress-bar ${activeTransfer.type}`}
                                         showValue={false}
-                                        style={{ height: '5px', borderRadius: '3px' }}
+                                        style={{ height: '7px', borderRadius: '4px' }}
                                     />
                                     <div className="transfer-stats-row">
                                         <span>{formatFileSize(activeTransfer.transferred)} / {formatFileSize(activeTransfer.total)}</span>
-                                        <span className="transfer-pct">
+                                        <span className="transfer-stat-chip">
+                                            <i className="pi pi-percentage" />
                                             {Math.min(100, Math.round((activeTransfer.transferred / activeTransfer.total) * 100))}%
                                         </span>
                                         {activeTransfer.eta > 1 && (
-                                            <span>ETA: {formatETA(activeTransfer.eta)}</span>
+                                            <span className="transfer-stat-chip">
+                                                <i className="pi pi-clock" />
+                                                {formatETA(activeTransfer.eta)}
+                                            </span>
                                         )}
                                     </div>
                                 </>
                             ) : (
                                 <>
-                                    <ProgressBar mode="indeterminate" className={`transfer-progress-bar ${activeTransfer.type}`} style={{ height: '5px', borderRadius: '3px' }} />
+                                    <ProgressBar mode="indeterminate" className={`transfer-progress-bar ${activeTransfer.type}`} style={{ height: '7px', borderRadius: '4px' }} />
                                     <div className="transfer-stats-row">
                                         {activeTransfer.transferred > 0
                                             ? <span>{formatFileSize(activeTransfer.transferred)} transferidos...</span>
