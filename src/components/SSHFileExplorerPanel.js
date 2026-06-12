@@ -30,6 +30,17 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
     const [remoteCurrentPath, setRemoteCurrentPath] = useState(null);
     const [localCurrentPath, setLocalCurrentPath] = useState(null);
 
+    const [tempRemotePath, setTempRemotePath] = useState('');
+    const [tempLocalPath, setTempLocalPath] = useState('');
+
+    useEffect(() => {
+        setTempRemotePath(remoteCurrentPath || '');
+    }, [remoteCurrentPath]);
+
+    useEffect(() => {
+        setTempLocalPath(localCurrentPath || '');
+    }, [localCurrentPath]);
+
     // ---- Shared State ----
     const [globalLoading, setGlobalLoading] = useState(false);
     const [contextItems, setContextItems] = useState([]);
@@ -1726,6 +1737,8 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
     const renderPaneToolbar = (side) => {
         const isRemote = side === 'remote';
         const currentPath = isRemote ? remoteCurrentPath : localCurrentPath;
+        const tempPath = isRemote ? tempRemotePath : tempLocalPath;
+        const setTempPath = isRemote ? setTempRemotePath : setTempLocalPath;
         const nodes = isRemote ? remoteNodes : localNodes;
         const defaultRoot = isRemote ? '/' : 'C:\\';
         const separator = isRemote ? '/' : '\\';
@@ -1819,9 +1832,31 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                     </button>
                     <div style={{ flex: 1, margin: '0 4px', display: 'flex', alignItems: 'center', background: 'rgba(13, 17, 23, 0.4)', padding: '2px 8px', borderRadius: '4px', border: '1px solid #30363d' }}>
                         <i className="pi pi-folder-open" style={{ color: '#8b949e', fontSize: '11px', marginRight: '6px' }} />
-                        <span style={{ color: '#e6edf3', fontSize: '0.75rem', fontFamily: 'Consolas, monospace', letterSpacing: '-0.3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {currentPath}
-                        </span>
+                        <input
+                            type="text"
+                            value={tempPath}
+                            onChange={(e) => setTempPath(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    handleNavigate(tempPath, side);
+                                }
+                            }}
+                            onBlur={() => {
+                                setTempPath(currentPath || '');
+                            }}
+                            style={{
+                                flex: 1,
+                                background: 'transparent',
+                                border: 'none',
+                                outline: 'none',
+                                color: '#e6edf3',
+                                fontSize: '0.75rem',
+                                fontFamily: 'Consolas, monospace',
+                                letterSpacing: '-0.3px',
+                                padding: '0',
+                                width: '100%'
+                            }}
+                        />
                     </div>
                     <button className="ssh-monitor-action-btn pane-toolbar-btn" onClick={handleRefresh} title="Actualizar">
                         <i className="pi pi-refresh" />
