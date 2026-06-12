@@ -784,9 +784,9 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
         initSystems();
     }, [tabId, sshConfig, loadRemoteDirectory, loadLocalDirectory, makeKey, notify]);
 
-    const handleSaveDefaultPaths = useCallback(() => {
-        if (!remoteCurrentPath || !localCurrentPath) {
-            notify('warn', 'Rutas no disponibles', 'Ambas rutas (local y remota) deben estar cargadas para guardarse.');
+    const handleSaveDefaultPathForSide = useCallback((side, path) => {
+        if (!path) {
+            notify('warn', 'Ruta no disponible', 'No hay una ruta cargada para guardar.');
             return;
         }
 
@@ -794,13 +794,25 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
             ? `ssh_explorer_default_paths_${sshConfig.host}_${sshConfig.username || 'root'}` 
             : `ssh_explorer_default_paths_${tabId}`;
             
-        localStorage.setItem(pathsKey, JSON.stringify({
-            remotePath: remoteCurrentPath,
-            localPath: localCurrentPath
-        }));
+        let existing = {};
+        try {
+            const saved = localStorage.getItem(pathsKey);
+            if (saved) {
+                existing = JSON.parse(saved);
+            }
+        } catch (e) {
+            console.error('Error parsing default paths', e);
+        }
 
-        notify('success', 'Predeterminado guardado', 'Se han guardado las rutas actuales como predeterminadas.');
-    }, [remoteCurrentPath, localCurrentPath, sshConfig, tabId, notify]);
+        if (side === 'remote') {
+            existing.remotePath = path;
+        } else {
+            existing.localPath = path;
+        }
+
+        localStorage.setItem(pathsKey, JSON.stringify(existing));
+        notify('success', 'Ruta guardada', `Se guardó la ruta ${side === 'remote' ? 'remota' : 'local'} predeterminada.`);
+    }, [sshConfig, tabId, notify]);
 
     // Close on Escape key
     useEffect(() => {
@@ -1577,7 +1589,7 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
             });
             items.push({
                 label: 'Nueva carpeta',
-                icon: 'pi pi-folder-plus',
+                icon: 'pi pi-plus',
                 command: () => {
                     setSelection(node.key);
                     openCreateFolderDialog(node, sideHint);
@@ -1866,6 +1878,10 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
             openCreateFolderDialog({ data: { path: currentPath, type: 'directory' } }, side);
         };
 
+        const handleSaveDefaultPath = () => {
+            handleSaveDefaultPathForSide(side, currentPath);
+        };
+
         // Parse path into breadcrumb segments
         const parseBreadcrumbs = (path) => {
             if (!path) return [];
@@ -1925,7 +1941,13 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                                 <i className="pi pi-home" />
                             </button>
                             <button className="pane-toolbar-btn" onClick={handleNewFolder} title="Nueva carpeta">
-                                <i className="pi pi-folder-plus" />
+                                <span style={{ position: 'relative', display: 'inline-flex', width: '14px', height: '14px', alignItems: 'center', justifyContent: 'center' }}>
+                                    <i className="pi pi-folder" style={{ fontSize: '13px' }} />
+                                    <i className="pi pi-plus" style={{ position: 'absolute', fontSize: '7px', right: '-4px', bottom: '-4px', background: '#161b22', border: '1px solid #30363d', borderRadius: '50%', width: '10px', height: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: accentColor }} />
+                                </span>
+                            </button>
+                            <button className="pane-toolbar-btn" onClick={handleSaveDefaultPath} title="Guardar esta ruta como predeterminada">
+                                <i className="pi pi-bookmark" />
                             </button>
                         </div>
 
@@ -2090,16 +2112,6 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                             </div>
                         </div>
                         <div className="ssh-monitor-header-actions">
-                            {/* Save defaults */}
-                            <button
-                                className="ssh-explorer-icon-btn"
-                                onClick={handleSaveDefaultPaths}
-                                title="Guardar rutas actuales como predeterminadas"
-                            >
-                                <i className="pi pi-bookmark" style={{ fontSize: '12px' }} />
-                            </button>
-
-                            <div className="ssh-monitor-header-sep" />
 
                             {/* Sync navigation pill */}
                             <button
