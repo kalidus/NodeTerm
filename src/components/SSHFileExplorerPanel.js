@@ -9,6 +9,42 @@ import { InputText } from 'primereact/inputtext';
 import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
 import '../styles/ssh-monitor.css';
 
+const getSyncPath = (fromSide, currentPathA, newPathA, currentPathB) => {
+    if (!currentPathA || !newPathA || !currentPathB) return null;
+    const sepA = fromSide === 'remote' ? '/' : (currentPathA.includes('\\') ? '\\' : '/');
+    const sepB = fromSide === 'remote' ? (currentPathB.includes('\\') ? '\\' : '/') : '/';
+
+    const normA_curr = currentPathA.endsWith(sepA) && currentPathA.length > 1 && !currentPathA.endsWith(':\\') ? currentPathA.slice(0, -1) : currentPathA;
+    const normA_new = newPathA.endsWith(sepA) && newPathA.length > 1 && !newPathA.endsWith(':\\') ? newPathA.slice(0, -1) : newPathA;
+    const normB_curr = currentPathB.endsWith(sepB) && currentPathB.length > 1 && !currentPathB.endsWith(':\\') ? currentPathB.slice(0, -1) : currentPathB;
+
+    const getParentPath = (p, sep) => {
+        let temp = p;
+        if (temp.endsWith(sep) && temp.length > 1) temp = temp.slice(0, -1);
+        const idx = temp.lastIndexOf(sep);
+        if (idx < 0) return null;
+        const res = temp.substring(0, idx === 2 && temp.includes(':') ? 3 : (idx === 0 ? 1 : idx));
+        return res;
+    };
+
+    // 1. Check if going UP
+    const parentA = getParentPath(normA_curr, sepA);
+    if (parentA && normA_new === parentA) {
+        return getParentPath(normB_curr, sepB);
+    }
+
+    // 2. Check if going DOWN (entering a subfolder)
+    if (normA_new.startsWith(normA_curr)) {
+        let rel = normA_new.substring(normA_curr.length);
+        if (rel.startsWith(sepA)) rel = rel.substring(1);
+        
+        const relB = rel.split(sepA).join(sepB);
+        return normB_curr.endsWith(sepB) ? `${normB_curr}${relB}` : `${normB_curr}${sepB}${relB}`;
+    }
+
+    return null;
+};
+
 const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
     // ---- Remote State ----
     const [remoteNodes, setRemoteNodes] = useState([]);
@@ -40,6 +76,10 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
     useEffect(() => {
         setTempLocalPath(localCurrentPath || '');
     }, [localCurrentPath]);
+
+    const [syncNavigation, setSyncNavigation] = useState(() => {
+        return localStorage.getItem('ssh_file_explorer_sync_navigation') === 'true';
+    });
 
     // ---- Shared State ----
     const [globalLoading, setGlobalLoading] = useState(false);
@@ -589,7 +629,7 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
         setLocalExpandedKeys(newExpanded);
     }, [localExpandedKeys, findNodeByKey, loadLocalDirectory, localNodes]);
 
-    const handleNavigate = useCallback((path, side) => {
+    const handleNavigate = useCallback((path, side, isSync = false) => {
         if (!path) return;
         if (side === 'local') {
             setLocalCurrentPath(path);
@@ -598,6 +638,13 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
             if (!node || !node.children || node.children.length === 0) {
                 loadLocalDirectory(path);
             }
+
+            if (syncNavigation && !isSync && remoteCurrentPath) {
+                const syncPath = getSyncPath('local', localCurrentPath, path, remoteCurrentPath);
+                if (syncPath) {
+                    handleNavigate(syncPath, 'remote', true);
+                }
+            }
         } else {
             setRemoteCurrentPath(path);
             setRemoteSelectedKey(null);
@@ -605,8 +652,15 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
             if (!node || !node.children || node.children.length === 0) {
                 loadRemoteDirectory(path);
             }
+
+            if (syncNavigation && !isSync && localCurrentPath) {
+                const syncPath = getSyncPath('remote', remoteCurrentPath, path, localCurrentPath);
+                if (syncPath) {
+                    handleNavigate(syncPath, 'local', true);
+                }
+            }
         }
-    }, [localNodes, remoteNodes, findNodeByKey, loadLocalDirectory, loadRemoteDirectory, makeKey]);
+    }, [localNodes, remoteNodes, findNodeByKey, loadLocalDirectory, loadRemoteDirectory, makeKey, syncNavigation, localCurrentPath, remoteCurrentPath]);
 
     // Initial load: get HOME directory (remote and local)
     useEffect(() => {
@@ -1963,6 +2017,21 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose }) => {
                             >
                                 <i className="pi pi-bookmark" style={{ fontSize: '12px' }} />
                                 <span style={{ fontSize: '11px', fontWeight: 600 }}>Guardar predeterminado</span>
+                            </button>
+
+                            <button
+                                className={`ssh-monitor-transfer-toggle ${syncNavigation ? 'active' : ''}`}
+                                onClick={() => {
+                                    const next = !syncNavigation;
+                                    setSyncNavigation(next);
+                                    localStorage.setItem('ssh_file_explorer_sync_navigation', String(next));
+                                    notify('info', next ? 'Navegación sincronizada activa' : 'Navegación sincronizada inactiva', next ? 'Se intentará replicar los cambios de directorio en ambos paneles.' : 'Los paneles se navegarán de forma independiente.');
+                                }}
+                                title="Habilitar/Deshabilitar Navegación Sincronizada (como FileZilla)"
+                                style={{ marginRight: '4px', display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 10px' }}
+                            >
+                                <i className="pi pi-sync" style={{ fontSize: '12px' }} />
+                                <span style={{ fontSize: '11px', fontWeight: 600 }}>Navegación sinc.</span>
                             </button>
 
                             <button
