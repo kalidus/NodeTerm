@@ -87,7 +87,7 @@
     border-bottom: 1px solid rgba(48, 54, 61, 0.6);
     flex-shrink: 0;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
 }
 
 /* Subtle top accent line on header */
