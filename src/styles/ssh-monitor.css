@@ -1210,7 +1210,8 @@
     flex: 1;
     background: transparent;
     border: none;
-    outline: none;
+    outline: none !important;
+    box-shadow: none !important;
     color: #e6edf3;
     font-size: 0.73rem;
     font-family: 'Consolas', monospace;
@@ -1218,6 +1219,13 @@
     padding: 0;
     width: 100%;
     min-width: 40px;
+}
+
+.explorer-breadcrumb-input:focus,
+.explorer-breadcrumb-input:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
 }
 
 .explorer-breadcrumb-input::placeholder {
