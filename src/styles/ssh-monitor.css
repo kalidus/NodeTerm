@@ -134,7 +134,7 @@
     margin: 0;
     font-size: 12.5px;
     font-weight: 700;
-    color: #e6edf3;
+    color: var(--explorer-text, #e6edf3);
     letter-spacing: 0.1px;
     white-space: nowrap;
     overflow: hidden;
@@ -1172,19 +1172,19 @@
 }
 
 .explorer-breadcrumb-seg:hover {
-    color: #e6edf3;
-    background: rgba(88, 166, 255, 0.1);
+    color: var(--explorer-accent, #58a6ff);
+    background: var(--explorer-hover, rgba(88, 166, 255, 0.1));
 }
 
 .explorer-breadcrumb-seg.last-seg {
-    color: #c9d1d9;
+    color: var(--explorer-text, #e6edf3);
     font-weight: 600;
     cursor: default;
 }
 
 .explorer-breadcrumb-seg.last-seg:hover {
     background: transparent;
-    color: #c9d1d9;
+    color: var(--explorer-text, #e6edf3);
 }
 
 .explorer-breadcrumb-chevron {

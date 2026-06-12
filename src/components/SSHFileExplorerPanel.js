@@ -1767,7 +1767,7 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose, iconTheme = 'mat
                 <span
                     className="fs-node-label"
                     style={{
-                        color: isSelected ? accentColor : isHidden ? '#8b949e' : '#e6edf3',
+                        color: isSelected ? accentColor : isHidden ? '#8b949e' : 'var(--explorer-text, #e6edf3)',
                         fontWeight: isSelected ? 600 : (isDirectory ? 500 : 400),
                     }}
                 >
