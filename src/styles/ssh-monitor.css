@@ -2316,3 +2316,974 @@
     color: var(--explorer-accent, #58a6ff);
     font-weight: 600;
 }
+
+/* ============================================================
+   Cyberpunk Mockup Style overrides
+   ============================================================ */
+
+/* Main panel background & custom grid */
+.cyberpunk-style.ssh-monitor-panel {
+    background-color: #070d19 !important;
+    background-image: linear-gradient(rgba(0, 229, 255, 0.025) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(0, 229, 255, 0.025) 1px, transparent 1px) !important;
+    background-size: 20px 20px !important;
+    border-left: 1px solid rgba(0, 229, 255, 0.25) !important;
+    box-shadow: -10px 0 32px rgba(0, 229, 255, 0.12) !important;
+    backdrop-filter: blur(16px) !important;
+}
+
+/* Header style and neon top gradient */
+.cyberpunk-style .ssh-monitor-header {
+    background: rgba(10, 14, 23, 0.75) !important;
+    border-bottom: 1px solid rgba(0, 229, 255, 0.25) !important;
+}
+
+.cyberpunk-style .ssh-monitor-header::before {
+    height: 3px !important;
+    background: linear-gradient(90deg, #00e5ff 0%, #bd00ff 50%, #00ff66 100%) !important;
+    opacity: 1 !important;
+    box-shadow: 0 1px 8px rgba(189, 0, 255, 0.4);
+}
+
+.cyberpunk-style .ssh-monitor-server-title h2 {
+    font-family: 'Consolas', monospace !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1.5px !important;
+    color: #e6edf3 !important;
+    text-shadow: 0 0 4px rgba(230, 237, 243, 0.4);
+}
+
+/* Custom indicator dial */
+.cyberpunk-style .cyber-dial-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 12px;
+    height: 12px;
+    border: 1.5px solid currentColor;
+    border-radius: 50%;
+    margin-left: 8px;
+    opacity: 0.8;
+}
+
+.cyberpunk-style .cyber-dial-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    box-shadow: 0 0 4px currentColor;
+}
+
+/* Side Pane custom layouts */
+.cyberpunk-style .remote-pane {
+    border-right: 1px solid rgba(0, 229, 255, 0.2) !important;
+}
+
+/* Hide breadcrumb chevrons */
+.cyberpunk-style .explorer-breadcrumb-chevron {
+    display: none !important;
+}
+
+/* Breadcrumb row & capsule pills */
+.cyberpunk-style .explorer-breadcrumb-row {
+    background: rgba(10, 14, 23, 0.6) !important;
+    border: 1px solid rgba(0, 229, 255, 0.25) !important;
+    border-radius: 20px !important;
+    padding: 2px 10px !important;
+    box-shadow: 0 0 8px rgba(0, 229, 255, 0.08) !important;
+}
+
+.cyberpunk-style .local-pane .explorer-breadcrumb-row {
+    border-color: rgba(0, 255, 102, 0.25) !important;
+    box-shadow: 0 0 8px rgba(0, 255, 102, 0.08) !important;
+}
+
+.cyberpunk-style .explorer-breadcrumb-seg {
+    border: 1.5px solid rgba(0, 229, 255, 0.4) !important;
+    border-radius: 12px !important;
+    padding: 1px 8px !important;
+    margin: 0 2px !important;
+    background: rgba(0, 229, 255, 0.03) !important;
+    color: #00e5ff !important;
+    transition: all 0.2s ease !important;
+}
+
+.cyberpunk-style .local-pane .explorer-breadcrumb-seg {
+    border-color: rgba(0, 255, 102, 0.4) !important;
+    background: rgba(0, 255, 102, 0.03) !important;
+    color: #00ff66 !important;
+}
+
+.cyberpunk-style .explorer-breadcrumb-seg:hover {
+    box-shadow: 0 0 8px rgba(0, 229, 255, 0.5) !important;
+    background: rgba(0, 229, 255, 0.12) !important;
+    border-color: #00e5ff !important;
+}
+
+.cyberpunk-style .local-pane .explorer-breadcrumb-seg:hover {
+    box-shadow: 0 0 8px rgba(0, 255, 102, 0.5) !important;
+    background: rgba(0, 255, 102, 0.12) !important;
+    border-color: #00ff66 !important;
+}
+
+.cyberpunk-style .explorer-breadcrumb-seg.last-seg {
+    background: #00e5ff !important;
+    border-color: #00e5ff !important;
+    color: #070d19 !important;
+    font-weight: 700 !important;
+}
+
+.cyberpunk-style .local-pane .explorer-breadcrumb-seg.last-seg {
+    background: #00ff66 !important;
+    border-color: #00ff66 !important;
+    color: #070d19 !important;
+    font-weight: 700 !important;
+}
+
+/* Toolbar button pills styling */
+.cyberpunk-style .explorer-toolbar-group {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    gap: 4px !important;
+}
+
+.cyberpunk-style .remote-pane .pane-toolbar-btn {
+    border: 1px solid rgba(0, 229, 255, 0.35) !important;
+    color: #00e5ff !important;
+    background: transparent !important;
+    border-radius: 4px !important;
+    height: 24px !important;
+    min-width: 24px !important;
+    transition: all 0.15s ease !important;
+}
+
+.cyberpunk-style .local-pane .pane-toolbar-btn {
+    border: 1px solid rgba(0, 255, 102, 0.35) !important;
+    color: #00ff66 !important;
+    background: transparent !important;
+    border-radius: 4px !important;
+    height: 24px !important;
+    min-width: 24px !important;
+    transition: all 0.15s ease !important;
+}
+
+.cyberpunk-style .remote-pane .pane-toolbar-btn:hover {
+    background: #00e5ff !important;
+    color: #070d19 !important;
+    box-shadow: 0 0 8px rgba(0, 229, 255, 0.5) !important;
+}
+
+.cyberpunk-style .local-pane .pane-toolbar-btn:hover {
+    background: #00ff66 !important;
+    color: #070d19 !important;
+    box-shadow: 0 0 8px rgba(0, 255, 102, 0.5) !important;
+}
+
+/* Tree override reset and clean colors */
+.cyberpunk-style .p-tree-container {
+    background: transparent !important;
+}
+
+/* Selected item outline with full box glow */
+.cyberpunk-style .remote-pane .filesystem-node.fs-node-selected {
+    border: 1.5px solid #00e5ff !important;
+    background: rgba(0, 229, 255, 0.1) !important;
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.3) !important;
+    border-radius: 5px !important;
+}
+
+.cyberpunk-style .local-pane .filesystem-node.fs-node-selected {
+    border: 1.5px solid #00ff66 !important;
+    background: rgba(0, 255, 102, 0.1) !important;
+    box-shadow: 0 0 10px rgba(0, 255, 102, 0.3) !important;
+    border-radius: 5px !important;
+}
+
+/* File items left vertical neon bar */
+.cyberpunk-style .filesystem-node {
+    border-left: 2px solid transparent !important;
+    transition: all 0.1s ease !important;
+    padding-left: 6px !important;
+}
+
+.cyberpunk-style .remote-pane .filesystem-node.fs-node-file {
+    border-left: 2px solid #00e5ff !important;
+}
+
+.cyberpunk-style .local-pane .filesystem-node.fs-node-file {
+    border-left: 2px solid #00ff66 !important;
+}
+
+.cyberpunk-style .remote-pane .filesystem-node::before,
+.cyberpunk-style .local-pane .filesystem-node::before {
+    display: none !important;
+}
+
+.cyberpunk-style .remote-pane .filesystem-node:hover {
+    background: rgba(0, 229, 255, 0.05) !important;
+}
+
+.cyberpunk-style .local-pane .filesystem-node:hover {
+    background: rgba(0, 255, 102, 0.05) !important;
+}
+
+/* File size badge */
+.cyberpunk-style .fs-size-badge {
+    background: #0f1423 !important;
+    border: 1.5px solid rgba(0, 229, 255, 0.3) !important;
+    color: #00e5ff !important;
+    font-size: 0.65rem !important;
+    padding: 1px 6px !important;
+    border-radius: 4px !important;
+}
+
+.cyberpunk-style .local-pane .fs-size-badge {
+    background: #0d1e18 !important;
+    border-color: rgba(0, 255, 102, 0.3) !important;
+    color: #00ff66 !important;
+}
+
+/* File & Folder icon neon drop shadow glow */
+.cyberpunk-style .fs-icon-badge i {
+    filter: drop-shadow(0 0 2px currentColor);
+}
+
+/* Divider stylings */
+.cyberpunk-style .fs-section-separator {
+    margin: 14px 4px 10px 4px !important;
+}
+
+.cyberpunk-style .remote-pane .fs-section-separator {
+    color: rgba(0, 229, 255, 0.6);
+}
+
+.cyberpunk-style .local-pane .fs-section-separator {
+    color: rgba(0, 255, 102, 0.6);
+}
+
+.cyberpunk-style .fs-section-separator-line {
+    border-bottom: 1.5px dashed currentColor !important;
+    background: transparent !important;
+    height: 0 !important;
+}
+
+.cyberpunk-style .fs-section-separator-label {
+    font-family: 'Consolas', monospace;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: currentColor !important;
+}
+
+.cyberpunk-style .fs-section-separator-badge {
+    font-family: 'Consolas', monospace;
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(10, 14, 23, 0.9);
+    border: 1px solid currentColor;
+    color: currentColor;
+    white-space: nowrap;
+}
+
+/* Transfer Station overrides */
+.cyberpunk-style .transfer-station {
+    background: #07060d !important;
+    border-top: 1.5px solid #bd00ff !important;
+    box-shadow: 0 -4px 20px rgba(189, 0, 255, 0.18) !important;
+}
+
+.cyberpunk-style .transfer-station-header {
+    border-bottom: 1px solid rgba(189, 0, 255, 0.35) !important;
+    background: rgba(189, 0, 255, 0.03) !important;
+}
+
+.cyberpunk-style .transfer-station-title {
+    color: #ff00ea !important;
+    font-family: 'Consolas', monospace;
+    font-size: 0.72rem !important;
+    letter-spacing: 1px;
+}
+
+.cyberpunk-style .transfer-station-title-dot.active {
+    background: #ff00ea !important;
+    box-shadow: 0 0 6px #ff00ea;
+}
+
+.cyberpunk-style .transfer-progress-bar.p-progressbar {
+    background: #120e1d !important;
+    border: 1.5px solid rgba(189, 0, 255, 0.4) !important;
+    border-radius: 6px !important;
+    overflow: hidden;
+}
+
+.cyberpunk-style .transfer-progress-bar .p-progressbar-value {
+    background: linear-gradient(90deg, #bd00ff, #ff00ea) !important;
+    box-shadow: 0 0 8px #ff00ea;
+}
+
+/* Close action */
+.cyberpunk-style .ssh-monitor-close {
+    border: 1.5px solid rgba(255, 7, 58, 0.5) !important;
+    color: #ff073a !important;
+    background: transparent !important;
+    border-radius: 4px !important;
+    font-weight: 700;
+}
+
+.cyberpunk-style .ssh-monitor-close:hover {
+    background: #ff073a !important;
+    color: #070d19 !important;
+    box-shadow: 0 0 8px rgba(255, 7, 58, 0.6);
+}
+
+/* ============================================================
+   CYBERPUNK ENHANCED — Professional Dual-Panel SSH Explorer
+   Inspired by CHEADER-style UI mockup
+   ============================================================ */
+
+/* ── Keyframes ─────────────────────────────────────────────── */
+@keyframes cyber-neon-pulse-cyan {
+    0%, 100% { box-shadow: 0 0 4px #00e5ff, 0 0 8px rgba(0, 229, 255, 0.3); opacity: 0.9; }
+    50%       { box-shadow: 0 0 8px #00e5ff, 0 0 18px rgba(0, 229, 255, 0.6); opacity: 1; }
+}
+@keyframes cyber-neon-pulse-green {
+    0%, 100% { box-shadow: 0 0 4px #00ff88, 0 0 8px rgba(0, 255, 136, 0.3); opacity: 0.9; }
+    50%       { box-shadow: 0 0 8px #00ff88, 0 0 18px rgba(0, 255, 136, 0.6); opacity: 1; }
+}
+@keyframes cyber-shimmer {
+    0%   { left: -80%; }
+    100% { left: 130%; }
+}
+@keyframes cyber-scanline {
+    0%   { transform: translateY(-100%); }
+    100% { transform: translateY(100vh); }
+}
+@keyframes cyber-dot-breathe-cyan {
+    0%, 100% { transform: scale(1);   box-shadow: 0 0 0 0 rgba(0, 229, 255, 0.5); }
+    50%       { transform: scale(1.3); box-shadow: 0 0 0 4px rgba(0, 229, 255, 0); }
+}
+@keyframes cyber-dot-breathe-green {
+    0%, 100% { transform: scale(1);   box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.5); }
+    50%       { transform: scale(1.3); box-shadow: 0 0 0 4px rgba(0, 255, 136, 0); }
+}
+@keyframes cyber-slide-in-left {
+    from { transform: translateX(-6px); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+}
+
+/* ── Scanline overlay texture ──────────────────────────────── */
+.cyberpunk-style.ssh-monitor-panel::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+        180deg,
+        transparent 0px,
+        transparent 3px,
+        rgba(0, 229, 255, 0.012) 4px
+    );
+    z-index: 0;
+}
+
+/* All content above scanlines */
+.cyberpunk-style .ssh-monitor-header,
+.cyberpunk-style .ssh-file-explorer-content,
+.cyberpunk-style .transfer-station {
+    position: relative;
+    z-index: 1;
+}
+
+/* ── Panel label header row — pane title with neon dot ────── */
+.cyberpunk-style .explorer-pane-toolbar {
+    background: rgba(7, 13, 25, 0.95) !important;
+    border-bottom: 1px solid rgba(0, 229, 255, 0.18) !important;
+}
+
+.cyberpunk-style .local-pane .explorer-pane-toolbar {
+    border-bottom-color: rgba(0, 255, 136, 0.18) !important;
+}
+
+.cyberpunk-style .explorer-panel-label {
+    gap: 7px !important;
+    padding: 0 2px !important;
+}
+
+.cyberpunk-style .explorer-panel-label-text {
+    font-family: 'Consolas', 'JetBrains Mono', monospace !important;
+    font-weight: 700 !important;
+    letter-spacing: 2px !important;
+    font-size: 0.72rem !important;
+    text-shadow: 0 0 8px currentColor !important;
+}
+
+/* Neon pulsing indicator dot — remote (cyan) */
+.cyberpunk-style .remote-pane .explorer-panel-label-dot {
+    width: 8px !important;
+    height: 8px !important;
+    border-radius: 50% !important;
+    background: #00e5ff !important;
+    animation: cyber-dot-breathe-cyan 2s ease-in-out infinite !important;
+    flex-shrink: 0 !important;
+}
+
+/* Neon pulsing indicator dot — local (green) */
+.cyberpunk-style .local-pane .explorer-panel-label-dot {
+    width: 8px !important;
+    height: 8px !important;
+    border-radius: 50% !important;
+    background: #00ff88 !important;
+    animation: cyber-dot-breathe-green 2s ease-in-out infinite !important;
+    flex-shrink: 0 !important;
+}
+
+/* Panel label icon glow */
+.cyberpunk-style .explorer-panel-label-icon {
+    filter: drop-shadow(0 0 4px currentColor) !important;
+    font-size: 11px !important;
+}
+
+/* ── Toolbar divider — neon glow version ──────────────────── */
+.cyberpunk-style .explorer-toolbar-divider {
+    width: 1px !important;
+    background: rgba(0, 229, 255, 0.18) !important;
+    align-self: stretch !important;
+    margin: 2px 4px !important;
+}
+
+.cyberpunk-style .local-pane .explorer-toolbar-divider {
+    background: rgba(0, 255, 136, 0.18) !important;
+}
+
+/* ── Breadcrumb row — glassmorphism pill ──────────────────── */
+.cyberpunk-style .explorer-pane-toolbar-top {
+    padding: 5px 10px !important;
+    gap: 6px !important;
+    min-height: 38px !important;
+}
+
+/* Override the last breadcrumb segment active color */
+.cyberpunk-style .remote-pane .explorer-breadcrumb-seg.last-seg {
+    background: rgba(0, 229, 255, 0.15) !important;
+    border-color: #00e5ff !important;
+    color: #00e5ff !important;
+    font-weight: 700 !important;
+    text-shadow: 0 0 6px #00e5ff !important;
+}
+
+.cyberpunk-style .local-pane .explorer-breadcrumb-seg.last-seg {
+    background: rgba(0, 255, 136, 0.15) !important;
+    border-color: #00ff88 !important;
+    color: #00ff88 !important;
+    font-weight: 700 !important;
+    text-shadow: 0 0 6px #00ff88 !important;
+}
+
+/* Breadcrumb icon */
+.cyberpunk-style .remote-pane .explorer-breadcrumb-icon {
+    color: #00e5ff !important;
+    filter: drop-shadow(0 0 4px #00e5ff) !important;
+    font-size: 11px !important;
+}
+
+.cyberpunk-style .local-pane .explorer-breadcrumb-icon {
+    color: #00ff88 !important;
+    filter: drop-shadow(0 0 4px #00ff88) !important;
+    font-size: 11px !important;
+}
+
+/* ── File/Folder items — cyber left-bar accent ────────────── */
+.cyberpunk-style .filesystem-node {
+    border-radius: 4px !important;
+    transition: all 0.12s ease !important;
+    min-height: 30px !important;
+}
+
+/* Remove default left bar (we add our own) */
+.cyberpunk-style .filesystem-node::before {
+    display: none !important;
+}
+
+/* Folder items — bold accent left border */
+.cyberpunk-style .remote-pane .filesystem-node.fs-node-folder {
+    border-left: 3px solid rgba(0, 229, 255, 0.5) !important;
+}
+
+.cyberpunk-style .local-pane .filesystem-node.fs-node-folder {
+    border-left: 3px solid rgba(0, 255, 136, 0.5) !important;
+}
+
+/* File items — thin accent left border */
+.cyberpunk-style .remote-pane .filesystem-node.fs-node-file {
+    border-left: 2px solid rgba(0, 229, 255, 0.3) !important;
+}
+
+.cyberpunk-style .local-pane .filesystem-node.fs-node-file {
+    border-left: 2px solid rgba(0, 255, 136, 0.3) !important;
+}
+
+/* Hover states */
+.cyberpunk-style .remote-pane .filesystem-node:hover {
+    background: rgba(0, 229, 255, 0.06) !important;
+    border-left-color: #00e5ff !important;
+}
+
+.cyberpunk-style .local-pane .filesystem-node:hover {
+    background: rgba(0, 255, 136, 0.06) !important;
+    border-left-color: #00ff88 !important;
+}
+
+/* Selected state — full neon outline glow */
+.cyberpunk-style .remote-pane .filesystem-node.fs-node-selected {
+    border: 1.5px solid #00e5ff !important;
+    border-left-width: 3px !important;
+    background: rgba(0, 229, 255, 0.1) !important;
+    box-shadow: 0 0 12px rgba(0, 229, 255, 0.25), inset 0 0 8px rgba(0, 229, 255, 0.05) !important;
+    border-radius: 5px !important;
+}
+
+.cyberpunk-style .local-pane .filesystem-node.fs-node-selected {
+    border: 1.5px solid #00ff88 !important;
+    border-left-width: 3px !important;
+    background: rgba(0, 255, 136, 0.1) !important;
+    box-shadow: 0 0 12px rgba(0, 255, 136, 0.25), inset 0 0 8px rgba(0, 255, 136, 0.05) !important;
+    border-radius: 5px !important;
+}
+
+/* Label color on selected */
+.cyberpunk-style .remote-pane .filesystem-node.fs-node-selected .fs-node-label {
+    color: #00e5ff !important;
+    text-shadow: 0 0 8px rgba(0, 229, 255, 0.5) !important;
+}
+
+.cyberpunk-style .local-pane .filesystem-node.fs-node-selected .fs-node-label {
+    color: #00ff88 !important;
+    text-shadow: 0 0 8px rgba(0, 255, 136, 0.5) !important;
+}
+
+/* Icon badge in cyberpunk mode */
+.cyberpunk-style .fs-icon-badge i {
+    filter: drop-shadow(0 0 3px currentColor) !important;
+}
+
+.cyberpunk-style .remote-pane .fs-icon-badge.directory {
+    background: rgba(0, 229, 255, 0.12) !important;
+    border: 1px solid rgba(0, 229, 255, 0.2) !important;
+}
+
+.cyberpunk-style .local-pane .fs-icon-badge.directory {
+    background: rgba(0, 255, 136, 0.12) !important;
+    border: 1px solid rgba(0, 255, 136, 0.2) !important;
+}
+
+.cyberpunk-style .fs-icon-badge.file {
+    background: rgba(15, 20, 35, 0.8) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+/* ── File size badge — monospace neon pill ────────────────── */
+.cyberpunk-style .fs-size-badge {
+    font-family: 'Consolas', 'JetBrains Mono', monospace !important;
+    font-size: 0.62rem !important;
+    font-weight: 600 !important;
+    padding: 1px 7px !important;
+    border-radius: 4px !important;
+    letter-spacing: 0.02em !important;
+}
+
+.cyberpunk-style .remote-pane .fs-size-badge {
+    background: rgba(7, 13, 25, 0.9) !important;
+    border: 1.5px solid rgba(0, 229, 255, 0.35) !important;
+    color: #00e5ff !important;
+    text-shadow: 0 0 4px rgba(0, 229, 255, 0.5) !important;
+}
+
+.cyberpunk-style .local-pane .fs-size-badge {
+    background: rgba(7, 13, 25, 0.9) !important;
+    border: 1.5px solid rgba(0, 255, 136, 0.35) !important;
+    color: #00ff88 !important;
+    text-shadow: 0 0 4px rgba(0, 255, 136, 0.5) !important;
+}
+
+/* ── Section separator — dashed "FOLDER ······ N FILES" ──── */
+.cyberpunk-style .fs-section-separator {
+    padding: 10px 6px 8px !important;
+    margin: 6px 0 2px 0 !important;
+    gap: 8px !important;
+    align-items: center !important;
+}
+
+.cyberpunk-style .remote-pane .fs-section-separator {
+    color: rgba(0, 229, 255, 0.55) !important;
+}
+
+.cyberpunk-style .local-pane .fs-section-separator {
+    color: rgba(0, 255, 136, 0.55) !important;
+}
+
+.cyberpunk-style .fs-section-separator-line {
+    height: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    border-bottom: 1.5px dashed currentColor !important;
+    opacity: 0.7 !important;
+}
+
+.cyberpunk-style .fs-section-separator-label {
+    font-family: 'Consolas', 'JetBrains Mono', monospace !important;
+    font-size: 0.64rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.1em !important;
+    color: currentColor !important;
+    text-shadow: 0 0 6px currentColor !important;
+    white-space: nowrap !important;
+}
+
+.cyberpunk-style .fs-section-separator-badge {
+    font-family: 'Consolas', 'JetBrains Mono', monospace !important;
+    font-size: 0.6rem !important;
+    font-weight: 700 !important;
+    padding: 1px 7px !important;
+    border-radius: 4px !important;
+    border: 1px solid currentColor !important;
+    color: currentColor !important;
+    background: rgba(7, 13, 25, 0.85) !important;
+    text-shadow: 0 0 4px currentColor !important;
+    letter-spacing: 0.05em !important;
+    white-space: nowrap !important;
+}
+
+/* ── Pane content area scrollbar ──────────────────────────── */
+.cyberpunk-style .ssh-file-explorer-content > div::-webkit-scrollbar {
+    width: 4px;
+}
+
+.cyberpunk-style .ssh-file-explorer-content > div::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.cyberpunk-style .remote-pane > div::-webkit-scrollbar-thumb {
+    background: rgba(0, 229, 255, 0.25);
+    border-radius: 2px;
+}
+
+.cyberpunk-style .local-pane > div::-webkit-scrollbar-thumb {
+    background: rgba(0, 255, 136, 0.25);
+    border-radius: 2px;
+}
+
+/* ── Remote/Local pane divider ───────────────────────────── */
+.cyberpunk-style .remote-pane {
+    border-right: 1px solid rgba(0, 229, 255, 0.2) !important;
+}
+
+/* ── Selection action bar ────────────────────────────────── */
+.cyberpunk-style .explorer-selection-bar {
+    background: rgba(7, 13, 25, 0.9) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* ── Empty state ─────────────────────────────────────────── */
+.cyberpunk-style .remote-pane .explorer-empty-state-icon {
+    background: rgba(0, 229, 255, 0.08) !important;
+    border: 1px solid rgba(0, 229, 255, 0.25) !important;
+    color: #00e5ff !important;
+    filter: drop-shadow(0 0 8px rgba(0, 229, 255, 0.3)) !important;
+}
+
+.cyberpunk-style .local-pane .explorer-empty-state-icon {
+    background: rgba(0, 255, 136, 0.08) !important;
+    border: 1px solid rgba(0, 255, 136, 0.25) !important;
+    color: #00ff88 !important;
+    filter: drop-shadow(0 0 8px rgba(0, 255, 136, 0.3)) !important;
+}
+
+/* ── Transfer Station — triple-color neon upgrade ─────────── */
+.cyberpunk-style .transfer-station {
+    background: #060810 !important;
+    border-top: 2px solid transparent !important;
+    border-image: linear-gradient(90deg, #00e5ff, #bd00ff, #ff00ea, #00ff88) 1 !important;
+    box-shadow: 0 -6px 28px rgba(189, 0, 255, 0.2) !important;
+}
+
+.cyberpunk-style .transfer-station-resizer {
+    background: linear-gradient(90deg,
+        rgba(0, 229, 255, 0.15) 0%,
+        rgba(189, 0, 255, 0.15) 50%,
+        rgba(0, 255, 136, 0.15) 100%
+    ) !important;
+    border-bottom: 1px solid rgba(189, 0, 255, 0.2) !important;
+    height: 6px !important;
+    cursor: ns-resize !important;
+}
+
+.cyberpunk-style .transfer-station-header {
+    background: rgba(13, 8, 20, 0.9) !important;
+    border-bottom: 1px solid rgba(189, 0, 255, 0.3) !important;
+    padding: 6px 14px 5px !important;
+}
+
+.cyberpunk-style .transfer-station-title {
+    font-family: 'Consolas', monospace !important;
+    font-size: 0.68rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 2px !important;
+    color: #bd00ff !important;
+    text-shadow: 0 0 8px rgba(189, 0, 255, 0.6) !important;
+    text-transform: uppercase !important;
+}
+
+.cyberpunk-style .transfer-station-title-dot.active {
+    background: #ff00ea !important;
+    box-shadow: 0 0 4px #ff00ea, 0 0 8px rgba(255, 0, 234, 0.5) !important;
+    animation: cyber-dot-breathe-cyan 1.8s ease-in-out infinite !important;
+}
+
+/* Dual-color gradient progress bar — the signature element */
+.cyberpunk-style .transfer-progress-bar.p-progressbar {
+    background: rgba(12, 8, 22, 0.9) !important;
+    border: 1.5px solid rgba(189, 0, 255, 0.4) !important;
+    border-radius: 6px !important;
+    height: 8px !important;
+    overflow: visible !important;
+}
+
+/* Both upload and download share the same tri-color gradient */
+.cyberpunk-style .transfer-progress-bar .p-progressbar-value,
+.cyberpunk-style .transfer-progress-bar.upload .p-progressbar-value,
+.cyberpunk-style .transfer-progress-bar.download .p-progressbar-value {
+    background: linear-gradient(90deg, #00e5ff 0%, #bd00ff 50%, #ff00ea 100%) !important;
+    box-shadow: 0 0 10px rgba(189, 0, 255, 0.6), 0 0 20px rgba(0, 229, 255, 0.2) !important;
+    border-radius: 4px !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+/* Shimmer on the cyberpunk bar */
+.cyberpunk-style .transfer-progress-bar .p-progressbar-value::after,
+.cyberpunk-style .transfer-progress-bar.upload .p-progressbar-value::after,
+.cyberpunk-style .transfer-progress-bar.download .p-progressbar-value::after {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: -80% !important;
+    width: 60% !important;
+    height: 100% !important;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent) !important;
+    animation: cyber-shimmer 1.6s ease-in-out infinite !important;
+}
+
+/* Transfer badge overrides */
+.cyberpunk-style .transfer-direction-badge.upload {
+    background: rgba(0, 255, 136, 0.12) !important;
+    color: #00ff88 !important;
+    border-color: rgba(0, 255, 136, 0.4) !important;
+    text-shadow: 0 0 4px rgba(0, 255, 136, 0.5) !important;
+}
+
+.cyberpunk-style .transfer-direction-badge.download {
+    background: rgba(0, 229, 255, 0.12) !important;
+    color: #00e5ff !important;
+    border-color: rgba(0, 229, 255, 0.4) !important;
+    text-shadow: 0 0 4px rgba(0, 229, 255, 0.5) !important;
+}
+
+.cyberpunk-style .transfer-speed {
+    color: #00ff88 !important;
+    background: rgba(0, 255, 136, 0.08) !important;
+    border: 1px solid rgba(0, 255, 136, 0.2) !important;
+    text-shadow: 0 0 4px rgba(0, 255, 136, 0.4) !important;
+}
+
+.cyberpunk-style .transfer-filename {
+    color: #c9d1d9 !important;
+    font-family: 'Consolas', monospace !important;
+}
+
+/* Action buttons in transfer station */
+.cyberpunk-style .transfer-action-btn {
+    background: rgba(12, 8, 22, 0.8) !important;
+    border: 1px solid rgba(189, 0, 255, 0.35) !important;
+    color: #bd00ff !important;
+}
+
+.cyberpunk-style .transfer-action-btn:hover {
+    background: rgba(189, 0, 255, 0.15) !important;
+    color: #ff00ea !important;
+    border-color: rgba(255, 0, 234, 0.5) !important;
+    box-shadow: 0 0 8px rgba(189, 0, 255, 0.3) !important;
+}
+
+.cyberpunk-style .transfer-action-btn.danger:hover {
+    background: rgba(255, 7, 58, 0.2) !important;
+    color: #ff073a !important;
+    border-color: rgba(255, 7, 58, 0.5) !important;
+    box-shadow: 0 0 8px rgba(255, 7, 58, 0.3) !important;
+}
+
+/* Transfer stats chips */
+.cyberpunk-style .transfer-stat-chip {
+    background: rgba(12, 8, 22, 0.8) !important;
+    border: 1px solid rgba(189, 0, 255, 0.25) !important;
+    color: #bd00ff !important;
+}
+
+/* Transfer log */
+.cyberpunk-style .transfer-log-list {
+    background: rgba(6, 8, 16, 0.95) !important;
+}
+
+.cyberpunk-style .transfer-log-entry.success .transfer-log-status-icon {
+    color: #00ff88 !important;
+    filter: drop-shadow(0 0 3px rgba(0, 255, 136, 0.5)) !important;
+}
+
+.cyberpunk-style .transfer-log-entry.error .transfer-log-status-icon {
+    color: #ff073a !important;
+    filter: drop-shadow(0 0 3px rgba(255, 7, 58, 0.4)) !important;
+}
+
+.cyberpunk-style .transfer-log-toggle {
+    color: rgba(189, 0, 255, 0.6) !important;
+    border-top: 1px solid rgba(189, 0, 255, 0.15) !important;
+}
+
+.cyberpunk-style .transfer-log-toggle:hover {
+    background: rgba(189, 0, 255, 0.05) !important;
+    color: #bd00ff !important;
+}
+
+.cyberpunk-style .transfer-log-count {
+    background: rgba(189, 0, 255, 0.15) !important;
+    color: #bd00ff !important;
+    border: 1px solid rgba(189, 0, 255, 0.3) !important;
+}
+
+/* Transfer empty state */
+.cyberpunk-style .transfer-empty-icon {
+    background: rgba(12, 8, 22, 0.8) !important;
+    border: 1px solid rgba(189, 0, 255, 0.3) !important;
+    color: rgba(189, 0, 255, 0.5) !important;
+}
+
+/* ── Global header server badge ──────────────────────────── */
+.cyberpunk-style .ssh-monitor-server-badge {
+    background: rgba(7, 13, 25, 0.8) !important;
+    border: 1px solid rgba(0, 229, 255, 0.3) !important;
+    color: #00e5ff !important;
+    font-family: 'Consolas', monospace !important;
+}
+
+.cyberpunk-style .ssh-monitor-server-badge i {
+    color: #00ff88 !important;
+    filter: drop-shadow(0 0 4px #00ff88) !important;
+}
+
+/* ── Sync pill ───────────────────────────────────────────── */
+.cyberpunk-style .ssh-explorer-sync-pill {
+    background: rgba(7, 13, 25, 0.7) !important;
+    border: 1px solid rgba(0, 229, 255, 0.3) !important;
+    color: rgba(0, 229, 255, 0.7) !important;
+}
+
+.cyberpunk-style .ssh-explorer-sync-pill:hover {
+    background: rgba(0, 229, 255, 0.08) !important;
+    color: #00e5ff !important;
+    border-color: #00e5ff !important;
+    box-shadow: 0 0 8px rgba(0, 229, 255, 0.25) !important;
+}
+
+.cyberpunk-style .ssh-explorer-sync-pill.active {
+    background: rgba(0, 229, 255, 0.1) !important;
+    border-color: #00e5ff !important;
+    color: #00e5ff !important;
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.3) !important;
+}
+
+/* ── Icon buttons in header ──────────────────────────────── */
+.cyberpunk-style .ssh-explorer-icon-btn {
+    background: rgba(7, 13, 25, 0.6) !important;
+    border: 1px solid rgba(0, 229, 255, 0.2) !important;
+    color: rgba(0, 229, 255, 0.6) !important;
+}
+
+.cyberpunk-style .ssh-explorer-icon-btn:hover {
+    background: rgba(0, 229, 255, 0.1) !important;
+    border-color: rgba(0, 229, 255, 0.6) !important;
+    color: #00e5ff !important;
+    box-shadow: 0 0 8px rgba(0, 229, 255, 0.3) !important;
+}
+
+.cyberpunk-style .ssh-explorer-icon-btn.active {
+    background: rgba(0, 229, 255, 0.12) !important;
+    border-color: #00e5ff !important;
+    color: #00e5ff !important;
+    box-shadow: 0 0 6px rgba(0, 229, 255, 0.25) !important;
+}
+
+/* ── Resize handle ───────────────────────────────────────── */
+.cyberpunk-style .ssh-monitor-resize-handle:hover,
+.cyberpunk-style .ssh-monitor-resize-handle.is-resizing {
+    background: rgba(0, 229, 255, 0.25) !important;
+    box-shadow: 2px 0 12px rgba(0, 229, 255, 0.2) !important;
+}
+
+/* ── PrimeTree hover override ─────────────────────────────── */
+.cyberpunk-style .remote-pane .ssh-monitor-tree .p-treenode-content:hover,
+.cyberpunk-style .remote-pane .ssh-monitor-tree .p-tree-node-content:hover {
+    background: rgba(0, 229, 255, 0.05) !important;
+}
+
+.cyberpunk-style .local-pane .ssh-monitor-tree .p-treenode-content:hover,
+.cyberpunk-style .local-pane .ssh-monitor-tree .p-tree-node-content:hover {
+    background: rgba(0, 255, 136, 0.05) !important;
+}
+
+/* ── Opacity popover ─────────────────────────────────────── */
+.cyberpunk-style .ssh-monitor-opacity-popover {
+    background: rgba(7, 13, 25, 0.98) !important;
+    border: 1px solid rgba(0, 229, 255, 0.3) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), 0 0 20px rgba(0, 229, 255, 0.1) !important;
+}
+
+.cyberpunk-style .ssh-monitor-opacity-slider::-webkit-slider-thumb {
+    background: #00e5ff !important;
+    box-shadow: 0 0 6px rgba(0, 229, 255, 0.5) !important;
+}
+
+/* ── Folder dialog ───────────────────────────────────────── */
+.cyberpunk-style .ssh-monitor-panel + .p-dialog {
+    background: rgba(7, 13, 25, 0.98) !important;
+    border: 1px solid rgba(0, 229, 255, 0.35) !important;
+    box-shadow: 0 0 30px rgba(0, 229, 255, 0.15) !important;
+}
+
+/* ── Skeleton shimmer in cyberpunk ───────────────────────── */
+.cyberpunk-style .explorer-skeleton-icon,
+.cyberpunk-style .explorer-skeleton-label,
+.cyberpunk-style .explorer-skeleton-size {
+    background: rgba(0, 229, 255, 0.06) !important;
+    animation: cyber-skeleton-shimmer 1.8s ease-in-out infinite !important;
+}
+
+@keyframes cyber-skeleton-shimmer {
+    0%   { background-color: rgba(0, 229, 255, 0.03); }
+    50%  { background-color: rgba(0, 229, 255, 0.09); }
+    100% { background-color: rgba(0, 229, 255, 0.03); }
+}
+
+/* ── Node label font in cyberpunk ───────────────────────── */
+.cyberpunk-style .fs-node-label {
+    font-family: 'Consolas', 'JetBrains Mono', 'Courier New', monospace !important;
+    letter-spacing: 0.01em !important;
+}
+
+/* ── Folder node label — slightly brighter ──────────────── */
+.cyberpunk-style .remote-pane .filesystem-node.fs-node-folder .fs-node-label {
+    color: rgba(0, 229, 255, 0.9) !important;
+}
+
+.cyberpunk-style .local-pane .filesystem-node.fs-node-folder .fs-node-label {
+    color: rgba(0, 255, 136, 0.9) !important;
+}

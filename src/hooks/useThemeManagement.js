@@ -375,12 +375,14 @@ export const useThemeManagement = () => {
   useEffect(() => {
     try {
       localStorage.setItem('sidebarFont', sidebarFont);
+      window.dispatchEvent(new Event('settings-updated'));
     } catch { }
   }, [sidebarFont]);
 
   useEffect(() => {
     try {
       localStorage.setItem('sidebarFontSize', sidebarFontSize.toString());
+      window.dispatchEvent(new Event('settings-updated'));
     } catch { }
   }, [sidebarFontSize]);
 
@@ -391,6 +393,7 @@ export const useThemeManagement = () => {
       } else {
         localStorage.removeItem('sidebarFontColor');
       }
+      window.dispatchEvent(new Event('settings-updated'));
     } catch { }
   }, [sidebarFontColor]);
 

@@ -1691,8 +1691,13 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose, iconTheme = 'mat
         const loadingPathsMap = side === 'local' ? localLoadingPaths : remoteLoadingPaths;
         const keysMap = side === 'local' ? localExpandedKeys : remoteExpandedKeys;
         const selectedKeysSet = side === 'local' ? localSelectedKeys : remoteSelectedKeys;
-        const accentColor = side === 'remote' ? '#58a6ff' : '#3fb950';
-        const accentRgb = side === 'remote' ? '88,166,255' : '63,185,80';
+        const isCyber = explorerColorTheme === 'Cyberpunk';
+        const accentColor = isCyber
+            ? (side === 'remote' ? '#00e5ff' : '#00ff88')
+            : (side === 'remote' ? '#58a6ff' : '#3fb950');
+        const accentRgb = isCyber
+            ? (side === 'remote' ? '0,229,255' : '0,255,136')
+            : (side === 'remote' ? '88,166,255' : '63,185,80');
 
         const isLoading = node?.data?.path ? loadingPathsMap[node.data.path] : false;
         const entry = node?.data?.raw || {};
@@ -1750,7 +1755,7 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose, iconTheme = 'mat
                     cursor: 'pointer', minHeight: '32px', opacity: isHidden ? 0.4 : 1,
                     background: bgColor, boxShadow: bsVal,
                 }}
-                className={`filesystem-node fs-node-${side} ${isHidden ? 'is-hidden-node' : ''} ${isSelected ? 'fs-node-selected' : ''}`}
+                className={`filesystem-node fs-node-${side} ${isDirectory ? 'fs-node-folder' : 'fs-node-file'} ${isHidden ? 'is-hidden-node' : ''} ${isSelected ? 'fs-node-selected' : ''}`}
             >
                 {/* Icon badge */}
                 <span
@@ -1785,7 +1790,7 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose, iconTheme = 'mat
                 </div>
             </div>
         );
-    }, [dragOverKey, formatFileSize, handleContextMenu, handleNavigate, handleNodeClick,
+    }, [dragOverKey, explorerColorTheme, formatFileSize, handleContextMenu, handleNavigate, handleNodeClick,
         localLoadingPaths, remoteLoadingPaths, localExpandedKeys, remoteExpandedKeys,
         localSelectedKeys, remoteSelectedKeys]);
 
@@ -1847,8 +1852,13 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose, iconTheme = 'mat
         const nodes = isRemote ? remoteNodes : localNodes;
         const defaultRoot = isRemote ? '/' : 'C:\\';
         const separator = isRemote ? '/' : '\\';
-        const accentColor = isRemote ? '#58a6ff' : '#3fb950';
-        const accentRgb = isRemote ? '88,166,255' : '63,185,80';
+        const isCyber = explorerColorTheme === 'Cyberpunk';
+        const accentColor = isCyber
+            ? (isRemote ? '#00e5ff' : '#00ff88')
+            : (isRemote ? '#58a6ff' : '#3fb950');
+        const accentRgb = isCyber
+            ? (isRemote ? '0,229,255' : '0,255,136')
+            : (isRemote ? '88,166,255' : '63,185,80');
 
         const handleUpLevel = () => {
             if (!currentPath || currentPath === defaultRoot || currentPath === '/') return;
@@ -1945,8 +1955,13 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose, iconTheme = 'mat
                             <span className="explorer-panel-label-dot" style={{ background: accentColor }} />
                             <i className={isRemote ? 'pi pi-server explorer-panel-label-icon' : 'pi pi-desktop explorer-panel-label-icon'} style={{ color: accentColor }} />
                             <span className="explorer-panel-label-text" style={{ color: accentColor }}>
-                                {isRemote ? 'Remoto' : 'Local'}
+                                {explorerColorTheme === 'Cyberpunk' ? (isRemote ? 'REMOTE' : 'LOCAL') : (isRemote ? 'Remoto' : 'Local')}
                             </span>
+                            {explorerColorTheme === 'Cyberpunk' && (
+                                <span className="cyber-dial-indicator" style={{ color: accentColor, borderColor: accentColor }}>
+                                    <span className="cyber-dial-dot" style={{ backgroundColor: accentColor }} />
+                                </span>
+                            )}
                         </div>
 
                         <div className="explorer-toolbar-divider" />
@@ -2112,7 +2127,7 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose, iconTheme = 'mat
             />
 
             <div 
-                className={`ssh-monitor-panel ${hasMounted || isResizing ? 'no-animation' : ''}`} 
+                className={`ssh-monitor-panel ${hasMounted || isResizing ? 'no-animation' : ''} ${explorerColorTheme === 'Cyberpunk' ? 'cyberpunk-style' : ''}`} 
                 style={{ 
                     display: 'flex', 
                     flexDirection: 'column',
@@ -2305,8 +2320,15 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose, iconTheme = 'mat
                                             {showSep && (
                                                 <div className="fs-section-separator">
                                                     <div className="fs-section-separator-line" />
-                                                    <span className="fs-section-separator-label">{fileCount} archivo{fileCount !== 1 ? 's' : ''}</span>
+                                                    <span className="fs-section-separator-label">
+                                                        {explorerColorTheme === 'Cyberpunk' ? 'FOLDER' : `${fileCount} archivo${fileCount !== 1 ? 's' : ''}`}
+                                                    </span>
                                                     <div className="fs-section-separator-line" />
+                                                    {explorerColorTheme === 'Cyberpunk' && (
+                                                        <span className="fs-section-separator-badge">
+                                                            {fileCount} FILES
+                                                        </span>
+                                                    )}
                                                 </div>
                                             )}
                                             {showSep && (
@@ -2378,8 +2400,15 @@ const SSHFileExplorerPanel = ({ tabId, tab, sshConfig, onClose, iconTheme = 'mat
                                             {showSep && (
                                                 <div className="fs-section-separator">
                                                     <div className="fs-section-separator-line" />
-                                                    <span className="fs-section-separator-label">{fileCount} archivo{fileCount !== 1 ? 's' : ''}</span>
+                                                    <span className="fs-section-separator-label">
+                                                        {explorerColorTheme === 'Cyberpunk' ? 'FILES' : `${fileCount} archivo${fileCount !== 1 ? 's' : ''}`}
+                                                    </span>
                                                     <div className="fs-section-separator-line" />
+                                                    {explorerColorTheme === 'Cyberpunk' && (
+                                                        <span className="fs-section-separator-badge">
+                                                            {fileCount} FILES
+                                                        </span>
+                                                    )}
                                                 </div>
                                             )}
                                             {showSep && (

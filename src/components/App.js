@@ -3260,9 +3260,13 @@ const App = () => {
     folderIconSize: folderIconSize,
     connectionIconSize: connectionIconSize,
     explorerFont: sidebarFont,
+    setExplorerFont: setSidebarFont,
     explorerFontSize: sidebarFontSize,
+    setExplorerFontSize: setSidebarFontSize,
     explorerFontColor: sidebarFontColor,
+    setExplorerFontColor: setSidebarFontColor,
     uiTheme: uiTheme || 'Light',
+    setIconSize: setIconSize,
     showToast: toast.current && toast.current.show ? toast.current.show : undefined,
     confirmDialog: confirmDialog,
     onOpenSSHConnection,
@@ -3361,7 +3365,7 @@ const App = () => {
   }), [
     isLoadingConnections, nodes, setNodes, sidebarCollapsed, setSidebarCollapsed, allExpanded, toggleExpandAll,
     expandedKeys, setExpandedKeys, setShowCreateGroupDialog, setShowSettingsDialog,
-    iconThemeSidebar, setIconThemeSidebar, iconSize, sidebarFont, sidebarFontSize, sidebarFontColor, terminalTheme, treeTheme, setTreeTheme, sessionActionIconTheme, setSessionActionIconTheme,
+    iconThemeSidebar, setIconThemeSidebar, iconSize, setIconSize, sidebarFont, setSidebarFont, sidebarFontSize, setSidebarFontSize, sidebarFontColor, setSidebarFontColor, terminalTheme, treeTheme, setTreeTheme, sessionActionIconTheme, setSessionActionIconTheme,
     toast, confirmDialog, onOpenSSHConnection, onNodeContextMenu, onTreeAreaContextMenu, hideContextMenu,
     sidebarCallbacksRef, selectedNodeKey, setSelectedNodeKey, activeTab, openFileExplorer, openSessionNodeKeys,
 

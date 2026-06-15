@@ -140,11 +140,15 @@ const Sidebar = React.memo(({
   iconTheme,
   setIconTheme,
   iconSize = 20,
+  setIconSize,
   folderIconSize = 20,
   connectionIconSize = 20,
   explorerFont,
+  setExplorerFont,
   explorerFontSize = 14,
+  setExplorerFontSize,
   explorerFontColor,
+  setExplorerFontColor,
   uiTheme = 'Light',
   showToast, // callback opcional para mostrar toast global
   confirmDialog, // callback para mostrar diálogo de confirmación
@@ -3151,6 +3155,14 @@ const Sidebar = React.memo(({
               setIconTheme={setIconTheme}
               sessionActionIconTheme={sessionActionIconTheme}
               setSessionActionIconTheme={setSessionActionIconTheme}
+              explorerFont={explorerFont}
+              setExplorerFont={setExplorerFont}
+              explorerFontSize={explorerFontSize}
+              setExplorerFontSize={setExplorerFontSize}
+              explorerFontColor={explorerFontColor}
+              setExplorerFontColor={setExplorerFontColor}
+              iconSize={iconSize}
+              setIconSize={setIconSize}
               tooltip="Apariencia del árbol"
             />
           )}
