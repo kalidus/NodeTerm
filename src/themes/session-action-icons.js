@@ -2280,9 +2280,9 @@ export const newDocumentToolbarIcon = sessionActionIconThemes.modern.icons.newDo
 
 export const getDefaultSessionActionIconTheme = () => {
   try {
-    return localStorage.getItem('sessionActionIconTheme') || 'modern';
+    return localStorage.getItem('sessionActionIconTheme') || 'classic';
   } catch {
-    return 'modern';
+    return 'classic';
   }
 };
 

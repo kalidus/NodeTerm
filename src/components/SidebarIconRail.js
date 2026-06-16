@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import AIClientBrandIcon from './AIClientBrandIcon';
 import { sessionActionIconThemes } from '../themes/session-action-icons';
+import { railIcons } from '../themes/rail-icons';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
 
@@ -86,6 +87,7 @@ const SidebarIconRail = React.memo(({
         {SECTIONS.map(section => {
           const isActive = panelOpen && activeSection === section.id;
           const tooltip = section.labelKey ? t(section.labelKey) : section.label;
+          const customIcon = railIcons[sessionActionIconTheme]?.[section.id];
           return (
             <button
               key={section.id}
@@ -94,7 +96,13 @@ const SidebarIconRail = React.memo(({
               title={tooltip}
               style={{ '--rail-item-color': section.color }}
             >
-              <i className={section.icon} style={{ fontSize: `${Math.round(ICON_SIZE * 0.75)}px` }} />
+              {customIcon ? (
+                <span className="sidebar-rail-svg-wrapper" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {customIcon}
+                </span>
+              ) : (
+                <i className={section.icon} style={{ fontSize: `${Math.round(ICON_SIZE * 0.75)}px` }} />
+              )}
             </button>
           );
         })}

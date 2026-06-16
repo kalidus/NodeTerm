@@ -268,9 +268,9 @@ export const useThemeManagement = () => {
   // Session action icons theme state
   const [sessionActionIconTheme, setSessionActionIconTheme] = useState(() => {
     try {
-      return localStorage.getItem('sessionActionIconTheme') || 'modern';
+      return localStorage.getItem('sessionActionIconTheme') || 'classic';
     } catch {
-      return 'modern';
+      return 'classic';
     }
   });
 
@@ -507,7 +507,7 @@ export const useThemeManagement = () => {
     const updatedIconTheme = localStorage.getItem('iconTheme') || 'nord';
     const updatedIconThemeSidebar = localStorage.getItem('iconThemeSidebar') || 'nord';
     const updatedTreeTheme = localStorage.getItem(TREE_THEME_STORAGE_KEY) || 'cursorCompact';
-    const updatedSessionActionIconTheme = localStorage.getItem('sessionActionIconTheme') || 'modern';
+    const updatedSessionActionIconTheme = localStorage.getItem('sessionActionIconTheme') || 'classic';
     const updatedUiTheme = localStorage.getItem('ui_theme') || 'Light';
 
     // Actualizar estados
