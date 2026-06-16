@@ -305,19 +305,6 @@ const SettingsSidebar = ({
           >
             {node.label}
           </div>
-          <div
-            style={{
-              fontSize: '0.7rem',
-              color: 'var(--ui-sidebar-text)',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              opacity: isHovered ? 0.85 : 0.55,
-              transition: 'opacity 0.12s ease'
-            }}
-          >
-            {node.description}
-          </div>
         </div>
         {isHovered && (
           <i
