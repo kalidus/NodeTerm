@@ -119,14 +119,16 @@
   border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.22)) !important;
   margin-bottom: 0 !important;
   background: var(--home-tab-theme-bg, var(--ui-tab-bg, rgba(255, 255, 255, 0.04))) !important;
+  color: var(--ui-tab-text, rgba(255, 255, 255, 0.65)) !important;
   transition: background 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.15s !important;
   outline: none !important;
 }
 
 .p-tabview .p-tabview-nav li.home-tab.p-highlight .p-tabview-nav-link {
-  border-color: var(--ui-home-tab-accent, var(--ui-button-primary)) !important;
-  background: var(--home-tab-active-bg, var(--ui-tab-active-bg, rgba(255, 255, 255, 0.06))) !important;
-  box-shadow: 0 0 0 1px var(--ui-home-tab-accent-subtle, rgba(0,0,0,0.15)) !important;
+  border-color: var(--ui-tab-border, rgba(255, 255, 255, 0.22)) !important;
+  background: var(--ui-tab-active-bg, rgba(255, 255, 255, 0.12)) !important;
+  color: var(--ui-tab-active-text, #ffffff) !important;
+  box-shadow: none !important;
 }
 
 .p-tabview .p-tabview-nav li.home-tab:not(.p-highlight) .p-tabview-nav-link:hover {

@@ -133,27 +133,27 @@ const TabHeader = React.memo(({
   const homeTabStyles = useMemo(() => {
     if (!isHomeTab) return {};
 
+    if (selected) {
+      // Dejar que el CSS maneje el estilo activo para que sea idéntico a las otras pestañas
+      return {};
+    }
+
     // En temas oscuros usamos un fondo algo más claro para que el botón Home
     // siempre tenga contraste suficiente con la barra.
     const idleBackground = isDarkTheme
       ? 'rgba(255,255,255,0.10)'
       : 'rgba(0,0,0,0.03)';
 
-    const selectedBackground =
-      currentTheme.colors?.tabSelectedBackground ||
-      `linear-gradient(90deg, ${primaryColor}25, ${primaryColor}55)`;
+    const idleColor = currentTheme.colors?.tabText || (isDarkTheme ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)');
 
     return {
-      background: selected ? selectedBackground : idleBackground,
+      background: idleBackground,
+      color: idleColor,
       borderRadius: 999,
-      border: selected
-        ? `1px solid ${primaryColor}`
-        : `1px solid transparent`,
-      boxShadow: selected
-        ? `0 0 0 1px ${primaryColor}40, 0 0 14px ${primaryColor}33`
-        : 'none'
+      border: `1px solid transparent`,
+      boxShadow: 'none'
     };
-  }, [isHomeTab, selected, primaryColor, isDarkTheme, currentTheme]);
+  }, [isHomeTab, selected, isDarkTheme, currentTheme]);
 
   // Función para obtener colores según la categoría (igual que en NodeTermStatus)
   const getColorForCategory = (category) => {
