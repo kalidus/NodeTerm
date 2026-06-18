@@ -261,7 +261,7 @@
       "select": "Select a Layout",
       "options": {
         "default": "Modern (Rounded)",
-        "modern-custom": "Modern (Custom)",
+        "unified-rounded": "Modern (Custom)",
         "cyberpunk": "Cyberpunk (Angular)"
       }
     },

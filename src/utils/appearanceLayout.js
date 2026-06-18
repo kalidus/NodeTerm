@@ -12,7 +12,11 @@ export function applyUILayoutFromStorage() {
     return 'unified';
   }
 
-  const layoutId = localStorage.getItem(UI_LAYOUT_STORAGE_KEY) || 'unified';
+  let layoutId = localStorage.getItem(UI_LAYOUT_STORAGE_KEY) || 'unified';
+  if (layoutId === 'modern-custom') {
+    layoutId = 'unified-rounded';
+    localStorage.setItem(UI_LAYOUT_STORAGE_KEY, 'unified-rounded');
+  }
   document.body.classList.remove(...LAYOUT_BODY_CLASSES);
   document.body.classList.add(`layout-${layoutId}`);
   if (window.electronAPI && window.electronAPI.setWindowCorners) {

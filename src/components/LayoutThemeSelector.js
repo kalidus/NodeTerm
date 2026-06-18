@@ -41,7 +41,7 @@ const LayoutThemeSelector = () => {
       window.dispatchEvent(new CustomEvent('settings-updated', { 
         detail: { source: 'layout-sync' } 
       }));
-    } else if (layoutId === 'default' || layoutId === 'modern-custom') {
+    } else if (layoutId === 'default') {
       localStorage.setItem('iconTheme', 'ghost_ui');
       localStorage.setItem('iconThemeSidebar', 'ghost_ui');
       // Dispatch event to notify useThemeManagement and other components
@@ -129,77 +129,6 @@ const LayoutThemeSelector = () => {
       )
     },
     {
-      id: 'modern-custom',
-      name: 'Moderno (Personalizado)',
-      description: 'Copia del estilo moderno redondeado con soporte para tus propias modificaciones personalizadas.',
-      icon: 'pi-clone',
-      preview: () => (
-        <div style={{
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          backgroundColor: '#0a0f1d',
-          padding: '6px',
-          boxSizing: 'border-box',
-          gap: '5px'
-        }}>
-          {/* Header/Titlebar Mockup */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            padding: '2px 4px',
-            backgroundColor: '#111827',
-            borderRadius: '4px',
-            height: '14px'
-          }}>
-            <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#ef4444' }}></div>
-            <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#f59e0b' }}></div>
-            <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#10b981' }}></div>
-            <div style={{ flex: 1, height: '3px', backgroundColor: 'var(--ui-button-primary, #6366f1)', borderRadius: '2px', marginLeft: '6px', opacity: 0.5 }}></div>
-          </div>
-          {/* Workspace Area Mockup with cards and rounded corners */}
-          <div style={{ display: 'flex', flex: 1, gap: '6px', minHeight: 0 }}>
-            {/* Sidebar Card */}
-            <div style={{
-              width: '28%',
-              backgroundColor: '#111827',
-              borderRadius: '6px',
-              border: '1px solid rgba(255, 255, 255, 0.05)',
-              display: 'flex',
-              flexDirection: 'column',
-              padding: '4px',
-              gap: '3px',
-              boxSizing: 'border-box'
-            }}>
-              <div style={{ width: '80%', height: '4px', backgroundColor: 'var(--ui-button-primary, #6366f1)', borderRadius: '2px' }}></div>
-              <div style={{ width: '60%', height: '3px', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '1.5px' }}></div>
-              <div style={{ width: '70%', height: '3px', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '1.5px' }}></div>
-            </div>
-            {/* Content Card with visual highlight */}
-            <div style={{
-              flex: 1,
-              backgroundColor: '#1f2937',
-              borderRadius: '6px',
-              border: '1px solid var(--ui-button-primary, #6366f1)',
-              padding: '6px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px',
-              boxSizing: 'border-box',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
-            }}>
-              {/* Tab mockup */}
-              <div style={{ width: '45%', height: '8px', backgroundColor: '#111827', borderRadius: '3px', border: '1px solid rgba(255,255,255,0.06)' }}></div>
-              {/* Terminal Area */}
-              <div style={{ flex: 1, backgroundColor: '#0a0f1d', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.05)' }}></div>
-            </div>
-          </div>
-        </div>
-      )
-    },
-    {
       id: 'unified',
       name: 'Unificado (Seamless)',
       description: 'Estilo continuo sin bordes ni márgenes. La barra de título, la barra lateral y la pantalla de contenido se integran.',
@@ -269,7 +198,7 @@ const LayoutThemeSelector = () => {
     },
     {
       id: 'unified-rounded',
-      name: 'Unificado (Esquinas Redondeadas)',
+      name: 'Moderno (Personalizado)',
       description: 'Estilo continuo basado en el unificado, pero manteniendo las esquinas redondeadas en las pantallas para un toque elegante.',
       icon: 'pi-stop',
       preview: () => (
