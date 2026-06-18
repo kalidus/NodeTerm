@@ -3070,18 +3070,13 @@ ipcMain.handle('window:close', () => {
   if (mainWindow) mainWindow.close();
 });
 ipcMain.handle('window:set-corners', (event, layoutId) => {
-  console.log(`[WindowCorners] IPC window:set-corners received with layoutId: ${layoutId}`);
   if (mainWindow) {
     applyWindowCornersForLayout(mainWindow, layoutId);
-  } else {
-    console.warn('[WindowCorners] IPC received but mainWindow is null');
   }
 });
 
 function applyWindowCornersForLayout(win, layoutId) {
-  console.log(`[WindowCorners] applyWindowCornersForLayout called with layoutId: ${layoutId}`);
   if (process.platform !== 'win32' || !win || win.isDestroyed()) {
-    console.log(`[WindowCorners] Skipping: platform=${process.platform}, winExists=${!!win}, winDestroyed=${win ? win.isDestroyed() : 'N/A'}`);
     return;
   }
   
@@ -3112,7 +3107,6 @@ function applyWindowCornersForLayout(win, layoutId) {
     }
 
     const { spawn } = require('child_process');
-    console.log(`[WindowCorners] Executing inline DWM corners update for HWND=${hwndAddress} preference=${preference}`);
     
     const minimalEnv = {};
     const keysToKeep = ['SystemRoot', 'windir', 'PATH', 'PSModulePath', 'USERPROFILE', 'SystemDrive', 'TEMP', 'TMP'];
@@ -3154,27 +3148,24 @@ Write-Host "SUCCESS HWND=${hwndAddress} preference=${preference} DwmRes=$res Set
       env: minimalEnv
     });
 
+    // Sub-process listeners defined to consume stdout/stderr stream but output nothing to console
     child.on('error', (err) => {
-      console.error('[WindowCorners] Failed to start PowerShell child process:', err);
+      // Ignored console.error
     });
     
     child.stdout.on('data', (data) => {
-      console.log(`[WindowCorners] PowerShell stdout: ${data.toString().trim()}`);
+      // Ignored console.log
     });
 
     child.stderr.on('data', (data) => {
-      console.error(`[WindowCorners] PowerShell stderr: ${data.toString().trim()}`);
+      // Ignored console.error
     });
 
     child.on('close', (code) => {
-      if (code !== 0) {
-        console.warn(`[WindowCorners] PowerShell process exited with code ${code}`);
-      } else {
-        console.log(`[WindowCorners] PowerShell process finished successfully`);
-      }
+      // Ignored close log
     });
   } catch (err) {
-    console.error('[WindowCorners] Error setting window corner preference:', err);
+    // Ignored error log
   }
 }
 
