@@ -107,16 +107,21 @@ const ToolbarButton = ({ onClick, isActive, disabled, title, children }) => (
 
 const ToolbarSeparator = () => <div className="toolbar-separator" />;
 
-const EditorToolbar = ({
-  editor,
-  onInsertTemplate,
-  isPlayingSpeech,
-  onToggleSpeech,
-  onOpenAiAssist,
-  isZenMode,
-  onToggleZen,
-  onPrint
-}) => {
+const EditorToolbar = ({ editor }) => {
+  const [activeDropdown, setActiveDropdown] = useState(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (!e.target.closest('.toolbar-template-dropdown')) {
+        setActiveDropdown(null);
+      }
+    };
+    document.addEventListener('click', handleOutsideClick, true);
+    return () => {
+      document.removeEventListener('click', handleOutsideClick, true);
+    };
+  }, []);
+
   if (!editor || editor.isDestroyed || !editor.schema) return null;
 
   const addImage = () => {
@@ -131,8 +136,21 @@ const EditorToolbar = ({
     }
   };
 
+  const getActiveHeadingLabel = () => {
+    if (editor.isActive('heading', { level: 1 })) return 'Título 1';
+    if (editor.isActive('heading', { level: 2 })) return 'Título 2';
+    if (editor.isActive('heading', { level: 3 })) return 'Título 3';
+    return 'Normal';
+  };
+
+  const getActiveAlignIcon = () => {
+    if (editor.isActive({ textAlign: 'center' })) return 'pi pi-align-center';
+    if (editor.isActive({ textAlign: 'right' })) return 'pi pi-align-right';
+    return 'pi pi-align-left';
+  };
+
   return (
-    <div className="document-editor-toolbar">
+    <div className="document-editor-toolbar-items">
       {/* Grupo 1: Formato básico */}
       <div className="toolbar-group">
         <ToolbarButton
@@ -140,63 +158,60 @@ const EditorToolbar = ({
           isActive={editor.isActive('bold')}
           title="Negrita (Ctrl+B)"
         >
-          <FaBold size={13} />
+          <FaBold size={11} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleItalic().run()}
           isActive={editor.isActive('italic')}
           title="Cursiva (Ctrl+I)"
         >
-          <FaItalic size={13} />
+          <FaItalic size={11} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleUnderline().run()}
           isActive={editor.isActive('underline')}
           title="Subrayado (Ctrl+U)"
         >
-          <FaUnderline size={13} />
+          <FaUnderline size={11} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleStrike().run()}
           isActive={editor.isActive('strike')}
           title="Tachado"
         >
-          <i className="pi pi-minus" />
+          <i className="pi pi-minus" style={{ fontSize: '0.75rem' }} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleHighlight().run()}
           isActive={editor.isActive('highlight')}
           title="Resaltar"
         >
-          <i className="pi pi-sun" />
+          <i className="pi pi-sun" style={{ fontSize: '0.75rem' }} />
         </ToolbarButton>
       </div>
 
       <ToolbarSeparator />
 
-      {/* Grupo 2: Títulos */}
+      {/* Grupo 2: Títulos (Desplegable) */}
       <div className="toolbar-group">
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-          isActive={editor.isActive('heading', { level: 1 })}
-          title="Título 1"
-        >
-          H1
-        </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          isActive={editor.isActive('heading', { level: 2 })}
-          title="Título 2"
-        >
-          H2
-        </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-          isActive={editor.isActive('heading', { level: 3 })}
-          title="Título 3"
-        >
-          H3
-        </ToolbarButton>
+        <div className="toolbar-template-dropdown" style={{ position: 'relative' }}>
+          <button
+            className="toolbar-dropdown-btn"
+            title="Estilos de texto"
+            type="button"
+            onClick={() => setActiveDropdown(activeDropdown === 'styles' ? null : 'styles')}
+            style={{ display: 'flex', gap: '2px', width: '30px' }}
+          >
+            <i className="pi pi-text" style={{ fontSize: '0.75rem' }} />
+            <i className="pi pi-chevron-down" style={{ fontSize: '0.55rem', opacity: 0.7 }} />
+          </button>
+          <div className={`template-dropdown-menu ${activeDropdown === 'styles' ? 'show' : ''}`} style={{ minWidth: '130px', left: 0 }}>
+            <div onClick={() => { editor.chain().focus().setParagraph().run(); setActiveDropdown(null); }} className={!editor.isActive('heading') ? 'active-item' : ''}>Normal</div>
+            <div onClick={() => { editor.chain().focus().toggleHeading({ level: 1 }).run(); setActiveDropdown(null); }} className={editor.isActive('heading', { level: 1 }) ? 'active-item' : ''} style={{ fontWeight: 'bold' }}>Título 1</div>
+            <div onClick={() => { editor.chain().focus().toggleHeading({ level: 2 }).run(); setActiveDropdown(null); }} className={editor.isActive('heading', { level: 2 }) ? 'active-item' : ''} style={{ fontWeight: 'bold' }}>Título 2</div>
+            <div onClick={() => { editor.chain().focus().toggleHeading({ level: 3 }).run(); setActiveDropdown(null); }} className={editor.isActive('heading', { level: 3 }) ? 'active-item' : ''} style={{ fontWeight: 'bold' }}>Título 3</div>
+          </div>
+        </div>
       </div>
 
       <ToolbarSeparator />
@@ -208,21 +223,21 @@ const EditorToolbar = ({
           isActive={editor.isActive('bulletList')}
           title="Lista de viñetas"
         >
-          <i className="pi pi-list" />
+          <i className="pi pi-list" style={{ fontSize: '0.75rem' }} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
           isActive={editor.isActive('orderedList')}
           title="Lista numerada"
         >
-          <i className="pi pi-sort-numeric-up" />
+          <i className="pi pi-sort-numeric-up" style={{ fontSize: '0.75rem' }} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleTaskList().run()}
           isActive={editor.isActive('taskList')}
           title="Lista de tareas"
         >
-          <i className="pi pi-check-square" />
+          <i className="pi pi-check-square" style={{ fontSize: '0.75rem' }} />
         </ToolbarButton>
       </div>
 
@@ -235,20 +250,20 @@ const EditorToolbar = ({
           isActive={editor.isActive('blockquote')}
           title="Cita"
         >
-          <i className="pi pi-comment" />
+          <i className="pi pi-comment" style={{ fontSize: '0.75rem' }} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleCodeBlock().run()}
           isActive={editor.isActive('codeBlock')}
           title="Bloque de código"
         >
-          <i className="pi pi-code" />
+          <i className="pi pi-code" style={{ fontSize: '0.75rem' }} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().setHorizontalRule().run()}
           title="Línea horizontal"
         >
-          <i className="pi pi-minus" style={{ transform: 'scaleX(1.5)' }} />
+          <i className="pi pi-minus" style={{ transform: 'scaleX(1.3)', fontSize: '0.75rem' }} />
         </ToolbarButton>
       </div>
 
@@ -260,41 +275,47 @@ const EditorToolbar = ({
           onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
           title="Insertar tabla"
         >
-          <i className="pi pi-table" />
+          <i className="pi pi-table" style={{ fontSize: '0.75rem' }} />
         </ToolbarButton>
         <ToolbarButton onClick={addImage} title="Insertar imagen">
-          <i className="pi pi-image" />
+          <i className="pi pi-image" style={{ fontSize: '0.75rem' }} />
         </ToolbarButton>
         <ToolbarButton onClick={addLink} isActive={editor.isActive('link')} title="Insertar enlace">
-          <i className="pi pi-link" />
+          <i className="pi pi-link" style={{ fontSize: '0.75rem' }} />
         </ToolbarButton>
       </div>
 
       <ToolbarSeparator />
 
-      {/* Grupo 6: Alineación */}
+      {/* Grupo 6: Alineación (Desplegable) */}
       <div className="toolbar-group">
-        <ToolbarButton
-          onClick={() => editor.chain().focus().setTextAlign('left').run()}
-          isActive={editor.isActive({ textAlign: 'left' })}
-          title="Alinear izquierda"
-        >
-          <i className="pi pi-align-left" />
-        </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().setTextAlign('center').run()}
-          isActive={editor.isActive({ textAlign: 'center' })}
-          title="Centrar"
-        >
-          <i className="pi pi-align-center" />
-        </ToolbarButton>
-        <ToolbarButton
-          onClick={() => editor.chain().focus().setTextAlign('right').run()}
-          isActive={editor.isActive({ textAlign: 'right' })}
-          title="Alinear derecha"
-        >
-          <i className="pi pi-align-right" />
-        </ToolbarButton>
+        <div className="toolbar-template-dropdown" style={{ position: 'relative' }}>
+          <button
+            className="toolbar-dropdown-btn"
+            title="Alineación"
+            type="button"
+            onClick={() => setActiveDropdown(activeDropdown === 'align' ? null : 'align')}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--ui-content-text, #94a3b8)',
+              cursor: 'pointer',
+              padding: '0 4px',
+              height: '26px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '2px'
+            }}
+          >
+            <i className={getActiveAlignIcon()} style={{ fontSize: '0.75rem' }} />
+            <i className="pi pi-chevron-down" style={{ fontSize: '0.55rem', opacity: 0.7 }} />
+          </button>
+          <div className={`template-dropdown-menu ${activeDropdown === 'align' ? 'show' : ''}`} style={{ minWidth: '120px', left: 0 }}>
+            <div onClick={() => { editor.chain().focus().setTextAlign('left').run(); setActiveDropdown(null); }} className={editor.isActive({ textAlign: 'left' }) || (!editor.isActive({ textAlign: 'center' }) && !editor.isActive({ textAlign: 'right' })) ? 'active-item' : ''}><i className="pi pi-align-left" style={{ marginRight: '6px' }} /> Izquierda</div>
+            <div onClick={() => { editor.chain().focus().setTextAlign('center').run(); setActiveDropdown(null); }} className={editor.isActive({ textAlign: 'center' }) ? 'active-item' : ''}><i className="pi pi-align-center" style={{ marginRight: '6px' }} /> Centro</div>
+            <div onClick={() => { editor.chain().focus().setTextAlign('right').run(); setActiveDropdown(null); }} className={editor.isActive({ textAlign: 'right' }) ? 'active-item' : ''}><i className="pi pi-align-right" style={{ marginRight: '6px' }} /> Derecha</div>
+          </div>
+        </div>
       </div>
 
       <ToolbarSeparator />
@@ -306,114 +327,15 @@ const EditorToolbar = ({
           disabled={!editor.can().undo()}
           title="Deshacer (Ctrl+Z)"
         >
-          <i className="pi pi-undo" />
+          <i className="pi pi-undo" style={{ fontSize: '0.75rem' }} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().redo().run()}
           disabled={!editor.can().redo()}
           title="Rehacer (Ctrl+Y)"
         >
-          <i className="pi pi-replay" />
+          <i className="pi pi-replay" style={{ fontSize: '0.75rem' }} />
         </ToolbarButton>
-      </div>
-
-      <ToolbarSeparator />
-
-      {/* NUEVO: Funcionalidades Premium en Toolbar */}
-      <div className="toolbar-group premium-tools" style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
-        {/* Plantillas Dropdown */}
-        <div className="toolbar-template-dropdown" style={{ position: 'relative' }}>
-          <button
-            className="toolbar-premium-btn"
-            title="Insertar Plantilla Técnica"
-            type="button"
-            onClick={(e) => {
-              const menu = e.currentTarget.nextElementSibling;
-              if (menu) {
-                menu.classList.toggle('show');
-                const closeMenu = (evt) => {
-                  if (!e.currentTarget.contains(evt.target) && !menu.contains(evt.target)) {
-                    menu.classList.remove('show');
-                    document.removeEventListener('click', closeMenu);
-                  }
-                };
-                document.addEventListener('click', closeMenu);
-              }
-            }}
-            style={{ border: '1px solid rgba(16, 185, 129, 0.3)', color: '#10b981', background: 'rgba(16, 185, 129, 0.05)' }}
-          >
-            <i className="pi pi-clone" style={{ marginRight: '4px' }} />
-            Plantillas
-          </button>
-          <div className="template-dropdown-menu">
-            <div onClick={() => onInsertTemplate(NOTE_TEMPLATES.meeting)}><i className="pi pi-calendar" /> Minuta de Reunión</div>
-            <div onClick={() => onInsertTemplate(NOTE_TEMPLATES.bug)}><i className="pi pi-exclamation-triangle" /> Reporte de Bug (QA)</div>
-            <div onClick={() => onInsertTemplate(NOTE_TEMPLATES.ssh)}><i className="pi pi-desktop" /> Bitácora SSH / Comandos</div>
-            <div onClick={() => onInsertTemplate(NOTE_TEMPLATES.todo)}><i className="pi pi-list" /> Planificador de Objetivos</div>
-          </div>
-        </div>
-
-        {/* Lector TTS */}
-        <button
-          className={`toolbar-premium-btn ${isPlayingSpeech ? 'active-reading' : ''}`}
-          onClick={onToggleSpeech}
-          title={isPlayingSpeech ? "Detener lector" : "Leer nota en voz alta (TTS)"}
-          type="button"
-          style={{
-            border: isPlayingSpeech ? '1px solid #ff9800' : '1px solid rgba(255, 152, 0, 0.3)',
-            color: '#ff9800',
-            background: isPlayingSpeech ? 'rgba(255, 152, 0, 0.15)' : 'rgba(255, 152, 0, 0.05)'
-          }}
-        >
-          <i className={isPlayingSpeech ? "pi pi-volume-off" : "pi pi-volume-up"} />
-        </button>
-
-        {/* AI Sparkles */}
-        <button
-          className="toolbar-premium-btn"
-          onClick={onOpenAiAssist}
-          title="Asistente de Escritura IA"
-          type="button"
-          style={{
-            border: '1px solid rgba(156, 39, 176, 0.4)',
-            color: '#c792ea',
-            background: 'rgba(156, 39, 176, 0.05)'
-          }}
-        >
-          <i style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><HiSparkles size={14} /></i>
-        </button>
-
-        {/* Imprimir */}
-        <button
-          className="toolbar-premium-btn"
-          onClick={onPrint}
-          title="Imprimir / Exportar PDF"
-          type="button"
-          style={{
-            border: '1px solid rgba(100, 181, 246, 0.3)',
-            color: '#64b5f6',
-            background: 'rgba(100, 181, 246, 0.05)'
-          }}
-        >
-          <i className="pi pi-print" />
-        </button>
-
-        {/* Modo Zen */}
-        <button
-          className={`toolbar-premium-btn ${isZenMode ? 'zen-active' : ''}`}
-          onClick={onToggleZen}
-          title={isZenMode ? "Salir de Modo Zen" : "Modo Concentración Zen"}
-          type="button"
-          style={{
-            border: isZenMode ? '1px solid #10b981' : '1px solid rgba(255, 255, 255, 0.15)',
-            color: isZenMode ? '#10b981' : 'var(--ui-content-text, #ccc)',
-            background: isZenMode ? 'rgba(16, 185, 129, 0.15)' : 'transparent'
-          }}
-        >
-          <i style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-            {isZenMode ? <FiMinimize2 size={14} /> : <FiMaximize2 size={14} />}
-          </i>
-        </button>
       </div>
     </div>
   );
@@ -440,6 +362,21 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResult, setAiResult] = useState('');
   const [aiActionType, setAiActionType] = useState(''); // 'summary', 'tasks', 'rewrite', 'translate'
+
+  // Dropdown States and handlers
+  const [activeDropdown, setActiveDropdown] = useState(null); // 'templates' | 'more' | null
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (!e.target.closest('.toolbar-template-dropdown')) {
+        setActiveDropdown(null);
+      }
+    };
+    document.addEventListener('click', handleOutsideClick, true);
+    return () => {
+      document.removeEventListener('click', handleOutsideClick, true);
+    };
+  }, []);
 
   // Document Metrics State
   const [metrics, setMetrics] = useState({
@@ -958,32 +895,39 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
   return (
     <div className={`document-editor-container ${isZenMode ? `zen-mode-active zen-theme-${zenTheme}` : ''}`}>
       
-      {/* CABECERA PRINCIPAL */}
+      {/* CABECERA PRINCIPAL UNIFICADA */}
       <div className="document-editor-header">
-        <div className="document-editor-title">
-          <i className="pi pi-file-edit" />
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {documentData?.label || 'Sin título'}
-          </span>
+        <div className="document-editor-title-container">
+          <div className="document-editor-title">
+            <i className="pi pi-file-edit" />
+            <span className="title-text">
+              {documentData?.label || 'Sin título'}
+            </span>
+          </div>
+          <div className={`document-editor-status-dot ${saveStatus}`} title={
+            saveStatus === 'saved' ? 'Guardado' : saveStatus === 'saving' ? 'Guardando...' : 'Sin guardar'
+          }>
+            <span className="dot" />
+          </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {/* Barra de Formato Central (Solo en Visual) */}
+        {viewMode === 'wysiwyg' && (
+          <div className="document-editor-toolbar-center">
+            <EditorToolbar editor={editor} />
+          </div>
+        )}
+
+        <div className="document-editor-actions-container">
           
           {/* Lector TTS Rate Slider (Solo se muestra cuando está hablando) */}
           {isPlayingSpeech && (
-            <div className="tts-rate-control" style={{ display: 'flex', alignItems: 'center', gap: 6, marginRight: 8 }}>
-              <span style={{ fontSize: '0.75rem', color: '#ff9800' }}>Velocidad:</span>
+            <div className="tts-rate-control">
+              <span className="tts-label">Velocidad:</span>
               <select
                 value={speechRate}
                 onChange={(e) => handleSpeechRateChange(parseFloat(e.target.value))}
-                style={{
-                  background: 'rgba(0,0,0,0.3)',
-                  color: 'white',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 4,
-                  fontSize: '0.75rem',
-                  padding: '2px 4px'
-                }}
+                className="tts-select"
               >
                 <option value="0.5">0.5x</option>
                 <option value="1">1.0x</option>
@@ -996,7 +940,7 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
 
           {/* Selector de Tema Zen (Solo en Zen Mode) */}
           {isZenMode && (
-            <div className="zen-theme-selector" style={{ display: 'flex', alignItems: 'center', gap: 4, marginRight: 8 }}>
+            <div className="zen-theme-selector">
               <button
                 className={`theme-badge charcoal ${zenTheme === 'dark-charcoal' ? 'active' : ''}`}
                 onClick={() => setZenTheme('dark-charcoal')}
@@ -1020,6 +964,7 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
             </div>
           )}
 
+          {/* Selector de Modo */}
           <div className="document-mode-toggle">
             <button
               className={viewMode === 'wysiwyg' ? 'active' : ''}
@@ -1037,94 +982,122 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
             </button>
           </div>
 
-          {/* Opciones de portapapeles dropdown */}
-          <div className="toolbar-template-dropdown" style={{ position: 'relative' }}>
+          {/* Herramientas Premium */}
+          <div className="header-premium-actions-group">
+            {/* Plantillas Dropdown */}
+            <div className="toolbar-template-dropdown">
+              <button
+                className="toolbar-premium-btn"
+                title="Insertar Plantilla Técnica"
+                type="button"
+                onClick={() => setActiveDropdown(activeDropdown === 'templates' ? null : 'templates')}
+                style={{ border: '1px solid rgba(16, 185, 129, 0.3)', color: '#10b981', background: 'rgba(16, 185, 129, 0.05)' }}
+              >
+                <i className="pi pi-clone" />
+                <span className="premium-btn-text">Plantillas</span>
+              </button>
+              <div className={`template-dropdown-menu ${activeDropdown === 'templates' ? 'show' : ''}`}>
+                <div onClick={() => { handleInsertTemplate(NOTE_TEMPLATES.meeting); setActiveDropdown(null); }}><i className="pi pi-calendar" /> Minuta de Reunión</div>
+                <div onClick={() => { handleInsertTemplate(NOTE_TEMPLATES.bug); setActiveDropdown(null); }}><i className="pi pi-exclamation-triangle" /> Reporte de Bug (QA)</div>
+                <div onClick={() => { handleInsertTemplate(NOTE_TEMPLATES.ssh); setActiveDropdown(null); }}><i className="pi pi-desktop" /> Bitácora SSH / Comandos</div>
+                <div onClick={() => { handleInsertTemplate(NOTE_TEMPLATES.todo); setActiveDropdown(null); }}><i className="pi pi-list" /> Planificador de Objetivos</div>
+              </div>
+            </div>
+
+            {/* AI Sparkles */}
             <button
-              title="Copiar nota..."
+              className="toolbar-premium-btn"
+              onClick={() => setShowAiPanel(!showAiPanel)}
+              title="Asistente de Escritura IA"
               type="button"
-              className="toolbar-header-action-btn"
-              onClick={(e) => {
-                const menu = e.currentTarget.nextElementSibling;
-                if (menu) {
-                  menu.classList.toggle('show');
-                  const closeMenu = (evt) => {
-                    if (!e.currentTarget.contains(evt.target) && !menu.contains(evt.target)) {
-                      menu.classList.remove('show');
-                      document.removeEventListener('click', closeMenu);
-                    }
-                  };
-                  document.addEventListener('click', closeMenu);
-                }
+              style={{
+                border: '1px solid rgba(156, 39, 176, 0.4)',
+                color: '#c792ea',
+                background: 'rgba(156, 39, 176, 0.05)',
+                width: '30px',
+                height: '28px',
+                padding: 0,
+                justifyContent: 'center'
               }}
             >
-              <i className="pi pi-copy" />
+              <i style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><HiSparkles size={13} /></i>
             </button>
-            <div className="template-dropdown-menu" style={{ right: 0, left: 'auto', minWidth: '160px' }}>
-              <div onClick={handleCopyMarkdown}><i className="pi pi-file" /> Copiar Markdown</div>
-              <div onClick={handleCopyHtml}><i className="pi pi-code" /> Copiar código HTML</div>
+
+            {/* Modo Zen */}
+            <button
+              className={`toolbar-premium-btn ${isZenMode ? 'zen-active' : ''}`}
+              onClick={() => setIsZenMode(!isZenMode)}
+              title={isZenMode ? "Salir de Modo Zen" : "Modo Concentración Zen"}
+              type="button"
+              style={{
+                border: isZenMode ? '1px solid #10b981' : '1px solid rgba(255, 255, 255, 0.15)',
+                color: isZenMode ? '#10b981' : 'var(--ui-content-text, #ccc)',
+                background: isZenMode ? 'rgba(16, 185, 129, 0.15)' : 'transparent',
+                width: '30px',
+                height: '28px',
+                padding: 0,
+                justifyContent: 'center'
+              }}
+            >
+              <i style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                {isZenMode ? <FiMinimize2 size={13} /> : <FiMaximize2 size={13} />}
+              </i>
+            </button>
+          </div>
+
+          {/* Menú de Más Acciones (...) */}
+          <div className="toolbar-template-dropdown">
+            <button
+              title="Más opciones..."
+              type="button"
+              className="toolbar-header-action-btn"
+              onClick={() => setActiveDropdown(activeDropdown === 'more' ? null : 'more')}
+              style={{ width: '30px', height: '28px' }}
+            >
+              <i className="pi pi-ellipsis-v" />
+            </button>
+            <div className={`template-dropdown-menu ${activeDropdown === 'more' ? 'show' : ''}`} style={{ right: 0, left: 'auto', minWidth: '200px' }}>
+              <div onClick={() => { handleToggleSpeech(); setActiveDropdown(null); }}>
+                <i className={isPlayingSpeech ? "pi pi-volume-off" : "pi pi-volume-up"} style={{ color: '#ff9800', marginRight: '6px' }} />
+                <span>{isPlayingSpeech ? "Detener lector" : "Leer en voz alta (TTS)"}</span>
+              </div>
+              <div onClick={() => { handlePrint(); setActiveDropdown(null); }}>
+                <i className="pi pi-print" style={{ color: '#64b5f6', marginRight: '6px' }} />
+                <span>Imprimir / PDF</span>
+              </div>
+              <hr style={{ border: 'none', borderTop: '1px solid rgba(255, 255, 255, 0.08)', margin: '4px 0' }} />
+              <div onClick={() => { handleCopyMarkdown(); setActiveDropdown(null); }}>
+                <i className="pi pi-copy" style={{ marginRight: '6px' }} />
+                <span>Copiar Markdown</span>
+              </div>
+              <div onClick={() => { handleCopyHtml(); setActiveDropdown(null); }}>
+                <i className="pi pi-code" style={{ marginRight: '6px' }} />
+                <span>Copiar HTML</span>
+              </div>
+              <hr style={{ border: 'none', borderTop: '1px solid rgba(255, 255, 255, 0.08)', margin: '4px 0' }} />
+              <div onClick={() => { handleImportMarkdown(); setActiveDropdown(null); }}>
+                <i className="pi pi-upload" style={{ marginRight: '6px' }} />
+                <span>Importar Markdown</span>
+              </div>
+              <div onClick={() => { handleExportMarkdown(); setActiveDropdown(null); }}>
+                <i className="pi pi-download" style={{ marginRight: '6px' }} />
+                <span>Exportar Markdown (.md)</span>
+              </div>
+              <div onClick={() => { handleExportHtml(); setActiveDropdown(null); }}>
+                <i className="pi pi-file" style={{ marginRight: '6px' }} />
+                <span>Exportar Web HTML (.html)</span>
+              </div>
             </div>
           </div>
 
-          {/* Opciones de descarga dropdown */}
-          <div className="toolbar-template-dropdown" style={{ position: 'relative' }}>
-            <button
-              title="Exportar/Importar..."
-              type="button"
-              className="toolbar-header-action-btn"
-              onClick={(e) => {
-                const menu = e.currentTarget.nextElementSibling;
-                if (menu) {
-                  menu.classList.toggle('show');
-                  const closeMenu = (evt) => {
-                    if (!e.currentTarget.contains(evt.target) && !menu.contains(evt.target)) {
-                      menu.classList.remove('show');
-                      document.removeEventListener('click', closeMenu);
-                    }
-                  };
-                  document.addEventListener('click', closeMenu);
-                }
-              }}
-            >
-              <i className="pi pi-download" />
-            </button>
-            <div className="template-dropdown-menu" style={{ right: 0, left: 'auto', minWidth: '180px' }}>
-              <div onClick={handleImportMarkdown}><i className="pi pi-upload" /> Importar Markdown</div>
-              <div onClick={handleExportMarkdown}><i className="pi pi-download" /> Exportar Markdown (.md)</div>
-              <div onClick={handleExportHtml}><i className="pi pi-file-html" /> Exportar Web HTML (.html)</div>
-            </div>
-          </div>
-
-          <div className="document-editor-status">
-            {saveStatus === 'saved' && (
-              <span className="saved"><i className="pi pi-check" /> Guardado</span>
-            )}
-            {saveStatus === 'saving' && (
-              <span className="saving"><i className="pi pi-spin pi-spinner" /> Guardando...</span>
-            )}
-            {saveStatus === 'unsaved' && (
-              <span style={{ color: '#ff9800' }}><i className="pi pi-circle-fill" style={{ fontSize: '0.5rem' }} /> Sin guardar</span>
-            )}
-          </div>
         </div>
       </div>
 
       {/* CUERPO DEL EDITOR */}
       {viewMode === 'wysiwyg' ? (
-        <>
-          <EditorToolbar
-            editor={editor}
-            onInsertTemplate={handleInsertTemplate}
-            isPlayingSpeech={isPlayingSpeech}
-            onToggleSpeech={handleToggleSpeech}
-            onOpenAiAssist={() => setShowAiPanel(!showAiPanel)}
-            isZenMode={isZenMode}
-            onToggleZen={() => setIsZenMode(!isZenMode)}
-            onPrint={handlePrint}
-          />
-          <div className="document-editor-content">
-            <EditorContent editor={editor} />
-          </div>
-        </>
+        <div className="document-editor-content">
+          <EditorContent editor={editor} />
+        </div>
       ) : (
         <div className="document-markdown-source">
           <textarea
