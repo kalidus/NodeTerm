@@ -129,6 +129,32 @@ const TabHeader = React.memo(({
     };
   }, [themeVersion]);
 
+  // Estilos de bordes estables para evitar advertencias de React sobre propiedades en conflicto
+  const borderStyles = useMemo(() => {
+    if (isDragOver) {
+      return {
+        borderTop: 'none',
+        borderRight: 'none',
+        borderBottom: 'none',
+        borderLeft: '3px solid var(--primary-color)'
+      };
+    }
+    if (isHomeTab && !selected) {
+      return {
+        borderTop: '1px solid transparent',
+        borderRight: '1px solid transparent',
+        borderBottom: '1px solid transparent',
+        borderLeft: '1px solid transparent'
+      };
+    }
+    return {
+      borderTop: 'none',
+      borderRight: 'none',
+      borderBottom: 'none',
+      borderLeft: 'none'
+    };
+  }, [isDragOver, isHomeTab, selected]);
+
   // Estilos especiales para la pestaña Home
   const homeTabStyles = useMemo(() => {
     if (!isHomeTab) return {};
@@ -150,9 +176,6 @@ const TabHeader = React.memo(({
       background: idleBackground,
       color: idleColor,
       borderRadius: 999,
-      borderWidth: '1px',
-      borderStyle: 'solid',
-      borderColor: 'transparent',
       boxShadow: 'none'
     };
   }, [isHomeTab, selected, isDarkTheme, currentTheme]);
@@ -376,10 +399,10 @@ const TabHeader = React.memo(({
         minWidth: isHomeTab ? '100%' : 'inherit',
         width: isHomeTab ? '100%' : 'inherit',
         opacity: isDragging ? 0.5 : 1,
-        borderLeft: isDragOver ? '3px solid var(--primary-color)' : 'none',
         transition: 'opacity 0.2s, border-left 0.2s, box-shadow 0.2s, background 0.2s, border 0.2s',
         cursor: isDragging ? 'grabbing' : 'grab',
         WebkitAppRegion: isDraggable ? 'no-drag' : 'inherit',
+        ...borderStyles,
         ...(homeTabStyles || {})
       }}
       onClick={(e) => {
