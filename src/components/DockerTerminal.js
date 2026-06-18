@@ -180,10 +180,13 @@ const DockerTerminal = forwardRef(({
 
         // PASO 1: Registrar listeners PRIMERO (antes de iniciar Docker)
         console.log(`???? Registrando listeners para ${tabId}...`);
+        let unsubscribeData = null;
+        let unsubscribeError = null;
+        let unsubscribeExit = null;
         if (window.electron) {
-            window.electron.ipcRenderer.on(dockerDataEvent, handleDockerOutput);
-            window.electron.ipcRenderer.on(dockerErrorEvent, handleDockerError);
-            window.electron.ipcRenderer.on(dockerExitEvent, handleDockerExit);
+            unsubscribeData = window.electron.ipcRenderer.on(dockerDataEvent, handleDockerOutput);
+            unsubscribeError = window.electron.ipcRenderer.on(dockerErrorEvent, handleDockerError);
+            unsubscribeExit = window.electron.ipcRenderer.on(dockerExitEvent, handleDockerExit);
         }
         console.log(`??? Listeners registrados para ${tabId}`);
 
@@ -214,9 +217,9 @@ const DockerTerminal = forwardRef(({
         // Cleanup
         return () => {
             if (window.electron) {
-                window.electron.ipcRenderer.off(dockerDataEvent, handleDockerOutput);
-                window.electron.ipcRenderer.off(dockerErrorEvent, handleDockerError);
-                window.electron.ipcRenderer.off(dockerExitEvent, handleDockerExit);
+                if (unsubscribeData) unsubscribeData();
+                if (unsubscribeError) unsubscribeError();
+                if (unsubscribeExit) unsubscribeExit();
                 window.electron.ipcRenderer.send(`docker:stop:${tabId}`);
             }
             if (term.current) {

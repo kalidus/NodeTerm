@@ -13,6 +13,19 @@ let connectionHistory = {
   favorites: []
 };
 
+// Helper para espera síncrona sin consumo de CPU (yield al planificador del SO)
+function sleepSync(ms) {
+  try {
+    const sab = new SharedArrayBuffer(4);
+    const int32 = new Int32Array(sab);
+    Atomics.wait(int32, 0, 0, ms);
+  } catch (e) {
+    // Fallback si SharedArrayBuffer no es compatible
+    const start = Date.now();
+    while (Date.now() - start < ms) { }
+  }
+}
+
 // Cargar historial de conexiones
 function loadConnectionHistory(retries = 3) {
   try {
@@ -32,9 +45,7 @@ function loadConnectionHistory(retries = 3) {
     // Retry si es bloqueo de archivo
     if (retries > 0 && (error.code === 'EBUSY' || error.code === 'EPERM')) {
       console.log(`Reintentando carga de historial... (${retries} restantes)`);
-      // Espera bloqueante breve (hacky pero efectivo para loadSync)
-      const start = Date.now();
-      while (Date.now() - start < 100) { };
+      sleepSync(100);
       loadConnectionHistory(retries - 1);
     }
   }
@@ -60,8 +71,7 @@ function saveConnectionHistory() {
       } catch (e) {
         retries--;
         if (retries === 0) throw e;
-        const start = Date.now();
-        while (Date.now() - start < 50) { };
+        sleepSync(50);
       }
     }
   } catch (error) {
