@@ -3147,7 +3147,7 @@ const Sidebar = React.memo(({
               </span>
             </button>
           )}
-          {activeTab !== null && activeTab !== 'settings' && activeTab !== 'tools' && (setTreeTheme || setIconTheme || setSessionActionIconTheme) && (
+          {activeTab !== null && activeTab !== 'settings' && (setTreeTheme || setIconTheme || setSessionActionIconTheme) && (
             <SidebarAppearanceMenu
               treeTheme={treeTheme}
               setTreeTheme={setTreeTheme}

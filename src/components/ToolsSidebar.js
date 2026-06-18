@@ -197,7 +197,7 @@ const ToolsSidebar = ({
           <span className="node-label" style={{
             lineHeight: '20px',
             color: node.color,
-            fontSize: '0.78rem',
+            fontSize: `${Math.round(explorerFontSize * 0.85)}px`,
             fontWeight: '600',
             textTransform: 'uppercase',
             letterSpacing: '0.5px'
@@ -210,7 +210,7 @@ const ToolsSidebar = ({
             color: node.color,
             borderRadius: '10px',
             padding: '0 6px',
-            fontSize: '0.65rem',
+            fontSize: `${Math.round(explorerFontSize * 0.72)}px`,
             fontWeight: '700',
             border: `1px solid ${node.color}30`
           }}>
@@ -253,7 +253,7 @@ const ToolsSidebar = ({
           {/* Texto y Descripción */}
           <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
             <div style={{ 
-              fontSize: '0.82rem', 
+              fontSize: `${explorerFontSize}px`, 
               fontWeight: '500', 
               overflow: 'hidden', 
               textOverflow: 'ellipsis', 
@@ -265,7 +265,7 @@ const ToolsSidebar = ({
               {node.label}
             </div>
             <div style={{ 
-              fontSize: '0.7rem', 
+              fontSize: `${Math.round(explorerFontSize * 0.8)}px`, 
               color: 'var(--ui-sidebar-text)', 
               overflow: 'hidden', 
               textOverflow: 'ellipsis', 
