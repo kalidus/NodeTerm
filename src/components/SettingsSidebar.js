@@ -203,7 +203,7 @@ const SettingsSidebar = ({
             userSelect: 'none',
             width: '100%',
             fontWeight: '600',
-            fontSize: '0.8rem',
+            fontSize: `${Math.round(explorerFontSize * 0.87)}px`,
             fontFamily: explorerFont || 'inherit'
           }}
         >
@@ -224,7 +224,7 @@ const SettingsSidebar = ({
             style={{
               lineHeight: '20px',
               color: node.color,
-              fontSize: '0.78rem',
+              fontSize: `${Math.round(explorerFontSize * 0.85)}px`,
               fontWeight: '600',
               textTransform: 'uppercase',
               letterSpacing: '0.5px'
@@ -239,7 +239,7 @@ const SettingsSidebar = ({
               color: node.color,
               borderRadius: '10px',
               padding: '0 6px',
-              fontSize: '0.65rem',
+              fontSize: `${Math.round(explorerFontSize * 0.72)}px`,
               fontWeight: '700',
               border: `1px solid ${node.color}30`
             }}
@@ -293,7 +293,7 @@ const SettingsSidebar = ({
         <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
           <div
             style={{
-              fontSize: '0.82rem',
+              fontSize: `${explorerFontSize}px`,
               fontWeight: '500',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
@@ -319,7 +319,7 @@ const SettingsSidebar = ({
         )}
       </div>
     );
-  }, [connectionIconSize, explorerFont, folderIconSize, hoveredItem, openSettingsSection, toggleCategory]);
+  }, [connectionIconSize, explorerFont, explorerFontSize, folderIconSize, hoveredItem, openSettingsSection, toggleCategory]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
