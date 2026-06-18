@@ -168,6 +168,13 @@ if (process.env.NODE_ENV === 'development') {
 const { app, BrowserWindow, ipcMain, clipboard, dialog, Menu, powerMonitor, screen } = require('electron');
 logTiming('Electron cargado');
 
+// 🚀 OPTIMIZACIONES DE RENDIMIENTO DE HARDWARE (GPU)
+app.commandLine.appendSwitch('ignore-gpu-blocklist');
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-zero-copy');
+app.commandLine.appendSwitch('enable-webgl');
+app.commandLine.appendSwitch('enable-accelerated-video-decode');
+
 // Windows: mismo ID que build.appId en prod (barra tras auto-update NSIS); ID distinto en dev
 if (process.platform === 'win32') {
   app.setAppUserModelId(app.isPackaged ? 'com.electron.nodeterm' : 'com.electron.nodeterm.dev');
@@ -1247,7 +1254,8 @@ function createWindow() {
       webviewTag: true,
       preload: path.join(__dirname, 'preload.js'),
       v8CacheOptions: 'code',
-      enableBlinkFeatures: 'PreciseMemoryInfo'
+      enableBlinkFeatures: 'PreciseMemoryInfo',
+      backgroundThrottling: false
     }
   });
   logTiming('BrowserWindow creado');

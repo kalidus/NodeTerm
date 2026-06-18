@@ -276,8 +276,12 @@ const TerminalComponent = forwardRef(({
         // term.current.loadAddon(new ImageAddon({ sixelScrolling: true }));
 
         // Load and activate the WebGL renderer
-        const webglAddon = new WebglAddon();
-        term.current.loadAddon(webglAddon);
+        try {
+            const webglAddon = new WebglAddon();
+            term.current.loadAddon(webglAddon);
+        } catch (e) {
+            console.warn('WebGL addon failed to load, falling back to canvas renderer:', e);
+        }
 
         term.current.open(terminalRef.current);
         fitAddon.current.fit();

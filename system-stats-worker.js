@@ -295,6 +295,22 @@ async function getSystemStats() {
     // Si falla o no hay datos, mantener temperatura anterior
   } catch (error) { }
 
+  // GPU Temperatura e info (si está disponible y soportado)
+  try {
+    const graphicsData = await Promise.race([
+      getSI().graphics(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Graphics timeout')), 2000))
+    ]);
+
+    if (graphicsData && Array.isArray(graphicsData.controllers)) {
+      // Buscar primera GPU con temperatura válida
+      const gpuWithTemp = graphicsData.controllers.find(c => typeof c.temperatureGpu === 'number' && c.temperatureGpu > 0);
+      if (gpuWithTemp) {
+        stats.temperature.gpu = gpuWithTemp.temperatureGpu;
+      }
+    }
+  } catch (error) { }
+
   // Guardar los stats actuales como últimos válidos
   lastValidStats = {
     cpu: { ...stats.cpu },
