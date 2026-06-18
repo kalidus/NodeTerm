@@ -485,13 +485,27 @@ body.layout-unified-app-rounded.p-splitter.p-splitter-resizing .p-splitter-gutte
 
 /* Sidebar overrides */
 body.layout-unified .main-splitter > .p-splitter-panel:first-child:has(.sidebar-collapsed),
-body.layout-unified-rounded .main-splitter > .p-splitter-panel:first-child:has(.sidebar-collapsed),
 body.layout-unified-app-rounded .main-splitter > .p-splitter-panel:first-child:has(.sidebar-collapsed) {
-  flex: 0 0 44px !important;
-  flex-basis: 44px !important;
-  width: 44px !important;
-  min-width: 44px !important;
-  max-width: 44px !important;
+  flex: 0 0 48px !important;
+  flex-basis: 48px !important;
+  width: 48px !important;
+  min-width: 48px !important;
+  max-width: 48px !important;
+  padding: 0 !important;
+}
+
+body.layout-unified-rounded .main-splitter > .p-splitter-panel:first-child:has(.sidebar-collapsed) {
+  flex: 0 0 56px !important;
+  flex-basis: 56px !important;
+  width: 56px !important;
+  min-width: 56px !important;
+  max-width: 56px !important;
+  padding: 6px 2px 6px 6px !important;
+}
+
+body.layout-unified-rounded .main-splitter .terminal-frame.sidebar-collapsed {
+  border-color: var(--ui-sidebar-border, rgba(255, 255, 255, 0.08)) !important;
+  box-shadow: var(--layout-panel-shadow) !important;
 }
 
 body.layout-unified .sidebar-container,

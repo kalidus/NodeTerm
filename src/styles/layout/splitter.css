@@ -25,11 +25,14 @@
 .p-splitter .p-splitter-panel:first-child {
   min-height: 47px !important;
   max-width: 400px;
-  min-width: 44px !important; /* Límite mínimo: tamaño de sidebar colapsada */
+  min-width: 48px !important; /* Límite mínimo: tamaño de sidebar colapsada */
 }
-/* Cuando la sidebar está colapsada (ancho 44px) - permitir resize visual temporal */
-.p-splitter .p-splitter-panel:first-child[style*="width: 44px"] {
-  min-width: 44px !important;
+/* Cuando la sidebar está colapsada (ancho 48px o similar) - permitir resize visual temporal */
+.p-splitter .p-splitter-panel:first-child[style*="width: 60px"],
+.p-splitter .p-splitter-panel:first-child[style*="width: 48px"],
+.p-splitter .p-splitter-panel:first-child[style*="width: 44px"],
+.p-splitter .p-splitter-panel:first-child[style*="width: 56px"] {
+  min-width: 48px !important;
   /* max-width temporalmente removido para resize visual */
 }
 
