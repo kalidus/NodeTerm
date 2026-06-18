@@ -150,7 +150,9 @@ const TabHeader = React.memo(({
       background: idleBackground,
       color: idleColor,
       borderRadius: 999,
-      border: `1px solid transparent`,
+      borderWidth: '1px',
+      borderStyle: 'solid',
+      borderColor: 'transparent',
       boxShadow: 'none'
     };
   }, [isHomeTab, selected, isDarkTheme, currentTheme]);
