@@ -1,4 +1,8 @@
 import React, { Suspense } from 'react';
+import { InputText } from 'primereact/inputtext';
+import { InputTextarea } from 'primereact/inputtextarea';
+import { Dropdown } from 'primereact/dropdown';
+import { Button } from 'primereact/button';
 import {
   LazyHomeTab,
   LazyFileExplorer,
@@ -35,8 +39,8 @@ import {
 } from './tabLoaders';
 import { themes } from '../themes';
 import { TAB_TYPES } from '../utils/constants';
-import { recordRecentPassword } from '../utils/connectionStore';
-import { getNetworkById } from '../utils/cryptoNetworks';
+import { recordRecentPassword, isFavorite, toggleFavorite } from '../utils/connectionStore';
+import { getNetworkById, CRYPTO_NETWORK_OPTIONS } from '../utils/cryptoNetworks';
 
 import { countConnections } from '../utils/connectionCounter';
 import EditConnectionTabContent from './EditConnectionTabContent';
@@ -309,6 +313,865 @@ const WalletSeedPhraseSection = ({ seedPhrase, onCopyFull }) => {
   );
 };
 
+const EditableField = ({ label, value, onChange, placeholder, type = 'text', masked = false, copy = false, multiline = false }) => {
+  const [showMasked, setShowMasked] = React.useState(false);
+  const isPassword = type === 'password' || masked;
+  const inputType = isPassword ? (showMasked ? 'text' : 'password') : 'text';
+
+  const copyToClipboard = async () => {
+    if (!value) return;
+    try {
+      if (window.electron?.clipboard?.writeText) {
+        await window.electron.clipboard.writeText(value);
+      } else {
+        await navigator.clipboard.writeText(value);
+      }
+      if (window.toast?.current?.show) {
+        window.toast.current.show({ severity: 'success', summary: 'Copiado', detail: `${label} copiado al portapapeles`, life: 1000 });
+      }
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  return (
+    <div style={{ marginBottom: '1.25rem' }}>
+      <label style={{ display: 'block', marginBottom: '0.35rem', fontWeight: '600', fontSize: '0.85rem', color: 'var(--ui-dialog-text, #cdd6f4)', opacity: 0.8 }}>
+        {label}
+      </label>
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        {multiline ? (
+          <InputTextarea
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            rows={4}
+            style={{
+              flex: 1,
+              background: 'rgba(0,0,0,0.15)',
+              border: '1px solid var(--ui-content-border, rgba(255, 255, 255, 0.08))',
+              color: '#fff',
+              fontSize: '0.9rem',
+              resize: 'vertical',
+              fontFamily: 'inherit'
+            }}
+          />
+        ) : (
+          <InputText
+            type={inputType}
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            style={{
+              flex: 1,
+              background: 'rgba(0,0,0,0.15)',
+              border: '1px solid var(--ui-content-border, rgba(255, 255, 255, 0.08))',
+              color: '#fff',
+              fontSize: '0.9rem',
+              fontFamily: isPassword && !showMasked ? 'monospace' : 'inherit'
+            }}
+          />
+        )}
+
+        {isPassword && value && (
+          <button
+            type="button"
+            onClick={() => setShowMasked(!showMasked)}
+            style={{
+              padding: '6px',
+              borderRadius: '6px',
+              border: '1px solid var(--ui-content-border, rgba(255, 255, 255, 0.1))',
+              background: 'rgba(255, 255, 255, 0.03)',
+              color: 'var(--ui-button-primary, #6366f1)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '32px',
+              height: '32px',
+              transition: 'all 0.2s'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'}
+            onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)'}
+          >
+            <i className={`pi ${showMasked ? 'pi-eye-slash' : 'pi-eye'}`} style={{ fontSize: '0.85rem' }}></i>
+          </button>
+        )}
+
+        {copy && value && (
+          <button
+            type="button"
+            onClick={copyToClipboard}
+            style={{
+              padding: '6px',
+              borderRadius: '6px',
+              border: '1px solid var(--ui-content-border, rgba(255, 255, 255, 0.1))',
+              background: 'rgba(255, 255, 255, 0.03)',
+              color: 'var(--ui-dialog-text, #cdd6f4)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '32px',
+              height: '32px',
+              transition: 'all 0.2s'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'}
+            onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)'}
+            title="Copiar"
+          >
+            <i className="pi pi-copy" style={{ fontSize: '0.85rem' }}></i>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const PasswordTabContent = ({ tab, masterKey, secureStorage, setSshTabs }) => {
+  const p = tab.passwordData;
+  const secretType = p.type || 'password';
+
+  const [showValues, setShowValues] = React.useState({});
+  const isInitializedRef = React.useRef(false);
+
+  const [formData, setFormData] = React.useState({
+    title: p.title || '',
+    notes: p.notes || '',
+    username: p.username || '',
+    password: p.password || '',
+    url: p.url || '',
+    group: p.group || '',
+    network: p.network || 'bitcoin',
+    seedPhrase: p.seedPhrase || '',
+    privateKey: p.privateKey || '',
+    address: p.address || '',
+    passphrase: p.passphrase || '',
+    apiKey: p.apiKey || '',
+    apiSecret: p.apiSecret || '',
+    endpoint: p.endpoint || '',
+    serviceName: p.serviceName || '',
+    noteContent: p.noteContent || ''
+  });
+
+  // Sync state when tab node changes
+  React.useEffect(() => {
+    isInitializedRef.current = false;
+    setFormData({
+      title: p.title || '',
+      notes: p.notes || '',
+      username: p.username || '',
+      password: p.password || '',
+      url: p.url || '',
+      group: p.group || '',
+      network: p.network || 'bitcoin',
+      seedPhrase: p.seedPhrase || '',
+      privateKey: p.privateKey || '',
+      address: p.address || '',
+      passphrase: p.passphrase || '',
+      apiKey: p.apiKey || '',
+      apiSecret: p.apiSecret || '',
+      endpoint: p.endpoint || '',
+      serviceName: p.serviceName || '',
+      noteContent: p.noteContent || ''
+    });
+    
+    const timer = setTimeout(() => {
+      isInitializedRef.current = true;
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [p.id]);
+
+  const [favStatus, setFavStatus] = React.useState(false);
+
+  const secretConnection = React.useMemo(() => ({
+    id: p.id,
+    type: secretType,
+    name: formData.title || p.title,
+    ...p
+  }), [p.id, secretType, formData.title, p]);
+
+  React.useEffect(() => {
+    setFavStatus(isFavorite(secretConnection));
+  }, [p.id, secretConnection]);
+
+  const handleToggleFav = (e) => {
+    e.stopPropagation();
+    toggleFavorite(secretConnection);
+    setFavStatus(isFavorite(secretConnection));
+    window.dispatchEvent(new CustomEvent('connections-updated'));
+  };
+
+  const copyToClipboard = async (text, fieldName) => {
+    if (!text) return;
+    try {
+      if (window.electron?.clipboard?.writeText) {
+        await window.electron.clipboard.writeText(text);
+      } else {
+        await navigator.clipboard.writeText(text);
+      }
+      if (window.toast?.current?.show) {
+        window.toast.current.show({ severity: 'success', summary: 'Copiado', detail: `${fieldName} copiado al portapapeles`, life: 1500 });
+      }
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  const usernameToCopy = secretType === 'crypto_wallet' ? formData.address :
+                         secretType === 'api_key' ? formData.apiKey :
+                         secretType === 'password' ? formData.username : '';
+
+  const passwordToCopy = secretType === 'crypto_wallet' ? formData.privateKey :
+                         secretType === 'api_key' ? formData.apiSecret :
+                         secretType === 'password' ? formData.password :
+                         secretType === 'secure_note' ? formData.noteContent : '';
+
+  const urlToOpen = secretType === 'api_key' ? formData.endpoint : formData.url;
+
+  const getTabIcon = (type) => {
+    switch (type) {
+      case 'crypto_wallet': return '💰';
+      case 'api_key': return '🔑';
+      case 'secure_note': return '📝';
+      default: return '🔐';
+    }
+  };
+
+  const getIconInfo = () => {
+    switch (secretType) {
+      case 'crypto_wallet':
+        const network = getNetworkById(formData.network);
+        return { icon: 'pi pi-wallet', color: network?.color || '#F7931A', label: 'Billetera Crypto' };
+      case 'api_key':
+        return { icon: 'pi pi-key', color: '#00BCD4', label: 'API Key' };
+      case 'secure_note':
+        return { icon: 'pi pi-file-edit', color: '#9C27B0', label: 'Nota Segura' };
+      default:
+        return { icon: 'pi pi-lock', color: '#E91E63', label: 'Contraseña' };
+    }
+  };
+
+  const iconInfo = getIconInfo();
+
+  // Debounced auto-save
+  React.useEffect(() => {
+    if (!isInitializedRef.current) return;
+    if (!formData.title.trim()) return;
+
+    const saveTimeout = setTimeout(async () => {
+      // 1. Load nodes
+      let passwordNodes = [];
+      try {
+        if (masterKey && secureStorage) {
+          const encryptedData = localStorage.getItem('passwords_encrypted');
+          if (encryptedData) {
+            passwordNodes = await secureStorage.decryptData(
+              JSON.parse(encryptedData),
+              masterKey
+            );
+          } else {
+            const plainData = localStorage.getItem('passwordManagerNodes');
+            if (plainData) {
+              passwordNodes = JSON.parse(plainData);
+            }
+          }
+        } else {
+          const saved = localStorage.getItem('passwordManagerNodes');
+          if (saved) {
+            passwordNodes = JSON.parse(saved);
+          }
+        }
+      } catch (e) {
+        console.error('Error loading passwords for save:', e);
+      }
+
+      // 2. Update list
+      const updateNodeInList = (list) => {
+        return list.map(node => {
+          if (node.key === p.id) {
+            return {
+              ...node,
+              label: formData.title.trim(),
+              data: {
+                ...node.data,
+                type: secretType,
+                notes: formData.notes,
+                username: formData.username,
+                password: formData.password,
+                url: formData.url,
+                group: formData.group,
+                network: formData.network,
+                seedPhrase: formData.seedPhrase,
+                privateKey: formData.privateKey,
+                address: formData.address,
+                passphrase: formData.passphrase,
+                apiKey: formData.apiKey,
+                apiSecret: formData.apiSecret,
+                endpoint: formData.endpoint,
+                serviceName: formData.serviceName,
+                noteContent: formData.noteContent
+              }
+            };
+          }
+          if (node.children && node.children.length > 0) {
+            return {
+              ...node,
+              children: updateNodeInList(node.children)
+            };
+          }
+          return node;
+        });
+      };
+
+      const updatedNodes = updateNodeInList(passwordNodes);
+
+      // 3. Save
+      try {
+        if (masterKey && secureStorage) {
+          const encrypted = await secureStorage.encryptData(updatedNodes, masterKey);
+          localStorage.setItem('passwords_encrypted', JSON.stringify(encrypted));
+          localStorage.removeItem('passwordManagerNodes');
+        } else {
+          localStorage.setItem('passwordManagerNodes', JSON.stringify(updatedNodes));
+        }
+
+        // 4. Notify sidebar
+        window.dispatchEvent(new CustomEvent('passwords-synced-from-cloud', {
+          detail: { silent: true }
+        }));
+
+        // 5. Update parent tab info
+        if (setSshTabs) {
+          setSshTabs(prev => prev.map(t => {
+            if (t.key === tab.key) {
+              return {
+                ...t,
+                label: `${getTabIcon(secretType)} ${formData.title.trim()}`,
+                passwordData: {
+                  ...t.passwordData,
+                  title: formData.title.trim(),
+                  notes: formData.notes,
+                  username: formData.username,
+                  password: formData.password,
+                  url: formData.url,
+                  group: formData.group,
+                  network: formData.network,
+                  seedPhrase: formData.seedPhrase,
+                  privateKey: formData.privateKey,
+                  address: formData.address,
+                  passphrase: formData.passphrase,
+                  apiKey: formData.apiKey,
+                  apiSecret: formData.apiSecret,
+                  endpoint: formData.endpoint,
+                  serviceName: formData.serviceName,
+                  noteContent: formData.noteContent
+                }
+              };
+            }
+            return t;
+          }));
+        }
+      } catch (err) {
+        console.error('Error auto-saving password:', err);
+      }
+    }, 500);
+
+    return () => clearTimeout(saveTimeout);
+  }, [
+    formData.title,
+    formData.notes,
+    formData.username,
+    formData.password,
+    formData.url,
+    formData.group,
+    formData.network,
+    formData.seedPhrase,
+    formData.privateKey,
+    formData.address,
+    formData.passphrase,
+    formData.apiKey,
+    formData.apiSecret,
+    formData.endpoint,
+    formData.serviceName,
+    formData.noteContent
+  ]);
+
+  return (
+    <div
+      className="password-tab-content"
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        background: 'var(--ui-content-bg, #1a1b26)'
+      }}
+    >
+      {/* Header bar */}
+      <div
+        style={{
+          padding: '1.25rem 2rem',
+          borderBottom: '1px solid var(--ui-content-border, rgba(255, 255, 255, 0.08))',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1rem',
+          background: 'rgba(0, 0, 0, 0.15)'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1 }}>
+          <div
+            style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '10px',
+              background: `linear-gradient(135deg, ${iconInfo.color} 0%, rgba(255, 255, 255, 0.2) 100%)`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#fff',
+              fontSize: '1.3rem',
+              boxShadow: `0 4px 14px ${iconInfo.color}40`,
+              flexShrink: 0
+            }}
+          >
+            <i className={iconInfo.icon}></i>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, maxWidth: '400px' }}>
+            <InputText
+              value={formData.title}
+              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+              placeholder="Título"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                borderBottom: '1.5px solid transparent',
+                color: '#fff',
+                fontSize: '1.2rem',
+                fontWeight: 600,
+                padding: '2px 0',
+                boxShadow: 'none',
+                outline: 'none'
+              }}
+              onFocus={(e) => e.target.style.borderBottomColor = 'var(--ui-button-primary, #6366f1)'}
+              onBlur={(e) => e.target.style.borderBottomColor = 'transparent'}
+            />
+            <span style={{ fontSize: '0.8rem', color: 'var(--ui-dialog-text, #cdd6f4)', opacity: 0.5 }}>
+              {iconInfo.label} • Cambios guardados al instante
+            </span>
+          </div>
+        </div>
+
+        {/* Quick action buttons on the right side of header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* USERNAME COPY */}
+          <button
+            onClick={() => {
+              if (usernameToCopy && usernameToCopy.trim() !== '' && usernameToCopy.trim() !== '-') {
+                copyToClipboard(usernameToCopy, secretType === 'crypto_wallet' ? 'Dirección' : 'Usuario');
+              }
+            }}
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              color: 'var(--ui-dialog-text, #cdd6f4)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '6px',
+              width: '34px',
+              height: '34px',
+              cursor: (usernameToCopy && usernameToCopy.trim() !== '' && usernameToCopy.trim() !== '-') ? 'pointer' : 'not-allowed',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+              opacity: (usernameToCopy && usernameToCopy.trim() !== '' && usernameToCopy.trim() !== '-') ? 1 : 0.35
+            }}
+            title={(usernameToCopy && usernameToCopy.trim() !== '' && usernameToCopy.trim() !== '-') 
+              ? (secretType === 'crypto_wallet' ? "Copiar Dirección" : "Copiar Usuario")
+              : (secretType === 'crypto_wallet' ? "Copiar Dirección (No disponible)" : "Copiar Usuario (No disponible)")
+            }
+            onMouseOver={(e) => {
+              if (usernameToCopy && usernameToCopy.trim() !== '' && usernameToCopy.trim() !== '-') {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                e.currentTarget.style.borderColor = 'var(--ui-button-primary, #6366f1)';
+              }
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
+            }}
+          >
+            <i className="pi pi-user" style={{ fontSize: '0.9rem' }}></i>
+          </button>
+
+          {/* PASSWORD COPY */}
+          <button
+            onClick={() => {
+              if (passwordToCopy && passwordToCopy.trim() !== '' && passwordToCopy.trim() !== '-') {
+                copyToClipboard(passwordToCopy, secretType === 'secure_note' ? 'Contenido' : 'Contraseña');
+              }
+            }}
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              color: 'var(--ui-dialog-text, #cdd6f4)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '6px',
+              width: '34px',
+              height: '34px',
+              cursor: (passwordToCopy && passwordToCopy.trim() !== '' && passwordToCopy.trim() !== '-') ? 'pointer' : 'not-allowed',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+              opacity: (passwordToCopy && passwordToCopy.trim() !== '' && passwordToCopy.trim() !== '-') ? 1 : 0.35
+            }}
+            title={(passwordToCopy && passwordToCopy.trim() !== '' && passwordToCopy.trim() !== '-')
+              ? (secretType === 'secure_note' ? "Copiar Contenido" : "Copiar Contraseña")
+              : (secretType === 'secure_note' ? "Copiar Contenido (No disponible)" : "Copiar Contraseña (No disponible)")
+            }
+            onMouseOver={(e) => {
+              if (passwordToCopy && passwordToCopy.trim() !== '' && passwordToCopy.trim() !== '-') {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                e.currentTarget.style.borderColor = 'var(--ui-button-primary, #6366f1)';
+              }
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
+            }}
+          >
+            <i className="pi pi-key" style={{ fontSize: '0.9rem' }}></i>
+          </button>
+
+          {/* OPEN BROWSER URL */}
+          <button
+            onClick={() => {
+              if (urlToOpen && urlToOpen.trim() !== '' && urlToOpen.trim() !== '-') {
+                window.electron?.import?.openExternal?.(urlToOpen);
+              }
+            }}
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              color: 'var(--ui-dialog-text, #cdd6f4)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '6px',
+              width: '34px',
+              height: '34px',
+              cursor: (urlToOpen && urlToOpen.trim() !== '' && urlToOpen.trim() !== '-') ? 'pointer' : 'not-allowed',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+              opacity: (urlToOpen && urlToOpen.trim() !== '' && urlToOpen.trim() !== '-') ? 1 : 0.35
+            }}
+            title={(urlToOpen && urlToOpen.trim() !== '' && urlToOpen.trim() !== '-')
+              ? "Abrir en Navegador"
+              : "Abrir en Navegador (URL no configurada)"
+            }
+            onMouseOver={(e) => {
+              if (urlToOpen && urlToOpen.trim() !== '' && urlToOpen.trim() !== '-') {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                e.currentTarget.style.borderColor = 'var(--ui-button-primary, #6366f1)';
+              }
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
+            }}
+          >
+            <i className="pi pi-external-link" style={{ fontSize: '0.9rem' }}></i>
+          </button>
+
+          <button
+            onClick={handleToggleFav}
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              color: favStatus ? '#ffd700' : 'var(--ui-dialog-text, #cdd6f4)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '6px',
+              width: '34px',
+              height: '34px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s'
+            }}
+            title={favStatus ? "Quitar de favoritos" : "Añadir a favoritos"}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+              e.currentTarget.style.borderColor = 'var(--ui-button-primary, #6366f1)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
+            }}
+          >
+            <i className={favStatus ? 'pi pi-star-fill' : 'pi pi-star'} style={{ fontSize: '0.9rem' }}></i>
+          </button>
+        </div>
+      </div>
+
+      {/* Form area */}
+      <div
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '2rem',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'flex-start'
+        }}
+      >
+        <div
+          style={{
+            maxWidth: '960px',
+            width: '100%',
+            background: 'var(--ui-dialog-bg, rgba(30, 30, 46, 0.6))',
+            backdropFilter: 'blur(10px)',
+            borderRadius: '16px',
+            border: '1px solid var(--ui-content-border, rgba(255, 255, 255, 0.08))',
+            padding: '28px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
+          }}
+        >
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+            {/* Left Column */}
+            <div>
+              {secretType === 'password' && (
+                <>
+                  <EditableField
+                    label="Usuario"
+                    value={formData.username}
+                    onChange={(val) => setFormData(prev => ({ ...prev, username: val }))}
+                    placeholder="Ej: admin"
+                    copy
+                  />
+                  <EditableField
+                    label="Contraseña"
+                    value={formData.password}
+                    onChange={(val) => setFormData(prev => ({ ...prev, password: val }))}
+                    placeholder="••••••••"
+                    masked
+                    copy
+                  />
+                  <EditableField
+                    label="URL"
+                    value={formData.url}
+                    onChange={(val) => setFormData(prev => ({ ...prev, url: val }))}
+                    placeholder="Ej: https://..."
+                    copy
+                  />
+                </>
+              )}
+
+              {secretType === 'crypto_wallet' && (
+                <>
+                  <div className="field" style={{ marginBottom: '1.25rem' }}>
+                    <label style={{ display: 'block', marginBottom: '0.35rem', fontWeight: '600', fontSize: '0.85rem', color: 'var(--ui-dialog-text, #cdd6f4)', opacity: 0.8 }}>Red</label>
+                    <Dropdown
+                      value={formData.network}
+                      options={CRYPTO_NETWORK_OPTIONS}
+                      onChange={(e) => setFormData(prev => ({ ...prev, network: e.value }))}
+                      style={{ width: '100%', background: 'rgba(0,0,0,0.15)', border: '1px solid var(--ui-content-border, rgba(255, 255, 255, 0.08))' }}
+                    />
+                  </div>
+                  <EditableField
+                    label="Dirección de Billetera"
+                    value={formData.address}
+                    onChange={(val) => setFormData(prev => ({ ...prev, address: val }))}
+                    placeholder="Ej: 0x..."
+                    copy
+                  />
+                  <EditableField
+                    label="Seed Phrase"
+                    value={formData.seedPhrase}
+                    onChange={(val) => setFormData(prev => ({ ...prev, seedPhrase: val }))}
+                    placeholder="Palabras semilla separadas por espacio"
+                    masked
+                    copy
+                    multiline
+                  />
+                </>
+              )}
+
+              {secretType === 'api_key' && (
+                <>
+                  <EditableField
+                    label="Servicio"
+                    value={formData.serviceName}
+                    onChange={(val) => setFormData(prev => ({ ...prev, serviceName: val }))}
+                    placeholder="Ej: OpenAI, AWS..."
+                    copy
+                  />
+                  <EditableField
+                    label="API Key"
+                    value={formData.apiKey}
+                    onChange={(val) => setFormData(prev => ({ ...prev, apiKey: val }))}
+                    placeholder="API Key"
+                    masked
+                    copy
+                  />
+                </>
+              )}
+
+              {secretType === 'secure_note' && (
+                <EditableField
+                  label="Contenido de la Nota"
+                  value={formData.noteContent}
+                  onChange={(val) => setFormData(prev => ({ ...prev, noteContent: val }))}
+                  placeholder="Escribe tu nota aquí..."
+                  multiline
+                />
+              )}
+            </div>
+
+            {/* Right Column */}
+            <div>
+              {secretType === 'password' && (
+                <>
+                  <EditableField
+                    label="Grupo"
+                    value={formData.group}
+                    onChange={(val) => setFormData(prev => ({ ...prev, group: val }))}
+                    placeholder="Ej: Servidores, Cryptos..."
+                  />
+                  <EditableField
+                    label="Notas"
+                    value={formData.notes}
+                    onChange={(val) => setFormData(prev => ({ ...prev, notes: val }))}
+                    placeholder="Notas adicionales..."
+                    multiline
+                  />
+                </>
+              )}
+
+              {secretType === 'crypto_wallet' && (
+                <>
+                  <EditableField
+                    label="Clave Privada"
+                    value={formData.privateKey}
+                    onChange={(val) => setFormData(prev => ({ ...prev, privateKey: val }))}
+                    placeholder="Private key hex / wif"
+                    masked
+                    copy
+                  />
+                  <EditableField
+                    label="Passphrase"
+                    value={formData.passphrase}
+                    onChange={(val) => setFormData(prev => ({ ...prev, passphrase: val }))}
+                    placeholder="Opcional"
+                    masked
+                    copy
+                  />
+                  <EditableField
+                    label="Notas"
+                    value={formData.notes}
+                    onChange={(val) => setFormData(prev => ({ ...prev, notes: val }))}
+                    placeholder="Notas adicionales..."
+                    multiline
+                  />
+                </>
+              )}
+
+              {secretType === 'api_key' && (
+                <>
+                  <EditableField
+                    label="API Secret"
+                    value={formData.apiSecret}
+                    onChange={(val) => setFormData(prev => ({ ...prev, apiSecret: val }))}
+                    placeholder="API Secret / Private key"
+                    masked
+                    copy
+                  />
+                  <EditableField
+                    label="Endpoint URL"
+                    value={formData.endpoint}
+                    onChange={(val) => setFormData(prev => ({ ...prev, endpoint: val }))}
+                    placeholder="https://api.example.com/v1"
+                    copy
+                  />
+                  <EditableField
+                    label="Notas"
+                    value={formData.notes}
+                    onChange={(val) => setFormData(prev => ({ ...prev, notes: val }))}
+                    placeholder="Notas adicionales..."
+                    multiline
+                  />
+                </>
+              )}
+
+              {secretType === 'secure_note' && (
+                <EditableField
+                  label="Notas Adicionales"
+                  value={formData.notes}
+                  onChange={(val) => setFormData(prev => ({ ...prev, notes: val }))}
+                  placeholder="Etiquetas o notas de metadatos..."
+                  multiline
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Helper Quick Action Link Buttons */}
+          <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end', borderTop: '1px solid var(--ui-content-border, rgba(255, 255, 255, 0.08))', paddingTop: '20px' }}>
+            {secretType === 'password' && formData.url && (
+              <button
+                onClick={() => window.electron?.import?.openExternal?.(formData.url)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 8,
+                  border: 'none',
+                  background: 'var(--ui-button-primary, #6366f1)',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                <i className="pi pi-external-link"></i>
+                <span>Abrir URL</span>
+              </button>
+            )}
+
+            {secretType === 'api_key' && formData.endpoint && (
+              <button
+                onClick={() => window.electron?.import?.openExternal?.(formData.endpoint)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 8,
+                  border: 'none',
+                  background: '#00BCD4',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
+                onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                <i className="pi pi-external-link"></i>
+                <span>Abrir Endpoint</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const TabContentRendererInner = React.memo(({
   tab,
   isActiveTab,
@@ -513,237 +1376,13 @@ const TabContentRendererInner = React.memo(({
 
   // Secret info tab (password, crypto_wallet, api_key, secure_note)
   if (tab.type === TAB_TYPES.PASSWORD && tab.passwordData) {
-    const p = tab.passwordData;
-    const secretType = p.type || 'password';
-
-    const copyToClipboard = async (text, fieldName) => {
-      try {
-        if (window.electron?.clipboard?.writeText) {
-          await window.electron.clipboard.writeText(text);
-        } else {
-          await navigator.clipboard.writeText(text);
-        }
-
-        // Registrar como reciente cuando se copia (para cualquier tipo de secreto)
-        if (fieldName === 'Contraseña' || fieldName === 'Seed Phrase' || fieldName === 'Private Key' || fieldName === 'API Key') {
-          try {
-            recordRecentPassword({
-              id: p.id,
-              name: p.name || p.label,
-              username: p.username,
-              password: p.password,
-              url: p.url,
-              group: p.group,
-              notes: p.notes,
-              type: secretType || p.type || 'password',
-              icon: p.icon || 'pi-key'
-            }, 5);
-          } catch (e) {
-            console.warn('Error registrando secreto reciente:', e);
-          }
-        }
-
-        // Show success toast if available
-        if (window.toast?.current?.show) {
-          window.toast.current.show({ severity: 'success', summary: 'Copiado', detail: `${fieldName} copiado al portapapeles`, life: 1500 });
-        }
-      } catch (err) {
-        console.error('Failed to copy:', err);
-      }
-    };
-
-    const Row = (props) => <PasswordDetailRow {...props} onCopy={copyToClipboard} />;
-
-    // Determinar icono y color según tipo
-    const getIconInfo = () => {
-      switch (secretType) {
-        case 'crypto_wallet':
-          const network = getNetworkById(p.network);
-          return { icon: 'pi pi-wallet', color: network?.color || '#F7931A' };
-        case 'api_key':
-          return { icon: 'pi pi-key', color: '#00BCD4' };
-        case 'secure_note':
-          return { icon: 'pi pi-file-edit', color: '#9C27B0' };
-        default:
-          return { icon: 'pi pi-lock', color: '#E91E63' };
-      }
-    };
-
-    const iconInfo = getIconInfo();
-
     return (
-      <div
-        style={{
-          padding: '24px',
-          background: 'var(--ui-content-bg)',
-          height: '100%',
-          overflow: 'auto'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-          <span className={iconInfo.icon} style={{ fontSize: '24px', color: iconInfo.color }}></span>
-          <h2 style={{ margin: 0, color: 'var(--ui-dialog-text)', fontSize: '24px', fontWeight: '600' }}>{p.title}</h2>
-          {secretType === 'crypto_wallet' && p.network && (
-            <span style={{
-              padding: '6px 14px',
-              borderRadius: '6px',
-              background: getNetworkById(p.network)?.color || '#F7931A',
-              color: 'white',
-              fontSize: '13px',
-              fontWeight: '600',
-              letterSpacing: '0.5px'
-            }}>
-              {getNetworkById(p.network)?.symbol || p.network}
-            </span>
-          )}
-        </div>
-
-        <div style={{
-          background: 'var(--ui-dialog-bg)',
-          borderRadius: 12,
-          padding: '24px 20px',
-          border: '1px solid var(--ui-content-border)',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-        }}>
-          {/* Vista para PASSWORD */}
-          {secretType === 'password' && (
-            <>
-              <Row label="Usuario" value={p.username} copy />
-              <Row label="Contraseña" value={p.password} copy masked />
-              <Row label="URL" value={p.url} />
-              <Row label="Grupo" value={p.group} mono={false} />
-              {p.notes && <Row label="Notas" value={p.notes} mono={false} />}
-            </>
-          )}
-
-          {/* Vista para CRYPTO WALLET */}
-          {secretType === 'crypto_wallet' && (
-            <>
-              <Row label="Red" value={getNetworkById(p.network)?.name || p.network} mono={false} />
-              {p.address && <Row label="Dirección" value={p.address} copy />}
-
-              {p.seedPhrase && (
-                <WalletSeedPhraseSection
-                  seedPhrase={p.seedPhrase}
-                  onCopyFull={copyToClipboard}
-                />
-              )}
-
-              {p.passphrase && <Row label="Passphrase" value={p.passphrase} masked />}
-              {p.privateKey && <Row label="Clave Privada" value={p.privateKey} copy masked />}
-              {p.notes && <Row label="Notas" value={p.notes} mono={false} />}
-            </>
-          )}
-
-          {/* Vista para API KEY */}
-          {secretType === 'api_key' && (
-            <>
-              {p.serviceName && <Row label="Servicio" value={p.serviceName} mono={false} />}
-              <Row label="API Key" value={p.apiKey} copy masked />
-              {p.apiSecret && <Row label="API Secret" value={p.apiSecret} copy masked />}
-              {p.endpoint && <Row label="Endpoint" value={p.endpoint} />}
-              {p.notes && <Row label="Notas" value={p.notes} mono={false} />}
-            </>
-          )}
-
-          {/* Vista para SECURE NOTE */}
-          {secretType === 'secure_note' && (
-            <div style={{
-              whiteSpace: 'pre-wrap',
-              fontFamily: 'inherit',
-              fontSize: '14px',
-              color: 'var(--ui-dialog-text)',
-              lineHeight: '1.6'
-            }}>
-              {p.noteContent || p.notes || 'Sin contenido'}
-            </div>
-          )}
-        </div>
-
-        {/* Advertencia para crypto */}
-        {secretType === 'crypto_wallet' && (
-          <div style={{
-            marginTop: 20,
-            padding: '14px 18px',
-            background: 'rgba(255, 152, 0, 0.15)',
-            border: 'none',
-            borderRadius: 8,
-            color: 'white',
-            fontSize: '14px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            fontWeight: '500'
-          }}>
-            <span style={{ fontSize: '18px' }}>⚠️</span>
-            <span>NUNCA compartas tu seed phrase o clave privada con nadie</span>
-          </div>
-        )}
-
-        {/* Botón para abrir URL (solo password) */}
-        {secretType === 'password' && p.url && (
-          <div style={{ marginTop: 20, textAlign: 'center' }}>
-            <button
-              onClick={() => window.electron?.import?.openExternal?.(p.url)}
-              style={{
-                padding: '12px 24px',
-                borderRadius: 8,
-                border: 'none',
-                background: 'var(--ui-button-primary)',
-                color: 'var(--ui-button-primary-text)',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '500',
-                transition: 'all 0.2s',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-              }}
-              onMouseOver={(e) => {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.background = 'var(--ui-button-hover)';
-              }}
-              onMouseOut={(e) => {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.background = 'var(--ui-button-primary)';
-              }}
-            >
-              <span className="pi pi-external-link" style={{ marginRight: 8 }}></span>
-              Abrir URL
-            </button>
-          </div>
-        )}
-
-        {/* Botón para abrir endpoint (solo api_key) */}
-        {secretType === 'api_key' && p.endpoint && (
-          <div style={{ marginTop: 20, textAlign: 'center' }}>
-            <button
-              onClick={() => window.electron?.import?.openExternal?.(p.endpoint)}
-              style={{
-                padding: '12px 24px',
-                borderRadius: 8,
-                border: 'none',
-                background: '#00BCD4',
-                color: 'white',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '500',
-                transition: 'all 0.2s',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-              }}
-              onMouseOver={(e) => {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.opacity = '0.9';
-              }}
-              onMouseOut={(e) => {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.opacity = '1';
-              }}
-            >
-              <span className="pi pi-external-link" style={{ marginRight: 8 }}></span>
-              Abrir Endpoint
-            </button>
-          </div>
-        )}
-      </div>
+      <PasswordTabContent
+        tab={tab}
+        masterKey={masterKey}
+        secureStorage={secureStorage}
+        setSshTabs={setSshTabs}
+      />
     );
   }
 
