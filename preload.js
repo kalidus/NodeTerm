@@ -461,6 +461,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   unmaximize: () => ipcRenderer.invoke('window:unmaximize'),
   isMaximized: () => ipcRenderer.invoke('window:isMaximized'),
   close: () => ipcRenderer.invoke('window:close'),
+  setWindowCorners: (layoutId) => ipcRenderer.invoke('window:set-corners', layoutId),
   // RDP API
   rdp: {
     connect: (config) => ipcRenderer.invoke('rdp:connect', config),

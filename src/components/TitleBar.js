@@ -327,6 +327,20 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
     };
   }, []);
 
+  // Sincronizar el estado de maximizado de la ventana al redimensionar
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.electronAPI?.isMaximized) {
+        window.electronAPI.isMaximized().then(maximized => {
+          setIsMaximized(maximized);
+        });
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Verificar estado inicial
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Efecto para crear copos de nieve dinámicamente para el tema Winter Snowfall
   useEffect(() => {
     const titleBar = document.querySelector('.title-bar');
@@ -1743,7 +1757,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         {/* Maximizar/Restaurar */}
         <button
           onClick={handleMaximizeRestore}
-          title="Maximizar/Restaurar"
+          title={isMaximized ? "Restaurar" : "Maximizar"}
           style={{
             width: 28,
             height: 28,
@@ -1765,7 +1779,17 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
             e.currentTarget.style.backgroundColor = 'transparent';
           }}
         >
-          <svg width="12" height="12" viewBox="0 0 14 14"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5" fill="none" stroke="var(--ui-titlebar-text, #fff)" strokeWidth="1.2" /></svg>
+          {isMaximized ? (
+            /* Icono Restaurar (dos rectángulos superpuestos) */
+            <svg width="12" height="12" viewBox="0 0 14 14">
+              <path d="M4.5 4.5v-2h7v7h-2M2.5 4.5h7v7h-7z" fill="none" stroke="var(--ui-titlebar-text, #fff)" strokeWidth="1.2" />
+            </svg>
+          ) : (
+            /* Icono Maximizar (un solo rectángulo) */
+            <svg width="12" height="12" viewBox="0 0 14 14">
+              <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" fill="none" stroke="var(--ui-titlebar-text, #fff)" strokeWidth="1.2" />
+            </svg>
+          )}
         </button>
         {/* Cerrar */}
         <button

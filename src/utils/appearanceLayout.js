@@ -15,5 +15,8 @@ export function applyUILayoutFromStorage() {
   const layoutId = localStorage.getItem(UI_LAYOUT_STORAGE_KEY) || 'unified';
   document.body.classList.remove(...LAYOUT_BODY_CLASSES);
   document.body.classList.add(`layout-${layoutId}`);
+  if (window.electronAPI && window.electronAPI.setWindowCorners) {
+    window.electronAPI.setWindowCorners(layoutId);
+  }
   return layoutId;
 }
