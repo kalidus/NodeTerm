@@ -3092,7 +3092,7 @@ function applyWindowCornersForLayout(win, layoutId) {
   // 3 = DWMWCP_ROUNDSMALL (Slightly rounded corners)
   let preference = 2; // Default to rounded
   
-  if (layoutId === 'unified' || layoutId === 'cyberpunk') {
+  if (layoutId === 'unified' || layoutId === 'unified-rounded' || layoutId === 'cyberpunk') {
     preference = 1; // Square corners
   }
   
@@ -3144,10 +3144,12 @@ $posRes = [User32]::SetWindowPos($hwndIntPtr, [IntPtr]0, 0, 0, 0, 0, $flags)
 Write-Host "SUCCESS HWND=${hwndAddress} preference=${preference} DwmRes=$res SetWindowPosRes=$posRes"
 `;
 
+    const encodedScript = Buffer.from(psScript, 'utf-16le').toString('base64');
+
     const child = spawn('powershell.exe', [
       '-NoProfile',
       '-ExecutionPolicy', 'Bypass',
-      '-Command', '-'
+      '-EncodedCommand', encodedScript
     ], {
       env: minimalEnv
     });
@@ -3171,9 +3173,6 @@ Write-Host "SUCCESS HWND=${hwndAddress} preference=${preference} DwmRes=$res Set
         console.log(`[WindowCorners] PowerShell process finished successfully`);
       }
     });
-
-    child.stdin.write(psScript);
-    child.stdin.end();
   } catch (err) {
     console.error('[WindowCorners] Error setting window corner preference:', err);
   }
