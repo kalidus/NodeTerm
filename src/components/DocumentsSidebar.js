@@ -575,33 +575,10 @@ const DocumentsSidebar = ({
     }, 50);
   }, []);
 
-  // Elimina una nota del contenedor de notas rápidas
+  // Elimina una nota del contenedor de notas rápidas y la mueve a la papelera
   const deleteQuickNote = useCallback((noteNode) => {
-    if (confirmDialog) {
-      confirmDialog({
-        message: `¿Eliminar la nota rápida "${noteNode.label}"?`,
-        header: 'Confirmar eliminación',
-        icon: 'pi pi-exclamation-triangle',
-        acceptClassName: 'p-button-danger',
-        accept: () => {
-          setDocumentNodes(prev => prev.map(node => {
-            if (node.key === 'quick_note') {
-              return {
-                ...node,
-                children: (node.children || []).filter(c => c.key !== noteNode.key)
-              };
-            }
-            return node;
-          }));
-          showToast?.({
-            severity: 'info',
-            summary: 'Eliminada',
-            detail: `"${noteNode.label}" eliminada`,
-            life: 3000
-          });
-        }
-      });
-    } else {
+    const performDelete = () => {
+      const nodeCopy = JSON.parse(JSON.stringify(noteNode));
       setDocumentNodes(prev => prev.map(node => {
         if (node.key === 'quick_note') {
           return {
@@ -611,8 +588,37 @@ const DocumentsSidebar = ({
         }
         return node;
       }));
+      // Mover a papelera
+      const trashItem = {
+        id: `dtrash_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+        key: noteNode.key,
+        label: noteNode.label || 'Sin nombre',
+        isFolder: false,
+        isQuickNote: true,
+        deletedAt: new Date().toISOString(),
+        nodeData: nodeCopy,
+      };
+      setTrashedDocuments(prev => [trashItem, ...prev]);
+      showToast?.({
+        severity: 'success',
+        summary: 'Movido a la papelera',
+        detail: `"${noteNode.label}" movido a la papelera`,
+        life: 3000
+      });
+    };
+
+    if (confirmDialog) {
+      confirmDialog({
+        message: `¿Eliminar la nota rápida "${noteNode.label}"?`,
+        header: 'Confirmar eliminación',
+        icon: 'pi pi-exclamation-triangle',
+        acceptClassName: 'p-button-danger',
+        accept: performDelete
+      });
+    } else {
+      performDelete();
     }
-  }, [confirmDialog, showToast]);
+  }, [confirmDialog, showToast, setTrashedDocuments]);
 
   const handleCreateNewNote = useCallback(() => {
     createNewDocumentInTree(getParentKeyForNewNote());
@@ -683,7 +689,19 @@ const DocumentsSidebar = ({
   const restoreDocumentFromTrash = useCallback((trashId) => {
     const item = trashedDocuments.find(i => i.id === trashId);
     if (!item || !item.nodeData) return;
-    setDocumentNodes(prev => [item.nodeData, ...prev]);
+    if (item.isQuickNote) {
+      setDocumentNodes(prev => prev.map(node => {
+        if (node.key === 'quick_note') {
+          return {
+            ...node,
+            children: [item.nodeData, ...(node.children || [])]
+          };
+        }
+        return node;
+      }));
+    } else {
+      setDocumentNodes(prev => [item.nodeData, ...prev]);
+    }
     setTrashedDocuments(prev => prev.filter(i => i.id !== trashId));
     showToast && showToast({ severity: 'success', summary: 'Restaurado', detail: `"${item.label}" restaurado`, life: 3000 });
   }, [trashedDocuments, showToast]);
