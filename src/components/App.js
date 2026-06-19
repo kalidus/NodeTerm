@@ -2578,16 +2578,17 @@ const App = () => {
   useEffect(() => {
     const handler = (e) => {
       const { key, icon } = e.detail || {};
-      if (!key || !icon) return;
+      if (!key) return;
       setSshTabs(prev =>
         prev.map(t => {
           if (t.type === TAB_TYPES.DOCUMENT && t.documentData?.key === key) {
+            const finalIcon = icon || '📄';
             return {
               ...t,
-              label: `${icon} ${t.documentData.label}`,
+              label: `${finalIcon} ${t.documentData.label}`,
               documentData: {
                 ...t.documentData,
-                icon
+                icon: icon || null
               }
             };
           }

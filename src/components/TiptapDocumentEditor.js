@@ -988,7 +988,7 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
                 onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
                 title="Cambiar icono de nota"
               >
-                {documentData?.icon && documentData.icon.length <= 4 ? documentData.icon : '📝'}
+                {documentData?.icon && documentData.icon.length <= 4 ? documentData.icon : '📄'}
               </span>
               {showIconPicker && (
                 <div
@@ -1035,6 +1035,27 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
                       {emoji}
                     </button>
                   ))}
+                  <button
+                    onClick={() => handleSelectIcon(null)}
+                    type="button"
+                    style={{
+                      gridColumn: 'span 6',
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      border: 'none',
+                      color: 'var(--ui-content-text, #f1f5f9)',
+                      fontSize: '0.72rem',
+                      cursor: 'pointer',
+                      padding: '5px 10px',
+                      borderRadius: '5px',
+                      marginTop: '4px',
+                      transition: 'background 0.2s',
+                      fontWeight: '600'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+                    onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
+                  >
+                    Restaurar por defecto
+                  </button>
                 </div>
               )}
             </div>

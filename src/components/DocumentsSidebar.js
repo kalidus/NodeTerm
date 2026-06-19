@@ -1016,14 +1016,14 @@ const DocumentsSidebar = ({
   useEffect(() => {
     const handler = (e) => {
       const { key, icon } = e.detail || {};
-      if (!key || !icon) return;
+      if (!key) return;
       setDocumentNodes(prev => {
         const node = findNodeInTree(prev, key);
         if (!node) return prev;
         return updateNodeInTree(prev, key, {
           data: {
             ...(node.data || {}),
-            icon
+            icon: icon || null
           }
         });
       });
