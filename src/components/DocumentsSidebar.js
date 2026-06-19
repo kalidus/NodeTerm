@@ -997,6 +997,19 @@ const DocumentsSidebar = ({
     return () => window.removeEventListener('document-content-updated', handler);
   }, []);
 
+  // Sync external title updates when renamed in the editor
+  useEffect(() => {
+    const handler = (e) => {
+      const { key, label } = e.detail || {};
+      if (!key || !label) return;
+      setDocumentNodes(prev =>
+        updateNodeInTree(prev, key, { label })
+      );
+    };
+    window.addEventListener('document-title-updated', handler);
+    return () => window.removeEventListener('document-title-updated', handler);
+  }, []);
+
   const openNewFolderDialog = () => {
     setParentKeyForNew(null);
     setNewItemName('');

@@ -348,6 +348,42 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
   const saveTimerRef = useRef(null);
   const lastSavedContentRef = useRef(documentData?.content || '');
 
+  // Title Editing State
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [tempTitle, setTempTitle] = useState(documentData?.label || 'Sin título');
+
+  useEffect(() => {
+    if (documentData?.label) {
+      setTempTitle(documentData.label);
+    }
+  }, [documentData?.label]);
+
+  const handleTitleBlur = () => {
+    setIsEditingTitle(false);
+    const trimmed = tempTitle.trim();
+    if (trimmed && trimmed !== documentData?.label) {
+      window.dispatchEvent(new CustomEvent('document-title-updated', {
+        detail: {
+          key: documentKey,
+          label: trimmed
+        }
+      }));
+    } else {
+      setTempTitle(documentData?.label || 'Sin título');
+    }
+  };
+
+  const handleTitleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleTitleBlur();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setTempTitle(documentData?.label || 'Sin título');
+      setIsEditingTitle(false);
+    }
+  };
+
   // Premium Features State
   const [isZenMode, setIsZenMode] = useState(false);
   const [zenTheme, setZenTheme] = useState('dark-charcoal'); // 'dark-charcoal', 'deep-nebula', 'solar-sepia', 'clean-cyber'
@@ -897,12 +933,41 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
       
       {/* CABECERA PRINCIPAL UNIFICADA */}
       <div className="document-editor-header">
-        <div className="document-editor-title-container">
+        <div className="document-editor-title-container" style={{ maxWidth: '280px' }}>
           <div className="document-editor-title">
             <i className="pi pi-file-edit" />
-            <span className="title-text">
-              {documentData?.label || 'Sin título'}
-            </span>
+            {isEditingTitle ? (
+              <input
+                type="text"
+                className="document-editor-title-input"
+                value={tempTitle}
+                onChange={(e) => setTempTitle(e.target.value)}
+                onBlur={handleTitleBlur}
+                onKeyDown={handleTitleKeyDown}
+                autoFocus
+                style={{
+                  background: 'rgba(0, 0, 0, 0.25)',
+                  border: '1px solid var(--ui-primary-color, #3b82f6)',
+                  borderRadius: '4px',
+                  color: 'var(--ui-content-text, #f1f5f9)',
+                  fontFamily: 'inherit',
+                  fontSize: '0.88rem',
+                  fontWeight: '600',
+                  padding: '2px 6px',
+                  outline: 'none',
+                  width: '180px',
+                }}
+              />
+            ) : (
+              <span
+                className="title-text"
+                onClick={() => setIsEditingTitle(true)}
+                title="Haga clic para editar el título"
+                style={{ cursor: 'pointer' }}
+              >
+                {documentData?.label || 'Sin título'}
+              </span>
+            )}
           </div>
           <div className={`document-editor-status-dot ${saveStatus}`} title={
             saveStatus === 'saved' ? 'Guardado' : saveStatus === 'saving' ? 'Guardando...' : 'Sin guardar'

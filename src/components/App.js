@@ -2547,6 +2547,31 @@ const App = () => {
     return () => window.removeEventListener('open-document-tab', handler);
   }, [getAllTabs, promoteAndActivateTab, activateTabSynchronously]);
 
+  // Sync tab title/label when the document title is updated in the editor
+  useEffect(() => {
+    const handler = (e) => {
+      const { key, label } = e.detail || {};
+      if (!key || !label) return;
+      setSshTabs(prev =>
+        prev.map(t => {
+          if (t.type === TAB_TYPES.DOCUMENT && t.documentData?.key === key) {
+            return {
+              ...t,
+              label: `📝 ${label}`,
+              documentData: {
+                ...t.documentData,
+                label
+              }
+            };
+          }
+          return t;
+        })
+      );
+    };
+    window.addEventListener('document-title-updated', handler);
+    return () => window.removeEventListener('document-title-updated', handler);
+  }, [setSshTabs]);
+
   // Escuchar eventos de expansión de nodos desde el buscador
   useEffect(() => {
     const findNodePathByKey = (nodeList, targetKey, currentPath = []) => {
