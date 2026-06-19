@@ -1070,7 +1070,7 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
                 autoFocus
                 style={{
                   background: 'rgba(0, 0, 0, 0.25)',
-                  border: '1px solid var(--ui-primary-color, #3b82f6)',
+                  border: '1px solid var(--ui-button-primary, #3b82f6)',
                   borderRadius: '4px',
                   color: 'var(--ui-content-text, #f1f5f9)',
                   fontFamily: 'inherit',
