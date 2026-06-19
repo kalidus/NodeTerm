@@ -1105,6 +1105,7 @@ const DocumentsSidebar = ({
   // Abrir una nota rápida en el editor principal
   const handleOpenQuickNote = useCallback((node) => {
     setSelectedNodeKey(node.key);
+    setQuickNotesPanelOpen(false);
     window.dispatchEvent(new CustomEvent('open-document-tab', {
       detail: {
         key: node.key,
