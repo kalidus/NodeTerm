@@ -353,7 +353,13 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
   const [tempTitle, setTempTitle] = useState(documentData?.label || 'Sin título');
   const [showIconPicker, setShowIconPicker] = useState(false);
 
-  const emojiPresets = ['📝', '💡', '🚀', '💻', '🔒', '🌐', '⚙️', '📊', '📁', '🐧', '🐳', '🎨', '⭐', '🔥', '🐞', '📅', '💬', '🧠', '🛠️', '📎', '🔑', '🎯', '📢', '🧪'];
+  const emojiPresets = [
+    '📝', '📄', '📃', '📑', '📓', '📔',
+    '📕', '📗', '📘', '📙', '📚', '🗒️',
+    '✍️', '✏️', '✒️', '🖋️', '📌', '📎',
+    '💡', '⚡', '📅', '🐞', '🔒', '🔑',
+    '💻', '⚙️', '📂', '🏷️', '🎯', '🚀'
+  ];
 
   useEffect(() => {
     const handleOutsideIconClick = (e) => {
