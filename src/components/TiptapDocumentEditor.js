@@ -348,9 +348,34 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
   const saveTimerRef = useRef(null);
   const lastSavedContentRef = useRef(documentData?.content || '');
 
-  // Title Editing State
+  // Title & Icon Editing State
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState(documentData?.label || 'Sin título');
+  const [showIconPicker, setShowIconPicker] = useState(false);
+
+  const emojiPresets = ['📝', '💡', '🚀', '💻', '🔒', '🌐', '⚙️', '📊', '📁', '🐧', '🐳', '🎨', '⭐', '🔥', '🐞', '📅', '💬', '🧠', '🛠️', '📎', '🔑', '🎯', '📢', '🧪'];
+
+  useEffect(() => {
+    const handleOutsideIconClick = (e) => {
+      if (!e.target.closest('.document-icon-container')) {
+        setShowIconPicker(false);
+      }
+    };
+    document.addEventListener('click', handleOutsideIconClick, true);
+    return () => {
+      document.removeEventListener('click', handleOutsideIconClick, true);
+    };
+  }, []);
+
+  const handleSelectIcon = (emoji) => {
+    setShowIconPicker(false);
+    window.dispatchEvent(new CustomEvent('document-icon-updated', {
+      detail: {
+        key: documentKey,
+        icon: emoji
+      }
+    }));
+  };
 
   useEffect(() => {
     if (documentData?.label) {
@@ -935,7 +960,78 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
       <div className="document-editor-header">
         <div className="document-editor-title-container" style={{ maxWidth: '280px' }}>
           <div className="document-editor-title">
-            <i className="pi pi-file-edit" />
+            <div className="document-icon-container" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <span
+                onClick={() => setShowIconPicker(!showIconPicker)}
+                style={{
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  padding: '4px',
+                  borderRadius: '6px',
+                  marginRight: '4px',
+                  width: '24px',
+                  height: '24px',
+                  transition: 'background 0.2s',
+                  userSelect: 'none'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+                onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
+                title="Cambiar icono de nota"
+              >
+                {documentData?.icon && documentData.icon.length <= 4 ? documentData.icon : '📝'}
+              </span>
+              {showIconPicker && (
+                <div
+                  className="document-icon-picker-popover"
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    marginTop: '8px',
+                    background: 'rgba(30, 30, 38, 0.98)',
+                    backdropFilter: 'blur(20px)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    padding: '8px',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(6, 1fr)',
+                    gap: '6px',
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+                    zIndex: 1000,
+                    width: '190px',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  {emojiPresets.map(emoji => (
+                    <button
+                      key={emoji}
+                      onClick={() => handleSelectIcon(emoji)}
+                      type="button"
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        fontSize: '1.1rem',
+                        cursor: 'pointer',
+                        padding: '4px',
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+                      onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             {isEditingTitle ? (
               <input
                 type="text"

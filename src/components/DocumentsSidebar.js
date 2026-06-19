@@ -914,7 +914,9 @@ const DocumentsSidebar = ({
           {isFolder ? (
             <NotebookIcon themeKey={iconTheme} isOpen={node.expanded} size={18} />
           ) : (
-            themeIcons.file ? (
+            node.data?.icon ? (
+              <span style={{ fontSize: '0.95rem', width: 18, height: 18, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{node.data.icon}</span>
+            ) : themeIcons.file ? (
               React.cloneElement(themeIcons.file, {
                 width: 18,
                 height: 18,
@@ -1008,6 +1010,26 @@ const DocumentsSidebar = ({
     };
     window.addEventListener('document-title-updated', handler);
     return () => window.removeEventListener('document-title-updated', handler);
+  }, []);
+
+  // Sync external icon updates when changed in the editor
+  useEffect(() => {
+    const handler = (e) => {
+      const { key, icon } = e.detail || {};
+      if (!key || !icon) return;
+      setDocumentNodes(prev => {
+        const node = findNodeInTree(prev, key);
+        if (!node) return prev;
+        return updateNodeInTree(prev, key, {
+          data: {
+            ...(node.data || {}),
+            icon
+          }
+        });
+      });
+    };
+    window.addEventListener('document-icon-updated', handler);
+    return () => window.removeEventListener('document-icon-updated', handler);
   }, []);
 
   const openNewFolderDialog = () => {

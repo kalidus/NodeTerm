@@ -2528,6 +2528,7 @@ const App = () => {
       const documentData = {
         key: info.key,
         label: info.label,
+        icon: info.data?.icon || '📝',
         content: info.data?.content || '',
         markdownSource: info.data?.markdownSource || '',
         createdAt: info.data?.createdAt,
@@ -2536,7 +2537,7 @@ const App = () => {
 
       const newTab = {
         key: tabId,
-        label: `📝 ${info.label}`,
+        label: `${documentData.icon} ${info.label}`,
         type: TAB_TYPES.DOCUMENT,
         documentData,
         createdAt: Date.now()
@@ -2555,9 +2556,10 @@ const App = () => {
       setSshTabs(prev =>
         prev.map(t => {
           if (t.type === TAB_TYPES.DOCUMENT && t.documentData?.key === key) {
+            const icon = t.documentData?.icon || '📝';
             return {
               ...t,
-              label: `📝 ${label}`,
+              label: `${icon} ${label}`,
               documentData: {
                 ...t.documentData,
                 label
@@ -2570,6 +2572,31 @@ const App = () => {
     };
     window.addEventListener('document-title-updated', handler);
     return () => window.removeEventListener('document-title-updated', handler);
+  }, [setSshTabs]);
+
+  // Sync tab icon/label when the document icon is updated in the editor
+  useEffect(() => {
+    const handler = (e) => {
+      const { key, icon } = e.detail || {};
+      if (!key || !icon) return;
+      setSshTabs(prev =>
+        prev.map(t => {
+          if (t.type === TAB_TYPES.DOCUMENT && t.documentData?.key === key) {
+            return {
+              ...t,
+              label: `${icon} ${t.documentData.label}`,
+              documentData: {
+                ...t.documentData,
+                icon
+              }
+            };
+          }
+          return t;
+        })
+      );
+    };
+    window.addEventListener('document-icon-updated', handler);
+    return () => window.removeEventListener('document-icon-updated', handler);
   }, [setSshTabs]);
 
   // Escuchar eventos de expansión de nodos desde el buscador
