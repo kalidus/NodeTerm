@@ -1396,3 +1396,21 @@ button[aria-label="Seleccionar tipo de terminal"]:focus i {
 .launcher-card:hover::after {
     opacity: 1;
 }
+
+/* Sincronización de estilo de letra (fuente), tamaño y color de pestañas con la barra lateral */
+:root[data-tab-layout] .p-tabview .p-tabview-nav li:not(.home-tab) .p-tabview-nav-link,
+:root .p-tabview .p-tabview-nav li:not(.home-tab) .p-tabview-nav-link {
+    font-family: var(--sidebar-font-family, system-ui, sans-serif) !important;
+    font-size: var(--sidebar-font-size, 0.82rem) !important;
+    color: var(--ui-sidebar-text, var(--ui-tab-text, rgba(255, 255, 255, 0.6))) !important;
+}
+
+:root[data-tab-layout] .p-tabview .p-tabview-nav li:not(.home-tab).p-highlight .p-tabview-nav-link,
+:root .p-tabview .p-tabview-nav li:not(.home-tab).p-highlight .p-tabview-nav-link {
+    color: var(--ui-tab-active-text, var(--ui-sidebar-text, #ffffff)) !important;
+}
+
+:root[data-tab-layout] .p-tabview .p-tabview-nav li:not(.home-tab):not(.p-highlight) .p-tabview-nav-link:hover,
+:root .p-tabview .p-tabview-nav li:not(.home-tab):not(.p-highlight) .p-tabview-nav-link:hover {
+    color: var(--ui-sidebar-text, var(--ui-tab-text-hover, rgba(255, 255, 255, 0.9))) !important;
+}
