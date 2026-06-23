@@ -1638,7 +1638,7 @@ const TabContentRendererInner = React.memo(({
       if (isCyberpunk) {
         borderStyle = isHovered ? '1px solid #00f0ff' : '1px solid rgba(255, 0, 85, 0.4)';
       } else if (isUnified || isUnifiedRounded) {
-        borderStyle = isHovered ? '1px solid var(--ui-button-primary)' : '1px solid transparent';
+        borderStyle = isHovered ? '1px solid var(--ui-button-primary)' : '1px solid var(--ui-content-border, rgba(255, 255, 255, 0.08))';
       }
       
       let shadowStyle = isHovered ? '0 8px 24px rgba(0, 0, 0, 0.25)' : '0 2px 4px rgba(0, 0, 0, 0.05)';
