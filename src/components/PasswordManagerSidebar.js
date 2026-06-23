@@ -1290,7 +1290,7 @@ const PasswordManagerSidebar = ({
         onClick={(e) => {
           if (isSecret) {
             e.stopPropagation();
-            setSelectedNodeKey({ [node.key]: true });
+            setSelectedNodeKey(node.key);
             if (passwordClickTimerRef.current) {
               clearTimeout(passwordClickTimerRef.current);
             }
@@ -1312,7 +1312,7 @@ const PasswordManagerSidebar = ({
               clearTimeout(passwordClickTimerRef.current);
               passwordClickTimerRef.current = null;
             }
-            setSelectedNodeKey({ [node.key]: true });
+            setSelectedNodeKey(node.key);
             dispatchPasswordTab(node, 'permanent');
           }
         }}
@@ -1524,7 +1524,7 @@ const PasswordManagerSidebar = ({
     if (node.data?.isShowMoreBtn) return;
     event.preventDefault();
     event.stopPropagation();
-    setSelectedNodeKey({ [node.key]: true });
+    setSelectedNodeKey(node.key);
     setCurrentContextNode(node);
     
     // Crear menú contextual simple para secretos
