@@ -1863,17 +1863,19 @@ const TabContentRendererInner = React.memo(({
       const isUnifiedRounded = uiLayout === 'unified-rounded';
 
       const actionButtonStyle = {
-        padding: '4px 8px',
-        borderRadius: isCyberpunk || isUnified ? '0px' : '4px',
-        border: isCyberpunk ? '1px solid rgba(255, 0, 85, 0.4)' : '1px solid var(--ui-content-border)',
-        background: 'var(--ui-button-secondary)',
-        color: 'var(--ui-button-secondary-text)',
+        width: '28px',
+        height: '28px',
+        borderRadius: isCyberpunk || isUnified ? '0px' : '50%',
+        border: 'none',
+        background: 'transparent',
+        color: 'var(--ui-dialog-text)',
+        opacity: 0.65,
         cursor: 'pointer',
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        transition: 'all 0.2s',
-        fontSize: '10px'
+        transition: 'all 0.15s ease-in-out',
+        fontSize: '11px'
       };
 
       let borderBottomStyle = isCyberpunk 
@@ -1962,8 +1964,16 @@ const TabContentRendererInner = React.memo(({
             {password.username && (
               <button
                 onClick={handleCopyUser}
-                onMouseOver={(e) => e.currentTarget.style.background = 'var(--ui-button-hover)'}
-                onMouseOut={(e) => e.currentTarget.style.background = 'var(--ui-button-secondary)'}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                  e.currentTarget.style.opacity = '1';
+                  e.currentTarget.style.color = 'var(--ui-button-primary)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.opacity = '0.65';
+                  e.currentTarget.style.color = 'var(--ui-dialog-text)';
+                }}
                 title="Copiar usuario"
                 style={actionButtonStyle}
               >
@@ -1978,8 +1988,14 @@ const TabContentRendererInner = React.memo(({
                     e.stopPropagation();
                     setShowPassword(!showPassword);
                   }}
-                  onMouseOver={(e) => e.currentTarget.style.background = 'var(--ui-button-hover)'}
-                  onMouseOut={(e) => e.currentTarget.style.background = 'var(--ui-button-secondary)'}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                    e.currentTarget.style.opacity = '1';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.opacity = '0.65';
+                  }}
                   title={showPassword ? "Ocultar" : "Mostrar"}
                   style={actionButtonStyle}
                 >
@@ -1987,8 +2003,16 @@ const TabContentRendererInner = React.memo(({
                 </button>
                 <button
                   onClick={handleCopyPass}
-                  onMouseOver={(e) => e.currentTarget.style.background = 'var(--ui-button-hover)'}
-                  onMouseOut={(e) => e.currentTarget.style.background = 'var(--ui-button-secondary)'}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                    e.currentTarget.style.opacity = '1';
+                    e.currentTarget.style.color = 'var(--ui-button-primary)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.opacity = '0.65';
+                    e.currentTarget.style.color = 'var(--ui-dialog-text)';
+                  }}
                   title="Copiar contraseña"
                   style={actionButtonStyle}
                 >
