@@ -1393,9 +1393,9 @@ const TabContentRendererInner = React.memo(({
     // Estado de Layout (grid o list), recordado en localStorage
     const [layoutMode, setLayoutMode] = React.useState(() => {
       try {
-        return localStorage.getItem('nodeterm_password_layout_mode') || 'grid';
+        return localStorage.getItem('nodeterm_password_layout_mode') || 'list';
       } catch (e) {
-        return 'grid';
+        return 'list';
       }
     });
 
