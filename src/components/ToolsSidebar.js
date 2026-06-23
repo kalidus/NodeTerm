@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Tree } from 'primereact/tree';
 import { iconThemes } from '../themes/icon-themes';
+import { themeManager, getThemeGroupColorPalette } from '../utils/themeManager';
 
 const TOOL_CATEGORIES = [
   {
     id: 'connectivity',
     label: 'Conectividad',
     icon: 'pi pi-wifi',
-    color: '#22c55e',
     tools: [
       { id: 'ping', label: 'Ping', icon: 'pi pi-clock', description: 'Test de conectividad con estadísticas' },
       { id: 'traceroute', label: 'Traceroute', icon: 'pi pi-sitemap', description: 'Trazado de rutas de red' }
@@ -17,7 +17,6 @@ const TOOL_CATEGORIES = [
     id: 'scanning',
     label: 'Escaneo',
     icon: 'pi pi-search',
-    color: '#f59e0b',
     tools: [
       { id: 'port-scan', label: 'Port Scanner', icon: 'pi pi-th-large', description: 'Escaneo de puertos TCP' },
       { id: 'network-scan', label: 'Network Scan', icon: 'pi pi-globe', description: 'Descubrimiento de hosts en red' }
@@ -27,7 +26,6 @@ const TOOL_CATEGORIES = [
     id: 'dns',
     label: 'DNS',
     icon: 'pi pi-database',
-    color: '#3b82f6',
     tools: [
       { id: 'dns-lookup', label: 'DNS Lookup', icon: 'pi pi-search-plus', description: 'Resolución de registros DNS' },
       { id: 'reverse-dns', label: 'Reverse DNS', icon: 'pi pi-replay', description: 'DNS inverso (IP a hostname)' }
@@ -37,7 +35,6 @@ const TOOL_CATEGORIES = [
     id: 'security',
     label: 'Seguridad',
     icon: 'pi pi-shield',
-    color: '#ef4444',
     tools: [
       { id: 'ssl-check', label: 'SSL Checker', icon: 'pi pi-lock', description: 'Verificación de certificados SSL/TLS' },
       { id: 'http-headers', label: 'HTTP Headers', icon: 'pi pi-file', description: 'Análisis de cabeceras HTTP' },
@@ -50,7 +47,6 @@ const TOOL_CATEGORIES = [
     id: 'utilities',
     label: 'Utilidades',
     icon: 'pi pi-cog',
-    color: '#8b5cf6',
     tools: [
       { id: 'whois', label: 'WHOIS', icon: 'pi pi-id-card', description: 'Información de dominio' },
       { id: 'subnet-calc', label: 'Subnet Calculator', icon: 'pi pi-calculator', description: 'Calculadora de subredes' },
@@ -106,29 +102,59 @@ const ToolsSidebar = ({
   const [hoveredTool, setHoveredTool] = useState(null);
   const [selectedToolKey, setSelectedToolKey] = useState(null);
 
+  const [themePalette, setThemePalette] = useState(() => {
+    return getThemeGroupColorPalette(themeManager.currentTheme?.colors);
+  });
+
+  useEffect(() => {
+    const handleThemeChanged = () => {
+      setThemePalette(getThemeGroupColorPalette(themeManager.currentTheme?.colors));
+    };
+    window.addEventListener('theme-changed', handleThemeChanged);
+    return () => window.removeEventListener('theme-changed', handleThemeChanged);
+  }, []);
+
+  const getCategoryColor = useCallback((categoryId, index) => {
+    if (themePalette && themePalette[index]) {
+      return themePalette[index];
+    }
+    // Fallbacks
+    switch (categoryId) {
+      case 'connectivity': return '#22c55e';
+      case 'scanning': return '#f59e0b';
+      case 'dns': return '#3b82f6';
+      case 'security': return '#ef4444';
+      case 'utilities': return '#8b5cf6';
+      default: return '#5e81ac';
+    }
+  }, [themePalette]);
+
   // Mapear TOOL_CATEGORIES al formato compatible con Tree de PrimeReact
   const treeNodes = useMemo(() => {
-    return TOOL_CATEGORIES.map(category => ({
-      key: category.id,
-      label: category.label,
-      icon: null,
-      categoryIcon: category.icon,
-      color: category.color,
-      droppable: false,
-      selectable: false,
-      children: category.tools.map(tool => ({
-        key: tool.id,
-        label: tool.label,
+    return TOOL_CATEGORIES.map((category, index) => {
+      const color = getCategoryColor(category.id, index);
+      return {
+        key: category.id,
+        label: category.label,
         icon: null,
-        toolIcon: tool.icon,
-        description: tool.description,
-        color: category.color,
+        categoryIcon: category.icon,
+        color: color,
         droppable: false,
-        selectable: true,
-        isLeaf: true
-      }))
-    }));
-  }, []);
+        selectable: false,
+        children: category.tools.map(tool => ({
+          key: tool.id,
+          label: tool.label,
+          icon: null,
+          toolIcon: tool.icon,
+          description: tool.description,
+          color: color,
+          droppable: false,
+          selectable: true,
+          isLeaf: true
+        }))
+      };
+    });
+  }, [getCategoryColor]);
 
   const notifyExpandState = useCallback((state) => {
     const allExpanded = Object.values(state).every(Boolean);
@@ -184,7 +210,7 @@ const ToolsSidebar = ({
         >
           {/* Icono de la Sección (usado en lugar de la carpeta genérica) */}
           <span className={node.categoryIcon} style={{ 
-            color: node.color, 
+            color: 'color-mix(in srgb, var(--ui-sidebar-selected) 50%, black)', 
             fontSize: `${folderIconSize}px`,
             marginRight: '4px',
             display: 'flex',
@@ -196,7 +222,7 @@ const ToolsSidebar = ({
           {/* Nombre de la Sección */}
           <span className="node-label" style={{
             lineHeight: '20px',
-            color: node.color,
+            color: 'color-mix(in srgb, var(--ui-sidebar-selected) 50%, black)',
             fontSize: `${Math.round(explorerFontSize * 0.85)}px`,
             fontWeight: '600',
             textTransform: 'uppercase',
@@ -206,13 +232,13 @@ const ToolsSidebar = ({
           {/* Contador de Herramientas */}
           <span style={{
             marginLeft: 'auto',
-            background: `${node.color}15`,
-            color: node.color,
+            background: 'color-mix(in srgb, var(--ui-sidebar-selected) 15%, transparent)',
+            color: 'color-mix(in srgb, var(--ui-sidebar-selected) 50%, black)',
             borderRadius: '10px',
             padding: '0 6px',
             fontSize: `${Math.round(explorerFontSize * 0.72)}px`,
             fontWeight: '700',
-            border: `1px solid ${node.color}30`
+            border: '1px solid color-mix(in srgb, var(--ui-sidebar-selected) 30%, transparent)'
           }}>
             {node.children.length}
           </span>
@@ -242,7 +268,7 @@ const ToolsSidebar = ({
             className={node.toolIcon} 
             style={{ 
               fontSize: `${connectionIconSize}px`, 
-              color: isHovered ? node.color : 'var(--ui-sidebar-text)',
+              color: isHovered ? 'var(--ui-sidebar-selected)' : 'var(--ui-sidebar-text)',
               opacity: isHovered ? 1 : 0.7,
               transition: 'all 0.12s ease',
               flexShrink: 0 
@@ -278,7 +304,7 @@ const ToolsSidebar = ({
 
           {/* Flecha al pasar el ratón */}
           {isHovered && (
-            <i className="pi pi-arrow-right animate-fade-in" style={{ fontSize: '0.65rem', color: node.color, flexShrink: 0, marginRight: '4px' }} />
+            <i className="pi pi-arrow-right animate-fade-in" style={{ fontSize: '0.65rem', color: 'var(--ui-sidebar-selected)', flexShrink: 0, marginRight: '4px' }} />
           )}
         </div>
       );

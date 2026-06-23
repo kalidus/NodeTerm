@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Tree } from 'primereact/tree';
 import { useTranslation } from '../i18n/hooks/useTranslation';
+import { themeManager, getThemeGroupColorPalette } from '../utils/themeManager';
 
 /**
  * Settings navigation panel for the main Sidebar.
@@ -15,14 +16,12 @@ const SETTINGS_SECTIONS = [
     labelKey: 'sidebar.general',
     descriptionKey: 'sidebarDescriptions.general',
     icon: 'pi pi-cog',
-    color: '#a78bfa',
     subitems: []
   },
   {
     id: 'seguridad',
     labelKey: 'sidebar.security',
     icon: 'pi pi-shield',
-    color: '#ef4444',
     subitems: [
       { id: 'clave-maestra', labelKey: 'sidebar.masterKey', descriptionKey: 'sidebarDescriptions.masterKey', icon: 'pi pi-key' },
       { id: 'auditoria', labelKey: 'sidebar.audit', descriptionKey: 'sidebarDescriptions.audit', icon: 'pi pi-video' }
@@ -33,14 +32,12 @@ const SETTINGS_SECTIONS = [
     labelKey: 'sidebar.users',
     descriptionKey: 'sidebarDescriptions.users',
     icon: 'pi pi-users',
-    color: '#f59e0b',
     subitems: []
   },
   {
     id: 'apariencia',
     labelKey: 'sidebar.appearance',
     icon: 'pi pi-palette',
-    color: '#3b82f6',
     subitems: [
       { id: 'interfaz', labelKey: 'sidebar.interface', descriptionKey: 'sidebarDescriptions.interface', icon: 'pi pi-eye' },
       { id: 'layouts', labelKey: 'sidebar.layouts', descriptionKey: 'sidebarDescriptions.layouts', icon: 'pi pi-th-large' },
@@ -59,7 +56,6 @@ const SETTINGS_SECTIONS = [
     labelKey: 'sidebar.apps',
     descriptionKey: 'sidebarDescriptions.apps',
     icon: 'pi pi-th-large',
-    color: '#3b82f6',
     subitems: []
   },
   {
@@ -67,7 +63,6 @@ const SETTINGS_SECTIONS = [
     labelKey: 'sidebar.updates',
     descriptionKey: 'sidebarDescriptions.updates',
     icon: 'pi pi-refresh',
-    color: '#8b5cf6',
     subitems: []
   },
   {
@@ -75,7 +70,6 @@ const SETTINGS_SECTIONS = [
     labelKey: 'sidebar.sync',
     descriptionKey: 'sidebarDescriptions.sync',
     icon: 'pi pi-cloud',
-    color: '#64b5f6',
     subitems: []
   },
   {
@@ -83,7 +77,6 @@ const SETTINGS_SECTIONS = [
     labelKey: 'sidebar.info',
     descriptionKey: 'sidebarDescriptions.info',
     icon: 'pi pi-info-circle',
-    color: '#9ca3af',
     subitems: []
   }
 ];
@@ -106,6 +99,36 @@ const SettingsSidebar = ({
   });
   const [hoveredItem, setHoveredItem] = useState(null);
   const [selectedItemKey, setSelectedItemKey] = useState(null);
+
+  const [themePalette, setThemePalette] = useState(() => {
+    return getThemeGroupColorPalette(themeManager.currentTheme?.colors);
+  });
+
+  useEffect(() => {
+    const handleThemeChanged = () => {
+      setThemePalette(getThemeGroupColorPalette(themeManager.currentTheme?.colors));
+    };
+    window.addEventListener('theme-changed', handleThemeChanged);
+    return () => window.removeEventListener('theme-changed', handleThemeChanged);
+  }, []);
+
+  const getSectionColor = useCallback((sectionId, index) => {
+    if (themePalette && themePalette[index]) {
+      return themePalette[index];
+    }
+    // Fallbacks
+    switch (sectionId) {
+      case 'general': return '#a78bfa';
+      case 'seguridad': return '#ef4444';
+      case 'usuarios': return '#f59e0b';
+      case 'apariencia': return '#3b82f6';
+      case 'apps': return '#3b82f6';
+      case 'actualizaciones': return '#8b5cf6';
+      case 'sincronizacion': return '#64b5f6';
+      case 'informacion': return '#9ca3af';
+      default: return '#5e81ac';
+    }
+  }, [themePalette]);
 
   const toggleCategory = useCallback((categoryId) => {
     setExpandedCategories(prev => ({ ...prev, [categoryId]: !prev[categoryId] }));
@@ -146,8 +169,9 @@ const SettingsSidebar = ({
   }, []);
 
   const resolvedSections = useMemo(() => {
-    return SETTINGS_SECTIONS.map(section => ({
+    return SETTINGS_SECTIONS.map((section, index) => ({
       ...section,
+      color: getSectionColor(section.id, index),
       label: t(section.labelKey) || section.id,
       description: section.descriptionKey ? (t(section.descriptionKey) || '') : '',
       subitems: section.subitems.map(sub => ({
@@ -156,7 +180,7 @@ const SettingsSidebar = ({
         description: sub.descriptionKey ? (t(sub.descriptionKey) || '') : ''
       }))
     }));
-  }, [t]);
+  }, [t, getSectionColor]);
 
   const treeNodes = useMemo(() => {
     return resolvedSections.map(section => ({
@@ -210,7 +234,7 @@ const SettingsSidebar = ({
           <span
             className={node.categoryIcon}
             style={{
-              color: node.color,
+              color: 'color-mix(in srgb, var(--ui-sidebar-selected) 50%, black)',
               fontSize: `${folderIconSize}px`,
               marginRight: '4px',
               display: 'flex',
@@ -223,7 +247,7 @@ const SettingsSidebar = ({
             className="node-label"
             style={{
               lineHeight: '20px',
-              color: node.color,
+              color: 'color-mix(in srgb, var(--ui-sidebar-selected) 50%, black)',
               fontSize: `${Math.round(explorerFontSize * 0.85)}px`,
               fontWeight: '600',
               textTransform: 'uppercase',
@@ -235,13 +259,13 @@ const SettingsSidebar = ({
           <span
             style={{
               marginLeft: 'auto',
-              background: `${node.color}15`,
-              color: node.color,
+              background: 'color-mix(in srgb, var(--ui-sidebar-selected) 15%, transparent)',
+              color: 'color-mix(in srgb, var(--ui-sidebar-selected) 50%, black)',
               borderRadius: '10px',
               padding: '0 6px',
               fontSize: `${Math.round(explorerFontSize * 0.72)}px`,
               fontWeight: '700',
-              border: `1px solid ${node.color}30`
+              border: '1px solid color-mix(in srgb, var(--ui-sidebar-selected) 30%, transparent)'
             }}
           >
             {node.children.length}
@@ -252,7 +276,7 @@ const SettingsSidebar = ({
 
     const hoverKey = node.parentId ? node.key : `${node.key}__main`;
     const isHovered = hoveredItem === hoverKey;
-    const itemColor = isTopLevelLeaf ? node.color : 'var(--ui-sidebar-text)';
+    const itemColor = isTopLevelLeaf ? 'color-mix(in srgb, var(--ui-sidebar-selected) 50%, black)' : 'var(--ui-sidebar-text)';
     const itemOpacity = isTopLevelLeaf ? 1 : isHovered ? 1 : 0.9;
 
     return (
@@ -276,7 +300,7 @@ const SettingsSidebar = ({
           className={isTopLevelLeaf ? node.categoryIcon : node.toolIcon}
           style={{
             fontSize: `${connectionIconSize}px`,
-            color: isHovered ? node.color : itemColor,
+            color: isHovered ? 'var(--ui-sidebar-selected)' : itemColor,
             opacity: isTopLevelLeaf ? (isHovered ? 1 : 0.95) : (isHovered ? 1 : 0.7),
             transition: 'all 0.12s ease',
             flexShrink: 0
@@ -304,7 +328,7 @@ const SettingsSidebar = ({
             className="pi pi-arrow-right animate-fade-in"
             style={{
               fontSize: '0.65rem',
-              color: node.color,
+              color: 'var(--ui-sidebar-selected)',
               flexShrink: 0,
               marginRight: '4px'
             }}
