@@ -1407,6 +1407,29 @@ const TabContentRendererInner = React.memo(({
       setCurrentPage(1); // Resetear página
     };
 
+    // Estado de Layout global (para adaptar bordes, sombras, etc. al estilo activo de NodeTerm)
+    const [uiLayout, setUiLayout] = React.useState(() => {
+      try {
+        return localStorage.getItem('ui_layout') || 'unified';
+      } catch (e) {
+        return 'unified';
+      }
+    });
+
+    React.useEffect(() => {
+      const handleLayoutChange = () => {
+        try {
+          setUiLayout(localStorage.getItem('ui_layout') || 'unified');
+        } catch (e) { /* noop */ }
+      };
+      window.addEventListener('layout-changed', handleLayoutChange);
+      window.addEventListener('settings-updated', handleLayoutChange);
+      return () => {
+        window.removeEventListener('layout-changed', handleLayoutChange);
+        window.removeEventListener('settings-updated', handleLayoutChange);
+      };
+    }, []);
+
     // Estado para paginación, búsqueda y ordenación
     const [currentPage, setCurrentPage] = React.useState(1);
     const [searchTerm, setSearchTerm] = React.useState('');
@@ -1599,24 +1622,51 @@ const TabContentRendererInner = React.memo(({
         minHeight: '28px'
       };
 
+      // Adaptar estilos según el layout global de la UI
+      const isCyberpunk = uiLayout === 'cyberpunk';
+      const isUnified = uiLayout === 'unified' || uiLayout === 'unified-app-rounded';
+      const isUnifiedRounded = uiLayout === 'unified-rounded';
+      
+      let borderRadius = '12px';
+      if (isCyberpunk || isUnified) {
+        borderRadius = '0px';
+      } else if (isUnifiedRounded) {
+        borderRadius = '8px';
+      }
+      
+      let borderStyle = isHovered ? '1px solid var(--ui-button-primary)' : '1px solid var(--ui-content-border)';
+      if (isCyberpunk) {
+        borderStyle = isHovered ? '1px solid #00f0ff' : '1px solid rgba(255, 0, 85, 0.4)';
+      } else if (isUnified || isUnifiedRounded) {
+        borderStyle = isHovered ? '1px solid var(--ui-button-primary)' : '1px solid transparent';
+      }
+      
+      let shadowStyle = isHovered ? '0 8px 24px rgba(0, 0, 0, 0.25)' : '0 2px 4px rgba(0, 0, 0, 0.05)';
+      if (isCyberpunk) {
+        shadowStyle = isHovered ? '0 0 15px rgba(0, 240, 255, 0.35)' : 'none';
+      } else if (isUnified || isUnifiedRounded) {
+        shadowStyle = 'none';
+      }
+
       return (
         <div
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
           style={{
             background: 'var(--ui-dialog-bg)',
-            border: isHovered ? '1px solid var(--ui-button-primary)' : '1px solid var(--ui-content-border)',
-            borderRadius: '12px',
+            border: borderStyle,
+            borderRadius: borderRadius,
             padding: '16px',
             display: 'flex',
             flexDirection: 'column',
             gap: '12px',
             position: 'relative',
             transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-            transform: isHovered ? 'translateY(-2px)' : 'none',
-            boxShadow: isHovered ? '0 8px 24px rgba(0, 0, 0, 0.25)' : '0 2px 4px rgba(0, 0, 0, 0.05)',
+            transform: isHovered && !isUnified && !isUnifiedRounded ? 'translateY(-2px)' : 'none',
+            boxShadow: shadowStyle,
             minHeight: '170px',
-            justifyContent: 'space-between'
+            justifyContent: 'space-between',
+            fontFamily: isCyberpunk ? 'monospace' : 'inherit'
           }}
         >
           {/* Top Row: Icon and Actions */}
@@ -1624,7 +1674,7 @@ const TabContentRendererInner = React.memo(({
             <div style={{
               width: '36px',
               height: '36px',
-              borderRadius: '8px',
+              borderRadius: isCyberpunk || isUnified ? '0px' : (isUnifiedRounded ? '6px' : '8px'),
               background: 'var(--ui-sidebar-hover)',
               display: 'flex',
               alignItems: 'center',
@@ -1650,7 +1700,10 @@ const TabContentRendererInner = React.memo(({
                   onMouseOver={(e) => e.currentTarget.style.background = 'var(--ui-button-hover)'}
                   onMouseOut={(e) => e.currentTarget.style.background = 'var(--ui-button-secondary)'}
                   title="Abrir enlace externo"
-                  style={actionButtonStyle}
+                  style={{
+                    ...actionButtonStyle,
+                    borderRadius: isCyberpunk || isUnified ? '0px' : '6px'
+                  }}
                 >
                   <span className="pi pi-external-link" style={{ fontSize: '11px' }}></span>
                 </button>
@@ -1662,7 +1715,10 @@ const TabContentRendererInner = React.memo(({
                   onMouseOver={(e) => e.currentTarget.style.background = 'var(--ui-button-hover)'}
                   onMouseOut={(e) => e.currentTarget.style.background = 'var(--ui-button-secondary)'}
                   title="Copiar usuario"
-                  style={actionButtonStyle}
+                  style={{
+                    ...actionButtonStyle,
+                    borderRadius: isCyberpunk || isUnified ? '0px' : '6px'
+                  }}
                 >
                   <span className={copiedUser ? "pi pi-check" : "pi pi-user"} style={{ fontSize: '11px', color: copiedUser ? '#4caf50' : 'inherit' }}></span>
                 </button>
@@ -1678,7 +1734,10 @@ const TabContentRendererInner = React.memo(({
                     onMouseOver={(e) => e.currentTarget.style.background = 'var(--ui-button-hover)'}
                     onMouseOut={(e) => e.currentTarget.style.background = 'var(--ui-button-secondary)'}
                     title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                    style={actionButtonStyle}
+                    style={{
+                      ...actionButtonStyle,
+                      borderRadius: isCyberpunk || isUnified ? '0px' : '6px'
+                    }}
                   >
                     <span className={showPassword ? "pi pi-eye-slash" : "pi pi-eye"} style={{ fontSize: '11px' }}></span>
                   </button>
@@ -1687,7 +1746,10 @@ const TabContentRendererInner = React.memo(({
                     onMouseOver={(e) => e.currentTarget.style.background = 'var(--ui-button-hover)'}
                     onMouseOut={(e) => e.currentTarget.style.background = 'var(--ui-button-secondary)'}
                     title="Copiar contraseña"
-                    style={actionButtonStyle}
+                    style={{
+                      ...actionButtonStyle,
+                      borderRadius: isCyberpunk || isUnified ? '0px' : '6px'
+                    }}
                   >
                     <span className={copiedPass ? "pi pi-check" : "pi pi-key"} style={{ fontSize: '11px', color: copiedPass ? '#4caf50' : 'inherit' }}></span>
                   </button>
@@ -1725,13 +1787,13 @@ const TabContentRendererInner = React.memo(({
           <div style={{ 
             background: 'var(--ui-sidebar-hover)', 
             padding: '6px 10px', 
-            borderRadius: '6px', 
+            borderRadius: isCyberpunk || isUnified ? '0px' : (isUnifiedRounded ? '6px' : '6px'), 
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'space-between',
             fontFamily: 'monospace',
             fontSize: '11px',
-            border: '1px solid var(--ui-content-border)',
+            border: isCyberpunk ? '1px solid rgba(0, 240, 255, 0.3)' : '1px solid var(--ui-content-border)',
             minHeight: '28px'
           }}>
             <span style={{ 
@@ -1752,7 +1814,7 @@ const TabContentRendererInner = React.memo(({
               fontSize: '10px', 
               color: 'var(--ui-dialog-text)', 
               opacity: 0.5,
-              borderTop: '1px solid var(--ui-content-border)',
+              borderTop: isCyberpunk ? '1px dashed #ff0055' : '1px solid var(--ui-content-border)',
               paddingTop: '6px',
               display: 'flex',
               flexDirection: 'column',
@@ -1796,10 +1858,14 @@ const TabContentRendererInner = React.memo(({
         setTimeout(() => setCopiedPass(false), 1500);
       };
 
+      const isCyberpunk = uiLayout === 'cyberpunk';
+      const isUnified = uiLayout === 'unified' || uiLayout === 'unified-app-rounded';
+      const isUnifiedRounded = uiLayout === 'unified-rounded';
+
       const actionButtonStyle = {
         padding: '4px 8px',
-        borderRadius: '4px',
-        border: '1px solid var(--ui-content-border)',
+        borderRadius: isCyberpunk || isUnified ? '0px' : '4px',
+        border: isCyberpunk ? '1px solid rgba(255, 0, 85, 0.4)' : '1px solid var(--ui-content-border)',
         background: 'var(--ui-button-secondary)',
         color: 'var(--ui-button-secondary-text)',
         cursor: 'pointer',
@@ -1810,6 +1876,10 @@ const TabContentRendererInner = React.memo(({
         fontSize: '10px'
       };
 
+      let borderBottomStyle = isCyberpunk 
+        ? '1px solid rgba(255, 0, 85, 0.2)' 
+        : (isUnified || isUnifiedRounded ? '1px solid rgba(255,255,255,0.05)' : '1px solid var(--ui-content-border)');
+
       return (
         <div
           onMouseEnter={() => setIsHovered(true)}
@@ -1818,12 +1888,13 @@ const TabContentRendererInner = React.memo(({
             display: 'flex',
             alignItems: 'center',
             padding: '10px 16px',
-            borderBottom: '1px solid var(--ui-content-border)',
+            borderBottom: borderBottomStyle,
             background: isHovered 
               ? 'var(--ui-sidebar-hover)' 
               : (index % 2 === 0 ? 'rgba(255, 255, 255, 0.015)' : 'transparent'),
             transition: 'background-color 0.2s',
-            minHeight: '48px'
+            minHeight: '48px',
+            fontFamily: isCyberpunk ? 'monospace' : 'inherit'
           }}
         >
           {/* Columna Icono */}
@@ -1932,6 +2003,8 @@ const TabContentRendererInner = React.memo(({
 
     const TableHeader = ({ field, label, flex = '1' }) => {
       const isSorted = sortField === field;
+      const isCyberpunk = uiLayout === 'cyberpunk';
+
       return (
         <div
           onClick={() => handleSort(field)}
@@ -1946,7 +2019,8 @@ const TabContentRendererInner = React.memo(({
             color: isSorted ? 'var(--ui-button-primary)' : 'var(--ui-dialog-text)',
             fontSize: '12px',
             fontWeight: '600',
-            transition: 'color 0.2s'
+            transition: 'color 0.2s',
+            fontFamily: isCyberpunk ? 'monospace' : 'inherit'
           }}
           onMouseOver={(e) => !isSorted && (e.currentTarget.style.color = 'var(--ui-button-primary)')}
           onMouseOut={(e) => !isSorted && (e.currentTarget.style.color = 'var(--ui-dialog-text)')}
@@ -1966,8 +2040,8 @@ const TabContentRendererInner = React.memo(({
         disabled={disabled}
         style={{
           padding: '8px 16px',
-          borderRadius: 6,
-          border: '1px solid var(--ui-content-border)',
+          borderRadius: uiLayout === 'cyberpunk' || uiLayout === 'unified' || uiLayout === 'unified-app-rounded' ? 0 : (uiLayout === 'unified-rounded' ? 6 : 6),
+          border: uiLayout === 'unified' || uiLayout === 'unified-rounded' || uiLayout === 'unified-app-rounded' ? '1px solid rgba(255,255,255,0.06)' : '1px solid var(--ui-content-border)',
           background: disabled ? 'var(--ui-content-bg)' : 'var(--ui-button-secondary)',
           color: disabled ? 'var(--text-color-secondary)' : 'var(--ui-button-secondary-text)',
           cursor: disabled ? 'not-allowed' : 'pointer',
@@ -1983,6 +2057,10 @@ const TabContentRendererInner = React.memo(({
       </button>
     );
 
+    const isCyberpunk = uiLayout === 'cyberpunk';
+    const isUnified = uiLayout === 'unified' || uiLayout === 'unified-app-rounded';
+    const isUnifiedRounded = uiLayout === 'unified-rounded';
+
     return (
       <div style={{
         padding: '24px',
@@ -1995,16 +2073,23 @@ const TabContentRendererInner = React.memo(({
         {/* Header Title Row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
           <span className="pi pi-folder-open" style={{ fontSize: '28px', color: 'var(--ui-button-primary)' }}></span>
-          <h2 style={{ margin: 0, color: 'var(--ui-dialog-text)', fontSize: '24px' }}>{folderLabel}</h2>
+          <h2 style={{ 
+            margin: 0, 
+            color: 'var(--ui-dialog-text)', 
+            fontSize: '24px',
+            fontFamily: isCyberpunk ? 'monospace' : 'inherit'
+          }}>{folderLabel}</h2>
           
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{
               padding: '4px 12px',
-              borderRadius: 12,
+              borderRadius: isCyberpunk || isUnified ? 0 : (isUnifiedRounded ? 8 : 12),
               background: 'rgba(255, 255, 255, 0.08)',
               color: 'var(--ui-button-primary)',
               fontSize: '12px',
-              fontWeight: '600'
+              fontWeight: '600',
+              fontFamily: isCyberpunk ? 'monospace' : 'inherit',
+              border: isCyberpunk ? '1px solid #00f0ff' : 'none'
             }}>
               {passwords.length} {passwords.length === 1 ? 'password' : 'passwords'}
             </span>
@@ -2013,9 +2098,9 @@ const TabContentRendererInner = React.memo(({
             <div style={{ 
               display: 'flex', 
               background: 'var(--ui-dialog-bg, rgba(0,0,0,0.2))', 
-              borderRadius: '8px', 
+              borderRadius: isCyberpunk || isUnified ? 0 : (isUnifiedRounded ? '6px' : '8px'), 
               padding: '2px', 
-              border: '1px solid var(--ui-content-border, #555)',
+              border: isCyberpunk ? '1px solid #ff0055' : (isUnified || isUnifiedRounded ? '1px solid rgba(255,255,255,0.06)' : '1px solid var(--ui-content-border, #555)'),
               alignItems: 'center',
               gap: '2px'
             }}>
@@ -2024,7 +2109,7 @@ const TabContentRendererInner = React.memo(({
                 title="Vista Cuadrícula (Tarjetas)"
                 style={{
                   padding: '6px 12px',
-                  borderRadius: '6px',
+                  borderRadius: isCyberpunk || isUnified ? 0 : (isUnifiedRounded ? '4px' : '6px'),
                   border: 'none',
                   background: layoutMode === 'grid' ? 'var(--ui-button-primary)' : 'transparent',
                   color: layoutMode === 'grid' ? '#fff' : 'var(--ui-dialog-text)',
@@ -2046,7 +2131,7 @@ const TabContentRendererInner = React.memo(({
                 title="Vista Lista (Tabla)"
                 style={{
                   padding: '6px 12px',
-                  borderRadius: '6px',
+                  borderRadius: isCyberpunk || isUnified ? 0 : (isUnifiedRounded ? '4px' : '6px'),
                   border: 'none',
                   background: layoutMode === 'list' ? 'var(--ui-button-primary)' : 'transparent',
                   color: layoutMode === 'list' ? '#fff' : 'var(--ui-dialog-text)',
@@ -2089,16 +2174,19 @@ const TabContentRendererInner = React.memo(({
             style={{
               width: '100%',
               padding: '8px 12px 8px 36px',
-              borderRadius: '8px',
-              border: '1px solid var(--ui-content-border)',
+              borderRadius: isCyberpunk || isUnified ? 0 : (isUnifiedRounded ? '6px' : '8px'),
+              border: isCyberpunk 
+                ? '1px solid #ff0055' 
+                : (isUnified || isUnifiedRounded ? '1px solid rgba(255,255,255,0.06)' : '1px solid var(--ui-content-border)'),
               background: 'var(--ui-dialog-bg)',
               color: 'var(--ui-dialog-text)',
               fontSize: '13px',
               outline: 'none',
-              transition: 'border-color 0.2s'
+              transition: 'border-color 0.2s',
+              fontFamily: isCyberpunk ? 'monospace' : 'inherit'
             }}
-            onFocus={(e) => e.target.style.borderColor = 'var(--ui-button-primary)'}
-            onBlur={(e) => e.target.style.borderColor = 'var(--ui-content-border)'}
+            onFocus={(e) => e.target.style.borderColor = isCyberpunk ? '#00f0ff' : 'var(--ui-button-primary)'}
+            onBlur={(e) => e.target.style.borderColor = isCyberpunk ? '#ff0055' : (isUnified || isUnifiedRounded ? 'rgba(255,255,255,0.06)' : 'var(--ui-content-border)')}
           />
           {searchTerm && (
             <span 
@@ -2127,7 +2215,8 @@ const TabContentRendererInner = React.memo(({
             padding: '40px',
             color: 'var(--ui-dialog-text)',
             opacity: 0.7,
-            fontSize: '14px'
+            fontSize: '14px',
+            fontFamily: isCyberpunk ? 'monospace' : 'inherit'
           }}>
             <span className="pi pi-inbox" style={{ fontSize: '48px', display: 'block', marginBottom: '16px', opacity: 0.5 }}></span>
             No se encontraron passwords
@@ -2162,8 +2251,13 @@ const TabContentRendererInner = React.memo(({
                 overflow: 'auto',
                 marginBottom: '16px',
                 background: 'var(--ui-dialog-bg)',
-                borderRadius: '8px',
-                border: '1px solid var(--ui-content-border)',
+                borderRadius: isCyberpunk || isUnified ? 0 : (isUnifiedRounded ? '8px' : '8px'),
+                border: isCyberpunk 
+                  ? '1px solid #ff0055' 
+                  : (isUnified || isUnifiedRounded ? 'none' : '1px solid var(--ui-content-border)'),
+                boxShadow: isCyberpunk 
+                  ? '0 0 10px rgba(255, 0, 85, 0.15)' 
+                  : (isUnified || isUnifiedRounded ? 'none' : 'none'),
                 display: 'flex',
                 flexDirection: 'column'
               }}>
@@ -2173,8 +2267,10 @@ const TabContentRendererInner = React.memo(({
                   alignItems: 'center',
                   padding: '12px 16px',
                   background: 'var(--ui-sidebar-hover)',
-                  borderBottom: '2px solid var(--ui-content-border)',
-                  borderRadius: '8px 8px 0 0',
+                  borderBottom: isCyberpunk 
+                    ? '2px solid #ff0055' 
+                    : (isUnified || isUnifiedRounded ? '1px solid rgba(255,255,255,0.06)' : '2px solid var(--ui-content-border)'),
+                  borderRadius: isCyberpunk || isUnified ? 0 : (isUnifiedRounded ? '8px 8px 0 0' : '8px 8px 0 0'),
                   opacity: 0.9
                 }}>
                   <div style={{ width: '32px' }}></div>
@@ -2183,7 +2279,15 @@ const TabContentRendererInner = React.memo(({
                   <TableHeader field="url" label="URL" flex="2" />
                   <TableHeader field="notes" label="Notas" flex="2" />
                   <TableHeader field="password" label="Contraseña" flex="1.5" />
-                  <div style={{ width: '120px', textAlign: 'right', fontWeight: '600', fontSize: '12px', color: 'var(--ui-dialog-text)', userSelect: 'none' }}>Acciones</div>
+                  <div style={{ 
+                    width: '120px', 
+                    textAlign: 'right', 
+                    fontWeight: '600', 
+                    fontSize: '12px', 
+                    color: 'var(--ui-dialog-text)', 
+                    userSelect: 'none',
+                    fontFamily: isCyberpunk ? 'monospace' : 'inherit'
+                  }}>Acciones</div>
                 </div>
                 {/* rows */}
                 <div style={{ flex: 1, overflow: 'auto' }}>
@@ -2206,7 +2310,7 @@ const TabContentRendererInner = React.memo(({
                 justifyContent: 'center',
                 gap: '12px',
                 padding: '16px 0',
-                borderTop: '1px solid var(--ui-content-border)',
+                borderTop: isUnified || isUnifiedRounded ? '1px solid rgba(255,255,255,0.05)' : '1px solid var(--ui-content-border)',
                 marginTop: 'auto'
               }}>
                 <PaginationButton
@@ -2226,11 +2330,12 @@ const TabContentRendererInner = React.memo(({
                 <div style={{
                   padding: '8px 16px',
                   background: 'var(--ui-dialog-bg)',
-                  borderRadius: 6,
-                  border: '1px solid var(--ui-content-border)',
+                  borderRadius: isCyberpunk || isUnified ? 0 : (isUnifiedRounded ? 6 : 6),
+                  border: isUnified || isUnifiedRounded ? '1px solid rgba(255,255,255,0.06)' : '1px solid var(--ui-content-border)',
                   color: 'var(--ui-dialog-text)',
                   fontSize: '13px',
-                  fontWeight: '500'
+                  fontWeight: '500',
+                  fontFamily: isCyberpunk ? 'monospace' : 'inherit'
                 }}>
                   Página {currentPage} de {totalPages}
                   <span style={{ color: 'var(--text-color-secondary)', marginLeft: '8px', opacity: 0.7 }}>
