@@ -1386,19 +1386,55 @@ const TabContentRendererInner = React.memo(({
     );
   }
 
-  // Password folder tab - muestra todos los passwords de una carpeta con paginación
+  // Password folder tab - muestra todos los passwords de una carpeta con paginación y selección de layout
   if (tab.type === TAB_TYPES.PASSWORD_FOLDER && tab.folderData) {
     const { folderLabel, passwords } = tab.folderData;
 
-    // Estado para paginación
+    // Estado de Layout (grid o list), recordado en localStorage
+    const [layoutMode, setLayoutMode] = React.useState(() => {
+      try {
+        return localStorage.getItem('nodeterm_password_layout_mode') || 'grid';
+      } catch (e) {
+        return 'grid';
+      }
+    });
+
+    const handleSetLayoutMode = (mode) => {
+      setLayoutMode(mode);
+      try {
+        localStorage.setItem('nodeterm_password_layout_mode', mode);
+      } catch (e) { /* noop */ }
+      setCurrentPage(1); // Resetear página
+    };
+
+    // Estado para paginación y búsqueda
     const [currentPage, setCurrentPage] = React.useState(1);
-    const ITEMS_PER_PAGE = 20; // Mostrar 20 passwords por página
+    const [searchTerm, setSearchTerm] = React.useState('');
+    const ITEMS_PER_PAGE = layoutMode === 'grid' ? 24 : 20;
+
+    // Resetear página y búsqueda cuando cambie la carpeta
+    React.useEffect(() => {
+      setCurrentPage(1);
+      setSearchTerm('');
+    }, [tab.folderData?.folderKey]);
+
+    // Filtrar contraseñas
+    const filteredPasswords = React.useMemo(() => {
+      if (!searchTerm) return passwords;
+      const term = searchTerm.toLowerCase();
+      return passwords.filter(p => 
+        (p.label && p.label.toLowerCase().includes(term)) ||
+        (p.username && p.username.toLowerCase().includes(term)) ||
+        (p.url && p.url.toLowerCase().includes(term)) ||
+        (p.notes && p.notes.toLowerCase().includes(term))
+      );
+    }, [passwords, searchTerm]);
 
     // Calcular paginación
-    const totalPages = Math.ceil(passwords.length / ITEMS_PER_PAGE);
+    const totalPages = Math.ceil(filteredPasswords.length / ITEMS_PER_PAGE);
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
-    const currentPasswords = passwords.slice(startIndex, endIndex);
+    const currentPasswords = filteredPasswords.slice(startIndex, endIndex);
 
     const copyToClipboard = async (text, fieldName, passwordData = null) => {
       try {
@@ -1434,21 +1470,6 @@ const TabContentRendererInner = React.memo(({
       } catch (err) {
         console.error('Failed to copy:', err);
       }
-    };
-
-    // Estado para fila seleccionada
-    const [selectedRowIndex, setSelectedRowIndex] = React.useState(null);
-
-    // Resetear página y selección cuando cambie la carpeta
-    React.useEffect(() => {
-      setCurrentPage(1);
-      setSelectedRowIndex(null);
-    }, [tab.folderData?.folderKey]);
-
-    // Función para truncar texto
-    const truncateText = (text, maxLength = 40) => {
-      if (!text) return '';
-      return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
     };
 
     // Función para obtener icono según la URL o tipo
@@ -1511,81 +1532,290 @@ const TabContentRendererInner = React.memo(({
       return defaultIcons[Math.abs(hash) % defaultIcons.length];
     };
 
-    // Función para obtener color del icono según el tipo (ahora los emojis ya tienen sus colores)
-    const getIconColor = (password) => {
-      // Los emojis ya tienen sus propios colores, pero podemos ajustar la opacidad si está seleccionado
-      return 'transparent'; // Los emojis mantienen sus colores naturales
-    };
+    // --- SUB-COMPONENTE: CARD LAYOUT (Opcion 1) ---
+    const PasswordCard = ({ password }) => {
+      const [showPassword, setShowPassword] = React.useState(false);
+      const [copiedUser, setCopiedUser] = React.useState(false);
+      const [copiedPass, setCopiedPass] = React.useState(false);
+      const [isHovered, setIsHovered] = React.useState(false);
 
-    const PasswordTableRow = ({ password, index }) => {
-      const isSelected = selectedRowIndex === index;
-      const rowStyle = {
+      const handleCopyUser = async (e) => {
+        e.stopPropagation();
+        await copyToClipboard(password.username, 'Usuario');
+        setCopiedUser(true);
+        setTimeout(() => setCopiedUser(false), 1500);
+      };
+
+      const handleCopyPass = async (e) => {
+        e.stopPropagation();
+        await copyToClipboard(password.password, 'Contraseña', password);
+        setCopiedPass(true);
+        setTimeout(() => setCopiedPass(false), 1500);
+      };
+
+      const actionButtonStyle = {
+        padding: '6px',
+        borderRadius: '6px',
+        border: '1px solid var(--ui-content-border)',
+        background: 'var(--ui-button-secondary)',
+        color: 'var(--ui-button-secondary-text)',
+        cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
-        padding: '8px 12px',
-        borderBottom: '1px solid var(--ui-content-border)',
-        background: isSelected ? 'var(--ui-sidebar-selected)' : 'transparent',
-        cursor: 'pointer',
-        transition: 'background-color 0.2s',
-        minHeight: '40px'
+        justifyContent: 'center',
+        transition: 'all 0.2s',
+        minWidth: '28px',
+        minHeight: '28px'
       };
 
       return (
         <div
-          style={rowStyle}
-          onMouseEnter={(e) => !isSelected && (e.target.style.background = 'var(--ui-sidebar-hover)')}
-          onMouseLeave={(e) => !isSelected && (e.target.style.background = 'transparent')}
-          onClick={() => setSelectedRowIndex(isSelected ? null : index)}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          style={{
+            background: 'var(--ui-dialog-bg)',
+            border: isHovered ? '1px solid var(--ui-button-primary)' : '1px solid var(--ui-content-border)',
+            borderRadius: '12px',
+            padding: '16px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+            position: 'relative',
+            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+            transform: isHovered ? 'translateY(-2px)' : 'none',
+            boxShadow: isHovered ? '0 8px 24px rgba(0, 0, 0, 0.25)' : '0 2px 4px rgba(0, 0, 0, 0.05)',
+            minHeight: '170px',
+            justifyContent: 'space-between'
+          }}
+        >
+          {/* Top Row: Icon and Actions */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '8px',
+              background: 'var(--ui-sidebar-hover)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '18px'
+            }}>
+              {getPasswordIcon(password)}
+            </div>
+            
+            {/* Quick Actions */}
+            <div style={{ 
+              display: 'flex', 
+              gap: '6px', 
+              opacity: isHovered ? 1 : 0.8,
+              transition: 'opacity 0.2s' 
+            }}>
+              {password.url && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.electron?.import?.openExternal?.(password.url);
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.background = 'var(--ui-button-hover)'}
+                  onMouseOut={(e) => e.currentTarget.style.background = 'var(--ui-button-secondary)'}
+                  title="Abrir enlace externo"
+                  style={actionButtonStyle}
+                >
+                  <span className="pi pi-external-link" style={{ fontSize: '11px' }}></span>
+                </button>
+              )}
+              
+              {password.username && (
+                <button
+                  onClick={handleCopyUser}
+                  onMouseOver={(e) => e.currentTarget.style.background = 'var(--ui-button-hover)'}
+                  onMouseOut={(e) => e.currentTarget.style.background = 'var(--ui-button-secondary)'}
+                  title="Copiar usuario"
+                  style={actionButtonStyle}
+                >
+                  <span className={copiedUser ? "pi pi-check" : "pi pi-user"} style={{ fontSize: '11px', color: copiedUser ? '#4caf50' : 'inherit' }}></span>
+                </button>
+              )}
+
+              {password.password && (
+                <>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowPassword(!showPassword);
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = 'var(--ui-button-hover)'}
+                    onMouseOut={(e) => e.currentTarget.style.background = 'var(--ui-button-secondary)'}
+                    title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    style={actionButtonStyle}
+                  >
+                    <span className={showPassword ? "pi pi-eye-slash" : "pi pi-eye"} style={{ fontSize: '11px' }}></span>
+                  </button>
+                  <button
+                    onClick={handleCopyPass}
+                    onMouseOver={(e) => e.currentTarget.style.background = 'var(--ui-button-hover)'}
+                    onMouseOut={(e) => e.currentTarget.style.background = 'var(--ui-button-secondary)'}
+                    title="Copiar contraseña"
+                    style={actionButtonStyle}
+                  >
+                    <span className={copiedPass ? "pi pi-check" : "pi pi-key"} style={{ fontSize: '11px', color: copiedPass ? '#4caf50' : 'inherit' }}></span>
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Title and Username */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <span style={{
+              color: 'var(--ui-dialog-text)',
+              fontSize: '14px',
+              fontWeight: '600',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }} title={password.label}>
+              {password.label}
+            </span>
+            <span style={{
+              color: 'var(--ui-dialog-text)',
+              opacity: 0.6,
+              fontSize: '11px',
+              fontFamily: 'monospace',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}>
+              {password.username || <span style={{ fontStyle: 'italic', opacity: 0.4 }}>sin usuario</span>}
+            </span>
+          </div>
+
+          {/* Password Value (Hidden/Shown) */}
+          <div style={{ 
+            background: 'var(--ui-sidebar-hover)', 
+            padding: '6px 10px', 
+            borderRadius: '6px', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            fontFamily: 'monospace',
+            fontSize: '11px',
+            border: '1px solid var(--ui-content-border)',
+            minHeight: '28px'
+          }}>
+            <span style={{ 
+              color: 'var(--ui-dialog-text)',
+              letterSpacing: showPassword ? 'normal' : '3px',
+              fontSize: showPassword ? '11px' : '13px'
+            }}>
+              {password.password 
+                ? (showPassword ? password.password : '••••••••••••') 
+                : <span style={{ fontStyle: 'italic', opacity: 0.4 }}>sin contraseña</span>
+              }
+            </span>
+          </div>
+
+          {/* Notes or URL */}
+          {(password.notes || password.url) && (
+            <div style={{ 
+              fontSize: '10px', 
+              color: 'var(--ui-dialog-text)', 
+              opacity: 0.5,
+              borderTop: '1px solid var(--ui-content-border)',
+              paddingTop: '6px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '2px',
+              overflow: 'hidden'
+            }}>
+              {password.url && (
+                <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={password.url}>
+                  🔗 {password.url}
+                </span>
+              )}
+              {password.notes && (
+                <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={password.notes}>
+                  📝 {password.notes}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // --- SUB-COMPONENTE: TABLE LIST ROW LAYOUT (Opcion 2) ---
+    const PasswordListRow = ({ password }) => {
+      const [showPassword, setShowPassword] = React.useState(false);
+      const [copiedUser, setCopiedUser] = React.useState(false);
+      const [copiedPass, setCopiedPass] = React.useState(false);
+      const [isHovered, setIsHovered] = React.useState(false);
+
+      const handleCopyUser = async (e) => {
+        e.stopPropagation();
+        await copyToClipboard(password.username, 'Usuario');
+        setCopiedUser(true);
+        setTimeout(() => setCopiedUser(false), 1500);
+      };
+
+      const handleCopyPass = async (e) => {
+        e.stopPropagation();
+        await copyToClipboard(password.password, 'Contraseña', password);
+        setCopiedPass(true);
+        setTimeout(() => setCopiedPass(false), 1500);
+      };
+
+      const actionButtonStyle = {
+        padding: '4px 8px',
+        borderRadius: '4px',
+        border: '1px solid var(--ui-content-border)',
+        background: 'var(--ui-button-secondary)',
+        color: 'var(--ui-button-secondary-text)',
+        cursor: 'pointer',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        transition: 'all 0.2s',
+        fontSize: '10px'
+      };
+
+      return (
+        <div
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            padding: '10px 16px',
+            borderBottom: '1px solid var(--ui-content-border)',
+            background: isHovered ? 'var(--ui-sidebar-hover)' : 'transparent',
+            transition: 'background-color 0.2s',
+            minHeight: '48px'
+          }}
         >
           {/* Columna Icono */}
-          <div style={{ width: '24px', marginRight: '12px', display: 'flex', justifyContent: 'center' }}>
-            <span style={{
-              fontSize: '16px',
-              filter: isSelected ? 'brightness(1.2) saturate(1.3)' : 'none'
-            }}>
+          <div style={{ width: '32px', display: 'flex', alignItems: 'center' }}>
+            <span style={{ fontSize: '16px' }}>
               {getPasswordIcon(password)}
             </span>
           </div>
 
           {/* Columna Título */}
-          <div style={{
-            flex: '0 0 200px',
-            marginRight: '12px',
-            overflow: 'hidden',
-            whiteSpace: 'nowrap'
-          }}>
-            <span style={{
-              color: 'var(--ui-dialog-text)',
-              fontSize: '13px',
-              fontWeight: '500'
-            }}>
-              {truncateText(password.label, 25)}
+          <div style={{ flex: '2', marginRight: '16px', minWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ color: 'var(--ui-dialog-text)', fontSize: '13px', fontWeight: '500' }}>
+              {password.label}
             </span>
           </div>
 
           {/* Columna Usuario */}
-          <div style={{
-            flex: '0 0 150px',
-            marginRight: '12px',
-            overflow: 'hidden',
-            whiteSpace: 'nowrap'
-          }}>
-            <span style={{
-              color: 'var(--ui-dialog-text)',
-              fontSize: '12px',
-              fontFamily: 'monospace'
-            }}>
-              {truncateText(password.username, 20)}
+          <div style={{ flex: '1.5', marginRight: '16px', minWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ color: 'var(--ui-dialog-text)', opacity: 0.8, fontSize: '12px', fontFamily: 'monospace' }}>
+              {password.username || <span style={{ fontStyle: 'italic', opacity: 0.4 }}>-</span>}
             </span>
           </div>
 
           {/* Columna URL */}
-          <div style={{
-            flex: '0 0 180px',
-            marginRight: '12px',
-            overflow: 'hidden',
-            whiteSpace: 'nowrap'
-          }}>
+          <div style={{ flex: '2', marginRight: '16px', minWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {password.url ? (
               <span
                 style={{
@@ -1599,102 +1829,68 @@ const TabContentRendererInner = React.memo(({
                   window.electron?.import?.openExternal?.(password.url);
                 }}
               >
-                {truncateText(password.url, 25)}
+                {password.url}
               </span>
             ) : (
-              <span style={{ color: 'var(--text-color-secondary)', fontSize: '12px' }}>-</span>
+              <span style={{ color: 'var(--text-color-secondary)', fontSize: '12px', opacity: 0.5 }}>-</span>
             )}
           </div>
 
           {/* Columna Notas */}
-          <div style={{
-            flex: '0 0 150px',
-            marginRight: '12px',
-            overflow: 'hidden',
-            whiteSpace: 'nowrap'
-          }}>
-            <span style={{
-              color: 'var(--ui-dialog-text)',
-              opacity: 0.7,
-              fontSize: '12px'
-            }}>
-              {truncateText(password.notes, 20)}
+          <div style={{ flex: '2', marginRight: '16px', minWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ color: 'var(--ui-dialog-text)', opacity: 0.6, fontSize: '12px' }}>
+              {password.notes || <span style={{ fontStyle: 'italic', opacity: 0.4 }}>-</span>}
             </span>
           </div>
 
           {/* Columna Contraseña */}
-          <div style={{
-            flex: '0 0 120px',
-            marginRight: '12px',
-            overflow: 'hidden',
-            whiteSpace: 'nowrap'
-          }}>
-            {password.password ? (
-              <span style={{
-                color: 'var(--ui-dialog-text)',
-                fontSize: '12px',
-                fontFamily: 'monospace'
-              }}>
-                {'•'.repeat(Math.min(password.password.length, 12))}
-              </span>
-            ) : (
-              <span style={{ color: 'var(--text-color-secondary)', fontSize: '12px' }}>-</span>
-            )}
+          <div style={{ flex: '1.5', marginRight: '16px', minWidth: '130px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ color: 'var(--ui-dialog-text)', fontSize: '12px', fontFamily: 'monospace', letterSpacing: showPassword ? 'normal' : '2px' }}>
+              {password.password 
+                ? (showPassword ? password.password : '••••••••') 
+                : <span style={{ fontStyle: 'italic', opacity: 0.4 }}>-</span>
+              }
+            </span>
           </div>
 
           {/* Columna Acciones */}
-          <div style={{
-            flex: '0 0 60px',
-            display: 'flex',
-            gap: '4px',
-            justifyContent: 'flex-end'
-          }}>
+          <div style={{ width: '120px', display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
             {password.username && (
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  copyToClipboard(password.username, 'Usuario');
-                }}
-                style={{
-                  padding: '2px 6px',
-                  borderRadius: 3,
-                  border: '1px solid var(--ui-content-border)',
-                  background: 'var(--ui-button-secondary)',
-                  color: 'var(--ui-button-secondary-text)',
-                  cursor: 'pointer',
-                  fontSize: '10px',
-                  transition: 'all 0.2s'
-                }}
-                onMouseOver={(e) => e.target.style.background = 'var(--ui-button-hover)'}
-                onMouseOut={(e) => e.target.style.background = 'var(--ui-button-secondary)'}
+                onClick={handleCopyUser}
+                onMouseOver={(e) => e.currentTarget.style.background = 'var(--ui-button-hover)'}
+                onMouseOut={(e) => e.currentTarget.style.background = 'var(--ui-button-secondary)'}
                 title="Copiar usuario"
+                style={actionButtonStyle}
               >
-                <span className="pi pi-user" style={{ fontSize: '10px' }}></span>
+                <span className={copiedUser ? "pi pi-check" : "pi pi-user"} style={{ color: copiedUser ? '#4caf50' : 'inherit' }}></span>
               </button>
             )}
 
             {password.password && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  copyToClipboard(password.password, 'Contraseña', password);
-                }}
-                style={{
-                  padding: '2px 6px',
-                  borderRadius: 3,
-                  border: '1px solid var(--ui-content-border)',
-                  background: 'var(--ui-button-secondary)',
-                  color: 'var(--ui-button-secondary-text)',
-                  cursor: 'pointer',
-                  fontSize: '10px',
-                  transition: 'all 0.2s'
-                }}
-                onMouseOver={(e) => e.target.style.background = 'var(--ui-button-hover)'}
-                onMouseOut={(e) => e.target.style.background = 'var(--ui-button-secondary)'}
-                title="Copiar contraseña"
-              >
-                <span className="pi pi-key" style={{ fontSize: '10px' }}></span>
-              </button>
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowPassword(!showPassword);
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.background = 'var(--ui-button-hover)'}
+                  onMouseOut={(e) => e.currentTarget.style.background = 'var(--ui-button-secondary)'}
+                  title={showPassword ? "Ocultar" : "Mostrar"}
+                  style={actionButtonStyle}
+                >
+                  <span className={showPassword ? "pi pi-eye-slash" : "pi pi-eye"}></span>
+                </button>
+                <button
+                  onClick={handleCopyPass}
+                  onMouseOver={(e) => e.currentTarget.style.background = 'var(--ui-button-hover)'}
+                  onMouseOut={(e) => e.currentTarget.style.background = 'var(--ui-button-secondary)'}
+                  title="Copiar contraseña"
+                  style={actionButtonStyle}
+                >
+                  <span className={copiedPass ? "pi pi-check" : "pi pi-key"} style={{ color: copiedPass ? '#4caf50' : 'inherit' }}></span>
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -1733,24 +1929,136 @@ const TabContentRendererInner = React.memo(({
         display: 'flex',
         flexDirection: 'column'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+        {/* Header Title Row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
           <span className="pi pi-folder-open" style={{ fontSize: '28px', color: 'var(--ui-button-primary)' }}></span>
           <h2 style={{ margin: 0, color: 'var(--ui-dialog-text)', fontSize: '24px' }}>{folderLabel}</h2>
-          <span style={{
-            marginLeft: 'auto',
-            padding: '4px 12px',
-            borderRadius: 12,
-            background: 'var(--ui-button-primary)',
-            opacity: 0.2,
-            color: 'var(--ui-button-primary)',
-            fontSize: '12px',
-            fontWeight: '600'
-          }}>
-            {passwords.length} {passwords.length === 1 ? 'password' : 'passwords'}
-          </span>
+          
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{
+              padding: '4px 12px',
+              borderRadius: 12,
+              background: 'rgba(255, 255, 255, 0.08)',
+              color: 'var(--ui-button-primary)',
+              fontSize: '12px',
+              fontWeight: '600'
+            }}>
+              {passwords.length} {passwords.length === 1 ? 'password' : 'passwords'}
+            </span>
+
+            {/* Layout switch button group */}
+            <div style={{ 
+              display: 'flex', 
+              background: 'var(--ui-dialog-bg, rgba(0,0,0,0.2))', 
+              borderRadius: '8px', 
+              padding: '2px', 
+              border: '1px solid var(--ui-content-border, #555)',
+              alignItems: 'center',
+              gap: '2px'
+            }}>
+              <button
+                onClick={() => handleSetLayoutMode('grid')}
+                title="Vista Cuadrícula (Tarjetas)"
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: layoutMode === 'grid' ? 'var(--ui-button-primary)' : 'transparent',
+                  color: layoutMode === 'grid' ? '#fff' : 'var(--ui-dialog-text)',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s',
+                  opacity: layoutMode === 'grid' ? 1 : 0.6
+                }}
+              >
+                <i className="pi pi-th-large" style={{ fontSize: '11px' }}></i>
+                <span>Tarjetas</span>
+              </button>
+              <button
+                onClick={() => handleSetLayoutMode('list')}
+                title="Vista Lista (Tabla)"
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: layoutMode === 'list' ? 'var(--ui-button-primary)' : 'transparent',
+                  color: layoutMode === 'list' ? '#fff' : 'var(--ui-dialog-text)',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s',
+                  opacity: layoutMode === 'list' ? 1 : 0.6
+                }}
+              >
+                <i className="pi pi-list" style={{ fontSize: '11px' }}></i>
+                <span>Lista</span>
+              </button>
+            </div>
+          </div>
         </div>
 
-        {passwords.length === 0 ? (
+        {/* Search Bar */}
+        <div style={{ marginBottom: '20px', position: 'relative' }}>
+          <span className="pi pi-search" style={{
+            position: 'absolute',
+            left: '12px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            color: 'var(--ui-dialog-text)',
+            opacity: 0.5,
+            fontSize: '13px'
+          }}></span>
+          <input
+            type="text"
+            placeholder="Buscar contraseñas..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
+            style={{
+              width: '100%',
+              padding: '8px 12px 8px 36px',
+              borderRadius: '8px',
+              border: '1px solid var(--ui-content-border)',
+              background: 'var(--ui-dialog-bg)',
+              color: 'var(--ui-dialog-text)',
+              fontSize: '13px',
+              outline: 'none',
+              transition: 'border-color 0.2s'
+            }}
+            onFocus={(e) => e.target.style.borderColor = 'var(--ui-button-primary)'}
+            onBlur={(e) => e.target.style.borderColor = 'var(--ui-content-border)'}
+          />
+          {searchTerm && (
+            <span 
+              className="pi pi-times" 
+              onClick={() => {
+                setSearchTerm('');
+                setCurrentPage(1);
+              }}
+              style={{
+                position: 'absolute',
+                right: '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: 'var(--ui-dialog-text)',
+                opacity: 0.5,
+                cursor: 'pointer',
+                fontSize: '11px'
+              }}
+            ></span>
+          )}
+        </div>
+
+        {filteredPasswords.length === 0 ? (
           <div style={{
             textAlign: 'center',
             padding: '40px',
@@ -1759,106 +2067,75 @@ const TabContentRendererInner = React.memo(({
             fontSize: '14px'
           }}>
             <span className="pi pi-inbox" style={{ fontSize: '48px', display: 'block', marginBottom: '16px', opacity: 0.5 }}></span>
-            No hay passwords en esta carpeta
+            No se encontraron passwords
           </div>
         ) : (
           <>
-            {/* Encabezados de tabla */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '12px 12px 8px 12px',
-              background: 'var(--ui-sidebar-hover)',
-              borderBottom: '2px solid var(--ui-content-border)',
-              marginBottom: '8px',
-              borderRadius: '6px 6px 0 0'
-            }}>
-              {/* Columna Icono */}
-              <div style={{ width: '24px', marginRight: '12px' }}></div>
-
-              {/* Columna Título */}
+            {layoutMode === 'grid' ? (
+              /* GRID CARDS VIEW */
               <div style={{
-                flex: '0 0 200px',
-                marginRight: '12px',
-                color: 'var(--ui-dialog-text)',
-                fontSize: '13px',
-                fontWeight: '600'
+                flex: 1,
+                overflow: 'auto',
+                marginBottom: '16px'
               }}>
-                Título
-                <span className="pi pi-sort-up" style={{ marginLeft: '8px', fontSize: '12px' }}></span>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+                  gap: '16px',
+                  padding: '4px'
+                }}>
+                  {currentPasswords.map((password, index) => (
+                    <PasswordCard
+                      key={password.key || index}
+                      password={password}
+                    />
+                  ))}
+                </div>
               </div>
-
-              {/* Columna Usuario */}
+            ) : (
+              /* PREMIUM TABLE LIST VIEW */
               <div style={{
-                flex: '0 0 150px',
-                marginRight: '12px',
-                color: 'var(--ui-dialog-text)',
-                fontSize: '13px',
-                fontWeight: '600'
+                flex: 1,
+                overflow: 'auto',
+                marginBottom: '16px',
+                background: 'var(--ui-dialog-bg)',
+                borderRadius: '8px',
+                border: '1px solid var(--ui-content-border)',
+                display: 'flex',
+                flexDirection: 'column'
               }}>
-                Usuario
+                {/* headers */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '12px 16px',
+                  background: 'var(--ui-sidebar-hover)',
+                  borderBottom: '2px solid var(--ui-content-border)',
+                  borderRadius: '8px 8px 0 0',
+                  fontWeight: '600',
+                  fontSize: '12px',
+                  color: 'var(--ui-dialog-text)',
+                  opacity: 0.9
+                }}>
+                  <div style={{ width: '32px' }}></div>
+                  <div style={{ flex: '2', marginRight: '16px', minWidth: '150px' }}>Título</div>
+                  <div style={{ flex: '1.5', marginRight: '16px', minWidth: '120px' }}>Usuario</div>
+                  <div style={{ flex: '2', marginRight: '16px', minWidth: '150px' }}>URL</div>
+                  <div style={{ flex: '2', marginRight: '16px', minWidth: '120px' }}>Notas</div>
+                  <div style={{ flex: '1.5', marginRight: '16px', minWidth: '130px' }}>Contraseña</div>
+                  <div style={{ width: '120px', textAlign: 'right' }}>Acciones</div>
+                </div>
+                {/* rows */}
+                <div style={{ flex: 1, overflow: 'auto' }}>
+                  {currentPasswords.map((password, index) => (
+                    <PasswordListRow
+                      key={password.key || index}
+                      password={password}
+                    />
+                  ))}
+                </div>
               </div>
-
-              {/* Columna URL */}
-              <div style={{
-                flex: '0 0 180px',
-                marginRight: '12px',
-                color: 'var(--ui-dialog-text)',
-                fontSize: '13px',
-                fontWeight: '600'
-              }}>
-                URL
-              </div>
-
-              {/* Columna Notas */}
-              <div style={{
-                flex: '0 0 150px',
-                marginRight: '12px',
-                color: 'var(--ui-dialog-text)',
-                fontSize: '13px',
-                fontWeight: '600'
-              }}>
-                Notas
-              </div>
-
-              {/* Columna Contraseña */}
-              <div style={{
-                flex: '0 0 120px',
-                marginRight: '12px',
-                color: 'var(--ui-dialog-text)',
-                fontSize: '13px',
-                fontWeight: '600'
-              }}>
-                Contraseña
-              </div>
-
-              {/* Columna Acciones */}
-              <div style={{
-                flex: '0 0 60px',
-                color: 'var(--ui-dialog-text)',
-                fontSize: '13px',
-                fontWeight: '600',
-                textAlign: 'center'
-              }}>
-                Acciones
-              </div>
-            </div>
-
-            <div style={{
-              flex: 1,
-              overflow: 'auto',
-              marginBottom: '16px',
-              background: 'var(--ui-dialog-bg)',
-              borderRadius: '0 0 6px 6px'
-            }}>
-              {currentPasswords.map((password, index) => (
-                <PasswordTableRow
-                  key={password.key || index}
-                  password={password}
-                  index={index}
-                />
-              ))}
-            </div>
+            )}
 
             {/* Paginación */}
             {totalPages > 1 && (
@@ -1868,7 +2145,7 @@ const TabContentRendererInner = React.memo(({
                 justifyContent: 'center',
                 gap: '12px',
                 padding: '16px 0',
-                borderTop: '1px solid #333',
+                borderTop: '1px solid var(--ui-content-border)',
                 marginTop: 'auto'
               }}>
                 <PaginationButton
@@ -1887,16 +2164,16 @@ const TabContentRendererInner = React.memo(({
 
                 <div style={{
                   padding: '8px 16px',
-                  background: '#2a2a2a',
+                  background: 'var(--ui-dialog-bg)',
                   borderRadius: 6,
-                  border: '1px solid #555',
-                  color: '#fff',
+                  border: '1px solid var(--ui-content-border)',
+                  color: 'var(--ui-dialog-text)',
                   fontSize: '13px',
                   fontWeight: '500'
                 }}>
                   Página {currentPage} de {totalPages}
-                  <span style={{ color: '#9aa0a6', marginLeft: '8px' }}>
-                    ({startIndex + 1}-{Math.min(endIndex, passwords.length)} de {passwords.length})
+                  <span style={{ color: 'var(--text-color-secondary)', marginLeft: '8px', opacity: 0.7 }}>
+                    ({startIndex + 1}-{Math.min(endIndex, filteredPasswords.length)} de {filteredPasswords.length})
                   </span>
                 </div>
 
