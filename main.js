@@ -745,7 +745,10 @@ async function initializeGuacamoleServices() {
           key: SECRET_KEY
         },
         log: {
-          level: process.env.NODE_ENV === 'development' ? 'DEBUG' : 'NORMAL'
+          // ⚡ PERF FIX: 'DEBUG' logs every Guacamole instruction (every mousemove, every draw rect),
+          // blocking the Node.js event loop on each frame and adding noticeable latency.
+          // Use NODETERM_DEBUG_GUACAMOLE=1 env var if guacamole-lite protocol debugging is needed.
+          level: 'ERRORS'
         },
         maxInactivityTime: 0
       };

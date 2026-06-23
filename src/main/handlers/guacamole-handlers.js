@@ -419,7 +419,10 @@ function registerGuacamoleHandlers({
           "enable-desktop-composition": config.enableDesktopComposition === true ? true : false,
           "enable-font-smoothing": config.enableFontSmoothing === true ? true : false,
           "enable-theming": config.enableTheming === true ? true : false,
-          "enable-full-window-drag": (config.enableFullWindowDrag === true || config.autoResize === true) ? true : false,
+          // ⚡ PERF FIX: decoupled from autoResize. full-window-drag floods the WebSocket with
+          // continuous frame updates while dragging, tanking FPS on Canvas 2D rendering.
+          // autoResize = resize session on window resize; full-window-drag = show content while dragging. Unrelated.
+          "enable-full-window-drag": config.enableFullWindowDrag === true ? true : false,
           "enable-menu-animations": config.enableMenuAnimations === true ? true : false,
           // Configuración específica para resize dinámico
           // Usar display-update siempre para evitar reconexiones, incluso con resolución fija
