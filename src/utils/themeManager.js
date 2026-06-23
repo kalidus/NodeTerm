@@ -415,7 +415,6 @@ class ThemeManager {
 
   generateCSS(theme) {
     const colors = theme.colors;
-    // Determinar si el fondo de la sidebar es claro u oscuro
     function isColorLight(hex) {
       let c = hex.replace('#', '');
       if (c.length === 3) c = c.split('').map(x => x + x).join('');
@@ -423,9 +422,24 @@ class ThemeManager {
       const r = (num >> 16) & 255;
       const g = (num >> 8) & 255;
       const b = num & 255;
-      // Percepción de luminosidad
       return (0.299 * r + 0.587 * g + 0.114 * b) > 186;
     }
+    const getSidebarSelectedText = () => {
+      if (colors.sidebarSelectedText) return colors.sidebarSelectedText;
+      let c = colors.sidebarSelected.replace('#', '');
+      if (c.length === 3) c = c.split('').map(x => x + x).join('');
+      const num = parseInt(c, 16);
+      const r = (num >> 16) & 255;
+      const g = (num >> 8) & 255;
+      const b = num & 255;
+      const brightness = (0.299 * r + 0.587 * g + 0.114 * b);
+      if (brightness > 130) {
+        return colors.buttonPrimaryText || '#000000';
+      } else {
+        return '#ffffff';
+      }
+    };
+    const selectedTextColor = getSidebarSelectedText();
     const sidebarBgIsLight = isColorLight(colors.sidebarBackground);
     const sidebarButtonText = colors.sidebarText;
     const palette = theme.statusBarPalette || {};
@@ -449,6 +463,7 @@ class ThemeManager {
         --ui-sidebar-text: ${colors.sidebarText};
         --ui-sidebar-hover: ${colors.sidebarHover};
         --ui-sidebar-selected: ${colors.sidebarSelected};
+        --ui-sidebar-selected-text: ${selectedTextColor};
         --ui-sidebar-gutter-bg: ${colors.sidebarGutter};
         --ui-sidebar-rail-bg: ${(() => {
           let railBg = colors.sidebarRailBackground || colors.menuBarBackground || colors.sidebarBackground;
@@ -584,6 +599,15 @@ class ThemeManager {
 
       .sidebar-tree .p-treenode-label {
         color: var(--ui-sidebar-text) !important;
+      }
+
+      .sidebar-tree .p-treenode-content.p-highlight .p-treenode-label,
+      .sidebar-tree .p-treenode-content.p-highlight .node-label,
+      .sidebar-tree .p-treenode-content.p-highlight .p-treenode-icon,
+      .sidebar-tree .p-treenode-content.p-highlight .p-tree-toggler,
+      .sidebar-tree .p-treenode-content.p-highlight .p-tree-toggler-icon,
+      .sidebar-tree .p-treenode-content.p-highlight .pi {
+        color: var(--ui-sidebar-selected-text) !important;
       }
 
       .sidebar-action-button {

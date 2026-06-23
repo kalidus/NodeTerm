@@ -131,6 +131,15 @@
   color: var(--ui-sidebar-text) !important;
 }
 
+.sidebar-tree .p-treenode-content.p-highlight .p-treenode-label,
+.sidebar-tree .p-treenode-content.p-highlight .node-label,
+.sidebar-tree .p-treenode-content.p-highlight .p-treenode-icon,
+.sidebar-tree .p-treenode-content.p-highlight .p-tree-toggler,
+.sidebar-tree .p-treenode-content.p-highlight .p-tree-toggler-icon,
+.sidebar-tree .p-treenode-content.p-highlight .pi {
+  color: var(--ui-sidebar-selected-text) !important;
+}
+
 /* Connection indicators */
 .connection-indicator {
   margin-left: 8px;
@@ -265,7 +274,7 @@
   z-index: 1;
 }
 .sidebar-tree .p-treenode-content.p-highlight {
-  color: var(--ui-sidebar-text);
+  color: var(--ui-sidebar-selected-text) !important;
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
