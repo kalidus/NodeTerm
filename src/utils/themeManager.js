@@ -606,7 +606,10 @@ class ThemeManager {
       .sidebar-tree .p-treenode-content.p-highlight .p-treenode-icon,
       .sidebar-tree .p-treenode-content.p-highlight .p-tree-toggler,
       .sidebar-tree .p-treenode-content.p-highlight .p-tree-toggler-icon,
-      .sidebar-tree .p-treenode-content.p-highlight .pi {
+      .sidebar-tree .p-treenode-content.p-highlight .pi,
+      .sidebar-tree .p-treenode-content.p-highlight div,
+      .sidebar-tree .p-treenode-content.p-highlight i,
+      .sidebar-tree .p-treenode-content.p-highlight span {
         color: var(--ui-sidebar-selected-text) !important;
       }
 
