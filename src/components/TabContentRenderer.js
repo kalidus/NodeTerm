@@ -1407,15 +1407,29 @@ const TabContentRendererInner = React.memo(({
       setCurrentPage(1); // Resetear página
     };
 
-    // Estado para paginación y búsqueda
+    // Estado para paginación, búsqueda y ordenación
     const [currentPage, setCurrentPage] = React.useState(1);
     const [searchTerm, setSearchTerm] = React.useState('');
+    const [sortField, setSortField] = React.useState('label'); // 'label', 'username', 'url', etc.
+    const [sortDirection, setSortDirection] = React.useState('asc'); // 'asc' or 'desc'
     const ITEMS_PER_PAGE = layoutMode === 'grid' ? 24 : 20;
 
-    // Resetear página y búsqueda cuando cambie la carpeta
+    const handleSort = (field) => {
+      if (sortField === field) {
+        setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+      } else {
+        setSortField(field);
+        setSortDirection('asc');
+      }
+      setCurrentPage(1);
+    };
+
+    // Resetear página, búsqueda y ordenación cuando cambie la carpeta
     React.useEffect(() => {
       setCurrentPage(1);
       setSearchTerm('');
+      setSortField('label');
+      setSortDirection('asc');
     }, [tab.folderData?.folderKey]);
 
     // Filtrar contraseñas
@@ -1430,11 +1444,28 @@ const TabContentRendererInner = React.memo(({
       );
     }, [passwords, searchTerm]);
 
+    // Ordenar contraseñas
+    const sortedPasswords = React.useMemo(() => {
+      const sorted = [...filteredPasswords];
+      if (!sortField) return sorted;
+
+      sorted.sort((a, b) => {
+        let valA = (a[sortField] || '').toString().toLowerCase();
+        let valB = (b[sortField] || '').toString().toLowerCase();
+        
+        if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+        if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+
+      return sorted;
+    }, [filteredPasswords, sortField, sortDirection]);
+
     // Calcular paginación
-    const totalPages = Math.ceil(filteredPasswords.length / ITEMS_PER_PAGE);
+    const totalPages = Math.ceil(sortedPasswords.length / ITEMS_PER_PAGE);
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
-    const currentPasswords = filteredPasswords.slice(startIndex, endIndex);
+    const currentPasswords = sortedPasswords.slice(startIndex, endIndex);
 
     const copyToClipboard = async (text, fieldName, passwordData = null) => {
       try {
@@ -1745,7 +1776,7 @@ const TabContentRendererInner = React.memo(({
     };
 
     // --- SUB-COMPONENTE: TABLE LIST ROW LAYOUT (Opcion 2) ---
-    const PasswordListRow = ({ password }) => {
+    const PasswordListRow = ({ password, index }) => {
       const [showPassword, setShowPassword] = React.useState(false);
       const [copiedUser, setCopiedUser] = React.useState(false);
       const [copiedPass, setCopiedPass] = React.useState(false);
@@ -1788,7 +1819,9 @@ const TabContentRendererInner = React.memo(({
             alignItems: 'center',
             padding: '10px 16px',
             borderBottom: '1px solid var(--ui-content-border)',
-            background: isHovered ? 'var(--ui-sidebar-hover)' : 'transparent',
+            background: isHovered 
+              ? 'var(--ui-sidebar-hover)' 
+              : (index % 2 === 0 ? 'rgba(255, 255, 255, 0.015)' : 'transparent'),
             transition: 'background-color 0.2s',
             minHeight: '48px'
           }}
@@ -1893,6 +1926,36 @@ const TabContentRendererInner = React.memo(({
               </>
             )}
           </div>
+        </div>
+      );
+    };
+
+    const TableHeader = ({ field, label, flex = '1' }) => {
+      const isSorted = sortField === field;
+      return (
+        <div
+          onClick={() => handleSort(field)}
+          style={{
+            flex,
+            marginRight: '16px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            userSelect: 'none',
+            color: isSorted ? 'var(--ui-button-primary)' : 'var(--ui-dialog-text)',
+            fontSize: '12px',
+            fontWeight: '600',
+            transition: 'color 0.2s'
+          }}
+          onMouseOver={(e) => !isSorted && (e.currentTarget.style.color = 'var(--ui-button-primary)')}
+          onMouseOut={(e) => !isSorted && (e.currentTarget.style.color = 'var(--ui-dialog-text)')}
+        >
+          <span>{label}</span>
+          <i className={isSorted 
+            ? (sortDirection === 'asc' ? "pi pi-sort-amount-up" : "pi pi-sort-amount-down") 
+            : "pi pi-sort-alt"
+          } style={{ fontSize: '10px', opacity: isSorted ? 1 : 0.4 }}></i>
         </div>
       );
     };
@@ -2058,7 +2121,7 @@ const TabContentRendererInner = React.memo(({
           )}
         </div>
 
-        {filteredPasswords.length === 0 ? (
+        {sortedPasswords.length === 0 ? (
           <div style={{
             textAlign: 'center',
             padding: '40px',
@@ -2112,18 +2175,15 @@ const TabContentRendererInner = React.memo(({
                   background: 'var(--ui-sidebar-hover)',
                   borderBottom: '2px solid var(--ui-content-border)',
                   borderRadius: '8px 8px 0 0',
-                  fontWeight: '600',
-                  fontSize: '12px',
-                  color: 'var(--ui-dialog-text)',
                   opacity: 0.9
                 }}>
                   <div style={{ width: '32px' }}></div>
-                  <div style={{ flex: '2', marginRight: '16px', minWidth: '150px' }}>Título</div>
-                  <div style={{ flex: '1.5', marginRight: '16px', minWidth: '120px' }}>Usuario</div>
-                  <div style={{ flex: '2', marginRight: '16px', minWidth: '150px' }}>URL</div>
-                  <div style={{ flex: '2', marginRight: '16px', minWidth: '120px' }}>Notas</div>
-                  <div style={{ flex: '1.5', marginRight: '16px', minWidth: '130px' }}>Contraseña</div>
-                  <div style={{ width: '120px', textAlign: 'right' }}>Acciones</div>
+                  <TableHeader field="label" label="Título" flex="2" />
+                  <TableHeader field="username" label="Usuario" flex="1.5" />
+                  <TableHeader field="url" label="URL" flex="2" />
+                  <TableHeader field="notes" label="Notas" flex="2" />
+                  <TableHeader field="password" label="Contraseña" flex="1.5" />
+                  <div style={{ width: '120px', textAlign: 'right', fontWeight: '600', fontSize: '12px', color: 'var(--ui-dialog-text)', userSelect: 'none' }}>Acciones</div>
                 </div>
                 {/* rows */}
                 <div style={{ flex: 1, overflow: 'auto' }}>
@@ -2131,6 +2191,7 @@ const TabContentRendererInner = React.memo(({
                     <PasswordListRow
                       key={password.key || index}
                       password={password}
+                      index={index}
                     />
                   ))}
                 </div>
@@ -2173,7 +2234,7 @@ const TabContentRendererInner = React.memo(({
                 }}>
                   Página {currentPage} de {totalPages}
                   <span style={{ color: 'var(--text-color-secondary)', marginLeft: '8px', opacity: 0.7 }}>
-                    ({startIndex + 1}-{Math.min(endIndex, filteredPasswords.length)} de {filteredPasswords.length})
+                    ({startIndex + 1}-{Math.min(endIndex, sortedPasswords.length)} de {sortedPasswords.length})
                   </span>
                 </div>
 
