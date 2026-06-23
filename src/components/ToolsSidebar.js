@@ -222,7 +222,6 @@ const ToolsSidebar = ({
       const isHovered = hoveredTool === node.key;
       return (
         <div 
-          onClick={() => onOpenTool && onOpenTool(node.key, node.label)}
           onMouseEnter={() => setHoveredTool(node.key)}
           onMouseLeave={() => setHoveredTool(null)}
           className="flex align-items-center"
@@ -322,6 +321,15 @@ const ToolsSidebar = ({
           selectionMode="single"
           selectionKeys={selectedToolKey}
           onSelectionChange={e => setSelectedToolKey(e.value)}
+          onNodeClick={(e) => {
+            const node = e.node;
+            if (node.isLeaf) {
+              setSelectedToolKey(node.key);
+              if (onOpenTool) {
+                onOpenTool(node.key, node.label);
+              }
+            }
+          }}
           expandedKeys={expandedKeys}
           onToggle={e => setExpandedKeys(e.value)}
           className={`sidebar-tree tree-theme-${treeTheme} tools-tree`}

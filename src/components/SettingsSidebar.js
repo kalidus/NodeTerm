@@ -257,13 +257,6 @@ const SettingsSidebar = ({
 
     return (
       <div
-        onClick={() => {
-          if (node.parentId) {
-            openSettingsSection(node.parentId, node.subitemId);
-          } else {
-            openSettingsSection(node.key, null);
-          }
-        }}
         onMouseEnter={() => setHoveredItem(hoverKey)}
         onMouseLeave={() => setHoveredItem(null)}
         className="flex align-items-center"
@@ -319,7 +312,7 @@ const SettingsSidebar = ({
         )}
       </div>
     );
-  }, [connectionIconSize, explorerFont, explorerFontSize, folderIconSize, hoveredItem, openSettingsSection, toggleCategory]);
+  }, [connectionIconSize, explorerFont, explorerFontSize, folderIconSize, hoveredItem]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -355,6 +348,17 @@ const SettingsSidebar = ({
           selectionMode="single"
           selectionKeys={selectedItemKey}
           onSelectionChange={(e) => setSelectedItemKey(e.value)}
+          onNodeClick={(e) => {
+            const node = e.node;
+            if (node.selectable) {
+              setSelectedItemKey(node.key);
+              if (node.parentId) {
+                openSettingsSection(node.parentId, node.subitemId);
+              } else {
+                openSettingsSection(node.key, null);
+              }
+            }
+          }}
           expandedKeys={expandedCategories}
           onToggle={(e) => setExpandedCategories(e.value)}
           className={`sidebar-tree tree-theme-${treeTheme} settings-tree`}
