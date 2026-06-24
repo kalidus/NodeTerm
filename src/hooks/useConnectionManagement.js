@@ -637,8 +637,8 @@ export const useConnectionManagement = ({
         security: baseRdp.guacSecurity || 'any',
         // Campos específicos de Guacamole
         autoResize: baseRdp.autoResize === true,
-        // Forzar congelación de resizes iniciales para camuflar RDProxy
-        freezeInitialResize: true,
+        // Forzar congelación de resizes iniciales para camuflar RDProxy solo si autoResize está activo
+        freezeInitialResize: baseRdp.autoResize === true,
         enableGfx: (baseRdp.guacEnableGfx === true) || (baseRdp.guacWin11Compat === true),
         // Características visuales
         enableDesktopComposition: baseRdp.guacEnableDesktopComposition === true,
@@ -956,7 +956,7 @@ export const useConnectionManagement = ({
         colorDepth: baseVnc.colorDepth || parseInt(baseVnc.colors) || 32,
         // Campos específicos de VNC
         autoResize: baseVnc.autoResize === true,
-        freezeInitialResize: true,
+        freezeInitialResize: baseVnc.autoResize === true,
         readOnly: baseVnc.readOnly === true,
         enableCompression: baseVnc.enableCompression !== false,
         imageQuality: baseVnc.imageQuality || 'lossless',
