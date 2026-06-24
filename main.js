@@ -750,7 +750,63 @@ async function initializeGuacamoleServices() {
           // Use NODETERM_DEBUG_GUACAMOLE=1 env var if guacamole-lite protocol debugging is needed.
           level: 'ERRORS'
         },
-        maxInactivityTime: 0
+        maxInactivityTime: 0,
+        // ⚡ PERF: Override connectionDefaultSettings from guacamole-lite defaults.
+        // Verified: guacd 1.3.0 on WSL has libwebp.so.7 linked (guac_client_supports_webp present).
+        // WebP negotiated first → guacd will use it, reducing frame size 30-40% vs JPEG.
+        // Empty audio array → guacd won't allocate audio channel, reducing overhead.
+        // DeepExtend replaces arrays, so this fully overrides the default ['image/png','image/jpeg'].
+        connectionDefaultSettings: {
+          rdp: {
+            'port': '3389',
+            'width': 1024,
+            'height': 768,
+            'dpi': 96,
+            'audio': [],
+            'video': null,
+            'image': ['image/webp', 'image/jpeg', 'image/png'],
+            'timezone': null,
+          },
+          vnc: {
+            'port': '5900',
+            'width': 1024,
+            'height': 768,
+            'dpi': 96,
+            'audio': [],
+            'video': null,
+            'image': ['image/webp', 'image/jpeg', 'image/png'],
+            'timezone': null,
+          },
+          ssh: {
+            'port': 22,
+            'width': 1024,
+            'height': 768,
+            'dpi': 96,
+            'audio': [],
+            'video': null,
+            'image': ['image/webp', 'image/jpeg', 'image/png'],
+            'timezone': null,
+          },
+          telnet: {
+            'port': 23,
+            'width': 1024,
+            'height': 768,
+            'dpi': 96,
+            'audio': [],
+            'video': null,
+            'image': ['image/webp', 'image/jpeg', 'image/png'],
+            'timezone': null,
+          },
+          join: {
+            'width': 1024,
+            'height': 768,
+            'dpi': 96,
+            'audio': [],
+            'video': null,
+            'image': ['image/webp', 'image/jpeg', 'image/png'],
+            'timezone': null,
+          }
+        }
       };
 
       // Configurar timeout de inactividad
@@ -764,7 +820,11 @@ async function initializeGuacamoleServices() {
       for (let i = 0; i < MAX_RETRIES; i++) {
         try {
           websocketPort = 8081 + i;
-          const websocketOptions = { port: websocketPort };
+          // ⚡ PERF: perMessageDeflate:false — Guacamole sends one WS message per protocol
+          // instruction. Per-message deflate has significant CPU overhead for many small
+          // messages. Over localhost/LAN, bandwidth is not the bottleneck; CPU is.
+          // Verified: wsOptions passes directly to WebSocketServer constructor in guacamole-lite.
+          const websocketOptions = { port: websocketPort, perMessageDeflate: false };
 
           if (DEBUG_GUACAMOLE) console.log(`🔄 Intentando iniciar WebSocket en puerto ${websocketPort} (intento ${i + 1}/${MAX_RETRIES})`);
 

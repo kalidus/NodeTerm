@@ -433,8 +433,23 @@ const GuacamoleTerminal = forwardRef(({
 
                 // ⚡ PERF: Mouse events must NOT call React setState (causes re-render on every mousemove at 60+ events/s).
                 // Idle detection uses only the ref.
-                mouse.onmousedown = mouse.onmouseup = mouse.onmousemove = (mouseState) => {
-                    // Enviar eventos solo si el display está montado.
+                // ⚡ PERF: Throttle mousemove to ~60fps (16ms). Without throttle, fast mouse
+                // movement generates 200-400 events/s, flooding the WebSocket unnecessarily.
+                // Safe: Guacamole.Mouse tracks button state via internal press()/release()
+                // methods, independent of move(). Throttling onmousemove never drops button events.
+                // mousedown/mouseup remain instant for click responsiveness.
+                // Verified by reading guacamole-common-js source (move() only dispatches position).
+                let _lastMouseMoveAt = 0;
+                mouse.onmousemove = (mouseState) => {
+                    if (!document.body.contains(targetElement)) return;
+                    const _now = Date.now();
+                    if (_now - _lastMouseMoveAt < 16) return; // ~60fps cap
+                    _lastMouseMoveAt = _now;
+                    try { client.sendMouseState(mouseState); } catch { }
+                    lastActivityTimeRef.current = _now;
+                    wasIdleRef.current = false;
+                };
+                mouse.onmousedown = mouse.onmouseup = (mouseState) => {
                     if (!document.body.contains(targetElement)) return;
                     try { client.sendMouseState(mouseState); } catch { }
                     lastActivityTimeRef.current = Date.now();
