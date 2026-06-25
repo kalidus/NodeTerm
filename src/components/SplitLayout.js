@@ -163,6 +163,8 @@ const SplitLayout = ({
 }) => {
   const leftTerminalRef = useRef(null);
   const rightTerminalRef = useRef(null);
+  const verticalDragRafRef = useRef(0);
+  const latestVerticalLeftSizeRef = useRef(30);
 
   // Determinar qué sistema usar
   const isNestedSystem = first || second;
@@ -1442,13 +1444,24 @@ const SplitLayout = ({
 
       const rect = container.getBoundingClientRect();
       const newLeftSize = ((e.clientX - rect.left) / rect.width) * 100;
-      setLeftSize(Math.max(20, Math.min(80, newLeftSize)));
+      const clampedSize = Math.max(20, Math.min(80, newLeftSize));
+
+      latestVerticalLeftSizeRef.current = clampedSize;
+      if (verticalDragRafRef.current) return;
+      verticalDragRafRef.current = requestAnimationFrame(() => {
+        verticalDragRafRef.current = 0;
+        setLeftSize(latestVerticalLeftSizeRef.current);
+      });
     };
 
     const handleMouseUp = () => {
       setIsDragging(false);
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
+      if (verticalDragRafRef.current) {
+        cancelAnimationFrame(verticalDragRafRef.current);
+        verticalDragRafRef.current = 0;
+      }
     };
 
     useEffect(() => {

@@ -14,7 +14,7 @@
     width: 100%;
     margin: 0;
     border: 1px solid rgba(255, 255, 255, 0.05);
-    transition: all 0.3s ease;
+    transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 /* Permitir unificado total: cuando están en el splitter principal, los marcos son transparentes
@@ -744,6 +744,18 @@ body.minimalist-terminal-mode .main-content-frame {
 
 body.minimalist-terminal-mode .main-content-frame-content {
     padding: 0 !important;
+}
+
+body.minimalist-terminal-mode,
+body.minimalist-terminal-mode *,
+body.minimalist-terminal-mode .main-splitter,
+body.minimalist-terminal-mode .p-splitter-panel,
+body.minimalist-terminal-mode .terminal-frame,
+body.minimalist-terminal-mode .terminal-frame-container,
+body.minimalist-terminal-mode .main-content-frame,
+body.minimalist-terminal-mode .main-content-frame-content {
+    transition: none !important;
+    animation: none !important;
 }
 
 body.minimalist-terminal-mode .terminal-frame {
