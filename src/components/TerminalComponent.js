@@ -321,28 +321,20 @@ const TerminalComponent = forwardRef(({
 
         term.current.focus();
 
-        // ResizeObserver con debounce para evitar desplazamientos al hacer split
-        // CR??TICO: No hacer fit() inmediatamente cuando cambia el tama??o, esperar a que el DOM se estabilice
-        let resizeRaf = null;
+        // ResizeObserver con throttling (30ms) para evitar sobrecargar el renderer WebGL/Canvas al arrastrar
         let resizeTimeout = null;
         const resizeObserver = new ResizeObserver(() => {
             if (fitAddon.current && term.current) {
-                // Cancelar RAF y timeout anteriores si existen
-                if (resizeRaf) {
-                    cancelAnimationFrame(resizeRaf);
-                    resizeRaf = null;
-                }
-                if (resizeTimeout) {
-                    clearTimeout(resizeTimeout);
-                }
-
-                resizeRaf = requestAnimationFrame(() => {
+                if (!resizeTimeout) {
                     resizeTimeout = setTimeout(() => {
-                        try {
-                            fitAddon.current.fit();
-                        } catch (e) { /* silenciar */ }
-                    }, 16); // 1 frame - suficiente para layout; menos delay = respuesta más rápida
-                });
+                        requestAnimationFrame(() => {
+                            try {
+                                fitAddon.current.fit();
+                            } catch (e) { /* silenciar */ }
+                            resizeTimeout = null;
+                        });
+                    }, 30);
+                }
             }
         });
         if (terminalRef.current) resizeObserver.observe(terminalRef.current);
@@ -511,15 +503,21 @@ const TerminalComponent = forwardRef(({
                 }
             });
 
-            // Handle resize
+            // Handle resize with 80ms debounce to prevent flooding the backend PTY process
+            let resizeIpcTimeout = null;
             const resizeHandler = term.current.onResize(({ cols, rows }) => {
-                window.electron.ipcRenderer.send('ssh:resize', { tabId, cols, rows });
+                if (resizeIpcTimeout) clearTimeout(resizeIpcTimeout);
+                resizeIpcTimeout = setTimeout(() => {
+                    window.electron.ipcRenderer.send('ssh:resize', { tabId, cols, rows });
+                }, 80);
             });
 
             // Cleanup on component unmount
             return () => {
                 resizeObserver.disconnect();
                 cleanupContextMenu();
+                if (resizeTimeout) clearTimeout(resizeTimeout);
+                if (resizeIpcTimeout) clearTimeout(resizeIpcTimeout);
 
                 // Preservar el buffer del terminal antes de desmontarlo
                 // Guardar las ??ltimas 500 l??neas del buffer (o todo si hay menos)
@@ -579,13 +577,6 @@ const TerminalComponent = forwardRef(({
                 if (!window.__sshDisconnectTimers) window.__sshDisconnectTimers = {};
                 window.__sshDisconnectTimers[tabId] = disconnectTimer;
 
-                // Limpiar RAF y timeout del ResizeObserver
-                if (resizeRaf) {
-                    cancelAnimationFrame(resizeRaf);
-                }
-                if (resizeTimeout) {
-                    clearTimeout(resizeTimeout);
-                }
 
                 if (onDataUnsubscribe) onDataUnsubscribe();
                 if (onErrorUnsubscribe) onErrorUnsubscribe();

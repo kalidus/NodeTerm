@@ -327,18 +327,32 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
     };
   }, []);
 
-  // Sincronizar el estado de maximizado de la ventana al redimensionar
+  // Sincronizar el estado de maximizado de la ventana al redimensionar (con debounce para evitar inundación de IPC)
   useEffect(() => {
+    let debounceTimeout = null;
     const handleResize = () => {
-      if (window.electronAPI?.isMaximized) {
-        window.electronAPI.isMaximized().then(maximized => {
-          setIsMaximized(maximized);
-        });
-      }
+      if (debounceTimeout) clearTimeout(debounceTimeout);
+      debounceTimeout = setTimeout(() => {
+        if (window.electronAPI?.isMaximized) {
+          window.electronAPI.isMaximized().then(maximized => {
+            setIsMaximized(maximized);
+          });
+        }
+      }, 150);
     };
     window.addEventListener('resize', handleResize);
-    handleResize(); // Verificar estado inicial
-    return () => window.removeEventListener('resize', handleResize);
+    
+    // Verificar estado inicial inmediatamente
+    if (window.electronAPI?.isMaximized) {
+      window.electronAPI.isMaximized().then(maximized => {
+        setIsMaximized(maximized);
+      });
+    }
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (debounceTimeout) clearTimeout(debounceTimeout);
+    };
   }, []);
 
   // Efecto para crear copos de nieve dinámicamente para el tema Winter Snowfall
