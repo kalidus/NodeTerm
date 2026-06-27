@@ -319,16 +319,37 @@
 
 :root[data-tab-layout="classicBrowser"] .p-tabview .p-tabview-nav {
   padding-left: 4px !important;
+  padding-top: 4px !important;
+  padding-bottom: 0 !important;
+  align-items: stretch !important;
 }
 
 :root[data-tab-layout="classicBrowser"] .p-tabview .p-tabview-nav li {
-  margin-right: 2px !important;
+  margin-right: 0px !important;
+  margin-bottom: -1px !important;
+  height: 100% !important;
+}
+
+:root[data-tab-layout="classicBrowser"] .p-tabview .p-tabview-nav li.home-tab {
+  margin-right: 4px !important;
+  height: 100% !important;
 }
 
 :root[data-tab-layout="classicBrowser"] .p-tabview .p-tabview-nav li .p-tabview-nav-link {
   border-radius: 6px 6px 0 0 !important;
   border: 1px solid var(--ui-tab-border, rgba(255, 255, 255, 0.22)) !important;
   border-bottom: none !important;
+  height: 100% !important;
+  margin-top: 0 !important;
+}
+
+:root[data-tab-layout="classicBrowser"] .p-tabview .p-tabview-nav li.home-tab {
+  height: 100% !important;
+}
+
+:root[data-tab-layout="classicBrowser"] .p-tabview .p-tabview-nav li.home-tab .p-tabview-nav-link {
+  height: 100% !important;
+  margin-top: 0 !important;
 }
 
 
