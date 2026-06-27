@@ -55,6 +55,7 @@
   min-height: var(--tab-bar-height);
   margin-bottom: 0;
   padding-bottom: 0;
+  padding-left: 4px !important;
   display: flex !important; /* Asegurar flex para el comportamiento adaptativo */
   align-items: stretch !important;
   background: var(--ui-tab-bar-bg, var(--ui-content-bg)) !important;
@@ -95,7 +96,7 @@
 
 /* Pestaña de inicio: misma altura/alineación que el resto */
 .p-tabview .p-tabview-nav li.home-tab {
-  margin-right: 8px !important;
+  margin-right: 4px !important;
   width: 40px !important;
   min-width: 40px !important;
   max-width: 40px !important;
@@ -1075,7 +1076,7 @@ button.local-terminal-buttons .tab-action-button:hover,
   display: flex !important;
   align-items: center !important;
   gap: 2px !important;
-  margin-left: 6px !important;
+  margin-left: 2px !important;
   margin-right: 2px !important;
   flex-shrink: 0 !important;
   height: 25px !important;

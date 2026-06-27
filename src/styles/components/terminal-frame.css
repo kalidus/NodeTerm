@@ -542,7 +542,7 @@
     min-height: var(--tab-bar-height, 34px) !important;
     background: var(--ui-tab-bar-bg, var(--ui-sidebar-bg, #1a1b26)) !important;
     border: none !important;
-    padding: 0 6px 0 10px !important;
+    padding: 0 6px 0 4px !important;
     border-bottom: none !important;
     align-items: center !important;
     padding-bottom: 0 !important;
@@ -578,7 +578,7 @@
 .terminal-frame .main-tab-view .p-tabview-nav {
     background: transparent !important;
     border: none !important;
-    padding: 0 10px !important;
+    padding: 0 4px !important;
     border-bottom: none !important;
 }
 
@@ -614,7 +614,7 @@
 
 /* Home tab: misma altura que el resto, más ancha, centrada */
 .terminal-frame .main-tab-view .p-tabview-nav li.home-tab {
-    margin-right: 6px !important;
+    margin-right: 4px !important;
     width: 42px !important;
     min-width: 42px !important;
     max-width: 42px !important;
@@ -668,7 +668,7 @@
 /* Botones + y v: más pequeños e integrados en la barra */
 .terminal-frame .main-tab-view .p-tabview-nav-container .local-terminal-buttons {
     gap: 2px !important;
-    margin-left: 6px !important;
+    margin-left: 2px !important;
     align-self: center !important;
 }
 :root[data-tab-layout="chrome"] .terminal-frame .main-tab-view .p-tabview-nav-container .local-terminal-buttons {
