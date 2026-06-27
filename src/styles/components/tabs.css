@@ -317,6 +317,10 @@
 }
 
 
+:root[data-tab-layout="classicBrowser"] .p-tabview .p-tabview-nav {
+  padding-left: 4px !important;
+}
+
 :root[data-tab-layout="classicBrowser"] .p-tabview .p-tabview-nav li {
   margin-right: 2px !important;
 }
