@@ -533,7 +533,8 @@ const RecentVulnsPanel = () => {
             emptyMessage="No se encontraron vulnerabilidades críticas para este rango de fechas."
             className="p-datatable-sm recent-vulns-table"
             scrollable
-            scrollHeight="360px"
+            scrollHeight="flex"
+            style={{ flex: 1, minHeight: 0 }}
             rowHover
           >
             <Column field="cve" header="Identificador CVE" body={cveTemplate} sortable style={{ width: '130px', fontWeight: 'bold' }} />
