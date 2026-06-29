@@ -25,6 +25,7 @@ import { Tooltip } from 'primereact/tooltip';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
 import CvssCalculatorPanel from './network-tools/CvssCalculatorPanel';
+import RecentVulnsPanel from './network-tools/RecentVulnsPanel';
 import localStorageSyncService from '../services/LocalStorageSyncService';
 
 // Categorías de herramientas
@@ -69,7 +70,8 @@ const TOOL_CATEGORIES = [
       { id: 'http-headers', label: 'HTTP Headers', icon: 'pi pi-file', description: 'Análisis de cabeceras HTTP' },
       { id: 'host-vuln-scan', label: 'Host Vuln Scanner', icon: 'pi pi-exclamation-triangle', description: 'Detecta vulnerabilidades y CVEs en servicios' },
       { id: 'web-security-scan', label: 'Web Security', icon: 'pi pi-globe', description: 'Analiza seguridad web, headers y cookies' },
-      { id: 'cvss-calculator', label: 'CVSS Calculator', icon: 'pi pi-chart-bar', description: 'Calcula CVSS 3.1 y 4.0 · Templates · Reportes HTML/PDF' }
+      { id: 'cvss-calculator', label: 'CVSS Calculator', icon: 'pi pi-chart-bar', description: 'Calcula CVSS 3.1 y 4.0 · Templates · Reportes HTML/PDF' },
+      { id: 'recent-vulns', label: 'Critical Vulns', icon: 'pi pi-shield', description: 'Consulta vulnerabilidades críticas globales de los últimos años' }
     ]
   },
   {
@@ -3453,6 +3455,10 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
       return <CvssCalculatorPanel />;
     }
 
+    if (selectedTool === 'recent-vulns') {
+      return <RecentVulnsPanel />;
+    }
+
     // Mostrar salida en tiempo real mientras se ejecuta
     if (loading) {
       const liveOutputStyle = {
@@ -5257,6 +5263,9 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
       case 'cvss-calculator':
         return <CvssCalculatorPanel />;
 
+      case 'recent-vulns':
+        return <RecentVulnsPanel />;
+
       default:
         return <div>Resultados no disponibles</div>;
     }
@@ -5690,7 +5699,7 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
               </div>
             )}
             <div className="network-tools-form-results" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-              {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'http-headers', 'whois', 'subnet-calc', 'wake-on-lan', 'host-vuln-scan', 'web-security-scan', 'cvss-calculator'].includes(selectedTool) && (
+              {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'http-headers', 'whois', 'subnet-calc', 'wake-on-lan', 'host-vuln-scan', 'web-security-scan', 'cvss-calculator', 'recent-vulns'].includes(selectedTool) && (
                 <div className="network-tools-form" style={{ padding: '1rem', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                   {renderToolForm()}
                 </div>
@@ -6075,7 +6084,7 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
               flexShrink: 0
             }}>
               {/* Primera fila: Solo título para herramientas con header especial, título + botón para otros */}
-              {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'http-headers', 'whois', 'subnet-calc', 'wake-on-lan', 'host-vuln-scan', 'web-security-scan', 'cvss-calculator'].includes(selectedTool) ? (
+              {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'http-headers', 'whois', 'subnet-calc', 'wake-on-lan', 'host-vuln-scan', 'web-security-scan', 'cvss-calculator', 'recent-vulns'].includes(selectedTool) ? (
                 <div style={{
                   display: 'flex',
                   flexDirection: isMobile ? 'column' : 'row',
@@ -7249,7 +7258,7 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
           {/* Contenido: formulario y resultados */}
           <div className="network-tools-form-results">
             {/* Panel de formulario - Solo si NO es tool con header especial */}
-            {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'http-headers', 'whois', 'subnet-calc', 'wake-on-lan', 'host-vuln-scan', 'web-security-scan', 'cvss-calculator'].includes(selectedTool) && (
+            {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'http-headers', 'whois', 'subnet-calc', 'wake-on-lan', 'host-vuln-scan', 'web-security-scan', 'cvss-calculator', 'recent-vulns'].includes(selectedTool) && (
               <div className="network-tools-form" style={{
                 padding: '1rem',
                 paddingBottom: '2rem',
@@ -7265,9 +7274,9 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
               padding: '1rem',
               paddingBottom: '2rem',
               background: 'rgba(0,0,0,0.1)',
-              width: ['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'http-headers', 'whois', 'subnet-calc', 'wake-on-lan', 'host-vuln-scan', 'web-security-scan', 'cvss-calculator'].includes(selectedTool) ? '100%' : undefined
+              width: ['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'http-headers', 'whois', 'subnet-calc', 'wake-on-lan', 'host-vuln-scan', 'web-security-scan', 'cvss-calculator', 'recent-vulns'].includes(selectedTool) ? '100%' : undefined
             }}>
-              {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'http-headers', 'whois', 'subnet-calc', 'wake-on-lan', 'host-vuln-scan', 'web-security-scan', 'cvss-calculator'].includes(selectedTool) && (
+              {!['ssl-check', 'ping', 'traceroute', 'port-scan', 'network-scan', 'dns-lookup', 'reverse-dns', 'http-headers', 'whois', 'subnet-calc', 'wake-on-lan', 'host-vuln-scan', 'web-security-scan', 'cvss-calculator', 'recent-vulns'].includes(selectedTool) && (
                 <div style={{
                   marginBottom: '0.75rem',
                   fontSize: '0.85rem',

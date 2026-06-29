@@ -18,7 +18,15 @@ const https = require('https');
 const http = require('http');
 const dgram = require('dgram');
 const os = require('os');
+const path = require('path');
 const { promisify } = require('util');
+
+let app;
+try {
+  app = require('electron').app;
+} catch (e) {
+  // En caso de ejecutarse fuera de Electron (e.g. tests)
+}
 
 const execAsync = promisify(exec);
 
@@ -27,6 +35,54 @@ class NetworkToolsService {
     this.platform = process.platform;
     this.commandCache = new Map(); // Cache para comandos disponibles
     this._nmapPathCache = undefined;
+    this.nvdCache = new Map(); // Caché para peticiones de NVD
+    
+    this.nvdCachePath = null;
+    try {
+      if (app) {
+        this.nvdCachePath = path.join(app.getPath('userData'), 'nvd_vulns_cache.json');
+      }
+    } catch (e) {
+      console.warn('[NetworkToolsService] No se pudo obtener la ruta userData de electron:', e);
+    }
+    
+    this._loadCache();
+  }
+
+  /**
+   * Carga la caché desde el archivo persistente en disco
+   * @private
+   */
+  _loadCache() {
+    if (!this.nvdCachePath) return;
+    try {
+      if (fs.existsSync(this.nvdCachePath)) {
+        const raw = fs.readFileSync(this.nvdCachePath, 'utf8');
+        const data = JSON.parse(raw);
+        for (const [key, value] of Object.entries(data)) {
+          this.nvdCache.set(key, value);
+        }
+      }
+    } catch (error) {
+      console.error('[NetworkToolsService:loadCache] Error al cargar la caché persistente:', error);
+    }
+  }
+
+  /**
+   * Guarda la caché en un archivo persistente en disco
+   * @private
+   */
+  _saveCache() {
+    if (!this.nvdCachePath) return;
+    try {
+      const data = {};
+      for (const [key, value] of this.nvdCache.entries()) {
+        data[key] = value;
+      }
+      fs.writeFileSync(this.nvdCachePath, JSON.stringify(data, null, 2), 'utf8');
+    } catch (error) {
+      console.error('[NetworkToolsService:saveCache] Error al guardar la caché persistente:', error);
+    }
   }
 
   /**
@@ -3176,6 +3232,126 @@ class NetworkToolsService {
       });
     } catch {
       return [];
+    }
+  }
+
+  /**
+   * Obtiene las vulnerabilidades más críticas de los últimos X años
+   * @param {number} years - Número de años configurados
+   * @param {number} minScore - Puntuación CVSS mínima
+   * @param {number} [days=null] - Número de días alternativos
+   * @returns {Promise<Object>} Lista de vulnerabilidades
+   */
+  async getRecentCriticalVulns(years = 1, minScore = 9.0, days = null) {
+    try {
+      const totalDays = days !== null && days !== undefined ? days : Math.round(years * 365.25);
+      const cacheKey = `${totalDays}_${minScore}`;
+      const cached = this.nvdCache.get(cacheKey);
+      const CACHE_TTL = 3600000; // 1 hora de TTL para caché
+      
+      if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
+        return { success: true, vulnerabilities: cached.vulnerabilities, fromCache: true };
+      }
+
+      const chunks = [];
+      const now = new Date();
+      let daysLeft = totalDays;
+      let currentEndDate = new Date(now);
+
+      while (daysLeft > 0) {
+        const daysToSubtract = Math.min(120, daysLeft);
+        const currentStartDate = new Date(currentEndDate);
+        currentStartDate.setDate(currentEndDate.getDate() - daysToSubtract);
+
+        chunks.push({
+          start: currentStartDate.toISOString().split('.')[0] + '.000',
+          end: currentEndDate.toISOString().split('.')[0] + '.000'
+        });
+
+        currentEndDate = new Date(currentStartDate);
+        daysLeft -= daysToSubtract;
+      }
+
+      let allCves = [];
+      const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        
+        // Agregar un pequeño retardo de 1s entre llamadas para evitar límites de tasa
+        if (i > 0) {
+          await sleep(1000);
+        }
+
+        const url = `https://services.nvd.nist.gov/rest/json/cves/2.0?pubStartDate=${chunk.start}&pubEndDate=${chunk.end}&cvssV3Severity=CRITICAL`;
+        
+        const chunkCves = await new Promise((resolve) => {
+          const options = {
+            headers: {
+              'User-Agent': 'NodeTerm-Security-Scanner'
+            },
+            timeout: 15000
+          };
+          
+          const request = https.get(url, options, (response) => {
+            let data = '';
+            
+            response.on('data', chunk => { data += chunk; });
+            response.on('end', () => {
+              try {
+                const json = JSON.parse(data);
+                const cves = (json.vulnerabilities || []).map(v => {
+                  const cve = v.cve;
+                  const metrics = cve.metrics?.cvssMetricV31?.[0] || cve.metrics?.cvssMetricV30?.[0] || cve.metrics?.cvssMetricV2?.[0];
+                  const baseScore = metrics?.cvssData?.baseScore || 0;
+                  
+                  let severity = 'LOW';
+                  if (baseScore >= 9.0) severity = 'CRITICAL';
+                  else if (baseScore >= 7.0) severity = 'HIGH';
+                  else if (baseScore >= 4.0) severity = 'MEDIUM';
+                  
+                  return {
+                    cve: cve.id,
+                    severity,
+                    score: baseScore,
+                    published: cve.published,
+                    description: cve.descriptions?.find(d => d.lang === 'es')?.value || cve.descriptions?.find(d => d.lang === 'en')?.value || 'Sin descripción',
+                    references: (cve.references || []).slice(0, 5).map(r => r.url)
+                  };
+                });
+                resolve(cves);
+              } catch (e) {
+                resolve([]);
+              }
+            });
+          });
+          
+          request.on('error', () => resolve([]));
+          request.on('timeout', () => {
+            request.destroy();
+            resolve([]);
+          });
+        });
+
+        allCves = allCves.concat(chunkCves);
+      }
+
+      // Filtrar por puntuación mínima y ordenar descendentemente por puntuación
+      const filtered = allCves
+        .filter(c => c.score >= minScore)
+        .sort((a, b) => b.score - a.score);
+
+      // Guardar en caché antes de retornar
+      this.nvdCache.set(cacheKey, {
+        timestamp: Date.now(),
+        vulnerabilities: filtered
+      });
+      this._saveCache();
+
+      return { success: true, vulnerabilities: filtered };
+    } catch (error) {
+      console.error('[NetworkToolsService:getRecentCriticalVulns] Error:', error);
+      return { success: false, error: error.message || 'Error desconocido al obtener vulnerabilidades' };
     }
   }
 

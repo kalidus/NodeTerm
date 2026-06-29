@@ -532,6 +532,7 @@ const TabHeader = React.memo(({
           'host-vuln-scan': { icon: 'pi pi-exclamation-triangle', color: '#ef4444' },
           'web-security-scan': { icon: 'pi pi-globe', color: '#ef4444' },
           'cvss-calculator': { icon: 'pi pi-chart-bar', color: '#ef4444' },
+          'recent-vulns': { icon: 'pi pi-shield', color: '#ef4444' },
           'whois': { icon: 'pi pi-id-card', color: '#8b5cf6' },
           'subnet-calc': { icon: 'pi pi-calculator', color: '#8b5cf6' },
           'wake-on-lan': { icon: 'pi pi-power-off', color: '#8b5cf6' }

@@ -345,6 +345,18 @@ function registerNetworkToolsHandlers() {
     }
   });
 
+  // === GET RECENT CRITICAL VULNERABILITIES ===
+  ipcMain.handle('network-tools:get-recent-vulns', async (event, { years, minScore, days }) => {
+    try {
+      const service = getService();
+      const result = await service.getRecentCriticalVulns(years, minScore, days);
+      return result;
+    } catch (err) {
+      console.error('[network-tools:get-recent-vulns] Error:', err);
+      return { success: false, error: err?.message || 'Error al obtener vulnerabilidades' };
+    }
+  });
+
   // === GET NETWORK INTERFACES ===
   ipcMain.handle('network-tools:get-interfaces', async () => {
     try {
