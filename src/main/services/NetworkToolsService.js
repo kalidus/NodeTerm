@@ -3341,12 +3341,19 @@ class NetworkToolsService {
         .filter(c => c.score >= minScore)
         .sort((a, b) => b.score - a.score);
 
-      // Guardar en caché antes de retornar
-      this.nvdCache.set(cacheKey, {
-        timestamp: Date.now(),
-        vulnerabilities: filtered
-      });
-      this._saveCache();
+      // Si la API falló o devolvió vacío y ya tenemos datos en caché, usarlos como fallback
+      if (filtered.length === 0 && cached) {
+        return { success: true, vulnerabilities: cached.vulnerabilities, fromCache: true };
+      }
+
+      // Guardar en caché sólo si obtuvimos resultados
+      if (filtered.length > 0) {
+        this.nvdCache.set(cacheKey, {
+          timestamp: Date.now(),
+          vulnerabilities: filtered
+        });
+        this._saveCache();
+      }
 
       return { success: true, vulnerabilities: filtered };
     } catch (error) {

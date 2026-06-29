@@ -12,7 +12,7 @@ import { Message } from 'primereact/message';
 import { themeManager } from '../../utils/themeManager';
 
 const RecentVulnsPanel = () => {
-  const [range, setRange] = useState('1Y'); // Rango seleccionado por defecto: 1 año
+  const [range, setRange] = useState('1M'); // Rango seleccionado por defecto: 1 Mes
   const [minScore, setMinScore] = useState(9.0);
   const [vulnerabilities, setVulnerabilities] = useState([]);
   const [loading, setLoading] = useState(false);
