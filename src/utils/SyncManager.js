@@ -312,18 +312,18 @@ class SyncManager {
       localPowerShellTheme: localStorage.getItem('basicapp_local_powershell_theme'),
       localLinuxTerminalTheme: localStorage.getItem('basicapp_local_linux_terminal_theme'),
       
-      // Configuraciones de UI - CORREGIR KEYS
-      uiTheme: localStorage.getItem('ui_theme'),  // Cambiar de 'basicapp_ui_theme' a 'ui_theme'
+      // Configuraciones de UI
+      uiTheme: localStorage.getItem('ui_theme'),
       statusBarTheme: localStorage.getItem('basicapp_statusbar_theme'),
       terminalTheme: localStorage.getItem('basicapp_terminal_theme'),
-      iconTheme: localStorage.getItem('iconTheme'),  // Cambiar de 'basicapp_icon_theme' a 'iconTheme'
-      explorerFont: localStorage.getItem('explorerFont'),  // Cambiar de 'basicapp_explorer_font' a 'explorerFont'
-      explorerFontSize: localStorage.getItem('explorerFontSize'),  // Cambiar de 'basicapp_explorer_font_size' a 'explorerFontSize'
-      explorerColorTheme: localStorage.getItem('explorerColorTheme'),  // Cambiar de 'basicapp_explorer_color_theme' a 'explorerColorTheme'
-      sidebarFont: localStorage.getItem('sidebarFont'),  // Cambiar de 'basicapp_sidebar_font' a 'sidebarFont'
-      sidebarFontSize: localStorage.getItem('sidebarFontSize'),  // Cambiar de 'basicapp_sidebar_font_size' a 'sidebarFontSize'
+      iconTheme: localStorage.getItem('iconTheme'),
+      explorerFont: localStorage.getItem('explorerFont'),
+      explorerFontSize: localStorage.getItem('explorerFontSize'),
+      explorerColorTheme: localStorage.getItem('explorerColorTheme'),
+      sidebarFont: localStorage.getItem('sidebarFont'),
+      sidebarFontSize: localStorage.getItem('sidebarFontSize'),
       statusBarIconTheme: localStorage.getItem('basicapp_statusbar_icon_theme'),
-      statusBarPollingInterval: localStorage.getItem('statusBarPollingInterval'),  // Cambiar de 'basicapp_statusbar_polling_interval' a 'statusBarPollingInterval'
+      statusBarPollingInterval: localStorage.getItem('statusBarPollingInterval'),
       
       // Historial de conexiones
       connectionHistory: localStorage.getItem('nodeterm_connection_history'),
@@ -338,6 +338,41 @@ class SyncManager {
       syncTimestamp: new Date().toISOString(),
       version: '1.0'
     };
+
+    // Agregar todas las configuraciones con sus nombres exactos de LocalStorage para sincronización completa
+    const configKeys = [
+      'ui_theme', 'iconTheme', 'iconThemeSidebar', 'actionBarIconTheme', 'sessionActionIconTheme', 'treeTheme',
+      'localLinuxTerminalTheme', 'localPowerShellTheme', 'localDockerTerminalTheme',
+      'basicapp_statusbar_theme', 'basicapp_terminal_theme', 'basicapp_statusbar_icon_theme',
+      'basicapp_statusbar_layout', 'basicapp_statusbar_height', 'basicapp_local_powershell_theme',
+      'basicapp_local_linux_terminal_theme', 'sidebarFont', 'sidebarFontSize', 'sidebarFontColor',
+      'sidebarFontColorSource', 'homeTabFont', 'homeTabFontSize', 'explorerFont', 'explorerFontSize',
+      'explorerColorTheme', 'basicapp_local_terminal_font_family', 'basicapp_local_terminal_font_size',
+      'nodeterm_linux_font_size', 'nodeterm_docker_font_family', 'nodeterm_docker_font_size',
+      'custom_titlebar_color', 'titlebar_color_mode', 'use_primary_colors_titlebar',
+      'nodeterm_ui_anim_speed', 'nodeterm_ui_reduced_motion', 'nodeterm_themes_per_row',
+      'connectionDetailsPanelHeight', 'lock_home_button', 'nodeterm_fav_type',
+      'audit_auto_recording', 'audit_recording_quality', 'audit_encrypt_recordings',
+      'nodeterm_language', 'home_tab_icon', 'statusBarIconTheme', 'statusBarPollingInterval',
+      'nodeterm_interactive_icon', 'nodeterm_tab_theme', 'nodeterm_tab_layout',
+      'nodeterm_sync_config', 'nodeterm_connection_history', 'ai_clients_enabled', 'selectedMcpServers',
+      'nodeterm_default_local_terminal', 'nodeterm_scrollback_lines'
+    ];
+
+    configKeys.forEach(key => {
+      const val = localStorage.getItem(key);
+      if (val !== null) {
+        data[key] = val;
+      }
+    });
+
+    // Agregar temas de pestañas dinámicos (tab_theme_*)
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith('tab_theme_') || key === 'tab_theme_default' || key === 'tab_theme_active' || key === 'tab_theme_hover')) {
+        data[key] = localStorage.getItem(key);
+      }
+    }
 
     // Filtrar valores null/undefined y strings "undefined"
     Object.keys(data).forEach(key => {
@@ -359,18 +394,35 @@ class SyncManager {
     }
 
     const applied = [];
-    // Asegurar que ui_theme en localStorage se sobrescriba antes de recargar temas
-    if (data.uiTheme) {
+    
+    // 1. Restaurar ui_theme primero
+    if (data.ui_theme) {
+      localStorage.setItem('ui_theme', data.ui_theme);
+    } else if (data.uiTheme) {
       localStorage.setItem('ui_theme', data.uiTheme);
     } else {
       localStorage.setItem('ui_theme', 'Light');
     }
 
+    // 2. Mapear retrocompatibilidad de claves antiguas si es necesario
+    const CLOUD_TO_LOCAL_KEY_MAP = {
+      statusBarHeight: 'basicapp_statusbar_height',
+      localFontFamily: 'basicapp_local_terminal_font_family',
+      localFontSize: 'basicapp_local_terminal_font_size',
+      localPowerShellTheme: 'basicapp_local_powershell_theme',
+      localLinuxTerminalTheme: 'basicapp_local_linux_terminal_theme',
+      statusBarTheme: 'basicapp_statusbar_theme',
+      terminalTheme: 'basicapp_terminal_theme',
+      statusBarIconTheme: 'basicapp_statusbar_icon_theme',
+      connectionHistory: 'nodeterm_connection_history',
+    };
+
     Object.keys(data).forEach(key => {
-      if (key === 'syncTimestamp' || key === 'version' || key === 'uiTheme') return; // Skip metadata y uiTheme (ya lo pusimos)
+      if (key === 'syncTimestamp' || key === 'version' || key === 'uiTheme' || key === 'ui_theme') return;
       if (data[key] !== null && data[key] !== undefined) {
-        localStorage.setItem(key, data[key]);
-        applied.push(key);
+        const localKey = CLOUD_TO_LOCAL_KEY_MAP[key] || key;
+        localStorage.setItem(localKey, data[key]);
+        applied.push(localKey);
       }
     });
 

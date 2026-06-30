@@ -115,6 +115,11 @@ class ExportImportService {
         const encryptedConnections = this.safeGetItem('connections_encrypted');
         const importSources = this.safeGetItem('IMPORT_SOURCES');
         const favorites = this.safeGetItem('nodeterm_favorite_connections');
+        const favoriteGroups = this.safeGetItem('nodeterm_favorite_groups');
+        const favoriteGroupAssignments = this.safeGetItem('nodeterm_favorite_group_assignments');
+        const favoriteMemberOrder = this.safeGetItem('nodeterm_favorite_member_order');
+        const filterConfig = this.safeGetItem('nodeterm_filter_config');
+        const groupAssignments = this.safeGetItem('nodeterm_group_assignments');
         
         console.log('[ExportImportService] Exportando conexiones:', {
           hasTreeData: !!treeData,
@@ -129,7 +134,12 @@ class ExportImportService {
           tree: treeData,
           encrypted: encryptedConnections,
           importSources: importSources,
-          favorites: favorites
+          favorites: favorites,
+          favoriteGroups: favoriteGroups,
+          favoriteGroupAssignments: favoriteGroupAssignments,
+          favoriteMemberOrder: favoriteMemberOrder,
+          filterConfig: filterConfig,
+          groupAssignments: groupAssignments
         };
       }
 
@@ -245,7 +255,27 @@ class ExportImportService {
           
           // Status Bar
           statusBarIconTheme: this.safeGetItem('statusBarIconTheme'),
-          statusBarPollingInterval: this.safeGetItem('statusBarPollingInterval')
+          statusBarPollingInterval: this.safeGetItem('statusBarPollingInterval'),
+          
+          // Status Bar extra config
+          basicapp_statusbar_theme: this.safeGetItem('basicapp_statusbar_theme'),
+          basicapp_terminal_theme: this.safeGetItem('basicapp_terminal_theme'),
+          basicapp_statusbar_icon_theme: this.safeGetItem('basicapp_statusbar_icon_theme'),
+          basicapp_statusbar_layout: this.safeGetItem('basicapp_statusbar_layout'),
+          basicapp_statusbar_height: this.safeGetItem('basicapp_statusbar_height'),
+          basicapp_local_powershell_theme: this.safeGetItem('basicapp_local_powershell_theme'),
+          basicapp_local_linux_terminal_theme: this.safeGetItem('basicapp_local_linux_terminal_theme'),
+          
+          // Extra styles/UI settings
+          sidebarFontColor: this.safeGetItem('sidebarFontColor'),
+          sidebarFontColorSource: this.safeGetItem('sidebarFontColorSource'),
+          nodeterm_interactive_icon: this.safeGetItem('nodeterm_interactive_icon'),
+          nodeterm_tab_theme: this.safeGetItem('nodeterm_tab_theme'),
+          nodeterm_tab_layout: this.safeGetItem('nodeterm_tab_layout'),
+          
+          // Sync & History
+          nodeterm_sync_config: this.safeGetItem('nodeterm_sync_config'),
+          nodeterm_connection_history: this.safeGetItem('nodeterm_connection_history')
         };
         
         console.log('[ExportImportService] Exportando configuraciones:', {
@@ -611,21 +641,70 @@ class ExportImportService {
       'ai_clients_enabled',
       'selectedMcpServers',
       'nodeterm_default_local_terminal',
+      'scrollbackLines',
       'ai_conversations_index',
       // Añadir todas las claves de conversaciones
       ...this.getKeysWithPrefix('conversation_'),
       // Añadir todas las claves de configuraciones relevantes
-      'sidebarFont',
-      'sidebarFontSize',
-      'homeTabFont',
-      'homeTabFontSize',
+      'ui_theme',
+      'iconTheme',
       'iconThemeSidebar',
       'actionBarIconTheme',
       'sessionActionIconTheme',
       'treeTheme',
+      'localLinuxTerminalTheme',
+      'localPowerShellTheme',
+      'localDockerTerminalTheme',
+      'sidebarFont',
+      'sidebarFontSize',
+      'sidebarFontColor',
+      'sidebarFontColorSource',
+      'homeTabFont',
+      'homeTabFontSize',
+      'explorerFont',
+      'explorerFontSize',
+      'explorerColorTheme',
+      'basicapp_local_terminal_font_family',
+      'basicapp_local_terminal_font_size',
+      'nodeterm_linux_font_size',
+      'nodeterm_docker_font_family',
+      'nodeterm_docker_font_size',
+      'custom_titlebar_color',
+      'titlebar_color_mode',
+      'use_primary_colors_titlebar',
+      'nodeterm_ui_anim_speed',
+      'nodeterm_ui_reduced_motion',
+      'nodeterm_themes_per_row',
+      'connectionDetailsPanelHeight',
+      'lock_home_button',
+      'nodeterm_fav_type',
+      'audit_auto_recording',
+      'audit_recording_quality',
+      'audit_encrypt_recordings',
+      'nodeterm_language',
+      'home_tab_icon',
+      'statusBarIconTheme',
+      'statusBarPollingInterval',
       'documents_encrypted',
       'documentManagerNodes',
-      'documents_expanded_keys'
+      'documents_expanded_keys',
+      
+      // Nuevas claves de configuración
+      'basicapp_statusbar_theme',
+      'basicapp_terminal_theme',
+      'basicapp_statusbar_icon_theme',
+      'basicapp_statusbar_layout',
+      'basicapp_statusbar_height',
+      'basicapp_local_powershell_theme',
+      'basicapp_local_linux_terminal_theme',
+      'nodeterm_interactive_icon',
+      'nodeterm_tab_theme',
+      'nodeterm_tab_layout',
+      'nodeterm_sync_config',
+      'nodeterm_connection_history',
+      
+      // Añadir dinámicamente claves relacionadas con temas de pestañas
+      ...Object.keys(this.getTabThemeConfig())
     ];
     
     const backup = {};
@@ -716,6 +795,11 @@ class ExportImportService {
       localStorage.removeItem('connections_encrypted');
       localStorage.removeItem('IMPORT_SOURCES');
       localStorage.removeItem('nodeterm_favorite_connections');
+      localStorage.removeItem('nodeterm_favorite_groups');
+      localStorage.removeItem('nodeterm_favorite_group_assignments');
+      localStorage.removeItem('nodeterm_favorite_member_order');
+      localStorage.removeItem('nodeterm_filter_config');
+      localStorage.removeItem('nodeterm_group_assignments');
     }
 
     // Importar (fusionar o reemplazar según options)
@@ -739,6 +823,26 @@ class ExportImportService {
 
     if (connectionsData.favorites) {
       localStorage.setItem('nodeterm_favorite_connections', JSON.stringify(connectionsData.favorites));
+    }
+
+    if (connectionsData.favoriteGroups) {
+      localStorage.setItem('nodeterm_favorite_groups', JSON.stringify(connectionsData.favoriteGroups));
+    }
+
+    if (connectionsData.favoriteGroupAssignments) {
+      localStorage.setItem('nodeterm_favorite_group_assignments', JSON.stringify(connectionsData.favoriteGroupAssignments));
+    }
+
+    if (connectionsData.favoriteMemberOrder) {
+      localStorage.setItem('nodeterm_favorite_member_order', JSON.stringify(connectionsData.favoriteMemberOrder));
+    }
+
+    if (connectionsData.filterConfig) {
+      localStorage.setItem('nodeterm_filter_config', JSON.stringify(connectionsData.filterConfig));
+    }
+
+    if (connectionsData.groupAssignments) {
+      localStorage.setItem('nodeterm_group_assignments', JSON.stringify(connectionsData.groupAssignments));
     }
   }
 
