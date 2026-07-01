@@ -3089,30 +3089,30 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.875rem;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--ui-dialog-border);
-  border-radius: 10px;
+  padding: 0.75rem 0.875rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
 }
 
 .import-source-card:hover:not(.disabled) {
-  background: rgba(102, 126, 234, 0.1);
-  border-color: var(--ui-button-primary);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  background: rgba(0, 242, 254, 0.05);
+  border-color: var(--cyan-400, #00f2fe);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 242, 254, 0.15);
 }
 
 .import-source-card.selected {
-  background: rgba(102, 126, 234, 0.15);
-  border-color: var(--ui-button-primary);
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3);
+  background: rgba(0, 242, 254, 0.08);
+  border-color: var(--cyan-400, #00f2fe);
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.3);
 }
 
 .import-source-card.disabled {
-  opacity: 0.5;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 
@@ -3120,16 +3120,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  background: rgba(102, 126, 234, 0.1);
-  border-radius: 8px;
+  width: 2rem;
+  height: 2rem;
+  background: rgba(0, 242, 254, 0.08);
+  border-radius: 6px;
   flex-shrink: 0;
 }
 
 .import-source-card-icon i {
-  font-size: 1.1rem;
-  color: var(--ui-button-primary);
+  font-size: 1rem;
+  color: var(--cyan-400, #00f2fe);
 }
 
 .import-source-card.disabled .import-source-card-icon {

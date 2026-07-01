@@ -28,13 +28,24 @@ import { useTranslation } from '../i18n/hooks/useTranslation';
 
 // Definición de fuentes de importación
 const IMPORT_SOURCES = {
-    // NodeTerm
+    // Exportar
+    export_nodeterm: {
+        id: 'export_nodeterm',
+        category: 'export',
+        label: 'Exportar Copia de Seguridad',
+        description: 'Crea una copia cifrada local de tus datos',
+        icon: 'pi pi-download',
+        extension: '.nodeterm',
+        implemented: true,
+        defaultFolder: ''
+    },
+    // NodeTerm (Importar)
     nodeterm: {
         id: 'nodeterm',
         category: 'nodeterm',
-        label: 'Backup de NodeTerm',
-        description: 'Restaurar sesiones, contraseñas y configuración',
-        icon: 'pi pi-box',
+        label: 'Restaurar Copia de Seguridad',
+        description: 'Restaura tus datos desde una copia local',
+        icon: 'pi pi-upload',
         extension: '.nodeterm',
         implemented: true,
         defaultFolder: 'Importados/NodeTerm'
@@ -134,6 +145,113 @@ const IMPORT_SOURCES = {
     }
 };
 
+// Componente de pasos estilo cyberpunk de neón
+const CyberpunkStepper = ({ steps, activeIndex }) => {
+    return (
+        <div className="cyberpunk-stepper" style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            position: 'relative',
+            width: '100%',
+            marginBottom: '25px',
+            padding: '10px 0'
+        }}>
+            {/* Línea de fondo */}
+            <div style={{
+                position: 'absolute',
+                top: '50%',
+                left: '20px',
+                right: '20px',
+                height: '2px',
+                background: 'rgba(255, 255, 255, 0.08)',
+                transform: 'translateY(-50%)',
+                zIndex: 0
+            }} />
+            
+            {/* Línea de progreso de neón */}
+            <div style={{
+                position: 'absolute',
+                top: '50%',
+                left: '20px',
+                width: `calc(${(activeIndex / (steps.length - 1)) * 100}% - 20px)`,
+                height: '2px',
+                background: 'linear-gradient(90deg, var(--cyan-400, #00f2fe) 0%, var(--green-400, #10b981) 100%)',
+                boxShadow: '0 0 10px var(--cyan-400, #00f2fe)',
+                transform: 'translateY(-50%)',
+                transition: 'width 0.4s ease',
+                zIndex: 0
+            }} />
+
+            {steps.map((step, idx) => {
+                const isActive = idx === activeIndex;
+                const isCompleted = idx < activeIndex;
+                
+                let badgeBg = 'rgba(30, 30, 30, 0.8)';
+                let badgeBorder = 'rgba(255, 255, 255, 0.1)';
+                let iconColor = 'var(--text-color-secondary, #9ca3af)';
+                let labelColor = 'var(--text-color-secondary, #9ca3af)';
+                let glow = 'none';
+                
+                if (isActive) {
+                    badgeBg = 'rgba(0, 242, 254, 0.08)';
+                    badgeBorder = 'var(--cyan-400, #00f2fe)';
+                    iconColor = 'var(--cyan-400, #00f2fe)';
+                    labelColor = 'var(--cyan-400, #00f2fe)';
+                    glow = '0 0 12px rgba(0, 242, 254, 0.4)';
+                } else if (isCompleted) {
+                    badgeBg = 'rgba(16, 185, 129, 0.06)';
+                    badgeBorder = 'var(--green-500, #10b981)';
+                    iconColor = 'var(--green-500, #10b981)';
+                    labelColor = '#ffffff';
+                    glow = '0 0 8px rgba(16, 185, 129, 0.3)';
+                }
+
+                return (
+                    <div key={idx} style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '8px',
+                        zIndex: 1,
+                        position: 'relative'
+                    }}>
+                        {/* Nodo hexagonal/tecnológico */}
+                        <div style={{
+                            width: '32px',
+                            height: '32px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: badgeBg,
+                            border: `2px solid ${badgeBorder}`,
+                            borderRadius: '8px',
+                            boxShadow: glow,
+                            transition: 'all 0.3s ease',
+                            cursor: 'default'
+                        }}>
+                            <i className={step.icon} style={{ fontSize: '13px', color: iconColor, transition: 'all 0.3s ease' }} />
+                        </div>
+                        
+                        {/* Etiqueta */}
+                        <span style={{
+                            fontFamily: 'Consolas, Monaco, monospace',
+                            fontSize: '11px',
+                            fontWeight: isActive ? '700' : '500',
+                            letterSpacing: '0.5px',
+                            color: labelColor,
+                            transition: 'all 0.3s ease',
+                            textTransform: 'uppercase'
+                        }}>
+                            {step.label}
+                        </span>
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
 const ImportWizardDialog = ({
     visible,
     onHide,
@@ -142,7 +260,9 @@ const ImportWizardDialog = ({
     showToast,
     targetFolderOptions = [],
     defaultTargetFolderKey,
-    isEmbedded = false
+    isEmbedded = false,
+    initialSource = null,
+    initialStep = 0
 }) => {
     const { t } = useTranslation('common');
     const toast = useRef(null);
@@ -182,6 +302,25 @@ const ImportWizardDialog = ({
         recordings: false
     });
 
+    // Estados de exportación
+    const [fileName, setFileName] = useState(`nodeterm-backup-${new Date().toISOString().split('T')[0]}`);
+    const [useEncryption, setUseEncryption] = useState(false);
+    const [encryptPassword, setEncryptPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+
+    // Ejecutar redirección al abrir/cambiar props iniciales
+    useEffect(() => {
+        if (visible) {
+            if (initialSource) {
+                setSelectedSource(initialSource);
+                setCurrentStep(initialStep !== undefined ? initialStep : 1);
+            } else {
+                setSelectedSource(null);
+                setCurrentStep(0);
+            }
+        }
+    }, [visible, initialSource, initialStep]);
+
     // Vista previa
     const [previewData, setPreviewData] = useState(null);
     const [previewLoading, setPreviewLoading] = useState(false);
@@ -198,12 +337,14 @@ const ImportWizardDialog = ({
     const fileInputRef = useRef(null);
     const keyFileInputRef = useRef(null);
 
-    // Pasos del wizard
+    const isExport = selectedSource === 'export_nodeterm';
+
+    // Pasos del wizard dinámicos
     const steps = [
-        { label: 'Fuente', icon: 'pi pi-box' },
+        { label: isExport ? 'Acción' : 'Fuente', icon: 'pi pi-box' },
         { label: 'Configurar', icon: 'pi pi-cog' },
-        { label: 'Vista Previa', icon: 'pi pi-eye' },
-        { label: 'Importar', icon: 'pi pi-check' }
+        { label: isExport ? 'Análisis' : 'Vista Previa', icon: 'pi pi-eye' },
+        { label: isExport ? 'Descargar' : 'Importar', icon: 'pi pi-check' }
     ];
 
     // Resetear estado al cerrar
@@ -373,6 +514,15 @@ const ImportWizardDialog = ({
             case 0: // Seleccionar fuente
                 return selectedSource !== null;
             case 1: // Configurar
+                if (selectedSource === 'export_nodeterm') {
+                    const hasSelectedOption = Object.values(nodetermOptions).some(v => v === true);
+                    if (!hasSelectedOption) return false;
+                    if (!fileName) return false;
+                    if (useEncryption) {
+                        return encryptPassword.length >= 8 && encryptPassword === confirmPassword;
+                    }
+                    return true;
+                }
                 if (selectedSource === 'wallix') {
                     return wallixUrl && wallixUsername && password;
                 }
@@ -383,9 +533,10 @@ const ImportWizardDialog = ({
                 // Para KeePass, necesita contraseña o key file
                 if (selectedSource === 'keepass' && !password && !selectedKeyFile) return false;
                 return true;
-            case 2: // Vista previa
+            case 2: // Vista previa / Análisis
+                if (selectedSource === 'export_nodeterm') return true;
                 return previewData !== null && !previewError;
-            case 3: // Importar
+            case 3: // Importar / Exportar completado
                 return importResult !== null;
             default:
                 return false;
@@ -394,6 +545,11 @@ const ImportWizardDialog = ({
 
     const handleNext = async () => {
         if (currentStep === 1) {
+            if (selectedSource === 'export_nodeterm') {
+                // Para exportar, no necesitamos generar preview remoto
+                setCurrentStep(2);
+                return;
+            }
             // Pasar inmediatamente a Vista Previa para mostrar estado de carga
             // y evitar la sensación de UI bloqueada.
             setCurrentStep(2);
@@ -643,15 +799,18 @@ const ImportWizardDialog = ({
 
     // Ejecutar importación
     const handleImport = async () => {
-        if (!previewData) return;
+        if (!previewData && selectedSource !== 'export_nodeterm') return;
 
         setImporting(true);
         setImportProgress(0);
-        setImportStatus('Iniciando importación...');
+        setImportStatus(selectedSource === 'export_nodeterm' ? 'Iniciando empaquetado...' : 'Iniciando importación...');
         setCurrentStep(3);
 
         try {
             switch (selectedSource) {
+                case 'export_nodeterm':
+                    await exportNodeTerm();
+                    break;
                 case 'nodeterm':
                     await importNodeTerm();
                     break;
@@ -671,19 +830,92 @@ const ImportWizardDialog = ({
                     throw new Error('Fuente no soportada');
             }
         } catch (error) {
-            console.error('[ImportWizard] Error importando:', error);
+            console.error('[ImportWizard] Error procesando:', error);
             setImportResult({
                 success: false,
-                error: error.message || 'Error durante la importación'
+                error: error.message || 'Error durante la operación'
             });
             showToastSafe({
                 severity: 'error',
-                summary: 'Error de importación',
-                detail: error.message || 'Error durante la importación',
+                summary: 'Error',
+                detail: error.message || 'Error durante la operación',
                 life: 5000
             });
         } finally {
             setImporting(false);
+        }
+    };
+
+    const exportNodeTerm = async () => {
+        setImportStatus('Preparando empaquetado...');
+        setImportProgress(20);
+
+        try {
+            // Exportar datos usando el servicio
+            setImportProgress(40);
+            setImportStatus('Empaquetando datos cifrados...');
+
+            const exportData = await exportImportService.exportAllData({
+                connections: nodetermOptions.connections,
+                passwords: nodetermOptions.passwords,
+                conversations: nodetermOptions.conversations,
+                config: nodetermOptions.config,
+                documents: nodetermOptions.documents,
+                recordings: nodetermOptions.recordings,
+                encryptPassword: useEncryption ? encryptPassword : null
+            });
+
+            setImportProgress(70);
+            setImportStatus('Guardando archivo encriptado...');
+
+            const cleanFileName = fileName.endsWith('.nodeterm') ? fileName : `${fileName}.nodeterm`;
+            const jsonString = JSON.stringify(exportData, null, 2);
+            
+            const result = await window.electron?.import?.saveFile({
+                fileName: cleanFileName,
+                fileContent: jsonString
+            });
+
+            setImportProgress(100);
+
+            if (result && result.success) {
+                setImportResult({
+                    success: true,
+                    stats: {
+                        'Conexiones': nodetermOptions.connections ? 'Guardado' : 'Omitido',
+                        'Contraseñas': nodetermOptions.passwords ? 'Guardado' : 'Omitido',
+                        'Historial IA': nodetermOptions.conversations ? 'Guardado' : 'Omitido',
+                        'Configuración': nodetermOptions.config ? 'Guardado' : 'Omitido',
+                        'Notas': nodetermOptions.documents ? 'Guardado' : 'Omitido'
+                    }
+                });
+                showToastSafe({
+                    severity: 'success',
+                    summary: 'Exportación completada',
+                    detail: 'Copia de seguridad guardada con éxito',
+                    life: 5000
+                });
+            } else if (result && result.canceled) {
+                // Cancelado
+                setImportResult({
+                    success: false,
+                    error: 'Exportación cancelada por el usuario'
+                });
+            } else {
+                throw new Error('Error al guardar el archivo de backup');
+            }
+        } catch (error) {
+            console.error('[ImportWizard] Error exportando:', error);
+            setImportResult({
+                success: false,
+                error: error.message || 'Error durante la exportación'
+            });
+            showToastSafe({
+                severity: 'error',
+                summary: 'Error de exportación',
+                detail: error.message || 'Error durante la exportación',
+                life: 5000
+            });
         }
     };
 
@@ -1042,88 +1274,245 @@ const ImportWizardDialog = ({
     };
 
     // STEP 0: Selección de fuente
-    const renderSourceSelection = () => (
-        <div className="import-wizard-sources">
-            <h4 className="import-wizard-section-title">
-                <i className="pi pi-box" />
-                ¿Qué deseas importar?
-            </h4>
-
-            {/* NodeTerm */}
-            <div className="import-wizard-category">
-                <h5 className="import-wizard-category-title">
-                    <i className="pi pi-box" style={{ color: 'var(--primary-color)' }} />
-                    NodeTerm
-                </h5>
-                <div className="import-wizard-source-grid">
-                    <SourceCard
-                        source={IMPORT_SOURCES.nodeterm}
-                        selected={selectedSource === 'nodeterm'}
-                        onSelect={() => handleSourceSelect('nodeterm')}
-                    />
-                </div>
-            </div>
-
-            {/* Gestores SSH */}
-            <div className="import-wizard-category">
-                <h5 className="import-wizard-category-title">
-                    <i className="pi pi-server" style={{ color: 'var(--primary-color)' }} />
-                    Gestores de Sesiones
-                </h5>
-                <div className="import-wizard-source-grid">
-                    {['mremoteng', 'putty', 'securecrt', 'mobaxterm'].map(id => (
+    const renderSourceSelection = () => {
+        return (
+            <div className="import-wizard-sources" style={{ padding: '0' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px', marginBottom: '15px' }}>
+                    
+                    {/* Columna Izquierda: Exportar */}
+                    <div style={{
+                        background: 'rgba(255, 255, 255, 0.01)',
+                        border: '1px solid rgba(255, 255, 255, 0.05)',
+                        borderRadius: '10px',
+                        padding: '12px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '12px'
+                    }}>
+                        <h5 style={{
+                            margin: 0,
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            textTransform: 'uppercase',
+                            letterSpacing: '1px',
+                            color: 'var(--green-400, #10b981)',
+                            borderBottom: '1px solid rgba(16, 185, 129, 0.15)',
+                            paddingBottom: '6px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                        }}>
+                            <i className="pi pi-download" /> Exportar Datos
+                        </h5>
                         <SourceCard
-                            key={id}
-                            source={IMPORT_SOURCES[id]}
-                            selected={selectedSource === id}
-                            onSelect={() => handleSourceSelect(id)}
+                            source={IMPORT_SOURCES.export_nodeterm}
+                            selected={selectedSource === 'export_nodeterm'}
+                            onSelect={() => handleSourceSelect('export_nodeterm')}
                         />
-                    ))}
-                </div>
-            </div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-color-secondary)', padding: '5px', lineHeight: '1.4' }}>
+                            Descarga una copia completa cifrada local de tus conexiones, contraseñas, conversaciones de IA, configuraciones y notas.
+                        </div>
+                    </div>
 
-            {/* Gestores de contraseñas */}
-            <div className="import-wizard-category">
-                <h5 className="import-wizard-category-title">
-                    <i className="pi pi-key" style={{ color: 'var(--primary-color)' }} />
-                    Gestores de Contraseñas
-                </h5>
-                <div className="import-wizard-source-grid">
-                    {['browser', 'keepass', 'onepassword', 'bitwarden'].map(id => (
-                        <SourceCard
-                            key={id}
-                            source={IMPORT_SOURCES[id]}
-                            selected={selectedSource === id}
-                            onSelect={() => handleSourceSelect(id)}
-                        />
-                    ))}
+                    {/* Columna Derecha: Importar */}
+                    <div style={{
+                        background: 'rgba(255, 255, 255, 0.01)',
+                        border: '1px solid rgba(255, 255, 255, 0.05)',
+                        borderRadius: '10px',
+                        padding: '12px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '12px'
+                    }}>
+                        <h5 style={{
+                            margin: 0,
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            textTransform: 'uppercase',
+                            letterSpacing: '1px',
+                            color: 'var(--cyan-400, #00f2fe)',
+                            borderBottom: '1px solid rgba(0, 242, 254, 0.15)',
+                            paddingBottom: '6px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                        }}>
+                            <i className="pi pi-upload" /> Importar / Restaurar
+                        </h5>
+                        
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                            {/* Copias locales */}
+                            <SourceCard
+                                source={IMPORT_SOURCES.nodeterm}
+                                selected={selectedSource === 'nodeterm'}
+                                onSelect={() => handleSourceSelect('nodeterm')}
+                            />
+                            {/* mRemoteNG */}
+                            <SourceCard
+                                source={IMPORT_SOURCES.mremoteng}
+                                selected={selectedSource === 'mremoteng'}
+                                onSelect={() => handleSourceSelect('mremoteng')}
+                            />
+                            {/* KeePass */}
+                            <SourceCard
+                                source={IMPORT_SOURCES.keepass}
+                                selected={selectedSource === 'keepass'}
+                                onSelect={() => handleSourceSelect('keepass')}
+                            />
+                            {/* Navegador */}
+                            <SourceCard
+                                source={IMPORT_SOURCES.browser}
+                                selected={selectedSource === 'browser'}
+                                onSelect={() => handleSourceSelect('browser')}
+                            />
+                            {/* Wallix */}
+                            <div style={{ gridColumn: 'span 2' }}>
+                                <SourceCard
+                                    source={IMPORT_SOURCES.wallix}
+                                    selected={selectedSource === 'wallix'}
+                                    onSelect={() => handleSourceSelect('wallix')}
+                                />
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-            {/* APIs externas */}
-            <div className="import-wizard-category">
-                <h5 className="import-wizard-category-title">
-                    <i className="pi pi-cloud-download" style={{ color: 'var(--primary-color)' }} />
-                    APIs Externas
-                </h5>
-                <div className="import-wizard-source-grid">
-                    {['wallix'].map(id => (
-                        <SourceCard
-                            key={id}
-                            source={IMPORT_SOURCES[id]}
-                            selected={selectedSource === id}
-                            onSelect={() => handleSourceSelect(id)}
-                        />
-                    ))}
+                <div style={{ padding: '8px 12px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <i className="pi pi-info-circle" style={{ color: 'var(--cyan-400, #00f2fe)', fontSize: '0.9rem', flexShrink: 0 }}></i>
+                    <span style={{ fontSize: '11px', color: 'var(--text-color-secondary)' }}>
+                        <strong>Integraciones futuras:</strong> Soporte para PuTTY, SecureCRT, MobaXterm, 1Password y Bitwarden.
+                    </span>
                 </div>
             </div>
-        </div>
-    );
+        );
+    };
+
+    const renderExportConfiguration = (source) => {
+        return (
+            <div className="import-wizard-config" style={{ padding: '0' }}>
+                <h4 className="import-wizard-section-title" style={{ marginBottom: '15px', fontSize: '14px', fontWeight: '600' }}>
+                    <i className={source.icon} style={{ marginRight: '8px' }} />
+                    {source.label}
+                </h4>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    {/* Columna Izquierda: Selección de datos */}
+                    <div>
+                        <h5 style={{ margin: '0 0 12px 0', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-color)' }}>
+                            📦 Categorías a Exportar
+                        </h5>
+                        
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 15px' }}>
+                            {[
+                                { key: 'connections', label: 'Conexiones', icon: 'pi pi-desktop', desc: 'Sesiones SSH/RDP/VNC' },
+                                { key: 'passwords', label: 'Contraseñas', icon: 'pi pi-key', desc: 'Credenciales cifradas' },
+                                { key: 'conversations', label: 'Chats de IA', icon: 'pi pi-comments', desc: 'Historial de IA' },
+                                { key: 'config', label: 'Configuración', icon: 'pi pi-cog', desc: 'Temas y preferencias' },
+                                { key: 'documents', label: 'Notas', icon: 'pi pi-file-edit', desc: 'Notas y documentos' },
+                                { key: 'recordings', label: 'Grabaciones', icon: 'pi pi-video', desc: 'Solo metadatos' }
+                            ].map(opt => (
+                                <div key={opt.key} className="p-field-checkbox" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                                    <Checkbox
+                                        inputId={`exp-${opt.key}`}
+                                        checked={nodetermOptions[opt.key]}
+                                        onChange={(e) => setNodeTermOptions(prev => ({ ...prev, [opt.key]: e.checked }))}
+                                    />
+                                    <label htmlFor={`exp-${opt.key}`} style={{ margin: 0, cursor: 'pointer', lineHeight: '1.2' }}>
+                                        <span style={{ fontSize: '12.5px', fontWeight: '600', display: 'block', color: 'var(--text-color)' }}>{opt.label}</span>
+                                        <span style={{ fontSize: '11px', color: 'var(--text-color-secondary)' }}>{opt.desc}</span>
+                                    </label>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Columna Derecha: Configuración de archivo */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                        <div>
+                            <h5 style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-color)' }}>
+                                📄 Nombre del archivo
+                            </h5>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <InputText
+                                    value={fileName}
+                                    onChange={(e) => setFileName(e.target.value)}
+                                    style={{ flex: 1, padding: '8px 12px' }}
+                                    placeholder="nodeterm-backup"
+                                />
+                                <span style={{ color: 'var(--text-color-secondary)', fontSize: '13px', fontWeight: '600' }}>.nodeterm</span>
+                            </div>
+                        </div>
+
+                        <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px' }}>
+                            <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                                <Checkbox
+                                    inputId="exp-use-encryption"
+                                    checked={useEncryption}
+                                    onChange={(e) => setUseEncryption(e.checked)}
+                                />
+                                <label htmlFor="exp-use-encryption" style={{ margin: 0, cursor: 'pointer', lineHeight: '1.2' }}>
+                                    <span style={{ fontSize: '12.5px', fontWeight: '600', display: 'block', color: 'var(--text-color)' }}>Proteger con contraseña adicional</span>
+                                    <span style={{ fontSize: '11px', color: 'var(--text-color-secondary)' }}>Cifrado robusto AES-256-GCM</span>
+                                </label>
+                            </div>
+
+                            {useEncryption && (
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '12px' }}>
+                                    <div>
+                                        <label htmlFor="exp-encrypt-pwd" style={{ fontSize: '11px', color: 'var(--text-color-secondary)', marginBottom: '4px', display: 'block' }}>
+                                            Contraseña
+                                        </label>
+                                        <Password
+                                            id="exp-encrypt-pwd"
+                                            value={encryptPassword}
+                                            onChange={(e) => setEncryptPassword(e.target.value)}
+                                            feedback={false}
+                                            toggleMask
+                                            style={{ width: '100%' }}
+                                            inputStyle={{ width: '100%', padding: '6px 10px' }}
+                                            placeholder="Mínimo 8 caracteres"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label htmlFor="exp-confirm-pwd" style={{ fontSize: '11px', color: 'var(--text-color-secondary)', marginBottom: '4px', display: 'block' }}>
+                                            Confirmar
+                                        </label>
+                                        <Password
+                                            id="exp-confirm-pwd"
+                                            value={confirmPassword}
+                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                            feedback={false}
+                                            toggleMask
+                                            style={{ width: '100%' }}
+                                            inputStyle={{ width: '100%', padding: '6px 10px' }}
+                                            placeholder="Repetir contraseña"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                            
+                            {useEncryption && encryptPassword && confirmPassword && encryptPassword !== confirmPassword && (
+                                <div style={{ marginTop: '5px' }}>
+                                    <small style={{ color: 'var(--red-500)', fontSize: '11px' }}>
+                                        ⚠️ Las contraseñas no coinciden
+                                    </small>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     // STEP 1: Configuración
     const renderConfiguration = () => {
         const source = IMPORT_SOURCES[selectedSource];
         if (!source) return null;
+
+        if (selectedSource === 'export_nodeterm') {
+            return renderExportConfiguration(source);
+        }
 
         return (
             <div className="import-wizard-config" style={{ padding: '0' }}>
@@ -1455,6 +1844,68 @@ const ImportWizardDialog = ({
 
     // STEP 2: Vista previa
     const renderPreview = () => {
+        if (selectedSource === 'export_nodeterm') {
+            // Estimar tamaño
+            let size = 0;
+            if (nodetermOptions.connections) size += 100;
+            if (nodetermOptions.passwords) size += 50;
+            if (nodetermOptions.conversations) size += 500;
+            if (nodetermOptions.config) size += 20;
+            if (nodetermOptions.documents) size += 80;
+            if (nodetermOptions.recordings) size += 1000;
+            
+            const sizeStr = size < 1024 ? `~${size} KB` : `~${(size / 1024).toFixed(1)} MB`;
+
+            return (
+                <div className="import-wizard-preview">
+                    <h4 className="import-wizard-section-title">
+                        <i className="pi pi-eye" />
+                        Análisis de Paquete a Exportar
+                    </h4>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '10px' }}>
+                        {/* Resumen técnico */}
+                        <div style={{ background: 'rgba(0, 0, 0, 0.25)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px', padding: '15px' }}>
+                            <h5 style={{ margin: '0 0 12px 0', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--green-400)' }}>
+                                📑 Ficha de Configuración
+                            </h5>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12.5px' }}>
+                                <div>Nombre: <strong style={{ color: '#fff' }}>{fileName}.nodeterm</strong></div>
+                                <div>Cifrado AES-256: <strong style={{ color: useEncryption ? 'var(--green-500)' : 'var(--red-500)' }}>{useEncryption ? 'ACTIVO' : 'INACTIVO'}</strong></div>
+                                <div>Tamaño Estimado: <strong style={{ color: 'var(--cyan-400)' }}>{sizeStr}</strong></div>
+                                <div>Destino: <strong style={{ color: 'var(--text-color-secondary)' }}>Diálogo del sistema</strong></div>
+                            </div>
+                        </div>
+
+                        {/* Desglose de elementos */}
+                        <div style={{ background: 'rgba(0, 0, 0, 0.25)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px', padding: '15px' }}>
+                            <h5 style={{ margin: '0 0 12px 0', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--cyan-400)' }}>
+                                📊 Módulos Seleccionados
+                            </h5>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 15px' }}>
+                                {[
+                                    { key: 'connections', label: 'Conexiones' },
+                                    { key: 'passwords', label: 'Contraseñas' },
+                                    { key: 'conversations', label: 'Chats de IA' },
+                                    { key: 'config', label: 'Configuración' },
+                                    { key: 'documents', label: 'Notas' },
+                                    { key: 'recordings', label: 'Grabaciones' }
+                                ].map(opt => {
+                                    const isSelected = nodetermOptions[opt.key];
+                                    return (
+                                        <div key={opt.key} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', opacity: isSelected ? 1 : 0.4 }}>
+                                            <i className={isSelected ? 'pi pi-check-circle' : 'pi pi-times-circle'} style={{ color: isSelected ? 'var(--green-500)' : 'var(--text-color-secondary)' }} />
+                                            <span style={{ color: isSelected ? '#fff' : 'var(--text-color-secondary)' }}>{opt.label}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
         if (previewLoading) {
             return (
                 <div className="import-wizard-loading">
@@ -1585,38 +2036,99 @@ const ImportWizardDialog = ({
     const renderImport = () => {
         if (importing) {
             return (
-                <div className="import-wizard-importing">
-                    <h4 className="import-wizard-section-title">
-                        <i className="pi pi-spin pi-spinner" />
-                        Importando...
+                <div className="import-wizard-importing" style={{ textAlign: 'center', padding: '10px 0' }}>
+                    <h4 className="import-wizard-section-title" style={{ marginBottom: '15px', fontSize: '14px', fontWeight: '600' }}>
+                        <i className="pi pi-spin pi-spinner" style={{ marginRight: '8px', color: 'var(--cyan-400, #00f2fe)' }} />
+                        PROCESANDO IMPORTACIÓN...
                     </h4>
-                    <ProgressBar value={importProgress} showValue style={{ height: '8px', marginBottom: '1rem' }} />
-                    <p className="import-wizard-status">{importStatus}</p>
+                    
+                    {/* Cyberpunk Progress Bar */}
+                    <div style={{
+                        position: 'relative',
+                        height: '14px',
+                        background: 'rgba(0, 0, 0, 0.4)',
+                        border: '1px solid rgba(0, 242, 254, 0.25)',
+                        borderRadius: '4px',
+                        overflow: 'hidden',
+                        marginBottom: '15px',
+                        boxShadow: 'inset 0 0 5px rgba(0,0,0,0.8)'
+                    }}>
+                        <div style={{
+                            width: `${importProgress}%`,
+                            height: '100%',
+                            background: 'linear-gradient(90deg, var(--cyan-400, #00f2fe) 0%, var(--green-400, #10b981) 100%)',
+                            boxShadow: '0 0 10px var(--cyan-400, #00f2fe)',
+                            transition: 'width 0.3s ease'
+                        }} />
+                    </div>
+
+                    {/* Monospace Tech Terminal Console Logger */}
+                    <div style={{
+                        fontFamily: 'Consolas, Monaco, monospace',
+                        fontSize: '11px',
+                        color: 'var(--cyan-400, #00f2fe)',
+                        background: 'rgba(0, 0, 0, 0.65)',
+                        border: '1px solid rgba(255, 255, 255, 0.06)',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        minHeight: '90px',
+                        maxHeight: '120px',
+                        overflowY: 'auto',
+                        textAlign: 'left',
+                        boxShadow: 'inset 0 0 8px rgba(0,0,0,0.5)',
+                        lineHeight: '1.5'
+                    }}>
+                        <div style={{ color: '#10b981' }}>[SYSTEM] Inicializando importación...</div>
+                        <div style={{ color: '#4facfe' }}>[SOURCE] Módulo de origen detectado: {IMPORT_SOURCES[selectedSource]?.label}</div>
+                        <div style={{ color: 'var(--text-color-secondary)' }}>[STATUS] {importStatus || 'Cargando buffers...'}</div>
+                        <div style={{ color: 'var(--cyan-400)' }}>&gt; Progreso de transmisión: {importProgress}%</div>
+                        {importProgress >= 100 && <div style={{ color: '#10b981', fontWeight: 'bold' }}>[SUCCESS] Escritura de datos finalizada con éxito.</div>}
+                    </div>
                 </div>
             );
         }
 
         if (importResult) {
             return (
-                <div className={`import-wizard-result ${importResult.success ? 'success' : 'error'}`}>
-                    <div className="import-wizard-result-icon">
-                        <i className={importResult.success ? 'pi pi-check-circle' : 'pi pi-times-circle'} />
+                <div className={`import-wizard-result ${importResult.success ? 'success' : 'error'}`} style={{
+                    padding: '20px',
+                    textAlign: 'center',
+                    background: importResult.success ? 'rgba(16, 185, 129, 0.05)' : 'rgba(239, 68, 68, 0.05)',
+                    border: `1px solid ${importResult.success ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)'}`,
+                    borderRadius: '10px',
+                    marginBottom: '10px'
+                }}>
+                    <div className="import-wizard-result-icon" style={{ marginBottom: '15px' }}>
+                        <i className={importResult.success ? 'pi pi-check-circle' : 'pi pi-times-circle'} style={{ fontSize: '2.5rem', color: importResult.success ? 'var(--green-500)' : 'var(--red-500)' }} />
                     </div>
-                    <h4>{importResult.success ? 'Importación completada' : 'Error en la importación'}</h4>
+                    <h4 style={{ margin: '0 0 10px 0', fontSize: '15px', fontWeight: '700' }}>
+                        {importResult.success ? 'IMPORTACIÓN COMPLETADA CON ÉXITO' : 'ERROR EN LA IMPORTACIÓN'}
+                    </h4>
 
                     {importResult.success && importResult.stats && (
-                        <div className="import-wizard-result-stats">
+                        <div className="import-wizard-result-stats" style={{
+                            display: 'inline-flex',
+                            flexWrap: 'wrap',
+                            justifyContent: 'center',
+                            gap: '10px 20px',
+                            marginTop: '15px',
+                            padding: '10px 20px',
+                            background: 'rgba(0, 0, 0, 0.2)',
+                            borderRadius: '6px'
+                        }}>
                             {Object.entries(importResult.stats).map(([key, value]) => (
-                                <div key={key} className="import-wizard-result-stat">
-                                    <span className="label">{key}:</span>
-                                    <span className="value">{value}</span>
+                                <div key={key} className="import-wizard-result-stat" style={{ fontSize: '12px' }}>
+                                    <span className="label" style={{ color: 'var(--text-color-secondary)', marginRight: '6px' }}>{key}:</span>
+                                    <span className="value" style={{ fontWeight: '700', color: 'var(--text-color)' }}>{value}</span>
                                 </div>
                             ))}
                         </div>
                     )}
 
                     {importResult.error && (
-                        <Message severity="error" text={importResult.error} style={{ marginTop: '1rem' }} />
+                        <div style={{ marginTop: '15px' }}>
+                            <Message severity="error" text={importResult.error} style={{ width: '100%' }} />
+                        </div>
                     )}
                 </div>
             );
@@ -1658,10 +2170,10 @@ const ImportWizardDialog = ({
                 )}
                 {currentStep === 2 && (
                     <Button
-                        label="Importar"
+                        label={selectedSource === 'export_nodeterm' ? "Exportar" : "Importar"}
                         icon="pi pi-download"
                         onClick={handleImport}
-                        disabled={!previewData || previewError}
+                        disabled={selectedSource === 'export_nodeterm' ? !canGoNext() : (!previewData || previewError)}
                     />
                 )}
                 {currentStep === 3 && importResult && (
@@ -1681,11 +2193,9 @@ const ImportWizardDialog = ({
                 <Toast ref={toast} />
                 <div className="import-wizard-content" style={{ flex: 1 }}>
                     {/* Indicador de pasos */}
-                    <Steps
-                        model={steps}
+                    <CyberpunkStepper
+                        steps={steps}
                         activeIndex={currentStep}
-                        readOnly
-                        className="import-wizard-steps"
                     />
 
                     {/* Contenido del paso actual */}
@@ -1722,11 +2232,9 @@ const ImportWizardDialog = ({
             >
                 <div className="import-wizard-content">
                     {/* Indicador de pasos */}
-                    <Steps
-                        model={steps}
+                    <CyberpunkStepper
+                        steps={steps}
                         activeIndex={currentStep}
-                        readOnly
-                        className="import-wizard-steps"
                     />
 
                     {/* Contenido del paso actual */}

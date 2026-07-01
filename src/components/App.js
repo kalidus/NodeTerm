@@ -45,8 +45,6 @@ import { iconThemes } from '../themes/icon-themes';
 const SettingsDialog = lazy(() => import('./SettingsDialog'));
 const SyncSettingsDialog = lazy(() => import('./SyncSettingsDialog'));
 const ImportDialog = lazy(() => import('./ImportDialog'));
-const ExportDialog = lazy(() => import('./ExportDialog'));
-const ImportExportDialog = lazy(() => import('./ImportExportDialog'));
 const ImportWizardDialog = lazy(() => import('./ImportWizardDialog'));
 const RdpSessionTab = lazy(() => import('./RdpSessionTab'));
 const GuacamoleTab = lazy(() => import('./GuacamoleTab'));
@@ -4243,30 +4241,40 @@ const App = () => {
             defaultTargetFolderKey={null}
           />
 
-          <ExportDialog
-            visible={showExportDialog}
-            onHide={() => setShowExportDialog(false)}
-            showToast={(message) => toast.current?.show(message)}
-          />
+          {/* Diálogo Unificado de Exportación (Modal flotante) */}
+          {showExportDialog && (
+            <ImportWizardDialog
+              visible={showExportDialog}
+              onHide={() => setShowExportDialog(false)}
+              initialSource="export_nodeterm"
+              initialStep={1}
+              showToast={(message) => toast.current?.show(message)}
+            />
+          )}
 
-          <ImportExportDialog
-            visible={showImportExportDialog}
-            onHide={() => setShowImportExportDialog(false)}
-            showToast={(message) => toast.current?.show(message)}
-            onImportComplete={(result) => {
-              console.log('[App.js] Importación completada:', result);
-              // Recargar nodos si es necesario
-              const treeData = localStorage.getItem('basicapp2_tree_data');
-              if (treeData) {
-                try {
-                  const parsed = JSON.parse(treeData);
-                  setNodes(parsed);
-                } catch (error) {
-                  console.error('Error al recargar nodos:', error);
+          {/* Diálogo Unificado de Restauración (Modal flotante) */}
+          {showImportExportDialog && (
+            <ImportWizardDialog
+              visible={showImportExportDialog}
+              onHide={() => setShowImportExportDialog(false)}
+              initialSource="nodeterm"
+              initialStep={1}
+              showToast={(message) => toast.current?.show(message)}
+              onImportComplete={async (result) => {
+                console.log('[App.js] Importación completada:', result);
+                // Recargar nodos si es necesario
+                const treeData = localStorage.getItem('basicapp2_tree_data');
+                if (treeData) {
+                  try {
+                    const parsed = JSON.parse(treeData);
+                    setNodes(parsed);
+                  } catch (error) {
+                    console.error('Error al recargar nodos:', error);
+                  }
                 }
-              }
-            }}
-          />
+              }}
+            />
+          )}
 
           {/* Import Wizard Dialog - Nueva interfaz unificada de importación */}
           <ImportWizardDialog
