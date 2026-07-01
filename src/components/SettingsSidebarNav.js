@@ -76,6 +76,12 @@ const SettingsSidebarNav = ({
       subitems: []
     },
     {
+      id: 'importar-exportar',
+      label: t('sidebar.importExport') || 'Importar / Exportar',
+      icon: 'pi pi-exchange',
+      subitems: []
+    },
+    {
       id: 'informacion',
       label: t('sidebar.info'),
       icon: 'pi pi-info-circle',

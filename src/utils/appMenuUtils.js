@@ -44,7 +44,7 @@ export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImpo
           icon: 'pi pi-download',
           command: () => {
             console.log('🔍 [Menu] Exportar clickeado');
-            onShowExportDialog && onShowExportDialog(true);
+            window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'import-export' } }));
           }
         },
         { separator: true },
@@ -53,13 +53,7 @@ export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImpo
           icon: 'pi pi-upload',
           command: () => {
             console.log('🔍 [Menu] Importar (Wizard) clickeado');
-            // Usar el nuevo wizard unificado si está disponible
-            if (onShowImportWizard) {
-              onShowImportWizard(true);
-            } else {
-              // Fallback a los diálogos antiguos
-              onShowImportDialog && onShowImportDialog(true);
-            }
+            window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'import-export', subTab: 'wizard' } }));
           }
         }
       ]

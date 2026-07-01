@@ -73,6 +73,13 @@ const SETTINGS_SECTIONS = [
     subitems: []
   },
   {
+    id: 'importar-exportar',
+    labelKey: 'sidebar.importExport',
+    descriptionKey: 'sidebarDescriptions.importExport',
+    icon: 'pi pi-exchange',
+    subitems: []
+  },
+  {
     id: 'informacion',
     labelKey: 'sidebar.info',
     descriptionKey: 'sidebarDescriptions.info',
@@ -125,6 +132,7 @@ const SettingsSidebar = ({
       case 'apps': return '#3b82f6';
       case 'actualizaciones': return '#8b5cf6';
       case 'sincronizacion': return '#64b5f6';
+      case 'importar-exportar': return '#10b981';
       case 'informacion': return '#9ca3af';
       default: return '#5e81ac';
     }

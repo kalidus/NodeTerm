@@ -310,7 +310,11 @@ const DialogsManager = ({
 
   // Gestión de usuarios
   onUpdateUserPassword,
-  onEditConnection
+  onEditConnection,
+  secureStorage,
+  masterKey,
+  handleImportComplete,
+  setNodes
 }) => {
   // Debug: verificar que el prop se recibe correctamente (deshabilitado)
   // useEffect(() => {
@@ -542,6 +546,11 @@ const DialogsManager = ({
         nodes={nodes}
         onUpdateUserPassword={onUpdateUserPassword}
         onEditConnection={onEditConnection}
+        secureStorage={secureStorage}
+        masterKey={masterKey}
+        handleImportComplete={handleImportComplete}
+        toast={toast}
+        setNodes={setNodes}
       />}
 
       {/* Sync Settings Dialog - solo se monta cuando es visible */}

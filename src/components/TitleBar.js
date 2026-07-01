@@ -492,26 +492,26 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
       // Intento directo: si tenemos ruta guardada, comparar hash y ofrecer actualizar
       const filePath = source?.filePath;
       if (!filePath) {
-        onShowImportDialog && onShowImportDialog(true);
+        window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'import-export', subTab: 'wizard' } }));
         setImportBanner(null);
         return;
       }
       const info = await window.electron?.import?.getFileInfo?.(filePath);
       if (!info?.ok) {
-        onShowImportDialog && onShowImportDialog(true);
+        window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'import-export', subTab: 'wizard' } }));
         setImportBanner(null);
         return;
       }
       const hashRes = await window.electron?.import?.getFileHash?.(filePath);
       if (!hashRes?.ok) {
-        onShowImportDialog && onShowImportDialog(true);
+        window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'import-export', subTab: 'wizard' } }));
         setImportBanner(null);
         return;
       }
       const changed = hashRes.hash && source.fileHash && hashRes.hash !== source.fileHash;
       if (changed) {
         // Abrir diálogo directamente para aplicar con opciones
-        onShowImportDialog && onShowImportDialog(true);
+        window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'import-export', subTab: 'wizard' } }));
       } else {
         alert('No se han detectado cambios en el archivo vinculado.');
       }

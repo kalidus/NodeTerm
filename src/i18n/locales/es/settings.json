@@ -36,7 +36,8 @@
     "users": "Usuarios",
     "sync": "Sincronización",
     "info": "Información",
-    "splashScreen": "Pantalla de Inicio"
+    "splashScreen": "Pantalla de Inicio",
+    "importExport": "Importar / Exportar"
   },
   "sidebarDescriptions": {
     "general": "Ajustes globales de comportamiento",
@@ -56,7 +57,8 @@
     "updates": "Canales y revisión de versiones",
     "sync": "Sincroniza ajustes en la nube",
     "info": "Versión y datos técnicos",
-    "splashScreen": "Personaliza la pantalla de carga"
+    "splashScreen": "Personaliza la pantalla de carga",
+    "importExport": "Importación y exportación de datos"
   },
   "general": {
     "title": "Configuración General",

@@ -3409,6 +3409,7 @@ const App = () => {
     onShowExportDialog: setShowExportDialog,
     onShowImportExportDialog: setShowImportExportDialog,
     onShowImportWizard: setShowImportWizard,
+    handleImportComplete,
     isExternalReloadRef,
     updateTreeHash,
     onOpenWallixRefresh: (node) => {
@@ -3455,7 +3456,8 @@ const App = () => {
 
     // Dependencias de diálogos
     setShowImportDialog, setShowExportDialog, setShowImportExportDialog, setShowImportWizard,
-    setWallixRefreshNode, setShowWallixRefreshDialog
+    setWallixRefreshNode, setShowWallixRefreshDialog,
+    handleImportComplete
   ]);
 
   // === PROPS MEMOIZADAS PARA TABHEADER ===
@@ -4062,6 +4064,7 @@ const App = () => {
           closeRdpDialog={closeRdpDialog}
           getAllFolders={getAllFolders}
           nodes={nodes}
+          setNodes={setNodes}
 
           // Funciones de sincronización
           exportTreeToJson={exportTreeToJson}
@@ -4073,6 +4076,9 @@ const App = () => {
           onMasterPasswordChanged={handleMasterPasswordChanged}
           onUpdateUserPassword={handleUpdateUserPassword}
           onEditConnection={handleEditConnectionFromUsers}
+          secureStorage={secureStorage}
+          masterKey={masterKey}
+          handleImportComplete={handleImportComplete}
         />
 
         {/* Menú contextual del árbol de la sidebar */}

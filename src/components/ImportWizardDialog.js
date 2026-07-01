@@ -141,7 +141,8 @@ const ImportWizardDialog = ({
     onImportPasswordsComplete,
     showToast,
     targetFolderOptions = [],
-    defaultTargetFolderKey
+    defaultTargetFolderKey,
+    isEmbedded = false
 }) => {
     const { t } = useTranslation('common');
     const toast = useRef(null);
@@ -244,7 +245,7 @@ const ImportWizardDialog = ({
     const handleClose = useCallback(() => {
         if (!importing) {
             resetState();
-            onHide();
+            onHide && onHide();
         }
     }, [importing, resetState, onHide]);
 
@@ -1746,6 +1747,31 @@ const ImportWizardDialog = ({
             </div>
         </div>
     );
+
+    if (isEmbedded) {
+        return (
+            <div className="import-wizard-embedded" style={{ padding: '0', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <Toast ref={toast} />
+                <div className="import-wizard-content" style={{ flex: 1 }}>
+                    {/* Indicador de pasos */}
+                    <Steps
+                        model={steps}
+                        activeIndex={currentStep}
+                        readOnly
+                        className="import-wizard-steps"
+                    />
+
+                    {/* Contenido del paso actual */}
+                    <div className="import-wizard-step-content" style={{ marginTop: '20px', maxHeight: 'calc(100vh - 350px)', overflowY: 'auto' }}>
+                        {renderStepContent()}
+                    </div>
+                </div>
+                <div style={{ borderTop: '1px solid var(--border-color, rgba(255,255,255,0.1))', paddingTop: '15px', marginTop: '15px' }}>
+                    {renderFooter()}
+                </div>
+            </div>
+        );
+    }
 
     return (
         <>

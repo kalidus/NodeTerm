@@ -17,7 +17,7 @@ import { confirmDialog } from 'primereact/confirmdialog';
 import exportImportService from '../services/ExportImportService';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 
-const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) => {
+const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete, isEmbedded = false }) => {
   const { t } = useTranslation('common');
   const fileUploadRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -618,7 +618,7 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
       setProgress(0);
       setImporting(false);
       setLoadingFile(false);
-      onHide();
+      onHide && onHide();
     }
   };
 
@@ -768,6 +768,273 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
     );
   };
 
+  const dialogContent = (
+    <div style={{ padding: isEmbedded ? '0' : '10px 0', maxHeight: isEmbedded ? 'none' : 'calc(90vh - 200px)', overflowY: isEmbedded ? 'visible' : 'auto' }}>
+      {/* Selección de archivo */}
+      {!selectedFile && (
+        <div style={{ marginBottom: '20px' }}>
+          {/* Input file nativo oculto como fallback */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".nodeterm,.json"
+            onChange={handleNativeFileSelect}
+            style={{ display: 'none' }}
+          />
+          
+          {/* Botón personalizado que abre el selector nativo */}
+          <Button
+            label={loadingFile ? (t('import.loading') || 'Cargando...') : (t('import.chooseFile') || '📁 Seleccionar archivo .nodeterm')}
+            icon="pi pi-upload"
+            onClick={handleChooseFile}
+            className="p-button-outlined"
+            disabled={importing || loadingFile}
+            style={{ width: '100%' }}
+          />
+          
+          {loadingFile && (
+            <div style={{ marginTop: '10px', textAlign: 'center' }}>
+              <i className="pi pi-spin pi-spinner" style={{ fontSize: '1.5rem', color: 'var(--primary-color)' }}></i>
+              <div style={{ marginTop: '5px', fontSize: '13px', color: 'var(--text-color-secondary)' }}>
+                {t('import.readingFile') || 'Leyendo archivo...'}
+              </div>
+            </div>
+          )}
+          <small style={{ display: 'block', marginTop: '8px', color: 'var(--text-color-secondary)', fontSize: '12px' }}>
+            {t('import.supportedFormats') || 'Formatos soportados: .nodeterm, .json (máx. 50 MB)'}
+          </small>
+        </div>
+      )}
+
+      {/* Preview del archivo */}
+      {selectedFile && renderPreview()}
+
+      {/* Contraseña de desencriptación (archivo completo encriptado) */}
+      {isEncrypted && needsPassword && (
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+            {t('import.enterPassword') || '🔑 Contraseña de desencriptación'}
+          </label>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <Password
+              value={decryptPassword}
+              onChange={(e) => setDecryptPassword(e.target.value)}
+              disabled={importing}
+              feedback={false}
+              toggleMask
+              style={{ flex: 1 }}
+              inputStyle={{ width: '100%' }}
+              placeholder={t('import.passwordPlaceholder') || 'Ingresa la contraseña'}
+              onKeyPress={(e) => e.key === 'Enter' && handleDecryptPreview()}
+            />
+            <Button
+              label={t('import.decrypt') || 'Desencriptar'}
+              icon="pi pi-unlock"
+              onClick={handleDecryptPreview}
+              disabled={!decryptPassword}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Master Key para desencriptar datos internos */}
+      {needsMasterKey && !needsPassword && (
+        <div style={{ marginBottom: '20px' }}>
+          <Message
+            severity="info"
+            text={t('import.masterKeyRequired') || '🔒 Este archivo contiene datos encriptados (contraseñas/conexiones). Ingresa la Master Key para ver el contenido completo y poder importar.'}
+            style={{ marginBottom: '15px' }}
+          />
+          <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
+            {t('import.enterMasterKey') || '🔑 Master Key'}
+          </label>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <Password
+              value={masterKey}
+              onChange={(e) => setMasterKey(e.target.value)}
+              disabled={importing}
+              feedback={false}
+              toggleMask
+              style={{ flex: 1 }}
+              inputStyle={{ width: '100%' }}
+              placeholder={t('import.masterKeyPlaceholder') || 'Ingresa la Master Key del sistema origen'}
+              onKeyPress={(e) => e.key === 'Enter' && handleDecryptWithMasterKey()}
+            />
+            <Button
+              label={t('import.decrypt') || 'Desencriptar'}
+              icon="pi pi-unlock"
+              onClick={handleDecryptWithMasterKey}
+              disabled={!masterKey || importing}
+            />
+          </div>
+          <small style={{ display: 'block', marginTop: '8px', fontSize: '12px', color: 'var(--text-color-secondary)' }}>
+            {t('import.masterKeyNote') || 'La Master Key es la misma que usaste en el sistema donde exportaste los datos.'}
+          </small>
+        </div>
+      )}
+
+      {/* Opciones de importación - Solo mostrar si hay archivo y no necesita contraseña/master key */}
+      {selectedFile && !needsPassword && !needsMasterKey && (
+        <>
+          {/* Modo de importación */}
+          <div style={{ marginBottom: '20px' }}>
+            <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600' }}>
+              {t('import.importMode') || '🔄 Modo de importación'}
+            </h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div className="p-field-radiobutton" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <RadioButton
+                  inputId="mode-merge"
+                  value="merge"
+                  checked={importMode === 'merge'}
+                  onChange={(e) => setImportMode(e.value)}
+                  disabled={importing}
+                />
+                <label htmlFor="mode-merge" style={{ margin: 0, cursor: 'pointer' }}>
+                  <strong>{t('import.merge') || 'Fusionar con datos existentes'}</strong>
+                  <div style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>
+                    {t('import.mergeDesc') || 'Los datos nuevos se añaden sin eliminar los existentes'}
+                  </div>
+                </label>
+              </div>
+              <div className="p-field-radiobutton" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <RadioButton
+                  inputId="mode-replace"
+                  value="replace"
+                  checked={importMode === 'replace'}
+                  onChange={(e) => setImportMode(e.value)}
+                  disabled={importing}
+                />
+                <label htmlFor="mode-replace" style={{ margin: 0, cursor: 'pointer' }}>
+                  <strong style={{ color: 'var(--red-500)' }}>{t('import.replace') || '⚠️ Reemplazar datos existentes'}</strong>
+                  <div style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>
+                    {t('import.replaceDesc') || 'Se eliminarán TODOS los datos actuales (se crea backup automático)'}
+                  </div>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Selección de categorías */}
+          <div style={{ marginBottom: '20px' }}>
+            <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600' }}>
+              {t('import.selectCategories') || '📦 Seleccionar categorías a importar'}
+            </h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Checkbox
+                  inputId="cat-connections"
+                  checked={categories.connections}
+                  onChange={() => handleCategoryChange('connections')}
+                  disabled={importing}
+                />
+                <label htmlFor="cat-connections" style={{ margin: 0, cursor: 'pointer' }}>
+                  <strong>{t('import.connections') || 'Conexiones'}</strong> ({filePreview?.stats?.connections || 0})
+                </label>
+              </div>
+              <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Checkbox
+                  inputId="cat-passwords"
+                  checked={categories.passwords}
+                  onChange={() => handleCategoryChange('passwords')}
+                  disabled={importing}
+                />
+                <label htmlFor="cat-passwords" style={{ margin: 0, cursor: 'pointer' }}>
+                  <strong>{t('import.passwords') || 'Contraseñas'}</strong> ({filePreview?.stats?.passwords || 0})
+                </label>
+              </div>
+              <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Checkbox
+                  inputId="cat-conversations"
+                  checked={categories.conversations}
+                  onChange={() => handleCategoryChange('conversations')}
+                  disabled={importing}
+                />
+                <label htmlFor="cat-conversations" style={{ margin: 0, cursor: 'pointer' }}>
+                  <strong>{t('import.conversations') || 'Conversaciones'}</strong> ({filePreview?.stats?.conversations || 0})
+                </label>
+              </div>
+              <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Checkbox
+                  inputId="cat-config"
+                  checked={categories.config}
+                  onChange={() => handleCategoryChange('config')}
+                  disabled={importing}
+                />
+                <label htmlFor="cat-config" style={{ margin: 0, cursor: 'pointer' }}>
+                  <strong>{t('import.config') || 'Configuraciones'}</strong> ({filePreview?.stats?.configItems || 0})
+                </label>
+              </div>
+              <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Checkbox
+                  inputId="cat-documents"
+                  checked={categories.documents}
+                  onChange={() => handleCategoryChange('documents')}
+                  disabled={importing}
+                />
+                <label htmlFor="cat-documents" style={{ margin: 0, cursor: 'pointer' }}>
+                  <strong>{t('export.documents') || 'Notas / documentos'}</strong> (
+                  {filePreview?.stats?.documentsEncryptedUnknown
+                    ? '∗'
+                    : filePreview?.stats?.documents ?? 0}
+                  )
+                </label>
+              </div>
+              {filePreview?.stats?.recordings > 0 && (
+                <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Checkbox
+                    inputId="cat-recordings"
+                    checked={categories.recordings}
+                    onChange={() => handleCategoryChange('recordings')}
+                    disabled={importing}
+                  />
+                  <label htmlFor="cat-recordings" style={{ margin: 0, cursor: 'pointer' }}>
+                    <strong>{t('import.recordings') || 'Grabaciones'}</strong> ({filePreview?.stats?.recordings || 0})
+                  </label>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Advertencia para modo replace */}
+          {importMode === 'replace' && (
+            <Message
+              severity="warn"
+              text={t('import.replaceWarning') || '⚠️ ADVERTENCIA: Se creará un backup automático antes de reemplazar los datos. Podrás restaurarlo si es necesario.'}
+              style={{ marginBottom: '15px' }}
+            />
+          )}
+        </>
+      )}
+
+      {/* Barra de progreso */}
+      {importing && (
+        <div style={{ marginTop: '20px' }}>
+          <ProgressBar value={progress} showValue={false} style={{ height: '6px' }} />
+          <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '13px', color: 'var(--text-color-secondary)' }}>
+            {progress < 30 && (t('import.validating') || 'Validando archivo...')}
+            {progress >= 30 && progress < 80 && (t('import.importing') || 'Importando datos...')}
+            {progress >= 80 && progress < 100 && (t('import.finalizing') || 'Finalizando...')}
+            {progress >= 100 && (t('import.completed') || '✓ Completado')}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  if (isEmbedded) {
+    return (
+      <div className="import-dialog-embedded" style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <div style={{ flex: 1 }}>
+          {dialogContent}
+        </div>
+        <div style={{ borderTop: '1px solid var(--border-color, rgba(255,255,255,0.1))', paddingTop: '15px', marginTop: '15px' }}>
+          {renderFooter()}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Dialog
       visible={visible}
@@ -786,258 +1053,7 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete }) =>
       closable={!importing}
       className="import-export-dialog"
     >
-      <div style={{ padding: '10px 0', maxHeight: 'calc(90vh - 200px)', overflowY: 'auto' }}>
-
-        {/* Selección de archivo */}
-        {!selectedFile && (
-          <div style={{ marginBottom: '20px' }}>
-            {/* Input file nativo oculto como fallback */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".nodeterm,.json"
-              onChange={handleNativeFileSelect}
-              style={{ display: 'none' }}
-            />
-            
-            {/* Botón personalizado que abre el selector nativo */}
-            <Button
-              label={loadingFile ? (t('import.loading') || 'Cargando...') : (t('import.chooseFile') || '📁 Seleccionar archivo .nodeterm')}
-              icon="pi pi-upload"
-              onClick={handleChooseFile}
-              className="p-button-outlined"
-              disabled={importing || loadingFile}
-              style={{ width: '100%' }}
-            />
-            
-            {loadingFile && (
-              <div style={{ marginTop: '10px', textAlign: 'center' }}>
-                <i className="pi pi-spin pi-spinner" style={{ fontSize: '1.5rem', color: 'var(--primary-color)' }}></i>
-                <div style={{ marginTop: '5px', fontSize: '13px', color: 'var(--text-color-secondary)' }}>
-                  {t('import.readingFile') || 'Leyendo archivo...'}
-                </div>
-              </div>
-            )}
-            <small style={{ display: 'block', marginTop: '8px', color: 'var(--text-color-secondary)', fontSize: '12px' }}>
-              {t('import.supportedFormats') || 'Formatos soportados: .nodeterm, .json (máx. 50 MB)'}
-            </small>
-          </div>
-        )}
-
-        {/* Preview del archivo */}
-        {selectedFile && renderPreview()}
-
-        {/* Contraseña de desencriptación (archivo completo encriptado) */}
-        {isEncrypted && needsPassword && (
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
-              {t('import.enterPassword') || '🔑 Contraseña de desencriptación'}
-            </label>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <Password
-                value={decryptPassword}
-                onChange={(e) => setDecryptPassword(e.target.value)}
-                disabled={importing}
-                feedback={false}
-                toggleMask
-                style={{ flex: 1 }}
-                inputStyle={{ width: '100%' }}
-                placeholder={t('import.passwordPlaceholder') || 'Ingresa la contraseña'}
-                onKeyPress={(e) => e.key === 'Enter' && handleDecryptPreview()}
-              />
-              <Button
-                label={t('import.decrypt') || 'Desencriptar'}
-                icon="pi pi-unlock"
-                onClick={handleDecryptPreview}
-                disabled={!decryptPassword}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Master Key para desencriptar datos internos */}
-        {needsMasterKey && !needsPassword && (
-          <div style={{ marginBottom: '20px' }}>
-            <Message
-              severity="info"
-              text={t('import.masterKeyRequired') || '🔒 Este archivo contiene datos encriptados (contraseñas/conexiones). Ingresa la Master Key para ver el contenido completo y poder importar.'}
-              style={{ marginBottom: '15px' }}
-            />
-            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600' }}>
-              {t('import.enterMasterKey') || '🔑 Master Key'}
-            </label>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <Password
-                value={masterKey}
-                onChange={(e) => setMasterKey(e.target.value)}
-                disabled={importing}
-                feedback={false}
-                toggleMask
-                style={{ flex: 1 }}
-                inputStyle={{ width: '100%' }}
-                placeholder={t('import.masterKeyPlaceholder') || 'Ingresa la Master Key del sistema origen'}
-                onKeyPress={(e) => e.key === 'Enter' && handleDecryptWithMasterKey()}
-              />
-              <Button
-                label={t('import.decrypt') || 'Desencriptar'}
-                icon="pi pi-unlock"
-                onClick={handleDecryptWithMasterKey}
-                disabled={!masterKey || importing}
-              />
-            </div>
-            <small style={{ display: 'block', marginTop: '8px', fontSize: '12px', color: 'var(--text-color-secondary)' }}>
-              {t('import.masterKeyNote') || 'La Master Key es la misma que usaste en el sistema donde exportaste los datos.'}
-            </small>
-          </div>
-        )}
-
-        {/* Opciones de importación - Solo mostrar si hay archivo y no necesita contraseña/master key */}
-        {selectedFile && !needsPassword && !needsMasterKey && (
-          <>
-            {/* Modo de importación */}
-            <div style={{ marginBottom: '20px' }}>
-              <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600' }}>
-                {t('import.importMode') || '🔄 Modo de importación'}
-              </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div className="p-field-radiobutton" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <RadioButton
-                    inputId="mode-merge"
-                    value="merge"
-                    checked={importMode === 'merge'}
-                    onChange={(e) => setImportMode(e.value)}
-                    disabled={importing}
-                  />
-                  <label htmlFor="mode-merge" style={{ margin: 0, cursor: 'pointer' }}>
-                    <strong>{t('import.merge') || 'Fusionar con datos existentes'}</strong>
-                    <div style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>
-                      {t('import.mergeDesc') || 'Los datos nuevos se añaden sin eliminar los existentes'}
-                    </div>
-                  </label>
-                </div>
-                <div className="p-field-radiobutton" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <RadioButton
-                    inputId="mode-replace"
-                    value="replace"
-                    checked={importMode === 'replace'}
-                    onChange={(e) => setImportMode(e.value)}
-                    disabled={importing}
-                  />
-                  <label htmlFor="mode-replace" style={{ margin: 0, cursor: 'pointer' }}>
-                    <strong style={{ color: 'var(--red-500)' }}>{t('import.replace') || '⚠️ Reemplazar datos existentes'}</strong>
-                    <div style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>
-                      {t('import.replaceDesc') || 'Se eliminarán TODOS los datos actuales (se crea backup automático)'}
-                    </div>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* Selección de categorías */}
-            <div style={{ marginBottom: '20px' }}>
-              <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '600' }}>
-                {t('import.selectCategories') || '📦 Seleccionar categorías a importar'}
-              </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <Checkbox
-                    inputId="cat-connections"
-                    checked={categories.connections}
-                    onChange={() => handleCategoryChange('connections')}
-                    disabled={importing}
-                  />
-                  <label htmlFor="cat-connections" style={{ margin: 0, cursor: 'pointer' }}>
-                    <strong>{t('import.connections') || 'Conexiones'}</strong> ({filePreview?.stats?.connections || 0})
-                  </label>
-                </div>
-                <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <Checkbox
-                    inputId="cat-passwords"
-                    checked={categories.passwords}
-                    onChange={() => handleCategoryChange('passwords')}
-                    disabled={importing}
-                  />
-                  <label htmlFor="cat-passwords" style={{ margin: 0, cursor: 'pointer' }}>
-                    <strong>{t('import.passwords') || 'Contraseñas'}</strong> ({filePreview?.stats?.passwords || 0})
-                  </label>
-                </div>
-                <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <Checkbox
-                    inputId="cat-conversations"
-                    checked={categories.conversations}
-                    onChange={() => handleCategoryChange('conversations')}
-                    disabled={importing}
-                  />
-                  <label htmlFor="cat-conversations" style={{ margin: 0, cursor: 'pointer' }}>
-                    <strong>{t('import.conversations') || 'Conversaciones'}</strong> ({filePreview?.stats?.conversations || 0})
-                  </label>
-                </div>
-                <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <Checkbox
-                    inputId="cat-config"
-                    checked={categories.config}
-                    onChange={() => handleCategoryChange('config')}
-                    disabled={importing}
-                  />
-                  <label htmlFor="cat-config" style={{ margin: 0, cursor: 'pointer' }}>
-                    <strong>{t('import.config') || 'Configuraciones'}</strong> ({filePreview?.stats?.configItems || 0})
-                  </label>
-                </div>
-                <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <Checkbox
-                    inputId="cat-documents"
-                    checked={categories.documents}
-                    onChange={() => handleCategoryChange('documents')}
-                    disabled={importing}
-                  />
-                  <label htmlFor="cat-documents" style={{ margin: 0, cursor: 'pointer' }}>
-                    <strong>{t('export.documents') || 'Notas / documentos'}</strong> (
-                    {filePreview?.stats?.documentsEncryptedUnknown
-                      ? '∗'
-                      : filePreview?.stats?.documents ?? 0}
-                    )
-                  </label>
-                </div>
-                {filePreview?.stats?.recordings > 0 && (
-                  <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <Checkbox
-                      inputId="cat-recordings"
-                      checked={categories.recordings}
-                      onChange={() => handleCategoryChange('recordings')}
-                      disabled={importing}
-                    />
-                    <label htmlFor="cat-recordings" style={{ margin: 0, cursor: 'pointer' }}>
-                      <strong>{t('import.recordings') || 'Grabaciones'}</strong> ({filePreview?.stats?.recordings || 0})
-                    </label>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Advertencia para modo replace */}
-            {importMode === 'replace' && (
-              <Message
-                severity="warn"
-                text={t('import.replaceWarning') || '⚠️ ADVERTENCIA: Se creará un backup automático antes de reemplazar los datos. Podrás restaurarlo si es necesario.'}
-                style={{ marginBottom: '15px' }}
-              />
-            )}
-          </>
-        )}
-
-        {/* Barra de progreso */}
-        {importing && (
-          <div style={{ marginTop: '20px' }}>
-            <ProgressBar value={progress} showValue={false} style={{ height: '6px' }} />
-            <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '13px', color: 'var(--text-color-secondary)' }}>
-              {progress < 30 && (t('import.validating') || 'Validando archivo...')}
-              {progress >= 30 && progress < 80 && (t('import.importing') || 'Importando datos...')}
-              {progress >= 80 && progress < 100 && (t('import.finalizing') || 'Finalizando...')}
-              {progress >= 100 && (t('import.completed') || '✓ Completado')}
-            </div>
-          </div>
-        )}
-      </div>
+      {dialogContent}
     </Dialog>
   );
 };

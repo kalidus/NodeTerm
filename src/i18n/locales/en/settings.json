@@ -36,7 +36,8 @@
     "users": "Users",
     "sync": "Sync",
     "info": "Information",
-    "splashScreen": "Splash Screen"
+    "splashScreen": "Splash Screen",
+    "importExport": "Import / Export"
   },
   "sidebarDescriptions": {
     "general": "Global behavior preferences",
@@ -56,7 +57,8 @@
     "updates": "Channels and version checks",
     "sync": "Sync settings to cloud",
     "info": "Version and technical details",
-    "splashScreen": "Customize the startup loading window"
+    "splashScreen": "Customize the startup loading window",
+    "importExport": "Import and export application data"
   },
   "general": {
     "title": "General Settings",

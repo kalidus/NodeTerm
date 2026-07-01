@@ -20,6 +20,9 @@ import TabThemeSelector from './TabThemeSelector';
 import LayoutThemeSelector from './LayoutThemeSelector';
 import SyncSettingsDialog from './SyncSettingsDialog';
 import UpdatePanel from './UpdatePanel';
+import ExportDialog from './ExportDialog';
+import ImportExportDialog from './ImportExportDialog';
+import ImportWizardDialog from './ImportWizardDialog';
 import { themes } from '../themes';
 import { getVersionInfo, getFullVersionInfo } from '../version-info';
 import { iconThemes } from '../themes/icon-themes';
@@ -211,10 +214,15 @@ const SettingsContent = ({
   setSessionActionIconTheme,
   nodes = [],
   onUpdateUserPassword,
-  onEditConnection
+  onEditConnection,
+  masterKey,
+  handleImportComplete,
+  toast,
+  setNodes
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [splashStyle, setSplashStyle] = useState('classic');
+  const [showWizardInline, setShowWizardInline] = useState(false);
 
   useEffect(() => {
     if (window.electron && window.electron.theme && window.electron.theme.getSplashStyle) {
@@ -379,7 +387,8 @@ const SettingsContent = ({
       'clientes-ia': 4,
       'actualizaciones': 5,
       'sincronizacion': 6,
-      'informacion': 7
+      'importar-exportar': 7,
+      'informacion': 8
     };
     return mainTabMap[mainTab] || 0;
   };
@@ -453,13 +462,23 @@ const SettingsContent = ({
         'about': 'informacion',
         'ai': 'clientes-ia',
         'general': 'general',
-        'rdp': 'rdp'
+        'rdp': 'rdp',
+        'import-export': 'importar-exportar',
+        'import': 'importar-exportar',
+        'export': 'importar-exportar',
+        'importar-exportar': 'importar-exportar'
       };
 
       const targetTab = tabMap[tab] || tab;
       setActiveMainTab(targetTab);
 
-      if (subTab) {
+      if (targetTab === 'importar-exportar' && subTab === 'wizard') {
+        setShowWizardInline(true);
+      } else if (targetTab === 'importar-exportar') {
+        setShowWizardInline(false);
+      }
+
+      if (subTab && targetTab !== 'importar-exportar') {
         setActiveSubTab(subTab);
       }
     };
@@ -5544,6 +5563,140 @@ const SettingsContent = ({
                       </div>
                     </div>
                   </div>
+                </div>
+              </div>
+            </TabPanel>
+
+            <TabPanel header={t('sidebar.importExport') || 'Importar / Exportar'} leftIcon="pi pi-exchange" style={{ '--content-height': `${contentHeight}px` }}>
+              <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
+                <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: '8px', bottom: 0, width: 'calc(100% - 8px)' }}>
+                  
+                  {/* Header */}
+                  <div className="general-settings-header-wrapper" style={{ flexShrink: 0 }}>
+                    <div className="general-header-content">
+                      <span className="general-header-icon protocol-dialog-header-icon">
+                        <i className="pi pi-exchange"></i>
+                      </span>
+                      <div className="general-header-text">
+                        <h3 className="general-header">{t('sidebar.importExport') || 'Importar / Exportar'}</h3>
+                        <p className="general-description">Crea copias de seguridad de tus datos o restaura sesiones y contraseñas desde múltiples formatos.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {showWizardInline ? (
+                    <div className="import-wizard-inline-wrapper" style={{ padding: '10px 0' }}>
+                      <Button
+                        label="Volver a Importar / Exportar"
+                        icon="pi pi-arrow-left"
+                        className="p-button-text"
+                        style={{ marginBottom: '1.5rem', paddingLeft: 0 }}
+                        onClick={() => setShowWizardInline(false)}
+                      />
+                      <ImportWizardDialog
+                        isEmbedded={true}
+                        visible={true}
+                        onHide={() => setShowWizardInline(false)}
+                        onImportComplete={async (result) => {
+                          if (handleImportComplete) {
+                            return await handleImportComplete(result);
+                          }
+                        }}
+                        onImportPasswordsComplete={(payload) => {
+                          window.dispatchEvent(new CustomEvent('import-passwords-to-manager', { detail: payload }));
+                        }}
+                        showToast={(msg) => {
+                          if (toast?.current?.show) {
+                            toast.current.show(msg);
+                          }
+                        }}
+                        targetFolderOptions={(() => {
+                          const list = [];
+                          const walk = (arr, prefix = '') => {
+                            if (!Array.isArray(arr)) return;
+                            for (const n of arr) {
+                              if (n && n.droppable) {
+                                list.push({ label: `${prefix}${n.label}`, value: n.key });
+                                if (n.children && n.children.length) walk(n.children, `${prefix}${n.label} / `);
+                              }
+                            }
+                          };
+                          walk(nodes || []);
+                          return list;
+                        })()}
+                        defaultTargetFolderKey={null}
+                      />
+                    </div>
+                  ) : (
+                    <div className="import-export-main-content" style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '10px 0' }}>
+                      {/* Grid de dos columnas para exportar e importar archivo */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                        
+                        {/* Columna Izquierda: Exportar */}
+                        <Card title="Exportar Copia de Seguridad" style={{ background: 'var(--ui-dialog-bg, rgba(30,30,30,0.5))', border: '1px solid var(--ui-dialog-border, rgba(255,255,255,0.08))' }}>
+                          <ExportDialog
+                            isEmbedded={true}
+                            visible={true}
+                            showToast={(msg) => {
+                              if (toast?.current?.show) {
+                                toast.current.show(msg);
+                              }
+                            }}
+                          />
+                        </Card>
+
+                        {/* Columna Derecha: Importar copia de seguridad */}
+                        <Card title="Importar Copia de Seguridad" style={{ background: 'var(--ui-dialog-bg, rgba(30,30,30,0.5))', border: '1px solid var(--ui-dialog-border, rgba(255,255,255,0.08))' }}>
+                          <ImportExportDialog
+                            isEmbedded={true}
+                            visible={true}
+                            showToast={(msg) => {
+                              if (toast?.current?.show) {
+                                toast.current.show(msg);
+                              }
+                            }}
+                            onImportComplete={(result) => {
+                              console.log('[SettingsDialog] Importación local completada:', result);
+                              if (setNodes) {
+                                const treeData = localStorage.getItem('basicapp2_tree_data');
+                                if (treeData) {
+                                  try {
+                                    const parsed = JSON.parse(treeData);
+                                    setNodes(parsed);
+                                  } catch (error) {
+                                    console.error('Error al recargar nodos en ajustes:', error);
+                                  }
+                                }
+                              }
+                            }}
+                          />
+                        </Card>
+                      </div>
+
+                      {/* Fila Inferior: Asistente guiado */}
+                      <Card style={{ marginTop: '10px', background: 'var(--ui-dialog-bg, rgba(30,30,30,0.5))', border: '1px solid var(--ui-dialog-border, rgba(255,255,255,0.08))' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                            <i className="pi pi-compass" style={{ fontSize: '2.5rem', color: 'var(--primary-color)' }}></i>
+                            <div>
+                              <h4 style={{ margin: '0 0 5px 0', fontSize: '15px', fontWeight: '700' }}>Asistente de Importación Guiado</h4>
+                              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-color-secondary)' }}>
+                                Importa sesiones y contraseñas paso a paso desde <strong>mRemoteNG (.xml)</strong>, <strong>KeePass (.kdbx)</strong> o <strong>Navegadores Web</strong>.
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            label="Iniciar Asistente"
+                            icon="pi pi-arrow-right"
+                            iconPos="right"
+                            className="p-button-outlined"
+                            onClick={() => setShowWizardInline(true)}
+                          />
+                        </div>
+                      </Card>
+                    </div>
+                  )}
+
                 </div>
               </div>
             </TabPanel>
