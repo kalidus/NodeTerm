@@ -222,7 +222,7 @@ const SettingsContent = ({
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [splashStyle, setSplashStyle] = useState('classic');
-  const [showWizardInline, setShowWizardInline] = useState(false);
+  const [importExportSection, setImportExportSection] = useState('export'); // 'export', 'import-backup', 'wizard'
 
   useEffect(() => {
     if (window.electron && window.electron.theme && window.electron.theme.getSplashStyle) {
@@ -472,10 +472,14 @@ const SettingsContent = ({
       const targetTab = tabMap[tab] || tab;
       setActiveMainTab(targetTab);
 
-      if (targetTab === 'importar-exportar' && subTab === 'wizard') {
-        setShowWizardInline(true);
-      } else if (targetTab === 'importar-exportar') {
-        setShowWizardInline(false);
+      if (targetTab === 'importar-exportar') {
+        if (subTab === 'wizard') {
+          setImportExportSection('wizard');
+        } else if (subTab === 'import') {
+          setImportExportSection('import-backup');
+        } else {
+          setImportExportSection('export');
+        }
       }
 
       if (subTab && targetTab !== 'importar-exportar') {
@@ -5567,135 +5571,168 @@ const SettingsContent = ({
               </div>
             </TabPanel>
 
-            <TabPanel header={t('sidebar.importExport') || 'Importar / Exportar'} leftIcon="pi pi-exchange" style={{ '--content-height': `${contentHeight}px` }}>
+            <TabPanel header={t('sidebar.importExport') || 'Importar / Exportar'} leftIcon="pi pi-arrow-right-arrow-left" style={{ '--content-height': `${contentHeight}px` }}>
               <div style={{ height: `${contentHeight}px`, maxHeight: `${contentHeight}px`, minHeight: `${contentHeight}px`, overflow: 'hidden', position: 'relative' }}>
                 <div className="general-settings-container" style={{ height: '100%', maxHeight: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'absolute', top: 0, left: 0, right: '8px', bottom: 0, width: 'calc(100% - 8px)' }}>
                   
                   {/* Header */}
-                  <div className="general-settings-header-wrapper" style={{ flexShrink: 0 }}>
+                  <div className="general-settings-header-wrapper" style={{ flexShrink: 0, marginBottom: '20px' }}>
                     <div className="general-header-content">
                       <span className="general-header-icon protocol-dialog-header-icon">
-                        <i className="pi pi-exchange"></i>
+                        <i className="pi pi-arrow-right-arrow-left"></i>
                       </span>
                       <div className="general-header-text">
                         <h3 className="general-header">{t('sidebar.importExport') || 'Importar / Exportar'}</h3>
-                        <p className="general-description">Crea copias de seguridad de tus datos o restaura sesiones y contraseñas desde múltiples formatos.</p>
+                        <p className="general-description">Crea copias de seguridad de tus datos o restaura sesiones y contraseñas desde múltiples formatos de manera segura.</p>
                       </div>
                     </div>
                   </div>
 
-                  {showWizardInline ? (
-                    <div className="import-wizard-inline-wrapper" style={{ padding: '10px 0' }}>
-                      <Button
-                        label="Volver a Importar / Exportar"
-                        icon="pi pi-arrow-left"
-                        className="p-button-text"
-                        style={{ marginBottom: '1.5rem', paddingLeft: 0 }}
-                        onClick={() => setShowWizardInline(false)}
-                      />
-                      <ImportWizardDialog
-                        isEmbedded={true}
-                        visible={true}
-                        onHide={() => setShowWizardInline(false)}
-                        onImportComplete={async (result) => {
-                          if (handleImportComplete) {
-                            return await handleImportComplete(result);
-                          }
-                        }}
-                        onImportPasswordsComplete={(payload) => {
-                          window.dispatchEvent(new CustomEvent('import-passwords-to-manager', { detail: payload }));
-                        }}
-                        showToast={(msg) => {
-                          if (toast?.current?.show) {
-                            toast.current.show(msg);
-                          }
-                        }}
-                        targetFolderOptions={(() => {
-                          const list = [];
-                          const walk = (arr, prefix = '') => {
-                            if (!Array.isArray(arr)) return;
-                            for (const n of arr) {
-                              if (n && n.droppable) {
-                                list.push({ label: `${prefix}${n.label}`, value: n.key });
-                                if (n.children && n.children.length) walk(n.children, `${prefix}${n.label} / `);
-                              }
-                            }
-                          };
-                          walk(nodes || []);
-                          return list;
-                        })()}
-                        defaultTargetFolderKey={null}
-                      />
+                  {/* Modern Segmented Selector */}
+                  <div className="flex justify-content-center" style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+                    <div style={{
+                      display: 'inline-flex',
+                      background: 'rgba(0, 0, 0, 0.25)',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      padding: '4px',
+                      borderRadius: '12px',
+                      gap: '4px'
+                    }}>
+                      {[
+                        { id: 'export', label: 'Exportar Copia', icon: 'pi pi-download', color: 'var(--green-500, #10b981)' },
+                        { id: 'import-backup', label: 'Restaurar Copia', icon: 'pi pi-upload', color: 'var(--blue-500, #3b82f6)' },
+                        { id: 'wizard', label: 'Asistente de Importación', icon: 'pi pi-compass', color: 'var(--primary-color, #8b5cf6)' }
+                      ].map(s => {
+                        const isSelected = importExportSection === s.id;
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => setImportExportSection(s.id)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              padding: '8px 18px',
+                              borderRadius: '8px',
+                              border: 'none',
+                              cursor: 'pointer',
+                              fontWeight: '600',
+                              fontSize: '13px',
+                              transition: 'all 0.2s ease',
+                              background: isSelected ? 'var(--ui-button-primary, #10b981)' : 'transparent',
+                              color: isSelected ? '#ffffff' : 'var(--text-color-secondary, #9ca3af)',
+                              boxShadow: isSelected ? '0 4px 12px rgba(0, 0, 0, 0.2)' : 'none'
+                            }}
+                          >
+                            <i className={s.icon} style={{ color: isSelected ? '#fff' : s.color }}></i>
+                            <span>{s.label}</span>
+                          </button>
+                        );
+                      })}
                     </div>
-                  ) : (
-                    <div className="import-export-main-content" style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '10px 0' }}>
-                      {/* Grid de dos columnas para exportar e importar archivo */}
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                        
-                        {/* Columna Izquierda: Exportar */}
-                        <Card title="Exportar Copia de Seguridad" style={{ background: 'var(--ui-dialog-bg, rgba(30,30,30,0.5))', border: '1px solid var(--ui-dialog-border, rgba(255,255,255,0.08))' }}>
-                          <ExportDialog
-                            isEmbedded={true}
-                            visible={true}
-                            showToast={(msg) => {
-                              if (toast?.current?.show) {
-                                toast.current.show(msg);
-                              }
-                            }}
-                          />
-                        </Card>
+                  </div>
 
-                        {/* Columna Derecha: Importar copia de seguridad */}
-                        <Card title="Importar Copia de Seguridad" style={{ background: 'var(--ui-dialog-bg, rgba(30,30,30,0.5))', border: '1px solid var(--ui-dialog-border, rgba(255,255,255,0.08))' }}>
-                          <ImportExportDialog
-                            isEmbedded={true}
-                            visible={true}
-                            showToast={(msg) => {
-                              if (toast?.current?.show) {
-                                toast.current.show(msg);
-                              }
-                            }}
-                            onImportComplete={(result) => {
-                              console.log('[SettingsDialog] Importación local completada:', result);
-                              if (setNodes) {
-                                const treeData = localStorage.getItem('basicapp2_tree_data');
-                                if (treeData) {
-                                  try {
-                                    const parsed = JSON.parse(treeData);
-                                    setNodes(parsed);
-                                  } catch (error) {
-                                    console.error('Error al recargar nodos en ajustes:', error);
-                                  }
+                  {/* Forms Card Wrapper */}
+                  <div className="import-export-section-content" style={{ paddingBottom: '20px' }}>
+                    {importExportSection === 'export' && (
+                      <Card style={{ background: 'var(--ui-dialog-bg, rgba(30,30,30,0.5))', border: '1px solid var(--ui-dialog-border, rgba(255,255,255,0.08))', borderRadius: '12px' }}>
+                        <div style={{ marginBottom: '20px', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', paddingBottom: '15px' }}>
+                          <h4 style={{ margin: '0 0 5px 0', fontSize: '15px', fontWeight: '700', color: 'var(--text-color)' }}>Crear Copia de Seguridad Local</h4>
+                          <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--text-color-secondary)' }}>
+                            Descarga tus conexiones, gestor de contraseñas, conversaciones de IA, configuraciones y notas en un único archivo encriptado.
+                          </p>
+                        </div>
+                        <ExportDialog
+                          isEmbedded={true}
+                          visible={true}
+                          showToast={(msg) => {
+                            if (toast?.current?.show) {
+                              toast.current.show(msg);
+                            }
+                          }}
+                        />
+                      </Card>
+                    )}
+
+                    {importExportSection === 'import-backup' && (
+                      <Card style={{ background: 'var(--ui-dialog-bg, rgba(30,30,30,0.5))', border: '1px solid var(--ui-dialog-border, rgba(255,255,255,0.08))', borderRadius: '12px' }}>
+                        <div style={{ marginBottom: '20px', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', paddingBottom: '15px' }}>
+                          <h4 style={{ margin: '0 0 5px 0', fontSize: '15px', fontWeight: '700', color: 'var(--text-color)' }}>Restaurar Copia de Seguridad Local</h4>
+                          <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--text-color-secondary)' }}>
+                            Carga tu archivo de copia de seguridad (.nodeterm o .json) para restaurar tus datos anteriores.
+                          </p>
+                        </div>
+                        <ImportExportDialog
+                          isEmbedded={true}
+                          visible={true}
+                          showToast={(msg) => {
+                            if (toast?.current?.show) {
+                              toast.current.show(msg);
+                            }
+                          }}
+                          onImportComplete={(result) => {
+                            console.log('[SettingsDialog] Importación local completada:', result);
+                            if (setNodes) {
+                              const treeData = localStorage.getItem('basicapp2_tree_data');
+                              if (treeData) {
+                                try {
+                                  const parsed = JSON.parse(treeData);
+                                  setNodes(parsed);
+                                } catch (error) {
+                                  console.error('Error al recargar nodos en ajustes:', error);
                                 }
                               }
-                            }}
-                          />
-                        </Card>
-                      </div>
-
-                      {/* Fila Inferior: Asistente guiado */}
-                      <Card style={{ marginTop: '10px', background: 'var(--ui-dialog-bg, rgba(30,30,30,0.5))', border: '1px solid var(--ui-dialog-border, rgba(255,255,255,0.08))' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                            <i className="pi pi-compass" style={{ fontSize: '2.5rem', color: 'var(--primary-color)' }}></i>
-                            <div>
-                              <h4 style={{ margin: '0 0 5px 0', fontSize: '15px', fontWeight: '700' }}>Asistente de Importación Guiado</h4>
-                              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-color-secondary)' }}>
-                                Importa sesiones y contraseñas paso a paso desde <strong>mRemoteNG (.xml)</strong>, <strong>KeePass (.kdbx)</strong> o <strong>Navegadores Web</strong>.
-                              </p>
-                            </div>
-                          </div>
-                          <Button
-                            label="Iniciar Asistente"
-                            icon="pi pi-arrow-right"
-                            iconPos="right"
-                            className="p-button-outlined"
-                            onClick={() => setShowWizardInline(true)}
-                          />
-                        </div>
+                            }
+                          }}
+                        />
                       </Card>
-                    </div>
-                  )}
+                    )}
+
+                    {importExportSection === 'wizard' && (
+                      <Card style={{ background: 'var(--ui-dialog-bg, rgba(30,30,30,0.5))', border: '1px solid var(--ui-dialog-border, rgba(255,255,255,0.08))', borderRadius: '12px' }}>
+                        <div style={{ marginBottom: '20px', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', paddingBottom: '15px' }}>
+                          <h4 style={{ margin: '0 0 5px 0', fontSize: '15px', fontWeight: '700', color: 'var(--text-color)' }}>Asistente de Importación Guiado</h4>
+                          <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--text-color-secondary)' }}>
+                            Migra de forma guiada tus sesiones y credenciales desde mRemoteNG, KeePass o navegadores web.
+                          </p>
+                        </div>
+                        <ImportWizardDialog
+                          isEmbedded={true}
+                          visible={true}
+                          onHide={() => setImportExportSection('export')}
+                          onImportComplete={async (result) => {
+                            if (handleImportComplete) {
+                              return await handleImportComplete(result);
+                            }
+                          }}
+                          onImportPasswordsComplete={(payload) => {
+                            window.dispatchEvent(new CustomEvent('import-passwords-to-manager', { detail: payload }));
+                          }}
+                          showToast={(msg) => {
+                            if (toast?.current?.show) {
+                              toast.current.show(msg);
+                            }
+                          }}
+                          targetFolderOptions={(() => {
+                            const list = [];
+                            const walk = (arr, prefix = '') => {
+                              if (!Array.isArray(arr)) return;
+                              for (const n of arr) {
+                                if (n && n.droppable) {
+                                  list.push({ label: `${prefix}${n.label}`, value: n.key });
+                                  if (n.children && n.children.length) walk(n.children, `${prefix}${n.label} / `);
+                                }
+                              }
+                            };
+                            walk(nodes || []);
+                            return list;
+                          })()}
+                          defaultTargetFolderKey={null}
+                        />
+                      </Card>
+                    )}
+                  </div>
 
                 </div>
               </div>

@@ -1126,405 +1126,332 @@ const ImportWizardDialog = ({
         if (!source) return null;
 
         return (
-            <div className="import-wizard-config">
-                <h4 className="import-wizard-section-title">
-                    <i className={source.icon} />
+            <div className="import-wizard-config" style={{ padding: '0' }}>
+                <h4 className="import-wizard-section-title" style={{ marginBottom: '15px', fontSize: '14px', fontWeight: '600' }}>
+                    <i className={source.icon} style={{ marginRight: '8px' }} />
                     Importar desde {source.label}
                 </h4>
 
-                {/* Dropzone */}
-                {selectedSource !== 'wallix' && selectedSource !== 'browser' && (
-                    <>
-                        <div
-                            className={`import-wizard-dropzone ${isDragOver ? 'drag-over' : ''} ${selectedFile ? 'has-file' : ''}`}
-                            onDragOver={handleDragOver}
-                            onDragEnter={handleDragOver}
-                            onDragLeave={handleDragLeave}
-                            onDrop={handleDrop}
-                            onClick={!selectedFile ? handleChooseFile : undefined}
-                        >
-                            {!selectedFile ? (
-                                <>
-                                    <i className="pi pi-cloud-upload import-wizard-dropzone-icon" />
-                                    <div className="import-wizard-dropzone-text">
-                                        Arrastra tu archivo {source.extension} aquí
-                                        <br />
-                                        <span className="import-wizard-dropzone-hint">o haz clic para seleccionar</span>
-                                    </div>
-                                </>
-                            ) : (
-                                <div className="import-wizard-file-info">
-                                    <div className="import-wizard-file-icon">
-                                        <i className={source.icon} />
-                                    </div>
-                                    <div className="import-wizard-file-details">
-                                        <div className="import-wizard-file-name">{selectedFile.name}</div>
-                                        <div className="import-wizard-file-size">
-                                            {(selectedFile.size / 1024).toFixed(1)} KB
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    {/* Columna Izquierda: Origen / Archivo / Credenciales */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <h5 style={{ margin: '0 0 5px 0', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-color)' }}>
+                            📁 Origen de Datos
+                        </h5>
+                        
+                        {/* Dropzone si requiere archivo */}
+                        {selectedSource !== 'wallix' && selectedSource !== 'browser' && (
+                            <>
+                                <div
+                                    className={`import-wizard-dropzone ${isDragOver ? 'drag-over' : ''} ${selectedFile ? 'has-file' : ''}`}
+                                    onDragOver={handleDragOver}
+                                    onDragEnter={handleDragOver}
+                                    onDragLeave={handleDragLeave}
+                                    onDrop={handleDrop}
+                                    onClick={!selectedFile ? handleChooseFile : undefined}
+                                    style={{
+                                        border: '2px dashed rgba(255,255,255,0.15)',
+                                        borderRadius: '8px',
+                                        padding: '15px',
+                                        textAlign: 'center',
+                                        cursor: selectedFile ? 'default' : 'pointer',
+                                        background: isDragOver ? 'rgba(var(--primary-color-rgb), 0.05)' : 'rgba(0,0,0,0.1)'
+                                    }}
+                                >
+                                    {!selectedFile ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+                                            <i className="pi pi-cloud-upload" style={{ fontSize: '1.5rem', color: 'var(--primary-color)' }} />
+                                            <span style={{ fontSize: '12px', color: 'var(--text-color)' }}>
+                                                Arrastra tu archivo {source.extension} aquí o haz clic
+                                            </span>
                                         </div>
-                                    </div>
-                                    <div className="import-wizard-file-actions">
-                                        <Button
-                                            icon="pi pi-refresh"
-                                            className="p-button-outlined p-button-sm"
-                                            onClick={(e) => { e.stopPropagation(); handleChooseFile(); }}
-                                            tooltip="Cambiar archivo"
-                                        />
-                                        <Button
-                                            icon="pi pi-times"
-                                            className="p-button-outlined p-button-danger p-button-sm"
-                                            onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }}
-                                            tooltip="Quitar archivo"
-                                        />
-                                    </div>
+                                    ) : (
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', padding: '2px 5px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                                                <i className={source.icon} style={{ fontSize: '1.2rem', color: 'var(--primary-color)' }} />
+                                                <div style={{ textAlign: 'left', minWidth: 0 }}>
+                                                    <div style={{ fontSize: '12px', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedFile.name}</div>
+                                                    <div style={{ fontSize: '10px', color: 'var(--text-color-secondary)' }}>{(selectedFile.size / 1024).toFixed(1)} KB</div>
+                                                </div>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '5px' }}>
+                                                <Button
+                                                    icon="pi pi-refresh"
+                                                    className="p-button-outlined p-button-sm"
+                                                    style={{ padding: '4px', width: '28px', height: '28px' }}
+                                                    onClick={(e) => { e.stopPropagation(); handleChooseFile(); }}
+                                                    tooltip="Cambiar"
+                                                />
+                                                <Button
+                                                    icon="pi pi-times"
+                                                    className="p-button-outlined p-button-danger p-button-sm"
+                                                    style={{ padding: '4px', width: '28px', height: '28px' }}
+                                                    onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }}
+                                                    tooltip="Quitar"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                            )}
-                        </div>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept={source.extension}
+                                    style={{ display: 'none' }}
+                                    onChange={handleFileInputChange}
+                                />
+                            </>
+                        )}
 
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept={source.extension}
-                            style={{ display: 'none' }}
-                            onChange={handleFileInputChange}
-                        />
-                    </>
-                )}
+                        {/* Campos específicos de descifrado/perfiles/APIs */}
+                        {selectedSource === 'nodeterm' && (
+                            <div className="import-wizard-field">
+                                <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-color-secondary)', marginBottom: '5px' }}>
+                                    <i className="pi pi-lock" style={{ marginRight: '4px' }} /> Contraseña (si está encriptado)
+                                </label>
+                                <Password
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    toggleMask
+                                    feedback={false}
+                                    placeholder="Contraseña del archivo"
+                                    style={{ width: '100%' }}
+                                    inputStyle={{ width: '100%', padding: '6px 10px' }}
+                                />
+                            </div>
+                        )}
 
-                {/* Campos específicos por fuente */}
-                {selectedSource === 'nodeterm' && renderNodeTermConfig()}
-                {selectedSource === 'mremoteng' && renderMRemoteNGConfig()}
-                {selectedSource === 'keepass' && renderKeePassConfig()}
-                {selectedSource === 'browser' && renderBrowserConfig()}
-                {selectedSource === 'wallix' && renderWallixConfig()}
+                        {selectedSource === 'keepass' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                <div className="import-wizard-field">
+                                    <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-color-secondary)', marginBottom: '5px' }}>
+                                        <i className="pi pi-lock" style={{ marginRight: '4px' }} /> Contraseña maestra KeePass
+                                    </label>
+                                    <Password
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        toggleMask
+                                        feedback={false}
+                                        placeholder="Contraseña de la base de datos"
+                                        style={{ width: '100%' }}
+                                        inputStyle={{ width: '100%', padding: '6px 10px' }}
+                                    />
+                                </div>
+                                <div className="import-wizard-field">
+                                    <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-color-secondary)', marginBottom: '5px' }}>
+                                        <i className="pi pi-key" style={{ marginRight: '4px' }} /> Archivo de clave (.key - opcional)
+                                    </label>
+                                    {!selectedKeyFile ? (
+                                        <Button
+                                            label="Seleccionar archivo .key"
+                                            icon="pi pi-plus"
+                                            className="p-button-outlined p-button-sm"
+                                            style={{ width: '100%', padding: '6px 12px' }}
+                                            onClick={() => keyFileInputRef.current?.click()}
+                                        />
+                                    ) : (
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', background: 'rgba(255,255,255,0.05)', borderRadius: '6px' }}>
+                                            <span style={{ fontSize: '12px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}><i className="pi pi-file" /> {selectedKeyFile.name}</span>
+                                            <Button
+                                                icon="pi pi-times"
+                                                className="p-button-text p-button-danger p-button-sm"
+                                                style={{ padding: '0', width: '20px', height: '20px' }}
+                                                onClick={() => setSelectedKeyFile(null)}
+                                            />
+                                        </div>
+                                    )}
+                                    <input
+                                        ref={keyFileInputRef}
+                                        type="file"
+                                        accept=".key,.bin,.txt,*"
+                                        style={{ display: 'none' }}
+                                        onChange={handleKeyFileInputChange}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {selectedSource === 'browser' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                <div className="import-wizard-field">
+                                    <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-color-secondary)', marginBottom: '5px' }}>
+                                        <i className="pi pi-user" style={{ marginRight: '4px' }} /> Perfil del navegador
+                                    </label>
+                                    <Dropdown
+                                        value={selectedBrowserProfileId}
+                                        options={browserProfiles.map(p => ({ label: `${p.browserLabel} — ${p.profileLabel}`, value: p.id }))}
+                                        onChange={(e) => setSelectedBrowserProfileId(e.value)}
+                                        placeholder={browserProfiles.length ? 'Seleccionar perfil' : 'No se detectaron perfiles'}
+                                        style={{ width: '100%' }}
+                                    />
+                                    <Button
+                                        icon="pi pi-refresh"
+                                        className="p-button-text p-button-sm"
+                                        style={{ padding: '4px 0', marginTop: '4px' }}
+                                        onClick={loadBrowserProfiles}
+                                        label="Actualizar perfiles"
+                                    />
+                                </div>
+                                {browserProfiles.find(p => p.id === selectedBrowserProfileId)?.type === 'firefox' && (
+                                    <div className="import-wizard-field">
+                                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-color-secondary)', marginBottom: '5px' }}>
+                                            <i className="pi pi-lock" style={{ marginRight: '4px' }} /> Contraseña maestra Firefox (opcional)
+                                        </label>
+                                        <Password
+                                            value={firefoxMasterPassword}
+                                            onChange={(e) => setFirefoxMasterPassword(e.target.value)}
+                                            toggleMask
+                                            feedback={false}
+                                            placeholder="Solo si la configuraste en Firefox"
+                                            style={{ width: '100%' }}
+                                            inputStyle={{ width: '100%', padding: '6px 10px' }}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {selectedSource === 'wallix' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div className="import-wizard-field">
+                                    <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-color-secondary)', marginBottom: '4px' }}>
+                                        <i className="pi pi-link" /> URL API Wallix
+                                    </label>
+                                    <InputText
+                                        value={wallixUrl}
+                                        onChange={(e) => setWallixUrl(e.target.value)}
+                                        placeholder="https://wallix.example.com"
+                                        style={{ width: '100%', padding: '6px 10px' }}
+                                    />
+                                </div>
+                                <div className="import-wizard-field">
+                                    <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-color-secondary)', marginBottom: '4px' }}>
+                                        <i className="pi pi-user" /> Usuario
+                                    </label>
+                                    <InputText
+                                        value={wallixUsername}
+                                        onChange={(e) => setWallixUsername(e.target.value)}
+                                        placeholder="Usuario API"
+                                        style={{ width: '100%', padding: '6px 10px' }}
+                                    />
+                                </div>
+                                <div className="import-wizard-field">
+                                    <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-color-secondary)', marginBottom: '4px' }}>
+                                        <i className="pi pi-lock" /> Contraseña
+                                    </label>
+                                    <Password
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        toggleMask
+                                        feedback={false}
+                                        placeholder="Contraseña API"
+                                        style={{ width: '100%' }}
+                                        inputStyle={{ width: '100%', padding: '6px 10px' }}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Columna Derecha: Configuración Destino / Selección de datos */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <h5 style={{ margin: '0 0 5px 0', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-color)' }}>
+                            ⚙️ Opciones de Importación
+                        </h5>
+
+                        {selectedSource === 'nodeterm' ? (
+                            <div className="import-wizard-field">
+                                <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-color-secondary)', marginBottom: '8px' }}>
+                                    <i className="pi pi-list" style={{ marginRight: '4px' }} /> Seleccionar elementos a importar
+                                </label>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 15px' }}>
+                                    {[
+                                        { key: 'connections', label: 'Conexiones', icon: 'pi pi-desktop' },
+                                        { key: 'passwords', label: 'Contraseñas', icon: 'pi pi-key' },
+                                        { key: 'conversations', label: 'Chats IA', icon: 'pi pi-comments' },
+                                        { key: 'config', label: 'Ajustes', icon: 'pi pi-cog' },
+                                        { key: 'documents', label: 'Notas', icon: 'pi pi-file-edit' },
+                                        { key: 'recordings', label: 'Grabaciones', icon: 'pi pi-video' }
+                                    ].map(opt => (
+                                        <div key={opt.key} className="p-field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <Checkbox
+                                                inputId={`opt-${opt.key}`}
+                                                checked={nodetermOptions[opt.key]}
+                                                onChange={(e) => setNodeTermOptions(prev => ({ ...prev, [opt.key]: e.checked }))}
+                                            />
+                                            <label htmlFor={`opt-${opt.key}`} style={{ fontSize: '12px', cursor: 'pointer', margin: 0, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <i className={opt.icon} style={{ fontSize: '10px', opacity: 0.8 }} />
+                                                {opt.label}
+                                            </label>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                {/* Carpeta destino */}
+                                <div className="import-wizard-field">
+                                    <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-color-secondary)', marginBottom: '5px' }}>
+                                        <i className="pi pi-folder" /> Carpeta destino
+                                    </label>
+                                    <Dropdown
+                                        value={targetFolder}
+                                        options={folderOptions}
+                                        onChange={(e) => setTargetFolder(e.value)}
+                                        placeholder="Seleccionar carpeta"
+                                        style={{ width: '100%' }}
+                                    />
+                                </div>
+
+                                {/* Crear carpeta contenedora */}
+                                <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '10px' }}>
+                                    <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                        <Checkbox
+                                            inputId="create-container"
+                                            checked={createContainerFolder}
+                                            onChange={(e) => setCreateContainerFolder(e.checked)}
+                                        />
+                                        <label htmlFor="create-container" style={{ fontSize: '12px', cursor: 'pointer', margin: 0, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <i className="pi pi-folder-open" />
+                                            Crear carpeta contenedora
+                                        </label>
+                                    </div>
+
+                                    {createContainerFolder && (
+                                        <div className="import-wizard-field">
+                                            <InputText
+                                                value={containerFolderName}
+                                                onChange={(e) => setContainerFolderName(e.target.value)}
+                                                placeholder="Nombre de la nueva carpeta"
+                                                style={{ width: '100%', padding: '6px 10px' }}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+
+                                {selectedSource === 'keepass' && (
+                                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '10px' }}>
+                                        <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <Checkbox
+                                                inputId="kp-create-container"
+                                                checked={createContainerFolder}
+                                                onChange={(e) => setCreateContainerFolder(e.checked)}
+                                                disabled
+                                                style={{ display: 'none' }}
+                                            />
+                                        </div>
+                                        <small className="import-wizard-hint" style={{ fontSize: '11px', color: 'var(--text-color-secondary)' }}>
+                                            ℹ️ Se conservará la estructura de grupos de la base de datos KeePass.
+                                        </small>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
         );
     };
-
-    const renderNodeTermConfig = () => (
-        <div className="import-wizard-options">
-            {/* Contraseña si está encriptado */}
-            <div className="import-wizard-field">
-                <label>
-                    <i className="pi pi-lock" />
-                    Contraseña (si está encriptado)
-                </label>
-                <Password
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    toggleMask
-                    feedback={false}
-                    placeholder="Contraseña del archivo"
-                    inputStyle={{ width: '100%' }}
-                />
-            </div>
-
-            {/* Selección de categorías */}
-            <div className="import-wizard-field">
-                <label>
-                    <i className="pi pi-list" />
-                    Seleccionar qué importar
-                </label>
-                <div className="import-wizard-checkboxes">
-                    {[
-                        { key: 'connections', label: 'Sesiones SSH/RDP', icon: 'pi pi-desktop' },
-                        { key: 'passwords', label: 'Contraseñas guardadas', icon: 'pi pi-key' },
-                        { key: 'conversations', label: 'Conversaciones IA', icon: 'pi pi-comments' },
-                        { key: 'config', label: 'Configuración', icon: 'pi pi-cog' },
-                        { key: 'documents', label: 'Notas / documentos', icon: 'pi pi-file-edit' },
-                        { key: 'recordings', label: 'Grabaciones (metadata)', icon: 'pi pi-video' }
-                    ].map(opt => (
-                        <div key={opt.key} className="import-wizard-checkbox">
-                            <Checkbox
-                                inputId={`opt-${opt.key}`}
-                                checked={nodetermOptions[opt.key]}
-                                onChange={(e) => setNodeTermOptions(prev => ({ ...prev, [opt.key]: e.checked }))}
-                            />
-                            <label htmlFor={`opt-${opt.key}`}>
-                                <i className={opt.icon} />
-                                {opt.label}
-                            </label>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </div>
-    );
-
-    const renderMRemoteNGConfig = () => (
-        <div className="import-wizard-options">
-            {/* Carpeta destino */}
-            <div className="import-wizard-field">
-                <label>
-                    <i className="pi pi-folder" />
-                    Carpeta destino
-                </label>
-                <Dropdown
-                    value={targetFolder}
-                    options={folderOptions}
-                    onChange={(e) => setTargetFolder(e.value)}
-                    placeholder="Seleccionar carpeta"
-                    style={{ width: '100%' }}
-                />
-            </div>
-
-            {/* Crear carpeta contenedora */}
-            <div className="import-wizard-checkbox">
-                <Checkbox
-                    inputId="create-container"
-                    checked={createContainerFolder}
-                    onChange={(e) => setCreateContainerFolder(e.checked)}
-                />
-                <label htmlFor="create-container">
-                    <i className="pi pi-folder-open" />
-                    Crear carpeta contenedora
-                </label>
-            </div>
-
-            {createContainerFolder && (
-                <div className="import-wizard-field" style={{ marginLeft: '28px' }}>
-                    <InputText
-                        value={containerFolderName}
-                        onChange={(e) => setContainerFolderName(e.target.value)}
-                        placeholder="Nombre de la carpeta"
-                        style={{ width: '100%' }}
-                    />
-                </div>
-            )}
-        </div>
-    );
-
-    const renderBrowserConfig = () => {
-        const profileOptions = browserProfiles.map((p) => ({
-            label: `${p.browserLabel} — ${p.profileLabel}`,
-            value: p.id
-        }));
-
-        return (
-            <div className="import-wizard-options">
-                <Message
-                    severity="info"
-                    className="w-full mb-3"
-                    text="Cierra el navegador si la lectura falla. En Chrome 127+ algunas contraseñas pueden omitirse (cifrado App-Bound)."
-                />
-                <div className="import-wizard-field">
-                    <label>
-                        <i className="pi pi-globe" />
-                        Perfil del navegador
-                    </label>
-                    <Dropdown
-                        value={selectedBrowserProfileId}
-                        options={profileOptions}
-                        onChange={(e) => setSelectedBrowserProfileId(e.value)}
-                        placeholder={profileOptions.length ? 'Seleccionar perfil' : 'No se detectaron perfiles'}
-                        style={{ width: '100%' }}
-                    />
-                    <Button
-                        icon="pi pi-refresh"
-                        className="p-button-text p-button-sm mt-2"
-                        onClick={loadBrowserProfiles}
-                        label="Actualizar perfiles"
-                    />
-                </div>
-                {selectedBrowserProfile?.type === 'firefox' && (
-                    <div className="import-wizard-field">
-                        <label>
-                            <i className="pi pi-lock" />
-                            Contraseña maestra de Firefox (opcional)
-                        </label>
-                        <Password
-                            value={firefoxMasterPassword}
-                            onChange={(e) => setFirefoxMasterPassword(e.target.value)}
-                            toggleMask
-                            feedback={false}
-                            placeholder="Solo si configuraste una en Firefox"
-                            inputStyle={{ width: '100%' }}
-                        />
-                    </div>
-                )}
-                <div className="import-wizard-checkbox">
-                    <Checkbox
-                        inputId="browser-create-container"
-                        checked={createContainerFolder}
-                        onChange={(e) => setCreateContainerFolder(e.checked)}
-                    />
-                    <label htmlFor="browser-create-container">
-                        <i className="pi pi-folder-open" />
-                        Crear carpeta contenedora
-                    </label>
-                </div>
-                {createContainerFolder && (
-                    <div className="import-wizard-field" style={{ marginLeft: '28px' }}>
-                        <InputText
-                            value={containerFolderName}
-                            onChange={(e) => setContainerFolderName(e.target.value)}
-                            placeholder="Nombre de la carpeta"
-                            style={{ width: '100%' }}
-                        />
-                    </div>
-                )}
-            </div>
-        );
-    };
-
-    const renderKeePassConfig = () => (
-        <div className="import-wizard-options">
-            {/* Contraseña */}
-            <div className="import-wizard-field">
-                <label>
-                    <i className="pi pi-lock" />
-                    Contraseña maestra
-                </label>
-                <Password
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    toggleMask
-                    feedback={false}
-                    placeholder="Contraseña de la base de datos"
-                    inputStyle={{ width: '100%' }}
-                />
-            </div>
-
-            {/* Archivo de clave */}
-            <div className="import-wizard-field">
-                <label>
-                    <i className="pi pi-key" />
-                    Archivo de clave (opcional)
-                </label>
-                {!selectedKeyFile ? (
-                    <Button
-                        label="Seleccionar archivo .key"
-                        icon="pi pi-plus"
-                        className="p-button-outlined"
-                        onClick={() => keyFileInputRef.current?.click()}
-                    />
-                ) : (
-                    <div className="import-wizard-key-file">
-                        <span><i className="pi pi-file" /> {selectedKeyFile.name}</span>
-                        <Button
-                            icon="pi pi-times"
-                            className="p-button-text p-button-danger p-button-sm"
-                            onClick={() => setSelectedKeyFile(null)}
-                        />
-                    </div>
-                )}
-                <input
-                    ref={keyFileInputRef}
-                    type="file"
-                    accept=".key,.bin,.txt,*"
-                    style={{ display: 'none' }}
-                    onChange={handleKeyFileInputChange}
-                />
-                <small className="import-wizard-hint">
-                    Puede usar contraseña, archivo clave o ambos.
-                </small>
-            </div>
-
-            {/* Carpeta destino */}
-            <div className="import-wizard-checkbox">
-                <Checkbox
-                    inputId="kp-create-container"
-                    checked={createContainerFolder}
-                    onChange={(e) => setCreateContainerFolder(e.checked)}
-                />
-                <label htmlFor="kp-create-container">
-                    <i className="pi pi-folder-open" />
-                    Crear carpeta contenedora
-                </label>
-            </div>
-
-            {createContainerFolder && (
-                <div className="import-wizard-field" style={{ marginLeft: '28px' }}>
-                    <InputText
-                        value={containerFolderName}
-                        onChange={(e) => setContainerFolderName(e.target.value)}
-                        placeholder="Nombre de la carpeta"
-                        style={{ width: '100%' }}
-                    />
-                </div>
-            )}
-        </div>
-    );
-
-    const renderWallixConfig = () => (
-        <div className="import-wizard-options">
-            <div className="import-wizard-field">
-                <label>
-                    <i className="pi pi-link" />
-                    URL de la API de Wallix
-                </label>
-                <InputText
-                    value={wallixUrl}
-                    onChange={(e) => setWallixUrl(e.target.value)}
-                    placeholder="https://wallix.example.com"
-                    style={{ width: '100%' }}
-                />
-            </div>
-            <div className="import-wizard-field">
-                <label>
-                    <i className="pi pi-user" />
-                    Usuario
-                </label>
-                <InputText
-                    value={wallixUsername}
-                    onChange={(e) => setWallixUsername(e.target.value)}
-                    placeholder="Usuario de API"
-                    style={{ width: '100%' }}
-                />
-            </div>
-            <div className="import-wizard-field">
-                <label>
-                    <i className="pi pi-lock" />
-                    Contraseña
-                </label>
-                <Password
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    toggleMask
-                    feedback={false}
-                    placeholder="Contraseña de API"
-                    inputStyle={{ width: '100%' }}
-                />
-            </div>
-            
-            <div className="import-wizard-field mt-3">
-                <label>
-                    <i className="pi pi-folder" />
-                    Carpeta destino base
-                </label>
-                <Dropdown
-                    value={targetFolder}
-                    options={folderOptions}
-                    onChange={(e) => setTargetFolder(e.value)}
-                    placeholder="Seleccionar carpeta"
-                    style={{ width: '100%' }}
-                />
-            </div>
-
-            <div className="import-wizard-checkbox mt-2">
-                <Checkbox
-                    inputId="wx-create-container"
-                    checked={createContainerFolder}
-                    onChange={(e) => setCreateContainerFolder(e.checked)}
-                />
-                <label htmlFor="wx-create-container">
-                    <i className="pi pi-folder-open" />
-                    Crear carpeta root para los grupos (recomendado)
-                </label>
-            </div>
-
-            {createContainerFolder && (
-                <div className="import-wizard-field" style={{ marginLeft: '28px' }}>
-                    <InputText
-                        value={containerFolderName}
-                        onChange={(e) => setContainerFolderName(e.target.value)}
-                        placeholder="Nombre de la carpeta principal"
-                        style={{ width: '100%' }}
-                    />
-                </div>
-            )}
-        </div>
-    );
 
     // STEP 2: Vista previa
     const renderPreview = () => {

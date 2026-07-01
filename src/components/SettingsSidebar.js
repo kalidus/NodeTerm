@@ -76,7 +76,7 @@ const SETTINGS_SECTIONS = [
     id: 'importar-exportar',
     labelKey: 'sidebar.importExport',
     descriptionKey: 'sidebarDescriptions.importExport',
-    icon: 'pi pi-exchange',
+    icon: 'pi pi-arrow-right-arrow-left',
     subitems: []
   },
   {

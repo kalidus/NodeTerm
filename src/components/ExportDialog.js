@@ -207,194 +207,190 @@ const ExportDialog = ({ visible, onHide, showToast, isEmbedded = false }) => {
 
   const dialogContent = (
     <div style={{ padding: isEmbedded ? '0' : '10px 0' }}>
-      {/* Advertencia de seguridad */}
-      <Message
-        severity="info"
-        text={t('export.securityNote') || 'La master key NO se exporta por seguridad. Solo se exportan datos encriptados.'}
-        style={{ marginBottom: '20px', width: '100%' }}
-      />
+      {/* Advertencia de seguridad compacta */}
+      <div className="flex align-items-center gap-2 mb-3" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.15)', borderRadius: '8px', marginBottom: '15px' }}>
+        <i className="pi pi-info-circle" style={{ color: 'var(--blue-400)', fontSize: '1rem', flexShrink: 0 }}></i>
+        <span style={{ fontSize: '12px', color: 'var(--text-color-secondary)', lineHeight: '1.4' }}>
+          {t('export.securityNote') || 'La master key NO se exporta por seguridad. Solo se exportan datos encriptados.'}
+        </span>
+      </div>
 
-      {/* Sección: Seleccionar datos */}
-      <div style={{ marginBottom: '25px' }}>
-        <h4 style={{ margin: '0 0 15px 0', fontSize: '14px', fontWeight: '600' }}>
-          {t('export.selectData') || '📦 Seleccionar datos a exportar'}
-        </h4>
+      {/* Grid principal de dos columnas */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '15px' }}>
         
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Checkbox
-              inputId="opt-connections"
-              checked={options.connections}
-              onChange={() => handleOptionChange('connections')}
-              disabled={exporting}
-            />
-            <label htmlFor="opt-connections" style={{ margin: 0, cursor: 'pointer' }}>
-              <strong>{t('export.connections') || 'Conexiones SSH/RDP/VNC'}</strong>
-              <div style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>
-                {t('export.connectionsDesc') || 'Árbol de conexiones, favoritos y fuentes de importación'}
-              </div>
-            </label>
-          </div>
-
-          <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Checkbox
-              inputId="opt-passwords"
-              checked={options.passwords}
-              onChange={() => handleOptionChange('passwords')}
-              disabled={exporting}
-            />
-            <label htmlFor="opt-passwords" style={{ margin: 0, cursor: 'pointer' }}>
-              <strong>{t('export.passwords') || 'Gestor de Contraseñas'}</strong>
-              <div style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>
-                {t('export.passwordsDesc') || 'Contraseñas encriptadas y estructura de carpetas'}
-              </div>
-            </label>
-          </div>
-
-          <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Checkbox
-              inputId="opt-conversations"
-              checked={options.conversations}
-              onChange={() => handleOptionChange('conversations')}
-              disabled={exporting}
-            />
-            <label htmlFor="opt-conversations" style={{ margin: 0, cursor: 'pointer' }}>
-              <strong>{t('export.conversations') || 'Conversaciones de IA'}</strong>
-              <div style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>
-                {t('export.conversationsDesc') || 'Historial de conversaciones y backups'}
-              </div>
-            </label>
-          </div>
-
-          <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Checkbox
-              inputId="opt-config"
-              checked={options.config}
-              onChange={() => handleOptionChange('config')}
-              disabled={exporting}
-            />
-            <label htmlFor="opt-config" style={{ margin: 0, cursor: 'pointer' }}>
-              <strong>{t('export.config') || 'Configuraciones'}</strong>
-              <div style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>
-                {t('export.configDesc') || 'Temas, fuentes, terminal por defecto, MCPs, etc.'}
-              </div>
-            </label>
-          </div>
-
-          <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Checkbox
-              inputId="opt-documents"
-              checked={options.documents}
-              onChange={() => handleOptionChange('documents')}
-              disabled={exporting}
-            />
-            <label htmlFor="opt-documents" style={{ margin: 0, cursor: 'pointer' }}>
-              <strong>{t('export.documents') || 'Notas / documentos'}</strong>
-              <div style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>
-                {t('export.documentsDesc') || 'Árbol de notas, carpetas y contenido'}
-              </div>
-            </label>
-          </div>
-
-          <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Checkbox
-              inputId="opt-recordings"
-              checked={options.recordings}
-              onChange={() => handleOptionChange('recordings')}
-              disabled={exporting}
-            />
-            <label htmlFor="opt-recordings" style={{ margin: 0, cursor: 'pointer' }}>
-              <strong>{t('export.recordings') || 'Grabaciones (metadata)'}</strong>
-              <div style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>
-                {t('export.recordingsDesc') || 'Solo información de grabaciones, no el contenido completo'}
-              </div>
-            </label>
-          </div>
-        </div>
-      </div>
-
-      {/* Sección: Nombre del archivo */}
-      <div style={{ marginBottom: '25px' }}>
-        <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: '600' }}>
-          {t('export.fileName') || '📄 Nombre del archivo'}
-        </h4>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-          <InputText
-            value={fileName}
-            onChange={(e) => setFileName(e.target.value)}
-            disabled={exporting}
-            style={{ flex: 1 }}
-            placeholder="nodeterm-backup"
-          />
-          <span style={{ color: 'var(--text-color-secondary)' }}>.nodeterm</span>
-        </div>
-      </div>
-
-      {/* Sección: Encriptación opcional */}
-      <div style={{ marginBottom: '20px' }}>
-        <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
-          <Checkbox
-            inputId="opt-encryption"
-            checked={useEncryption}
-            onChange={(e) => setUseEncryption(e.checked)}
-            disabled={exporting}
-          />
-          <label htmlFor="opt-encryption" style={{ margin: 0, cursor: 'pointer' }}>
-            <strong>{t('export.useEncryption') || '🔒 Proteger con contraseña adicional'}</strong>
-            <div style={{ fontSize: '12px', color: 'var(--text-color-secondary)' }}>
-              {t('export.encryptionNote') || 'Encriptación AES-256-GCM (recomendado)'}
-            </div>
-          </label>
-        </div>
-
-        {useEncryption && (
-          <div style={{ paddingLeft: '34px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <div>
-              <label htmlFor="encrypt-pwd" style={{ fontSize: '13px', marginBottom: '5px', display: 'block' }}>
-                {t('export.password') || 'Contraseña'}
-              </label>
-              <Password
-                id="encrypt-pwd"
-                value={encryptPassword}
-                onChange={(e) => setEncryptPassword(e.target.value)}
+        {/* Columna Izquierda: Selección de datos */}
+        <div>
+          <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-color)' }}>
+            {t('export.selectData') || '📦 Seleccionar datos a exportar'}
+          </h4>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              <Checkbox
+                inputId="opt-connections"
+                checked={options.connections}
+                onChange={() => handleOptionChange('connections')}
                 disabled={exporting}
-                feedback={false}
-                toggleMask
-                style={{ width: '100%' }}
-                inputStyle={{ width: '100%' }}
-                placeholder={t('export.passwordPlaceholder') || 'Mínimo 8 caracteres'}
               />
-            </div>
-            <div>
-              <label htmlFor="confirm-pwd" style={{ fontSize: '13px', marginBottom: '5px', display: 'block' }}>
-                {t('export.confirmPassword') || 'Confirmar contraseña'}
+              <label htmlFor="opt-connections" style={{ margin: 0, cursor: 'pointer', lineHeight: '1.2' }}>
+                <span style={{ fontSize: '12.5px', fontWeight: '600', display: 'block', color: 'var(--text-color)' }}>{t('export.connections') || 'Conexiones SSH/RDP/VNC'}</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-color-secondary)' }}>{t('export.connectionsDesc') || 'Árbol de conexiones, favoritos y fuentes'}</span>
               </label>
-              <Password
-                id="confirm-pwd"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                disabled={exporting}
-                feedback={false}
-                toggleMask
-                style={{ width: '100%' }}
-                inputStyle={{ width: '100%' }}
-                placeholder={t('export.confirmPasswordPlaceholder') || 'Repetir contraseña'}
-              />
             </div>
-            {encryptPassword && confirmPassword && encryptPassword !== confirmPassword && (
-              <small style={{ color: 'var(--red-500)', fontSize: '12px' }}>
-                {t('export.passwordsDoNotMatch') || '⚠️ Las contraseñas no coinciden'}
-              </small>
+
+            <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              <Checkbox
+                inputId="opt-passwords"
+                checked={options.passwords}
+                onChange={() => handleOptionChange('passwords')}
+                disabled={exporting}
+              />
+              <label htmlFor="opt-passwords" style={{ margin: 0, cursor: 'pointer', lineHeight: '1.2' }}>
+                <span style={{ fontSize: '12.5px', fontWeight: '600', display: 'block', color: 'var(--text-color)' }}>{t('export.passwords') || 'Gestor de Contraseñas'}</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-color-secondary)' }}>{t('export.passwordsDesc') || 'Contraseñas encriptadas y estructura'}</span>
+              </label>
+            </div>
+
+            <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              <Checkbox
+                inputId="opt-conversations"
+                checked={options.conversations}
+                onChange={() => handleOptionChange('conversations')}
+                disabled={exporting}
+              />
+              <label htmlFor="opt-conversations" style={{ margin: 0, cursor: 'pointer', lineHeight: '1.2' }}>
+                <span style={{ fontSize: '12.5px', fontWeight: '600', display: 'block', color: 'var(--text-color)' }}>{t('export.conversations') || 'Conversaciones de IA'}</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-color-secondary)' }}>{t('export.conversationsDesc') || 'Historial de conversaciones y backups'}</span>
+              </label>
+            </div>
+
+            <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              <Checkbox
+                inputId="opt-config"
+                checked={options.config}
+                onChange={() => handleOptionChange('config')}
+                disabled={exporting}
+              />
+              <label htmlFor="opt-config" style={{ margin: 0, cursor: 'pointer', lineHeight: '1.2' }}>
+                <span style={{ fontSize: '12.5px', fontWeight: '600', display: 'block', color: 'var(--text-color)' }}>{t('export.config') || 'Configuraciones'}</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-color-secondary)' }}>{t('export.configDesc') || 'Temas, fuentes, terminal, MCPs, etc.'}</span>
+              </label>
+            </div>
+
+            <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              <Checkbox
+                inputId="opt-documents"
+                checked={options.documents}
+                onChange={() => handleOptionChange('documents')}
+                disabled={exporting}
+              />
+              <label htmlFor="opt-documents" style={{ margin: 0, cursor: 'pointer', lineHeight: '1.2' }}>
+                <span style={{ fontSize: '12.5px', fontWeight: '600', display: 'block', color: 'var(--text-color)' }}>{t('export.documents') || 'Notas / documentos'}</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-color-secondary)' }}>{t('export.documentsDesc') || 'Árbol de notas, carpetas y contenido'}</span>
+              </label>
+            </div>
+
+            <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              <Checkbox
+                inputId="opt-recordings"
+                checked={options.recordings}
+                onChange={() => handleOptionChange('recordings')}
+                disabled={exporting}
+              />
+              <label htmlFor="opt-recordings" style={{ margin: 0, cursor: 'pointer', lineHeight: '1.2' }}>
+                <span style={{ fontSize: '12.5px', fontWeight: '600', display: 'block', color: 'var(--text-color)' }}>{t('export.recordings') || 'Grabaciones (metadata)'}</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-color-secondary)' }}>{t('export.recordingsDesc') || 'Solo metadatos de grabaciones'}</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {/* Columna Derecha: Configuración de Archivo */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+          <div>
+            <h4 style={{ margin: '0 0 8px 0', fontSize: '13px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-color)' }}>
+              {t('export.fileName') || '📄 Nombre del archivo'}
+            </h4>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <InputText
+                value={fileName}
+                onChange={(e) => setFileName(e.target.value)}
+                disabled={exporting}
+                style={{ flex: 1, padding: '8px 12px' }}
+                placeholder="nodeterm-backup"
+              />
+              <span style={{ color: 'var(--text-color-secondary)', fontSize: '13px', fontWeight: '600' }}>.nodeterm</span>
+            </div>
+          </div>
+
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px' }}>
+            <div className="p-field-checkbox" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              <Checkbox
+                inputId="opt-encryption"
+                checked={useEncryption}
+                onChange={(e) => setUseEncryption(e.checked)}
+                disabled={exporting}
+              />
+              <label htmlFor="opt-encryption" style={{ margin: 0, cursor: 'pointer', lineHeight: '1.2' }}>
+                <span style={{ fontSize: '12.5px', fontWeight: '600', display: 'block', color: 'var(--text-color)' }}>{t('export.useEncryption') || 'Proteger con contraseña adicional'}</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-color-secondary)' }}>{t('export.encryptionNote') || 'Encriptación AES-256-GCM (recomendado)'}</span>
+              </label>
+            </div>
+
+            {useEncryption && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '12px' }}>
+                <div>
+                  <label htmlFor="encrypt-pwd" style={{ fontSize: '11px', color: 'var(--text-color-secondary)', marginBottom: '4px', display: 'block' }}>
+                    {t('export.password') || 'Contraseña'}
+                  </label>
+                  <Password
+                    id="encrypt-pwd"
+                    value={encryptPassword}
+                    onChange={(e) => setEncryptPassword(e.target.value)}
+                    disabled={exporting}
+                    feedback={false}
+                    toggleMask
+                    style={{ width: '100%' }}
+                    inputStyle={{ width: '100%', padding: '6px 10px' }}
+                    placeholder={t('export.passwordPlaceholder') || 'Mínimo 8 caracteres'}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="confirm-pwd" style={{ fontSize: '11px', color: 'var(--text-color-secondary)', marginBottom: '4px', display: 'block' }}>
+                    {t('export.confirmPassword') || 'Confirmar'}
+                  </label>
+                  <Password
+                    id="confirm-pwd"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    disabled={exporting}
+                    feedback={false}
+                    toggleMask
+                    style={{ width: '100%' }}
+                    inputStyle={{ width: '100%', padding: '6px 10px' }}
+                    placeholder={t('export.confirmPasswordPlaceholder') || 'Repetir contraseña'}
+                  />
+                </div>
+              </div>
+            )}
+            
+            {useEncryption && encryptPassword && confirmPassword && encryptPassword !== confirmPassword && (
+              <div style={{ marginTop: '5px' }}>
+                <small style={{ color: 'var(--red-500)', fontSize: '11px' }}>
+                  {t('export.passwordsDoNotMatch') || '⚠️ Las contraseñas no coinciden'}
+                </small>
+              </div>
             )}
           </div>
-        )}
+        </div>
+
       </div>
 
       {/* Barra de progreso */}
       {exporting && (
-        <div style={{ marginTop: '20px' }}>
-          <ProgressBar value={progress} showValue={false} style={{ height: '6px' }} />
-          <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '13px', color: 'var(--text-color-secondary)' }}>
+        <div style={{ marginTop: '10px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '10px' }}>
+          <ProgressBar value={progress} showValue={false} style={{ height: '5px' }} />
+          <div style={{ textAlign: 'center', marginTop: '5px', fontSize: '12px', color: 'var(--text-color-secondary)' }}>
             {progress < 30 && (t('export.preparing') || 'Preparando datos...')}
             {progress >= 30 && progress < 60 && (t('export.exporting') || 'Exportando...')}
             {progress >= 60 && progress < 80 && (t('export.generating') || 'Generando archivo...')}
