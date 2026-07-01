@@ -132,6 +132,17 @@ const IMPORT_SOURCES = {
         implemented: false,
         defaultFolder: 'Importados/Bitwarden'
     },
+    // Notas y documentos
+    joplin: {
+        id: 'joplin',
+        category: 'documents',
+        label: 'Joplin / Markdown',
+        description: 'Importar notas desde archivos Markdown o Joplin ENEX',
+        icon: 'pi pi-file-edit',
+        extension: '.md,.txt,.enex',
+        implemented: false,
+        defaultFolder: 'Importados/Notas'
+    },
     // APIs externas
     wallix: {
         id: 'wallix',
@@ -1340,39 +1351,71 @@ const ImportWizardDialog = ({
                             <i className="pi pi-upload" /> Importar / Restaurar
                         </h5>
                         
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                            {/* Copias locales */}
-                            <SourceCard
-                                source={IMPORT_SOURCES.nodeterm}
-                                selected={selectedSource === 'nodeterm'}
-                                onSelect={() => handleSourceSelect('nodeterm')}
-                            />
-                            {/* mRemoteNG */}
-                            <SourceCard
-                                source={IMPORT_SOURCES.mremoteng}
-                                selected={selectedSource === 'mremoteng'}
-                                onSelect={() => handleSourceSelect('mremoteng')}
-                            />
-                            {/* KeePass */}
-                            <SourceCard
-                                source={IMPORT_SOURCES.keepass}
-                                selected={selectedSource === 'keepass'}
-                                onSelect={() => handleSourceSelect('keepass')}
-                            />
-                            {/* Navegador */}
-                            <SourceCard
-                                source={IMPORT_SOURCES.browser}
-                                selected={selectedSource === 'browser'}
-                                onSelect={() => handleSourceSelect('browser')}
-                            />
-                            {/* Wallix */}
-                            <div style={{ gridColumn: 'span 2' }}>
+                        {/* Sub-Secciones de Importación */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                            
+                            {/* Grupo 1: Copias Locales */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--green-400)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    ● Copias Locales
+                                </div>
                                 <SourceCard
-                                    source={IMPORT_SOURCES.wallix}
-                                    selected={selectedSource === 'wallix'}
-                                    onSelect={() => handleSourceSelect('wallix')}
+                                    source={IMPORT_SOURCES.nodeterm}
+                                    selected={selectedSource === 'nodeterm'}
+                                    onSelect={() => handleSourceSelect('nodeterm')}
                                 />
                             </div>
+
+                            {/* Grupo 2: Sesiones SSH/RDP */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--blue-400)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    ● Sesiones SSH/RDP
+                                </div>
+                                <SourceCard
+                                    source={IMPORT_SOURCES.mremoteng}
+                                    selected={selectedSource === 'mremoteng'}
+                                    onSelect={() => handleSourceSelect('mremoteng')}
+                                />
+                            </div>
+
+                            {/* Grupo 3: Seguridad y Navegador */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--primary-color)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    ● Seguridad y Navegador
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <SourceCard
+                                        source={IMPORT_SOURCES.keepass}
+                                        selected={selectedSource === 'keepass'}
+                                        onSelect={() => handleSourceSelect('keepass')}
+                                    />
+                                    <SourceCard
+                                        source={IMPORT_SOURCES.browser}
+                                        selected={selectedSource === 'browser'}
+                                        onSelect={() => handleSourceSelect('browser')}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Grupo 4: APIs y Notas */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--orange-400)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                    ● APIs y Notas
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <SourceCard
+                                        source={IMPORT_SOURCES.wallix}
+                                        selected={selectedSource === 'wallix'}
+                                        onSelect={() => handleSourceSelect('wallix')}
+                                    />
+                                    <SourceCard
+                                        source={IMPORT_SOURCES.joplin}
+                                        selected={selectedSource === 'joplin'}
+                                        onSelect={() => handleSourceSelect('joplin')}
+                                    />
+                                </div>
+                            </div>
+
                         </div>
                     </div>
                 </div>
