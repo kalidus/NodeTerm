@@ -4296,7 +4296,143 @@ class NetworkToolsService {
   }
 
   /**
-   * Encontrar IP a partir de una dirección MAC buscando en la tabla ARP
+   * Obtiene los detalles de un CVE específico desde NVD
+   * @param {string} cveId - El ID de CVE (ej: CVE-2026-46331)
+   * @returns {Promise<Object>} Detalles de la vulnerabilidad
+   */
+  async getCveDetails(cveId) {
+    if (!cveId || typeof cveId !== 'string') {
+      return { success: false, error: 'CVE ID inválido' };
+    }
+    const cleanCveId = cveId.trim().toUpperCase();
+    if (!/^CVE-\d{4}-\d{4,7}$/.test(cleanCveId)) {
+      return { success: false, error: 'Formato de CVE inválido (debe ser CVE-YYYY-NNNN)' };
+    }
+
+    try {
+      const url = `https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=${cleanCveId}`;
+      
+      return new Promise((resolve) => {
+        const request = https.get(url, { 
+          timeout: 10000,
+          headers: { 'User-Agent': 'NodeTerm-Security-App' }
+        }, (response) => {
+          let data = '';
+          
+          response.on('data', chunk => { data += chunk; });
+          response.on('end', () => {
+            try {
+              const json = JSON.parse(data);
+              const vuln = json.vulnerabilities?.[0]?.cve;
+              if (!vuln) {
+                return resolve({ success: false, error: 'No se encontraron registros para este CVE' });
+              }
+
+              // Buscar vector CVSS en la respuesta (V4.0, V3.1, V3.0, V2)
+              const v4Metric = vuln.metrics?.cvssMetricV40?.[0];
+              const v31Metric = vuln.metrics?.cvssMetricV31?.[0];
+              const v30Metric = vuln.metrics?.cvssMetricV30?.[0];
+              const v2Metric = vuln.metrics?.cvssMetricV2?.[0];
+
+              const selectedMetric = v4Metric || v31Metric || v30Metric || v2Metric;
+              const cvssData = selectedMetric?.cvssData;
+
+              // Obtener sistemas operativos / plataformas afectadas
+              const affectedPlatforms = [];
+              if (vuln.configurations) {
+                for (const config of vuln.configurations) {
+                  for (const node of config.nodes || []) {
+                    for (const match of node.cpeMatch || []) {
+                      if (match.vulnerable && match.criteria) {
+                        // El CPE suele tener la forma: cpe:2.3:part:vendor:product:version:...
+                        const parts = match.criteria.split(':');
+                        if (parts.length >= 5) {
+                          const part = parts[2]; // o, a, h
+                          const vendor = parts[3];
+                          const product = parts[4];
+                          const version = parts[5];
+                          
+                          let partDesc = '';
+                          if (part === 'o') partDesc = 'Sistema Operativo';
+                          else if (part === 'a') partDesc = 'Aplicación';
+                          else if (part === 'h') partDesc = 'Hardware';
+                          
+                          let desc = `${vendor} ${product}`;
+                          if (version && version !== '*' && version !== '-') {
+                            desc += ` (${version})`;
+                          }
+                          affectedPlatforms.push({ part: partDesc, name: desc });
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+
+              // Eliminar duplicados
+              const uniquePlatforms = [];
+              const seen = new Set();
+              for (const plat of affectedPlatforms) {
+                const key = `${plat.part}:${plat.name}`;
+                if (!seen.has(key)) {
+                  seen.add(key);
+                  uniquePlatforms.push(plat);
+                }
+              }
+
+              const description = vuln.descriptions?.find(d => d.lang === 'es')?.value || vuln.descriptions?.find(d => d.lang === 'en')?.value || 'Sin descripción';
+
+              // Si no se detectaron plataformas por CPE, intentar deducir de la descripción
+              if (uniquePlatforms.length === 0 && description) {
+                const descLower = description.toLowerCase();
+                if (descLower.includes('linux kernel') || descLower.includes('in the linux kernel')) {
+                  uniquePlatforms.push({ part: 'Sistema Operativo', name: 'Linux Kernel' });
+                } else if (descLower.includes('windows')) {
+                  uniquePlatforms.push({ part: 'Sistema Operativo', name: 'Microsoft Windows' });
+                } else if (descLower.includes('android')) {
+                  uniquePlatforms.push({ part: 'Sistema Operativo', name: 'Android OS' });
+                } else if (descLower.includes('macos') || descLower.includes('os x')) {
+                  uniquePlatforms.push({ part: 'Sistema Operativo', name: 'Apple macOS' });
+                } else if (descLower.includes('ios')) {
+                  uniquePlatforms.push({ part: 'Sistema Operativo', name: 'Apple iOS' });
+                }
+              }
+
+              // Obtener referencias de mitigaciones / oficiales
+              const references = (vuln.references || []).map(r => r.url);
+
+              resolve({
+                success: true,
+                cveId: vuln.id,
+                description: vuln.descriptions?.find(d => d.lang === 'es')?.value || vuln.descriptions?.find(d => d.lang === 'en')?.value || 'Sin descripción',
+                cvss: cvssData ? {
+                  version: cvssData.version || (v4Metric ? '4.0' : v31Metric ? '3.1' : '3.0'),
+                  vectorString: cvssData.vectorString,
+                  baseScore: cvssData.baseScore,
+                  baseSeverity: cvssData.baseSeverity || selectedMetric?.baseSeverity
+                } : null,
+                affectedPlatforms: uniquePlatforms,
+                references
+              });
+            } catch (err) {
+              resolve({ success: false, error: 'Error al parsear datos de NVD: ' + err.message });
+            }
+          });
+        });
+
+        request.on('error', (err) => resolve({ success: false, error: 'Error de conexión con NVD: ' + err.message }));
+        request.on('timeout', () => {
+          request.destroy();
+          resolve({ success: false, error: 'Tiempo de espera agotado al conectar con NVD' });
+        });
+      });
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Resolves MAC Address to IP Address by looking up the local ARP table
    * @param {string} mac - MAC Address
    * @returns {Promise<Object>} IP address resolved
    */

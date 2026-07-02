@@ -357,6 +357,21 @@ function registerNetworkToolsHandlers() {
     }
   });
 
+  // === GET SPECIFIC CVE DETAILS ===
+  ipcMain.handle('network-tools:get-cve-details', async (event, { cveId }) => {
+    try {
+      if (!cveId) {
+        return { success: false, error: 'CVE ID es requerido' };
+      }
+      const service = getService();
+      const result = await service.getCveDetails(cveId);
+      return result;
+    } catch (err) {
+      console.error('[network-tools:get-cve-details] Error:', err);
+      return { success: false, error: err?.message || 'Error al obtener detalles del CVE' };
+    }
+  });
+
   // === GET NETWORK INTERFACES ===
   ipcMain.handle('network-tools:get-interfaces', async () => {
     try {

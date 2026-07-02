@@ -12,7 +12,9 @@ export const CvssAuditorService = {
         technicalDetails: {
           affectedLayers: 'Desconocido',
           cwe: 'N/A',
-          technicalImpact: 'No hay información suficiente.'
+          technicalImpact: 'No hay información suficiente.',
+          affectedOS: 'No determinado.',
+          possibleMitigations: 'Configure las métricas para obtener mitigaciones técnicas detalladas.'
         }
       };
     }
@@ -24,7 +26,9 @@ export const CvssAuditorService = {
       technicalDetails: {
         affectedLayers: 'Aplicación / Red',
         cwe: 'N/A',
-        technicalImpact: ''
+        technicalImpact: '',
+        affectedOS: '',
+        possibleMitigations: ''
       }
     };
 
@@ -242,11 +246,31 @@ export const CvssAuditorService = {
       technicalImpactText = 'Fuga pasiva de información técnica o datos del usuario sin capacidad de realizar modificaciones directas en el flujo de ejecución o estado del sistema.';
     }
 
+    // Determinar SO/Kernels y mitigaciones técnicas
+    let affectedOS = '';
+    let possibleMitigations = '';
+
+    if (av === 'L') {
+      affectedOS = 'Sistemas Unix/Linux (Kernel Space/Syscalls), Windows OS (Servicios locales/Drivers) y macOS. Afecta especialmente a versiones de kernel obsoletas o sin parches de seguridad de desbordamiento de búfer / UAF.';
+      possibleMitigations = 'Habilitar SMEP/SMAP, KASLR y endurecimiento del Kernel (e.g. sysctl -w kernel.unprivileged_userns_clone=0), perfiles de SELinux/AppArmor, y control de privilegios (políticas de sudo restrictivas).';
+    } else if (av === 'P') {
+      affectedOS = 'Dispositivos de Hardware, IoT/Firmware, BIOS/UEFI, Controladoras de almacenamiento y sistemas embebidos con acceso físico directo.';
+      possibleMitigations = 'Cifrado de disco completo (BitLocker/LUKS), deshabilitar puertos USB/Thunderbolt no autorizados en BIOS, contraseñas de arranque de BIOS robustas e intrusión física de chasis.';
+    } else if (av === 'A') {
+      affectedOS = 'Equipos dentro del segmento de red adyacente (routers, switches, puntos de acceso WiFi, hosts del mismo segmento de Capa 2).';
+      possibleMitigations = 'Habilitar seguridad de puertos en switches (Port Security, DHCP Snooping, Dynamic ARP Inspection), aislamiento de APs WiFi, cifrado de tráfico local (WPA3/IPsec).';
+    } else { // Network 'N'
+      affectedOS = 'Multiplataforma (Linux, Windows, macOS, Nubes públicas). Afecta al Stack TCP/IP del sistema operativo, servidores de base de datos, APIs HTTP, o demonios expuestos.';
+      possibleMitigations = 'Parchear inmediatamente la aplicación/servidor, implementar WAF (Web Application Firewall), microsegmentación de red mediante firewalls internos, y endurecer el stack TCP/IP a nivel de sistema.';
+    }
+
     // Asignar los detalles técnicos
     insights.technicalDetails = {
       affectedLayers: layers.join(' y '),
       cwe: cweList.length > 0 ? cweList.join(', ') : 'CWE-200 / CWE-284',
-      technicalImpact: technicalImpactText
+      technicalImpact: technicalImpactText,
+      affectedOS,
+      possibleMitigations
     };
 
     return insights;

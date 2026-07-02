@@ -151,6 +151,8 @@ const CvssCalculatorPanel = () => {
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [vectorInput, setVectorInput] = useState('');
   const [expandedMetricGroups, setExpandedMetricGroups] = useState([0]);
+  const [loadingCve, setLoadingCve] = useState(false);
+  const [cveData, setCveData] = useState(null);
 
   const feedbackTimer = useRef(null);
 
@@ -186,12 +188,65 @@ const CvssCalculatorPanel = () => {
     setMetrics(prev => ({ ...prev, [key]: val }));
   }, [setMetrics]);
 
+  const handleCveLookup = async () => {
+    const cveId = title.trim().toUpperCase();
+    if (!cveId.match(/^CVE-\d{4}-\d{4,7}$/)) return;
+
+    setLoadingCve(true);
+    try {
+      const res = await window?.electron?.ipcRenderer?.invoke('network-tools:get-cve-details', { cveId });
+      if (res?.success) {
+        setCveData(res);
+        showFeedback('success', `Datos de ${cveId} obtenidos de NVD.`);
+        
+        if (res.description) {
+          setNotes(res.description);
+        }
+        
+        if (res.affectedPlatforms && res.affectedPlatforms.length > 0) {
+          const platformsText = res.affectedPlatforms
+            .map(p => p.name)
+            .slice(0, 5)
+            .join(', ');
+          setAffectedVersions(platformsText);
+        }
+
+        if (res.cvss?.vectorString) {
+          try {
+            const ver = res.cvss.version === '4.0' ? '4.0' : '3.1';
+            setVersion(ver);
+            
+            // Esperar que setVersion se propague o usar el parser adecuado
+            const svc = ver === '3.1' ? cvssV31Service : cvssV4Service;
+            const parsed = svc.parseVector(res.cvss.vectorString);
+            
+            if (ver === '3.1') {
+              setMetrics31({ ...cvssV31Service.DEFAULT_METRICS, ...parsed });
+            } else {
+              setMetrics40({ ...cvssV4Service.DEFAULT_METRICS, ...parsed });
+            }
+            showFeedback('success', `Vector de CVSS ${ver} importado desde NVD.`);
+          } catch (e) {
+            console.warn('Error al auto-importar vector de CVE:', e);
+          }
+        }
+      } else {
+        showFeedback('error', res?.error || 'No se pudieron obtener datos del CVE.');
+      }
+    } catch (error) {
+      showFeedback('error', 'Error al consultar NVD: ' + error.message);
+    } finally {
+      setLoadingCve(false);
+    }
+  };
+
   const handleReset = () => {
     setMetrics({ ...service.DEFAULT_METRICS });
     setTitle('');
     setNotes('');
     setAffectedVersions('');
     setVectorInput('');
+    setCveData(null);
   };
 
 
@@ -479,8 +534,36 @@ const CvssCalculatorPanel = () => {
       {/* Título y notas */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.5rem' }}>
         <div>
-          <label style={{ fontSize: '0.72rem', color: 'var(--text-color-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Título del hallazgo</label>
-          <InputText value={title} onChange={e => setTitle(e.target.value)} placeholder="Ej: SQL Injection en login" style={{ width: '100%' }} />
+          <label style={{ fontSize: '0.72rem', color: 'var(--text-color-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Título del hallazgo / CVE ID</label>
+          <div style={{ display: 'flex', gap: '0.35rem' }}>
+            <InputText 
+              value={title} 
+              onChange={e => {
+                setTitle(e.target.value);
+                if (cveData && !e.target.value.trim().toUpperCase().match(/^CVE-\d{4}-\d{4,7}$/)) {
+                  setCveData(null);
+                }
+              }} 
+              onBlur={() => {
+                if (title.trim().toUpperCase().match(/^CVE-\d{4}-\d{4,7}$/) && (!cveData || cveData.cveId !== title.trim().toUpperCase())) {
+                  handleCveLookup();
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  if (title.trim().toUpperCase().match(/^CVE-\d{4}-\d{4,7}$/)) {
+                    handleCveLookup();
+                  }
+                }
+              }}
+              placeholder="Ej: CVE-2026-46331 o SQL Injection" 
+              style={{ flex: 1 }} 
+            />
+            {title.trim().toUpperCase().match(/^CVE-\d{4}-\d{4,7}$/) && (
+              <Button icon="pi pi-search" tooltip="Buscar datos oficiales en NVD (NIST)" tooltipOptions={{ position: 'top' }} onClick={handleCveLookup} loading={loadingCve} outlined size="small" />
+            )}
+          </div>
         </div>
         <div>
           <label style={{ fontSize: '0.72rem', color: 'var(--text-color-secondary)', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Tecnologías y Versiones Afectadas</label>
@@ -593,7 +676,7 @@ const CvssCalculatorPanel = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <i className="pi pi-cog" style={{ color: '#818cf8', fontSize: '0.85rem' }} />
                 <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#d1d5db' }}>
-                  Detalles Técnicos Avanzados (CWE, Capas e Impacto Técnico)
+                  Detalles Técnicos Avanzados (CWE, Capas, Mitigación y SO)
                 </span>
               </div>
               <i className={`pi pi-chevron-${techDetailsExpanded ? 'up' : 'down'}`} style={{ fontSize: '0.7rem', color: '#94a3b8' }} />
@@ -618,8 +701,36 @@ const CvssCalculatorPanel = () => {
                   <span style={{ fontSize: '0.75rem', color: '#e2e8f0' }}>{auditorInsights.technicalDetails.cwe}</span>
                 </div>
                 <div style={{ gridColumn: 'span 2' }}>
+                  <strong style={{ display: 'block', fontSize: '0.72rem', color: '#94a3b8', marginBottom: '3px' }}>Sistemas y Entornos Afectados:</strong>
+                  <span style={{ fontSize: '0.75rem', color: '#cbd5e1', lineHeight: '1.4' }}>
+                    {cveData && cveData.affectedPlatforms && cveData.affectedPlatforms.length > 0
+                      ? cveData.affectedPlatforms.map(p => `[${p.part}] ${p.name}`).join(' | ')
+                      : auditorInsights.technicalDetails.affectedOS}
+                  </span>
+                </div>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <strong style={{ display: 'block', fontSize: '0.72rem', color: '#94a3b8', marginBottom: '3px' }}>Mitigación Técnica del Sistema:</strong>
+                  <span style={{ fontSize: '0.75rem', color: '#cbd5e1', lineHeight: '1.4' }}>
+                    {auditorInsights.technicalDetails.possibleMitigations}
+                  </span>
+                </div>
+                {cveData && cveData.references && cveData.references.length > 0 && (
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <strong style={{ display: 'block', fontSize: '0.72rem', color: '#94a3b8', marginBottom: '3px' }}>Referencias Oficiales:</strong>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', maxHeight: '100px', overflowY: 'auto' }}>
+                      {cveData.references.slice(0, 5).map((url, i) => (
+                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.72rem', color: '#6366f1', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {url}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div style={{ gridColumn: 'span 2' }}>
                   <strong style={{ display: 'block', fontSize: '0.72rem', color: '#94a3b8', marginBottom: '3px' }}>Impacto Técnico Profundo:</strong>
-                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#cbd5e1', lineHeight: '1.4' }}>{auditorInsights.technicalDetails.technicalImpact}</p>
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#cbd5e1', lineHeight: '1.4' }}>
+                    {cveData ? cveData.description : auditorInsights.technicalDetails.technicalImpact}
+                  </p>
                 </div>
               </div>
             )}
