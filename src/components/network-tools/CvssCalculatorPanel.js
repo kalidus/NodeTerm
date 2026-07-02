@@ -431,8 +431,34 @@ const CvssCalculatorPanel = () => {
       }}>
         <ScoreGauge score={computed.score || 0} severity={computed.severity || 'None'} />
         <div style={{ flex: 1, minWidth: '200px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <div style={{ fontSize: '0.78rem', color: 'var(--text-color-secondary)', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-            CVSS {version} · {computed.scoringMode || 'Base'} Score
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.8rem' }}>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-color-secondary)', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+              CVSS {version} · {computed.scoringMode || 'Base'} Score
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', background: 'rgba(255,255,255,0.06)', borderRadius: '6px', padding: '2px', gap: '2px' }}>
+                {['3.1', '4.0'].map(v => (
+                  <button
+                    key={v}
+                    onClick={() => setVersion(v)}
+                    style={{
+                      padding: '0.2rem 0.6rem', borderRadius: '4px', border: 'none', cursor: 'pointer',
+                      fontSize: '0.75rem', fontWeight: 700, transition: 'all 0.2s',
+                      background: version === v ? 'rgba(99,102,241,0.75)' : 'transparent',
+                      color: version === v ? '#fff' : 'var(--text-color-secondary)',
+                      boxShadow: version === v ? '0 1px 4px rgba(99,102,241,0.3)' : 'none'
+                    }}
+                  >
+                    CVSS {v}
+                  </button>
+                ))}
+              </div>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-color-secondary)', opacity: 0.8 }}>
+                {version === '3.1'
+                  ? 'Base + Temp + Env'
+                  : 'Base + Threat + Env + Supp'}
+              </span>
+            </div>
           </div>
           <ScoreBar score={computed.score || 0} />
           <div style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: 'var(--text-color-secondary)', wordBreak: 'break-all', marginTop: '0.1rem' }}>
@@ -847,34 +873,6 @@ const CvssCalculatorPanel = () => {
         <Message severity={feedback.severity} text={feedback.text} style={{ borderRadius: '8px' }} />
       )}
 
-      {/* Selector de versión */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-color-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-          Versión CVSS:
-        </span>
-        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', padding: '3px', gap: '3px' }}>
-          {['3.1', '4.0'].map(v => (
-            <button
-              key={v}
-              onClick={() => setVersion(v)}
-              style={{
-                padding: '0.3rem 0.9rem', borderRadius: '6px', border: 'none', cursor: 'pointer',
-                fontSize: '0.82rem', fontWeight: 700, transition: 'all 0.2s',
-                background: version === v ? 'rgba(99,102,241,0.7)' : 'transparent',
-                color: version === v ? '#fff' : 'var(--text-color-secondary)',
-                boxShadow: version === v ? '0 2px 8px rgba(99,102,241,0.4)' : 'none'
-              }}
-            >
-              CVSS {v}
-            </button>
-          ))}
-        </div>
-        <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-          {version === '3.1'
-            ? 'Base + Temporal + Environmental (22 métricas)'
-            : 'Base + Threat + Environmental + Supplemental (32 métricas)'}
-        </span>
-      </div>
 
       {/* Tabs principales */}
       <TabView activeIndex={activeTab} onTabChange={(e) => setActiveTab(e.index)} style={{ background: 'transparent' }}>
