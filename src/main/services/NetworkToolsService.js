@@ -3194,6 +3194,9 @@ class NetworkToolsService {
       
       return new Promise((resolve) => {
         const request = https.get(url, { timeout: 10000 }, (response) => {
+          if (response.statusCode !== 200) {
+            return resolve([]);
+          }
           let data = '';
           
           response.on('data', chunk => { data += chunk; });
@@ -3294,6 +3297,9 @@ class NetworkToolsService {
           };
           
           const request = https.get(url, options, (response) => {
+            if (response.statusCode !== 200) {
+              return resolve([]);
+            }
             let data = '';
             
             response.on('data', chunk => { data += chunk; });
@@ -4317,6 +4323,12 @@ class NetworkToolsService {
           timeout: 10000,
           headers: { 'User-Agent': 'NodeTerm-Security-App' }
         }, (response) => {
+          if (response.statusCode !== 200) {
+            return resolve({ 
+              success: false, 
+              error: `El servicio de NVD de NIST retornó un error HTTP ${response.statusCode}. Esto suele deberse a límites de peticiones (rate limiting) o bloqueos temporales.` 
+            });
+          }
           let data = '';
           
           response.on('data', chunk => { data += chunk; });

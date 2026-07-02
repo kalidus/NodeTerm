@@ -140,6 +140,7 @@ const CvssCalculatorPanel = () => {
   const [notes, setNotes] = useState('');
   const [affectedVersions, setAffectedVersions] = useState('');
   const [techDetailsExpanded, setTechDetailsExpanded] = useState(false);
+  const [exposureExpanded, setExposureExpanded] = useState(true);
   const [auditorPanelExpanded, setAuditorPanelExpanded] = useState(true);
   const [templateName, setTemplateName] = useState('');
   const [templateDesc, setTemplateDesc] = useState('');
@@ -699,43 +700,70 @@ const CvssCalculatorPanel = () => {
                 </div>
               )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
-                {/* Columna Exposición */}
-                <div style={{
-                  background: 'rgba(255, 255, 255, 0.02)',
-                  border: '1px solid rgba(255, 255, 255, 0.05)',
+              {/* Toggle para análisis de exposición y mitigación */}
+              <div 
+                onClick={() => setExposureExpanded(!exposureExpanded)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid rgba(255, 255, 255, 0.06)',
                   borderRadius: '8px',
-                  padding: '0.75rem'
-                }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <i className="pi pi-exclamation-triangle" style={{ color: '#fbbf24', fontSize: '0.8rem' }} />
-                    CÓMO AFECTA (EXPOSICIÓN & IMPACTO)
-                  </div>
-                  <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.75rem', color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                    {auditorInsights.exposure.map((exp, idx) => (
-                      <li key={idx} style={{ lineHeight: '1.4' }}>{exp}</li>
-                    ))}
-                  </ul>
+                  padding: '0.6rem 0.8rem',
+                  cursor: 'pointer',
+                  marginBottom: exposureExpanded ? '0.6rem' : '0',
+                  transition: 'background 0.2s'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <i className="pi pi-list" style={{ color: '#818cf8', fontSize: '0.85rem' }} />
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#d1d5db' }}>
+                    Análisis de Exposición y Mitigación (Cómo Afecta / Recomendaciones)
+                  </span>
                 </div>
-
-                {/* Columna Remediación */}
-                <div style={{
-                  background: 'rgba(255, 255, 255, 0.02)',
-                  border: '1px solid rgba(255, 255, 255, 0.05)',
-                  borderRadius: '8px',
-                  padding: '0.75rem'
-                }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <i className="pi pi-check-circle" style={{ color: '#34d399', fontSize: '0.8rem' }} />
-                    RECOMENDACIONES DE MITIGACIÓN
-                  </div>
-                  <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.75rem', color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                    {auditorInsights.remediation.map((rem, idx) => (
-                      <li key={idx} style={{ lineHeight: '1.4' }}>{rem}</li>
-                    ))}
-                  </ul>
-                </div>
+                <i className={`pi pi-chevron-${exposureExpanded ? 'up' : 'down'}`} style={{ fontSize: '0.7rem', color: '#94a3b8' }} />
               </div>
+
+              {exposureExpanded && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                  {/* Columna Exposición */}
+                  <div style={{
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                    borderRadius: '8px',
+                    padding: '0.75rem'
+                  }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <i className="pi pi-exclamation-triangle" style={{ color: '#fbbf24', fontSize: '0.8rem' }} />
+                      CÓMO AFECTA (EXPOSICIÓN & IMPACTO)
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.75rem', color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      {auditorInsights.exposure.map((exp, idx) => (
+                        <li key={idx} style={{ lineHeight: '1.4' }}>{exp}</li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Columna Remediación */}
+                  <div style={{
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                    borderRadius: '8px',
+                    padding: '0.75rem'
+                  }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <i className="pi pi-check-circle" style={{ color: '#34d399', fontSize: '0.8rem' }} />
+                      RECOMENDACIONES DE MITIGACIÓN
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.75rem', color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      {auditorInsights.remediation.map((rem, idx) => (
+                        <li key={idx} style={{ lineHeight: '1.4' }}>{rem}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>
