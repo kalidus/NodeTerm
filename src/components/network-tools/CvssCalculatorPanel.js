@@ -576,167 +576,170 @@ const CvssCalculatorPanel = () => {
       </div>
 
       {/* Información para el Auditor */}
-      <div style={{
-        background: 'rgba(99, 102, 241, 0.04)',
-        border: '1px solid rgba(99, 102, 241, 0.15)',
-        borderRadius: '12px',
-        padding: '1rem',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.7rem'
-      }}>
-        <div 
-          onClick={() => setAuditorPanelExpanded(!auditorPanelExpanded)}
-          style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between', 
-            flexWrap: 'wrap', 
-            gap: '0.5rem',
-            cursor: 'pointer',
-            userSelect: 'none'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <i className="pi pi-shield" style={{ color: '#a5b4fc', fontSize: '1.1rem' }} />
-            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0', letterSpacing: '0.02em' }}>
-              Diagnóstico del Auditor e Insights de Remediación
+      {title.trim() && (
+        <div style={{
+          background: 'rgba(99, 102, 241, 0.04)',
+          border: '1px solid rgba(99, 102, 241, 0.15)',
+          borderRadius: '12px',
+          padding: '1rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.7rem'
+        }}>
+          <div 
+            onClick={() => setAuditorPanelExpanded(!auditorPanelExpanded)}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between', 
+              flexWrap: 'wrap', 
+              gap: '0.5rem',
+              cursor: 'pointer',
+              userSelect: 'none'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <i className="pi pi-shield" style={{ color: '#a5b4fc', fontSize: '1.1rem' }} />
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#e2e8f0', letterSpacing: '0.02em' }}>
+                Diagnóstico del Auditor e Insights de Remediación
+              </span>
+              <i className={`pi pi-chevron-${auditorPanelExpanded ? 'up' : 'down'}`} style={{ fontSize: '0.75rem', color: '#94a3b8', marginLeft: '0.2rem' }} />
+            </div>
+            <span style={{
+              fontSize: '0.72rem',
+              background: 'rgba(99, 102, 241, 0.18)',
+              border: '1px solid rgba(99, 102, 241, 0.3)',
+              color: '#c7d2fe',
+              padding: '3px 8px',
+              borderRadius: '6px',
+              fontWeight: 600
+            }}>
+              {auditorInsights.profile}
             </span>
-            <i className={`pi pi-chevron-${auditorPanelExpanded ? 'up' : 'down'}`} style={{ fontSize: '0.75rem', color: '#94a3b8', marginLeft: '0.2rem' }} />
           </div>
-          <span style={{
-            fontSize: '0.72rem',
-            background: 'rgba(99, 102, 241, 0.18)',
-            border: '1px solid rgba(99, 102, 241, 0.3)',
-            color: '#c7d2fe',
-            padding: '3px 8px',
-            borderRadius: '6px',
-            fontWeight: 600
-          }}>
-            {auditorInsights.profile}
-          </span>
-        </div>
 
-        {auditorPanelExpanded && (
-          <>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', marginTop: '0.2rem' }}>
-              {/* Columna Exposición */}
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.02)',
-                border: '1px solid rgba(255, 255, 255, 0.05)',
-                borderRadius: '8px',
-                padding: '0.75rem'
-              }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <i className="pi pi-exclamation-triangle" style={{ color: '#fbbf24', fontSize: '0.8rem' }} />
-                  CÓMO AFECTA (EXPOSICIÓN & IMPACTO)
-                </div>
-                <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.75rem', color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                  {auditorInsights.exposure.map((exp, idx) => (
-                    <li key={idx} style={{ lineHeight: '1.4' }}>{exp}</li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Columna Remediación */}
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.02)',
-                border: '1px solid rgba(255, 255, 255, 0.05)',
-                borderRadius: '8px',
-                padding: '0.75rem'
-              }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <i className="pi pi-check-circle" style={{ color: '#34d399', fontSize: '0.8rem' }} />
-                  RECOMENDACIONES DE MITIGACIÓN
-                </div>
-                <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.75rem', color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                  {auditorInsights.remediation.map((rem, idx) => (
-                    <li key={idx} style={{ lineHeight: '1.4' }}>{rem}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            {/* Toggle para detalles técnicos avanzados */}
-            <div 
-              onClick={() => setTechDetailsExpanded(!techDetailsExpanded)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                background: 'rgba(255, 255, 255, 0.03)',
-                border: '1px solid rgba(255, 255, 255, 0.06)',
-                borderRadius: '8px',
-                padding: '0.6rem 0.8rem',
-                cursor: 'pointer',
-                marginTop: '0.3rem',
-                transition: 'background 0.2s'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <i className="pi pi-cog" style={{ color: '#818cf8', fontSize: '0.85rem' }} />
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#d1d5db' }}>
-                  Detalles Técnicos Avanzados (CWE, Capas, Mitigación y SO)
-                </span>
-              </div>
-              <i className={`pi pi-chevron-${techDetailsExpanded ? 'up' : 'down'}`} style={{ fontSize: '0.7rem', color: '#94a3b8' }} />
-            </div>
-
-            {techDetailsExpanded && (
-              <div style={{
-                background: 'rgba(0, 0, 0, 0.15)',
-                border: '1px solid rgba(255, 255, 255, 0.04)',
-                borderRadius: '8px',
-                padding: '0.8rem',
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '0.8rem'
-              }}>
-                <div>
-                  <strong style={{ display: 'block', fontSize: '0.72rem', color: '#94a3b8', marginBottom: '3px' }}>Capas Afectadas:</strong>
-                  <span style={{ fontSize: '0.75rem', color: '#e2e8f0' }}>{auditorInsights.technicalDetails.affectedLayers}</span>
-                </div>
-                <div>
-                  <strong style={{ display: 'block', fontSize: '0.72rem', color: '#94a3b8', marginBottom: '3px' }}>CWEs Relacionados:</strong>
-                  <span style={{ fontSize: '0.75rem', color: '#e2e8f0' }}>{auditorInsights.technicalDetails.cwe}</span>
-                </div>
-                <div style={{ gridColumn: 'span 2' }}>
-                  <strong style={{ display: 'block', fontSize: '0.72rem', color: '#94a3b8', marginBottom: '3px' }}>Sistemas y Entornos Afectados:</strong>
-                  <span style={{ fontSize: '0.75rem', color: '#cbd5e1', lineHeight: '1.4' }}>
-                    {cveData && cveData.affectedPlatforms && cveData.affectedPlatforms.length > 0
-                      ? cveData.affectedPlatforms.map(p => `[${p.part}] ${p.name}`).join(' | ')
-                      : auditorInsights.technicalDetails.affectedOS}
+          {auditorPanelExpanded && (
+            <>
+              {/* Toggle para detalles técnicos avanzados */}
+              <div 
+                onClick={() => setTechDetailsExpanded(!techDetailsExpanded)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid rgba(255, 255, 255, 0.06)',
+                  borderRadius: '8px',
+                  padding: '0.6rem 0.8rem',
+                  cursor: 'pointer',
+                  marginBottom: techDetailsExpanded ? '0.4rem' : '0.8rem',
+                  transition: 'background 0.2s'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <i className="pi pi-cog" style={{ color: '#818cf8', fontSize: '0.85rem' }} />
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#d1d5db' }}>
+                    Detalles Técnicos Avanzados (CWE, Capas, Mitigación y SO)
                   </span>
                 </div>
-                <div style={{ gridColumn: 'span 2' }}>
-                  <strong style={{ display: 'block', fontSize: '0.72rem', color: '#94a3b8', marginBottom: '3px' }}>Mitigación Técnica del Sistema:</strong>
-                  <span style={{ fontSize: '0.75rem', color: '#cbd5e1', lineHeight: '1.4' }}>
-                    {auditorInsights.technicalDetails.possibleMitigations}
-                  </span>
-                </div>
-                {cveData && cveData.references && cveData.references.length > 0 && (
-                  <div style={{ gridColumn: 'span 2' }}>
-                    <strong style={{ display: 'block', fontSize: '0.72rem', color: '#94a3b8', marginBottom: '3px' }}>Referencias Oficiales:</strong>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', maxHeight: '100px', overflowY: 'auto' }}>
-                      {cveData.references.slice(0, 5).map((url, i) => (
-                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.72rem', color: '#6366f1', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {url}
-                        </a>
-                      ))}
-                    </div>
+                <i className={`pi pi-chevron-${techDetailsExpanded ? 'up' : 'down'}`} style={{ fontSize: '0.7rem', color: '#94a3b8' }} />
+              </div>
+
+              {techDetailsExpanded && (
+                <div style={{
+                  background: 'rgba(0, 0, 0, 0.15)',
+                  border: '1px solid rgba(255, 255, 255, 0.04)',
+                  borderRadius: '8px',
+                  padding: '0.8rem',
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '0.8rem',
+                  marginBottom: '0.8rem'
+                }}>
+                  <div>
+                    <strong style={{ display: 'block', fontSize: '0.72rem', color: '#94a3b8', marginBottom: '3px' }}>Capas Afectadas:</strong>
+                    <span style={{ fontSize: '0.75rem', color: '#e2e8f0' }}>{auditorInsights.technicalDetails.affectedLayers}</span>
                   </div>
-                )}
-                <div style={{ gridColumn: 'span 2' }}>
-                  <strong style={{ display: 'block', fontSize: '0.72rem', color: '#94a3b8', marginBottom: '3px' }}>Impacto Técnico Profundo:</strong>
-                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#cbd5e1', lineHeight: '1.4' }}>
-                    {cveData ? cveData.description : auditorInsights.technicalDetails.technicalImpact}
-                  </p>
+                  <div>
+                    <strong style={{ display: 'block', fontSize: '0.72rem', color: '#94a3b8', marginBottom: '3px' }}>CWEs Relacionados:</strong>
+                    <span style={{ fontSize: '0.75rem', color: '#e2e8f0' }}>{auditorInsights.technicalDetails.cwe}</span>
+                  </div>
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <strong style={{ display: 'block', fontSize: '0.72rem', color: '#94a3b8', marginBottom: '3px' }}>Sistemas y Entornos Afectados:</strong>
+                    <span style={{ fontSize: '0.75rem', color: '#cbd5e1', lineHeight: '1.4' }}>
+                      {cveData && cveData.affectedPlatforms && cveData.affectedPlatforms.length > 0
+                        ? cveData.affectedPlatforms.map(p => `[${p.part}] ${p.name}`).join(' | ')
+                        : auditorInsights.technicalDetails.affectedOS}
+                    </span>
+                  </div>
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <strong style={{ display: 'block', fontSize: '0.72rem', color: '#94a3b8', marginBottom: '3px' }}>Mitigación Técnica del Sistema:</strong>
+                    <span style={{ fontSize: '0.75rem', color: '#cbd5e1', lineHeight: '1.4' }}>
+                      {auditorInsights.technicalDetails.possibleMitigations}
+                    </span>
+                  </div>
+                  {cveData && cveData.references && cveData.references.length > 0 && (
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <strong style={{ display: 'block', fontSize: '0.72rem', color: '#94a3b8', marginBottom: '3px' }}>Referencias Oficiales:</strong>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', maxHeight: '100px', overflowY: 'auto' }}>
+                        {cveData.references.slice(0, 5).map((url, i) => (
+                          <a key={i} href={url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.72rem', color: '#6366f1', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {url}
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <strong style={{ display: 'block', fontSize: '0.72rem', color: '#94a3b8', marginBottom: '3px' }}>Impacto Técnico Profundo:</strong>
+                    <p style={{ margin: 0, fontSize: '0.75rem', color: '#cbd5e1', lineHeight: '1.4' }}>
+                      {cveData ? cveData.description : auditorInsights.technicalDetails.technicalImpact}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                {/* Columna Exposición */}
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  border: '1px solid rgba(255, 255, 255, 0.05)',
+                  borderRadius: '8px',
+                  padding: '0.75rem'
+                }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <i className="pi pi-exclamation-triangle" style={{ color: '#fbbf24', fontSize: '0.8rem' }} />
+                    CÓMO AFECTA (EXPOSICIÓN & IMPACTO)
+                  </div>
+                  <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.75rem', color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    {auditorInsights.exposure.map((exp, idx) => (
+                      <li key={idx} style={{ lineHeight: '1.4' }}>{exp}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Columna Remediación */}
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  border: '1px solid rgba(255, 255, 255, 0.05)',
+                  borderRadius: '8px',
+                  padding: '0.75rem'
+                }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f1f5f9', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <i className="pi pi-check-circle" style={{ color: '#34d399', fontSize: '0.8rem' }} />
+                    RECOMENDACIONES DE MITIGACIÓN
+                  </div>
+                  <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.75rem', color: '#cbd5e1', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    {auditorInsights.remediation.map((rem, idx) => (
+                      <li key={idx} style={{ lineHeight: '1.4' }}>{rem}</li>
+                    ))}
+                  </ul>
                 </div>
               </div>
-            )}
-          </>
-        )}
-      </div>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Métricas */}
       <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '10px', padding: '0.9rem' }}>
