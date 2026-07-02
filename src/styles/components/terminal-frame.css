@@ -783,14 +783,6 @@ body.minimalist-terminal-mode .main-content-frame-content {
     padding: 0 !important;
 }
 
-/* Permitir arrastrar la ventana desde cualquier parte del área de contenido del terminal en modo minimalista 
-   SOLO si titleBarCollapsed es true (o sea, si estamos en modo custom titlebar) */
-body.minimalist-terminal-mode .main-content-frame-content {
-    /* El componente TerminalFrame ya maneja isDraggable, 
-       pero este CSS asegura que el área no bloquee el drag si se desea. 
-       Sin embargo, para interactuar con el terminal se necesita no-drag. */
-}
-
 /* Handle especial para salir del modo minimalista si el header está oculto */
 body.minimalist-terminal-mode .main-content-frame::before {
     content: '';
@@ -860,7 +852,6 @@ body.minimalist-terminal-mode .connection-history-root .hero-splash-header {
  */
 body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header {
     -webkit-app-region: drag;
-    app-region: drag;
 }
 
 body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .traffic-lights,
@@ -886,7 +877,6 @@ body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents
 body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .recents-header-right,
 body.minimalist-terminal-mode .connection-history-root.is-terminal-view .recents-terminal-header .recents-header-right * {
     -webkit-app-region: no-drag;
-    app-region: no-drag;
 }
 
 /* En minimalista absoluto ocultar accesos rápidos de Recientes/Favoritos (reloj + estrella). */

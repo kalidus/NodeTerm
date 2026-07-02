@@ -1,3 +1,5 @@
+import { CvssAuditorService } from '../cvss/CvssAuditorService';
+
 const escapeHtml = (value = '') =>
   String(value)
     .replace(/&/g, '&amp;')
@@ -134,6 +136,8 @@ export const cvssReportService = {
     const gaugeSvg = buildGaugeSvg(score, severity);
     const explanation = severityText(severity, score);
     const generatedAt = formatDate(report?.createdAt || new Date().toISOString());
+    const insights = CvssAuditorService.getAuditorInsights(version, metrics);
+
 
     return `<!DOCTYPE html>
 <html lang="es">
@@ -446,11 +450,53 @@ export const cvssReportService = {
       </table>
     </div>
 
-    <!-- Notas -->
-    ${report?.notes ? `
+    <!-- Diagnóstico del Auditor -->
     <div class="card">
-      <h2><span class="icon">📝</span> Notas del Análisis</h2>
-      <div class="notes-box">${escapeHtml(report.notes)}</div>
+      <h2><span class="icon">🔍</span> Diagnóstico del Auditor</h2>
+      <div style="font-size: 0.95rem; font-weight: 700; color: #4f46e5; margin-bottom: 0.8rem;">
+        Perfil: ${escapeHtml(insights.profile)}
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1rem;">
+        <div>
+          <h3 style="font-size: 0.8rem; font-weight: 700; color: #374151; margin-bottom: 0.4rem; text-transform: uppercase;">Cómo Afecta</h3>
+          <ul style="margin: 0; padding-left: 1.2rem; font-size: 0.8rem; color: #4b5563; line-height: 1.5;">
+            ${insights.exposure.map(e => `<li>${escapeHtml(e)}</li>`).join('')}
+          </ul>
+        </div>
+        <div>
+          <h3 style="font-size: 0.8rem; font-weight: 700; color: #374151; margin-bottom: 0.4rem; text-transform: uppercase;">Mitigación Recomendada</h3>
+          <ul style="margin: 0; padding-left: 1.2rem; font-size: 0.8rem; color: #4b5563; line-height: 1.5;">
+            ${insights.remediation.map(r => `<li>${escapeHtml(r)}</li>`).join('')}
+          </ul>
+        </div>
+      </div>
+      
+      <!-- Detalle técnico -->
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.8rem; font-size: 0.8rem; line-height: 1.4;">
+        <div style="margin-bottom: 0.4rem;"><strong>Capas Afectadas:</strong> ${escapeHtml(insights.technicalDetails.affectedLayers)}</div>
+        <div style="margin-bottom: 0.4rem;"><strong>CWEs Relacionados:</strong> ${escapeHtml(insights.technicalDetails.cwe)}</div>
+        <div><strong>Impacto Técnico Profundo:</strong> ${escapeHtml(insights.technicalDetails.technicalImpact)}</div>
+      </div>
+    </div>
+
+    <!-- Notas y Versiones -->
+    ${report?.affectedVersions || report?.notes ? `
+    <div class="card">
+      <h2><span class="icon">📝</span> Detalles del Hallazgo</h2>
+      ${report?.affectedVersions ? `
+        <div style="margin-bottom: 0.8rem; font-size: 0.85rem;">
+          <strong style="color: #374151;">Tecnologías y Versiones Afectadas:</strong>
+          <div style="background: #fffbeb; border-left: 3px solid #f59e0b; padding: 0.5rem 0.8rem; margin-top: 0.3rem; border-radius: 0 4px 4px 0;">
+            ${escapeHtml(report.affectedVersions)}
+          </div>
+        </div>
+      ` : ''}
+      ${report?.notes ? `
+        <div style="font-size: 0.85rem;">
+          <strong style="color: #374151;">Notas del Análisis:</strong>
+          <div class="notes-box" style="margin-top: 0.3rem;">${escapeHtml(report.notes)}</div>
+        </div>
+      ` : ''}
     </div>
     ` : ''}
 
