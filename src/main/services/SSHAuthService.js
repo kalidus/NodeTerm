@@ -101,7 +101,12 @@ class SSHAuthService {
     if (data.includes('\r') || data.includes('\n')) {
       const password = (conn.manualPasswordBuffer + data.replace(/[\r\n]/g, '')).trim();
 
+      // Limpiar buffer
+      conn.manualPasswordBuffer = '';
+
       if (password) {
+        // Desactivar modo manual inmediatamente para evitar reenvíos/doble reconexión
+        conn.manualPasswordMode = false;
         return password;
       } else {
         sendToRenderer(sender, `ssh:data:${tabId}`, `\r\nPassword vacío. Por favor, introduce el password:\r\nPassword: `);
