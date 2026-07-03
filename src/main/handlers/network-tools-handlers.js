@@ -372,6 +372,29 @@ function registerNetworkToolsHandlers() {
     }
   });
 
+  // === SEARCH SECURITY ADVISORIES AND VERIFICATION GUIDES ===
+  ipcMain.handle('network-tools:search-cve-verification', async (event, { cveId }) => {
+    try {
+      if (!cveId) {
+        return { success: false, error: 'CVE ID es requerido' };
+      }
+      
+      const WebSearchService = require('../services/WebSearchService');
+      const query = `${cveId} vulnerability detection check version advisory`;
+      
+      const results = await WebSearchService.search(query, {
+        maxResults: 5,
+        mode: 'scraping'
+      });
+      
+      return { success: true, results };
+    } catch (err) {
+      console.error('[network-tools:search-cve-verification] Error:', err);
+      return { success: false, error: err?.message || 'Error al buscar guías de verificación' };
+    }
+  });
+
+
   // === GET NETWORK INTERFACES ===
   ipcMain.handle('network-tools:get-interfaces', async () => {
     try {
