@@ -348,6 +348,15 @@ const Sidebar = React.memo(({
   // Estado para el nodo seleccionado actualmente (para el panel de detalles)
   const [selectedNodeForDetails, setSelectedNodeForDetails] = useState(null);
   const [detailsCollapsed, setDetailsCollapsed] = useState(false);
+  const detailsPanelTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (detailsPanelTimeoutRef.current) {
+        clearTimeout(detailsPanelTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const isDetailsPanelVisible = useMemo(() => {
     if (!selectedNodeForDetails) return false;
@@ -2738,6 +2747,10 @@ const Sidebar = React.memo(({
         } : undefined}
         onDoubleClick={(e) => {
           e.stopPropagation();
+          if (detailsPanelTimeoutRef.current) {
+            clearTimeout(detailsPanelTimeoutRef.current);
+            detailsPanelTimeoutRef.current = null;
+          }
           if (isSSH && onOpenSSHConnection) {
             onOpenSSHConnection(actionNode, nodes);
           } else if (isRDP && sidebarCallbacksRef?.current?.connectRDP) {
@@ -3242,8 +3255,22 @@ const Sidebar = React.memo(({
                   selectedKey = Object.keys(e.value)[0];
                 }
 
+                if (detailsPanelTimeoutRef.current) {
+                  clearTimeout(detailsPanelTimeoutRef.current);
+                  detailsPanelTimeoutRef.current = null;
+                }
+
                 const node = selectedKey ? findNode(displayNodes, selectedKey) : null;
-                setSelectedNodeForDetails(node ? resolveFavoriteShortcutNode(node, nodes) : null);
+                const resolvedNode = node ? resolveFavoriteShortcutNode(node, nodes) : null;
+
+                if (resolvedNode) {
+                  detailsPanelTimeoutRef.current = setTimeout(() => {
+                    setSelectedNodeForDetails(resolvedNode);
+                    detailsPanelTimeoutRef.current = null;
+                  }, 250);
+                } else {
+                  setSelectedNodeForDetails(null);
+                }
               }}
               expandedKeys={expandedKeys}
               onToggle={e => setExpandedKeys(e.value)}
