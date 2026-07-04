@@ -408,7 +408,8 @@ contextBridge.exposeInMainWorld('electron', {
     readFile: (path) => ipcRenderer.invoke('import:read-file', path),
     openExternal: (url) => ipcRenderer.invoke('import:open-external', url),
     getDownloadsPath: () => ipcRenderer.invoke('import:get-downloads-path'),
-    findLatestXmlDownload: (params) => ipcRenderer.invoke('import:find-latest-xml-download', params)
+    findLatestXmlDownload: (params) => ipcRenderer.invoke('import:find-latest-xml-download', params),
+    importJoplinJex: (filePath) => ipcRenderer.invoke('import:joplin-jex', filePath)
   },
   browserImport: {
     listProfiles: () => ipcRenderer.invoke('browser-import:list-profiles'),

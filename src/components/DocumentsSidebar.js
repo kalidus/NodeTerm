@@ -502,6 +502,8 @@ const DocumentsSidebar = ({
     saveDocumentTree(documentNodes, secureStorage, masterKey);
   }, [documentNodes, isLoading, secureStorage, masterKey]);
 
+
+
   const handleOpenDocument = useCallback((node) => {
     if (node.data?.type === 'document-folder' || node.droppable) return;
     window.dispatchEvent(new CustomEvent('open-document-tab', {

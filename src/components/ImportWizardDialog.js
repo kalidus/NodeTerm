@@ -137,10 +137,10 @@ const IMPORT_SOURCES = {
         id: 'joplin',
         category: 'documents',
         label: 'Joplin / Markdown',
-        description: 'Importar notas desde archivos Markdown o Joplin ENEX',
+        description: 'Importar notas desde archivos Markdown o Joplin JEX (tar)',
         icon: 'pi pi-file-edit',
-        extension: '.md,.txt,.enex',
-        implemented: false,
+        extension: '.jex,.md,.txt,.enex',
+        implemented: true,
         defaultFolder: 'Importados/Notas'
     },
     // APIs externas
@@ -270,6 +270,7 @@ const ImportWizardDialog = ({
     onImportPasswordsComplete,
     showToast,
     targetFolderOptions = [],
+    documentFolderOptions = [],
     defaultTargetFolderKey,
     isEmbedded = false,
     initialSource = null,
@@ -481,10 +482,12 @@ const ImportWizardDialog = ({
         if (!source) return;
 
         // Validar extensión
-        const ext = source.extension.toLowerCase();
+        const allowedExtensions = source.extension.toLowerCase().split(',');
         const fileName = file.name.toLowerCase();
 
-        if (!fileName.endsWith(ext)) {
+        const isAllowed = allowedExtensions.some(ext => fileName.endsWith(ext.trim()));
+
+        if (!isAllowed) {
             showToastSafe({
                 severity: 'error',
                 summary: 'Error',
@@ -613,6 +616,9 @@ const ImportWizardDialog = ({
                     break;
                 case 'wallix':
                     await generateWallixPreview();
+                    break;
+                case 'joplin':
+                    await generateJoplinPreview();
                     break;
                 default:
                     throw new Error('Fuente no soportada');
@@ -808,6 +814,45 @@ const ImportWizardDialog = ({
         }
     };
 
+    const generateJoplinPreview = async () => {
+        try {
+            setPreviewStatus('Parseando archivo de Joplin...');
+            let filePath = window.electron?.fileUtils?.getPathForFile(selectedFile);
+            if (!filePath) {
+                setPreviewStatus('Guardando archivo temporal para procesamiento...');
+                const ab = await readFileAsArrayBuffer(selectedFile);
+                const tempRes = await window.electron?.fileUtils?.saveTempFile(selectedFile.name, ab);
+                if (tempRes && tempRes.ok) {
+                    filePath = tempRes.path;
+                }
+            }
+            if (!filePath) {
+                throw new Error('No se pudo determinar la ruta del archivo seleccionado');
+            }
+            
+            const res = await window.electron.import.importJoplinJex(filePath);
+            if (!res || !res.ok) {
+                throw new Error(res?.error || 'Error al importar archivo de Joplin');
+            }
+
+            const result = res.result;
+            const treeNodes = convertStructureToTree(result.structure?.nodes || []);
+
+            setPreviewData({
+                type: 'joplin',
+                structure: result.structure,
+                metadata: result.metadata,
+                treeNodes: treeNodes,
+                stats: {
+                    notes: result.structure?.noteCount || 0,
+                    folders: result.structure?.folderCount || 0
+                }
+            });
+        } catch (error) {
+            throw error;
+        }
+    };
+
     // Ejecutar importación
     const handleImport = async () => {
         if (!previewData && selectedSource !== 'export_nodeterm') return;
@@ -836,6 +881,9 @@ const ImportWizardDialog = ({
                     break;
                 case 'wallix':
                     await importWallix();
+                    break;
+                case 'joplin':
+                    await importJoplin();
                     break;
                 default:
                     throw new Error('Fuente no soportada');
@@ -1052,6 +1100,64 @@ const ImportWizardDialog = ({
         });
     };
 
+    const importJoplin = async () => {
+        setImportStatus('Procesando notas de Joplin...');
+        setImportProgress(30);
+
+        let filePath = window.electron?.fileUtils?.getPathForFile(selectedFile);
+        if (!filePath) {
+            setImportStatus('Guardando archivo temporal para procesamiento...');
+            const ab = await readFileAsArrayBuffer(selectedFile);
+            const tempRes = await window.electron?.fileUtils?.saveTempFile(selectedFile.name, ab);
+            if (tempRes && tempRes.ok) {
+                filePath = tempRes.path;
+            }
+        }
+        if (!filePath) {
+            throw new Error('No se pudo determinar la ruta del archivo seleccionado');
+        }
+
+        const res = await window.electron.import.importJoplinJex(filePath);
+        if (!res || !res.ok) {
+            throw new Error(res?.error || 'Error al procesar el archivo');
+        }
+
+        const result = res.result;
+
+        setImportProgress(60);
+        setImportStatus('Guardando notas en la base de datos...');
+
+        if (onImportComplete) {
+            await onImportComplete({
+                ...result,
+                createContainerFolder: createContainerFolder,
+                containerFolderName: containerFolderName,
+                overwrite: importMode === 'replace',
+                linkFile: false,
+                targetBaseFolderKey: targetFolder,
+                linkedTargetFolderKey: targetFolder
+            });
+        }
+
+        setImportProgress(100);
+        setImportStatus('Completado');
+
+        setImportResult({
+            success: true,
+            stats: {
+                notes: result.structure?.noteCount || 0,
+                folders: result.structure?.folderCount || 0
+            }
+        });
+
+        showToastSafe({
+            severity: 'success',
+            summary: 'Importación exitosa',
+            detail: `Se importaron ${result.structure?.noteCount || 0} notas de Joplin`,
+            life: 5000
+        });
+    };
+
     const importBrowser = async () => {
         setImportStatus('Procesando contraseñas del navegador...');
         setImportProgress(40);
@@ -1238,7 +1344,7 @@ const ImportWizardDialog = ({
         return nodes.map(node => ({
             key: node.key,
             label: node.label,
-            icon: node.children ? 'pi pi-folder' : getConnectionIcon(node.data?.type),
+            icon: node.type === 'document-folder' || node.children ? 'pi pi-folder' : (node.type === 'document' ? 'pi pi-file' : getConnectionIcon(node.data?.type)),
             children: node.children ? convertStructureToTree(node.children) : undefined
         }));
     };
@@ -1265,7 +1371,10 @@ const ImportWizardDialog = ({
     // Opciones de carpeta destino
     const folderOptions = [
         { label: 'Raíz', value: 'ROOT' },
-        ...(targetFolderOptions || [])
+        ...(selectedSource && IMPORT_SOURCES[selectedSource]?.category === 'documents'
+            ? (documentFolderOptions || [])
+            : (targetFolderOptions || [])
+        )
     ];
 
     // Renderizar contenido según el paso actual
@@ -2005,8 +2114,8 @@ const ImportWizardDialog = ({
                     </div>
                 )}
 
-                {/* Árbol de estructura (solo para mRemoteNG) */}
-                {previewData.type === 'mremoteng' && previewData.treeNodes && (
+                {/* Árbol de estructura (para mRemoteNG, Wallix y Joplin) */}
+                {(previewData.type === 'mremoteng' || previewData.type === 'wallix' || previewData.type === 'joplin') && previewData.treeNodes && (
                     <div className="import-wizard-tree">
                         <h5>Estructura a importar:</h5>
                         <div className="import-wizard-tree-container">
@@ -2068,6 +2177,22 @@ const ImportWizardDialog = ({
                         {(previewData.stats.skippedAbe ?? 0) > 0 && (
                             <StatCard icon="pi pi-shield" label="App-Bound" value={previewData.stats.skippedAbe} color="var(--red-500)" />
                         )}
+                    </div>
+                );
+            case 'wallix':
+                return (
+                    <div className="import-wizard-stats-grid">
+                        <StatCard icon="pi pi-desktop" label="SSH" value={previewData.stats.sshCount} color="var(--green-500)" />
+                        <StatCard icon="pi pi-microsoft" label="RDP" value={previewData.stats.rdpCount} color="var(--blue-500)" />
+                        <StatCard icon="pi pi-folder" label="Carpetas" value={previewData.stats.folders} color="var(--orange-500)" />
+                        <StatCard icon="pi pi-link" label="Total" value={previewData.stats.connections} color="var(--primary-color)" />
+                    </div>
+                );
+            case 'joplin':
+                return (
+                    <div className="import-wizard-stats-grid">
+                        <StatCard icon="pi pi-file" label="Notas" value={previewData.stats.notes} color="var(--green-500)" />
+                        <StatCard icon="pi pi-folder" label="Libretas" value={previewData.stats.folders} color="var(--orange-500)" />
                     </div>
                 );
             default:

@@ -74,6 +74,7 @@ import { detectBlockedInputs } from '../utils/formDebugger';
 // import '../assets/form-fixes.css';
 import '../styles/layout/sidebar.css';
 import connectionStore, { recordRecent, toggleFavorite, addGroupToFavorites, removeGroupFromFavorites, isGroupFavorite, recordRecentPassword, helpers as connectionHelpers } from '../utils/connectionStore';
+import { loadDocumentTree, saveDocumentTree } from '../utils/documentStore';
 import {
   getTabTypeAndIndex,
   moveTabToFirst,
@@ -122,6 +123,32 @@ const App = () => {
   const [isLoadingConnections, setIsLoadingConnections] = React.useState(true);
   const hasLoadedNodesRef = useRef(false);
   const [importPreset, setImportPreset] = React.useState(null);
+  const [documentFolderOptions, setDocumentFolderOptions] = React.useState([]);
+
+  React.useEffect(() => {
+    if (showImportWizard) {
+      const loadDocFolders = async () => {
+        try {
+          const docTree = await loadDocumentTree(secureStorage, masterKey);
+          const list = [];
+          const walk = (arr, prefix = '') => {
+            if (!Array.isArray(arr)) return;
+            for (const n of arr) {
+              if (n && n.type === 'document-folder') {
+                list.push({ label: `${prefix}${n.label}`, value: n.key });
+                if (n.children && n.children.length) walk(n.children, `${prefix}${n.label} / `);
+              }
+            }
+          };
+          walk(docTree || []);
+          setDocumentFolderOptions(list);
+        } catch (error) {
+          console.error('Error loading document folders for import wizard:', error);
+        }
+      };
+      loadDocFolders();
+    }
+  }, [showImportWizard, secureStorage, masterKey]);
 
   // Estado para mostrar/ocultar la titlebar superior
   const [titleBarCollapsed, setTitleBarCollapsed] = React.useState(() => {
@@ -901,6 +928,115 @@ const App = () => {
           life: 3000
         });
         return;
+      }
+
+      // Soporte específico para importar notas desde Joplin
+      if (importResult.metadata?.source === 'Joplin') {
+        const currentTree = await loadDocumentTree(secureStorage, masterKey);
+        const newNodes = importResult.structure?.nodes || [];
+        let targetKey = importResult.targetBaseFolderKey || 'ROOT';
+        const createContainer = importResult.createContainerFolder === true && !!importResult.containerFolderName;
+        const containerLabel = importResult.containerFolderName || 'Importado de Joplin';
+        const overwrite = importResult.overwrite === true;
+
+        const containerize = (children) => ({
+          key: `import_doc_container_${Date.now()}`,
+          label: containerLabel,
+          type: 'document-folder',
+          droppable: true,
+          children: children,
+          data: {
+            type: 'document-folder',
+            createdAt: Date.now()
+          }
+        });
+
+        const finalNodes = createContainer ? [containerize(newNodes)] : newNodes;
+
+        // Verificar si la carpeta destino existe en el árbol actual
+        const findNode = (list, key) => {
+          for (const node of list) {
+            if (node.key === key) return node;
+            if (node.children && node.children.length > 0) {
+              const found = findNode(node.children, key);
+              if (found) return found;
+            }
+          }
+          return null;
+        };
+
+        if (targetKey !== 'ROOT' && !findNode(currentTree, targetKey)) {
+          console.warn(`Target folder key "${targetKey}" not found in current tree. Falling back to ROOT.`);
+          targetKey = 'ROOT';
+        }
+
+        let updatedTree;
+        if (targetKey === 'ROOT') {
+          updatedTree = overwrite ? finalNodes : [...currentTree, ...finalNodes];
+        } else {
+          const walkAndInsert = (list) => {
+            return list.map(node => {
+              if (node.key === targetKey) {
+                const currentChildren = Array.isArray(node.children) ? node.children : [];
+                return {
+                  ...node,
+                  children: overwrite ? finalNodes : [...currentChildren, ...finalNodes]
+                };
+              }
+              if (node.children && node.children.length > 0) {
+                return {
+                  ...node,
+                  children: walkAndInsert(node.children)
+                };
+              }
+              return node;
+            });
+          };
+          updatedTree = walkAndInsert(currentTree);
+        }
+
+        // Expandir las carpetas recién importadas y la carpeta destino automáticamente
+        try {
+          const keysToExpand = [];
+          if (targetKey !== 'ROOT') {
+            keysToExpand.push(targetKey);
+          }
+          const collectFolderKeys = (nodes) => {
+            for (const n of nodes) {
+              if (n.type === 'document-folder') {
+                keysToExpand.push(n.key);
+                if (n.children) collectFolderKeys(n.children);
+              }
+            }
+          };
+          collectFolderKeys(finalNodes);
+
+          let savedExp = {};
+          try {
+            const stored = localStorage.getItem('documents_expanded_keys');
+            if (stored) savedExp = JSON.parse(stored);
+          } catch (e) {}
+
+          for (const k of keysToExpand) {
+            savedExp[k] = true;
+          }
+          localStorage.setItem('documents_expanded_keys', JSON.stringify(savedExp));
+        } catch (e) {
+          console.error('Error expanding imported folder keys:', e);
+        }
+
+        await saveDocumentTree(updatedTree, secureStorage, masterKey);
+
+        // Disparar evento para que la barra lateral de documentos recargue los datos
+        window.dispatchEvent(new CustomEvent('documents-storage-updated'));
+
+        return {
+          success: true,
+          stats: {
+            notes: importResult.structure?.noteCount || 0,
+            folders: importResult.structure?.folderCount || 0
+          }
+        };
       }
 
       // Helper para eliminar duplicados cuando overwrite=true
@@ -4308,6 +4444,7 @@ const App = () => {
               walk(nodes || []);
               return list;
             })()}
+            documentFolderOptions={documentFolderOptions}
             defaultTargetFolderKey={null}
           />
 

@@ -453,27 +453,29 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
     readTime: 0
   });
 
+  const extensions = useMemo(() => [
+    StarterKit.configure({
+      codeBlock: false,
+    }),
+    Placeholder.configure({
+      placeholder: 'Empieza a escribir tu nota... (Presiona el botón de Plantillas para empezar rápido)',
+    }),
+    Underline,
+    Highlight,
+    Link.configure({ openOnClick: false }),
+    Image,
+    TextAlign.configure({ types: ['heading', 'paragraph'] }),
+    Table.configure({ resizable: true }),
+    TableRow,
+    TableCell,
+    TableHeader,
+    TaskList,
+    TaskItem.configure({ nested: true }),
+    CodeBlockLowlight.configure({ lowlight }),
+  ], []);
+
   const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        codeBlock: false,
-      }),
-      Placeholder.configure({
-        placeholder: 'Empieza a escribir tu nota... (Presiona el botón de Plantillas para empezar rápido)',
-      }),
-      Underline,
-      Highlight,
-      Link.configure({ openOnClick: false }),
-      Image,
-      TextAlign.configure({ types: ['heading', 'paragraph'] }),
-      Table.configure({ resizable: true }),
-      TableRow,
-      TableCell,
-      TableHeader,
-      TaskList,
-      TaskItem.configure({ nested: true }),
-      CodeBlockLowlight.configure({ lowlight }),
-    ],
+    extensions,
     content: documentData?.content || '',
     onUpdate: ({ editor }) => {
       setSaveStatus('unsaved');

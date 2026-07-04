@@ -7,6 +7,7 @@ const { exec } = require('child_process');
 const { promisify } = require('util');
 const execAsync = promisify(exec);
 const { parseProcessList } = require('../utils/parsing-utils');
+const JoplinImportService = require('../services/JoplinImportService');
 
 /**
  * Handlers para funcionalidades del sistema
@@ -94,6 +95,20 @@ function registerSystemHandlers() {
 function registerSystemMonitoringHandlers() {
 
   // === IMPORT HANDLERS ===
+
+  // Handler para importar desde Joplin JEX (tar)
+  ipcMain.handle('import:joplin-jex', async (event, filePath) => {
+    try {
+      if (!filePath || typeof filePath !== 'string' || filePath.trim() === '') {
+        return { ok: false, error: 'Ruta de archivo no proporcionada o inválida' };
+      }
+      const result = await JoplinImportService.importJex(filePath.trim());
+      return { ok: true, result };
+    } catch (e) {
+      console.error('Error en handler import:joplin-jex:', e);
+      return { ok: false, error: e?.message || 'Error desconocido al importar desde Joplin' };
+    }
+  });
 
   // Handler para obtener información de archivo
   ipcMain.handle('import:get-file-info', async (event, filePath) => {
