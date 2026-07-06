@@ -167,7 +167,15 @@ const DocumentDetailsPanel = ({
   );
 
   // Vista previa HTML o texto
-  const hasPreview = !!(data?.content && data.content.trim() !== '<p></p>' && data.content.trim() !== '');
+  const sanitizeContent = (content) => {
+    if (!content || typeof content !== 'string') return content || '';
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="350" height="80" viewBox="0 0 350 80" style="background:#1e1e2f; border:1px dashed #4f46e5; border-radius:8px; font-family:system-ui,-apple-system,sans-serif;"><rect width="100%" height="100%" fill="none"/><text x="50%" y="40%" dominant-baseline="middle" text-anchor="middle" fill="#9ca3af" font-size="12" font-weight="600">📌 Recurso de Evernote</text><text x="50%" y="65%" dominant-baseline="middle" text-anchor="middle" fill="#6b7280" font-size="10">Imagen privada no disponible sin sesion</text></svg>`;
+    const evernotePlaceholder = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    return content.replace(/en-cache:\/\/[^\s"'>\)]*/gi, evernotePlaceholder);
+  };
+
+  const sanitizedContent = sanitizeContent(data?.content || '');
+  const hasPreview = !!(sanitizedContent && sanitizedContent.trim() !== '<p></p>' && sanitizedContent.trim() !== '');
 
   return (
     <Wrapper
@@ -197,7 +205,7 @@ const DocumentDetailsPanel = ({
         {hasPreview ? (
           <div 
             className="note-preview-content" 
-            dangerouslySetInnerHTML={{ __html: data.content }}
+            dangerouslySetInnerHTML={{ __html: sanitizedContent }}
           />
         ) : (
           <div className="note-preview-empty">

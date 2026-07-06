@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -24,6 +24,29 @@ import '../styles/components/documents.css';
 
 const lowlight = createLowlight(common);
 const turndownService = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' });
+
+const TIPTAP_EXTENSIONS = [
+  StarterKit.configure({
+    codeBlock: false,
+    link: false,
+    underline: false,
+  }),
+  Placeholder.configure({
+    placeholder: 'Empieza a escribir tu nota... (Presiona el botón de Plantillas para empezar rápido)',
+  }),
+  Underline,
+  Highlight,
+  Link.configure({ openOnClick: false }),
+  Image,
+  TextAlign.configure({ types: ['heading', 'paragraph'] }),
+  Table.configure({ resizable: true }),
+  TableRow,
+  TableCell,
+  TableHeader,
+  TaskList,
+  TaskItem.configure({ nested: true }),
+  CodeBlockLowlight.configure({ lowlight }),
+];
 
 // Preset Rich Templates for developers and administrators
 const NOTE_TEMPLATES = {
@@ -341,12 +364,19 @@ const EditorToolbar = ({ editor }) => {
   );
 };
 
+const sanitizeContent = (content) => {
+  if (!content || typeof content !== 'string') return content || '';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="350" height="80" viewBox="0 0 350 80" style="background:#1e1e2f; border:1px dashed #4f46e5; border-radius:8px; font-family:system-ui,-apple-system,sans-serif;"><rect width="100%" height="100%" fill="none"/><text x="50%" y="40%" dominant-baseline="middle" text-anchor="middle" fill="#9ca3af" font-size="12" font-weight="600">📌 Recurso de Evernote</text><text x="50%" y="65%" dominant-baseline="middle" text-anchor="middle" fill="#6b7280" font-size="10">Imagen privada no disponible sin sesion</text></svg>`;
+  const evernotePlaceholder = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  return content.replace(/en-cache:\/\/[^\s"'>\)]*/gi, evernotePlaceholder);
+};
+
 const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
   const [viewMode, setViewMode] = useState('wysiwyg');
-  const [markdownSource, setMarkdownSource] = useState(documentData?.markdownSource || '');
+  const [markdownSource, setMarkdownSource] = useState(sanitizeContent(documentData?.markdownSource || ''));
   const [saveStatus, setSaveStatus] = useState('saved');
   const saveTimerRef = useRef(null);
-  const lastSavedContentRef = useRef(documentData?.content || '');
+  const lastSavedContentRef = useRef(sanitizeContent(documentData?.content || ''));
 
   // Title & Icon Editing State
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -453,30 +483,9 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
     readTime: 0
   });
 
-  const extensions = useMemo(() => [
-    StarterKit.configure({
-      codeBlock: false,
-    }),
-    Placeholder.configure({
-      placeholder: 'Empieza a escribir tu nota... (Presiona el botón de Plantillas para empezar rápido)',
-    }),
-    Underline,
-    Highlight,
-    Link.configure({ openOnClick: false }),
-    Image,
-    TextAlign.configure({ types: ['heading', 'paragraph'] }),
-    Table.configure({ resizable: true }),
-    TableRow,
-    TableCell,
-    TableHeader,
-    TaskList,
-    TaskItem.configure({ nested: true }),
-    CodeBlockLowlight.configure({ lowlight }),
-  ], []);
-
   const editor = useEditor({
-    extensions,
-    content: documentData?.content || '',
+    extensions: TIPTAP_EXTENSIONS,
+    content: sanitizeContent(documentData?.content || ''),
     onUpdate: ({ editor }) => {
       setSaveStatus('unsaved');
       updateMetrics(editor);
@@ -577,7 +586,7 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
   const switchToWysiwyg = useCallback(() => {
     if (editor && !editor.isDestroyed && editor.schema && markdownSource) {
       const html = marked(markdownSource);
-      editor.commands.setContent(html);
+      editor.commands.setContent(sanitizeContent(html));
       updateMetrics(editor);
     }
     setViewMode('wysiwyg');
