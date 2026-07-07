@@ -1198,6 +1198,7 @@ const TabContentRendererInner = React.memo(({
   iconTheme,
   explorerFont,
   explorerColorTheme,
+  setExplorerColorTheme,
   explorerFontSize,
   // SplitLayout props
   fontFamily,
@@ -1344,11 +1345,14 @@ const TabContentRendererInner = React.memo(({
   if (tab.type === 'explorer' || tab.isExplorerInSSH) {
     return (
       <LazyFileExplorer
-        sshConfig={tab.sshConfig}
         tabId={tab.key}
+        tab={tab}
+        sshConfig={tab.sshConfig}
+        isStandaloneTab={true}
         iconTheme={iconTheme}
         explorerFont={explorerFont}
         explorerColorTheme={explorerColorTheme}
+        setExplorerColorTheme={setExplorerColorTheme}
         explorerFontSize={explorerFontSize}
       />
     );

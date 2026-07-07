@@ -26,7 +26,7 @@ import TabContextMenu from './contextmenus/TabContextMenu';
 import TerminalContextMenu from './contextmenus/TerminalContextMenu';
 import OverflowMenu from './contextmenus/OverflowMenu';
 import SSHSystemMonitorPanel from './SSHSystemMonitorPanel';
-import SSHFileExplorerPanel from './SSHFileExplorerPanel';
+import FileExplorer from './FileExplorer';
 import { TAB_TYPES } from '../utils/constants';
 import { isHomeButtonLocked as readHomeButtonLocked } from '../utils/homeTabDefaults';
 import { themeManager } from '../utils/themeManager';
@@ -3353,11 +3353,12 @@ const MainContentArea = ({
 
                           {/* SSH File Explorer: right-side panel inside per-tab absolute div */}
                           {tab.type === 'terminal' && sshFileExplorerTabId === tab.key && (
-                            <SSHFileExplorerPanel
+                            <FileExplorer
                               tabId={tab.key}
                               tab={tab}
                               sshConfig={tab.sshConfig}
                               onClose={() => setSshFileExplorerTabId(null)}
+                              isStandaloneTab={false}
                               iconTheme={memoizedContentRendererProps?.iconTheme}
                               explorerFont={memoizedContentRendererProps?.explorerFont}
                               explorerColorTheme={memoizedContentRendererProps?.explorerColorTheme}
