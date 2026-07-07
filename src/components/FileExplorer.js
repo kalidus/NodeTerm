@@ -105,6 +105,18 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
         return isNaN(parsed) ? 25 : parsed;
     });
     const [isResizing, setIsResizing] = useState(false);
+    // Split pane resizing state
+    const [splitPercent, setSplitPercent] = useState(() => {
+        const saved = localStorage.getItem('ssh_file_explorer_split_percent');
+        const parsed = saved ? parseFloat(saved) : 50;
+        return isNaN(parsed) ? 50 : Math.max(10, Math.min(parsed, 90));
+    });
+    const [isResizingSplit, setIsResizingSplit] = useState(false);
+    const splitPercentRef = useRef(splitPercent);
+    useEffect(() => {
+        splitPercentRef.current = splitPercent;
+    }, [splitPercent]);
+    const resizeSplitStateRef = useRef({ isResizing: false, startX: 0, startSplitPercent: 50, containerWidth: 0 });
     const [hasMounted, setHasMounted] = useState(false);
     const [opacity, setOpacity] = useState(() => {
         const saved = localStorage.getItem('ssh_file_explorer_opacity');
@@ -901,6 +913,52 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
         document.body.style.userSelect = 'none';
     };
 
+    const handleMouseMoveSplit = useCallback((e) => {
+        if (!resizeSplitStateRef.current.isResizing) return;
+        const { startX, startSplitPercent, containerWidth } = resizeSplitStateRef.current;
+        const deltaX = e.clientX - startX;
+        const deltaPct = (deltaX / containerWidth) * 100;
+        const newPct = Math.max(10, Math.min(90, startSplitPercent + deltaPct));
+        setSplitPercent(newPct);
+    }, []);
+
+    const handleMouseUpSplit = useCallback((e) => {
+        if (resizeSplitStateRef.current.isResizing) {
+            localStorage.setItem('ssh_file_explorer_split_percent', splitPercentRef.current.toString());
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        }
+        resizeSplitStateRef.current.isResizing = false;
+        setIsResizingSplit(false);
+        document.removeEventListener('mousemove', handleMouseMoveSplit);
+        document.removeEventListener('mouseup', handleMouseUpSplit);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+    }, [handleMouseMoveSplit]);
+
+    const handleMouseDownSplit = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const container = e.currentTarget.parentElement;
+        if (!container) return;
+        const rect = container.getBoundingClientRect();
+        
+        resizeSplitStateRef.current = {
+            isResizing: true,
+            startX: e.clientX,
+            startSplitPercent: splitPercentRef.current,
+            containerWidth: rect.width
+        };
+        
+        setIsResizingSplit(true);
+        document.addEventListener('mousemove', handleMouseMoveSplit);
+        document.addEventListener('mouseup', handleMouseUpSplit);
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+    };
+
     useEffect(() => {
         return () => {
             document.removeEventListener('mousemove', handleMouseMoveResizer);
@@ -909,8 +967,10 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
             document.removeEventListener('mouseup', handleTransferLogResizeUp);
             document.removeEventListener('mousemove', handleTransferStationResizeMove);
             document.removeEventListener('mouseup', handleTransferStationResizeUp);
+            document.removeEventListener('mousemove', handleMouseMoveSplit);
+            document.removeEventListener('mouseup', handleMouseUpSplit);
         };
-    }, [handleMouseMoveResizer, handleMouseUpResizer, handleTransferLogResizeMove, handleTransferLogResizeUp, handleTransferStationResizeMove, handleTransferStationResizeUp]);
+    }, [handleMouseMoveResizer, handleMouseUpResizer, handleTransferLogResizeMove, handleTransferLogResizeUp, handleTransferStationResizeMove, handleTransferStationResizeUp, handleMouseMoveSplit, handleMouseUpSplit]);
 
     const handleOpacityChange = (e) => {
         const val = parseFloat(e.target.value);
@@ -2279,7 +2339,7 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
 
                     {/* Remote Pane - LEFT */}
                     <div
-                        style={{ flex: 1, overflowY: 'auto', padding: '0', position: 'relative', borderRight: '1px solid #21262d', display: 'flex', flexDirection: 'column' }}
+                        style={{ width: `${splitPercent}%`, flexGrow: 0, flexShrink: 0, overflowY: 'auto', padding: '0', position: 'relative', display: 'flex', flexDirection: 'column' }}
                         className="ssh-file-explorer-content remote-pane"
                         onDragOver={handleDragOver}
                         onDrop={(e) => handleDrop(e, 'remote')}
@@ -2366,9 +2426,27 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
                         </div>
                     </div>
 
+                    {/* Split Pane Resizer */}
+                    <div
+                        className={`ssh-explorer-split-resizer ${isResizingSplit ? 'is-resizing' : ''}`}
+                        onMouseDown={handleMouseDownSplit}
+                        style={{
+                            width: '4px',
+                            cursor: 'col-resize',
+                            background: isResizingSplit ? 'rgba(88, 166, 255, 0.3)' : 'transparent',
+                            borderLeft: '1px solid var(--explorer-border, #30363d)',
+                            zIndex: 10,
+                            transition: 'background-color 0.2s',
+                            flexGrow: 0,
+                            flexShrink: 0
+                        }}
+                        onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'rgba(88, 166, 255, 0.15)'; }}
+                        onMouseOut={(e) => { if (!isResizingSplit) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                    />
+
                     {/* Local Pane - RIGHT */}
                     <div
-                        style={{ flex: 1, overflowY: 'auto', padding: '0', position: 'relative', display: 'flex', flexDirection: 'column' }}
+                        style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: '0', position: 'relative', display: 'flex', flexDirection: 'column' }}
                         className="ssh-file-explorer-content local-pane"
                         onDragOver={handleDragOver}
                         onDrop={(e) => handleDrop(e, 'local')}
