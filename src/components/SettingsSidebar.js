@@ -80,6 +80,15 @@ const SETTINGS_SECTIONS = [
     subitems: []
   },
   {
+    id: 'integraciones',
+    labelKey: 'sidebar.integrations',
+    descriptionKey: 'sidebarDescriptions.integrations',
+    icon: 'pi pi-link',
+    subitems: [
+      { id: 'mcp', labelKey: 'sidebar.mcp', descriptionKey: 'sidebarDescriptions.mcp', icon: 'pi pi-server' }
+    ]
+  },
+  {
     id: 'informacion',
     labelKey: 'sidebar.info',
     descriptionKey: 'sidebarDescriptions.info',

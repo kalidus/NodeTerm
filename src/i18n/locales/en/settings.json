@@ -37,7 +37,9 @@
     "sync": "Sync",
     "info": "Information",
     "splashScreen": "Splash Screen",
-    "importExport": "Import / Export"
+    "importExport": "Import / Export",
+    "integrations": "Integrations",
+    "mcp": "MCP"
   },
   "sidebarDescriptions": {
     "general": "Global behavior preferences",
@@ -58,7 +60,9 @@
     "sync": "Sync settings to cloud",
     "info": "Version and technical details",
     "splashScreen": "Customize the startup loading window",
-    "importExport": "Import and export application data"
+    "importExport": "Backup and restore data",
+    "integrations": "Integrations with external tools",
+    "mcp": "MCP server for AI and automation"
   },
   "general": {
     "title": "General Settings",
@@ -394,5 +398,24 @@
       "ip": "IP",
       "version": "Ver"
     }
+  },
+  "mcp": {
+    "title": "MCP Integration",
+    "description": "Allows external AI tools (Cursor, Claude, etc.) to securely interact with NodeTerm.",
+    "enabled": "Enable MCP server",
+    "apiKey": "API Key",
+    "port": "Port",
+    "generateKey": "Generate new key",
+    "copyKey": "Copy to clipboard",
+    "status": "Status",
+    "running": "Running",
+    "stopped": "Stopped",
+    "configSnippets": "Configure your MCP client",
+    "copySnippet": "Copy configuration",
+    "requirements": "Requirements for this to work",
+    "req1": "NodeTerm must be open",
+    "req2": "Passwords must be unlocked",
+    "req3": "Integration enabled on this screen",
+    "req4": "API Key must match"
   }
 }

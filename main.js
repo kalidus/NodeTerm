@@ -1540,6 +1540,24 @@ function createWindow() {
 
       // Registrar handlers de túnel SSH (último paso)
       registerSSHTunnelHandlers(handlerDependencies);
+
+      // Iniciar McpApiServer si está habilitado
+      try {
+        const mcpApiServer = require('./src/main/services/McpApiServer');
+        mcpApiServer.setDependencies({
+          mainWindow,
+          getConnectionsFn: null // Se inyecta localmente en _getConnections
+        });
+        const mcpConfig = mcpApiServer.loadConfig();
+        if (mcpConfig.enabled) {
+          mcpApiServer.start(mcpConfig.port).catch(err => {
+            console.error('❌ [POST-SHOW] Error iniciando MCP API Server:', err.message);
+          });
+        }
+      } catch (mcpErr) {
+        console.error('❌ [POST-SHOW] Error configurando MCP API Server:', mcpErr);
+      }
+
       console.log('✅ [POST-SHOW] Todos los handlers secundarios registrados');
     } catch (error) {
       console.error('❌ [POST-SHOW] Error registrando handlers:', error);
@@ -3674,6 +3692,13 @@ app.on('before-quit', (event) => {
     HermesCli.cleanup();
   } catch (error) {
     console.error('Error cleaning up HermesCli processes on quit:', error);
+  }
+
+  try {
+    const mcpApiServer = require('./src/main/services/McpApiServer');
+    mcpApiServer.stop();
+  } catch (error) {
+    console.error('Error cleaning up McpApiServer on quit:', error);
   }
 });
 

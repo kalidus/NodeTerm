@@ -82,6 +82,14 @@ const SettingsSidebarNav = ({
       subitems: []
     },
     {
+      id: 'integraciones',
+      label: t('sidebar.integrations') || 'Integraciones',
+      icon: 'pi pi-link',
+      subitems: [
+        { id: 'mcp', label: t('sidebar.mcp') || 'MCP', icon: 'pi pi-server' }
+      ]
+    },
+    {
       id: 'informacion',
       label: t('sidebar.info'),
       icon: 'pi pi-info-circle',

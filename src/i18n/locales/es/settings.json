@@ -37,7 +37,9 @@
     "sync": "Sincronización",
     "info": "Información",
     "splashScreen": "Pantalla de Inicio",
-    "importExport": "Importar / Exportar"
+    "importExport": "Importar / Exportar",
+    "integrations": "Integraciones",
+    "mcp": "MCP"
   },
   "sidebarDescriptions": {
     "general": "Ajustes globales de comportamiento",
@@ -58,7 +60,9 @@
     "sync": "Sincroniza ajustes en la nube",
     "info": "Versión y datos técnicos",
     "splashScreen": "Personaliza la pantalla de carga",
-    "importExport": "Importación y exportación de datos"
+    "importExport": "Copia de seguridad y restauración",
+    "integrations": "Integraciones con herramientas externas",
+    "mcp": "Servidor MCP para IA y automatización"
   },
   "general": {
     "title": "Configuración General",
@@ -387,5 +391,24 @@
       "ip": "IP",
       "version": "Ver"
     }
+  },
+  "mcp": {
+    "title": "Integración MCP",
+    "description": "Permite que herramientas de IA externas (Cursor, Claude, etc.) interactúen con NodeTerm de forma segura.",
+    "enabled": "Habilitar servidor MCP",
+    "apiKey": "API Key",
+    "port": "Puerto",
+    "generateKey": "Generar nueva clave",
+    "copyKey": "Copiar al portapapeles",
+    "status": "Estado",
+    "running": "Activo",
+    "stopped": "Inactivo",
+    "configSnippets": "Configurar tu MCP client",
+    "copySnippet": "Copiar configuración",
+    "requirements": "Requisitos para que funcione",
+    "req1": "NodeTerm debe estar abierto",
+    "req2": "Contraseñas deben estar desbloqueadas",
+    "req3": "Integración habilitada en esta pantalla",
+    "req4": "API Key debe coincidir"
   }
 }

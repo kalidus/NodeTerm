@@ -174,6 +174,13 @@ contextBridge.exposeInMainWorld('electron', {
     installCli: () => ipcRenderer.invoke('hermescli:cli-install'),
     uninstallCli: () => ipcRenderer.invoke('hermescli:cli-uninstall')
   },
+  mcpApi: {
+    getConfig: () => ipcRenderer.invoke('mcp-api:get-config'),
+    saveConfig: (config) => ipcRenderer.invoke('mcp-api:save-config', config),
+    generateApiKey: () => ipcRenderer.invoke('mcp-api:generate-api-key'),
+    getStatus: () => ipcRenderer.invoke('mcp-api:get-status'),
+    restartServer: () => ipcRenderer.invoke('mcp-api:restart-server')
+  },
   ipcRenderer: {
     send: (channel, ...args) => {
       const validSendChannels = [

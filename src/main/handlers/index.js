@@ -37,10 +37,16 @@ let _codexcliHandlers = null;
 let _antigravitycliHandlers = null;
 let _hermescliHandlers = null;
 let _browserImportHandlers = null;
+let _mcpApiHandlers = null;
 
 function getBrowserImportHandlers() {
   if (!_browserImportHandlers) _browserImportHandlers = require('./browser-import-handlers');
   return _browserImportHandlers;
+}
+
+function getMcpApiHandlers() {
+  if (!_mcpApiHandlers) _mcpApiHandlers = require('./mcp-api-handlers');
+  return _mcpApiHandlers;
 }
 
 function getAppHandlers() {
@@ -287,6 +293,9 @@ function registerSecondaryHandlers(dependencies) {
   // Handlers de herramientas de red
   getNetworkToolsHandlers().registerNetworkToolsHandlers();
 
+  // Handlers de MCP API (servidor HTTP local)
+  getMcpApiHandlers().registerMcpApiHandlers();
+
   // NOTA: Handlers de clientes IA en registerAIClientHandlers() (fase crítica)
   // NOTA: Theme handlers ahora se registran en registerCriticalHandlers()
 
@@ -363,5 +372,6 @@ module.exports = {
   getCodexCliHandlers,
   getAntigravityCliHandlers,
   getHermesCliHandlers,
-  getBrowserImportHandlers
+  getBrowserImportHandlers,
+  getMcpApiHandlers
 };
