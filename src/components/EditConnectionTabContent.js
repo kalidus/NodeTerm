@@ -135,6 +135,8 @@ export default function EditConnectionTabContent({
   const [filePort, setFilePort] = useState(22);
   const [fileRemoteFolder, setFileRemoteFolder] = useState('');
   const [fileTargetFolder, setFileTargetFolder] = useState('');
+  const [activeFileFormTab, setActiveFileFormTab] = useState('general');
+  const [showFilePassword, setShowFilePassword] = useState(false);
 
   // --- SSH TUNNEL STATES ---
   const [tunnelType, setTunnelType] = useState('local'); // local, remote, dynamic
@@ -544,121 +546,218 @@ export default function EditConnectionTabContent({
 
       case 'sftp':
       case 'ftp':
-      case 'scp':
-        return (
-          <div className="p-fluid">
-            <Card title={`🔗 ${t('fileConnection.sections.connection')}`} className="mb-2" style={{ background: 'transparent', border: 'none', boxShadow: 'none' }}>
-              <div className={(layoutMode === 'split' || layoutMode === 'sidebar') ? "grid" : "formgrid grid"}>
-                <div className={(layoutMode === 'split' || layoutMode === 'sidebar') ? "col-6" : "col-12"} style={{ padding: '0 0.5rem' }}>
-                  <div className="field col-12" style={{ marginBottom: '1rem' }}>
-                    <label htmlFor="file-name" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>{t('fileConnection.fields.name')} *</label>
-                    <InputText
-                      id="file-name"
-                      value={fileName}
-                      onChange={(e) => setFileName(e.target.value)}
-                      placeholder={t('fileConnection.placeholders.name')}
-                      style={{ width: '100%' }}
-                    />
-                  </div>
+      case 'scp': {
+        const renderFileHostPort = () => (
+          <div className="terminal-host-port-row mb-3">
+            <div className="terminal-host-port-host">
+              <label className="terminal-label">{t('fileConnection.fields.host').toUpperCase()} *</label>
+              <div className="terminal-input-wrap">
+                <i className="pi pi-server terminal-icon-left"></i>
+                <InputText 
+                  value={fileHost} 
+                  onChange={(e) => setFileHost(e.target.value)}
+                  placeholder={t('fileConnection.placeholders.host')}
+                  className="terminal-input"
+                />
+              </div>
+            </div>
+            <div className="terminal-host-port-port">
+              <label className="terminal-label">{t('fileConnection.fields.port').toUpperCase()}</label>
+              <div className="terminal-input-wrap terminal-port-input-wrap">
+                <InputText
+                  value={filePort}
+                  onChange={(e) => setFilePort(parseInt(e.target.value) || (fileProtocol === 'ftp' ? 21 : 22))}
+                  placeholder={fileProtocol === 'ftp' ? '21' : '22'}
+                  className="terminal-input terminal-port-input text-center"
+                />
+              </div>
+            </div>
+          </div>
+        );
 
-                  <div className="grid col-12" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', padding: '0 0.5rem', marginBottom: '1rem' }}>
-                    <div className="field">
-                      <label htmlFor="file-protocol" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>{t('fileConnection.fields.protocol')} *</label>
-                      <Dropdown
-                        id="file-protocol"
-                        value={fileProtocol}
-                        options={[
-                          { label: t('fileConnection.protocols.sftp'), value: 'sftp' },
-                          { label: t('fileConnection.protocols.ftp'), value: 'ftp' },
-                          { label: t('fileConnection.protocols.scp'), value: 'scp' }
-                        ]}
-                        onChange={(e) => {
-                          setFileProtocol(e.value);
-                          setFilePort(e.value === 'ftp' ? 21 : 22);
-                        }}
-                        placeholder={tCommon('labels.select')}
-                        style={{ width: '100%' }}
-                      />
-                    </div>
+        const renderFileNameProtocol = () => (
+          <div className="terminal-row grid grid-nogutter gap-3 mb-3">
+            <div className="col">
+              <label className="terminal-label">{t('fileConnection.fields.name').toUpperCase()} *</label>
+              <div className="terminal-input-wrap">
+                <InputText 
+                  value={fileName} 
+                  onChange={(e) => setFileName(e.target.value)} 
+                  placeholder={t('fileConnection.placeholders.name')} 
+                  className="terminal-input" 
+                />
+              </div>
+            </div>
+            <div className="col">
+              <label className="terminal-label">{t('fileConnection.fields.protocol').toUpperCase()} *</label>
+              <div className="terminal-input-wrap terminal-folder-dropdown-wrap">
+                <Dropdown
+                  value={fileProtocol}
+                  options={[
+                    { label: t('fileConnection.protocols.sftp'), value: 'sftp' },
+                    { label: t('fileConnection.protocols.ftp'), value: 'ftp' },
+                    { label: t('fileConnection.protocols.scp'), value: 'scp' }
+                  ]}
+                  onChange={(e) => {
+                    setFileProtocol(e.value);
+                    setFilePort(e.value === 'ftp' ? 21 : 22);
+                  }}
+                  placeholder={tCommon('labels.select')}
+                  className="terminal-folder-dropdown"
+                  panelClassName="terminal-folder-dropdown-panel"
+                />
+              </div>
+            </div>
+          </div>
+        );
 
-                    <div className="field">
-                      <label htmlFor="file-host" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>{t('fileConnection.fields.host')} *</label>
-                      <InputText
-                        id="file-host"
-                        value={fileHost}
-                        onChange={(e) => setFileHost(e.target.value)}
-                        placeholder={t('fileConnection.placeholders.host')}
-                        style={{ width: '100%' }}
-                      />
-                    </div>
-                  </div>
+        const renderFileUserPassword = () => (
+          <div className="terminal-row grid grid-nogutter gap-3 mb-3">
+            <div className="col">
+              <label className="terminal-label">{t('fileConnection.fields.user').toUpperCase()} *</label>
+              <div className="terminal-input-wrap">
+                <i className="pi pi-user terminal-icon-left"></i>
+                <InputText 
+                  value={fileUser} 
+                  onChange={(e) => setFileUser(e.target.value)} 
+                  placeholder={t('fileConnection.placeholders.user')} 
+                  className="terminal-input" 
+                />
+              </div>
+            </div>
+            <div className="col">
+              <label className="terminal-label">{t('fileConnection.fields.password').toUpperCase()}</label>
+              <div className="terminal-input-wrap">
+                <i className="pi pi-lock terminal-icon-left"></i>
+                <InputText
+                  type={showFilePassword ? 'text' : 'password'}
+                  value={filePassword}
+                  onChange={(e) => setFilePassword(e.target.value)}
+                  placeholder={t('fileConnection.placeholders.password')}
+                  className="terminal-input"
+                />
+                <i
+                  className={`pi ${showFilePassword ? 'pi-eye-slash' : 'pi-eye'} terminal-icon-right cursor-pointer`}
+                  onClick={() => setShowFilePassword(!showFilePassword)}
+                ></i>
+              </div>
+            </div>
+          </div>
+        );
 
-                  <div className="grid col-12" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', padding: '0 0.5rem', marginBottom: '1rem' }}>
-                    <div className="field">
-                      <label htmlFor="file-user" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>{t('fileConnection.fields.user')} *</label>
-                      <InputText
-                        id="file-user"
-                        value={fileUser}
-                        onChange={(e) => setFileUser(e.target.value)}
-                        placeholder={t('fileConnection.placeholders.user')}
-                        style={{ width: '100%' }}
-                      />
-                    </div>
+        const renderFileFolders = () => (
+          <div>
+            <div className="terminal-row mb-4">
+              <label className="terminal-label">
+                {t('fileConnection.fields.targetFolder').toUpperCase()}{' '}
+                <span className="opacity-50">({tCommon('labels.optional').toUpperCase()})</span>
+              </label>
+              <div className="terminal-input-wrap terminal-folder-dropdown-wrap">
+                <i className="pi pi-folder terminal-icon-left"></i>
+                <Dropdown
+                  value={fileTargetFolder}
+                  options={folderOptionsList}
+                  onChange={(e) => setFileTargetFolder(e.value)}
+                  placeholder={tCommon('labels.select')}
+                  showClear
+                  filter
+                  className="terminal-folder-dropdown"
+                  panelClassName="terminal-folder-dropdown-panel"
+                />
+              </div>
+            </div>
 
-                    <div className="field">
-                      <label htmlFor="file-port" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>{t('fileConnection.fields.port')}</label>
-                      <InputText
-                        id="file-port"
-                        type="number"
-                        value={filePort}
-                        onChange={(e) => setFilePort(parseInt(e.target.value) || (fileProtocol === 'ftp' ? 21 : 22))}
-                        placeholder={fileProtocol === 'ftp' ? '21' : '22'}
-                        style={{ width: '100%' }}
-                      />
-                    </div>
-                  </div>
+            <div className="terminal-row mb-4">
+              <label className="terminal-label">
+                {t('fileConnection.fields.remoteFolder').toUpperCase()}{' '}
+                <span className="opacity-50">({tCommon('labels.optional').toUpperCase()})</span>
+              </label>
+              <div className="terminal-input-wrap">
+                <i className="pi pi-folder-open terminal-icon-left"></i>
+                <InputText
+                  value={fileRemoteFolder}
+                  onChange={(e) => setFileRemoteFolder(e.target.value)}
+                  placeholder={t('fileConnection.placeholders.remoteFolder')}
+                  className="terminal-input"
+                />
+              </div>
+            </div>
+          </div>
+        );
+
+        if (layoutMode === 'sidebar') {
+          const sidebarTabs = [
+            { id: 'general', label: 'General', icon: 'pi pi-info-circle' },
+            { id: 'auth', label: 'Autenticación', icon: 'pi pi-lock' },
+            { id: 'folders', label: 'Carpetas', icon: 'pi pi-folder' }
+          ];
+
+          return (
+            <div className="connection-terminal-form" style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div className="form-layout-sidebar" style={{ flex: '1 1 auto', minHeight: 0, overflow: 'hidden', marginBottom: '1rem' }}>
+                <div className="form-sidebar-nav">
+                  {sidebarTabs.map(tab => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      className={`form-sidebar-nav-btn ${activeFileFormTab === tab.id ? 'active' : ''}`}
+                      onClick={() => setActiveFileFormTab(tab.id)}
+                    >
+                      <i className={tab.icon}></i>
+                      <span>{tab.label}</span>
+                    </button>
+                  ))}
                 </div>
+                <div className="form-sidebar-content" style={{ overflowY: 'auto', flex: 1, paddingRight: '6px' }}>
+                  {activeFileFormTab === 'general' && (
+                    <div>
+                      {renderFileHostPort()}
+                      {renderFileNameProtocol()}
+                    </div>
+                  )}
+                  {activeFileFormTab === 'auth' && (
+                    <div>
+                      {renderFileUserPassword()}
+                    </div>
+                  )}
+                  {activeFileFormTab === 'folders' && renderFileFolders()}
+                </div>
+              </div>
+            </div>
+          );
+        }
 
-                <div className={(layoutMode === 'split' || layoutMode === 'sidebar') ? "col-6" : "col-12"} style={{ padding: '0 0.5rem' }}>
-                  <div className="field col-12" style={{ marginBottom: '1rem' }}>
-                    <label htmlFor="file-password" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>{t('fileConnection.fields.password')}</label>
-                    <InputText
-                      id="file-password"
-                      type="password"
-                      value={filePassword}
-                      onChange={(e) => setFilePassword(e.target.value)}
-                      placeholder={t('fileConnection.placeholders.password')}
-                      style={{ width: '100%' }}
-                    />
+        if (layoutMode === 'split') {
+          return (
+            <div className="connection-terminal-form" style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div className="terminal-form-scroll-area" style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', paddingRight: '4px' }}>
+                <div className="grid" style={{ gap: '0', margin: 0 }}>
+                  <div className="col-12 md:col-6" style={{ padding: '0 1rem 0 0' }}>
+                    {renderFileHostPort()}
+                    {renderFileNameProtocol()}
+                    {renderFileUserPassword()}
                   </div>
-
-                  <div className="field col-12" style={{ marginBottom: '1rem' }}>
-                    <label htmlFor="file-remote-folder" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>{t('fileConnection.fields.remoteFolder')} ({tCommon('labels.optional')})</label>
-                    <InputText
-                      id="file-remote-folder"
-                      value={fileRemoteFolder}
-                      onChange={(e) => setFileRemoteFolder(e.target.value)}
-                      placeholder={t('fileConnection.placeholders.remoteFolder')}
-                      style={{ width: '100%' }}
-                    />
-                  </div>
-
-                  <div className="field col-12" style={{ marginBottom: '1.5rem' }}>
-                    <label htmlFor="file-target-folder" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>{t('fileConnection.fields.targetFolder')} ({tCommon('labels.optional')})</label>
-                    <Dropdown
-                      id="file-target-folder"
-                      value={fileTargetFolder}
-                      options={folderOptionsList}
-                      onChange={(e) => setFileTargetFolder(e.value)}
-                      placeholder={tCommon('labels.select')}
-                      style={{ width: '100%' }}
-                    />
+                  
+                  <div className="col-12 md:col-6" style={{ padding: '0 0 0 1rem', borderLeft: '1px solid var(--ui-content-border, rgba(255, 255, 255, 0.08))' }}>
+                    {renderFileFolders()}
                   </div>
                 </div>
               </div>
-            </Card>
+            </div>
+          );
+        }
+
+        return (
+          <div className="connection-terminal-form" style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div className="terminal-form-scroll-area" style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', paddingRight: '4px' }}>
+              {renderFileHostPort()}
+              {renderFileNameProtocol()}
+              {renderFileUserPassword()}
+              {renderFileFolders()}
+            </div>
           </div>
         );
+      }
 
       case 'ssh-tunnel':
         return (
