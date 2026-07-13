@@ -18,7 +18,7 @@ import { useTranslation } from '../i18n/hooks/useTranslation';
 /**
  * Componente SVG del diagrama visual del túnel
  */
-const TunnelDiagram = ({ tunnelType, config }) => {
+export const TunnelDiagram = ({ tunnelType, config }) => {
   const { t } = useTranslation('dialogs');
   
   // Colores del tema

@@ -11,6 +11,7 @@ import { getAllFolders } from '../utils/treeFolders';
 import { EnhancedSSHForm } from './Dialogs';
 import { EnhancedRDPForm, createDefaultRdpFormData, mapEditNodeDataToRdpFormData, isRdpFormValid } from './EnhancedRDPForm';
 import { EnhancedVNCForm, createDefaultVncFormData, mapEditNodeDataToVncFormData, isVncFormValid } from './EnhancedVNCForm';
+import { TunnelDiagram } from './SSHTunnelDialog';
 
 export default function EditConnectionTabContent({
   tab,
@@ -154,6 +155,7 @@ export default function EditConnectionTabContent({
   const [tunnelRemotePort, setTunnelRemotePort] = useState('');
   const [tunnelBindHost, setTunnelBindHost] = useState('0.0.0.0');
   const [showTunnelPassword, setShowTunnelPassword] = useState(false);
+  const [activeTunnelFormTab, setActiveTunnelFormTab] = useState('local');
 
   const isInitializedRef = useRef(false);
 
@@ -759,244 +761,317 @@ export default function EditConnectionTabContent({
         );
       }
 
-      case 'ssh-tunnel':
-        return (
-          <div className="p-fluid">
-            <div style={{ display: 'grid', gridTemplateColumns: layoutMode === 'standard' ? '1fr' : '1fr 1fr', gap: '1.5rem' }}>
-              {/* Configuración Local */}
-              <div>
-                <h4 style={{ marginBottom: '1rem', color: 'var(--ui-dialog-text)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <i className="pi pi-home" style={{ color: 'var(--ui-button-primary)' }}></i>
-                  {tunnelType === 'remote' ? 'Servidor Local' : 'Configuración Local'}
-                </h4>
+      case 'ssh-tunnel': {
+        const diagramConfig = {
+          localHost: tunnelLocalHost,
+          localPort: tunnelLocalPort || '????',
+          remoteHost: tunnelRemoteHost || '<host>',
+          remotePort: tunnelRemotePort || '????',
+          sshHost: tunnelSshHost || '<SSH host>',
+          sshPort: tunnelSshPort || 22
+        };
 
-                <div className="field" style={{ marginBottom: '1rem' }}>
-                  <label htmlFor="tunnelName" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>Nombre *</label>
+        const renderDiagram = () => (
+          <div className="tunnel-diagram-container mb-4" style={{ borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--ui-content-border, rgba(255, 255, 255, 0.08))', background: 'rgba(0, 0, 0, 0.2)', padding: '0.5rem', maxWidth: '900px', margin: '0 auto 1.5rem auto' }}>
+            <TunnelDiagram tunnelType={tunnelType} config={diagramConfig} />
+          </div>
+        );
+
+        const renderTunnelLocalConfig = () => (
+          <div>
+            <div className="terminal-row mb-3">
+              <label className="terminal-label">NOMBRE DE CONEXIÓN *</label>
+              <div className="terminal-input-wrap">
+                <InputText
+                  value={tunnelName}
+                  onChange={(e) => setTunnelName(e.target.value)}
+                  placeholder="Mi túnel SSH"
+                  className="terminal-input"
+                />
+              </div>
+            </div>
+
+            <div className="terminal-row mb-3">
+              <label className="terminal-label">TIPO DE TÚNEL</label>
+              <div className="terminal-auth-selector">
+                <div
+                  className={`terminal-auth-chip ${tunnelType === 'local' ? 'active' : ''}`}
+                  onClick={() => setTunnelType('local')}
+                >
+                  Local (-L)
+                </div>
+                <div
+                  className={`terminal-auth-chip ${tunnelType === 'remote' ? 'active' : ''}`}
+                  onClick={() => setTunnelType('remote')}
+                >
+                  Remoto (-R)
+                </div>
+                <div
+                  className={`terminal-auth-chip ${tunnelType === 'dynamic' ? 'active' : ''}`}
+                  onClick={() => setTunnelType('dynamic')}
+                >
+                  Dinámico (SOCKS)
+                </div>
+              </div>
+            </div>
+
+            {tunnelType === 'remote' && (
+              <div className="terminal-row mb-3">
+                <label className="terminal-label">SERVIDOR LOCAL</label>
+                <div className="terminal-input-wrap">
                   <InputText
-                    id="tunnelName"
-                    value={tunnelName}
-                    onChange={(e) => setTunnelName(e.target.value)}
-                    placeholder="Mi túnel SSH"
-                    style={{ width: '100%' }}
+                    value={tunnelLocalHost}
+                    onChange={(e) => setTunnelLocalHost(e.target.value)}
+                    placeholder="127.0.0.1"
+                    className="terminal-input"
                   />
                 </div>
+              </div>
+            )}
 
-                <div className="field" style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>Tipo de túnel</label>
-                  <div style={{ display: 'flex', gap: '1rem' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer' }}>
-                      <RadioButton
-                        inputId="tunnel-local"
-                        value="local"
-                        checked={tunnelType === 'local'}
-                        onChange={(e) => setTunnelType(e.value)}
-                      />
-                      <span>Local (-L)</span>
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer' }}>
-                      <RadioButton
-                        inputId="tunnel-remote"
-                        value="remote"
-                        checked={tunnelType === 'remote'}
-                        onChange={(e) => setTunnelType(e.value)}
-                      />
-                      <span>Remoto (-R)</span>
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer' }}>
-                      <RadioButton
-                        inputId="tunnel-dynamic"
-                        value="dynamic"
-                        checked={tunnelType === 'dynamic'}
-                        onChange={(e) => setTunnelType(e.value)}
-                      />
-                      <span>Dinámico (SOCKS)</span>
-                    </label>
-                  </div>
-                </div>
+            <div className="terminal-row mb-3">
+              <label className="terminal-label">
+                {tunnelType === 'dynamic' ? 'PUERTO SOCKS *' : 'PUERTO LOCAL *'}
+              </label>
+              <div className="terminal-input-wrap">
+                <InputText
+                  type="number"
+                  value={tunnelLocalPort}
+                  onChange={(e) => setTunnelLocalPort(e.target.value)}
+                  placeholder={tunnelType === 'dynamic' ? '1080' : '8080'}
+                  className="terminal-input"
+                />
+              </div>
+            </div>
 
-                {tunnelType === 'remote' && (
-                  <div className="field" style={{ marginBottom: '1rem' }}>
-                    <label htmlFor="localHost" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>Servidor Local</label>
+            {tunnelType === 'local' && (
+              <div className="terminal-row grid grid-nogutter gap-3 mb-3">
+                <div className="col">
+                  <label className="terminal-label">HOST REMOTO *</label>
+                  <div className="terminal-input-wrap">
                     <InputText
-                      id="localHost"
-                      value={tunnelLocalHost}
-                      onChange={(e) => setTunnelLocalHost(e.target.value)}
-                      placeholder="127.0.0.1"
-                      style={{ width: '100%' }}
+                      value={tunnelRemoteHost}
+                      onChange={(e) => setTunnelRemoteHost(e.target.value)}
+                      placeholder="database.internal"
+                      className="terminal-input"
                     />
                   </div>
-                )}
-
-                <div className="field" style={{ marginBottom: '1rem' }}>
-                  <label htmlFor="localPort" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>
-                    {tunnelType === 'dynamic' ? 'Puerto SOCKS *' : 'Puerto Local *'}
-                  </label>
-                  <InputText
-                    id="localPort"
-                    type="number"
-                    value={tunnelLocalPort}
-                    onChange={(e) => setTunnelLocalPort(e.target.value)}
-                    placeholder={tunnelType === 'dynamic' ? '1080' : '8080'}
-                    style={{ width: '100%' }}
-                  />
                 </div>
-
-                {tunnelType === 'local' && (
-                  <>
-                    <div className="field" style={{ marginBottom: '1rem' }}>
-                      <label htmlFor="remoteHost" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>Host remoto *</label>
-                      <InputText
-                        id="remoteHost"
-                        value={tunnelRemoteHost}
-                        onChange={(e) => setTunnelRemoteHost(e.target.value)}
-                        placeholder="database.internal"
-                        style={{ width: '100%' }}
-                      />
-                    </div>
-                    <div className="field" style={{ marginBottom: '1rem' }}>
-                      <label htmlFor="remotePort" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>Puerto remoto *</label>
-                      <InputText
-                        id="remotePort"
-                        type="number"
-                        value={tunnelRemotePort}
-                        onChange={(e) => setTunnelRemotePort(e.target.value)}
-                        placeholder="3306"
-                        style={{ width: '100%' }}
-                      />
-                    </div>
-                  </>
-                )}
-
-                {tunnelType === 'remote' && (
-                  <div className="field" style={{ marginBottom: '1rem' }}>
-                    <label htmlFor="remotePort" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>Puerto reenviado (en servidor SSH) *</label>
+                <div className="col">
+                  <label className="terminal-label">PUERTO REMOTO *</label>
+                  <div className="terminal-input-wrap">
                     <InputText
-                      id="remotePort"
                       type="number"
                       value={tunnelRemotePort}
                       onChange={(e) => setTunnelRemotePort(e.target.value)}
-                      placeholder="8080"
-                      style={{ width: '100%' }}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Servidor SSH */}
-              <div>
-                <h4 style={{ marginBottom: '1rem', color: 'var(--ui-dialog-text)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <i className="pi pi-server" style={{ color: 'var(--ui-button-primary)' }}></i>
-                  Servidor SSH
-                </h4>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.75rem', marginBottom: '1rem' }}>
-                  <div className="field">
-                    <label htmlFor="sshHost" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>Servidor SSH *</label>
-                    <InputText
-                      id="sshHost"
-                      value={tunnelSshHost}
-                      onChange={(e) => setTunnelSshHost(e.target.value)}
-                      placeholder="ssh.ejemplo.com"
-                      style={{ width: '100%' }}
-                    />
-                  </div>
-                  <div className="field">
-                    <label htmlFor="sshPort" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>Puerto</label>
-                    <InputText
-                      id="sshPort"
-                      type="number"
-                      value={tunnelSshPort}
-                      onChange={(e) => setTunnelSshPort(e.target.value)}
-                      placeholder="22"
-                      style={{ width: '80px' }}
+                      placeholder="3306"
+                      className="terminal-input"
                     />
                   </div>
                 </div>
+              </div>
+            )}
 
-                <div className="field" style={{ marginBottom: '1rem' }}>
-                  <label htmlFor="sshUser" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>Usuario SSH *</label>
+            {tunnelType === 'remote' && (
+              <div className="terminal-row mb-3">
+                <label className="terminal-label">PUERTO REENVIADO (EN SERVIDOR SSH) *</label>
+                <div className="terminal-input-wrap">
                   <InputText
-                    id="sshUser"
-                    value={tunnelSshUser}
-                    onChange={(e) => setTunnelSshUser(e.target.value)}
-                    placeholder="root"
-                    style={{ width: '100%' }}
+                    type="number"
+                    value={tunnelRemotePort}
+                    onChange={(e) => setTunnelRemotePort(e.target.value)}
+                    placeholder="8080"
+                    className="terminal-input"
                   />
                 </div>
+              </div>
+            )}
+          </div>
+        );
 
-                <div className="field" style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>Autenticación</label>
-                  <div style={{ display: 'flex', gap: '1rem' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer' }}>
-                      <RadioButton
-                        inputId="tunnel-auth-password"
-                        value="password"
-                        checked={tunnelAuthType === 'password'}
-                        onChange={(e) => setTunnelAuthType(e.value)}
-                      />
-                      <span>Contraseña</span>
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer' }}>
-                      <RadioButton
-                        inputId="tunnel-auth-key"
-                        value="key"
-                        checked={tunnelAuthType === 'key'}
-                        onChange={(e) => setTunnelAuthType(e.value)}
-                      />
-                      <span>Clave privada</span>
-                    </label>
+        const renderTunnelSSHConfig = () => (
+          <div>
+            <div className="terminal-host-port-row mb-3">
+              <div className="terminal-host-port-host">
+                <label className="terminal-label">SERVIDOR SSH *</label>
+                <div className="terminal-input-wrap">
+                  <i className="pi pi-server terminal-icon-left"></i>
+                  <InputText
+                    value={tunnelSshHost}
+                    onChange={(e) => setTunnelSshHost(e.target.value)}
+                    placeholder="ssh.ejemplo.com"
+                    className="terminal-input"
+                  />
+                </div>
+              </div>
+              <div className="terminal-host-port-port">
+                <label className="terminal-label">PUERTO</label>
+                <div className="terminal-input-wrap terminal-port-input-wrap">
+                  <InputText
+                    type="number"
+                    value={tunnelSshPort}
+                    onChange={(e) => setTunnelSshPort(e.target.value)}
+                    placeholder="22"
+                    className="terminal-input terminal-port-input text-center"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="terminal-row mb-3">
+              <label className="terminal-label">USUARIO SSH *</label>
+              <div className="terminal-input-wrap">
+                <i className="pi pi-user terminal-icon-left"></i>
+                <InputText
+                  value={tunnelSshUser}
+                  onChange={(e) => setTunnelSshUser(e.target.value)}
+                  placeholder="root"
+                  className="terminal-input"
+                />
+              </div>
+            </div>
+
+            <div className="terminal-row mb-3">
+              <label className="terminal-label">AUTENTICACIÓN</label>
+              <div className="terminal-auth-selector">
+                <div
+                  className={`terminal-auth-chip ${tunnelAuthType === 'password' ? 'active' : ''}`}
+                  onClick={() => setTunnelAuthType('password')}
+                >
+                  <i className="pi pi-lock"></i> Contraseña
+                </div>
+                <div
+                  className={`terminal-auth-chip ${tunnelAuthType === 'key' ? 'active' : ''}`}
+                  onClick={() => setTunnelAuthType('key')}
+                >
+                  <i className="pi pi-key"></i> Clave privada
+                </div>
+              </div>
+            </div>
+
+            {tunnelAuthType === 'password' ? (
+              <div className="terminal-row mb-3">
+                <label className="terminal-label">CONTRASEÑA *</label>
+                <div className="terminal-input-wrap">
+                  <i className="pi pi-lock terminal-icon-left"></i>
+                  <InputText
+                    type={showTunnelPassword ? 'text' : 'password'}
+                    value={tunnelSshPassword}
+                    onChange={(e) => setTunnelSshPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="terminal-input"
+                  />
+                  <i
+                    className={`pi ${showTunnelPassword ? 'pi-eye-slash' : 'pi-eye'} terminal-icon-right cursor-pointer`}
+                    onClick={() => setShowTunnelPassword(!showTunnelPassword)}
+                  ></i>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="terminal-row mb-3">
+                  <label className="terminal-label">RUTA CLAVE PRIVADA *</label>
+                  <div className="terminal-input-wrap">
+                    <i className="pi pi-file terminal-icon-left"></i>
+                    <InputText
+                      value={tunnelPrivateKeyPath}
+                      onChange={(e) => setTunnelPrivateKeyPath(e.target.value)}
+                      placeholder="C:\Users\...\.ssh\id_rsa"
+                      className="terminal-input"
+                    />
                   </div>
                 </div>
-
-                {tunnelAuthType === 'password' ? (
-                  <div className="field" style={{ marginBottom: '1rem' }}>
-                    <label htmlFor="sshPassword" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>Contraseña *</label>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <InputText
-                        id="sshPassword"
-                        type={showTunnelPassword ? 'text' : 'password'}
-                        value={tunnelSshPassword}
-                        onChange={(e) => setTunnelSshPassword(e.target.value)}
-                        placeholder="••••••••"
-                        style={{ flex: 1 }}
-                      />
-                      <Button
-                        type="button"
-                        icon={showTunnelPassword ? 'pi pi-eye-slash' : 'pi pi-eye'}
-                        className="p-button-outlined"
-                        onClick={() => setShowTunnelPassword(!showTunnelPassword)}
-                      />
-                    </div>
+                <div className="terminal-row mb-3">
+                  <label className="terminal-label">PASSPHRASE (OPCIONAL)</label>
+                  <div className="terminal-input-wrap">
+                    <i className="pi pi-lock terminal-icon-left"></i>
+                    <InputText
+                      type="password"
+                      value={tunnelPassphrase}
+                      onChange={(e) => setTunnelPassphrase(e.target.value)}
+                      placeholder="••••••••"
+                      className="terminal-input"
+                    />
                   </div>
-                ) : (
-                  <>
-                    <div className="field" style={{ marginBottom: '1rem' }}>
-                      <label htmlFor="privateKeyPath" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>Ruta clave privada *</label>
-                      <InputText
-                        id="privateKeyPath"
-                        value={tunnelPrivateKeyPath}
-                        onChange={(e) => setTunnelPrivateKeyPath(e.target.value)}
-                        placeholder="C:\Users\...\.ssh\id_rsa"
-                        style={{ width: '100%' }}
-                      />
-                    </div>
-                    <div className="field" style={{ marginBottom: '1rem' }}>
-                      <label htmlFor="passphrase" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>Passphrase (opcional)</label>
-                      <InputText
-                        id="passphrase"
-                        type="password"
-                        value={tunnelPassphrase}
-                        onChange={(e) => setTunnelPassphrase(e.target.value)}
-                        placeholder="••••••••"
-                        style={{ width: '100%' }}
-                      />
-                    </div>
-                  </>
-                )}
+                </div>
               </div>
+            )}
+          </div>
+        );
+
+        if (layoutMode === 'sidebar') {
+          const sidebarTabs = [
+            { id: 'local', label: 'Local', icon: 'pi pi-home' },
+            { id: 'ssh', label: 'Servidor SSH', icon: 'pi pi-server' }
+          ];
+
+          return (
+            <div className="connection-terminal-form" style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div className="form-layout-sidebar" style={{ flex: '1 1 auto', minHeight: 0, overflow: 'hidden', marginBottom: '1rem' }}>
+                <div className="form-sidebar-nav">
+                  {sidebarTabs.map(tab => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      className={`form-sidebar-nav-btn ${activeTunnelFormTab === tab.id ? 'active' : ''}`}
+                      onClick={() => setActiveTunnelFormTab(tab.id)}
+                    >
+                      <i className={tab.icon}></i>
+                      <span>{tab.label}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="form-sidebar-content" style={{ overflowY: 'auto', flex: 1, paddingRight: '6px' }}>
+                  {renderDiagram()}
+                  {activeTunnelFormTab === 'local' && renderTunnelLocalConfig()}
+                  {activeTunnelFormTab === 'ssh' && renderTunnelSSHConfig()}
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        if (layoutMode === 'split') {
+          return (
+            <div className="connection-terminal-form" style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div className="terminal-form-scroll-area" style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', paddingRight: '4px' }}>
+                {renderDiagram()}
+                <div className="grid" style={{ gap: '0', margin: 0 }}>
+                  <div className="col-12 md:col-6" style={{ padding: '0 1rem 0 0' }}>
+                    <h4 style={{ marginBottom: '1.25rem', color: 'var(--ui-button-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', fontWeight: 600 }}>
+                      <i className="pi pi-home"></i> CONFIGURACIÓN LOCAL
+                    </h4>
+                    {renderTunnelLocalConfig()}
+                  </div>
+                  
+                  <div className="col-12 md:col-6" style={{ padding: '0 0 0 1rem', borderLeft: '1px solid var(--ui-content-border, rgba(255, 255, 255, 0.08))' }}>
+                    <h4 style={{ marginBottom: '1.25rem', color: 'var(--ui-button-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', fontWeight: 600 }}>
+                      <i className="pi pi-server"></i> SERVIDOR SSH
+                    </h4>
+                    {renderTunnelSSHConfig()}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <div className="connection-terminal-form" style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div className="terminal-form-scroll-area" style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', paddingRight: '4px' }}>
+              {renderDiagram()}
+              <h4 style={{ marginBottom: '1.25rem', color: 'var(--ui-button-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', fontWeight: 600 }}>
+                <i className="pi pi-home"></i> CONFIGURACIÓN LOCAL
+              </h4>
+              {renderTunnelLocalConfig()}
+              <h4 style={{ marginBottom: '1.25rem', marginTop: '1.5rem', color: 'var(--ui-button-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', fontWeight: 600 }}>
+                <i className="pi pi-server"></i> SERVIDOR SSH
+              </h4>
+              {renderTunnelSSHConfig()}
             </div>
           </div>
         );
+      }
 
       default:
         return (
