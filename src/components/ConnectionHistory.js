@@ -731,7 +731,7 @@ const ConnectionHistory = ({
 
 		let mergedExpandedKeys = {};
 		try {
-			mergedExpandedKeys = JSON.parse(localStorage.getItem('basicapp2_sidebar_expanded_keys') || '{}');
+			mergedExpandedKeys = JSON.parse(localStorage.getItem('nodeterm_expanded_keys') || '{}');
 		} catch {
 			mergedExpandedKeys = {};
 		}
@@ -781,7 +781,7 @@ const ConnectionHistory = ({
 		if (nodePath && nodePath.length > 1) {
 			let savedExpandedKeys = {};
 			try {
-				savedExpandedKeys = JSON.parse(localStorage.getItem('basicapp2_sidebar_expanded_keys') || '{}');
+				savedExpandedKeys = JSON.parse(localStorage.getItem('nodeterm_expanded_keys') || '{}');
 			} catch {
 				savedExpandedKeys = {};
 			}

@@ -91,7 +91,14 @@ const PasswordManagerSidebar = ({
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const [editingPassword, setEditingPassword] = useState(null);
   const [editingFolder, setEditingFolder] = useState(null);
-  const [expandedKeys, setExpandedKeys] = useState({});
+  const [expandedKeys, setExpandedKeys] = useState(() => {
+    try {
+      const savedExpanded = localStorage.getItem('passwords_expanded_keys');
+      return savedExpanded ? JSON.parse(savedExpanded) : {};
+    } catch {
+      return {};
+    }
+  });
   const [selectedNodeKey, setSelectedNodeKey] = useState(null);
   const selectedNodeForDetails = useMemo(() => {
     if (!selectedNodeKey) return null;
@@ -112,20 +119,15 @@ const PasswordManagerSidebar = ({
     return !isFolder && !data?.isShowMoreBtn && isSecret;
   }, [selectedNodeForDetails]);
 
-  const [allExpanded, setAllExpanded] = useState(false);
-  const [folderLimits, setFolderLimits] = useState({});
-
-  // Restaurar estado de expansión desde localStorage
-  useEffect(() => {
-    try {
-      const savedExpanded = localStorage.getItem('passwords_expanded_keys');
-      if (savedExpanded) setExpandedKeys(JSON.parse(savedExpanded));
-    } catch {}
+  const [allExpanded, setAllExpanded] = useState(() => {
     try {
       const savedAllExpanded = localStorage.getItem('passwords_all_expanded');
-      if (savedAllExpanded !== null) setAllExpanded(JSON.parse(savedAllExpanded));
-    } catch {}
-  }, []);
+      return savedAllExpanded !== null ? JSON.parse(savedAllExpanded) : false;
+    } catch {
+      return false;
+    }
+  });
+  const [folderLimits, setFolderLimits] = useState({});
   
   // Persistir estado de expansión
   useEffect(() => {
@@ -2308,33 +2310,491 @@ const PasswordManagerSidebar = ({
       {/* Dialog para crear/editar secreto */}
       <Dialog
         header={
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <i className={
-              selectedSecretType === 'password' ? 'pi pi-lock' :
-              selectedSecretType === 'crypto_wallet' ? 'pi pi-wallet' :
-              selectedSecretType === 'api_key' ? 'pi pi-key' : 'pi pi-file-edit'
-            } style={{ 
-              fontSize: '1.2rem',
-              color: selectedSecretType === 'password' ? '#E91E63' :
-                     selectedSecretType === 'crypto_wallet' ? '#F7931A' :
-                     selectedSecretType === 'api_key' ? '#00BCD4' : '#9C27B0'
-            }}></i>
-            <span>
-              {editingPassword ? 'Editar ' : 'Nuevo '}
-              {selectedSecretType === 'password' ? 'Contraseña' :
-               selectedSecretType === 'crypto_wallet' ? 'Billetera Crypto' :
-               selectedSecretType === 'api_key' ? 'Clave de API' : 'Nota Segura'}
+          <div className="protocol-dialog-header-custom">
+            <div 
+              className="protocol-dialog-header-icon" 
+              style={{ 
+                background: selectedSecretType === 'password' ? 'linear-gradient(135deg, #E91E63 0%, #C2185B 100%)' :
+                            selectedSecretType === 'crypto_wallet' ? 'linear-gradient(135deg, #F7931A 0%, #D27B0F 100%)' :
+                            selectedSecretType === 'api_key' ? 'linear-gradient(135deg, #00BCD4 0%, #0097A7 100%)' :
+                            'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)',
+                boxShadow: selectedSecretType === 'password' ? '0 2px 8px rgba(233, 30, 99, 0.3)' :
+                           selectedSecretType === 'crypto_wallet' ? '0 2px 8px rgba(247, 147, 26, 0.3)' :
+                           selectedSecretType === 'api_key' ? '0 2px 8px rgba(0, 188, 212, 0.3)' :
+                           '0 2px 8px rgba(156, 39, 176, 0.3)'
+              }}
+            >
+              <i className={
+                selectedSecretType === 'password' ? 'pi pi-lock' :
+                selectedSecretType === 'crypto_wallet' ? 'pi pi-wallet' :
+                selectedSecretType === 'api_key' ? 'pi pi-key' : 'pi pi-file-edit'
+              }></i>
+            </div>
+            <span className="protocol-dialog-header-title" style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, letterSpacing: '0.05em' }}>
+              {editingPassword ? 'EDITAR ' : 'NUEVO '}
+              {selectedSecretType === 'password' ? 'CONTRASEÑA' :
+               selectedSecretType === 'crypto_wallet' ? 'BILLETERA CRYPTO' :
+               selectedSecretType === 'api_key' ? 'CLAVE DE API' : 'NOTA SEGURA'}
             </span>
           </div>
         }
         visible={showPasswordDialog}
-        style={{ width: '550px' }}
+        style={{ width: '90vw', maxWidth: '550px' }}
         onHide={() => {
           setShowPasswordDialog(false);
           resetForm();
         }}
-        footer={
-          <div>
+        modal
+        className="ssh-tunnel-dialog protocol-selection-dialog-new"
+        contentStyle={{ padding: '0', overflow: 'hidden' }}
+      >
+        <div className="tunnel-form-content" style={{ padding: '1.25rem', maxHeight: '75vh', overflowY: 'auto' }}>
+          <div className="secret-form tunnel-form-section" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {/* Campo común: Título */}
+            <div className="field">
+              <label htmlFor="title" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.8rem' }}>{t('passwordManager.fields.title')} *</label>
+              <InputText
+                id="title"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder={
+                  selectedSecretType === 'password' ? 'Ej: Gmail, Netflix...' :
+                  selectedSecretType === 'crypto_wallet' ? 'Ej: Mi Wallet Bitcoin' :
+                  selectedSecretType === 'api_key' ? 'Ej: API de OpenAI' : 'Ej: Notas importantes'
+                }
+                className="w-full"
+                autoFocus
+              />
+            </div>
+
+            {/* Campos para PASSWORD */}
+            {selectedSecretType === 'password' && (
+              <>
+                <div className="field">
+                  <label htmlFor="username" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.8rem' }}>{t('passwordManager.fields.username')}</label>
+                  <InputText
+                    id="username"
+                    value={formData.username}
+                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                    placeholder={t('passwordManager.placeholders.username')}
+                    className="w-full"
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="password" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.8rem' }}>{t('passwordManager.fields.password')}</label>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <InputText
+                      id="password"
+                      type="text"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      placeholder={t('passwordManager.placeholders.password')}
+                      className="w-full"
+                    />
+                    <Button
+                      icon="pi pi-refresh"
+                      className="p-button-secondary"
+                      onClick={generateRandomPassword}
+                      tooltip={t('passwordManager.tooltips.generatePassword')}
+                    />
+                  </div>
+                </div>
+                <div className="field">
+                  <label htmlFor="url" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.8rem' }}>{t('passwordManager.fields.url')}</label>
+                  <InputText
+                    id="url"
+                    value={formData.url}
+                    onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                    placeholder={t('passwordManager.placeholders.url')}
+                    className="w-full"
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="group" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.8rem' }}>{t('passwordManager.fields.group')}</label>
+                  <InputText
+                    id="group"
+                    value={formData.group}
+                    onChange={(e) => setFormData({ ...formData, group: e.target.value })}
+                    placeholder={t('passwordManager.placeholders.group')}
+                    className="w-full"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Campos para CRYPTO WALLET */}
+            {selectedSecretType === 'crypto_wallet' && (
+              <>
+                <div className="field">
+                  <label htmlFor="network" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.8rem' }}>Red / Blockchain</label>
+                  <Dropdown
+                    id="network"
+                    value={formData.network}
+                    options={CRYPTO_NETWORK_OPTIONS}
+                    onChange={(e) => setFormData({ ...formData, network: e.value })}
+                    placeholder="Selecciona una red"
+                    className="w-full"
+                    itemTemplate={(option) => (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ 
+                          width: '12px', 
+                          height: '12px', 
+                          borderRadius: '50%', 
+                          backgroundColor: option.color 
+                        }}></span>
+                        <span>{option.label}</span>
+                      </div>
+                    )}
+                    valueTemplate={(option) => option ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ 
+                          width: '12px', 
+                          height: '12px', 
+                          borderRadius: '50%', 
+                          backgroundColor: option.color 
+                        }}></span>
+                        <span>{option.label}</span>
+                      </div>
+                    ) : 'Selecciona una red'}
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="address" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.8rem' }}>Dirección Pública</label>
+                  <InputText
+                    id="address"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    placeholder="0x... / bc1... / etc."
+                    className="w-full"
+                    style={{ fontFamily: 'monospace' }}
+                  />
+                </div>
+                <div className="field">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <label htmlFor="seedPhrase" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.8rem' }}>
+                      Seed Phrase
+                      {formData.seedPhrase && (
+                        <span style={{ marginLeft: '8px', fontSize: '0.85em', color: 'var(--text-color-secondary)' }}>
+                          ({countWords(formData.seedPhrase)} palabras)
+                        </span>
+                      )}
+                    </label>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <Button
+                        label="12"
+                        className={seedWordsCount === 12 ? 'p-button-primary' : 'p-button-secondary'}
+                        size="small"
+                        onClick={() => {
+                          if (seedWordsCount !== 12) {
+                            const newWords = Array(12).fill('');
+                            seedWords.slice(0, 12).forEach((word, index) => {
+                              newWords[index] = word;
+                            });
+                            setSeedWords(newWords);
+                            setSeedWordsCount(12);
+                          }
+                        }}
+                      />
+                      <Button
+                        label="24"
+                        className={seedWordsCount === 24 ? 'p-button-primary' : 'p-button-secondary'}
+                        size="small"
+                        onClick={() => {
+                          if (seedWordsCount !== 24) {
+                            const newWords = Array(24).fill('');
+                            seedWords.forEach((word, index) => {
+                              if (index < 24) {
+                                newWords[index] = word;
+                              }
+                            });
+                            setSeedWords(newWords);
+                            setSeedWordsCount(24);
+                          }
+                        }}
+                      />
+                      <Button
+                        icon="pi pi-copy"
+                        className="p-button-text p-button-sm"
+                        style={{ padding: '2px 6px', fontSize: '0.75rem' }}
+                        onClick={async () => {
+                          if (formData.seedPhrase) {
+                            try {
+                              if (window.electron?.clipboard?.writeText) {
+                                await window.electron.clipboard.writeText(formData.seedPhrase);
+                              } else {
+                                await navigator.clipboard.writeText(formData.seedPhrase);
+                              }
+                              showToast && showToast({
+                                severity: 'success',
+                                summary: 'Copiado',
+                                detail: 'Seed phrase copiada al portapapeles',
+                                life: 2000
+                              });
+                            } catch (err) {
+                              console.error('Error copiando:', err);
+                            }
+                          }
+                        }}
+                        tooltip="Copiar seed phrase completa"
+                        tooltipOptions={{ position: 'top' }}
+                        disabled={!formData.seedPhrase}
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Campo para pegar seed phrase completa */}
+                  <InputTextarea
+                    placeholder="Pega aquí tu seed phrase completa para llenar automáticamente los campos..."
+                    rows={2}
+                    className="w-full"
+                    style={{ fontFamily: 'monospace', marginBottom: '12px' }}
+                    onPaste={(e) => {
+                      const pastedText = e.clipboardData.getData('text');
+                      const words = pastedText.trim().split(/\s+/).filter(w => w.length > 0);
+                      if (words.length > 0) {
+                        const newWords = Array(seedWordsCount).fill('');
+                        words.forEach((word, index) => {
+                          if (index < seedWordsCount) {
+                            newWords[index] = word;
+                          }
+                        });
+                        setSeedWords(newWords);
+                        if (words.length === 12 || words.length === 24) {
+                          setSeedWordsCount(words.length);
+                        }
+                      }
+                    }}
+                  />
+                  
+                  {/* Grid de campos individuales para cada palabra */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gap: '8px',
+                    marginTop: '12px',
+                    marginBottom: '12px'
+                  }}>
+                    {Array(seedWordsCount).fill(null).map((_, index) => (
+                      <div key={index} style={{ position: 'relative' }}>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          marginBottom: '4px'
+                        }}>
+                          <span style={{
+                            color: 'var(--ui-button-primary)',
+                            fontWeight: '600',
+                            fontSize: '12px',
+                            minWidth: '24px'
+                          }}>
+                            {index + 1}.
+                          </span>
+                          <Button
+                            icon="pi pi-copy"
+                            className="p-button-text p-button-sm"
+                            style={{ 
+                              padding: '2px 4px', 
+                              fontSize: '0.7rem',
+                              minWidth: 'auto',
+                              height: '20px'
+                            }}
+                            onClick={async () => {
+                              const word = seedWords[index];
+                              if (word) {
+                                try {
+                                  if (window.electron?.clipboard?.writeText) {
+                                    await window.electron.clipboard.writeText(word);
+                                  } else {
+                                    await navigator.clipboard.writeText(word);
+                                  }
+                                  showToast && showToast({
+                                    severity: 'success',
+                                    summary: 'Copiado',
+                                    detail: `Palabra ${index + 1} copiada`,
+                                    life: 1500
+                                  });
+                                } catch (err) {
+                                  console.error('Error copiando:', err);
+                                }
+                              }
+                            }}
+                            tooltip={`Copiar palabra ${index + 1}`}
+                            tooltipOptions={{ position: 'top' }}
+                            disabled={!seedWords[index]}
+                          />
+                        </div>
+                        <InputText
+                          value={seedWords[index] || ''}
+                          onChange={(e) => {
+                            const newWords = [...seedWords];
+                            newWords[index] = e.target.value;
+                            setSeedWords(newWords);
+                          }}
+                          placeholder={`Palabra ${index + 1}`}
+                          className="w-full"
+                          style={{
+                            fontFamily: 'monospace',
+                            fontSize: '13px',
+                            padding: '10px 12px',
+                            borderRadius: '8px',
+                            border: '1px solid var(--ui-content-border)',
+                            background: 'var(--ui-dialog-bg)'
+                          }}
+                          onKeyDown={(e) => {
+                            // Navegar al siguiente campo con Enter o Tab
+                            if (e.key === 'Enter' || e.key === 'Tab') {
+                              if (index < seedWordsCount - 1) {
+                                e.preventDefault();
+                                const nextInput = document.querySelector(`input[placeholder="Palabra ${index + 2}"]`);
+                                if (nextInput) nextInput.focus();
+                              }
+                            }
+                            // Navegar al campo anterior con Shift+Tab
+                            if (e.key === 'Tab' && e.shiftKey && index > 0) {
+                              e.preventDefault();
+                              const prevInput = document.querySelector(`input[placeholder="Palabra ${index}"]`);
+                              if (prevInput) prevInput.focus();
+                            }
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Validación */}
+                  {formData.seedPhrase && (() => {
+                    const validation = validateSeedPhrase(formData.seedPhrase);
+                    if (!validation.valid) {
+                      return (
+                        <Message 
+                          severity="warn" 
+                          text={validation.errors[0]} 
+                          style={{ marginTop: '8px', width: '100%' }}
+                        />
+                      );
+                    }
+                    return (
+                      <Message 
+                        severity="success" 
+                        text="✓ Seed phrase válida" 
+                        style={{ marginTop: '8px', width: '100%' }}
+                      />
+                    );
+                  })()}
+                </div>
+                <div className="field">
+                  <label htmlFor="passphrase" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.8rem' }}>Passphrase (25ta palabra, opcional)</label>
+                  <InputText
+                    id="passphrase"
+                    value={formData.passphrase}
+                    onChange={(e) => setFormData({ ...formData, passphrase: e.target.value })}
+                    placeholder="Palabra adicional de seguridad"
+                    className="w-full"
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="privateKey" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.8rem' }}>Clave Privada (opcional)</label>
+                  <InputText
+                    id="privateKey"
+                    type="password"
+                    value={formData.privateKey}
+                    onChange={(e) => setFormData({ ...formData, privateKey: e.target.value })}
+                    placeholder="Solo si no tienes seed phrase"
+                    className="w-full"
+                    style={{ fontFamily: 'monospace' }}
+                  />
+                </div>
+                <Message 
+                  severity="warn" 
+                  text="⚠️ NUNCA compartas tu seed phrase o clave privada con nadie" 
+                  style={{ marginBottom: '12px', width: '100%' }}
+                />
+              </>
+            )}
+
+            {/* Campos para API KEY */}
+            {selectedSecretType === 'api_key' && (
+              <>
+                <div className="field">
+                  <label htmlFor="serviceName" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.8rem' }}>Nombre del Servicio</label>
+                  <InputText
+                    id="serviceName"
+                    value={formData.serviceName}
+                    onChange={(e) => setFormData({ ...formData, serviceName: e.target.value })}
+                    placeholder="Ej: OpenAI, AWS, Stripe..."
+                    className="w-full"
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="apiKey" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.8rem' }}>API Key / Token</label>
+                  <InputText
+                    id="apiKey"
+                    value={formData.apiKey}
+                    onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
+                    placeholder="sk-... / api_..."
+                    className="w-full"
+                    style={{ fontFamily: 'monospace' }}
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="apiSecret" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.8rem' }}>API Secret (opcional)</label>
+                  <InputText
+                    id="apiSecret"
+                    type="password"
+                    value={formData.apiSecret}
+                    onChange={(e) => setFormData({ ...formData, apiSecret: e.target.value })}
+                    placeholder="Secret key si aplica"
+                    className="w-full"
+                    style={{ fontFamily: 'monospace' }}
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor="endpoint" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.8rem' }}>Endpoint / URL Base (opcional)</label>
+                  <InputText
+                    id="endpoint"
+                    value={formData.endpoint}
+                    onChange={(e) => setFormData({ ...formData, endpoint: e.target.value })}
+                    placeholder="https://api.ejemplo.com/v1"
+                    className="w-full"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Campos para SECURE NOTE */}
+            {selectedSecretType === 'secure_note' && (
+              <div className="field">
+                <label htmlFor="noteContent" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.8rem' }}>Contenido de la Nota</label>
+                <InputTextarea
+                  id="noteContent"
+                  value={formData.noteContent}
+                  onChange={(e) => setFormData({ ...formData, noteContent: e.target.value })}
+                  placeholder="Escribe aquí tu nota segura..."
+                  rows={8}
+                  className="w-full"
+                />
+              </div>
+            )}
+
+            {/* Campo común: Notas adicionales (excepto para secure_note) */}
+            {selectedSecretType !== 'secure_note' && (
+              <div className="field">
+                <label htmlFor="notes" style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', fontSize: '0.8rem' }}>{t('passwordManager.fields.notes')}</label>
+                <InputTextarea
+                  id="notes"
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  placeholder={t('passwordManager.placeholders.notes')}
+                  rows={2}
+                  className="w-full"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Botones de acción */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--ui-content-border)' }}>
             <Button
               label={tCommon('buttons.cancel')}
               icon="pi pi-times"
@@ -2351,450 +2811,6 @@ const PasswordManagerSidebar = ({
               onClick={handleSavePassword}
             />
           </div>
-        }
-      >
-        <div className="secret-form">
-          {/* Campo común: Título */}
-          <div className="field">
-            <label htmlFor="title">{t('passwordManager.fields.title')} *</label>
-            <InputText
-              id="title"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder={
-                selectedSecretType === 'password' ? 'Ej: Gmail, Netflix...' :
-                selectedSecretType === 'crypto_wallet' ? 'Ej: Mi Wallet Bitcoin' :
-                selectedSecretType === 'api_key' ? 'Ej: API de OpenAI' : 'Ej: Notas importantes'
-              }
-              className="w-full"
-              autoFocus
-            />
-          </div>
-
-          {/* Campos para PASSWORD */}
-          {selectedSecretType === 'password' && (
-            <>
-              <div className="field">
-                <label htmlFor="username">{t('passwordManager.fields.username')}</label>
-                <InputText
-                  id="username"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  placeholder={t('passwordManager.placeholders.username')}
-                  className="w-full"
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="password">{t('passwordManager.fields.password')}</label>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <InputText
-                    id="password"
-                    type="text"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    placeholder={t('passwordManager.placeholders.password')}
-                    className="w-full"
-                  />
-                  <Button
-                    icon="pi pi-refresh"
-                    className="p-button-secondary"
-                    onClick={generateRandomPassword}
-                    tooltip={t('passwordManager.tooltips.generatePassword')}
-                  />
-                </div>
-              </div>
-              <div className="field">
-                <label htmlFor="url">{t('passwordManager.fields.url')}</label>
-                <InputText
-                  id="url"
-                  value={formData.url}
-                  onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                  placeholder={t('passwordManager.placeholders.url')}
-                  className="w-full"
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="group">{t('passwordManager.fields.group')}</label>
-                <InputText
-                  id="group"
-                  value={formData.group}
-                  onChange={(e) => setFormData({ ...formData, group: e.target.value })}
-                  placeholder={t('passwordManager.placeholders.group')}
-                  className="w-full"
-                />
-              </div>
-            </>
-          )}
-
-          {/* Campos para CRYPTO WALLET */}
-          {selectedSecretType === 'crypto_wallet' && (
-            <>
-              <div className="field">
-                <label htmlFor="network">Red / Blockchain</label>
-                <Dropdown
-                  id="network"
-                  value={formData.network}
-                  options={CRYPTO_NETWORK_OPTIONS}
-                  onChange={(e) => setFormData({ ...formData, network: e.value })}
-                  placeholder="Selecciona una red"
-                  className="w-full"
-                  itemTemplate={(option) => (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ 
-                        width: '12px', 
-                        height: '12px', 
-                        borderRadius: '50%', 
-                        backgroundColor: option.color 
-                      }}></span>
-                      <span>{option.label}</span>
-                    </div>
-                  )}
-                  valueTemplate={(option) => option ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ 
-                        width: '12px', 
-                        height: '12px', 
-                        borderRadius: '50%', 
-                        backgroundColor: option.color 
-                      }}></span>
-                      <span>{option.label}</span>
-                    </div>
-                  ) : 'Selecciona una red'}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="address">Dirección Pública</label>
-                <InputText
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  placeholder="0x... / bc1... / etc."
-                  className="w-full"
-                  style={{ fontFamily: 'monospace' }}
-                />
-              </div>
-              <div className="field">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <label htmlFor="seedPhrase">
-                    Seed Phrase
-                    {formData.seedPhrase && (
-                      <span style={{ marginLeft: '8px', fontSize: '0.85em', color: 'var(--text-color-secondary)' }}>
-                        ({countWords(formData.seedPhrase)} palabras)
-                      </span>
-                    )}
-                  </label>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <Button
-                      label="12"
-                      className={seedWordsCount === 12 ? 'p-button-primary' : 'p-button-secondary'}
-                      size="small"
-                      onClick={() => {
-                        if (seedWordsCount !== 12) {
-                          const newWords = Array(12).fill('');
-                          seedWords.slice(0, 12).forEach((word, index) => {
-                            newWords[index] = word;
-                          });
-                          setSeedWords(newWords);
-                          setSeedWordsCount(12);
-                        }
-                      }}
-                    />
-                    <Button
-                      label="24"
-                      className={seedWordsCount === 24 ? 'p-button-primary' : 'p-button-secondary'}
-                      size="small"
-                      onClick={() => {
-                        if (seedWordsCount !== 24) {
-                          const newWords = Array(24).fill('');
-                          seedWords.forEach((word, index) => {
-                            if (index < 24) {
-                              newWords[index] = word;
-                            }
-                          });
-                          setSeedWords(newWords);
-                          setSeedWordsCount(24);
-                        }
-                      }}
-                    />
-                    <Button
-                      icon="pi pi-copy"
-                      className="p-button-text p-button-sm"
-                      style={{ padding: '2px 6px', fontSize: '0.75rem' }}
-                      onClick={async () => {
-                        if (formData.seedPhrase) {
-                          try {
-                            if (window.electron?.clipboard?.writeText) {
-                              await window.electron.clipboard.writeText(formData.seedPhrase);
-                            } else {
-                              await navigator.clipboard.writeText(formData.seedPhrase);
-                            }
-                            showToast && showToast({
-                              severity: 'success',
-                              summary: 'Copiado',
-                              detail: 'Seed phrase copiada al portapapeles',
-                              life: 2000
-                            });
-                          } catch (err) {
-                            console.error('Error copiando:', err);
-                          }
-                        }
-                      }}
-                      tooltip="Copiar seed phrase completa"
-                      tooltipOptions={{ position: 'top' }}
-                      disabled={!formData.seedPhrase}
-                    />
-                  </div>
-                </div>
-                
-                {/* Campo para pegar seed phrase completa */}
-                <InputTextarea
-                  placeholder="Pega aquí tu seed phrase completa para llenar automáticamente los campos..."
-                  rows={2}
-                  className="w-full"
-                  style={{ fontFamily: 'monospace', marginBottom: '12px' }}
-                  onPaste={(e) => {
-                    const pastedText = e.clipboardData.getData('text');
-                    const words = pastedText.trim().split(/\s+/).filter(w => w.length > 0);
-                    if (words.length > 0) {
-                      const newWords = Array(seedWordsCount).fill('');
-                      words.forEach((word, index) => {
-                        if (index < seedWordsCount) {
-                          newWords[index] = word;
-                        }
-                      });
-                      setSeedWords(newWords);
-                      if (words.length === 12 || words.length === 24) {
-                        setSeedWordsCount(words.length);
-                      }
-                    }
-                  }}
-                />
-                
-                {/* Grid de campos individuales para cada palabra */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
-                  gap: '8px',
-                  marginTop: '12px',
-                  marginBottom: '12px'
-                }}>
-                  {Array(seedWordsCount).fill(null).map((_, index) => (
-                    <div key={index} style={{ position: 'relative' }}>
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        marginBottom: '4px'
-                      }}>
-                        <span style={{
-                          color: 'var(--ui-button-primary)',
-                          fontWeight: '600',
-                          fontSize: '12px',
-                          minWidth: '24px'
-                        }}>
-                          {index + 1}.
-                        </span>
-                        <Button
-                          icon="pi pi-copy"
-                          className="p-button-text p-button-sm"
-                          style={{ 
-                            padding: '2px 4px', 
-                            fontSize: '0.7rem',
-                            minWidth: 'auto',
-                            height: '20px'
-                          }}
-                          onClick={async () => {
-                            const word = seedWords[index];
-                            if (word) {
-                              try {
-                                if (window.electron?.clipboard?.writeText) {
-                                  await window.electron.clipboard.writeText(word);
-                                } else {
-                                  await navigator.clipboard.writeText(word);
-                                }
-                                showToast && showToast({
-                                  severity: 'success',
-                                  summary: 'Copiado',
-                                  detail: `Palabra ${index + 1} copiada`,
-                                  life: 1500
-                                });
-                              } catch (err) {
-                                console.error('Error copiando:', err);
-                              }
-                            }
-                          }}
-                          tooltip={`Copiar palabra ${index + 1}`}
-                          tooltipOptions={{ position: 'top' }}
-                          disabled={!seedWords[index]}
-                        />
-                      </div>
-                      <InputText
-                        value={seedWords[index] || ''}
-                        onChange={(e) => {
-                          const newWords = [...seedWords];
-                          newWords[index] = e.target.value;
-                          setSeedWords(newWords);
-                        }}
-                        placeholder={`Palabra ${index + 1}`}
-                        className="w-full"
-                        style={{
-                          fontFamily: 'monospace',
-                          fontSize: '13px',
-                          padding: '10px 12px',
-                          borderRadius: '8px',
-                          border: '1px solid var(--ui-content-border)',
-                          background: 'var(--ui-dialog-bg)'
-                        }}
-                        onKeyDown={(e) => {
-                          // Navegar al siguiente campo con Enter o Tab
-                          if (e.key === 'Enter' || e.key === 'Tab') {
-                            if (index < seedWordsCount - 1) {
-                              e.preventDefault();
-                              const nextInput = document.querySelector(`input[placeholder="Palabra ${index + 2}"]`);
-                              if (nextInput) nextInput.focus();
-                            }
-                          }
-                          // Navegar al campo anterior con Shift+Tab
-                          if (e.key === 'Tab' && e.shiftKey && index > 0) {
-                            e.preventDefault();
-                            const prevInput = document.querySelector(`input[placeholder="Palabra ${index}"]`);
-                            if (prevInput) prevInput.focus();
-                          }
-                        }}
-                      />
-                    </div>
-                  ))}
-                </div>
-                
-                {/* Validación */}
-                {formData.seedPhrase && (() => {
-                  const validation = validateSeedPhrase(formData.seedPhrase);
-                  if (!validation.valid) {
-                    return (
-                      <Message 
-                        severity="warn" 
-                        text={validation.errors[0]} 
-                        style={{ marginTop: '8px', width: '100%' }}
-                      />
-                    );
-                  }
-                  return (
-                    <Message 
-                      severity="success" 
-                      text="✓ Seed phrase válida" 
-                      style={{ marginTop: '8px', width: '100%' }}
-                    />
-                  );
-                })()}
-              </div>
-              <div className="field">
-                <label htmlFor="passphrase">Passphrase (25ta palabra, opcional)</label>
-                <InputText
-                  id="passphrase"
-                  value={formData.passphrase}
-                  onChange={(e) => setFormData({ ...formData, passphrase: e.target.value })}
-                  placeholder="Palabra adicional de seguridad"
-                  className="w-full"
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="privateKey">Clave Privada (opcional)</label>
-                <InputText
-                  id="privateKey"
-                  type="password"
-                  value={formData.privateKey}
-                  onChange={(e) => setFormData({ ...formData, privateKey: e.target.value })}
-                  placeholder="Solo si no tienes seed phrase"
-                  className="w-full"
-                  style={{ fontFamily: 'monospace' }}
-                />
-              </div>
-              <Message 
-                severity="warn" 
-                text="⚠️ NUNCA compartas tu seed phrase o clave privada con nadie" 
-                style={{ marginBottom: '12px', width: '100%' }}
-              />
-            </>
-          )}
-
-          {/* Campos para API KEY */}
-          {selectedSecretType === 'api_key' && (
-            <>
-              <div className="field">
-                <label htmlFor="serviceName">Nombre del Servicio</label>
-                <InputText
-                  id="serviceName"
-                  value={formData.serviceName}
-                  onChange={(e) => setFormData({ ...formData, serviceName: e.target.value })}
-                  placeholder="Ej: OpenAI, AWS, Stripe..."
-                  className="w-full"
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="apiKey">API Key / Token</label>
-                <InputText
-                  id="apiKey"
-                  value={formData.apiKey}
-                  onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
-                  placeholder="sk-... / api_..."
-                  className="w-full"
-                  style={{ fontFamily: 'monospace' }}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="apiSecret">API Secret (opcional)</label>
-                <InputText
-                  id="apiSecret"
-                  type="password"
-                  value={formData.apiSecret}
-                  onChange={(e) => setFormData({ ...formData, apiSecret: e.target.value })}
-                  placeholder="Secret key si aplica"
-                  className="w-full"
-                  style={{ fontFamily: 'monospace' }}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="endpoint">Endpoint / URL Base (opcional)</label>
-                <InputText
-                  id="endpoint"
-                  value={formData.endpoint}
-                  onChange={(e) => setFormData({ ...formData, endpoint: e.target.value })}
-                  placeholder="https://api.ejemplo.com/v1"
-                  className="w-full"
-                />
-              </div>
-            </>
-          )}
-
-          {/* Campos para SECURE NOTE */}
-          {selectedSecretType === 'secure_note' && (
-            <div className="field">
-              <label htmlFor="noteContent">Contenido de la Nota</label>
-              <InputTextarea
-                id="noteContent"
-                value={formData.noteContent}
-                onChange={(e) => setFormData({ ...formData, noteContent: e.target.value })}
-                placeholder="Escribe aquí tu nota segura..."
-                rows={8}
-                className="w-full"
-              />
-            </div>
-          )}
-
-          {/* Campo común: Notas adicionales (excepto para secure_note) */}
-          {selectedSecretType !== 'secure_note' && (
-            <div className="field">
-              <label htmlFor="notes">{t('passwordManager.fields.notes')}</label>
-              <InputTextarea
-                id="notes"
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder={t('passwordManager.placeholders.notes')}
-                rows={2}
-                className="w-full"
-              />
-            </div>
-          )}
         </div>
       </Dialog>
 

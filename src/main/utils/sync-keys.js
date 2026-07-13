@@ -129,6 +129,7 @@ const SYNC_KEYS = [
   'documents_encrypted',
   'documentManagerNodes',
   'documents_expanded_keys',
+  'passwords_expanded_keys',
 
   // Herramientas de red (Wake on LAN y escaneos de red guardados)
   'nodeterm_wol_devices',

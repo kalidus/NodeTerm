@@ -335,7 +335,14 @@ const DocumentsSidebar = ({
   const { t: tCommon } = useTranslation('common');
   const [documentNodes, setDocumentNodes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [expandedKeys, setExpandedKeys] = useState({});
+  const [expandedKeys, setExpandedKeys] = useState(() => {
+    try {
+      const saved = localStorage.getItem('documents_expanded_keys');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
   const [selectedNodeKey, setSelectedNodeKey] = useState(null);
   const [quickNotesPanelOpen, setQuickNotesPanelOpen] = useState(false);
 
@@ -400,13 +407,6 @@ const DocumentsSidebar = ({
   const inlineRenameInputRef = useRef(null);
   const sidebarRootRef = useRef(null);
   const [contextMenuItems, setContextMenuItems] = useState([]);
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('documents_expanded_keys');
-      if (saved) setExpandedKeys(JSON.parse(saved));
-    } catch {}
-  }, []);
 
   useEffect(() => {
     const reloadFromStorage = async () => {
