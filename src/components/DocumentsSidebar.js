@@ -28,6 +28,7 @@ import localStorageSyncService from '../services/LocalStorageSyncService';
 import connectionStore from '../utils/connectionStore';
 import DocumentDetailsPanel from './DocumentDetailsPanel';
 import QuickNotesSidePanel from './QuickNotesSidePanel';
+import { FolderIconSelectorModal, FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
 import '../styles/components/documents.css';
 
 /** PrimeReact Tree ya muestra icono vía node.icon; el nodeTemplate añade el propio — quitamos duplicados (también en datos guardados). */
@@ -402,6 +403,8 @@ const DocumentsSidebar = ({
   const [renamingNode, setRenamingNode] = useState(null);
   const [inlineRenamingKey, setInlineRenamingKey] = useState(null);
   const [inlineRenameValue, setInlineRenameValue] = useState('');
+  const [showIconSelector, setShowIconSelector] = useState(false);
+  const [iconTargetNode, setIconTargetNode] = useState(null);
 
   const contextMenuRef = useRef(null);
   const inlineRenameInputRef = useRef(null);
@@ -677,6 +680,23 @@ const DocumentsSidebar = ({
     setRenamingNode(null);
   };
 
+  const handleSelectFolderIcon = useCallback((iconId) => {
+    if (!iconTargetNode) return;
+    const selectedIcon = iconId === 'default' || iconId == null ? null : iconId;
+    setDocumentNodes(prev => {
+      const node = findNodeInTree(prev, iconTargetNode.key);
+      if (!node) return prev;
+      return updateNodeInTree(prev, iconTargetNode.key, {
+        data: {
+          ...(node.data || {}),
+          customIcon: selectedIcon
+        }
+      });
+    });
+    setShowIconSelector(false);
+    setIconTargetNode(null);
+  }, [iconTargetNode]);
+
   // ── Papelera de notas/documentos ─────────────────────────────────────────────────────
   const DOC_TRASH_KEY = 'nodeterm_trash_documents';
   const loadDocTrash = () => { try { return JSON.parse(localStorage.getItem(DOC_TRASH_KEY) || '[]'); } catch { return []; } };
@@ -766,6 +786,14 @@ const DocumentsSidebar = ({
             setParentKeyForNew(node.key);
             setNewItemName('');
             setShowNewFolderDialog(true);
+          }
+        },
+        {
+          label: 'Cambiar icono',
+          icon: 'pi pi-image',
+          command: () => {
+            setIconTargetNode(node);
+            setShowIconSelector(true);
           }
         },
         { separator: true }
@@ -932,7 +960,17 @@ const DocumentsSidebar = ({
           }}
         >
           {isFolder ? (
-            <NotebookIcon themeKey={iconTheme} isOpen={node.expanded} size={18} />
+            node.data?.customIcon ? (
+              (() => {
+                const preset = Object.values(FolderIconPresets).find(p => p.id === node.data.customIcon);
+                if (preset) {
+                  return <FolderIconRenderer preset={preset} pixelSize={18} />;
+                }
+                return <NotebookIcon themeKey={iconTheme} isOpen={node.expanded} size={18} />;
+              })()
+            ) : (
+              <NotebookIcon themeKey={iconTheme} isOpen={node.expanded} size={18} />
+            )
           ) : (
             node.data?.icon ? (
               <span style={{ fontSize: '0.95rem', width: 18, height: 18, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{node.data.icon}</span>
@@ -1526,6 +1564,18 @@ const DocumentsSidebar = ({
           />
         </div>
       </Dialog>
+
+      <FolderIconSelectorModal
+        visible={showIconSelector}
+        onHide={() => {
+          setShowIconSelector(false);
+          setIconTargetNode(null);
+        }}
+        selectedIconId={iconTargetNode?.data?.customIcon}
+        onSelectIcon={handleSelectFolderIcon}
+        theme={uiTheme}
+        defaultCategory="notes"
+      />
       {/* ─ Botón flotante papelera docs ─ */}
       <button
         id="doc-trash-btn"
