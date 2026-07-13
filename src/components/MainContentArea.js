@@ -93,6 +93,7 @@ const MainContentArea = ({
   // Tab context menu props
   tabGroups,
   moveTabToGroup,
+  groupTabsBySection,
   setShowCreateGroupDialog,
   isGroupFavorite,
   addGroupToFavorites,
@@ -3231,6 +3232,7 @@ const MainContentArea = ({
                     setTabContextMenu={setTabContextMenu}
                     tabGroups={tabGroups}
                     moveTabToGroup={moveTabToGroup}
+                    groupTabsBySection={groupTabsBySection}
                     setShowCreateGroupDialog={setShowCreateGroupDialog}
                     isGroupFavorite={isGroupFavorite}
                     addGroupToFavorites={addGroupToFavorites}

@@ -454,6 +454,75 @@ export const useTabManagement = (toast, {
     ));
   }, []);
 
+  const groupTabsBySection = useCallback((tabKey) => {
+    const allTabs = [...homeTabs, ...sshTabs, ...rdpTabs, ...guacamoleTabs, ...fileExplorerTabs];
+    const targetTab = allTabs.find(t => t.key === tabKey);
+    if (!targetTab) return;
+
+    const getTabSection = (t) => {
+      if (!t) return null;
+      const type = t.type;
+      if (type === 'password' || type === 'password-folder') {
+        return 'password';
+      }
+      if (type === 'document' || type === 'document-folder') {
+        return 'notas';
+      }
+      const sessionTypes = [
+        'terminal', 'split', 'rdp', 'rdp-guacamole', 'vnc', 'vnc-guacamole',
+        'guacamole', 'explorer', 'local-terminal', 'powershell', 'cygwin',
+        'ubuntu', 'wsl-distro', 'docker', 'ssh', 'sftp'
+      ];
+      if (sessionTypes.includes(type) || t.isExplorerInSSH) {
+        return 'sesiones';
+      }
+      return null;
+    };
+
+    const section = getTabSection(targetTab);
+    if (!section) return;
+
+    const matchingTabs = allTabs.filter(t => getTabSection(t) === section);
+    if (matchingTabs.length <= 1) return;
+
+    const baseName = section === 'password' ? 'Contraseñas' : (section === 'notas' ? 'Notas' : 'Sesiones');
+    let groupName = baseName;
+    let counter = 1;
+    while (tabGroups.some(g => g.name.toLowerCase() === groupName.toLowerCase())) {
+      counter++;
+      groupName = `${baseName} ${counter}`;
+    }
+
+    const colorToUse = getNextGroupColor();
+    const newGroup = {
+      id: `group_${Date.now()}`,
+      name: groupName,
+      color: colorToUse,
+      createdAt: new Date().toISOString()
+    };
+
+    setTabGroups(prev => [...prev, newGroup]);
+
+    const moveTabs = (prev) => prev.map(t =>
+      getTabSection(t) === section ? { ...t, groupId: newGroup.id } : t
+    );
+
+    setHomeTabs(moveTabs);
+    setSshTabs(moveTabs);
+    setRdpTabs(moveTabs);
+    setGuacamoleTabs(moveTabs);
+    setFileExplorerTabs(moveTabs);
+
+    if (toast && toast.current) {
+      toast.current.show({
+        severity: 'success',
+        summary: 'Pestañas agrupadas',
+        detail: `Se ha creado el grupo "${newGroup.name}" con ${matchingTabs.length} pestañas`,
+        life: 3000
+      });
+    }
+  }, [homeTabs, sshTabs, rdpTabs, guacamoleTabs, fileExplorerTabs, tabGroups, getNextGroupColor, toast]);
+
   // === FUNCIONES DE LIMPIEZA ===
   const cleanupTabDistro = useCallback((tabKey) => {
     setTabDistros(prev => {
@@ -888,6 +957,7 @@ export const useTabManagement = (toast, {
     createNewGroup,
     deleteGroup,
     moveTabToGroup,
+    groupTabsBySection,
     cleanupTabDistro,
     handleTabContextMenu,
     handleTabClose,

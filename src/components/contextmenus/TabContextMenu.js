@@ -5,6 +5,7 @@ const TabContextMenu = ({
   setTabContextMenu,
   tabGroups,
   moveTabToGroup,
+  groupTabsBySection,
   setShowCreateGroupDialog,
   isGroupFavorite,
   addGroupToFavorites,
@@ -17,6 +18,34 @@ const TabContextMenu = ({
   getAllTabs
 }) => {
   if (!tabContextMenu) return null;
+
+  const allTabs = getAllTabs ? getAllTabs() : [];
+  const currentTab = allTabs.find(t => t.key === tabContextMenu.tabKey);
+
+  const getTabSection = (t) => {
+    if (!t) return null;
+    const type = t.type;
+    if (type === 'password' || type === 'password-folder') {
+      return 'password';
+    }
+    if (type === 'document' || type === 'document-folder') {
+      return 'notas';
+    }
+    const sessionTypes = [
+      'terminal', 'split', 'rdp', 'rdp-guacamole', 'vnc', 'vnc-guacamole',
+      'guacamole', 'explorer', 'local-terminal', 'powershell', 'cygwin',
+      'ubuntu', 'wsl-distro', 'docker', 'ssh', 'sftp'
+    ];
+    if (sessionTypes.includes(type) || t.isExplorerInSSH) {
+      return 'sesiones';
+    }
+    return null;
+  };
+
+  const section = getTabSection(currentTab);
+  const matchingTabs = section ? allTabs.filter(t => getTabSection(t) === section) : [];
+  const hasMoreTabsOfSameSection = matchingTabs.length > 1;
+  const sectionLabel = section === 'password' ? 'contraseñas' : (section === 'notas' ? 'notas' : 'sesiones');
 
 
 
@@ -184,6 +213,28 @@ const TabContextMenu = ({
                     {group.name}
                   </div>
                 ))}
+                <div className="menu-separator" style={{ height: '1px', margin: '4px 0' }}></div>
+              </>
+            )}
+            {hasMoreTabsOfSameSection && (
+              <>
+                <div
+                  className="menu-item"
+                  style={{
+                    padding: '8px 12px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                  onClick={() => {
+                    groupTabsBySection(tabContextMenu.tabKey);
+                    setTabContextMenu(null);
+                  }}
+                >
+                  <i className="pi pi-tags" style={{ width: '16px' }}></i>
+                  Agrupar {sectionLabel}
+                </div>
                 <div className="menu-separator" style={{ height: '1px', margin: '4px 0' }}></div>
               </>
             )}

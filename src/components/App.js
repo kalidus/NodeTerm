@@ -1408,7 +1408,7 @@ const App = () => {
     selectedGroupColor, setSelectedGroupColor, tabContextMenu, setTabContextMenu,
     tabDistros, setTabDistros,
     GROUP_COLORS, getNextGroupColor, getAllTabs, getTabsInGroup, getFilteredTabs,
-    handleLoadGroupFromFavorites, createNewGroup, deleteGroup, moveTabToGroup, cleanupTabDistro,
+    handleLoadGroupFromFavorites, createNewGroup, deleteGroup, moveTabToGroup, groupTabsBySection, cleanupTabDistro,
     handleTabContextMenu, handleTabClose, handleToggleBroadcast, handleToggleBroadcastTarget
   } = useTabManagement(toast, {
     cleanupTabDistro,
@@ -4278,6 +4278,7 @@ const App = () => {
           // Tab context menu props
           tabGroups={tabGroups}
           moveTabToGroup={moveTabToGroup}
+          groupTabsBySection={groupTabsBySection}
           setShowCreateGroupDialog={setShowCreateGroupDialog}
           isGroupFavorite={isGroupFavorite}
           addGroupToFavorites={addGroupToFavorites}
