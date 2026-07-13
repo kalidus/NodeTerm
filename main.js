@@ -2848,6 +2848,10 @@ ipcMain.on('ssh:data', (event, { tabId, data }) => {
           password // Pasar password capturado manualmente
         );
 
+        // Actualizar conexión
+        conn.ssh = ssh2Client;
+        conn.config = newConfig;
+
         const reconnectOptions = buildSshConnectOptions(newConfig, {
           includePassword: true,
           knownHostsService: sshKnownHostsService,
@@ -3061,6 +3065,17 @@ async function findSSHConnection(tabId, sshConfig = null) {
           conn.config.useBastionWallix &&
           conn.config.bastionHost === sshConfig.bastionHost &&
           conn.config.bastionUser === sshConfig.bastionUser &&
+          conn.config.host === sshConfig.host &&
+          conn.config.username === sshConfig.username &&
+          (conn.config.port || 22) === (sshConfig.port || 22)) {
+          return conn;
+        }
+      }
+    } else {
+      // Buscar en conexiones activas cualquier conexión estándar al mismo destino
+      for (const conn of Object.values(sshConnections)) {
+        if (conn.config &&
+          !conn.config.useBastionWallix &&
           conn.config.host === sshConfig.host &&
           conn.config.username === sshConfig.username &&
           (conn.config.port || 22) === (sshConfig.port || 22)) {

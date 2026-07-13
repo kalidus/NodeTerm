@@ -189,6 +189,12 @@ class SSHAuthService {
         const responses = conn.keyboardInteractiveResponses.slice(0, conn.keyboardInteractivePrompts.length);
         const finish = conn.keyboardInteractiveFinish;
 
+        // Guardar password si es un prompt interactivo único para password
+        if (responses.length === 1 && conn.keyboardInteractivePrompts[0] && 
+            /password/i.test(conn.keyboardInteractivePrompts[0].prompt || 'password')) {
+          conn.manualPassword = responses[0];
+        }
+
         // Limpiar estado antes de llamar finish
         conn.keyboardInteractiveFinish = null;
         conn.keyboardInteractivePrompts = null;

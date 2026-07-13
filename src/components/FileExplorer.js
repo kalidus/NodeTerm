@@ -6,6 +6,7 @@ import { ProgressSpinner } from 'primereact/progressspinner';
 import { ProgressBar } from 'primereact/progressbar';
 import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
+import { Password } from 'primereact/password';
 import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
 import { uiThemes } from '../themes/ui-themes';
 import '../styles/ssh-monitor.css';
@@ -53,6 +54,51 @@ const getSyncPath = (fromSide, currentPathA, newPathA, currentPathB) => {
 };
 
 const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', explorerFont = 'Segoe UI', explorerColorTheme = 'Light', setExplorerColorTheme, explorerFontSize = 15, isStandaloneTab = false }) => {
+    // Password Prompt States
+    const [passwordPromptVisible, setPasswordPromptVisible] = useState(false);
+    const [promptPassword, setPromptPassword] = useState('');
+    const [customPassword, setCustomPassword] = useState(null);
+    const customPasswordRef = useRef(null);
+
+    const handlePasswordSubmit = useCallback((password) => {
+        customPasswordRef.current = password;
+        setCustomPassword(password);
+    }, []);
+
+    // Wrapper to intercept and route to correct preload wrapper (sftp vs ssh)
+    const invokeRemote = useCallback(async (channel, args) => {
+        const fileExplorer = window.electron?.fileExplorer;
+        const rawInvoke = window.electron?.ipcRenderer?.invoke;
+        if (!rawInvoke) return null;
+        if (!fileExplorer) return rawInvoke(channel, args);
+
+        const { path, sshConfig: argSshConfig, remotePath, localPath, isDirectory, oldPath, newPath, transferId } = args || {};
+        const activePassword = customPasswordRef.current;
+        const finalConfig = {
+            ...(argSshConfig || sshConfig),
+            password: activePassword !== null ? activePassword : (argSshConfig?.password || sshConfig?.password)
+        };
+
+        switch (channel) {
+            case 'ssh:get-home-directory':
+                return fileExplorer.getHomeDirectory(tabId, finalConfig);
+            case 'ssh:list-files':
+                return fileExplorer.listFiles(tabId, path, finalConfig);
+            case 'ssh:create-directory':
+                return fileExplorer.createDirectory(tabId, remotePath, finalConfig);
+            case 'ssh:rename-file':
+                return fileExplorer.renameFile(tabId, oldPath, newPath, finalConfig);
+            case 'ssh:delete-file':
+                return fileExplorer.deleteFile(tabId, remotePath, isDirectory, finalConfig);
+            case 'ssh:download-file':
+                return fileExplorer.downloadFile(tabId, remotePath, localPath, finalConfig);
+            case 'ssh:upload-file':
+                return fileExplorer.uploadFile(tabId, localPath, remotePath, finalConfig);
+            default:
+                return rawInvoke(channel, args);
+        }
+    }, [tabId, sshConfig]);
+
     // ---- Remote State ----
     const [remoteNodes, setRemoteNodes] = useState([]);
     const [remoteExpandedKeys, setRemoteExpandedKeys] = useState({});
@@ -283,7 +329,7 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
 
     const cancelTransferById = useCallback(async (transferId) => {
         if (!transferId) return;
-        const invoke = window.electron?.ipcRenderer?.invoke;
+        const invoke = invokeRemote;
         if (!invoke) return;
         try {
             await invoke('ssh:cancel-transfer', { transferId });
@@ -309,7 +355,7 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
 
     const handleResumePausedTransfer = useCallback(async () => {
         if (!pausedTransfer) return;
-        const invoke = window.electron?.ipcRenderer?.invoke;
+        const invoke = invokeRemote;
         if (!invoke) return;
         const nextId = startTransfer(
             pausedTransfer.type,
@@ -564,7 +610,7 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
         if (!path) return;
         try {
             setLoadingForRemotePath(path, true);
-            const invoke = window.electron?.ipcRenderer?.invoke;
+            const invoke = invokeRemote;
             if (!invoke) return;
 
             const result = await invoke('ssh:list-files', { tabId, path, sshConfig });
@@ -702,121 +748,140 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
     }, [localNodes, remoteNodes, findNodeByKey, loadLocalDirectory, loadRemoteDirectory, makeKey, syncNavigation, localCurrentPath, remoteCurrentPath]);
 
     // Initial load: get HOME directory (remote and local)
-    useEffect(() => {
-        const initSystems = async () => {
+    const initSystems = useCallback(async () => {
+        try {
+            setGlobalLoading(true);
+            const invoke = invokeRemote;
+            const localFs = window.electron?.localFs;
+            if (!invoke || !localFs) return;
+
+            // Load saved default paths if any
+            const pathsKey = sshConfig && sshConfig.host 
+                ? `ssh_explorer_default_paths_${sshConfig.host}_${sshConfig.username || 'root'}` 
+                : `ssh_explorer_default_paths_${tabId}`;
+            
+            let savedPaths = null;
             try {
-                setGlobalLoading(true);
-                const invoke = window.electron?.ipcRenderer?.invoke;
-                const localFs = window.electron?.localFs;
-                if (!invoke || !localFs) return;
+                const saved = localStorage.getItem(pathsKey);
+                if (saved) {
+                    savedPaths = JSON.parse(saved);
+                }
+            } catch (e) {
+                console.error('Error loading default paths', e);
+            }
 
-                // Load saved default paths if any
-                const pathsKey = sshConfig && sshConfig.host 
-                    ? `ssh_explorer_default_paths_${sshConfig.host}_${sshConfig.username || 'root'}` 
-                    : `ssh_explorer_default_paths_${tabId}`;
-                
-                let savedPaths = null;
-                try {
-                    const saved = localStorage.getItem(pathsKey);
-                    if (saved) {
-                        savedPaths = JSON.parse(saved);
-                    }
-                } catch (e) {
-                    console.error('Error loading default paths', e);
+            // 1. Initialize Remote
+            const remoteResult = await invoke('ssh:get-home-directory', { tabId });
+            if (remoteResult && remoteResult.success && remoteResult.home) {
+                const homePath = remoteResult.home;
+                const rNodes = [{
+                    key: makeKey(homePath),
+                    label: homePath,
+                    data: { path: homePath, type: 'directory', parentPath: null, isRoot: true },
+                    icon: 'pi pi-home', droppable: true, leaf: false, children: []
+                }];
+                if (homePath !== '/') {
+                    rNodes.push({
+                        key: makeKey('/'), label: '/',
+                        data: { path: '/', type: 'directory', parentPath: null, isRoot: true },
+                        icon: 'pi pi-hdd', droppable: true, leaf: false, children: []
+                    });
                 }
 
-                // 1. Initialize Remote
-                const remoteResult = await invoke('ssh:get-home-directory', { tabId, sshConfig });
-                if (remoteResult && remoteResult.success && remoteResult.home) {
-                    const homePath = remoteResult.home;
-                    const rNodes = [{
-                        key: makeKey(homePath),
-                        label: homePath,
-                        data: { path: homePath, type: 'directory', parentPath: null, isRoot: true },
-                        icon: 'pi pi-home', droppable: true, leaf: false, children: []
-                    }];
-                    if (homePath !== '/') {
+                let initialRemotePath = homePath;
+                if (savedPaths?.remotePath) {
+                    initialRemotePath = savedPaths.remotePath;
+                    if (initialRemotePath !== homePath && initialRemotePath !== '/') {
                         rNodes.push({
-                            key: makeKey('/'), label: '/',
-                            data: { path: '/', type: 'directory', parentPath: null, isRoot: true },
-                            icon: 'pi pi-hdd', droppable: true, leaf: false, children: []
-                        });
-                    }
-
-                    let initialRemotePath = homePath;
-                    if (savedPaths?.remotePath) {
-                        initialRemotePath = savedPaths.remotePath;
-                        if (initialRemotePath !== homePath && initialRemotePath !== '/') {
-                            rNodes.push({
-                                key: makeKey(initialRemotePath),
-                                label: initialRemotePath,
-                                data: { path: initialRemotePath, type: 'directory', parentPath: null, isRoot: true },
-                                icon: 'pi pi-star-fill', droppable: true, leaf: false, children: []
-                            });
-                        }
-                    }
-
-                    setRemoteNodes(rNodes);
-                    setRemoteCurrentPath(initialRemotePath);
-                    await loadRemoteDirectory(initialRemotePath, { keepExpanded: true });
-                }
-
-                // 2. Initialize Local
-                const localResult = await localFs.getHomeDirectory();
-                const localDrivesResult = await localFs.getDrives();
-
-                const lNodes = [];
-                let homeDir = null;
-
-                if (localResult && localResult.success && localResult.home) {
-                    homeDir = localResult.home;
-                    lNodes.push({
-                        key: makeKey(homeDir),
-                        label: `HOME (${homeDir})`,
-                        data: { path: homeDir, type: 'directory', parentPath: null, isRoot: true },
-                        icon: 'pi pi-home', droppable: true, leaf: false, children: []
-                    });
-                }
-
-                if (localDrivesResult && localDrivesResult.success && localDrivesResult.drives) {
-                    localDrivesResult.drives.forEach(drive => {
-                        lNodes.push({
-                            key: makeKey(drive),
-                            label: drive,
-                            data: { path: drive, type: 'directory', parentPath: null, isRoot: true },
-                            icon: 'pi pi-server', droppable: true, leaf: false, children: []
-                        });
-                    });
-                }
-
-                let initialLocalPath = homeDir || (lNodes.length > 0 ? lNodes[0].data.path : null);
-                if (savedPaths?.localPath) {
-                    initialLocalPath = savedPaths.localPath;
-                    const exists = lNodes.some(n => n.data.path.toLowerCase() === initialLocalPath.toLowerCase());
-                    if (!exists) {
-                        lNodes.push({
-                            key: makeKey(initialLocalPath),
-                            label: initialLocalPath,
-                            data: { path: initialLocalPath, type: 'directory', parentPath: null, isRoot: true },
+                            key: makeKey(initialRemotePath),
+                            label: initialRemotePath,
+                            data: { path: initialRemotePath, type: 'directory', parentPath: null, isRoot: true },
                             icon: 'pi pi-star-fill', droppable: true, leaf: false, children: []
                         });
                     }
                 }
 
-                setLocalNodes(lNodes);
+                setRemoteNodes(rNodes);
+                setRemoteCurrentPath(initialRemotePath);
+                await loadRemoteDirectory(initialRemotePath, { keepExpanded: true });
 
-                if (initialLocalPath) {
-                    setLocalCurrentPath(initialLocalPath);
-                    await loadLocalDirectory(initialLocalPath, { keepExpanded: true });
+                // Si conectó con éxito usando un password ingresado manualmente, guardarlo!
+                if (customPassword && sshConfig?.originalKey) {
+                    window.dispatchEvent(new CustomEvent('ssh:password-correct', {
+                        detail: {
+                            originalKey: sshConfig.originalKey,
+                            password: customPassword
+                        }
+                    }));
                 }
-            } catch (error) {
-                notify('error', 'Error de inicialización', error?.message || 'Error al conectar las unidades');
-            } finally {
-                setGlobalLoading(false);
+            } else {
+                notify('error', 'Error de conexión remota', remoteResult?.error || 'No se pudo conectar al servidor remoto');
+                const errStr = remoteResult?.error || '';
+                const activePassword = customPasswordRef.current !== null ? customPasswordRef.current : sshConfig?.password;
+                const isAuthError = errStr.includes('authentication') || errStr.includes('methods failed') || errStr.includes('All configured') || !activePassword;
+                if (isAuthError) {
+                    setPasswordPromptVisible(true);
+                }
             }
-        };
+
+            // 2. Initialize Local
+            const localResult = await localFs.getHomeDirectory();
+            const localDrivesResult = await localFs.getDrives();
+
+            const lNodes = [];
+            let homeDir = null;
+
+            if (localResult && localResult.success && localResult.home) {
+                homeDir = localResult.home;
+                lNodes.push({
+                    key: makeKey(homeDir),
+                    label: `HOME (${homeDir})`,
+                    data: { path: homeDir, type: 'directory', parentPath: null, isRoot: true },
+                    icon: 'pi pi-home', droppable: true, leaf: false, children: []
+                });
+            }
+
+            if (localDrivesResult && localDrivesResult.success && localDrivesResult.drives) {
+                localDrivesResult.drives.forEach(drive => {
+                    lNodes.push({
+                        key: makeKey(drive),
+                        label: drive,
+                        data: { path: drive, type: 'directory', parentPath: null, isRoot: true },
+                        icon: 'pi pi-server', droppable: true, leaf: false, children: []
+                    });
+                });
+            }
+
+            let initialLocalPath = homeDir || (lNodes.length > 0 ? lNodes[0].data.path : null);
+            if (savedPaths?.localPath) {
+                initialLocalPath = savedPaths.localPath;
+                const exists = lNodes.some(n => n.data.path.toLowerCase() === initialLocalPath.toLowerCase());
+                if (!exists) {
+                    lNodes.push({
+                        key: makeKey(initialLocalPath),
+                        label: initialLocalPath,
+                        data: { path: initialLocalPath, type: 'directory', parentPath: null, isRoot: true },
+                        icon: 'pi pi-star-fill', droppable: true, leaf: false, children: []
+                    });
+                }
+            }
+
+            setLocalNodes(lNodes);
+
+            if (initialLocalPath) {
+                setLocalCurrentPath(initialLocalPath);
+                await loadLocalDirectory(initialLocalPath, { keepExpanded: true });
+            }
+        } catch (error) {
+            notify('error', 'Error de inicialización', error?.message || 'Error al conectar las unidades');
+        } finally {
+            setGlobalLoading(false);
+        }
+    }, [tabId, sshConfig, customPassword, loadRemoteDirectory, loadLocalDirectory, makeKey, notify, invokeRemote]);
+
+    useEffect(() => {
         initSystems();
-    }, [tabId, sshConfig, loadRemoteDirectory, loadLocalDirectory, makeKey, notify]);
+    }, [initSystems]);
 
     const handleSaveDefaultPathForSide = useCallback((side, path) => {
         if (!path) {
@@ -1118,7 +1183,7 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
         setGlobalLoading(true);
         setCreateDialogVisible(false);
         try {
-            const invoke = window.electron?.ipcRenderer?.invoke;
+            const invoke = invokeRemote;
             const rpc = side === 'local' ? window.electron?.localFs?.createDirectory : undefined;
 
             let result;
@@ -1172,7 +1237,7 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
 
         setGlobalLoading(true);
         try {
-            const invoke = window.electron?.ipcRenderer?.invoke;
+            const invoke = invokeRemote;
             const rpc = side === 'local' ? window.electron?.localFs?.renameFile : undefined;
 
             let result;
@@ -1206,7 +1271,7 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
 
         setGlobalLoading(true);
         try {
-            const invoke = window.electron?.ipcRenderer?.invoke;
+            const invoke = invokeRemote;
             const rpc = side === 'local' ? window.electron?.localFs?.deleteFile : undefined;
 
             let result;
@@ -1247,7 +1312,7 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
 
         if (!targetNode || targetNode.data?.type === 'directory') return;
 
-        const invoke = window.electron?.ipcRenderer?.invoke;
+        const invoke = invokeRemote;
         if (!invoke) return;
 
         try {
@@ -1302,7 +1367,7 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
             return;
         }
 
-        const invoke = window.electron?.ipcRenderer?.invoke;
+        const invoke = invokeRemote;
         if (!invoke) return;
 
         try {
@@ -1387,7 +1452,7 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
     // Bulk copy cross-panel (local→remote or remote→local)
     // ────────────────────────────────────────────────────────────────
     const handleCopySelectedCrossSide = useCallback(async (fromSide) => {
-        const invoke = window.electron?.ipcRenderer?.invoke;
+        const invoke = invokeRemote;
         if (!invoke) return;
 
         const fromKeys = fromSide === 'local' ? localSelectedKeys : remoteSelectedKeys;
@@ -1436,7 +1501,7 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
     // Bulk delete
     // ────────────────────────────────────────────────────────────────
     const handleDeleteSelected = useCallback(async (side) => {
-        const invoke = window.electron?.ipcRenderer?.invoke;
+        const invoke = invokeRemote;
         const fromKeys = side === 'local' ? localSelectedKeys : remoteSelectedKeys;
         const fromNodes = side === 'local' ? localNodes : remoteNodes;
         const currentPath = side === 'local' ? localCurrentPath : remoteCurrentPath;
@@ -1476,7 +1541,7 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
         e.preventDefault();
         e.stopPropagation();
 
-        const invoke = window.electron?.ipcRenderer?.invoke;
+        const invoke = invokeRemote;
         if (!invoke) return;
 
         const dt = e.dataTransfer;
@@ -2788,6 +2853,58 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
                             icon="pi pi-check"
                             onClick={handleCreateFolder}
                             disabled={globalLoading}
+                            className="p-button-primary"
+                            style={{ background: '#238636', border: '1px solid rgba(240,246,252,0.1)' }}
+                        />
+                    </div>
+                </div>
+            </Dialog>
+
+            {/* Diálogo para solicitar contraseña si falla la autenticación */}
+            <Dialog
+                header="🔑 Introducir contraseña"
+                visible={passwordPromptVisible}
+                onHide={() => setPasswordPromptVisible(false)}
+                dismissableMask
+                closable
+                style={{ width: '350px', borderRadius: '8px' }}
+                contentStyle={{ background: '#0d1117', color: '#c9d1d9' }}
+                headerStyle={{ background: '#161b22', color: '#e6edf3', borderBottom: '1px solid #30363d' }}
+            >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', paddingTop: '1rem' }}>
+                    <div style={{ fontSize: '0.85rem', color: '#8b949e' }}>
+                        La conexión remota ha fallado. Por favor, introduce la contraseña para conectar a <strong>{sshConfig?.host}</strong>:
+                    </div>
+                    <Password
+                        value={promptPassword}
+                        onChange={(e) => setPromptPassword(e.target.value)}
+                        placeholder="Contraseña"
+                        feedback={false}
+                        toggleMask
+                        autoFocus
+                        onKeyPress={(e) => {
+                            if (e.key === 'Enter' && promptPassword) {
+                                setPasswordPromptVisible(false);
+                                handlePasswordSubmit(promptPassword);
+                            }
+                        }}
+                        style={{ width: '100%' }}
+                        inputStyle={{ width: '100%', background: '#010409', color: '#c9d1d9', border: '1px solid #30363d' }}
+                    />
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
+                        <Button
+                            label="Cancelar"
+                            className="p-button-text p-button-secondary"
+                            onClick={() => setPasswordPromptVisible(false)}
+                        />
+                        <Button
+                            label="Conectar"
+                            icon="pi pi-check"
+                            disabled={!promptPassword}
+                            onClick={() => {
+                                setPasswordPromptVisible(false);
+                                handlePasswordSubmit(promptPassword);
+                            }}
                             className="p-button-primary"
                             style={{ background: '#238636', border: '1px solid rgba(240,246,252,0.1)' }}
                         />
