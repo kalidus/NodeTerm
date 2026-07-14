@@ -182,6 +182,114 @@ class McpApiServer {
   }
 
   /**
+   * Helper recursivo para aplanar el árbol de conexiones
+   */
+  _flattenConnections(nodes, parentGroup = '') {
+    let result = [];
+    if (!Array.isArray(nodes)) return result;
+    for (const node of nodes) {
+      const nodeType = node.type || (node.data && node.data.type);
+      if (nodeType === 'folder' || node.children) {
+        const currentGroup = parentGroup ? `${parentGroup}/${node.label || node.name}` : (node.label || node.name);
+        result.push({
+          id: node.id || node.key,
+          name: node.label || node.name,
+          type: 'folder',
+          group: parentGroup || null,
+          isFolder: true
+        });
+        if (node.children) {
+          result = result.concat(this._flattenConnections(node.children, currentGroup));
+        }
+      } else {
+        result.push({
+          ...node,
+          id: node.id || node.key,
+          name: node.label || node.name || `${node.username}@${node.host}`,
+          type: nodeType || 'ssh',
+          group: parentGroup || null,
+          isFolder: false
+        });
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Helper recursivo para aplanar el árbol de contraseñas
+   */
+  _flattenPasswords(nodes, parentPath = '') {
+    let result = [];
+    if (!Array.isArray(nodes)) return result;
+    for (const node of nodes) {
+      const nodeType = node.type || (node.data && node.data.type);
+      const isFolder = nodeType === 'password-folder' || node.droppable;
+      const currentPath = parentPath ? `${parentPath}/${node.label}` : node.label;
+      if (isFolder) {
+        result.push({
+          id: node.key || node.id,
+          name: node.label,
+          type: 'folder',
+          path: parentPath || null,
+          isFolder: true
+        });
+        if (node.children) {
+          result = result.concat(this._flattenPasswords(node.children, currentPath));
+        }
+      } else {
+        result.push({
+          id: node.key || node.id,
+          name: node.label,
+          type: nodeType || 'password',
+          path: parentPath || null,
+          isFolder: false,
+          username: node.data ? (node.data.username || '') : '',
+          password: node.data ? (node.data.password || '') : '',
+          website: node.data ? (node.data.website || '') : '',
+          notes: node.data ? (node.data.notes || '') : '',
+          api_key: node.data ? (node.data.api_key || '') : '',
+          wallet_seed: node.data ? (node.data.wallet_seed || '') : '',
+        });
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Helper recursivo para aplanar el árbol de documentos/notas
+   */
+  _flattenDocuments(nodes, parentPath = '') {
+    let result = [];
+    if (!Array.isArray(nodes)) return result;
+    for (const node of nodes) {
+      const isFolder = node.type === 'document-folder';
+      const currentPath = parentPath ? `${parentPath}/${node.label}` : node.label;
+      if (isFolder) {
+        result.push({
+          id: node.key || node.id,
+          name: node.label,
+          type: 'folder',
+          path: parentPath || null,
+          isFolder: true
+        });
+        if (node.children) {
+          result = result.concat(this._flattenDocuments(node.children, currentPath));
+        }
+      } else {
+        result.push({
+          id: node.key || node.id,
+          name: node.label,
+          type: 'document',
+          path: parentPath || null,
+          content: node.data ? (node.data.content || node.data.markdownSource || '') : '',
+          isFolder: false
+        });
+      }
+    }
+    return result;
+  }
+
+  /**
    * Obtiene las conexiones guardadas desde el renderer vía IPC
    */
   async _getConnections() {
@@ -194,6 +302,10 @@ class McpApiServer {
       const result = await this._mainWindow.webContents.executeJavaScript(`
         (function() {
           try {
+            if (window.nodeterm_integration) {
+              const conns = window.nodeterm_integration.getConnections();
+              return JSON.stringify(conns);
+            }
             const favs = JSON.parse(localStorage.getItem('nodeterm_favorite_connections') || '[]');
             const history = JSON.parse(localStorage.getItem('nodeterm_connection_history') || '[]');
             // Combinar y deduplicar por ID
@@ -233,6 +345,7 @@ class McpApiServer {
       group: conn.group || null,
       isFavorite: conn.isFavorite || false,
       lastConnected: conn.lastConnected || null,
+      isFolder: conn.isFolder || false,
       // NUNCA exponer password, privateKey, passphrase
     }));
   }
@@ -254,8 +367,12 @@ class McpApiServer {
     }
 
     // Buscar la conexión en las guardadas
-    const connections = await this._getConnections();
-    const connConfig = connections.find(c => c.id === connectionId);
+    const rawConnections = await this._getConnections();
+    const flatConnections = this._flattenConnections(rawConnections);
+    const connConfig = flatConnections.find(c => 
+      c.id === connectionId || 
+      (c.name && c.name.toLowerCase() === connectionId.toLowerCase())
+    );
     if (!connConfig) {
       throw new Error(`Connection not found: ${connectionId}`);
     }
@@ -427,10 +544,71 @@ class McpApiServer {
   async _handleListConnections(req, res) {
     try {
       const connections = await this._getConnections();
-      const sanitized = this._sanitizeConnections(connections);
+      const flat = this._flattenConnections(connections);
+      const sanitized = this._sanitizeConnections(flat);
       this._sendJson(res, 200, { connections: sanitized });
     } catch (err) {
       this._sendJson(res, 500, { error: 'Failed to list connections', detail: err.message });
+    }
+  }
+
+  /**
+   * Handler: GET /api/passwords
+   */
+  async _handleListPasswords(req, res) {
+    try {
+      if (!this._mainWindow || this._mainWindow.isDestroyed()) {
+        this._sendJson(res, 503, { error: 'NodeTerm window not available' });
+        return;
+      }
+      const result = await this._mainWindow.webContents.executeJavaScript(`
+        (async function() {
+          try {
+            if (window.nodeterm_integration) {
+              const passwords = await window.nodeterm_integration.getPasswords();
+              return JSON.stringify(passwords || []);
+            }
+            return '[]';
+          } catch(e) {
+            return '[]';
+          }
+        })()
+      `);
+      const rawPasswords = JSON.parse(result);
+      const flat = this._flattenPasswords(rawPasswords);
+      this._sendJson(res, 200, { passwords: flat });
+    } catch (err) {
+      this._sendJson(res, 500, { error: 'Failed to list passwords', detail: err.message });
+    }
+  }
+
+  /**
+   * Handler: GET /api/documents
+   */
+  async _handleListDocuments(req, res) {
+    try {
+      if (!this._mainWindow || this._mainWindow.isDestroyed()) {
+        this._sendJson(res, 503, { error: 'NodeTerm window not available' });
+        return;
+      }
+      const result = await this._mainWindow.webContents.executeJavaScript(`
+        (async function() {
+          try {
+            if (window.nodeterm_integration) {
+              const docs = await window.nodeterm_integration.getDocuments();
+              return JSON.stringify(docs || []);
+            }
+            return '[]';
+          } catch(e) {
+            return '[]';
+          }
+        })()
+      `);
+      const rawDocs = JSON.parse(result);
+      const flat = this._flattenDocuments(rawDocs);
+      this._sendJson(res, 200, { documents: flat });
+    } catch (err) {
+      this._sendJson(res, 500, { error: 'Failed to list documents', detail: err.message });
     }
   }
 
@@ -509,10 +687,14 @@ class McpApiServer {
         await this._handleStatus(req, res);
       } else if (method === 'GET' && url === '/api/connections') {
         await this._handleListConnections(req, res);
+      } else if (method === 'GET' && url === '/api/passwords') {
+        await this._handleListPasswords(req, res);
+      } else if (method === 'GET' && url === '/api/documents') {
+        await this._handleListDocuments(req, res);
       } else if (method === 'POST' && url === '/api/ssh/exec') {
         await this._handleSshExec(req, res);
       } else {
-        this._sendJson(res, 404, { error: 'Not found', availableEndpoints: ['/api/status', '/api/connections', '/api/ssh/exec'] });
+        this._sendJson(res, 404, { error: 'Not found', availableEndpoints: ['/api/status', '/api/connections', '/api/passwords', '/api/documents', '/api/ssh/exec'] });
       }
     } catch (err) {
       console.error('❌ [MCP-API] Error en request:', err);

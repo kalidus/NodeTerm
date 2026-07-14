@@ -2223,6 +2223,43 @@ const App = () => {
     saveNodes();
   }, [nodes, masterKey, secureStorage, updateTreeHash, isExternalReloadRef]);
 
+  // Exponer API de integración para MCP / API Server
+  useEffect(() => {
+    window.nodeterm_integration = {
+      getConnections: () => nodes || [],
+      getMasterKey: () => masterKey,
+      getSecureStorage: () => secureStorage,
+      getPasswords: async () => {
+        if (!secureStorage) return [];
+        const encryptedData = localStorage.getItem('passwords_encrypted');
+        if (encryptedData && masterKey) {
+          try {
+            return await secureStorage.decryptData(JSON.parse(encryptedData), masterKey);
+          } catch (e) {
+            console.error('MCP getPasswords decryption error:', e);
+            return [];
+          }
+        }
+        const plainData = localStorage.getItem('passwordManagerNodes');
+        return plainData ? JSON.parse(plainData) : [];
+      },
+      getDocuments: async () => {
+        if (!secureStorage) return [];
+        const encryptedData = localStorage.getItem('documents_encrypted');
+        if (encryptedData && masterKey) {
+          try {
+            return await secureStorage.decryptData(JSON.parse(encryptedData), masterKey);
+          } catch (e) {
+            console.error('MCP getDocuments decryption error:', e);
+            return [];
+          }
+        }
+        const plainData = localStorage.getItem('documentManagerNodes');
+        return plainData ? JSON.parse(plainData) : [];
+      }
+    };
+  }, [nodes, masterKey, secureStorage]);
+
   // Escuchar eventos de sincronización externa para datos encriptados y configuración
   useEffect(() => {
     const handleSync = () => {
