@@ -483,19 +483,6 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
     readTime: 0
   });
 
-  const editor = useEditor({
-    extensions: TIPTAP_EXTENSIONS,
-    content: sanitizeContent(documentData?.content || ''),
-    onUpdate: ({ editor }) => {
-      setSaveStatus('unsaved');
-      updateMetrics(editor);
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = setTimeout(() => {
-        saveContent(editor);
-      }, 2000);
-    },
-  });
-
   // Calculate Metrics in real time
   const updateMetrics = (editorInstance) => {
     if (!editorInstance || editorInstance.isDestroyed || !editorInstance.schema) return;
@@ -518,6 +505,19 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
       readTime
     });
   };
+
+  const editor = useEditor({
+    extensions: TIPTAP_EXTENSIONS,
+    content: sanitizeContent(documentData?.content || ''),
+    onUpdate: ({ editor }) => {
+      setSaveStatus('unsaved');
+      updateMetrics(editor);
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(() => {
+        saveContent(editor);
+      }, 2000);
+    },
+  });
 
   useEffect(() => {
     if (editor && !editor.isDestroyed && editor.schema) {
