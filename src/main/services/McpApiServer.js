@@ -659,6 +659,100 @@ class McpApiServer {
   }
 
   /**
+   * Handler: POST /api/passwords
+   */
+  async _handleSavePassword(req, res) {
+    let body;
+    try {
+      body = await this._parseBody(req);
+    } catch (err) {
+      this._sendJson(res, 400, { error: err.message });
+      return;
+    }
+
+    if (!body.name) {
+      this._sendJson(res, 400, { error: 'Missing required field: name' });
+      return;
+    }
+
+    try {
+      if (!this._mainWindow || this._mainWindow.isDestroyed()) {
+        this._sendJson(res, 503, { error: 'NodeTerm window not available' });
+        return;
+      }
+      const escapedBody = JSON.stringify(body);
+      const result = await this._mainWindow.webContents.executeJavaScript(`
+        (async function() {
+          try {
+            if (window.nodeterm_integration && window.nodeterm_integration.upsertPassword) {
+              const newId = await window.nodeterm_integration.upsertPassword(${escapedBody});
+              return JSON.stringify({ success: true, id: newId });
+            }
+            return JSON.stringify({ success: false, error: 'Integration not available' });
+          } catch(e) {
+            return JSON.stringify({ success: false, error: e.message });
+          }
+        })()
+      `);
+      const responseObj = JSON.parse(result);
+      if (responseObj.success) {
+        this._sendJson(res, 200, responseObj);
+      } else {
+        this._sendJson(res, 500, { error: responseObj.error });
+      }
+    } catch (err) {
+      this._sendJson(res, 500, { error: 'Failed to save password', detail: err.message });
+    }
+  }
+
+  /**
+   * Handler: POST /api/documents
+   */
+  async _handleSaveDocument(req, res) {
+    let body;
+    try {
+      body = await this._parseBody(req);
+    } catch (err) {
+      this._sendJson(res, 400, { error: err.message });
+      return;
+    }
+
+    if (!body.name) {
+      this._sendJson(res, 400, { error: 'Missing required field: name' });
+      return;
+    }
+
+    try {
+      if (!this._mainWindow || this._mainWindow.isDestroyed()) {
+        this._sendJson(res, 503, { error: 'NodeTerm window not available' });
+        return;
+      }
+      const escapedBody = JSON.stringify(body);
+      const result = await this._mainWindow.webContents.executeJavaScript(`
+        (async function() {
+          try {
+            if (window.nodeterm_integration && window.nodeterm_integration.upsertDocument) {
+              const newId = await window.nodeterm_integration.upsertDocument(${escapedBody});
+              return JSON.stringify({ success: true, id: newId });
+            }
+            return JSON.stringify({ success: false, error: 'Integration not available' });
+          } catch(e) {
+            return JSON.stringify({ success: false, error: e.message });
+          }
+        })()
+      `);
+      const responseObj = JSON.parse(result);
+      if (responseObj.success) {
+        this._sendJson(res, 200, responseObj);
+      } else {
+        this._sendJson(res, 500, { error: responseObj.error });
+      }
+    } catch (err) {
+      this._sendJson(res, 500, { error: 'Failed to save note', detail: err.message });
+    }
+  }
+
+  /**
    * Router principal
    */
   async _handleRequest(req, res) {
@@ -700,8 +794,12 @@ class McpApiServer {
         await this._handleListDocuments(req, res);
       } else if (method === 'POST' && url === '/api/ssh/exec') {
         await this._handleSshExec(req, res);
+      } else if (method === 'POST' && url === '/api/passwords') {
+        await this._handleSavePassword(req, res);
+      } else if (method === 'POST' && url === '/api/documents') {
+        await this._handleSaveDocument(req, res);
       } else {
-        this._sendJson(res, 404, { error: 'Not found', availableEndpoints: ['/api/status', '/api/connections', '/api/passwords', '/api/documents', '/api/ssh/exec'] });
+        this._sendJson(res, 404, { error: 'Not found', availableEndpoints: ['/api/status', '/api/connections', '/api/passwords', '/api/documents', '/api/ssh/exec', 'POST /api/passwords', 'POST /api/documents'] });
       }
     } catch (err) {
       console.error('❌ [MCP-API] Error en request:', err);

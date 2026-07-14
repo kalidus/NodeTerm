@@ -270,6 +270,8 @@ const PasswordManagerSidebar = ({
     };
 
     loadPasswords();
+    window.addEventListener('passwords-storage-updated', loadPasswords);
+    return () => window.removeEventListener('passwords-storage-updated', loadPasswords);
   }, [masterKey, secureStorage]);
 
   // GUARDAR passwords (con o sin encriptación)

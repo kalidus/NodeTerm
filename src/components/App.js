@@ -2256,6 +2256,202 @@ const App = () => {
         }
         const plainData = localStorage.getItem('documentManagerNodes');
         return plainData ? JSON.parse(plainData) : [];
+      },
+      savePasswords: async (newPasswords) => {
+        if (!secureStorage) return false;
+        if (masterKey) {
+          const encrypted = await secureStorage.encryptData(newPasswords, masterKey);
+          const encStr = JSON.stringify(encrypted);
+          localStorage.setItem('passwords_encrypted', encStr);
+          localStorage.removeItem('passwordManagerNodes');
+          localStorageSyncService.debouncedSync({ passwords_encrypted: encStr });
+        } else {
+          const plainStr = JSON.stringify(newPasswords);
+          localStorage.setItem('passwordManagerNodes', plainStr);
+          localStorageSyncService.debouncedSync({ passwordManagerNodes: plainStr });
+        }
+        window.dispatchEvent(new CustomEvent('passwords-storage-updated'));
+        return true;
+      },
+      saveDocuments: async (newDocuments) => {
+        if (!secureStorage) return false;
+        if (masterKey) {
+          const encrypted = await secureStorage.encryptData(newDocuments, masterKey);
+          const encStr = JSON.stringify(encrypted);
+          localStorage.setItem('documents_encrypted', encStr);
+          localStorage.removeItem('documentManagerNodes');
+          localStorageSyncService.debouncedSync({ documents_encrypted: encStr });
+        } else {
+          const plainStr = JSON.stringify(newDocuments);
+          localStorage.setItem('documentManagerNodes', plainStr);
+          localStorageSyncService.debouncedSync({ documentManagerNodes: plainStr });
+        }
+        window.dispatchEvent(new CustomEvent('documents-storage-updated'));
+        return true;
+      },
+      upsertPassword: async (item) => {
+        const getPasswords = window.nodeterm_integration.getPasswords;
+        const savePasswords = window.nodeterm_integration.savePasswords;
+        const list = await getPasswords();
+        
+        function updateNodeInTree(nodes, id, name, data) {
+          return nodes.map(n => {
+            if (n.key === id || n.id === id) {
+              return {
+                ...n,
+                label: name || n.label,
+                data: {
+                  ...n.data,
+                  ...data
+                }
+              };
+            }
+            if (n.children && n.children.length > 0) {
+              return {
+                ...n,
+                children: updateNodeInTree(n.children, id, name, data)
+              };
+            }
+            return n;
+          });
+        }
+
+        function addNodeToTree(nodes, parentId, newNode) {
+          if (!parentId) {
+            return [...nodes, newNode];
+          }
+          return nodes.map(n => {
+            if (n.key === parentId || n.id === parentId) {
+              return {
+                ...n,
+                children: [...(n.children || []), newNode]
+              };
+            }
+            if (n.children && n.children.length > 0) {
+              return {
+                ...n,
+                children: addNodeToTree(n.children, parentId, newNode)
+              };
+            }
+            return n;
+          });
+        }
+
+        const dataFields = {};
+        if (item.type !== undefined) dataFields.type = item.type;
+        if (item.username !== undefined) dataFields.username = item.username;
+        if (item.password !== undefined) dataFields.password = item.password;
+        if (item.website !== undefined) dataFields.website = item.website;
+        if (item.notes !== undefined) dataFields.notes = item.notes;
+        if (item.api_key !== undefined) dataFields.api_key = item.api_key;
+        if (item.wallet_seed !== undefined) dataFields.wallet_seed = item.wallet_seed;
+
+        if (item.id) {
+          const updated = updateNodeInTree(list, item.id, item.name, dataFields);
+          await savePasswords(updated);
+          return item.id;
+        } else {
+          if (dataFields.type === undefined) dataFields.type = 'password';
+          if (dataFields.username === undefined) dataFields.username = '';
+          if (dataFields.password === undefined) dataFields.password = '';
+          if (dataFields.website === undefined) dataFields.website = '';
+          if (dataFields.notes === undefined) dataFields.notes = '';
+          if (dataFields.api_key === undefined) dataFields.api_key = '';
+          if (dataFields.wallet_seed === undefined) dataFields.wallet_seed = '';
+
+          const newId = (item.type === 'password-folder' ? 'password_folder_' : 'password_') + Date.now() + '_' + Math.floor(Math.random()*1e6);
+          const newNode = {
+            key: newId,
+            id: newId,
+            label: item.name,
+            droppable: item.type === 'password-folder',
+            data: dataFields
+          };
+          if (item.type === 'password-folder') {
+            newNode.children = [];
+          }
+          const updated = addNodeToTree(list, item.parentId, newNode);
+          await savePasswords(updated);
+          return newId;
+        }
+      },
+      upsertDocument: async (item) => {
+        const getDocs = window.nodeterm_integration.getDocuments;
+        const saveDocs = window.nodeterm_integration.saveDocuments;
+        const list = await getDocs();
+
+        function updateNodeInTree(nodes, id, name, content) {
+          return nodes.map(n => {
+            if (n.key === id || n.id === id) {
+              return {
+                ...n,
+                label: name || n.label,
+                data: {
+                  ...n.data,
+                  content: content !== undefined ? content : (n.data ? (n.data.content || '') : ''),
+                  updatedAt: Date.now()
+                }
+              };
+            }
+            if (n.children && n.children.length > 0) {
+              return {
+                ...n,
+                children: updateNodeInTree(n.children, id, name, content)
+              };
+            }
+            return n;
+          });
+        }
+
+        function addNodeToTree(nodes, parentId, newNode) {
+          if (!parentId) {
+            return [...nodes, newNode];
+          }
+          return nodes.map(n => {
+            if (n.key === parentId || n.id === parentId) {
+              return {
+                ...n,
+                children: [...(n.children || []), newNode]
+              };
+            }
+            if (n.children && n.children.length > 0) {
+              return {
+                ...n,
+                children: addNodeToTree(n.children, parentId, newNode)
+              };
+            }
+            return n;
+          });
+        }
+
+        if (item.id) {
+          const updated = updateNodeInTree(list, item.id, item.name, item.content);
+          await saveDocs(updated);
+          return item.id;
+        } else {
+          const isFolder = item.type === 'document-folder';
+          const newId = (isFolder ? 'docfolder_' : 'doc_') + Date.now() + '_' + Math.floor(Math.random()*1e6);
+          const newNode = {
+            key: newId,
+            id: newId,
+            label: item.name,
+            type: item.type || 'document',
+            droppable: isFolder,
+            data: isFolder ? { type: 'document-folder', createdAt: Date.now() } : {
+              type: 'document',
+              content: item.content || '',
+              markdownSource: item.content || '',
+              createdAt: Date.now(),
+              updatedAt: Date.now()
+            }
+          };
+          if (isFolder) {
+            newNode.children = [];
+          }
+          const updated = addNodeToTree(list, item.parentId, newNode);
+          await saveDocs(updated);
+          return newId;
+        }
       }
     };
   }, [nodes, masterKey, secureStorage]);
