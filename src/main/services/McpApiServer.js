@@ -202,10 +202,17 @@ class McpApiServer {
           result = result.concat(this._flattenConnections(node.children, currentGroup));
         }
       } else {
+        const data = node.data || {};
         result.push({
           ...node,
           id: node.id || node.key,
-          name: node.label || node.name || `${node.username}@${node.host}`,
+          name: node.label || node.name || `${data.username || data.user || ''}@${data.host || data.server || ''}`,
+          host: data.host || data.server || data.hostname,
+          port: data.port || 22,
+          username: data.username || data.user,
+          password: data.password,
+          privateKey: data.privateKey,
+          passphrase: data.passphrase,
           type: nodeType || 'ssh',
           group: parentGroup || null,
           isFolder: false
