@@ -13,6 +13,7 @@ import { Badge } from 'primereact/badge';
 import { Checkbox } from 'primereact/checkbox';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { Card } from 'primereact/card';
+import { InputSwitch } from 'primereact/inputswitch';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import ThemeSelector from './ThemeSelector';
 import StatusBarSettingsTab from './StatusBarSettingsTab';
