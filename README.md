@@ -77,7 +77,7 @@ En Linux, `npm install` ejecuta automáticamente la reparación del binario de E
 | 🔄 Sincronización en tiempo real | 🧩 Soporte para iconos y fuentes |
 | 🛡️ Seguridad local y cifrado | 🌙 Modo oscuro y claro |
 | 🖱️ Menús contextuales avanzados | ⚡ Atajos de teclado |
-| 🔄 Actualizaciones automáticas | 📦 Sistema de actualización integrado |
+| 🔄 Actualizaciones automáticas | 🔌 Servidor MCP Integrado (API Key) |
 
 <details>
 <summary>🔎 <strong>Desglose avanzado de características</strong></summary>
@@ -87,6 +87,11 @@ En Linux, `npm install` ejecuta automáticamente la reparación del binario de E
 - Menú contextual intuitivo para elegir orientación
 - Barras de separación responsive
 - Reutilización de sesiones SSH existentes
+
+### 🔌 **Servidor MCP Integrado (Model Context Protocol)**
+- **Servidor Integrado Seguro**: Servidor nativo con comunicación segura mediante autenticación por API Key.
+- **Acceso a Datos**: Permite a agentes de IA externos consultar de forma segura conexiones, contraseñas y notas/documentos.
+- **Gestión de Recursos**: Soporte para la creación, consulta y edición remota de credenciales y notas de forma controlada.
 
 ### 🌐 **Gestión SSH Profesional**
 - Soporte completo para bastiones Wallix
@@ -151,6 +156,8 @@ El historial detallado vive solo en **[CHANGELOG.md](CHANGELOG.md)**. Las [GitHu
 |--|--|
 | **Última publicada** | **[v1.6.9](https://github.com/kalidus/NodeTerm/releases/tag/v1.6.9)** (5 junio 2026) |
 | **Instaladores** | [Descargas en Releases](https://github.com/kalidus/NodeTerm/releases) |
+
+**Resumen de v1.6.9:** incorpora un servidor nativo de Model Context Protocol (MCP) altamente seguro con soporte para exponer y gestionar de forma externa las conexiones, contraseñas y notas de NodeTerm mediante autenticación por API Key.
 
 **Resumen de v1.6.8:** retira el chat de IA integrado y el MCP nativo de NodeTerm; mantiene clientes IA dedicados (AnythingLLM, CLI, Docker); menos carga en arranque y sync más limpio entre instancias.
 

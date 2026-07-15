@@ -13,6 +13,37 @@ Borrador opcional para usuarios: `RELEASE_NOTES.md` (solo la versión en curso).
 
 ## [1.6.9] - 2026-06-05
 
+### 🔌 Servidor MCP Nativo (Model Context Protocol)
+- **Seguridad**: Implementación de un servidor MCP nativo con autenticación segura mediante API Key.
+- **Recursos**: Exposición segura de conexiones, contraseñas y notas/documentos de la aplicación para consumo externo.
+- **Operaciones**: Soporte remoto para consultar, crear y modificar contraseñas y notas directamente a través de MCP.
+
+### 📂 Explorador de Archivos SSH (SSH File Explorer)
+- **Rediseño Premium**: Integración de breadcrumbs interactivos, loaders de esqueleto (skeletons), badges de iconos y estación de transferencias en la barra lateral.
+- **Navegación**: Barras de dirección editables para navegación directa mediante copiar/pegar y soporte de navegación sincronizada entre paneles.
+- **Persistencia**: Rutas por defecto local y remota configurables y opción de guardarlas directamente desde las barras de herramientas.
+- **Ajustes**: Integración de selector de temas y opacidad directamente en el explorador SSH.
+
+### 📝 Notas y Documentos
+- **Edición**: Soporte para edición de título inline en la cabecera del editor y selector de emojis para iconos personalizados en el documento.
+- **Papelera**: Sistema independiente de papelera y flujo completo para mover notas rápidas eliminadas y restaurarlas.
+- **Favoritos**: Permitido añadir notas, documentos, contraseñas y secretos a la sección unificada de favoritos.
+- **UX**: Cierre automático del panel lateral de notas al abrir un documento y refactorización de dropdowns a React para corregir cierres erráticos.
+
+### 🔐 Gestión de Contraseñas
+- **Vistas**: Implementación de un grid de tarjetas moderno y una vista de lista tipo tabla interactiva con ordenación de columnas y filas alternas (zebra-striping).
+- **Detalles**: Rediseño de botones a formato circular sin bordes y visibilidad mejorada de tarjetas en todos los temas del sistema.
+
+### 🧭 Sidebar, Temas y Apariencia
+- **Tipografía y Fuentes**: Integración de selector de fuentes, tamaño y colores directamente en la barra lateral con menú de apariencia dinámico.
+- **Layouts**: Incorporación de los estilos de layout `unified-rounded` (Moderno Personalizado) y `unified-app-rounded`.
+- **Iconografía**: Actualización de los iconos de rail, soporte para tema PrimeIcons (Original) y corrección en la selección y clickabilidad en cascada.
+
+### ⚡ Rendimiento y Núcleo
+- **Recursos**: Corrección de fugas de memoria en `DockerTerminal` y eliminación de bucles busy-wait en `ConnectionHistoryService`.
+- **Gráficos**: Optimización de aceleración por GPU, control de estrangulamiento en segundo plano y renderizado del terminal sin stutters visuales.
+- **Guacamole (RDP/VNC)**: Mejora del rendimiento de renderizado RDP mediante imágenes WebP, compresión optimizada sin `perMessageDeflate` y limitación de eventos de ratón.
+
 ### 📝 Documentación
 - **Captura**: Sustituida la captura principal (`screenshot-main.png`) en el `README.md`.
 - **Versión**: Actualizada la versión del proyecto a `1.6.9` en `package.json`, `package-lock.json` y `README.md`.
