@@ -596,7 +596,14 @@ async function main() {
     await runCommand('npm run build', 'Compilando código fuente (Webpack)');
 
     // ssh2 opcional: cpu-features falla al recompilar con Electron; no es necesario en runtime
-    await runCommand('npm run rm-cpu-features', 'Preparando dependencias nativas (omitir cpu-features)');
+    console.log('\n\x1b[36m[Ejecutando]\x1b[0m Preparando dependencias nativas (omitir cpu-features)...');
+    [path.join(REPO_ROOT, 'node_modules', 'cpu-features'), path.join(REPO_ROOT, 'node_modules', 'ssh2', 'node_modules', 'cpu-features')].forEach(p => {
+        try {
+            fs.rmSync(p, { recursive: true, force: true });
+        } catch (e) {
+            console.log(`Error al borrar ${p}: ${e.message}`);
+        }
+    });
 
     if (await runCommand(ebCommand, isPublish ? 'Generando paquetes y publicando' : 'Generando paquetes locales')) {
         console.log('\n\x1b[32m✅ Compilación finalizada correctamente.\x1b[0m');
