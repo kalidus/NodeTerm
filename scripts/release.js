@@ -554,7 +554,7 @@ async function main() {
     }
 
     // 3. Preparar comando electron-builder
-    let ebCommand = `npx electron-builder ${platforms.join(' ')}`;
+    let ebCommand = `node node_modules/electron-builder/cli.js ${platforms.join(' ')}`;
 
     if (isPublish) {
         if (!process.env.GH_TOKEN) {
