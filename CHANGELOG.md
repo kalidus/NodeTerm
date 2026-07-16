@@ -11,7 +11,7 @@ Borrador opcional para usuarios: `RELEASE_NOTES.md` (solo la versión en curso).
 
 ## [Unreleased]
 
-## [1.6.9] - 2026-06-05
+## [1.6.9] - 2026-07-16
 
 ### 🔌 Servidor MCP Nativo (Model Context Protocol)
 - **Seguridad**: Implementación de un servidor MCP nativo con autenticación segura mediante API Key.
