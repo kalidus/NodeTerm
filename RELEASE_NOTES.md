@@ -5,7 +5,7 @@
 > `npm run release` publica en GitHub la sección `## [x.y.z]` del changelog (no este archivo).
 
 **Fecha prevista:** Por definir  
-**Versión anterior:** v1.6.8
+**Versión anterior:** v1.6.9
 
 ---
 

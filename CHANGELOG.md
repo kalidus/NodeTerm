@@ -11,6 +11,8 @@ Borrador opcional para usuarios: `RELEASE_NOTES.md` (solo la versión en curso).
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-07-17
+
 ## [1.6.9] - 2026-07-16
 
 ### 🔌 Servidor MCP Nativo (Model Context Protocol)
