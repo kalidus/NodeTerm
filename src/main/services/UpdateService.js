@@ -116,8 +116,14 @@ class UpdateService {
     });
 
     // Configuración de autoUpdater
-    autoUpdater.autoDownload = this.config.autoDownload;
-    autoUpdater.autoInstallOnAppQuit = this.config.autoInstall;
+    if (process.platform === 'linux') {
+      autoUpdater.autoDownload = false;
+      autoUpdater.autoInstallOnAppQuit = false;
+      log.info('🐧 Linux detectado: Auto-descarga y auto-instalación interna de actualizaciones desactivadas');
+    } else {
+      autoUpdater.autoDownload = this.config.autoDownload;
+      autoUpdater.autoInstallOnAppQuit = this.config.autoInstall;
+    }
   }
 
   /**
@@ -146,8 +152,13 @@ class UpdateService {
   loadConfig(storedConfig) {
     if (storedConfig && typeof storedConfig === 'object') {
       this.config = { ...this.config, ...storedConfig };
-      autoUpdater.autoDownload = this.config.autoDownload;
-      autoUpdater.autoInstallOnAppQuit = this.config.autoInstall;
+      if (process.platform === 'linux') {
+        autoUpdater.autoDownload = false;
+        autoUpdater.autoInstallOnAppQuit = false;
+      } else {
+        autoUpdater.autoDownload = this.config.autoDownload;
+        autoUpdater.autoInstallOnAppQuit = this.config.autoInstall;
+      }
       log.info('Configuración de actualización cargada:', this.config);
     }
   }
@@ -157,8 +168,13 @@ class UpdateService {
    */
   updateConfig(newConfig) {
     this.config = { ...this.config, ...newConfig };
-    autoUpdater.autoDownload = this.config.autoDownload;
-    autoUpdater.autoInstallOnAppQuit = this.config.autoInstall;
+    if (process.platform === 'linux') {
+      autoUpdater.autoDownload = false;
+      autoUpdater.autoInstallOnAppQuit = false;
+    } else {
+      autoUpdater.autoDownload = this.config.autoDownload;
+      autoUpdater.autoInstallOnAppQuit = this.config.autoInstall;
+    }
     log.info('Configuración de actualización actualizada:', this.config);
     return this.config;
   }
@@ -286,6 +302,9 @@ class UpdateService {
    */
   async downloadUpdate() {
     try {
+      if (process.platform === 'linux') {
+        throw new Error('En Linux las actualizaciones internas están desactivadas para evitar romper los accesos directos.');
+      }
       log.info('Descarga manual de actualización iniciada');
 
       // Configurar opciones de descarga para manejar errores de checksum
@@ -384,6 +403,8 @@ class UpdateService {
       updateAvailable: this.updateInfo !== null,
       isUpdateDownloaded: this.isUpdateDownloaded,
       updateInfo: this.updateInfo,
+      isAppImage: !!process.env.APPIMAGE,
+      isLinux: process.platform === 'linux',
     };
   }
 
