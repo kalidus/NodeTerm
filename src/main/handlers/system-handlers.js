@@ -522,7 +522,8 @@ function registerSystemMonitoringHandlers() {
           // Intenta nvidia-smi con más información (nombre, memoria, temperatura, uso)
           const output = execSync('nvidia-smi --query-gpu=name,memory.total,memory.used,utilization.gpu,temperature.gpu --format=csv,nounits,noheader', {
             encoding: 'utf-8',
-            timeout: 2000 // Reducido de 3000ms a 2000ms
+            timeout: 2000, // Reducido de 3000ms a 2000ms
+            stdio: ['ignore', 'pipe', 'ignore']
           }).trim();
 
           if (output) {
@@ -569,7 +570,8 @@ function registerSystemMonitoringHandlers() {
           try {
             const output = execSync('rocm-smi --showmeminfo --json', {
               encoding: 'utf-8',
-              timeout: 3000
+              timeout: 3000,
+              stdio: ['ignore', 'pipe', 'ignore']
             });
             const data = JSON.parse(output);
             if (data && data.gpu_memory_use && data.gpu_memory_use.length > 0) {
@@ -580,7 +582,8 @@ function registerSystemMonitoringHandlers() {
               try {
                 const nameOutput = execSync('rocm-smi --showproductname', {
                   encoding: 'utf-8',
-                  timeout: 2000
+                  timeout: 2000,
+                  stdio: ['ignore', 'pipe', 'ignore']
                 });
                 const nameMatch = nameOutput.match(/Product Name:\s*(.+)/);
                 if (nameMatch) gpuName = nameMatch[1].trim();
@@ -618,13 +621,80 @@ function registerSystemMonitoringHandlers() {
           }
         }
 
+        // Fallback Linux (sysfs DRM) — sin subprocesos
+        if (platform === 'linux') {
+          try {
+            const drmDir = '/sys/class/drm';
+            if (fs.existsSync(drmDir)) {
+              const files = fs.readdirSync(drmDir);
+              const cardDirs = files.filter(f => /^card\d+$/.test(f));
+              for (const card of cardDirs) {
+                const ueventPath = path.join(drmDir, card, 'device', 'uevent');
+                if (fs.existsSync(ueventPath)) {
+                  const content = fs.readFileSync(ueventPath, 'utf8');
+                  const lines = content.split('\n');
+                  let driver = '';
+                  let pciId = '';
+                  for (const line of lines) {
+                    if (line.startsWith('DRIVER=')) {
+                      driver = line.substring(7).trim();
+                    } else if (line.startsWith('PCI_ID=')) {
+                      pciId = line.substring(7).trim();
+                    }
+                  }
+                  if (driver || pciId) {
+                    let type = 'integrated';
+                    let name = 'Generic GPU';
+                    if (driver === 'amdgpu' || pciId.startsWith('1002:')) {
+                      type = 'amd';
+                      name = 'AMD Radeon Graphics';
+                    } else if (driver === 'i915' || driver === 'xe' || pciId.startsWith('8086:')) {
+                      type = 'intel';
+                      name = 'Intel HD/UHD Graphics';
+                    } else if (driver === 'nvidia' || driver === 'nouveau' || pciId.startsWith('10de:')) {
+                      type = 'nvidia';
+                      name = 'NVIDIA Graphics Card';
+                    }
+                    
+                    if (!gpuDetectionLogged || detectedGpuType !== type || detectedGpuName !== name) {
+                      console.log(`[GPU Handler] ✅ GPU Linux detectada vía sysfs (${driver || 'generic'}):`, name);
+                      gpuDetectionLogged = true;
+                      detectedGpuType = type;
+                      detectedGpuName = name;
+                    }
+
+                    const stats = {
+                      ok: true,
+                      type: type,
+                      name: name,
+                      totalMB: null,
+                      usedMB: null,
+                      freeMB: null,
+                      usagePercent: null,
+                      gpuUtilization: null,
+                      temperature: null,
+                      note: `Detectado vía kernel sysfs (${driver || 'unknown'})`
+                    };
+                    cachedGpuStats = stats;
+                    lastGpuCheck = now;
+                    return stats;
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            // Error en fallback sysfs
+          }
+        }
+
         // Windows (AMD e Intel)
         if (platform === 'win32') {
           try {
             // Obtener todas las controladoras de video con su VRAM (aproximada)
             const output = execSync('wmic path win32_VideoController get name,AdapterRAM /format:csv', {
               encoding: 'utf-8',
-              timeout: 3000
+              timeout: 3000,
+              stdio: ['ignore', 'pipe', 'ignore']
             }).trim();
 
             if (output) {
@@ -713,7 +783,8 @@ function registerSystemMonitoringHandlers() {
 
             const output = execSync('system_profiler SPDisplaysDataType', {
               encoding: 'utf-8',
-              timeout: 2000 // Reducido para evitar cuelgues largos
+              timeout: 2000, // Reducido para evitar cuelgues largos
+              stdio: ['ignore', 'pipe', 'ignore']
             });
             if (output.includes('GPU')) {
               // Intentar extraer nombre del GPU
