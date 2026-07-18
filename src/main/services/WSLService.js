@@ -42,6 +42,12 @@ function setDependencies(dependencies) {
  * @returns {Promise<Array>} Array de distribuciones WSL disponibles
  */
 async function detectAllWSLDistributions() {
+  // Si no estamos en Windows, evitar detección y devolver vacío inmediatamente
+  if (process.platform !== 'win32') {
+    cachedDistributions = [];
+    return Promise.resolve([]);
+  }
+
   // Si ya hay una detección en curso, retornar la promesa existente
   if (detectionPromise) return detectionPromise;
 

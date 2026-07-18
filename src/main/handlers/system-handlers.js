@@ -502,6 +502,9 @@ function registerSystemMonitoringHandlers() {
   let cachedGpuStats = null;
   let lastGpuCheck = 0;
   const GPU_CACHE_TTL = 15000; // 15 segundos de caché para evitar bloqueos del Main Process
+  let nvidiaDisabledUntil = 0;
+  let amdDisabledUntil = 0;
+  const PENALTY_DURATION = 5 * 60 * 1000; // 5 minutos de penalización
 
   // Handler para obtener estadísticas de GPU (mejorado con más información)
   ipcMain.handle('system:get-gpu-stats', async () => {
@@ -518,55 +521,59 @@ function registerSystemMonitoringHandlers() {
 
       // NVIDIA CUDA
       if (platform === 'win32' || platform === 'linux' || platform === 'darwin') {
-        try {
-          // Intenta nvidia-smi con más información (nombre, memoria, temperatura, uso)
-          const output = execSync('nvidia-smi --query-gpu=name,memory.total,memory.used,utilization.gpu,temperature.gpu --format=csv,nounits,noheader', {
-            encoding: 'utf-8',
-            timeout: 2000, // Reducido de 3000ms a 2000ms
-            stdio: ['ignore', 'pipe', 'ignore']
-          }).trim();
+        if (now > nvidiaDisabledUntil) {
+          try {
+            // Intenta nvidia-smi con más información (nombre, memoria, temperatura, uso)
+            const output = execSync('nvidia-smi --query-gpu=name,memory.total,memory.used,utilization.gpu,temperature.gpu --format=csv,nounits,noheader', {
+              encoding: 'utf-8',
+              timeout: 2000, // Reducido de 3000ms a 2000ms
+              stdio: ['ignore', 'pipe', 'ignore']
+            }).trim();
 
-          if (output) {
-            const lines = output.split('\n').filter(l => l.trim());
-            if (lines.length > 0) {
-              const [name, total, used, gpuUtil, temp] = lines[0].split(',').map(v => v.trim());
-              const totalMB = parseInt(total);
-              const usedMB = parseInt(used);
-              const gpuUsage = parseInt(gpuUtil) || 0;
-              const temperature = parseInt(temp) || null;
+            if (output) {
+              const lines = output.split('\n').filter(l => l.trim());
+              if (lines.length > 0) {
+                const [name, total, used, gpuUtil, temp] = lines[0].split(',').map(v => v.trim());
+                const totalMB = parseInt(total);
+                const usedMB = parseInt(used);
+                const gpuUsage = parseInt(gpuUtil) || 0;
+                const temperature = parseInt(temp) || null;
 
-              if (totalMB && !isNaN(totalMB) && !isNaN(usedMB)) {
-                // Solo loguear la primera vez que se detecta
-                if (!gpuDetectionLogged || detectedGpuType !== 'nvidia' || detectedGpuName !== name) {
-                  console.log('[GPU Handler] ✅ GPU NVIDIA detectada:', name);
-                  gpuDetectionLogged = true;
-                  detectedGpuType = 'nvidia';
-                  detectedGpuName = name;
+                if (totalMB && !isNaN(totalMB) && !isNaN(usedMB)) {
+                  // Solo loguear la primera vez que se detecta
+                  if (!gpuDetectionLogged || detectedGpuType !== 'nvidia' || detectedGpuName !== name) {
+                    console.log('[GPU Handler] ✅ GPU NVIDIA detectada:', name);
+                    gpuDetectionLogged = true;
+                    detectedGpuType = 'nvidia';
+                    detectedGpuName = name;
+                  }
+                  const stats = {
+                    ok: true,
+                    type: 'nvidia',
+                    name: name || 'NVIDIA GPU',
+                    totalMB: totalMB,
+                    usedMB: usedMB,
+                    freeMB: totalMB - usedMB,
+                    usagePercent: Math.round((usedMB / totalMB) * 100),
+                    gpuUtilization: gpuUsage, // Uso de GPU (0-100)
+                    temperature: temperature, // Temperatura en °C
+                    driverVersion: null // Se puede obtener con otro comando si es necesario
+                  };
+                  cachedGpuStats = stats;
+                  lastGpuCheck = now;
+                  return stats;
                 }
-                const stats = {
-                  ok: true,
-                  type: 'nvidia',
-                  name: name || 'NVIDIA GPU',
-                  totalMB: totalMB,
-                  usedMB: usedMB,
-                  freeMB: totalMB - usedMB,
-                  usagePercent: Math.round((usedMB / totalMB) * 100),
-                  gpuUtilization: gpuUsage, // Uso de GPU (0-100)
-                  temperature: temperature, // Temperatura en °C
-                  driverVersion: null // Se puede obtener con otro comando si es necesario
-                };
-                cachedGpuStats = stats;
-                lastGpuCheck = now;
-                return stats;
               }
             }
+          } catch (e) {
+            // No es NVIDIA o nvidia-smi no disponible o falló/timeout. Penalizar reintentos.
+            console.warn('[GPU Handler] ⚠️ Consulta nvidia-smi fallida o inalcanzable. Penalizando por 5m.');
+            nvidiaDisabledUntil = Date.now() + PENALTY_DURATION;
           }
-        } catch (e) {
-          // No es NVIDIA o nvidia-smi no disponible
         }
 
         // AMD ROCm (Linux)
-        if (platform === 'linux') {
+        if (platform === 'linux' && now > amdDisabledUntil) {
           try {
             const output = execSync('rocm-smi --showmeminfo --json', {
               encoding: 'utf-8',
@@ -617,7 +624,9 @@ function registerSystemMonitoringHandlers() {
               }
             }
           } catch (e) {
-            // No es AMD o rocm-smi no disponible
+            // No es AMD o rocm-smi no disponible o falló/timeout. Penalizar reintentos.
+            console.warn('[GPU Handler] ⚠️ Consulta rocm-smi fallida o inalcanzable. Penalizando por 5m.');
+            amdDisabledUntil = Date.now() + PENALTY_DURATION;
           }
         }
 

@@ -13,6 +13,21 @@ function getSI() {
   return _si;
 }
 
+let detectedOsPrettyName = '';
+if (process.platform === 'linux') {
+  try {
+    const osRelease = fs.readFileSync('/etc/os-release', 'utf8');
+    const match = osRelease.match(/^PRETTY_NAME="?([^"\n]+)"?/m);
+    if (match) {
+      detectedOsPrettyName = match[1];
+    }
+  } catch (_) {}
+} else if (process.platform === 'darwin') {
+  detectedOsPrettyName = 'macOS';
+} else if (process.platform === 'win32') {
+  detectedOsPrettyName = 'Windows';
+}
+
 let lastNetStats = null;
 let lastNetTime = null;
 let lastValidStats = {
@@ -28,7 +43,7 @@ let lastValidStats = {
   arch: os.arch(),
   kernel: os.release(),
   osVersion: (typeof os.version === 'function' ? os.version() : ''),
-  osPrettyName: '',
+  osPrettyName: detectedOsPrettyName,
   uptime: ''
 };
 
@@ -149,7 +164,7 @@ async function getSystemStats() {
     arch: os.arch(),
     kernel: os.release(),
     osVersion: (typeof os.version === 'function' ? os.version() : ''),
-    osPrettyName: lastValidStats.osPrettyName || '',
+    osPrettyName: detectedOsPrettyName || lastValidStats.osPrettyName || '',
     uptime
   };
 
@@ -244,7 +259,7 @@ async function getSystemStats() {
     networkInterfaces: Array.isArray(stats.networkInterfaces) ? [...stats.networkInterfaces] : [],
     hostname: stats.hostname, ip: stats.ip, temperature: { ...stats.temperature },
     platform: stats.platform, arch: stats.arch, kernel: stats.kernel,
-    osVersion: stats.osVersion, osPrettyName: stats.osPrettyName, uptime: stats.uptime
+    osVersion: stats.osVersion, osPrettyName: stats.osPrettyName || detectedOsPrettyName, uptime: stats.uptime
   };
 
   return stats;

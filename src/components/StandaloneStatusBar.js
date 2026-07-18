@@ -75,6 +75,16 @@ const StandaloneStatusBar = ({ visible = true, style = {} }) => {
                     setGpuStats(null);
                 }
 
+                let distroVal = systemStats.platform === 'win32' ? 'windows' : (systemStats.platform === 'darwin' ? 'macos' : 'linux');
+                if (systemStats.platform === 'linux' && systemStats.osPrettyName) {
+                    const pretty = systemStats.osPrettyName.toLowerCase();
+                    const distros = ['ubuntu', 'debian', 'fedora', 'centos', 'arch', 'opensuse', 'redhat', 'rhel', 'alpine', 'kali', 'gentoo', 'linuxmint', 'pop'];
+                    const found = distros.find(d => pretty.includes(d));
+                    if (found) {
+                        distroVal = found === 'rhel' ? 'redhat' : found;
+                    }
+                }
+
                 const statsPayload = {
                     cpu: Math.round((systemStats.cpu?.usage || 0) * 10) / 10,
                     mem: { total: memTotalBytes, used: memUsedBytes, free: memFreeBytes },
@@ -83,7 +93,7 @@ const StandaloneStatusBar = ({ visible = true, style = {} }) => {
                     networkInterfaces: Array.isArray(systemStats.networkInterfaces) ? systemStats.networkInterfaces : [],
                     hostname: systemStats.hostname,
                     ip: systemStats.ip || undefined,
-                    distro: 'windows',
+                    distro: distroVal,
                     versionId: systemStats.osVersion || '',
                     kernel: systemStats.kernel || '',
                     platform: systemStats.platform || 'win32',
