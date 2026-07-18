@@ -156,7 +156,10 @@
       "warningsAsErrors": false
     },
     "linux": {
-      "target": "AppImage",
+      "target": [
+        "AppImage",
+        "pacman"
+      ],
       "category": "Utility",
       "icon": "src/assets/app-icon.png"
     },

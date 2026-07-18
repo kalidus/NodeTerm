@@ -34,8 +34,7 @@ const UpdatePanel = () => {
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState('');
   const [isChecking, setIsChecking] = useState(false);
-  const [isLinux, setIsLinux] = useState(false);
-  const [isAppImage, setIsAppImage] = useState(false);
+  const [isManagedAppImage, setIsManagedAppImage] = useState(false);
 
   const toast = useRef(null);
 
@@ -175,9 +174,9 @@ const UpdatePanel = () => {
         const result = await window.electron.updater.getUpdateInfo();
         if (result.success) {
           setCurrentVersion(result.currentVersion);
-          setIsLinux(!!result.isLinux);
-          setIsAppImage(!!result.isAppImage);
-          if (result.isUpdateDownloaded && !result.isLinux) {
+          const isManaged = !!result.isManagedAppImage;
+          setIsManagedAppImage(isManaged);
+          if (result.isUpdateDownloaded && !isManaged) {
             setUpdateStatus('downloaded');
             setUpdateInfo(result.updateInfo);
             setDownloadProgress(100);
@@ -431,7 +430,7 @@ const UpdatePanel = () => {
           <Message severity="info" text="Comprobando actualizaciones..." style={{ width: '100%', marginTop: '1rem' }} />
         )}
 
-        {updateStatus === 'available' && (isLinux || isAppImage) && (
+        {updateStatus === 'available' && isManagedAppImage && (
           <Message
             severity="info"
             text="En Linux (AppImage), te recomendamos buscar y aplicar las actualizaciones directamente desde tu gestor de aplicaciones (como Gear Lever o AppImageLauncher) para evitar que se rompa el acceso directo o el lanzador en tu sistema."
@@ -484,7 +483,7 @@ const UpdatePanel = () => {
           />
         )}
 
-        {updateStatus === 'available' && !config.autoDownload && !(isLinux || isAppImage) && (
+        {updateStatus === 'available' && !config.autoDownload && !isManagedAppImage && (
           <Button
             label="Descargar"
             icon="pi pi-download"
@@ -493,7 +492,7 @@ const UpdatePanel = () => {
           />
         )}
 
-        {updateStatus === 'downloaded' && !(isLinux || isAppImage) && (
+        {updateStatus === 'downloaded' && !isManagedAppImage && (
           <Button
             label="Instalar y Reiniciar"
             icon="pi pi-check"
@@ -580,9 +579,9 @@ const UpdatePanel = () => {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <Checkbox
-              checked={isLinux || isAppImage ? false : config.autoDownload}
+              checked={isManagedAppImage ? false : config.autoDownload}
               onChange={(e) => updateConfig({ ...config, autoDownload: e.checked })}
-              disabled={isLinux || isAppImage}
+              disabled={isManagedAppImage}
             />
             <div>
               <label style={{
@@ -594,8 +593,8 @@ const UpdatePanel = () => {
                 Descargar actualizaciones automáticamente
               </label>
               <span style={{ fontSize: '0.85rem', color: 'var(--text-color-secondary)' }}>
-                {isLinux || isAppImage
-                  ? 'Desactivado en Linux (gestionado por tu gestor de aplicaciones)'
+                {isManagedAppImage
+                  ? 'Desactivado (gestionado por tu gestor de aplicaciones)'
                   : 'Las actualizaciones se descargarán en segundo plano'
                 }
               </span>
@@ -612,9 +611,9 @@ const UpdatePanel = () => {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <Checkbox
-              checked={isLinux || isAppImage ? false : config.autoInstall}
+              checked={isManagedAppImage ? false : config.autoInstall}
               onChange={(e) => updateConfig({ ...config, autoInstall: e.checked })}
-              disabled={isLinux || isAppImage || !config.autoDownload} // Deshabilitar si no se descarga automáticamente
+              disabled={isManagedAppImage || !config.autoDownload} // Deshabilitar si no se descarga automáticamente
             />
             <div>
               <label style={{
@@ -626,8 +625,8 @@ const UpdatePanel = () => {
                 Instalar automáticamente
               </label>
               <span style={{ fontSize: '0.85rem', color: 'var(--text-color-secondary)' }}>
-                {isLinux || isAppImage
-                  ? 'Desactivado en Linux'
+                {isManagedAppImage
+                  ? 'Desactivado'
                   : 'Se instalarán las actualizaciones al reiniciar la aplicación (sin preguntar)'
                 }
               </span>

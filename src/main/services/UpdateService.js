@@ -116,10 +116,10 @@ class UpdateService {
     });
 
     // Configuración de autoUpdater
-    if (process.platform === 'linux') {
+    if (this.isManagedAppImage()) {
       autoUpdater.autoDownload = false;
       autoUpdater.autoInstallOnAppQuit = false;
-      log.info('🐧 Linux detectado: Auto-descarga y auto-instalación interna de actualizaciones desactivadas');
+      log.info('🐧 AppImage gestionada por el sistema: Auto-descarga y auto-instalación interna desactivadas para evitar romper los accesos directos.');
     } else {
       autoUpdater.autoDownload = this.config.autoDownload;
       autoUpdater.autoInstallOnAppQuit = this.config.autoInstall;
@@ -152,7 +152,7 @@ class UpdateService {
   loadConfig(storedConfig) {
     if (storedConfig && typeof storedConfig === 'object') {
       this.config = { ...this.config, ...storedConfig };
-      if (process.platform === 'linux') {
+      if (this.isManagedAppImage()) {
         autoUpdater.autoDownload = false;
         autoUpdater.autoInstallOnAppQuit = false;
       } else {
@@ -168,7 +168,7 @@ class UpdateService {
    */
   updateConfig(newConfig) {
     this.config = { ...this.config, ...newConfig };
-    if (process.platform === 'linux') {
+    if (this.isManagedAppImage()) {
       autoUpdater.autoDownload = false;
       autoUpdater.autoInstallOnAppQuit = false;
     } else {
@@ -302,8 +302,8 @@ class UpdateService {
    */
   async downloadUpdate() {
     try {
-      if (process.platform === 'linux') {
-        throw new Error('En Linux las actualizaciones internas están desactivadas para evitar romper los accesos directos.');
+      if (this.isManagedAppImage()) {
+        throw new Error('En este sistema las actualizaciones internas están desactivadas para evitar romper los accesos directos. Por favor, actualiza desde tu gestor de aplicaciones (Gear Lever).');
       }
       log.info('Descarga manual de actualización iniciada');
 
@@ -395,6 +395,26 @@ class UpdateService {
   }
 
   /**
+   * Detecta si la AppImage está siendo gestionada por un gestor de aplicaciones (Gear Lever, AppImageLauncher, etc.)
+   */
+  isManagedAppImage() {
+    if (process.platform !== 'linux') return false;
+    const appImagePath = process.env.APPIMAGE;
+    if (!appImagePath) return false;
+    
+    // Directorios comunes de gestores de AppImage
+    const managedPaths = [
+      '/.local/bin/',
+      '/.local/share/gearlever/',
+      '/Applications/',
+      '/usr/bin/',
+      '/opt/'
+    ];
+    
+    return managedPaths.some(p => appImagePath.includes(p));
+  }
+
+  /**
    * Obtiene información de la actualización actual
    */
   getUpdateInfo() {
@@ -405,6 +425,7 @@ class UpdateService {
       updateInfo: this.updateInfo,
       isAppImage: !!process.env.APPIMAGE,
       isLinux: process.platform === 'linux',
+      isManagedAppImage: this.isManagedAppImage(),
     };
   }
 
