@@ -15,7 +15,7 @@
     "pack": "npm run build && npm run rm-cpu-features && electron-builder --dir",
     "verify-packaging": "node scripts/verify-electron-packaging.js",
     "dist": "npm run verify-packaging && npm run build && npm prune --no-audit --no-fund && npm run rm-cpu-features && electron-builder",
-    "dist:linux": "npm run build && npm run rm-cpu-features && electron-builder --linux --publish never",
+    "dist:linux": "npm run build && npm run rm-cpu-features && electron-builder --linux",
     "version:patch": "npm version patch --no-git-tag-version",
     "version:minor": "npm version minor --no-git-tag-version",
     "version:major": "npm version major --no-git-tag-version",
