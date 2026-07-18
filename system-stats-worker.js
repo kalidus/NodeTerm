@@ -1,21 +1,20 @@
 // system-stats-worker.js
-// 🚀 OPTIMIZACIÓN: Lazy loading de systeminformation
-const os = require('os');
+// ⚠️  SIN SUBPROCESOS EXTERNOS: nvidia-smi, sensors y df se bloquean en estado
+// D (uninterruptible sleep) con drivers NVIDIA en CachyOS/Wayland. SIGKILL no
+// puede interrumpir procesos en estado D. Usamos solo APIs del kernel directamente.
 
-// systeminformation se carga solo cuando se necesita
+const os = require('os');
+const fs = require('fs');
+
+// systeminformation solo para currentLoad() que lee /proc/stat sin subprocesos
 let _si = null;
 function getSI() {
-  if (!_si) {
-    _si = require('systeminformation');
-  }
+  if (!_si) _si = require('systeminformation');
   return _si;
 }
 
 let lastNetStats = null;
 let lastNetTime = null;
-// Cache para unidades de red (se actualiza cada 30 segundos)
-let networkDrivesCache = { data: new Set(), timestamp: 0, ttl: 30000 };
-// Sticky stats para mantener estado cuando hay errores
 let lastValidStats = {
   cpu: { usage: 0, cores: 0, model: 'Iniciando...', perCpuLoad: [] },
   memory: { used: 0, total: 0, free: 0, percentage: 0 },
@@ -33,24 +32,110 @@ let lastValidStats = {
   uptime: ''
 };
 
+// ── Temperatura CPU desde /sys/class/thermal (sin subprocesos) ──
+function readCpuTempSync() {
+  try {
+    const base = '/sys/class/thermal';
+    const zones = fs.readdirSync(base).filter(z => z.startsWith('thermal_zone'));
+    const temps = [];
+    for (const zone of zones) {
+      try {
+        const type = fs.readFileSync(`${base}/${zone}/type`, 'utf8').trim();
+        if (/cpu|acpi|x86_pkg|coretemp|tdie|tccd/i.test(type)) {
+          const raw = parseInt(fs.readFileSync(`${base}/${zone}/temp`, 'utf8').trim(), 10);
+          if (!isNaN(raw) && raw > 0) temps.push(raw / 1000);
+        }
+      } catch (_) {}
+    }
+    return temps.length > 0 ? Math.round(Math.max(...temps) * 10) / 10 : 0;
+  } catch (_) { return 0; }
+}
+
+// ── Discos desde /proc/mounts + statfsSync (sin subprocesos) ──
+function readDisksSync() {
+  try {
+    const lines = fs.readFileSync('/proc/mounts', 'utf8').split('\n').filter(Boolean);
+    const results = [];
+    const seen = new Set();
+    const SKIP_FS = /^(proc|sysfs|devtmpfs|devpts|tmpfs|cgroup|cgroup2|pstore|bpf|tracefs|debugfs|securityfs|autofs|hugetlbfs|mqueue|fusectl|configfs|efivarfs|nsfs|overlay|squashfs|ramfs|udev|fuse\.gvfsd|fuse\.portal)$/i;
+    for (const line of lines) {
+      const parts = line.split(' ');
+      if (parts.length < 3) continue;
+      const [dev, mount, fstype] = parts;
+      if (SKIP_FS.test(fstype)) continue;
+      if (/^\/(?:sys|proc|dev\/pts|run)/.test(mount)) continue;
+      if (seen.has(mount)) continue;
+      seen.add(mount);
+      try {
+        const stat = fs.statfsSync(mount);
+        const total = stat.blocks * stat.bsize;
+        const free = stat.bfree * stat.bsize;
+        const used = total - free;
+        if (total < 1024 * 1024) continue;
+        const isNetwork = /\b(cifs|smb|nfs|sshfs|fuse\.sshfs|davfs)\b/i.test(fstype) || dev.startsWith('//') || dev.startsWith('\\\\');
+        results.push({
+          name: dev,
+          mount,
+          used: Math.round(used / (1024 ** 3) * 10) / 10,
+          total: Math.round(total / (1024 ** 3) * 10) / 10,
+          percentage: total > 0 ? Math.round((used / total) * 100) : 0,
+          isNetwork
+        });
+      } catch (_) {}
+    }
+    if (process.platform === 'darwin') {
+      const root = results.find(d => d.mount === '/');
+      return root ? [{ ...root, name: 'Macintosh HD' }] : results;
+    }
+    return results;
+  } catch (_) { return []; }
+}
+
+// ── Red desde /proc/net/dev (sin subprocesos) ──
+function readNetRaw() {
+  try {
+    const lines = fs.readFileSync('/proc/net/dev', 'utf8').split('\n');
+    const ifaces = [];
+    for (const line of lines) {
+      const t = line.trim();
+      if (!t || t.startsWith('Inter') || t.startsWith('face')) continue;
+      const ci = t.indexOf(':');
+      if (ci < 0) continue;
+      const name = t.substring(0, ci).trim();
+      if (name === 'lo') continue;
+      const vals = t.substring(ci + 1).trim().split(/\s+/);
+      if (vals.length < 10) continue;
+      ifaces.push({ iface: name, rx_bytes: parseInt(vals[0], 10) || 0, tx_bytes: parseInt(vals[8], 10) || 0 });
+    }
+    return ifaces;
+  } catch (_) { return []; }
+}
+
+// ── IPs desde os.networkInterfaces() (sin subprocesos) ──
+function readNetIfaces() {
+  try {
+    return Object.entries(os.networkInterfaces() || {}).reduce((acc, [name, addrs]) => {
+      if (!addrs) return acc;
+      const ip4 = addrs.find(a => a.family === 'IPv4' && !a.internal)?.address || '';
+      const ip6 = addrs.find(a => a.family === 'IPv6' && !a.internal)?.address || '';
+      if (ip4 || ip6) {
+        const mac = addrs.find(a => a.mac && a.mac !== '00:00:00:00:00:00')?.mac || '';
+        acc.push({ iface: name, ip4, ip6, mac, operstate: 'unknown', rx_speed: 0, tx_speed: 0 });
+      }
+      return acc;
+    }, []);
+  } catch (_) { return []; }
+}
+
 async function getSystemStats() {
   // Uptime
   let uptime = '';
   try {
-    const uptimeSeconds = os.uptime();
-    const d = Math.floor(uptimeSeconds / (3600 * 24));
-    const h = Math.floor((uptimeSeconds % (3600 * 24)) / 3600);
-    const m = Math.floor((uptimeSeconds % 3600) / 60);
-    if (d > 0) {
-      uptime = `${d} ${d === 1 ? 'day' : 'days'}, ${h}:${String(m).padStart(2, '0')}`;
-    } else {
-      uptime = `${h}:${String(m).padStart(2, '0')}`;
-    }
-  } catch (error) {
-    uptime = '';
-  }
+    const s = os.uptime();
+    const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
+    uptime = d > 0 ? `${d} ${d === 1 ? 'day' : 'days'}, ${h}:${String(m).padStart(2, '0')}` : `${h}:${String(m).padStart(2, '0')}`;
+  } catch (_) {}
 
-  // Comenzar con los últimos valores válidos conocidos
   const stats = {
     cpu: { ...lastValidStats.cpu },
     memory: { ...lastValidStats.memory },
@@ -65,294 +150,120 @@ async function getSystemStats() {
     kernel: os.release(),
     osVersion: (typeof os.version === 'function' ? os.version() : ''),
     osPrettyName: lastValidStats.osPrettyName || '',
-    uptime: uptime
+    uptime
   };
 
-  // Memoria (siempre disponible, actualizar directamente)
+  // ── Memoria (os.* — sin subprocesos) ──
   try {
-    const totalMem = os.totalmem();
-    const freeMem = os.freemem();
-    const usedMem = totalMem - freeMem;
-
-    if (totalMem > 0) {
-      stats.memory.total = Math.round(totalMem / (1024 * 1024 * 1024) * 10) / 10;
-      stats.memory.used = Math.round(usedMem / (1024 * 1024 * 1024) * 10) / 10;
-      stats.memory.free = Math.round(freeMem / (1024 * 1024 * 1024) * 10) / 10;
-      stats.memory.percentage = Math.round((usedMem / totalMem) * 100 * 10) / 10;
+    const total = os.totalmem(), free = os.freemem(), used = total - free;
+    if (total > 0) {
+      stats.memory.total = Math.round(total / (1024 ** 3) * 10) / 10;
+      stats.memory.used = Math.round(used / (1024 ** 3) * 10) / 10;
+      stats.memory.free = Math.round(free / (1024 ** 3) * 10) / 10;
+      stats.memory.percentage = Math.round((used / total) * 1000) / 10;
     }
-  } catch (error) {
-    // Mantener valores anteriores si falla
-  }
+  } catch (_) {}
 
-  // CPU (solo actualizar si obtiene datos válidos)
+  // ── CPU load (systeminformation.currentLoad lee /proc/stat — sin subprocesos) ──
   try {
     const cpuData = await Promise.race([
       getSI().currentLoad(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('CPU timeout')), 3000))
+      new Promise((_, rej) => setTimeout(() => rej(new Error('CPU timeout')), 3000))
     ]);
-
     if (cpuData && typeof cpuData.currentLoad === 'number') {
       stats.cpu.usage = Math.round(cpuData.currentLoad * 10) / 10;
       stats.cpu.cores = cpuData.cpus ? cpuData.cpus.length : os.cpus().length;
       stats.cpu.model = os.cpus()[0]?.model || 'CPU';
-      stats.cpu.perCpuLoad = cpuData.cpus
-        ? cpuData.cpus.map(c => Math.round((c.load || 0) * 10) / 10)
-        : [];
+      stats.cpu.perCpuLoad = cpuData.cpus ? cpuData.cpus.map(c => Math.round((c.load || 0) * 10) / 10) : [];
     }
-  } catch (error) {
-    // Mantener valores anteriores de CPU si falla
+  } catch (_) {}
+
+  // ── Discos ──
+  if (process.platform === 'win32') {
+    try {
+      const d = await Promise.race([getSI().fsSize(), new Promise((_, rej) => setTimeout(() => rej(), 3000))]);
+      if (Array.isArray(d) && d.length > 0) {
+        stats.disks = d.map(disk => ({
+          name: String(disk.fs || ''), mount: String(disk.mount || ''),
+          used: Math.round(Number(disk.used || 0) / (1024 ** 3) * 10) / 10,
+          total: Math.round(Number(disk.size || 0) / (1024 ** 3) * 10) / 10,
+          percentage: Number(disk.size) > 0 ? Math.round((Number(disk.used) / Number(disk.size)) * 100) : 0,
+          isNetwork: false
+        }));
+      }
+    } catch (_) {}
+  } else {
+    const disks = readDisksSync();
+    if (disks.length > 0) stats.disks = disks;
   }
 
-  // Discos - optimizado con timeout reducido y detección de red asíncrona
+  // ── Red (/proc/net/dev — sin subprocesos) ──
   try {
-    const diskData = await Promise.race([
-      getSI().fsSize(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Disk timeout')), 2500)) // Reducido de 5000ms a 2500ms
-    ]);
-    if (Array.isArray(diskData) && diskData.length > 0) {
-      // Detectar unidades de red en Windows de forma asíncrona
-      const isWindows = process.platform === 'win32';
-      const isMacOS = process.platform === 'darwin';
-      let networkLetters = new Set();
-
-      if (isWindows) {
-        const now = Date.now();
-
-        // Usar cache si es válido (TTL de 30 segundos)
-        if (now - networkDrivesCache.timestamp < networkDrivesCache.ttl) {
-          networkLetters = networkDrivesCache.data;
-        } else {
-          // Actualizar cache de forma asíncrona y con timeout reducido
-          try {
-            const { exec } = require('child_process');
-            const { promisify } = require('util');
-            const execAsync = promisify(exec);
-
-            // Solo PowerShell optimizado con timeout más agresivo en primera ejecución
-            const isFirstRun = networkDrivesCache.timestamp === 0;
-            const timeout = isFirstRun ? 400 : 600; // Más rápido en primera ejecución
-            const ps = 'powershell -NoProfile -NonInteractive -Command "Get-CimInstance Win32_LogicalDisk -Filter \\"DriveType=4\\" | Select-Object -ExpandProperty DeviceID"';
-            const { stdout } = await Promise.race([
-              execAsync(ps, { timeout }),
-              new Promise((_, reject) => setTimeout(() => reject(new Error('Network detection timeout')), timeout))
-            ]);
-
-            const newNetworkLetters = new Set();
-            stdout.split(/\r?\n/).forEach(line => {
-              const m = line && line.match(/^[A-Z]:/i);
-              if (m) newNetworkLetters.add(m[0].toUpperCase());
-            });
-
-            // Actualizar cache
-            networkDrivesCache = {
-              data: newNetworkLetters,
-              timestamp: now,
-              ttl: 30000
-            };
-            networkLetters = newNetworkLetters;
-          } catch {
-            // Si falla, mantener cache anterior o usar Set vacío
-            networkLetters = networkDrivesCache.data;
-          }
-        }
-      }
-
-      // Solo actualizar discos si obtenemos datos válidos y completos
-      if (diskData && diskData.length > 0) {
-        let processedDisks = diskData.map(disk => {
-          const size = Number(disk.size || 0);
-          const used = Number(disk.used || 0);
-          const percentage = size > 0 ? Math.round((used / size) * 100) : 0;
-          const fs = String(disk.fs || '');
-          const mount = String(disk.mount || '');
-          const type = String(disk.type || '');
-          // Heurística robusta para red
-          const isUNC = fs.startsWith('\\\\') || fs.startsWith('//') || mount.startsWith('\\\\') || mount.startsWith('//');
-          const isNetworkType = /\b(cifs|smb|smbfs|nfs|afs|gluster|glusterfs|ceph|iscsi|webdav|davfs|sshfs|fuse.sshfs)\b/i.test(type);
-          let isNetwork = isUNC || isNetworkType;
-          if (!isNetwork && isWindows) {
-            // Detectar por letra de unidad mapeada (Z:, Y:, etc.)
-            const letter = (mount || fs).match(/^[A-Z]:/i);
-            if (letter && networkLetters.has(letter[0].toUpperCase())) {
-              isNetwork = true;
-            }
-          }
-          return {
-            name: fs,
-            mount,
-            used: Math.round(used / (1024 * 1024 * 1024) * 10) / 10,
-            total: Math.round(size / (1024 * 1024 * 1024) * 10) / 10,
-            percentage,
-            isNetwork
-          };
-        });
-
-        // En macOS, mostrar solo volúmenes principales con nombres amigables
-        if (isMacOS) {
-          // REEMPLAZAR completamente la lista de discos con solo Macintosh HD
-          processedDisks = [{
-            name: 'Macintosh HD',
-            mount: '/',
-            used: processedDisks.find(d => d.mount === '/')?.used || 0,
-            total: processedDisks.find(d => d.mount === '/')?.total || 0,
-            percentage: processedDisks.find(d => d.mount === '/')?.percentage || 0,
-            isNetwork: false
-          }];
-        }
-
-        stats.disks = processedDisks;
-      }
-      // Si falla o no hay datos, mantener la lista anterior de discos
-    }
-  } catch (error) { }
-
-  // Red
-  try {
-    const netIfaces = await getSI().networkInterfaces();
-    const netStats = await getSI().networkStats();
     const now = Date.now();
-    const validIfaces = netIfaces.filter(i => !i.internal && i.iface);
-    const validNames = validIfaces.map(i => i.iface);
-    const filteredStats = netStats.filter(s => validNames.includes(s.iface));
-
-    // Publicar lista base de interfaces aunque no haya trafico
-    stats.networkInterfaces = validIfaces.map((i) => ({
-      iface: i.iface,
-      ip4: i.ip4 || '',
-      ip6: i.ip6 || '',
-      mac: i.mac || '',
-      operstate: i.operstate || '',
-      rx_speed: 0,
-      tx_speed: 0
-    }));
-
-    // Solo actualizar red si obtenemos datos válidos
-    if (validIfaces && validIfaces.length > 0) {
-      const primary = validIfaces[0];
-      if (primary && (primary.ip4 || primary.ip6)) {
-        stats.ip = primary.ip4 || primary.ip6 || '';
-      }
-    }
-
-    // Actualizar estadísticas de red solo si hay datos válidos
-    if (filteredStats && filteredStats.length > 0) {
-      let rx = 0, tx = 0;
-      const ifaceSpeeds = [];
-      if (lastNetStats && lastNetTime) {
-        const dt = (now - lastNetTime) / 1000;
-        for (const stat of filteredStats) {
-          const prev = lastNetStats.find(s => s.iface === stat.iface);
+    const ifaceAddrs = readNetIfaces();
+    const netRaw = readNetRaw();
+    if (lastNetStats && lastNetTime && netRaw.length > 0) {
+      const dt = (now - lastNetTime) / 1000;
+      if (dt > 0) {
+        let rx = 0, tx = 0;
+        const speeds = [];
+        for (const iface of netRaw) {
+          const prev = lastNetStats.find(p => p.iface === iface.iface);
           if (prev) {
-            const rxDelta = Math.max(0, stat.rx_bytes - prev.rx_bytes);
-            const txDelta = Math.max(0, stat.tx_bytes - prev.tx_bytes);
-            rx += rxDelta;
-            tx += txDelta;
-            const meta = validIfaces.find(i => i.iface === stat.iface);
-            ifaceSpeeds.push({
-              iface: stat.iface,
-              ip4: meta?.ip4 || '',
-              ip6: meta?.ip6 || '',
-              mac: meta?.mac || '',
-              operstate: meta?.operstate || '',
-              rx_speed: dt > 0 ? rxDelta / dt : 0,
-              tx_speed: dt > 0 ? txDelta / dt : 0
-            });
+            const rxD = Math.max(0, iface.rx_bytes - prev.rx_bytes);
+            const txD = Math.max(0, iface.tx_bytes - prev.tx_bytes);
+            rx += rxD; tx += txD;
+            const meta = ifaceAddrs.find(a => a.iface === iface.iface) || {};
+            speeds.push({ iface: iface.iface, ip4: meta.ip4 || '', ip6: meta.ip6 || '', mac: meta.mac || '', operstate: 'unknown', rx_speed: rxD / dt, tx_speed: txD / dt });
           }
         }
-        if (dt > 0) {
-          stats.network.download = Math.round((rx * 8 / 1e6) / dt * 10) / 10;
-          stats.network.upload = Math.round((tx * 8 / 1e6) / dt * 10) / 10;
-        }
-        const ifaceSpeedMap = new Map(ifaceSpeeds.map((i) => [i.iface, i]));
-        stats.networkInterfaces = validIfaces.map((i) => {
-          const live = ifaceSpeedMap.get(i.iface);
-          return {
-            iface: i.iface,
-            ip4: i.ip4 || '',
-            ip6: i.ip6 || '',
-            mac: i.mac || '',
-            operstate: i.operstate || '',
-            rx_speed: live?.rx_speed || 0,
-            tx_speed: live?.tx_speed || 0
-          };
-        });
+        stats.network.download = Math.round((rx * 8 / 1e6) / dt * 10) / 10;
+        stats.network.upload = Math.round((tx * 8 / 1e6) / dt * 10) / 10;
+        if (speeds.length > 0) stats.networkInterfaces = speeds;
       }
-      lastNetStats = filteredStats.map(s => ({ iface: s.iface, rx_bytes: s.rx_bytes, tx_bytes: s.tx_bytes }));
-      lastNetTime = now;
+    } else {
+      stats.networkInterfaces = ifaceAddrs;
     }
-  } catch (error) { }
+    lastNetStats = netRaw;
+    lastNetTime = now;
+    const primary = ifaceAddrs[0];
+    if (primary?.ip4 || primary?.ip6) stats.ip = primary.ip4 || primary.ip6;
+  } catch (_) {}
 
-  // Temperatura (solo actualizar si obtenemos datos válidos)
+  // ── Temperatura CPU (/sys/class/thermal — sin subprocesos) ──
+  // ❌ NO usar nvidia-smi ni sensors: se bloquean en estado D en CachyOS/NVIDIA
   try {
-    const tempData = await Promise.race([
-      getSI().cpuTemperature(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Temperature timeout')), 2000))
-    ]);
+    const t = readCpuTempSync();
+    if (t > 0) stats.temperature.cpu = t;
+  } catch (_) {}
+  // stats.temperature.gpu permanece en 0 — nvidia-smi no es llamado
 
-    if (tempData && typeof tempData.main === 'number' && tempData.main > 0) {
-      stats.temperature.cpu = tempData.main;
-    }
-    // Si falla o no hay datos, mantener temperatura anterior
-  } catch (error) { }
-
-  // GPU Temperatura e info (si está disponible y soportado)
-  try {
-    const graphicsData = await Promise.race([
-      getSI().graphics(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Graphics timeout')), 2000))
-    ]);
-
-    if (graphicsData && Array.isArray(graphicsData.controllers)) {
-      // Buscar primera GPU con temperatura válida
-      const gpuWithTemp = graphicsData.controllers.find(c => typeof c.temperatureGpu === 'number' && c.temperatureGpu > 0);
-      if (gpuWithTemp) {
-        stats.temperature.gpu = gpuWithTemp.temperatureGpu;
-      }
-    }
-  } catch (error) { }
-
-  // Guardar los stats actuales como últimos válidos
   lastValidStats = {
-    cpu: { ...stats.cpu },
-    memory: { ...stats.memory },
-    disks: [...stats.disks],
+    cpu: { ...stats.cpu }, memory: { ...stats.memory }, disks: [...stats.disks],
     network: { ...stats.network },
     networkInterfaces: Array.isArray(stats.networkInterfaces) ? [...stats.networkInterfaces] : [],
-    hostname: stats.hostname,
-    ip: stats.ip,
-    temperature: { ...stats.temperature },
-    platform: stats.platform,
-    arch: stats.arch,
-    kernel: stats.kernel,
-    osVersion: stats.osVersion,
-    osPrettyName: stats.osPrettyName,
-    uptime: stats.uptime
+    hostname: stats.hostname, ip: stats.ip, temperature: { ...stats.temperature },
+    platform: stats.platform, arch: stats.arch, kernel: stats.kernel,
+    osVersion: stats.osVersion, osPrettyName: stats.osPrettyName, uptime: stats.uptime
   };
 
   return stats;
 }
 
-// Variable para controlar si se deben generar estadísticas
 let shouldGenerateStats = true;
 
 process.on('message', async (msg) => {
   if (msg === 'get-stats') {
-    if (!shouldGenerateStats) {
-      return;
-    }
+    if (!shouldGenerateStats) return;
     try {
       const stats = await getSystemStats();
-      if (process.connected) {
-        process.send({ type: 'stats', data: stats });
-      }
+      if (process.connected) process.send({ type: 'stats', data: stats });
     } catch (error) {
-      if (process.connected) {
-        process.send({ type: 'error', error: error.message });
-      }
+      if (process.connected) process.send({ type: 'error', error: error.message });
     }
   } else if (msg === 'pause-stats') {
     shouldGenerateStats = false;
   } else if (msg === 'resume-stats') {
     shouldGenerateStats = true;
   }
-}); 
+});
