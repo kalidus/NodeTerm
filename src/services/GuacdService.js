@@ -11,6 +11,14 @@ try {
 } catch (_) {}
 const { getNodeTermDataDir } = require('../main/utils/file-utils');
 
+function fileExistsSync(p) {
+  try {
+    return fs.existsSync(p);
+  } catch (_) {
+    return false;
+  }
+}
+
 function getUserDataDir() {
   return getNodeTermDataDir();
 }

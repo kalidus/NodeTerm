@@ -168,6 +168,15 @@ if (process.env.NODE_ENV === 'development') {
 const { app, BrowserWindow, ipcMain, clipboard, dialog, Menu, powerMonitor, screen } = require('electron');
 logTiming('Electron cargado');
 
+// Establecer el nombre de la aplicación para que el WM_CLASS en Linux
+// coincida con el productName de electron-builder ('NodeTerm')
+if (app) {
+  app.name = 'NodeTerm';
+  if (process.platform === 'linux' && typeof app.setDesktopName === 'function') {
+    app.setDesktopName('nodeterm.desktop');
+  }
+}
+
 // 🚀 OPTIMIZACIONES DE RENDIMIENTO DE HARDWARE (GPU)
 app.commandLine.appendSwitch('ignore-gpu-blocklist');
 app.commandLine.appendSwitch('enable-gpu-rasterization');
@@ -1292,6 +1301,7 @@ function createWindow() {
       show: true,
       resizable: false,
       alwaysOnTop: true,
+      icon: path.join(__dirname, 'src/assets/app-icon.png'),
       webPreferences: { contextIsolation: true, nodeIntegration: false }
     });
     // 🚀 OPTIMIZACIÓN: loadURL con data URI es instantáneo (no I/O de disco)
@@ -1311,6 +1321,7 @@ function createWindow() {
     show: false,
     transparent: false,
     backgroundColor: '#0a0f1f',
+    icon: path.join(__dirname, 'src/assets/app-icon.png'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
