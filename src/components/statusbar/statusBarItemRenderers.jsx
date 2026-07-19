@@ -211,9 +211,9 @@ export function createStatusBarItemRenderers(ctx) {
             {GPUIcon}
           </span>
           {gpuStats.totalMB && gpuStats.usedMB !== null ? (
-            <span>{Math.round(gpuStats.usedMB / 1024 * 10) / 10}GB / {Math.round(gpuStats.totalMB / 1024 * 10) / 10}GB</span>
+            <span>{(gpuStats.usedMB / 1024).toFixed(1)}GB / {(gpuStats.totalMB / 1024).toFixed(1)}GB</span>
           ) : gpuStats.totalMB ? (
-            <span>{Math.round(gpuStats.totalMB / 1024 * 10) / 10}GB {gpuStats.type && gpuStats.type.toUpperCase()}</span>
+            <span>{(gpuStats.totalMB / 1024).toFixed(1)}GB {gpuStats.type && gpuStats.type.toUpperCase()}</span>
           ) : (
             <span>{gpuStats.type && gpuStats.type.toUpperCase()}</span>
           )}

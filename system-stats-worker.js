@@ -266,19 +266,52 @@ async function getSystemStats() {
 }
 
 let shouldGenerateStats = true;
+let latestStats = { ...lastValidStats };
+let isUpdating = false;
+let updateTimer = null;
+
+async function updateStatsLoop() {
+  if (updateTimer) {
+    clearTimeout(updateTimer);
+    updateTimer = null;
+  }
+
+  if (isUpdating) {
+    updateTimer = setTimeout(updateStatsLoop, 1000);
+    return;
+  }
+
+  if (!shouldGenerateStats) {
+    updateTimer = setTimeout(updateStatsLoop, 1000);
+    return;
+  }
+
+  isUpdating = true;
+  try {
+    const stats = await getSystemStats();
+    latestStats = stats;
+  } catch (error) {
+    // Ignorar para mantener el bucle activo
+  } finally {
+    isUpdating = false;
+    updateTimer = setTimeout(updateStatsLoop, 1000);
+  }
+}
+
+// Iniciar el bucle de actualización inmediatamente
+updateStatsLoop();
 
 process.on('message', async (msg) => {
   if (msg === 'get-stats') {
-    if (!shouldGenerateStats) return;
-    try {
-      const stats = await getSystemStats();
-      if (process.connected) process.send({ type: 'stats', data: stats });
-    } catch (error) {
-      if (process.connected) process.send({ type: 'error', error: error.message });
+    if (process.connected) {
+      process.send({ type: 'stats', data: latestStats });
     }
   } else if (msg === 'pause-stats') {
     shouldGenerateStats = false;
   } else if (msg === 'resume-stats') {
-    shouldGenerateStats = true;
+    if (!shouldGenerateStats) {
+      shouldGenerateStats = true;
+      updateStatsLoop(); // Forzar una actualización inmediata
+    }
   }
 });

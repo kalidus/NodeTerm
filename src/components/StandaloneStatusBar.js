@@ -13,6 +13,9 @@ const StandaloneStatusBar = ({ visible = true, style = {} }) => {
     const [localStatusBarThemeName, setLocalStatusBarThemeName] = useState(() => {
         try { return localStorage.getItem('localLinuxStatusBarTheme') || localStorage.getItem('basicapp_statusbar_theme') || 'Default Dark'; } catch { return 'Default Dark'; }
     });
+    const [pollingInterval, setPollingInterval] = useState(() => {
+        try { return parseInt(localStorage.getItem('statusBarPollingInterval') || '3', 10) * 1000; } catch { return 3000; }
+    });
 
     const sessionHistory = useStatusBarSessionHistory(statusStats, { gpuStats });
 
@@ -38,7 +41,6 @@ const StandaloneStatusBar = ({ visible = true, style = {} }) => {
 
         let stopped = false;
         let timer = null;
-        const pollingInterval = parseInt(localStorage.getItem('statusBarPollingInterval') || '3', 10) * 1000;
 
         const handleBlur = () => {
             stopped = true;
@@ -119,6 +121,8 @@ const StandaloneStatusBar = ({ visible = true, style = {} }) => {
                 setStatusBarIconTheme(e.newValue || 'classic');
             } else if (e.key === 'localLinuxStatusBarTheme' || e.key === 'basicapp_statusbar_theme') {
                 setLocalStatusBarThemeName(e.newValue || 'Default Dark');
+            } else if (e.key === 'statusBarPollingInterval') {
+                setPollingInterval(parseInt(e.newValue || '3', 10) * 1000);
             }
         };
         const onThemeChanged = (e) => {
@@ -140,7 +144,7 @@ const StandaloneStatusBar = ({ visible = true, style = {} }) => {
             window.removeEventListener('storage', handleStorageChange);
             window.removeEventListener('statusbar-theme-changed', onThemeChanged);
         };
-    }, [visible]);
+    }, [visible, pollingInterval]);
 
     if (!visible) return null;
 
