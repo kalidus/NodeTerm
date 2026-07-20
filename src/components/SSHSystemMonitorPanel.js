@@ -131,6 +131,36 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
     const [activeLogService, setActiveLogService] = useState(null);
     const [logContent, setLogContent] = useState('');
     const [logsLoading, setLogsLoading] = useState(false);
+    const [serviceColWidths, setServiceColWidths] = useState({
+        detail: 300,
+        name: 180,
+        state: 70,
+        actions: 110
+    });
+
+    const handleResizeMouseDown = useCallback((e, colKey) => {
+        e.preventDefault();
+        const startX = e.clientX;
+        const startWidth = serviceColWidths[colKey];
+        
+        const handleMouseMove = (moveEvent) => {
+            const deltaX = moveEvent.clientX - startX;
+            setServiceColWidths(prev => ({
+                ...prev,
+                [colKey]: Math.max(50, startWidth + deltaX)
+            }));
+        };
+        
+        const handleMouseUp = () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            document.body.style.cursor = 'default';
+        };
+        
+        document.body.style.cursor = 'col-resize';
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+    }, [serviceColWidths]);
 
     // Dropdown refresh menu state
     const [refreshInterval, setRefreshInterval] = useState(() => {
@@ -952,7 +982,6 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
                                     {runningServices.length} servicios | {listeningPorts.length} puertos
                                 </span>
                             </div>
-
                             <div className="ssh-monitor-services-wrapper">
                                 {servicesLoading && !servicesLoaded ? (
                                     <div className="ssh-monitor-services-state">
@@ -970,22 +999,49 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
                                                 {runningServices.length === 0 ? (
                                                     <div className="ssh-monitor-services-empty">Sin datos de servicios.</div>
                                                 ) : (
-                                                    <table className="ssh-monitor-table">
+                                                    <table className="ssh-monitor-table" style={{ tableLayout: 'fixed' }}>
                                                         <thead>
                                                             <tr>
-                                                                <th style={{ width: 240 }}>Servicio</th>
-                                                                <th style={{ width: 130 }}>Estado</th>
-                                                                <th>Detalle</th>
-                                                                <th style={{ width: 150, textAlign: 'center' }}>Acciones</th>
+                                                                <th style={{ width: serviceColWidths.detail, position: 'relative' }}>
+                                                                    Detalle
+                                                                    <div className="col-resizer" onMouseDown={(e) => handleResizeMouseDown(e, 'detail')} />
+                                                                </th>
+                                                                <th style={{ width: serviceColWidths.name, position: 'relative' }}>
+                                                                    Servicio
+                                                                    <div className="col-resizer" onMouseDown={(e) => handleResizeMouseDown(e, 'name')} />
+                                                                </th>
+                                                                <th style={{ width: serviceColWidths.state, position: 'relative', textAlign: 'center' }}>
+                                                                    Estado
+                                                                    <div className="col-resizer" onMouseDown={(e) => handleResizeMouseDown(e, 'state')} />
+                                                                </th>
+                                                                <th style={{ width: serviceColWidths.actions, position: 'relative', textAlign: 'center' }}>
+                                                                    Acciones
+                                                                    <div className="col-resizer" onMouseDown={(e) => handleResizeMouseDown(e, 'actions')} />
+                                                                </th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
                                                             {runningServices.map((service, idx) => (
                                                                 <tr key={`${service.name}-${idx}`}>
-                                                                    <td className="cmd" title={service.name}>{service.name}</td>
-                                                                    <td className="user">{service.state || 'unknown'}</td>
-                                                                    <td className="cmd" title={service.detail || ''}>{service.detail || '—'}</td>
-                                                                    <td style={{ width: 150, textAlign: 'center' }}>
+                                                                    <td className="cmd" title={service.detail || ''} style={{ whiteSpace: 'normal', wordBreak: 'break-word', color: '#e6edf3' }}>
+                                                                        {service.detail || '—'}
+                                                                    </td>
+                                                                    <td className="cmd" title={service.name} style={{ color: '#8b949e' }}>
+                                                                        {service.name}
+                                                                    </td>
+                                                                    <td style={{ textAlign: 'center' }}>
+                                                                        {(() => {
+                                                                            const lowerState = (service.state || '').toLowerCase();
+                                                                            if (lowerState.includes('running') || lowerState.includes('active')) {
+                                                                                return <i className="pi pi-check-circle" style={{ color: '#3fb950', fontSize: '13px' }} title={service.state} />;
+                                                                            } else if (lowerState.includes('dead') || lowerState.includes('stopped') || lowerState.includes('inactive')) {
+                                                                                return <i className="pi pi-times-circle" style={{ color: '#f78166', fontSize: '13px' }} title={service.state} />;
+                                                                            } else {
+                                                                                return <i className="pi pi-exclamation-circle" style={{ color: '#d29922', fontSize: '13px' }} title={service.state} />;
+                                                                            }
+                                                                        })()}
+                                                                    </td>
+                                                                    <td style={{ textAlign: 'center' }}>
                                                                         <button
                                                                             className="ssh-monitor-action-btn restart"
                                                                             onClick={() => handleManageService(service.name, 'restart')}

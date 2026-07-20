@@ -688,12 +688,19 @@
     border-radius: 4px;
     color: #c9d1d9;
     cursor: pointer;
-    font-size: 10px;
-    padding: 2px 6px;
-    font-family: inherit;
     transition: all 0.15s ease;
-    margin: 0 3px;
+    margin: 0 2px;
     outline: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 20px;
+    padding: 0;
+}
+
+.ssh-monitor-action-btn i {
+    font-size: 9px;
 }
 
 .ssh-monitor-action-btn:hover {
@@ -3458,4 +3465,20 @@
     color: #e6edf3;
     border-color: #8b949e;
     background: rgba(255, 255, 255, 0.08);
+}
+
+/* ── Table Column Resizing ────────────────────────────────── */
+.col-resizer {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    cursor: col-resize;
+    z-index: 10;
+    user-select: none;
+}
+
+.col-resizer:hover {
+    background: rgba(88, 166, 255, 0.25);
 }
