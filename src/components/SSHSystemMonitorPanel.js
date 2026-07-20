@@ -173,6 +173,82 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
         }
     }, [tabId, tab?.type]);
 
+    const handleKillProcess = useCallback(async (pid, command) => {
+        const isLocal = tab?.type === 'local-terminal';
+        const confirmMsg = isLocal 
+            ? `¿Está seguro de que desea finalizar el proceso local ${pid} (${command})?`
+            : `¿Está seguro de que desea finalizar el proceso ${pid} (${command}) en el servidor remoto?`;
+        
+        if (!window.confirm(confirmMsg)) return;
+
+        try {
+            const result = await window.electron.sshMonitor.killProcess(tabId, pid, isLocal);
+            if (result?.success) {
+                if (window.toast?.current?.show) {
+                    window.toast.current.show({
+                        severity: 'success',
+                        summary: 'Proceso finalizado',
+                        detail: `El proceso con PID ${pid} fue detenido correctamente.`,
+                        life: 3000
+                    });
+                }
+                fetchProcesses();
+            } else {
+                throw new Error(result?.error || 'Error al matar el proceso.');
+            }
+        } catch (err) {
+            if (window.toast?.current?.show) {
+                window.toast.current.show({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: `No se pudo finalizar el proceso: ${err.message}`,
+                    life: 5000
+                });
+            }
+        }
+    }, [tabId, tab?.type, fetchProcesses]);
+
+    const handleManageService = useCallback(async (serviceName, action) => {
+        const actionStr = action === 'restart' ? 'reiniciar' : action === 'stop' ? 'detener' : 'iniciar';
+        const confirmMsg = `¿Está seguro de que desea ${actionStr} el servicio "${serviceName}"?`;
+        
+        if (!window.confirm(confirmMsg)) return;
+
+        try {
+            if (window.toast?.current?.show) {
+                window.toast.current.show({
+                    severity: 'info',
+                    summary: 'Ejecutando acción',
+                    detail: `Enviando comando para ${actionStr} "${serviceName}"...`,
+                    life: 2000
+                });
+            }
+            const result = await window.electron.sshMonitor.manageService(tabId, serviceName, action);
+            if (result?.success) {
+                if (window.toast?.current?.show) {
+                    window.toast.current.show({
+                        severity: 'success',
+                        summary: 'Acción completada',
+                        detail: `El servicio "${serviceName}" se ha solicitado ${action === 'restart' ? 'reiniciar' : 'detener'}.`,
+                        life: 3500
+                    });
+                }
+                setTimeout(fetchServicesAndPorts, 1500);
+            } else {
+                throw new Error(result?.error || 'Error al gestionar el servicio.');
+            }
+        } catch (err) {
+            if (window.toast?.current?.show) {
+                window.toast.current.show({
+                    severity: 'error',
+                    summary: 'Error',
+                    detail: `No se pudo ${actionStr} el servicio: ${err.message}`,
+                    life: 6000
+                });
+            }
+        }
+    }, [tabId, fetchServicesAndPorts]);
+
     // ── Handle interval changes and sync with backend ─────────────────────────
     const handleIntervalChange = useCallback((newMs) => {
         setRefreshInterval(newMs);
@@ -757,12 +833,13 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
                                         <th onClick={() => handleSort('command')}>
                                             Comando<SortIndicator col="command" />
                                         </th>
+                                        <th style={{ width: 80, textAlign: 'center' }}>Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {filteredProcesses.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6} style={{ textAlign: 'center', color: '#8b949e', padding: '20px' }}>
+                                            <td colSpan={7} style={{ textAlign: 'center', color: '#8b949e', padding: '20px' }}>
                                                 Sin resultados
                                             </td>
                                         </tr>
@@ -785,6 +862,15 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
                                                     <td className="mem">{normalizedCpu > 0 ? proc.mem.toFixed(1) : proc.mem.toFixed(1)}%</td>
                                                     <td className="rss">{formatBytes(proc.rss)}</td>
                                                     <td className="cmd" title={proc.command}>{proc.command}</td>
+                                                    <td style={{ width: 80, textAlign: 'center' }}>
+                                                        <button
+                                                            className="ssh-monitor-action-btn kill"
+                                                            onClick={() => handleKillProcess(proc.pid, proc.command)}
+                                                            title="Finalizar proceso"
+                                                        >
+                                                            Matar
+                                                        </button>
+                                                    </td>
                                                 </tr>
                                             );
                                         })
@@ -833,6 +919,7 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
                                                                 <th style={{ width: 240 }}>Servicio</th>
                                                                 <th style={{ width: 130 }}>Estado</th>
                                                                 <th>Detalle</th>
+                                                                <th style={{ width: 150, textAlign: 'center' }}>Acciones</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
@@ -841,6 +928,22 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
                                                                     <td className="cmd" title={service.name}>{service.name}</td>
                                                                     <td className="user">{service.state || 'unknown'}</td>
                                                                     <td className="cmd" title={service.detail || ''}>{service.detail || '—'}</td>
+                                                                    <td style={{ width: 150, textAlign: 'center' }}>
+                                                                        <button
+                                                                            className="ssh-monitor-action-btn restart"
+                                                                            onClick={() => handleManageService(service.name, 'restart')}
+                                                                            title="Reiniciar servicio"
+                                                                        >
+                                                                            Reiniciar
+                                                                        </button>
+                                                                        <button
+                                                                            className="ssh-monitor-action-btn stop"
+                                                                            onClick={() => handleManageService(service.name, 'stop')}
+                                                                            title="Detener servicio"
+                                                                        >
+                                                                            Detener
+                                                                        </button>
+                                                                    </td>
                                                                 </tr>
                                                             ))}
                                                         </tbody>

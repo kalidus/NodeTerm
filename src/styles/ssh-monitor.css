@@ -682,6 +682,58 @@
     cursor: wait;
 }
 
+.ssh-monitor-action-btn {
+    background: rgba(33, 38, 45, 0.5);
+    border: 1px solid #30363d;
+    border-radius: 4px;
+    color: #c9d1d9;
+    cursor: pointer;
+    font-size: 10px;
+    padding: 2px 6px;
+    font-family: inherit;
+    transition: all 0.15s ease;
+    margin: 0 3px;
+    outline: none;
+}
+
+.ssh-monitor-action-btn:hover {
+    background: rgba(88, 166, 255, 0.1);
+}
+
+.ssh-monitor-action-btn.kill {
+    color: #f78166;
+    border-color: rgba(247, 129, 102, 0.3);
+}
+
+.ssh-monitor-action-btn.kill:hover {
+    color: #ff7b72;
+    border-color: #f78166;
+    background: rgba(247, 129, 102, 0.15);
+}
+
+.ssh-monitor-action-btn.restart {
+    color: #58a6ff;
+    border-color: rgba(88, 166, 255, 0.3);
+}
+
+.ssh-monitor-action-btn.restart:hover {
+    color: #79c0ff;
+    border-color: #58a6ff;
+    background: rgba(88, 166, 255, 0.15);
+}
+
+.ssh-monitor-action-btn.stop {
+    color: #f78166;
+    border-color: rgba(247, 129, 102, 0.3);
+}
+
+.ssh-monitor-action-btn.stop:hover {
+    color: #ff7b72;
+    border-color: #f78166;
+    background: rgba(247, 129, 102, 0.15);
+}
+
+
 .ssh-monitor-services-wrapper {
     flex: 1;
     min-height: 0;

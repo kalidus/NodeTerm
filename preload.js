@@ -100,7 +100,9 @@ contextBridge.exposeInMainWorld('electron', {
   },
   sshMonitor: {
     getListeningPorts: (tabId) => ipcRenderer.invoke('ssh:get-listening-ports', { tabId }),
-    getRunningServices: (tabId) => ipcRenderer.invoke('ssh:get-running-services', { tabId })
+    getRunningServices: (tabId) => ipcRenderer.invoke('ssh:get-running-services', { tabId }),
+    manageService: (tabId, serviceName, action) => ipcRenderer.invoke('ssh:manage-service', { tabId, serviceName, action }),
+    killProcess: (tabId, pid, isLocal) => ipcRenderer.invoke('ssh:kill-process', { tabId, pid, isLocal })
   },
   theme: {
     get: () => ipcRenderer.invoke('theme:get'),

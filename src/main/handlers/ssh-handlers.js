@@ -975,6 +975,64 @@ function registerSSHHandlers(dependencies = {}) {
     }
   });
 
+  // SSH: Iniciar/Detener/Reiniciar un servicio
+  ipcMain.handle('ssh:manage-service', async (event, { tabId, serviceName, action }) => {
+    try {
+      const conn = sshConnections && sshConnections[tabId];
+      if (!conn || !conn.ssh) {
+        return { success: false, error: 'No SSH connection found' };
+      }
+
+      if (!serviceName || typeof serviceName !== 'string' || !action || typeof action !== 'string') {
+        return { success: false, error: 'Parámetros inválidos' };
+      }
+
+      const safeServiceName = escapeShellPath(serviceName.trim());
+      let command = '';
+
+      if (action === 'restart') {
+        command = `sudo systemctl restart "${safeServiceName}" || systemctl restart "${safeServiceName}" || sudo service "${safeServiceName}" restart || service "${safeServiceName}" restart`;
+      } else if (action === 'stop') {
+        command = `sudo systemctl stop "${safeServiceName}" || systemctl stop "${safeServiceName}" || sudo service "${safeServiceName}" stop || service "${safeServiceName}" stop`;
+      } else if (action === 'start') {
+        command = `sudo systemctl start "${safeServiceName}" || systemctl start "${safeServiceName}" || sudo service "${safeServiceName}" start || service "${safeServiceName}" start`;
+      } else {
+        return { success: false, error: 'Acción no soportada' };
+      }
+
+      const result = await conn.ssh.exec(command);
+      return { success: true, output: result };
+    } catch (err) {
+      return { success: false, error: err.message || String(err) };
+    }
+  });
+
+  // SSH/Local: Matar un proceso
+  ipcMain.handle('ssh:kill-process', async (event, { tabId, pid, isLocal }) => {
+    try {
+      const safePid = parseInt(pid, 10);
+      if (isNaN(safePid)) {
+        return { success: false, error: 'PID inválido' };
+      }
+
+      if (isLocal) {
+        process.kill(safePid, 'SIGTERM');
+        return { success: true };
+      }
+
+      const conn = sshConnections && sshConnections[tabId];
+      if (!conn || !conn.ssh) {
+        return { success: false, error: 'No SSH connection found' };
+      }
+
+      const command = `kill ${safePid} || sudo kill ${safePid} || kill -9 ${safePid} || sudo kill -9 ${safePid}`;
+      const result = await conn.ssh.exec(command);
+      return { success: true, output: result };
+    } catch (err) {
+      return { success: false, error: err.message || String(err) };
+    }
+  });
+
   // SSH: Configurar intervalo de actualización de stats
   ipcMain.handle('ssh:set-stats-interval', async (event, { intervalMs }) => {
     try {
