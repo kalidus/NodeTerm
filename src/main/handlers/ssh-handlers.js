@@ -1033,6 +1033,28 @@ function registerSSHHandlers(dependencies = {}) {
     }
   });
 
+  // SSH: Obtener logs de un servicio (journalctl / systemctl status)
+  ipcMain.handle('ssh:get-service-logs', async (event, { tabId, serviceName }) => {
+    try {
+      const conn = sshConnections && sshConnections[tabId];
+      if (!conn || !conn.ssh) {
+        return { success: false, error: 'No SSH connection found' };
+      }
+
+      if (!serviceName || typeof serviceName !== 'string') {
+        return { success: false, error: 'Nombre de servicio inválido' };
+      }
+
+      const safeServiceName = escapeShellPath(serviceName.trim());
+      // Obtener últimas 100 líneas con journalctl, o bien usar systemctl status
+      const command = `sudo journalctl -u "${safeServiceName}" -n 100 --no-pager 2>/dev/null || journalctl -u "${safeServiceName}" -n 100 --no-pager 2>/dev/null || systemctl status "${safeServiceName}" --no-pager 2>/dev/null`;
+      const logs = await conn.ssh.exec(command);
+      return { success: true, logs: logs || 'No se obtuvieron logs para este servicio.' };
+    } catch (err) {
+      return { success: false, error: err.message || String(err) };
+    }
+  });
+
   // SSH: Configurar intervalo de actualización de stats
   ipcMain.handle('ssh:set-stats-interval', async (event, { intervalMs }) => {
     try {

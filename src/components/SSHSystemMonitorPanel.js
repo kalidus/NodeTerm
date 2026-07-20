@@ -25,6 +25,38 @@ function formatSpeed(bytesPerSec) {
 }
 
 /**
+ * Formats and colorizes log lines for the terminal display
+ */
+function formatLogLines(rawLogs) {
+    if (!rawLogs) return '';
+    const lines = rawLogs.split('\n');
+    return lines.map((line, idx) => {
+        let className = 'log-line';
+        const lower = line.toLowerCase();
+        if (lower.includes('error') || lower.includes('fail') || lower.includes('crit') || lower.includes('emerg') || lower.includes('fatal')) {
+            className += ' error';
+        } else if (lower.includes('warn') || lower.includes('warning')) {
+            className += ' warn';
+        } else if (lower.includes('success') || lower.includes('started') || lower.includes('active') || lower.includes('ok')) {
+            className += ' success';
+        }
+        
+        // Highlight timestamp (e.g. "Jul 20 11:15:30")
+        const match = line.match(/^([A-Z][a-z]{2}\s+\d+\s+\d{2}:\d{2}:\d{2})/);
+        if (match) {
+            const ts = match[1];
+            const rest = line.substring(ts.length);
+            return (
+                <div key={idx} className={className}>
+                    <span className="log-timestamp">{ts}</span>{rest}
+                </div>
+            );
+        }
+        return <div key={idx} className={className}>{line}</div>;
+    });
+}
+
+/**
  * Mini sparkline component that renders the CPU history as tiny bars
  */
 const Sparkline = ({ data, color = '#58a6ff', maxVal }) => {
@@ -96,6 +128,9 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
     const [listeningPorts, setListeningPorts] = useState([]);
     const [runningServices, setRunningServices] = useState([]);
     const [servicesMeta, setServicesMeta] = useState({});
+    const [activeLogService, setActiveLogService] = useState(null);
+    const [logContent, setLogContent] = useState('');
+    const [logsLoading, setLogsLoading] = useState(false);
 
     // Dropdown refresh menu state
     const [refreshInterval, setRefreshInterval] = useState(() => {
@@ -248,6 +283,28 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
             }
         }
     }, [tabId, fetchServicesAndPorts]);
+
+    const fetchServiceLogs = useCallback(async (serviceName) => {
+        setLogsLoading(true);
+        try {
+            const result = await window.electron.sshMonitor.getServiceLogs(tabId, serviceName);
+            if (result?.success) {
+                setLogContent(result.logs);
+            } else {
+                setLogContent(`Error al obtener logs: ${result?.error || 'Error desconocido'}`);
+            }
+        } catch (err) {
+            setLogContent(`Error al obtener logs: ${err.message}`);
+        } finally {
+            setLogsLoading(false);
+        }
+    }, [tabId]);
+
+    const handleOpenLogs = useCallback((serviceName) => {
+        setActiveLogService(serviceName);
+        setLogContent('');
+        fetchServiceLogs(serviceName);
+    }, [fetchServiceLogs]);
 
     // ── Handle interval changes and sync with backend ─────────────────────────
     const handleIntervalChange = useCallback((newMs) => {
@@ -868,7 +925,7 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
                                                             onClick={() => handleKillProcess(proc.pid, proc.command)}
                                                             title="Finalizar proceso"
                                                         >
-                                                            Matar
+                                                            <i className="pi pi-trash" />
                                                         </button>
                                                     </td>
                                                 </tr>
@@ -934,14 +991,21 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
                                                                             onClick={() => handleManageService(service.name, 'restart')}
                                                                             title="Reiniciar servicio"
                                                                         >
-                                                                            Reiniciar
+                                                                            <i className="pi pi-refresh" />
                                                                         </button>
                                                                         <button
                                                                             className="ssh-monitor-action-btn stop"
                                                                             onClick={() => handleManageService(service.name, 'stop')}
                                                                             title="Detener servicio"
                                                                         >
-                                                                            Detener
+                                                                            <i className="pi pi-stop-circle" />
+                                                                        </button>
+                                                                        <button
+                                                                            className="ssh-monitor-action-btn logs"
+                                                                            onClick={() => handleOpenLogs(service.name)}
+                                                                            title="Ver logs (journalctl)"
+                                                                        >
+                                                                            <i className="pi pi-file" />
                                                                         </button>
                                                                     </td>
                                                                 </tr>
@@ -1027,6 +1091,48 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
                     )}
                     <span style={{ color: '#484f58', marginLeft: 'auto' }}>ESC para cerrar</span>
                 </div>
+
+                {activeLogService && (
+                    <div className="ssh-monitor-log-modal-overlay">
+                        <div className="ssh-monitor-log-modal-content">
+                            <div className="ssh-monitor-log-modal-header">
+                                <span className="ssh-monitor-log-modal-title">
+                                    <i className="pi pi-file" style={{ marginRight: 8, color: '#58a6ff' }} />
+                                    Logs: <span style={{ color: '#58a6ff' }}>{activeLogService}</span>
+                                </span>
+                                <div className="ssh-monitor-log-modal-actions">
+                                    <button
+                                        className="ssh-monitor-services-refresh-btn"
+                                        onClick={() => fetchServiceLogs(activeLogService)}
+                                        disabled={logsLoading}
+                                        style={{ marginRight: 10, display: 'flex', alignItems: 'center', gap: 6 }}
+                                    >
+                                        {logsLoading ? <i className="pi pi-spin pi-spinner" /> : <i className="pi pi-refresh" />} Refrescar
+                                    </button>
+                                    <button
+                                        className="ssh-monitor-close"
+                                        onClick={() => setActiveLogService(null)}
+                                        title="Cerrar logs"
+                                        style={{ background: 'none', border: 'none', color: '#8b949e', cursor: 'pointer', fontSize: 16 }}
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="ssh-monitor-log-modal-body">
+                                {logsLoading && !logContent ? (
+                                    <div className="ssh-monitor-services-state">
+                                        <i className="pi pi-spin pi-spinner" /> Cargando logs...
+                                    </div>
+                                ) : (
+                                    <pre className="ssh-monitor-log-pre">
+                                        {formatLogLines(logContent)}
+                                    </pre>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
 
             </div>
         </div>
