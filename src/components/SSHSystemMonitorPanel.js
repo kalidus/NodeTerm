@@ -531,7 +531,8 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
     const [panelLeft, setPanelLeft] = useState(() => {
         const saved = localStorage.getItem('ssh_monitor_panel_left');
         const parsed = saved ? parseFloat(saved) : 45;
-        return isNaN(parsed) ? 45 : parsed;
+        const val = isNaN(parsed) ? 45 : parsed;
+        return Math.max(4, val); // Evitar que se quede bloqueado en 0% si se guardó un valor muy bajo
     });
     const [isResizing, setIsResizing] = useState(false);
     const [hasMounted, setHasMounted] = useState(false);
@@ -556,8 +557,8 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
         const { startX, startLeftPx, parentWidth } = resizeStateRef.current;
         const deltaX = e.clientX - startX;
 
-        // Nuevo posicionamiento en píxeles (min 20%, max 85%)
-        const newLeftPx = Math.max(parentWidth * 0.2, Math.min(parentWidth * 0.85, startLeftPx + deltaX));
+        // Nuevo posicionamiento en píxeles (min 35px para evitar conflictos con scrollbars/sidebar, max 85%)
+        const newLeftPx = Math.max(35, Math.min(parentWidth * 0.85, startLeftPx + deltaX));
         const newLeftPct = (newLeftPx / parentWidth) * 100;
 
         setPanelLeft(newLeftPct);
