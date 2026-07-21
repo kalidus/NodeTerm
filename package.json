@@ -162,8 +162,7 @@
         "pacman"
       ],
       "category": "Utility",
-      "icon": "src/assets/app-icon.png",
-      "syncDesktopName": true
+      "icon": "src/assets/app-icon.png"
     },
     "publish": {
       "provider": "github",
