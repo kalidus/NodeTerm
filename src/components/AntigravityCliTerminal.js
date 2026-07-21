@@ -3,6 +3,7 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import '@xterm/xterm/css/xterm.css';
+import { shouldBlockHumanInput } from '../services/terminalAgentState';
 
 const AntigravityCliTerminal = forwardRef(({
   fontFamily = 'Consolas, "Courier New", monospace',
@@ -122,6 +123,7 @@ const AntigravityCliTerminal = forwardRef(({
     });
 
     const dataHandler = term.current.onData((data) => {
+      if (shouldBlockHumanInput(tabId)) return;
       window.electron?.ipcRenderer.send(`antigravitycli:data:${tabId}`, data);
     });
 

@@ -2428,16 +2428,17 @@ const MainContentArea = ({
       setActiveGroupId(null);
     }
 
-    setSshTabs(prevTabs => {
-      const nowTs = Date.now();
-      // Usar formato simple con contador alto para evitar colisiones: tab-1000, tab-1001, etc.
-      const tabId = `tab-${localTerminalCounterRef.current}`;
-      localTerminalCounterRef.current += 1;
+    const nowTs = Date.now();
+    // Usar formato simple con contador alto para evitar colisiones: tab-1000, tab-1001, etc.
+    const tabId = `tab-${localTerminalCounterRef.current}`;
+    localTerminalCounterRef.current += 1;
 
-      // Registrar eventos para el nuevo tab en el backend de Electron
-      if (window.electron) {
-        window.electron.ipcRenderer.send('register-tab-events', tabId);
-      }
+    // Registrar eventos para el nuevo tab en el backend de Electron
+    if (window.electron) {
+      window.electron.ipcRenderer.send('register-tab-events', tabId);
+    }
+
+    setSshTabs(prevTabs => {
 
       // Determinar el label según el tipo de terminal
       let label = 'Terminal';
@@ -2573,10 +2574,25 @@ const MainContentArea = ({
 
       return [newTab, ...prevTabs];
     });
+
+    return tabId;
   };
 
   // Actualizar la referencia
   createLocalTerminalTabRef.current = createLocalTerminalTab;
+
+  // Exponer apertura de terminal local para el puente MCP / agent
+  useEffect(() => {
+    window.__nodeterm_create_local_terminal = (terminalType, distroInfo = null) => {
+      if (createLocalTerminalTabRef.current) {
+        return createLocalTerminalTabRef.current(terminalType, distroInfo);
+      }
+      return null;
+    };
+    return () => {
+      delete window.__nodeterm_create_local_terminal;
+    };
+  }, []);
 
   // Funciones para controlar el scroll de pestañas
   const checkScrollButtons = () => {

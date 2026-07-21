@@ -564,3 +564,15 @@ El MCP SSH/Terminal es la forma más fácil de dar a los modelos de IA acceso a 
 **Mantenedor:** NodeTerm Team  
 **Última Actualización:** 2025-11-11
 
+---
+
+## Nota: inyeccion segura de secretos (NodeTerm MCP HTTP / nodeterm-mcp)
+
+Esta guia describe el MCP nativo SSH/Terminal. El cliente externo **nodeterm-mcp** (API local de NodeTerm) añade desde v1.4.0:
+
+- `list_passwords`: solo metadata (no secretos en claro).
+- `inject_secret`: requiere `promptTicket` (un solo uso, TTL 60s) emitido por `wait_terminal_pattern` tras un comando allowlist (sudo/git/mysql/...).
+- Gate de prompt + correlacion de comando + rate limit. El valor nunca vuelve al agente.
+- Flujo: comando -> wait (leer `promptTicket`) -> `inject_secret(promptTicket,...)` -> continuar.
+
+

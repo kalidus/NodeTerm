@@ -8,6 +8,7 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import '@xterm/xterm/css/xterm.css';
 import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
+import { shouldBlockHumanInput } from '../services/terminalAgentState';
 
 const WSLTerminal = forwardRef(({
     fontFamily = 'Consolas, "Courier New", monospace',
@@ -350,6 +351,7 @@ const WSLTerminal = forwardRef(({
 
             // Handle user input - send to WSL
             const dataHandler = term.current.onData(data => {
+                if (shouldBlockHumanInput(tabId)) return;
                 window.electron.ipcRenderer.send(`wsl:data:${tabId}`, data);
             });
 

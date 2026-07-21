@@ -8,6 +8,7 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import '@xterm/xterm/css/xterm.css';
 import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
+import { shouldBlockHumanInput } from '../services/terminalAgentState';
 
 const DockerTerminal = forwardRef(({
     fontFamily = '"FiraCode Nerd Font", Consolas, monospace',
@@ -192,6 +193,7 @@ const DockerTerminal = forwardRef(({
 
         // Manejar input del usuario
         term.current.onData((data) => {
+            if (shouldBlockHumanInput(tabId)) return;
             if (window.electron) {
                 window.electron.ipcRenderer.send(`docker:data:${tabId}`, data);
             }

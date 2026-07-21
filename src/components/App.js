@@ -75,6 +75,7 @@ import { detectBlockedInputs } from '../utils/formDebugger';
 import '../styles/layout/sidebar.css';
 import connectionStore, { recordRecent, toggleFavorite, addGroupToFavorites, removeGroupFromFavorites, isGroupFavorite, recordRecentPassword, helpers as connectionHelpers } from '../utils/connectionStore';
 import { loadDocumentTree, saveDocumentTree } from '../utils/documentStore';
+import { terminalAgentBridge } from '../services/TerminalAgentBridge';
 import {
   getTabTypeAndIndex,
   moveTabToFirst,
@@ -2452,9 +2453,142 @@ const App = () => {
           await saveDocs(updated);
           return newId;
         }
-      }
+      },
+
+      // --- Terminales vivos (MCP agent) ---
+      listOpenTerminals: () => terminalAgentBridge.listOpenTerminals(),
+      openTerminal: async (opts) => terminalAgentBridge.openTerminal(opts || {}),
+      focusTerminal: (terminalId) => terminalAgentBridge.focusTerminal(terminalId),
+      setTerminalInputLock: (terminalId, locked) => terminalAgentBridge.setInputLock(terminalId, locked),
+      getTerminalStatus: (terminalId) => terminalAgentBridge.getStatus(terminalId),
+      writeTerminal: async (terminalId, opts) => terminalAgentBridge.writeTerminal(terminalId, opts || {}),
+      execInTerminal: async (terminalId, opts) => terminalAgentBridge.execInTerminal(terminalId, opts || {}),
+      readTerminalBuffer: (terminalId, opts) => terminalAgentBridge.readBuffer(terminalId, opts || {}),
+      waitTerminalPattern: async (terminalId, opts) => terminalAgentBridge.waitPattern(terminalId, opts || {}),
+      injectSecretIntoTerminal: async (terminalId, opts) =>
+        terminalAgentBridge.injectSecretIntoTerminal(terminalId, opts || {})
     };
   }, [nodes, masterKey, secureStorage]);
+
+  // Limpiar listeners/buffer de terminales cerrados
+  useEffect(() => {
+    const activeIds = new Set();
+    (sshTabs || []).forEach((tab) => {
+      if (!tab) return;
+      if (tab.type === 'terminal' || tab.type === 'local-terminal' || tab.type === 'docker') {
+        activeIds.add(tab.key);
+      } else if (tab.type === 'split') {
+        const walk = (node) => {
+          if (!node) return;
+          if (node.key && (node.type === 'terminal' || node.type === 'local-terminal' || node.type === 'docker')) {
+            activeIds.add(node.key);
+          }
+          walk(node.first);
+          walk(node.second);
+          walk(node.leftTerminal);
+          walk(node.rightTerminal);
+          if (Array.isArray(node.terminals)) node.terminals.forEach(walk);
+        };
+        walk(tab);
+      }
+    });
+    terminalAgentBridge.pruneClosedTerminals(activeIds);
+  }, [sshTabs]);
+
+  // Dependencias del puente agente MCP (tabs / focus / open)
+  useEffect(() => {
+    const findConnectionById = (connectionId) => {
+      if (!connectionId) return null;
+      const needle = String(connectionId).toLowerCase();
+      let found = null;
+      const walk = (list) => {
+        if (!Array.isArray(list) || found) return;
+        for (const n of list) {
+          const id = n.id || n.key;
+          const label = n.label || n.name || '';
+          const dataType = n.data?.type || n.type;
+          if (
+            (id && String(id).toLowerCase() === needle) ||
+            (label && label.toLowerCase() === needle)
+          ) {
+            if (!dataType || dataType === 'ssh' || n.data?.host || n.data?.targetServer) {
+              found = n;
+              return;
+            }
+          }
+          if (n.children) walk(n.children);
+        }
+      };
+      walk(nodes);
+      return found;
+    };
+
+    terminalAgentBridge.setDependencies({
+      getTabs: () => sshTabs || [],
+      getActiveTabKey: () => {
+        try {
+          const tabs = typeof getFilteredTabs === 'function' ? getFilteredTabs() : getAllTabs();
+          const active = tabs && tabs[activeTabIndex];
+          return active ? active.key : null;
+        } catch (_) {
+          return null;
+        }
+      },
+      openSSHConnection: (nodeOrConn) => {
+        if (onOpenSSHConnection) onOpenSSHConnection(nodeOrConn, nodes);
+      },
+      createLocalTerminal: (localType, distroInfo) => {
+        if (typeof window.__nodeterm_create_local_terminal === 'function') {
+          return window.__nodeterm_create_local_terminal(localType, distroInfo);
+        }
+        return null;
+      },
+      focusTerminal: (terminalId) => {
+        if (!terminalId) return;
+        setLastOpenedTabKey(terminalId);
+        setOnCreateActivateTabKey(terminalId);
+        try {
+          const tabs = typeof getFilteredTabs === 'function' ? getFilteredTabs() : getAllTabs();
+          const idx = Array.isArray(tabs) ? tabs.findIndex((t) => t.key === terminalId) : -1;
+          if (idx >= 0) {
+            setActiveTabIndex(idx);
+            if (activeGroupId != null) {
+              setGroupActiveIndices((prev) => ({
+                ...prev,
+                [activeGroupId || 'no-group']: idx
+              }));
+            } else {
+              setGroupActiveIndices((prev) => ({ ...prev, 'no-group': idx }));
+            }
+          }
+        } catch (_) {
+          /* ignore */
+        }
+      },
+      findConnectionById,
+      getPasswordsTree: async () => {
+        if (window.nodeterm_integration && typeof window.nodeterm_integration.getPasswords === 'function') {
+          return window.nodeterm_integration.getPasswords();
+        }
+        return [];
+      },
+      getTerminalRef: (terminalId) =>
+        terminalRefs && terminalRefs.current ? terminalRefs.current[terminalId] : null
+    });
+  }, [
+    sshTabs,
+    nodes,
+    activeTabIndex,
+    activeGroupId,
+    getAllTabs,
+    getFilteredTabs,
+    onOpenSSHConnection,
+    setLastOpenedTabKey,
+    setOnCreateActivateTabKey,
+    setActiveTabIndex,
+    setGroupActiveIndices,
+    terminalRefs
+  ]);
 
   // Escuchar eventos de sincronización externa para datos encriptados y configuración
   useEffect(() => {

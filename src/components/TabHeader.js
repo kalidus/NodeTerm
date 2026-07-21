@@ -10,6 +10,11 @@ import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
 import { isHomeButtonLocked as readHomeButtonLocked } from '../utils/homeTabDefaults';
+import {
+  getAgentSession,
+  setHumanInputLocked,
+  subscribeAgentState
+} from '../services/terminalAgentState';
 
 const TabHeader = React.memo(({
   // Props básicas de PrimeReact
@@ -46,12 +51,33 @@ const TabHeader = React.memo(({
   isDraggable = false
 }) => {
   const isHomeTab = tab.type === 'home';
+  const isPtyTab = tab && (tab.type === 'terminal' || tab.type === 'local-terminal' || tab.type === 'docker');
   const [homeIconVersion, setHomeIconVersion] = useState(0);
   const [themeVersion, setThemeVersion] = useState(0);
   const [sidebarIconThemeVersion, setSidebarIconThemeVersion] = useState(0);
+  const [agentLocked, setAgentLocked] = useState(() =>
+    isPtyTab && tab?.key ? !!getAgentSession(tab.key).humanInputLocked : false
+  );
+  const [agentBusy, setAgentBusy] = useState(() =>
+    isPtyTab && tab?.key ? !!getAgentSession(tab.key).agentBusy : false
+  );
 
   // Verificar si el botón de inicio está bloqueado
   const [isHomeButtonLocked, setIsHomeButtonLocked] = useState(readHomeButtonLocked);
+
+  useEffect(() => {
+    if (!isPtyTab || !tab?.key) return undefined;
+    const sync = (terminalId, state) => {
+      if (terminalId !== tab.key) return;
+      setAgentLocked(!!(state && state.humanInputLocked));
+      setAgentBusy(!!(state && state.agentBusy));
+    };
+    const unsub = subscribeAgentState(sync);
+    const current = getAgentSession(tab.key);
+    setAgentLocked(!!current.humanInputLocked);
+    setAgentBusy(!!current.agentBusy);
+    return () => unsub();
+  }, [isPtyTab, tab?.key]);
 
   // Escuchar cambios en el icono de inicio y bloqueo
   useEffect(() => {
@@ -556,6 +582,34 @@ const TabHeader = React.memo(({
         }}>
           {tab.label}
         </span>
+      )}
+
+      {/* Interruptor lock edicion agente MCP */}
+      {isPtyTab && (
+        <Button
+          icon={agentLocked ? 'pi pi-lock' : 'pi pi-lock-open'}
+          className="p-button-rounded p-button-text p-button-sm"
+          title={agentLocked
+            ? 'Edicion bloqueada (agente). Pulsa para desbloquear y editar.'
+            : (agentBusy
+              ? 'Agente activo. Pulsa para bloquear edicion.'
+              : 'Edicion libre. Pulsa para bloquear teclado.')}
+          style={{
+            marginLeft: '2px',
+            minWidth: 16,
+            minHeight: 16,
+            width: 16,
+            height: 16,
+            flexShrink: 0,
+            color: agentLocked ? '#f59e0b' : (agentBusy ? '#22c55e' : undefined),
+            opacity: agentLocked || agentBusy ? 1 : 0.55
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!tab?.key) return;
+            setHumanInputLocked(tab.key, !agentLocked);
+          }}
+        />
       )}
 
       {/* Mostrar botón de cierre solo si NO es una pestaña de inicio (las pestañas de inicio nunca se pueden cerrar) */}

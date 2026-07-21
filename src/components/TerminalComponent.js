@@ -4,6 +4,7 @@ import { loadXtermModules, getCachedXtermModules } from '../utils/xtermLoader';
 import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { themes } from '../themes';
+import { shouldBlockHumanInput } from '../services/terminalAgentState';
 
 const TerminalComponent = forwardRef(({
     tabId,
@@ -202,7 +203,27 @@ const TerminalComponent = forwardRef(({
                     }, 5);
                 }, 10);
             }
-        }
+        },
+        agentWrite: (data) => {
+            if (!data) return;
+            window.electron?.ipcRenderer?.send('ssh:data', { tabId, data });
+        },
+        getScrollback: (maxLines = 500) => {
+            if (!term.current) return '';
+            try {
+                const buffer = term.current.buffer.active;
+                const lines = [];
+                const start = Math.max(0, buffer.length - maxLines);
+                for (let i = start; i < buffer.length; i++) {
+                    const line = buffer.getLine(i);
+                    if (line) lines.push(line.translateToString(true));
+                }
+                return lines.join('\n');
+            } catch (_) {
+                return '';
+            }
+        },
+        isReady: () => !!(term.current)
     }));
 
     useEffect(() => {
@@ -471,6 +492,9 @@ const TerminalComponent = forwardRef(({
 
             // Handle user input
             const dataHandler = term.current.onData(data => {
+                if (shouldBlockHumanInput(tabId)) {
+                    return;
+                }
                 const { isBroadcastActive: currentBroadcast, onBroadcastData: currentBroadcastFn } = broadcastPropsRef.current;
 
                 // Local echo SSH: mostrar el car??cter localmente ANTES del round-trip al servidor

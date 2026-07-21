@@ -1,6 +1,6 @@
 {
   "name": "nodeterm",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -10,7 +10,7 @@
     "postinstall": "node scripts/ensure-electron-binary.js && node scripts/rebuild-browser-import-native.js",
     "predev": "node scripts/ensure-electron-binary.js",
     "rebuild:native": "node scripts/rebuild-browser-import-native.js --force",
-    "dev": "cross-env NODE_OPTIONS=--no-deprecation concurrently --kill-others \"webpack --watch --mode development\" \"wait-on dist/index.html -t 60000 && cross-env NODE_OPTIONS=--no-deprecation electron .\"",
+    "dev": "cross-env NODE_OPTIONS=--no-deprecation concurrently --kill-others \"webpack --watch --mode development\" \"wait-on dist/index.html -t 180000 && cross-env NODE_OPTIONS=--no-deprecation electron .\"",
     "rm-cpu-features": "node -e \"const fs=require('fs'),path=require('path'),r=process.cwd();[path.join(r,'node_modules','cpu-features'),path.join(r,'node_modules','ssh2','node_modules','cpu-features')].forEach(p=>{try{fs.rmSync(p,{recursive:true,force:true})}catch(e){}})\"",
     "pack": "npm run build && npm run rm-cpu-features && electron-builder --dir",
     "verify-packaging": "node scripts/verify-electron-packaging.js",

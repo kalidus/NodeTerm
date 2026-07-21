@@ -8,6 +8,7 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import '@xterm/xterm/css/xterm.css';
 import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
+import { shouldBlockHumanInput } from '../services/terminalAgentState';
 
 const PowerShellTerminal = forwardRef(({
     fontFamily = 'Consolas, "Courier New", monospace',
@@ -188,7 +189,27 @@ const PowerShellTerminal = forwardRef(({
             if (term.current && text) {
                 window.electron?.ipcRenderer.send(`powershell:data:${tabId}`, text);
             }
-        }
+        },
+        agentWrite: (data) => {
+            if (!data) return;
+            window.electron?.ipcRenderer?.send(`powershell:data:${tabId}`, data);
+        },
+        getScrollback: (maxLines = 500) => {
+            if (!term.current) return '';
+            try {
+                const buffer = term.current.buffer.active;
+                const lines = [];
+                const start = Math.max(0, buffer.length - maxLines);
+                for (let i = start; i < buffer.length; i++) {
+                    const line = buffer.getLine(i);
+                    if (line) lines.push(line.translateToString(true));
+                }
+                return lines.join('\n');
+            } catch (_) {
+                return '';
+            }
+        },
+        isReady: () => !!(term.current)
     }));
 
     useEffect(() => {
@@ -360,6 +381,7 @@ const PowerShellTerminal = forwardRef(({
 
             // Handle user input - send to PowerShell
             const dataHandler = term.current.onData(data => {
+                if (shouldBlockHumanInput(tabId)) return;
                 window.electron.ipcRenderer.send(`powershell:data:${tabId}`, data);
             });
 

@@ -13,7 +13,14 @@
  * Endpoints:
  * - GET  /api/status      → Estado del servidor
  * - GET  /api/connections  → Listar conexiones (sin passwords)
- * - POST /api/ssh/exec     → Ejecutar comando SSH
+ * - POST /api/ssh/exec     → Ejecutar comando SSH (headless, sin UI)
+ * - GET  /api/terminals    → Listar terminales PTY abiertos
+ * - POST /api/terminals/open|focus|input-lock|exec|write|buffer|wait|status|inject-secret
+ * - GET  /api/passwords    → Listar entradas KeePass (metadata; sin secretos)
+ * - GET  /api/recordings   → Listar grabaciones (metadata; filtros query)
+ * - GET  /api/recordings/stats → Estadisticas de grabaciones
+ * - GET  /api/recordings/:id → Metadata de una grabacion
+ * - POST /api/recordings/export → Exportar .cast a fichero (mcp-exports)
  */
 
 const http = require('http');
@@ -22,6 +29,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { Client } = require('ssh2');
 const { getNodeTermDataDir } = require('../utils/file-utils');
+const recordingQuery = require('./recording-query');
 
 // Ruta del archivo de configuración MCP
 const MCP_CONFIG_PATH = path.join(getNodeTermDataDir(), 'mcp-config.json');
@@ -244,22 +252,39 @@ class McpApiServer {
           result = result.concat(this._flattenPasswords(node.children, currentPath));
         }
       } else {
+        const data = node.data || {};
         result.push({
           id: node.key || node.id,
           name: node.label,
           type: nodeType || 'password',
           path: parentPath || null,
           isFolder: false,
-          username: node.data ? (node.data.username || '') : '',
-          password: node.data ? (node.data.password || '') : '',
-          website: node.data ? (node.data.website || '') : '',
-          notes: node.data ? (node.data.notes || '') : '',
-          api_key: node.data ? (node.data.api_key || '') : '',
-          wallet_seed: node.data ? (node.data.wallet_seed || '') : '',
+          username: data.username || '',
+          password: data.password || '',
+          website: data.website || data.url || '',
+          notes: data.notes || '',
+          api_key: data.api_key || data.apiKey || '',
+          wallet_seed: data.wallet_seed || data.seedPhrase || '',
         });
       }
     }
     return result;
+  }
+
+  /**
+   * Filtra entradas del password manager para no exponer secretos al MCP.
+   */
+  _sanitizePasswords(passwords) {
+    // Nunca incluir password, notes, api_key, wallet_seed, privateKey, passphrase, etc.
+    return (passwords || []).map((p) => ({
+      id: p.id,
+      name: p.name,
+      type: p.type || 'password',
+      path: p.path || null,
+      isFolder: !!p.isFolder,
+      username: p.username || '',
+      website: p.website || ''
+    }));
   }
 
   /**
@@ -583,7 +608,8 @@ class McpApiServer {
       `);
       const rawPasswords = JSON.parse(result);
       const flat = this._flattenPasswords(rawPasswords);
-      this._sendJson(res, 200, { passwords: flat });
+      const sanitized = this._sanitizePasswords(flat);
+      this._sendJson(res, 200, { passwords: sanitized });
     } catch (err) {
       this._sendJson(res, 500, { error: 'Failed to list passwords', detail: err.message });
     }
@@ -706,6 +732,352 @@ class McpApiServer {
   }
 
   /**
+   * Llama a un metodo async/sync de window.nodeterm_integration y parsea JSON.
+   */
+  async _callIntegration(methodName, args = []) {
+    if (!this._mainWindow || this._mainWindow.isDestroyed()) {
+      const err = new Error('NodeTerm window not available');
+      err.statusCode = 503;
+      throw err;
+    }
+    const argsLiteral = JSON.stringify(args);
+    const result = await this._mainWindow.webContents.executeJavaScript(`
+      (async function() {
+        try {
+          if (!window.nodeterm_integration || typeof window.nodeterm_integration[${JSON.stringify(methodName)}] !== 'function') {
+            return JSON.stringify({ __error: 'Integration method not available', method: ${JSON.stringify(methodName)} });
+          }
+          const fn = window.nodeterm_integration[${JSON.stringify(methodName)}];
+          const args = ${argsLiteral};
+          const out = await fn.apply(window.nodeterm_integration, args);
+          return JSON.stringify({ __ok: true, result: out === undefined ? null : out });
+        } catch (e) {
+          return JSON.stringify({ __error: e && e.message ? e.message : String(e) });
+        }
+      })()
+    `);
+    const parsed = JSON.parse(result);
+    if (parsed.__error) {
+      const err = new Error(parsed.__error);
+      err.statusCode = 500;
+      throw err;
+    }
+    return parsed.result;
+  }
+
+  async _handleListTerminals(req, res) {
+    try {
+      const result = await this._callIntegration('listOpenTerminals', []);
+      const payload = result || { terminals: [] };
+      if (!Array.isArray(payload.terminals)) {
+        payload.terminals = [];
+      }
+      if (payload.count == null) {
+        payload.count = payload.terminals.length;
+      }
+      this._sendJson(res, 200, payload);
+    } catch (err) {
+      this._sendJson(res, err.statusCode || 500, { error: err.message });
+    }
+  }
+
+  async _handleTerminalOpen(req, res) {
+    let body;
+    try {
+      body = await this._parseBody(req);
+    } catch (err) {
+      this._sendJson(res, 400, { error: err.message });
+      return;
+    }
+    if (!body.connectionId && !body.localType) {
+      this._sendJson(res, 400, { error: 'Missing connectionId or localType' });
+      return;
+    }
+    try {
+      const result = await this._callIntegration('openTerminal', [body]);
+      if (result && result.success === false) {
+        const code = result.error === 'connection_not_found' ? 404 : 400;
+        this._sendJson(res, code, result);
+        return;
+      }
+      this._sendJson(res, 200, result);
+    } catch (err) {
+      this._sendJson(res, err.statusCode || 500, { error: err.message });
+    }
+  }
+
+  async _handleTerminalFocus(req, res) {
+    let body;
+    try {
+      body = await this._parseBody(req);
+    } catch (err) {
+      this._sendJson(res, 400, { error: err.message });
+      return;
+    }
+    if (!body.terminalId) {
+      this._sendJson(res, 400, { error: 'Missing required field: terminalId' });
+      return;
+    }
+    try {
+      const result = await this._callIntegration('focusTerminal', [body.terminalId]);
+      if (result && result.success === false) {
+        this._sendJson(res, result.error === 'terminal_not_found' ? 404 : 400, result);
+        return;
+      }
+      this._sendJson(res, 200, result);
+    } catch (err) {
+      this._sendJson(res, err.statusCode || 500, { error: err.message });
+    }
+  }
+
+  async _handleTerminalInputLock(req, res) {
+    let body;
+    try {
+      body = await this._parseBody(req);
+    } catch (err) {
+      this._sendJson(res, 400, { error: err.message });
+      return;
+    }
+    if (!body.terminalId || typeof body.locked !== 'boolean') {
+      this._sendJson(res, 400, { error: 'Missing terminalId or locked (boolean)' });
+      return;
+    }
+    try {
+      const result = await this._callIntegration('setTerminalInputLock', [body.terminalId, body.locked]);
+      if (result && result.success === false) {
+        this._sendJson(res, result.error === 'terminal_not_found' ? 404 : 400, result);
+        return;
+      }
+      this._sendJson(res, 200, result);
+    } catch (err) {
+      this._sendJson(res, err.statusCode || 500, { error: err.message });
+    }
+  }
+
+  async _handleTerminalExec(req, res) {
+    let body;
+    try {
+      body = await this._parseBody(req);
+    } catch (err) {
+      this._sendJson(res, 400, { error: err.message });
+      return;
+    }
+    if (!body.terminalId || body.command == null) {
+      this._sendJson(res, 400, { error: 'Missing terminalId or command' });
+      return;
+    }
+    try {
+      const result = await this._callIntegration('execInTerminal', [body.terminalId, {
+        command: body.command,
+        timeoutMs: body.timeoutMs,
+        humanTyping: body.humanTyping,
+        keepLocked: body.keepLocked,
+        takeControl: body.takeControl,
+        idleMs: body.idleMs,
+        appendNewline: body.appendNewline
+      }]);
+      if (result && result.error === 'terminal_not_found') {
+        this._sendJson(res, 404, result);
+        return;
+      }
+      if (result && result.error === 'busy') {
+        this._sendJson(res, 409, result);
+        return;
+      }
+      if (result && result.error && result.error !== 'command_required') {
+        this._sendJson(res, 400, result);
+        return;
+      }
+      this._sendJson(res, 200, result);
+    } catch (err) {
+      this._sendJson(res, err.statusCode || 500, { error: err.message });
+    }
+  }
+
+  async _handleTerminalWrite(req, res) {
+    let body;
+    try {
+      body = await this._parseBody(req);
+    } catch (err) {
+      this._sendJson(res, 400, { error: err.message });
+      return;
+    }
+    if (!body.terminalId) {
+      this._sendJson(res, 400, { error: 'Missing required field: terminalId' });
+      return;
+    }
+    try {
+      const result = await this._callIntegration('writeTerminal', [body.terminalId, {
+        data: body.data,
+        keys: body.keys,
+        humanTyping: body.humanTyping,
+        takeControl: body.takeControl,
+        keepLocked: body.keepLocked
+      }]);
+      if (result && result.success === false) {
+        const code = result.error === 'terminal_not_found' ? 404 : (result.statusCode || 400);
+        this._sendJson(res, code, result);
+        return;
+      }
+      this._sendJson(res, 200, result);
+    } catch (err) {
+      this._sendJson(res, err.statusCode || 500, { error: err.message });
+    }
+  }
+
+  /**
+   * Handler: POST /api/terminals/inject-secret
+   * Inyecta un secreto por referencia (connection|keepass). Nunca acepta ni devuelve el valor.
+   */
+  async _handleTerminalInjectSecret(req, res) {
+    let body;
+    try {
+      body = await this._parseBody(req);
+    } catch (err) {
+      this._sendJson(res, 400, { error: err.message });
+      return;
+    }
+
+    if (!body || !body.terminalId) {
+      this._sendJson(res, 400, { error: 'Missing required field: terminalId' });
+      return;
+    }
+    if (body.password != null || body.data != null || body.secret != null || body.passphrase != null) {
+      this._sendJson(res, 400, {
+        error: 'Plaintext secrets are not accepted. Use inject-secret by reference only (source + id).'
+      });
+      return;
+    }
+    if (!body.source) {
+      this._sendJson(res, 400, { error: 'Missing required field: source (connection|keepass)' });
+      return;
+    }
+    if (body.promptTicket == null || String(body.promptTicket).length === 0) {
+      this._sendJson(res, 400, {
+        success: false,
+        error: 'prompt_ticket_required'
+      });
+      return;
+    }
+
+    try {
+      const result = await this._callIntegration('injectSecretIntoTerminal', [body.terminalId, {
+        source: body.source,
+        id: body.id != null ? body.id : null,
+        field: body.field,
+        promptTicket: body.promptTicket,
+        keepLocked: body.keepLocked
+      }]);
+      if (result && result.success === false) {
+        let code = result.statusCode || 400;
+        if (result.error === 'terminal_not_found' || result.error === 'secret_not_found') code = 404;
+        else if (result.error === 'rate_limited') code = 429;
+        else if (
+          result.error === 'password_prompt_required' ||
+          result.error === 'prompt_ticket_expired' ||
+          result.error === 'command_correlation_required' ||
+          result.error === 'password_prompt_already_consumed'
+        ) code = 403;
+        this._sendJson(res, code, {
+          success: false,
+          error: result.error
+        });
+        return;
+      }
+      this._sendJson(res, 200, {
+        success: true,
+        matchedPrompt: result && result.matchedPrompt ? result.matchedPrompt : null,
+        source: result && result.source ? result.source : body.source
+      });
+    } catch (err) {
+      this._sendJson(res, err.statusCode || 500, { error: err.message });
+    }
+  }
+
+  async _handleTerminalBuffer(req, res) {
+    let body;
+    try {
+      body = await this._parseBody(req);
+    } catch (err) {
+      this._sendJson(res, 400, { error: err.message });
+      return;
+    }
+    if (!body.terminalId) {
+      this._sendJson(res, 400, { error: 'Missing required field: terminalId' });
+      return;
+    }
+    try {
+      const result = await this._callIntegration('readTerminalBuffer', [body.terminalId, {
+        maxChars: body.maxChars,
+        maxLines: body.maxLines,
+        fromOffset: body.fromOffset
+      }]);
+      if (result && result.error === 'terminal_not_found') {
+        this._sendJson(res, 404, result);
+        return;
+      }
+      this._sendJson(res, 200, result);
+    } catch (err) {
+      this._sendJson(res, err.statusCode || 500, { error: err.message });
+    }
+  }
+
+  async _handleTerminalWait(req, res) {
+    let body;
+    try {
+      body = await this._parseBody(req);
+    } catch (err) {
+      this._sendJson(res, 400, { error: err.message });
+      return;
+    }
+    if (!body.terminalId || body.pattern == null) {
+      this._sendJson(res, 400, { error: 'Missing terminalId or pattern' });
+      return;
+    }
+    try {
+      const result = await this._callIntegration('waitTerminalPattern', [body.terminalId, {
+        pattern: body.pattern,
+        regex: body.regex,
+        timeoutMs: body.timeoutMs,
+        includeBuffer: body.includeBuffer,
+        takeControl: body.takeControl,
+        keepLocked: body.keepLocked
+      }]);
+      if (result && result.error === 'terminal_not_found') {
+        this._sendJson(res, 404, result);
+        return;
+      }
+      this._sendJson(res, 200, result);
+    } catch (err) {
+      this._sendJson(res, err.statusCode || 500, { error: err.message });
+    }
+  }
+
+  async _handleTerminalStatus(req, res) {
+    let body;
+    try {
+      body = await this._parseBody(req);
+    } catch (err) {
+      this._sendJson(res, 400, { error: err.message });
+      return;
+    }
+    if (!body.terminalId) {
+      this._sendJson(res, 400, { error: 'Missing required field: terminalId' });
+      return;
+    }
+    try {
+      const result = await this._callIntegration('getTerminalStatus', [body.terminalId]);
+      if (result && result.error === 'terminal_not_found') {
+        this._sendJson(res, 404, result);
+        return;
+      }
+      this._sendJson(res, 200, result);
+    } catch (err) {
+      this._sendJson(res, err.statusCode || 500, { error: err.message });
+    }
+  }
+
+  /**
    * Handler: POST /api/documents
    */
   async _handleSaveDocument(req, res) {
@@ -753,11 +1125,100 @@ class McpApiServer {
   }
 
   /**
+   * Handler: GET /api/recordings
+   */
+  async _handleListRecordings(req, res, searchParams) {
+    try {
+      const filters = {
+        host: searchParams.get('host') || undefined,
+        username: searchParams.get('username') || undefined,
+        sessionName: searchParams.get('sessionName') || undefined,
+        from: searchParams.get('from') || undefined,
+        to: searchParams.get('to') || undefined
+      };
+      const result = await recordingQuery.listRecordings(filters);
+      this._sendJson(res, 200, {
+        success: true,
+        recordings: result.recordings || [],
+        recordingsDir: result.recordingsDir
+      });
+    } catch (err) {
+      this._sendJson(res, 500, { error: 'Failed to list recordings', detail: err.message });
+    }
+  }
+
+  /**
+   * Handler: GET /api/recordings/stats
+   */
+  async _handleRecordingStats(req, res) {
+    try {
+      const result = await recordingQuery.getRecordingStats();
+      this._sendJson(res, 200, result);
+    } catch (err) {
+      this._sendJson(res, 500, { error: 'Failed to get recording stats', detail: err.message });
+    }
+  }
+
+  /**
+   * Handler: GET /api/recordings/:id
+   */
+  async _handleGetRecording(req, res, recordingId) {
+    try {
+      const result = await recordingQuery.getRecordingMeta(recordingId);
+      this._sendJson(res, 200, result);
+    } catch (err) {
+      if (err.code === 'NOT_FOUND' || err.code === 'INVALID_ID') {
+        this._sendJson(res, 404, { error: err.message });
+        return;
+      }
+      this._sendJson(res, 500, { error: 'Failed to get recording', detail: err.message });
+    }
+  }
+
+  /**
+   * Handler: POST /api/recordings/export
+   * Body: { recordingId, exportPath? }
+   * Escribe el .cast completo a disco; no cambia config de grabacion.
+   */
+  async _handleExportRecording(req, res) {
+    try {
+      const body = await this._parseBody(req);
+      const recordingId = body && body.recordingId;
+      if (!recordingId) {
+        this._sendJson(res, 400, { error: 'recordingId is required' });
+        return;
+      }
+      const result = await recordingQuery.exportRecording(recordingId, body.exportPath);
+      this._sendJson(res, 200, result);
+    } catch (err) {
+      if (err.code === 'NOT_FOUND' || err.code === 'INVALID_ID') {
+        this._sendJson(res, 404, { error: err.message });
+        return;
+      }
+      if (err.code === 'INVALID_PATH') {
+        this._sendJson(res, 400, { error: err.message });
+        return;
+      }
+      this._sendJson(res, 500, { error: 'Failed to export recording', detail: err.message });
+    }
+  }
+
+  /**
    * Router principal
    */
   async _handleRequest(req, res) {
     this.requestCount++;
-    const { method, url } = req;
+    const { method } = req;
+    let pathname = req.url || '/';
+    let searchParams = new URLSearchParams();
+    try {
+      const parsedUrl = new URL(req.url || '/', 'http://127.0.0.1');
+      pathname = parsedUrl.pathname;
+      searchParams = parsedUrl.searchParams;
+    } catch {
+      const q = (req.url || '').indexOf('?');
+      pathname = q >= 0 ? req.url.slice(0, q) : (req.url || '/');
+    }
 
     // CORS preflight
     if (method === 'OPTIONS') {
@@ -784,22 +1245,80 @@ class McpApiServer {
 
     // Router
     try {
-      if (method === 'GET' && url === '/api/status') {
+      if (method === 'GET' && pathname === '/api/status') {
         await this._handleStatus(req, res);
-      } else if (method === 'GET' && url === '/api/connections') {
+      } else if (method === 'GET' && pathname === '/api/connections') {
         await this._handleListConnections(req, res);
-      } else if (method === 'GET' && url === '/api/passwords') {
+      } else if (method === 'GET' && pathname === '/api/passwords') {
         await this._handleListPasswords(req, res);
-      } else if (method === 'GET' && url === '/api/documents') {
+      } else if (method === 'GET' && pathname === '/api/documents') {
         await this._handleListDocuments(req, res);
-      } else if (method === 'POST' && url === '/api/ssh/exec') {
+      } else if (method === 'POST' && pathname === '/api/ssh/exec') {
         await this._handleSshExec(req, res);
-      } else if (method === 'POST' && url === '/api/passwords') {
+      } else if (method === 'GET' && pathname === '/api/terminals') {
+        await this._handleListTerminals(req, res);
+      } else if (method === 'POST' && pathname === '/api/terminals/open') {
+        await this._handleTerminalOpen(req, res);
+      } else if (method === 'POST' && pathname === '/api/terminals/focus') {
+        await this._handleTerminalFocus(req, res);
+      } else if (method === 'POST' && pathname === '/api/terminals/input-lock') {
+        await this._handleTerminalInputLock(req, res);
+      } else if (method === 'POST' && pathname === '/api/terminals/exec') {
+        await this._handleTerminalExec(req, res);
+      } else if (method === 'POST' && pathname === '/api/terminals/write') {
+        await this._handleTerminalWrite(req, res);
+      } else if (method === 'POST' && pathname === '/api/terminals/inject-secret') {
+        await this._handleTerminalInjectSecret(req, res);
+      } else if (method === 'POST' && pathname === '/api/terminals/buffer') {
+        await this._handleTerminalBuffer(req, res);
+      } else if (method === 'POST' && pathname === '/api/terminals/wait') {
+        await this._handleTerminalWait(req, res);
+      } else if (method === 'POST' && pathname === '/api/terminals/status') {
+        await this._handleTerminalStatus(req, res);
+      } else if (method === 'POST' && pathname === '/api/passwords') {
         await this._handleSavePassword(req, res);
-      } else if (method === 'POST' && url === '/api/documents') {
+      } else if (method === 'POST' && pathname === '/api/documents') {
         await this._handleSaveDocument(req, res);
+      } else if (method === 'GET' && pathname === '/api/recordings') {
+        await this._handleListRecordings(req, res, searchParams);
+      } else if (method === 'GET' && pathname === '/api/recordings/stats') {
+        await this._handleRecordingStats(req, res);
+      } else if (method === 'POST' && pathname === '/api/recordings/export') {
+        await this._handleExportRecording(req, res);
+      } else if (method === 'GET' && pathname.startsWith('/api/recordings/')) {
+        const recordingId = decodeURIComponent(pathname.slice('/api/recordings/'.length));
+        if (!recordingId || recordingId.includes('/')) {
+          this._sendJson(res, 404, { error: 'Not found' });
+        } else {
+          await this._handleGetRecording(req, res, recordingId);
+        }
       } else {
-        this._sendJson(res, 404, { error: 'Not found', availableEndpoints: ['/api/status', '/api/connections', '/api/passwords', '/api/documents', '/api/ssh/exec', 'POST /api/passwords', 'POST /api/documents'] });
+        this._sendJson(res, 404, {
+          error: 'Not found',
+          availableEndpoints: [
+            '/api/status',
+            '/api/connections',
+            '/api/passwords',
+            '/api/documents',
+            '/api/ssh/exec',
+            '/api/terminals',
+            'POST /api/terminals/open',
+            'POST /api/terminals/focus',
+            'POST /api/terminals/input-lock',
+            'POST /api/terminals/exec',
+            'POST /api/terminals/write',
+            'POST /api/terminals/inject-secret',
+            'POST /api/terminals/buffer',
+            'POST /api/terminals/wait',
+            'POST /api/terminals/status',
+            'POST /api/passwords',
+            'POST /api/documents',
+            'GET /api/recordings',
+            'GET /api/recordings/stats',
+            'GET /api/recordings/:id',
+            'POST /api/recordings/export'
+          ]
+        });
       }
     } catch (err) {
       console.error('❌ [MCP-API] Error en request:', err);

@@ -128,10 +128,8 @@ try {
 }
 
 const bin = path.join(REPO_ROOT, 'node_modules', '.bin', 'electron-rebuild.cmd');
-const rebuildArgs = ['-f'];
-for (const mod of nativeModules) {
-  rebuildArgs.push('-m', mod);
-}
+// -o/--only: modulos concretos. -m/--module-dir es la ruta a node_modules, no el nombre del paquete.
+const rebuildArgs = ['-f', '-o', nativeModules.join(',')];
 const useNpx = !fs.existsSync(bin);
 
 const result = spawnSync(
