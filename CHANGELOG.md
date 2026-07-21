@@ -11,7 +11,26 @@ Borrador opcional para usuarios: `RELEASE_NOTES.md` (solo la versión en curso).
 
 ## [Unreleased]
 
+## [1.7.1] - 2026-07-21
+
+### Servidor MCP y agent terminal
+- **Terminales abiertos**: API MCP para listar, abrir, enfocar y consultar estado de pestanas PTY visibles (SSH, local y CLIs IA).
+- **Buffer y espera**: lectura de salida reciente y `waitForPattern` con soporte de ticket opaco (`promptTicket`) ante prompts de password.
+- **Inyeccion segura de secretos**: `inject_secret` por referencia (`connection` / `keepass`), sin devolver el valor; gate de prompt, ticket de un solo uso, correlacion de comando y rate limit.
+- **Control de entrada**: bloqueo de teclado humano mientras el agente opera; indicador en cabecera de pestana.
+- **list_passwords**: endurecido para devolver solo metadata (nunca valores).
+
 ## [1.7.0] - 2026-07-17
+
+### Monitor de sistema SSH
+- **Servicios**: acciones por icono, columnas reordenables/redimensionables y visor de logs con colorizado.
+- **Estabilidad**: limites de resize e inicializacion ajustados para evitar solapes y bloqueos del monitor.
+
+### Linux, GPU y actualizaciones
+- **GPU**: deteccion NVIDIA/memoria, fallback sysfs en integradas, menos overhead de polling y menos congelaciones bajo NVIDIA/Wayland.
+- **Escritorio Linux**: icono de ventana, matching Wayland y correccion en GuacdService; barra de estado y retardos del terminal local.
+- **Updater**: en Linux se desactivan descargas/instalaciones internas que rompian el icono del escritorio; info de update embebida en el build.
+- **Empaquetado**: target `pacman` para Arch/CachyOS; exclusion de builds previos y paquetes frontend no usados del paquete.
 
 ## [1.6.9] - 2026-07-16
 
