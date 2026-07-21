@@ -2,6 +2,7 @@
   "name": "nodeterm",
   "version": "1.7.1",
   "main": "main.js",
+  "desktopName": "nodeterm.desktop",
   "scripts": {
     "start": "electron .",
     "start:cold": "node -e \"try{require('fs').rmSync('.cold-cache',{recursive:true,force:true})}catch(e){}\" && electron . --user-data-dir=.cold-cache",
@@ -26,7 +27,6 @@
   "build": {
     "appId": "com.electron.nodeterm",
     "productName": "NodeTerm",
-    "desktopName": "nodeterm",
     "copyright": "Copyright © 2024",
     "compression": "normal",
     "files": [
@@ -162,7 +162,8 @@
         "pacman"
       ],
       "category": "Utility",
-      "icon": "src/assets/app-icon.png"
+      "icon": "src/assets/app-icon.png",
+      "syncDesktopName": true
     },
     "publish": {
       "provider": "github",
