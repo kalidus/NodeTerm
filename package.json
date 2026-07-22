@@ -1,6 +1,10 @@
 {
   "name": "nodeterm",
   "version": "1.7.2",
+  "author": {
+    "name": "kalidus",
+    "email": "kalidus@users.noreply.github.com"
+  },
   "main": "main.js",
   "desktopName": "nodeterm.desktop",
   "scripts": {
@@ -125,15 +129,6 @@
       "node_modules/ssh2-promise/**",
       "node_modules/ssh2/**"
     ],
-    "extraResources": [
-      {
-        "from": "resources/cygwin64",
-        "to": "cygwin64",
-        "filter": [
-          "**/*"
-        ]
-      }
-    ],
     "win": {
       "target": [
         "nsis",
@@ -141,7 +136,16 @@
       ],
       "icon": "src/assets/app-icon.png",
       "verifyUpdateCodeSignature": false,
-      "requestedExecutionLevel": "asInvoker"
+      "requestedExecutionLevel": "asInvoker",
+      "extraResources": [
+        {
+          "from": "resources/cygwin64",
+          "to": "cygwin64",
+          "filter": [
+            "**/*"
+          ]
+        }
+      ]
     },
     "electronLanguages": [
       "en",
@@ -165,6 +169,7 @@
         "pacman"
       ],
       "category": "Utility",
+      "maintainer": "kalidus <kalidus@users.noreply.github.com>",
       "icon": "src/assets/app-icon.png"
     },
     "publish": {

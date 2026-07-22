@@ -36,6 +36,33 @@ jobs:
       - name: Cleanup native dependencies
         run: npm run rm-cpu-features
 
+      - name: Extract Release Notes from CHANGELOG
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          node -e "
+            const fs = require('fs');
+            const version = process.env.GITHUB_REF_NAME ? process.env.GITHUB_REF_NAME.replace(/^v/, '') : '';
+            let notes = '';
+            if (fs.existsSync('CHANGELOG.md')) {
+              const changelog = fs.readFileSync('CHANGELOG.md', 'utf8').replace(/\r\n/g, '\n');
+              const escapedVersion = version.replace(/\./g, '\\.');
+              const regex = new RegExp('## \\\\[' + escapedVersion + '\\\\][^\\n]*\\n([\\s\\S]*?)(?=\\n## \\\\[|$)', 'g');
+              const match = regex.exec(changelog);
+              if (match && match[1]) notes = match[1].trim();
+            }
+            fs.writeFileSync('RELEASE_NOTES_BODY.md', notes || '### Novedades en esta versión\n- Mejoras generales y correcciones de estabilidad.');
+          "
+
+      - name: Create or Update GitHub Release with Changelog & Commit Summary
+        if: matrix.os == 'ubuntu-latest'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          body_path: RELEASE_NOTES_BODY.md
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build and Publish Electron Package
         run: npx electron-builder --publish always
         env:
