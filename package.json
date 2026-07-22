@@ -166,7 +166,10 @@
     "linux": {
       "target": [
         "AppImage",
-        "pacman"
+        "pacman",
+        "deb",
+        "rpm",
+        "tar.xz"
       ],
       "category": "Utility",
       "maintainer": "kalidus <kalidus@users.noreply.github.com>",
