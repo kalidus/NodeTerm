@@ -492,6 +492,7 @@ const MainContentArea = ({
 
   // Estado para controlar la visibilidad de las opciones de clientes de IA
   const [aiClientsEnabled, setAiClientsEnabled] = React.useState({
+    cygwin: false,
     claude: false,
     opencode: false,
     geminicli: false,
@@ -514,6 +515,7 @@ const MainContentArea = ({
   });
 
   const defaultAiClientsEnabled = React.useMemo(() => ({
+    cygwin: false,
     claude: false,
     opencode: false,
     geminicli: false,
@@ -794,8 +796,10 @@ const MainContentArea = ({
               createLocalTerminalTabRef.current('powershell');
             }
           }
-        },
-        {
+        }
+      ];
+      if (aiClientsEnabled.cygwin) {
+        shells.push({
           label: 'Cygwin',
           icon: getTerminalMenuIcon('cygwin'),
           command: () => {
@@ -804,8 +808,8 @@ const MainContentArea = ({
               createLocalTerminalTabRef.current('cygwin');
             }
           }
-        }
-      ];
+        });
+      }
 
       const aiClis = [];
       if (aiClientsEnabled.geminicli) {

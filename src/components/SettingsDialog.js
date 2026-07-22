@@ -275,6 +275,15 @@ const SettingsContent = ({
     return window.electron?.platform || 'unknown';
   });
 
+  const [cygwinClientEnabled, setCygwinClientEnabled] = useState(() => {
+    try {
+      const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
+      return cfg.cygwin === true;
+    } catch {
+      return false;
+    }
+  });
+
   const [claudeClientEnabled, setClaudeClientEnabled] = useState(() => {
     try {
       const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
@@ -1429,6 +1438,15 @@ const SettingsContent = ({
   }, [visible]);
 
   useEffect(() => {
+    const syncCygwinClientState = () => {
+      try {
+        const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
+        setCygwinClientEnabled(cfg.cygwin === true);
+      } catch {
+        setCygwinClientEnabled(false);
+      }
+    };
+
     const syncClaudeClientState = () => {
       try {
         const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
@@ -1484,6 +1502,7 @@ const SettingsContent = ({
     };
 
     const onAiClientsConfigChanged = () => {
+      syncCygwinClientState();
       syncClaudeClientState();
       syncOpenCodeClientState();
       syncGeminiCliClientState();
@@ -1493,6 +1512,7 @@ const SettingsContent = ({
     };
     const onStorage = (e) => {
       if (e.key === 'ai_clients_enabled') {
+        syncCygwinClientState();
         syncClaudeClientState();
         syncOpenCodeClientState();
         syncGeminiCliClientState();
@@ -1511,13 +1531,14 @@ const SettingsContent = ({
   }, []);
 
   const aiClientsEnabledForDefault = useMemo(() => ({
+    cygwin: cygwinClientEnabled,
     claude: claudeClientEnabled,
     opencode: openCodeClientEnabled,
     geminicli: geminiCliClientEnabled,
     codexcli: codexCliClientEnabled,
     antigravitycli: antigravityCliClientEnabled,
     hermescli: hermesCliClientEnabled
-  }), [claudeClientEnabled, openCodeClientEnabled, geminiCliClientEnabled, codexCliClientEnabled, antigravityCliClientEnabled, hermesCliClientEnabled]);
+  }), [cygwinClientEnabled, claudeClientEnabled, openCodeClientEnabled, geminiCliClientEnabled, codexCliClientEnabled, antigravityCliClientEnabled, hermesCliClientEnabled]);
 
   const defaultTerminalOptions = useMemo(() => buildDefaultTerminalOptions({
     platform,

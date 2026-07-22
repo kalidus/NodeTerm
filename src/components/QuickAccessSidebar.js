@@ -55,6 +55,7 @@ const QuickAccessSidebar = ({
   // Estado para controlar el submenú de Docker
   const [dockerMenuOpen, setDockerMenuOpen] = useState(false);
   const [dockerMenuPosition, setDockerMenuPosition] = useState({ top: 0, left: 0 });
+  const [cygwinEnabled, setCygwinEnabled] = useState(false);
   const [claudeEnabled, setClaudeEnabled] = useState(false);
   const [openCodeEnabled, setOpenCodeEnabled] = useState(false);
   const [geminiCliEnabled, setGeminiCliEnabled] = useState(false);
@@ -267,6 +268,7 @@ const QuickAccessSidebar = ({
     const syncClaudeEnabled = () => {
       try {
         const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
+        setCygwinEnabled(cfg.cygwin === true);
         setClaudeEnabled(cfg.claude === true);
         setOpenCodeEnabled(cfg.opencode === true);
         setGeminiCliEnabled(cfg.geminicli === true);
@@ -274,6 +276,7 @@ const QuickAccessSidebar = ({
         setAntigravityCliEnabled(cfg.antigravitycli === true);
         setHermesCliEnabled(cfg.hermescli === true);
       } catch {
+        setCygwinEnabled(false);
         setClaudeEnabled(false);
         setOpenCodeEnabled(false);
         setGeminiCliEnabled(false);
@@ -374,14 +377,16 @@ const QuickAccessSidebar = ({
         action: () => handleOpenTerminal('wsl')
       });
 
-      // Cygwin si está disponible
-      terminals.push({
-        label: cygwinAvailable ? 'Cygwin' : 'Cygwin',
-        value: 'cygwin',
-        icon: 'pi pi-code',
-        color: '#00FF00',
-        action: () => handleOpenTerminal('cygwin')
-      });
+      // Cygwin solo si esta activado en Apps
+      if (cygwinEnabled) {
+        terminals.push({
+          label: 'Cygwin',
+          value: 'cygwin',
+          icon: 'pi pi-code',
+          color: '#00FF00',
+          action: () => handleOpenTerminal('cygwin')
+        });
+      }
 
       // Agregar distribuciones WSL detectadas (sin duplicar las básicas)
       wslDistributions.forEach(distro => {
@@ -528,7 +533,7 @@ const QuickAccessSidebar = ({
     }
 
     setAvailableTerminals(terminals);
-  }, [wslDistributions, cygwinAvailable, dockerContainers, claudeEnabled, openCodeEnabled, geminiCliEnabled, codexCliEnabled, antigravityCliEnabled, hermesCliEnabled]);
+  }, [wslDistributions, cygwinAvailable, cygwinEnabled, dockerContainers, claudeEnabled, openCodeEnabled, geminiCliEnabled, codexCliEnabled, antigravityCliEnabled, hermesCliEnabled]);
 
   // Configurar acciones principales
   useEffect(() => {

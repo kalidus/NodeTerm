@@ -48,8 +48,9 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     const [canScrollLeft, setCanScrollLeft] = useState(false);
     const [canScrollRight, setCanScrollRight] = useState(false);
 
-    // Estado para clientes de IA habilitados
+    // Estado para clientes/apps habilitados (AppsTab -> ai_clients_enabled)
     const [aiClientsEnabled, setAiClientsEnabled] = useState({
+        cygwin: false,
         claude: false,
         opencode: false,
         geminicli: false,
@@ -63,6 +64,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             try {
                 const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
                 setAiClientsEnabled({
+                    cygwin: cfg.cygwin === true,
                     claude: cfg.claude === true,
                     opencode: cfg.opencode === true,
                     geminicli: cfg.geminicli === true,
@@ -1206,11 +1208,13 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         const shells = [];
         if (platform === 'win32') {
             shells.push({ label: 'PowerShell', value: 'powershell', icon: <FaWindows style={{ color: '#0078D4' }} /> });
-            shells.push({
-                label: cygwinAvailable ? 'Cygwin' : 'Cygwin (instalar)',
-                value: 'cygwin',
-                icon: <FaLinux style={{ color: '#FCC624' }} />
-            });
+            if (aiClientsEnabled.cygwin) {
+                shells.push({
+                    label: cygwinAvailable ? 'Cygwin' : 'Cygwin (instalar)',
+                    value: 'cygwin',
+                    icon: <FaLinux style={{ color: '#FCC624' }} />
+                });
+            }
         } else {
             shells.push({
                 label: platform === 'darwin' ? 'Terminal macOS' : 'Terminal Linux',

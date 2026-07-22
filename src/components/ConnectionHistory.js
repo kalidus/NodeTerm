@@ -511,13 +511,15 @@ const ConnectionHistory = ({
 						}
 					}
 
-					// Cygwin
-					try {
-						const result = await window.electronAPI.invoke('cygwin:detect');
-						if (result && result.available) {
-							shells.push({ label: 'Cygwin', value: 'cygwin', icon: <FaLinux style={{ color: '#FCC624' }} /> });
-						}
-					} catch (e) { /* ignore */ }
+					// Cygwin solo si esta activado en Apps
+					if (aiClientsCfg.cygwin === true) {
+						try {
+							const result = await window.electronAPI.invoke('cygwin:detect');
+							if (result && result.available) {
+								shells.push({ label: 'Cygwin', value: 'cygwin', icon: <FaLinux style={{ color: '#FCC624' }} /> });
+							}
+						} catch (e) { /* ignore */ }
+					}
 				} else {
 					shells.push({
 						label: platform === 'darwin' ? 'macOS Terminal' : 'Linux Terminal',

@@ -79,6 +79,7 @@ const NodeTermStatus = ({
 	const [cygwinAvailable, setCygwinAvailable] = useState(false);
 	const [dockerContainers, setDockerContainers] = useState([]);
 	const [availableTerminals, setAvailableTerminals] = useState([]);
+	const [cygwinEnabled, setCygwinEnabled] = useState(false);
 	const [claudeEnabled, setClaudeEnabled] = useState(false);
 	const [openCodeEnabled, setOpenCodeEnabled] = useState(false);
 	const [geminiCliEnabled, setGeminiCliEnabled] = useState(false);
@@ -846,6 +847,7 @@ const NodeTermStatus = ({
 		const syncClaudeEnabled = () => {
 			try {
 				const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
+			setCygwinEnabled(cfg.cygwin === true);
 			setClaudeEnabled(cfg.claude === true);
 			setOpenCodeEnabled(cfg.opencode === true);
 			setGeminiCliEnabled(cfg.geminicli === true);
@@ -853,6 +855,7 @@ const NodeTermStatus = ({
 			setAntigravityCliEnabled(cfg.antigravitycli === true);
 			setHermesCliEnabled(cfg.hermescli === true);
 		} catch {
+			setCygwinEnabled(false);
 			setClaudeEnabled(false);
 			setOpenCodeEnabled(false);
 			setGeminiCliEnabled(false);
@@ -944,7 +947,7 @@ const NodeTermStatus = ({
 			});
 		}
 
-		if (cygwinAvailable) {
+		if (cygwinAvailable && cygwinEnabled) {
 				terminals.push({
 					label: 'Cygwin',
 					value: 'cygwin',
@@ -1124,7 +1127,7 @@ const NodeTermStatus = ({
 	}
 
 	setAvailableTerminals(terminals);
-	}, [wslDistributions, cygwinAvailable, horizontal, compact, variant, claudeEnabled, openCodeEnabled, geminiCliEnabled, codexCliEnabled, antigravityCliEnabled, hermesCliEnabled]);
+	}, [wslDistributions, cygwinAvailable, cygwinEnabled, horizontal, compact, variant, claudeEnabled, openCodeEnabled, geminiCliEnabled, codexCliEnabled, antigravityCliEnabled, hermesCliEnabled]);
 
 	const getRelativeTime = (date) => {
 		try {

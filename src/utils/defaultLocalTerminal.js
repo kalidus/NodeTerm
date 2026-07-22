@@ -63,7 +63,7 @@ export function buildDefaultTerminalOptions({
       });
     }
 
-    if (cygwinAvailable) {
+    if (cygwinAvailable && aiClientsEnabled.cygwin === true) {
       options.push({ label: 'Cygwin', value: 'cygwin' });
     }
   } else if (platform === 'linux' || platform === 'darwin') {
