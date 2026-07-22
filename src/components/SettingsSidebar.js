@@ -243,15 +243,15 @@ const SettingsSidebar = ({
             gap: '6px',
             userSelect: 'none',
             width: '100%',
-            fontWeight: '600',
-            fontSize: `${Math.round(explorerFontSize * 0.87)}px`,
+            fontWeight: '700',
+            fontSize: `${Math.round(explorerFontSize * 0.85)}px`,
             fontFamily: explorerFont || 'inherit'
           }}
         >
           <span
             className={node.categoryIcon}
             style={{
-              color: 'color-mix(in srgb, var(--ui-sidebar-selected) 50%, black)',
+              color: 'var(--ui-sidebar-selected)',
               fontSize: `${folderIconSize}px`,
               marginRight: '4px',
               display: 'flex',
@@ -264,11 +264,11 @@ const SettingsSidebar = ({
             className="node-label"
             style={{
               lineHeight: '20px',
-              color: 'color-mix(in srgb, var(--ui-sidebar-selected) 50%, black)',
+              color: 'var(--ui-sidebar-selected)',
               fontSize: `${Math.round(explorerFontSize * 0.85)}px`,
-              fontWeight: '600',
+              fontWeight: '700',
               textTransform: 'uppercase',
-              letterSpacing: '0.5px'
+              letterSpacing: '0.6px'
             }}
           >
             {node.label}
@@ -276,13 +276,13 @@ const SettingsSidebar = ({
           <span
             style={{
               marginLeft: 'auto',
-              background: 'color-mix(in srgb, var(--ui-sidebar-selected) 15%, transparent)',
-              color: 'color-mix(in srgb, var(--ui-sidebar-selected) 50%, black)',
+              background: 'color-mix(in srgb, var(--ui-sidebar-selected) 18%, transparent)',
+              color: 'var(--ui-sidebar-selected)',
               borderRadius: '10px',
               padding: '0 6px',
               fontSize: `${Math.round(explorerFontSize * 0.72)}px`,
               fontWeight: '700',
-              border: '1px solid color-mix(in srgb, var(--ui-sidebar-selected) 30%, transparent)'
+              border: '1px solid color-mix(in srgb, var(--ui-sidebar-selected) 35%, transparent)'
             }}
           >
             {node.children.length}
@@ -293,8 +293,12 @@ const SettingsSidebar = ({
 
     const hoverKey = node.parentId ? node.key : `${node.key}__main`;
     const isHovered = hoveredItem === hoverKey;
-    const itemColor = isTopLevelLeaf ? 'color-mix(in srgb, var(--ui-sidebar-selected) 50%, black)' : 'var(--ui-sidebar-text)';
-    const itemOpacity = isTopLevelLeaf ? 1 : isHovered ? 1 : 0.9;
+    const itemColor = 'var(--ui-sidebar-text)';
+    const itemWeight = isTopLevelLeaf ? '600' : '400';
+    const itemFontSize = isTopLevelLeaf ? explorerFontSize : Math.round(explorerFontSize * 0.94);
+    const itemOpacity = isTopLevelLeaf ? (isHovered ? 1 : 0.95) : (isHovered ? 1 : 0.78);
+    const iconOpacity = isTopLevelLeaf ? (isHovered ? 1 : 0.85) : (isHovered ? 1 : 0.6);
+    const iconColor = isHovered ? 'var(--ui-sidebar-selected)' : (isTopLevelLeaf ? 'var(--ui-sidebar-selected)' : itemColor);
 
     return (
       <div
@@ -317,8 +321,8 @@ const SettingsSidebar = ({
           className={isTopLevelLeaf ? node.categoryIcon : node.toolIcon}
           style={{
             fontSize: `${connectionIconSize}px`,
-            color: isHovered ? 'var(--ui-sidebar-selected)' : itemColor,
-            opacity: isTopLevelLeaf ? (isHovered ? 1 : 0.95) : (isHovered ? 1 : 0.7),
+            color: iconColor,
+            opacity: iconOpacity,
             transition: 'all 0.12s ease',
             flexShrink: 0
           }}
@@ -327,8 +331,8 @@ const SettingsSidebar = ({
         <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
           <div
             style={{
-              fontSize: `${explorerFontSize}px`,
-              fontWeight: '500',
+              fontSize: `${itemFontSize}px`,
+              fontWeight: itemWeight,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',

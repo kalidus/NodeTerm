@@ -211,7 +211,7 @@ const ToolsSidebar = ({
         >
           {/* Icono de la Sección (usado en lugar de la carpeta genérica) */}
           <span className={node.categoryIcon} style={{ 
-            color: 'color-mix(in srgb, var(--ui-sidebar-selected) 50%, black)', 
+            color: 'var(--ui-sidebar-selected)', 
             fontSize: `${folderIconSize}px`,
             marginRight: '4px',
             display: 'flex',
@@ -223,23 +223,23 @@ const ToolsSidebar = ({
           {/* Nombre de la Sección */}
           <span className="node-label" style={{
             lineHeight: '20px',
-            color: 'color-mix(in srgb, var(--ui-sidebar-selected) 50%, black)',
+            color: 'var(--ui-sidebar-selected)',
             fontSize: `${Math.round(explorerFontSize * 0.85)}px`,
-            fontWeight: '600',
+            fontWeight: '700',
             textTransform: 'uppercase',
-            letterSpacing: '0.5px'
+            letterSpacing: '0.6px'
           }}>{node.label}</span>
 
           {/* Contador de Herramientas */}
           <span style={{
             marginLeft: 'auto',
-            background: 'color-mix(in srgb, var(--ui-sidebar-selected) 15%, transparent)',
-            color: 'color-mix(in srgb, var(--ui-sidebar-selected) 50%, black)',
+            background: 'color-mix(in srgb, var(--ui-sidebar-selected) 18%, transparent)',
+            color: 'var(--ui-sidebar-selected)',
             borderRadius: '10px',
             padding: '0 6px',
             fontSize: `${Math.round(explorerFontSize * 0.72)}px`,
             fontWeight: '700',
-            border: '1px solid color-mix(in srgb, var(--ui-sidebar-selected) 30%, transparent)'
+            border: '1px solid color-mix(in srgb, var(--ui-sidebar-selected) 35%, transparent)'
           }}>
             {node.children.length}
           </span>
@@ -270,7 +270,7 @@ const ToolsSidebar = ({
             style={{ 
               fontSize: `${connectionIconSize}px`, 
               color: isHovered ? 'var(--ui-sidebar-selected)' : 'var(--ui-sidebar-text)',
-              opacity: isHovered ? 1 : 0.7,
+              opacity: isHovered ? 1 : 0.6,
               transition: 'all 0.12s ease',
               flexShrink: 0 
             }}
@@ -279,13 +279,13 @@ const ToolsSidebar = ({
           {/* Texto y Descripción */}
           <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
             <div style={{ 
-              fontSize: `${explorerFontSize}px`, 
-              fontWeight: '500', 
+              fontSize: `${Math.round(explorerFontSize * 0.95)}px`, 
+              fontWeight: '400', 
               overflow: 'hidden', 
               textOverflow: 'ellipsis', 
               whiteSpace: 'nowrap',
               color: 'var(--ui-sidebar-text)',
-              opacity: isHovered ? 1 : 0.9,
+              opacity: isHovered ? 1 : 0.78,
               transition: 'opacity 0.12s ease'
             }}>
               {node.label}
