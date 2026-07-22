@@ -183,7 +183,12 @@ const ToolsSidebar = ({
     return () => window.removeEventListener('tools-sidebar:toggle-expand-all', handleToggleExpandAll);
   }, []);
 
-  const nodeTemplate = (node, options) => {
+  const sectionFontSize = Math.round(explorerFontSize * 0.85);
+  const toolLabelFontSize = Math.round(explorerFontSize * 0.95);
+  const toolDescFontSize = Math.round(explorerFontSize * 0.8);
+  const badgeFontSize = Math.round(explorerFontSize * 0.72);
+
+  const nodeTemplate = (node) => {
     const isFolder = !node.isLeaf;
 
     if (isFolder) {
@@ -205,11 +210,9 @@ const ToolsSidebar = ({
             userSelect: 'none',
             width: '100%',
             fontWeight: '600',
-            fontSize: '0.8rem',
             fontFamily: explorerFont || 'inherit',
           }}
         >
-          {/* Icono de la Sección (usado en lugar de la carpeta genérica) */}
           <span className={node.categoryIcon} style={{ 
             color: 'var(--ui-sidebar-selected)', 
             fontSize: `${folderIconSize}px`,
@@ -220,101 +223,86 @@ const ToolsSidebar = ({
             minWidth: 16
           }} />
 
-          {/* Nombre de la Sección */}
-          <span className="node-label" style={{
-            lineHeight: '20px',
-            color: 'var(--ui-sidebar-selected)',
-            fontSize: `${Math.round(explorerFontSize * 0.85)}px`,
-            fontWeight: '700',
-            textTransform: 'uppercase',
-            letterSpacing: '0.6px'
-          }}>{node.label}</span>
+          <span className="tools-section-label">{node.label}</span>
 
-          {/* Contador de Herramientas */}
           <span style={{
             marginLeft: 'auto',
             background: 'color-mix(in srgb, var(--ui-sidebar-selected) 18%, transparent)',
             color: 'var(--ui-sidebar-selected)',
             borderRadius: '10px',
             padding: '0 6px',
-            fontSize: `${Math.round(explorerFontSize * 0.72)}px`,
+            fontSize: `${badgeFontSize}px`,
             fontWeight: '700',
-            border: '1px solid color-mix(in srgb, var(--ui-sidebar-selected) 35%, transparent)'
+            border: '1px solid color-mix(in srgb, var(--ui-sidebar-selected) 35%, transparent)',
+            flexShrink: 0
           }}>
             {node.children.length}
           </span>
         </div>
       );
-    } else {
-      const isHovered = hoveredTool === node.key;
-      return (
-        <div 
-          onMouseEnter={() => setHoveredTool(node.key)}
-          onMouseLeave={() => setHoveredTool(null)}
-          className="flex align-items-center"
-          style={{
-            padding: '0.1rem 0.25rem',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            width: '100%',
-            fontFamily: explorerFont || 'inherit',
-            transition: 'all 0.12s ease',
-          }}
-          title={node.description}
-        >
-          {/* Icono de la Herramienta */}
-          <i 
-            className={node.toolIcon} 
-            style={{ 
-              fontSize: `${connectionIconSize}px`, 
-              color: isHovered ? 'var(--ui-sidebar-selected)' : 'var(--ui-sidebar-text)',
-              opacity: isHovered ? 1 : 0.6,
-              transition: 'all 0.12s ease',
-              flexShrink: 0 
-            }}
-          />
+    }
 
-          {/* Texto y Descripción */}
-          <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <div style={{ 
-              fontSize: `${Math.round(explorerFontSize * 0.95)}px`, 
-              fontWeight: '400', 
-              overflow: 'hidden', 
-              textOverflow: 'ellipsis', 
-              whiteSpace: 'nowrap',
+    const isHovered = hoveredTool === node.key;
+    return (
+      <div 
+        onMouseEnter={() => setHoveredTool(node.key)}
+        onMouseLeave={() => setHoveredTool(null)}
+        className="flex align-items-center"
+        style={{
+          padding: '0.1rem 0.25rem',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          width: '100%',
+          fontFamily: explorerFont || 'inherit',
+          transition: 'all 0.12s ease',
+        }}
+        title={node.description}
+      >
+        <i 
+          className={node.toolIcon} 
+          style={{ 
+            fontSize: `${connectionIconSize}px`, 
+            color: isHovered ? 'var(--ui-sidebar-selected)' : 'var(--ui-sidebar-text)',
+            opacity: isHovered ? 1 : 0.6,
+            transition: 'all 0.12s ease',
+            flexShrink: 0 
+          }}
+        />
+
+        <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <div
+            className="tools-item-label"
+            style={{
               color: 'var(--ui-sidebar-text)',
               opacity: isHovered ? 1 : 0.78,
               transition: 'opacity 0.12s ease'
-            }}>
-              {node.label}
-            </div>
-            <div style={{ 
-              fontSize: `${Math.round(explorerFontSize * 0.8)}px`, 
-              color: 'var(--ui-sidebar-text)', 
-              overflow: 'hidden', 
-              textOverflow: 'ellipsis', 
-              whiteSpace: 'nowrap', 
+            }}
+          >
+            {node.label}
+          </div>
+          <div
+            className="tools-item-desc"
+            style={{
+              color: 'var(--ui-sidebar-text)',
               opacity: isHovered ? 0.85 : 0.55,
               transition: 'opacity 0.12s ease'
-            }}>
-              {node.description}
-            </div>
+            }}
+          >
+            {node.description}
           </div>
-
-          {/* Flecha al pasar el ratón */}
-          {isHovered && (
-            <i className="pi pi-arrow-right animate-fade-in" style={{ fontSize: '0.65rem', color: 'var(--ui-sidebar-selected)', flexShrink: 0, marginRight: '4px' }} />
-          )}
         </div>
-      );
-    }
+
+        {isHovered && (
+          <i className="pi pi-arrow-right animate-fade-in" style={{ fontSize: '0.65rem', color: 'var(--ui-sidebar-selected)', flexShrink: 0, marginRight: '4px' }} />
+        )}
+      </div>
+    );
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      {/* Sobrescribimos estilos del árbol para esta sección para permitir la doble línea sin colisiones y ocultar conector en raíz */}
       <style>{`
         .tools-tree .p-treenode-leaf > .p-treenode-content {
           min-height: 38px !important;
@@ -336,9 +324,34 @@ const ToolsSidebar = ({
           align-items: center !important;
           overflow: hidden !important;
         }
-        /* Ocultar el guión conector horizontal (-) en los nodos raíz (Categorías) */
         .tools-tree > .p-tree-container > .p-treenode > .p-treenode-content::before {
           display: none !important;
+        }
+        html body .sidebar-tree.tools-tree .tools-section-label {
+          flex: 1 1 auto !important;
+          min-width: 0 !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+          white-space: nowrap !important;
+          line-height: 1.25 !important;
+          color: var(--ui-sidebar-selected) !important;
+          font-size: var(--tools-section-font-size) !important;
+          font-weight: 600 !important;
+          text-transform: uppercase !important;
+          letter-spacing: 0.5px !important;
+        }
+        html body .sidebar-tree.tools-tree .tools-item-label {
+          font-size: var(--tools-item-font-size) !important;
+          font-weight: 400 !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+          white-space: nowrap !important;
+        }
+        html body .sidebar-tree.tools-tree .tools-item-desc {
+          font-size: var(--tools-desc-font-size) !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+          white-space: nowrap !important;
         }
       `}</style>
       <div className="tools-sidebar-scroll-container" style={{ flex: 1, overflowY: 'auto', padding: '0.25rem 0' }}>
@@ -367,6 +380,9 @@ const ToolsSidebar = ({
             overflow: 'auto',
             fontSize: `${explorerFontSize}px`,
             fontFamily: explorerFont || 'inherit',
+            '--tools-section-font-size': `${sectionFontSize}px`,
+            '--tools-item-font-size': `${toolLabelFontSize}px`,
+            '--tools-desc-font-size': `${toolDescFontSize}px`,
             '--icon-size': `${iconSize}px`,
             '--sidebar-folder-icon-size': `${folderIconSize}px`,
             '--sidebar-connection-icon-size': `${connectionIconSize}px`,

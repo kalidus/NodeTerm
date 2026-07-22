@@ -224,6 +224,10 @@ const SettingsSidebar = ({
     }));
   }, [resolvedSections]);
 
+  const sectionFontSize = Math.round(explorerFontSize * 0.85);
+  const subitemFontSize = Math.round(explorerFontSize * 0.94);
+  const badgeFontSize = Math.round(explorerFontSize * 0.72);
+
   const nodeTemplate = useCallback((node) => {
     const isLeaf = node.isLeaf;
     const isTopLevelLeaf = isLeaf && !node.parentId;
@@ -244,7 +248,6 @@ const SettingsSidebar = ({
             userSelect: 'none',
             width: '100%',
             fontWeight: '600',
-            fontSize: `${Math.round(explorerFontSize * 0.85)}px`,
             fontFamily: explorerFont || 'inherit'
           }}
         >
@@ -260,17 +263,7 @@ const SettingsSidebar = ({
               minWidth: 16
             }}
           />
-          <span
-            className="node-label"
-            style={{
-              lineHeight: '20px',
-              color: 'var(--ui-sidebar-selected)',
-              fontSize: `${Math.round(explorerFontSize * 0.85)}px`,
-              fontWeight: '600',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px'
-            }}
-          >
+          <span className="settings-section-label">
             {node.label}
           </span>
           <span
@@ -280,9 +273,10 @@ const SettingsSidebar = ({
               color: 'var(--ui-sidebar-selected)',
               borderRadius: '10px',
               padding: '0 6px',
-              fontSize: `${Math.round(explorerFontSize * 0.72)}px`,
+              fontSize: `${badgeFontSize}px`,
               fontWeight: '700',
-              border: '1px solid color-mix(in srgb, var(--ui-sidebar-selected) 35%, transparent)'
+              border: '1px solid color-mix(in srgb, var(--ui-sidebar-selected) 35%, transparent)',
+              flexShrink: 0
             }}
           >
             {node.children.length}
@@ -326,20 +320,7 @@ const SettingsSidebar = ({
           />
 
           <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <div
-              style={{
-                fontSize: `${Math.round(explorerFontSize * 0.85)}px`,
-                fontWeight: '600',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                color: 'var(--ui-sidebar-selected)',
-                opacity: isHovered ? 1 : 1.0,
-                transition: 'all 0.12s ease'
-              }}
-            >
+            <div className="settings-section-label">
               {node.label}
             </div>
           </div>
@@ -388,12 +369,8 @@ const SettingsSidebar = ({
 
         <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
           <div
+            className="settings-subitem-label"
             style={{
-              fontSize: `${Math.round(explorerFontSize * 0.94)}px`,
-              fontWeight: '400',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
               color: isHovered ? 'var(--ui-sidebar-selected)' : itemColor,
               opacity: isHovered ? 1 : 0.78,
               transition: 'all 0.12s ease'
@@ -415,7 +392,7 @@ const SettingsSidebar = ({
         )}
       </div>
     );
-  }, [connectionIconSize, explorerFont, explorerFontSize, folderIconSize, hoveredItem]);
+  }, [badgeFontSize, connectionIconSize, explorerFont, folderIconSize, hoveredItem, toggleCategory]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -442,6 +419,27 @@ const SettingsSidebar = ({
         }
         .settings-tree > .p-tree-container > .p-treenode > .p-treenode-content::before {
           display: none !important;
+        }
+        /* Tamano unico para secciones principales (evita overrides de .node-label / layout) */
+        html body .sidebar-tree.settings-tree .settings-section-label {
+          flex: 1 1 auto !important;
+          min-width: 0 !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+          white-space: nowrap !important;
+          line-height: 1.25 !important;
+          color: var(--ui-sidebar-selected) !important;
+          font-size: var(--settings-section-font-size) !important;
+          font-weight: 600 !important;
+          text-transform: uppercase !important;
+          letter-spacing: 0.5px !important;
+        }
+        html body .sidebar-tree.settings-tree .settings-subitem-label {
+          font-size: var(--settings-subitem-font-size) !important;
+          font-weight: 400 !important;
+          overflow: hidden !important;
+          text-overflow: ellipsis !important;
+          white-space: nowrap !important;
         }
       `}</style>
       <div className="settings-sidebar-scroll-container" style={{ flex: 1, overflowY: 'auto', padding: '0.25rem 0' }}>
@@ -472,6 +470,8 @@ const SettingsSidebar = ({
             overflow: 'auto',
             fontSize: `${explorerFontSize}px`,
             fontFamily: explorerFont || 'inherit',
+            '--settings-section-font-size': `${sectionFontSize}px`,
+            '--settings-subitem-font-size': `${subitemFontSize}px`,
             '--icon-size': `${iconSize}px`,
             '--sidebar-folder-icon-size': `${folderIconSize}px`,
             '--sidebar-connection-icon-size': `${connectionIconSize}px`,
