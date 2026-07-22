@@ -112,7 +112,7 @@ async function runCommand(command, description) {
     console.log(`\n\x1b[36m[Ejecutando]\x1b[0m ${description}...`);
     try {
         execSync(command, {
-            stdio: 'inherit',
+            stdio: ['ignore', 'inherit', 'inherit'],
             env: { ...process.env },
             cwd: REPO_ROOT
         });
@@ -472,7 +472,7 @@ async function main() {
         if (needsCommit) {
             const doCommit = nonInteractive ? (cli.commitPrep ? 's' : 'n') : await question('\n¿Hacer commit de la preparación de release? (S/n): ');
             if (doCommit.toLowerCase() !== 'n') {
-                await runCommand('git add .', 'Añadiendo cambios');
+                await runCommand('git add package.json package-lock.json CHANGELOG.md RELEASE_NOTES.md README.md scripts/release.js', 'Añadiendo archivos de versión');
                 await runCommand(`git commit -m "release: preparación v${nextVersion}"`, 'Haciendo commit');
             }
         }
@@ -524,7 +524,8 @@ async function main() {
         const tagName = `v${nextVersion}`;
         if (await ensureSyncWithRemote(branchForBuild, { autoYes: nonInteractive })) {
             if (await runCommand(`git push origin ${branchForBuild}`, `Subiendo rama ${branchForBuild}`)) {
-                const tagOk = await ensureTagOnHeadAndPush(tagName, { tagConflictStrategy: nonInteractive ? (cli.tagStrategy || 'move') : 'ask' });
+                const tagStrategyToUse = nonInteractive ? (cli.tagStrategy && cli.tagStrategy !== 'ask' ? cli.tagStrategy : 'move') : 'ask';
+                const tagOk = await ensureTagOnHeadAndPush(tagName, { tagConflictStrategy: tagStrategyToUse });
                 if (tagOk) {
                     const notes = buildReleaseNotes(nextVersion);
                     await upsertGithubRelease(tagName, branchForBuild, nextVersion, notes);
@@ -617,7 +618,8 @@ async function main() {
             if (doTag.toLowerCase() !== 'n') {
                 if (await ensureSyncWithRemote(branchForBuild, { autoYes: nonInteractive })) {
                     if (await runCommand(`git push origin ${branchForBuild}`, `Subiendo rama ${branchForBuild}`)) {
-                        const tagOk = await ensureTagOnHeadAndPush(tagName, { tagConflictStrategy: nonInteractive ? (cli.tagStrategy || 'move') : 'ask' });
+                        const tagStrategyToUse = nonInteractive ? (cli.tagStrategy && cli.tagStrategy !== 'ask' ? cli.tagStrategy : 'move') : 'ask';
+                    const tagOk = await ensureTagOnHeadAndPush(tagName, { tagConflictStrategy: tagStrategyToUse });
                         if (tagOk) {
                             const notes = buildReleaseNotes(nextVersion);
                             await upsertGithubRelease(tagName, branchForBuild, nextVersion, notes);

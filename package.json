@@ -1,6 +1,6 @@
 {
   "name": "nodeterm",
-  "version": "1.7.1",
+  "version": "1.7.2",
   "main": "main.js",
   "desktopName": "nodeterm.desktop",
   "scripts": {
@@ -22,8 +22,8 @@
     "version:major": "npm version major --no-git-tag-version",
     "version:build": "npm run build && npm run pack",
     "release": "node scripts/release.js",
-    "release:patch": "node scripts/release.js --prepare --release-type patch --cloud",
-    "release:minor": "node scripts/release.js --prepare --release-type minor --cloud",
+    "release:patch": "node scripts/release.js --yes --prepare --release-type patch --update-changelog --commit-prep --cloud",
+    "release:minor": "node scripts/release.js --yes --prepare --release-type minor --update-changelog --commit-prep --cloud",
     "release:local": "node scripts/release.js --prepare --publish",
     "fix-release-notes": "node scripts/release.js --fix-notes --yes"
   },

@@ -5,6 +5,9 @@ Todos los cambios notables de este proyecto serán documentados en este archivo.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## [1.7.2] - 2026-07-22
+
 **Proceso de release:** documenta aquí todos los cambios. `npm run release` publica esta sección en GitHub.
 Borrador opcional para usuarios: `RELEASE_NOTES.md` (solo la versión en curso). Resumen en `README.md`: ver [docs/release-process.md](docs/release-process.md).
 
