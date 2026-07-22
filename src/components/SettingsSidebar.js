@@ -243,7 +243,7 @@ const SettingsSidebar = ({
             gap: '6px',
             userSelect: 'none',
             width: '100%',
-            fontWeight: '700',
+            fontWeight: '600',
             fontSize: `${Math.round(explorerFontSize * 0.85)}px`,
             fontFamily: explorerFont || 'inherit'
           }}
@@ -266,9 +266,9 @@ const SettingsSidebar = ({
               lineHeight: '20px',
               color: 'var(--ui-sidebar-selected)',
               fontSize: `${Math.round(explorerFontSize * 0.85)}px`,
-              fontWeight: '700',
+              fontWeight: '600',
               textTransform: 'uppercase',
-              letterSpacing: '0.6px'
+              letterSpacing: '0.5px'
             }}
           >
             {node.label}
@@ -294,11 +294,69 @@ const SettingsSidebar = ({
     const hoverKey = node.parentId ? node.key : `${node.key}__main`;
     const isHovered = hoveredItem === hoverKey;
     const itemColor = 'var(--ui-sidebar-text)';
-    const itemWeight = isTopLevelLeaf ? '600' : '400';
-    const itemFontSize = isTopLevelLeaf ? explorerFontSize : Math.round(explorerFontSize * 0.94);
-    const itemOpacity = isTopLevelLeaf ? (isHovered ? 1 : 0.95) : (isHovered ? 1 : 0.78);
-    const iconOpacity = isTopLevelLeaf ? (isHovered ? 1 : 0.85) : (isHovered ? 1 : 0.6);
-    const iconColor = isHovered ? 'var(--ui-sidebar-selected)' : (isTopLevelLeaf ? 'var(--ui-sidebar-selected)' : itemColor);
+
+    if (isTopLevelLeaf) {
+      return (
+        <div
+          onMouseEnter={() => setHoveredItem(hoverKey)}
+          onMouseLeave={() => setHoveredItem(null)}
+          className="flex align-items-center"
+          style={{
+            padding: '0.1rem 0.25rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            width: '100%',
+            fontFamily: explorerFont || 'inherit',
+            transition: 'all 0.12s ease'
+          }}
+          title={node.description || node.label}
+        >
+          <i
+            className={node.categoryIcon}
+            style={{
+              fontSize: `${folderIconSize}px`,
+              color: 'var(--ui-sidebar-selected)',
+              opacity: isHovered ? 1 : 0.95,
+              transition: 'all 0.12s ease',
+              flexShrink: 0,
+              minWidth: 16
+            }}
+          />
+
+          <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <div
+              style={{
+                fontSize: `${Math.round(explorerFontSize * 0.85)}px`,
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                color: 'var(--ui-sidebar-selected)',
+                opacity: isHovered ? 1 : 1.0,
+                transition: 'all 0.12s ease'
+              }}
+            >
+              {node.label}
+            </div>
+          </div>
+          {isHovered && (
+            <i
+              className="pi pi-arrow-right animate-fade-in"
+              style={{
+                fontSize: '0.65rem',
+                color: 'var(--ui-sidebar-selected)',
+                flexShrink: 0,
+                marginRight: '4px'
+              }}
+            />
+          )}
+        </div>
+      );
+    }
 
     return (
       <div
@@ -318,11 +376,11 @@ const SettingsSidebar = ({
         title={node.description || node.label}
       >
         <i
-          className={isTopLevelLeaf ? node.categoryIcon : node.toolIcon}
+          className={node.toolIcon}
           style={{
             fontSize: `${connectionIconSize}px`,
-            color: iconColor,
-            opacity: iconOpacity,
+            color: isHovered ? 'var(--ui-sidebar-selected)' : itemColor,
+            opacity: isHovered ? 1 : 0.6,
             transition: 'all 0.12s ease',
             flexShrink: 0
           }}
@@ -331,14 +389,14 @@ const SettingsSidebar = ({
         <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
           <div
             style={{
-              fontSize: `${itemFontSize}px`,
-              fontWeight: itemWeight,
+              fontSize: `${Math.round(explorerFontSize * 0.94)}px`,
+              fontWeight: '400',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
-              color: itemColor,
-              opacity: itemOpacity,
-              transition: 'opacity 0.12s ease'
+              color: isHovered ? 'var(--ui-sidebar-selected)' : itemColor,
+              opacity: isHovered ? 1 : 0.78,
+              transition: 'all 0.12s ease'
             }}
           >
             {node.label}
