@@ -1,4 +1,5 @@
 import React from 'react';
+import { getAgentSession, setHumanInputLocked } from '../../services/terminalAgentState';
 
 const TabContextMenu = ({
   tabContextMenu,
@@ -255,6 +256,35 @@ const TabContextMenu = ({
               <i className="pi pi-plus" style={{ width: '16px' }}></i>
               Crear nuevo grupo
             </div>
+
+            {currentTab && currentTab.key && currentTab.type !== 'home' && currentTab.type !== 'settings' && currentTab.type !== 'password' && currentTab.type !== 'document' && (
+              <>
+                <div className="menu-separator" style={{ height: '1px', margin: '4px 0' }}></div>
+                {(() => {
+                  const isLocked = !!getAgentSession(currentTab.key).humanInputLocked;
+                  return (
+                    <div
+                      className="menu-item"
+                      style={{
+                        padding: '8px 12px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        color: isLocked ? '#f59e0b' : 'inherit'
+                      }}
+                      onClick={() => {
+                        setHumanInputLocked(currentTab.key, !isLocked);
+                        setTabContextMenu(null);
+                      }}
+                    >
+                      <i className={`pi ${isLocked ? 'pi-lock-open' : 'pi-lock'}`} style={{ width: '16px', color: isLocked ? '#f59e0b' : 'inherit' }}></i>
+                      {isLocked ? 'Desbloquear teclado del terminal' : 'Bloquear teclado del terminal'}
+                    </div>
+                  );
+                })()}
+              </>
+            )}
 
           </>
         )}

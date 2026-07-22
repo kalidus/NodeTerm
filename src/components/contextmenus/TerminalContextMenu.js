@@ -1,4 +1,5 @@
 import React, { useRef, useState, useLayoutEffect } from 'react';
+import { getAgentSession, setHumanInputLocked } from '../../services/terminalAgentState';
 
 const TerminalContextMenu = ({
   terminalContextMenu,
@@ -271,6 +272,32 @@ const TerminalContextMenu = ({
           <i className="pi pi-trash" style={{ width: '16px' }}></i>
           Limpiar terminal
         </div>
+        {terminalContextMenu?.tabKey && (() => {
+          const isLocked = !!getAgentSession(terminalContextMenu.tabKey).humanInputLocked;
+          return (
+            <>
+              <div className="menu-separator" style={{ height: '1px', margin: '4px 0' }}></div>
+              <div
+                className="menu-item"
+                style={{
+                  padding: '8px 12px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  color: isLocked ? '#f59e0b' : 'inherit'
+                }}
+                onClick={() => {
+                  setHumanInputLocked(terminalContextMenu.tabKey, !isLocked);
+                  setTerminalContextMenu(null);
+                }}
+              >
+                <i className={`pi ${isLocked ? 'pi-lock-open' : 'pi-lock'}`} style={{ width: '16px', color: isLocked ? '#f59e0b' : 'inherit' }}></i>
+                {isLocked ? 'Desbloquear teclado del terminal' : 'Bloquear teclado del terminal'}
+              </div>
+            </>
+          );
+        })()}
         <div className="menu-separator" style={{ height: '1px', margin: '4px 0' }}></div>
         {(onStartRecording || onStopRecording) && (
           <div
