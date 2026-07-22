@@ -31,6 +31,7 @@ function parseCliArgs(argv) {
         token: '',
         fixNotes: false,
         version: '',
+        cloud: false,
         help: false
     };
 
@@ -52,6 +53,7 @@ function parseCliArgs(argv) {
         else if (a === '--token' && argv[i + 1]) args.token = String(argv[++i]);
         else if (a === '--fix-notes') args.fixNotes = true;
         else if (a === '--version' && argv[i + 1]) args.version = String(argv[++i]);
+        else if (a === '--cloud' || a === '--ci') args.cloud = true;
     }
     return args;
 }
@@ -60,13 +62,12 @@ function printHelp() {
     console.log('\nUso: node scripts/release.js [opciones]\n');
     console.log('Opciones rápidas:');
     console.log('  --yes, -y                 Modo no interactivo (respuestas por defecto seguras)');
-    console.log('  --publish                 Compilar y publicar en GitHub');
+    console.log('  --publish                 Compilar y publicar localmente en GitHub');
+    console.log('  --cloud, --ci             Publicar en la nube (crea tag y push a GitHub para GitHub Actions)');
     console.log('  --local                   Solo compilar local (sin publicar)');
     console.log('  --platform <valor>        win|mac|linux|all|current|wm|ml|wml');
     console.log('  --prepare                 Ejecutar preparación de versión');
     console.log('  --release-type <tipo>     keep|patch|minor|major');
-    console.log('  --merge-main              Forzar merge a main antes de compilar');
-    console.log('  --no-merge-main           Omitir merge automático desde release/*');
     console.log('  --update-changelog        Actualizar encabezado en CHANGELOG (fuente de verdad para GitHub)');
     console.log('  --commit-prep             Commit automático de preparación');
     console.log('  --tag-strategy <modo>     ask|move|skip|cancel (si tag existe y no apunta a HEAD)');
@@ -480,151 +481,147 @@ async function main() {
     }
 
     // =========================================================================
-    // ETAPA 2: INTEGRACIÓN (Merge a Main)
+    // ETAPA 2: COMPROBACIÓN DE RAMA (GitHub Flow)
     // =========================================================================
-    console.log('\n\x1b[1m\x1b[36m--- ETAPA 2: INTEGRACIÓN ---\x1b[0m');
+    console.log('\n\x1b[1m\x1b[36m--- ETAPA 2: COMPROBACIÓN DE RAMA ---\x1b[0m');
 
     let branchForBuild = currentBranch;
     if (currentBranch === 'main' || currentBranch === 'master') {
-        console.log('  ℹ️ Ya estás en la rama principal.');
+        console.log('  \x1b[32m✓ Estás en la rama principal (main).\x1b[0m');
     } else {
-        const autoMerge = shouldMergeToMain({ currentBranch, cli });
-        const onRelease = isReleaseBranch(currentBranch);
-        if (autoMerge) {
-            console.log(`\x1b[32m✓ Merge automático: "${currentBranch}" → main\x1b[0m`);
-        } else if (onRelease) {
-            console.log('\x1b[33m💡 Rama release/*: por defecto se integra en main al publicar. Usa --no-merge-main para omitir.\x1b[0m');
-        } else {
-            console.log('\x1b[33m💡 Si quieres probar solo en esta rama, elige "n".\x1b[0m');
-        }
-        const mergePrompt = onRelease ? '(S/n)' : '(s/N)';
-        const doMerge = nonInteractive
-            ? (autoMerge ? 's' : 'n')
-            : await question(`\n¿Mezclar "${currentBranch}" en "main" antes de compilar? ${mergePrompt}: `);
-        const mergeAccepted = isYes(doMerge) || (onRelease && !nonInteractive && doMerge.trim() === '');
-        if (mergeAccepted) {
-            if (await runCommand('git checkout main', 'Cambiando a main')) {
-                if (await runCommand(`git merge ${currentBranch}`, 'Fusionando cambios')) {
-                    console.log('\x1b[32m✅ Integración completada.\x1b[0m');
-                    branchForBuild = 'main';
-                } else {
-                    console.log('\x1b[31m❌ Error en el merge. Resuélvelo manualmente.\x1b[0m');
-                    process.exit(1);
-                }
-            }
-        } else {
-            console.log(`  ℹ️ Continuando en la rama actual: ${currentBranch}`);
-        }
+        console.log(`  \x1b[33m⚠️ ADVERTENCIA: Estás en la rama "${currentBranch}". En GitHub Flow, las releases deben lanzarse desde "main".\x1b[0m`);
     }
 
     // =========================================================================
     // ETAPA 3: COMPILACIÓN Y DESPLIEGUE
     // =========================================================================
-    console.log('\n\x1b[1m\x1b[36m--- ETAPA 3: COMPILACIÓN ---\x1b[0m');
+    console.log('\n\x1b[1m\x1b[36m--- ETAPA 3: DESPLIEGUE ---\x1b[0m');
 
-    // 1. Elegir Tareas
-    console.log('\n¿Qué deseas hacer?');
-    console.log('  1) Solo Compilar localmente (No publica nada)');
-    console.log('  2) Compilar y Publicar en GitHub');
-    console.log('  n) Salir');
+    let actionChoice = '1';
+    if (nonInteractive) {
+        if (cli.cloud) actionChoice = '3';
+        else if (cli.publish) actionChoice = '2';
+        else actionChoice = '1';
+    } else {
+        console.log('\n¿Qué deseas hacer?');
+        console.log('  1) Solo Compilar localmente (No publica nada)');
+        console.log('  2) Compilar y Publicar localmente en GitHub');
+        console.log(`  3) 🚀 Publicar en la Nube con GitHub Actions (Push Tag v${nextVersion}) [RECOMENDADO]`);
+        console.log('  n) Salir');
+        actionChoice = await question('\nSelecciona opción: ');
+    }
 
-    const actionChoice = nonInteractive ? (cli.publish ? '2' : '1') : await question('\nSelecciona opción: ');
     if (actionChoice.toLowerCase() === 'n') {
         rl.close();
         return;
     }
 
+    const isCloud = actionChoice === '3';
     const isPublish = actionChoice === '2';
 
-    // 2. Elegir Plataformas
-    console.log('\n¿Para qué plataformas deseas compilar?');
-    console.log('  w) Windows');
-    console.log('  m) macOS');
-    console.log('  l) Linux');
-    console.log('  a) Todas (W+M+L)');
-    console.log('  c) Solo plataforma actual');
-
-    const platChoice = nonInteractive ? (cli.platform || 'current') : (await question('\nSelecciona plataformas (ej: ml para Mac y Linux): ')).toLowerCase();
-    const platformSelection = resolvePlatforms(platChoice);
-    const platforms = platformSelection.platforms;
-
-    if (platforms.length === 0 && !platformSelection.isCurrent) {
-        console.log('No has seleccionado ninguna plataforma válida.');
-        process.exit(1);
-    }
-
-    // 3. Preparar comando electron-builder
-    let ebCommand = `node node_modules/electron-builder/cli.js ${platforms.join(' ')}`;
-
-    if (isPublish) {
-        if (!process.env.GH_TOKEN) {
-            ensureGhToken();
+    if (isCloud) {
+        console.log('\n\x1b[35m🚀 Modo GitHub Actions (Nube) seleccionado.\x1b[0m');
+        const tagName = `v${nextVersion}`;
+        if (await ensureSyncWithRemote(branchForBuild, { autoYes: nonInteractive })) {
+            if (await runCommand(`git push origin ${branchForBuild}`, `Subiendo rama ${branchForBuild}`)) {
+                const tagOk = await ensureTagOnHeadAndPush(tagName, { tagConflictStrategy: nonInteractive ? (cli.tagStrategy || 'move') : 'ask' });
+                if (tagOk) {
+                    const notes = buildReleaseNotes(nextVersion);
+                    await upsertGithubRelease(tagName, branchForBuild, nextVersion, notes);
+                    console.log(`\n\x1b[32m✅ Tag ${tagName} subido a GitHub. GitHub Actions iniciará la compilación automáticamente.\x1b[0m`);
+                }
+            }
         }
-        if (!process.env.GH_TOKEN) {
-            console.log('\n\x1b[33m⚠️  No se detectó GH_TOKEN.\x1b[0m');
-            if (!nonInteractive) {
-                const token = await question('Pega tu GitHub Personal Access Token (Enter para omitir subida): ');
-                if (token) process.env.GH_TOKEN = token;
+    } else {
+        // 2. Elegir Plataformas
+        console.log('\n¿Para qué plataformas deseas compilar?');
+        console.log('  w) Windows');
+        console.log('  m) macOS');
+        console.log('  l) Linux');
+        console.log('  a) Todas (W+M+L)');
+        console.log('  c) Solo plataforma actual');
+
+        const platChoice = nonInteractive ? (cli.platform || 'current') : (await question('\nSelecciona plataformas (ej: ml para Mac y Linux): ')).toLowerCase();
+        const platformSelection = resolvePlatforms(platChoice);
+        const platforms = platformSelection.platforms;
+
+        if (platforms.length === 0 && !platformSelection.isCurrent) {
+            console.log('No has seleccionado ninguna plataforma válida.');
+            process.exit(1);
+        }
+
+        // 3. Preparar comando electron-builder
+        let ebCommand = `node node_modules/electron-builder/cli.js ${platforms.join(' ')}`;
+
+        if (isPublish) {
+            if (!process.env.GH_TOKEN) {
+                ensureGhToken();
+            }
+            if (!process.env.GH_TOKEN) {
+                console.log('\n\x1b[33m⚠️  No se detectó GH_TOKEN.\x1b[0m');
+                if (!nonInteractive) {
+                    const token = await question('Pega tu GitHub Personal Access Token (Enter para omitir subida): ');
+                    if (token) process.env.GH_TOKEN = token;
+                }
+            }
+
+            if (process.env.GH_TOKEN) {
+                ebCommand += ' --publish always -c.publish.releaseType=release';
+            } else {
+                console.log('\n\x1b[31m❌ No se puede publicar sin Token. Cambiando a modo local.\x1b[0m');
+                ebCommand += ' --publish never';
+            }
+        } else {
+            ebCommand += ' --publish never';
+        }
+
+        // 4. Ejecución
+        console.log(`\x1b[34m[Debug]\x1b[0m Rama: ${branchForBuild} | Plataformas: ${platforms.length ? platforms.join(' ') : 'Actual'}`);
+
+        // --- CONFIGURACIÓN DE RED (Solo para macOS que es donde falla) ---
+        const isMacTarget = platforms.includes('--mac') || (platforms.length === 0 && process.platform === 'darwin');
+
+        if (isMacTarget) {
+            const skipSSL = nonInteractive ? (cli.skipSsl ? 's' : 'n') : await question('\n¿Tienes problemas de red/SSL detectados en macOS? (¿Omitir validación?) (s/N): ');
+            if (isYes(skipSSL)) {
+                process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+                console.log('\x1b[33m⚠️  Validación SSL desactivada para esta sesión\x1b[0m');
             }
         }
 
-        if (process.env.GH_TOKEN) {
-            ebCommand += ' --publish always -c.publish.releaseType=release';
-        } else {
-            console.log('\n\x1b[31m❌ No se puede publicar sin Token. Cambiando a modo local.\x1b[0m');
-            ebCommand += ' --publish never';
+        // Build de React/Webpack (necesario siempre)
+        await runCommand('npm run build', 'Compilando código fuente (Webpack)');
+
+        // ssh2 opcional: cpu-features falla al recompilar con Electron; no es necesario en runtime
+        console.log('\n\x1b[36m[Ejecutando]\x1b[0m Preparando dependencias nativas (omitir cpu-features)...');
+        [path.join(REPO_ROOT, 'node_modules', 'cpu-features'), path.join(REPO_ROOT, 'node_modules', 'ssh2', 'node_modules', 'cpu-features')].forEach(p => {
+            try {
+                fs.rmSync(p, { recursive: true, force: true });
+            } catch (e) {
+                console.log(`Error al borrar ${p}: ${e.message}`);
+            }
+        });
+
+        if (await runCommand(ebCommand, isPublish ? 'Generando paquetes y publicando' : 'Generando paquetes locales')) {
+            console.log('\n\x1b[32m✅ Compilación finalizada correctamente.\x1b[0m');
         }
-    } else {
-        ebCommand += ' --publish never';
-    }
 
-    // 4. Ejecución
-    console.log(`\x1b[34m[Debug]\x1b[0m Rama: ${branchForBuild} | Plataformas: ${platforms.length ? platforms.join(' ') : 'Actual'}`);
+        // =========================================================================
+        // ETAPA FINAL: TAGS (Solo si es publicación local)
+        // =========================================================================
+        if (isPublish) {
+            console.log('\n\x1b[1m\x1b[36m--- ETAPA FINAL: ETIQUETADO Y SINCRONIZACIÓN ---\x1b[0m');
+            const tagName = `v${nextVersion}`;
 
-    // --- CONFIGURACIÓN DE RED (Solo para macOS que es donde falla) ---
-    const isMacTarget = platforms.includes('--mac') || (platforms.length === 0 && process.platform === 'darwin');
-
-    if (isMacTarget) {
-        const skipSSL = nonInteractive ? (cli.skipSsl ? 's' : 'n') : await question('\n¿Tienes problemas de red/SSL detectados en macOS? (¿Omitir validación?) (s/N): ');
-        if (isYes(skipSSL)) {
-            process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-            console.log('\x1b[33m⚠️  Validación SSL desactivada para esta sesión\x1b[0m');
-        }
-    }
-
-    // Build de React/Webpack (necesario siempre)
-    await runCommand('npm run build', 'Compilando código fuente (Webpack)');
-
-    // ssh2 opcional: cpu-features falla al recompilar con Electron; no es necesario en runtime
-    console.log('\n\x1b[36m[Ejecutando]\x1b[0m Preparando dependencias nativas (omitir cpu-features)...');
-    [path.join(REPO_ROOT, 'node_modules', 'cpu-features'), path.join(REPO_ROOT, 'node_modules', 'ssh2', 'node_modules', 'cpu-features')].forEach(p => {
-        try {
-            fs.rmSync(p, { recursive: true, force: true });
-        } catch (e) {
-            console.log(`Error al borrar ${p}: ${e.message}`);
-        }
-    });
-
-    if (await runCommand(ebCommand, isPublish ? 'Generando paquetes y publicando' : 'Generando paquetes locales')) {
-        console.log('\n\x1b[32m✅ Compilación finalizada correctamente.\x1b[0m');
-
-    }
-
-    // =========================================================================
-    // ETAPA FINAL: TAGS (Solo si es publicación)
-    // =========================================================================
-    if (isPublish) {
-        console.log('\n\x1b[1m\x1b[36m--- ETAPA FINAL: ETIQUETADO Y SINCRONIZACIÓN ---\x1b[0m');
-        const tagName = `v${nextVersion}`;
-
-        const doTag = nonInteractive ? 's' : await question(`\n¿Asegurar y subir tag ${tagName}, rama y release notes? (S/n): `);
-        if (doTag.toLowerCase() !== 'n') {
-            if (await ensureSyncWithRemote(branchForBuild, { autoYes: nonInteractive })) {
-                if (await runCommand(`git push origin ${branchForBuild}`, `Subiendo rama ${branchForBuild}`)) {
-                    const tagOk = await ensureTagOnHeadAndPush(tagName, { tagConflictStrategy: nonInteractive ? (cli.tagStrategy || 'move') : 'ask' });
-                    if (tagOk) {
-                        const notes = buildReleaseNotes(nextVersion);
-                        await upsertGithubRelease(tagName, branchForBuild, nextVersion, notes);
+            const doTag = nonInteractive ? 's' : await question(`\n¿Asegurar y subir tag ${tagName}, rama y release notes? (S/n): `);
+            if (doTag.toLowerCase() !== 'n') {
+                if (await ensureSyncWithRemote(branchForBuild, { autoYes: nonInteractive })) {
+                    if (await runCommand(`git push origin ${branchForBuild}`, `Subiendo rama ${branchForBuild}`)) {
+                        const tagOk = await ensureTagOnHeadAndPush(tagName, { tagConflictStrategy: nonInteractive ? (cli.tagStrategy || 'move') : 'ask' });
+                        if (tagOk) {
+                            const notes = buildReleaseNotes(nextVersion);
+                            await upsertGithubRelease(tagName, branchForBuild, nextVersion, notes);
+                        }
                     }
                 }
             }

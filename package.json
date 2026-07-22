@@ -22,6 +22,9 @@
     "version:major": "npm version major --no-git-tag-version",
     "version:build": "npm run build && npm run pack",
     "release": "node scripts/release.js",
+    "release:patch": "node scripts/release.js --prepare --release-type patch --cloud",
+    "release:minor": "node scripts/release.js --prepare --release-type minor --cloud",
+    "release:local": "node scripts/release.js --prepare --publish",
     "fix-release-notes": "node scripts/release.js --fix-notes --yes"
   },
   "build": {

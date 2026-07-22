@@ -1,81 +1,88 @@
-# Proceso de release ? NodeTerm
+# Proceso de Release — NodeTerm (GitHub Flow & CI/CD)
 
-Flujo para publicar versiones con el asistente `npm run release` y una sola fuente de verdad para los cambios.
+Este documento describe la estrategia de releases de NodeTerm bajo **GitHub Flow** utilizando **GitHub Actions** para la publicación automatizada en la nube.
 
-## Archivos y roles
+---
+
+## Estrategia de Ramas (GitHub Flow)
+
+1. **`main` es la rama principal e inmutable de producción.**
+2. Todo el desarrollo se realiza mediante Feature Branches efímeras (`feature/mi-tarea`) o pequeños commits integrados en `main`.
+3. **No se crean ni mantienen ramas por versión (`release/v1.7.0`).**
+4. Las versiones se marcan mediante **Git Tags** (`vX.Y.Z`) generados directamente desde la rama `main`.
+
+---
+
+## Archivos de Versión y Publicación
 
 | Archivo | Rol |
 |---------|-----|
-| **`CHANGELOG.md`** | Fuente de verdad ([Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/)). Todo cambio notable va aqu?. |
-| **`RELEASE_NOTES.md`** | Borrador **opcional** solo de la versi?n en curso (tono usuario). No duplicar historial. |
-| **`README.md`** | Badge, resumen corto de la ?ltima versi?n publicada y enlaces a changelog/releases. **Sin** changelog embebido. |
-| **`package.json`** | Versi?n de la app; webpack y electron-builder la propagan. |
+| **`CHANGELOG.md`** | Fuente de verdad ([Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/)). Todo cambio notable se registra aquí bajo `## [x.y.z]`. |
+| **`package.json`** | Contiene la versión actual de la aplicación (`"version": "1.7.1"`). |
+| **`.github/workflows/release.yml`** | Workflow de GitHub Actions que compila para Windows, macOS y Linux automáticamente al subir un tag. |
+| **`scripts/release.js`** | Asistente de preparación y publicación de versión. |
 
-GitHub Release recibe el texto de la secci?n `## [x.y.z]` de **`CHANGELOG.md`** (v?a `scripts/release.js`).
+---
 
-## Flujo est?ndar
+## Flujo de Lanzamiento de una Release
 
-### 1. Preparaci?n (rama `release/x.y.z`)
+### Opción 1: Lanzamiento Nube con GitHub Actions (RECOMENDADO)
 
+Para realizar una release de forma automatizada sin cargar la máquina local:
+
+#### Requisito: Estar en la rama `main`
+
+#### 1. Versión Parche (Bugfixes - ej. 1.7.1 ➡️ 1.7.2)
 ```bash
-git checkout -b release/1.6.8   # ejemplo
-npm version patch --no-git-tag-version
+npm run release:patch
 ```
 
-- A?adir en `CHANGELOG.md`:
-
-  ```markdown
-  ## [1.6.8] - YYYY-MM-DD
-
-  ### Added / Changed / Fixed ...
-  ```
-
-- Opcional: redactar resumen en `RELEASE_NOTES.md` (solo esta versi?n).
-- Actualizar `README.md`: badge, tabla de versi?n y 1 p?rrafo de resumen (sin listar versiones antiguas).
-- Commit: `release: preparaci?n v1.6.8`
-
-Durante el desarrollo, ir a?adiendo bullets bajo esa secci?n del changelog.
-
-### 2. Integraci?n
-
-- Merge de `release/x.y.z` ? `main` cuando el c?digo est? listo para publicar.
-- Con `npm run release -- --yes --publish` desde `release/*`, el script hace este merge **autom?ticamente** (opt-out: `--no-merge-main`).
-- Cerrar fecha en `CHANGELOG.md` y quitar entradas tipo ?En preparaci?n? si ya no aplican.
-
-### 3. Publicaci?n (normalmente en `main`)
-
+#### 2. Versión Minor (Funcionalidades nuevas - ej. 1.7.0 ➡️ 1.8.0)
 ```bash
-npm run release -- --yes --publish --platform win --tag-strategy move
+npm run release:minor
 ```
 
-El asistente puede:
+**¿Qué hace este comando automáticamente?**
+1. Incrementa la versión en `package.json`.
+2. Actualiza la cabecera en `CHANGELOG.md` con la versión y la fecha de hoy.
+3. Hace commit de la preparación en `main`.
+4. Crea el tag Git (ej: `v1.7.2`).
+5. Sube el commit y el tag a GitHub (`git push origin main --tags`).
+6. **GitHub Actions se activa automáticamente** en los servidores de GitHub, compila para Windows, Mac y Linux en paralelo, y publica los instaladores en GitHub Releases.
 
-- Compilar y generar instaladores en `dist/`
-- Crear tag `vX.Y.Z` y subir a GitHub
-- Publicar notas desde **`CHANGELOG.md`**
-- Subir `latest.yml` y artefactos
+---
 
-Si las notas en GitHub salen mal codificadas en Windows:
+### Opción 2: Lanzamiento o Compilación Local (Manual)
+
+Si deseas compilar los paquetes en tu propia máquina en lugar de la nube:
+
+```bash
+npm run release:local
+```
+O simplemente ejecuta el asistente interactivo:
+```bash
+npm run release
+```
+El asistente te dará la opción de:
+1. Compilar solo localmente (sin publicar).
+2. Compilar y publicar localmente en GitHub (requiere `GH_TOKEN` o sesión `gh`).
+3. Disparar la publicación en la nube con GitHub Actions.
+
+---
+
+## Reparación de notas de versión en GitHub (UTF-8)
+
+Si por alguna razón las notas de la release en GitHub presentan problemas de codificación de caracteres:
 
 ```bash
 npm run fix-release-notes
 ```
 
-### 4. Tras publicar
+---
 
-- En `main`: README con la versi?n **ya publicada** (no la rama en curso).
-- Borrador de `RELEASE_NOTES.md` listo para la **siguiente** versi?n o vac?o con la plantilla.
+## Checklist de Verificación antes de una Release
 
-## Checklist antes del tag
-
-- [ ] `package.json` / `package-lock.json` con la versi?n correcta
-- [ ] `CHANGELOG.md` con secci?n completa y fecha
-- [ ] `README.md`: badge y resumen alineados con la release publicada
-- [ ] `RELEASE_NOTES.md` (opcional): solo borrador de esta versi?n, sin historial apilado
-- [ ] `npm run build` si quieres verificar la versi?n en la UI
-
-## Consejos
-
-1. **GH_TOKEN**: el script puede usar `gh auth token` o pedir el token al vuelo.
-2. **Timeouts**: si falla la subida por tama?o, reintentar la etapa de publicaci?n.
-3. **No mantener tres changelogs**: detalle solo en `CHANGELOG.md`; README y GitHub resumen o enlazan.
+- [ ] Estar en la rama `main` con todos los cambios integrados y probados.
+- [ ] Verificar que `CHANGELOG.md` contiene los cambios notables de la versión.
+- [ ] Ejecutar `npm run release:patch` o `npm run release:minor`.
+- [ ] Comprobar en la pestaña **Actions** de GitHub que el build se ejecuta sin errores.
