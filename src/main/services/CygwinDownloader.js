@@ -20,7 +20,7 @@ const META_FILE = 'nodeterm-cygwin-meta.json';
 const MAX_REDIRECTS = 8;
 
 const MINIMAL_PACKAGES = [
-  'bash', 'coreutils', 'grep', 'sed', 'gawk', 'findutils', 'which', 'less', 'ncurses'
+  'cygwin', 'bash', 'coreutils', 'grep', 'sed', 'gawk', 'findutils', 'which', 'less', 'ncurses'
 ];
 
 const MEDIUM_PACKAGES = [
@@ -264,20 +264,41 @@ async function forceRemoveDir(targetPath) {
   throw lastError || new Error(`No se pudo eliminar ${targetPath}. Cierra terminales Cygwin e intentalo de nuevo.`);
 }
 
-function runCygwinSetup(setupPath, rootPath, packages, onStdout) {
+/**
+ * Espera a que aparezca bash.exe (el setup puede cerrar el proceso padre
+ * antes de que el hijo termine de escribir ficheros).
+ */
+async function waitForBash(rootPath, timeoutMs = 120000, intervalMs = 500) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (isInstalledAt(rootPath)) return true;
+    await sleep(intervalMs);
+  }
+  return isInstalledAt(rootPath);
+}
+
+function runCygwinSetup(setupPath, rootPath, packages, localPackageDir, onStdout) {
   return new Promise((resolve, reject) => {
     const args = [
       '--quiet-mode',
       '--root', rootPath,
       '--site', CYGWIN_MIRROR,
+      '--only-site',
+      '--local-package-dir', localPackageDir,
       '--packages', packages.join(','),
+      // AppData no requiere admin; sin esto el setup eleva, el padre sale
+      // con codigo 0 y NodeTerm valida bash antes de que el hijo termine.
+      '--no-admin',
+      '--wait',
       '--no-shortcuts',
       '--no-desktop',
-      '--no-startmenu'
+      '--no-startmenu',
+      '--no-write-registry'
     ];
 
-    console.log('[CygwinDownloader] Ejecutando setup-x86_64.exe ...');
+    console.log(`[CygwinDownloader] Ejecutando setup-x86_64.exe root=${rootPath}`);
     const child = spawn(setupPath, args, {
+      cwd: path.dirname(setupPath),
       windowsHide: true,
       stdio: ['ignore', 'pipe', 'pipe']
     });
@@ -349,6 +370,9 @@ async function installCygwinPackage(optionsOrCallback, maybeCallback) {
     await safeRm(finalRoot);
     await fsp.mkdir(finalRoot, { recursive: true });
 
+    const localPackageDir = path.join(tempBase, 'packages');
+    await fsp.mkdir(localPackageDir, { recursive: true });
+
     let pulse = 45;
     const pulseTimer = setInterval(() => {
       pulse = Math.min(90, pulse + 1);
@@ -356,13 +380,21 @@ async function installCygwinPackage(optionsOrCallback, maybeCallback) {
     }, 3000);
 
     try {
-      await runCygwinSetup(setupPath, finalRoot, tierInfo.packages);
+      await runCygwinSetup(setupPath, finalRoot, tierInfo.packages, localPackageDir);
+      // Por si el proceso padre cerro antes de materializar bin/bash.exe
+      const ready = await waitForBash(finalRoot, 120000, 500);
+      if (!ready) {
+        let listing = '';
+        try {
+          const entries = await fsp.readdir(finalRoot);
+          listing = entries.length ? ` Contenido: ${entries.slice(0, 20).join(', ')}` : ' El directorio root esta vacio.';
+        } catch {
+          listing = ' No se pudo leer el directorio root.';
+        }
+        throw new Error(`La instalacion termino pero no se encontro bin/bash.exe en ${finalRoot}.${listing}`);
+      }
     } finally {
       clearInterval(pulseTimer);
-    }
-
-    if (!isInstalledAt(finalRoot)) {
-      throw new Error('La instalacion termino pero no se encontro bin/bash.exe');
     }
 
     if (progressCallback) progressCallback('finalizing', 95, 100);
