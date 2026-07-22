@@ -416,6 +416,7 @@ contextBridge.exposeInMainWorld('electron', {
     getFileInfo: (path) => ipcRenderer.invoke('import:get-file-info', path),
     getFileHash: (path) => ipcRenderer.invoke('import:get-file-hash', path),
     readFile: (path) => ipcRenderer.invoke('import:read-file', path),
+    saveFile: (options) => ipcRenderer.invoke('import:save-file', options),
     openExternal: (url) => ipcRenderer.invoke('import:open-external', url),
     getDownloadsPath: () => ipcRenderer.invoke('import:get-downloads-path'),
     findLatestXmlDownload: (params) => ipcRenderer.invoke('import:find-latest-xml-download', params),

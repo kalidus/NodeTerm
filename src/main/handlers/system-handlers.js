@@ -156,6 +156,40 @@ function registerSystemMonitoringHandlers() {
     }
   });
 
+  // Handler para guardar un archivo exportado (backup/configuración)
+  ipcMain.handle('import:save-file', async (event, { fileName, fileContent, options = {} } = {}) => {
+    try {
+      if (typeof fileContent !== 'string') {
+        return { success: false, error: 'Contenido de archivo no proporcionado o inválido' };
+      }
+
+      const win = BrowserWindow.getFocusedWindow();
+      const defaultFileName = fileName || 'backup.nodeterm';
+
+      const saveOptions = {
+        defaultPath: defaultFileName,
+        filters: [
+          { name: 'Archivo NodeTerm (*.nodeterm)', extensions: ['nodeterm'] },
+          { name: 'Archivo JSON (*.json)', extensions: ['json'] },
+          { name: 'Todos los archivos (*.*)', extensions: ['*'] }
+        ],
+        ...options
+      };
+
+      const result = win ? await dialog.showSaveDialog(win, saveOptions) : await dialog.showSaveDialog(saveOptions);
+
+      if (result.canceled || !result.filePath) {
+        return { canceled: true, success: false };
+      }
+
+      fs.writeFileSync(result.filePath, fileContent, 'utf-8');
+      return { success: true, filePath: result.filePath };
+    } catch (e) {
+      console.error('Error en handler import:save-file:', e);
+      return { success: false, error: e?.message || 'Error desconocido al guardar archivo' };
+    }
+  });
+
   // Handler para obtener ruta de descargas
   ipcMain.handle('import:get-downloads-path', async () => {
     try {
