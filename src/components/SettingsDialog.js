@@ -518,6 +518,8 @@ const SettingsContent = ({
         'ai': 'clientes-ia',
         'general': 'general',
         'rdp': 'rdp',
+        'apps': 'apps',
+        'cygwin': 'apps',
         'import-export': 'importar-exportar',
         'import': 'importar-exportar',
         'export': 'importar-exportar',
@@ -528,6 +530,11 @@ const SettingsContent = ({
 
       const targetTab = tabMap[tab] || tab;
       setActiveMainTab(targetTab);
+
+      // Atajo: tab=cygwin abre Apps con Cygwin seleccionado
+      if (tab === 'cygwin' && !subTab) {
+        setActiveSubTab('cygwin');
+      }
 
       if (targetTab === 'importar-exportar') {
         if (subTab === 'wizard') {

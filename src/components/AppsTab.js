@@ -8,12 +8,17 @@ import { InputNumber } from 'primereact/inputnumber';
 import { Dropdown } from 'primereact/dropdown';
 import { Accordion, AccordionTab } from 'primereact/accordion';
 import { Toast } from 'primereact/toast';
+import { ProgressBar } from 'primereact/progressbar';
 import AIClientBrandIcon from './AIClientBrandIcon';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import '../styles/components/ai-clients-tab.css';
 import '../styles/components/apps-tab.css';
 
 const AI_CLIENTS_STORAGE_KEY = 'ai_clients_enabled';
+
+const isWindowsPlatform = () =>
+  (typeof window !== 'undefined' && window.electron?.platform === 'win32') ||
+  (typeof navigator !== 'undefined' && /windows/i.test(navigator.userAgent || ''));
 
 const APP_CATEGORY_META = {
   connectivity: { label: 'Nativo', mod: 'nativo' },
@@ -40,7 +45,8 @@ const CategoryTypeBadge = ({ category, size = 'md' }) => {
  */
 const SUBTAB_DEFAULT_APP = {
   rdp: 'rdp',
-  ai: 'claude'
+  ai: 'claude',
+  cygwin: 'cygwin'
 };
 
 const AppsTab = ({
@@ -66,9 +72,11 @@ const AppsTab = ({
 }) => {
   const { t } = useTranslation('settings');
   const toast = useRef(null);
+  const isWindows = isWindowsPlatform();
 
   // Estado para cada cliente de IA
   const [clients, setClients] = useState({
+    cygwin: false,
     claude: false,
     opencode: false,
     geminicli: false,
@@ -118,6 +126,25 @@ const AppsTab = ({
   const [hermesCliStatus, setHermesCliStatus] = useState({
     loading: false, installed: false, installing: false, version: null, binaryPath: null, error: null
   });
+  const [cygwinStatus, setCygwinStatus] = useState({
+    loading: false,
+    installed: false,
+    installing: false,
+    uninstalling: false,
+    root: null,
+    path: null,
+    tier: null,
+    packageVersion: null,
+    progressPhase: null,
+    progressPercent: 0,
+    error: null
+  });
+  const [cygwinTier, setCygwinTier] = useState('medium');
+  const cygwinTierOptions = [
+    { label: 'Minimal (~50-100 MB) - bash basico', value: 'minimal' },
+    { label: 'Medium (~150-300 MB) - git, ssh, curl... (recomendado)', value: 'medium' },
+    { label: 'Full (~500-800 MB) - + gcc, make, cmake', value: 'full' }
+  ];
 
   // Estados para configuración detallada de los CLIs
   const [claudeConfig, setClaudeConfig] = useState({ binaryPath: '', defaultModel: '', extraArgs: '', authToken: '' });
@@ -150,6 +177,29 @@ const AppsTab = ({
     checkCodexCliStatus();
     checkAntigravityCliStatus();
     checkHermesCliStatus();
+    if (isWindows) {
+      checkCygwinStatus();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isWindows || !window.electron?.ipcRenderer?.on) return undefined;
+
+    const onProgress = (data) => {
+      const percent = typeof data?.percent === 'number' ? data.percent : 0;
+      setCygwinStatus((prev) => ({
+        ...prev,
+        installing: true,
+        progressPhase: data?.phase || prev.progressPhase,
+        progressPercent: percent,
+        error: null
+      }));
+    };
+
+    const unsubscribe = window.electron.ipcRenderer.on('cygwin:install-progress', onProgress);
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
   }, []);
 
   // Cargar configuraciones detalladas desde el proceso principal
@@ -195,13 +245,13 @@ const AppsTab = ({
     clients.opennotebook
   ]);
 
-  // Deep link desde SettingsDialog (rdp / clientes-ia → apps)
+  // Deep link desde SettingsDialog (rdp / clientes-ia / cygwin → apps)
   useEffect(() => {
     if (!activeSubTab) return;
     const key = SUBTAB_DEFAULT_APP[activeSubTab];
     if (key) {
       setSelectedAppKey(key);
-      if (activeSubTab === 'rdp') setCategoryFilter('connectivity');
+      if (activeSubTab === 'rdp' || activeSubTab === 'cygwin') setCategoryFilter('connectivity');
       else if (activeSubTab === 'ai') setCategoryFilter('cli');
     }
   }, [activeSubTab]);
@@ -577,6 +627,111 @@ const AppsTab = ({
     }
   };
 
+  const checkCygwinStatus = async () => {
+    if (!isWindows) return;
+    setCygwinStatus((prev) => ({ ...prev, loading: true, error: null }));
+    try {
+      const invoke = window.electronAPI?.invoke || window.electron?.ipcRenderer?.invoke;
+      const result = await invoke?.('cygwin:install-status');
+      const installed = !!(result?.installed || result?.available);
+      if (result?.tier) {
+        setCygwinTier(result.tier);
+      }
+      setCygwinStatus((prev) => ({
+        ...prev,
+        loading: false,
+        installing: !!result?.installing,
+        installed,
+        root: result?.root || null,
+        path: result?.path || null,
+        tier: result?.tier || null,
+        packageVersion: result?.tier || result?.packageVersion || null,
+        progressPhase: result?.installing ? prev.progressPhase : null,
+        progressPercent: result?.installing ? prev.progressPercent : 0,
+        error: result?.success === false ? (result?.error || 'No se pudo verificar Cygwin') : null
+      }));
+    } catch (error) {
+      setCygwinStatus((prev) => ({
+        ...prev,
+        loading: false,
+        installing: false,
+        error: error.message || 'No se pudo verificar Cygwin'
+      }));
+    }
+  };
+
+  const installCygwinApp = async () => {
+    if (!isWindows) return false;
+    setCygwinStatus((prev) => ({
+      ...prev,
+      installing: true,
+      progressPhase: 'downloading',
+      progressPercent: 0,
+      error: null
+    }));
+    try {
+      const invoke = window.electronAPI?.invoke || window.electron?.ipcRenderer?.invoke;
+      const result = await invoke?.('cygwin:install', { tier: cygwinTier || 'medium' });
+      if (!result?.success) {
+        throw new Error(result?.error || 'No se pudo instalar Cygwin');
+      }
+      await checkCygwinStatus();
+      toast.current?.show({
+        severity: 'success',
+        summary: 'Cygwin instalado',
+        detail: `${result.tier || cygwinTier} en ${result.root || 'AppData'}`,
+        life: 4000
+      });
+      window.dispatchEvent(new CustomEvent('cygwin-install-changed', { detail: { installed: true } }));
+      return true;
+    } catch (error) {
+      setCygwinStatus((prev) => ({
+        ...prev,
+        installing: false,
+        progressPhase: null,
+        progressPercent: 0,
+        error: error.message || 'No se pudo instalar Cygwin'
+      }));
+      toast.current?.show({
+        severity: 'error',
+        summary: 'Error instalando Cygwin',
+        detail: error.message || 'Error desconocido',
+        life: 7000
+      });
+      return false;
+    }
+  };
+
+  const uninstallCygwinApp = async () => {
+    if (!isWindows) return false;
+    setCygwinStatus((prev) => ({ ...prev, uninstalling: true, error: null }));
+    try {
+      const invoke = window.electronAPI?.invoke || window.electron?.ipcRenderer?.invoke;
+      const result = await invoke?.('cygwin:uninstall');
+      if (!result?.success) {
+        throw new Error(result?.error || 'No se pudo desinstalar Cygwin');
+      }
+      await checkCygwinStatus();
+      toast.current?.show({
+        severity: 'success',
+        summary: 'Cygwin desinstalado',
+        detail: 'Se elimino el runtime portable de AppData',
+        life: 4000
+      });
+      window.dispatchEvent(new CustomEvent('cygwin-install-changed', { detail: { installed: false } }));
+      return true;
+    } catch (error) {
+      setCygwinStatus((prev) => ({
+        ...prev,
+        uninstalling: false,
+        error: error.message || 'No se pudo desinstalar Cygwin'
+      }));
+      return false;
+    } finally {
+      setCygwinStatus((prev) => ({ ...prev, uninstalling: false }));
+    }
+  };
+
   const handleSaveClaudeConfig = async () => {
     try {
       const validation = await window.electron?.claude?.validateConfig?.(claudeConfig);
@@ -700,6 +855,25 @@ const AppsTab = ({
       if (handleRestartGuacd && !guacdRestarting) {
         await handleRestartGuacd();
       }
+      return;
+    }
+
+    if (clientKey === 'cygwin') {
+      if (!isWindows) {
+        toast.current?.show({
+          severity: 'warn',
+          summary: 'Cygwin',
+          detail: 'Solo disponible en Windows.',
+          life: 4000
+        });
+        return;
+      }
+      const willEnable = !clients.cygwin;
+      if (willEnable && !cygwinStatus.installed) {
+        const ok = await installCygwinApp();
+        if (!ok) return;
+      }
+      saveClientsConfig({ ...clients, cygwin: willEnable });
       return;
     }
 
@@ -969,7 +1143,7 @@ const AppsTab = ({
     return [{ label: 'NATIVO / LOCAL', severity: 'success' }];
   };
 
-  // Definición de los clientes de IA + RDP
+  // Definición de los clientes de IA + RDP + Cygwin
   const clientsDefinition = [
     {
       key: 'rdp', category: 'connectivity',
@@ -981,6 +1155,21 @@ const AppsTab = ({
       requiresDocker: guacdPreferredMethod === 'docker',
       requiresWSL: guacdPreferredMethod === 'wsl',
       isRdp: true
+    },
+    {
+      key: 'cygwin', category: 'connectivity',
+      name: 'Cygwin Terminal', shortName: 'Cygwin',
+      color: '#00AA00',
+      description: isWindows
+        ? 'Runtime Unix portable. Se instala bajo demanda desde cygwin.com (Minimal / Medium / Full) en AppData; no va en el instalador de NodeTerm.'
+        : 'Cygwin solo esta disponible en Windows.',
+      features: ['Bash portable', 'Minimal / Medium / Full', 'Mirror oficial', 'Sin admin'],
+      badges: [
+        { label: 'WINDOWS', severity: 'info' },
+        { label: 'OPCIONAL', severity: 'success' }
+      ],
+      requiresDocker: false,
+      isCygwin: true
     },
     {
       key: 'claude', category: 'cli',
@@ -1122,6 +1311,13 @@ const AppsTab = ({
       if (guacdStatus?.isRunning) return <span className="ai-status-dot running" title="Guacd activo" />;
       return <span className="ai-status-dot stopped" title="Guacd inactivo" />;
     }
+    if (client.isCygwin) {
+      if (cygwinStatus.loading || cygwinStatus.installing) {
+        return <span className="ai-status-dot loading" title={cygwinStatus.installing ? 'Instalando...' : 'Verificando...'} />;
+      }
+      if (cygwinStatus.installed) return <span className="ai-status-dot installed" title="Instalado" />;
+      return <span className="ai-status-dot not-installed" title="No instalado" />;
+    }
     if (client.isLocalCli) {
       const s = getCliStatus(client.key);
       if (!s) return null;
@@ -1146,6 +1342,17 @@ const AppsTab = ({
       if (guacdRestarting) return <span className="ai-status-label stopped">Reiniciando...</span>;
       if (guacdStatus?.isRunning) return <span className="ai-status-label running">Activo</span>;
       return <span className="ai-status-label stopped">Inactivo</span>;
+    }
+    if (client.isCygwin) {
+      if (cygwinStatus.installing) {
+        return <span className="ai-status-label stopped">Instalando {cygwinStatus.progressPercent || 0}%</span>;
+      }
+      if (cygwinStatus.loading) return null;
+      if (cygwinStatus.installed) {
+        const tier = cygwinStatus.tier ? ` ${cygwinStatus.tier}` : '';
+        return <span className="ai-status-label installed">Instalado{tier}</span>;
+      }
+      return <span className="ai-status-label not-installed">No instalado</span>;
     }
     if (client.isLocalCli) {
       const s = getCliStatus(client.key);
@@ -1328,13 +1535,151 @@ const AppsTab = ({
     );
   };
 
+  const cygwinPhaseLabel = (phase) => {
+    switch (phase) {
+      case 'downloading':
+        return 'Descargando setup-x86_64.exe (cygwin.com)';
+      case 'installing':
+        return 'Instalando paquetes desde el mirror oficial (puede tardar varios minutos)';
+      case 'finalizing':
+        return 'Finalizando instalacion';
+      case 'completed':
+        return 'Completado';
+      default:
+        return 'Preparando';
+    }
+  };
+
+  const renderCygwinAdvancedConfig = () => {
+    const isInstalled = cygwinStatus.installed;
+    const busy = cygwinStatus.installing || cygwinStatus.uninstalling;
+    const brandColor = '#00AA00';
+
+    return (
+      <div className="apps-config-container">
+        <div className="apps-config-card apps-cli-status-card" style={{ borderColor: `${brandColor}25` }}>
+          <div className="apps-card-header">
+            <div className="apps-card-icon-wrapper" style={{ background: `${brandColor}12`, borderColor: `${brandColor}25`, color: brandColor }}>
+              <i className="pi pi-info-circle apps-card-icon" />
+            </div>
+            <div className="apps-card-header-text">
+              <h3>Estado de Cygwin</h3>
+              <p className="apps-card-subtitle">Instalacion oficial desde cygwin.com a AppData</p>
+            </div>
+          </div>
+
+          <div className="apps-card-content">
+            <div className="apps-status-display">
+              <div className="apps-status-main">
+                <span className={`apps-status-indicator ${isInstalled ? 'apps-status-active' : 'apps-status-inactive'}`} />
+                <span className="apps-status-text">
+                  Estado:{' '}
+                  <strong>
+                    {cygwinStatus.installing
+                      ? `instalando (${cygwinStatus.progressPercent || 0}%)`
+                      : isInstalled
+                        ? `Listo${cygwinStatus.tier ? ` (${cygwinStatus.tier})` : ''}`
+                        : 'No instalado'}
+                  </strong>
+                </span>
+              </div>
+              {cygwinStatus.root && (
+                <div className="apps-status-technical">
+                  <span className="apps-tech-label">Ruta:</span>
+                  <code className="apps-tech-code">{cygwinStatus.root}</code>
+                </div>
+              )}
+            </div>
+
+            <div className="apps-param-field" style={{ marginTop: '0.75rem' }}>
+              <label htmlFor="cygwin-tier">Nivel de instalacion</label>
+              <Dropdown
+                id="cygwin-tier"
+                value={cygwinTier}
+                options={cygwinTierOptions}
+                onChange={(e) => setCygwinTier(e.value)}
+                disabled={busy}
+                className="p-inputtext-sm"
+                style={{ width: '100%' }}
+              />
+            </div>
+
+            {cygwinStatus.installing && (
+              <div style={{ marginTop: '0.75rem' }}>
+                <div style={{ fontSize: '0.75rem', marginBottom: '0.35rem', opacity: 0.85 }}>
+                  {cygwinPhaseLabel(cygwinStatus.progressPhase)}
+                </div>
+                <ProgressBar value={cygwinStatus.progressPercent || 0} style={{ height: 8 }} />
+              </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem' }}>
+              {!isInstalled && (
+                <Button
+                  label="Instalar Cygwin"
+                  icon="pi pi-download"
+                  className="apps-restart-btn p-button-sm"
+                  onClick={installCygwinApp}
+                  loading={cygwinStatus.installing}
+                  disabled={busy}
+                />
+              )}
+              {isInstalled && (
+                <>
+                  <Button
+                    label="Reinstalar"
+                    icon="pi pi-refresh"
+                    className="apps-restart-btn p-button-secondary p-button-sm"
+                    onClick={installCygwinApp}
+                    loading={cygwinStatus.installing}
+                    disabled={busy}
+                  />
+                  <Button
+                    label="Desinstalar"
+                    icon="pi pi-trash"
+                    className="apps-restart-btn p-button-danger p-button-sm"
+                    onClick={uninstallCygwinApp}
+                    loading={cygwinStatus.uninstalling}
+                    disabled={busy}
+                  />
+                </>
+              )}
+              <Button
+                label="Verificar Estado"
+                icon="pi pi-search"
+                className="apps-restart-btn p-button-secondary p-button-sm"
+                onClick={checkCygwinStatus}
+                loading={cygwinStatus.loading}
+                disabled={busy}
+              />
+            </div>
+
+            <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.66rem', opacity: 0.8, color: 'var(--text-color-secondary)', lineHeight: 1.35 }}>
+              Descarga setup-x86_64.exe desde cygwin.com e instala paquetes desde el mirror oficial. Medium: 5-10 min. Full: mas tiempo.
+            </p>
+
+            {cygwinStatus.error && (
+              <div className="apps-detail-docker-error" style={{ marginTop: '0.5rem' }}>
+                <i className="pi pi-times-circle" />
+                <span>{cygwinStatus.error}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Render para config avanzada de cada cliente de IA
   const renderAdvancedConfig = (client) => {
     const key = client.key;
     if (client.isRdp) {
       return renderRdpAdvancedConfig();
     }
-    
+    if (client.isCygwin) {
+      return renderCygwinAdvancedConfig();
+    }
+
     if (client.isLocalCli) {
       const status = getCliStatus(key);
       const isInstalled = status?.installed;
@@ -1659,6 +2004,9 @@ const AppsTab = ({
     if (client.isRdp) {
       return <i className="pi pi-desktop" style={{ fontSize: size, color: client.color }} />;
     }
+    if (client.isCygwin) {
+      return <i className="pi pi-code" style={{ fontSize: size, color: client.color }} />;
+    }
     return <AIClientBrandIcon tabType={brandType} size={size} />;
   };
 
@@ -1674,6 +2022,9 @@ const AppsTab = ({
     if (client.isLocalCli && getCliStatus(client.key)?.installed) {
       extras.push(<Badge key="cli" value="CLI listo" severity="success" style={{ fontSize: '0.6rem' }} />);
     }
+    if (client.isCygwin && cygwinStatus.installed) {
+      extras.push(<Badge key="cyg" value="Runtime listo" severity="success" style={{ fontSize: '0.6rem' }} />);
+    }
     return extras;
   };
 
@@ -1682,6 +2033,14 @@ const AppsTab = ({
       if (guacdRestarting) return { text: 'Reiniciando…', className: 'stopped' };
       if (guacdStatus?.isRunning) return { text: 'Activo', className: 'running' };
       return { text: 'Inactivo', className: 'stopped' };
+    }
+    if (client.isCygwin) {
+      if (cygwinStatus.installing) {
+        return { text: `Instalando ${cygwinStatus.progressPercent || 0}%`, className: 'stopped' };
+      }
+      if (cygwinStatus.loading) return { text: '…', className: 'stopped' };
+      if (cygwinStatus.installed) return { text: 'Instalado', className: 'installed' };
+      return { text: 'No instalado', className: 'not-installed' };
     }
     if (client.isLocalCli) {
       const s = getCliStatus(client.key);
@@ -1719,9 +2078,52 @@ const AppsTab = ({
 
   const renderHeroCtas = (client) => {
     const isEnabled = isClientEnabled(client);
-    if (!isEnabled) return null;
+    if (!isEnabled && !client.isCygwin) return null;
 
     const ctas = [];
+
+    if (client.isCygwin) {
+      ctas.push(
+        <Dropdown
+          key="tier"
+          value={cygwinTier}
+          options={cygwinTierOptions}
+          onChange={(e) => setCygwinTier(e.value)}
+          disabled={cygwinStatus.installing || cygwinStatus.uninstalling}
+          className="p-inputtext-sm"
+          style={{ minWidth: '14rem' }}
+        />
+      );
+      if (!cygwinStatus.installed) {
+        ctas.push(
+          <Button
+            key="install"
+            label="Instalar"
+            icon="pi pi-download"
+            className="p-button-sm"
+            onClick={installCygwinApp}
+            loading={cygwinStatus.installing}
+            disabled={cygwinStatus.uninstalling}
+          />
+        );
+      } else if (isEnabled) {
+        ctas.push(
+          <Button
+            key="reinstall"
+            label="Reinstalar"
+            icon="pi pi-refresh"
+            className="p-button-secondary p-button-sm"
+            onClick={installCygwinApp}
+            loading={cygwinStatus.installing}
+            disabled={cygwinStatus.uninstalling}
+          />
+        );
+      }
+    }
+
+    if (!isEnabled) {
+      return ctas.length > 0 ? <div className="apps-hero-cta-row">{ctas}</div> : null;
+    }
 
     if (client.isLocalCli) {
       const s = getCliStatus(client.key);
@@ -1855,7 +2257,10 @@ const AppsTab = ({
           <InputSwitch
             checked={isEnabled}
             onChange={() => handleToggleClient(client.key)}
-            disabled={client.isRdp && guacdRestarting}
+            disabled={
+              (client.isRdp && guacdRestarting) ||
+              (client.isCygwin && (!isWindows || cygwinStatus.installing || cygwinStatus.uninstalling))
+            }
           />
         </div>
         <div
@@ -1878,12 +2283,14 @@ const AppsTab = ({
   const renderHeroSection = (client) => {
     if (!client) return null;
     const isEnabled = isClientEnabled(client);
-    const hasAdvanced = client.isLocalCli || client.requiresDocker || client.isRdp;
+    const hasAdvanced = client.isLocalCli || client.requiresDocker || client.isRdp || client.isCygwin;
     const advancedTitle = client.isRdp
       ? 'Backend y conexión'
-      : client.requiresDocker
-        ? 'Docker y actualizaciones'
-        : 'Opciones avanzadas';
+      : client.isCygwin
+        ? 'Instalacion y runtime'
+        : client.requiresDocker
+          ? 'Docker y actualizaciones'
+          : 'Opciones avanzadas';
 
     return (
       <section key={client.key} className="apps-hero-section" aria-label={client.name}>
@@ -1934,7 +2341,10 @@ const AppsTab = ({
               <InputSwitch
                 checked={isEnabled}
                 onChange={() => handleToggleClient(client.key)}
-                disabled={client.isRdp && guacdRestarting}
+                disabled={
+                  (client.isRdp && guacdRestarting) ||
+                  (client.isCygwin && (!isWindows || cygwinStatus.installing || cygwinStatus.uninstalling))
+                }
               />
             </div>
             {renderHeroCtas(client)}

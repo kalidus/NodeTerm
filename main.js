@@ -1899,72 +1899,128 @@ ipcMain.handle('docker:list', async () => {
 });
 
 
-// Variable global para controlar instalación de Cygwin
+// Variable global para controlar instalacion de Cygwin
 let cygwinInstalling = false;
 
-// Handler para instalar Cygwin portable automáticamente
-// NOTA: Actualmente usa descarga de paquete pre-empaquetado
-// Para crear el paquete: .\scripts\package-cygwin.ps1
-ipcMain.handle('cygwin:install', async () => {
-  // Prevenir múltiples instalaciones simultáneas
+function emitCygwinInstallProgress(phase, current, total) {
+  try {
+    if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
+      const percent = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0;
+      mainWindow.webContents.send('cygwin:install-progress', {
+        phase,
+        current,
+        total,
+        percent
+      });
+    }
+  } catch (e) {
+    // ignore
+  }
+}
+
+// Instala Cygwin portable desde cygwin.com (setup-x86_64.exe) a %APPDATA%/nodeterm/cygwin64
+// options: { tier: 'minimal' | 'medium' | 'full' }
+ipcMain.handle('cygwin:install', async (_event, options = {}) => {
+  if (process.platform !== 'win32') {
+    return { success: false, error: 'Cygwin solo esta disponible en Windows.' };
+  }
+
   if (cygwinInstalling) {
-    console.log('⚠️ Instalación de Cygwin ya en progreso, ignorando solicitud duplicada');
     return {
       success: false,
-      error: 'Ya hay una instalación de Cygwin en progreso. Por favor espera a que termine.'
+      error: 'Ya hay una instalacion de Cygwin en progreso. Espera a que termine.'
     };
   }
 
   try {
     cygwinInstalling = true;
+    const tier = options?.tier || 'medium';
+    console.log(`[Cygwin] Iniciando instalacion oficial (tier=${tier})...`);
 
-    // TODO: Cambiar a CygwinDownloader cuando el paquete esté en GitHub
-    // Por ahora, ejecutar script local para testing
-    console.log('🚀 Iniciando instalación automática de Cygwin...');
+    const {
+      installCygwinPackage,
+      getInstallStatus
+    } = require('./src/main/services/CygwinDownloader');
 
-    const { spawn } = require('child_process');
-    const scriptPath = path.join(app.getAppPath(), 'scripts', 'create-cygwin-portable.ps1');
-
-    return new Promise((resolve) => {
-      const ps = spawn('powershell.exe', [
-        '-ExecutionPolicy', 'Bypass',
-        '-File', scriptPath,
-        '-OutputDir', path.join(app.getAppPath(), 'resources', 'cygwin64')
-      ], {
-        stdio: 'inherit',  // Mostrar salida en consola
-        windowsHide: false
-      });
-
-      ps.on('close', (code) => {
-        cygwinInstalling = false;
-        if (code === 0) {
-          console.log('✅ Cygwin instalado correctamente');
-          resolve({ success: true });
-        } else {
-          console.error('❌ Error en instalación de Cygwin. Código:', code);
-          resolve({
-            success: false,
-            error: `Instalación falló con código ${code}`
-          });
-        }
-      });
-
-      ps.on('error', (error) => {
-        cygwinInstalling = false;
-        console.error('❌ Error ejecutando script:', error);
-        resolve({
-          success: false,
-          error: `Error ejecutando PowerShell: ${error.message}`
-        });
-      });
+    const result = await installCygwinPackage({
+      tier,
+      progressCallback: (phase, current, total) => {
+        emitCygwinInstallProgress(phase, current, total);
+      }
     });
 
+    Cygwin.resetCygwinPaths();
+
+    if (result.success) {
+      const status = getInstallStatus();
+      console.log('[Cygwin] Instalacion completada en:', status.root, 'tier:', status.tier);
+      return { success: true, ...status };
+    }
+
+    return result;
   } catch (error) {
-    cygwinInstalling = false;
-    console.error('❌ Error en handler cygwin:install:', error);
+    console.error('[Cygwin] Error en cygwin:install:', error);
     return {
       success: false,
-      error: error.message + '\n\nPor favor, ejecuta manualmente:\n.\\scripts\\create-cygwin-portable.ps1'
+      error: error.message || String(error)
+    };
+  } finally {
+    cygwinInstalling = false;
+  }
+});
+
+ipcMain.handle('cygwin:uninstall', async () => {
+  if (process.platform !== 'win32') {
+    return { success: false, error: 'Cygwin solo esta disponible en Windows.' };
+  }
+
+  if (cygwinInstalling) {
+    return {
+      success: false,
+      error: 'Hay una instalacion en progreso. Espera a que termine.'
+    };
+  }
+
+  try {
+    // Liberar DLLs: cerrar sesiones PTY y procesos bajo cygwin64
+    if (Cygwin && Cygwin.CygwinHandlers && typeof Cygwin.CygwinHandlers.cleanupAndWait === 'function') {
+      await Cygwin.CygwinHandlers.cleanupAndWait();
+    } else if (Cygwin && Cygwin.CygwinHandlers) {
+      Cygwin.CygwinHandlers.cleanup();
+    }
+
+    const { uninstallCygwinPackage } = require('./src/main/services/CygwinDownloader');
+    const result = await uninstallCygwinPackage();
+    Cygwin.resetCygwinPaths();
+    return result;
+  } catch (error) {
+    console.error('[Cygwin] Error en cygwin:uninstall:', error);
+    return {
+      success: false,
+      error: error.message || String(error)
+    };
+  }
+});
+
+ipcMain.handle('cygwin:install-status', async () => {
+  try {
+    const { getInstallStatus } = require('./src/main/services/CygwinDownloader');
+    const downloadStatus = getInstallStatus();
+    const detect = Cygwin.CygwinHandlers.detect();
+    return {
+      success: true,
+      ...downloadStatus,
+      available: detect.available === true,
+      path: detect.path || downloadStatus.path,
+      root: detect.root || downloadStatus.root,
+      installing: cygwinInstalling
+    };
+  } catch (error) {
+    return {
+      success: false,
+      installed: false,
+      available: false,
+      error: error.message || String(error)
     };
   }
 });

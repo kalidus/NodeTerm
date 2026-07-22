@@ -3,11 +3,11 @@ const pty = require('node-pty');
 const path = require('path');
 const fs = require('fs');
 const { app } = require('electron');
+const { getNodeTermDataDir } = require('../utils/file-utils');
 
 /**
- * Servicio para Cygwin embebido (portable)
- * Similar a como MobaXterm integra Cygwin
- * No requiere instalación del usuario - todo está embebido en la app
+ * Servicio para Cygwin portable instalado bajo demanda (Apps).
+ * Prioridad: %APPDATA%/nodeterm/cygwin64, luego resources/cygwin64 en desarrollo.
  */
 
 let cygwinProcesses = {};
@@ -15,8 +15,24 @@ let mainWindow = null;
 let cygwinRootPath = null;
 let cygwinBashPath = null;
 
+function candidateRoots() {
+  const roots = [path.join(getNodeTermDataDir(), 'cygwin64')];
+  if (!app.isPackaged) {
+    roots.push(path.join(app.getAppPath(), 'resources', 'cygwin64'));
+  }
+  return roots;
+}
+
 /**
- * Inicializa las rutas de Cygwin embebido
+ * Invalida cache de rutas (tras instalar/desinstalar).
+ */
+function resetCygwinPaths() {
+  cygwinRootPath = null;
+  cygwinBashPath = null;
+}
+
+/**
+ * Inicializa las rutas de Cygwin portable
  */
 function initializeCygwinPaths() {
   try {
@@ -28,33 +44,32 @@ function initializeCygwinPaths() {
       };
     }
 
-    // Detectar si estamos en desarrollo o producción
-    const isDev = !app.isPackaged;
-
-    let resourcesPath;
-    if (isDev) {
-      // En desarrollo: resources en la raíz del proyecto
-      resourcesPath = path.join(app.getAppPath(), 'resources');
-    } else {
-      // En producción: resources está en el directorio de la app empaquetada
-      // Para Electron, process.resourcesPath apunta a la carpeta resources
-      resourcesPath = process.resourcesPath;
+    for (const root of candidateRoots()) {
+      const bash = path.join(root, 'bin', 'bash.exe');
+      if (fs.existsSync(bash)) {
+        cygwinRootPath = root;
+        cygwinBashPath = bash;
+        console.log('[Cygwin] Disponible en:', root);
+        return {
+          root: cygwinRootPath,
+          bash: cygwinBashPath,
+          exists: true
+        };
+      }
     }
 
-    cygwinRootPath = path.join(resourcesPath, 'cygwin64');
-    cygwinBashPath = path.join(cygwinRootPath, 'bin', 'bash.exe');
-
-    const exists = fs.existsSync(cygwinBashPath);
-
-    console.log('🔍 Cygwin embebido:', exists ? '✅ Disponible' : '❌ No encontrado');
+    const preferred = candidateRoots()[0];
+    cygwinRootPath = preferred;
+    cygwinBashPath = path.join(preferred, 'bin', 'bash.exe');
+    console.log('[Cygwin] No encontrado. Destino de instalacion:', preferred);
 
     return {
       root: cygwinRootPath,
       bash: cygwinBashPath,
-      exists: exists
+      exists: false
     };
   } catch (error) {
-    console.error('❌ Error inicializando rutas de Cygwin:', error);
+    console.error('[Cygwin] Error inicializando rutas:', error);
     return {
       root: null,
       bash: null,
@@ -64,14 +79,14 @@ function initializeCygwinPaths() {
 }
 
 /**
- * Verifica si Cygwin embebido está disponible
+ * Verifica si Cygwin portable esta disponible
  */
 function isCygwinAvailable() {
   try {
     const paths = initializeCygwinPaths();
     return paths.exists === true;
   } catch (error) {
-    console.error('❌ Error verificando Cygwin:', error);
+    console.error('[Cygwin] Error verificando disponibilidad:', error);
     return false;
   }
 }
@@ -99,7 +114,7 @@ async function startCygwinSession(tabId, { cols, rows }) {
     const paths = initializeCygwinPaths();
 
     if (!paths.exists) {
-      throw new Error('Cygwin embebido no encontrado en la aplicación');
+      throw new Error('Cygwin no esta instalado. Instalarlo desde Ajustes > Apps > Cygwin.');
     }
 
     // Iniciando Cygwin silenciosamente
@@ -302,7 +317,7 @@ cd ~
     if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
       mainWindow.webContents.send(`cygwin:error:${tabId}`,
         `No se pudo iniciar Cygwin: ${error.message}\n\n` +
-        `Asegúrate de que la carpeta 'resources/cygwin64' existe en la aplicación.`
+        `Instalalo desde Ajustes > Apps > Cygwin.`
       );
     }
   }
@@ -364,56 +379,91 @@ const CygwinHandlers = {
   },
 
   // Detener
-  stop: (tabId) => {
-    if (cygwinProcesses[tabId]) {
-      try {
-        const process = cygwinProcesses[tabId];
-        const pid = process.pid;
+  stop: (tabId, options = {}) => {
+    const wait = options.wait === true;
+    if (!cygwinProcesses[tabId]) {
+      return wait ? Promise.resolve() : undefined;
+    }
 
-        process.removeAllListeners();
+    try {
+      const proc = cygwinProcesses[tabId];
+      const pid = proc.pid;
+      proc.removeAllListeners();
 
-        // En Windows, usar taskkill directamente para evitar errores de AttachConsole
-        if (os.platform() === 'win32') {
+      const finish = () => {
+        delete cygwinProcesses[tabId];
+      };
+
+      if (os.platform() === 'win32') {
+        const { spawn } = require('child_process');
+
+        if (!wait) {
           try {
-            const { spawn } = require('child_process');
-            // Usar taskkill de forma asíncrona y separada para no bloquear
-            // el cierre de la aplicación
-            const killProc = spawn('taskkill', ['/F', '/T', '/PID', pid], {
+            const killProc = spawn('taskkill', ['/F', '/T', '/PID', String(pid)], {
               detached: true,
               windowsHide: true,
               stdio: 'ignore'
             });
             killProc.unref();
-          } catch (killError) {
-            // El proceso probablemente ya terminó
+          } catch {
+            // ignore
           }
-        } else {
-          try {
-            process.kill();
-          } catch (killError) {
-            // Ignorar errores de kill
-          }
+          finish();
+          return undefined;
         }
 
-        delete cygwinProcesses[tabId];
-      } catch (error) {
-        console.error(`❌ Cygwin ${tabId}: Error al detener`);
+        const killPromise = new Promise((resolve) => {
+          try {
+            const killProc = spawn('taskkill', ['/F', '/T', '/PID', String(pid)], {
+              windowsHide: true,
+              stdio: 'ignore'
+            });
+            killProc.on('close', () => resolve());
+            killProc.on('error', () => resolve());
+            setTimeout(() => resolve(), 3000);
+          } catch {
+            resolve();
+          }
+        });
+
+        return killPromise.finally(finish);
       }
+
+      try {
+        proc.kill();
+      } catch {
+        // ignore
+      }
+      finish();
+      return wait ? Promise.resolve() : undefined;
+    } catch (error) {
+      console.error(`[Cygwin] Error al detener ${tabId}`);
+      delete cygwinProcesses[tabId];
+      return wait ? Promise.resolve() : undefined;
     }
   },
 
-  // Limpiar todos los procesos (al cerrar la app)
+  // Limpiar todos los procesos (al cerrar la app / antes de desinstalar)
   cleanup: () => {
-    console.log(`🧹 Cygwin: Limpiando ${Object.keys(cygwinProcesses).length} procesos`);
-    Object.keys(cygwinProcesses).forEach(tabId => {
+    console.log(`[Cygwin] Limpiando ${Object.keys(cygwinProcesses).length} procesos`);
+    Object.keys(cygwinProcesses).forEach((tabId) => {
       CygwinHandlers.stop(tabId);
     });
+  },
+
+  cleanupAndWait: async () => {
+    const tabIds = Object.keys(cygwinProcesses);
+    console.log(`[Cygwin] Deteniendo ${tabIds.length} sesiones antes de desinstalar`);
+    await Promise.all(tabIds.map((tabId) => CygwinHandlers.stop(tabId, { wait: true })));
+    // Dar tiempo a Windows a liberar DLLs
+    await new Promise((resolve) => setTimeout(resolve, 500));
   }
 };
 
 module.exports = {
   setMainWindow,
   initializeCygwinPaths,
+  resetCygwinPaths,
   isCygwinAvailable,
   startCygwinSession,
   CygwinHandlers,

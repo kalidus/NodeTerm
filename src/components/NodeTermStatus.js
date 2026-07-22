@@ -471,37 +471,52 @@ const NodeTermStatus = ({
 	useEffect(() => {
 		if ((!horizontal || !compact) && variant !== 'rightColumn') return;
 
-		// 🚀 Verificar caché en sessionStorage primero
-		const cachedCygwin = getCachedData(CACHE_KEYS.CYGWIN);
-		if (cachedCygwin !== null) {
-			setCygwinAvailable(cachedCygwin);
-			return;
-		}
-
-		const timer = setTimeout(() => {
-			const detectCygwin = async () => {
-				if (window.electron && window.electron.platform === 'win32') {
-					try {
-						const result = await window.electronAPI.invoke('cygwin:detect');
-						if (result && typeof result.available === 'boolean') {
-							setCachedData(CACHE_KEYS.CYGWIN, result.available); // 🚀 Guardar en caché persistente
-							setCygwinAvailable(result.available);
-						} else {
-							setCachedData(CACHE_KEYS.CYGWIN, false); // 🚀 Guardar en caché persistente
-							setCygwinAvailable(false);
-						}
-					} catch (error) {
-						setCachedData(CACHE_KEYS.CYGWIN, false); // 🚀 Guardar en caché persistente
+		const detectCygwin = async (force = false) => {
+			if (!force) {
+				const cachedCygwin = getCachedData(CACHE_KEYS.CYGWIN);
+				if (cachedCygwin !== null) {
+					setCygwinAvailable(cachedCygwin);
+					return;
+				}
+			}
+			if (window.electron && window.electron.platform === 'win32') {
+				try {
+					const result = await window.electronAPI.invoke('cygwin:detect');
+					if (result && typeof result.available === 'boolean') {
+						setCachedData(CACHE_KEYS.CYGWIN, result.available);
+						setCygwinAvailable(result.available);
+					} else {
+						setCachedData(CACHE_KEYS.CYGWIN, false);
 						setCygwinAvailable(false);
 					}
-				} else {
-					setCachedData(CACHE_KEYS.CYGWIN, false); // 🚀 Guardar en caché persistente
+				} catch (error) {
+					setCachedData(CACHE_KEYS.CYGWIN, false);
 					setCygwinAvailable(false);
 				}
-			};
-			detectCygwin();
-		}, 1000); // Diferir 1000ms
-		return () => clearTimeout(timer);
+			} else {
+				setCachedData(CACHE_KEYS.CYGWIN, false);
+				setCygwinAvailable(false);
+			}
+		};
+
+		const timer = setTimeout(() => {
+			detectCygwin(false);
+		}, 1000);
+
+		const onCygwinChanged = () => {
+			try {
+				sessionStorage.removeItem(CACHE_KEYS.CYGWIN);
+			} catch (e) {
+				// ignore
+			}
+			detectCygwin(true);
+		};
+		window.addEventListener('cygwin-install-changed', onCygwinChanged);
+
+		return () => {
+			clearTimeout(timer);
+			window.removeEventListener('cygwin-install-changed', onCygwinChanged);
+		};
 	}, [horizontal, compact, variant]);
 
 	// 🚀 OPTIMIZACIÓN CON CACHÉ PERSISTENTE: Detectar contenedores Docker DIFERIDO

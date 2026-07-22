@@ -885,6 +885,22 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         return () => clearTimeout(timer);
     }, []);
 
+    // Refrescar deteccion cuando Apps instala/desinstala Cygwin
+    useEffect(() => {
+        const onCygwinChanged = async () => {
+            try {
+                const result = await window.electronAPI?.invoke?.('cygwin:detect');
+                if (result && typeof result.available === 'boolean') {
+                    setCygwinAvailable(result.available);
+                }
+            } catch (e) {
+                // ignore
+            }
+        };
+        window.addEventListener('cygwin-install-changed', onCygwinChanged);
+        return () => window.removeEventListener('cygwin-install-changed', onCygwinChanged);
+    }, []);
+
     // 🚀 OPTIMIZACIÓN: Detectar disponibilidad de Cygwin DIFERIDO
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -971,47 +987,26 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         };
     }, []); // Solo ejecutar UNA VEZ al montar
 
-    // Función para instalar Cygwin bajo demanda
-    const installCygwin = async () => {
+    // Abrir Apps > Cygwin para instalar el runtime bajo demanda
+    const openCygwinAppsInstall = () => {
+        const proceed = window.confirm(
+            'Cygwin no esta instalado.\n\n' +
+            'Se descarga bajo demanda desde Ajustes > Apps (~25-40 MB).\n\n' +
+            'Abrir Apps para instalarlo?'
+        );
+        if (!proceed) return;
         try {
-            console.log('🚀 Cygwin: Iniciando instalación...');
-
-            // Mostrar notificación de inicio
-            const proceed = window.confirm(
-                '⏳ ¿Instalar Cygwin Portable?\n\n' +
-                '• Descarga: ~150 MB\n' +
-                '• Tiempo: 5-10 minutos\n' +
-                '• Requiere internet\n\n' +
-                'Se abrirá una ventana de PowerShell mostrando el progreso.\n\n' +
-                '¿Continuar?'
-            );
-
-            if (!proceed) {
-                console.log('❌ Instalación cancelada por el usuario');
-                return;
-            }
-
-            // Llamar al handler de instalación
-            console.log('📥 Cygwin: Descargando...');
-            const result = await window.electronAPI.invoke('cygwin:install');
-
-            if (result.success) {
-                console.log('✅ Cygwin: Instalación completada');
-
-                // Re-detectar Cygwin
-                const detectResult = await window.electronAPI.invoke('cygwin:detect');
-                if (detectResult && detectResult.available) {
-                    setCygwinAvailable(true);
-                    alert('✅ ¡Cygwin instalado correctamente!\n\nAhora puedes crear pestañas de Cygwin.');
-                } else {
-                    alert('⚠️ Cygwin se instaló pero no se pudo verificar.\n\nPor favor, reinicia la aplicación.');
-                }
-            } else {
-                alert('❌ Error instalando Cygwin:\n\n' + (result.error || 'Error desconocido') + '\n\nPuedes ejecutar manualmente:\n.\\scripts\\create-cygwin-portable.ps1');
-            }
-        } catch (error) {
-            console.error('❌ Cygwin: Error en instalación');
-            alert('❌ Error instalando Cygwin:\n\n' + error.message + '\n\nPor favor, ejecuta manualmente:\n.\\scripts\\create-cygwin-portable.ps1');
+            // Primero abre el dialogo; luego (tras montar SettingsDialog) selecciona Cygwin
+            window.dispatchEvent(new CustomEvent('open-settings-dialog', {
+                detail: { tab: 'apps', subTab: 'cygwin' }
+            }));
+            setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('open-settings-dialog', {
+                    detail: { tab: 'apps', subTab: 'cygwin' }
+                }));
+            }, 150);
+        } catch (e) {
+            console.error('[Cygwin] No se pudo abrir Apps:', e);
         }
     };
 
@@ -1389,7 +1384,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             title = 'RDP Session';
             terminalType = 'rdp-guacamole';
         } else if (terminalTypeToUse === 'cygwin') {
-            // Re-detectar Cygwin en tiempo real (evita pedir instalar si ya está empaquetado o recién instalado)
+            // Re-detectar Cygwin en tiempo real (AppData o resources en dev)
             try {
                 const det = await window.electronAPI.invoke('cygwin:detect');
                 if (det?.available) {
@@ -1397,21 +1392,11 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                     title = 'Cygwin';
                     terminalType = 'cygwin';
                 } else {
-                    const vi = await window.electronAPI.invoke('get-version-info');
-                    if (vi?.isPackaged) {
-                        window.alert(
-                            'Cygwin viene incluido en NodeTerm.\n\n' +
-                            'No se ha encontrado; puede que la instalación esté dañada.\n\n' +
-                            'Prueba a reinstalar la aplicación.'
-                        );
-                        return;
-                    }
-                    // Desarrollo: ofrecer instalación (script create-cygwin-portable)
-                    installCygwin();
+                    openCygwinAppsInstall();
                     return;
                 }
             } catch (e) {
-                console.error('Cygwin: error en detección o versión', e);
+                console.error('Cygwin: error en deteccion', e);
                 setCygwinAvailable(false);
                 return;
             }

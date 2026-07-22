@@ -489,6 +489,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const validChannels = [
       'cygwin:detect',
       'cygwin:install',
+      'cygwin:uninstall',
+      'cygwin:install-status',
       'docker:list',
       'get-version-info',
       // Add more channels as needed

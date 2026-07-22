@@ -136,16 +136,7 @@
       ],
       "icon": "src/assets/app-icon.png",
       "verifyUpdateCodeSignature": false,
-      "requestedExecutionLevel": "asInvoker",
-      "extraResources": [
-        {
-          "from": "resources/cygwin64",
-          "to": "cygwin64",
-          "filter": [
-            "**/*"
-          ]
-        }
-      ]
+      "requestedExecutionLevel": "asInvoker"
     },
     "electronLanguages": [
       "en",
