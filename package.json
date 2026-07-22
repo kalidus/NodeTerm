@@ -122,7 +122,15 @@
       "!dist/*.exe",
       "!dist/*.dmg",
       "!dist/*.yml",
-      "!dist/*.blockmap"
+      "!dist/*.blockmap",
+      "!node_modules/node-pty/src/**",
+      "!node_modules/node-pty/deps/**",
+      "!node_modules/node-pty/**/*.test.js",
+      "!node_modules/node-pty/build/deps/**",
+      "!node_modules/node-pty/build/**/obj/**",
+      "!node_modules/node-pty/**/*.{iobj,ipdb,pdb,exp,lib,ilk,tlog}",
+      "!node_modules/better-sqlite3/deps/**",
+      "!node_modules/better-sqlite3/src/**"
     ],
     "asarUnpack": [
       "binaries/**",
@@ -136,7 +144,31 @@
       ],
       "icon": "src/assets/app-icon.png",
       "verifyUpdateCodeSignature": false,
-      "requestedExecutionLevel": "asInvoker"
+      "requestedExecutionLevel": "asInvoker",
+      "files": [
+        "!resources${/*}",
+        "!http*/**",
+        "!https*/**",
+        "!docs${/*}",
+        "!scripts${/*}",
+        "!testing${/*}",
+        "!.agents${/*}",
+        "!.rules${/*}",
+        "!src/assets${/*}",
+        "!src/components${/*}",
+        "src/components/bastion-ssh.js",
+        "!src/hooks${/*}",
+        "!src/i18n${/*}",
+        "!src/styles${/*}",
+        "!src/themes${/*}",
+        "!src/stores${/*}",
+        "!src/config${/*}",
+        "!src/mcp-servers${/*}",
+        "!node_modules/node-pty/prebuilds/win32-arm64/**",
+        "!node_modules/node-pty/prebuilds/darwin-*/**",
+        "!node_modules/node-pty/prebuilds/linux-*/**",
+        "!node_modules/node-pty/third_party/**/win10-arm64/**"
+      ]
     },
     "electronLanguages": [
       "en",
@@ -164,7 +196,30 @@
       ],
       "category": "Utility",
       "maintainer": "kalidus <kalidus@users.noreply.github.com>",
-      "icon": "src/assets/app-icon.png"
+      "icon": "src/assets/app-icon.png",
+      "files": [
+        "!resources${/*}",
+        "!http*/**",
+        "!https*/**",
+        "!docs${/*}",
+        "!scripts${/*}",
+        "!testing${/*}",
+        "!.agents${/*}",
+        "!.rules${/*}",
+        "!src/assets${/*}",
+        "!src/components${/*}",
+        "src/components/bastion-ssh.js",
+        "!src/hooks${/*}",
+        "!src/i18n${/*}",
+        "!src/styles${/*}",
+        "!src/themes${/*}",
+        "!src/stores${/*}",
+        "!src/config${/*}",
+        "!src/mcp-servers${/*}",
+        "!node_modules/node-pty/prebuilds/win32-*/**",
+        "!node_modules/node-pty/prebuilds/darwin-*/**",
+        "!node_modules/node-pty/third_party/**"
+      ]
     },
     "publish": {
       "provider": "github",
@@ -190,14 +245,36 @@
         }
       ],
       "icon": "src/assets/app-icon.png",
-      "category": "public.app-category.utilities"
+      "category": "public.app-category.utilities",
+      "files": [
+        "!resources${/*}",
+        "!http*/**",
+        "!https*/**",
+        "!docs${/*}",
+        "!scripts${/*}",
+        "!testing${/*}",
+        "!.agents${/*}",
+        "!.rules${/*}",
+        "!src/assets${/*}",
+        "!src/components${/*}",
+        "src/components/bastion-ssh.js",
+        "!src/hooks${/*}",
+        "!src/i18n${/*}",
+        "!src/styles${/*}",
+        "!src/themes${/*}",
+        "!src/stores${/*}",
+        "!src/config${/*}",
+        "!src/mcp-servers${/*}",
+        "!node_modules/node-pty/prebuilds/win32-*/**",
+        "!node_modules/node-pty/prebuilds/linux-*/**",
+        "!node_modules/node-pty/third_party/**"
+      ]
     }
   },
   "engines": {
     "node": ">=24 <25"
   },
   "keywords": [],
-  "author": "",
   "license": "ISC",
   "description": "Aplicación de escritorio multiplataforma con Electron y PrimeReact",
   "dependencies": {
@@ -205,7 +282,6 @@
     "@fortawesome/free-solid-svg-icons": "^7.2.0",
     "@fortawesome/react-fontawesome": "^3.2.0",
     "@mozilla/readability": "^0.6.0",
-    "@napi-rs/canvas": "^0.1.82",
     "@primno/dpapi": "^2.0.1",
     "@tiptap/extension-code-block-lowlight": "^3.23.4",
     "@tiptap/extension-color": "^3.23.4",
