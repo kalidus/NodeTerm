@@ -1,10 +1,10 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Button } from 'primereact/button';
-import { Dialog } from 'primereact/dialog';
 import { Password } from 'primereact/password';
 import { Checkbox } from 'primereact/checkbox';
 import { Tag } from 'primereact/tag';
 import { InputText } from 'primereact/inputtext';
+import AppDialog from './ui/AppDialog';
 
 const CONNECTION_TYPE_LABELS = {
   ssh: { label: 'SSH', icon: 'pi pi-server', color: '#4caf50' },
@@ -611,21 +611,19 @@ const UsersSettingsTab = ({ nodes = [], onUpdateUserPassword, onEditConnection }
         )}
       </div>
 
-      {/* Diálogo de cambio de contraseña */}
-      <Dialog
+      <AppDialog
         visible={changePasswordVisible}
         onHide={() => setChangePasswordVisible(false)}
-        header={
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <i className="pi pi-lock" />
-            <span>Cambiar Contraseña — {selectedUser?.username}</span>
-          </div>
-        }
-        style={{ width: '420px' }}
-        modal
+        headerIcon="pi pi-lock"
+        headerTitle={`Cambiar Contrasena - ${selectedUser?.username || ''}`}
+        size="md"
         draggable={false}
+        confirmLabel="Aplicar"
+        confirmIcon="pi pi-check"
+        confirmDisabled={!newPassword || !confirmPassword}
+        onConfirm={handleApplyPassword}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '0.5rem 0' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div style={{
             padding: '0.75rem 1rem',
             borderRadius: 8,
@@ -636,15 +634,15 @@ const UsersSettingsTab = ({ nodes = [], onUpdateUserPassword, onEditConnection }
             opacity: 0.85,
           }}>
             <i className="pi pi-info-circle" style={{ marginRight: '0.5rem', color: 'var(--ui-button-primary)' }} />
-            Se actualizará la contraseña en{' '}
+            Se actualizara la contrasena en{' '}
             <strong>{selectedConnectionKeys.size}</strong>{' '}
-            {selectedConnectionKeys.size === 1 ? 'conexión' : 'conexiones'} del usuario{' '}
+            {selectedConnectionKeys.size === 1 ? 'conexion' : 'conexiones'} del usuario{' '}
             <strong>{selectedUser?.username}</strong>.
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
             <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--ui-dialog-text)' }}>
-              Nueva contraseña
+              Nueva contrasena
             </label>
             <Password
               value={newPassword}
@@ -653,13 +651,13 @@ const UsersSettingsTab = ({ nodes = [], onUpdateUserPassword, onEditConnection }
               toggleMask
               inputStyle={{ width: '100%' }}
               style={{ width: '100%' }}
-              placeholder="Introduce la nueva contraseña"
+              placeholder="Introduce la nueva contrasena"
             />
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
             <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--ui-dialog-text)' }}>
-              Confirmar contraseña
+              Confirmar contrasena
             </label>
             <Password
               value={confirmPassword}
@@ -668,7 +666,7 @@ const UsersSettingsTab = ({ nodes = [], onUpdateUserPassword, onEditConnection }
               toggleMask
               inputStyle={{ width: '100%' }}
               style={{ width: '100%' }}
-              placeholder="Repite la contraseña"
+              placeholder="Repite la contrasena"
             />
           </div>
 
@@ -688,25 +686,8 @@ const UsersSettingsTab = ({ nodes = [], onUpdateUserPassword, onEditConnection }
               {passwordError}
             </div>
           )}
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.25rem' }}>
-            <Button
-              label="Cancelar"
-              icon="pi pi-times"
-              severity="secondary"
-              size="small"
-              onClick={() => setChangePasswordVisible(false)}
-            />
-            <Button
-              label="Aplicar"
-              icon="pi pi-check"
-              size="small"
-              onClick={handleApplyPassword}
-              disabled={!newPassword || !confirmPassword}
-            />
-          </div>
         </div>
-      </Dialog>
+      </AppDialog>
     </div>
   );
 };

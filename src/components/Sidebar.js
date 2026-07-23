@@ -29,6 +29,7 @@ import localStorageSyncService from '../services/LocalStorageSyncService';
 import { getFavorites, onUpdate as onFavoritesUpdate } from '../utils/connectionStore';
 import favoriteGroupsStore from '../utils/favoriteGroupsStore';
 import { buildSidebarFontStack } from '../utils/sidebarFontStack';
+import { appConfirm } from './ui/AppConfirm';
 import {
   FAVORITES_ROOT_KEY,
   applyFavoritesDragDropFromEvent,
@@ -2387,8 +2388,16 @@ const Sidebar = React.memo(({
                 acceptClassName: 'p-button-danger',
                 accept: executeFavoriteGroupDeletion
               });
-            } else if (window.confirm(`¿Eliminar la carpeta de favoritos "${nodeLabel}"?`)) {
-              executeFavoriteGroupDeletion();
+            } else {
+              appConfirm({
+                message: `¿Eliminar la carpeta de favoritos "${nodeLabel}"?`,
+                header: 'Confirmar',
+                severity: 'danger',
+                acceptLabel: 'Aceptar',
+                rejectLabel: 'Cancelar'
+              }).then(ok => {
+                if (ok) executeFavoriteGroupDeletion();
+              });
             }
             return;
           }
@@ -3681,10 +3690,13 @@ const Sidebar = React.memo(({
             .trash-delete-btn:hover { background: rgba(239,68,68,0.22) !important; }
             .trash-empty-btn:hover { background: rgba(239,68,68,0.25) !important; }
           `}</style>
-          <div style={{
-            background: 'linear-gradient(145deg, #1a1b2e 0%, #16213e 100%)',
-            border: '1px solid rgba(255,255,255,0.12)',
-            borderRadius: '16px',
+          <div
+            className="app-dialog"
+            style={{
+            background: 'var(--ui-dialog-bg)',
+            border: '1px solid var(--ui-dialog-border)',
+            borderRadius: 'var(--ui-radius-lg)',
+            color: 'var(--ui-dialog-text)',
             width: '460px',
             maxHeight: '560px',
             display: 'flex',

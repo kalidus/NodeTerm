@@ -7,7 +7,6 @@ import { TabView, TabPanel } from 'primereact/tabview';
 import { Accordion, AccordionTab } from 'primereact/accordion';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
-import { Dialog } from 'primereact/dialog';
 import { Tooltip } from 'primereact/tooltip';
 import { Tag } from 'primereact/tag';
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
@@ -16,6 +15,7 @@ import { cvssV31Service } from '../../services/cvss/CvssV31Service';
 import { cvssStore } from '../../stores/cvssStore';
 import { cvssReportService } from '../../services/reports/CvssReportService';
 import { CvssAuditorService } from '../../services/cvss/CvssAuditorService';
+import AppDialog from '../ui/AppDialog';
 
 // ─── Paleta de severidad ─────────────────────────────────────────────────────
 const SEVERITY_CONFIG = {
@@ -1279,33 +1279,31 @@ const CvssCalculatorPanel = () => {
         </TabPanel>
       </TabView>
 
-      {/* Dialog guardar template */}
-      <Dialog
-        header="Guardar Template CVSS"
+      <AppDialog
+        headerTitle="Guardar Template CVSS"
+        headerIcon="pi pi-bookmark"
         visible={showTemplateDialog}
         onHide={() => setShowTemplateDialog(false)}
-        style={{ width: '400px' }}
-        modal
+        size="sm"
+        confirmLabel="Guardar"
+        confirmIcon="pi pi-bookmark"
+        onConfirm={handleSaveTemplate}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.7rem' }}>
           <div>
             <label style={{ fontSize: '0.78rem', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Nombre del template *</label>
-            <InputText value={templateName} onChange={e => setTemplateName(e.target.value)} placeholder="Ej: RCE remoto crítico" style={{ width: '100%' }} autoFocus />
+            <InputText value={templateName} onChange={e => setTemplateName(e.target.value)} placeholder="Ej: RCE remoto critico" style={{ width: '100%' }} autoFocus />
           </div>
           <div>
-            <label style={{ fontSize: '0.78rem', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Descripción (opcional)</label>
-            <InputText value={templateDesc} onChange={e => setTemplateDesc(e.target.value)} placeholder="Para qué tipo de vulnerabilidad…" style={{ width: '100%' }} />
+            <label style={{ fontSize: '0.78rem', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Descripcion (opcional)</label>
+            <InputText value={templateDesc} onChange={e => setTemplateDesc(e.target.value)} placeholder="Para que tipo de vulnerabilidad..." style={{ width: '100%' }} />
           </div>
           <div style={{ display: 'flex', gap: '0.4rem', fontSize: '0.78rem', color: 'var(--text-color-secondary)' }}>
             <Tag value={`CVSS ${version}`} style={{ background: 'rgba(99,102,241,0.2)', color: '#a5b4fc' }} />
             <Tag value={`Score: ${Number(computed.score || 0).toFixed(1)}`} style={{ background: getSeverityConfig(computed.severity || 'None').bg, color: getSeverityConfig(computed.severity || 'None').fg }} />
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-            <Button label="Cancelar" severity="secondary" outlined onClick={() => setShowTemplateDialog(false)} />
-            <Button label="Guardar" icon="pi pi-bookmark" onClick={handleSaveTemplate} />
-          </div>
         </div>
-      </Dialog>
+      </AppDialog>
     </div>
   );
 };

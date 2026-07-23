@@ -4,8 +4,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: var(--statusbar-bg, #252526) !important;
-  color: var(--statusbar-text, #cccccc) !important;
+  background-color: var(--statusbar-bg, var(--ui-statusbar-bg, #252526)) !important;
+  color: var(--statusbar-text, var(--ui-statusbar-text, #cccccc)) !important;
   padding: 0 10px;
   margin: 0 !important;
   border: none !important;
@@ -69,8 +69,8 @@
   display: flex;
   align-items: flex-end;
   margin-left: 5px;
-  border: 1px solid var(--statusbar-border, #2c313a) !important;
-  background-color: var(--statusbar-bg, #1e1e1e) !important;
+  border: 1px solid var(--statusbar-border, var(--ui-statusbar-border, #2c313a)) !important;
+  background-color: var(--statusbar-bg, var(--ui-statusbar-bg, #1e1e1e)) !important;
   overflow: hidden;
   padding: 1px;
   box-sizing: border-box;
@@ -224,9 +224,11 @@
 
 /* Quick Theme Selector Overlay */
 .statusbar-theme-overlay.p-overlaypanel {
-  background: var(--statusbar-bg, #1e1e1e) !important;
-  border: 1px solid var(--statusbar-border, #333) !important;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4) !important;
+  background: var(--statusbar-bg, var(--ui-dialog-bg)) !important;
+  color: var(--statusbar-text, var(--ui-dialog-text)) !important;
+  border: 1px solid var(--statusbar-border, var(--ui-dialog-border)) !important;
+  box-shadow: 0 4px 12px var(--ui-dialog-shadow) !important;
+  border-radius: var(--ui-radius-md) !important;
   padding: 0 !important;
 }
 
@@ -244,8 +246,8 @@
 }
 
 .statusbar-theme-overlay .theme-list-container::-webkit-scrollbar-thumb {
-  background: var(--statusbar-border, #444);
-  border-radius: 10px;
+  background: var(--statusbar-border, var(--ui-dialog-border));
+  border-radius: var(--ui-radius-md);
 }
 
 .statusbar-theme-overlay .theme-item:hover {
@@ -260,25 +262,21 @@
   transition: background 0.15s ease;
 }
 .sbpop-trigger:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--ui-context-hover, rgba(255, 255, 255, 0.07));
 }
 
 /* ── Metric popover panel ─────────────────────────────────────────────── */
 .sbpop-panel {
   position: fixed;
   z-index: 99999;
-  background: #0a0e14;
-  border: 1px solid rgba(0, 255, 231, 0.2);
-  border-radius: 6px;
+  background: var(--ui-dialog-bg);
+  border: 1px solid var(--ui-dialog-border);
+  border-radius: var(--ui-radius-md);
   padding: 10px 8px 8px 8px;
   font-family: 'Consolas', 'Courier New', monospace;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.82);
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.8),
-    0 6px 24px rgba(0, 0, 0, 0.7),
-    0 0 16px rgba(0, 255, 231, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  color: var(--ui-dialog-text);
+  box-shadow: 0 4px 12px var(--ui-dialog-shadow);
   pointer-events: auto;
   user-select: none;
   animation: sbpop-in 0.12s ease forwards;
@@ -298,13 +296,13 @@
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: 6px;
+  border-radius: var(--ui-radius-md);
   background: repeating-linear-gradient(
     0deg,
     transparent,
     transparent 3px,
-    rgba(255, 255, 255, 0.012) 3px,
-    rgba(255, 255, 255, 0.012) 4px
+    color-mix(in srgb, var(--ui-dialog-text) 4%, transparent) 3px,
+    color-mix(in srgb, var(--ui-dialog-text) 4%, transparent) 4px
   );
   pointer-events: none;
 }
@@ -315,7 +313,7 @@
   gap: 6px;
   margin-bottom: 6px;
   padding-bottom: 5px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid var(--ui-dialog-border);
 }
 
 .sbpop-label {
@@ -327,7 +325,7 @@
 
 .sbpop-sublabel {
   font-size: 9px;
-  color: rgba(255, 255, 255, 0.35);
+  color: color-mix(in srgb, var(--ui-dialog-text) 40%, transparent);
   letter-spacing: 0.3px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -360,14 +358,14 @@
 .sbpop-unit {
   font-size: 11px;
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.4);
+  color: color-mix(in srgb, var(--ui-dialog-text) 45%, transparent);
   letter-spacing: 0;
 }
 
 .sbpop-cores {
   font-size: 9px;
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.3);
+  color: color-mix(in srgb, var(--ui-dialog-text) 35%, transparent);
   margin-left: 6px;
   letter-spacing: 0.5px;
   align-self: center;
@@ -386,20 +384,20 @@
 
 .sbpop-key {
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.38);
+  color: color-mix(in srgb, var(--ui-dialog-text) 42%, transparent);
   letter-spacing: 0.3px;
 }
 
 .sbpop-val {
   font-size: 10px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.78);
+  color: color-mix(in srgb, var(--ui-dialog-text) 85%, transparent);
   letter-spacing: 0.3px;
 }
 
 .sbpop-bar-track {
   height: 4px;
-  background: rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--ui-dialog-text) 10%, transparent);
   border-radius: 2px;
   overflow: hidden;
   margin-top: 6px;
@@ -413,7 +411,7 @@
 
 .sbpop-legend {
   font-size: 9px;
-  color: rgba(255, 255, 255, 0.28);
+  color: color-mix(in srgb, var(--ui-dialog-text) 32%, transparent);
   text-align: right;
   margin-top: 4px;
   letter-spacing: 0.3px;
@@ -421,7 +419,7 @@
 
 .sbpop-chart-caption {
   font-size: 9px;
-  color: rgba(255, 255, 255, 0.35);
+  color: color-mix(in srgb, var(--ui-dialog-text) 40%, transparent);
   letter-spacing: 0.4px;
   text-transform: uppercase;
   margin-top: 6px;
@@ -430,7 +428,7 @@
 
 .sbpop-diskgroup {
   padding: 3px 0;
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+  border-bottom: 1px dashed var(--ui-dialog-border);
 }
 
 .sbpop-diskgroup:last-of-type {
@@ -451,7 +449,7 @@
 }
 
 .sbpop-disklogical .sbpop-key {
-  color: rgba(255, 255, 255, 0.28);
+  color: color-mix(in srgb, var(--ui-dialog-text) 32%, transparent);
 }
 
 .sbpop-diskgroup-logicals-open {
@@ -464,13 +462,13 @@
 .sbpop-disklogical-card {
   margin: 5px 0 7px 0;
   padding: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--ui-dialog-border);
+  border-radius: var(--ui-radius-sm);
+  background: color-mix(in srgb, var(--ui-dialog-text) 4%, transparent);
 }
 
 .sbpop-disklogical-header .sbpop-key {
-  color: rgba(255, 255, 255, 0.75);
+  color: color-mix(in srgb, var(--ui-dialog-text) 80%, transparent);
 }
 
 .sbpop-diskgroup-header {

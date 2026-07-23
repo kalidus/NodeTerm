@@ -16,6 +16,7 @@ import { Card } from 'primereact/card';
 import { confirmDialog } from 'primereact/confirmdialog';
 import exportImportService from '../services/ExportImportService';
 import { useTranslation } from '../i18n/hooks/useTranslation';
+import { appConfirm } from './ui/AppConfirm';
 
 const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete, isEmbedded = false }) => {
   const { t } = useTranslation('common');
@@ -559,11 +560,19 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete, isEm
 
       // Recargar página después de un momento para aplicar cambios
       setTimeout(() => {
-        if (window.confirm(t('import.reloadRequired') || '¿Recargar la aplicación para aplicar los cambios?')) {
-          window.location.reload();
-        } else {
-          handleClose();
-        }
+        appConfirm({
+          message: t('import.reloadRequired') || '¿Recargar la aplicación para aplicar los cambios?',
+          header: 'Confirmar',
+          severity: 'warn',
+          acceptLabel: 'Aceptar',
+          rejectLabel: 'Cancelar'
+        }).then(ok => {
+          if (ok) {
+            window.location.reload();
+          } else {
+            handleClose();
+          }
+        });
       }, 1500);
 
     } catch (error) {
@@ -1051,7 +1060,7 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete, isEm
       draggable={false}
       resizable={false}
       closable={!importing}
-      className="import-export-dialog"
+      className="app-dialog import-export-dialog"
     >
       {dialogContent}
     </Dialog>

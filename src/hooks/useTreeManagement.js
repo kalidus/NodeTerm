@@ -302,9 +302,10 @@ export const useTreeManagement = ({ toast, confirmDialog }) => {
 
     confirmDialog({
       message: message,
-      header: 'Confirmar eliminación',
+      header: 'Confirmar eliminacion',
       icon: 'pi pi-exclamation-triangle',
       acceptClassName: 'p-button-danger',
+      className: 'app-confirm-dialog',
       accept: () => deleteNode(nodes, setNodes, nodeKey),
       reject: () => { }
     });

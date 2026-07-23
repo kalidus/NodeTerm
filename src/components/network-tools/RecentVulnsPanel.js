@@ -4,12 +4,12 @@ import { Dropdown } from 'primereact/dropdown';
 import { InputNumber } from 'primereact/inputnumber';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
-import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
 import { Tag } from 'primereact/tag';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { Message } from 'primereact/message';
 import { themeManager } from '../../utils/themeManager';
+import AppDialog from '../ui/AppDialog';
 
 const RecentVulnsPanel = () => {
   const [range, setRange] = useState('1M'); // Rango seleccionado por defecto: 1 Mes
@@ -546,19 +546,20 @@ const RecentVulnsPanel = () => {
         )}
       </div>
 
-      {/* Diálogo de Detalles de Vulnerabilidad */}
-      <Dialog 
-        header={selectedVuln ? `Detalle de Vulnerabilidad - ${selectedVuln.cve}` : 'Detalles'} 
-        visible={detailsVisible} 
+      <AppDialog
+        headerTitle={selectedVuln ? `Detalle de Vulnerabilidad - ${selectedVuln.cve}` : 'Detalles'}
+        headerIcon="pi pi-shield"
+        visible={detailsVisible}
         onHide={() => setDetailsVisible(false)}
+        size="md"
         style={{ width: '550px' }}
-        modal
+        cancelLabel={false}
         draggable={false}
         resizable={false}
         className="cyberpunk-dialog"
       >
         {selectedVuln && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '0.25rem 0' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.03)', padding: '0.6rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
               <div>
                 <span style={{ fontSize: '0.72rem', color: themeColors.textSecondary }}>CVSS Score</span>
@@ -567,16 +568,16 @@ const RecentVulnsPanel = () => {
                 </div>
               </div>
               <div>
-                <span style={{ fontSize: '0.72rem', color: themeColors.textSecondary, display: 'block', textAlign: 'right' }}>Fecha Publicación</span>
-                <span style={{ fontWeight: '600', color: '#fff', fontSize: '0.85rem' }}>{new Date(selectedVuln.published).toLocaleDateString()}</span>
+                <span style={{ fontSize: '0.72rem', color: themeColors.textSecondary, display: 'block', textAlign: 'right' }}>Fecha Publicacion</span>
+                <span style={{ fontWeight: '600', fontSize: '0.85rem' }}>{new Date(selectedVuln.published).toLocaleDateString()}</span>
               </div>
             </div>
 
             <div>
               <h3 style={{ margin: '0 0 0.4rem 0', fontSize: '0.85rem', color: themeColors.primary, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Descripción de la Vulnerabilidad
+                Descripcion de la Vulnerabilidad
               </h3>
-              <p style={{ margin: 0, fontSize: '0.82rem', lineHeight: '1.5', color: '#e2e8f0', background: 'rgba(0,0,0,0.3)', padding: '0.6rem', borderRadius: '6px', border: '1px solid rgba(6, 182, 212, 0.1)' }}>
+              <p style={{ margin: 0, fontSize: '0.82rem', lineHeight: '1.5', background: 'rgba(0,0,0,0.3)', padding: '0.6rem', borderRadius: '6px', border: '1px solid rgba(6, 182, 212, 0.1)' }}>
                 {selectedVuln.description}
               </p>
             </div>
@@ -589,8 +590,8 @@ const RecentVulnsPanel = () => {
                 <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.78rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   {selectedVuln.references.map((url, i) => (
                     <li key={i}>
-                      <a 
-                        href="#" 
+                      <a
+                        href="#"
                         onClick={(e) => {
                           e.preventDefault();
                           if (window.electron?.ipcRenderer) {
@@ -598,7 +599,7 @@ const RecentVulnsPanel = () => {
                           } else {
                             window.open(url, '_blank');
                           }
-                        }} 
+                        }}
                         style={{ color: themeColors.primary, textDecoration: 'none', wordBreak: 'break-all' }}
                       >
                         {url}
@@ -610,7 +611,7 @@ const RecentVulnsPanel = () => {
             )}
           </div>
         )}
-      </Dialog>
+      </AppDialog>
     </div>
   );
 };

@@ -431,7 +431,7 @@ const ExportDialog = ({ visible, onHide, showToast, isEmbedded = false }) => {
       draggable={false}
       resizable={false}
       closable={!exporting}
-      className="export-dialog"
+      className="app-dialog export-dialog"
     >
       {dialogContent}
     </Dialog>

@@ -16,6 +16,7 @@ import StandaloneStatusBar from './StandaloneStatusBar';
 import { FaWindows, FaUbuntu, FaLinux } from 'react-icons/fa';
 import { SiAnthropic, SiDebian, SiDocker, SiGooglegemini, SiOpenai } from 'react-icons/si';
 import AIClientBrandIcon from './AIClientBrandIcon';
+import { appConfirm } from './ui/AppConfirm';
 
 // Formatear "Hace 5m", "Hace 2 h", "Ayer", etc.
 function formatRelativeTime(iso) {
@@ -1017,8 +1018,15 @@ const ConnectionHistory = ({
 		}
 	};
 
-	const handleDeleteGroup = (groupId) => {
-		if (!window.confirm('\u00BFEst\u00E1s seguro de que deseas eliminar este grupo?')) return;
+	const handleDeleteGroup = async (groupId) => {
+		const ok = await appConfirm({
+			message: '\u00BFEst\u00E1s seguro de que deseas eliminar este grupo?',
+			header: 'Confirmar',
+			severity: 'danger',
+			acceptLabel: 'Aceptar',
+			rejectLabel: 'Cancelar'
+		});
+		if (!ok) return;
 		try {
 			favoriteGroupsStore.deleteGroup(groupId);
 			setFavoriteGroups(favoriteGroupsStore.getGroups());
@@ -2784,7 +2792,7 @@ const ConnectionHistory = ({
 			{
 				showFilterConfig && ReactDOM.createPortal(
 					<div className="create-group-overlay" onClick={() => setShowFilterConfig(false)}>
-						<div className="create-group-dialog filter-config-dialog" onClick={(e) => e.stopPropagation()}>
+						<div className="app-dialog create-group-dialog filter-config-dialog" onClick={(e) => e.stopPropagation()}>
 							<div className="dialog-header">
 								<h3><i className="pi pi-cog" /> Configurar Filtros</h3>
 								<button className="dialog-close" onClick={() => setShowFilterConfig(false)}>
@@ -2851,7 +2859,7 @@ const ConnectionHistory = ({
 			{
 				showCreateGroupDialog && ReactDOM.createPortal(
 					<div className="create-group-overlay" onClick={() => setShowCreateGroupDialog(false)}>
-						<div className="create-group-dialog" onClick={(e) => e.stopPropagation()}>
+						<div className="app-dialog create-group-dialog" onClick={(e) => e.stopPropagation()}>
 							<div className="dialog-header">
 								<h3>Crear Grupo</h3>
 								<button className="dialog-close" onClick={() => setShowCreateGroupDialog(false)}>
@@ -2903,7 +2911,7 @@ const ConnectionHistory = ({
 			{
 				editingGroup && ReactDOM.createPortal(
 					<div className="create-group-overlay" onClick={() => setEditingGroup(null)}>
-						<div className="create-group-dialog small" onClick={(e) => e.stopPropagation()}>
+						<div className="app-dialog create-group-dialog small" onClick={(e) => e.stopPropagation()}>
 							<div className="dialog-header">
 								<h3>Opciones de "{editingGroup.name}"</h3>
 								<button className="dialog-close" onClick={() => setEditingGroup(null)}>
@@ -2932,7 +2940,7 @@ const ConnectionHistory = ({
 			{
 				showGroupSelector && connectionToFavorite && ReactDOM.createPortal(
 					<div className="create-group-overlay" onClick={() => setShowGroupSelector(false)}>
-						<div className="create-group-dialog" onClick={(e) => e.stopPropagation()}>
+						<div className="app-dialog create-group-dialog" onClick={(e) => e.stopPropagation()}>
 							<div className="dialog-header">
 								<h3>{isFavorite(connectionToFavorite) ? 'Editar favorito' : 'Agregar a favoritos'}</h3>
 								<button className="dialog-close" onClick={() => setShowGroupSelector(false)}>
@@ -3009,7 +3017,7 @@ const ConnectionHistory = ({
 			{
 				showEditFavGroups && editingFavorite && ReactDOM.createPortal(
 					<div className="create-group-overlay" onClick={() => setShowEditFavGroups(false)}>
-						<div className="create-group-dialog" onClick={(e) => e.stopPropagation()}>
+						<div className="app-dialog create-group-dialog" onClick={(e) => e.stopPropagation()}>
 							<div className="dialog-header">
 								<h3><i className="pi pi-folder" /> Grupos de Favoritos</h3>
 								<button className="dialog-close" onClick={() => setShowEditFavGroups(false)}>
@@ -3945,12 +3953,12 @@ const ConnectionHistory = ({
 				ref={themePickerRef}
 				style={{
 					width: '280px',
-					backgroundColor: 'var(--ui-dialog-bg, #1e1e1e)',
-					border: '1px solid var(--ui-content-border, #444)',
-					boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-					borderRadius: '8px'
+					backgroundColor: 'var(--ui-dialog-bg)',
+					border: '1px solid var(--ui-dialog-border)',
+					boxShadow: '0 4px 12px var(--ui-dialog-shadow)',
+					borderRadius: 'var(--ui-radius-md)'
 				}}
-				className="theme-picker-overlay"
+				className="theme-picker-overlay app-surface"
 			>
 				<div style={{ maxHeight: '350px', overflowY: 'auto', padding: '4px' }}>
 					<div style={{
@@ -3958,7 +3966,7 @@ const ConnectionHistory = ({
 						fontWeight: '600',
 						fontSize: '14px',
 						color: 'var(--ui-dialog-text)',
-						borderBottom: '1px solid var(--ui-content-border, #444)',
+						borderBottom: '1px solid var(--ui-dialog-border)',
 						marginBottom: '8px',
 						display: 'flex',
 						alignItems: 'center',
@@ -4043,12 +4051,12 @@ const ConnectionHistory = ({
 				ref={uiThemePickerRef}
 				style={{
 					width: '320px',
-					backgroundColor: 'var(--ui-dialog-bg, #1e1e1e)',
-					border: '1px solid var(--ui-content-border, #444)',
+					backgroundColor: 'var(--ui-dialog-bg)',
+					border: '1px solid var(--ui-dialog-border)',
 					boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
 					borderRadius: '12px'
 				}}
-				className="ui-theme-picker-overlay"
+				className="ui-theme-picker-overlay app-surface"
 			>
 				<div style={{ maxHeight: '450px', overflowY: 'auto', padding: '8px' }}>
 					<div style={{
@@ -4056,7 +4064,7 @@ const ConnectionHistory = ({
 						fontWeight: '700',
 						fontSize: '15px',
 						color: 'var(--ui-dialog-text)',
-						borderBottom: '1px solid var(--ui-content-border, #444)',
+						borderBottom: '1px solid var(--ui-dialog-border)',
 						marginBottom: '12px',
 						display: 'flex',
 						alignItems: 'center',
@@ -4095,7 +4103,7 @@ const ConnectionHistory = ({
 											gap: '12px',
 											padding: '8px 12px',
 											cursor: 'pointer',
-											borderRadius: '8px',
+											borderRadius: 'var(--ui-radius-md)',
 											backgroundColor: isActive ? 'rgba(var(--ui-button-primary-rgb), 0.15)' : 'transparent',
 											transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
 											margin: '2px 0'
@@ -4173,7 +4181,7 @@ const ConnectionHistory = ({
 			<OverlayPanel
 				ref={terminalSwitcherOverlayRef}
 				appendTo={document.body}
-				className="cyber-terminal-menu"
+				className="cyber-terminal-menu app-surface"
 			>
 				<div className="terminal-launcher-container">
 					<div style={{

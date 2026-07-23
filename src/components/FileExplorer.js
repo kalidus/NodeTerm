@@ -4,11 +4,12 @@ import { Tree } from 'primereact/tree';
 import { ContextMenu } from 'primereact/contextmenu';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { ProgressBar } from 'primereact/progressbar';
-import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
 import { Password } from 'primereact/password';
 import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
 import { uiThemes } from '../themes/ui-themes';
+import { appConfirm } from './ui/AppConfirm';
+import AppDialog from './ui/AppDialog';
 import '../styles/ssh-monitor.css';
 
 // Helper para obtener colores del tema
@@ -1267,7 +1268,14 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
         const isDir = targetNode.data?.type === 'directory';
         const msg = `¿Estás seguro de que deseas eliminar ${isDir ? 'la carpeta' : 'el archivo'} "${targetNode.label}"?`;
 
-        if (!window.confirm(msg)) return;
+        const ok = await appConfirm({
+            message: msg,
+            header: 'Confirmar',
+            severity: 'danger',
+            acceptLabel: 'Aceptar',
+            rejectLabel: 'Cancelar'
+        });
+        if (!ok) return;
 
         setGlobalLoading(true);
         try {
@@ -1509,7 +1517,14 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
 
         if (fromKeys.size === 0) { notify('warn', 'Sin selección', 'Selecciona archivos primero.'); return; }
 
-        if (!window.confirm(`¿Eliminar ${fromKeys.size} elemento(s)?`)) return;
+        const okConfirm = await appConfirm({
+            message: `¿Eliminar ${fromKeys.size} elemento(s)?`,
+            header: 'Confirmar',
+            severity: 'danger',
+            acceptLabel: 'Aceptar',
+            rejectLabel: 'Cancelar'
+        });
+        if (!okConfirm) return;
 
         setGlobalLoading(true);
         let ok = 0; let fail = 0;
@@ -2807,8 +2822,9 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
                 )}
             </div>
 
-            <Dialog
-                header="Nueva carpeta"
+            <AppDialog
+                headerTitle="Nueva carpeta"
+                headerIcon="pi pi-folder"
                 visible={createDialogVisible}
                 onHide={() => {
                     if (!globalLoading) {
@@ -2819,14 +2835,16 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
                 }}
                 dismissableMask
                 closable={!globalLoading}
-                style={{ width: '320px', borderRadius: '8px' }}
-                contentStyle={{ background: '#0d1117', color: '#c9d1d9' }}
-                headerStyle={{ background: '#161b22', color: '#e6edf3', borderBottom: '1px solid #30363d' }}
+                size="sm"
+                confirmLabel="Crear"
+                confirmIcon="pi pi-check"
+                onConfirm={handleCreateFolder}
+                loading={globalLoading}
             >
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '1rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     <div>
-                        <span style={{ fontSize: '0.75rem', opacity: 0.75, color: '#8b949e' }}>Directorio base</span>
-                        <div style={{ fontSize: '0.8rem', marginTop: '0.25rem', color: '#58a6ff', wordBreak: 'break-all' }}>
+                        <span style={{ fontSize: '0.75rem', opacity: 0.75 }}>Directorio base</span>
+                        <div style={{ fontSize: '0.8rem', marginTop: '0.25rem', wordBreak: 'break-all' }}>
                             {pendingBaseDir}
                         </div>
                     </div>
@@ -2835,50 +2853,33 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
                         onChange={(e) => setNewFolderName(e.target.value)}
                         placeholder="Nombre de la carpeta"
                         autoFocus
-                        style={{ background: '#010409', color: '#c9d1d9', border: '1px solid #30363d' }}
                     />
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
-                        <Button
-                            label="Cancelar"
-                            className="p-button-text p-button-secondary"
-                            disabled={globalLoading}
-                            onClick={() => {
-                                setCreateDialogVisible(false);
-                                setNewFolderName('');
-                                setPendingBaseDir(null);
-                            }}
-                        />
-                        <Button
-                            label="Crear"
-                            icon="pi pi-check"
-                            onClick={handleCreateFolder}
-                            disabled={globalLoading}
-                            className="p-button-primary"
-                            style={{ background: '#238636', border: '1px solid rgba(240,246,252,0.1)' }}
-                        />
-                    </div>
                 </div>
-            </Dialog>
+            </AppDialog>
 
-            {/* Diálogo para solicitar contraseña si falla la autenticación */}
-            <Dialog
-                header="🔑 Introducir contraseña"
+            <AppDialog
+                headerTitle="Introducir contrasena"
+                headerIcon="pi pi-key"
                 visible={passwordPromptVisible}
                 onHide={() => setPasswordPromptVisible(false)}
                 dismissableMask
-                closable
-                style={{ width: '350px', borderRadius: '8px' }}
-                contentStyle={{ background: '#0d1117', color: '#c9d1d9' }}
-                headerStyle={{ background: '#161b22', color: '#e6edf3', borderBottom: '1px solid #30363d' }}
+                size="sm"
+                confirmLabel="Conectar"
+                confirmIcon="pi pi-check"
+                confirmDisabled={!promptPassword}
+                onConfirm={() => {
+                    setPasswordPromptVisible(false);
+                    handlePasswordSubmit(promptPassword);
+                }}
             >
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', paddingTop: '1rem' }}>
-                    <div style={{ fontSize: '0.85rem', color: '#8b949e' }}>
-                        La conexión remota ha fallado. Por favor, introduce la contraseña para conectar a <strong>{sshConfig?.host}</strong>:
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{ fontSize: '0.85rem', opacity: 0.8 }}>
+                        La conexion remota ha fallado. Por favor, introduce la contrasena para conectar a <strong>{sshConfig?.host}</strong>:
                     </div>
                     <Password
                         value={promptPassword}
                         onChange={(e) => setPromptPassword(e.target.value)}
-                        placeholder="Contraseña"
+                        placeholder="Contrasena"
                         feedback={false}
                         toggleMask
                         autoFocus
@@ -2889,28 +2890,10 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
                             }
                         }}
                         style={{ width: '100%' }}
-                        inputStyle={{ width: '100%', background: '#010409', color: '#c9d1d9', border: '1px solid #30363d' }}
+                        inputStyle={{ width: '100%' }}
                     />
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '0.5rem' }}>
-                        <Button
-                            label="Cancelar"
-                            className="p-button-text p-button-secondary"
-                            onClick={() => setPasswordPromptVisible(false)}
-                        />
-                        <Button
-                            label="Conectar"
-                            icon="pi pi-check"
-                            disabled={!promptPassword}
-                            onClick={() => {
-                                setPasswordPromptVisible(false);
-                                handlePasswordSubmit(promptPassword);
-                            }}
-                            className="p-button-primary"
-                            style={{ background: '#238636', border: '1px solid rgba(240,246,252,0.1)' }}
-                        />
-                    </div>
                 </div>
-            </Dialog>
+            </AppDialog>
 
         </div >
     );

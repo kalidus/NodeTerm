@@ -490,7 +490,7 @@
 }
 
 .tree-theme-overlay-fix .theme-item:hover {
-    background: rgba(255, 255, 255, 0.08) !important;
+    background: var(--ui-context-hover) !important;
 }
 
 /* Sidebar overrides within TerminalFrame */

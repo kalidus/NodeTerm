@@ -4,6 +4,7 @@
  */
 
 import { getVersionInfo } from '../version-info';
+import { appConfirm } from '../components/ui/AppConfirm';
 
 export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImportExportDialog, t, onShowImportWizard) => {
   // Si no se pasa t, usar valores por defecto en español (fallback)
@@ -219,9 +220,17 @@ export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImpo
       icon: 'pi pi-sign-out',
       shortcut: 'Ctrl+Q',
       command: () => {
-        if (window.confirm(getText('appMenu.exitConfirm'))) {
-          window.electronAPI?.quitApp && window.electronAPI.quitApp();
-        }
+        appConfirm({
+          message: getText('appMenu.exitConfirm'),
+          header: 'Confirmar',
+          severity: 'danger',
+          acceptLabel: 'Aceptar',
+          rejectLabel: 'Cancelar'
+        }).then(ok => {
+          if (ok) {
+            window.electronAPI?.quitApp && window.electronAPI.quitApp();
+          }
+        });
       }
     }
   ];
@@ -230,8 +239,9 @@ export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImpo
 };
 
 export const createContextMenu = (event, menuStructure, menuClass = 'app-context-menu-unified') => {
+  const menuSelector = `.${String(menuClass).trim().split(/\s+/).pop()}`;
   // Remover menú existente si está abierto
-  const existingMenu = document.querySelector(`.${menuClass}`);
+  const existingMenu = document.querySelector(menuSelector);
   if (existingMenu) {
     existingMenu.remove();
     return;
@@ -247,7 +257,7 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
     if (activeSubmenu && document.body.contains(activeSubmenu)) {
       document.body.removeChild(activeSubmenu);
     }
-    const allMenus = document.querySelectorAll(`.${menuClass}`);
+    const allMenus = document.querySelectorAll(menuSelector);
     allMenus.forEach(menu => {
       // Limpiar todos los hovers antes de remover
       const menuItems = menu.querySelectorAll('.menu-item-unified');
@@ -283,16 +293,16 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
 
   // Crear el menú contextual principal
   const contextMenu = document.createElement('div');
-  contextMenu.className = menuClass;
+  contextMenu.className = menuClass.includes('app-menu-surface') ? menuClass : `app-menu-surface ${menuClass}`;
   contextMenu.style.cssText = `
     position: fixed;
-    background: var(--ui-context-bg, #333) !important;
-    border: 1px solid var(--ui-context-border, #555);
-    border-radius: 6px;
+    background: var(--ui-context-bg) !important;
+    border: 1px solid var(--ui-context-border);
+    border-radius: var(--ui-radius-md);
     box-shadow: 0 4px 12px var(--ui-context-shadow, rgba(0, 0, 0, 0.3));
     z-index: 9999;
     min-width: 220px;
-    padding: 4px 0;
+    padding: var(--ui-space-1) 0;
     font-family: var(--font-family, sans-serif);
     font-size: 14px;
     left: -9999px;
@@ -383,17 +393,18 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
         }
 
         // Crear nuevo submenú
+        const baseMenuClass = String(menuClass).trim().split(/\s+/).pop();
         activeSubmenu = document.createElement('div');
-        activeSubmenu.className = `${menuClass}-submenu`;
+        activeSubmenu.className = `app-menu-surface ${baseMenuClass}-submenu`;
         activeSubmenu.style.cssText = `
           position: fixed;
-          background: var(--ui-context-bg, #333) !important;
-          border: 1px solid var(--ui-context-border, #555);
-          border-radius: 6px;
+          background: var(--ui-context-bg) !important;
+          border: 1px solid var(--ui-context-border);
+          border-radius: var(--ui-radius-md);
           box-shadow: 0 4px 12px var(--ui-context-shadow, rgba(0, 0, 0, 0.3));
           z-index: 10000;
           min-width: 200px;
-          padding: 4px 0;
+          padding: var(--ui-space-1) 0;
           font-family: var(--font-family, sans-serif);
           font-size: 14px;
           left: -9999px;

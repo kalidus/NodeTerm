@@ -218,9 +218,9 @@ const StatusBar = ({
         />
       )}
 
-      <OverlayPanel ref={op} className="statusbar-theme-overlay" style={{ width: '280px' }}>
+      <OverlayPanel ref={op} className="statusbar-theme-overlay app-surface" style={{ width: '280px' }}>
         <div className="statusbar-quick-presets">
-          <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--statusbar-border, #333)', marginBottom: '8px', fontWeight: 'bold', fontSize: '0.9em', color: 'var(--statusbar-text)' }}>
+          <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--statusbar-border, var(--ui-statusbar-border))', marginBottom: '8px', fontWeight: 'bold', fontSize: '0.9em', color: 'var(--statusbar-text, var(--ui-statusbar-text))' }}>
             Temas de la barra de estado
           </div>
           <div className="theme-list-container" style={{ maxHeight: '300px', overflowY: 'auto', padding: '0 4px' }}>
@@ -233,7 +233,7 @@ const StatusBar = ({
                   style={{
                     padding: '10px 12px',
                     cursor: 'pointer',
-                    borderRadius: '4px',
+                    borderRadius: 'var(--ui-radius-sm)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
@@ -280,12 +280,12 @@ const StatusBar = ({
             style={{
               marginTop: '10px',
               padding: '10px 12px',
-              borderTop: '1px solid var(--statusbar-border, #333)',
+              borderTop: '1px solid var(--statusbar-border, var(--ui-statusbar-border))',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              color: 'var(--statusbar-text)',
+              color: 'var(--statusbar-text, var(--ui-statusbar-text))',
               fontSize: '0.85em',
               opacity: 0.8
             }}

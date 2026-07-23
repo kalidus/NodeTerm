@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
+import { appConfirm } from './ui/AppConfirm';
 import '../styles/ssh-monitor.css';
 
 /**
@@ -244,7 +245,14 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
             ? `¿Está seguro de que desea finalizar el proceso local ${pid} (${command})?`
             : `¿Está seguro de que desea finalizar el proceso ${pid} (${command}) en el servidor remoto?`;
         
-        if (!window.confirm(confirmMsg)) return;
+        const ok = await appConfirm({
+            message: confirmMsg,
+            header: 'Confirmar',
+            severity: 'danger',
+            acceptLabel: 'Aceptar',
+            rejectLabel: 'Cancelar'
+        });
+        if (!ok) return;
 
         try {
             const result = await window.electron.sshMonitor.killProcess(tabId, pid, isLocal);
@@ -277,7 +285,14 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
         const actionStr = action === 'restart' ? 'reiniciar' : action === 'stop' ? 'detener' : 'iniciar';
         const confirmMsg = `¿Está seguro de que desea ${actionStr} el servicio "${serviceName}"?`;
         
-        if (!window.confirm(confirmMsg)) return;
+        const ok = await appConfirm({
+            message: confirmMsg,
+            header: 'Confirmar',
+            severity: action === 'stop' ? 'danger' : 'warn',
+            acceptLabel: 'Aceptar',
+            rejectLabel: 'Cancelar'
+        });
+        if (!ok) return;
 
         try {
             if (window.toast?.current?.show) {

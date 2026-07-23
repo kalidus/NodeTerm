@@ -4826,7 +4826,7 @@ const App = () => {
         </Suspense>
 
         {/* ConfirmDialog para confirmaciones globales */}
-        <ConfirmDialog />
+        <ConfirmDialog className="app-confirm-dialog" />
       </div>
     </ErrorBoundary>
   );

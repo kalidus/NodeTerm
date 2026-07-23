@@ -21,6 +21,7 @@ import { FaBold, FaItalic, FaUnderline } from 'react-icons/fa';
 import { HiSparkles } from 'react-icons/hi';
 import { FiMaximize2, FiMinimize2 } from 'react-icons/fi';
 import '../styles/components/documents.css';
+import { appConfirm } from './ui/AppConfirm';
 
 const lowlight = createLowlight(common);
 const turndownService = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' });
@@ -627,12 +628,19 @@ const TiptapDocumentEditor = ({ documentKey, documentData, onSave }) => {
   };
 
   // Note templates insertion handler
-  const handleInsertTemplate = (templateHtml) => {
+  const handleInsertTemplate = async (templateHtml) => {
     if (!editor || editor.isDestroyed || !editor.schema) return;
     
     const confirmText = '¿Estás seguro de insertar la plantilla? Esto reemplazará el contenido actual de tu nota.';
-    if (editor.getText().trim().length > 0 && !window.confirm(confirmText)) {
-      return;
+    if (editor.getText().trim().length > 0) {
+      const ok = await appConfirm({
+        message: confirmText,
+        header: 'Confirmar',
+        severity: 'warn',
+        acceptLabel: 'Aceptar',
+        rejectLabel: 'Cancelar'
+      });
+      if (!ok) return;
     }
 
     editor.commands.setContent(templateHtml);

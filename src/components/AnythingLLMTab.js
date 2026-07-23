@@ -10,6 +10,7 @@ import { Toast } from 'primereact/toast';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { Card } from 'primereact/card';
 import { useTranslation } from '../i18n/hooks/useTranslation';
+import AppDialog from './ui/AppDialog';
 import '../styles/components/anything-llm.css';
 
 const INITIAL_STATUS = {
@@ -748,19 +749,20 @@ const AnythingLLMTab = () => {
         </div>
       </div>
 
-      {/* Diálogo de configuración MCP */}
+      {/* Dialogo de configuracion MCP */}
       <Dialog
-        header="⚙️ Configuración MCP de AnythingLLM"
+        header="Configuracion MCP de AnythingLLM"
         visible={showMCPDialog}
         style={{ width: '85vw', maxWidth: '1000px' }}
-        contentStyle={{ 
-          height: '75vh', 
-          display: 'flex', 
+        contentStyle={{
+          height: '75vh',
+          display: 'flex',
           flexDirection: 'column',
           padding: '0'
         }}
         modal
         onHide={() => setShowMCPDialog(false)}
+        className="app-dialog"
         footer={
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: '0.5rem', padding: '0.5rem' }}>
             <div style={{ flex: 1, minWidth: '200px' }}>
@@ -1025,39 +1027,22 @@ ${diag.alternativeFiles?.length > 0 ? `📄 Archivos alternativos encontrados:\n
         )}
       </Dialog>
 
-      {/* Diálogo para pedir ruta */}
-      <Dialog
-        header="📁 Configurar Ruta"
+      <AppDialog
+        headerTitle="Configurar Ruta"
+        headerIcon="pi pi-folder"
         visible={showPathDialog}
-        style={{ width: '600px' }}
-        modal
+        size="lg"
         onHide={() => {
           setShowPathDialog(false);
           setPendingServer(null);
           setPathInput('');
         }}
-        footer={
-          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-            <Button
-              label="Cancelar"
-              icon="pi pi-times"
-              onClick={() => {
-                setShowPathDialog(false);
-                setPendingServer(null);
-                setPathInput('');
-              }}
-              className="p-button-text"
-            />
-            <Button
-              label="Continuar"
-              icon="pi pi-check"
-              onClick={handleConfirmPath}
-              disabled={!pathInput.trim()}
-            />
-          </div>
-        }
+        confirmLabel="Continuar"
+        confirmIcon="pi pi-check"
+        confirmDisabled={!pathInput.trim()}
+        onConfirm={handleConfirmPath}
       >
-        <div style={{ padding: '1rem 0' }}>
+        <div>
           <label htmlFor="path-input" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
             {pendingServer?.pathLabel || 'Introduce la ruta:'}
           </label>
@@ -1074,23 +1059,23 @@ ${diag.alternativeFiles?.length > 0 ? `📄 Archivos alternativos encontrados:\n
             }}
             autoFocus
           />
-          
+
           {dataDir && (
-            <div style={{ 
-              marginTop: '1rem', 
-              padding: '0.75rem', 
-              backgroundColor: 'var(--surface-ground)', 
+            <div style={{
+              marginTop: '1rem',
+              padding: '0.75rem',
+              backgroundColor: 'var(--surface-ground)',
               borderRadius: '4px',
               fontSize: '0.85rem'
             }}>
-              <strong>💡 Recomendación:</strong>
+              <strong>Recomendacion:</strong>
               <p style={{ margin: '0.5rem 0', opacity: 0.9 }}>
                 Para mejor compatibilidad con Docker, usa una carpeta dentro del directorio de datos de AnythingLLM:
               </p>
-              <code style={{ 
-                display: 'block', 
-                padding: '0.5rem', 
-                backgroundColor: 'var(--surface-card)', 
+              <code style={{
+                display: 'block',
+                padding: '0.5rem',
+                backgroundColor: 'var(--surface-card)',
                 borderRadius: '3px',
                 marginTop: '0.5rem',
                 wordBreak: 'break-all'
@@ -1098,68 +1083,51 @@ ${diag.alternativeFiles?.length > 0 ? `📄 Archivos alternativos encontrados:\n
                 {dataDir}\\documents
               </code>
               <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.8rem', opacity: 0.8 }}>
-                Esta carpeta ya está montada en el contenedor como <code>/app/server/storage/documents</code>
+                Esta carpeta ya esta montada en el contenedor como <code>/app/server/storage/documents</code>
               </p>
             </div>
           )}
 
           {pendingServer?.requiresPath && (
             <div style={{ marginTop: '1rem', fontSize: '0.85rem', opacity: 0.8 }}>
-              <strong>✨ Mapeo automático de volúmenes (como Guacamole):</strong>
+              <strong>Mapeo automatico de volumenes (como Guacamole):</strong>
               <p style={{ margin: '0.25rem 0' }}>
-                Si usas una ruta externa (ej: <code>C:\Users\kalid\Documents</code>), 
-                el sistema <strong>mapeará automáticamente</strong> esa carpeta como volumen en el contenedor Docker.
+                Si usas una ruta externa (ej: <code>C:\Users\kalid\Documents</code>),
+                el sistema <strong>mapeara automaticamente</strong> esa carpeta como volumen en el contenedor Docker.
               </p>
               <p style={{ margin: '0.25rem 0', fontSize: '0.85rem', opacity: 0.9 }}>
-                ✅ La carpeta se montará como <code>/mnt/host/documents</code> dentro del contenedor
+                La carpeta se montara como <code>/mnt/host/documents</code> dentro del contenedor
               </p>
               <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', opacity: 0.7 }}>
-                ⚠️ El contenedor se reiniciará automáticamente para aplicar el nuevo volumen.
+                El contenedor se reiniciara automaticamente para aplicar el nuevo volumen.
               </p>
             </div>
           )}
-          
+
           {pendingServer?.requiresEnv && (
             <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', opacity: 0.8 }}>
-              Después de la ruta, se te pedirá la API key o token necesario.
+              Despues de la ruta, se te pedira la API key o token necesario.
             </p>
           )}
         </div>
-      </Dialog>
+      </AppDialog>
 
-      {/* Diálogo para pedir variable de entorno */}
-      <Dialog
-        header="🔑 Configurar Variable de Entorno"
+      <AppDialog
+        headerTitle="Configurar Variable de Entorno"
+        headerIcon="pi pi-key"
         visible={showEnvDialog}
-        style={{ width: '500px' }}
-        modal
+        size="md"
         onHide={() => {
           setShowEnvDialog(false);
           setPendingServer(null);
           setEnvInput('');
         }}
-        footer={
-          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-            <Button
-              label="Cancelar"
-              icon="pi pi-times"
-              onClick={() => {
-                setShowEnvDialog(false);
-                setPendingServer(null);
-                setEnvInput('');
-              }}
-              className="p-button-text"
-            />
-            <Button
-              label="Continuar"
-              icon="pi pi-check"
-              onClick={handleConfirmEnv}
-              disabled={!envInput.trim()}
-            />
-          </div>
-        }
+        confirmLabel="Continuar"
+        confirmIcon="pi pi-check"
+        confirmDisabled={!envInput.trim()}
+        onConfirm={handleConfirmEnv}
       >
-        <div style={{ padding: '1rem 0' }}>
+        <div>
           <label htmlFor="env-input" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
             {envLabel || 'Variable de entorno:'}
           </label>
@@ -1180,10 +1148,10 @@ ${diag.alternativeFiles?.length > 0 ? `📄 Archivos alternativos encontrados:\n
             autoFocus
           />
           <p style={{ marginTop: '0.5rem', fontSize: '0.85rem', opacity: 0.8 }}>
-            Este valor se almacenará de forma segura en la configuración.
+            Este valor se almacenara de forma segura en la configuracion.
           </p>
         </div>
-      </Dialog>
+      </AppDialog>
     </div>
   );
 };

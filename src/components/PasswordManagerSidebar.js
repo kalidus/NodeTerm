@@ -2347,7 +2347,7 @@ const PasswordManagerSidebar = ({
           resetForm();
         }}
         modal
-        className="ssh-tunnel-dialog protocol-selection-dialog-new"
+        className="app-dialog ssh-tunnel-dialog protocol-selection-dialog-new"
         contentStyle={{ padding: '0', overflow: 'hidden' }}
       >
         <div className="tunnel-form-content" style={{ padding: '1.25rem', maxHeight: '75vh', overflowY: 'auto' }}>
@@ -2886,7 +2886,7 @@ const PasswordManagerSidebar = ({
         onClick={e => { if (e.target === e.currentTarget) { setShowPwdTrashModal(false); setPwdTrashConfirm(null); } }}
       >
         <style>{`@keyframes trashModalIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}} .ptrash-item:hover{background:rgba(255,255,255,0.06)!important} .ptrash-restore:hover{background:rgba(34,197,94,0.22)!important} .ptrash-del:hover{background:rgba(239,68,68,0.22)!important}`}</style>
-        <div style={{ background: 'linear-gradient(145deg,#1a1b2e,#16213e)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '16px', width: '460px', maxHeight: '560px', display: 'flex', flexDirection: 'column', boxShadow: '0 32px 80px rgba(0,0,0,0.6)', overflow: 'hidden', fontFamily: 'system-ui,-apple-system,sans-serif' }}>
+        <div className="app-dialog" style={{ background: 'var(--ui-dialog-bg)', border: '1px solid var(--ui-dialog-border)', borderRadius: 'var(--ui-radius-lg)', color: 'var(--ui-dialog-text)', width: '460px', maxHeight: '560px', display: 'flex', flexDirection: 'column', boxShadow: '0 32px 80px rgba(0,0,0,0.6)', overflow: 'hidden', fontFamily: 'system-ui,-apple-system,sans-serif' }}>
           {/* Header */}
           <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(239,68,68,0.06)' }}>
             <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>

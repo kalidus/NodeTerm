@@ -197,7 +197,7 @@ const TerminalContextMenu = ({
     <>
       <div
         ref={menuRef}
-        className="terminal-context-menu"
+        className="app-menu-surface terminal-context-menu"
         style={{
           position: 'fixed',
           left: position.left,
@@ -208,9 +208,7 @@ const TerminalContextMenu = ({
           maxHeight: 'calc(100vh - 16px)',
           overflowY: 'auto',
           overflowX: 'hidden',
-          visibility: position.left === -9999 ? 'hidden' : 'visible',
-          boxShadow: '0 8px 16px rgba(0,0,0,0.4)',
-          borderRadius: '6px'
+          visibility: position.left === -9999 ? 'hidden' : 'visible'
         }}
         onContextMenu={(e) => e.preventDefault()}
       >

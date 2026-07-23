@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import ReactDOM from 'react-dom';
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
-import { Dialog } from 'primereact/dialog';
 import { Tree } from 'primereact/tree';
+import AppDialog from './ui/AppDialog';
 import { ContextMenu } from 'primereact/contextmenu';
 import { sessionActionIconThemes } from '../themes/session-action-icons';
 import { iconThemes } from '../themes/icon-themes';
@@ -1513,18 +1513,16 @@ const DocumentsSidebar = ({
       <ContextMenu model={contextMenuItems} ref={contextMenuRef} />
 
       {/* New Folder Dialog */}
-      <Dialog
-        header="Nueva libreta"
+      <AppDialog
+        headerTitle="Nueva libreta"
+        headerIcon="pi pi-book"
         visible={showNewFolderDialog}
         onHide={() => setShowNewFolderDialog(false)}
-        style={{ width: '380px' }}
-        modal
-        footer={
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            <Button label="Cancelar" className="p-button-text" onClick={() => setShowNewFolderDialog(false)} />
-            <Button label="Crear" icon="pi pi-check" onClick={handleCreateFolder} disabled={!newItemName.trim()} />
-          </div>
-        }
+        size="sm"
+        confirmLabel="Crear"
+        confirmIcon="pi pi-check"
+        confirmDisabled={!newItemName.trim()}
+        onConfirm={handleCreateFolder}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <label htmlFor="notebook-name" style={{ fontWeight: 600, fontSize: '0.875rem' }}>Nombre de la libreta</label>
@@ -1537,21 +1535,19 @@ const DocumentsSidebar = ({
             onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
           />
         </div>
-      </Dialog>
+      </AppDialog>
 
       {/* Rename Dialog */}
-      <Dialog
-        header="Renombrar"
+      <AppDialog
+        headerTitle="Renombrar"
+        headerIcon="pi pi-pencil"
         visible={showRenameDialog}
         onHide={() => setShowRenameDialog(false)}
-        style={{ width: '380px' }}
-        modal
-        footer={
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            <Button label="Cancelar" className="p-button-text" onClick={() => setShowRenameDialog(false)} />
-            <Button label="Renombrar" icon="pi pi-check" onClick={handleRename} disabled={!newItemName.trim()} />
-          </div>
-        }
+        size="sm"
+        confirmLabel="Renombrar"
+        confirmIcon="pi pi-check"
+        confirmDisabled={!newItemName.trim()}
+        onConfirm={handleRename}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <label htmlFor="rename-input" style={{ fontWeight: 600, fontSize: '0.875rem' }}>Nuevo nombre</label>
@@ -1563,7 +1559,7 @@ const DocumentsSidebar = ({
             onKeyDown={(e) => e.key === 'Enter' && handleRename()}
           />
         </div>
-      </Dialog>
+      </AppDialog>
 
       <FolderIconSelectorModal
         visible={showIconSelector}
@@ -1618,7 +1614,7 @@ const DocumentsSidebar = ({
         onClick={e => { if (e.target === e.currentTarget) { setShowDocTrashModal(false); setDocTrashConfirm(null); } }}
       >
         <style>{`@keyframes trashModalIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}} .dtrash-item:hover{background:rgba(255,255,255,0.06)!important} .dtrash-restore:hover{background:rgba(34,197,94,0.22)!important} .dtrash-del:hover{background:rgba(239,68,68,0.22)!important}`}</style>
-        <div style={{ background: 'linear-gradient(145deg,#1a1b2e,#16213e)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '16px', width: '460px', maxHeight: '560px', display: 'flex', flexDirection: 'column', boxShadow: '0 32px 80px rgba(0,0,0,0.6)', overflow: 'hidden', fontFamily: 'system-ui,-apple-system,sans-serif' }}>
+        <div className="app-dialog" style={{ background: 'var(--ui-dialog-bg)', border: '1px solid var(--ui-dialog-border)', borderRadius: 'var(--ui-radius-lg)', color: 'var(--ui-dialog-text)', width: '460px', maxHeight: '560px', display: 'flex', flexDirection: 'column', boxShadow: '0 32px 80px rgba(0,0,0,0.6)', overflow: 'hidden', fontFamily: 'system-ui,-apple-system,sans-serif' }}>
           {/* Header */}
           <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(239,68,68,0.06)' }}>
             <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>

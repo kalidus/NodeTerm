@@ -1,0 +1,337 @@
+/* --- App UI shell: dialogs, confirms, menus (tokens --ui-*) --- */
+
+:root {
+  --ui-radius-sm: 4px;
+  --ui-radius-md: 8px;
+  --ui-radius-lg: 12px;
+  --ui-space-1: 0.25rem;
+  --ui-space-2: 0.5rem;
+  --ui-space-3: 0.75rem;
+  --ui-space-4: 1rem;
+}
+
+/* Shared chrome surface (popovers, palettes, dropdowns) */
+.app-surface {
+  background: var(--ui-dialog-bg);
+  color: var(--ui-dialog-text);
+  border: 1px solid var(--ui-dialog-border);
+  border-radius: var(--ui-radius-md);
+  box-shadow: 0 4px 12px var(--ui-dialog-shadow);
+}
+
+.app-surface-lg {
+  border-radius: var(--ui-radius-lg);
+  box-shadow: 0 8px 28px var(--ui-dialog-shadow);
+}
+
+.search-dropdown {
+  background: var(--ui-dialog-bg);
+  color: var(--ui-dialog-text);
+  border: 1px solid var(--ui-dialog-border);
+  border-radius: var(--ui-radius-md);
+  box-shadow: 0 4px 12px var(--ui-dialog-shadow);
+  scrollbar-width: thin;
+  scrollbar-color: var(--ui-sidebar-selected) var(--ui-dialog-bg);
+}
+
+.connection-search-palette-backdrop {
+  background: color-mix(in srgb, var(--ui-dialog-bg) 55%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.connection-search-palette.app-surface,
+.connection-search-palette {
+  background: var(--ui-dialog-bg);
+  color: var(--ui-dialog-text);
+  border: 1px solid var(--ui-dialog-border);
+  border-radius: var(--ui-radius-lg);
+  box-shadow: 0 24px 80px var(--ui-dialog-shadow);
+}
+
+.p-overlaypanel.app-surface,
+.p-overlaypanel.app-surface .p-overlaypanel-content {
+  background: var(--ui-dialog-bg) !important;
+  color: var(--ui-dialog-text) !important;
+  border-color: var(--ui-dialog-border) !important;
+  box-shadow: 0 4px 12px var(--ui-dialog-shadow) !important;
+}
+
+.p-overlaypanel.app-surface-lg {
+  border-radius: var(--ui-radius-lg) !important;
+  box-shadow: 0 8px 28px var(--ui-dialog-shadow) !important;
+}
+
+.app-search-input {
+  border: 1px solid var(--ui-dialog-border);
+  background: var(--ui-dialog-bg);
+  color: var(--ui-dialog-text);
+  border-radius: var(--ui-radius-md);
+}
+
+/* ===== AppDialog ===== */
+.p-dialog.app-dialog {
+  background: var(--ui-dialog-bg) !important;
+  color: var(--ui-dialog-text) !important;
+  border: 1px solid var(--ui-dialog-border) !important;
+  box-shadow: 0 8px 28px var(--ui-dialog-shadow) !important;
+  border-radius: var(--ui-radius-lg) !important;
+  overflow: hidden;
+}
+
+.p-dialog.app-dialog .p-dialog-header {
+  background: var(--ui-dialog-bg) !important;
+  color: var(--ui-dialog-text) !important;
+  border-bottom: 1px solid var(--ui-dialog-border) !important;
+  padding: var(--ui-space-3) var(--ui-space-4) !important;
+}
+
+.p-dialog.app-dialog .p-dialog-content {
+  background: var(--ui-dialog-bg) !important;
+  color: var(--ui-dialog-text) !important;
+}
+
+.p-dialog.app-dialog .p-dialog-footer {
+  background: var(--ui-dialog-bg) !important;
+  border-top: 1px solid var(--ui-dialog-border) !important;
+  padding: var(--ui-space-2) var(--ui-space-4) !important;
+}
+
+.p-dialog.app-dialog .p-dialog-header-icons .p-dialog-header-icon {
+  color: var(--ui-dialog-text) !important;
+  width: 2rem;
+  height: 2rem;
+}
+
+.p-dialog.app-dialog .p-dialog-header-icons .p-dialog-header-icon:hover {
+  background: var(--ui-context-hover, rgba(127, 127, 127, 0.15)) !important;
+}
+
+.app-dialog-header {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-3);
+  min-width: 0;
+}
+
+.app-dialog-header-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--ui-radius-md);
+  background: color-mix(in srgb, var(--ui-button-primary) 16%, transparent);
+  color: var(--ui-button-primary);
+  flex-shrink: 0;
+}
+
+.app-dialog-header-icon i {
+  font-size: 1rem;
+}
+
+.app-dialog-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.app-dialog-header-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ui-dialog-text);
+  line-height: 1.3;
+}
+
+.app-dialog-header-subtitle {
+  font-size: 0.8rem;
+  opacity: 0.72;
+  color: var(--ui-dialog-text);
+  line-height: 1.3;
+}
+
+.app-dialog-body {
+  color: var(--ui-dialog-text);
+}
+
+.app-dialog-body .p-fluid .p-field,
+.app-dialog-body .app-form-field {
+  margin-bottom: var(--ui-space-4);
+}
+
+.app-dialog-body label,
+.app-dialog-body .app-form-label {
+  display: block;
+  margin-bottom: var(--ui-space-2);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--ui-dialog-text);
+}
+
+.app-dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ui-space-3);
+  width: 100%;
+}
+
+.app-dialog-footer-extra {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-dialog-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+  margin-left: auto;
+}
+
+/* Compat: footer custom dentro del body (folder-dialog legacy) */
+.app-dialog .app-dialog-footer,
+.app-dialog .folder-dialog-footer {
+  margin-top: var(--ui-space-3);
+}
+
+/* ===== AppConfirm ===== */
+.p-confirm-dialog.app-confirm-dialog,
+.p-dialog.app-confirm-dialog {
+  background: var(--ui-dialog-bg) !important;
+  color: var(--ui-dialog-text) !important;
+  border: 1px solid var(--ui-dialog-border) !important;
+  box-shadow: 0 8px 28px var(--ui-dialog-shadow) !important;
+  border-radius: var(--ui-radius-lg) !important;
+}
+
+.p-confirm-dialog.app-confirm-dialog .p-dialog-header,
+.p-confirm-dialog.app-confirm-dialog .p-dialog-content,
+.p-confirm-dialog.app-confirm-dialog .p-dialog-footer {
+  background: var(--ui-dialog-bg) !important;
+  color: var(--ui-dialog-text) !important;
+}
+
+.p-confirm-dialog.app-confirm-dialog .p-confirm-dialog-message {
+  color: var(--ui-dialog-text) !important;
+}
+
+/* ===== AppMenu surface (Overflow / Tab / Terminal / DOM) ===== */
+.app-menu-surface {
+  font-family: var(--font-family, 'Public Sans', Arial, sans-serif);
+  background: var(--ui-context-bg) !important;
+  color: var(--ui-context-text) !important;
+  border: 1px solid var(--ui-context-border) !important;
+  box-shadow: 0 4px 12px var(--ui-context-shadow, rgba(0, 0, 0, 0.15)) !important;
+  border-radius: var(--ui-radius-md) !important;
+  padding: var(--ui-space-1) 0 !important;
+  min-width: 180px;
+  z-index: 9999;
+  user-select: none;
+  animation: contextMenuFadeIn 0.15s ease-out;
+}
+
+.app-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  color: var(--ui-context-text) !important;
+  font-size: 0.875rem;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+}
+
+.app-menu-item:hover,
+.app-menu-item.is-hover {
+  background: var(--ui-context-hover) !important;
+}
+
+.app-menu-item i,
+.app-menu-item .app-menu-item-icon {
+  width: 1rem;
+  text-align: center;
+  font-size: 0.875rem;
+  opacity: 0.85;
+  color: var(--ui-context-text) !important;
+  flex-shrink: 0;
+}
+
+.app-menu-item:hover i,
+.app-menu-item:hover .app-menu-item-icon {
+  opacity: 1;
+}
+
+.app-menu-item-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-menu-separator {
+  height: 1px;
+  margin: var(--ui-space-1) var(--ui-space-2);
+  background: var(--ui-context-border) !important;
+  opacity: 0.55;
+  border: none;
+}
+
+.app-menu-empty {
+  padding: var(--ui-space-3);
+  color: var(--ui-context-text);
+  opacity: 0.65;
+  font-style: italic;
+  font-size: 0.875rem;
+}
+
+.app-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: transparent;
+}
+
+/* Align legacy context menus to shared surface tokens */
+.terminal-context-menu,
+.tab-context-menu,
+.app-context-menu-unified,
+.app-context-menu-sidebar,
+.app-context-menu,
+.app-submenu {
+  background: var(--ui-context-bg) !important;
+  color: var(--ui-context-text) !important;
+  border: 1px solid var(--ui-context-border) !important;
+  box-shadow: 0 4px 12px var(--ui-context-shadow, rgba(0, 0, 0, 0.15)) !important;
+  border-radius: var(--ui-radius-md) !important;
+}
+
+/* ===== Form density helpers ===== */
+.app-form-field {
+  margin-bottom: var(--ui-space-4);
+}
+
+.app-form-field .p-inputtext,
+.app-form-field .p-dropdown,
+.app-form-field .p-password,
+.app-form-field .p-inputnumber,
+.app-dialog-body .p-inputtext,
+.app-dialog-body .p-dropdown,
+.app-dialog-body .p-password,
+.app-dialog-body .p-inputnumber {
+  width: 100%;
+}
+
+.app-form-error {
+  margin-top: var(--ui-space-1);
+  font-size: 0.8rem;
+  color: var(--red-500, #ef4444);
+}
+
+.app-form-help {
+  margin-top: var(--ui-space-1);
+  font-size: 0.8rem;
+  opacity: 0.7;
+  color: var(--ui-dialog-text);
+}

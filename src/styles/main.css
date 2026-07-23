@@ -16,6 +16,7 @@
 @import './components/forms.css';
 @import './components/menubar.css';
 @import './components/dialogs.css';
+@import './components/app-ui.css';
 @import './components/connection-terminal-form.css';
 @import './components/menus.css';
 @import './components/terminal.css';

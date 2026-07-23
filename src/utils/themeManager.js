@@ -536,6 +536,15 @@ class ThemeManager {
         --ui-dialog-text: ${colors.dialogText};
         --ui-dialog-border: ${colors.dialogBorder};
         --ui-dialog-shadow: ${colors.dialogShadow};
+
+        /* Shared layout tokens (fixed scale; colors stay theme-driven) */
+        --ui-radius-sm: 4px;
+        --ui-radius-md: 8px;
+        --ui-radius-lg: 12px;
+        --ui-space-1: 0.25rem;
+        --ui-space-2: 0.5rem;
+        --ui-space-3: 0.75rem;
+        --ui-space-4: 1rem;
         
         --ui-button-primary: ${colors.buttonPrimary};
         --ui-button-primary-text: ${colors.buttonPrimaryText};

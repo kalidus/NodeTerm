@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { Dialog } from 'primereact/dialog';
 import { Password } from 'primereact/password';
-import { Button } from 'primereact/button';
 import { Message } from 'primereact/message';
+import AppDialog from './ui/AppDialog';
 
 /**
  * Tras descargar un backup de Nextcloud con vaults cifrados, pide la clave maestra
@@ -45,9 +44,9 @@ const CloudRestoreMasterKeyDialog = ({ visible, onSuccess, onHide, secureStorage
     if (passwordsRaw) {
       try {
         await secureStorage.decryptData(JSON.parse(passwordsRaw), masterKey);
-        verified.push('contraseñas');
+        verified.push('contrasenas');
       } catch {
-        throw new Error('La clave no descifra el vault de contraseñas del backup.');
+        throw new Error('La clave no descifra el vault de contrasenas del backup.');
       }
     }
 
@@ -64,7 +63,7 @@ const CloudRestoreMasterKeyDialog = ({ visible, onSuccess, onHide, secureStorage
       return;
     }
     if (password !== confirmPassword) {
-      setError('Las contraseñas no coinciden.');
+      setError('Las contrasenas no coinciden.');
       return;
     }
 
@@ -87,17 +86,24 @@ const CloudRestoreMasterKeyDialog = ({ visible, onSuccess, onHide, secureStorage
 
   const vaultList = [
     hasConnectionsVault && 'conexiones',
-    hasPasswordsVault && 'contraseñas del gestor'
+    hasPasswordsVault && 'contrasenas del gestor'
   ].filter(Boolean);
 
   return (
-    <Dialog
-      header="Clave maestra del backup en la nube"
+    <AppDialog
+      headerIcon="pi pi-key"
+      headerTitle="Clave maestra del backup en la nube"
       visible={visible}
-      style={{ width: '460px' }}
+      size="md"
       modal
       closable
       onHide={handleClose}
+      cancelLabel="Mas tarde"
+      confirmLabel="Desbloquear backup"
+      confirmIcon="pi pi-key"
+      onConfirm={handleSubmit}
+      loading={loading}
+      confirmDisabled={!password || !confirmPassword}
     >
       <div className="p-fluid">
         <Message
@@ -112,10 +118,10 @@ const CloudRestoreMasterKeyDialog = ({ visible, onSuccess, onHide, secureStorage
           }
         />
 
-        {error && <Message severity="error" text={error} className="mb-3" />}
+        {error ? <Message severity="error" text={error} className="mb-3" /> : null}
 
-        <div className="field mb-3">
-          <label htmlFor="cloud-restore-master-password">Clave maestra</label>
+        <div className="app-form-field">
+          <label htmlFor="cloud-restore-master-password" className="app-form-label">Clave maestra</label>
           <Password
             id="cloud-restore-master-password"
             value={password}
@@ -123,45 +129,23 @@ const CloudRestoreMasterKeyDialog = ({ visible, onSuccess, onHide, secureStorage
             toggleMask
             feedback={false}
             autoFocus
-            style={{ width: '100%' }}
-            inputStyle={{ width: '100%' }}
             onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
           />
         </div>
 
-        <div className="field mb-3">
-          <label htmlFor="cloud-restore-master-confirm">Confirmar clave maestra</label>
+        <div className="app-form-field">
+          <label htmlFor="cloud-restore-master-confirm" className="app-form-label">Confirmar clave maestra</label>
           <Password
             id="cloud-restore-master-confirm"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             toggleMask
             feedback={false}
-            style={{ width: '100%' }}
-            inputStyle={{ width: '100%' }}
             onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
           />
         </div>
-
-        <div className="flex gap-2" style={{ marginTop: '0.5rem' }}>
-          <Button
-            label="Más tarde"
-            icon="pi pi-times"
-            className="p-button-text flex-1"
-            onClick={handleClose}
-            disabled={loading}
-          />
-          <Button
-            label="Desbloquear backup"
-            icon="pi pi-key"
-            className="flex-1"
-            onClick={handleSubmit}
-            loading={loading}
-            disabled={!password || !confirmPassword}
-          />
-        </div>
       </div>
-    </Dialog>
+    </AppDialog>
   );
 };
 

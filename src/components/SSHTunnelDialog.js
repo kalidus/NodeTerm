@@ -510,7 +510,7 @@ export function SSHTunnelDialog({
       onHide={onHide}
       style={{ width: '90vw', maxWidth: '900px' }}
       modal
-      className="ssh-tunnel-dialog protocol-selection-dialog-new"
+      className="app-dialog ssh-tunnel-dialog protocol-selection-dialog-new"
       contentStyle={{ padding: '0', overflow: 'hidden' }}
     >
       <div className="tunnel-form-content" style={{ padding: '1rem', maxHeight: '70vh', overflowY: 'auto' }}>

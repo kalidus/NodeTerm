@@ -115,7 +115,7 @@ const TabContextMenu = ({
   return (
     <>
       <div
-        className="tab-context-menu"
+        className="app-menu-surface tab-context-menu"
         style={{
           position: 'fixed',
           left: tabContextMenu.x,

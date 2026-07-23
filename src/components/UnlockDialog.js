@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { Dialog } from 'primereact/dialog';
 import { Password } from 'primereact/password';
-import { Button } from 'primereact/button';
 import { Message } from 'primereact/message';
 import { Checkbox } from 'primereact/checkbox';
+import AppDialog from './ui/AppDialog';
 
 const UnlockDialog = ({ visible, onSuccess, secureStorage }) => {
   const [password, setPassword] = useState('');
@@ -14,13 +13,9 @@ const UnlockDialog = ({ visible, onSuccess, secureStorage }) => {
   const handleUnlock = async () => {
     setLoading(true);
     setError('');
-    console.log('[UnlockDialog] 🔑 Iniciando unlock...');
 
     try {
-      // Cargar la master key guardada (usa device fingerprint)
-      console.log('[UnlockDialog] Cargando master key guardada...');
       const savedMasterKey = await secureStorage.loadMasterKey();
-      console.log('[UnlockDialog] Master key cargada:', savedMasterKey ? 'OK' : 'NULL');
 
       if (!savedMasterKey) {
         setError('Error al cargar la clave guardada');
@@ -28,49 +23,48 @@ const UnlockDialog = ({ visible, onSuccess, secureStorage }) => {
         return;
       }
 
-      // Verificar que el password introducido es correcto
-      // comparándolo con el masterKey guardado
-      console.log('[UnlockDialog] Verificando password...');
       if (password !== savedMasterKey) {
-        setError('Contraseña incorrecta');
+        setError('Contrasena incorrecta');
         setLoading(false);
         return;
       }
 
-      // Password correcto - guardar preferencia de recordar
-      console.log('[UnlockDialog] Password correcto, guardando preferencias...');
       await secureStorage.setRememberPassword(rememberPassword);
-
-      // Devolver la master key
-      console.log('[UnlockDialog] ✅ Llamando onSuccess...');
       onSuccess(savedMasterKey);
-      console.log('[UnlockDialog] ✅ onSuccess completado');
     } catch (err) {
       console.error('[UnlockDialog] Error:', err);
-      setError('Error al desbloquear la aplicación');
+      setError('Error al desbloquear la aplicacion');
       setLoading(false);
     }
   };
 
   return (
-    <Dialog
-      header="🔓 Desbloquear NodeTerm"
+    <AppDialog
+      headerIcon="pi pi-lock"
+      headerTitle="Desbloquear NodeTerm"
       visible={visible}
-      style={{ width: '400px' }}
+      size="sm"
       modal
       closable={false}
+      onHide={() => {}}
+      cancelLabel={false}
+      confirmLabel="Desbloquear"
+      confirmIcon="pi pi-unlock"
+      onConfirm={handleUnlock}
+      loading={loading}
+      confirmDisabled={!password}
     >
       <div className="p-fluid">
-        {error && <Message severity="error" text={error} className="mb-3" />}
+        {error ? <Message severity="error" text={error} className="mb-3" /> : null}
 
         <Message
           severity="info"
-          text="Introduce tu contraseña maestra para desbloquear la aplicación"
+          text="Introduce tu contrasena maestra para desbloquear la aplicacion"
           className="mb-3"
         />
 
-        <div className="field mb-3">
-          <label htmlFor="unlock-password">Contraseña Maestra</label>
+        <div className="app-form-field">
+          <label htmlFor="unlock-password" className="app-form-label">Contrasena Maestra</label>
           <Password
             id="unlock-password"
             value={password}
@@ -82,29 +76,19 @@ const UnlockDialog = ({ visible, onSuccess, secureStorage }) => {
           />
         </div>
 
-        <div className="field-checkbox mb-3">
+        <div className="field-checkbox app-form-field">
           <Checkbox
             inputId="remember-password"
             checked={rememberPassword}
             onChange={(e) => setRememberPassword(e.checked)}
           />
           <label htmlFor="remember-password" className="ml-2">
-            Recordar contraseña en este dispositivo
+            Recordar contrasena en este dispositivo
           </label>
         </div>
-
-        <Button
-          label="Desbloquear"
-          icon="pi pi-unlock"
-          onClick={handleUnlock}
-          loading={loading}
-          disabled={!password}
-          className="w-full"
-        />
       </div>
-    </Dialog>
+    </AppDialog>
   );
 };
 
 export default UnlockDialog;
-

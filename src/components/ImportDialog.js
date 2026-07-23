@@ -706,7 +706,7 @@ const ImportDialog = ({
         visible={visible}
         style={{ width: '900px', maxWidth: '95vw' }}
         contentStyle={{ padding: '0' }}
-        className="import-dialog"
+        className="app-dialog import-dialog"
         header={headerTemplate()}
         modal
         onHide={handleClose}

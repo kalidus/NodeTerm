@@ -8,6 +8,7 @@ import { iconThemes } from '../themes/icon-themes';
 import { toggleFavorite, helpers } from '../utils/connectionStore';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import { themeManager } from '../utils/themeManager';
+import { appConfirm } from './ui/AppConfirm';
 
 const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnections, onOpenSSHConnection, onOpenRdpConnection, onOpenVncConnection, onShowImportDialog, onShowExportDialog, onShowImportExportDialog, onShowImportWizard, onOpenImportWithSource, onQuickImportFromSource, iconTheme = 'material', openEditSSHDialog, openEditRdpDialog, expandedKeys, masterKey, secureStorage, onToggleTitleBar }) => {
   // Hook de internacionalización
@@ -889,9 +890,17 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
         icon: 'pi pi-sign-out',
         shortcut: 'Ctrl+Q',
         command: () => {
-          if (window.confirm('¿Estás seguro de que quieres salir de NodeTerm?')) {
-            window.electronAPI?.quitApp && window.electronAPI.quitApp();
-          }
+          appConfirm({
+            message: '¿Estás seguro de que quieres salir de NodeTerm?',
+            header: 'Confirmar',
+            severity: 'danger',
+            acceptLabel: 'Aceptar',
+            rejectLabel: 'Cancelar'
+          }).then(ok => {
+            if (ok) {
+              window.electronAPI?.quitApp && window.electronAPI.quitApp();
+            }
+          });
         }
       }
     ];
@@ -1315,7 +1324,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
             onChange={e => handleFilterChange(e.target.value)}
             onKeyDown={handleSearchKeyDown}
             placeholder=""
-            className="search-input"
+            className="search-input app-search-input"
             data-animation=""
             style={{
               minWidth: 350,
@@ -1323,14 +1332,14 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
               width: '100%',
               paddingLeft: 12,
               height: 28,
-              borderRadius: 6,
-              border: '1px solid #bbb',
+              borderRadius: 'var(--ui-radius-md)',
+              border: '1px solid var(--ui-dialog-border)',
               fontSize: 13,
-              background: '#f5f5f5',
-              color: '#333',
+              background: 'var(--ui-dialog-bg)',
+              color: 'var(--ui-dialog-text)',
               fontWeight: 500,
               outline: 'none',
-              boxShadow: '0 1px 4px 0 rgba(0,0,0,0.1)',
+              boxShadow: '0 1px 4px 0 var(--ui-dialog-shadow)',
               transition: 'border 0.2s',
               zIndex: 1,
               textAlign: 'center',
@@ -1348,7 +1357,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
           />
           {showDropdown && ReactDOM.createPortal(
             <div
-              className="search-dropdown"
+              className="search-dropdown app-surface"
               onClick={(e) => e.stopPropagation()}
               style={{
                 position: 'fixed',
@@ -1359,21 +1368,14 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                 maxWidth: 600,
                 width: '35vw',
                 maxHeight: 300,
-                background: 'var(--ui-dialog-bg, #232629)',
-                color: 'var(--ui-dialog-text, #fff)',
-                borderRadius: 6,
-                boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
                 zIndex: 9999,
                 overflowY: 'auto',
-                border: '1px solid var(--ui-dialog-border, #444)',
                 WebkitAppRegion: 'no-drag',
                 fontFamily: 'inherit',
                 fontSize: '13px',
                 fontWeight: '500',
                 margin: 0,
                 padding: 0,
-                scrollbarWidth: 'thin',
-                scrollbarColor: 'var(--ui-sidebar-selected, #00bfff) var(--ui-dialog-bg, #232629)',
               }}>
               {filteredConnections.map((node, idx) => {
                 const isSSH = node.data && node.data.type === 'ssh';
@@ -1423,13 +1425,13 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                       borderRadius: '4px',
                       margin: '2px 4px',
                       minHeight: '60px',
-                      backgroundColor: activeIndex === idx ? 'var(--ui-sidebar-hover, #2a2d31)' : 'transparent',
+                      backgroundColor: activeIndex === idx ? 'var(--ui-sidebar-hover)' : 'transparent',
                       transform: activeIndex === idx ? 'translateY(-1px)' : 'translateY(0)',
                       boxShadow: activeIndex === idx ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
                     }}
                     onMouseEnter={(e) => {
                       setActiveIndex(idx);
-                      e.currentTarget.style.backgroundColor = 'var(--ui-sidebar-hover, #2a2d31)';
+                      e.currentTarget.style.backgroundColor = 'var(--ui-sidebar-hover)';
                       e.currentTarget.style.transform = 'translateY(-1px)';
                       e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
                     }}
@@ -1462,7 +1464,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           fontWeight: 500,
-                          color: 'var(--ui-dialog-text, #fff)',
+                          color: 'var(--ui-dialog-text)',
                           fontSize: '13px'
                         }}>
                           {node.label}
@@ -1512,9 +1514,9 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                       }}>
                         <span style={{
                           fontSize: 11,
-                          color: 'var(--ui-dialog-text, #fff)',
+                          color: 'var(--ui-dialog-text)',
                           fontWeight: 600,
-                          backgroundColor: 'var(--ui-sidebar-hover, #2a2d31)',
+                          backgroundColor: 'var(--ui-sidebar-hover)',
                           padding: '2px 6px',
                           borderRadius: '10px',
                           border: '1px solid var(--ui-dialog-border, #444)',
@@ -1626,7 +1628,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                           }}
                           onMouseEnter={(e) => {
                             e.currentTarget.style.color = 'var(--ui-primary-color, #ffd700)';
-                            e.currentTarget.style.backgroundColor = 'var(--ui-sidebar-hover, #444)';
+                            e.currentTarget.style.backgroundColor = 'var(--ui-sidebar-hover)';
                           }}
                           onMouseLeave={(e) => {
                             e.currentTarget.style.color = isFavorite ? 'var(--ui-primary-color, #ffd700)' : 'var(--ui-dialog-text, #666)';
@@ -1657,8 +1659,8 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
                             transition: 'all 0.2s ease',
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.color = 'var(--ui-dialog-text, #fff)';
-                            e.currentTarget.style.backgroundColor = 'var(--ui-sidebar-hover, #444)';
+                            e.currentTarget.style.color = 'var(--ui-dialog-text)';
+                            e.currentTarget.style.backgroundColor = 'var(--ui-sidebar-hover)';
                           }}
                           onMouseLeave={(e) => {
                             e.currentTarget.style.color = 'var(--ui-dialog-text, #888)';
@@ -1730,7 +1732,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
             top: '1px'
           }}
           onMouseEnter={e => {
-            e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)';
+            e.currentTarget.style.backgroundColor = 'var(--ui-menubar-hover)';
           }}
           onMouseLeave={e => {
             e.currentTarget.style.backgroundColor = 'transparent';
@@ -1760,7 +1762,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
             top: '1px'
           }}
           onMouseEnter={e => {
-            e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)';
+            e.currentTarget.style.backgroundColor = 'var(--ui-menubar-hover)';
           }}
           onMouseLeave={e => {
             e.currentTarget.style.backgroundColor = 'transparent';
@@ -1787,7 +1789,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
             cursor: 'pointer'
           }}
           onMouseEnter={e => {
-            e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)';
+            e.currentTarget.style.backgroundColor = 'var(--ui-menubar-hover)';
           }}
           onMouseLeave={e => {
             e.currentTarget.style.backgroundColor = 'transparent';

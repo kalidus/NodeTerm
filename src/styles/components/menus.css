@@ -182,8 +182,23 @@
   background-color: var(--ui-context-bg) !important;
   border: 1px solid var(--ui-context-border) !important;
   box-shadow: 0 4px 12px var(--ui-context-shadow) !important;
-  border-radius: 6px !important;
-  padding: 4px 0 !important;
+  border-radius: var(--ui-radius-md, 8px) !important;
+  padding: var(--ui-space-1, 4px) 0 !important;
+}
+
+/* OverlayPanel / Menu Prime: misma superficie */
+.p-overlaypanel,
+.p-menu.p-menu-overlay {
+  background: var(--ui-dialog-bg) !important;
+  color: var(--ui-dialog-text) !important;
+  border: 1px solid var(--ui-dialog-border) !important;
+  box-shadow: 0 4px 12px var(--ui-dialog-shadow) !important;
+  border-radius: var(--ui-radius-md, 8px) !important;
+}
+
+.p-overlaypanel .p-overlaypanel-content {
+  background: var(--ui-dialog-bg) !important;
+  color: var(--ui-dialog-text) !important;
 }
 
 .p-contextmenu ul,
@@ -278,26 +293,45 @@
   letter-spacing: 0.03em;
 }
 
-/* Custom Terminal Context Menu */
-.terminal-context-menu {
-  background: var(--ui-context-bg, #1a1b1e) !important;
-  border: 1px solid var(--ui-context-border, rgba(255, 255, 255, 0.1)) !important;
-  color: var(--ui-context-text, #e1e1e1) !important;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+/* Custom Terminal / Tab Context Menu */
+.terminal-context-menu,
+.tab-context-menu {
+  background: var(--ui-context-bg) !important;
+  border: 1px solid var(--ui-context-border) !important;
+  color: var(--ui-context-text) !important;
+  border-radius: var(--ui-radius-md, 8px) !important;
+  box-shadow: 0 4px 12px var(--ui-context-shadow, rgba(0, 0, 0, 0.15)) !important;
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
-.terminal-context-menu .menu-item {
+.terminal-context-menu .menu-item,
+.tab-context-menu .menu-item,
+.app-menu-surface .menu-item,
+.app-menu-surface .menu-item-unified {
   transition: background-color 0.15s ease, color 0.15s ease;
+  color: var(--ui-context-text) !important;
 }
 
-.terminal-context-menu .menu-item:hover {
-  background-color: var(--ui-context-hover, rgba(255, 255, 255, 0.1)) !important;
+.terminal-context-menu .menu-item:hover,
+.tab-context-menu .menu-item:hover,
+.app-menu-surface .menu-item:hover,
+.app-menu-surface .menu-item-unified:hover {
+  background-color: var(--ui-context-hover) !important;
 }
 
-.terminal-context-menu .menu-separator {
-  background-color: var(--ui-context-border, rgba(255, 255, 255, 0.1)) !important;
+.terminal-context-menu .menu-separator,
+.tab-context-menu .menu-separator,
+.app-menu-surface .menu-separator {
+  background-color: var(--ui-context-border) !important;
+}
+
+.app-context-menu-unified,
+.app-context-menu-unified-submenu {
+  background: var(--ui-context-bg) !important;
+  color: var(--ui-context-text) !important;
+  border: 1px solid var(--ui-context-border) !important;
+  border-radius: var(--ui-radius-md, 8px) !important;
+  box-shadow: 0 4px 12px var(--ui-context-shadow, rgba(0, 0, 0, 0.15)) !important;
 }
 
 /* Custom Scrollbar for context menus */

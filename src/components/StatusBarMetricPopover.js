@@ -16,7 +16,7 @@ const MiniAreaChart = ({ data, width = 220, height = 52, color = '#00ffe7', maxV
     if (!dataP || dataP.length < 2) {
         return (
             <svg width={width} height={height} style={{ display: 'block' }}>
-                <text x={width / 2} y={height / 2 + 4} textAnchor="middle" fill="rgba(255,255,255,0.2)" fontSize="10">sin datos</text>
+                <text x={width / 2} y={height / 2 + 4} textAnchor="middle" fill="color-mix(in srgb, var(--ui-dialog-text) 25%, transparent)" fontSize="10">sin datos</text>
             </svg>
         );
     }
@@ -53,7 +53,7 @@ const MiniAreaChart = ({ data, width = 220, height = 52, color = '#00ffe7', maxV
             {/* Grid */}
             {gridYs.map((y, i) => (
                 <line key={i} x1={pad.l} y1={y} x2={pad.l + W} y2={y}
-                    stroke="rgba(255,255,255,0.07)" strokeWidth="0.5" strokeDasharray="3,3" />
+                    stroke="color-mix(in srgb, var(--ui-dialog-text) 10%, transparent)" strokeWidth="0.5" strokeDasharray="3,3" />
             ))}
             {/* Area fill */}
             <path d={buildPath(dataP)} fill={color} fillOpacity="0.12" />
@@ -91,7 +91,7 @@ const CoreGrid = ({ coreLoads, color }) => {
                     <div style={{
                         width: '100%',
                         height: '28px',
-                        background: 'rgba(255,255,255,0.05)',
+                        background: 'color-mix(in srgb, var(--ui-dialog-text) 8%, transparent)',
                         borderRadius: '2px',
                         overflow: 'hidden',
                         position: 'relative',
@@ -108,7 +108,7 @@ const CoreGrid = ({ coreLoads, color }) => {
                             boxShadow: `0 0 4px ${color}66`,
                         }} />
                     </div>
-                    <span style={{ fontSize: '9px', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>
+                    <span style={{ fontSize: '9px', color: 'color-mix(in srgb, var(--ui-dialog-text) 45%, transparent)', fontFamily: 'monospace' }}>
                         {i}
                     </span>
                 </div>
@@ -147,7 +147,7 @@ const MetricPopover = ({ anchorRect, children, onMouseLeave, onMouseEnter }) => 
 
     return createPortal(
         <div
-            className="sbpop-panel"
+            className="sbpop-panel app-surface"
             style={{ left, bottom, width: PANEL_W }}
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
@@ -454,7 +454,7 @@ export const HostNetworkPanel = ({ stats, sessionHistory, anchorRect, onClose, o
                     }}
                 >
                     <div className="sbpop-row" style={{ paddingBottom: 1 }}>
-                        <span className="sbpop-key" style={{ color: 'rgba(255,255,255,0.7)' }}>{row.iface}</span>
+                        <span className="sbpop-key" style={{ color: 'color-mix(in srgb, var(--ui-dialog-text) 70%, transparent)' }}>{row.iface}</span>
                         <span className="sbpop-val" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                             <span>{row.operstate || '--'}</span>
                             <button
@@ -464,7 +464,7 @@ export const HostNetworkPanel = ({ stats, sessionHistory, anchorRect, onClose, o
                                 style={{
                                     background: 'transparent',
                                     border: 'none',
-                                    color: 'rgba(255,255,255,0.75)',
+                                    color: 'color-mix(in srgb, var(--ui-dialog-text) 75%, transparent)',
                                     fontSize: '11px',
                                     lineHeight: 1,
                                     padding: 0,
@@ -483,7 +483,7 @@ export const HostNetworkPanel = ({ stats, sessionHistory, anchorRect, onClose, o
                     )}
                     <div className="sbpop-row sbpop-dim">
                         <span className="sbpop-key">RX/TX</span>
-                        <span className="sbpop-val" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                        <span className="sbpop-val" style={{ color: 'color-mix(in srgb, var(--ui-dialog-text) 70%, transparent)' }}>
                             {fmtSpeed(row.rxSpeed)} / {fmtSpeed(row.txSpeed)}
                         </span>
                     </div>

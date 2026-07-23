@@ -239,6 +239,71 @@ input, textarea, select {
 
 .field-checkbox {
   margin-bottom: 8px;
+}
+
+/* ===== App form density (shared shell) ===== */
+.app-dialog .field,
+.app-dialog .p-field,
+.app-dialog .app-form-field,
+.app-form .field,
+.app-form .p-field {
+  margin-bottom: var(--ui-space-4, 1rem);
+}
+
+.app-dialog label,
+.app-dialog .field > label,
+.app-dialog .p-field > label,
+.app-form-label {
+  display: block;
+  margin-bottom: var(--ui-space-2, 0.5rem);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--ui-dialog-text, inherit);
+}
+
+.app-dialog .p-inputtext,
+.app-dialog .p-dropdown,
+.app-dialog .p-password,
+.app-dialog .p-inputnumber,
+.app-dialog .p-inputtextarea {
+  width: 100%;
+}
+
+.app-dialog .p-inputtext,
+.app-dialog .p-dropdown .p-dropdown-label,
+.app-dialog .p-password input {
+  min-height: 2.25rem;
+}
+
+.app-dialog .p-button.p-button-primary,
+.app-dialog .app-dialog-btn-confirm {
+  background: var(--ui-button-primary) !important;
+  border-color: var(--ui-button-primary) !important;
+  color: var(--ui-button-primary-text) !important;
+}
+
+.app-dialog .p-button.p-button-primary:enabled:hover,
+.app-dialog .app-dialog-btn-confirm:enabled:hover {
+  background: var(--ui-button-hover) !important;
+  border-color: var(--ui-button-hover) !important;
+}
+
+.app-dialog .p-invalid,
+.app-dialog .p-inputtext.p-invalid {
+  border-color: var(--red-500, #ef4444) !important;
+}
+
+.app-form-error {
+  margin-top: var(--ui-space-1, 0.25rem);
+  font-size: 0.8rem;
+  color: var(--red-500, #ef4444);
+}
+
+.app-form-help {
+  margin-top: var(--ui-space-1, 0.25rem);
+  font-size: 0.8rem;
+  opacity: 0.7;
+  color: var(--ui-dialog-text, inherit);
 } 
 
 /* === Unified Connection Dialog: form controls con mejor usabilidad === */

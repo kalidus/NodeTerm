@@ -14,19 +14,17 @@ const PaletteBackdrop = ({ children, onClose }) => (
       alignItems: 'flex-start',
       justifyContent: 'center',
       padding: '12vh 24px 24px',
-      background: 'rgba(6, 10, 18, 0.62)',
-      backdropFilter: 'blur(6px)',
       WebkitAppRegion: 'no-drag',
     }}
   >
     <div
+      className="app-surface app-surface-lg connection-search-palette"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Buscador de conexiones"
       style={{
         width: 'min(640px, 100%)',
         padding: '18px 18px 14px',
-        borderRadius: 14,
-        border: '1px solid rgba(255,255,255,0.08)',
-        background: 'linear-gradient(180deg, rgba(24, 30, 42, 0.96) 0%, rgba(14, 18, 28, 0.98) 100%)',
-        boxShadow: '0 24px 80px rgba(0,0,0,0.45)',
       }}
       onMouseDown={(event) => event.stopPropagation()}
     >
@@ -80,32 +78,25 @@ const ConnectionSearchPalette = ({
 
   return ReactDOM.createPortal(
     <PaletteBackdrop onClose={onClose}>
-      <div
-        className="connection-search-palette"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Buscador de conexiones"
-      >
-        <ConnectionSearchBar
-          variant="palette"
-          sidebarFilter={sidebarFilter}
-          setSidebarFilter={setSidebarFilter}
-          allNodes={allNodes}
-          findAllConnections={findAllConnections}
-          onOpenSSHConnection={onOpenSSHConnection}
-          onOpenRdpConnection={onOpenRdpConnection}
-          onOpenVncConnection={onOpenVncConnection}
-          openEditSSHDialog={openEditSSHDialog}
-          openEditRdpDialog={openEditRdpDialog}
-          expandedKeys={expandedKeys}
-          masterKey={masterKey}
-          secureStorage={secureStorage}
-          iconTheme={iconTheme}
-          emptyLabel="Buscar conexiones, hosts o contraseñas"
-          autoFocus
-          onRequestClose={onClose}
-        />
-      </div>
+      <ConnectionSearchBar
+        variant="palette"
+        sidebarFilter={sidebarFilter}
+        setSidebarFilter={setSidebarFilter}
+        allNodes={allNodes}
+        findAllConnections={findAllConnections}
+        onOpenSSHConnection={onOpenSSHConnection}
+        onOpenRdpConnection={onOpenRdpConnection}
+        onOpenVncConnection={onOpenVncConnection}
+        openEditSSHDialog={openEditSSHDialog}
+        openEditRdpDialog={openEditRdpDialog}
+        expandedKeys={expandedKeys}
+        masterKey={masterKey}
+        secureStorage={secureStorage}
+        iconTheme={iconTheme}
+        emptyLabel="Buscar conexiones, hosts o contraseñas"
+        autoFocus
+        onRequestClose={onClose}
+      />
     </PaletteBackdrop>,
     document.body
   );

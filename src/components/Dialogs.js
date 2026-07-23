@@ -16,6 +16,7 @@ import { FolderIconSelectorModal, FolderIconRenderer, FolderIconPresets } from '
 import { SSHIconSelectorModal, SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
 import { iconThemes } from '../themes/icon-themes';
 import { useTranslation } from '../i18n/hooks/useTranslation';
+import AppDialog from './ui/AppDialog';
 import {
   EnhancedRDPForm,
   RdpTerminalDialogHeader,
@@ -352,25 +353,25 @@ export function FolderDialog({
   }, [setFolderIcon]);
   
   return (
-    <Dialog 
-      header={
-        <div className="folder-dialog-header">
-          <div className="header-icon">
-            <i className={`pi ${isEdit ? 'pi-pencil' : 'pi-folder-plus'}`}></i>
-          </div>
-          <div className="header-content">
-            <h3 className="header-title">{isEdit ? t('folder.title.edit') : t('folder.title.new')}</h3>
-            <p className="header-subtitle">
-              {isEdit ? t('folder.subtitle.edit') : t('folder.subtitle.new')}
-            </p>
-          </div>
-        </div>
-      } 
-      visible={visible} 
-      style={{ width: '420px', borderRadius: '16px' }} 
-      modal 
+    <AppDialog
+      headerIcon={`pi ${isEdit ? 'pi-pencil' : 'pi-folder-plus'}`}
+      headerTitle={isEdit ? t('folder.title.edit') : t('folder.title.new')}
+      headerSubtitle={isEdit ? t('folder.subtitle.edit') : t('folder.subtitle.new')}
+      visible={visible}
+      size="md"
       onHide={onHide}
       className="folder-dialog"
+      cancelLabel={tCommon('buttons.cancel')}
+      confirmLabel={isEdit ? t('folder.buttons.saveChanges') : t('folder.buttons.create')}
+      confirmIcon={isEdit ? 'pi pi-save' : 'pi pi-plus'}
+      loading={loading}
+      confirmDisabled={!folderName?.trim()}
+      onConfirm={() => {
+        if (setFolderIcon && typeof setFolderIcon === 'function') {
+          setFolderIcon(currentFolderIcon);
+        }
+        onConfirm();
+      }}
     >
       <div className="folder-dialog-content">
         <div className="form-section">
@@ -472,38 +473,14 @@ export function FolderDialog({
           </div>
         </div>
       </div>
-      
-      <div className="folder-dialog-footer">
-        <Button 
-          label={tCommon('buttons.cancel')} 
-          icon="pi pi-times" 
-          className="p-button-text cancel-button" 
-          onClick={onHide}
-        />
-        <Button 
-          label={isEdit ? t('folder.buttons.saveChanges') : t('folder.buttons.create')} 
-          icon={isEdit ? 'pi pi-save' : 'pi pi-plus'} 
-          className="p-button-primary create-button" 
-          onClick={() => {
-            // Asegurar que el icono se actualice en el hook antes de guardar
-            console.log('💾 Guardando carpeta con icono:', currentFolderIcon);
-            if (setFolderIcon && typeof setFolderIcon === 'function') {
-              setFolderIcon(currentFolderIcon);
-            }
-            onConfirm();
-          }} 
-          loading={loading}
-          disabled={!folderName?.trim()}
-        />
-      </div>
-      
+
       <FolderIconSelectorModal
         visible={showIconSelector}
         onHide={() => setShowIconSelector(false)}
         selectedIconId={hasCustomIcon ? selectedPreset.id : 'general'}
         onSelectIcon={handleIconSelect}
       />
-    </Dialog>
+    </AppDialog>
   );
 }
 
@@ -522,15 +499,27 @@ export function GroupDialog({
   const { t: tCommon } = useTranslation('common');
   
   return (
-    <Dialog header={t('group.title.new')} visible={visible} style={{ width: '370px', borderRadius: 16 }} modal onHide={onHide}>
-      <div className="p-fluid" style={{ padding: 8 }}>
-        <div className="p-field" style={{ marginBottom: 18 }}>
-          <label htmlFor="groupName">{t('group.fields.name')}</label>
+    <AppDialog
+      visible={visible}
+      onHide={onHide}
+      size="sm"
+      headerIcon="pi pi-th-large"
+      headerTitle={t('group.title.new')}
+      cancelLabel={tCommon('buttons.cancel')}
+      confirmLabel={t('group.buttons.create')}
+      confirmIcon="pi pi-plus"
+      onConfirm={onConfirm}
+      loading={loading}
+      confirmDisabled={!groupName.trim()}
+    >
+      <div className="p-fluid">
+        <div className="app-form-field">
+          <label htmlFor="groupName" className="app-form-label">{t('group.fields.name')}</label>
           <InputText id="groupName" value={groupName} onChange={e => setGroupName(e.target.value)} autoFocus />
         </div>
-        <div className="p-field" style={{ marginBottom: 18 }}>
-          <label>{t('group.fields.color')}</label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 8, justifyContent: 'center', alignItems: 'center' }}>
+        <div className="app-form-field">
+          <label className="app-form-label">{t('group.fields.color')}</label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center', alignItems: 'center' }}>
             {colorOptions.map(color => (
               <div
                 key={color}
@@ -540,11 +529,11 @@ export function GroupDialog({
                   height: 28,
                   borderRadius: '50%',
                   background: color,
-                  border: groupColor === color ? '3px solid var(--primary-color, #1976d2)' : '2px solid var(--ui-dialog-border, #23272f)',
-                  boxShadow: groupColor === color ? '0 0 0 4px color-mix(in srgb, var(--primary-color, #1976d2) 65%, transparent)' : '0 1px 4px rgba(0,0,0,0.10)',
+                  border: groupColor === color ? '3px solid var(--ui-button-primary)' : '2px solid var(--ui-dialog-border)',
+                  boxShadow: groupColor === color ? '0 0 0 4px color-mix(in srgb, var(--ui-button-primary) 65%, transparent)' : '0 1px 4px var(--ui-dialog-shadow)',
                   cursor: 'pointer',
                   transition: 'box-shadow 0.2s, border 0.2s',
-                  outline: groupColor === color ? '2px solid var(--primary-color, #1976d2)' : 'none',
+                  outline: groupColor === color ? '2px solid var(--ui-button-primary)' : 'none',
                   margin: 0,
                   position: 'relative',
                   display: 'flex',
@@ -556,25 +545,24 @@ export function GroupDialog({
                 {groupColor === color && (
                   <span style={{
                     position: 'absolute',
-                    color: '#fff',
+                    color: 'var(--ui-button-primary-text)',
                     fontSize: 16,
                     fontWeight: 900,
                     pointerEvents: 'none',
-                    textShadow: '0 1px 4px var(--primary-color, #1976d2), 0 0 2px var(--ui-dialog-border, #23272f)'
-                  }}>✓</span>
+                    textShadow: '0 1px 4px var(--ui-button-primary)'
+                  }}>OK</span>
                 )}
               </div>
             ))}
-            {/* Selector personalizado */}
             <div
               onClick={() => document.getElementById('custom-group-color-input').click()}
               style={{
                 width: 28,
                 height: 28,
                 borderRadius: '50%',
-                background: groupColor && !colorOptions.includes(groupColor) ? groupColor : 'var(--ui-dialog-border, #23272f)',
-                border: !colorOptions.includes(groupColor) ? '3px solid var(--primary-color, #1976d2)' : '2px dashed var(--ui-dialog-text, #888)',
-                boxShadow: !colorOptions.includes(groupColor) ? '0 0 0 4px color-mix(in srgb, var(--primary-color, #1976d2) 65%, transparent)' : '0 1px 4px rgba(0,0,0,0.10)',
+                background: groupColor && !colorOptions.includes(groupColor) ? groupColor : 'var(--ui-dialog-border)',
+                border: !colorOptions.includes(groupColor) ? '3px solid var(--ui-button-primary)' : '2px dashed var(--ui-dialog-text)',
+                boxShadow: !colorOptions.includes(groupColor) ? '0 0 0 4px color-mix(in srgb, var(--ui-button-primary) 65%, transparent)' : '0 1px 4px var(--ui-dialog-shadow)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -585,7 +573,7 @@ export function GroupDialog({
               }}
               title={t('group.color.custom')}
             >
-              <span style={{ fontSize: 16, color: !colorOptions.includes(groupColor) ? '#fff' : 'var(--primary-color, #1976d2)', pointerEvents: 'none', userSelect: 'none' }}>🎨</span>
+              <span style={{ fontSize: 12, color: !colorOptions.includes(groupColor) ? 'var(--ui-button-primary-text)' : 'var(--ui-button-primary)', pointerEvents: 'none', userSelect: 'none' }}>+</span>
               <input
                 id="custom-group-color-input"
                 type="color"
@@ -593,34 +581,11 @@ export function GroupDialog({
                 onChange={e => setGroupColor(e.target.value)}
                 style={{ display: 'none' }}
               />
-              {!colorOptions.includes(groupColor) && groupColor && (
-                <span style={{
-                  position: 'absolute',
-                  color: '#fff',
-                  fontSize: 16,
-                  fontWeight: 900,
-                  pointerEvents: 'none',
-                  textShadow: '0 1px 4px var(--primary-color, #1976d2), 0 0 2px var(--ui-dialog-border, #23272f)',
-                  left: 0, right: 0, top: 0, bottom: 0,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>✓</span>
-              )}
             </div>
           </div>
         </div>
-        <div className="p-field" style={{ marginTop: 18 }}>
-          <Button
-            label={t('group.buttons.create')}
-            icon="pi pi-plus"
-            onClick={onConfirm}
-            disabled={!groupName.trim()}
-            className="p-button-success"
-            style={{ width: '100%' }}
-            loading={loading}
-          />
-        </div>
       </div>
-    </Dialog>
+    </AppDialog>
   );
 }
 
@@ -761,7 +726,7 @@ export function EditSSHConnectionDialog({
         resizable
         onHide={onHide}
         contentStyle={TERMINAL_PRO_DIALOG_CONTENT_STYLE}
-        className="terminal-pro-dialog"
+        className="app-dialog terminal-pro-dialog"
         closable={false}
       >
         <div style={TERMINAL_PRO_DIALOG_FORM_WRAPPER_STYLE}>
@@ -903,7 +868,7 @@ export function EditRDPConnectionDialog({
       modal
       resizable
       contentStyle={TERMINAL_PRO_DIALOG_CONTENT_STYLE}
-      className="terminal-pro-dialog"
+      className="app-dialog terminal-pro-dialog"
       closable={false}
     >
       <div style={TERMINAL_PRO_DIALOG_FORM_WRAPPER_STYLE}>
@@ -1046,17 +1011,51 @@ export function FileConnectionDialog({
   };
 
   return (
-    <Dialog
-      header={isEditMode ? t('fileConnection.title.edit') : t('fileConnection.title.new')}
+    <AppDialog
+      headerIcon="pi pi-folder"
+      headerTitle={isEditMode ? t('fileConnection.title.edit') : t('fileConnection.title.new')}
       visible={visible}
-      style={{ width: '500px', borderRadius: '16px' }}
-      modal
+      size="md"
       onHide={onHide}
       className="file-connection-dialog"
+      cancelLabel={tCommon('buttons.cancel')}
+      confirmLabel={isEditMode ? t('fileConnection.buttons.saveChanges') : t('fileConnection.buttons.create')}
+      confirmIcon="pi pi-check"
+      onConfirm={handleConfirm}
+      loading={fileConnectionLoading}
+      footer={
+        <div className="app-dialog-footer">
+          <div className="app-dialog-footer-extra">
+            {onGoBack ? (
+              <Button
+                label={t('common.back')}
+                icon="pi pi-arrow-left"
+                className="p-button-text"
+                onClick={onGoBack}
+              />
+            ) : null}
+          </div>
+          <div className="app-dialog-footer-actions">
+            <Button
+              label={tCommon('buttons.cancel')}
+              icon="pi pi-times"
+              className="p-button-text app-dialog-btn-cancel"
+              onClick={onHide}
+            />
+            <Button
+              label={isEditMode ? t('fileConnection.buttons.saveChanges') : t('fileConnection.buttons.create')}
+              icon="pi pi-check"
+              className="p-button-primary app-dialog-btn-confirm"
+              onClick={handleConfirm}
+              loading={fileConnectionLoading}
+            />
+          </div>
+        </div>
+      }
     >
-      <div className="p-fluid" style={{ padding: '12px', height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ flex: '1 1 auto', overflowY: 'auto', padding: '2px' }}>
-          <Card title={`🔗 ${t('fileConnection.sections.connection')}`} className="mb-2">
+      <div className="p-fluid">
+        <div>
+          <Card title={t('fileConnection.sections.connection')} className="mb-2">
             <div className="formgrid grid">
               <div className="field col-12">
                 <label htmlFor="file-name">{t('fileConnection.fields.name')} *</label>
@@ -1155,39 +1154,8 @@ export function FileConnectionDialog({
             </div>
           </Card>
         </div>
-
-        <div className="flex justify-content-between gap-2 mt-3" style={{ borderTop: '1px solid #e9ecef', paddingTop: '12px' }}>
-          <div style={{ display: 'flex', gap: 12 }}>
-            {onGoBack && (
-              <Button
-                label={t('common.back')}
-                icon="pi pi-arrow-left"
-                className="p-button-text"
-                onClick={onGoBack}
-                style={{ fontSize: '13px', padding: '8px 16px' }}
-              />
-            )}
-          </div>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <Button
-              label={tCommon('buttons.cancel')}
-              icon="pi pi-times"
-              className="p-button-text"
-              onClick={onHide}
-              style={{ fontSize: '13px', padding: '8px 16px' }}
-            />
-            <Button
-              label={isEditMode ? t('fileConnection.buttons.saveChanges') : t('fileConnection.buttons.create')}
-              icon="pi pi-check"
-              className="p-button-primary"
-              onClick={handleConfirm}
-              loading={fileConnectionLoading}
-              style={{ fontSize: '13px', padding: '8px 16px' }}
-            />
-          </div>
-        </div>
       </div>
-    </Dialog>
+    </AppDialog>
   );
 }
 
@@ -2902,7 +2870,7 @@ export function NewSSHConnectionDialog({
       resizable
       onHide={onHide}
       contentStyle={TERMINAL_PRO_DIALOG_CONTENT_STYLE}
-      className="terminal-pro-dialog"
+      className="app-dialog terminal-pro-dialog"
       closable={false}
     >
       <div style={TERMINAL_PRO_DIALOG_FORM_WRAPPER_STYLE}>
@@ -3037,7 +3005,7 @@ export function NewRDPConnectionDialog({
       modal
       resizable
       contentStyle={TERMINAL_PRO_DIALOG_CONTENT_STYLE}
-      className="terminal-pro-dialog"
+      className="app-dialog terminal-pro-dialog"
       closable={false}
     >
       <div style={TERMINAL_PRO_DIALOG_FORM_WRAPPER_STYLE}>
@@ -3106,7 +3074,7 @@ export function NewVNCConnectionDialog({
       modal
       resizable
       contentStyle={TERMINAL_PRO_DIALOG_CONTENT_STYLE}
-      className="terminal-pro-dialog"
+      className="app-dialog terminal-pro-dialog"
       closable={false}
     >
       <div style={TERMINAL_PRO_DIALOG_FORM_WRAPPER_STYLE}>
@@ -3180,7 +3148,7 @@ export function EditVNCConnectionDialog({
       modal
       resizable
       contentStyle={TERMINAL_PRO_DIALOG_CONTENT_STYLE}
-      className="terminal-pro-dialog"
+      className="app-dialog terminal-pro-dialog"
       closable={false}
     >
       <div style={TERMINAL_PRO_DIALOG_FORM_WRAPPER_STYLE}>
@@ -3471,7 +3439,7 @@ export function ProtocolSelectionDialog({
       style={PROTOCOL_PICKER_DIALOG_STYLE}
       modal
       resizable
-      className="terminal-pro-dialog protocol-selection-dialog-new protocol-selection-picker-compact"
+      className="app-dialog terminal-pro-dialog protocol-selection-dialog-new protocol-selection-picker-compact"
       contentStyle={TERMINAL_PRO_DIALOG_CONTENT_STYLE}
       closable
     >

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
-import { Dialog } from 'primereact/dialog';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import { presetManager } from '../utils/presetManager';
+import AppDialog from './ui/AppDialog';
 
 /**
  * PresetSelector renders the Appearance > Presets settings section.
@@ -321,32 +321,19 @@ const PresetSelector = () => {
       </div>
 
       {/* Save dialog */}
-      <Dialog
-        header={t('presets.saveDialogTitle') || 'Guardar como preset'}
+      <AppDialog
+        headerTitle={t('presets.saveDialogTitle') || 'Guardar como preset'}
+        headerIcon="pi pi-save"
         visible={saveDialogVisible}
-        style={{ width: '380px' }}
+        size="sm"
         onHide={() => setSaveDialogVisible(false)}
-        modal
-        footer={
-          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-            <Button
-              label={t('presets.cancel') || 'Cancelar'}
-              icon="pi pi-times"
-              outlined
-              size="small"
-              onClick={() => setSaveDialogVisible(false)}
-            />
-            <Button
-              label={t('presets.save') || 'Guardar'}
-              icon="pi pi-check"
-              size="small"
-              disabled={!newPresetName.trim()}
-              onClick={handleSaveConfirm}
-            />
-          </div>
-        }
+        cancelLabel={t('presets.cancel') || 'Cancelar'}
+        confirmLabel={t('presets.save') || 'Guardar'}
+        confirmIcon="pi pi-check"
+        confirmDisabled={!newPresetName.trim()}
+        onConfirm={handleSaveConfirm}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', paddingTop: '0.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div>
             <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: 500 }}>
               {t('presets.nameLabel') || 'Nombre del preset'}
@@ -354,7 +341,7 @@ const PresetSelector = () => {
             <InputText
               value={newPresetName}
               onChange={e => setNewPresetName(e.target.value)}
-              placeholder={t('presets.namePlaceholder') || 'Ej: Mi configuración de trabajo'}
+              placeholder={t('presets.namePlaceholder') || 'Ej: Mi configuracion de trabajo'}
               style={{ width: '100%' }}
               autoFocus
               onKeyDown={e => { if (e.key === 'Enter') handleSaveConfirm(); }}
@@ -367,50 +354,35 @@ const PresetSelector = () => {
             <InputText
               value={newPresetIcon}
               onChange={e => setNewPresetIcon(e.target.value)}
-              placeholder="⭐"
+              placeholder="*"
               style={{ width: '80px', textAlign: 'center', fontSize: '1.2rem' }}
               maxLength={2}
             />
           </div>
         </div>
-      </Dialog>
+      </AppDialog>
 
       {/* Rename dialog */}
-      <Dialog
-        header={t('presets.renameDialogTitle') || 'Renombrar preset'}
+      <AppDialog
+        headerTitle={t('presets.renameDialogTitle') || 'Renombrar preset'}
+        headerIcon="pi pi-pencil"
         visible={renameDialogVisible}
-        style={{ width: '360px' }}
+        size="sm"
         onHide={() => setRenameDialogVisible(false)}
-        modal
-        footer={
-          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-            <Button
-              label={t('presets.cancel') || 'Cancelar'}
-              icon="pi pi-times"
-              outlined
-              size="small"
-              onClick={() => setRenameDialogVisible(false)}
-            />
-            <Button
-              label={t('presets.rename') || 'Renombrar'}
-              icon="pi pi-check"
-              size="small"
-              disabled={!renameValue.trim()}
-              onClick={handleRenameConfirm}
-            />
-          </div>
-        }
+        cancelLabel={t('presets.cancel') || 'Cancelar'}
+        confirmLabel={t('presets.rename') || 'Renombrar'}
+        confirmIcon="pi pi-check"
+        confirmDisabled={!renameValue.trim()}
+        onConfirm={handleRenameConfirm}
       >
-        <div style={{ paddingTop: '0.5rem' }}>
-          <InputText
-            value={renameValue}
-            onChange={e => setRenameValue(e.target.value)}
-            style={{ width: '100%' }}
-            autoFocus
-            onKeyDown={e => { if (e.key === 'Enter') handleRenameConfirm(); }}
-          />
-        </div>
-      </Dialog>
+        <InputText
+          value={renameValue}
+          onChange={e => setRenameValue(e.target.value)}
+          style={{ width: '100%' }}
+          autoFocus
+          onKeyDown={e => { if (e.key === 'Enter') handleRenameConfirm(); }}
+        />
+      </AppDialog>
     </div>
   );
 };

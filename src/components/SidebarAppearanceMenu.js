@@ -57,15 +57,10 @@ const SidebarAppearanceMenu = ({
         id="sidebar_appearance_panel"
         style={{
           width: '280px',
-          background: 'var(--ui-dialog-bg, #1a1a1e)',
-          border: '1px solid var(--ui-tab-border, rgba(255,255,255,0.1))',
-          borderRadius: '12px',
-          boxShadow: '0 15px 50px rgba(0,0,0,0.8)',
-          backdropFilter: 'blur(30px)',
           zIndex: 10001,
           marginTop: '5px'
         }}
-        className="glass-panel tree-theme-overlay-fix"
+        className="app-surface app-surface-lg glass-panel tree-theme-overlay-fix"
         appendTo={document.body}
         onHide={() => setSettingsView('choice')}
       >
@@ -86,7 +81,7 @@ const SidebarAppearanceMenu = ({
                 onKeyDown={(e) => { if (e.key === 'Enter') setSettingsView('tree'); }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '10px',
-                  cursor: 'pointer', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)'
+                  cursor: 'pointer', background: 'var(--ui-context-hover)', border: '1px solid var(--ui-dialog-border)'
                 }}
               >
                 <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(33, 150, 243, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -106,7 +101,7 @@ const SidebarAppearanceMenu = ({
                 onKeyDown={(e) => { if (e.key === 'Enter') setSettingsView('treeIcons'); }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '10px',
-                  cursor: 'pointer', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)'
+                  cursor: 'pointer', background: 'var(--ui-context-hover)', border: '1px solid var(--ui-dialog-border)'
                 }}
               >
                 <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(76, 175, 80, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -126,7 +121,7 @@ const SidebarAppearanceMenu = ({
                 onKeyDown={(e) => { if (e.key === 'Enter') setSettingsView('actionIcons'); }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '10px',
-                  cursor: 'pointer', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)'
+                  cursor: 'pointer', background: 'var(--ui-context-hover)', border: '1px solid var(--ui-dialog-border)'
                 }}
               >
                 <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(156, 39, 176, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -146,7 +141,7 @@ const SidebarAppearanceMenu = ({
                 onKeyDown={(e) => { if (e.key === 'Enter') setSettingsView('typography'); }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderRadius: '10px',
-                  cursor: 'pointer', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)'
+                  cursor: 'pointer', background: 'var(--ui-context-hover)', border: '1px solid var(--ui-dialog-border)'
                 }}
               >
                 <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(233, 30, 99, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -186,7 +181,7 @@ const SidebarAppearanceMenu = ({
                         transition: 'all 0.15s'
                       }}
                     >
-                      <div style={{ width: '30px', height: '30px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.2)', fontSize: '1.1rem', flexShrink: 0 }}>
+                      <div style={{ width: '30px', height: '30px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'color-mix(in srgb, var(--ui-dialog-text) 8%, transparent)', fontSize: '1.1rem', flexShrink: 0 }}>
                         {opt.value === 'default' && <i className="pi pi-folder" style={{ color: '#64b5f6' }} />}
                         {opt.value === 'minimal' && <i className="pi pi-minus" style={{ color: '#90a4ae' }} />}
                         {opt.value === 'connected' && <i className="pi pi-share-alt" style={{ color: '#81c784' }} />}
@@ -238,7 +233,7 @@ const SidebarAppearanceMenu = ({
                         transition: 'all 0.15s'
                       }}
                     >
-                      <div style={{ width: '30px', height: '30px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.2)', flexShrink: 0 }}>
+                      <div style={{ width: '30px', height: '30px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'color-mix(in srgb, var(--ui-dialog-text) 8%, transparent)', flexShrink: 0 }}>
                         <div style={{ transform: 'scale(0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           {previewIcon || <i className="pi pi-folder" style={{ color: 'var(--primary-color)' }} />}
                         </div>
@@ -281,7 +276,7 @@ const SidebarAppearanceMenu = ({
                         transition: 'all 0.15s'
                       }}
                     >
-                      <div style={{ width: '30px', height: '30px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.2)', flexShrink: 0 }}>
+                      <div style={{ width: '30px', height: '30px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'color-mix(in srgb, var(--ui-dialog-text) 8%, transparent)', flexShrink: 0 }}>
                         <div style={{ transform: 'scale(0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           {theme.icons.newConnection}
                         </div>
@@ -321,17 +316,17 @@ const SidebarAppearanceMenu = ({
                     placeholder="Seleccionar fuente"
                     style={{
                       width: '100%',
-                      background: 'rgba(0,0,0,0.2)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      borderRadius: '8px',
+                      background: 'color-mix(in srgb, var(--ui-dialog-text) 8%, transparent)',
+                      border: '1px solid var(--ui-dialog-border)',
+                      borderRadius: 'var(--ui-radius-md)',
                       height: '34px',
                       fontSize: '0.8rem'
                     }}
                     panelStyle={{
-                      background: 'var(--ui-dialog-bg, #1a1a1e)',
-                      border: '1px solid var(--ui-tab-border, rgba(255,255,255,0.1))',
-                      boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
-                      borderRadius: '8px'
+                      background: 'var(--ui-dialog-bg)',
+                      border: '1px solid var(--ui-dialog-border)',
+                      boxShadow: '0 8px 30px var(--ui-dialog-shadow)',
+                      borderRadius: 'var(--ui-radius-md)'
                     }}
                     itemTemplate={(option) => (
                       <span style={{ fontFamily: option.value, fontSize: '0.8rem', color: 'var(--ui-sidebar-text)' }}>
@@ -368,7 +363,7 @@ const SidebarAppearanceMenu = ({
                       height: '24px',
                       borderRadius: '50%',
                       backgroundColor: explorerFontColor || '#a9b1d6',
-                      border: '2px solid rgba(255,255,255,0.2)',
+                      border: '2px solid var(--ui-dialog-border)',
                       cursor: 'pointer',
                       position: 'relative',
                       overflow: 'hidden',
@@ -396,11 +391,11 @@ const SidebarAppearanceMenu = ({
                       onChange={(e) => setExplorerFontColor?.(e.target.value)}
                       style={{
                         flex: 1,
-                        background: 'rgba(0,0,0,0.2)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: '6px',
+                        background: 'color-mix(in srgb, var(--ui-dialog-text) 8%, transparent)',
+                        border: '1px solid var(--ui-dialog-border)',
+                        borderRadius: 'var(--ui-radius-md)',
                         padding: '4px 8px',
-                        color: '#fff',
+                        color: 'var(--ui-dialog-text)',
                         fontSize: '0.8rem',
                         height: '30px'
                       }}
@@ -429,9 +424,9 @@ const SidebarAppearanceMenu = ({
                     marginTop: '8px',
                     width: '100%',
                     padding: '8px 12px',
-                    borderRadius: '8px',
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: 'var(--ui-radius-md)',
+                    background: 'var(--ui-context-hover)',
+                    border: '1px solid var(--ui-dialog-border)',
                     color: 'var(--ui-sidebar-text)',
                     fontSize: '0.8rem',
                     fontWeight: '600',
@@ -443,12 +438,12 @@ const SidebarAppearanceMenu = ({
                     gap: '6px'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                    e.currentTarget.style.background = 'var(--ui-sidebar-hover)';
+                    e.currentTarget.style.borderColor = 'var(--ui-dialog-border)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                    e.currentTarget.style.background = 'var(--ui-context-hover)';
+                    e.currentTarget.style.borderColor = 'var(--ui-dialog-border)';
                   }}
                 >
                   <i className="pi pi-refresh" style={{ fontSize: '0.75rem' }} />

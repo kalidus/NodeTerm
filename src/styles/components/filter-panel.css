@@ -10,7 +10,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.4);
+    background: color-mix(in srgb, var(--ui-dialog-bg) 45%, transparent);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
     opacity: 0;
@@ -26,22 +26,24 @@
 
 /* === PANEL CONTAINER === */
 .filter-panel-container {
+    --panel-bg: var(--ui-dialog-bg);
+    --panel-border: var(--ui-dialog-border);
+    --panel-text: var(--ui-dialog-text);
+    --panel-text-secondary: color-mix(in srgb, var(--ui-dialog-text) 60%, transparent);
+    --panel-hover: var(--ui-context-hover);
     position: absolute;
     top: 80px;
     left: 20px;
     width: 380px;
     max-width: calc(100vw - 40px);
     max-height: calc(100vh - 120px);
-    background: linear-gradient(135deg,
-            var(--panel-bg, rgba(16, 20, 28, 0.95)) 0%,
-            var(--panel-bg, rgba(16, 20, 28, 0.90)) 100%);
+    background: var(--panel-bg);
+    color: var(--panel-text);
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.1));
-    border-radius: 12px;
-    box-shadow:
-        0 8px 32px rgba(0, 0, 0, 0.4),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--ui-radius-lg);
+    box-shadow: 0 8px 32px var(--ui-dialog-shadow);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -61,7 +63,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 16px 20px;
-    border-bottom: 1px solid var(--panel-border, rgba(255, 255, 255, 0.08));
+    border-bottom: 1px solid var(--panel-border);
     flex-shrink: 0;
 }
 
@@ -69,7 +71,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    color: var(--panel-text, rgba(255, 255, 255, 0.9));
+    color: var(--panel-text);
 }
 
 .filter-panel-title i {
@@ -91,10 +93,10 @@
     min-width: 24px;
     height: 24px;
     padding: 0 8px;
-    background: rgba(79, 195, 247, 0.2);
-    border: 1px solid rgba(79, 195, 247, 0.4);
-    border-radius: 12px;
-    color: #4fc3f7;
+    background: color-mix(in srgb, var(--ui-button-primary) 20%, transparent);
+    border: 1px solid color-mix(in srgb, var(--ui-button-primary) 40%, transparent);
+    border-radius: var(--ui-radius-lg);
+    color: var(--ui-button-primary);
     font-size: 0.75rem;
     font-weight: 700;
 }
@@ -108,16 +110,16 @@
     background: transparent;
     border: 1px solid transparent;
     border-radius: 6px;
-    color: var(--panel-text-secondary, rgba(255, 255, 255, 0.6));
+    color: var(--panel-text-secondary);
     cursor: pointer;
     transition: all 0.15s ease;
     font-size: 1.1rem;
 }
 
 .filter-panel-close:hover {
-    background: var(--panel-hover, rgba(255, 255, 255, 0.05));
-    border-color: var(--panel-border, rgba(255, 255, 255, 0.1));
-    color: var(--panel-text, rgba(255, 255, 255, 0.9));
+    background: var(--panel-hover);
+    border-color: var(--panel-border);
+    color: var(--panel-text);
 }
 
 /* === SEARCH === */
@@ -126,12 +128,12 @@
     align-items: center;
     gap: 10px;
     padding: 12px 20px;
-    border-bottom: 1px solid var(--panel-border, rgba(255, 255, 255, 0.08));
+    border-bottom: 1px solid var(--panel-border);
     flex-shrink: 0;
 }
 
 .filter-search i.pi-search {
-    color: var(--panel-text-secondary, rgba(255, 255, 255, 0.5));
+    color: var(--panel-text-secondary);
     font-size: 0.9rem;
 }
 
@@ -140,13 +142,13 @@
     background: transparent;
     border: none;
     outline: none;
-    color: var(--panel-text, rgba(255, 255, 255, 0.9));
+    color: var(--panel-text);
     font-size: 0.9rem;
     padding: 0;
 }
 
 .filter-search input::placeholder {
-    color: var(--panel-text-secondary, rgba(255, 255, 255, 0.4));
+    color: var(--panel-text-secondary);
 }
 
 .search-clear {
@@ -158,15 +160,15 @@
     background: transparent;
     border: none;
     border-radius: 50%;
-    color: var(--panel-text-secondary, rgba(255, 255, 255, 0.5));
+    color: var(--panel-text-secondary);
     cursor: pointer;
     transition: all 0.15s ease;
     font-size: 0.75rem;
 }
 
 .search-clear:hover {
-    background: var(--panel-hover, rgba(255, 255, 255, 0.08));
-    color: var(--panel-text, rgba(255, 255, 255, 0.9));
+    background: var(--panel-hover);
+    color: var(--panel-text);
 }
 
 /* === SECTIONS === */
@@ -178,7 +180,7 @@
 }
 
 .filter-section {
-    border-bottom: 1px solid var(--panel-border, rgba(255, 255, 255, 0.06));
+    border-bottom: 1px solid var(--panel-border);
 }
 
 .filter-section:last-child {
@@ -196,17 +198,17 @@
 }
 
 .filter-section-header:hover {
-    background: var(--panel-hover, rgba(255, 255, 255, 0.03));
+    background: var(--panel-hover);
 }
 
 .section-icon {
-    color: var(--panel-text-secondary, rgba(255, 255, 255, 0.6));
+    color: var(--panel-text-secondary);
     font-size: 0.9rem;
 }
 
 .section-title {
     flex: 1;
-    color: var(--panel-text-secondary, rgba(255, 255, 255, 0.7));
+    color: var(--panel-text-secondary);
     font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.8px;
@@ -214,7 +216,7 @@
 }
 
 .section-chevron {
-    color: var(--panel-text-secondary, rgba(255, 255, 255, 0.5));
+    color: var(--panel-text-secondary);
     font-size: 0.75rem;
     transition: transform 0.2s ease;
 }
@@ -249,7 +251,7 @@
 }
 
 .filter-checkbox-wrapper:hover {
-    background: var(--panel-hover, rgba(255, 255, 255, 0.05));
+    background: var(--panel-hover);
 }
 
 .filter-checkbox {
@@ -265,7 +267,7 @@
 
 /* Remove hover from inner element as wrapper handles it */
 /* .filter-checkbox:hover {
-    background: var(--panel-hover, rgba(255, 255, 255, 0.05));
+    background: var(--panel-hover);
 } */
 
 .filter-checkbox-delete {
@@ -276,7 +278,7 @@
     justify-content: center;
     background: transparent;
     border: none;
-    color: var(--panel-text-secondary, rgba(255, 255, 255, 0.4));
+    color: var(--panel-text-secondary);
     cursor: pointer;
     border-radius: 4px;
     margin-right: 8px;
@@ -297,7 +299,7 @@
     width: 18px;
     height: 18px;
     margin: 0;
-    accent-color: var(--filter-color, #4fc3f7);
+    accent-color: var(--filter-color, var(--ui-button-primary));
     cursor: pointer;
 }
 
@@ -306,7 +308,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    color: var(--panel-text, rgba(255, 255, 255, 0.9));
+    color: var(--panel-text);
     font-size: 0.9rem;
     min-width: 0;
 }
@@ -323,7 +325,7 @@
 }
 
 .filter-checkbox-count {
-    color: var(--panel-text-secondary, rgba(255, 255, 255, 0.5));
+    color: var(--panel-text-secondary);
     font-size: 0.85rem;
     font-weight: 500;
     flex-shrink: 0;
@@ -336,7 +338,7 @@
     align-items: center;
     gap: 8px;
     padding: 20px;
-    color: var(--panel-text-secondary, rgba(255, 255, 255, 0.4));
+    color: var(--panel-text-secondary);
     font-size: 0.85rem;
     text-align: center;
 }
@@ -354,9 +356,9 @@
     width: 100%;
     padding: 8px 12px;
     background: transparent;
-    border: 1px dashed var(--panel-border, rgba(255, 255, 255, 0.15));
+    border: 1px dashed var(--panel-border);
     border-radius: 6px;
-    color: var(--panel-text-secondary, rgba(255, 255, 255, 0.6));
+    color: var(--panel-text-secondary);
     font-size: 0.85rem;
     cursor: pointer;
     transition: all 0.15s ease;
@@ -364,9 +366,9 @@
 }
 
 .filter-add-group-btn:hover {
-    background: var(--panel-hover, rgba(255, 255, 255, 0.05));
-    border-color: rgba(79, 195, 247, 0.4);
-    color: #4fc3f7;
+    background: var(--panel-hover);
+    border-color: color-mix(in srgb, var(--ui-button-primary) 40%, transparent);
+    color: var(--ui-button-primary);
 }
 
 .filter-add-group-btn i {
@@ -379,14 +381,14 @@
     align-items: center;
     gap: 10px;
     padding: 16px 20px;
-    border-top: 1px solid var(--panel-border, rgba(255, 255, 255, 0.08));
+    border-top: 1px solid var(--panel-border);
     flex-shrink: 0;
 }
 
 .filter-footer-btn {
     flex: 1;
     padding: 10px 16px;
-    border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.15));
+    border: 1px solid var(--panel-border);
     border-radius: 8px;
     font-size: 0.9rem;
     font-weight: 500;
@@ -400,25 +402,25 @@
 
 .filter-footer-btn.secondary {
     background: transparent;
-    color: var(--panel-text-secondary, rgba(255, 255, 255, 0.7));
+    color: var(--panel-text-secondary);
 }
 
 .filter-footer-btn.secondary:hover:not(:disabled) {
-    background: var(--panel-hover, rgba(255, 255, 255, 0.05));
-    border-color: var(--panel-border, rgba(255, 255, 255, 0.25));
-    color: var(--panel-text, rgba(255, 255, 255, 0.9));
+    background: var(--panel-hover);
+    border-color: var(--panel-border);
+    color: var(--panel-text);
 }
 
 .filter-footer-btn.primary {
-    background: linear-gradient(135deg, #4fc3f7 0%, #2196f3 100%);
+    background: var(--ui-button-primary);
     border-color: transparent;
-    color: #ffffff;
+    color: var(--primary-color-text, #fff);
     font-weight: 600;
 }
 
 .filter-footer-btn.primary:hover {
-    background: linear-gradient(135deg, #60d0ff 0%, #2ea3ff 100%);
-    box-shadow: 0 4px 12px rgba(79, 195, 247, 0.3);
+    background: color-mix(in srgb, var(--ui-button-primary) 88%, white);
+    box-shadow: 0 4px 12px var(--ui-dialog-shadow);
     transform: translateY(-1px);
 }
 
@@ -443,7 +445,7 @@
     font-size: 0.75rem;
     /* Smaller font */
     font-weight: 500;
-    color: var(--badge-color, #4fc3f7);
+    color: var(--badge-color, var(--ui-button-primary));
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     transition: all 0.15s ease;
@@ -453,7 +455,7 @@
 
 .filter-badge:hover {
     background: var(--badge-bg, rgba(79, 195, 247, 0.15));
-    border-color: var(--badge-color, #4fc3f7);
+    border-color: var(--badge-color, var(--ui-button-primary));
 }
 
 .filter-badge-icon {
@@ -507,9 +509,9 @@
     /* Significantly reduced padding */
     background: transparent;
     /* Cleaner look, less button-like */
-    border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.1));
+    border: 1px solid var(--panel-border);
     border-radius: 6px;
-    color: var(--panel-text-secondary, rgba(255, 255, 255, 0.7));
+    color: var(--panel-text-secondary);
     /* Subtle text color */
     font-size: 0.8rem;
     /* Smaller font */
@@ -521,15 +523,15 @@
 }
 
 .filter-trigger-btn:hover {
-    background: var(--panel-hover, rgba(255, 255, 255, 0.05));
-    border-color: var(--panel-border, rgba(255, 255, 255, 0.2));
-    color: var(--panel-text, rgba(255, 255, 255, 0.9));
+    background: var(--panel-hover);
+    border-color: var(--panel-border);
+    color: var(--panel-text);
 }
 
 .filter-trigger-btn.active {
     background: var(--badge-bg, rgba(79, 195, 247, 0.1));
     border-color: var(--badge-border, rgba(79, 195, 247, 0.3));
-    color: var(--badge-color, #4fc3f7);
+    color: var(--badge-color, var(--ui-button-primary));
 }
 
 .filter-trigger-btn i {
@@ -543,9 +545,9 @@
     min-width: 16px;
     height: 16px;
     padding: 0 4px;
-    background: linear-gradient(135deg, #4fc3f7 0%, #2196f3 100%);
-    border-radius: 8px;
-    color: #ffffff;
+    background: var(--ui-button-primary);
+    border-radius: var(--ui-radius-md);
+    color: var(--primary-color-text, #fff);
     font-size: 0.65rem;
     font-weight: 700;
     margin-left: 2px;
@@ -568,12 +570,12 @@
 }
 
 .filter-sections::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--ui-context-hover);
     border-radius: 3px;
 }
 
 .filter-sections::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: var(--ui-sidebar-hover);
 }
 
 /* === RESPONSIVE === */

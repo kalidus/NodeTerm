@@ -2396,7 +2396,7 @@ const ImportWizardDialog = ({
                 draggable={false}
                 resizable={false}
                 closable={!importing}
-                className="import-wizard-dialog"
+                className="app-dialog import-wizard-dialog"
             >
                 <div className="import-wizard-content">
                     {/* Indicador de pasos */}

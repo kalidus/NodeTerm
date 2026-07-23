@@ -2438,9 +2438,10 @@
 }
 
 .create-group-dialog {
-  background: rgba(25, 30, 40, 0.98);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
+  background: var(--ui-dialog-bg, rgba(25, 30, 40, 0.98));
+  border: 1px solid var(--ui-dialog-border, rgba(255, 255, 255, 0.1));
+  border-radius: var(--ui-radius-lg, 16px);
+  color: var(--ui-dialog-text, #fff);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   width: 100%;
   max-width: 400px;
@@ -2476,7 +2477,7 @@
   margin: 0;
   font-size: 1.1rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--ui-dialog-text, #fff);
 }
 
 .dialog-close {

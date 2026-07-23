@@ -5910,7 +5910,7 @@ const NetworkToolsDialog = ({ visible, onHide, standalone = false, toolId = null
       visible={visible}
       onHide={onHide}
       header={dialogHeader}
-      className="network-tools-dialog"
+      className="app-dialog network-tools-dialog"
       style={{ 
         width: `${dialogSize.width}px`,
         maxWidth: '95vw',

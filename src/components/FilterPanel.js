@@ -108,12 +108,12 @@ const FilterPanel = ({
 
     return (
         <div className={`filter-panel-overlay ${isOpen ? 'open' : ''}`}>
-            <div className="filter-panel-container" ref={panelRef} style={{
-                '--panel-bg': themeColors.cardBackground || 'rgba(16, 20, 28, 0.95)',
-                '--panel-border': themeColors.borderColor || 'rgba(255, 255, 255, 0.1)',
-                '--panel-text': themeColors.textPrimary || 'rgba(255, 255, 255, 0.9)',
-                '--panel-text-secondary': themeColors.textSecondary || 'rgba(255, 255, 255, 0.6)',
-                '--panel-hover': themeColors.hoverBackground || 'rgba(255, 255, 255, 0.05)',
+            <div className="filter-panel-container app-surface app-surface-lg" ref={panelRef} style={{
+                '--panel-bg': themeColors.cardBackground || 'var(--ui-dialog-bg)',
+                '--panel-border': themeColors.borderColor || 'var(--ui-dialog-border)',
+                '--panel-text': themeColors.textPrimary || 'var(--ui-dialog-text)',
+                '--panel-text-secondary': themeColors.textSecondary || 'color-mix(in srgb, var(--ui-dialog-text) 60%, transparent)',
+                '--panel-hover': themeColors.hoverBackground || 'var(--ui-context-hover)',
             }}>
                 {/* Header */}
                 <div className="filter-panel-header">

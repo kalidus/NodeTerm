@@ -305,7 +305,7 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
         </div>
       }
       visible={visible}
-      className="sync-settings-dialog"
+      className="app-dialog sync-settings-dialog"
       style={{
         maxWidth: '90vw',
         maxHeight: '90vh',

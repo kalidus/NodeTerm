@@ -28,6 +28,7 @@ import {
     resolveTabUpdateFromDefault,
     isExplicitNonWslDefault
 } from '../utils/defaultLocalTerminal';
+import { appConfirm } from './ui/AppConfirm';
 
 // Utilidad para ajustar brillo de un color hex
 function adjustColorBrightness(hex, percent) {
@@ -990,12 +991,17 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     }, []); // Solo ejecutar UNA VEZ al montar
 
     // Abrir Apps > Cygwin para instalar el runtime bajo demanda
-    const openCygwinAppsInstall = () => {
-        const proceed = window.confirm(
-            'Cygwin no esta instalado.\n\n' +
-            'Se descarga bajo demanda desde Ajustes > Apps (~25-40 MB).\n\n' +
-            'Abrir Apps para instalarlo?'
-        );
+    const openCygwinAppsInstall = async () => {
+        const proceed = await appConfirm({
+            message:
+                'Cygwin no esta instalado.\n\n' +
+                'Se descarga bajo demanda desde Ajustes > Apps (~25-40 MB).\n\n' +
+                'Abrir Apps para instalarlo?',
+            header: 'Confirmar',
+            severity: 'warn',
+            acceptLabel: 'Aceptar',
+            rejectLabel: 'Cancelar'
+        });
         if (!proceed) return;
         try {
             // Primero abre el dialogo; luego (tras montar SettingsDialog) selecciona Cygwin

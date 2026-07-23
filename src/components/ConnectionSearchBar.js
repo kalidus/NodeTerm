@@ -18,15 +18,15 @@ const VARIANT_STYLES = {
       width: '100%',
       paddingLeft: 12,
       height: 28,
-      borderRadius: 6,
-      border: '1px solid #bbb',
+      borderRadius: 'var(--ui-radius-md)',
+      border: '1px solid var(--ui-dialog-border)',
       fontSize: 13,
-      background: '#f5f5f5',
-      color: '#333',
+      background: 'var(--ui-dialog-bg)',
+      color: 'var(--ui-dialog-text)',
       fontWeight: 500,
       textAlign: 'center',
     },
-    emptyLabelColor: 'var(--ui-titlebar-text, #fff)',
+    emptyLabelColor: 'var(--ui-titlebar-text)',
   },
   'main-frame': {
     container: {
@@ -38,15 +38,15 @@ const VARIANT_STYLES = {
       width: '100%',
       paddingLeft: 12,
       height: 26,
-      borderRadius: 6,
-      border: '1px solid rgba(255,255,255,0.12)',
+      borderRadius: 'var(--ui-radius-md)',
+      border: '1px solid var(--ui-dialog-border)',
       fontSize: 12,
-      background: 'rgba(0,0,0,0.22)',
-      color: 'var(--ui-titlebar-text, #fff)',
+      background: 'color-mix(in srgb, var(--ui-dialog-bg) 72%, transparent)',
+      color: 'var(--ui-titlebar-text)',
       fontWeight: 500,
       textAlign: 'center',
     },
-    emptyLabelColor: 'var(--ui-sidebar-text, #a9b1d6)',
+    emptyLabelColor: 'var(--ui-sidebar-text)',
   },
   palette: {
     container: {
@@ -59,15 +59,15 @@ const VARIANT_STYLES = {
       paddingLeft: 16,
       paddingRight: 16,
       height: 44,
-      borderRadius: 10,
-      border: '1px solid rgba(255,255,255,0.14)',
+      borderRadius: 'var(--ui-radius-md)',
+      border: '1px solid var(--ui-dialog-border)',
       fontSize: 15,
-      background: 'rgba(0,0,0,0.28)',
-      color: 'var(--ui-titlebar-text, #fff)',
+      background: 'color-mix(in srgb, var(--ui-dialog-bg) 65%, transparent)',
+      color: 'var(--ui-dialog-text)',
       fontWeight: 500,
       textAlign: 'left',
     },
-    emptyLabelColor: 'var(--ui-sidebar-text, #a9b1d6)',
+    emptyLabelColor: 'var(--ui-sidebar-text)',
     dropdownMaxHeight: 360,
     dropdownZIndex: 10051,
   },
@@ -582,7 +582,7 @@ const ConnectionSearchBar = ({
           right: '12px',
           top: '50%',
           transform: 'translateY(-50%)',
-          color: '#666',
+          color: 'color-mix(in srgb, var(--ui-dialog-text) 55%, transparent)',
           pointerEvents: 'none',
           fontSize: 12,
           display: 'flex',
@@ -598,12 +598,12 @@ const ConnectionSearchBar = ({
         onChange={(e) => handleFilterChange(e.target.value)}
         onKeyDown={handleSearchKeyDown}
         placeholder=""
-        className="search-input"
+        className="search-input app-search-input"
         data-animation=""
         style={{
           ...variantStyles.input,
           outline: 'none',
-          boxShadow: variant === 'titlebar' ? '0 1px 4px 0 rgba(0,0,0,0.1)' : 'none',
+          boxShadow: variant === 'titlebar' ? '0 1px 4px 0 var(--ui-dialog-shadow)' : 'none',
           transition: 'border 0.2s',
           zIndex: 1,
         }}
@@ -627,7 +627,7 @@ const ConnectionSearchBar = ({
       />
       {showDropdown && ReactDOM.createPortal(
         <div
-          className="search-dropdown"
+          className="search-dropdown app-surface"
           onClick={(e) => e.stopPropagation()}
           style={{
             position: 'fixed',
@@ -637,21 +637,16 @@ const ConnectionSearchBar = ({
             minWidth: variantStyles.container.minWidth,
             maxWidth: variantStyles.container.maxWidth,
             maxHeight: variantStyles.dropdownMaxHeight || 300,
-            background: 'var(--ui-dialog-bg, #232629)',
-            color: 'var(--ui-dialog-text, #fff)',
-            borderRadius: variant === 'palette' ? 10 : 6,
-            boxShadow: variant === 'palette' ? '0 12px 40px rgba(0,0,0,0.35)' : '0 4px 16px rgba(0,0,0,0.18)',
+            borderRadius: variant === 'palette' ? 'var(--ui-radius-lg)' : 'var(--ui-radius-md)',
+            boxShadow: variant === 'palette' ? '0 12px 40px var(--ui-dialog-shadow)' : undefined,
             zIndex: variantStyles.dropdownZIndex || 9999,
             overflowY: 'auto',
-            border: '1px solid var(--ui-dialog-border, #444)',
             WebkitAppRegion: 'no-drag',
             fontFamily: 'inherit',
             fontSize: '13px',
             fontWeight: '500',
             margin: 0,
             padding: 0,
-            scrollbarWidth: 'thin',
-            scrollbarColor: 'var(--ui-sidebar-selected, #00bfff) var(--ui-dialog-bg, #232629)',
           }}
         >
           {filteredConnections.map((node, idx) => {
@@ -689,21 +684,21 @@ const ConnectionSearchBar = ({
                   alignItems: 'flex-start',
                   gap: 8,
                   fontSize: 13,
-                  borderBottom: '1px solid var(--ui-dialog-border, #333)',
+                  borderBottom: '1px solid var(--ui-dialog-border)',
                   position: 'relative',
                   transition: 'all 0.2s ease',
                   borderRadius: '4px',
                   margin: '2px 4px',
                   minHeight: '60px',
-                  backgroundColor: activeIndex === idx ? 'var(--ui-sidebar-hover, #2a2d31)' : 'transparent',
+                  backgroundColor: activeIndex === idx ? 'var(--ui-sidebar-hover)' : 'transparent',
                   transform: activeIndex === idx ? 'translateY(-1px)' : 'translateY(0)',
-                  boxShadow: activeIndex === idx ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
+                  boxShadow: activeIndex === idx ? '0 2px 8px var(--ui-dialog-shadow)' : 'none',
                 }}
                 onMouseEnter={(e) => {
                   setActiveIndex(idx);
-                  e.currentTarget.style.backgroundColor = 'var(--ui-sidebar-hover, #2a2d31)';
+                  e.currentTarget.style.backgroundColor = 'var(--ui-sidebar-hover)';
                   e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+                  e.currentTarget.style.boxShadow = '0 2px 8px var(--ui-dialog-shadow)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = 'transparent';
@@ -732,7 +727,7 @@ const ConnectionSearchBar = ({
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       fontWeight: 500,
-                      color: 'var(--ui-dialog-text, #fff)',
+                      color: 'var(--ui-dialog-text)',
                       fontSize: '13px'
                     }}>
                       {node.label}
@@ -755,7 +750,7 @@ const ConnectionSearchBar = ({
                     alignItems: 'center',
                     gap: 4,
                     fontSize: '11px',
-                    color: 'var(--ui-dialog-text, #aaa)',
+                    color: 'color-mix(in srgb, var(--ui-dialog-text) 70%, transparent)',
                     opacity: 0.8
                   }}>
                     <span style={{ fontSize: '10px' }}>📁</span>
@@ -780,12 +775,12 @@ const ConnectionSearchBar = ({
                   }}>
                     <span style={{
                       fontSize: 11,
-                      color: 'var(--ui-dialog-text, #fff)',
+                      color: 'var(--ui-dialog-text)',
                       fontWeight: 600,
-                      backgroundColor: 'var(--ui-sidebar-hover, #2a2d31)',
+                      backgroundColor: 'var(--ui-sidebar-hover)',
                       padding: '2px 6px',
                       borderRadius: '10px',
-                      border: '1px solid var(--ui-dialog-border, #444)',
+                      border: '1px solid var(--ui-dialog-border)',
                       whiteSpace: 'nowrap',
                       display: 'flex',
                       alignItems: 'center',
@@ -858,7 +853,7 @@ const ConnectionSearchBar = ({
                       style={{
                         background: 'transparent',
                         border: 'none',
-                        color: isFavorite ? 'var(--ui-primary-color, #ffd700)' : 'var(--ui-dialog-text, #666)',
+                        color: isFavorite ? 'var(--ui-primary-color, #ffd700)' : 'color-mix(in srgb, var(--ui-dialog-text) 50%, transparent)',
                         cursor: 'pointer',
                         padding: '4px',
                         borderRadius: '4px',
@@ -881,7 +876,7 @@ const ConnectionSearchBar = ({
                       style={{
                         background: 'transparent',
                         border: 'none',
-                        color: 'var(--ui-dialog-text, #888)',
+                        color: 'color-mix(in srgb, var(--ui-dialog-text) 60%, transparent)',
                         cursor: 'pointer',
                         padding: '4px',
                         borderRadius: '4px',
@@ -906,7 +901,7 @@ const ConnectionSearchBar = ({
           {filteredConnections.length === 0 && (
             <div style={{
               padding: '12px',
-              color: 'var(--ui-dialog-text, #aaa)',
+              color: 'color-mix(in srgb, var(--ui-dialog-text) 70%, transparent)',
               fontSize: 13,
               textAlign: 'center',
               fontFamily: 'inherit'
@@ -915,12 +910,12 @@ const ConnectionSearchBar = ({
           {filteredConnections.length >= 50 && (
             <div style={{
               padding: '8px 12px',
-              color: 'var(--ui-dialog-text, #888)',
+              color: 'color-mix(in srgb, var(--ui-dialog-text) 60%, transparent)',
               fontSize: 11,
               textAlign: 'center',
               fontFamily: 'inherit',
               fontStyle: 'italic',
-              borderTop: '1px solid var(--ui-dialog-border, #333)'
+              borderTop: '1px solid var(--ui-dialog-border)'
             }}>
               Mostrando primeros 50 resultados. Refina tu búsqueda para ver más.
             </div>

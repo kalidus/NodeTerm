@@ -319,6 +319,7 @@ const KeePassImportDialog = ({
     <Dialog
       visible={visible}
       style={{ width: '600px', maxWidth: '95vw' }}
+      className="app-dialog"
       header={(
         <div className="flex align-items-center" style={{ gap: 8 }}>
           <i className="pi pi-key" style={{ fontSize: 16, color: 'var(--primary-color)' }} />

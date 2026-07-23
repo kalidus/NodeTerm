@@ -43,6 +43,7 @@ import {
   sanitizeAndPersistDefaultTerminal
 } from '../utils/defaultLocalTerminal';
 import { persistSyncedSetting } from '../utils/persistSyncedSetting';
+import { appConfirm } from './ui/AppConfirm';
 import {
   getConnectionSearchShortcut,
   setConnectionSearchShortcut,
@@ -1813,14 +1814,21 @@ const SettingsContent = ({
   };
 
   const handleRemoveMasterKey = async () => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar la clave maestra? Esto eliminará todas las sesiones guardadas de forma segura.')) {
-      secureStorage.clearMasterKey();
-      setHasMasterKey(false);
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmNewPassword('');
-      showToast('info', 'Información', 'Clave maestra eliminada');
-    }
+    const ok = await appConfirm({
+      message: '¿Estás seguro de que quieres eliminar la clave maestra? Esto eliminará todas las sesiones guardadas de forma segura.',
+      header: 'Confirmar',
+      severity: 'danger',
+      acceptLabel: 'Aceptar',
+      rejectLabel: 'Cancelar'
+    });
+    if (!ok) return;
+
+    secureStorage.clearMasterKey();
+    setHasMasterKey(false);
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmNewPassword('');
+    showToast('info', 'Información', 'Clave maestra eliminada');
   };
 
   // Persistir configuración de auditoría
@@ -2047,9 +2055,14 @@ const SettingsContent = ({
 
   // Handlers para configuración de auditoría
   const handleManualCleanup = async () => {
-    if (!window.confirm('¿Estás seguro de que quieres ejecutar la limpieza manual de archivos de auditoría?')) {
-      return;
-    }
+    const ok = await appConfirm({
+      message: '¿Estás seguro de que quieres ejecutar la limpieza manual de archivos de auditoría?',
+      header: 'Confirmar',
+      severity: 'warn',
+      acceptLabel: 'Aceptar',
+      rejectLabel: 'Cancelar'
+    });
+    if (!ok) return;
 
     try {
       setIsLoading(true);
@@ -5836,9 +5849,15 @@ const SettingsContent = ({
                                 className="p-button-outlined p-button-warning"
                                 onClick={() => {
                                   if (mcpConfig.apiKey) {
-                                    if (window.confirm('¿Estás seguro de generar una nueva clave? Tendrás que actualizar la configuración en todos tus clientes MCP.')) {
-                                      generateMcpApiKey();
-                                    }
+                                    appConfirm({
+                                      message: '¿Estás seguro de generar una nueva clave? Tendrás que actualizar la configuración en todos tus clientes MCP.',
+                                      header: 'Confirmar',
+                                      severity: 'warn',
+                                      acceptLabel: 'Aceptar',
+                                      rejectLabel: 'Cancelar'
+                                    }).then(ok => {
+                                      if (ok) generateMcpApiKey();
+                                    });
                                   } else {
                                     generateMcpApiKey();
                                   }
@@ -6160,7 +6179,7 @@ const SettingsContent = ({
         </div>
       }
       visible={visible}
-      className="settings-dialog"
+      className="app-dialog settings-dialog"
       style={{
         maxWidth: '98vw',
         maxHeight: '98vh',
