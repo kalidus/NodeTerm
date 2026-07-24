@@ -2914,7 +2914,7 @@ const MainContentArea = ({
         <SplitterPanel
           size={isMinimalMode ? 0 : (sidebarCollapsed ? 5 : 22)}
           minSize={isMinimalMode ? 0 : (sidebarCollapsed ? 5 : 5)}
-          maxSize={isMinimalMode ? 0 : (sidebarCollapsed ? 5 : 35)}
+          maxSize={isMinimalMode ? 0 : (sidebarCollapsed ? 5 : 28)}
           className="terminal-frame-container"
           style={isMinimalMode
             ? { display: 'none', width: 0, minWidth: 0, maxWidth: 0, padding: 0, overflow: 'hidden' }

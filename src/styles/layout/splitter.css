@@ -21,10 +21,10 @@
 /* Evitar “banda difuminada” en la unión sidebar <-> panel derecho: 
    Eliminado para que la card principal tenga su propia sombra y quede uniforme con la sidebar. */
 
-/* Tamaño mínimo para el panel lateral */
+/* Tamaño mínimo y máximo para el panel lateral */
 .p-splitter .p-splitter-panel:first-child {
   min-height: 47px !important;
-  max-width: 400px;
+  max-width: 480px;
   min-width: 48px !important; /* Límite mínimo: tamaño de sidebar colapsada */
 }
 /* Cuando la sidebar está colapsada (ancho 48px o similar) - permitir resize visual temporal */
