@@ -14,6 +14,15 @@ Borrador opcional para usuarios: `RELEASE_NOTES.md` (solo la versión en curso).
 
 ## [Unreleased]
 
+### ⚡ Rendimiento y Fluidez de la Aplicación (Optimización Integral)
+
+- **Motor Xterm (Write Batching a 60 FPS)**: Implementación de acumulación y vuelco de datos `stdout` alineado a 60 FPS con `requestAnimationFrame` en ráfagas de datos masivas (SSH directo, Bastión Wallix y PowerShell), evitando bloqueos del hilo UI.
+- **Redimensionamiento de Paneles (Splitter)**: Solucionado el micro-lag y congelamiento del puntero del ratón mediante delegación de eventos globales en fase de captura e inhabilitación de `pointer-events` en canvas, webviews e iframes durante el arrastre.
+- **Telemetría Adaptativa del Sistema**: Bucle de sondeo de CPU/RAM adaptativo según el estado de la ventana (2s activa, 5s en segundo plano, 10s minimizada), reduciendo hasta un 80% los despertares inútiles de CPU.
+- **Persistencia Asíncrona de Disco**: Añadido *debounce* de 500 ms en escrituras síncronas de historial y favoritos (`ConnectionHistoryService`), eliminando pequeñas pausas al marcar o desmarcar elementos rápidamente.
+- **Carga Diferida de Diálogos y Memoización**: Diálogos secundarios convertidos a `React.lazy()` en `DialogsManager` y componentes de alta frecuencia de refresco (`StandaloneStatusBar`) memoizados con `React.memo`.
+- **Prevención de Fugas de Memoria**: Verificación y limpieza estricta de instancias de terminal (`term.dispose()`), listeners IPC y suscripciones al cerrar pestañas.
+
 ## [1.7.1] - 2026-07-21
 
 ### Servidor MCP y agent terminal
