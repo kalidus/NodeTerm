@@ -2282,7 +2282,6 @@ const PasswordManagerSidebar = ({
                     onToggle={e => setExpandedKeys(e.value)}
                     dragdropScope="password-tree"
                     onDragDrop={onDragDrop}
-                    virtualScrollerOptions={{ itemSize: 36 }}
                     onDragStart={(e) => {
                       // Feedback visual opcional
                     }}

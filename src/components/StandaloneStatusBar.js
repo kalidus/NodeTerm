@@ -3,7 +3,7 @@ import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { useStatusBarSessionHistory } from '../hooks/useStatusBarSessionHistory';
 
-const StandaloneStatusBar = ({ visible = true, style = {} }) => {
+const StandaloneStatusBar = React.memo(({ visible = true, style = {} }) => {
     const [statusStats, setStatusStats] = useState(null);
     const [isLoadingStats, setIsLoadingStats] = useState(true);
     const [gpuStats, setGpuStats] = useState(null);
@@ -169,6 +169,6 @@ const StandaloneStatusBar = ({ visible = true, style = {} }) => {
             />
         </div>
     );
-};
+});
 
 export default StandaloneStatusBar;

@@ -3285,7 +3285,6 @@ const Sidebar = React.memo(({
               onToggle={e => setExpandedKeys(e.value)}
               dragdropScope="sidebar"
               onDragDrop={onDragDrop}
-              virtualScrollerOptions={{ itemSize: 36 }}
               onDragEnd={() => {
                 stopTreeDragAutoScroll();
                 // Limpiar el nodo SSH arrastrado al finalizar el drag
