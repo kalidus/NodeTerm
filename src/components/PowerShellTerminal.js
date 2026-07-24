@@ -9,6 +9,7 @@ import '@xterm/xterm/css/xterm.css';
 import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
+import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
 
 const PowerShellTerminal = forwardRef(({
     fontFamily = 'Consolas, "Courier New", monospace',
@@ -20,6 +21,7 @@ const PowerShellTerminal = forwardRef(({
 }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
+    const writeBufferRef = useRef(null);
     const fitAddon = useRef(null);
     const [isConnected, setIsConnected] = useState(false);
     const [statusStats, setStatusStats] = useState(null);
@@ -264,6 +266,8 @@ const PowerShellTerminal = forwardRef(({
             bracketedPasteMode: false, // Disable to prevent weird characters
         });
 
+        writeBufferRef.current = createXtermWriteBuffer(term);
+
         // Add addons
         fitAddon.current = new FitAddon();
         term.current.loadAddon(fitAddon.current);
@@ -390,9 +394,11 @@ const PowerShellTerminal = forwardRef(({
                 window.electron.ipcRenderer.send(`powershell:resize:${tabId}`, { cols, rows });
             });
 
-            // Listen for PowerShell output
+            // Listen for PowerShell output (60 FPS write batching)
             const dataListener = (data) => {
-                if (term.current) {
+                if (writeBufferRef.current) {
+                    writeBufferRef.current.write(data);
+                } else if (term.current) {
                     term.current.write(data);
                 }
             };
@@ -426,6 +432,7 @@ const PowerShellTerminal = forwardRef(({
 
             // Cleanup function
             return () => {
+                writeBufferRef.current?.flushSync();
                 resizeObserver.disconnect();
                 document.removeEventListener('visibilitychange', handleVisibilityChange);
 

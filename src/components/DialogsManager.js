@@ -7,11 +7,13 @@ import { Password } from 'primereact/password';
 import { Dropdown } from 'primereact/dropdown';
 import { InputNumber } from 'primereact/inputnumber';
 
-import SettingsDialog from './SettingsDialog';
-import SyncSettingsDialog from './SyncSettingsDialog';
-import NetworkToolsDialog from './NetworkToolsDialog';
 import { SSHDialog, FolderDialog, GroupDialog, EditSSHConnectionDialog, EditRDPConnectionDialog, EditVNCConnectionDialog, FileConnectionDialog, ProtocolSelectionDialog, NewSSHConnectionDialog, NewRDPConnectionDialog, NewVNCConnectionDialog } from './Dialogs';
-import { SSHTunnelDialog } from './SSHTunnelDialog';
+
+// 🚀 OPTIMIZACIÓN: Carga diferida de diálogos pesados
+const SettingsDialog = React.lazy(() => import('./SettingsDialog'));
+const SyncSettingsDialog = React.lazy(() => import('./SyncSettingsDialog'));
+const NetworkToolsDialog = React.lazy(() => import('./NetworkToolsDialog'));
+const SSHTunnelDialog = React.lazy(() => import('./SSHTunnelDialog').then(m => ({ default: m.SSHTunnelDialog })));
 
 /**
  * DialogsManager - Componente que centraliza la gestión de todos los diálogos
@@ -477,92 +479,100 @@ const DialogsManager = ({
 
 
 
-      {/* 🚀 OPTIMIZACIÓN: Settings Dialog solo se monta cuando es visible */}
-      {showSettingsDialog && <SettingsDialog
-        visible={showSettingsDialog}
-        onHide={() => setShowSettingsDialog(false)}
-        availableThemes={availableThemes}
-        availableFonts={availableFonts}
-        fontFamily={fontFamily}
-        setFontFamily={setFontFamily}
-        fontSize={fontSize}
-        setFontSize={setFontSize}
-        localFontFamily={localFontFamily}
-        setLocalFontFamily={setLocalFontFamily}
-        localFontSize={localFontSize}
-        setLocalFontSize={setLocalFontSize}
-        terminalTheme={terminalTheme}
-        setTerminalTheme={setTerminalTheme}
-        statusBarTheme={statusBarTheme}
-        setStatusBarTheme={setStatusBarTheme}
-        localPowerShellTheme={localPowerShellTheme}
-        setLocalPowerShellTheme={setLocalPowerShellTheme}
-        localLinuxTerminalTheme={localLinuxTerminalTheme}
-        setLocalLinuxTerminalTheme={setLocalLinuxTerminalTheme}
-        localDockerTerminalTheme={localDockerTerminalTheme}
-        setLocalDockerTerminalTheme={setLocalDockerTerminalTheme}
-        dockerFontFamily={dockerFontFamily}
-        setDockerFontFamily={setDockerFontFamily}
-        dockerFontSize={dockerFontSize}
-        setDockerFontSize={setDockerFontSize}
-        uiTheme={uiTheme}
-        setUiTheme={setUiTheme}
-        iconTheme={iconTheme}
-        setIconTheme={setIconTheme}
-        iconThemeSidebar={iconThemeSidebar}
-        setIconThemeSidebar={setIconThemeSidebar}
-        iconSize={iconSize}
-        setIconSize={setIconSize}
-        folderIconSize={folderIconSize}
-        setFolderIconSize={setFolderIconSize}
-        connectionIconSize={connectionIconSize}
-        setConnectionIconSize={setConnectionIconSize}
-        explorerFont={explorerFont}
-        setExplorerFont={setExplorerFont}
-        explorerFontSize={explorerFontSize}
-        setExplorerFontSize={setExplorerFontSize}
-        explorerColorTheme={explorerColorTheme}
-        setExplorerColorTheme={setExplorerColorTheme}
-        sidebarFont={sidebarFont}
-        setSidebarFont={setSidebarFont}
-        sidebarFontSize={sidebarFontSize}
-        setSidebarFontSize={setSidebarFontSize}
-        sidebarFontColor={sidebarFontColor}
-        setSidebarFontColor={setSidebarFontColor}
-        treeTheme={treeTheme}
-        setTreeTheme={setTreeTheme}
-        sessionActionIconTheme={sessionActionIconTheme}
-        setSessionActionIconTheme={setSessionActionIconTheme}
-        statusBarIconTheme={statusBarIconTheme}
-        setStatusBarIconTheme={setStatusBarIconTheme}
-        statusBarPollingInterval={statusBarPollingInterval}
-        setStatusBarPollingInterval={setStatusBarPollingInterval}
-        statusBarLayout={statusBarLayout}
-        setStatusBarLayout={setStatusBarLayout}
-        exportTreeToJson={exportTreeToJson}
-        importTreeFromJson={importTreeFromJson}
-        sessionManager={sessionManager}
-        onMasterPasswordConfigured={onMasterPasswordConfigured}
-        nodes={nodes}
-        onUpdateUserPassword={onUpdateUserPassword}
-        onEditConnection={onEditConnection}
-        secureStorage={secureStorage}
-        masterKey={masterKey}
-        handleImportComplete={handleImportComplete}
-        toast={toast}
-        setNodes={setNodes}
-      />}
+      {/* 🚀 OPTIMIZACIÓN: Settings Dialog solo se monta cuando es visible con React.Suspense */}
+      {showSettingsDialog && (
+        <React.Suspense fallback={null}>
+          <SettingsDialog
+            visible={showSettingsDialog}
+            onHide={() => setShowSettingsDialog(false)}
+            availableThemes={availableThemes}
+            availableFonts={availableFonts}
+            fontFamily={fontFamily}
+            setFontFamily={setFontFamily}
+            fontSize={fontSize}
+            setFontSize={setFontSize}
+            localFontFamily={localFontFamily}
+            setLocalFontFamily={setLocalFontFamily}
+            localFontSize={localFontSize}
+            setLocalFontSize={setLocalFontSize}
+            terminalTheme={terminalTheme}
+            setTerminalTheme={setTerminalTheme}
+            statusBarTheme={statusBarTheme}
+            setStatusBarTheme={setStatusBarTheme}
+            localPowerShellTheme={localPowerShellTheme}
+            setLocalPowerShellTheme={setLocalPowerShellTheme}
+            localLinuxTerminalTheme={localLinuxTerminalTheme}
+            setLocalLinuxTerminalTheme={setLocalLinuxTerminalTheme}
+            localDockerTerminalTheme={localDockerTerminalTheme}
+            setLocalDockerTerminalTheme={setLocalDockerTerminalTheme}
+            dockerFontFamily={dockerFontFamily}
+            setDockerFontFamily={setDockerFontFamily}
+            dockerFontSize={dockerFontSize}
+            setDockerFontSize={setDockerFontSize}
+            uiTheme={uiTheme}
+            setUiTheme={setUiTheme}
+            iconTheme={iconTheme}
+            setIconTheme={setIconTheme}
+            iconThemeSidebar={iconThemeSidebar}
+            setIconThemeSidebar={setIconThemeSidebar}
+            iconSize={iconSize}
+            setIconSize={setIconSize}
+            folderIconSize={folderIconSize}
+            setFolderIconSize={setFolderIconSize}
+            connectionIconSize={connectionIconSize}
+            setConnectionIconSize={setConnectionIconSize}
+            explorerFont={explorerFont}
+            setExplorerFont={setExplorerFont}
+            explorerFontSize={explorerFontSize}
+            setExplorerFontSize={setExplorerFontSize}
+            explorerColorTheme={explorerColorTheme}
+            setExplorerColorTheme={setExplorerColorTheme}
+            sidebarFont={sidebarFont}
+            setSidebarFont={setSidebarFont}
+            sidebarFontSize={sidebarFontSize}
+            setSidebarFontSize={setSidebarFontSize}
+            sidebarFontColor={sidebarFontColor}
+            setSidebarFontColor={setSidebarFontColor}
+            treeTheme={treeTheme}
+            setTreeTheme={setTreeTheme}
+            sessionActionIconTheme={sessionActionIconTheme}
+            setSessionActionIconTheme={setSessionActionIconTheme}
+            statusBarIconTheme={statusBarIconTheme}
+            setStatusBarIconTheme={setStatusBarIconTheme}
+            statusBarPollingInterval={statusBarPollingInterval}
+            setStatusBarPollingInterval={setStatusBarPollingInterval}
+            statusBarLayout={statusBarLayout}
+            setStatusBarLayout={setStatusBarLayout}
+            exportTreeToJson={exportTreeToJson}
+            importTreeFromJson={importTreeFromJson}
+            sessionManager={sessionManager}
+            onMasterPasswordConfigured={onMasterPasswordConfigured}
+            nodes={nodes}
+            onUpdateUserPassword={onUpdateUserPassword}
+            onEditConnection={onEditConnection}
+            secureStorage={secureStorage}
+            masterKey={masterKey}
+            handleImportComplete={handleImportComplete}
+            toast={toast}
+            setNodes={setNodes}
+          />
+        </React.Suspense>
+      )}
 
-      {/* Sync Settings Dialog - solo se monta cuando es visible */}
-      {showSyncDialog && <SyncSettingsDialog
-        visible={showSyncDialog}
-        onHide={() => setShowSyncDialog(false)}
-        updateThemesFromSync={updateThemesFromSync}
-        updateStatusBarFromSync={updateStatusBarFromSync}
-        exportTreeToJson={exportTreeToJson}
-        importTreeFromJson={importTreeFromJson}
-        sessionManager={sessionManager}
-      />}
+      {/* Sync Settings Dialog - solo se monta cuando es visible con React.Suspense */}
+      {showSyncDialog && (
+        <React.Suspense fallback={null}>
+          <SyncSettingsDialog
+            visible={showSyncDialog}
+            onHide={() => setShowSyncDialog(false)}
+            updateThemesFromSync={updateThemesFromSync}
+            updateStatusBarFromSync={updateStatusBarFromSync}
+            exportTreeToJson={exportTreeToJson}
+            importTreeFromJson={importTreeFromJson}
+            sessionManager={sessionManager}
+          />
+        </React.Suspense>
+      )}
 
       {/* Diálogo: Nueva conexión SSH */}
       <SSHDialog
@@ -854,54 +864,60 @@ const DialogsManager = ({
         initialCategory={protocolSelectionInitialCategory}
       />
 
-      {/* Diálogo de herramientas de red */}
-      <NetworkToolsDialog
-        visible={showNetworkToolsDialog}
-        onHide={() => setShowNetworkToolsDialog(false)}
-      />
+      {/* Diálogo de herramientas de red - solo se monta cuando es visible */}
+      {showNetworkToolsDialog && (
+        <React.Suspense fallback={null}>
+          <NetworkToolsDialog
+            visible={showNetworkToolsDialog}
+            onHide={() => setShowNetworkToolsDialog(false)}
+          />
+        </React.Suspense>
+      )}
 
       {/* Diálogo de túnel SSH */}
       {showSSHTunnelDialog && (
-        <SSHTunnelDialog
-          visible={showSSHTunnelDialog}
-          onHide={() => {
-            setShowSSHTunnelDialog(false);
-            if (setEditingSSHTunnelNode) {
-              setEditingSSHTunnelNode(null);
-            }
-          }}
-          mode={editingSSHTunnelNode ? 'edit' : 'new'}
-          initialData={editingSSHTunnelNode ? {
-            name: editingSSHTunnelNode.label,
-            tunnelType: editingSSHTunnelNode.data?.tunnelType || 'local',
-            sshHost: editingSSHTunnelNode.data?.sshHost || '',
-            sshPort: editingSSHTunnelNode.data?.sshPort || 22,
-            sshUser: editingSSHTunnelNode.data?.sshUser || '',
-            sshPassword: editingSSHTunnelNode.data?.sshPassword || '',
-            authType: editingSSHTunnelNode.data?.authType || 'password',
-            privateKeyPath: editingSSHTunnelNode.data?.privateKeyPath || '',
-            passphrase: editingSSHTunnelNode.data?.passphrase || '',
-            localHost: editingSSHTunnelNode.data?.localHost || '127.0.0.1',
-            localPort: editingSSHTunnelNode.data?.localPort || '',
-            remoteHost: editingSSHTunnelNode.data?.remoteHost || '',
-            remotePort: editingSSHTunnelNode.data?.remotePort || '',
-            bindHost: editingSSHTunnelNode.data?.bindHost || '0.0.0.0',
-            targetFolder: null
-          } : null}
-          onConfirm={(tunnelData) => {
-            if (createNewSSHTunnel) {
-              createNewSSHTunnel(tunnelData);
-            }
-            setShowSSHTunnelDialog(false);
-          }}
-          onGoBack={() => {
-            setShowSSHTunnelDialog(false);
-            if (!editingSSHTunnelNode) {
-              setShowProtocolSelectionDialog(true);
-            }
-          }}
-          foldersOptions={getAllFolders && nodes ? getAllFolders(nodes) : []}
-        />
+        <React.Suspense fallback={null}>
+          <SSHTunnelDialog
+            visible={showSSHTunnelDialog}
+            onHide={() => {
+              setShowSSHTunnelDialog(false);
+              if (setEditingSSHTunnelNode) {
+                setEditingSSHTunnelNode(null);
+              }
+            }}
+            mode={editingSSHTunnelNode ? 'edit' : 'new'}
+            initialData={editingSSHTunnelNode ? {
+              name: editingSSHTunnelNode.label,
+              tunnelType: editingSSHTunnelNode.data?.tunnelType || 'local',
+              sshHost: editingSSHTunnelNode.data?.sshHost || '',
+              sshPort: editingSSHTunnelNode.data?.sshPort || 22,
+              sshUser: editingSSHTunnelNode.data?.sshUser || '',
+              sshPassword: editingSSHTunnelNode.data?.sshPassword || '',
+              authType: editingSSHTunnelNode.data?.authType || 'password',
+              privateKeyPath: editingSSHTunnelNode.data?.privateKeyPath || '',
+              passphrase: editingSSHTunnelNode.data?.passphrase || '',
+              localHost: editingSSHTunnelNode.data?.localHost || '127.0.0.1',
+              localPort: editingSSHTunnelNode.data?.localPort || '',
+              remoteHost: editingSSHTunnelNode.data?.remoteHost || '',
+              remotePort: editingSSHTunnelNode.data?.remotePort || '',
+              bindHost: editingSSHTunnelNode.data?.bindHost || '0.0.0.0',
+              targetFolder: null
+            } : null}
+            onConfirm={(tunnelData) => {
+              if (createNewSSHTunnel) {
+                createNewSSHTunnel(tunnelData);
+              }
+              setShowSSHTunnelDialog(false);
+            }}
+            onGoBack={() => {
+              setShowSSHTunnelDialog(false);
+              if (!editingSSHTunnelNode) {
+                setShowProtocolSelectionDialog(true);
+              }
+            }}
+            foldersOptions={getAllFolders && nodes ? getAllFolders(nodes) : []}
+          />
+        </React.Suspense>
       )}
     </>
   );

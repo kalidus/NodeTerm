@@ -5,6 +5,7 @@ import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { themes } from '../themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
+import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
 
 const TerminalComponent = forwardRef(({
     tabId,
@@ -97,6 +98,7 @@ const TerminalComponent = forwardRef(({
 
     const terminalRef = useRef(null);
     const term = useRef(null);
+    const writeBufferRef = useRef(null);
     const fitAddon = useRef(null);
     const activeRef = useRef(active);
     const [xtermLib, setXtermLib] = useState(() => getCachedXtermModules());
@@ -284,6 +286,9 @@ const TerminalComponent = forwardRef(({
             lineHeight: 1.1,
         });
 
+        // Inicializar buffer de escrituras por fotograma (60 FPS write batching)
+        writeBufferRef.current = createXtermWriteBuffer(term);
+
         // Disable bracketed paste mode to prevent weird characters on Ctrl+V
         term.current.options.bracketedPasteMode = false;
 
@@ -442,9 +447,13 @@ const TerminalComponent = forwardRef(({
             };
             const onReadyUnsubscribe = window.electron.ipcRenderer.on(`ssh:ready:${tabId}`, onReady);
 
-            // Listen for incoming data
+            // Listen for incoming data (60 FPS write batching)
             const dataListener = (data) => {
-                term.current?.write(data);
+                if (writeBufferRef.current) {
+                    writeBufferRef.current.write(data);
+                } else {
+                    term.current?.write(data);
+                }
             };
             const onDataUnsubscribe = window.electron.ipcRenderer.on(`ssh:data:${tabId}`, dataListener);
 
@@ -538,6 +547,7 @@ const TerminalComponent = forwardRef(({
 
             // Cleanup on component unmount
             return () => {
+                writeBufferRef.current?.flushSync();
                 resizeObserver.disconnect();
                 cleanupContextMenu();
                 if (resizeTimeout) clearTimeout(resizeTimeout);
