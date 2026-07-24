@@ -596,9 +596,9 @@ class ThemeManager {
         --ui-context-shadow: ${colors.contextMenuShadow};
         
         /* Scrollbar Colors */
-        --scrollbar-track: ${colors.scrollbarTrack || 'rgba(0, 0, 0, 0.1)'};
-        --scrollbar-thumb: ${colors.scrollbarThumb || '#888'};
-        --scrollbar-thumb-hover: ${colors.scrollbarThumbHover || '#555'};
+        --scrollbar-track: ${colors.scrollbarTrack || 'transparent'};
+        --scrollbar-thumb: ${colors.scrollbarThumb || colors.buttonPrimary || colors.sidebarBorder || '#64b5f6'};
+        --scrollbar-thumb-hover: ${colors.scrollbarThumbHover || colors.buttonHover || colors.buttonPrimary || '#3b82f6'};
         
         /* File Explorer Button Colors */
         --ui-file-button-text: ${colors.sidebarText};

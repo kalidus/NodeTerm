@@ -1446,7 +1446,7 @@ const DocumentsSidebar = ({
                 <p>No hay notas creadas en el árbol.</p>
               </div>
             ) : (
-              <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+              <div className="documents-tree-scroll-area" style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
                 <Tree
                   value={treeValue}
                   expandedKeys={expandedKeys}

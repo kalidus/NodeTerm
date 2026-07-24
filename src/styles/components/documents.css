@@ -419,8 +419,14 @@
 }
 
 /* Scrollbar for editor */
+.document-editor-content {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb, var(--ui-sidebar-border, rgba(255, 255, 255, 0.2))) transparent;
+}
+
 .document-editor-content::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 .document-editor-content::-webkit-scrollbar-track {
@@ -428,12 +434,12 @@
 }
 
 .document-editor-content::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--scrollbar-thumb, var(--ui-sidebar-border, rgba(255, 255, 255, 0.2)));
   border-radius: 4px;
 }
 
 .document-editor-content::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--scrollbar-thumb-hover, var(--ui-primary-color, rgba(255, 255, 255, 0.4)));
 }
 
 /* Markdown source view */
@@ -455,6 +461,26 @@
   font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', monospace;
   font-size: 0.9rem;
   line-height: 1.7;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb, var(--ui-sidebar-border, rgba(255, 255, 255, 0.2))) transparent;
+}
+
+.document-markdown-source textarea::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.document-markdown-source textarea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.document-markdown-source textarea::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb, var(--ui-sidebar-border, rgba(255, 255, 255, 0.2)));
+  border-radius: 4px;
+}
+
+.document-markdown-source textarea::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover, var(--ui-primary-color, rgba(255, 255, 255, 0.4)));
 }
 
 /* Mode toggle */
@@ -1099,6 +1125,10 @@
 }
 
 /* Scrollbar fina para la vista previa */
+.document-details-panel .note-preview-container {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb, var(--ui-sidebar-border, rgba(255, 255, 255, 0.2))) transparent;
+}
 .document-details-panel .note-preview-container::-webkit-scrollbar {
   width: 5px;
   height: 5px;
@@ -1107,11 +1137,11 @@
   background: transparent;
 }
 .document-details-panel .note-preview-container::-webkit-scrollbar-thumb {
-  background-color: var(--ui-sidebar-border, rgba(255, 255, 255, 0.1));
+  background-color: var(--scrollbar-thumb, var(--ui-sidebar-border, rgba(255, 255, 255, 0.2)));
   border-radius: 3px;
 }
 .document-details-panel .note-preview-container::-webkit-scrollbar-thumb:hover {
-  background-color: var(--ui-primary-color, #64b5f6);
+  background-color: var(--scrollbar-thumb-hover, var(--ui-primary-color, #64b5f6));
 }
 
 /* Estilos de contenido Tiptap en la vista previa */
@@ -1322,26 +1352,50 @@
   opacity: 1 !important;
 }
 
-/* Lista de notas */
+/* Lista de notas y Árbol de Documentos (vertical y horizontal) */
+.documents-sidebar-root,
+.documents-sidebar-root *,
+.documents-tree-scroll-area,
 .qnp-list {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 6px 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb, var(--ui-primary-color, #64b5f6)) transparent !important;
 }
 
+.documents-sidebar-root::-webkit-scrollbar,
+.documents-sidebar-root *::-webkit-scrollbar,
+.documents-tree-scroll-area::-webkit-scrollbar,
 .qnp-list::-webkit-scrollbar {
-  width: 4px;
+  width: 6px !important;
+  height: 6px !important;
 }
+
+.documents-sidebar-root::-webkit-scrollbar-track,
+.documents-sidebar-root *::-webkit-scrollbar-track,
+.documents-tree-scroll-area::-webkit-scrollbar-track,
 .qnp-list::-webkit-scrollbar-track {
-  background: transparent;
+  background: transparent !important;
 }
+
+.documents-sidebar-root::-webkit-scrollbar-thumb,
+.documents-sidebar-root *::-webkit-scrollbar-thumb,
+.documents-tree-scroll-area::-webkit-scrollbar-thumb,
 .qnp-list::-webkit-scrollbar-thumb {
-  background: var(--ui-sidebar-border, rgba(255, 255, 255, 0.1));
-  border-radius: 2px;
+  background: var(--scrollbar-thumb, var(--ui-primary-color, #64b5f6)) !important;
+  border-radius: 4px !important;
 }
+
+.documents-sidebar-root::-webkit-scrollbar-thumb:hover,
+.documents-sidebar-root *::-webkit-scrollbar-thumb:hover,
+.documents-tree-scroll-area::-webkit-scrollbar-thumb:hover,
 .qnp-list::-webkit-scrollbar-thumb:hover {
-  background: var(--ui-primary-color, #64b5f6);
+  background: var(--scrollbar-thumb-hover, var(--ui-primary-color, #3b82f6)) !important;
+}
+
+.documents-sidebar-root::-webkit-scrollbar-corner,
+.documents-sidebar-root *::-webkit-scrollbar-corner,
+.documents-tree-scroll-area::-webkit-scrollbar-corner,
+.qnp-list::-webkit-scrollbar-corner {
+  background: transparent !important;
 }
 
 /* Ítem de nota */
