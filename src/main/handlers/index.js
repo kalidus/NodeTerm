@@ -336,6 +336,29 @@ function registerAllHandlers(dependencies) {
   registerCriticalHandlers(dependencies);
   // ℹ️ Los handlers SECUNDARIOS se registran después de ready-to-show
   // desde initializeServicesAfterShow() en main.js
+
+  // 🚀 OPTIMIZACIÓN: Sondeo adaptativo de telemetría del sistema según foco/estado de la ventana
+  if (dependencies && dependencies.mainWindow) {
+    const { mainWindow } = dependencies;
+    try {
+      const StatsWorkerService = require('../services/StatsWorkerService');
+
+      const updateTelemetryInterval = () => {
+        if (mainWindow.isMinimized()) {
+          StatsWorkerService.setStatsWorkerInterval(10000); // 10s si está minimizada
+        } else if (mainWindow.isFocused()) {
+          StatsWorkerService.setStatsWorkerInterval(2000);  // 2s si está enfocada y activa
+        } else {
+          StatsWorkerService.setStatsWorkerInterval(5000);  // 5s en segundo plano
+        }
+      };
+
+      mainWindow.on('focus', updateTelemetryInterval);
+      mainWindow.on('blur', updateTelemetryInterval);
+      mainWindow.on('minimize', updateTelemetryInterval);
+      mainWindow.on('restore', updateTelemetryInterval);
+    } catch (_) {}
+  }
 }
 
 module.exports = {

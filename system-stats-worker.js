@@ -269,6 +269,7 @@ let shouldGenerateStats = true;
 let latestStats = { ...lastValidStats };
 let isUpdating = false;
 let updateTimer = null;
+let currentPollIntervalMs = 2000;
 
 async function updateStatsLoop() {
   if (updateTimer) {
@@ -277,12 +278,12 @@ async function updateStatsLoop() {
   }
 
   if (isUpdating) {
-    updateTimer = setTimeout(updateStatsLoop, 1000);
+    updateTimer = setTimeout(updateStatsLoop, currentPollIntervalMs);
     return;
   }
 
   if (!shouldGenerateStats) {
-    updateTimer = setTimeout(updateStatsLoop, 1000);
+    updateTimer = setTimeout(updateStatsLoop, currentPollIntervalMs);
     return;
   }
 
@@ -294,7 +295,7 @@ async function updateStatsLoop() {
     // Ignorar para mantener el bucle activo
   } finally {
     isUpdating = false;
-    updateTimer = setTimeout(updateStatsLoop, 1000);
+    updateTimer = setTimeout(updateStatsLoop, currentPollIntervalMs);
   }
 }
 
@@ -302,6 +303,16 @@ async function updateStatsLoop() {
 updateStatsLoop();
 
 process.on('message', async (msg) => {
+  if (typeof msg === 'object' && msg !== null) {
+    if (msg.type === 'set-interval') {
+      const newInterval = parseInt(msg.interval, 10);
+      if (!isNaN(newInterval) && newInterval >= 500) {
+        currentPollIntervalMs = newInterval;
+      }
+    }
+    return;
+  }
+
   if (msg === 'get-stats') {
     if (process.connected) {
       process.send({ type: 'stats', data: latestStats });

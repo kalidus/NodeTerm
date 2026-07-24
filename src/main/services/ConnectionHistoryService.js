@@ -51,7 +51,8 @@ function loadConnectionHistory(retries = 3) {
   }
 }
 
-// Guardar historial de conexiones
+let saveDebounceTimer = null;
+
 function saveConnectionHistory() {
   try {
     const historyDir = getNodeTermDataDir();
@@ -77,6 +78,14 @@ function saveConnectionHistory() {
   } catch (error) {
     console.error('Error guardando historial de conexiones:', error);
   }
+}
+
+function debouncedSaveConnectionHistory(ms = 500) {
+  if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
+  saveDebounceTimer = setTimeout(() => {
+    saveDebounceTimer = null;
+    saveConnectionHistory();
+  }, ms);
 }
 
 // Agregar conexión al historial
@@ -130,7 +139,7 @@ function toggleFavoriteConnection(connectionId) {
         connection.isFavorite = true;
         connectionHistory.favorites.push({ ...connection });
       }
-      saveConnectionHistory();
+      debouncedSaveConnectionHistory();
       return { success: true, isFavorite: connection.isFavorite };
     }
 
@@ -138,7 +147,7 @@ function toggleFavoriteConnection(connectionId) {
     const favoriteIndex = connectionHistory.favorites.findIndex(conn => conn.id === connectionId);
     if (favoriteIndex !== -1) {
       connectionHistory.favorites.splice(favoriteIndex, 1);
-      saveConnectionHistory();
+      debouncedSaveConnectionHistory();
       return { success: true, isFavorite: false };
     }
 
@@ -161,7 +170,7 @@ function removeFromHistory(connectionId) {
     // Eliminar de favoritos
     connectionHistory.favorites = connectionHistory.favorites.filter(conn => conn.id !== connectionId);
 
-    saveConnectionHistory();
+    debouncedSaveConnectionHistory();
 
     return { success: true, removed: beforeLength > connectionHistory.recent.length };
   } catch (error) {

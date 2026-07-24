@@ -98,10 +98,19 @@ function stopStatsWorker() {
   }
 }
 
+function setStatsWorkerInterval(intervalMs) {
+  if (statsWorker && statsWorkerReady) {
+    try {
+      statsWorker.send({ type: 'set-interval', interval: intervalMs });
+    } catch (_) {}
+  }
+}
+
 module.exports = {
   startStatsWorker,
   getSystemStats,
   isWorkerReady,
   stopStatsWorker,
-  getFallbackStats
+  getFallbackStats,
+  setStatsWorkerInterval
 };
