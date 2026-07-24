@@ -36,21 +36,32 @@
   /* max-width temporalmente removido para resize visual */
 }
 
-.p-splitter.p-splitter-resizing .sidebar-container {
-  will-change: width, min-width, max-width !important;
-  transition: none !important; /* Sin transición durante el arrastre para fluidez */
+/* === OPTIMIZACIÓN ULTRA-FLUÍDA AL ARRASTRAR EL SPLITTER === */
+body.is-splitter-resizing,
+body.is-splitter-resizing * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  cursor: col-resize !important;
 }
 
-/* === FIX: Webviews capturan eventos del mouse durante el resize del splitter ===
-   Las <webview> de Electron (usadas por clientes de IA: OpenWebUI, AnythingLLM,
-   LibreChat, AgentZero, OpenClaw, OpenNotebook) "tragan" los eventos mousemove
-   cuando el cursor pasa sobre ellas durante el arrastre del gutter, causando que
-   el splitter se congele/vaya a trompicones. Deshabilitamos pointer-events en
-   webviews e iframes durante el redimensionamiento para que todos los eventos
-   lleguen al documento padre y el arrastre sea fluido. */
+body.is-splitter-resizing .p-splitter-panel *,
+body.is-splitter-resizing .terminal-frame-container *,
+body.is-splitter-resizing webview,
+body.is-splitter-resizing iframe,
+body.is-splitter-resizing canvas,
+.p-splitter.p-splitter-resizing .p-splitter-panel *,
 .p-splitter.p-splitter-resizing webview,
-.p-splitter.p-splitter-resizing iframe {
+.p-splitter.p-splitter-resizing iframe,
+.p-splitter.p-splitter-resizing canvas {
   pointer-events: none !important;
+}
+
+.p-splitter.p-splitter-resizing .sidebar-container,
+body.is-splitter-resizing .sidebar-container,
+body.is-splitter-resizing .terminal-frame,
+body.is-splitter-resizing .p-splitter-panel {
+  will-change: flex-basis, width !important;
+  transition: none !important;
 }
 
 .main-splitter-transitioning > .p-splitter-panel {

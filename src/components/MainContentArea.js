@@ -2706,6 +2706,8 @@ const MainContentArea = ({
   const SPLITTER_DRAG_THRESHOLD_PX = 3;
 
   const markSplitterPointerDown = useCallback((event) => {
+    document.body.classList.add('is-splitter-resizing');
+    document.querySelectorAll('.p-splitter').forEach(el => el.classList.add('p-splitter-resizing'));
     splitterDragStateRef.current = {
       isPointerDown: true,
       hasMoved: false,
@@ -2728,6 +2730,8 @@ const MainContentArea = ({
 
     const handleWindowMouseUp = () => {
       splitterDragStateRef.current.isPointerDown = false;
+      document.body.classList.remove('is-splitter-resizing');
+      document.querySelectorAll('.p-splitter').forEach(el => el.classList.remove('p-splitter-resizing'));
     };
 
     window.addEventListener('mousemove', handleWindowMouseMove);
@@ -2735,6 +2739,7 @@ const MainContentArea = ({
     return () => {
       window.removeEventListener('mousemove', handleWindowMouseMove);
       window.removeEventListener('mouseup', handleWindowMouseUp);
+      document.body.classList.remove('is-splitter-resizing');
     };
   }, []);
 

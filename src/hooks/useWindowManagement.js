@@ -159,31 +159,34 @@ export const useWindowManagement = ({ getFilteredTabs, activeTabIndex, resizeTer
 
   // Optimización para redimensionamiento fluido del splitter
   useEffect(() => {
-    const splitterElement = document.querySelector('.p-splitter');
-    if (!splitterElement) return;
-
     const handleResizeStart = (e) => {
-      // Solo aplicar optimizaciones si el click es en el gutter
-      if (e.target.classList.contains('p-splitter-gutter')) {
-        splitterElement.classList.add('p-splitter-resizing');
-        // Deshabilitar transiciones durante el redimensionamiento para mejor rendimiento
+      const target = e.target;
+      if (
+        target &&
+        (target.classList?.contains('p-splitter-gutter') ||
+          target.closest?.('.p-splitter-gutter') ||
+          target.classList?.contains('p-splitter-gutter-handle'))
+      ) {
+        document.body.classList.add('is-splitter-resizing');
+        document.querySelectorAll('.p-splitter').forEach(el => el.classList.add('p-splitter-resizing'));
         document.documentElement.style.setProperty('--sidebar-transition', 'none');
       }
     };
 
     const handleResizeEnd = () => {
-      splitterElement.classList.remove('p-splitter-resizing');
-      // Reactivar transiciones después del redimensionamiento
+      document.body.classList.remove('is-splitter-resizing');
+      document.querySelectorAll('.p-splitter').forEach(el => el.classList.remove('p-splitter-resizing'));
       document.documentElement.style.removeProperty('--sidebar-transition');
     };
 
-    // Eventos para detectar inicio y fin del redimensionamiento
-    splitterElement.addEventListener('mousedown', handleResizeStart);
-    document.addEventListener('mouseup', handleResizeEnd);
+    // Eventos globales con captura para inicio y fin del redimensionamiento
+    document.addEventListener('mousedown', handleResizeStart, true);
+    document.addEventListener('mouseup', handleResizeEnd, true);
 
     return () => {
-      splitterElement.removeEventListener('mousedown', handleResizeStart);
-      document.removeEventListener('mouseup', handleResizeEnd);
+      document.removeEventListener('mousedown', handleResizeStart, true);
+      document.removeEventListener('mouseup', handleResizeEnd, true);
+      document.body.classList.remove('is-splitter-resizing');
     };
   }, []);
 
