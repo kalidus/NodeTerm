@@ -21,6 +21,7 @@ Borrador opcional para usuarios: `RELEASE_NOTES.md` (solo la versión en curso).
 - **Telemetría Adaptativa del Sistema**: Bucle de sondeo de CPU/RAM adaptativo según el estado de la ventana (2s activa, 5s en segundo plano, 10s minimizada), reduciendo hasta un 80% los despertares inútiles de CPU.
 - **Persistencia Asíncrona de Disco**: Añadido *debounce* de 500 ms en escrituras síncronas de historial y favoritos (`ConnectionHistoryService`), eliminando pequeñas pausas al marcar o desmarcar elementos rápidamente.
 - **Carga Diferida de Diálogos y Memoización**: Diálogos secundarios convertidos a `React.lazy()` en `DialogsManager` y componentes de alta frecuencia de refresco (`StandaloneStatusBar`) memoizados con `React.memo`.
+- **Transición Suave de Temas Visuales**: Eliminado el retardo en el color de fondo de la barra lateral y árbol de conexiones durante cambios de tema UI mediante sincronización inmediata de variables CSS inline en root DOM y aplicación temporal de la clase `.theme-transitioning` (250 ms).
 - **Prevención de Fugas de Memoria**: Verificación y limpieza estricta de instancias de terminal (`term.dispose()`), listeners IPC y suscripciones al cerrar pestañas.
 
 ## [1.7.1] - 2026-07-21
