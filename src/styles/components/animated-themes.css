@@ -847,11 +847,11 @@
 
 /* Animaciones para elementos de la interfaz en temas animados */
 .sidebar-container[data-animation] {
-  transition: all 0.3s ease !important;
+  /* Evitar transition: all para prevenir lag y desincronización en el cambio de fondo */
 }
 
 .status-bar[data-animation] {
-  transition: all 0.3s ease !important;
+  /* Evitar transition: all */
 }
 
 /* Efectos de partículas para temas específicos */

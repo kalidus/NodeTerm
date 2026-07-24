@@ -2285,11 +2285,11 @@
 }
 
 .sidebar-tree[data-tree-theme] .p-treenode-content {
-  transition: background 0.15s ease, box-shadow 0.15s ease, border-radius 0.15s ease;
+  transition: box-shadow 0.15s ease, border-radius 0.15s ease;
 }
 
 .sidebar-tree[data-tree-theme] .p-treenode-children::before {
-  transition: opacity 0.2s ease, background 0.2s ease;
+  transition: opacity 0.2s ease;
 }
 
 

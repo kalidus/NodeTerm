@@ -296,7 +296,18 @@ class ThemeManager {
       localStorage.setItem(TITLEBAR_COLOR_MODE_KEY, 'theme');
     }
 
+    if (typeof document !== 'undefined' && document.body) {
+      document.body.classList.add('theme-transitioning');
+      if (this.themeTransitionTimer) clearTimeout(this.themeTransitionTimer);
+      this.themeTransitionTimer = setTimeout(() => {
+        if (document.body) {
+          document.body.classList.remove('theme-transitioning');
+        }
+      }, 250);
+    }
+
     this.currentTheme = theme;
+    this.applyRootCssVariables(theme.colors);
     this.generateCSS(theme);
 
     // Sidebar text override handling:
@@ -345,14 +356,11 @@ class ThemeManager {
         .catch(err => console.warn('Error syncing theme:', err));
     }
 
-    // Emitir evento global para notificar cambio de tema
+    // Emitir evento global para notificar cambio de tema de forma sincrónica
     if (typeof window !== 'undefined') {
-      // Usar setTimeout para asegurar que el tema se haya aplicado completamente
-      setTimeout(() => {
-        window.dispatchEvent(new Event('theme-changed'));
-        this.applyTitlebarColorVars(theme.colors);
-        this.applyCheckboxStyles();
-      }, 50);
+      window.dispatchEvent(new Event('theme-changed'));
+      this.applyTitlebarColorVars(theme.colors);
+      this.applyCheckboxStyles();
     }
   }
 
@@ -365,6 +373,33 @@ class ThemeManager {
       return;
     }
     this.applyTitlebarColorVars(theme.colors);
+  }
+
+  applyRootCssVariables(colors) {
+    if (!colors || typeof document === 'undefined') return;
+    const root = document.documentElement;
+
+    root.style.setProperty('--ui-sidebar-bg', colors.sidebarBackground);
+    root.style.setProperty('--ui-sidebar-border', colors.sidebarBorder);
+    root.style.setProperty('--ui-sidebar-text', colors.sidebarText);
+    root.style.setProperty('--ui-sidebar-hover', colors.sidebarHover);
+    root.style.setProperty('--ui-sidebar-selected', colors.sidebarSelected);
+    root.style.setProperty('--ui-sidebar-gutter-bg', colors.sidebarGutter);
+
+    let railBg = colors.sidebarRailBackground || colors.menuBarBackground || colors.sidebarBackground;
+    if (railBg === colors.sidebarBackground) {
+      if (colors.tabGroupBackground && colors.tabGroupBackground !== colors.sidebarBackground) {
+        railBg = colors.tabGroupBackground;
+      } else if (colors.tabBackground && colors.tabBackground !== colors.sidebarBackground) {
+        railBg = colors.tabBackground;
+      } else {
+        railBg = adjustColorBrightness(colors.sidebarBackground, 6);
+      }
+    }
+    root.style.setProperty('--ui-sidebar-rail-bg', railBg);
+    root.style.setProperty('--ui-content-bg', colors.contentBackground);
+    root.style.setProperty('--ui-dialog-bg', colors.dialogBackground);
+    root.style.setProperty('--ui-statusbar-bg', colors.statusBarBackground);
   }
 
   /**
@@ -1222,6 +1257,20 @@ class ThemeManager {
     } else {
       // Remover animaciones si no es un tema animado
       this.removeAnimations();
+    }
+  }
+
+  removeAnimations() {
+    cleanupMatrixAnimation();
+    if (typeof document === 'undefined') return;
+
+    document.querySelectorAll('[data-animation]').forEach(el => {
+      el.removeAttribute('data-animation');
+    });
+
+    const titleBar = document.querySelector('.title-bar');
+    if (titleBar) {
+      this.removeSpaceStationStars(titleBar);
     }
   }
 

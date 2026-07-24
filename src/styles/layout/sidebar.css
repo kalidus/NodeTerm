@@ -1,7 +1,35 @@
-/* Archivo de parches CSS para asegurar que los temas se apliquen correctamente */
+/* Transición suave y coordinada para todo el layout únicamente durante el cambio de tema */
+body.theme-transitioning,
+body.theme-transitioning .workspace-container,
+body.theme-transitioning .main-splitter,
+body.theme-transitioning .p-splitter-panel,
+body.theme-transitioning .sidebar-container,
+body.theme-transitioning .sidebar-panel,
+body.theme-transitioning .sidebar-panel-content-wrapper,
+body.theme-transitioning .tree-container,
+body.theme-transitioning .sidebar-tree,
+body.theme-transitioning .sidebar-tree.p-tree,
+body.theme-transitioning .sidebar-tree .p-tree-container,
+body.theme-transitioning .sidebar-tree .p-treenode,
+body.theme-transitioning .sidebar-tree .p-treenode-content,
+body.theme-transitioning .terminal-frame,
+body.theme-transitioning .title-bar,
+body.theme-transitioning .status-bar,
+body.theme-transitioning .content-main {
+  transition: background-color 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
 
-/* Forzar estilos de sidebar con máxima prioridad */
-.sidebar-container {
+/* Forzar estilos de sidebar y árbol con máxima prioridad */
+.sidebar-container,
+.sidebar-panel,
+.sidebar-panel-content-wrapper,
+.tree-container,
+.sidebar-tree,
+.sidebar-tree.p-tree,
+.sidebar-tree .p-tree-container,
+.sidebar-tree .p-treenode {
   background: var(--ui-sidebar-bg) !important;
   color: var(--ui-sidebar-text) !important;
 }
