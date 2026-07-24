@@ -8,18 +8,50 @@
   flex: 1;
   min-height: 0;
   width: 100%;
+  overflow-x: hidden !important;
 }
 
-.documents-sidebar-root .sidebar-footer {
-  flex-shrink: 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  background: var(--ui-sidebar-bg, transparent);
+.documents-tree-scroll-area {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  width: 100%;
+  box-sizing: border-box;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.documents-tree-scroll-area::-webkit-scrollbar {
+  display: none !important;
 }
 
 /* Alinear con el resto de árboles de la sidebar (sin padding extra del contenedor) */
-.documents-sidebar-root .tree-container .sidebar-tree .p-tree-container {
+.documents-sidebar-root .tree-container .sidebar-tree .p-tree-container,
+.documents-tree-scroll-area .sidebar-tree .p-tree-container {
   padding: 0;
   margin: 0;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.document-tree-node {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px;
+  width: 100% !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+.document-tree-node .node-label {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
 }
 
 .documents-empty-state {

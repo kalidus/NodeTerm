@@ -47,7 +47,7 @@ body.theme-transitioning .content-main {
   scroll-behavior: smooth;
   /* Asegurar que el scroll funcione con la rueda del mouse */
   overflow-y: auto !important;
-  overflow-x: visible !important;
+  overflow-x: hidden !important;
 }
 
 .tree-container.drag-autoscroll-active {
@@ -278,14 +278,16 @@ body.theme-transitioning .content-main {
   display: flex !important;
   align-items: center !important;
   gap: 2px;
-  width: 100%;
-  box-sizing: border-box;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
   font-size: inherit !important;
   background: transparent !important;
   isolation: isolate;
+  overflow: hidden !important;
 }
 /* Fondo full-bleed en pseudo-elemento (no pisa ::before de líneas del tema) */
 .sidebar-tree .p-treenode-content::after {
@@ -339,10 +341,18 @@ body.theme-transitioning .content-main {
   font-size: inherit;
   color: var(--ui-sidebar-text, #495057);
   font-weight: 400;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  display: flex !important;
+  align-items: center !important;
 }
 .sidebar-tree .pi {
   font-size: var(--icon-size, 0.75rem);
   color: #6c757d;
+  flex-shrink: 0;
 }
 .sidebar-tree .p-treenode-children {
   padding-left: var(--tree-indent, 20px) !important;
@@ -364,17 +374,18 @@ body.theme-transitioning .content-main {
 .sidebar-tree .p-treenode-content .connection-indicator {
   font-size: 0.7rem;
   margin-right: 0.25rem;
+  flex-shrink: 0;
 }
 .sidebar-tree .p-treenode-content .node-label {
-  flex: 1 !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
   line-height: 1.15 !important;
   height: auto !important;
   min-height: 0 !important;
-  display: flex !important;
-  align-items: center !important;
+  display: block !important;
   margin: 0 !important;
   padding: 0 !important;
 }

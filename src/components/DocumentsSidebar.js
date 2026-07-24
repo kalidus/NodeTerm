@@ -947,7 +947,9 @@ const DocumentsSidebar = ({
           gap: 6,
           cursor: isFolder ? 'default' : 'pointer',
           fontFamily: explorerFont || 'inherit',
-          width: '100%'
+          width: '100%',
+          minWidth: 0,
+          overflow: 'hidden'
         }}
       >
         <span
@@ -956,7 +958,8 @@ const DocumentsSidebar = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            height: 20
+            height: 20,
+            flexShrink: 0
           }}
         >
           {isFolder ? (
@@ -1011,6 +1014,7 @@ const DocumentsSidebar = ({
             className="document-inline-rename-input"
             style={{
               flex: 1,
+              minWidth: 0,
               height: 22,
               padding: '0 4px',
               fontSize: 'inherit',
@@ -1020,8 +1024,10 @@ const DocumentsSidebar = ({
         ) : (
           <span
             className="node-label"
+            title={node.label}
             style={{
               flex: 1,
+              minWidth: 0,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
@@ -1035,7 +1041,7 @@ const DocumentsSidebar = ({
         {!isInlineRenaming && isFolder && (() => {
           const count = countNotesInFolder(node);
           return count > 0 ? (
-            <span className="qnp-count-badge" style={{ marginLeft: 'auto', marginRight: '4px' }}>{count}</span>
+            <span className="qnp-count-badge" style={{ marginLeft: 'auto', marginRight: '4px', flexShrink: 0 }}>{count}</span>
           ) : null;
         })()}
       </span>
@@ -1420,10 +1426,10 @@ const DocumentsSidebar = ({
                 position: 'relative'
               }}
             >
-              <span style={{ minWidth: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', height: 20 }}>
+              <span style={{ minWidth: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', height: 20, flexShrink: 0 }}>
                 <i className="pi pi-bolt" style={{ fontSize: '0.9rem', color: '#ffc107' }} />
               </span>
-              <span className="node-label" style={{ flex: 1, fontWeight: 'bold', color: 'var(--ui-primary-color, #64b5f6)' }}>
+              <span className="node-label" style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 'bold', color: 'var(--ui-primary-color, #64b5f6)' }}>
                 Notas rápidas
               </span>
               {/* Indicador del número de notas rápidas */}
@@ -1431,12 +1437,12 @@ const DocumentsSidebar = ({
                 const qn = documentNodes.find(n => n.key === 'quick_note');
                 const count = qn?.children?.length || 0;
                 return count > 0 ? (
-                  <span className="qnp-count-badge">{count}</span>
+                  <span className="qnp-count-badge" style={{ flexShrink: 0 }}>{count}</span>
                 ) : null;
               })()}
               <i
                 className={`pi ${quickNotesPanelOpen ? 'pi-chevron-left' : 'pi-chevron-right'}`}
-                style={{ fontSize: '0.7rem', opacity: 0.5, marginRight: 4 }}
+                style={{ fontSize: '0.7rem', opacity: 0.5, marginRight: 4, flexShrink: 0 }}
               />
             </div>
 
@@ -1446,7 +1452,7 @@ const DocumentsSidebar = ({
                 <p>No hay notas creadas en el árbol.</p>
               </div>
             ) : (
-              <div className="documents-tree-scroll-area" style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+              <div className="documents-tree-scroll-area" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
                 <Tree
                   value={treeValue}
                   expandedKeys={expandedKeys}
