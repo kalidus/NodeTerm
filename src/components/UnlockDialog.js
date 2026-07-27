@@ -3,8 +3,10 @@ import { Password } from 'primereact/password';
 import { Message } from 'primereact/message';
 import { Checkbox } from 'primereact/checkbox';
 import AppDialog from './ui/AppDialog';
+import { useTranslation } from '../i18n/hooks/useTranslation';
 
 const UnlockDialog = ({ visible, onSuccess, secureStorage }) => {
+  const { t } = useTranslation();
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,13 +20,13 @@ const UnlockDialog = ({ visible, onSuccess, secureStorage }) => {
       const savedMasterKey = await secureStorage.loadMasterKey();
 
       if (!savedMasterKey) {
-        setError('Error al cargar la clave guardada');
+        setError(t('dialogs.unlock.errors.loadKey', 'Error al cargar la clave guardada'));
         setLoading(false);
         return;
       }
 
       if (password !== savedMasterKey) {
-        setError('Contrasena incorrecta');
+        setError(t('dialogs.unlock.errors.incorrect', 'Contraseña incorrecta'));
         setLoading(false);
         return;
       }
@@ -33,7 +35,7 @@ const UnlockDialog = ({ visible, onSuccess, secureStorage }) => {
       onSuccess(savedMasterKey);
     } catch (err) {
       console.error('[UnlockDialog] Error:', err);
-      setError('Error al desbloquear la aplicacion');
+      setError(t('dialogs.unlock.errors.unlockFailed', 'Error al desbloquear la aplicación'));
       setLoading(false);
     }
   };
@@ -41,14 +43,14 @@ const UnlockDialog = ({ visible, onSuccess, secureStorage }) => {
   return (
     <AppDialog
       headerIcon="pi pi-lock"
-      headerTitle="Desbloquear NodeTerm"
+      headerTitle={t('dialogs.unlock.title', 'Desbloquear NodeTerm')}
       visible={visible}
       size="sm"
       modal
       closable={false}
       onHide={() => {}}
       cancelLabel={false}
-      confirmLabel="Desbloquear"
+      confirmLabel={t('dialogs.unlock.confirm', 'Desbloquear')}
       confirmIcon="pi pi-unlock"
       onConfirm={handleUnlock}
       loading={loading}
@@ -59,12 +61,12 @@ const UnlockDialog = ({ visible, onSuccess, secureStorage }) => {
 
         <Message
           severity="info"
-          text="Introduce tu contrasena maestra para desbloquear la aplicacion"
+          text={t('dialogs.unlock.infoMessage', 'Introduce tu contraseña maestra para desbloquear la aplicación')}
           className="mb-3"
         />
 
         <div className="app-form-field">
-          <label htmlFor="unlock-password" className="app-form-label">Contrasena Maestra</label>
+          <label htmlFor="unlock-password" className="app-form-label">{t('dialogs.unlock.masterPassword', 'Contraseña Maestra')}</label>
           <Password
             id="unlock-password"
             value={password}
@@ -83,7 +85,7 @@ const UnlockDialog = ({ visible, onSuccess, secureStorage }) => {
             onChange={(e) => setRememberPassword(e.checked)}
           />
           <label htmlFor="remember-password" className="ml-2">
-            Recordar contrasena en este dispositivo
+            {t('dialogs.unlock.rememberOnDevice', 'Recordar contraseña en este dispositivo')}
           </label>
         </div>
       </div>

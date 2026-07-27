@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
 import { appConfirm } from './ui/AppConfirm';
+import { useTranslation } from '../i18n/hooks/useTranslation';
 import '../styles/ssh-monitor.css';
 
 /**
@@ -110,6 +111,7 @@ const MONITOR_SUBTABS = { processes: 'processes', services: 'services' };
  *   onClose    - Callback to close the panel
  */
 const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
+    const { t } = useTranslation();
     const [processes, setProcesses] = useState([]);
     const [processesLoading, setProcessesLoading] = useState(true);
     const [processFilter, setProcessFilter] = useState('');
@@ -241,16 +243,14 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
 
     const handleKillProcess = useCallback(async (pid, command) => {
         const isLocal = tab?.type === 'local-terminal';
-        const confirmMsg = isLocal 
-            ? `¿Está seguro de que desea finalizar el proceso local ${pid} (${command})?`
-            : `¿Está seguro de que desea finalizar el proceso ${pid} (${command}) en el servidor remoto?`;
+        const confirmMsg = t('dialogs.sshMonitor.killProcessConfirm', 'El proceso con PID {pid} será detenido. ¿Deseas continuar?', { pid, command });
         
         const ok = await appConfirm({
             message: confirmMsg,
-            header: 'Confirmar',
+            header: t('dialogs.sshMonitor.confirmHeader', 'Confirmar'),
             severity: 'danger',
-            acceptLabel: 'Aceptar',
-            rejectLabel: 'Cancelar'
+            acceptLabel: t('dialogs.sshMonitor.accept', 'Aceptar'),
+            rejectLabel: t('dialogs.sshMonitor.cancel', 'Cancelar')
         });
         if (!ok) return;
 
@@ -260,8 +260,8 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
                 if (window.toast?.current?.show) {
                     window.toast.current.show({
                         severity: 'success',
-                        summary: 'Proceso finalizado',
-                        detail: `El proceso con PID ${pid} fue detenido correctamente.`,
+                        summary: t('dialogs.sshMonitor.killProcessSuccess', 'Proceso finalizado'),
+                        detail: t('dialogs.sshMonitor.killProcessSuccessDetail', 'El proceso con PID {pid} fue detenido correctamente.', { pid }),
                         life: 3000
                     });
                 }
@@ -279,18 +279,18 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
                 });
             }
         }
-    }, [tabId, tab?.type, fetchProcesses]);
+    }, [tabId, tab?.type, fetchProcesses, t]);
 
     const handleManageService = useCallback(async (serviceName, action) => {
-        const actionStr = action === 'restart' ? 'reiniciar' : action === 'stop' ? 'detener' : 'iniciar';
-        const confirmMsg = `¿Está seguro de que desea ${actionStr} el servicio "${serviceName}"?`;
+        const actionStr = t(`dialogs.sshMonitor.actions.${action}`, action);
+        const confirmMsg = t('dialogs.sshMonitor.manageServiceConfirm', '¿Está seguro de que desea {action} el servicio "{serviceName}"?', { action: actionStr, serviceName });
         
         const ok = await appConfirm({
             message: confirmMsg,
-            header: 'Confirmar',
+            header: t('dialogs.sshMonitor.confirmHeader', 'Confirmar'),
             severity: action === 'stop' ? 'danger' : 'warn',
-            acceptLabel: 'Aceptar',
-            rejectLabel: 'Cancelar'
+            acceptLabel: t('dialogs.sshMonitor.accept', 'Aceptar'),
+            rejectLabel: t('dialogs.sshMonitor.cancel', 'Cancelar')
         });
         if (!ok) return;
 

@@ -1,10 +1,11 @@
 import React, { useCallback, useRef, useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
+import { useTranslation } from '../i18n/hooks/useTranslation';
 
 /**
  * Formatea una fecha de timestamp a string legible.
  */
-function formatDate(ts) {
+function formatDate(ts, t) {
   if (!ts) return '';
   const d = new Date(ts);
   const now = new Date();
@@ -13,8 +14,8 @@ function formatDate(ts) {
   if (diffDays === 0) {
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
-  if (diffDays === 1) return 'Ayer';
-  if (diffDays < 7) return `Hace ${diffDays} días`;
+  if (diffDays === 1) return t ? t('quickNotes.yesterday', 'Ayer') : 'Ayer';
+  if (diffDays < 7) return t ? t('quickNotes.daysAgo', 'Hace {count} días', { count: diffDays }) : `Hace ${diffDays} días`;
   return d.toLocaleDateString([], { day: '2-digit', month: 'short' });
 }
 
@@ -31,17 +32,6 @@ function htmlToPlainText(html) {
 /**
  * Panel lateral vertical estilo Joplin para listar las notas rápidas.
  * Se ancla vía position:fixed a la derecha del sidebar de documentos.
- *
- * Props:
- *  - isOpen: boolean
- *  - anchorRef: ref del elemento sidebar al que anclar el panel
- *  - notes: array de nodos de notas rápidas (hijos del nodo quick_note)
- *  - onClose: () => void
- *  - onOpenNote: (node) => void
- *  - onCreateNote: () => void
- *  - onDeleteNote: (node) => void
- *  - explorerFont: string
- *  - explorerFontSize: number
  */
 const QuickNotesSidePanel = ({
   isOpen,
@@ -53,11 +43,13 @@ const QuickNotesSidePanel = ({
   onDeleteNote,
   explorerFont,
   explorerFontSize = 14,
-  title = 'Notas rápidas',
+  title,
   iconClass = 'pi pi-bolt',
   iconColor = '#ffc107',
   selectedNoteKey = null,
 }) => {
+  const { t } = useTranslation();
+  const displayTitle = title || t('quickNotes.title', 'Notas rápidas');
   const [rect, setRect] = useState(null);
 
   // Actualizar posición cuando se abre o se redimensiona
@@ -120,20 +112,20 @@ const QuickNotesSidePanel = ({
       <div className="qnp-header">
         <div className="qnp-header-title">
           <i className={iconClass} style={{ color: iconColor, fontSize: '0.95rem' }} />
-          <span>{title}</span>
+          <span>{displayTitle}</span>
         </div>
         <div className="qnp-header-actions">
           <button
             className="qnp-icon-btn"
             onClick={(e) => { e.stopPropagation(); onCreateNote?.(); }}
-            title="Nueva nota rápida"
+            title={t('quickNotes.newNote', 'Nueva nota rápida')}
           >
             <i className="pi pi-plus" />
           </button>
           <button
             className="qnp-icon-btn qnp-close-btn"
             onClick={(e) => { e.stopPropagation(); onClose?.(); }}
-            title="Cerrar panel"
+            title={t('quickNotes.closePanel', 'Cerrar panel')}
           >
             <i className="pi pi-times" />
           </button>
@@ -145,12 +137,12 @@ const QuickNotesSidePanel = ({
         {notes.length === 0 ? (
           <div className="qnp-empty-state">
             <i className="pi pi-bolt" style={{ fontSize: '2rem', opacity: 0.3 }} />
-            <p>Sin notas rápidas</p>
+            <p>{t('quickNotes.noNotes', 'Sin notas rápidas')}</p>
             <button
               className="qnp-create-first-btn"
               onClick={(e) => { e.stopPropagation(); onCreateNote?.(); }}
             >
-              <i className="pi pi-plus" /> Crear nota
+              <i className="pi pi-plus" /> {t('quickNotes.createNote', 'Crear nota')}
             </button>
           </div>
         ) : (
@@ -176,7 +168,7 @@ const QuickNotesSidePanel = ({
                   </button>
                 </div>
                 {updatedAt && (
-                  <span className="qnp-note-date">{formatDate(updatedAt)}</span>
+                  <span className="qnp-note-date">{formatDate(updatedAt, t)}</span>
                 )}
                 {preview && (
                   <p className="qnp-note-preview">{preview}</p>

@@ -110,6 +110,13 @@
     "startWithSystem": "Iniciar con el sistema",
     "checkUpdates": "Buscar actualizaciones al iniciar"
   },
+  "appearance_legacy": {
+    "title": "Apariencia",
+    "theme": "Tema",
+    "iconTheme": "Tema de iconos",
+    "fontSize": "Tamaño de fuente",
+    "fontFamily": "Familia de fuente"
+  },
   "appearance": {
     "title": "Apariencia",
     "theme": "Tema",

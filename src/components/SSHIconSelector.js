@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
+import { useTranslation } from '../i18n/hooks/useTranslation';
 
 // SVG inner content — viewBox 0 0 24 24, all attributes kebab-case for innerHTML.
 // Every icon uses currentColor so color theming works with style={{ color }}.
@@ -873,6 +874,7 @@ export const SSHIconRenderer = ({ preset, size = 'medium', pixelSize = null }) =
 // ── Modal selector ─────────────────────────────────────────────────────────────
 
 export const SSHIconSelectorModal = ({ visible, onHide, selectedIconId, onSelectIcon, theme }) => {
+  const { t } = useTranslation();
   const [hoveredId, setHoveredId] = useState(null);
   const [themeVersion, setThemeVersion] = useState(0);
 
@@ -951,7 +953,7 @@ export const SSHIconSelectorModal = ({ visible, onHide, selectedIconId, onSelect
         {/* Header */}
         <div style={{ padding: '1.5rem', borderBottom: `1px solid ${themeColors.border}`, display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <i className="pi pi-server" style={{ fontSize: '1.5rem', color: themeColors.buttonPrimary }}/>
-          <span style={{ fontSize: '1.1rem', fontWeight: '600' }}>Selecciona el icono de la conexión SSH</span>
+          <span style={{ fontSize: '1.1rem', fontWeight: '600' }}>{t('dialogs.sshIconSelector.title', 'Selecciona el icono de la conexión SSH')}</span>
           <button
             onClick={onHide}
             style={{ marginLeft: 'auto', background: 'none', border: 'none', color: themeColors.dialogText, fontSize: '1.5rem', cursor: 'pointer', padding: 0, width: '32px', height: '32px' }}
@@ -1067,7 +1069,7 @@ export const SSHIconSelectorModal = ({ visible, onHide, selectedIconId, onSelect
               cursor: 'pointer', fontSize: '0.9rem', fontWeight: '600'
             }}
           >
-            Usar icono del tema
+            {t('dialogs.sshIconSelector.useThemeIcon', 'Usar icono del tema')}
           </button>
           <button
             onClick={onHide}
@@ -1078,7 +1080,7 @@ export const SSHIconSelectorModal = ({ visible, onHide, selectedIconId, onSelect
               cursor: 'pointer', fontSize: '0.9rem', fontWeight: '600'
             }}
           >
-            Cerrar
+            {t('dialogs.sshIconSelector.close', 'Cerrar')}
           </button>
         </div>
       </div>

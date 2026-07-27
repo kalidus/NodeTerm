@@ -284,5 +284,14 @@
     "sessions": "Sesiones",
     "secrets": "Secretos",
     "tools": "Herramientas"
+  },
+  "quickNotes": {
+    "title": "Notas rápidas",
+    "newNote": "Nueva nota rápida",
+    "closePanel": "Cerrar panel",
+    "noNotes": "Sin notas rápidas",
+    "createNote": "Crear nota",
+    "yesterday": "Ayer",
+    "daysAgo": "Hace {{count}} días"
   }
 }

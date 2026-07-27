@@ -645,5 +645,47 @@
       "newPassword": "New password",
       "generatePassword": "Generate random password"
     }
+  },
+  "unlock": {
+    "title": "Unlock NodeTerm",
+    "confirm": "Unlock",
+    "infoMessage": "Enter your master password to unlock the application",
+    "masterPassword": "Master Password",
+    "rememberOnDevice": "Remember password on this device",
+    "errors": {
+      "loadKey": "Failed to load saved key",
+      "incorrect": "Incorrect password",
+      "unlockFailed": "Failed to unlock application"
+    }
+  },
+  "wallix": {
+    "title": "Refresh Wallix Connections",
+    "confirm": "Refresh",
+    "loading": "Querying Wallix API...",
+    "url": "Wallix Server URL",
+    "adminUser": "Admin / API User",
+    "password": "Password",
+    "requiredFields": "All fields are required",
+    "emptyResult": "No results received from API",
+    "importError": "Import error"
+  },
+  "sshIconSelector": {
+    "title": "Select SSH Connection Icon",
+    "useThemeIcon": "Use theme icon",
+    "close": "Close"
+  },
+  "sshMonitor": {
+    "confirmHeader": "Confirm",
+    "accept": "Accept",
+    "cancel": "Cancel",
+    "killProcessConfirm": "Process PID {pid} will be terminated. Do you want to continue?",
+    "killProcessSuccess": "Process terminated",
+    "killProcessSuccessDetail": "Process with PID {pid} was stopped successfully.",
+    "manageServiceConfirm": "Are you sure you want to {action} the service \"{serviceName}\"?",
+    "actions": {
+      "restart": "restart",
+      "stop": "stop",
+      "start": "start"
+    }
   }
 }

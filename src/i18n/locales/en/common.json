@@ -284,5 +284,14 @@
     "sessions": "Sessions",
     "secrets": "Secrets",
     "tools": "Tools"
+  },
+  "quickNotes": {
+    "title": "Quick notes",
+    "newNote": "New quick note",
+    "closePanel": "Close panel",
+    "noNotes": "No quick notes",
+    "createNote": "Create note",
+    "yesterday": "Yesterday",
+    "daysAgo": "{{count}} days ago"
   }
 }

@@ -645,5 +645,47 @@
       "newPassword": "Nuevo password",
       "generatePassword": "Generar password aleatorio"
     }
+  },
+  "unlock": {
+    "title": "Desbloquear NodeTerm",
+    "confirm": "Desbloquear",
+    "infoMessage": "Introduce tu contraseña maestra para desbloquear la aplicación",
+    "masterPassword": "Contraseña Maestra",
+    "rememberOnDevice": "Recordar contraseña en este dispositivo",
+    "errors": {
+      "loadKey": "Error al cargar la clave guardada",
+      "incorrect": "Contraseña incorrecta",
+      "unlockFailed": "Error al desbloquear la aplicación"
+    }
+  },
+  "wallix": {
+    "title": "Refrescar Conexiones de Wallix",
+    "confirm": "Refrescar",
+    "loading": "Consultando API de Wallix...",
+    "url": "URL Servidor Wallix",
+    "adminUser": "Usuario Administrador / API",
+    "password": "Contraseña",
+    "requiredFields": "Todos los campos son obligatorios",
+    "emptyResult": "No se obtuvieron resultados de la API",
+    "importError": "Error de importación"
+  },
+  "sshIconSelector": {
+    "title": "Selecciona el icono de la conexión SSH",
+    "useThemeIcon": "Usar icono del tema",
+    "close": "Cerrar"
+  },
+  "sshMonitor": {
+    "confirmHeader": "Confirmar",
+    "accept": "Aceptar",
+    "cancel": "Cancelar",
+    "killProcessConfirm": "El proceso con PID {pid} será detenido. ¿Deseas continuar?",
+    "killProcessSuccess": "Proceso finalizado",
+    "killProcessSuccessDetail": "El proceso con PID {pid} fue detenido correctamente.",
+    "manageServiceConfirm": "¿Está seguro de que desea {action} el servicio \"{serviceName}\"?",
+    "actions": {
+      "restart": "reiniciar",
+      "stop": "detener",
+      "start": "iniciar"
+    }
   }
 }
