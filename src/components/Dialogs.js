@@ -1361,7 +1361,6 @@ export function EnhancedSSHForm({
   const sidebarTabs = useMemo(() => {
     const tabs = [
       { id: 'general', label: 'General', icon: 'pi pi-info-circle' },
-      { id: 'auth', label: 'Autenticación', icon: 'pi pi-lock' },
       { id: 'folders', label: 'Carpetas', icon: 'pi pi-folder' }
     ];
     if (!isWallixUser) {
@@ -1501,7 +1500,13 @@ export function EnhancedSSHForm({
   );
 
   const renderAuthMethodSelector = () => (
-    <div className="terminal-row mb-3">
+    <div className="terminal-row mb-3 mt-4 pt-3" style={{ borderTop: '1px solid var(--ui-content-border, rgba(255, 255, 255, 0.08))' }}>
+      <div className="flex align-items-center gap-2 mb-2">
+        <i className="pi pi-lock" style={{ color: 'var(--ui-button-primary, #6366f1)', fontSize: '0.85rem' }}></i>
+        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ui-button-primary, #6366f1)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+          Autenticación
+        </span>
+      </div>
       <label className="terminal-label">{t('ssh.auth.method')}</label>
       <div className="terminal-auth-selector">
         <div
@@ -2394,12 +2399,8 @@ export function EnhancedSSHForm({
           <div className="form-sidebar-content" style={{ overflowY: 'auto', flex: 1, paddingRight: '6px' }}>
             {activeFormTab === 'general' && (
               <div>
-                {renderHostPort()}
                 {renderNameDesc()}
-              </div>
-            )}
-            {activeFormTab === 'auth' && (
-              <div>
+                {renderHostPort()}
                 {renderAuthMethodSelector()}
                 {renderUserAndAuthInput()}
               </div>
@@ -2640,7 +2641,6 @@ export function EnhancedSSHForm({
         <div className="form-tabs" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', borderBottom: '1px solid var(--ui-content-border, rgba(255, 255, 255, 0.08))', paddingBottom: '0.5rem' }}>
           {[
             { id: 'general', label: 'General', icon: 'pi-info-circle' },
-            { id: 'auth', label: 'Autenticación', icon: 'pi-lock' },
             { id: 'advanced', label: 'Opciones Avanzadas', icon: 'pi-cog' }
           ].map(ft => (
             <button
@@ -2674,8 +2674,8 @@ export function EnhancedSSHForm({
         {layoutMode === 'split' ? (
           <div className="grid" style={{ gap: '0' }}>
             <div className="col-12 md:col-6" style={{ padding: '0 1rem 0 0' }}>
-              {renderHostPort()}
               {renderNameDesc()}
+              {renderHostPort()}
               {renderAuthMethodSelector()}
               {renderUserAndAuthInput()}
             </div>
@@ -2690,14 +2690,8 @@ export function EnhancedSSHForm({
           <div>
             {activeFormTab === 'general' && (
               <div>
-                {renderHostPort()}
                 {renderNameDesc()}
-                {renderFolderSelector()}
-              </div>
-            )}
-            
-            {activeFormTab === 'auth' && (
-              <div>
+                {renderHostPort()}
                 {renderAuthMethodSelector()}
                 {renderUserAndAuthInput()}
               </div>
@@ -2712,8 +2706,8 @@ export function EnhancedSSHForm({
         ) : (
           /* Standard Layout */
           <>
-            {renderHostPort()}
             {renderNameDesc()}
+            {renderHostPort()}
             {renderAuthMethodSelector()}
             {renderUserAndAuthInput()}
             {renderFolderSelector()}
