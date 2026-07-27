@@ -1497,6 +1497,10 @@ const DocumentsSidebar = ({
         onOpenDocument={handleOpenDocument}
         collapsed={detailsCollapsed}
         onCollapseChange={setDetailsCollapsed}
+        onClose={() => {
+          setSelectedNodeKey(null);
+          setSelectedNodeForDetails(null);
+        }}
       />
 
       {/* Panel lateral de Notas Rápidas (estilo Joplin) */}

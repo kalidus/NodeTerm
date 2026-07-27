@@ -9,7 +9,8 @@ const DocumentDetailsPanel = ({
   uiTheme = 'Light',
   onOpenDocument = null,
   collapsed: controlledCollapsed,
-  onCollapseChange
+  onCollapseChange,
+  onClose
 }) => {
   const { t } = useTranslation('common');
   const [localCollapsed, setLocalCollapsed] = useState(false);
@@ -118,7 +119,7 @@ const DocumentDetailsPanel = ({
     return null;
   }
 
-  const Wrapper = ({ children, iconNode, rightButtons }) => (
+  const Wrapper = ({ children, iconNode, closeBtn, rightButtons }) => (
     <div
       className={`connection-details-panel document-details-panel ${collapsed ? 'collapsed' : ''} ${isResizing ? 'resizing' : ''}`}
       style={!collapsed ? { height: `${panelHeight}px`, maxHeight: `${panelHeight}px` } : {}}
@@ -135,9 +136,14 @@ const DocumentDetailsPanel = ({
         style={{ height: '100%', width: '100%' }}
         showControls={false}
         title={
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-            {iconNode}
-            <span>{label}</span>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', minHeight: '20px' }}>
+            <div style={{ position: 'absolute', left: 0, display: 'flex', alignItems: 'center' }}>
+              {closeBtn}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+              {iconNode}
+              <span>{label}</span>
+            </div>
           </div>
         }
         headerExtra={
@@ -177,9 +183,20 @@ const DocumentDetailsPanel = ({
   const sanitizedContent = sanitizeContent(data?.content || '');
   const hasPreview = !!(sanitizedContent && sanitizedContent.trim() !== '<p></p>' && sanitizedContent.trim() !== '');
 
+  const closeBtn = (
+    <Button
+      icon="pi pi-times"
+      className="p-button-text p-button-sm panel-toggle-button"
+      onClick={(e) => { e.stopPropagation(); if (onClose) onClose(); else setCollapsed(true); }}
+      tooltip="Cerrar"
+      tooltipOptions={{ showDelay: 500, position: 'bottom' }}
+    />
+  );
+
   return (
     <Wrapper
       iconNode={<i className="pi pi-file" style={{ fontSize: '14px', color: '#64b5f6' }}></i>}
+      closeBtn={closeBtn}
       rightButtons={
         <>
           <Button

@@ -17,6 +17,7 @@ const DetailsPanelWrapper = ({
   onResizeStart,
   label,
   iconNode,
+  closeBtn,
   rightButtons,
   children,
   onMinimize,
@@ -39,9 +40,14 @@ const DetailsPanelWrapper = ({
       style={{ height: '100%', width: '100%' }}
       showControls={false}
       title={
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-          {iconNode}
-          <span>{label}</span>
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', minHeight: '20px' }}>
+          <div style={{ position: 'absolute', left: 0, display: 'flex', alignItems: 'center' }}>
+            {closeBtn}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+            {iconNode}
+            <span>{label}</span>
+          </div>
         </div>
       }
       headerExtra={
@@ -163,7 +169,8 @@ const ConnectionDetailsPanel = ({
   onOpenSSHConnection,
   onOpenVncConnection,
   collapsed: controlledCollapsed,
-  onCollapseChange
+  onCollapseChange,
+  onClose
 }) => {
   // TODOS LOS HOOKS DEBEN IR AL PRINCIPIO, ANTES DE CUALQUIER RETORNO CONDICIONAL
   const { t } = useTranslation('common');
@@ -398,8 +405,18 @@ const ConnectionDetailsPanel = ({
   const frameControls = {
     onMinimize: (e) => { e?.stopPropagation(); setCollapsed(true); },
     onMaximize: (e) => { e?.stopPropagation(); setCollapsed(false); },
-    onClose: (e) => { e?.stopPropagation(); setCollapsed(true); }
+    onClose: (e) => { e?.stopPropagation(); if (onClose) onClose(); else setCollapsed(true); }
   };
+
+  const closeBtn = (
+    <Button
+      icon="pi pi-times"
+      className="p-button-text p-button-sm panel-toggle-button"
+      onClick={(e) => { e.stopPropagation(); onClose?.(); }}
+      tooltip="Cerrar"
+      tooltipOptions={{ showDelay: 500, position: 'bottom' }}
+    />
+  );
 
   const chevronBtn = (
     <Button
@@ -420,6 +437,7 @@ const ConnectionDetailsPanel = ({
         onResizeStart={handleResizeStart}
         label={label}
         iconNode={<i className="pi pi-folder" style={{ fontSize: '14px', color: selectedNode.color || 'var(--ui-folder-color, #ffa726)' }}></i>}
+        closeBtn={closeBtn}
         rightButtons={chevronBtn}
         {...frameControls}
       >
@@ -466,6 +484,7 @@ const ConnectionDetailsPanel = ({
         onResizeStart={handleResizeStart}
         label={label}
         iconNode={<i className="pi pi-key" style={{ fontSize: '14px', color: '#ffc107' }}></i>}
+        closeBtn={closeBtn}
         rightButtons={chevronBtn}
         {...frameControls}
       >
@@ -563,6 +582,7 @@ const ConnectionDetailsPanel = ({
       onResizeStart={handleResizeStart}
       label={label}
       iconNode={getNodeIcon()}
+      closeBtn={closeBtn}
       {...frameControls}
       rightButtons={
         <>

@@ -67,7 +67,8 @@ const PasswordDetailsPanel = ({
   selectedNode,
   onCopy = null,
   collapsed: controlledCollapsed,
-  onCollapseChange
+  onCollapseChange,
+  onClose
 }) => {
   const [localCollapsed, setLocalCollapsed] = useState(false);
   const isControlled = controlledCollapsed !== undefined;
@@ -330,6 +331,16 @@ const PasswordDetailsPanel = ({
     }
   };
 
+  const closeBtn = (
+    <Button
+      icon="pi pi-times"
+      className="p-button-text p-button-sm panel-toggle-button"
+      onClick={(e) => { e.stopPropagation(); if (onClose) onClose(); else setCollapsed(true); }}
+      tooltip="Cerrar"
+      tooltipOptions={{ showDelay: 500, position: 'bottom' }}
+    />
+  );
+
   return (
     <div
       className={`connection-details-panel password-details-panel ${collapsed ? 'collapsed' : ''} ${isResizing ? 'resizing' : ''}`}
@@ -347,9 +358,14 @@ const PasswordDetailsPanel = ({
         style={{ height: '100%', width: '100%' }}
         showControls={false}
         title={
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-            {getSecretIcon(secretType)}
-            <span>{label}</span>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', minHeight: '20px' }}>
+            <div style={{ position: 'absolute', left: 0, display: 'flex', alignItems: 'center' }}>
+              {closeBtn}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+              {getSecretIcon(secretType)}
+              <span>{label}</span>
+            </div>
           </div>
         }
         headerExtra={

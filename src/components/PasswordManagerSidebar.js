@@ -2307,6 +2307,10 @@ const PasswordManagerSidebar = ({
         onCopy={handleCopyToClipboard}
         collapsed={detailsCollapsed}
         onCollapseChange={setDetailsCollapsed}
+        onClose={() => {
+          setSelectedNodeKey(null);
+          setSelectedNodeForDetails(null);
+        }}
       />
 
       {/* Dialog para crear/editar secreto */}

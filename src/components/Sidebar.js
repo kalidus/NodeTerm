@@ -3330,6 +3330,10 @@ const Sidebar = React.memo(({
           onOpenVncConnection={onOpenVncConnection}
           collapsed={detailsCollapsed}
           onCollapseChange={setDetailsCollapsed}
+          onClose={() => {
+            setSelectedNodeKey(null);
+            setSelectedNodeForDetails(null);
+          }}
         />
       </div>
 
