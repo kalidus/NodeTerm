@@ -507,6 +507,12 @@ export function EnhancedRDPForm({
       case 'screen':
         return (
           <div id={`${p}-advanced-panel-screen`} role="tabpanel" className="terminal-advanced-panel-pane">
+            <div className="flex align-items-center gap-2 mb-3">
+              <i className="pi pi-desktop" style={{ color: 'var(--ui-button-primary, #6366f1)', fontSize: '0.85rem' }}></i>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ui-button-primary, #6366f1)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                {t('rdp.sections.screen')}
+              </span>
+            </div>
             <div className="terminal-screen-grid">
               <TerminalDropdownField
                 id={`${p}-preset`}
@@ -560,6 +566,12 @@ export function EnhancedRDPForm({
       case 'options':
         return (
           <div id={`${p}-advanced-panel-options`} role="tabpanel" className="terminal-advanced-panel-pane">
+            <div className="flex align-items-center gap-2 mb-3">
+              <i className="pi pi-cog" style={{ color: 'var(--ui-button-primary, #6366f1)', fontSize: '0.85rem' }}></i>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ui-button-primary, #6366f1)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                {t('rdp.sections.options')}
+              </span>
+            </div>
             <div className="terminal-options-grid">
               {formData.clientType === 'mstsc' ? (
                 <>
@@ -670,6 +682,12 @@ export function EnhancedRDPForm({
       case 'guacamole':
         return (
           <div id={`${p}-advanced-panel-guacamole`} role="tabpanel" className="terminal-advanced-panel-pane">
+            <div className="flex align-items-center gap-2 mb-3">
+              <i className="pi pi-sliders-h" style={{ color: 'var(--ui-button-primary, #6366f1)', fontSize: '0.85rem' }}></i>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ui-button-primary, #6366f1)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                {t('rdp.sections.advanced')}
+              </span>
+            </div>
             <TerminalOptionSection title={t('rdp.advanced.performance')}>
               <TerminalSwitchOption
                 iconClass="pi-palette"
@@ -761,6 +779,12 @@ export function EnhancedRDPForm({
       case 'sharedFolder':
         return (
           <div id={`${p}-advanced-panel-sharedFolder`} role="tabpanel" className="terminal-advanced-panel-pane">
+            <div className="flex align-items-center gap-2 mb-3">
+              <i className="pi pi-folder" style={{ color: 'var(--ui-button-primary, #6366f1)', fontSize: '0.85rem' }}></i>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ui-button-primary, #6366f1)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                {t('rdp.fields.sharedFolder')}
+              </span>
+            </div>
             <div className="terminal-row mb-0">
               <label className="terminal-label terminal-label-with-help" htmlFor={`${p}-guacDriveHostDir`}>
                 <span>{t('rdp.fields.localPath').toUpperCase()}</span>
