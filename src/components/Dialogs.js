@@ -1623,6 +1623,12 @@ export function EnhancedSSHForm({
 
   const renderFoldersContent = () => (
     <div>
+      <div className="flex align-items-center gap-2 mb-3">
+        <i className="pi pi-folder" style={{ color: 'var(--ui-button-primary, #6366f1)', fontSize: '0.85rem' }}></i>
+        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ui-button-primary, #6366f1)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+          Carpetas
+        </span>
+      </div>
       {renderFolderSelector()}
       <div className="terminal-row mb-4">
         <label className="terminal-label">CARPETA REMOTA (INICIAL) <span className="opacity-50">({tCommon('labels.optional')})</span></label>
@@ -2416,7 +2422,12 @@ export function EnhancedSSHForm({
             {activeFormTab === 'folders' && renderFoldersContent()}
             {activeFormTab === 'proxy' && (
               <div className="p-fluid">
-                <h4 style={{ marginBottom: '1.25rem', marginTop: 0, fontSize: '0.9rem', fontWeight: 600 }}>Configuración de Salto SSH (Proxy Jump)</h4>
+                <div className="flex align-items-center gap-2 mb-3">
+                  <i className="pi pi-share-alt" style={{ color: 'var(--ui-button-primary, #6366f1)', fontSize: '0.85rem' }}></i>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ui-button-primary, #6366f1)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                    Configuración de Salto SSH (Proxy Jump)
+                  </span>
+                </div>
                 <p className="terminal-proxyjump-intro" style={{ marginBottom: '1.25rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem', opacity: 0.7 }}>
                   <i className="pi pi-question-circle" style={{ fontSize: '1rem', color: 'var(--ui-button-primary)' }}></i>
                   <span>{t('ssh.auth.proxyJumpDescription')}</span>
@@ -2531,7 +2542,12 @@ export function EnhancedSSHForm({
             )}
             {activeFormTab === 'security' && (
               <div className="p-fluid">
-                <h4 style={{ marginBottom: '1.25rem', marginTop: 0, fontSize: '0.9rem', fontWeight: 600 }}>Políticas de Seguridad de Host</h4>
+                <div className="flex align-items-center gap-2 mb-3">
+                  <i className="pi pi-shield" style={{ color: 'var(--ui-button-primary, #6366f1)', fontSize: '0.85rem' }}></i>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ui-button-primary, #6366f1)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                    Políticas de Seguridad de Host
+                  </span>
+                </div>
                 <div className="terminal-row">
                   <label className="terminal-label terminal-label-with-help">
                     <span>{t('ssh.auth.hostKeyPolicy').toUpperCase()}</span>
@@ -2554,7 +2570,12 @@ export function EnhancedSSHForm({
             )}
             {activeFormTab === 'advanced' && (
               <div>
-                <h4 style={{ marginBottom: '1.25rem', marginTop: 0, fontSize: '0.9rem', fontWeight: 600 }}>Opciones Avanzadas</h4>
+                <div className="flex align-items-center gap-2 mb-3">
+                  <i className="pi pi-cog" style={{ color: 'var(--ui-button-primary, #6366f1)', fontSize: '0.85rem' }}></i>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ui-button-primary, #6366f1)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                    Opciones Avanzadas
+                  </span>
+                </div>
                 <div className="terminal-options-grid" style={{ gridTemplateColumns: '1fr', gap: '0.75rem' }}>
                   <div className="terminal-option-item" style={{ padding: '0.5rem 0' }}>
                     <div className="flex align-items-center">
