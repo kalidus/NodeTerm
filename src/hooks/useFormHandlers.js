@@ -1094,7 +1094,7 @@ export const useFormHandlers = ({
     
     const nodesCopy = deepCopy(nodes);
     
-    if (isEditing && originalNode) {
+    if (isEditing && originalNode && !originalNode.isNew) {
       const nodeToEdit = findNodeByKey(nodesCopy, originalNode.key);
       if (nodeToEdit) {
         const oldConnection = connectionHelpers.fromSidebarNode(originalNode);
@@ -1133,6 +1133,44 @@ export const useFormHandlers = ({
             life: 3000
           });
         }
+      }
+    } else {
+      const newKey = `ssh-tunnel_${Date.now()}`;
+      const newTunnelNode = {
+        key: newKey,
+        label: tunnelData.name.trim(),
+        data: {
+          type: 'ssh-tunnel',
+          tunnelType: tunnelData.tunnelType,
+          sshHost: tunnelData.sshHost.trim(),
+          sshPort: tunnelData.sshPort || 22,
+          sshUser: tunnelData.sshUser.trim(),
+          sshPassword: tunnelData.sshPassword || '',
+          authType: tunnelData.authType || 'password',
+          privateKeyPath: tunnelData.privateKeyPath || '',
+          passphrase: tunnelData.passphrase || '',
+          localHost: tunnelData.localHost || '127.0.0.1',
+          localPort: tunnelData.localPort || 0,
+          remoteHost: tunnelData.remoteHost || '',
+          remotePort: tunnelData.remotePort || 0,
+          bindHost: tunnelData.bindHost || '0.0.0.0'
+        },
+        draggable: true,
+        droppable: false,
+        uid: newKey,
+        createdAt: new Date().toISOString(),
+        isUserCreated: true
+      };
+      nodesCopy.unshift(newTunnelNode);
+      setNodes(nodesCopy);
+
+      if (!silent) {
+        toast.current.show({
+          severity: 'success',
+          summary: 'Túnel SSH añadido',
+          detail: `Túnel "${tunnelData.name}" añadido al árbol`,
+          life: 3000
+        });
       }
     }
   }, [nodes, setNodes, findNodeByKey, deepCopy, toast]);
@@ -1271,7 +1309,7 @@ export const useFormHandlers = ({
    * Guardar RDP en sidebar
    */
   const handleSaveRdpToSidebar = useCallback((rdpData, isEditing = false, originalNode = null, silent = false) => {
-    if (isEditing && originalNode) {
+    if (isEditing && originalNode && !originalNode.isNew) {
       // Guardar datos antiguos para actualizar favoritos
       const oldConnection = connectionHelpers.fromSidebarNode(originalNode);
       
@@ -1383,10 +1421,10 @@ export const useFormHandlers = ({
         isUserCreated: true
       };
 
-      // Agregar el nodo a la raíz del árbol
+      // Agregar el nodo al principio de la raíz del árbol
       setNodes(prevNodes => {
         const newNodes = Array.isArray(prevNodes) ? [...prevNodes] : [];
-        newNodes.push(newNode);
+        newNodes.unshift(newNode);
         return newNodes;
       });
     }
@@ -1481,7 +1519,7 @@ export const useFormHandlers = ({
    * Guardar VNC en sidebar
    */
   const handleSaveVncToSidebar = useCallback((vncData, isEditing = false, originalNode = null, silent = false) => {
-    if (isEditing && originalNode) {
+    if (isEditing && originalNode && !originalNode.isNew) {
       // Guardar datos antiguos para actualizar favoritos
       const oldConnection = connectionHelpers.fromSidebarNode(originalNode);
       
@@ -1551,10 +1589,10 @@ export const useFormHandlers = ({
         isUserCreated: true
       };
 
-      // Agregar el nodo a la raíz del árbol
+      // Agregar el nodo al principio de la raíz del árbol
       setNodes(prevNodes => {
         const newNodes = Array.isArray(prevNodes) ? [...prevNodes] : [];
-        newNodes.push(newNode);
+        newNodes.unshift(newNode);
         return newNodes;
       });
     }
@@ -1616,7 +1654,7 @@ export const useFormHandlers = ({
     
     const fileType = fileData.protocol || 'sftp'; // sftp, ftp, scp
     
-    if (isEditing && originalNode) {
+    if (isEditing && originalNode && !originalNode.isNew) {
       // Guardar datos antiguos para actualizar favoritos
       const oldConnection = connectionHelpers.fromSidebarNode(originalNode);
       
@@ -1674,11 +1712,10 @@ export const useFormHandlers = ({
         isUserCreated: true
       };
 
-      // Agregar el nodo a la raíz del árbol
+      // Agregar el nodo al principio de la raíz del árbol
       setNodes(prevNodes => {
         const newNodes = Array.isArray(prevNodes) ? [...prevNodes] : [];
-        newNodes.push(newNode);
-        console.log('Nodo de archivos agregado a la sidebar:', newNode);
+        newNodes.unshift(newNode);
         return newNodes;
       });
     }
