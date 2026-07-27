@@ -796,6 +796,12 @@ export default function EditConnectionTabContent({
 
         const renderTunnelLocalConfig = () => (
           <div>
+            <div className="flex align-items-center gap-2 mb-3">
+              <i className="pi pi-home" style={{ color: 'var(--ui-button-primary, #6366f1)', fontSize: '0.85rem' }}></i>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ui-button-primary, #6366f1)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                Configuración Local del Túnel
+              </span>
+            </div>
             <div className="terminal-row mb-3">
               <label className="terminal-label">NOMBRE DE CONEXIÓN *</label>
               <div className="terminal-input-wrap">
@@ -908,6 +914,12 @@ export default function EditConnectionTabContent({
 
         const renderTunnelSSHConfig = () => (
           <div>
+            <div className="flex align-items-center gap-2 mb-3">
+              <i className="pi pi-server" style={{ color: 'var(--ui-button-primary, #6366f1)', fontSize: '0.85rem' }}></i>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ui-button-primary, #6366f1)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                Servidor y Autenticación SSH
+              </span>
+            </div>
             <div className="terminal-host-port-row mb-3">
               <div className="terminal-host-port-host">
                 <label className="terminal-label">SERVIDOR SSH *</label>

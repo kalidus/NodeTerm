@@ -207,6 +207,29 @@ export function EnhancedVNCForm({
 
   const renderCredentials = () => (
     <>
+      <div className="flex align-items-center gap-2 mb-3">
+        <i className="pi pi-info-circle" style={{ color: 'var(--ui-button-primary, #6366f1)', fontSize: '0.85rem' }}></i>
+        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ui-button-primary, #6366f1)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+          Información General
+        </span>
+      </div>
+
+      <div className="terminal-row mb-3">
+        <label className="terminal-label" htmlFor={`${p}-name`}>
+          {t('vnc.fields.name').toUpperCase()}
+        </label>
+        <div className="terminal-input-wrap">
+          <InputText
+            id={`${p}-name`}
+            value={formData.name}
+            onChange={handleTextChange('name')}
+            placeholder={t('vnc.placeholders.name')}
+            className="terminal-input"
+            autoComplete="off"
+          />
+        </div>
+      </div>
+
       <div className="terminal-host-port-row mb-3">
         <div className="terminal-host-port-host">
           <label className="terminal-label" htmlFor={`${p}-server`}>
@@ -242,19 +265,12 @@ export function EnhancedVNCForm({
         </div>
       </div>
 
-      <div className="terminal-row mb-3">
-        <label className="terminal-label" htmlFor={`${p}-name`}>
-          {t('vnc.fields.name').toUpperCase()}
-        </label>
-        <div className="terminal-input-wrap">
-          <InputText
-            id={`${p}-name`}
-            value={formData.name}
-            onChange={handleTextChange('name')}
-            placeholder={t('vnc.placeholders.name')}
-            className="terminal-input"
-            autoComplete="off"
-          />
+      <div className="terminal-row mb-3 mt-4 pt-3" style={{ borderTop: '1px solid var(--ui-content-border, rgba(255, 255, 255, 0.08))' }}>
+        <div className="flex align-items-center gap-2 mb-2">
+          <i className="pi pi-lock" style={{ color: 'var(--ui-button-primary, #6366f1)', fontSize: '0.85rem' }}></i>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ui-button-primary, #6366f1)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+            Autenticación
+          </span>
         </div>
       </div>
 
@@ -322,6 +338,12 @@ export function EnhancedVNCForm({
       case 'screen':
         return (
           <div id={`${p}-advanced-panel-screen`} role="tabpanel" className="terminal-advanced-panel-pane">
+            <div className="flex align-items-center gap-2 mb-3">
+              <i className="pi pi-desktop" style={{ color: 'var(--ui-button-primary, #6366f1)', fontSize: '0.85rem' }}></i>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ui-button-primary, #6366f1)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                {t('vnc.advancedTabs.screen')}
+              </span>
+            </div>
             <div className="terminal-screen-grid">
               <TerminalDropdownField
                 id={`${p}-resolution`}
@@ -375,6 +397,12 @@ export function EnhancedVNCForm({
       case 'options':
         return (
           <div id={`${p}-advanced-panel-options`} role="tabpanel" className="terminal-advanced-panel-pane">
+            <div className="flex align-items-center gap-2 mb-3">
+              <i className="pi pi-cog" style={{ color: 'var(--ui-button-primary, #6366f1)', fontSize: '0.85rem' }}></i>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ui-button-primary, #6366f1)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                {t('vnc.advancedTabs.options')}
+              </span>
+            </div>
             <div className="terminal-options-grid">
               <TerminalSwitchOption
                 iconClass="pi-eye"
