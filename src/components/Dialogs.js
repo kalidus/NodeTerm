@@ -1483,20 +1483,28 @@ export function EnhancedSSHForm({
   );
 
   const renderNameDesc = () => (
-    <div className="terminal-row grid grid-nogutter gap-3 mb-3">
-      <div className="col">
-        <label className="terminal-label">Nombre de Conexión</label>
-        <div className="terminal-input-wrap">
-          <InputText value={sshName} onChange={(e) => setSSHName(e.target.value)} placeholder="Mi Servidor" className="terminal-input" />
+    <>
+      <div className="flex align-items-center gap-2 mb-3">
+        <i className="pi pi-info-circle" style={{ color: 'var(--ui-button-primary, #6366f1)', fontSize: '0.85rem' }}></i>
+        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ui-button-primary, #6366f1)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+          Información General
+        </span>
+      </div>
+      <div className="terminal-row grid grid-nogutter gap-3 mb-3">
+        <div className="col">
+          <label className="terminal-label">Nombre de Conexión</label>
+          <div className="terminal-input-wrap">
+            <InputText value={sshName} onChange={(e) => setSSHName(e.target.value)} placeholder="Mi Servidor" className="terminal-input" />
+          </div>
+        </div>
+        <div className="col">
+          <label className="terminal-label">Descripción</label>
+          <div className="terminal-input-wrap">
+            <InputText value={sshDescription} onChange={(e) => setSSHDescription(e.target.value)} placeholder="..." className="terminal-input" />
+          </div>
         </div>
       </div>
-      <div className="col">
-        <label className="terminal-label">Descripción</label>
-        <div className="terminal-input-wrap">
-          <InputText value={sshDescription} onChange={(e) => setSSHDescription(e.target.value)} placeholder="..." className="terminal-input" />
-        </div>
-      </div>
-    </div>
+    </>
   );
 
   const renderAuthMethodSelector = () => (
