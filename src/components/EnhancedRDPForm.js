@@ -328,6 +328,29 @@ export function EnhancedRDPForm({
 
   const renderCredentials = () => (
     <>
+      <div className="flex align-items-center gap-2 mb-3">
+        <i className="pi pi-info-circle" style={{ color: 'var(--ui-button-primary, #6366f1)', fontSize: '0.85rem' }}></i>
+        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ui-button-primary, #6366f1)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+          Información General
+        </span>
+      </div>
+
+      <div className="terminal-row mb-3">
+        <label className="terminal-label" htmlFor={`${p}-name`}>
+          {t('rdp.fields.name').toUpperCase()}
+        </label>
+        <div className="terminal-input-wrap">
+          <InputText
+            id={`${p}-name`}
+            value={formData.name}
+            onChange={handleTextChange('name')}
+            placeholder={t('rdp.placeholders.name')}
+            className="terminal-input"
+            autoComplete="off"
+          />
+        </div>
+      </div>
+
       <div className="terminal-host-port-row mb-3">
         <div className="terminal-host-port-host">
           <label className="terminal-label" htmlFor={`${p}-server`}>
@@ -363,19 +386,12 @@ export function EnhancedRDPForm({
         </div>
       </div>
 
-      <div className="terminal-row mb-3">
-        <label className="terminal-label" htmlFor={`${p}-name`}>
-          {t('rdp.fields.name').toUpperCase()}
-        </label>
-        <div className="terminal-input-wrap">
-          <InputText
-            id={`${p}-name`}
-            value={formData.name}
-            onChange={handleTextChange('name')}
-            placeholder={t('rdp.placeholders.name')}
-            className="terminal-input"
-            autoComplete="off"
-          />
+      <div className="terminal-row mb-3 mt-4 pt-3" style={{ borderTop: '1px solid var(--ui-content-border, rgba(255, 255, 255, 0.08))' }}>
+        <div className="flex align-items-center gap-2 mb-2">
+          <i className="pi pi-lock" style={{ color: 'var(--ui-button-primary, #6366f1)', fontSize: '0.85rem' }}></i>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--ui-button-primary, #6366f1)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+            Autenticación
+          </span>
         </div>
       </div>
 
