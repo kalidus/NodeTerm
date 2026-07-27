@@ -2818,6 +2818,35 @@ const App = () => {
     promoteAndActivateTab(tabKey, (prev) => [newTab, ...prev]);
   }, [getAllTabs, promoteAndActivateTab]);
 
+  const handleOpenNewConnectionTab = useCallback((protocol = 'ssh') => {
+    const tabKey = `new_connection_${Date.now()}`;
+    const protocolUpper = (protocol || 'ssh').toUpperCase();
+    const dummyNode = {
+      key: `temp_${Date.now()}`,
+      label: `Nueva Conexión ${protocolUpper}`,
+      type: protocol,
+      data: { type: protocol },
+      isNew: true
+    };
+    const newTab = {
+      key: tabKey,
+      label: `Nueva Conexión (${protocolUpper})`,
+      type: 'edit-connection',
+      node: dummyNode,
+      createdAt: Date.now()
+    };
+    promoteAndActivateTab(tabKey, (prev) => [newTab, ...prev]);
+  }, [promoteAndActivateTab]);
+
+  useEffect(() => {
+    const handleOpenNewConn = (e) => {
+      const protocol = e?.detail?.protocol || 'ssh';
+      handleOpenNewConnectionTab(protocol);
+    };
+    window.addEventListener('open-new-connection-tab', handleOpenNewConn);
+    return () => window.removeEventListener('open-new-connection-tab', handleOpenConn);
+  }, [handleOpenNewConnectionTab]);
+
   const openEditSSHDialog = handleOpenEditConnectionTab;
   const openEditRdpDialog = handleOpenEditConnectionTab;
   const openEditVncDialog = handleOpenEditConnectionTab;

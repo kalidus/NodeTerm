@@ -369,39 +369,11 @@ const DialogsManager = ({
   const handleProtocolSelect = useCallback((protocolId) => {
     setShowProtocolSelectionDialog(false);
 
-    // Abrir el diálogo correspondiente según el protocolo seleccionado
-    switch (protocolId) {
-      case 'ssh':
-        // Abrir nuevo diálogo SSH
-        setShowNewSSHDialog(true);
-        break;
-      case 'rdp':
-        // Abrir nuevo diálogo RDP
-        setShowNewRDPDialog(true);
-        break;
-      case 'vnc':
-        // Abrir nuevo diálogo VNC
-        setShowNewVNCDialog(true);
-        break;
-      case 'sftp':
-      case 'ftp':
-      case 'scp':
-        // Abrir FileConnectionDialog con el protocolo seleccionado
-        if (setFileConnectionProtocol) {
-          setFileConnectionProtocol(protocolId);
-        }
-        setShowFileConnectionDialog(true);
-        break;
-      case 'ssh-tunnel':
-        // Abrir diálogo de túnel SSH
-        if (setShowSSHTunnelDialog) {
-          setShowSSHTunnelDialog(true);
-        }
-        break;
-      default:
-        console.warn('Protocolo no reconocido:', protocolId);
-    }
-  }, [setShowFileConnectionDialog, setFileConnectionProtocol, setShowSSHTunnelDialog]);
+    // Emitir evento para abrir una pestaña de nueva conexión según el protocolo elegido
+    window.dispatchEvent(new CustomEvent('open-new-connection-tab', {
+      detail: { protocol: protocolId }
+    }));
+  }, []);
 
   // Escuchar evento para abrir diálogo de selección de protocolo con categoría inicial
   useEffect(() => {

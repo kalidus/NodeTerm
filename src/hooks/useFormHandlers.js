@@ -927,7 +927,7 @@ export const useFormHandlers = ({
       }
     }
 
-    if (isEditing && originalNode) {
+    if (isEditing && originalNode && !originalNode.isNew) {
       const oldConnection = connectionHelpers.fromSidebarNode(originalNode);
       const nodesCopy = deepCopy(nodes);
       const nodeToEdit = findNodeByKey(nodesCopy, originalNode.key);
@@ -990,17 +990,71 @@ export const useFormHandlers = ({
         }
       }
       setNodes(nodesCopy);
+    } else {
+      // Crear nueva conexión SSH e insertarla en la barra lateral
+      const newKey = generateUniqueKey(nodes, name.trim());
+      const newSSHNode = {
+        key: newKey,
+        label: name.trim(),
+        data: {
+          host: userInfo.isWallix ? userInfo.targetServer : host.trim(),
+          user: userInfo.isWallix ? userInfo.targetUser : user.trim(),
+          password: authMethod === 'password' ? password.trim() : '',
+          privateKey: authMethod === 'key' ? privateKey.trim() : '',
+          authMethod,
+          remoteFolder: remoteFolder ? remoteFolder.trim() : '',
+          port,
+          type: 'ssh',
+          useBastionWallix: userInfo.isWallix,
+          bastionHost: userInfo.isWallix ? host.trim() : '',
+          bastionUser: userInfo.isWallix ? userInfo.bastionUser : '',
+          targetServer: userInfo.isWallix ? userInfo.targetServer : '',
+          autoCopyPassword: autoCopyPassword || false,
+          x11Forwarding: x11Forwarding || false,
+          agentForwarding: agentForwarding || false,
+          autoRecording: autoRecording || false,
+          proxyJumpEnabled: proxyJumpState.active,
+          jumpHost: proxyJumpState.active ? proxyJumpState.host : '',
+          jumpPort: proxyJumpState.active ? (jumpPort || 22) : 22,
+          jumpUser: proxyJumpState.active ? proxyJumpState.user : '',
+          jumpAuthMethod: proxyJumpState.active ? (jumpAuthMethod === 'key' ? 'key' : 'password') : 'password',
+          jumpPassword: proxyJumpState.active && jumpAuthMethod !== 'key' ? jumpPassword.trim() : '',
+          jumpPrivateKey: proxyJumpState.active && jumpAuthMethod === 'key' ? jumpPrivateKey.trim() : '',
+          hostKeyPolicy: userInfo.isWallix ? 'warn_new' : (hostKeyPolicy || 'warn_new'),
+          description: description || '',
+          customIcon: customIcon && customIcon !== 'default' ? customIcon : null
+        },
+        draggable: true,
+        droppable: false,
+        uid: newKey,
+        createdAt: new Date().toISOString(),
+        isUserCreated: true
+      };
+
+      const nodesCopy = deepCopy(nodes);
+      if (targetFolder) {
+        const parentNode = findNodeByKey(nodesCopy, targetFolder);
+        if (parentNode) {
+          parentNode.children = parentNode.children || [];
+          parentNode.children.unshift(newSSHNode);
+        } else {
+          nodesCopy.unshift(newSSHNode);
+        }
+      } else {
+        nodesCopy.unshift(newSSHNode);
+      }
+      setNodes(nodesCopy);
     }
 
     if (!silent) {
       toast.current.show({
         severity: 'success',
-        summary: 'SSH editada',
-        detail: `Sesión SSH actualizada`,
+        summary: isEditing && originalNode && !originalNode.isNew ? 'SSH editada' : 'SSH añadida',
+        detail: isEditing && originalNode && !originalNode.isNew ? 'Sesión SSH actualizada' : `Conexión SSH "${name}" añadida al árbol`,
         life: 3000
       });
     }
-  }, [nodes, setNodes, findNodeByKey, findParentNodeAndIndex, deepCopy, parseWallixUser, toast]);
+  }, [nodes, setNodes, findNodeByKey, findParentNodeAndIndex, deepCopy, parseWallixUser, generateUniqueKey, toast]);
 
   /**
    * Guardar túnel SSH en sidebar desde tab

@@ -248,7 +248,7 @@ export default function EditConnectionTabContent({
 
   // Auto-guardado al editar cualquier campo
   useEffect(() => {
-    if (!isInitializedRef.current || !isFormValid()) return;
+    if (!isInitializedRef.current || !isFormValid() || node?.isNew) return;
 
     const saveTimeout = setTimeout(() => {
       if (connectionType === 'ssh') {
