@@ -132,6 +132,7 @@
     "importMremote": "Import mRemoteNG/KeePass",
     "importNodeterm": "Import NodeTerm (.nodeterm)",
     "export": "Export",
+    "importExport": "Import / Export",
     "view": "View",
     "reload": "Reload",
     "forceReload": "Force reload",

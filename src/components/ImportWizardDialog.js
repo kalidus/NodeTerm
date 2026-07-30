@@ -1016,6 +1016,11 @@ const ImportWizardDialog = ({
             detail: 'Datos de NodeTerm importados correctamente',
             life: 5000
         });
+
+        // Refrescar arbol de conexiones / notas tras restaurar backup a localStorage
+        window.dispatchEvent(new CustomEvent('nodeterm-backup-imported', {
+            detail: { stats: result }
+        }));
     };
 
     const importMRemoteNG = async () => {
@@ -1041,6 +1046,8 @@ const ImportWizardDialog = ({
                 targetBaseFolderKey: targetFolder,
                 linkedTargetFolderKey: targetFolder
             });
+        } else {
+            throw new Error('No se pudo actualizar la sidebar: falta el callback de importacion');
         }
 
         setImportProgress(100);
@@ -1079,6 +1086,8 @@ const ImportWizardDialog = ({
                 targetBaseFolderKey: targetFolder,
                 linkedTargetFolderKey: targetFolder
             });
+        } else {
+            throw new Error('No se pudo actualizar la sidebar: falta el callback de importacion');
         }
 
         setImportProgress(100);
@@ -1137,6 +1146,8 @@ const ImportWizardDialog = ({
                 targetBaseFolderKey: targetFolder,
                 linkedTargetFolderKey: targetFolder
             });
+        } else {
+            throw new Error('No se pudo actualizar la sidebar: falta el callback de importacion');
         }
 
         setImportProgress(100);

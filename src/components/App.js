@@ -2593,6 +2593,10 @@ const App = () => {
   // Escuchar eventos de sincronización externa para datos encriptados y configuración
   useEffect(() => {
     const handleSync = () => {
+        // Invalidar cache de desencriptado para forzar recarga real tras restore
+        lastDecryptedDataStr = null;
+        lastDecryptedKey = null;
+        lastDecryptedResult = null;
         loadNodes();
     };
 
@@ -2606,12 +2610,14 @@ const App = () => {
     window.addEventListener('connections-synced-from-cloud', handleSync);
     window.addEventListener('settings-updated', handleSettingsUpdated);
     window.addEventListener('localstorage-sync-ready', handleSync);
+    window.addEventListener('nodeterm-backup-imported', handleSync);
     
     return () => {
       window.removeEventListener('encryption-data-synced', handleSync);
       window.removeEventListener('connections-synced-from-cloud', handleSync);
       window.removeEventListener('settings-updated', handleSettingsUpdated);
       window.removeEventListener('localstorage-sync-ready', handleSync);
+      window.removeEventListener('nodeterm-backup-imported', handleSync);
     };
   }, [loadNodes]);
 

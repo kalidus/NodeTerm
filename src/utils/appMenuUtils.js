@@ -17,6 +17,7 @@ export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImpo
       'appMenu.importMremote': 'Importar mRemoteNG/KeePass',
       'appMenu.importNodeterm': 'Importar NodeTerm (.nodeterm)',
       'appMenu.export': 'Exportar',
+      'appMenu.importExport': 'Importar / Exportar',
       'appMenu.view': 'Ver',
       'appMenu.reload': 'Recargar',
       'appMenu.forceReload': 'Forzar recarga',
@@ -41,20 +42,12 @@ export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImpo
       icon: 'pi pi-file',
       submenu: [
         {
-          label: getText('appMenu.export'),
-          icon: 'pi pi-download',
+          label: getText('appMenu.importExport'),
+          icon: 'pi pi-arrow-right-arrow-left',
           command: () => {
-            console.log('🔍 [Menu] Exportar clickeado');
-            window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'import-export' } }));
-          }
-        },
-        { separator: true },
-        {
-          label: getText('appMenu.import'),
-          icon: 'pi pi-upload',
-          command: () => {
-            console.log('🔍 [Menu] Importar (Wizard) clickeado');
-            window.dispatchEvent(new CustomEvent('open-settings-dialog', { detail: { tab: 'import-export', subTab: 'wizard' } }));
+            window.dispatchEvent(new CustomEvent('open-settings-tab', {
+              detail: { mainTab: 'importar-exportar' }
+            }));
           }
         }
       ]
