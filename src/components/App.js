@@ -4150,6 +4150,12 @@ const App = () => {
     nodes,
     onUpdateUserPassword: handleUpdateUserPassword,
     onEditConnection: handleEditConnectionFromUsers,
+    // Necesarios para Import Wizard (Wallix etc.) desde pestana Configuracion embebida
+    handleImportComplete,
+    toast,
+    masterKey,
+    secureStorage,
+    setNodes,
   }), [
     availableThemes, availableFonts, fontFamily, setFontFamily, fontSize, setFontSize,
     localFontFamily, setLocalFontFamily, localFontSize, setLocalFontSize, terminalTheme, setTerminalTheme,
@@ -4163,7 +4169,8 @@ const App = () => {
     statusBarIconTheme, setStatusBarIconTheme, statusBarPollingInterval, setStatusBarPollingInterval,
     statusBarLayout, setStatusBarLayout,
     exportTreeToJson, importTreeFromJson, sessionManager, handleMasterPasswordConfigured, nodes,
-    handleUpdateUserPassword, handleEditConnectionFromUsers
+    handleUpdateUserPassword, handleEditConnectionFromUsers,
+    handleImportComplete, toast, masterKey, secureStorage, setNodes
   ]);
 
   if (!isAppReady) {
