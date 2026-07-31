@@ -186,6 +186,9 @@
       "differentialPackage": false,
       "warningsAsErrors": false
     },
+    "dmg": {
+      "writeUpdateInfo": false
+    },
     "linux": {
       "target": [
         "AppImage",
@@ -232,14 +235,12 @@
         {
           "target": "dmg",
           "arch": [
-            "x64",
             "arm64"
           ]
         },
         {
           "target": "dir",
           "arch": [
-            "x64",
             "arm64"
           ]
         }
