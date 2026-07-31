@@ -254,7 +254,7 @@ const SettingsSidebar = ({
           <span
             className={node.categoryIcon}
             style={{
-              color: 'var(--ui-sidebar-selected)',
+              color: 'var(--ui-button-primary)',
               fontSize: `${folderIconSize}px`,
               marginRight: '4px',
               display: 'flex',
@@ -311,7 +311,7 @@ const SettingsSidebar = ({
             className={node.categoryIcon}
             style={{
               fontSize: `${folderIconSize}px`,
-              color: 'var(--ui-sidebar-selected)',
+              color: 'var(--ui-button-primary)',
               opacity: isHovered ? 1 : 0.95,
               transition: 'all 0.12s ease',
               flexShrink: 0,
@@ -428,7 +428,7 @@ const SettingsSidebar = ({
           text-overflow: ellipsis !important;
           white-space: nowrap !important;
           line-height: 1.25 !important;
-          color: var(--ui-sidebar-selected) !important;
+          color: var(--ui-button-primary) !important;
           font-size: var(--settings-section-font-size) !important;
           font-weight: 600 !important;
           text-transform: uppercase !important;
