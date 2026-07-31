@@ -7,13 +7,13 @@ const { exec } = require('child_process');
 const { promisify } = require('util');
 const execAsync = promisify(exec);
 const { parseProcessList } = require('../utils/parsing-utils');
-const JoplinImportService = require('../services/JoplinImportService');
+const { registerClipboardHandlers } = require('./clipboard-handlers');
 
 /**
  * Handlers para funcionalidades del sistema
  * - Clipboard (leer/escribir texto)
- * - Diálogos (guardar/abrir archivos)
- * - Importación de archivos
+ * - Dialogos (guardar/abrir archivos)
+ * - Importacion de archivos
  */
 
 /**
@@ -43,36 +43,30 @@ function hashFileSync(path) {
   }
 }
 
+function safeHandle(channel, handler) {
+  try {
+    ipcMain.removeHandler(channel);
+  } catch (_) {
+    /* noop */
+  }
+  ipcMain.handle(channel, handler);
+}
+
 /**
- * 🚀 CRÍTICO: Registra handlers del sistema que son necesarios para la UI inicial
- * Solo incluye Clipboard y Dialog que son esenciales para el funcionamiento básico
+ * Registra handlers del sistema necesarios para la UI inicial
+ * (clipboard + dialogs). Clipboard vive en clipboard-handlers.js.
  */
 function registerSystemHandlers() {
-
-  // === CLIPBOARD HANDLERS ===
-
-  // Handler para leer texto del clipboard
-  ipcMain.handle('clipboard:readText', () => {
-    return clipboard.readText();
-  });
-
-  // Handler para escribir texto al clipboard
-  ipcMain.handle('clipboard:writeText', (event, text) => {
-    clipboard.writeText(text == null ? '' : String(text));
-  });
+  registerClipboardHandlers();
 
   // === DIALOG HANDLERS ===
-
-  // Handler para mostrar el diálogo de guardado
-  ipcMain.handle('dialog:show-save-dialog', async (event, options) => {
+  safeHandle('dialog:show-save-dialog', async (event, options) => {
     const win = BrowserWindow.getFocusedWindow();
     return await dialog.showSaveDialog(win, options);
   });
 
-  // Handler para mostrar el diálogo de selección (abrir carpeta/archivo)
-  ipcMain.handle('dialog:show-open-dialog', async (event, options) => {
+  safeHandle('dialog:show-open-dialog', async (event, options) => {
     const win = BrowserWindow.getFocusedWindow();
-    // Asegurar propiedades por defecto si no vienen
     const safeOptions = {
       properties: ['openDirectory'],
       ...options
@@ -102,6 +96,8 @@ function registerSystemMonitoringHandlers() {
       if (!filePath || typeof filePath !== 'string' || filePath.trim() === '') {
         return { ok: false, error: 'Ruta de archivo no proporcionada o inválida' };
       }
+      // Lazy require: tar/marked no deben impedir registrar clipboard al cargar este modulo
+      const JoplinImportService = require('../services/JoplinImportService');
       const result = await JoplinImportService.importJex(filePath.trim());
       return { ok: true, result };
     } catch (e) {

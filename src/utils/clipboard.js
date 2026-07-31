@@ -34,13 +34,22 @@ export async function writeText(text) {
   if (!value) return false;
 
   if (window.electron?.clipboard?.writeText) {
-    await window.electron.clipboard.writeText(value);
-    return true;
+    try {
+      await window.electron.clipboard.writeText(value);
+      return true;
+    } catch (err) {
+      // Handler ausente o IPC roto: continuar con fallbacks del renderer
+      console.warn('[clipboard] Electron IPC write failed, using fallback:', err?.message || err);
+    }
   }
 
   if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(value);
-    return true;
+    try {
+      await navigator.clipboard.writeText(value);
+      return true;
+    } catch (err) {
+      console.warn('[clipboard] navigator.clipboard write failed:', err?.message || err);
+    }
   }
 
   writeViaExecCommand(value);
@@ -53,13 +62,21 @@ export async function writeText(text) {
  */
 export async function readText() {
   if (window.electron?.clipboard?.readText) {
-    const value = await window.electron.clipboard.readText();
-    return normalizeText(value);
+    try {
+      const value = await window.electron.clipboard.readText();
+      return normalizeText(value);
+    } catch (err) {
+      console.warn('[clipboard] Electron IPC read failed, using fallback:', err?.message || err);
+    }
   }
 
   if (navigator.clipboard?.readText) {
-    const value = await navigator.clipboard.readText();
-    return normalizeText(value);
+    try {
+      const value = await navigator.clipboard.readText();
+      return normalizeText(value);
+    } catch (err) {
+      console.warn('[clipboard] navigator.clipboard read failed:', err?.message || err);
+    }
   }
 
   return '';

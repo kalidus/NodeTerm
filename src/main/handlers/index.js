@@ -225,6 +225,11 @@ function registerSystemStatsIpcHandler() {
 }
 
 function registerBootstrapIpcHandlers() {
+  // Clipboard en modulo aislado (sin tar/Joplin): en asar prod system-handlers
+  // fallaba al require JoplinImportService porque faltaba el paquete tar.
+  runHandlerStep('clipboard IPC', () => {
+    require('./clipboard-handlers').registerClipboardHandlers();
+  });
   runHandlerStep('appdata IPC', () => getAppDataHandlers().registerAppDataHandlers({}));
   runHandlerStep('get-system-stats IPC', registerSystemStatsIpcHandler);
   runHandlerStep('theme IPC', () => getThemeHandlers().registerThemeHandlers({}));
