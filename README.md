@@ -5,7 +5,7 @@
   <br>
   <b>Cliente SSH moderno y multiplataforma para administradores y devs</b>
   <br><br>
-  <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/badge/version-1.7.3-blue.svg"/></a>
+  <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/badge/version-1.7.4-blue.svg"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg"/></a>
   <a href="https://www.electronjs.org/"><img src="https://img.shields.io/badge/electron-latest-brightgreen.svg"/></a>
   <a href="#donaciones"><img src="https://img.shields.io/badge/💰-Donate_Crypto-yellow.svg"/></a>
@@ -154,8 +154,10 @@ El historial detallado vive solo en **[CHANGELOG.md](CHANGELOG.md)**. Las [GitHu
 
 | | |
 |--|--|
-| **Ultima publicada** | **[v1.7.3](https://github.com/kalidus/NodeTerm/releases/tag/v1.7.3)** (31 julio 2026) |
+| **Ultima publicada** | **[v1.7.4](https://github.com/kalidus/NodeTerm/releases/tag/v1.7.4)** (31 julio 2026) |
 | **Instaladores** | [Descargas en Releases](https://github.com/kalidus/NodeTerm/releases) |
+
+**Resumen de v1.7.4:** hotfix clipboard en build de produccion (handler IPC aislado + fallback; dependencia `tar` para Joplin).
 
 **Resumen de v1.7.3:** rendimiento (xterm 60 FPS, splitter, telemetria adaptativa), UX unificada (`AppDialog`/`AppConfirm`), Cygwin bajo demanda, conexiones desde sidebar/tabs, formularios estandarizados, i18n y clipboard aislado del lock MCP.
 
@@ -253,6 +255,7 @@ NodeTerm/
 
 | Version | Foco | Estado |
 |---------|------|--------|
+| **v1.7.4** | Hotfix clipboard en release | Publicada |
 | **v1.7.3** | Rendimiento, UX unificada, Cygwin on-demand | Publicada |
 | **v1.7.2** | Proceso release / CI | Publicada |
 | **v1.7.1** | MCP agent: terminales abiertos e inject seguro | Incluida en linea 1.7.x |

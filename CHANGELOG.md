@@ -8,6 +8,15 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ## [Unreleased]
 
+## [1.7.4] - 2026-07-31
+
+### Hotfix clipboard (release)
+- **Causa**: en el paquete de produccion faltaba `tar`; al cargar `system-handlers` fallaba el `require` de Joplin y no se registraba `clipboard:writeText` (en dev si funcionaba).
+- **Clipboard IPC aislado**: nuevo `clipboard-handlers.js` registrado en bootstrap, sin dependencias pesadas.
+- **Joplin**: lazy require para no tumbar el arranque de handlers del sistema.
+- **Fallback renderer**: si el IPC falla, se usa `navigator.clipboard` / `execCommand`.
+- **Dependencia**: `tar` anadido a `dependencies` para import Joplin en builds empaquetados.
+
 ## [1.7.3] - 2026-07-31
 
 ### Rendimiento

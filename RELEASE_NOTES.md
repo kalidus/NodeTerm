@@ -1,17 +1,17 @@
-# Borrador de release — NodeTerm v1.7.3
+# Borrador de release — NodeTerm v1.7.4
 
 > **Uso:** texto opcional orientado al usuario antes de publicar en GitHub.  
 > **Fuente de verdad:** el historial completo esta en [`CHANGELOG.md`](CHANGELOG.md).  
 > `npm run release` publica en GitHub la seccion `## [x.y.z]` del changelog (no este archivo).
 
 **Fecha prevista:** 2026-07-31  
-**Version anterior:** v1.7.2
+**Version anterior:** v1.7.3
 
 ---
 
 ## Resumen
 
-NodeTerm v1.7.3 mejora fluidez y UX: write batching del terminal a 60 FPS, splitter sin lag, telemetria adaptativa y dialogos unificados (`AppDialog` / `AppConfirm`). Cygwin pasa a instalacion bajo demanda (instalador mas ligero). Incluye nueva conexion desde sidebar/tabs, formularios SSH/RDP/FTP/VNC estandarizados, i18n completada, copy UI aislado del lock MCP, y builds macOS solo arm64.
+Hotfix: restaura el copiado al portapapeles en la build de produccion (contrasenas, detalles de conexion, etc.). En v1.7.3 el handler IPC no se registraba en el paquete empaquetado; v1.7.4 lo aisla del arranque de Joplin/tar y anade fallback en el renderer.
 
 ---
 
