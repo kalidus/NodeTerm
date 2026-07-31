@@ -1,17 +1,17 @@
-# Borrador de release — NodeTerm v1.7.1
+# Borrador de release — NodeTerm v1.7.3
 
 > **Uso:** texto opcional orientado al usuario antes de publicar en GitHub.  
 > **Fuente de verdad:** el historial completo esta en [`CHANGELOG.md`](CHANGELOG.md).  
 > `npm run release` publica en GitHub la seccion `## [x.y.z]` del changelog (no este archivo).
 
-**Fecha prevista:** 2026-07-21  
-**Version anterior:** v1.7.0
+**Fecha prevista:** 2026-07-31  
+**Version anterior:** v1.7.2
 
 ---
 
 ## Resumen
 
-NodeTerm v1.7.1 refuerza el servidor MCP para agentes: control de terminales abiertos, buffer de salida, bloqueo de teclado humano e inyeccion segura de secretos con `promptTicket` (sin exponer contrasenas al agente). Incluye ademas las mejoras de monitor SSH, GPU/Linux y empaquetado `pacman` de la linea 1.7.0.
+NodeTerm v1.7.3 mejora fluidez y UX: write batching del terminal a 60 FPS, splitter sin lag, telemetria adaptativa y dialogos unificados (`AppDialog` / `AppConfirm`). Cygwin pasa a instalacion bajo demanda (instalador mas ligero). Incluye nueva conexion desde sidebar/tabs, formularios SSH/RDP/FTP/VNC estandarizados, i18n completada, copy UI aislado del lock MCP, y builds macOS solo arm64.
 
 ---
 

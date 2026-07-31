@@ -5,7 +5,7 @@
   <br>
   <b>Cliente SSH moderno y multiplataforma para administradores y devs</b>
   <br><br>
-  <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/badge/version-1.7.1-blue.svg"/></a>
+  <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/badge/version-1.7.3-blue.svg"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg"/></a>
   <a href="https://www.electronjs.org/"><img src="https://img.shields.io/badge/electron-latest-brightgreen.svg"/></a>
   <a href="#donaciones"><img src="https://img.shields.io/badge/💰-Donate_Crypto-yellow.svg"/></a>
@@ -154,8 +154,12 @@ El historial detallado vive solo en **[CHANGELOG.md](CHANGELOG.md)**. Las [GitHu
 
 | | |
 |--|--|
-| **Última publicada** | **[v1.7.1](https://github.com/kalidus/NodeTerm/releases/tag/v1.7.1)** (21 julio 2026) |
+| **Ultima publicada** | **[v1.7.3](https://github.com/kalidus/NodeTerm/releases/tag/v1.7.3)** (31 julio 2026) |
 | **Instaladores** | [Descargas en Releases](https://github.com/kalidus/NodeTerm/releases) |
+
+**Resumen de v1.7.3:** rendimiento (xterm 60 FPS, splitter, telemetria adaptativa), UX unificada (`AppDialog`/`AppConfirm`), Cygwin bajo demanda, conexiones desde sidebar/tabs, formularios estandarizados, i18n y clipboard aislado del lock MCP.
+
+**Resumen de v1.7.2:** proceso de release y publicacion en GitHub Actions (notas detalladas en la linea 1.7.3).
 
 **Resumen de v1.7.1:** MCP con control de terminales abiertos, buffer de salida e inyeccion segura de secretos (`promptTicket`); sin exponer contrasenas al agente.
 
@@ -247,12 +251,14 @@ NodeTerm/
 
 ## 🗓️ Roadmap
 
-| Versión | Foco | Estado |
+| Version | Foco | Estado |
 |---------|------|--------|
-| **v1.7.1** | MCP agent: terminales abiertos e inject seguro | 📋 Preparando release |
-| **v1.7.0** | Monitor SSH, GPU/Linux y pacman | ✅ Incluida en linea 1.7.x |
-| **v1.6.9** | Servidor MCP nativo | ✅ Publicada |
-| **v1.8.0** | Terminal multi-shell integrado | 💭 Concepto |
+| **v1.7.3** | Rendimiento, UX unificada, Cygwin on-demand | Publicada |
+| **v1.7.2** | Proceso release / CI | Publicada |
+| **v1.7.1** | MCP agent: terminales abiertos e inject seguro | Incluida en linea 1.7.x |
+| **v1.7.0** | Monitor SSH, GPU/Linux y pacman | Incluida en linea 1.7.x |
+| **v1.6.9** | Servidor MCP nativo | Publicada |
+| **v1.8.0** | Terminal multi-shell integrado | Concepto |
 
 Versiones anteriores: [CHANGELOG.md](CHANGELOG.md).
 

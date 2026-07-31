@@ -6,23 +6,51 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [1.7.2] - 2026-07-22
-
-**Proceso de release:** documenta aquí todos los cambios. `npm run release` publica esta sección en GitHub.
-Borrador opcional para usuarios: `RELEASE_NOTES.md` (solo la versión en curso). Resumen en `README.md`: ver [docs/release-process.md](docs/release-process.md).
-
-
 ## [Unreleased]
 
-### ⚡ Rendimiento y Fluidez de la Aplicación (Optimización Integral)
+## [1.7.3] - 2026-07-31
 
-- **Motor Xterm (Write Batching a 60 FPS)**: Implementación de acumulación y vuelco de datos `stdout` alineado a 60 FPS con `requestAnimationFrame` en ráfagas de datos masivas (SSH directo, Bastión Wallix y PowerShell), evitando bloqueos del hilo UI.
-- **Redimensionamiento de Paneles (Splitter)**: Solucionado el micro-lag y congelamiento del puntero del ratón mediante delegación de eventos globales en fase de captura e inhabilitación de `pointer-events` en canvas, webviews e iframes durante el arrastre.
-- **Telemetría Adaptativa del Sistema**: Bucle de sondeo de CPU/RAM adaptativo según el estado de la ventana (2s activa, 5s en segundo plano, 10s minimizada), reduciendo hasta un 80% los despertares inútiles de CPU.
-- **Persistencia Asíncrona de Disco**: Añadido *debounce* de 500 ms en escrituras síncronas de historial y favoritos (`ConnectionHistoryService`), eliminando pequeñas pausas al marcar o desmarcar elementos rápidamente.
-- **Carga Diferida de Diálogos y Memoización**: Diálogos secundarios convertidos a `React.lazy()` en `DialogsManager` y componentes de alta frecuencia de refresco (`StandaloneStatusBar`) memoizados con `React.memo`.
-- **Transición Suave de Temas Visuales**: Eliminado el retardo en el color de fondo de la barra lateral y árbol de conexiones durante cambios de tema UI mediante sincronización inmediata de variables CSS inline en root DOM y aplicación temporal de la clase `.theme-transitioning` (250 ms).
-- **Prevención de Fugas de Memoria**: Verificación y limpieza estricta de instancias de terminal (`term.dispose()`), listeners IPC y suscripciones al cerrar pestañas.
+### Rendimiento
+- **Motor Xterm (write batching a 60 FPS)**: acumulacion y vuelco de `stdout` con `requestAnimationFrame` en rafagas masivas (SSH directo, Bastion Wallix y PowerShell), evitando bloqueos del hilo UI.
+- **Splitter**: micro-lag y congelamiento del puntero corregidos con captura global de eventos e inhabilitacion de `pointer-events` en canvas, webviews e iframes durante el arrastre.
+- **Telemetria adaptativa**: sondeo CPU/RAM segun estado de ventana (2s activa, 5s segundo plano, 10s minimizada).
+- **Persistencia**: debounce de 500 ms en historial y favoritos (`ConnectionHistoryService`).
+- **UI**: dialogos secundarios con `React.lazy()`; `StandaloneStatusBar` memoizado; cleanup estricto de terminales, listeners IPC y suscripciones al cerrar pestanas.
+- **Arbol**: virtualizacion y limpieza de props del Tree.
+
+### UX unificada
+- **AppDialog / AppConfirm** y tokens `--ui-*` para dialogos y confirmaciones coherentes con el tema.
+- **Formularios**: encabezados y orden estandarizados en SSH, RDP, FTP/SFTP, VNC y Tunel SSH; autenticacion integrada en pestanas generales.
+- **Settings**: contraste de titulos de seccion; tamano de fuente unificado en Configuracion y Herramientas.
+- **Sidebar**: ancho maximo ajustado a 480px (28%).
+
+### Cygwin
+- Instalacion bajo demanda desde Ajustes > Apps; Cygwin fuera del instalador principal.
+- Opcion de terminal oculta si Cygwin no esta activado.
+- Evitado falso error de bash tras setup oficial.
+
+### Sidebar y conexiones
+- Nueva conexion desde sidebar y desde pestanas del editor; insercion al inicio del arbol.
+- Import Wallix desde Configuracion con refresco correcto de sidebar.
+- Importar/Exportar unificados en menu.
+- Boton de cierre en cabeceras de preview.
+- Notas: titulos largos con ellipsis; scrollbars adaptados al tema UI.
+
+### Tema e i18n
+- Transicion de tema sin retardo en fondo de sidebar y arbol (sync CSS inline + `.theme-transitioning`).
+- Auditoria y completado de traducciones en dialogos y componentes.
+
+### Clipboard y MCP
+- Copy de UI restaurado con clipboard Electron, aislado del lock de teclado MCP.
+
+### Build y release
+- Instalador mas pequeno excluyendo basura del asar.
+- macOS: solo arm64; blockmaps omitidos en publicacion.
+
+## [1.7.2] - 2026-07-22
+
+**Proceso de release:** documenta aqui todos los cambios. `npm run release` publica esta seccion en GitHub.
+Borrador opcional para usuarios: `RELEASE_NOTES.md` (solo la version en curso). Resumen en `README.md`: ver [docs/release-process.md](docs/release-process.md).
 
 ## [1.7.1] - 2026-07-21
 
