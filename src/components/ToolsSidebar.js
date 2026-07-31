@@ -213,8 +213,8 @@ const ToolsSidebar = ({
             fontFamily: explorerFont || 'inherit',
           }}
         >
-          <span className={node.categoryIcon} style={{ 
-            color: 'var(--ui-sidebar-selected)', 
+          <span className={node.categoryIcon} style={{
+            color: 'var(--ui-button-primary)',
             fontSize: `${folderIconSize}px`,
             marginRight: '4px',
             display: 'flex',
@@ -334,7 +334,7 @@ const ToolsSidebar = ({
           text-overflow: ellipsis !important;
           white-space: nowrap !important;
           line-height: 1.25 !important;
-          color: var(--ui-sidebar-selected) !important;
+          color: var(--ui-button-primary) !important;
           font-size: var(--tools-section-font-size) !important;
           font-weight: 600 !important;
           text-transform: uppercase !important;
