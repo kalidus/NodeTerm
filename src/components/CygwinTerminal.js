@@ -9,6 +9,7 @@ import '@xterm/xterm/css/xterm.css';
 import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
+import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
 
 const CygwinTerminal = forwardRef(({
     fontFamily = '"FiraCode Nerd Font", Consolas, monospace',
@@ -305,13 +306,14 @@ const CygwinTerminal = forwardRef(({
                 if (modifierKey && domEvent.key === 'c') {
                     const selection = term.current.getSelection();
                     if (selection) {
-                        window.electron.clipboard.writeText(selection);
+                        clipboardWriteText(selection).catch(() => {});
                         domEvent.preventDefault();
                         return;
                     }
                 } else if (modifierKey && domEvent.key === 'v') {
                     domEvent.preventDefault();
-                    window.electron.clipboard.readText().then(text => {
+                    if (shouldBlockHumanInput(tabId)) return;
+                    clipboardReadText().then(text => {
                         if (text) {
                             term.current.focus();
                             setTimeout(() => {
@@ -319,7 +321,7 @@ const CygwinTerminal = forwardRef(({
                                 term.current.focus();
                             }, 10);
                         }
-                    });
+                    }).catch(() => {});
                     return;
                 }
             });
@@ -356,11 +358,12 @@ const CygwinTerminal = forwardRef(({
 
             const contextMenuHandler = (e) => {
                 e.preventDefault();
-                window.electron.clipboard.readText().then(text => {
+                if (shouldBlockHumanInput(tabId)) return;
+                clipboardReadText().then(text => {
                     if (text) {
                         window.electron.ipcRenderer.send(`cygwin:data:${tabId}`, text);
                     }
-                });
+                }).catch(() => {});
             };
             terminalRef.current.addEventListener('contextmenu', contextMenuHandler);
 

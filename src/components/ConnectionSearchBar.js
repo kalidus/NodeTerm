@@ -4,6 +4,7 @@ import { InputText } from 'primereact/inputtext';
 import { FaSearch } from 'react-icons/fa';
 import { iconThemes } from '../themes/icon-themes';
 import { toggleFavorite, helpers } from '../utils/connectionStore';
+import { writeText as clipboardWriteText } from '../utils/clipboard';
 
 const VARIANT_STYLES = {
   titlebar: {
@@ -440,11 +441,7 @@ const ConnectionSearchBar = ({
 
   const copyToClipboard = async (text, fieldName) => {
     try {
-      if (window.electron?.clipboard?.writeText) {
-        await window.electron.clipboard.writeText(text);
-      } else {
-        await navigator.clipboard.writeText(text);
-      }
+      await clipboardWriteText(text);
 
       if (window.toast?.current?.show) {
         const message = fieldName === 'Contraseña' || fieldName === 'Password'

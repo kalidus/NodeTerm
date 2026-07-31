@@ -689,8 +689,9 @@ class TerminalAgentBridge {
   }
 
   /**
-   * Inyecta un secreto por referencia opaca en un terminal abierto.
-   * Nunca devuelve el valor del secreto. Requiere promptTicket + prompt activo.
+   * Inyecta un secreto por referencia opaca en un terminal abierto (solo MCP).
+   * Escribe al PTY; nunca usa el clipboard UI ni devuelve el valor del secreto.
+   * Requiere promptTicket + prompt activo.
    */
   async injectSecretIntoTerminal(terminalId, {
     source,

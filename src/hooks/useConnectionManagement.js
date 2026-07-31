@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import connectionStore from '../utils/connectionStore';
 import { normalizeRdpColorDepth, resolveRdpScreenDimensions } from '../utils/rdpScreenConfig';
+import { writeText as clipboardWriteText } from '../utils/clipboard';
 
 export const useConnectionManagement = ({
   // Estados del hook de pestañas
@@ -319,14 +320,10 @@ export const useConnectionManagement = ({
       return;
     }
 
-    // Copiar password automáticamente si está configurado
+    // Copiar password automáticamente si está configurado (UI clipboard; no MCP)
     if (autoCopyPassword && password) {
       try {
-        if (window.electron?.clipboard?.writeText) {
-          window.electron.clipboard.writeText(password);
-        } else {
-          navigator.clipboard.writeText(password);
-        }
+        clipboardWriteText(password);
 
         // Mostrar notificación si está disponible
         if (window.toast?.current?.show) {

@@ -2,12 +2,14 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import SessionManager from '../services/SessionManager';
 import { createTerminalActionWrapper, handleUnblockForms } from '../utils/tabEventHandlers';
 import { EVENT_NAMES, CONNECTION_STATUS } from '../utils/constants';
+import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
+import { shouldBlockHumanInput } from '../services/terminalAgentState';
 
 export const useSessionManagement = (toast, {
   sshTabs = [],
   setTabDistros,
   resizeTimeoutRef,
-  hideContextMenu
+  hideTerminalContextMenu
 } = {}) => {
   // Referencias para terminales
   const terminalRefs = useRef({});
@@ -180,61 +182,97 @@ export const useSessionManagement = (toast, {
     };
   }, []);
 
-  // Funciones de manejo de terminal
-  const handleCopyFromTerminal = useCallback((tabKey) => {
-    if (window.electron && terminalRefs.current[tabKey]) {
-      const terminal = terminalRefs.current[tabKey];
-      const selection = terminal.getSelection();
-      if (selection) {
-        window.electron.clipboard.writeText(selection);
-        if (toast?.current?.show) {
-          toast.current.show({
-            severity: 'success',
-            summary: 'Copiado',
-            detail: 'Texto copiado al portapapeles',
-            life: 2000
-          });
-        }
+  // Funciones de manejo de terminal (copy UI independiente del lock MCP)
+  const handleCopyFromTerminal = useCallback(async (tabKey) => {
+    const terminal = terminalRefs.current[tabKey];
+    if (!terminal?.getSelection) {
+      if (toast?.current?.show) {
+        toast.current.show({
+          severity: 'warn',
+          summary: 'Copiar',
+          detail: 'Terminal no disponible',
+          life: 2000
+        });
+      }
+      return;
+    }
+    const selection = terminal.getSelection();
+    if (!selection) {
+      if (toast?.current?.show) {
+        toast.current.show({
+          severity: 'info',
+          summary: 'Copiar',
+          detail: 'No hay texto seleccionado',
+          life: 2000
+        });
+      }
+      return;
+    }
+    try {
+      await clipboardWriteText(selection);
+      if (toast?.current?.show) {
+        toast.current.show({
+          severity: 'success',
+          summary: 'Copiado',
+          detail: 'Texto copiado al portapapeles',
+          life: 2000
+        });
+      }
+    } catch (error) {
+      console.error('Error al copiar texto:', error);
+      if (toast?.current?.show) {
+        toast.current.show({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'No se pudo copiar el texto',
+          life: 3000
+        });
       }
     }
   }, [toast]);
 
   const handlePasteToTerminal = useCallback(async (tabKey) => {
-    if (window.electron && terminalRefs.current[tabKey]) {
-      try {
-        const text = await window.electron.clipboard.readText();
-        if (text) {
-          const terminal = terminalRefs.current[tabKey];
-
-          // Asegurar que el terminal tenga el foco antes de pegar
+    const terminal = terminalRefs.current[tabKey];
+    if (!terminal) return;
+    // Solo bloquear envio al PTY cuando el agente tiene el terminal locked
+    if (shouldBlockHumanInput(tabKey)) {
+      if (toast?.current?.show) {
+        toast.current.show({
+          severity: 'warn',
+          summary: 'Terminal bloqueado',
+          detail: 'El agente MCP controla este terminal',
+          life: 2500
+        });
+      }
+      return;
+    }
+    try {
+      const text = await clipboardReadText();
+      if (text) {
+        terminal.focus();
+        setTimeout(() => {
+          terminal.paste(text);
           terminal.focus();
+        }, 10);
 
-          // Usar un pequeño delay para asegurar que el terminal esté listo
-          setTimeout(() => {
-            terminal.paste(text);
-            // Restaurar el foco después de pegar
-            terminal.focus();
-          }, 10);
-
-          if (toast?.current?.show) {
-            toast.current.show({
-              severity: 'info',
-              summary: 'Pegado',
-              detail: 'Texto pegado en el terminal',
-              life: 2000
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Error al pegar texto:', error);
         if (toast?.current?.show) {
           toast.current.show({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'No se pudo pegar el texto',
-            life: 3000
+            severity: 'info',
+            summary: 'Pegado',
+            detail: 'Texto pegado en el terminal',
+            life: 2000
           });
         }
+      }
+    } catch (error) {
+      console.error('Error al pegar texto:', error);
+      if (toast?.current?.show) {
+        toast.current.show({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'No se pudo pegar el texto',
+          life: 3000
+        });
       }
     }
   }, [toast]);
@@ -394,10 +432,10 @@ export const useSessionManagement = (toast, {
   }, [sessionManager]);
 
   // === FUNCIONES WRAPPER DE TERMINAL ===
-  const handleCopyFromTerminalWrapper = createTerminalActionWrapper(handleCopyFromTerminal, hideContextMenu);
-  const handlePasteToTerminalWrapper = createTerminalActionWrapper(handlePasteToTerminal, hideContextMenu);
-  const handleSelectAllTerminalWrapper = createTerminalActionWrapper(handleSelectAllTerminal, hideContextMenu);
-  const handleClearTerminalWrapper = createTerminalActionWrapper(handleClearTerminal, hideContextMenu);
+  const handleCopyFromTerminalWrapper = createTerminalActionWrapper(handleCopyFromTerminal, hideTerminalContextMenu);
+  const handlePasteToTerminalWrapper = createTerminalActionWrapper(handlePasteToTerminal, hideTerminalContextMenu);
+  const handleSelectAllTerminalWrapper = createTerminalActionWrapper(handleSelectAllTerminal, hideTerminalContextMenu);
+  const handleClearTerminalWrapper = createTerminalActionWrapper(handleClearTerminal, hideTerminalContextMenu);
 
   // === FUNCIÓN WRAPPER PARA DESBLOQUEAR FORMULARIOS ===
   const handleUnblockFormsWrapper = useCallback(() => handleUnblockForms(toast), [toast]);

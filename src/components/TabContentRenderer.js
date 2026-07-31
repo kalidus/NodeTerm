@@ -43,6 +43,7 @@ import { recordRecentPassword, isFavorite, toggleFavorite } from '../utils/conne
 import { getNetworkById, CRYPTO_NETWORK_OPTIONS } from '../utils/cryptoNetworks';
 
 import { countConnections } from '../utils/connectionCounter';
+import { writeText as clipboardWriteText } from '../utils/clipboard';
 import EditConnectionTabContent from './EditConnectionTabContent';
 
 const PasswordDetailRow = ({ label, value, copy, masked = false, mono = true, onCopy }) => {
@@ -154,11 +155,7 @@ const WalletSeedPhraseSection = ({ seedPhrase, onCopyFull }) => {
   const copyWord = async (word, index) => {
     if (!word) return;
     try {
-      if (window.electron?.clipboard?.writeText) {
-        await window.electron.clipboard.writeText(word);
-      } else {
-        await navigator.clipboard.writeText(word);
-      }
+      await clipboardWriteText(word);
       if (window.toast?.current?.show) {
         window.toast.current.show({
           severity: 'success',
@@ -321,11 +318,7 @@ const EditableField = ({ label, value, onChange, placeholder, type = 'text', mas
   const copyToClipboard = async () => {
     if (!value) return;
     try {
-      if (window.electron?.clipboard?.writeText) {
-        await window.electron.clipboard.writeText(value);
-      } else {
-        await navigator.clipboard.writeText(value);
-      }
+      await clipboardWriteText(value);
       if (window.toast?.current?.show) {
         window.toast.current.show({ severity: 'success', summary: 'Copiado', detail: `${label} copiado al portapapeles`, life: 1000 });
       }
@@ -505,11 +498,7 @@ const PasswordTabContent = ({ tab, masterKey, secureStorage, setSshTabs }) => {
   const copyToClipboard = async (text, fieldName) => {
     if (!text) return;
     try {
-      if (window.electron?.clipboard?.writeText) {
-        await window.electron.clipboard.writeText(text);
-      } else {
-        await navigator.clipboard.writeText(text);
-      }
+      await clipboardWriteText(text);
       if (window.toast?.current?.show) {
         window.toast.current.show({ severity: 'success', summary: 'Copiado', detail: `${fieldName} copiado al portapapeles`, life: 1500 });
       }
@@ -1496,11 +1485,7 @@ const TabContentRendererInner = React.memo(({
 
     const copyToClipboard = async (text, fieldName, passwordData = null) => {
       try {
-        if (window.electron?.clipboard?.writeText) {
-          await window.electron.clipboard.writeText(text);
-        } else {
-          await navigator.clipboard.writeText(text);
-        }
+        await clipboardWriteText(text);
 
         // Registrar como reciente cuando se copia (para cualquier tipo de secreto)
         if ((fieldName === 'Contraseña' || fieldName === 'Seed Phrase' || fieldName === 'Private Key' || fieldName === 'API Key') && passwordData) {

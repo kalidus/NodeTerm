@@ -6,6 +6,7 @@ import { statusBarThemes } from '../themes/status-bar-themes';
 import { themes } from '../themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
+import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
 
 const TerminalComponent = forwardRef(({
     tabId,
@@ -374,34 +375,32 @@ const TerminalComponent = forwardRef(({
                 const modifierKey = isMac ? domEvent.metaKey : domEvent.ctrlKey;
 
                 if (modifierKey && domEvent.key === 'c') {
+                    // Copy UI nunca consulta el lock MCP
                     const selection = term.current.getSelection();
                     if (selection) {
-                        window.electron.clipboard.writeText(selection);
+                        clipboardWriteText(selection).catch(() => {});
                         domEvent.preventDefault();
                     }
                 } else if (modifierKey && domEvent.key === 'v') {
-                    domEvent.preventDefault(); // Prevenir el comportamiento por defecto primero
-                    window.electron.clipboard.readText().then(text => {
+                    domEvent.preventDefault();
+                    // Solo bloquear envio al PTY si el agente tiene el terminal locked
+                    if (shouldBlockHumanInput(tabId)) return;
+                    clipboardReadText().then(text => {
                         if (text) {
-                            // Asegurar que el terminal tenga el foco y est?? listo
                             term.current.focus();
                             setTimeout(() => {
-                                // Para terminales SSH, enviar datos al servidor SSH
                                 if (sshConfig && sshConfig.host) {
                                     window.electron.ipcRenderer.send('ssh:data', { tabId, data: text });
                                 } else {
-                                    // Para terminales locales, usar write directamente
                                     term.current.write(text);
                                 }
-                                // Restaurar el foco despu??s de pegar y asegurar que los eventos funcionen
                                 setTimeout(() => {
                                     term.current.focus();
-                                    // Forzar un evento de foco para asegurar que el terminal est?? completamente activo
                                     term.current.element?.dispatchEvent(new Event('focus', { bubbles: true }));
                                 }, 5);
                             }, 10);
                         }
-                    });
+                    }).catch(() => {});
                 }
             });
 
@@ -410,19 +409,17 @@ const TerminalComponent = forwardRef(({
                 if (onContextMenu) {
                     onContextMenu(e, tabId);
                 } else {
-                    // Fallback: paste functionality
                     e.preventDefault();
-                    window.electron.clipboard.readText().then(text => {
+                    if (shouldBlockHumanInput(tabId)) return;
+                    clipboardReadText().then(text => {
                         if (text) {
-                            // Para terminales SSH, enviar datos al servidor SSH
                             if (sshConfig && sshConfig.host) {
                                 window.electron.ipcRenderer.send('ssh:data', { tabId, data: text });
                             } else {
-                                // Para terminales locales, usar write directamente
                                 term.current.write(text);
                             }
                         }
-                    });
+                    }).catch(() => {});
                 }
             };
             terminalRef.current.addEventListener('contextmenu', contextMenuHandler);

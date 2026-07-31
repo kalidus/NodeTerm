@@ -7,6 +7,7 @@ import { iconThemes } from '../themes/icon-themes';
 import { FolderIconPresets, FolderIconRenderer } from './FolderIconSelector';
 import { SSHIconPresets, SSHIconRenderer } from './SSHIconSelector';
 import TerminalFrame from './TerminalFrame';
+import { writeText as clipboardWriteText } from '../utils/clipboard';
 
 // Wrapper estable (no definir componentes dentro del render — remonta hijos y pierde foco al escribir)
 const DetailsPanelWrapper = ({
@@ -314,28 +315,12 @@ const ConnectionDetailsPanel = ({
     }
   }, [saveEdit, cancelEdit]);
 
-  // Función para copiar al portapapeles
+  // Función para copiar al portapapeles (UI; MCP usa inject_secret, no clipboard)
   const copyToClipboard = useCallback(async (text, fieldName) => {
     if (!text) return;
 
     try {
-      if (window.electron && window.electron.clipboard) {
-        // Electron
-        window.electron.clipboard.writeText(text);
-      } else if (navigator.clipboard && navigator.clipboard.writeText) {
-        // Navegador moderno
-        await navigator.clipboard.writeText(text);
-      } else {
-        // Fallback para navegadores antiguos
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        textArea.style.position = 'fixed';
-        textArea.style.opacity = '0';
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-      }
+      await clipboardWriteText(text);
 
       // Mostrar notificación (si hay un sistema de toast disponible)
       if (window.toast?.current?.show) {

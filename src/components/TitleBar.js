@@ -9,6 +9,7 @@ import { toggleFavorite, helpers } from '../utils/connectionStore';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import { themeManager } from '../utils/themeManager';
 import { appConfirm } from './ui/AppConfirm';
+import { writeText as clipboardWriteText } from '../utils/clipboard';
 
 const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnections, onOpenSSHConnection, onOpenRdpConnection, onOpenVncConnection, onShowImportDialog, onShowExportDialog, onShowImportExportDialog, onShowImportWizard, onOpenImportWithSource, onQuickImportFromSource, iconTheme = 'material', openEditSSHDialog, openEditRdpDialog, expandedKeys, masterKey, secureStorage, onToggleTitleBar }) => {
   // Hook de internacionalización
@@ -678,11 +679,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
   // Función para copiar al portapapeles
   const copyToClipboard = async (text, fieldName) => {
     try {
-      if (window.electron?.clipboard?.writeText) {
-        await window.electron.clipboard.writeText(text);
-      } else {
-        await navigator.clipboard.writeText(text);
-      }
+      await clipboardWriteText(text);
 
       // Mostrar notificación si está disponible
       if (window.toast?.current?.show) {

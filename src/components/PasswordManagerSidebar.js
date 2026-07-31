@@ -25,6 +25,7 @@ import {
   moveNodeFromTreeEvent
 } from '../utils/treeDragDrop';
 import connectionStore from '../utils/connectionStore';
+import { writeText as clipboardWriteText } from '../utils/clipboard';
 import '../styles/components/password-manager-sidebar.css';
 import '../styles/components/tree-themes.css';
 
@@ -1355,10 +1356,13 @@ const PasswordManagerSidebar = ({
     );
   };
 
-  // Función para copiar al portapapeles
+  // Función para copiar al portapapeles (Electron IPC; no usado por MCP inject_secret)
   const handleCopyToClipboard = async (text, type) => {
     try {
-      await navigator.clipboard.writeText(text);
+      const ok = await clipboardWriteText(text);
+      if (!ok) {
+        throw new Error('empty clipboard payload');
+      }
       showToast && showToast({
         severity: 'success',
         summary: 'Copiado',
@@ -2525,11 +2529,7 @@ const PasswordManagerSidebar = ({
                         onClick={async () => {
                           if (formData.seedPhrase) {
                             try {
-                              if (window.electron?.clipboard?.writeText) {
-                                await window.electron.clipboard.writeText(formData.seedPhrase);
-                              } else {
-                                await navigator.clipboard.writeText(formData.seedPhrase);
-                              }
+                              await clipboardWriteText(formData.seedPhrase);
                               showToast && showToast({
                                 severity: 'success',
                                 summary: 'Copiado',
@@ -2609,11 +2609,7 @@ const PasswordManagerSidebar = ({
                               const word = seedWords[index];
                               if (word) {
                                 try {
-                                  if (window.electron?.clipboard?.writeText) {
-                                    await window.electron.clipboard.writeText(word);
-                                  } else {
-                                    await navigator.clipboard.writeText(word);
-                                  }
+                                  await clipboardWriteText(word);
                                   showToast && showToast({
                                     severity: 'success',
                                     summary: 'Copiado',

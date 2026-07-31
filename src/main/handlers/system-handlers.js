@@ -58,7 +58,7 @@ function registerSystemHandlers() {
 
   // Handler para escribir texto al clipboard
   ipcMain.handle('clipboard:writeText', (event, text) => {
-    clipboard.writeText(text);
+    clipboard.writeText(text == null ? '' : String(text));
   });
 
   // === DIALOG HANDLERS ===

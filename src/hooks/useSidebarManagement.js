@@ -3,6 +3,7 @@ import connectionStore, { helpers as connectionHelpers } from '../utils/connecti
 import { unblockAllInputs } from '../utils/formDebugger';
 import localStorageSyncService from '../services/LocalStorageSyncService';
 import { STORAGE_KEYS, GROUP_KEYS } from '../utils/constants';
+import { writeText as clipboardWriteText } from '../utils/clipboard';
 
 function normalizeTreeNodes(inputNodes) {
   const seenKeys = new Set();
@@ -742,11 +743,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
           icon: 'pi pi-key',
           command: async () => {
             try {
-              if (window.electron?.clipboard?.writeText) {
-                await window.electron.clipboard.writeText(node.data.password);
-              } else if (navigator.clipboard?.writeText) {
-                await navigator.clipboard.writeText(node.data.password);
-              }
+              await clipboardWriteText(node.data.password);
               // Mostrar toast de confirmación
               if (window.toast?.current?.show) {
                 window.toast.current.show({
@@ -832,11 +829,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
           icon: 'pi pi-key',
           command: async () => {
             try {
-              if (window.electron?.clipboard?.writeText) {
-                await window.electron.clipboard.writeText(node.data.password);
-              } else if (navigator.clipboard?.writeText) {
-                await navigator.clipboard.writeText(node.data.password);
-              }
+              await clipboardWriteText(node.data.password);
               // Mostrar toast de confirmación
               if (window.toast?.current?.show) {
                 window.toast.current.show({
@@ -921,11 +914,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
           icon: 'pi pi-key',
           command: async () => {
             try {
-              if (window.electron?.clipboard?.writeText) {
-                await window.electron.clipboard.writeText(node.data.password);
-              } else if (navigator.clipboard?.writeText) {
-                await navigator.clipboard.writeText(node.data.password);
-              }
+              await clipboardWriteText(node.data.password);
               // Mostrar toast de confirmación
               if (window.toast?.current?.show) {
                 window.toast.current.show({
@@ -1045,11 +1034,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
           icon: 'pi pi-key',
           command: async () => {
             try {
-              if (window.electron?.clipboard?.writeText) {
-                await window.electron.clipboard.writeText(node.data.password);
-              } else if (navigator.clipboard?.writeText) {
-                await navigator.clipboard.writeText(node.data.password);
-              }
+              await clipboardWriteText(node.data.password);
               // Mostrar toast de confirmación
               if (window.toast?.current?.show) {
                 window.toast.current.show({
@@ -1131,11 +1116,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
           icon: 'pi pi-key',
           command: async () => {
             try {
-              if (window.electron?.clipboard?.writeText) {
-                await window.electron.clipboard.writeText(node.data.sshPassword);
-              } else if (navigator.clipboard?.writeText) {
-                await navigator.clipboard.writeText(node.data.sshPassword);
-              }
+              await clipboardWriteText(node.data.sshPassword);
               // Mostrar toast de confirmación
               if (window.toast?.current?.show) {
                 window.toast.current.show({

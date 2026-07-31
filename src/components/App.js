@@ -80,8 +80,6 @@ import {
   getTabTypeAndIndex,
   moveTabToFirst,
   handleTerminalContextMenu,
-  hideContextMenu,
-  createTerminalActionWrapper,
   handleUnblockForms,
   handleGuacamoleCreateTab
 } from '../utils/tabEventHandlers';
@@ -1535,6 +1533,19 @@ const App = () => {
     };
   }, [draggedSSHNodeRef]);
 
+  // Context menus antes de session wrappers (hideTerminalContextMenu real)
+  const {
+    terminalContextMenu, setTerminalContextMenu,
+    showOverflowMenu, setShowOverflowMenu,
+    overflowMenuPosition, setOverflowMenuPosition,
+    treeContextMenuRef,
+    showTerminalContextMenu, hideTerminalContextMenu,
+    showOverflowMenuAt, hideOverflowMenu,
+    onNodeContextMenu: onNodeContextMenuHook,
+    onTreeAreaContextMenu: onTreeAreaContextMenuHook,
+    hideContextMenu
+  } = useContextMenuManagement();
+
   // Usar el hook de gestión de sesiones
   const {
     terminalRefs, activeListenersRef, sessionManager,
@@ -1549,7 +1560,7 @@ const App = () => {
     sshTabs,
     setTabDistros,
     resizeTimeoutRef,
-    hideContextMenu
+    hideTerminalContextMenu
   });
 
 
@@ -1855,24 +1866,6 @@ const App = () => {
   } = useDialogManagement();
 
 
-
-  // Context menu management hook
-  const {
-    // Estados de menús contextuales
-    terminalContextMenu, setTerminalContextMenu,
-    showOverflowMenu, setShowOverflowMenu,
-    overflowMenuPosition, setOverflowMenuPosition,
-    // Referencias
-    treeContextMenuRef,
-    // Funciones de terminal context menu
-    showTerminalContextMenu, hideTerminalContextMenu,
-    // Funciones de overflow menu
-    showOverflowMenuAt, hideOverflowMenu,
-    // Funciones de tree context menu
-    onNodeContextMenu: onNodeContextMenuHook,
-    onTreeAreaContextMenu: onTreeAreaContextMenuHook,
-    hideContextMenu
-  } = useContextMenuManagement();
 
   // Window management hook
   const {
@@ -2224,7 +2217,8 @@ const App = () => {
     saveNodes();
   }, [nodes, masterKey, secureStorage, updateTreeHash, isExternalReloadRef]);
 
-  // Exponer API de integración para MCP / API Server
+  // API MCP / API Server. UI copy usa clipboard IPC; MCP nunca expone secretos
+  // por clipboard (list_* sanitizado + inject_secret al PTY por referencia).
   useEffect(() => {
     window.nodeterm_integration = {
       getConnections: () => nodes || [],

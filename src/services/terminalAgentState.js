@@ -1,6 +1,8 @@
 /**
  * Estado de control del agente MCP por terminal (lock teclado / busy).
- * Los componentes PTY consultan isHumanInputLocked antes de enviar onData.
+ * Los componentes PTY consultan shouldBlockHumanInput solo antes de enviar
+ * input al PTY (onData / paste). El copy UI al portapapeles NUNCA se bloquea aqui.
+ * Los secretos MCP van por inject_secret al PTY, no por clipboard.
  */
 
 const listeners = new Set();
@@ -106,8 +108,9 @@ export function removeAgentSession(terminalId) {
 }
 
 /**
- * Bloquea input humano si el agente tiene el terminal bloqueado.
- * Devuelve true si hay que ignorar el onData del usuario.
+ * Bloquea input humano hacia el PTY si el agente tiene el terminal bloqueado.
+ * Devuelve true si hay que ignorar onData / paste-al-PTY.
+ * No aplica al copy UI (clipboard del SO).
  */
 export function shouldBlockHumanInput(terminalId) {
   return isHumanInputLocked(terminalId);

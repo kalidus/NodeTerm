@@ -9,6 +9,7 @@ import '@xterm/xterm/css/xterm.css';
 import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
+import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
 
 const UbuntuTerminal = forwardRef(({
     fontFamily = 'Consolas, "Courier New", monospace',
@@ -353,23 +354,22 @@ const UbuntuTerminal = forwardRef(({
                 if (modifierKey && domEvent.key === 'c') {
                     const selection = term.current.getSelection();
                     if (selection) {
-                        window.electron.clipboard.writeText(selection);
+                        clipboardWriteText(selection).catch(() => {});
                         domEvent.preventDefault();
                         return;
                     }
                 } else if (modifierKey && domEvent.key === 'v') {
                     domEvent.preventDefault();
-                    window.electron.clipboard.readText().then(text => {
+                    if (shouldBlockHumanInput(tabId)) return;
+                    clipboardReadText().then(text => {
                         if (text) {
-                            // Asegurar que el terminal tenga el foco antes de enviar datos
                             term.current.focus();
                             setTimeout(() => {
                                 window.electron.ipcRenderer.send(`${getChannelPrefix()}:data:${tabId}`, text);
-                                // Restaurar el foco despu??s de pegar
                                 term.current.focus();
                             }, 10);
                         }
-                    });
+                    }).catch(() => {});
                     return;
                 }
             });
@@ -413,12 +413,12 @@ const UbuntuTerminal = forwardRef(({
             // Handle right-click context menu
             const contextMenuHandler = (e) => {
                 e.preventDefault();
-                // Simple paste functionality on right-click
-                window.electron.clipboard.readText().then(text => {
+                if (shouldBlockHumanInput(tabId)) return;
+                clipboardReadText().then(text => {
                     if (text) {
                         window.electron.ipcRenderer.send(`${getChannelPrefix()}:data:${tabId}`, text);
                     }
-                });
+                }).catch(() => {});
             };
             terminalRef.current.addEventListener('contextmenu', contextMenuHandler);
 

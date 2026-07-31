@@ -15,6 +15,7 @@ import { themeManager } from '../utils/themeManager';
 import { themes } from '../themes';
 import { getRecents, onUpdate, getRecentPasswords, subscribeRecents, recordRecentPassword } from '../utils/connectionStore';
 import { STORAGE_KEYS } from '../utils/constants';
+import { writeText as clipboardWriteText } from '../utils/clipboard';
 import {
   persistHomeTabSetting,
   readBoolSetting,
@@ -590,11 +591,7 @@ const HomeTab = ({
 
   const copyToClipboard = async (text, fieldName) => {
     try {
-      if (window.electron?.clipboard?.writeText) {
-        await window.electron.clipboard.writeText(text);
-      } else {
-        await navigator.clipboard.writeText(text);
-      }
+      await clipboardWriteText(text);
 
       // Mostrar notificaci\u00F3n si est\u00E1 disponible
       if (window.toast?.current?.show) {
