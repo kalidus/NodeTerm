@@ -202,6 +202,9 @@ if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU =
 if (process.platform === 'win32') {
   app.setAppUserModelId(app.isPackaged ? 'com.electron.nodeterm' : 'com.electron.nodeterm.dev');
 }
+if (process.platform === 'linux') {
+  app.setDesktopName('nodeterm.desktop');
+}
 
 const path = require('path');
 const url = require('url');
@@ -1311,6 +1314,7 @@ function createWindow() {
       x, y, width: W, height: H,
       frame: false,
       transparent: false,
+      icon: path.join(__dirname, 'src/assets/app-icon.png'),
       backgroundColor: style === 'terminal-minimalist' ? '#000000' : (style === 'hologram-hud' ? '#06040d' : (style === 'synthwave-outrun' ? '#0f021a' : '#0a0f18')),
       show: true,
       resizable: false,
@@ -1331,6 +1335,7 @@ function createWindow() {
     minWidth: 200,
     minHeight: 100,
     title: 'NodeTerm',
+    icon: path.join(__dirname, 'src/assets/app-icon.png'),
     frame: false,
     show: false,
     transparent: false,

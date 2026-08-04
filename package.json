@@ -197,9 +197,14 @@
         "rpm",
         "tar.xz"
       ],
-      "category": "Utility",
       "maintainer": "kalidus <kalidus@users.noreply.github.com>",
       "icon": "src/assets/app-icon.png",
+      "executableName": "nodeterm",
+      "desktop": {
+        "entry": {
+          "StartupWMClass": "nodeterm"
+        }
+      },
       "files": [
         "!resources${/*}",
         "!http*/**",
