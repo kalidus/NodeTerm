@@ -35,6 +35,7 @@
 @import './components/status-bar-settings.css';
 @import './components/settings-sidebar.css';
 @import './components/theme-selector.css';
+@import './components/update-notification.css';
 /* Sobrescribir colores de PrimeReact después de todos los demás estilos */
 @import './components/prime-react-overrides.css';
 

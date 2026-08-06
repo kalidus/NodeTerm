@@ -1,0 +1,207 @@
+/* ---
+  Update Notification Toast (Cursor Style)
+  Aviso emergente flotante en la esquina inferior izquierda al detectar una nueva versión de la aplicación.
+--- */
+
+.update-notification-toast {
+  position: fixed;
+  bottom: 34px;
+  left: 20px;
+  z-index: 9999;
+  min-width: 320px;
+  max-width: 390px;
+  background: var(--surface-card, #1e2430);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.12));
+  border-left: 4px solid var(--primary-color, #3b82f6);
+  border-radius: 10px;
+  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.25);
+  padding: 14px 16px;
+  color: var(--text-color, #f1f5f9);
+  font-family: var(--font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  animation: updateToastSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  user-select: none;
+}
+
+.update-notification-toast--downloaded {
+  border-left-color: var(--green-500, #22c55e);
+}
+
+.update-notification-toast--downloading {
+  border-left-color: var(--blue-400, #60a5fa);
+}
+
+.update-notification-toast--error {
+  border-left-color: var(--red-500, #ef4444);
+}
+
+.update-notification-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.update-notification-title-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--text-color, #f1f5f9);
+}
+
+.update-notification-icon {
+  font-size: 1.1rem;
+  color: var(--primary-color, #3b82f6);
+}
+
+.update-notification-toast--downloaded .update-notification-icon {
+  color: var(--green-500, #22c55e);
+}
+
+.update-notification-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-color-secondary, #94a3b8);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.update-notification-close-btn:hover {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.1));
+  color: var(--text-color, #ffffff);
+}
+
+.update-notification-body {
+  margin-bottom: 6px;
+}
+
+.update-notification-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface-hover, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--primary-color, #3b82f6);
+  margin-bottom: 6px;
+}
+
+.update-notification-toast--downloaded .update-notification-badge {
+  color: var(--green-500, #22c55e);
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.25);
+}
+
+.update-notification-text {
+  font-size: 0.84rem;
+  color: var(--text-color-secondary, #94a3b8);
+  line-height: 1.4;
+  margin: 4px 0 8px 0;
+}
+
+.update-notification-progress-container {
+  margin: 8px 0 10px 0;
+}
+
+.update-notification-progress-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: var(--text-color-secondary, #94a3b8);
+  margin-bottom: 4px;
+}
+
+.update-notification-progress-track {
+  width: 100%;
+  height: 5px;
+  background: var(--surface-border, rgba(255, 255, 255, 0.12));
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.update-notification-progress-bar {
+  height: 100%;
+  background: var(--primary-color, #3b82f6);
+  border-radius: 3px;
+  transition: width 0.2s ease;
+}
+
+.update-notification-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.update-notification-btn-primary {
+  background: var(--primary-color, #3b82f6);
+  color: #ffffff;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 0.83rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+
+.update-notification-btn-primary:hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+}
+
+.update-notification-btn-primary:active {
+  transform: translateY(0);
+}
+
+.update-notification-btn-primary--success {
+  background: var(--green-600, #16a34a);
+}
+
+.update-notification-btn-primary--success:hover {
+  background: var(--green-500, #22c55e);
+}
+
+.update-notification-btn-secondary {
+  background: transparent;
+  color: var(--text-color-secondary, #94a3b8);
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.15));
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.update-notification-btn-secondary:hover {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.08));
+  color: var(--text-color, #ffffff);
+}
+
+@keyframes updateToastSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

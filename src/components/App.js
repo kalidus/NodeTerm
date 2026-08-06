@@ -64,6 +64,7 @@ import SecureStorage from '../services/SecureStorage';
 
 import UnlockDialog from './UnlockDialog';
 import CloudRestoreMasterKeyDialog from './CloudRestoreMasterKeyDialog';
+import UpdateNotificationToast from './UpdateNotificationToast';
 import ConnectionSearchPalette from './ConnectionSearchPalette';
 import {
   getConnectionSearchShortcut,
@@ -4860,6 +4861,13 @@ const App = () => {
               toast={toast}
           />
         </Suspense>
+
+        {/* Notificación flotante de actualización estilo Cursor */}
+        <UpdateNotificationToast
+          onOpenUpdateSettings={() => {
+            setShowSettingsDialog(true);
+          }}
+        />
 
         {/* ConfirmDialog para confirmaciones globales */}
         <ConfirmDialog className="app-confirm-dialog" />
