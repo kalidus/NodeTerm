@@ -9,9 +9,11 @@
   <p align="center">
     <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/github/v/release/kalidus/NodeTerm?style=flat-square&color=2eb85c&logo=github&label=Versi%C3%B3n" alt="Última Release"/></a>
     <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/badge/Plataformas-Windows%20%7C%20Linux%20%7C%20macOS-blue?style=flat-square&logo=electron" alt="Plataformas"/></a>
-    <a href="#-servidor-mcp-integrado-model-context-protocol"><img src="https://img.shields.io/badge/IA%20Ready-Servidor%20MCP-purple?style=flat-square" alt="MCP Server"/></a>
-    <a href="#donar"><img src="https://img.shields.io/badge/☕_Donar-F7931A?style=flat-square" alt="Donar"/></a>
+    <a href="#-servidor-mcp-integrado-model-context-protocol"><img src="https://img.shields.io/badge/🤖_IA-MCP_Native-8a2be2?style=flat-square" alt="MCP Server"/></a>
+    <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/github/downloads/kalidus/NodeTerm/total?style=flat-square&color=007acc&logo=github&label=Descargas" alt="Descargas Totales"/></a>
+    <a href="https://github.com/kalidus/NodeTerm/stargazers"><img src="https://img.shields.io/github/stars/kalidus/NodeTerm?style=flat-square&color=ffb900&logo=github&label=Stars" alt="GitHub Stars"/></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/Licencia-MIT-green?style=flat-square" alt="Licencia MIT"/></a>
+    <a href="#donar"><img src="https://img.shields.io/badge/Invitar_un_café-☕_Donar-FFDD00?style=flat-square&logo=buy-me-a-coffee&logoColor=black" alt="Donar"/></a>
   </p>
 
   <p align="center">
@@ -200,11 +202,6 @@ Si **NodeTerm** te resulta útil y quieres apoyar su mantenimiento y desarrollo 
   &nbsp;
   <a href="https://solscan.io/account/DAP3efj9Fvp1uvf8eVse3dMTxxyw2bWLh4snA891iNZh"><img src="https://img.shields.io/badge/Solana-9945FF?style=for-the-badge&logo=solana&logoColor=white" height="36" alt="Solana"/></a>
 </p>
-
-```text
-ETH / EVM: 0x7D18e60b2717edA94e6a48d05e6d09038dCf9342
-Solana:    DAP3efj9Fvp1uvf8eVse3dMTxxyw2bWLh4snA891iNZh
-```
 
 ¡Cualquier apoyo, por pequeño que sea, ayuda enormemente al proyecto! 🙏 
 
