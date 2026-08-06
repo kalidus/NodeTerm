@@ -29,87 +29,40 @@
 
 ---
 
-## ✨ ¿Por qué elegir NodeTerm?
+## ✨ Características Destacadas
 
-NodeTerm unifica el acceso remoto tradicional, la gestión de contraseñas y la automatización con IA en una única herramienta ultrarrápida.
+NodeTerm es un espacio de trabajo remoto *all-in-one* que unifica múltiples protocolos de conexión, una bóveda cifrada de credenciales y capacidades avanzadas de automatización con IA en una interfaz moderna y ultrarrápida.
 
-#### 🛡️ Seguridad & Bóveda de Credenciales
-- 🔒 **Cifrado AES-256**: Protección de datos sensibles con contraseña maestra y auto-lock.
-- 🔑 **Gestión de Vault**: Almacenamiento seguro e inyección controlada de secretos para IA.
+### 🌐 1. Conexión & Soporte Multiprotocolo
+- 🖥️ **Multiprotocolo Completo**: Soporte nativo para conexiones **SSH**, **RDP** (Escritorio Remoto), **VNC** y **SFTP**.
+- 🛡️ **Gestión SSH Profesional**: Conexión a bastiones Wallix, autenticación por clave/contraseña y pool de conexiones optimizado.
+- 🗂️ **Espacio de Trabajo Multipestaña**: Organización jerárquica de sesiones en carpetas y agrupación de pestañas por proyectos.
+- 📁 **Explorador SFTP Integrado**: Navegación remota visual, operaciones de archivos (copiar, pegar, eliminar) y búsqueda inteligente.
 
-#### 🤖 Automatización e Integración de IA (MCP)
-- 🔌 **Servidor MCP Nativo**: Conecta tu terminal a Claude, Cursor o Antigravity mediante API Key.
-- 🛡️ **Acceso Aislado**: Permite a agentes de IA interactuar con el sistema de forma segura sin exponer tus claves.
+### 🤖 2. Ecosistema de IA Avanzado (Servidor MCP Integrado)
+- 🔌 **Servidor MCP Nativo**: Protocolo estándar (Model Context Protocol) para conectar agentes de IA externos (Claude, Cursor, Antigravity, AnythingLLM).
+- 🛡️ **Seguridad & Prompt Ticket**: Inyección segura de secretos y credenciales (`promptTicket`) sin exponer contraseñas al agente de IA.
+- 📑 **Acceso a Recursos**: Los agentes de IA pueden consultar y gestionar de forma autorizada conexiones, notas, documentos y terminales abiertos.
 
-#### ⚡ Terminal & Productividad Remota
-- 🖥️ **Splits a 60 FPS**: Paneles divididos horizontal y verticalmente sin lag en xterm.js.
-- 📁 **Explorador SFTP Integrado**: Navegación y transferencia visual de archivos remotos.
-- 📹 **Grabación asciinema**: Auditoría completa de sesiones exportable a formato `.cast`.
-- 🔌 **Túneles SSH**: Soporte local (-L), remoto (-R) y Proxy SOCKS5 dinámico (-D).
+### 🔒 3. Seguridad & Bóveda de Credenciales (Vault)
+- 🛡️ **Encriptación AES-256**: Cifrado de grado militar para contraseñas, conexiones y datos sensibles almacenados localmente.
+- 🔑 **Master Password & Auto-Lock**: Clave única para desbloquear la aplicación con temporizador de bloqueo automático.
 
-<details>
-<summary>🔎 <strong>Desglose técnico detallado de características</strong></summary>
+### ⚡ 4. Productividad, Splits & Red Remota
+- 🖥️ **Splits a 60 FPS**: Motor `xterm.js` con división de pantalla horizontal y vertical, redimensionamiento fluido y menús contextuales.
+- 🔌 **Túneles SSH Avanzados**: Túneles Locales (`-L`), Remotos (`-R`) y Proxy SOCKS5 Dinámico (`-D`) con verificación automática de puertos libres y limpieza de puertos huérfanos.
+- 📹 **Auditoría & Grabación asciinema**: Captura toda la entrada/salida de sesiones SSH en formato estándar `asciicast v2` (.cast) con reproductor integrado.
+- 🚀 **Arranque Ultra-Rápido**: Carga diferida inteligente (*Lazy Loading*) de módulos y servicios pesados.
 
-### 🔄 **Sistema de Splits Avanzado**
-- Splits horizontales y verticales con redimensionamiento fluido
-- Menú contextual intuitivo para elegir orientación
-- Barras de separación responsive
-- Reutilización de sesiones SSH existentes
+### 📊 5. Monitoreo del Sistema & Diagnóstico
+- 📈 **Telemetría en Tiempo Real**: Métricas de CPU, memoria RAM y carga del sistema en tiempo real con gráficas de histórico.
+- 🐧 **Auto-detección OS**: Detección automática de distribuciones Linux e indicadores visuales de estado de conexión.
 
-### 🔌 **Servidor MCP Integrado (Model Context Protocol)**
-- **Servidor Integrado Seguro**: Servidor nativo con comunicación segura mediante autenticación por API Key.
-- **Acceso a Datos**: Permite a agentes de IA externos consultar de forma segura conexiones, contraseñas y notas/documentos.
-- **Gestión de Recursos**: Soporte para la creación, consulta y edición remota de credenciales y notas de forma controlada.
-
-### 🌐 **Gestión SSH Profesional**
-- Soporte completo para bastiones Wallix
-- Autenticación por usuario/contraseña
-- Organización jerárquica de sesiones en carpetas
-- Agrupación de pestañas por proyectos
-- Pool de conexiones para optimización de recursos
-
-### 🔌 **Túneles SSH Avanzados**
-- **Túneles Locales (-L)**: Redirige puerto local a servidor remoto
-- **Túneles Remotos (-R)**: Redirige puerto remoto a servidor local
-- **Proxy SOCKS Dinámico (-D)**: Proxy SOCKS5 para enrutar todo el tráfico
-- **Verificación de Puertos**: Verificación automática de puertos libres antes de crear túneles
-- **Limpieza Automática**: Cierre automático de túneles anteriores que usen el mismo puerto
-- **Gestión de Recursos**: Prevención de puertos ocupados y túneles huérfanos
-- **Limpieza al Cerrar**: Todos los túneles se cierran correctamente al cerrar la aplicación
-- **Logs en Tiempo Real**: Visualización de logs y estado de túneles activos
-
-### 🚀 **Optimizaciones de Arranque**
-- **Arranque Mucho Más Rápido**: Optimizaciones significativas que reducen drásticamente el tiempo de inicio
-- **Lazy Loading Inteligente**: Módulos pesados se cargan solo cuando se necesitan
-- **Inicialización Diferida**: Servicios pesados se inicializan después de mostrar la ventana
-- **Registro Progresivo**: Handlers críticos primero, secundarios después para no bloquear la UI
-- **Profiler Integrado**: Sistema de medición de tiempos para monitorear el arranque
-
-### 📊 **Monitoreo y Estadísticas**
-- CPU, RAM y carga del sistema en tiempo real
-- Gráficas de histórico de rendimiento
-- Detección automática de distribuciones Linux
-- Indicadores visuales de estado de conexión
-
-### 🎨 **Personalización Total**
-- Múltiples temas para terminal y UI
-- Fuentes personalizables (FiraCode, JetBrains Mono, etc.)
-- Temas de iconos (Material, VSCode, etc.)
-- Interfaz responsive y moderna
-
-### 📁 **Explorador de Archivos Integrado**
-- Navegación remota por SSH
-- Operaciones de archivos (copiar, pegar, eliminar)
-- Búsqueda y filtrado inteligente
-- Temas de color personalizables
-
-### 🔄 **Sistema de Actualización Automática**
-- Actualizaciones desde GitHub Releases
-- Comprobación automática configurable (cada 1-168 horas)
-- Descarga en segundo plano sin interrumpir tu trabajo
-- Notificaciones de nuevas versiones disponibles
-- Instalación con un clic
-</details>
+### 🎨 6. Personalización Total & UX
+- 🎨 **Temas de UI y Terminal**: Selección de múltiples temas oscuros y claros con personalización de paletas de color.
+- 🔤 **Fuentes & Iconos**: Soporte para fuentes especializadas con ligaduras (*FiraCode*, *JetBrains Mono*) y packs de iconos (*Material*, *VSCode*).
+- ⌨️ **Atajos & Layout**: Configuración completa de teclado, pestañas organizables por proyectos y menús contextuales avanzados.
+- 🔄 **Actualizador Automático**: Comprobación en segundo plano desde GitHub Releases con canales Estable y Beta.
 
 ---
 
