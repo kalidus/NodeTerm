@@ -1,35 +1,48 @@
-# 🚀 NodeTerm
-
 <div align="center">
-  <img src="src/assets/app-icon.png" alt="NodeTerm Logo" width="96" style="border-radius:16px; margin-bottom:12px;"/>
-  <br>
-  <b>Cliente SSH moderno y multiplataforma para administradores y devs</b>
+
+  <img src="src/assets/app-icon.png" alt="NodeTerm Logo" width="120" style="border-radius:24px; box-shadow: 0 8px 24px rgba(0,0,0,0.2);"/>
+
+  # 🚀 NodeTerm
+
+  <b>El cliente SSH visual de nueva generación: ultrarrápido, seguro y preparado para la era de la IA.</b>
+
+  <p align="center">
+    <i>Pensado para administradores de sistemas, DevOps y desarrolladores que buscan máxima productividad en escritorio y web.</i>
+  </p>
+
+  <!-- Badges estilizados -->
+  <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/github/v/release/kalidus/NodeTerm?style=for-the-badge&color=2eb85c&logo=github&label=Versi%C3%B3n" alt="Última Release"/></a>
+  <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/badge/Plataformas-Windows%20%7C%20Linux%20%7C%20macOS-blue?style=for-the-badge&logo=electron" alt="Plataformas"/></a>
+  <a href="#-servidor-mcp-integrado-model-context-protocol"><img src="https://img.shields.io/badge/IA%20Ready-Servidor%20MCP-purple?style=for-the-badge&logo=openai" alt="MCP Server"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/Licencia-MIT-green?style=for-the-badge" alt="Licencia MIT"/></a>
+
   <br><br>
-  <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/badge/version-1.7.4-blue.svg"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg"/></a>
-  <a href="https://www.electronjs.org/"><img src="https://img.shields.io/badge/electron-latest-brightgreen.svg"/></a>
-  <a href="#donaciones"><img src="https://img.shields.io/badge/💰-Donate_Crypto-yellow.svg"/></a>
+
+  <!-- Botones de Acción (CTA) -->
+  <a href="https://github.com/kalidus/NodeTerm/releases/latest">
+    <img src="https://img.shields.io/badge/📥_Descargar_NodeTerm-238636?style=for-the-badge&logoColor=white" height="38" alt="Descargar"/>
+  </a>
+  &nbsp;&nbsp;
+  <a href="#-instalación-rápida">
+    <img src="https://img.shields.io/badge/⚡_Guía_de_Instalación-1f6feb?style=for-the-badge&logoColor=white" height="38" alt="Instalación"/>
+  </a>
+
+  <br><br>
+
+  <!-- Captura de pantalla principal VISIBLE -->
+  <img src="src/assets/screenshot-main.png" alt="NodeTerm Screenshot" width="85%"/>
+
 </div>
 
 ---
 
-## ✨ ¿Qué es NodeTerm?
+## ✨ ¿Por qué elegir NodeTerm?
 
-NodeTerm es un cliente SSH visual, rápido y personalizable, pensado para administradores, devs y entusiastas que buscan productividad y una experiencia moderna tanto en escritorio como en web/PWA.
+NodeTerm combina la potencia de la terminal tradicional con una interfaz gráfica moderna, rápida y extensible.
 
-- 🔒 **Seguro**: Encriptación AES-256 para credenciales y datos sensibles.
-- ⚡ **Rápido**: Conexión instantánea y gestión de múltiples sesiones.
-- 🎨 **Personalizable**: Temas, iconos, fuentes y más.
-- 🌐 **Multiplataforma**: Windows, Linux, Mac y versión web progresiva.
-
-<details>
-<summary>🖼️ <strong>Ver vista previa</strong></summary>
-
-<div align="center">
-  <img src="src/assets/screenshot-main.png" alt="NodeTerm Screenshot" width="600"/>
-</div>
-
-</details>
+| 🤖 **Servidor MCP Integrado** | 🔒 **Seguridad Militar AES-256** | ⚡ **Rendimiento 60 FPS & Splits** | 📁 **SFTP & Auditoría Integrada** |
+| :--- | :--- | :--- | :--- |
+| Conecta tu terminal a asistentes de IA (Claude, Cursor, Antigravity) mediante el protocolo estándar MCP de forma segura. | Protege tus credenciales y conexiones con encriptación nativa AES-256 y contraseña maestra. | Motor **xterm.js** optimizado con multitarea mediante splits verticales y horizontales fluidos. | Explora archivos remotos visualmente y graba/exporta sesiones SSH en formato estándar asciinema. |
 
 ---
 
