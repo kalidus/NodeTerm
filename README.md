@@ -10,6 +10,7 @@
     <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/github/v/release/kalidus/NodeTerm?style=flat-square&color=2eb85c&logo=github&label=Versi%C3%B3n" alt="Última Release"/></a>
     <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/badge/Plataformas-Windows%20%7C%20Linux%20%7C%20macOS-blue?style=flat-square&logo=electron" alt="Plataformas"/></a>
     <a href="#-servidor-mcp-integrado-model-context-protocol"><img src="https://img.shields.io/badge/IA%20Ready-Servidor%20MCP-purple?style=flat-square" alt="MCP Server"/></a>
+    <a href="#donar"><img src="https://img.shields.io/badge/☕_Donar-F7931A?style=flat-square" alt="Donar"/></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/Licencia-MIT-green?style=flat-square" alt="Licencia MIT"/></a>
   </p>
 
@@ -181,14 +182,31 @@ Versiones anteriores: [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
-## 💰 Donaciones
+<a id="donar"></a>
+## 💖 Apoyar el Proyecto
 
-¿Te gusta NodeTerm? Puedes apoyar el desarrollo con una donación en cripto:
+Si **NodeTerm** te resulta útil y quieres apoyar su mantenimiento y desarrollo continuo, puedes hacer una contribución o dejar una estrella ⭐ en el repositorio.
 
-- **ETH y tokens EVM:** `0xE6df364718CCFB96025eF24078b7C8D387a47242`
-- **Solana (SOL):** `3b4UFMaXHmuincSXKpfgCoroFV1RYZVaAWbGTcfeNh5q`
+<p align="left">
+  <a href="https://github.com/sponsors/kalidus"><img src="https://img.shields.io/badge/GitHub_Sponsors-ea4aaa?style=for-the-badge&logo=githubsponsors&logoColor=white" height="36" alt="GitHub Sponsors"/></a>
+  &nbsp;
+  <a href="https://ko-fi.com/kalidus"><img src="https://img.shields.io/badge/Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white" height="36" alt="Ko-fi"/></a>
+  &nbsp;
+  <a href="https://buymeacoffee.com/kalidus"><img src="https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" height="36" alt="Buy Me A Coffee"/></a>
+</p>
 
-¡Gracias por tu apoyo! 🙏
+<p align="left">
+  <a href="https://etherscan.io/address/0x7D18e60b2717edA94e6a48d05e6d09038dCf9342"><img src="https://img.shields.io/badge/Ethereum_%2F_EVM-3C3C3D?style=for-the-badge&logo=ethereum&logoColor=white" height="36" alt="Ethereum / EVM"/></a>
+  &nbsp;
+  <a href="https://solscan.io/account/DAP3efj9Fvp1uvf8eVse3dMTxxyw2bWLh4snA891iNZh"><img src="https://img.shields.io/badge/Solana-9945FF?style=for-the-badge&logo=solana&logoColor=white" height="36" alt="Solana"/></a>
+</p>
+
+```text
+ETH / EVM: 0x7D18e60b2717edA94e6a48d05e6d09038dCf9342
+Solana:    DAP3efj9Fvp1uvf8eVse3dMTxxyw2bWLh4snA891iNZh
+```
+
+¡Cualquier apoyo, por pequeño que sea, ayuda enormemente al proyecto! 🙏 
 
 ---
 
@@ -211,6 +229,7 @@ Versiones anteriores: [CHANGELOG.md](CHANGELOG.md).
 - Abre una [Feature Request](https://github.com/kalidus/NodeTerm/issues/new)
 - Describe claramente la funcionalidad deseada
 - Explica cómo mejoraría la experiencia de usuario
+
 ---
 
 ## 🤖 Sobre el Desarrollo
@@ -224,9 +243,3 @@ Versiones anteriores: [CHANGELOG.md](CHANGELOG.md).
 ## 📄 Licencia
 
 MIT. Hecho con ❤️ por [kalidus](https://github.com/kalidus).
-
----
-
-## ☕ ¿Te gusta el proyecto?
-
-Puedes invitarme a un café ☕ o dejar una estrella ⭐ en GitHub. ¡Gracias! 
