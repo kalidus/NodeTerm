@@ -7,6 +7,11 @@
   <b>Un cliente de acceso remoto "all-in-one" moderno, multiprotocolo, con bóveda de contraseñas e IA integrada en un espacio multipestaña ultrarrápido.</b>
 
   <p align="center">
+    <a href="README.md"><img src="https://img.shields.io/badge/Language-🇪🇸_Español-blue?style=flat-square" alt="Español"/></a>
+    <a href="README.en.md"><img src="https://img.shields.io/badge/Language-🇬🇧_English-lightgrey?style=flat-square" alt="English"/></a>
+  </p>
+
+  <p align="center">
     <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/github/v/release/kalidus/NodeTerm?style=flat-square&color=2eb85c&logo=github&label=Versi%C3%B3n" alt="Última Release"/></a>
     <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/badge/Plataformas-Windows%20%7C%20Linux%20%7C%20macOS-blue?style=flat-square&logo=electron" alt="Plataformas"/></a>
     <a href="#-servidor-mcp-integrado-model-context-protocol"><img src="https://img.shields.io/badge/🤖_IA-MCP_Native-8a2be2?style=flat-square" alt="MCP Server"/></a>

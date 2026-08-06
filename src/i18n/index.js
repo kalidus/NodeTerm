@@ -37,20 +37,19 @@ const allTranslations = {
 
 class I18nService {
   constructor() {
-    // Inicializar con español por defecto inmediatamente
     const savedLocale = localStorage.getItem('app_locale');
-    const systemLocale = navigator.language?.split('-')[0] || 'es';
-    // Validar locale directamente (es o en)
-    const isValid = ['es', 'en'].includes(systemLocale);
-    const defaultLocale = savedLocale || (isValid ? systemLocale : 'es');
+    const systemLocale = (typeof navigator !== 'undefined' && (navigator.language || navigator.userLanguage))
+      ? navigator.language.toLowerCase().split('-')[0]
+      : 'en';
+
+    // Si el idioma del sistema es español ('es'), usar 'es'.
+    // Para CUALQUIER OTRO IDIOMA (inglés, francés, alemán, etc.), la aplicación usará 'en' por defecto.
+    const defaultLocale = savedLocale || (systemLocale === 'es' ? 'es' : 'en');
     
     this.currentLocale = defaultLocale;
-    // Cargar traducciones inmediatamente (no esperar a init())
-    this.translations = allTranslations[defaultLocale] || allTranslations['es'];
+    this.translations = allTranslations[defaultLocale] || allTranslations['en'];
     this.listeners = new Set();
     this.isInitialized = false;
-    
-    // console.log(`[i18n] Constructor - Idioma inicial: ${this.currentLocale}`, Object.keys(this.translations));
   }
 
   /**
@@ -144,11 +143,19 @@ class I18nService {
         value = value[part];
       }
 
-      // Si no se encontró, devolver la clave
+      // Si no se encontró en el idioma actual, intentar fallback en español
+      if ((value === undefined || value === null) && this.currentLocale !== 'es') {
+        let fallbackVal = allTranslations['es']?.[namespace];
+        for (const part of path) {
+          if (fallbackVal === undefined || fallbackVal === null) break;
+          fallbackVal = fallbackVal[part];
+        }
+        if (fallbackVal !== undefined && fallbackVal !== null) {
+          value = fallbackVal;
+        }
+      }
+
       if (value === undefined || value === null) {
-        // Solo mostrar warning en desarrollo (reducido para evitar spam)
-        // console.warn(`[i18n] Traducción faltante: ${key} (${this.currentLocale})`);
-        // console.warn(`[i18n] Namespace: ${namespace}, Path: ${path.join('.')}, Traducciones disponibles:`, Object.keys(this.translations[namespace] || {}));
         return key;
       }
 
