@@ -1,35 +1,28 @@
 <div align="center">
 
-  <img src="src/assets/app-icon.png" alt="NodeTerm Logo" width="120" style="border-radius:24px; box-shadow: 0 8px 24px rgba(0,0,0,0.2);"/>
+  <img src="src/assets/app-icon.png" alt="NodeTerm Logo" width="80" style="border-radius:16px;"/>
 
   # 🚀 NodeTerm
 
-  <b>El cliente SSH visual de nueva generación: ultrarrápido, seguro y preparado para la era de la IA.</b>
+  <b>Un cliente de acceso remoto "all-in-one" moderno, multiprotocolo, con bóveda de contraseñas e IA integrada en un espacio multipestaña ultrarrápido.</b>
 
   <p align="center">
-    <i>Pensado para administradores de sistemas, DevOps y desarrolladores que buscan máxima productividad en escritorio y web.</i>
+    <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/github/v/release/kalidus/NodeTerm?style=flat-square&color=2eb85c&logo=github&label=Versi%C3%B3n" alt="Última Release"/></a>
+    <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/badge/Plataformas-Windows%20%7C%20Linux%20%7C%20macOS-blue?style=flat-square&logo=electron" alt="Plataformas"/></a>
+    <a href="#-servidor-mcp-integrado-model-context-protocol"><img src="https://img.shields.io/badge/IA%20Ready-Servidor%20MCP-purple?style=flat-square" alt="MCP Server"/></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/Licencia-MIT-green?style=flat-square" alt="Licencia MIT"/></a>
   </p>
 
-  <!-- Badges estilizados -->
-  <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/github/v/release/kalidus/NodeTerm?style=for-the-badge&color=2eb85c&logo=github&label=Versi%C3%B3n" alt="Última Release"/></a>
-  <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/badge/Plataformas-Windows%20%7C%20Linux%20%7C%20macOS-blue?style=for-the-badge&logo=electron" alt="Plataformas"/></a>
-  <a href="#-servidor-mcp-integrado-model-context-protocol"><img src="https://img.shields.io/badge/IA%20Ready-Servidor%20MCP-purple?style=for-the-badge&logo=openai" alt="MCP Server"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/Licencia-MIT-green?style=for-the-badge" alt="Licencia MIT"/></a>
+  <p align="center">
+    <a href="https://github.com/kalidus/NodeTerm/releases/latest">
+      <img src="https://img.shields.io/badge/📥_Descargar_NodeTerm-238636?style=flat-square" height="28" alt="Descargar"/>
+    </a>
+    &nbsp;
+    <a href="#-instalación-rápida">
+      <img src="https://img.shields.io/badge/⚡_Guía_de_Instalación-1f6feb?style=flat-square" height="28" alt="Instalación"/>
+    </a>
+  </p>
 
-  <br><br>
-
-  <!-- Botones de Acción (CTA) -->
-  <a href="https://github.com/kalidus/NodeTerm/releases/latest">
-    <img src="https://img.shields.io/badge/📥_Descargar_NodeTerm-238636?style=for-the-badge&logoColor=white" height="38" alt="Descargar"/>
-  </a>
-  &nbsp;&nbsp;
-  <a href="#-instalación-rápida">
-    <img src="https://img.shields.io/badge/⚡_Guía_de_Instalación-1f6feb?style=for-the-badge&logoColor=white" height="38" alt="Instalación"/>
-  </a>
-
-  <br><br>
-
-  <!-- Captura de pantalla principal VISIBLE -->
   <img src="src/assets/screenshot-main.png" alt="NodeTerm Screenshot" width="85%"/>
 
 </div>
@@ -38,7 +31,7 @@
 
 ## ✨ ¿Por qué elegir NodeTerm?
 
-NodeTerm combina la potencia de la terminal tradicional con una interfaz gráfica moderna, rápida y extensible.
+NodeTerm es un cliente de acceso remoto *all-in-one* construido con Node.js y Electron. Está diseñado para gestionar múltiples protocolos, almacenamiento seguro de contraseñas (Vault) e integración nativa con clientes y servidores de IA en un entorno de trabajo multipestaña rápido y totalmente personalizable.
 
 | 🤖 **Servidor MCP Integrado** | 🔒 **Seguridad Militar AES-256** | ⚡ **Rendimiento 60 FPS & Splits** | 📁 **SFTP & Auditoría Integrada** |
 | :--- | :--- | :--- | :--- |
