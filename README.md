@@ -31,62 +31,24 @@
 
 ## ✨ ¿Por qué elegir NodeTerm?
 
-NodeTerm es un cliente de acceso remoto *all-in-one* construido con Node.js y Electron. Está diseñado para gestionar múltiples protocolos, almacenamiento seguro de contraseñas (Vault) e integración nativa con clientes y servidores de IA en un entorno de trabajo multipestaña rápido y totalmente personalizable.
+NodeTerm unifica el acceso remoto tradicional, la gestión de contraseñas y la automatización con IA en una única herramienta ultrarrápida.
 
-| 🤖 **Servidor MCP Integrado** | 🔒 **Seguridad Militar AES-256** | ⚡ **Rendimiento 60 FPS & Splits** | 📁 **SFTP & Auditoría Integrada** |
-| :--- | :--- | :--- | :--- |
-| Conecta tu terminal a asistentes de IA (Claude, Cursor, Antigravity) mediante el protocolo estándar MCP de forma segura. | Protege tus credenciales y conexiones con encriptación nativa AES-256 y contraseña maestra. | Motor **xterm.js** optimizado con multitarea mediante splits verticales y horizontales fluidos. | Explora archivos remotos visualmente y graba/exporta sesiones SSH en formato estándar asciinema. |
+#### 🛡️ Seguridad & Bóveda de Credenciales
+- 🔒 **Cifrado AES-256**: Protección de datos sensibles con contraseña maestra y auto-lock.
+- 🔑 **Gestión de Vault**: Almacenamiento seguro e inyección controlada de secretos para IA.
 
----
+#### 🤖 Automatización e Integración de IA (MCP)
+- 🔌 **Servidor MCP Nativo**: Conecta tu terminal a Claude, Cursor o Antigravity mediante API Key.
+- 🛡️ **Acceso Aislado**: Permite a agentes de IA interactuar con el sistema de forma segura sin exponer tus claves.
 
-## 🚀 Instalación Rápida
-
-### Desktop (Electron)
-```sh
-# Descarga el instalador desde la sección Releases
-https://github.com/kalidus/NodeTerm/releases
-```
-
-<details>
-<summary>🛠️ <strong>Desarrollo local</strong></summary>
-
-```sh
-# Clonar el repositorio
-git clone https://github.com/kalidus/NodeTerm.git
-cd NodeTerm
-
-# Node.js 24 LTS recomendado (nvm: nvm install && nvm use)
-# Linux (Arch/CachyOS): sudo pacman -S --needed base-devel python
-
-# Instalar dependencias (sin sudo)
-npm install
-
-# Modo desarrollo
-npm run dev
-
-# Construir ejecutable
-npm run build:win
-```
-
-En Linux, `npm install` ejecuta automáticamente la reparación del binario de Electron si la instalación quedó incompleta. No uses `sudo npm install` dentro del proyecto.
-
-</details>
-
----
-
-## 🛠️ Características Principales
-
-|  |  |
-|--|--|
-| 🖥️ Múltiples terminales SSH | 📁 Explorador de archivos remoto |
-| 🗂️ Agrupación de pestañas   | 🎨 Temas y personalización total |
-| 🔄 Sincronización en tiempo real | 🧩 Soporte para iconos y fuentes |
-| 🛡️ Seguridad local y cifrado | 🌙 Modo oscuro y claro |
-| 🖱️ Menús contextuales avanzados | ⚡ Atajos de teclado |
-| 🔄 Actualizaciones automáticas | 🔌 Servidor MCP Integrado (API Key) |
+#### ⚡ Terminal & Productividad Remota
+- 🖥️ **Splits a 60 FPS**: Paneles divididos horizontal y verticalmente sin lag en xterm.js.
+- 📁 **Explorador SFTP Integrado**: Navegación y transferencia visual de archivos remotos.
+- 📹 **Grabación asciinema**: Auditoría completa de sesiones exportable a formato `.cast`.
+- 🔌 **Túneles SSH**: Soporte local (-L), remoto (-R) y Proxy SOCKS5 dinámico (-D).
 
 <details>
-<summary>🔎 <strong>Desglose avanzado de características</strong></summary>
+<summary>🔎 <strong>Desglose técnico detallado de características</strong></summary>
 
 ### 🔄 **Sistema de Splits Avanzado**
 - Splits horizontales y verticales con redimensionamiento fluido
@@ -147,8 +109,40 @@ En Linux, `npm install` ejecuta automáticamente la reparación del binario de E
 - Descarga en segundo plano sin interrumpir tu trabajo
 - Notificaciones de nuevas versiones disponibles
 - Instalación con un clic
-- Soporte para canales stable/beta
-- Actualizaciones firmadas y verificadas
+</details>
+
+---
+
+## 🚀 Instalación Rápida
+
+### Desktop (Electron)
+```sh
+# Descarga el instalador ejecutable (.exe / .AppImage / .deb / pacman)
+https://github.com/kalidus/NodeTerm/releases
+```
+
+<details>
+<summary>🛠️ <strong>Desarrollo local</strong></summary>
+
+```sh
+# Clonar el repositorio
+git clone https://github.com/kalidus/NodeTerm.git
+cd NodeTerm
+
+# Node.js 24 LTS recomendado (nvm: nvm install && nvm use)
+# Linux (Arch/CachyOS): sudo pacman -S --needed base-devel python
+
+# Instalar dependencias (sin sudo)
+npm install
+
+# Modo desarrollo
+npm run dev
+
+# Construir ejecutable
+npm run build:win
+```
+
+En Linux, `npm install` ejecuta automáticamente la reparación del binario de Electron si la instalación quedó incompleta. No uses `sudo npm install` dentro del proyecto.
 
 </details>
 
