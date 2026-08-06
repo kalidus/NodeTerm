@@ -45,8 +45,9 @@ NodeTerm es un espacio de trabajo remoto *all-in-one* que unifica múltiples pro
 - 📑 **Acceso a Recursos**: Los agentes de IA pueden consultar y gestionar de forma autorizada conexiones, notas, documentos y terminales abiertos.
 
 ### 🔒 3. Seguridad & Bóveda de Credenciales (Vault)
-- 🛡️ **Encriptación AES-256**: Cifrado de grado militar para contraseñas, conexiones y datos sensibles almacenados localmente.
+- 🛡️ **Encriptación AES-256**: NodeTerm incluye un sistema completo de encriptación AES-256 para proteger todas las credenciales y datos sensibles almacenados localmente.
 - 🔑 **Master Password & Auto-Lock**: Clave única para desbloquear la aplicación con temporizador de bloqueo automático.
+- 📹 **Sistema de Auditoría y Grabación**: Incluye un sistema completo de grabación y auditoría de sesiones SSH para compliance, debugging y documentación:
 
 ### ⚡ 4. Productividad, Splits & Red Remota
 - 🖥️ **Splits a 60 FPS**: Motor `xterm.js` con división de pantalla horizontal y vertical, redimensionamiento fluido y menús contextuales.
@@ -134,46 +135,6 @@ El historial detallado vive solo en **[CHANGELOG.md](CHANGELOG.md)**. Las [GitHu
 
 ---
 
-## 🔄 Sistema de Actualización
-
-NodeTerm incluye un sistema de actualización automática que mantiene tu aplicación siempre al día:
-
-### Configuración
-
-Accede a `Configuración → Actualizaciones` para personalizar:
-
-- **Actualizaciones Automáticas**: Activa/desactiva la comprobación automática
-- **Intervalo de Comprobación**: Configura cada cuántas horas buscar actualizaciones (1-168 horas)
-- **Descarga Automática**: Las actualizaciones se descargan en segundo plano automáticamente
-- **Canal de Actualizaciones**: 
-  - **Estable (Recomendado)**: Versiones probadas y estables
-  - **Beta**: Versiones de prueba con nuevas funcionalidades
-
-### Procedimiento de Actualización
-
-1. **Comprobación**: La app comprueba automáticamente si hay nuevas versiones en GitHub Releases
-2. **Notificación**: Si hay una actualización disponible, recibirás una notificación
-3. **Descarga**: La actualización se descarga en segundo plano sin interrumpir tu trabajo
-4. **Instalación**: Cuando esté lista, haz clic en "Instalar y Reiniciar" para aplicar la actualización
-5. **Reinicio**: La aplicación se reinicia automáticamente con la nueva versión
-
-### Actualización Manual
-
-Si prefieres controlar las actualizaciones manualmente:
-
-1. Abre `Configuración → Actualizaciones`
-2. Haz clic en **"Buscar Actualizaciones"**
-3. Si hay una versión disponible, haz clic en **"Descargar"**
-4. Una vez descargada, haz clic en **"Instalar y Reiniciar"**
-
-### Seguridad
-
-- Todas las actualizaciones provienen de GitHub Releases oficial
-- Las actualizaciones están firmadas y verificadas automáticamente
-- El proceso de actualización es completamente seguro y no requiere permisos de administrador
-
----
-
 ## 🏗️ Arquitectura Técnica
 
 <details>
@@ -250,36 +211,6 @@ Versiones anteriores: [CHANGELOG.md](CHANGELOG.md).
 - Abre una [Feature Request](https://github.com/kalidus/NodeTerm/issues/new)
 - Describe claramente la funcionalidad deseada
 - Explica cómo mejoraría la experiencia de usuario
-
----
-
-## 🔒 Seguridad y Encriptación
-
-NodeTerm incluye un sistema completo de encriptación AES-256 para proteger todas las credenciales y datos sensibles:
-
-- **Encriptación AES-256**: Grado militar para passwords y conexiones
-- **Master Password**: Clave única para desbloquear la aplicación
-- **Auto-Unlock**: Opción para no pedir contraseña cada vez
-- **Migración Automática**: Encripta datos existentes sin pérdida
-- **Retrocompatibilidad**: Funciona con y sin encriptación
-
-📖 **Documentación completa**: [docs/SISTEMA_ENCRIPTACION.md](docs/SISTEMA_ENCRIPTACION.md)
-
----
-
-## 📹 Sistema de Auditoría y Grabación
-
-NodeTerm incluye un sistema completo de grabación y auditoría de sesiones SSH para compliance, debugging y documentación:
-
-- **Grabación en tiempo real**: Captura toda la entrada/salida de sesiones SSH
-- **Formato estándar**: Compatible con asciicast v2 (asciinema)
-- **Reproductor integrado**: Playback con controles de velocidad
-- **Búsqueda y filtrado**: Encuentra grabaciones por conexión
-- **Exportación**: Comparte grabaciones en formato estándar
-- **Almacenamiento local**: Sin dependencias de servicios externos
-
-📖 **Guía completa**: [docs/GUIA_AUDITORIA_SESIONES.md](docs/GUIA_AUDITORIA_SESIONES.md)
-
 ---
 
 ## 🤖 Sobre el Desarrollo
