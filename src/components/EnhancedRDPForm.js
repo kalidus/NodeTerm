@@ -413,6 +413,23 @@ export function EnhancedRDPForm({
       </div>
 
       <div className="terminal-row mb-3">
+        <label className="terminal-label" htmlFor={`${p}-domain`}>
+          DOMINIO / DOMAIN
+        </label>
+        <div className="terminal-input-wrap">
+          <i className="pi pi-sitemap terminal-icon-left" aria-hidden="true"></i>
+          <InputText
+            id={`${p}-domain`}
+            value={formData.domain || ''}
+            onChange={handleTextChange('domain')}
+            placeholder="Dominio de Active Directory (opcional, ej: MIEMPRESA)"
+            className="terminal-input"
+            autoComplete="off"
+          />
+        </div>
+      </div>
+
+      <div className="terminal-row mb-3">
         <label className="terminal-label" htmlFor={`${p}-password`}>
           {t('rdp.fields.password').toUpperCase()}
         </label>

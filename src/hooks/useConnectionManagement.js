@@ -622,6 +622,7 @@ export const useConnectionManagement = ({
         clientType: baseRdp.clientType || 'web-rdp',
         hostname: baseRdp.server || baseRdp.host || baseRdp.hostname,
         username: baseRdp.username || baseRdp.user,
+        domain: baseRdp.domain || baseRdp.serverDomain,
         password: baseRdp.password || 'password', // En producción desde vault
         port: baseRdp.port || 3389,
         width: screen.width,

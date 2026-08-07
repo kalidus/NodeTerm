@@ -1441,6 +1441,7 @@ export const useFormHandlers = ({
                 name: rdpData.name,
                 server: rdpData.server,
                 username: rdpData.username,
+                domain: rdpData.domain,
                 password: rdpData.password,
                 port: rdpData.port || 3389,
                 clientType: rdpData.clientType || 'guacamole',

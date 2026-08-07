@@ -100,7 +100,33 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
         const host = String(rdpConfig.hostname || rdpConfig.server || rdpConfig.host || '127.0.0.1');
         const port = parseInt(rdpConfig.port, 10) || 3389;
         const destinationStr = `${host}:${port}`;
-        const usernameStr = String(rdpConfig.username || rdpConfig.user || '');
+        let usernameStr = String(rdpConfig.username || rdpConfig.user || '').trim();
+        let domainStr = String(rdpConfig.domain || rdpConfig.serverDomain || '').trim();
+
+        // 1. Formato NetBIOS clasico: "DOMINIO\usuario"
+        if (usernameStr.includes('\\')) {
+          const parts = usernameStr.split('\\');
+          if (!domainStr) domainStr = parts[0];
+          usernameStr = parts[1];
+        } 
+        // 2. Formato Correo / UPN (ej: kalidus@outlook.es o juan@miempresa.com)
+        else if (usernameStr.includes('@')) {
+          const emailParts = usernameStr.split('@');
+          const emailPrefix = emailParts[0];
+          const emailDomain = emailParts[1].toLowerCase();
+
+          // Si es una Cuenta de Microsoft (outlook, hotmail, live, msn), Windows 10/11 asigna las primeras 5 letras como cuenta SAM local
+          const isPublicMicrosoftEmail = ['outlook.', 'hotmail.', 'live.', 'msn.'].some(d => emailDomain.includes(d));
+
+          if (isPublicMicrosoftEmail && !domainStr) {
+            // Mapear automáticamente las primeras 5 letras de la cuenta Microsoft (ej: kalid para kalidus@outlook.es)
+            usernameStr = emailPrefix.substring(0, Math.min(5, emailPrefix.length));
+          } else if (!domainStr) {
+            domainStr = emailParts[1];
+            usernameStr = emailPrefix;
+          }
+        }
+
         const passwordStr = String(rdpConfig.password || '');
         const proxyAddressStr = String(tokenResponse.wsUrl || '');
         const authTokenStr = String(tokenResponse.tokenId || '');
@@ -129,8 +155,8 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
           .extension(enableCredssp(true))
           .extension(displayControl(true));
 
-        if (rdpConfig.domain || rdpConfig.serverDomain) {
-          builder.serverDomain(String(rdpConfig.domain || rdpConfig.serverDomain));
+        if (domainStr) {
+          builder.serverDomain(domainStr);
         }
 
         if (canvasRef.current) {
@@ -138,6 +164,7 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
         }
 
         console.log(`🚀 [IronRDP WASM] Iniciando sesión RDP para ${destinationStr} vía ${tokenResponse.wsUrl}...`);
+        console.log(`🔐 [IronRDP WASM] Credenciales enviadas: user="${usernameStr}", domain="${domainStr || '(ninguno)'}"`);
         console.log('⏳ [IronRDP WASM] Ejecutando builder.connect()...');
         
         currentSession = await builder.connect();

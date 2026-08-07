@@ -230,7 +230,9 @@ class RdpNativeBridgeService extends EventEmitter {
 
           let x224Cr = this.extractX224FromRdCleanPath(payload);
           if (!x224Cr || x224Cr.length === 0) {
-            const cookieStr = `Cookie: mstshash=${session.username || 'nodeterm'}\r\n`;
+            let samUser = session.username || 'nodeterm';
+            if (samUser.includes('\\')) samUser = samUser.split('\\')[1];
+            const cookieStr = `Cookie: mstshash=${samUser}\r\n`;
             const cookieBytes = Buffer.from(cookieStr, 'utf8');
             const tpktLen = 11 + cookieBytes.length + 8;
             x224Cr = Buffer.concat([
