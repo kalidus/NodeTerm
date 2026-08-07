@@ -143,7 +143,9 @@ class RdpNativeBridgeService extends EventEmitter {
     const connectionId = `native_rdp_${Date.now()}`;
     const workerPath = path.join(__dirname, 'rdp-tls-worker.js');
 
-    let forkOptions = {};
+    let forkOptions = {
+      windowsHide: true
+    };
     try {
       forkOptions.execPath = process.platform === 'win32' ? 'node.exe' : 'node';
     } catch (e) {}
@@ -153,7 +155,7 @@ class RdpNativeBridgeService extends EventEmitter {
       worker = fork(workerPath, [], forkOptions);
     } catch (e) {
       console.warn('⚠️ Falló fork con node genérico, usando fork predeterminado:', e);
-      worker = fork(workerPath);
+      worker = fork(workerPath, [], { windowsHide: true });
     }
 
     this.activeConnections.set(connectionId, { ws, worker, session });
