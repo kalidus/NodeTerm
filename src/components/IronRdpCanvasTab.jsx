@@ -4,6 +4,7 @@ import { Dialog } from 'primereact/dialog';
 import { InputTextarea } from 'primereact/inputtextarea';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { Backend, init as initIronRdp, enableCredssp, displayControl } from '@devolutions/iron-remote-desktop-rdp';
+import { resolveCredsspPolicy } from '../utils/rdpSecurityPolicy';
 
 const extractErrorMessage = (err) => {
   if (!err) return 'Error desconocido de conexión RDP';
@@ -45,7 +46,7 @@ const extractErrorMessage = (err) => {
   }
 
   if (msg.includes('not enough bytes') || msg.includes('read frame by hint')) {
-    return 'Este bastión o servidor RDP requiere autenticación TLS sin NLA (0x01), la cual no es compatible con el motor RDP Web WASM. Cambia el tipo de CLIENTE a "Apache Guacamole" o "Nativo SO (MSTSC)" en la configuración de la tarjeta para conectar.';
+    return `Fallo al decodificar PDU RDP (${msg}). Si acabas de cambiar el bridge, reinicia npm run dev. Alternativa: Seguridad=TLS o Guacamole/MSTSC.`;
   }
 
   return msg;
@@ -81,9 +82,15 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
         await initIronRdp('');
 
         // 2. Obtener dimensiones del contenedor o ventana
+        // Wallix rellena bitmaps a multiplo de 4; IronRDP 0.7 usa dest-rect como stride.
+        // Pedimos desktop alineado + margen para que el bridge pueda expandir dest sin OOB.
         const rect = containerRef.current?.getBoundingClientRect() || { width: 1600, height: 1000 };
-        const width = Math.max(800, Math.floor(rect.width || window.innerWidth));
-        const height = Math.max(600, Math.floor(rect.height || window.innerHeight));
+        const alignDesktop = (n) => {
+          const base = Math.max(1, Math.floor(n));
+          return ((base + 3) & ~3) + 4;
+        };
+        const width = alignDesktop(Math.max(800, rect.width || window.innerWidth));
+        const height = alignDesktop(Math.max(600, rect.height || window.innerHeight));
 
         const configPayload = {
           ...rdpConfig,
@@ -107,12 +114,10 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
         let usernameStr = String(rdpConfig.username || rdpConfig.user || '').trim();
         let domainStr = String(rdpConfig.domain || rdpConfig.serverDomain || '').trim();
 
-        // 1. Soporte para Bastión / Proxy Wallix en RDP
-        const hostLower = host.toLowerCase();
-        const isBastionHost = hostLower.includes('bastion') || hostLower.includes('wallix') || hostLower.includes('proxy');
-        const isBastion = rdpConfig.useBastionWallix || rdpConfig.bastionUser || rdpConfig.targetServer || usernameStr.includes('@default@') || usernameStr.includes(':APP:') || isBastionHost;
+        // Formato usuario Wallix solo si hay flags/cadena de target (NO por hostname)
+        const isWallixUserFormat = rdpConfig.useBastionWallix || rdpConfig.bastionUser || rdpConfig.targetServer || usernameStr.includes('@default@') || usernameStr.includes(':APP:');
 
-        if (isBastion) {
+        if (isWallixUserFormat) {
           // Mantener la cadena de usuario de Wallix intacta si ya viene formateada (ej: rt01119@default@FortiAnalyzer:APP:rt01119)
           if (!usernameStr.includes('@') && !usernameStr.includes(':')) {
             const tServer = rdpConfig.targetServer || rdpConfig.targetHost || '';
@@ -125,24 +130,20 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
               }
             }
           }
-        } 
-        // 2. Formato NetBIOS clasico: "DOMINIO\usuario"
-        else if (usernameStr.includes('\\')) {
+        } else if (usernameStr.includes('\\')) {
+          // Formato NetBIOS clasico: "DOMINIO\usuario"
           const parts = usernameStr.split('\\');
           if (!domainStr) domainStr = parts[0];
           usernameStr = parts[1];
-        } 
-        // 3. Formato Correo / UPN (ej: kalidus@outlook.es o juan@miempresa.com)
-        else if (usernameStr.includes('@')) {
+        } else if (usernameStr.includes('@')) {
+          // Formato Correo / UPN (ej: kalidus@outlook.es o juan@miempresa.com)
           const emailParts = usernameStr.split('@');
           const emailPrefix = emailParts[0];
           const emailDomain = emailParts[1].toLowerCase();
 
-          // Si es una Cuenta de Microsoft (outlook, hotmail, live, msn), Windows 10/11 asigna las primeras 5 letras como cuenta SAM local
           const isPublicMicrosoftEmail = ['outlook.', 'hotmail.', 'live.', 'msn.'].some(d => emailDomain.includes(d));
 
           if (isPublicMicrosoftEmail && !domainStr) {
-            // Mapear automáticamente las primeras 5 letras de la cuenta Microsoft (ej: kalid para kalidus@outlook.es)
             usernameStr = emailPrefix.substring(0, Math.min(5, emailPrefix.length));
           } else if (!domainStr) {
             domainStr = emailParts[1];
@@ -150,17 +151,12 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
           }
         }
 
-        // 4. Determinar soporte CredSSP / NLA o TLS directo (Los bastiones Wallix requieren TLS estándar 0x01 sin CredSSP)
-        const secLower = String(rdpConfig.security || '').toLowerCase();
-        let useCredssp = true;
-        if (secLower === 'tls' || secLower === 'rdp') {
-          useCredssp = false;
-        } else if (secLower === 'nla') {
-          useCredssp = true;
-        } else {
-          // Si security es 'any' o automatico: Auto-detectar si el host es un bastión/proxy que requiere TLS directo
-          useCredssp = !isBastion;
-        }
+        // CredSSP: security explicita, o con "any" el selectedProtocol del preflight X.224 (sin mirar hostname)
+        const selectedProtocol = (typeof tokenResponse.selectedProtocol === 'number')
+          ? tokenResponse.selectedProtocol
+          : null;
+        const useCredssp = resolveCredsspPolicy(rdpConfig.security, selectedProtocol);
+        console.log(`[IronRDP WASM] Negociacion: security=${rdpConfig.security || 'any'} preflight=${tokenResponse.protocolLabel || 'n/a'} credssp=${useCredssp}`);
 
         const passwordStr = String(rdpConfig.password || '');
         const proxyAddressStr = String(tokenResponse.wsUrl || '');
@@ -187,7 +183,7 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
             }
           })
           .setCursorStyleCallbackContext({})
-          .extension(enableCredssp(true))
+          .extension(enableCredssp(useCredssp))
           .extension(displayControl(true));
 
         if (domainStr) {

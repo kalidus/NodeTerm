@@ -11,6 +11,12 @@ const http = require('http');
 const crypto = require('crypto');
 const EventEmitter = require('events');
 const { WebSocketServer } = require('ws');
+const fs = require('fs');
+const path = require('path');
+const { parseX224ConnectionConfirm, protocolName } = require('./rdp-protocol-helpers');
+const { prepareMcsConnectInitial, findClientCoreData } = require('./rdp-mcs-helpers');
+const { patchFontSequenceFlags } = require('./rdp-font-helpers');
+const { fixWallixBitmapStrideCrop } = require('./rdp-fastpath-helpers');
 
 class RdpNativeBridgeService extends EventEmitter {
   constructor() {
@@ -162,6 +168,13 @@ class RdpNativeBridgeService extends EventEmitter {
 
     let rdCleanPathPhase = 'waiting_request';
     let savedX224CcHex = null;
+    let savedSelectedProtocol = null;
+    let bytesToRdp = 0;
+    let bytesFromRdp = 0;
+    let framesFromRdp = 0;
+    let framesToRdp = 0;
+    const framesDir = path.join(__dirname, '../../../testing/rdp/frames');
+    try { fs.mkdirSync(framesDir, { recursive: true }); } catch (_) { /* noop */ }
 
     let isCleanedUp = false;
     const cleanup = (reason) => {
@@ -193,14 +206,20 @@ class RdpNativeBridgeService extends EventEmitter {
           console.log(`📜 [Bridge] Certificado X.509 real devuelto por worker (${msg.certRawHex.length / 2} bytes)`);
         }
 
-        let x224CcBuffer = savedX224CcHex ? Buffer.from(savedX224CcHex, 'hex') : Buffer.from([0x03, 0x00, 0x00, 0x13, 0x0e, 0xd0, 0x00, 0x00, 0x12, 0x34, 0x00, 0x02, 0x2f, 0x08, 0x00, 0x08, 0x00, 0x00, 0x00]);
-        if (x224CcBuffer.length >= 19) {
-          x224CcBuffer = Buffer.from(x224CcBuffer);
-          x224CcBuffer.writeUInt32LE(0x02, 15);
-          console.log(`🔧 [Bridge] Parcheado X.224 CC selectedProtocol a 0x02 (HYBRID) para satisfacer a IronRDP WASM!`);
+        // Reenviar el X.224 CC real del servidor (sin reescribir selectedProtocol).
+        // Wallix/TLS Direct responde 0x01; hosts NLA responden 0x02/0x08. IronRDP sigue ese valor.
+        let x224CcBuffer = savedX224CcHex
+          ? Buffer.from(savedX224CcHex, 'hex')
+          : Buffer.from([0x03, 0x00, 0x00, 0x13, 0x0e, 0xd0, 0x00, 0x00, 0x12, 0x34, 0x00, 0x02, 0x2f, 0x08, 0x00, 0x01, 0x00, 0x00, 0x00]);
+        const nego = parseX224ConnectionConfirm(x224CcBuffer);
+        if (nego && nego.ok) {
+          savedSelectedProtocol = nego.selectedProtocol;
+          console.log(`[Bridge] X.224 CC selectedProtocol=0x${nego.selectedProtocol.toString(16)} (${protocolName(nego.selectedProtocol)})`);
+        } else if (nego && !nego.ok) {
+          console.warn(`[Bridge] X.224 NEG_FAILURE code=${nego.failureCode}`);
         }
         const responsePdu = this.createRdCleanPathResponsePdu(session.host, x224CcBuffer, peerCertChain);
-        console.log(`📤 [Bridge] Enviando RDCleanPath Response PDU (${responsePdu.length} bytes) a WASM...`);
+        console.log(`[Bridge] Enviando RDCleanPath Response PDU (${responsePdu.length} bytes) a WASM...`);
 
         if (ws.readyState === ws.OPEN) {
           ws.send(responsePdu, { binary: true });
@@ -208,15 +227,52 @@ class RdpNativeBridgeService extends EventEmitter {
 
         rdCleanPathPhase = 'transparent';
       } else if (msg.type === 'DATA_FROM_RDP') {
-        console.log(`⬅️ [Bridge RDP -> WASM] (${msg.dataHex.length / 2} bytes):`, msg.dataHex.substring(0, 60));
+        let chunk = Buffer.from(msg.dataHex || '', 'hex');
+        const n = chunk.length;
+        framesFromRdp += 1;
+        if (framesFromRdp <= 24) {
+          console.log(`[Bridge] RDP->WASM frame#${framesFromRdp}: ${n} bytes`);
+          try {
+            fs.writeFileSync(path.join(framesDir, `from-${String(framesFromRdp).padStart(2, '0')}-${n}b.hex`), chunk.toString('hex'), 'utf8');
+          } catch (_) { /* noop */ }
+        }
+
+        // Wallix FontMap a veces trae mapFlags invalidos para IronRDP (from_bits).
+        // Solo forzar FIRST|LAST; NO reclasificar a UPDATE (rompe FontMap con glifos).
+        const fontPatch = patchFontSequenceFlags(chunk);
+        if (fontPatch.candidates.length) {
+          console.log(`[Bridge] FontPdu frame#${framesFromRdp}:`, fontPatch.candidates.map((c) => `len=${c.totalLength} type2=0x${c.type2.toString(16)} flags=0x${c.flags.toString(16)} entry=${c.entrySize}`).join('; '));
+        }
+        if (fontPatch.patchedCount) {
+          chunk = fontPatch.buf;
+          console.log(`[Bridge] FontPdu adjust flags=${fontPatch.patchedCount}`, fontPatch.details.map((d) => `len=${d.totalLength} 0x${d.previous.toString(16)}->0x${d.next.toString(16)}`).join(', '));
+        }
+
+        // IronRDP 0.7: stride = dest-rect; Wallix width padded %4 -> crop RLE a dest.
+        const stridePatch = fixWallixBitmapStrideCrop(chunk);
+        const outChunks = stridePatch.patchedCount
+          ? (stridePatch.buffers || [stridePatch.buf])
+          : [chunk];
+        if (stridePatch.patchedCount && (framesFromRdp <= 24 || stridePatch.fallback)) {
+          console.log(
+            `[Bridge] FastPath BITMAP stride crop frame#${framesFromRdp}: rects=${stridePatch.numberRectangles} patched=${stridePatch.patchedCount}` +
+              (stridePatch.fallback ? ' fallback=dest-expand' : '') +
+              (stridePatch.pduCount > 1 ? ` pdus=${stridePatch.pduCount}` : '') +
+              (stridePatch.newLength ? ` ${stridePatch.originalLength}->${stridePatch.newLength}B` : '')
+          );
+        }
+
+        bytesFromRdp += n;
         if (ws.readyState === ws.OPEN) {
-          ws.send(Buffer.from(msg.dataHex, 'hex'), { binary: true });
+          for (const out of outChunks) {
+            ws.send(out, { binary: true });
+          }
         }
       } else if (msg.type === 'ERROR') {
         console.error('❌ [Bridge Worker Error]:', msg.error);
         cleanup(`Worker Error: ${msg.error}`);
       } else if (msg.type === 'CLOSED') {
-        cleanup('Worker notificó conexión cerrada');
+        cleanup(`Worker notificó conexión cerrada (toRdp=${bytesToRdp}B fromRdp=${bytesFromRdp}B)`);
       }
     });
 
@@ -262,11 +318,36 @@ class RdpNativeBridgeService extends EventEmitter {
           return;
         }
 
-        console.log(`➡️ [Bridge WASM -> RDP] (${payload.length} bytes):`, payload.toString('hex').substring(0, 60));
-        // Reenviar datos de WASM al worker RDP
+        // Primer frame post-TLS: MCS Connect Initial. Parches CS_CORE para bastiones TLS Direct.
+        let forward = payload;
+        if (rdCleanPathPhase === 'transparent') {
+          framesToRdp += 1;
+          if (framesToRdp <= 24) {
+            try {
+              fs.writeFileSync(path.join(framesDir, `to-${String(framesToRdp).padStart(2, '0')}-${payload.length}b.hex`), payload.toString('hex'), 'utf8');
+            } catch (_) { /* noop */ }
+          }
+        }
+        if (bytesToRdp === 0 && rdCleanPathPhase === 'transparent') {
+          const core = findClientCoreData(payload);
+          console.log(`[Bridge] Primer frame WASM->RDP: ${payload.length} bytes; CS_CORE=${core ? `len=${core.length} serverSelectedProtocol=0x${(core.serverSelectedProtocol ?? -1).toString(16)}` : 'no'}`);
+          try {
+            const dumpPath = path.join(__dirname, '../../../testing/rdp/last-mcs-connect-initial.hex');
+            fs.mkdirSync(path.dirname(dumpPath), { recursive: true });
+            fs.writeFileSync(dumpPath, payload.toString('hex'), 'utf8');
+            console.log(`[Bridge] Dump MCS en ${dumpPath}`);
+          } catch (dumpErr) {
+            console.warn('[Bridge] No se pudo escribir dump MCS:', dumpErr.message);
+          }
+
+          const prepared = prepareMcsConnectInitial(payload, savedSelectedProtocol);
+          forward = prepared.buf;
+          console.log(`[Bridge] MCS prepare: ${prepared.notes.join('; ') || 'sin cambios'}`);
+        }
+        bytesToRdp += forward.length;
         worker.send({
           type: 'DATA_TO_RDP',
-          dataHex: payload.toString('hex')
+          dataHex: forward.toString('hex')
         });
       } catch (e) {
         console.error('Error enviando a worker RDP:', e);

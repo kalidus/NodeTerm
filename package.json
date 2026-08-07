@@ -29,7 +29,9 @@
     "release:patch": "node scripts/release.js --yes --prepare --release-type patch --update-changelog --commit-prep --cloud",
     "release:minor": "node scripts/release.js --yes --prepare --release-type minor --update-changelog --commit-prep --cloud",
     "release:local": "node scripts/release.js --prepare --publish",
-    "fix-release-notes": "node scripts/release.js --fix-notes --yes"
+    "fix-release-notes": "node scripts/release.js --fix-notes --yes",
+    "test:rdp": "node --test testing/rdp/*.test.js",
+    "probe:rdp": "node testing/rdp/probe-wallix-nego.js"
   },
   "build": {
     "appId": "com.electron.nodeterm",

@@ -139,14 +139,31 @@ function registerRdpHandlers(dependencies) {
   ipcMain.handle('rdp:create-native-bridge-token', async (event, config) => {
     try {
       const rdpNativeBridgeService = require('../services/RdpNativeBridgeService');
+      const { probeSelectedProtocol } = require('../services/rdp-nego-probe');
       await rdpNativeBridgeService.initialize();
+
+      const host = config?.hostname || config?.server || config?.host;
+      const port = config?.port || 3389;
+      const username = config?.username || config?.user || 'nodeterm';
+
+      let nego = null;
+      try {
+        nego = await probeSelectedProtocol({ host, port, username });
+        console.log(`[RDP Native Bridge] Preflight X.224 ${host}:${port} -> ${nego.protocolLabel}${nego.error ? ` (${nego.error})` : ''}`);
+      } catch (probeErr) {
+        console.warn('[RDP Native Bridge] Preflight X.224 fallo:', probeErr?.message || probeErr);
+      }
+
       const sessionInfo = rdpNativeBridgeService.createSessionToken(config);
       console.log('🚀 [RDP Native Bridge] Token creado para RDP Web Nativo (Sin guacd/WSL):', sessionInfo.tokenId);
       return {
         success: true,
         wsUrl: sessionInfo.wsUrl,
         tokenId: sessionInfo.tokenId,
-        port: sessionInfo.port
+        port: sessionInfo.port,
+        selectedProtocol: nego && nego.ok ? nego.selectedProtocol : null,
+        protocolLabel: nego ? nego.protocolLabel : null,
+        negoOk: !!(nego && nego.ok)
       };
     } catch (error) {
       console.error('❌ [RDP Native Bridge] Error creando token:', error);
