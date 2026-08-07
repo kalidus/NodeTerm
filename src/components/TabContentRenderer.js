@@ -2460,8 +2460,8 @@ const TabContentRendererInner = React.memo(({
 
   if (tab.type === 'rdp-guacamole' || tab.type === 'vnc-guacamole') {
     const isVnc = tab.type === 'vnc-guacamole';
-    const isExternalGuacamole = tab.rdpConfig?.clientType === 'external-guacamole';
-    if (!isVnc && !isExternalGuacamole) {
+    const isWebRdp = tab.rdpConfig?.clientType === 'web-rdp';
+    if (isWebRdp && !isVnc) {
       return (
         <LazyIronRdpCanvasTab
           ref={el => terminalRefs.current[tab.key] = el}

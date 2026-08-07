@@ -193,7 +193,12 @@ class RdpNativeBridgeService extends EventEmitter {
           console.log(`📜 [Bridge] Certificado X.509 real devuelto por worker (${msg.certRawHex.length / 2} bytes)`);
         }
 
-        const x224CcBuffer = savedX224CcHex ? Buffer.from(savedX224CcHex, 'hex') : Buffer.from([0x03, 0x00, 0x00, 0x13, 0x0e, 0xd0, 0x00, 0x00, 0x12, 0x34, 0x00, 0x02, 0x2f, 0x08, 0x00, 0x08, 0x00, 0x00, 0x00]);
+        let x224CcBuffer = savedX224CcHex ? Buffer.from(savedX224CcHex, 'hex') : Buffer.from([0x03, 0x00, 0x00, 0x13, 0x0e, 0xd0, 0x00, 0x00, 0x12, 0x34, 0x00, 0x02, 0x2f, 0x08, 0x00, 0x08, 0x00, 0x00, 0x00]);
+        if (x224CcBuffer.length >= 19) {
+          x224CcBuffer = Buffer.from(x224CcBuffer);
+          x224CcBuffer.writeUInt32LE(0x02, 15);
+          console.log(`🔧 [Bridge] Parcheado X.224 CC selectedProtocol a 0x02 (HYBRID) para satisfacer a IronRDP WASM!`);
+        }
         const responsePdu = this.createRdCleanPathResponsePdu(session.host, x224CcBuffer, peerCertChain);
         console.log(`📤 [Bridge] Enviando RDCleanPath Response PDU (${responsePdu.length} bytes) a WASM...`);
 
@@ -203,6 +208,7 @@ class RdpNativeBridgeService extends EventEmitter {
 
         rdCleanPathPhase = 'transparent';
       } else if (msg.type === 'DATA_FROM_RDP') {
+        console.log(`⬅️ [Bridge RDP -> WASM] (${msg.dataHex.length / 2} bytes):`, msg.dataHex.substring(0, 60));
         if (ws.readyState === ws.OPEN) {
           ws.send(Buffer.from(msg.dataHex, 'hex'), { binary: true });
         }
@@ -256,6 +262,7 @@ class RdpNativeBridgeService extends EventEmitter {
           return;
         }
 
+        console.log(`➡️ [Bridge WASM -> RDP] (${payload.length} bytes):`, payload.toString('hex').substring(0, 60));
         // Reenviar datos de WASM al worker RDP
         worker.send({
           type: 'DATA_TO_RDP',

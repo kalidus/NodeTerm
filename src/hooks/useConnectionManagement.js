@@ -625,6 +625,13 @@ export const useConnectionManagement = ({
         domain: baseRdp.domain || baseRdp.serverDomain,
         password: baseRdp.password || 'password', // En producción desde vault
         port: baseRdp.port || 3389,
+        // Campos de Bastión Wallix
+        useBastionWallix: baseRdp.useBastionWallix === true,
+        bastionHost: baseRdp.bastionHost || undefined,
+        bastionUser: baseRdp.bastionUser || undefined,
+        targetServer: baseRdp.targetServer || undefined,
+        targetUser: baseRdp.targetUser || undefined,
+        wallixService: baseRdp.wallixService || undefined,
         width: screen.width,
         height: screen.height,
         resolution: screen.resolution,

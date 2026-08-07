@@ -160,8 +160,7 @@ const GuacamoleTerminal = forwardRef(({
                 // Esperar un poco para asegurar que los servicios estén listos (optimizado)
                 await new Promise(resolve => setTimeout(resolve, 300));
 
-                const isExternalGuacamole = rdpConfig && rdpConfig.clientType === 'external-guacamole';
-                const isNativeBridge = !isExternalGuacamole;
+                const isNativeBridge = rdpConfig && rdpConfig.clientType === 'web-rdp';
 
                 if (!isNativeBridge) {
                     // Obtener estado del servicio Guacamole con reintentos solo para Guacamole externo

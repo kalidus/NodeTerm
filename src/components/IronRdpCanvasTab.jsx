@@ -44,6 +44,10 @@ const extractErrorMessage = (err) => {
     }
   }
 
+  if (msg.includes('not enough bytes') || msg.includes('read frame by hint')) {
+    return 'Este bastión o servidor RDP requiere autenticación TLS sin NLA (0x01), la cual no es compatible con el motor RDP Web WASM. Cambia el tipo de CLIENTE a "Apache Guacamole" o "Nativo SO (MSTSC)" en la configuración de la tarjeta para conectar.';
+  }
+
   return msg;
 };
 
@@ -103,13 +107,32 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
         let usernameStr = String(rdpConfig.username || rdpConfig.user || '').trim();
         let domainStr = String(rdpConfig.domain || rdpConfig.serverDomain || '').trim();
 
-        // 1. Formato NetBIOS clasico: "DOMINIO\usuario"
-        if (usernameStr.includes('\\')) {
+        // 1. Soporte para Bastión / Proxy Wallix en RDP
+        const hostLower = host.toLowerCase();
+        const isBastionHost = hostLower.includes('bastion') || hostLower.includes('wallix') || hostLower.includes('proxy');
+        const isBastion = rdpConfig.useBastionWallix || rdpConfig.bastionUser || rdpConfig.targetServer || usernameStr.includes('@default@') || usernameStr.includes(':APP:') || isBastionHost;
+
+        if (isBastion) {
+          // Mantener la cadena de usuario de Wallix intacta si ya viene formateada (ej: rt01119@default@FortiAnalyzer:APP:rt01119)
+          if (!usernameStr.includes('@') && !usernameStr.includes(':')) {
+            const tServer = rdpConfig.targetServer || rdpConfig.targetHost || '';
+            const tUser = rdpConfig.targetUser || '';
+            if (tServer) {
+              if (tUser) {
+                usernameStr = `${usernameStr}:${tUser}@${tServer}`;
+              } else {
+                usernameStr = `${usernameStr}:${tServer}`;
+              }
+            }
+          }
+        } 
+        // 2. Formato NetBIOS clasico: "DOMINIO\usuario"
+        else if (usernameStr.includes('\\')) {
           const parts = usernameStr.split('\\');
           if (!domainStr) domainStr = parts[0];
           usernameStr = parts[1];
         } 
-        // 2. Formato Correo / UPN (ej: kalidus@outlook.es o juan@miempresa.com)
+        // 3. Formato Correo / UPN (ej: kalidus@outlook.es o juan@miempresa.com)
         else if (usernameStr.includes('@')) {
           const emailParts = usernameStr.split('@');
           const emailPrefix = emailParts[0];
@@ -125,6 +148,18 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
             domainStr = emailParts[1];
             usernameStr = emailPrefix;
           }
+        }
+
+        // 4. Determinar soporte CredSSP / NLA o TLS directo (Los bastiones Wallix requieren TLS estándar 0x01 sin CredSSP)
+        const secLower = String(rdpConfig.security || '').toLowerCase();
+        let useCredssp = true;
+        if (secLower === 'tls' || secLower === 'rdp') {
+          useCredssp = false;
+        } else if (secLower === 'nla') {
+          useCredssp = true;
+        } else {
+          // Si security es 'any' o automatico: Auto-detectar si el host es un bastión/proxy que requiere TLS directo
+          useCredssp = !isBastion;
         }
 
         const passwordStr = String(rdpConfig.password || '');
@@ -164,7 +199,7 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
         }
 
         console.log(`🚀 [IronRDP WASM] Iniciando sesión RDP para ${destinationStr} vía ${tokenResponse.wsUrl}...`);
-        console.log(`🔐 [IronRDP WASM] Credenciales enviadas: user="${usernameStr}", domain="${domainStr || '(ninguno)'}"`);
+        console.log(`🔐 [IronRDP WASM] Credenciales enviadas: user="${usernameStr}", domain="${domainStr || '(ninguno)'}", credssp=${useCredssp}`);
         console.log('⏳ [IronRDP WASM] Ejecutando builder.connect()...');
         
         currentSession = await builder.connect();
