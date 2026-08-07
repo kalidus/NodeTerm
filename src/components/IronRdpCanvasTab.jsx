@@ -39,7 +39,7 @@ const extractErrorMessage = (err) => {
     try {
       const props = Object.getOwnPropertyNames(err);
       msg = `Error (${props.map(p => `${p}:${err[p]}`).join(', ')})`;
-    } catch {
+    } catch (e) {
       msg = String(err);
     }
   }
@@ -112,7 +112,19 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
           .proxyAddress(proxyAddressStr)
           .authToken(authTokenStr)
           .desktopSize(new Backend.DesktopSize(width, height))
-          .setCursorStyleCallback(() => {})
+          .setCursorStyleCallback((cursorKind, cursorData, hotspotX, hotspotY) => {
+            if (canvasRef.current) {
+              if (cursorKind === 'url' && cursorData) {
+                const hX = Math.round(hotspotX || 0);
+                const hY = Math.round(hotspotY || 0);
+                canvasRef.current.style.cursor = `url(${cursorData}) ${hX} ${hY}, default`;
+              } else if (cursorKind === 'none') {
+                canvasRef.current.style.cursor = 'none';
+              } else {
+                canvasRef.current.style.cursor = 'default';
+              }
+            }
+          })
           .setCursorStyleCallbackContext({})
           .extension(enableCredssp(true))
           .extension(displayControl(true));
@@ -181,6 +193,139 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
       canvasRef.current.focus();
     }
   }, [connectionState, isActive]);
+
+  // Manejo de eventos de entrada (Ratón y Teclado) para IronRDP WASM
+  useEffect(() => {
+    if (connectionState !== 'connected' || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+
+    const CODE_TO_SCANCODE = {
+      KeyA: 0x1E, KeyB: 0x30, KeyC: 0x2E, KeyD: 0x20, KeyE: 0x12, KeyF: 0x21, KeyG: 0x22, KeyH: 0x23,
+      KeyI: 0x17, KeyJ: 0x24, KeyK: 0x25, KeyL: 0x26, KeyM: 0x32, KeyN: 0x31, KeyO: 0x18, KeyP: 0x19,
+      KeyQ: 0x10, KeyR: 0x13, KeyS: 0x1F, KeyT: 0x14, KeyU: 0x16, KeyV: 0x2F, KeyW: 0x11, KeyX: 0x2D,
+      KeyY: 0x15, KeyZ: 0x2C, Digit1: 0x02, Digit2: 0x03, Digit3: 0x04, Digit4: 0x05, Digit5: 0x06,
+      Digit6: 0x07, Digit7: 0x08, Digit8: 0x09, Digit9: 0x0A, Digit0: 0x0B, Enter: 0x1C, Escape: 0x01,
+      Backspace: 0x0E, Tab: 0x0F, Space: 0x39, Minus: 0x0C, Equal: 0x0D, BracketLeft: 0x1A,
+      BracketRight: 0x1B, Backslash: 0x2B, Semicolon: 0x27, Quote: 0x28, Backquote: 0x29, Comma: 0x33,
+      Period: 0x34, Slash: 0x35, ControlLeft: 0x1D, ControlRight: 0xE01D, AltLeft: 0x38, AltRight: 0xE038,
+      ShiftLeft: 0x2A, ShiftRight: 0x36, ArrowUp: 0xE048, ArrowDown: 0xE050, ArrowLeft: 0xE04B,
+      ArrowRight: 0xE04D, Delete: 0xE053, Home: 0xE047, End: 0xE04F, PageUp: 0xE049, PageDown: 0xE051,
+      Insert: 0xE052, CapsLock: 0x3A, F1: 0x3B, F2: 0x3C, F3: 0x3D, F4: 0x3E, F5: 0x3F, F6: 0x40,
+      F7: 0x41, F8: 0x42, F9: 0x43, F10: 0x44, F11: 0x57, F12: 0x58
+    };
+
+    const getCanvasPos = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      return {
+        x: Math.floor((e.clientX - rect.left) * scaleX),
+        y: Math.floor((e.clientY - rect.top) * scaleY)
+      };
+    };
+
+    const handleMouseMove = (e) => {
+      if (!sessionRef.current) return;
+      const { x, y } = getCanvasPos(e);
+      try {
+        const transaction = new Backend.InputTransaction();
+        transaction.addEvent(Backend.DeviceEvent.mouseMove(x, y));
+        sessionRef.current.applyInputs(transaction);
+      } catch (err) {}
+    };
+
+    const handleMouseDown = (e) => {
+      if (!sessionRef.current) return;
+      canvas.focus();
+      e.preventDefault();
+      const { x, y } = getCanvasPos(e);
+      // Mapeo botones: 0 -> Izquierdo (0), 1 -> Central (1), 2 -> Derecho (2)
+      const btn = e.button === 0 ? 0 : e.button === 2 ? 2 : 1;
+      try {
+        const transaction = new Backend.InputTransaction();
+        transaction.addEvent(Backend.DeviceEvent.mouseMove(x, y));
+        transaction.addEvent(Backend.DeviceEvent.mouseButtonPressed(btn));
+        sessionRef.current.applyInputs(transaction);
+      } catch (err) {}
+    };
+
+    const handleMouseUp = (e) => {
+      if (!sessionRef.current) return;
+      e.preventDefault();
+      const { x, y } = getCanvasPos(e);
+      const btn = e.button === 0 ? 0 : e.button === 2 ? 2 : 1;
+      try {
+        const transaction = new Backend.InputTransaction();
+        transaction.addEvent(Backend.DeviceEvent.mouseMove(x, y));
+        transaction.addEvent(Backend.DeviceEvent.mouseButtonReleased(btn));
+        sessionRef.current.applyInputs(transaction);
+      } catch (err) {}
+    };
+
+    const handleContextMenu = (e) => {
+      e.preventDefault();
+    };
+
+    const handleWheel = (e) => {
+      if (!sessionRef.current) return;
+      e.preventDefault();
+      const isVertical = e.deltaY !== 0;
+      const delta = isVertical ? -e.deltaY : -e.deltaX;
+      try {
+        const transaction = new Backend.InputTransaction();
+        transaction.addEvent(Backend.DeviceEvent.wheelRotations(isVertical, delta, 0));
+        sessionRef.current.applyInputs(transaction);
+      } catch (err) {}
+    };
+
+    const handleKeyDown = (e) => {
+      if (!sessionRef.current) return;
+      e.preventDefault();
+      const scancode = CODE_TO_SCANCODE[e.code];
+      try {
+        const transaction = new Backend.InputTransaction();
+        if (scancode) {
+          transaction.addEvent(Backend.DeviceEvent.keyPressed(scancode));
+        } else if (e.key && e.key.length === 1) {
+          transaction.addEvent(Backend.DeviceEvent.unicodePressed(e.key));
+        }
+        sessionRef.current.applyInputs(transaction);
+      } catch (err) {}
+    };
+
+    const handleKeyUp = (e) => {
+      if (!sessionRef.current) return;
+      e.preventDefault();
+      const scancode = CODE_TO_SCANCODE[e.code];
+      try {
+        const transaction = new Backend.InputTransaction();
+        if (scancode) {
+          transaction.addEvent(Backend.DeviceEvent.keyReleased(scancode));
+        } else if (e.key && e.key.length === 1) {
+          transaction.addEvent(Backend.DeviceEvent.unicodeReleased(e.key));
+        }
+        sessionRef.current.applyInputs(transaction);
+      } catch (err) {}
+    };
+
+    canvas.addEventListener('mousemove', handleMouseMove);
+    canvas.addEventListener('mousedown', handleMouseDown);
+    canvas.addEventListener('mouseup', handleMouseUp);
+    canvas.addEventListener('contextmenu', handleContextMenu);
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
+    canvas.addEventListener('keydown', handleKeyDown);
+    canvas.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      canvas.removeEventListener('mousemove', handleMouseMove);
+      canvas.removeEventListener('mousedown', handleMouseDown);
+      canvas.removeEventListener('mouseup', handleMouseUp);
+      canvas.removeEventListener('contextmenu', handleContextMenu);
+      canvas.removeEventListener('wheel', handleWheel);
+      canvas.removeEventListener('keydown', handleKeyDown);
+      canvas.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [connectionState]);
 
   // Manejo de redimensionamiento dinámico del canvas RDP
   useEffect(() => {
