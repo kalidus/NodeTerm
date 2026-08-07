@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useImperativeHandle, forwardRef, useState } from 'react';
 import { Button } from 'primereact/button';
+import { Dialog } from 'primereact/dialog';
+import { InputTextarea } from 'primereact/inputtextarea';
 import Guacamole from 'guacamole-common-js';
 import ResizeController from '../utils/ResizeController';
 import ErrorMapper from '../utils/guacamoleErrorMapper';
@@ -31,6 +33,10 @@ const GuacamoleTerminal = forwardRef(({
     const [autoResize, setAutoResize] = useState(true); // Por defecto true para evitar reconexiones
     const [freezeDetected, setFreezeDetected] = useState(false);
     const [isRdpSessionActive, setIsRdpSessionActive] = useState(false);
+    const [isToolbarPinned, setIsToolbarPinned] = useState(false);
+    const [isToolbarHovered, setIsToolbarHovered] = useState(false);
+    const [showClipboardDialog, setShowClipboardDialog] = useState(false);
+    const [clipboardText, setClipboardText] = useState('');
     // ⚡ PERF: debug flag - set window.__rdp_debug__ = true in console to enable verbose logs
     const _rdpDebug = () => typeof window !== 'undefined' && window.__rdp_debug__;
 
@@ -154,50 +160,38 @@ const GuacamoleTerminal = forwardRef(({
                 // Esperar un poco para asegurar que los servicios estén listos (optimizado)
                 await new Promise(resolve => setTimeout(resolve, 300));
 
-                // Obtener estado del servicio Guacamole con reintentos
-                let status = null;
-                let attempts = 0;
-                const maxAttempts = 3;
+                const isExternalGuacamole = rdpConfig && rdpConfig.clientType === 'external-guacamole';
+                const isNativeBridge = !isExternalGuacamole;
 
-                // Verificar si estamos en modo mock
+                if (!isNativeBridge) {
+                    // Obtener estado del servicio Guacamole con reintentos solo para Guacamole externo
+                    let status = null;
+                    let attempts = 0;
+                    const maxAttempts = 3;
 
-                // Obtener estado detallado del servicio
-                const detailedStatus = await window.electron.ipcRenderer.invoke('guacamole:get-status');
-                if (detailedStatus && detailedStatus.guacd) {
+                    const detailedStatus = await window.electron.ipcRenderer.invoke('guacamole:get-status');
 
-                    // Mostrar información adicional según el método
-                    if (detailedStatus.guacd.method === 'docker') {
-                    } else if (detailedStatus.guacd.method === 'native') {
-                    }
-                }
-
-                while (attempts < maxAttempts && !status) {
-                    try {
-                        attempts++;
-                        status = await window.electron.ipcRenderer.invoke('guacamole:get-status');
-
-                        if (status && status.server) {
-                            break; // Éxito
-                        }
-                    } catch (error) {
-                        console.error(`❌ Error en intento ${attempts}:`, error);
-                        if (attempts < maxAttempts) {
-                            await new Promise(resolve => setTimeout(resolve, 400));
+                    while (attempts < maxAttempts && !status) {
+                        try {
+                            attempts++;
+                            status = await window.electron.ipcRenderer.invoke('guacamole:get-status');
+                            if (status && status.server) break;
+                        } catch (error) {
+                            console.error(`❌ Error en intento ${attempts}:`, error);
+                            if (attempts < maxAttempts) {
+                                await new Promise(resolve => setTimeout(resolve, 400));
+                            }
                         }
                     }
-                }
 
-                if (!status || !status.server) {
-                    throw new Error(`No se pudo obtener estado del servidor Guacamole después de ${maxAttempts} intentos`);
-                }
-
-                if (!status.server.isRunning) {
-                    throw new Error('Servidor Guacamole no está ejecutándose');
+                    if (!status || !status.server || !status.server.isRunning) {
+                        throw new Error('Servidor Guacamole no está ejecutándose');
+                    }
                 }
 
                 // Warm-up si el servidor WebSocket acaba de arrancar (optimizado)
                 try {
-                    const readyAt = Number(status.server.readyAt || 0);
+                    const readyAt = Number(status?.server?.readyAt || 0);
                     if (readyAt > 0) {
                         const sinceReady = Date.now() - readyAt;
                         if (sinceReady < 800) {
@@ -300,10 +294,10 @@ const GuacamoleTerminal = forwardRef(({
                     rdpConfig.colorDepth = normalizeRdpColorDepth(rdpConfig.colorDepth, 32);
                 } catch { }
 
-                // Crear token de conexión
-                // Log crítico: verificar configuración antes de enviar al backend
-
-                const tokenResponse = await window.electron.ipcRenderer.invoke('guacamole:create-token', rdpConfig);
+                // Crear token de conexión nativo sin guacd ni Docker
+                const tokenResponse = isNativeBridge
+                    ? await window.electron.ipcRenderer.invoke('rdp:create-native-bridge-token', rdpConfig)
+                    : await window.electron.ipcRenderer.invoke('guacamole:create-token', rdpConfig);
 
                 if (!tokenResponse.success) {
                     try {
@@ -2239,6 +2233,145 @@ const GuacamoleTerminal = forwardRef(({
                     {renderContent()}
                 </div>
             )}
+
+            {/* Barra flotante de herramientas RDP HTML5 (Estilo Wallix) */}
+            {connectionState === 'connected' && (
+                <div
+                    onMouseEnter={() => setIsToolbarHovered(true)}
+                    onMouseLeave={() => setIsToolbarHovered(false)}
+                    style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        zIndex: 1000,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        transition: 'all 0.25s ease-in-out',
+                        marginTop: (isToolbarPinned || isToolbarHovered) ? '0px' : '-28px',
+                        opacity: (isToolbarPinned || isToolbarHovered) ? 1 : 0.45
+                    }}
+                >
+                    <div
+                        className="flex align-items-center gap-2 px-3 py-1 border-round-bottom shadow-4"
+                        style={{
+                            backgroundColor: 'rgba(20, 24, 33, 0.92)',
+                            backdropFilter: 'blur(8px)',
+                            border: '1px solid rgba(255, 255, 255, 0.15)',
+                            borderTop: 'none',
+                            color: '#ffffff',
+                            fontSize: '12px'
+                        }}
+                    >
+                        <span className="flex align-items-center gap-1 font-semibold text-blue-400" style={{ fontSize: '11px' }}>
+                            <i className="pi pi-globe text-xs"></i> {rdpConfig?.hostname || rdpConfig?.server || 'RDP Web'}
+                        </span>
+
+                        <span style={{ width: '1px', height: '14px', backgroundColor: 'rgba(255,255,255,0.2)' }} />
+
+                        <Button
+                            icon="pi pi-key"
+                            label="Ctrl+Alt+Del"
+                            tooltip="Enviar Ctrl+Alt+Del"
+                            tooltipOptions={{ position: 'bottom' }}
+                            size="small"
+                            className="p-button-text p-button-secondary p-button-sm text-xs py-0 px-2"
+                            style={{ color: '#e0e0e0', fontSize: '11px' }}
+                            onClick={() => {
+                                if (guacamoleClientRef.current) {
+                                    const client = guacamoleClientRef.current;
+                                    try {
+                                        client.sendKeyEvent(1, 0xFFE3); // Ctrl_L
+                                        client.sendKeyEvent(1, 0xFFE9); // Alt_L
+                                        client.sendKeyEvent(1, 0xFFFF); // Delete
+                                        client.sendKeyEvent(0, 0xFFFF);
+                                        client.sendKeyEvent(0, 0xFFE9);
+                                        client.sendKeyEvent(0, 0xFFE3);
+                                    } catch (e) {
+                                        console.error('Error enviando Ctrl+Alt+Del:', e);
+                                    }
+                                }
+                            }}
+                        />
+
+                        <Button
+                            icon="pi pi-send"
+                            tooltip="Enviar texto al portapapeles remoto"
+                            tooltipOptions={{ position: 'bottom' }}
+                            size="small"
+                            className="p-button-text p-button-secondary p-button-sm text-xs py-0 px-2"
+                            style={{ color: '#e0e0e0', fontSize: '11px' }}
+                            onClick={() => setShowClipboardDialog(true)}
+                        />
+
+                        <Button
+                            icon="pi pi-window-maximize"
+                            tooltip="Pantalla Completa"
+                            tooltipOptions={{ position: 'bottom' }}
+                            size="small"
+                            className="p-button-text p-button-secondary p-button-sm text-xs py-0 px-2"
+                            style={{ color: '#e0e0e0', fontSize: '11px' }}
+                            onClick={() => {
+                                if (!containerRef.current) return;
+                                if (!document.fullscreenElement) {
+                                    containerRef.current.requestFullscreen?.().catch(() => {});
+                                } else {
+                                    document.exitFullscreen?.().catch(() => {});
+                                }
+                            }}
+                        />
+
+                        <Button
+                            icon={isToolbarPinned ? "pi pi-bookmark-fill" : "pi pi-bookmark"}
+                            tooltip={isToolbarPinned ? "Desfijar barra flotante" : "Fijar barra siempre visible"}
+                            tooltipOptions={{ position: 'bottom' }}
+                            size="small"
+                            className="p-button-text p-button-secondary p-button-sm text-xs py-0 px-2"
+                            style={{ color: isToolbarPinned ? '#64b5f6' : '#a0a0a0', fontSize: '11px' }}
+                            onClick={() => setIsToolbarPinned(!isToolbarPinned)}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* Dialogo para inyectar texto al portapapeles RDP remoto */}
+            <Dialog
+                header="Enviar Texto a la Sesión RDP"
+                visible={showClipboardDialog}
+                style={{ width: '420px' }}
+                onHide={() => setShowClipboardDialog(false)}
+                footer={
+                    <div className="flex justify-content-end gap-2">
+                        <Button label="Cancelar" icon="pi pi-times" className="p-button-text p-button-sm" onClick={() => setShowClipboardDialog(false)} />
+                        <Button label="Enviar" icon="pi pi-check" className="p-button-primary p-button-sm" onClick={() => {
+                            if (guacamoleClientRef.current && clipboardText) {
+                                try {
+                                    const stream = guacamoleClientRef.current.createClipboardStream('text/plain');
+                                    const writer = new Guacamole.StringWriter(stream);
+                                    writer.sendText(clipboardText);
+                                    writer.sendEnd();
+                                    setShowClipboardDialog(false);
+                                    setClipboardText('');
+                                } catch (e) {
+                                    console.error('Error enviando portapapeles:', e);
+                                }
+                            }
+                        }} />
+                    </div>
+                }
+            >
+                <div className="flex flex-column gap-2 pt-2">
+                    <label className="text-xs text-color-secondary">Escribe o pega el texto que deseas enviar a la máquina remota:</label>
+                    <InputTextarea
+                        value={clipboardText}
+                        onChange={(e) => setClipboardText(e.target.value)}
+                        rows={4}
+                        autoFocus
+                        style={{ width: '100%', resize: 'none', backgroundColor: '#1e1e1e', color: '#fff', borderColor: '#444' }}
+                    />
+                </div>
+            </Dialog>
         </div>
     );
 });

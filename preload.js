@@ -482,7 +482,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getActiveConnections: () => ipcRenderer.invoke('rdp:get-active-connections'),
     getPresets: () => ipcRenderer.invoke('rdp:get-presets'),
     showWindow: (server) => ipcRenderer.invoke('rdp:show-window', { server }),
-    disconnectSession: (server) => ipcRenderer.invoke('rdp:disconnect-session', { server })
+    disconnectSession: (server) => ipcRenderer.invoke('rdp:disconnect-session', { server }),
+    createNativeBridgeToken: (config) => ipcRenderer.invoke('rdp:create-native-bridge-token', config)
   },
   // Generic invoke method for IPC
   invoke: (channel, data) => {

@@ -122,7 +122,7 @@ function toSerializable(connection) {
     password: connection.password || '',
     privateKey: connection.privateKey || '',
     authMethod: connection.authMethod || undefined,
-    clientType: connection.clientType || (type === 'rdp-guacamole' || type === 'vnc-guacamole' ? 'guacamole' : 'native'),
+    clientType: connection.clientType || (type === 'rdp-guacamole' || type === 'vnc-guacamole' ? 'web-rdp' : 'native'),
     // Campos adicionales para RDP
     domain: connection.domain || '',
     resolution: connection.resolution || '1024x768',
@@ -199,7 +199,7 @@ function fromSidebarNode(node, typeOverride = null) {
     password: node.data?.password || '',
     privateKey: node.data?.privateKey || '',
     authMethod: node.data?.authMethod || undefined,
-    clientType: node.data?.clientType || (isRDP ? 'guacamole' : 'native'),
+    clientType: node.data?.clientType || (isRDP ? 'web-rdp' : 'native'),
     // Campos adicionales para RDP
     domain: node.data?.domain || '',
     resolution: node.data?.resolution || '1024x768',

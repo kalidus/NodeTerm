@@ -21,6 +21,7 @@ export const LazyFileExplorer = lazy(() => getChunk('FileExplorer', () => import
 export const LazySplitLayout = lazy(() => getChunk('SplitLayout', () => import('./SplitLayout')));
 export const LazyRdpSessionTab = lazy(() => getChunk('RdpSessionTab', () => import('./RdpSessionTab')));
 export const LazyGuacamoleTerminal = lazy(() => getChunk('GuacamoleTerminal', () => import('./GuacamoleTerminal')));
+export const LazyIronRdpCanvasTab = lazy(() => getChunk('IronRdpCanvasTab', () => import('./IronRdpCanvasTab')));
 export const LazyGuacamoleTab = lazy(() => getChunk('GuacamoleTab', () => import('./GuacamoleTab')));
 export const LazyTerminalComponent = lazy(() => getChunk('TerminalComponent', () => import('./TerminalComponent')));
 export const LazyPowerShellTerminal = lazy(() => getChunk('PowerShellTerminal', () => import('./PowerShellTerminal')));

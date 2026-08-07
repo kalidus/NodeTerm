@@ -448,7 +448,9 @@ function registerGuacamoleHandlers({
 
       // Log de diagnóstico para analizar cierres tempranos (sin exponer password)
       if (!isVNC) {
-        console.log('[Guacamole][RDP token] creando token', {
+        const clientLabel = config.clientType === 'web-rdp' ? 'Web-RDP (Wallix Style)' : 'Guacamole';
+        console.log(`[${clientLabel}][RDP token] creando token`, {
+          clientType: config.clientType || 'web-rdp',
           host: connectionSettings.hostname,
           port: connectionSettings.port,
           username: connectionSettings.username,

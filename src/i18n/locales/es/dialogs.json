@@ -156,7 +156,8 @@
       "sharedFolder": "Esta carpeta estará disponible como una unidad de red dentro de la sesión RDP."
     },
     "clientTypes": {
-      "mstsc": "Windows MSTSC",
+      "mstsc": "Nativo SO (MSTSC)",
+      "web-rdp": "RDP Web (HTML5)",
       "guacamole": "Apache Guacamole"
     },
     "securityOptions": {

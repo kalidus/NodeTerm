@@ -569,7 +569,7 @@ export const useConnectionManagement = ({
         dfs(nodes);
       }
     }
-    const isGuacamoleRDP = baseRdp.clientType === 'guacamole' || baseRdp.type === 'rdp-guacamole';
+    const isGuacamoleRDP = baseRdp.clientType === 'web-rdp' || baseRdp.clientType === 'guacamole' || baseRdp.type === 'rdp-guacamole';
 
     // Registrar como reciente (RDP) - incluir todas las credenciales y configuración
     try {
@@ -619,6 +619,7 @@ export const useConnectionManagement = ({
       });
 
       const rdpConfig = {
+        clientType: baseRdp.clientType || 'web-rdp',
         hostname: baseRdp.server || baseRdp.host || baseRdp.hostname,
         username: baseRdp.username || baseRdp.user,
         password: baseRdp.password || 'password', // En producción desde vault

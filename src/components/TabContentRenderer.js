@@ -9,6 +9,7 @@ import {
   LazySplitLayout,
   LazyRdpSessionTab,
   LazyGuacamoleTerminal,
+  LazyIronRdpCanvasTab,
   LazyGuacamoleTab,
   LazyTerminalComponent,
   LazyPowerShellTerminal,
@@ -2458,6 +2459,18 @@ const TabContentRendererInner = React.memo(({
   }
 
   if (tab.type === 'rdp-guacamole' || tab.type === 'vnc-guacamole') {
+    const isVnc = tab.type === 'vnc-guacamole';
+    const isExternalGuacamole = tab.rdpConfig?.clientType === 'external-guacamole';
+    if (!isVnc && !isExternalGuacamole) {
+      return (
+        <LazyIronRdpCanvasTab
+          ref={el => terminalRefs.current[tab.key] = el}
+          tabId={tab.key}
+          rdpConfig={tab.rdpConfig}
+          isActive={isActiveTab}
+        />
+      );
+    }
     return (
       <LazyGuacamoleTerminal
         ref={el => terminalRefs.current[tab.key] = el}

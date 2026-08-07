@@ -45,7 +45,7 @@ export function createDefaultRdpFormData() {
     username: '',
     password: '',
     port: 3389,
-    clientType: 'guacamole',
+    clientType: 'web-rdp',
     preset: 'default',
     resolution: '1600x1000',
     colorDepth: 32,
@@ -88,7 +88,7 @@ export function mapEditNodeDataToRdpFormData(editNodeData) {
     username: data.username || '',
     password: data.password || '',
     port: data.port || 3389,
-    clientType: data.clientType || 'guacamole',
+    clientType: data.clientType || 'web-rdp',
     preset: data.preset || 'default',
     resolution: data.resolution || '1600x1000',
     colorDepth: data.colorDepth || 32,
@@ -289,14 +289,14 @@ export function EnhancedRDPForm({
         icon: 'pi-cog'
       }
     );
-    if (formData.clientType === 'guacamole') {
+    if (formData.clientType === 'guacamole' || formData.clientType === 'web-rdp') {
       tabs.push({
         id: 'guacamole',
         label: t('rdp.sections.advanced'),
         icon: 'pi-sliders-h'
       });
     }
-    if (formData.clientType === 'guacamole' && formData.guacEnableDrive) {
+    if ((formData.clientType === 'guacamole' || formData.clientType === 'web-rdp') && formData.guacEnableDrive) {
       tabs.push({
         id: 'sharedFolder',
         label: t('rdp.fields.sharedFolder'),
@@ -441,6 +441,14 @@ export function EnhancedRDPForm({
         <label className="terminal-label">{t('rdp.fields.client').toUpperCase()}</label>
         <div className="terminal-auth-selector">
           <div
+            className={`terminal-auth-chip ${formData.clientType === 'web-rdp' ? 'active' : ''}`}
+            onClick={() => handleInputChange('clientType', 'web-rdp')}
+            role="button"
+            tabIndex={0}
+          >
+            <i className="pi pi-globe" aria-hidden="true"></i> {t('rdp.clientTypes.web-rdp')}
+          </div>
+          <div
             className={`terminal-auth-chip ${formData.clientType === 'mstsc' ? 'active' : ''}`}
             onClick={() => handleInputChange('clientType', 'mstsc')}
             role="button"
@@ -454,12 +462,12 @@ export function EnhancedRDPForm({
             role="button"
             tabIndex={0}
           >
-            <i className="pi pi-globe" aria-hidden="true"></i> {t('rdp.clientTypes.guacamole')}
+            <i className="pi pi-server" aria-hidden="true"></i> {t('rdp.clientTypes.guacamole')}
           </div>
         </div>
       </div>
 
-      {formData.clientType === 'guacamole' ? (
+      {(formData.clientType === 'guacamole' || formData.clientType === 'web-rdp') ? (
         <TerminalDropdownField
           id={`${p}-guacSecurity`}
           labelNode={t('rdp.fields.security').toUpperCase()}

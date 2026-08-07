@@ -135,6 +135,28 @@ function registerRdpHandlers(dependencies) {
     }
   });
   
+  // Handler para RDP Web HTML5 Nativo (Sin guacd/WSL/Docker)
+  ipcMain.handle('rdp:create-native-bridge-token', async (event, config) => {
+    try {
+      const rdpNativeBridgeService = require('../services/RdpNativeBridgeService');
+      await rdpNativeBridgeService.initialize();
+      const sessionInfo = rdpNativeBridgeService.createSessionToken(config);
+      console.log('🚀 [RDP Native Bridge] Token creado para RDP Web Nativo (Sin guacd/WSL):', sessionInfo.tokenId);
+      return {
+        success: true,
+        wsUrl: sessionInfo.wsUrl,
+        tokenId: sessionInfo.tokenId,
+        port: sessionInfo.port
+      };
+    } catch (error) {
+      console.error('❌ [RDP Native Bridge] Error creando token:', error);
+      return {
+        success: false,
+        error: error?.message || 'Error al iniciar puente RDP nativo'
+      };
+    }
+  });
+
   console.log('✅ [RDP Handlers] Registrados');
 }
 
