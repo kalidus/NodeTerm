@@ -17,6 +17,11 @@ const { parseX224ConnectionConfirm, protocolName } = require('./rdp-protocol-hel
 const { prepareMcsConnectInitial, findClientCoreData } = require('./rdp-mcs-helpers');
 const { patchFontSequenceFlags } = require('./rdp-font-helpers');
 const { fixWallixBitmapStrideCrop } = require('./rdp-fastpath-helpers');
+const {
+  createChannelFilterState,
+  processServerFrame,
+  learnClientInitiator
+} = require('./rdp-channel-filter');
 
 class RdpNativeBridgeService extends EventEmitter {
   constructor() {
@@ -173,6 +178,7 @@ class RdpNativeBridgeService extends EventEmitter {
     let bytesFromRdp = 0;
     let framesFromRdp = 0;
     let framesToRdp = 0;
+    const channelFilter = createChannelFilterState();
     const framesDir = path.join(__dirname, '../../../testing/rdp/frames');
     try { fs.mkdirSync(framesDir, { recursive: true }); } catch (_) { /* noop */ }
 
@@ -248,6 +254,41 @@ class RdpNativeBridgeService extends EventEmitter {
           console.log(`[Bridge] FontPdu adjust flags=${fontPatch.patchedCount}`, fontPatch.details.map((d) => `len=${d.totalLength} 0x${d.previous.toString(16)}->0x${d.next.toString(16)}`).join(', '));
         }
 
+        // IronRDP 0.7: message channel (1001) no soportado -> no reenviar a WASM,
+        // pero responder Auto-Detect RTT/BW para que Wallix no espere (pantalla negra).
+        const wasReady = channelFilter.ready;
+        const processed = processServerFrame(channelFilter, chunk);
+        if (!wasReady && channelFilter.ready) {
+          console.log(
+            `[Bridge] Canales MCS permitidos: io=${channelFilter.ioChannelId}` +
+              ` allowed=[${[...channelFilter.allowed].join(',')}]` +
+              (channelFilter.messageChannelId != null ? ` msg=${channelFilter.messageChannelId}` : '')
+          );
+        }
+        if (processed.dropped) {
+          if (channelFilter.droppedCount <= 12) {
+            console.log(
+              `[Bridge] MCS ch=${processed.channelId} frame#${framesFromRdp}: ${processed.note}` +
+                (processed.replies.length ? ` replies=${processed.replies.length}` : '') +
+                ` (total=${channelFilter.droppedCount})`
+            );
+            if (processed.replies[0]) {
+              console.log(
+                `[Bridge] AD reply[0] ${processed.replies[0].length}B hex=${processed.replies[0].toString('hex').slice(0, 64)}`
+              );
+            }
+          }
+          if (processed.replies.length && worker && worker.connected) {
+            for (const reply of processed.replies) {
+              bytesToRdp += reply.length;
+              worker.send({ type: 'DATA_TO_RDP', dataHex: reply.toString('hex') });
+            }
+          }
+          bytesFromRdp += n;
+          return;
+        }
+        chunk = processed.forward;
+
         // IronRDP 0.7: stride = dest-rect; Wallix width padded %4 -> crop RLE a dest.
         const stridePatch = fixWallixBitmapStrideCrop(chunk);
         const outChunks = stridePatch.patchedCount
@@ -256,7 +297,10 @@ class RdpNativeBridgeService extends EventEmitter {
         if (stridePatch.patchedCount && (framesFromRdp <= 24 || stridePatch.fallback)) {
           console.log(
             `[Bridge] FastPath BITMAP stride crop frame#${framesFromRdp}: rects=${stridePatch.numberRectangles} patched=${stridePatch.patchedCount}` +
-              (stridePatch.fallback ? ' fallback=dest-expand' : '') +
+              (stridePatch.destExpandCount != null
+                ? ` solid=${stridePatch.destExpandCount} crop=${stridePatch.cropCount}`
+                : '') +
+              (stridePatch.fallback ? ' fallback=dest-expand-all' : '') +
               (stridePatch.pduCount > 1 ? ` pdus=${stridePatch.pduCount}` : '') +
               (stridePatch.newLength ? ` ${stridePatch.originalLength}->${stridePatch.newLength}B` : '')
           );
@@ -322,6 +366,7 @@ class RdpNativeBridgeService extends EventEmitter {
         let forward = payload;
         if (rdCleanPathPhase === 'transparent') {
           framesToRdp += 1;
+          learnClientInitiator(channelFilter, payload);
           if (framesToRdp <= 24) {
             try {
               fs.writeFileSync(path.join(framesDir, `to-${String(framesToRdp).padStart(2, '0')}-${payload.length}b.hex`), payload.toString('hex'), 'utf8');

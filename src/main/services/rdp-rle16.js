@@ -335,9 +335,19 @@ function cropRgb16(src, srcWidth, srcHeight, destWidth, destHeight) {
   return out;
 }
 
+function isUniformRgb16(pixels) {
+  if (!Buffer.isBuffer(pixels) || pixels.length < COLOR_DEPTH) return false;
+  if (pixels.length % COLOR_DEPTH !== 0) return false;
+  const a = pixels[0];
+  const b = pixels[1];
+  for (let i = 2; i < pixels.length; i += 2) {
+    if (pixels[i] !== a || pixels[i + 1] !== b) return false;
+  }
+  return true;
+}
+
 /**
  * Empaqueta pixels RGB16 como un unico MEGA_MEGA_COLOR_IMAGE (sin hdr RDP).
- * IronRDP 0.7 aplica mejor el path RLE que el uncompressed.
  */
 function encodeMegaMegaColorImage(pixels) {
   if (!Buffer.isBuffer(pixels) || pixels.length % COLOR_DEPTH !== 0) {
@@ -354,10 +364,42 @@ function encodeMegaMegaColorImage(pixels) {
   return out;
 }
 
+/**
+ * Relleno solido: MEGA_MEGA_COLOR_RUN (5 bytes) en lugar de volcar todos los pixels.
+ */
+function encodeMegaMegaColorRun(pixelCount, color) {
+  if (pixelCount <= 0 || pixelCount > 0xffff) {
+    throw new RleError('pixel count out of range for MEGA_MEGA_COLOR_RUN');
+  }
+  const out = Buffer.alloc(5);
+  out[0] = 0xf3; // MEGA_MEGA_COLOR_RUN
+  out.writeUInt16LE(pixelCount, 1);
+  out.writeUInt16LE(color & 0xffff, 3);
+  return out;
+}
+
+/**
+ * Elige encoding compacto: solido -> COLOR_RUN; si no -> COLOR_IMAGE.
+ */
+function encodeRgb16Rle(pixels) {
+  if (!Buffer.isBuffer(pixels) || pixels.length % COLOR_DEPTH !== 0) {
+    throw new RleError('invalid pixel buffer');
+  }
+  const pixelCount = pixels.length / COLOR_DEPTH;
+  if (pixelCount === 0) throw new RleError('empty pixels');
+  if (isUniformRgb16(pixels)) {
+    return encodeMegaMegaColorRun(pixelCount, pixels.readUInt16LE(0));
+  }
+  return encodeMegaMegaColorImage(pixels);
+}
+
 module.exports = {
   RleError,
   decompress16bpp,
   cropRgb16,
+  isUniformRgb16,
   encodeMegaMegaColorImage,
+  encodeMegaMegaColorRun,
+  encodeRgb16Rle,
   COLOR_DEPTH
 };

@@ -13,7 +13,9 @@ const {
 const {
   decompress16bpp,
   cropRgb16,
-  encodeMegaMegaColorImage
+  encodeMegaMegaColorImage,
+  encodeRgb16Rle,
+  encodeMegaMegaColorRun
 } = require('../../src/main/services/rdp-rle16');
 const { alignDesktopDimension } = require('../../src/main/services/rdp-mcs-helpers');
 
@@ -64,6 +66,23 @@ describe('decompress16bpp', () => {
     const enc = encodeMegaMegaColorImage(pixels);
     const dec = decompress16bpp(enc, 2, 2);
     assert.deepEqual([...dec], [...pixels]);
+  });
+
+  it('encodeRgb16Rle usa COLOR_RUN para solidos', () => {
+    const pixels = Buffer.alloc(20);
+    for (let i = 0; i < 10; i++) pixels.writeUInt16LE(0xfff3, i * 2);
+    const enc = encodeRgb16Rle(pixels);
+    assert.equal(enc[0], 0xf3);
+    assert.equal(enc.length, 5);
+    const dec = decompress16bpp(enc, 5, 2);
+    assert.equal(dec.length, 20);
+    assert.equal(dec.readUInt16LE(0), 0xfff3);
+  });
+
+  it('encodeMegaMegaColorRun roundtrip', () => {
+    const enc = encodeMegaMegaColorRun(4, 0x1234);
+    const dec = decompress16bpp(enc, 2, 2);
+    assert.deepEqual([...dec], [0x34, 0x12, 0x34, 0x12, 0x34, 0x12, 0x34, 0x12]);
   });
 });
 
@@ -139,15 +158,18 @@ describe('fixWallixBitmapStrideCrop', () => {
     }
   });
 
-  it('parte frames grandes (from-16-7966) en varios PDUs', () => {
-    const p = path.join(__dirname, 'frames/from-16-7966b.hex');
+  it('frames grandes: solidos compactos (no inflar a MB)', () => {
+    const p = path.join(__dirname, 'frames/from-14-7805b.hex');
     if (!fs.existsSync(p)) return;
     const raw = Buffer.from(fs.readFileSync(p, 'utf8').trim(), 'hex');
     const before = inspectWallixFastPathBitmap(raw);
     const result = fixWallixBitmapStrideCrop(raw);
-    assert.ok(result.patchedCount > 200);
+    assert.ok(result.patchedCount > 50);
     assert.equal(result.fallback, false);
-    assert.ok(result.pduCount > 1, `expected split, got pduCount=${result.pduCount}`);
+    assert.ok(result.destExpandCount > 0, 'deberia reusar dest-expand en solidos');
+    // Antes ~1.9MB / 81 PDUs; con solidos compactos debe quedarse cerca del original.
+    assert.ok(result.newLength < 100000, `newLength too big: ${result.newLength}`);
+    assert.ok(result.pduCount <= 8, `too many pdus: ${result.pduCount}`);
     const totalRects = result.buffers.reduce((s, pdu) => {
       const info = inspectWallixFastPathBitmap(pdu);
       assert.ok(info && info.ok);

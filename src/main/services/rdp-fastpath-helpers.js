@@ -18,7 +18,8 @@
 const {
   decompress16bpp,
   cropRgb16,
-  encodeMegaMegaColorImage,
+  encodeRgb16Rle,
+  isUniformRgb16,
   RleError
 } = require('./rdp-rle16');
 
@@ -94,12 +95,27 @@ function needsStrideCrop(width, height, destLeft, destTop, destRight, destBottom
 }
 
 /**
- * Recorta un TS_BITMAP_DATA con stride Wallix a dest inclusivo.
- * Re-emite como RLE MEGA_MEGA_COLOR_IMAGE (IronRDP 0.7 falla con uncompressed
- * en anchos no multiplo de 4 / padding de fila).
- * @returns {{ header: Buffer, data: Buffer } | null}
+ * Expande dest-rect in-place (mismo bitmap). OK si el tile es color uniforme
+ * (el padding se pinta del mismo color; sin ghosting visible).
  */
-function cropOneBitmapRect(rectBuf) {
+function destExpandOneBitmapRect(rectBuf) {
+  const out = Buffer.from(rectBuf);
+  const destLeft = out.readUInt16LE(0);
+  const destTop = out.readUInt16LE(2);
+  const width = out.readUInt16LE(8);
+  const height = out.readUInt16LE(10);
+  out.writeUInt16LE((destLeft + width - 1) & 0xffff, 4);
+  out.writeUInt16LE((destTop + height - 1) & 0xffff, 6);
+  return out;
+}
+
+/**
+ * Corrige stride Wallix de un TS_BITMAP_DATA.
+ * - Solido: dest-expand (mantiene RLE original, 0 coste de tamaño).
+ * - Complejo: crop + RLE compacto (COLOR_RUN / COLOR_IMAGE).
+ * @returns {{ kind: 'dest-expand'|'crop', buf: Buffer } | null}
+ */
+function fixOneBitmapRectStride(rectBuf) {
   if (!Buffer.isBuffer(rectBuf) || rectBuf.length < 18) return null;
 
   const destLeft = rectBuf.readUInt16LE(0);
@@ -124,7 +140,7 @@ function cropOneBitmapRect(rectBuf) {
   if (iw > 8192 || ih > 8192 || width > 8192 || height > 8192) return null;
 
   const raw = rectBuf.subarray(18, 18 + bitmapLength);
-  let pixels;
+  let full;
 
   if (flags & BITMAP_COMPRESSION) {
     let rle = raw;
@@ -133,8 +149,7 @@ function cropOneBitmapRect(rectBuf) {
       rle = raw.subarray(8);
     }
     try {
-      const full = decompress16bpp(rle, width, height);
-      pixels = cropRgb16(full, width, height, iw, ih);
+      full = decompress16bpp(rle, width, height);
     } catch (err) {
       if (err instanceof RleError) return null;
       throw err;
@@ -142,12 +157,25 @@ function cropOneBitmapRect(rectBuf) {
   } else {
     const rowBytes = width * 2;
     if (raw.length < rowBytes * height) return null;
-    pixels = cropRgb16(raw, width, height, iw, ih);
+    full = raw.subarray(0, rowBytes * height);
+  }
+
+  // Relleno solido: expandir dest evita re-encode y mantiene el PDU pequeno.
+  if (isUniformRgb16(full)) {
+    return { kind: 'dest-expand', buf: destExpandOneBitmapRect(rectBuf) };
+  }
+
+  let pixels;
+  try {
+    pixels = cropRgb16(full, width, height, iw, ih);
+  } catch (err) {
+    if (err instanceof RleError) return null;
+    throw err;
   }
 
   let encoded;
   try {
-    encoded = encodeMegaMegaColorImage(pixels);
+    encoded = encodeRgb16Rle(pixels);
   } catch (err) {
     if (err instanceof RleError) return null;
     throw err;
@@ -165,7 +193,14 @@ function cropOneBitmapRect(rectBuf) {
   header.writeUInt16LE(BITMAP_COMPRESSION | NO_BITMAP_COMPRESSION_HDR, 14);
   header.writeUInt16LE(encoded.length, 16);
 
-  return { header, data: encoded };
+  return { kind: 'crop', buf: Buffer.concat([header, encoded]) };
+}
+
+/** @deprecated usar fixOneBitmapRectStride */
+function cropOneBitmapRect(rectBuf) {
+  const fixed = fixOneBitmapRectStride(rectBuf);
+  if (!fixed || fixed.kind !== 'crop') return null;
+  return { header: fixed.buf.subarray(0, 18), data: fixed.buf.subarray(18) };
 }
 
 /**
@@ -284,8 +319,8 @@ function packRectBuffersToFastPath(fpHeaderByte, updateHeader, rectBuffers) {
 }
 
 /**
- * Recorta stride Wallix (RLE->crop->uncompressed). Corrige ghosting del dest-expand.
- * Puede devolver varios PDUs (extras) si el frame supera el limite Fast-Path.
+ * Corrige stride Wallix: solidos via dest-expand; complejos crop+RLE compacto.
+ * Puede devolver varios PDUs si el frame supera el limite Fast-Path.
  */
 function fixWallixBitmapStrideCrop(buf) {
   const info = inspectWallixFastPathBitmap(buf);
@@ -298,6 +333,8 @@ function fixWallixBitmapStrideCrop(buf) {
   const rectBuffers = [];
   let p = 4;
   let patchedCount = 0;
+  let destExpandCount = 0;
+  let cropCount = 0;
   let failed = 0;
 
   for (let i = 0; i < n; i++) {
@@ -320,10 +357,12 @@ function fixWallixBitmapStrideCrop(buf) {
     const destBottom = rectBuf.readUInt16LE(6);
 
     if (needsStrideCrop(width, height, destLeft, destTop, destRight, destBottom)) {
-      const cropped = cropOneBitmapRect(rectBuf);
-      if (cropped) {
-        rectBuffers.push(Buffer.concat([cropped.header, cropped.data]));
+      const fixed = fixOneBitmapRectStride(rectBuf);
+      if (fixed) {
+        rectBuffers.push(fixed.buf);
         patchedCount += 1;
+        if (fixed.kind === 'dest-expand') destExpandCount += 1;
+        else cropCount += 1;
       } else {
         rectBuffers.push(Buffer.from(rectBuf));
         failed += 1;
@@ -370,6 +409,8 @@ function fixWallixBitmapStrideCrop(buf) {
     buffers: pdus,
     extras: pdus.slice(1),
     patchedCount,
+    destExpandCount,
+    cropCount,
     numberRectangles: n,
     fallback: false,
     failed: 0,
@@ -390,6 +431,7 @@ module.exports = {
   inspectWallixFastPathBitmap,
   fixWallixBitmapDestStride,
   fixWallixBitmapStrideCrop,
+  fixOneBitmapRectStride,
   cropOneBitmapRect,
   needsStrideCrop,
   buildFastPathBitmapPdu,
