@@ -9,6 +9,7 @@
   min-height: 0;
   width: 100%;
   overflow-x: hidden !important;
+  contain: layout paint;
 }
 
 .documents-tree-scroll-area {

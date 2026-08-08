@@ -790,18 +790,19 @@ const TerminalComponent = forwardRef(({
                         border: '1px solid var(--ui-dialog-border, rgba(255, 255, 255, 0.15))',
                         boxShadow: '0 4px 15px var(--ui-dialog-shadow, rgba(0, 0, 0, 0.4))',
                         opacity: 0.2, // Very low opacity when not hovered
-                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        transform: 'translateZ(0)',
+                        transition: 'opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease',
                         pointerEvents: 'auto',
                         userSelect: 'none'
                     }}
                         onMouseEnter={(e) => {
                             e.currentTarget.style.opacity = '1';
-                            e.currentTarget.style.transform = 'translateY(1px)';
+                            e.currentTarget.style.transform = 'translateY(1px) translateZ(0)';
                             e.currentTarget.style.boxShadow = '0 6px 20px var(--ui-dialog-shadow, rgba(0, 0, 0, 0.5))';
                         }}
                         onMouseLeave={(e) => {
                             e.currentTarget.style.opacity = '0.2';
-                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.transform = 'translateY(0) translateZ(0)';
                             e.currentTarget.style.boxShadow = '0 4px 15px var(--ui-dialog-shadow, rgba(0, 0, 0, 0.4))';
                         }}
                     >
