@@ -187,8 +187,6 @@ if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU =
   app.commandLine.appendSwitch('enable-zero-copy');
   app.commandLine.appendSwitch('enable-webgl');
   app.commandLine.appendSwitch('enable-accelerated-video-decode');
-  app.commandLine.appendSwitch('enable-native-gpu-memory-buffers');
-  app.commandLine.appendSwitch('enable-gpu-memory-buffer-video-frames');
 
   if (process.platform === 'linux') {
     // 🛡️ FIX: El GPU process crashea con SIGSEGV en libGLESv2.so cuando ANGLE usa
@@ -197,13 +195,10 @@ if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU =
     // Desactivar Vulkan y WaylandDataDrag (evita bloqueos de drag controller en Wayland al minimizar/restaurar)
     app.commandLine.appendSwitch('disable-vulkan');
     app.commandLine.appendSwitch('disable-features', 'Vulkan,VulkanFromANGLE,DefaultANGLEVulkan,VulkanDisplay,VulkanSurface,WaylandDataDrag');
-    app.commandLine.appendSwitch('enable-features', 'CanvasOopRasterization,WaylandWindowDecorations');
     // Desactivar watchdog del GPU process para evitar kills prematuros
     app.commandLine.appendSwitch('disable-gpu-watchdog');
     // 🐧 WAYLAND NATIVO: Utilizar servidor Wayland nativo si está disponible (con fallback a X11)
     app.commandLine.appendSwitch('ozone-platform-hint', 'auto');
-  } else {
-    app.commandLine.appendSwitch('enable-features', 'CanvasOopRasterization');
   }
 }
 
@@ -1357,7 +1352,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       v8CacheOptions: 'code',
       enableBlinkFeatures: 'PreciseMemoryInfo',
-      backgroundThrottling: process.platform === 'linux' ? true : false
+      backgroundThrottling: false
     }
   });
   logTiming('BrowserWindow creado');
