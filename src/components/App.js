@@ -1417,6 +1417,10 @@ const App = () => {
     GROUP_KEYS
   });
 
+  const filteredTabs = useMemo(() => {
+    return getFilteredTabs();
+  }, [getFilteredTabs]);
+
   // Usar el hook de gestión de conexiones
   const {
     onOpenSSHConnection,
@@ -2638,10 +2642,10 @@ const App = () => {
 
   useEffect(() => {
     // Cuando cambia la pestaña activa, notificar al backend
-    const activeTab = filteredTabs[activeTabIndex];
+    const activeTab = filteredTabs?.[activeTabIndex];
 
     // Solo proceder si hay pestañas en el grupo actual
-    if (filteredTabs.length > 0 && activeTab && window.electron && window.electron.ipcRenderer) {
+    if (filteredTabs?.length > 0 && activeTab && window.electron && window.electron.ipcRenderer) {
       if (activeTab.type === 'split') {
         // Para splits, activar stats en ambos terminales
         if (activeTab.leftTerminal) {
@@ -2654,7 +2658,7 @@ const App = () => {
         window.electron.ipcRenderer.send('ssh:set-active-stats-tab', activeTab.key);
       }
     }
-  }, [activeTabIndex, filteredTabs[activeTabIndex]?.key]);
+  }, [activeTabIndex, filteredTabs?.[activeTabIndex]?.key]);
 
   // TODO: Implementar lógica para overflow menu items
   const overflowMenuItems = [];
@@ -3582,10 +3586,6 @@ const App = () => {
   const localTerminalBg = useMemo(() => {
     return themes[localLinuxTerminalTheme]?.theme?.background || THEME_DEFAULTS.BACKGROUND;
   }, [localLinuxTerminalTheme]);
-
-  const filteredTabs = useMemo(() => {
-    return getFilteredTabs();
-  }, [getFilteredTabs]);
 
 
 
