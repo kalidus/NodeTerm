@@ -16,9 +16,10 @@ const UbuntuTerminal = forwardRef(({
     fontSize = 14,
     theme = {},
     tabId = 'default',
-    ubuntuInfo = null, // Mantener nombre por compatibilidad, pero puede ser cualquier distribuci??n WSL
+    ubuntuInfo = null, // Mantener nombre por compatibilidad, pero puede ser cualquier distribución WSL
     hideStatusBar = false,
-    isIntegrated = false
+    isIntegrated = false,
+    active = true
 }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
@@ -306,7 +307,7 @@ const UbuntuTerminal = forwardRef(({
 
         // Listener para cambios de visibilidad del documento
         const handleVisibilityChange = () => {
-            if (!document.hidden) {
+            if (!document.hidden && active) {
                 setTimeout(() => {
                     if (fitAddon.current && terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
                         try {

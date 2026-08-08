@@ -18,7 +18,8 @@ const PowerShellTerminal = forwardRef(({
     theme = {},
     tabId = 'default',
     hideStatusBar = false,
-    isIntegrated = false
+    isIntegrated = false,
+    active = true
 }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
@@ -324,7 +325,7 @@ const PowerShellTerminal = forwardRef(({
 
         // Listener para cambios de visibilidad del documento
         const handleVisibilityChange = () => {
-            if (!document.hidden) {
+            if (!document.hidden && active) {
                 // console.log(`PowerShellTerminal visibility change detected for tab ${tabId}`);
                 setTimeout(() => {
                     try {

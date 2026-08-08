@@ -1357,7 +1357,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       v8CacheOptions: 'code',
       enableBlinkFeatures: 'PreciseMemoryInfo',
-      backgroundThrottling: false
+      backgroundThrottling: process.platform === 'linux' ? true : false
     }
   });
   logTiming('BrowserWindow creado');

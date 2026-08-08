@@ -17,7 +17,8 @@ const CygwinTerminal = forwardRef(({
     theme = {},
     tabId = 'default',
     hideStatusBar = false,
-    isIntegrated = false
+    isIntegrated = false,
+    active = true
 }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
@@ -269,7 +270,7 @@ const CygwinTerminal = forwardRef(({
         }
 
         const handleVisibilityChange = () => {
-            if (!document.hidden) {
+            if (!document.hidden && active) {
                 setTimeout(() => {
                     if (terminalRef.current && terminalRef.current.offsetHeight > 0 && terminalRef.current.offsetWidth > 0) {
                         try {

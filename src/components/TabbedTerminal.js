@@ -1850,6 +1850,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     if (ref) terminalRefs.current[tab.id] = ref;
                                 }}
                                 tabId={tab.id}
+                                active={tab.active}
                                 fontFamily={localFontFamily}
                                 fontSize={localFontSize}
                                 theme={themes[localPowerShellTheme]?.theme || powershellXtermTheme}
@@ -1864,6 +1865,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     if (ref) terminalRefs.current[tab.id] = ref;
                                 }}
                                 tabId={tab.id}
+                                active={tab.active}
                                 theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
                                 hideStatusBar={hideStatusBar}
                                 isIntegrated={isIntegrated}
@@ -1876,6 +1878,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     if (ref) terminalRefs.current[tab.id] = ref;
                                 }}
                                 tabId={tab.id}
+                                active={tab.active}
                                 ubuntuInfo={tab.distroInfo || tab.ubuntuInfo}
                                 tabType={tab.type}
                                 fontFamily={localFontFamily}
@@ -1892,6 +1895,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     if (ref) terminalRefs.current[tab.id] = ref;
                                 }}
                                 tabId={tab.id}
+                                active={tab.active}
                                 fontFamily={localFontFamily}
                                 fontSize={localFontSize}
                                 theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
@@ -1906,6 +1910,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     if (ref) terminalRefs.current[tab.id] = ref;
                                 }}
                                 tabId={tab.id}
+                                active={tab.active}
                                 dockerInfo={tab.distroInfo}
                                 fontFamily={localFontFamily}
                                 fontSize={localFontSize}
@@ -1921,6 +1926,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     if (ref) terminalRefs.current[tab.id] = ref;
                                 }}
                                 tabId={tab.id}
+                                active={tab.active}
                                 fontFamily={localFontFamily}
                                 fontSize={localFontSize}
                                 theme={themes[localPowerShellTheme]?.theme || powershellXtermTheme}
@@ -1934,6 +1940,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     if (ref) terminalRefs.current[tab.id] = ref;
                                 }}
                                 tabId={tab.id}
+                                active={tab.active}
                                 fontFamily={localFontFamily}
                                 fontSize={localFontSize}
                                 theme={themes[localPowerShellTheme]?.theme || powershellXtermTheme}
@@ -1947,6 +1954,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     if (ref) terminalRefs.current[tab.id] = ref;
                                 }}
                                 tabId={tab.id}
+                                active={tab.active}
                                 fontFamily={localFontFamily}
                                 fontSize={localFontSize}
                                 theme={themes[localPowerShellTheme]?.theme || powershellXtermTheme}
@@ -1960,6 +1968,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     if (ref) terminalRefs.current[tab.id] = ref;
                                 }}
                                 tabId={tab.id}
+                                active={tab.active}
                                 fontFamily={localFontFamily}
                                 fontSize={localFontSize}
                                 theme={themes[localPowerShellTheme]?.theme || powershellXtermTheme}
@@ -1973,6 +1982,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     if (ref) terminalRefs.current[tab.id] = ref;
                                 }}
                                 tabId={tab.id}
+                                active={tab.active}
                                 fontFamily={localFontFamily}
                                 fontSize={localFontSize}
                                 theme={themes[localPowerShellTheme]?.theme || powershellXtermTheme}
@@ -1986,6 +1996,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     if (ref) terminalRefs.current[tab.id] = ref;
                                 }}
                                 tabId={tab.id}
+                                active={tab.active}
                                 fontFamily={localFontFamily}
                                 fontSize={localFontSize}
                                 theme={themes[localPowerShellTheme]?.theme || powershellXtermTheme}
@@ -1999,6 +2010,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                     if (ref) terminalRefs.current[tab.id] = ref;
                                 }}
                                 tabId={tab.id}
+                                active={tab.active}
                                 rdpConfig={tab.rdpConfig}
                             />
                         )}

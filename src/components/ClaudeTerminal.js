@@ -10,7 +10,8 @@ const ClaudeTerminal = forwardRef(({
   fontSize = 14,
   theme = {},
   tabId = 'default',
-  isIntegrated = false
+  isIntegrated = false,
+  active = true
 }, ref) => {
   const terminalRef = useRef(null);
   const term = useRef(null);
@@ -157,7 +158,7 @@ const ClaudeTerminal = forwardRef(({
 
     const handleWindowResize = () => fitAndSyncSize();
     const handleVisibilityChange = () => {
-      if (!document.hidden) {
+      if (!document.hidden && active) {
         setTimeout(fitAndSyncSize, 100);
       }
     };
