@@ -194,9 +194,9 @@ if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU =
     // 🛡️ FIX: El GPU process crashea con SIGSEGV en libGLESv2.so cuando ANGLE usa
     // OpenGL ES nativo. Forzar desktop OpenGL evita el crash manteniendo aceleración HW.
     app.commandLine.appendSwitch('use-angle', 'gl');
-    // Desactivar Vulkan en Linux (crashes bajo Wayland con ciertos drivers)
+    // Desactivar Vulkan en Linux (evita advertencias e incompatibilidades con Wayland Surface Factory)
     app.commandLine.appendSwitch('disable-vulkan');
-    app.commandLine.appendSwitch('disable-features', 'Vulkan,VulkanFromANGLE,DefaultANGLEVulkan');
+    app.commandLine.appendSwitch('disable-features', 'Vulkan,VulkanFromANGLE,DefaultANGLEVulkan,VulkanDisplay,VulkanSurface');
     app.commandLine.appendSwitch('enable-features', 'CanvasOopRasterization');
     // Desactivar watchdog del GPU process para evitar kills prematuros
     app.commandLine.appendSwitch('disable-gpu-watchdog');
