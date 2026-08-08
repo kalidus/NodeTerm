@@ -535,25 +535,23 @@ const PowerShellTerminal = forwardRef(({
         setTimeout(forceResize, 300);
     }, [tabId]);
 
-    // Efecto adicional para asegurar el focus autom??tico despu??s del montaje
+    // Efecto para asegurar el focus automático al estar activa la pestaña
     useEffect(() => {
+        if (!active) return;
         const ensureFocus = () => {
             if (term.current) {
                 try {
                     term.current.focus();
-                    // console.log(`PowerShellTerminal focus applied for tab ${tabId}`);
                 } catch (e) {
-                    // console.error(`PowerShellTerminal focus error for tab ${tabId}:`, e);
+                    // Silently handle
                 }
             }
         };
 
-        // Aplicar focus m??ltiples veces para asegurar que se aplique correctamente
-        setTimeout(ensureFocus, 100);
-        setTimeout(ensureFocus, 250);
-        setTimeout(ensureFocus, 400);
-        setTimeout(ensureFocus, 600);
-    }, [tabId]);
+        ensureFocus();
+        const timer = setTimeout(ensureFocus, 50);
+        return () => clearTimeout(timer);
+    }, [active, tabId]);
 
     return (
         <div style={{

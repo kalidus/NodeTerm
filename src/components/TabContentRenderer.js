@@ -487,7 +487,7 @@ const PasswordTabContent = ({ tab, masterKey, secureStorage, setSshTabs }) => {
 
   React.useEffect(() => {
     setFavStatus(isFavorite(secretConnection));
-  }, [p.id, secretConnection]);
+  }, [p.id, formData.title, secretType]);
 
   const handleToggleFav = (e) => {
     e.stopPropagation();

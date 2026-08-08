@@ -2654,17 +2654,7 @@ const App = () => {
         window.electron.ipcRenderer.send('ssh:set-active-stats-tab', activeTab.key);
       }
     }
-    // Si filteredTabs.length === 0 (grupo vacío), no hacer nada para preservar stats loops existentes
-  }, [activeTabIndex, sshTabs, fileExplorerTabs]);
-
-  // Reactivar stats para bastión al volver a la pestaña
-  useEffect(() => {
-    if (!window.electron || !window.electron.ipcRenderer) return;
-    const activeTab = filteredTabs[activeTabIndex];
-    if (activeTab && activeTab.sshConfig && activeTab.sshConfig.useBastionWallix) {
-      window.electron.ipcRenderer.send('ssh:set-active-stats-tab', activeTab.key);
-    }
-  }, [activeTabIndex, sshTabs]);
+  }, [activeTabIndex, filteredTabs[activeTabIndex]?.key]);
 
   // TODO: Implementar lógica para overflow menu items
   const overflowMenuItems = [];

@@ -35,7 +35,6 @@ const TerminalComponent = forwardRef(({
     onToggleBroadcastTarget,
     isSplit = false
 }, ref) => {
-    const [forceUpdateCounter, setForceUpdateCounter] = useState(0);
     const sessionHistory = useStatusBarSessionHistory(stats);
     // Visibilidad local del status bar (toggle desde el menú de la sesión SSH)
     const [localStatusBarVisible, setLocalStatusBarVisible] = useState(true);
@@ -681,22 +680,16 @@ const TerminalComponent = forwardRef(({
         if (!active || !xtermLib) return;
 
         const ensureFocus = () => {
-            if (!term.current) return;
-            try {
-                term.current.focus();
-                setForceUpdateCounter((c) => c + 1);
-            } catch (_) { /* noop */ }
+            if (term.current) {
+                try {
+                    term.current.focus();
+                } catch (_) { /* noop */ }
+            }
         };
 
         ensureFocus();
-        const t1 = setTimeout(ensureFocus, 50);
-        const t2 = setTimeout(ensureFocus, 150);
-        const t3 = setTimeout(ensureFocus, 300);
-        return () => {
-            clearTimeout(t1);
-            clearTimeout(t2);
-            clearTimeout(t3);
-        };
+        const timer = setTimeout(ensureFocus, 50);
+        return () => clearTimeout(timer);
     }, [active, xtermLib]);
 
     // Forzar fit tras el primer render (por si el layout cambia despu??s del render)

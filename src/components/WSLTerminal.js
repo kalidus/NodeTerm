@@ -17,7 +17,8 @@ const WSLTerminal = forwardRef(({
     theme = {},
     tabId = 'default',
     hideStatusBar = false,
-    isIntegrated = false
+    isIntegrated = false,
+    active = true
 }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
@@ -464,8 +465,9 @@ const WSLTerminal = forwardRef(({
         }
     });
 
-    // Efecto adicional para asegurar el focus autom??tico despu??s del montaje
+    // Efecto para asegurar el focus automático al estar activa la pestaña
     useEffect(() => {
+        if (!active) return;
         const ensureFocus = () => {
             if (term.current) {
                 try {
@@ -476,12 +478,10 @@ const WSLTerminal = forwardRef(({
             }
         };
 
-        // Aplicar focus m??ltiples veces para asegurar que se aplique correctamente
-        setTimeout(ensureFocus, 100);
-        setTimeout(ensureFocus, 250);
-        setTimeout(ensureFocus, 400);
-        setTimeout(ensureFocus, 600);
-    }, [tabId]);
+        ensureFocus();
+        const timer = setTimeout(ensureFocus, 50);
+        return () => clearTimeout(timer);
+    }, [active, tabId]);
 
 
     return (
