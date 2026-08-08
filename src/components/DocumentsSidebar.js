@@ -672,12 +672,19 @@ const DocumentsSidebar = ({
 
   const handleRename = () => {
     if (!newItemName.trim() || !renamingNode) return;
+    const newName = newItemName.trim();
     setDocumentNodes(prev =>
-      updateNodeInTree(prev, renamingNode.key, { label: newItemName.trim() })
+      updateNodeInTree(prev, renamingNode.key, { label: newName })
     );
     setShowRenameDialog(false);
     setNewItemName('');
     setRenamingNode(null);
+    showToast?.({
+      severity: 'success',
+      summary: 'Renombrado',
+      detail: `Nombre actualizado a "${newName}"`,
+      life: 3000
+    });
   };
 
   const handleSelectFolderIcon = useCallback((iconId) => {
@@ -695,7 +702,13 @@ const DocumentsSidebar = ({
     });
     setShowIconSelector(false);
     setIconTargetNode(null);
-  }, [iconTargetNode]);
+    showToast?.({
+      severity: 'success',
+      summary: 'Icono actualizado',
+      detail: 'Icono de la carpeta actualizado',
+      life: 2500
+    });
+  }, [iconTargetNode, showToast]);
 
   // ── Papelera de notas/documentos ─────────────────────────────────────────────────────
   const DOC_TRASH_KEY = 'nodeterm_trash_documents';

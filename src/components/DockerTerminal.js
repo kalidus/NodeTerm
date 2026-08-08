@@ -139,7 +139,11 @@ const DockerTerminal = forwardRef(({
 
         // Intentar agregar WebGL addon para mejor rendimiento
         try {
-            term.current.loadAddon(new WebglAddon());
+            const webglAddon = new WebglAddon();
+            webglAddon.onContextLoss(() => {
+                try { webglAddon.dispose(); } catch (_) {}
+            });
+            term.current.loadAddon(webglAddon);
         } catch (e) {
             console.warn('WebGL addon no disponible para Docker');
         }

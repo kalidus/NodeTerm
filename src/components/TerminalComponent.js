@@ -305,6 +305,9 @@ const TerminalComponent = forwardRef(({
         // Load and activate the WebGL renderer
         try {
             const webglAddon = new WebglAddon();
+            webglAddon.onContextLoss(() => {
+                try { webglAddon.dispose(); } catch (_) {}
+            });
             term.current.loadAddon(webglAddon);
         } catch (e) {
             console.warn('WebGL addon failed to load, falling back to canvas renderer:', e);

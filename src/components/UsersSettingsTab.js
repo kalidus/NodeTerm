@@ -140,6 +140,15 @@ const UsersSettingsTab = ({ nodes = [], onUpdateUserPassword, onEditConnection }
       onUpdateUserPassword(selectedUser.username, newPassword, nodeIds);
     }
 
+    if (window.toast?.current?.show) {
+      window.toast.current.show({
+        severity: 'success',
+        summary: 'Contraseña actualizada',
+        detail: `Se actualizó la contraseña para el usuario "${selectedUser?.username}"`,
+        life: 3000
+      });
+    }
+
     setApplySuccess(true);
     setChangePasswordVisible(false);
     setNewPassword('');

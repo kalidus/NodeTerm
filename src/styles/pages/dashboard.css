@@ -34,12 +34,13 @@
 
 /* Tarjetas de estadísticas del sistema */
 .system-stat-card {
-  transition: all 0.3s ease;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s ease;
+  transform: translateZ(0);
   cursor: pointer;
 }
 
 .system-stat-card:hover {
-  transform: translateY(-5px);
+  transform: translateY(-3px) translateZ(0);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 

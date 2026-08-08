@@ -74,6 +74,14 @@ const CloudRestoreMasterKeyDialog = ({ visible, onSuccess, onHide, secureStorage
       await verifyAgainstVaults(password);
       await secureStorage.saveMasterKey(password, null, true);
       await secureStorage.setRememberPassword(true);
+      if (window.toast?.current?.show) {
+        window.toast.current.show({
+          severity: 'success',
+          summary: 'Clave maestra guardada',
+          detail: 'Clave maestra verificada y guardada correctamente',
+          life: 3000
+        });
+      }
       resetForm();
       onSuccess(password);
     } catch (err) {

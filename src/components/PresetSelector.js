@@ -59,6 +59,14 @@ const PresetSelector = () => {
     if (!name) return;
     presetManager.saveCurrentAsPreset(name, newPresetIcon || '⭐');
     setSaveDialogVisible(false);
+    if (window.toast?.current?.show) {
+      window.toast.current.show({
+        severity: 'success',
+        summary: 'Preset guardado',
+        detail: `Preset "${name}" guardado correctamente`,
+        life: 3000
+      });
+    }
   };
 
   // ─── Rename ──────────────────────────────────────────────────────────────────
@@ -71,7 +79,16 @@ const PresetSelector = () => {
 
   const handleRenameConfirm = () => {
     if (renameTarget && renameValue.trim()) {
-      presetManager.renameUserPreset(renameTarget.id, renameValue.trim());
+      const newName = renameValue.trim();
+      presetManager.renameUserPreset(renameTarget.id, newName);
+      if (window.toast?.current?.show) {
+        window.toast.current.show({
+          severity: 'success',
+          summary: 'Preset renombrado',
+          detail: `Nombre actualizado a "${newName}"`,
+          life: 3000
+        });
+      }
     }
     setRenameDialogVisible(false);
     setRenameTarget(null);
@@ -82,6 +99,14 @@ const PresetSelector = () => {
   const handleUpdateConfirm = (id) => {
     presetManager.updateUserPreset(id);
     setConfirmUpdateId(null);
+    if (window.toast?.current?.show) {
+      window.toast.current.show({
+        severity: 'success',
+        summary: 'Preset actualizado',
+        detail: 'Configuración del preset actualizada',
+        life: 3000
+      });
+    }
   };
 
   // ─── Delete ──────────────────────────────────────────────────────────────────

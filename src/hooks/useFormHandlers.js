@@ -1477,11 +1477,19 @@ export const useFormHandlers = ({
       });
     }
 
+    if (!silent) {
+      toast.current?.show({
+        severity: 'success',
+        summary: isEditing && originalNode && !originalNode.isNew ? 'RDP editada' : 'RDP añadida',
+        detail: isEditing && originalNode && !originalNode.isNew ? 'Sesión RDP actualizada' : `Conexión RDP "${rdpData.name || rdpData.server}" añadida al árbol`,
+        life: 3000
+      });
+    }
 
     setShowUnifiedConnectionDialog(false); // Cerrar diálogo unificado
     setRdpNodeData(null);
     setEditingRdpNode(null);
-  }, [setNodes, findNodeByKey, setRdpTabs, setShowUnifiedConnectionDialog, setRdpNodeData, setEditingRdpNode]);
+  }, [setNodes, findNodeByKey, setRdpTabs, setShowUnifiedConnectionDialog, setRdpNodeData, setEditingRdpNode, toast]);
 
   /**
    * Abrir diálogo de nueva conexión VNC
@@ -1629,6 +1637,15 @@ export const useFormHandlers = ({
       });
     }
 
+    if (!silent) {
+      toast.current?.show({
+        severity: 'success',
+        summary: isEditing && originalNode && !originalNode.isNew ? 'VNC editada' : 'VNC añadida',
+        detail: isEditing && originalNode && !originalNode.isNew ? 'Sesión VNC actualizada' : `Conexión VNC "${vncData.name || vncData.server}" añadida al árbol`,
+        life: 3000
+      });
+    }
+
     // Solo cerrar diálogo unificado si estamos editando (no creando nueva)
     if (isEditing) {
       setShowUnifiedConnectionDialog(false);
@@ -1636,7 +1653,7 @@ export const useFormHandlers = ({
       setEditingVncNode(null);
     }
     // Si es nueva conexión, el diálogo se cierra con onHide() en NewVNCConnectionDialog
-  }, [setNodes, findNodeByKey, setRdpTabs, setShowUnifiedConnectionDialog, setVncNodeData, setEditingVncNode]);
+  }, [setNodes, findNodeByKey, setRdpTabs, setShowUnifiedConnectionDialog, setVncNodeData, setEditingVncNode, toast]);
 
   /**
    * Guardar conexión de archivos (SFTP/FTP/SCP) en sidebar

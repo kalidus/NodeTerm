@@ -177,25 +177,29 @@ if (app) {
   }
 }
 
-// Configuración de GPU por plataforma
+// Configuración de GPU y plataforma por SO
 if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU === 'true') {
   app.disableHardwareAcceleration();
-} else if (process.platform === 'linux') {
-  // 🛡️ FIX: El GPU process crashea con SIGSEGV en libGLESv2.so cuando ANGLE usa
-  // OpenGL ES nativo. Forzar desktop OpenGL evita el crash manteniendo aceleración HW.
-  app.commandLine.appendSwitch('use-angle', 'gl');
-  // Desactivar Vulkan en Linux (crashes bajo Wayland con ciertos drivers)
-  app.commandLine.appendSwitch('disable-vulkan');
-  app.commandLine.appendSwitch('disable-features', 'Vulkan,VulkanFromANGLE,DefaultANGLEVulkan');
-  // Desactivar watchdog del GPU process para evitar kills prematuros
-  app.commandLine.appendSwitch('disable-gpu-watchdog');
 } else {
-  // 🚀 OPTIMIZACIONES DE RENDIMIENTO DE HARDWARE (GPU) — solo en macOS/Windows
+  // 🚀 OPTIMIZACIONES DE RENDIMIENTO DE HARDWARE (GPU)
   app.commandLine.appendSwitch('ignore-gpu-blocklist');
   app.commandLine.appendSwitch('enable-gpu-rasterization');
   app.commandLine.appendSwitch('enable-zero-copy');
   app.commandLine.appendSwitch('enable-webgl');
   app.commandLine.appendSwitch('enable-accelerated-video-decode');
+
+  if (process.platform === 'linux') {
+    // 🛡️ FIX: El GPU process crashea con SIGSEGV en libGLESv2.so cuando ANGLE usa
+    // OpenGL ES nativo. Forzar desktop OpenGL evita el crash manteniendo aceleración HW.
+    app.commandLine.appendSwitch('use-angle', 'gl');
+    // Desactivar Vulkan en Linux (crashes bajo Wayland con ciertos drivers)
+    app.commandLine.appendSwitch('disable-vulkan');
+    app.commandLine.appendSwitch('disable-features', 'Vulkan,VulkanFromANGLE,DefaultANGLEVulkan');
+    // Desactivar watchdog del GPU process para evitar kills prematuros
+    app.commandLine.appendSwitch('disable-gpu-watchdog');
+    // 🐧 WAYLAND NATIVO: Utilizar servidor Wayland nativo si está disponible (con fallback a X11)
+    app.commandLine.appendSwitch('ozone-platform-hint', 'auto');
+  }
 }
 
 // Windows: mismo ID que build.appId en prod (barra tras auto-update NSIS); ID distinto en dev

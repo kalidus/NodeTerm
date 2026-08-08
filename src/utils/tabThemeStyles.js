@@ -5,11 +5,13 @@ export const generateAdvancedCSS = (themeName, styles) => {
     /* Override completo de PrimeReact */
     .p-tabview .p-tabview-nav li .p-tabview-nav-link {
       ${styles['--tab-clip-path'] ? `clip-path: var(--tab-clip-path) !important;` : ''}
-      ${styles['--tab-backdrop-filter'] ? `backdrop-filter: var(--tab-backdrop-filter) !important;` : ''}
+      ${styles['--tab-backdrop-filter'] ? `backdrop-filter: var(--tab-backdrop-filter) !important; -webkit-backdrop-filter: var(--tab-backdrop-filter) !important;` : ''}
       ${styles['--tab-background-size'] ? `background-size: var(--tab-background-size) !important;` : ''}
       background-attachment: fixed !important;
       position: relative !important;
       overflow: hidden !important;
+      transform: translateZ(0);
+      will-change: transform;
     }
     
     /* Estilos para el botón de cerrar en pestañas */

@@ -277,6 +277,9 @@ const UbuntuTerminal = forwardRef(({
         // Load WebGL renderer for better performance
         try {
             const webglAddon = new WebglAddon();
+            webglAddon.onContextLoss(() => {
+                try { webglAddon.dispose(); } catch (_) {}
+            });
             term.current.loadAddon(webglAddon);
         } catch (e) {
             console.warn('WebGL addon failed to load, falling back to canvas renderer:', e);

@@ -151,6 +151,14 @@ const SyncSettingsDialog = ({ visible, onHide, onReloadSessions, sessionManager,
       );
 
       setMessage({ severity: 'success', summary: 'Guardado', detail: 'Configuración guardada correctamente' });
+      if (window.toast?.current?.show) {
+        window.toast.current.show({
+          severity: 'success',
+          summary: 'Configuración guardada',
+          detail: 'Parámetros de sincronización Nextcloud guardados correctamente',
+          life: 3000
+        });
+      }
       updateSyncStatus();
     } catch (error) {
       setMessage({ severity: 'error', summary: 'Error', detail: 'Error guardando configuración' });

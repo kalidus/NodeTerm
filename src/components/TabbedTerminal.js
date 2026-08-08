@@ -1194,16 +1194,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             // Si el efecto se reemplaza rápidamente (tab change), cancelamos fits pendientes
             cancelScheduledFit();
         };
-    }, [tabs, activeTabKey, scheduleFitForTab, cancelScheduledFit]);
-
-    // Efecto adicional que se ejecuta cuando cambia la key activa
-    useEffect(() => {
-        const activeTab = tabs.find(tab => tab.active);
-        if (activeTab && activeTabKey > 0) {
-            scheduleFitForTab(activeTab.id);
-        }
-        return () => cancelScheduledFit();
-    }, [activeTabKey, tabs, scheduleFitForTab, cancelScheduledFit]);
+    }, [tabs, scheduleFitForTab, cancelScheduledFit]);
 
     // Opciones para el selector de tipo de terminal agrupadas por categorías
     const getGroupedTerminalOptions = () => {
@@ -1557,9 +1548,6 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             return newTabs;
         });
 
-        // Incrementar la key para forzar re-render
-        setActiveTabKey(prev => prev + 1);
-
         // Redimensionar el terminal activo sin saturar el main thread
         scheduleFitForTab(tabId);
     };
@@ -1849,7 +1837,9 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                             width: '100%',
                             position: 'absolute',
                             top: 0,
-                            left: 0
+                            left: 0,
+                            transform: 'translateZ(0)',
+                            willChange: 'transform, opacity'
                         }}
                     >
                         <Suspense fallback={null}>
