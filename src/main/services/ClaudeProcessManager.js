@@ -1,5 +1,6 @@
 const os = require('os');
 const fs = require('fs');
+const { sendToRenderer } = require('../utils');
 
 let claudeProcesses = {};
 let mainWindow = null;
@@ -18,20 +19,16 @@ function resolveClaudeCandidates(config = {}) {
   const customPath = String(config.binaryPath || '').trim();
   if (customPath) {
     if (!fs.existsSync(customPath)) {
-      throw new Error(`Claude binary no encontrado en: ${customPath}`);
+      return { customPath, error: `Ruta personalizada no existe: ${customPath}`, candidates: [] };
     }
-    return [customPath];
+    return { customPath, candidates: [customPath] };
   }
 
-  if (os.platform() === 'win32') {
-    return ['claude.cmd', 'claude.exe', 'claude'];
-  }
-  return ['claude'];
-}
-
-function isNotFoundError(error) {
-  const msg = String(error?.message || '').toLowerCase();
-  return msg.includes('file not found') || msg.includes('enoent') || msg.includes('not found');
+  const isWin = os.platform() === 'win32';
+  return {
+    customPath: null,
+    candidates: isWin ? ['claude.cmd', 'claude.exe', 'claude'] : ['claude']
+  };
 }
 
 function buildClaudeArgs(config = {}) {
@@ -50,16 +47,23 @@ function buildClaudeArgs(config = {}) {
   return args;
 }
 
-async function startClaudeSession(tabId, { cols, rows } = {}) {
-  if (isAppQuitting.value) return;
-  if (!getPtyFn) return;
+function startClaudeSession(tabId, options = {}) {
+  const { cols = 120, rows = 30 } = options;
+
+  if (claudeProcesses[tabId]) {
+    try {
+      claudeProcesses[tabId].kill();
+    } catch (_) {}
+    delete claudeProcesses[tabId];
+  }
 
   try {
-    if (claudeProcesses[tabId]) return;
+    const config = typeof getClaudeConfig === 'function' ? getClaudeConfig() : {};
+    const { customPath, error, candidates } = resolveClaudeCandidates(config);
 
-    const config = typeof getClaudeConfig === 'function'
-      ? await getClaudeConfig()
-      : {};
+    if (error) {
+      throw new Error(error);
+    }
 
     const args = buildClaudeArgs(config);
     const env = {
@@ -74,8 +78,8 @@ async function startClaudeSession(tabId, { cols, rows } = {}) {
 
     const spawnOptions = {
       name: 'xterm-256color',
-      cols: cols || 120,
-      rows: rows || 30,
+      cols,
+      rows,
       cwd: os.homedir(),
       env
     };
@@ -86,28 +90,23 @@ async function startClaudeSession(tabId, { cols, rows } = {}) {
       spawnOptions.backend = 'winpty';
     }
 
-    const candidates = resolveClaudeCandidates(config);
     let ptyProcess = null;
-    let lastError = null;
     let usedCommand = null;
+    let lastError = null;
 
-    for (const command of candidates) {
+    for (const cmd of candidates) {
       try {
-        ptyProcess = getPtyFn().spawn(command, args, spawnOptions);
-        usedCommand = command;
+        ptyProcess = getPtyFn().spawn(cmd, args, spawnOptions);
+        usedCommand = cmd;
         break;
       } catch (err) {
         lastError = err;
-        if (!isNotFoundError(err)) {
-          break;
-        }
       }
     }
 
     if (!ptyProcess) {
-      const configuredPath = String(config.binaryPath || '').trim();
-      if (configuredPath) {
-        throw new Error(`No se pudo ejecutar Claude en la ruta configurada: ${configuredPath}. Error: ${lastError?.message || 'desconocido'}`);
+      if (customPath) {
+        throw new Error(`No se pudo ejecutar Claude en la ruta configurada: ${customPath}. Error: ${lastError?.message || 'desconocido'}`);
       }
       throw new Error(
         `No se encontró Claude Code en PATH. Comandos probados: ${candidates.join(', ')}. ` +
@@ -118,8 +117,8 @@ async function startClaudeSession(tabId, { cols, rows } = {}) {
     claudeProcesses[tabId] = ptyProcess;
 
     ptyProcess.onData((data) => {
-      if (mainWindow?.webContents) {
-        mainWindow.webContents.send(`claude:data:${tabId}`, data);
+      if (!isAppQuitting.value) {
+        sendToRenderer(mainWindow, `claude:data:${tabId}`, data);
       }
     });
 
@@ -127,19 +126,17 @@ async function startClaudeSession(tabId, { cols, rows } = {}) {
       const exitCode = typeof event === 'object' ? event?.exitCode : event;
       delete claudeProcesses[tabId];
 
-      if (!isAppQuitting.value && mainWindow?.webContents && exitCode !== 0) {
-        mainWindow.webContents.send(`claude:error:${tabId}`, `Claude finalizó con código ${exitCode}`);
+      if (!isAppQuitting.value && exitCode !== 0) {
+        sendToRenderer(mainWindow, `claude:error:${tabId}`, `Claude finalizó con código ${exitCode}`);
       }
     });
 
-    mainWindow?.webContents?.send(`claude:ready:${tabId}`);
-    if (usedCommand && mainWindow?.webContents) {
-      mainWindow.webContents.send(`claude:data:${tabId}`, `\r\n[Claude] usando comando: ${usedCommand}\r\n`);
+    sendToRenderer(mainWindow, `claude:ready:${tabId}`);
+    if (usedCommand) {
+      sendToRenderer(mainWindow, `claude:data:${tabId}`, `\r\n[Claude] usando comando: ${usedCommand}\r\n`);
     }
   } catch (error) {
-    if (mainWindow?.webContents) {
-      mainWindow.webContents.send(`claude:error:${tabId}`, `No se pudo iniciar Claude Code: ${error.message}`);
-    }
+    sendToRenderer(mainWindow, `claude:error:${tabId}`, `No se pudo iniciar Claude Code: ${error.message}`);
   }
 }
 
@@ -148,9 +145,7 @@ function writeToClaude(tabId, data) {
   try {
     claudeProcesses[tabId].write(data);
   } catch (error) {
-    if (mainWindow?.webContents) {
-      mainWindow.webContents.send(`claude:error:${tabId}`, `Error enviando datos: ${error.message}`);
-    }
+    sendToRenderer(mainWindow, `claude:error:${tabId}`, `Error enviando datos: ${error.message}`);
   }
 }
 
@@ -159,9 +154,7 @@ function resizeClaude(tabId, { cols, rows }) {
   try {
     claudeProcesses[tabId].resize(cols, rows);
   } catch (error) {
-    if (mainWindow?.webContents) {
-      mainWindow.webContents.send(`claude:error:${tabId}`, `Error redimensionando terminal: ${error.message}`);
-    }
+    sendToRenderer(mainWindow, `claude:error:${tabId}`, `Error redimensionando terminal: ${error.message}`);
   }
 }
 

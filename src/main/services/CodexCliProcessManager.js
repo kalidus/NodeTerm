@@ -1,5 +1,6 @@
 const os = require('os');
 const fs = require('fs');
+const { sendToRenderer } = require('../utils');
 
 let codexCliProcesses = {};
 let mainWindow = null;
@@ -114,8 +115,8 @@ async function startCodexCliSession(tabId, { cols, rows } = {}) {
     codexCliProcesses[tabId] = ptyProcess;
 
     ptyProcess.onData((data) => {
-      if (mainWindow?.webContents) {
-        mainWindow.webContents.send(`codexcli:data:${tabId}`, data);
+      if (!isAppQuitting.value) {
+        sendToRenderer(mainWindow, `codexcli:data:${tabId}`, data);
       }
     });
 
@@ -123,19 +124,17 @@ async function startCodexCliSession(tabId, { cols, rows } = {}) {
       const exitCode = typeof event === 'object' ? event?.exitCode : event;
       delete codexCliProcesses[tabId];
 
-      if (!isAppQuitting.value && mainWindow?.webContents && exitCode !== 0) {
-        mainWindow.webContents.send(`codexcli:error:${tabId}`, `Codex CLI finalizó con código ${exitCode}`);
+      if (!isAppQuitting.value && exitCode !== 0) {
+        sendToRenderer(mainWindow, `codexcli:error:${tabId}`, `Codex CLI finalizó con código ${exitCode}`);
       }
     });
 
-    mainWindow?.webContents?.send(`codexcli:ready:${tabId}`);
-    if (usedCommand && mainWindow?.webContents) {
-      mainWindow.webContents.send(`codexcli:data:${tabId}`, `\r\n[Codex CLI] usando comando: ${usedCommand}\r\n`);
+    sendToRenderer(mainWindow, `codexcli:ready:${tabId}`);
+    if (usedCommand) {
+      sendToRenderer(mainWindow, `codexcli:data:${tabId}`, `\r\n[Codex CLI] usando comando: ${usedCommand}\r\n`);
     }
   } catch (error) {
-    if (mainWindow?.webContents) {
-      mainWindow.webContents.send(`codexcli:error:${tabId}`, `No se pudo iniciar Codex CLI: ${error.message}`);
-    }
+    sendToRenderer(mainWindow, `codexcli:error:${tabId}`, `No se pudo iniciar Codex CLI: ${error.message}`);
   }
 }
 
@@ -144,9 +143,7 @@ function writeToCodexCli(tabId, data) {
   try {
     codexCliProcesses[tabId].write(data);
   } catch (error) {
-    if (mainWindow?.webContents) {
-      mainWindow.webContents.send(`codexcli:error:${tabId}`, `Error enviando datos: ${error.message}`);
-    }
+    sendToRenderer(mainWindow, `codexcli:error:${tabId}`, `Error enviando datos: ${error.message}`);
   }
 }
 
@@ -155,9 +152,7 @@ function resizeCodexCli(tabId, { cols, rows }) {
   try {
     codexCliProcesses[tabId].resize(cols, rows);
   } catch (error) {
-    if (mainWindow?.webContents) {
-      mainWindow.webContents.send(`codexcli:error:${tabId}`, `Error redimensionando terminal: ${error.message}`);
-    }
+    sendToRenderer(mainWindow, `codexcli:error:${tabId}`, `Error redimensionando terminal: ${error.message}`);
   }
 }
 

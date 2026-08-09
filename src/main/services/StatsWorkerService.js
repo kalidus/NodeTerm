@@ -9,6 +9,7 @@ const path = require('path');
 let statsWorker = null;
 let statsWorkerReady = false;
 let statsWorkerQueue = [];
+let isShuttingDown = false;
 
 function startStatsWorker() {
   if (statsWorker) {
@@ -22,8 +23,10 @@ function startStatsWorker() {
 
   statsWorker.on('exit', () => {
     statsWorkerReady = false;
-    // Reiniciar automáticamente si muere
-    setTimeout(startStatsWorker, 1000);
+    // Solo reiniciar si no estamos cerrando la aplicación
+    if (!isShuttingDown) {
+      setTimeout(startStatsWorker, 1000);
+    }
   });
 
   statsWorker.on('message', (msg) => {
@@ -87,15 +90,18 @@ function isWorkerReady() {
 }
 
 function stopStatsWorker() {
+  isShuttingDown = true;
   if (statsWorker) {
     try {
-      statsWorker.kill();
+      statsWorker.removeAllListeners('exit');
+      statsWorker.kill('SIGKILL');
     } catch (e) {
-      console.error('Error stopping stats worker:', e);
+      // Ignore
     }
     statsWorker = null;
     statsWorkerReady = false;
   }
+  statsWorkerQueue = [];
 }
 
 function setStatsWorkerInterval(intervalMs) {

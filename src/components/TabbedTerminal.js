@@ -1837,9 +1837,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                             width: '100%',
                             position: 'absolute',
                             top: 0,
-                            left: 0,
-                            transform: 'translateZ(0)',
-                            willChange: 'transform, opacity'
+                            left: 0
                         }}
                     >
                         <Suspense fallback={null}>

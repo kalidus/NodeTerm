@@ -4,6 +4,7 @@
 // ============================================
 
 const os = require('os');
+const { sendToRenderer } = require('../utils');
 
 let ubuntuProcesses = {};
 let isAppQuitting = { value: false };
@@ -101,8 +102,8 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
 
     // Handle Ubuntu output
     ptyProcess.onData((data) => {
-      if (mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send(`ubuntu:data:${tabId}`, data);
+      if (!isAppQuitting.value) {
+        sendToRenderer(mainWindow, `ubuntu:data:${tabId}`, data);
       }
     });
 
@@ -127,9 +128,7 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
         // Silenciar el mensaje de error si estamos cerrando la aplicación
         if (!isAppQuitting.value) {
           console.log(`Ubuntu ${tabId} terminó con error (código ${actualExitCode})`);
-          if (mainWindow && mainWindow.webContents) {
-            mainWindow.webContents.send(`ubuntu:error:${tabId}`, `Ubuntu process exited with code ${actualExitCode}`);
-          }
+          sendToRenderer(mainWindow, `ubuntu:error:${tabId}`, `Ubuntu process exited with code ${actualExitCode}`);
         }
       }
 
@@ -140,16 +139,11 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
     });
 
     // Send ready signal
-    if (mainWindow && mainWindow.webContents) {
-      mainWindow.webContents.send(`ubuntu:ready:${tabId}`);
-    }
+    sendToRenderer(mainWindow, `ubuntu:ready:${tabId}`);
 
   } catch (error) {
     console.error(`Error starting Ubuntu session for tab ${tabId}:`, error);
-    if (mainWindow && mainWindow.webContents) {
-      mainWindow.webContents.send(`ubuntu:error:${tabId}`,
-        `Failed to start Ubuntu: ${error.message}`);
-    }
+    sendToRenderer(mainWindow, `ubuntu:error:${tabId}`, `Failed to start Ubuntu: ${error.message}`);
   }
 }
 
@@ -162,9 +156,7 @@ function writeToUbuntu(tabId, data) {
       ubuntuProcesses[tabId].write(data);
     } catch (error) {
       console.error(`Error writing to Ubuntu ${tabId}:`, error);
-      if (mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send(`ubuntu:error:${tabId}`, `Write error: ${error.message}`);
-      }
+      sendToRenderer(mainWindow, `ubuntu:error:${tabId}`, `Write error: ${error.message}`);
     }
   } else {
     console.warn(`No Ubuntu process found for ${tabId}`);

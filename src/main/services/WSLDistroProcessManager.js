@@ -3,6 +3,7 @@
 // Gestiona el ciclo de vida de procesos de distribuciones WSL
 // ============================================
 const os = require('os');
+const { sendToRenderer } = require('../utils');
 
 let wslDistroProcesses = {};
 let isAppQuitting = { value: false };
@@ -144,23 +145,22 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
 
     // Handle distribution output
     wslDistroProcesses[tabId].onData((data) => {
-      // Proteger acceso si el proceso ya no existe
       if (!wslDistroProcesses[tabId]) return;
 
-      if (!isAppQuitting.value && mainWindow && !mainWindow.isDestroyed()) {
+      if (!isAppQuitting.value) {
         const channelName = distroInfo?.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
-        mainWindow.webContents.send(`${channelName}:data:${tabId}`, data);
+        sendToRenderer(mainWindow, `${channelName}:data:${tabId}`, data);
       }
     });
 
     // Send ready signal AFTER registering onData (consistent with Ubuntu manager)
-    if (!isAppQuitting.value && mainWindow && !mainWindow.isDestroyed()) {
+    if (!isAppQuitting.value) {
       const channelName = distroInfo?.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
-      mainWindow.webContents.send(`${channelName}:ready:${tabId}`);
+      sendToRenderer(mainWindow, `${channelName}:ready:${tabId}`);
 
       // Enviar mensaje de bienvenida para confirmar que el backend está respondiendo
       const welcomeMsg = `\r\n\x1b[36m🚀 Starting ${distroInfo?.label || distroInfo?.name || 'WSL Distribution'}...\x1b[0m\r\n`;
-      mainWindow.webContents.send(`${channelName}:data:${tabId}`, welcomeMsg);
+      sendToRenderer(mainWindow, `${channelName}:data:${tabId}`, welcomeMsg);
     }
 
     // Handle distribution exit  
@@ -171,18 +171,13 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
         return;
       }
 
-      if (!mainWindow || mainWindow.isDestroyed()) {
-        console.log(`Main window destroyed, ignoring exit for ${tabId}`);
-        return;
-      }
-
       let actualExitCode = exitCode;
       if (exitCode === null && signal) {
         actualExitCode = `killed by ${signal}`;
       }
 
       // Determinar si necesita reinicio automático (solo para errores específicos de ConPTY)
-      const needsRestart = exitCode === -1073741510; // Error específico de ConPTY
+      const needsRestart = exitCode === -1073741510;
 
       if (needsRestart) {
         console.log(`WSL ${shell} (${tabId}) falló con error de ConPTY, reiniciando en 2 segundos...`);
@@ -202,9 +197,9 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
 
   } catch (error) {
     console.error(`Error starting WSL distro session for tab ${tabId}:`, error);
-    if (!isAppQuitting.value && mainWindow && !mainWindow.isDestroyed()) {
+    if (!isAppQuitting.value) {
       const channelName = distroInfo?.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
-      mainWindow.webContents.send(`${channelName}:error:${tabId}`,
+      sendToRenderer(mainWindow, `${channelName}:error:${tabId}`,
         `Failed to start ${distroInfo?.label || 'WSL Distribution'}: ${error.message}`);
     }
   }

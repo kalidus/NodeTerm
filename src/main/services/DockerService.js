@@ -1,6 +1,7 @@
 const { execSync, spawn } = require('child_process');
 const pty = require('node-pty');
 const os = require('os');
+const { sendToRenderer } = require('../utils');
 
 /**
  * Servicio para gestión de contenedores Docker
@@ -14,6 +15,11 @@ let dockerProcesses = {};
 
 // Referencia a la ventana principal
 let mainWindow = null;
+let isAppQuitting = { value: false };
+
+function setAppQuitting(quittingRef) {
+  if (quittingRef) isAppQuitting = quittingRef;
+}
 
 // Flag para evitar logs repetidos de errores Docker
 let dockerErrorLogged = false;
@@ -279,33 +285,30 @@ async function startDockerSession(tabId, containerName, { cols, rows }) {
 
     // Handle output
     dockerProcesses[tabId].onData((data) => {
-      const dataStr = data.toString('utf8');
-      if (mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send(`docker:data:${tabId}`, dataStr);
+      if (!isAppQuitting.value) {
+        const dataStr = data.toString('utf8');
+        sendToRenderer(mainWindow, `docker:data:${tabId}`, dataStr);
       }
     });
-
-    // El prompt ya se envía automáticamente, no es necesario enviar Enter
 
     // Handle exit
     dockerProcesses[tabId].onExit(({ exitCode, signal }) => {
       delete dockerProcesses[tabId];
-
-      if (mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send(`docker:exit:${tabId}`, exitCode?.toString() || '0');
+      if (!isAppQuitting.value) {
+        sendToRenderer(mainWindow, `docker:exit:${tabId}`, exitCode?.toString() || '0');
       }
     });
 
     // Handle errors
     dockerProcesses[tabId].on('error', (error) => {
-      if (mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send(`docker:error:${tabId}`, error.message);
+      if (!isAppQuitting.value) {
+        sendToRenderer(mainWindow, `docker:error:${tabId}`, error.message);
       }
     });
   } catch (error) {
     console.error(`❌ Error iniciando Docker en '${containerName}': ${error.message}`);
-    if (mainWindow && mainWindow.webContents) {
-      mainWindow.webContents.send(`docker:error:${tabId}`,
+    if (!isAppQuitting.value) {
+      sendToRenderer(mainWindow, `docker:error:${tabId}`,
         `No se pudo iniciar sesión en '${containerName}': ${error.message}`
       );
     }

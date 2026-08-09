@@ -1,5 +1,6 @@
 const os = require('os');
 const fs = require('fs');
+const { sendToRenderer } = require('../utils');
 
 let geminiCliProcesses = {};
 let mainWindow = null;
@@ -124,8 +125,8 @@ async function startGeminiCliSession(tabId, { cols, rows } = {}) {
     geminiCliProcesses[tabId] = ptyProcess;
 
     ptyProcess.onData((data) => {
-      if (mainWindow?.webContents) {
-        mainWindow.webContents.send(`geminicli:data:${tabId}`, data);
+      if (!isAppQuitting.value) {
+        sendToRenderer(mainWindow, `geminicli:data:${tabId}`, data);
       }
     });
 
@@ -133,19 +134,17 @@ async function startGeminiCliSession(tabId, { cols, rows } = {}) {
       const exitCode = typeof event === 'object' ? event?.exitCode : event;
       delete geminiCliProcesses[tabId];
 
-      if (!isAppQuitting.value && mainWindow?.webContents && exitCode !== 0) {
-        mainWindow.webContents.send(`geminicli:error:${tabId}`, `Gemini CLI finalizó con código ${exitCode}`);
+      if (!isAppQuitting.value && exitCode !== 0) {
+        sendToRenderer(mainWindow, `geminicli:error:${tabId}`, `Gemini CLI finalizó con código ${exitCode}`);
       }
     });
 
-    mainWindow?.webContents?.send(`geminicli:ready:${tabId}`);
-    if (usedCommand && mainWindow?.webContents) {
-      mainWindow.webContents.send(`geminicli:data:${tabId}`, `\r\n[Gemini CLI] usando comando: ${usedCommand}\r\n`);
+    sendToRenderer(mainWindow, `geminicli:ready:${tabId}`);
+    if (usedCommand) {
+      sendToRenderer(mainWindow, `geminicli:data:${tabId}`, `\r\n[Gemini CLI] usando comando: ${usedCommand}\r\n`);
     }
   } catch (error) {
-    if (mainWindow?.webContents) {
-      mainWindow.webContents.send(`geminicli:error:${tabId}`, `No se pudo iniciar Gemini CLI: ${error.message}`);
-    }
+    sendToRenderer(mainWindow, `geminicli:error:${tabId}`, `No se pudo iniciar Gemini CLI: ${error.message}`);
   }
 }
 
@@ -154,9 +153,7 @@ function writeToGeminiCli(tabId, data) {
   try {
     geminiCliProcesses[tabId].write(data);
   } catch (error) {
-    if (mainWindow?.webContents) {
-      mainWindow.webContents.send(`geminicli:error:${tabId}`, `Error enviando datos: ${error.message}`);
-    }
+    sendToRenderer(mainWindow, `geminicli:error:${tabId}`, `Error enviando datos: ${error.message}`);
   }
 }
 
@@ -165,9 +162,7 @@ function resizeGeminiCli(tabId, { cols, rows }) {
   try {
     geminiCliProcesses[tabId].resize(cols, rows);
   } catch (error) {
-    if (mainWindow?.webContents) {
-      mainWindow.webContents.send(`geminicli:error:${tabId}`, `Error redimensionando terminal: ${error.message}`);
-    }
+    sendToRenderer(mainWindow, `geminicli:error:${tabId}`, `Error redimensionando terminal: ${error.message}`);
   }
 }
 

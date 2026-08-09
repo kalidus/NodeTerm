@@ -1,5 +1,6 @@
 const os = require('os');
 const fs = require('fs');
+const { sendToRenderer } = require('../utils');
 const path = require('path');
 
 let hermesCliProcesses = {};
@@ -146,8 +147,8 @@ async function startHermesCliSession(tabId, { cols, rows } = {}) {
     hermesCliProcesses[tabId] = ptyProcess;
 
     ptyProcess.onData((data) => {
-      if (mainWindow?.webContents) {
-        mainWindow.webContents.send(`hermescli:data:${tabId}`, data);
+      if (!isAppQuitting.value) {
+        sendToRenderer(mainWindow, `hermescli:data:${tabId}`, data);
       }
     });
 
@@ -155,19 +156,17 @@ async function startHermesCliSession(tabId, { cols, rows } = {}) {
       const exitCode = typeof event === 'object' ? event?.exitCode : event;
       delete hermesCliProcesses[tabId];
 
-      if (!isAppQuitting.value && mainWindow?.webContents && exitCode !== 0) {
-        mainWindow.webContents.send(`hermescli:error:${tabId}`, `Hermes CLI finalizó con código ${exitCode}`);
+      if (!isAppQuitting.value && exitCode !== 0) {
+        sendToRenderer(mainWindow, `hermescli:error:${tabId}`, `Hermes CLI finalizó con código ${exitCode}`);
       }
     });
 
-    mainWindow?.webContents?.send(`hermescli:ready:${tabId}`);
-    if (usedCommand && mainWindow?.webContents) {
-      mainWindow.webContents.send(`hermescli:data:${tabId}`, `\r\n[Hermes CLI] usando comando: ${usedCommand}\r\n`);
+    sendToRenderer(mainWindow, `hermescli:ready:${tabId}`);
+    if (usedCommand) {
+      sendToRenderer(mainWindow, `hermescli:data:${tabId}`, `\r\n[Hermes CLI] usando comando: ${usedCommand}\r\n`);
     }
   } catch (error) {
-    if (mainWindow?.webContents) {
-      mainWindow.webContents.send(`hermescli:error:${tabId}`, `No se pudo iniciar Hermes CLI: ${error.message}`);
-    }
+    sendToRenderer(mainWindow, `hermescli:error:${tabId}`, `No se pudo iniciar Hermes CLI: ${error.message}`);
   }
 }
 
@@ -176,9 +175,7 @@ function writeToHermesCli(tabId, data) {
   try {
     hermesCliProcesses[tabId].write(data);
   } catch (error) {
-    if (mainWindow?.webContents) {
-      mainWindow.webContents.send(`hermescli:error:${tabId}`, `Error enviando datos: ${error.message}`);
-    }
+    sendToRenderer(mainWindow, `hermescli:error:${tabId}`, `Error enviando datos: ${error.message}`);
   }
 }
 
@@ -187,9 +184,7 @@ function resizeHermesCli(tabId, { cols, rows }) {
   try {
     hermesCliProcesses[tabId].resize(cols, rows);
   } catch (error) {
-    if (mainWindow?.webContents) {
-      mainWindow.webContents.send(`hermescli:error:${tabId}`, `Error redimensionando terminal: ${error.message}`);
-    }
+    sendToRenderer(mainWindow, `hermescli:error:${tabId}`, `Error redimensionando terminal: ${error.message}`);
   }
 }
 

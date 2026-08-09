@@ -1,6 +1,7 @@
 const { exec, spawn } = require('child_process');
 const os = require('os');
 const pty = require('node-pty');
+const { sendToRenderer } = require('../utils');
 
 /**
  * Servicio para gestión de WSL (Windows Subsystem for Linux)
@@ -329,16 +330,15 @@ function startWSLSession(tabId, { cols, rows }) {
     });
 
     wslProcesses[tabId].on('data', (data) => {
-      if (mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send(`wsl:data:${tabId}`, data);
+      if (!isAppQuitting.value) {
+        sendToRenderer(mainWindow, `wsl:data:${tabId}`, data);
       }
     });
 
     wslProcesses[tabId].on('exit', (exitCode) => {
-      // Solo notificar si no estamos cerrando la aplicación
-      if (!isAppQuitting.value && mainWindow && mainWindow.webContents) {
+      if (!isAppQuitting.value) {
         const exitCodeStr = exitCode ? exitCode.toString() : '0';
-        mainWindow.webContents.send(`wsl:exit:${tabId}`, exitCodeStr);
+        sendToRenderer(mainWindow, `wsl:exit:${tabId}`, exitCodeStr);
       }
       delete wslProcesses[tabId];
     });
@@ -356,9 +356,7 @@ function startWSLSession(tabId, { cols, rows }) {
 
   } catch (error) {
     console.error(`Error starting WSL for tab ${tabId}:`, error);
-    if (mainWindow && mainWindow.webContents) {
-      mainWindow.webContents.send(`wsl:error:${tabId}`, `Failed to start WSL: ${error.message}`);
-    }
+    sendToRenderer(mainWindow, `wsl:error:${tabId}`, `Failed to start WSL: ${error.message}`);
   }
 }
 
@@ -374,9 +372,7 @@ const WSLHandlers = {
         wslProcesses[tabId].write(data);
       } catch (error) {
         console.error(`Error writing to WSL ${tabId}:`, error);
-        if (mainWindow && mainWindow.webContents) {
-          mainWindow.webContents.send(`wsl:error:${tabId}`, `Write error: ${error.message}`);
-        }
+        sendToRenderer(mainWindow, `wsl:error:${tabId}`, `Write error: ${error.message}`);
       }
     } else {
       console.warn(`No WSL process found for ${tabId}`);

@@ -1,5 +1,6 @@
 const os = require('os');
 const fs = require('fs');
+const { sendToRenderer } = require('../utils');
 
 let openCodeProcesses = {};
 let mainWindow = null;
@@ -108,8 +109,8 @@ async function startOpenCodeSession(tabId, { cols, rows } = {}) {
     openCodeProcesses[tabId] = ptyProcess;
 
     ptyProcess.onData((data) => {
-      if (mainWindow?.webContents) {
-        mainWindow.webContents.send(`opencode:data:${tabId}`, data);
+      if (!isAppQuitting.value) {
+        sendToRenderer(mainWindow, `opencode:data:${tabId}`, data);
       }
     });
 
@@ -117,19 +118,17 @@ async function startOpenCodeSession(tabId, { cols, rows } = {}) {
       const exitCode = typeof event === 'object' ? event?.exitCode : event;
       delete openCodeProcesses[tabId];
 
-      if (!isAppQuitting.value && mainWindow?.webContents && exitCode !== 0) {
-        mainWindow.webContents.send(`opencode:error:${tabId}`, `OpenCode finalizó con código ${exitCode}`);
+      if (!isAppQuitting.value && exitCode !== 0) {
+        sendToRenderer(mainWindow, `opencode:error:${tabId}`, `OpenCode finalizó con código ${exitCode}`);
       }
     });
 
-    mainWindow?.webContents?.send(`opencode:ready:${tabId}`);
-    if (usedCommand && mainWindow?.webContents) {
-      mainWindow.webContents.send(`opencode:data:${tabId}`, `\r\n[OpenCode] usando comando: ${usedCommand}\r\n`);
+    sendToRenderer(mainWindow, `opencode:ready:${tabId}`);
+    if (usedCommand) {
+      sendToRenderer(mainWindow, `opencode:data:${tabId}`, `\r\n[OpenCode] usando comando: ${usedCommand}\r\n`);
     }
   } catch (error) {
-    if (mainWindow?.webContents) {
-      mainWindow.webContents.send(`opencode:error:${tabId}`, `No se pudo iniciar OpenCode: ${error.message}`);
-    }
+    sendToRenderer(mainWindow, `opencode:error:${tabId}`, `No se pudo iniciar OpenCode: ${error.message}`);
   }
 }
 
@@ -138,9 +137,7 @@ function writeToOpenCode(tabId, data) {
   try {
     openCodeProcesses[tabId].write(data);
   } catch (error) {
-    if (mainWindow?.webContents) {
-      mainWindow.webContents.send(`opencode:error:${tabId}`, `Error enviando datos: ${error.message}`);
-    }
+    sendToRenderer(mainWindow, `opencode:error:${tabId}`, `Error enviando datos: ${error.message}`);
   }
 }
 
@@ -149,9 +146,7 @@ function resizeOpenCode(tabId, { cols, rows }) {
   try {
     openCodeProcesses[tabId].resize(cols, rows);
   } catch (error) {
-    if (mainWindow?.webContents) {
-      mainWindow.webContents.send(`opencode:error:${tabId}`, `Error redimensionando terminal: ${error.message}`);
-    }
+    sendToRenderer(mainWindow, `opencode:error:${tabId}`, `Error redimensionando terminal: ${error.message}`);
   }
 }
 

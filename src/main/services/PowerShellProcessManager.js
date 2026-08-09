@@ -4,6 +4,7 @@
 // ============================================
 
 const os = require('os');
+const { sendToRenderer } = require('../utils');
 
 let powershellProcesses = {};
 let isAppQuitting = { value: false };
@@ -205,8 +206,8 @@ function startPowerShellSession(tabId, { cols, rows }) {
 
     // Handle PowerShell output
     ptyProcess.onData((data) => {
-      if (mainWindow && mainWindow.webContents) {
-        mainWindow.webContents.send(`powershell:data:${tabId}`, data);
+      if (!isAppQuitting.value) {
+        sendToRenderer(mainWindow, `powershell:data:${tabId}`, data);
       }
     });
 
@@ -239,7 +240,7 @@ function startPowerShellSession(tabId, { cols, rows }) {
       if (needsRestart) {
         console.log(`PowerShell ${tabId} falló con código ${actualExitCode}, reiniciando en 1 segundo...`);
         setTimeout(() => {
-          if (!isAppQuitting.value && mainWindow && mainWindow.webContents) {
+          if (!isAppQuitting.value && mainWindow && !mainWindow.isDestroyed()) {
             console.log(`Reiniciando PowerShell ${tabId} después de fallo...`);
             const originalCols = cols || 120;
             const originalRows = rows || 30;
@@ -253,10 +254,8 @@ function startPowerShellSession(tabId, { cols, rows }) {
           // Solo enviar error si no estamos cerrando la aplicación
           if (!isAppQuitting.value) {
             console.log(`PowerShell ${tabId} terminó con error (código ${actualExitCode})`);
-            if (mainWindow && mainWindow.webContents) {
-              const exitCodeStr = typeof exitCode === 'object' ? JSON.stringify(exitCode) : String(exitCode);
-              mainWindow.webContents.send(`powershell:error:${tabId}`, `PowerShell process exited with code ${exitCodeStr}`);
-            }
+            const exitCodeStr = typeof exitCode === 'object' ? JSON.stringify(exitCode) : String(exitCode);
+            sendToRenderer(mainWindow, `powershell:error:${tabId}`, `PowerShell process exited with code ${exitCodeStr}`);
           }
         }
       }
@@ -275,9 +274,7 @@ function startPowerShellSession(tabId, { cols, rows }) {
 
   } catch (error) {
     console.error(`Error starting PowerShell for tab ${tabId}:`, error);
-    if (mainWindow && mainWindow.webContents) {
-      mainWindow.webContents.send(`powershell:error:${tabId}`, `Failed to start PowerShell: ${error.message}`);
-    }
+    sendToRenderer(mainWindow, `powershell:error:${tabId}`, `Failed to start PowerShell: ${error.message}`);
   }
 }
 

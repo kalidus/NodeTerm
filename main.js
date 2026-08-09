@@ -177,29 +177,25 @@ if (app) {
   }
 }
 
-// Configuración de GPU y plataforma por SO
+// Configuración de GPU por plataforma
 if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU === 'true') {
   app.disableHardwareAcceleration();
+} else if (process.platform === 'linux') {
+  // 🛡️ FIX: El GPU process crashea con SIGSEGV en libGLESv2.so cuando ANGLE usa
+  // OpenGL ES nativo. Forzar desktop OpenGL evita el crash manteniendo aceleración HW.
+  app.commandLine.appendSwitch('use-angle', 'gl');
+  // Desactivar Vulkan en Linux (crashes bajo Wayland con ciertos drivers)
+  app.commandLine.appendSwitch('disable-vulkan');
+  app.commandLine.appendSwitch('disable-features', 'Vulkan,VulkanFromANGLE,DefaultANGLEVulkan,VulkanDisplay,VulkanSurface,WaylandDataDrag');
+  // Desactivar watchdog del GPU process para evitar kills prematuros
+  app.commandLine.appendSwitch('disable-gpu-watchdog');
 } else {
-  // 🚀 OPTIMIZACIONES DE RENDIMIENTO DE HARDWARE (GPU)
+  // 🚀 OPTIMIZACIONES DE RENDIMIENTO DE HARDWARE (GPU) — solo en macOS/Windows
   app.commandLine.appendSwitch('ignore-gpu-blocklist');
   app.commandLine.appendSwitch('enable-gpu-rasterization');
   app.commandLine.appendSwitch('enable-zero-copy');
   app.commandLine.appendSwitch('enable-webgl');
   app.commandLine.appendSwitch('enable-accelerated-video-decode');
-
-  if (process.platform === 'linux') {
-    // 🛡️ FIX: El GPU process crashea con SIGSEGV en libGLESv2.so cuando ANGLE usa
-    // OpenGL ES nativo. Forzar desktop OpenGL evita el crash manteniendo aceleración HW.
-    app.commandLine.appendSwitch('use-angle', 'gl');
-    // Desactivar Vulkan y WaylandDataDrag (evita bloqueos de drag controller en Wayland al minimizar/restaurar)
-    app.commandLine.appendSwitch('disable-vulkan');
-    app.commandLine.appendSwitch('disable-features', 'Vulkan,VulkanFromANGLE,DefaultANGLEVulkan,VulkanDisplay,VulkanSurface,WaylandDataDrag');
-    // Desactivar watchdog del GPU process para evitar kills prematuros
-    app.commandLine.appendSwitch('disable-gpu-watchdog');
-    // 🐧 WAYLAND NATIVO: Utilizar servidor Wayland nativo si está disponible (con fallback a X11)
-    app.commandLine.appendSwitch('ozone-platform-hint', 'auto');
-  }
 }
 
 // Windows: mismo ID que build.appId en prod (barra tras auto-update NSIS); ID distinto en dev
@@ -1358,10 +1354,10 @@ function createWindow() {
   logTiming('BrowserWindow creado');
   setupConnectionSearchShortcutBridge(mainWindow);
 
-  // Cierre instantaneo al usar la X de la ventana.
+  // Cierre de la ventana principal
   mainWindow.on('close', () => {
     isAppQuitting.value = true;
-    app.exit(0);
+    app.quit();
   });
 
   // 🔒 CRÍTICO: Registrar handlers de seguridad ANTES de que la ventana cargue
@@ -3063,7 +3059,7 @@ async function stopAiClientDockerContainersOnQuit() {
     'nodeterm-librechat-mongo'
   ];
   for (const name of forcedNames) {
-    stopTasks.push(execAsync(`${dockerPrefix} stop ${name}`).catch(() => null));
+    stopTasks.push(execAsync(`${dockerPrefix} stop ${name}`, { stdio: 'ignore', timeout: 1500 }).catch(() => null));
   }
 
   await Promise.all(stopTasks);
@@ -3084,68 +3080,126 @@ app.on('before-quit', async (event) => {
   event.preventDefault();
   isAppQuitting.value = true;
 
-  // ✅ MEMORY LEAK FIX: Limpiar intervalo de limpieza de conexiones huérfanas
-  if (orphanCleanupInterval) {
-    clearInterval(orphanCleanupInterval);
-    orphanCleanupInterval = null;
-  }
+  // Safeguard: Forzar salida limpia tras 1.5 segundos si alguna tarea asíncrona no responde
+  const forceExitTimeout = setTimeout(() => {
+    console.warn('[quit] Forzando salida de la aplicación tras timeout de limpieza.');
+    try { app.exit(0); } catch (_) {}
+    try { process.exit(0); } catch (_) {}
+  }, 1500);
 
   try {
-    await stopAiClientDockerContainersOnQuit();
-  } catch (e) {
-    console.error('[quit] Error deteniendo contenedores Docker de clientes IA:', e?.message || e);
-  }
+    // ✅ CRÍTICO: Matar el worker de stats primero — es un proceso hijo fork()
+    // que se queda huérfano si no se mata explícitamente, impidiendo que concurrently
+    // detecte el cierre de electron y devuelva el prompt de la terminal
+    const { stopStatsWorker } = require('./src/main/services/StatsWorkerService');
+    stopStatsWorker();
+  } catch (e) {}
 
-  // ✅ REFACTORIZADO: Limpiar todas las conexiones SSH con SSHConnectionCleanupService
-  sshCleanupService.cleanupAllConnections(sshConnections);
+  try {
+    // ✅ MEMORY LEAK FIX: Limpiar intervalo de limpieza de conexiones huérfanas
+    if (orphanCleanupInterval) {
+      clearInterval(orphanCleanupInterval);
+      orphanCleanupInterval = null;
+    }
 
-  // Limpiar también el pool de conexiones con mejor limpieza
-  Object.values(sshConnectionPool).forEach(poolConn => {
     try {
-      // Limpiar listeners del pool también
-      poolConn.removeAllListeners('error');
-      poolConn.removeAllListeners('close');
-      poolConn.removeAllListeners('end');
-      if (poolConn.ssh) {
-        poolConn.ssh.removeAllListeners('error');
-        poolConn.ssh.removeAllListeners('close');
-        poolConn.ssh.removeAllListeners('end');
-      }
-      poolConn.close();
+      await Promise.race([
+        stopAiClientDockerContainersOnQuit(),
+        new Promise(resolve => setTimeout(resolve, 500))
+      ]);
     } catch (e) {
-      // Ignorar errores
+      console.error('[quit] Error deteniendo contenedores Docker de clientes IA:', e?.message || e);
     }
-  });
 
-  // Cleanup SSH tunnels
-  try {
-    await cleanupTunnels();
-  } catch (error) {
-    console.error('Error cleaning up SSH tunnels:', error);
-  }
-
-  // Cleanup Cygwin processes
-  if (Cygwin && Cygwin.CygwinHandlers) {
+    // ✅ REFACTORIZADO: Limpiar todas las conexiones SSH con SSHConnectionCleanupService
     try {
-      Cygwin.CygwinHandlers.cleanup();
-    } catch (error) {
-      console.error('Error cleaning up Cygwin:', error);
-    }
-  }
+      sshCleanupService.cleanupAllConnections(sshConnections);
+    } catch (e) {}
 
-  // Cleanup Docker processes
-  const docker = getDocker();
-  if (docker && docker.DockerHandlers) {
+    // Limpiar también el pool de conexiones con mejor limpieza
+    Object.values(sshConnectionPool).forEach(poolConn => {
+      try {
+        poolConn.removeAllListeners('error');
+        poolConn.removeAllListeners('close');
+        poolConn.removeAllListeners('end');
+        if (poolConn.ssh) {
+          poolConn.ssh.removeAllListeners('error');
+          poolConn.ssh.removeAllListeners('close');
+          poolConn.ssh.removeAllListeners('end');
+        }
+        poolConn.close();
+      } catch (e) {}
+    });
+
+    // Cleanup SSH tunnels
     try {
-      docker.DockerHandlers.cleanup();
+      await Promise.race([
+        cleanupTunnels(),
+        new Promise(resolve => setTimeout(resolve, 500))
+      ]);
     } catch (error) {
-      console.error('Error cleaning up Docker processes:', error);
+      console.error('Error cleaning up SSH tunnels:', error);
     }
-  }
 
-  appCleanupCompleted = true;
-  appCleanupInProgress = false;
-  app.quit();
+    // Cleanup Cygwin processes
+    if (Cygwin && Cygwin.CygwinHandlers) {
+      try { Cygwin.CygwinHandlers.cleanup(); } catch (error) {}
+    }
+
+    // Cleanup Docker processes
+    const docker = getDocker();
+    if (docker && docker.DockerHandlers) {
+      try { docker.DockerHandlers.cleanup(); } catch (error) {}
+    }
+
+    // Cleanup Terminal processes
+    try { PowerShell.cleanup(); } catch (e) {}
+    try { UbuntuProcessManager.cleanup(); } catch (e) {}
+    try { Claude.cleanup(); } catch (e) {}
+    try { OpenCode.cleanup(); } catch (e) {}
+    try { GeminiCli.cleanup(); } catch (e) {}
+    try { CodexCli.cleanup(); } catch (e) {}
+    try { AntigravityCli.cleanup(); } catch (e) {}
+    try { HermesCli.cleanup(); } catch (e) {}
+
+    // Cleanup RDP and Guacamole
+    try {
+      const { getRdpHandlers } = require('./src/main/handlers');
+      getRdpHandlers().cleanupRdpConnections();
+    } catch (e) {}
+
+    try {
+      if (typeof _guacdService !== 'undefined' && _guacdService) {
+        await Promise.race([
+          getGuacdService().stop(),
+          new Promise(resolve => setTimeout(resolve, 500))
+        ]);
+      }
+    } catch (e) {}
+
+    // Cleanup MCP API Server
+    try {
+      const mcpApiServer = require('./src/main/services/McpApiServer');
+      mcpApiServer.stop();
+    } catch (e) {}
+
+  } catch (err) {
+    console.error('[quit] Error en limpieza before-quit:', err);
+  } finally {
+    clearTimeout(forceExitTimeout);
+    appCleanupCompleted = true;
+    appCleanupInProgress = false;
+
+    console.log('[quit] Ejecutando exit final...');
+
+    try {
+      if (process.stdout && typeof process.stdout.destroy === 'function') process.stdout.destroy();
+      if (process.stderr && typeof process.stderr.destroy === 'function') process.stderr.destroy();
+    } catch (_) {}
+
+    try { app.exit(0); } catch (_) {}
+    try { process.exit(0); } catch (_) {}
+  }
 });
 
 // Handlers del sistema (clipboard, dialog, import) movidos a main/handlers/system-handlers.js
@@ -3463,18 +3517,6 @@ ipcMain.handle('updater:clear-cache', async () => {
 // ✅ OPTIMIZACIÓN: Handlers de RDP movidos a src/main/handlers/rdp-handlers.js
 // Se registran automáticamente desde registerSecondaryHandlers() en handlers/index.js
 
-// Cleanup on app quit
-app.on('before-quit', () => {
-  // Disconnect all RDP connections
-  const { getRdpHandlers } = require('./src/main/handlers');
-  getRdpHandlers().cleanupRdpConnections();
-
-  // Cleanup Guacamole services
-  if (_guacdService) {
-    getGuacdService().stop();
-  }
-});
-
 // === Guacamole Support ===
 // Handlers de Guacamole movidos a src/main/handlers/guacamole-handlers.js
 
@@ -3728,69 +3770,7 @@ ipcMain.on('register-tab-events', (event, tabId) => {
 
 // Using dynamic tab registration instead of predefined tabs
 
-// Cleanup terminals on app quit
-app.on('before-quit', (event) => {
-  isAppQuitting.value = true;
-
-  // Cleanup all PowerShell processes (ahora manejado por PowerShellProcessManager)
-  try {
-    PowerShell.cleanup();
-  } catch (error) {
-    console.error('Error cleaning up PowerShell processes on quit:', error);
-  }
-
-  // WSL processes cleanup is now handled by WSLService.js
-
-  // Cleanup all Ubuntu processes (ahora manejado por UbuntuProcessManager)
-  try {
-    UbuntuProcessManager.cleanup();
-  } catch (error) {
-    console.error('Error cleaning up Ubuntu processes on quit:', error);
-  }
-
-  try {
-    Claude.cleanup();
-  } catch (error) {
-    console.error('Error cleaning up Claude processes on quit:', error);
-  }
-
-  try {
-    OpenCode.cleanup();
-  } catch (error) {
-    console.error('Error cleaning up OpenCode processes on quit:', error);
-  }
-
-  try {
-    GeminiCli.cleanup();
-  } catch (error) {
-    console.error('Error cleaning up GeminiCli processes on quit:', error);
-  }
-
-  try {
-    CodexCli.cleanup();
-  } catch (error) {
-    console.error('Error cleaning up CodexCli processes on quit:', error);
-  }
-
-  try {
-    AntigravityCli.cleanup();
-  } catch (error) {
-    console.error('Error cleaning up AntigravityCli processes on quit:', error);
-  }
-
-  try {
-    HermesCli.cleanup();
-  } catch (error) {
-    console.error('Error cleaning up HermesCli processes on quit:', error);
-  }
-
-  try {
-    const mcpApiServer = require('./src/main/services/McpApiServer');
-    mcpApiServer.stop();
-  } catch (error) {
-    console.error('Error cleaning up McpApiServer on quit:', error);
-  }
-});
+// Dynamic tab registration handled by tab-events-handler.js
 
 // ✅ OPTIMIZACIÓN: getSystemStats() eliminada - ahora usa StatsWorkerService exclusivamente
 

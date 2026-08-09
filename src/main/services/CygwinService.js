@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const { app } = require('electron');
 const { getNodeTermDataDir } = require('../utils/file-utils');
+const { sendToRenderer } = require('../utils');
 
 /**
  * Servicio para Cygwin portable instalado bajo demanda (Apps).
@@ -12,8 +13,13 @@ const { getNodeTermDataDir } = require('../utils/file-utils');
 
 let cygwinProcesses = {};
 let mainWindow = null;
+let isAppQuitting = { value: false };
 let cygwinRootPath = null;
 let cygwinBashPath = null;
+
+function setAppQuitting(quittingRef) {
+  if (quittingRef) isAppQuitting = quittingRef;
+}
 
 function candidateRoots() {
   const roots = [path.join(getNodeTermDataDir(), 'cygwin64')];
@@ -271,51 +277,47 @@ cd ~
 
     // Handle output - bufferea inicialmente
     cygwinProcesses[tabId].onData((data) => {
-      if (!listenerReady) {
-        // Almacenar en buffer durante los primeros 600ms
-        outputBuffer.push(data);
-      } else if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
-        mainWindow.webContents.send(`cygwin:data:${tabId}`, data);
+      if (!isAppQuitting.value) {
+        if (!listenerReady) {
+          outputBuffer.push(data);
+        } else {
+          sendToRenderer(mainWindow, `cygwin:data:${tabId}`, data);
+        }
       }
     });
 
     // Después de 600ms, liberar el buffer y permitir output directo
     setTimeout(() => {
       listenerReady = true;
-      if (outputBuffer.length > 0 && mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
+      if (outputBuffer.length > 0 && !isAppQuitting.value) {
         outputBuffer.forEach(data => {
-          mainWindow.webContents.send(`cygwin:data:${tabId}`, data);
+          sendToRenderer(mainWindow, `cygwin:data:${tabId}`, data);
         });
         outputBuffer = [];
       }
     }, 600);
 
-    // No enviar \r automático - bash ya mostrará su prompt cuando esté listo
-
     // Handle exit
     cygwinProcesses[tabId].onExit(({ exitCode, signal }) => {
       console.log(`🔚 Cygwin ${tabId}: Terminado`);
       delete cygwinProcesses[tabId];
-
-      if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
-        mainWindow.webContents.send(`cygwin:exit:${tabId}`, exitCode?.toString() || '0');
+      if (!isAppQuitting.value) {
+        sendToRenderer(mainWindow, `cygwin:exit:${tabId}`, exitCode?.toString() || '0');
       }
     });
 
     // Handle errors
     cygwinProcesses[tabId].on('error', (error) => {
       console.error(`❌ Cygwin ${tabId}: Error`);
-      if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
-        mainWindow.webContents.send(`cygwin:error:${tabId}`, error.message);
+      if (!isAppQuitting.value) {
+        sendToRenderer(mainWindow, `cygwin:error:${tabId}`, error.message);
       }
     });
 
-    // Sesión lista silenciosamente
-
   } catch (error) {
     console.error(`❌ Cygwin ${tabId}: Error de inicio`);
-    if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
-      mainWindow.webContents.send(`cygwin:error:${tabId}`,
+    if (!isAppQuitting.value) {
+      sendToRenderer(mainWindow, `cygwin:error:${tabId}`,
         `No se pudo iniciar Cygwin: ${error.message}\n\n` +
         `Instalalo desde Ajustes > Apps > Cygwin.`
       );

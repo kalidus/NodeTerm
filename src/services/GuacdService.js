@@ -1519,7 +1519,7 @@ class GuacdService {
         const execAsync = util.promisify(exec);
 
         try {
-          await execAsync(`${dockerCommand} stop nodeterm-guacd`);
+          await execAsync(`${dockerCommand} stop nodeterm-guacd`, { stdio: 'ignore', timeout: 2000 });
         } catch (error) {
           if (error?.message?.includes('No such container') || error?.message?.includes('not running')) {
             console.log('[GuacdService] Contenedor Docker no estaba corriendo o ya fue eliminado');
@@ -1528,7 +1528,7 @@ class GuacdService {
             // Intentar con comando genérico si falla
             if (dockerCommand !== 'docker') {
               try {
-                await execAsync('docker stop nodeterm-guacd');
+                await execAsync('docker stop nodeterm-guacd', { stdio: 'ignore', timeout: 2000 });
               } catch (error2) {
                 if (error2?.message?.includes('No such container') || error2?.message?.includes('not running')) {
                   console.log('[GuacdService] Contenedor Docker (genérico) no estaba corriendo o ya fue eliminado');
@@ -1546,7 +1546,7 @@ class GuacdService {
         const execFileAsync = util.promisify(execFile);
         const args = this.wslDistro ? ['-d', this.wslDistro, '--', 'sh', '-lc', 'pkill -f guacd || true'] : ['--', 'sh', '-lc', 'pkill -f guacd || true'];
         try {
-          await execFileAsync('wsl.exe', args);
+          await execFileAsync('wsl.exe', args, { stdio: 'ignore', timeout: 2000 });
         } catch (error) {
           // Ignore error
         }

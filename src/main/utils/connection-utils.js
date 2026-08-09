@@ -12,17 +12,21 @@
  */
 function sendToRenderer(sender, eventName, ...args) {
   try {
-    if (sender && typeof sender.isDestroyed === 'function' && !sender.isDestroyed()) {
-      // Solo logear eventos SSH para debugging
-      if (eventName.startsWith('ssh-connection-')) {
-        // console.log('📡 Enviando evento SSH:', eventName, 'con args:', args);
+    if (!sender) return;
+    let wc = sender;
+    if (typeof sender.isDestroyed === 'function') {
+      if (sender.isDestroyed()) return;
+      try {
+        if (sender.webContents) wc = sender.webContents;
+      } catch (_) {
+        return;
       }
-      sender.send(eventName, ...args);
-    } else {
-      // console.error('Sender no válido o destruido para evento:', eventName);
+    }
+    if (wc && typeof wc.isDestroyed === 'function' && !wc.isDestroyed()) {
+      wc.send(eventName, ...args);
     }
   } catch (error) {
-    // console.error('Error sending to renderer:', eventName, error);
+    // Ignorar silenciosamente errores de envío durante el cierre de la aplicación
   }
 }
 

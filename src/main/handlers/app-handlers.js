@@ -110,8 +110,7 @@ function registerAppHandlers(dependencies) {
   // Permite cerrar la app desde el renderer (React) usando ipcRenderer
   ipcMain.on('app-quit', () => {
     isAppQuitting.value = true;
-    // Salida inmediata solicitada por UX: no esperar cleanup async.
-    app.exit(0);
+    app.quit();
   });
 
   // Handler para abrir la previsualización del splash screen en el navegador predeterminado
