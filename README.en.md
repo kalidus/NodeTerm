@@ -175,23 +175,42 @@ NodeTerm/
 <a id="donate"></a>
 ## 💖 Support the Project
 
-If **NodeTerm** helps you in your daily work and you'd like to support its ongoing development and maintenance, you can make a contribution or leave a ⭐ on GitHub.
+If **NodeTerm** helps you in your daily work and you'd like to support its ongoing development and maintenance, you can sponsor the project on GitHub or leave a ⭐ on GitHub.
+
+Your support enables focused development, security maintenance of the AES-256 vault, new protocols, and expanding AI and MCP agent integrations.
 
 <p align="left">
   <a href="https://github.com/sponsors/kalidus"><img src="https://img.shields.io/badge/GitHub_Sponsors-ea4aaa?style=for-the-badge&logo=githubsponsors&logoColor=white" height="36" alt="GitHub Sponsors"/></a>
   &nbsp;
-  <a href="https://ko-fi.com/kalidus"><img src="https://img.shields.io/badge/Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white" height="36" alt="Ko-fi"/></a>
+  <a href="SPONSORS.md"><img src="https://img.shields.io/badge/View_Tiers_%26_Benefits-SPONSORS.md-007acc?style=for-the-badge&logo=markdown&logoColor=white" height="36" alt="View SPONSORS.md"/></a>
+</p>
+
+### 🏆 Featured Sponsorship Tiers
+- ☕ **Developer Coffee ($5/mo)**: Name in `SPONSORS.md` and official Sponsor badge on GitHub.
+- 🚀 **Ecosystem Supporter ($25/mo)**: Highlighted name in `README.md` & `SPONSORS.md` + priority roadmap voting.
+- 🏢 **Infrastructure Partner ($100/mo)**: Corporate logo & link on `README.md` & `SPONSORS.md` + special mention in Release Notes.
+- 👑 **Lead Visionary Partner ($250+/mo)**: Premier top banner logo placement on `README.md` & `SPONSORS.md` + priority channel for custom MCP integrations.
+
+See full details, goals, and rewards in [**SPONSORS.md**](SPONSORS.md).
+
+<details>
+<summary><b>Other one-time contribution methods (Crypto / Direct Donations)</b></summary>
+
+<br/>
+<p align="left">
+  <a href="https://ko-fi.com/kalidus"><img src="https://img.shields.io/badge/Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white" height="32" alt="Ko-fi"/></a>
   &nbsp;
-  <a href="https://buymeacoffee.com/kalidus"><img src="https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" height="36" alt="Buy Me A Coffee"/></a>
+  <a href="https://buymeacoffee.com/kalidus"><img src="https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black" height="32" alt="Buy Me A Coffee"/></a>
 </p>
 
 <p align="left">
-  <a href="https://etherscan.io/address/0x7D18e60b2717edA94e6a48d05e6d09038dCf9342"><img src="https://img.shields.io/badge/Ethereum_%2F_EVM-3C3C3D?style=for-the-badge&logo=ethereum&logoColor=white" height="36" alt="Ethereum / EVM"/></a>
+  <a href="https://etherscan.io/address/0x7D18e60b2717edA94e6a48d05e6d09038dCf9342"><img src="https://img.shields.io/badge/Ethereum_%2F_EVM-3C3C3D?style=for-the-badge&logo=ethereum&logoColor=white" height="32" alt="Ethereum / EVM"/></a>
   &nbsp;
-  <a href="https://solscan.io/account/DAP3efj9Fvp1uvf8eVse3dMTxxyw2bWLh4snA891iNZh"><img src="https://img.shields.io/badge/Solana-9945FF?style=for-the-badge&logo=solana&logoColor=white" height="36" alt="Solana"/></a>
+  <a href="https://solscan.io/account/DAP3efj9Fvp1uvf8eVse3dMTxxyw2bWLh4snA891iNZh"><img src="https://img.shields.io/badge/Solana-9945FF?style=for-the-badge&logo=solana&logoColor=white" height="32" alt="Solana"/></a>
 </p>
+</details>
 
-Every bit of support is greatly appreciated! 🙏 
+Every bit of support is greatly appreciated and helps drive NodeTerm forward! 🙏
 
 ---
 

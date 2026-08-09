@@ -6140,6 +6140,40 @@ const SettingsContent = ({
                         </div>
                       </div>
                     </div>
+
+                    {/* Sección: Patrocinio / Apoyar el proyecto */}
+                    <div className="general-settings-section">
+                      <div className="general-section-header">
+                        <div className="general-section-icon" style={{ color: '#ea4aaa' }}>
+                          <i className="pi pi-heart-fill"></i>
+                        </div>
+                        <h4 className="general-section-title">Apoyar el Proyecto</h4>
+                      </div>
+
+                      <div className="general-settings-options">
+                        <div style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)', lineHeight: '1.5' }}>
+                          <p style={{ margin: '0' }}>
+                            NodeTerm es gratuito y de código abierto. Tu apoyo en GitHub Sponsors permite garantizar su mantenimiento activo, mejoras de seguridad y nuevas funcionalidades.
+                          </p>
+                          <div style={{ marginTop: '0.75rem' }}>
+                            <Button
+                              label="Patrocinar NodeTerm en GitHub 💖"
+                              icon="pi pi-external-link"
+                              className="p-button-outlined p-button-sm"
+                              style={{ color: '#ea4aaa', borderColor: '#ea4aaa' }}
+                              onClick={() => {
+                                const sponsorUrl = 'https://github.com/sponsors/kalidus';
+                                if (window.electronAPI?.openExternal) {
+                                  window.electronAPI.openExternal(sponsorUrl);
+                                } else if (window.electron?.import?.openExternal) {
+                                  window.electron.import.openExternal(sponsorUrl);
+                                }
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

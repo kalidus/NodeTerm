@@ -27,6 +27,7 @@ export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImpo
       'appMenu.actualSize': 'Tamaño real',
       'appMenu.fullscreen': 'Pantalla completa',
       'appMenu.unblockForms': '🔧 Desbloquear Formularios',
+      'appMenu.sponsor': '💖 Patrocinar NodeTerm',
       'appMenu.about': 'Acerca de NodeTerm',
       'appMenu.version': 'Versión',
       'appMenu.close': 'Cerrar',
@@ -117,6 +118,19 @@ export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImpo
     },
     { separator: true },
     {
+      label: getText('appMenu.sponsor'),
+      icon: 'pi pi-heart-fill',
+      command: () => {
+        const sponsorUrl = 'https://github.com/sponsors/kalidus';
+        if (window.electronAPI?.openExternal) {
+          window.electronAPI.openExternal(sponsorUrl);
+        } else if (window.electron?.import?.openExternal) {
+          window.electron.import.openExternal(sponsorUrl);
+        }
+      }
+    },
+    { separator: true },
+    {
       label: getText('appMenu.about'),
       icon: 'pi pi-info-circle',
       command: () => {
@@ -157,6 +171,21 @@ export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImpo
               <p style="margin: 8px 0; font-size: 14px;"><strong>Node.js:</strong> ${versionInfo.nodeVersion || 'N/A'}</p>
               <p style="margin: 8px 0; font-size: 14px;"><strong>Chrome:</strong> ${versionInfo.chromeVersion || 'N/A'}</p>
             </div>
+            <div style="margin-top: 16px; padding: 12px; background: rgba(234, 74, 170, 0.1); border: 1px solid rgba(234, 74, 170, 0.3); border-radius: 8px; text-align: center;">
+              <p style="margin: 0 0 8px 0; font-size: 13px; color: var(--ui-text-primary, #333);">
+                💖 <strong>¿Te gusta NodeTerm?</strong> Apoya su desarrollo en GitHub Sponsors.
+              </p>
+              <button id="sponsorAboutBtn" style="
+                background: #ea4aaa;
+                color: white;
+                border: none;
+                padding: 6px 14px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 13px;
+                font-weight: 600;
+              ">💖 Patrocinar en GitHub</button>
+            </div>
             <div style="margin-top: 20px; text-align: center;">
               <button id="closeAboutDialog" style="
                 background: var(--primary-color, #007ad9);
@@ -188,6 +217,14 @@ export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImpo
           };
 
           document.getElementById('closeAboutDialog').addEventListener('click', closeDialog);
+          document.getElementById('sponsorAboutBtn')?.addEventListener('click', () => {
+            const sponsorUrl = 'https://github.com/sponsors/kalidus';
+            if (window.electronAPI?.openExternal) {
+              window.electronAPI.openExternal(sponsorUrl);
+            } else if (window.electron?.import?.openExternal) {
+              window.electron.import.openExternal(sponsorUrl);
+            }
+          });
           overlay.addEventListener('click', (e) => {
             if (e.target === overlay) {
               closeDialog();
