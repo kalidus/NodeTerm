@@ -5,6 +5,8 @@
 
 'use strict';
 
+const { parseMcsSendData } = require('./rdp-autodetect');
+
 const CS_CORE = 0xc001;
 const SERVER_SELECTED_PROTOCOL_OFFSET = 212;
 const CS_CORE_MIN_LEN_WITH_PROTOCOL = 216;
@@ -258,6 +260,39 @@ function prepareMcsConnectInitial(buf, selectedProtocol) {
   return { buf: current, notes, core: findClientCoreData(current) };
 }
 
+/**
+ * Inyecta INFO_AUTOLOGON (0x00000008) en TS_INFO_PACKET (MS-RDPBCGR 2.2.1.11.1.1)
+ * para que Wallix/Windows Server inicie sesión automáticamente con la contraseña guardada
+ * sin mostrar la pantalla interactiva de selección de usuario / petición de contraseña.
+ */
+function patchInfoAutoLogon(buf) {
+  if (!Buffer.isBuffer(buf) || buf.length < 32) return { buf, patched: false };
+  const parsed = parseMcsSendData(buf);
+  if (!parsed || parsed.userData.length < 26) return { buf, patched: false };
+
+  const u = parsed.userData;
+  // Offset 4 en userData (tras length u32 / sec header u32)
+  for (const off of [4, 0, 8]) {
+    if (off + 20 > u.length) continue;
+    const flags = u.readUInt32LE(off + 4);
+    // INFO_UNICODE (0x10) + INFO_MOUSE (0x01)
+    if ((flags & 0x0011) === 0x0011 && (flags & 0xff000000) === 0) {
+      const cbUserName = u.readUInt16LE(off + 10);
+      const cbPassword = u.readUInt16LE(off + 12);
+      if (cbUserName > 0 && cbPassword > 0) {
+        if ((flags & 0x0008) === 0) {
+          const out = Buffer.from(buf);
+          const dataOff = parsed.dataOff + off + 4;
+          out.writeUInt32LE(flags | 0x0008, dataOff);
+          return { buf: out, patched: true, oldFlags: flags, newFlags: flags | 0x0008 };
+        }
+        return { buf, patched: false, reason: 'already-autologon' };
+      }
+    }
+  }
+  return { buf, patched: false };
+}
+
 module.exports = {
   CS_CORE,
   SERVER_SELECTED_PROTOCOL_OFFSET,
@@ -268,5 +303,6 @@ module.exports = {
   ensureMcsServerSelectedProtocol,
   hardenClientCoreData,
   fixWallixGccConnectPduLength,
-  prepareMcsConnectInitial
+  prepareMcsConnectInitial,
+  patchInfoAutoLogon
 };

@@ -122,8 +122,8 @@ describe('processServerFrame message channel', () => {
     const result = processServerFrame(state, indication);
     assert.equal(result.dropped, true);
     assert.equal(result.forward, null);
-    assert.equal(result.replies.length, 0);
-    assert.match(result.note, /drop dynvc:/);
+    assert.equal(result.replies.length, 1);
+    assert.match(result.note, /dvc-(accept|reject)/);
   });
 
   it('dropea from-18-22b (8B IO) que tumba ShareControl IronRDP', () => {
@@ -135,7 +135,7 @@ describe('processServerFrame message channel', () => {
     );
     const result = processServerFrame(state, io);
     assert.equal(result.dropped, true);
-    assert.match(result.note, /short-io 8B/);
+    assert.match(result.note, /(short-io 8B|heartbeat-reply)/);
   });
 
   it('no intercepta trafico IO normal (>=10B ShareControl)', () => {

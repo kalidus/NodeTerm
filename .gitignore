@@ -34,4 +34,8 @@ resources/cygwin64/
 cygwin-setup-temp.exe
 http*/
 ftp*/
-*%*/ 
+*%*/
+
+# Dumps temporales de pruebas RDP
+testing/rdp/frames/gap-*
+testing/rdp/last-mcs-connect-initial.hex 

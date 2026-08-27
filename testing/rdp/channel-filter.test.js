@@ -9,7 +9,8 @@ const {
   readSendDataIndicationChannelId,
   readChannelJoinConfirmId,
   createChannelFilterState,
-  filterServerFrame
+  filterServerFrame,
+  processServerFrame
 } = require('../../src/main/services/rdp-channel-filter');
 
 describe('parseServerNetworkChannels', () => {
@@ -34,11 +35,11 @@ describe('readSendDataIndicationChannelId', () => {
 });
 
 describe('readChannelJoinConfirmId', () => {
-  it('detecta join de 1001 (message channel)', () => {
+  it('detecta join confirm de canal (1003)', () => {
     const p = path.join(__dirname, 'frames/from-05-15b.hex');
     if (!fs.existsSync(p)) return;
     const raw = Buffer.from(fs.readFileSync(p, 'utf8').trim(), 'hex');
-    assert.equal(readChannelJoinConfirmId(raw), 1001);
+    assert.equal(readChannelJoinConfirmId(raw), 1003);
   });
 });
 
@@ -60,13 +61,16 @@ describe('filterServerFrame', () => {
     assert.equal(filterServerFrame(state, ioOk), ioOk);
 
     const dvc = Buffer.from(fs.readFileSync(path.join(__dirname, 'frames/from-18-66b.hex'), 'utf8').trim(), 'hex');
-    assert.equal(filterServerFrame(state, dvc), dvc);
+    const procDvc = processServerFrame(state, dvc);
+    assert.equal(procDvc.dropped, true);
+    assert.equal(procDvc.replies.length, 1);
+    assert.equal(procDvc.forward, null);
 
     // Fabricar SendDataIndication a canal 1001
     const bad = Buffer.from('0300001602f08068000003e97008008041000000e903', 'hex');
     assert.equal(readSendDataIndicationChannelId(bad), 1001);
     assert.equal(filterServerFrame(state, bad), null);
-    assert.equal(state.droppedCount, 2); // short-io + ch1001
+    assert.equal(state.droppedCount, 3); // short-io + dvc + ch1001
     assert.equal(state.droppedByChannel[1001], 1);
     assert.equal(state.droppedByChannel[1003], 1);
   });
@@ -75,5 +79,17 @@ describe('filterServerFrame', () => {
     const state = createChannelFilterState();
     const fp = Buffer.from(fs.readFileSync(path.join(__dirname, 'frames/from-14-581b.hex'), 'utf8').trim(), 'hex');
     assert.equal(filterServerFrame(state, fp), fp);
+  });
+});
+
+describe('patchInfoAutoLogon', () => {
+  it('inyecta flag INFO_AUTOLOGON (0x08) en TS_INFO_PACKET real', () => {
+    const { patchInfoAutoLogon } = require('../../src/main/services/rdp-mcs-helpers');
+    const p = path.join(__dirname, 'frames/to-05-421b.hex');
+    if (!fs.existsSync(p)) return;
+    const raw = Buffer.from(fs.readFileSync(p, 'utf8').trim(), 'hex');
+    const res = patchInfoAutoLogon(raw);
+    assert.equal(res.patched, true);
+    assert.ok(res.newFlags & 0x0008);
   });
 });

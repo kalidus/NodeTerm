@@ -78,8 +78,8 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
         }
 
         // 1. Inicializar módulo WebAssembly de IronRDP pasando cadena de configuración de log
-        console.log('⏳ [IronRDP WASM] Cargando motor WebAssembly RDP...');
-        await initIronRdp('');
+        console.log('⏳ [IronRDP WASM] Cargando motor WebAssembly RDP con logs activos...');
+        await initIronRdp('info');
 
         // 2. Obtener dimensiones del contenedor o ventana
         // Wallix rellena bitmaps a multiplo de 4; IronRDP 0.7 usa dest-rect como stride.
@@ -184,7 +184,7 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
           })
           .setCursorStyleCallbackContext({})
           .extension(enableCredssp(useCredssp))
-          .extension(displayControl(true));
+          .extension(displayControl(false));
 
         if (domainStr) {
           builder.serverDomain(domainStr);

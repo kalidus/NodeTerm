@@ -10,11 +10,13 @@
 
 const {
   parseMcsSendData,
+  buildMcsSendDataRequest,
   createAutoDetectState,
   handleAutoDetectRequest,
   stripSecAutodetect,
   isChannelPduHeader
 } = require('./rdp-autodetect');
+const { handleDvcRequest } = require('./rdp-dynvc');
 
 const TPKT_X224_MCS_HEADER = 8;
 const MCS_SEND_DATA_INDICATION = 0x68;
@@ -178,6 +180,28 @@ function dropShortIoPdu(state, channelId, userData) {
     return null;
   }
 
+  // Responder a Heartbeat (MS-RDPBCGR 2.2.14.2)
+  if (userData.length >= 8) {
+    const flags = userData.readUInt16LE(0);
+    const flagsHi = userData.readUInt16LE(2);
+    if ((flags & 0x8000) && (flagsHi & 0x0041)) {
+      const replyBody = Buffer.alloc(userData.length);
+      userData.copy(replyBody);
+      replyBody.writeUInt16LE(0x8000, 0);
+      replyBody.writeUInt16LE(0x0001, 2);
+      const effectiveInitiator = state.clientInitiator > 0 ? state.clientInitiator : 1002;
+      const mcsPacket = buildMcsSendDataRequest(effectiveInitiator, channelId, replyBody);
+      markDropped(state, channelId);
+      return {
+        forward: null,
+        replies: [mcsPacket],
+        dropped: true,
+        note: `heartbeat-reply (${userData.length}B)`,
+        channelId
+      };
+    }
+  }
+
   let note = `short-io ${userData.length}B`;
   if (userData.length >= 4) {
     const flags = userData.readUInt16LE(0);
@@ -219,6 +243,22 @@ function processServerFrame(state, buf) {
   const parsed = parseMcsSendData(buf);
   if (!parsed) return empty;
 
+  // 1. DYNVC (CHANNEL_PDU_HEADER):
+  // Interceptar peticiones DVC en cualquier canal (1001, 1003 o 1004) y responder en 0ms
+  // para que el servidor haga fallback instantáneo sin esperar 40 segundos de timeout,
+  // y evitar que IronRDP intente parsearlo como ShareControl (crash invalid pdu_type).
+  if (isChannelPduHeader(parsed.userData)) {
+    const dvc = handleDvcRequest(channelId, state.clientInitiator, parsed.userData);
+    markDropped(state, channelId);
+    return {
+      forward: null,
+      replies: dvc.replies || [],
+      dropped: true,
+      note: dvc.note || `drop ${channelPduHint(parsed.userData)}`,
+      channelId
+    };
+  }
+
   const allowed = state.allowed.has(channelId);
 
   if (allowed) {
@@ -235,18 +275,6 @@ function processServerFrame(state, buf) {
   // Canal no permitido (message channel)
   if (state.messageChannelId == null) {
     state.messageChannelId = channelId;
-  }
-
-  // DYNVC en message channel: dropear (remap a 1004 rompe IronRDP: not enough bytes)
-  if (isChannelPduHeader(parsed.userData)) {
-    markDropped(state, channelId);
-    return {
-      forward: null,
-      replies: [],
-      dropped: true,
-      note: `drop ${channelPduHint(parsed.userData)}`,
-      channelId
-    };
   }
 
   const siphoned = consumeAutodetect(state, channelId, parsed.userData, true);

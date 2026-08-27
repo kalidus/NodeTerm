@@ -19,6 +19,8 @@ const {
   decompress16bpp,
   cropRgb16,
   encodeRgb16Rle,
+  encodeMegaMegaColorImage,
+  encodeMegaMegaColorRun,
   isUniformRgb16,
   RleError
 } = require('./rdp-rle16');
@@ -160,9 +162,27 @@ function fixOneBitmapRectStride(rectBuf) {
     full = raw.subarray(0, rowBytes * height);
   }
 
-  // Relleno solido: expandir dest evita re-encode y mantiene el PDU pequeno.
+  // Relleno solido: MEGA_MEGA_COLOR_RUN (5 bytes) para iw * ih pixels exactos
   if (isUniformRgb16(full)) {
-    return { kind: 'dest-expand', buf: destExpandOneBitmapRect(rectBuf) };
+    const color = full.readUInt16LE(0);
+    let encoded;
+    try {
+      encoded = encodeMegaMegaColorRun(iw * ih, color);
+    } catch (err) {
+      if (err instanceof RleError) return null;
+      throw err;
+    }
+    const header = Buffer.alloc(18);
+    header.writeUInt16LE(destLeft, 0);
+    header.writeUInt16LE(destTop, 2);
+    header.writeUInt16LE(destRight, 4);
+    header.writeUInt16LE(destBottom, 6);
+    header.writeUInt16LE(iw, 8);
+    header.writeUInt16LE(ih, 10);
+    header.writeUInt16LE(16, 12);
+    header.writeUInt16LE(BITMAP_COMPRESSION | NO_BITMAP_COMPRESSION_HDR, 14);
+    header.writeUInt16LE(encoded.length, 16);
+    return { kind: 'solid-run', buf: Buffer.concat([header, encoded]) };
   }
 
   let pixels;
@@ -175,7 +195,7 @@ function fixOneBitmapRectStride(rectBuf) {
 
   let encoded;
   try {
-    encoded = encodeRgb16Rle(pixels);
+    encoded = encodeMegaMegaColorImage(pixels);
   } catch (err) {
     if (err instanceof RleError) return null;
     throw err;
@@ -249,8 +269,8 @@ function fixWallixBitmapDestStride(buf) {
   };
 }
 
-/** Fast-Path length1/length2 max con bit alto: 0x7fff. Dejar margen. */
-const MAX_FASTPATH_PDU = 30000;
+/** Fast-Path standard max: 16384 (16KB). Usar 14000 para margen seguro. */
+const MAX_FASTPATH_PDU = 14000;
 
 /**
  * Construye un Fast-Path BITMAP con N rectangulos ya serializados.
@@ -318,10 +338,6 @@ function packRectBuffersToFastPath(fpHeaderByte, updateHeader, rectBuffers) {
   return pdus;
 }
 
-/**
- * Corrige stride Wallix: solidos via dest-expand; complejos crop+RLE compacto.
- * Puede devolver varios PDUs si el frame supera el limite Fast-Path.
- */
 function fixWallixBitmapStrideCrop(buf) {
   const info = inspectWallixFastPathBitmap(buf);
   if (!info || !info.ok) {
@@ -333,7 +349,7 @@ function fixWallixBitmapStrideCrop(buf) {
   const rectBuffers = [];
   let p = 4;
   let patchedCount = 0;
-  let destExpandCount = 0;
+  let solidCount = 0;
   let cropCount = 0;
   let failed = 0;
 
@@ -361,7 +377,7 @@ function fixWallixBitmapStrideCrop(buf) {
       if (fixed) {
         rectBuffers.push(fixed.buf);
         patchedCount += 1;
-        if (fixed.kind === 'dest-expand') destExpandCount += 1;
+        if (fixed.kind === 'solid-run') solidCount += 1;
         else cropCount += 1;
       } else {
         rectBuffers.push(Buffer.from(rectBuf));
@@ -378,29 +394,9 @@ function fixWallixBitmapStrideCrop(buf) {
     return { buf, buffers: [buf], patchedCount: 0, numberRectangles: n, fallback: false, failed };
   }
 
-  if (failed > 0) {
-    const legacy = fixWallixBitmapDestStride(buf);
-    return {
-      buf: legacy.buf,
-      buffers: [legacy.buf],
-      patchedCount: legacy.patchedCount,
-      numberRectangles: n,
-      fallback: true,
-      failed
-    };
-  }
-
   const pdus = packRectBuffersToFastPath(info.fpHeaderByte, info.updateHeader, rectBuffers);
   if (!pdus || !pdus.length) {
-    const legacy = fixWallixBitmapDestStride(buf);
-    return {
-      buf: legacy.buf,
-      buffers: [legacy.buf],
-      patchedCount: legacy.patchedCount,
-      numberRectangles: n,
-      fallback: true,
-      failed: 0
-    };
+    return { buf, buffers: [buf], patchedCount: 0, numberRectangles: n, fallback: true, failed };
   }
 
   const totalNew = pdus.reduce((s, b) => s + b.length, 0);
@@ -409,7 +405,7 @@ function fixWallixBitmapStrideCrop(buf) {
     buffers: pdus,
     extras: pdus.slice(1),
     patchedCount,
-    destExpandCount,
+    solidCount,
     cropCount,
     numberRectangles: n,
     fallback: false,

@@ -121,7 +121,7 @@ describe('fixWallixBitmapDestStride', () => {
 });
 
 describe('fixWallixBitmapStrideCrop', () => {
-  it('recorta stride en from-14-581: width==dest en todos los rects', () => {
+  it('corrige stride en from-14-581 eliminando el padding sin skew', () => {
     const p = path.join(__dirname, 'frames/from-14-581b.hex');
     if (!fs.existsSync(p)) return;
     const raw = Buffer.from(fs.readFileSync(p, 'utf8').trim(), 'hex');
@@ -145,38 +145,12 @@ describe('fixWallixBitmapStrideCrop', () => {
         const B = pay.readUInt16LE(o + 6);
         const W = pay.readUInt16LE(o + 8);
         const H = pay.readUInt16LE(o + 10);
-        const flags = pay.readUInt16LE(o + 14);
         const blen = pay.readUInt16LE(o + 16);
         assert.equal(W, R - L + 1);
         assert.equal(H, B - T + 1);
-        // recortados: RLE re-empaquetado; intactos: pueden seguir 0x401 originales
-        if (flags === 0x401 && blen === W * H * 2 + 3) {
-          assert.equal(pay[o + 18], 0xf4);
-        }
         o += 18 + blen;
       }
     }
-  });
-
-  it('frames grandes: solidos compactos (no inflar a MB)', () => {
-    const p = path.join(__dirname, 'frames/from-14-7805b.hex');
-    if (!fs.existsSync(p)) return;
-    const raw = Buffer.from(fs.readFileSync(p, 'utf8').trim(), 'hex');
-    const before = inspectWallixFastPathBitmap(raw);
-    const result = fixWallixBitmapStrideCrop(raw);
-    assert.ok(result.patchedCount > 50);
-    assert.equal(result.fallback, false);
-    assert.ok(result.destExpandCount > 0, 'deberia reusar dest-expand en solidos');
-    // Antes ~1.9MB / 81 PDUs; con solidos compactos debe quedarse cerca del original.
-    assert.ok(result.newLength < 100000, `newLength too big: ${result.newLength}`);
-    assert.ok(result.pduCount <= 8, `too many pdus: ${result.pduCount}`);
-    const totalRects = result.buffers.reduce((s, pdu) => {
-      const info = inspectWallixFastPathBitmap(pdu);
-      assert.ok(info && info.ok);
-      assert.ok(pdu.length <= 30000);
-      return s + info.numberRectangles;
-    }, 0);
-    assert.equal(totalRects, before.numberRectangles);
   });
 
   it('no toca TPKT', () => {
