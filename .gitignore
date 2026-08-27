@@ -38,4 +38,19 @@ ftp*/
 
 # Dumps temporales de pruebas RDP
 testing/rdp/frames/gap-*
-testing/rdp/last-mcs-connect-initial.hex 
+testing/rdp/last-mcs-connect-initial.hex
+testing/rdp/frames/from-*
+testing/rdp/frames/to-*
+!testing/rdp/frames/from-01-105b.hex
+!testing/rdp/frames/from-05-15b.hex
+!testing/rdp/frames/from-09-36b.hex
+!testing/rdp/frames/from-12-205b.hex
+!testing/rdp/frames/from-14-581b.hex
+!testing/rdp/frames/from-14-7966b.hex
+!testing/rdp/frames/from-15-7960b.hex
+!testing/rdp/frames/from-16-7956b.hex
+!testing/rdp/frames/from-17-5651b.hex
+!testing/rdp/frames/from-18-22b.hex
+!testing/rdp/frames/from-18-66b.hex
+!testing/rdp/frames/to-01-403b.hex
+!testing/rdp/frames/to-05-421b.hex

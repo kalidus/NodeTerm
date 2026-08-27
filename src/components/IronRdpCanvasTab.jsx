@@ -77,17 +77,14 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
           throw new Error('Electron IPC no está disponible');
         }
 
-        // 1. Inicializar módulo WebAssembly de IronRDP pasando cadena de configuración de log
-        console.log('⏳ [IronRDP WASM] Cargando motor WebAssembly RDP con logs activos...');
-        await initIronRdp('info');
+        // 1. Inicializar módulo WebAssembly de IronRDP con nivel warn para evitar ruido de consola
+        await initIronRdp('warn');
 
         // 2. Obtener dimensiones del contenedor o ventana
-        // Wallix rellena bitmaps a multiplo de 4; IronRDP 0.7 usa dest-rect como stride.
-        // Pedimos desktop alineado + margen para que el bridge pueda expandir dest sin OOB.
         const rect = containerRef.current?.getBoundingClientRect() || { width: 1600, height: 1000 };
         const alignDesktop = (n) => {
           const base = Math.max(1, Math.floor(n));
-          return ((base + 3) & ~3) + 4;
+          return (base + 3) & ~3;
         };
         const width = alignDesktop(Math.max(800, rect.width || window.innerWidth));
         const height = alignDesktop(Math.max(600, rect.height || window.innerHeight));
@@ -108,35 +105,20 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
         if (!isMounted) return;
 
         // 4. Construir la sesión de IronRDP WebAssembly
-        const host = String(rdpConfig.hostname || rdpConfig.server || rdpConfig.host || '127.0.0.1');
-        const port = parseInt(rdpConfig.port, 10) || 3389;
-        const destinationStr = `${host}:${port}`;
-        let usernameStr = String(rdpConfig.username || rdpConfig.user || '').trim();
-        let domainStr = String(rdpConfig.domain || rdpConfig.serverDomain || '').trim();
+        let usernameStr = String(rdpConfig.username || '');
+        let domainStr = String(rdpConfig.domain || '');
+        const destinationStr = `${rdpConfig.hostname || rdpConfig.server}:${rdpConfig.port || 3389}`;
 
         // Formato usuario Wallix solo si hay flags/cadena de target (NO por hostname)
         const isWallixUserFormat = rdpConfig.useBastionWallix || rdpConfig.bastionUser || rdpConfig.targetServer || usernameStr.includes('@default@') || usernameStr.includes(':APP:');
 
         if (isWallixUserFormat) {
-          // Mantener la cadena de usuario de Wallix intacta si ya viene formateada (ej: rt01119@default@FortiAnalyzer:APP:rt01119)
-          if (!usernameStr.includes('@') && !usernameStr.includes(':')) {
-            const tServer = rdpConfig.targetServer || rdpConfig.targetHost || '';
-            const tUser = rdpConfig.targetUser || '';
-            if (tServer) {
-              if (tUser) {
-                usernameStr = `${usernameStr}:${tUser}@${tServer}`;
-              } else {
-                usernameStr = `${usernameStr}:${tServer}`;
-              }
-            }
-          }
-        } else if (usernameStr.includes('\\')) {
-          // Formato NetBIOS clasico: "DOMINIO\usuario"
+          // Mantener la cadena de usuario de Wallix intacta
+        } else if (!domainStr && usernameStr.includes('\\')) {
           const parts = usernameStr.split('\\');
-          if (!domainStr) domainStr = parts[0];
+          domainStr = parts[0];
           usernameStr = parts[1];
         } else if (usernameStr.includes('@')) {
-          // Formato Correo / UPN (ej: kalidus@outlook.es o juan@miempresa.com)
           const emailParts = usernameStr.split('@');
           const emailPrefix = emailParts[0];
           const emailDomain = emailParts[1].toLowerCase();
@@ -156,7 +138,6 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
           ? tokenResponse.selectedProtocol
           : null;
         const useCredssp = resolveCredsspPolicy(rdpConfig.security, selectedProtocol);
-        console.log(`[IronRDP WASM] Negociacion: security=${rdpConfig.security || 'any'} preflight=${tokenResponse.protocolLabel || 'n/a'} credssp=${useCredssp}`);
 
         const passwordStr = String(rdpConfig.password || '');
         const proxyAddressStr = String(tokenResponse.wsUrl || '');
@@ -197,13 +178,11 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
           builder.renderCanvas(canvasRef.current);
         }
 
-        console.log(`🚀 [IronRDP WASM] Iniciando sesión RDP para ${destinationStr} vía ${tokenResponse.wsUrl}...`);
-        console.log(`🔐 [IronRDP WASM] Credenciales enviadas: user="${usernameStr}", domain="${domainStr || '(ninguno)'}", credssp=${useCredssp}`);
-        console.log('⏳ [IronRDP WASM] Ejecutando builder.connect()...');
+        console.log(`🚀 [IronRDP WASM] Conectando a ${destinationStr} (protocolo=${tokenResponse.protocolLabel || 'auto'}, credssp=${useCredssp})...`);
         
         currentSession = await builder.connect();
         sessionRef.current = currentSession;
-        console.log('✅ [IronRDP WASM] builder.connect() completado con éxito!');
+        console.log('✅ [IronRDP WASM] Sesión RDP conectada');
 
         if (isMounted) {
           setConnectionState('connected');

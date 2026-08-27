@@ -246,14 +246,16 @@ class RdpNativeBridgeService extends EventEmitter {
         framesFromRdp += 1;
         const pduDesc = describeRdpPdu(chunk);
 
-        if (framesFromRdp <= 24) {
+        const isDebug = process.env.NODETERM_RDP_DEBUG === '1';
+
+        if (framesFromRdp <= 24 && isDebug) {
           console.log(`[Bridge] RDP->WASM frame#${framesFromRdp}: ${n}B | ${pduDesc}`);
           if (process.env.NODETERM_RDP_RECORD_FRAMES === '1') {
             try {
               fs.writeFileSync(path.join(framesDir, `from-${String(framesFromRdp).padStart(2, '0')}-${n}b.hex`), chunk.toString('hex'), 'utf8');
             } catch (_) { /* noop */ }
           }
-        } else if (gapFromLastRdp >= 400) {
+        } else if (gapFromLastRdp >= 400 && isDebug) {
           console.log(`⏱️ [Bridge Trace GAP ${gapFromLastRdp}ms] Pausa RDP -> Frame #${framesFromRdp} (${n}B): ${pduDesc}`);
           if (process.env.NODETERM_RDP_RECORD_FRAMES === '1') {
             try {
@@ -261,15 +263,17 @@ class RdpNativeBridgeService extends EventEmitter {
             } catch (_) { /* noop */ }
           }
         } else if (
-          pduDesc.includes('DEMAND_ACTIVE') ||
-          pduDesc.includes('DEACTIVATE_ALL') ||
-          pduDesc.includes('AUTODETECT') ||
-          pduDesc.includes('HEARTBEAT') ||
-          pduDesc.includes('CONTROL') ||
-          pduDesc.includes('SAVE_SESSION_INFO') ||
-          pduDesc.includes('SET_ERROR_INFO') ||
-          pduDesc.includes('FRAME_ACK') ||
-          pduDesc.includes('SURFACE_CMDS')
+          isDebug && (
+            pduDesc.includes('DEMAND_ACTIVE') ||
+            pduDesc.includes('DEACTIVATE_ALL') ||
+            pduDesc.includes('AUTODETECT') ||
+            pduDesc.includes('HEARTBEAT') ||
+            pduDesc.includes('CONTROL') ||
+            pduDesc.includes('SAVE_SESSION_INFO') ||
+            pduDesc.includes('SET_ERROR_INFO') ||
+            pduDesc.includes('FRAME_ACK') ||
+            pduDesc.includes('SURFACE_CMDS')
+          )
         ) {
           console.log(`📡 [Bridge Trace PDU #${framesFromRdp}] ${pduDesc}`);
         }
@@ -277,12 +281,14 @@ class RdpNativeBridgeService extends EventEmitter {
         // Wallix FontMap a veces trae mapFlags invalidos para IronRDP (from_bits).
         // Solo forzar FIRST|LAST; NO reclasificar a UPDATE (rompe FontMap con glifos).
         const fontPatch = patchFontSequenceFlags(chunk);
-        if (fontPatch.candidates.length) {
+        if (fontPatch.candidates.length && isDebug) {
           console.log(`[Bridge] FontPdu frame#${framesFromRdp}:`, fontPatch.candidates.map((c) => `len=${c.totalLength} type2=0x${c.type2.toString(16)} flags=0x${c.flags.toString(16)} entry=${c.entrySize}`).join('; '));
         }
         if (fontPatch.patchedCount) {
           chunk = fontPatch.buf;
-          console.log(`[Bridge] FontPdu adjust flags=${fontPatch.patchedCount}`, fontPatch.details.map((d) => `len=${d.totalLength} 0x${d.previous.toString(16)}->0x${d.next.toString(16)}`).join(', '));
+          if (isDebug) {
+            console.log(`[Bridge] FontPdu adjust flags=${fontPatch.patchedCount}`, fontPatch.details.map((d) => `len=${d.totalLength} 0x${d.previous.toString(16)}->0x${d.next.toString(16)}`).join(', '));
+          }
         }
 
         // IronRDP 0.7: message channel (1001) no soportado -> no reenviar a WASM,
@@ -291,20 +297,17 @@ class RdpNativeBridgeService extends EventEmitter {
         const processed = processServerFrame(channelFilter, chunk);
         if (!wasReady && channelFilter.ready) {
           console.log(
-            `[Bridge] Canales MCS permitidos: io=${channelFilter.ioChannelId}` +
-              ` allowed=[${[...channelFilter.allowed].join(',')}]` +
+            `[Bridge] Canales MCS configurados: io=${channelFilter.ioChannelId}` +
+              ` permitidos=[${[...channelFilter.allowed].join(',')}]` +
               (channelFilter.messageChannelId != null ? ` msg=${channelFilter.messageChannelId}` : '')
           );
         }
         if (processed.dropped) {
-          console.log(
-            `🚫 [Bridge Trace DROPPED #${framesFromRdp}] MCS ch=${processed.channelId}: ${processed.note}` +
-              (processed.replies.length ? ` (replies=${processed.replies.length})` : '') +
-              ` | PDU: ${pduDesc}`
-          );
-          if (processed.replies[0]) {
+          if (isDebug) {
             console.log(
-              `[Bridge] AD reply[0] ${processed.replies[0].length}B hex=${processed.replies[0].toString('hex').slice(0, 64)}`
+              `🚫 [Bridge Trace DROPPED #${framesFromRdp}] MCS ch=${processed.channelId}: ${processed.note}` +
+                (processed.replies.length ? ` (replies=${processed.replies.length})` : '') +
+                ` | PDU: ${pduDesc}`
             );
           }
           if (processed.replies.length && worker && worker.connected) {
@@ -318,20 +321,16 @@ class RdpNativeBridgeService extends EventEmitter {
         }
         chunk = processed.forward;
 
-        // IronRDP 0.7: stride = dest-rect; Wallix width padded %4 -> crop RLE a dest.
+        // Normalizar todas las teselas 16bpp a estándar 0xf3/0xf4 y <=64x64
         const stridePatch = fixWallixBitmapStrideCrop(chunk);
         const outChunks = stridePatch.patchedCount
           ? (stridePatch.buffers || [stridePatch.buf])
           : [chunk];
-        if (stridePatch.patchedCount && (framesFromRdp <= 24 || stridePatch.fallback || gapFromLastRdp >= 400)) {
+        if (stridePatch.patchedCount && isDebug) {
           console.log(
-            `[Bridge] FastPath BITMAP stride crop frame#${framesFromRdp}: rects=${stridePatch.numberRectangles} patched=${stridePatch.patchedCount}` +
-              (stridePatch.destExpandCount != null
-                ? ` solid=${stridePatch.destExpandCount} crop=${stridePatch.cropCount}`
-                : '') +
-              (stridePatch.fallback ? ' fallback=dest-expand-all' : '') +
-              (stridePatch.pduCount > 1 ? ` pdus=${stridePatch.pduCount}` : '') +
-              (stridePatch.newLength ? ` ${stridePatch.originalLength}->${stridePatch.newLength}B` : '')
+            `[Bridge] FastPath BITMAP normalizado frame#${framesFromRdp}: rects=${stridePatch.numberRectangles} patched=${stridePatch.patchedCount}` +
+              (stridePatch.solidCount != null ? ` solid=${stridePatch.solidCount} crop=${stridePatch.cropCount}` : '') +
+              (stridePatch.pduCount > 1 ? ` pdus=${stridePatch.pduCount}` : '')
           );
         }
 
