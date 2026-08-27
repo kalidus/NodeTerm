@@ -180,23 +180,22 @@ function dropShortIoPdu(state, channelId, userData) {
     return null;
   }
 
-  // Responder a Heartbeat (MS-RDPBCGR 2.2.14.2)
-  if (userData.length >= 8) {
+  // Dropear Heartbeat del servidor (MS-RDPBCGR 2.2.16.1 / Wallix):
+  // El cliente no debe responder al Server Heartbeat PDU.
+  // Dropearlo evita que IronRDP WASM crashee por PDU corto (<10B) en ShareControl.
+  if (userData.length >= 6) {
     const flags = userData.readUInt16LE(0);
-    const flagsHi = userData.readUInt16LE(2);
-    if ((flags & 0x8000) && (flagsHi & 0x0041)) {
-      const replyBody = Buffer.alloc(userData.length);
-      userData.copy(replyBody);
-      replyBody.writeUInt16LE(0x8000, 0);
-      replyBody.writeUInt16LE(0x0001, 2);
-      const effectiveInitiator = state.clientInitiator > 0 ? state.clientInitiator : 1002;
-      const mcsPacket = buildMcsSendDataRequest(effectiveInitiator, channelId, replyBody);
+    const hasFlagsHi = (flags & 0x8000) !== 0;
+    const flagsHi = hasFlagsHi && userData.length >= 4 ? userData.readUInt16LE(2) : 0;
+    const isHeartbeat = (flags & 0x4000) !== 0 || (hasFlagsHi && ((flagsHi & 0x0041) !== 0));
+
+    if (isHeartbeat) {
       markDropped(state, channelId);
       return {
         forward: null,
-        replies: [mcsPacket],
+        replies: [],
         dropped: true,
-        note: `heartbeat-reply (${userData.length}B)`,
+        note: `server-heartbeat (${userData.length}B dropped for WASM)`,
         channelId
       };
     }

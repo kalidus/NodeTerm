@@ -135,7 +135,8 @@ describe('processServerFrame message channel', () => {
     );
     const result = processServerFrame(state, io);
     assert.equal(result.dropped, true);
-    assert.match(result.note, /(short-io 8B|heartbeat-reply)/);
+    assert.equal(result.replies.length, 0);
+    assert.match(result.note, /(short-io 8B|server-heartbeat|heartbeat)/);
   });
 
   it('no intercepta trafico IO normal (>=10B ShareControl)', () => {

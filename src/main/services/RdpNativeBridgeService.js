@@ -20,7 +20,8 @@ const { fixWallixBitmapStrideCrop } = require('./rdp-fastpath-helpers');
 const {
   createChannelFilterState,
   processServerFrame,
-  learnClientInitiator
+  learnClientInitiator,
+  buildMcsSendDataRequest
 } = require('./rdp-channel-filter');
 
 class RdpNativeBridgeService extends EventEmitter {
@@ -185,6 +186,7 @@ class RdpNativeBridgeService extends EventEmitter {
     try { fs.mkdirSync(framesDir, { recursive: true }); } catch (_) { /* noop */ }
 
     let isCleanedUp = false;
+
     const cleanup = (reason) => {
       if (isCleanedUp) return;
       isCleanedUp = true;
