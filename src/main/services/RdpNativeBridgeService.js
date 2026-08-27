@@ -248,14 +248,18 @@ class RdpNativeBridgeService extends EventEmitter {
 
         if (framesFromRdp <= 24) {
           console.log(`[Bridge] RDP->WASM frame#${framesFromRdp}: ${n}B | ${pduDesc}`);
-          try {
-            fs.writeFileSync(path.join(framesDir, `from-${String(framesFromRdp).padStart(2, '0')}-${n}b.hex`), chunk.toString('hex'), 'utf8');
-          } catch (_) { /* noop */ }
+          if (process.env.NODETERM_RDP_RECORD_FRAMES === '1') {
+            try {
+              fs.writeFileSync(path.join(framesDir, `from-${String(framesFromRdp).padStart(2, '0')}-${n}b.hex`), chunk.toString('hex'), 'utf8');
+            } catch (_) { /* noop */ }
+          }
         } else if (gapFromLastRdp >= 400) {
           console.log(`⏱️ [Bridge Trace GAP ${gapFromLastRdp}ms] Pausa RDP -> Frame #${framesFromRdp} (${n}B): ${pduDesc}`);
-          try {
-            fs.writeFileSync(path.join(framesDir, `gap-${gapFromLastRdp}ms-from-f${framesFromRdp}-${n}b.hex`), chunk.toString('hex'), 'utf8');
-          } catch (_) { /* noop */ }
+          if (process.env.NODETERM_RDP_RECORD_FRAMES === '1') {
+            try {
+              fs.writeFileSync(path.join(framesDir, `gap-${gapFromLastRdp}ms-from-f${framesFromRdp}-${n}b.hex`), chunk.toString('hex'), 'utf8');
+            } catch (_) { /* noop */ }
+          }
         } else if (
           pduDesc.includes('DEMAND_ACTIVE') ||
           pduDesc.includes('DEACTIVATE_ALL') ||
@@ -400,9 +404,11 @@ class RdpNativeBridgeService extends EventEmitter {
 
           if (framesToRdp <= 24) {
             console.log(`[Bridge] WASM->RDP frame#${framesToRdp}: ${payload.length}B | ${pduDesc}`);
-            try {
-              fs.writeFileSync(path.join(framesDir, `to-${String(framesToRdp).padStart(2, '0')}-${payload.length}b.hex`), payload.toString('hex'), 'utf8');
-            } catch (_) { /* noop */ }
+            if (process.env.NODETERM_RDP_RECORD_FRAMES === '1') {
+              try {
+                fs.writeFileSync(path.join(framesDir, `to-${String(framesToRdp).padStart(2, '0')}-${payload.length}b.hex`), payload.toString('hex'), 'utf8');
+              } catch (_) { /* noop */ }
+            }
           } else if (gapFromLastWs >= 400) {
             console.log(`📤 [Bridge Trace WASM GAP ${gapFromLastWs}ms] WASM->RDP #${framesToRdp} (${payload.length}B): ${pduDesc}`);
           } else if (
