@@ -326,9 +326,10 @@ function cropRgb16(src, srcWidth, srcHeight, destWidth, destHeight) {
     return Buffer.from(src);
   }
   const out = Buffer.alloc(destWidth * destHeight * COLOR_DEPTH);
-  const rowSkip = srcHeight - destHeight;
+  // Bitmaps bottom-up en RDP: la fila 0 en memoria es la parte inferior en pantalla (destBottom).
+  // Las filas utiles estan en y = 0 .. destHeight - 1. El padding de alto esta en y >= destHeight.
   for (let y = 0; y < destHeight; y++) {
-    const srcOff = (rowSkip + y) * srcWidth * COLOR_DEPTH;
+    const srcOff = y * srcWidth * COLOR_DEPTH;
     const dstOff = y * destWidth * COLOR_DEPTH;
     src.copy(out, dstOff, srcOff, srcOff + destWidth * COLOR_DEPTH);
   }

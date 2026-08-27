@@ -162,13 +162,16 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
         const proxyAddressStr = String(tokenResponse.wsUrl || '');
         const authTokenStr = String(tokenResponse.tokenId || '');
 
+        const alignedWidth = (width + 3) & ~3;
+        const alignedHeight = (height + 3) & ~3;
+
         const builder = new Backend.SessionBuilder()
           .username(usernameStr)
           .password(passwordStr)
           .destination(destinationStr)
           .proxyAddress(proxyAddressStr)
           .authToken(authTokenStr)
-          .desktopSize(new Backend.DesktopSize(width, height))
+          .desktopSize(new Backend.DesktopSize(alignedWidth, alignedHeight))
           .setCursorStyleCallback((cursorKind, cursorData, hotspotX, hotspotY) => {
             if (canvasRef.current) {
               if (cursorKind === 'url' && cursorData) {

@@ -18,11 +18,10 @@ const DESKTOP_HEIGHT_OFFSET = 10;
 const DEFAULT_CLIENT_BUILD = 19041;
 const DEFAULT_KEYBOARD_LAYOUT = 0x00000409;
 
-/** Multiplo de 4 + margen: Wallix rellena bitmaps a %4; IronRDP 0.7 usa dest como stride. */
+/** Multiplo de 4 exacto (MS-RDPBCGR). */
 function alignDesktopDimension(n) {
   const base = Math.max(1, n >>> 0);
-  const aligned = (base + 3) & ~3;
-  return aligned + 4;
+  return (base + 3) & ~3;
 }
 
 /**

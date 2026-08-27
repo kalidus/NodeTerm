@@ -117,6 +117,44 @@ function destExpandOneBitmapRect(rectBuf) {
  * - Complejo: crop + RLE compacto (COLOR_RUN / COLOR_IMAGE).
  * @returns {{ kind: 'dest-expand'|'crop', buf: Buffer } | null}
  */
+const SUBTILE_MAX = 64;
+
+function encodeOneTileBuffer(destLeft, destTop, destRight, destBottom, width, height, tilePixels) {
+  let encoded;
+  let kind = 'crop';
+  if (isUniformRgb16(tilePixels)) {
+    const color = tilePixels.readUInt16LE(0);
+    try {
+      encoded = encodeMegaMegaColorRun(width * height, color);
+      kind = 'solid-run';
+    } catch (err) {
+      if (err instanceof RleError) return null;
+      throw err;
+    }
+  } else {
+    try {
+      encoded = encodeMegaMegaColorImage(tilePixels);
+    } catch (err) {
+      if (err instanceof RleError) return null;
+      throw err;
+    }
+  }
+  if (!encoded || encoded.length > 0xffff) return null;
+
+  const header = Buffer.alloc(18);
+  header.writeUInt16LE(destLeft, 0);
+  header.writeUInt16LE(destTop, 2);
+  header.writeUInt16LE(destRight, 4);
+  header.writeUInt16LE(destBottom, 6);
+  header.writeUInt16LE(width, 8);
+  header.writeUInt16LE(height, 10);
+  header.writeUInt16LE(16, 12);
+  header.writeUInt16LE(BITMAP_COMPRESSION | NO_BITMAP_COMPRESSION_HDR, 14);
+  header.writeUInt16LE(encoded.length, 16);
+
+  return { kind, buf: Buffer.concat([header, encoded]) };
+}
+
 function fixOneBitmapRectStride(rectBuf) {
   if (!Buffer.isBuffer(rectBuf) || rectBuf.length < 18) return null;
 
@@ -134,14 +172,25 @@ function fixOneBitmapRectStride(rectBuf) {
 
   const iw = destRight - destLeft + 1;
   const ih = destBottom - destTop + 1;
-  if (!needsStrideCrop(width, height, destLeft, destTop, destRight, destBottom)) {
-    return null;
-  }
   if (bitsPerPixel !== 16) return null;
   if (iw <= 0 || ih <= 0 || iw > width || ih > height) return null;
   if (iw > 8192 || ih > 8192 || width > 8192 || height > 8192) return null;
 
   const raw = rectBuf.subarray(18, 18 + bitmapLength);
+  const needsCrop = needsStrideCrop(width, height, destLeft, destTop, destRight, destBottom);
+
+  // Si ya es un formato elemental 0xf3 o 0xf4 sin desfase de stride y <=64x64, pasar directo
+  if (
+    !needsCrop &&
+    (flags & NO_BITMAP_COMPRESSION_HDR) &&
+    raw.length > 0 &&
+    (raw[0] === 0xf3 || raw[0] === 0xf4) &&
+    iw <= SUBTILE_MAX &&
+    ih <= SUBTILE_MAX
+  ) {
+    return null;
+  }
+
   let full;
 
   if (flags & BITMAP_COMPRESSION) {
@@ -162,64 +211,77 @@ function fixOneBitmapRectStride(rectBuf) {
     full = raw.subarray(0, rowBytes * height);
   }
 
-  // Relleno solido: MEGA_MEGA_COLOR_RUN (5 bytes) para iw * ih pixels exactos
-  if (isUniformRgb16(full)) {
-    const color = full.readUInt16LE(0);
-    let encoded;
+  let pixels;
+  if (needsCrop) {
     try {
-      encoded = encodeMegaMegaColorRun(iw * ih, color);
+      pixels = cropRgb16(full, width, height, iw, ih);
     } catch (err) {
       if (err instanceof RleError) return null;
       throw err;
     }
-    const header = Buffer.alloc(18);
-    header.writeUInt16LE(destLeft, 0);
-    header.writeUInt16LE(destTop, 2);
-    header.writeUInt16LE(destRight, 4);
-    header.writeUInt16LE(destBottom, 6);
-    header.writeUInt16LE(iw, 8);
-    header.writeUInt16LE(ih, 10);
-    header.writeUInt16LE(16, 12);
-    header.writeUInt16LE(BITMAP_COMPRESSION | NO_BITMAP_COMPRESSION_HDR, 14);
-    header.writeUInt16LE(encoded.length, 16);
-    return { kind: 'solid-run', buf: Buffer.concat([header, encoded]) };
+  } else {
+    pixels = full;
   }
 
-  let pixels;
-  try {
-    pixels = cropRgb16(full, width, height, iw, ih);
-  } catch (err) {
-    if (err instanceof RleError) return null;
-    throw err;
+  // Si es un relleno sólido completo, un único solid-run (5B) basta para cualquier tamaño
+  if (isUniformRgb16(pixels) && iw * ih <= 0xffff) {
+    const solid = encodeOneTileBuffer(destLeft, destTop, destRight, destBottom, iw, ih, pixels);
+    if (!solid) return null;
+    return { kind: 'solid-run', buf: solid.buf, buffers: [solid.buf] };
   }
 
-  let encoded;
-  try {
-    encoded = encodeMegaMegaColorImage(pixels);
-  } catch (err) {
-    if (err instanceof RleError) return null;
-    throw err;
+  // Si cabe en un único subtile pequeño (<= 64x64)
+  if (iw <= SUBTILE_MAX && ih <= SUBTILE_MAX) {
+    const single = encodeOneTileBuffer(destLeft, destTop, destRight, destBottom, iw, ih, pixels);
+    if (!single) return null;
+    return { kind: single.kind, buf: single.buf, buffers: [single.buf] };
   }
-  if (encoded.length > 0xffff) return null;
 
-  const header = Buffer.alloc(18);
-  header.writeUInt16LE(destLeft, 0);
-  header.writeUInt16LE(destTop, 2);
-  header.writeUInt16LE(destRight, 4);
-  header.writeUInt16LE(destBottom, 6);
-  header.writeUInt16LE(iw, 8);
-  header.writeUInt16LE(ih, 10);
-  header.writeUInt16LE(16, 12);
-  header.writeUInt16LE(BITMAP_COMPRESSION | NO_BITMAP_COMPRESSION_HDR, 14);
-  header.writeUInt16LE(encoded.length, 16);
+  // Subdividir rectángulos grandes en teselas de máximo 64x64 para que nunca
+  // superen el límite de tamaño de Fast-Path PDU ni dejen recuadros sin repintar.
+  const tiles = [];
+  let solidCount = 0;
+  let cropCount = 0;
 
-  return { kind: 'crop', buf: Buffer.concat([header, encoded]) };
+  for (let ty = 0; ty < ih; ty += SUBTILE_MAX) {
+    const th = Math.min(SUBTILE_MAX, ih - ty);
+    for (let tx = 0; tx < iw; tx += SUBTILE_MAX) {
+      const tw = Math.min(SUBTILE_MAX, iw - tx);
+      const tileLeft = destLeft + tx;
+      const tileTop = destTop + ty;
+      const tileRight = tileLeft + tw - 1;
+      const tileBottom = tileTop + th - 1;
+
+      const tilePixels = Buffer.alloc(tw * th * 2);
+      const startRow = ih - (ty + th);
+      for (let y = 0; y < th; y++) {
+        const srcRow = startRow + y;
+        const srcOff = (srcRow * iw + tx) * 2;
+        const dstOff = y * tw * 2;
+        pixels.copy(tilePixels, dstOff, srcOff, srcOff + tw * 2);
+      }
+
+      const encodedTile = encodeOneTileBuffer(tileLeft, tileTop, tileRight, tileBottom, tw, th, tilePixels);
+      if (!encodedTile) return null;
+      tiles.push(encodedTile.buf);
+      if (encodedTile.kind === 'solid-run') solidCount += 1;
+      else cropCount += 1;
+    }
+  }
+
+  return {
+    kind: 'subtiles',
+    buf: tiles[0],
+    buffers: tiles,
+    solidCount,
+    cropCount
+  };
 }
 
 /** @deprecated usar fixOneBitmapRectStride */
 function cropOneBitmapRect(rectBuf) {
   const fixed = fixOneBitmapRectStride(rectBuf);
-  if (!fixed || fixed.kind !== 'crop') return null;
+  if (!fixed) return null;
   return { header: fixed.buf.subarray(0, 18), data: fixed.buf.subarray(18) };
 }
 
@@ -372,16 +434,17 @@ function fixWallixBitmapStrideCrop(buf) {
     const destRight = rectBuf.readUInt16LE(4);
     const destBottom = rectBuf.readUInt16LE(6);
 
-    if (needsStrideCrop(width, height, destLeft, destTop, destRight, destBottom)) {
-      const fixed = fixOneBitmapRectStride(rectBuf);
-      if (fixed) {
-        rectBuffers.push(fixed.buf);
-        patchedCount += 1;
-        if (fixed.kind === 'solid-run') solidCount += 1;
-        else cropCount += 1;
+    const fixed = fixOneBitmapRectStride(rectBuf);
+    if (fixed && fixed.buffers && fixed.buffers.length) {
+      rectBuffers.push(...fixed.buffers);
+      patchedCount += 1;
+      if (fixed.kind === 'solid-run') {
+        solidCount += 1;
+      } else if (fixed.kind === 'subtiles') {
+        solidCount += fixed.solidCount || 0;
+        cropCount += fixed.cropCount || 0;
       } else {
-        rectBuffers.push(Buffer.from(rectBuf));
-        failed += 1;
+        cropCount += 1;
       }
     } else {
       rectBuffers.push(Buffer.from(rectBuf));

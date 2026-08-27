@@ -40,8 +40,8 @@ describe('decompress16bpp', () => {
     assert.deepEqual([...out], [0xff, 0xff, 0xff, 0xff]);
   });
 
-  it('cropRgb16 descarta padding derecho e inferior (bottom-up)', () => {
-    // 4x3, dest 3x2: quitar col derecha y 1 fila inferior (inicio buffer)
+  it('cropRgb16 descarta padding derecho y superior (bottom-up)', () => {
+    // 4x3, dest 3x2: quitar col derecha y 1 fila superior (final buffer)
     const src = Buffer.alloc(4 * 3 * 2);
     for (let y = 0; y < 3; y++) {
       for (let x = 0; x < 4; x++) {
@@ -50,11 +50,13 @@ describe('decompress16bpp', () => {
     }
     const out = cropRgb16(src, 4, 3, 3, 2);
     assert.equal(out.length, 3 * 2 * 2);
-    // filas buffer 1 y 2 (skip row 0), cols 0..2
-    assert.equal(out.readUInt16LE(0), 0x0100);
-    assert.equal(out.readUInt16LE(2), 0x0101);
-    assert.equal(out.readUInt16LE(4), 0x0102);
-    assert.equal(out.readUInt16LE(6), 0x0200);
+    // filas buffer 0 y 1 (filas reales bottom-up), cols 0..2
+    assert.equal(out.readUInt16LE(0), 0x0000);
+    assert.equal(out.readUInt16LE(2), 0x0001);
+    assert.equal(out.readUInt16LE(4), 0x0002);
+    assert.equal(out.readUInt16LE(6), 0x0100);
+    assert.equal(out.readUInt16LE(8), 0x0101);
+    assert.equal(out.readUInt16LE(10), 0x0102);
   });
 
   it('encodeMegaMegaColorImage roundtrip', () => {
@@ -153,6 +155,36 @@ describe('fixWallixBitmapStrideCrop', () => {
     }
   });
 
+  it('divide rectangulos grandes en teselas de maximo 64x64', () => {
+    const { fixOneBitmapRectStride } = require('../../src/main/services/rdp-fastpath-helpers');
+    // Simular un rect 150x120 padded a 152x120
+    const rectBuf = Buffer.alloc(18 + 152 * 120 * 2);
+    rectBuf.writeUInt16LE(10, 0); // destLeft
+    rectBuf.writeUInt16LE(20, 2); // destTop
+    rectBuf.writeUInt16LE(10 + 150 - 1, 4); // destRight
+    rectBuf.writeUInt16LE(20 + 120 - 1, 6); // destBottom
+    rectBuf.writeUInt16LE(152, 8); // width padded
+    rectBuf.writeUInt16LE(120, 10); // height
+    rectBuf.writeUInt16LE(16, 12); // bitsPerPixel
+    rectBuf.writeUInt16LE(0, 14); // uncompressed
+    rectBuf.writeUInt16LE(152 * 120 * 2, 16); // bitmapLength
+    // Rellenar con patron no uniforme
+    for (let i = 0; i < 152 * 120; i++) {
+      rectBuf.writeUInt16LE(i & 0xffff, 18 + i * 2);
+    }
+
+    const fixed = fixOneBitmapRectStride(rectBuf);
+    assert.ok(fixed);
+    assert.equal(fixed.kind, 'subtiles');
+    assert.ok(fixed.buffers.length >= 6);
+    for (const tile of fixed.buffers) {
+      const tw = tile.readUInt16LE(8);
+      const th = tile.readUInt16LE(10);
+      assert.ok(tw <= 64);
+      assert.ok(th <= 64);
+    }
+  });
+
   it('no toca TPKT', () => {
     const p = path.join(__dirname, 'frames/from-12-205b.hex');
     if (!fs.existsSync(p)) return;
@@ -163,9 +195,10 @@ describe('fixWallixBitmapStrideCrop', () => {
 });
 
 describe('alignDesktopDimension', () => {
-  it('alinea a multiplo de 4 con margen', () => {
-    assert.equal(alignDesktopDimension(1271), 1276);
-    assert.equal(alignDesktopDimension(1272), 1276);
-    assert.equal(alignDesktopDimension(800), 804);
+  it('alinea a multiplo de 4 exacto', () => {
+    assert.equal(alignDesktopDimension(1271), 1272);
+    assert.equal(alignDesktopDimension(1272), 1272);
+    assert.equal(alignDesktopDimension(800), 800);
+    assert.equal(alignDesktopDimension(1280), 1280);
   });
 });
