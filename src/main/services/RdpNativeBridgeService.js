@@ -299,6 +299,8 @@ class RdpNativeBridgeService extends EventEmitter {
           console.log(
             `[Bridge] Canales MCS configurados: io=${channelFilter.ioChannelId}` +
               ` permitidos=[${[...channelFilter.allowed].join(',')}]` +
+              (channelFilter.cliprdrChannelId != null ? ` cliprdr=${channelFilter.cliprdrChannelId}` : '') +
+              (channelFilter.drdynvcChannelId != null ? ` drdynvc=${channelFilter.drdynvcChannelId}` : '') +
               (channelFilter.messageChannelId != null ? ` msg=${channelFilter.messageChannelId}` : '')
           );
         }

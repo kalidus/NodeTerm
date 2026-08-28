@@ -656,7 +656,7 @@ export const useConnectionManagement = ({
         disableOffscreenCaching: baseRdp.guacDisableOffscreenCaching === true,
         disableBitmapCaching: baseRdp.guacDisableBitmapCaching === true,
         disableCopyRect: baseRdp.guacDisableCopyRect === true,
-        redirectClipboard: baseRdp.redirectClipboard === true,
+        redirectClipboard: baseRdp.redirectClipboard !== false,
         redirectPrinters: baseRdp.redirectPrinters === true,
         redirectAudio: baseRdp.redirectAudio === true,
         fullscreen: screen.fullscreen || baseRdp.fullscreen === true,

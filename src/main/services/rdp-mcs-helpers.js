@@ -8,6 +8,7 @@
 const { parseMcsSendData } = require('./rdp-autodetect');
 
 const CS_CORE = 0xc001;
+const CS_NET = 0xc003;
 const SERVER_SELECTED_PROTOCOL_OFFSET = 212;
 const CS_CORE_MIN_LEN_WITH_PROTOCOL = 216;
 const CLIENT_BUILD_OFFSET = 20;
@@ -22,6 +23,40 @@ const DEFAULT_KEYBOARD_LAYOUT = 0x00000409;
 function alignDesktopDimension(n) {
   const base = Math.max(1, n >>> 0);
   return (base + 3) & ~3;
+}
+
+/**
+ * Localiza el bloque TS_UD_CS_NET en un TPKT/MCS Connect Initial.
+ * @param {Buffer} buf
+ * @returns {string[]} Lista de nombres de canales estáticos solicitados (ej: ['cliprdr', 'drdynvc'])
+ */
+function findClientNetworkChannels(buf) {
+  if (!Buffer.isBuffer(buf) || buf.length < 8) return [];
+
+  const duca = buf.indexOf(Buffer.from('Duca'));
+  const start = duca >= 0 ? duca : 0;
+
+  for (let i = start; i + 8 <= buf.length; i++) {
+    if (buf.readUInt16LE(i) !== CS_NET) continue;
+    const length = buf.readUInt16LE(i + 2);
+    if (length < 8 || i + length > buf.length) continue;
+    const count = buf.readUInt32LE(i + 4);
+    if (count < 1 || count > 32) continue;
+    if (i + 8 + count * 12 > buf.length) continue;
+
+    const channels = [];
+    for (let c = 0; c < count; c++) {
+      const off = i + 8 + c * 12;
+      const rawName = buf.subarray(off, off + 8).toString('ascii');
+      const nullIdx = rawName.indexOf('\0');
+      const name = (nullIdx >= 0 ? rawName.slice(0, nullIdx) : rawName).trim();
+      if (name) {
+        channels.push(name);
+      }
+    }
+    return channels;
+  }
+  return [];
 }
 
 /**
@@ -294,11 +329,13 @@ function patchInfoAutoLogon(buf) {
 
 module.exports = {
   CS_CORE,
+  CS_NET,
   SERVER_SELECTED_PROTOCOL_OFFSET,
   alignDesktopDimension,
   DEFAULT_CLIENT_BUILD,
   DEFAULT_KEYBOARD_LAYOUT,
   findClientCoreData,
+  findClientNetworkChannels,
   ensureMcsServerSelectedProtocol,
   hardenClientCoreData,
   fixWallixGccConnectPduLength,

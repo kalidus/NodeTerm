@@ -78,13 +78,26 @@ function readChannelJoinConfirmId(buf) {
   return buf.readUInt16BE(11);
 }
 
+function isCliprdrHeader(userData) {
+  if (!isChannelPduHeader(userData) || userData.length < 16) return false;
+  const payload = userData.subarray(8);
+  const msgType = payload.readUInt16LE(0);
+  const dataLen = payload.readUInt32LE(4);
+  // Tipos estándar MS-RDPECLIP (1..11) y consistencia de longitud
+  return msgType >= 0x0001 && msgType <= 0x000b && dataLen === (payload.length - 8);
+}
+
 function createChannelFilterState() {
   return {
     ready: false,
     ioChannelId: null,
     allowed: new Set(),
+    clientChannelNames: [],
+    channelIdToName: new Map(),
     messageChannelId: null,
     staticVcChannelId: null,
+    cliprdrChannelId: null,
+    drdynvcChannelId: null,
     clientInitiator: 0,
     droppedCount: 0,
     droppedByChannel: Object.create(null),
@@ -103,12 +116,40 @@ function learnFromServerGcc(state, buf) {
   if (parsed.messageChannelId != null) {
     state.allowed.delete(parsed.messageChannelId);
   }
+
+  // Mapear nombres de canales solicitados por el cliente a channelIds asignados por el servidor
+  state.channelIdToName = new Map();
+  if (Array.isArray(state.clientChannelNames)) {
+    parsed.channelIds.forEach((id, idx) => {
+      const name = state.clientChannelNames[idx];
+      if (name) {
+        state.channelIdToName.set(id, name);
+        if (name === 'cliprdr') {
+          state.cliprdrChannelId = id;
+        } else if (name === 'drdynvc') {
+          state.drdynvcChannelId = id;
+        }
+      }
+    });
+  }
+
   state.ready = true;
   return true;
 }
 
 function learnClientInitiator(state, buf) {
   if (!state || !Buffer.isBuffer(buf) || buf[0] !== 0x03) return false;
+
+  if (!state.clientChannelNames || state.clientChannelNames.length === 0) {
+    try {
+      const { findClientNetworkChannels } = require('./rdp-mcs-helpers');
+      const chs = findClientNetworkChannels(buf);
+      if (chs.length) {
+        state.clientChannelNames = chs;
+      }
+    } catch (_) {}
+  }
+
   const parsed = parseMcsSendData(buf);
   if (!parsed || parsed.mcsType !== 0x64) return false;
   if (parsed.initiator > 0) {
@@ -242,10 +283,21 @@ function processServerFrame(state, buf) {
   const parsed = parseMcsSendData(buf);
   if (!parsed) return empty;
 
-  // 1. DYNVC (CHANNEL_PDU_HEADER):
-  // Interceptar peticiones DVC en cualquier canal (1001, 1003 o 1004) y responder en 0ms
-  // para que el servidor haga fallback instantáneo sin esperar 40 segundos de timeout,
-  // y evitar que IronRDP intente parsearlo como ShareControl (crash invalid pdu_type).
+  // 1. Portapapeles (cliprdr): Si es el canal cliprdr o el contenido es un PDU de CLIPRDR,
+  // REENVIAR DIRECTAMENTE A IRONRDP WASM SIN INTERCEPTAR NI DROPEAR!
+  const isCliprdr = channelId === state.cliprdrChannelId || 
+                    state.channelIdToName?.get(channelId) === 'cliprdr' ||
+                    isCliprdrHeader(parsed.userData);
+  if (isCliprdr) {
+    if (state.cliprdrChannelId == null) {
+      state.cliprdrChannelId = channelId;
+      if (state.channelIdToName) state.channelIdToName.set(channelId, 'cliprdr');
+    }
+    return empty; // forward: buf, dropped: false -> reenviar a WASM
+  }
+
+  // 2. DYNVC / Otros Virtual Channels (CHANNEL_PDU_HEADER que no sea cliprdr):
+  // Interceptar peticiones DVC y responder en 0ms para evitar timeouts de servidores RDS / Wallix.
   if (isChannelPduHeader(parsed.userData)) {
     const dvc = handleDvcRequest(channelId, state.clientInitiator, parsed.userData);
     markDropped(state, channelId);
