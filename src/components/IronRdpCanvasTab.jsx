@@ -2,8 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { InputTextarea } from 'primereact/inputtextarea';
+import { ProgressBar } from 'primereact/progressbar';
 import { ProgressSpinner } from 'primereact/progressspinner';
-import { Backend, init as initIronRdp, enableCredssp, displayControl } from '@devolutions/iron-remote-desktop-rdp';
+import { Toast } from 'primereact/toast';
+import { Backend, init as initIronRdp, enableCredssp, displayControl, RdpFileTransferProvider } from '@devolutions/iron-remote-desktop-rdp';
 import { resolveCredsspPolicy } from '../utils/rdpSecurityPolicy';
 
 const extractErrorMessage = (err) => {
@@ -98,6 +100,8 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const sessionRef = useRef(null);
+  const fileTransferProviderRef = useRef(null);
+  const toastRef = useRef(null);
 
   const [connectionState, setConnectionState] = useState('connecting'); // connecting, connected, error, disconnected
   const [errorMessage, setErrorMessage] = useState('');
@@ -105,13 +109,18 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
   const [isToolbarHovered, setIsToolbarHovered] = useState(false);
   const [showClipboardDialog, setShowClipboardDialog] = useState(false);
   const [clipboardText, setClipboardText] = useState('');
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [activeTransfers, setActiveTransfers] = useState({});
 
   const lastReceivedClipboardTextRef = useRef('');
   const lastSentClipboardTextRef = useRef('');
 
+  const isDriveEnabled = rdpConfig.redirectFolders !== false && rdpConfig.enableDrive !== false;
+
   useEffect(() => {
     let isMounted = true;
     let currentSession = null;
+    let currentFileTransferProvider = null;
 
     const startRdpSession = async () => {
       try {
@@ -217,9 +226,23 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
           .extension(enableCredssp(useCredssp))
           .extension(displayControl(false));
 
+        // Registrar extensiones para transferencia de archivos / carpeta compartida (RdpFileTransferProvider)
+        if (isDriveEnabled) {
+          try {
+            currentFileTransferProvider = new RdpFileTransferProvider({ chunkSize: 64 * 1024 });
+            fileTransferProviderRef.current = currentFileTransferProvider;
+            for (const ext of currentFileTransferProvider.getBuilderExtensions()) {
+              builder.extension(ext);
+            }
+            console.log('📁 [IronRDP FileTransfer] Extensiones de transferencia de archivos registradas');
+          } catch (ftpErr) {
+            console.warn('[IronRDP FileTransfer] Error creando FileTransferProvider:', ftpErr);
+          }
+        }
+
         // Configurar sincronización del portapapeles nativo (CLIPRDR)
         if (isClipboardEnabled) {
-          // Remoto -> Local: cuando se copia en el servidor RDP, escribir en portapapeles del cliente
+          // Remoto -> Local: cuando se copia texto en el servidor RDP, escribir en portapapeles del cliente
           builder.remoteClipboardChangedCallback(async (clipboardData) => {
             if (!clipboardData) return;
             try {
@@ -263,11 +286,130 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
           builder.renderCanvas(canvasRef.current);
         }
 
-        console.log(`🚀 [IronRDP WASM] Conectando a ${destinationStr} (protocolo=${tokenResponse.protocolLabel || 'auto'}, credssp=${useCredssp}, clipboard=${isClipboardEnabled})...`);
+        console.log(`🚀 [IronRDP WASM] Conectando a ${destinationStr} (protocolo=${tokenResponse.protocolLabel || 'auto'}, credssp=${useCredssp}, clipboard=${isClipboardEnabled}, drive=${isDriveEnabled})...`);
         
         currentSession = await builder.connect();
         sessionRef.current = currentSession;
         console.log('✅ [IronRDP WASM] Sesión RDP conectada');
+
+        // Inicializar FileTransferProvider con la sesión activa
+        if (currentFileTransferProvider) {
+          try {
+            currentFileTransferProvider.setSession(currentSession);
+
+            currentFileTransferProvider.on('upload-progress', (progress) => {
+              setActiveTransfers(prev => ({
+                ...prev,
+                [progress.transferId]: {
+                  name: progress.fileName,
+                  type: 'upload',
+                  percentage: progress.percentage || 0
+                }
+              }));
+
+              if (progress.percentage >= 100) {
+                setTimeout(() => {
+                  setActiveTransfers(prev => {
+                    const next = { ...prev };
+                    delete next[progress.transferId];
+                    return next;
+                  });
+                }, 1000);
+              }
+            });
+
+            currentFileTransferProvider.on('upload-complete', (file, fileIndex, transferId) => {
+              console.log('✅ [IronRDP FileTransfer] Subida completada:', file?.name);
+              setActiveTransfers(prev => {
+                const next = { ...prev };
+                delete next[transferId];
+                return next;
+              });
+              toastRef.current?.show({
+                severity: 'success',
+                summary: 'Archivo Transferido',
+                detail: `${file?.name || 'Archivo'} subido a la sesión remota`,
+                life: 3000
+              });
+            });
+
+            currentFileTransferProvider.on('download-progress', (progress) => {
+              setActiveTransfers(prev => ({
+                ...prev,
+                [progress.transferId]: {
+                  name: progress.fileName,
+                  type: 'download',
+                  percentage: progress.percentage || 0
+                }
+              }));
+
+              if (progress.percentage >= 100) {
+                setTimeout(() => {
+                  setActiveTransfers(prev => {
+                    const next = { ...prev };
+                    delete next[progress.transferId];
+                    return next;
+                  });
+                }, 1000);
+              }
+            });
+
+            currentFileTransferProvider.on('download-complete', (fileInfo, blob, fileIndex, transferId) => {
+              console.log('✅ [IronRDP FileTransfer] Recepción de buffer completada:', fileInfo?.name);
+              setActiveTransfers(prev => {
+                const next = { ...prev };
+                delete next[transferId];
+                return next;
+              });
+            });
+
+            currentFileTransferProvider.on('files-available', async (files) => {
+              if (!files || !files.length) return;
+              console.log('📁 [IronRDP FileTransfer] Archivos remotos disponibles:', files);
+
+              toastRef.current?.show({
+                severity: 'info',
+                summary: 'Descargando Archivo(s)',
+                detail: `Recibiendo ${files.map(f => f.name).join(', ')} del servidor remoto...`,
+                life: 3000
+              });
+
+              const copiedPaths = [];
+              for (let i = 0; i < files.length; i++) {
+                try {
+                  const { completion } = currentFileTransferProvider.downloadFile(files[i], i);
+                  const blob = await completion;
+                  const arrayBuffer = await blob.arrayBuffer();
+                  const uint8 = new Uint8Array(arrayBuffer);
+                  if (window.electron?.clipboard?.saveTempFile) {
+                    const res = await window.electron.clipboard.saveTempFile(files[i].name, uint8);
+                    if (res?.success && res.filePath) {
+                      copiedPaths.push(res.filePath);
+                    }
+                  }
+                } catch (dlErr) {
+                  console.warn('[IronRDP FileTransfer] Error descargando archivo:', dlErr);
+                }
+              }
+
+              if (copiedPaths.length && window.electron?.clipboard?.writeFiles) {
+                await window.electron.clipboard.writeFiles(copiedPaths);
+                toastRef.current?.show({
+                  severity: 'success',
+                  summary: 'Archivo Listo en Portapapeles',
+                  detail: `${files.map(f => f.name).join(', ')} copiado. Pulsa Ctrl+V en cualquier carpeta de tu PC para pegarlo.`,
+                  life: 5000
+                });
+              }
+            });
+
+            currentFileTransferProvider.on('error', (err) => {
+              console.warn('⚠️ [IronRDP FileTransfer] Error:', err);
+            });
+          } catch (ftpInitErr) {
+            console.warn('[IronRDP FileTransfer] Error asociando sesión:', ftpInitErr);
+          }
+        }
 
         // Enviar estado inicial del portapapeles local inmediatamente tras conectar
         if (isClipboardEnabled) {
@@ -315,6 +457,10 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
 
     return () => {
       isMounted = false;
+      if (currentFileTransferProvider) {
+        try { currentFileTransferProvider.dispose(); } catch (_) {}
+      }
+      fileTransferProviderRef.current = null;
       if (currentSession) {
         try { currentSession.shutdown(); } catch (e) {}
       }
@@ -414,7 +560,6 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
       canvas.focus();
       e.preventDefault();
       const { x, y } = getCanvasPos(e);
-      // Mapeo botones: 0 -> Izquierdo (0), 1 -> Central (1), 2 -> Derecho (2)
       const btn = e.button === 0 ? 0 : e.button === 2 ? 2 : 1;
       try {
         const transaction = new Backend.InputTransaction();
@@ -456,7 +601,7 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
     const handleKeyDown = (e) => {
       if (!sessionRef.current) return;
 
-      // Si el usuario pulsa Ctrl+V (o Cmd+V), asegurar sincronización del portapapeles local más reciente antes de pegar
+      // Si el usuario pulsa Ctrl+V (o Cmd+V), asegurar sincronización del portapapeles local antes de pegar
       if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyV' || e.key === 'v' || e.key === 'V')) {
         const isClipboardEnabled = rdpConfig.redirectClipboard !== false;
         if (isClipboardEnabled) {
@@ -534,22 +679,30 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
     };
   }, [connectionState, rdpConfig.redirectClipboard]);
 
-  // Manejo de redimensionamiento dinámico del canvas RDP
+  // Manejo de redimensionado de canvas dinámico
   useEffect(() => {
-    if (connectionState !== 'connected' || !sessionRef.current || !containerRef.current) return;
+    if (!containerRef.current || connectionState !== 'connected') return;
 
+    let resizeTimer = null;
     const handleResize = () => {
-      if (!containerRef.current || !sessionRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
-      const w = Math.floor(rect.width);
-      const h = Math.floor(rect.height);
-      if (w > 320 && h > 240) {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        if (!containerRef.current || !sessionRef.current) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        const alignDesktop = (n) => {
+          const base = Math.max(1, Math.floor(n));
+          return (base + 3) & ~3;
+        };
+        const width = alignDesktop(Math.max(800, rect.width || window.innerWidth));
+        const height = alignDesktop(Math.max(600, rect.height || window.innerHeight));
+
         try {
-          sessionRef.current.resize(w, h);
+          console.log(`📐 [IronRDP WASM] Redimensionando escritorio a ${width}x${height}`);
+          sessionRef.current.requestDesktopSize(new Backend.DesktopSize(width, height));
         } catch (e) {
-          console.warn('Advertencia redimensionando IronRDP:', e);
+          console.warn('[IronRDP WASM] requestDesktopSize no soportado o falló:', e);
         }
-      }
+      }, 300);
     };
 
     const resizeObserver = new ResizeObserver(handleResize);
@@ -587,6 +740,49 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
   return (
     <div
       ref={containerRef}
+      onDragEnter={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isDriveEnabled) {
+          setIsDraggingOver(true);
+        }
+      }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isDriveEnabled) {
+          fileTransferProviderRef.current?.handleDragOver(e);
+          setIsDraggingOver(true);
+        }
+      }}
+      onDragLeave={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (containerRef.current && !containerRef.current.contains(e.relatedTarget)) {
+          setIsDraggingOver(false);
+        }
+      }}
+      onDrop={async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDraggingOver(false);
+        if (!isDriveEnabled || !fileTransferProviderRef.current) return;
+        try {
+          const dropped = await fileTransferProviderRef.current.handleDrop(e);
+          if (dropped && dropped.length) {
+            console.log('📤 [IronRDP FileTransfer] Subiendo archivos arrastrados:', dropped.length);
+            fileTransferProviderRef.current.uploadFiles(dropped);
+            toastRef.current?.show({
+              severity: 'info',
+              summary: 'Iniciando Transferencia',
+              detail: `Subiendo ${dropped.length} archivo(s) a la sesión RDP...`,
+              life: 3000
+            });
+          }
+        } catch (dropErr) {
+          console.warn('[IronRDP FileTransfer] Error en drop:', dropErr);
+        }
+      }}
       style={{
         width: '100%',
         height: '100%',
@@ -595,6 +791,8 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
         overflow: 'hidden'
       }}
     >
+      <Toast ref={toastRef} position="bottom-left" />
+
       {/* Elemento Canvas HTML5 para IronRDP WASM siempre presente en el DOM */}
       <canvas
         ref={canvasRef}
@@ -610,6 +808,64 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
           cursor: 'default'
         }}
       />
+
+      {/* Overlay visual cuando se arrastra un archivo sobre la pantalla RDP */}
+      {isDraggingOver && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.88)',
+            backdropFilter: 'blur(6px)',
+            border: '3px dashed #3b82f6',
+            zIndex: 50,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#ffffff',
+            pointerEvents: 'none'
+          }}
+        >
+          <i className="pi pi-cloud-upload text-blue-400 mb-3" style={{ fontSize: '3.5rem' }}></i>
+          <h3 className="m-0 font-medium text-white">Soltar archivos para transferir</h3>
+          <p className="m-0 mt-1 text-sm text-gray-300">Los archivos se subirán directamente a la sesión RDP</p>
+        </div>
+      )}
+
+      {/* Indicador flotante de progreso de transferencias activas */}
+      {Object.keys(activeTransfers).length > 0 && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '16px',
+            right: '16px',
+            backgroundColor: 'rgba(20, 24, 33, 0.94)',
+            backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(59, 130, 246, 0.4)',
+            borderRadius: '8px',
+            padding: '10px 14px',
+            zIndex: 100,
+            minWidth: '260px',
+            maxWidth: '340px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.5)'
+          }}
+        >
+          <div className="text-xs font-semibold text-blue-400 mb-2 flex align-items-center justify-content-between">
+            <span>Transferencias en curso</span>
+            <i className="pi pi-sync pi-spin text-xs"></i>
+          </div>
+          {Object.entries(activeTransfers).map(([id, t]) => (
+            <div key={id} className="mb-2 last:mb-0">
+              <div className="flex justify-content-between text-xs text-gray-300 mb-1">
+                <span className="text-truncate" style={{ maxWidth: '180px' }} title={t.name}>{t.name}</span>
+                <span className="font-medium text-blue-300">{Math.round(t.percentage)}%</span>
+              </div>
+              <ProgressBar value={Math.round(t.percentage)} showValue={false} style={{ height: '4px' }} />
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Overlays de estado (Cargando / Error / Desconectado) encima del canvas */}
       {connectionState === 'connecting' && (
@@ -707,6 +963,35 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
               style={{ color: '#e0e0e0', fontSize: '11px' }}
               onClick={() => setShowClipboardDialog(true)}
             />
+
+            {isDriveEnabled && (
+              <Button
+                icon="pi pi-upload"
+                tooltip="Subir archivos a la sesión remota"
+                tooltipOptions={{ position: 'bottom' }}
+                size="small"
+                className="p-button-text p-button-secondary p-button-sm text-xs py-0 px-2"
+                style={{ color: '#e0e0e0', fontSize: '11px' }}
+                onClick={async () => {
+                  if (fileTransferProviderRef.current) {
+                    try {
+                      const files = await fileTransferProviderRef.current.showFilePicker({ multiple: true });
+                      if (files && files.length) {
+                        fileTransferProviderRef.current.uploadFiles(files);
+                        toastRef.current?.show({
+                          severity: 'info',
+                          summary: 'Iniciando Transferencia',
+                          detail: `Subiendo ${files.length} archivo(s)...`,
+                          life: 3000
+                        });
+                      }
+                    } catch (e) {
+                      console.warn('Selector de archivos cancelado o error:', e);
+                    }
+                  }
+                }}
+              />
+            )}
 
             <Button
               icon="pi pi-window-maximize"

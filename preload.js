@@ -6,6 +6,8 @@ contextBridge.exposeInMainWorld('electron', {
   clipboard: {
     writeText: (text) => ipcRenderer.invoke('clipboard:writeText', text),
     readText: () => ipcRenderer.invoke('clipboard:readText'),
+    writeFiles: (files) => ipcRenderer.invoke('clipboard:writeFiles', files),
+    saveTempFile: (fileName, buffer) => ipcRenderer.invoke('clipboard:saveTempFile', { fileName, buffer })
   },
   fileExplorer: {
     listFiles: (tabId, path, config) => {
@@ -227,6 +229,7 @@ contextBridge.exposeInMainWorld('electron', {
         'toggle-favorite-connection',
         'clipboard:writeText',
         'clipboard:readText',
+        /^clipboard:.*$/,
         'register-tab-events',
         'detect-ubuntu-availability',
         'detect-wsl-distributions',
