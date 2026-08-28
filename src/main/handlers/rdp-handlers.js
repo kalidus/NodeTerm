@@ -174,6 +174,28 @@ function registerRdpHandlers(dependencies) {
     }
   });
 
+  // Handler para guardar PDFs de trabajos de impresión RDP redirigidos
+  ipcMain.handle('rdp:save-print-pdf', async (event, { filename, data }) => {
+    try {
+      const { app, shell } = require('electron');
+      const fs = require('fs').promises;
+      const path = require('path');
+      const downloadsDir = app.getPath('downloads');
+      const safeName = filename || `nodeterm-rdp-print-${Date.now()}.pdf`;
+      const filePath = path.join(downloadsDir, safeName);
+      const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data);
+      await fs.writeFile(filePath, buffer);
+      console.log(`🖨️ [RDP Print] Documento PDF guardado exitosamente en: ${filePath} (${buffer.length} bytes)`);
+      try {
+        shell.showItemInFolder(filePath);
+      } catch (_) {}
+      return { success: true, filePath, filename: safeName };
+    } catch (err) {
+      console.error('❌ [RDP Print] Error guardando PDF:', err);
+      return { success: false, error: err.message };
+    }
+  });
+
   console.log('✅ [RDP Handlers] Registrados');
 }
 

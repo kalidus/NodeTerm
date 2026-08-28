@@ -14,7 +14,7 @@ const { WebSocketServer } = require('ws');
 const fs = require('fs');
 const path = require('path');
 const { parseX224ConnectionConfirm, protocolName, describeRdpPdu } = require('./rdp-protocol-helpers');
-const { prepareMcsConnectInitial, findClientCoreData, patchInfoAutoLogon } = require('./rdp-mcs-helpers');
+const { prepareMcsConnectInitial, findClientCoreData, patchInfoPacket, patchInfoAutoLogon } = require('./rdp-mcs-helpers');
 const { patchFontSequenceFlags } = require('./rdp-font-helpers');
 const { fixWallixBitmapStrideCrop } = require('./rdp-fastpath-helpers');
 const {
@@ -107,6 +107,12 @@ class RdpNativeBridgeService extends EventEmitter {
       width: config.width || 1920,
       height: config.height || 1080,
       colorDepth: config.colorDepth || 32,
+      enableWallpaper: config.guacEnableWallpaper !== undefined ? config.guacEnableWallpaper : (config.enableWallpaper !== false),
+      enableFontSmoothing: config.guacEnableFontSmoothing === true,
+      enableDesktopComposition: config.guacEnableDesktopComposition === true,
+      enableTheming: config.guacEnableTheming !== false,
+      enableFullWindowDrag: config.guacEnableFullWindowDrag === true,
+      enableMenuAnimations: config.guacEnableMenuAnimations === true,
       createdAt: Date.now()
     };
 
@@ -439,10 +445,10 @@ class RdpNativeBridgeService extends EventEmitter {
           forward = prepared.buf;
           console.log(`[Bridge] MCS prepare: ${prepared.notes.join('; ') || 'sin cambios'}`);
         } else if (framesToRdp <= 10) {
-          const autoLogon = patchInfoAutoLogon(forward);
-          if (autoLogon.patched) {
-            forward = autoLogon.buf;
-            console.log(`[Bridge] TS_INFO_PACKET: Inyectado flag INFO_AUTOLOGON (0x08) para auto-login automático!`);
+          const infoResult = patchInfoPacket(forward, session);
+          if (infoResult.patched) {
+            forward = infoResult.buf;
+            console.log(`[Bridge] TS_INFO_PACKET ajustado: ${infoResult.changes.join(', ')}`);
           }
         }
         bytesToRdp += forward.length;

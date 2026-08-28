@@ -5,7 +5,18 @@ import { InputTextarea } from 'primereact/inputtextarea';
 import { ProgressBar } from 'primereact/progressbar';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { Toast } from 'primereact/toast';
-import { Backend, init as initIronRdp, enableCredssp, displayControl, RdpFileTransferProvider } from '@devolutions/iron-remote-desktop-rdp';
+import {
+  Backend,
+  init as initIronRdp,
+  enableCredssp,
+  displayControl,
+  RdpFileTransferProvider,
+  printerDeviceId,
+  printerDriverName,
+  printerName,
+  printJobStreamCallbacks,
+  PrinterDriverName
+} from '@devolutions/iron-remote-desktop-rdp';
 import { resolveCredsspPolicy } from '../utils/rdpSecurityPolicy';
 
 const extractErrorMessage = (err) => {
@@ -105,7 +116,7 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
 
   const [connectionState, setConnectionState] = useState('connecting'); // connecting, connected, error, disconnected
   const [errorMessage, setErrorMessage] = useState('');
-  const [isToolbarPinned, setIsToolbarPinned] = useState(false);
+  const [isToolbarPinned, setIsToolbarPinned] = useState(true);
   const [isToolbarHovered, setIsToolbarHovered] = useState(false);
   const [showClipboardDialog, setShowClipboardDialog] = useState(false);
   const [clipboardText, setClipboardText] = useState('');
@@ -116,6 +127,8 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
   const lastSentClipboardTextRef = useRef('');
 
   const isDriveEnabled = rdpConfig.redirectFolders !== false && rdpConfig.enableDrive !== false;
+  const isPrinterEnabled = rdpConfig.redirectPrinters === true;
+  const isAutoResizeEnabled = rdpConfig.autoResize !== false;
 
   useEffect(() => {
     let isMounted = true;
@@ -237,6 +250,80 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
             console.log('📁 [IronRDP FileTransfer] Extensiones de transferencia de archivos registradas');
           } catch (ftpErr) {
             console.warn('[IronRDP FileTransfer] Error creando FileTransferProvider:', ftpErr);
+          }
+        }
+
+        // Registrar extensión de Impresora Virtual PDF (Microsoft Print to PDF / PostScript)
+        if (isPrinterEnabled) {
+          try {
+            const activePrintJobs = new Map();
+            builder.extension(printerName('NodeTerm PDF Printer'));
+            builder.extension(printerDriverName(PrinterDriverName.MicrosoftPrintToPdf));
+            builder.extension(printerDeviceId(1));
+            builder.extension(printJobStreamCallbacks({
+              onJobStart: (fileId) => {
+                console.log(`🖨️ [IronRDP Printer] Inicio de trabajo de impresión #${fileId}`);
+                activePrintJobs.set(fileId, []);
+                toastRef.current?.show({
+                  severity: 'info',
+                  summary: 'Impresión en Curso',
+                  detail: 'Recibiendo documento del servidor RDP...',
+                  life: 3000
+                });
+              },
+              onJobData: (fileId, chunk) => {
+                const chunks = activePrintJobs.get(fileId) || [];
+                chunks.push(chunk);
+                activePrintJobs.set(fileId, chunks);
+              },
+              onJobComplete: async (fileId) => {
+                console.log(`🖨️ [IronRDP Printer] Trabajo de impresión completado #${fileId}`);
+                const chunks = activePrintJobs.get(fileId) || [];
+                activePrintJobs.delete(fileId);
+
+                if (!chunks.length) return;
+
+                const totalLength = chunks.reduce((acc, c) => acc + c.length, 0);
+                const combined = new Uint8Array(totalLength);
+                let offset = 0;
+                for (const chunk of chunks) {
+                  combined.set(chunk, offset);
+                  offset += chunk.length;
+                }
+
+                const dateStr = new Date().toISOString().replace(/[:.]/g, '-');
+                const filename = `nodeterm-print-${dateStr}.pdf`;
+
+                if (window.electron?.ipcRenderer) {
+                  const res = await window.electron.ipcRenderer.invoke('rdp:save-print-pdf', {
+                    filename,
+                    data: combined
+                  });
+
+                  if (res?.success) {
+                    toastRef.current?.show({
+                      severity: 'success',
+                      summary: 'Documento Impreso Recibido',
+                      detail: `Guardado en Descargas: ${res.filename}`,
+                      life: 5000
+                    });
+                  }
+                }
+              },
+              onJobError: (fileId) => {
+                console.warn(`⚠️ [IronRDP Printer] Error en trabajo de impresión #${fileId}`);
+                activePrintJobs.delete(fileId);
+                toastRef.current?.show({
+                  severity: 'warn',
+                  summary: 'Error de Impresión',
+                  detail: `Fallo al recibir documento #${fileId}`,
+                  life: 4000
+                });
+              }
+            }));
+            console.log('🖨️ [IronRDP Printer] Extensiones de Impresora Virtual PDF registradas');
+          } catch (printerErr) {
+            console.warn('[IronRDP Printer] Error registrando extensión de impresora:', printerErr);
           }
         }
 
@@ -681,7 +768,7 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
 
   // Manejo de redimensionado de canvas dinámico
   useEffect(() => {
-    if (!containerRef.current || connectionState !== 'connected') return;
+    if (!containerRef.current || connectionState !== 'connected' || !isAutoResizeEnabled) return;
 
     let resizeTimer = null;
     const handleResize = () => {
@@ -698,9 +785,13 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
 
         try {
           console.log(`📐 [IronRDP WASM] Redimensionando escritorio a ${width}x${height}`);
-          sessionRef.current.requestDesktopSize(new Backend.DesktopSize(width, height));
+          if (typeof sessionRef.current.resize === 'function') {
+            sessionRef.current.resize(width, height);
+          } else if (typeof sessionRef.current.requestDesktopSize === 'function') {
+            sessionRef.current.requestDesktopSize(new Backend.DesktopSize(width, height));
+          }
         } catch (e) {
-          console.warn('[IronRDP WASM] requestDesktopSize no soportado o falló:', e);
+          console.warn('[IronRDP WASM] resize no soportado o falló:', e);
         }
       }, 300);
     };
@@ -709,7 +800,7 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
     resizeObserver.observe(containerRef.current);
 
     return () => resizeObserver.disconnect();
-  }, [connectionState]);
+  }, [connectionState, isAutoResizeEnabled]);
 
   const handleSendCtrlAltDel = () => {
     if (sessionRef.current) {
@@ -722,8 +813,33 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
         transaction.addEvent(Backend.DeviceEvent.keyReleased(0x38));
         transaction.addEvent(Backend.DeviceEvent.keyReleased(0x1D));
         sessionRef.current.applyInputs(transaction);
+        toastRef.current?.show({
+          severity: 'info',
+          summary: 'Teclado Remoto',
+          detail: 'Ctrl+Alt+Del enviado',
+          life: 1500
+        });
       } catch (e) {
         console.error('Error enviando Ctrl+Alt+Del:', e);
+      }
+    }
+  };
+
+  const handleSendWinKey = () => {
+    if (sessionRef.current) {
+      try {
+        const transaction = new Backend.InputTransaction();
+        transaction.addEvent(Backend.DeviceEvent.keyPressed(0x5B)); // Tecla Windows izquierda
+        transaction.addEvent(Backend.DeviceEvent.keyReleased(0x5B));
+        sessionRef.current.applyInputs(transaction);
+        toastRef.current?.show({
+          severity: 'info',
+          summary: 'Teclado Remoto',
+          detail: 'Tecla Windows enviada',
+          life: 1500
+        });
+      } catch (e) {
+        console.error('Error enviando Tecla Windows:', e);
       }
     }
   };
@@ -922,8 +1038,8 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
             flexDirection: 'column',
             alignItems: 'center',
             transition: 'all 0.25s ease-in-out',
-            marginTop: (isToolbarPinned || isToolbarHovered) ? '0px' : '-28px',
-            opacity: (isToolbarPinned || isToolbarHovered) ? 1 : 0.45
+            marginTop: (isToolbarPinned || isToolbarHovered) ? '0px' : '-32px',
+            opacity: (isToolbarPinned || isToolbarHovered) ? 1 : 0.85
           }}
         >
           <div
@@ -946,12 +1062,23 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
             <Button
               icon="pi pi-key"
               label="Ctrl+Alt+Del"
-              tooltip="Enviar Ctrl+Alt+Del"
+              tooltip="Enviar Ctrl+Alt+Del a la sesión"
               tooltipOptions={{ position: 'bottom' }}
               size="small"
               className="p-button-text p-button-secondary p-button-sm text-xs py-0 px-2"
               style={{ color: '#e0e0e0', fontSize: '11px' }}
               onClick={handleSendCtrlAltDel}
+            />
+
+            <Button
+              icon="pi pi-microsoft"
+              label="Win"
+              tooltip="Enviar Tecla Windows"
+              tooltipOptions={{ position: 'bottom' }}
+              size="small"
+              className="p-button-text p-button-secondary p-button-sm text-xs py-0 px-2"
+              style={{ color: '#e0e0e0', fontSize: '11px' }}
+              onClick={handleSendWinKey}
             />
 
             <Button
@@ -963,6 +1090,16 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
               style={{ color: '#e0e0e0', fontSize: '11px' }}
               onClick={() => setShowClipboardDialog(true)}
             />
+
+            {isPrinterEnabled && (
+              <span
+                className="flex align-items-center gap-1 text-xs px-2 py-0 border-round font-medium"
+                style={{ backgroundColor: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', fontSize: '11px', height: '22px' }}
+                title="Impresora virtual PDF redirigida (NodeTerm PDF Printer)"
+              >
+                <i className="pi pi-print text-xs"></i> Impresora PDF
+              </span>
+            )}
 
             {isDriveEnabled && (
               <Button
@@ -1013,6 +1150,28 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
               onClick={() => setIsToolbarPinned(!isToolbarPinned)}
             />
           </div>
+          {!(isToolbarPinned || isToolbarHovered) && (
+            <div
+              onClick={() => setIsToolbarPinned(true)}
+              style={{
+                backgroundColor: 'rgba(20, 24, 33, 0.92)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                borderTop: 'none',
+                borderRadius: '0 0 6px 6px',
+                padding: '2px 14px',
+                cursor: 'pointer',
+                color: '#60a5fa',
+                fontSize: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.4)'
+              }}
+              title="Mostrar barra de herramientas RDP"
+            >
+              <i className="pi pi-chevron-down" style={{ fontSize: '9px' }}></i>
+            </div>
+          )}
         </div>
       )}
 

@@ -294,12 +294,20 @@ function prepareMcsConnectInitial(buf, selectedProtocol) {
   return { buf: current, notes, core: findClientCoreData(current) };
 }
 
+const PERF_DISABLE_WALLPAPER = 0x00000001;
+const PERF_DISABLE_FULLWINDOWDRAG = 0x00000002;
+const PERF_DISABLE_MENUANIMATIONS = 0x00000004;
+const PERF_DISABLE_THEMING = 0x00000008;
+const PERF_DISABLE_CURSOR_SHADOW = 0x00000020;
+const PERF_DISABLE_CURSORSETTINGS = 0x00000040;
+const PERF_ENABLE_FONT_SMOOTHING = 0x00000080;
+const PERF_ENABLE_DESKTOP_COMPOSITION = 0x00000100;
+
 /**
- * Inyecta INFO_AUTOLOGON (0x00000008) en TS_INFO_PACKET (MS-RDPBCGR 2.2.1.11.1.1)
- * para que Wallix/Windows Server inicie sesión automáticamente con la contraseña guardada
- * sin mostrar la pantalla interactiva de selección de usuario / petición de contraseña.
+ * Inyecta INFO_AUTOLOGON (0x00000008) y ajusta TS_PERF_FLAGS en TS_INFO_PACKET (MS-RDPBCGR 2.2.1.11.1.1)
+ * para inicio de sesión automático y aplicación de flags de rendimiento (wallpaper, fuentes ClearType, etc.)
  */
-function patchInfoAutoLogon(buf) {
+function patchInfoPacket(buf, options = {}) {
   if (!Buffer.isBuffer(buf) || buf.length < 32) return { buf, patched: false };
   const parsed = parseMcsSendData(buf);
   if (!parsed || parsed.userData.length < 26) return { buf, patched: false };
@@ -311,20 +319,100 @@ function patchInfoAutoLogon(buf) {
     const flags = u.readUInt32LE(off + 4);
     // INFO_UNICODE (0x10) + INFO_MOUSE (0x01)
     if ((flags & 0x0011) === 0x0011 && (flags & 0xff000000) === 0) {
+      const cbDomain = u.readUInt16LE(off + 8);
       const cbUserName = u.readUInt16LE(off + 10);
       const cbPassword = u.readUInt16LE(off + 12);
+      const cbAlternateShell = u.readUInt16LE(off + 14);
+      const cbWorkingDir = u.readUInt16LE(off + 16);
+
       if (cbUserName > 0 && cbPassword > 0) {
+        let out = Buffer.from(buf);
+        let wasPatched = false;
+        const changes = [];
+
+        // 1. Inyectar INFO_AUTOLOGON si no está activo
         if ((flags & 0x0008) === 0) {
-          const out = Buffer.from(buf);
           const dataOff = parsed.dataOff + off + 4;
           out.writeUInt32LE(flags | 0x0008, dataOff);
-          return { buf: out, patched: true, oldFlags: flags, newFlags: flags | 0x0008 };
+          wasPatched = true;
+          changes.push('autologon');
         }
-        return { buf, patched: false, reason: 'already-autologon' };
+
+        // 2. Localizar TS_EXTENDED_INFO_PACKET y ajustar performanceFlags
+        const extOff = off + 18 + cbDomain + cbUserName + cbPassword + cbAlternateShell + cbWorkingDir;
+        if (extOff + 4 <= u.length) {
+          const cbClientAddress = u.readUInt16LE(extOff + 2);
+          const dirOff = extOff + 4 + cbClientAddress;
+          if (dirOff + 2 <= u.length) {
+            const cbClientDir = u.readUInt16LE(dirOff);
+            const tzOff = dirOff + 2 + cbClientDir;
+            const perfFlagsOff = tzOff + 172 + 4; // 172B TimeZone + 4B clientSessionId
+
+            if (perfFlagsOff + 4 <= u.length) {
+              const oldPerfFlags = u.readUInt32LE(perfFlagsOff);
+              let newPerfFlags = oldPerfFlags;
+
+              if (options.enableWallpaper === true) {
+                newPerfFlags &= ~PERF_DISABLE_WALLPAPER;
+              } else if (options.enableWallpaper === false) {
+                newPerfFlags |= PERF_DISABLE_WALLPAPER;
+              }
+
+              if (options.enableFontSmoothing === true) {
+                newPerfFlags |= PERF_ENABLE_FONT_SMOOTHING;
+              } else if (options.enableFontSmoothing === false) {
+                newPerfFlags &= ~PERF_ENABLE_FONT_SMOOTHING;
+              }
+
+              if (options.enableTheming === true) {
+                newPerfFlags &= ~PERF_DISABLE_THEMING;
+              } else if (options.enableTheming === false) {
+                newPerfFlags |= PERF_DISABLE_THEMING;
+              }
+
+              if (options.enableDesktopComposition === true) {
+                newPerfFlags |= PERF_ENABLE_DESKTOP_COMPOSITION;
+              } else if (options.enableDesktopComposition === false) {
+                newPerfFlags &= ~PERF_ENABLE_DESKTOP_COMPOSITION;
+              }
+
+              if (options.enableFullWindowDrag === true) {
+                newPerfFlags &= ~PERF_DISABLE_FULLWINDOWDRAG;
+              } else if (options.enableFullWindowDrag === false) {
+                newPerfFlags |= PERF_DISABLE_FULLWINDOWDRAG;
+              }
+
+              if (options.enableMenuAnimations === true) {
+                newPerfFlags &= ~PERF_DISABLE_MENUANIMATIONS;
+              } else if (options.enableMenuAnimations === false) {
+                newPerfFlags |= PERF_DISABLE_MENUANIMATIONS;
+              }
+
+              if (newPerfFlags !== oldPerfFlags) {
+                const perfDataOff = parsed.dataOff + perfFlagsOff;
+                out.writeUInt32LE(newPerfFlags >>> 0, perfDataOff);
+                wasPatched = true;
+                changes.push(`perfFlags 0x${oldPerfFlags.toString(16)}->0x${newPerfFlags.toString(16)}`);
+              }
+            }
+          }
+        }
+
+        return {
+          buf: wasPatched ? out : buf,
+          patched: wasPatched,
+          oldFlags: flags,
+          newFlags: flags | 0x0008,
+          changes
+        };
       }
     }
   }
-  return { buf, patched: false };
+  return { buf, patched: false, changes: [] };
+}
+
+function patchInfoAutoLogon(buf) {
+  return patchInfoPacket(buf);
 }
 
 module.exports = {
@@ -334,11 +422,18 @@ module.exports = {
   alignDesktopDimension,
   DEFAULT_CLIENT_BUILD,
   DEFAULT_KEYBOARD_LAYOUT,
+  PERF_DISABLE_WALLPAPER,
+  PERF_DISABLE_FULLWINDOWDRAG,
+  PERF_DISABLE_MENUANIMATIONS,
+  PERF_DISABLE_THEMING,
+  PERF_ENABLE_FONT_SMOOTHING,
+  PERF_ENABLE_DESKTOP_COMPOSITION,
   findClientCoreData,
   findClientNetworkChannels,
   ensureMcsServerSelectedProtocol,
   hardenClientCoreData,
   fixWallixGccConnectPduLength,
   prepareMcsConnectInitial,
+  patchInfoPacket,
   patchInfoAutoLogon
 };
