@@ -4,6 +4,13 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      publish_release:
+        description: 'Publicar como Release en GitHub (por defecto solo compila y firma)'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -16,6 +23,12 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
+
+    env:
+      SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+      SIGNPATH_ORGANIZATION_ID: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
+      SIGNPATH_PROJECT_SLUG: ${{ secrets.SIGNPATH_PROJECT_SLUG || 'nodeterm' }}
+      SIGNPATH_SIGNING_POLICY_SLUG: ${{ secrets.SIGNPATH_SIGNING_POLICY_SLUG || 'test-signing' }}
 
     steps:
       - name: Checkout code
@@ -60,7 +73,7 @@ jobs:
           "
 
       - name: Create or Update GitHub Release with Changelog & Commit Summary
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-latest' && (startsWith(github.ref, 'refs/tags/v') || inputs.publish_release == true)
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
@@ -69,7 +82,77 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and Publish Electron Package
+      # Linux & macOS: Direct build and publish
+      - name: Build and Publish Electron Package (Linux / macOS)
+        if: matrix.os != 'windows-latest' && (startsWith(github.ref, 'refs/tags/v') || inputs.publish_release == true)
         run: npx electron-builder --publish always
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Electron Package (Linux / macOS - Test Run)
+        if: matrix.os != 'windows-latest' && !startsWith(github.ref, 'refs/tags/v') && inputs.publish_release != true
+        run: npx electron-builder --publish never
+
+      # Windows: Build unsigned packages first
+      - name: Build Windows Package
+        if: matrix.os == 'windows-latest'
+        run: npx electron-builder --publish never
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Windows: Upload unsigned binaries to Actions artifact
+      - name: Upload Windows Executables for Signing
+        if: matrix.os == 'windows-latest' && env.SIGNPATH_API_TOKEN != ''
+        id: upload-unsigned-win
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-windows-binaries
+          path: dist/*.exe
+          if-no-files-found: error
+
+      # Windows: Submit signing request to SignPath
+      - name: Submit Signing Request to SignPath
+        if: matrix.os == 'windows-latest' && env.SIGNPATH_API_TOKEN != ''
+        uses: signpath/github-action-submit-signing-request@v2
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ env.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ env.SIGNPATH_SIGNING_POLICY_SLUG }}
+          github-artifact-id: ${{ steps.upload-unsigned-win.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: './signed-win'
+
+      # Windows: Overwrite dist with signed binaries and update hashes in latest.yml
+      - name: Replace Dist with Signed Windows Binaries & Update Hashes
+        if: matrix.os == 'windows-latest' && env.SIGNPATH_API_TOKEN != ''
+        shell: pwsh
+        run: |
+          Get-ChildItem -Path "./signed-win" -Filter "*.exe" -Recurse | ForEach-Object {
+            Copy-Item -Path $_.FullName -Destination "./dist/$($_.Name)" -Force
+            Write-Host "Replaced ./dist/$($_.Name) with signed binary from $($_.FullName)"
+          }
+          node scripts/update-signed-hashes.js
+
+      # Windows: Upload signed test artifacts (for manual testing via workflow_dispatch)
+      - name: Upload Signed Windows Artifacts (Test Run)
+        if: matrix.os == 'windows-latest' && !startsWith(github.ref, 'refs/tags/v') && inputs.publish_release != true
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-windows-binaries-test
+          path: |
+            dist/*.exe
+            dist/latest.yml
+
+      # Windows: Publish release assets (when running on a tag or release requested)
+      - name: Publish Windows Release Assets
+        if: matrix.os == 'windows-latest' && (startsWith(github.ref, 'refs/tags/v') || inputs.publish_release == true)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            dist/*.exe
+            dist/*.blockmap
+            dist/latest.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
