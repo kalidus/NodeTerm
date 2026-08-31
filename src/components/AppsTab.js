@@ -180,7 +180,16 @@ const AppsTab = ({
         const status = await window.electron?.ipcRenderer?.invoke('guacamole:get-status');
         if (status) {
           if (typeof status.enabled === 'boolean') {
-            setClients(prev => ({ ...prev, guacamole: status.enabled }));
+            setClients(prev => {
+              if (prev.guacamole !== status.enabled) {
+                const updated = { ...prev, guacamole: status.enabled, rdp: status.enabled };
+                try {
+                  localStorage.setItem(AI_CLIENTS_STORAGE_KEY, JSON.stringify(updated));
+                } catch {}
+                return updated;
+              }
+              return prev;
+            });
           }
           if (status.guacd) {
             setGuacdStatus(status.guacd);

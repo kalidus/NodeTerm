@@ -229,7 +229,16 @@ async function savePreferredGuacdMethod(method) {
   try {
     const dir = path.dirname(prefPath);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(prefPath, JSON.stringify({ preferredMethod: method }, null, 2), 'utf8');
+    
+    let existingPrefs = {};
+    try {
+      if (fs.existsSync(prefPath)) {
+        existingPrefs = JSON.parse(fs.readFileSync(prefPath, 'utf8') || '{}');
+      }
+    } catch {}
+
+    existingPrefs.preferredMethod = method;
+    fs.writeFileSync(prefPath, JSON.stringify(existingPrefs, null, 2), 'utf8');
     return true;
   } catch { 
     return false; 
