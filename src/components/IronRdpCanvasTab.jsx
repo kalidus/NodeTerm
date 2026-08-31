@@ -108,12 +108,26 @@ const sendClipboardToSession = async (session, text) => {
   }
 };
 
+const RESOLUTION_OPTIONS = [
+  { label: '3840x2160', tag: '4K UHD', width: 3840, height: 2160 },
+  { label: '2560x1440', tag: '2K QHD', width: 2560, height: 1440 },
+  { label: '1920x1080', tag: 'Full HD', width: 1920, height: 1080 },
+  { label: '1600x1000', tag: '16:10', width: 1600, height: 1000 },
+  { label: '1600x900', tag: 'HD+', width: 1600, height: 900 },
+  { label: '1440x900', tag: '16:10', width: 1440, height: 900 },
+  { label: '1366x768', tag: 'WXGA', width: 1366, height: 768 },
+  { label: '1280x800', tag: '16:10', width: 1280, height: 800 },
+  { label: '1280x720', tag: 'HD', width: 1280, height: 720 },
+  { label: '1024x768', tag: 'XGA 4:3', width: 1024, height: 768 }
+];
+
 const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true }, ref) => {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const sessionRef = useRef(null);
   const fileTransferProviderRef = useRef(null);
   const toastRef = useRef(null);
+  const resolutionMenuRef = useRef(null);
 
   const [connectionState, setConnectionState] = useState('connecting'); // connecting, connected, error, disconnected
   const [errorMessage, setErrorMessage] = useState('');
@@ -123,13 +137,14 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
   const [clipboardText, setClipboardText] = useState('');
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [activeTransfers, setActiveTransfers] = useState({});
+  const [isAutoResize, setIsAutoResize] = useState(rdpConfig.autoResize !== false);
+  const [showResolutionMenu, setShowResolutionMenu] = useState(false);
 
   const lastReceivedClipboardTextRef = useRef('');
   const lastSentClipboardTextRef = useRef('');
 
   const isDriveEnabled = rdpConfig.enableDrive !== false && (rdpConfig.guacEnableDrive !== false || rdpConfig.redirectFolders !== false || rdpConfig.enableDrive === true);
   const isPrinterEnabled = rdpConfig.redirectPrinters === true;
-  const isAutoResizeEnabled = rdpConfig.autoResize !== false;
   const isFullscreen = rdpConfig.fullscreen === true || rdpConfig.resolution === 'fullscreen';
 
   const alignDesktop = (n) => {
@@ -138,7 +153,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
   };
 
   const calculateInitialDimensions = () => {
-    if (isFullscreen || isAutoResizeEnabled) {
+    if (isFullscreen || (rdpConfig.autoResize !== false)) {
       const rect = containerRef.current?.getBoundingClientRect();
       const w = (rect && rect.width > 100) ? rect.width : (window.innerWidth || 1600);
       const h = (rect && rect.height > 100) ? rect.height : (window.innerHeight || 1000);
@@ -312,7 +327,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
             }
           })
           .extension(enableCredssp(useCredssp))
-          .extension(displayControl(isAutoResizeEnabled));
+          .extension(displayControl(true));
 
         // Registrar extensiones para transferencia de archivos / carpeta compartida (RdpFileTransferProvider)
         if (isDriveEnabled) {
@@ -858,15 +873,39 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
     };
   }, [connectionState, rdpConfig.redirectClipboard]);
 
+  // Cerrar menú de resolución al hacer clic fuera o pulsar Escape
+  useEffect(() => {
+    if (!showResolutionMenu) return;
+
+    const handleClickOutside = (e) => {
+      if (resolutionMenuRef.current && !resolutionMenuRef.current.contains(e.target)) {
+        setShowResolutionMenu(false);
+      }
+    };
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setShowResolutionMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showResolutionMenu]);
+
   // Manejo de redimensionado de canvas dinámico
   useEffect(() => {
-    if (!containerRef.current || connectionState !== 'connected' || !isAutoResizeEnabled) return;
+    if (!containerRef.current || connectionState !== 'connected' || !isAutoResize) return;
 
     let resizeTimer = null;
     const handleResize = () => {
       if (resizeTimer) clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
-        if (!containerRef.current || !sessionRef.current) return;
+        if (!containerRef.current || !sessionRef.current || !isAutoResize) return;
         const rect = containerRef.current.getBoundingClientRect();
         const width = alignDesktop(Math.max(640, rect.width || window.innerWidth));
         const height = alignDesktop(Math.max(480, rect.height || window.innerHeight));
@@ -887,8 +926,67 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
     const resizeObserver = new ResizeObserver(handleResize);
     resizeObserver.observe(containerRef.current);
 
-    return () => resizeObserver.disconnect();
-  }, [connectionState, isAutoResizeEnabled]);
+    return () => {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeObserver.disconnect();
+    };
+  }, [connectionState, isAutoResize]);
+
+  // Selector interactivo de resolución instantánea
+  const handleSelectResolution = (resKey) => {
+    setShowResolutionMenu(false);
+    if (!sessionRef.current) return;
+
+    if (resKey === 'auto') {
+      setIsAutoResize(true);
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const targetW = alignDesktop(Math.max(640, rect.width || window.innerWidth));
+        const targetH = alignDesktop(Math.max(480, rect.height || window.innerHeight));
+        console.log(`📐 [IronRDP] Cambiando a resolución dinámica Auto (${targetW}x${targetH})`);
+        try {
+          if (typeof sessionRef.current.resize === 'function') {
+            sessionRef.current.resize(targetW, targetH);
+          } else if (typeof sessionRef.current.requestDesktopSize === 'function') {
+            sessionRef.current.requestDesktopSize(new Backend.DesktopSize(targetW, targetH));
+          }
+          setDesktopDimensions({ width: targetW, height: targetH });
+          toastRef.current?.show({
+            severity: 'info',
+            summary: 'Ajuste Dinámico',
+            detail: `Resolución adaptada al visor: ${targetW}x${targetH}`,
+            life: 2000
+          });
+        } catch (e) {
+          console.warn('[IronRDP] Error cambiando a resolución Auto:', e);
+        }
+      }
+    } else {
+      setIsAutoResize(false);
+      const parsed = parseResolutionValue(resKey);
+      if (parsed) {
+        const targetW = alignDesktop(parsed.width);
+        const targetH = alignDesktop(parsed.height);
+        console.log(`📐 [IronRDP] Cambiando resolución a ${targetW}x${targetH}`);
+        try {
+          if (typeof sessionRef.current.resize === 'function') {
+            sessionRef.current.resize(targetW, targetH);
+          } else if (typeof sessionRef.current.requestDesktopSize === 'function') {
+            sessionRef.current.requestDesktopSize(new Backend.DesktopSize(targetW, targetH));
+          }
+          setDesktopDimensions({ width: targetW, height: targetH });
+          toastRef.current?.show({
+            severity: 'info',
+            summary: 'Resolución Cambiada',
+            detail: `Resolución configurada a ${targetW}x${targetH}`,
+            life: 2000
+          });
+        } catch (e) {
+          console.warn('[IronRDP] Error cambiando a resolución fija:', e);
+        }
+      }
+    }
+  };
 
   const handleSendCtrlAltDel = () => {
     if (sessionRef.current) {
@@ -999,7 +1097,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
 
       {/* Contenedor de visualización / scroll para el Canvas HTML5 */}
       <div
-        style={isAutoResizeEnabled ? {
+        style={isAutoResize ? {
           width: '100%',
           height: '100%',
           overflow: 'hidden'
@@ -1012,7 +1110,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
         }}
       >
         <div
-          style={isAutoResizeEnabled ? {
+          style={isAutoResize ? {
             width: '100%',
             height: '100%'
           } : {
@@ -1031,7 +1129,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
             tabIndex={0}
             onClick={() => canvasRef.current?.focus()}
             onMouseDown={() => canvasRef.current?.focus()}
-            style={isAutoResizeEnabled ? {
+            style={isAutoResize ? {
               width: '100%',
               height: '100%',
               display: 'block',
@@ -1157,7 +1255,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
         <div
           onMouseEnter={() => setIsToolbarHovered(true)}
           onMouseLeave={() => setIsToolbarHovered(false)}
-          className={`ironrdp-toolbar-wrapper ${(isToolbarPinned || isToolbarHovered) ? 'is-visible' : 'is-hidden'}`}
+          className={`ironrdp-toolbar-wrapper ${(isToolbarPinned || isToolbarHovered || showResolutionMenu) ? 'is-visible' : 'is-hidden'}`}
         >
           <div className="ironrdp-cyber-bar">
             {/* Host Badge */}
@@ -1168,14 +1266,79 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
 
             <span className="ironrdp-cyber-divider" />
 
-            {/* Resolution Badge */}
-            <span
-              className={`ironrdp-badge-resolution ${isAutoResizeEnabled ? 'auto' : 'fixed'}`}
-              title={isAutoResizeEnabled ? 'Ajuste automático activo (se adapta al visor)' : 'Resolución fija configurada'}
-            >
-              <i className="pi pi-desktop"></i>
-              <span>{desktopDimensions.width}x{desktopDimensions.height}{isAutoResizeEnabled ? ' (Auto)' : ''}</span>
-            </span>
+            {/* Resolution Selector Popover */}
+            <div ref={resolutionMenuRef} className="ironrdp-res-wrapper">
+              <button
+                type="button"
+                className={`ironrdp-badge-resolution clickable ${isAutoResize ? 'is-auto' : 'is-fixed'} ${showResolutionMenu ? 'is-open' : ''}`}
+                title="Hacer clic para cambiar la resolución instantáneamente"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowResolutionMenu(prev => !prev);
+                }}
+              >
+                <i className="pi pi-desktop"></i>
+                <span>{desktopDimensions.width}x{desktopDimensions.height}{isAutoResize ? ' (Auto)' : ''}</span>
+                <i className={`pi ${showResolutionMenu ? 'pi-chevron-up' : 'pi-chevron-down'}`} style={{ fontSize: '8px', opacity: 0.85, marginLeft: '2px' }}></i>
+              </button>
+
+              {showResolutionMenu && (
+                <div
+                  className="ironrdp-res-dropdown"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="ironrdp-res-header">
+                    <span>⚡ Resolución RDP</span>
+                    <span className="cyber-dot"></span>
+                  </div>
+
+                  {/* Opción Ajuste Dinámico (Auto) */}
+                  <div
+                    className={`ironrdp-res-item ${isAutoResize ? 'is-selected' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSelectResolution('auto');
+                    }}
+                  >
+                    <div className="ironrdp-res-item-left">
+                      <i className="pi pi-sync text-xs"></i>
+                      <span>Ajuste Dinámico</span>
+                    </div>
+                    <span className="ironrdp-res-tag">AUTO</span>
+                  </div>
+
+                  <div className="ironrdp-res-divider" />
+
+                  {/* Lista de resoluciones predefinidas */}
+                  <div className="ironrdp-res-list">
+                    {RESOLUTION_OPTIONS.map((opt) => {
+                      const isSelected = !isAutoResize && desktopDimensions.width === opt.width && desktopDimensions.height === opt.height;
+                      return (
+                        <div
+                          key={opt.label}
+                          className={`ironrdp-res-item ${isSelected ? 'is-selected' : ''}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSelectResolution(opt.label);
+                          }}
+                        >
+                          <div className="ironrdp-res-item-left">
+                            {isSelected ? (
+                              <i className="pi pi-check text-xs" style={{ color: '#00f0ff' }}></i>
+                            ) : (
+                              <i className="pi pi-stop text-xs" style={{ opacity: 0.3, fontSize: '6px' }}></i>
+                            )}
+                            <span>{opt.label}</span>
+                          </div>
+                          <span className="ironrdp-res-tag">{opt.tag}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
 
             <span className="ironrdp-cyber-divider" />
 

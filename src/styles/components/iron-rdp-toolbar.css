@@ -14,6 +14,7 @@
   align-items: center;
   transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: auto;
+  overflow: visible;
 }
 
 .ironrdp-toolbar-wrapper.is-hidden {
@@ -29,10 +30,12 @@
 .ironrdp-cyber-bar {
   display: flex;
   align-items: center;
+  flex-wrap: nowrap;
   gap: 5px;
   padding: 3px 10px;
   height: 30px;
   box-sizing: border-box;
+  white-space: nowrap;
   background: linear-gradient(180deg, rgba(10, 15, 26, 0.96) 0%, rgba(6, 10, 18, 0.94) 100%);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -46,7 +49,7 @@
   font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
   font-size: 11px;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* Neon Top Micro-Glow Line */
@@ -69,6 +72,7 @@
   gap: 5px;
   padding: 1px 7px;
   height: 22px;
+  flex-shrink: 0;
   border-radius: 4px;
   background: rgba(0, 240, 255, 0.08);
   border: 1px solid rgba(0, 240, 255, 0.35);
@@ -86,21 +90,56 @@
   filter: drop-shadow(0 0 3px #00f0ff);
 }
 
+/* Resolution wrapper */
+.ironrdp-res-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+}
+
 /* Cyber resolution badge */
 .ironrdp-badge-resolution {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
-  padding: 1px 7px;
+  padding: 0 7px;
   height: 22px;
   border-radius: 4px;
+  font-family: inherit;
   font-weight: 600;
   font-size: 10px;
   letter-spacing: 0.02em;
   box-sizing: border-box;
-  transition: all 0.2s ease;
+  margin: 0;
+  outline: none;
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: all 0.16s ease-in-out;
 }
 
+.ironrdp-badge-resolution.clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.ironrdp-badge-resolution.clickable:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.25);
+}
+
+.ironrdp-badge-resolution.clickable.is-open {
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.6), inset 0 0 4px rgba(0, 240, 255, 0.3);
+  border-color: #00f0ff !important;
+}
+
+.ironrdp-badge-resolution.is-auto,
 .ironrdp-badge-resolution.auto {
   background: rgba(14, 165, 233, 0.12);
   border: 1px solid rgba(14, 165, 233, 0.4);
@@ -108,17 +147,155 @@
   text-shadow: 0 0 6px rgba(14, 165, 233, 0.4);
 }
 
-.ironrdp-badge-resolution.fixed {
+.ironrdp-badge-resolution.is-fixed {
   background: rgba(168, 85, 247, 0.12);
   border: 1px solid rgba(168, 85, 247, 0.4);
   color: #c084fc;
   text-shadow: 0 0 6px rgba(168, 85, 247, 0.4);
 }
 
+/* Cyberpunk Resolution Popover Menu */
+.ironrdp-res-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 220px;
+  background: linear-gradient(180deg, rgba(8, 13, 24, 0.98) 0%, rgba(5, 9, 17, 0.96) 100%);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 240, 255, 0.4);
+  border-radius: 8px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.85), 0 0 18px rgba(0, 240, 255, 0.25);
+  padding: 6px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  animation: ironrdp-menu-fade-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes ironrdp-menu-fade-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-4px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+.ironrdp-res-header {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #38bdf8;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 8px 3px 8px;
+  border-bottom: 1px solid rgba(0, 240, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.ironrdp-res-header span.cyber-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: #00f0ff;
+  box-shadow: 0 0 6px #00f0ff;
+}
+
+.ironrdp-res-list {
+  max-height: 240px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-right: 2px;
+}
+
+/* Custom cyber scrollbar for resolution list */
+.ironrdp-res-list::-webkit-scrollbar {
+  width: 4px;
+}
+.ironrdp-res-list::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 2px;
+}
+.ironrdp-res-list::-webkit-scrollbar-thumb {
+  background: rgba(0, 240, 255, 0.4);
+  border-radius: 2px;
+}
+.ironrdp-res-list::-webkit-scrollbar-thumb:hover {
+  background: #00f0ff;
+  box-shadow: 0 0 6px #00f0ff;
+}
+
+.ironrdp-res-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px;
+  border-radius: 4px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #cbd5e1;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.14s ease;
+  user-select: none;
+}
+
+.ironrdp-res-item:hover {
+  background: rgba(0, 240, 255, 0.12);
+  border-color: rgba(0, 240, 255, 0.4);
+  color: #ffffff;
+  transform: translateX(2px);
+}
+
+.ironrdp-res-item.is-selected {
+  background: rgba(0, 240, 255, 0.18);
+  border-color: #00f0ff;
+  color: #00f0ff;
+  font-weight: 600;
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.25);
+}
+
+.ironrdp-res-item-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ironrdp-res-tag {
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.ironrdp-res-item.is-selected .ironrdp-res-tag {
+  background: rgba(0, 240, 255, 0.25);
+  color: #7dd3fc;
+}
+
+.ironrdp-res-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.3), transparent);
+  margin: 3px 0;
+}
+
 /* Cyber divider */
 .ironrdp-cyber-divider {
   width: 1px;
   height: 14px;
+  flex-shrink: 0;
   background: linear-gradient(180deg, transparent, rgba(0, 240, 255, 0.4), transparent);
   margin: 0 2px;
 }
@@ -131,6 +308,7 @@
   gap: 4px;
   height: 22px;
   padding: 0 7px;
+  flex-shrink: 0;
   border-radius: 4px;
   font-size: 10.5px;
   font-weight: 600;
