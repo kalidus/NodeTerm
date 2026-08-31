@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Rnd } from 'react-rnd';
 import { Card } from 'primereact/card';
 import { TabView, TabPanel } from 'primereact/tabview';
@@ -35,6 +35,83 @@ const HOME_TERMINAL_FRAME_STYLE_OPTIONS = [
   { id: 'minimal', label: 'Minimal (Sin botones)', noButtons: true },
   { id: 'retro', label: 'Retro (CRT)', color: '#0f0', switch: true }
 ];
+
+const computeDefaultPanelsLayout = (cWidth = (typeof window !== 'undefined' ? window.innerWidth : 1200), cHeight = (typeof window !== 'undefined' ? window.innerHeight : 800)) => {
+  const w = cWidth > 100 ? cWidth : 1200;
+  const h = cHeight > 100 ? cHeight : 800;
+
+  const searchWidth = Math.min(Math.max(540, Math.floor(w * 0.5)), 660);
+  const searchHeight = 126;
+  const searchX = Math.max(20, Math.floor((w - searchWidth) / 2));
+  const searchY = 16;
+
+  const termMargin = 20;
+  const termX = termMargin;
+  const termY = searchY + searchHeight + 12;
+  const termWidth = Math.max(380, w - termMargin * 2);
+  const termHeight = Math.max(240, h - termY - 24);
+
+  const recentsWidth = Math.min(780, Math.floor(w * 0.6));
+  const recentsHeight = Math.min(460, Math.floor(h * 0.6));
+
+  return {
+    search: {
+      visible: true,
+      x: searchX,
+      y: searchY,
+      width: searchWidth,
+      height: searchHeight,
+      minWidth: 320,
+      minHeight: 110,
+      zIndex: 20,
+      isMaximized: false
+    },
+    terminal: {
+      visible: true,
+      x: termX,
+      y: termY,
+      width: termWidth,
+      height: termHeight,
+      minWidth: 380,
+      minHeight: 200,
+      zIndex: 10,
+      isMaximized: false
+    },
+    recents: {
+      visible: false,
+      x: Math.max(20, Math.floor(w * 0.05)),
+      y: Math.max(40, termY + 20),
+      width: recentsWidth,
+      height: recentsHeight,
+      minWidth: 360,
+      minHeight: 200,
+      zIndex: 15,
+      isMaximized: false
+    },
+    favorites: {
+      visible: false,
+      x: Math.max(40, Math.floor(w * 0.08)),
+      y: Math.max(60, termY + 40),
+      width: recentsWidth,
+      height: recentsHeight,
+      minWidth: 360,
+      minHeight: 200,
+      zIndex: 16,
+      isMaximized: false
+    },
+    quickbar: {
+      visible: false,
+      x: Math.max(20, w - 280),
+      y: termY,
+      width: 250,
+      height: Math.max(300, termHeight),
+      minWidth: 200,
+      minHeight: 250,
+      zIndex: 12,
+      isMaximized: false
+    }
+  };
+};
 
 const HomeTab = ({
   isActiveTab = true,
@@ -206,13 +283,169 @@ const HomeTab = ({
   const containerRef = useRef(null);
   const mainAreaRef = useRef(null);
 
-
   const homeOptionsOverlayRef = useRef(null);
   const localThemeOverlayRef = useRef(null);
   const frameStyleOverlayRef = useRef(null);
   const [containerHeight, setContainerHeight] = useState(window.innerHeight - 100);
   const [containerWidth, setContainerWidth] = useState(window.innerWidth - 100);
   const [hasUserMovedTerminal, setHasUserMovedTerminal] = useState(false);
+
+  // Estado modular para paneles arrastrables y redimensionables
+  const [panelsLayout, setPanelsLayout] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.HOME_TAB_PANELS_LAYOUT);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const defaults = computeDefaultPanelsLayout();
+        return { ...defaults, ...parsed };
+      }
+    } catch (e) {
+      console.warn('Failed to parse saved home panels layout:', e);
+    }
+    return computeDefaultPanelsLayout();
+  });
+
+  const [snapToGrid, setSnapToGrid] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.HOME_TAB_SNAP_TO_GRID);
+      return saved !== null ? saved === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
+
+  // Persistencia con debounce para el layout de paneles
+  const savePanelsLayoutTimerRef = useRef(null);
+  const savePanelsLayoutDebounced = useCallback((layout) => {
+    if (savePanelsLayoutTimerRef.current) {
+      clearTimeout(savePanelsLayoutTimerRef.current);
+    }
+    savePanelsLayoutTimerRef.current = setTimeout(() => {
+      try {
+        localStorage.setItem(STORAGE_KEYS.HOME_TAB_PANELS_LAYOUT, JSON.stringify(layout));
+      } catch (err) {
+        console.error('Error saving home panels layout:', err);
+      }
+    }, 400);
+  }, []);
+
+  const handlePanelLayoutChange = useCallback((panelId, updates) => {
+    setPanelsLayout((prev) => {
+      const currentPanel = prev[panelId] || {};
+      const updatedPanel = { ...currentPanel, ...updates };
+      const next = { ...prev, [panelId]: updatedPanel };
+      savePanelsLayoutDebounced(next);
+      return next;
+    });
+  }, [savePanelsLayoutDebounced]);
+
+  const handleBringToFront = useCallback((panelId) => {
+    setPanelsLayout((prev) => {
+      const current = prev[panelId];
+      if (!current) return prev;
+      let maxZ = 10;
+      Object.values(prev).forEach((p) => {
+        if (p && typeof p.zIndex === 'number') maxZ = Math.max(maxZ, p.zIndex);
+      });
+      if (current.zIndex >= maxZ) return prev;
+      const next = { ...prev, [panelId]: { ...current, zIndex: maxZ + 1 } };
+      savePanelsLayoutDebounced(next);
+      return next;
+    });
+  }, [savePanelsLayoutDebounced]);
+
+  const handleTogglePanelVisibility = useCallback((panelId, forceState) => {
+    setPanelsLayout((prev) => {
+      const current = prev[panelId];
+      if (!current) return prev;
+      const isVis = forceState !== undefined ? forceState : !current.visible;
+      let maxZ = 10;
+      Object.values(prev).forEach((p) => {
+        if (p && typeof p.zIndex === 'number') maxZ = Math.max(maxZ, p.zIndex);
+      });
+      const next = {
+        ...prev,
+        [panelId]: {
+          ...current,
+          visible: isVis,
+          zIndex: isVis ? maxZ + 1 : current.zIndex
+        }
+      };
+      savePanelsLayoutDebounced(next);
+      return next;
+    });
+  }, [savePanelsLayoutDebounced]);
+
+  const handleClosePanel = useCallback((panelId) => {
+    handleTogglePanelVisibility(panelId, false);
+  }, [handleTogglePanelVisibility]);
+
+  const handleToggleMaximizePanel = useCallback((panelId) => {
+    setPanelsLayout((prev) => {
+      const current = prev[panelId];
+      if (!current) return prev;
+      const next = {
+        ...prev,
+        [panelId]: {
+          ...current,
+          isMaximized: !current.isMaximized
+        }
+      };
+      savePanelsLayoutDebounced(next);
+      return next;
+    });
+  }, [savePanelsLayoutDebounced]);
+
+  const handleResetLayout = useCallback(() => {
+    const fresh = computeDefaultPanelsLayout(containerWidth, containerHeight);
+    setPanelsLayout(fresh);
+    localStorage.setItem(STORAGE_KEYS.HOME_TAB_PANELS_LAYOUT, JSON.stringify(fresh));
+    window.dispatchEvent(new Event('resize'));
+  }, [containerWidth, containerHeight]);
+
+  const handleApplySplitPreset = useCallback(() => {
+    const w = containerWidth > 100 ? containerWidth : window.innerWidth;
+    const h = containerHeight > 100 ? containerHeight : window.innerHeight;
+    const colW = Math.max(340, Math.floor((w - 48) / 2));
+    const searchH = 124;
+    const topY = 16;
+    const bottomY = topY + searchH + 12;
+    const bottomH = Math.max(220, h - bottomY - 24);
+
+    const next = {
+      ...panelsLayout,
+      search: { ...panelsLayout.search, visible: true, x: Math.max(20, Math.floor((w - 560) / 2)), y: topY, width: 560, height: searchH, isMaximized: false },
+      terminal: { ...panelsLayout.terminal, visible: true, x: 16, y: bottomY, width: colW, height: bottomH, zIndex: 12, isMaximized: false },
+      recents: { ...panelsLayout.recents, visible: true, x: 28 + colW, y: bottomY, width: colW, height: bottomH, zIndex: 11, isMaximized: false }
+    };
+    setPanelsLayout(next);
+    localStorage.setItem(STORAGE_KEYS.HOME_TAB_PANELS_LAYOUT, JSON.stringify(next));
+    window.dispatchEvent(new Event('resize'));
+  }, [containerWidth, containerHeight, panelsLayout]);
+
+  const handleApplyTerminalMaxPreset = useCallback(() => {
+    const w = containerWidth > 100 ? containerWidth : window.innerWidth;
+    const h = containerHeight > 100 ? containerHeight : window.innerHeight;
+    const next = {
+      ...panelsLayout,
+      search: { ...panelsLayout.search, visible: true, x: Math.max(20, Math.floor((w - 580) / 2)), y: 12, width: 580, height: 120, zIndex: 20, isMaximized: false },
+      terminal: { ...panelsLayout.terminal, visible: true, x: 16, y: 140, width: w - 32, height: h - 156, zIndex: 10, isMaximized: false },
+      recents: { ...panelsLayout.recents, visible: false },
+      favorites: { ...panelsLayout.favorites, visible: false },
+      quickbar: { ...panelsLayout.quickbar, visible: false }
+    };
+    setPanelsLayout(next);
+    localStorage.setItem(STORAGE_KEYS.HOME_TAB_PANELS_LAYOUT, JSON.stringify(next));
+    window.dispatchEvent(new Event('resize'));
+  }, [containerWidth, containerHeight, panelsLayout]);
+
+  const handleToggleSnapToGrid = useCallback(() => {
+    setSnapToGrid((prev) => {
+      const next = !prev;
+      localStorage.setItem(STORAGE_KEYS.HOME_TAB_SNAP_TO_GRID, String(next));
+      return next;
+    });
+  }, []);
 
   // Estado para el terminal embebido como vista integrada (por defecto visible)
   const [terminalView, setTerminalView] = useState(true);
@@ -1504,29 +1737,176 @@ const HomeTab = ({
               </label>
             </div>
 
-            <div className="menu-item-row" onClick={handleToggleRightColumnVisibility}>
-              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.88rem', fontWeight: 500 }}>Barra derecha (accesos rápidos)</span>
+            <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '6px 0' }} />
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '4px 0 2px 0' }}>
+              <span style={{ color: themeColors.primaryColor || '#2196f3', fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                Paneles de Inicio
+              </span>
+            </div>
+
+            <div className="menu-item-row" onClick={() => handleTogglePanelVisibility('search')}>
+              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem', fontWeight: 500 }}>
+                <i className="pi pi-search" style={{ marginRight: '6px', fontSize: '0.8rem', opacity: 0.7 }} />
+                Buscador y Acciones
+              </span>
               <label className="premium-switch" onClick={(e) => e.stopPropagation()}>
                 <input 
                   type="checkbox" 
-                  checked={rightColumnVisible} 
-                  onChange={handleToggleRightColumnVisibility} 
+                  checked={panelsLayout?.search?.visible !== false} 
+                  onChange={() => handleTogglePanelVisibility('search')} 
                 />
                 <span className="premium-slider"></span>
               </label>
             </div>
 
-            <div className="menu-item-row" onClick={handleToggleHomeCardVisibility}>
-              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.88rem', fontWeight: 500 }}>Tarjeta Home (Buscador/Acciones)</span>
+            <div className="menu-item-row" onClick={() => handleTogglePanelVisibility('terminal')}>
+              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem', fontWeight: 500 }}>
+                <i className="pi pi-desktop" style={{ marginRight: '6px', fontSize: '0.8rem', opacity: 0.7 }} />
+                Terminal Integrado
+              </span>
               <label className="premium-switch" onClick={(e) => e.stopPropagation()}>
                 <input 
                   type="checkbox" 
-                  checked={homeCardVisible} 
-                  onChange={handleToggleHomeCardVisibility} 
+                  checked={panelsLayout?.terminal?.visible !== false} 
+                  onChange={() => handleTogglePanelVisibility('terminal')} 
                 />
                 <span className="premium-slider"></span>
               </label>
             </div>
+
+            <div className="menu-item-row" onClick={() => handleTogglePanelVisibility('recents')}>
+              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem', fontWeight: 500 }}>
+                <i className="pi pi-clock" style={{ marginRight: '6px', fontSize: '0.8rem', opacity: 0.7 }} />
+                Sesiones Recientes
+              </span>
+              <label className="premium-switch" onClick={(e) => e.stopPropagation()}>
+                <input 
+                  type="checkbox" 
+                  checked={!!panelsLayout?.recents?.visible} 
+                  onChange={() => handleTogglePanelVisibility('recents')} 
+                />
+                <span className="premium-slider"></span>
+              </label>
+            </div>
+
+            <div className="menu-item-row" onClick={() => handleTogglePanelVisibility('favorites')}>
+              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem', fontWeight: 500 }}>
+                <i className="pi pi-star" style={{ marginRight: '6px', fontSize: '0.8rem', opacity: 0.7 }} />
+                Favoritos
+              </span>
+              <label className="premium-switch" onClick={(e) => e.stopPropagation()}>
+                <input 
+                  type="checkbox" 
+                  checked={!!panelsLayout?.favorites?.visible} 
+                  onChange={() => handleTogglePanelVisibility('favorites')} 
+                />
+                <span className="premium-slider"></span>
+              </label>
+            </div>
+
+            <div className="menu-item-row" onClick={() => handleTogglePanelVisibility('quickbar')}>
+              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem', fontWeight: 500 }}>
+                <i className="pi pi-th-large" style={{ marginRight: '6px', fontSize: '0.8rem', opacity: 0.7 }} />
+                Barra Accesos Rápidos
+              </span>
+              <label className="premium-switch" onClick={(e) => e.stopPropagation()}>
+                <input 
+                  type="checkbox" 
+                  checked={!!panelsLayout?.quickbar?.visible} 
+                  onChange={() => handleTogglePanelVisibility('quickbar')} 
+                />
+                <span className="premium-slider"></span>
+              </label>
+            </div>
+
+            <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '6px 0' }} />
+
+            <div className="menu-item-row" onClick={handleToggleSnapToGrid}>
+              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem', fontWeight: 500 }}>
+                <i className="pi pi-table" style={{ marginRight: '6px', fontSize: '0.8rem', opacity: 0.7 }} />
+                Alinear a cuadrícula (10px)
+              </span>
+              <label className="premium-switch" onClick={(e) => e.stopPropagation()}>
+                <input 
+                  type="checkbox" 
+                  checked={snapToGrid} 
+                  onChange={handleToggleSnapToGrid} 
+                />
+                <span className="premium-slider"></span>
+              </label>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '6px' }}>
+              <button
+                type="button"
+                onClick={handleApplySplitPreset}
+                style={{
+                  padding: '6px 8px',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  background: 'rgba(255,255,255,0.04)',
+                  color: themeColors.textPrimary || '#fff',
+                  fontSize: '0.78rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  transition: 'all 0.2s ease'
+                }}
+                title="Diseño dividido: Terminal a la izquierda y Recientes a la derecha"
+              >
+                <i className="pi pi-pause" style={{ transform: 'rotate(90deg)', fontSize: '0.7rem' }} /> 2 Columnas
+              </button>
+              <button
+                type="button"
+                onClick={handleApplyTerminalMaxPreset}
+                style={{
+                  padding: '6px 8px',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  background: 'rgba(255,255,255,0.04)',
+                  color: themeColors.textPrimary || '#fff',
+                  fontSize: '0.78rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  transition: 'all 0.2s ease'
+                }}
+                title="Maximizar terminal en la pantalla de inicio"
+              >
+                <i className="pi pi-window-maximize" style={{ fontSize: '0.7rem' }} /> Terminal Max
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleResetLayout}
+              style={{
+                width: '100%',
+                padding: '6px 8px',
+                borderRadius: '6px',
+                border: '1px solid rgba(255,255,255,0.12)',
+                background: 'rgba(255,255,255,0.04)',
+                color: themeColors.textPrimary || '#fff',
+                fontSize: '0.78rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                marginTop: '4px',
+                transition: 'all 0.2s ease'
+              }}
+              title="Restablecer posición y tamaño de todos los paneles a sus valores por defecto"
+            >
+              <i className="pi pi-refresh" style={{ fontSize: '0.75rem' }} /> Restablecer Posiciones
+            </button>
+
+            <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '6px 0' }} />
 
             <div className="menu-item-row" onClick={() => {
               try {
@@ -1709,6 +2089,13 @@ const HomeTab = ({
                   rightQuickBar={flushRightQuickBar ? homeRightQuickBar : null}
                   localTerminalMaximized={localTerminalMaximized}
                   onToggleLocalTerminalMaximized={handleToggleLocalTerminalMaximized}
+                  panelsLayout={panelsLayout}
+                  onLayoutChange={handlePanelLayoutChange}
+                  onBringToFront={handleBringToFront}
+                  onClosePanel={handleClosePanel}
+                  onToggleMaximizePanel={handleToggleMaximizePanel}
+                  onTogglePanelVisibility={handleTogglePanelVisibility}
+                  snapToGrid={snapToGrid}
                   onSwitchTerminal={(type, info) => {
                     if (showLocalTerminalTabs && embeddedTabbedTerminalRef.current?.addTerminalTab) {
                       embeddedTabbedTerminalRef.current.addTerminalTab(type, info);

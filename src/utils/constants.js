@@ -15,6 +15,8 @@ export const STORAGE_KEYS = {
   HOME_TAB_LOCAL_TERMINAL_TABS_VISIBLE: 'homeTab_localTerminalTabsVisible',
   HOME_TAB_LOCAL_TERMINAL_WORKSPACE: 'homeTab_localTerminalWorkspace',
   HOME_TAB_LOCAL_TERMINAL_MAXIMIZED: 'homeTab_localTerminalMaximized',
+  HOME_TAB_PANELS_LAYOUT: 'nodeterm_home_panels_layout',
+  HOME_TAB_SNAP_TO_GRID: 'nodeterm_home_snap_to_grid',
   TERMINAL_FRAME_STYLE: 'nodeterm_terminal_frame_style',
   MAIN_FRAME_HEADER_START_COLLAPSED: 'nodeterm_main_frame_header_start_collapsed',
   MINIMAL_MODE: 'nodeterm_minimal_mode',

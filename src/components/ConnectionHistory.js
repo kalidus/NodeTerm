@@ -17,6 +17,7 @@ import { FaWindows, FaUbuntu, FaLinux } from 'react-icons/fa';
 import { SiAnthropic, SiDebian, SiDocker, SiGooglegemini, SiOpenai } from 'react-icons/si';
 import AIClientBrandIcon from './AIClientBrandIcon';
 import { appConfirm } from './ui/AppConfirm';
+import HomePanelWrapper from './HomePanelWrapper';
 
 // Formatear "Hace 5m", "Hace 2 h", "Ayer", etc.
 function formatRelativeTime(iso) {
@@ -231,6 +232,14 @@ const ConnectionHistory = ({
 	rightQuickBar = null,
 	localTerminalMaximized = false,
 	onToggleLocalTerminalMaximized = () => {},
+	// Props para layout modular y paneles arrastrables
+	panelsLayout = null,
+	onLayoutChange = null,
+	onBringToFront = null,
+	onClosePanel = null,
+	onToggleMaximizePanel = null,
+	onTogglePanelVisibility = null,
+	snapToGrid = true,
 	children
 }) => {
 	// Helper para ajustar la opacidad de los colores (Hex o RGBA)
@@ -1612,9 +1621,489 @@ const ConnectionHistory = ({
 		);
 	};
 
+	// Sub-renderizador para el contenido de la tarjeta de búsqueda
+	const renderSearchCardBody = () => (
+		<div className="top-terminal-body" style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '10px 16px' }}>
+			<div className="hero-search-container" style={{ margin: '0 0 6px 0', width: '100%', maxWidth: '100%' }}>
+				<InputText
+					value={searchTerm}
+					onChange={(e) => setSearchTerm(e.target.value)}
+					onKeyDown={handleSearchKeyDown}
+					className="hero-search-input"
+					placeholder="Search or connect to a host..."
+					onBlur={() => {
+						setTimeout(() => setShowDropdown(false), 200);
+					}}
+					onFocus={() => {
+						if (filteredSearchResults.length > 0) setShowDropdown(true);
+					}}
+					autoComplete="off"
+				/>
+				{isSearching && (
+					<i className="pi pi-spin pi-spinner hero-search-spinner" />
+				)}
+
+				<button
+					className="hero-terminal-btn"
+					title="Mostrar/ocultar terminal local"
+					onClick={(e) => {
+						e.stopPropagation();
+						if (onTogglePanelVisibility) {
+							onTogglePanelVisibility('terminal');
+						} else if (onToggleTerminalVisibility) {
+							onToggleTerminalVisibility();
+						}
+					}}
+				>
+					<span className="btn-prompt">$</span><span className="btn-cursor">_</span>
+				</button>
+
+				{showDropdown && ReactDOM.createPortal(
+					<div
+						className="hero-search-dropdown"
+						style={{
+							width: 'min(600px, 90vw)',
+							left: '50%',
+							top: document.querySelector('.hero-search-input')?.getBoundingClientRect().bottom || 0,
+							transform: 'translateX(-50%)'
+						}}
+					>
+						{filteredSearchResults.map((node, idx) => {
+							const isPassword = node.data?.type === 'password';
+							const color = isPassword ? '#E91E63' : getConnectionTypeColor(node.data?.type);
+							const label = node.label;
+							const sub = isPassword ? (node.data.url || node.data.username) : (node.data.host || node.data.hostname || node.data.server);
+							const folderPath = getNodeFolderPath(sidebarNodes, node);
+							const folderPathString = folderPath && folderPath.length > 0 ? folderPath.join(' / ') : 'Raíz';
+
+							return (
+								<div
+									key={node.key}
+									className={`search-result-item ${activeIndex === idx ? 'active' : ''}`}
+									onClick={() => handleSelectSearchResult(node)}
+									onMouseEnter={() => setActiveIndex(idx)}
+								>
+									<div className="search-result-icon" style={{ background: `${color}15`, color }}>
+										<i className={isPassword ? 'pi pi-key' : getConnectionTypeIcon(node.data?.type)} />
+									</div>
+									<div className="search-result-info">
+										<div className="search-result-flex-header">
+											<span className="search-result-label">{label}</span>
+											<span className="search-result-type" style={{ background: `${color}20`, color, borderColor: `${color}40`, border: '1px solid' }}>
+												{isPassword ? 'PWD' : getProtocolLabel(node.data?.type)}
+											</span>
+										</div>
+										<div className="search-result-sub-container">
+											<span className="search-result-sub">{sub}</span>
+											{!isPassword && <span className="search-result-folder">📁  {folderPathString}</span>}
+										</div>
+									</div>
+								</div>
+							);
+						})}
+					</div>,
+					document.body
+				)}
+			</div>
+
+			<div className="hero-action-buttons">
+				<button
+					className={`hero-action-btn terminal-primary ${panelsLayout?.terminal?.visible !== false ? 'active' : ''}`}
+					title="Abrir o enfocar terminal"
+					onClick={(e) => {
+						e.stopPropagation();
+						if (onTogglePanelVisibility) {
+							onTogglePanelVisibility('terminal', true);
+							onBringToFront?.('terminal');
+						} else if (onTerminalToggle) {
+							const terminalType = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
+							onTerminalToggle(true, terminalType, false);
+						}
+					}}
+				>
+					<i className="pi pi-plus-circle" /> Terminal
+				</button>
+				<button
+					className={`hero-action-btn ${panelsLayout ? (panelsLayout?.recents?.visible ? 'active' : '') : (terminalView ? (splitOpen && splitView === 'recent' ? 'active' : '') : (activeBottomView === 'recent' && !terminalView ? 'active' : ''))}`}
+					onClick={() => {
+						if (onTogglePanelVisibility) {
+							onTogglePanelVisibility('recents', !panelsLayout?.recents?.visible);
+							if (!panelsLayout?.recents?.visible) onBringToFront?.('recents');
+						} else if (terminalView) {
+							handleToggleSplit('recent');
+						} else {
+							setActiveBottomView('recent');
+						}
+					}}
+				>
+					<i className="pi pi-clock" /> Recientes
+				</button>
+				<button
+					className={`hero-action-btn ${panelsLayout ? (panelsLayout?.favorites?.visible ? 'active' : '') : (terminalView ? (splitOpen && splitView === 'favorites' ? 'active' : '') : (activeBottomView === 'favorites' && !terminalView ? 'active' : ''))}`}
+					onClick={() => {
+						if (onTogglePanelVisibility) {
+							onTogglePanelVisibility('favorites', !panelsLayout?.favorites?.visible);
+							if (!panelsLayout?.favorites?.visible) onBringToFront?.('favorites');
+						} else if (terminalView) {
+							handleToggleSplit('favorites');
+						} else {
+							setActiveBottomView('favorites');
+						}
+					}}
+				>
+					<i className="pi pi-star" /> Favoritos
+				</button>
+			</div>
+		</div>
+	);
+
+	// Sub-renderizador para tabla de Recientes
+	const renderRecentsTableBody = () => (
+		<div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+			{getActiveFilterCount(activeRecentFilters) > 0 && (
+				<div className="recents-filter-chips-bar" style={{ padding: '6px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+					{activeRecentFilters.protocols?.map(filterId => (
+						<FilterBadge
+							key={`protocol-${filterId}`}
+							label={getFilterLabel('protocols', filterId)}
+							color={getFilterColor('protocols', filterId)}
+							icon={getFilterIcon('protocols', filterId)}
+							type="protocol"
+							onRemove={() => handleRemoveFilter('recents', 'protocols', filterId)}
+							compact
+						/>
+					))}
+					{activeRecentFilters.groups?.map(filterId => (
+						<FilterBadge
+							key={`group-${filterId}`}
+							label={getFilterLabel('groups', filterId)}
+							color={getFilterColor('groups', filterId)}
+							icon={getFilterIcon('groups', filterId)}
+							type="group"
+							onRemove={() => handleRemoveFilter('recents', 'groups', filterId)}
+							compact
+						/>
+					))}
+					{activeRecentFilters.states?.map(filterId => (
+						<FilterBadge
+							key={`state-${filterId}`}
+							label={getFilterLabel('states', filterId)}
+							color={getFilterColor('states', filterId)}
+							icon={getFilterIcon('states', filterId)}
+							type="state"
+							onRemove={() => handleRemoveFilter('recents', 'states', filterId)}
+							compact
+						/>
+					))}
+				</div>
+			)}
+			<div className="recents-terminal-body" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+				<ConnectionTable
+					connections={filteredRecentsForDisplay}
+					title="Nombre"
+					emptyMessage="# no recent sessions"
+				/>
+			</div>
+		</div>
+	);
+
+	// Sub-renderizador para tabla de Favoritos
+	const renderFavoritesTableBody = () => (
+		<div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+			{getActiveFilterCount(activeFavFilters) > 0 && (
+				<div className="recents-filter-chips-bar" style={{ padding: '6px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+					{activeFavFilters.protocols?.map(filterId => (
+						<FilterBadge
+							key={`fav-protocol-${filterId}`}
+							label={getFilterLabel('protocols', filterId)}
+							color={getFilterColor('protocols', filterId)}
+							icon={getFilterIcon('protocols', filterId)}
+							type="protocol"
+							onRemove={() => handleRemoveFilter('favorites', 'protocols', filterId)}
+							compact
+						/>
+					))}
+					{activeFavFilters.groups?.map(filterId => (
+						<FilterBadge
+							key={`fav-group-${filterId}`}
+							label={getFilterLabel('groups', filterId)}
+							color={getFilterColor('groups', filterId)}
+							icon={getFilterIcon('groups', filterId)}
+							type="group"
+							onRemove={() => handleRemoveFilter('favorites', 'groups', filterId)}
+							compact
+						/>
+					))}
+					{activeFavFilters.states?.map(filterId => (
+						<FilterBadge
+							key={`fav-state-${filterId}`}
+							label={getFilterLabel('states', filterId)}
+							color={getFilterColor('states', filterId)}
+							icon={getFilterIcon('states', filterId)}
+							type="state"
+							onRemove={() => handleRemoveFilter('favorites', 'states', filterId)}
+							compact
+						/>
+					))}
+				</div>
+			)}
+			<div className="recents-terminal-body" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+				<ConnectionTable
+					connections={filteredFavorites}
+					title="Favoritos"
+					emptyMessage="# no favorite sessions found"
+				/>
+			</div>
+		</div>
+	);
+
+	// Sub-renderizador para terminal embebido con split
+	const renderTerminalSplitBody = () => (
+		<div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+			<div
+				ref={splitBodyRef}
+				style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}
+			>
+				<div style={{ flex: 1, minWidth: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+					{children}
+				</div>
+
+				{splitOpen && (() => {
+					const splitConnections = splitView === 'favorites' ? filteredFavorites : filteredRecentsForDisplay;
+					const panelW = splitWidth !== null
+						? splitWidth
+						: (splitBodyRef.current ? splitBodyRef.current.getBoundingClientRect().width * 0.25 : 220);
+					return (
+						<>
+							<div
+								onMouseDown={handleSplitDragStart}
+								style={{
+									width: 4, height: '100%', cursor: 'col-resize', flexShrink: 0,
+									background: 'rgba(255,255,255,0.06)', transition: 'background 0.15s',
+								}}
+								onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+								onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+								title="Arrastrar para redimensionar"
+							/>
+							<div style={{
+								width: panelW,
+								minWidth: 160,
+								maxWidth: '60%',
+								flexShrink: 0,
+								display: 'flex',
+								flexDirection: 'column',
+								overflow: 'hidden',
+							}}>
+								<div style={{
+									display: 'flex',
+									alignItems: 'center',
+									gap: 2,
+									padding: '4px 8px',
+									borderBottom: `1px solid rgba(255,255,255,0.06)`,
+									flexShrink: 0,
+								}}>
+									<button
+										onClick={() => setSplitView('recent')}
+										style={{
+											flex: 1, padding: '3px 5px', border: 'none', borderRadius: 3,
+											cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'inherit',
+											background: splitView === 'recent' ? 'rgba(79,195,247,0.14)' : 'transparent',
+											color: splitView === 'recent' ? '#4fc3f7' : 'rgba(255,255,255,0.35)',
+											fontWeight: splitView === 'recent' ? 700 : 400,
+											display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3,
+										}}
+									>
+										<i className="pi pi-clock" style={{ fontSize: '0.65rem' }} /> Recientes
+									</button>
+									<button
+										onClick={() => setSplitView('favorites')}
+										style={{
+											flex: 1, padding: '3px 5px', border: 'none', borderRadius: 3,
+											cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'inherit',
+											background: splitView === 'favorites' ? 'rgba(255,215,0,0.1)' : 'transparent',
+											color: splitView === 'favorites' ? '#FFD700' : 'rgba(255,255,255,0.35)',
+											fontWeight: splitView === 'favorites' ? 700 : 400,
+											display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3,
+										}}
+									>
+										<i className="pi pi-star" style={{ fontSize: '0.65rem' }} /> Favoritos
+									</button>
+									<button
+										onClick={() => setSplitOpen(false)}
+										title="Cerrar split"
+										style={{
+											padding: '3px 5px', border: 'none', borderRadius: 3,
+											cursor: 'pointer', background: 'transparent',
+											color: 'rgba(255,255,255,0.2)', fontSize: '0.6rem', flexShrink: 0,
+										}}
+										onMouseEnter={e => e.currentTarget.style.color = '#ff5f56'}
+										onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.2)'}
+									>
+										<i className="pi pi-times" />
+									</button>
+								</div>
+								<div style={{
+									display: 'flex',
+									alignItems: 'center',
+									justifyContent: 'space-between',
+									padding: '2px 8px',
+									fontSize: '0.62rem',
+									color: 'rgba(255,255,255,0.25)',
+									fontFamily: "'Fira Code', monospace",
+									borderBottom: `1px solid rgba(255,255,255,0.04)`,
+									flexShrink: 0,
+								}}>
+									<div>
+										<span style={{ color: 'rgba(255,255,255,0.4)' }}>~</span>/{splitView === 'favorites' ? 'favorites' : 'recent'} · {splitConnections.length}
+									</div>
+									<div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+										<button
+											className="split-header-filter-btn"
+											onClick={(e) => {
+												e.stopPropagation();
+												setFilterContext(splitView === 'favorites' ? 'favorites' : 'recents');
+												setFilterPanelOpen(true);
+											}}
+											style={{
+												background: 'transparent',
+												border: 'none',
+												color: getActiveFilterCount(splitView === 'favorites' ? activeFavFilters : activeRecentFilters) > 0 ? '#4fc3f7' : 'rgba(255,255,255,0.4)',
+												cursor: 'pointer',
+												padding: '2px',
+												display: 'flex',
+												alignItems: 'center',
+												transition: 'color 0.2s',
+											}}
+											title="Filtrar por protocolo"
+											onMouseEnter={e => e.currentTarget.style.color = '#4fc3f7'}
+											onMouseLeave={e => e.currentTarget.style.color = getActiveFilterCount(splitView === 'favorites' ? activeFavFilters : activeRecentFilters) > 0 ? '#4fc3f7' : 'rgba(255,255,255,0.4)'}
+										>
+											<i className={getActiveFilterCount(splitView === 'favorites' ? activeFavFilters : activeRecentFilters) > 0 ? "pi pi-filter-fill" : "pi pi-filter"} style={{ fontSize: '0.65rem' }} />
+										</button>
+
+										{splitView === 'recent' && (
+											<button
+												onClick={(e) => {
+													e.stopPropagation();
+													if (confirm('¿Estás seguro de que deseas limpiar el historial de recientes?')) {
+														clearRecents();
+													}
+												}}
+												style={{
+													background: 'transparent',
+													border: 'none',
+													color: 'rgba(255,255,255,0.4)',
+													cursor: 'pointer',
+													padding: '2px',
+													display: 'flex',
+													alignItems: 'center',
+													transition: 'color 0.2s',
+												}}
+												title="Limpiar panel de recientes"
+												onMouseEnter={e => e.currentTarget.style.color = '#ff5f56'}
+												onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}
+											>
+												<i className="pi pi-trash" style={{ fontSize: '0.65rem' }} />
+											</button>
+										)}
+									</div>
+								</div>
+								{getActiveFilterCount(splitView === 'favorites' ? activeFavFilters : activeRecentFilters) > 0 && (
+									<div style={{
+										display: 'flex',
+										flexWrap: 'wrap',
+										gap: '4px',
+										padding: '4px 8px',
+										borderBottom: `1px solid rgba(255,255,255,0.04)`,
+										background: 'rgba(255,255,255,0.02)',
+										flexShrink: 0
+									}}>
+										{(splitView === 'favorites' ? activeFavFilters : activeRecentFilters).protocols?.map(filterId => (
+											<FilterBadge
+												key={`protocol-${filterId}`}
+												label={getFilterLabel('protocols', filterId)}
+												color={getFilterColor('protocols', filterId)}
+												icon={getFilterIcon('protocols', filterId)}
+												type="protocol"
+												onRemove={() => handleRemoveFilter(splitView === 'favorites' ? 'favorites' : 'recents', 'protocols', filterId)}
+												compact
+											/>
+										))}
+										{(splitView === 'favorites' ? activeFavFilters : activeRecentFilters).groups?.map(filterId => (
+											<FilterBadge
+												key={`group-${filterId}`}
+												label={getFilterLabel('groups', filterId)}
+												color={getFilterColor('groups', filterId)}
+												icon={getFilterIcon('groups', filterId)}
+												type="group"
+												onRemove={() => handleRemoveFilter(splitView === 'favorites' ? 'favorites' : 'recents', 'groups', filterId)}
+												compact
+											/>
+										))}
+										{(splitView === 'favorites' ? activeFavFilters : activeRecentFilters).states?.map(filterId => (
+											<FilterBadge
+												key={`state-${filterId}`}
+												label={getFilterLabel('states', filterId)}
+												color={getFilterColor('states', filterId)}
+												icon={getFilterIcon('states', filterId)}
+												type="state"
+												onRemove={() => handleRemoveFilter(splitView === 'favorites' ? 'favorites' : 'recents', 'states', filterId)}
+												compact
+											/>
+										))}
+									</div>
+								)}
+								<div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+									{splitConnections.length === 0 ? (
+										<div style={{
+											display: 'flex', flexDirection: 'column', alignItems: 'center',
+											justifyContent: 'center', height: '100%', gap: 8,
+											color: 'rgba(255,255,255,0.2)', fontSize: '0.75rem',
+											padding: 16, textAlign: 'center',
+										}}>
+											<i className={splitView === 'favorites' ? 'pi pi-star' : 'pi pi-clock'} style={{ fontSize: '1.3rem', opacity: 0.3 }} />
+											<span>No hay {splitView === 'favorites' ? 'favoritos' : 'recientes'}</span>
+										</div>
+									) : splitConnections.map(conn => (
+										<ConnectionRow
+											key={conn.id}
+											connection={conn}
+											isPinned={isFavorite(conn)}
+											isActive={activeIds.has(activeKey(conn))}
+											onConnect={onConnectToHistory}
+											onEdit={onEdit}
+											onToggleFav={handleToggleFavoriteWithGroup}
+											isSplit={true}
+										/>
+									))}
+								</div>
+							</div>
+						</>
+					);
+				})()}
+			</div>
+
+			{statusBarVisible && (
+				<StandaloneStatusBar
+					visible={true}
+					style={{
+						position: 'relative',
+						bottom: 'auto',
+						left: 'auto',
+						right: 'auto',
+						width: '100%',
+						zIndex: 5,
+						borderTop: `1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '33' : 'rgba(255,255,255,0.05)'}`,
+						marginTop: 'auto'
+					}}
+				/>
+			)}
+		</div>
+	);
+
 	// Debug: Log theme colors to see what we're getting
 	React.useEffect(() => {
-		// console.log('\uD83D\uDCC1 ConnectionHistory themeColors:', {
+		// console.log('📂 ConnectionHistory themeColors:', {
 		// 	itemBackground: themeColors.itemBackground,
 		// 	cardBackground: themeColors.cardBackground,
 		// 	textPrimary: themeColors.textPrimary
@@ -2571,1383 +3060,718 @@ const ConnectionHistory = ({
 				.connection-history-root.is-terminal-maximized .home-integrated-terminal-quickbar {
 					display: none !important;
 				}
+
+				/* --- Canvas & Modular Panels Styles --- */
+				.home-panels-canvas {
+					position: relative;
+					width: 100%;
+					height: 100%;
+					min-height: 0;
+					flex: 1;
+					overflow: hidden;
+				}
+				.home-panel-frame {
+					margin: 0 !important;
+					border-radius: 12px;
+					box-shadow: 0 10px 30px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05);
+					backdrop-filter: blur(16px);
+					transition: box-shadow 0.2s ease, border-color 0.2s ease;
+				}
+				.home-panel-frame.is-maximized {
+					border-radius: 0 !important;
+					box-shadow: none !important;
+					border: none !important;
+				}
+				.home-panel-drag-handle {
+					user-select: none;
+				}
 			`}</style>
 
-
-
-			<div className="hero-splash-header" style={{ paddingBottom: '8px' }}>
-
-				{homeCardVisible && (
-					<div className={`top-terminal-frame ${terminalFrameStyle}`}>
-						<div className="top-terminal-header">
-							<div className="traffic-lights">
-								{terminalFrameStyle === 'macos' ? (
-									<>
-										<div className="traffic-dot red" />
-										<div className="traffic-dot yellow" />
-										<div className="traffic-dot green" />
-									</>
-								) : terminalFrameStyle === 'gnome' ? (
-								<div className="gnome-controls" style={{ marginLeft: '-8px' }}>
-									<div className="gnome-dot close" title="Cerrar"><i className="pi pi-times" /></div>
-								</div>
-							) : terminalFrameStyle === 'kde' ? (
-								<div className="kde-controls" style={{ marginLeft: '-8px' }}>
-									<div className="kde-dot minimize" title="Minimizar"><div className="custom-icon icon-min" /></div>
-									<div className="kde-dot maximize" title="Maximizar"><div className="custom-icon icon-max" /></div>
-									<div className="kde-dot close" title="Cerrar"><div className="custom-icon icon-close" /></div>
-								</div>
-							) : terminalFrameStyle === 'windows' ? (
-								<div className="windows-controls" style={{ marginLeft: '-8px' }}>
-									<div className="win-dot minimize" title="Minimizar"><div className="custom-icon icon-min" /></div>
-									<div className="win-dot maximize" title="Maximizar"><div className="custom-icon icon-max" /></div>
-									<div className="win-dot close" title="Cerrar"><div className="custom-icon icon-close" /></div>
-								</div>
-							) : terminalFrameStyle === 'matcha' ? (
-								<div className="matcha-controls" style={{ marginLeft: '-8px' }}>
-									<div className="matcha-dot"><i className="pi pi-times" /></div>
-								</div>
-							) : terminalFrameStyle === 'futuristic' ? (
-								<div className="futuristic-controls" style={{ marginLeft: '-8px' }}>
-									<div className="cyber-dot"><i className="pi pi-times" /></div>
-								</div>
-							) : terminalFrameStyle === 'modern' ? (
-								<div className="modern-controls" style={{ marginLeft: '-8px' }}>
-									<div className="glass-dot"><i className="pi pi-times" /></div>
-								</div>
-							) : terminalFrameStyle === 'minimal' ? (
-								<div className="minimal-controls" style={{ marginLeft: '-8px' }} />
-							) : (
-								<div className="retro-controls" style={{ marginLeft: '-8px' }}>
-									<div className="retro-switch on" />
-								</div>
-							)}
-						</div>
-						<div className="header-path">
-							<span style={{ fontWeight: 'bold' }}>
-								<span className="path-tilde">~</span>/home
-							</span>
-							<span style={{ opacity: 0.5 }}>·</span>
-							<span style={{ opacity: 0.9 }}>{activeViewName}</span>
-						</div>
-					</div>
-					<div className="top-terminal-body">
-						<div className="hero-search-container" style={{ margin: '0 0 6px 0' }}>
-							<InputText
-								value={searchTerm}
-								onChange={(e) => setSearchTerm(e.target.value)}
-								onKeyDown={handleSearchKeyDown}
-								className="hero-search-input"
-								placeholder="Search or connect to a host..."
-								onBlur={() => {
-									// Pequeno delay para permitir clicks en el dropdown
-									setTimeout(() => setShowDropdown(false), 200);
-								}}
-								onFocus={() => {
-									if (filteredSearchResults.length > 0) setShowDropdown(true);
-								}}
-								autoComplete="off"
-							/>
-							{isSearching && (
-								<i className="pi pi-spin pi-spinner hero-search-spinner" />
-							)}
-
-							<button
-								className="hero-terminal-btn"
-								title="Mostrar/ocultar terminal local flotante"
-								onClick={(e) => {
-									e.stopPropagation();
-									if (onToggleTerminalVisibility) {
-										onToggleTerminalVisibility();
-									}
-								}}
-							>
-								<span className="btn-prompt">$</span><span className="btn-cursor">_</span>
-							</button>
-
-							{showDropdown && ReactDOM.createPortal(
-								<div
-									className="hero-search-dropdown"
-									style={{
-										width: 'min(600px, 90vw)',
-										left: '50%',
-										top: document.querySelector('.hero-search-input')?.getBoundingClientRect().bottom || 0,
-										transform: 'translateX(-50%)'
-									}}
-								>
-									{filteredSearchResults.map((node, idx) => {
-										const isPassword = node.data?.type === 'password';
-										const color = isPassword ? '#E91E63' : getConnectionTypeColor(node.data?.type);
-										const label = node.label;
-										const sub = isPassword ? (node.data.url || node.data.username) : (node.data.host || node.data.hostname || node.data.server);
-
-										// Obtener ruta de carpetas
-										const folderPath = getNodeFolderPath(sidebarNodes, node);
-										const folderPathString = folderPath && folderPath.length > 0 ? folderPath.join(' / ') : 'Ra\u00EDz';
-
-										return (
-											<div
-												key={node.key}
-												className={`search-result-item ${activeIndex === idx ? 'active' : ''}`}
-												onClick={() => handleSelectSearchResult(node)}
-												onMouseEnter={() => setActiveIndex(idx)}
-											>
-												<div className="search-result-icon" style={{ background: `${color}15`, color }}>
-													<i className={isPassword ? 'pi pi-key' : getConnectionTypeIcon(node.data?.type)} />
-												</div>
-												<div className="search-result-info">
-													<div className="search-result-flex-header">
-														<span className="search-result-label">{label}</span>
-														<span className="search-result-type" style={{ background: `${color}20`, color, borderColor: `${color}40`, border: '1px solid' }}>
-															{isPassword ? 'PWD' : getProtocolLabel(node.data?.type)}
-														</span>
-													</div>
-													<div className="search-result-sub-container">
-														<span className="search-result-sub">{sub}</span>
-														{!isPassword && <span className="search-result-folder">{'\uD83D\uDCC1'}  {folderPathString}</span>}
-													</div>
-												</div>
-											</div>
-										);
-									})}
-								</div>,
-								document.body
-							)}
-						</div>
-
-						<div className="hero-action-buttons">
-							<button
-								className={`hero-action-btn terminal-primary ${terminalView ? 'active' : ''}`}
-								title="Abrir nueva terminal local"
-								onClick={(e) => {
-									e.stopPropagation();
-									if (onTerminalToggle) {
-										const terminalType = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
-										onTerminalToggle(true, terminalType, false);
-									}
-								}}
-							>
-								<i className="pi pi-plus-circle" /> Terminal
-							</button>
-						<button
-							className={`hero-action-btn ${terminalView ? (splitOpen && splitView === 'recent' ? 'active' : '') : (activeBottomView === 'recent' && !terminalView ? 'active' : '')}`}
-							onClick={() => {
-								if (terminalView) {
-									handleToggleSplit('recent');
-								} else {
-									setActiveBottomView('recent');
-								}
-							}}
-						>
-							<i className="pi pi-clock" /> Recientes
-						</button>
-						<button
-							className={`hero-action-btn ${terminalView ? (splitOpen && splitView === 'favorites' ? 'active' : '') : (activeBottomView === 'favorites' && !terminalView ? 'active' : '')}`}
-							onClick={() => {
-								if (terminalView) {
-									handleToggleSplit('favorites');
-								} else {
-									setActiveBottomView('favorites');
-								}
-							}}
-						>
-							<i className="pi pi-star" /> Favoritos
-						</button>
-						</div>
-					</div>
-				</div>
-				)}
-			</div > {/* FilterPanel Dropdown - Rendered in Portal to avoid clipping */}
-			{
-				ReactDOM.createPortal(
-					<FilterPanel
-						isOpen={filterPanelOpen}
-						onClose={() => setFilterPanelOpen(false)}
-						activeFilters={filterContext === 'favorites' ? activeFavFilters : activeRecentFilters}
-						onApplyFilters={handleApplyFilters}
-						availableFilters={{
-							protocols: favoriteGroupsStore.getProtocolFilters().map(f => ({
-								...f,
-								count: countByType(filterContext === 'recents' ? recentConnections : favoriteConnections, f.id)
-							})),
-							groups: favoriteGroups.filter(g => !g.isDefault).map(g => ({
-								id: g.id,
-								label: g.name,
-								icon: g.icon || 'pi-folder',
-								color: g.color,
-								count: filterContext === 'recents'
-									? recentConnections.filter(c => c.groupId === g.id).length // Simple check for recents
-									: favoriteGroupsStore.getFavoritesInGroup(g.id, favoriteConnections).length
-							}))
-						}}
-						themeColors={themeColors}
-						onCreateGroup={() => setShowCreateGroupDialog(true)}
-						onDeleteGroup={handleDeleteGroup}
-					/>,
-					document.body
-				)
-			}
+			{/* FilterPanel Dropdown - Rendered in Portal to avoid clipping */}
+			{ReactDOM.createPortal(
+				<FilterPanel
+					isOpen={filterPanelOpen}
+					onClose={() => setFilterPanelOpen(false)}
+					activeFilters={filterContext === 'favorites' ? activeFavFilters : activeRecentFilters}
+					onApplyFilters={handleApplyFilters}
+					availableFilters={{
+						protocols: favoriteGroupsStore.getProtocolFilters().map(f => ({
+							...f,
+							count: countByType(filterContext === 'recents' ? recentConnections : favoriteConnections, f.id)
+						})),
+						groups: favoriteGroups.filter(g => !g.isDefault).map(g => ({
+							id: g.id,
+							label: g.name,
+							icon: g.icon || 'pi-folder',
+							color: g.color,
+							count: filterContext === 'recents'
+								? recentConnections.filter(c => c.groupId === g.id).length
+								: favoriteGroupsStore.getFavoritesInGroup(g.id, favoriteConnections).length
+						}))
+					}}
+					themeColors={themeColors}
+					onCreateGroup={() => setShowCreateGroupDialog(true)}
+					onDeleteGroup={handleDeleteGroup}
+				/>,
+				document.body
+			)}
 
 			{/* Filter Configuration Dialog */}
-			{
-				showFilterConfig && ReactDOM.createPortal(
-					<div className="create-group-overlay" onClick={() => setShowFilterConfig(false)}>
-						<div className="app-dialog create-group-dialog filter-config-dialog" onClick={(e) => e.stopPropagation()}>
-							<div className="dialog-header">
-								<h3><i className="pi pi-cog" /> Configurar Filtros</h3>
-								<button className="dialog-close" onClick={() => setShowFilterConfig(false)}>
-									<i className="pi pi-times" />
-								</button>
-							</div>
-							<div className="dialog-body">
-								<p style={{ color: 'rgba(255,255,255,0.6)', margin: '0 0 16px', fontSize: '0.85rem' }}>
-									Activa o desactiva los filtros que deseas ver en la barra:
-								</p>
-								<div className="filter-config-list">
-									{allFilters.map(filter => (
-										<div
-											key={filter.id}
-											className={`filter-config-item ${filter.visible ? 'visible' : 'hidden'}`}
-											style={{ '--item-color': filter.color }}
-										>
-											<div className="filter-config-info">
-												{filter.isGroup && (
-													<span className="filter-config-dot" style={{ background: filter.color }} />
-												)}
-												<i className={`pi ${filter.icon}`} style={{ color: filter.color }} />
-												<span className="filter-config-label">{filter.label}</span>
-												{filter.isProtocol && <span className="filter-config-type">Protocolo</span>}
-												{filter.isGroup && <span className="filter-config-type">Grupo</span>}
-											</div>
-											<button
-												type="button"
-												className={`filter-config-toggle ${filter.visible ? 'on' : 'off'}`}
-												onClick={() => {
-													if (filter.id !== 'all') {
-														favoriteGroupsStore.setFilterVisibility(filter.id, !filter.visible);
-														setAllFilters(favoriteGroupsStore.getAllFilters());
-													}
-												}}
-												disabled={filter.id === 'all'}
-												title={filter.id === 'all' ? 'Este filtro siempre est\u00E1 visible' : (filter.visible ? 'Ocultar' : 'Mostrar')}
-											>
-												<i className={filter.visible ? 'pi pi-eye' : 'pi pi-eye-slash'} />
-											</button>
+			{showFilterConfig && ReactDOM.createPortal(
+				<div className="create-group-overlay" onClick={() => setShowFilterConfig(false)}>
+					<div className="app-dialog create-group-dialog filter-config-dialog" onClick={(e) => e.stopPropagation()}>
+						<div className="dialog-header">
+							<h3><i className="pi pi-cog" /> Configurar Filtros</h3>
+							<button className="dialog-close" onClick={() => setShowFilterConfig(false)}>
+								<i className="pi pi-times" />
+							</button>
+						</div>
+						<div className="dialog-body">
+							<p style={{ color: 'rgba(255,255,255,0.6)', margin: '0 0 16px', fontSize: '0.85rem' }}>
+								Activa o desactiva los filtros que deseas ver en la barra:
+							</p>
+							<div className="filter-config-list">
+								{allFilters.map(filter => (
+									<div
+										key={filter.id}
+										className={`filter-config-item ${filter.visible ? 'visible' : 'hidden'}`}
+										style={{ '--item-color': filter.color }}
+									>
+										<div className="filter-config-info">
+											{filter.isGroup && (
+												<span className="filter-config-dot" style={{ background: filter.color }} />
+											)}
+											<i className={`pi ${filter.icon}`} style={{ color: filter.color }} />
+											<span className="filter-config-label">{filter.label}</span>
+											{filter.isProtocol && <span className="filter-config-type">Protocolo</span>}
+											{filter.isGroup && <span className="filter-config-type">Grupo</span>}
 										</div>
+										<button
+											type="button"
+											className={`filter-config-toggle ${filter.visible ? 'on' : 'off'}`}
+											onClick={() => {
+												if (filter.id !== 'all') {
+													favoriteGroupsStore.setFilterVisibility(filter.id, !filter.visible);
+													setAllFilters(favoriteGroupsStore.getAllFilters());
+												}
+											}}
+											disabled={filter.id === 'all'}
+											title={filter.id === 'all' ? 'Este filtro siempre está visible' : (filter.visible ? 'Ocultar' : 'Mostrar')}
+										>
+											<i className={filter.visible ? 'pi pi-eye' : 'pi pi-eye-slash'} />
+										</button>
+									</div>
+								))}
+							</div>
+						</div>
+						<div className="dialog-footer">
+							<button
+								className="btn-cancel"
+								onClick={() => {
+									favoriteGroupsStore.resetFilterConfig();
+									setAllFilters(favoriteGroupsStore.getAllFilters());
+								}}
+							>
+								<i className="pi pi-refresh" /> Restaurar
+							</button>
+							<button className="btn-create" onClick={() => setShowFilterConfig(false)}>
+								<i className="pi pi-check" /> Listo
+							</button>
+						</div>
+					</div>
+				</div>,
+				document.body
+			)}
+
+			{/* Create Group Dialog */}
+			{showCreateGroupDialog && ReactDOM.createPortal(
+				<div className="create-group-overlay" onClick={() => setShowCreateGroupDialog(false)}>
+					<div className="app-dialog create-group-dialog" onClick={(e) => e.stopPropagation()}>
+						<div className="dialog-header">
+							<h3>Crear Grupo</h3>
+							<button className="dialog-close" onClick={() => setShowCreateGroupDialog(false)}>
+								<i className="pi pi-times" />
+							</button>
+						</div>
+						<div className="dialog-body">
+							<div className="form-field">
+								<label>Nombre del grupo</label>
+								<input
+									type="text"
+									value={newGroupName}
+									onChange={(e) => setNewGroupName(e.target.value)}
+									placeholder={"Ej: Producción, Desarrollo..."}
+									autoFocus
+									onKeyDown={(e) => e.key === 'Enter' && handleCreateGroup()}
+								/>
+							</div>
+							<div className="form-field">
+								<label>Color</label>
+								<div className="color-picker">
+									{['#4fc3f7', '#ff6b35', '#81c784', '#FFB300', '#E91E63', '#9C27B0', '#00BCD4', '#FF5722'].map(c => (
+										<button
+											key={c}
+											type="button"
+											className={`color-option ${newGroupColor === c ? 'selected' : ''}`}
+											style={{ background: c }}
+											onClick={() => setNewGroupColor(c)}
+										/>
 									))}
 								</div>
 							</div>
-							<div className="dialog-footer">
+						</div>
+						<div className="dialog-footer">
+							<button className="btn-cancel" onClick={() => setShowCreateGroupDialog(false)}>
+								Cancelar
+							</button>
+							<button className="btn-create" onClick={handleCreateGroup} disabled={!newGroupName.trim()}>
+								<i className="pi pi-check" /> Crear
+							</button>
+						</div>
+					</div>
+				</div>,
+				document.body
+			)}
+
+			{/* Edit/Delete Group Menu */}
+			{editingGroup && ReactDOM.createPortal(
+				<div className="create-group-overlay" onClick={() => setEditingGroup(null)}>
+					<div className="app-dialog create-group-dialog small" onClick={(e) => e.stopPropagation()}>
+						<div className="dialog-header">
+							<h3>Opciones de "{editingGroup.name}"</h3>
+							<button className="dialog-close" onClick={() => setEditingGroup(null)}>
+								<i className="pi pi-times" />
+							</button>
+						</div>
+						<div className="dialog-body">
+							<button
+								className="menu-option danger"
+								onClick={() => {
+									handleDeleteGroup(editingGroup.id);
+									setEditingGroup(null);
+								}}
+							>
+								<i className="pi pi-trash" /> Eliminar grupo
+							</button>
+						</div>
+					</div>
+				</div>,
+				document.body
+			)}
+
+			{/* Group Selector Dialog */}
+			{showGroupSelector && connectionToFavorite && ReactDOM.createPortal(
+				<div className="create-group-overlay" onClick={() => setShowGroupSelector(false)}>
+					<div className="app-dialog create-group-dialog" onClick={(e) => e.stopPropagation()}>
+						<div className="dialog-header">
+							<h3>{isFavorite(connectionToFavorite) ? 'Editar favorito' : 'Agregar a favoritos'}</h3>
+							<button className="dialog-close" onClick={() => setShowGroupSelector(false)}>
+								<i className="pi pi-times" />
+							</button>
+						</div>
+						<div className="dialog-body">
+							<p style={{ color: 'rgba(255,255,255,0.7)', margin: '0 0 16px', fontSize: '0.9rem' }}>
+								Selecciona los grupos para <strong style={{ color: '#fff' }}>{connectionToFavorite.name}</strong>:
+							</p>
+							<div className="groups-selector">
+								{customGroups.map(group => (
+									<button
+										key={group.id}
+										type="button"
+										className={`group-selector-item ${selectedGroupsForFav.includes(group.id) ? 'selected' : ''}`}
+										onClick={() => toggleGroupForFavorite(group.id)}
+										style={{ '--group-color': group.color }}
+									>
+										<span className="group-dot" style={{ background: group.color }} />
+										<span>{group.name}</span>
+										{selectedGroupsForFav.includes(group.id) && (
+											<i className="pi pi-check" style={{ marginLeft: 'auto', color: group.color }} />
+										)}
+									</button>
+								))}
+							</div>
+							{!customGroups.length && (
+								<p style={{ color: 'rgba(255,255,255,0.5)', margin: '8px 0', fontSize: '0.8rem', fontStyle: 'italic' }}>
+									No hay grupos personalizados.
+								</p>
+							)}
+						</div>
+						<div className="dialog-footer">
+							{isFavorite(connectionToFavorite) ? (
+								<button
+									className="btn-cancel"
+									style={{ color: '#ff5252' }}
+									onClick={handleRemoveFavoriteFromDialog}
+								>
+									<i className="pi pi-trash" style={{ marginRight: 6 }} />
+									Quitar fav
+								</button>
+							) : (
 								<button
 									className="btn-cancel"
 									onClick={() => {
-										favoriteGroupsStore.resetFilterConfig();
-										setAllFilters(favoriteGroupsStore.getAllFilters());
+										toggleFavorite(connectionToFavorite);
+										loadConnectionHistory();
+										setShowGroupSelector(false);
+										setConnectionToFavorite(null);
 									}}
 								>
-									<i className="pi pi-refresh" /> Restaurar
+									Sin grupos
 								</button>
-								<button className="btn-create" onClick={() => setShowFilterConfig(false)}>
-									<i className="pi pi-check" /> Listo
-								</button>
-							</div>
-						</div>
-					</div>,
-					document.body
-				)
-			}
-			{
-				showCreateGroupDialog && ReactDOM.createPortal(
-					<div className="create-group-overlay" onClick={() => setShowCreateGroupDialog(false)}>
-						<div className="app-dialog create-group-dialog" onClick={(e) => e.stopPropagation()}>
-							<div className="dialog-header">
-								<h3>Crear Grupo</h3>
-								<button className="dialog-close" onClick={() => setShowCreateGroupDialog(false)}>
-									<i className="pi pi-times" />
-								</button>
-							</div>
-							<div className="dialog-body">
-								<div className="form-field">
-									<label>Nombre del grupo</label>
-									<input
-										type="text"
-										value={newGroupName}
-										onChange={(e) => setNewGroupName(e.target.value)}
-										placeholder={"Ej: Producci\u00F3n, Desarrollo..."}
-										autoFocus
-										onKeyDown={(e) => e.key === 'Enter' && handleCreateGroup()}
-									/>
-								</div>
-								<div className="form-field">
-									<label>Color</label>
-									<div className="color-picker">
-										{['#4fc3f7', '#ff6b35', '#81c784', '#FFB300', '#E91E63', '#9C27B0', '#00BCD4', '#FF5722'].map(c => (
-											<button
-												key={c}
-												type="button"
-												className={`color-option ${newGroupColor === c ? 'selected' : ''}`}
-												style={{ background: c }}
-												onClick={() => setNewGroupColor(c)}
-											/>
-										))}
-									</div>
-								</div>
-							</div>
-							<div className="dialog-footer">
-								<button className="btn-cancel" onClick={() => setShowCreateGroupDialog(false)}>
-									Cancelar
-								</button>
-								<button className="btn-create" onClick={handleCreateGroup} disabled={!newGroupName.trim()}>
-									<i className="pi pi-check" /> Crear
-								</button>
-							</div>
-						</div>
-					</div>,
-					document.body
-				)
-			}
+							)}
 
-			{/* Edit/Delete Group Menu */}
-			{
-				editingGroup && ReactDOM.createPortal(
-					<div className="create-group-overlay" onClick={() => setEditingGroup(null)}>
-						<div className="app-dialog create-group-dialog small" onClick={(e) => e.stopPropagation()}>
-							<div className="dialog-header">
-								<h3>Opciones de "{editingGroup.name}"</h3>
-								<button className="dialog-close" onClick={() => setEditingGroup(null)}>
-									<i className="pi pi-times" />
-								</button>
-							</div>
-							<div className="dialog-body">
-								<button
-									className="menu-option danger"
-									onClick={() => {
-										handleDeleteGroup(editingGroup.id);
-										setEditingGroup(null);
-									}}
-								>
-									<i className="pi pi-trash" /> Eliminar grupo
-								</button>
-							</div>
+							<button className="btn-create" onClick={handleConfirmAddFavorite}>
+								{isFavorite(connectionToFavorite) ? (
+									<><i className="pi pi-save" /> Guardar</>
+								) : (
+									<><i className="pi pi-star-fill" /> Agregar</>
+								)}
+							</button>
 						</div>
-					</div>,
-					document.body
-				)
-			}
+					</div>
+				</div>,
+				document.body
+			)}
 
-			{/* Group Selector Dialog - shown when adding a favorite */}
-			{/* Group Selector Dialog - shown when adding a favorite */}
-			{
-				showGroupSelector && connectionToFavorite && ReactDOM.createPortal(
-					<div className="create-group-overlay" onClick={() => setShowGroupSelector(false)}>
-						<div className="app-dialog create-group-dialog" onClick={(e) => e.stopPropagation()}>
-							<div className="dialog-header">
-								<h3>{isFavorite(connectionToFavorite) ? 'Editar favorito' : 'Agregar a favoritos'}</h3>
-								<button className="dialog-close" onClick={() => setShowGroupSelector(false)}>
-									<i className="pi pi-times" />
-								</button>
-							</div>
-							<div className="dialog-body">
-								<p style={{ color: 'rgba(255,255,255,0.7)', margin: '0 0 16px', fontSize: '0.9rem' }}>
-									Selecciona los grupos para <strong style={{ color: '#fff' }}>{connectionToFavorite.name}</strong>:
-								</p>
-								<div className="groups-selector">
-									{customGroups.map(group => (
+			{/* Edit Favorite Groups Dialog */}
+			{showEditFavGroups && editingFavorite && ReactDOM.createPortal(
+				<div className="create-group-overlay" onClick={() => setShowEditFavGroups(false)}>
+					<div className="app-dialog create-group-dialog" onClick={(e) => e.stopPropagation()}>
+						<div className="dialog-header">
+							<h3><i className="pi pi-folder" /> Grupos de Favoritos</h3>
+							<button className="dialog-close" onClick={() => setShowEditFavGroups(false)}>
+								<i className="pi pi-times" />
+							</button>
+						</div>
+						<div className="dialog-body">
+							<p style={{ color: 'rgba(255,255,255,0.7)', margin: '0 0 16px', fontSize: '0.9rem' }}>
+								Asignar <strong style={{ color: '#fff' }}>{editingFavorite.name}</strong> a grupos:
+							</p>
+							<div className="groups-selector">
+								{customGroups.length > 0 ? (
+									customGroups.map(group => (
 										<button
 											key={group.id}
 											type="button"
-											className={`group-selector-item ${selectedGroupsForFav.includes(group.id) ? 'selected' : ''}`}
-											onClick={() => toggleGroupForFavorite(group.id)}
+											className={`group-selector-item ${editSelectedGroups.includes(group.id) ? 'selected' : ''}`}
+											onClick={() => toggleEditGroup(group.id)}
 											style={{ '--group-color': group.color }}
 										>
 											<span className="group-dot" style={{ background: group.color }} />
 											<span>{group.name}</span>
-											{selectedGroupsForFav.includes(group.id) && (
+											{editSelectedGroups.includes(group.id) && (
 												<i className="pi pi-check" style={{ marginLeft: 'auto', color: group.color }} />
 											)}
 										</button>
-									))}
-								</div>
-								{!customGroups.length && (
-									<p style={{ color: 'rgba(255,255,255,0.5)', margin: '8px 0', fontSize: '0.8rem', fontStyle: 'italic' }}>
-										No hay grupos personalizados.
-									</p>
+									))
+								) : (
+									<div style={{ textAlign: 'center', padding: '20px', color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem' }}>
+										<i className="pi pi-info-circle" style={{ display: 'block', fontSize: '1.5rem', marginBottom: '8px' }} />
+										No hay grupos personalizados creados.
+									</div>
 								)}
 							</div>
-							<div className="dialog-footer">
-								{isFavorite(connectionToFavorite) ? (
-									<button
-										className="btn-cancel"
-										style={{ color: '#ff5252' }}
-										onClick={handleRemoveFavoriteFromDialog}
-									>
-										<i className="pi pi-trash" style={{ marginRight: 6 }} />
-										Quitar fav
-									</button>
-								) : (
-									<button
-										className="btn-cancel"
-										onClick={() => {
-											// Agregar sin grupos
-											toggleFavorite(connectionToFavorite);
-											loadConnectionHistory();
-											setShowGroupSelector(false);
-											setConnectionToFavorite(null);
+						</div>
+						<div className="dialog-footer">
+							<button className="btn-cancel" onClick={() => setShowEditFavGroups(false)}>Cancelar</button>
+							<button className="btn-create" onClick={handleSaveEditGroups}>
+								<i className="pi pi-save" /> Guardar Cambios
+							</button>
+						</div>
+					</div>
+				</div>,
+				document.body
+			)}
+
+			{/* ========================================================= */}
+			{/* RENDER PRINCIPAL: CANVAS MODULAR O LAYOUT LEGACY          */}
+			{/* ========================================================= */}
+			{panelsLayout ? (
+				<div
+					className="home-panels-canvas"
+					style={{
+						position: 'relative',
+						width: '100%',
+						height: '100%',
+						minHeight: 0,
+						flex: 1,
+						overflow: 'hidden'
+					}}
+				>
+					{/* 1. Panel Buscador y Conexión */}
+					{panelsLayout.search && panelsLayout.search.visible !== false && (
+						<HomePanelWrapper
+							id="search"
+							title="~/home · terminal"
+							path={`home · ${activeViewName || 'terminal'}`}
+							panelState={panelsLayout.search}
+							onLayoutChange={onLayoutChange}
+							onBringToFront={onBringToFront}
+							onClose={() => (onClosePanel ? onClosePanel('search') : onTogglePanelVisibility?.('search', false))}
+							onToggleMaximize={() => (onToggleMaximizePanel ? onToggleMaximizePanel('search') : null)}
+							terminalFrameStyle={terminalFrameStyle}
+							snapToGrid={snapToGrid}
+							minWidth={320}
+							minHeight={110}
+							className="top-terminal-frame"
+							frameBackground={adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}
+						>
+							{renderSearchCardBody()}
+						</HomePanelWrapper>
+					)}
+
+					{/* 2. Panel Terminal Integrado */}
+					{panelsLayout.terminal && panelsLayout.terminal.visible !== false && (
+						<HomePanelWrapper
+							id="terminal"
+							title={terminalTitle}
+							path={terminalTitle ? terminalTitle.replace(/^\/?(local\s*·\s*)?/, 'local · ') : 'local'}
+							panelState={panelsLayout.terminal}
+							onLayoutChange={onLayoutChange}
+							onBringToFront={onBringToFront}
+							onClose={() => (onClosePanel ? onClosePanel('terminal') : onTogglePanelVisibility?.('terminal', false))}
+							onToggleMaximize={() => {
+								if (onToggleMaximizePanel) onToggleMaximizePanel('terminal');
+								else if (onToggleLocalTerminalMaximized) onToggleLocalTerminalMaximized();
+							}}
+							terminalFrameStyle={terminalFrameStyle}
+							snapToGrid={snapToGrid}
+							minWidth={380}
+							minHeight={200}
+							className="recents-terminal-frame"
+							frameBackground={localTerminalBg}
+							headerRight={
+								<>
+									<i
+										className="pi pi-clock"
+										style={{
+											fontSize: '0.86rem',
+											color: splitOpen && splitView === 'recent' ? (terminalTheme.green || '#3fb950') : (terminalTheme.foreground || '#c9d1d9'),
+											opacity: splitOpen && splitView === 'recent' ? 1 : 0.7,
+											cursor: 'pointer',
+											padding: '4px',
+											transition: 'all 0.2s'
 										}}
+										title="Recientes — split con terminal"
+										onClick={(e) => { e.stopPropagation(); handleToggleSplit('recent'); }}
+									/>
+									<div aria-hidden="true" style={{ width: '1px', height: '14px', background: 'rgba(255,255,255,0.20)', margin: '0 4px' }} />
+									<i
+										className="pi pi-sliders-h"
+										style={{
+											fontSize: '0.9rem',
+											color: terminalTheme.foreground || '#c9d1d9',
+											opacity: 0.6,
+											cursor: 'pointer',
+											padding: '4px',
+											transition: 'all 0.2s'
+										}}
+										title="Opciones de Home"
+										onClick={(e) => {
+											e.stopPropagation();
+											if (onOpenHomeOptions) onOpenHomeOptions(e);
+										}}
+									/>
+									<i
+										className="pi pi-th-large"
+										style={{
+											fontSize: '0.9rem',
+											color: terminalTheme.foreground || '#c9d1d9',
+											opacity: isDetectingTerminals ? 0.3 : 0.6,
+											cursor: isDetectingTerminals ? 'wait' : 'pointer',
+											padding: '4px',
+											transition: 'all 0.2s'
+										}}
+										title="Cambiar terminal integrado"
+										onClick={(e) => {
+											e.stopPropagation();
+											terminalSwitcherOverlayRef.current?.toggle(e);
+										}}
+									/>
+									<i
+										className={`pi ${panelsLayout.terminal?.isMaximized ? 'pi-window-minimize' : 'pi-window-maximize'}`}
+										style={{
+											fontSize: '0.9rem',
+											color: terminalTheme.foreground || '#c9d1d9',
+											opacity: 0.6,
+											cursor: 'pointer',
+											padding: '4px',
+											transition: 'all 0.2s'
+										}}
+										title={panelsLayout.terminal?.isMaximized ? "Restaurar Terminal" : "Maximizar Terminal"}
+										onClick={(e) => {
+											e.stopPropagation();
+											if (onToggleMaximizePanel) onToggleMaximizePanel('terminal');
+											else if (onToggleLocalTerminalMaximized) onToggleLocalTerminalMaximized();
+										}}
+									/>
+								</>
+							}
+						>
+							{renderTerminalSplitBody()}
+						</HomePanelWrapper>
+					)}
+
+					{/* 3. Panel Conexiones Recientes */}
+					{panelsLayout.recents && panelsLayout.recents.visible && (
+						<HomePanelWrapper
+							id="recents"
+							title="~/recent"
+							path={`recent · ${filteredRecentsForDisplay.length} conexiones`}
+							panelState={panelsLayout.recents}
+							onLayoutChange={onLayoutChange}
+							onBringToFront={onBringToFront}
+							onClose={() => (onClosePanel ? onClosePanel('recents') : onTogglePanelVisibility?.('recents', false))}
+							onToggleMaximize={() => (onToggleMaximizePanel ? onToggleMaximizePanel('recents') : null)}
+							terminalFrameStyle={terminalFrameStyle}
+							snapToGrid={snapToGrid}
+							minWidth={360}
+							minHeight={200}
+							className="recents-terminal-frame"
+							frameBackground={adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}
+							headerRight={
+								<>
+									<button
+										className="recents-header-filter-btn"
+										onClick={(e) => {
+											e.stopPropagation();
+											if (onTogglePanelVisibility) {
+												onTogglePanelVisibility('terminal', true);
+												onBringToFront?.('terminal');
+											} else if (onTerminalToggle) {
+												const terminalType = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
+												onTerminalToggle(true, terminalType, false);
+											}
+										}}
+										title="Abrir o enfocar terminal"
 									>
-										Sin grupos
+										<i className="pi pi-desktop" />
 									</button>
-								)}
+									<button
+										className={`recents-header-filter-btn ${getActiveFilterCount(activeRecentFilters) > 0 ? 'active' : ''}`}
+										onClick={() => { setFilterContext('recents'); setFilterPanelOpen(true); }}
+										title="Filtrar recientes"
+									>
+										<i className={`pi ${getActiveFilterCount(activeRecentFilters) > 0 ? 'pi-filter-fill' : 'pi-filter'}`} />
+										{getActiveFilterCount(activeRecentFilters) > 0 && (
+											<span style={{ fontSize: '0.7rem', marginLeft: 3 }}>{getActiveFilterCount(activeRecentFilters)}</span>
+										)}
+									</button>
+								</>
+							}
+						>
+							{renderRecentsTableBody()}
+						</HomePanelWrapper>
+					)}
 
-								<button className="btn-create" onClick={handleConfirmAddFavorite}>
-									{isFavorite(connectionToFavorite) ? (
-										<><i className="pi pi-save" /> Guardar</>
-									) : (
-										<><i className="pi pi-star-fill" /> Agregar</>
-									)}
-								</button>
-							</div>
-						</div>
-					</div>,
-					document.body
-				)
-			}
+					{/* 4. Panel Favoritos */}
+					{panelsLayout.favorites && panelsLayout.favorites.visible && (
+						<HomePanelWrapper
+							id="favorites"
+							title="~/favorites"
+							path={`favorites · ${filteredFavorites.length} conexiones`}
+							panelState={panelsLayout.favorites}
+							onLayoutChange={onLayoutChange}
+							onBringToFront={onBringToFront}
+							onClose={() => (onClosePanel ? onClosePanel('favorites') : onTogglePanelVisibility?.('favorites', false))}
+							onToggleMaximize={() => (onToggleMaximizePanel ? onToggleMaximizePanel('favorites') : null)}
+							terminalFrameStyle={terminalFrameStyle}
+							snapToGrid={snapToGrid}
+							minWidth={360}
+							minHeight={200}
+							className="recents-terminal-frame favorites-terminal-frame"
+							frameBackground={adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}
+							headerRight={
+								<>
+									<button
+										className="recents-header-filter-btn"
+										onClick={(e) => {
+											e.stopPropagation();
+											if (onTogglePanelVisibility) {
+												onTogglePanelVisibility('terminal', true);
+												onBringToFront?.('terminal');
+											} else if (onTerminalToggle) {
+												const terminalType = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
+												onTerminalToggle(true, terminalType, false);
+											}
+										}}
+										title="Abrir o enfocar terminal"
+									>
+										<i className="pi pi-desktop" />
+									</button>
+									<button
+										className={`recents-header-filter-btn ${getActiveFilterCount(activeFavFilters) > 0 ? 'active' : ''}`}
+										onClick={() => { setFilterContext('favorites'); setFilterPanelOpen(true); }}
+										title="Filtrar favoritos"
+									>
+										<i className={`pi ${getActiveFilterCount(activeFavFilters) > 0 ? 'pi-filter-fill' : 'pi-filter'}`} />
+										{getActiveFilterCount(activeFavFilters) > 0 && (
+											<span style={{ fontSize: '0.7rem', marginLeft: 3 }}>{getActiveFilterCount(activeFavFilters)}</span>
+										)}
+									</button>
+								</>
+							}
+						>
+							{renderFavoritesTableBody()}
+						</HomePanelWrapper>
+					)}
 
-			{/* Edit Favorite Groups Dialog */}
-			{
-				showEditFavGroups && editingFavorite && ReactDOM.createPortal(
-					<div className="create-group-overlay" onClick={() => setShowEditFavGroups(false)}>
-						<div className="app-dialog create-group-dialog" onClick={(e) => e.stopPropagation()}>
-							<div className="dialog-header">
-								<h3><i className="pi pi-folder" /> Grupos de Favoritos</h3>
-								<button className="dialog-close" onClick={() => setShowEditFavGroups(false)}>
-									<i className="pi pi-times" />
-								</button>
+					{/* 5. Panel Accesos Rápidos */}
+					{panelsLayout.quickbar && panelsLayout.quickbar.visible && rightQuickBar && (
+						<HomePanelWrapper
+							id="quickbar"
+							title="Accesos Rápidos"
+							path="quickbar"
+							panelState={panelsLayout.quickbar}
+							onLayoutChange={onLayoutChange}
+							onBringToFront={onBringToFront}
+							onClose={() => (onClosePanel ? onClosePanel('quickbar') : onTogglePanelVisibility?.('quickbar', false))}
+							onToggleMaximize={() => (onToggleMaximizePanel ? onToggleMaximizePanel('quickbar') : null)}
+							terminalFrameStyle={terminalFrameStyle}
+							snapToGrid={snapToGrid}
+							minWidth={200}
+							minHeight={250}
+							className="recents-terminal-frame"
+							frameBackground={adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}
+						>
+							<div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
+								{rightQuickBar}
 							</div>
-							<div className="dialog-body">
-								<p style={{ color: 'rgba(255,255,255,0.7)', margin: '0 0 16px', fontSize: '0.9rem' }}>
-									Asignar <strong style={{ color: '#fff' }}>{editingFavorite.name}</strong> a grupos:
-								</p>
-								<div className="groups-selector">
-									{customGroups.length > 0 ? (
-										customGroups.map(group => (
-											<button
-												key={group.id}
-												type="button"
-												className={`group-selector-item ${editSelectedGroups.includes(group.id) ? 'selected' : ''}`}
-												onClick={() => toggleEditGroup(group.id)}
-												style={{ '--group-color': group.color }}
-											>
-												<span className="group-dot" style={{ background: group.color }} />
-												<span>{group.name}</span>
-												{editSelectedGroups.includes(group.id) && (
-													<i className="pi pi-check" style={{ marginLeft: 'auto', color: group.color }} />
-												)}
-											</button>
-										))
-									) : (
-										<div style={{ textAlign: 'center', padding: '20px', color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem' }}>
-											<i className="pi pi-info-circle" style={{ display: 'block', fontSize: '1.5rem', marginBottom: '8px' }} />
-											No hay grupos personalizados creados.
-										</div>
-									)}
-								</div>
-							</div>
-							<div className="dialog-footer">
-								<button className="btn-cancel" onClick={() => setShowEditFavGroups(false)}>Cancelar</button>
-								<button className="btn-create" onClick={handleSaveEditGroups}>
-									<i className="pi pi-save" /> Guardar Cambios
-								</button>
-							</div>
-						</div>
-					</div>,
-					document.body
-				)
-			}
-
-
-
-			{/* FAVORITES TABLE - Terminal-style frame for favorites */}
-			{
-				!terminalView && activeBottomView === 'favorites' && (
-					<HomeIntegratedTerminalShell
-						enabled={flushRightQuickBar && !!rightQuickBar}
-						visible
-						rightQuickBar={rightQuickBar}
-						frameClassName={`recents-terminal-frame favorites-terminal-frame ${terminalFrameStyle}`}
-						terminalFrameStyle={terminalFrameStyle}
-					>
-						{/* macOS-style header */}
-						<div className="recents-terminal-header">
-							<div className="traffic-lights">
-								{terminalFrameStyle === 'macos' ? (
-									<>
-										<div
-											className="traffic-dot red"
-											onClick={() => setActiveBottomView('all')}
-											title="Cerrar favoritos"
-										/>
-										<div className="traffic-dot yellow" />
-										<div className="traffic-dot green" />
-									</>
-								) : terminalFrameStyle === 'gnome' ? (
-									<div className="gnome-controls">
-										<div className="gnome-dot close" title="Cerrar" onClick={() => setActiveBottomView('all')}><i className="pi pi-times" /></div>
-									</div>
-								) : terminalFrameStyle === 'kde' ? (
-									<div className="kde-controls">
-										<div className="kde-dot minimize" title="Minimizar"><i className="pi pi-minus" /></div>
-										<div className="kde-dot maximize" title="Maximizar"><i className="pi pi-stop" /></div>
-										<div className="kde-dot close" title="Cerrar" onClick={() => setActiveBottomView('all')}><i className="pi pi-times" /></div>
-									</div>
-								) : terminalFrameStyle === 'windows' ? (
-									<div className="windows-controls">
-										<div className="win-dot minimize" title="Minimizar"><i className="pi pi-minus" /></div>
-										<div className="win-dot maximize" title="Maximizar"><i className="pi pi-stop" /></div>
-										<div className="win-dot close" title="Cerrar" onClick={() => setActiveBottomView('all')}><i className="pi pi-times" /></div>
-									</div>
-								) : terminalFrameStyle === 'orchis' ? (
-									<div className="orchis-controls">
-										<div className="orchis-dot" onClick={() => setActiveBottomView('all')} title="Cerrar"><i className="pi pi-times" /></div>
-									</div>
-								) : terminalFrameStyle === 'fluent' ? (
-									<div className="fluent-controls">
-										<div className="fluent-dot"><i className="pi pi-minus" /></div>
-										<div className="fluent-dot"><i className="pi pi-stop" /></div>
-										<div className="fluent-dot" onClick={() => setActiveBottomView('all')} title="Cerrar"><i className="pi pi-times" /></div>
-									</div>
-								) : terminalFrameStyle === 'matcha' ? (
-									<div className="matcha-controls">
-										<div className="matcha-dot" onClick={() => setActiveBottomView('all')} title="Cerrar"><i className="pi pi-times" /></div>
-									</div>
-								) : terminalFrameStyle === 'futuristic' ? (
-									<div className="futuristic-controls">
-										<div className="cyber-dot" onClick={() => setActiveBottomView('all')} title="Cerrar">EXE</div>
-									</div>
-								) : terminalFrameStyle === 'modern' ? (
-									<div className="modern-controls">
-										<div className="glass-dot" onClick={() => setActiveBottomView('all')} title="Cerrar"><i className="pi pi-times" /></div>
-									</div>
-								) : terminalFrameStyle === 'minimal' ? (
-									<div className="minimal-controls" />
-								) : (
-									<div className="retro-controls">
-										<div className="retro-switch on" onClick={() => setActiveBottomView('all')} title="OFF" />
-									</div>
-								)}
-							</div>
-							<div className="header-path">
-								<span className="path-tilde">~</span>/favorites &nbsp;{'\u00B7'}&nbsp; {filteredFavorites.length} connections
-							</div>
-							<div className="recents-header-right">
-								<button
-									className="recents-header-filter-btn"
-									onClick={(e) => {
-										e.stopPropagation();
-										const terminalType = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
-										// Reabrir el terminal integrado sin crear nueva tab para preservar la sesión.
-										if (onTerminalToggle) onTerminalToggle(true, terminalType, false);
-									}}
-									title="Abrir terminal"
-								>
-									<i className="pi pi-desktop" />
-								</button>
-								<button
-									className="recents-header-filter-btn"
-									onClick={() => setActiveBottomView('recent')}
-									title="Ir a recientes"
-								>
-									<i className="pi pi-clock" />
-								</button>
-								<div
-									aria-hidden="true"
-									style={{
-										width: '1px',
-										height: '14px',
-										background: 'rgba(255,255,255,0.20)',
-										margin: '0 4px'
-									}}
-								/>
-								<button
-									className={`recents-header-filter-btn ${getActiveFilterCount(activeFavFilters) > 0 ? 'active' : ''}`}
-									onClick={() => { setFilterContext('favorites'); setFilterPanelOpen(true); }}
-									title="Filtrar favoritos"
-								>
-									<i className={`pi ${getActiveFilterCount(activeFavFilters) > 0 ? 'pi-filter-fill' : 'pi-filter'}`} />
-									{getActiveFilterCount(activeFavFilters) > 0 && (
-										<span style={{ fontSize: '0.7rem', marginLeft: 3 }}>{getActiveFilterCount(activeFavFilters)}</span>
-									)}
-								</button>
-							</div>
-						</div>
-
-						{/* Active filter chips strip for favorites */}
-						{getActiveFilterCount(activeFavFilters) > 0 && (
-							<div className="recents-filter-chips-bar">
-								{activeFavFilters.protocols?.map(filterId => (
-									<FilterBadge
-										key={`fav-protocol-${filterId}`}
-										label={getFilterLabel('protocols', filterId)}
-										color={getFilterColor('protocols', filterId)}
-										icon={getFilterIcon('protocols', filterId)}
-										type="protocol"
-										onRemove={() => handleRemoveFilter('favorites', 'protocols', filterId)}
-										compact
-									/>
-								))}
-								{activeFavFilters.groups?.map(filterId => (
-									<FilterBadge
-										key={`fav-group-${filterId}`}
-										label={getFilterLabel('groups', filterId)}
-										color={getFilterColor('groups', filterId)}
-										icon={getFilterIcon('groups', filterId)}
-										type="group"
-										onRemove={() => handleRemoveFilter('favorites', 'groups', filterId)}
-										compact
-									/>
-								))}
-								{activeFavFilters.states?.map(filterId => (
-									<FilterBadge
-										key={`fav-state-${filterId}`}
-										label={getFilterLabel('states', filterId)}
-										color={getFilterColor('states', filterId)}
-										icon={getFilterIcon('states', filterId)}
-										type="state"
-										onRemove={() => handleRemoveFilter('favorites', 'states', filterId)}
-										compact
-									/>
-								))}
-							</div>
-						)}
-
-						{/* Grep-style connection list for favorites */}
-						<div className="recents-terminal-body">
-							<ConnectionTable
-								connections={filteredFavorites}
-								title="Favoritos"
-								emptyMessage="# no favorite sessions found"
-							/>
-						</div>
-					</HomeIntegratedTerminalShell>
-				)
-			}
-
-			{/* RECIENTES TABLE - Terminal-style frame with grep rows */}
-			{
-				!terminalView && (activeBottomView === 'all' || activeBottomView === 'recent') && (
-					<HomeIntegratedTerminalShell
-						enabled={flushRightQuickBar && !!rightQuickBar}
-						visible
-						rightQuickBar={rightQuickBar}
-						frameClassName={`recents-terminal-frame ${terminalFrameStyle}`}
-						terminalFrameStyle={terminalFrameStyle}
-					>
-						{/* macOS-style header with filter on the right */}
-						<div className="recents-terminal-header">
-							<div className="traffic-lights">
-								{terminalFrameStyle === 'macos' ? (
-									<>
-										<div
-											className="traffic-dot red"
-											onClick={() => setActiveBottomView('all')}
-											title="Cerrar recientes"
-										/>
-										<div className="traffic-dot yellow" />
-										<div className="traffic-dot green" />
-									</>
-								) : terminalFrameStyle === 'gnome' ? (
-									<div className="gnome-controls">
-										<div className="gnome-dot close" title="Cerrar" onClick={() => setActiveBottomView('all')}><i className="pi pi-times" /></div>
-									</div>
-								) : terminalFrameStyle === 'kde' ? (
-									<div className="kde-controls">
-										<div className="kde-dot minimize" title="Minimizar"><i className="pi pi-minus" /></div>
-										<div className="kde-dot maximize" title="Maximizar"><i className="pi pi-stop" /></div>
-										<div className="kde-dot close" title="Cerrar" onClick={() => setActiveBottomView('all')}><i className="pi pi-times" /></div>
-									</div>
-								) : terminalFrameStyle === 'windows' ? (
-									<div className="windows-controls">
-										<div className="win-dot minimize" title="Minimizar"><i className="pi pi-minus" /></div>
-										<div className="win-dot maximize" title="Maximizar"><i className="pi pi-stop" /></div>
-										<div className="win-dot close" title="Cerrar" onClick={() => setActiveBottomView('all')}><i className="pi pi-times" /></div>
-									</div>
-								) : terminalFrameStyle === 'orchis' ? (
-									<div className="orchis-controls">
-										<div className="orchis-dot" onClick={() => setActiveBottomView('all')} title="Cerrar"><i className="pi pi-times" /></div>
-									</div>
-								) : terminalFrameStyle === 'fluent' ? (
-									<div className="fluent-controls">
-										<div className="fluent-dot"><i className="pi pi-minus" /></div>
-										<div className="fluent-dot"><i className="pi pi-stop" /></div>
-										<div className="fluent-dot" onClick={() => setActiveBottomView('all')} title="Cerrar"><i className="pi pi-times" /></div>
-									</div>
-								) : terminalFrameStyle === 'matcha' ? (
-									<div className="matcha-controls">
-										<div className="matcha-dot" onClick={() => setActiveBottomView('all')} title="Cerrar"><i className="pi pi-times" /></div>
-									</div>
-								) : terminalFrameStyle === 'futuristic' ? (
-									<div className="futuristic-controls">
-										<div className="cyber-dot" onClick={() => setActiveBottomView('all')} title="Cerrar">EXE</div>
-									</div>
-								) : terminalFrameStyle === 'modern' ? (
-									<div className="modern-controls">
-										<div className="glass-dot" onClick={() => setActiveBottomView('all')} title="Cerrar"><i className="pi pi-times" /></div>
-									</div>
-								) : terminalFrameStyle === 'minimal' ? (
-									<div className="minimal-controls" />
-								) : (
-									<div className="retro-controls">
-										<div className="retro-switch on" onClick={() => setActiveBottomView('all')} title="OFF" />
-									</div>
-								)}
-							</div>
-							<div className="header-path">
-								<span className="path-tilde">~</span>/recent &nbsp;{'\u00B7'}&nbsp; {filteredRecentsForDisplay.length} connections
-							</div>
-							<div className="recents-header-right">
-								<button
-									className="recents-header-filter-btn"
-									onClick={(e) => {
-										e.stopPropagation();
-										const terminalType = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
-										// Reabrir el terminal integrado sin crear nueva tab para preservar la sesión.
-										if (onTerminalToggle) onTerminalToggle(true, terminalType, false);
-									}}
-									title="Abrir terminal"
-								>
-									<i className="pi pi-desktop" />
-								</button>
-								<button
-									className="recents-header-filter-btn"
-									onClick={() => setActiveBottomView('favorites')}
-									title="Ir a favoritos"
-								>
-									<i className="pi pi-star" />
-								</button>
-								<div
-									aria-hidden="true"
-									style={{
-										width: '1px',
-										height: '14px',
-										background: 'rgba(255,255,255,0.20)',
-										margin: '0 4px'
-									}}
-								/>
-								<button
-									className={`recents-header-filter-btn ${getActiveFilterCount(activeRecentFilters) > 0 ? 'active' : ''}`}
-									onClick={() => { setFilterContext('recents'); setFilterPanelOpen(true); }}
-									title="Filtrar recientes"
-								>
-									<i className={`pi ${getActiveFilterCount(activeRecentFilters) > 0 ? 'pi-filter-fill' : 'pi-filter'}`} />
-									{getActiveFilterCount(activeRecentFilters) > 0 && (
-										<span style={{ fontSize: '0.7rem', marginLeft: 3 }}>{getActiveFilterCount(activeRecentFilters)}</span>
-									)}
-								</button>
-							</div>
-						</div>
-
-						{/* Active filter chips strip */}
-						{getActiveFilterCount(activeRecentFilters) > 0 && (
-							<div className="recents-filter-chips-bar">
-								{activeRecentFilters.protocols?.map(filterId => (
-									<FilterBadge
-										key={`protocol-${filterId}`}
-										label={getFilterLabel('protocols', filterId)}
-										color={getFilterColor('protocols', filterId)}
-										icon={getFilterIcon('protocols', filterId)}
-										type="protocol"
-										onRemove={() => handleRemoveFilter('recents', 'protocols', filterId)}
-										compact
-									/>
-								))}
-								{activeRecentFilters.groups?.map(filterId => (
-									<FilterBadge
-										key={`group-${filterId}`}
-										label={getFilterLabel('groups', filterId)}
-										color={getFilterColor('groups', filterId)}
-										icon={getFilterIcon('groups', filterId)}
-										type="group"
-										onRemove={() => handleRemoveFilter('recents', 'groups', filterId)}
-										compact
-									/>
-								))}
-								{activeRecentFilters.states?.map(filterId => (
-									<FilterBadge
-										key={`state-${filterId}`}
-										label={getFilterLabel('states', filterId)}
-										color={getFilterColor('states', filterId)}
-										icon={getFilterIcon('states', filterId)}
-										type="state"
-										onRemove={() => handleRemoveFilter('recents', 'states', filterId)}
-										compact
-									/>
-								))}
-							</div>
-						)}
-
-						{/* Grep-style connection list */}
-						<div className="recents-terminal-body">
-							<ConnectionTable
-								connections={filteredRecentsForDisplay}
-								title="Nombre"
-								emptyMessage="# no recent sessions"
-							/>
-						</div>
-					</HomeIntegratedTerminalShell>
-				)
-			}
-
-			{/* CSS Overrides for Terminal Transparency in Integrated View */}
-			<style>
-				{`
-					.recents-terminal-frame .xterm, 
-					.recents-terminal-frame .xterm-viewport,
-					.recents-terminal-frame .xterm-screen,
-					.recents-terminal-frame .xterm-screen canvas, 
-					.recents-terminal-frame .xterm-rows,
-					.recents-terminal-frame .xterm-text-layer, 
-					.recents-terminal-frame .xterm-selection-layer,
-					.recents-terminal-frame .xterm-link-layer, 
-					.recents-terminal-frame .xterm-cursor-layer,
-					.recents-terminal-frame .xterm-decoration-container, 
-					.recents-terminal-frame .xterm-helpers,
-					.recents-terminal-frame .p-tabview, 
-					.recents-terminal-frame .p-tabview-panels,
-					.recents-terminal-frame .p-tabview-panel {
-						background: transparent !important;
-						background-color: transparent !important;
-					}
-				`}
-			</style>
-
-			{/* EMBEDDED LOCAL TERMINAL - Always mounted to preserve session state, shown/hidden via display */}
-			<HomeIntegratedTerminalShell
-				enabled={flushRightQuickBar && !!rightQuickBar}
-				visible={terminalView}
-				rightQuickBar={rightQuickBar}
-				frameClassName={`recents-terminal-frame ${terminalFrameStyle}`}
-				frameBackground={localTerminalBg}
-				terminalFrameStyle={terminalFrameStyle}
-			>
-				{/* macOS-style header */}
-				<div className="recents-terminal-header" onDoubleClick={onToggleLocalTerminalMaximized} style={{ cursor: 'pointer' }}>
-					<div className="traffic-lights">
-						{terminalFrameStyle === 'minimal' ? null : terminalFrameStyle === 'macos' ? (
-							<>
-								<div
-									className="traffic-dot red"
-									onClick={() => {
-										if (onTerminalToggle) onTerminalToggle(false);
-										// Al cerrar el terminal integrado, forzar vista de Recientes para evitar el 'old code' de favoritos
-										setActiveBottomView('recent');
-									}}
-									title="Ocultar Terminal"
-								/>
-								<div className="traffic-dot yellow" />
-								<div
-									className="traffic-dot green"
-									onClick={onToggleLocalTerminalMaximized}
-									title={localTerminalMaximized ? "Restaurar tamaño" : "Maximizar Terminal"}
-								/>
-							</>
-						) : terminalFrameStyle === 'gnome' ? (
-							<div className="gnome-controls" style={{ display: 'flex', gap: '6px' }}>
-								<div
-									className="gnome-dot"
-									title={localTerminalMaximized ? "Restaurar" : "Maximizar"}
-									onClick={onToggleLocalTerminalMaximized}
-								>
-									<i className={localTerminalMaximized ? "pi pi-window-minimize" : "pi pi-window-maximize"} style={{ fontSize: '9px' }} />
-								</div>
-								<div
-									className="gnome-dot close"
-									title="Cerrar"
-									onClick={() => {
-										if (onTerminalToggle) onTerminalToggle(false);
-										setActiveBottomView('recent');
-									}}
-								>
-									<i className="pi pi-times" />
-								</div>
-							</div>
-						) : terminalFrameStyle === 'kde' ? (
-							<div className="kde-controls">
-								<div className="kde-dot minimize" title="Minimizar"><div className="custom-icon icon-min" /></div>
-								<div
-									className="kde-dot maximize"
-									title={localTerminalMaximized ? "Restaurar" : "Maximizar"}
-									onClick={onToggleLocalTerminalMaximized}
-								>
-									<div className="custom-icon icon-max" />
-								</div>
-								<div
-									className="kde-dot close"
-									title="Cerrar"
-									onClick={() => {
-										if (onTerminalToggle) onTerminalToggle(false);
-										setActiveBottomView('recent');
-									}}
-								>
-									<div className="custom-icon icon-close" />
-								</div>
-							</div>
-						) : terminalFrameStyle === 'windows' ? (
-							<div className="windows-controls">
-								<div className="win-dot minimize" title="Minimizar"><div className="custom-icon icon-min" /></div>
-								<div
-									className="win-dot maximize"
-									title={localTerminalMaximized ? "Restaurar" : "Maximizar"}
-									onClick={onToggleLocalTerminalMaximized}
-								>
-									<div className="custom-icon icon-max" />
-								</div>
-								<div
-									className="win-dot close"
-									title="Cerrar"
-									onClick={() => {
-										if (onTerminalToggle) onTerminalToggle(false);
-										setActiveBottomView('recent');
-									}}
-								>
-									<div className="custom-icon icon-close" />
-								</div>
-							</div>
-						) : terminalFrameStyle === 'orchis' ? (
-							<div className="orchis-controls" style={{ display: 'flex', gap: '6px' }}>
-								<div
-									className="orchis-dot"
-									onClick={onToggleLocalTerminalMaximized}
-									title={localTerminalMaximized ? "Restaurar" : "Maximizar"}
-									style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-								>
-									<i className={localTerminalMaximized ? "pi pi-window-minimize" : "pi pi-window-maximize"} style={{ fontSize: '9px' }} />
-								</div>
-								<div className="orchis-dot" onClick={() => { if (onTerminalToggle) onTerminalToggle(false); setActiveBottomView('recent'); }} title="Cerrar"><i className="pi pi-times" /></div>
-							</div>
-						) : terminalFrameStyle === 'fluent' ? (
-							<div className="fluent-controls">
-								<div className="fluent-dot"><i className="pi pi-minus" /></div>
-								<div
-									className="fluent-dot"
-									title={localTerminalMaximized ? "Restaurar" : "Maximizar"}
-									onClick={onToggleLocalTerminalMaximized}
-								>
-									<i className="pi pi-stop" />
-								</div>
-								<div className="fluent-dot" onClick={() => { if (onTerminalToggle) onTerminalToggle(false); setActiveBottomView('recent'); }} title="Cerrar"><i className="pi pi-times" /></div>
-							</div>
-						) : terminalFrameStyle === 'matcha' ? (
-							<div className="matcha-controls">
-								<div
-									className="matcha-dot"
-									title={localTerminalMaximized ? "Restaurar" : "Maximizar"}
-									onClick={onToggleLocalTerminalMaximized}
-								>
-									<i className={localTerminalMaximized ? "pi pi-window-minimize" : "pi pi-window-maximize"} style={{ fontSize: '9px' }} />
-								</div>
-								<div className="matcha-dot" onClick={() => { if (onTerminalToggle) onTerminalToggle(false); setActiveBottomView('recent'); }} title="Cerrar"><i className="pi pi-times" /></div>
-							</div>
-						) : terminalFrameStyle === 'futuristic' ? (
-							<div className="futuristic-controls" style={{ display: 'flex', gap: '6px' }}>
-								<div
-									className="cyber-dot"
-									title={localTerminalMaximized ? "Restaurar" : "Maximizar"}
-									onClick={onToggleLocalTerminalMaximized}
-								>
-									{localTerminalMaximized ? "RST" : "MAX"}
-								</div>
-								<div
-									className="cyber-dot"
-									title="Cerrar"
-									onClick={() => {
-										if (onTerminalToggle) onTerminalToggle(false);
-										setActiveBottomView('recent');
-									}}
-								>
-									EXE
-								</div>
-							</div>
-						) : terminalFrameStyle === 'modern' ? (
-							<div className="modern-controls" style={{ display: 'flex', gap: '6px' }}>
-								<div
-									className="glass-dot"
-									title={localTerminalMaximized ? "Restaurar" : "Maximizar"}
-									onClick={onToggleLocalTerminalMaximized}
-								>
-									<i className={localTerminalMaximized ? "pi pi-window-minimize" : "pi pi-window-maximize"} style={{ fontSize: '10px' }} />
-								</div>
-								<div
-									className="glass-dot"
-									title="Cerrar"
-									onClick={() => {
-										if (onTerminalToggle) onTerminalToggle(false);
-										setActiveBottomView('recent');
-									}}
-								>
-									<i className="pi pi-times" />
-								</div>
-							</div>
-						) : terminalFrameStyle === 'minimal' ? (
-							<div className="minimal-controls" />
-						) : (
-							<div className="retro-controls" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-								<div
-									className={`retro-switch ${localTerminalMaximized ? 'on' : ''}`}
-									title={localTerminalMaximized ? "Restaurar CRT" : "Maximizar CRT"}
-									onClick={onToggleLocalTerminalMaximized}
-									style={{ border: '2px solid #0f0' }}
-								/>
-								<span style={{ fontSize: '9px', color: '#0f0', fontFamily: 'monospace' }}>
-									{localTerminalMaximized ? "MAX" : "NORM"}
-								</span>
-								<div
-									className="retro-switch on"
-									title="OFF"
-									onClick={() => {
-										if (onTerminalToggle) onTerminalToggle(false);
-										setActiveBottomView('recent');
-									}}
-								/>
-							</div>
-						)}
-					</div>
-					<div className="header-path">
-						<span className="path-tilde">~</span>{terminalTitle}
-					</div>
-					<div className="recents-header-right" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-						<i
-							className="pi pi-clock"
-							style={{
-								fontSize: '0.86rem',
-								color: splitOpen && splitView === 'recent' ? (terminalTheme.green || '#3fb950') : (terminalTheme.foreground || '#c9d1d9'),
-								opacity: splitOpen && splitView === 'recent' ? 1 : 0.7,
-								cursor: 'pointer',
-								padding: '4px',
-								transition: 'all 0.2s'
-							}}
-							title="Recientes — split con terminal (clic para activar/desactivar)"
-							onClick={(e) => { e.stopPropagation(); handleToggleSplit('recent'); }}
-							onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
-							onMouseLeave={(e) => { e.currentTarget.style.opacity = splitOpen && splitView === 'recent' ? 1 : 0.7; }}
-						/>
-						<div
-							aria-hidden="true"
-							style={{
-								width: '1px',
-								height: '14px',
-								background: 'rgba(255,255,255,0.20)',
-								margin: '0 4px'
-							}}
-						/>
-						<i
-							className="pi pi-sliders-h"
-							style={{
-								fontSize: '0.9rem',
-								color: terminalTheme.foreground || '#c9d1d9',
-								opacity: 0.6,
-								cursor: 'pointer',
-								padding: '4px',
-								transition: 'all 0.2s'
-							}}
-							title="Opciones de Home"
-							onClick={(e) => {
-								e.stopPropagation();
-								if (onOpenHomeOptions) onOpenHomeOptions(e);
-							}}
-							onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
-							onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.6'; }}
-						/>
-						<i
-							className="pi pi-th-large"
-							style={{
-								fontSize: '0.9rem',
-								color: terminalTheme.foreground || '#c9d1d9',
-								opacity: isDetectingTerminals ? 0.3 : 0.6,
-								cursor: isDetectingTerminals ? 'wait' : 'pointer',
-								padding: '4px',
-								transition: 'all 0.2s'
-							}}
-							title="Cambiar terminal integrado"
-							onClick={(e) => {
-								e.stopPropagation();
-								terminalSwitcherOverlayRef.current?.toggle(e);
-							}}
-							onMouseEnter={(e) => { if (!isDetectingTerminals) e.currentTarget.style.opacity = '1'; }}
-							onMouseLeave={(e) => { if (!isDetectingTerminals) e.currentTarget.style.opacity = '0.6'; }}
-						/>
-						<i
-							className={`pi ${localTerminalMaximized ? 'pi-window-minimize' : 'pi-window-maximize'}`}
-							style={{
-								fontSize: '0.9rem',
-								color: terminalTheme.foreground || '#c9d1d9',
-								opacity: 0.6,
-								cursor: 'pointer',
-								padding: '4px',
-								transition: 'all 0.2s'
-							}}
-							title={localTerminalMaximized ? "Restaurar Terminal" : "Maximizar Terminal"}
-							onClick={(e) => {
-								e.stopPropagation();
-								if (onToggleLocalTerminalMaximized) onToggleLocalTerminalMaximized();
-							}}
-							onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
-							onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.6'; }}
-						/>
-					</div>
+						</HomePanelWrapper>
+					)}
 				</div>
-
-
-
-			{/* Terminal Body — con split opcional de Recientes / Favoritos (derecha) */}
-			<div
-				ref={splitBodyRef}
-				style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}
-			>
-				{/* Terminal real (izquierda, ocupa el espacio restante) */}
-				<div style={{ flex: 1, minWidth: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-					{children}
-				</div>
-
-				{splitOpen && (() => {
-					const splitConnections = splitView === 'favorites' ? filteredFavorites : filteredRecentsForDisplay;
-					const panelW = splitWidth !== null
-						? splitWidth
-						: (splitBodyRef.current ? splitBodyRef.current.getBoundingClientRect().width * 0.25 : 220);
-					return (
-						<>
-							{/* divisor arrastrable */}
-							<div
-								onMouseDown={handleSplitDragStart}
-								style={{
-									width: 4, height: '100%', cursor: 'col-resize', flexShrink: 0,
-									background: 'rgba(255,255,255,0.06)', transition: 'background 0.15s',
-								}}
-								onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
-								onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
-								title="Arrastrar para redimensionar"
-							/>
-							{/* Panel derecho — sin marco */}
-							<div style={{
-								width: panelW,
-								minWidth: 160,
-								maxWidth: '60%',
-								flexShrink: 0,
-								display: 'flex',
-								flexDirection: 'column',
-								overflow: 'hidden',
-							}}>
-								{/* barra de tabs */}
-								<div style={{
-									display: 'flex',
-									alignItems: 'center',
-									gap: 2,
-									padding: '4px 8px',
-									borderBottom: `1px solid rgba(255,255,255,0.06)`,
-									flexShrink: 0,
-								}}>
-									<button
-										onClick={() => setSplitView('recent')}
-										style={{
-											flex: 1, padding: '3px 5px', border: 'none', borderRadius: 3,
-											cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'inherit',
-											background: splitView === 'recent' ? 'rgba(79,195,247,0.14)' : 'transparent',
-											color: splitView === 'recent' ? '#4fc3f7' : 'rgba(255,255,255,0.35)',
-											fontWeight: splitView === 'recent' ? 700 : 400,
-											display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3,
-										}}
-									>
-										<i className="pi pi-clock" style={{ fontSize: '0.65rem' }} /> Recientes
-									</button>
-									<button
-										onClick={() => setSplitView('favorites')}
-										style={{
-											flex: 1, padding: '3px 5px', border: 'none', borderRadius: 3,
-											cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'inherit',
-											background: splitView === 'favorites' ? 'rgba(255,215,0,0.1)' : 'transparent',
-											color: splitView === 'favorites' ? '#FFD700' : 'rgba(255,255,255,0.35)',
-											fontWeight: splitView === 'favorites' ? 700 : 400,
-											display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3,
-										}}
-									>
-										<i className="pi pi-star" style={{ fontSize: '0.65rem' }} /> Favoritos
-									</button>
-									<button
-										onClick={() => setSplitOpen(false)}
-										title="Cerrar split"
-										style={{
-											padding: '3px 5px', border: 'none', borderRadius: 3,
-											cursor: 'pointer', background: 'transparent',
-											color: 'rgba(255,255,255,0.2)', fontSize: '0.6rem', flexShrink: 0,
-										}}
-										onMouseEnter={e => e.currentTarget.style.color = '#ff5f56'}
-										onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.2)'}
-									>
-										<i className="pi pi-times" />
-									</button>
-								</div>
-								{/* path bar */}
-								<div style={{
-									display: 'flex',
-									alignItems: 'center',
-									justifyContent: 'space-between',
-									padding: '2px 8px',
-									fontSize: '0.62rem',
-									color: 'rgba(255,255,255,0.25)',
-									fontFamily: "'Fira Code', monospace",
-									borderBottom: `1px solid rgba(255,255,255,0.04)`,
-									flexShrink: 0,
-								}}>
-									<div>
-										<span style={{ color: 'rgba(255,255,255,0.4)' }}>~</span>/{splitView === 'favorites' ? 'favorites' : 'recent'} · {splitConnections.length}
-									</div>
-									<div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-										{/* Filter Button */}
-										<button
-											className="split-header-filter-btn"
-											onClick={(e) => {
-												e.stopPropagation();
-												setFilterContext(splitView === 'favorites' ? 'favorites' : 'recents');
-												setFilterPanelOpen(true);
-											}}
-											style={{
-												background: 'transparent',
-												border: 'none',
-												color: getActiveFilterCount(splitView === 'favorites' ? activeFavFilters : activeRecentFilters) > 0 ? '#4fc3f7' : 'rgba(255,255,255,0.4)',
-												cursor: 'pointer',
-												padding: '2px',
-												display: 'flex',
-												alignItems: 'center',
-												transition: 'color 0.2s',
-											}}
-											title="Filtrar por protocolo"
-											onMouseEnter={e => e.currentTarget.style.color = '#4fc3f7'}
-											onMouseLeave={e => e.currentTarget.style.color = getActiveFilterCount(splitView === 'favorites' ? activeFavFilters : activeRecentFilters) > 0 ? '#4fc3f7' : 'rgba(255,255,255,0.4)'}
-										>
-											<i className={getActiveFilterCount(splitView === 'favorites' ? activeFavFilters : activeRecentFilters) > 0 ? "pi pi-filter-fill" : "pi pi-filter"} style={{ fontSize: '0.65rem' }} />
-										</button>
-
-										{/* Clear Recents Button */}
-										{splitView === 'recent' && (
-											<button
-												onClick={(e) => {
-													e.stopPropagation();
-													if (confirm('¿Estás seguro de que deseas limpiar el historial de recientes?')) {
-														clearRecents();
-													}
-												}}
-												style={{
-													background: 'transparent',
-													border: 'none',
-													color: 'rgba(255,255,255,0.4)',
-													cursor: 'pointer',
-													padding: '2px',
-													display: 'flex',
-													alignItems: 'center',
-													transition: 'color 0.2s',
-												}}
-												title="Limpiar panel de recientes"
-												onMouseEnter={e => e.currentTarget.style.color = '#ff5f56'}
-												onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}
-											>
-												<i className="pi pi-trash" style={{ fontSize: '0.65rem' }} />
-											</button>
+			) : (
+				<>
+					{/* Layout Legacy para retrocompatibilidad */}
+					<div className="hero-splash-header" style={{ paddingBottom: '8px' }}>
+						{homeCardVisible && (
+							<div className={`top-terminal-frame ${terminalFrameStyle}`}>
+								<div className="top-terminal-header">
+									<div className="traffic-lights">
+										{terminalFrameStyle === 'macos' ? (
+											<>
+												<div className="traffic-dot red" />
+												<div className="traffic-dot yellow" />
+												<div className="traffic-dot green" />
+											</>
+										) : terminalFrameStyle === 'gnome' ? (
+											<div className="gnome-controls" style={{ marginLeft: '-8px' }}>
+												<div className="gnome-dot close" title="Cerrar"><i className="pi pi-times" /></div>
+											</div>
+										) : terminalFrameStyle === 'kde' ? (
+											<div className="kde-controls" style={{ marginLeft: '-8px' }}>
+												<div className="kde-dot minimize" title="Minimizar"><div className="custom-icon icon-min" /></div>
+												<div className="kde-dot maximize" title="Maximizar"><div className="custom-icon icon-max" /></div>
+												<div className="kde-dot close" title="Cerrar"><div className="custom-icon icon-close" /></div>
+											</div>
+										) : terminalFrameStyle === 'windows' ? (
+											<div className="windows-controls" style={{ marginLeft: '-8px' }}>
+												<div className="win-dot minimize" title="Minimizar"><div className="custom-icon icon-min" /></div>
+												<div className="win-dot maximize" title="Maximizar"><div className="custom-icon icon-max" /></div>
+												<div className="win-dot close" title="Cerrar"><div className="custom-icon icon-close" /></div>
+											</div>
+										) : terminalFrameStyle === 'matcha' ? (
+											<div className="matcha-controls" style={{ marginLeft: '-8px' }}>
+												<div className="matcha-dot"><i className="pi pi-times" /></div>
+											</div>
+										) : terminalFrameStyle === 'futuristic' ? (
+											<div className="futuristic-controls" style={{ marginLeft: '-8px' }}>
+												<div className="cyber-dot"><i className="pi pi-times" /></div>
+											</div>
+										) : terminalFrameStyle === 'modern' ? (
+											<div className="modern-controls" style={{ marginLeft: '-8px' }}>
+												<div className="glass-dot"><i className="pi pi-times" /></div>
+											</div>
+										) : terminalFrameStyle === 'minimal' ? (
+											<div className="minimal-controls" style={{ marginLeft: '-8px' }} />
+										) : (
+											<div className="retro-controls" style={{ marginLeft: '-8px' }}>
+												<div className="retro-switch on" />
+											</div>
 										)}
 									</div>
-								</div>
-								{/* active filters badges in split view */}
-								{getActiveFilterCount(splitView === 'favorites' ? activeFavFilters : activeRecentFilters) > 0 && (
-									<div style={{
-										display: 'flex',
-										flexWrap: 'wrap',
-										gap: '4px',
-										padding: '4px 8px',
-										borderBottom: `1px solid rgba(255,255,255,0.04)`,
-										background: 'rgba(255,255,255,0.02)',
-										flexShrink: 0
-									}}>
-										{(splitView === 'favorites' ? activeFavFilters : activeRecentFilters).protocols?.map(filterId => (
-											<FilterBadge
-												key={`protocol-${filterId}`}
-												label={getFilterLabel('protocols', filterId)}
-												color={getFilterColor('protocols', filterId)}
-												icon={getFilterIcon('protocols', filterId)}
-												type="protocol"
-												onRemove={() => handleRemoveFilter(splitView === 'favorites' ? 'favorites' : 'recents', 'protocols', filterId)}
-												compact
-											/>
-										))}
-										{(splitView === 'favorites' ? activeFavFilters : activeRecentFilters).groups?.map(filterId => (
-											<FilterBadge
-												key={`group-${filterId}`}
-												label={getFilterLabel('groups', filterId)}
-												color={getFilterColor('groups', filterId)}
-												icon={getFilterIcon('groups', filterId)}
-												type="group"
-												onRemove={() => handleRemoveFilter(splitView === 'favorites' ? 'favorites' : 'recents', 'groups', filterId)}
-												compact
-											/>
-										))}
-										{(splitView === 'favorites' ? activeFavFilters : activeRecentFilters).states?.map(filterId => (
-											<FilterBadge
-												key={`state-${filterId}`}
-												label={getFilterLabel('states', filterId)}
-												color={getFilterColor('states', filterId)}
-												icon={getFilterIcon('states', filterId)}
-												type="state"
-												onRemove={() => handleRemoveFilter(splitView === 'favorites' ? 'favorites' : 'recents', 'states', filterId)}
-												compact
-											/>
-										))}
+									<div className="header-path">
+										<span style={{ fontWeight: 'bold' }}>
+											<span className="path-tilde">~</span>/home
+										</span>
+										<span style={{ opacity: 0.5 }}>·</span>
+										<span style={{ opacity: 0.9 }}>{activeViewName}</span>
 									</div>
-								)}
-								{/* lista de conexiones */}
-								<div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
-									{splitConnections.length === 0 ? (
-										<div style={{
-											display: 'flex', flexDirection: 'column', alignItems: 'center',
-											justifyContent: 'center', height: '100%', gap: 8,
-											color: 'rgba(255,255,255,0.2)', fontSize: '0.75rem',
-											padding: 16, textAlign: 'center',
-										}}>
-											<i className={splitView === 'favorites' ? 'pi pi-star' : 'pi pi-clock'} style={{ fontSize: '1.3rem', opacity: 0.3 }} />
-											<span>No hay {splitView === 'favorites' ? 'favoritos' : 'recientes'}</span>
-										</div>
-									) : splitConnections.map(conn => (
-										<ConnectionRow
-											key={conn.id}
-											connection={conn}
-											isPinned={isFavorite(conn)}
-											isActive={activeIds.has(activeKey(conn))}
-											onConnect={onConnectToHistory}
-											onEdit={onEdit}
-											onToggleFav={handleToggleFavoriteWithGroup}
-											isSplit={true}
-										/>
-									))}
+								</div>
+								{renderSearchCardBody()}
+							</div>
+						)}
+					</div>
+
+					{/* FAVORITES TABLE */}
+					{!terminalView && activeBottomView === 'favorites' && (
+						<HomeIntegratedTerminalShell
+							enabled={flushRightQuickBar && !!rightQuickBar}
+							visible
+							rightQuickBar={rightQuickBar}
+							frameClassName={`recents-terminal-frame favorites-terminal-frame ${terminalFrameStyle}`}
+							terminalFrameStyle={terminalFrameStyle}
+						>
+							<div className="recents-terminal-header">
+								<div className="traffic-lights">
+									<div className="traffic-dot red" onClick={() => setActiveBottomView('all')} title="Cerrar favoritos" />
+									<div className="traffic-dot yellow" />
+									<div className="traffic-dot green" />
+								</div>
+								<div className="header-path">
+									<span className="path-tilde">~</span>/favorites &nbsp;·&nbsp; {filteredFavorites.length} connections
 								</div>
 							</div>
-						</>
-					);
-				})()}
-			</div>
+							{renderFavoritesTableBody()}
+						</HomeIntegratedTerminalShell>
+					)}
 
-				{/* Integrated Status Bar */}
-				{statusBarVisible && (
-					<StandaloneStatusBar
-						visible={true}
-						style={{
-							position: 'relative',
-							bottom: 'auto',
-							left: 'auto',
-							right: 'auto',
-							width: '100%',
-							zIndex: 5,
-							borderTop: `1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '33' : 'rgba(255,255,255,0.05)'}`,
-							marginTop: 'auto'
-						}}
-					/>
-				)}
-			</HomeIntegratedTerminalShell>
+					{/* RECIENTES TABLE */}
+					{!terminalView && (activeBottomView === 'all' || activeBottomView === 'recent') && (
+						<HomeIntegratedTerminalShell
+							enabled={flushRightQuickBar && !!rightQuickBar}
+							visible
+							rightQuickBar={rightQuickBar}
+							frameClassName={`recents-terminal-frame ${terminalFrameStyle}`}
+							terminalFrameStyle={terminalFrameStyle}
+						>
+							<div className="recents-terminal-header">
+								<div className="traffic-lights">
+									<div className="traffic-dot red" onClick={() => setActiveBottomView('all')} title="Cerrar recientes" />
+									<div className="traffic-dot yellow" />
+									<div className="traffic-dot green" />
+								</div>
+								<div className="header-path">
+									<span className="path-tilde">~</span>/recent &nbsp;·&nbsp; {filteredRecentsForDisplay.length} connections
+								</div>
+							</div>
+							{renderRecentsTableBody()}
+						</HomeIntegratedTerminalShell>
+					)}
+
+					{/* EMBEDDED TERMINAL */}
+					<HomeIntegratedTerminalShell
+						enabled={flushRightQuickBar && !!rightQuickBar}
+						visible={terminalView}
+						rightQuickBar={rightQuickBar}
+						frameClassName={`recents-terminal-frame ${terminalFrameStyle}`}
+						frameBackground={localTerminalBg}
+						terminalFrameStyle={terminalFrameStyle}
+					>
+						<div className="recents-terminal-header" onDoubleClick={onToggleLocalTerminalMaximized} style={{ cursor: 'pointer' }}>
+							<div className="traffic-lights">
+								<div className="traffic-dot red" onClick={() => { if (onTerminalToggle) onTerminalToggle(false); setActiveBottomView('recent'); }} title="Ocultar Terminal" />
+								<div className="traffic-dot yellow" />
+								<div className="traffic-dot green" onClick={onToggleLocalTerminalMaximized} title={localTerminalMaximized ? "Restaurar tamaño" : "Maximizar Terminal"} />
+							</div>
+							<div className="header-path">
+								<span className="path-tilde">~</span>{terminalTitle}
+							</div>
+						</div>
+						{renderTerminalSplitBody()}
+					</HomeIntegratedTerminalShell>
+				</>
+			)}
 
 			<OverlayPanel
 				ref={themePickerRef}
