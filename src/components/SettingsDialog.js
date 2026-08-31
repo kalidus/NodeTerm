@@ -1235,74 +1235,7 @@ const SettingsContent = ({
     };
   }, [groupTabIcons]);
 
-  // Guacd preferred method (docker|wsl|mock)
-  const GUACD_PREF_KEY = 'nodeterm_guacd_preferred_method';
-  const isWindows = window?.electron?.platform === 'win32';
-  const methodOptions = isWindows
-    ? [
-      { label: 'Docker Desktop', value: 'docker' },
-      { label: 'WSL', value: 'wsl' }
-    ]
-    : [
-      { label: 'Docker', value: 'docker' },
-      { label: 'Nativo (local)', value: 'native' }
-    ];
 
-  const [guacdPreferredMethod, setGuacdPreferredMethod] = useState(() => {
-    const saved = (localStorage.getItem(GUACD_PREF_KEY) || 'docker').toLowerCase();
-    const allowed = methodOptions.map(o => o.value);
-    return allowed.includes(saved) ? saved : allowed[0];
-  });
-  const [guacdStatus, setGuacdStatus] = useState({ isRunning: false, method: 'unknown', port: 4822, host: '127.0.0.1' });
-  const [guacdRestarting, setGuacdRestarting] = useState(false);
-
-  // Función para reiniciar guacd manualmente
-  const handleRestartGuacd = async () => {
-    if (guacdRestarting) return;
-    setGuacdRestarting(true);
-    try {
-      if (window?.electron?.ipcRenderer) {
-        const result = await window.electron.ipcRenderer.invoke('guacamole:restart-guacd');
-        if (result?.success) {
-          // Actualizar el estado inmediatamente si viene en la respuesta
-          if (result.status) {
-            setGuacdStatus(result.status);
-          } else {
-            // Si no, refrescar el estado
-            const st = await window.electron.ipcRenderer.invoke('guacamole:get-status');
-            if (st && st.guacd) setGuacdStatus(st.guacd);
-          }
-        }
-      }
-    } catch (err) {
-      console.error('Error reiniciando guacd:', err);
-    } finally {
-      setGuacdRestarting(false);
-    }
-  };
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(GUACD_PREF_KEY, guacdPreferredMethod);
-      if (window?.electron?.ipcRenderer) {
-        window.electron.ipcRenderer.invoke('guacamole:set-preferred-method', guacdPreferredMethod).catch(() => { });
-      }
-    } catch { }
-  }, [guacdPreferredMethod]);
-
-  useEffect(() => {
-    const fetchStatus = async () => {
-      try {
-        if (window?.electron?.ipcRenderer) {
-          const st = await window.electron.ipcRenderer.invoke('guacamole:get-status');
-          if (st && st.guacd) setGuacdStatus(st.guacd);
-        }
-      } catch { }
-    };
-    fetchStatus();
-    const t = setInterval(fetchStatus, 5000); // Reducido de 2000ms a 5000ms para ahorrar CPU/RAM
-    return () => clearInterval(t);
-  }, []);
 
   useEffect(() => {
     // Obtener la versión real de la app con información completa
