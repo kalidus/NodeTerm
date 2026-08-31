@@ -634,7 +634,7 @@ export const useConnectionManagement = ({
         wallixService: baseRdp.wallixService || undefined,
         width: screen.width,
         height: screen.height,
-        resolution: screen.resolution,
+        resolution: baseRdp.resolution || screen.resolution || '1600x1000',
         dpi: baseRdp.guacDpi || 96,
         colorDepth: normalizeRdpColorDepth(baseRdp.colorDepth, 32),
         enableDrive: baseRdp.guacEnableDrive !== false && (baseRdp.guacEnableDrive === true || baseRdp.redirectFolders !== false),

@@ -89,7 +89,7 @@ function parseResolutionValue(resolution) {
     return null;
   }
 
-  const match = String(resolution).match(/^(\d+)\s*x\s*(\d+)$/i);
+  const match = String(resolution).trim().match(/^(\d+)\s*x\s*(\d+)$/i);
   if (!match) {
     return null;
   }
@@ -118,18 +118,17 @@ function resolveRdpScreenDimensions(config = {}, viewport = {}) {
     };
   }
 
+  const parsed = parseResolutionValue(resolution);
+
   if (config.autoResize === true) {
-    const width = Math.floor(viewportWidth * 0.8);
-    const height = Math.floor(viewportHeight * 0.7);
     return {
-      width,
-      height,
-      resolution: `${width}x${height}`,
+      width: viewportWidth,
+      height: viewportHeight,
+      resolution: parsed ? `${parsed.width}x${parsed.height}` : resolution,
       fullscreen: false
     };
   }
 
-  const parsed = parseResolutionValue(resolution);
   if (parsed) {
     return {
       width: parsed.width,

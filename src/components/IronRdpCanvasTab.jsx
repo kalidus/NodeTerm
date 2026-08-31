@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { InputTextarea } from 'primereact/inputtextarea';
@@ -18,6 +18,7 @@ import {
   PrinterDriverName
 } from '@devolutions/iron-remote-desktop-rdp';
 import { resolveCredsspPolicy } from '../utils/rdpSecurityPolicy';
+import { parseResolutionValue } from '../utils/rdpScreenConfig';
 
 const extractErrorMessage = (err) => {
   if (!err) return 'Error desconocido de conexión RDP';
@@ -107,7 +108,7 @@ const sendClipboardToSession = async (session, text) => {
   }
 };
 
-const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
+const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true }, ref) => {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const sessionRef = useRef(null);
@@ -129,6 +130,70 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
   const isDriveEnabled = rdpConfig.enableDrive !== false && (rdpConfig.guacEnableDrive !== false || rdpConfig.redirectFolders !== false || rdpConfig.enableDrive === true);
   const isPrinterEnabled = rdpConfig.redirectPrinters === true;
   const isAutoResizeEnabled = rdpConfig.autoResize !== false;
+  const isFullscreen = rdpConfig.fullscreen === true || rdpConfig.resolution === 'fullscreen';
+
+  const alignDesktop = (n) => {
+    const base = Math.max(1, Math.floor(n));
+    return (base + 3) & ~3;
+  };
+
+  const calculateInitialDimensions = () => {
+    if (isFullscreen || isAutoResizeEnabled) {
+      const rect = containerRef.current?.getBoundingClientRect();
+      const w = (rect && rect.width > 100) ? rect.width : (window.innerWidth || 1600);
+      const h = (rect && rect.height > 100) ? rect.height : (window.innerHeight || 1000);
+      return {
+        width: alignDesktop(Math.max(640, Math.floor(w))),
+        height: alignDesktop(Math.max(480, Math.floor(h)))
+      };
+    }
+
+    const parsed = parseResolutionValue(rdpConfig.resolution);
+    if (parsed) {
+      return {
+        width: alignDesktop(parsed.width),
+        height: alignDesktop(parsed.height)
+      };
+    }
+    if (rdpConfig.width && rdpConfig.height) {
+      return {
+        width: alignDesktop(parseInt(rdpConfig.width, 10)),
+        height: alignDesktop(parseInt(rdpConfig.height, 10))
+      };
+    }
+    return {
+      width: 1600,
+      height: 1000
+    };
+  };
+
+  const [desktopDimensions, setDesktopDimensions] = useState(() => calculateInitialDimensions());
+
+  // Métodos expuestos al componente padre
+  useImperativeHandle(ref, () => ({
+    fit: () => {
+      if (!containerRef.current || !sessionRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const width = alignDesktop(Math.max(640, rect.width || window.innerWidth));
+      const height = alignDesktop(Math.max(480, rect.height || window.innerHeight));
+      try {
+        console.log(`📐 [IronRDP WASM] fit() invocado → redimensionando a ${width}x${height}`);
+        if (typeof sessionRef.current.resize === 'function') {
+          sessionRef.current.resize(width, height);
+        }
+      } catch (e) {
+        console.warn('[IronRDP WASM] fit() error:', e);
+      }
+    },
+    focus: () => {
+      canvasRef.current?.focus();
+    },
+    disconnect: () => {
+      try {
+        sessionRef.current?.shutdown();
+      } catch (_) {}
+    }
+  }));
 
   useEffect(() => {
     let isMounted = true;
@@ -147,14 +212,17 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
         // 1. Inicializar módulo WebAssembly de IronRDP con nivel warn para evitar ruido de consola
         await initIronRdp('warn');
 
-        // 2. Obtener dimensiones del contenedor o ventana
-        const rect = containerRef.current?.getBoundingClientRect() || { width: 1600, height: 1000 };
-        const alignDesktop = (n) => {
-          const base = Math.max(1, Math.floor(n));
-          return (base + 3) & ~3;
-        };
-        const width = alignDesktop(Math.max(800, rect.width || window.innerWidth));
-        const height = alignDesktop(Math.max(600, rect.height || window.innerHeight));
+        // 2. Obtener dimensiones calculadas según configuración (autoResize vs resolución fija)
+        const dims = calculateInitialDimensions();
+        const width = dims.width;
+        const height = dims.height;
+
+        setDesktopDimensions({ width, height });
+
+        if (canvasRef.current) {
+          canvasRef.current.width = width;
+          canvasRef.current.height = height;
+        }
 
         const configPayload = {
           ...rdpConfig,
@@ -210,9 +278,6 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
         const proxyAddressStr = String(tokenResponse.wsUrl || '');
         const authTokenStr = String(tokenResponse.tokenId || '');
 
-        const alignedWidth = (width + 3) & ~3;
-        const alignedHeight = (height + 3) & ~3;
-
         const isClipboardEnabled = rdpConfig.redirectClipboard !== false;
 
         const builder = new Backend.SessionBuilder()
@@ -221,7 +286,7 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
           .destination(destinationStr)
           .proxyAddress(proxyAddressStr)
           .authToken(authTokenStr)
-          .desktopSize(new Backend.DesktopSize(alignedWidth, alignedHeight))
+          .desktopSize(new Backend.DesktopSize(width, height))
           .setCursorStyleCallback((cursorKind, cursorData, hotspotX, hotspotY) => {
             if (canvasRef.current) {
               if (cursorKind === 'url' && cursorData) {
@@ -237,14 +302,17 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
           })
           .setCursorStyleCallbackContext({})
           .canvasResizedCallback((w, h) => {
-            if (canvasRef.current && w && h) {
+            if (w && h) {
               console.log(`📐 [IronRDP WASM] Canvas redimensionado por servidor a ${w}x${h}`);
-              canvasRef.current.width = w;
-              canvasRef.current.height = h;
+              if (canvasRef.current) {
+                canvasRef.current.width = w;
+                canvasRef.current.height = h;
+              }
+              setDesktopDimensions({ width: w, height: h });
             }
           })
           .extension(enableCredssp(useCredssp))
-          .extension(displayControl(false));
+          .extension(displayControl(isAutoResizeEnabled));
 
         // Registrar extensiones para transferencia de archivos / carpeta compartida (RdpFileTransferProvider)
         if (isDriveEnabled) {
@@ -644,11 +712,13 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
 
     const getCanvasPos = (e) => {
       const rect = canvas.getBoundingClientRect();
-      const scaleX = canvas.width / rect.width;
-      const scaleY = canvas.height / rect.height;
+      const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
+      const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
+      const rawX = Math.floor((e.clientX - rect.left) * scaleX);
+      const rawY = Math.floor((e.clientY - rect.top) * scaleY);
       return {
-        x: Math.floor((e.clientX - rect.left) * scaleX),
-        y: Math.floor((e.clientY - rect.top) * scaleY)
+        x: Math.max(0, Math.min(canvas.width - 1, rawX)),
+        y: Math.max(0, Math.min(canvas.height - 1, rawY))
       };
     };
 
@@ -798,15 +868,11 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
       resizeTimer = setTimeout(() => {
         if (!containerRef.current || !sessionRef.current) return;
         const rect = containerRef.current.getBoundingClientRect();
-        const alignDesktop = (n) => {
-          const base = Math.max(1, Math.floor(n));
-          return (base + 3) & ~3;
-        };
-        const width = alignDesktop(Math.max(800, rect.width || window.innerWidth));
-        const height = alignDesktop(Math.max(600, rect.height || window.innerHeight));
+        const width = alignDesktop(Math.max(640, rect.width || window.innerWidth));
+        const height = alignDesktop(Math.max(480, rect.height || window.innerHeight));
 
         try {
-          console.log(`📐 [IronRDP WASM] Redimensionando escritorio a ${width}x${height}`);
+          console.log(`📐 [IronRDP WASM] Redimensionando escritorio dinámico a ${width}x${height}`);
           if (typeof sessionRef.current.resize === 'function') {
             sessionRef.current.resize(width, height);
           } else if (typeof sessionRef.current.requestDesktopSize === 'function') {
@@ -931,21 +997,62 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
     >
       <Toast ref={toastRef} position="bottom-left" />
 
-      {/* Elemento Canvas HTML5 para IronRDP WASM siempre presente en el DOM */}
-      <canvas
-        ref={canvasRef}
-        tabIndex={0}
-        onClick={() => canvasRef.current?.focus()}
-        onMouseDown={() => canvasRef.current?.focus()}
-        style={{
+      {/* Contenedor de visualización / scroll para el Canvas HTML5 */}
+      <div
+        style={isAutoResizeEnabled ? {
           width: '100%',
           height: '100%',
-          display: 'block',
-          backgroundColor: '#000000',
-          outline: 'none',
-          cursor: 'default'
+          overflow: 'hidden'
+        } : {
+          width: '100%',
+          height: '100%',
+          overflow: 'auto',
+          display: 'flex',
+          backgroundColor: '#141821'
         }}
-      />
+      >
+        <div
+          style={isAutoResizeEnabled ? {
+            width: '100%',
+            height: '100%'
+          } : {
+            margin: 'auto',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minWidth: 'fit-content',
+            minHeight: 'fit-content',
+            padding: '16px'
+          }}
+        >
+          {/* Elemento Canvas HTML5 para IronRDP WASM siempre presente en el DOM */}
+          <canvas
+            ref={canvasRef}
+            tabIndex={0}
+            onClick={() => canvasRef.current?.focus()}
+            onMouseDown={() => canvasRef.current?.focus()}
+            style={isAutoResizeEnabled ? {
+              width: '100%',
+              height: '100%',
+              display: 'block',
+              backgroundColor: '#000000',
+              outline: 'none',
+              cursor: 'default'
+            } : {
+              width: `${desktopDimensions.width}px`,
+              height: `${desktopDimensions.height}px`,
+              minWidth: `${desktopDimensions.width}px`,
+              minHeight: `${desktopDimensions.height}px`,
+              display: 'block',
+              backgroundColor: '#000000',
+              outline: 'none',
+              cursor: 'default',
+              borderRadius: '4px',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.7)'
+            }}
+          />
+        </div>
+      </div>
 
       {/* Overlay visual cuando se arrastra un archivo sobre la pantalla RDP */}
       {isDraggingOver && (
@@ -1077,6 +1184,21 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
           >
             <span className="flex align-items-center gap-1 font-semibold text-blue-400" style={{ fontSize: '11px' }}>
               <i className="pi pi-globe text-xs"></i> {rdpConfig?.hostname || rdpConfig?.server || 'RDP Web'}
+            </span>
+
+            <span style={{ width: '1px', height: '14px', backgroundColor: 'rgba(255,255,255,0.2)' }} />
+
+            <span
+              className="flex align-items-center gap-1 text-xs px-2 py-0 border-round font-medium"
+              style={{
+                backgroundColor: isAutoResizeEnabled ? 'rgba(59, 130, 246, 0.15)' : 'rgba(168, 85, 247, 0.15)',
+                color: isAutoResizeEnabled ? '#93c5fd' : '#d8b4fe',
+                fontSize: '11px',
+                height: '22px'
+              }}
+              title={isAutoResizeEnabled ? 'Ajuste automático activo (se adapta al visor)' : 'Resolución fija configurada'}
+            >
+              <i className="pi pi-desktop text-xs"></i> {desktopDimensions.width}x{desktopDimensions.height}{isAutoResizeEnabled ? ' (Auto)' : ''}
             </span>
 
             <span style={{ width: '1px', height: '14px', backgroundColor: 'rgba(255,255,255,0.2)' }} />
@@ -1241,6 +1363,8 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
       </Dialog>
     </div>
   );
-};
+});
+
+IronRdpCanvasTab.displayName = 'IronRdpCanvasTab';
 
 export default IronRdpCanvasTab;
