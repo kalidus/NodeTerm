@@ -27,8 +27,8 @@ jobs:
     env:
       SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
       SIGNPATH_ORGANIZATION_ID: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
-      SIGNPATH_PROJECT_SLUG: ${{ secrets.SIGNPATH_PROJECT_SLUG || 'nodeterm' }}
-      SIGNPATH_SIGNING_POLICY_SLUG: ${{ secrets.SIGNPATH_SIGNING_POLICY_SLUG || 'test-signing' }}
+      SIGNPATH_PROJECT_SLUG: 'nodeterm'
+      SIGNPATH_SIGNING_POLICY_SLUG: 'test-signing'
 
     steps:
       - name: Checkout code
