@@ -343,14 +343,14 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
               for (const item of clipboardData.items()) {
                 const mime = typeof item.mimeType === 'function' ? item.mimeType() : (item.mimeType || '');
                 const val = typeof item.value === 'function' ? item.value() : item.value;
-                if (mime.startsWith('text/') || mime === 'text/plain') {
+                if (mime.startsWith('text/') || mime === 'text/plain' || !mime) {
                   const text = typeof val === 'string'
                     ? val
-                    : (val instanceof Uint8Array ? new TextDecoder().decode(val) : String(val || ''));
-                  if (text && text !== lastReceivedClipboardTextRef.current) {
+                    : (val instanceof Uint8Array ? new TextDecoder('utf-8').decode(val) : String(val || ''));
+                  if (text) {
                     lastReceivedClipboardTextRef.current = text;
                     lastSentClipboardTextRef.current = text;
-                    console.log('📋 [IronRDP Clipboard] Recibido desde servidor remoto:', text.slice(0, 80));
+                    console.log('📋 [IronRDP Clipboard] Copiado remoto -> escrito en portapapeles local:', text.slice(0, 80));
                     await writeLocalClipboardText(text);
                   }
                   break;
@@ -367,6 +367,7 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
               const text = await readLocalClipboardText();
               if (text && sessionRef.current) {
                 lastSentClipboardTextRef.current = text;
+                lastReceivedClipboardTextRef.current = text;
                 await sendClipboardToSession(sessionRef.current, text);
               }
             } catch (_) {}
@@ -570,7 +571,7 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
     }
   }, [connectionState, isActive]);
 
-  // Sincronización periódica y por enfoque del portapapeles Local -> Remoto
+  // Sincronización periódica y por interacción del portapapeles Local -> Remoto
   useEffect(() => {
     if (connectionState !== 'connected' || !sessionRef.current || !isActive) return;
     const isClipboardEnabled = rdpConfig.redirectClipboard !== false;
@@ -584,10 +585,10 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
         const text = await readLocalClipboardText();
         if (
           text &&
-          text !== lastReceivedClipboardTextRef.current &&
           text !== lastSentClipboardTextRef.current
         ) {
           lastSentClipboardTextRef.current = text;
+          lastReceivedClipboardTextRef.current = text;
           await sendClipboardToSession(sessionRef.current, text);
         }
       } catch (_) {}
@@ -600,11 +601,22 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
       syncLocalClipboardToRemote();
     };
 
+    const canvas = canvasRef.current;
+    if (canvas) {
+      canvas.addEventListener('pointerenter', handleWindowFocus);
+      canvas.addEventListener('mousedown', handleWindowFocus);
+      canvas.addEventListener('focus', handleWindowFocus);
+    }
     window.addEventListener('focus', handleWindowFocus);
-    const intervalId = setInterval(syncLocalClipboardToRemote, 500);
+    const intervalId = setInterval(syncLocalClipboardToRemote, 300);
 
     return () => {
       isDisposed = true;
+      if (canvas) {
+        canvas.removeEventListener('pointerenter', handleWindowFocus);
+        canvas.removeEventListener('mousedown', handleWindowFocus);
+        canvas.removeEventListener('focus', handleWindowFocus);
+      }
       window.removeEventListener('focus', handleWindowFocus);
       clearInterval(intervalId);
     };
@@ -701,8 +713,9 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
         const isClipboardEnabled = rdpConfig.redirectClipboard !== false;
         if (isClipboardEnabled) {
           readLocalClipboardText().then((text) => {
-            if (text && text !== lastReceivedClipboardTextRef.current && sessionRef.current) {
+            if (text && text !== lastSentClipboardTextRef.current && sessionRef.current) {
               lastSentClipboardTextRef.current = text;
+              lastReceivedClipboardTextRef.current = text;
               sendClipboardToSession(sessionRef.current, text);
             }
           }).catch(() => {});
@@ -746,8 +759,9 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
         text = await readLocalClipboardText();
       }
 
-      if (text && text !== lastReceivedClipboardTextRef.current) {
+      if (text && text !== lastSentClipboardTextRef.current) {
         lastSentClipboardTextRef.current = text;
+        lastReceivedClipboardTextRef.current = text;
         console.log('📋 [IronRDP Clipboard] Evento Paste -> enviando a remoto:', text.slice(0, 80));
         await sendClipboardToSession(sessionRef.current, text);
       }
