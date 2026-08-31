@@ -157,6 +157,24 @@ class RdpManager {
   }
 
   /**
+   * Guardar credencial en Windows Vault (cmdkey) para evitar re-solicitud de contraseña en MSTSC
+   */
+  async saveCredentialsToWindowsVault(config) {
+    if (process.platform !== 'win32' || !config.server || !config.password) return;
+    try {
+      const { exec } = require('child_process');
+      const util = require('util');
+      const execPromise = util.promisify(exec);
+      const user = config.domain ? `${config.domain}\\${config.username}` : config.username;
+      const host = config.port && config.port !== 3389 ? `${config.server}:${config.port}` : config.server;
+      await execPromise(`cmdkey /generic:TERMSRV/${host} /user:"${user}" /pass:"${config.password.replace(/"/g, '`"')}"`);
+      console.log(`[RDP] Credenciales registradas en Windows Vault para TERMSRV/${host}`);
+    } catch (e) {
+      console.warn('[RDP] Aviso: no se pudo registrar credencial en Windows Vault:', e.message);
+    }
+  }
+
+  /**
    * Crear archivo .rdp temporal
    */
   async createRdpFile(config, connectionId) {
@@ -164,6 +182,9 @@ class RdpManager {
     const path = require('path');
     const os = require('os');
     
+    // Guardar credencial en almacén si es posible
+    await this.saveCredentialsToWindowsVault(config);
+
     const tempDir = os.tmpdir();
     const fileName = `nodeterm_rdp_${connectionId}.rdp`;
     const filePath = path.join(tempDir, fileName);
@@ -183,10 +204,19 @@ class RdpManager {
    */
   generateRdpContent(config) {
     // Detectar si es un servidor que probablemente requiera certificados
-    const isEnterpriseServer = config.server.includes('.sec.') || 
-                              config.server.includes('bastion') || 
-                              config.server.includes('corporate') ||
-                              config.server.includes('enterprise');
+    const isEnterpriseServer = (config.server && (
+      config.server.includes('.sec.') || 
+      config.server.includes('bastion') || 
+      config.server.includes('corporate') ||
+      config.server.includes('enterprise')
+    ));
+
+    const showWallpaper = config.enableWallpaper !== false && config.guacEnableWallpaper !== false;
+    const isDriveRedirect = config.redirectFolders !== false && (config.enableDrive !== false || config.guacEnableDrive !== false || config.redirectFolders === true);
+    const isClipboardRedirect = config.redirectClipboard !== false;
+    const isAudioRedirect = config.redirectAudio !== false;
+    const isPrinterRedirect = config.redirectPrinters === true;
+    const isSmartSizing = config.smartSizing !== false && config.autoResize !== false;
     
     // Configuración base
     const lines = [
@@ -197,32 +227,42 @@ class RdpManager {
       `administrative session:i:${config.admin === true ? 1 : 0}`,
       'negotiate security layer:i:1',
       'connect to console:i:0',
-      'disable wallpaper:i:0',
-      'disable full window drag:i:0',
-      'disable menu anims:i:0',
-      'disable themes:i:0',
+      `disable wallpaper:i:${showWallpaper ? 0 : 1}`,
+      `disable full window drag:i:${config.guacEnableFullWindowDrag === true ? 0 : 1}`,
+      `disable menu anims:i:${config.guacEnableMenuAnimations === true ? 0 : 1}`,
+      `disable themes:i:${config.guacEnableTheming !== false ? 0 : 1}`,
       'disable cursor setting:i:0',
       'bitmapcachepersistenable:i:1',
       'compression:i:1',
       'keyboardhook:i:2',
+      `audiomode:i:${isAudioRedirect ? 0 : 2}`,
       'audiocapturemode:i:0',
       'videoplaybackmode:i:1',
       'connection type:i:7',
+      `redirectclipboard:i:${isClipboardRedirect ? 1 : 0}`,
+      `redirectprinters:i:${isPrinterRedirect ? 1 : 0}`,
+      `redirectdrives:i:${isDriveRedirect ? 1 : 0}`,
+      `drivestoredirect:s:${isDriveRedirect ? '*' : ''}`,
       'redirectsmartcards:i:1',
       'redirectcomports:i:0',
       'redirectposdevices:i:0',
       'redirectdirectx:i:1',
       `session bpp:i:${normalizeRdpColorDepth(config.colorDepth, 32)}`,
-      'allow font smoothing:i:1',
+      `allow font smoothing:i:${config.guacEnableFontSmoothing !== false ? 1 : 0}`,
+      `allow desktop composition:i:${config.guacEnableDesktopComposition !== false ? 1 : 0}`,
       'promptcredentialonce:i:1'
     ];
+
+    if (config.domain) {
+      lines.push(`domain:s:${config.domain}`);
+    }
 
     // Configuraciones adicionales según opciones
     let finalWidth = 1600;
     let finalHeight = 1000;
 
     // Parsear resolución si está disponible
-    if (config.resolution) {
+    if (config.resolution && config.resolution !== 'fullscreen') {
       const [width, height] = config.resolution.split('x');
       if (width && height) {
         finalWidth = parseInt(width);
@@ -231,7 +271,7 @@ class RdpManager {
     }
 
     // Configuración de pantalla
-    if (config.fullscreen === true) {
+    if (config.fullscreen === true || config.resolution === 'fullscreen') {
       lines.push('screen mode id:i:2'); // Pantalla completa
     } else {
       lines.push('screen mode id:i:1'); // Ventana
@@ -240,8 +280,13 @@ class RdpManager {
       lines.push(`winposstr:s:0,1,100,100,${100 + finalWidth + 16},${100 + finalHeight + 39}`);
     }
 
+    if (config.span === true) {
+      lines.push('span:i:1');
+      lines.push('use multimon:i:1');
+    }
+
     // Smart sizing
-    if (config.smartSizing) {
+    if (isSmartSizing) {
       lines.push('smart sizing:i:1');   // Activar smart sizing
     } else {
       lines.push('smart sizing:i:0');   // Desactivar smart sizing

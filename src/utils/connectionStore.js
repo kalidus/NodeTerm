@@ -128,7 +128,9 @@ function toSerializable(connection) {
     resolution: connection.resolution || '1024x768',
     colors: connection.colors || '32',
     // Opciones avanzadas de RDP (usar nombres consistentes con el formulario)
-    guacEnableWallpaper: connection.guacEnableWallpaper || connection.enableWallpaper || false,
+    guacEnableWallpaper: connection.guacEnableWallpaper !== false && connection.enableWallpaper !== false,
+    guacEnableDrive: connection.guacEnableDrive !== false && (connection.guacEnableDrive === true || connection.redirectFolders !== false),
+    guacDriveHostDir: connection.guacDriveHostDir || '',
     guacEnableDesktopComposition: connection.guacEnableDesktopComposition || connection.enableDesktopComposition || false,
     guacEnableFontSmoothing: connection.guacEnableFontSmoothing || connection.enableFontSmoothing || false,
     guacEnableTheming: connection.guacEnableTheming || connection.enableTheming || false,
@@ -205,8 +207,8 @@ function fromSidebarNode(node, typeOverride = null) {
     resolution: node.data?.resolution || '1024x768',
     colors: node.data?.colors || '32',
     // Opciones avanzadas de RDP (usar nombres consistentes con el formulario)
-    guacEnableWallpaper: node.data?.guacEnableWallpaper || node.data?.enableWallpaper || false,
-    guacEnableDrive: node.data?.guacEnableDrive || false,
+    guacEnableWallpaper: node.data?.guacEnableWallpaper !== false && node.data?.enableWallpaper !== false,
+    guacEnableDrive: node.data?.guacEnableDrive !== false && (node.data?.guacEnableDrive === true || node.data?.redirectFolders !== false),
     guacDriveHostDir: node.data?.guacDriveHostDir || '',
     guacEnableDesktopComposition: node.data?.guacEnableDesktopComposition || node.data?.enableDesktopComposition || false,
     guacEnableFontSmoothing: node.data?.guacEnableFontSmoothing || node.data?.enableFontSmoothing || false,

@@ -52,7 +52,7 @@ export function createDefaultRdpFormData() {
     redirectFolders: true,
     redirectClipboard: true,
     redirectPrinters: false,
-    redirectAudio: false,
+    redirectAudio: true,
     fullscreen: false,
     smartSizing: true,
     span: false,
@@ -62,7 +62,7 @@ export function createDefaultRdpFormData() {
     guacDpi: 96,
     guacSecurity: 'any',
     guacEnableWallpaper: true,
-    guacEnableDrive: false,
+    guacEnableDrive: true,
     guacDriveHostDir: '',
     guacEnableGfx: false,
     guacEnableDesktopComposition: false,
@@ -82,6 +82,16 @@ export function mapEditNodeDataToRdpFormData(editNodeData) {
     return createDefaultRdpFormData();
   }
   const data = editNodeData.data || {};
+  const isDriveOn = data.guacEnableDrive !== undefined 
+    ? data.guacEnableDrive 
+    : (data.redirectFolders !== undefined ? data.redirectFolders : true);
+  const isAutoResizeOn = data.autoResize !== undefined 
+    ? data.autoResize 
+    : (data.smartSizing !== undefined ? data.smartSizing : true);
+  const isWallpaperOn = data.guacEnableWallpaper !== undefined 
+    ? data.guacEnableWallpaper 
+    : (data.enableWallpaper !== undefined ? data.enableWallpaper : true);
+
   return {
     name: editNodeData.label || '',
     server: data.server || data.hostname || '',
@@ -92,20 +102,20 @@ export function mapEditNodeDataToRdpFormData(editNodeData) {
     preset: data.preset || 'default',
     resolution: data.resolution || '1600x1000',
     colorDepth: data.colorDepth || 32,
-    redirectFolders: data.redirectFolders !== undefined ? data.redirectFolders : true,
+    redirectFolders: isDriveOn,
     redirectClipboard: data.redirectClipboard !== undefined ? data.redirectClipboard : true,
     redirectPrinters: data.redirectPrinters || false,
     redirectAudio: data.redirectAudio !== undefined ? data.redirectAudio : true,
     fullscreen: data.fullscreen || false,
-    smartSizing: data.smartSizing !== undefined ? data.smartSizing : true,
+    smartSizing: isAutoResizeOn,
     span: data.span || false,
     admin: data.admin || false,
     public: data.public || false,
-    autoResize: data.autoResize !== false,
+    autoResize: isAutoResizeOn,
     guacDpi: data.guacDpi || 96,
     guacSecurity: data.guacSecurity || 'any',
-    guacEnableWallpaper: data.guacEnableWallpaper || false,
-    guacEnableDrive: data.guacEnableDrive || false,
+    guacEnableWallpaper: isWallpaperOn,
+    guacEnableDrive: isDriveOn,
     guacDriveHostDir: data.guacDriveHostDir || '',
     guacEnableGfx: data.guacEnableGfx || false,
     guacEnableDesktopComposition: data.guacEnableDesktopComposition || false,
@@ -598,109 +608,60 @@ export function EnhancedRDPForm({
               </span>
             </div>
             <div className="terminal-options-grid">
-              {formData.clientType === 'mstsc' ? (
-                <>
-                  <TerminalSwitchOption
-                    iconClass="pi-copy"
-                    labelText={t('rdp.options.clipboard')}
-                    checked={formData.redirectClipboard}
-                    onCheckedChange={(v) => handleInputChange('redirectClipboard', v)}
-                    inputId={`${p}-mstsc-clipboard`}
-                    helpText={t('rdp.help.clipboard')}
-                  />
-                  <TerminalSwitchOption
-                    iconClass="pi-volume-up"
-                    labelText={t('rdp.options.audio')}
-                    checked={formData.redirectAudio}
-                    onCheckedChange={(v) => handleInputChange('redirectAudio', v)}
-                    inputId={`${p}-mstsc-audio`}
-                    helpText={t('rdp.help.audio')}
-                  />
-                  <TerminalSwitchOption
-                    iconClass="pi-print"
-                    labelText={t('rdp.options.printers')}
-                    checked={formData.redirectPrinters}
-                    onCheckedChange={(v) => handleInputChange('redirectPrinters', v)}
-                    inputId={`${p}-mstsc-printers`}
-                    helpText={t('rdp.help.printers')}
-                  />
-                  <TerminalSwitchOption
-                    iconClass="pi-folder"
-                    labelText={t('rdp.options.folders')}
-                    checked={formData.redirectFolders}
-                    onCheckedChange={(v) => handleInputChange('redirectFolders', v)}
-                    inputId={`${p}-mstsc-folders`}
-                    helpText={t('rdp.help.folders')}
-                  />
-                  <TerminalSwitchOption
-                    iconClass="pi-arrows-alt"
-                    labelText={t('rdp.options.smartSizing')}
-                    checked={formData.smartSizing}
-                    onCheckedChange={(v) => handleInputChange('smartSizing', v)}
-                    inputId={`${p}-mstsc-smart`}
-                    helpText={t('rdp.help.smartSizing')}
-                  />
-                  <TerminalSwitchOption
-                    iconClass="pi-window-maximize"
-                    labelText={t('rdp.options.fullscreen')}
-                    checked={formData.fullscreen}
-                    onCheckedChange={(v) => handleInputChange('fullscreen', v)}
-                    inputId={`${p}-mstsc-fullscreen`}
-                    helpText={t('rdp.help.fullscreen')}
-                  />
-                </>
-              ) : (
-                <>
-                  <TerminalSwitchOption
-                    iconClass="pi-copy"
-                    labelText={t('rdp.options.clipboard')}
-                    checked={formData.redirectClipboard}
-                    onCheckedChange={(v) => handleInputChange('redirectClipboard', v)}
-                    inputId={`${p}-guac-clipboard`}
-                    helpText={t('rdp.help.clipboard')}
-                  />
-                  <TerminalSwitchOption
-                    iconClass="pi-volume-up"
-                    labelText={t('rdp.options.audio')}
-                    checked={formData.redirectAudio}
-                    onCheckedChange={(v) => handleInputChange('redirectAudio', v)}
-                    inputId={`${p}-guac-audio`}
-                    helpText={t('rdp.help.audio')}
-                  />
-                  <TerminalSwitchOption
-                    iconClass="pi-database"
-                    labelText={t('rdp.options.enableDrive')}
-                    checked={formData.guacEnableDrive}
-                    onCheckedChange={(v) => handleInputChange('guacEnableDrive', v)}
-                    inputId={`${p}-guac-drive`}
-                    helpText={t('rdp.help.enableDrive')}
-                  />
-                  <TerminalSwitchOption
-                    iconClass="pi-arrows-alt"
-                    labelText={t('rdp.options.autoResize')}
-                    checked={formData.autoResize}
-                    onCheckedChange={(v) => handleInputChange('autoResize', v)}
-                    inputId={`${p}-guac-resize`}
-                    helpText={t('rdp.help.autoResize')}
-                  />
-                  <TerminalSwitchOption
-                    iconClass="pi-image"
-                    labelText={t('rdp.options.enableWallpaper')}
-                    checked={formData.guacEnableWallpaper}
-                    onCheckedChange={(v) => handleInputChange('guacEnableWallpaper', v)}
-                    inputId={`${p}-guac-wallpaper`}
-                    helpText={t('rdp.help.enableWallpaper')}
-                  />
-                  <TerminalSwitchOption
-                    iconClass="pi-print"
-                    labelText={t('rdp.options.printers')}
-                    checked={formData.redirectPrinters}
-                    onCheckedChange={(v) => handleInputChange('redirectPrinters', v)}
-                    inputId={`${p}-guac-printers`}
-                    helpText={t('rdp.help.printers')}
-                  />
-                </>
-              )}
+              <TerminalSwitchOption
+                iconClass="pi-copy"
+                labelText={t('rdp.options.clipboard')}
+                checked={formData.redirectClipboard}
+                onCheckedChange={(v) => handleInputChange('redirectClipboard', v)}
+                inputId={`${p}-opt-clipboard`}
+                helpText={t('rdp.help.clipboard')}
+              />
+              <TerminalSwitchOption
+                iconClass="pi-volume-up"
+                labelText={t('rdp.options.audio')}
+                checked={formData.redirectAudio}
+                onCheckedChange={(v) => handleInputChange('redirectAudio', v)}
+                inputId={`${p}-opt-audio`}
+                helpText={t('rdp.help.audio')}
+              />
+              <TerminalSwitchOption
+                iconClass="pi-database"
+                labelText={t('rdp.options.enableDrive')}
+                checked={formData.guacEnableDrive !== false && formData.redirectFolders !== false}
+                onCheckedChange={(v) => {
+                  handleInputChange('guacEnableDrive', v);
+                  handleInputChange('redirectFolders', v);
+                }}
+                inputId={`${p}-opt-drive`}
+                helpText={t('rdp.help.enableDrive')}
+              />
+              <TerminalSwitchOption
+                iconClass="pi-arrows-alt"
+                labelText={t('rdp.options.autoResize')}
+                checked={formData.autoResize !== false && formData.smartSizing !== false}
+                onCheckedChange={(v) => {
+                  handleInputChange('autoResize', v);
+                  handleInputChange('smartSizing', v);
+                }}
+                inputId={`${p}-opt-resize`}
+                helpText={t('rdp.help.autoResize')}
+              />
+              <TerminalSwitchOption
+                iconClass="pi-image"
+                labelText={t('rdp.options.enableWallpaper')}
+                checked={formData.guacEnableWallpaper}
+                onCheckedChange={(v) => handleInputChange('guacEnableWallpaper', v)}
+                inputId={`${p}-opt-wallpaper`}
+                helpText={t('rdp.help.enableWallpaper')}
+              />
+              <TerminalSwitchOption
+                iconClass="pi-print"
+                labelText={t('rdp.options.printers')}
+                checked={formData.redirectPrinters}
+                onCheckedChange={(v) => handleInputChange('redirectPrinters', v)}
+                inputId={`${p}-opt-printers`}
+                helpText={t('rdp.help.printers')}
+              />
             </div>
           </div>
         );

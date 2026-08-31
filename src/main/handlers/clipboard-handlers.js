@@ -48,8 +48,10 @@ function registerClipboardHandlers() {
         data = Buffer.from(buffer.buffer, buffer.byteOffset || 0, buffer.byteLength || buffer.length);
       } else if (typeof buffer === 'string') {
         data = Buffer.from(buffer, 'base64');
+      } else if (buffer && typeof buffer === 'object' && Object.keys(buffer).length > 0) {
+        data = Buffer.from(Object.values(buffer));
       } else {
-        data = Buffer.from(buffer);
+        data = Buffer.from(buffer || []);
       }
       fs.writeFileSync(filePath, data);
       console.log(`💾 [Clipboard] Archivo temporal guardado (${data.length} bytes): ${filePath}`);

@@ -126,7 +126,7 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
   const lastReceivedClipboardTextRef = useRef('');
   const lastSentClipboardTextRef = useRef('');
 
-  const isDriveEnabled = rdpConfig.redirectFolders !== false && rdpConfig.enableDrive !== false;
+  const isDriveEnabled = rdpConfig.enableDrive !== false && (rdpConfig.guacEnableDrive !== false || rdpConfig.redirectFolders !== false || rdpConfig.enableDrive === true);
   const isPrinterEnabled = rdpConfig.redirectPrinters === true;
   const isAutoResizeEnabled = rdpConfig.autoResize !== false;
 
@@ -334,14 +334,15 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
             if (!clipboardData) return;
             try {
               for (const item of clipboardData.items()) {
-                const mime = item.mimeType ? item.mimeType() : '';
-                const val = item.value ? item.value() : null;
-                if (mime.startsWith('text/')) {
+                const mime = typeof item.mimeType === 'function' ? item.mimeType() : (item.mimeType || '');
+                const val = typeof item.value === 'function' ? item.value() : item.value;
+                if (mime.startsWith('text/') || mime === 'text/plain') {
                   const text = typeof val === 'string'
                     ? val
                     : (val instanceof Uint8Array ? new TextDecoder().decode(val) : String(val || ''));
-                  if (text && text !== lastSentClipboardTextRef.current) {
+                  if (text && text !== lastReceivedClipboardTextRef.current) {
                     lastReceivedClipboardTextRef.current = text;
+                    lastSentClipboardTextRef.current = text;
                     console.log('📋 [IronRDP Clipboard] Recibido desde servidor remoto:', text.slice(0, 80));
                     await writeLocalClipboardText(text);
                   }
@@ -357,7 +358,7 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
           builder.forceClipboardUpdateCallback(async () => {
             try {
               const text = await readLocalClipboardText();
-              if (text && text !== lastReceivedClipboardTextRef.current && sessionRef.current) {
+              if (text && sessionRef.current) {
                 lastSentClipboardTextRef.current = text;
                 await sendClipboardToSession(sessionRef.current, text);
               }
