@@ -27,8 +27,6 @@ jobs:
     env:
       SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
       SIGNPATH_ORGANIZATION_ID: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
-      SIGNPATH_PROJECT_SLUG: 'nodeterm'
-      SIGNPATH_SIGNING_POLICY_SLUG: 'test-signing'
 
     steps:
       - name: Checkout code
@@ -108,14 +106,17 @@ jobs:
           Set-PSRepository PSGallery -InstallationPolicy Trusted
           Install-Module -Name SignPath -Force -Scope CurrentUser
 
+          $projectSlug = "nodeterm"
+          $policySlug = "Test_Signing"
+
           $exeFiles = Get-ChildItem -Path "dist" -Filter "*.exe"
           foreach ($file in $exeFiles) {
-            Write-Host "Submitting $($file.FullName) to SignPath for signing..."
+            Write-Host "Submitting $($file.FullName) to SignPath for signing with policy '$policySlug'..."
             Submit-SigningRequest `
               -OrganizationId "${{ secrets.SIGNPATH_ORGANIZATION_ID }}" `
               -ApiToken "${{ secrets.SIGNPATH_API_TOKEN }}" `
-              -ProjectSlug "nodeterm" `
-              -SigningPolicySlug "test-signing" `
+              -ProjectSlug $projectSlug `
+              -SigningPolicySlug $policySlug `
               -InputArtifactPath $file.FullName `
               -OutputArtifactPath $file.FullName `
               -WaitForCompletion `
