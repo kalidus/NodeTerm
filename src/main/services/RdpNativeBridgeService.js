@@ -201,10 +201,31 @@ class RdpNativeBridgeService extends EventEmitter {
 
     let isCleanedUp = false;
 
-    const cleanup = (reason) => {
+    const formatCloseReason = (reason) => {
+      if (!reason) return 'Cerrado por el usuario';
+      const r = String(reason);
+      if (r.includes('WebSocket') || r.includes('WASM') || r.includes('usuario') || r.includes('user') || r.includes('tab')) {
+        return 'Cerrado por el usuario';
+      }
+      if (r.includes('CLOSED') || r.includes('TLS socket closed') || r.includes('servidor remoto')) {
+        return 'Cerrado por el servidor remoto';
+      }
+      if (r.includes('ECONNRESET') || r.includes('EPIPE') || r.includes('reiniciada')) {
+        return 'Conexión finalizada';
+      }
+      if (r.includes('ETIMEDOUT')) {
+        return 'Tiempo de espera agotado (Timeout)';
+      }
+      if (r.includes('ECONNREFUSED')) {
+        return 'Conexión rechazada por el servidor remoto';
+      }
+      return r;
+    };
+
+    const cleanup = (reason = 'Cerrado por el usuario') => {
       if (isCleanedUp) return;
       isCleanedUp = true;
-      console.log(`🧹 [RdpNativeBridgeService] Conexión cerrada (${reason})`);
+      console.log(`🧹 [RdpNativeBridgeService] Sesión RDP finalizada (${formatCloseReason(reason)})`);
       this.activeConnections.delete(connectionId);
       try { ws.close(); } catch (e) {}
       try {
@@ -357,17 +378,26 @@ class RdpNativeBridgeService extends EventEmitter {
           }
         }
       } else if (msg.type === 'ERROR') {
-        console.error('❌ [Bridge Worker Error]:', msg.error);
-        cleanup(`Worker Error: ${msg.error}`);
+        if (!isCleanedUp) {
+          const isBenign = msg.error && (msg.error.includes('ECONNRESET') || msg.error.includes('EPIPE'));
+          if (!isBenign) {
+            console.error('❌ [RdpNativeBridgeService] Error de conexión:', msg.error);
+          }
+          cleanup(isBenign ? 'Conexión finalizada' : `Error: ${msg.error}`);
+        }
       } else if (msg.type === 'CLOSED') {
-        cleanup(`Worker notificó conexión cerrada (toRdp=${bytesToRdp}B fromRdp=${bytesFromRdp}B)`);
+        cleanup('Cerrado por el servidor remoto');
       }
     });
 
-    worker.on('error', (err) => cleanup(`Worker process error: ${err.message}`));
+    worker.on('error', (err) => {
+      if (!isCleanedUp) {
+        cleanup(`Error worker: ${err.message}`);
+      }
+    });
     worker.on('exit', (code) => {
-      if (rdCleanPathPhase !== 'transparent') {
-        cleanup(`Worker process exited with code ${code}`);
+      if (rdCleanPathPhase !== 'transparent' && !isCleanedUp) {
+        cleanup(`Proceso worker finalizó con código ${code}`);
       }
     });
 
@@ -478,8 +508,11 @@ class RdpNativeBridgeService extends EventEmitter {
       }
     });
 
-    ws.on('close', () => cleanup('WebSocket (WASM client) closed'));
-    ws.on('error', (e) => cleanup(`WebSocket error: ${e.message}`));
+    ws.on('close', () => cleanup('Cerrado por el usuario'));
+    ws.on('error', (e) => {
+      const isBenign = e.message && (e.message.includes('ECONNRESET') || e.message.includes('closed'));
+      cleanup(isBenign ? 'Cerrado por el usuario' : `Error WebSocket: ${e.message}`);
+    });
   }
 
   /**
