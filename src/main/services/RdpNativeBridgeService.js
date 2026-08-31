@@ -107,12 +107,12 @@ class RdpNativeBridgeService extends EventEmitter {
       width: config.width || 1920,
       height: config.height || 1080,
       colorDepth: config.colorDepth || 32,
-      enableWallpaper: config.guacEnableWallpaper !== undefined ? config.guacEnableWallpaper : (config.enableWallpaper !== false),
-      enableFontSmoothing: config.guacEnableFontSmoothing === true,
-      enableDesktopComposition: config.guacEnableDesktopComposition === true,
-      enableTheming: config.guacEnableTheming !== false,
-      enableFullWindowDrag: config.guacEnableFullWindowDrag === true,
-      enableMenuAnimations: config.guacEnableMenuAnimations === true,
+      enableWallpaper: config.guacEnableWallpaper !== undefined ? config.guacEnableWallpaper : (config.enableWallpaper !== undefined ? config.enableWallpaper : true),
+      enableFontSmoothing: config.enableFontSmoothing === true || config.guacEnableFontSmoothing === true,
+      enableDesktopComposition: config.enableDesktopComposition === true || config.guacEnableDesktopComposition === true,
+      enableTheming: config.enableTheming !== false && config.guacEnableTheming !== false,
+      enableFullWindowDrag: config.enableFullWindowDrag === true || config.guacEnableFullWindowDrag === true,
+      enableMenuAnimations: config.enableMenuAnimations === true || config.guacEnableMenuAnimations === true,
       createdAt: Date.now()
     };
 
