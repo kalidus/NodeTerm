@@ -236,6 +236,13 @@ const IronRdpCanvasTab = ({ tabId, rdpConfig = {}, isActive = true }) => {
             }
           })
           .setCursorStyleCallbackContext({})
+          .canvasResizedCallback((w, h) => {
+            if (canvasRef.current && w && h) {
+              console.log(`📐 [IronRDP WASM] Canvas redimensionado por servidor a ${w}x${h}`);
+              canvasRef.current.width = w;
+              canvasRef.current.height = h;
+            }
+          })
           .extension(enableCredssp(useCredssp))
           .extension(displayControl(false));
 
