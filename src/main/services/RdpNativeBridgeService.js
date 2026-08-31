@@ -7,6 +7,7 @@
  */
 
 const net = require('net');
+const tls = require('tls');
 const http = require('http');
 const crypto = require('crypto');
 const EventEmitter = require('events');
@@ -139,53 +140,26 @@ class RdpNativeBridgeService extends EventEmitter {
   /**
    * Establece la conexión bidireccional entre el WebSocket cliente y el puerto RDP TCP remoto.
    * 
-   * Implementa la arquitectura RDCleanPath + TLS Proxy:
+   * Implementa la arquitectura RDCleanPath + TLS Nativo:
    * 1. Recibe RDCleanPath Request PDU de WASM (contiene X.224 Connection Request en tag [6])
-   * 2. Extrae el X.224 CR del tag [6] y lo envía al servidor RDP TCP
-   * 3. Espera la respuesta X.224 Connection Confirm del servidor RDP
-   * 4. Inicia actualización del socket TCP a TLS (`tls.connect`) con el servidor RDP remoto
-   * 5. Al completarse el handshake TLS, obtiene el certificado X.509 real del servidor RDP
+   * 2. Conecta TCP con el servidor RDP y envía el X.224 CR
+   * 3. Recibe la respuesta X.224 Connection Confirm del servidor RDP
+   * 4. Actualiza a TLS en el proceso nativo gestionando certificados autofirmados RDP
+   * 5. Obtiene el certificado X.509 real del servidor RDP
    * 6. Construye RDCleanPath Response PDU con version + x224_connection_pdu(CC) + cert_chain + server_addr
-   * 7. Envía el Response a WASM. El bridge reenvía datos encriptados por TLS 1:1 entre WASM y el servidor RDP.
-   */
-  /**
-   * Establece la conexión bidireccional entre el WebSocket cliente y el puerto RDP TCP remoto.
-   * 
-   * Utiliza rdp-tls-worker.js ejecutado bajo Node.js nativo (OpenSSL) para evadir BoringSSL en Electron:
-   * 1. Recibe RDCleanPath Request PDU de WASM (contiene X.224 Connection Request en tag [6])
-   * 2. Delega al worker TCP+TLS la conexión y negociación X.224 + TLS 1.3 con el servidor RDP
-   * 3. El worker obtiene el certificado X.509 real de 724+ bytes del servidor RDP
-   * 4. Construye RDCleanPath Response PDU con version + x224_connection_pdu(CC) + cert_chain + server_addr
-   * 5. Envía el Response a WASM. Canaliza los datos de sesión bidireccionales encriptados.
+   * 7. Envía el Response a WASM. Desencripta y canaliza los datos de sesión bidireccionales.
    */
   handleConnection(ws, session) {
-    const { fork } = require('child_process');
-    const path = require('path');
-
     console.log(`🔌 [RdpNativeBridgeService] Conectando a ${session.host}:${session.port}`);
 
     const connectionId = `native_rdp_${Date.now()}`;
-    const workerPath = path.join(__dirname, 'rdp-tls-worker.js');
+    let targetSocket = null;
+    let tlsSocket = null;
 
-    let forkOptions = {
-      windowsHide: true
-    };
-    try {
-      forkOptions.execPath = process.platform === 'win32' ? 'node.exe' : 'node';
-    } catch (e) {}
-
-    let worker = null;
-    try {
-      worker = fork(workerPath, [], forkOptions);
-    } catch (e) {
-      console.warn('⚠️ Falló fork con node genérico, usando fork predeterminado:', e);
-      worker = fork(workerPath, [], { windowsHide: true });
-    }
-
-    this.activeConnections.set(connectionId, { ws, worker, session });
+    this.activeConnections.set(connectionId, { ws, session });
 
     let rdCleanPathPhase = 'waiting_request';
-    let savedX224CcHex = null;
+    let savedX224Cc = null;
     let savedSelectedProtocol = null;
     let bytesToRdp = 0;
     let bytesFromRdp = 0;
@@ -228,178 +202,9 @@ class RdpNativeBridgeService extends EventEmitter {
       console.log(`🧹 [RdpNativeBridgeService] Sesión RDP finalizada (${formatCloseReason(reason)})`);
       this.activeConnections.delete(connectionId);
       try { ws.close(); } catch (e) {}
-      try {
-        if (worker && worker.connected) {
-          worker.send({ type: 'DISCONNECT' });
-        }
-      } catch (e) {}
-      try { if (worker) worker.kill(); } catch (e) {}
+      try { if (tlsSocket) tlsSocket.destroy(); } catch (e) {}
+      try { if (targetSocket) targetSocket.destroy(); } catch (e) {}
     };
-
-    worker.on('message', (msg) => {
-      if (!msg || !msg.type) return;
-
-      if (msg.type === 'X224_CC') {
-        savedX224CcHex = msg.x224Cc;
-        debugLog(`✅ [Bridge] Recibida X.224 Connection Confirm (${savedX224CcHex.length / 2} bytes) desde worker. Esperando TLS...`);
-      } else if (msg.type === 'TLS_CONNECTED') {
-        console.log(`🔒 [RdpNativeBridgeService] Conexión RDP TLS establecida con ${session.host}:${session.port}`);
-
-        let peerCertChain = [];
-        if (msg.certRawHex) {
-          peerCertChain.push(Buffer.from(msg.certRawHex, 'hex'));
-          debugLog(`📜 [Bridge] Certificado X.509 real devuelto por worker (${msg.certRawHex.length / 2} bytes)`);
-        }
-
-        // Reenviar el X.224 CC real del servidor (sin reescribir selectedProtocol).
-        // Wallix/TLS Direct responde 0x01; hosts NLA responden 0x02/0x08. IronRDP sigue ese valor.
-        let x224CcBuffer = savedX224CcHex
-          ? Buffer.from(savedX224CcHex, 'hex')
-          : Buffer.from([0x03, 0x00, 0x00, 0x13, 0x0e, 0xd0, 0x00, 0x00, 0x12, 0x34, 0x00, 0x02, 0x2f, 0x08, 0x00, 0x01, 0x00, 0x00, 0x00]);
-        const nego = parseX224ConnectionConfirm(x224CcBuffer);
-        if (nego && nego.ok) {
-          savedSelectedProtocol = nego.selectedProtocol;
-          debugLog(`[Bridge] X.224 CC selectedProtocol=0x${nego.selectedProtocol.toString(16)} (${protocolName(nego.selectedProtocol)})`);
-        } else if (nego && !nego.ok) {
-          console.warn(`[Bridge] X.224 NEG_FAILURE code=${nego.failureCode}`);
-        }
-        const responsePdu = this.createRdCleanPathResponsePdu(session.host, x224CcBuffer, peerCertChain);
-        debugLog(`[Bridge] Enviando RDCleanPath Response PDU (${responsePdu.length} bytes) a WASM...`);
-
-        if (ws.readyState === ws.OPEN) {
-          ws.send(responsePdu, { binary: true });
-        }
-
-        rdCleanPathPhase = 'transparent';
-      } else if (msg.type === 'DATA_FROM_RDP') {
-        const now = Date.now();
-        const gapFromLastRdp = lastRdpFrameAt > 0 ? now - lastRdpFrameAt : 0;
-        lastRdpFrameAt = now;
-
-        let chunk = Buffer.from(msg.dataHex || '', 'hex');
-        const n = chunk.length;
-        framesFromRdp += 1;
-        const pduDesc = describeRdpPdu(chunk);
-
-        const isDebug = process.env.NODETERM_RDP_DEBUG === '1';
-
-        if (framesFromRdp <= 24 && isDebug) {
-          console.log(`[Bridge] RDP->WASM frame#${framesFromRdp}: ${n}B | ${pduDesc}`);
-          if (process.env.NODETERM_RDP_RECORD_FRAMES === '1') {
-            try {
-              fs.writeFileSync(path.join(framesDir, `from-${String(framesFromRdp).padStart(2, '0')}-${n}b.hex`), chunk.toString('hex'), 'utf8');
-            } catch (_) { /* noop */ }
-          }
-        } else if (gapFromLastRdp >= 400 && isDebug) {
-          console.log(`⏱️ [Bridge Trace GAP ${gapFromLastRdp}ms] Pausa RDP -> Frame #${framesFromRdp} (${n}B): ${pduDesc}`);
-          if (process.env.NODETERM_RDP_RECORD_FRAMES === '1') {
-            try {
-              fs.writeFileSync(path.join(framesDir, `gap-${gapFromLastRdp}ms-from-f${framesFromRdp}-${n}b.hex`), chunk.toString('hex'), 'utf8');
-            } catch (_) { /* noop */ }
-          }
-        } else if (
-          isDebug && (
-            pduDesc.includes('DEMAND_ACTIVE') ||
-            pduDesc.includes('DEACTIVATE_ALL') ||
-            pduDesc.includes('AUTODETECT') ||
-            pduDesc.includes('HEARTBEAT') ||
-            pduDesc.includes('CONTROL') ||
-            pduDesc.includes('SAVE_SESSION_INFO') ||
-            pduDesc.includes('SET_ERROR_INFO') ||
-            pduDesc.includes('FRAME_ACK') ||
-            pduDesc.includes('SURFACE_CMDS')
-          )
-        ) {
-          console.log(`📡 [Bridge Trace PDU #${framesFromRdp}] ${pduDesc}`);
-        }
-
-        // Wallix FontMap a veces trae mapFlags invalidos para IronRDP (from_bits).
-        // Solo forzar FIRST|LAST; NO reclasificar a UPDATE (rompe FontMap con glifos).
-        const fontPatch = patchFontSequenceFlags(chunk);
-        if (fontPatch.candidates.length && isDebug) {
-          console.log(`[Bridge] FontPdu frame#${framesFromRdp}:`, fontPatch.candidates.map((c) => `len=${c.totalLength} type2=0x${c.type2.toString(16)} flags=0x${c.flags.toString(16)} entry=${c.entrySize}`).join('; '));
-        }
-        if (fontPatch.patchedCount) {
-          chunk = fontPatch.buf;
-          if (isDebug) {
-            console.log(`[Bridge] FontPdu adjust flags=${fontPatch.patchedCount}`, fontPatch.details.map((d) => `len=${d.totalLength} 0x${d.previous.toString(16)}->0x${d.next.toString(16)}`).join(', '));
-          }
-        }
-
-        // IronRDP 0.7: message channel (1001) no soportado -> no reenviar a WASM,
-        // pero responder Auto-Detect RTT/BW para que Wallix no espere (pantalla negra).
-        const wasReady = channelFilter.ready;
-        const processed = processServerFrame(channelFilter, chunk);
-        if (!wasReady && channelFilter.ready && isDebug) {
-          console.log(
-            `[Bridge] Canales MCS configurados: io=${channelFilter.ioChannelId}` +
-              ` permitidos=[${[...channelFilter.allowed].join(',')}]` +
-              (channelFilter.cliprdrChannelId != null ? ` cliprdr=${channelFilter.cliprdrChannelId}` : '') +
-              (channelFilter.drdynvcChannelId != null ? ` drdynvc=${channelFilter.drdynvcChannelId}` : '') +
-              (channelFilter.messageChannelId != null ? ` msg=${channelFilter.messageChannelId}` : '')
-          );
-        }
-        if (processed.dropped) {
-          if (isDebug) {
-            console.log(
-              `🚫 [Bridge Trace DROPPED #${framesFromRdp}] MCS ch=${processed.channelId}: ${processed.note}` +
-                (processed.replies.length ? ` (replies=${processed.replies.length})` : '') +
-                ` | PDU: ${pduDesc}`
-            );
-          }
-          if (processed.replies.length && worker && worker.connected) {
-            for (const reply of processed.replies) {
-              bytesToRdp += reply.length;
-              worker.send({ type: 'DATA_TO_RDP', dataHex: reply.toString('hex') });
-            }
-          }
-          bytesFromRdp += n;
-          return;
-        }
-        chunk = processed.forward;
-
-        // Normalizar todas las teselas 16bpp a estándar 0xf3/0xf4 y <=64x64
-        const stridePatch = fixWallixBitmapStrideCrop(chunk);
-        const outChunks = stridePatch.patchedCount
-          ? (stridePatch.buffers || [stridePatch.buf])
-          : [chunk];
-        if (stridePatch.patchedCount && isDebug) {
-          console.log(
-            `[Bridge] FastPath BITMAP normalizado frame#${framesFromRdp}: rects=${stridePatch.numberRectangles} patched=${stridePatch.patchedCount}` +
-              (stridePatch.solidCount != null ? ` solid=${stridePatch.solidCount} crop=${stridePatch.cropCount}` : '') +
-              (stridePatch.pduCount > 1 ? ` pdus=${stridePatch.pduCount}` : '')
-          );
-        }
-
-        bytesFromRdp += n;
-        if (ws.readyState === ws.OPEN) {
-          for (const out of outChunks) {
-            ws.send(out, { binary: true });
-          }
-        }
-      } else if (msg.type === 'ERROR') {
-        if (!isCleanedUp) {
-          const isBenign = msg.error && (msg.error.includes('ECONNRESET') || msg.error.includes('EPIPE'));
-          if (!isBenign) {
-            console.error('❌ [RdpNativeBridgeService] Error de conexión:', msg.error);
-          }
-          cleanup(isBenign ? 'Conexión finalizada' : `Error: ${msg.error}`);
-        }
-      } else if (msg.type === 'CLOSED') {
-        cleanup('Cerrado por el servidor remoto');
-      }
-    });
-
-    worker.on('error', (err) => {
-      if (!isCleanedUp) {
-        cleanup(`Error worker: ${err.message}`);
-      }
-    });
-    worker.on('exit', (code) => {
-      if (rdCleanPathPhase !== 'transparent' && !isCleanedUp) {
-        cleanup(`Proceso worker finalizó con código ${code}`);
-      }
-    });
 
     ws.on('message', (message) => {
       try {
@@ -427,13 +232,201 @@ class RdpNativeBridgeService extends EventEmitter {
           }
 
           rdCleanPathPhase = 'waiting_x224_cc';
-          debugLog(`📤 [Bridge] Iniciando worker RDP TLS para ${session.host}:${session.port}...`);
-          worker.send({
-            type: 'CONNECT',
-            host: session.host,
-            port: session.port,
-            x224Cr: x224Cr.toString('hex')
+          debugLog(`📤 [Bridge] Conectando TCP a ${session.host}:${session.port}...`);
+
+          targetSocket = net.connect({ host: session.host, port: session.port }, () => {
+            targetSocket.setNoDelay(true);
+            targetSocket.write(x224Cr);
           });
+
+          targetSocket.once('data', (x224CcChunk) => {
+            savedX224Cc = x224CcChunk;
+            debugLog(`✅ [Bridge] Recibida X.224 Connection Confirm (${x224CcChunk.length} bytes). Iniciando TLS...`);
+
+            // Upgrade TCP socket to TLS.
+            // Para evadir el chequeo estricto de KEY_USAGE_BIT_INCORRECT en certificados
+            // autofirmados de Windows RDP bajo BoringSSL/Electron, se usan ciphers RSA en TLS 1.2
+            const tlsOptions = {
+              socket: targetSocket,
+              rejectUnauthorized: false,
+              checkServerIdentity: () => undefined,
+              minVersion: 'TLSv1',
+              maxVersion: 'TLSv1.2',
+              ciphers: 'ALL:DEFAULT:!ECDHE:!DHE:RSA'
+            };
+
+            tlsSocket = tls.connect(tlsOptions, () => {
+              console.log(`🔒 [RdpNativeBridgeService] Conexión RDP TLS establecida con ${session.host}:${session.port}`);
+
+              let peerCertChain = [];
+              try {
+                const cert = tlsSocket.getPeerCertificate(true);
+                if (cert && cert.raw) {
+                  peerCertChain.push(cert.raw);
+                  debugLog(`📜 [Bridge] Certificado X.509 real obtenido (${cert.raw.length} bytes)`);
+                }
+              } catch (e) {
+                console.warn('[Bridge] Error leyendo certificado peer:', e);
+              }
+
+              const nego = parseX224ConnectionConfirm(savedX224Cc);
+              if (nego && nego.ok) {
+                savedSelectedProtocol = nego.selectedProtocol;
+                debugLog(`[Bridge] X.224 CC selectedProtocol=0x${nego.selectedProtocol.toString(16)} (${protocolName(nego.selectedProtocol)})`);
+              } else if (nego && !nego.ok) {
+                console.warn(`[Bridge] X.224 NEG_FAILURE code=${nego.failureCode}`);
+              }
+
+              const responsePdu = this.createRdCleanPathResponsePdu(session.host, savedX224Cc, peerCertChain);
+              debugLog(`[Bridge] Enviando RDCleanPath Response PDU (${responsePdu.length} bytes) a WASM...`);
+
+              if (ws.readyState === ws.OPEN) {
+                ws.send(responsePdu, { binary: true });
+              }
+
+              rdCleanPathPhase = 'transparent';
+
+              tlsSocket.on('data', (chunk) => {
+                const now = Date.now();
+                const gapFromLastRdp = lastRdpFrameAt > 0 ? now - lastRdpFrameAt : 0;
+                lastRdpFrameAt = now;
+
+                const n = chunk.length;
+                framesFromRdp += 1;
+                const pduDesc = describeRdpPdu(chunk);
+
+                if (framesFromRdp <= 24 && isDebug) {
+                  console.log(`[Bridge] RDP->WASM frame#${framesFromRdp}: ${n}B | ${pduDesc}`);
+                  if (process.env.NODETERM_RDP_RECORD_FRAMES === '1') {
+                    try {
+                      fs.writeFileSync(path.join(framesDir, `from-${String(framesFromRdp).padStart(2, '0')}-${n}b.hex`), chunk.toString('hex'), 'utf8');
+                    } catch (_) { /* noop */ }
+                  }
+                } else if (gapFromLastRdp >= 400 && isDebug) {
+                  console.log(`⏱️ [Bridge Trace GAP ${gapFromLastRdp}ms] Pausa RDP -> Frame #${framesFromRdp} (${n}B): ${pduDesc}`);
+                  if (process.env.NODETERM_RDP_RECORD_FRAMES === '1') {
+                    try {
+                      fs.writeFileSync(path.join(framesDir, `gap-${gapFromLastRdp}ms-from-f${framesFromRdp}-${n}b.hex`), chunk.toString('hex'), 'utf8');
+                    } catch (_) { /* noop */ }
+                  }
+                } else if (
+                  isDebug && (
+                    pduDesc.includes('DEMAND_ACTIVE') ||
+                    pduDesc.includes('DEACTIVATE_ALL') ||
+                    pduDesc.includes('AUTODETECT') ||
+                    pduDesc.includes('HEARTBEAT') ||
+                    pduDesc.includes('CONTROL') ||
+                    pduDesc.includes('SAVE_SESSION_INFO') ||
+                    pduDesc.includes('SET_ERROR_INFO') ||
+                    pduDesc.includes('FRAME_ACK') ||
+                    pduDesc.includes('SURFACE_CMDS')
+                  )
+                ) {
+                  console.log(`📡 [Bridge Trace PDU #${framesFromRdp}] ${pduDesc}`);
+                }
+
+                // Wallix FontMap a veces trae mapFlags invalidos para IronRDP (from_bits).
+                // Solo forzar FIRST|LAST; NO reclasificar a UPDATE (rompe FontMap con glifos).
+                const fontPatch = patchFontSequenceFlags(chunk);
+                if (fontPatch.candidates.length && isDebug) {
+                  console.log(`[Bridge] FontPdu frame#${framesFromRdp}:`, fontPatch.candidates.map((c) => `len=${c.totalLength} type2=0x${c.type2.toString(16)} flags=0x${c.flags.toString(16)} entry=${c.entrySize}`).join('; '));
+                }
+                if (fontPatch.patchedCount) {
+                  chunk = fontPatch.buf;
+                  if (isDebug) {
+                    console.log(`[Bridge] FontPdu adjust flags=${fontPatch.patchedCount}`, fontPatch.details.map((d) => `len=${d.totalLength} 0x${d.previous.toString(16)}->0x${d.next.toString(16)}`).join(', '));
+                  }
+                }
+
+                // IronRDP 0.7: message channel (1001) no soportado -> no reenviar a WASM,
+                // pero responder Auto-Detect RTT/BW para que Wallix no espere (pantalla negra).
+                const wasReady = channelFilter.ready;
+                const processed = processServerFrame(channelFilter, chunk);
+                if (!wasReady && channelFilter.ready && isDebug) {
+                  console.log(
+                    `[Bridge] Canales MCS configurados: io=${channelFilter.ioChannelId}` +
+                      ` permitidos=[${[...channelFilter.allowed].join(',')}]` +
+                      (channelFilter.cliprdrChannelId != null ? ` cliprdr=${channelFilter.cliprdrChannelId}` : '') +
+                      (channelFilter.drdynvcChannelId != null ? ` drdynvc=${channelFilter.drdynvcChannelId}` : '') +
+                      (channelFilter.messageChannelId != null ? ` msg=${channelFilter.messageChannelId}` : '')
+                  );
+                }
+                if (processed.dropped) {
+                  if (isDebug) {
+                    console.log(
+                      `🚫 [Bridge Trace DROPPED #${framesFromRdp}] MCS ch=${processed.channelId}: ${processed.note}` +
+                        (processed.replies.length ? ` (replies=${processed.replies.length})` : '') +
+                        ` | PDU: ${pduDesc}`
+                    );
+                  }
+                  if (processed.replies.length && tlsSocket && tlsSocket.writable) {
+                    for (const reply of processed.replies) {
+                      bytesToRdp += reply.length;
+                      tlsSocket.write(reply);
+                    }
+                  }
+                  bytesFromRdp += n;
+                  return;
+                }
+                chunk = processed.forward;
+
+                // Normalizar todas las teselas 16bpp a estándar 0xf3/0xf4 y <=64x64
+                const stridePatch = fixWallixBitmapStrideCrop(chunk);
+                const outChunks = stridePatch.patchedCount
+                  ? (stridePatch.buffers || [stridePatch.buf])
+                  : [chunk];
+                if (stridePatch.patchedCount && isDebug) {
+                  console.log(
+                    `[Bridge] FastPath BITMAP normalizado frame#${framesFromRdp}: rects=${stridePatch.numberRectangles} patched=${stridePatch.patchedCount}` +
+                      (stridePatch.solidCount != null ? ` solid=${stridePatch.solidCount} crop=${stridePatch.cropCount}` : '') +
+                      (stridePatch.pduCount > 1 ? ` pdus=${stridePatch.pduCount}` : '')
+                  );
+                }
+
+                bytesFromRdp += n;
+                if (ws.readyState === ws.OPEN) {
+                  for (const out of outChunks) {
+                    ws.send(out, { binary: true });
+                  }
+                }
+              });
+
+              tlsSocket.on('close', () => cleanup('Cerrado por el servidor remoto'));
+              tlsSocket.on('error', (err) => {
+                if (!isCleanedUp) {
+                  const isBenign = err.message && (err.message.includes('ECONNRESET') || err.message.includes('EPIPE'));
+                  if (!isBenign) {
+                    console.error('❌ [RdpNativeBridgeService] Error de conexión TLS:', err.message);
+                  }
+                  cleanup(isBenign ? 'Conexión finalizada' : `Error TLS: ${err.message}`);
+                }
+              });
+            });
+
+            tlsSocket.on('error', (err) => {
+              if (!isCleanedUp) {
+                console.error('❌ [RdpNativeBridgeService] Error en handshake TLS:', err.message);
+                cleanup(`Error TLS Handshake: ${err.message}`);
+              }
+            });
+          });
+
+          targetSocket.on('error', (err) => {
+            if (!isCleanedUp) {
+              const isBenign = err.message && (err.message.includes('ECONNRESET') || err.message.includes('EPIPE'));
+              if (!isBenign) {
+                console.error('❌ [RdpNativeBridgeService] Error TCP:', err.message);
+              }
+              cleanup(isBenign ? 'Conexión finalizada' : `Error TCP: ${err.message}`);
+            }
+          });
+
+          targetSocket.on('close', () => {
+            if (rdCleanPathPhase !== 'transparent' && !isCleanedUp) {
+              cleanup('Conexión TCP cerrada antes de TLS');
+            }
+          });
+
           return;
         }
 
@@ -499,12 +492,13 @@ class RdpNativeBridgeService extends EventEmitter {
           }
         }
         bytesToRdp += forward.length;
-        worker.send({
-          type: 'DATA_TO_RDP',
-          dataHex: forward.toString('hex')
-        });
+        if (tlsSocket && tlsSocket.writable) {
+          tlsSocket.write(forward);
+        } else if (targetSocket && targetSocket.writable) {
+          targetSocket.write(forward);
+        }
       } catch (e) {
-        console.error('Error enviando a worker RDP:', e);
+        console.error('Error enviando datos a RDP:', e);
       }
     });
 
@@ -710,8 +704,9 @@ class RdpNativeBridgeService extends EventEmitter {
    */
   async stop() {
     for (const [id, conn] of this.activeConnections) {
-      try { conn.ws.close(); } catch (e) {}
-      try { conn.targetSocket.destroy(); } catch (e) {}
+      try { conn.ws?.close(); } catch (e) {}
+      try { if (conn.tlsSocket) conn.tlsSocket.destroy(); } catch (e) {}
+      try { if (conn.targetSocket) conn.targetSocket.destroy(); } catch (e) {}
     }
     this.activeConnections.clear();
 

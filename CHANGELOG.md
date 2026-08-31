@@ -6,14 +6,13 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## [1.7.5] - 2026-08-31
-
-
 ## [Unreleased]
 
+## [1.7.5] - 2026-08-31
+
 ### 🖥️ RDP Nativo HTML5 (IronRDP WASM de Alto Rendimiento)
-- **Motor 100% Nativo e Independiente**: Conexión de escritorio remoto en pestaña web HTML5 sin requerir `guacd`, WSL (`ubuntu.exe`) ni Docker.
-- **Worker TCP+TLS en Node.js puro (OpenSSL 3.x)**: Resuelve el error `ERR_SSL_KEY_USAGE_BIT_INCORRECT` de BoringSSL en Electron al negociar TLS con servidores RDP Windows modernos.
+- **Motor 100% Nativo e In-Process (Zero-Dependency)**: Conexión de escritorio remoto en pestaña web HTML5 sin requerir `guacd`, WSL (`ubuntu.exe`), Docker ni binarios externos de Node.js.
+- **Canal TCP+TLS Integrado**: Resuelve de forma nativa e in-process la compatibilidad con certificados autofirmados de Windows RDP en Electron/BoringSSL mediante negociación segura RSA TLS 1.2 sin procesos secundarios ni sobrecoste de IPC.
 - **Compatibilidad con Bastiones y Wallix**:
   - Negociación y soporte nativo para **Wallix TLS Direct** y preflight X.224.
   - Corrección de `selectedProtocol` en X.224 Connection Confirm y alineación de Client Core Data (`CS_CORE`).
