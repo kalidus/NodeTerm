@@ -156,9 +156,9 @@
       "sharedFolder": "This folder will be available as a network drive within the RDP session."
     },
     "clientTypes": {
-      "mstsc": "Native OS (MSTSC)",
-      "web-rdp": "RDP Web (HTML5)",
-      "guacamole": "Apache Guacamole"
+      "web-rdp": "Native Web RDP (Recommended)",
+      "mstsc": "Remote Desktop (MSTSC)",
+      "guacamole": "Apache Guacamole (Docker/WSL Tunnel)"
     },
     "securityOptions": {
       "any": "Automatic",

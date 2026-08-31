@@ -255,6 +255,58 @@ async function loadPreferredGuacdMethod() {
 }
 
 /**
+ * Guarda si el servicio Guacamole está habilitado
+ * @param {boolean} enabled - Estado habilitado o no
+ * @returns {Promise<boolean>} true si se guardó exitosamente
+ */
+async function saveGuacamoleEnabled(enabled) {
+  const prefPath = getGuacdPrefPath();
+  if (!prefPath) return false;
+  try {
+    const dir = path.dirname(prefPath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    
+    let existingPrefs = {};
+    try {
+      if (fs.existsSync(prefPath)) {
+        existingPrefs = JSON.parse(fs.readFileSync(prefPath, 'utf8') || '{}');
+      }
+    } catch {}
+    
+    existingPrefs.enabled = !!enabled;
+    fs.writeFileSync(prefPath, JSON.stringify(existingPrefs, null, 2), 'utf8');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Carga si el servicio Guacamole está habilitado
+ * @returns {Promise<boolean>} false por defecto
+ */
+async function loadGuacamoleEnabled() {
+  return loadGuacamoleEnabledSync();
+}
+
+/**
+ * Carga de forma síncrona si Guacamole está habilitado
+ * @returns {boolean} false por defecto
+ */
+function loadGuacamoleEnabledSync() {
+  const prefPath = getGuacdPrefPath();
+  if (!prefPath) return false;
+  try {
+    if (!fs.existsSync(prefPath)) return false;
+    const raw = fs.readFileSync(prefPath, 'utf8');
+    const json = JSON.parse(raw || '{}');
+    return json.enabled === true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Guarda el timeout de inactividad de guacd de forma persistente
  * @param {number} timeoutMs - Timeout en milisegundos (0 = desactivado)
  * @returns {Promise<boolean>} true si se guardó exitosamente
@@ -365,6 +417,9 @@ module.exports = {
   getGuacdPrefPath,
   savePreferredGuacdMethod,
   loadPreferredGuacdMethod,
+  saveGuacamoleEnabled,
+  loadGuacamoleEnabled,
+  loadGuacamoleEnabledSync,
   saveGuacdInactivityTimeout,
   loadGuacdInactivityTimeout,
   getNodeTermDataDir,

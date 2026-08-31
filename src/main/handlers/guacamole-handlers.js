@@ -7,7 +7,12 @@
  */
 
 const { ipcMain } = require('electron');
-const { saveGuacdInactivityTimeout, loadGuacdInactivityTimeout } = require('../utils/file-utils');
+const {
+  saveGuacdInactivityTimeout,
+  loadGuacdInactivityTimeout,
+  loadGuacamoleEnabled,
+  saveGuacamoleEnabled
+} = require('../utils/file-utils');
 // ⚡ PERF FIX: require at module level so Node.js caches them before any IPC handler runs.
 // Was previously inline inside the IPC handler, causing synchronous module resolution on every token creation.
 const crypto = require('crypto');
@@ -31,6 +36,8 @@ const {
  * @param {Function} dependencies.getGuacamoleServerReadyAt - Función getter para obtener el timestamp actual
  * @param {Function} dependencies.isGuacamoleInitializing - Función getter para verificar si está inicializando
  * @param {Function} dependencies.isGuacamoleInitialized - Función getter para verificar si está inicializado
+ * @param {Function} [dependencies.initializeGuacamoleServices] - Inicia Guacamole bajo demanda
+ * @param {Function} [dependencies.stopGuacamoleServices] - Detiene Guacamole
  */
 function registerGuacamoleHandlers({
   guacdService,
@@ -44,7 +51,9 @@ function registerGuacamoleHandlers({
   getGuacamoleWebSocketPort,
   getOrCreateGuacamoleSecretKey,
   isGuacamoleInitializing,
-  isGuacamoleInitialized
+  isGuacamoleInitialized,
+  initializeGuacamoleServices,
+  stopGuacamoleServices
 }) {
   // IPC para configurar el watchdog de guacd desde la UI
   ipcMain.handle('guacamole:set-guacd-timeout-ms', async (event, timeoutMs) => {
@@ -101,13 +110,78 @@ function registerGuacamoleHandlers({
     sendToRenderer(event.sender, 'guacamole:create-tab', data);
   });
 
+  // Handler para iniciar servicios Guacamole bajo demanda
+  ipcMain.handle('guacamole:start', async () => {
+    try {
+      console.log('🚀 [guacamole:start] Iniciando servicios de Guacamole...');
+      await saveGuacamoleEnabled(true);
+      if (initializeGuacamoleServices) {
+        await initializeGuacamoleServices();
+      }
+      const guacdStatus = guacdService ? guacdService.getStatus() : { isRunning: true, method: 'unknown' };
+      return { success: true, guacd: guacdStatus, enabled: true };
+    } catch (error) {
+      console.error('❌ Error en guacamole:start:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Handler para detener servicios Guacamole
+  ipcMain.handle('guacamole:stop', async () => {
+    try {
+      console.log('🛑 [guacamole:stop] Deteniendo servicios de Guacamole...');
+      await saveGuacamoleEnabled(false);
+      if (stopGuacamoleServices) {
+        await stopGuacamoleServices();
+      }
+      return { success: true, enabled: false };
+    } catch (error) {
+      console.error('❌ Error en guacamole:stop:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Handler para consultar si Guacamole está habilitado
+  ipcMain.handle('guacamole:get-enabled', async () => {
+    try {
+      const enabled = await loadGuacamoleEnabled();
+      return { success: true, enabled };
+    } catch (error) {
+      return { success: true, enabled: false };
+    }
+  });
+
+  // Handler para establecer si Guacamole está habilitado
+  ipcMain.handle('guacamole:set-enabled', async (event, enabled) => {
+    try {
+      const willEnable = !!enabled;
+      await saveGuacamoleEnabled(willEnable);
+      if (willEnable) {
+        if (initializeGuacamoleServices) await initializeGuacamoleServices();
+      } else {
+        if (stopGuacamoleServices) await stopGuacamoleServices();
+      }
+      return { success: true, enabled: willEnable };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+
   // IPC handlers for Guacamole RDP connections
   // Cache para evitar logs repetidos
   let guacamoleStatusWarningLogged = false;
 
   ipcMain.handle('guacamole:get-status', async (event) => {
     try {
-      const guacdStatus = guacdService ? guacdService.getStatus() : { isRunning: false, method: 'unknown' };
+      const enabled = await loadGuacamoleEnabled();
+      let guacdStatus = { isRunning: false, method: 'unknown' };
+      if (guacdService) {
+        if (typeof guacdService.checkLiveStatus === 'function') {
+          guacdStatus = await guacdService.checkLiveStatus();
+        } else if (typeof guacdService.getStatus === 'function') {
+          guacdStatus = guacdService.getStatus();
+        }
+      }
 
       // Obtener el estado actual del servidor usando las funciones getter
       const currentServer = getGuacamoleServer ? getGuacamoleServer() : guacamoleServer;
@@ -119,7 +193,7 @@ function registerGuacamoleHandlers({
 
       // Solo mostrar warning si NO está inicializando y NO está inicializado (problema real)
       // Durante el arranque, es normal que el servidor aún no esté listo
-      if (!currentServer && !isInitializing && !isInitialized && !guacamoleStatusWarningLogged) {
+      if (enabled && !currentServer && !isInitializing && !isInitialized && !guacamoleStatusWarningLogged) {
         console.warn('⚠️ [guacamole:get-status] guacamoleServer es null. guacdStatus:', guacdStatus);
         guacamoleStatusWarningLogged = true;
       } else if (currentServer) {
@@ -128,6 +202,7 @@ function registerGuacamoleHandlers({
       }
 
       const result = {
+        enabled,
         guacd: guacdStatus,
         server: currentServer ? {
           isRunning: true,
@@ -145,6 +220,7 @@ function registerGuacamoleHandlers({
     } catch (error) {
       console.error('Error getting Guacamole status:', error);
       const errorResult = {
+        enabled: false,
         guacd: { isRunning: false, method: 'error' },
         server: {
           isRunning: false,
@@ -318,11 +394,18 @@ function registerGuacamoleHandlers({
       const normalizedColorDepth = normalizeRdpColorDepth(config.colorDepth, 32);
 
 
-      // Obtener el estado actual del servidor usando las funciones getter
+      // Verificar si Guacamole está habilitado y el servidor disponible
+      const isGuacEnabled = await loadGuacamoleEnabled();
       const currentServer = getGuacamoleServer ? getGuacamoleServer() : guacamoleServer;
 
-      if (!currentServer) {
-        throw new Error('Servidor Guacamole no está inicializado');
+      if (!isGuacEnabled || !currentServer) {
+        return {
+          success: false,
+          isServiceDisabled: !isGuacEnabled,
+          error: !isGuacEnabled
+            ? 'El servicio Apache Guacamole está desactivado. Actívalo en la sección de Apps de NodeTerm para utilizar conexiones Guacamole.'
+            : 'El servidor Guacamole no está inicializado o se está iniciando. Por favor, inténtalo de nuevo en unos segundos.'
+        };
       }
 
       const CIPHER = 'AES-256-CBC';

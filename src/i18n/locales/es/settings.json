@@ -159,9 +159,9 @@
     }
   },
   "rdp": {
-    "title": "Configuración RDP",
-    "description": "Personaliza el comportamiento, conectividad y rendimiento de las sesiones RDP",
-    "guacdMethod": "Método preferido",
+    "title": "Parámetros de Guacamole",
+    "description": "Personaliza el comportamiento, conectividad y rendimiento del proxy Apache Guacamole",
+    "guacdMethod": "Método backend preferido",
     "guacdMethodHint": "Preferencia → alternativa (Windows: Docker/WSL, Linux: Docker/Nativo)",
     "guacdStatus": {
       "active": "Activo",
@@ -178,7 +178,7 @@
     "guacdInactivity": "Watchdog de inactividad de Guacd (min)",
     "guacdInactivityHint": "0 para desactivar. Cierre por inactividad entre guacamole-lite y guacd",
     "guacdInactivitySynced": "Se sincroniza automáticamente con el umbral de actividad de sesión",
-    "backendTitle": "Backend Guacamole",
+    "backendTitle": "Backend Apache Guacamole (guacd)",
     "restartGuacd": "Reiniciar Guacd",
     "resetDefaults": "Restaurar"
   },

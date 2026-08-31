@@ -494,6 +494,13 @@ export function EnhancedRDPForm({
         </div>
       </div>
 
+      {formData.clientType === 'guacamole' && (
+        <div style={{ fontSize: '0.75rem', color: '#059669', background: 'rgba(5, 150, 105, 0.08)', border: '1px solid rgba(5, 150, 105, 0.25)', borderRadius: '6px', padding: '6px 10px', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <i className="pi pi-info-circle" />
+          <span>Requiere que el servicio Apache Guacamole (guacd) esté activo en la sección de Aplicaciones.</span>
+        </div>
+      )}
+
       {(formData.clientType === 'guacamole' || formData.clientType === 'web-rdp') ? (
         <TerminalDropdownField
           id={`${p}-guacSecurity`}

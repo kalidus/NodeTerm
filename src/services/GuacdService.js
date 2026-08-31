@@ -887,6 +887,46 @@ class GuacdService {
     return this._initializePromise;
   }
 
+  /**
+   * Obtiene el estado actual del servicio guacd
+   * @returns {Object}
+   */
+  getStatus() {
+    return {
+      isRunning: !!this.isRunning,
+      method: this.detectedMethod || this.preferredMethod || 'docker',
+      host: this.host || '127.0.0.1',
+      port: this.port || 4822,
+      preferredMethod: this.preferredMethod || 'docker'
+    };
+  }
+
+  /**
+   * Verifica activamente si guacd está corriendo y actualiza isRunning
+   * @returns {Promise<Object>}
+   */
+  async checkLiveStatus() {
+    try {
+      const portBusy = !(await this.isPortAvailable(this.port));
+      if (portBusy) {
+        const isAlive = await this._checkGuacdConnection();
+        if (isAlive) {
+          this.isRunning = true;
+          if (!this.detectedMethod) {
+            this.detectedMethod = this.preferredMethod || 'docker';
+          }
+        } else {
+          this.isRunning = false;
+        }
+      } else {
+        this.isRunning = false;
+      }
+    } catch {
+      // mantener estado actual si hay error
+    }
+    return this.getStatus();
+  }
+
   setPreferredMethod(method) {
     const m = String(method || '').toLowerCase();
     if (m === 'docker' || m === 'wsl' || m === 'mock' || m === 'native') {
@@ -963,60 +1003,78 @@ class GuacdService {
 
   _checkDockerRunning(resolve, dockerCommand = 'docker') {
     // Verificar si Docker Desktop está corriendo
-    exec(`${dockerCommand} ps`, (dockerError) => {
+    exec(`${dockerCommand} ps`, async (dockerError) => {
       if (dockerError) {
         console.log('❌ Docker Desktop no está corriendo');
         resolve(false);
         return;
       }
 
-      // Intentar iniciar contenedor guacd con imagen multi-arquitectura
-      const dockerArgs = [
-        'run',
-        '--name', 'nodeterm-guacd',
-        '--rm', // Eliminar contenedor al salir
-        '-d', // Modo detached
-        '-p', `${this.port}:4822`,
-        // Montar carpeta de staging del host dentro del contenedor
-        // Importante: pasar como un único argumento host:container
-        '-v', `${this.driveHostDir}:/guacdrive`,
-        'guacamole/guacd:latest' // Usar tag latest para mejor compatibilidad multi-arquitectura
-      ];
-
-      this.guacdProcess = spawn(dockerCommand, dockerArgs);
-
-      this.guacdProcess.stdout.on('data', (data) => {
-        // Docker stdout
-      });
-
-      this.guacdProcess.stderr.on('data', (data) => {
-        // Docker stderr
-      });
-
-      this.guacdProcess.on('error', (error) => {
-        console.error('❌ Error ejecutando Docker:', error);
-        resolve(false);
-      });
-
-      this.guacdProcess.on('close', (code) => {
-        // Docker proceso cerrado
-      });
-
-      // Esperar un momento y verificar si el contenedor está corriendo (optimizado)
-      setTimeout(async () => {
-        try {
-          // Verificar si el puerto está disponible (cerrado = guacd corriendo)
-          const available = await this.isPortAvailable(this.port);
-          if (!available) {
-            this.isRunning = true;
-            resolve(true);
-          } else {
-            resolve(false);
-          }
-        } catch (error) {
-          resolve(false);
+      // Si guacd ya está escuchando en este puerto y responde por TCP, reutilizar
+      const portBusy = !(await this.isPortAvailable(this.port));
+      if (portBusy) {
+        const isAlive = await this._checkGuacdConnection();
+        if (isAlive) {
+          console.log(`✅ Contenedor guacd ya activo y respondiendo en puerto ${this.port}`);
+          this.isRunning = true;
+          this.detectedMethod = 'docker';
+          resolve(true);
+          return;
         }
-      }, 1500);
+      }
+
+      // Limpiar contenedor previo por si quedó en estado inconsistente
+      exec(`${dockerCommand} rm -f nodeterm-guacd`, () => {
+        // Iniciar contenedor guacd
+        const dockerArgs = [
+          'run',
+          '--name', 'nodeterm-guacd',
+          '--rm',
+          '-d',
+          '-p', `${this.port}:4822`,
+          '-v', `${this.driveHostDir}:/guacdrive`,
+          'guacamole/guacd:latest'
+        ];
+
+        this.guacdProcess = spawn(dockerCommand, dockerArgs);
+
+        this.guacdProcess.on('error', (error) => {
+          console.error('❌ Error ejecutando Docker:', error);
+          resolve(false);
+        });
+
+        // Esperar a que el puerto responda con reintentos
+        let attempts = 0;
+        const maxAttempts = 12;
+        const interval = setInterval(async () => {
+          attempts++;
+          try {
+            const available = await this.isPortAvailable(this.port);
+            if (!available) {
+              const alive = await this._checkGuacdConnection();
+              if (alive) {
+                clearInterval(interval);
+                this.isRunning = true;
+                this.detectedMethod = 'docker';
+                resolve(true);
+                return;
+              }
+            }
+          } catch (e) { }
+
+          if (attempts >= maxAttempts) {
+            clearInterval(interval);
+            const finalAvailable = await this.isPortAvailable(this.port);
+            if (!finalAvailable) {
+              this.isRunning = true;
+              this.detectedMethod = 'docker';
+              resolve(true);
+            } else {
+              resolve(false);
+            }
+          }
+        }, 500);
+      });
     });
   }
 

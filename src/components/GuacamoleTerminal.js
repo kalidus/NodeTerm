@@ -37,6 +37,8 @@ const GuacamoleTerminal = forwardRef(({
     const [isToolbarHovered, setIsToolbarHovered] = useState(false);
     const [showClipboardDialog, setShowClipboardDialog] = useState(false);
     const [clipboardText, setClipboardText] = useState('');
+    const [isServiceDisabled, setIsServiceDisabled] = useState(false);
+    const [isEnablingService, setIsEnablingService] = useState(false);
     // ⚡ PERF: debug flag - set window.__rdp_debug__ = true in console to enable verbose logs
     const _rdpDebug = () => typeof window !== 'undefined' && window.__rdp_debug__;
 
@@ -299,6 +301,13 @@ const GuacamoleTerminal = forwardRef(({
                     : await window.electron.ipcRenderer.invoke('guacamole:create-token', rdpConfig);
 
                 if (!tokenResponse.success) {
+                    if (tokenResponse.isServiceDisabled) {
+                        setIsServiceDisabled(true);
+                        hasFatalErrorRef.current = true;
+                        setConnectionState('error');
+                        setErrorMessage(tokenResponse.error || 'El servicio Apache Guacamole está desactivado.');
+                        return;
+                    }
                     try {
                         const mapped = ErrorMapper && typeof ErrorMapper.mapGuacamoleError === 'function'
                             ? ErrorMapper.mapGuacamoleError({ message: tokenResponse.error, type: 'token' })
@@ -2091,6 +2100,63 @@ const GuacamoleTerminal = forwardRef(({
                 );
 
             case 'error':
+                if (isServiceDisabled) {
+                    return (
+                        <div style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            height: '100%',
+                            color: '#ffffff',
+                            backgroundColor: '#1e1e1e',
+                            padding: '24px',
+                            textAlign: 'center',
+                            maxWidth: '560px',
+                            margin: '0 auto'
+                        }}>
+                            <i className="pi pi-server" style={{ fontSize: '52px', marginBottom: '16px', color: '#059669' }} />
+                            <h3 style={{ fontSize: '1.25rem', marginBottom: '8px' }}>Servicio Guacamole Desactivado</h3>
+                            <p style={{ color: '#9ca3af', fontSize: '0.9rem', lineHeight: 1.5, marginBottom: '24px' }}>
+                                Esta conexión está configurada para usar el túnel <strong>Apache Guacamole (guacd)</strong>, pero el servicio se encuentra apagado en NodeTerm.
+                            </p>
+                            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                <Button
+                                    label={isEnablingService ? "Iniciando servicio..." : "Activar Guacamole y Conectar"}
+                                    icon={isEnablingService ? "pi pi-spin pi-spinner" : "pi pi-play"}
+                                    onClick={async () => {
+                                        try {
+                                            setIsEnablingService(true);
+                                            await window.electron?.ipcRenderer?.invoke('guacamole:start');
+                                            setIsServiceDisabled(false);
+                                            hasFatalErrorRef.current = false;
+                                            setConnectionState('disconnected');
+                                            setErrorMessage('');
+                                        } catch (err) {
+                                            setErrorMessage(err?.message || 'Error al iniciar servicio Guacamole');
+                                        } finally {
+                                            setIsEnablingService(false);
+                                        }
+                                    }}
+                                    disabled={isEnablingService}
+                                    className="p-button-success"
+                                />
+                                <Button
+                                    label="Cerrar"
+                                    icon="pi pi-times"
+                                    onClick={() => {
+                                        setIsServiceDisabled(false);
+                                        hasFatalErrorRef.current = false;
+                                        setConnectionState('disconnected');
+                                        setErrorMessage('');
+                                    }}
+                                    className="p-button-outlined p-button-secondary"
+                                />
+                            </div>
+                        </div>
+                    );
+                }
+
                 return (
                     <div style={{
                         display: 'flex',

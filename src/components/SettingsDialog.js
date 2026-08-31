@@ -5545,23 +5545,6 @@ const SettingsContent = ({
                 <AppsTab
                   themeColors={{ primary: 'var(--primary-color)' }}
                   activeSubTab={activeSubTab}
-                  rdpIdleMinutes={rdpIdleMinutes}
-                  setRdpIdleMinutes={setRdpIdleMinutes}
-                  rdpSessionActivityMinutes={rdpSessionActivityMinutes}
-                  setRdpSessionActivityMinutes={setRdpSessionActivityMinutes}
-                  rdpResizeDebounceMs={rdpResizeDebounceMs}
-                  setRdpResizeDebounceMs={setRdpResizeDebounceMs}
-                  rdpResizeAckTimeoutMs={rdpResizeAckTimeoutMs}
-                  setRdpResizeAckTimeoutMs={setRdpResizeAckTimeoutMs}
-                  rdpGuacdInactivityMs={rdpGuacdInactivityMs}
-                  setRdpGuacdInactivityMs={setRdpGuacdInactivityMs}
-                  guacdPreferredMethod={guacdPreferredMethod}
-                  setGuacdPreferredMethod={setGuacdPreferredMethod}
-                  guacdStatus={guacdStatus}
-                  guacdRestarting={guacdRestarting}
-                  handleRestartGuacd={handleRestartGuacd}
-                  handleResetRdpDefaults={handleResetRdpDefaults}
-                  methodOptions={methodOptions}
                 />
               </div>
             </TabPanel>

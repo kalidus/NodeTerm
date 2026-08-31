@@ -940,13 +940,53 @@ async function initializeGuacamoleServices() {
   return await guacamoleInitPromise;
 }
 
+/**
+ * Detiene los servicios de Guacamole (desconecta clientes, cierra WS y para guacd)
+ */
+async function stopGuacamoleServices() {
+  console.log('🛑 [main] Deteniendo servicios de Guacamole...');
+  try {
+    await disconnectAllGuacamoleConnections();
+  } catch (e) {
+    console.warn('⚠️ Error desconectando sesiones de Guacamole:', e?.message || e);
+  }
+
+  if (guacamoleServer) {
+    try {
+      if (guacamoleServer.webSocketServer && typeof guacamoleServer.webSocketServer.close === 'function') {
+        guacamoleServer.webSocketServer.close();
+      }
+    } catch (e) {
+      console.warn('⚠️ Error cerrando websocket de Guacamole:', e?.message || e);
+    }
+    guacamoleServer = null;
+  }
+
+  try {
+    if (typeof _guacdService !== 'undefined' && _guacdService) {
+      await getGuacdService().stop();
+    }
+  } catch (e) {
+    console.warn('⚠️ Error deteniendo guacdService:', e?.message || e);
+  }
+
+  guacamoleInitialized = false;
+  guacamoleInitializing = false;
+  guacamoleInitPromise = null;
+  guacamoleServerReadyAt = 0;
+  console.log('✅ Servicios de Guacamole detenidos.');
+  return true;
+}
+
 // === Preferencias Guacd (persistencia en userData) ===
 // Funciones movidas a src/main/utils/file-utils.js
 const {
   loadPreferredGuacdMethod,
   savePreferredGuacdMethod,
   loadGuacdInactivityTimeout,
-  saveGuacdInactivityTimeout
+  saveGuacdInactivityTimeout,
+  loadGuacamoleEnabled,
+  saveGuacamoleEnabled
 } = require('./src/main/utils/file-utils');
 
 // Handlers de Guacamole movidos a src/main/handlers/guacamole-handlers.js
@@ -1388,7 +1428,9 @@ function createWindow() {
       getOrCreateGuacamoleSecretKey: getOrCreateGuacamoleSecretKey,
       isGuacamoleInitializing: () => guacamoleInitializing,
       isGuacamoleInitialized: () => guacamoleInitialized,
-      getGuacamoleWebSocketPort: () => (guacamoleServer ? guacamoleServer.port : null)
+      getGuacamoleWebSocketPort: () => (guacamoleServer ? guacamoleServer.port : null),
+      initializeGuacamoleServices,
+      stopGuacamoleServices
     });
   } catch (err) {
     console.error('❌ Error registrando handlers críticos:', err?.message || err);
@@ -1527,10 +1569,20 @@ function createWindow() {
 
   // 🚀 OPTIMIZACIÓN: Función para inicializar servicios pesados después del arranque
   async function initializeServicesAfterShow() {
-    // Inicializar Guacamole en background (no bloquea la UI)
-    initializeGuacamoleServices().catch((error) => {
-      console.error('❌ [POST-SHOW] Error en inicialización de Guacamole:', error);
-    });
+    // Inicializar Guacamole en background solo si está habilitado por el usuario en APPs
+    try {
+      const isGuacEnabled = await loadGuacamoleEnabled();
+      if (isGuacEnabled) {
+        console.log('🚀 [POST-SHOW] Guacamole está habilitado. Inicializando servicios...');
+        initializeGuacamoleServices().catch((error) => {
+          console.error('❌ [POST-SHOW] Error en inicialización de Guacamole:', error);
+        });
+      } else {
+        console.log('💤 [POST-SHOW] Guacamole está desactivado por defecto (NodeTerm usa RDP Nativo). No se inicia guacd.');
+      }
+    } catch (e) {
+      console.warn('⚠️ [POST-SHOW] Error comprobando estado de Guacamole:', e);
+    }
 
     // 🚀 OPTIMIZACIÓN: Registrar handlers SECUNDARIOS después de que la ventana sea visible
     // Estos handlers no son críticos para el arranque y pueden esperar
@@ -1562,7 +1614,10 @@ function createWindow() {
         getGuacamoleServerReadyAt: () => guacamoleServerReadyAt,
         getOrCreateGuacamoleSecretKey: getOrCreateGuacamoleSecretKey,
         isGuacamoleInitializing: () => guacamoleInitializing,
-        isGuacamoleInitialized: () => guacamoleInitialized
+        isGuacamoleInitialized: () => guacamoleInitialized,
+        getGuacamoleWebSocketPort: () => (guacamoleServer ? guacamoleServer.port : null),
+        initializeGuacamoleServices,
+        stopGuacamoleServices
       };
 
       // Registrar handlers secundarios (System Services, RDP, MCP, Nextcloud, SSH, etc.)

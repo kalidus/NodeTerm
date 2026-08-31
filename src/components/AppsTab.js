@@ -21,7 +21,8 @@ const isWindowsPlatform = () =>
   (typeof navigator !== 'undefined' && /windows/i.test(navigator.userAgent || ''));
 
 const APP_CATEGORY_META = {
-  connectivity: { label: 'Nativo', mod: 'nativo' },
+  services: { label: 'Servicio', mod: 'servicio' },
+  connectivity: { label: 'Servicio', mod: 'servicio' },
   cli: { label: 'IA CLI', mod: 'ia-cli' },
   webapps: { label: 'IA WEB', mod: 'ia-web' }
 };
@@ -40,42 +41,27 @@ const CategoryTypeBadge = ({ category, size = 'md' }) => {
 };
 
 /**
- * AppsTab — configuración unificada de aplicaciones (RDP, CLI, Web Docker).
+ * AppsTab — configuración unificada de aplicaciones (Guacamole, CLI, Web Docker).
  * Layout hero + galería (estilo tienda) integrado en el diálogo de ajustes.
  */
 const SUBTAB_DEFAULT_APP = {
-  rdp: 'rdp',
+  guacamole: 'guacamole',
+  rdp: 'guacamole',
   ai: 'claude',
   cygwin: 'cygwin'
 };
 
 const AppsTab = ({
   themeColors,
-  activeSubTab,
-  rdpIdleMinutes,
-  setRdpIdleMinutes,
-  rdpSessionActivityMinutes,
-  setRdpSessionActivityMinutes,
-  rdpResizeDebounceMs,
-  setRdpResizeDebounceMs,
-  rdpResizeAckTimeoutMs,
-  setRdpResizeAckTimeoutMs,
-  rdpGuacdInactivityMs,
-  setRdpGuacdInactivityMs,
-  guacdPreferredMethod,
-  setGuacdPreferredMethod,
-  guacdStatus,
-  guacdRestarting,
-  handleRestartGuacd,
-  handleResetRdpDefaults,
-  methodOptions
+  activeSubTab
 }) => {
   const { t } = useTranslation('settings');
   const toast = useRef(null);
   const isWindows = isWindowsPlatform();
 
-  // Estado para cada cliente de IA
+  // Estado para cada cliente/servicio (Guacamole viene desactivado por defecto)
   const [clients, setClients] = useState({
+    guacamole: false,
     cygwin: false,
     claude: false,
     opencode: false,
@@ -91,8 +77,25 @@ const AppsTab = ({
     opennotebook: false
   });
 
-  // Estado de RDP (siempre activo en NodeTerm por defecto)
-  const [rdpEnabled, setRdpEnabled] = useState(true);
+  // Estado autónomo para el backend Guacamole (guacd) y parámetros
+  const [guacdStatus, setGuacdStatus] = useState({ isRunning: false, host: '127.0.0.1', port: 4822, method: 'docker' });
+  const [guacdPreferredMethod, setGuacdPreferredMethod] = useState('docker');
+  const [guacdRestarting, setGuacdRestarting] = useState(false);
+  const [rdpSessionActivityMinutes, setRdpSessionActivityMinutes] = useState(120);
+  const [rdpIdleMinutes, setRdpIdleMinutes] = useState(1);
+  const [rdpResizeDebounceMs, setRdpResizeDebounceMs] = useState(300);
+  const [rdpResizeAckTimeoutMs, setRdpResizeAckTimeoutMs] = useState(1500);
+  const [rdpGuacdInactivityMs, setRdpGuacdInactivityMs] = useState(0);
+
+  const methodOptions = useMemo(() => isWindows
+    ? [
+        { label: 'Docker Desktop (Recomendado)', value: 'docker' },
+        { label: 'WSL (Windows Subsystem for Linux)', value: 'wsl' }
+      ]
+    : [
+        { label: 'Docker (Contenedor)', value: 'docker' },
+        { label: 'Nativo (Servicio del sistema)', value: 'native' }
+      ], [isWindows]);
 
   // Estado de carga para verificar servicios Docker
   const [dockerStatus, setDockerStatus] = useState({
@@ -155,11 +158,11 @@ const AppsTab = ({
   const [hermesCliConfig, setHermesCliConfig] = useState({ binaryPath: '', extraArgs: '' });
 
   // UI state — master-detail
-  const [selectedAppKey, setSelectedAppKey] = useState('rdp');
+  const [selectedAppKey, setSelectedAppKey] = useState('guacamole');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [advancedAccordionIndex, setAdvancedAccordionIndex] = useState(null);
 
-  // Cargar configuración desde localStorage al montar
+  // Cargar configuración desde localStorage y backend al montar
   useEffect(() => {
     const saved = localStorage.getItem(AI_CLIENTS_STORAGE_KEY);
     if (saved) {
@@ -171,6 +174,28 @@ const AppsTab = ({
       }
     }
 
+    // Sincronizar estado persistido de Guacamole desde el proceso principal
+    const syncGuacamoleState = async () => {
+      try {
+        const status = await window.electron?.ipcRenderer?.invoke('guacamole:get-status');
+        if (status) {
+          if (typeof status.enabled === 'boolean') {
+            setClients(prev => ({ ...prev, guacamole: status.enabled }));
+          }
+          if (status.guacd) {
+            setGuacdStatus(status.guacd);
+            if (status.guacd.method && status.guacd.method !== 'unknown') {
+              setGuacdPreferredMethod(status.guacd.method);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[AppsTab] Error sincronizando estado de Guacamole:', err);
+      }
+    };
+    syncGuacamoleState();
+    const guacInterval = setInterval(syncGuacamoleState, 2500);
+
     checkClaudeCliStatus();
     checkOpenCodeCliStatus();
     checkGeminiCliStatus();
@@ -180,6 +205,10 @@ const AppsTab = ({
     if (isWindows) {
       checkCygwinStatus();
     }
+
+    return () => {
+      clearInterval(guacInterval);
+    };
   }, []);
 
   useEffect(() => {
@@ -849,11 +878,114 @@ const AppsTab = ({
     }
   };
 
+  const handleChangeGuacdMethod = async (newMethod) => {
+    setGuacdPreferredMethod(newMethod);
+    try {
+      setGuacdRestarting(true);
+      const res = await window.electron?.ipcRenderer?.invoke('guacamole:set-preferred-method', newMethod);
+      const statusRes = await window.electron?.ipcRenderer?.invoke('guacamole:get-status');
+      if (statusRes?.guacd) {
+        setGuacdStatus(statusRes.guacd);
+      }
+      toast.current?.show({
+        severity: res?.success ? 'success' : 'warn',
+        summary: 'Guacamole',
+        detail: res?.success ? `Método cambiado a ${newMethod.toUpperCase()}` : (res?.error || 'No se pudo cambiar el método'),
+        life: 3000
+      });
+    } catch (err) {
+      toast.current?.show({
+        severity: 'error',
+        summary: 'Guacamole',
+        detail: err?.message || 'Error cambiando método',
+        life: 4000
+      });
+    } finally {
+      setGuacdRestarting(false);
+    }
+  };
+
+  const handleRestartGuacd = async () => {
+    try {
+      setGuacdRestarting(true);
+      const res = await window.electron?.ipcRenderer?.invoke('guacamole:restart-guacd');
+      const statusRes = await window.electron?.ipcRenderer?.invoke('guacamole:get-status');
+      if (statusRes?.guacd) {
+        setGuacdStatus(statusRes.guacd);
+      }
+      toast.current?.show({
+        severity: res?.success ? 'success' : 'warn',
+        summary: 'Guacamole',
+        detail: res?.success ? 'Servicio Guacamole reiniciado correctamente' : (res?.error || 'Error al reiniciar'),
+        life: 3000
+      });
+    } catch (err) {
+      toast.current?.show({
+        severity: 'error',
+        summary: 'Guacamole',
+        detail: err?.message || 'Error al reiniciar Guacamole',
+        life: 4000
+      });
+    } finally {
+      setGuacdRestarting(false);
+    }
+  };
+
+  const handleResetRdpDefaults = () => {
+    setRdpSessionActivityMinutes(120);
+    setRdpIdleMinutes(1);
+    setRdpResizeDebounceMs(300);
+    setRdpResizeAckTimeoutMs(1500);
+    setRdpGuacdInactivityMs(0);
+    toast.current?.show({
+      severity: 'info',
+      summary: 'Valores Restaurados',
+      detail: 'Parámetros de Guacamole restaurados a los valores por defecto.',
+      life: 2500
+    });
+  };
+
   const handleToggleClient = async (clientKey) => {
-    if (clientKey === 'rdp') {
-      // RDP está siempre activada nativamente. El switch enciende/apaga el servicio backend guacd
-      if (handleRestartGuacd && !guacdRestarting) {
-        await handleRestartGuacd();
+    if (clientKey === 'guacamole' || clientKey === 'rdp') {
+      const willEnable = !clients.guacamole;
+      try {
+        setGuacdRestarting(true);
+        if (willEnable) {
+          const res = await window.electron?.ipcRenderer?.invoke('guacamole:start');
+          if (res?.guacd) {
+            setGuacdStatus(res.guacd);
+          }
+          const statusRes = await window.electron?.ipcRenderer?.invoke('guacamole:get-status');
+          if (statusRes?.guacd) {
+            setGuacdStatus(statusRes.guacd);
+          }
+          toast.current?.show({
+            severity: res?.success ? 'success' : 'warn',
+            summary: 'Guacamole',
+            detail: res?.success ? 'Servicio Apache Guacamole iniciado correctamente.' : (res?.error || 'No se pudo iniciar el servicio'),
+            life: 3000
+          });
+        } else {
+          await window.electron?.ipcRenderer?.invoke('guacamole:stop');
+          setGuacdStatus(prev => ({ ...prev, isRunning: false }));
+          toast.current?.show({
+            severity: 'info',
+            summary: 'Guacamole',
+            detail: 'Servicio Apache Guacamole detenido.',
+            life: 3000
+          });
+        }
+        setClients(prev => ({ ...prev, guacamole: willEnable, rdp: willEnable }));
+        saveClientsConfig({ ...clients, guacamole: willEnable, rdp: willEnable });
+      } catch (err) {
+        toast.current?.show({
+          severity: 'error',
+          summary: 'Guacamole',
+          detail: err?.message || 'Error al cambiar estado de Guacamole',
+          life: 4000
+        });
+      } finally {
+        setGuacdRestarting(false);
       }
       return;
     }
@@ -1133,31 +1265,30 @@ const AppsTab = ({
     opennotebook: 'open-notebook'
   };
 
-  // Mapeo dinámico de requisitos del RDP
-  const getRdpReqBadges = () => {
+  // Mapeo dinámico de requisitos de Guacamole
+  const getGuacamoleReqBadges = () => {
     if (guacdPreferredMethod === 'docker') {
       return [{ label: 'DOCKER', severity: 'info' }];
     } else if (guacdPreferredMethod === 'wsl') {
       return [{ label: 'WSL', severity: 'danger' }];
     }
-    return [{ label: 'NATIVO / LOCAL', severity: 'success' }];
+    return [{ label: 'LOCAL / DAEMON', severity: 'success' }];
   };
 
-  // Definición de los clientes de IA + RDP + Cygwin
+  // Definición de los clientes de IA + Guacamole + Cygwin
   const clientsDefinition = [
     {
-      key: 'rdp', category: 'connectivity',
-      name: 'RDP (Guacamole Connection)', shortName: 'RDP',
-      color: '#3b82f6',
-      description: 'Conexión a escritorios remotos mediante Guacamole. Admite escalado dinámico de pantalla y redirección de audio.',
-      features: ['Microsoft RDP', 'Sandboxing seguro', 'Warm-up automático', 'Redimensión dinámica'],
-      get badges() { return getRdpReqBadges(); },
-      requiresDocker: guacdPreferredMethod === 'docker',
-      requiresWSL: guacdPreferredMethod === 'wsl',
-      isRdp: true
+      key: 'guacamole', category: 'services',
+      name: 'Guacamole', shortName: 'Guacamole',
+      color: '#059669',
+      description: 'Servidor proxy y túnel Apache Guacamole (guacd) para sesiones remotas RDP y VNC que requieran intermediación web mediante Docker o WSL. (Nota: NodeTerm ya cuenta con RDP Web Nativo integrado sin dependencias externas).',
+      features: ['Proxy RDP / VNC', 'Backend Docker / WSL / Nativo', 'Watchdog configurable', 'Audio y Portapapeles'],
+      get badges() { return getGuacamoleReqBadges(); },
+      requiresDocker: false,
+      isGuacamole: true
     },
     {
-      key: 'cygwin', category: 'connectivity',
+      key: 'cygwin', category: 'services',
       name: 'Cygwin Terminal', shortName: 'Cygwin',
       color: '#00AA00',
       description: isWindows
@@ -1306,9 +1437,10 @@ const AppsTab = ({
   };
 
   const StatusDot = ({ client }) => {
-    if (client.isRdp) {
+    if (client.isGuacamole || client.isRdp) {
+      if (!clients.guacamole) return <span className="ai-status-dot stopped" title="Guacamole desactivado" />;
       if (guacdRestarting) return <span className="ai-status-dot loading" title="Reiniciando..." />;
-      if (guacdStatus?.isRunning) return <span className="ai-status-dot running" title="Guacd activo" />;
+      if (guacdStatus?.isRunning) return <span className="ai-status-dot running" title="Guacamole activo" />;
       return <span className="ai-status-dot stopped" title="Guacd inactivo" />;
     }
     if (client.isCygwin) {
@@ -1338,10 +1470,11 @@ const AppsTab = ({
   };
 
   const StatusLabel = ({ client }) => {
-    if (client.isRdp) {
+    if (client.isGuacamole || client.isRdp) {
+      if (!clients.guacamole) return <span className="ai-status-label not-installed">Desactivada</span>;
       if (guacdRestarting) return <span className="ai-status-label stopped">Reiniciando...</span>;
       if (guacdStatus?.isRunning) return <span className="ai-status-label running">Activo</span>;
-      return <span className="ai-status-label stopped">Inactivo</span>;
+      return <span className="ai-status-label stopped">Detenido</span>;
     }
     if (client.isCygwin) {
       if (cygwinStatus.installing) {
@@ -1370,24 +1503,39 @@ const AppsTab = ({
     return null;
   };
 
-  // Render para config avanzada de RDP
-  const renderRdpAdvancedConfig = () => {
-    const isRunning = guacdStatus?.isRunning;
+  // Render para config avanzada de Guacamole (guacd)
+  const renderGuacamoleAdvancedConfig = () => {
+    const isEnabled = clients.guacamole;
+    const isRunning = guacdStatus?.isRunning && isEnabled;
     const statusClass = isRunning ? 'apps-status-active' : 'apps-status-inactive';
-    const statusText = isRunning ? t('rdp.guacdStatus.active') : t('rdp.guacdStatus.inactive');
+    const statusText = isRunning
+      ? 'Activo (En ejecución)'
+      : isEnabled
+        ? 'Iniciando / Detenido'
+        : 'Desactivado';
     const activeMethodLabel = methodOptions.find(o => o.value === guacdPreferredMethod)?.label || guacdPreferredMethod;
 
     return (
       <div className="apps-config-container">
+        {/* Banner informativo de aclaración RDP Nativo vs Guacamole */}
+        <div className="apps-config-card" style={{ gridColumn: '1 / -1', background: 'rgba(5, 150, 105, 0.08)', borderColor: 'rgba(5, 150, 105, 0.25)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <i className="pi pi-info-circle" style={{ color: '#059669', fontSize: '1.25rem' }} />
+            <div style={{ fontSize: '0.82rem', lineHeight: 1.4, color: 'var(--text-color)' }}>
+              <strong>NodeTerm integra RDP Web Nativo:</strong> Puedes conectarte a cualquier escritorio remoto por RDP o mstsc directamente sin intermediarios. Activa este servicio únicamente si deseas conectar sesiones mediante el proxy <strong>Apache Guacamole (guacd)</strong> vía Docker o WSL.
+            </div>
+          </div>
+        </div>
+
         {/* Tarjeta 1: Estado del Servidor Backend (Guacd) */}
         <div className="apps-config-card apps-backend-card">
           <div className="apps-card-header">
-            <div className="apps-card-icon-wrapper">
+            <div className="apps-card-icon-wrapper" style={{ background: 'rgba(5, 150, 105, 0.12)', borderColor: 'rgba(5, 150, 105, 0.25)', color: '#059669' }}>
               <i className="pi pi-server apps-card-icon" />
             </div>
             <div className="apps-card-header-text">
-              <h3>{t('rdp.backendTitle') || 'Backend Guacamole'}</h3>
-              <p className="apps-card-subtitle">Servicio de túnel y protocolo RDP</p>
+              <h3>Backend Guacamole (guacd)</h3>
+              <p className="apps-card-subtitle">Servicio de túnel y proxy de protocolos</p>
             </div>
           </div>
 
@@ -1406,7 +1554,7 @@ const AppsTab = ({
                 </code>
               </div>
               <div className="apps-status-technical">
-                <span className="apps-tech-label">Método actual:</span>
+                <span className="apps-tech-label">Método preferido:</span>
                 <span className="apps-tech-value">{activeMethodLabel}</span>
               </div>
             </div>
@@ -1417,7 +1565,7 @@ const AppsTab = ({
                 id="guacd-preferred-method"
                 value={guacdPreferredMethod}
                 options={methodOptions}
-                onChange={(e) => setGuacdPreferredMethod(e.value)}
+                onChange={(e) => handleChangeGuacdMethod(e.value)}
                 style={{ width: '100%' }}
                 className="rdp-dropdown-premium"
               />
@@ -1426,13 +1574,30 @@ const AppsTab = ({
               </small>
             </div>
 
-            <Button
-              label={guacdRestarting ? "Reiniciando..." : (t('rdp.restartGuacd') || "Reiniciar Guacd")}
-              icon={guacdRestarting ? "pi pi-spin pi-spinner" : "pi pi-refresh"}
-              className={`rdp-restart-btn p-button-sm ${isRunning ? 'p-button-secondary' : 'p-button-warning'}`}
-              onClick={handleRestartGuacd}
-              disabled={guacdRestarting}
-            />
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+              {!isEnabled ? (
+                <Button
+                  label="Iniciar Servicio"
+                  icon="pi pi-play"
+                  className="p-button-success p-button-sm"
+                  onClick={() => handleToggleClient('guacamole')}
+                />
+              ) : (
+                <Button
+                  label="Detener Servicio"
+                  icon="pi pi-power-off"
+                  className="p-button-danger p-button-sm"
+                  onClick={() => handleToggleClient('guacamole')}
+                />
+              )}
+              <Button
+                label={guacdRestarting ? "Reiniciando..." : (t('rdp.restartGuacd') || "Reiniciar Guacd")}
+                icon={guacdRestarting ? "pi pi-spin pi-spinner" : "pi pi-refresh"}
+                className="p-button-secondary p-button-sm"
+                onClick={handleRestartGuacd}
+                disabled={guacdRestarting || !isEnabled}
+              />
+            </div>
           </div>
         </div>
 
@@ -1443,7 +1608,7 @@ const AppsTab = ({
               <i className="pi pi-sliders-h apps-card-icon" />
             </div>
             <div className="apps-card-header-text">
-              <h3>{t('rdp.title') || 'Parámetros de Sesión RDP'}</h3>
+              <h3>Parámetros de Guacamole</h3>
               <p className="apps-card-subtitle">Rendimiento, optimización y tiempos límite</p>
             </div>
             <Button
@@ -1673,8 +1838,8 @@ const AppsTab = ({
   // Render para config avanzada de cada cliente de IA
   const renderAdvancedConfig = (client) => {
     const key = client.key;
-    if (client.isRdp) {
-      return renderRdpAdvancedConfig();
+    if (client.isGuacamole || client.isRdp) {
+      return renderGuacamoleAdvancedConfig();
     }
     if (client.isCygwin) {
       return renderCygwinAdvancedConfig();
@@ -1975,7 +2140,7 @@ const AppsTab = ({
     return null;
   };
 
-  const isClientEnabled = (client) => (client.isRdp ? rdpEnabled : !!clients[client.key]);
+  const isClientEnabled = (client) => !!clients[client.key];
 
   const openWebAppUrl = (url) => {
     if (!url) return;
@@ -2001,8 +2166,8 @@ const AppsTab = ({
 
   const renderAppIcon = (client, size = 26) => {
     const brandType = BRAND_TYPE_MAP[client.key];
-    if (client.isRdp) {
-      return <i className="pi pi-desktop" style={{ fontSize: size, color: client.color }} />;
+    if (client.isGuacamole || client.isRdp) {
+      return <i className="pi pi-server" style={{ fontSize: size, color: client.color }} />;
     }
     if (client.isCygwin) {
       return <i className="pi pi-code" style={{ fontSize: size, color: client.color }} />;
@@ -2029,7 +2194,8 @@ const AppsTab = ({
   };
 
   const getThumbnailStatus = (client) => {
-    if (client.isRdp) {
+    if (client.isGuacamole || client.isRdp) {
+      if (!clients.guacamole) return { text: 'Desactivada', className: 'stopped' };
       if (guacdRestarting) return { text: 'Reiniciando…', className: 'stopped' };
       if (guacdStatus?.isRunning) return { text: 'Activo', className: 'running' };
       return { text: 'Inactivo', className: 'stopped' };
@@ -2078,7 +2244,7 @@ const AppsTab = ({
 
   const renderHeroCtas = (client) => {
     const isEnabled = isClientEnabled(client);
-    if (!isEnabled && !client.isCygwin) return null;
+    if (!isEnabled && !client.isCygwin && !client.isGuacamole && !client.isRdp) return null;
 
     const ctas = [];
 
@@ -2121,11 +2287,7 @@ const AppsTab = ({
       }
     }
 
-    if (!isEnabled) {
-      return ctas.length > 0 ? <div className="apps-hero-cta-row">{ctas}</div> : null;
-    }
-
-    if (client.isLocalCli) {
+    if (client.isLocalCli && isEnabled) {
       const s = getCliStatus(client.key);
       const h = getCliInstallHandler(client.key);
       if (h && !s?.installed) {
@@ -2142,7 +2304,7 @@ const AppsTab = ({
       }
     }
 
-    if (client.requiresDocker) {
+    if (client.requiresDocker && isEnabled) {
       const status = dockerStatus[client.key];
       if (status?.running) {
         ctas.push(
@@ -2167,17 +2329,38 @@ const AppsTab = ({
       }
     }
 
-    if (client.isRdp) {
-      ctas.push(
-        <Button
-          key="guacd"
-          label={guacdRestarting ? 'Reiniciando…' : 'Reiniciar Guacd'}
-          icon={guacdRestarting ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'}
-          className="p-button-secondary p-button-sm"
-          onClick={handleRestartGuacd}
-          disabled={guacdRestarting}
-        />
-      );
+    if (client.isGuacamole || client.isRdp) {
+      if (!isEnabled) {
+        ctas.push(
+          <Button
+            key="start-guac"
+            label="Iniciar"
+            icon="pi pi-play"
+            className="p-button-success p-button-sm"
+            onClick={() => handleToggleClient('guacamole')}
+          />
+        );
+      } else {
+        ctas.push(
+          <Button
+            key="stop-guac"
+            label="Detener"
+            icon="pi pi-power-off"
+            className="p-button-danger p-button-sm"
+            onClick={() => handleToggleClient('guacamole')}
+          />
+        );
+        ctas.push(
+          <Button
+            key="guacd"
+            label={guacdRestarting ? 'Reiniciando…' : 'Reiniciar Guacd'}
+            icon={guacdRestarting ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'}
+            className="p-button-secondary p-button-sm"
+            onClick={handleRestartGuacd}
+            disabled={guacdRestarting}
+          />
+        );
+      }
     }
 
     return ctas.length > 0 ? <div className="apps-hero-cta-row">{ctas}</div> : null;
@@ -2258,7 +2441,7 @@ const AppsTab = ({
             checked={isEnabled}
             onChange={() => handleToggleClient(client.key)}
             disabled={
-              (client.isRdp && guacdRestarting) ||
+              ((client.isGuacamole || client.isRdp) && guacdRestarting) ||
               (client.isCygwin && (!isWindows || cygwinStatus.installing || cygwinStatus.uninstalling))
             }
           />
@@ -2283,8 +2466,8 @@ const AppsTab = ({
   const renderHeroSection = (client) => {
     if (!client) return null;
     const isEnabled = isClientEnabled(client);
-    const hasAdvanced = client.isLocalCli || client.requiresDocker || client.isRdp || client.isCygwin;
-    const advancedTitle = client.isRdp
+    const hasAdvanced = client.isLocalCli || client.requiresDocker || client.isGuacamole || client.isRdp || client.isCygwin;
+    const advancedTitle = (client.isGuacamole || client.isRdp)
       ? 'Backend y conexión'
       : client.isCygwin
         ? 'Instalacion y runtime'
@@ -2342,7 +2525,7 @@ const AppsTab = ({
                 checked={isEnabled}
                 onChange={() => handleToggleClient(client.key)}
                 disabled={
-                  (client.isRdp && guacdRestarting) ||
+                  ((client.isGuacamole || client.isRdp) && guacdRestarting) ||
                   (client.isCygwin && (!isWindows || cygwinStatus.installing || cygwinStatus.uninstalling))
                 }
               />
@@ -2369,14 +2552,14 @@ const AppsTab = ({
 
   const CATEGORY_PILLS = [
     { key: 'all', label: 'Todas' },
-    { key: 'connectivity', label: 'Nativo' },
+    { key: 'services', label: 'Servicios' },
     { key: 'cli', label: 'IA CLI' },
     { key: 'webapps', label: 'IA WEB' }
   ];
 
   const categoryCounts = {
     all: clientsDefinition.length,
-    connectivity: clientsDefinition.filter((c) => c.category === 'connectivity').length,
+    services: clientsDefinition.filter((c) => c.category === 'services' || c.category === 'connectivity').length,
     cli: clientsDefinition.filter((c) => c.category === 'cli').length,
     webapps: clientsDefinition.filter((c) => c.category === 'webapps').length
   };
@@ -2400,8 +2583,8 @@ const AppsTab = ({
                 <strong>{totalActive}</strong>/{totalCount} activas
               </span>
               <span className="apps-explore-stat">
-                <span className={`apps-stat-dot ${guacdStatus?.isRunning ? 'ok' : 'warn'}`} />
-                Guacd {guacdStatus?.isRunning ? 'activo' : 'inactivo'}
+                <span className={`apps-stat-dot ${guacdStatus?.isRunning && clients.guacamole ? 'ok' : 'warn'}`} />
+                Guacamole {guacdStatus?.isRunning && clients.guacamole ? 'activo' : 'inactivo'}
               </span>
               {dockerEnabledCount > 0 && (
                 <span className="apps-explore-stat">
