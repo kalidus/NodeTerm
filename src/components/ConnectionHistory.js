@@ -1559,21 +1559,26 @@ const ConnectionHistory = ({
 					e.stopPropagation();
 					onEdit?.(connection);
 				}}
+				title={`${connection.name} (${hostLabel})`}
 			>
 				<span className="hrc-prompt">$</span>
-				<span className="hrc-protocol-tag" style={{ color: typeColor }}>[{protocolLabel}]</span>
-				<span className="hrc-name">{connection.name}</span>
-				<span className="hrc-host">{hostLabel}</span>
+				<span className="hrc-protocol-tag" style={{ color: typeColor, background: `${typeColor}15`, borderColor: `${typeColor}35` }}>[{protocolLabel}]</span>
+				<div className="hrc-main-info">
+					<span className="hrc-name">{connection.name}</span>
+					<span className="hrc-host">{hostLabel}</span>
+				</div>
 				<span className="hrc-time">{timeStr}</span>
 				<div className="hrc-actions" onClick={(e) => e.stopPropagation()}>
 					<button
 						className={`glass-action-btn ${fav ? 'fav-active' : ''}`}
 						onClick={(e) => { e.stopPropagation(); onToggleFav(connection); }}
-						title="Favorito"
+						title={fav ? "Quitar de Favoritos" : "Marcar como Favorito"}
 					>
 						<i className={fav ? 'pi pi-star-fill' : 'pi pi-star'} />
 					</button>
-					<button className="hrc-connect-btn" onClick={() => onConnect?.(connection)}>{'\u2192'} connect</button>
+					<button className="hrc-connect-btn" onClick={() => onConnect?.(connection)} title="Conectar">
+						<i className="pi pi-arrow-right" style={{ fontSize: '0.65rem' }} />
+					</button>
 				</div>
 			</div>
 		);
@@ -2732,7 +2737,7 @@ const ConnectionHistory = ({
 					background: ${adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)} !important;
 				}
 
-				/* --- Grep-style connection rows --- */
+				/* --- Grep-style connection rows (Adaptable y fluido) --- */
 				.connection-list-body {
 					display: flex !important;
 					flex-direction: column !important;
@@ -2744,23 +2749,26 @@ const ConnectionHistory = ({
 					overflow: visible !important;
 				}
 				.hero-recent-card {
-					display: grid !important;
-					grid-template-columns: 24px 90px 320px 1fr 100px minmax(0,auto) !important;
+					display: flex !important;
 					align-items: center !important;
+					gap: 8px !important;
 					background: transparent !important;
 					border: none !important;
 					border-left: 2px solid transparent !important;
+					border-bottom: 1px solid rgba(255,255,255,0.02) !important;
 					border-radius: 0 !important;
-					padding: 0 32px 0 24px !important;
+					padding: 0 12px 0 14px !important;
 					cursor: pointer !important;
-					transition: background 0.1s, border-color 0.1s !important;
+					transition: background 0.12s, border-color 0.12s !important;
 					box-shadow: none !important;
 					min-width: 0 !important;
 					width: 100% !important;
-					height: 40px !important;
+					height: 38px !important;
 					font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace !important;
-					font-size: 0.88rem !important;
+					font-size: 0.84rem !important;
 					backdrop-filter: none !important;
+					box-sizing: border-box !important;
+					overflow: hidden !important;
 				}
 				.hero-recent-card:hover {
 					background: ${terminalTheme.selectionBackground || 'rgba(255,255,255,0.08)'} !important;
@@ -2769,6 +2777,111 @@ const ConnectionHistory = ({
 				.hero-recent-card.active-row {
 					border-left-color: var(--row-accent) !important;
 					background: ${terminalTheme.selectionBackground || 'rgba(255,255,255,0.06)'} !important;
+				}
+				.hrc-prompt {
+					color: ${terminalTheme.green || '#3fb950'};
+					font-weight: 700;
+					flex-shrink: 0;
+					opacity: 0.85;
+					font-size: 0.85rem;
+					width: 10px;
+				}
+				.hrc-protocol-tag {
+					font-weight: 600;
+					font-size: 0.72rem;
+					flex-shrink: 0;
+					padding: 1px 5px;
+					border-radius: 3px;
+					border: 1px solid transparent;
+					letter-spacing: 0.3px;
+					max-width: 90px;
+					overflow: hidden;
+					text-overflow: ellipsis;
+					white-space: nowrap;
+				}
+				.hrc-main-info {
+					display: flex;
+					align-items: baseline;
+					gap: 8px;
+					flex: 1;
+					min-width: 0;
+					overflow: hidden;
+				}
+				.hrc-name {
+					font-weight: 500;
+					color: ${terminalTheme.foreground || '#ffffff'};
+					overflow: hidden;
+					text-overflow: ellipsis;
+					white-space: nowrap;
+					flex-shrink: 1;
+					min-width: 40px;
+				}
+				.hrc-host {
+					font-size: 0.74rem;
+					color: ${themeColors.textSecondary || 'rgba(255,255,255,0.45)'};
+					opacity: 0.55;
+					overflow: hidden;
+					text-overflow: ellipsis;
+					white-space: nowrap;
+					flex-shrink: 2;
+					min-width: 0;
+				}
+				.hrc-time {
+					font-size: 0.72rem;
+					color: ${themeColors.textSecondary || 'rgba(255,255,255,0.45)'};
+					opacity: 0.55;
+					flex-shrink: 0;
+					margin-left: auto;
+					white-space: nowrap;
+					text-align: right;
+					padding-left: 6px;
+				}
+				.hrc-actions {
+					display: flex;
+					align-items: center;
+					gap: 4px;
+					flex-shrink: 0;
+					margin-left: 4px;
+				}
+				.hrc-actions .glass-action-btn {
+					background: transparent;
+					border: none;
+					cursor: pointer;
+					padding: 4px 6px;
+					border-radius: 4px;
+					color: rgba(255,255,255,0.35);
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					transition: all 0.15s;
+					font-size: 0.8rem;
+				}
+				.hrc-actions .glass-action-btn:hover {
+					color: #FFD700;
+					background: rgba(255,215,0,0.15);
+				}
+				.hrc-actions .glass-action-btn.fav-active {
+					color: #FFD700;
+					opacity: 1;
+				}
+				.hrc-connect-btn {
+					background: rgba(63, 185, 80, 0.12);
+					border: 1px solid rgba(63, 185, 80, 0.3);
+					color: ${terminalTheme.green || '#3fb950'};
+					font-size: 0.72rem;
+					padding: 3px 6px;
+					border-radius: 4px;
+					cursor: pointer;
+					white-space: nowrap;
+					transition: all 0.15s;
+					display: flex;
+					align-items: center;
+					justify-content: center;
+				}
+				.hrc-connect-btn:hover {
+					background: ${terminalTheme.green || '#3fb950'};
+					border-color: ${terminalTheme.green || '#3fb950'};
+					color: #000;
 				}
 				/* --- Split / Sidebar compact connections --- */
 				.split-recent-card {
@@ -3084,6 +3197,27 @@ const ConnectionHistory = ({
 				}
 				.home-panel-drag-handle {
 					user-select: none;
+				}
+
+				/* Ocultar barra de scroll en paneles pero mantener el scroll */
+				.recents-terminal-body,
+				.connection-list-container,
+				.home-panels-canvas,
+				.home-panels-canvas div,
+				.home-panel-frame,
+				.home-panel-frame div {
+					scrollbar-width: none !important;
+					-ms-overflow-style: none !important;
+				}
+				.recents-terminal-body::-webkit-scrollbar,
+				.connection-list-container::-webkit-scrollbar,
+				.home-panels-canvas::-webkit-scrollbar,
+				.home-panels-canvas *::-webkit-scrollbar,
+				.home-panel-frame::-webkit-scrollbar,
+				.home-panel-frame *::-webkit-scrollbar {
+					display: none !important;
+					width: 0 !important;
+					height: 0 !important;
 				}
 			`}</style>
 

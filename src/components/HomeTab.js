@@ -696,13 +696,63 @@ const HomeTab = ({
       Object.values(prev).forEach((p) => {
         if (p && typeof p.zIndex === 'number') maxZ = Math.max(maxZ, p.zIndex);
       });
+
+      let updatedPanel = {
+        ...current,
+        visible: isVis,
+        zIndex: isVis ? maxZ + 1 : current.zIndex
+      };
+
+      // Si se activa el panel y no se había posicionado manualmente en la sesión actual
+      if (isVis && mainAreaRef.current) {
+        const w = mainAreaRef.current.offsetWidth || 1200;
+        const h = mainAreaRef.current.offsetHeight || 800;
+        const pad = 16;
+        const gap = 12;
+
+        const search = prev.search;
+        const terminal = prev.terminal;
+        const isSearchRight = search && search.visible !== false && search.x > w * 0.35;
+        const isTermLeft = terminal && terminal.visible !== false && terminal.x <= pad + 30;
+
+        if (isSearchRight && (panelId === 'recents' || panelId === 'favorites')) {
+          // Si el buscador está arriba a la derecha, colocar el panel justo debajo del buscador
+          const targetX = search.x;
+          const targetW = search.width;
+          const targetY = search.y + search.height + gap;
+          const targetH = Math.max(200, h - targetY - pad);
+
+          updatedPanel = {
+            ...updatedPanel,
+            x: targetX,
+            y: targetY,
+            width: targetW,
+            height: targetH,
+            isMaximized: false
+          };
+        } else if (isTermLeft && terminal.width < w - pad * 3 && (panelId === 'recents' || panelId === 'favorites')) {
+          // Si la terminal ocupa solo una columna izquierda, colocar a la derecha
+          const targetX = terminal.x + terminal.width + gap;
+          const targetW = Math.max(340, w - targetX - pad);
+          const targetY = (search && search.visible !== false && search.y <= pad + 30 && search.x >= targetX - 50)
+            ? search.y + search.height + gap
+            : pad;
+          const targetH = Math.max(200, h - targetY - pad);
+
+          updatedPanel = {
+            ...updatedPanel,
+            x: targetX,
+            y: targetY,
+            width: targetW,
+            height: targetH,
+            isMaximized: false
+          };
+        }
+      }
+
       const next = {
         ...prev,
-        [panelId]: {
-          ...current,
-          visible: isVis,
-          zIndex: isVis ? maxZ + 1 : current.zIndex
-        }
+        [panelId]: updatedPanel
       };
       savePanelsLayoutDebounced(next);
       return next;
@@ -2145,7 +2195,7 @@ const HomeTab = ({
             <div className="menu-item-row" onClick={() => handleTogglePanelVisibility('recents')}>
               <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem', fontWeight: 500 }}>
                 <i className="pi pi-clock" style={{ marginRight: '6px', fontSize: '0.8rem', opacity: 0.7 }} />
-                Sesiones Recientes
+                Conexiones Recientes
               </span>
               <label className="premium-switch" onClick={(e) => e.stopPropagation()}>
                 <input 
