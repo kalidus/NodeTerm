@@ -109,6 +109,17 @@ const computeDefaultPanelsLayout = (cWidth = (typeof window !== 'undefined' ? wi
       minHeight: 250,
       zIndex: 12,
       isMaximized: false
+    },
+    sysmon: {
+      visible: false,
+      x: Math.max(20, Math.floor(w * 0.55)),
+      y: termY,
+      width: Math.min(460, Math.floor(w * 0.42)),
+      height: Math.min(340, termHeight),
+      minWidth: 280,
+      minHeight: 200,
+      zIndex: 17,
+      isMaximized: false
     }
   };
 };
@@ -312,6 +323,7 @@ const computeAutoOrganizeLayout = (currentLayout, width, height) => {
   if (next.terminal && next.terminal.visible !== false) activeSecondary.push('terminal');
   if (next.recents && next.recents.visible) activeSecondary.push('recents');
   if (next.favorites && next.favorites.visible) activeSecondary.push('favorites');
+  if (next.sysmon && next.sysmon.visible) activeSecondary.push('sysmon');
   if (next.quickbar && next.quickbar.visible) activeSecondary.push('quickbar');
 
   const count = activeSecondary.length;
@@ -395,42 +407,23 @@ const computeAutoOrganizeLayout = (currentLayout, width, height) => {
       });
     }
   } else if (count >= 4) {
-    // 4 paneles: Cuadrícula 2x2
+    // 4 o más paneles: Cuadrícula 2 columnas
     const colW = Math.floor((availableW - gap) / 2);
-    const rowH = Math.floor((availableH - gap) / 2);
+    const rowCount = Math.ceil(count / 2);
+    const rowH = Math.floor((availableH - gap * (rowCount - 1)) / rowCount);
 
-    next[activeSecondary[0]] = {
-      ...next[activeSecondary[0]],
-      x: pad,
-      y: topOffset,
-      width: colW,
-      height: rowH,
-      isMaximized: false
-    };
-    next[activeSecondary[1]] = {
-      ...next[activeSecondary[1]],
-      x: pad + colW + gap,
-      y: topOffset,
-      width: availableW - colW - gap,
-      height: rowH,
-      isMaximized: false
-    };
-    next[activeSecondary[2]] = {
-      ...next[activeSecondary[2]],
-      x: pad,
-      y: topOffset + rowH + gap,
-      width: colW,
-      height: availableH - rowH - gap,
-      isMaximized: false
-    };
-    next[activeSecondary[3]] = {
-      ...next[activeSecondary[3]],
-      x: pad + colW + gap,
-      y: topOffset + rowH + gap,
-      width: availableW - colW - gap,
-      height: availableH - rowH - gap,
-      isMaximized: false
-    };
+    activeSecondary.forEach((key, idx) => {
+      const col = idx % 2;
+      const row = Math.floor(idx / 2);
+      next[key] = {
+        ...next[key],
+        x: pad + col * (colW + gap),
+        y: topOffset + row * (rowH + gap),
+        width: col === 1 ? (availableW - colW - gap) : colW,
+        height: row === rowCount - 1 ? (availableH - (rowCount - 1) * (rowH + gap)) : rowH,
+        isMaximized: false
+      };
+    });
   }
 
   return next;
@@ -715,7 +708,9 @@ const HomeTab = ({
         const isSearchRight = search && search.visible !== false && search.x > w * 0.35;
         const isTermLeft = terminal && terminal.visible !== false && terminal.x <= pad + 30;
 
-        if (isSearchRight && (panelId === 'recents' || panelId === 'favorites')) {
+        const isTargetModule = panelId === 'recents' || panelId === 'favorites' || panelId === 'sysmon';
+
+        if (isSearchRight && isTargetModule) {
           // Si el buscador está arriba a la derecha, colocar el panel justo debajo del buscador
           const targetX = search.x;
           const targetW = search.width;
@@ -730,7 +725,7 @@ const HomeTab = ({
             height: targetH,
             isMaximized: false
           };
-        } else if (isTermLeft && terminal.width < w - pad * 3 && (panelId === 'recents' || panelId === 'favorites')) {
+        } else if (isTermLeft && terminal.width < w - pad * 3 && isTargetModule) {
           // Si la terminal ocupa solo una columna izquierda, colocar a la derecha
           const targetX = terminal.x + terminal.width + gap;
           const targetW = Math.max(340, w - targetX - pad);
@@ -2217,6 +2212,21 @@ const HomeTab = ({
                   type="checkbox" 
                   checked={!!panelsLayout?.favorites?.visible} 
                   onChange={() => handleTogglePanelVisibility('favorites')} 
+                />
+                <span className="premium-slider"></span>
+              </label>
+            </div>
+
+            <div className="menu-item-row" onClick={() => handleTogglePanelVisibility('sysmon')}>
+              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem', fontWeight: 500 }}>
+                <i className="pi pi-bolt" style={{ marginRight: '6px', fontSize: '0.8rem', color: themeColors.primaryColor || '#00f2ff' }} />
+                Monitor de Sistema (Telemetry)
+              </span>
+              <label className="premium-switch" onClick={(e) => e.stopPropagation()}>
+                <input 
+                  type="checkbox" 
+                  checked={!!panelsLayout?.sysmon?.visible} 
+                  onChange={() => handleTogglePanelVisibility('sysmon')} 
                 />
                 <span className="premium-slider"></span>
               </label>

@@ -18,6 +18,7 @@ import { SiAnthropic, SiDebian, SiDocker, SiGooglegemini, SiOpenai } from 'react
 import AIClientBrandIcon from './AIClientBrandIcon';
 import { appConfirm } from './ui/AppConfirm';
 import HomePanelWrapper from './HomePanelWrapper';
+import HomeTelemetryPanel from './HomeTelemetryPanel';
 
 // Formatear "Hace 5m", "Hace 2 h", "Ayer", etc.
 function formatRelativeTime(iso) {
@@ -3771,6 +3772,32 @@ const ConnectionHistory = ({
 							<div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
 								{rightQuickBar}
 							</div>
+						</HomePanelWrapper>
+					)}
+
+					{/* 6. Panel Monitor de Sistema (Telemetría Cyberpunk) */}
+					{panelsLayout.sysmon && panelsLayout.sysmon.visible && (
+						<HomePanelWrapper
+							id="sysmon"
+							title="~/sysmon · telemetry"
+							path="sysmon · hardware"
+							titleIcon={<i className="pi pi-bolt" style={{ color: themeColors.primaryColor || '#00f2ff', fontSize: '0.8rem' }} />}
+							panelState={panelsLayout.sysmon}
+							onLayoutChange={onLayoutChange}
+							onBringToFront={onBringToFront}
+							onClose={() => (onClosePanel ? onClosePanel('sysmon') : onTogglePanelVisibility?.('sysmon', false))}
+							onToggleMaximize={() => (onToggleMaximizePanel ? onToggleMaximizePanel('sysmon') : null)}
+							terminalFrameStyle={terminalFrameStyle}
+							snapToGrid={snapToGrid}
+							minWidth={280}
+							minHeight={200}
+							className="recents-terminal-frame sysmon-terminal-frame"
+							frameBackground={adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}
+						>
+							<HomeTelemetryPanel
+								themeColors={themeColors}
+								terminalTheme={terminalTheme}
+							/>
 						</HomePanelWrapper>
 					)}
 				</div>
