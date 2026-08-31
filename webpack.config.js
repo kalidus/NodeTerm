@@ -6,6 +6,8 @@ const packageJson = require('./package.json');
 
 module.exports = {
   mode: 'development',
+  // 🚀 Limpiar consola: solo mostrar compilación y avisos/errores, sin volcar la lista de todos los assets
+  stats: 'minimal',
   entry: './src/index.js',
   target: 'electron-renderer',
   // 🚀 OPTIMIZACIÓN: Cache en disco para que la 2.ª y siguientes compilaciones sean mucho más rápidas

@@ -10,7 +10,9 @@ export function markStartup(label) {
       performance.mark(`startup:${label}`);
     } catch (_) { /* noop */ }
   }
-  console.log(`⏱️ [renderer ${elapsed}ms] ${label}`);
+  if (typeof process !== 'undefined' && (process.env?.DEBUG_STARTUP === 'true' || process.env?.NODETERM_PROFILE === '1')) {
+    console.log(`⏱️ [renderer ${elapsed}ms] ${label}`);
+  }
 }
 
 export function getStartupElapsed() {

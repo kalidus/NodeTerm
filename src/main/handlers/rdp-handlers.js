@@ -195,8 +195,6 @@ function registerRdpHandlers(dependencies) {
       return { success: false, error: err.message };
     }
   });
-
-  console.log('✅ [RDP Handlers] Registrados');
 }
 
 /**

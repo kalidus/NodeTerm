@@ -49,9 +49,9 @@ class UpdateService {
   setupAutoUpdater() {
     // Permitir que funcione siempre, sin importar si está empaquetado
     autoUpdater.forceDevUpdateConfig = false;
-    log.info('🚀 Configurado para comprobar GitHub Releases');
-    log.info('📦 Modo empaquetado:', app.isPackaged);
-    log.info('🔧 NODE_ENV:', process.env.NODE_ENV || 'undefined');
+    if (app.isPackaged || process.env.DEBUG_UPDATER === 'true') {
+      log.info('🚀 Configurado para comprobar GitHub Releases (empaquetado:', app.isPackaged, ')');
+    }
 
     // Evento: Comprobando actualizaciones
     autoUpdater.on('checking-for-update', () => {
@@ -191,11 +191,6 @@ class UpdateService {
    */
   async checkForUpdates() {
     try {
-      log.info('=== INICIO COMPROBACIÓN DE ACTUALIZACIONES ===');
-      log.info(`NODE_ENV: ${process.env.NODE_ENV}`);
-      log.info(`app.isPackaged: ${app.isPackaged}`);
-      log.info(`Versión actual: ${app.getVersion()}`);
-
       // Si ya hay una actualización descargada, notificarlo
       if (this.isUpdateDownloaded && this.updateInfo) {
         log.info('✅ Actualización ya descargada previamente:', this.updateInfo.version);
@@ -211,14 +206,11 @@ class UpdateService {
 
       // MODO DESARROLLO: Simular respuesta
       if (!app.isPackaged) {
-        log.info('🔧 MODO DESARROLLO: Simulando comprobación');
-
         // Enviar evento "checking" inmediatamente
         this.sendStatusToWindow('checking-for-update');
 
-        // Simular respuesta después de 2 segundos
+        // Simular respuesta después de 2 segundos sin spamear logs
         setTimeout(() => {
-          log.info('✅ Simulación: No hay actualizaciones disponibles');
           this.sendStatusToWindow('update-not-available', {
             version: app.getVersion(),
           });
@@ -380,7 +372,9 @@ class UpdateService {
       this.checkForUpdates();
     }, intervalMs);
 
-    log.info(`Comprobación automática iniciada cada ${this.config.checkIntervalHours} horas`);
+    if (app.isPackaged || process.env.DEBUG_UPDATER === 'true') {
+      log.info(`Comprobación automática iniciada cada ${this.config.checkIntervalHours} horas`);
+    }
   }
 
   /**

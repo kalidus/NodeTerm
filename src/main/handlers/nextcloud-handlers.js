@@ -67,8 +67,6 @@ function registerNextcloudHandlers() {
       throw error;
     }
   });
-
-  console.log('✅ [Nextcloud Handlers] Registrados');
 }
 
 module.exports = { registerNextcloudHandlers };

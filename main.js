@@ -1642,8 +1642,6 @@ function createWindow() {
       } catch (mcpErr) {
         console.error('❌ [POST-SHOW] Error configurando MCP API Server:', mcpErr);
       }
-
-      console.log('✅ [POST-SHOW] Todos los handlers secundarios registrados');
     } catch (error) {
       console.error('❌ [POST-SHOW] Error registrando handlers:', error);
       console.error('❌ Stack:', error.stack);
@@ -1907,8 +1905,8 @@ ipcMain.handle('detect-wsl-distributions', async () => {
   try {
     const distributions = await WSL.detectAllWSLDistributions();
     if (!wslDetectionResultLogged) {
-      console.log('✅ [MAIN] Detección completada:', distributions.length, 'distribuciones encontradas');
-      if (distributions.length > 0) {
+      if (process.env.DEBUG_WSL === 'true') {
+        console.log('✅ [MAIN] WSL Detección:', distributions.length, 'distribuciones encontradas');
         distributions.forEach(distro => console.log(`  - ${distro.name} (${distro.label}, ${distro.category})`));
       }
       wslDetectionResultLogged = true;

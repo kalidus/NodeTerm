@@ -8,7 +8,9 @@ const _timings = [];
 function logTiming(label) {
   const elapsed = Date.now() - _startupTime;
   _timings.push({ label, elapsed });
-  console.log(`⏱️ [${elapsed}ms] ${label}`);
+  if (process.env.DEBUG_STARTUP === 'true' || process.env.NODETERM_PROFILE === '1') {
+    console.log(`⏱️ [${elapsed}ms] ${label}`);
+  }
 }
 
 function getTimings() {

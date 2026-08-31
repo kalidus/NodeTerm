@@ -34,7 +34,6 @@ function initializeSystemServices(sshConnectionPool, sshConnections) {
     ConnectionPoolCleaner.startOrphanCleanup(sshConnectionPool, sshConnections);
     
     servicesInitialized = true;
-    console.log('✅ [System Services] Servicios del sistema inicializados');
   } catch (error) {
     console.error('❌ [System Services] Error inicializando servicios:', error);
   }
@@ -75,8 +74,6 @@ function registerSystemServicesHandlers(dependencies) {
   // === System Stats Handler ===
   // ⚠️ NOTA: get-system-stats ya se registra en registerCriticalHandlers()
   // porque TODOS los componentes del frontend lo necesitan inmediatamente
-  
-  console.log('✅ [System Services Handlers] Registrados');
 }
 
 module.exports = {

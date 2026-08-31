@@ -224,8 +224,6 @@ function registerSSHTunnelHandlers(dependencies = {}) {
       return { success: false, error: err?.message || 'Error al cerrar túneles' };
     }
   });
-
-  console.log('✅ [SSH Tunnel Handlers] Registrados correctamente');
 }
 
 /**
