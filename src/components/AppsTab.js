@@ -1526,16 +1526,6 @@ const AppsTab = ({
 
     return (
       <div className="apps-config-container">
-        {/* Banner informativo de aclaración RDP Nativo vs Guacamole */}
-        <div className="apps-config-card" style={{ gridColumn: '1 / -1', background: 'rgba(5, 150, 105, 0.08)', borderColor: 'rgba(5, 150, 105, 0.25)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <i className="pi pi-info-circle" style={{ color: '#059669', fontSize: '1.25rem' }} />
-            <div style={{ fontSize: '0.82rem', lineHeight: 1.4, color: 'var(--text-color)' }}>
-              <strong>NodeTerm integra RDP Web Nativo:</strong> Puedes conectarte a cualquier escritorio remoto por RDP o mstsc directamente sin intermediarios. Activa este servicio únicamente si deseas conectar sesiones mediante el proxy <strong>Apache Guacamole (guacd)</strong> vía Docker o WSL.
-            </div>
-          </div>
-        </div>
-
         {/* Tarjeta 1: Estado del Servidor Backend (Guacd) */}
         <div className="apps-config-card apps-backend-card">
           <div className="apps-card-header">
