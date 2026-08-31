@@ -100,38 +100,29 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Windows: Upload unsigned binaries to Actions artifact
-      - name: Upload Windows Executables for Signing
-        if: matrix.os == 'windows-latest' && env.SIGNPATH_API_TOKEN != ''
-        id: upload-unsigned-win
-        uses: actions/upload-artifact@v4
-        with:
-          name: unsigned-windows-binaries
-          path: dist/*.exe
-          if-no-files-found: error
-
-      # Windows: Submit signing request to SignPath
-      - name: Submit Signing Request to SignPath
-        if: matrix.os == 'windows-latest' && env.SIGNPATH_API_TOKEN != ''
-        uses: signpath/github-action-submit-signing-request@v2
-        with:
-          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
-          organization-id: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
-          project-slug: 'nodeterm'
-          signing-policy-slug: 'test-signing'
-          github-artifact-id: ${{ steps.upload-unsigned-win.outputs.artifact-id }}
-          wait-for-completion: true
-          output-artifact-directory: './signed-win'
-
-      # Windows: Overwrite dist with signed binaries and update hashes in latest.yml
-      - name: Replace Dist with Signed Windows Binaries & Update Hashes
+      # Windows: Sign executables directly via SignPath PowerShell module
+      - name: Sign Windows Binaries via SignPath
         if: matrix.os == 'windows-latest' && env.SIGNPATH_API_TOKEN != ''
         shell: pwsh
         run: |
-          Get-ChildItem -Path "./signed-win" -Filter "*.exe" -Recurse | ForEach-Object {
-            Copy-Item -Path $_.FullName -Destination "./dist/$($_.Name)" -Force
-            Write-Host "Replaced ./dist/$($_.Name) with signed binary from $($_.FullName)"
+          Set-PSRepository PSGallery -InstallationPolicy Trusted
+          Install-Module -Name SignPath -Force -Scope CurrentUser
+
+          $exeFiles = Get-ChildItem -Path "dist" -Filter "*.exe"
+          foreach ($file in $exeFiles) {
+            Write-Host "Submitting $($file.FullName) to SignPath for signing..."
+            Submit-SigningRequest `
+              -OrganizationId "${{ secrets.SIGNPATH_ORGANIZATION_ID }}" `
+              -ApiToken "${{ secrets.SIGNPATH_API_TOKEN }}" `
+              -ProjectSlug "nodeterm" `
+              -SigningPolicySlug "test-signing" `
+              -InputArtifactPath $file.FullName `
+              -OutputArtifactPath $file.FullName `
+              -WaitForCompletion `
+              -Force
+            Write-Host "Successfully signed $($file.Name)"
           }
+
           node scripts/update-signed-hashes.js
 
       # Windows: Upload signed test artifacts (for manual testing via workflow_dispatch)
