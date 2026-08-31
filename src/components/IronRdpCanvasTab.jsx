@@ -1152,107 +1152,77 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
         </div>
       )}
 
-      {/* Barra flotante de utilidades RDP (HTML5 Canvas) */}
+      {/* Barra flotante de utilidades RDP Cyberpunk (HTML5 Canvas) */}
       {connectionState === 'connected' && (
         <div
           onMouseEnter={() => setIsToolbarHovered(true)}
           onMouseLeave={() => setIsToolbarHovered(false)}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 1000,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            transition: 'all 0.25s ease-in-out',
-            marginTop: (isToolbarPinned || isToolbarHovered) ? '0px' : '-32px',
-            opacity: (isToolbarPinned || isToolbarHovered) ? 1 : 0.85
-          }}
+          className={`ironrdp-toolbar-wrapper ${(isToolbarPinned || isToolbarHovered) ? 'is-visible' : 'is-hidden'}`}
         >
-          <div
-            className="flex align-items-center gap-2 px-3 py-1 border-round-bottom shadow-4"
-            style={{
-              backgroundColor: 'rgba(20, 24, 33, 0.92)',
-              backdropFilter: 'blur(8px)',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
-              borderTop: 'none',
-              color: '#ffffff',
-              fontSize: '12px'
-            }}
-          >
-            <span className="flex align-items-center gap-1 font-semibold text-blue-400" style={{ fontSize: '11px' }}>
-              <i className="pi pi-globe text-xs"></i> {rdpConfig?.hostname || rdpConfig?.server || 'RDP Web'}
+          <div className="ironrdp-cyber-bar">
+            {/* Host Badge */}
+            <span className="ironrdp-badge-host">
+              <i className="pi pi-globe"></i>
+              <span>{rdpConfig?.hostname || rdpConfig?.server || 'RDP Web'}</span>
             </span>
 
-            <span style={{ width: '1px', height: '14px', backgroundColor: 'rgba(255,255,255,0.2)' }} />
+            <span className="ironrdp-cyber-divider" />
 
+            {/* Resolution Badge */}
             <span
-              className="flex align-items-center gap-1 text-xs px-2 py-0 border-round font-medium"
-              style={{
-                backgroundColor: isAutoResizeEnabled ? 'rgba(59, 130, 246, 0.15)' : 'rgba(168, 85, 247, 0.15)',
-                color: isAutoResizeEnabled ? '#93c5fd' : '#d8b4fe',
-                fontSize: '11px',
-                height: '22px'
-              }}
+              className={`ironrdp-badge-resolution ${isAutoResizeEnabled ? 'auto' : 'fixed'}`}
               title={isAutoResizeEnabled ? 'Ajuste automático activo (se adapta al visor)' : 'Resolución fija configurada'}
             >
-              <i className="pi pi-desktop text-xs"></i> {desktopDimensions.width}x{desktopDimensions.height}{isAutoResizeEnabled ? ' (Auto)' : ''}
+              <i className="pi pi-desktop"></i>
+              <span>{desktopDimensions.width}x{desktopDimensions.height}{isAutoResizeEnabled ? ' (Auto)' : ''}</span>
             </span>
 
-            <span style={{ width: '1px', height: '14px', backgroundColor: 'rgba(255,255,255,0.2)' }} />
+            <span className="ironrdp-cyber-divider" />
 
-            <Button
-              icon="pi pi-key"
-              label="Ctrl+Alt+Del"
-              tooltip="Enviar Ctrl+Alt+Del a la sesión"
-              tooltipOptions={{ position: 'bottom' }}
-              size="small"
-              className="p-button-text p-button-secondary p-button-sm text-xs py-0 px-2"
-              style={{ color: '#e0e0e0', fontSize: '11px' }}
+            <button
+              type="button"
+              className="ironrdp-cyber-btn ironrdp-cyber-btn-cad"
+              title="Enviar Ctrl+Alt+Del a la sesión"
               onClick={handleSendCtrlAltDel}
-            />
+            >
+              <i className="pi pi-key"></i>
+              <span>Ctrl+Alt+Del</span>
+            </button>
 
-            <Button
-              icon="pi pi-microsoft"
-              label="Win"
-              tooltip="Enviar Tecla Windows"
-              tooltipOptions={{ position: 'bottom' }}
-              size="small"
-              className="p-button-text p-button-secondary p-button-sm text-xs py-0 px-2"
-              style={{ color: '#e0e0e0', fontSize: '11px' }}
+            <button
+              type="button"
+              className="ironrdp-cyber-btn ironrdp-cyber-btn-win"
+              title="Enviar Tecla Windows"
               onClick={handleSendWinKey}
-            />
+            >
+              <i className="pi pi-microsoft"></i>
+              <span>Win</span>
+            </button>
 
-            <Button
-              icon="pi pi-send"
-              tooltip="Enviar texto al portapapeles remoto"
-              tooltipOptions={{ position: 'bottom' }}
-              size="small"
-              className="p-button-text p-button-secondary p-button-sm text-xs py-0 px-2"
-              style={{ color: '#e0e0e0', fontSize: '11px' }}
+            <button
+              type="button"
+              className="ironrdp-cyber-btn ironrdp-cyber-btn-clip"
+              title="Enviar texto al portapapeles remoto"
               onClick={() => setShowClipboardDialog(true)}
-            />
+            >
+              <i className="pi pi-send"></i>
+            </button>
 
             {isPrinterEnabled && (
               <span
-                className="flex align-items-center gap-1 text-xs px-2 py-0 border-round font-medium"
-                style={{ backgroundColor: 'rgba(34, 197, 94, 0.15)', color: '#4ade80', fontSize: '11px', height: '22px' }}
+                className="ironrdp-cyber-badge-printer"
                 title="Impresora virtual PDF redirigida (NodeTerm PDF Printer)"
               >
-                <i className="pi pi-print text-xs"></i> Impresora PDF
+                <i className="pi pi-print"></i>
+                <span>PDF</span>
               </span>
             )}
 
             {isDriveEnabled && (
-              <Button
-                icon="pi pi-upload"
-                tooltip="Subir archivos a la sesión remota"
-                tooltipOptions={{ position: 'bottom' }}
-                size="small"
-                className="p-button-text p-button-secondary p-button-sm text-xs py-0 px-2"
-                style={{ color: '#e0e0e0', fontSize: '11px' }}
+              <button
+                type="button"
+                className="ironrdp-cyber-btn ironrdp-cyber-btn-upload"
+                title="Subir archivos a la sesión remota"
                 onClick={async () => {
                   if (fileTransferProviderRef.current) {
                     try {
@@ -1271,49 +1241,36 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
                     }
                   }
                 }}
-              />
+              >
+                <i className="pi pi-upload"></i>
+              </button>
             )}
 
-            <Button
-              icon="pi pi-window-maximize"
-              tooltip="Pantalla Completa"
-              tooltipOptions={{ position: 'bottom' }}
-              size="small"
-              className="p-button-text p-button-secondary p-button-sm text-xs py-0 px-2"
-              style={{ color: '#e0e0e0', fontSize: '11px' }}
+            <button
+              type="button"
+              className="ironrdp-cyber-btn ironrdp-cyber-btn-screen"
+              title="Pantalla Completa"
               onClick={handleToggleFullscreen}
-            />
+            >
+              <i className="pi pi-window-maximize"></i>
+            </button>
 
-            <Button
-              icon={isToolbarPinned ? "pi pi-bookmark-fill" : "pi pi-bookmark"}
-              tooltip={isToolbarPinned ? "Desfijar barra flotante" : "Fijar barra siempre visible"}
-              tooltipOptions={{ position: 'bottom' }}
-              size="small"
-              className="p-button-text p-button-secondary p-button-sm text-xs py-0 px-2"
-              style={{ color: isToolbarPinned ? '#64b5f6' : '#a0a0a0', fontSize: '11px' }}
+            <button
+              type="button"
+              className={`ironrdp-cyber-btn ironrdp-cyber-btn-pin ${isToolbarPinned ? 'active' : ''}`}
+              title={isToolbarPinned ? "Desfijar barra flotante" : "Fijar barra siempre visible"}
               onClick={() => setIsToolbarPinned(!isToolbarPinned)}
-            />
+            >
+              <i className={isToolbarPinned ? "pi pi-bookmark-fill" : "pi pi-bookmark"}></i>
+            </button>
           </div>
           {!(isToolbarPinned || isToolbarHovered) && (
             <div
               onClick={() => setIsToolbarPinned(true)}
-              style={{
-                backgroundColor: 'rgba(20, 24, 33, 0.92)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                borderTop: 'none',
-                borderRadius: '0 0 6px 6px',
-                padding: '2px 14px',
-                cursor: 'pointer',
-                color: '#60a5fa',
-                fontSize: '10px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.4)'
-              }}
+              className="ironrdp-cyber-handle"
               title="Mostrar barra de herramientas RDP"
             >
-              <i className="pi pi-chevron-down" style={{ fontSize: '9px' }}></i>
+              <i className="pi pi-chevron-down"></i>
             </div>
           )}
         </div>
