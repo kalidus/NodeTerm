@@ -1,4 +1,4 @@
-# Borrador de release — NodeTerm v1.8.0
+# Borrador de release — NodeTerm v1.7.5
 
 > **Uso:** texto opcional orientado al usuario antes de publicar en GitHub.  
 > **Fuente de verdad:** el historial completo está en [`CHANGELOG.md`](CHANGELOG.md).  

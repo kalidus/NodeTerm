@@ -6,6 +6,9 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.7.5] - 2026-08-31
+
+
 ## [Unreleased]
 
 ### 🖥️ RDP Nativo HTML5 (IronRDP WASM de Alto Rendimiento)
