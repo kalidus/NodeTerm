@@ -306,7 +306,7 @@ export function EnhancedRDPForm({
         icon: 'pi-sliders-h'
       });
     }
-    if ((formData.clientType === 'guacamole' || formData.clientType === 'web-rdp') && formData.guacEnableDrive) {
+    if (formData.clientType === 'guacamole' && formData.guacEnableDrive) {
       tabs.push({
         id: 'sharedFolder',
         label: t('rdp.fields.sharedFolder'),

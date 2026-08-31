@@ -142,6 +142,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
 
   const lastReceivedClipboardTextRef = useRef('');
   const lastSentClipboardTextRef = useRef('');
+  const isFileTransferArmedRef = useRef(false);
 
   const isDriveEnabled = rdpConfig.enableDrive !== false && (rdpConfig.guacEnableDrive !== false || rdpConfig.redirectFolders !== false || rdpConfig.enableDrive === true);
   const isPrinterEnabled = rdpConfig.redirectPrinters === true;
@@ -422,6 +423,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
           // Remoto -> Local: cuando se copia texto en el servidor RDP, escribir en portapapeles del cliente
           builder.remoteClipboardChangedCallback(async (clipboardData) => {
             if (!clipboardData) return;
+            isFileTransferArmedRef.current = false;
             try {
               for (const item of clipboardData.items()) {
                 const mime = typeof item.mimeType === 'function' ? item.mimeType() : (item.mimeType || '');
@@ -446,9 +448,10 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
 
           // Local -> Remoto (solicitud de actualización del portapapeles)
           builder.forceClipboardUpdateCallback(async () => {
+            if (isFileTransferArmedRef.current) return;
             try {
               const text = await readLocalClipboardText();
-              if (text && sessionRef.current) {
+              if (text && sessionRef.current && !isFileTransferArmedRef.current) {
                 lastSentClipboardTextRef.current = text;
                 lastReceivedClipboardTextRef.current = text;
                 await sendClipboardToSession(sessionRef.current, text);
@@ -590,16 +593,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
           }
         }
 
-        // Enviar estado inicial del portapapeles local inmediatamente tras conectar
-        if (isClipboardEnabled) {
-          readLocalClipboardText().then((initText) => {
-            if (initText && isMounted && currentSession) {
-              lastSentClipboardTextRef.current = initText;
-              sendClipboardToSession(currentSession, initText);
-            }
-          }).catch(() => {});
-        }
-
         if (isMounted) {
           setConnectionState('connected');
           setTimeout(() => {
@@ -663,12 +656,13 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
     let isDisposed = false;
 
     const syncLocalClipboardToRemote = async () => {
-      if (isDisposed || !sessionRef.current) return;
+      if (isDisposed || !sessionRef.current || isFileTransferArmedRef.current) return;
       try {
         const text = await readLocalClipboardText();
         if (
           text &&
-          text !== lastSentClipboardTextRef.current
+          text !== lastSentClipboardTextRef.current &&
+          !isFileTransferArmedRef.current
         ) {
           lastSentClipboardTextRef.current = text;
           lastReceivedClipboardTextRef.current = text;
@@ -793,12 +787,12 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
     const handleKeyDown = (e) => {
       if (!sessionRef.current) return;
 
-      // Si el usuario pulsa Ctrl+V (o Cmd+V), asegurar sincronización del portapapeles local antes de pegar
+      // Si el usuario pulsa Ctrl+V (o Cmd+V), asegurar sincronización del portapapeles local antes de pegar si no hay archivos armados
       if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyV' || e.key === 'v' || e.key === 'V')) {
         const isClipboardEnabled = rdpConfig.redirectClipboard !== false;
-        if (isClipboardEnabled) {
+        if (isClipboardEnabled && !isFileTransferArmedRef.current) {
           readLocalClipboardText().then((text) => {
-            if (text && text !== lastSentClipboardTextRef.current && sessionRef.current) {
+            if (text && text !== lastSentClipboardTextRef.current && sessionRef.current && !isFileTransferArmedRef.current) {
               lastSentClipboardTextRef.current = text;
               lastReceivedClipboardTextRef.current = text;
               sendClipboardToSession(sessionRef.current, text);
@@ -837,14 +831,14 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
 
     const handlePaste = async (e) => {
       const isClipboardEnabled = rdpConfig.redirectClipboard !== false;
-      if (!isClipboardEnabled || !sessionRef.current) return;
+      if (!isClipboardEnabled || !sessionRef.current || isFileTransferArmedRef.current) return;
 
       let text = e.clipboardData?.getData('text/plain') || '';
       if (!text) {
         text = await readLocalClipboardText();
       }
 
-      if (text && text !== lastSentClipboardTextRef.current) {
+      if (text && text !== lastSentClipboardTextRef.current && !isFileTransferArmedRef.current) {
         lastSentClipboardTextRef.current = text;
         lastReceivedClipboardTextRef.current = text;
         console.log('📋 [IronRDP Clipboard] Evento Paste -> enviando a remoto:', text.slice(0, 80));
@@ -1039,6 +1033,39 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
     }
   };
 
+  // Transferencia segura de archivos con reintento automático si el canal CLIPRDR está negociando
+  const uploadFilesSafely = async (provider, files) => {
+    if (!provider || !files || !files.length) return;
+    isFileTransferArmedRef.current = true;
+    for (let attempt = 1; attempt <= 4; attempt++) {
+      try {
+        const handle = provider.uploadFiles(files);
+        toastRef.current?.show({
+          severity: 'info',
+          summary: 'Iniciando Transferencia',
+          detail: `Subiendo ${files.length} archivo(s) a la sesión RDP...`,
+          life: 3000
+        });
+        return handle;
+      } catch (err) {
+        const msg = err?.message || String(err || '');
+        if ((msg.includes('Ready state') || msg.includes('not in Ready')) && attempt < 4) {
+          console.warn(`⏳ [IronRDP FileTransfer] Canal CLIPRDR negociando... reintento ${attempt}/4 en 500ms`);
+          await new Promise((r) => setTimeout(r, 500));
+          continue;
+        }
+        isFileTransferArmedRef.current = false;
+        toastRef.current?.show({
+          severity: 'error',
+          summary: 'Error de Transferencia',
+          detail: msg,
+          life: 4000
+        });
+        throw err;
+      }
+    }
+  };
+
   return (
     <div
       ref={containerRef}
@@ -1073,13 +1100,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
           const dropped = await fileTransferProviderRef.current.handleDrop(e);
           if (dropped && dropped.length) {
             console.log('📤 [IronRDP FileTransfer] Subiendo archivos arrastrados:', dropped.length);
-            fileTransferProviderRef.current.uploadFiles(dropped);
-            toastRef.current?.show({
-              severity: 'info',
-              summary: 'Iniciando Transferencia',
-              detail: `Subiendo ${dropped.length} archivo(s) a la sesión RDP...`,
-              life: 3000
-            });
+            await uploadFilesSafely(fileTransferProviderRef.current, dropped);
           }
         } catch (dropErr) {
           console.warn('[IronRDP FileTransfer] Error en drop:', dropErr);
@@ -1391,13 +1412,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
                     try {
                       const files = await fileTransferProviderRef.current.showFilePicker({ multiple: true });
                       if (files && files.length) {
-                        fileTransferProviderRef.current.uploadFiles(files);
-                        toastRef.current?.show({
-                          severity: 'info',
-                          summary: 'Iniciando Transferencia',
-                          detail: `Subiendo ${files.length} archivo(s)...`,
-                          life: 3000
-                        });
+                        await uploadFilesSafely(fileTransferProviderRef.current, files);
                       }
                     } catch (e) {
                       console.warn('Selector de archivos cancelado o error:', e);
