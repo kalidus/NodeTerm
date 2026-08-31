@@ -54,7 +54,9 @@ function registerClipboardHandlers() {
         data = Buffer.from(buffer || []);
       }
       fs.writeFileSync(filePath, data);
-      console.log(`💾 [Clipboard] Archivo temporal guardado (${data.length} bytes): ${filePath}`);
+      if (process.env.NODETERM_RDP_DEBUG === '1' || process.env.NODETERM_DEBUG === '1') {
+        console.log(`💾 [Clipboard] Archivo temporal guardado (${data.length} bytes): ${filePath}`);
+      }
       return { success: true, filePath };
     } catch (err) {
       console.error('[Clipboard] Error saving temp file:', err);
@@ -79,7 +81,9 @@ function registerClipboardHandlers() {
               } catch (_) {}
               resolve(false);
             } else {
-              console.log('📋 [Clipboard] Archivos listos en portapapeles de Windows:', filePaths);
+              if (process.env.NODETERM_RDP_DEBUG === '1' || process.env.NODETERM_DEBUG === '1') {
+                console.log('📋 [Clipboard] Archivos listos en portapapeles de Windows:', filePaths);
+              }
               resolve(true);
             }
           });

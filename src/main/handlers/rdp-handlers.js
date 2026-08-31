@@ -149,13 +149,19 @@ function registerRdpHandlers(dependencies) {
       let nego = null;
       try {
         nego = await probeSelectedProtocol({ host, port, username });
-        console.log(`[RDP Native Bridge] Preflight X.224 ${host}:${port} -> ${nego.protocolLabel}${nego.error ? ` (${nego.error})` : ''}`);
+        if (process.env.NODETERM_RDP_DEBUG === '1') {
+          console.log(`[RDP Native Bridge] Preflight X.224 ${host}:${port} -> ${nego.protocolLabel}${nego.error ? ` (${nego.error})` : ''}`);
+        }
       } catch (probeErr) {
-        console.warn('[RDP Native Bridge] Preflight X.224 fallo:', probeErr?.message || probeErr);
+        if (process.env.NODETERM_RDP_DEBUG === '1') {
+          console.warn('[RDP Native Bridge] Preflight X.224 fallo:', probeErr?.message || probeErr);
+        }
       }
 
       const sessionInfo = rdpNativeBridgeService.createSessionToken(config);
-      console.log('🚀 [RDP Native Bridge] Token creado para RDP Web Nativo (Sin guacd/WSL):', sessionInfo.tokenId);
+      if (process.env.NODETERM_RDP_DEBUG === '1') {
+        console.log('🚀 [RDP Native Bridge] Token creado para RDP Web Nativo (Sin guacd/WSL):', sessionInfo.tokenId);
+      }
       return {
         success: true,
         wsUrl: sessionInfo.wsUrl,

@@ -24,6 +24,12 @@ const {
   buildMcsSendDataRequest
 } = require('./rdp-channel-filter');
 
+function debugLog(...args) {
+  if (process.env.NODETERM_RDP_DEBUG === '1') {
+    console.log(...args);
+  }
+}
+
 class RdpNativeBridgeService extends EventEmitter {
   constructor() {
     super();
@@ -57,7 +63,7 @@ class RdpNativeBridgeService extends EventEmitter {
         this.server.on('upgrade', (request, socket, head) => {
           const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
           const token = url.searchParams.get('token');
-          console.log(`🌐 [RdpNativeBridgeService] Solicitud WebSocket Upgrade recibida para URL: ${request.url}`);
+          debugLog(`🌐 [RdpNativeBridgeService] Solicitud WebSocket Upgrade recibida para URL: ${request.url}`);
 
           if (!token || !this.sessionTokens.has(token)) {
             console.warn(`⚠️ [RdpNativeBridgeService] Token inválido o ausente: token="${token}". Conexiones activas:`, Array.from(this.sessionTokens.keys()));
@@ -70,7 +76,7 @@ class RdpNativeBridgeService extends EventEmitter {
           this.sessionTokens.delete(token); // Token de un solo uso
 
           this.wss.handleUpgrade(request, socket, head, (ws) => {
-            console.log(`✅ [RdpNativeBridgeService] Handshake WebSocket completado exitosamente para la sesión.`);
+            debugLog(`✅ [RdpNativeBridgeService] Handshake WebSocket completado exitosamente para la sesión.`);
             this.handleConnection(ws, session);
           });
         });
@@ -156,7 +162,7 @@ class RdpNativeBridgeService extends EventEmitter {
     const { fork } = require('child_process');
     const path = require('path');
 
-    console.log(`🔌 [RdpNativeBridgeService] WebSocket cliente conectado para ${session.host}:${session.port}`);
+    console.log(`🔌 [RdpNativeBridgeService] Conectando a ${session.host}:${session.port}`);
 
     const connectionId = `native_rdp_${Date.now()}`;
     const workerPath = path.join(__dirname, 'rdp-tls-worker.js');
@@ -189,14 +195,16 @@ class RdpNativeBridgeService extends EventEmitter {
     let lastWsFrameAt = 0;
     const channelFilter = createChannelFilterState();
     const framesDir = path.join(__dirname, '../../../testing/rdp/frames');
-    try { fs.mkdirSync(framesDir, { recursive: true }); } catch (_) { /* noop */ }
+    if (process.env.NODETERM_RDP_RECORD_FRAMES === '1') {
+      try { fs.mkdirSync(framesDir, { recursive: true }); } catch (_) { /* noop */ }
+    }
 
     let isCleanedUp = false;
 
     const cleanup = (reason) => {
       if (isCleanedUp) return;
       isCleanedUp = true;
-      console.log(`🧹 [RdpNativeBridgeService] Cierre de conexión ${connectionId} provocado por: ${reason}`);
+      console.log(`🧹 [RdpNativeBridgeService] Conexión cerrada (${reason})`);
       this.activeConnections.delete(connectionId);
       try { ws.close(); } catch (e) {}
       try {
@@ -212,14 +220,14 @@ class RdpNativeBridgeService extends EventEmitter {
 
       if (msg.type === 'X224_CC') {
         savedX224CcHex = msg.x224Cc;
-        console.log(`✅ [Bridge] Recibida X.224 Connection Confirm (${savedX224CcHex.length / 2} bytes) desde worker. Esperando TLS...`);
+        debugLog(`✅ [Bridge] Recibida X.224 Connection Confirm (${savedX224CcHex.length / 2} bytes) desde worker. Esperando TLS...`);
       } else if (msg.type === 'TLS_CONNECTED') {
-        console.log(`🔒 [Bridge] Worker notificó TLS Handshake completado exitosamente!`);
+        console.log(`🔒 [RdpNativeBridgeService] Conexión RDP TLS establecida con ${session.host}:${session.port}`);
 
         let peerCertChain = [];
         if (msg.certRawHex) {
           peerCertChain.push(Buffer.from(msg.certRawHex, 'hex'));
-          console.log(`📜 [Bridge] Certificado X.509 real devuelto por worker (${msg.certRawHex.length / 2} bytes)`);
+          debugLog(`📜 [Bridge] Certificado X.509 real devuelto por worker (${msg.certRawHex.length / 2} bytes)`);
         }
 
         // Reenviar el X.224 CC real del servidor (sin reescribir selectedProtocol).
@@ -230,12 +238,12 @@ class RdpNativeBridgeService extends EventEmitter {
         const nego = parseX224ConnectionConfirm(x224CcBuffer);
         if (nego && nego.ok) {
           savedSelectedProtocol = nego.selectedProtocol;
-          console.log(`[Bridge] X.224 CC selectedProtocol=0x${nego.selectedProtocol.toString(16)} (${protocolName(nego.selectedProtocol)})`);
+          debugLog(`[Bridge] X.224 CC selectedProtocol=0x${nego.selectedProtocol.toString(16)} (${protocolName(nego.selectedProtocol)})`);
         } else if (nego && !nego.ok) {
           console.warn(`[Bridge] X.224 NEG_FAILURE code=${nego.failureCode}`);
         }
         const responsePdu = this.createRdCleanPathResponsePdu(session.host, x224CcBuffer, peerCertChain);
-        console.log(`[Bridge] Enviando RDCleanPath Response PDU (${responsePdu.length} bytes) a WASM...`);
+        debugLog(`[Bridge] Enviando RDCleanPath Response PDU (${responsePdu.length} bytes) a WASM...`);
 
         if (ws.readyState === ws.OPEN) {
           ws.send(responsePdu, { binary: true });
@@ -301,7 +309,7 @@ class RdpNativeBridgeService extends EventEmitter {
         // pero responder Auto-Detect RTT/BW para que Wallix no espere (pantalla negra).
         const wasReady = channelFilter.ready;
         const processed = processServerFrame(channelFilter, chunk);
-        if (!wasReady && channelFilter.ready) {
+        if (!wasReady && channelFilter.ready && isDebug) {
           console.log(
             `[Bridge] Canales MCS configurados: io=${channelFilter.ioChannelId}` +
               ` permitidos=[${[...channelFilter.allowed].join(',')}]` +
@@ -366,9 +374,10 @@ class RdpNativeBridgeService extends EventEmitter {
     ws.on('message', (message) => {
       try {
         const payload = Buffer.isBuffer(message) ? message : Buffer.from(message);
+        const isDebug = process.env.NODETERM_RDP_DEBUG === '1';
 
         if (rdCleanPathPhase === 'waiting_request' && payload.length > 0 && payload[0] === 0x30) {
-          console.log(`📥 [Bridge] Recibido RDCleanPath Request PDU (${payload.length} bytes). Extrayendo X.224 CR del tag [6]...`);
+          debugLog(`📥 [Bridge] Recibido RDCleanPath Request PDU (${payload.length} bytes). Extrayendo X.224 CR del tag [6]...`);
 
           let x224Cr = this.extractX224FromRdCleanPath(payload);
           if (!x224Cr || x224Cr.length === 0) {
@@ -388,7 +397,7 @@ class RdpNativeBridgeService extends EventEmitter {
           }
 
           rdCleanPathPhase = 'waiting_x224_cc';
-          console.log(`📤 [Bridge] Iniciando worker RDP TLS para ${session.host}:${session.port}...`);
+          debugLog(`📤 [Bridge] Iniciando worker RDP TLS para ${session.host}:${session.port}...`);
           worker.send({
             type: 'CONNECT',
             host: session.host,
@@ -409,46 +418,54 @@ class RdpNativeBridgeService extends EventEmitter {
           learnClientInitiator(channelFilter, payload);
           const pduDesc = describeRdpPdu(payload);
 
-          if (framesToRdp <= 24) {
-            console.log(`[Bridge] WASM->RDP frame#${framesToRdp}: ${payload.length}B | ${pduDesc}`);
-            if (process.env.NODETERM_RDP_RECORD_FRAMES === '1') {
-              try {
-                fs.writeFileSync(path.join(framesDir, `to-${String(framesToRdp).padStart(2, '0')}-${payload.length}b.hex`), payload.toString('hex'), 'utf8');
-              } catch (_) { /* noop */ }
+          if (isDebug) {
+            if (framesToRdp <= 24) {
+              console.log(`[Bridge] WASM->RDP frame#${framesToRdp}: ${payload.length}B | ${pduDesc}`);
+              if (process.env.NODETERM_RDP_RECORD_FRAMES === '1') {
+                try {
+                  fs.writeFileSync(path.join(framesDir, `to-${String(framesToRdp).padStart(2, '0')}-${payload.length}b.hex`), payload.toString('hex'), 'utf8');
+                } catch (_) { /* noop */ }
+              }
+            } else if (gapFromLastWs >= 400) {
+              console.log(`📤 [Bridge Trace WASM GAP ${gapFromLastWs}ms] WASM->RDP #${framesToRdp} (${payload.length}B): ${pduDesc}`);
+            } else if (
+              pduDesc.includes('CONFIRM_ACTIVE') ||
+              pduDesc.includes('AUTODETECT') ||
+              pduDesc.includes('CONTROL') ||
+              pduDesc.includes('FONTLIST') ||
+              pduDesc.includes('SYNCHRONIZE') ||
+              pduDesc.includes('FRAME_ACK')
+            ) {
+              console.log(`📤 [Bridge Trace WASM PDU #${framesToRdp}] ${pduDesc}`);
             }
-          } else if (gapFromLastWs >= 400) {
-            console.log(`📤 [Bridge Trace WASM GAP ${gapFromLastWs}ms] WASM->RDP #${framesToRdp} (${payload.length}B): ${pduDesc}`);
-          } else if (
-            pduDesc.includes('CONFIRM_ACTIVE') ||
-            pduDesc.includes('AUTODETECT') ||
-            pduDesc.includes('CONTROL') ||
-            pduDesc.includes('FONTLIST') ||
-            pduDesc.includes('SYNCHRONIZE') ||
-            pduDesc.includes('FRAME_ACK')
-          ) {
-            console.log(`📤 [Bridge Trace WASM PDU #${framesToRdp}] ${pduDesc}`);
           }
         }
         if (bytesToRdp === 0 && rdCleanPathPhase === 'transparent') {
           const core = findClientCoreData(payload);
-          console.log(`[Bridge] Primer frame WASM->RDP: ${payload.length} bytes; CS_CORE=${core ? `len=${core.length} serverSelectedProtocol=0x${(core.serverSelectedProtocol ?? -1).toString(16)}` : 'no'}`);
-          try {
-            const dumpPath = path.join(__dirname, '../../../testing/rdp/last-mcs-connect-initial.hex');
-            fs.mkdirSync(path.dirname(dumpPath), { recursive: true });
-            fs.writeFileSync(dumpPath, payload.toString('hex'), 'utf8');
-            console.log(`[Bridge] Dump MCS en ${dumpPath}`);
-          } catch (dumpErr) {
-            console.warn('[Bridge] No se pudo escribir dump MCS:', dumpErr.message);
+          if (isDebug) {
+            console.log(`[Bridge] Primer frame WASM->RDP: ${payload.length} bytes; CS_CORE=${core ? `len=${core.length} serverSelectedProtocol=0x${(core.serverSelectedProtocol ?? -1).toString(16)}` : 'no'}`);
+            try {
+              const dumpPath = path.join(__dirname, '../../../testing/rdp/last-mcs-connect-initial.hex');
+              fs.mkdirSync(path.dirname(dumpPath), { recursive: true });
+              fs.writeFileSync(dumpPath, payload.toString('hex'), 'utf8');
+              console.log(`[Bridge] Dump MCS en ${dumpPath}`);
+            } catch (dumpErr) {
+              console.warn('[Bridge] No se pudo escribir dump MCS:', dumpErr.message);
+            }
           }
 
           const prepared = prepareMcsConnectInitial(payload, savedSelectedProtocol);
           forward = prepared.buf;
-          console.log(`[Bridge] MCS prepare: ${prepared.notes.join('; ') || 'sin cambios'}`);
+          if (isDebug) {
+            console.log(`[Bridge] MCS prepare: ${prepared.notes.join('; ') || 'sin cambios'}`);
+          }
         } else if (framesToRdp <= 10) {
           const infoResult = patchInfoPacket(forward, session);
           if (infoResult.patched) {
             forward = infoResult.buf;
-            console.log(`[Bridge] TS_INFO_PACKET ajustado: ${infoResult.changes.join(', ')}`);
+            if (isDebug) {
+              console.log(`[Bridge] TS_INFO_PACKET ajustado: ${infoResult.changes.join(', ')}`);
+            }
           }
         }
         bytesToRdp += forward.length;
@@ -603,7 +620,7 @@ class RdpNativeBridgeService extends EventEmitter {
 
       const derBytes = Buffer.from(forge.asn1.toDer(pki.certificateToAsn1(cert)).getBytes(), 'binary');
       this.cachedDerCert = derBytes;
-      console.log(`📜 [RdpNativeBridgeService] Certificado X.509 DER autofirmado generado (${derBytes.length} bytes)`);
+      debugLog(`📜 [RdpNativeBridgeService] Certificado X.509 DER autofirmado generado (${derBytes.length} bytes)`);
       return derBytes;
     } catch (e) {
       console.error('❌ Error generando certificado X.509 DER autofirmado:', e);
