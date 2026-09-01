@@ -30,9 +30,55 @@ function formatRelativeTime(iso) {
 	if (s < 3600) return `Hace ${Math.floor(s / 60)}m`;
 	if (s < 86400) return `Hace ${Math.floor(s / 3600)} h`;
 	if (s < 172800) return 'Ayer';
-	if (s < 604800) return `Hace ${Math.floor(s / 86400)} d\u00EDas`;
+	if (s < 604800) return `Hace ${Math.floor(s / 86400)} días`;
 	if (s < 2592000) return `Hace ${Math.floor(s / 604800)} sem`;
 	return `Hace ${Math.floor(s / 2592000)} mes`;
+}
+
+function hexToRgbString(hex) {
+	if (!hex) return '79, 195, 247';
+	if (hex.startsWith('rgb')) {
+		const m = hex.match(/[\d.]+/g);
+		if (m && m.length >= 3) return `${m[0]}, ${m[1]}, ${m[2]}`;
+	}
+	if (hex.startsWith('#')) {
+		const clean = hex.replace('#', '');
+		if (clean.length === 3) {
+			const r = parseInt(clean[0] + clean[0], 16) || 0;
+			const g = parseInt(clean[1] + clean[1], 16) || 0;
+			const b = parseInt(clean[2] + clean[2], 16) || 0;
+			return `${r}, ${g}, ${b}`;
+		}
+		const r = parseInt(clean.substring(0, 2), 16) || 0;
+		const g = parseInt(clean.substring(2, 4), 16) || 0;
+		const b = parseInt(clean.substring(4, 6), 16) || 0;
+		return `${r}, ${g}, ${b}`;
+	}
+	return '79, 195, 247';
+}
+
+function getProtocolBadge(type, port) {
+	switch (type) {
+		case 'ssh': return port && Number(port) !== 22 ? `SSH:${port}` : 'SSH:22';
+		case 'rdp-guacamole':
+		case 'rdp': return port && Number(port) !== 3389 ? `RDP:${port}` : 'RDP:3389';
+		case 'vnc-guacamole':
+		case 'vnc': return port && Number(port) !== 5900 ? `VNC:${port}` : 'VNC:5900';
+		case 'explorer':
+		case 'sftp': return port && Number(port) !== 22 ? `SFTP:${port}` : 'SFTP';
+		case 'ftp': return port && Number(port) !== 21 ? `FTP:${port}` : 'FTP:21';
+		case 'scp': return 'SCP';
+		case 'group': return 'GRUPO';
+		case 'password':
+		case 'secret': return 'PWD';
+		case 'crypto_wallet': return 'WALLET';
+		case 'api_key': return 'API KEY';
+		case 'secure_note': return 'NOTE';
+		case 'document':
+		case 'quick-note': return 'NOTA';
+		case 'ssh-tunnel': return 'TUNNEL';
+		default: return (type || 'HOST').toUpperCase();
+	}
 }
 
 function defaultPort(type) {
@@ -272,7 +318,7 @@ const ConnectionHistory = ({
 	const [isSearching, setIsSearching] = useState(false);
 	const [showDropdown, setShowDropdown] = useState(false);
 	const [activeIndex, setActiveIndex] = useState(-1);
-	const MIN_SEARCH_CHARS = 3;
+	const MIN_SEARCH_CHARS = 2;
 	const lastAutoExpandedSignatureRef = useRef('');
 	const [activeBottomView, setActiveBottomView] = useState('all');
 
@@ -608,20 +654,30 @@ const ConnectionHistory = ({
 
 			detectDocker();
 		}, 700);
-
 		return () => {
 			mounted = false;
 			clearTimeout(timer);
 		};
 	}, []);
 
-	// Funci\u00F3n para encontrar todas las conexiones en el \u00E1rbol
+	// Función para encontrar todas las conexiones en el árbol
 	const findAllSidebarConnections = useCallback((nodesList) => {
 		if (!nodesList) return [];
 		let results = [];
 		const traverse = (list) => {
 			for (const node of list) {
-				if (node.data && (node.data.type === 'ssh' || node.data.type === 'rdp' || node.data.type === 'rdp-guacamole' || node.data.type === 'vnc' || node.data.type === 'vnc-guacamole')) {
+				if (node.data && (
+					node.data.type === 'ssh' ||
+					node.data.type === 'rdp' ||
+					node.data.type === 'rdp-guacamole' ||
+					node.data.type === 'vnc' ||
+					node.data.type === 'vnc-guacamole' ||
+					node.data.type === 'explorer' ||
+					node.data.type === 'sftp' ||
+					node.data.type === 'ftp' ||
+					node.data.type === 'scp' ||
+					node.data.type === 'ssh-tunnel'
+				)) {
 					results.push(node);
 				}
 				if (node.children && node.children.length > 0) {
@@ -633,13 +689,21 @@ const ConnectionHistory = ({
 		return results;
 	}, []);
 
-	// Funci\u00F3n para encontrar todos los passwords en el \u00E1rbol
+	// Función para encontrar todos los passwords y secretos en el árbol
 	const findAllPasswords = useCallback((nodesList) => {
 		if (!nodesList) return [];
 		let results = [];
 		const traverse = (list) => {
 			for (const node of list) {
-				if (node.data && node.data.type === 'password') {
+				if (node.data && (
+					node.data.type === 'password' ||
+					node.data.type === 'secret' ||
+					node.data.type === 'crypto_wallet' ||
+					node.data.type === 'api_key' ||
+					node.data.type === 'secure_note' ||
+					node.data.type === 'document' ||
+					node.data.type === 'quick-note'
+				)) {
 					results.push(node);
 				}
 				if (node.children && node.children.length > 0) {
@@ -651,39 +715,42 @@ const ConnectionHistory = ({
 		return results;
 	}, []);
 
-	// L\u00F3gica de b\u00FAsqueda debounced
+	// Lógica de búsqueda debounced ultra-rápida (100ms)
 	useEffect(() => {
 		const timeoutId = setTimeout(() => {
 			if (searchTerm.trim().length >= MIN_SEARCH_CHARS) {
 				setIsSearching(true);
 				const performSearch = () => {
 					try {
-						const query = searchTerm.toLowerCase();
+						const query = searchTerm.toLowerCase().trim();
 						const allConnNodes = findAllSidebarConnections(sidebarNodes);
 						const allPwdNodes = findAllPasswords(passwordNodes);
 						const combined = [...allConnNodes, ...allPwdNodes];
-						const MAX_RESULTS = 30;
+						const MAX_RESULTS = 35;
 
 						const filtered = [];
 						for (let i = 0; i < combined.length && filtered.length < MAX_RESULTS; i++) {
 							const node = combined[i];
 							let matches = false;
 
-							if (node.label.toLowerCase().includes(query)) {
+							if (node.label && node.label.toLowerCase().includes(query)) {
 								matches = true;
 							} else if (node.data) {
-								if (node.data.type === 'password') {
+								if (node.data.type === 'password' || node.data.type === 'secret' || node.data.type === 'crypto_wallet' || node.data.type === 'api_key' || node.data.type === 'secure_note') {
 									matches = (
 										(node.data.username && node.data.username.toLowerCase().includes(query)) ||
 										(node.data.url && node.data.url.toLowerCase().includes(query)) ||
-										(node.data.group && node.data.group.toLowerCase().includes(query))
+										(node.data.group && node.data.group.toLowerCase().includes(query)) ||
+										(node.data.name && node.data.name.toLowerCase().includes(query))
 									);
 								} else {
 									matches = (
 										(node.data.host && node.data.host.toLowerCase().includes(query)) ||
 										(node.data.hostname && node.data.hostname.toLowerCase().includes(query)) ||
 										(node.data.user && node.data.user.toLowerCase().includes(query)) ||
-										(node.data.username && node.data.username.toLowerCase().includes(query))
+										(node.data.username && node.data.username.toLowerCase().includes(query)) ||
+										(node.data.name && node.data.name.toLowerCase().includes(query)) ||
+										(node.data.port && String(node.data.port).includes(query))
 									);
 								}
 							}
@@ -692,7 +759,6 @@ const ConnectionHistory = ({
 						}
 
 						setFilteredSearchResults(filtered);
-						setShowDropdown(filtered.length > 0);
 						setIsSearching(false);
 						setActiveIndex(filtered.length > 0 ? 0 : -1);
 					} catch (err) {
@@ -708,14 +774,52 @@ const ConnectionHistory = ({
 				}
 			} else {
 				setFilteredSearchResults([]);
-				setShowDropdown(false);
 				setIsSearching(false);
 				setActiveIndex(-1);
 			}
-		}, 300);
+		}, 100);
 
 		return () => clearTimeout(timeoutId);
 	}, [searchTerm, sidebarNodes, passwordNodes, findAllSidebarConnections, findAllPasswords, MIN_SEARCH_CHARS]);
+
+	// Conectar SSH directo a IP / Hostname personalizado no guardado
+	const handleDirectConnect = useCallback((query) => {
+		if (!query) return;
+		let raw = query.trim();
+		if (!raw) return;
+
+		let username = '';
+		let host = raw;
+		let port = 22;
+
+		if (raw.includes('@')) {
+			const parts = raw.split('@');
+			username = parts[0];
+			raw = parts[1];
+		}
+		if (raw.includes(':')) {
+			const parts = raw.split(':');
+			host = parts[0];
+			const parsedPort = parseInt(parts[1], 10);
+			if (!isNaN(parsedPort)) port = parsedPort;
+		} else {
+			host = raw;
+		}
+
+		const conn = {
+			id: `direct:${username ? username + '@' : ''}${host}:${port}`,
+			name: host,
+			host,
+			username,
+			port,
+			type: 'ssh',
+			lastConnected: new Date().toISOString()
+		};
+
+		setSearchTerm('');
+		setActiveIndex(-1);
+		onConnectToHistory?.(conn);
+	}, [onConnectToHistory]);
 
 	// Cerrar dropdown al hacer click fuera
 	useEffect(() => {
@@ -728,9 +832,8 @@ const ConnectionHistory = ({
 		return () => document.removeEventListener('mousedown', handleClickOutside);
 	}, [showDropdown]);
 
-	// Auto-expandir la ruta de todos los resultados visibles sin requerir Enter.
+	// Auto-expandir la ruta de todos los resultados visibles en el árbol lateral
 	useEffect(() => {
-		if (!showDropdown) return;
 		if (searchTerm.trim().length < MIN_SEARCH_CHARS) return;
 		if (!filteredSearchResults.length) return;
 
@@ -761,29 +864,43 @@ const ConnectionHistory = ({
 		window.dispatchEvent(new CustomEvent('expand-node-path', {
 			detail: { expandedKeys: mergedExpandedKeys, nodeKey: keysToExpand[0] }
 		}));
-	}, [showDropdown, searchTerm, filteredSearchResults, sidebarNodes, MIN_SEARCH_CHARS]);
+	}, [searchTerm, filteredSearchResults, sidebarNodes, MIN_SEARCH_CHARS]);
 
-	const handleSearchKeyDown = (e) => {
-		if (!showDropdown) return;
+	const handleSearchKeyDown = useCallback((e) => {
+		const isSearchingActive = searchTerm.trim().length >= MIN_SEARCH_CHARS;
+
+		if (!isSearchingActive) {
+			if (e.key === 'Enter' && searchTerm.trim().length > 0) {
+				e.preventDefault();
+				handleDirectConnect(searchTerm.trim());
+			}
+			return;
+		}
 
 		if (e.key === 'ArrowDown') {
 			e.preventDefault();
-			setActiveIndex(prev => (prev < filteredSearchResults.length - 1 ? prev + 1 : prev));
+			setActiveIndex(prev => (prev < filteredSearchResults.length - 1 ? prev + 1 : 0));
 		} else if (e.key === 'ArrowUp') {
 			e.preventDefault();
-			setActiveIndex(prev => (prev > 0 ? prev - 1 : prev));
+			setActiveIndex(prev => (prev > 0 ? prev - 1 : Math.max(0, filteredSearchResults.length - 1)));
 		} else if (e.key === 'Enter') {
+			e.preventDefault();
 			if (activeIndex >= 0 && activeIndex < filteredSearchResults.length) {
 				handleSelectSearchResult(filteredSearchResults[activeIndex]);
+			} else if (filteredSearchResults.length > 0) {
+				handleSelectSearchResult(filteredSearchResults[0]);
+			} else if (searchTerm.trim().length > 0) {
+				handleDirectConnect(searchTerm.trim());
 			}
 		} else if (e.key === 'Escape') {
-			setShowDropdown(false);
+			e.preventDefault();
+			setSearchTerm('');
+			setActiveIndex(-1);
 		}
-	};
+	}, [searchTerm, filteredSearchResults, activeIndex, MIN_SEARCH_CHARS, handleSelectSearchResult, handleDirectConnect]);
 
-	const handleSelectSearchResult = (node) => {
+	const handleSelectSearchResult = useCallback((node) => {
 		setSearchTerm('');
-		setShowDropdown(false);
 		setActiveIndex(-1);
 
 		// Asegurar que la sidebar esté visible para percibir la expansión.
@@ -804,7 +921,7 @@ const ConnectionHistory = ({
 			}));
 		}
 
-		const isPassword = node.data && ['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note'].includes(node.data.type);
+		const isPassword = node.data && ['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note', 'document', 'quick-note'].includes(node.data.type);
 		if (isPassword) {
 			const payload = {
 				key: node.key,
@@ -813,11 +930,11 @@ const ConnectionHistory = ({
 			};
 			window.dispatchEvent(new CustomEvent('open-password-tab', { detail: payload }));
 		} else {
-			// Es una conexi\u00F3n, usar handleConnectToHistory pero adaptando el formato
+			// Es una conexión, usar handleConnectToHistory pero adaptando el formato
 			const conn = helpers.fromSidebarNode(node);
 			if (conn) onConnectToHistory(conn);
 		}
-	};
+	}, [sidebarNodes, onConnectToHistory]);
 
 	const [typeFilter, setTypeFilter] = useState(() => {
 		const saved = localStorage.getItem('nodeterm_fav_type');
@@ -1628,140 +1745,226 @@ const ConnectionHistory = ({
 	};
 
 	// Sub-renderizador para el contenido de la tarjeta de búsqueda
-	const renderSearchCardBody = () => (
-		<div className="top-terminal-body" style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '10px 16px' }}>
-			<div className="hero-search-container" style={{ margin: '0 0 6px 0', width: '100%', maxWidth: '100%' }}>
-				<InputText
-					value={searchTerm}
-					onChange={(e) => setSearchTerm(e.target.value)}
-					onKeyDown={handleSearchKeyDown}
-					className="hero-search-input"
-					placeholder="Search or connect to a host..."
-					onBlur={() => {
-						setTimeout(() => setShowDropdown(false), 200);
-					}}
-					onFocus={() => {
-						if (filteredSearchResults.length > 0) setShowDropdown(true);
-					}}
-					autoComplete="off"
-				/>
-				{isSearching && (
-					<i className="pi pi-spin pi-spinner hero-search-spinner" />
-				)}
+	const renderSearchCardBody = () => {
+		const isSearchActive = searchTerm.trim().length >= MIN_SEARCH_CHARS;
 
-				<button
-					className="hero-terminal-btn"
-					title="Mostrar/ocultar terminal local"
-					onClick={(e) => {
-						e.stopPropagation();
-						if (onTogglePanelVisibility) {
-							onTogglePanelVisibility('terminal');
-						} else if (onToggleTerminalVisibility) {
-							onToggleTerminalVisibility();
-						}
-					}}
-				>
-					<span className="btn-prompt">$</span><span className="btn-cursor">_</span>
-				</button>
-
-				{showDropdown && ReactDOM.createPortal(
-					<div
-						className="hero-search-dropdown"
-						style={{
-							width: 'min(600px, 90vw)',
-							left: '50%',
-							top: document.querySelector('.hero-search-input')?.getBoundingClientRect().bottom || 0,
-							transform: 'translateX(-50%)'
-						}}
-					>
-						{filteredSearchResults.map((node, idx) => {
-							const isPassword = node.data?.type === 'password';
-							const color = isPassword ? '#E91E63' : getConnectionTypeColor(node.data?.type);
-							const label = node.label;
-							const sub = isPassword ? (node.data.url || node.data.username) : (node.data.host || node.data.hostname || node.data.server);
-							const folderPath = getNodeFolderPath(sidebarNodes, node);
-							const folderPathString = folderPath && folderPath.length > 0 ? folderPath.join(' / ') : 'Raíz';
-
-							return (
-								<div
-									key={node.key}
-									className={`search-result-item ${activeIndex === idx ? 'active' : ''}`}
-									onClick={() => handleSelectSearchResult(node)}
-									onMouseEnter={() => setActiveIndex(idx)}
+		return (
+			<div className="cyber-search-panel-body">
+				{/* Top Zone: Search input + Buttons */}
+				<div className="cyber-search-top-zone">
+					<div className="hero-search-container" style={{ margin: '0', width: '100%', maxWidth: '100%' }}>
+						<div className="cyber-search-input-wrapper">
+							<InputText
+								value={searchTerm}
+								onChange={(e) => setSearchTerm(e.target.value)}
+								onKeyDown={handleSearchKeyDown}
+								className="hero-search-input"
+								placeholder="Search hosts, IPs, protocols, passwords..."
+								autoComplete="off"
+								spellCheck="false"
+							/>
+							{isSearching && (
+								<i className="pi pi-spin pi-spinner hero-search-spinner" />
+							)}
+							{searchTerm.length > 0 && (
+								<button
+									type="button"
+									className="cyber-search-clear-btn"
+									onClick={() => {
+										setSearchTerm('');
+										setActiveIndex(-1);
+									}}
+									title="Limpiar búsqueda (Esc)"
 								>
-									<div className="search-result-icon" style={{ background: `${color}15`, color }}>
-										<i className={isPassword ? 'pi pi-key' : getConnectionTypeIcon(node.data?.type)} />
+									<i className="pi pi-times" />
+								</button>
+							)}
+							<button
+								type="button"
+								className="hero-terminal-btn"
+								title="Mostrar/ocultar terminal local"
+								onClick={(e) => {
+									e.stopPropagation();
+									if (onTogglePanelVisibility) {
+										onTogglePanelVisibility('terminal');
+									} else if (onToggleTerminalVisibility) {
+										onToggleTerminalVisibility();
+									}
+								}}
+							>
+								<span className="btn-prompt">$</span><span className="btn-cursor">_</span>
+							</button>
+						</div>
+					</div>
+
+					<div className="hero-action-buttons" style={{ margin: '0' }}>
+						<button
+							type="button"
+							className={`hero-action-btn terminal-primary ${panelsLayout?.terminal?.visible !== false ? 'active' : ''}`}
+							title="Abrir o enfocar terminal"
+							onClick={(e) => {
+								e.stopPropagation();
+								if (onTogglePanelVisibility) {
+									onTogglePanelVisibility('terminal', true);
+									onBringToFront?.('terminal');
+								} else if (onTerminalToggle) {
+									const terminalType = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
+									onTerminalToggle(true, terminalType, false);
+								}
+							}}
+						>
+							<i className="pi pi-plus-circle" /> Terminal
+						</button>
+						<button
+							type="button"
+							className={`hero-action-btn ${panelsLayout ? (panelsLayout?.recents?.visible ? 'active' : '') : (terminalView ? (splitOpen && splitView === 'recent' ? 'active' : '') : (activeBottomView === 'recent' && !terminalView ? 'active' : ''))}`}
+							onClick={() => {
+								if (onTogglePanelVisibility) {
+									onTogglePanelVisibility('recents', !panelsLayout?.recents?.visible);
+									if (!panelsLayout?.recents?.visible) onBringToFront?.('recents');
+								} else if (terminalView) {
+									handleToggleSplit('recent');
+								} else {
+									setActiveBottomView('recent');
+								}
+							}}
+						>
+							<i className="pi pi-clock" /> Recientes
+						</button>
+						<button
+							type="button"
+							className={`hero-action-btn ${panelsLayout ? (panelsLayout?.favorites?.visible ? 'active' : '') : (terminalView ? (splitOpen && splitView === 'favorites' ? 'active' : '') : (activeBottomView === 'favorites' && !terminalView ? 'active' : ''))}`}
+							onClick={() => {
+								if (onTogglePanelVisibility) {
+									onTogglePanelVisibility('favorites', !panelsLayout?.favorites?.visible);
+									if (!panelsLayout?.favorites?.visible) onBringToFront?.('favorites');
+								} else if (terminalView) {
+									handleToggleSplit('favorites');
+								} else {
+									setActiveBottomView('favorites');
+								}
+							}}
+						>
+							<i className="pi pi-star" /> Favoritos
+						</button>
+					</div>
+				</div>
+
+				{/* Middle / Integrated Real-Time Results Zone */}
+				{isSearchActive ? (
+					<div className="cyber-search-results-container">
+						<div className="cyber-results-header-bar">
+							<div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+								<span
+									style={{
+										width: '6px',
+										height: '6px',
+										borderRadius: '50%',
+										background: terminalTheme.green || '#27c93f',
+										boxShadow: `0 0 6px ${terminalTheme.green || '#27c93f'}`
+									}}
+								/>
+								<span style={{ color: terminalTheme.green || '#27c93f', fontWeight: '700' }}>
+									MATCHES // {filteredSearchResults.length.toString().padStart(2, '0')}
+								</span>
+							</div>
+							<span style={{ opacity: 0.5, fontSize: '0.68rem', fontFamily: 'monospace' }}>
+								REAL-TIME QUERY: "{searchTerm}"
+							</span>
+						</div>
+
+						<div className="cyber-results-list-scroll">
+							{filteredSearchResults.map((node, idx) => {
+								const isPassword = node.data && ['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note'].includes(node.data.type);
+								const color = isPassword ? '#E91E63' : getConnectionTypeColor(node.data?.type);
+								const rgbColor = hexToRgbString(color);
+								const label = node.label;
+								const sub = isPassword
+									? (node.data.url || node.data.username || node.data.group || '-')
+									: (node.data.host || node.data.hostname || node.data.server || '-');
+								const port = node.data?.port;
+								const badgeLabel = isPassword ? 'PWD' : getProtocolBadge(node.data?.type, port);
+								const folderPath = getNodeFolderPath(sidebarNodes, node);
+								const folderPathString = folderPath && folderPath.length > 0 ? folderPath.join(' / ') : null;
+								const isSelected = activeIndex === idx;
+
+								return (
+									<div
+										key={node.key || `${node.label}-${idx}`}
+										className={`cyber-result-card ${isSelected ? 'active-item' : ''}`}
+										style={{
+											'--row-color': color,
+											'--row-color-rgb': rgbColor
+										}}
+										onClick={() => handleSelectSearchResult(node)}
+										onMouseEnter={() => setActiveIndex(idx)}
+									>
+										<span className="crc-prefix-arrow">➜</span>
+										<span className="crc-badge">{badgeLabel}</span>
+										<div className="crc-info">
+											<div className="crc-top-line">
+												<span className="crc-name">{label}</span>
+												<span className="crc-host">{sub}{port && Number(port) !== 22 && Number(port) !== 3389 && !sub.includes(`:${port}`) ? `:${port}` : ''}</span>
+											</div>
+											{folderPathString && (
+												<span className="crc-folder-path">📁 {folderPathString}</span>
+											)}
+										</div>
+										<button
+											type="button"
+											className="crc-action-btn"
+											onClick={(e) => {
+												e.stopPropagation();
+												handleSelectSearchResult(node);
+											}}
+										>
+											<span>{isPassword ? 'ABRIR' : 'CONECTAR'}</span>
+											<i className="pi pi-arrow-right" style={{ fontSize: '0.65rem' }} />
+										</button>
 									</div>
-									<div className="search-result-info">
-										<div className="search-result-flex-header">
-											<span className="search-result-label">{label}</span>
-											<span className="search-result-type" style={{ background: `${color}20`, color, borderColor: `${color}40`, border: '1px solid' }}>
-												{isPassword ? 'PWD' : getProtocolLabel(node.data?.type)}
+								);
+							})}
+
+							{filteredSearchResults.length === 0 && (
+								<div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+									<div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: '0.78rem', fontFamily: 'monospace' }}>
+										// NO SE ENCONTRARON COINCIDENCIAS GUARDADAS
+									</div>
+									<div
+										className="cyber-direct-connect-row"
+										onClick={() => handleDirectConnect(searchTerm)}
+									>
+										<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+											<span style={{ color: '#27c93f', fontWeight: 'bold', fontSize: '0.9rem' }}>➜</span>
+											<span style={{ color: '#ffffff', fontSize: '0.82rem' }}>
+												Conectar SSH directo a <strong style={{ color: terminalTheme.green || '#27c93f' }}>{searchTerm}</strong>
 											</span>
 										</div>
-										<div className="search-result-sub-container">
-											<span className="search-result-sub">{sub}</span>
-											{!isPassword && <span className="search-result-folder">📁  {folderPathString}</span>}
-										</div>
+										<span style={{ color: '#27c93f', fontSize: '0.72rem', fontWeight: 'bold' }}>
+											[ ENTER ↵ ]
+										</span>
 									</div>
 								</div>
-							);
-						})}
-					</div>,
-					document.body
+							)}
+						</div>
+					</div>
+				) : (
+					/* Standby State: Clean & Minimalist */
+					<div className="cyber-search-standby">
+						<div style={{ display: 'flex', alignItems: 'center' }}>
+							<span className="css-dot" />
+							<span>STANDBY // BUSCADOR DIRECTO</span>
+						</div>
+						<div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+							<span><kbd>↑↓</kbd> Navegar</span>
+							<span><kbd>↵</kbd> Conectar</span>
+							<span><kbd>ESC</kbd> Limpiar</span>
+						</div>
+					</div>
 				)}
 			</div>
-
-			<div className="hero-action-buttons">
-				<button
-					className={`hero-action-btn terminal-primary ${panelsLayout?.terminal?.visible !== false ? 'active' : ''}`}
-					title="Abrir o enfocar terminal"
-					onClick={(e) => {
-						e.stopPropagation();
-						if (onTogglePanelVisibility) {
-							onTogglePanelVisibility('terminal', true);
-							onBringToFront?.('terminal');
-						} else if (onTerminalToggle) {
-							const terminalType = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
-							onTerminalToggle(true, terminalType, false);
-						}
-					}}
-				>
-					<i className="pi pi-plus-circle" /> Terminal
-				</button>
-				<button
-					className={`hero-action-btn ${panelsLayout ? (panelsLayout?.recents?.visible ? 'active' : '') : (terminalView ? (splitOpen && splitView === 'recent' ? 'active' : '') : (activeBottomView === 'recent' && !terminalView ? 'active' : ''))}`}
-					onClick={() => {
-						if (onTogglePanelVisibility) {
-							onTogglePanelVisibility('recents', !panelsLayout?.recents?.visible);
-							if (!panelsLayout?.recents?.visible) onBringToFront?.('recents');
-						} else if (terminalView) {
-							handleToggleSplit('recent');
-						} else {
-							setActiveBottomView('recent');
-						}
-					}}
-				>
-					<i className="pi pi-clock" /> Recientes
-				</button>
-				<button
-					className={`hero-action-btn ${panelsLayout ? (panelsLayout?.favorites?.visible ? 'active' : '') : (terminalView ? (splitOpen && splitView === 'favorites' ? 'active' : '') : (activeBottomView === 'favorites' && !terminalView ? 'active' : ''))}`}
-					onClick={() => {
-						if (onTogglePanelVisibility) {
-							onTogglePanelVisibility('favorites', !panelsLayout?.favorites?.visible);
-							if (!panelsLayout?.favorites?.visible) onBringToFront?.('favorites');
-						} else if (terminalView) {
-							handleToggleSplit('favorites');
-						} else {
-							setActiveBottomView('favorites');
-						}
-					}}
-				>
-					<i className="pi pi-star" /> Favoritos
-				</button>
-			</div>
-		</div>
-	);
+		);
+	};
 
 	// Sub-renderizador para tabla de Recientes
 	const renderRecentsTableBody = () => (
@@ -3005,53 +3208,287 @@ const ConnectionHistory = ({
 				/* Empty state inside terminal frame */
 				.recents-terminal-body .ribbon-empty { flex-direction: column; gap: 8px; color: ${terminalTheme.brightBlack || '#6e7681'}; background: transparent; border: none; font-family: 'Fira Code', monospace; font-size: 0.82rem; min-height: 60px; }
 
-				/* Search Dropdown Styles */
-				.hero-search-dropdown {
-					position: fixed;
-					background: ${themeColors.cardBackground ? themeColors.cardBackground.replace('0.6', '0.90') : 'rgba(16, 20, 28, 0.90)'};
-					border: 1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'};
-					border-radius: 16px;
-					box-shadow: 0 16px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05) inset;
-					backdrop-filter: blur(24px);
-					overflow-y: auto;
-					z-index: 10000;
-					margin-top: 12px;
-					padding: 12px;
+				/* --- CYBERPUNK INTEGRATED SEARCH PANEL STYLES --- */
+				.cyber-search-panel-body {
+					display: flex;
+					flex-direction: column;
+					height: 100%;
+					width: 100%;
+					min-height: 0;
+					overflow: hidden;
+					position: relative;
+					box-sizing: border-box;
+				}
+
+				.cyber-search-top-zone {
+					flex-shrink: 0;
+					padding: 8px 14px 6px 14px;
 					display: flex;
 					flex-direction: column;
 					gap: 6px;
 				}
-				.search-result-item {
+
+				.cyber-search-input-wrapper {
+					position: relative;
+					width: 100%;
 					display: flex;
 					align-items: center;
-					gap: 16px;
-					padding: 12px 16px;
-					border-radius: 10px;
-					cursor: pointer;
-					transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-					border: 1px solid transparent;
 				}
-				.search-result-item:hover, .search-result-item.active {
-					background: ${themeColors.hoverBackground || 'rgba(255,255,255,0.06)'};
-					border-color: ${themeColors.borderColor || 'rgba(255,255,255,0.08)'};
-					transform: scale(1.01);
-				}
-				.search-result-icon {
-					width: 40px;
-					height: 40px;
+
+				.cyber-search-clear-btn {
+					position: absolute;
+					right: 48px;
+					top: 50%;
+					transform: translateY(-50%);
+					width: 22px;
+					height: 22px;
+					border-radius: 4px;
+					border: 1px solid rgba(255, 255, 255, 0.15);
+					background: rgba(0, 0, 0, 0.5);
+					color: rgba(255, 255, 255, 0.6);
 					display: flex;
 					align-items: center;
 					justify-content: center;
-					font-size: 1.4rem;
-					border-radius: 10px;
+					font-size: 0.7rem;
+					cursor: pointer;
+					z-index: 10;
+					transition: all 0.15s ease;
 				}
-				.search-result-info { flex: 1; display: flex; flex-direction: column; overflow: hidden; gap: 4px; }
-				.search-result-flex-header { display: flex; align-items: center; gap: 10px; }
-				.search-result-label { font-weight: 500; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: ${themeColors.textPrimary || '#fff'}; }
-				.search-result-sub-container { display: flex; align-items: center; gap: 10px; }
-				.search-result-sub { font-size: 0.8rem; opacity: 0.5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: monospace; }
-				.search-result-folder { font-size: 0.75rem; opacity: 0.4; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-				.search-result-type { font-size: 0.7rem; font-weight: bold; padding: 2px 8px; border-radius: 6px; opacity: 0.8; flex-shrink: 0; text-transform: uppercase; letter-spacing: 0.5px;}
+				.cyber-search-clear-btn:hover {
+					background: rgba(255, 80, 80, 0.25);
+					border-color: #ff5252;
+					color: #ff5252;
+					box-shadow: 0 0 8px rgba(255, 82, 82, 0.4);
+				}
+
+				/* Integrated Results Area */
+				.cyber-search-results-container {
+					flex: 1;
+					min-height: 0;
+					display: flex;
+					flex-direction: column;
+					overflow: hidden;
+					margin: 2px 14px 8px 14px;
+					border-radius: 8px;
+					border: 1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '55' : 'rgba(255,255,255,0.1)'};
+					background: ${terminalTheme.background ? adjustOpacity(terminalTheme.background, 0.5) : 'rgba(0, 0, 0, 0.35)'};
+					backdrop-filter: blur(14px);
+					box-shadow: inset 0 1px 10px rgba(0,0,0,0.4);
+					animation: cyberFadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+				}
+
+				@keyframes cyberFadeIn {
+					from { opacity: 0; transform: translateY(-4px); }
+					to { opacity: 1; transform: translateY(0); }
+				}
+
+				.cyber-results-header-bar {
+					display: flex;
+					align-items: center;
+					justify-content: space-between;
+					padding: 6px 12px;
+					font-family: 'Fira Code', 'Consolas', monospace;
+					font-size: 0.72rem;
+					border-bottom: 1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '44' : 'rgba(255,255,255,0.06)'};
+					background: rgba(255, 255, 255, 0.02);
+					flex-shrink: 0;
+					letter-spacing: 0.5px;
+					color: ${themeColors.textSecondary || 'rgba(255,255,255,0.6)'};
+				}
+
+				.cyber-results-list-scroll {
+					flex: 1;
+					min-height: 0;
+					overflow-y: auto;
+					overflow-x: hidden;
+					padding: 4px 6px;
+					display: flex;
+					flex-direction: column;
+					gap: 3px;
+					scrollbar-width: thin;
+					scrollbar-color: ${terminalTheme.green || '#3fb950'} transparent;
+				}
+
+				.cyber-result-card {
+					display: flex;
+					align-items: center;
+					gap: 8px;
+					padding: 6px 10px;
+					border-radius: 6px;
+					cursor: pointer;
+					border: 1px solid transparent;
+					border-left: 3px solid var(--row-color, #4fc3f7);
+					background: rgba(255, 255, 255, 0.02);
+					transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+					font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+					min-height: 42px;
+					box-sizing: border-box;
+				}
+
+				.cyber-result-card:hover, .cyber-result-card.active-item {
+					background: ${terminalTheme.selectionBackground ? adjustOpacity(terminalTheme.selectionBackground, 0.25) : 'rgba(255,255,255,0.08)'} !important;
+					border-color: rgba(255, 255, 255, 0.15);
+					border-left-color: var(--row-color, #4fc3f7) !important;
+					transform: translateX(2px);
+					box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3), 0 0 10px rgba(var(--row-color-rgb), 0.2);
+				}
+
+				.cyber-result-card.active-item {
+					border-color: var(--row-color, #4fc3f7);
+					background: rgba(var(--row-color-rgb), 0.12) !important;
+				}
+
+				.crc-prefix-arrow {
+					font-size: 0.78rem;
+					color: var(--row-color, #4fc3f7);
+					opacity: 0;
+					transition: all 0.15s ease;
+					flex-shrink: 0;
+					font-weight: bold;
+				}
+				.cyber-result-card:hover .crc-prefix-arrow, .cyber-result-card.active-item .crc-prefix-arrow {
+					opacity: 1;
+					transform: translateX(1px);
+					text-shadow: 0 0 5px var(--row-color, #4fc3f7);
+				}
+
+				.crc-badge {
+					font-size: 0.68rem;
+					font-weight: 700;
+					padding: 2px 6px;
+					border-radius: 4px;
+					border: 1px solid var(--row-color, #4fc3f7);
+					background: rgba(var(--row-color-rgb), 0.15);
+					color: var(--row-color, #4fc3f7);
+					letter-spacing: 0.5px;
+					flex-shrink: 0;
+					text-shadow: 0 0 6px rgba(var(--row-color-rgb), 0.4);
+					max-width: 90px;
+					overflow: hidden;
+					text-overflow: ellipsis;
+					white-space: nowrap;
+				}
+
+				.crc-info {
+					display: flex;
+					flex-direction: column;
+					flex: 1;
+					min-width: 0;
+					gap: 1px;
+				}
+
+				.crc-top-line {
+					display: flex;
+					align-items: baseline;
+					gap: 8px;
+					min-width: 0;
+				}
+
+				.crc-name {
+					font-size: 0.86rem;
+					font-weight: 600;
+					color: ${terminalTheme.foreground || '#ffffff'};
+					white-space: nowrap;
+					overflow: hidden;
+					text-overflow: ellipsis;
+					letter-spacing: 0.2px;
+				}
+
+				.crc-host {
+					font-size: 0.74rem;
+					color: ${themeColors.textSecondary || 'rgba(255,255,255,0.55)'};
+					white-space: nowrap;
+					overflow: hidden;
+					text-overflow: ellipsis;
+					opacity: 0.8;
+				}
+
+				.crc-folder-path {
+					font-size: 0.68rem;
+					color: ${themeColors.textSecondary || 'rgba(255,255,255,0.4)'};
+					white-space: nowrap;
+					overflow: hidden;
+					text-overflow: ellipsis;
+					opacity: 0.7;
+				}
+
+				.crc-action-btn {
+					padding: 3px 8px;
+					border-radius: 4px;
+					border: 1px solid var(--row-color, #4fc3f7);
+					background: rgba(var(--row-color-rgb), 0.1);
+					color: var(--row-color, #4fc3f7);
+					font-size: 0.68rem;
+					font-weight: 700;
+					letter-spacing: 0.5px;
+					display: flex;
+					align-items: center;
+					gap: 4px;
+					opacity: 0.85;
+					cursor: pointer;
+					transition: all 0.15s;
+					flex-shrink: 0;
+					font-family: inherit;
+				}
+
+				.cyber-result-card:hover .crc-action-btn, .cyber-result-card.active-item .crc-action-btn {
+					opacity: 1;
+					background: var(--row-color, #4fc3f7);
+					color: #000;
+					box-shadow: 0 0 10px rgba(var(--row-color-rgb), 0.6);
+				}
+
+				.cyber-direct-connect-row {
+					display: flex;
+					align-items: center;
+					justify-content: space-between;
+					padding: 8px 12px;
+					border-radius: 6px;
+					border: 1px dashed ${terminalTheme.green ? terminalTheme.green + '88' : 'rgba(39, 201, 63, 0.5)'};
+					background: ${terminalTheme.green ? terminalTheme.green + '15' : 'rgba(39, 201, 63, 0.08)'};
+					cursor: pointer;
+					margin: 4px 0;
+					transition: all 0.15s;
+					font-family: 'Fira Code', monospace;
+				}
+				.cyber-direct-connect-row:hover {
+					background: ${terminalTheme.green ? terminalTheme.green + '28' : 'rgba(39, 201, 63, 0.2)'};
+					border-color: ${terminalTheme.green || '#27c93f'};
+					box-shadow: 0 0 12px ${terminalTheme.green ? terminalTheme.green + '44' : 'rgba(39, 201, 63, 0.3)'};
+				}
+
+				/* Standby Clean HUD Footer */
+				.cyber-search-standby {
+					display: flex;
+					align-items: center;
+					justify-content: space-between;
+					padding: 6px 16px 8px 16px;
+					font-family: 'Fira Code', 'Consolas', monospace;
+					font-size: 0.7rem;
+					color: ${themeColors.textSecondary || 'rgba(255,255,255,0.4)'};
+					letter-spacing: 0.5px;
+					border-top: 1px solid rgba(255, 255, 255, 0.04);
+					margin-top: auto;
+				}
+				.cyber-search-standby .css-dot {
+					width: 6px;
+					height: 6px;
+					border-radius: 50%;
+					background: ${terminalTheme.green || '#27c93f'};
+					display: inline-block;
+					box-shadow: 0 0 6px ${terminalTheme.green || '#27c93f'};
+					animation: btn-blink 1.5s infinite;
+					margin-right: 6px;
+				}
+				.cyber-search-standby kbd {
+					background: rgba(255, 255, 255, 0.06);
+					border: 1px solid rgba(255, 255, 255, 0.12);
+					border-radius: 3px;
+					padding: 1px 4px;
+					margin: 0 2px;
+					font-size: 0.65rem;
+					color: ${themeColors.textPrimary || 'rgba(255,255,255,0.7)'};
+				}
 				
 				/* Hero Chips */
 				.hero-chip { display: flex; align-items: center; background: ${themeColors.itemBackground || 'rgba(22, 27, 34, 0.4)'}; border: 1px solid transparent; border-radius: 16px; padding: 8px 24px 8px 8px; width: 220px; height: 70px; cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); backdrop-filter: blur(10px); flex-shrink: 0; text-align: left; }
