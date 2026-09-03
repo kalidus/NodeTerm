@@ -28,6 +28,9 @@ export const useContextMenuManagement = () => {
     setTerminalContextMenu(null);
   }, []);
 
+  // Estado para menú contextual del árbol
+  const [treeContextMenu, setTreeContextMenu] = useState(null);
+
   // ============ FUNCIONES DE MENÚ DE OVERFLOW ============
 
   // Mostrar menú de overflow
@@ -45,13 +48,14 @@ export const useContextMenuManagement = () => {
 
   // Context menu for nodes
   const onNodeContextMenu = useCallback((event, node, setSelectedNode, setIsGeneralTreeMenu) => {
+    if (event.persist) event.persist();
     event.preventDefault();
     event.stopPropagation();
-    setSelectedNode(node);
-    setIsGeneralTreeMenu(false);
-    if (treeContextMenuRef.current) {
-      treeContextMenuRef.current.show(event);
-    }
+    const x = event.clientX ?? event.pageX ?? 0;
+    const y = event.clientY ?? event.pageY ?? 0;
+    if (setSelectedNode) setSelectedNode(node);
+    if (setIsGeneralTreeMenu) setIsGeneralTreeMenu(false);
+    setTreeContextMenu({ x, y, node, isGeneral: false });
   }, []);
 
   // Context menu for tree area (general)
@@ -62,25 +66,25 @@ export const useContextMenuManagement = () => {
       targetElement.closest('.p-tree-toggler');
 
     if (!isNodeClick) {
+      if (event.persist) event.persist();
       event.preventDefault();
       event.stopPropagation();
-      setSelectedNode(null);
-      setIsGeneralTreeMenu(true);
-      if (treeContextMenuRef.current) {
-        treeContextMenuRef.current.show(event);
-      }
+      const x = event.clientX ?? event.pageX ?? 0;
+      const y = event.clientY ?? event.pageY ?? 0;
+      if (setSelectedNode) setSelectedNode(null);
+      if (setIsGeneralTreeMenu) setIsGeneralTreeMenu(true);
+      setTreeContextMenu({ x, y, node: null, isGeneral: true });
     }
   }, []);
 
   // Función para cerrar el menú contextual del árbol
   const hideContextMenu = useCallback(() => {
+    setTreeContextMenu(null);
     try {
       if (treeContextMenuRef.current && treeContextMenuRef.current.hide) {
         treeContextMenuRef.current.hide();
       }
-    } catch (error) {
-      console.error('Error cerrando menú contextual:', error);
-    }
+    } catch (_) {}
   }, []);
 
   return {
@@ -91,6 +95,8 @@ export const useContextMenuManagement = () => {
     setShowOverflowMenu,
     overflowMenuPosition,
     setOverflowMenuPosition,
+    treeContextMenu,
+    setTreeContextMenu,
 
     // Referencias
     treeContextMenuRef,

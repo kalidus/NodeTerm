@@ -55,7 +55,8 @@ function probeSelectedProtocol({ host, port = 3389, username = 'nodeterm', timeo
         selectedProtocol: null,
         failureCode: null,
         protocolLabel: 'timeout',
-        error: `probe timeout ${timeoutMs}ms`
+        error: `probe timeout ${timeoutMs}ms`,
+        errorCode: 'ETIMEDOUT'
       });
     }, timeoutMs);
 
@@ -67,7 +68,8 @@ function probeSelectedProtocol({ host, port = 3389, username = 'nodeterm', timeo
         selectedProtocol: null,
         failureCode: null,
         protocolLabel: 'timeout',
-        error: 'socket timeout'
+        error: 'socket timeout',
+        errorCode: 'ETIMEDOUT'
       });
     });
 
@@ -78,7 +80,8 @@ function probeSelectedProtocol({ host, port = 3389, username = 'nodeterm', timeo
         selectedProtocol: null,
         failureCode: null,
         protocolLabel: 'error',
-        error: err.message
+        error: err.message,
+        errorCode: err.code
       });
     });
 
