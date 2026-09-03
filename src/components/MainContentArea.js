@@ -123,13 +123,6 @@ const MainContentArea = ({
   isHomeTabActive,
   localTerminalBg,
 
-  // Tree context menu
-  isGeneralTreeMenu,
-  getGeneralTreeContextMenuItems,
-  getTreeContextMenuItems,
-  selectedNode,
-  treeContextMenuRef,
-
   // Active sessions info
   activeIds,
 
@@ -3419,14 +3412,6 @@ const MainContentArea = ({
           </TerminalFrame>
         </SplitterPanel>
       </Splitter>
-
-
-      {/* Context Menu para el árbol de la sidebar */}
-      <ContextMenu
-        ref={treeContextMenuRef}
-        model={isGeneralTreeMenu ? getGeneralTreeContextMenuItems() : getTreeContextMenuItems(selectedNode)}
-        breakpoint="767px"
-      />
     </div>
   );
 };

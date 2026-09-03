@@ -33,6 +33,7 @@ import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
 import { TabView, TabPanel } from 'primereact/tabview';
 
 import { ContextMenu } from 'primereact/contextmenu';
+import TreeContextMenu from './contextmenus/TreeContextMenu';
 // FileExplorer ahora usa lazy loading arriba
 import WallixRefreshDialog from './WallixRefreshDialog';
 import Sidebar from './Sidebar';
@@ -1516,6 +1517,7 @@ const App = () => {
     terminalContextMenu, setTerminalContextMenu,
     showOverflowMenu, setShowOverflowMenu,
     overflowMenuPosition, setOverflowMenuPosition,
+    treeContextMenu, setTreeContextMenu,
     treeContextMenuRef,
     showTerminalContextMenu, hideTerminalContextMenu,
     showOverflowMenuAt, hideOverflowMenu,
@@ -4583,11 +4585,14 @@ const App = () => {
         />
 
         {/* Menú contextual del árbol de la sidebar */}
-        <ContextMenu
-          model={isGeneralTreeMenu ? getGeneralTreeContextMenuItems() : getTreeContextMenuItems(selectedNode)}
-          ref={treeContextMenuRef}
-          breakpoint="600px"
-          style={{ zIndex: 99999 }}
+        <TreeContextMenu
+          treeContextMenu={treeContextMenu}
+          onClose={hideContextMenu}
+          items={
+            treeContextMenu?.isGeneral
+              ? getGeneralTreeContextMenuItems()
+              : getTreeContextMenuItems(treeContextMenu?.node || selectedNode)
+          }
         />
         <MainContentArea
           settingsTabProps={settingsTabProps}
@@ -4674,13 +4679,6 @@ const App = () => {
           // Theme props
           isHomeTabActive={isHomeTabActive}
           localTerminalBg={localTerminalBg}
-
-          // Tree context menu
-          isGeneralTreeMenu={isGeneralTreeMenu}
-          getGeneralTreeContextMenuItems={getGeneralTreeContextMenuItems}
-          getTreeContextMenuItems={getTreeContextMenuItems}
-          selectedNode={selectedNode}
-          treeContextMenuRef={treeContextMenuRef}
 
           // Active sessions info
           activeIds={activeIds}

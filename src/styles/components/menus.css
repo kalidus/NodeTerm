@@ -184,6 +184,7 @@
   box-shadow: 0 4px 12px var(--ui-context-shadow) !important;
   border-radius: var(--ui-radius-md, 8px) !important;
   padding: var(--ui-space-1, 4px) 0 !important;
+  z-index: 99999 !important;
 }
 
 /* OverlayPanel / Menu Prime: misma superficie */
@@ -293,7 +294,8 @@
   letter-spacing: 0.03em;
 }
 
-/* Custom Terminal / Tab Context Menu */
+/* Custom Terminal / Tab / Tree Context Menu */
+.tree-context-menu,
 .terminal-context-menu,
 .tab-context-menu {
   background: var(--ui-context-bg) !important;
@@ -304,6 +306,7 @@
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
+.tree-context-menu .tree-menu-item,
 .terminal-context-menu .menu-item,
 .tab-context-menu .menu-item,
 .app-menu-surface .menu-item,
@@ -312,11 +315,16 @@
   color: var(--ui-context-text) !important;
 }
 
+.tree-context-menu .tree-menu-item:hover:not([style*="not-allowed"]),
 .terminal-context-menu .menu-item:hover,
 .tab-context-menu .menu-item:hover,
 .app-menu-surface .menu-item:hover,
 .app-menu-surface .menu-item-unified:hover {
   background-color: var(--ui-context-hover) !important;
+}
+
+.tree-context-menu .tree-menu-item.p-menuitem-danger:hover:not([style*="not-allowed"]) {
+  background-color: rgba(239, 68, 68, 0.15) !important;
 }
 
 .terminal-context-menu .menu-separator,
