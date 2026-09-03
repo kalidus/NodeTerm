@@ -130,7 +130,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
 
   const [connectionState, setConnectionState] = useState('connecting'); // connecting, connected, error, disconnected
   const [errorMessage, setErrorMessage] = useState('');
-  const [isToolbarPinned, setIsToolbarPinned] = useState(true);
+  const [isToolbarPinned, setIsToolbarPinned] = useState(false);
   const [isToolbarHovered, setIsToolbarHovered] = useState(false);
   const [showClipboardDialog, setShowClipboardDialog] = useState(false);
   const [clipboardText, setClipboardText] = useState('');
