@@ -158,6 +158,36 @@ function registerRdpHandlers(dependencies) {
         }
       }
 
+      // Si el preflight falló por un error de red a nivel de socket/TCP (puerto cerrado, host no existe, timeout),
+      // abortar inmediatamente con un mensaje claro en vez de dejar que WASM falle con "read RDCleanPath request: not enough bytes".
+      if (nego && !nego.ok && nego.errorCode) {
+        const code = nego.errorCode;
+        if (code === 'ECONNREFUSED') {
+          return {
+            success: false,
+            error: `Conexión rechazada por ${host}:${port} (ECONNREFUSED). Comprueba que la dirección IP sea correcta y que el servicio RDP esté activo escuchando en el puerto ${port}.`
+          };
+        }
+        if (code === 'ENOTFOUND') {
+          return {
+            success: false,
+            error: `No se pudo resolver el host "${host}" (ENOTFOUND). Verifica el nombre o dirección del servidor.`
+          };
+        }
+        if (code === 'ETIMEDOUT') {
+          return {
+            success: false,
+            error: `Tiempo de espera agotado al conectar con ${host}:${port} (ETIMEDOUT). Verifica la dirección IP y las reglas de cortafuegos/VPN.`
+          };
+        }
+        if (code === 'EHOSTUNREACH' || code === 'ENETUNREACH') {
+          return {
+            success: false,
+            error: `Host o red no alcanzable (${code}) al conectar con ${host}:${port}. Verifica tu conexión de red o si necesitas conectar una VPN.`
+          };
+        }
+      }
+
       const sessionInfo = rdpNativeBridgeService.createSessionToken(config);
       if (process.env.NODETERM_RDP_DEBUG === '1') {
         console.log('🚀 [RDP Native Bridge] Token creado para RDP Web Nativo (Sin guacd/WSL):', sessionInfo.tokenId);

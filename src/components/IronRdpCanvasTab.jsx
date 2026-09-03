@@ -58,6 +58,10 @@ const extractErrorMessage = (err) => {
     }
   }
 
+  if (msg.includes('read RDCleanPath request') || (msg.includes('not enough bytes') && msg.includes('RDCleanPath'))) {
+    return `La conexión RDP se cerró prematuramente durante el saludo inicial (${msg}). Verifica que la IP/puerto del servidor sea correcta y que el equipo esté encendido y accesible desde esta red.`;
+  }
+
   if (msg.includes('not enough bytes') || msg.includes('read frame by hint')) {
     return `Fallo al decodificar PDU RDP (${msg}). Si acabas de cambiar el bridge, reinicia npm run dev. Alternativa: Seguridad=TLS o Guacamole/MSTSC.`;
   }
