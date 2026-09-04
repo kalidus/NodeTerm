@@ -114,10 +114,18 @@ export function applyAppTypography({
     : (sidebarFontSize != null && sidebarFontSize !== '' ? sidebarFontSize : explorerFontSize);
 
   if (effectiveSize != null && effectiveSize !== '') {
-    root.style.setProperty('--ui-font-size', `${effectiveSize}px`);
-    root.style.setProperty('--sidebar-font-size', `${effectiveSize}px`);
-    root.style.setProperty('--explorer-font-size', `${effectiveSize}px`);
-    root.style.setProperty('--home-tab-font-size', `${effectiveSize}px`);
+    const numericSize = typeof effectiveSize === 'number' ? effectiveSize : parseFloat(effectiveSize);
+    if (!isNaN(numericSize) && numericSize > 0) {
+      root.style.setProperty('--ui-font-size', `${numericSize}px`);
+      root.style.setProperty('--sidebar-font-size', `${numericSize}px`);
+      root.style.setProperty('--explorer-font-size', `${numericSize}px`);
+      root.style.setProperty('--home-tab-font-size', `${numericSize}px`);
+      // Dynamic rem scaling: ensures 0.875rem (the UI base label font size) calculates exactly to numericSize px.
+      // Base ratio: 14px UI font size corresponds to standard 16px browser root (16/14 = 1.142857).
+      root.style.setProperty('font-size', `${(numericSize * (16 / 14)).toFixed(3)}px`);
+    }
+  } else {
+    root.style.removeProperty('font-size');
   }
 }
 

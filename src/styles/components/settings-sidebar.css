@@ -28,9 +28,9 @@
 
 /* Sidebar vertical */
 .settings-sidebar {
-  width: 240px !important;
-  min-width: 240px !important;
-  max-width: 240px !important;
+  width: clamp(240px, calc(var(--ui-font-size, 14px) * 17.5), 320px) !important;
+  min-width: clamp(240px, calc(var(--ui-font-size, 14px) * 17.5), 320px) !important;
+  max-width: clamp(240px, calc(var(--ui-font-size, 14px) * 17.5), 320px) !important;
   height: 100% !important;
   background: var(--ui-content-bg) !important;
   border-right: 1px solid var(--ui-dialog-border) !important;

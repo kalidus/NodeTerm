@@ -106,6 +106,41 @@ body .p-checkbox .p-checkbox-box[style*="background"] {
   font-family: var(--ui-font-family, inherit) !important;
 }
 
+/* En el diálogo de configuración y sus vistas, asegurar escala de tamaño de fuente */
+.settings-dialog,
+.p-dialog.settings-dialog,
+.settings-dialog-vertical,
+.settings-content-wrapper,
+.general-settings-container,
+.security-settings-container,
+.terminal-settings-container,
+.statusbar-settings-container {
+  font-family: var(--ui-font-family, inherit) !important;
+  font-size: var(--ui-font-size, 14px);
+}
+
+.settings-dialog .p-inputtext,
+.settings-dialog .p-dropdown,
+.settings-dialog .p-button:not(.p-button-icon-only),
+.settings-dialog .p-dropdown-label,
+.settings-dialog .p-dropdown-panel,
+.settings-dialog .p-dropdown-item,
+.settings-dialog .p-inputnumber-input,
+.settings-dialog .p-password input,
+.settings-dialog .p-multiselect,
+.settings-dialog .p-multiselect-label {
+  font-size: var(--ui-font-size, 14px) !important;
+  font-family: var(--ui-font-family, inherit) !important;
+}
+
+.settings-dialog .p-button.p-button-sm {
+  font-size: calc(var(--ui-font-size, 14px) * 0.875) !important;
+}
+
+.settings-dialog .p-checkbox-label {
+  font-size: var(--ui-font-size, 14px) !important;
+}
+
 /* Asegurar que los iconos de PrimeIcons conserven SIEMPRE su propia fuente */
 .pi,
 .pi:before,

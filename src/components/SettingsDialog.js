@@ -5637,8 +5637,8 @@ const SettingsContent = ({
 
                   <Card style={{ background: 'var(--ui-dialog-bg, rgba(30,30,30,0.5))', border: '1px solid var(--ui-dialog-border, rgba(255,255,255,0.08))', borderRadius: '12px' }}>
                     <div style={{ marginBottom: '20px', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', paddingBottom: '15px' }}>
-                      <h4 style={{ margin: '0 0 5px 0', fontSize: '15px', fontWeight: '700', color: 'var(--text-color)' }}>Asistente Unificado de Importación y Exportación</h4>
-                      <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--text-color-secondary)' }}>
+                      <h4 style={{ margin: '0 0 5px 0', fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-color)' }}>Asistente Unificado de Importación y Exportación</h4>
+                      <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-color-secondary)' }}>
                         Crea copias de seguridad de tus datos, restaura archivos locales o importa sesiones y contraseñas de otras aplicaciones con un único flujo guiado.
                       </p>
                     </div>

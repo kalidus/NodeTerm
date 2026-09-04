@@ -7,6 +7,10 @@
   --home-tab-font-family: var(--ui-font-family);
 }
 
+html {
+  font-size: calc(var(--ui-font-size, 14px) * 1.142857);
+}
+
 html, body, #root {
   height: 100% !important;
   min-height: 0 !important;
@@ -19,6 +23,7 @@ html, body, #root {
   box-sizing: border-box !important;
   overflow: hidden !important;
   font-family: var(--ui-font-family) !important;
+  font-size: var(--ui-font-size, 14px);
 }
 
 #root {
