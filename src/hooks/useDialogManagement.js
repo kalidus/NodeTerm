@@ -118,7 +118,7 @@ export const useDialogManagement = () => {
   const [fileConnectionProtocol, setFileConnectionProtocol] = useState('sftp');
   const [fileConnectionRemoteFolder, setFileConnectionRemoteFolder] = useState('');
   const [fileConnectionTargetFolder, setFileConnectionTargetFolder] = useState('');
-  const [rdpClientType, setRdpClientType] = useState('guacamole');
+  const [rdpClientType, setRdpClientType] = useState('web-rdp');
   const [rdpGuacSecurity, setRdpGuacSecurity] = useState('any');
   const [rdpTargetFolder, setRdpTargetFolder] = useState(null);
   const [rdpNodeData, setRdpNodeData] = useState(null);
@@ -171,7 +171,7 @@ export const useDialogManagement = () => {
     setRdpUsername('');
     setRdpPassword('');
     setRdpPort(3389);
-    setRdpClientType('guacamole');
+    setRdpClientType('web-rdp');
     setRdpGuacSecurity('any');
     setRdpTargetFolder(null);
   };

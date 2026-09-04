@@ -156,7 +156,7 @@
       "sharedFolder": "Esta carpeta estará disponible como una unidad de red dentro de la sesión RDP."
     },
     "clientTypes": {
-      "web-rdp": "RDP Web Nativo (Recomendado)",
+      "web-rdp": "RDP Nativo (IronRDP - Recomendado)",
       "mstsc": "Escritorio Remoto (MSTSC)",
       "guacamole": "Apache Guacamole (Túnel Docker/WSL)"
     },

@@ -489,7 +489,7 @@ class ImportService {
         redirectPrinters: conn.redirectPrinters === 'true',
         redirectSmartCards: conn.redirectSmartCards === 'true',
         description: conn.description,
-        clientType: 'guacamole',
+        clientType: 'web-rdp',
         // Activar ajuste automático por defecto para evitar reconexiones
         autoResize: true,
         // Activar mostrar fondo por defecto

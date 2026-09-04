@@ -306,7 +306,7 @@ export function EnhancedRDPForm({
         icon: 'pi-sliders-h'
       });
     }
-    if (formData.clientType === 'guacamole' && formData.guacEnableDrive) {
+    if ((formData.clientType === 'guacamole' || formData.clientType === 'web-rdp') && formData.guacEnableDrive) {
       tabs.push({
         id: 'sharedFolder',
         label: t('rdp.fields.sharedFolder'),
@@ -956,22 +956,31 @@ export function EnhancedRDPForm({
                 )}
               </div>
 
-              {/* Cliente (MSTSC vs Guacamole) */}
+              {/* Cliente (IronRDP vs MSTSC vs Guacamole) */}
               <div 
                 className="hud-badge-pill active"
                 onClick={() => {
-                  const nextClient = formData.clientType === 'mstsc' ? 'guacamole' : 'mstsc';
+                  const clientCycle = ['web-rdp', 'mstsc', 'guacamole'];
+                  const currentIndex = clientCycle.indexOf(formData.clientType);
+                  const nextClient = clientCycle[(currentIndex + 1) % clientCycle.length];
                   handleInputChange('clientType', nextClient);
-                  setStatusMessage(`Cambiado cliente RDP a: ${nextClient === 'mstsc' ? 'Escritorio Nativo (MSTSC)' : 'Escritorio Web (Guacamole)'}`);
+                  const clientNames = {
+                    'web-rdp': 'RDP Nativo (IronRDP)',
+                    'mstsc': 'Escritorio Nativo (MSTSC)',
+                    'guacamole': 'Escritorio Web (Guacamole)'
+                  };
+                  setStatusMessage(`Cambiado cliente RDP a: ${clientNames[nextClient] || nextClient}`);
                 }}
               >
-                <i className="pi pi-desktop hud-badge-icon"></i>
+                <i className={`pi ${formData.clientType === 'web-rdp' ? 'pi-globe' : formData.clientType === 'mstsc' ? 'pi-desktop' : 'pi-server'} hud-badge-icon`}></i>
                 <span className="hud-badge-label">Cliente:</span>
-                <span className="hud-badge-value">{formData.clientType === 'mstsc' ? 'MSTSC' : 'Guacamole'}</span>
+                <span className="hud-badge-value">
+                  {formData.clientType === 'web-rdp' ? 'IronRDP' : (formData.clientType === 'mstsc' ? 'MSTSC' : 'Guacamole')}
+                </span>
               </div>
 
-              {/* Seguridad RDP (solo Guacamole) */}
-              {formData.clientType === 'guacamole' && (
+              {/* Seguridad RDP (IronRDP y Guacamole) */}
+              {(formData.clientType === 'guacamole' || formData.clientType === 'web-rdp') && (
                 <div className="hud-badge-pill">
                   <i className="pi pi-shield hud-badge-icon"></i>
                   <span className="hud-badge-label">Seguridad:</span>
@@ -980,7 +989,7 @@ export function EnhancedRDPForm({
                     options={guacSecurityOptions}
                     onChange={(e) => {
                       handleInputChange('guacSecurity', e.value);
-                      setStatusMessage(`Seguridad de Guacamole cambiada.`);
+                      setStatusMessage(`Seguridad RDP cambiada.`);
                     }}
                     placeholder="Seleccionar..."
                     className="hud-dropdown-inline"
@@ -1120,7 +1129,7 @@ export function EnhancedRDPForm({
               </div>
 
               {/* Opciones específicas según Cliente */}
-              {formData.clientType === 'guacamole' ? (
+              {formData.clientType === 'guacamole' || formData.clientType === 'web-rdp' ? (
                 <>
                   {/* Habilitar Disco Virtual */}
                   <div 
@@ -1206,8 +1215,8 @@ export function EnhancedRDPForm({
             </div>
           </div>
 
-          {/* Grupo 4: Carpeta Compartida RDP (solo Guacamole y si está activado) */}
-          {formData.clientType === 'guacamole' && formData.guacEnableDrive && (
+          {/* Grupo 4: Carpeta Compartida RDP (IronRDP / Guacamole y si está activado) */}
+          {(formData.clientType === 'guacamole' || formData.clientType === 'web-rdp') && formData.guacEnableDrive && (
             <div style={{ marginBottom: '1.5rem' }}>
               <h4 style={{ margin: '0 0 0.75rem 0.25rem', fontSize: '0.8rem', fontWeight: 700, color: 'var(--ui-button-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 📁 Carpeta Compartida (Disco Virtual)

@@ -1291,7 +1291,7 @@ export const useFormHandlers = ({
     setRdpUsername('');
     setRdpPassword('');
     setRdpPort(3389);
-    setRdpClientType('mstsc');
+    setRdpClientType('web-rdp');
   }, [setShowRdpDialog, setRdpTargetFolder, setRdpName, setRdpServer, setRdpUsername, setRdpPassword, setRdpPort, setRdpClientType]);
 
   /**
@@ -1328,7 +1328,7 @@ export const useFormHandlers = ({
             username: rdpData.username,
             password: rdpData.password,
             port: rdpData.port || 3389,
-            clientType: rdpData.clientType || 'guacamole',
+            clientType: rdpData.clientType || 'web-rdp',
             preset: rdpData.preset || 'default',
             resolution: rdpData.resolution || '1920x1080',
             colorDepth: rdpData.colorDepth || 32,
@@ -1382,7 +1382,7 @@ export const useFormHandlers = ({
           username: rdpData.username,
           password: rdpData.password,
           port: rdpData.port || 3389,
-          clientType: rdpData.clientType || 'guacamole',
+          clientType: rdpData.clientType || 'web-rdp',
           preset: rdpData.preset || 'default',
           resolution: rdpData.resolution || '1920x1080',
           colorDepth: rdpData.colorDepth || 32,
@@ -1444,7 +1444,7 @@ export const useFormHandlers = ({
                 domain: rdpData.domain,
                 password: rdpData.password,
                 port: rdpData.port || 3389,
-                clientType: rdpData.clientType || 'guacamole',
+                clientType: rdpData.clientType || 'web-rdp',
                 preset: rdpData.preset || 'default',
                 resolution: rdpData.resolution || '1920x1080',
                 colorDepth: rdpData.colorDepth || 32,

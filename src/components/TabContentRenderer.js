@@ -1282,7 +1282,7 @@ const TabContentRendererInner = React.memo(({
                 username: connection.username,
                 password: connection.password,
                 port: connection.port || 3389,
-                clientType: 'guacamole'
+                clientType: connection.clientType || 'web-rdp'
               }
             };
             openEditRdpDialog(tempNode);

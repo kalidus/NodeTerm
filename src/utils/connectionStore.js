@@ -122,7 +122,7 @@ function toSerializable(connection) {
     password: connection.password || '',
     privateKey: connection.privateKey || '',
     authMethod: connection.authMethod || undefined,
-    clientType: connection.clientType || (type === 'rdp-guacamole' || type === 'vnc-guacamole' ? 'web-rdp' : 'native'),
+    clientType: connection.clientType || (type === 'rdp-guacamole' ? 'web-rdp' : (type === 'vnc-guacamole' ? 'guacamole' : 'native')),
     // Campos adicionales para RDP
     domain: connection.domain || '',
     resolution: connection.resolution || '1024x768',

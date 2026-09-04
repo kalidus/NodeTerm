@@ -45,7 +45,7 @@ export const countConnections = (nodes, rdpTabs = []) => {
             // Heurística para RDP no tipados (compatibilidad)
             const hasServer = (data.server || data.hostname || data.host);
             const maybeRdpPort = (data.port && Number(data.port) === 3389);
-            const isGuac = (data.clientType === 'guacamole');
+            const isGuac = (data.clientType === 'guacamole' || data.clientType === 'web-rdp');
             const nameLooksRdp = typeof data.name === 'string' && /rdp|windows|server|desktop|win/i.test(data.name);
 
             if (((hasServer && (maybeRdpPort || isGuac)) || nameLooksRdp) && type !== 'ssh') {
