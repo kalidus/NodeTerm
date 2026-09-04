@@ -130,24 +130,32 @@
 .theme-hero-info {
   flex: 1;
   display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.25rem;
   min-width: 0;
-  position: relative;
+  flex-wrap: wrap;
+}
+
+.theme-hero-text {
+  flex: 1;
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 /* ========================================
    PANEL DE OPCIONES (DERECHA) - COMPACTO
    ======================================== */
 .theme-options-wrapper {
-  position: absolute;
-  top: 0;
-  right: 0;
   display: flex;
   flex-direction: row;
   align-items: flex-start;
   gap: 0.625rem;
-  z-index: 1;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .theme-options-col {
@@ -158,8 +166,8 @@
 
 /* Card de Tipografía con ancho óptimo para precisión */
 .theme-typography-card {
-  min-width: 240px;
-  width: 240px;
+  min-width: 235px;
+  width: 235px;
 }
 
 /* Fila de cabecera de tamaño: etiqueta y stepper pill */
@@ -262,7 +270,7 @@
 /* Contenedor del Slider a 100% de ancho para máximo recorrido físico */
 .theme-size-track-container {
   width: 100%;
-  padding: 0.35rem 0.25rem 0.4rem;
+  padding: 0.2rem 0.25rem 0.25rem;
   box-sizing: border-box;
 }
 
@@ -305,8 +313,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.25rem;
-  padding: 0.15rem 0.25rem;
+  gap: 0.2rem;
+  padding: 0.1rem 0.25rem 0.15rem;
   width: 100%;
   box-sizing: border-box;
 }
@@ -1234,7 +1242,21 @@
   }
 
   .theme-hero-info {
+    width: 100%;
+    flex-direction: column;
     align-items: center;
+    gap: 1rem;
+  }
+
+  .theme-hero-text {
+    align-items: center;
+    text-align: center;
+  }
+
+  .theme-options-wrapper {
+    margin-left: 0;
+    justify-content: center;
+    flex-wrap: wrap;
   }
 
   .theme-explore-header {

@@ -509,29 +509,55 @@ const ThemeSelector = ({ showPreview = false }) => {
           <HeroPreview theme={activeTheme} />
 
           <div className="theme-hero-info">
+            <div className="theme-hero-text">
+              <div className="theme-hero-badge">
+                <i className="pi pi-check"></i>
+                Tema Activo
+              </div>
+
+              <h2 className="theme-hero-name">{activeTheme.name}</h2>
+
+              <p className="theme-hero-description">
+                {THEME_DESCRIPTIONS[activeTheme.name] || THEME_DESCRIPTIONS['default']}
+              </p>
+
+              <div className="theme-hero-palette">
+                <span className="theme-hero-palette-label">Paleta:</span>
+                <div className="theme-hero-palette-colors">
+                  {[
+                    activeTheme.colors.sidebarBackground,
+                    activeTheme.colors.contentBackground,
+                    activeTheme.colors.buttonPrimary,
+                    activeTheme.colors.tabActiveBackground,
+                    activeTheme.colors.statusBarBackground,
+                    activeTheme.colors.menuBarBackground
+                  ].map((color, index) => (
+                    <div
+                      key={index}
+                      className="theme-hero-palette-dot"
+                      style={{ backgroundColor: color }}
+                      title={color}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
             {/* Panel de opciones en el hero banner (2 columnas) */}
             <div className="theme-options-wrapper">
-              {/* Columna Izquierda: Tipografía (espacio amplio del hero) */}
+              {/* Columna Izquierda: Tipografía */}
               <div className="theme-options-col">
                 <div className="theme-anim-card theme-typography-card">
                   <div className="theme-anim-card-header">
                     <span className="theme-anim-card-title">🔤 Tipografía</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                      <button
-                        type="button"
-                        className="theme-size-reset-btn"
-                        onClick={handleResetUiFontSize}
-                        title="Restablecer tamaño por defecto (14px)"
-                      >
-                        <i className="pi pi-refresh" style={{ fontSize: '0.625rem' }}></i>
-                      </button>
-                      <span
-                        className="theme-anim-card-badge"
-                        title="Tamaño actual de la fuente de la interfaz"
-                      >
-                        {Number(uiFontSize || 14).toFixed(uiFontSize % 1 === 0 ? 0 : 1)} px
-                      </span>
-                    </div>
+                    <button
+                      type="button"
+                      className="theme-size-reset-btn"
+                      onClick={handleResetUiFontSize}
+                      title="Restablecer tamaño por defecto (14px)"
+                    >
+                      <i className="pi pi-refresh" style={{ fontSize: '0.625rem' }}></i>
+                    </button>
                   </div>
                   <div className="theme-anim-card-options">
                     {/* Selector de Fuente */}
@@ -635,17 +661,6 @@ const ThemeSelector = ({ showPreview = false }) => {
                             {preset.label}
                           </button>
                         ))}
-                      </div>
-
-                      {/* Vista previa en vivo in-situ */}
-                      <div
-                        className="theme-typography-preview"
-                        style={{ fontFamily: buildAppFontStack(uiFont) }}
-                        title={`Vista previa con ${uiFont} a ${uiFontSize}px`}
-                      >
-                        <span style={{ fontSize: `${Math.min(Math.max(uiFontSize || 14, 8), 16)}px` }}>
-                          AaBb 123 • NodeTerm
-                        </span>
                       </div>
                     </div>
                   </div>
@@ -824,37 +839,6 @@ const ThemeSelector = ({ showPreview = false }) => {
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-            <div className="theme-hero-badge">
-              <i className="pi pi-check"></i>
-              Tema Activo
-            </div>
-
-            <h2 className="theme-hero-name">{activeTheme.name}</h2>
-
-            <p className="theme-hero-description">
-              {THEME_DESCRIPTIONS[activeTheme.name] || THEME_DESCRIPTIONS['default']}
-            </p>
-
-            <div className="theme-hero-palette">
-              <span className="theme-hero-palette-label">Paleta:</span>
-              <div className="theme-hero-palette-colors">
-                {[
-                  activeTheme.colors.sidebarBackground,
-                  activeTheme.colors.contentBackground,
-                  activeTheme.colors.buttonPrimary,
-                  activeTheme.colors.tabActiveBackground,
-                  activeTheme.colors.statusBarBackground,
-                  activeTheme.colors.menuBarBackground
-                ].map((color, index) => (
-                  <div
-                    key={index}
-                    className="theme-hero-palette-dot"
-                    style={{ backgroundColor: color }}
-                    title={color}
-                  />
-                ))}
               </div>
             </div>
           </div>
