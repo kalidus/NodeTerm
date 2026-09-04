@@ -134,7 +134,7 @@ body .p-checkbox .p-checkbox-box[style*="background"] {
 }
 
 .settings-dialog .p-button.p-button-sm {
-  font-size: calc(var(--ui-font-size, 14px) * 0.875) !important;
+  font-size: calc(var(--ui-font-size, 14px) - 2px) !important;
 }
 
 .settings-dialog .p-checkbox-label {

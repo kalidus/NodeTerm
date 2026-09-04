@@ -156,53 +156,165 @@
   gap: 0.5rem;
 }
 
-/* Slider de tamaño de tipografía en ThemeSelector */
-.theme-font-size-range {
-  -webkit-appearance: none;
-  appearance: none;
+/* Card de Tipografía con ancho óptimo para precisión */
+.theme-typography-card {
+  min-width: 235px;
+  width: 235px;
+}
+
+/* Fila del Slider con botones de precisión - y + */
+.theme-size-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
   width: 100%;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 2px;
-  outline: none;
+  padding: 0.15rem 0.25rem 0.25rem;
+  box-sizing: border-box;
+}
+
+.theme-size-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--ui-dialog-border);
+  color: var(--ui-dialog-text);
+  border-radius: 4px;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
   cursor: pointer;
-  margin: 0.25rem 0;
-  transition: background 0.15s ease;
+  padding: 0;
+  line-height: 1;
+  transition: all 0.15s ease;
+  user-select: none;
 }
 
-.theme-font-size-range:hover {
-  background: rgba(255, 255, 255, 0.25);
+.theme-size-btn:hover:not(:disabled) {
+  background: var(--ui-button-primary);
+  color: var(--ui-button-primary-text, #fff);
+  border-color: var(--ui-button-primary);
+  transform: scale(1.05);
 }
 
-.theme-font-size-range::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 12px;
-  height: 12px;
-  background: var(--ui-button-primary, #6366f1);
-  border-radius: 50%;
-  cursor: pointer;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  transition: transform 0.1s ease;
+.theme-size-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
-.theme-font-size-range::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
-}
-
-.theme-font-size-range::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
-  background: var(--ui-button-primary, #6366f1);
-  border-radius: 50%;
-  cursor: pointer;
+.theme-size-reset-btn {
+  background: transparent;
   border: none;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  transition: transform 0.1s ease;
+  color: var(--ui-dialog-text);
+  opacity: 0.6;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
 }
 
-.theme-font-size-range::-moz-range-thumb:hover {
-  transform: scale(1.2);
+.theme-size-reset-btn:hover {
+  opacity: 1;
+  color: var(--ui-button-primary);
+  transform: rotate(-45deg);
+}
+
+/* PrimeReact Slider dentro de la fila de tamaño */
+.theme-size-slider-row .p-slider {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-radius: 2px;
+  border: none;
+  cursor: pointer;
+}
+
+.theme-size-slider-row .p-slider .p-slider-range {
+  background: var(--ui-button-primary) !important;
+  border-radius: 2px;
+}
+
+.theme-size-slider-row .p-slider .p-slider-handle {
+  width: 12px;
+  height: 12px;
+  background: var(--ui-button-primary) !important;
+  border: 2px solid #ffffff !important;
+  border-radius: 50% !important;
+  margin-top: -4px;
+  margin-left: -6px;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  cursor: grab;
+}
+
+.theme-size-slider-row .p-slider .p-slider-handle:hover,
+.theme-size-slider-row .p-slider .p-slider-handle:focus {
+  transform: scale(1.25);
+  box-shadow: 0 0 0 3px rgba(var(--ui-button-primary-rgb, 99, 102, 241), 0.3);
+  outline: none;
+}
+
+/* Presets rápidos de densidad */
+.theme-size-presets {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem;
+  padding: 0.15rem 0.25rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.theme-size-chip {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--ui-dialog-border);
+  color: var(--ui-dialog-text);
+  border-radius: 3px;
+  padding: 0.15rem 0.1rem;
+  font-size: 0.5625rem;
+  font-weight: 500;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  opacity: 0.75;
+  user-select: none;
+}
+
+.theme-size-chip:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--ui-button-primary);
+}
+
+.theme-size-chip.active {
+  background: var(--ui-button-primary) !important;
+  color: var(--ui-button-primary-text, #ffffff) !important;
+  border-color: var(--ui-button-primary) !important;
+  opacity: 1;
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+/* Vista previa in-situ */
+.theme-typography-preview {
+  margin-top: 0.2rem;
+  padding: 0.25rem 0.375rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--ui-dialog-text);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+  line-height: 1.3;
 }
 
 /* Card de Animaciones */

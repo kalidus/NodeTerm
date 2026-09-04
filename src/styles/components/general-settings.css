@@ -10,11 +10,11 @@
   --general-glass-bg: rgba(255, 255, 255, 0.08);
   --general-glass-border: rgba(255, 255, 255, 0.15);
   
-  /* Tamaños de fuente legibles y profesionales vinculados dinámicamente a --ui-font-size */
-  --settings-font-title: calc(var(--ui-font-size, 14px) * 1.1428);          /* ~16px en base 14px */
+  /* Tamaños de fuente legibles y profesionales con offsets enteros limpios para máxima nitidez */
+  --settings-font-title: calc(var(--ui-font-size, 14px) + 2px);             /* 16px en base 14px */
   --settings-font-label: var(--ui-font-size, 14px);                         /* 14px en base 14px */
-  --settings-font-description: calc(var(--ui-font-size, 14px) * 0.9285);    /* ~13px en base 14px */
-  --settings-font-mini: calc(var(--ui-font-size, 14px) * 0.8571);           /* ~12px en base 14px */
+  --settings-font-description: calc(var(--ui-font-size, 14px) - 1px);       /* 13px en base 14px */
+  --settings-font-mini: calc(var(--ui-font-size, 14px) - 2px);              /* 12px en base 14px */
   --settings-font-input: var(--ui-font-size, 14px);                         /* 14px en base 14px */
   
   /* Espaciado adecuado */

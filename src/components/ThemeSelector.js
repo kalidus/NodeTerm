@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import { Slider } from 'primereact/slider';
 import {
   themeManager,
   getTitlebarColorConfig,
@@ -115,8 +116,9 @@ const ThemeSelector = ({ showPreview = false }) => {
   }, [uiFontSize]);
 
   const handleUiFontSizeChange = useCallback((newSize) => {
-    const numSize = parseInt(newSize, 10);
-    if (isNaN(numSize)) return;
+    const rawNum = parseInt(newSize, 10);
+    if (isNaN(rawNum)) return;
+    const numSize = Math.max(8, Math.min(32, rawNum));
     setUiFontSize(numSize);
     try {
       localStorage.setItem('uiFontSize', numSize.toString());
@@ -135,6 +137,10 @@ const ThemeSelector = ({ showPreview = false }) => {
       window.dispatchEvent(new Event('settings-updated'));
     } catch { }
   }, [uiFont]);
+
+  const handleResetUiFontSize = useCallback(() => {
+    handleUiFontSizeChange(14);
+  }, [handleUiFontSizeChange]);
 
   useEffect(() => {
     const handleFontSync = (e) => {
@@ -497,12 +503,22 @@ const ThemeSelector = ({ showPreview = false }) => {
                 <div className="theme-anim-card theme-typography-card">
                   <div className="theme-anim-card-header">
                     <span className="theme-anim-card-title">🔤 Tipografía</span>
-                    <span
-                      className="theme-anim-card-badge"
-                      title="Tamaño de la fuente de la interfaz"
-                    >
-                      {uiFontSize} px
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                      <button
+                        type="button"
+                        className="theme-size-reset-btn"
+                        onClick={handleResetUiFontSize}
+                        title="Restablecer tamaño por defecto (14px)"
+                      >
+                        <i className="pi pi-refresh" style={{ fontSize: '0.625rem' }}></i>
+                      </button>
+                      <span
+                        className="theme-anim-card-badge"
+                        title="Tamaño actual de la fuente de la interfaz"
+                      >
+                        {uiFontSize} px
+                      </span>
+                    </div>
                   </div>
                   <div className="theme-anim-card-options">
                     {/* Selector de Fuente */}
@@ -539,7 +555,7 @@ const ThemeSelector = ({ showPreview = false }) => {
                       </div>
                     </div>
 
-                    {/* Selector de Tamaño */}
+                    {/* Selector de Tamaño con Stepper y Slider PrimeReact */}
                     <div className="theme-anim-speed-wrapper" style={{ marginTop: '0.125rem' }}>
                       <span style={{
                         fontSize: '0.6875rem',
@@ -554,7 +570,7 @@ const ThemeSelector = ({ showPreview = false }) => {
                       }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                           <i className="pi pi-sliders-h" style={{ fontSize: '0.6875rem', opacity: 0.7, width: '0.6875rem', display: 'inline-flex', justifyContent: 'center', flexShrink: 0 }}></i>
-                          Tamaño
+                          Tamaño (8 - 32px)
                         </span>
                         <span style={{
                           fontSize: '0.6875rem',
@@ -564,20 +580,67 @@ const ThemeSelector = ({ showPreview = false }) => {
                           {uiFontSize} px
                         </span>
                       </span>
-                      <div
-                        className="theme-anim-speed"
-                        title="Controla el tamaño de la fuente de la interfaz"
-                        style={{ padding: '0.125rem 0.375rem 0.25rem 0.375rem' }}
-                      >
-                        <input
-                          type="range"
-                          min="10"
-                          max="22"
-                          step="1"
-                          value={uiFontSize}
-                          onChange={(e) => handleUiFontSizeChange(e.target.value)}
-                          className="theme-font-size-range"
+
+                      {/* Slider con botones de precisión - y + */}
+                      <div className="theme-size-slider-row" title="Ajusta el tamaño con precisión">
+                        <button
+                          type="button"
+                          className="theme-size-btn"
+                          onClick={() => handleUiFontSizeChange(Math.max(8, (uiFontSize || 14) - 1))}
+                          title="Disminuir 1px"
+                          disabled={uiFontSize <= 8}
+                        >
+                          −
+                        </button>
+                        <Slider
+                          value={uiFontSize || 14}
+                          onChange={(e) => handleUiFontSizeChange(e.value)}
+                          min={8}
+                          max={32}
+                          step={1}
+                          style={{ flex: 1 }}
                         />
+                        <button
+                          type="button"
+                          className="theme-size-btn"
+                          onClick={() => handleUiFontSizeChange(Math.min(32, (uiFontSize || 14) + 1))}
+                          title="Aumentar 1px"
+                          disabled={uiFontSize >= 32}
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      {/* Presets rápidos de densidad */}
+                      <div className="theme-size-presets">
+                        {[
+                          { size: 10, label: '10' },
+                          { size: 12, label: '12' },
+                          { size: 14, label: '14' },
+                          { size: 16, label: '16' },
+                          { size: 18, label: '18' }
+                        ].map(preset => (
+                          <button
+                            key={preset.size}
+                            type="button"
+                            className={`theme-size-chip ${uiFontSize === preset.size ? 'active' : ''}`}
+                            onClick={() => handleUiFontSizeChange(preset.size)}
+                            title={`Fijar a ${preset.size}px`}
+                          >
+                            {preset.label}px
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Vista previa en vivo in-situ */}
+                      <div
+                        className="theme-typography-preview"
+                        style={{ fontFamily: buildAppFontStack(uiFont) }}
+                        title={`Vista previa con ${uiFont} a ${uiFontSize}px`}
+                      >
+                        <span style={{ fontSize: `${Math.min(Math.max(uiFontSize || 14, 8), 16)}px` }}>
+                          AaBb 123 • NodeTerm
+                        </span>
                       </div>
                     </div>
                   </div>
