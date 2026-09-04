@@ -73,7 +73,7 @@
 /* Estilos para el menú personalizado de la aplicación (sidebar, etc.) */
 .app-context-menu,
 .app-submenu {
-  font-family: var(--font-family, 'Public Sans', Arial, sans-serif) !important;
+  font-family: var(--ui-font-family, var(--font-family, system-ui, sans-serif)) !important;
   color: var(--ui-text-primary) !important;
   background: var(--ui-sidebar-bg) !important;
   border: 1px solid var(--ui-sidebar-border) !important;

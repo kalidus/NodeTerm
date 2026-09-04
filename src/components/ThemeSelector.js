@@ -9,6 +9,14 @@ import {
   adjustColorBrightness,
 } from '../utils/themeManager';
 import { uiThemes, CLASSIC_UI_KEYS, FUTURISTIC_UI_KEYS, MODERN_UI_KEYS, ANIMATED_UI_KEYS, NATURE_UI_KEYS } from '../themes/ui-themes';
+import { Dropdown } from 'primereact/dropdown';
+import { explorerFonts } from '../themes';
+import {
+  buildAppFontStack,
+  applyAppTypography,
+  shouldLoadWebFont
+} from '../utils/sidebarFontStack';
+import { fontLoader } from '../utils/fontLoader';
 import '../styles/components/theme-selector.css';
 
 const ANIM_SPEED_KEY = 'nodeterm_ui_anim_speed';
@@ -66,6 +74,39 @@ const ThemeSelector = ({ showPreview = false }) => {
   const [reducedMotion, setReducedMotion] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [themesPerRow, setThemesPerRow] = useState(4);
+  const [uiFont, setUiFont] = useState(() => {
+    try {
+      return localStorage.getItem('uiFont') || localStorage.getItem('sidebarFont') || explorerFonts[0];
+    } catch {
+      return explorerFonts[0];
+    }
+  });
+
+  const handleUiFontChange = useCallback((newFont) => {
+    if (!newFont) return;
+    setUiFont(newFont);
+    try {
+      localStorage.setItem('uiFont', newFont);
+      localStorage.setItem('sidebarFont', newFont);
+      localStorage.setItem('explorerFont', newFont);
+      localStorage.setItem('homeTabFont', newFont);
+      applyAppTypography({ uiFont: newFont, sidebarFont: newFont, explorerFont: newFont });
+      window.dispatchEvent(new CustomEvent('ui-font-changed', { detail: { font: newFont } }));
+      window.dispatchEvent(new Event('settings-updated'));
+      if (shouldLoadWebFont(newFont)) {
+        fontLoader.loadGoogleFont(newFont, [400, 500, 600, 700]).catch(() => {});
+      }
+    } catch { }
+  }, []);
+
+  useEffect(() => {
+    const handleFontSync = (e) => {
+      const f = e.detail?.font || localStorage.getItem('uiFont') || localStorage.getItem('sidebarFont');
+      if (f) setUiFont(f);
+    };
+    window.addEventListener('ui-font-changed', handleFontSync);
+    return () => window.removeEventListener('ui-font-changed', handleFontSync);
+  }, []);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('ui_theme') || 'Light';
@@ -574,6 +615,40 @@ const ThemeSelector = ({ showPreview = false }) => {
                       </div>
                     )}
                   </div>
+                </div>
+              </div>
+
+              {/* Card de Tipografía de la Interfaz */}
+              <div className="theme-anim-card" style={{ marginTop: '0.25rem' }}>
+                <div className="theme-anim-card-header">
+                  <span className="theme-anim-card-title" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <i className="pi pi-pencil" style={{ fontSize: '0.75rem', color: 'var(--ui-button-primary)' }} />
+                    Tipografía Interfaz
+                  </span>
+                </div>
+                <div style={{ padding: '0.375rem 0.25rem' }}>
+                  <Dropdown
+                    id="theme-ui-font-dropdown"
+                    value={uiFont}
+                    options={explorerFonts.map(f => ({ label: f, value: f }))}
+                    onChange={(e) => handleUiFontChange(e.value)}
+                    placeholder="Seleccionar fuente"
+                    style={{
+                      width: '100%',
+                      height: '30px',
+                      fontSize: '0.75rem',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}
+                    panelStyle={{
+                      maxHeight: '300px'
+                    }}
+                    itemTemplate={(option) => (
+                      <span style={{ fontFamily: buildAppFontStack(option.value), fontSize: '0.8rem' }}>
+                        {option.label}
+                      </span>
+                    )}
+                  />
                 </div>
               </div>
             </div>

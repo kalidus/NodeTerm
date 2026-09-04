@@ -281,6 +281,8 @@ const DialogsManager = ({
   setExplorerFontSize,
   explorerColorTheme,
   setExplorerColorTheme,
+  uiFont,
+  setUiFont,
   sidebarFont,
   setSidebarFont,
   sidebarFontSize,
@@ -499,6 +501,8 @@ const DialogsManager = ({
             setExplorerFontSize={setExplorerFontSize}
             explorerColorTheme={explorerColorTheme}
             setExplorerColorTheme={setExplorerColorTheme}
+            uiFont={uiFont}
+            setUiFont={setUiFont}
             sidebarFont={sidebarFont}
             setSidebarFont={setSidebarFont}
             sidebarFontSize={sidebarFontSize}

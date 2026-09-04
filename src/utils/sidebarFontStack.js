@@ -41,22 +41,31 @@ const SYSTEM_OR_GENERIC_FONTS = new Set([
 ]);
 
 /**
+ * CSS font-family stack for whole application / UI typography.
+ * @param {string} fontFamily
+ * @returns {string}
+ */
+export function buildAppFontStack(fontFamily) {
+  if (!fontFamily || typeof fontFamily !== 'string') {
+    return 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+  }
+  const trimmed = fontFamily.trim();
+  if (!trimmed) {
+    return 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+  }
+  if (trimmed.includes(',')) {
+    return trimmed;
+  }
+  return `"${trimmed}", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`;
+}
+
+/**
  * CSS font-family stack for sidebar / explorer typography.
  * @param {string} fontFamily
  * @returns {string}
  */
 export function buildSidebarFontStack(fontFamily) {
-  if (!fontFamily || typeof fontFamily !== 'string') {
-    return 'system-ui, sans-serif';
-  }
-  const trimmed = fontFamily.trim();
-  if (!trimmed) {
-    return 'system-ui, sans-serif';
-  }
-  if (trimmed.includes(',')) {
-    return trimmed;
-  }
-  return `"${trimmed}", system-ui, sans-serif`;
+  return buildAppFontStack(fontFamily);
 }
 
 export function isBundledSidebarFont(fontFamily) {
@@ -65,7 +74,7 @@ export function isBundledSidebarFont(fontFamily) {
   return BUNDLED_FONT_FAMILIES.has(primary);
 }
 
-export function shouldLoadWebFontForSidebar(fontFamily) {
+export function shouldLoadWebFont(fontFamily) {
   if (!fontFamily || typeof fontFamily !== 'string') return false;
   const primary = fontFamily.split(',')[0].trim().replace(/^["']|["']$/g, '');
   if (!primary) return false;
@@ -74,10 +83,13 @@ export function shouldLoadWebFontForSidebar(fontFamily) {
   return true;
 }
 
+export const shouldLoadWebFontForSidebar = shouldLoadWebFont;
+
 /**
- * Writes sidebar / explorer typography variables on :root.
+ * Writes unified application typography variables on :root.
  */
-export function applySidebarTypographyCssVariables({
+export function applyAppTypography({
+  uiFont,
   sidebarFont,
   sidebarFontSize,
   explorerFont,
@@ -86,16 +98,28 @@ export function applySidebarTypographyCssVariables({
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
 
-  if (sidebarFont) {
-    root.style.setProperty('--sidebar-font-family', buildSidebarFontStack(sidebarFont));
+  const effectiveFont = uiFont || sidebarFont || explorerFont;
+  if (effectiveFont) {
+    const stack = buildAppFontStack(effectiveFont);
+    root.style.setProperty('--ui-font-family', stack);
+    root.style.setProperty('--font-family', stack);
+    root.style.setProperty('--sidebar-font-family', stack);
+    root.style.setProperty('--explorer-font-family', stack);
+    root.style.setProperty('--home-tab-font-family', stack);
   }
+
   if (sidebarFontSize != null && sidebarFontSize !== '') {
     root.style.setProperty('--sidebar-font-size', `${sidebarFontSize}px`);
-  }
-  if (explorerFont) {
-    root.style.setProperty('--explorer-font-family', buildSidebarFontStack(explorerFont));
   }
   if (explorerFontSize != null && explorerFontSize !== '') {
     root.style.setProperty('--explorer-font-size', `${explorerFontSize}px`);
   }
 }
+
+/**
+ * Legacy alias for applyAppTypography to preserve backwards compatibility.
+ */
+export function applySidebarTypographyCssVariables(options) {
+  applyAppTypography(options || {});
+}
+

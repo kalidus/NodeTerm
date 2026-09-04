@@ -1423,6 +1423,7 @@ const App = () => {
     folderIconSize, setFolderIconSize, connectionIconSize, setConnectionIconSize,
     explorerFont, setExplorerFont,
     explorerFontSize, setExplorerFontSize, explorerColorTheme, setExplorerColorTheme,
+    uiFont, setUiFont,
     sidebarFont, setSidebarFont, sidebarFontSize, setSidebarFontSize, sidebarFontColor, setSidebarFontColor,
     treeTheme, setTreeTheme,
     sessionActionIconTheme, setSessionActionIconTheme,
@@ -3827,8 +3828,8 @@ const App = () => {
     iconSize: iconSize,
     folderIconSize: folderIconSize,
     connectionIconSize: connectionIconSize,
-    explorerFont: sidebarFont,
-    setExplorerFont: setSidebarFont,
+    explorerFont: uiFont || sidebarFont,
+    setExplorerFont: setUiFont,
     explorerFontSize: sidebarFontSize,
     setExplorerFontSize: setSidebarFontSize,
     explorerFontColor: sidebarFontColor,
@@ -4352,6 +4353,8 @@ const App = () => {
           setExplorerFontSize={setExplorerFontSize}
           explorerColorTheme={explorerColorTheme}
           setExplorerColorTheme={setExplorerColorTheme}
+          uiFont={uiFont}
+          setUiFont={setUiFont}
           sidebarFont={sidebarFont}
           setSidebarFont={setSidebarFont}
           sidebarFontSize={sidebarFontSize}

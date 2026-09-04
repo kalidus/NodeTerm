@@ -75,5 +75,53 @@ body .p-checkbox .p-checkbox-box[style*="background"] {
   background-color: var(--primary-color, var(--ui-button-primary)) !important;
 }
 
+/* ===== UNIFICACIÓN TIPOGRÁFICA EN COMPONENTES PRIMEREACT ===== */
+.p-component,
+.p-inputtext,
+.p-button,
+.p-dropdown,
+.p-dropdown-panel,
+.p-dropdown-items,
+.p-dropdown-item,
+.p-dialog,
+.p-dialog-title,
+.p-dialog-content,
+.p-dialog-footer,
+.p-confirm-dialog,
+.p-confirm-dialog-message,
+.p-tabview,
+.p-tabview-title,
+.p-tree,
+.p-treenode-label,
+.p-menu,
+.p-menuitem-text,
+.p-menubar,
+.p-tooltip,
+.p-overlaypanel,
+.p-sidebar,
+.p-toast,
+.p-card,
+.p-badge,
+.p-tag {
+  font-family: var(--ui-font-family, inherit) !important;
+}
+
+/* Asegurar que los iconos de PrimeIcons conserven SIEMPRE su propia fuente */
+.pi,
+.pi:before,
+[class^="pi-"],
+[class*=" pi-"] {
+  font-family: 'primeicons' !important;
+}
+
+/* Asegurar que las terminales conserven fuente monoespaciada */
+.xterm,
+.xterm *,
+.terminal-tab-container .xterm,
+.terminal-container .xterm {
+  font-family: var(--terminal-font-family, monospace) !important;
+}
+
 /* ===== FIN DE SOBRESCRITURA DE PRIMEREACT ===== */
+
 

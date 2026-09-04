@@ -101,11 +101,13 @@ const applyEarlyBootTheme = () => {
     applyUILayoutFromStorage();
 
     try {
+      const uiFont = localStorage.getItem('uiFont');
       const sidebarFont = localStorage.getItem('sidebarFont');
       const sidebarFontSize = localStorage.getItem('sidebarFontSize');
       const explorerFont = localStorage.getItem('explorerFont');
       const explorerFontSize = localStorage.getItem('explorerFontSize');
       applySidebarTypographyCssVariables({
+        uiFont: uiFont || sidebarFont || explorerFont || undefined,
         sidebarFont: sidebarFont || undefined,
         sidebarFontSize: sidebarFontSize ? parseInt(sidebarFontSize, 10) : undefined,
         explorerFont: explorerFont || undefined,

@@ -1,3 +1,8 @@
+:root {
+  --fav-font-family: var(--ui-font-family, inherit);
+  --cc-font: var(--ui-font-family, inherit);
+}
+
 /* Ajuste de estilos para fieldset de rendimiento en tema oscuro */
 /* Igualar el fondo al del resto del diálogo (usar ground del tema) */
 .rdp-manager-dialog .performance-fieldset,
@@ -1242,7 +1247,7 @@
   color: var(--ui-sidebar-text, rgba(255, 255, 255, 0.95));
   letter-spacing: 1px;
   text-transform: uppercase;
-  font-family: 'Outfit', 'Inter', sans-serif;
+  font-family: var(--ui-font-family, 'Outfit', 'Inter', sans-serif);
 }
 
 .ribbon-header-actions {

@@ -1,3 +1,11 @@
+:root {
+  --ui-font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+  --font-family: var(--ui-font-family);
+  --sidebar-font-family: var(--ui-font-family);
+  --explorer-font-family: var(--ui-font-family);
+  --home-tab-font-family: var(--ui-font-family);
+}
+
 html, body, #root {
   height: 100% !important;
   min-height: 0 !important;
@@ -9,6 +17,7 @@ html, body, #root {
   margin: 0 !important;
   box-sizing: border-box !important;
   overflow: hidden !important;
+  font-family: var(--ui-font-family) !important;
 }
 
 #root {

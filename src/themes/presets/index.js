@@ -45,7 +45,9 @@ export const PRESET_SETTINGS_KEYS = [
   'nodeterm_linux_font_size',
   'nodeterm_docker_font_family',
   'nodeterm_docker_font_size',
-  // Explorer / sidebar fonts
+  // UI / Explorer / sidebar fonts
+  'uiFont',
+  'homeTabFont',
   'explorerFont',
   'explorerFontSize',
   'explorerColorTheme',

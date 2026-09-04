@@ -8,6 +8,7 @@ import {
   builtinPresets
 } from '../themes/presets/index';
 import localStorageSyncService from '../services/LocalStorageSyncService';
+import { applyAppTypography } from './sidebarFontStack';
 
 /**
  * PresetManager handles saving, loading, and applying appearance presets.
@@ -152,6 +153,14 @@ class PresetManager {
     if (!preset || !preset.settings) return;
 
     // 1. Reset ALL managed keys first, then apply the preset values.
+    // Ensure uiFont and homeTabFont are synchronized if missing from preset
+    if (preset.settings['sidebarFont'] && !preset.settings['uiFont']) {
+      preset.settings['uiFont'] = preset.settings['sidebarFont'];
+    }
+    if (preset.settings['sidebarFont'] && !preset.settings['homeTabFont']) {
+      preset.settings['homeTabFont'] = preset.settings['sidebarFont'];
+    }
+
     // This ensures that keys present in a previous preset but absent in the new
     // one are cleared from localStorage (instead of staying from the old preset).
     PRESET_SETTINGS_KEYS.forEach(key => {
@@ -243,6 +252,19 @@ class PresetManager {
       window.dispatchEvent(new CustomEvent('terminal-theme-changed', {
         detail: { theme: terminalTheme, terminalType: 'ssh' }
       }));
+    }
+
+    // UI Typography change
+    const effectiveUiFont = preset.settings['uiFont'] || preset.settings['sidebarFont'];
+    if (effectiveUiFont) {
+      applyAppTypography({
+        uiFont: effectiveUiFont,
+        sidebarFont: preset.settings['sidebarFont'],
+        sidebarFontSize: preset.settings['sidebarFontSize'],
+        explorerFont: preset.settings['explorerFont'],
+        explorerFontSize: preset.settings['explorerFontSize']
+      });
+      window.dispatchEvent(new CustomEvent('ui-font-changed', { detail: { font: effectiveUiFont } }));
     }
 
     this._notifyChange();

@@ -218,7 +218,7 @@
 
 /* ===== AppMenu surface (Overflow / Tab / Terminal / DOM) ===== */
 .app-menu-surface {
-  font-family: var(--font-family, 'Public Sans', Arial, sans-serif);
+  font-family: var(--ui-font-family, var(--font-family, system-ui, sans-serif));
   background: var(--ui-context-bg) !important;
   color: var(--ui-context-text) !important;
   border: 1px solid var(--ui-context-border) !important;

@@ -212,6 +212,7 @@ class ExportImportService {
           localDockerTerminalTheme: this.safeGetItem('localDockerTerminalTheme'),
           
           // === FUENTES ===
+          uiFont: this.safeGetItem('uiFont'),
           sidebarFont: this.safeGetItem('sidebarFont'),
           sidebarFontSize: this.safeGetItem('sidebarFontSize'),
           homeTabFont: this.safeGetItem('homeTabFont'),
@@ -655,6 +656,7 @@ class ExportImportService {
       'localLinuxTerminalTheme',
       'localPowerShellTheme',
       'localDockerTerminalTheme',
+      'uiFont',
       'sidebarFont',
       'sidebarFontSize',
       'sidebarFontColor',

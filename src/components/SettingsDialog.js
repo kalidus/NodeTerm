@@ -175,6 +175,8 @@ const SettingsContent = ({
   setFolderIconSize,
   connectionIconSize = 20,
   setConnectionIconSize,
+  uiFont,
+  setUiFont,
   sidebarFont,
   setSidebarFont,
   sidebarFontSize,
@@ -608,11 +610,36 @@ const SettingsContent = ({
   // Configuración de tipografía de HomeTab
   const [homeTabFont, setHomeTabFont] = useState(() => {
     try {
-      return localStorage.getItem('homeTabFont') || explorerFonts[0];
+      return localStorage.getItem('uiFont') || localStorage.getItem('homeTabFont') || explorerFonts[0];
     } catch {
       return explorerFonts[0];
     }
   });
+
+  const handleUnifiedFontChange = (newFont) => {
+    if (!newFont) return;
+    setHomeTabFont(newFont);
+    if (setUiFont) {
+      setUiFont(newFont);
+    } else if (setSidebarFont) {
+      setSidebarFont(newFont);
+    }
+  };
+
+  useEffect(() => {
+    const handleUiFontChange = (e) => {
+      const font = e.detail?.font || localStorage.getItem('uiFont');
+      if (font) setHomeTabFont(font);
+    };
+    window.addEventListener('ui-font-changed', handleUiFontChange);
+    return () => window.removeEventListener('ui-font-changed', handleUiFontChange);
+  }, []);
+
+  useEffect(() => {
+    if (uiFont && uiFont !== homeTabFont) {
+      setHomeTabFont(uiFont);
+    }
+  }, [uiFont]);
 
   const [homeTabFontSize, setHomeTabFontSize] = useState(() => {
     try {
@@ -4150,9 +4177,9 @@ const SettingsContent = ({
                               </div>
                               <Dropdown
                                 id="sidebar-font"
-                                value={sidebarFont}
+                                value={uiFont || sidebarFont}
                                 options={explorerFonts.map(f => ({ label: f, value: f }))}
-                                onChange={e => setSidebarFont(e.value)}
+                                onChange={e => handleUnifiedFontChange(e.value)}
                                 placeholder={t('appearance.sessionExplorer.selectFont')}
                                 style={{ flex: 1 }}
                                 itemTemplate={option => (
@@ -4784,9 +4811,9 @@ const SettingsContent = ({
                               </div>
                               <Dropdown
                                 id="explorer-font"
-                                value={explorerFont}
+                                value={uiFont || explorerFont}
                                 options={explorerFonts.map(f => ({ label: f, value: f }))}
-                                onChange={e => setExplorerFont(e.value)}
+                                onChange={e => handleUnifiedFontChange(e.value)}
                                 placeholder={t('appearance.sessionExplorer.selectFont')}
                                 style={{ flex: 1 }}
                                 itemTemplate={option => (
@@ -5064,9 +5091,9 @@ const SettingsContent = ({
                               </div>
                               <Dropdown
                                 id="homeTab-font"
-                                value={homeTabFont}
+                                value={uiFont || homeTabFont}
                                 options={explorerFonts.map(f => ({ label: f, value: f }))}
-                                onChange={e => setHomeTabFont(e.value)}
+                                onChange={e => handleUnifiedFontChange(e.value)}
                                 placeholder={t('appearance.sessionExplorer.selectFont')}
                                 style={{ flex: 1 }}
                                 itemTemplate={option => (

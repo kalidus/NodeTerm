@@ -1403,7 +1403,7 @@ button[aria-label="Seleccionar tipo de terminal"]:focus i {
     overflow: hidden;
     text-overflow: ellipsis;
     flex: 1;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--ui-font-family, 'Inter', sans-serif);
     font-weight: 500;
 }
 
@@ -1423,10 +1423,10 @@ button[aria-label="Seleccionar tipo de terminal"]:focus i {
     opacity: 1;
 }
 
-/* Sincronización de estilo de letra (fuente), tamaño y color de pestañas con la barra lateral */
-:root[data-tab-layout] .p-tabview .p-tabview-nav li:not(.home-tab) .p-tabview-nav-link,
-:root .p-tabview .p-tabview-nav li:not(.home-tab) .p-tabview-nav-link {
-    font-family: var(--sidebar-font-family, system-ui, sans-serif) !important;
+/* Sincronización de estilo de letra (fuente), tamaño y color de pestañas con la barra lateral y tema global */
+:root[data-tab-layout] .p-tabview .p-tabview-nav li .p-tabview-nav-link,
+:root .p-tabview .p-tabview-nav li .p-tabview-nav-link {
+    font-family: var(--ui-font-family, var(--sidebar-font-family, system-ui, sans-serif)) !important;
     font-size: var(--sidebar-font-size, 0.82rem) !important;
     color: var(--ui-sidebar-text, var(--ui-tab-text, rgba(255, 255, 255, 0.6))) !important;
 }
