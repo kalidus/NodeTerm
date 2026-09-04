@@ -38,6 +38,16 @@ export const TERMINAL_PRO_DIALOG_FORM_WRAPPER_STYLE = {
   overflow: 'hidden'
 };
 
+export const isPlatformWindows = () => {
+  if (typeof window !== 'undefined' && window.electron?.platform) {
+    return window.electron.platform === 'win32';
+  }
+  if (typeof navigator !== 'undefined' && navigator.platform) {
+    return navigator.platform.toLowerCase().includes('win');
+  }
+  return true;
+};
+
 export function createDefaultRdpFormData() {
   return {
     name: '',
@@ -98,7 +108,7 @@ export function mapEditNodeDataToRdpFormData(editNodeData) {
     username: data.username || '',
     password: data.password || '',
     port: data.port || 3389,
-    clientType: data.clientType || 'web-rdp',
+    clientType: (!isPlatformWindows() && data.clientType === 'mstsc') ? 'web-rdp' : (data.clientType || 'web-rdp'),
     preset: data.preset || 'default',
     resolution: data.resolution || '1600x1000',
     colorDepth: data.colorDepth || 32,
@@ -226,6 +236,7 @@ export function EnhancedRDPForm({
 }) {
   const { t } = useTranslation('dialogs');
   const { t: tCommon } = useTranslation('common');
+  const isWindows = isPlatformWindows();
 
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(true);
   const [advancedOptionsTab, setAdvancedOptionsTab] = useState((layoutMode === 'tabbed' || layoutMode === 'sidebar') ? 'general' : 'screen');
@@ -472,16 +483,23 @@ export function EnhancedRDPForm({
             onClick={() => handleInputChange('clientType', 'web-rdp')}
             role="button"
             tabIndex={0}
+            title="Cliente RDP Nativo HTML5 universal (Windows, macOS, Linux)"
           >
             <i className="pi pi-globe" aria-hidden="true"></i> {t('rdp.clientTypes.web-rdp')}
           </div>
           <div
             className={`terminal-auth-chip ${formData.clientType === 'mstsc' ? 'active' : ''}`}
-            onClick={() => handleInputChange('clientType', 'mstsc')}
+            onClick={() => {
+              if (isWindows) {
+                handleInputChange('clientType', 'mstsc');
+              }
+            }}
             role="button"
             tabIndex={0}
+            title={isWindows ? t('rdp.clientTypes.mstsc') : 'Cliente MSTSC nativo disponible exclusivamente en Windows'}
+            style={!isWindows ? { cursor: 'not-allowed', opacity: 0.45 } : {}}
           >
-            <i className="pi pi-desktop" aria-hidden="true"></i> {t('rdp.clientTypes.mstsc')}
+            <i className="pi pi-desktop" aria-hidden="true"></i> {t('rdp.clientTypes.mstsc')}{!isWindows ? ' (Solo Windows)' : ''}
           </div>
           <div
             className={`terminal-auth-chip ${formData.clientType === 'guacamole' ? 'active' : ''}`}
@@ -960,7 +978,7 @@ export function EnhancedRDPForm({
               <div 
                 className="hud-badge-pill active"
                 onClick={() => {
-                  const clientCycle = ['web-rdp', 'mstsc', 'guacamole'];
+                  const clientCycle = isWindows ? ['web-rdp', 'mstsc', 'guacamole'] : ['web-rdp', 'guacamole'];
                   const currentIndex = clientCycle.indexOf(formData.clientType);
                   const nextClient = clientCycle[(currentIndex + 1) % clientCycle.length];
                   handleInputChange('clientType', nextClient);

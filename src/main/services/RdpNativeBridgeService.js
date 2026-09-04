@@ -255,6 +255,7 @@ class RdpNativeBridgeService extends EventEmitter {
 
           targetSocket = net.connect({ host: session.host, port: session.port }, () => {
             targetSocket.setNoDelay(true);
+            targetSocket.setKeepAlive(true, 15000);
             targetSocket.write(x224Cr);
           });
 
@@ -284,6 +285,8 @@ class RdpNativeBridgeService extends EventEmitter {
             tlsSocket = tls.connect(tlsOptions, () => {
               tlsEstablished = true;
               tlsSocket.removeListener('error', onTlsHandshakeError);
+              tlsSocket.setNoDelay(true);
+              tlsSocket.setKeepAlive(true, 15000);
               console.log(`🔒 [RdpNativeBridgeService] Conexión RDP TLS establecida con ${session.host}:${session.port}`);
 
               let peerCertChain = [];
@@ -309,7 +312,11 @@ class RdpNativeBridgeService extends EventEmitter {
               debugLog(`[Bridge] Enviando RDCleanPath Response PDU (${responsePdu.length} bytes) a WASM...`);
 
               if (ws.readyState === ws.OPEN) {
-                ws.send(responsePdu, { binary: true });
+                try {
+                  ws.send(responsePdu, { binary: true });
+                } catch (sendErr) {
+                  console.warn('[Bridge] Error enviando RDCleanPath Response:', sendErr.message);
+                }
               }
 
               rdCleanPathPhase = 'transparent';
@@ -413,8 +420,12 @@ class RdpNativeBridgeService extends EventEmitter {
 
                 bytesFromRdp += n;
                 if (ws.readyState === ws.OPEN) {
-                  for (const out of outChunks) {
-                    ws.send(out, { binary: true });
+                  try {
+                    for (const out of outChunks) {
+                      ws.send(out, { binary: true });
+                    }
+                  } catch (sendErr) {
+                    console.warn('[Bridge] Error enviando frames a WebSocket:', sendErr.message);
                   }
                 }
               });

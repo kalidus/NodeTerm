@@ -105,10 +105,12 @@ const writeLocalClipboardText = async (text) => {
 const sendClipboardToSession = async (session, text) => {
   if (!session || typeof text !== 'string' || !text) return;
   try {
+    // Normalizar saltos de línea a CRLF para compatibilidad nativa con servidores Windows
+    const normalizedText = text.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
     const clip = new Backend.ClipboardData();
-    clip.addText('text/plain', text);
+    clip.addText('text/plain', normalizedText);
     await session.onClipboardPaste(clip);
-    console.log('📋 [IronRDP Clipboard] Enviado a sesión remota:', text.slice(0, 80));
+    console.log('📋 [IronRDP Clipboard] Enviado a sesión remota:', normalizedText.slice(0, 80));
   } catch (err) {
     console.warn('[IronRDP Clipboard] Error enviando a remoto:', err);
   }
@@ -804,11 +806,16 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     };
   }, [connectionState, isActive, rdpConfig.redirectClipboard]);
 
-  // Manejo de eventos de entrada (Ratón y Teclado) para IronRDP WASM
+  // Manejo de eventos de entrada (Ratón y Teclado) para IronRDP WASM con soporte multiplataforma nativo
   useEffect(() => {
     if (connectionState !== 'connected' || !canvasRef.current) return;
     const canvas = canvasRef.current;
 
+    // Detección de plataforma cliente (macOS vs Windows/Linux)
+    const isMac = (window.electron?.platform === 'darwin') ||
+      (typeof navigator !== 'undefined' && (/Mac|iPod|iPhone|iPad/.test(navigator.platform) || /Macintosh/.test(navigator.userAgent)));
+
+    // Mapa exhaustivo de scancodes PS/2 Set 1 para RDP nativo
     const CODE_TO_SCANCODE = {
       KeyA: 0x1E, KeyB: 0x30, KeyC: 0x2E, KeyD: 0x20, KeyE: 0x12, KeyF: 0x21, KeyG: 0x22, KeyH: 0x23,
       KeyI: 0x17, KeyJ: 0x24, KeyK: 0x25, KeyL: 0x26, KeyM: 0x32, KeyN: 0x31, KeyO: 0x18, KeyP: 0x19,
@@ -821,7 +828,22 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       ShiftLeft: 0x2A, ShiftRight: 0x36, ArrowUp: 0xE048, ArrowDown: 0xE050, ArrowLeft: 0xE04B,
       ArrowRight: 0xE04D, Delete: 0xE053, Home: 0xE047, End: 0xE04F, PageUp: 0xE049, PageDown: 0xE051,
       Insert: 0xE052, CapsLock: 0x3A, F1: 0x3B, F2: 0x3C, F3: 0x3D, F4: 0x3E, F5: 0x3F, F6: 0x40,
-      F7: 0x41, F8: 0x42, F9: 0x43, F10: 0x44, F11: 0x57, F12: 0x58
+      F7: 0x41, F8: 0x42, F9: 0x43, F10: 0x44, F11: 0x57, F12: 0x58,
+      // Modificadores de sistema: en macOS, Cmd se traduce ergonómicamente a Ctrl para atajos remotos
+      MetaLeft: isMac ? 0x1D : 0xE05B,
+      MetaRight: isMac ? 0xE01D : 0xE05C,
+      ContextMenu: 0xE05D,
+      PrintScreen: 0xE037,
+      ScrollLock: 0x46,
+      NumLock: 0x45,
+      Pause: 0xE11D,
+      // Teclado numérico completo (Numpad)
+      Numpad0: 0x52, Numpad1: 0x4F, Numpad2: 0x50, Numpad3: 0x51, Numpad4: 0x4B,
+      Numpad5: 0x4C, Numpad6: 0x4D, Numpad7: 0x47, Numpad8: 0x48, Numpad9: 0x49,
+      NumpadDecimal: 0x53, NumpadDivide: 0xE035, NumpadMultiply: 0x37, NumpadSubtract: 0x4A,
+      NumpadAdd: 0x4E, NumpadEnter: 0xE01C, NumpadEqual: 0x59,
+      // Teclados internacionales / ISO (Español, Europeo, ABNT, JIS)
+      IntlBackslash: 0x56, IntlRo: 0x73, IntlYen: 0x7D
     };
 
     const getCanvasPos = (e) => {
@@ -882,9 +904,11 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       e.preventDefault();
       const isVertical = e.deltaY !== 0;
       const delta = isVertical ? -e.deltaY : -e.deltaX;
+      // 0 = Pixel (trackpads macOS / touchpads de precisión), 1 = Line (ruedas de ratón estándar), 2 = Page
+      const unit = e.deltaMode === 1 ? 1 : (e.deltaMode === 2 ? 2 : 0);
       try {
         const transaction = new Backend.InputTransaction();
-        transaction.addEvent(Backend.DeviceEvent.wheelRotations(isVertical, delta, 0));
+        transaction.addEvent(Backend.DeviceEvent.wheelRotations(isVertical, delta, unit));
         sessionRef.current.applyInputs(transaction);
       } catch (err) {}
     };
@@ -892,7 +916,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     const handleKeyDown = (e) => {
       if (!sessionRef.current) return;
 
-      // Si el usuario pulsa Ctrl+V (o Cmd+V), asegurar sincronización del portapapeles local antes de pegar si no hay archivos armados
+      // Si el usuario pulsa Ctrl+V (o Cmd+V en Mac), asegurar sincronización del portapapeles local antes de pegar si no hay archivos armados
       if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyV' || e.key === 'v' || e.key === 'V')) {
         const isClipboardEnabled = rdpConfig.redirectClipboard !== false;
         if (isClipboardEnabled && !isFileTransferArmedRef.current) {
@@ -916,7 +940,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           transaction.addEvent(Backend.DeviceEvent.unicodePressed(e.key));
         }
         sessionRef.current.applyInputs(transaction);
-      } catch (err) {}
+      } catch (err) {
+        console.warn('[IronRDP Keyboard] Error aplicando tecla:', err);
+      }
     };
 
     const handleKeyUp = (e) => {
@@ -931,7 +957,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           transaction.addEvent(Backend.DeviceEvent.unicodeReleased(e.key));
         }
         sessionRef.current.applyInputs(transaction);
-      } catch (err) {}
+      } catch (err) {
+        console.warn('[IronRDP Keyboard] Error soltando tecla:', err);
+      }
     };
 
     const handlePaste = async (e) => {
@@ -1070,8 +1098,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         const transaction = new Backend.InputTransaction();
         transaction.addEvent(Backend.DeviceEvent.keyPressed(0x1D)); // Ctrl
         transaction.addEvent(Backend.DeviceEvent.keyPressed(0x38)); // Alt
-        transaction.addEvent(Backend.DeviceEvent.keyPressed(0x53)); // Delete
-        transaction.addEvent(Backend.DeviceEvent.keyReleased(0x53));
+        transaction.addEvent(Backend.DeviceEvent.keyPressed(0xE053)); // Delete estándar
+        transaction.addEvent(Backend.DeviceEvent.keyReleased(0xE053));
         transaction.addEvent(Backend.DeviceEvent.keyReleased(0x38));
         transaction.addEvent(Backend.DeviceEvent.keyReleased(0x1D));
         sessionRef.current.applyInputs(transaction);
@@ -1091,8 +1119,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     if (sessionRef.current) {
       try {
         const transaction = new Backend.InputTransaction();
-        transaction.addEvent(Backend.DeviceEvent.keyPressed(0x5B)); // Tecla Windows izquierda
-        transaction.addEvent(Backend.DeviceEvent.keyReleased(0x5B));
+        transaction.addEvent(Backend.DeviceEvent.keyPressed(0xE05B)); // Tecla Windows izquierda extendida
+        transaction.addEvent(Backend.DeviceEvent.keyReleased(0xE05B));
         sessionRef.current.applyInputs(transaction);
         toastRef.current?.show({
           severity: 'info',
