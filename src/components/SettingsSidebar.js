@@ -230,108 +230,87 @@ const SettingsSidebar = ({
 
   const nodeTemplate = useCallback((node) => {
     const isLeaf = node.isLeaf;
-    const isTopLevelLeaf = isLeaf && !node.parentId;
-
-    if (!isLeaf) {
-      return (
-        <div
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleCategory(node.key);
-          }}
-          className="flex align-items-center"
-          style={{
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            userSelect: 'none',
-            width: '100%',
-            fontWeight: '600',
-            fontFamily: explorerFont || 'inherit'
-          }}
-        >
-          <span
-            className={node.categoryIcon}
-            style={{
-              color: 'var(--ui-button-primary)',
-              fontSize: `${folderIconSize}px`,
-              marginRight: '4px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minWidth: 16
-            }}
-          />
-          <span className="settings-section-label">
-            {node.label}
-          </span>
-          <span
-            style={{
-              marginLeft: 'auto',
-              background: 'color-mix(in srgb, var(--ui-sidebar-selected) 18%, transparent)',
-              color: 'var(--ui-sidebar-selected)',
-              borderRadius: '10px',
-              padding: '0 6px',
-              fontSize: `${badgeFontSize}px`,
-              fontWeight: '700',
-              border: '1px solid color-mix(in srgb, var(--ui-sidebar-selected) 35%, transparent)',
-              flexShrink: 0
-            }}
-          >
-            {node.children.length}
-          </span>
-        </div>
-      );
-    }
-
+    const isTopLevel = !node.parentId;
     const hoverKey = node.parentId ? node.key : `${node.key}__main`;
     const isHovered = hoveredItem === hoverKey;
     const itemColor = 'var(--ui-sidebar-text)';
 
-    if (isTopLevelLeaf) {
+    if (isTopLevel) {
       return (
         <div
+          onClick={!isLeaf ? (e) => {
+            e.stopPropagation();
+            toggleCategory(node.key);
+          } : undefined}
           onMouseEnter={() => setHoveredItem(hoverKey)}
           onMouseLeave={() => setHoveredItem(null)}
           className="flex align-items-center"
           style={{
-            padding: '0.1rem 0.25rem',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
+            gap: '8px',
+            userSelect: 'none',
             width: '100%',
             fontFamily: explorerFont || 'inherit',
-            transition: 'all 0.12s ease'
+            transition: 'all 0.12s ease',
+            padding: '0 2px'
           }}
           title={node.description || node.label}
         >
-          <i
-            className={node.categoryIcon}
+          <span
             style={{
-              fontSize: `${folderIconSize}px`,
-              color: 'var(--ui-button-primary)',
-              opacity: isHovered ? 1 : 0.95,
-              transition: 'all 0.12s ease',
-              flexShrink: 0,
-              minWidth: 16
+              width: `${folderIconSize}px`,
+              minWidth: `${folderIconSize}px`,
+              height: `${folderIconSize}px`,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
             }}
-          />
+          >
+            <i
+              className={node.categoryIcon}
+              style={{
+                fontSize: `${folderIconSize}px`,
+                color: 'var(--ui-button-primary)',
+                opacity: isHovered || !isLeaf ? 1 : 0.95,
+                transition: 'all 0.12s ease'
+              }}
+            />
+          </span>
 
-          <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <div className="settings-section-label">
-              {node.label}
-            </div>
-          </div>
-          {isHovered && (
+          <span className="settings-section-label">
+            {node.label}
+          </span>
+
+          {!isLeaf && (
+            <span
+              style={{
+                marginLeft: 'auto',
+                background: 'color-mix(in srgb, var(--ui-sidebar-selected) 18%, transparent)',
+                color: 'var(--ui-sidebar-selected)',
+                borderRadius: '10px',
+                padding: '0 6px',
+                fontSize: `${badgeFontSize}px`,
+                fontWeight: '700',
+                border: '1px solid color-mix(in srgb, var(--ui-sidebar-selected) 35%, transparent)',
+                flexShrink: 0
+              }}
+            >
+              {node.children.length}
+            </span>
+          )}
+
+          {isLeaf && isHovered && (
             <i
               className="pi pi-arrow-right animate-fade-in"
               style={{
                 fontSize: '0.65rem',
                 color: 'var(--ui-sidebar-selected)',
                 flexShrink: 0,
-                marginRight: '4px'
+                marginLeft: 'auto',
+                marginRight: '2px'
               }}
             />
           )}
@@ -345,40 +324,51 @@ const SettingsSidebar = ({
         onMouseLeave={() => setHoveredItem(null)}
         className="flex align-items-center"
         style={{
-          padding: '0.1rem 0.25rem',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
+          userSelect: 'none',
           width: '100%',
           fontFamily: explorerFont || 'inherit',
-          transition: 'all 0.12s ease'
+          transition: 'all 0.12s ease',
+          padding: '0 2px'
         }}
         title={node.description || node.label}
       >
-        <i
-          className={node.toolIcon}
+        <span
           style={{
-            fontSize: `${connectionIconSize}px`,
-            color: isHovered ? 'var(--ui-sidebar-selected)' : itemColor,
-            opacity: isHovered ? 1 : 0.6,
-            transition: 'all 0.12s ease',
+            width: `${connectionIconSize}px`,
+            minWidth: `${connectionIconSize}px`,
+            height: `${connectionIconSize}px`,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             flexShrink: 0
           }}
-        />
-
-        <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
-          <div
-            className="settings-subitem-label"
+        >
+          <i
+            className={node.toolIcon}
             style={{
+              fontSize: `${connectionIconSize}px`,
               color: isHovered ? 'var(--ui-sidebar-selected)' : itemColor,
-              opacity: isHovered ? 1 : 0.78,
+              opacity: isHovered ? 1 : 0.65,
               transition: 'all 0.12s ease'
             }}
-          >
-            {node.label}
-          </div>
-        </div>
+          />
+        </span>
+
+        <span
+          className="settings-subitem-label"
+          style={{
+            color: isHovered ? 'var(--ui-sidebar-selected)' : itemColor,
+            opacity: isHovered ? 1 : 0.82,
+            transition: 'all 0.12s ease'
+          }}
+        >
+          {node.label}
+        </span>
+
         {isHovered && (
           <i
             className="pi pi-arrow-right animate-fade-in"
@@ -386,7 +376,8 @@ const SettingsSidebar = ({
               fontSize: '0.65rem',
               color: 'var(--ui-sidebar-selected)',
               flexShrink: 0,
-              marginRight: '4px'
+              marginLeft: 'auto',
+              marginRight: '2px'
             }}
           />
         )}
@@ -397,19 +388,61 @@ const SettingsSidebar = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <style>{`
-        .settings-tree .p-treenode-leaf > .p-treenode-content {
-          min-height: 38px !important;
+        .settings-sidebar-scroll-container {
+          padding: 0.35rem 0.25rem !important;
+        }
+        /* Altura y padding consistente para TODOS los items raíz (secciones principales) */
+        .settings-tree > .p-tree-container > .p-treenode > .p-treenode-content {
+          min-height: 28px !important;
           height: auto !important;
           line-height: normal !important;
-          padding-top: 4px !important;
-          padding-bottom: 4px !important;
+          padding-top: 3px !important;
+          padding-bottom: 3px !important;
+          padding-left: 2px !important;
+          padding-right: 6px !important;
+          margin-top: 2px !important;
+          margin-bottom: 1px !important;
+          border-radius: 4px !important;
+          transition: background-color 0.15s ease, color 0.15s ease !important;
         }
-        .settings-tree .p-treenode:not(.p-treenode-leaf) > .p-treenode-content {
+        /* Altura y padding consistente para los subitems */
+        .settings-tree .p-treenode-children .p-treenode-content {
           min-height: 26px !important;
           height: auto !important;
           line-height: normal !important;
-          padding-top: 4px !important;
-          padding-bottom: 4px !important;
+          padding-top: 2px !important;
+          padding-bottom: 2px !important;
+          padding-left: 2px !important;
+          padding-right: 6px !important;
+          margin-top: 1px !important;
+          margin-bottom: 1px !important;
+          border-radius: 4px !important;
+          transition: background-color 0.15s ease, color 0.15s ease !important;
+        }
+        /* Contenedor de subitems con indentación limpia (36px) y separación respecto a otras secciones */
+        html body .sidebar-tree.settings-tree .p-treenode-children,
+        html body .sidebar-tree[class*="tree-theme-"].settings-tree .p-treenode-children,
+        html body .settings-tree .p-treenode-children {
+          padding-left: 36px !important;
+          padding-top: 2px !important;
+          padding-bottom: 6px !important;
+        }
+        /* Ocultar el toggler invisible en subitems para evitar cualquier desplazamiento horizontal */
+        html body .sidebar-tree.settings-tree .p-treenode-children .p-tree-toggler,
+        html body .sidebar-tree[class*="tree-theme-"].settings-tree .p-treenode-children .p-tree-toggler,
+        html body .settings-tree .p-treenode-children .p-tree-toggler {
+          display: none !important;
+        }
+        /* Toggler de categorías raíz: ancho fijo y perfectamente alineado */
+        .settings-tree > .p-tree-container > .p-treenode > .p-treenode-content > .p-tree-toggler {
+          width: 16px !important;
+          min-width: 16px !important;
+          height: 16px !important;
+          margin-right: 2px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          flex-shrink: 0 !important;
         }
         .settings-tree .p-treenode-label {
           width: 100% !important;
@@ -420,7 +453,7 @@ const SettingsSidebar = ({
         .settings-tree > .p-tree-container > .p-treenode > .p-treenode-content::before {
           display: none !important;
         }
-        /* Tamano unico para secciones principales (evita overrides de .node-label / layout) */
+        /* Tamano y estilo uniforme para secciones principales */
         html body .sidebar-tree.settings-tree .settings-section-label {
           flex: 1 1 auto !important;
           min-width: 0 !important;
@@ -434,12 +467,16 @@ const SettingsSidebar = ({
           text-transform: uppercase !important;
           letter-spacing: 0.5px !important;
         }
+        /* Tamano y estilo uniforme para subitems */
         html body .sidebar-tree.settings-tree .settings-subitem-label {
-          font-size: var(--settings-subitem-font-size) !important;
-          font-weight: 400 !important;
+          flex: 1 1 auto !important;
+          min-width: 0 !important;
           overflow: hidden !important;
           text-overflow: ellipsis !important;
           white-space: nowrap !important;
+          line-height: 1.25 !important;
+          font-size: var(--settings-subitem-font-size) !important;
+          font-weight: 400 !important;
         }
       `}</style>
       <div className="settings-sidebar-scroll-container" style={{ flex: 1, overflowY: 'auto', padding: '0.25rem 0' }}>
