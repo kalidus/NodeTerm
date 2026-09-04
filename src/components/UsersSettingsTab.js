@@ -1,10 +1,11 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Button } from 'primereact/button';
 import { Password } from 'primereact/password';
 import { Checkbox } from 'primereact/checkbox';
 import { Tag } from 'primereact/tag';
 import { InputText } from 'primereact/inputtext';
 import AppDialog from './ui/AppDialog';
+import '../styles/components/users-settings.css';
 
 const CONNECTION_TYPE_LABELS = {
   ssh: { label: 'SSH', icon: 'pi pi-server', color: '#4caf50' },
@@ -82,12 +83,17 @@ function extractUsersFromNodes(nodes, result = new Map()) {
 const UsersSettingsTab = ({ nodes = [], onUpdateUserPassword, onEditConnection }) => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchText, setSearchText] = useState('');
+  const [connSearchText, setConnSearchText] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
   const [changePasswordVisible, setChangePasswordVisible] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [selectedConnectionKeys, setSelectedConnectionKeys] = useState(new Set());
   const [passwordError, setPasswordError] = useState('');
   const [applySuccess, setApplySuccess] = useState(false);
+
+  const connListScrollRef = useRef(null);
 
   const usersMap = useMemo(() => extractUsersFromNodes(nodes), [nodes]);
 
@@ -111,7 +117,19 @@ const UsersSettingsTab = ({ nodes = [], onUpdateUserPassword, onEditConnection }
     setSelectedUser(user);
     setSelectedConnectionKeys(new Set(user.connections.map(n => n.key)));
     setApplySuccess(false);
+    setConnSearchText('');
+    setCurrentPage(1);
+    if (connListScrollRef.current) {
+      connListScrollRef.current.scrollTop = 0;
+    }
   }, []);
+
+  // Desplazar la lista arriba al cambiar de página
+  useEffect(() => {
+    if (connListScrollRef.current) {
+      connListScrollRef.current.scrollTop = 0;
+    }
+  }, [currentPage]);
 
   const handleOpenChangePassword = useCallback(() => {
     setNewPassword('');
@@ -167,14 +185,80 @@ const UsersSettingsTab = ({ nodes = [], onUpdateUserPassword, onEditConnection }
     });
   }, []);
 
-  const toggleAllConnections = useCallback(() => {
+  // Filtrado de conexiones en tiempo real
+  const filteredConnections = useMemo(() => {
+    if (!selectedUser?.connections) return [];
+    if (!connSearchText.trim()) return selectedUser.connections;
+    const term = connSearchText.toLowerCase().trim();
+    return selectedUser.connections.filter(conn => {
+      const label = (conn.label || conn.data?.name || '').toLowerCase();
+      const type = (conn.type || conn.data?.type || '').toLowerCase();
+      const host = (conn.data?.host || conn.data?.hostname || conn.data?.server || conn.data?.targetServer || conn.data?.bastionHost || '').toLowerCase();
+      const bastion = (conn.data?.bastionUser || '').toLowerCase();
+      const user = (conn.data?.user || conn.data?.username || '').toLowerCase();
+      const port = conn.data?.port ? String(conn.data.port) : '';
+      return label.includes(term) || host.includes(term) || type.includes(term) || bastion.includes(term) || user.includes(term) || port.includes(term);
+    });
+  }, [selectedUser, connSearchText]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredConnections.length / pageSize));
+  const activePage = Math.min(currentPage, totalPages);
+
+  // Conexiones de la página actual (solo renderiza el lote visible)
+  const pagedConnections = useMemo(() => {
+    const start = (activePage - 1) * pageSize;
+    return filteredConnections.slice(start, start + pageSize);
+  }, [filteredConnections, activePage, pageSize]);
+
+  // Estados de selección
+  const areAllUserConnectionsSelected = Boolean(
+    selectedUser && selectedUser.connections.length > 0 &&
+    selectedConnectionKeys.size === selectedUser.connections.length
+  );
+
+  const areAllFilteredSelected = Boolean(
+    filteredConnections.length > 0 &&
+    filteredConnections.every(conn => selectedConnectionKeys.has(conn.key))
+  );
+
+  const areAllPageSelected = Boolean(
+    pagedConnections.length > 0 &&
+    pagedConnections.every(conn => selectedConnectionKeys.has(conn.key))
+  );
+
+  const toggleAllUserConnections = useCallback(() => {
     if (!selectedUser) return;
-    if (selectedConnectionKeys.size === selectedUser.connections.length) {
+    if (areAllUserConnectionsSelected) {
       setSelectedConnectionKeys(new Set());
     } else {
       setSelectedConnectionKeys(new Set(selectedUser.connections.map(n => n.key)));
     }
-  }, [selectedUser, selectedConnectionKeys]);
+  }, [selectedUser, areAllUserConnectionsSelected]);
+
+  const toggleFilteredConnections = useCallback(() => {
+    if (!selectedUser) return;
+    setSelectedConnectionKeys(prev => {
+      const next = new Set(prev);
+      if (areAllFilteredSelected) {
+        filteredConnections.forEach(c => next.delete(c.key));
+      } else {
+        filteredConnections.forEach(c => next.add(c.key));
+      }
+      return next;
+    });
+  }, [selectedUser, areAllFilteredSelected, filteredConnections]);
+
+  const togglePageConnections = useCallback(() => {
+    setSelectedConnectionKeys(prev => {
+      const next = new Set(prev);
+      if (areAllPageSelected) {
+        pagedConnections.forEach(c => next.delete(c.key));
+      } else {
+        pagedConnections.forEach(c => next.add(c.key));
+      }
+      return next;
+    });
+  }, [areAllPageSelected, pagedConnections]);
 
   const handleEditConnection = useCallback((conn, event) => {
     event?.stopPropagation();
@@ -281,7 +365,7 @@ const UsersSettingsTab = ({ nodes = [], onUpdateUserPassword, onEditConnection }
           </div>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+        <div className="users-settings-scroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
           {usersList.length === 0 ? (
             <div style={{ ...emptyPanelStyle, padding: '2rem 1rem' }}>
               <i className="pi pi-users" style={{ fontSize: '2rem' }} />
@@ -434,167 +518,339 @@ const UsersSettingsTab = ({ nodes = [], onUpdateUserPassword, onEditConnection }
               </div>
             )}
 
-            <div style={{ padding: '1rem 1.5rem 0.5rem', flexShrink: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ui-dialog-text)' }}>
-                  Conexiones ({selectedUser.count})
-                </span>
-                <button
-                  onClick={toggleAllConnections}
+            <div style={{ padding: '0.85rem 1.5rem 0.5rem', flexShrink: 0 }}>
+              {/* Buscador rápido de conexiones */}
+              <div style={{ position: 'relative', marginBottom: '0.65rem' }}>
+                <i
+                  className="pi pi-search"
                   style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: '0.7rem',
-                    color: 'var(--ui-button-primary)',
-                    padding: '2px 6px',
+                    position: 'absolute',
+                    left: '0.75rem',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    fontSize: '0.8rem',
+                    zIndex: 1,
+                    pointerEvents: 'none',
+                    color: 'var(--text-color-secondary)'
                   }}
-                >
-                  {selectedConnectionKeys.size === selectedUser.connections.length ? 'Deseleccionar todo' : 'Seleccionar todo'}
-                </button>
+                />
+                <InputText
+                  value={connSearchText}
+                  onChange={e => {
+                    setConnSearchText(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  placeholder="Buscar por nombre, host, IP, puerto o protocolo..."
+                  style={{
+                    width: '100%',
+                    paddingLeft: '2.1rem',
+                    paddingRight: connSearchText ? '2rem' : '0.75rem',
+                    fontSize: '0.8rem',
+                    height: '32px'
+                  }}
+                />
+                {connSearchText && (
+                  <i
+                    className="pi pi-times"
+                    style={{
+                      position: 'absolute',
+                      right: '0.75rem',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
+                      color: 'var(--text-color-secondary)'
+                    }}
+                    onClick={() => {
+                      setConnSearchText('');
+                      setCurrentPage(1);
+                    }}
+                    title="Limpiar búsqueda"
+                  />
+                )}
+              </div>
+
+              {/* Estadísticas y acciones de selección rápida */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--ui-dialog-text)' }}>
+                    Conexiones ({selectedUser.count})
+                  </span>
+                  {connSearchText.trim() && (
+                    <span style={{
+                      fontSize: '0.7rem',
+                      padding: '1px 6px',
+                      borderRadius: '4px',
+                      background: 'rgba(var(--ui-button-primary-rgb, 99, 102, 241), 0.15)',
+                      color: 'var(--ui-button-primary)',
+                      fontWeight: 600
+                    }}>
+                      {filteredConnections.length} {filteredConnections.length === 1 ? 'coincidente' : 'coincidentes'}
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  {totalPages > 1 && (
+                    <button
+                      type="button"
+                      className="users-conn-action-btn"
+                      onClick={togglePageConnections}
+                      title={areAllPageSelected ? 'Deseleccionar conexiones de esta página' : 'Seleccionar conexiones de esta página'}
+                    >
+                      <i className={areAllPageSelected ? 'pi pi-check-square' : 'pi pi-square'} style={{ fontSize: '0.7rem' }} />
+                      <span>Esta página ({pagedConnections.length})</span>
+                    </button>
+                  )}
+
+                  {connSearchText.trim() && filteredConnections.length !== selectedUser.connections.length ? (
+                    <button
+                      type="button"
+                      className="users-conn-action-btn"
+                      onClick={toggleFilteredConnections}
+                    >
+                      <i className={areAllFilteredSelected ? 'pi pi-check-square' : 'pi pi-square'} style={{ fontSize: '0.7rem' }} />
+                      <span>{areAllFilteredSelected ? 'Deseleccionar coincidentes' : `Coincidentes (${filteredConnections.length})`}</span>
+                    </button>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    className="users-conn-action-btn"
+                    onClick={toggleAllUserConnections}
+                  >
+                    <i className={areAllUserConnectionsSelected ? 'pi pi-check-square' : 'pi pi-square'} style={{ fontSize: '0.7rem' }} />
+                    <span>{areAllUserConnectionsSelected ? 'Deseleccionar todo' : 'Seleccionar todo'}</span>
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '0 1.5rem 1.5rem' }}>
-              {selectedUser.connections.map(conn => {
-                const type = conn.type || conn.data?.type;
-                const info = getTypeInfo(type);
-                const explicitBastion = !!(conn.data?.useBastionWallix && conn.data?.bastionUser);
-                const rawUserWallix = !explicitBastion && isWallixString(conn.data?.user || conn.data?.username)
-                  ? (conn.data?.user || conn.data?.username)
-                  : null;
-                const isBastion = explicitBastion || !!rawUserWallix;
-                const bastionString = explicitBastion ? conn.data.bastionUser : rawUserWallix;
-                const host = isBastion
-                  ? (conn.data?.targetServer || conn.data?.bastionHost || conn.data?.host || '')
-                  : (conn.data?.host || conn.data?.hostname || conn.data?.server || conn.data?.targetServer || '');
-                const port = conn.data?.port;
-                const isChecked = selectedConnectionKeys.has(conn.key);
-                const hasPassword = !!(conn.data?.password);
-                const bastionSubtitle = isBastion ? bastionString : null;
-                return (
-                  <div
-                    key={conn.key}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      padding: '0.6rem 0.875rem',
-                      marginBottom: '0.375rem',
-                      borderRadius: 8,
-                      background: isChecked
-                        ? 'rgba(var(--ui-button-primary-rgb, 33, 150, 243), 0.08)'
-                        : 'var(--ui-content-bg)',
-                      border: `1px solid ${isChecked ? 'var(--ui-button-primary)' : 'var(--ui-dialog-border)'}`,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s',
-                    }}
-                    onClick={() => toggleConnectionSelection(conn.key)}
-                  >
-                    <Checkbox
-                      checked={isChecked}
-                      onChange={() => toggleConnectionSelection(conn.key)}
-                      onClick={e => e.stopPropagation()}
-                    />
-                    <div style={{
-                      width: 30,
-                      height: 30,
-                      borderRadius: 6,
-                      background: isBastion ? '#ff572222' : info.color + '22',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                    }}>
-                      <i className={isBastion ? 'pi pi-shield' : info.icon} style={{ fontSize: '0.85rem', color: isBastion ? '#ff5722' : info.color }} />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{
-                        fontSize: '0.8125rem',
-                        fontWeight: 600,
-                        color: 'var(--ui-dialog-text)',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}>
-                        {conn.label || conn.data?.name || `${selectedUser.username}@${host}`}
-                      </div>
-                      <div style={{
-                        fontSize: '0.7rem',
-                        opacity: 0.6,
-                        color: 'var(--ui-dialog-text)',
-                        marginTop: 2,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
+            {/* Lista de conexiones con scroll estilizado y lote paginado */}
+            <div
+              ref={connListScrollRef}
+              className="users-settings-scroll"
+              style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '0 1.5rem 0.5rem' }}
+            >
+              {pagedConnections.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '2.5rem 1rem', opacity: 0.6, fontSize: '0.85rem' }}>
+                  <i className="pi pi-search" style={{ fontSize: '1.75rem', marginBottom: '0.5rem', display: 'block' }} />
+                  <span>{connSearchText ? `No se encontraron conexiones para "${connSearchText}"` : 'No hay conexiones'}</span>
+                </div>
+              ) : (
+                pagedConnections.map(conn => {
+                  const type = conn.type || conn.data?.type;
+                  const info = getTypeInfo(type);
+                  const explicitBastion = !!(conn.data?.useBastionWallix && conn.data?.bastionUser);
+                  const rawUserWallix = !explicitBastion && isWallixString(conn.data?.user || conn.data?.username)
+                    ? (conn.data?.user || conn.data?.username)
+                    : null;
+                  const isBastion = explicitBastion || !!rawUserWallix;
+                  const bastionString = explicitBastion ? conn.data.bastionUser : rawUserWallix;
+                  const host = isBastion
+                    ? (conn.data?.targetServer || conn.data?.bastionHost || conn.data?.host || '')
+                    : (conn.data?.host || conn.data?.hostname || conn.data?.server || conn.data?.targetServer || '');
+                  const port = conn.data?.port;
+                  const isChecked = selectedConnectionKeys.has(conn.key);
+                  const hasPassword = !!(conn.data?.password);
+                  const bastionSubtitle = isBastion ? bastionString : null;
+                  return (
+                    <div
+                      key={conn.key}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        padding: '0.6rem 0.875rem',
+                        marginBottom: '0.375rem',
+                        borderRadius: 8,
+                        background: isChecked
+                          ? 'rgba(var(--ui-button-primary-rgb, 33, 150, 243), 0.08)'
+                          : 'var(--ui-content-bg)',
+                        border: `1px solid ${isChecked ? 'var(--ui-button-primary)' : 'var(--ui-dialog-border)'}`,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s',
                       }}
-                        title={bastionSubtitle || undefined}
-                      >
-                        {isBastion
-                          ? (bastionSubtitle || host)
-                          : `${host}${port ? `:${port}` : ''}${!host ? 'Sin host configurado' : ''}`
-                        }
+                      onClick={() => toggleConnectionSelection(conn.key)}
+                    >
+                      <Checkbox
+                        checked={isChecked}
+                        onChange={() => toggleConnectionSelection(conn.key)}
+                        onClick={e => e.stopPropagation()}
+                      />
+                      <div style={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: 6,
+                        background: isBastion ? '#ff572222' : info.color + '22',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}>
+                        <i className={isBastion ? 'pi pi-shield' : info.icon} style={{ fontSize: '0.85rem', color: isBastion ? '#ff5722' : info.color }} />
                       </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
-                      {onEditConnection && (
-                        <button
-                          type="button"
-                          title="Editar conexión"
-                          aria-label="Editar conexión"
-                          onClick={(e) => handleEditConnection(conn, e)}
-                          style={{
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{
+                          fontSize: '0.8125rem',
+                          fontWeight: 600,
+                          color: 'var(--ui-dialog-text)',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}>
+                          {conn.label || conn.data?.name || `${selectedUser.username}@${host}`}
+                        </div>
+                        <div style={{
+                          fontSize: '0.7rem',
+                          opacity: 0.6,
+                          color: 'var(--ui-dialog-text)',
+                          marginTop: 2,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                          title={bastionSubtitle || undefined}
+                        >
+                          {isBastion
+                            ? (bastionSubtitle || host)
+                            : `${host}${port ? `:${port}` : ''}${!host ? 'Sin host configurado' : ''}`
+                          }
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
+                        {onEditConnection && (
+                          <button
+                            type="button"
+                            title="Editar conexión"
+                            aria-label="Editar conexión"
+                            onClick={(e) => handleEditConnection(conn, e)}
+                            style={{
+                              fontSize: '0.6rem',
+                              padding: '2px 6px',
+                              borderRadius: 4,
+                              border: '1px solid var(--ui-dialog-border)',
+                              background: 'rgba(255,255,255,0.04)',
+                              color: 'var(--ui-dialog-text)',
+                              fontWeight: 600,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              minWidth: '24px',
+                              height: '18px',
+                              cursor: 'pointer',
+                              opacity: 0.85
+                            }}
+                          >
+                            <i className="pi pi-pencil" style={{ fontSize: '0.52rem' }} />
+                          </button>
+                        )}
+                        {isBastion && (
+                          <span style={{
                             fontSize: '0.6rem',
                             padding: '2px 6px',
                             borderRadius: 4,
-                            border: '1px solid var(--ui-dialog-border)',
-                            background: 'rgba(255,255,255,0.04)',
-                            color: 'var(--ui-dialog-text)',
+                            background: '#ff572222',
+                            color: '#ff5722',
                             fontWeight: 600,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            minWidth: '24px',
-                            height: '18px',
-                            cursor: 'pointer',
-                            opacity: 0.85
-                          }}
-                        >
-                          <i className="pi pi-pencil" style={{ fontSize: '0.52rem' }} />
-                        </button>
-                      )}
-                      {isBastion && (
+                          }}>
+                            Bastion
+                          </span>
+                        )}
                         <span style={{
                           fontSize: '0.6rem',
                           padding: '2px 6px',
                           borderRadius: 4,
-                          background: '#ff572222',
-                          color: '#ff5722',
+                          background: info.color + '22',
+                          color: info.color,
                           fontWeight: 600,
                         }}>
-                          Bastion
+                          {info.label}
                         </span>
-                      )}
-                      <span style={{
-                        fontSize: '0.6rem',
-                        padding: '2px 6px',
-                        borderRadius: 4,
-                        background: info.color + '22',
-                        color: info.color,
-                        fontWeight: 600,
-                      }}>
-                        {info.label}
-                      </span>
-                      {hasPassword ? (
-                        <i className="pi pi-lock" style={{ fontSize: '0.75rem', color: '#4caf50', opacity: 0.8 }} title="Tiene contraseña" />
-                      ) : (
-                        <i className="pi pi-lock-open" style={{ fontSize: '0.75rem', color: '#ff9800', opacity: 0.7 }} title="Sin contraseña" />
-                      )}
+                        {hasPassword ? (
+                          <i className="pi pi-lock" style={{ fontSize: '0.75rem', color: '#4caf50', opacity: 0.8 }} title="Tiene contraseña" />
+                        ) : (
+                          <i className="pi pi-lock-open" style={{ fontSize: '0.75rem', color: '#ff9800', opacity: 0.7 }} title="Sin contraseña" />
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
+
+            {/* Barra de paginación limpia y compacta */}
+            {filteredConnections.length > 25 && (
+              <div className="users-paginator-bar">
+                <div className="users-paginator-info">
+                  <span>
+                    Mostrando <strong>{filteredConnections.length === 0 ? 0 : (activePage - 1) * pageSize + 1}</strong> - <strong>{Math.min(activePage * pageSize, filteredConnections.length)}</strong> de <strong>{filteredConnections.length.toLocaleString()}</strong>
+                    {connSearchText.trim() && ` (de ${selectedUser.count.toLocaleString()})`}
+                  </span>
+                </div>
+
+                <div className="users-paginator-controls">
+                  <button
+                    type="button"
+                    className="users-page-nav-btn"
+                    disabled={activePage <= 1}
+                    onClick={() => setCurrentPage(1)}
+                    title="Primera página"
+                  >
+                    <i className="pi pi-angle-double-left" />
+                  </button>
+                  <button
+                    type="button"
+                    className="users-page-nav-btn"
+                    disabled={activePage <= 1}
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    title="Página anterior"
+                  >
+                    <i className="pi pi-angle-left" />
+                  </button>
+
+                  <span className="users-page-indicator">
+                    Pág. {activePage} de {totalPages}
+                  </span>
+
+                  <button
+                    type="button"
+                    className="users-page-nav-btn"
+                    disabled={activePage >= totalPages}
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    title="Página siguiente"
+                  >
+                    <i className="pi pi-angle-right" />
+                  </button>
+                  <button
+                    type="button"
+                    className="users-page-nav-btn"
+                    disabled={activePage >= totalPages}
+                    onClick={() => setCurrentPage(totalPages)}
+                    title="Última página"
+                  >
+                    <i className="pi pi-angle-double-right" />
+                  </button>
+
+                  <div className="users-page-size-container" style={{ marginLeft: '0.75rem' }}>
+                    <span style={{ opacity: 0.65, fontSize: '0.7rem' }}>Por pág:</span>
+                    {[25, 50, 100].map(size => (
+                      <button
+                        key={size}
+                        type="button"
+                        className={`users-page-size-btn ${pageSize === size ? 'active' : ''}`}
+                        onClick={() => {
+                          setPageSize(size);
+                          setCurrentPage(1);
+                        }}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {selectedConnectionKeys.size > 0 && (
               <div style={{

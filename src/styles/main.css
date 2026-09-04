@@ -37,6 +37,7 @@
 @import './components/theme-selector.css';
 @import './components/update-notification.css';
 @import './components/iron-rdp-toolbar.css';
+@import './components/users-settings.css';
 /* Sobrescribir colores de PrimeReact después de todos los demás estilos */
 @import './components/prime-react-overrides.css';
 
