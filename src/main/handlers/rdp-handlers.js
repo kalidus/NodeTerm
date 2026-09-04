@@ -26,6 +26,22 @@ function getRdpManager() {
  */
 function registerRdpHandlers(dependencies) {
   const { sendToRenderer } = dependencies;
+  const rdpNativeBridgeService = require('../services/RdpNativeBridgeService');
+
+  // Reenviar evento tipado de desconexión del puente nativo hacia el renderer
+  rdpNativeBridgeService.removeAllListeners('session-closed');
+  rdpNativeBridgeService.on('session-closed', (eventData) => {
+    try {
+      const { BrowserWindow } = require('electron');
+      BrowserWindow.getAllWindows().forEach((win) => {
+        if (!win.isDestroyed()) {
+          sendToRenderer(win, 'rdp:native-session-closed', eventData);
+        }
+      });
+    } catch (err) {
+      console.warn('[RDP Handlers] Error enviando rdp:native-session-closed:', err);
+    }
+  });
   
   // === RDP Connection Handlers ===
   ipcMain.handle('rdp:connect', async (event, config) => {

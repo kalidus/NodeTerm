@@ -181,14 +181,14 @@ class RdpNativeBridgeService extends EventEmitter {
       if (r.includes('WebSocket') || r.includes('WASM') || r.includes('usuario') || r.includes('user') || r.includes('tab')) {
         return 'Cerrado por el usuario';
       }
-      if (r.includes('CLOSED') || r.includes('TLS socket closed') || r.includes('servidor remoto')) {
-        return 'Cerrado por el servidor remoto';
+      if (r.includes('inactividad') || r.includes('idle') || r.includes('ETIMEDOUT') || r.includes('timeout')) {
+        return 'Conexión cortada por inactividad o timeout';
       }
       if (r.includes('ECONNRESET') || r.includes('EPIPE') || r.includes('reiniciada')) {
-        return 'Conexión finalizada';
+        return 'Conexión cortada por el servidor remoto o la red (posible inactividad)';
       }
-      if (r.includes('ETIMEDOUT')) {
-        return 'Tiempo de espera agotado (Timeout)';
+      if (r.includes('CLOSED') || r.includes('TLS socket closed') || r.includes('servidor remoto') || r.includes('FIN')) {
+        return 'Cerrado por el servidor remoto';
       }
       if (r.includes('ECONNREFUSED')) {
         return 'Conexión rechazada por el servidor remoto';
@@ -196,12 +196,31 @@ class RdpNativeBridgeService extends EventEmitter {
       return r;
     };
 
-    const cleanup = (reason = 'Cerrado por el usuario') => {
+    const cleanup = (reason = 'Cerrado por el usuario', closeCode = 1000) => {
       if (isCleanedUp) return;
       isCleanedUp = true;
-      console.log(`🧹 [RdpNativeBridgeService] Sesión RDP finalizada (${formatCloseReason(reason)})`);
+      const formattedReason = formatCloseReason(reason);
+      console.log(`🧹 [RdpNativeBridgeService] Sesión RDP finalizada (${formattedReason})`);
       this.activeConnections.delete(connectionId);
-      try { ws.close(); } catch (e) {}
+
+      this.emit('session-closed', {
+        connectionId,
+        tokenId: session.id,
+        reason: formattedReason,
+        rawReason: String(reason || ''),
+        closeCode,
+        host: session.host,
+        port: session.port
+      });
+
+      try {
+        if (ws.readyState === ws.OPEN) {
+          const safeReason = String(formattedReason).slice(0, 120);
+          ws.close(closeCode >= 1000 && closeCode < 5000 ? closeCode : 1000, safeReason);
+        } else {
+          ws.close();
+        }
+      } catch (e) {}
       try { if (tlsSocket) tlsSocket.destroy(); } catch (e) {}
       try { if (targetSocket) targetSocket.destroy(); } catch (e) {}
     };
@@ -255,7 +274,16 @@ class RdpNativeBridgeService extends EventEmitter {
               ciphers: 'ALL:DEFAULT:!ECDHE:!DHE:RSA'
             };
 
+            let tlsEstablished = false;
+            const onTlsHandshakeError = (err) => {
+              if (tlsEstablished || isCleanedUp) return;
+              console.error('❌ [RdpNativeBridgeService] Error en handshake TLS:', err.message);
+              cleanup(`Error TLS Handshake: ${err.message}`, 4001);
+            };
+
             tlsSocket = tls.connect(tlsOptions, () => {
+              tlsEstablished = true;
+              tlsSocket.removeListener('error', onTlsHandshakeError);
               console.log(`🔒 [RdpNativeBridgeService] Conexión RDP TLS establecida con ${session.host}:${session.port}`);
 
               let peerCertChain = [];
@@ -391,24 +419,39 @@ class RdpNativeBridgeService extends EventEmitter {
                 }
               });
 
-              tlsSocket.on('close', () => cleanup('Cerrado por el servidor remoto'));
+              tlsSocket.on('end', () => {
+                if (!isCleanedUp) {
+                  cleanup('Cerrado por el servidor remoto (FIN)', 1000);
+                }
+              });
+
+              tlsSocket.on('close', () => {
+                if (!isCleanedUp) {
+                  cleanup('Cerrado por el servidor remoto', 1000);
+                }
+              });
+
               tlsSocket.on('error', (err) => {
                 if (!isCleanedUp) {
-                  const isBenign = err.message && (err.message.includes('ECONNRESET') || err.message.includes('EPIPE'));
-                  if (!isBenign) {
+                  const isReset = err.message && (err.message.includes('ECONNRESET') || err.message.includes('EPIPE'));
+                  if (isReset) {
+                    console.log('ℹ️ [RdpNativeBridgeService] Conexión TLS restablecida por el host remoto o corte de red (ECONNRESET/EPIPE)');
+                    cleanup('Conexión cortada por el servidor remoto o la red (posible inactividad)', 4002);
+                  } else {
                     console.error('❌ [RdpNativeBridgeService] Error de conexión TLS:', err.message);
+                    cleanup(`Error TLS: ${err.message}`, 4003);
                   }
-                  cleanup(isBenign ? 'Conexión finalizada' : `Error TLS: ${err.message}`);
                 }
               });
             });
 
-            tlsSocket.on('error', (err) => {
-              if (!isCleanedUp) {
-                console.error('❌ [RdpNativeBridgeService] Error en handshake TLS:', err.message);
-                cleanup(`Error TLS Handshake: ${err.message}`);
-              }
-            });
+            tlsSocket.once('error', onTlsHandshakeError);
+          });
+
+          targetSocket.on('end', () => {
+            if (!isCleanedUp && rdCleanPathPhase !== 'transparent') {
+              cleanup('Conexión TCP finalizada por el servidor (FIN)', 1000);
+            }
           });
 
           targetSocket.on('error', (err) => {
@@ -417,13 +460,13 @@ class RdpNativeBridgeService extends EventEmitter {
               if (!isBenign) {
                 console.error('❌ [RdpNativeBridgeService] Error TCP:', err.message);
               }
-              cleanup(isBenign ? 'Conexión finalizada' : `Error TCP: ${err.message}`);
+              cleanup(isBenign ? 'Conexión cortada por el servidor remoto o la red' : `Error TCP: ${err.message}`, 4004);
             }
           });
 
           targetSocket.on('close', () => {
             if (rdCleanPathPhase !== 'transparent' && !isCleanedUp) {
-              cleanup('Conexión TCP cerrada antes de TLS');
+              cleanup('Conexión TCP cerrada antes de TLS', 4005);
             }
           });
 
@@ -502,10 +545,13 @@ class RdpNativeBridgeService extends EventEmitter {
       }
     });
 
-    ws.on('close', () => cleanup('Cerrado por el usuario'));
+    ws.on('close', (code, reasonBuf) => {
+      const reasonStr = reasonBuf ? reasonBuf.toString() : '';
+      cleanup(reasonStr || 'Cerrado por el usuario', code || 1000);
+    });
     ws.on('error', (e) => {
       const isBenign = e.message && (e.message.includes('ECONNRESET') || e.message.includes('closed'));
-      cleanup(isBenign ? 'Cerrado por el usuario' : `Error WebSocket: ${e.message}`);
+      cleanup(isBenign ? 'Cerrado por el usuario' : `Error WebSocket: ${e.message}`, 1006);
     });
   }
 

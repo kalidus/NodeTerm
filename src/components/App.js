@@ -3309,6 +3309,25 @@ const App = () => {
     };
   }, [getAllTabs, setSshTabs, setLastOpenedTabKey, setOnCreateActivateTabKey]);
 
+  // Listener global para cerrar pestañas bajo demanda (ej. desde el overlay de desconexión RDP)
+  useEffect(() => {
+    const handleCloseTabEvent = (e) => {
+      const tabKey = e.detail?.tabKey;
+      if (!tabKey) return;
+      const allTabs = getAllTabs();
+      const tabToClose = allTabs.find(t => t.key === tabKey);
+      if (tabToClose) {
+        const idx = allTabs.indexOf(tabToClose);
+        handleTabClose(tabToClose, idx, tabToClose.type === 'home');
+      }
+    };
+
+    window.addEventListener('close-tab', handleCloseTabEvent);
+    return () => {
+      window.removeEventListener('close-tab', handleCloseTabEvent);
+    };
+  }, [getAllTabs, handleTabClose]);
+
   // Configurar callbacks RDP para el sidebar
   useEffect(() => {
     // Asegurar que el ref esté inicializado

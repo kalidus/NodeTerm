@@ -2468,6 +2468,7 @@ const TabContentRendererInner = React.memo(({
           tabId={tab.key}
           rdpConfig={tab.rdpConfig}
           isActive={isActiveTab}
+          onClose={() => handleTabClose && handleTabClose(tab)}
         />
       );
     }

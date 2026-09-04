@@ -18,6 +18,9 @@ import {
 } from '@devolutions/iron-remote-desktop-rdp';
 import { resolveCredsspPolicy } from '../utils/rdpSecurityPolicy';
 import { parseResolutionValue } from '../utils/rdpScreenConfig';
+import { mapTerminationReason } from '../utils/rdpTerminationReasons';
+
+export { mapTerminationReason };
 
 const extractErrorMessage = (err) => {
   if (!err) return 'Error desconocido de conexión RDP';
@@ -124,7 +127,7 @@ const RESOLUTION_OPTIONS = [
   { label: '1024x768', tag: 'XGA 4:3', width: 1024, height: 768 }
 ];
 
-const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true }, ref) => {
+const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, onClose }, ref) => {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const sessionRef = useRef(null);
@@ -134,6 +137,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
 
   const [connectionState, setConnectionState] = useState('connecting'); // connecting, connected, error, disconnected
   const [errorMessage, setErrorMessage] = useState('');
+  const [disconnectDetails, setDisconnectDetails] = useState(null);
+  const [reconnectTrigger, setReconnectTrigger] = useState(0);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [isToolbarPinned, setIsToolbarPinned] = useState(false);
   const [isToolbarHovered, setIsToolbarHovered] = useState(false);
   const [showClipboardDialog, setShowClipboardDialog] = useState(false);
@@ -147,6 +153,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
   const lastSentClipboardTextRef = useRef('');
   const isFileTransferArmedRef = useRef(false);
   const currentDesktopSizeRef = useRef({ width: 0, height: 0 });
+  const hasEverConnectedRef = useRef(false);
+  const currentTokenIdRef = useRef(null);
+  const lastBackendReasonRef = useRef(null);
 
   const isDriveEnabled = rdpConfig.enableDrive !== false && (rdpConfig.guacEnableDrive !== false || rdpConfig.redirectFolders !== false || rdpConfig.enableDrive === true);
   const isPrinterEnabled = rdpConfig.redirectPrinters === true;
@@ -204,18 +213,119 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
       try {
         sessionRef.current?.shutdown();
       } catch (_) {}
+    },
+    reconnect: () => {
+      handleReconnect();
     }
   }));
+
+  const handleReconnect = () => {
+    if (sessionRef.current) {
+      try { sessionRef.current.shutdown(); } catch (_) {}
+      sessionRef.current = null;
+    }
+    if (fileTransferProviderRef.current) {
+      try { fileTransferProviderRef.current.dispose(); } catch (_) {}
+      fileTransferProviderRef.current = null;
+    }
+    if (canvasRef.current) {
+      try {
+        const ctx = canvasRef.current.getContext('2d');
+        if (ctx) {
+          ctx.fillStyle = '#141821';
+          ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+        }
+      } catch (_) {}
+    }
+    hasEverConnectedRef.current = false;
+    lastBackendReasonRef.current = null;
+    setDisconnectDetails(null);
+    setErrorMessage('');
+    setReconnectTrigger(prev => prev + 1);
+  };
+
+  const handleCloseTab = () => {
+    if (sessionRef.current) {
+      try { sessionRef.current.shutdown(); } catch (_) {}
+      sessionRef.current = null;
+    }
+    if (fileTransferProviderRef.current) {
+      try { fileTransferProviderRef.current.dispose(); } catch (_) {}
+      fileTransferProviderRef.current = null;
+    }
+    if (typeof onClose === 'function') {
+      onClose();
+      return;
+    }
+    window.dispatchEvent(new CustomEvent('close-tab', {
+      detail: { tabKey: tabId }
+    }));
+  };
+
+  // Escuchar evento de desconexión enviado por el bridge de Node.js
+  useEffect(() => {
+    if (!window.electron?.ipcRenderer) return;
+
+    const handleSessionClosed = (event, data) => {
+      if (data && data.tokenId && data.tokenId === currentTokenIdRef.current) {
+        console.log('📡 [IronRDP Tab] Recibido rdp:native-session-closed del bridge:', data.reason);
+        lastBackendReasonRef.current = data.reason;
+
+        // Si la sesión WASM aún no terminó de procesar el cierre del socket, ordenar shutdown
+        if (sessionRef.current) {
+          try { sessionRef.current.shutdown(); } catch (_) {}
+        }
+      }
+    };
+
+    window.electron.ipcRenderer.on('rdp:native-session-closed', handleSessionClosed);
+    return () => {
+      window.electron.ipcRenderer.removeListener('rdp:native-session-closed', handleSessionClosed);
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
     let currentSession = null;
     let currentFileTransferProvider = null;
 
+    const clearCanvasScreen = () => {
+      if (canvasRef.current) {
+        try {
+          const ctx = canvasRef.current.getContext('2d');
+          if (ctx) {
+            ctx.fillStyle = '#141821';
+            ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+          }
+        } catch (_) {}
+      }
+    };
+
+    const handleSessionEnded = (rawReason, err) => {
+      if (!isMounted) return;
+      clearCanvasScreen();
+
+      const wasConnected = hasEverConnectedRef.current;
+      const backendReason = lastBackendReasonRef.current;
+      const details = mapTerminationReason(rawReason, backendReason, wasConnected, err);
+
+      details.rawReason = rawReason || (err ? extractErrorMessage(err) : (backendReason || 'Desconexión normal'));
+      details.timestamp = new Date().toLocaleTimeString();
+
+      setDisconnectDetails(details);
+      if (wasConnected || details.category !== 'CONNECT_ERROR') {
+        setConnectionState('disconnected');
+      } else {
+        setConnectionState('error');
+        setErrorMessage(details.description || details.rawReason);
+      }
+    };
+
     const startRdpSession = async () => {
       try {
         setConnectionState('connecting');
         setErrorMessage('');
+        setDisconnectDetails(null);
 
         if (!window.electron || !window.electron.ipcRenderer) {
           throw new Error('Electron IPC no está disponible');
@@ -249,6 +359,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
         if (!tokenResponse || !tokenResponse.success || !tokenResponse.wsUrl) {
           throw new Error(tokenResponse?.error || 'No se pudo inicializar el puente RDP nativo');
         }
+
+        currentTokenIdRef.current = tokenResponse.tokenId;
 
         if (!isMounted) return;
 
@@ -591,6 +703,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
         }
 
         if (isMounted) {
+          hasEverConnectedRef.current = true;
           setConnectionState('connected');
           setTimeout(() => {
             canvasRef.current?.focus();
@@ -599,26 +712,21 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
 
         // Ejecutar sesión RDP
         currentSession.run().then((terminationInfo) => {
-          console.log('ℹ️ [IronRDP WASM] Sesión terminada:', terminationInfo?.reason?.() || terminationInfo);
-          if (isMounted) {
-            setConnectionState('disconnected');
-          }
+          const rawReason = typeof terminationInfo?.reason === 'function'
+            ? terminationInfo.reason()
+            : String(terminationInfo || '');
+          console.log('ℹ️ [IronRDP WASM] Sesión terminada:', rawReason);
+          handleSessionEnded(rawReason, null);
         }).catch((err) => {
           const detail = extractErrorMessage(err);
           console.error('❌ [IronRDP WASM] Error en ejecución de sesión:', detail, err);
-          if (isMounted) {
-            setConnectionState('error');
-            setErrorMessage(detail);
-          }
+          handleSessionEnded(null, err);
         });
 
       } catch (err) {
         const detail = extractErrorMessage(err);
         console.error('❌ [IronRDP WASM] Error conectando:', detail, err);
-        if (isMounted) {
-          setConnectionState('error');
-          setErrorMessage(detail);
-        }
+        handleSessionEnded(null, err);
       }
     };
 
@@ -635,7 +743,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
       }
       sessionRef.current = null;
     };
-  }, [rdpConfig]);
+  }, [rdpConfig, reconnectTrigger]);
 
   // Manejo de enfoque dinámico del canvas al activar pestaña
   useEffect(() => {
@@ -1222,26 +1330,216 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true },
         </div>
       )}
 
-      {connectionState === 'error' && (
+      {/* Overlays de estado: Desconectado o Error */}
+      {(connectionState === 'disconnected' || connectionState === 'error') && (
         <div
-          className="flex flex-column align-items-center justify-content-center text-white gap-3 p-4 text-center"
+          className="flex flex-column align-items-center justify-content-center text-white p-4"
           style={{
             position: 'absolute',
             inset: 0,
-            backgroundColor: '#141821',
-            zIndex: 10
+            backgroundColor: 'rgba(20, 24, 33, 0.96)',
+            backdropFilter: 'blur(8px)',
+            zIndex: 30,
+            overflowY: 'auto'
           }}
         >
-          <i className="pi pi-exclamation-triangle text-red-500" style={{ fontSize: '3rem' }}></i>
-          <h3 className="m-0 text-red-400">Error de Conexión RDP Web</h3>
-          <p className="m-0 text-sm text-gray-300 max-w-26rem">{errorMessage || 'Ocurrió un error inesperado al establecer la sesión RDP'}</p>
-        </div>
-      )}
+          <div
+            style={{
+              backgroundColor: '#1a1f2c',
+              border: `1px solid ${
+                disconnectDetails?.severity === 'danger'
+                  ? 'rgba(239, 68, 68, 0.4)'
+                  : disconnectDetails?.severity === 'warn'
+                  ? 'rgba(245, 158, 11, 0.4)'
+                  : 'rgba(59, 130, 246, 0.4)'
+              }`,
+              borderRadius: '12px',
+              padding: '28px 36px',
+              maxWidth: '520px',
+              width: '100%',
+              boxShadow: '0 16px 36px rgba(0, 0, 0, 0.6)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              gap: '16px'
+            }}
+          >
+            {/* Icono de estado con aura */}
+            <div
+              style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor:
+                  disconnectDetails?.severity === 'danger'
+                    ? 'rgba(239, 68, 68, 0.15)'
+                    : disconnectDetails?.severity === 'warn'
+                    ? 'rgba(245, 158, 11, 0.15)'
+                    : 'rgba(59, 130, 246, 0.15)',
+                boxShadow:
+                  disconnectDetails?.severity === 'danger'
+                    ? '0 0 20px rgba(239, 68, 68, 0.25)'
+                    : disconnectDetails?.severity === 'warn'
+                    ? '0 0 20px rgba(245, 158, 11, 0.25)'
+                    : '0 0 20px rgba(59, 130, 246, 0.25)'
+              }}
+            >
+              <i
+                className={
+                  disconnectDetails?.icon ||
+                  (connectionState === 'error' ? 'pi pi-exclamation-triangle' : 'pi pi-desktop')
+                }
+                style={{
+                  fontSize: '2rem',
+                  color:
+                    disconnectDetails?.severity === 'danger'
+                      ? '#ef4444'
+                      : disconnectDetails?.severity === 'warn'
+                      ? '#f59e0b'
+                      : '#38bdf8'
+                }}
+              />
+            </div>
 
-      {connectionState === 'disconnected' && (
-        <div className="flex flex-column align-items-center justify-content-center h-full text-white gap-3">
-          <i className="pi pi-desktop text-gray-500" style={{ fontSize: '3rem' }}></i>
-          <h4 className="m-0 text-gray-300">Sesión RDP Finalizada</h4>
+            {/* Badge de categoría */}
+            {disconnectDetails?.badge && (
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  padding: '3px 10px',
+                  borderRadius: '12px',
+                  backgroundColor:
+                    disconnectDetails?.severity === 'danger'
+                      ? 'rgba(239, 68, 68, 0.2)'
+                      : disconnectDetails?.severity === 'warn'
+                      ? 'rgba(245, 158, 11, 0.2)'
+                      : 'rgba(59, 130, 246, 0.2)',
+                  color:
+                    disconnectDetails?.severity === 'danger'
+                      ? '#fca5a5'
+                      : disconnectDetails?.severity === 'warn'
+                      ? '#fde68a'
+                      : '#93c5fd'
+                }}
+              >
+                {disconnectDetails.badge}
+              </span>
+            )}
+
+            {/* Título principal */}
+            <h3 className="m-0 text-xl font-semibold text-white">
+              {disconnectDetails?.title || (connectionState === 'error' ? 'Error de Conexión RDP' : 'Sesión RDP Finalizada')}
+            </h3>
+
+            {/* Host Badge */}
+            <div
+              className="flex align-items-center gap-2 px-2 py-1"
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: '6px',
+                fontSize: '12px',
+                color: '#94a3b8'
+              }}
+            >
+              <i className="pi pi-desktop text-xs"></i>
+              <span>{rdpConfig?.hostname || rdpConfig?.server || 'Servidor RDP'}:{rdpConfig?.port || 3389}</span>
+              {rdpConfig?.username && (
+                <>
+                  <span style={{ opacity: 0.4 }}>•</span>
+                  <span>{rdpConfig.username}</span>
+                </>
+              )}
+            </div>
+
+            {/* Descripción en lenguaje natural */}
+            <p className="m-0 text-sm text-gray-300 line-height-3">
+              {disconnectDetails?.description || errorMessage || 'La sesión de escritorio remoto se ha cerrado.'}
+            </p>
+
+            {/* Sugerencia o consejo de acción */}
+            {disconnectDetails?.suggestion && (
+              <p className="m-0 text-xs text-blue-300 font-medium">
+                {disconnectDetails.suggestion}
+              </p>
+            )}
+
+            {/* Botones de acción principales */}
+            <div className="flex align-items-center gap-3 mt-2 w-full justify-content-center">
+              <Button
+                label="Reconectar"
+                icon="pi pi-replay"
+                className="p-button-sm font-semibold"
+                style={{
+                  backgroundColor: '#00f0ff',
+                  borderColor: '#00f0ff',
+                  color: '#0a0d14',
+                  boxShadow: '0 0 12px rgba(0, 240, 255, 0.35)',
+                  minWidth: '130px'
+                }}
+                onClick={handleReconnect}
+              />
+              <Button
+                label="Cerrar pestaña"
+                icon="pi pi-times"
+                className="p-button-outlined p-button-secondary p-button-sm"
+                style={{
+                  borderColor: 'rgba(148, 163, 184, 0.4)',
+                  color: '#cbd5e1',
+                  minWidth: '130px'
+                }}
+                onClick={handleCloseTab}
+              />
+            </div>
+
+            {/* Diagnóstico técnico desplegable */}
+            {disconnectDetails?.rawReason && (
+              <div className="w-full mt-2" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowDiagnostics(prev => !prev)}
+                  className="flex align-items-center justify-content-center gap-2 w-full p-1"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#64748b',
+                    fontSize: '11px',
+                    cursor: 'pointer',
+                    outline: 'none'
+                  }}
+                >
+                  <i className={`pi ${showDiagnostics ? 'pi-chevron-up' : 'pi-chevron-down'}`} style={{ fontSize: '10px' }}></i>
+                  <span>{showDiagnostics ? 'Ocultar diagnóstico técnico' : 'Ver detalles técnicos'}</span>
+                </button>
+
+                {showDiagnostics && (
+                  <div
+                    className="mt-2 p-2 text-left text-xs font-mono"
+                    style={{
+                      backgroundColor: 'rgba(0, 0, 0, 0.35)',
+                      borderRadius: '6px',
+                      color: '#94a3b8',
+                      maxHeight: '120px',
+                      overflowY: 'auto',
+                      wordBreak: 'break-all'
+                    }}
+                  >
+                    <div><strong className="text-gray-400">Hora:</strong> {disconnectDetails.timestamp || 'N/A'}</div>
+                    <div><strong className="text-gray-400">Motivo:</strong> {disconnectDetails.rawReason}</div>
+                    {disconnectDetails.category && (
+                      <div><strong className="text-gray-400">Categoría:</strong> {disconnectDetails.category}</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
