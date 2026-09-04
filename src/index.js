@@ -109,11 +109,11 @@ const applyEarlyBootTheme = () => {
       const explorerFontSize = localStorage.getItem('explorerFontSize');
       applySidebarTypographyCssVariables({
         uiFont: uiFont || sidebarFont || explorerFont || undefined,
-        uiFontSize: uiFontSize ? parseInt(uiFontSize, 10) : undefined,
+        uiFontSize: uiFontSize ? parseFloat(uiFontSize) : undefined,
         sidebarFont: sidebarFont || undefined,
-        sidebarFontSize: sidebarFontSize ? parseInt(sidebarFontSize, 10) : undefined,
+        sidebarFontSize: sidebarFontSize ? parseFloat(sidebarFontSize) : undefined,
         explorerFont: explorerFont || undefined,
-        explorerFontSize: explorerFontSize ? parseInt(explorerFontSize, 10) : undefined
+        explorerFontSize: explorerFontSize ? parseFloat(explorerFontSize) : undefined
       });
     } catch { /* ignore */ }
   } catch { }

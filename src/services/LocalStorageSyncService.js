@@ -79,6 +79,15 @@ class LocalStorageSyncService {
             }
         });
 
+        // Garantizar persistencia a disco al cerrar la ventana o salir de la aplicación
+        window.addEventListener('beforeunload', () => {
+            this.syncToFile();
+        });
+
+        window.addEventListener('pagehide', () => {
+            this.syncToFile();
+        });
+
         setInterval(() => {
             this.syncToFile();
         }, 30000);

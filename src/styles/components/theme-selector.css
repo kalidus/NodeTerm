@@ -158,33 +158,53 @@
 
 /* Card de Tipografía con ancho óptimo para precisión */
 .theme-typography-card {
-  min-width: 235px;
-  width: 235px;
+  min-width: 240px;
+  width: 240px;
 }
 
-/* Fila del Slider con botones de precisión - y + */
-.theme-size-slider-row {
+/* Fila de cabecera de tamaño: etiqueta y stepper pill */
+.theme-size-header-row {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
+  justify-content: space-between;
   width: 100%;
-  padding: 0.15rem 0.25rem 0.25rem;
+  padding: 0.125rem 0.25rem 0.25rem;
   box-sizing: border-box;
 }
 
-.theme-size-btn {
-  background: rgba(255, 255, 255, 0.08);
+.theme-size-header-label {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--ui-dialog-text);
+  letter-spacing: 0.01em;
+}
+
+/* Stepper Pill unificado de alta visibilidad: [-] [14.0 px] [+] */
+.theme-size-stepper-pill {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.4);
   border: 1px solid var(--ui-dialog-border);
+  border-radius: 6px;
+  padding: 2px;
+  gap: 2px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.theme-size-step-btn {
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   color: var(--ui-dialog-text);
   border-radius: 4px;
-  width: 20px;
-  height: 20px;
-  min-width: 20px;
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.75rem;
-  font-weight: 700;
   cursor: pointer;
   padding: 0;
   line-height: 1;
@@ -192,16 +212,31 @@
   user-select: none;
 }
 
-.theme-size-btn:hover:not(:disabled) {
+.theme-size-step-btn:hover:not(:disabled) {
   background: var(--ui-button-primary);
-  color: var(--ui-button-primary-text, #fff);
+  color: var(--ui-button-primary-text, #ffffff);
   border-color: var(--ui-button-primary);
-  transform: scale(1.05);
+  transform: scale(1.08);
 }
 
-.theme-size-btn:disabled {
-  opacity: 0.35;
+.theme-size-step-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.theme-size-step-btn:disabled {
+  opacity: 0.25;
   cursor: not-allowed;
+}
+
+.theme-size-value-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--ui-button-primary);
+  min-width: 48px;
+  text-align: center;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
 }
 
 .theme-size-reset-btn {
@@ -224,38 +259,44 @@
   transform: rotate(-45deg);
 }
 
-/* PrimeReact Slider dentro de la fila de tamaño */
-.theme-size-slider-row .p-slider {
-  flex: 1;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.15) !important;
-  border-radius: 2px;
+/* Contenedor del Slider a 100% de ancho para máximo recorrido físico */
+.theme-size-track-container {
+  width: 100%;
+  padding: 0.35rem 0.25rem 0.4rem;
+  box-sizing: border-box;
+}
+
+.theme-size-track-container .p-slider {
+  width: 100% !important;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.18) !important;
+  border-radius: 3px;
   border: none;
   cursor: pointer;
 }
 
-.theme-size-slider-row .p-slider .p-slider-range {
+.theme-size-track-container .p-slider .p-slider-range {
   background: var(--ui-button-primary) !important;
-  border-radius: 2px;
+  border-radius: 3px;
 }
 
-.theme-size-slider-row .p-slider .p-slider-handle {
-  width: 12px;
-  height: 12px;
+.theme-size-track-container .p-slider .p-slider-handle {
+  width: 14px;
+  height: 14px;
   background: var(--ui-button-primary) !important;
   border: 2px solid #ffffff !important;
   border-radius: 50% !important;
-  margin-top: -4px;
-  margin-left: -6px;
+  margin-top: -4.5px;
+  margin-left: -7px;
   transition: transform 0.1s ease, box-shadow 0.1s ease;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
   cursor: grab;
 }
 
-.theme-size-slider-row .p-slider .p-slider-handle:hover,
-.theme-size-slider-row .p-slider .p-slider-handle:focus {
+.theme-size-track-container .p-slider .p-slider-handle:hover,
+.theme-size-track-container .p-slider .p-slider-handle:focus {
   transform: scale(1.25);
-  box-shadow: 0 0 0 3px rgba(var(--ui-button-primary-rgb, 99, 102, 241), 0.3);
+  box-shadow: 0 0 0 4px rgba(var(--ui-button-primary-rgb, 99, 102, 241), 0.35);
   outline: none;
 }
 

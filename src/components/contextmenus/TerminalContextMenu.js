@@ -339,7 +339,7 @@ const TerminalContextMenu = ({
 
             {isBroadcasting && terminalsInGroup.length > 0 && (
               <div style={{ marginTop: '4px' }}>
-                <div className="menu-header" style={{ padding: '8px 12px 4px 12px', fontWeight: 'bold', fontSize: '11px', color: 'var(--ui-context-text)', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                <div className="menu-header" style={{ padding: '8px 12px 4px 12px', fontWeight: 'bold', fontSize: 'calc(var(--ui-font-size, 14px) - 3px)', color: 'var(--ui-context-text)', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   Destinos del Broadcast
                 </div>
                 {terminalsInGroup.map(term => {
@@ -356,7 +356,7 @@ const TerminalContextMenu = ({
                         display: 'flex',
                         alignItems: 'center',
                         gap: '8px',
-                        fontSize: '12px'
+                        fontSize: 'calc(var(--ui-font-size, 14px) - 1px)'
                       }}
                       onClick={(e) => {
                         e.stopPropagation();

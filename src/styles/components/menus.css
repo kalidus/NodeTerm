@@ -7,6 +7,8 @@
   border: 1px solid var(--ui-context-border) !important;
   border-radius: 6px !important;
   background: var(--ui-context-bg) !important;
+  font-family: var(--ui-font-family, inherit) !important;
+  font-size: var(--ui-font-size, 14px) !important;
   z-index: 9999 !important;
   animation: none !important;
   position: fixed !important;
@@ -61,6 +63,7 @@
 
 .p-menu .p-menuitem-text {
   color: var(--ui-context-text) !important;
+  font-size: var(--ui-font-size, 14px) !important;
   font-weight: 500;
 }
 
@@ -74,6 +77,7 @@
 .app-context-menu,
 .app-submenu {
   font-family: var(--ui-font-family, var(--font-family, system-ui, sans-serif)) !important;
+  font-size: var(--ui-font-size, 14px) !important;
   color: var(--ui-text-primary) !important;
   background: var(--ui-sidebar-bg) !important;
   border: 1px solid var(--ui-sidebar-border) !important;
@@ -138,7 +142,7 @@
 }
 
 .menu-shortcut {
-  font-size: 14px !important;
+  font-size: calc(var(--ui-font-size, 14px) - 2px) !important;
   color: var(--ui-text-secondary, #888) !important;
   font-weight: normal !important;
 }
@@ -184,6 +188,8 @@
   box-shadow: 0 4px 12px var(--ui-context-shadow) !important;
   border-radius: var(--ui-radius-md, 8px) !important;
   padding: var(--ui-space-1, 4px) 0 !important;
+  font-family: var(--ui-font-family, inherit) !important;
+  font-size: var(--ui-font-size, 14px) !important;
   z-index: 99999 !important;
 }
 
@@ -233,6 +239,7 @@
 
 .p-contextmenu .p-menuitem-text {
   color: var(--ui-context-text) !important;
+  font-size: var(--ui-font-size, 14px) !important;
 }
 
 .p-contextmenu .p-separator {
@@ -303,6 +310,8 @@
   color: var(--ui-context-text) !important;
   border-radius: var(--ui-radius-md, 8px) !important;
   box-shadow: 0 4px 12px var(--ui-context-shadow, rgba(0, 0, 0, 0.15)) !important;
+  font-family: var(--ui-font-family, inherit) !important;
+  font-size: var(--ui-font-size, 14px) !important;
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
@@ -311,6 +320,7 @@
 .tab-context-menu .menu-item,
 .app-menu-surface .menu-item,
 .app-menu-surface .menu-item-unified {
+  font-size: var(--ui-font-size, 14px) !important;
   transition: background-color 0.15s ease, color 0.15s ease;
   color: var(--ui-context-text) !important;
 }
@@ -340,6 +350,8 @@
   border: 1px solid var(--ui-context-border) !important;
   border-radius: var(--ui-radius-md, 8px) !important;
   box-shadow: 0 4px 12px var(--ui-context-shadow, rgba(0, 0, 0, 0.15)) !important;
+  font-family: var(--ui-font-family, inherit) !important;
+  font-size: var(--ui-font-size, 14px) !important;
 }
 
 /* Custom Scrollbar for context menus */

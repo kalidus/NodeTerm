@@ -120,9 +120,10 @@ export function applyAppTypography({
       root.style.setProperty('--sidebar-font-size', `${numericSize}px`);
       root.style.setProperty('--explorer-font-size', `${numericSize}px`);
       root.style.setProperty('--home-tab-font-size', `${numericSize}px`);
-      // Dynamic rem scaling with pure whole-integer pixels to prevent DirectWrite / subpixel font distortion:
-      // Base ratio: 14px UI font size corresponds to standard 16px browser root (16/14 = 1.142857).
-      root.style.setProperty('font-size', `${Math.round(numericSize * (16 / 14))}px`);
+      // Dynamic rem scaling: ensures 0.875rem (the standard UI base font size) calculates exactly to numericSize px.
+      // Base ratio: 14px UI font size corresponds to standard 16px browser root (16/14 = 1.14285714).
+      // Continuous precision with 4 decimal places ensures smooth 0.5px subpixel scaling without stair-step jumps:
+      root.style.setProperty('font-size', `${(numericSize * (16 / 14)).toFixed(4)}px`);
     }
   } else {
     root.style.removeProperty('font-size');

@@ -34,6 +34,8 @@ const SYNC_KEYS = [
   'nodeterm_tab_theme',
   'nodeterm_tab_layout',
   'nodeterm_expanded_keys',
+  'uiFont',
+  'uiFontSize',
   'explorerFont',
   'explorerFontSize',
   'explorerColorTheme',

@@ -19,6 +19,7 @@ import {
   shouldLoadWebFontForSidebar
 } from '../utils/sidebarFontStack';
 import { fontLoader } from '../utils/fontLoader';
+import { persistSyncedSetting } from '../utils/persistSyncedSetting';
 
 
 export const useThemeManagement = () => {
@@ -248,7 +249,7 @@ export const useThemeManagement = () => {
   const [uiFontSize, setUiFontSizeState] = useState(() => {
     try {
       const saved = localStorage.getItem('uiFontSize') || localStorage.getItem('sidebarFontSize') || localStorage.getItem('explorerFontSize');
-      return saved ? parseInt(saved, 10) : 14;
+      return saved ? parseFloat(saved) : 14;
     } catch {
       return 14;
     }
@@ -260,27 +261,29 @@ export const useThemeManagement = () => {
     setSidebarFontState(newFont);
     setExplorerFontState(newFont);
     try {
-      localStorage.setItem('uiFont', newFont);
-      localStorage.setItem('sidebarFont', newFont);
-      localStorage.setItem('explorerFont', newFont);
-      localStorage.setItem('homeTabFont', newFont);
+      persistSyncedSetting('uiFont', newFont);
+      persistSyncedSetting('sidebarFont', newFont);
+      persistSyncedSetting('explorerFont', newFont);
+      persistSyncedSetting('homeTabFont', newFont);
       window.dispatchEvent(new CustomEvent('ui-font-changed', { detail: { font: newFont } }));
       window.dispatchEvent(new Event('settings-updated'));
     } catch { }
   }, []);
 
   const setUiFontSize = useCallback((newSize) => {
-    if (!newSize) return;
-    const numSize = parseInt(newSize, 10);
-    if (isNaN(numSize)) return;
+    if (!newSize && newSize !== 0) return;
+    const raw = typeof newSize === 'number' ? newSize : parseFloat(newSize);
+    if (isNaN(raw)) return;
+    const numSize = Number(raw.toFixed(1));
+    const strSize = numSize.toString();
     setUiFontSizeState(numSize);
     setSidebarFontSize(numSize);
     setExplorerFontSize(numSize);
     try {
-      localStorage.setItem('uiFontSize', numSize.toString());
-      localStorage.setItem('sidebarFontSize', numSize.toString());
-      localStorage.setItem('explorerFontSize', numSize.toString());
-      localStorage.setItem('homeTabFontSize', numSize.toString());
+      persistSyncedSetting('uiFontSize', strSize);
+      persistSyncedSetting('sidebarFontSize', strSize);
+      persistSyncedSetting('explorerFontSize', strSize);
+      persistSyncedSetting('homeTabFontSize', strSize);
       window.dispatchEvent(new CustomEvent('ui-font-size-changed', { detail: { size: numSize } }));
       window.dispatchEvent(new Event('settings-updated'));
     } catch { }
@@ -289,17 +292,13 @@ export const useThemeManagement = () => {
   const setSidebarFont = setUiFont;
   const setExplorerFont = setUiFont;
 
-  // sidebarFontSize: se deriva de sidebarIconSize automáticamente.
-  // El estado se mantiene para que todos los consumidores sigan funcionando sin cambios.
+  // sidebarFontSize: se alinea con la tipografía de UI configurada
   const [sidebarFontSize, setSidebarFontSize] = useState(() => {
     try {
-      // Inicializar desde iconSize si ya hay uno guardado (garantiza coherencia)
-      const savedIconSize = localStorage.getItem('folderIconSize');
-      if (savedIconSize) return derivedFontSize(parseInt(savedIconSize, 10));
-      const saved = localStorage.getItem('sidebarFontSize');
-      return saved ? parseInt(saved, 10) : 15;
+      const saved = localStorage.getItem('uiFontSize') || localStorage.getItem('sidebarFontSize') || localStorage.getItem('explorerFontSize');
+      return saved ? parseFloat(saved) : 14;
     } catch {
-      return 15;
+      return 14;
     }
   });
 
@@ -396,18 +395,13 @@ export const useThemeManagement = () => {
     } catch { }
   }, [iconSize]);
 
-  // Persistir el tamaño unificado en ambas claves para retrocompatibilidad total
-  // y derivar el fontSize proporcional automáticamente
+  // Persistir el tamaño de iconos en ambas claves para retrocompatibilidad total
   useEffect(() => {
     try {
       localStorage.setItem('folderIconSize', sidebarIconSize.toString());
       localStorage.setItem('connectionIconSize', sidebarIconSize.toString());
-      // Sincronizar font size con el ratio fijo
-      const derived = derivedFontSize(sidebarIconSize);
-      setSidebarFontSize(derived);
-      localStorage.setItem('sidebarFontSize', derived.toString());
     } catch { }
-  }, [sidebarIconSize]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sidebarIconSize]);
 
   useEffect(() => {
     try {
@@ -550,7 +544,7 @@ export const useThemeManagement = () => {
     const updatedFontSize = localStorage.getItem(FONT_SIZE_STORAGE_KEY);
 
     const updatedUiFont = localStorage.getItem('uiFont') || localStorage.getItem('sidebarFont') || explorerFonts[0];
-    const updatedUiFontSize = localStorage.getItem('uiFontSize');
+    const updatedUiFontSize = localStorage.getItem('uiFontSize') || localStorage.getItem('sidebarFontSize') || localStorage.getItem('explorerFontSize');
     const updatedExplorerFont = localStorage.getItem('explorerFont') || updatedUiFont;
     const updatedExplorerFontSize = localStorage.getItem('explorerFontSize') || updatedUiFontSize;
     const updatedExplorerColorTheme = localStorage.getItem('explorerColorTheme') || 'Light';
@@ -582,12 +576,12 @@ export const useThemeManagement = () => {
 
     // UI Font State Update
     setUiFontState(updatedUiFont);
-    if (updatedUiFontSize) setUiFontSizeState(parseInt(updatedUiFontSize, 10));
+    if (updatedUiFontSize) setUiFontSizeState(parseFloat(updatedUiFontSize));
     setExplorerFontState(updatedExplorerFont);
-    if (updatedExplorerFontSize) setExplorerFontSize(parseInt(updatedExplorerFontSize, 10));
+    if (updatedExplorerFontSize) setExplorerFontSize(parseFloat(updatedExplorerFontSize));
     setExplorerColorTheme(updatedExplorerColorTheme);
     setSidebarFontState(updatedSidebarFont);
-    if (updatedSidebarFontSize) setSidebarFontSize(parseInt(updatedSidebarFontSize, 10));
+    if (updatedSidebarFontSize) setSidebarFontSize(parseFloat(updatedSidebarFontSize));
     setSidebarFontColor(updatedSidebarFontColor);
     if (updatedIconSize) setIconSize(parseInt(updatedIconSize, 10));
     if (updatedSidebarIconSize) setSidebarIconSize(parseInt(updatedSidebarIconSize, 10));
@@ -613,11 +607,11 @@ export const useThemeManagement = () => {
 
       applyAppTypography({
         uiFont: updatedUiFont,
-        uiFontSize: updatedUiFontSize ? parseInt(updatedUiFontSize, 10) : undefined,
+        uiFontSize: updatedUiFontSize ? parseFloat(updatedUiFontSize) : undefined,
         sidebarFont: updatedSidebarFont,
-        sidebarFontSize: updatedSidebarFontSize ? parseInt(updatedSidebarFontSize, 10) : undefined,
+        sidebarFontSize: updatedSidebarFontSize ? parseFloat(updatedSidebarFontSize) : undefined,
         explorerFont: updatedExplorerFont,
-        explorerFontSize: updatedExplorerFontSize ? parseInt(updatedExplorerFontSize, 10) : undefined
+        explorerFontSize: updatedExplorerFontSize ? parseFloat(updatedExplorerFontSize) : undefined
       });
       if (updatedSidebarFontColor) {
         root.style.setProperty('--ui-sidebar-text', updatedSidebarFontColor);

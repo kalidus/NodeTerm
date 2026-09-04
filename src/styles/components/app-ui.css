@@ -218,7 +218,8 @@
 
 /* ===== AppMenu surface (Overflow / Tab / Terminal / DOM) ===== */
 .app-menu-surface {
-  font-family: var(--ui-font-family, var(--font-family, system-ui, sans-serif));
+  font-family: var(--ui-font-family, var(--font-family, system-ui, sans-serif)) !important;
+  font-size: var(--ui-font-size, 14px) !important;
   background: var(--ui-context-bg) !important;
   color: var(--ui-context-text) !important;
   border: 1px solid var(--ui-context-border) !important;
@@ -238,7 +239,7 @@
   padding: 0.5rem 0.75rem;
   cursor: pointer;
   color: var(--ui-context-text) !important;
-  font-size: 0.875rem;
+  font-size: var(--ui-font-size, 14px) !important;
   border: none;
   background: transparent;
   width: 100%;
@@ -252,9 +253,9 @@
 
 .app-menu-item i,
 .app-menu-item .app-menu-item-icon {
-  width: 1rem;
+  width: 1.25em;
   text-align: center;
-  font-size: 0.875rem;
+  font-size: 1em;
   opacity: 0.85;
   color: var(--ui-context-text) !important;
   flex-shrink: 0;
@@ -283,7 +284,7 @@
   color: var(--ui-context-text);
   opacity: 0.65;
   font-style: italic;
-  font-size: 0.875rem;
+  font-size: calc(var(--ui-font-size, 14px) - 1px);
 }
 
 .app-menu-backdrop {

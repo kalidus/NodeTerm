@@ -127,7 +127,7 @@ const TabContextMenu = ({
         {tabContextMenu.isGroup ? (
           // Menú contextual para grupos
           <>
-            <div className="menu-header" style={{ padding: '8px 12px', fontWeight: 'bold', borderBottom: '1px solid var(--ui-context-border)', fontSize: '12px', color: 'var(--ui-context-text)', opacity: 0.7 }}>
+            <div className="menu-header" style={{ padding: '8px 12px', fontWeight: 'bold', borderBottom: '1px solid var(--ui-context-border)', fontSize: 'calc(var(--ui-font-size, 14px) - 2px)', color: 'var(--ui-context-text)', opacity: 0.7 }}>
               Opciones del grupo "{tabContextMenu.group.name}":
             </div>
             <div
@@ -166,7 +166,7 @@ const TabContextMenu = ({
           <>
             {tabGroups.length > 0 && (
               <>
-                <div className="menu-header" style={{ padding: '8px 12px', fontWeight: 'bold', borderBottom: '1px solid var(--ui-context-border)', fontSize: '12px', color: 'var(--ui-context-text)', opacity: 0.7 }}>
+                <div className="menu-header" style={{ padding: '8px 12px', fontWeight: 'bold', borderBottom: '1px solid var(--ui-context-border)', fontSize: 'calc(var(--ui-font-size, 14px) - 2px)', color: 'var(--ui-context-text)', opacity: 0.7 }}>
                   Mover a grupo:
                 </div>
                 <div

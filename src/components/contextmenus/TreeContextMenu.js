@@ -35,16 +35,16 @@ const SubMenuItem = ({ item, onClose }) => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        fontSize: '13px',
+        fontSize: 'var(--ui-font-size, 13px)',
         color: 'var(--ui-context-text, #e2e8f0)',
         userSelect: 'none'
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        {item.icon && <i className={item.icon} style={{ width: '16px', fontSize: '13px' }} />}
+        {item.icon && <i className={item.icon} style={{ width: '16px', fontSize: '1em' }} />}
         <span>{item.label}</span>
       </div>
-      <i className="pi pi-angle-right" style={{ fontSize: '11px', opacity: 0.7 }} />
+      <i className="pi pi-angle-right" style={{ fontSize: 'calc(var(--ui-font-size, 13px) - 2px)', opacity: 0.7 }} />
 
       {isOpen && item.items && item.items.length > 0 && (
         <div
@@ -89,7 +89,7 @@ const SubMenuItem = ({ item, onClose }) => {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
-                  fontSize: '13px',
+                  fontSize: 'var(--ui-font-size, 13px)',
                   color: 'var(--ui-context-text, #e2e8f0)',
                   userSelect: 'none'
                 }}
@@ -101,7 +101,7 @@ const SubMenuItem = ({ item, onClose }) => {
                   }
                 }}
               >
-                {subItem.icon && <i className={subItem.icon} style={{ width: '16px', fontSize: '13px' }} />}
+                {subItem.icon && <i className={subItem.icon} style={{ width: '16px', fontSize: '1em' }} />}
                 <span>{subItem.label}</span>
               </div>
             );
@@ -218,7 +218,7 @@ const TreeContextMenu = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                fontSize: '13px',
+                fontSize: 'var(--ui-font-size, 13px)',
                 color: isDanger ? 'var(--red-400, #f87171)' : 'var(--ui-context-text, #e2e8f0)',
                 userSelect: 'none'
               }}
@@ -235,7 +235,7 @@ const TreeContextMenu = ({
                   className={item.icon}
                   style={{
                     width: '16px',
-                    fontSize: '13px',
+                    fontSize: '1em',
                     color: isDanger ? 'var(--red-400, #f87171)' : undefined
                   }}
                 />

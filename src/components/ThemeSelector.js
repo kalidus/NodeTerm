@@ -17,6 +17,7 @@ import {
   shouldLoadWebFont
 } from '../utils/sidebarFontStack';
 import { fontLoader } from '../utils/fontLoader';
+import { persistSyncedSetting } from '../utils/persistSyncedSetting';
 import '../styles/components/theme-selector.css';
 
 const ANIM_SPEED_KEY = 'nodeterm_ui_anim_speed';
@@ -85,7 +86,7 @@ const ThemeSelector = ({ showPreview = false }) => {
   const [uiFontSize, setUiFontSize] = useState(() => {
     try {
       const saved = localStorage.getItem('uiFontSize') || localStorage.getItem('sidebarFontSize') || localStorage.getItem('explorerFontSize');
-      return saved ? parseInt(saved, 10) : 14;
+      return saved ? parseFloat(saved) : 14;
     } catch {
       return 14;
     }
@@ -95,10 +96,10 @@ const ThemeSelector = ({ showPreview = false }) => {
     if (!newFont) return;
     setUiFont(newFont);
     try {
-      localStorage.setItem('uiFont', newFont);
-      localStorage.setItem('sidebarFont', newFont);
-      localStorage.setItem('explorerFont', newFont);
-      localStorage.setItem('homeTabFont', newFont);
+      persistSyncedSetting('uiFont', newFont);
+      persistSyncedSetting('sidebarFont', newFont);
+      persistSyncedSetting('explorerFont', newFont);
+      persistSyncedSetting('homeTabFont', newFont);
       applyAppTypography({
         uiFont: newFont,
         uiFontSize,
@@ -116,15 +117,16 @@ const ThemeSelector = ({ showPreview = false }) => {
   }, [uiFontSize]);
 
   const handleUiFontSizeChange = useCallback((newSize) => {
-    const rawNum = parseInt(newSize, 10);
+    const rawNum = typeof newSize === 'number' ? newSize : parseFloat(newSize);
     if (isNaN(rawNum)) return;
-    const numSize = Math.max(8, Math.min(32, rawNum));
+    const numSize = Number(Math.max(8, Math.min(32, rawNum)).toFixed(1));
     setUiFontSize(numSize);
     try {
-      localStorage.setItem('uiFontSize', numSize.toString());
-      localStorage.setItem('sidebarFontSize', numSize.toString());
-      localStorage.setItem('explorerFontSize', numSize.toString());
-      localStorage.setItem('homeTabFontSize', numSize.toString());
+      const strSize = numSize.toString();
+      persistSyncedSetting('uiFontSize', strSize);
+      persistSyncedSetting('sidebarFontSize', strSize);
+      persistSyncedSetting('explorerFontSize', strSize);
+      persistSyncedSetting('homeTabFontSize', strSize);
       applyAppTypography({
         uiFont,
         uiFontSize: numSize,
@@ -144,18 +146,29 @@ const ThemeSelector = ({ showPreview = false }) => {
 
   useEffect(() => {
     const handleFontSync = (e) => {
-      const f = e.detail?.font || localStorage.getItem('uiFont') || localStorage.getItem('sidebarFont');
+      const f = e?.detail?.font || localStorage.getItem('uiFont') || localStorage.getItem('sidebarFont');
       if (f) setUiFont(f);
     };
     const handleSizeSync = (e) => {
-      const s = e.detail?.size || localStorage.getItem('uiFontSize') || localStorage.getItem('sidebarFontSize');
-      if (s) setUiFontSize(parseInt(s, 10));
+      const s = e?.detail?.size != null ? e.detail.size : (localStorage.getItem('uiFontSize') || localStorage.getItem('sidebarFontSize') || localStorage.getItem('explorerFontSize'));
+      if (s != null && s !== '') {
+        const num = parseFloat(s);
+        if (!isNaN(num)) setUiFontSize(num);
+      }
+    };
+    const handleGeneralSync = () => {
+      handleFontSync();
+      handleSizeSync();
     };
     window.addEventListener('ui-font-changed', handleFontSync);
     window.addEventListener('ui-font-size-changed', handleSizeSync);
+    window.addEventListener('settings-updated', handleGeneralSync);
+    window.addEventListener('localstorage-sync-ready', handleGeneralSync);
     return () => {
       window.removeEventListener('ui-font-changed', handleFontSync);
       window.removeEventListener('ui-font-size-changed', handleSizeSync);
+      window.removeEventListener('settings-updated', handleGeneralSync);
+      window.removeEventListener('localstorage-sync-ready', handleGeneralSync);
     };
   }, []);
 
@@ -516,7 +529,7 @@ const ThemeSelector = ({ showPreview = false }) => {
                         className="theme-anim-card-badge"
                         title="Tamaño actual de la fuente de la interfaz"
                       >
-                        {uiFontSize} px
+                        {Number(uiFontSize || 14).toFixed(uiFontSize % 1 === 0 ? 0 : 1)} px
                       </span>
                     </div>
                   </div>
@@ -555,79 +568,71 @@ const ThemeSelector = ({ showPreview = false }) => {
                       </div>
                     </div>
 
-                    {/* Selector de Tamaño con Stepper y Slider PrimeReact */}
+                    {/* Selector de Tamaño de Alta Precisión con Stepper Pill y Slider PrimeReact */}
                     <div className="theme-anim-speed-wrapper" style={{ marginTop: '0.125rem' }}>
-                      <span style={{
-                        fontSize: '0.6875rem',
-                        fontWeight: 500,
-                        color: 'var(--ui-dialog-text)',
-                        marginBottom: '0.25rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        paddingLeft: '0.375rem',
-                        paddingRight: '0.375rem'
-                      }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                          <i className="pi pi-sliders-h" style={{ fontSize: '0.6875rem', opacity: 0.7, width: '0.6875rem', display: 'inline-flex', justifyContent: 'center', flexShrink: 0 }}></i>
-                          Tamaño (8 - 32px)
+                      <div className="theme-size-header-row">
+                        <span className="theme-size-header-label">
+                          <i className="pi pi-sliders-h" style={{ fontSize: '0.6875rem', opacity: 0.75, width: '0.6875rem', display: 'inline-flex', justifyContent: 'center', flexShrink: 0 }}></i>
+                          Tamaño interfaz
                         </span>
-                        <span style={{
-                          fontSize: '0.6875rem',
-                          fontWeight: 700,
-                          color: 'var(--ui-button-primary)'
-                        }}>
-                          {uiFontSize} px
-                        </span>
-                      </span>
 
-                      {/* Slider con botones de precisión - y + */}
-                      <div className="theme-size-slider-row" title="Ajusta el tamaño con precisión">
-                        <button
-                          type="button"
-                          className="theme-size-btn"
-                          onClick={() => handleUiFontSizeChange(Math.max(8, (uiFontSize || 14) - 1))}
-                          title="Disminuir 1px"
-                          disabled={uiFontSize <= 8}
-                        >
-                          −
-                        </button>
+                        {/* Stepper Pill unificado [-] [14.0 px] [+] */}
+                        <div className="theme-size-stepper-pill" title="Ajuste fino de 0.5px por clic">
+                          <button
+                            type="button"
+                            className="theme-size-step-btn"
+                            onClick={() => handleUiFontSizeChange(Math.max(8, (uiFontSize || 14) - 0.5))}
+                            title="Disminuir 0.5px"
+                            disabled={uiFontSize <= 8}
+                          >
+                            <i className="pi pi-minus" style={{ fontSize: '0.625rem' }}></i>
+                          </button>
+                          <span className="theme-size-value-badge">
+                            {Number(uiFontSize || 14).toFixed(uiFontSize % 1 === 0 ? 0 : 1)} px
+                          </span>
+                          <button
+                            type="button"
+                            className="theme-size-step-btn"
+                            onClick={() => handleUiFontSizeChange(Math.min(32, (uiFontSize || 14) + 0.5))}
+                            title="Aumentar 0.5px"
+                            disabled={uiFontSize >= 32}
+                          >
+                            <i className="pi pi-plus" style={{ fontSize: '0.625rem' }}></i>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Slider a 100% de ancho con paso de 0.5px */}
+                      <div className="theme-size-track-container" title="Arrastra para ajustar continuamente (0.5px)">
                         <Slider
                           value={uiFontSize || 14}
                           onChange={(e) => handleUiFontSizeChange(e.value)}
                           min={8}
                           max={32}
-                          step={1}
-                          style={{ flex: 1 }}
+                          step={0.5}
+                          style={{ width: '100%' }}
                         />
-                        <button
-                          type="button"
-                          className="theme-size-btn"
-                          onClick={() => handleUiFontSizeChange(Math.min(32, (uiFontSize || 14) + 1))}
-                          title="Aumentar 1px"
-                          disabled={uiFontSize >= 32}
-                        >
-                          +
-                        </button>
                       </div>
 
                       {/* Presets rápidos de densidad */}
                       <div className="theme-size-presets">
                         {[
-                          { size: 10, label: '10' },
+                          { size: 11, label: '11' },
                           { size: 12, label: '12' },
+                          { size: 13, label: '13' },
                           { size: 14, label: '14' },
+                          { size: 15, label: '15' },
                           { size: 16, label: '16' },
                           { size: 18, label: '18' }
                         ].map(preset => (
                           <button
                             key={preset.size}
                             type="button"
-                            className={`theme-size-chip ${uiFontSize === preset.size ? 'active' : ''}`}
+                            className={`theme-size-chip ${Math.abs(uiFontSize - preset.size) < 0.25 ? 'active' : ''}`}
                             onClick={() => handleUiFontSizeChange(preset.size)}
                             title={`Fijar a ${preset.size}px`}
                           >
-                            {preset.label}px
+                            {preset.label}
                           </button>
                         ))}
                       </div>

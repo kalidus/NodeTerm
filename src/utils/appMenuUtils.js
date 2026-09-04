@@ -7,9 +7,12 @@ import { getVersionInfo } from '../version-info';
 import { appConfirm } from '../components/ui/AppConfirm';
 
 export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImportExportDialog, t, onShowImportWizard) => {
-  // Si no se pasa t, usar valores por defecto en español (fallback)
+  // Si no se pasa t o la clave no está traducida, usar valores por defecto en español (fallback)
   const getText = (key) => {
-    if (t) return t(key);
+    if (t) {
+      const val = t(key);
+      if (val && !val.includes('appMenu.') && !val.includes('common.')) return val;
+    }
     // Fallback en español si no hay traducción
     const fallbacks = {
       'appMenu.file': 'Archivo',
@@ -160,19 +163,20 @@ export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImpo
             min-width: 350px;
             max-width: 500px;
             color: var(--ui-text-primary, #333);
-            font-family: var(--font-family, sans-serif);
+            font-family: var(--ui-font-family, inherit) !important;
+            font-size: var(--ui-font-size, 14px);
           `;
 
           aboutDialog.innerHTML = `
-            <h3 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600; text-align: center;">${versionInfo.appName || 'NodeTerm'}</h3>
+            <h3 style="margin: 0 0 16px 0; font-size: calc(var(--ui-font-size, 14px) + 4px); font-weight: 600; text-align: center;">${versionInfo.appName || 'NodeTerm'}</h3>
             <div style="margin: 16px 0;">
-              <p style="margin: 8px 0; font-size: 14px;"><strong>${getText('appMenu.version')}:</strong> ${versionInfo.appVersion || getVersionInfo().appVersion}</p>
-              <p style="margin: 8px 0; font-size: 14px;"><strong>Electron:</strong> ${versionInfo.electronVersion || 'N/A'}</p>
-              <p style="margin: 8px 0; font-size: 14px;"><strong>Node.js:</strong> ${versionInfo.nodeVersion || 'N/A'}</p>
-              <p style="margin: 8px 0; font-size: 14px;"><strong>Chrome:</strong> ${versionInfo.chromeVersion || 'N/A'}</p>
+              <p style="margin: 8px 0; font-size: var(--ui-font-size, 14px);"><strong>${getText('appMenu.version')}:</strong> ${versionInfo.appVersion || getVersionInfo().appVersion}</p>
+              <p style="margin: 8px 0; font-size: var(--ui-font-size, 14px);"><strong>Electron:</strong> ${versionInfo.electronVersion || 'N/A'}</p>
+              <p style="margin: 8px 0; font-size: var(--ui-font-size, 14px);"><strong>Node.js:</strong> ${versionInfo.nodeVersion || 'N/A'}</p>
+              <p style="margin: 8px 0; font-size: var(--ui-font-size, 14px);"><strong>Chrome:</strong> ${versionInfo.chromeVersion || 'N/A'}</p>
             </div>
             <div style="margin-top: 16px; padding: 12px; background: rgba(234, 74, 170, 0.1); border: 1px solid rgba(234, 74, 170, 0.3); border-radius: 8px; text-align: center;">
-              <p style="margin: 0 0 8px 0; font-size: 13px; color: var(--ui-text-primary, #333);">
+              <p style="margin: 0 0 8px 0; font-size: calc(var(--ui-font-size, 14px) - 1px); color: var(--ui-text-primary, #333);">
                 💖 <strong>¿Te gusta NodeTerm?</strong> Apoya su desarrollo en GitHub Sponsors.
               </p>
               <button id="sponsorAboutBtn" style="
@@ -182,7 +186,7 @@ export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImpo
                 padding: 6px 14px;
                 border-radius: 6px;
                 cursor: pointer;
-                font-size: 13px;
+                font-size: calc(var(--ui-font-size, 14px) - 1px);
                 font-weight: 600;
               ">💖 Patrocinar en GitHub</button>
             </div>
@@ -191,10 +195,10 @@ export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImpo
                 background: var(--primary-color, #007ad9);
                 color: white;
                 border: none;
-                padding: 10px 20px;
+                padding: 8px 18px;
                 border-radius: 4px;
                 cursor: pointer;
-                font-size: 14px;
+                font-size: var(--ui-font-size, 14px);
                 min-width: 80px;
               ">${getText('appMenu.close')}</button>
             </div>
@@ -333,8 +337,8 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
     z-index: 9999;
     min-width: 220px;
     padding: var(--ui-space-1) 0;
-    font-family: var(--font-family, sans-serif);
-    font-size: 14px;
+    font-family: var(--ui-font-family, inherit) !important;
+    font-size: var(--ui-font-size, 14px) !important;
     left: -9999px;
     top: -9999px;
     opacity: 0;
@@ -355,12 +359,13 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
     const menuItem = document.createElement('div');
     menuItem.className = 'menu-item-unified';
     menuItem.style.cssText = `
-      padding: ${isSubmenu ? '8px 20px' : '10px 16px'};
+      padding: ${isSubmenu ? '6px 16px' : '8px 14px'};
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: space-between;
       color: var(--ui-context-text, #fff);
+      font-size: var(--ui-font-size, 14px);
       transition: background-color 0.15s ease;
       position: relative;
     `;
@@ -374,8 +379,8 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
     `;
 
     leftContent.innerHTML = `
-      <i class="${item.icon}" style="width: 16px; font-size: 14px;"></i>
-      <span>${item.label}</span>
+      <i class="${item.icon}" style="width: 1.25em; font-size: 1em; display: inline-flex; justify-content: center; align-items: center;"></i>
+      <span style="font-size: var(--ui-font-size, 14px);">${item.label}</span>
     `;
 
     menuItem.appendChild(leftContent);
@@ -384,7 +389,7 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
     if (item.shortcut) {
       const shortcut = document.createElement('span');
       shortcut.style.cssText = `
-        font-size: 12px;
+        font-size: calc(var(--ui-font-size, 14px) - 2px);
         color: var(--ui-sidebar-text, #aaa);
         margin-left: 20px;
       `;
@@ -397,7 +402,7 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
       const arrow = document.createElement('i');
       arrow.className = 'pi pi-angle-right';
       arrow.style.cssText = `
-        font-size: 12px;
+        font-size: calc(var(--ui-font-size, 14px) - 2px);
         margin-left: 10px;
       `;
       menuItem.appendChild(arrow);
@@ -435,8 +440,8 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
           z-index: 10000;
           min-width: 200px;
           padding: var(--ui-space-1) 0;
-          font-family: var(--font-family, sans-serif);
-          font-size: 14px;
+          font-family: var(--ui-font-family, inherit) !important;
+          font-size: var(--ui-font-size, 14px) !important;
           left: -9999px;
           top: -9999px;
           opacity: 0;

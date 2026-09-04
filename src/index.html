@@ -84,6 +84,29 @@
             observer.observe(document.documentElement, { childList: true, subtree: true });
           }
           
+          // Tipografía temprana para evitar saltos o flash de tamaño al arrancar
+          const savedFontSize = localStorage.getItem('uiFontSize') || localStorage.getItem('sidebarFontSize') || localStorage.getItem('explorerFontSize');
+          if (savedFontSize) {
+            const numSize = parseFloat(savedFontSize);
+            if (!isNaN(numSize) && numSize > 0) {
+              document.documentElement.style.setProperty('--ui-font-size', numSize + 'px');
+              document.documentElement.style.setProperty('--sidebar-font-size', numSize + 'px');
+              document.documentElement.style.setProperty('--explorer-font-size', numSize + 'px');
+              document.documentElement.style.setProperty('--home-tab-font-size', numSize + 'px');
+              document.documentElement.style.setProperty('font-size', (numSize * (16 / 14)).toFixed(4) + 'px');
+            }
+          }
+          const savedFont = localStorage.getItem('uiFont') || localStorage.getItem('sidebarFont') || localStorage.getItem('explorerFont');
+          if (savedFont && savedFont.trim()) {
+            const trimmedFont = savedFont.trim();
+            const fontStack = trimmedFont.includes(',') ? trimmedFont : `"${trimmedFont}", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`;
+            document.documentElement.style.setProperty('--ui-font-family', fontStack);
+            document.documentElement.style.setProperty('--font-family', fontStack);
+            document.documentElement.style.setProperty('--sidebar-font-family', fontStack);
+            document.documentElement.style.setProperty('--explorer-font-family', fontStack);
+            document.documentElement.style.setProperty('--home-tab-font-family', fontStack);
+          }
+
           // Marcar que el fondo básico está aplicado
           window.__earlyThemeApplied = true;
         } catch (e) {

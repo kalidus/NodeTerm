@@ -26,6 +26,11 @@ html, body, #root {
   font-size: var(--ui-font-size, 14px);
 }
 
+input, button, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
 #root {
   height: 100vh;
 }
