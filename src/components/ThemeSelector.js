@@ -9,7 +9,6 @@ import {
   adjustColorBrightness,
 } from '../utils/themeManager';
 import { uiThemes, CLASSIC_UI_KEYS, FUTURISTIC_UI_KEYS, MODERN_UI_KEYS, ANIMATED_UI_KEYS, NATURE_UI_KEYS } from '../themes/ui-themes';
-import { Dropdown } from 'primereact/dropdown';
 import { explorerFonts } from '../themes';
 import {
   buildAppFontStack,
@@ -82,6 +81,15 @@ const ThemeSelector = ({ showPreview = false }) => {
     }
   });
 
+  const [uiFontSize, setUiFontSize] = useState(() => {
+    try {
+      const saved = localStorage.getItem('uiFontSize') || localStorage.getItem('sidebarFontSize') || localStorage.getItem('explorerFontSize');
+      return saved ? parseInt(saved, 10) : 14;
+    } catch {
+      return 14;
+    }
+  });
+
   const handleUiFontChange = useCallback((newFont) => {
     if (!newFont) return;
     setUiFont(newFont);
@@ -90,22 +98,59 @@ const ThemeSelector = ({ showPreview = false }) => {
       localStorage.setItem('sidebarFont', newFont);
       localStorage.setItem('explorerFont', newFont);
       localStorage.setItem('homeTabFont', newFont);
-      applyAppTypography({ uiFont: newFont, sidebarFont: newFont, explorerFont: newFont });
+      applyAppTypography({
+        uiFont: newFont,
+        uiFontSize,
+        sidebarFont: newFont,
+        sidebarFontSize: uiFontSize,
+        explorerFont: newFont,
+        explorerFontSize: uiFontSize
+      });
       window.dispatchEvent(new CustomEvent('ui-font-changed', { detail: { font: newFont } }));
       window.dispatchEvent(new Event('settings-updated'));
       if (shouldLoadWebFont(newFont)) {
         fontLoader.loadGoogleFont(newFont, [400, 500, 600, 700]).catch(() => {});
       }
     } catch { }
-  }, []);
+  }, [uiFontSize]);
+
+  const handleUiFontSizeChange = useCallback((newSize) => {
+    const numSize = parseInt(newSize, 10);
+    if (isNaN(numSize)) return;
+    setUiFontSize(numSize);
+    try {
+      localStorage.setItem('uiFontSize', numSize.toString());
+      localStorage.setItem('sidebarFontSize', numSize.toString());
+      localStorage.setItem('explorerFontSize', numSize.toString());
+      localStorage.setItem('homeTabFontSize', numSize.toString());
+      applyAppTypography({
+        uiFont,
+        uiFontSize: numSize,
+        sidebarFont: uiFont,
+        sidebarFontSize: numSize,
+        explorerFont: uiFont,
+        explorerFontSize: numSize
+      });
+      window.dispatchEvent(new CustomEvent('ui-font-size-changed', { detail: { size: numSize } }));
+      window.dispatchEvent(new Event('settings-updated'));
+    } catch { }
+  }, [uiFont]);
 
   useEffect(() => {
     const handleFontSync = (e) => {
       const f = e.detail?.font || localStorage.getItem('uiFont') || localStorage.getItem('sidebarFont');
       if (f) setUiFont(f);
     };
+    const handleSizeSync = (e) => {
+      const s = e.detail?.size || localStorage.getItem('uiFontSize') || localStorage.getItem('sidebarFontSize');
+      if (s) setUiFontSize(parseInt(s, 10));
+    };
     window.addEventListener('ui-font-changed', handleFontSync);
-    return () => window.removeEventListener('ui-font-changed', handleFontSync);
+    window.addEventListener('ui-font-size-changed', handleSizeSync);
+    return () => {
+      window.removeEventListener('ui-font-changed', handleFontSync);
+      window.removeEventListener('ui-font-size-changed', handleSizeSync);
+    };
   }, []);
 
   useEffect(() => {
@@ -445,210 +490,271 @@ const ThemeSelector = ({ showPreview = false }) => {
           <HeroPreview theme={activeTheme} />
 
           <div className="theme-hero-info">
-            {/* Panel de opciones a la derecha */}
+            {/* Panel de opciones en el hero banner (2 columnas) */}
             <div className="theme-options-wrapper">
-              {/* Card de Animaciones */}
-              <div className="theme-anim-card">
-                <div className="theme-anim-card-header">
-                  <span className="theme-anim-card-title">🎬 Animaciones</span>
-                  <span
-                    className="theme-anim-card-badge"
-                    title="Muestra solo temas con animaciones activas"
-                  >
-                    Solo animados
-                  </span>
-                </div>
-                <div className="theme-anim-card-options">
-                  <div className="theme-anim-option-wrapper">
-                    <button
-                      className={`theme-anim-option ${!reducedMotion ? 'active' : ''}`}
-                      onClick={handleReducedMotionToggle}
-                      title={reducedMotion ? "Activa las animaciones de la interfaz" : "Desactiva las animaciones para mejorar el rendimiento y reducir distracciones"}
+              {/* Columna Izquierda: Tipografía (espacio amplio del hero) */}
+              <div className="theme-options-col">
+                <div className="theme-anim-card theme-typography-card">
+                  <div className="theme-anim-card-header">
+                    <span className="theme-anim-card-title">🔤 Tipografía</span>
+                    <span
+                      className="theme-anim-card-badge"
+                      title="Tamaño de la fuente de la interfaz"
                     >
-                      <i className="pi pi-eye-slash" style={{ width: '0.6875rem', display: 'inline-flex', justifyContent: 'center', flexShrink: 0 }}></i>
-                      <span>Animaciones</span>
-                      <div className={`theme-mini-toggle ${!reducedMotion ? 'on' : ''}`} style={{ marginLeft: 'auto' }}></div>
-                    </button>
-                  </div>
-                  <div className="theme-anim-speed-wrapper">
-                    <span style={{
-                      fontSize: '0.6875rem',
-                      fontWeight: 500,
-                      color: 'var(--ui-dialog-text)',
-                      marginBottom: '0.25rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.375rem',
-                      paddingLeft: '0.375rem'
-                    }}>
-                      <i className="pi pi-forward" style={{ fontSize: '0.6875rem', opacity: 0.7, width: '0.6875rem', display: 'inline-flex', justifyContent: 'center', flexShrink: 0 }}></i>
-                      Velocidad animaciones
+                      {uiFontSize} px
                     </span>
-                    <div
-                      className="theme-anim-speed"
-                      title="Controla la velocidad de las animaciones de la interfaz"
-                    >
-                      <select
-                        className="theme-speed-select-mini"
-                        value={animSpeed}
-                        onChange={handleAnimSpeedChange}
+                  </div>
+                  <div className="theme-anim-card-options">
+                    {/* Selector de Fuente */}
+                    <div className="theme-anim-speed-wrapper">
+                      <span style={{
+                        fontSize: '0.6875rem',
+                        fontWeight: 500,
+                        color: 'var(--ui-dialog-text)',
+                        marginBottom: '0.25rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.375rem',
+                        paddingLeft: '0.375rem'
+                      }}>
+                        <i className="pi pi-pencil" style={{ fontSize: '0.6875rem', opacity: 0.7, width: '0.6875rem', display: 'inline-flex', justifyContent: 'center', flexShrink: 0 }}></i>
+                        Fuente interfaz
+                      </span>
+                      <div
+                        className="theme-anim-speed"
+                        title="Selecciona la fuente de la interfaz"
                       >
-                        <option value="slow">Lento</option>
-                        <option value="normal">Normal</option>
-                        <option value="fast">Rápido</option>
-                        <option value="turbo">Turbo</option>
-                      </select>
+                        <select
+                          className="theme-speed-select-mini"
+                          value={uiFont}
+                          onChange={(e) => handleUiFontChange(e.target.value)}
+                          style={{ fontFamily: buildAppFontStack(uiFont), width: '100%' }}
+                        >
+                          {explorerFonts.map((f) => (
+                            <option key={f} value={f} style={{ fontFamily: buildAppFontStack(f) }}>
+                              {f}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Selector de Tamaño */}
+                    <div className="theme-anim-speed-wrapper" style={{ marginTop: '0.125rem' }}>
+                      <span style={{
+                        fontSize: '0.6875rem',
+                        fontWeight: 500,
+                        color: 'var(--ui-dialog-text)',
+                        marginBottom: '0.25rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        paddingLeft: '0.375rem',
+                        paddingRight: '0.375rem'
+                      }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                          <i className="pi pi-sliders-h" style={{ fontSize: '0.6875rem', opacity: 0.7, width: '0.6875rem', display: 'inline-flex', justifyContent: 'center', flexShrink: 0 }}></i>
+                          Tamaño
+                        </span>
+                        <span style={{
+                          fontSize: '0.6875rem',
+                          fontWeight: 700,
+                          color: 'var(--ui-button-primary)'
+                        }}>
+                          {uiFontSize} px
+                        </span>
+                      </span>
+                      <div
+                        className="theme-anim-speed"
+                        title="Controla el tamaño de la fuente de la interfaz"
+                        style={{ padding: '0.125rem 0.375rem 0.25rem 0.375rem' }}
+                      >
+                        <input
+                          type="range"
+                          min="10"
+                          max="22"
+                          step="1"
+                          value={uiFontSize}
+                          onChange={(e) => handleUiFontSizeChange(e.target.value)}
+                          className="theme-font-size-range"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Titlebar: modo + paleta del tema */}
-              <div className="theme-titlebar-line">
-                <span className="theme-titlebar-line-title" title={titlebarModeLabel}>
-                  <i className="pi pi-window-maximize" />
-                  Titlebar
-                </span>
+              {/* Columna Derecha: Animaciones y Titlebar */}
+              <div className="theme-options-col">
+                {/* Card de Animaciones */}
+                <div className="theme-anim-card">
+                  <div className="theme-anim-card-header">
+                    <span className="theme-anim-card-title">🎬 Animaciones</span>
+                    <span
+                      className="theme-anim-card-badge"
+                      title="Muestra solo temas con animaciones activas"
+                    >
+                      Solo animados
+                    </span>
+                  </div>
+                  <div className="theme-anim-card-options">
+                    <div className="theme-anim-option-wrapper">
+                      <button
+                        className={`theme-anim-option ${!reducedMotion ? 'active' : ''}`}
+                        onClick={handleReducedMotionToggle}
+                        title={reducedMotion ? "Activa las animaciones de la interfaz" : "Desactiva las animaciones para mejorar el rendimiento y reducir distracciones"}
+                      >
+                        <i className="pi pi-eye-slash" style={{ width: '0.6875rem', display: 'inline-flex', justifyContent: 'center', flexShrink: 0 }}></i>
+                        <span>Animaciones</span>
+                        <div className={`theme-mini-toggle ${!reducedMotion ? 'on' : ''}`} style={{ marginLeft: 'auto' }}></div>
+                      </button>
+                    </div>
+                    <div className="theme-anim-speed-wrapper">
+                      <span style={{
+                        fontSize: '0.6875rem',
+                        fontWeight: 500,
+                        color: 'var(--ui-dialog-text)',
+                        marginBottom: '0.25rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.375rem',
+                        paddingLeft: '0.375rem'
+                      }}>
+                        <i className="pi pi-forward" style={{ fontSize: '0.6875rem', opacity: 0.7, width: '0.6875rem', display: 'inline-flex', justifyContent: 'center', flexShrink: 0 }}></i>
+                        Velocidad animaciones
+                      </span>
+                      <div
+                        className="theme-anim-speed"
+                        title="Controla la velocidad de las animaciones de la interfaz"
+                      >
+                        <select
+                          className="theme-speed-select-mini"
+                          value={animSpeed}
+                          onChange={handleAnimSpeedChange}
+                        >
+                          <option value="slow">Lento</option>
+                          <option value="normal">Normal</option>
+                          <option value="fast">Rápido</option>
+                          <option value="turbo">Turbo</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-                <div className="theme-titlebar-controls">
-                  <button
-                    type="button"
-                    className={`theme-titlebar-dot-btn ${!customTitlebarColor && !usePrimaryColorsForTitlebar ? 'active' : ''}`}
-                    style={{ backgroundColor: sidebarAutoColor }}
-                    onClick={handleSelectSidebarMode}
-                    title="Automático (Sidebar)"
-                  >
-                    {!customTitlebarColor && !usePrimaryColorsForTitlebar && <i className="pi pi-check" />}
-                  </button>
+                {/* Titlebar: modo + paleta del tema */}
+                <div className="theme-titlebar-line">
+                  <span className="theme-titlebar-line-title" title={titlebarModeLabel}>
+                    <i className="pi pi-window-maximize" />
+                    Titlebar
+                  </span>
 
-                  <button
-                    type="button"
-                    className={`theme-titlebar-dot-btn ${!customTitlebarColor && usePrimaryColorsForTitlebar ? 'active' : ''}`}
-                    style={{ backgroundColor: accentAutoColor }}
-                    onClick={handleSelectAccentMode}
-                    title="Automático (Acento)"
-                  >
-                    {!customTitlebarColor && usePrimaryColorsForTitlebar && <i className="pi pi-check" />}
-                  </button>
-
-                  <div className="theme-titlebar-palette-container">
+                  <div className="theme-titlebar-controls">
                     <button
                       type="button"
-                      className={`theme-titlebar-palette-btn ${customTitlebarColor ? 'active' : ''}`}
-                      onClick={() => setTitlebarPaletteOpen((open) => !open)}
-                      title="Paleta del tema"
+                      className={`theme-titlebar-dot-btn ${!customTitlebarColor && !usePrimaryColorsForTitlebar ? 'active' : ''}`}
+                      style={{ backgroundColor: sidebarAutoColor }}
+                      onClick={handleSelectSidebarMode}
+                      title="Automático (Sidebar)"
                     >
-                      <i className="pi pi-palette" />
-                      {customTitlebarColor && (
-                        <span 
-                          className="theme-titlebar-active-dot" 
-                          style={{ backgroundColor: customTitlebarColor }}
-                        />
-                      )}
+                      {!customTitlebarColor && !usePrimaryColorsForTitlebar && <i className="pi pi-check" />}
                     </button>
 
-                    {titlebarPaletteOpen && (
-                      <div className="theme-titlebar-palette-dropdown">
-                        <div className="theme-titlebar-palette-grid">
-                          {titlebarPalette.map((swatch) => (
-                            <button
-                              key={swatch.id}
-                              type="button"
-                              className={`theme-titlebar-palette-item ${
-                                normalizedCustomTitlebar === swatch.color.toLowerCase() ? 'selected' : ''
+                    <button
+                      type="button"
+                      className={`theme-titlebar-dot-btn ${!customTitlebarColor && usePrimaryColorsForTitlebar ? 'active' : ''}`}
+                      style={{ backgroundColor: accentAutoColor }}
+                      onClick={handleSelectAccentMode}
+                      title="Automático (Acento)"
+                    >
+                      {!customTitlebarColor && usePrimaryColorsForTitlebar && <i className="pi pi-check" />}
+                    </button>
+
+                    <div className="theme-titlebar-palette-container">
+                      <button
+                        type="button"
+                        className={`theme-titlebar-palette-btn ${customTitlebarColor ? 'active' : ''}`}
+                        onClick={() => setTitlebarPaletteOpen((open) => !open)}
+                        title="Paleta del tema"
+                      >
+                        <i className="pi pi-palette" />
+                        {customTitlebarColor && (
+                          <span 
+                            className="theme-titlebar-active-dot" 
+                            style={{ backgroundColor: customTitlebarColor }}
+                          />
+                        )}
+                      </button>
+
+                      {titlebarPaletteOpen && (
+                        <div className="theme-titlebar-palette-dropdown">
+                          <div className="theme-titlebar-palette-grid">
+                            {titlebarPalette.map((swatch) => (
+                              <button
+                                key={swatch.id}
+                                type="button"
+                                className={`theme-titlebar-palette-item ${
+                                  normalizedCustomTitlebar === swatch.color.toLowerCase() ? 'selected' : ''
+                                }`}
+                                title={`${swatch.label} (${swatch.color})`}
+                                onClick={() => {
+                                  handleTitlebarPaletteSelect(swatch.color);
+                                  setTitlebarPaletteOpen(false);
+                                }}
+                              >
+                                <span
+                                  className="theme-titlebar-palette-swatch"
+                                  style={{ backgroundColor: swatch.color }}
+                                />
+                              </button>
+                            ))}
+
+                            <label
+                              className={`theme-titlebar-palette-item theme-titlebar-custom-picker-label ${
+                                customTitlebarColor && !isCustomColorPredefined ? 'selected' : ''
                               }`}
-                              title={`${swatch.label} (${swatch.color})`}
-                              onClick={() => {
-                                handleTitlebarPaletteSelect(swatch.color);
-                                setTitlebarPaletteOpen(false);
+                              title="Color personalizado..."
+                              style={{ cursor: 'pointer' }}
+                              tabIndex={0}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  e.currentTarget.querySelector('input')?.click();
+                                }
                               }}
                             >
                               <span
-                                className="theme-titlebar-palette-swatch"
-                                style={{ backgroundColor: swatch.color }}
+                                className="theme-titlebar-palette-swatch theme-titlebar-custom-picker-swatch"
+                                style={{
+                                  background: customTitlebarColor && !isCustomColorPredefined
+                                    ? customTitlebarColor
+                                    : 'conic-gradient(from 0deg, red, yellow, lime, aqua, blue, magenta, red)'
+                                }}
                               />
-                            </button>
-                          ))}
-
-                          <label
-                            className={`theme-titlebar-palette-item theme-titlebar-custom-picker-label ${
-                              customTitlebarColor && !isCustomColorPredefined ? 'selected' : ''
-                            }`}
-                            title="Color personalizado..."
-                            style={{ cursor: 'pointer' }}
-                            tabIndex={0}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
-                                e.currentTarget.querySelector('input')?.click();
-                              }
+                              <input
+                                type="color"
+                                value={customTitlebarColor || '#1976d2'}
+                                onChange={handleCustomColorChange}
+                                style={{ display: 'none' }}
+                              />
+                            </label>
+                          </div>
+                          <button
+                            type="button"
+                            className="theme-titlebar-reset-btn"
+                            onClick={() => {
+                              handleTitlebarUseThemeDefault();
+                              setTitlebarPaletteOpen(false);
                             }}
+                            title="Volver a automático"
                           >
-                            <span
-                              className="theme-titlebar-palette-swatch theme-titlebar-custom-picker-swatch"
-                              style={{
-                                background: customTitlebarColor && !isCustomColorPredefined
-                                  ? customTitlebarColor
-                                  : 'conic-gradient(from 0deg, red, yellow, lime, aqua, blue, magenta, red)'
-                              }}
-                            />
-                            <input
-                              type="color"
-                              value={customTitlebarColor || '#1976d2'}
-                              onChange={handleCustomColorChange}
-                              style={{ display: 'none' }}
-                            />
-                          </label>
+                            <i className="pi pi-replay" />
+                            <span>Por defecto</span>
+                          </button>
                         </div>
-                        <button
-                          type="button"
-                          className="theme-titlebar-reset-btn"
-                          onClick={() => {
-                            handleTitlebarUseThemeDefault();
-                            setTitlebarPaletteOpen(false);
-                          }}
-                          title="Volver a automático"
-                        >
-                          <i className="pi pi-replay" />
-                          <span>Por defecto</span>
-                        </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
-              </div>
-
-              {/* Card de Tipografía de la Interfaz */}
-              <div className="theme-anim-card" style={{ marginTop: '0.25rem' }}>
-                <div className="theme-anim-card-header">
-                  <span className="theme-anim-card-title" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <i className="pi pi-pencil" style={{ fontSize: '0.75rem', color: 'var(--ui-button-primary)' }} />
-                    Tipografía Interfaz
-                  </span>
-                </div>
-                <div style={{ padding: '0.375rem 0.25rem' }}>
-                  <Dropdown
-                    id="theme-ui-font-dropdown"
-                    value={uiFont}
-                    options={explorerFonts.map(f => ({ label: f, value: f }))}
-                    onChange={(e) => handleUiFontChange(e.value)}
-                    placeholder="Seleccionar fuente"
-                    style={{
-                      width: '100%',
-                      height: '30px',
-                      fontSize: '0.75rem',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}
-                    panelStyle={{
-                      maxHeight: '300px'
-                    }}
-                    itemTemplate={(option) => (
-                      <span style={{ fontFamily: buildAppFontStack(option.value), fontSize: '0.8rem' }}>
-                        {option.label}
-                      </span>
-                    )}
-                  />
                 </div>
               </div>
             </div>

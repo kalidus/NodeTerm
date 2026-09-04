@@ -1,5 +1,6 @@
 :root {
   --ui-font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+  --ui-font-size: 14px;
   --font-family: var(--ui-font-family);
   --sidebar-font-family: var(--ui-font-family);
   --explorer-font-family: var(--ui-font-family);

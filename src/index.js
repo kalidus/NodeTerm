@@ -102,12 +102,14 @@ const applyEarlyBootTheme = () => {
 
     try {
       const uiFont = localStorage.getItem('uiFont');
+      const uiFontSize = localStorage.getItem('uiFontSize');
       const sidebarFont = localStorage.getItem('sidebarFont');
       const sidebarFontSize = localStorage.getItem('sidebarFontSize');
       const explorerFont = localStorage.getItem('explorerFont');
       const explorerFontSize = localStorage.getItem('explorerFontSize');
       applySidebarTypographyCssVariables({
         uiFont: uiFont || sidebarFont || explorerFont || undefined,
+        uiFontSize: uiFontSize ? parseInt(uiFontSize, 10) : undefined,
         sidebarFont: sidebarFont || undefined,
         sidebarFontSize: sidebarFontSize ? parseInt(sidebarFontSize, 10) : undefined,
         explorerFont: explorerFont || undefined,

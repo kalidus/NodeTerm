@@ -1424,6 +1424,7 @@ const App = () => {
     explorerFont, setExplorerFont,
     explorerFontSize, setExplorerFontSize, explorerColorTheme, setExplorerColorTheme,
     uiFont, setUiFont,
+    uiFontSize, setUiFontSize,
     sidebarFont, setSidebarFont, sidebarFontSize, setSidebarFontSize, sidebarFontColor, setSidebarFontColor,
     treeTheme, setTreeTheme,
     sessionActionIconTheme, setSessionActionIconTheme,
@@ -4355,6 +4356,8 @@ const App = () => {
           setExplorerColorTheme={setExplorerColorTheme}
           uiFont={uiFont}
           setUiFont={setUiFont}
+          uiFontSize={uiFontSize}
+          setUiFontSize={setUiFontSize}
           sidebarFont={sidebarFont}
           setSidebarFont={setSidebarFont}
           sidebarFontSize={sidebarFontSize}

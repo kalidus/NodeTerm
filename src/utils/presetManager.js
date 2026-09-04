@@ -259,6 +259,7 @@ class PresetManager {
     if (effectiveUiFont) {
       applyAppTypography({
         uiFont: effectiveUiFont,
+        uiFontSize: preset.settings['uiFontSize'] || preset.settings['sidebarFontSize'],
         sidebarFont: preset.settings['sidebarFont'],
         sidebarFontSize: preset.settings['sidebarFontSize'],
         explorerFont: preset.settings['explorerFont'],

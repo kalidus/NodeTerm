@@ -213,6 +213,7 @@ class ExportImportService {
           
           // === FUENTES ===
           uiFont: this.safeGetItem('uiFont'),
+          uiFontSize: this.safeGetItem('uiFontSize'),
           sidebarFont: this.safeGetItem('sidebarFont'),
           sidebarFontSize: this.safeGetItem('sidebarFontSize'),
           homeTabFont: this.safeGetItem('homeTabFont'),
@@ -657,6 +658,7 @@ class ExportImportService {
       'localPowerShellTheme',
       'localDockerTerminalTheme',
       'uiFont',
+      'uiFontSize',
       'sidebarFont',
       'sidebarFontSize',
       'sidebarFontColor',

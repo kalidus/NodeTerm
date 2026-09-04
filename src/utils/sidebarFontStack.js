@@ -90,6 +90,7 @@ export const shouldLoadWebFontForSidebar = shouldLoadWebFont;
  */
 export function applyAppTypography({
   uiFont,
+  uiFontSize,
   sidebarFont,
   sidebarFontSize,
   explorerFont,
@@ -108,11 +109,15 @@ export function applyAppTypography({
     root.style.setProperty('--home-tab-font-family', stack);
   }
 
-  if (sidebarFontSize != null && sidebarFontSize !== '') {
-    root.style.setProperty('--sidebar-font-size', `${sidebarFontSize}px`);
-  }
-  if (explorerFontSize != null && explorerFontSize !== '') {
-    root.style.setProperty('--explorer-font-size', `${explorerFontSize}px`);
+  const effectiveSize = uiFontSize != null && uiFontSize !== ''
+    ? uiFontSize
+    : (sidebarFontSize != null && sidebarFontSize !== '' ? sidebarFontSize : explorerFontSize);
+
+  if (effectiveSize != null && effectiveSize !== '') {
+    root.style.setProperty('--ui-font-size', `${effectiveSize}px`);
+    root.style.setProperty('--sidebar-font-size', `${effectiveSize}px`);
+    root.style.setProperty('--explorer-font-size', `${effectiveSize}px`);
+    root.style.setProperty('--home-tab-font-size', `${effectiveSize}px`);
   }
 }
 

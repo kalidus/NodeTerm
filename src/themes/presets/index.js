@@ -47,6 +47,7 @@ export const PRESET_SETTINGS_KEYS = [
   'nodeterm_docker_font_size',
   // UI / Explorer / sidebar fonts
   'uiFont',
+  'uiFontSize',
   'homeTabFont',
   'explorerFont',
   'explorerFontSize',
