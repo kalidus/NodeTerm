@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       publish_release:
-        description: 'Publicar como Release en GitHub (por defecto solo compila y firma)'
+        description: 'Publicar como Release en GitHub (por defecto solo compila)'
         required: false
         type: boolean
         default: false
@@ -23,10 +23,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
-
-    env:
-      SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
-      SIGNPATH_ORGANIZATION_ID: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
 
     steps:
       - name: Checkout code
@@ -80,71 +76,28 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Linux & macOS: Direct build and publish
-      - name: Build and Publish Electron Package (Linux / macOS)
-        if: matrix.os != 'windows-latest' && (startsWith(github.ref, 'refs/tags/v') || inputs.publish_release == true)
+      # Build and Publish across all platforms (Linux, macOS, Windows)
+      - name: Build and Publish Electron Package
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.publish_release == true
         run: npx electron-builder --publish always
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build Electron Package (Linux / macOS - Test Run)
-        if: matrix.os != 'windows-latest' && !startsWith(github.ref, 'refs/tags/v') && inputs.publish_release != true
+      # Build without publishing for test runs (workflow_dispatch without publish_release)
+      - name: Build Electron Package (Test Run)
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') && inputs.publish_release != true }}
         run: npx electron-builder --publish never
 
-      # Windows: Build unsigned packages first
-      - name: Build Windows Package
-        if: matrix.os == 'windows-latest'
-        run: npx electron-builder --publish never
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Windows: Sign executables directly via SignPath PowerShell module
-      - name: Sign Windows Binaries via SignPath
-        if: matrix.os == 'windows-latest' && env.SIGNPATH_API_TOKEN != ''
-        shell: pwsh
-        run: |
-          Set-PSRepository PSGallery -InstallationPolicy Trusted
-          Install-Module -Name SignPath -Force -Scope CurrentUser
-
-          $projectSlug = "nodeterm"
-          $policySlug = "Test_Signing"
-
-          $exeFiles = Get-ChildItem -Path "dist" -Filter "*.exe"
-          foreach ($file in $exeFiles) {
-            Write-Host "Submitting $($file.FullName) to SignPath for signing with policy '$policySlug'..."
-            Submit-SigningRequest `
-              -OrganizationId "${{ secrets.SIGNPATH_ORGANIZATION_ID }}" `
-              -ApiToken "${{ secrets.SIGNPATH_API_TOKEN }}" `
-              -ProjectSlug $projectSlug `
-              -SigningPolicySlug $policySlug `
-              -InputArtifactPath $file.FullName `
-              -OutputArtifactPath $file.FullName `
-              -WaitForCompletion `
-              -Force
-            Write-Host "Successfully signed $($file.Name)"
-          }
-
-          node scripts/update-signed-hashes.js
-
-      # Windows: Upload signed test artifacts (for manual testing via workflow_dispatch)
-      - name: Upload Signed Windows Artifacts (Test Run)
-        if: matrix.os == 'windows-latest' && !startsWith(github.ref, 'refs/tags/v') && inputs.publish_release != true
+      - name: Upload Test Artifacts
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') && inputs.publish_release != true }}
         uses: actions/upload-artifact@v4
         with:
-          name: signed-windows-binaries-test
+          name: nodeterm-artifacts-${{ matrix.os }}
           path: |
             dist/*.exe
-            dist/latest.yml
-
-      # Windows: Publish release assets (when running on a tag or release requested)
-      - name: Publish Windows Release Assets
-        if: matrix.os == 'windows-latest' && (startsWith(github.ref, 'refs/tags/v') || inputs.publish_release == true)
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          files: |
-            dist/*.exe
-            dist/*.blockmap
-            dist/latest.yml
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            dist/*.AppImage
+            dist/*.deb
+            dist/*.rpm
+            dist/*.dmg
+            dist/*.zip
+            dist/latest*.yml
