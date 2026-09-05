@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react';
 import { Slider } from 'primereact/slider';
 import {
   themeManager,
@@ -8,6 +8,7 @@ import {
   isUserCustomTitlebar,
   TITLEBAR_COLOR_MODE_KEY,
   adjustColorBrightness,
+  isColorLight,
 } from '../utils/themeManager';
 import { uiThemes, CLASSIC_UI_KEYS, FUTURISTIC_UI_KEYS, MODERN_UI_KEYS, ANIMATED_UI_KEYS, NATURE_UI_KEYS } from '../themes/ui-themes';
 import { explorerFonts } from '../themes';
@@ -66,11 +67,163 @@ const THEME_DESCRIPTIONS = {
   'default': 'Un tema personalizado para tu terminal'
 };
 
+// Preview del tema hero (grande) - Memoizado para evitar re-renders innecesarios
+const HeroPreview = memo(({ theme }) => {
+  const colors = theme.colors;
+  return (
+    <div className="theme-hero-preview">
+      <div
+        className="theme-hero-menubar"
+        style={{ background: colors.menuBarBackground, color: colors.menuBarText }}
+      >
+        <span className="theme-hero-menubar-icons">🏠 📁 ⚙️</span>
+        <span className="theme-hero-menubar-title">NodeTerm</span>
+      </div>
+      <div className="theme-hero-main">
+        <div
+          className="theme-hero-sidebar"
+          style={{ background: colors.sidebarBackground, color: colors.sidebarText, borderRight: `1px solid ${colors.sidebarBorder}` }}
+        >
+          <div className="theme-hero-sidebar-item" style={{ background: colors.sidebarSelected }}>📁 Projects</div>
+          <div className="theme-hero-sidebar-item">🖥️ SSH-Server</div>
+          <div className="theme-hero-sidebar-item">🖥️ Database</div>
+          <div className="theme-hero-sidebar-item">📂 Config</div>
+        </div>
+        <div className="theme-hero-content-area">
+          <div
+            className="theme-hero-tabs"
+            style={{ background: colors.tabBackground, borderBottom: `1px solid ${colors.tabBorder}` }}
+          >
+            <div
+              className="theme-hero-tab active"
+              style={{ background: colors.tabActiveBackground, color: colors.tabActiveText }}
+            >
+              Terminal
+            </div>
+            <div className="theme-hero-tab" style={{ color: colors.tabText }}>Explorer</div>
+            <div className="theme-hero-tab" style={{ color: colors.tabText }}>Logs</div>
+          </div>
+          <div
+            className="theme-hero-terminal"
+            style={{ background: colors.contentBackground, color: colors.dialogText }}
+          >
+            <div style={{ color: colors.buttonPrimary, marginBottom: '4px' }}>user@server:~$</div>
+            <div style={{ opacity: 0.9 }}>Welcome to {theme.name} theme</div>
+            <div style={{ opacity: 0.7 }}>Last login: Today at 10:30</div>
+            <div style={{ opacity: 0.6, marginTop: '4px' }}>$ ls -la</div>
+          </div>
+        </div>
+      </div>
+      <div
+        className="theme-hero-statusbar"
+        style={{ background: colors.statusBarBackground, color: colors.statusBarText, borderTop: `1px solid ${colors.statusBarBorder}` }}
+      >
+        <span>✓ Connected • SSH</span>
+        <span>UTF-8 • LF</span>
+      </div>
+    </div>
+  );
+});
+
+// Preview miniatura - Memoizado para evitar re-renders durante resize
+const ThumbnailPreview = memo(({ theme }) => {
+  const colors = theme.colors;
+  return (
+    <div className="theme-thumbnail-preview">
+      <div
+        className="theme-thumbnail-menubar"
+        style={{ background: colors.menuBarBackground, color: colors.menuBarText }}
+      >
+        🏠📁⚙️ NodeTerm
+      </div>
+      <div className="theme-thumbnail-main">
+        <div
+          className="theme-thumbnail-sidebar"
+          style={{ background: colors.sidebarBackground, color: colors.sidebarText }}
+        >
+          <div className="theme-thumbnail-sidebar-item" style={{ background: colors.sidebarSelected }}>📁 Proj</div>
+          <div className="theme-thumbnail-sidebar-item">🖥️ SSH</div>
+        </div>
+        <div className="theme-thumbnail-content">
+          <div
+            className="theme-thumbnail-tabs"
+            style={{ background: colors.tabBackground }}
+          >
+            <div
+              className="theme-thumbnail-tab"
+              style={{ background: colors.tabActiveBackground, color: colors.tabActiveText }}
+            >
+              Term
+            </div>
+          </div>
+          <div
+            className="theme-thumbnail-terminal"
+            style={{ background: colors.contentBackground, color: colors.dialogText }}
+          >
+            <span style={{ color: colors.buttonPrimary }}>$</span> ls
+          </div>
+        </div>
+      </div>
+      <div
+        className="theme-thumbnail-statusbar"
+        style={{ background: colors.statusBarBackground, color: colors.statusBarText }}
+      >
+        <span>✓</span>
+        <span>{theme.name}</span>
+      </div>
+    </div>
+  );
+});
+
+// Componente memoizado para las tarjetas de tema - Evita re-renders durante cambios de color o resize
+const ThemeThumbnailCard = memo(({ theme, isActive, onSelect }) => {
+  return (
+    <div
+      className={`theme-thumbnail ${isActive ? 'active' : ''}`}
+      onClick={onSelect}
+    >
+      {isActive && (
+        <div className="theme-thumbnail-check">
+          <i className="pi pi-check"></i>
+        </div>
+      )}
+
+      <ThumbnailPreview theme={theme} />
+
+      <div className="theme-thumbnail-info">
+        <span className="theme-thumbnail-name">{theme.name}</span>
+        <div className="theme-thumbnail-palette">
+          {[
+            theme.colors.sidebarBackground,
+            theme.colors.buttonPrimary,
+            theme.colors.contentBackground
+          ].map((color, index) => (
+            <div
+              key={index}
+              className="theme-thumbnail-dot"
+              style={{ backgroundColor: color }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}, (prevProps, nextProps) => {
+  // Comparación personalizada: solo re-renderizar si cambia el tema activo o el tema mismo
+  return prevProps.isActive === nextProps.isActive &&
+    prevProps.theme.name === nextProps.theme.name;
+});
+
 const ThemeSelector = ({ showPreview = false }) => {
   const [currentTheme, setCurrentTheme] = useState('Light');
   const [usePrimaryColorsForTitlebar, setUsePrimaryColorsForTitlebar] = useState(false);
   const [customTitlebarColor, setCustomTitlebarColor] = useState(null);
   const [titlebarPaletteOpen, setTitlebarPaletteOpen] = useState(false);
+  const [customHexInput, setCustomHexInput] = useState('');
+  const paletteRef = useRef(null);
+  const paletteBtnRef = useRef(null);
+  const rafRef = useRef(null);
+  const saveTimeoutRef = useRef(null);
   const [animSpeed, setAnimSpeed] = useState('normal');
   const [reducedMotion, setReducedMotion] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -179,8 +332,10 @@ const ThemeSelector = ({ showPreview = false }) => {
     migrateTitlebarStorage();
     const hasCustomTitlebar = isUserCustomTitlebar();
     setUsePrimaryColorsForTitlebar(localStorage.getItem(LEGACY_TITLEBAR_KEY) === 'true');
-    setCustomTitlebarColor(hasCustomTitlebar ? localStorage.getItem(TITLEBAR_COLOR_KEY) : null);
-    setTitlebarPaletteOpen(hasCustomTitlebar);
+    const storedColor = hasCustomTitlebar ? localStorage.getItem(TITLEBAR_COLOR_KEY) : null;
+    setCustomTitlebarColor(storedColor);
+    setCustomHexInput(storedColor || '');
+    setTitlebarPaletteOpen(false);
 
     const savedSpeed = localStorage.getItem(ANIM_SPEED_KEY) || 'normal';
     setAnimSpeed(savedSpeed);
@@ -214,7 +369,9 @@ const ThemeSelector = ({ showPreview = false }) => {
   useEffect(() => {
     const syncTitlebarColorState = () => {
       setUsePrimaryColorsForTitlebar(localStorage.getItem(LEGACY_TITLEBAR_KEY) === 'true');
-      setCustomTitlebarColor(isUserCustomTitlebar() ? localStorage.getItem(TITLEBAR_COLOR_KEY) : null);
+      const currentColor = isUserCustomTitlebar() ? localStorage.getItem(TITLEBAR_COLOR_KEY) : null;
+      setCustomTitlebarColor(currentColor);
+      setCustomHexInput(currentColor || '');
     };
     window.addEventListener('theme-changed', syncTitlebarColorState);
     return () => window.removeEventListener('theme-changed', syncTitlebarColorState);
@@ -223,55 +380,130 @@ const ThemeSelector = ({ showPreview = false }) => {
   useEffect(() => {
     if (!titlebarPaletteOpen) return;
     const handleOutsideClick = (e) => {
-      if (!e.target.closest('.theme-titlebar-palette-container')) {
+      if (paletteRef.current && paletteRef.current.contains(e.target)) {
+        return;
+      }
+      if (paletteBtnRef.current && paletteBtnRef.current.contains(e.target)) {
+        return;
+      }
+      setTitlebarPaletteOpen(false);
+    };
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
         setTitlebarPaletteOpen(false);
       }
     };
-    document.addEventListener('click', handleOutsideClick);
-    return () => document.removeEventListener('click', handleOutsideClick);
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, [titlebarPaletteOpen]);
 
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+  }, []);
+
+  // Actualización directa al DOM y variables CSS a 60fps sin bloquear el hilo principal
+  const applyColorDirect = useCallback((color) => {
+    if (!color) return;
+    const root = document.documentElement;
+    root.style.setProperty('--ui-titlebar-accent', color);
+    root.style.setProperty('--ui-titlebar-text', isColorLight(color) ? '#222' : '#fff');
+    root.setAttribute('data-custom-titlebar', 'true');
+
+    document.querySelectorAll('.title-bar').forEach((bar) => {
+      bar.setAttribute('data-custom-titlebar', 'true');
+      const isModernCustom = document.body && document.body.classList.contains('layout-modern-custom');
+      const bgVal = isModernCustom ? `color-mix(in srgb, ${color} 55%, transparent)` : color;
+      bar.style.setProperty('background', bgVal, 'important');
+      bar.style.setProperty('color', isColorLight(color) ? '#222' : '#fff', 'important');
+    });
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    saveTimeoutRef.current = setTimeout(() => {
+      localStorage.setItem(TITLEBAR_COLOR_MODE_KEY, 'custom');
+      localStorage.setItem(TITLEBAR_COLOR_KEY, color);
+    }, 120);
+  }, []);
+
   const handleThemeChange = useCallback((themeName) => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     setCurrentTheme(themeName);
     setCustomTitlebarColor(null);
+    setCustomHexInput('');
     localStorage.removeItem(TITLEBAR_COLOR_KEY);
     localStorage.setItem(TITLEBAR_COLOR_MODE_KEY, 'theme');
     themeManager.applyTheme(themeName);
   }, []);
 
   const handleSelectSidebarMode = useCallback(() => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     setUsePrimaryColorsForTitlebar(false);
     localStorage.setItem(LEGACY_TITLEBAR_KEY, 'false');
     setCustomTitlebarColor(null);
+    setCustomHexInput('');
     localStorage.removeItem(TITLEBAR_COLOR_KEY);
     localStorage.setItem(TITLEBAR_COLOR_MODE_KEY, 'theme');
     themeManager.applyTheme(localStorage.getItem('ui_theme') || currentTheme);
   }, [currentTheme]);
 
   const handleSelectAccentMode = useCallback(() => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     setUsePrimaryColorsForTitlebar(true);
     localStorage.setItem(LEGACY_TITLEBAR_KEY, 'true');
     setCustomTitlebarColor(null);
+    setCustomHexInput('');
     localStorage.removeItem(TITLEBAR_COLOR_KEY);
     localStorage.setItem(TITLEBAR_COLOR_MODE_KEY, 'theme');
     themeManager.applyTheme(localStorage.getItem('ui_theme') || currentTheme);
   }, [currentTheme]);
 
   const handleTitlebarPaletteSelect = useCallback((color) => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    applyColorDirect(color);
     setCustomTitlebarColor(color);
+    setCustomHexInput(color);
     localStorage.setItem(TITLEBAR_COLOR_MODE_KEY, 'custom');
     localStorage.setItem(TITLEBAR_COLOR_KEY, color);
-    themeManager.applyTitlebarColors(localStorage.getItem('ui_theme') || currentTheme);
-  }, [currentTheme]);
+  }, [applyColorDirect]);
 
   const handleCustomColorChange = useCallback((e) => {
     const color = e.target.value;
-    handleTitlebarPaletteSelect(color);
-    setTitlebarPaletteOpen(false);
-  }, [handleTitlebarPaletteSelect]);
+    applyColorDirect(color);
+
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+    }
+    rafRef.current = requestAnimationFrame(() => {
+      setCustomTitlebarColor(color);
+      setCustomHexInput(color);
+    });
+  }, [applyColorDirect]);
+
+  const handleHexInputChange = useCallback((e) => {
+    const val = e.target.value;
+    setCustomHexInput(val);
+    const cleaned = val.trim();
+    if (/^#?([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(cleaned)) {
+      const fullHex = cleaned.startsWith('#') ? cleaned : `#${cleaned}`;
+      applyColorDirect(fullHex);
+      setCustomTitlebarColor(fullHex);
+    }
+  }, [applyColorDirect]);
 
   const handleTitlebarUseThemeDefault = useCallback(() => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     setCustomTitlebarColor(null);
+    setCustomHexInput('');
     localStorage.setItem(TITLEBAR_COLOR_MODE_KEY, 'theme');
     localStorage.removeItem(TITLEBAR_COLOR_KEY);
     themeManager.applyTheme(localStorage.getItem('ui_theme') || currentTheme);
@@ -353,153 +585,6 @@ const ThemeSelector = ({ showPreview = false }) => {
       .filter(key => uiThemes[key])
       .map(key => uiThemes[key]);
   }, [selectedCategory]);
-
-  // Preview del tema hero (grande) - Memoizado para evitar re-renders innecesarios
-  const HeroPreview = memo(({ theme }) => {
-    const colors = theme.colors;
-    return (
-      <div className="theme-hero-preview">
-        <div
-          className="theme-hero-menubar"
-          style={{ background: colors.menuBarBackground, color: colors.menuBarText }}
-        >
-          <span className="theme-hero-menubar-icons">🏠 📁 ⚙️</span>
-          <span className="theme-hero-menubar-title">NodeTerm</span>
-        </div>
-        <div className="theme-hero-main">
-          <div
-            className="theme-hero-sidebar"
-            style={{ background: colors.sidebarBackground, color: colors.sidebarText, borderRight: `1px solid ${colors.sidebarBorder}` }}
-          >
-            <div className="theme-hero-sidebar-item" style={{ background: colors.sidebarSelected }}>📁 Projects</div>
-            <div className="theme-hero-sidebar-item">🖥️ SSH-Server</div>
-            <div className="theme-hero-sidebar-item">🖥️ Database</div>
-            <div className="theme-hero-sidebar-item">📂 Config</div>
-          </div>
-          <div className="theme-hero-content-area">
-            <div
-              className="theme-hero-tabs"
-              style={{ background: colors.tabBackground, borderBottom: `1px solid ${colors.tabBorder}` }}
-            >
-              <div
-                className="theme-hero-tab active"
-                style={{ background: colors.tabActiveBackground, color: colors.tabActiveText }}
-              >
-                Terminal
-              </div>
-              <div className="theme-hero-tab" style={{ color: colors.tabText }}>Explorer</div>
-              <div className="theme-hero-tab" style={{ color: colors.tabText }}>Logs</div>
-            </div>
-            <div
-              className="theme-hero-terminal"
-              style={{ background: colors.contentBackground, color: colors.dialogText }}
-            >
-              <div style={{ color: colors.buttonPrimary, marginBottom: '4px' }}>user@server:~$</div>
-              <div style={{ opacity: 0.9 }}>Welcome to {theme.name} theme</div>
-              <div style={{ opacity: 0.7 }}>Last login: Today at 10:30</div>
-              <div style={{ opacity: 0.6, marginTop: '4px' }}>$ ls -la</div>
-            </div>
-          </div>
-        </div>
-        <div
-          className="theme-hero-statusbar"
-          style={{ background: colors.statusBarBackground, color: colors.statusBarText, borderTop: `1px solid ${colors.statusBarBorder}` }}
-        >
-          <span>✓ Connected • SSH</span>
-          <span>UTF-8 • LF</span>
-        </div>
-      </div>
-    );
-  });
-
-  // Preview miniatura - Memoizado para evitar re-renders durante resize
-  const ThumbnailPreview = memo(({ theme }) => {
-    const colors = theme.colors;
-    return (
-      <div className="theme-thumbnail-preview">
-        <div
-          className="theme-thumbnail-menubar"
-          style={{ background: colors.menuBarBackground, color: colors.menuBarText }}
-        >
-          🏠📁⚙️ NodeTerm
-        </div>
-        <div className="theme-thumbnail-main">
-          <div
-            className="theme-thumbnail-sidebar"
-            style={{ background: colors.sidebarBackground, color: colors.sidebarText }}
-          >
-            <div className="theme-thumbnail-sidebar-item" style={{ background: colors.sidebarSelected }}>📁 Proj</div>
-            <div className="theme-thumbnail-sidebar-item">🖥️ SSH</div>
-          </div>
-          <div className="theme-thumbnail-content">
-            <div
-              className="theme-thumbnail-tabs"
-              style={{ background: colors.tabBackground }}
-            >
-              <div
-                className="theme-thumbnail-tab"
-                style={{ background: colors.tabActiveBackground, color: colors.tabActiveText }}
-              >
-                Term
-              </div>
-            </div>
-            <div
-              className="theme-thumbnail-terminal"
-              style={{ background: colors.contentBackground, color: colors.dialogText }}
-            >
-              <span style={{ color: colors.buttonPrimary }}>$</span> ls
-            </div>
-          </div>
-        </div>
-        <div
-          className="theme-thumbnail-statusbar"
-          style={{ background: colors.statusBarBackground, color: colors.statusBarText }}
-        >
-          <span>✓</span>
-          <span>{theme.name}</span>
-        </div>
-      </div>
-    );
-  });
-
-  // Componente memoizado para las tarjetas de tema - Evita re-renders durante resize
-  const ThemeThumbnailCard = memo(({ theme, isActive, onSelect }) => {
-    return (
-      <div
-        className={`theme-thumbnail ${isActive ? 'active' : ''}`}
-        onClick={onSelect}
-      >
-        {isActive && (
-          <div className="theme-thumbnail-check">
-            <i className="pi pi-check"></i>
-          </div>
-        )}
-
-        <ThumbnailPreview theme={theme} />
-
-        <div className="theme-thumbnail-info">
-          <span className="theme-thumbnail-name">{theme.name}</span>
-          <div className="theme-thumbnail-palette">
-            {[
-              theme.colors.sidebarBackground,
-              theme.colors.buttonPrimary,
-              theme.colors.contentBackground
-            ].map((color, index) => (
-              <div
-                key={index}
-                className="theme-thumbnail-dot"
-                style={{ backgroundColor: color }}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }, (prevProps, nextProps) => {
-    // Comparación personalizada: solo re-renderizar si cambia el tema activo o el tema mismo
-    return prevProps.isActive === nextProps.isActive &&
-      prevProps.theme.name === nextProps.theme.name;
-  });
 
   return (
     <div className="theme-selector-container">
@@ -755,10 +840,11 @@ const ThemeSelector = ({ showPreview = false }) => {
 
                     <div className="theme-titlebar-palette-container">
                       <button
+                        ref={paletteBtnRef}
                         type="button"
-                        className={`theme-titlebar-palette-btn ${customTitlebarColor ? 'active' : ''}`}
+                        className={`theme-titlebar-palette-btn ${customTitlebarColor || titlebarPaletteOpen ? 'active' : ''}`}
                         onClick={() => setTitlebarPaletteOpen((open) => !open)}
-                        title="Paleta del tema"
+                        title="Paleta de color de la titlebar"
                       >
                         <i className="pi pi-palette" />
                         {customTitlebarColor && (
@@ -768,76 +854,126 @@ const ThemeSelector = ({ showPreview = false }) => {
                           />
                         )}
                       </button>
-
-                      {titlebarPaletteOpen && (
-                        <div className="theme-titlebar-palette-dropdown">
-                          <div className="theme-titlebar-palette-grid">
-                            {titlebarPalette.map((swatch) => (
-                              <button
-                                key={swatch.id}
-                                type="button"
-                                className={`theme-titlebar-palette-item ${
-                                  normalizedCustomTitlebar === swatch.color.toLowerCase() ? 'selected' : ''
-                                }`}
-                                title={`${swatch.label} (${swatch.color})`}
-                                onClick={() => {
-                                  handleTitlebarPaletteSelect(swatch.color);
-                                  setTitlebarPaletteOpen(false);
-                                }}
-                              >
-                                <span
-                                  className="theme-titlebar-palette-swatch"
-                                  style={{ backgroundColor: swatch.color }}
-                                />
-                              </button>
-                            ))}
-
-                            <label
-                              className={`theme-titlebar-palette-item theme-titlebar-custom-picker-label ${
-                                customTitlebarColor && !isCustomColorPredefined ? 'selected' : ''
-                              }`}
-                              title="Color personalizado..."
-                              style={{ cursor: 'pointer' }}
-                              tabIndex={0}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  e.preventDefault();
-                                  e.currentTarget.querySelector('input')?.click();
-                                }
-                              }}
-                            >
-                              <span
-                                className="theme-titlebar-palette-swatch theme-titlebar-custom-picker-swatch"
-                                style={{
-                                  background: customTitlebarColor && !isCustomColorPredefined
-                                    ? customTitlebarColor
-                                    : 'conic-gradient(from 0deg, red, yellow, lime, aqua, blue, magenta, red)'
-                                }}
-                              />
-                              <input
-                                type="color"
-                                value={customTitlebarColor || '#1976d2'}
-                                onChange={handleCustomColorChange}
-                                style={{ display: 'none' }}
-                              />
-                            </label>
-                          </div>
-                          <button
-                            type="button"
-                            className="theme-titlebar-reset-btn"
-                            onClick={() => {
-                              handleTitlebarUseThemeDefault();
-                              setTitlebarPaletteOpen(false);
-                            }}
-                            title="Volver a automático"
-                          >
-                            <i className="pi pi-replay" />
-                            <span>Por defecto</span>
-                          </button>
-                        </div>
-                      )}
                     </div>
                   </div>
+
+                  {titlebarPaletteOpen && (
+                    <div className="theme-titlebar-palette-dropdown" ref={paletteRef}>
+                      <div className="theme-titlebar-palette-header">
+                        <div className="theme-titlebar-palette-title">
+                          <i className="pi pi-palette" />
+                          <span>Color de Titlebar</span>
+                        </div>
+                        <button
+                          type="button"
+                          className="theme-titlebar-palette-close-btn"
+                          onClick={() => setTitlebarPaletteOpen(false)}
+                          title="Cerrar"
+                        >
+                          <i className="pi pi-times" />
+                        </button>
+                      </div>
+
+                      <div className="theme-titlebar-section-label">Colores del tema</div>
+                      <div className="theme-titlebar-palette-grid">
+                        {titlebarPalette.map((swatch) => {
+                          const isSelected = normalizedCustomTitlebar === swatch.color.toLowerCase();
+                          return (
+                            <button
+                              key={swatch.id}
+                              type="button"
+                              className={`theme-titlebar-palette-item ${isSelected ? 'selected' : ''}`}
+                              title={`${swatch.label} (${swatch.color})`}
+                              onClick={() => handleTitlebarPaletteSelect(swatch.color)}
+                            >
+                              <span
+                                className="theme-titlebar-palette-swatch"
+                                style={{ backgroundColor: swatch.color }}
+                              >
+                                {isSelected && (
+                                  <i
+                                    className="pi pi-check"
+                                    style={{
+                                      fontSize: '0.5625rem',
+                                      fontWeight: 'bold',
+                                      color: isColorLight(swatch.color) ? '#111' : '#fff'
+                                    }}
+                                  />
+                                )}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div className="theme-titlebar-section-label">Personalizado</div>
+                      <div className="theme-titlebar-custom-row">
+                        <div
+                          className="theme-titlebar-picker-preview-wrapper"
+                          title="Clic para abrir selector de color nativo"
+                        >
+                          <span
+                            className="theme-titlebar-palette-swatch theme-titlebar-custom-preview"
+                            style={{
+                              backgroundColor: customTitlebarColor || '#1976d2',
+                              background: customTitlebarColor
+                                ? customTitlebarColor
+                                : 'conic-gradient(from 0deg, red, yellow, lime, aqua, blue, magenta, red)'
+                            }}
+                          >
+                            <i
+                              className="pi pi-pencil"
+                              style={{
+                                fontSize: '0.5625rem',
+                                color: customTitlebarColor && isColorLight(customTitlebarColor) ? '#111' : '#fff'
+                              }}
+                            />
+                          </span>
+                          <input
+                            type="color"
+                            value={customTitlebarColor || '#1976d2'}
+                            onChange={handleCustomColorChange}
+                            className="theme-titlebar-native-color-input"
+                            title="Selector de color del sistema"
+                          />
+                        </div>
+
+                        <div className="theme-titlebar-hex-input-wrapper" title="Código HEX del color">
+                          <span className="theme-titlebar-hex-prefix">#</span>
+                          <input
+                            type="text"
+                            className="theme-titlebar-hex-input"
+                            placeholder="1976D2"
+                            value={(customHexInput || '').replace(/^#/, '')}
+                            onChange={handleHexInputChange}
+                            maxLength={6}
+                            spellCheck={false}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="theme-titlebar-palette-footer">
+                        <button
+                          type="button"
+                          className="theme-titlebar-reset-btn"
+                          onClick={handleTitlebarUseThemeDefault}
+                          title="Restablecer color automático del tema"
+                        >
+                          <i className="pi pi-replay" />
+                          <span>Por defecto</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="theme-titlebar-done-btn"
+                          onClick={() => setTitlebarPaletteOpen(false)}
+                          title="Listo"
+                        >
+                          <i className="pi pi-check" />
+                          <span>Listo</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

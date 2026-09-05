@@ -46,7 +46,7 @@ function normalizeHexColor(hex) {
   return c.toLowerCase();
 }
 
-function isColorLight(hex) {
+export function isColorLight(hex) {
   const normalized = normalizeHexColor(hex);
   if (!normalized) return false;
   const num = parseInt(normalized.slice(1), 16);
