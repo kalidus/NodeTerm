@@ -18,6 +18,11 @@ const HomePanelWrapper = ({
   onToggleMaximize,
   terminalFrameStyle = 'macos',
   snapToGrid = true,
+  smartSnap = true,
+  onDragging = null,
+  onDragEnd = null,
+  onResizing = null,
+  onResizeEnd = null,
   minWidth = 260,
   minHeight = 90,
   bounds = 'parent',
@@ -50,23 +55,53 @@ const HomePanelWrapper = ({
     }
   }, [id, onBringToFront]);
 
+  const handleDrag = useCallback((e, d) => {
+    if (isMaximized) return;
+    if (onDragging) {
+      const curW = rndRef.current?.resizableElement?.current?.offsetWidth || width;
+      const curH = rndRef.current?.resizableElement?.current?.offsetHeight || height;
+      onDragging(id, { x: d.x, y: d.y, width: curW, height: curH });
+    }
+  }, [id, isMaximized, onDragging, width, height]);
+
   const handleDragStop = useCallback((e, d) => {
     if (isMaximized) return;
-    if (onLayoutChange) {
+    if (onDragEnd) {
+      onDragEnd(id, { x: d.x, y: d.y, width, height });
+    } else if (onLayoutChange) {
       onLayoutChange(id, {
         ...panelState,
         x: d.x,
         y: d.y
       });
     }
-  }, [id, isMaximized, onLayoutChange, panelState]);
+  }, [id, isMaximized, onDragEnd, onLayoutChange, panelState, width, height]);
+
+  const handleResize = useCallback((e, direction, ref, delta, position) => {
+    if (isMaximized) return;
+    if (onResizing) {
+      onResizing(id, {
+        x: position.x,
+        y: position.y,
+        width: ref.offsetWidth,
+        height: ref.offsetHeight
+      }, direction);
+    }
+  }, [id, isMaximized, onResizing]);
 
   const handleResizeStop = useCallback((e, direction, ref, delta, position) => {
     if (isMaximized) return;
     const newWidth = ref.offsetWidth;
     const newHeight = ref.offsetHeight;
 
-    if (onLayoutChange) {
+    if (onResizeEnd) {
+      onResizeEnd(id, {
+        x: position.x,
+        y: position.y,
+        width: newWidth,
+        height: newHeight
+      }, direction);
+    } else if (onLayoutChange) {
       onLayoutChange(id, {
         ...panelState,
         width: newWidth,
@@ -80,7 +115,7 @@ const HomePanelWrapper = ({
     setTimeout(() => {
       window.dispatchEvent(new Event('resize'));
     }, 50);
-  }, [id, isMaximized, onLayoutChange, panelState]);
+  }, [id, isMaximized, onResizeEnd, onLayoutChange, panelState]);
 
   const handleHeaderDoubleClick = useCallback((e) => {
     // Si se hace doble clic sobre un elemento con .no-drag, no maximizar
@@ -90,7 +125,8 @@ const HomePanelWrapper = ({
     }
   }, [id, onToggleMaximize]);
 
-  const gridStep = snapToGrid ? [10, 10] : [1, 1];
+  // Si smartSnap está activo, el grid fino 1x1 permite que la imantación magnética sea fluida y exacta
+  const gridStep = smartSnap ? [1, 1] : (snapToGrid ? [10, 10] : [1, 1]);
 
   const renderFrameControls = () => {
     if (hideHeader) return null;
@@ -279,8 +315,10 @@ const HomePanelWrapper = ({
           : { x, y }
       }
       onDragStart={handleDragStart}
+      onDrag={handleDrag}
       onDragStop={handleDragStop}
       onResizeStart={handleDragStart}
+      onResize={handleResize}
       onResizeStop={handleResizeStop}
       minWidth={minWidth}
       minHeight={minHeight}

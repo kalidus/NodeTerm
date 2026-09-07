@@ -22,6 +22,20 @@ import {
   readFloatSetting,
   readStringSetting
 } from '../utils/homeTabSync';
+import {
+  calculateDragSnap,
+  calculateResizeSnap,
+  autoEqualizeBottomRow
+} from '../utils/homeTabSnapping';
+import {
+  getBuiltinPresets,
+  getUserPresets,
+  saveUserPreset,
+  deleteUserPreset,
+  getCurrentDisplayKey,
+  getLayoutForCurrentDisplay,
+  saveLayoutForCurrentDisplay
+} from '../utils/homeTabPresets';
 
 /** Opciones de marco del terminal local (Home); mismas claves que `TERMINAL_FRAME_STYLE` en ConnectionHistory. */
 const HOME_TERMINAL_FRAME_STYLE_OPTIONS = [
@@ -125,8 +139,8 @@ const computeDefaultPanelsLayout = (cWidth = (typeof window !== 'undefined' ? wi
 };
 
 /**
- * Preserva con precisión la estructura, anclajes y proporciones de los paneles
- * configurados por el usuario cuando la ventana o contenedor cambia de tamaño.
+ * Preserva con precisión la estructura, proporciones y evita por completo colisiones
+ * o solapamientos entre paneles cuando la ventana o contenedor cambia de tamaño.
  */
 const smartRefitPanelsLayout = (prevLayout, newWidth, newHeight, prevWidth, prevHeight) => {
   if (!prevLayout || newWidth <= 0 || newHeight <= 0) return prevLayout;
@@ -137,147 +151,181 @@ const smartRefitPanelsLayout = (prevLayout, newWidth, newHeight, prevWidth, prev
 
   const pad = 16;
   const gap = 12;
-  const maxCanvasW = Math.max(320, newWidth - pad * 2);
-  const maxCanvasH = Math.max(200, newHeight - pad * 2);
 
-  // Si el cambio de tamaño es mínimo, no alterar
+  // Si el cambio de tamaño es insignificante (< 2px), no alterar
   if (Math.abs(newWidth - prevWidth) < 2 && Math.abs(newHeight - prevHeight) < 2) {
     return prevLayout;
   }
 
+  const nextLayout = { ...prevLayout };
   const keys = Object.keys(prevLayout);
-  const nextLayout = {};
 
-  // Paso 1: Procesar cada panel según sus propios anclajes (bordes de pantalla)
-  keys.forEach((key) => {
-    const p = prevLayout[key];
-    if (!p) return;
+  const activeKeys = keys.filter(
+    (k) => prevLayout[k] && prevLayout[k].visible !== false && !prevLayout[k].isMaximized
+  );
 
-    if (p.isMaximized) {
-      nextLayout[key] = { ...p };
-      return;
-    }
+  if (activeKeys.length === 0) return prevLayout;
 
-    const minW = p.minWidth || (key === 'search' ? 320 : 200);
-    const minH = p.minHeight || (key === 'search' ? 110 : 180);
-
-    // Detección de anclajes a los bordes del canvas anterior
-    const isTopAnchored = p.y <= pad + 25;
-    const isBottomAnchored = prevHeight > 100 && (prevHeight - (p.y + p.height) <= pad + 35);
-    const isLeftAnchored = p.x <= pad + 25;
-    const isRightAnchored = prevWidth > 100 && (prevWidth - (p.x + p.width) <= pad + 35);
-    const wasHorizontallyCentered = prevWidth > 100 && Math.abs((prevWidth - p.width) / 2 - p.x) < 40;
-
-    let targetX = p.x;
-    let targetY = p.y;
-    let targetW = p.width;
-    let targetH = p.height;
-
-    // --- POSICIONAMIENTO VERTICAL (Y, Altura) ---
-    if (isTopAnchored && isBottomAnchored) {
-      // Ocupa toda la altura útil de la pantalla (ej. Terminal en columna completa)
-      targetY = pad;
-      targetH = Math.max(minH, newHeight - pad * 2);
-    } else if (isTopAnchored) {
-      // Anclado arriba (ej. Buscador o Terminal en la parte superior)
-      targetY = pad;
-      targetH = Math.min(p.height, maxCanvasH);
-    } else if (isBottomAnchored) {
-      // Anclado al fondo (ej. panel inferior)
-      const relY = p.y / prevHeight;
-      targetY = Math.max(pad, Math.min(Math.round(relY * newHeight), newHeight - minH - pad));
-      targetH = Math.max(minH, newHeight - targetY - pad);
-    } else {
-      // Flotante vertical
-      const relY = p.y / prevHeight;
-      targetY = Math.max(pad, Math.min(Math.round(relY * newHeight), newHeight - minH - pad));
-      targetH = Math.min(p.height, newHeight - targetY - pad);
-    }
-
-    // --- POSICIONAMIENTO HORIZONTAL (X, Anchura) ---
-    if (isLeftAnchored && isRightAnchored) {
-      // Ocupa todo el ancho disponible
-      targetX = pad;
-      targetW = Math.max(minW, newWidth - pad * 2);
-    } else if (wasHorizontallyCentered) {
-      // Centrado horizontalmente (ej. Buscador centrado)
-      targetW = Math.min(p.width, maxCanvasW);
-      targetX = Math.max(pad, Math.floor((newWidth - targetW) / 2));
-    } else if (isLeftAnchored && !isRightAnchored) {
-      // Anclado a la izquierda (ej. Terminal ocupando ~60% a la izquierda)
-      targetX = pad;
-      const relW = prevWidth > 100 ? p.width / (prevWidth - pad * 2) : 0.5;
-      if (relW > 0.2 && relW < 0.85) {
-        targetW = Math.max(minW, Math.floor((newWidth - pad * 2 - gap) * relW));
-      } else {
-        targetW = Math.min(p.width, maxCanvasW);
-      }
-    } else if (!isLeftAnchored && isRightAnchored) {
-      // Anclado a la derecha (ej. Buscador o Recientes en el lado derecho)
-      const relW = prevWidth > 100 ? p.width / (prevWidth - pad * 2) : 0.5;
-      if (relW > 0.2 && relW < 0.85) {
-        targetW = Math.max(minW, Math.floor((newWidth - pad * 2 - gap) * relW));
-        targetX = Math.max(pad, newWidth - targetW - pad);
-      } else {
-        targetW = Math.min(p.width, maxCanvasW);
-        targetX = Math.max(pad, newWidth - targetW - pad);
-      }
-    } else {
-      // Flotante horizontal
-      const relX = p.x / prevWidth;
-      targetX = Math.max(pad, Math.min(Math.round(relX * newWidth), newWidth - minW - pad));
-      targetW = Math.min(p.width, newWidth - targetX - pad);
-    }
-
-    // Límites estrictos
-    targetX = Math.max(pad, Math.min(targetX, newWidth - minW - pad));
-    targetY = Math.max(pad, Math.min(targetY, newHeight - minH - pad));
-    targetW = Math.max(minW, Math.min(targetW, newWidth - targetX - pad));
-    targetH = Math.max(minH, Math.min(targetH, newHeight - targetY - pad));
-
-    nextLayout[key] = {
-      ...p,
-      x: targetX,
-      y: targetY,
-      width: targetW,
-      height: targetH
+  // Si solo hay 1 panel activo, ocupa todo el espacio útil
+  if (activeKeys.length === 1) {
+    const k = activeKeys[0];
+    nextLayout[k] = {
+      ...prevLayout[k],
+      x: pad,
+      y: pad,
+      width: Math.max(prevLayout[k].minWidth || 200, newWidth - pad * 2),
+      height: Math.max(prevLayout[k].minHeight || 120, newHeight - pad * 2),
+      isMaximized: false
     };
+    return nextLayout;
+  }
+
+  // Detectar si tenemos el layout clásico de 2 Columnas (ej: Terminal ocupando la columna izquierda)
+  const term = prevLayout.terminal;
+  const isColumnSplit = term && term.visible !== false && !term.isMaximized &&
+    activeKeys.length >= 2 &&
+    term.x <= pad + 35 &&
+    (prevWidth > 100 && term.width < prevWidth * 0.75) &&
+    activeKeys.some(k => k !== 'terminal' && prevLayout[k].x >= term.x + term.width - 40);
+
+  if (isColumnSplit) {
+    // --- LAYOUT SPLIT: Columna Izquierda (Terminal) + Columna Derecha ---
+    const prevTermW = Math.max(300, term.width);
+    const prevRightW = Math.max(260, prevWidth - prevTermW - pad * 2 - gap);
+    const leftRatio = prevTermW / (prevTermW + prevRightW);
+
+    const totalUsefulW = Math.max(500, newWidth - pad * 2 - gap);
+    const newLeftW = Math.max(term.minWidth || 320, Math.floor(totalUsefulW * leftRatio));
+    const newRightW = Math.max(240, totalUsefulW - newLeftW);
+    const rightX = pad + newLeftW + gap;
+
+    const hasSearchLeft = prevLayout.search && prevLayout.search.visible !== false && prevLayout.search.x <= pad + 40 && prevLayout.search.width <= newLeftW + 30;
+    let leftTopY = pad;
+
+    if (hasSearchLeft) {
+      const sH = Math.min(124, prevLayout.search.height || 110);
+      nextLayout.search = {
+        ...prevLayout.search,
+        x: pad,
+        y: pad,
+        width: newLeftW,
+        height: sH,
+        isMaximized: false
+      };
+      leftTopY = pad + sH + gap;
+    }
+
+    nextLayout.terminal = {
+      ...term,
+      x: pad,
+      y: leftTopY,
+      width: newLeftW,
+      height: Math.max(term.minHeight || 200, newHeight - leftTopY - pad),
+      isMaximized: false
+    };
+
+    const rightKeys = activeKeys.filter(k => k !== 'terminal' && (!hasSearchLeft || k !== 'search'));
+    rightKeys.sort((a, b) => (prevLayout[a].y || 0) - (prevLayout[b].y || 0));
+
+    const totalRightH = Math.max(180, newHeight - pad * 2 - gap * (rightKeys.length - 1));
+    const sumPrevRightH = rightKeys.reduce((acc, k) => acc + (prevLayout[k].height || 150), 0) || 1;
+
+    let rightY = pad;
+    rightKeys.forEach((k, idx) => {
+      const isLast = idx === rightKeys.length - 1;
+      const weightH = (prevLayout[k].height || 150) / sumPrevRightH;
+      const h = isLast ? Math.max(prevLayout[k].minHeight || 100, (newHeight - pad) - rightY) : Math.max(prevLayout[k].minHeight || 100, Math.floor(totalRightH * weightH));
+
+      nextLayout[k] = {
+        ...prevLayout[k],
+        x: rightX,
+        y: rightY,
+        width: newRightW,
+        height: h,
+        isMaximized: false
+      };
+      rightY += h + gap;
+    });
+
+    return nextLayout;
+  }
+
+  // --- LAYOUT POR BANDAS / FILAS HORIZONTALES (Dashboard Pro y general) ---
+  // Agrupar los paneles activos en filas según su coordenada Y
+  const sortedKeys = [...activeKeys].sort((a, b) => {
+    const midA = prevLayout[a].y + (prevLayout[a].height || 100) / 2;
+    const midB = prevLayout[b].y + (prevLayout[b].height || 100) / 2;
+    return midA - midB;
   });
 
-  // Paso 2: Preservar relaciones de apilamiento vertical SOLO entre paneles que realmente compartían columna
-  keys.forEach((keyTop) => {
-    const topPanel = prevLayout[keyTop];
-    if (!topPanel || !topPanel.visible || topPanel.isMaximized) return;
+  const rows = [];
+  sortedKeys.forEach((key) => {
+    const p = prevLayout[key];
+    let placed = false;
 
-    keys.forEach((keyBottom) => {
-      if (keyTop === keyBottom) return;
-      const bottomPanel = prevLayout[keyBottom];
-      if (!bottomPanel || !bottomPanel.visible || bottomPanel.isMaximized) return;
+    for (const row of rows) {
+      const ref = prevLayout[row[0]];
+      const verticalOverlap = Math.min(p.y + p.height, ref.y + ref.height) - Math.max(p.y, ref.y);
+      const minH = Math.min(p.height, ref.height);
+      const sameRow = Math.abs(p.y - ref.y) <= 45 || (verticalOverlap > minH * 0.35);
 
-      // Verificar si en el layout anterior, bottomPanel estaba justo debajo de topPanel:
-      // 1. Debe haber solapamiento horizontal significativo (> 50% de anchura)
-      const overlapX = Math.min(topPanel.x + topPanel.width, bottomPanel.x + bottomPanel.width) - Math.max(topPanel.x, bottomPanel.x);
-      const sharesColumn = overlapX > Math.min(topPanel.width, bottomPanel.width) * 0.5;
-
-      // 2. Y su coordenada Y estaba justo bajo el panel superior
-      const isStackedBelow = sharesColumn &&
-        bottomPanel.y >= topPanel.y + topPanel.height - 10 &&
-        Math.abs(bottomPanel.y - (topPanel.y + topPanel.height)) <= 35;
-
-      if (isStackedBelow) {
-        const nextTop = nextLayout[keyTop];
-        const nextBottom = nextLayout[keyBottom];
-        if (nextTop && nextBottom) {
-          const expectedY = nextTop.y + nextTop.height + gap;
-          const wasBottomAnchored = prevHeight > 100 && (prevHeight - (bottomPanel.y + bottomPanel.height) <= pad + 35);
-
-          nextBottom.y = Math.max(expectedY, Math.min(nextBottom.y, newHeight - (nextBottom.minHeight || 180) - pad));
-          if (wasBottomAnchored) {
-            nextBottom.height = Math.max(nextBottom.minHeight || 180, newHeight - nextBottom.y - pad);
-          }
-        }
+      if (sameRow) {
+        row.push(key);
+        placed = true;
+        break;
       }
+    }
+
+    if (!placed) {
+      rows.push([key]);
+    }
+  });
+
+  // Calcular alturas de las filas proporcionales a la altura útil total
+  const totalUsefulH = Math.max(200, newHeight - pad * 2 - gap * (rows.length - 1));
+  const rowPrevHeights = rows.map((row) => {
+    let maxH = 0;
+    row.forEach((k) => { maxH = Math.max(maxH, prevLayout[k].height || 180); });
+    return Math.max(90, maxH);
+  });
+  const sumPrevRowH = rowPrevHeights.reduce((acc, h) => acc + h, 0) || 1;
+
+  let curY = pad;
+  rows.forEach((row, rowIdx) => {
+    const isLastRow = rowIdx === rows.length - 1;
+    const rowRatio = rowPrevHeights[rowIdx] / sumPrevRowH;
+    const targetRowH = isLastRow
+      ? Math.max(100, (newHeight - pad) - curY)
+      : Math.max(100, Math.floor(totalUsefulH * rowRatio));
+
+    // Ordenar paneles de izquierda a derecha dentro de la fila
+    row.sort((a, b) => (prevLayout[a].x || 0) - (prevLayout[b].x || 0));
+
+    const totalUsefulW = Math.max(260, newWidth - pad * 2 - gap * (row.length - 1));
+    const rowPrevWidths = row.map((k) => Math.max(prevLayout[k].minWidth || 160, prevLayout[k].width || 200));
+    const sumPrevRowW = rowPrevWidths.reduce((acc, w) => acc + w, 0) || 1;
+
+    let curX = pad;
+    row.forEach((key, colIdx) => {
+      const isLastCol = colIdx === row.length - 1;
+      const colRatio = rowPrevWidths[colIdx] / sumPrevRowW;
+      const targetW = isLastCol
+        ? Math.max(prevLayout[key].minWidth || 160, (newWidth - pad) - curX)
+        : Math.max(prevLayout[key].minWidth || 160, Math.floor(totalUsefulW * colRatio));
+
+      nextLayout[key] = {
+        ...prevLayout[key],
+        x: curX,
+        y: curY,
+        width: targetW,
+        height: Math.max(prevLayout[key].minHeight || 90, targetRowH),
+        isMaximized: false
+      };
+
+      curX += targetW + gap;
     });
+
+    curY += targetRowH + gap;
   });
 
   return nextLayout;
@@ -610,15 +658,14 @@ const HomeTab = ({
   });
   const [hasUserMovedTerminal, setHasUserMovedTerminal] = useState(false);
 
-  // Estado modular para paneles arrastrables y redimensionables
+  // Estado modular para paneles arrastrables y redimensionables con memoria por monitor
   const [panelsLayout, setPanelsLayout] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.HOME_TAB_PANELS_LAYOUT);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        const defaults = computeDefaultPanelsLayout();
-        return { ...defaults, ...parsed };
-      }
+      const defaults = computeDefaultPanelsLayout();
+      const base = saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
+      const displayLayout = getLayoutForCurrentDisplay(base);
+      return { ...defaults, ...displayLayout };
     } catch (e) {
       console.warn('Failed to parse saved home panels layout:', e);
     }
@@ -634,7 +681,21 @@ const HomeTab = ({
     }
   });
 
-  // Persistencia con debounce para el layout de paneles
+  // Snapping Magnético Inteligente con guías visuales en tiempo real
+  const [smartSnap, setSmartSnap] = useState(() => {
+    try {
+      const saved = localStorage.getItem('nodeterm_home_smart_snap');
+      return saved !== null ? saved === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
+  const [snapGuides, setSnapGuides] = useState([]);
+  const [userPresets, setUserPresets] = useState(() => getUserPresets());
+  const [newPresetName, setNewPresetName] = useState('');
+  const lastDisplayKeyRef = useRef(getCurrentDisplayKey());
+
+  // Persistencia con debounce para el layout de paneles (guarda global y por monitor)
   const savePanelsLayoutTimerRef = useRef(null);
   const savePanelsLayoutDebounced = useCallback((layout) => {
     if (savePanelsLayoutTimerRef.current) {
@@ -643,6 +704,7 @@ const HomeTab = ({
     savePanelsLayoutTimerRef.current = setTimeout(() => {
       try {
         localStorage.setItem(STORAGE_KEYS.HOME_TAB_PANELS_LAYOUT, JSON.stringify(layout));
+        saveLayoutForCurrentDisplay(layout);
       } catch (err) {
         console.error('Error saving home panels layout:', err);
       }
@@ -663,6 +725,100 @@ const HomeTab = ({
         height: mainAreaRef.current.offsetHeight
       };
     }
+  }, [savePanelsLayoutDebounced]);
+
+  // Callbacks de interacción de movimiento (sin líneas visuales en pantalla)
+  const handlePanelDragging = useCallback(() => {}, []);
+
+  const handlePanelDragEnd = useCallback((panelId, finalBounds) => {
+    const bounds = {
+      width: containerWidth > 100 ? containerWidth : (mainAreaRef.current?.offsetWidth || window.innerWidth),
+      height: containerHeight > 100 ? containerHeight : (mainAreaRef.current?.offsetHeight || window.innerHeight)
+    };
+    if (smartSnap) {
+      const snapped = calculateDragSnap(panelId, finalBounds, panelsLayout, bounds);
+      handlePanelLayoutChange(panelId, { x: snapped.x, y: snapped.y });
+    } else {
+      handlePanelLayoutChange(panelId, { x: finalBounds.x, y: finalBounds.y });
+    }
+  }, [smartSnap, containerWidth, containerHeight, panelsLayout, handlePanelLayoutChange]);
+
+  const handlePanelResizing = useCallback(() => {}, []);
+
+  const handlePanelResizeEnd = useCallback((panelId, finalBounds, direction) => {
+    const bounds = {
+      width: containerWidth > 100 ? containerWidth : (mainAreaRef.current?.offsetWidth || window.innerWidth),
+      height: containerHeight > 100 ? containerHeight : (mainAreaRef.current?.offsetHeight || window.innerHeight)
+    };
+    if (smartSnap) {
+      const snapped = calculateResizeSnap(panelId, finalBounds, direction, panelsLayout, bounds);
+      handlePanelLayoutChange(panelId, {
+        x: snapped.x,
+        y: snapped.y,
+        width: snapped.width,
+        height: snapped.height
+      });
+    } else {
+      handlePanelLayoutChange(panelId, {
+        x: finalBounds.x,
+        y: finalBounds.y,
+        width: finalBounds.width,
+        height: finalBounds.height
+      });
+    }
+  }, [smartSnap, containerWidth, containerHeight, panelsLayout, handlePanelLayoutChange]);
+
+  const handleToggleSmartSnap = useCallback(() => {
+    setSmartSnap((prev) => {
+      const next = !prev;
+      localStorage.setItem('nodeterm_home_smart_snap', String(next));
+      return next;
+    });
+  }, []);
+
+  const handleEqualizeBottomRow = useCallback(() => {
+    const w = containerWidth > 100 ? containerWidth : (mainAreaRef.current?.offsetWidth || window.innerWidth);
+    const h = containerHeight > 100 ? containerHeight : (mainAreaRef.current?.offsetHeight || window.innerHeight);
+    const updated = autoEqualizeBottomRow(panelsLayout, w, h);
+    setPanelsLayout(updated);
+    savePanelsLayoutDebounced(updated);
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 60);
+  }, [containerWidth, containerHeight, panelsLayout, savePanelsLayoutDebounced]);
+
+  const handleApplyBuiltinPreset = useCallback((presetKey) => {
+    const w = containerWidth > 100 ? containerWidth : (mainAreaRef.current?.offsetWidth || window.innerWidth);
+    const h = containerHeight > 100 ? containerHeight : (mainAreaRef.current?.offsetHeight || window.innerHeight);
+    const builtins = getBuiltinPresets(w, h);
+    if (builtins[presetKey]?.layout) {
+      setPanelsLayout(builtins[presetKey].layout);
+      savePanelsLayoutDebounced(builtins[presetKey].layout);
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+      }, 60);
+    }
+  }, [containerWidth, containerHeight, savePanelsLayoutDebounced]);
+
+  const handleSaveCustomPreset = useCallback(() => {
+    if (!newPresetName.trim()) return;
+    const updated = saveUserPreset(newPresetName, panelsLayout);
+    setUserPresets(updated);
+    setNewPresetName('');
+  }, [newPresetName, panelsLayout]);
+
+  const handleDeleteCustomPreset = useCallback((presetId) => {
+    const updated = deleteUserPreset(presetId);
+    setUserPresets(updated);
+  }, []);
+
+  const handleApplyCustomPreset = useCallback((preset) => {
+    if (!preset?.layout) return;
+    setPanelsLayout(preset.layout);
+    savePanelsLayoutDebounced(preset.layout);
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 60);
   }, [savePanelsLayoutDebounced]);
 
   const handleBringToFront = useCallback((panelId) => {
@@ -877,8 +1033,25 @@ const HomeTab = ({
           const prevW = prevContainerSizeRef.current.width;
           const prevH = prevContainerSizeRef.current.height;
 
-          // Solo reajustar si las dimensiones cambiaron significativamente (> 12px)
-          if (Math.abs(newW - prevW) > 12 || Math.abs(newH - prevH) > 12) {
+          // Verificar si cambió el monitor / resolución de pantalla
+          const curDisplayKey = getCurrentDisplayKey();
+          if (lastDisplayKeyRef.current !== curDisplayKey) {
+            lastDisplayKeyRef.current = curDisplayKey;
+            const monitorLayout = getLayoutForCurrentDisplay(null);
+            if (monitorLayout) {
+              setPanelsLayout(monitorLayout);
+              prevContainerSizeRef.current = { width: newW, height: newH };
+              setContainerHeight(newH);
+              setContainerWidth(newW);
+              setTimeout(() => {
+                window.dispatchEvent(new Event('resize'));
+              }, 60);
+              return;
+            }
+          }
+
+          // Reajustar paneles ante cualquier redimensionado de ventana (> 4px)
+          if (Math.abs(newW - prevW) > 4 || Math.abs(newH - prevH) > 4) {
             setPanelsLayout((prevLayout) => {
               const refitted = smartRefitPanelsLayout(prevLayout, newW, newH, prevW, prevH);
               savePanelsLayoutDebounced(refitted);
@@ -2249,90 +2422,201 @@ const HomeTab = ({
 
             <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '6px 0' }} />
 
-            <div className="menu-item-row" onClick={handleToggleSnapToGrid}>
+            <div className="menu-item-row" onClick={handleToggleSmartSnap}>
               <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem', fontWeight: 500 }}>
-                <i className="pi pi-table" style={{ marginRight: '6px', fontSize: '0.8rem', opacity: 0.7 }} />
-                Alinear a cuadrícula (10px)
+                <i className="pi pi-table" style={{ marginRight: '6px', fontSize: '0.8rem', color: '#00e5ff' }} />
+                Alineación Magnética (Snap)
               </span>
               <label className="premium-switch" onClick={(e) => e.stopPropagation()}>
                 <input 
                   type="checkbox" 
-                  checked={snapToGrid} 
-                  onChange={handleToggleSnapToGrid} 
+                  checked={smartSnap} 
+                  onChange={handleToggleSmartSnap} 
                 />
                 <span className="premium-slider"></span>
               </label>
             </div>
 
-            <button
-              type="button"
-              onClick={handleAutoOrganizePanels}
-              style={{
-                width: '100%',
-                padding: '7px 10px',
-                borderRadius: '6px',
-                border: '1px solid rgba(0, 229, 255, 0.35)',
-                background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.15) 0%, rgba(99, 102, 241, 0.15) 100%)',
-                color: themeColors.textPrimary || '#fff',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                marginTop: '6px',
-                boxShadow: '0 2px 8px rgba(0, 229, 255, 0.12)',
-                transition: 'all 0.2s ease'
-              }}
-              title="Ajustar y reorganizar inteligentemente los paneles activos para aprovechar al máximo el tamaño de la pantalla"
-            >
-              <i className="pi pi-sparkles" style={{ fontSize: '0.8rem', color: '#00e5ff' }} /> Auto-Ajustar Todo
-            </button>
-
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '6px' }}>
               <button
                 type="button"
-                onClick={handleApplySplitPreset}
+                onClick={handleEqualizeBottomRow}
                 style={{
-                  padding: '6px 8px',
+                  padding: '7px 8px',
                   borderRadius: '6px',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(0, 229, 255, 0.4)',
+                  background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.18) 0%, rgba(99, 102, 241, 0.18) 100%)',
                   color: themeColors.textPrimary || '#fff',
                   fontSize: '0.78rem',
+                  fontWeight: 600,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '4px',
+                  gap: '5px',
                   transition: 'all 0.2s ease'
                 }}
-                title="Diseño dividido: Terminal a la izquierda y Recientes a la derecha"
+                title="Alinear al mismo nivel Y, misma altura y distribuir uniformemente los módulos de la fila inferior"
               >
-                <i className="pi pi-pause" style={{ transform: 'rotate(90deg)', fontSize: '0.7rem' }} /> 2 Columnas
+                <i className="pi pi-align-justify" style={{ fontSize: '0.75rem', color: '#00e5ff' }} /> Nivelar Fila
               </button>
+
               <button
                 type="button"
-                onClick={handleApplyTerminalMaxPreset}
+                onClick={handleAutoOrganizePanels}
                 style={{
-                  padding: '6px 8px',
+                  padding: '7px 8px',
                   borderRadius: '6px',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(0, 229, 255, 0.25)',
+                  background: 'rgba(0, 229, 255, 0.08)',
                   color: themeColors.textPrimary || '#fff',
                   fontSize: '0.78rem',
+                  fontWeight: 600,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '4px',
+                  gap: '5px',
                   transition: 'all 0.2s ease'
                 }}
-                title="Maximizar terminal en la pantalla de inicio"
+                title="Ajustar y reorganizar inteligentemente todos los paneles activos"
               >
-                <i className="pi pi-window-maximize" style={{ fontSize: '0.7rem' }} /> Terminal Max
+                <i className="pi pi-sparkles" style={{ fontSize: '0.75rem', color: '#00e5ff' }} /> Auto-Ajustar
               </button>
+            </div>
+
+            <div style={{ marginTop: '8px' }}>
+              <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Presets Oficiales
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '5px' }}>
+                <button
+                  type="button"
+                  onClick={() => handleApplyBuiltinPreset('dashboard-pro')}
+                  style={{
+                    padding: '6px 4px',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(0, 229, 255, 0.3)',
+                    background: 'rgba(0, 229, 255, 0.1)',
+                    color: '#00e5ff',
+                    fontSize: '0.74rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '3px',
+                    transition: 'all 0.2s ease'
+                  }}
+                  title="Dashboard Pro: Terminal ancho arriba y fila con 4 widgets nivelados abajo"
+                >
+                  <i className="pi pi-th-large" style={{ fontSize: '0.85rem' }} />
+                  <span>Dashboard</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleApplySplitPreset}
+                  style={{
+                    padding: '6px 4px',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    background: 'rgba(255,255,255,0.04)',
+                    color: themeColors.textPrimary || '#fff',
+                    fontSize: '0.74rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '3px',
+                    transition: 'all 0.2s ease'
+                  }}
+                  title="Diseño dividido: Terminal a la izquierda y Recientes a la derecha"
+                >
+                  <i className="pi pi-pause" style={{ transform: 'rotate(90deg)', fontSize: '0.85rem' }} />
+                  <span>2 Columnas</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleApplyTerminalMaxPreset}
+                  style={{
+                    padding: '6px 4px',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    background: 'rgba(255,255,255,0.04)',
+                    color: themeColors.textPrimary || '#fff',
+                    fontSize: '0.74rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '3px',
+                    transition: 'all 0.2s ease'
+                  }}
+                  title="Maximizar terminal en la pantalla de inicio"
+                >
+                  <i className="pi pi-window-maximize" style={{ fontSize: '0.85rem' }} />
+                  <span>Terminal Max</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="home-presets-section">
+              <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginTop: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Mis Presets
+              </div>
+              <div className="home-presets-save-row">
+                <input
+                  type="text"
+                  className="home-presets-input"
+                  placeholder="Nombre de mi preset..."
+                  value={newPresetName}
+                  onChange={(e) => setNewPresetName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSaveCustomPreset();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="home-presets-save-btn"
+                  onClick={handleSaveCustomPreset}
+                  title="Guardar distribución actual de paneles"
+                >
+                  <i className="pi pi-bookmark" /> Guardar
+                </button>
+              </div>
+
+              {userPresets && userPresets.length > 0 && (
+                <div className="home-presets-list">
+                  {userPresets.map((preset) => (
+                    <div key={preset.id} className="home-preset-item">
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '170px' }}>
+                        {preset.name}
+                      </span>
+                      <div className="home-preset-item-actions">
+                        <button
+                          type="button"
+                          className="home-preset-apply-btn"
+                          onClick={() => handleApplyCustomPreset(preset)}
+                          title="Aplicar preset"
+                        >
+                          Cargar
+                        </button>
+                        <button
+                          type="button"
+                          className="home-preset-delete-btn"
+                          onClick={() => handleDeleteCustomPreset(preset.id)}
+                          title="Eliminar preset"
+                        >
+                          <i className="pi pi-trash" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <button
@@ -2351,7 +2635,7 @@ const HomeTab = ({
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '6px',
-                marginTop: '4px',
+                marginTop: '6px',
                 transition: 'all 0.2s ease'
               }}
               title="Restablecer posición y tamaño de todos los paneles a sus valores por defecto"
@@ -2549,6 +2833,12 @@ const HomeTab = ({
                   onToggleMaximizePanel={handleToggleMaximizePanel}
                   onTogglePanelVisibility={handleTogglePanelVisibility}
                   snapToGrid={snapToGrid}
+                  smartSnap={smartSnap}
+                  snapGuides={snapGuides}
+                  onPanelDragging={handlePanelDragging}
+                  onPanelDragEnd={handlePanelDragEnd}
+                  onPanelResizing={handlePanelResizing}
+                  onPanelResizeEnd={handlePanelResizeEnd}
                   onSwitchTerminal={(type, info) => {
                     if (showLocalTerminalTabs && embeddedTabbedTerminalRef.current?.addTerminalTab) {
                       embeddedTabbedTerminalRef.current.addTerminalTab(type, info);

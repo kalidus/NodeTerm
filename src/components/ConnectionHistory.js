@@ -18,6 +18,7 @@ import { SiAnthropic, SiDebian, SiDocker, SiGooglegemini, SiOpenai } from 'react
 import AIClientBrandIcon from './AIClientBrandIcon';
 import { appConfirm } from './ui/AppConfirm';
 import HomePanelWrapper from './HomePanelWrapper';
+import HomePanelGuideOverlay from './HomePanelGuideOverlay';
 import HomeTelemetryPanel from './HomeTelemetryPanel';
 
 // Formatear "Hace 5m", "Hace 2 h", "Ayer", etc.
@@ -326,6 +327,12 @@ const ConnectionHistory = ({
 	onToggleMaximizePanel = null,
 	onTogglePanelVisibility = null,
 	snapToGrid = true,
+	smartSnap = true,
+	snapGuides = [],
+	onPanelDragging = null,
+	onPanelDragEnd = null,
+	onPanelResizing = null,
+	onPanelResizeEnd = null,
 	children
 }) => {
 	// Helper para ajustar la opacidad de los colores (Hex o RGBA)
@@ -4512,6 +4519,9 @@ const ConnectionHistory = ({
 						overflow: 'hidden'
 					}}
 				>
+					{/* Overlay de guías magnéticas inteligentes en tiempo real */}
+					<HomePanelGuideOverlay guides={snapGuides} />
+
 					{/* 1. Panel Buscador y Conexión */}
 					{panelsLayout.search && panelsLayout.search.visible !== false && (
 						<HomePanelWrapper
@@ -4525,6 +4535,11 @@ const ConnectionHistory = ({
 							onToggleMaximize={() => (onToggleMaximizePanel ? onToggleMaximizePanel('search') : null)}
 							terminalFrameStyle={terminalFrameStyle}
 							snapToGrid={snapToGrid}
+							smartSnap={smartSnap}
+							onDragging={onPanelDragging}
+							onDragEnd={onPanelDragEnd}
+							onResizing={onPanelResizing}
+							onResizeEnd={onPanelResizeEnd}
 							minWidth={320}
 							minHeight={110}
 							className="top-terminal-frame"
@@ -4550,6 +4565,11 @@ const ConnectionHistory = ({
 							}}
 							terminalFrameStyle={terminalFrameStyle}
 							snapToGrid={snapToGrid}
+							smartSnap={smartSnap}
+							onDragging={onPanelDragging}
+							onDragEnd={onPanelDragEnd}
+							onResizing={onPanelResizing}
+							onResizeEnd={onPanelResizeEnd}
 							minWidth={380}
 							minHeight={200}
 							className="recents-terminal-frame"
@@ -4564,10 +4584,14 @@ const ConnectionHistory = ({
 											opacity: splitOpen && splitView === 'recent' ? 1 : 0.7,
 											cursor: 'pointer',
 											padding: '4px',
-											transition: 'all 0.2s'
+											borderRadius: '4px',
+											transition: 'all 0.15s ease'
+										}}
+										onClick={(e) => {
+											e.stopPropagation();
+											handleToggleSplit('recent');
 										}}
 										title="Recientes — split con terminal"
-										onClick={(e) => { e.stopPropagation(); handleToggleSplit('recent'); }}
 									/>
 									<div aria-hidden="true" style={{ width: '1px', height: '14px', background: 'rgba(255,255,255,0.20)', margin: '0 4px' }} />
 									<i
@@ -4575,12 +4599,12 @@ const ConnectionHistory = ({
 										style={{
 											fontSize: '0.9rem',
 											color: terminalTheme.foreground || '#c9d1d9',
-											opacity: 0.6,
+											opacity: 0.65,
 											cursor: 'pointer',
 											padding: '4px',
 											transition: 'all 0.2s'
 										}}
-										title="Opciones de Home"
+										title="Opciones de Home y Presets"
 										onClick={(e) => {
 											e.stopPropagation();
 											if (onOpenHomeOptions) onOpenHomeOptions(e);
@@ -4591,7 +4615,7 @@ const ConnectionHistory = ({
 										style={{
 											fontSize: '0.9rem',
 											color: terminalTheme.foreground || '#c9d1d9',
-											opacity: isDetectingTerminals ? 0.3 : 0.6,
+											opacity: isDetectingTerminals ? 0.3 : 0.65,
 											cursor: isDetectingTerminals ? 'wait' : 'pointer',
 											padding: '4px',
 											transition: 'all 0.2s'
@@ -4607,7 +4631,7 @@ const ConnectionHistory = ({
 										style={{
 											fontSize: '0.9rem',
 											color: terminalTheme.foreground || '#c9d1d9',
-											opacity: 0.6,
+											opacity: 0.65,
 											cursor: 'pointer',
 											padding: '4px',
 											transition: 'all 0.2s'
@@ -4639,6 +4663,11 @@ const ConnectionHistory = ({
 							onToggleMaximize={() => (onToggleMaximizePanel ? onToggleMaximizePanel('recents') : null)}
 							terminalFrameStyle={terminalFrameStyle}
 							snapToGrid={snapToGrid}
+							smartSnap={smartSnap}
+							onDragging={onPanelDragging}
+							onDragEnd={onPanelDragEnd}
+							onResizing={onPanelResizing}
+							onResizeEnd={onPanelResizeEnd}
 							minWidth={250}
 							minHeight={140}
 							className="recents-terminal-frame"
@@ -4691,6 +4720,11 @@ const ConnectionHistory = ({
 							onToggleMaximize={() => (onToggleMaximizePanel ? onToggleMaximizePanel('favorites') : null)}
 							terminalFrameStyle={terminalFrameStyle}
 							snapToGrid={snapToGrid}
+							smartSnap={smartSnap}
+							onDragging={onPanelDragging}
+							onDragEnd={onPanelDragEnd}
+							onResizing={onPanelResizing}
+							onResizeEnd={onPanelResizeEnd}
 							minWidth={250}
 							minHeight={140}
 							className="recents-terminal-frame favorites-terminal-frame"
@@ -4743,6 +4777,11 @@ const ConnectionHistory = ({
 							onToggleMaximize={() => (onToggleMaximizePanel ? onToggleMaximizePanel('quickbar') : null)}
 							terminalFrameStyle={terminalFrameStyle}
 							snapToGrid={snapToGrid}
+							smartSnap={smartSnap}
+							onDragging={onPanelDragging}
+							onDragEnd={onPanelDragEnd}
+							onResizing={onPanelResizing}
+							onResizeEnd={onPanelResizeEnd}
 							minWidth={200}
 							minHeight={250}
 							className="recents-terminal-frame"
@@ -4768,6 +4807,11 @@ const ConnectionHistory = ({
 							onToggleMaximize={() => (onToggleMaximizePanel ? onToggleMaximizePanel('sysmon') : null)}
 							terminalFrameStyle={terminalFrameStyle}
 							snapToGrid={snapToGrid}
+							smartSnap={smartSnap}
+							onDragging={onPanelDragging}
+							onDragEnd={onPanelDragEnd}
+							onResizing={onPanelResizing}
+							onResizeEnd={onPanelResizeEnd}
 							minWidth={280}
 							minHeight={200}
 							className="recents-terminal-frame sysmon-terminal-frame"

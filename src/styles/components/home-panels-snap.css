@@ -1,0 +1,146 @@
+/* ==========================================================================
+   Home Panels Smart Snapping & Presets Styles
+   ========================================================================== */
+
+.home-snap-guides-container,
+.home-snap-guide-line,
+.home-snap-badge {
+  display: none !important;
+}
+
+/* Indicador o badge de snap magnético */
+.home-snap-badge {
+  position: absolute;
+  background: rgba(0, 229, 255, 0.2);
+  border: 1px solid rgba(0, 229, 255, 0.6);
+  color: #00e5ff;
+  font-size: 9px;
+  font-family: monospace;
+  padding: 1px 4px;
+  border-radius: 3px;
+  pointer-events: none;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+}
+
+/* ==========================================================================
+   Estilos para la sección de Presets en el Menú de Opciones
+   ========================================================================== */
+
+.home-presets-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.home-presets-save-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.home-presets-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 0.8rem;
+  color: #fff;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.home-presets-input:focus {
+  border-color: rgba(0, 229, 255, 0.6);
+  box-shadow: 0 0 6px rgba(0, 229, 255, 0.25);
+}
+
+.home-presets-save-btn {
+  background: rgba(0, 229, 255, 0.2);
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  color: #00e5ff;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.home-presets-save-btn:hover {
+  background: rgba(0, 229, 255, 0.35);
+  box-shadow: 0 2px 8px rgba(0, 229, 255, 0.3);
+}
+
+.home-presets-list {
+  max-height: 140px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.home-preset-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  font-size: 0.78rem;
+  color: #ddd;
+  transition: all 0.15s ease;
+}
+
+.home-preset-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
+.home-preset-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.home-preset-apply-btn {
+  background: transparent;
+  border: none;
+  color: #00e5ff;
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  transition: background 0.15s ease;
+}
+
+.home-preset-apply-btn:hover {
+  background: rgba(0, 229, 255, 0.15);
+}
+
+.home-preset-delete-btn {
+  background: transparent;
+  border: none;
+  color: #ff5252;
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  opacity: 0.65;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.home-preset-delete-btn:hover {
+  opacity: 1;
+  background: rgba(255, 82, 82, 0.15);
+}
