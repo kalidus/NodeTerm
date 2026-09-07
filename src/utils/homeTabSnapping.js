@@ -162,7 +162,116 @@ export function calculateDragSnap(
 }
 
 /**
- * Calcula las dimensiones y posición imantadas magnéticamente durante el redimensionado (resize).
+/**
+ * Calcula los límites de colisión y el espacio disponible para el redimensionado de un panel,
+ * analizando los obstáculos vecinos que intersectan en el eje transversal y los márgenes del canvas.
+ * 
+ * @param {string} panelId ID del panel
+ * @param {{x: number, y: number, width: number, height: number}} currentRect Posición y tamaño actual
+ * @param {Record<string, any>} allPanels Mapa de todos los paneles
+ * @param {{width: number, height: number}} containerBounds Dimensiones del canvas
+ * @param {Partial<typeof SNAP_CONFIG>} [customConfig]
+ * @returns {{ maxRight: number, maxBottom: number, minLeft: number, minTop: number, maxWidth: number, maxHeight: number }}
+ */
+export function getAvailableResizeBounds(
+  panelId,
+  currentRect,
+  allPanels,
+  containerBounds,
+  customConfig = {}
+) {
+  const cfg = { ...SNAP_CONFIG, ...customConfig };
+  const cW = containerBounds?.width || (typeof window !== 'undefined' ? window.innerWidth : 1200);
+  const cH = containerBounds?.height || (typeof window !== 'undefined' ? window.innerHeight : 800);
+
+  const { x, y, width, height } = currentRect;
+  const currentRight = x + width;
+  const currentBottom = y + height;
+
+  let maxRight = cW - cfg.CANVAS_PAD;
+  let maxBottom = cH - cfg.CANVAS_PAD;
+  let minLeft = cfg.CANVAS_PAD;
+  let minTop = cfg.CANVAS_PAD;
+
+  if (!allPanels) {
+    return {
+      maxRight,
+      maxBottom,
+      minLeft,
+      minTop,
+      maxWidth: Math.max(160, maxRight - x),
+      maxHeight: Math.max(90, maxBottom - y)
+    };
+  }
+
+  const otherPanels = Object.entries(allPanels).filter(
+    ([id, p]) => id !== panelId && p && p.visible !== false && !p.isMaximized
+  );
+
+  for (const [_, other] of otherPanels) {
+    const oX = other.x;
+    const oY = other.y;
+    const oW = other.width;
+    const oH = other.height;
+    const oR = oX + oW;
+    const oB = oY + oH;
+
+    // Solapamiento en el eje vertical
+    const vOverlap = Math.max(y, oY) < Math.min(currentBottom, oB) - 6;
+    // Solapamiento en el eje horizontal
+    const hOverlap = Math.max(x, oX) < Math.min(currentRight, oR) - 6;
+
+    // Obstáculo a la DERECHA
+    if (vOverlap && oX >= currentRight - 20) {
+      const allowedRight = oX - cfg.GAP;
+      if (allowedRight < maxRight) {
+        maxRight = allowedRight;
+      }
+    }
+
+    // Obstáculo ABAJO
+    if (hOverlap && oY >= currentBottom - 20) {
+      const allowedBottom = oY - cfg.GAP;
+      if (allowedBottom < maxBottom) {
+        maxBottom = allowedBottom;
+      }
+    }
+
+    // Obstáculo a la IZQUIERDA
+    if (vOverlap && oR <= x + 20) {
+      const allowedLeft = oR + cfg.GAP;
+      if (allowedLeft > minLeft) {
+        minLeft = allowedLeft;
+      }
+    }
+
+    // Obstáculo ARRIBA
+    if (hOverlap && oB <= y + 20) {
+      const allowedTop = oB + cfg.GAP;
+      if (allowedTop > minTop) {
+        minTop = allowedTop;
+      }
+    }
+  }
+
+  maxRight = Math.max(x + 100, maxRight);
+  maxBottom = Math.max(y + 80, maxBottom);
+  minLeft = Math.min(currentRight - 100, minLeft);
+  minTop = Math.min(currentBottom - 80, minTop);
+
+  return {
+    maxRight,
+    maxBottom,
+    minLeft,
+    minTop,
+    maxWidth: Math.max(160, Math.floor(maxRight - x)),
+    maxHeight: Math.max(90, Math.floor(maxBottom - y))
+  };
+}
+
+/**
+ * Calcula las dimensiones y posición imantadas magnéticamente durante el redimensionado (resize),
+ * impidiendo estrictamente sobreponerse a otros paneles.
  * 
  * @param {string} resizedId ID del panel
  * @param {{x: number, y: number, width: number, height: number}} current Dimensiones actuales
@@ -182,6 +291,8 @@ export function calculateResizeSnap(
 ) {
   const cfg = { ...SNAP_CONFIG, ...customConfig };
   const { width: cW, height: cH } = containerBounds;
+
+  const limits = getAvailableResizeBounds(resizedId, current, allPanels, containerBounds, customConfig);
 
   let newX = current.x;
   let newY = current.y;
@@ -206,7 +317,8 @@ export function calculateResizeSnap(
     let matchedGuide = null;
 
     const rightCandidates = [
-      // Borde derecho del canvas
+      // Borde del obstáculo contiguo o límite del canvas
+      { target: limits.maxRight, guidePos: limits.maxRight, reason: 'free-space-limit' },
       { target: cW - cfg.CANVAS_PAD, guidePos: cW - cfg.CANVAS_PAD, reason: 'canvas-right' }
     ];
 
@@ -240,13 +352,11 @@ export function calculateResizeSnap(
 
     if (matchedGuide && minDiffR <= cfg.THRESHOLD) {
       newW = Math.max(160, bestRight - current.x);
-      guides.push({
-        type: 'vertical',
-        pos: matchedGuide.guidePos,
-        start: Math.min(current.y, matchedGuide.otherY1 || 0),
-        end: Math.max(current.y + current.height, matchedGuide.otherY2 || cH),
-        reason: matchedGuide.reason
-      });
+    }
+
+    // CLAMPING ANTI-COLISIÓN ESTRICTO: Nunca sobrepasar limits.maxRight
+    if (current.x + newW > limits.maxRight) {
+      newW = Math.max(160, limits.maxRight - current.x);
     }
   }
 
@@ -258,12 +368,13 @@ export function calculateResizeSnap(
     let matchedGuide = null;
 
     const bottomCandidates = [
-      // Borde inferior del canvas
+      // Borde del obstáculo contiguo o límite del canvas
+      { target: limits.maxBottom, guidePos: limits.maxBottom, reason: 'free-space-limit' },
       { target: cH - cfg.CANVAS_PAD, guidePos: cH - cfg.CANVAS_PAD, reason: 'canvas-bottom' }
     ];
 
     otherPanels.forEach(([_, other]) => {
-      // 1. Imantar encima del vecino superior - gap
+      // 1. Imantar encima del vecino inferior - gap
       bottomCandidates.push({
         target: other.y - cfg.GAP,
         guidePos: other.y - cfg.GAP,
@@ -280,9 +391,7 @@ export function calculateResizeSnap(
         otherX2: other.x + other.width
       });
 
-      // 3. AUTO-SNAP DE ALTURA IDÉNTICA:
-      // Si el panel comparte una fila similar (misma altura de inicio aproximada),
-      // ofrecer snap para tener exactamente la misma altura
+      // 3. AUTO-SNAP DE ALTURA IDÉNTICA en la misma fila
       const shareRow = Math.abs(current.y - other.y) < 50;
       if (shareRow) {
         const sameHeightBottom = current.y + other.height;
@@ -307,13 +416,11 @@ export function calculateResizeSnap(
 
     if (matchedGuide && minDiffB <= cfg.THRESHOLD) {
       newH = Math.max(90, bestBottom - current.y);
-      guides.push({
-        type: 'horizontal',
-        pos: matchedGuide.guidePos,
-        start: Math.min(current.x, matchedGuide.otherX1 || 0),
-        end: Math.max(current.x + current.width, matchedGuide.otherX2 || cW),
-        reason: matchedGuide.reason
-      });
+    }
+
+    // CLAMPING ANTI-COLISIÓN ESTRICTO: Nunca sobrepasar limits.maxBottom
+    if (current.y + newH > limits.maxBottom) {
+      newH = Math.max(90, limits.maxBottom - current.y);
     }
   }
 
@@ -325,11 +432,11 @@ export function calculateResizeSnap(
     let matchedGuide = null;
 
     const leftCandidates = [
+      { target: limits.minLeft, guidePos: limits.minLeft, reason: 'free-space-limit' },
       { target: cfg.CANVAS_PAD, guidePos: cfg.CANVAS_PAD, reason: 'canvas-left' }
     ];
 
     otherPanels.forEach(([_, other]) => {
-      // Imantar al borde derecho del vecino + gap
       leftCandidates.push({
         target: other.x + other.width + cfg.GAP,
         guidePos: other.x + other.width + cfg.GAP,
@@ -337,7 +444,6 @@ export function calculateResizeSnap(
         otherY1: other.y,
         otherY2: other.y + other.height
       });
-      // Alinear borde izquierdo
       leftCandidates.push({
         target: other.x,
         guidePos: other.x,
@@ -360,13 +466,12 @@ export function calculateResizeSnap(
       const deltaX = current.x - bestLeft;
       newW = Math.max(160, current.width + deltaX);
       newX = bestLeft;
-      guides.push({
-        type: 'vertical',
-        pos: matchedGuide.guidePos,
-        start: Math.min(current.y, matchedGuide.otherY1 || 0),
-        end: Math.max(current.y + current.height, matchedGuide.otherY2 || cH),
-        reason: matchedGuide.reason
-      });
+    }
+
+    // CLAMPING ANTI-COLISIÓN ESTRICTO: Nunca pasar a la izquierda de limits.minLeft
+    if (newX < limits.minLeft) {
+      newX = limits.minLeft;
+      newW = Math.max(160, (current.x + current.width) - newX);
     }
   }
 
@@ -378,11 +483,11 @@ export function calculateResizeSnap(
     let matchedGuide = null;
 
     const topCandidates = [
+      { target: limits.minTop, guidePos: limits.minTop, reason: 'free-space-limit' },
       { target: cfg.CANVAS_PAD, guidePos: cfg.CANVAS_PAD, reason: 'canvas-top' }
     ];
 
     otherPanels.forEach(([_, other]) => {
-      // Imantar al borde inferior del vecino + gap
       topCandidates.push({
         target: other.y + other.height + cfg.GAP,
         guidePos: other.y + other.height + cfg.GAP,
@@ -390,7 +495,6 @@ export function calculateResizeSnap(
         otherX1: other.x,
         otherX2: other.x + other.width
       });
-      // Alinear borde superior
       topCandidates.push({
         target: other.y,
         guidePos: other.y,
@@ -413,13 +517,12 @@ export function calculateResizeSnap(
       const deltaY = current.y - bestTop;
       newH = Math.max(90, current.height + deltaY);
       newY = bestTop;
-      guides.push({
-        type: 'horizontal',
-        pos: matchedGuide.guidePos,
-        start: Math.min(current.x, matchedGuide.otherX1 || 0),
-        end: Math.max(current.x + current.width, matchedGuide.otherX2 || cW),
-        reason: matchedGuide.reason
-      });
+    }
+
+    // CLAMPING ANTI-COLISIÓN ESTRICTO: Nunca pasar hacia arriba de limits.minTop
+    if (newY < limits.minTop) {
+      newY = limits.minTop;
+      newH = Math.max(90, (current.y + current.height) - newY);
     }
   }
 
@@ -429,6 +532,164 @@ export function calculateResizeSnap(
     width: newW,
     height: newH,
     guides
+  };
+}
+
+/**
+ * Calcula las coordenadas y tamaño óptimos para ampliar un panel ocupando
+ * el trozo de espacio disponible restante sin sobreponerse a ningún otro panel activo.
+ * 
+ * Explora la expansión horizontal-primero y vertical-primero para encontrar
+ * el área libre máxima contigua disponible en el canvas.
+ * 
+ * @param {string} panelId ID del panel a ampliar
+ * @param {Record<string, any>} allPanels Mapa de todos los paneles
+ * @param {{width: number, height: number}} containerBounds Límites del canvas
+ * @param {Partial<typeof SNAP_CONFIG>} [customConfig]
+ * @returns {{ x: number, y: number, width: number, height: number }}
+ */
+export function computeExpandedPanelBounds(
+  panelId,
+  allPanels,
+  containerBounds,
+  customConfig = {}
+) {
+  const cfg = { ...SNAP_CONFIG, ...customConfig };
+  const cW = containerBounds?.width || (typeof window !== 'undefined' ? window.innerWidth : 1200);
+  const cH = containerBounds?.height || (typeof window !== 'undefined' ? window.innerHeight : 800);
+
+  const current = allPanels?.[panelId];
+  if (!current) {
+    return {
+      x: cfg.CANVAS_PAD,
+      y: cfg.CANVAS_PAD,
+      width: Math.max(260, cW - cfg.CANVAS_PAD * 2),
+      height: Math.max(140, cH - cfg.CANVAS_PAD * 2)
+    };
+  }
+
+  const others = Object.entries(allPanels || {})
+    .filter(([id, p]) => id !== panelId && p && p.visible !== false && !p.isMaximized)
+    .map(([id, p]) => ({ id, ...p }));
+
+  if (others.length === 0) {
+    return {
+      x: cfg.CANVAS_PAD,
+      y: cfg.CANVAS_PAD,
+      width: Math.max(260, cW - cfg.CANVAS_PAD * 2),
+      height: Math.max(140, cH - cfg.CANVAS_PAD * 2)
+    };
+  }
+
+  const curX = current.x;
+  const curY = current.y;
+  const curW = current.width;
+  const curH = current.height;
+  const curR = curX + curW;
+  const curB = curY + curH;
+
+  // --- ESTRATEGIA 1: Expansión Horizontal primero, luego Vertical ---
+  let left1 = cfg.CANVAS_PAD;
+  let right1 = cW - cfg.CANVAS_PAD;
+
+  for (const o of others) {
+    const vOverlap = Math.max(curY, o.y) < Math.min(curB, o.y + o.height) - 4;
+    if (vOverlap) {
+      if (o.x + o.width <= curX + 15) {
+        left1 = Math.max(left1, o.x + o.width + cfg.GAP);
+      } else if (o.x >= curR - 15) {
+        right1 = Math.min(right1, o.x - cfg.GAP);
+      }
+    }
+  }
+  left1 = Math.min(left1, curX);
+  right1 = Math.max(right1, curR);
+
+  let top1 = cfg.CANVAS_PAD;
+  let bottom1 = cH - cfg.CANVAS_PAD;
+  for (const o of others) {
+    const hOverlap = Math.max(left1, o.x) < Math.min(right1, o.x + o.width) - 4;
+    if (hOverlap) {
+      if (o.y + o.height <= curY + 15) {
+        top1 = Math.max(top1, o.y + o.height + cfg.GAP);
+      } else if (o.y >= curB - 15) {
+        bottom1 = Math.min(bottom1, o.y - cfg.GAP);
+      }
+    }
+  }
+  top1 = Math.min(top1, curY);
+  bottom1 = Math.max(bottom1, curB);
+
+  const w1 = Math.max(curW, right1 - left1);
+  const h1 = Math.max(curH, bottom1 - top1);
+  const area1 = w1 * h1;
+
+  // --- ESTRATEGIA 2: Expansión Vertical primero, luego Horizontal ---
+  let top2 = cfg.CANVAS_PAD;
+  let bottom2 = cH - cfg.CANVAS_PAD;
+
+  for (const o of others) {
+    const hOverlap = Math.max(curX, o.x) < Math.min(curR, o.x + o.width) - 4;
+    if (hOverlap) {
+      if (o.y + o.height <= curY + 15) {
+        top2 = Math.max(top2, o.y + o.height + cfg.GAP);
+      } else if (o.y >= curB - 15) {
+        bottom2 = Math.min(bottom2, o.y - cfg.GAP);
+      }
+    }
+  }
+  top2 = Math.min(top2, curY);
+  bottom2 = Math.max(bottom2, curB);
+
+  let left2 = cfg.CANVAS_PAD;
+  let right2 = cW - cfg.CANVAS_PAD;
+  for (const o of others) {
+    const vOverlap = Math.max(top2, o.y) < Math.min(bottom2, o.y + o.height) - 4;
+    if (vOverlap) {
+      if (o.x + o.width <= curX + 15) {
+        left2 = Math.max(left2, o.x + o.width + cfg.GAP);
+      } else if (o.x >= curR - 15) {
+        right2 = Math.min(right2, o.x - cfg.GAP);
+      }
+    }
+  }
+  left2 = Math.min(left2, curX);
+  right2 = Math.max(right2, curR);
+
+  const w2 = Math.max(curW, right2 - left2);
+  const h2 = Math.max(curH, bottom2 - top2);
+  const area2 = w2 * h2;
+
+  // Seleccionar la mejor opción
+  let chosen;
+  if (panelId === 'terminal') {
+    chosen = (w1 >= w2 || area1 >= area2 * 0.9)
+      ? { x: left1, y: top1, width: w1, height: h1 }
+      : { x: left2, y: top2, width: w2, height: h2 };
+  } else {
+    chosen = area1 >= area2
+      ? { x: left1, y: top1, width: w1, height: h1 }
+      : { x: left2, y: top2, width: w2, height: h2 };
+  }
+
+  // Verificación final de seguridad anti-colisión
+  for (const o of others) {
+    const collidesX = Math.max(chosen.x, o.x) < Math.min(chosen.x + chosen.width, o.x + o.width);
+    const collidesY = Math.max(chosen.y, o.y) < Math.min(chosen.y + chosen.height, o.y + o.height);
+    if (collidesX && collidesY) {
+      if (chosen.x < o.x && chosen.x + chosen.width > o.x) {
+        chosen.width = Math.max(160, o.x - cfg.GAP - chosen.x);
+      } else if (chosen.y < o.y && chosen.y + chosen.height > o.y) {
+        chosen.height = Math.max(90, o.y - cfg.GAP - chosen.y);
+      }
+    }
+  }
+
+  return {
+    x: Math.round(chosen.x),
+    y: Math.round(chosen.y),
+    width: Math.round(chosen.width),
+    height: Math.round(chosen.height)
   };
 }
 

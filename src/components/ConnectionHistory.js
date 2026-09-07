@@ -333,8 +333,15 @@ const ConnectionHistory = ({
 	onPanelDragEnd = null,
 	onPanelResizing = null,
 	onPanelResizeEnd = null,
+	containerBounds = null,
 	children
 }) => {
+	const canvasRef = useRef(null);
+	const effectiveContainerBounds = containerBounds || {
+		width: canvasRef.current?.offsetWidth || (typeof window !== 'undefined' ? window.innerWidth : 1200),
+		height: canvasRef.current?.offsetHeight || (typeof window !== 'undefined' ? window.innerHeight : 800)
+	};
+
 	// Helper para ajustar la opacidad de los colores (Hex o RGBA)
 	const adjustOpacity = (color, opacity) => {
 		if (!color) return `rgba(0,0,0,${opacity})`;
@@ -4509,6 +4516,7 @@ const ConnectionHistory = ({
 			{/* ========================================================= */}
 			{panelsLayout ? (
 				<div
+					ref={canvasRef}
 					className="home-panels-canvas"
 					style={{
 						position: 'relative',
@@ -4529,6 +4537,8 @@ const ConnectionHistory = ({
 							title="~/home · terminal"
 							path={`home · ${activeViewName || 'terminal'}`}
 							panelState={panelsLayout.search}
+							allPanels={panelsLayout}
+							containerBounds={effectiveContainerBounds}
 							onLayoutChange={onLayoutChange}
 							onBringToFront={onBringToFront}
 							onClose={() => (onClosePanel ? onClosePanel('search') : onTogglePanelVisibility?.('search', false))}
@@ -4556,6 +4566,8 @@ const ConnectionHistory = ({
 							title={terminalTitle}
 							path={terminalTitle ? terminalTitle.replace(/^\/?(local\s*·\s*)?/, 'local · ') : 'local'}
 							panelState={panelsLayout.terminal}
+							allPanels={panelsLayout}
+							containerBounds={effectiveContainerBounds}
 							onLayoutChange={onLayoutChange}
 							onBringToFront={onBringToFront}
 							onClose={() => (onClosePanel ? onClosePanel('terminal') : onTogglePanelVisibility?.('terminal', false))}
@@ -4636,7 +4648,7 @@ const ConnectionHistory = ({
 											padding: '4px',
 											transition: 'all 0.2s'
 										}}
-										title={panelsLayout.terminal?.isMaximized ? "Restaurar Terminal" : "Maximizar Terminal"}
+										title={panelsLayout.terminal?.isMaximized ? "Restaurar Terminal" : "Ampliar Terminal al espacio libre"}
 										onClick={(e) => {
 											e.stopPropagation();
 											if (onToggleMaximizePanel) onToggleMaximizePanel('terminal');
@@ -4657,6 +4669,8 @@ const ConnectionHistory = ({
 							title="~/recent"
 							path={`recent · ${filteredRecentsForDisplay.length} conexiones`}
 							panelState={panelsLayout.recents}
+							allPanels={panelsLayout}
+							containerBounds={effectiveContainerBounds}
 							onLayoutChange={onLayoutChange}
 							onBringToFront={onBringToFront}
 							onClose={() => (onClosePanel ? onClosePanel('recents') : onTogglePanelVisibility?.('recents', false))}
@@ -4714,6 +4728,8 @@ const ConnectionHistory = ({
 							title="~/favorites"
 							path={`favorites · ${filteredFavorites.length} conexiones`}
 							panelState={panelsLayout.favorites}
+							allPanels={panelsLayout}
+							containerBounds={effectiveContainerBounds}
 							onLayoutChange={onLayoutChange}
 							onBringToFront={onBringToFront}
 							onClose={() => (onClosePanel ? onClosePanel('favorites') : onTogglePanelVisibility?.('favorites', false))}
@@ -4771,6 +4787,8 @@ const ConnectionHistory = ({
 							title="Accesos Rápidos"
 							path="quickbar"
 							panelState={panelsLayout.quickbar}
+							allPanels={panelsLayout}
+							containerBounds={effectiveContainerBounds}
 							onLayoutChange={onLayoutChange}
 							onBringToFront={onBringToFront}
 							onClose={() => (onClosePanel ? onClosePanel('quickbar') : onTogglePanelVisibility?.('quickbar', false))}
@@ -4801,6 +4819,8 @@ const ConnectionHistory = ({
 							path="sysmon · hardware"
 							titleIcon={<i className="pi pi-bolt" style={{ color: themeColors.primaryColor || '#00f2ff', fontSize: '0.8rem' }} />}
 							panelState={panelsLayout.sysmon}
+							allPanels={panelsLayout}
+							containerBounds={effectiveContainerBounds}
 							onLayoutChange={onLayoutChange}
 							onBringToFront={onBringToFront}
 							onClose={() => (onClosePanel ? onClosePanel('sysmon') : onTogglePanelVisibility?.('sysmon', false))}

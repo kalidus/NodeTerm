@@ -25,7 +25,8 @@ import {
 import {
   calculateDragSnap,
   calculateResizeSnap,
-  autoEqualizeBottomRow
+  autoEqualizeBottomRow,
+  computeExpandedPanelBounds
 } from '../utils/homeTabSnapping';
 import {
   getBuiltinPresets,
@@ -750,22 +751,15 @@ const HomeTab = ({
       width: containerWidth > 100 ? containerWidth : (mainAreaRef.current?.offsetWidth || window.innerWidth),
       height: containerHeight > 100 ? containerHeight : (mainAreaRef.current?.offsetHeight || window.innerHeight)
     };
-    if (smartSnap) {
-      const snapped = calculateResizeSnap(panelId, finalBounds, direction, panelsLayout, bounds);
-      handlePanelLayoutChange(panelId, {
-        x: snapped.x,
-        y: snapped.y,
-        width: snapped.width,
-        height: snapped.height
-      });
-    } else {
-      handlePanelLayoutChange(panelId, {
-        x: finalBounds.x,
-        y: finalBounds.y,
-        width: finalBounds.width,
-        height: finalBounds.height
-      });
-    }
+    const snapped = calculateResizeSnap(panelId, finalBounds, direction, panelsLayout, bounds, {
+      THRESHOLD: smartSnap ? 10 : 0
+    });
+    handlePanelLayoutChange(panelId, {
+      x: snapped.x,
+      y: snapped.y,
+      width: snapped.width,
+      height: snapped.height
+    });
   }, [smartSnap, containerWidth, containerHeight, panelsLayout, handlePanelLayoutChange]);
 
   const handleToggleSmartSnap = useCallback(() => {
@@ -918,17 +912,53 @@ const HomeTab = ({
     setPanelsLayout((prev) => {
       const current = prev[panelId];
       if (!current) return prev;
+
+      const w = containerWidth > 100 ? containerWidth : (mainAreaRef.current?.offsetWidth || window.innerWidth);
+      const h = containerHeight > 100 ? containerHeight : (mainAreaRef.current?.offsetHeight || window.innerHeight);
+      const bounds = { width: w, height: h };
+
+      let nextPanel;
+      if (current.isMaximized && current.originalBounds) {
+        // Restaurar tamaño y posición original
+        nextPanel = {
+          ...current,
+          x: current.originalBounds.x,
+          y: current.originalBounds.y,
+          width: current.originalBounds.width,
+          height: current.originalBounds.height,
+          isMaximized: false,
+          originalBounds: null
+        };
+      } else {
+        // Ampliar ocupando el trozo disponible sin sobreponerse a otros paneles
+        const expanded = computeExpandedPanelBounds(panelId, prev, bounds);
+        nextPanel = {
+          ...current,
+          originalBounds: {
+            x: current.x,
+            y: current.y,
+            width: current.width,
+            height: current.height
+          },
+          x: expanded.x,
+          y: expanded.y,
+          width: expanded.width,
+          height: expanded.height,
+          isMaximized: true
+        };
+      }
+
       const next = {
         ...prev,
-        [panelId]: {
-          ...current,
-          isMaximized: !current.isMaximized
-        }
+        [panelId]: nextPanel
       };
       savePanelsLayoutDebounced(next);
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+      }, 50);
       return next;
     });
-  }, [savePanelsLayoutDebounced]);
+  }, [containerWidth, containerHeight, savePanelsLayoutDebounced]);
 
   const handleResetLayout = useCallback(() => {
     const fresh = computeDefaultPanelsLayout(containerWidth, containerHeight);
@@ -2827,6 +2857,10 @@ const HomeTab = ({
                   localTerminalMaximized={localTerminalMaximized}
                   onToggleLocalTerminalMaximized={handleToggleLocalTerminalMaximized}
                   panelsLayout={panelsLayout}
+                  containerBounds={{
+                    width: containerWidth > 100 ? containerWidth : (mainAreaRef.current?.offsetWidth || window.innerWidth),
+                    height: containerHeight > 100 ? containerHeight : (mainAreaRef.current?.offsetHeight || window.innerHeight)
+                  }}
                   onLayoutChange={handlePanelLayoutChange}
                   onBringToFront={handleBringToFront}
                   onClosePanel={handleClosePanel}
