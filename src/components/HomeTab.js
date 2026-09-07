@@ -83,8 +83,8 @@ const computeDefaultPanelsLayout = (cWidth = (typeof window !== 'undefined' ? wi
       y: Math.max(40, termY + 20),
       width: recentsWidth,
       height: recentsHeight,
-      minWidth: 360,
-      minHeight: 200,
+      minWidth: 250,
+      minHeight: 140,
       zIndex: 15,
       isMaximized: false
     },
@@ -94,8 +94,8 @@ const computeDefaultPanelsLayout = (cWidth = (typeof window !== 'undefined' ? wi
       y: Math.max(60, termY + 40),
       width: recentsWidth,
       height: recentsHeight,
-      minWidth: 360,
-      minHeight: 200,
+      minWidth: 250,
+      minHeight: 140,
       zIndex: 16,
       isMaximized: false
     },

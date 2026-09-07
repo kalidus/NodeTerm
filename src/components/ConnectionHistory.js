@@ -35,6 +35,21 @@ function formatRelativeTime(iso) {
 	return `Hace ${Math.floor(s / 2592000)} mes`;
 }
 
+// Formato compacto para paneles estrechos ("5m", "2h", "ayer", "3d", "1sem", "1mes")
+function formatRelativeTimeShort(iso) {
+	if (!iso) return '-';
+	const d = new Date(iso);
+	if (isNaN(d.getTime())) return '-';
+	const s = Math.floor((Date.now() - d) / 1000);
+	if (s < 60) return 'ahora';
+	if (s < 3600) return `${Math.floor(s / 60)}m`;
+	if (s < 86400) return `${Math.floor(s / 3600)}h`;
+	if (s < 172800) return 'ayer';
+	if (s < 604800) return `${Math.floor(s / 86400)}d`;
+	if (s < 2592000) return `${Math.floor(s / 604800)}sem`;
+	return `${Math.floor(s / 2592000)}mes`;
+}
+
 function hexToRgbString(hex) {
 	if (!hex) return '79, 195, 247';
 	if (hex.startsWith('rgb')) {
@@ -1486,9 +1501,9 @@ const ConnectionHistory = ({
 			case 'scp': return 'SCP';
 			case 'group': return 'GRUPO';
 			case 'password':
-			case 'secret': return 'PASSWORD';
+			case 'secret': return 'PWD';
 			case 'crypto_wallet': return 'WALLET';
-			case 'api_key': return 'API KEY';
+			case 'api_key': return 'API';
 			case 'secure_note': return 'NOTE';
 			case 'document':
 			case 'quick-note': return 'NOTA';
@@ -1755,6 +1770,10 @@ const ConnectionHistory = ({
 			);
 		}
 
+		const isHostRedundant = !hostLabel || hostLabel === '-' || hostLabel.trim() === '' || hostLabel === connection.name;
+		const timeShort = formatRelativeTimeShort(connection.lastConnected);
+		const fullTitle = isHostRedundant ? `${connection.name} · ${timeStr}` : `${connection.name} (${hostLabel}) · ${timeStr}`;
+
 		return (
 			<div
 				className={`hero-recent-card ${isActive ? 'active-row' : ''}`}
@@ -1765,27 +1784,20 @@ const ConnectionHistory = ({
 					e.stopPropagation();
 					onEdit?.(connection);
 				}}
-				title={`${connection.name} (${hostLabel})`}
+				title={fullTitle}
 			>
 				<span className="hrc-prompt">$</span>
 				<span className="hrc-protocol-tag" style={{ color: typeColor, background: `${typeColor}15`, borderColor: `${typeColor}35` }}>[{protocolLabel}]</span>
-				<div className="hrc-main-info">
+				<div className={`hrc-main-info ${!isHostRedundant ? 'has-host' : ''}`}>
 					<span className="hrc-name">{connection.name}</span>
-					<span className="hrc-host">{hostLabel}</span>
+					{!isHostRedundant && (
+						<span className="hrc-host">{hostLabel}</span>
+					)}
 				</div>
-				<span className="hrc-time">{timeStr}</span>
-				<div className="hrc-actions" onClick={(e) => e.stopPropagation()}>
-					<button
-						className={`glass-action-btn ${fav ? 'fav-active' : ''}`}
-						onClick={(e) => { e.stopPropagation(); onToggleFav(connection); }}
-						title={fav ? "Quitar de Favoritos" : "Marcar como Favorito"}
-					>
-						<i className={fav ? 'pi pi-star-fill' : 'pi pi-star'} />
-					</button>
-					<button className="hrc-connect-btn" onClick={() => onConnect?.(connection)} title="Conectar">
-						<i className="pi pi-arrow-right" style={{ fontSize: '0.65rem' }} />
-					</button>
-				</div>
+				<span className="hrc-time">
+					<span className="hrc-time-full">{timeStr}</span>
+					<span className="hrc-time-short">{timeShort}</span>
+				</span>
 			</div>
 		);
 	};
@@ -3423,6 +3435,11 @@ const ConnectionHistory = ({
 				}
 
 				/* --- Grep-style connection rows (Adaptable y fluido) --- */
+				.connection-list-container {
+					container-type: inline-size;
+					width: 100%;
+					min-width: 0;
+				}
 				.connection-list-body {
 					display: flex !important;
 					flex-direction: column !important;
@@ -3436,21 +3453,21 @@ const ConnectionHistory = ({
 				.hero-recent-card {
 					display: flex !important;
 					align-items: center !important;
-					gap: 8px !important;
+					gap: 6px !important;
 					background: transparent !important;
 					border: none !important;
 					border-left: 2px solid transparent !important;
 					border-bottom: 1px solid rgba(255,255,255,0.02) !important;
 					border-radius: 0 !important;
-					padding: 0 12px 0 14px !important;
+					padding: 0 8px 0 8px !important;
 					cursor: pointer !important;
 					transition: background 0.12s, border-color 0.12s !important;
 					box-shadow: none !important;
 					min-width: 0 !important;
 					width: 100% !important;
-					height: 38px !important;
+					height: 35px !important;
 					font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace !important;
-					font-size: 0.84rem !important;
+					font-size: 0.82rem !important;
 					backdrop-filter: none !important;
 					box-sizing: border-box !important;
 					overflow: hidden !important;
@@ -3468,47 +3485,54 @@ const ConnectionHistory = ({
 					font-weight: 700;
 					flex-shrink: 0;
 					opacity: 0.85;
-					font-size: 0.85rem;
-					width: 10px;
+					font-size: 0.8rem;
+					width: 8px;
+					text-align: center;
 				}
 				.hrc-protocol-tag {
 					font-weight: 600;
-					font-size: 0.72rem;
+					font-size: 0.68rem;
 					flex-shrink: 0;
-					padding: 1px 5px;
+					padding: 1px 4px;
 					border-radius: 3px;
 					border: 1px solid transparent;
-					letter-spacing: 0.3px;
-					max-width: 90px;
+					letter-spacing: 0.2px;
+					max-width: 70px;
 					overflow: hidden;
 					text-overflow: ellipsis;
 					white-space: nowrap;
+					line-height: 1.25;
 				}
 				.hrc-main-info {
 					display: flex;
 					align-items: baseline;
-					gap: 8px;
+					gap: 6px;
 					flex: 1;
 					min-width: 0;
 					overflow: hidden;
 				}
 				.hrc-name {
-					font-weight: 500;
+					font-weight: 600;
+					font-size: 0.82rem;
 					color: ${terminalTheme.foreground || '#ffffff'};
 					overflow: hidden;
 					text-overflow: ellipsis;
 					white-space: nowrap;
-					flex-shrink: 1;
-					min-width: 40px;
+					letter-spacing: 0.2px;
+					flex: 0 1 auto;
+					min-width: 0;
+				}
+				.hrc-main-info.has-host .hrc-name {
+					max-width: 60%;
 				}
 				.hrc-host {
-					font-size: 0.74rem;
+					font-size: 0.75rem;
 					color: ${themeColors.textSecondary || 'rgba(255,255,255,0.45)'};
-					opacity: 0.55;
+					opacity: 0.6;
 					overflow: hidden;
 					text-overflow: ellipsis;
 					white-space: nowrap;
-					flex-shrink: 2;
+					flex: 1 1 auto;
 					min-width: 0;
 				}
 				.hrc-time {
@@ -3519,54 +3543,38 @@ const ConnectionHistory = ({
 					margin-left: auto;
 					white-space: nowrap;
 					text-align: right;
-					padding-left: 6px;
+					padding-left: 4px;
 				}
-				.hrc-actions {
-					display: flex;
-					align-items: center;
-					gap: 4px;
-					flex-shrink: 0;
-					margin-left: 4px;
+				.hrc-time-full {
+					display: inline;
 				}
-				.hrc-actions .glass-action-btn {
-					background: transparent;
-					border: none;
-					cursor: pointer;
-					padding: 4px 6px;
-					border-radius: 4px;
-					color: rgba(255,255,255,0.35);
-					display: flex;
-					align-items: center;
-					justify-content: center;
-					transition: all 0.15s;
-					font-size: 0.8rem;
+				.hrc-time-short {
+					display: none;
 				}
-				.hrc-actions .glass-action-btn:hover {
-					color: #FFD700;
-					background: rgba(255,215,0,0.15);
+				@container (max-width: 380px) {
+					.hrc-time-full {
+						display: none;
+					}
+					.hrc-time-short {
+						display: inline;
+					}
 				}
-				.hrc-actions .glass-action-btn.fav-active {
-					color: #FFD700;
-					opacity: 1;
+				@container (max-width: 330px) {
+					.hero-recent-card {
+						padding: 0 5px 0 5px !important;
+						gap: 4px !important;
+					}
+					.hrc-main-info {
+						gap: 4px;
+					}
 				}
-				.hrc-connect-btn {
-					background: rgba(63, 185, 80, 0.12);
-					border: 1px solid rgba(63, 185, 80, 0.3);
-					color: ${terminalTheme.green || '#3fb950'};
-					font-size: 0.72rem;
-					padding: 3px 6px;
-					border-radius: 4px;
-					cursor: pointer;
-					white-space: nowrap;
-					transition: all 0.15s;
-					display: flex;
-					align-items: center;
-					justify-content: center;
-				}
-				.hrc-connect-btn:hover {
-					background: ${terminalTheme.green || '#3fb950'};
-					border-color: ${terminalTheme.green || '#3fb950'};
-					color: #000;
+				@container (max-width: 290px) {
+					.hrc-prompt {
+						display: none;
+					}
+					.hrc-time {
+						display: none;
+					}
 				}
 				/* --- Split / Sidebar compact connections --- */
 				.split-recent-card {
@@ -3662,27 +3670,6 @@ const ConnectionHistory = ({
 				.split-recent-card:hover .src-actions {
 					opacity: 1 !important;
 				}
-				.hrc-prompt { color: ${terminalTheme.green || '#3fb950'}; font-weight: bold; font-size: 0.9rem; }
-				.hrc-protocol-tag { font-weight: 700; font-size: 0.75rem; letter-spacing: 0.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-				.hrc-name { color: ${terminalTheme.foreground || '#ffffff'}; font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.2px; }
-				.hrc-host { color: ${terminalTheme.foreground || '#c9d1d9'}; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: inherit; opacity: 0.75; }
-				.hrc-time { color: ${terminalTheme.foreground || '#c9d1d9'}; font-size: 0.75rem; text-align: right; white-space: nowrap; opacity: 0.5; }
-				.hrc-actions { display: flex; gap: 6px; opacity: 0; transition: opacity 0.15s; align-items: center; justify-content: flex-end; }
-				.hero-recent-card:hover .hrc-actions { opacity: 1; }
-				.hrc-connect-btn {
-					background: transparent;
-					padding: 2px 8px;
-					font-size: 0.72rem;
-					color: ${terminalTheme.green || '#3fb950'};
-					border: 1px solid ${terminalTheme.green ? terminalTheme.green + '55' : 'rgba(63,185,80,0.4)'};
-					border-radius: 3px;
-					cursor: pointer;
-					transition: all 0.15s;
-					font-family: inherit;
-					font-weight: 500;
-					letter-spacing: 0.3px;
-				}
-				.hrc-connect-btn:hover { background: ${terminalTheme.green ? terminalTheme.green + '22' : 'rgba(63,185,80,0.15)'}; color: ${terminalTheme.green || '#3fb950'}; }
 				.glass-action-btn { background: transparent; border: none; cursor: pointer; color: ${terminalTheme.brightBlack || '#6e7681'}; font-size: 0.8rem; padding: 2px 4px; transition: color 0.15s; }
 				.glass-action-btn:hover { color: #FFD700; }
 				.glass-action-btn.fav-active i { color: #FFD700; filter: drop-shadow(0 0 3px rgba(255,215,0,0.5)); }
@@ -4637,8 +4624,8 @@ const ConnectionHistory = ({
 							onToggleMaximize={() => (onToggleMaximizePanel ? onToggleMaximizePanel('recents') : null)}
 							terminalFrameStyle={terminalFrameStyle}
 							snapToGrid={snapToGrid}
-							minWidth={360}
-							minHeight={200}
+							minWidth={250}
+							minHeight={140}
 							className="recents-terminal-frame"
 							frameBackground={adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}
 							headerRight={
@@ -4689,8 +4676,8 @@ const ConnectionHistory = ({
 							onToggleMaximize={() => (onToggleMaximizePanel ? onToggleMaximizePanel('favorites') : null)}
 							terminalFrameStyle={terminalFrameStyle}
 							snapToGrid={snapToGrid}
-							minWidth={360}
-							minHeight={200}
+							minWidth={250}
+							minHeight={140}
 							className="recents-terminal-frame favorites-terminal-frame"
 							frameBackground={adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}
 							headerRight={
