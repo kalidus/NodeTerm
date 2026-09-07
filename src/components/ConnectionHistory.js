@@ -3559,21 +3559,36 @@ const ConnectionHistory = ({
 						display: inline;
 					}
 				}
-				@container (max-width: 330px) {
+				@container (max-width: 340px) {
 					.hero-recent-card {
-						padding: 0 5px 0 5px !important;
+						padding: 0 6px 0 6px !important;
 						gap: 4px !important;
 					}
 					.hrc-main-info {
 						gap: 4px;
 					}
+					/* Al reducir a tamaño muy pequeño, ocultar la cadena de conexión (host / user@host) */
+					.hrc-host {
+						display: none !important;
+					}
+					.hrc-main-info.has-host .hrc-name {
+						max-width: 100% !important;
+						flex: 1 1 auto;
+					}
 				}
-				@container (max-width: 290px) {
-					.hrc-prompt {
-						display: none;
+				@container (max-width: 270px) {
+					.hero-recent-card {
+						padding: 0 4px 0 4px !important;
+						gap: 3px !important;
+					}
+					.hrc-protocol-tag {
+						padding: 1px 2px;
+						font-size: 0.62rem;
+						max-width: 52px;
 					}
 					.hrc-time {
-						display: none;
+						font-size: 0.68rem;
+						padding-left: 2px;
 					}
 				}
 				/* --- Split / Sidebar compact connections --- */
