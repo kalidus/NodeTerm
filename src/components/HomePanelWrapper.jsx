@@ -338,8 +338,14 @@ const HomePanelWrapper = ({
         );
 
       case 'hologram':
+      case 'holo-amber':
+      case 'holo-emerald':
+      case 'holo-crimson':
+      case 'holo-violet':
+      case 'plasma-cyan': {
+        const ctrlClass = terminalFrameStyle === 'hologram' ? 'hologram-controls' : `${terminalFrameStyle}-controls`;
         return (
-          <div className="hologram-controls no-drag" onMouseDown={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <div className={`${ctrlClass} no-drag`} onMouseDown={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
             <div
               className="holo-btn"
               title={isMaximized ? "Restaurar HUD" : "Maximizar HUD"}
@@ -352,6 +358,7 @@ const HomePanelWrapper = ({
             </div>
           </div>
         );
+      }
 
       case 'synthwave':
         return (

@@ -142,8 +142,8 @@ const TerminalFrame = ({
                                 <div className="cyber-pro-btn maximize" onClick={onMaximize} title="Maximizar">⬡</div>
                                 <div className="cyber-pro-btn close" onClick={onClose} title="Cerrar">✕</div>
                             </div>
-                        ) : frameStyle === 'hologram' ? (
-                            <div className="terminal-frame-controls hologram-controls" style={isDraggable ? { WebkitAppRegion: 'no-drag' } : {}}>
+                        ) : ['hologram', 'holo-amber', 'holo-emerald', 'holo-crimson', 'holo-violet', 'plasma-cyan'].includes(frameStyle) ? (
+                            <div className={`terminal-frame-controls ${frameStyle === 'hologram' ? 'hologram-controls' : `${frameStyle}-controls`}`} style={isDraggable ? { WebkitAppRegion: 'no-drag' } : {}}>
                                 <div className="holo-btn minimize" onClick={onMinimize} title="Minimizar">─</div>
                                 <div className="holo-btn maximize" onClick={onMaximize} title="Maximizar">◈</div>
                                 <div className="holo-btn close" onClick={onClose} title="Cerrar">✕</div>

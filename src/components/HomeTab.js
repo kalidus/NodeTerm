@@ -51,7 +51,12 @@ const HOME_TERMINAL_FRAME_STYLE_OPTIONS = [
   { id: 'matcha', label: 'Matcha (Green)', line: '#2eb398', icons: ['pi-times'], right: true },
   // Futuristas & Cyberpunk
   { id: 'cyberpunk-pro', label: 'Cyberpunk Pro (Arasaka)', color: '#fcee0a', tag: 'SYS', cyberBorder: true },
-  { id: 'hologram', label: 'Holográfico (Sci-Fi HUD)', color: '#00e5ff', hud: true },
+  { id: 'hologram', label: 'Holográfico (Sci-Fi Cyan)', color: '#00e5ff', hud: true },
+  { id: 'holo-amber', label: 'Holográfico Ámbar (Deus Ex)', color: '#ffb000', hud: true },
+  { id: 'holo-emerald', label: 'Holográfico Esmeralda (Radar)', color: '#00ff88', hud: true },
+  { id: 'holo-crimson', label: 'Holográfico Carmesí (Red Alert)', color: '#ff0055', hud: true },
+  { id: 'holo-violet', label: 'Holográfico Violeta (Quantum)', color: '#a855f7', hud: true },
+  { id: 'plasma-cyan', label: 'Plasma Fusión (Core HUD)', color: '#00f2ff', hud: true, plasma: true },
   { id: 'matrix', label: 'Matrix (Digital Rain)', color: '#00ff66', text: '[01]' },
   { id: 'futuristic', label: 'Futurista (Cyber)', color: '#00f2ff', text: 'EXE' },
   // Modernos & Efectos
@@ -2804,7 +2809,7 @@ const HomeTab = ({
                     borderTop: style.line ? `2px solid ${style.line}` : (style.cyberBorder ? '2px solid #fcee0a' : undefined),
                     borderRadius: style.rounded ? '8px' : (style.frameless ? '2px' : '4px'),
                     background: style.aurora ? 'linear-gradient(135deg, rgba(99,102,241,0.25), rgba(20,184,166,0.25))' : undefined,
-                    boxShadow: style.hud ? '0 0 6px rgba(0,229,255,0.4)' : (style.synthwave ? '0 0 6px rgba(217,70,239,0.5)' : undefined)
+                    boxShadow: style.hud ? `0 0 6px ${style.color || 'rgba(0,229,255,0.4)'}` : (style.synthwave ? '0 0 6px rgba(217,70,239,0.5)' : undefined)
                   }}
                 >
                   {style.noButtons ? null : style.dots ? (
@@ -2817,8 +2822,8 @@ const HomeTab = ({
                     <div className="frame-preview-dot" style={{ background: '#0f0', boxShadow: '0 0 4px #0f0' }} />
                   ) : style.hud ? (
                     <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
-                      <span style={{ fontSize: '7px', color: '#00e5ff', lineHeight: 1 }}>◈</span>
-                      <span style={{ fontSize: '6px', color: '#00e5ff', lineHeight: 1 }}>✕</span>
+                      <span style={{ fontSize: '7px', color: style.color || '#00e5ff', lineHeight: 1 }}>◈</span>
+                      <span style={{ fontSize: '6px', color: style.color || '#00e5ff', lineHeight: 1 }}>✕</span>
                     </div>
                   ) : style.tag ? (
                     <span style={{ fontSize: '6px', color: '#000', background: style.color, padding: '0 2px', borderRadius: '1px', fontWeight: 'bold' }}>{style.tag}</span>
@@ -2940,7 +2945,7 @@ const HomeTab = ({
         background: localTerminalBg,
         borderRadius: terminalState === 'maximized' ? '0' : (['modern', 'aurora-glass'].includes(terminalFrameStyle) ? '20px' : (terminalFrameStyle === 'retro' ? '24px' : '8px')),
         boxShadow: terminalState === 'maximized' ? 'none' : '0 10px 30px rgba(0,0,0,0.5)',
-        border: terminalState === 'maximized' ? 'none' : (['futuristic', 'modern', 'retro', 'matcha', 'cyberpunk-pro', 'hologram', 'synthwave', 'matrix', 'aurora-glass', 'stealth'].includes(terminalFrameStyle) ? 'none' : `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`)
+        border: terminalState === 'maximized' ? 'none' : (['futuristic', 'modern', 'retro', 'matcha', 'cyberpunk-pro', 'hologram', 'holo-amber', 'holo-emerald', 'holo-crimson', 'holo-violet', 'plasma-cyan', 'synthwave', 'matrix', 'aurora-glass', 'stealth'].includes(terminalFrameStyle) ? 'none' : `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`)
       }}
     >
       {/* Universal header wrapper */}
@@ -2949,7 +2954,7 @@ const HomeTab = ({
         style={{
           height: '36px',
           background: themeColors.cardBackground || 'rgba(255, 255, 255, 0.03)',
-          borderBottom: ['futuristic', 'modern', 'retro', 'matcha', 'cyberpunk-pro', 'hologram', 'synthwave', 'matrix', 'aurora-glass', 'stealth'].includes(terminalFrameStyle) ? 'none' : `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
+          borderBottom: ['futuristic', 'modern', 'retro', 'matcha', 'cyberpunk-pro', 'hologram', 'holo-amber', 'holo-emerald', 'holo-crimson', 'holo-violet', 'plasma-cyan', 'synthwave', 'matrix', 'aurora-glass', 'stealth'].includes(terminalFrameStyle) ? 'none' : `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -3030,8 +3035,8 @@ const HomeTab = ({
               <div className="cyber-pro-btn maximize" title="Maximizar" onClick={handleMaximizeTerminal}>⬡</div>
               <div className="cyber-pro-btn close" title="Cerrar Terminal" onClick={handleCloseTerminal}>✕</div>
             </div>
-          ) : terminalFrameStyle === 'hologram' ? (
-            <div className="hologram-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+          ) : ['hologram', 'holo-amber', 'holo-emerald', 'holo-crimson', 'holo-violet', 'plasma-cyan'].includes(terminalFrameStyle) ? (
+            <div className={`${terminalFrameStyle === 'hologram' ? 'hologram-controls' : `${terminalFrameStyle}-controls`} no-drag`} onMouseDown={(e) => e.stopPropagation()}>
               <div className="holo-btn minimize" title="Minimizar" onClick={handleMinimizeTerminal}>─</div>
               <div className="holo-btn maximize" title="Maximizar" onClick={handleMaximizeTerminal}>◈</div>
               <div className="holo-btn close" title="Cerrar Terminal" onClick={handleCloseTerminal}>✕</div>
@@ -3083,10 +3088,10 @@ const HomeTab = ({
 
         <div style={{
           position: 'absolute', left: 0, right: 0, textAlign: 'center',
-          color: terminalFrameStyle === 'futuristic' ? '#00f2ff' : (terminalFrameStyle === 'cyberpunk-pro' ? '#fcee0a' : (terminalFrameStyle === 'hologram' ? '#00e5ff' : (terminalFrameStyle === 'synthwave' ? '#ff2a85' : (terminalFrameStyle === 'matrix' ? '#00ff66' : (terminalFrameStyle === 'stealth' ? '#ff6b00' : (terminalFrameStyle === 'retro' ? '#0f0' : themeColors.textSecondary)))))),
+          color: terminalFrameStyle === 'futuristic' || terminalFrameStyle === 'plasma-cyan' ? '#00f2ff' : (terminalFrameStyle === 'cyberpunk-pro' ? '#fcee0a' : (terminalFrameStyle === 'hologram' ? '#00e5ff' : (terminalFrameStyle === 'holo-amber' ? '#ffb000' : (terminalFrameStyle === 'holo-emerald' ? '#00ff88' : (terminalFrameStyle === 'holo-crimson' ? '#ff0055' : (terminalFrameStyle === 'holo-violet' ? '#a855f7' : (terminalFrameStyle === 'synthwave' ? '#ff2a85' : (terminalFrameStyle === 'matrix' ? '#00ff66' : (terminalFrameStyle === 'stealth' ? '#ff6b00' : (terminalFrameStyle === 'retro' ? '#0f0' : themeColors.textSecondary)))))))))),
           fontSize: terminalFrameStyle === 'retro' ? '12px' : '11px',
           userSelect: 'none', pointerEvents: 'none', fontWeight: 500,
-          textShadow: terminalFrameStyle === 'futuristic' ? '0 0 8px #00f2ff' : (terminalFrameStyle === 'cyberpunk-pro' ? '0 0 8px rgba(252,238,10,0.6)' : (terminalFrameStyle === 'hologram' ? '0 0 8px #00e5ff' : (terminalFrameStyle === 'synthwave' ? '0 0 8px #ff2a85' : (terminalFrameStyle === 'matrix' ? '0 0 8px #00ff66' : (terminalFrameStyle === 'stealth' ? '0 0 6px #ff6b00' : (terminalFrameStyle === 'retro' ? '0 0 5px #0f0' : 'none')))))),
+          textShadow: terminalFrameStyle === 'futuristic' || terminalFrameStyle === 'plasma-cyan' ? '0 0 8px #00f2ff' : (terminalFrameStyle === 'cyberpunk-pro' ? '0 0 8px rgba(252,238,10,0.6)' : (terminalFrameStyle === 'hologram' ? '0 0 8px #00e5ff' : (terminalFrameStyle === 'holo-amber' ? '0 0 8px #ffb000' : (terminalFrameStyle === 'holo-emerald' ? '0 0 8px #00ff88' : (terminalFrameStyle === 'holo-crimson' ? '0 0 8px #ff0055' : (terminalFrameStyle === 'holo-violet' ? '0 0 8px #a855f7' : (terminalFrameStyle === 'synthwave' ? '0 0 8px #ff2a85' : (terminalFrameStyle === 'matrix' ? '0 0 8px #00ff66' : (terminalFrameStyle === 'stealth' ? '0 0 6px #ff6b00' : (terminalFrameStyle === 'retro' ? '0 0 5px #0f0' : 'none')))))))))),
           fontFamily: ['retro', 'cyberpunk-pro', 'matrix', 'stealth'].includes(terminalFrameStyle) ? '"Fira Code", monospace' : 'inherit'
         }}>
           {terminalTitle}

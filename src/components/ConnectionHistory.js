@@ -3401,6 +3401,11 @@ const ConnectionHistory = ({
 				.recents-terminal-frame.retro, .top-terminal-frame.retro,
 				.recents-terminal-frame.cyberpunk-pro, .top-terminal-frame.cyberpunk-pro,
 				.recents-terminal-frame.hologram, .top-terminal-frame.hologram,
+				.recents-terminal-frame.holo-amber, .top-terminal-frame.holo-amber,
+				.recents-terminal-frame.holo-emerald, .top-terminal-frame.holo-emerald,
+				.recents-terminal-frame.holo-crimson, .top-terminal-frame.holo-crimson,
+				.recents-terminal-frame.holo-violet, .top-terminal-frame.holo-violet,
+				.recents-terminal-frame.plasma-cyan, .top-terminal-frame.plasma-cyan,
 				.recents-terminal-frame.synthwave, .top-terminal-frame.synthwave,
 				.recents-terminal-frame.matrix, .top-terminal-frame.matrix,
 				.recents-terminal-frame.aurora-glass, .top-terminal-frame.aurora-glass,
@@ -4897,8 +4902,8 @@ const ConnectionHistory = ({
 												<span className="cyber-pro-tag">SYS</span>
 												<div className="cyber-pro-btn close" title="Cerrar"><i className="pi pi-times" /></div>
 											</div>
-										) : terminalFrameStyle === 'hologram' ? (
-											<div className="hologram-controls" style={{ marginLeft: '-8px' }}>
+										) : ['hologram', 'holo-amber', 'holo-emerald', 'holo-crimson', 'holo-violet', 'plasma-cyan'].includes(terminalFrameStyle) ? (
+											<div className={terminalFrameStyle === 'hologram' ? 'hologram-controls' : `${terminalFrameStyle}-controls`} style={{ marginLeft: '-8px' }}>
 												<div className="holo-btn close" title="Cerrar"><i className="pi pi-times" /></div>
 											</div>
 										) : terminalFrameStyle === 'synthwave' ? (

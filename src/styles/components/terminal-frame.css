@@ -546,6 +546,311 @@
     color: #fff;
 }
 
+/* --- Hologram Amber (Deus Ex HUD) --- */
+.terminal-frame-holo-amber,
+.recents-terminal-frame.holo-amber,
+.top-terminal-frame.holo-amber {
+    border: 1px solid rgba(255, 176, 0, 0.45) !important;
+    box-shadow: 0 0 20px rgba(255, 176, 0, 0.25), inset 0 0 15px rgba(255, 176, 0, 0.05) !important;
+    background: rgba(24, 16, 4, 0.88) !important;
+    position: relative;
+    border-radius: 4px !important;
+}
+
+.terminal-frame-holo-amber::before,
+.recents-terminal-frame.holo-amber::before {
+    content: '';
+    position: absolute;
+    top: -1px; left: -1px;
+    width: 10px; height: 10px;
+    border-top: 2px solid #ffb000;
+    border-left: 2px solid #ffb000;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.terminal-frame-holo-amber::after,
+.recents-terminal-frame.holo-amber::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; right: -1px;
+    width: 10px; height: 10px;
+    border-bottom: 2px solid #ffb000;
+    border-right: 2px solid #ffb000;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.terminal-frame-holo-amber .terminal-frame-header,
+.recents-terminal-frame.holo-amber .recents-terminal-header,
+.top-terminal-frame.holo-amber .top-terminal-header {
+    background: linear-gradient(90deg, rgba(255, 176, 0, 0.12) 0%, rgba(245, 158, 11, 0.05) 100%) !important;
+    border-bottom: 1px solid rgba(255, 176, 0, 0.3) !important;
+}
+
+.holo-amber-controls {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.holo-amber-controls .holo-btn {
+    border-color: rgba(255, 176, 0, 0.4);
+    color: #ffb000;
+    background: rgba(255, 176, 0, 0.08);
+}
+
+.holo-amber-controls .holo-btn:hover {
+    background: rgba(255, 176, 0, 0.3);
+    box-shadow: 0 0 10px #ffb000;
+    color: #fff;
+    border-color: #ffb000;
+}
+
+/* --- Hologram Emerald (Radar Táctico) --- */
+.terminal-frame-holo-emerald,
+.recents-terminal-frame.holo-emerald,
+.top-terminal-frame.holo-emerald {
+    border: 1px solid rgba(0, 255, 136, 0.45) !important;
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.22), inset 0 0 15px rgba(0, 255, 136, 0.05) !important;
+    background: rgba(4, 24, 14, 0.88) !important;
+    position: relative;
+    border-radius: 4px !important;
+}
+
+.terminal-frame-holo-emerald::before,
+.recents-terminal-frame.holo-emerald::before {
+    content: '';
+    position: absolute;
+    top: -1px; left: -1px;
+    width: 10px; height: 10px;
+    border-top: 2px solid #00ff88;
+    border-left: 2px solid #00ff88;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.terminal-frame-holo-emerald::after,
+.recents-terminal-frame.holo-emerald::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; right: -1px;
+    width: 10px; height: 10px;
+    border-bottom: 2px solid #00ff88;
+    border-right: 2px solid #00ff88;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.terminal-frame-holo-emerald .terminal-frame-header,
+.recents-terminal-frame.holo-emerald .recents-terminal-header,
+.top-terminal-frame.holo-emerald .top-terminal-header {
+    background: linear-gradient(90deg, rgba(0, 255, 136, 0.12) 0%, rgba(16, 185, 129, 0.05) 100%) !important;
+    border-bottom: 1px solid rgba(0, 255, 136, 0.3) !important;
+}
+
+.holo-emerald-controls {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.holo-emerald-controls .holo-btn {
+    border-color: rgba(0, 255, 136, 0.4);
+    color: #00ff88;
+    background: rgba(0, 255, 136, 0.08);
+}
+
+.holo-emerald-controls .holo-btn:hover {
+    background: rgba(0, 255, 136, 0.3);
+    box-shadow: 0 0 10px #00ff88;
+    color: #fff;
+    border-color: #00ff88;
+}
+
+/* --- Hologram Crimson (Red Alert HUD) --- */
+.terminal-frame-holo-crimson,
+.recents-terminal-frame.holo-crimson,
+.top-terminal-frame.holo-crimson {
+    border: 1px solid rgba(255, 0, 85, 0.45) !important;
+    box-shadow: 0 0 20px rgba(255, 0, 85, 0.25), inset 0 0 15px rgba(255, 0, 85, 0.05) !important;
+    background: rgba(24, 4, 10, 0.88) !important;
+    position: relative;
+    border-radius: 4px !important;
+}
+
+.terminal-frame-holo-crimson::before,
+.recents-terminal-frame.holo-crimson::before {
+    content: '';
+    position: absolute;
+    top: -1px; left: -1px;
+    width: 10px; height: 10px;
+    border-top: 2px solid #ff0055;
+    border-left: 2px solid #ff0055;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.terminal-frame-holo-crimson::after,
+.recents-terminal-frame.holo-crimson::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; right: -1px;
+    width: 10px; height: 10px;
+    border-bottom: 2px solid #ff0055;
+    border-right: 2px solid #ff0055;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.terminal-frame-holo-crimson .terminal-frame-header,
+.recents-terminal-frame.holo-crimson .recents-terminal-header,
+.top-terminal-frame.holo-crimson .top-terminal-header {
+    background: linear-gradient(90deg, rgba(255, 0, 85, 0.15) 0%, rgba(239, 68, 68, 0.05) 100%) !important;
+    border-bottom: 1px solid rgba(255, 0, 85, 0.3) !important;
+}
+
+.holo-crimson-controls {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.holo-crimson-controls .holo-btn {
+    border-color: rgba(255, 0, 85, 0.4);
+    color: #ff0055;
+    background: rgba(255, 0, 85, 0.08);
+}
+
+.holo-crimson-controls .holo-btn:hover {
+    background: rgba(255, 0, 85, 0.3);
+    box-shadow: 0 0 10px #ff0055;
+    color: #fff;
+    border-color: #ff0055;
+}
+
+/* --- Hologram Violet (Quantum Void HUD) --- */
+.terminal-frame-holo-violet,
+.recents-terminal-frame.holo-violet,
+.top-terminal-frame.holo-violet {
+    border: 1px solid rgba(168, 85, 247, 0.45) !important;
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.25), inset 0 0 15px rgba(168, 85, 247, 0.05) !important;
+    background: rgba(18, 8, 28, 0.88) !important;
+    position: relative;
+    border-radius: 4px !important;
+}
+
+.terminal-frame-holo-violet::before,
+.recents-terminal-frame.holo-violet::before {
+    content: '';
+    position: absolute;
+    top: -1px; left: -1px;
+    width: 10px; height: 10px;
+    border-top: 2px solid #a855f7;
+    border-left: 2px solid #a855f7;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.terminal-frame-holo-violet::after,
+.recents-terminal-frame.holo-violet::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; right: -1px;
+    width: 10px; height: 10px;
+    border-bottom: 2px solid #a855f7;
+    border-right: 2px solid #a855f7;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.terminal-frame-holo-violet .terminal-frame-header,
+.recents-terminal-frame.holo-violet .recents-terminal-header,
+.top-terminal-frame.holo-violet .top-terminal-header {
+    background: linear-gradient(90deg, rgba(168, 85, 247, 0.12) 0%, rgba(192, 132, 252, 0.05) 100%) !important;
+    border-bottom: 1px solid rgba(168, 85, 247, 0.3) !important;
+}
+
+.holo-violet-controls {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.holo-violet-controls .holo-btn {
+    border-color: rgba(168, 85, 247, 0.4);
+    color: #a855f7;
+    background: rgba(168, 85, 247, 0.08);
+}
+
+.holo-violet-controls .holo-btn:hover {
+    background: rgba(168, 85, 247, 0.3);
+    box-shadow: 0 0 10px #a855f7;
+    color: #fff;
+    border-color: #a855f7;
+}
+
+/* --- Plasma Cyan (Core Fusión HUD) --- */
+.terminal-frame-plasma-cyan,
+.recents-terminal-frame.plasma-cyan,
+.top-terminal-frame.plasma-cyan {
+    border: 1px solid rgba(0, 242, 255, 0.45) !important;
+    box-shadow: 0 0 20px rgba(0, 242, 255, 0.25), inset 0 0 15px rgba(255, 170, 0, 0.08) !important;
+    background: rgba(6, 15, 25, 0.9) !important;
+    position: relative;
+    border-radius: 4px !important;
+}
+
+.terminal-frame-plasma-cyan::before,
+.recents-terminal-frame.plasma-cyan::before {
+    content: '';
+    position: absolute;
+    top: -1px; left: -1px;
+    width: 10px; height: 10px;
+    border-top: 2px solid #ffaa00;
+    border-left: 2px solid #ffaa00;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.terminal-frame-plasma-cyan::after,
+.recents-terminal-frame.plasma-cyan::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; right: -1px;
+    width: 10px; height: 10px;
+    border-bottom: 2px solid #00f2ff;
+    border-right: 2px solid #00f2ff;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.terminal-frame-plasma-cyan .terminal-frame-header,
+.recents-terminal-frame.plasma-cyan .recents-terminal-header,
+.top-terminal-frame.plasma-cyan .top-terminal-header {
+    background: linear-gradient(90deg, rgba(0, 242, 255, 0.15) 0%, rgba(255, 170, 0, 0.12) 100%) !important;
+    border-bottom: 1px solid rgba(0, 242, 255, 0.35) !important;
+}
+
+.plasma-cyan-controls {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.plasma-cyan-controls .holo-btn {
+    border-color: rgba(0, 242, 255, 0.4);
+    color: #00f2ff;
+    background: rgba(0, 242, 255, 0.08);
+}
+
+.plasma-cyan-controls .holo-btn:hover {
+    background: rgba(0, 242, 255, 0.3);
+    box-shadow: 0 0 10px #00f2ff;
+    color: #fff;
+    border-color: #00f2ff;
+}
+
 /* --- Synthwave Style (Neon Outrun 80s) --- */
 .terminal-frame-synthwave,
 .recents-terminal-frame.synthwave,
