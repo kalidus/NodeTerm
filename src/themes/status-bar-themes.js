@@ -600,5 +600,157 @@ export const statusBarThemes = {
       networkDownColor: '#c4a7e7',
       sparklineColor: '#9ccfd8'
     }
+  },
+
+  // === TEMAS FUTURISTAS & HOLOGRÁFICOS ===
+  'Cyberpunk Pro': {
+    name: 'Cyberpunk Pro',
+    colors: {
+      background: '#0b0c10',
+      text: '#fcee0a',
+      border: '#00f0ff',
+      iconColor: '#fcee0a',
+      cpuBarColor: '#fcee0a',
+      memoryBarColor: '#00f0ff',
+      diskBarColor: '#ff003c',
+      networkUpColor: '#00f0ff',
+      networkDownColor: '#fcee0a',
+      sparklineColor: '#fcee0a'
+    }
+  },
+  'Hologram Cyan': {
+    name: 'Hologram Cyan',
+    colors: {
+      background: '#040d1a',
+      text: '#00f3ff',
+      border: '#00f3ff',
+      iconColor: '#00f3ff',
+      cpuBarColor: '#00f3ff',
+      memoryBarColor: '#00bbff',
+      diskBarColor: '#7928ca',
+      networkUpColor: '#00f3ff',
+      networkDownColor: '#0077ff',
+      sparklineColor: '#00f3ff'
+    }
+  },
+  'Hologram Amber': {
+    name: 'Hologram Amber',
+    colors: {
+      background: '#0f0c05',
+      text: '#ffb300',
+      border: '#ffb300',
+      iconColor: '#ffb300',
+      cpuBarColor: '#ffb300',
+      memoryBarColor: '#ff9100',
+      diskBarColor: '#ff3d00',
+      networkUpColor: '#ffb300',
+      networkDownColor: '#ff6d00',
+      sparklineColor: '#ffb300'
+    }
+  },
+  'Hologram Emerald': {
+    name: 'Hologram Emerald',
+    colors: {
+      background: '#04120a',
+      text: '#00ff88',
+      border: '#00ff88',
+      iconColor: '#00ff88',
+      cpuBarColor: '#00ff88',
+      memoryBarColor: '#00e5ff',
+      diskBarColor: '#a3e635',
+      networkUpColor: '#00ff88',
+      networkDownColor: '#00d26a',
+      sparklineColor: '#00ff88'
+    }
+  },
+  'Hologram Crimson': {
+    name: 'Hologram Crimson',
+    colors: {
+      background: '#120409',
+      text: '#ff0055',
+      border: '#ff0055',
+      iconColor: '#ff0055',
+      cpuBarColor: '#ff0055',
+      memoryBarColor: '#ff3366',
+      diskBarColor: '#ff9900',
+      networkUpColor: '#ff0055',
+      networkDownColor: '#ff00aa',
+      sparklineColor: '#ff0055'
+    }
+  },
+  'Hologram Violet': {
+    name: 'Hologram Violet',
+    colors: {
+      background: '#0d0414',
+      text: '#b537f2',
+      border: '#b537f2',
+      iconColor: '#b537f2',
+      cpuBarColor: '#b537f2',
+      memoryBarColor: '#ff007f',
+      diskBarColor: '#7928ca',
+      networkUpColor: '#b537f2',
+      networkDownColor: '#c084fc',
+      sparklineColor: '#b537f2'
+    }
+  },
+  'Plasma Core': {
+    name: 'Plasma Core',
+    colors: {
+      background: '#070312',
+      text: '#00f0ff',
+      border: '#bf00ff',
+      iconColor: '#bf00ff',
+      cpuBarColor: '#bf00ff',
+      memoryBarColor: '#00f0ff',
+      diskBarColor: '#ff00aa',
+      networkUpColor: '#00f0ff',
+      networkDownColor: '#bf00ff',
+      sparklineColor: '#00f0ff'
+    }
+  },
+  'Synthwave 80s': {
+    name: 'Synthwave 80s',
+    colors: {
+      background: '#19092c',
+      text: '#ff71ce',
+      border: '#ff71ce',
+      iconColor: '#01cdfe',
+      cpuBarColor: '#ff71ce',
+      memoryBarColor: '#01cdfe',
+      diskBarColor: '#ffbe0b',
+      networkUpColor: '#01cdfe',
+      networkDownColor: '#b967ff',
+      sparklineColor: '#ff71ce'
+    }
+  },
+  'Aurora Glass': {
+    name: 'Aurora Glass',
+    colors: {
+      background: '#06181f',
+      text: '#00ffa3',
+      border: '#00ffa3',
+      iconColor: '#00ffa3',
+      cpuBarColor: '#00ffa3',
+      memoryBarColor: '#00b8ff',
+      diskBarColor: '#79ffe1',
+      networkUpColor: '#00ffa3',
+      networkDownColor: '#00d2ff',
+      sparklineColor: '#00ffa3'
+    }
+  },
+  'Stealth Ops': {
+    name: 'Stealth Ops',
+    colors: {
+      background: '#0b0e11',
+      text: '#ff5500',
+      border: '#374151',
+      iconColor: '#ff5500',
+      cpuBarColor: '#ff5500',
+      memoryBarColor: '#798e9c',
+      diskBarColor: '#f59e0b',
+      networkUpColor: '#ff5500',
+      networkDownColor: '#9ca3af',
+      sparklineColor: '#ff5500'
+    }
   }
 };

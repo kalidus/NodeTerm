@@ -1557,7 +1557,8 @@ const NEW_FUTURISTIC_KEYS = [
   'neonAurora', 'quantumFlux', 'laserWave', 'prismTrail', 'hyperdrive',
   'neonOrbit', 'cyberGrid', 'pulseMagenta', 'neonLime',
   'steam', 'steamBlue', 'steamGreen',
-  'futuristic', 'hologram', 'particleSystem', 'soundWave', 'dnaHelix'
+  'futuristic', 'hologram', 'particleSystem', 'soundWave', 'dnaHelix',
+  'cyberpunkPro', 'holoCyan', 'holoAmber', 'holoEmerald', 'holoCrimson', 'holoViolet', 'plasmaCore', 'synthwave80s', 'auroraGlass', 'stealthOps'
 ];
 
 const NEW_PRO_KEYS = [
@@ -2290,6 +2291,227 @@ Object.assign(tabThemes, {
       '--tab-transition': 'all 0.25s ease'
     }
   },
+  cyberpunkPro: {
+    name: 'Cyberpunk Pro',
+    description: 'Estilo táctico cyberpunk amarillo y cian con bordes cortados',
+    preview: {
+      background: 'linear-gradient(135deg, #0b0c10 0%, #1f2833 100%)',
+      borderRadius: '6px 6px 0 0',
+      border: '1px solid #fcee0a',
+      boxShadow: '0 0 12px rgba(252, 238, 10, 0.3)'
+    },
+    styles: {
+      '--ui-tab-bg': '#0b0c10',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, #1f2833 0%, #0b0c10 100%)',
+      '--ui-tab-hover-bg': '#151b23',
+      '--ui-tab-text': '#8a99a8',
+      '--ui-tab-active-text': '#fcee0a',
+      '--ui-tab-border': '#fcee0a',
+      '--ui-tab-close-hover': '#ff003c',
+      '--tab-border-radius': '6px 6px 0 0',
+      '--tab-box-shadow': '0 0 12px rgba(252, 238, 10, 0.25), inset 0 1px 0 rgba(0, 240, 255, 0.3)',
+      '--tab-transition': 'all 0.25s ease'
+    }
+  },
+  holoCyan: {
+    name: 'Hologram Cyan',
+    description: 'Proyección holográfica cian con resplandor cuántico',
+    preview: {
+      background: 'linear-gradient(135deg, #040d1a 0%, #071e3d 100%)',
+      borderRadius: '8px 8px 0 0',
+      border: '1px solid #00f3ff',
+      boxShadow: '0 0 14px rgba(0, 243, 255, 0.35)'
+    },
+    styles: {
+      '--ui-tab-bg': '#040d1a',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, #071e3d 0%, #040d1a 100%)',
+      '--ui-tab-hover-bg': '#0a1a2e',
+      '--ui-tab-text': '#7debf5',
+      '--ui-tab-active-text': '#00f3ff',
+      '--ui-tab-border': '#00f3ff',
+      '--ui-tab-close-hover': '#ff0055',
+      '--tab-border-radius': '8px 8px 0 0',
+      '--tab-box-shadow': '0 0 14px rgba(0, 243, 255, 0.35), inset 0 1px 0 rgba(0, 243, 255, 0.2)',
+      '--tab-transition': 'all 0.25s ease'
+    }
+  },
+  holoAmber: {
+    name: 'Hologram Amber',
+    description: 'Proyección holográfica ámbar/dorada estilo terminal táctica',
+    preview: {
+      background: 'linear-gradient(135deg, #0f0c05 0%, #261b05 100%)',
+      borderRadius: '8px 8px 0 0',
+      border: '1px solid #ffb300',
+      boxShadow: '0 0 14px rgba(255, 179, 0, 0.35)'
+    },
+    styles: {
+      '--ui-tab-bg': '#0f0c05',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, #261b05 0%, #0f0c05 100%)',
+      '--ui-tab-hover-bg': '#1a1408',
+      '--ui-tab-text': '#f5d58e',
+      '--ui-tab-active-text': '#ffb300',
+      '--ui-tab-border': '#ffb300',
+      '--ui-tab-close-hover': '#ff3d00',
+      '--tab-border-radius': '8px 8px 0 0',
+      '--tab-box-shadow': '0 0 14px rgba(255, 179, 0, 0.35), inset 0 1px 0 rgba(255, 179, 0, 0.2)',
+      '--tab-transition': 'all 0.25s ease'
+    }
+  },
+  holoEmerald: {
+    name: 'Hologram Emerald',
+    description: 'Proyección holográfica verde esmeralda y menta bioluminiscente',
+    preview: {
+      background: 'linear-gradient(135deg, #04120a 0%, #072615 100%)',
+      borderRadius: '8px 8px 0 0',
+      border: '1px solid #00ff88',
+      boxShadow: '0 0 14px rgba(0, 255, 136, 0.35)'
+    },
+    styles: {
+      '--ui-tab-bg': '#04120a',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, #072615 0%, #04120a 100%)',
+      '--ui-tab-hover-bg': '#081f11',
+      '--ui-tab-text': '#8cf5bf',
+      '--ui-tab-active-text': '#00ff88',
+      '--ui-tab-border': '#00ff88',
+      '--ui-tab-close-hover': '#ff0055',
+      '--tab-border-radius': '8px 8px 0 0',
+      '--tab-box-shadow': '0 0 14px rgba(0, 255, 136, 0.35), inset 0 1px 0 rgba(0, 255, 136, 0.2)',
+      '--tab-transition': 'all 0.25s ease'
+    }
+  },
+  holoCrimson: {
+    name: 'Hologram Crimson',
+    description: 'Proyección holográfica carmesí con alerta de combate',
+    preview: {
+      background: 'linear-gradient(135deg, #120409 0%, #2b0815 100%)',
+      borderRadius: '8px 8px 0 0',
+      border: '1px solid #ff0055',
+      boxShadow: '0 0 14px rgba(255, 0, 85, 0.35)'
+    },
+    styles: {
+      '--ui-tab-bg': '#120409',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, #2b0815 0%, #120409 100%)',
+      '--ui-tab-hover-bg': '#200710',
+      '--ui-tab-text': '#f58ea9',
+      '--ui-tab-active-text': '#ff0055',
+      '--ui-tab-border': '#ff0055',
+      '--ui-tab-close-hover': '#ffbe0b',
+      '--tab-border-radius': '8px 8px 0 0',
+      '--tab-box-shadow': '0 0 14px rgba(255, 0, 85, 0.35), inset 0 1px 0 rgba(255, 0, 85, 0.2)',
+      '--tab-transition': 'all 0.25s ease'
+    }
+  },
+  holoViolet: {
+    name: 'Hologram Violet',
+    description: 'Proyección holográfica violeta y magenta cuántica',
+    preview: {
+      background: 'linear-gradient(135deg, #0d0414 0%, #220935 100%)',
+      borderRadius: '8px 8px 0 0',
+      border: '1px solid #b537f2',
+      boxShadow: '0 0 14px rgba(181, 55, 242, 0.35)'
+    },
+    styles: {
+      '--ui-tab-bg': '#0d0414',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, #220935 0%, #0d0414 100%)',
+      '--ui-tab-hover-bg': '#1a0729',
+      '--ui-tab-text': '#dab3f7',
+      '--ui-tab-active-text': '#b537f2',
+      '--ui-tab-border': '#b537f2',
+      '--ui-tab-close-hover': '#ff007f',
+      '--tab-border-radius': '8px 8px 0 0',
+      '--tab-box-shadow': '0 0 14px rgba(181, 55, 242, 0.35), inset 0 1px 0 rgba(181, 55, 242, 0.2)',
+      '--tab-transition': 'all 0.25s ease'
+    }
+  },
+  plasmaCore: {
+    name: 'Plasma Core',
+    description: 'Reactor de plasma de alta energía con destellos violeta y cian',
+    preview: {
+      background: 'linear-gradient(135deg, #070312 0%, #1a082e 100%)',
+      borderRadius: '8px 8px 0 0',
+      border: '1px solid #bf00ff',
+      boxShadow: '0 0 16px rgba(191, 0, 255, 0.4)'
+    },
+    styles: {
+      '--ui-tab-bg': '#070312',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, #1a082e 0%, #070312 100%)',
+      '--ui-tab-hover-bg': '#130621',
+      '--ui-tab-text': '#b0ebff',
+      '--ui-tab-active-text': '#00f0ff',
+      '--ui-tab-border': '#bf00ff',
+      '--ui-tab-close-hover': '#bf00ff',
+      '--tab-border-radius': '8px 8px 0 0',
+      '--tab-box-shadow': '0 0 16px rgba(191, 0, 255, 0.35), inset 0 1px 0 rgba(0, 240, 255, 0.3)',
+      '--tab-transition': 'all 0.25s ease'
+    }
+  },
+  synthwave80s: {
+    name: 'Synthwave 80s',
+    description: 'Estética retrofuturista de los 80s con neón rosa, cian y violeta',
+    preview: {
+      background: 'linear-gradient(135deg, #19092c 0%, #2e0854 100%)',
+      borderRadius: '8px 8px 0 0',
+      border: '1px solid #ff71ce',
+      boxShadow: '0 0 16px rgba(255, 113, 206, 0.4)'
+    },
+    styles: {
+      '--ui-tab-bg': '#19092c',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, #2e0854 0%, #19092c 100%)',
+      '--ui-tab-hover-bg': '#250c40',
+      '--ui-tab-text': '#ffabe3',
+      '--ui-tab-active-text': '#01cdfe',
+      '--ui-tab-border': '#ff71ce',
+      '--ui-tab-close-hover': '#ffbe0b',
+      '--tab-border-radius': '8px 8px 0 0',
+      '--tab-box-shadow': '0 0 16px rgba(255, 113, 206, 0.35), inset 0 1px 0 rgba(1, 205, 254, 0.3)',
+      '--tab-transition': 'all 0.25s ease'
+    }
+  },
+  auroraGlass: {
+    name: 'Aurora Glass',
+    description: 'Cristal boreal translúcido con gradiente de aurora verde y cian',
+    preview: {
+      background: 'linear-gradient(135deg, rgba(6, 24, 31, 0.85) 0%, rgba(10, 42, 54, 0.85) 100%)',
+      borderRadius: '10px 10px 0 0',
+      border: '1px solid #00ffa3',
+      boxShadow: '0 0 15px rgba(0, 255, 163, 0.35)'
+    },
+    styles: {
+      '--ui-tab-bg': 'rgba(6, 24, 31, 0.75)',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, rgba(10, 42, 54, 0.9) 0%, rgba(6, 24, 31, 0.9) 100%)',
+      '--ui-tab-hover-bg': 'rgba(10, 35, 45, 0.85)',
+      '--ui-tab-text': '#8ffadc',
+      '--ui-tab-active-text': '#00ffa3',
+      '--ui-tab-border': '#00ffa3',
+      '--ui-tab-close-hover': '#00b8ff',
+      '--tab-border-radius': '10px 10px 0 0',
+      '--tab-box-shadow': '0 0 15px rgba(0, 255, 163, 0.3), inset 0 1px 0 rgba(0, 184, 255, 0.3)',
+      '--tab-backdrop-filter': 'blur(10px)',
+      '--tab-transition': 'all 0.25s ease'
+    }
+  },
+  stealthOps: {
+    name: 'Stealth Ops',
+    description: 'Operaciones tácticas oscuras con acento de combate naranja y gris grafito',
+    preview: {
+      background: 'linear-gradient(135deg, #0b0e11 0%, #161c22 100%)',
+      borderRadius: '6px 6px 0 0',
+      border: '1px solid #ff5500',
+      boxShadow: '0 0 12px rgba(255, 85, 0, 0.3)'
+    },
+    styles: {
+      '--ui-tab-bg': '#0b0e11',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, #161c22 0%, #0b0e11 100%)',
+      '--ui-tab-hover-bg': '#12171d',
+      '--ui-tab-text': '#9ca3af',
+      '--ui-tab-active-text': '#ff5500',
+      '--ui-tab-border': '#ff5500',
+      '--ui-tab-close-hover': '#ef4444',
+      '--tab-border-radius': '6px 6px 0 0',
+      '--tab-box-shadow': '0 0 12px rgba(255, 85, 0, 0.25), inset 0 1px 0 rgba(255, 85, 0, 0.2)',
+      '--tab-transition': 'all 0.25s ease'
+    }
+  }
 });
 
 // Storage key para columnas

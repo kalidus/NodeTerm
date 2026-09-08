@@ -1433,7 +1433,160 @@ Object.assign(tabThemes, {
   } },
   hueShift: { styles: {
     '--ui-tab-bg': 'linear-gradient(135deg, #141414 0%, #1f1f1f 100%)', '--ui-tab-active-bg': 'linear-gradient(135deg, #ff9aff 0%, #7ab8ff 50%, #79ffdf 100%)', '--ui-tab-hover-bg': 'linear-gradient(135deg, #1a1a1a 0%, #262626 100%)', '--ui-tab-text': '#e2e2e2', '--ui-tab-active-text': '#0b0b0b', '--ui-tab-border': '#a8bfff', '--ui-tab-close-hover': '#79ffdf', '--tab-border-radius': '8px 8px 0 0', '--tab-box-shadow': '0 0 18px rgba(168, 191, 255, 0.35)', '--tab-transition': 'all 0.25s ease'
-  } }
+  } },
+
+  // Temas Futuristas y Holográficos
+  cyberpunkPro: {
+    name: 'Cyberpunk Pro',
+    styles: {
+      '--ui-tab-bg': '#0b0c10',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, #1f2833 0%, #0b0c10 100%)',
+      '--ui-tab-hover-bg': '#151b23',
+      '--ui-tab-text': '#8a99a8',
+      '--ui-tab-active-text': '#fcee0a',
+      '--ui-tab-border': '#fcee0a',
+      '--ui-tab-close-hover': '#ff003c',
+      '--tab-border-radius': '6px 6px 0 0',
+      '--tab-box-shadow': '0 0 12px rgba(252, 238, 10, 0.25), inset 0 1px 0 rgba(0, 240, 255, 0.3)',
+      '--tab-transition': 'all 0.25s ease'
+    }
+  },
+  holoCyan: {
+    name: 'Hologram Cyan',
+    styles: {
+      '--ui-tab-bg': '#040d1a',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, #071e3d 0%, #040d1a 100%)',
+      '--ui-tab-hover-bg': '#0a1a2e',
+      '--ui-tab-text': '#7debf5',
+      '--ui-tab-active-text': '#00f3ff',
+      '--ui-tab-border': '#00f3ff',
+      '--ui-tab-close-hover': '#ff0055',
+      '--tab-border-radius': '8px 8px 0 0',
+      '--tab-box-shadow': '0 0 14px rgba(0, 243, 255, 0.35), inset 0 1px 0 rgba(0, 243, 255, 0.2)',
+      '--tab-transition': 'all 0.25s ease'
+    }
+  },
+  holoAmber: {
+    name: 'Hologram Amber',
+    styles: {
+      '--ui-tab-bg': '#0f0c05',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, #261b05 0%, #0f0c05 100%)',
+      '--ui-tab-hover-bg': '#1a1408',
+      '--ui-tab-text': '#f5d58e',
+      '--ui-tab-active-text': '#ffb300',
+      '--ui-tab-border': '#ffb300',
+      '--ui-tab-close-hover': '#ff3d00',
+      '--tab-border-radius': '8px 8px 0 0',
+      '--tab-box-shadow': '0 0 14px rgba(255, 179, 0, 0.35), inset 0 1px 0 rgba(255, 179, 0, 0.2)',
+      '--tab-transition': 'all 0.25s ease'
+    }
+  },
+  holoEmerald: {
+    name: 'Hologram Emerald',
+    styles: {
+      '--ui-tab-bg': '#04120a',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, #072615 0%, #04120a 100%)',
+      '--ui-tab-hover-bg': '#081f11',
+      '--ui-tab-text': '#8cf5bf',
+      '--ui-tab-active-text': '#00ff88',
+      '--ui-tab-border': '#00ff88',
+      '--ui-tab-close-hover': '#ff0055',
+      '--tab-border-radius': '8px 8px 0 0',
+      '--tab-box-shadow': '0 0 14px rgba(0, 255, 136, 0.35), inset 0 1px 0 rgba(0, 255, 136, 0.2)',
+      '--tab-transition': 'all 0.25s ease'
+    }
+  },
+  holoCrimson: {
+    name: 'Hologram Crimson',
+    styles: {
+      '--ui-tab-bg': '#120409',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, #2b0815 0%, #120409 100%)',
+      '--ui-tab-hover-bg': '#200710',
+      '--ui-tab-text': '#f58ea9',
+      '--ui-tab-active-text': '#ff0055',
+      '--ui-tab-border': '#ff0055',
+      '--ui-tab-close-hover': '#ffbe0b',
+      '--tab-border-radius': '8px 8px 0 0',
+      '--tab-box-shadow': '0 0 14px rgba(255, 0, 85, 0.35), inset 0 1px 0 rgba(255, 0, 85, 0.2)',
+      '--tab-transition': 'all 0.25s ease'
+    }
+  },
+  holoViolet: {
+    name: 'Hologram Violet',
+    styles: {
+      '--ui-tab-bg': '#0d0414',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, #220935 0%, #0d0414 100%)',
+      '--ui-tab-hover-bg': '#1a0729',
+      '--ui-tab-text': '#dab3f7',
+      '--ui-tab-active-text': '#b537f2',
+      '--ui-tab-border': '#b537f2',
+      '--ui-tab-close-hover': '#ff007f',
+      '--tab-border-radius': '8px 8px 0 0',
+      '--tab-box-shadow': '0 0 14px rgba(181, 55, 242, 0.35), inset 0 1px 0 rgba(181, 55, 242, 0.2)',
+      '--tab-transition': 'all 0.25s ease'
+    }
+  },
+  plasmaCore: {
+    name: 'Plasma Core',
+    styles: {
+      '--ui-tab-bg': '#070312',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, #1a082e 0%, #070312 100%)',
+      '--ui-tab-hover-bg': '#130621',
+      '--ui-tab-text': '#b0ebff',
+      '--ui-tab-active-text': '#00f0ff',
+      '--ui-tab-border': '#bf00ff',
+      '--ui-tab-close-hover': '#bf00ff',
+      '--tab-border-radius': '8px 8px 0 0',
+      '--tab-box-shadow': '0 0 16px rgba(191, 0, 255, 0.35), inset 0 1px 0 rgba(0, 240, 255, 0.3)',
+      '--tab-transition': 'all 0.25s ease'
+    }
+  },
+  synthwave80s: {
+    name: 'Synthwave 80s',
+    styles: {
+      '--ui-tab-bg': '#19092c',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, #2e0854 0%, #19092c 100%)',
+      '--ui-tab-hover-bg': '#250c40',
+      '--ui-tab-text': '#ffabe3',
+      '--ui-tab-active-text': '#01cdfe',
+      '--ui-tab-border': '#ff71ce',
+      '--ui-tab-close-hover': '#ffbe0b',
+      '--tab-border-radius': '8px 8px 0 0',
+      '--tab-box-shadow': '0 0 16px rgba(255, 113, 206, 0.35), inset 0 1px 0 rgba(1, 205, 254, 0.3)',
+      '--tab-transition': 'all 0.25s ease'
+    }
+  },
+  auroraGlass: {
+    name: 'Aurora Glass',
+    styles: {
+      '--ui-tab-bg': 'rgba(6, 24, 31, 0.75)',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, rgba(10, 42, 54, 0.9) 0%, rgba(6, 24, 31, 0.9) 100%)',
+      '--ui-tab-hover-bg': 'rgba(10, 35, 45, 0.85)',
+      '--ui-tab-text': '#8ffadc',
+      '--ui-tab-active-text': '#00ffa3',
+      '--ui-tab-border': '#00ffa3',
+      '--ui-tab-close-hover': '#00b8ff',
+      '--tab-border-radius': '10px 10px 0 0',
+      '--tab-box-shadow': '0 0 15px rgba(0, 255, 163, 0.3), inset 0 1px 0 rgba(0, 184, 255, 0.3)',
+      '--tab-backdrop-filter': 'blur(10px)',
+      '--tab-transition': 'all 0.25s ease'
+    }
+  },
+  stealthOps: {
+    name: 'Stealth Ops',
+    styles: {
+      '--ui-tab-bg': '#0b0e11',
+      '--ui-tab-active-bg': 'linear-gradient(135deg, #161c22 0%, #0b0e11 100%)',
+      '--ui-tab-hover-bg': '#12171d',
+      '--ui-tab-text': '#9ca3af',
+      '--ui-tab-active-text': '#ff5500',
+      '--ui-tab-border': '#ff5500',
+      '--ui-tab-close-hover': '#ef4444',
+      '--tab-border-radius': '6px 6px 0 0',
+      '--tab-box-shadow': '0 0 12px rgba(255, 85, 0, 0.25), inset 0 1px 0 rgba(255, 85, 0, 0.2)',
+      '--tab-transition': 'all 0.25s ease'
+    }
+  }
 });
 
 // Lista de temas para el selector rápido (id + nombre + preview para mostrar)
