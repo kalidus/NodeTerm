@@ -325,6 +325,7 @@ const ConnectionHistory = ({
 	onBringToFront = null,
 	onClosePanel = null,
 	onToggleMaximizePanel = null,
+	onToggleMinimizePanel = null,
 	onTogglePanelVisibility = null,
 	snapToGrid = true,
 	smartSnap = true,
@@ -3080,8 +3081,10 @@ const ConnectionHistory = ({
 				}
 				.top-terminal-header .traffic-dot.red { background: #ff5f56; border: 1px solid #e0443e; cursor: pointer; transition: filter 0.15s; }
 				.top-terminal-header .traffic-dot.red:hover { filter: brightness(1.25); }
-				.top-terminal-header .traffic-dot.yellow { background: #ffbd2e; border: 1px solid #dea123; }
-				.top-terminal-header .traffic-dot.green { background: #27c93f; border: 1px solid #1aab29; }
+				.top-terminal-header .traffic-dot.yellow { background: #ffbd2e; border: 1px solid #dea123; cursor: pointer; transition: filter 0.15s; }
+				.top-terminal-header .traffic-dot.yellow:hover { filter: brightness(1.25); }
+				.top-terminal-header .traffic-dot.green { background: #27c93f; border: 1px solid #1aab29; cursor: pointer; transition: filter 0.15s; }
+				.top-terminal-header .traffic-dot.green:hover { filter: brightness(1.25); }
 				.top-terminal-header .header-path {
 					position: absolute;
 					left: 50%;
@@ -3187,8 +3190,10 @@ const ConnectionHistory = ({
 				}
 				.recents-terminal-header .traffic-dot.red { background: #ff5f56; border: 1px solid #e0443e; cursor: pointer; transition: filter 0.15s; }
 				.recents-terminal-header .traffic-dot.red:hover { filter: brightness(1.25); }
-				.recents-terminal-header .traffic-dot.yellow { background: #ffbd2e; border: 1px solid #dea123; }
-				.recents-terminal-header .traffic-dot.green { background: #27c93f; border: 1px solid #1aab29; }
+				.recents-terminal-header .traffic-dot.yellow { background: #ffbd2e; border: 1px solid #dea123; cursor: pointer; transition: filter 0.15s; }
+				.recents-terminal-header .traffic-dot.yellow:hover { filter: brightness(1.25); }
+				.recents-terminal-header .traffic-dot.green { background: #27c93f; border: 1px solid #1aab29; cursor: pointer; transition: filter 0.15s; }
+				.recents-terminal-header .traffic-dot.green:hover { filter: brightness(1.25); }
 				.recents-terminal-header .header-path {
 					flex: 1;
 					text-align: center;
@@ -4554,6 +4559,7 @@ const ConnectionHistory = ({
 							onBringToFront={onBringToFront}
 							onClose={() => (onClosePanel ? onClosePanel('search') : onTogglePanelVisibility?.('search', false))}
 							onToggleMaximize={() => (onToggleMaximizePanel ? onToggleMaximizePanel('search') : null)}
+							onToggleMinimize={() => (onToggleMinimizePanel ? onToggleMinimizePanel('search') : null)}
 							terminalFrameStyle={terminalFrameStyle}
 							snapToGrid={snapToGrid}
 							smartSnap={smartSnap}
@@ -4586,6 +4592,7 @@ const ConnectionHistory = ({
 								if (onToggleMaximizePanel) onToggleMaximizePanel('terminal');
 								else if (onToggleLocalTerminalMaximized) onToggleLocalTerminalMaximized();
 							}}
+							onToggleMinimize={() => (onToggleMinimizePanel ? onToggleMinimizePanel('terminal') : null)}
 							terminalFrameStyle={terminalFrameStyle}
 							snapToGrid={snapToGrid}
 							smartSnap={smartSnap}
@@ -4686,6 +4693,7 @@ const ConnectionHistory = ({
 							onBringToFront={onBringToFront}
 							onClose={() => (onClosePanel ? onClosePanel('recents') : onTogglePanelVisibility?.('recents', false))}
 							onToggleMaximize={() => (onToggleMaximizePanel ? onToggleMaximizePanel('recents') : null)}
+							onToggleMinimize={() => (onToggleMinimizePanel ? onToggleMinimizePanel('recents') : null)}
 							terminalFrameStyle={terminalFrameStyle}
 							snapToGrid={snapToGrid}
 							smartSnap={smartSnap}
@@ -4745,6 +4753,7 @@ const ConnectionHistory = ({
 							onBringToFront={onBringToFront}
 							onClose={() => (onClosePanel ? onClosePanel('favorites') : onTogglePanelVisibility?.('favorites', false))}
 							onToggleMaximize={() => (onToggleMaximizePanel ? onToggleMaximizePanel('favorites') : null)}
+							onToggleMinimize={() => (onToggleMinimizePanel ? onToggleMinimizePanel('favorites') : null)}
 							terminalFrameStyle={terminalFrameStyle}
 							snapToGrid={snapToGrid}
 							smartSnap={smartSnap}
@@ -4804,6 +4813,7 @@ const ConnectionHistory = ({
 							onBringToFront={onBringToFront}
 							onClose={() => (onClosePanel ? onClosePanel('quickbar') : onTogglePanelVisibility?.('quickbar', false))}
 							onToggleMaximize={() => (onToggleMaximizePanel ? onToggleMaximizePanel('quickbar') : null)}
+							onToggleMinimize={() => (onToggleMinimizePanel ? onToggleMinimizePanel('quickbar') : null)}
 							terminalFrameStyle={terminalFrameStyle}
 							snapToGrid={snapToGrid}
 							smartSnap={smartSnap}
@@ -4836,6 +4846,7 @@ const ConnectionHistory = ({
 							onBringToFront={onBringToFront}
 							onClose={() => (onClosePanel ? onClosePanel('sysmon') : onTogglePanelVisibility?.('sysmon', false))}
 							onToggleMaximize={() => (onToggleMaximizePanel ? onToggleMaximizePanel('sysmon') : null)}
+							onToggleMinimize={() => (onToggleMinimizePanel ? onToggleMinimizePanel('sysmon') : null)}
 							terminalFrameStyle={terminalFrameStyle}
 							snapToGrid={snapToGrid}
 							smartSnap={smartSnap}
@@ -4861,83 +4872,16 @@ const ConnectionHistory = ({
 					<div className="hero-splash-header" style={{ paddingBottom: '8px' }}>
 						{homeCardVisible && (
 							<div className={`top-terminal-frame ${terminalFrameStyle}`}>
-								<div className="top-terminal-header">
-									<div className="traffic-lights">
-										{terminalFrameStyle === 'macos' ? (
-											<>
-												<div className="traffic-dot red" />
-												<div className="traffic-dot yellow" />
-												<div className="traffic-dot green" />
-											</>
-										) : terminalFrameStyle === 'gnome' ? (
-											<div className="gnome-controls" style={{ marginLeft: '-8px' }}>
-												<div className="gnome-dot close" title="Cerrar"><i className="pi pi-times" /></div>
-											</div>
-										) : terminalFrameStyle === 'kde' ? (
-											<div className="kde-controls" style={{ marginLeft: '-8px' }}>
-												<div className="kde-dot minimize" title="Minimizar"><div className="custom-icon icon-min" /></div>
-												<div className="kde-dot maximize" title="Maximizar"><div className="custom-icon icon-max" /></div>
-												<div className="kde-dot close" title="Cerrar"><div className="custom-icon icon-close" /></div>
-											</div>
-										) : terminalFrameStyle === 'windows' ? (
-											<div className="windows-controls" style={{ marginLeft: '-8px' }}>
-												<div className="win-dot minimize" title="Minimizar"><div className="custom-icon icon-min" /></div>
-												<div className="win-dot maximize" title="Maximizar"><div className="custom-icon icon-max" /></div>
-												<div className="win-dot close" title="Cerrar"><div className="custom-icon icon-close" /></div>
-											</div>
-										) : terminalFrameStyle === 'matcha' ? (
-											<div className="matcha-controls" style={{ marginLeft: '-8px' }}>
-												<div className="matcha-dot"><i className="pi pi-times" /></div>
-											</div>
-										) : terminalFrameStyle === 'futuristic' ? (
-											<div className="futuristic-controls" style={{ marginLeft: '-8px' }}>
-												<div className="cyber-dot"><i className="pi pi-times" /></div>
-											</div>
-										) : terminalFrameStyle === 'modern' ? (
-											<div className="modern-controls" style={{ marginLeft: '-8px' }}>
-												<div className="glass-dot"><i className="pi pi-times" /></div>
-											</div>
-										) : terminalFrameStyle === 'cyberpunk-pro' ? (
-											<div className="cyberpunk-pro-controls" style={{ marginLeft: '-8px' }}>
-												<span className="cyber-pro-tag">SYS</span>
-												<div className="cyber-pro-btn close" title="Cerrar"><i className="pi pi-times" /></div>
-											</div>
-										) : ['hologram', 'holo-amber', 'holo-emerald', 'holo-crimson', 'holo-violet', 'plasma-cyan'].includes(terminalFrameStyle) ? (
-											<div className={terminalFrameStyle === 'hologram' ? 'hologram-controls' : `${terminalFrameStyle}-controls`} style={{ marginLeft: '-8px' }}>
-												<div className="holo-btn close" title="Cerrar"><i className="pi pi-times" /></div>
-											</div>
-										) : terminalFrameStyle === 'synthwave' ? (
-											<div className="synthwave-controls" style={{ marginLeft: '-8px' }}>
-												<div className="synth-dot close" title="Cerrar" />
-												<div className="synth-dot max" />
-												<div className="synth-dot min" />
-											</div>
-										) : terminalFrameStyle === 'matrix' ? (
-											<div className="matrix-controls" style={{ marginLeft: '-8px' }}>
-												<div className="matrix-btn close" title="Cerrar">[11]</div>
-											</div>
-										) : terminalFrameStyle === 'aurora-glass' ? (
-											<div className="aurora-controls" style={{ marginLeft: '-8px' }}>
-												<div className="aurora-pill close" title="Cerrar"><i className="pi pi-times" /></div>
-											</div>
-										) : terminalFrameStyle === 'stealth' ? (
-											<div className="stealth-controls" style={{ marginLeft: '-8px' }}>
-												<div className="stealth-btn close" title="Cerrar"><i className="pi pi-times" /></div>
-											</div>
-										) : terminalFrameStyle === 'frameless' ? (
-											<div className="traffic-lights" style={{ marginLeft: '-8px' }}>
-												<div className="traffic-dot red" />
-												<div className="traffic-dot yellow" />
-												<div className="traffic-dot green" />
-											</div>
-										) : terminalFrameStyle === 'minimal' ? (
-											<div className="minimal-controls" style={{ marginLeft: '-8px' }} />
-										) : (
-											<div className="retro-controls" style={{ marginLeft: '-8px' }}>
-												<div className="retro-switch on" />
-											</div>
-										)}
-									</div>
+								<div className="top-terminal-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+									{terminalFrameStyle === 'macos' ? (
+										<div className="traffic-lights">
+											<div className="traffic-dot red" onClick={() => onTogglePanelVisibility?.('search', false)} title="Cerrar" />
+											<div className="traffic-dot yellow" onClick={() => onToggleMinimizePanel?.('search')} title="Minimizar" />
+											<div className="traffic-dot green" onClick={() => onToggleMaximizePanel?.('search')} title="Maximizar" />
+										</div>
+									) : (
+										<div style={{ width: '12px' }} />
+									)}
 									<div className="header-path">
 										<span style={{ fontWeight: 'bold' }}>
 											<span className="path-tilde">~</span>/home
@@ -4945,6 +4889,100 @@ const ConnectionHistory = ({
 										<span style={{ opacity: 0.5 }}>·</span>
 										<span style={{ opacity: 0.9 }}>{activeViewName}</span>
 									</div>
+									{terminalFrameStyle !== 'macos' ? (
+										<div className="traffic-lights" style={{ marginLeft: 'auto' }}>
+											{terminalFrameStyle === 'gnome' ? (
+												<div className="gnome-controls" style={{ display: 'flex', gap: '4px' }}>
+													<div className="gnome-dot minimize" title="Minimizar" onClick={() => onToggleMinimizePanel?.('search')}><i className="pi pi-minus" style={{ fontSize: '8px' }} /></div>
+													<div className="gnome-dot maximize" title="Maximizar" onClick={() => onToggleMaximizePanel?.('search')}><i className="pi pi-stop" style={{ fontSize: '8px' }} /></div>
+													<div className="gnome-dot close" title="Cerrar" onClick={() => onTogglePanelVisibility?.('search', false)}><i className="pi pi-times" /></div>
+												</div>
+											) : terminalFrameStyle === 'kde' ? (
+												<div className="kde-controls" style={{ display: 'flex', gap: '2px' }}>
+													<div className="kde-dot minimize" title="Minimizar" onClick={() => onToggleMinimizePanel?.('search')}><div className="custom-icon icon-min" /></div>
+													<div className="kde-dot maximize" title="Maximizar" onClick={() => onToggleMaximizePanel?.('search')}><div className="custom-icon icon-max" /></div>
+													<div className="kde-dot close" title="Cerrar" onClick={() => onTogglePanelVisibility?.('search', false)}><div className="custom-icon icon-close" /></div>
+												</div>
+											) : terminalFrameStyle === 'windows' ? (
+												<div className="windows-controls" style={{ display: 'flex' }}>
+													<div className="win-dot minimize" title="Minimizar" onClick={() => onToggleMinimizePanel?.('search')}><div className="custom-icon icon-min" /></div>
+													<div className="win-dot maximize" title="Maximizar" onClick={() => onToggleMaximizePanel?.('search')}><div className="custom-icon icon-max" /></div>
+													<div className="win-dot close" title="Cerrar" onClick={() => onTogglePanelVisibility?.('search', false)}><div className="custom-icon icon-close" /></div>
+												</div>
+											) : terminalFrameStyle === 'matcha' ? (
+												<div className="matcha-controls" style={{ display: 'flex', gap: '4px' }}>
+													<div className="matcha-dot minimize" onClick={() => onToggleMinimizePanel?.('search')} title="Minimizar"><i className="pi pi-minus" style={{ fontSize: '9px' }} /></div>
+													<div className="matcha-dot maximize" onClick={() => onToggleMaximizePanel?.('search')} title="Maximizar"><i className="pi pi-stop" style={{ fontSize: '9px' }} /></div>
+													<div className="matcha-dot close" onClick={() => onTogglePanelVisibility?.('search', false)} title="Cerrar"><i className="pi pi-times" /></div>
+												</div>
+											) : terminalFrameStyle === 'futuristic' ? (
+												<div className="futuristic-controls" style={{ display: 'flex', gap: '6px' }}>
+													<div className="cyber-dot minimize" title="Minimizar" onClick={() => onToggleMinimizePanel?.('search')}>MIN</div>
+													<div className="cyber-dot maximize" title="Maximizar" onClick={() => onToggleMaximizePanel?.('search')}>MAX</div>
+													<div className="cyber-dot close" title="Cerrar" onClick={() => onTogglePanelVisibility?.('search', false)}>EXE</div>
+												</div>
+											) : terminalFrameStyle === 'modern' ? (
+												<div className="modern-controls" style={{ display: 'flex', gap: '5px' }}>
+													<div className="glass-dot minimize" title="Minimizar" onClick={() => onToggleMinimizePanel?.('search')}><i className="pi pi-minus" style={{ fontSize: '9px' }} /></div>
+													<div className="glass-dot maximize" title="Maximizar" onClick={() => onToggleMaximizePanel?.('search')}><i className="pi pi-stop" style={{ fontSize: '9px' }} /></div>
+													<div className="glass-dot close" title="Cerrar" onClick={() => onTogglePanelVisibility?.('search', false)}><i className="pi pi-times" /></div>
+												</div>
+											) : terminalFrameStyle === 'cyberpunk-pro' ? (
+												<div className="cyberpunk-pro-controls" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+													<span className="cyber-pro-tag">SYS</span>
+													<div className="cyber-pro-btn minimize" title="Minimizar" onClick={() => onToggleMinimizePanel?.('search')}>_</div>
+													<div className="cyber-pro-btn maximize" title="Maximizar" onClick={() => onToggleMaximizePanel?.('search')}>⬡</div>
+													<div className="cyber-pro-btn close" title="Cerrar" onClick={() => onTogglePanelVisibility?.('search', false)}><i className="pi pi-times" /></div>
+												</div>
+											) : ['hologram', 'holo-amber', 'holo-emerald', 'holo-crimson', 'holo-violet', 'plasma-cyan'].includes(terminalFrameStyle) ? (
+												<div className={terminalFrameStyle === 'hologram' ? 'hologram-controls' : `${terminalFrameStyle}-controls`} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+													<div className="holo-btn minimize" title="Minimizar" onClick={() => onToggleMinimizePanel?.('search')}>─</div>
+													<div className="holo-btn maximize" title="Maximizar" onClick={() => onToggleMaximizePanel?.('search')}>◈</div>
+													<div className="holo-btn close" title="Cerrar" onClick={() => onTogglePanelVisibility?.('search', false)}><i className="pi pi-times" /></div>
+												</div>
+											) : terminalFrameStyle === 'synthwave' ? (
+												<div className="synthwave-controls" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+													<div className="synth-dot min" title="Minimizar" onClick={() => onToggleMinimizePanel?.('search')} />
+													<div className="synth-dot max" title="Maximizar" onClick={() => onToggleMaximizePanel?.('search')} />
+													<div className="synth-dot close" title="Cerrar" onClick={() => onTogglePanelVisibility?.('search', false)} />
+												</div>
+											) : terminalFrameStyle === 'matrix' ? (
+												<div className="matrix-controls" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+													<div className="matrix-btn minimize" title="Minimizar" onClick={() => onToggleMinimizePanel?.('search')}>[01]</div>
+													<div className="matrix-btn maximize" title="Maximizar" onClick={() => onToggleMaximizePanel?.('search')}>[10]</div>
+													<div className="matrix-btn close" title="Cerrar" onClick={() => onTogglePanelVisibility?.('search', false)}>[11]</div>
+												</div>
+											) : terminalFrameStyle === 'aurora-glass' ? (
+												<div className="aurora-controls" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+													<div className="aurora-pill minimize" title="Minimizar" onClick={() => onToggleMinimizePanel?.('search')}><i className="pi pi-minus" style={{ fontSize: '9px' }} /></div>
+													<div className="aurora-pill maximize" title="Maximizar" onClick={() => onToggleMaximizePanel?.('search')}><i className="pi pi-stop" style={{ fontSize: '9px' }} /></div>
+													<div className="aurora-pill close" title="Cerrar" onClick={() => onTogglePanelVisibility?.('search', false)}><i className="pi pi-times" /></div>
+												</div>
+											) : terminalFrameStyle === 'stealth' ? (
+												<div className="stealth-controls" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+													<div className="stealth-btn minimize" title="Minimizar" onClick={() => onToggleMinimizePanel?.('search')}>—</div>
+													<div className="stealth-btn maximize" title="Maximizar" onClick={() => onToggleMaximizePanel?.('search')}>□</div>
+													<div className="stealth-btn close" title="Cerrar" onClick={() => onTogglePanelVisibility?.('search', false)}>✕</div>
+												</div>
+											) : terminalFrameStyle === 'frameless' ? (
+												<div className="traffic-lights" style={{ display: 'flex', gap: '6px' }}>
+													<div className="traffic-dot red" onClick={() => onTogglePanelVisibility?.('search', false)} title="Cerrar" />
+													<div className="traffic-dot yellow" onClick={() => onToggleMinimizePanel?.('search')} title="Minimizar" />
+													<div className="traffic-dot green" onClick={() => onToggleMaximizePanel?.('search')} title="Maximizar" />
+												</div>
+											) : terminalFrameStyle === 'minimal' ? (
+												<div className="minimal-controls" />
+											) : (
+												<div className="retro-controls" style={{ display: 'flex', gap: '6px' }}>
+													<div className="retro-switch minimize" title="MIN" onClick={() => onToggleMinimizePanel?.('search')} />
+													<div className="retro-switch maximize" title="MAX" onClick={() => onToggleMaximizePanel?.('search')} />
+													<div className="retro-switch on" title="OFF" onClick={() => onTogglePanelVisibility?.('search', false)} />
+												</div>
+											)}
+										</div>
+									) : (
+										<div style={{ width: '12px' }} />
+									)}
 								</div>
 								{renderSearchCardBody()}
 							</div>

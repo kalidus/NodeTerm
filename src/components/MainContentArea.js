@@ -169,6 +169,86 @@ const MainContentArea = ({
     setSidebarFilter('');
   }, [setSidebarFilter]);
 
+  // Estado y controladores para los botones de ventana del marco superior
+  const [isWindowMaximized, setIsWindowMaximized] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    const checkMaximized = async () => {
+      try {
+        if (window.electronAPI?.isMaximized) {
+          const maximized = await window.electronAPI.isMaximized();
+          if (isMounted) {
+            setIsWindowMaximized(Boolean(maximized));
+          }
+        }
+      } catch {
+        // Ignorar
+      }
+    };
+
+    checkMaximized();
+
+    const handleResize = () => {
+      checkMaximized();
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  const handleWindowMinimize = useCallback(() => {
+    try {
+      if (window.electronAPI?.minimize) {
+        window.electronAPI.minimize();
+      }
+    } catch (e) {
+      console.error('Error minimizing window:', e);
+    }
+  }, []);
+
+  const handleWindowMaximizeRestore = useCallback(async () => {
+    try {
+      if (window.electronAPI) {
+        const currentlyMaximized = window.electronAPI.isMaximized
+          ? await window.electronAPI.isMaximized()
+          : isWindowMaximized;
+        if (currentlyMaximized) {
+          window.electronAPI.unmaximize && (await window.electronAPI.unmaximize());
+          setIsWindowMaximized(false);
+        } else {
+          window.electronAPI.maximize && (await window.electronAPI.maximize());
+          setIsWindowMaximized(true);
+        }
+      } else {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen?.();
+          setIsWindowMaximized(true);
+        } else {
+          document.exitFullscreen?.();
+          setIsWindowMaximized(false);
+        }
+      }
+    } catch (e) {
+      console.error('Error toggling window maximize:', e);
+    }
+  }, [isWindowMaximized]);
+
+  const handleWindowClose = useCallback(() => {
+    try {
+      if (window.electronAPI?.close) {
+        window.electronAPI.close();
+      } else {
+        window.close();
+      }
+    } catch (e) {
+      console.error('Error closing window:', e);
+    }
+  }, []);
+
   // Estado para el panel SSH System Monitor
   const [sshSystemMonitorTabId, setSshSystemMonitorTabId] = useState(null);
 
@@ -2947,9 +3027,13 @@ const MainContentArea = ({
           <TerminalFrame
             className={`main-content-frame ${mainFrameHeaderCollapsed ? 'main-content-frame--header-collapsed' : ''}`}
             contentClassName="main-content-frame-content"
-            isDraggable={titleBarCollapsed || isMinimalMode}
+            isDraggable={true}
             hideHeader={mainFrameHeaderCollapsed || isMinimalMode}
             showFloatingHeaderExtra={false}
+            isMaximized={isWindowMaximized}
+            onMinimize={handleWindowMinimize}
+            onMaximize={handleWindowMaximizeRestore}
+            onClose={handleWindowClose}
             title={
               <div
                 className="main-content-frame-title"
@@ -2960,28 +3044,30 @@ const MainContentArea = ({
                   gap: '8px',
                   width: '100%',
                   pointerEvents: 'auto',
-                  WebkitAppRegion: 'no-drag',
+                  WebkitAppRegion: frameSearchOpen ? 'no-drag' : 'drag',
                 }}
               >
                 {frameSearchOpen ? (
-                  <ConnectionSearchBar
-                    variant="main-frame"
-                    sidebarFilter={sidebarFilter}
-                    setSidebarFilter={setSidebarFilter}
-                    allNodes={allNodes}
-                    findAllConnections={findAllConnections}
-                    onOpenSSHConnection={onOpenSSHConnection}
-                    onOpenRdpConnection={onOpenRdpConnection}
-                    onOpenVncConnection={onOpenVncConnection}
-                    openEditSSHDialog={openEditSSHDialog}
-                    openEditRdpDialog={openEditRdpDialog}
-                    expandedKeys={expandedKeys}
-                    masterKey={masterKey}
-                    secureStorage={secureStorage}
-                    iconTheme={iconTheme}
-                    autoFocus
-                    onRequestClose={handleFrameSearchClose}
-                  />
+                  <div style={{ WebkitAppRegion: 'no-drag', width: '100%', display: 'flex', justifyContent: 'center' }}>
+                    <ConnectionSearchBar
+                      variant="main-frame"
+                      sidebarFilter={sidebarFilter}
+                      setSidebarFilter={setSidebarFilter}
+                      allNodes={allNodes}
+                      findAllConnections={findAllConnections}
+                      onOpenSSHConnection={onOpenSSHConnection}
+                      onOpenRdpConnection={onOpenRdpConnection}
+                      onOpenVncConnection={onOpenVncConnection}
+                      openEditSSHDialog={openEditSSHDialog}
+                      openEditRdpDialog={openEditRdpDialog}
+                      expandedKeys={expandedKeys}
+                      masterKey={masterKey}
+                      secureStorage={secureStorage}
+                      iconTheme={iconTheme}
+                      autoFocus
+                      onRequestClose={handleFrameSearchClose}
+                    />
+                  </div>
                 ) : (
                   <>
                     <span style={{ fontWeight: 'bold', color: 'var(--ui-titlebar-text, #fff)' }}>NodeTerm</span>
@@ -3006,6 +3092,7 @@ const MainContentArea = ({
                         color: 'var(--ui-sidebar-text, #a9b1d6)',
                         cursor: 'pointer',
                         transition: 'background 0.2s ease, color 0.2s ease',
+                        WebkitAppRegion: 'no-drag',
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.background = 'rgba(255,255,255,0.08)';

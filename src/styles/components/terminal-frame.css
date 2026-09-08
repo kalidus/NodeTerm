@@ -57,6 +57,13 @@
     height: 12px;
     border-radius: 50%;
     opacity: 0.8;
+    cursor: pointer;
+    transition: opacity 0.15s ease, filter 0.15s ease;
+}
+
+.terminal-frame-dot:hover {
+    opacity: 1;
+    filter: brightness(1.25);
 }
 
 .terminal-frame-dot.theme {

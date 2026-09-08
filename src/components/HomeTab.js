@@ -42,29 +42,29 @@ import {
 const HOME_TERMINAL_FRAME_STYLE_OPTIONS = [
   // Clásicos & OS
   { id: 'macos', label: 'macOS (Traffic)', dots: ['#ff5f56', '#ffbd2e', '#27c93f'] },
-  { id: 'gnome', label: 'GNOME (Adwaita)', icon: 'pi pi-times', right: true },
+  { id: 'gnome', label: 'GNOME (Adwaita)', icons: ['pi-minus', 'pi-stop', 'pi-times'], right: true },
   { id: 'kde', label: 'KDE (Breeze)', icons: ['pi-minus', 'pi-stop', 'pi-times'], right: true },
   { id: 'windows', label: 'Windows (WinUI)', icons: ['pi-minus', 'pi-stop', 'pi-times'], right: true },
   // Minimalistas
   { id: 'frameless', label: 'Sin marco (Solo Terminal)', frameless: true, text: '∅' },
   { id: 'minimal', label: 'Minimal (Sin botones)', noButtons: true },
-  { id: 'matcha', label: 'Matcha (Green)', line: '#2eb398', icons: ['pi-times'], right: true },
+  { id: 'matcha', label: 'Matcha (Green)', line: '#2eb398', icons: ['pi-minus', 'pi-stop', 'pi-times'], right: true },
   // Futuristas & Cyberpunk
-  { id: 'cyberpunk-pro', label: 'Cyberpunk Pro (Arasaka)', color: '#fcee0a', tag: 'SYS', cyberBorder: true },
-  { id: 'hologram', label: 'Holográfico (Sci-Fi Cyan)', color: '#00e5ff', hud: true },
-  { id: 'holo-amber', label: 'Holográfico Ámbar (Deus Ex)', color: '#ffb000', hud: true },
-  { id: 'holo-emerald', label: 'Holográfico Esmeralda (Radar)', color: '#00ff88', hud: true },
-  { id: 'holo-crimson', label: 'Holográfico Carmesí (Red Alert)', color: '#ff0055', hud: true },
-  { id: 'holo-violet', label: 'Holográfico Violeta (Quantum)', color: '#a855f7', hud: true },
-  { id: 'plasma-cyan', label: 'Plasma Fusión (Core HUD)', color: '#00f2ff', hud: true, plasma: true },
-  { id: 'matrix', label: 'Matrix (Digital Rain)', color: '#00ff66', text: '[01]' },
-  { id: 'futuristic', label: 'Futurista (Cyber)', color: '#00f2ff', text: 'EXE' },
+  { id: 'cyberpunk-pro', label: 'Cyberpunk Pro (Arasaka)', color: '#fcee0a', tag: 'SYS', cyberBorder: true, right: true },
+  { id: 'hologram', label: 'Holográfico (Sci-Fi Cyan)', color: '#00e5ff', hud: true, right: true },
+  { id: 'holo-amber', label: 'Holográfico Ámbar (Deus Ex)', color: '#ffb000', hud: true, right: true },
+  { id: 'holo-emerald', label: 'Holográfico Esmeralda (Radar)', color: '#00ff88', hud: true, right: true },
+  { id: 'holo-crimson', label: 'Holográfico Carmesí (Red Alert)', color: '#ff0055', hud: true, right: true },
+  { id: 'holo-violet', label: 'Holográfico Violeta (Quantum)', color: '#a855f7', hud: true, right: true },
+  { id: 'plasma-cyan', label: 'Plasma Fusión (Core HUD)', color: '#00f2ff', hud: true, plasma: true, right: true },
+  { id: 'matrix', label: 'Matrix (Digital Rain)', color: '#00ff66', matrix: true, right: true },
+  { id: 'futuristic', label: 'Futurista (Cyber)', color: '#00f2ff', futuristic: true, right: true },
   // Modernos & Efectos
-  { id: 'aurora-glass', label: 'Aurora Glass (Liquid)', rounded: true, color: '#93c5fd', aurora: true },
-  { id: 'modern', label: 'Moderno (Glass)', rounded: true, icons: ['pi-times'], right: true },
-  { id: 'synthwave', label: 'Synthwave (Neon 80s)', synthwave: true, dots: ['#ec4899', '#8b5cf6', '#06b6d4'] },
-  { id: 'stealth', label: 'Stealth Ops (Matte)', color: '#ff6b00', stealth: true, text: '—' },
-  { id: 'retro', label: 'Retro (CRT)', color: '#0f0', switch: true }
+  { id: 'aurora-glass', label: 'Aurora Glass (Liquid)', rounded: true, color: '#93c5fd', aurora: true, right: true },
+  { id: 'modern', label: 'Moderno (Glass)', rounded: true, icons: ['pi-minus', 'pi-stop', 'pi-times'], right: true },
+  { id: 'synthwave', label: 'Synthwave (Neon 80s)', synthwave: true, dots: ['#06b6d4', '#8b5cf6', '#ec4899'], right: true },
+  { id: 'stealth', label: 'Stealth Ops (Matte)', color: '#ff6b00', stealth: true, right: true },
+  { id: 'retro', label: 'Retro (CRT)', color: '#0f0', switch: true, right: true }
 ];
 
 const computeDefaultPanelsLayout = (cWidth = (typeof window !== 'undefined' ? window.innerWidth : 1200), cHeight = (typeof window !== 'undefined' ? window.innerHeight : 800)) => {
@@ -943,24 +943,30 @@ const HomeTab = ({
           width: current.originalBounds.width,
           height: current.originalBounds.height,
           isMaximized: false,
+          isMinimized: false,
           originalBounds: null
         };
       } else {
-        // Ampliar ocupando el trozo disponible sin sobreponerse a otros paneles
-        const expanded = computeExpandedPanelBounds(panelId, prev, bounds);
+        // Si estaba minimizado, restaurar altura original previa antes de calcular expansión
+        const effectiveHeight = current.isMinimized ? (current.preMinimizedHeight || 280) : current.height;
+        const basePanel = { ...current, height: effectiveHeight, isMinimized: false };
+        const stateForCalc = { ...prev, [panelId]: basePanel };
+        const expanded = computeExpandedPanelBounds(panelId, stateForCalc, bounds);
         nextPanel = {
           ...current,
           originalBounds: {
             x: current.x,
             y: current.y,
             width: current.width,
-            height: current.height
+            height: effectiveHeight
           },
           x: expanded.x,
           y: expanded.y,
           width: expanded.width,
           height: expanded.height,
-          isMaximized: true
+          isMaximized: true,
+          isMinimized: false,
+          preMinimizedHeight: undefined
         };
       }
 
@@ -975,6 +981,60 @@ const HomeTab = ({
       return next;
     });
   }, [containerWidth, containerHeight, savePanelsLayoutDebounced]);
+
+  const handleToggleMinimizePanel = useCallback((panelId) => {
+    setPanelsLayout((prev) => {
+      const current = prev[panelId];
+      if (!current) return prev;
+
+      let nextPanel;
+      if (current.isMinimized) {
+        // Restaurar altura original previa
+        nextPanel = {
+          ...current,
+          height: current.preMinimizedHeight || (panelId === 'search' ? 126 : (panelId === 'terminal' ? 240 : 280)),
+          isMinimized: false,
+          preMinimizedHeight: undefined
+        };
+      } else {
+        // Si estaba maximizado, restaurar primero sus dimensiones base
+        const baseHeight = current.isMaximized && current.originalBounds
+          ? current.originalBounds.height
+          : current.height;
+        const baseX = current.isMaximized && current.originalBounds
+          ? current.originalBounds.x
+          : current.x;
+        const baseY = current.isMaximized && current.originalBounds
+          ? current.originalBounds.y
+          : current.y;
+        const baseWidth = current.isMaximized && current.originalBounds
+          ? current.originalBounds.width
+          : current.width;
+
+        nextPanel = {
+          ...current,
+          x: baseX,
+          y: baseY,
+          width: baseWidth,
+          preMinimizedHeight: baseHeight,
+          height: 36,
+          isMinimized: true,
+          isMaximized: false,
+          originalBounds: null
+        };
+      }
+
+      const next = {
+        ...prev,
+        [panelId]: nextPanel
+      };
+      savePanelsLayoutDebounced(next);
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+      }, 50);
+      return next;
+    });
+  }, [savePanelsLayoutDebounced]);
 
   const handleResetLayout = useCallback(() => {
     const fresh = computeDefaultPanelsLayout(containerWidth, containerHeight);
@@ -2812,31 +2872,77 @@ const HomeTab = ({
                     boxShadow: style.hud ? `0 0 6px ${style.color || 'rgba(0,229,255,0.4)'}` : (style.synthwave ? '0 0 6px rgba(217,70,239,0.5)' : undefined)
                   }}
                 >
-                  {style.noButtons ? null : style.dots ? (
-                    <div style={{ display: 'flex', gap: '3px' }}>
-                      {style.dots.map((c, i) => (
-                        <div key={i} className="frame-preview-dot" style={{ background: c, boxShadow: style.synthwave ? `0 0 3px ${c}` : undefined }} />
-                      ))}
-                    </div>
-                  ) : style.switch ? (
-                    <div className="frame-preview-dot" style={{ background: '#0f0', boxShadow: '0 0 4px #0f0' }} />
-                  ) : style.hud ? (
-                    <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
-                      <span style={{ fontSize: '7px', color: style.color || '#00e5ff', lineHeight: 1 }}>◈</span>
-                      <span style={{ fontSize: '6px', color: style.color || '#00e5ff', lineHeight: 1 }}>✕</span>
-                    </div>
-                  ) : style.tag ? (
-                    <span style={{ fontSize: '6px', color: '#000', background: style.color, padding: '0 2px', borderRadius: '1px', fontWeight: 'bold' }}>{style.tag}</span>
-                  ) : style.text ? (
-                    <span style={{ fontSize: '6px', color: style.color || '#fff', fontWeight: 'bold', fontFamily: 'monospace' }}>{style.text}</span>
+                  {style.id === 'macos' ? (
+                    <>
+                      <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
+                        {style.dots.map((c, i) => (
+                          <div key={i} className="frame-preview-dot" style={{ background: c }} />
+                        ))}
+                      </div>
+                      <div className="frame-preview-bar" />
+                    </>
+                  ) : style.noButtons ? (
+                    <div className="frame-preview-bar" />
+                  ) : style.frameless ? (
+                    <>
+                      <div className="frame-preview-bar" style={{ borderTopStyle: 'dashed' }} />
+                      <span style={{ fontSize: '7px', color: '#fff', fontWeight: 'bold', fontFamily: 'monospace' }}>∅</span>
+                    </>
                   ) : (
-                    <div style={{ display: 'flex', gap: '2px', marginLeft: style.right ? 'auto' : 0 }}>
-                      {(style.icons || [style.icon]).map((ico, i) => (
-                        <i key={i} className={`pi ${ico}`} style={{ fontSize: '6px', opacity: 0.5 }} />
-                      ))}
-                    </div>
+                    <>
+                      <div className="frame-preview-bar" />
+                      {style.dots ? (
+                        <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+                          {style.dots.map((c, i) => (
+                            <div key={i} className="frame-preview-dot" style={{ background: c, boxShadow: style.synthwave ? `0 0 3px ${c}` : undefined }} />
+                          ))}
+                        </div>
+                      ) : style.switch ? (
+                        <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+                          <div className="frame-preview-dot" style={{ background: '#0f0', opacity: 0.4 }} />
+                          <div className="frame-preview-dot" style={{ background: '#0f0', opacity: 0.7 }} />
+                          <div className="frame-preview-dot" style={{ background: '#0f0', boxShadow: '0 0 4px #0f0' }} />
+                        </div>
+                      ) : style.hud ? (
+                        <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+                          <span style={{ fontSize: '6px', color: style.color || '#00e5ff', lineHeight: 1 }}>—</span>
+                          <span style={{ fontSize: '7px', color: style.color || '#00e5ff', lineHeight: 1 }}>◈</span>
+                          <span style={{ fontSize: '6px', color: style.color || '#00e5ff', lineHeight: 1 }}>✕</span>
+                        </div>
+                      ) : style.tag ? (
+                        <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+                          <span style={{ fontSize: '5px', color: '#000', background: style.color, padding: '0 1px', borderRadius: '1px', fontWeight: 'bold' }}>{style.tag}</span>
+                          <span style={{ fontSize: '5px', color: style.color || '#fcee0a', lineHeight: 1 }}>_</span>
+                          <span style={{ fontSize: '5px', color: style.color || '#fcee0a', lineHeight: 1 }}>⬡</span>
+                          <span style={{ fontSize: '5px', color: style.color || '#fcee0a', lineHeight: 1 }}>✕</span>
+                        </div>
+                      ) : style.matrix ? (
+                        <div style={{ display: 'flex', gap: '1px', alignItems: 'center', fontSize: '5px', color: style.color || '#00ff66', fontFamily: 'monospace' }}>
+                          <span>01</span>
+                          <span>10</span>
+                          <span>11</span>
+                        </div>
+                      ) : style.futuristic ? (
+                        <div style={{ display: 'flex', gap: '2px', alignItems: 'center', fontSize: '5px', color: style.color || '#00f2ff' }}>
+                          <span>-</span>
+                          <span>□</span>
+                          <span>✕</span>
+                        </div>
+                      ) : style.stealth ? (
+                        <div style={{ display: 'flex', gap: '2px', alignItems: 'center', fontSize: '6px', color: style.color || '#ff6b00' }}>
+                          <span>—</span>
+                          <span>□</span>
+                          <span>✕</span>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+                          {(style.icons || [style.icon || 'pi-times']).map((ico, i) => (
+                            <i key={i} className={`pi ${ico}`} style={{ fontSize: '6px', opacity: 0.6 }} />
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
-                  <div className="frame-preview-bar" style={style.frameless ? { borderTopStyle: 'dashed' } : {}} />
                 </div>
                 <span style={{ fontSize: '0.82rem' }}>{style.label}</span>
               </div>
@@ -2891,6 +2997,7 @@ const HomeTab = ({
                   onBringToFront={handleBringToFront}
                   onClosePanel={handleClosePanel}
                   onToggleMaximizePanel={handleToggleMaximizePanel}
+                  onToggleMinimizePanel={handleToggleMinimizePanel}
                   onTogglePanelVisibility={handleTogglePanelVisibility}
                   snapToGrid={snapToGrid}
                   smartSnap={smartSnap}
@@ -2970,121 +3077,30 @@ const HomeTab = ({
         onMouseLeave={(e) => { if (terminalState !== 'maximized') e.currentTarget.style.cursor = 'grab'; }}
         onDoubleClick={handleMaximizeTerminal}
       >
-        <div style={{ display: 'flex', gap: '8px', zIndex: 10 }}>
-          {terminalFrameStyle === 'macos' || terminalFrameStyle === 'frameless' ? (
-            <>
-              <div
-                className="no-drag"
-                onMouseDown={(e) => e.stopPropagation()}
-                onClick={handleCloseTerminal}
-                style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ff5f56', cursor: 'pointer', border: '1px solid #e0443e' }}
-                title="Cerrar" />
-              <div
-                className="no-drag"
-                onMouseDown={(e) => e.stopPropagation()}
-                onClick={handleMinimizeTerminal}
-                style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ffbd2e', cursor: 'pointer', border: '1px solid #dea123' }}
-                title="Minimizar" />
-              <div
-                className="no-drag"
-                onMouseDown={(e) => e.stopPropagation()}
-                onClick={handleMaximizeTerminal}
-                style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#27c93f', cursor: 'pointer', border: '1px solid #1aab29' }}
-                title="Maximizar" />
-            </>
-          ) : terminalFrameStyle === 'gnome' ? (
-            <div className="gnome-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="gnome-dot minimize" title="Minimizar" onClick={handleMinimizeTerminal}>
-                <i className="pi pi-minus" style={{ fontSize: '8px' }} />
-              </div>
-              <div className="gnome-dot maximize" title="Maximizar" onClick={handleMaximizeTerminal}>
-                <i className="pi pi-stop" style={{ fontSize: '8px' }} />
-              </div>
-              <div className="gnome-dot close" title="Cerrar" onClick={handleCloseTerminal}>
-                <i className="pi pi-times" />
-              </div>
-            </div>
-          ) : terminalFrameStyle === 'kde' ? (
-            <div className="kde-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="kde-dot minimize" title="Minimizar" onClick={handleMinimizeTerminal}><div className="custom-icon icon-min" /></div>
-              <div className="kde-dot maximize" title="Maximizar" onClick={handleMaximizeTerminal}><div className="custom-icon icon-max" /></div>
-              <div className="kde-dot close" title="Cerrar" onClick={handleCloseTerminal}><div className="custom-icon icon-close" /></div>
-            </div>
-          ) : terminalFrameStyle === 'windows' ? (
-            <div className="windows-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="win-dot minimize" title="Minimizar" onClick={handleMinimizeTerminal}><div className="custom-icon icon-min" /></div>
-              <div className="win-dot maximize" title="Maximizar" onClick={handleMaximizeTerminal}><div className="custom-icon icon-max" /></div>
-              <div className="win-dot close" title="Cerrar" onClick={handleCloseTerminal}><div className="custom-icon icon-close" /></div>
-            </div>
-          ) : terminalFrameStyle === 'matcha' ? (
-            <div className="matcha-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="matcha-dot" onClick={handleMinimizeTerminal} title="Minimizar"><i className="pi pi-minus" style={{ fontSize: '10px' }} /></div>
-              <div className="matcha-dot" onClick={handleMaximizeTerminal} title="Maximizar"><i className="pi pi-stop" style={{ fontSize: '10px' }} /></div>
-              <div className="matcha-dot" onClick={handleCloseTerminal} title="Cerrar"><i className="pi pi-times" /></div>
-            </div>
-          ) : terminalFrameStyle === 'futuristic' ? (
-            <div className="futuristic-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="cyber-dot minimize" title="Minimizar" onClick={handleMinimizeTerminal}>MIN</div>
-              <div className="cyber-dot maximize" title="Maximizar" onClick={handleMaximizeTerminal}>MAX</div>
-              <div className="cyber-dot close" title="Cerrar Terminal" onClick={handleCloseTerminal}>EXE</div>
-            </div>
-          ) : terminalFrameStyle === 'cyberpunk-pro' ? (
-            <div className="cyberpunk-pro-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-              <span className="cyber-pro-tag">SYS</span>
-              <div className="cyber-pro-btn minimize" title="Minimizar" onClick={handleMinimizeTerminal}>_</div>
-              <div className="cyber-pro-btn maximize" title="Maximizar" onClick={handleMaximizeTerminal}>⬡</div>
-              <div className="cyber-pro-btn close" title="Cerrar Terminal" onClick={handleCloseTerminal}>✕</div>
-            </div>
-          ) : ['hologram', 'holo-amber', 'holo-emerald', 'holo-crimson', 'holo-violet', 'plasma-cyan'].includes(terminalFrameStyle) ? (
-            <div className={`${terminalFrameStyle === 'hologram' ? 'hologram-controls' : `${terminalFrameStyle}-controls`} no-drag`} onMouseDown={(e) => e.stopPropagation()}>
-              <div className="holo-btn minimize" title="Minimizar" onClick={handleMinimizeTerminal}>─</div>
-              <div className="holo-btn maximize" title="Maximizar" onClick={handleMaximizeTerminal}>◈</div>
-              <div className="holo-btn close" title="Cerrar Terminal" onClick={handleCloseTerminal}>✕</div>
-            </div>
-          ) : terminalFrameStyle === 'synthwave' ? (
-            <div className="synthwave-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="synth-dot close" title="Cerrar" onClick={handleCloseTerminal} />
-              <div className="synth-dot max" title="Maximizar" onClick={handleMaximizeTerminal} />
-              <div className="synth-dot min" title="Minimizar" onClick={handleMinimizeTerminal} />
-            </div>
-          ) : terminalFrameStyle === 'matrix' ? (
-            <div className="matrix-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="matrix-btn minimize" title="Minimizar" onClick={handleMinimizeTerminal}>[01]</div>
-              <div className="matrix-btn maximize" title="Maximizar" onClick={handleMaximizeTerminal}>[10]</div>
-              <div className="matrix-btn close" title="Cerrar Terminal" onClick={handleCloseTerminal}>[11]</div>
-            </div>
-          ) : terminalFrameStyle === 'aurora-glass' ? (
-            <div className="aurora-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="aurora-pill minimize" title="Minimizar" onClick={handleMinimizeTerminal}><i className="pi pi-minus" style={{ fontSize: '10px' }} /></div>
-              <div className="aurora-pill maximize" title="Maximizar" onClick={handleMaximizeTerminal}><i className="pi pi-stop" style={{ fontSize: '10px' }} /></div>
-              <div className="aurora-pill close" title="Ocultar" onClick={handleCloseTerminal}><i className="pi pi-times" /></div>
-            </div>
-          ) : terminalFrameStyle === 'stealth' ? (
-            <div className="stealth-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="stealth-btn minimize" title="Minimizar" onClick={handleMinimizeTerminal}>—</div>
-              <div className="stealth-btn maximize" title="Maximizar" onClick={handleMaximizeTerminal}>□</div>
-              <div className="stealth-btn close" title="Cerrar Terminal" onClick={handleCloseTerminal}>✕</div>
-            </div>
-          ) : terminalFrameStyle === 'modern' ? (
-            <div className="modern-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="glass-dot minimize" title="Minimizar" onClick={handleMinimizeTerminal}><i className="pi pi-minus" style={{ fontSize: '10px' }} /></div>
-              <div className="glass-dot maximize" title="Maximizar" onClick={handleMaximizeTerminal}><i className="pi pi-stop" style={{ fontSize: '10px' }} /></div>
-              <div className="glass-dot close" title="Ocultar" onClick={handleCloseTerminal}><i className="pi pi-times" /></div>
-            </div>
-          ) : terminalFrameStyle === 'minimal' ? (
-            <div className="minimal-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="win-dot minimize" title="Minimizar" onClick={handleMinimizeTerminal}><div className="custom-icon icon-min" /></div>
-              <div className="win-dot maximize" title="Maximizar" onClick={handleMaximizeTerminal}><div className="custom-icon icon-max" /></div>
-              <div className="win-dot close" title="Cerrar" onClick={handleCloseTerminal}><div className="custom-icon icon-close" /></div>
-            </div>
-          ) : (
-            <div className="retro-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-              <div className="retro-switch minimize" title="MIN" onClick={handleMinimizeTerminal} />
-              <div className="retro-switch maximize" title="MAX" onClick={handleMaximizeTerminal} />
-              <div className="retro-switch on" title="OFF" onClick={handleCloseTerminal} />
-            </div>
-          )}
-        </div>
+        {terminalFrameStyle === 'macos' ? (
+          <div style={{ display: 'flex', gap: '8px', zIndex: 10 }}>
+            <div
+              className="no-drag"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={handleCloseTerminal}
+              style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ff5f56', cursor: 'pointer', border: '1px solid #e0443e' }}
+              title="Cerrar" />
+            <div
+              className="no-drag"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={handleMinimizeTerminal}
+              style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ffbd2e', cursor: 'pointer', border: '1px solid #dea123' }}
+              title="Minimizar" />
+            <div
+              className="no-drag"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={handleMaximizeTerminal}
+              style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#27c93f', cursor: 'pointer', border: '1px solid #1aab29' }}
+              title="Maximizar" />
+          </div>
+        ) : (
+          <div style={{ width: '12px', zIndex: 10 }}></div>
+        )}
 
         <div style={{
           position: 'absolute', left: 0, right: 0, textAlign: 'center',
@@ -3097,12 +3113,108 @@ const HomeTab = ({
           {terminalTitle}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', zIndex: 10 }}>
-
-          {/* Opacity toggle hidden for floating terminal since it is now opaque */}
-
-          <div style={{ width: '12px' }}></div>
-        </div>
+        {terminalFrameStyle === 'macos' ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', zIndex: 10 }}>
+            <div style={{ width: '12px' }}></div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', zIndex: 10 }}>
+            {terminalFrameStyle === 'frameless' ? (
+              <div className="traffic-lights no-drag" onMouseDown={(e) => e.stopPropagation()} style={{ display: 'flex', gap: '6px' }}>
+                <div className="traffic-dot red" onClick={handleCloseTerminal} title="Cerrar" />
+                <div className="traffic-dot yellow" onClick={handleMinimizeTerminal} title="Minimizar" />
+                <div className="traffic-dot green" onClick={handleMaximizeTerminal} title="Maximizar" />
+              </div>
+            ) : terminalFrameStyle === 'gnome' ? (
+              <div className="gnome-controls no-drag" onMouseDown={(e) => e.stopPropagation()} style={{ display: 'flex', gap: '4px' }}>
+                <div className="gnome-dot minimize" title="Minimizar" onClick={handleMinimizeTerminal}>
+                  <i className="pi pi-minus" style={{ fontSize: '8px' }} />
+                </div>
+                <div className="gnome-dot maximize" title="Maximizar" onClick={handleMaximizeTerminal}>
+                  <i className="pi pi-stop" style={{ fontSize: '8px' }} />
+                </div>
+                <div className="gnome-dot close" title="Cerrar" onClick={handleCloseTerminal}>
+                  <i className="pi pi-times" />
+                </div>
+              </div>
+            ) : terminalFrameStyle === 'kde' ? (
+              <div className="kde-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+                <div className="kde-dot minimize" title="Minimizar" onClick={handleMinimizeTerminal}><div className="custom-icon icon-min" /></div>
+                <div className="kde-dot maximize" title="Maximizar" onClick={handleMaximizeTerminal}><div className="custom-icon icon-max" /></div>
+                <div className="kde-dot close" title="Cerrar" onClick={handleCloseTerminal}><div className="custom-icon icon-close" /></div>
+              </div>
+            ) : terminalFrameStyle === 'windows' ? (
+              <div className="windows-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+                <div className="win-dot minimize" title="Minimizar" onClick={handleMinimizeTerminal}><div className="custom-icon icon-min" /></div>
+                <div className="win-dot maximize" title="Maximizar" onClick={handleMaximizeTerminal}><div className="custom-icon icon-max" /></div>
+                <div className="win-dot close" title="Cerrar" onClick={handleCloseTerminal}><div className="custom-icon icon-close" /></div>
+              </div>
+            ) : terminalFrameStyle === 'matcha' ? (
+              <div className="matcha-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+                <div className="matcha-dot minimize" onClick={handleMinimizeTerminal} title="Minimizar"><i className="pi pi-minus" style={{ fontSize: '10px' }} /></div>
+                <div className="matcha-dot maximize" onClick={handleMaximizeTerminal} title="Maximizar"><i className="pi pi-stop" style={{ fontSize: '10px' }} /></div>
+                <div className="matcha-dot close" onClick={handleCloseTerminal} title="Cerrar"><i className="pi pi-times" /></div>
+              </div>
+            ) : terminalFrameStyle === 'futuristic' ? (
+              <div className="futuristic-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+                <div className="cyber-dot minimize" title="Minimizar" onClick={handleMinimizeTerminal}>MIN</div>
+                <div className="cyber-dot maximize" title="Maximizar" onClick={handleMaximizeTerminal}>MAX</div>
+                <div className="cyber-dot close" title="Cerrar Terminal" onClick={handleCloseTerminal}>EXE</div>
+              </div>
+            ) : terminalFrameStyle === 'cyberpunk-pro' ? (
+              <div className="cyberpunk-pro-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+                <span className="cyber-pro-tag">SYS</span>
+                <div className="cyber-pro-btn minimize" title="Minimizar" onClick={handleMinimizeTerminal}>_</div>
+                <div className="cyber-pro-btn maximize" title="Maximizar" onClick={handleMaximizeTerminal}>⬡</div>
+                <div className="cyber-pro-btn close" title="Cerrar Terminal" onClick={handleCloseTerminal}>✕</div>
+              </div>
+            ) : ['hologram', 'holo-amber', 'holo-emerald', 'holo-crimson', 'holo-violet', 'plasma-cyan'].includes(terminalFrameStyle) ? (
+              <div className={`${terminalFrameStyle === 'hologram' ? 'hologram-controls' : `${terminalFrameStyle}-controls`} no-drag`} onMouseDown={(e) => e.stopPropagation()}>
+                <div className="holo-btn minimize" title="Minimizar" onClick={handleMinimizeTerminal}>─</div>
+                <div className="holo-btn maximize" title="Maximizar" onClick={handleMaximizeTerminal}>◈</div>
+                <div className="holo-btn close" title="Cerrar Terminal" onClick={handleCloseTerminal}>✕</div>
+              </div>
+            ) : terminalFrameStyle === 'synthwave' ? (
+              <div className="synthwave-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+                <div className="synth-dot min" title="Minimizar" onClick={handleMinimizeTerminal} />
+                <div className="synth-dot max" title="Maximizar" onClick={handleMaximizeTerminal} />
+                <div className="synth-dot close" title="Cerrar" onClick={handleCloseTerminal} />
+              </div>
+            ) : terminalFrameStyle === 'matrix' ? (
+              <div className="matrix-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+                <div className="matrix-btn minimize" title="Minimizar" onClick={handleMinimizeTerminal}>[01]</div>
+                <div className="matrix-btn maximize" title="Maximizar" onClick={handleMaximizeTerminal}>[10]</div>
+                <div className="matrix-btn close" title="Cerrar Terminal" onClick={handleCloseTerminal}>[11]</div>
+              </div>
+            ) : terminalFrameStyle === 'aurora-glass' ? (
+              <div className="aurora-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+                <div className="aurora-pill minimize" title="Minimizar" onClick={handleMinimizeTerminal}><i className="pi pi-minus" style={{ fontSize: '10px' }} /></div>
+                <div className="aurora-pill maximize" title="Maximizar" onClick={handleMaximizeTerminal}><i className="pi pi-stop" style={{ fontSize: '10px' }} /></div>
+                <div className="aurora-pill close" title="Ocultar" onClick={handleCloseTerminal}><i className="pi pi-times" /></div>
+              </div>
+            ) : terminalFrameStyle === 'stealth' ? (
+              <div className="stealth-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+                <div className="stealth-btn minimize" title="Minimizar" onClick={handleMinimizeTerminal}>—</div>
+                <div className="stealth-btn maximize" title="Maximizar" onClick={handleMaximizeTerminal}>□</div>
+                <div className="stealth-btn close" title="Cerrar Terminal" onClick={handleCloseTerminal}>✕</div>
+              </div>
+            ) : terminalFrameStyle === 'modern' ? (
+              <div className="modern-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+                <div className="glass-dot minimize" title="Minimizar" onClick={handleMinimizeTerminal}><i className="pi pi-minus" style={{ fontSize: '10px' }} /></div>
+                <div className="glass-dot maximize" title="Maximizar" onClick={handleMaximizeTerminal}><i className="pi pi-stop" style={{ fontSize: '10px' }} /></div>
+                <div className="glass-dot close" title="Ocultar" onClick={handleCloseTerminal}><i className="pi pi-times" /></div>
+              </div>
+            ) : terminalFrameStyle === 'minimal' ? (
+              <div className="minimal-controls no-drag" onMouseDown={(e) => e.stopPropagation()} />
+            ) : (
+              <div className="retro-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+                <div className="retro-switch minimize" title="MIN" onClick={handleMinimizeTerminal} />
+                <div className="retro-switch maximize" title="MAX" onClick={handleMaximizeTerminal} />
+                <div className="retro-switch on" title="OFF" onClick={handleCloseTerminal} />
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
 
