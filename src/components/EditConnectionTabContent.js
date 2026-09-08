@@ -6,6 +6,8 @@ import { Dropdown } from 'primereact/dropdown';
 import { Card } from 'primereact/card';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 import { getAllFolders } from '../utils/treeFolders';
+import connectionStore, { isFavorite, toggleFavorite, helpers as connectionHelpers, onUpdate as onFavoritesUpdate } from '../utils/connectionStore';
+import { writeText as clipboardWriteText } from '../utils/clipboard';
 
 // Importar los formularios existentes
 import { EnhancedSSHForm } from './Dialogs';
@@ -21,6 +23,11 @@ export default function EditConnectionTabContent({
   handleSaveVncToSidebar,
   handleSaveFileConnectionToSidebar,
   handleSaveSSHTunnelToSidebar,
+  onOpenSSHConnection,
+  onOpenRdpConnection,
+  onOpenVncConnection,
+  onOpenFileConnection,
+  onOpenSSHTunnel,
   handleTabClose,
   iconTheme = 'material'
 }) {
@@ -29,6 +36,7 @@ export default function EditConnectionTabContent({
 
   const node = tab?.node;
   const connectionType = node?.data?.type || node?.type;
+  const isNewConnection = !!(node?.isNew || !node?.key || String(node?.key).startsWith('temp_'));
 
   const [layoutMode, setLayoutMode] = useState(() => {
     const saved = localStorage.getItem('node-term-edit-layout');
@@ -67,28 +75,69 @@ export default function EditConnectionTabContent({
     return true;
   };
 
+  // Status Pill feedback (non-blocking, replaces alert)
+  const [testStatus, setTestStatus] = useState(null); // { type: 'testing' | 'success' | 'error' | 'copied', message: string }
+  const statusTimerRef = useRef(null);
+
+  const setTimedStatus = useCallback((statusObj, duration = 4000) => {
+    if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
+    setTestStatus(statusObj);
+    if (duration > 0) {
+      statusTimerRef.current = setTimeout(() => {
+        setTestStatus(null);
+      }, duration);
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
+    };
+  }, []);
+
   const [isTesting, setIsTesting] = useState(false);
 
   const handleTestConnection = async () => {
-    if (connectionType !== 'ssh') return;
     setIsTesting(true);
+    setTimedStatus({ type: 'testing', message: 'Probando conectividad...' }, 0);
     try {
-      const sshConfig = {
-        host: sshHost,
-        port: parseInt(sshPort) || 22,
-        user: sshUser,
-        password: sshPassword,
-        privateKey: sshPrivateKey,
-        authMethod: sshAuthMethod
-      };
-      const result = await window.electron.ipcRenderer.invoke('ssh:test-connection', { sshConfig });
-      if (result.success) {
-        alert('¡Conexión establecida con éxito!');
+      if (connectionType === 'ssh') {
+        const sshConfig = {
+          host: sshHost,
+          port: parseInt(sshPort) || 22,
+          user: sshUser,
+          password: sshPassword,
+          privateKey: sshPrivateKey,
+          authMethod: sshAuthMethod
+        };
+        const result = await window.electron.ipcRenderer.invoke('ssh:test-connection', { sshConfig });
+        if (result.success) {
+          setTimedStatus({ type: 'success', message: '¡Conexión SSH establecida con éxito!' }, 4000);
+        } else {
+          setTimedStatus({ type: 'error', message: `Fallo SSH: ${result.error || 'No se pudo conectar'}` }, 6000);
+        }
       } else {
-        alert(`Error de conexión: ${result.error}`);
+        const targetHost = connectionType === 'rdp' ? (rdpFormData?.server || rdpFormData?.host)
+          : (connectionType === 'vnc' || connectionType === 'vnc-guacamole') ? (vncFormData?.server || vncFormData?.host)
+          : ['sftp', 'ftp', 'scp'].includes(connectionType) ? fileHost
+          : tunnelSshHost;
+
+        if (!targetHost || !targetHost.trim()) {
+          setTimedStatus({ type: 'error', message: 'Indica un host antes de probar la conexión' }, 4000);
+          setIsTesting(false);
+          return;
+        }
+
+        const result = await window.electron.ipcRenderer.invoke('network-tools:ping', { host: targetHost.trim(), count: 2, timeout: 3 });
+        if (result && result.success) {
+          const avgTime = result.avgTime != null ? ` (${result.avgTime} ms)` : '';
+          setTimedStatus({ type: 'success', message: `¡Host accesible!${avgTime}` }, 4000);
+        } else {
+          setTimedStatus({ type: 'error', message: result?.error || 'Host no responde al ping' }, 6000);
+        }
       }
     } catch (error) {
-      alert(`Error: ${error.message || error}`);
+      setTimedStatus({ type: 'error', message: `Error: ${error.message || error}` }, 6000);
     } finally {
       setIsTesting(false);
     }
@@ -363,9 +412,418 @@ export default function EditConnectionTabContent({
     setVncFormData((previous) => ({ ...previous, [field]: value }));
   }, []);
 
-  // Confirmación
-  const handleSave = (e) => {
+  // --- FAVORITES HANDLING ---
+  const [isFav, setIsFav] = useState(false);
+
+  const getCurrentConnectionObject = useCallback(() => {
+    try {
+      if (connectionType === 'ssh') {
+        return connectionHelpers.toSerializable({
+          type: 'ssh',
+          name: sshName || node?.label || 'SSH',
+          host: sshHost,
+          username: sshUser,
+          port: sshPort || 22,
+          password: sshPassword,
+          privateKey: sshPrivateKey,
+          authMethod: sshAuthMethod,
+          customIcon: sshIcon,
+          targetFolder: sshTargetFolder,
+          useBastionWallix: !!sshProxyJumpEnabled,
+          bastionHost: sshJumpHost,
+          bastionUser: sshJumpUser
+        });
+      } else if (connectionType === 'rdp') {
+        return connectionHelpers.toSerializable({
+          type: 'rdp-guacamole',
+          name: rdpFormData?.name || node?.label || 'RDP',
+          host: rdpFormData?.server || rdpFormData?.host,
+          username: rdpFormData?.username,
+          port: rdpFormData?.port || 3389,
+          password: rdpFormData?.password,
+          domain: rdpFormData?.domain
+        });
+      } else if (connectionType === 'vnc' || connectionType === 'vnc-guacamole') {
+        return connectionHelpers.toSerializable({
+          type: 'vnc-guacamole',
+          name: vncFormData?.name || node?.label || 'VNC',
+          host: vncFormData?.server || vncFormData?.host,
+          username: vncFormData?.username,
+          port: vncFormData?.port || 5900,
+          password: vncFormData?.password
+        });
+      } else if (['sftp', 'ftp', 'scp'].includes(connectionType)) {
+        return connectionHelpers.toSerializable({
+          type: fileProtocol || connectionType,
+          name: fileName || node?.label || fileProtocol?.toUpperCase(),
+          host: fileHost,
+          username: fileUser,
+          port: filePort || 22,
+          password: filePassword
+        });
+      } else if (connectionType === 'ssh-tunnel') {
+        return connectionHelpers.toSerializable({
+          type: 'ssh-tunnel',
+          name: tunnelName || node?.label || 'SSH Tunnel',
+          sshHost: tunnelSshHost,
+          sshUser: tunnelSshUser,
+          sshPort: tunnelSshPort || 22,
+          tunnelType: tunnelType,
+          localPort: tunnelLocalPort,
+          remotePort: tunnelRemotePort,
+          remoteHost: tunnelRemoteHost
+        });
+      }
+      return node ? connectionHelpers.fromSidebarNode(node) : null;
+    } catch (_) {
+      return null;
+    }
+  }, [
+    connectionType, node, sshName, sshHost, sshUser, sshPort, sshPassword, sshPrivateKey, sshAuthMethod, sshIcon, sshTargetFolder, sshProxyJumpEnabled, sshJumpHost, sshJumpUser,
+    rdpFormData, vncFormData, fileProtocol, fileName, fileHost, fileUser, filePort, filePassword,
+    tunnelName, tunnelSshHost, tunnelSshUser, tunnelSshPort, tunnelType, tunnelLocalPort, tunnelRemotePort, tunnelRemoteHost
+  ]);
+
+  const updateFavoriteState = useCallback(() => {
+    const conn = getCurrentConnectionObject();
+    if (conn && isFavorite(conn)) {
+      setIsFav(true);
+      return;
+    }
+    if (node) {
+      if (node.key && isFavorite(node.key)) {
+        setIsFav(true);
+        return;
+      }
+      const nodeConn = connectionHelpers.fromSidebarNode(node);
+      if (nodeConn && isFavorite(nodeConn)) {
+        setIsFav(true);
+        return;
+      }
+    }
+    setIsFav(false);
+  }, [getCurrentConnectionObject, node]);
+
+  useEffect(() => {
+    updateFavoriteState();
+    const unsub = onFavoritesUpdate(() => {
+      updateFavoriteState();
+    });
+    return () => {
+      if (unsub) unsub();
+    };
+  }, [updateFavoriteState]);
+
+  const handleToggleFavorite = (e) => {
+    if (e) e.stopPropagation();
+    const conn = getCurrentConnectionObject() || (node ? connectionHelpers.fromSidebarNode(node) : null);
+    if (!conn) return;
+
+    toggleFavorite(conn);
+    setIsFav(prev => !prev);
+    setTimedStatus({
+      type: 'success',
+      message: isFav ? 'Quitado de Favoritos' : '★ ¡Añadido a Favoritos!'
+    }, 2500);
+  };
+
+  // Helper metadata (defined before copy/duplicate handlers)
+  const getHostAndUser = useCallback(() => {
+    let host = '';
+    let user = '';
+    let port = '';
+
+    if (connectionType === 'ssh') {
+      host = sshHost || '';
+      user = sshUser || '';
+      port = sshPort && String(sshPort) !== '22' ? String(sshPort) : '';
+    } else if (connectionType === 'rdp') {
+      host = rdpFormData?.server || rdpFormData?.host || '';
+      user = rdpFormData?.username || '';
+      port = rdpFormData?.port && String(rdpFormData?.port) !== '3389' ? String(rdpFormData?.port) : '';
+    } else if (connectionType === 'vnc' || connectionType === 'vnc-guacamole') {
+      host = vncFormData?.server || vncFormData?.host || '';
+      user = vncFormData?.username || '';
+      port = vncFormData?.port && String(vncFormData?.port) !== '5900' ? String(vncFormData?.port) : '';
+    } else if (['sftp', 'ftp', 'scp'].includes(connectionType)) {
+      host = fileHost || '';
+      user = fileUser || '';
+      port = filePort && String(filePort) !== '22' && String(filePort) !== '21' ? String(filePort) : '';
+    } else if (connectionType === 'ssh-tunnel') {
+      host = tunnelSshHost || '';
+      user = tunnelSshUser || '';
+      port = tunnelLocalPort ? `${tunnelLocalPort}` : '';
+    }
+
+    const hostDisplay = host ? `${host}${port ? ':' + port : ''}` : '';
+    return { host: hostDisplay, user };
+  }, [connectionType, sshHost, sshUser, sshPort, rdpFormData, vncFormData, fileHost, fileUser, filePort, tunnelSshHost, tunnelSshUser, tunnelLocalPort]);
+
+  const currentHostValue = useCallback(() => {
+    const { host } = getHostAndUser();
+    return host;
+  }, [getHostAndUser]);
+
+  const currentConnectionName = useCallback(() => {
+    if (connectionType === 'ssh') return sshName;
+    if (connectionType === 'rdp') return rdpFormData?.name;
+    if (connectionType === 'vnc' || connectionType === 'vnc-guacamole') return vncFormData?.name;
+    if (['sftp', 'ftp', 'scp'].includes(connectionType)) return fileName;
+    if (connectionType === 'ssh-tunnel') return tunnelName;
+    return node?.label || '';
+  }, [connectionType, sshName, rdpFormData?.name, vncFormData?.name, fileName, tunnelName, node?.label]);
+
+  const getProtocolMeta = useCallback(() => {
+    switch (connectionType) {
+      case 'ssh':
+        return {
+          icon: 'pi pi-terminal',
+          avatarClass: 'avatar-ssh',
+          badgeClass: 'badge-ssh',
+          label: 'SSH',
+          accentColor: '#10b981'
+        };
+      case 'rdp':
+        return {
+          icon: 'pi pi-desktop',
+          avatarClass: 'avatar-rdp',
+          badgeClass: 'badge-rdp',
+          label: 'RDP',
+          accentColor: '#3b82f6'
+        };
+      case 'vnc':
+      case 'vnc-guacamole':
+        return {
+          icon: 'pi pi-eye',
+          avatarClass: 'avatar-vnc',
+          badgeClass: 'badge-vnc',
+          label: 'VNC',
+          accentColor: '#f59e0b'
+        };
+      case 'sftp':
+      case 'ftp':
+      case 'scp':
+        return {
+          icon: connectionType === 'scp' ? 'pi pi-send' : connectionType === 'ftp' ? 'pi pi-server' : 'pi pi-folder',
+          avatarClass: 'avatar-sftp',
+          badgeClass: 'badge-sftp',
+          label: (fileProtocol || connectionType).toUpperCase(),
+          accentColor: '#8b5cf6'
+        };
+      case 'ssh-tunnel':
+        return {
+          icon: 'pi pi-share-alt',
+          avatarClass: 'avatar-tunnel',
+          badgeClass: 'badge-tunnel',
+          label: 'TÚNEL SSH',
+          accentColor: '#06b6d4'
+        };
+      default:
+        return {
+          icon: 'pi pi-server',
+          avatarClass: 'avatar-ssh',
+          badgeClass: 'badge-ssh',
+          label: connectionType?.toUpperCase() || 'CONEXIÓN',
+          accentColor: '#6366f1'
+        };
+    }
+  }, [connectionType, fileProtocol]);
+
+  // --- QUICK COPY COMMAND / URI ---
+  const handleCopyCommand = (e) => {
+    if (e) e.stopPropagation();
+    let cmd = '';
+    if (connectionType === 'ssh') {
+      const portPart = sshPort && String(sshPort) !== '22' ? ` -p ${sshPort}` : '';
+      const userPart = sshUser ? `${sshUser}@` : '';
+      cmd = `ssh ${userPart}${sshHost || 'host'}${portPart}`;
+    } else if (connectionType === 'rdp') {
+      const host = rdpFormData?.server || rdpFormData?.host || '';
+      const port = rdpFormData?.port ? `:${rdpFormData.port}` : '';
+      const user = rdpFormData?.username ? `${rdpFormData.username}@` : '';
+      cmd = `rdp://${user}${host}${port}`;
+    } else if (connectionType === 'vnc' || connectionType === 'vnc-guacamole') {
+      const host = vncFormData?.server || vncFormData?.host || '';
+      const port = vncFormData?.port ? `:${vncFormData.port}` : '';
+      cmd = `vnc://${host}${port}`;
+    } else if (['sftp', 'ftp', 'scp'].includes(connectionType)) {
+      const proto = fileProtocol || connectionType;
+      const port = filePort && String(filePort) !== '22' ? `:${filePort}` : '';
+      const user = fileUser ? `${fileUser}@` : '';
+      cmd = `${proto}://${user}${fileHost || 'host'}${port}`;
+    } else if (connectionType === 'ssh-tunnel') {
+      cmd = `ssh -L ${tunnelLocalPort || 8080}:${tunnelRemoteHost || 'localhost'}:${tunnelRemotePort || 80} ${tunnelSshUser ? tunnelSshUser + '@' : ''}${tunnelSshHost || 'bastion'}`;
+    }
+
+    if (cmd) {
+      navigator.clipboard.writeText(cmd).then(() => {
+        setTimedStatus({ type: 'copied', message: `¡Comando copiado!` }, 2500);
+      }).catch(() => {
+        setTimedStatus({ type: 'copied', message: cmd }, 3000);
+      });
+    }
+  };
+
+  const handleCopyHost = (e) => {
+    if (e) e.stopPropagation();
+    const host = currentHostValue();
+    if (host) {
+      navigator.clipboard.writeText(host).then(() => {
+        setTimedStatus({ type: 'copied', message: `Host copiado: ${host}` }, 2000);
+      });
+    }
+  };
+
+  // --- QUICK COPY PASSWORD ---
+  const getCurrentPassword = useCallback(() => {
+    if (connectionType === 'ssh') {
+      return sshPassword || (node?.data?.password || '');
+    }
+    if (connectionType === 'rdp') {
+      return rdpFormData?.password || (node?.data?.password || '');
+    }
+    if (connectionType === 'vnc' || connectionType === 'vnc-guacamole') {
+      return vncFormData?.password || (node?.data?.password || '');
+    }
+    if (['sftp', 'ftp', 'scp'].includes(connectionType)) {
+      return filePassword || (node?.data?.password || '');
+    }
+    if (connectionType === 'ssh-tunnel') {
+      return tunnelSshPassword || tunnelPassphrase || (node?.data?.sshPassword || node?.data?.password || '');
+    }
+    return node?.data?.password || '';
+  }, [connectionType, sshPassword, rdpFormData?.password, vncFormData?.password, filePassword, tunnelSshPassword, tunnelPassphrase, node?.data]);
+
+  const hasPassword = Boolean(getCurrentPassword() && String(getCurrentPassword()).trim());
+
+  const handleCopyPassword = async (e) => {
+    if (e) e.stopPropagation();
+    const pass = getCurrentPassword();
+    if (!pass) {
+      setTimedStatus({ type: 'error', message: 'No hay contraseña configurada' }, 3000);
+      return;
+    }
+
+    try {
+      await clipboardWriteText(pass);
+      setTimedStatus({ type: 'copied', message: '✓ ¡Contraseña copiada al portapapeles!' }, 2500);
+    } catch (_) {
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(pass).then(() => {
+          setTimedStatus({ type: 'copied', message: '✓ ¡Contraseña copiada al portapapeles!' }, 2500);
+        }).catch(() => {
+          setTimedStatus({ type: 'error', message: 'No se pudo copiar la contraseña' }, 3000);
+        });
+      } else {
+        setTimedStatus({ type: 'error', message: 'No se pudo copiar la contraseña' }, 3000);
+      }
+    }
+  };
+
+  // --- DUPLICATE CONNECTION ---
+  const handleDuplicateConnection = (e) => {
+    if (e) e.stopPropagation();
+    if (!isFormValid()) {
+      setTimedStatus({ type: 'error', message: 'Completa los campos obligatorios antes de duplicar' }, 3500);
+      return;
+    }
+
+    if (connectionType === 'ssh') {
+      const dupData = {
+        name: `${sshName || 'SSH'} (Copia)`,
+        host: sshHost,
+        user: sshUser,
+        password: sshPassword,
+        port: sshPort,
+        remoteFolder: sshRemoteFolder,
+        authMethod: sshAuthMethod,
+        privateKey: sshPrivateKey,
+        autoCopyPassword: sshAutoCopyPassword,
+        x11Forwarding: sshX11Forwarding,
+        agentForwarding: sshAgentForwarding,
+        autoRecording: sshAutoRecording,
+        proxyJumpEnabled: sshProxyJumpEnabled,
+        jumpHost: sshJumpHost,
+        jumpPort: sshJumpPort,
+        jumpUser: sshJumpUser,
+        jumpAuthMethod: sshJumpAuthMethod,
+        jumpPassword: sshJumpPassword,
+        jumpPrivateKey: sshJumpPrivateKey,
+        hostKeyPolicy: sshHostKeyPolicy,
+        description: sshDescription,
+        customIcon: sshIcon,
+        targetFolder: sshTargetFolder
+      };
+      handleSaveSshToSidebar(dupData, false, null);
+      setTimedStatus({ type: 'success', message: '✓ Conexión duplicada en la barra lateral' }, 3000);
+    } else if (connectionType === 'rdp') {
+      const dupData = {
+        ...rdpFormData,
+        name: `${rdpFormData?.name || 'RDP'} (Copia)`
+      };
+      handleSaveRdpToSidebar(dupData, false, null);
+      setTimedStatus({ type: 'success', message: '✓ Conexión duplicada en la barra lateral' }, 3000);
+    } else if (connectionType === 'vnc' || connectionType === 'vnc-guacamole') {
+      const dupData = {
+        ...vncFormData,
+        name: `${vncFormData?.name || 'VNC'} (Copia)`
+      };
+      handleSaveVncToSidebar(dupData, false, null);
+      setTimedStatus({ type: 'success', message: '✓ Conexión duplicada en la barra lateral' }, 3000);
+    } else if (['sftp', 'ftp', 'scp'].includes(connectionType)) {
+      const dupData = {
+        name: `${fileName || 'Archivo'} (Copia)`,
+        host: fileHost,
+        username: fileUser,
+        password: filePassword,
+        port: filePort,
+        protocol: fileProtocol,
+        remoteFolder: fileRemoteFolder,
+        targetFolder: fileTargetFolder
+      };
+      handleSaveFileConnectionToSidebar(dupData, false, null);
+      setTimedStatus({ type: 'success', message: '✓ Conexión duplicada en la barra lateral' }, 3000);
+    } else if (connectionType === 'ssh-tunnel') {
+      const dupData = {
+        name: `${tunnelName || 'Túnel'} (Copia)`,
+        tunnelType,
+        sshHost: tunnelSshHost,
+        sshPort: tunnelSshPort,
+        sshUser: tunnelSshUser,
+        authType: tunnelAuthType,
+        sshPassword: tunnelSshPassword,
+        privateKeyPath: tunnelPrivateKeyPath,
+        passphrase: tunnelPassphrase,
+        localHost: tunnelLocalHost,
+        localPort: parseInt(tunnelLocalPort) || 0,
+        remoteHost: tunnelRemoteHost,
+        remotePort: parseInt(tunnelRemotePort) || 0,
+        bindHost: tunnelBindHost
+      };
+      handleSaveSSHTunnelToSidebar(dupData, false, null);
+      setTimedStatus({ type: 'success', message: '✓ Túnel duplicado en la barra lateral' }, 3000);
+    }
+  };
+
+  // --- CLOSE TAB HELPER ---
+  const closeCurrentTab = useCallback(() => {
+    if (typeof handleTabClose === 'function') {
+      handleTabClose(tab || tab?.key);
+    }
+    if (tab?.key) {
+      window.dispatchEvent(new CustomEvent('close-tab', { detail: { tabKey: tab.key } }));
+    }
+  }, [handleTabClose, tab]);
+
+  // --- CONNECT (Save & Launch) ---
+  const handleConnect = (e) => {
     if (e) e.preventDefault();
+    if (!isFormValid()) {
+      setTimedStatus({ type: 'error', message: 'Por favor, completa los campos requeridos' }, 3500);
+      return;
+    }
+
+    const isEdit = !isNewConnection;
 
     if (connectionType === 'ssh') {
       const sshData = {
@@ -393,18 +851,64 @@ export default function EditConnectionTabContent({
         customIcon: sshIcon,
         targetFolder: sshTargetFolder
       };
-      handleSaveSshToSidebar(sshData, true, node);
-      handleTabClose(tab.key);
+      handleSaveSshToSidebar(sshData, isEdit, node);
+
+      const connNode = {
+        key: node?.key || `ssh_${Date.now()}`,
+        label: sshName,
+        type: 'ssh',
+        data: {
+          ...sshData,
+          type: 'ssh'
+        }
+      };
+
+      if (onOpenSSHConnection) {
+        onOpenSSHConnection(connNode, nodes);
+      }
+      closeCurrentTab();
     }
     else if (connectionType === 'rdp') {
       if (!isRdpFormValid(rdpFormData)) return;
-      handleSaveRdpToSidebar(rdpFormData, true, node);
-      handleTabClose(tab.key);
+      handleSaveRdpToSidebar(rdpFormData, isEdit, node);
+
+      const rdpNode = {
+        key: node?.key || `rdp_${Date.now()}`,
+        label: rdpFormData.name || rdpFormData.server || 'RDP',
+        type: 'rdp-guacamole',
+        data: {
+          ...rdpFormData,
+          type: 'rdp-guacamole'
+        }
+      };
+
+      if (onOpenRdpConnection) {
+        onOpenRdpConnection(rdpNode);
+      } else {
+        window.dispatchEvent(new CustomEvent('create-rdp-tab', {
+          detail: { tab: { key: rdpNode.key, title: rdpNode.label, type: 'rdp', data: rdpNode.data, id: rdpNode.key } }
+        }));
+      }
+      closeCurrentTab();
     }
     else if (connectionType === 'vnc' || connectionType === 'vnc-guacamole') {
       if (!isVncFormValid(vncFormData)) return;
-      handleSaveVncToSidebar(vncFormData, true, node);
-      handleTabClose(tab.key);
+      handleSaveVncToSidebar(vncFormData, isEdit, node);
+
+      const vncNode = {
+        key: node?.key || `vnc_${Date.now()}`,
+        label: vncFormData.name || vncFormData.server || 'VNC',
+        type: 'vnc-guacamole',
+        data: {
+          ...vncFormData,
+          type: 'vnc-guacamole'
+        }
+      };
+
+      if (onOpenVncConnection) {
+        onOpenVncConnection(vncNode, nodes);
+      }
+      closeCurrentTab();
     }
     else if (['sftp', 'ftp', 'scp'].includes(connectionType)) {
       if (!fileName.trim() || !fileHost.trim() || !fileUser.trim()) return;
@@ -418,8 +922,22 @@ export default function EditConnectionTabContent({
         remoteFolder: fileRemoteFolder,
         targetFolder: fileTargetFolder
       };
-      handleSaveFileConnectionToSidebar(fileData, true, node);
-      handleTabClose(tab.key);
+      handleSaveFileConnectionToSidebar(fileData, isEdit, node);
+
+      const fileNode = {
+        key: node?.key || `file_${Date.now()}`,
+        label: fileName,
+        type: fileProtocol,
+        data: {
+          ...fileData,
+          type: fileProtocol
+        }
+      };
+
+      if (onOpenFileConnection) {
+        onOpenFileConnection(fileNode, nodes);
+      }
+      closeCurrentTab();
     }
     else if (connectionType === 'ssh-tunnel') {
       if (!tunnelName || !tunnelSshHost || !tunnelSshUser) return;
@@ -439,13 +957,109 @@ export default function EditConnectionTabContent({
         remotePort: parseInt(tunnelRemotePort) || 0,
         bindHost: tunnelBindHost
       };
-      handleSaveSSHTunnelToSidebar(tunnelData, true, node);
-      handleTabClose(tab.key);
+      handleSaveSSHTunnelToSidebar(tunnelData, isEdit, node);
+
+      const tunnelNode = {
+        key: node?.key || `tunnel_${Date.now()}`,
+        label: tunnelName,
+        type: 'ssh-tunnel',
+        data: {
+          ...tunnelData,
+          type: 'ssh-tunnel'
+        }
+      };
+
+      if (onOpenSSHTunnel) {
+        onOpenSSHTunnel(tunnelNode, nodes);
+      }
+      closeCurrentTab();
+    }
+  };
+
+  // Confirmación
+  const handleSave = (e) => {
+    if (e) e.preventDefault();
+    const isEdit = !isNewConnection;
+
+    if (connectionType === 'ssh') {
+      const sshData = {
+        name: sshName,
+        host: sshHost,
+        user: sshUser,
+        password: sshPassword,
+        port: sshPort,
+        remoteFolder: sshRemoteFolder,
+        authMethod: sshAuthMethod,
+        privateKey: sshPrivateKey,
+        autoCopyPassword: sshAutoCopyPassword,
+        x11Forwarding: sshX11Forwarding,
+        agentForwarding: sshAgentForwarding,
+        autoRecording: sshAutoRecording,
+        proxyJumpEnabled: sshProxyJumpEnabled,
+        jumpHost: sshJumpHost,
+        jumpPort: sshJumpPort,
+        jumpUser: sshJumpUser,
+        jumpAuthMethod: sshJumpAuthMethod,
+        jumpPassword: sshJumpPassword,
+        jumpPrivateKey: sshJumpPrivateKey,
+        hostKeyPolicy: sshHostKeyPolicy,
+        description: sshDescription,
+        customIcon: sshIcon,
+        targetFolder: sshTargetFolder
+      };
+      handleSaveSshToSidebar(sshData, isEdit, node);
+      closeCurrentTab();
+    }
+    else if (connectionType === 'rdp') {
+      if (!isRdpFormValid(rdpFormData)) return;
+      handleSaveRdpToSidebar(rdpFormData, isEdit, node);
+      closeCurrentTab();
+    }
+    else if (connectionType === 'vnc' || connectionType === 'vnc-guacamole') {
+      if (!isVncFormValid(vncFormData)) return;
+      handleSaveVncToSidebar(vncFormData, isEdit, node);
+      closeCurrentTab();
+    }
+    else if (['sftp', 'ftp', 'scp'].includes(connectionType)) {
+      if (!fileName.trim() || !fileHost.trim() || !fileUser.trim()) return;
+      const fileData = {
+        name: fileName,
+        host: fileHost,
+        username: fileUser,
+        password: filePassword,
+        port: filePort,
+        protocol: fileProtocol,
+        remoteFolder: fileRemoteFolder,
+        targetFolder: fileTargetFolder
+      };
+      handleSaveFileConnectionToSidebar(fileData, isEdit, node);
+      closeCurrentTab();
+    }
+    else if (connectionType === 'ssh-tunnel') {
+      if (!tunnelName || !tunnelSshHost || !tunnelSshUser) return;
+      const tunnelData = {
+        name: tunnelName,
+        tunnelType: tunnelType,
+        sshHost: tunnelSshHost,
+        sshPort: tunnelSshPort,
+        sshUser: tunnelSshUser,
+        authType: tunnelAuthType,
+        sshPassword: tunnelSshPassword,
+        privateKeyPath: tunnelPrivateKeyPath,
+        passphrase: tunnelPassphrase,
+        localHost: tunnelLocalHost,
+        localPort: parseInt(tunnelLocalPort) || 0,
+        remoteHost: tunnelRemoteHost,
+        remotePort: parseInt(tunnelRemotePort) || 0,
+        bindHost: tunnelBindHost
+      };
+      handleSaveSSHTunnelToSidebar(tunnelData, isEdit, node);
+      closeCurrentTab();
     }
   };
 
   const handleCancel = () => {
-    handleTabClose(tab.key);
+    closeCurrentTab();
   };
 
   const folderOptionsList = useMemo(() => getAllFolders(nodes), [nodes]);
@@ -589,6 +1203,7 @@ export default function EditConnectionTabContent({
               <div className="col">
                 <label className="terminal-label">{t('fileConnection.fields.name').toUpperCase()} *</label>
                 <div className="terminal-input-wrap">
+                  <i className="pi pi-tag terminal-icon-left"></i>
                   <InputText 
                     value={fileName} 
                     onChange={(e) => setFileName(e.target.value)} 
@@ -600,6 +1215,7 @@ export default function EditConnectionTabContent({
               <div className="col">
                 <label className="terminal-label">{t('fileConnection.fields.protocol').toUpperCase()} *</label>
                 <div className="terminal-input-wrap terminal-folder-dropdown-wrap">
+                  <i className="pi pi-shield terminal-icon-left"></i>
                   <Dropdown
                     value={fileProtocol}
                     options={[
@@ -805,6 +1421,7 @@ export default function EditConnectionTabContent({
             <div className="terminal-row mb-3">
               <label className="terminal-label">NOMBRE DE CONEXIÓN *</label>
               <div className="terminal-input-wrap">
+                <i className="pi pi-tag terminal-icon-left"></i>
                 <InputText
                   value={tunnelName}
                   onChange={(e) => setTunnelName(e.target.value)}
@@ -842,6 +1459,7 @@ export default function EditConnectionTabContent({
               <div className="terminal-row mb-3">
                 <label className="terminal-label">SERVIDOR LOCAL</label>
                 <div className="terminal-input-wrap">
+                  <i className="pi pi-desktop terminal-icon-left"></i>
                   <InputText
                     value={tunnelLocalHost}
                     onChange={(e) => setTunnelLocalHost(e.target.value)}
@@ -857,6 +1475,7 @@ export default function EditConnectionTabContent({
                 {tunnelType === 'dynamic' ? 'PUERTO SOCKS *' : 'PUERTO LOCAL *'}
               </label>
               <div className="terminal-input-wrap">
+                <i className="pi pi-hashtag terminal-icon-left"></i>
                 <InputText
                   type="number"
                   value={tunnelLocalPort}
@@ -872,6 +1491,7 @@ export default function EditConnectionTabContent({
                 <div className="col">
                   <label className="terminal-label">HOST REMOTO *</label>
                   <div className="terminal-input-wrap">
+                    <i className="pi pi-globe terminal-icon-left"></i>
                     <InputText
                       value={tunnelRemoteHost}
                       onChange={(e) => setTunnelRemoteHost(e.target.value)}
@@ -883,6 +1503,7 @@ export default function EditConnectionTabContent({
                 <div className="col">
                   <label className="terminal-label">PUERTO REMOTO *</label>
                   <div className="terminal-input-wrap">
+                    <i className="pi pi-hashtag terminal-icon-left"></i>
                     <InputText
                       type="number"
                       value={tunnelRemotePort}
@@ -899,6 +1520,7 @@ export default function EditConnectionTabContent({
               <div className="terminal-row mb-3">
                 <label className="terminal-label">PUERTO REENVIADO (EN SERVIDOR SSH) *</label>
                 <div className="terminal-input-wrap">
+                  <i className="pi pi-hashtag terminal-icon-left"></i>
                   <InputText
                     type="number"
                     value={tunnelRemotePort}
@@ -1112,6 +1734,10 @@ export default function EditConnectionTabContent({
     }
   };
 
+  const protocolMeta = getProtocolMeta();
+  const currentConnName = currentConnectionName();
+  const { host: hostDisplay, user: userDisplay } = getHostAndUser();
+
   return (
     <div
       className="edit-connection-tab-container"
@@ -1128,118 +1754,184 @@ export default function EditConnectionTabContent({
       <div
         className="tab-edit-header"
         style={{
-          padding: '1.25rem 2rem',
-          borderBottom: '1px solid var(--ui-content-border, rgba(255, 255, 255, 0.08))',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '1rem',
-          background: 'rgba(0, 0, 0, 0.15)'
+          '--header-accent-color': protocolMeta.accentColor || 'rgba(99, 102, 241, 0.45)'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        {/* Left: Identity & Metadata */}
+        <div className="tab-edit-header-identity">
+          {/* Protocol Avatar Badge */}
           <div
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '8px',
-              background: 'linear-gradient(135deg, #89b4fa 0%, #cba6f7 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#fff',
-              fontSize: '1.1rem',
-              boxShadow: '0 4px 12px rgba(137, 180, 250, 0.25)'
-            }}
+            className={`header-protocol-avatar ${protocolMeta.avatarClass}`}
+            title={`Protocolo: ${protocolMeta.label}`}
           >
-            <i className="pi pi-pencil"></i>
+            <i className={protocolMeta.icon}></i>
           </div>
-          <div>
-            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: 'var(--ui-dialog-text, #cdd6f4)' }}>
-              Editar Conexión
-            </h3>
-            <span style={{ fontSize: '0.8rem', color: 'var(--ui-dialog-text, #cdd6f4)', opacity: 0.5 }}>
-              {connectionType?.toUpperCase()} : {node?.label}
-            </span>
-          </div>
-        </div>
 
-        {/* Action Buttons and Layout Switcher */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          {/* PROBAR CONEXIÓN */}
-          {connectionType === 'ssh' && (
-            <button
-              type="button"
-              className="terminal-btn-outline"
-              style={{
-                padding: '0.4rem 0.8rem',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                borderRadius: '6px',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
-                background: 'transparent',
-                color: 'rgba(255, 255, 255, 0.8)',
-                cursor: isTesting ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-                transition: 'all 0.2s ease'
-              }}
-              onClick={handleTestConnection}
-              disabled={isTesting}
-            >
-              <i className={`pi ${isTesting ? 'pi-spin pi-spinner' : 'pi-sync'}`}></i>
-              {isTesting ? 'PROBANDO...' : 'PROBAR CONEXIÓN'}
-            </button>
-          )}
+          {/* Title */}
+          <span className="tab-edit-header-title" title={currentConnName || (isNewConnection ? 'Nueva Conexión' : 'Editar Conexión')}>
+            {currentConnName || (isNewConnection ? 'Nueva Conexión' : 'Editar Conexión')}
+          </span>
 
-          {/* GUARDAR */}
+          {/* Protocol Pill */}
+          <span className={`protocol-pill-badge ${protocolMeta.badgeClass}`}>
+            {protocolMeta.label}
+          </span>
+
+          {/* Favorite Star Button */}
           <button
             type="button"
-            className="terminal-btn-outline terminal-btn-submit"
-            style={{
-              padding: '0.4rem 0.8rem',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              borderRadius: '6px',
-              border: 'none',
-              background: isFormValid() ? 'var(--ui-button-primary, #6366f1)' : 'rgba(255, 255, 255, 0.08)',
-              color: isFormValid() ? '#ffffff' : 'rgba(255, 255, 255, 0.3)',
-              cursor: isFormValid() ? 'pointer' : 'not-allowed',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              transition: 'all 0.2s ease',
-              boxShadow: isFormValid() ? '0 2px 8px rgba(99, 102, 241, 0.25)' : 'none'
-            }}
-            onClick={handleSave}
-            disabled={!isFormValid()}
+            className={`btn-header-fav-star ${isFav ? 'is-favorite' : ''}`}
+            onClick={handleToggleFavorite}
+            title={isFav ? 'Quitar de Favoritos' : 'Añadir a Favoritos'}
+            aria-label={isFav ? 'Quitar de Favoritos' : 'Añadir a Favoritos'}
           >
-            <i className="pi pi-save"></i> GUARDAR
+            <i className={`pi ${isFav ? 'pi-star-fill' : 'pi-star'}`}></i>
           </button>
 
-          {/* Layout switcher: single toggle button */}
-          <button
-            onClick={() => changeLayoutMode(layoutMode === 'sidebar' ? 'split' : 'sidebar')}
-            style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              color: 'rgba(255, 255, 255, 0.8)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              padding: '0.4rem 0.8rem',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              transition: 'all 0.2s ease'
-            }}
-            title={layoutMode === 'sidebar' ? 'Cambiar a Columnas' : 'Cambiar a Lateral'}
-          >
-            <i className={`pi ${layoutMode === 'sidebar' ? 'pi-th-large' : 'pi-clone'}`} style={{ fontSize: '0.85rem' }}></i>
-            <span>{layoutMode === 'sidebar' ? 'Columnas' : 'Lateral'}</span>
-          </button>
+          {/* Separator and Host/User info */}
+          {(hostDisplay || userDisplay) && <span className="header-meta-sep"></span>}
+
+          {hostDisplay && (
+            <span
+              className="connection-host-chip"
+              onClick={handleCopyHost}
+              title="Clic para copiar dirección host"
+            >
+              <i className="pi pi-server"></i>
+              <span>{hostDisplay}</span>
+            </span>
+          )}
+
+          {userDisplay && (
+            <span className="connection-user-chip" title={`Usuario: ${userDisplay}`}>
+              <i className="pi pi-user"></i>
+              <span>{userDisplay}</span>
+            </span>
+          )}
+        </div>
+
+        {/* Center: Inline Status / Notification Pill */}
+        {testStatus && (
+          <div className={`header-status-pill status-${testStatus.type}`}>
+            <i className={`pi ${
+              testStatus.type === 'testing' ? 'pi-spin pi-spinner' :
+              testStatus.type === 'success' ? 'pi-check-circle' :
+              testStatus.type === 'copied' ? 'pi-check' : 'pi-exclamation-triangle'
+            }`}></i>
+            <span>{testStatus.message}</span>
+            {testStatus.type !== 'testing' && (
+              <i
+                className="pi pi-times status-pill-dismiss"
+                onClick={() => setTestStatus(null)}
+                title="Descartar"
+                style={{ cursor: 'pointer', fontSize: '0.7rem', opacity: 0.7, marginLeft: '0.25rem' }}
+              ></i>
+            )}
+          </div>
+        )}
+
+        {/* Right: Quick Tools & Action Buttons */}
+        <div className="tab-edit-header-toolbar">
+          {/* Quick Tools Segmented Group */}
+          <div className="header-tools-group">
+            {/* PROBAR CONEXIÓN */}
+            <button
+              type="button"
+              className="btn-header-tool btn-header-tool-test"
+              onClick={handleTestConnection}
+              disabled={isTesting}
+              title={isTesting ? "Probando conectividad..." : "Verificar conectividad de red con el host"}
+              aria-label="Probar conexión"
+            >
+              <i className={`pi ${isTesting ? 'pi-spin pi-spinner' : 'pi-bolt'}`}></i>
+            </button>
+
+            {/* COPIAR CONTRASEÑA */}
+            <button
+              type="button"
+              className="btn-header-tool btn-header-tool-key"
+              onClick={handleCopyPassword}
+              disabled={!hasPassword}
+              title={hasPassword ? "Copiar contraseña al portapapeles" : "No hay contraseña configurada"}
+              aria-label="Copiar contraseña"
+            >
+              <i className="pi pi-key"></i>
+            </button>
+
+            {/* COPIAR CLI */}
+            <button
+              type="button"
+              className="btn-header-tool btn-header-tool-copy"
+              onClick={handleCopyCommand}
+              title="Copiar comando CLI o URI de conexión"
+              aria-label="Copiar comando"
+            >
+              <i className="pi pi-code"></i>
+            </button>
+
+            {/* DUPLICAR */}
+            <button
+              type="button"
+              className="btn-header-tool btn-header-tool-dup"
+              onClick={handleDuplicateConnection}
+              title="Duplicar conexión en la barra lateral"
+              aria-label="Duplicar conexión"
+              disabled={!isFormValid()}
+            >
+              <i className="pi pi-copy"></i>
+            </button>
+
+            {/* SELECTOR DE MODO DE VISTA */}
+            <button
+              type="button"
+              className="btn-header-tool btn-header-tool-view"
+              onClick={() => changeLayoutMode(layoutMode === 'sidebar' ? 'split' : 'sidebar')}
+              title={layoutMode === 'sidebar' ? 'Cambiar a vista en Columnas' : 'Cambiar a panel Lateral'}
+              aria-label={layoutMode === 'sidebar' ? 'Cambiar a vista en Columnas' : 'Cambiar a panel Lateral'}
+            >
+              <i className={`pi ${layoutMode === 'sidebar' ? 'pi-table' : 'pi-bars'}`}></i>
+            </button>
+          </div>
+
+          <div className="header-actions-divider"></div>
+
+          {/* Primary Action Buttons Group */}
+          <div className="header-primary-group">
+            {/* GUARDAR */}
+            <button
+              type="button"
+              className="btn-header-save"
+              onClick={handleSave}
+              disabled={!isFormValid()}
+              title="Guardar cambios de la conexión"
+              aria-label="Guardar cambios"
+            >
+              <i className="pi pi-save"></i>
+            </button>
+
+            {/* CONECTAR */}
+            <button
+              type="button"
+              className="btn-header-connect"
+              onClick={handleConnect}
+              disabled={!isFormValid()}
+              title="Guardar e iniciar sesión inmediatamente"
+              aria-label="Guardar y Conectar"
+            >
+              <i className="pi pi-play"></i>
+            </button>
+
+            {/* CERRAR */}
+            <button
+              type="button"
+              className="btn-header-close"
+              onClick={handleCancel}
+              title="Cerrar pestaña"
+              aria-label="Cerrar"
+            >
+              <i className="pi pi-times"></i>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1249,7 +1941,7 @@ export default function EditConnectionTabContent({
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '2rem',
+          padding: '1.25rem 1.5rem',
           display: 'flex',
           flexDirection: 'column',
           minHeight: 0

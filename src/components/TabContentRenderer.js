@@ -1171,6 +1171,7 @@ const TabContentRendererInner = React.memo(({
   onOpenRdpConnection,
   onOpenSSHTunnel,
   onOpenVncConnection,
+  onOpenFileConnection,
   handleLoadGroupFromFavorites,
   openEditRdpDialog,
   openEditSSHDialog,
@@ -2932,6 +2933,11 @@ const TabContentRendererInner = React.memo(({
         handleSaveVncToSidebar={handleSaveVncToSidebar}
         handleSaveFileConnectionToSidebar={handleSaveFileConnectionToSidebar}
         handleSaveSSHTunnelToSidebar={handleSaveSSHTunnelToSidebar}
+        onOpenSSHConnection={onCreateSSHConnection}
+        onOpenRdpConnection={onOpenRdpConnection}
+        onOpenVncConnection={onOpenVncConnection}
+        onOpenFileConnection={onOpenFileConnection}
+        onOpenSSHTunnel={onOpenSSHTunnel}
         handleTabClose={handleTabClose}
         iconTheme={iconTheme}
       />

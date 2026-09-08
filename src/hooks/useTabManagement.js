@@ -545,7 +545,26 @@ export const useTabManagement = (toast, {
   }, []);
 
   // === FUNCIÓN DE CIERRE DE PESTAÑAS ===
-  const handleTabClose = useCallback((closedTab, idx, isHomeTab) => {
+  const handleTabClose = useCallback((closedTabOrKey, idx, isHomeTab) => {
+    if (!closedTabOrKey) return;
+
+    // Normalizar si se pasa solo la key (string)
+    let closedTab = closedTabOrKey;
+    if (typeof closedTabOrKey === 'string') {
+      const allTabsList = [...sshTabs, ...homeTabs, ...rdpTabs, ...guacamoleTabs, ...fileExplorerTabs];
+      closedTab = allTabsList.find(t => t.key === closedTabOrKey) || { key: closedTabOrKey, type: 'edit-connection' };
+    }
+
+    if (!closedTab || !closedTab.key) return;
+
+    // Calcular idx si no se proporcionó
+    let targetIdx = idx;
+    if (targetIdx === undefined) {
+      const currentTabs = getTabsInGroup ? getTabsInGroup(activeGroupId) : [];
+      targetIdx = currentTabs.findIndex(t => t.key === closedTab.key);
+      if (targetIdx === -1) targetIdx = activeTabIndex;
+    }
+
     // Limpiar distro de la pestaña cerrada
     if (externalCleanupTabDistro) {
       externalCleanupTabDistro(closedTab.key);
@@ -785,8 +804,8 @@ export const useTabManagement = (toast, {
     }
 
     // Ajustar índice activo
-    if (activeTabIndex === idx) {
-      const newIndex = Math.max(0, idx - 1);
+    if (activeTabIndex === targetIdx) {
+      const newIndex = Math.max(0, targetIdx - 1);
       setActiveTabIndex(newIndex);
       // Solo actualizar el índice guardado si el grupo actual tiene pestañas después del cierre
       const currentGroupKey = activeGroupId || GROUP_KEYS?.DEFAULT;
@@ -798,7 +817,7 @@ export const useTabManagement = (toast, {
           [currentGroupKey]: newIndex
         }));
       }
-    } else if (activeTabIndex > idx) {
+    } else if (activeTabIndex > targetIdx) {
       const newIndex = activeTabIndex - 1;
       setActiveTabIndex(newIndex);
       // Solo actualizar el índice guardado si el grupo actual tiene pestañas después del cierre

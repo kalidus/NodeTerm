@@ -4052,6 +4052,7 @@ const App = () => {
     masterKey,
     secureStorage,
     // Edit connection tab handlers
+    onOpenFileConnection,
     handleSaveSshToSidebar,
     handleSaveRdpToSidebar,
     handleSaveVncToSidebar,
@@ -4059,7 +4060,7 @@ const App = () => {
     handleSaveSSHTunnelToSidebar,
     handleTabClose
   }), [
-    onOpenSSHConnection, openFolderDialog, onOpenRdpConnection, onOpenVncConnection, handleLoadGroupFromFavorites,
+    onOpenSSHConnection, openFolderDialog, onOpenRdpConnection, onOpenVncConnection, onOpenFileConnection, handleLoadGroupFromFavorites,
     openEditRdpDialog, openEditSSHDialog, nodes, localFontFamily, localFontSize,
     localLinuxTerminalTheme, setLocalLinuxTerminalTheme, localPowerShellTheme, setLocalPowerShellTheme, localDockerTerminalTheme, dockerFontFamily, dockerFontSize, iconTheme, explorerFont,
     explorerColorTheme, setExplorerColorTheme, explorerFontSize, fontFamily, fontSize, terminalTheme,
