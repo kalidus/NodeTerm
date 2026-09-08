@@ -320,6 +320,105 @@ const HomePanelWrapper = ({
           </div>
         );
 
+      case 'cyberpunk-pro':
+        return (
+          <div className="cyberpunk-pro-controls no-drag" onMouseDown={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span className="cyber-pro-tag">SYS</span>
+            <div
+              className="cyber-pro-btn"
+              title={isMaximized ? "Restaurar tamaño original" : "Ampliar al espacio libre"}
+              onClick={handleMax}
+            >
+              {isMaximized ? "RST" : "MAX"}
+            </div>
+            <div className="cyber-pro-btn close" title="Ocultar" onClick={handleClose}>
+              ✕
+            </div>
+          </div>
+        );
+
+      case 'hologram':
+        return (
+          <div className="hologram-controls no-drag" onMouseDown={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <div
+              className="holo-btn"
+              title={isMaximized ? "Restaurar HUD" : "Maximizar HUD"}
+              onClick={handleMax}
+            >
+              {isMaximized ? "◈" : "⬡"}
+            </div>
+            <div className="holo-btn close" title="Cerrar HUD" onClick={handleClose}>
+              ✕
+            </div>
+          </div>
+        );
+
+      case 'synthwave':
+        return (
+          <div className="synthwave-controls no-drag" onMouseDown={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+            <div className="synth-dot close" onClick={handleClose} title="Cerrar" />
+            <div className="synth-dot max" onClick={handleMax} title={isMaximized ? "Restaurar tamaño original" : "Ampliar"} />
+            <div className="synth-dot min" title="Synth" />
+          </div>
+        );
+
+      case 'matrix':
+        return (
+          <div className="matrix-controls no-drag" onMouseDown={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <div
+              className="matrix-btn"
+              title={isMaximized ? "RESTORE [01]" : "MAX [10]"}
+              onClick={handleMax}
+            >
+              {isMaximized ? "[01]" : "[10]"}
+            </div>
+            <div className="matrix-btn close" title="EXIT [11]" onClick={handleClose}>
+              [11]
+            </div>
+          </div>
+        );
+
+      case 'aurora-glass':
+        return (
+          <div className="aurora-controls no-drag" onMouseDown={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div
+              className="aurora-pill"
+              title={isMaximized ? "Restaurar" : "Ampliar"}
+              onClick={handleMax}
+            >
+              <i className={isMaximized ? "pi pi-window-minimize" : "pi pi-window-maximize"} style={{ fontSize: '9px' }} />
+            </div>
+            <div className="aurora-pill close" title="Ocultar" onClick={handleClose}>
+              <i className="pi pi-times" style={{ fontSize: '9px' }} />
+            </div>
+          </div>
+        );
+
+      case 'stealth':
+        return (
+          <div className="stealth-controls no-drag" onMouseDown={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div
+              className="stealth-btn"
+              title={isMaximized ? "RESTORE" : "MAX"}
+              onClick={handleMax}
+            >
+              {isMaximized ? "—" : "□"}
+            </div>
+            <div className="stealth-btn close" title="ABORT" onClick={handleClose}>
+              ✕
+            </div>
+          </div>
+        );
+
+      case 'frameless':
+        return (
+          <div className="traffic-lights no-drag" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="traffic-dot red" onClick={handleClose} title="Ocultar" />
+            <div className="traffic-dot yellow" />
+            <div className="traffic-dot green" onClick={handleMax} title={isMaximized ? "Restaurar tamaño original" : "Ampliar al espacio libre (sin sobreponerse)"} />
+          </div>
+        );
+
       default:
         return (
           <div className="traffic-lights no-drag" onMouseDown={(e) => e.stopPropagation()}>
@@ -330,6 +429,8 @@ const HomePanelWrapper = ({
         );
     }
   };
+
+  const isFramelessNonTerminal = terminalFrameStyle === 'frameless' && id !== 'terminal';
 
   return (
     <Rnd
@@ -385,7 +486,7 @@ const HomePanelWrapper = ({
       onMouseDown={handleDragStart}
     >
       <div
-        className={`home-panel-frame recents-terminal-frame ${terminalFrameStyle} ${isMaximized ? 'is-maximized' : ''} ${className}`}
+        className={`home-panel-frame recents-terminal-frame ${terminalFrameStyle} ${isFramelessNonTerminal ? 'is-frameless-panel' : ''} ${isMaximized ? 'is-maximized' : ''} ${className}`}
         style={{
           width: '100%',
           height: '100%',
@@ -393,7 +494,7 @@ const HomePanelWrapper = ({
           flexDirection: 'column',
           overflow: 'hidden',
           borderRadius: isMaximized ? 0 : undefined,
-          ...(frameBackground ? { background: frameBackground } : {})
+          ...(frameBackground ? { background: isFramelessNonTerminal ? 'transparent' : frameBackground } : {})
         }}
       >
         {!hideHeader && (

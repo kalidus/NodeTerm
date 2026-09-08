@@ -3398,7 +3398,13 @@ const ConnectionHistory = ({
 				.recents-terminal-frame.matcha, .top-terminal-frame.matcha,
 				.recents-terminal-frame.futuristic, .top-terminal-frame.futuristic,
 				.recents-terminal-frame.modern, .top-terminal-frame.modern,
-				.recents-terminal-frame.retro, .top-terminal-frame.retro {
+				.recents-terminal-frame.retro, .top-terminal-frame.retro,
+				.recents-terminal-frame.cyberpunk-pro, .top-terminal-frame.cyberpunk-pro,
+				.recents-terminal-frame.hologram, .top-terminal-frame.hologram,
+				.recents-terminal-frame.synthwave, .top-terminal-frame.synthwave,
+				.recents-terminal-frame.matrix, .top-terminal-frame.matrix,
+				.recents-terminal-frame.aurora-glass, .top-terminal-frame.aurora-glass,
+				.recents-terminal-frame.stealth, .top-terminal-frame.stealth {
 					background-color: ${(() => {
 					const bg = terminalTheme.background || '#0d1117';
 					const adjustOpacityLoc = (color, opacity) => {
@@ -4885,6 +4891,39 @@ const ConnectionHistory = ({
 										) : terminalFrameStyle === 'modern' ? (
 											<div className="modern-controls" style={{ marginLeft: '-8px' }}>
 												<div className="glass-dot"><i className="pi pi-times" /></div>
+											</div>
+										) : terminalFrameStyle === 'cyberpunk-pro' ? (
+											<div className="cyberpunk-pro-controls" style={{ marginLeft: '-8px' }}>
+												<span className="cyber-pro-tag">SYS</span>
+												<div className="cyber-pro-btn close" title="Cerrar"><i className="pi pi-times" /></div>
+											</div>
+										) : terminalFrameStyle === 'hologram' ? (
+											<div className="hologram-controls" style={{ marginLeft: '-8px' }}>
+												<div className="holo-btn close" title="Cerrar"><i className="pi pi-times" /></div>
+											</div>
+										) : terminalFrameStyle === 'synthwave' ? (
+											<div className="synthwave-controls" style={{ marginLeft: '-8px' }}>
+												<div className="synth-dot close" title="Cerrar" />
+												<div className="synth-dot max" />
+												<div className="synth-dot min" />
+											</div>
+										) : terminalFrameStyle === 'matrix' ? (
+											<div className="matrix-controls" style={{ marginLeft: '-8px' }}>
+												<div className="matrix-btn close" title="Cerrar">[11]</div>
+											</div>
+										) : terminalFrameStyle === 'aurora-glass' ? (
+											<div className="aurora-controls" style={{ marginLeft: '-8px' }}>
+												<div className="aurora-pill close" title="Cerrar"><i className="pi pi-times" /></div>
+											</div>
+										) : terminalFrameStyle === 'stealth' ? (
+											<div className="stealth-controls" style={{ marginLeft: '-8px' }}>
+												<div className="stealth-btn close" title="Cerrar"><i className="pi pi-times" /></div>
+											</div>
+										) : terminalFrameStyle === 'frameless' ? (
+											<div className="traffic-lights" style={{ marginLeft: '-8px' }}>
+												<div className="traffic-dot red" />
+												<div className="traffic-dot yellow" />
+												<div className="traffic-dot green" />
 											</div>
 										) : terminalFrameStyle === 'minimal' ? (
 											<div className="minimal-controls" style={{ marginLeft: '-8px' }} />

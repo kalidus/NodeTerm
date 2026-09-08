@@ -135,6 +135,55 @@ const TerminalFrame = ({
                                 <div className="retro-switch maximize" onClick={onMaximize} title="Maximizar" />
                                 <div className="retro-switch on close" onClick={onClose} title="Cerrar" />
                             </div>
+                        ) : frameStyle === 'cyberpunk-pro' ? (
+                            <div className="terminal-frame-controls cyberpunk-pro-controls" style={isDraggable ? { WebkitAppRegion: 'no-drag' } : {}}>
+                                <span className="cyber-pro-tag">SYS</span>
+                                <div className="cyber-pro-btn minimize" onClick={onMinimize} title="Minimizar">_</div>
+                                <div className="cyber-pro-btn maximize" onClick={onMaximize} title="Maximizar">⬡</div>
+                                <div className="cyber-pro-btn close" onClick={onClose} title="Cerrar">✕</div>
+                            </div>
+                        ) : frameStyle === 'hologram' ? (
+                            <div className="terminal-frame-controls hologram-controls" style={isDraggable ? { WebkitAppRegion: 'no-drag' } : {}}>
+                                <div className="holo-btn minimize" onClick={onMinimize} title="Minimizar">─</div>
+                                <div className="holo-btn maximize" onClick={onMaximize} title="Maximizar">◈</div>
+                                <div className="holo-btn close" onClick={onClose} title="Cerrar">✕</div>
+                            </div>
+                        ) : frameStyle === 'synthwave' ? (
+                            <div className="terminal-frame-controls synthwave-controls" style={isDraggable ? { WebkitAppRegion: 'no-drag' } : {}}>
+                                <div className="synth-dot close" onClick={onClose} title="Cerrar" />
+                                <div className="synth-dot max" onClick={onMaximize} title="Maximizar" />
+                                <div className="synth-dot min" onClick={onMinimize} title="Minimizar" />
+                            </div>
+                        ) : frameStyle === 'matrix' ? (
+                            <div className="terminal-frame-controls matrix-controls" style={isDraggable ? { WebkitAppRegion: 'no-drag' } : {}}>
+                                <div className="matrix-btn minimize" onClick={onMinimize} title="Minimizar">[01]</div>
+                                <div className="matrix-btn maximize" onClick={onMaximize} title="Maximizar">[10]</div>
+                                <div className="matrix-btn close" onClick={onClose} title="Cerrar">[11]</div>
+                            </div>
+                        ) : frameStyle === 'aurora-glass' ? (
+                            <div className="terminal-frame-controls aurora-controls" style={isDraggable ? { WebkitAppRegion: 'no-drag' } : {}}>
+                                <div className="aurora-pill minimize" onClick={onMinimize} title="Minimizar">
+                                    <span style={{ fontSize: 10 }}>−</span>
+                                </div>
+                                <div className="aurora-pill maximize" onClick={onMaximize} title="Maximizar">
+                                    <span style={{ fontSize: 10 }}>□</span>
+                                </div>
+                                <div className="aurora-pill close" onClick={onClose} title="Cerrar">
+                                    <span style={{ fontSize: 10 }}>✕</span>
+                                </div>
+                            </div>
+                        ) : frameStyle === 'stealth' ? (
+                            <div className="terminal-frame-controls stealth-controls" style={isDraggable ? { WebkitAppRegion: 'no-drag' } : {}}>
+                                <div className="stealth-btn minimize" onClick={onMinimize} title="Minimizar">—</div>
+                                <div className="stealth-btn maximize" onClick={onMaximize} title="Maximizar">□</div>
+                                <div className="stealth-btn close" onClick={onClose} title="Cerrar">✕</div>
+                            </div>
+                        ) : frameStyle === 'frameless' ? (
+                            <div className="terminal-frame-controls" style={isDraggable ? { WebkitAppRegion: 'no-drag' } : {}}>
+                                <div className="terminal-frame-dot red" onClick={onClose} title="Cerrar" />
+                                <div className="terminal-frame-dot yellow" onClick={onMinimize} title="Minimizar" />
+                                <div className="terminal-frame-dot green" onClick={onMaximize} title="Maximizar" />
+                            </div>
                         ) : frameStyle === 'minimal' ? (
                             null
                         ) : (

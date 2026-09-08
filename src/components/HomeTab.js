@@ -40,14 +40,25 @@ import {
 
 /** Opciones de marco del terminal local (Home); mismas claves que `TERMINAL_FRAME_STYLE` en ConnectionHistory. */
 const HOME_TERMINAL_FRAME_STYLE_OPTIONS = [
+  // Clásicos & OS
   { id: 'macos', label: 'macOS (Traffic)', dots: ['#ff5f56', '#ffbd2e', '#27c93f'] },
   { id: 'gnome', label: 'GNOME (Adwaita)', icon: 'pi pi-times', right: true },
   { id: 'kde', label: 'KDE (Breeze)', icons: ['pi-minus', 'pi-stop', 'pi-times'], right: true },
   { id: 'windows', label: 'Windows (WinUI)', icons: ['pi-minus', 'pi-stop', 'pi-times'], right: true },
-  { id: 'matcha', label: 'Matcha (Green)', line: '#2eb398', icons: ['pi-times'], right: true },
-  { id: 'futuristic', label: 'Futurista (Cyber)', color: '#00f2ff', text: 'EXE' },
-  { id: 'modern', label: 'Moderno (Glass)', rounded: true, icons: ['pi-times'], right: true },
+  // Minimalistas
+  { id: 'frameless', label: 'Sin marco (Solo Terminal)', frameless: true, text: '∅' },
   { id: 'minimal', label: 'Minimal (Sin botones)', noButtons: true },
+  { id: 'matcha', label: 'Matcha (Green)', line: '#2eb398', icons: ['pi-times'], right: true },
+  // Futuristas & Cyberpunk
+  { id: 'cyberpunk-pro', label: 'Cyberpunk Pro (Arasaka)', color: '#fcee0a', tag: 'SYS', cyberBorder: true },
+  { id: 'hologram', label: 'Holográfico (Sci-Fi HUD)', color: '#00e5ff', hud: true },
+  { id: 'matrix', label: 'Matrix (Digital Rain)', color: '#00ff66', text: '[01]' },
+  { id: 'futuristic', label: 'Futurista (Cyber)', color: '#00f2ff', text: 'EXE' },
+  // Modernos & Efectos
+  { id: 'aurora-glass', label: 'Aurora Glass (Liquid)', rounded: true, color: '#93c5fd', aurora: true },
+  { id: 'modern', label: 'Moderno (Glass)', rounded: true, icons: ['pi-times'], right: true },
+  { id: 'synthwave', label: 'Synthwave (Neon 80s)', synthwave: true, dots: ['#ec4899', '#8b5cf6', '#06b6d4'] },
+  { id: 'stealth', label: 'Stealth Ops (Matte)', color: '#ff6b00', stealth: true, text: '—' },
   { id: 'retro', label: 'Retro (CRT)', color: '#0f0', switch: true }
 ];
 
@@ -2788,21 +2799,31 @@ const HomeTab = ({
                 <div
                   className="frame-preview"
                   style={{
-                    borderColor: style.color || 'rgba(255,255,255,0.1)',
-                    borderTop: style.line ? `2px solid ${style.line}` : undefined,
-                    borderRadius: style.rounded ? '8px' : '4px'
+                    borderColor: style.frameless ? 'rgba(255,255,255,0.25)' : (style.color || 'rgba(255,255,255,0.1)'),
+                    borderStyle: style.frameless ? 'dashed' : 'solid',
+                    borderTop: style.line ? `2px solid ${style.line}` : (style.cyberBorder ? '2px solid #fcee0a' : undefined),
+                    borderRadius: style.rounded ? '8px' : (style.frameless ? '2px' : '4px'),
+                    background: style.aurora ? 'linear-gradient(135deg, rgba(99,102,241,0.25), rgba(20,184,166,0.25))' : undefined,
+                    boxShadow: style.hud ? '0 0 6px rgba(0,229,255,0.4)' : (style.synthwave ? '0 0 6px rgba(217,70,239,0.5)' : undefined)
                   }}
                 >
                   {style.noButtons ? null : style.dots ? (
                     <div style={{ display: 'flex', gap: '3px' }}>
                       {style.dots.map((c, i) => (
-                        <div key={i} className="frame-preview-dot" style={{ background: c }} />
+                        <div key={i} className="frame-preview-dot" style={{ background: c, boxShadow: style.synthwave ? `0 0 3px ${c}` : undefined }} />
                       ))}
                     </div>
                   ) : style.switch ? (
                     <div className="frame-preview-dot" style={{ background: '#0f0', boxShadow: '0 0 4px #0f0' }} />
+                  ) : style.hud ? (
+                    <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+                      <span style={{ fontSize: '7px', color: '#00e5ff', lineHeight: 1 }}>◈</span>
+                      <span style={{ fontSize: '6px', color: '#00e5ff', lineHeight: 1 }}>✕</span>
+                    </div>
+                  ) : style.tag ? (
+                    <span style={{ fontSize: '6px', color: '#000', background: style.color, padding: '0 2px', borderRadius: '1px', fontWeight: 'bold' }}>{style.tag}</span>
                   ) : style.text ? (
-                    <span style={{ fontSize: '6px', color: style.color }}>{style.text}</span>
+                    <span style={{ fontSize: '6px', color: style.color || '#fff', fontWeight: 'bold', fontFamily: 'monospace' }}>{style.text}</span>
                   ) : (
                     <div style={{ display: 'flex', gap: '2px', marginLeft: style.right ? 'auto' : 0 }}>
                       {(style.icons || [style.icon]).map((ico, i) => (
@@ -2810,7 +2831,7 @@ const HomeTab = ({
                       ))}
                     </div>
                   )}
-                  <div className="frame-preview-bar" />
+                  <div className="frame-preview-bar" style={style.frameless ? { borderTopStyle: 'dashed' } : {}} />
                 </div>
                 <span style={{ fontSize: '0.82rem' }}>{style.label}</span>
               </div>
@@ -2917,9 +2938,9 @@ const HomeTab = ({
         flexDirection: 'column',
         overflow: 'hidden',
         background: localTerminalBg,
-        borderRadius: terminalState === 'maximized' ? '0' : (terminalFrameStyle === 'modern' ? '20px' : (terminalFrameStyle === 'retro' ? '24px' : '8px')),
+        borderRadius: terminalState === 'maximized' ? '0' : (['modern', 'aurora-glass'].includes(terminalFrameStyle) ? '20px' : (terminalFrameStyle === 'retro' ? '24px' : '8px')),
         boxShadow: terminalState === 'maximized' ? 'none' : '0 10px 30px rgba(0,0,0,0.5)',
-        border: terminalState === 'maximized' ? 'none' : (['futuristic', 'modern', 'retro', 'matcha'].includes(terminalFrameStyle) ? 'none' : `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`)
+        border: terminalState === 'maximized' ? 'none' : (['futuristic', 'modern', 'retro', 'matcha', 'cyberpunk-pro', 'hologram', 'synthwave', 'matrix', 'aurora-glass', 'stealth'].includes(terminalFrameStyle) ? 'none' : `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`)
       }}
     >
       {/* Universal header wrapper */}
@@ -2928,7 +2949,7 @@ const HomeTab = ({
         style={{
           height: '36px',
           background: themeColors.cardBackground || 'rgba(255, 255, 255, 0.03)',
-          borderBottom: ['futuristic', 'modern', 'retro', 'matcha'].includes(terminalFrameStyle) ? 'none' : `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
+          borderBottom: ['futuristic', 'modern', 'retro', 'matcha', 'cyberpunk-pro', 'hologram', 'synthwave', 'matrix', 'aurora-glass', 'stealth'].includes(terminalFrameStyle) ? 'none' : `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -2936,8 +2957,8 @@ const HomeTab = ({
           cursor: terminalState === 'maximized' ? 'default' : 'grab',
           flexShrink: 0,
           position: 'relative',
-          borderTopLeftRadius: terminalState === 'maximized' ? '0' : (terminalFrameStyle === 'modern' ? '20px' : (terminalFrameStyle === 'retro' ? '24px' : (terminalFrameStyle === 'orchis' ? '24px' : '8px'))),
-          borderTopRightRadius: terminalState === 'maximized' ? '0' : (terminalFrameStyle === 'modern' ? '20px' : (terminalFrameStyle === 'retro' ? '24px' : (terminalFrameStyle === 'orchis' ? '24px' : '8px'))),
+          borderTopLeftRadius: terminalState === 'maximized' ? '0' : (['modern', 'aurora-glass'].includes(terminalFrameStyle) ? '20px' : (terminalFrameStyle === 'retro' ? '24px' : (terminalFrameStyle === 'orchis' ? '24px' : '8px'))),
+          borderTopRightRadius: terminalState === 'maximized' ? '0' : (['modern', 'aurora-glass'].includes(terminalFrameStyle) ? '20px' : (terminalFrameStyle === 'retro' ? '24px' : (terminalFrameStyle === 'orchis' ? '24px' : '8px'))),
         }}
         onMouseDown={(e) => { if (terminalState !== 'maximized') e.currentTarget.style.cursor = 'grabbing'; }}
         onMouseUp={(e) => { if (terminalState !== 'maximized') e.currentTarget.style.cursor = 'grab'; }}
@@ -2945,7 +2966,7 @@ const HomeTab = ({
         onDoubleClick={handleMaximizeTerminal}
       >
         <div style={{ display: 'flex', gap: '8px', zIndex: 10 }}>
-          {terminalFrameStyle === 'macos' ? (
+          {terminalFrameStyle === 'macos' || terminalFrameStyle === 'frameless' ? (
             <>
               <div
                 className="no-drag"
@@ -3002,6 +3023,43 @@ const HomeTab = ({
               <div className="cyber-dot maximize" title="Maximizar" onClick={handleMaximizeTerminal}>MAX</div>
               <div className="cyber-dot close" title="Cerrar Terminal" onClick={handleCloseTerminal}>EXE</div>
             </div>
+          ) : terminalFrameStyle === 'cyberpunk-pro' ? (
+            <div className="cyberpunk-pro-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+              <span className="cyber-pro-tag">SYS</span>
+              <div className="cyber-pro-btn minimize" title="Minimizar" onClick={handleMinimizeTerminal}>_</div>
+              <div className="cyber-pro-btn maximize" title="Maximizar" onClick={handleMaximizeTerminal}>⬡</div>
+              <div className="cyber-pro-btn close" title="Cerrar Terminal" onClick={handleCloseTerminal}>✕</div>
+            </div>
+          ) : terminalFrameStyle === 'hologram' ? (
+            <div className="hologram-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+              <div className="holo-btn minimize" title="Minimizar" onClick={handleMinimizeTerminal}>─</div>
+              <div className="holo-btn maximize" title="Maximizar" onClick={handleMaximizeTerminal}>◈</div>
+              <div className="holo-btn close" title="Cerrar Terminal" onClick={handleCloseTerminal}>✕</div>
+            </div>
+          ) : terminalFrameStyle === 'synthwave' ? (
+            <div className="synthwave-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+              <div className="synth-dot close" title="Cerrar" onClick={handleCloseTerminal} />
+              <div className="synth-dot max" title="Maximizar" onClick={handleMaximizeTerminal} />
+              <div className="synth-dot min" title="Minimizar" onClick={handleMinimizeTerminal} />
+            </div>
+          ) : terminalFrameStyle === 'matrix' ? (
+            <div className="matrix-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+              <div className="matrix-btn minimize" title="Minimizar" onClick={handleMinimizeTerminal}>[01]</div>
+              <div className="matrix-btn maximize" title="Maximizar" onClick={handleMaximizeTerminal}>[10]</div>
+              <div className="matrix-btn close" title="Cerrar Terminal" onClick={handleCloseTerminal}>[11]</div>
+            </div>
+          ) : terminalFrameStyle === 'aurora-glass' ? (
+            <div className="aurora-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+              <div className="aurora-pill minimize" title="Minimizar" onClick={handleMinimizeTerminal}><i className="pi pi-minus" style={{ fontSize: '10px' }} /></div>
+              <div className="aurora-pill maximize" title="Maximizar" onClick={handleMaximizeTerminal}><i className="pi pi-stop" style={{ fontSize: '10px' }} /></div>
+              <div className="aurora-pill close" title="Ocultar" onClick={handleCloseTerminal}><i className="pi pi-times" /></div>
+            </div>
+          ) : terminalFrameStyle === 'stealth' ? (
+            <div className="stealth-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
+              <div className="stealth-btn minimize" title="Minimizar" onClick={handleMinimizeTerminal}>—</div>
+              <div className="stealth-btn maximize" title="Maximizar" onClick={handleMaximizeTerminal}>□</div>
+              <div className="stealth-btn close" title="Cerrar Terminal" onClick={handleCloseTerminal}>✕</div>
+            </div>
           ) : terminalFrameStyle === 'modern' ? (
             <div className="modern-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
               <div className="glass-dot minimize" title="Minimizar" onClick={handleMinimizeTerminal}><i className="pi pi-minus" style={{ fontSize: '10px' }} /></div>
@@ -3025,11 +3083,11 @@ const HomeTab = ({
 
         <div style={{
           position: 'absolute', left: 0, right: 0, textAlign: 'center',
-          color: terminalFrameStyle === 'futuristic' ? '#00f2ff' : (terminalFrameStyle === 'retro' ? '#0f0' : themeColors.textSecondary),
+          color: terminalFrameStyle === 'futuristic' ? '#00f2ff' : (terminalFrameStyle === 'cyberpunk-pro' ? '#fcee0a' : (terminalFrameStyle === 'hologram' ? '#00e5ff' : (terminalFrameStyle === 'synthwave' ? '#ff2a85' : (terminalFrameStyle === 'matrix' ? '#00ff66' : (terminalFrameStyle === 'stealth' ? '#ff6b00' : (terminalFrameStyle === 'retro' ? '#0f0' : themeColors.textSecondary)))))),
           fontSize: terminalFrameStyle === 'retro' ? '12px' : '11px',
           userSelect: 'none', pointerEvents: 'none', fontWeight: 500,
-          textShadow: terminalFrameStyle === 'futuristic' ? '0 0 8px #00f2ff' : (terminalFrameStyle === 'retro' ? '0 0 5px #0f0' : 'none'),
-          fontFamily: terminalFrameStyle === 'retro' ? '"Courier New", monospace' : 'inherit'
+          textShadow: terminalFrameStyle === 'futuristic' ? '0 0 8px #00f2ff' : (terminalFrameStyle === 'cyberpunk-pro' ? '0 0 8px rgba(252,238,10,0.6)' : (terminalFrameStyle === 'hologram' ? '0 0 8px #00e5ff' : (terminalFrameStyle === 'synthwave' ? '0 0 8px #ff2a85' : (terminalFrameStyle === 'matrix' ? '0 0 8px #00ff66' : (terminalFrameStyle === 'stealth' ? '0 0 6px #ff6b00' : (terminalFrameStyle === 'retro' ? '0 0 5px #0f0' : 'none')))))),
+          fontFamily: ['retro', 'cyberpunk-pro', 'matrix', 'stealth'].includes(terminalFrameStyle) ? '"Fira Code", monospace' : 'inherit'
         }}>
           {terminalTitle}
         </div>

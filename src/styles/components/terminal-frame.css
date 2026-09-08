@@ -349,6 +349,413 @@
     border-radius: 8px !important;
 }
 
+/* --- Frameless Style (Sin marco: paneles sin marco, terminal siempre conserva marco) --- */
+.terminal-frame-frameless:not(.main-content-frame) {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+}
+
+.terminal-frame-frameless:not(.main-content-frame) .terminal-frame-header {
+    background: transparent !important;
+    border-bottom: none !important;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.terminal-frame-frameless:not(.main-content-frame):hover .terminal-frame-header {
+    opacity: 1;
+}
+
+.home-panel-frame.is-frameless-panel {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+}
+
+.home-panel-frame.is-frameless-panel .recents-terminal-header {
+    background: transparent !important;
+    border-bottom: none !important;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+.home-panel-frame.is-frameless-panel:hover .recents-terminal-header {
+    opacity: 1;
+}
+
+.home-panel-frame.is-frameless-panel .home-panel-drag-handle {
+    background: rgba(15, 23, 42, 0.75) !important;
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 8px !important;
+    margin: 4px 8px 0 8px;
+    padding: 3px 10px !important;
+}
+
+/* --- Cyberpunk Pro Style (Arasaka HUD) --- */
+.terminal-frame-cyberpunk-pro,
+.recents-terminal-frame.cyberpunk-pro,
+.top-terminal-frame.cyberpunk-pro {
+    border: 1px solid #fcee0a !important;
+    box-shadow: 0 0 16px rgba(252, 238, 10, 0.25), inset 0 0 12px rgba(0, 242, 255, 0.08) !important;
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px)) !important;
+    background: rgba(10, 12, 16, 0.85) !important;
+    position: relative;
+}
+
+.terminal-frame-cyberpunk-pro .terminal-frame-header,
+.recents-terminal-frame.cyberpunk-pro .recents-terminal-header,
+.top-terminal-frame.cyberpunk-pro .top-terminal-header {
+    background: linear-gradient(90deg, rgba(252, 238, 10, 0.12) 0%, rgba(0, 242, 255, 0.08) 100%) !important;
+    border-bottom: 1px solid rgba(252, 238, 10, 0.35) !important;
+    font-family: 'Fira Code', 'Cascadia Code', monospace;
+}
+
+.cyberpunk-pro-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cyber-pro-btn {
+    width: 22px;
+    height: 18px;
+    border: 1px solid #fcee0a;
+    background: rgba(252, 238, 10, 0.06);
+    color: #fcee0a;
+    font-size: 9px;
+    font-family: 'Fira Code', monospace;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transform: skew(-12deg);
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.cyber-pro-btn:hover {
+    background: #fcee0a;
+    color: #000;
+    box-shadow: 0 0 10px #fcee0a;
+}
+
+.cyber-pro-btn.close {
+    border-color: #ff003c;
+    color: #ff003c;
+    background: rgba(255, 0, 60, 0.06);
+}
+
+.cyber-pro-btn.close:hover {
+    background: #ff003c;
+    color: #fff;
+    box-shadow: 0 0 12px #ff003c;
+}
+
+.cyber-pro-tag {
+    font-size: 8px;
+    padding: 1px 5px;
+    background: rgba(0, 242, 255, 0.15);
+    border: 1px solid #00f2ff;
+    color: #00f2ff;
+    border-radius: 2px;
+    letter-spacing: 0.8px;
+    font-family: 'Fira Code', monospace;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* --- Hologram Style (Sci-Fi HUD) --- */
+.terminal-frame-hologram,
+.recents-terminal-frame.hologram,
+.top-terminal-frame.hologram {
+    border: 1px solid rgba(0, 229, 255, 0.45) !important;
+    box-shadow: 0 0 20px rgba(0, 229, 255, 0.2), inset 0 0 15px rgba(0, 229, 255, 0.05) !important;
+    background: rgba(4, 16, 28, 0.85) !important;
+    position: relative;
+    border-radius: 4px !important;
+}
+
+.terminal-frame-hologram::before,
+.recents-terminal-frame.hologram::before {
+    content: '';
+    position: absolute;
+    top: -1px; left: -1px;
+    width: 10px; height: 10px;
+    border-top: 2px solid #00e5ff;
+    border-left: 2px solid #00e5ff;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.terminal-frame-hologram::after,
+.recents-terminal-frame.hologram::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; right: -1px;
+    width: 10px; height: 10px;
+    border-bottom: 2px solid #00e5ff;
+    border-right: 2px solid #00e5ff;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.terminal-frame-hologram .terminal-frame-header,
+.recents-terminal-frame.hologram .recents-terminal-header,
+.top-terminal-frame.hologram .top-terminal-header {
+    background: linear-gradient(90deg, rgba(0, 229, 255, 0.12) 0%, rgba(56, 189, 248, 0.05) 100%) !important;
+    border-bottom: 1px solid rgba(0, 229, 255, 0.3) !important;
+}
+
+.hologram-controls {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.holo-btn {
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+    border: 1px solid rgba(0, 229, 255, 0.4);
+    background: rgba(0, 229, 255, 0.08);
+    color: #00e5ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 9px;
+    transition: all 0.2s ease;
+}
+
+.holo-btn:hover {
+    background: rgba(0, 229, 255, 0.3);
+    box-shadow: 0 0 10px #00e5ff;
+    color: #fff;
+    border-color: #00e5ff;
+}
+
+.holo-btn.close:hover {
+    background: rgba(239, 68, 68, 0.4);
+    box-shadow: 0 0 10px #ef4444;
+    border-color: #ef4444;
+    color: #fff;
+}
+
+/* --- Synthwave Style (Neon Outrun 80s) --- */
+.terminal-frame-synthwave,
+.recents-terminal-frame.synthwave,
+.top-terminal-frame.synthwave {
+    border: 1px solid #d946ef !important;
+    box-shadow: 0 0 20px rgba(217, 70, 239, 0.3), 0 0 40px rgba(236, 72, 153, 0.15) !important;
+    background: rgba(18, 11, 31, 0.88) !important;
+    border-radius: 12px !important;
+}
+
+.terminal-frame-synthwave .terminal-frame-header,
+.recents-terminal-frame.synthwave .recents-terminal-header,
+.top-terminal-frame.synthwave .top-terminal-header {
+    background: linear-gradient(90deg, rgba(236, 72, 153, 0.2) 0%, rgba(139, 92, 246, 0.2) 50%, rgba(6, 182, 212, 0.15) 100%) !important;
+    border-bottom: 1px solid rgba(217, 70, 239, 0.4) !important;
+}
+
+.synthwave-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.synth-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.synth-dot.min {
+    background: #06b6d4;
+    box-shadow: 0 0 6px #06b6d4;
+}
+
+.synth-dot.max {
+    background: #8b5cf6;
+    box-shadow: 0 0 6px #8b5cf6;
+}
+
+.synth-dot.close {
+    background: #ec4899;
+    box-shadow: 0 0 6px #ec4899;
+}
+
+.synth-dot:hover {
+    transform: scale(1.25);
+    filter: brightness(1.3);
+}
+
+/* --- Matrix Style (Digital Rain / Hacker) --- */
+.terminal-frame-matrix,
+.recents-terminal-frame.matrix,
+.top-terminal-frame.matrix {
+    border: 1px solid #00ff66 !important;
+    box-shadow: 0 0 16px rgba(0, 255, 102, 0.25), inset 0 0 10px rgba(0, 255, 102, 0.05) !important;
+    background: rgba(5, 12, 8, 0.92) !important;
+    border-radius: 4px !important;
+}
+
+.terminal-frame-matrix .terminal-frame-header,
+.recents-terminal-frame.matrix .recents-terminal-header,
+.top-terminal-frame.matrix .top-terminal-header {
+    background: rgba(0, 255, 102, 0.06) !important;
+    border-bottom: 1px solid rgba(0, 255, 102, 0.3) !important;
+    font-family: 'Fira Code', 'Courier New', monospace;
+}
+
+.matrix-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Fira Code', 'Courier New', monospace;
+}
+
+.matrix-btn {
+    font-size: 10px;
+    font-weight: bold;
+    color: #00ff66;
+    background: rgba(0, 255, 102, 0.08);
+    border: 1px solid rgba(0, 255, 102, 0.4);
+    padding: 1px 4px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+
+.matrix-btn:hover {
+    background: #00ff66;
+    color: #000;
+    box-shadow: 0 0 8px #00ff66;
+}
+
+.matrix-btn.close:hover {
+    background: #ff0055;
+    border-color: #ff0055;
+    color: #fff;
+    box-shadow: 0 0 8px #ff0055;
+}
+
+/* --- Aurora Glass Style (Liquid Modern) --- */
+.terminal-frame-aurora-glass,
+.recents-terminal-frame.aurora-glass,
+.top-terminal-frame.aurora-glass {
+    border: 1px solid rgba(147, 197, 253, 0.25) !important;
+    backdrop-filter: blur(28px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(200%) !important;
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.75) 100%) !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+    border-radius: 18px !important;
+}
+
+.terminal-frame-aurora-glass .terminal-frame-header,
+.recents-terminal-frame.aurora-glass .recents-terminal-header,
+.top-terminal-frame.aurora-glass .top-terminal-header {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+}
+
+.aurora-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.aurora-pill {
+    width: 26px;
+    height: 22px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 10px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.aurora-pill:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.aurora-pill.close:hover {
+    background: rgba(239, 68, 68, 0.8);
+    color: #fff;
+    border-color: rgba(239, 68, 68, 0.8);
+}
+
+/* --- Stealth Ops Style (Matte Military) --- */
+.terminal-frame-stealth,
+.recents-terminal-frame.stealth,
+.top-terminal-frame.stealth {
+    border: 1px solid #232733 !important;
+    border-left: 3px solid #ff6b00 !important;
+    background: #0b0d12 !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7) !important;
+    border-radius: 2px !important;
+}
+
+.terminal-frame-stealth .terminal-frame-header,
+.recents-terminal-frame.stealth .recents-terminal-header,
+.top-terminal-frame.stealth .top-terminal-header {
+    background: #11141c !important;
+    border-bottom: 1px solid #1e222d !important;
+    font-family: 'Fira Code', monospace;
+    letter-spacing: 0.5px;
+}
+
+.stealth-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.stealth-btn {
+    width: 20px;
+    height: 18px;
+    border: 1px solid #2d3345;
+    background: #161a24;
+    color: #ff6b00;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 9px;
+    border-radius: 2px;
+    transition: all 0.15s ease;
+}
+
+.stealth-btn:hover {
+    background: #ff6b00;
+    color: #000;
+    box-shadow: 0 0 8px rgba(255, 107, 0, 0.6);
+}
+
+.stealth-btn.close:hover {
+    background: #ef4444;
+    border-color: #ef4444;
+    color: #fff;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+}
+
 .terminal-frame-window-btn {
     width: 18px;
     height: 18px;
