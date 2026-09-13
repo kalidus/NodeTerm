@@ -46,6 +46,11 @@ jobs:
       - name: Build Webpack
         run: npm run build
 
+      - name: Run Tests (RDP & VNC)
+        run: |
+          npm run test:rdp
+          npm run test:vnc
+
       - name: Cleanup native dependencies
         run: npm run rm-cpu-features
 

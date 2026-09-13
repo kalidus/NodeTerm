@@ -1,4 +1,4 @@
-const { ipcMain } = require('electron');
+const { ipcMain, safeStorage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { getNodeTermDataDir } = require('../utils/file-utils');
@@ -34,6 +34,19 @@ function registerSecurityHandlers(dependencies) {
   safeHandle('security:get-master-key', async () => {
     try {
       const config = readSecurityConfig();
+
+      // Prioridad 1: Descifrar con safeStorage nativo del SO (DPAPI / Keychain / Secret Service)
+      if (config.masterKeyEncrypted && safeStorage && safeStorage.isEncryptionAvailable()) {
+        try {
+          const buffer = Buffer.from(config.masterKeyEncrypted, 'base64');
+          const decrypted = safeStorage.decryptString(buffer);
+          return JSON.parse(decrypted);
+        } catch (decErr) {
+          console.error('❌ [Security] Falló descifrado con safeStorage:', decErr.message);
+        }
+      }
+
+      // Prioridad 2: Fallback retrocompatible para configuraciones guardadas anteriormente
       return config.masterKey || null;
     } catch (error) {
       console.warn('⚠️ [Security] Error leyendo seguridad:', error.message);
@@ -57,11 +70,25 @@ function registerSecurityHandlers(dependencies) {
       }
 
       const config = readSecurityConfig();
-      config.masterKey = encryptedMasterKey;
       config.updatedAt = new Date().toISOString();
 
       if (rememberPassword !== undefined) {
         config.rememberPassword = !!rememberPassword;
+      }
+
+      // ✅ SEGURIDAD: Cifrar usando safeStorage del SO (DPAPI en Windows, Keychain en macOS, Secret Service en Linux)
+      if (safeStorage && safeStorage.isEncryptionAvailable()) {
+        try {
+          const payloadStr = JSON.stringify(encryptedMasterKey);
+          const encryptedBuffer = safeStorage.encryptString(payloadStr);
+          config.masterKeyEncrypted = encryptedBuffer.toString('base64');
+          delete config.masterKey; // Eliminar clave en texto plano / cifrado débil en disco
+        } catch (encErr) {
+          console.warn('⚠️ [Security] Fallback a almacenamiento directo por error en safeStorage:', encErr.message);
+          config.masterKey = encryptedMasterKey;
+        }
+      } else {
+        config.masterKey = encryptedMasterKey;
       }
 
       writeSecurityConfig(config);
@@ -75,7 +102,7 @@ function registerSecurityHandlers(dependencies) {
   safeHandle('security:has-master-key', async () => {
     try {
       const config = readSecurityConfig();
-      return !!config.masterKey;
+      return !!(config.masterKeyEncrypted || config.masterKey);
     } catch (error) {
       return false;
     }
@@ -107,6 +134,7 @@ function registerSecurityHandlers(dependencies) {
     try {
       const config = readSecurityConfig();
       delete config.masterKey;
+      delete config.masterKeyEncrypted;
       delete config.rememberPassword;
       writeSecurityConfig(config);
       return { success: true };

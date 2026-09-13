@@ -17,7 +17,8 @@ class SecureStorage {
   }
 
   /**
-   * Genera una huella digital del dispositivo/navegador
+   * Genera una huella digital estable del dispositivo
+   * No depende de resolución de pantalla ni zona horaria para evitar bloqueos por monitores externos o DST
    */
   generateDeviceFingerprint() {
     if (this.deviceFingerprint) return this.deviceFingerprint;
@@ -31,14 +32,39 @@ class SecureStorage {
     const fingerprint = [
       navigator.userAgent,
       navigator.language,
-      screen.width + 'x' + screen.height,
-      new Date().getTimezoneOffset(),
+      navigator.platform || '',
       canvas.toDataURL(),
       navigator.hardwareConcurrency || 'unknown'
     ].join('|');
 
     this.deviceFingerprint = btoa(fingerprint).slice(0, 32);
     return this.deviceFingerprint;
+  }
+
+  /**
+   * Genera la huella legacy para migración automática de claves antiguas
+   */
+  generateLegacyDeviceFingerprint() {
+    try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      ctx.textBaseline = 'top';
+      ctx.font = '14px Arial';
+      ctx.fillText('NodeTerm Security', 2, 2);
+
+      const fingerprint = [
+        navigator.userAgent,
+        navigator.language,
+        screen.width + 'x' + screen.height,
+        new Date().getTimezoneOffset(),
+        canvas.toDataURL(),
+        navigator.hardwareConcurrency || 'unknown'
+      ].join('|');
+
+      return btoa(fingerprint).slice(0, 32);
+    } catch (_) {
+      return null;
+    }
   }
 
   /**
@@ -192,7 +218,31 @@ class SecureStorage {
 
       const protectionKey = sessionPassword || this.generateDeviceFingerprint();
 
-      const decrypted = await this.decryptData(encrypted, protectionKey);
+      let decrypted = null;
+      try {
+        decrypted = await this.decryptData(encrypted, protectionKey);
+      } catch (decryptError) {
+        // Si falla con la huella estable y no hay password explícito de sesión,
+        // intentar con la huella legacy (resolución de pantalla + timezone) para migrar transparentemente
+        if (!sessionPassword) {
+          const legacyKey = this.generateLegacyDeviceFingerprint();
+          if (legacyKey && legacyKey !== protectionKey) {
+            try {
+              decrypted = await this.decryptData(encrypted, legacyKey);
+              // Migrar automáticamente al nuevo formato estable + safeStorage en el proceso principal
+              const remember = await this.isRememberPasswordEnabled();
+              await this.saveMasterKey(decrypted.masterKey, null, remember);
+            } catch (_) {
+              throw decryptError;
+            }
+          } else {
+            throw decryptError;
+          }
+        } else {
+          throw decryptError;
+        }
+      }
+
       this.masterKeyCache = decrypted.masterKey;
       this.resetTimeout();
 
