@@ -23,12 +23,16 @@ const VncCanvasTab = forwardRef(({
   const toastRef = useRef(null);
   const containerRef = useRef(null);
   const rfbRef = useRef(null);
+  const isManualDisconnectRef = useRef(false);
+  const reconnectTimerRef = useRef(null);
 
   // Estados de conexión
   // 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error'
   const [connectionState, setConnectionState] = useState('connecting');
   const [errorMessage, setErrorMessage] = useState('');
   const [desktopName, setDesktopName] = useState('');
+  const [serverDimensions, setServerDimensions] = useState(null);
+  const [reconnectCountdown, setReconnectCountdown] = useState(null);
 
   // Estados de configuración de visualización
   const [scaleViewport, setScaleViewport] = useState(config.autoResize !== false);
@@ -46,14 +50,25 @@ const VncCanvasTab = forwardRef(({
   const [passwordInput, setPasswordInput] = useState(initialPassword);
   const [credentialsTypes, setCredentialsTypes] = useState(['password']);
 
+  const cancelAutoReconnect = useCallback(() => {
+    if (reconnectTimerRef.current) {
+      clearInterval(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+    setReconnectCountdown(null);
+  }, []);
+
   // Manejador imperativo expuesto al padre (cerrar o desconectar)
   useImperativeHandle(ref, () => ({
     disconnect: () => {
+      isManualDisconnectRef.current = true;
+      cancelAutoReconnect();
       if (rfbRef.current) {
         rfbRef.current.disconnect();
       }
     },
     reconnect: () => {
+      cancelAutoReconnect();
       startConnection();
     }
   }));
@@ -64,6 +79,9 @@ const VncCanvasTab = forwardRef(({
    * 2. Conecta noVNC vía WebSocket binario
    */
   const startConnection = useCallback(async () => {
+    cancelAutoReconnect();
+    isManualDisconnectRef.current = false;
+
     if (rfbRef.current) {
       try {
         rfbRef.current.disconnect();
@@ -122,9 +140,30 @@ const VncCanvasTab = forwardRef(({
 
       rfbRef.current = rfb;
 
+      // Aplicar Calidad de Imagen (JPEG)
+      let qualityLevel = 6;
+      if (config.imageQuality === 'lossless') {
+        qualityLevel = 9;
+      } else if (config.imageQuality === 'lossy-high') {
+        qualityLevel = 7;
+      } else if (config.imageQuality === 'lossy-medium') {
+        qualityLevel = 4;
+      } else if (config.imageQuality === 'lossy-low') {
+        qualityLevel = 1;
+      }
+      rfb.qualityLevel = qualityLevel;
+
+      // Aplicar Nivel de Compresión (zlib)
+      rfb.compressionLevel = (config.enableCompression === false) ? 0 : 6;
+
+      // Aplicar Profundidad de Color (8 bits si <= 8)
+      if (config.colorDepth && parseInt(config.colorDepth, 10) <= 8) {
+        rfb._fbDepth = 8;
+      }
+
       // Configuración de visualización y modo
       rfb.scaleViewport = scaleViewport;
-      rfb.resizeSession = false;
+      rfb.resizeSession = (config.autoResize !== false);
       rfb.viewOnly = isReadOnly;
       rfb.clipViewport = false;
       rfb.dragViewport = false;
@@ -132,6 +171,10 @@ const VncCanvasTab = forwardRef(({
       // Eventos de RFB
       rfb.addEventListener('connect', () => {
         setConnectionState('connected');
+        cancelAutoReconnect();
+        if (rfb._fbWidth && rfb._fbHeight) {
+          setServerDimensions({ width: rfb._fbWidth, height: rfb._fbHeight });
+        }
         toastRef.current?.show({
           severity: 'success',
           summary: 'VNC Conectado',
@@ -143,8 +186,22 @@ const VncCanvasTab = forwardRef(({
       rfb.addEventListener('disconnect', (e) => {
         setConnectionState('disconnected');
         const clean = e.detail?.clean;
-        if (!clean) {
+        if (!clean && !isManualDisconnectRef.current) {
           setErrorMessage('La conexión con el servidor VNC se interrumpió.');
+          if (config.autoReconnect !== false) {
+            cancelAutoReconnect();
+            let secondsLeft = 5;
+            setReconnectCountdown(secondsLeft);
+            reconnectTimerRef.current = setInterval(() => {
+              secondsLeft -= 1;
+              if (secondsLeft <= 0) {
+                cancelAutoReconnect();
+                startConnection();
+              } else {
+                setReconnectCountdown(secondsLeft);
+              }
+            }, 1000);
+          }
         }
       });
 
@@ -161,6 +218,7 @@ const VncCanvasTab = forwardRef(({
       });
 
       rfb.addEventListener('clipboard', (e) => {
+        if (config.redirectClipboard === false) return;
         if (e.detail && e.detail.text) {
           try {
             if (window.electron?.clipboard?.writeText) {
@@ -176,6 +234,9 @@ const VncCanvasTab = forwardRef(({
         if (e.detail?.name) {
           setDesktopName(e.detail.name);
         }
+        if (rfb._fbWidth && rfb._fbHeight) {
+          setServerDimensions({ width: rfb._fbWidth, height: rfb._fbHeight });
+        }
       });
 
     } catch (err) {
@@ -183,13 +244,14 @@ const VncCanvasTab = forwardRef(({
       setConnectionState('error');
       setErrorMessage(err.message || 'Error inesperado al conectar.');
     }
-  }, [host, port, initialUsername, initialPassword, usernameInput, passwordInput, isReadOnly, scaleViewport]);
+  }, [host, port, initialUsername, initialPassword, usernameInput, passwordInput, isReadOnly, scaleViewport, cancelAutoReconnect, config.imageQuality, config.enableCompression, config.colorDepth, config.autoResize, config.redirectClipboard, config.autoReconnect]);
 
   // Iniciar conexión al montar el componente
   useEffect(() => {
     startConnection();
 
     return () => {
+      cancelAutoReconnect();
       if (rfbRef.current) {
         try {
           rfbRef.current.disconnect();
@@ -197,7 +259,7 @@ const VncCanvasTab = forwardRef(({
         rfbRef.current = null;
       }
     };
-  }, [startConnection]);
+  }, [startConnection, cancelAutoReconnect]);
 
   // Actualizar modo de escala en noVNC dinámicamente
   useEffect(() => {
@@ -245,6 +307,10 @@ const VncCanvasTab = forwardRef(({
 
   // Acción: Pegar texto al portapapeles remoto
   const handlePasteClipboard = () => {
+    if (config.redirectClipboard === false) {
+      setShowClipboardDialog(false);
+      return;
+    }
     if (rfbRef.current && clipboardText) {
       rfbRef.current.clipboardPasteFrom(clipboardText);
       setShowClipboardDialog(false);
@@ -260,6 +326,15 @@ const VncCanvasTab = forwardRef(({
 
   // Acción: Cargar portapapeles local al abrir diálogo
   const handleOpenClipboardDialog = async () => {
+    if (config.redirectClipboard === false) {
+      toastRef.current?.show({
+        severity: 'warn',
+        summary: 'Portapapeles Desactivado',
+        detail: 'La redirección del portapapeles está desactivada en la configuración de la conexión',
+        life: 2500
+      });
+      return;
+    }
     try {
       let text = '';
       if (window.electron?.clipboard?.readText) {
@@ -306,10 +381,15 @@ const VncCanvasTab = forwardRef(({
           className={`vnc-toolbar-wrapper ${(isToolbarPinned || isToolbarHovered) ? 'is-visible' : 'is-hidden'}`}
         >
           <div className="vnc-cyber-bar">
-            {/* Host Badge */}
-            <span className="vnc-badge-host" title={`Servidor VNC: ${host}:${port}`}>
+            {/* Host Badge con resolución remota si está disponible */}
+            <span className="vnc-badge-host" title={`Servidor VNC: ${host}:${port}${serverDimensions ? ` (${serverDimensions.width}x${serverDimensions.height})` : ''} - Calidad: ${config.imageQuality || 'lossless'}`}>
               <i className="pi pi-desktop"></i>
               <span>{desktopName || `${host}:${port}`}</span>
+              {serverDimensions && (
+                <span style={{ fontSize: '0.68rem', opacity: 0.75, marginLeft: '4px', letterSpacing: '0.02em' }}>
+                  [{serverDimensions.width}x{serverDimensions.height}]
+                </span>
+              )}
             </span>
 
             <span className="vnc-cyber-divider" />
@@ -331,7 +411,9 @@ const VncCanvasTab = forwardRef(({
             <button
               type="button"
               className="vnc-cyber-btn vnc-cyber-btn-cad"
-              title="Enviar Ctrl+Alt+Del"
+              title={isReadOnly ? "Deshabilitado en modo Solo Lectura" : "Enviar Ctrl+Alt+Del"}
+              disabled={isReadOnly}
+              style={isReadOnly ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
               onClick={handleSendCtrlAltDel}
             >
               <i className="pi pi-key"></i>
@@ -342,7 +424,9 @@ const VncCanvasTab = forwardRef(({
             <button
               type="button"
               className="vnc-cyber-btn"
-              title="Enviar Tecla Windows"
+              title={isReadOnly ? "Deshabilitado en modo Solo Lectura" : "Enviar Tecla Windows"}
+              disabled={isReadOnly}
+              style={isReadOnly ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
               onClick={handleSendWinKey}
             >
               <i className="pi pi-microsoft"></i>
@@ -353,7 +437,9 @@ const VncCanvasTab = forwardRef(({
             <button
               type="button"
               className="vnc-cyber-btn"
-              title="Enviar texto al portapapeles remoto"
+              title={isReadOnly ? "Deshabilitado en modo Solo Lectura" : (config.redirectClipboard === false ? "Portapapeles desactivado en la configuración" : "Enviar texto al portapapeles remoto")}
+              disabled={isReadOnly || config.redirectClipboard === false}
+              style={(isReadOnly || config.redirectClipboard === false) ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
               onClick={handleOpenClipboardDialog}
             >
               <i className="pi pi-send"></i>
@@ -396,7 +482,11 @@ const VncCanvasTab = forwardRef(({
               type="button"
               className="vnc-cyber-btn vnc-cyber-btn-disconnect"
               title="Desconectar sesión VNC"
-              onClick={() => rfbRef.current?.disconnect()}
+              onClick={() => {
+                isManualDisconnectRef.current = true;
+                cancelAutoReconnect();
+                rfbRef.current?.disconnect();
+              }}
             >
               <i className="pi pi-power-off"></i>
             </button>
@@ -456,14 +546,29 @@ const VncCanvasTab = forwardRef(({
           <div className="vnc-status-card">
             <i className="pi pi-info-circle" style={{ fontSize: '2.5rem', color: '#00ff9d', marginBottom: '1rem' }}></i>
             <h3 className="vnc-status-title">Sesión VNC Finalizada</h3>
-            <p className="vnc-status-desc">La conexión con {host}:{port} se ha cerrado.</p>
+            <p className="vnc-status-desc">
+              {reconnectCountdown !== null
+                ? `La conexión se interrumpió. Reconectando automáticamente en ${reconnectCountdown}s...`
+                : `La conexión con ${host}:${port} se ha cerrado.`}
+            </p>
             <div className="flex justify-content-center gap-3">
               <Button
-                label="Reconectar"
+                label={reconnectCountdown !== null ? "Reconectar Ahora" : "Reconectar"}
                 icon="pi pi-refresh"
                 className="p-button-outlined p-button-success"
-                onClick={startConnection}
+                onClick={() => {
+                  cancelAutoReconnect();
+                  startConnection();
+                }}
               />
+              {reconnectCountdown !== null && (
+                <Button
+                  label="Cancelar Reconexión"
+                  icon="pi pi-ban"
+                  className="p-button-outlined p-button-warning"
+                  onClick={cancelAutoReconnect}
+                />
+              )}
               {onClose && (
                 <Button
                   label="Cerrar Pestaña"

@@ -1023,6 +1023,7 @@ export const useConnectionManagement = ({
       username: baseVnc.username || baseVnc.user || '',
       password: baseVnc.password || '',
       port: baseVnc.port || 5900,
+      resolution: baseVnc.resolution || '1600x1000',
       width: dynamicWidth,
       height: dynamicHeight,
       dpi: baseVnc.guacDpi || 96,
