@@ -1,5 +1,51 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
+// 🔒 Registro y mapeo de suscripciones para permitir desuscripción limpia por referencia
+const listenerSubscriptions = new Map();
+
+const VALID_LISTENER_CHANNELS = [
+  /^ssh:data:.*$/,
+  /^ssh:ready:.*$/,
+  /^ssh:error:.*$/,
+  /^ssh-stats:update:.*$/,
+  /^ssh-connection-ready$/,
+  /^ssh-connection-disconnected$/,
+  /^ssh-connection-error$/,
+  /^ssh:transfer-progress$/,
+  /^file:transfer-progress$/,
+  /^powershell:.*$/,
+  /^wsl:.*$/,
+  /^ubuntu:.*$/,
+  /^wsl-distro:.*$/,
+  /^cygwin:.*$/,
+  /^docker:.*$/,
+  /^claude:.*$/,
+  /^opencode:.*$/,
+  /^geminicli:.*$/,
+  /^codexcli:.*$/,
+  /^antigravitycli:.*$/,
+  /^hermescli:.*$/,
+  /^rdp:.*$/,
+  /^vnc:.*$/,
+  /^guacamole:.*$/,
+  /^anythingllm:.*$/,
+  /^librechat:.*$/,
+  /^agentzero:.*$/,
+  /^openclaw:.*$/,
+  /^opennotebook:.*$/,
+  /^updater-event$/,
+  /^network-tools:.*$/,
+  /^system:.*$/, // Eventos de suspensión/reanudación del sistema
+  /^ssh-tunnel:.*$/, // Eventos de túneles SSH
+  /^terminal:.*$/,
+  /^linux-terminal:.*$/
+];
+
+function isAllowedListenerChannel(channel) {
+  if (typeof channel !== 'string') return false;
+  return VALID_LISTENER_CHANNELS.some((rule) => rule.test(channel));
+}
+
 contextBridge.exposeInMainWorld('electron', {
   platform: process.platform,
   isSecondaryInstance: process.env.NODETERM_IS_SECONDARY_INSTANCE === 'true',
@@ -290,98 +336,48 @@ contextBridge.exposeInMainWorld('electron', {
       return Promise.reject(new Error(`Invalid IPC channel: ${String(channel)}`));
     },
     on: (channel, func) => {
-      const validChannels = [
-        /^ssh:data:.*$/,
-        /^ssh:ready:.*$/,
-        /^ssh:error:.*$/,
-        /^ssh-stats:update:.*$/,
-        /^ssh-connection-ready$/,
-        /^ssh-connection-disconnected$/,
-        /^ssh-connection-error$/,
-        /^ssh:transfer-progress$/,
-        /^file:transfer-progress$/,
-        /^powershell:.*$/,
-        /^wsl:.*$/,
-        /^ubuntu:.*$/,
-        /^wsl-distro:.*$/,
-        /^cygwin:.*$/,
-        /^docker:.*$/,
-        /^claude:.*$/,
-        /^opencode:.*$/,
-        /^geminicli:.*$/,
-        /^codexcli:.*$/,
-        /^antigravitycli:.*$/,
-        /^hermescli:.*$/,
-        /^rdp:.*$/,
-        /^vnc:.*$/,
-        /^guacamole:.*$/,
-        /^anythingllm:.*$/,
-        /^librechat:.*$/,
-        /^agentzero:.*$/,
-        /^openclaw:.*$/,
-        /^opennotebook:.*$/,
-        /^updater-event$/,
-        /^network-tools:.*$/,
-        /^system:.*$/, // Eventos de suspensión/reanudación del sistema
-        /^ssh-tunnel:.*$/ // Eventos de túneles SSH
-      ];
-      if (validChannels.some(regex => regex.test(channel))) {
-        // Deliberately strip event as it includes `sender`
-        const subscription = (event, ...args) => func(...args);
-        ipcRenderer.on(channel, subscription);
+      if (!isAllowedListenerChannel(channel) || typeof func !== 'function') return;
 
-        return () => {
-          ipcRenderer.off(channel, subscription);
-        };
+      // Deliberately strip event as it includes `sender`
+      const subscription = (event, ...args) => func(...args);
+      let channelMap = listenerSubscriptions.get(func);
+      if (!channelMap) {
+        channelMap = new Map();
+        listenerSubscriptions.set(func, channelMap);
       }
+      channelMap.set(channel, subscription);
+      ipcRenderer.on(channel, subscription);
+
+      return () => {
+        ipcRenderer.off(channel, subscription);
+        channelMap.delete(channel);
+        if (channelMap.size === 0) listenerSubscriptions.delete(func);
+      };
     },
     off: (channel, func) => {
-      const validChannels = [
-        /^ssh:data:.*$/,
-        /^ssh:ready:.*$/,
-        /^ssh:error:.*$/,
-        /^ssh-stats:update:.*$/,
-        /^ssh-connection-ready$/,
-        /^ssh-connection-disconnected$/,
-        /^ssh-connection-error$/,
-        /^powershell:.*$/,
-        /^wsl:.*$/,
-        /^ubuntu:.*$/,
-        /^wsl-distro:.*$/,
-        /^cygwin:.*$/,
-        /^docker:.*$/,
-        /^claude:.*$/,
-        /^opencode:.*$/,
-        /^geminicli:.*$/,
-        /^codexcli:.*$/,
-        /^antigravitycli:.*$/,
-        /^hermescli:.*$/,
-        /^rdp:.*$/,
-        /^vnc:.*$/,
-        /^librechat:.*$/,
-        /^agentzero:.*$/,
-        /^openclaw:.*$/,
-        /^opennotebook:.*$/,
-        /^updater-event$/,
-        /^network-tools:.*$/,
-        /^system:.*$/, // Eventos de suspensión/reanudación del sistema
-        /^ssh-tunnel:.*$/ // Eventos de túneles SSH
-      ];
-      if (validChannels.some(regex => regex.test(channel))) {
-        ipcRenderer.off(channel, func);
+      if (!isAllowedListenerChannel(channel)) return;
+      const channelMap = listenerSubscriptions.get(func);
+      const targetSubscription = channelMap ? (channelMap.get(channel) || func) : func;
+      ipcRenderer.off(channel, targetSubscription);
+      if (channelMap) {
+        channelMap.delete(channel);
+        if (channelMap.size === 0) listenerSubscriptions.delete(func);
       }
     },
     removeListener: (channel, func) => {
-      const validChannels = [
-        /^updater-event$/,
-        /^ssh-tunnel:.*$/
-      ];
-      if (validChannels.some(regex => regex.test(channel))) {
-        ipcRenderer.removeListener(channel, func);
+      if (!isAllowedListenerChannel(channel)) return;
+      const channelMap = listenerSubscriptions.get(func);
+      const targetSubscription = channelMap ? (channelMap.get(channel) || func) : func;
+      ipcRenderer.removeListener(channel, targetSubscription);
+      if (channelMap) {
+        channelMap.delete(channel);
+        if (channelMap.size === 0) listenerSubscriptions.delete(func);
       }
     },
     removeAllListeners: (channel) => {
-      ipcRenderer.removeAllListeners(channel);
+      if (channel && isAllowedListenerChannel(channel)) {
+        ipcRenderer.removeAllListeners(channel);
+      }
     }
   },
   // Guacamole helpers

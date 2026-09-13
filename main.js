@@ -165,7 +165,7 @@ if (process.env.NODE_ENV === 'development') {
   } catch (_) { }
 }
 
-const { app, BrowserWindow, ipcMain, clipboard, dialog, Menu, powerMonitor, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, clipboard, dialog, Menu, powerMonitor, screen, shell } = require('electron');
 logTiming('Electron cargado');
 
 // Establecer el nombre de la aplicación para que el WM_CLASS en Linux
@@ -1393,6 +1393,28 @@ function createWindow() {
   });
   logTiming('BrowserWindow creado');
   setupConnectionSearchShortcutBridge(mainWindow);
+
+  // 🛡️ SEGURIDAD: Control de ventanas emergentes / enlaces externos
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+      try {
+        shell.openExternal(url);
+      } catch (e) {
+        console.warn('⚠️ [Security] Error abriendo URL externa:', e?.message);
+      }
+    }
+    return { action: 'deny' };
+  });
+
+  // 🛡️ SEGURIDAD: Prevenir privilegios peligrosos en webviews incrustados
+  mainWindow.webContents.on('will-attach-webview', (event, webPreferences, params) => {
+    delete webPreferences.preload;
+    webPreferences.nodeIntegration = false;
+    webPreferences.nodeIntegrationInWorker = false;
+    webPreferences.nodeIntegrationInSubFrames = false;
+    webPreferences.contextIsolation = true;
+    webPreferences.sandbox = true;
+  });
 
   // Cierre de la ventana principal
   mainWindow.on('close', () => {

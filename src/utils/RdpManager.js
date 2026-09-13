@@ -84,6 +84,11 @@ class RdpManager {
       if (connection.rdpFilePath) {
         this.cleanupTempFile(connection.rdpFilePath);
       }
+
+      // Limpiar credenciales temporales de Windows Vault
+      if (connection.config) {
+        this.removeCredentialsFromWindowsVault(connection.config);
+      }
       
       // Remover de conexiones activas
       this.activeConnections.delete(connectionId);
@@ -157,20 +162,42 @@ class RdpManager {
   }
 
   /**
-   * Guardar credencial en Windows Vault (cmdkey) para evitar re-solicitud de contraseña en MSTSC
+   * Guardar credencial en Windows Vault (cmdkey) de forma segura (sin invocar shell cmd.exe)
    */
   async saveCredentialsToWindowsVault(config) {
     if (process.platform !== 'win32' || !config.server || !config.password) return;
     try {
-      const { exec } = require('child_process');
+      const { execFile } = require('child_process');
       const util = require('util');
-      const execPromise = util.promisify(exec);
+      const execFileAsync = util.promisify(execFile);
       const user = config.domain ? `${config.domain}\\${config.username}` : config.username;
       const host = config.port && config.port !== 3389 ? `${config.server}:${config.port}` : config.server;
-      await execPromise(`cmdkey /generic:TERMSRV/${host} /user:"${user}" /pass:"${config.password.replace(/"/g, '`"')}"`);
-      console.log(`[RDP] Credenciales registradas en Windows Vault para TERMSRV/${host}`);
+      // ✅ SEGURIDAD: Usar execFile con array de argumentos previene inyección de comandos en cmd.exe
+      await execFileAsync('cmdkey.exe', [
+        `/generic:TERMSRV/${host}`,
+        `/user:${user}`,
+        `/pass:${config.password}`
+      ], { windowsHide: true });
+      console.log(`[RDP] Credenciales registradas de forma segura en Windows Vault para TERMSRV/${host}`);
     } catch (e) {
       console.warn('[RDP] Aviso: no se pudo registrar credencial en Windows Vault:', e.message);
+    }
+  }
+
+  /**
+   * Eliminar credencial de Windows Vault al cerrar la sesión RDP para evitar persistencia innecesaria
+   */
+  async removeCredentialsFromWindowsVault(config) {
+    if (process.platform !== 'win32' || !config?.server) return;
+    try {
+      const { execFile } = require('child_process');
+      const util = require('util');
+      const execFileAsync = util.promisify(execFile);
+      const host = config.port && config.port !== 3389 ? `${config.server}:${config.port}` : config.server;
+      await execFileAsync('cmdkey.exe', [`/delete:TERMSRV/${host}`], { windowsHide: true });
+      console.log(`[RDP] Credenciales eliminadas de Windows Vault para TERMSRV/${host}`);
+    } catch (e) {
+      // Ignorar si la credencial no existía o ya se había eliminado
     }
   }
 
