@@ -117,6 +117,7 @@ const {
 } = require('./src/utils/sshConnectOptions');
 const sshKnownHostsService = require('./src/main/services/SSHKnownHostsService');
 const { connectViaProxyJump } = require('./src/main/services/SSHProxyJumpService');
+const { extractMotdBanner } = require('./src/main/utils/ssh-motd');
 
 // Servicio de limpieza de conexiones SSH
 const sshCleanupService = require('./src/main/services/SSHConnectionCleanupService');
@@ -619,6 +620,8 @@ const bastionStatsState = {};
 
 // Pool de conexiones SSH compartidas para evitar múltiples conexiones al mismo servidor
 const sshConnectionPool = {};
+// Caché de mensajes de bienvenida (MOTD) por cacheKey para conexiones multiplexadas
+const motdCache = {};
 
 // 🚀 OPTIMIZACIÓN: RDP Manager movido a src/main/handlers/rdp-handlers.js
 // Se maneja completamente con lazy loading en ese módulo
@@ -2523,6 +2526,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
           existingPoolConnection.close();
         } catch (e) { }
         delete sshConnectionPool[cacheKey];
+        delete motdCache[cacheKey];
       }
     }
     if (!ssh) {
@@ -2639,17 +2643,51 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       statsLoop(tabId, realHostname, finalDistroId, config.host);
     }
 
+    // Para conexiones multiplexadas/reutilizadas, enviar el MOTD en caché si existe
+    const cachedMotd = (ssh && ssh._motd) || motdCache[cacheKey];
+    if (isReusedConnection && cachedMotd) {
+      sendToRenderer(event.sender, `ssh:data:${tabId}`, cachedMotd);
+    }
+
+    // Para capturar el MOTD en la primera conexión directa sin bloquear
+    let motdBuffer = '';
+    let motdCaptured = isReusedConnection;
+
+    const motdTimer = !isReusedConnection ? setTimeout(() => {
+      motdCaptured = true;
+      motdBuffer = '';
+    }, 4000) : null;
+
     // Escuchar datos del stream y enviarlos directamente sin supresión de paquetes
     stream.on('data', (data) => {
       try {
         const dataStr = data.toString('utf-8');
+
+        // Captura no-bloqueante del banner inicial (MOTD) en la primera conexión
+        if (!motdCaptured) {
+          motdBuffer += dataStr;
+          const motdResult = extractMotdBanner(motdBuffer);
+          if (motdResult.matched) {
+            motdCaptured = true;
+            if (motdTimer) clearTimeout(motdTimer);
+            if (motdResult.motd) {
+              motdCache[cacheKey] = motdResult.motd;
+              if (ssh) ssh._motd = motdResult.motd;
+            }
+            motdBuffer = '';
+          } else if (motdBuffer.length > 8192) {
+            motdCaptured = true;
+            if (motdTimer) clearTimeout(motdTimer);
+            motdBuffer = '';
+          }
+        }
 
         // Grabar output si hay grabación activa
         if (getSessionRecorder().isRecording(tabId)) {
           getSessionRecorder().recordOutput(tabId, dataStr);
         }
 
-        // For all subsequent packets, just send them
+        // For all subsequent packets, just send them (sin descartar ningún paquete)
         sendToRenderer(event.sender, `ssh:data:${tabId}`, dataStr);
       } catch (e) {
         // log o ignora
@@ -2657,6 +2695,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
     });
 
     stream.on('close', async () => {
+      if (motdTimer) clearTimeout(motdTimer);
       sendToRenderer(event.sender, `ssh:data:${tabId}`, '\r\nConnection closed.\r\n');
       const conn = sshConnections[tabId];
       if (conn && conn.statsTimeout) {
@@ -2773,6 +2812,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
             // Ignorar errores de cierre
           }
           delete sshConnectionPool[cacheKey];
+          delete motdCache[cacheKey];
         }
 
         // Usar ssh2 Client directamente para permitir autenticación interactiva
@@ -2852,6 +2892,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
         // Ignorar errores de cierre
       }
       delete sshConnectionPool[cacheKey];
+      delete motdCache[cacheKey];
     }
 
     // Crear mensaje de error más descriptivo
@@ -3079,7 +3120,8 @@ ipcMain.on('ssh:disconnect', (event, tabId) => {
       sshConnections,
       sshConnectionPool,
       bastionStatsState,
-      event.sender
+      event.sender,
+      motdCache
     );
   }
 });

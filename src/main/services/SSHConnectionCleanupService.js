@@ -74,7 +74,7 @@ class SSHConnectionCleanupService {
    * Cierra la conexión SSH de forma segura
    * Solo cierra si no hay otras pestañas usando la misma conexión
    */
-  closeSSHConnection(conn, sshConnectionPool, otherTabsCount = 0) {
+  closeSSHConnection(conn, sshConnectionPool, otherTabsCount = 0, motdCache = null) {
     if (!conn || !conn.ssh) return;
 
     // Solo cerrar si no hay otras pestañas usando la conexión
@@ -101,6 +101,11 @@ class SSHConnectionCleanupService {
         if (sshConnectionPool && conn.cacheKey) {
           delete sshConnectionPool[conn.cacheKey];
         }
+
+        // Eliminar de caché MOTD si existe
+        if (motdCache && conn.cacheKey) {
+          delete motdCache[conn.cacheKey];
+        }
       } catch (e) {
         // Ignorar errores al cerrar conexión SSH
       }
@@ -115,9 +120,10 @@ class SSHConnectionCleanupService {
    * @param {Object} sshConnectionPool - Pool de conexiones SSH
    * @param {Object} bastionStatsState - Estado de estadísticas de bastion (opcional)
    * @param {Object} sender - Sender para eventos IPC (opcional)
+   * @param {Object} motdCache - Caché de mensajes de bienvenida MOTD (opcional)
    * @returns {boolean} - true si se limpió exitosamente
    */
-  cleanupConnection(tabId, conn, sshConnections, sshConnectionPool, bastionStatsState = null, sender = null) {
+  cleanupConnection(tabId, conn, sshConnections, sshConnectionPool, bastionStatsState = null, sender = null, motdCache = null) {
     if (!conn) return false;
 
     try {
@@ -143,7 +149,7 @@ class SSHConnectionCleanupService {
       }
 
       // 6. Cerrar conexión SSH si no hay otras tabs usándola
-      this.closeSSHConnection(conn, sshConnectionPool, otherTabsUsingConnection.length);
+      this.closeSSHConnection(conn, sshConnectionPool, otherTabsUsingConnection.length, motdCache);
 
       // 7. Limpiar estado de bastion si existe
       if (bastionStatsState && bastionStatsState[tabId]) {
