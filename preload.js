@@ -276,7 +276,8 @@ contextBridge.exposeInMainWorld('electron', {
         /^openwebui:.*$/,
         /^librechat:.*$/,
         /^openclaw:.*$/,
-        /^opennotebook:.*$/
+        /^opennotebook:.*$/,
+        /^vnc:.*$/
       ];
       if (validChannels.some(regex => {
         if (typeof regex === 'string') {
@@ -312,6 +313,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^antigravitycli:.*$/,
         /^hermescli:.*$/,
         /^rdp:.*$/,
+        /^vnc:.*$/,
         /^guacamole:.*$/,
         /^anythingllm:.*$/,
         /^librechat:.*$/,
@@ -355,6 +357,7 @@ contextBridge.exposeInMainWorld('electron', {
         /^antigravitycli:.*$/,
         /^hermescli:.*$/,
         /^rdp:.*$/,
+        /^vnc:.*$/,
         /^librechat:.*$/,
         /^agentzero:.*$/,
         /^openclaw:.*$/,
@@ -487,6 +490,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     showWindow: (server) => ipcRenderer.invoke('rdp:show-window', { server }),
     disconnectSession: (server) => ipcRenderer.invoke('rdp:disconnect-session', { server }),
     createNativeBridgeToken: (config) => ipcRenderer.invoke('rdp:create-native-bridge-token', config)
+  },
+  // VNC API
+  vnc: {
+    createNativeBridgeToken: (config) => ipcRenderer.invoke('vnc:create-native-bridge-token', config),
+    disconnectSession: (params) => ipcRenderer.invoke('vnc:disconnect-session', params)
   },
   // Generic invoke method for IPC
   invoke: (channel, data) => {

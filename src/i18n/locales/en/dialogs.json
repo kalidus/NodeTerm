@@ -261,6 +261,7 @@
       "name": "Name",
       "server": "Server",
       "port": "Port",
+      "username": "VNC Username",
       "password": "VNC Password",
       "resolution": "Resolution",
       "colorDepth": "Color Depth",
@@ -271,11 +272,17 @@
       "name": "Descriptive name",
       "server": "IP or server name",
       "port": "5900",
+      "username": "Username (optional)",
       "password": "VNC password (optional)",
       "dpi": "96"
     },
     "descriptions": {
+      "username": "VNC server username (required by servers such as VeNCrypt, macOS, UltraVNC)",
       "password": "VNC server password (if configured)"
+    },
+    "clientTypes": {
+      "web-vnc": "Native VNC (noVNC - Recommended)",
+      "guacamole": "Web VNC (Guacamole - Legacy)"
     },
     "colorDepths": {
       "32": "32 bits",

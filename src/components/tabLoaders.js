@@ -22,6 +22,7 @@ export const LazySplitLayout = lazy(() => getChunk('SplitLayout', () => import('
 export const LazyRdpSessionTab = lazy(() => getChunk('RdpSessionTab', () => import('./RdpSessionTab')));
 export const LazyGuacamoleTerminal = lazy(() => getChunk('GuacamoleTerminal', () => import('./GuacamoleTerminal')));
 export const LazyIronRdpCanvasTab = lazy(() => getChunk('IronRdpCanvasTab', () => import('./IronRdpCanvasTab')));
+export const LazyVncCanvasTab = lazy(() => getChunk('VncCanvasTab', () => import('./VncCanvasTab')));
 export const LazyGuacamoleTab = lazy(() => getChunk('GuacamoleTab', () => import('./GuacamoleTab')));
 export const LazyTerminalComponent = lazy(() => getChunk('TerminalComponent', () => import('./TerminalComponent')));
 export const LazyPowerShellTerminal = lazy(() => getChunk('PowerShellTerminal', () => import('./PowerShellTerminal')));
@@ -81,6 +82,7 @@ const CHUNK_LOADERS = {
   SplitLayout: () => import('./SplitLayout'),
   RdpSessionTab: () => import('./RdpSessionTab'),
   GuacamoleTerminal: () => import('./GuacamoleTerminal'),
+  VncCanvasTab: () => import('./VncCanvasTab'),
   GuacamoleTab: () => import('./GuacamoleTab'),
   TerminalComponent: () => import('./TerminalComponent'),
   PowerShellTerminal: () => import('./PowerShellTerminal'),

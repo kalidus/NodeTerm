@@ -12,8 +12,11 @@ export function createDefaultVncFormData() {
   return {
     name: '',
     server: '',
+    username: '',
     password: '',
     port: 5900,
+    clientType: 'web-vnc',
+    explicitGuacamole: false,
     resolution: '1600x1000',
     colorDepth: 32,
     readOnly: false,
@@ -31,11 +34,15 @@ export function mapEditNodeDataToVncFormData(editNodeData) {
     return createDefaultVncFormData();
   }
   const data = editNodeData.data || {};
+  const isExplicitGuac = data.clientType === 'guacamole' && data.explicitGuacamole === true;
   return {
     name: editNodeData.label || '',
     server: data.server || data.hostname || data.host || '',
+    username: data.username || data.user || '',
     password: data.password || '',
     port: data.port || 5900,
+    clientType: isExplicitGuac ? 'guacamole' : 'web-vnc',
+    explicitGuacamole: isExplicitGuac,
     resolution: data.resolution || '1600x1000',
     colorDepth: data.colorDepth || 32,
     readOnly: data.readOnly === true,
@@ -230,6 +237,28 @@ export function EnhancedVNCForm({
         </div>
       </div>
 
+      <div className="terminal-row mb-3">
+        <label className="terminal-label" htmlFor={`${p}-clientType`}>
+          CLIENTE VNC
+        </label>
+        <div className="terminal-input-wrap terminal-folder-dropdown-wrap">
+          <Dropdown
+            inputId={`${p}-clientType`}
+            value={formData.clientType || 'web-vnc'}
+            options={[
+              { label: 'VNC Nativo (noVNC - Recomendado)', value: 'web-vnc' },
+              { label: 'VNC Web (Guacamole - Legacy)', value: 'guacamole' }
+            ]}
+            onChange={(e) => {
+              handleInputChange('clientType', e.value);
+              handleInputChange('explicitGuacamole', e.value === 'guacamole');
+            }}
+            className="terminal-folder-dropdown"
+            panelClassName="terminal-folder-dropdown-panel"
+          />
+        </div>
+      </div>
+
       <div className="terminal-host-port-row mb-3">
         <div className="terminal-host-port-host">
           <label className="terminal-label" htmlFor={`${p}-server`}>
@@ -272,6 +301,27 @@ export function EnhancedVNCForm({
             Autenticación
           </span>
         </div>
+      </div>
+
+      {/* Usuario VNC */}
+      <div className="terminal-row mb-3">
+        <label className="terminal-label" htmlFor={`${p}-username`}>
+          {t('vnc.fields.username').toUpperCase()}
+        </label>
+        <div className="terminal-input-wrap">
+          <i className="pi pi-user terminal-icon-left" aria-hidden="true"></i>
+          <InputText
+            id={`${p}-username`}
+            value={formData.username || ''}
+            onChange={handleTextChange('username')}
+            placeholder={t('vnc.placeholders.username')}
+            className="terminal-input"
+            autoComplete="off"
+          />
+        </div>
+        <p className="mt-1 mb-0 opacity-60" style={{ fontSize: '0.7rem' }}>
+          {t('vnc.descriptions.username')}
+        </p>
       </div>
 
       <div className="terminal-row mb-3">
@@ -548,6 +598,28 @@ export function EnhancedVNCForm({
                 )}
               </div>
 
+              {/* Usuario */}
+              <div 
+                className={`hud-badge-pill ${editingField === 'username' ? 'editing' : ''}`}
+                onClick={() => { setEditingField('username'); setStatusMessage('Editando usuario de acceso VNC (opcional).'); }}
+              >
+                <i className="pi pi-user hud-badge-icon"></i>
+                <span className="hud-badge-label">Usuario:</span>
+                {editingField === 'username' ? (
+                  <input 
+                    type="text" 
+                    className="hud-badge-input" 
+                    value={formData.username || ''} 
+                    onChange={(e) => handleInputChange('username', e.target.value)} 
+                    onBlur={() => setEditingField(null)}
+                    onKeyDown={(e) => e.key === 'Enter' && setEditingField(null)}
+                    autoFocus 
+                  />
+                ) : (
+                  <span className="hud-badge-value">{formData.username || 'Sin usuario...'}</span>
+                )}
+              </div>
+
               {/* Contraseña */}
               <div 
                 className={`hud-badge-pill ${editingField === 'password' ? 'editing' : ''}`}
@@ -568,6 +640,24 @@ export function EnhancedVNCForm({
                 ) : (
                   <span className="hud-badge-value">{formData.password ? '••••••••' : 'Sin contraseña...'}</span>
                 )}
+              </div>
+
+              {/* Cliente (noVNC vs Guacamole) */}
+              <div 
+                className="hud-badge-pill active"
+                onClick={() => {
+                  const current = formData.clientType || 'web-vnc';
+                  const nextClient = current === 'web-vnc' ? 'guacamole' : 'web-vnc';
+                  handleInputChange('clientType', nextClient);
+                  handleInputChange('explicitGuacamole', nextClient === 'guacamole');
+                  setStatusMessage(`Cambiado cliente VNC a: ${nextClient === 'web-vnc' ? 'VNC Nativo (noVNC)' : 'VNC Web (Guacamole)'}`);
+                }}
+              >
+                <i className={`pi ${formData.clientType !== 'guacamole' ? 'pi-globe' : 'pi-server'} hud-badge-icon`}></i>
+                <span className="hud-badge-label">Cliente:</span>
+                <span className="hud-badge-value">
+                  {formData.clientType !== 'guacamole' ? 'noVNC (Nativo)' : 'Guacamole'}
+                </span>
               </div>
             </div>
           </div>

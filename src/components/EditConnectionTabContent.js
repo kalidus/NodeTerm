@@ -445,12 +445,14 @@ export default function EditConnectionTabContent({
         });
       } else if (connectionType === 'vnc' || connectionType === 'vnc-guacamole') {
         return connectionHelpers.toSerializable({
-          type: 'vnc-guacamole',
+          type: vncFormData?.clientType === 'guacamole' ? 'vnc-guacamole' : 'vnc',
           name: vncFormData?.name || node?.label || 'VNC',
           host: vncFormData?.server || vncFormData?.host,
-          username: vncFormData?.username,
+          username: vncFormData?.username || '',
           port: vncFormData?.port || 5900,
-          password: vncFormData?.password
+          password: vncFormData?.password || '',
+          clientType: vncFormData?.clientType || 'web-vnc',
+          explicitGuacamole: vncFormData?.clientType === 'guacamole'
         });
       } else if (['sftp', 'ftp', 'scp'].includes(connectionType)) {
         return connectionHelpers.toSerializable({

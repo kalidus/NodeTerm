@@ -261,6 +261,7 @@
       "name": "Nombre",
       "server": "Servidor",
       "port": "Puerto",
+      "username": "Usuario VNC",
       "password": "Contraseña VNC",
       "resolution": "Resolución",
       "colorDepth": "Profundidad de Color",
@@ -271,11 +272,17 @@
       "name": "Nombre descriptivo",
       "server": "IP o nombre del servidor",
       "port": "5900",
+      "username": "Usuario (opcional)",
       "password": "Contraseña VNC (opcional)",
       "dpi": "96"
     },
     "descriptions": {
+      "username": "Usuario del servidor VNC (requerido por servidores como VeNCrypt, macOS, UltraVNC)",
       "password": "Contraseña del servidor VNC (si está configurada)"
+    },
+    "clientTypes": {
+      "web-vnc": "VNC Nativo (noVNC - Recomendado)",
+      "guacamole": "VNC Web (Guacamole - Legacy)"
     },
     "colorDepths": {
       "32": "32 bits",

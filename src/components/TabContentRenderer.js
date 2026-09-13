@@ -10,6 +10,7 @@ import {
   LazyRdpSessionTab,
   LazyGuacamoleTerminal,
   LazyIronRdpCanvasTab,
+  LazyVncCanvasTab,
   LazyGuacamoleTab,
   LazyTerminalComponent,
   LazyPowerShellTerminal,
@@ -2459,9 +2460,24 @@ const TabContentRendererInner = React.memo(({
     );
   }
 
-  if (tab.type === 'rdp-guacamole' || tab.type === 'vnc-guacamole') {
-    const isVnc = tab.type === 'vnc-guacamole';
-    const isWebRdp = tab.rdpConfig?.clientType === 'web-rdp';
+  if (tab.type === 'rdp-guacamole' || tab.type === 'vnc-guacamole' || tab.type === 'vnc') {
+    const isVnc = tab.type === 'vnc-guacamole' || tab.type === 'vnc';
+    const clientType = tab.rdpConfig?.clientType || tab.vncConfig?.clientType;
+    const isWebRdp = clientType === 'web-rdp';
+    const isWebVnc = isVnc && (clientType === 'web-vnc' || !clientType || clientType !== 'guacamole');
+
+    if (isWebVnc) {
+      return (
+        <LazyVncCanvasTab
+          ref={el => terminalRefs.current[tab.key] = el}
+          tabId={tab.key}
+          vncConfig={tab.vncConfig || tab.rdpConfig}
+          isActive={isActiveTab}
+          onClose={() => handleTabClose && handleTabClose(tab)}
+        />
+      );
+    }
+
     if (isWebRdp && !isVnc) {
       return (
         <LazyIronRdpCanvasTab
@@ -2477,7 +2493,7 @@ const TabContentRendererInner = React.memo(({
       <LazyGuacamoleTerminal
         ref={el => terminalRefs.current[tab.key] = el}
         tabId={tab.key}
-        rdpConfig={tab.rdpConfig}
+        rdpConfig={tab.rdpConfig || tab.vncConfig}
         isActive={isActiveTab}
       />
     );

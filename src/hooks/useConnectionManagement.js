@@ -870,7 +870,7 @@ export const useConnectionManagement = ({
         hostname: hostValue,
         password: node.password || '',
         port: parseInt(node.port || 5900, 10),
-        clientType: node.clientType || 'guacamole',
+        clientType: node.clientType || 'web-vnc',
         type: node.type || 'vnc-guacamole',
         resolution: node.resolution || '1024x768',
         colors: node.colors || '32',
@@ -902,7 +902,9 @@ export const useConnectionManagement = ({
             if (matchesVnc(n)) {
               // Usar la información de la sidebar para completar los campos faltantes
               baseVnc.password = n.data.password || baseVnc.password;
-              baseVnc.clientType = n.data.clientType || baseVnc.clientType;
+              baseVnc.username = n.data.username || n.data.user || baseVnc.username || '';
+              baseVnc.clientType = (n.data.clientType === 'guacamole' && n.data.explicitGuacamole === true) ? 'guacamole' : (n.data.clientType === 'guacamole' ? 'web-vnc' : (n.data.clientType || 'web-vnc'));
+              baseVnc.explicitGuacamole = n.data.explicitGuacamole === true;
               baseVnc.resolution = n.data.resolution || baseVnc.resolution;
               baseVnc.colors = n.data.colors || baseVnc.colors;
               baseVnc.readOnly = n.data.readOnly !== undefined ? n.data.readOnly : baseVnc.readOnly;
@@ -920,7 +922,9 @@ export const useConnectionManagement = ({
         dfs(nodes);
       }
     }
-    const isGuacamoleVNC = baseVnc.clientType === 'guacamole' || baseVnc.type === 'vnc-guacamole';
+    const isExplicitGuac = (baseVnc.clientType === 'guacamole' && baseVnc.explicitGuacamole === true);
+    const clientType = isExplicitGuac ? 'guacamole' : 'web-vnc';
+    const isGuacamoleVNC = isExplicitGuac;
 
     // Registrar como reciente (VNC) - incluir todas las credenciales y configuración
     try {
@@ -928,9 +932,10 @@ export const useConnectionManagement = ({
         type: 'vnc-guacamole',
         name: node.label || node.name,
         host: baseVnc.server || baseVnc.host || baseVnc.hostname,
+        username: baseVnc.username || baseVnc.user || '',
         port: baseVnc.port || 5900,
         password: baseVnc.password || '',
-        clientType: baseVnc.clientType || 'guacamole',
+        clientType: clientType,
         resolution: baseVnc.resolution || '1024x768',
         colors: baseVnc.colors || '32',
         // Opciones avanzadas de VNC
@@ -946,27 +951,27 @@ export const useConnectionManagement = ({
     } catch (e) { /* noop */ }
 
     if (isGuacamoleVNC) {
-      // === VNC-Guacamole como pestañas independientes ===
+      // === VNC-Guacamole (Legacy) como pestañas independientes ===
       // Calcular resolución dinámica si autoResize está activado
       let dynamicWidth = parseInt(baseVnc.resolution?.split('x')[0]) || 1024;
       let dynamicHeight = parseInt(baseVnc.resolution?.split('x')[1]) || 768;
 
       if (baseVnc.autoResize) {
-        // Usar dimensiones dinámicas basadas en la ventana
         dynamicWidth = Math.floor(window.innerWidth * 0.8);
         dynamicHeight = Math.floor(window.innerHeight * 0.7);
       }
 
       const vncConfig = {
-        connectionType: 'vnc', // Indicar que es VNC
+        connectionType: 'vnc',
+        clientType: 'guacamole',
         hostname: baseVnc.server || baseVnc.host || baseVnc.hostname,
+        username: baseVnc.username || baseVnc.user || '',
         password: baseVnc.password || '',
         port: baseVnc.port || 5900,
-        width: dynamicWidth,  // ← NÚMEROS, no string
-        height: dynamicHeight, // ← NÚMEROS, no string
+        width: dynamicWidth,
+        height: dynamicHeight,
         dpi: baseVnc.guacDpi || 96,
         colorDepth: baseVnc.colorDepth || parseInt(baseVnc.colors) || 32,
-        // Campos específicos de VNC
         autoResize: baseVnc.autoResize === true,
         freezeInitialResize: baseVnc.autoResize === true,
         readOnly: baseVnc.readOnly === true,
@@ -976,7 +981,6 @@ export const useConnectionManagement = ({
         redirectClipboard: baseVnc.redirectClipboard === true
       };
 
-      // Crear pestaña VNC-Guacamole igual que RDP-Guacamole
       setRdpTabs(prevTabs => {
         const tabId = `${node.key || node.id || 'vnc'}_${Date.now()}`;
         const connectionName = node.label || node.name || 'VNC Connection';
@@ -986,12 +990,12 @@ export const useConnectionManagement = ({
           key: tabId,
           label: connectionName,
           originalKey: originalKey,
-          rdpConfig: vncConfig, // Reutilizar rdpConfig para mantener compatibilidad con GuacamoleTerminal
+          rdpConfig: vncConfig,
+          vncConfig: vncConfig,
           type: 'vnc-guacamole',
           customIcon: node.data?.customIcon || null,
           groupId: null
         };
-        // Marcar y activar usando la clave REAL creada y registrar orden de apertura
         setLastOpenedTabKey(tabId);
         setOnCreateActivateTabKey(tabId);
         setActiveTabIndex(1);
@@ -1000,8 +1004,59 @@ export const useConnectionManagement = ({
         return [newTab, ...prevTabs];
       });
 
-      return; // Salir aquí para VNC-Guacamole
+      return;
     }
+
+    // === VNC Nativo (noVNC HTML5 Canvas - Recomendado y por defecto) ===
+    let dynamicWidth = parseInt(baseVnc.resolution?.split('x')[0]) || 1024;
+    let dynamicHeight = parseInt(baseVnc.resolution?.split('x')[1]) || 768;
+
+    if (baseVnc.autoResize) {
+      dynamicWidth = Math.floor(window.innerWidth * 0.8);
+      dynamicHeight = Math.floor(window.innerHeight * 0.7);
+    }
+
+    const vncConfig = {
+      connectionType: 'vnc',
+      clientType: 'web-vnc',
+      hostname: baseVnc.server || baseVnc.host || baseVnc.hostname,
+      username: baseVnc.username || baseVnc.user || '',
+      password: baseVnc.password || '',
+      port: baseVnc.port || 5900,
+      width: dynamicWidth,
+      height: dynamicHeight,
+      dpi: baseVnc.guacDpi || 96,
+      colorDepth: baseVnc.colorDepth || parseInt(baseVnc.colors) || 32,
+      autoResize: baseVnc.autoResize !== false,
+      readOnly: baseVnc.readOnly === true,
+      enableCompression: baseVnc.enableCompression !== false,
+      imageQuality: baseVnc.imageQuality || 'lossless',
+      autoReconnect: baseVnc.autoReconnect !== false,
+      redirectClipboard: baseVnc.redirectClipboard !== false
+    };
+
+    setRdpTabs(prevTabs => {
+      const tabId = `${node.key || node.id || 'vnc'}_${Date.now()}`;
+      const connectionName = node.label || node.name || 'VNC Connection';
+      const originalKey = node.key || node.id || tabId;
+
+      const newTab = {
+        key: tabId,
+        label: connectionName,
+        originalKey: originalKey,
+        rdpConfig: vncConfig,
+        vncConfig: vncConfig,
+        type: 'vnc-guacamole', // Se renderiza en TabContentRenderer como LazyVncCanvasTab
+        customIcon: node.data?.customIcon || null,
+        groupId: null
+      };
+      setLastOpenedTabKey(tabId);
+      setOnCreateActivateTabKey(tabId);
+      setActiveTabIndex(1);
+      setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
+      setOpenTabOrder(prev => [tabId, ...prev.filter(k => k !== tabId)]);
+      return [newTab, ...prevTabs];
+    });
   }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId, setRdpTabs, setLastOpenedTabKey, setOnCreateActivateTabKey, setActiveTabIndex, setOpenTabOrder, toast]);
 
   // === RETORNO DEL HOOK ===

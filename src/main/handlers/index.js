@@ -14,6 +14,7 @@ let _appHandlers = null;
 let _systemHandlers = null;
 let _systemServicesHandlers = null;
 let _rdpHandlers = null;
+let _vncHandlers = null;
 let _guacamoleHandlers = null;
 let _anythingLLMHandlers = null;
 let _openWebUIHandlers = null;
@@ -67,6 +68,11 @@ function getSystemServicesHandlers() {
 function getRdpHandlers() {
   if (!_rdpHandlers) _rdpHandlers = require('./rdp-handlers');
   return _rdpHandlers;
+}
+
+function getVncHandlers() {
+  if (!_vncHandlers) _vncHandlers = require('./vnc-handlers');
+  return _vncHandlers;
 }
 
 function getGuacamoleHandlers() {
@@ -285,6 +291,9 @@ function registerSecondaryHandlers(dependencies) {
   // Handlers RDP (Remote Desktop Protocol)
   getRdpHandlers().registerRdpHandlers(dependencies);
 
+  // Handlers VNC Nativo (noVNC)
+  getVncHandlers().registerVncHandlers(dependencies);
+
   // Handlers SSH
   getSSHHandlers()(dependencies);
 
@@ -378,6 +387,7 @@ module.exports = {
   getSystemHandlers,
   getSystemServicesHandlers,
   getRdpHandlers,
+  getVncHandlers,
   getGuacamoleHandlers,
   getAnythingLLMHandlers,
   getOpenWebUIHandlers,

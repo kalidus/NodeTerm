@@ -1,0 +1,283 @@
+/* ==========================================================================
+   VNC Cyberpunk Floating Toolbar
+   Compact, futuristic HUD action bar for Native Web VNC sessions
+   ========================================================================== */
+
+.vnc-toolbar-wrapper {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+  overflow: visible;
+}
+
+.vnc-toolbar-wrapper.is-hidden {
+  margin-top: -30px;
+  opacity: 0.85;
+}
+
+.vnc-toolbar-wrapper.is-visible {
+  margin-top: 0px;
+  opacity: 1;
+}
+
+.vnc-cyber-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 5px;
+  padding: 3px 10px;
+  height: 30px;
+  box-sizing: border-box;
+  white-space: nowrap;
+  background: linear-gradient(180deg, rgba(8, 22, 16, 0.96) 0%, rgba(5, 14, 10, 0.94) 100%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 255, 157, 0.3);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7), 
+              0 0 12px rgba(0, 255, 157, 0.15), 
+              inset 0 1px 0 rgba(0, 255, 157, 0.4);
+  color: #f1f5f9;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 11px;
+  position: relative;
+  overflow: visible;
+}
+
+/* Neon Top Micro-Glow Line */
+.vnc-cyber-bar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #00ff9d, #10b981, transparent);
+  box-shadow: 0 0 6px #00ff9d;
+  opacity: 0.8;
+}
+
+/* Cyber host badge */
+.vnc-badge-host {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 7px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  background: rgba(0, 255, 157, 0.08);
+  border: 1px solid rgba(0, 255, 157, 0.35);
+  color: #00ff9d;
+  font-weight: 600;
+  font-size: 10.5px;
+  letter-spacing: 0.03em;
+  text-shadow: 0 0 8px rgba(0, 255, 157, 0.4);
+  box-sizing: border-box;
+}
+
+.vnc-badge-host i {
+  color: #00ff9d;
+  font-size: 11px;
+  filter: drop-shadow(0 0 3px #00ff9d);
+}
+
+/* Cyber Scale Badge */
+.vnc-badge-scale {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 7px;
+  height: 22px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  box-sizing: border-box;
+  margin: 0;
+  outline: none;
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: all 0.16s ease-in-out;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  text-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
+}
+
+.vnc-badge-scale:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.25);
+}
+
+.vnc-badge-scale.active {
+  box-shadow: 0 0 8px rgba(0, 255, 157, 0.5), inset 0 0 3px rgba(0, 255, 157, 0.3);
+  border-color: #00ff9d;
+}
+
+/* Divider */
+.vnc-cyber-divider {
+  width: 1px;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+/* Action Buttons */
+.vnc-cyber-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 7px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: #cbd5e1;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 10px;
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+  outline: none;
+  transition: all 0.16s ease-in-out;
+}
+
+.vnc-cyber-btn:hover {
+  background: rgba(0, 255, 157, 0.15);
+  border-color: rgba(0, 255, 157, 0.4);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 0 8px rgba(0, 255, 157, 0.25);
+}
+
+.vnc-cyber-btn:active {
+  transform: translateY(0);
+}
+
+.vnc-cyber-btn.active {
+  background: rgba(0, 255, 157, 0.2);
+  border-color: #00ff9d;
+  color: #00ff9d;
+  box-shadow: 0 0 8px rgba(0, 255, 157, 0.4);
+}
+
+.vnc-cyber-btn i {
+  font-size: 10px;
+}
+
+/* Special button styles */
+.vnc-cyber-btn-cad:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+}
+
+.vnc-cyber-btn-disconnect:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: #ef4444;
+  color: #fca5a5;
+}
+
+/* Handle when toolbar is hidden */
+.vnc-cyber-handle {
+  width: 44px;
+  height: 6px;
+  background: rgba(0, 255, 157, 0.4);
+  border: 1px solid rgba(0, 255, 157, 0.6);
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  cursor: pointer;
+  transition: all 0.16s ease;
+  box-shadow: 0 0 8px rgba(0, 255, 157, 0.4);
+  margin-top: 0px;
+}
+
+.vnc-cyber-handle:hover {
+  height: 10px;
+  background: #00ff9d;
+  box-shadow: 0 0 12px #00ff9d;
+}
+
+/* Canvas container styling */
+.vnc-canvas-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  background: #000000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vnc-canvas-viewport {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vnc-canvas-viewport canvas {
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+}
+
+/* Loading and error overlays */
+.vnc-status-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 14, 22, 0.94);
+  backdrop-filter: blur(8px);
+  z-index: 500;
+  color: #e2e8f0;
+}
+
+.vnc-status-card {
+  max-width: 480px;
+  padding: 2rem;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(0, 255, 157, 0.2);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7), 0 0 20px rgba(0, 255, 157, 0.1);
+  text-align: center;
+}
+
+.vnc-status-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: #00ff9d;
+  letter-spacing: 0.02em;
+}
+
+.vnc-status-desc {
+  font-size: 0.9rem;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+}
