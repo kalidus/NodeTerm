@@ -30,6 +30,7 @@ const crypto = require('crypto');
 const { Client } = require('ssh2');
 const { getNodeTermDataDir } = require('../utils/file-utils');
 const recordingQuery = require('./recording-query');
+const sshKnownHostsService = require('./SSHKnownHostsService');
 
 // Ruta del archivo de configuración MCP
 const MCP_CONFIG_PATH = path.join(getNodeTermDataDir(), 'mcp-config.json');
@@ -443,9 +444,13 @@ class McpApiServer {
         port: connConfig.port || 22,
         username: connConfig.username,
         readyTimeout: 15000,
-        // Aceptar host keys automáticamente para conexiones desde API
-        // (el usuario ya validó la conexión desde NodeTerm)
-        hostVerifier: () => true
+        // ✅ SEGURIDAD: Verificar clave del host contra known_hosts (política accept-new previene ataques MitM)
+        hostVerifier: sshKnownHostsService.createHostVerifier(
+          connConfig.host,
+          connConfig.port || 22,
+          'accept-new',
+          (msg) => console.warn(`[MCP-SSH] ${msg}`)
+        )
       };
 
       // Autenticación: password o privateKey
@@ -1226,13 +1231,16 @@ class McpApiServer {
       return;
     }
 
-    // Auth: API Key
+    // Auth: API Key (comparación segura en tiempo constante para mitigar timing attacks)
     const apiKey = req.headers['x-api-key'];
     if (!apiKey) {
       this._sendJson(res, 401, { error: 'Missing X-API-Key header' });
       return;
     }
-    if (apiKey !== this.config.apiKey) {
+    const expectedKey = this.config.apiKey || '';
+    const keyBuf = Buffer.from(String(apiKey));
+    const expectedBuf = Buffer.from(String(expectedKey));
+    if (keyBuf.length === 0 || keyBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(keyBuf, expectedBuf)) {
       this._sendJson(res, 403, { error: 'Invalid API key' });
       return;
     }
