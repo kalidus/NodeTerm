@@ -616,8 +616,7 @@ process.on('unhandledRejection', (reason, promise) => {
 const sshConnections = {};
 // Estado persistente para stats de bastión (CPU, red, etc.) por tabId
 const bastionStatsState = {};
-// Cache for Welcome Messages (MOTD) to show them on every new tab.
-const motdCache = {};
+
 // Pool de conexiones SSH compartidas para evitar múltiples conexiones al mismo servidor
 const sshConnectionPool = {};
 
@@ -2533,10 +2532,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
   }
 
   try {
-    // For subsequent connections, send the cached MOTD immediately.
-    if (motdCache[cacheKey]) {
-      sendToRenderer(event.sender, `ssh:data:${tabId}`, motdCache[cacheKey]);
-    }
+
 
     // Conectar SSH si es necesario
     if (!isReusedConnection) {
@@ -2643,25 +2639,10 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
       statsLoop(tabId, realHostname, finalDistroId, config.host);
     }
 
-    // Set up the data listener immediately to capture the MOTD
-    let isFirstPacket = true;
+    // Escuchar datos del stream y enviarlos directamente sin supresión de paquetes
     stream.on('data', (data) => {
       try {
         const dataStr = data.toString('utf-8');
-
-        if (isFirstPacket) {
-          isFirstPacket = false;
-          // If the MOTD is not cached yet (it's the first-ever connection)
-          if (!motdCache[cacheKey]) {
-            motdCache[cacheKey] = dataStr; // Cache it
-            sendToRenderer(event.sender, `ssh:data:${tabId}`, dataStr); // And send it
-          }
-          // If it was already cached, we've already sent the cached version.
-          // We do nothing here, effectively suppressing the duplicate message.
-
-          // La configuración original ya funciona correctamente
-          return;
-        }
 
         // Grabar output si hay grabación activa
         if (getSessionRecorder().isRecording(tabId)) {
