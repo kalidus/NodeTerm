@@ -61,23 +61,65 @@ async function getHomeDirectory() {
     }
 }
 
+let cachedDrives = null;
+let lastDrivesCheck = 0;
+const DRIVES_CACHE_TTL = 30000; // 30s cache
+
+/**
+ * Chequea una unidad con un timeout estricto para evitar bloqueos por unidades de red desconectadas
+ */
+function checkDriveWithTimeout(driveLetter, timeoutMs = 150) {
+    return new Promise((resolve) => {
+        let settled = false;
+        const timer = setTimeout(() => {
+            if (!settled) {
+                settled = true;
+                resolve(null);
+            }
+        }, timeoutMs);
+        if (timer.unref) timer.unref();
+
+        fs.promises.access(driveLetter, fs.constants.F_OK)
+            .then(() => {
+                if (!settled) {
+                    settled = true;
+                    clearTimeout(timer);
+                    resolve(driveLetter);
+                }
+            })
+            .catch(() => {
+                if (!settled) {
+                    settled = true;
+                    clearTimeout(timer);
+                    resolve(null);
+                }
+            });
+    });
+}
+
 /**
  * Obtiene las unidades/drives base (especialmente para Windows)
  */
 async function getDrives() {
+    const now = Date.now();
+    if (cachedDrives && (now - lastDrivesCheck < DRIVES_CACHE_TTL)) {
+        return { success: true, drives: cachedDrives };
+    }
     try {
         if (process.platform === 'win32') {
-            const drives = [];
-            // ✅ SEGURIDAD & COMPATIBILIDAD: Escaneo directo de letras A:\ a Z:\ con fs.accessSync.
-            // Instantáneo (<2ms), no invoca subprocesos y es 100% compatible con Windows 11 24H2+ (donde wmic fue eliminado).
+            const driveLetters = [];
             for (let i = 65; i <= 90; i++) {
-                const driveLetter = String.fromCharCode(i) + ':\\';
-                try {
-                    fs.accessSync(driveLetter, fs.constants.F_OK);
-                    drives.push(driveLetter);
-                } catch (_) {}
+                driveLetters.push(String.fromCharCode(i) + ':\\');
             }
+            // ✅ SEGURIDAD & RENDIMIENTO: Chequeo asíncrono en paralelo con timeout de 150ms.
+            // No bloquea el event loop y descarta instantáneamente unidades de red desconectadas o inaccesibles.
+            const checks = driveLetters.map(drive => checkDriveWithTimeout(drive, 150));
+            const results = await Promise.all(checks);
+            const drives = results.filter(Boolean);
+
             if (drives.length > 0) {
+                cachedDrives = drives;
+                lastDrivesCheck = now;
                 return { success: true, drives };
             }
             return { success: true, drives: ['C:\\'] };
@@ -110,12 +152,15 @@ async function listFiles(targetPath) {
                 if (files.length < 1000) {
                     // ✅ SEGURIDAD: Usar spawn en lugar de exec para evitar inyección de comandos
                     const { spawn } = require('child_process');
-                    const child = spawn('attrib', ['/D', path.join(safePath, '*')], { timeout: 2000 });
+                    const child = spawn('attrib', ['/D', path.join(safePath, '*')], { timeout: 1500 });
                     
                     let stdout = '';
-                    for await (const chunk of child.stdout) {
-                      stdout += chunk;
-                    }
+                    child.stdout.on('data', chunk => { stdout += chunk; });
+                    await new Promise((resolve) => {
+                        child.on('close', resolve);
+                        child.on('error', resolve);
+                    });
+
                     // Use regex that handles both CRLF and LF safely
                     const lines = stdout.split(/\r?\n/);
                     for (const line of lines) {

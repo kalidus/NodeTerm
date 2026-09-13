@@ -5,7 +5,7 @@ const CLASSIC_UI_KEYS = [
   'Tokyo Night', 'Synthwave 84', 'Palenight', 'Ayu Dark', 'Zenburn', 
   'Tomorrow Night', 'Oceanic Next', 'Breeze', 'Spacemacs', 
   'Night Owl', 'Silver', 'Arctic', 
-  'Neon Blue', 'Cyberpunk', 'Matrix', 'Hologram', 'Plasma'
+  'Neon Blue', 'Cyberpunk', 'Matrix', 'Hologram', 'Plasma', 'OLED', 'Glass'
 ];
 
 export const classicUiThemes = {
@@ -1579,6 +1579,134 @@ export const classicUiThemes = {
       iconos: '#2196f3'
     }
   },
+  'OLED': {
+    name: 'OLED',
+    colors: {
+      sidebarBackground: '#000000',
+      sidebarBorder: '#161b22',
+      sidebarText: '#c9d1d9',
+      sidebarHover: '#0d1117',
+      sidebarSelected: '#161b22',
+      sidebarGutter: '#161b22',
+      
+      menuBarBackground: '#000000',
+      menuBarText: '#c9d1d9',
+      menuBarBorder: '#161b22',
+      menuBarHover: '#0d1117',
+      
+      statusBarBackground: '#000000',
+      statusBarText: '#c9d1d9',
+      statusBarBorder: '#161b22',
+      
+      tabBackground: '#000000',
+      tabActiveBackground: '#0a0d12',
+      tabHoverBackground: '#0d1117',
+      tabText: '#8b949e',
+      tabActiveText: '#ffffff',
+      tabBorder: '#161b22',
+      tabCloseHover: '#f85149',
+      
+      tabGroupBackground: '#0a0d12',
+      tabGroupText: '#c9d1d9',
+      tabGroupBorder: '#161b22',
+      
+      contentBackground: '#000000',
+      contentBorder: '#161b22',
+      
+      dialogBackground: '#000000',
+      dialogText: '#ffffff',
+      dialogBorder: '#21262d',
+      dialogShadow: 'rgba(0, 0, 0, 0.9)',
+      
+      buttonPrimary: '#388bfd',
+      buttonPrimaryText: '#ffffff',
+      buttonSecondary: '#161b22',
+      buttonSecondaryText: '#c9d1d9',
+      buttonHover: '#1f6feb',
+      
+      contextMenuBackground: '#000000',
+      contextMenuText: '#c9d1d9',
+      contextMenuHover: '#161b22',
+      contextMenuBorder: '#21262d',
+      contextMenuShadow: 'rgba(0, 0, 0, 0.9)',
+      '--ui-titlebar-accent': '#388bfd',
+      '--ui-titlebar-text': '#fff'
+    },
+    statusBarPalette: {
+      fondo: '#000000',
+      texto: '#ffffff',
+      disco: '#3fb950',
+      redUp: '#f85149',
+      redDown: '#58a6ff',
+      cpu: '#58a6ff',
+      memoria: '#d29922',
+      iconos: '#58a6ff'
+    }
+  },
+  'Glass': {
+    name: 'Glass',
+    colors: {
+      sidebarBackground: 'rgba(15, 23, 42, 0.75)',
+      sidebarBorder: 'rgba(255, 255, 255, 0.1)',
+      sidebarText: '#e2e8f0',
+      sidebarHover: 'rgba(255, 255, 255, 0.08)',
+      sidebarSelected: 'rgba(56, 189, 248, 0.18)',
+      sidebarGutter: 'rgba(255, 255, 255, 0.1)',
+      
+      menuBarBackground: 'rgba(15, 23, 42, 0.8)',
+      menuBarText: '#e2e8f0',
+      menuBarBorder: 'rgba(255, 255, 255, 0.1)',
+      menuBarHover: 'rgba(255, 255, 255, 0.08)',
+      
+      statusBarBackground: 'rgba(15, 23, 42, 0.85)',
+      statusBarText: '#e2e8f0',
+      statusBarBorder: 'rgba(255, 255, 255, 0.1)',
+      
+      tabBackground: 'rgba(15, 23, 42, 0.6)',
+      tabActiveBackground: 'rgba(30, 41, 59, 0.8)',
+      tabHoverBackground: 'rgba(255, 255, 255, 0.08)',
+      tabText: '#94a3b8',
+      tabActiveText: '#38bdf8',
+      tabBorder: 'rgba(255, 255, 255, 0.1)',
+      tabCloseHover: '#f43f5e',
+      
+      tabGroupBackground: 'rgba(15, 23, 42, 0.6)',
+      tabGroupText: '#e2e8f0',
+      tabGroupBorder: 'rgba(255, 255, 255, 0.1)',
+      
+      contentBackground: 'rgba(15, 23, 42, 0.75)',
+      contentBorder: 'rgba(255, 255, 255, 0.1)',
+      
+      dialogBackground: 'rgba(15, 23, 42, 0.9)',
+      dialogText: '#f8fafc',
+      dialogBorder: 'rgba(255, 255, 255, 0.15)',
+      dialogShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+      
+      buttonPrimary: '#38bdf8',
+      buttonPrimaryText: '#0f172a',
+      buttonSecondary: 'rgba(255, 255, 255, 0.1)',
+      buttonSecondaryText: '#e2e8f0',
+      buttonHover: '#0284c7',
+      
+      contextMenuBackground: 'rgba(15, 23, 42, 0.9)',
+      contextMenuText: '#e2e8f0',
+      contextMenuHover: 'rgba(255, 255, 255, 0.1)',
+      contextMenuBorder: 'rgba(255, 255, 255, 0.15)',
+      contextMenuShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+      '--ui-titlebar-accent': '#38bdf8',
+      '--ui-titlebar-text': '#fff'
+    },
+    statusBarPalette: {
+      fondo: 'rgba(15, 23, 42, 0.85)',
+      texto: '#f8fafc',
+      disco: '#34d399',
+      redUp: '#f43f5e',
+      redDown: '#38bdf8',
+      cpu: '#38bdf8',
+      memoria: '#fbbf24',
+      iconos: '#38bdf8'
+    }
+  }
 };
 
 export { CLASSIC_UI_KEYS };

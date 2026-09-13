@@ -19,6 +19,18 @@ const getThemeColors = (themeName) => {
     return theme?.colors || {};
 };
 
+const hexToRgba = (color, alpha = 1) => {
+    if (!color || typeof color !== 'string') return `rgba(13, 17, 23, ${alpha})`;
+    if (color.startsWith('rgba') || color.startsWith('hsla')) return color;
+    let clean = color.replace('#', '').trim();
+    if (clean.length === 3) clean = clean.split('').map(c => c + c).join('');
+    if (clean.length === 6) {
+        const num = parseInt(clean, 16);
+        return `rgba(${(num >> 16) & 255}, ${(num >> 8) & 255}, ${num & 255}, ${alpha})`;
+    }
+    return color;
+};
+
 const getSyncPath = (fromSide, currentPathA, newPathA, currentPathB) => {
     if (!currentPathA || !newPathA || !currentPathB) return null;
     const sepA = fromSide === 'remote' ? '/' : (currentPathA.includes('\\') ? '\\' : '/');
@@ -139,6 +151,8 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
 
     // ---- Shared State ----
     const [globalLoading, setGlobalLoading] = useState(false);
+    const [remoteInitialLoading, setRemoteInitialLoading] = useState(true);
+    const [localInitialLoading, setLocalInitialLoading] = useState(true);
     const [contextItems, setContextItems] = useState([]);
     const contextMenuRef = useRef(null);
     const [createDialogVisible, setCreateDialogVisible] = useState(false);
@@ -750,10 +764,12 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
         }
     }, [localNodes, remoteNodes, findNodeByKey, loadLocalDirectory, loadRemoteDirectory, makeKey, syncNavigation, localCurrentPath, remoteCurrentPath]);
 
-    // Initial load: get HOME directory (remote and local)
+    // Initial load: get HOME directory (remote and local in parallel)
     const initSystems = useCallback(async () => {
         try {
             setGlobalLoading(true);
+            setLocalInitialLoading(true);
+            setRemoteInitialLoading(true);
             const invoke = invokeRemote;
             const localFs = window.electron?.localFs;
             if (!invoke || !localFs) return;
@@ -773,112 +789,134 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
                 console.error('Error loading default paths', e);
             }
 
-            // 1. Initialize Remote
-            const remoteResult = await invoke('ssh:get-home-directory', { tabId });
-            if (remoteResult && remoteResult.success && remoteResult.home) {
-                const homePath = remoteResult.home;
-                const rNodes = [{
-                    key: makeKey(homePath),
-                    label: homePath,
-                    data: { path: homePath, type: 'directory', parentPath: null, isRoot: true },
-                    icon: 'pi pi-home', droppable: true, leaf: false, children: []
-                }];
-                if (homePath !== '/') {
-                    rNodes.push({
-                        key: makeKey('/'), label: '/',
-                        data: { path: '/', type: 'directory', parentPath: null, isRoot: true },
-                        icon: 'pi pi-hdd', droppable: true, leaf: false, children: []
-                    });
-                }
+            // 1. Initialize Local (Runs immediately and concurrently without waiting for SSH!)
+            const initLocal = async () => {
+                try {
+                    const [localResult, localDrivesResult] = await Promise.all([
+                        localFs.getHomeDirectory(),
+                        localFs.getDrives()
+                    ]);
 
-                let initialRemotePath = homePath;
-                if (savedPaths?.remotePath) {
-                    initialRemotePath = savedPaths.remotePath;
-                    if (initialRemotePath !== homePath && initialRemotePath !== '/') {
-                        rNodes.push({
-                            key: makeKey(initialRemotePath),
-                            label: initialRemotePath,
-                            data: { path: initialRemotePath, type: 'directory', parentPath: null, isRoot: true },
-                            icon: 'pi pi-star-fill', droppable: true, leaf: false, children: []
+                    const lNodes = [];
+                    let homeDir = null;
+
+                    if (localResult && localResult.success && localResult.home) {
+                        homeDir = localResult.home;
+                        lNodes.push({
+                            key: makeKey(homeDir),
+                            label: `HOME (${homeDir})`,
+                            data: { path: homeDir, type: 'directory', parentPath: null, isRoot: true },
+                            icon: 'pi pi-home', droppable: true, leaf: false, children: []
                         });
                     }
-                }
 
-                setRemoteNodes(rNodes);
-                setRemoteCurrentPath(initialRemotePath);
-                await loadRemoteDirectory(initialRemotePath, { keepExpanded: true });
+                    if (localDrivesResult && localDrivesResult.success && localDrivesResult.drives) {
+                        localDrivesResult.drives.forEach(drive => {
+                            lNodes.push({
+                                key: makeKey(drive),
+                                label: drive,
+                                data: { path: drive, type: 'directory', parentPath: null, isRoot: true },
+                                icon: 'pi pi-server', droppable: true, leaf: false, children: []
+                            });
+                        });
+                    }
 
-                // Si conectó con éxito usando un password ingresado manualmente, guardarlo!
-                if (customPassword && sshConfig?.originalKey) {
-                    window.dispatchEvent(new CustomEvent('ssh:password-correct', {
-                        detail: {
-                            originalKey: sshConfig.originalKey,
-                            password: customPassword
+                    let initialLocalPath = homeDir || (lNodes.length > 0 ? lNodes[0].data.path : null);
+                    if (savedPaths?.localPath) {
+                        initialLocalPath = savedPaths.localPath;
+                        const exists = lNodes.some(n => n.data.path.toLowerCase() === initialLocalPath.toLowerCase());
+                        if (!exists) {
+                            lNodes.push({
+                                key: makeKey(initialLocalPath),
+                                label: initialLocalPath,
+                                data: { path: initialLocalPath, type: 'directory', parentPath: null, isRoot: true },
+                                icon: 'pi pi-star-fill', droppable: true, leaf: false, children: []
+                            });
                         }
-                    }));
+                    }
+
+                    setLocalNodes(lNodes);
+
+                    if (initialLocalPath) {
+                        setLocalCurrentPath(initialLocalPath);
+                        await loadLocalDirectory(initialLocalPath, { keepExpanded: true });
+                    }
+                } catch (error) {
+                    console.error('Error local filesystem init:', error);
+                } finally {
+                    setLocalInitialLoading(false);
                 }
-            } else {
-                notify('error', 'Error de conexión remota', remoteResult?.error || 'No se pudo conectar al servidor remoto');
-                const errStr = remoteResult?.error || '';
-                const activePassword = customPasswordRef.current !== null ? customPasswordRef.current : sshConfig?.password;
-                const isAuthError = errStr.includes('authentication') || errStr.includes('methods failed') || errStr.includes('All configured') || !activePassword;
-                if (isAuthError) {
-                    setPasswordPromptVisible(true);
+            };
+
+            // 2. Initialize Remote (Runs concurrently with local)
+            const initRemote = async () => {
+                try {
+                    const remoteResult = await invoke('ssh:get-home-directory', { tabId });
+                    if (remoteResult && remoteResult.success && remoteResult.home) {
+                        const homePath = remoteResult.home;
+                        const rNodes = [{
+                            key: makeKey(homePath),
+                            label: homePath,
+                            data: { path: homePath, type: 'directory', parentPath: null, isRoot: true },
+                            icon: 'pi pi-home', droppable: true, leaf: false, children: []
+                        }];
+                        if (homePath !== '/') {
+                            rNodes.push({
+                                key: makeKey('/'), label: '/',
+                                data: { path: '/', type: 'directory', parentPath: null, isRoot: true },
+                                icon: 'pi pi-hdd', droppable: true, leaf: false, children: []
+                            });
+                        }
+
+                        let initialRemotePath = homePath;
+                        if (savedPaths?.remotePath) {
+                            initialRemotePath = savedPaths.remotePath;
+                            if (initialRemotePath !== homePath && initialRemotePath !== '/') {
+                                rNodes.push({
+                                    key: makeKey(initialRemotePath),
+                                    label: initialRemotePath,
+                                    data: { path: initialRemotePath, type: 'directory', parentPath: null, isRoot: true },
+                                    icon: 'pi pi-star-fill', droppable: true, leaf: false, children: []
+                                });
+                            }
+                        }
+
+                        setRemoteNodes(rNodes);
+                        setRemoteCurrentPath(initialRemotePath);
+                        await loadRemoteDirectory(initialRemotePath, { keepExpanded: true });
+
+                        // Si conectó con éxito usando un password ingresado manualmente, guardarlo!
+                        if (customPassword && sshConfig?.originalKey) {
+                            window.dispatchEvent(new CustomEvent('ssh:password-correct', {
+                                detail: {
+                                    originalKey: sshConfig.originalKey,
+                                    password: customPassword
+                                }
+                            }));
+                        }
+                    } else {
+                        notify('error', 'Error de conexión remota', remoteResult?.error || 'No se pudo conectar al servidor remoto');
+                        const errStr = remoteResult?.error || '';
+                        const activePassword = customPasswordRef.current !== null ? customPasswordRef.current : sshConfig?.password;
+                        const isAuthError = errStr.includes('authentication') || errStr.includes('methods failed') || errStr.includes('All configured') || !activePassword;
+                        if (isAuthError) {
+                            setPasswordPromptVisible(true);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error remote filesystem init:', error);
+                } finally {
+                    setRemoteInitialLoading(false);
                 }
-            }
+            };
 
-            // 2. Initialize Local
-            const localResult = await localFs.getHomeDirectory();
-            const localDrivesResult = await localFs.getDrives();
-
-            const lNodes = [];
-            let homeDir = null;
-
-            if (localResult && localResult.success && localResult.home) {
-                homeDir = localResult.home;
-                lNodes.push({
-                    key: makeKey(homeDir),
-                    label: `HOME (${homeDir})`,
-                    data: { path: homeDir, type: 'directory', parentPath: null, isRoot: true },
-                    icon: 'pi pi-home', droppable: true, leaf: false, children: []
-                });
-            }
-
-            if (localDrivesResult && localDrivesResult.success && localDrivesResult.drives) {
-                localDrivesResult.drives.forEach(drive => {
-                    lNodes.push({
-                        key: makeKey(drive),
-                        label: drive,
-                        data: { path: drive, type: 'directory', parentPath: null, isRoot: true },
-                        icon: 'pi pi-server', droppable: true, leaf: false, children: []
-                    });
-                });
-            }
-
-            let initialLocalPath = homeDir || (lNodes.length > 0 ? lNodes[0].data.path : null);
-            if (savedPaths?.localPath) {
-                initialLocalPath = savedPaths.localPath;
-                const exists = lNodes.some(n => n.data.path.toLowerCase() === initialLocalPath.toLowerCase());
-                if (!exists) {
-                    lNodes.push({
-                        key: makeKey(initialLocalPath),
-                        label: initialLocalPath,
-                        data: { path: initialLocalPath, type: 'directory', parentPath: null, isRoot: true },
-                        icon: 'pi pi-star-fill', droppable: true, leaf: false, children: []
-                    });
-                }
-            }
-
-            setLocalNodes(lNodes);
-
-            if (initialLocalPath) {
-                setLocalCurrentPath(initialLocalPath);
-                await loadLocalDirectory(initialLocalPath, { keepExpanded: true });
-            }
+            await Promise.allSettled([initLocal(), initRemote()]);
         } catch (error) {
             notify('error', 'Error de inicialización', error?.message || 'Error al conectar las unidades');
         } finally {
             setGlobalLoading(false);
+            setLocalInitialLoading(false);
+            setRemoteInitialLoading(false);
         }
     }, [tabId, sshConfig, customPassword, loadRemoteDirectory, loadLocalDirectory, makeKey, notify, invokeRemote]);
 
@@ -2278,6 +2316,7 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
 
 
     const themeColors = getThemeColors(explorerColorTheme);
+    const bgWithOpacity = hexToRgba(themeColors.contentBackground || '#0d1117', isStandaloneTab ? 1 : opacity);
 
     return (
         <div
@@ -2316,12 +2355,13 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
                     flexDirection: 'column',
                     fontFamily: explorerFont,
                     fontSize: `${explorerFontSize}px`,
-                    '--explorer-bg': themeColors.contentBackground || '#0d1117',
+                    '--explorer-bg': bgWithOpacity,
                     '--explorer-text': themeColors.dialogText || '#e6edf3',
                     '--explorer-border': themeColors.contentBorder || '#30363d',
                     '--explorer-hover': themeColors.sidebarHover || 'rgba(139, 148, 158, 0.1)',
                     '--explorer-selected': themeColors.sidebarSelected || 'rgba(88, 166, 255, 0.12)',
                     '--explorer-accent': themeColors.buttonPrimary || '#58a6ff',
+                    '--ssh-monitor-opacity': opacity,
                     ...(isStandaloneTab ? {
                         width: '100%',
                         height: '100%',
@@ -2404,7 +2444,7 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
                                 </button>
 
                                 {isOpacityMenuOpen && (
-                                    <div className="ssh-monitor-opacity-popover">
+                                    <div className="ssh-monitor-opacity-popover" onMouseDown={(e) => e.stopPropagation()}>
                                         <span className="ssh-monitor-opacity-label">Opacidad — {Math.round(opacity * 100)}%</span>
                                         <input
                                             type="range"
@@ -2432,9 +2472,9 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
                                 </button>
 
                                 {isThemeMenuOpen && (
-                                    <div className="ssh-monitor-theme-popover">
+                                    <div className="ssh-monitor-theme-popover" onMouseDown={(e) => e.stopPropagation()}>
                                         <div className="ssh-monitor-theme-title">Tema Visual</div>
-                                        {['Light', 'Dark', 'Cyberpunk', 'Glass', 'OLED'].map(name => (
+                                        {['Light', 'Dark', 'Cyberpunk', 'Dracula', 'Nord', 'Matrix', 'Glass', 'OLED'].map(name => (
                                             <button
                                                 key={name}
                                                 className={`ssh-monitor-theme-option ${explorerColorTheme === name ? 'active' : ''}`}
@@ -2476,7 +2516,7 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
                     >
                         {renderPaneToolbar('remote')}
                         <div style={{ flex: 1, overflowY: 'auto', padding: '6px 8px' }}>
-                            {(remoteLoadingPaths[remoteCurrentPath] || globalLoading) && (!activeRemoteNodes || activeRemoteNodes.length === 0) ? (
+                            {(remoteLoadingPaths[remoteCurrentPath] || remoteInitialLoading) && (!activeRemoteNodes || activeRemoteNodes.length === 0) ? (
                                 <div className="explorer-skeleton-list">
                                     {[0.9, 0.7, 0.85, 0.6, 0.75, 0.8, 0.5].map((w, i) => (
                                         <div key={i} className="explorer-skeleton-row">
@@ -2583,7 +2623,7 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
                     >
                         {renderPaneToolbar('local')}
                         <div style={{ flex: 1, overflowY: 'auto', padding: '6px 8px' }}>
-                            {(localLoadingPaths[localCurrentPath] || globalLoading) && (!activeLocalNodes || activeLocalNodes.length === 0) ? (
+                            {(localLoadingPaths[localCurrentPath] || localInitialLoading) && (!activeLocalNodes || activeLocalNodes.length === 0) ? (
                                 <div className="explorer-skeleton-list">
                                     {[0.8, 0.6, 0.9, 0.7, 0.55, 0.85, 0.65].map((w, i) => (
                                         <div key={i} className="explorer-skeleton-row">

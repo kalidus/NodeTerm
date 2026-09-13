@@ -88,6 +88,7 @@
     flex-shrink: 0;
     position: relative;
     overflow: visible;
+    z-index: 100;
 }
 
 /* Subtle top accent line on header */
@@ -2305,10 +2306,12 @@
 }
 
 /* ---- Theme Selector Popover ---- */
-.ssh-monitor-theme-container {
+.ssh-monitor-theme-container,
+.ssh-monitor-opacity-container {
     position: relative;
     display: inline-flex;
     align-items: center;
+    z-index: 101;
 }
 
 .ssh-monitor-theme-popover {
@@ -2320,7 +2323,7 @@
     border: 1px solid var(--explorer-border, #30363d);
     border-radius: 6px;
     padding: 6px 0;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
     z-index: 1000;
     min-width: 160px;
     max-height: 280px;
@@ -2371,9 +2374,11 @@
 }
 
 .ssh-monitor-theme-option.active {
-    background: var(--explorer-selected, rgba(88, 166, 255, 0.12));
-    color: var(--explorer-accent, #58a6ff);
-    font-weight: 600;
+    background: var(--explorer-selected, rgba(88, 166, 255, 0.18));
+    color: #ffffff !important;
+    font-weight: 700;
+    border-left: 3px solid var(--explorer-accent, #58a6ff);
+    padding-left: 11px;
 }
 
 /* ============================================================
@@ -2382,7 +2387,7 @@
 
 /* Main panel background & custom grid */
 .cyberpunk-style.ssh-monitor-panel {
-    background-color: #070d19 !important;
+    background-color: rgba(7, 13, 25, var(--ssh-monitor-opacity, 0.95)) !important;
     background-image: linear-gradient(rgba(0, 229, 255, 0.025) 1px, transparent 1px),
                       linear-gradient(90deg, rgba(0, 229, 255, 0.025) 1px, transparent 1px) !important;
     background-size: 20px 20px !important;
@@ -2747,7 +2752,11 @@
 }
 
 /* All content above scanlines */
-.cyberpunk-style .ssh-monitor-header,
+.cyberpunk-style .ssh-monitor-header {
+    position: relative;
+    z-index: 100 !important;
+}
+
 .cyberpunk-style .ssh-file-explorer-content,
 .cyberpunk-style .transfer-station {
     position: relative;
