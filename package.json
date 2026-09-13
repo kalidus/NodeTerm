@@ -30,8 +30,10 @@
     "release:minor": "node scripts/release.js --yes --prepare --release-type minor --update-changelog --commit-prep --cloud",
     "release:local": "node scripts/release.js --prepare --publish",
     "fix-release-notes": "node scripts/release.js --fix-notes --yes",
+    "test:unit": "node --test testing/unit/*.test.js",
     "test:rdp": "node --test testing/rdp/*.test.js",
     "test:vnc": "node --test testing/vnc/*.test.js",
+    "test": "node --test testing/unit/*.test.js testing/rdp/*.test.js testing/vnc/*.test.js",
     "probe:rdp": "node testing/rdp/probe-wallix-nego.js"
   },
   "build": {

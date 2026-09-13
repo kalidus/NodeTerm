@@ -7,6 +7,7 @@
 
 const { ipcMain, BrowserWindow, app, shell } = require('electron');
 const path = require('path');
+const fs = require('fs');
 
 /**
  * Registra todos los handlers de aplicación
@@ -116,7 +117,17 @@ function registerAppHandlers(dependencies) {
   // Handler para abrir la previsualización del splash screen en el navegador predeterminado
   ipcMain.handle('app:open-splash-preview', async (event, style) => {
     try {
-      const previewPath = path.join(app.getAppPath(), 'testing', 'splash-preview.html');
+      // ✅ RESILIENCIA: Buscar primero en dist/ (empaquetado), luego en testing/ (desarrollo)
+      let previewPath = path.join(app.getAppPath(), 'dist', 'splash-preview.html');
+      if (!fs.existsSync(previewPath)) {
+        previewPath = path.join(app.getAppPath(), 'testing', 'splash-preview.html');
+      }
+      if (!fs.existsSync(previewPath)) {
+        previewPath = path.join(__dirname, '..', '..', '..', 'testing', 'splash-preview.html');
+      }
+      if (!fs.existsSync(previewPath)) {
+        return { success: false, error: 'Archivo de previsualización del splash no encontrado' };
+      }
       const fileUrl = `file://${previewPath.replace(/\\/g, '/')}${style ? '#' + style : ''}`;
       await shell.openExternal(fileUrl);
       return { success: true };

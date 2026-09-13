@@ -16,34 +16,113 @@ const sshStatsService = require('../services/SSHStatsService');
  * @returns {string} - Ruta escapada de forma segura
  */
 function escapeShellPath(path) {
-  if (typeof path !== 'string') {
+  if (!path || typeof path !== 'string') {
     return '';
   }
-  // Escapar caracteres especiales: ", `, $, \, !, ;, |, &, <, >
-  return path.replace(/(["`$\\!;|&<>])/g, '\\$1');
+  // Sanitizar saltos de línea y escapar caracteres especiales: ", `, $, \, !, ;, |, &, <, >
+  return path.replace(/[\r\n]/g, '').replace(/(["`$\\!;|&<>])/g, '\\$1');
 }
 
 /**
  * Parsea la salida del comando ls -la en formato de objetos
+ * Soporta nombres con espacios, enlaces simbólicos (-> destino),
+ * fechas tradicionales, ISO y localizadas, y atributos SELinux/ACL (+/.).
  */
 function parseLsOutput(output) {
-  const lines = output.split('\n').filter(line => line.trim() !== '' && !line.startsWith('total'));
-  return lines.map(line => {
-    // Ejemplo: -rw-r--r-- 1 user group 4096 Jan 1 12:00 filename
-    const parts = line.split(/\s+/);
-    if (parts.length < 9) return null;
-    const [permissions, , owner, group, size, month, day, timeOrYear, ...nameParts] = parts;
-    const name = nameParts.join(' ');
-    return {
-      name,
-      permissions,
-      owner,
-      group,
-      size: parseInt(size, 10) || 0,
-      modified: `${month} ${day} ${timeOrYear}`,
-      type: permissions[0] === 'd' ? 'directory' : 'file',
-    };
-  }).filter(Boolean);
+  if (!output || typeof output !== 'string') return [];
+  const lines = output.split(/\r?\n/);
+  const results = [];
+
+  // Regex para formato estándar ls -l:
+  // 1: permisos ([bcdlps-][rwxstST-]{9}[.+@]?)
+  // 2: links (\d+)
+  // 3: owner (\S+)
+  // 4: group (\S+)
+  // 5: size (\d+(?:,\s*\d+)?)
+  // 6: fecha (ISO "YYYY-MM-DD HH:MM[:SS]" o Tradicional "Mes Dia Hora/Año" o "Dia Mes Hora/Año")
+  // 7: resto de la línea (nombre del archivo y opcional destino de enlace)
+  const lsRegex = /^([bcdlps\-][rwxstST\-]{9}[.+@]?)\s+(\d+)\s+(\S+)\s+(\S+)\s+(\d+(?:,\s*\d+)?)\s+(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}(?::\d{2})?|[A-Za-z\u00C0-\u017F\.]+\s+\d{1,2}\s+(?:\d{2}:\d{2}|\d{4})|\d{1,2}\s+[A-Za-z\u00C0-\u017F\.]+\s+(?:\d{2}:\d{2}|\d{4}))\s+(.+)$/;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('total') || line.startsWith('total:')) continue;
+
+    const match = line.match(lsRegex);
+    if (match) {
+      const [, permissions, , owner, group, sizeStr, dateStr, rawName] = match;
+      const typeChar = permissions[0];
+      let type = 'file';
+      if (typeChar === 'd') type = 'directory';
+      else if (typeChar === 'l') type = 'symlink';
+      else if (typeChar === 'c' || typeChar === 'b') type = 'device';
+      else if (typeChar === 's') type = 'socket';
+      else if (typeChar === 'p') type = 'fifo';
+
+      let name = rawName.trim();
+      let target = null;
+
+      if (type === 'symlink' && name.includes(' -> ')) {
+        const arrowIdx = name.indexOf(' -> ');
+        target = name.substring(arrowIdx + 4).trim();
+        name = name.substring(0, arrowIdx).trim();
+      }
+
+      const size = parseInt(sizeStr.replace(/\s+/g, ''), 10) || 0;
+
+      results.push({
+        name,
+        target,
+        permissions,
+        owner,
+        group,
+        size,
+        modified: dateStr.trim(),
+        type,
+      });
+    } else {
+      // Fallback por división de tokens para formatos no estándar
+      const parts = line.split(/\s+/);
+      if (parts.length >= 9 && /^[bcdlps\-]/.test(parts[0])) {
+        const permissions = parts[0];
+        const owner = parts[2];
+        const group = parts[3];
+        const size = parseInt(parts[4], 10) || 0;
+        const month = parts[5];
+        const day = parts[6];
+        const timeOrYear = parts[7];
+        const rawName = parts.slice(8).join(' ');
+
+        const typeChar = permissions[0];
+        let type = 'file';
+        if (typeChar === 'd') type = 'directory';
+        else if (typeChar === 'l') type = 'symlink';
+        else if (typeChar === 'c' || typeChar === 'b') type = 'device';
+        else if (typeChar === 's') type = 'socket';
+        else if (typeChar === 'p') type = 'fifo';
+
+        let name = rawName.trim();
+        let target = null;
+        if (type === 'symlink' && name.includes(' -> ')) {
+          const arrowIdx = name.indexOf(' -> ');
+          target = name.substring(arrowIdx + 4).trim();
+          name = name.substring(0, arrowIdx).trim();
+        }
+
+        results.push({
+          name,
+          target,
+          permissions,
+          owner,
+          group,
+          size,
+          modified: `${month} ${day} ${timeOrYear}`,
+          type,
+        });
+      }
+    }
+  }
+
+  return results;
 }
 
 function waitForWritableCompletion(stream) {
@@ -87,7 +166,7 @@ function parseListeningPorts(rawOutput) {
   for (const line of lines) {
     if (!line) continue;
     const lowerLine = line.toLowerCase();
-    if (lowerLine.includes('proto') || lowerLine.includes('active internet connections') || lowerLine.includes('recvv-q')) {
+    if (lowerLine.includes('proto') || lowerLine.includes('active internet connections') || lowerLine.includes('recv-q') || lowerLine.includes('recvv-q') || lowerLine.includes('netid')) {
       continue;
     }
 
@@ -95,9 +174,17 @@ function parseListeningPorts(rawOutput) {
     if (parts.length < 4) continue;
 
     const protocol = parts[0];
-    const state = protocol.startsWith('udp')
-      ? 'LISTEN'
-      : (parts[1] || '').toUpperCase();
+    let state = 'LISTEN';
+    if (!protocol.startsWith('udp')) {
+      if (parts.includes('LISTEN')) {
+        state = 'LISTEN';
+      } else if (parts[1] && isNaN(Number(parts[1]))) {
+        state = parts[1].toUpperCase();
+      } else {
+        const lastPart = parts[parts.length - 1];
+        state = lastPart ? lastPart.toUpperCase() : 'LISTEN';
+      }
+    }
 
     // Support ss/netstat variants
     const localCandidate = parts.find((part) => part.includes(':') || part === '*') || '';
@@ -244,11 +331,24 @@ function registerSSHHandlers(dependencies = {}) {
   ipcMain.handle('ssh:get-home-directory', async (event, { tabId, sshConfig }) => {
     try {
       const secureConfig = await resolveCredentials(tabId, sshConfig);
+
+      // 1. Intentar usar conexión activa existente con .exec (sin contaminar la shell interactiva)
+      const existingConn = findSSHConnection ? await findSSHConnection(tabId, secureConfig) : null;
+      if (existingConn && existingConn.ssh && typeof existingConn.ssh.exec === 'function') {
+        try {
+          const homeOutput = await existingConn.ssh.exec('echo $HOME');
+          const cleanHome = String(homeOutput || '').replace(/\x1b\[[0-9;]*m/g, '').trim();
+          if (cleanHome && cleanHome.startsWith('/')) {
+            return { success: true, home: cleanHome.split('\n')[0].trim() };
+          }
+        } catch (execErr) {
+          console.warn('[SSH:get-home] exec en conexión activa falló, intentando fallback:', execErr.message);
+        }
+      }
+
       if (secureConfig.useBastionWallix) {
-        // Buscar la conexión existente para bastion
-        const existingConn = await findSSHConnection(tabId, sshConfig);
-        if (existingConn && existingConn.ssh && existingConn.stream) {
-          // Modo antiguo: usar stream interactivo si existe
+        if (existingConn && existingConn.stream && !existingConn.stream.destroyed) {
+          // Fallback al stream interactivo solo como último recurso si exec falla
           const stream = existingConn.stream;
           const command = 'echo $HOME\n';
           let output = '';
@@ -259,9 +359,6 @@ function registerSSHHandlers(dependencies = {}) {
           stream.write(command);
           await new Promise((resolve) => setTimeout(resolve, 300));
           stream.removeListener('data', onData);
-          // LOGS DE DEPURACIÓN
-          // console.log('[ssh:get-home-directory][BASTION] output bruto:', JSON.stringify(output));
-          // Split por líneas ANTES de limpiar
           const lines = output.replace(command.trim(), '').replace(/\r/g, '').split('\n');
           const cleanedLines = lines.map(line => line
             .replace(/\x1b\][^\x07]*(\x07|\x1b\\)/g, '') // OSC
@@ -269,9 +366,7 @@ function registerSSHHandlers(dependencies = {}) {
             .replace(/[\x00-\x1F\x7F-\x9F]/g, '') // Otros controles
             .trim()
           );
-          // console.log('[ssh:get-home-directory][BASTION] cleanedLines:', cleanedLines);
           const home = cleanedLines.find(l => l.startsWith('/')) || '/';
-          // console.log('[ssh:get-home-directory][BASTION] home final:', home);
           return { success: true, home };
         } else {
           // Nuevo: usar SFTP para obtener el home si no hay stream interactivo
@@ -320,41 +415,23 @@ function registerSSHHandlers(dependencies = {}) {
         safePath = path.path;
       }
 
-      let ssh;
-      let shouldCloseConnection = false;
+      // 1. Intentar usar conexión activa existente con .exec (aislado de la terminal interactiva del usuario)
+      const existingConn = findSSHConnection ? await findSSHConnection(tabId, secureConfig) : null;
+      if (existingConn && existingConn.ssh && typeof existingConn.ssh.exec === 'function') {
+        try {
+          const escapedPath = escapeShellPath(safePath);
+          const lsOutput = await existingConn.ssh.exec(`ls -la --color=never "${escapedPath}"`);
+          const cleanOutput = String(lsOutput || '').replace(/\x1b\[[0-9;]*m/g, '');
+          return { success: true, files: parseLsOutput(cleanOutput) };
+        } catch (execErr) {
+          console.warn('[SSH:list-files] exec en conexión activa falló, intentando fallback:', execErr.message);
+        }
+      }
 
       if (secureConfig.useBastionWallix) {
-        // Buscar la conexión existente para bastion
-        const existingConn = await findSSHConnection(tabId, secureConfig);
-        if (existingConn && existingConn.ssh && existingConn.stream) {
-          // Modo antiguo: usar stream interactivo si existe
-          ssh = existingConn.ssh;
-          const stream = existingConn.stream;
-          shouldCloseConnection = false;
-          // Ejecutar el comando en el stream interactivo
-          // ✅ SEGURIDAD: Escapar el path para prevenir command injection
-          const escapedPath = escapeShellPath(safePath);
-          const command = `ls -la --color=never "${escapedPath}"\n`;
-          let output = '';
-          // Listener temporal para capturar la salida
-          const onData = (data) => {
-            output += data.toString('utf-8');
-          };
-          stream.on('data', onData);
-          // Escribir el comando
-          stream.write(command);
-          // Esperar la respuesta (timeout corto o hasta que llegue el prompt)
-          await new Promise((resolve) => setTimeout(resolve, 400));
-          stream.removeListener('data', onData);
-          // Limpiar la salida: quitar el comando enviado y posibles prompts
-          let cleanOutput = output.replace(command.trim(), '').replace(/\r/g, '');
-          // Eliminar códigos ANSI
-          cleanOutput = cleanOutput.replace(/\x1b\[[0-9;]*m/g, '');
-          // Quitar líneas vacías y posibles prompts
-          cleanOutput = cleanOutput.split('\n').filter(line => line.trim() !== '' && !line.trim().endsWith('$') && !line.trim().endsWith('#')).join('\n');
-          return { success: true, files: parseLsOutput(cleanOutput) };
-        } else {
-          // Nuevo: usar SFTP para listar archivos si no hay stream interactivo
+        // Fallback para bastión: intentar SFTP
+        try {
+          const SftpClient = require('ssh2-sftp-client');
           const sftp = new SftpClient();
           const connectConfig = {
             host: secureConfig.bastionHost,
@@ -372,9 +449,9 @@ function registerSSHHandlers(dependencies = {}) {
           await sftp.connect(connectConfig);
           const sftpList = await sftp.list(safePath);
           await sftp.end();
-          // Adaptar el formato a lo que espera el frontend
           const files = sftpList.map(item => ({
             name: item.name,
+            target: item.target || null,
             permissions: item.longname?.split(' ')[0] || '',
             owner: '',
             group: '',
@@ -383,20 +460,35 @@ function registerSSHHandlers(dependencies = {}) {
             type: item.type === 'd' ? 'directory' : (item.type === 'l' ? 'symlink' : 'file'),
           }));
           return { success: true, files };
+        } catch (sftpErr) {
+          // Último recurso: stream interactivo si existe
+          if (existingConn && existingConn.stream && !existingConn.stream.destroyed) {
+            const stream = existingConn.stream;
+            const escapedPath = escapeShellPath(safePath);
+            const command = `ls -la --color=never "${escapedPath}"\n`;
+            let output = '';
+            const onData = (data) => {
+              output += data.toString('utf-8');
+            };
+            stream.on('data', onData);
+            stream.write(command);
+            await new Promise((resolve) => setTimeout(resolve, 400));
+            stream.removeListener('data', onData);
+            let cleanOutput = output.replace(command.trim(), '').replace(/\r/g, '');
+            cleanOutput = cleanOutput.replace(/\x1b\[[0-9;]*m/g, '');
+            cleanOutput = cleanOutput.split('\n').filter(line => line.trim() !== '' && !line.trim().endsWith('$') && !line.trim().endsWith('#')).join('\n');
+            return { success: true, files: parseLsOutput(cleanOutput) };
+          }
+          throw sftpErr;
         }
       } else {
-        // SSH directo: crear nueva conexión
-        ssh = new SSH2Promise(secureConfig);
+        // SSH directo: si no había conexión activa previa, crear conexión efímera con SSH2Promise
+        const ssh = new SSH2Promise(secureConfig);
         await ssh.connect();
-        shouldCloseConnection = true;
-        // ✅ SEGURIDAD: Escapar el path para prevenir command injection
         const escapedPath = escapeShellPath(safePath);
         const lsOutput = await ssh.exec(`ls -la --color=never "${escapedPath}"`);
-        // Eliminar códigos ANSI por si acaso
-        const cleanOutput = lsOutput.replace(/\x1b\[[0-9;]*m/g, '');
-        if (shouldCloseConnection && ssh) {
-          await ssh.close();
-        }
+        await ssh.close();
+        const cleanOutput = String(lsOutput || '').replace(/\x1b\[[0-9;]*m/g, '');
         return { success: true, files: parseLsOutput(cleanOutput) };
       }
     } catch (err) {
@@ -408,15 +500,24 @@ function registerSSHHandlers(dependencies = {}) {
   ipcMain.handle('ssh:check-directory', async (event, { tabId, path, sshConfig }) => {
     try {
       const secureConfig = await resolveCredentials(tabId, sshConfig);
+      const escapedPath = escapeShellPath(path);
+
+      // 1. Intentar usar conexión activa existente con .exec
+      const existingConn = findSSHConnection ? await findSSHConnection(tabId, secureConfig) : null;
+      if (existingConn && existingConn.ssh && typeof existingConn.ssh.exec === 'function') {
+        try {
+          const result = await existingConn.ssh.exec(`[ -d "${escapedPath}" ] && echo exists || echo notfound`);
+          return { success: true, exists: String(result).includes('exists') };
+        } catch (execErr) {
+          console.warn('[SSH:check-directory] exec en conexión activa falló, intentando fallback:', execErr.message);
+        }
+      }
+
       if (secureConfig.useBastionWallix) {
-        // Buscar la conexión existente para bastion
-        const existingConn = await findSSHConnection(tabId, secureConfig);
-        if (!existingConn || !existingConn.ssh || !existingConn.stream) {
+        if (!existingConn || !existingConn.stream || existingConn.stream.destroyed) {
           return { success: false, error: 'No se encontró una conexión bastión activa para este tabId. Abre primero una terminal.' };
         }
         const stream = existingConn.stream;
-        // ✅ SEGURIDAD: Escapar el path para prevenir command injection
-        const escapedPath = escapeShellPath(path);
         const command = `[ -d "${escapedPath}" ] && echo exists || echo notfound\n`;
         let output = '';
         const onData = (data) => {
@@ -426,29 +527,16 @@ function registerSSHHandlers(dependencies = {}) {
         stream.write(command);
         await new Promise((resolve) => setTimeout(resolve, 350));
         stream.removeListener('data', onData);
-        // Limpiar la salida: quitar el comando enviado y posibles prompts
         let cleanOutput = output.replace(command.trim(), '').replace(/\r/g, '');
-        // Eliminar códigos ANSI
         cleanOutput = cleanOutput.replace(/\x1b\[[0-9;]*m/g, '');
-        // Buscar si existe
-        if (cleanOutput.includes('exists')) {
-          return { success: true, exists: true };
-        } else {
-          return { success: true, exists: false };
-        }
+        return { success: true, exists: cleanOutput.includes('exists') };
       } else {
         // SSH directo
         const ssh = new SSH2Promise(secureConfig);
         await ssh.connect();
-        // ✅ SEGURIDAD: Escapar el path para prevenir command injection
-        const escapedPath = escapeShellPath(path);
         const result = await ssh.exec(`[ -d "${escapedPath}" ] && echo exists || echo notfound`);
         await ssh.close();
-        if (result.includes('exists')) {
-          return { success: true, exists: true };
-        } else {
-          return { success: true, exists: false };
-        }
+        return { success: true, exists: String(result).includes('exists') };
       }
     } catch (err) {
       return { success: false, error: err.message || err };
@@ -1065,5 +1153,9 @@ function registerSSHHandlers(dependencies = {}) {
     }
   });
 }
+
+registerSSHHandlers.parseLsOutput = parseLsOutput;
+registerSSHHandlers.escapeShellPath = escapeShellPath;
+registerSSHHandlers.parseListeningPorts = parseListeningPorts;
 
 module.exports = registerSSHHandlers;

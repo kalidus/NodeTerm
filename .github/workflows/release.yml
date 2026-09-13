@@ -46,8 +46,9 @@ jobs:
       - name: Build Webpack
         run: npm run build
 
-      - name: Run Tests (RDP & VNC)
+      - name: Run Tests (Unit, RDP & VNC)
         run: |
+          npm run test:unit
           npm run test:rdp
           npm run test:vnc
 

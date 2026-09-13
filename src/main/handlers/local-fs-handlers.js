@@ -250,5 +250,7 @@ function registerLocalFsHandlers() {
 }
 
 module.exports = {
-    registerLocalFsHandlers
+    registerLocalFsHandlers,
+    getDrives,
+    sanitizeLocalPath
 };

@@ -109,6 +109,7 @@ module.exports = {
       patterns: [
         { from: 'preload.js', to: 'preload.js' },
         { from: 'node_modules/kdbxweb/dist/kdbxweb.min.js', to: 'vendor/kdbxweb.min.js' },
+        { from: 'testing/splash-preview.html', to: 'splash-preview.html', noErrorOnMissing: true },
         {
           from: 'src/assets/fonts',
           to: 'assets/fonts',
