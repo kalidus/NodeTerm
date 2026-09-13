@@ -294,5 +294,22 @@
     "createNote": "Crear nota",
     "yesterday": "Ayer",
     "daysAgo": "Hace {{count}} días"
+  },
+  "fileExplorer": {
+    "title": "Explorador de Archivos",
+    "showHidden": "Mostrar archivos ocultos",
+    "hideHidden": "Ocultar archivos ocultos",
+    "upLevel": "Subir un nivel",
+    "home": "Directorio raíz",
+    "newFolder": "Nueva carpeta",
+    "saveDefaultPath": "Guardar esta ruta como predeterminada",
+    "refresh": "Actualizar",
+    "local": "Local",
+    "remote": "Remoto",
+    "close": "Cerrar (Esc)",
+    "upload": "Subir",
+    "download": "Descargar",
+    "delete": "Eliminar",
+    "rename": "Renombrar"
   }
 }

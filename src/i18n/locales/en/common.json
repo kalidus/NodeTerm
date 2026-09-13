@@ -294,5 +294,22 @@
     "createNote": "Create note",
     "yesterday": "Yesterday",
     "daysAgo": "{{count}} days ago"
+  },
+  "fileExplorer": {
+    "title": "File Explorer",
+    "showHidden": "Show hidden files",
+    "hideHidden": "Hide hidden files",
+    "upLevel": "Up one level",
+    "home": "Root directory",
+    "newFolder": "New folder",
+    "saveDefaultPath": "Save this path as default",
+    "refresh": "Refresh",
+    "local": "Local",
+    "remote": "Remote",
+    "close": "Close (Esc)",
+    "upload": "Upload",
+    "download": "Download",
+    "delete": "Delete",
+    "rename": "Rename"
   }
 }

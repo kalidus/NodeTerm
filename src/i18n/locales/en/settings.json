@@ -369,6 +369,8 @@
     "confirmUpdate": "Overwrite?"
   },
   "statusBar": {
+    "showStatusBar": "Show status bar",
+    "hideStatusBar": "Hide status bar",
     "itemsSectionTitle": "Visible items",
     "itemsSectionHint": "Click label to show/hide · arrows to reorder",
     "resetLayout": "Reset order",

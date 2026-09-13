@@ -369,6 +369,8 @@
     "confirmUpdate": "¿Sobrescribir?"
   },
   "statusBar": {
+    "showStatusBar": "Mostrar barra de estado",
+    "hideStatusBar": "Ocultar barra de estado",
     "itemsSectionTitle": "Elementos visibles",
     "itemsSectionHint": "Clic en la etiqueta para mostrar u ocultar · flechas para orden",
     "resetLayout": "Restaurar orden",

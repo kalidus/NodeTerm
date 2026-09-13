@@ -10,6 +10,7 @@ import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
 import { uiThemes } from '../themes/ui-themes';
 import { appConfirm } from './ui/AppConfirm';
 import AppDialog from './ui/AppDialog';
+import { useTranslation } from '../i18n/hooks/useTranslation';
 import '../styles/ssh-monitor.css';
 
 // Helper para obtener colores del tema
@@ -55,6 +56,7 @@ const getSyncPath = (fromSide, currentPathA, newPathA, currentPathB) => {
 };
 
 const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', explorerFont = 'Segoe UI', explorerColorTheme = 'Light', setExplorerColorTheme, explorerFontSize = 15, isStandaloneTab = false }) => {
+    const { t } = useTranslation('common');
     // Password Prompt States
     const [passwordPromptVisible, setPasswordPromptVisible] = useState(false);
     const [promptPassword, setPromptPassword] = useState('');
@@ -2108,22 +2110,47 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
 
                         {/* Nav button group */}
                         <div className="explorer-toolbar-group">
-                            <button className="pane-toolbar-btn" onClick={handleToggleHidden} title={showHidden ? 'Ocultar archivos ocultos' : 'Mostrar archivos ocultos'}>
+                            <button
+                                className="pane-toolbar-btn"
+                                onClick={handleToggleHidden}
+                                title={showHidden ? t('fileExplorer.hideHidden') : t('fileExplorer.showHidden')}
+                                aria-label={showHidden ? t('fileExplorer.hideHidden') : t('fileExplorer.showHidden')}
+                            >
                                 <i className={`pi ${showHidden ? 'pi-eye' : 'pi-eye-slash'}`} />
                             </button>
-                            <button className="pane-toolbar-btn" onClick={handleUpLevel} title="Subir un nivel">
+                            <button
+                                className="pane-toolbar-btn"
+                                onClick={handleUpLevel}
+                                title={t('fileExplorer.upLevel')}
+                                aria-label={t('fileExplorer.upLevel')}
+                            >
                                 <i className="pi pi-arrow-up" />
                             </button>
-                            <button className="pane-toolbar-btn" onClick={handleHome} title="Directorio raíz">
+                            <button
+                                className="pane-toolbar-btn"
+                                onClick={handleHome}
+                                title={t('fileExplorer.home')}
+                                aria-label={t('fileExplorer.home')}
+                            >
                                 <i className="pi pi-home" />
                             </button>
-                            <button className="pane-toolbar-btn" onClick={handleNewFolder} title="Nueva carpeta">
+                            <button
+                                className="pane-toolbar-btn"
+                                onClick={handleNewFolder}
+                                title={t('fileExplorer.newFolder')}
+                                aria-label={t('fileExplorer.newFolder')}
+                            >
                                 <span style={{ position: 'relative', display: 'inline-flex', width: '14px', height: '14px', alignItems: 'center', justifyContent: 'center' }}>
                                     <i className="pi pi-folder" style={{ fontSize: '13px' }} />
                                     <i className="pi pi-plus" style={{ position: 'absolute', fontSize: '7px', right: '-4px', bottom: '-4px', background: '#161b22', border: '1px solid #30363d', borderRadius: '50%', width: '10px', height: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: accentColor }} />
                                 </span>
                             </button>
-                            <button className="pane-toolbar-btn" onClick={handleSaveDefaultPath} title="Guardar esta ruta como predeterminada">
+                            <button
+                                className="pane-toolbar-btn"
+                                onClick={handleSaveDefaultPath}
+                                title={t('fileExplorer.saveDefaultPath')}
+                                aria-label={t('fileExplorer.saveDefaultPath')}
+                            >
                                 <i className="pi pi-bookmark" />
                             </button>
                         </div>
@@ -2195,7 +2222,12 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
 
                         <div className="explorer-toolbar-divider" />
 
-                        <button className="pane-toolbar-btn" onClick={handleRefresh} title="Actualizar">
+                        <button
+                            className="pane-toolbar-btn"
+                            onClick={handleRefresh}
+                            title={t('fileExplorer.refresh')}
+                            aria-label={t('fileExplorer.refresh')}
+                        >
                             <i className="pi pi-refresh" />
                         </button>
                     </div>
@@ -2218,6 +2250,7 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
                             className={`explorer-sel-action-btn transfer ${isRemote ? '' : 'green'}`}
                             onClick={() => handleCopySelectedCrossSide(side)}
                             title={`Copiar al panel ${isRemote ? 'local' : 'remoto'}`}
+                            aria-label={`Copiar al panel ${isRemote ? 'local' : 'remoto'}`}
                         >
                             <i className={`pi ${isRemote ? 'pi-arrow-right' : 'pi-arrow-left'}`} style={{ fontSize: '11px' }} />
                         </button>
@@ -2225,6 +2258,7 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
                             className="explorer-sel-action-btn danger"
                             onClick={() => handleDeleteSelected(side)}
                             title={`Eliminar ${selectedKeys.size} elemento(s)`}
+                            aria-label={`Eliminar ${selectedKeys.size} elemento(s)`}
                         >
                             <i className="pi pi-trash" style={{ fontSize: '10px' }} />
                         </button>
@@ -2232,6 +2266,7 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
                             className="explorer-sel-action-btn clear"
                             onClick={() => (isRemote ? setRemoteSelectedKeys : setLocalSelectedKeys)(new Set())}
                             title="Limpiar selección"
+                            aria-label="Limpiar selección"
                         >
                             <i className="pi pi-times" style={{ fontSize: '9px' }} />
                         </button>
@@ -2331,6 +2366,8 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
                                     notify('info', next ? 'Navegación sincronizada activa' : 'Navegación sincronizada inactiva', next ? 'Se intentará replicar los cambios de directorio en ambos paneles.' : 'Los paneles se navegarán de forma independiente.');
                                 }}
                                 title="Habilitar/Deshabilitar Navegación Sincronizada"
+                                aria-label="Habilitar o deshabilitar navegación sincronizada"
+                                aria-pressed={syncNavigation}
                             >
                                 <i className="pi pi-sync" />
                                 <span>Sinc.</span>
@@ -2347,6 +2384,8 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
                                     localStorage.setItem('ssh_file_explorer_show_transfer_station', String(next));
                                 }}
                                 title={showTransferStationManual ? 'Ocultar panel de transferencias' : 'Mostrar panel de transferencias'}
+                                aria-label={showTransferStationManual ? 'Ocultar panel de transferencias' : 'Mostrar panel de transferencias'}
+                                aria-expanded={showTransferStationManual}
                             >
                                 <i className={`pi ${activeTransfer ? 'pi-spin pi-spinner' : (showTransferStationManual ? 'pi-chevron-down' : 'pi-history')}`} style={{ fontSize: '12px' }} />
                                 {activeTransfer && <span style={{ fontSize: '9px', marginLeft: '4px', fontWeight: 700 }}>{Math.min(99, Math.round((activeTransfer.transferred / (activeTransfer.total || 1)) * 100))}%</span>}
@@ -2358,6 +2397,8 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
                                     className={`ssh-explorer-icon-btn ${isOpacityMenuOpen ? 'active' : ''}`}
                                     onClick={() => setIsOpacityMenuOpen(!isOpacityMenuOpen)}
                                     title="Ajustar opacidad"
+                                    aria-label="Ajustar opacidad"
+                                    aria-expanded={isOpacityMenuOpen}
                                 >
                                     <i className="pi pi-clone" style={{ fontSize: '12px', transform: 'rotate(45deg)' }} />
                                 </button>
@@ -2384,17 +2425,19 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
                                     className={`ssh-explorer-icon-btn ${isThemeMenuOpen ? 'active' : ''}`}
                                     onClick={() => setIsThemeMenuOpen(!isThemeMenuOpen)}
                                     title="Seleccionar tema del explorador"
+                                    aria-label="Seleccionar tema del explorador"
+                                    aria-expanded={isThemeMenuOpen}
                                 >
                                     <i className="pi pi-palette" style={{ fontSize: '12px' }} />
                                 </button>
 
                                 {isThemeMenuOpen && (
                                     <div className="ssh-monitor-theme-popover">
-                                        <div className="ssh-monitor-theme-title">Temas</div>
-                                        {Object.keys(uiThemes).map((name) => (
+                                        <div className="ssh-monitor-theme-title">Tema Visual</div>
+                                        {['Light', 'Dark', 'Cyberpunk', 'Glass', 'OLED'].map(name => (
                                             <button
                                                 key={name}
-                                                className={`ssh-monitor-theme-option ${name === explorerColorTheme ? 'active' : ''}`}
+                                                className={`ssh-monitor-theme-option ${explorerColorTheme === name ? 'active' : ''}`}
                                                 onClick={() => {
                                                     setExplorerColorTheme?.(name);
                                                     setIsThemeMenuOpen(false);
@@ -2407,9 +2450,16 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
                                 )}
                             </div>
 
-                            <div className="ssh-monitor-header-sep" />
-
-                            {onClose && <button className="ssh-monitor-close" onClick={onClose} title="Cerrar (Esc)">✕</button>}
+                            {onClose && (
+                                <button
+                                    className="ssh-monitor-close"
+                                    onClick={onClose}
+                                    title={t('fileExplorer.close')}
+                                    aria-label={t('fileExplorer.close')}
+                                >
+                                    ✕
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>

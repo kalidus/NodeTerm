@@ -498,7 +498,10 @@ const StatusBarSettingsTab = ({
                 <div
                   className={`statusbar-toggle-switch ${statusBarVisible ? 'active' : ''}`}
                   onClick={() => handleStatusBarVisibleChange(!statusBarVisible)}
-                  title={statusBarVisible ? 'Ocultar barra de estado' : 'Mostrar barra de estado'}
+                  title={statusBarVisible ? t('statusBar.hideStatusBar') : t('statusBar.showStatusBar')}
+                  role="switch"
+                  aria-checked={statusBarVisible}
+                  aria-label={statusBarVisible ? t('statusBar.hideStatusBar') : t('statusBar.showStatusBar')}
                 />
               </div>
             </div>
