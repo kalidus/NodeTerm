@@ -97,7 +97,11 @@ body .p-checkbox .p-checkbox-box[style*="background"] {
 .p-tooltip .p-tooltip-text,
 .p-overlaypanel,
 .p-sidebar,
-.p-toast,
+.p-toast {
+  font-family: var(--ui-font-family, inherit) !important;
+  z-index: 999999 !important;
+}
+
 .p-toast-message-content,
 .p-card,
 .p-badge,

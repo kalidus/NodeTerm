@@ -450,8 +450,6 @@ const DialogsManager = ({
 
   return (
     <>
-      {/* Toast para notificaciones */}
-      <Toast ref={toast} />
 
 
 

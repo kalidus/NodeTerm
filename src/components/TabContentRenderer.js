@@ -1271,27 +1271,26 @@ const TabContentRendererInner = React.memo(({
           if (onShowFileExplorer) onShowFileExplorer(null);
         }}
         onEditConnection={(connection) => {
-          // Intentar construir un nodo temporal según el tipo para reutilizar los editores existentes
           if (!connection) return;
-          if (connection.type === 'rdp-guacamole' || connection.type === 'rdp' || connection.type === 'vnc-guacamole' || connection.type === 'vnc') {
+          const connType = (connection.type || '').toLowerCase();
+          if (connType === 'rdp-guacamole' || connType === 'rdp' || connType === 'web-rdp' || connType === 'vnc-guacamole' || connType === 'vnc' || connType === 'web-vnc') {
             const tempNode = {
-              key: `temp_rdp_${Date.now()}`,
-              label: connection.name || `${connection.host}:${connection.port || 3389}`,
+              key: `temp_${connType}_${Date.now()}`,
+              label: connection.name || `${connection.host}:${connection.port || (connType.includes('vnc') ? 5900 : 3389)}`,
               data: {
-                type: 'rdp',
+                type: connType.includes('vnc') ? 'vnc' : 'rdp',
                 server: connection.host,
                 hostname: connection.host,
                 username: connection.username,
                 password: connection.password,
-                port: connection.port || 3389,
-                clientType: connection.clientType || 'web-rdp'
+                port: connection.port || (connType.includes('vnc') ? 5900 : 3389),
+                clientType: connection.clientType || (connType.includes('vnc') ? 'web-vnc' : 'web-rdp')
               }
             };
-            openEditRdpDialog(tempNode);
+            if (openEditRdpDialog) openEditRdpDialog(tempNode);
             return;
           }
-          if (connection.type === 'ssh' || connection.type === 'explorer') {
-            // Reutilizar diálogo de edición SSH
+          if (connType === 'ssh' || connType === 'explorer') {
             const tempNode = {
               key: `temp_ssh_${Date.now()}`,
               label: connection.name || `${connection.username}@${connection.host}`,
@@ -1311,8 +1310,19 @@ const TabContentRendererInner = React.memo(({
                 customIcon: connection.customIcon || null
               }
             };
-            openEditSSHDialog(tempNode);
+            if (openEditSSHDialog) openEditSSHDialog(tempNode);
+            return;
           }
+          // Fallback para sftp, ftp, scp, ssh-tunnel u otros
+          const tempNode = {
+            key: `temp_${connType || 'custom'}_${Date.now()}`,
+            label: connection.name || `${connection.username || ''}@${connection.host || ''}`,
+            data: {
+              ...connection,
+              type: connType
+            }
+          };
+          if (openEditSSHDialog) openEditSSHDialog(tempNode);
         }}
         sshConnectionsCount={counts?.ssh || 0}
         foldersCount={counts?.folders || 0}

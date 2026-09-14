@@ -511,13 +511,15 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
       getFilteredTabs, openFileExplorer, openInSplit, onOpenRdpConnection, onOpenVncConnection
     } = tabManagementProps;
     if (!node) return [];
-    const isFolder = node.droppable;
-    const isSSH = node.data && node.data.type === 'ssh';
-    const isRDP = node.data && node.data.type === 'rdp';
-    const isVNC = node.data && (node.data.type === 'vnc' || node.data.type === 'vnc-guacamole');
-    const isFileConnection = node.data && (node.data.type === 'sftp' || node.data.type === 'ftp' || node.data.type === 'scp');
-    const isPassword = node.data && node.data.type === 'password';
-    const isSSHTunnel = node.data && node.data.type === 'ssh-tunnel';
+    const nodeType = (node.data?.type || node.type || '').toLowerCase();
+    const hasChildren = Array.isArray(node.children) && node.children.length > 0;
+    const isFolder = !!(node.droppable || hasChildren || nodeType === 'folder' || node.isFolder || (node.children !== undefined && !node.data?.type));
+    const isSSH = nodeType === 'ssh';
+    const isRDP = nodeType === 'rdp' || nodeType === 'rdp-guacamole' || nodeType === 'web-rdp';
+    const isVNC = nodeType === 'vnc' || nodeType === 'vnc-guacamole' || nodeType === 'web-vnc';
+    const isFileConnection = nodeType === 'sftp' || nodeType === 'ftp' || nodeType === 'scp';
+    const isPassword = nodeType === 'password' || nodeType === 'crypto_wallet' || nodeType === 'api_key' || nodeType === 'secure_note';
+    const isSSHTunnel = nodeType === 'ssh-tunnel';
     const items = [];
 
     if (isSSH) {
@@ -667,7 +669,8 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
       };
 
       // Submenu simplificado para abrir en split - filtrar pestañas con menos de 4 terminales
-      const sshTabsFiltered = getFilteredTabs().filter(tab => {
+      const filteredTabsList = typeof getFilteredTabs === 'function' ? getFilteredTabs() : [];
+      const sshTabsFiltered = (Array.isArray(filteredTabsList) ? filteredTabsList : []).filter(tab => {
         if (tab.type === 'terminal') return true;
         if (tab.type === 'split') {
           const count = countTerminalsInTab(tab);
@@ -1174,7 +1177,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         label: 'Nueva Conexión',
         icon: 'pi pi-desktop',
         command: () => {
-          if (sidebarCallbacksRef.current.createSSH) {
+          if (sidebarCallbacksRef.current?.createSSH) {
             sidebarCallbacksRef.current.createSSH(node.key);
           }
         }
@@ -1184,7 +1187,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         label: 'Nueva Carpeta',
         icon: 'pi pi-folder',
         command: () => {
-          if (sidebarCallbacksRef.current.createFolder) {
+          if (sidebarCallbacksRef.current?.createFolder) {
             sidebarCallbacksRef.current.createFolder(node.key);
           }
         }
@@ -1193,7 +1196,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         label: 'Duplicar Carpeta',
         icon: 'pi pi-copy',
         command: () => {
-          if (sidebarCallbacksRef.current.duplicateFolder) {
+          if (sidebarCallbacksRef.current?.duplicateFolder) {
             sidebarCallbacksRef.current.duplicateFolder(node);
           }
         }
@@ -1202,7 +1205,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         label: 'Editar Carpeta',
         icon: 'pi pi-pencil',
         command: () => {
-          if (sidebarCallbacksRef.current.editFolder) {
+          if (sidebarCallbacksRef.current?.editFolder) {
             sidebarCallbacksRef.current.editFolder(node);
           }
         }
@@ -1211,7 +1214,27 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         label: 'Eliminar',
         icon: 'pi pi-trash',
         command: () => {
-          if (sidebarCallbacksRef.current.deleteNode) {
+          if (sidebarCallbacksRef.current?.deleteNode) {
+            sidebarCallbacksRef.current.deleteNode(node.key, node.label);
+          }
+        }
+      });
+    } else {
+      // Fallback para cualquier otro tipo de conexión personalizada o no clasificada
+      items.push({
+        label: 'Editar',
+        icon: 'pi pi-pencil',
+        command: () => {
+          if (sidebarCallbacksRef.current?.editSSH) {
+            sidebarCallbacksRef.current.editSSH(node);
+          }
+        }
+      });
+      items.push({
+        label: 'Eliminar',
+        icon: 'pi pi-trash',
+        command: () => {
+          if (sidebarCallbacksRef.current?.deleteNode) {
             sidebarCallbacksRef.current.deleteNode(node.key, node.label);
           }
         }
@@ -1227,7 +1250,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         label: 'Nueva Carpeta',
         icon: 'pi pi-folder',
         command: () => {
-          if (sidebarCallbacksRef.current.createFolder) {
+          if (sidebarCallbacksRef.current?.createFolder) {
             sidebarCallbacksRef.current.createFolder(null); // null = crear en raíz
           }
         }
@@ -1236,9 +1259,11 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         label: 'Nueva Conexión',
         icon: 'pi pi-sitemap',
         command: () => {
-          // Abrir diálogo de selección de protocolo
-          if (sidebarCallbacksRef.current.showProtocolSelection) {
+          // Abrir diálogo de selección de protocolo o diálogo unificado
+          if (sidebarCallbacksRef.current?.showProtocolSelection) {
             sidebarCallbacksRef.current.showProtocolSelection();
+          } else {
+            window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'));
           }
         }
       }

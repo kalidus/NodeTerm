@@ -3315,6 +3315,20 @@ const Sidebar = React.memo(({
                 } : {})
               }}
               nodeTemplate={(node, options) => nodeTemplate(node, { ...options, onNodeContextMenu })}
+              onContextMenu={(e) => {
+                if (e?.originalEvent) {
+                  e.originalEvent.preventDefault();
+                  e.originalEvent.stopPropagation();
+                }
+                const targetNode = e?.node;
+                if (!targetNode) return;
+                const resolved = (isFavoritesRootKey(targetNode.key) || isFavoriteGroupFolderNode(targetNode))
+                  ? targetNode
+                  : resolveFavoriteShortcutNode(targetNode, nodes);
+                if (onNodeContextMenu) {
+                  onNodeContextMenu(e.originalEvent || e, resolved);
+                }
+              }}
             />
           )}
         </div>

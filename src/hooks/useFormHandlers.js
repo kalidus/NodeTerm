@@ -157,9 +157,19 @@ export const useFormHandlers = ({
     return '#5e81ac'; // Nord color por defecto
   };
 
+  const notify = useCallback((options) => {
+    if (toast?.current?.show) {
+      notify(options);
+    } else if (window.toast?.current?.show) {
+      window.notify(options);
+    } else {
+      console.warn('[useFormHandlers] Toast no disponible:', options);
+    }
+  }, [toast]);
+
   const createNewFolder = useCallback(() => {
     if (!folderName.trim()) {
-      toast.current.show({
+      notify({
         severity: 'error',
         summary: 'Error',
         detail: 'El nombre de carpeta no puede estar vacío',
@@ -204,7 +214,7 @@ export const useFormHandlers = ({
       setNodes(nodesCopy);
       closeFolderDialogWithReset();
       
-      toast.current.show({
+      notify({
         severity: 'success',
         summary: 'Éxito',
         detail: `Carpeta "${folderName}" creada`,
@@ -212,7 +222,7 @@ export const useFormHandlers = ({
       });
     } catch (error) {
       console.error("Error creating folder:", error);
-      toast.current.show({
+      notify({
         severity: 'error',
         summary: 'Error',
         detail: 'No se pudo crear la carpeta',
@@ -231,7 +241,7 @@ export const useFormHandlers = ({
     const missingPrivateKey = authMethod === 'key' && !sshPrivateKey?.trim();
 
     if (missingBaseFields || missingPassword || missingPrivateKey) {
-      toast.current.show({
+      notify({
         severity: 'error',
         summary: 'Error',
         detail: authMethod === 'key'
@@ -253,7 +263,7 @@ export const useFormHandlers = ({
     });
 
     if (proxyJumpState.started && !proxyJumpState.active) {
-      toast.current.show({
+      notify({
         severity: 'error',
         summary: 'Error',
         detail: 'ProxyJump requiere host y usuario de salto',
@@ -265,7 +275,7 @@ export const useFormHandlers = ({
     if (proxyJumpState.active) {
       const jumpAuthMethod = sshJumpAuthMethod === 'key' ? 'key' : 'password';
       if (jumpAuthMethod === 'password' && !sshJumpPassword?.trim()) {
-        toast.current.show({
+        notify({
           severity: 'error',
           summary: 'Error',
           detail: 'ProxyJump requiere contrasena de salto',
@@ -274,7 +284,7 @@ export const useFormHandlers = ({
         return;
       }
       if (jumpAuthMethod === 'key' && !sshJumpPrivateKey?.trim()) {
-        toast.current.show({
+        notify({
           severity: 'error',
           summary: 'Error',
           detail: 'ProxyJump requiere clave privada de salto',
@@ -342,7 +352,7 @@ export const useFormHandlers = ({
     setNodes(nodesCopy);
     setShowUnifiedConnectionDialog(false); // Cerrar el diálogo unificado
     
-    toast.current.show({
+    notify({
       severity: 'success',
       summary: 'SSH añadida',
       detail: `Conexión SSH "${sshName}" añadida al árbol`,
@@ -355,7 +365,7 @@ export const useFormHandlers = ({
    */
   const createNewRdp = useCallback(() => {
     if (!rdpName.trim() || !rdpServer.trim() || !rdpUsername.trim() || !rdpPassword.trim()) {
-      toast.current.show({
+      notify({
         severity: 'error',
         summary: 'Error',
         detail: 'Todos los campos son obligatorios',
@@ -413,7 +423,7 @@ export const useFormHandlers = ({
     setNodes(nodesCopy);
     closeRdpDialog();
     
-    toast.current.show({
+    notify({
       severity: 'success',
       summary: 'RDP añadida',
       detail: `Conexión RDP "${rdpName}" añadida al árbol`,
@@ -427,7 +437,7 @@ export const useFormHandlers = ({
   const createNewSSHTunnel = useCallback((tunnelData) => {
     // Validar campos obligatorios
     if (!tunnelData.name || !tunnelData.sshHost || !tunnelData.sshUser) {
-      toast.current.show({
+      notify({
         severity: 'error',
         summary: 'Error',
         detail: 'Nombre, servidor SSH y usuario son obligatorios',
@@ -437,7 +447,7 @@ export const useFormHandlers = ({
     }
     
     if (tunnelData.authType === 'password' && !tunnelData.sshPassword) {
-      toast.current.show({
+      notify({
         severity: 'error',
         summary: 'Error',
         detail: 'La contraseña es obligatoria',
@@ -447,7 +457,7 @@ export const useFormHandlers = ({
     }
     
     if (tunnelData.authType === 'key' && !tunnelData.privateKeyPath) {
-      toast.current.show({
+      notify({
         severity: 'error',
         summary: 'Error',
         detail: 'La ruta de la clave privada es obligatoria',
@@ -490,7 +500,7 @@ export const useFormHandlers = ({
           setEditingSSHTunnelNode(null);
         }
         
-        toast.current.show({
+        notify({
           severity: 'success',
           summary: 'Túnel SSH actualizado',
           detail: `Túnel "${tunnelData.name}" actualizado`,
@@ -548,7 +558,7 @@ export const useFormHandlers = ({
       setShowSSHTunnelDialog(false);
     }
     
-    toast.current.show({
+    notify({
       severity: 'success',
       summary: 'Túnel SSH creado',
       detail: `Túnel "${tunnelData.name}" añadido al árbol`,
@@ -561,7 +571,7 @@ export const useFormHandlers = ({
    */
   const openEditSSHTunnelDialog = useCallback((node) => {
     if (!node || !node.data) {
-      toast.current.show({
+      notify({
         severity: 'error',
         summary: 'Error',
         detail: 'Nodo inválido para editar',
@@ -630,7 +640,7 @@ export const useFormHandlers = ({
     }
     
     setNodes(nodesCopy);
-    toast.current.show({
+    notify({
       severity: 'success',
       summary: 'Duplicado',
       detail: `Túnel "${duplicatedNode.label}" duplicado`,
@@ -645,7 +655,7 @@ export const useFormHandlers = ({
     console.log('📝 createNewPasswordEntry called with:', { targetFolderKey, entry });
     const title = (entry?.title || '').trim();
     if (!title) {
-      toast.current.show({ severity: 'error', summary: 'Error', detail: 'El título es obligatorio', life: 2500 });
+      notify({ severity: 'error', summary: 'Error', detail: 'El título es obligatorio', life: 2500 });
       return;
     }
     const newKey = generateUniqueKey();
@@ -681,7 +691,7 @@ export const useFormHandlers = ({
     }
     setNodes(nodesCopy);
     console.log('📝 Nodes updated, new password node added');
-    toast.current.show({ severity: 'success', summary: 'Creado', detail: `Entrada "${title}" añadida a la sidebar`, life: 2500 });
+    notify({ severity: 'success', summary: 'Creado', detail: `Entrada "${title}" añadida a la sidebar`, life: 2500 });
     return newNode;
   }, [nodes, setNodes, findNodeByKey, deepCopy, generateUniqueKey, toast]);
 
@@ -697,7 +707,7 @@ export const useFormHandlers = ({
     const missingPrivateKey = authMethod === 'key' && !editSSHPrivateKey?.trim();
 
     if (missingBaseFields || missingPassword || missingPrivateKey) {
-      toast.current.show({
+      notify({
         severity: 'error',
         summary: 'Error',
         detail: authMethod === 'key'
@@ -719,7 +729,7 @@ export const useFormHandlers = ({
     });
 
     if (proxyJumpState.started && !proxyJumpState.active) {
-      toast.current.show({
+      notify({
         severity: 'error',
         summary: 'Error',
         detail: 'ProxyJump requiere host y usuario de salto',
@@ -731,7 +741,7 @@ export const useFormHandlers = ({
     if (proxyJumpState.active) {
       const jumpAuthMethod = editSSHJumpAuthMethod === 'key' ? 'key' : 'password';
       if (jumpAuthMethod === 'password' && !editSSHJumpPassword?.trim()) {
-        toast.current.show({
+        notify({
           severity: 'error',
           summary: 'Error',
           detail: 'ProxyJump requiere contrasena de salto',
@@ -740,7 +750,7 @@ export const useFormHandlers = ({
         return;
       }
       if (jumpAuthMethod === 'key' && !editSSHJumpPrivateKey?.trim()) {
-        toast.current.show({
+        notify({
           severity: 'error',
           summary: 'Error',
           detail: 'ProxyJump requiere clave privada de salto',
@@ -832,7 +842,7 @@ export const useFormHandlers = ({
     if (setEditSSHIcon) setEditSSHIcon(null);
     if (setSSHTargetFolder) setSSHTargetFolder(null);
     
-    toast.current.show({
+    notify({
       severity: 'success',
       summary: 'SSH editada',
       detail: `Sesión SSH actualizada`,
@@ -875,7 +885,7 @@ export const useFormHandlers = ({
     const missingPrivateKey = authMethod === 'key' && !privateKey.trim();
 
     if (missingBaseFields || missingPassword || missingPrivateKey) {
-      toast.current.show({
+      notify({
         severity: 'error',
         summary: 'Error',
         detail: authMethod === 'key'
@@ -896,7 +906,7 @@ export const useFormHandlers = ({
     });
 
     if (proxyJumpState.started && !proxyJumpState.active) {
-      toast.current.show({
+      notify({
         severity: 'error',
         summary: 'Error',
         detail: 'ProxyJump requiere host y usuario de salto',
@@ -908,7 +918,7 @@ export const useFormHandlers = ({
     if (proxyJumpState.active) {
       const jumpAuth = jumpAuthMethod === 'key' ? 'key' : 'password';
       if (jumpAuth === 'password' && !jumpPassword.trim()) {
-        toast.current.show({
+        notify({
           severity: 'error',
           summary: 'Error',
           detail: 'ProxyJump requiere contrasena de salto',
@@ -917,7 +927,7 @@ export const useFormHandlers = ({
         return;
       }
       if (jumpAuth === 'key' && !jumpPrivateKey.trim()) {
-        toast.current.show({
+        notify({
           severity: 'error',
           summary: 'Error',
           detail: 'ProxyJump requiere clave privada de salto',
@@ -1047,7 +1057,7 @@ export const useFormHandlers = ({
     }
 
     if (!silent) {
-      toast.current.show({
+      notify({
         severity: 'success',
         summary: isEditing && originalNode && !originalNode.isNew ? 'SSH editada' : 'SSH añadida',
         detail: isEditing && originalNode && !originalNode.isNew ? 'Sesión SSH actualizada' : `Conexión SSH "${name}" añadida al árbol`,
@@ -1063,7 +1073,7 @@ export const useFormHandlers = ({
     if (!tunnelData) return;
 
     if (!tunnelData.name || !tunnelData.sshHost || !tunnelData.sshUser) {
-      toast.current.show({
+      notify({
         severity: 'error',
         summary: 'Error',
         detail: 'Nombre, servidor SSH y usuario son obligatorios',
@@ -1073,7 +1083,7 @@ export const useFormHandlers = ({
     }
     
     if (tunnelData.authType === 'password' && !tunnelData.sshPassword) {
-      toast.current.show({
+      notify({
         severity: 'error',
         summary: 'Error',
         detail: 'La contraseña es obligatoria',
@@ -1083,7 +1093,7 @@ export const useFormHandlers = ({
     }
     
     if (tunnelData.authType === 'key' && !tunnelData.privateKeyPath) {
-      toast.current.show({
+      notify({
         severity: 'error',
         summary: 'Error',
         detail: 'La ruta de la clave privada es obligatoria',
@@ -1126,7 +1136,7 @@ export const useFormHandlers = ({
         setNodes(nodesCopy);
         
         if (!silent) {
-          toast.current.show({
+          notify({
             severity: 'success',
             summary: 'Túnel SSH actualizado',
             detail: `Túnel "${tunnelData.name}" actualizado en el árbol`,
@@ -1165,7 +1175,7 @@ export const useFormHandlers = ({
       setNodes(nodesCopy);
 
       if (!silent) {
-        toast.current.show({
+        notify({
           severity: 'success',
           summary: 'Túnel SSH añadido',
           detail: `Túnel "${tunnelData.name}" añadido al árbol`,
@@ -1180,7 +1190,7 @@ export const useFormHandlers = ({
    */
   const saveEditFolder = useCallback(() => {
     if (!editFolderName.trim()) {
-      toast.current.show({
+      notify({
         severity: 'error',
         summary: 'Error',
         detail: 'El nombre de la carpeta no puede estar vacío',
@@ -1210,7 +1220,7 @@ export const useFormHandlers = ({
     setEditFolderNode(null);
     setEditFolderName('');
     
-    toast.current.show({
+    notify({
       severity: 'success',
       summary: 'Carpeta editada',
       detail: `Nombre actualizado`,
@@ -1478,7 +1488,7 @@ export const useFormHandlers = ({
     }
 
     if (!silent) {
-      toast.current?.show({
+      notify({
         severity: 'success',
         summary: isEditing && originalNode && !originalNode.isNew ? 'RDP editada' : 'RDP añadida',
         detail: isEditing && originalNode && !originalNode.isNew ? 'Sesión RDP actualizada' : `Conexión RDP "${rdpData.name || rdpData.server}" añadida al árbol`,
@@ -1664,7 +1674,7 @@ export const useFormHandlers = ({
     }
 
     if (!silent) {
-      toast.current?.show({
+      notify({
         severity: 'success',
         summary: isEditing && originalNode && !originalNode.isNew ? 'VNC editada' : 'VNC añadida',
         detail: isEditing && originalNode && !originalNode.isNew ? 'Sesión VNC actualizada' : `Conexión VNC "${vncData.name || vncData.server}" añadida al árbol`,
@@ -1765,7 +1775,7 @@ export const useFormHandlers = ({
     }
 
     if (!silent) {
-      toast.current?.show({
+      notify({
         severity: 'success',
         summary: isEditing ? 'Conexión actualizada' : 'Conexión añadida',
         detail: `Conexión "${fileData.name}" ${isEditing ? 'actualizada' : 'añadida'} al árbol`,

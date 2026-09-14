@@ -1,4 +1,5 @@
 import React, { useRef, useState, useLayoutEffect } from 'react';
+import ReactDOM from 'react-dom';
 
 const SubMenuItem = ({ item, onClose }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -59,7 +60,7 @@ const SubMenuItem = ({ item, onClose }) => {
             boxShadow: '0 8px 24px var(--ui-context-shadow, rgba(0, 0, 0, 0.45))',
             borderRadius: '8px',
             padding: '4px 0',
-            zIndex: 100001
+            zIndex: 1000002
           }}
         >
           {item.items.map((subItem, idx) => {
@@ -118,7 +119,7 @@ const TreeContextMenu = ({
   items = []
 }) => {
   const menuRef = useRef(null);
-  const [coords, setCoords] = useState({ left: -9999, top: -9999 });
+  const [adjustedCoords, setAdjustedCoords] = useState(null);
 
   useLayoutEffect(() => {
     if (treeContextMenu && menuRef.current) {
@@ -139,13 +140,22 @@ const TreeContextMenu = ({
       left = Math.max(8, left);
       top = Math.max(8, top);
 
-      setCoords({ left, top });
+      if (left !== treeContextMenu.x || top !== treeContextMenu.y) {
+        setAdjustedCoords({ left, top });
+      } else {
+        setAdjustedCoords(null);
+      }
+    } else {
+      setAdjustedCoords(null);
     }
-  }, [treeContextMenu, items]);
+  }, [treeContextMenu?.x, treeContextMenu?.y, items]);
 
   if (!treeContextMenu || !items || items.length === 0) return null;
 
-  return (
+  const left = adjustedCoords ? adjustedCoords.left : (treeContextMenu.x || 0);
+  const top = adjustedCoords ? adjustedCoords.top : (treeContextMenu.y || 0);
+
+  return ReactDOM.createPortal(
     <>
       {/* Backdrop transparente a pantalla completa: intercepta clics fuera sin cerrar inesperadamente por hover/resize */}
       <div
@@ -155,7 +165,7 @@ const TreeContextMenu = ({
           left: 0,
           right: 0,
           bottom: 0,
-          zIndex: 99998,
+          zIndex: 999998,
           cursor: 'default'
         }}
         onClick={(e) => {
@@ -175,9 +185,9 @@ const TreeContextMenu = ({
         className="tree-context-menu"
         style={{
           position: 'fixed',
-          left: coords.left,
-          top: coords.top,
-          zIndex: 99999,
+          left: left,
+          top: top,
+          zIndex: 999999,
           minWidth: '210px',
           background: 'var(--ui-context-bg, #1e222d)',
           border: '1px solid var(--ui-context-border, rgba(255, 255, 255, 0.12))',
@@ -245,7 +255,8 @@ const TreeContextMenu = ({
           );
         })}
       </div>
-    </>
+    </>,
+    document.body
   );
 };
 

@@ -34,8 +34,6 @@ import { TabView, TabPanel } from 'primereact/tabview';
 
 import { ContextMenu } from 'primereact/contextmenu';
 import TreeContextMenu from './contextmenus/TreeContextMenu';
-// FileExplorer ahora usa lazy loading arriba
-import WallixRefreshDialog from './WallixRefreshDialog';
 import Sidebar from './Sidebar';
 import { themes } from '../themes';
 import { iconThemes } from '../themes/icon-themes';
@@ -45,28 +43,20 @@ import { iconThemes } from '../themes/icon-themes';
 // Estos componentes se cargan bajo demanda, no al inicio
 const SettingsDialog = lazy(() => import('./SettingsDialog'));
 const SyncSettingsDialog = lazy(() => import('./SyncSettingsDialog'));
-const ImportDialog = lazy(() => import('./ImportDialog'));
-const ImportWizardDialog = lazy(() => import('./ImportWizardDialog'));
 const RdpSessionTab = lazy(() => import('./RdpSessionTab'));
 const GuacamoleTab = lazy(() => import('./GuacamoleTab'));
 const GuacamoleTerminal = lazy(() => import('./GuacamoleTerminal'));
 const FileExplorer = lazy(() => import('./FileExplorer'));
 
-
-// NOTA: localStorageSyncService ahora se inicializa en index.js antes del render
+// Componentes modulares de la aplicación
+import { AppHeader, AppModals } from './app/index';
+import { useMcpAgentBridge } from '../hooks/useMcpAgentBridge';
+import { useGlobalAppEvents } from '../hooks/useGlobalAppEvents';
 
 // Componentes críticos (se cargan inmediatamente)
-import TitleBar from './TitleBar';
 import { SSHDialog, FolderDialog, GroupDialog } from './Dialogs';
-import ImportService from '../services/ImportService';
 import { unblockAllInputs, resolveFormBlocking, emergencyUnblockForms } from '../utils/formDebugger';
 import SecureStorage from '../services/SecureStorage';
-
-
-import UnlockDialog from './UnlockDialog';
-import CloudRestoreMasterKeyDialog from './CloudRestoreMasterKeyDialog';
-import UpdateNotificationToast from './UpdateNotificationToast';
-import ConnectionSearchPalette from './ConnectionSearchPalette';
 import {
   getConnectionSearchShortcut,
   matchesShortcut,
@@ -1528,6 +1518,9 @@ const App = () => {
     hideContextMenu
   } = useContextMenuManagement();
 
+  // Items para el menú de desbordamiento de pestañas
+  const overflowMenuItems = useMemo(() => [], []);
+
   // Usar el hook de gestión de sesiones
   const {
     terminalRefs, activeListenersRef, sessionManager,
@@ -2198,362 +2191,12 @@ const App = () => {
 
     saveNodes();
   }, [nodes, masterKey, secureStorage, updateTreeHash, isExternalReloadRef]);
-
-  // API MCP / API Server. UI copy usa clipboard IPC; MCP nunca expone secretos
-  // por clipboard (list_* sanitizado + inject_secret al PTY por referencia).
-  useEffect(() => {
-    window.nodeterm_integration = {
-      getConnections: () => nodes || [],
-      getMasterKey: () => masterKey,
-      getSecureStorage: () => secureStorage,
-      getPasswords: async () => {
-        if (!secureStorage) return [];
-        const encryptedData = localStorage.getItem('passwords_encrypted');
-        if (encryptedData && masterKey) {
-          try {
-            return await secureStorage.decryptData(JSON.parse(encryptedData), masterKey);
-          } catch (e) {
-            console.error('MCP getPasswords decryption error:', e);
-            return [];
-          }
-        }
-        const plainData = localStorage.getItem('passwordManagerNodes');
-        return plainData ? JSON.parse(plainData) : [];
-      },
-      getDocuments: async () => {
-        if (!secureStorage) return [];
-        const encryptedData = localStorage.getItem('documents_encrypted');
-        if (encryptedData && masterKey) {
-          try {
-            return await secureStorage.decryptData(JSON.parse(encryptedData), masterKey);
-          } catch (e) {
-            console.error('MCP getDocuments decryption error:', e);
-            return [];
-          }
-        }
-        const plainData = localStorage.getItem('documentManagerNodes');
-        return plainData ? JSON.parse(plainData) : [];
-      },
-      savePasswords: async (newPasswords) => {
-        if (!secureStorage) return false;
-        if (masterKey) {
-          const encrypted = await secureStorage.encryptData(newPasswords, masterKey);
-          const encStr = JSON.stringify(encrypted);
-          localStorage.setItem('passwords_encrypted', encStr);
-          localStorage.removeItem('passwordManagerNodes');
-          localStorageSyncService.debouncedSync({ passwords_encrypted: encStr });
-        } else {
-          const plainStr = JSON.stringify(newPasswords);
-          localStorage.setItem('passwordManagerNodes', plainStr);
-          localStorageSyncService.debouncedSync({ passwordManagerNodes: plainStr });
-        }
-        window.dispatchEvent(new CustomEvent('passwords-storage-updated'));
-        return true;
-      },
-      saveDocuments: async (newDocuments) => {
-        if (!secureStorage) return false;
-        if (masterKey) {
-          const encrypted = await secureStorage.encryptData(newDocuments, masterKey);
-          const encStr = JSON.stringify(encrypted);
-          localStorage.setItem('documents_encrypted', encStr);
-          localStorage.removeItem('documentManagerNodes');
-          localStorageSyncService.debouncedSync({ documents_encrypted: encStr });
-        } else {
-          const plainStr = JSON.stringify(newDocuments);
-          localStorage.setItem('documentManagerNodes', plainStr);
-          localStorageSyncService.debouncedSync({ documentManagerNodes: plainStr });
-        }
-        window.dispatchEvent(new CustomEvent('documents-storage-updated'));
-        return true;
-      },
-      upsertPassword: async (item) => {
-        const getPasswords = window.nodeterm_integration.getPasswords;
-        const savePasswords = window.nodeterm_integration.savePasswords;
-        const list = await getPasswords();
-        
-        function updateNodeInTree(nodes, id, name, data) {
-          return nodes.map(n => {
-            if (n.key === id || n.id === id) {
-              return {
-                ...n,
-                label: name || n.label,
-                data: {
-                  ...n.data,
-                  ...data
-                }
-              };
-            }
-            if (n.children && n.children.length > 0) {
-              return {
-                ...n,
-                children: updateNodeInTree(n.children, id, name, data)
-              };
-            }
-            return n;
-          });
-        }
-
-        function addNodeToTree(nodes, parentId, newNode) {
-          if (!parentId) {
-            return [...nodes, newNode];
-          }
-          return nodes.map(n => {
-            if (n.key === parentId || n.id === parentId) {
-              return {
-                ...n,
-                children: [...(n.children || []), newNode]
-              };
-            }
-            if (n.children && n.children.length > 0) {
-              return {
-                ...n,
-                children: addNodeToTree(n.children, parentId, newNode)
-              };
-            }
-            return n;
-          });
-        }
-
-        const dataFields = {};
-        if (item.type !== undefined) dataFields.type = item.type;
-        if (item.username !== undefined) dataFields.username = item.username;
-        if (item.password !== undefined) dataFields.password = item.password;
-        if (item.website !== undefined) dataFields.website = item.website;
-        if (item.notes !== undefined) dataFields.notes = item.notes;
-        if (item.api_key !== undefined) dataFields.api_key = item.api_key;
-        if (item.wallet_seed !== undefined) dataFields.wallet_seed = item.wallet_seed;
-
-        if (item.id) {
-          const updated = updateNodeInTree(list, item.id, item.name, dataFields);
-          await savePasswords(updated);
-          return item.id;
-        } else {
-          if (dataFields.type === undefined) dataFields.type = 'password';
-          if (dataFields.username === undefined) dataFields.username = '';
-          if (dataFields.password === undefined) dataFields.password = '';
-          if (dataFields.website === undefined) dataFields.website = '';
-          if (dataFields.notes === undefined) dataFields.notes = '';
-          if (dataFields.api_key === undefined) dataFields.api_key = '';
-          if (dataFields.wallet_seed === undefined) dataFields.wallet_seed = '';
-
-          const newId = (item.type === 'password-folder' ? 'password_folder_' : 'password_') + Date.now() + '_' + Math.floor(Math.random()*1e6);
-          const newNode = {
-            key: newId,
-            id: newId,
-            label: item.name,
-            droppable: item.type === 'password-folder',
-            data: dataFields
-          };
-          if (item.type === 'password-folder') {
-            newNode.children = [];
-          }
-          const updated = addNodeToTree(list, item.parentId, newNode);
-          await savePasswords(updated);
-          return newId;
-        }
-      },
-      upsertDocument: async (item) => {
-        const getDocs = window.nodeterm_integration.getDocuments;
-        const saveDocs = window.nodeterm_integration.saveDocuments;
-        const list = await getDocs();
-
-        function updateNodeInTree(nodes, id, name, content) {
-          return nodes.map(n => {
-            if (n.key === id || n.id === id) {
-              return {
-                ...n,
-                label: name || n.label,
-                data: {
-                  ...n.data,
-                  content: content !== undefined ? content : (n.data ? (n.data.content || '') : ''),
-                  updatedAt: Date.now()
-                }
-              };
-            }
-            if (n.children && n.children.length > 0) {
-              return {
-                ...n,
-                children: updateNodeInTree(n.children, id, name, content)
-              };
-            }
-            return n;
-          });
-        }
-
-        function addNodeToTree(nodes, parentId, newNode) {
-          if (!parentId) {
-            return [...nodes, newNode];
-          }
-          return nodes.map(n => {
-            if (n.key === parentId || n.id === parentId) {
-              return {
-                ...n,
-                children: [...(n.children || []), newNode]
-              };
-            }
-            if (n.children && n.children.length > 0) {
-              return {
-                ...n,
-                children: addNodeToTree(n.children, parentId, newNode)
-              };
-            }
-            return n;
-          });
-        }
-
-        if (item.id) {
-          const updated = updateNodeInTree(list, item.id, item.name, item.content);
-          await saveDocs(updated);
-          return item.id;
-        } else {
-          const isFolder = item.type === 'document-folder';
-          const newId = (isFolder ? 'docfolder_' : 'doc_') + Date.now() + '_' + Math.floor(Math.random()*1e6);
-          const newNode = {
-            key: newId,
-            id: newId,
-            label: item.name,
-            type: item.type || 'document',
-            droppable: isFolder,
-            data: isFolder ? { type: 'document-folder', createdAt: Date.now() } : {
-              type: 'document',
-              content: item.content || '',
-              markdownSource: item.content || '',
-              createdAt: Date.now(),
-              updatedAt: Date.now()
-            }
-          };
-          if (isFolder) {
-            newNode.children = [];
-          }
-          const updated = addNodeToTree(list, item.parentId, newNode);
-          await saveDocs(updated);
-          return newId;
-        }
-      },
-
-      // --- Terminales vivos (MCP agent) ---
-      listOpenTerminals: () => terminalAgentBridge.listOpenTerminals(),
-      openTerminal: async (opts) => terminalAgentBridge.openTerminal(opts || {}),
-      focusTerminal: (terminalId) => terminalAgentBridge.focusTerminal(terminalId),
-      setTerminalInputLock: (terminalId, locked) => terminalAgentBridge.setInputLock(terminalId, locked),
-      getTerminalStatus: (terminalId) => terminalAgentBridge.getStatus(terminalId),
-      writeTerminal: async (terminalId, opts) => terminalAgentBridge.writeTerminal(terminalId, opts || {}),
-      execInTerminal: async (terminalId, opts) => terminalAgentBridge.execInTerminal(terminalId, opts || {}),
-      readTerminalBuffer: (terminalId, opts) => terminalAgentBridge.readBuffer(terminalId, opts || {}),
-      waitTerminalPattern: async (terminalId, opts) => terminalAgentBridge.waitPattern(terminalId, opts || {}),
-      injectSecretIntoTerminal: async (terminalId, opts) =>
-        terminalAgentBridge.injectSecretIntoTerminal(terminalId, opts || {})
-    };
-  }, [nodes, masterKey, secureStorage]);
-
-  // Limpiar listeners/buffer de terminales cerrados
-  useEffect(() => {
-    const activeIds = new Set();
-    (sshTabs || []).forEach((tab) => {
-      if (!tab) return;
-      if (tab.type === 'terminal' || tab.type === 'local-terminal' || tab.type === 'docker') {
-        activeIds.add(tab.key);
-      } else if (tab.type === 'split') {
-        const walk = (node) => {
-          if (!node) return;
-          if (node.key && (node.type === 'terminal' || node.type === 'local-terminal' || node.type === 'docker')) {
-            activeIds.add(node.key);
-          }
-          walk(node.first);
-          walk(node.second);
-          walk(node.leftTerminal);
-          walk(node.rightTerminal);
-          if (Array.isArray(node.terminals)) node.terminals.forEach(walk);
-        };
-        walk(tab);
-      }
-    });
-    terminalAgentBridge.pruneClosedTerminals(activeIds);
-  }, [sshTabs]);
-
-  // Dependencias del puente agente MCP (tabs / focus / open)
-  useEffect(() => {
-    const findConnectionById = (connectionId) => {
-      if (!connectionId) return null;
-      const needle = String(connectionId).toLowerCase();
-      let found = null;
-      const walk = (list) => {
-        if (!Array.isArray(list) || found) return;
-        for (const n of list) {
-          const id = n.id || n.key;
-          const label = n.label || n.name || '';
-          const dataType = n.data?.type || n.type;
-          if (
-            (id && String(id).toLowerCase() === needle) ||
-            (label && label.toLowerCase() === needle)
-          ) {
-            if (!dataType || dataType === 'ssh' || n.data?.host || n.data?.targetServer) {
-              found = n;
-              return;
-            }
-          }
-          if (n.children) walk(n.children);
-        }
-      };
-      walk(nodes);
-      return found;
-    };
-
-    terminalAgentBridge.setDependencies({
-      getTabs: () => sshTabs || [],
-      getActiveTabKey: () => {
-        try {
-          const tabs = typeof getFilteredTabs === 'function' ? getFilteredTabs() : getAllTabs();
-          const active = tabs && tabs[activeTabIndex];
-          return active ? active.key : null;
-        } catch (_) {
-          return null;
-        }
-      },
-      openSSHConnection: (nodeOrConn) => {
-        if (onOpenSSHConnection) onOpenSSHConnection(nodeOrConn, nodes);
-      },
-      createLocalTerminal: (localType, distroInfo) => {
-        if (typeof window.__nodeterm_create_local_terminal === 'function') {
-          return window.__nodeterm_create_local_terminal(localType, distroInfo);
-        }
-        return null;
-      },
-      focusTerminal: (terminalId) => {
-        if (!terminalId) return;
-        setLastOpenedTabKey(terminalId);
-        setOnCreateActivateTabKey(terminalId);
-        try {
-          const tabs = typeof getFilteredTabs === 'function' ? getFilteredTabs() : getAllTabs();
-          const idx = Array.isArray(tabs) ? tabs.findIndex((t) => t.key === terminalId) : -1;
-          if (idx >= 0) {
-            setActiveTabIndex(idx);
-            if (activeGroupId != null) {
-              setGroupActiveIndices((prev) => ({
-                ...prev,
-                [activeGroupId || 'no-group']: idx
-              }));
-            } else {
-              setGroupActiveIndices((prev) => ({ ...prev, 'no-group': idx }));
-            }
-          }
-        } catch (_) {
-          /* ignore */
-        }
-      },
-      findConnectionById,
-      getPasswordsTree: async () => {
-        if (window.nodeterm_integration && typeof window.nodeterm_integration.getPasswords === 'function') {
-          return window.nodeterm_integration.getPasswords();
-        }
-        return [];
-      },
-      getTerminalRef: (terminalId) =>
-        terminalRefs && terminalRefs.current ? terminalRefs.current[terminalId] : null
-    });
-  }, [
-    sshTabs,
+  // API MCP / API Server: window.nodeterm_integration y ciclo de vida PTY
+  useMcpAgentBridge({
     nodes,
+    masterKey,
+    secureStorage,
+    sshTabs,
     activeTabIndex,
     activeGroupId,
     getAllTabs,
@@ -2564,928 +2207,69 @@ const App = () => {
     setActiveTabIndex,
     setGroupActiveIndices,
     terminalRefs
-  ]);
-
-  // Escuchar eventos de sincronización externa para datos encriptados y configuración
-  useEffect(() => {
-    const handleSync = () => {
-        // Invalidar cache de desencriptado para forzar recarga real tras restore
-        lastDecryptedDataStr = null;
-        lastDecryptedKey = null;
-        lastDecryptedResult = null;
-        loadNodes();
-    };
-
-    const handleSettingsUpdated = (e) => {
-      if (e.detail?.source === 'sync') {
-        loadNodes();
-      }
-    };
-
-    window.addEventListener('encryption-data-synced', handleSync);
-    window.addEventListener('connections-synced-from-cloud', handleSync);
-    window.addEventListener('settings-updated', handleSettingsUpdated);
-    window.addEventListener('localstorage-sync-ready', handleSync);
-    window.addEventListener('nodeterm-backup-imported', handleSync);
-    
-    return () => {
-      window.removeEventListener('encryption-data-synced', handleSync);
-      window.removeEventListener('connections-synced-from-cloud', handleSync);
-      window.removeEventListener('settings-updated', handleSettingsUpdated);
-      window.removeEventListener('localstorage-sync-ready', handleSync);
-      window.removeEventListener('nodeterm-backup-imported', handleSync);
-    };
-  }, [loadNodes]);
-
-
-  // Efecto para manejar cambios en el explorador de archivos
-  useEffect(() => {
-    if (pendingExplorerSession) {
-      const explorerIndex = getTabsInGroup(activeGroupId).findIndex(tab => tab.originalKey === pendingExplorerSession);
-      if (explorerIndex >= sshTabs.length) {
-        if (!activatingNowRef.current) setActiveTabIndex(explorerIndex);
-        setPendingExplorerSession(null);
-      }
-    }
-  }, [fileExplorerTabs, pendingExplorerSession, sshTabs.length]);
-
-
-
-
-
-
-
-
-
-  useEffect(() => {
-    // Cuando cambia la pestaña activa, notificar al backend
-    const activeTab = filteredTabs?.[activeTabIndex];
-
-    // Solo proceder si hay pestañas en el grupo actual
-    if (filteredTabs?.length > 0 && activeTab && window.electron && window.electron.ipcRenderer) {
-      if (activeTab.type === 'split') {
-        // Para splits, activar stats en ambos terminales
-        if (activeTab.leftTerminal) {
-          window.electron.ipcRenderer.send('ssh:set-active-stats-tab', activeTab.leftTerminal.key);
-        }
-        if (activeTab.rightTerminal) {
-          window.electron.ipcRenderer.send('ssh:set-active-stats-tab', activeTab.rightTerminal.key);
-        }
-      } else if (activeTab.type === 'terminal') {
-        window.electron.ipcRenderer.send('ssh:set-active-stats-tab', activeTab.key);
-      }
-    }
-  }, [activeTabIndex, filteredTabs?.[activeTabIndex]?.key]);
-
-  // TODO: Implementar lógica para overflow menu items
-  const overflowMenuItems = [];
-
-  // Exponer la función globalmente para el menú de la aplicación
-  useEffect(() => {
-    window.handleUnblockForms = handleUnblockFormsWrapper;
-    return () => {
-      delete window.handleUnblockForms;
-    };
-  }, []);
-
-  // Handler para crear pestañas de Guacamole
-  useEffect(() => {
-    const handleGuacamoleCreateTabWrapper = async (event, data) => {
-      await handleGuacamoleCreateTab(
-        event,
-        data,
-        activeGroupId,
-        setGroupActiveIndices,
-        activeTabIndex,
-        setActiveGroupId,
-        setGuacamoleTabs,
-        setLastOpenedTabKey,
-        setOnCreateActivateTabKey,
-        setActiveTabIndex,
-        setOpenTabOrder
-      );
-    };
-
-    // Escuchar eventos de creación de pestañas de Guacamole
-    if (window.electron && window.electron.ipcRenderer) {
-      const unsubscribe = window.electron.ipcRenderer.on('guacamole:create-tab', handleGuacamoleCreateTabWrapper);
-      return () => { try { if (typeof unsubscribe === 'function') unsubscribe(); } catch { } };
-    }
-  }, []);
-
-
-
-
-  useEffect(() => {
-    window.__DEBUG_NODES__ = () => nodes;
-  }, [nodes]);
-
-  // Crear password desde el tab Password del diálogo unificado
-  useEffect(() => {
-    const handler = (e) => {
-      const p = e.detail || {};
-      try {
-        // Crear nodo en la carpeta seleccionada
-        const targetKey = p.targetFolder || null;
-        createNewPasswordEntry(targetKey, p);
-      } catch (err) {
-        console.error('Error creando password desde diálogo:', err);
-      }
-    };
-    window.addEventListener('create-password-from-dialog', handler);
-    return () => window.removeEventListener('create-password-from-dialog', handler);
-  }, []);
-
-  // Abrir diálogo unificado directamente en pestaña Password desde menú contextual
-  useEffect(() => {
-    const handler = (e) => {
-      try {
-        const targetFolder = e.detail?.targetFolder || null;
-        const isPasswordView = e.detail?.isPasswordView || false;
-
-        // Solo permitir crear passwords si estamos en la vista de passwords
-        if (!isPasswordView) {
-          console.log('⚠️ Intentando crear password fuera de la vista de passwords - ignorando');
-          return;
-        }
-
-        // Abrir diálogo unificado y cambiar a pestaña Password (índice 2)
-        setShowUnifiedConnectionDialog(true);
-        // Dejar una marca global para que el propio diálogo active la pestaña Password
-        setTimeout(() => {
-          try { document.querySelector('.unified-connection-dialog'); } catch { }
-          const ev = new CustomEvent('switch-unified-tab', { detail: { index: 2, targetFolder } });
-          window.dispatchEvent(ev);
-        }, 0);
-      } catch (err) {
-        console.error('Error abriendo diálogo password:', err);
-      }
-    };
-    window.addEventListener('open-password-tab-in-dialog', handler);
-    return () => window.removeEventListener('open-password-tab-in-dialog', handler);
-  }, []);
-
-  const getTargetIndexForTab = useCallback((tabKey) => {
-    const isHomeButtonLocked = readHomeButtonLocked();
-    if (isHomeButtonLocked) {
-      const homeTabsInGroup = homeTabs.filter(t => activeGroupId ? t.groupId === activeGroupId : !t.groupId).length;
-      return homeTabsInGroup;
-    } else {
-      return 0;
-    }
-  }, [homeTabs, activeGroupId]);
-
-  const promoteAndActivateTab = useCallback((tabKey, optSshTabsUpdater = null) => {
-    setOpenTabOrder(prev => [tabKey, ...prev.filter(k => k !== tabKey)]);
-    setSshTabs(prev => {
-      const base = optSshTabsUpdater ? optSshTabsUpdater(prev) : prev;
-      const idx = base.findIndex(t => t.key === tabKey);
-      if (idx <= 0) return base;
-      const next = [...base];
-      const [moved] = next.splice(idx, 1);
-      return [moved, ...next];
-    });
-    setLastOpenedTabKey(tabKey);
-    
-    const targetIdx = getTargetIndexForTab(tabKey);
-    setActiveTabIndex(targetIdx);
-    
-    const currentGroupKey = activeGroupId || 'no-group';
-    setGroupActiveIndices(prev => ({
-      ...prev,
-      [currentGroupKey]: targetIdx
-    }));
-  }, [setOpenTabOrder, setSshTabs, setLastOpenedTabKey, getTargetIndexForTab, setActiveTabIndex, activeGroupId, setGroupActiveIndices]);
-
-  const activateTabSynchronously = useCallback((tabKey) => {
-    const allTabs = getAllTabs();
-    const tabIndex = allTabs.findIndex(t => t.key === tabKey);
-    if (tabIndex !== -1) {
-      setActiveTabIndex(tabIndex);
-      const currentGroupKey = activeGroupId || 'no-group';
-      setGroupActiveIndices(prev => ({
-        ...prev,
-        [currentGroupKey]: tabIndex
-      }));
-    }
-  }, [getAllTabs, setActiveTabIndex, activeGroupId, setGroupActiveIndices]);
-
-  const handleOpenEditConnectionTab = useCallback((node) => {
-    if (!node) return;
-    const tabKey = `edit_connection_${node.key}`;
-    const allTabs = getAllTabs();
-    const existingTab = allTabs.find(t => t.key === tabKey);
-    if (existingTab) {
-      promoteAndActivateTab(tabKey);
-      return;
-    }
-    
-    const newTab = {
-      key: tabKey,
-      label: `Editar: ${node.label || node.name || 'Conexión'}`,
-      type: 'edit-connection',
-      node: node,
-      createdAt: Date.now()
-    };
-    promoteAndActivateTab(tabKey, (prev) => [newTab, ...prev]);
-  }, [getAllTabs, promoteAndActivateTab]);
-
-  const handleOpenNewConnectionTab = useCallback((protocol = 'ssh') => {
-    const tabKey = `new_connection_${Date.now()}`;
-    const protocolUpper = (protocol || 'ssh').toUpperCase();
-    const dummyNode = {
-      key: `temp_${Date.now()}`,
-      label: `Nueva Conexión ${protocolUpper}`,
-      type: protocol,
-      data: { type: protocol },
-      isNew: true
-    };
-    const newTab = {
-      key: tabKey,
-      label: `Nueva Conexión (${protocolUpper})`,
-      type: 'edit-connection',
-      node: dummyNode,
-      createdAt: Date.now()
-    };
-    promoteAndActivateTab(tabKey, (prev) => [newTab, ...prev]);
-  }, [promoteAndActivateTab]);
-
-  useEffect(() => {
-    const handleOpenNewConn = (e) => {
-      const protocol = e?.detail?.protocol || 'ssh';
-      handleOpenNewConnectionTab(protocol);
-    };
-    window.addEventListener('open-new-connection-tab', handleOpenNewConn);
-    return () => window.removeEventListener('open-new-connection-tab', handleOpenConn);
-  }, [handleOpenNewConnectionTab]);
-
-  const openEditSSHDialog = handleOpenEditConnectionTab;
-  const openEditRdpDialog = handleOpenEditConnectionTab;
-  const openEditVncDialog = handleOpenEditConnectionTab;
-  const openEditFileConnectionDialog = handleOpenEditConnectionTab;
-  const openEditSSHTunnelDialog = handleOpenEditConnectionTab;
-
-  // Crear y activar pestaña de info de secreto (password, crypto_wallet, api_key, secure_note)
-  const PASSWORD_PREVIEW_TAB_KEY = 'password-preview-view';
-  useEffect(() => {
-    const buildPasswordData = (info, secretType) => ({
-      id: info.key,
-      title: info.label || info.title,
-      type: secretType,
-      notes: info.notes || info.data?.notes || '',
-      username: info.username || info.data?.username || '',
-      password: info.password || info.data?.password || '',
-      url: info.url || info.data?.url || '',
-      group: info.group || info.data?.group || '',
-      network: info.network || info.data?.network || '',
-      address: info.address || info.data?.address || '',
-      seedPhrase: info.seedPhrase || info.data?.seedPhrase || '',
-      seedWordsCount: info.seedWordsCount || info.data?.seedWordsCount || 24,
-      privateKey: info.privateKey || info.data?.privateKey || '',
-      passphrase: info.passphrase || info.data?.passphrase || '',
-      apiKey: info.apiKey || info.data?.apiKey || '',
-      apiSecret: info.apiSecret || info.data?.apiSecret || '',
-      endpoint: info.endpoint || info.data?.endpoint || '',
-      serviceName: info.serviceName || info.data?.serviceName || '',
-      noteContent: info.noteContent || info.data?.noteContent || ''
-    });
-
-    const getTabIcon = (secretType) => {
-      switch (secretType) {
-        case 'crypto_wallet': return '💰';
-        case 'api_key': return '🔑';
-        case 'secure_note': return '📝';
-        default: return '🔐';
-      }
-    };
-
-    const recordRecent = (info, passwordData, secretType) => {
-      try {
-        recordRecentPassword({
-          id: info.key,
-          name: info.label,
-          username: passwordData.username,
-          password: passwordData.password,
-          url: passwordData.url,
-          group: passwordData.group,
-          notes: passwordData.notes,
-          type: secretType,
-          icon: info.data?.icon || 'pi-key'
-        }, 5);
-      } catch (err) {
-        console.warn('Error registrando secreto reciente:', err);
-      }
-    };
-
-    const handler = (e) => {
-      const info = e.detail || {};
-      const secretType = info.type || info.data?.type || 'password';
-      const mode = info.mode === 'preview' ? 'preview' : 'permanent';
-      const passwordData = buildPasswordData(info, secretType);
-      const tabLabel = `${getTabIcon(secretType)} ${info.label || info.title}`;
-
-      recordRecent(info, passwordData, secretType);
-
-      const existingTabs = getAllTabs();
-
-      if (mode === 'preview') {
-        const previewTab = existingTabs.find(
-          t => t.type === TAB_TYPES.PASSWORD && t.isPreview === true
-        );
-
-        if (previewTab) {
-          promoteAndActivateTab(previewTab.key, (prev) =>
-            prev.map(t =>
-              t.key === previewTab.key
-                ? { ...t, label: tabLabel, passwordData }
-                : t
-            )
-          );
-          return;
-        }
-
-        const newTab = {
-          key: PASSWORD_PREVIEW_TAB_KEY,
-          label: tabLabel,
-          type: TAB_TYPES.PASSWORD,
-          passwordData,
-          isPreview: true,
-          createdAt: Date.now()
-        };
-        promoteAndActivateTab(PASSWORD_PREVIEW_TAB_KEY, (prev) => [newTab, ...prev]);
-        return;
-      }
-
-      const existingPermanent = existingTabs.find(
-        t => t.type === TAB_TYPES.PASSWORD && !t.isPreview && t.passwordData?.id === info.key
-      );
-      if (existingPermanent) {
-        activateTabSynchronously(existingPermanent.key);
-        return;
-      }
-
-      const tabId = `${info.key}_${Date.now()}`;
-      const newTab = {
-        key: tabId,
-        label: tabLabel,
-        type: TAB_TYPES.PASSWORD,
-        passwordData,
-        createdAt: Date.now()
-      };
-      promoteAndActivateTab(tabId, (prev) => [newTab, ...prev]);
-    };
-    window.addEventListener('open-password-tab', handler);
-    return () => window.removeEventListener('open-password-tab', handler);
-  }, [getAllTabs, promoteAndActivateTab, activateTabSynchronously]);
-
-  // Crear y activar pestaña de navegador integrado (con soporte de autofill)
-  useEffect(() => {
-    const handler = (e) => {
-      const info = e.detail || {};
-      const { url, username, password, title } = info;
-      if (!url) return;
-
-      const existingTabs = getAllTabs();
-      // Buscar si ya hay un browser tab con esta URL
-      const existingTab = existingTabs.find(t => t.type === TAB_TYPES.BROWSER && t.browserData?.url === url);
-      if (existingTab) {
-        activateTabSynchronously(existingTab.key);
-        return;
-      }
-
-      const tabId = `browser_${Date.now()}`;
-      const browserData = {
-        url,
-        username,
-        password,
-        title
-      };
-
-      const newTab = {
-        key: tabId,
-        label: `🌐 ${title || 'Navegador'}`,
-        type: TAB_TYPES.BROWSER,
-        browserData,
-        createdAt: Date.now()
-      };
-
-      promoteAndActivateTab(tabId, (prev) => [newTab, ...prev]);
-    };
-
-    window.addEventListener('open-browser-tab', handler);
-    return () => window.removeEventListener('open-browser-tab', handler);
-  }, [getAllTabs, promoteAndActivateTab, activateTabSynchronously]);
-
-  // Una sola pestaña de exploración de carpetas de passwords; se actualiza al cambiar de carpeta
-  const PASSWORD_FOLDER_TAB_KEY = 'password-folder-view';
-  useEffect(() => {
-    const handler = (e) => {
-      const info = e.detail || {};
-      const folderData = {
-        folderKey: info.folderKey,
-        folderLabel: info.folderLabel,
-        passwords: info.passwords || []
-      };
-
-      const existingTabs = getAllTabs();
-      const existingTab = existingTabs.find(t => t.type === TAB_TYPES.PASSWORD_FOLDER);
-
-      if (existingTab) {
-        promoteAndActivateTab(existingTab.key, (prev) =>
-          prev.map(t =>
-            t.key === existingTab.key
-              ? { ...t, label: `📁 ${info.folderLabel}`, folderData }
-              : t
-          )
-        );
-        return;
-      }
-
-      const newTab = {
-        key: PASSWORD_FOLDER_TAB_KEY,
-        label: `📁 ${info.folderLabel}`,
-        type: TAB_TYPES.PASSWORD_FOLDER,
-        folderData,
-        createdAt: Date.now()
-      };
-      promoteAndActivateTab(PASSWORD_FOLDER_TAB_KEY, (prev) => [newTab, ...prev]);
-    };
-    window.addEventListener('open-password-folder-tab', handler);
-    return () => window.removeEventListener('open-password-folder-tab', handler);
-  }, [getAllTabs, promoteAndActivateTab]);
-
-  // Crear y activar pestaña de nota desde el sidebar de notas
-  useEffect(() => {
-    const handler = (e) => {
-      const info = e.detail || {};
-      const tabId = `doc_${info.key}_${Date.now()}`;
-
-      const existingTabs = getAllTabs();
-      const existingTab = existingTabs.find(t => t.type === TAB_TYPES.DOCUMENT && t.documentData?.key === info.key);
-      if (existingTab) {
-        activateTabSynchronously(existingTab.key);
-        return;
-      }
-
-      const documentData = {
-        key: info.key,
-        label: info.label,
-        icon: info.data?.icon || '📝',
-        content: info.data?.content || '',
-        markdownSource: info.data?.markdownSource || '',
-        createdAt: info.data?.createdAt,
-        updatedAt: info.data?.updatedAt
-      };
-
-      const newTab = {
-        key: tabId,
-        label: `${documentData.icon} ${info.label}`,
-        type: TAB_TYPES.DOCUMENT,
-        documentData,
-        createdAt: Date.now()
-      };
-      promoteAndActivateTab(tabId, (prev) => [newTab, ...prev]);
-    };
-    window.addEventListener('open-document-tab', handler);
-    return () => window.removeEventListener('open-document-tab', handler);
-  }, [getAllTabs, promoteAndActivateTab, activateTabSynchronously]);
-
-  // Sync tab title/label when the document title is updated in the editor
-  useEffect(() => {
-    const handler = (e) => {
-      const { key, label } = e.detail || {};
-      if (!key || !label) return;
-      setSshTabs(prev =>
-        prev.map(t => {
-          if (t.type === TAB_TYPES.DOCUMENT && t.documentData?.key === key) {
-            const icon = t.documentData?.icon || '📝';
-            return {
-              ...t,
-              label: `${icon} ${label}`,
-              documentData: {
-                ...t.documentData,
-                label
-              }
-            };
-          }
-          return t;
-        })
-      );
-    };
-    window.addEventListener('document-title-updated', handler);
-    return () => window.removeEventListener('document-title-updated', handler);
-  }, [setSshTabs]);
-
-  // Sync tab icon/label when the document icon is updated in the editor
-  useEffect(() => {
-    const handler = (e) => {
-      const { key, icon } = e.detail || {};
-      if (!key) return;
-      setSshTabs(prev =>
-        prev.map(t => {
-          if (t.type === TAB_TYPES.DOCUMENT && t.documentData?.key === key) {
-            const finalIcon = icon || '📄';
-            return {
-              ...t,
-              label: `${finalIcon} ${t.documentData.label}`,
-              documentData: {
-                ...t.documentData,
-                icon: icon || null
-              }
-            };
-          }
-          return t;
-        })
-      );
-    };
-    window.addEventListener('document-icon-updated', handler);
-    return () => window.removeEventListener('document-icon-updated', handler);
-  }, [setSshTabs]);
-
-  // Escuchar eventos de expansión de nodos desde el buscador
-  useEffect(() => {
-    const findNodePathByKey = (nodeList, targetKey, currentPath = []) => {
-      if (!nodeList || !targetKey) return null;
-      for (const node of nodeList) {
-        const nextPath = [...currentPath, node.key];
-        if (node.key === targetKey) return nextPath;
-        if (node.children && node.children.length > 0) {
-          const found = findNodePathByKey(node.children, targetKey, nextPath);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
-    const buildExpandedKeysFromPath = (nodePath = [], baseExpanded = {}) => {
-      const merged = { ...(baseExpanded || {}) };
-      for (let i = 0; i < nodePath.length - 1; i++) {
-        merged[nodePath[i]] = true;
-      }
-      return merged;
-    };
-
-    const handleExpandNodePath = (event) => {
-      const { expandedKeys: newExpandedKeys, nodeKey } = event.detail || {};
-
-      if (newExpandedKeys) {
-        setExpandedKeys((prev) => ({ ...(prev || {}), ...newExpandedKeys }));
-        return;
-      }
-
-      if (nodeKey) {
-        const path = findNodePathByKey(nodes, nodeKey);
-        if (path && path.length > 1) {
-          setExpandedKeys((prev) => buildExpandedKeysFromPath(path, prev));
-          return;
-        }
-      }
-    };
-
-    window.addEventListener('expand-node-path', handleExpandNodePath);
-
-    // Event listener para crear pestañas de auditoría global
-    const handleCreateAuditTab = (event) => {
-      const { tabId, title, recordings } = event.detail;
-
-      // Crear nueva pestaña de auditoría global
-      const newAuditTab = {
-        key: tabId,
-        label: title,
-        type: 'audit-global',
-        recordings: recordings,
-        createdAt: Date.now(),
-        groupId: null
-      };
-
-      // Añadir a las pestañas SSH (reutilizando la estructura existente)
-      setSshTabs(prevTabs => [newAuditTab, ...prevTabs]);
-
-      // Activar la nueva pestaña
-      setLastOpenedTabKey(tabId);
-      setOnCreateActivateTabKey(tabId);
-      setActiveTabIndex(1);
-      setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
-      setOpenTabOrder(prev => [tabId, ...prev.filter(k => k !== tabId)]);
-    };
-
-    window.addEventListener('create-audit-tab', handleCreateAuditTab);
-
-    // Event listener para crear pestañas de terminal desde QuickAccessSidebar
-    const handleCreateTerminalTab = (event) => {
-      const { type, distroInfo } = event.detail;
-
-      // Disparar evento para que MainContentArea maneje la creación del terminal
-      window.dispatchEvent(new CustomEvent('create-local-terminal', {
-        detail: { terminalType: type, distroInfo: distroInfo }
-      }));
-    };
-
-    window.addEventListener('create-terminal-tab', handleCreateTerminalTab);
-
-    const insertPinnedTab = (tab) => {
-      if (!tab) return;
-      if (activeGroupId !== null) {
-        const currentGroupKey = activeGroupId || 'no-group';
-        setGroupActiveIndices(prev => ({
-          ...prev,
-          [currentGroupKey]: activeTabIndex
-        }));
-        setActiveGroupId(null);
-      }
-      setSshTabs(prevTabs => [tab, ...prevTabs]);
-      setLastOpenedTabKey(tab.key);
-      setOnCreateActivateTabKey(tab.key);
-      setActiveTabIndex(1);
-      setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
-      setOpenTabOrder(prev => [tab.key, ...prev.filter(k => k !== tab.key)]);
-    };
-
-    const handleCreateAnythingLLMTab = (event) => {
-      insertPinnedTab(event.detail?.tab);
-    };
-
-    const handleCreateOpenWebUITab = (event) => {
-      insertPinnedTab(event.detail?.tab);
-    };
-
-    const handleCreateLibreChatTab = (event) => {
-      insertPinnedTab(event.detail?.tab);
-    };
-
-    const handleCreateAgentZeroTab = (event) => {
-      insertPinnedTab(event.detail?.tab);
-    };
-
-    const handleCreateOpenClawTab = (event) => {
-      insertPinnedTab(event.detail?.tab);
-    };
-
-    const handleCreateOpenNotebookTab = (event) => {
-      insertPinnedTab(event.detail?.tab);
-    };
-
-    window.addEventListener('create-anythingllm-tab', handleCreateAnythingLLMTab);
-    window.addEventListener('create-openwebui-tab', handleCreateOpenWebUITab);
-    window.addEventListener('create-librechat-tab', handleCreateLibreChatTab);
-    window.addEventListener('create-agentzero-tab', handleCreateAgentZeroTab);
-    window.addEventListener('create-openclaw-tab', handleCreateOpenClawTab);
-    window.addEventListener('create-open-notebook-tab', handleCreateOpenNotebookTab);
-
-    return () => {
-      window.removeEventListener('expand-node-path', handleExpandNodePath);
-      window.removeEventListener('create-audit-tab', handleCreateAuditTab);
-      window.removeEventListener('create-terminal-tab', handleCreateTerminalTab);
-      window.removeEventListener('create-anythingllm-tab', handleCreateAnythingLLMTab);
-      window.removeEventListener('create-openwebui-tab', handleCreateOpenWebUITab);
-      window.removeEventListener('create-librechat-tab', handleCreateLibreChatTab);
-      window.removeEventListener('create-agentzero-tab', handleCreateAgentZeroTab);
-      window.removeEventListener('create-openclaw-tab', handleCreateOpenClawTab);
-      window.removeEventListener('create-open-notebook-tab', handleCreateOpenNotebookTab);
-    };
-  }, [setExpandedKeys, nodes]);
-
-  // Abrir herramienta de red como pestaña (o enfocar si ya está abierta)
-  useEffect(() => {
-    const handleOpenNetworkTool = (event) => {
-      const { toolId, toolLabel } = event.detail || {};
-      if (!toolId) return;
-
-      const allTabs = getAllTabs();
-      const existing = allTabs.find(t => t.type === 'network-tool' && t.toolId === toolId);
-
-      if (existing) {
-        setOnCreateActivateTabKey(existing.key);
-      } else {
-        const newTab = {
-          key: `network-tool-${toolId}-${Date.now()}`,
-          label: toolLabel || toolId,
-          type: 'network-tool',
-          toolId,
-          groupId: null,
-          createdAt: Date.now()
-        };
-        setSshTabs(prev => [newTab, ...prev]);
-        setLastOpenedTabKey(newTab.key);
-        setOnCreateActivateTabKey(newTab.key);
-      }
-    };
-
-    window.addEventListener('open-network-tool', handleOpenNetworkTool);
-    return () => {
-      window.removeEventListener('open-network-tool', handleOpenNetworkTool);
-    };
-  }, [getAllTabs, setSshTabs, setLastOpenedTabKey, setOnCreateActivateTabKey]);
-
-  // Abrir configuración como pestaña (o enfocar si ya está abierta y cambiar sección)
-  useEffect(() => {
-    const handleOpenSettingsTab = (event) => {
-      const { mainTab, subTab } = event.detail || {};
-      const allTabs = getAllTabs();
-      const existing = allTabs.find(t => t.type === 'settings');
-
-      if (existing) {
-        // Actualizar sección activa de la pestaña existente
-        setSshTabs(prev => prev.map(t => t.key === existing.key ? { ...t, mainTab, subTab } : t));
-        setOnCreateActivateTabKey(existing.key);
-      } else {
-        const tabLabel = i18n.t('tooltips.settings') || 'Configuración';
-        const newTab = {
-          key: `settings-tab-${Date.now()}`,
-          label: tabLabel,
-          type: 'settings',
-          mainTab,
-          subTab,
-          groupId: null,
-          createdAt: Date.now()
-        };
-        setSshTabs(prev => [newTab, ...prev]);
-        setLastOpenedTabKey(newTab.key);
-        setOnCreateActivateTabKey(newTab.key);
-      }
-    };
-
-    window.addEventListener('open-settings-tab', handleOpenSettingsTab);
-    return () => {
-      window.removeEventListener('open-settings-tab', handleOpenSettingsTab);
-    };
-  }, [getAllTabs, setSshTabs, setLastOpenedTabKey, setOnCreateActivateTabKey]);
-
-  // Listener global para cerrar pestañas bajo demanda (ej. desde el overlay de desconexión RDP)
-  useEffect(() => {
-    const handleCloseTabEvent = (e) => {
-      const tabKey = e.detail?.tabKey;
-      if (!tabKey) return;
-      const allTabs = getAllTabs();
-      const tabToClose = allTabs.find(t => t.key === tabKey);
-      if (tabToClose) {
-        const idx = allTabs.indexOf(tabToClose);
-        handleTabClose(tabToClose, idx, tabToClose.type === 'home');
-      }
-    };
-
-    window.addEventListener('close-tab', handleCloseTabEvent);
-    return () => {
-      window.removeEventListener('close-tab', handleCloseTabEvent);
-    };
-  }, [getAllTabs, handleTabClose]);
-
-  // Configurar callbacks RDP para el sidebar
-  useEffect(() => {
-    // Asegurar que el ref esté inicializado
-    if (!sidebarCallbacksRef.current) {
-      sidebarCallbacksRef.current = {};
-    }
-
-    sidebarCallbacksRef.current.showProtocolSelection = () => {
-      setShowProtocolSelectionDialog(true);
-    };
-
-    sidebarCallbacksRef.current.createSSH = (targetFolder = null) => {
-      window.dispatchEvent(new CustomEvent('open-new-unified-connection-dialog'));
-    };
-    sidebarCallbacksRef.current.editRDP = (node) => {
-      openEditRdpDialog(node);
-    };
-    sidebarCallbacksRef.current.editSSH = (node) => {
-      openEditSSHDialog(node);
-    };
-    sidebarCallbacksRef.current.connectRDP = (node) => {
-      onOpenRdpConnection(node);
-    };
-    sidebarCallbacksRef.current.editVNC = (node) => {
-      openEditVncDialog(node);
-    };
-    sidebarCallbacksRef.current.connectVNC = (node) => {
-      onOpenVncConnection(node);
-    };
-    sidebarCallbacksRef.current.openFileConnection = (node, nodes) => {
-      onOpenFileConnection(node, nodes);
-    };
-    sidebarCallbacksRef.current.editFileConnection = (node) => {
-      openEditFileConnectionDialog(node);
-    };
-    sidebarCallbacksRef.current.openSSHTunnel = (node, nodes) => {
-      onOpenSSHTunnel(node, nodes);
-    };
-    sidebarCallbacksRef.current.editSSHTunnel = (node) => {
-      if (openEditSSHTunnelDialog) {
-        openEditSSHTunnelDialog(node);
-      }
-    };
-    sidebarCallbacksRef.current.duplicateSSHTunnel = (node) => {
-      if (duplicateSSHTunnel) {
-        duplicateSSHTunnel(node);
-      }
-    };
-    sidebarCallbacksRef.current.deleteNode = (nodeKey, nodeLabel) => {
-      // Detectar si la carpeta tiene hijos
-      const nodeInfo = findParentNodeAndIndex(nodes, nodeKey);
-      const hasChildren = !!(nodeInfo.node && Array.isArray(nodeInfo.node.children) && nodeInfo.node.children.length);
-      confirmDeleteNode(nodeKey, nodeLabel, hasChildren, nodes, setNodes);
-    };
-  }, [nodes, setNodes, findParentNodeAndIndex, confirmDeleteNode, sidebarCallbacksRef, openEditFileConnectionDialog, onOpenSSHTunnel, openEditSSHTunnelDialog, duplicateSSHTunnel]);
-
-  // Listener para evento personalizado de guardar conexión de archivos (fallback)
-  useEffect(() => {
-    const handleSaveFileConnection = (event) => {
-      const fileData = event.detail;
-      if (fileData && handleSaveFileConnectionToSidebar) {
-        console.log('App - Recibido evento save-file-connection, guardando:', fileData);
-        handleSaveFileConnectionToSidebar(fileData, false, null);
-      }
-    };
-
-    window.addEventListener('save-file-connection', handleSaveFileConnection);
-    return () => {
-      window.removeEventListener('save-file-connection', handleSaveFileConnection);
-    };
-  }, [handleSaveFileConnectionToSidebar]);
-
-  const handleEditConnectionFromUsers = useCallback((node) => {
-    if (!node) return;
-
-    const type = node.type || node.data?.type;
-
-    if (type === 'rdp' || type === 'rdp-guacamole') {
-      openEditRdpDialog(node);
-      return;
-    }
-
-    if (type === 'vnc' || type === 'vnc-guacamole') {
-      openEditVncDialog(node);
-      return;
-    }
-
-    if (type === 'sftp' || type === 'ftp' || type === 'scp') {
-      openEditFileConnectionDialog(node);
-      return;
-    }
-
-    if (type === 'ssh-tunnel') {
-      if (openEditSSHTunnelDialog) {
-        openEditSSHTunnelDialog(node);
-      }
-      return;
-    }
-
-    // Fallback: tratar conexiones desconocidas como SSH para mantener compatibilidad.
-    openEditSSHDialog(node);
-  }, [openEditRdpDialog, openEditVncDialog, openEditFileConnectionDialog, openEditSSHTunnelDialog, openEditSSHDialog]);
-
-  // Listener para abrir diálogo unificado de nueva conexión
-  useEffect(() => {
-    const handleOpenNewUnifiedConnectionDialog = (e) => {
-      const activeTab = e?.detail?.activeTab;
-      const initialCategory = e?.detail?.initialCategory;
-
-      // Si hay initialCategory, dejar que DialogsManager lo maneje
-      if (initialCategory) {
-        return;
-      }
-
-      if (activeTab === 'password') {
-        // Abrir diálogo unificado directamente en pestaña Password
-        if (setShowUnifiedConnectionDialog) {
-          setShowUnifiedConnectionDialog(true);
-          // Guardar en window para que el diálogo sepa qué pestaña abrir
-          window.__unifiedDialogActiveTab = 'password';
-        }
-      } else if (openNewUnifiedConnectionDialog) {
-        openNewUnifiedConnectionDialog();
-      }
-    };
-
-    window.addEventListener('open-new-unified-connection-dialog', handleOpenNewUnifiedConnectionDialog);
-    return () => {
-      window.removeEventListener('open-new-unified-connection-dialog', handleOpenNewUnifiedConnectionDialog);
-    };
-  }, [openNewUnifiedConnectionDialog, setShowUnifiedConnectionDialog]);
-
-  // Event listener para abrir el diálogo de herramientas de red
-  useEffect(() => {
-    const handleOpenNetworkTools = () => {
-      setShowNetworkToolsDialog(true);
-    };
-
-    window.addEventListener('open-network-tools-dialog', handleOpenNetworkTools);
-    return () => {
-      window.removeEventListener('open-network-tools-dialog', handleOpenNetworkTools);
-    };
-  }, [setShowNetworkToolsDialog]);
-
-  // Desactivar reactivación automática al cambiar rdpTabs si hay activación forzada u orden explícito
-  useEffect(() => {
-    if (activatingNowRef.current || onCreateActivateTabKey || lastOpenedTabKey) return;
-    if (rdpTabs.length > 0) {
-      const allTabs = getAllTabs();
-      const lastRdpTab = rdpTabs[rdpTabs.length - 1];
-      const rdpTabIndex = allTabs.findIndex(tab => tab.key === lastRdpTab.key);
-      if (rdpTabIndex !== -1) {
-        setActiveTabIndex(rdpTabIndex);
-      }
-    }
-  }, [rdpTabs, onCreateActivateTabKey, lastOpenedTabKey, openTabOrder]);
+  });
+
+
+  const {
+    openEditSSHDialog,
+    openEditRdpDialog,
+    openEditVncDialog,
+    openEditFileConnectionDialog,
+    openEditSSHTunnelDialog,
+    handleEditConnectionFromUsers
+  } = useGlobalAppEvents({
+    nodes,
+    setNodes,
+    loadNodes,
+    pendingExplorerSession,
+    setPendingExplorerSession,
+    activeGroupId,
+    setActiveGroupId,
+    sshTabs,
+    setSshTabs,
+    fileExplorerTabs,
+    activatingNowRef,
+    activeTabIndex,
+    setActiveTabIndex,
+    setGroupActiveIndices,
+    filteredTabs,
+    handleUnblockFormsWrapper,
+    createNewPasswordEntry,
+    setShowUnifiedConnectionDialog,
+    homeTabs,
+    getAllTabs,
+    getTabsInGroup,
+    setLastOpenedTabKey,
+    setOnCreateActivateTabKey,
+    setOpenTabOrder,
+    openTabOrder,
+    onCreateActivateTabKey,
+    lastOpenedTabKey,
+    setGuacamoleTabs,
+    setExpandedKeys,
+    handleTabClose,
+    sidebarCallbacksRef,
+    setShowProtocolSelectionDialog,
+    onOpenRdpConnection,
+    onOpenVncConnection,
+    onOpenFileConnection,
+    onOpenSSHTunnel,
+    duplicateSSHTunnel,
+    findParentNodeAndIndex,
+    confirmDeleteNode,
+    handleSaveFileConnectionToSidebar,
+    openNewUnifiedConnectionDialog,
+    setShowNetworkToolsDialog,
+    rdpTabs,
+    findNodeByKey,
+    toast,
+    fontSize,
+    setFontSize,
+    localFontSize,
+    setLocalFontSize,
+    dockerFontSize,
+    setDockerFontSize
+  });
 
   // === FUNCIONES DE SINCRONIZACIÓN ===
   // Función para exportar el árbol de sesiones a JSON
@@ -3584,152 +2368,6 @@ const App = () => {
   }, [localLinuxTerminalTheme]);
 
 
-
-  // Listener para cuando un password manual es correcto (auto-save)
-  useEffect(() => {
-    const handlePasswordCorrect = (event) => {
-      const { originalKey, password } = event.detail;
-      if (!originalKey || !password) return;
-
-      console.log(`🔐 [App] Capturado password correcto para nodo ${originalKey}. Guardando...`);
-
-      // 1. Actualizar en el árbol de nodos
-      setNodes(prevNodes => {
-        const updatePasswordInNodes = (nodesList) => {
-          return nodesList.map(node => {
-            if (node.key === originalKey) {
-              return {
-                ...node,
-                data: {
-                  ...node.data,
-                  password: password
-                }
-              };
-            }
-            if (node.children && node.children.length > 0) {
-              return {
-                ...node,
-                children: updatePasswordInNodes(node.children)
-              };
-            }
-            return node;
-          });
-        };
-        return updatePasswordInNodes(prevNodes);
-      });
-
-      // 2. Actualizar en Favorites y Recents
-      try {
-        // Encontrar el nodo para obtener su info completa (opcional, connectionStore suele basarse en ID)
-        const node = findNodeByKey(nodes, originalKey);
-        if (node && node.data) {
-          const oldConnection = connectionStore.helpers.fromSidebarNode(node);
-          const newConnection = connectionStore.helpers.fromSidebarNode({
-            ...node,
-            data: {
-              ...node.data,
-              password: password
-            }
-          });
-
-          // Actualizar favorito si existe
-          connectionStore.updateFavoriteOnEdit(oldConnection, newConnection);
-
-          // Registrar como reciente (esto actualizará el password en la lista de recientes)
-          connectionStore.recordRecent(newConnection);
-        }
-      } catch (e) {
-        console.warn('Error actualizando stores de conexión tras password manual:', e);
-      }
-
-      if (toast?.current?.show) {
-        toast.current.show({
-          severity: 'success',
-          summary: 'Password guardado',
-          detail: 'El password se ha actualizado automáticamente.',
-          life: 3000
-        });
-      }
-    };
-
-    window.addEventListener('ssh:password-correct', handlePasswordCorrect);
-    return () => window.removeEventListener('ssh:password-correct', handlePasswordCorrect);
-  }, [nodes, setNodes, findNodeByKey, toast]);
-
-  // Listener global para Ctrl + rueda del ratón para cambiar tamaño de fuente de terminales
-  useEffect(() => {
-    const handleWheel = (e) => {
-      // Solo procesar si Ctrl está presionado
-      if (!e.ctrlKey) return;
-
-      // Detectar si el cursor está sobre una terminal
-      // xterm.js crea elementos con clase 'xterm' y también puede estar dentro de contenedores
-      const target = e.target;
-      const isOverTerminal = target.closest('.xterm') !== null ||
-        target.closest('.terminal-outer-padding') !== null ||
-        target.classList.contains('xterm') ||
-        target.classList.contains('terminal-outer-padding') ||
-        // También verificar si está dentro de un contenedor de terminal (para terminales locales)
-        target.closest('[class*="terminal"]') !== null;
-
-      // Si no está sobre una terminal, no hacer nada
-      if (!isOverTerminal) return;
-
-      // Prevenir el comportamiento por defecto (zoom del navegador)
-      e.preventDefault();
-      e.stopPropagation();
-
-      // Determinar dirección del scroll (arriba = aumentar, abajo = disminuir)
-      const delta = e.deltaY > 0 ? -1 : 1; // deltaY positivo = scroll abajo = disminuir
-      const step = 1; // Incremento/decremento de 1px
-
-      // Función para actualizar un tamaño de fuente con límites
-      const updateFontSize = (currentSize, setter, storageKey, min = 8, max = 32) => {
-        const newSize = Math.max(min, Math.min(max, currentSize + (delta * step)));
-        if (newSize !== currentSize) {
-          setter(newSize);
-          localStorage.setItem(storageKey, newSize.toString());
-          // Disparar evento de cambio para sincronización
-          window.dispatchEvent(new CustomEvent('localStorageChange', {
-            detail: { key: storageKey, value: newSize.toString() }
-          }));
-          window.dispatchEvent(new StorageEvent('storage', {
-            key: storageKey,
-            newValue: newSize.toString()
-          }));
-        }
-        return newSize;
-      };
-
-      // Actualizar todos los tamaños de fuente de terminales
-      // 1. SSH terminales
-      const currentSSHSize = fontSize || 14;
-      updateFontSize(currentSSHSize, setFontSize, 'basicapp_terminal_font_size');
-
-      // 2. PowerShell/Linux locales
-      const currentLocalSize = localFontSize || 14;
-      updateFontSize(currentLocalSize, setLocalFontSize, 'basicapp_local_terminal_font_size');
-
-      // 3. Linux/WSL terminales
-      const currentLinuxSize = parseInt(localStorage.getItem('nodeterm_linux_font_size') || localFontSize || '14', 10);
-      const newLinuxSize = updateFontSize(currentLinuxSize, () => { }, 'nodeterm_linux_font_size');
-      // Notificar cambio para que TerminalSettingsTab lo detecte
-      window.dispatchEvent(new CustomEvent('terminal-settings-changed', {
-        detail: { linuxFontSize: newLinuxSize }
-      }));
-
-      // 4. Docker terminales
-      const currentDockerSize = dockerFontSize || 14;
-      updateFontSize(currentDockerSize, setDockerFontSize, 'nodeterm_docker_font_size');
-    };
-
-    // Agregar listener con capture para interceptar antes que otros handlers
-    document.addEventListener('wheel', handleWheel, { passive: false, capture: true });
-
-    return () => {
-      document.removeEventListener('wheel', handleWheel, { capture: true });
-    };
-  }, [fontSize, setFontSize, localFontSize, setLocalFontSize, dockerFontSize, setDockerFontSize]);
 
   const activeTab = filteredTabs[activeTabIndex] || null;
 
@@ -4168,145 +2806,32 @@ const App = () => {
   return (
     <ErrorBoundary>
       <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', minHeight: 0, background: 'var(--ui-sidebar-bg, #0a0f1f)' }}>
-        {/* UnlockDialog - Pide master password al inicio si existe */}
-        <UnlockDialog
-          visible={needsUnlock}
-          onSuccess={handleUnlockSuccess}
-          secureStorage={secureStorage}
-        />
-
-        <CloudRestoreMasterKeyDialog
-          visible={showCloudRestoreMasterKey && !needsUnlock}
-          secureStorage={secureStorage}
-          vaultsDownloaded={cloudRestoreVaults}
-          onSuccess={handleCloudRestoreMasterKeySuccess}
-          onHide={() => setShowCloudRestoreMasterKey(false)}
-        />
-
-        <ConnectionSearchPalette
-          open={connectionSearchPaletteOpen && !needsUnlock}
-          onClose={closeConnectionSearchPalette}
+        {/* Barra superior / TitleBar */}
+        <AppHeader
+          titleBarCollapsed={titleBarCollapsed}
+          isMinimalMode={isMinimalMode}
           sidebarFilter={sidebarFilter}
           setSidebarFilter={setSidebarFilter}
-          allNodes={nodes}
+          nodes={nodes}
           findAllConnections={findAllConnections}
           onOpenSSHConnection={onOpenSSHConnection}
           onOpenRdpConnection={onOpenRdpConnection}
           onOpenVncConnection={onOpenVncConnection}
-          openEditSSHDialog={openEditSSHDialog}
-          openEditRdpDialog={openEditRdpDialog}
-          expandedKeys={expandedKeys}
+          setShowImportDialog={setShowImportDialog}
+          setShowExportDialog={setShowExportDialog}
+          setShowImportExportDialog={setShowImportExportDialog}
+          setShowImportWizard={setShowImportWizard}
           masterKey={masterKey}
           secureStorage={secureStorage}
-          iconTheme={iconTheme}
-        />
-
-        {/* TitleBar superior - se puede ocultar */}
-        {!titleBarCollapsed && !isMinimalMode && (
-          <TitleBar
-            sidebarFilter={sidebarFilter}
-            setSidebarFilter={setSidebarFilter}
-            allNodes={nodes}
-            findAllConnections={findAllConnections}
-            onOpenSSHConnection={onOpenSSHConnection}
-            onOpenRdpConnection={onOpenRdpConnection}
-            onOpenVncConnection={onOpenVncConnection}
-            onShowImportDialog={setShowImportDialog}
-            onShowExportDialog={setShowExportDialog}
-          onShowImportExportDialog={setShowImportExportDialog}
-          onShowImportWizard={setShowImportWizard}
-          masterKey={masterKey}
-          secureStorage={secureStorage}
-          onOpenImportWithSource={(source) => {
-            try {
-              setImportPreset({
-                linkFile: true,
-                linkedPath: source?.filePath || null,
-                pollInterval: Number(source?.intervalMs) || 30000,
-                overwrite: !!source?.options?.overwrite,
-                placeInFolder: !!source?.options?.createContainerFolder,
-                containerFolderName: source?.options?.containerFolderName || null
-              });
-            } catch { }
-            setShowImportDialog(true);
-          }}
+          setImportPreset={setImportPreset}
           openEditSSHDialog={openEditSSHDialog}
           openEditRdpDialog={openEditRdpDialog}
           openNewVncDialog={openNewVncDialog}
-          onQuickImportFromSource={async (source) => {
-            try {
-              if (!source?.filePath) {
-                setShowImportDialog(true);
-                return;
-              }
-              const readRes = await window.electron?.import?.readFile?.(source.filePath);
-              if (!readRes?.ok) {
-                setShowImportDialog(true);
-                return;
-              }
-              let fileBlob;
-              try {
-                const fileName = source.fileName || source.filePath.split('\\').pop() || 'import.xml';
-                fileBlob = new File([readRes.content], fileName, { type: 'text/xml' });
-              } catch {
-                fileBlob = new Blob([readRes.content], { type: 'text/xml' });
-              }
-
-              // Importar y aplicar EXACTAMENTE las mismas opciones que el diálogo vinculado
-              const result = await ImportService.importFromMRemoteNG(fileBlob);
-
-              // Refrescar la fuente desde localStorage para obtener las últimas opciones del diálogo
-              const allSources = JSON.parse(localStorage.getItem('IMPORT_SOURCES') || '[]');
-              const fresh = (() => {
-                const byId = allSources.find(s => (source?.id && s.id === source.id));
-                if (byId) return byId;
-                const byPath = allSources.find(s => (source?.filePath && s.filePath === source.filePath));
-                if (byPath) return byPath;
-                const byName = allSources.find(s => (source?.fileName && s.fileName === source.fileName));
-                return byName || source;
-              })();
-
-              const opts = fresh?.options || source?.options || {};
-              const linkedOverwrite = !!(opts.linkedOverwrite ?? opts.overwrite);
-              const linkedCreateContainerFolder = !!(opts.linkedCreateContainerFolder ?? opts.createContainerFolder);
-              // Tomar exactamente el nombre configurado en el diálogo (si existe)
-              const effectiveContainerName = (opts.linkedContainerFolderName ?? opts.containerFolderName ?? '').toString();
-
-              // Usar el MISMO hash que usa el poller para evitar banners repetidos
-              let effectiveHash = result?.metadata?.contentHash || null;
-              try {
-                const hashRes = await window.electron?.import?.getFileHash?.(source.filePath);
-                if (hashRes?.ok && hashRes?.hash) effectiveHash = hashRes.hash;
-              } catch { }
-
-              // Llamar a la MISMA ruta que usa el diálogo
-              await handleImportComplete({
-                ...result,
-                // Modo vinculado
-                linkFile: true,
-                pollInterval: Number(source?.intervalMs) || 30000,
-                linkedFileName: source?.fileName || null,
-                linkedFilePath: source?.filePath || null,
-                linkedFileHash: effectiveHash,
-                // Opciones específicas de modo vinculado (las que usa el diálogo)
-                linkedOverwrite,
-                linkedCreateContainerFolder,
-                linkedContainerFolderName: effectiveContainerName,
-                // Por compatibilidad, reflejamos en las opciones básicas también
-                overwrite: linkedOverwrite,
-                createContainerFolder: linkedCreateContainerFolder,
-                containerFolderName: effectiveContainerName
-              });
-            } catch (e) {
-              console.error('Quick import failed:', e);
-              setShowImportDialog(true);
-            }
-          }}
-            onToggleTitleBar={handleToggleTitleBar}
-            iconTheme={iconTheme}
-            expandedKeys={expandedKeys}
-          />
-        )}
+          handleImportComplete={handleImportComplete}
+          handleToggleTitleBar={handleToggleTitleBar}
+          iconTheme={iconTheme}
+          expandedKeys={expandedKeys}
+        />
 
         <DialogsManager
           // Referencias
@@ -4610,16 +3135,6 @@ const App = () => {
           handleImportComplete={handleImportComplete}
         />
 
-        {/* Menú contextual del árbol de la sidebar */}
-        <TreeContextMenu
-          treeContextMenu={treeContextMenu}
-          onClose={hideContextMenu}
-          items={
-            treeContextMenu?.isGeneral
-              ? getGeneralTreeContextMenuItems()
-              : getTreeContextMenuItems(treeContextMenu?.node || selectedNode)
-          }
-        />
         <MainContentArea
           settingsTabProps={settingsTabProps}
           openInSplit={openInSplit}
@@ -4736,128 +3251,59 @@ const App = () => {
           isMinimalMode={isMinimalMode}
         />
 
-        {/* 🚀 OPTIMIZACIÓN: Lazy loading con Suspense */}
-        <Suspense fallback={null}>
-          <ImportDialog
-            visible={showImportDialog}
-            onHide={() => setShowImportDialog(false)}
-            onImportComplete={async (result) => {
-              try {
-                const res = await handleImportComplete(result);
-                return res;
-              } catch (error) {
-                console.error('🔍 DEBUG App.js - Error en handleImportComplete:', error);
-                throw error;
-              }
-            }}
-            showToast={(message) => toast.current?.show(message)}
-            presetOptions={importPreset}
-            targetFolderOptions={(() => {
-              const list = [];
-              const walk = (arr, prefix = '') => {
-                if (!Array.isArray(arr)) return;
-                for (const n of arr) {
-                  if (n && n.droppable) {
-                    list.push({ label: `${prefix}${n.label}`, value: n.key });
-                    if (n.children && n.children.length) walk(n.children, `${prefix}${n.label} / `);
-                  }
-                }
-              };
-              walk(nodes || []);
-              return list;
-            })()}
-            defaultTargetFolderKey={null}
-          />
-
-          {/* Diálogo Unificado de Exportación (Modal flotante) */}
-          {showExportDialog && (
-            <ImportWizardDialog
-              visible={showExportDialog}
-              onHide={() => setShowExportDialog(false)}
-              initialSource="export_nodeterm"
-              initialStep={1}
-              showToast={(message) => toast.current?.show(message)}
-            />
-          )}
-
-          {/* Diálogo Unificado de Restauración (Modal flotante) */}
-          {showImportExportDialog && (
-            <ImportWizardDialog
-              visible={showImportExportDialog}
-              onHide={() => setShowImportExportDialog(false)}
-              initialSource="nodeterm"
-              initialStep={1}
-              showToast={(message) => toast.current?.show(message)}
-              onImportComplete={async (result) => {
-                console.log('[App.js] Importación completada:', result);
-                // Recargar nodos si es necesario
-                const treeData = localStorage.getItem('basicapp2_tree_data');
-                if (treeData) {
-                  try {
-                    const parsed = JSON.parse(treeData);
-                    setNodes(parsed);
-                  } catch (error) {
-                    console.error('Error al recargar nodos:', error);
-                  }
-                }
-              }}
-            />
-          )}
-
-          {/* Import Wizard Dialog - Nueva interfaz unificada de importación */}
-          <ImportWizardDialog
-            visible={showImportWizard}
-            onHide={() => setShowImportWizard(false)}
-            onImportComplete={async (result) => {
-              try {
-                const res = await handleImportComplete(result);
-                return res;
-              } catch (error) {
-                console.error('[ImportWizard] Error en handleImportComplete:', error);
-                throw error;
-              }
-            }}
-            onImportPasswordsComplete={(payload) => {
-              // Dispatch event para el Password Manager
-              window.dispatchEvent(new CustomEvent('import-passwords-to-manager', { detail: payload }));
-            }}
-            showToast={(message) => toast.current?.show(message)}
-            targetFolderOptions={(() => {
-              const list = [];
-              const walk = (arr, prefix = '') => {
-                if (!Array.isArray(arr)) return;
-                for (const n of arr) {
-                  if (n && n.droppable) {
-                    list.push({ label: `${prefix}${n.label}`, value: n.key });
-                    if (n.children && n.children.length) walk(n.children, `${prefix}${n.label} / `);
-                  }
-                }
-              };
-              walk(nodes || []);
-              return list;
-            })()}
-            documentFolderOptions={documentFolderOptions}
-            defaultTargetFolderKey={null}
-          />
-
-          <WallixRefreshDialog
-              visible={showWallixRefreshDialog}
-              onHide={() => setShowWallixRefreshDialog(false)}
-              node={wallixRefreshNode}
-              onRefreshComplete={handleRefreshWallixComplete}
-              toast={toast}
-          />
-        </Suspense>
-
-        {/* Notificación flotante de actualización estilo Cursor */}
-        <UpdateNotificationToast
-          onOpenUpdateSettings={() => {
-            setShowSettingsDialog(true);
-          }}
+        {/* Menú contextual del árbol de la sidebar */}
+        <TreeContextMenu
+          treeContextMenu={treeContextMenu}
+          onClose={hideContextMenu}
+          items={
+            treeContextMenu?.isGeneral
+              ? getGeneralTreeContextMenuItems()
+              : getTreeContextMenuItems(treeContextMenu?.node || selectedNode)
+          }
         />
 
-        {/* ConfirmDialog para confirmaciones globales */}
-        <ConfirmDialog className="app-confirm-dialog" />
+        {/* Diálogos modales y overlays globales */}
+        <AppModals
+          needsUnlock={needsUnlock}
+          handleUnlockSuccess={handleUnlockSuccess}
+          secureStorage={secureStorage}
+          showCloudRestoreMasterKey={showCloudRestoreMasterKey}
+          cloudRestoreVaults={cloudRestoreVaults}
+          handleCloudRestoreMasterKeySuccess={handleCloudRestoreMasterKeySuccess}
+          setShowCloudRestoreMasterKey={setShowCloudRestoreMasterKey}
+          connectionSearchPaletteOpen={connectionSearchPaletteOpen}
+          closeConnectionSearchPalette={closeConnectionSearchPalette}
+          sidebarFilter={sidebarFilter}
+          setSidebarFilter={setSidebarFilter}
+          nodes={nodes}
+          findAllConnections={findAllConnections}
+          onOpenSSHConnection={onOpenSSHConnection}
+          onOpenRdpConnection={onOpenRdpConnection}
+          onOpenVncConnection={onOpenVncConnection}
+          openEditSSHDialog={openEditSSHDialog}
+          openEditRdpDialog={openEditRdpDialog}
+          expandedKeys={expandedKeys}
+          masterKey={masterKey}
+          iconTheme={iconTheme}
+          showImportDialog={showImportDialog}
+          setShowImportDialog={setShowImportDialog}
+          handleImportComplete={handleImportComplete}
+          toast={toast}
+          importPreset={importPreset}
+          showExportDialog={showExportDialog}
+          setShowExportDialog={setShowExportDialog}
+          showImportExportDialog={showImportExportDialog}
+          setShowImportExportDialog={setShowImportExportDialog}
+          setNodes={setNodes}
+          showImportWizard={showImportWizard}
+          setShowImportWizard={setShowImportWizard}
+          documentFolderOptions={documentFolderOptions}
+          showWallixRefreshDialog={showWallixRefreshDialog}
+          setShowWallixRefreshDialog={setShowWallixRefreshDialog}
+          wallixRefreshNode={wallixRefreshNode}
+          handleRefreshWallixComplete={handleRefreshWallixComplete}
+          setShowSettingsDialog={setShowSettingsDialog}
+        />
       </div>
     </ErrorBoundary>
   );
