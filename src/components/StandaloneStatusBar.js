@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { useStatusBarSessionHistory } from '../hooks/useStatusBarSessionHistory';
+import { systemStatsService } from '../services/SystemStatsService';
 
 const StandaloneStatusBar = React.memo(({ visible = true, style = {} }) => {
     const [statusStats, setStatusStats] = useState(null);
@@ -39,83 +40,23 @@ const StandaloneStatusBar = React.memo(({ visible = true, style = {} }) => {
     useEffect(() => {
         if (!visible) return;
 
-        let stopped = false;
-        let timer = null;
-
-        const handleBlur = () => {
-            stopped = true;
-            if (timer) clearInterval(timer);
-        };
-
-        const handleFocus = () => {
-            stopped = false;
-            if (timer) clearInterval(timer);
-            timer = setInterval(fetchStats, pollingInterval);
-            fetchStats();
-        };
-
-        window.addEventListener('blur', handleBlur);
-        window.addEventListener('focus', handleFocus);
-
-        const fetchStats = async () => {
-            try {
-                const systemStats = await window.electronAPI?.getSystemStats();
-                if (!systemStats || stopped) return;
-
-                const memTotalBytes = (systemStats.memory?.total || 0) * 1024 * 1024 * 1024;
-                const memUsedBytes = (systemStats.memory?.used || 0) * 1024 * 1024 * 1024;
-                const memFreeBytes = (systemStats.memory?.free || 0) * 1024 * 1024 * 1024;
-                const disk = Array.isArray(systemStats.disks)
-                    ? systemStats.disks.map(d => ({ fs: d.name, mount: d.mount, use: d.percentage, isNetwork: d.isNetwork, usedGb: d.used, totalGb: d.total }))
-                    : [];
-                const rxBytesPerSec = ((systemStats.network?.download || 0) * 1000000) / 8;
-                const txBytesPerSec = ((systemStats.network?.upload || 0) * 1000000) / 8;
+        const unsubscribe = systemStatsService.subscribe(async (stats) => {
+            if (stats) {
+                setStatusStats(stats);
+                setIsLoadingStats(false);
                 try {
                     const gpuData = await window.electron.system?.getGPUStats();
                     setGpuStats(gpuData && gpuData.ok ? gpuData : null);
                 } catch {
                     setGpuStats(null);
                 }
-
-                let distroVal = systemStats.platform === 'win32' ? 'windows' : (systemStats.platform === 'darwin' ? 'macos' : 'linux');
-                if (systemStats.platform === 'linux' && systemStats.osPrettyName) {
-                    const pretty = systemStats.osPrettyName.toLowerCase();
-                    const distros = ['ubuntu', 'debian', 'fedora', 'centos', 'arch', 'opensuse', 'redhat', 'rhel', 'alpine', 'kali', 'gentoo', 'linuxmint', 'pop'];
-                    const found = distros.find(d => pretty.includes(d));
-                    if (found) {
-                        distroVal = found === 'rhel' ? 'redhat' : found;
-                    }
-                }
-
-                const statsPayload = {
-                    cpu: Math.round((systemStats.cpu?.usage || 0) * 10) / 10,
-                    mem: { total: memTotalBytes, used: memUsedBytes, free: memFreeBytes },
-                    disk,
-                    network: { rx_speed: rxBytesPerSec, tx_speed: txBytesPerSec },
-                    networkInterfaces: Array.isArray(systemStats.networkInterfaces) ? systemStats.networkInterfaces : [],
-                    hostname: systemStats.hostname,
-                    ip: systemStats.ip || undefined,
-                    distro: distroVal,
-                    versionId: systemStats.osVersion || '',
-                    kernel: systemStats.kernel || '',
-                    platform: systemStats.platform || 'win32',
-                    arch: systemStats.arch || '',
-                    osPrettyName: systemStats.osPrettyName || '',
-                    uptime: systemStats.uptime || '',
-                    cpuMeta: {
-                        cores: systemStats.cpu?.cores || 0,
-                        model: systemStats.cpu?.model || '',
-                        perCpuLoad: systemStats.cpu?.perCpuLoad || [],
-                    },
-                };
-
-                setStatusStats(statsPayload);
-                setIsLoadingStats(false);
-            } catch (error) {
-                console.error('Error fetching system stats for standalone status bar:', error);
             }
-        };
+        });
 
+        return unsubscribe;
+    }, [visible]);
+
+    useEffect(() => {
         const handleStorageChange = (e) => {
             if (e.key === 'basicapp_statusbar_icon_theme') {
                 setStatusBarIconTheme(e.newValue || 'classic');
@@ -133,18 +74,11 @@ const StandaloneStatusBar = React.memo(({ visible = true, style = {} }) => {
         window.addEventListener('storage', handleStorageChange);
         window.addEventListener('statusbar-theme-changed', onThemeChanged);
 
-        fetchStats();
-        timer = setInterval(fetchStats, pollingInterval);
-
         return () => {
-            stopped = true;
-            if (timer) clearInterval(timer);
-            window.removeEventListener('blur', handleBlur);
-            window.removeEventListener('focus', handleFocus);
             window.removeEventListener('storage', handleStorageChange);
             window.removeEventListener('statusbar-theme-changed', onThemeChanged);
         };
-    }, [visible, pollingInterval]);
+    }, []);
 
     if (!visible) return null;
 

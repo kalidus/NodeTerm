@@ -4,6 +4,8 @@ import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import '@xterm/xterm/css/xterm.css';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
+import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
+import { attachTerminalRenderer } from '../utils/xtermRenderer';
 
 const AntigravityCliTerminal = forwardRef(({
   fontFamily = 'Consolas, "Courier New", monospace',
@@ -18,6 +20,7 @@ const AntigravityCliTerminal = forwardRef(({
   const fitAddon = useRef(null);
   const hasStartedRef = useRef(false);
   const isReadyRef = useRef(false);
+  const writeBufferRef = useRef(null);
   const terminalBg = theme?.background || '#0f172a';
 
   const fitAndSyncSize = () => {
@@ -75,6 +78,8 @@ const AntigravityCliTerminal = forwardRef(({
     term.current.loadAddon(new WebLinksAddon());
     term.current.open(terminalRef.current);
     fitAndSyncSize();
+    writeBufferRef.current = createXtermWriteBuffer(term.current);
+    attachTerminalRenderer(term.current);
     setTimeout(fitAndSyncSize, 80);
     setTimeout(fitAndSyncSize, 180);
     setTimeout(fitAndSyncSize, 320);
@@ -133,7 +138,7 @@ const AntigravityCliTerminal = forwardRef(({
     });
 
     const onDataUnsubscribe = window.electron?.ipcRenderer.on(`antigravitycli:data:${tabId}`, (data) => {
-      term.current?.write(data);
+      writeBufferRef.current?.write(data);
     });
 
     const onReadyUnsubscribe = window.electron?.ipcRenderer.on(`antigravitycli:ready:${tabId}`, () => {
@@ -180,6 +185,7 @@ const AntigravityCliTerminal = forwardRef(({
     }, ms));
 
     return () => {
+      writeBufferRef.current?.clear();
       resizeObserver.disconnect();
       window.removeEventListener('resize', handleWindowResize);
       document.removeEventListener('visibilitychange', handleVisibilityChange);

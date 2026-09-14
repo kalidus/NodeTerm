@@ -4,12 +4,13 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { Unicode11Addon } from '@xterm/addon-unicode11';
-import { WebglAddon } from '@xterm/addon-webgl';
 import '@xterm/xterm/css/xterm.css';
 import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
+import { attachTerminalRenderer } from '../utils/xtermRenderer';
+import { systemStatsService } from '../services/SystemStatsService';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
 
 const PowerShellTerminal = forwardRef(({
@@ -78,60 +79,15 @@ const PowerShellTerminal = forwardRef(({
         window.addEventListener('focus', handleFocus);
         window.addEventListener('blur', handleBlur);
 
-        const fetchStats = async () => {
-            try {
-                const systemStats = await window.electronAPI?.getSystemStats();
-                if (!systemStats) {
-                    return;
-                }
-                // Map worker stats ??? StatusBar expected shape
-                const memTotalBytes = (systemStats.memory?.total || 0) * 1024 * 1024 * 1024;
-                const memUsedBytes = (systemStats.memory?.used || 0) * 1024 * 1024 * 1024;
-                const disk = Array.isArray(systemStats.disks)
-                    ? systemStats.disks.map(d => ({ fs: d.name, mount: d.mount, use: d.percentage, isNetwork: d.isNetwork, usedGb: d.used, totalGb: d.total }))
-                    : [];
-                const rxBytesPerSec = ((systemStats.network?.download || 0) * 1000000) / 8; // Mb/s ??? B/s
-                const txBytesPerSec = ((systemStats.network?.upload || 0) * 1000000) / 8;   // Mb/s ??? B/s
-                const memFreeBytes = (systemStats.memory?.free || 0) * 1024 * 1024 * 1024;
-                const statsPayload = {
-                    cpu: Math.round((systemStats.cpu?.usage || 0) * 10) / 10,
-                    mem: { total: memTotalBytes, used: memUsedBytes, free: memFreeBytes },
-                    disk,
-                    network: { rx_speed: rxBytesPerSec, tx_speed: txBytesPerSec },
-                    networkInterfaces: Array.isArray(systemStats.networkInterfaces) ? systemStats.networkInterfaces : [],
-                    hostname: systemStats.hostname,
-                    ip: systemStats.ip,
-                    distro: window.electron?.platform === 'win32' ? 'windows' : (window.electron?.platform === 'darwin' ? 'macos' : 'linux'),
-                    versionId: systemStats.osVersion || '',
-                    kernel: systemStats.kernel || '',
-                    platform: systemStats.platform || window.electron?.platform || '',
-                    arch: systemStats.arch || '',
-                    osPrettyName: systemStats.osPrettyName || '',
-                    uptime: systemStats.uptime || '',
-                    cpuMeta: {
-                        cores: systemStats.cpu?.cores || 0,
-                        model: systemStats.cpu?.model || '',
-                        perCpuLoad: systemStats.cpu?.perCpuLoad || [],
-                    },
-                };
-                setStatusStats(statsPayload);
+        const unsubscribe = systemStatsService.subscribe((stats) => {
+            if (stats) {
+                setStatusStats(stats);
                 setIsLoadingStats(false);
-            } catch (error) {
-                console.error('Error obteniendo estad??sticas:', error);
             }
-        };
+        });
 
-        const loop = () => {
-            if (stopped) return;
-            fetchStats().finally(() => {
-                const ms = getIntervalMs();
-                timer = setTimeout(loop, ms);
-            });
-        };
-        loop();
         return () => {
-            stopped = true;
-            if (timer) clearTimeout(timer);
+            unsubscribe();
             window.removeEventListener('focus', handleFocus);
             window.removeEventListener('blur', handleBlur);
         };
@@ -277,16 +233,8 @@ const PowerShellTerminal = forwardRef(({
         term.current.loadAddon(new Unicode11Addon());
         term.current.unicode.activeVersion = '11';
 
-        // Load WebGL renderer for better performance
-        try {
-            const webglAddon = new WebglAddon();
-            webglAddon.onContextLoss(() => {
-                try { webglAddon.dispose(); } catch (_) {}
-            });
-            term.current.loadAddon(webglAddon);
-        } catch (e) {
-            console.warn('WebGL addon failed to load, falling back to canvas renderer:', e);
-        }
+        // Load hardware-accelerated renderer with Canvas 2D fallback
+        attachTerminalRenderer(term.current);
 
         // Open terminal in DOM
         term.current.open(terminalRef.current);

@@ -1,45 +1,87 @@
 /**
  * Utility for batching data writes to Xterm.js instances.
  * Prevents UI thread freezing during high-frequency stdout data bursts (e.g., cat large_file, docker logs).
+ * Uses an O(N) array-based chunk queue with backpressure protection.
  */
 
-const MAX_CHUNK_PER_FRAME = 65536; // 64 KB por fotograma para mantener 60 FPS
+const DEFAULT_MAX_CHUNK_PER_FRAME = 65536; // 64 KB por fotograma para mantener 60/120 FPS
+const MAX_BUFFER_BACKLOG_BYTES = 16 * 1024 * 1024; // 16 MB límite de contrapresión para prevenir OOM
 
-export function createXtermWriteBuffer(termRef) {
-  let queue = '';
+export function createXtermWriteBuffer(termRef, options = {}) {
+  const maxChunkPerFrame = options.maxChunkPerFrame || DEFAULT_MAX_CHUNK_PER_FRAME;
+  let chunks = [];
+  let pendingBytes = 0;
   let rafId = null;
 
   const flush = () => {
-    if (queue && termRef.current) {
-      try {
-        if (queue.length > MAX_CHUNK_PER_FRAME) {
-          const chunk = queue.slice(0, MAX_CHUNK_PER_FRAME);
-          queue = queue.slice(MAX_CHUNK_PER_FRAME);
-          termRef.current.write(chunk);
-          // Re-programar el siguiente chunk en el próximo fotograma de pantalla
-          rafId = requestAnimationFrame(flush);
-          return;
-        } else {
-          termRef.current.write(queue);
-          queue = '';
-        }
-      } catch (e) {
-        queue = '';
-      }
-    }
     rafId = null;
+    const term = termRef?.current;
+    if (!term || chunks.length === 0) {
+      chunks = [];
+      pendingBytes = 0;
+      return;
+    }
+
+    try {
+      let bytesThisFrame = 0;
+      let batch = '';
+
+      while (chunks.length > 0 && bytesThisFrame < maxChunkPerFrame) {
+        const nextChunk = chunks[0];
+        const nextLen = nextChunk.length;
+
+        if (bytesThisFrame + nextLen <= maxChunkPerFrame) {
+          batch += chunks.shift();
+          bytesThisFrame += nextLen;
+        } else {
+          // El fragmento restante supera el cupo de este fotograma
+          const remainingQuota = maxChunkPerFrame - bytesThisFrame;
+          batch += nextChunk.slice(0, remainingQuota);
+          chunks[0] = nextChunk.slice(remainingQuota);
+          bytesThisFrame += remainingQuota;
+          break;
+        }
+      }
+
+      pendingBytes = Math.max(0, pendingBytes - bytesThisFrame);
+      if (batch) {
+        term.write(batch);
+      }
+    } catch (_) {
+      chunks = [];
+      pendingBytes = 0;
+    }
+
+    // Si aún quedan fragmentos pendientes en la cola, programar el siguiente fotograma
+    if (chunks.length > 0 && termRef?.current) {
+      rafId = requestAnimationFrame(flush);
+    }
   };
 
   const write = (data) => {
     if (!data) return;
-    queue += data;
+    const dataStr = typeof data === 'string' ? data : String(data);
+    const dataLen = dataStr.length;
+
+    // Protección de contrapresión ante volcados masivos descontrolados
+    if (pendingBytes + dataLen > MAX_BUFFER_BACKLOG_BYTES) {
+      // Descartar la mitad más antigua de la cola acumulada para mantener responsividad
+      const half = Math.floor(chunks.length / 2);
+      chunks.splice(0, half);
+      pendingBytes = chunks.reduce((acc, c) => acc + c.length, 0);
+    }
+
+    chunks.push(dataStr);
+    pendingBytes += dataLen;
+
     if (!rafId) {
       rafId = requestAnimationFrame(flush);
     }
   };
 
   const clear = () => {
-    queue = '';
+    chunks = [];
+    pendingBytes = 0;
     if (rafId) {
       cancelAnimationFrame(rafId);
       rafId = null;
@@ -51,11 +93,13 @@ export function createXtermWriteBuffer(termRef) {
       cancelAnimationFrame(rafId);
       rafId = null;
     }
-    if (queue && termRef.current) {
+    const term = termRef?.current;
+    if (chunks.length > 0 && term) {
       try {
-        termRef.current.write(queue);
+        term.write(chunks.join(''));
       } catch (_) {}
-      queue = '';
+      chunks = [];
+      pendingBytes = 0;
     }
   };
 

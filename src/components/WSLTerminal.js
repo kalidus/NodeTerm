@@ -4,11 +4,13 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { Unicode11Addon } from '@xterm/addon-unicode11';
-import { WebglAddon } from '@xterm/addon-webgl';
 import '@xterm/xterm/css/xterm.css';
 import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
+import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
+import { attachTerminalRenderer } from '../utils/xtermRenderer';
+import { systemStatsService } from '../services/SystemStatsService';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
 
 const WSLTerminal = forwardRef(({
@@ -22,6 +24,7 @@ const WSLTerminal = forwardRef(({
 }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
+    const writeBufferRef = useRef(null);
     const fitAddon = useRef(null);
     const [isConnected, setIsConnected] = useState(false);
     const [statusStats, setStatusStats] = useState(null);
@@ -98,80 +101,37 @@ const WSLTerminal = forwardRef(({
         detectDistro();
     }, [tabId]);
 
-    // Poll Windows host stats (local) for WSL status bar
     useEffect(() => {
-        let stopped = false;
-        let timer = null;
-        const POLL_KEY = 'statusBarPollingInterval';
-        const getIntervalMs = () => {
-            try { return Math.max(1, parseInt(localStorage.getItem(POLL_KEY) || '3', 10)) * 1000; } catch { return 3000; } // Reducido de 5s a 3s para locales
+        const handleFocus = () => {
+            if (active && term.current) {
+                term.current.focus();
+            }
         };
 
-        // Optimizaci??n: pausar polling cuando la ventana pierda foco
-        const handleFocus = () => {
-            if (window.electronAPI?.send) {
-                window.electronAPI.send('window:focus-changed', true);
-            }
-        };
         const handleBlur = () => {
-            if (window.electronAPI?.send) {
-                window.electronAPI.send('window:focus-changed', false);
-            }
+            // Manejar blur si es necesario
         };
 
         window.addEventListener('focus', handleFocus);
         window.addEventListener('blur', handleBlur);
-        const fetchStats = async () => {
-            try {
-                const systemStats = await window.electronAPI?.getSystemStats();
-                if (!systemStats) return;
-                const memTotalBytes = (systemStats.memory?.total || 0) * 1024 * 1024 * 1024;
-                const memUsedBytes = (systemStats.memory?.used || 0) * 1024 * 1024 * 1024;
-                const disk = Array.isArray(systemStats.disks)
-                    ? systemStats.disks.map(d => ({ fs: d.name, mount: d.mount, use: d.percentage, isNetwork: d.isNetwork, usedGb: d.used, totalGb: d.total }))
-                    : [];
-                const rxBytesPerSec = ((systemStats.network?.download || 0) * 1000000) / 8;
-                const txBytesPerSec = ((systemStats.network?.upload || 0) * 1000000) / 8;
-                const memFreeBytes = (systemStats.memory?.free || 0) * 1024 * 1024 * 1024;
-                const payload = {
-                    cpu: Math.round((systemStats.cpu?.usage || 0) * 10) / 10,
-                    mem: { total: memTotalBytes, used: memUsedBytes, free: memFreeBytes },
-                    disk,
-                    network: { rx_speed: rxBytesPerSec, tx_speed: txBytesPerSec },
-                    networkInterfaces: Array.isArray(systemStats.networkInterfaces) ? systemStats.networkInterfaces : [],
-                    hostname: systemStats.hostname || undefined,
-                    ip: systemStats.ip || undefined,
-                    distro: distroId || 'ubuntu',
-                    versionId: systemStats.osVersion || '',
-                    kernel: linuxKernel || '',
-                    platform: 'linux',
-                    arch: linuxArch || systemStats.arch || '',
-                    osPrettyName: linuxPrettyName || '',
-                    uptime: systemStats.uptime || '',
-                    cpuMeta: {
-                        cores: systemStats.cpu?.cores || 0,
-                        model: systemStats.cpu?.model || '',
-                        perCpuLoad: systemStats.cpu?.perCpuLoad || [],
-                    },
-                };
-                setStatusStats(payload);
+
+        const unsubscribe = systemStatsService.subscribe((stats) => {
+            if (stats) {
+                setStatusStats(stats);
                 setIsLoadingStats(false);
-            } catch { }
-        };
-        const loop = () => {
-            if (stopped) return;
-            fetchStats().finally(() => {
-                timer = setTimeout(loop, getIntervalMs());
-            });
-        };
-        loop();
+                if (stats.distro) setDistroId(stats.distro);
+                if (stats.kernel) setLinuxKernel(stats.kernel);
+                if (stats.arch) setLinuxArch(stats.arch);
+                if (stats.osPrettyName) setLinuxPrettyName(stats.osPrettyName);
+            }
+        });
+
         return () => {
-            stopped = true;
-            if (timer) clearTimeout(timer);
+            unsubscribe();
             window.removeEventListener('focus', handleFocus);
             window.removeEventListener('blur', handleBlur);
         };
-    }, [distroId, linuxKernel, linuxArch, linuxPrettyName]);
+    }, []);
 
     useEffect(() => {
         const onStorage = (e) => {
@@ -275,6 +235,9 @@ const WSLTerminal = forwardRef(({
             bracketedPasteMode: true, // Enable for better paste support in Linux
         });
 
+        // Inicializar buffer de escrituras por fotograma (60/120 FPS batching)
+        writeBufferRef.current = createXtermWriteBuffer(term);
+
         // Add addons
         fitAddon.current = new FitAddon();
         term.current.loadAddon(fitAddon.current);
@@ -282,16 +245,8 @@ const WSLTerminal = forwardRef(({
         term.current.loadAddon(new Unicode11Addon());
         term.current.unicode.activeVersion = '11';
 
-        // Load WebGL renderer for better performance
-        try {
-            const webglAddon = new WebglAddon();
-            webglAddon.onContextLoss(() => {
-                try { webglAddon.dispose(); } catch (_) {}
-            });
-            term.current.loadAddon(webglAddon);
-        } catch (e) {
-            console.warn('WebGL addon failed to load, falling back to canvas renderer:', e);
-        }
+        // Load hardware-accelerated renderer with Canvas 2D fallback
+        attachTerminalRenderer(term.current);
 
         // Open terminal in DOM
         term.current.open(terminalRef.current);
@@ -366,7 +321,9 @@ const WSLTerminal = forwardRef(({
 
             // Listen for WSL output
             const dataListener = (data) => {
-                if (term.current) {
+                if (writeBufferRef.current) {
+                    writeBufferRef.current.write(data);
+                } else if (term.current) {
                     term.current.write(data);
                 }
             };
@@ -399,6 +356,9 @@ const WSLTerminal = forwardRef(({
 
             // Cleanup function
             return () => {
+                if (writeBufferRef.current) {
+                    writeBufferRef.current.clear();
+                }
                 resizeObserver.disconnect();
                 window.electron.ipcRenderer.send(`wsl:stop:${tabId}`);
                 if (onDataUnsubscribe) onDataUnsubscribe();

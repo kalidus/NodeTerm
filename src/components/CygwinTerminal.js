@@ -4,11 +4,13 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { Unicode11Addon } from '@xterm/addon-unicode11';
-import { WebglAddon } from '@xterm/addon-webgl';
 import '@xterm/xterm/css/xterm.css';
 import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
+import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
+import { attachTerminalRenderer } from '../utils/xtermRenderer';
+import { systemStatsService } from '../services/SystemStatsService';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
 
 const CygwinTerminal = forwardRef(({
@@ -22,6 +24,7 @@ const CygwinTerminal = forwardRef(({
 }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
+    const writeBufferRef = useRef(null);
     const fitAddon = useRef(null);
     const [statusStats, setStatusStats] = useState(null);
     const [isLoadingStats, setIsLoadingStats] = useState(true);
@@ -38,77 +41,22 @@ const CygwinTerminal = forwardRef(({
         const colors = themeObj.colors || {};
         return {
             '--statusbar-bg': colors.background,
-            '--statusbar-text': colors.text,
+            '--statusbar-fg': colors.foreground,
             '--statusbar-border': colors.border,
-            '--statusbar-icon-color': colors.iconColor,
-            '--statusbar-cpu': colors.cpuBarColor,
-            '--statusbar-mem': colors.memoryBarColor,
-            '--statusbar-disk': colors.diskBarColor,
-            '--statusbar-red-up': colors.networkUpColor,
-            '--statusbar-red-down': colors.networkDownColor,
-            '--statusbar-sparkline-color': colors.sparklineColor
+            '--statusbar-badge-bg': colors.badgeBg,
+            '--statusbar-badge-fg': colors.badgeFg
         };
     };
 
-    // Poll system stats
+    // Poll system stats consolidado
     useEffect(() => {
-        let stopped = false;
-        let timer = null;
-
-        const fetchStats = async () => {
-            try {
-                const systemStats = await window.electronAPI?.getSystemStats();
-                if (!systemStats) return;
-
-                const memTotalBytes = (systemStats.memory?.total || 0) * 1024 * 1024 * 1024;
-                const memUsedBytes = (systemStats.memory?.used || 0) * 1024 * 1024 * 1024;
-                const disk = Array.isArray(systemStats.disks)
-                    ? systemStats.disks.map(d => ({ fs: d.name, mount: d.mount, use: d.percentage, isNetwork: d.isNetwork, usedGb: d.used, totalGb: d.total }))
-                    : [];
-                const rxBytesPerSec = ((systemStats.network?.download || 0) * 1000000) / 8;
-                const txBytesPerSec = ((systemStats.network?.upload || 0) * 1000000) / 8;
-
-                const memFreeBytes = (systemStats.memory?.free || 0) * 1024 * 1024 * 1024;
-                const payload = {
-                    cpu: Math.round((systemStats.cpu?.usage || 0) * 10) / 10,
-                    mem: { total: memTotalBytes, used: memUsedBytes, free: memFreeBytes },
-                    disk,
-                    network: { rx_speed: rxBytesPerSec, tx_speed: txBytesPerSec },
-                    networkInterfaces: Array.isArray(systemStats.networkInterfaces) ? systemStats.networkInterfaces : [],
-                    hostname: systemStats.hostname || undefined,
-                    ip: systemStats.ip || undefined,
-                    distro: 'cygwin',
-                    versionId: systemStats.osVersion || '',
-                    kernel: systemStats.kernel || '',
-                    platform: systemStats.platform || window.electron?.platform || '',
-                    arch: systemStats.arch || '',
-                    osPrettyName: systemStats.osPrettyName || '',
-                    uptime: systemStats.uptime || '',
-                    cpuMeta: {
-                        cores: systemStats.cpu?.cores || 0,
-                        model: systemStats.cpu?.model || '',
-                        perCpuLoad: systemStats.cpu?.perCpuLoad || [],
-                    },
-                };
-                setStatusStats(payload);
+        const unsubscribe = systemStatsService.subscribe((stats) => {
+            if (stats) {
+                setStatusStats(stats);
                 setIsLoadingStats(false);
-            } catch (error) {
-                console.error('Error obteniendo estad??sticas:', error);
             }
-        };
-
-        const loop = () => {
-            if (stopped) return;
-            fetchStats().finally(() => {
-                timer = setTimeout(loop, 3000);
-            });
-        };
-        loop();
-
-        return () => {
-            stopped = true;
-            if (timer) clearTimeout(timer);
-        };
+        });
+        return unsubscribe;
     }, []);
 
     // Listen for storage events
@@ -222,6 +170,9 @@ const CygwinTerminal = forwardRef(({
             bracketedPasteMode: true,
         });
 
+        // Inicializar buffer de escrituras por fotograma (60/120 FPS batching)
+        writeBufferRef.current = createXtermWriteBuffer(term);
+
         // Add addons
         fitAddon.current = new FitAddon();
         term.current.loadAddon(fitAddon.current);
@@ -229,15 +180,8 @@ const CygwinTerminal = forwardRef(({
         term.current.loadAddon(new Unicode11Addon());
         term.current.unicode.activeVersion = '11';
 
-        try {
-            const webglAddon = new WebglAddon();
-            webglAddon.onContextLoss(() => {
-                try { webglAddon.dispose(); } catch (_) {}
-            });
-            term.current.loadAddon(webglAddon);
-        } catch (e) {
-            console.warn('WebGL addon failed to load:', e);
-        }
+        // Load hardware-accelerated renderer with Canvas 2D fallback
+        attachTerminalRenderer(term.current);
 
         term.current.open(terminalRef.current);
 
@@ -340,20 +284,13 @@ const CygwinTerminal = forwardRef(({
             });
 
             const dataListener = (data) => {
-                // console.log(`???? CygwinTerminal [${tabId}] recibi?? datos:`, { 
-                //     length: data?.length, 
-                //     preview: data?.substring(0, 50),
-                //     hasTerminal: !!term.current 
-                // });
-                if (term.current) {
+                if (writeBufferRef.current) {
+                    writeBufferRef.current.write(data);
+                } else if (term.current) {
                     term.current.write(data);
-                } else {
-                    console.error(`???? Cygwin ${tabId}: Terminal no disponible`);
                 }
             };
-            // console.log(`???? CygwinTerminal [${tabId}] registrando listener en canal: cygwin:data:${tabId}`);
             const onDataUnsubscribe = window.electron.ipcRenderer.on(`cygwin:data:${tabId}`, dataListener);
-            // console.log(`??? CygwinTerminal [${tabId}] listener registrado`);
 
             const errorListener = (error) => {
                 term.current?.writeln(`\x1b[31mCygwin Error: ${error}\x1b[0m`);
@@ -372,6 +309,9 @@ const CygwinTerminal = forwardRef(({
             terminalRef.current.addEventListener('contextmenu', contextMenuHandler);
 
             return () => {
+                if (writeBufferRef.current) {
+                    writeBufferRef.current.clear();
+                }
                 resizeObserver.disconnect();
                 document.removeEventListener('visibilitychange', handleVisibilityChange);
 

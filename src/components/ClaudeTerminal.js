@@ -4,6 +4,8 @@ import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import '@xterm/xterm/css/xterm.css';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
+import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
+import { attachTerminalRenderer } from '../utils/xtermRenderer';
 
 const ClaudeTerminal = forwardRef(({
   fontFamily = 'Consolas, "Courier New", monospace',
@@ -18,6 +20,7 @@ const ClaudeTerminal = forwardRef(({
   const fitAddon = useRef(null);
   const hasStartedRef = useRef(false);
   const isReadyRef = useRef(false);
+  const writeBufferRef = useRef(null);
   // Claude Code renderiza mejor con fondo sólido también en modo integrado
   // para evitar bordes/zonas con colores distintos.
   const terminalBg = theme?.background || '#111827';
@@ -76,6 +79,8 @@ const ClaudeTerminal = forwardRef(({
     term.current.loadAddon(new WebLinksAddon());
     term.current.open(terminalRef.current);
     fitAndSyncSize();
+    writeBufferRef.current = createXtermWriteBuffer(term.current);
+    attachTerminalRenderer(term.current);
     // Reintentos para asegurar ajuste correcto cuando el contenedor termina de montar
     setTimeout(fitAndSyncSize, 80);
     setTimeout(fitAndSyncSize, 180);
@@ -136,7 +141,7 @@ const ClaudeTerminal = forwardRef(({
     });
 
     const onDataUnsubscribe = window.electron?.ipcRenderer.on(`claude:data:${tabId}`, (data) => {
-      term.current?.write(data);
+      writeBufferRef.current?.write(data);
     });
 
     const onReadyUnsubscribe = window.electron?.ipcRenderer.on(`claude:ready:${tabId}`, () => {
@@ -185,6 +190,7 @@ const ClaudeTerminal = forwardRef(({
     }, ms));
 
     return () => {
+      writeBufferRef.current?.clear();
       resizeObserver.disconnect();
       window.removeEventListener('resize', handleWindowResize);
       document.removeEventListener('visibilitychange', handleVisibilityChange);

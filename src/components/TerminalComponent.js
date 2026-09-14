@@ -6,6 +6,7 @@ import { statusBarThemes } from '../themes/status-bar-themes';
 import { themes } from '../themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
+import { attachTerminalRenderer } from '../utils/xtermRenderer';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
 
 const TerminalComponent = forwardRef(({
@@ -230,7 +231,7 @@ const TerminalComponent = forwardRef(({
 
     useEffect(() => {
         if (!tabId || !xtermLib) return;
-        const { Terminal, FitAddon, WebLinksAddon, Unicode11Addon, WebglAddon } = xtermLib;
+        const { Terminal, FitAddon, WebLinksAddon, Unicode11Addon, WebglAddon, CanvasAddon } = xtermLib;
 
         // Cancelar timer de desconexi??n pendiente si existe
         // Esto evita desconectar la sesi??n SSH cuando el componente se remonta r??pidamente
@@ -301,16 +302,8 @@ const TerminalComponent = forwardRef(({
         // Load image addon - Comentado temporalmente por errores de require
         // term.current.loadAddon(new ImageAddon({ sixelScrolling: true }));
 
-        // Load and activate the WebGL renderer
-        try {
-            const webglAddon = new WebglAddon();
-            webglAddon.onContextLoss(() => {
-                try { webglAddon.dispose(); } catch (_) {}
-            });
-            term.current.loadAddon(webglAddon);
-        } catch (e) {
-            console.warn('WebGL addon failed to load, falling back to canvas renderer:', e);
-        }
+        // Load and activate the WebGL renderer with Canvas 2D fallback
+        attachTerminalRenderer(term.current, { WebglAddon, CanvasAddon });
 
         term.current.open(terminalRef.current);
         fitAddon.current.fit();

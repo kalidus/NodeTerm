@@ -197,6 +197,10 @@ if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU =
   app.commandLine.appendSwitch('enable-zero-copy');
   app.commandLine.appendSwitch('enable-webgl');
   app.commandLine.appendSwitch('enable-accelerated-video-decode');
+  app.commandLine.appendSwitch('enable-native-gpu-memory-buffers');
+  app.commandLine.appendSwitch('enable-features', 'CanvasOopRasterization,DirectComposition');
+  app.commandLine.appendSwitch('enable-smooth-scrolling');
+  app.commandLine.appendSwitch('disable-renderer-backgrounding');
 }
 
 // Windows: mismo ID que build.appId en prod (barra tras auto-update NSIS); ID distinto en dev

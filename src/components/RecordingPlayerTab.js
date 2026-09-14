@@ -6,6 +6,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
+import { attachTerminalRenderer } from '../utils/xtermRenderer';
 
 const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
   const terminalRef = useRef(null);
@@ -70,6 +71,7 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
     fitAddon.current = new FitAddon();
     term.loadAddon(fitAddon.current);
     term.open(terminalRef.current);
+    attachTerminalRenderer(term);
 
     try {
       fitAddon.current.fit();

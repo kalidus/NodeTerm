@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { systemStatsService } from '../services/SystemStatsService';
 
 /**
  * Formatea bytes por segundo a string legible (KB/s, MB/s, GB/s)
@@ -100,61 +101,52 @@ const HomeTelemetryPanel = ({
 
   useEffect(() => {
     let stopped = false;
-    let timer = null;
 
-    const fetchStats = async () => {
+    const unsubscribe = systemStatsService.subscribe(async (systemStatsPayload) => {
+      if (!systemStatsPayload || stopped) return;
+      const raw = systemStatsPayload.raw;
+      const cpuUsage = systemStatsPayload.cpu || 0;
+      const rxBytes = systemStatsPayload.network?.rx_speed || 0;
+      const txBytes = systemStatsPayload.network?.tx_speed || 0;
+
       try {
-        const systemStats = await window.electronAPI?.getSystemStats();
-        if (!systemStats || stopped) return;
-
-        const memTotal = (systemStats.memory?.total || 0) * 1024 * 1024 * 1024;
-        const memUsed = (systemStats.memory?.used || 0) * 1024 * 1024 * 1024;
-        const memFree = (systemStats.memory?.free || 0) * 1024 * 1024 * 1024;
-        const cpuUsage = Math.round((systemStats.cpu?.usage || 0) * 10) / 10;
-
-        const rxBytes = ((systemStats.network?.download || 0) * 1000000) / 8;
-        const txBytes = ((systemStats.network?.upload || 0) * 1000000) / 8;
-
-        try {
-          const gpuData = await window.electron?.system?.getGPUStats();
-          if (!stopped) setGpuStats(gpuData?.ok ? gpuData : null);
-        } catch {
-          if (!stopped) setGpuStats(null);
-        }
-
-        const payload = {
-          cpu: cpuUsage,
-          cpuModel: systemStats.cpu?.model || '',
-          cores: systemStats.cpu?.cores || 4,
-          perCpuLoad: Array.isArray(systemStats.cpu?.perCpuLoad) ? systemStats.cpu.perCpuLoad : [],
-          mem: { total: memTotal, used: memUsed, free: memFree },
-          memPercent: memTotal > 0 ? Math.round((memUsed / memTotal) * 100) : 0,
-          disks: Array.isArray(systemStats.disks) ? systemStats.disks : [],
-          network: { rx: rxBytes, tx: txBytes },
-          hostname: systemStats.hostname || 'localhost',
-          uptime: systemStats.uptime || '',
-          os: systemStats.osPrettyName || systemStats.platform || 'Linux/Windows'
-        };
-
-        if (!stopped) {
-          setStats(payload);
-          setCpuHistory((prev) => [...prev.slice(-20), cpuUsage]);
-          setNetRxHistory((prev) => [...prev.slice(-20), rxBytes / 1024]);
-          setNetTxHistory((prev) => [...prev.slice(-20), txBytes / 1024]);
-        }
-      } catch (err) {
-        console.warn('[HomeTelemetryPanel] Error fetching stats:', err);
+        const gpuData = await window.electron?.system?.getGPUStats();
+        if (!stopped) setGpuStats(gpuData?.ok ? gpuData : null);
+      } catch {
+        if (!stopped) setGpuStats(null);
       }
-    };
 
-    fetchStats();
-    timer = setInterval(fetchStats, pollingIntervalMs);
+      const memTotal = systemStatsPayload.mem?.total || 0;
+      const memUsed = systemStatsPayload.mem?.used || 0;
+      const memFree = systemStatsPayload.mem?.free || 0;
+
+      const payload = {
+        cpu: cpuUsage,
+        cpuModel: systemStatsPayload.cpuMeta?.model || '',
+        cores: systemStatsPayload.cpuMeta?.cores || 4,
+        perCpuLoad: systemStatsPayload.cpuMeta?.perCpuLoad || [],
+        mem: { total: memTotal, used: memUsed, free: memFree },
+        memPercent: memTotal > 0 ? Math.round((memUsed / memTotal) * 100) : 0,
+        disks: raw?.disks || [],
+        network: { rx: rxBytes, tx: txBytes },
+        hostname: systemStatsPayload.hostname || 'localhost',
+        uptime: systemStatsPayload.uptime || '',
+        os: systemStatsPayload.osPrettyName || systemStatsPayload.platform || 'Linux/Windows'
+      };
+
+      if (!stopped) {
+        setStats(payload);
+        setCpuHistory((prev) => [...prev.slice(-20), cpuUsage]);
+        setNetRxHistory((prev) => [...prev.slice(-20), rxBytes / 1024]);
+        setNetTxHistory((prev) => [...prev.slice(-20), txBytes / 1024]);
+      }
+    });
 
     return () => {
       stopped = true;
-      if (timer) clearInterval(timer);
+      unsubscribe();
     };
-  }, [pollingIntervalMs]);
+  }, []);
 
   const cpuLoad = stats?.cpu || 0;
   const memUsedGb = bytesToGb(stats?.mem?.used);

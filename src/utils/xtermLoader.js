@@ -16,14 +16,16 @@ export function loadXtermModules() {
     import('@xterm/addon-web-links'),
     import('@xterm/addon-unicode11'),
     import('@xterm/addon-webgl'),
+    import('@xterm/addon-canvas'),
     import('@xterm/xterm/css/xterm.css')
-  ]).then(([xterm, fit, webLinks, unicode11, webgl]) => {
+  ]).then(([xterm, fit, webLinks, unicode11, webgl, canvas]) => {
     cached = {
       Terminal: xterm.Terminal,
       FitAddon: fit.FitAddon,
       WebLinksAddon: webLinks.WebLinksAddon,
       Unicode11Addon: unicode11.Unicode11Addon,
-      WebglAddon: webgl.WebglAddon
+      WebglAddon: webgl.WebglAddon,
+      CanvasAddon: canvas.CanvasAddon
     };
     return cached;
   });

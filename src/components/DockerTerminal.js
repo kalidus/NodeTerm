@@ -4,11 +4,13 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { Unicode11Addon } from '@xterm/addon-unicode11';
-import { WebglAddon } from '@xterm/addon-webgl';
 import '@xterm/xterm/css/xterm.css';
 import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
+import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
+import { attachTerminalRenderer } from '../utils/xtermRenderer';
+import { systemStatsService } from '../services/SystemStatsService';
 
 const DockerTerminal = forwardRef(({
     fontFamily = '"FiraCode Nerd Font", Consolas, monospace',
@@ -21,6 +23,7 @@ const DockerTerminal = forwardRef(({
 }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
+    const writeBufferRef = useRef(null);
     const fitAddon = useRef(null);
     const [statusStats, setStatusStats] = useState(null);
     const [isLoadingStats, setIsLoadingStats] = useState(true);
@@ -37,79 +40,22 @@ const DockerTerminal = forwardRef(({
         const colors = themeObj.colors || {};
         return {
             '--statusbar-bg': colors.background,
-            '--statusbar-text': colors.text,
+            '--statusbar-fg': colors.foreground,
             '--statusbar-border': colors.border,
-            '--statusbar-icon-color': colors.iconColor,
-            '--statusbar-cpu': colors.cpuBarColor,
-            '--statusbar-mem': colors.memoryBarColor,
-            '--statusbar-disk': colors.diskBarColor,
-            '--statusbar-red-up': colors.networkUpColor,
-            '--statusbar-red-down': colors.networkDownColor,
-            '--statusbar-sparkline-color': colors.sparklineColor
+            '--statusbar-badge-bg': colors.badgeBg,
+            '--statusbar-badge-fg': colors.badgeFg
         };
     };
 
-    // Poll system stats
+    // Poll system stats consolidado
     useEffect(() => {
-        let stopped = false;
-        let timer = null;
-
-        const fetchStats = async () => {
-            try {
-                const systemStats = await window.electronAPI?.getSystemStats();
-                if (!systemStats) return;
-
-                const memTotalBytes = (systemStats.memory?.total || 0) * 1024 * 1024 * 1024;
-                const memUsedBytes = (systemStats.memory?.used || 0) * 1024 * 1024 * 1024;
-                const disk = Array.isArray(systemStats.disks)
-                    ? systemStats.disks.map(d => ({ fs: d.name, mount: d.mount, use: d.percentage, isNetwork: d.isNetwork, usedGb: d.used, totalGb: d.total }))
-                    : [];
-                const rxBytesPerSec = ((systemStats.network?.download || 0) * 1000000) / 8;
-                const txBytesPerSec = ((systemStats.network?.upload || 0) * 1000000) / 8;
-
-                const memFreeBytes = (systemStats.memory?.free || 0) * 1024 * 1024 * 1024;
-                const payload = {
-                    cpu: Math.round((systemStats.cpu?.usage || 0) * 10) / 10,
-                    mem: { total: memTotalBytes, used: memUsedBytes, free: memFreeBytes },
-                    disk,
-                    network: { rx_speed: rxBytesPerSec, tx_speed: txBytesPerSec },
-                    networkInterfaces: Array.isArray(systemStats.networkInterfaces) ? systemStats.networkInterfaces : [],
-                    hostname: systemStats.hostname || undefined,
-                    ip: systemStats.ip || undefined,
-                    distro: 'docker',
-                    versionId: systemStats.osVersion || '',
-                    kernel: systemStats.kernel || '',
-                    platform: systemStats.platform || window.electron?.platform || '',
-                    arch: systemStats.arch || '',
-                    osPrettyName: systemStats.osPrettyName || '',
-                    uptime: systemStats.uptime || '',
-                    cpuMeta: {
-                        cores: systemStats.cpu?.cores || 0,
-                        model: systemStats.cpu?.model || '',
-                        perCpuLoad: systemStats.cpu?.perCpuLoad || [],
-                    },
-                };
-                setStatusStats(payload);
+        const unsubscribe = systemStatsService.subscribe((stats) => {
+            if (stats) {
+                setStatusStats(stats);
                 setIsLoadingStats(false);
-            } catch (error) {
-                console.error('Error obteniendo estad??sticas:', error);
             }
-        };
-
-        const loop = () => {
-            if (stopped) return;
-            fetchStats().finally(() => {
-                timer = setTimeout(loop, 3000);
-            });
-        };
-
-        const initialTimer = setTimeout(loop, 500);
-
-        return () => {
-            stopped = true;
-            clearTimeout(initialTimer);
-            if (timer) clearTimeout(timer);
-        };
+        });
+        return unsubscribe;
     }, []);
 
     // Inicializar terminal
@@ -137,16 +83,11 @@ const DockerTerminal = forwardRef(({
         term.current.loadAddon(new WebLinksAddon());
         term.current.loadAddon(new Unicode11Addon());
 
-        // Intentar agregar WebGL addon para mejor rendimiento
-        try {
-            const webglAddon = new WebglAddon();
-            webglAddon.onContextLoss(() => {
-                try { webglAddon.dispose(); } catch (_) {}
-            });
-            term.current.loadAddon(webglAddon);
-        } catch (e) {
-            console.warn('WebGL addon no disponible para Docker');
-        }
+        // Inicializar buffer de escrituras por fotograma (60/120 FPS batching)
+        writeBufferRef.current = createXtermWriteBuffer(term);
+
+        // Cargar renderizador acelerado por hardware con fallback a Canvas 2D
+        attachTerminalRenderer(term.current);
 
         // Abrir terminal en elemento DOM
         term.current.open(terminalRef.current);
@@ -162,7 +103,9 @@ const DockerTerminal = forwardRef(({
 
         // Definir handlers
         const handleDockerOutput = (outputData) => {
-            if (term.current && outputData) {
+            if (writeBufferRef.current) {
+                writeBufferRef.current.write(outputData);
+            } else if (term.current && outputData) {
                 term.current.write(outputData);
             }
         };
@@ -222,6 +165,9 @@ const DockerTerminal = forwardRef(({
 
         // Cleanup
         return () => {
+            if (writeBufferRef.current) {
+                writeBufferRef.current.clear();
+            }
             if (window.electron) {
                 if (unsubscribeData) unsubscribeData();
                 if (unsubscribeError) unsubscribeError();
