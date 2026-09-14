@@ -105,8 +105,6 @@ const SettingsSidebarNav = ({
   };
 
   const handleMainItemClick = (tabId) => {
-    // Solo cambiar el tab si NO tiene subitems
-    // Si tiene subitems, solo expandir/contraer sin cambiar tab
     const item = navigationStructure.find(i => i.id === tabId);
     
     if (item && item.subitems.length === 0) {
@@ -114,9 +112,13 @@ const SettingsSidebarNav = ({
       onMainTabChange(tabId);
       onSubTabChange(null);
       console.log(`[SettingsSidebarNav] Main item clicked (sin subitems): ${tabId}`);
-    } else {
-      // Item CON subitems: solo log
-      console.log(`[SettingsSidebarNav] Item con subitems clickeado (expandir/contraer): ${tabId}`);
+    } else if (item && item.subitems.length > 0) {
+      // Item CON subitems: si no estaba activo, activar el primer subitem
+      if (activeMainTab !== tabId) {
+        onMainTabChange(tabId);
+        onSubTabChange(item.subitems[0].id);
+      }
+      console.log(`[SettingsSidebarNav] Item con subitems clickeado: ${tabId}`);
     }
   };
 
