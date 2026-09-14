@@ -538,26 +538,26 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
           setSshTabs(prevTabs => {
             const tabId = `${node.key}_${Date.now()}`;
             const sshConfig = {
-              host: node.data.useBastionWallix ? node.data.targetServer : node.data.host,
-              username: node.data.user,
-              password: node.data.password,
-              port: node.data.port || 22,
+              host: node.data?.useBastionWallix ? node.data?.targetServer : (node.data?.host || ''),
+              username: node.data?.user || '',
+              password: node.data?.password || '',
+              port: node.data?.port || 22,
               originalKey: node.key,
               name: node.label,
-              useBastionWallix: node.data.useBastionWallix || false,
-              bastionHost: node.data.bastionHost || '',
-              bastionUser: node.data.bastionUser || '',
-              x11Forwarding: node.data.x11Forwarding || false,
-              agentForwarding: node.data.agentForwarding || false,
-              autoRecording: node.data.autoRecording || false,
-              proxyJumpEnabled: node.data.proxyJumpEnabled || false,
-              jumpHost: node.data.jumpHost || '',
-              jumpPort: node.data.jumpPort || 22,
-              jumpUser: node.data.jumpUser || '',
-              jumpAuthMethod: node.data.jumpAuthMethod || 'password',
-              jumpPassword: node.data.jumpPassword || '',
-              jumpPrivateKey: node.data.jumpPrivateKey || '',
-              hostKeyPolicy: node.data.hostKeyPolicy || 'warn_new'
+              useBastionWallix: node.data?.useBastionWallix || false,
+              bastionHost: node.data?.bastionHost || '',
+              bastionUser: node.data?.bastionUser || '',
+              x11Forwarding: node.data?.x11Forwarding || false,
+              agentForwarding: node.data?.agentForwarding || false,
+              autoRecording: node.data?.autoRecording || false,
+              proxyJumpEnabled: node.data?.proxyJumpEnabled || false,
+              jumpHost: node.data?.jumpHost || '',
+              jumpPort: node.data?.jumpPort || 22,
+              jumpUser: node.data?.jumpUser || '',
+              jumpAuthMethod: node.data?.jumpAuthMethod || 'password',
+              jumpPassword: node.data?.jumpPassword || '',
+              jumpPrivateKey: node.data?.jumpPrivateKey || '',
+              hostKeyPolicy: node.data?.hostKeyPolicy || 'warn_new'
             };
             const newTab = {
               key: tabId,
@@ -603,9 +603,9 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
           setSshTabs(prevTabs => {
             const tabId = `audit_${node.key}_${Date.now()}`;
             const connectionInfo = {
-              host: node.data.useBastionWallix ? node.data.targetServer : node.data.host,
-              username: node.data.user,
-              port: node.data.port || 22,
+              host: node.data?.useBastionWallix ? node.data?.targetServer : (node.data?.host || ''),
+              username: node.data?.user || '',
+              port: node.data?.port || 22,
               name: node.label
             };
 
@@ -637,8 +637,8 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
             const connection = {
               type: 'ssh',
               name: node.label,
-              host: node.data?.useBastionWallix ? node.data?.targetServer : node.data?.host,
-              username: node.data?.user,
+              host: node.data?.useBastionWallix ? node.data?.targetServer : (node.data?.host || ''),
+              username: node.data?.user || '',
               port: node.data?.port || 22,
               password: node.data?.password || ''
             };
@@ -776,7 +776,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         label: 'Duplicar',
         icon: 'pi pi-copy',
         command: () => {
-          if (sidebarCallbacksRef.current.duplicateSSH) {
+          if (sidebarCallbacksRef.current?.duplicateSSH) {
             sidebarCallbacksRef.current.duplicateSSH(node);
           }
         }
@@ -785,7 +785,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         label: 'Editar',
         icon: 'pi pi-pencil',
         command: () => {
-          if (sidebarCallbacksRef.current.editSSH) {
+          if (sidebarCallbacksRef.current?.editSSH) {
             sidebarCallbacksRef.current.editSSH(node);
           }
         }
@@ -794,7 +794,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         label: 'Eliminar',
         icon: 'pi pi-trash',
         command: () => {
-          if (sidebarCallbacksRef.current.deleteNode) {
+          if (sidebarCallbacksRef.current?.deleteNode) {
             sidebarCallbacksRef.current.deleteNode(node.key, node.label);
           }
         }
@@ -862,7 +862,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         label: 'Duplicar',
         icon: 'pi pi-copy',
         command: () => {
-          if (sidebarCallbacksRef.current.duplicateRDP) {
+          if (sidebarCallbacksRef.current?.duplicateRDP) {
             sidebarCallbacksRef.current.duplicateRDP(node);
           }
         }
@@ -871,7 +871,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         label: 'Editar',
         icon: 'pi pi-pencil',
         command: () => {
-          if (sidebarCallbacksRef.current.editRDP) {
+          if (sidebarCallbacksRef.current?.editRDP) {
             sidebarCallbacksRef.current.editRDP(node);
           }
         }
@@ -880,7 +880,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         label: 'Eliminar',
         icon: 'pi pi-trash',
         command: () => {
-          if (sidebarCallbacksRef.current.deleteNode) {
+          if (sidebarCallbacksRef.current?.deleteNode) {
             sidebarCallbacksRef.current.deleteNode(node.key, node.label);
           }
         }
@@ -947,7 +947,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         label: 'Duplicar',
         icon: 'pi pi-copy',
         command: () => {
-          if (sidebarCallbacksRef.current.duplicateVNC) {
+          if (sidebarCallbacksRef.current?.duplicateVNC) {
             sidebarCallbacksRef.current.duplicateVNC(node);
           }
         }
@@ -956,7 +956,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         label: 'Editar',
         icon: 'pi pi-pencil',
         command: () => {
-          if (sidebarCallbacksRef.current.editVNC) {
+          if (sidebarCallbacksRef.current?.editVNC) {
             sidebarCallbacksRef.current.editVNC(node);
           }
         }
@@ -965,7 +965,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         label: 'Eliminar',
         icon: 'pi pi-trash',
         command: () => {
-          if (sidebarCallbacksRef.current.deleteNode) {
+          if (sidebarCallbacksRef.current?.deleteNode) {
             sidebarCallbacksRef.current.deleteNode(node.key, node.label);
           }
         }
@@ -1015,7 +1015,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         label: 'Editar',
         icon: 'pi pi-pencil',
         command: () => {
-          if (sidebarCallbacksRef.current.editFileConnection) {
+          if (sidebarCallbacksRef.current?.editFileConnection) {
             sidebarCallbacksRef.current.editFileConnection(node);
           }
         }
@@ -1024,7 +1024,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         label: 'Eliminar',
         icon: 'pi pi-trash',
         command: () => {
-          if (sidebarCallbacksRef.current.deleteNode) {
+          if (sidebarCallbacksRef.current?.deleteNode) {
             sidebarCallbacksRef.current.deleteNode(node.key, node.label);
           }
         }
@@ -1066,7 +1066,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         label: 'Eliminar',
         icon: 'pi pi-trash',
         command: () => {
-          if (sidebarCallbacksRef.current.deleteNode) {
+          if (sidebarCallbacksRef.current?.deleteNode) {
             sidebarCallbacksRef.current.deleteNode(node.key, node.label);
           }
         }
@@ -1077,7 +1077,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         label: 'Abrir Túnel',
         icon: 'pi pi-share-alt',
         command: () => {
-          if (sidebarCallbacksRef.current.openSSHTunnel) {
+          if (sidebarCallbacksRef.current?.openSSHTunnel) {
             sidebarCallbacksRef.current.openSSHTunnel(node, nodes);
           }
         }
@@ -1149,7 +1149,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         label: 'Duplicar',
         icon: 'pi pi-copy',
         command: () => {
-          if (sidebarCallbacksRef.current.duplicateSSHTunnel) {
+          if (sidebarCallbacksRef.current?.duplicateSSHTunnel) {
             sidebarCallbacksRef.current.duplicateSSHTunnel(node);
           }
         }
@@ -1158,7 +1158,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         label: 'Editar',
         icon: 'pi pi-pencil',
         command: () => {
-          if (sidebarCallbacksRef.current.editSSHTunnel) {
+          if (sidebarCallbacksRef.current?.editSSHTunnel) {
             sidebarCallbacksRef.current.editSSHTunnel(node);
           }
         }
@@ -1167,7 +1167,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
         label: 'Eliminar',
         icon: 'pi pi-trash',
         command: () => {
-          if (sidebarCallbacksRef.current.deleteNode) {
+          if (sidebarCallbacksRef.current?.deleteNode) {
             sidebarCallbacksRef.current.deleteNode(node.key, node.label);
           }
         }

@@ -1,4 +1,4 @@
-import React, { useRef, useState, useLayoutEffect } from 'react';
+import React, { useRef, useState, useLayoutEffect, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 
 const SubMenuItem = ({ item, onClose }) => {
@@ -29,6 +29,12 @@ const SubMenuItem = ({ item, onClose }) => {
       className="tree-menu-item has-submenu"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsOpen((prev) => !prev);
+      }}
       style={{
         position: 'relative',
         padding: '8px 12px',
@@ -62,6 +68,8 @@ const SubMenuItem = ({ item, onClose }) => {
             padding: '4px 0',
             zIndex: 1000002
           }}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
         >
           {item.items.map((subItem, idx) => {
             if (subItem.separator) {
@@ -94,11 +102,18 @@ const SubMenuItem = ({ item, onClose }) => {
                   color: 'var(--ui-context-text, #e2e8f0)',
                   userSelect: 'none'
                 }}
+                onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
+                  e.preventDefault();
                   e.stopPropagation();
-                  if (!subItem.disabled) {
-                    onClose();
-                    if (subItem.command) subItem.command({ originalEvent: e, item: subItem });
+                  if (subItem.disabled) return;
+                  if (typeof onClose === 'function') onClose();
+                  if (subItem.command) {
+                    try {
+                      subItem.command({ originalEvent: e, item: subItem });
+                    } catch (err) {
+                      console.error('[TreeContextMenu] Submenu command error:', err);
+                    }
                   }
                 }}
               >
@@ -120,6 +135,64 @@ const TreeContextMenu = ({
 }) => {
   const menuRef = useRef(null);
   const [adjustedCoords, setAdjustedCoords] = useState(null);
+
+  const handleClose = useCallback(() => {
+    if (typeof onClose === 'function') {
+      onClose();
+    }
+  }, [onClose]);
+
+  // Cerrar menú globalmente al hacer clic fuera, perder foco, scroll o pulsar Escape
+  useEffect(() => {
+    if (!treeContextMenu) return;
+
+    const handlePointerDown = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        handleClose();
+      }
+    };
+
+    const handleContextMenu = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        handleClose();
+      }
+    };
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        handleClose();
+      }
+    };
+
+    const handleBlur = () => {
+      handleClose();
+    };
+
+    const handleScroll = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        handleClose();
+      }
+    };
+
+    // Usar capture: true para recibir el evento antes de cualquier stopPropagation
+    document.addEventListener('pointerdown', handlePointerDown, true);
+    document.addEventListener('contextmenu', handleContextMenu, true);
+    document.addEventListener('keydown', handleKeyDown, true);
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('resize', handleScroll);
+    window.addEventListener('scroll', handleScroll, true);
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown, true);
+      document.removeEventListener('contextmenu', handleContextMenu, true);
+      document.removeEventListener('keydown', handleKeyDown, true);
+      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('resize', handleScroll);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [treeContextMenu, handleClose]);
 
   useLayoutEffect(() => {
     if (treeContextMenu && menuRef.current) {
@@ -157,25 +230,38 @@ const TreeContextMenu = ({
 
   return ReactDOM.createPortal(
     <>
-      {/* Backdrop transparente a pantalla completa: intercepta clics fuera sin cerrar inesperadamente por hover/resize */}
+      {/* Backdrop transparente a pantalla completa: intercepta clics fuera inmediatamente */}
       <div
+        className="tree-context-menu-backdrop"
         style={{
           position: 'fixed',
           top: 0,
           left: 0,
-          right: 0,
-          bottom: 0,
+          width: '100vw',
+          height: '100vh',
           zIndex: 999998,
+          background: 'rgba(0, 0, 0, 0.0001)', // Garantiza hit-testing en Chromium
           cursor: 'default'
         }}
-        onClick={(e) => {
+        onPointerDown={(e) => {
+          e.preventDefault();
           e.stopPropagation();
-          onClose();
+          handleClose();
+        }}
+        onMouseDown={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleClose();
+        }}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleClose();
         }}
         onContextMenu={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          onClose();
+          handleClose();
         }}
       />
 
@@ -196,6 +282,8 @@ const TreeContextMenu = ({
           padding: '4px 0',
           userSelect: 'none'
         }}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       >
         {items.map((item, idx) => {
           if (item.separator) {
@@ -212,7 +300,7 @@ const TreeContextMenu = ({
           }
 
           if (item.items && item.items.length > 0) {
-            return <SubMenuItem key={idx} item={item} onClose={onClose} />;
+            return <SubMenuItem key={idx} item={item} onClose={handleClose} />;
           }
 
           const isDanger = item.className && item.className.includes('p-menuitem-danger');
@@ -232,11 +320,18 @@ const TreeContextMenu = ({
                 color: isDanger ? 'var(--red-400, #f87171)' : 'var(--ui-context-text, #e2e8f0)',
                 userSelect: 'none'
               }}
+              onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
-                if (!item.disabled) {
-                  onClose();
-                  if (item.command) item.command({ originalEvent: e, item });
+                if (item.disabled) return;
+                handleClose();
+                if (item.command) {
+                  try {
+                    item.command({ originalEvent: e, item });
+                  } catch (err) {
+                    console.error('[TreeContextMenu] Command execution error:', err);
+                  }
                 }
               }}
             >
