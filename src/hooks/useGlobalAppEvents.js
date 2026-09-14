@@ -841,11 +841,15 @@ export const useGlobalAppEvents = ({
         duplicateSSHTunnel(node);
       }
     };
-    sidebarCallbacksRef.current.deleteNode = (nodeKey, nodeLabel) => {
-      const nodeInfo = findParentNodeAndIndex(nodes, nodeKey);
-      const hasChildren = !!(nodeInfo.node && Array.isArray(nodeInfo.node.children) && nodeInfo.node.children.length);
-      confirmDeleteNode(nodeKey, nodeLabel, hasChildren, nodes, setNodes);
-    };
+    if (!sidebarCallbacksRef.current.deleteNode) {
+      sidebarCallbacksRef.current.deleteNode = (nodeKey, nodeLabel) => {
+        const nodeInfo = findParentNodeAndIndex ? findParentNodeAndIndex(nodes, nodeKey) : { node: null };
+        const hasChildren = !!(nodeInfo?.node && Array.isArray(nodeInfo.node.children) && nodeInfo.node.children.length);
+        if (confirmDeleteNode) {
+          confirmDeleteNode(nodeKey, nodeLabel, hasChildren, nodes, setNodes);
+        }
+      };
+    }
   }, [
     nodes,
     setNodes,

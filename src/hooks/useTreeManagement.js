@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import connectionStore from '../utils/connectionStore';
+import { appConfirm } from '../components/ui/AppConfirm';
 
 export const useTreeManagement = ({ toast, confirmDialog }) => {
 
@@ -300,16 +301,15 @@ export const useTreeManagement = ({ toast, confirmDialog }) => {
       ? `¿Estás seguro de que deseas eliminar la carpeta "${nodeName}" y todo su contenido?`
       : `¿Estás seguro de que deseas eliminar "${nodeName}"?`;
 
-    confirmDialog({
+    appConfirm({
       message: message,
-      header: 'Confirmar eliminacion',
-      icon: 'pi pi-exclamation-triangle',
-      acceptClassName: 'p-button-danger',
-      className: 'app-confirm-dialog',
-      accept: () => deleteNode(nodes, setNodes, nodeKey),
-      reject: () => { }
+      header: 'Confirmar eliminación',
+      severity: 'danger',
+      acceptLabel: 'Eliminar',
+      rejectLabel: 'Cancelar',
+      accept: () => deleteNode(nodes, setNodes, nodeKey)
     });
-  }, [confirmDialog, deleteNode]);
+  }, [deleteNode]);
 
   return {
     // Utilidades básicas

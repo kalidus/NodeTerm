@@ -30,6 +30,7 @@ import { Card } from 'primereact/card';
 import { Toast } from 'primereact/toast';
 import { Button } from 'primereact/button';
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
+import { appConfirm } from './ui/AppConfirm';
 import { TabView, TabPanel } from 'primereact/tabview';
 
 import { ContextMenu } from 'primereact/contextmenu';
@@ -3331,8 +3332,8 @@ if (typeof window !== 'undefined') {
     }
   };
 
-  // Hacer disponible confirmDialog globalmente
-  window.confirmDialog = confirmDialog;
+  // Hacer disponible confirmDialog globalmente con la API unificada appConfirm
+  window.confirmDialog = (options) => appConfirm(options);
 }
 
 export default App;

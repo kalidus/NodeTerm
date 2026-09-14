@@ -16,6 +16,7 @@ import { cvssStore } from '../../stores/cvssStore';
 import { cvssReportService } from '../../services/reports/CvssReportService';
 import { CvssAuditorService } from '../../services/cvss/CvssAuditorService';
 import AppDialog from '../ui/AppDialog';
+import { appConfirm } from '../ui/AppConfirm';
 
 // ─── Paleta de severidad ─────────────────────────────────────────────────────
 const SEVERITY_CONFIG = {
@@ -347,10 +348,10 @@ const CvssCalculatorPanel = () => {
   };
 
   const handleDeleteTemplate = (id) => {
-    confirmDialog({
+    appConfirm({
       message: '¿Eliminar este template?',
       header: 'Confirmar eliminación',
-      icon: 'pi pi-trash',
+      severity: 'danger',
       acceptLabel: 'Eliminar',
       rejectLabel: 'Cancelar',
       accept: () => {
@@ -363,10 +364,10 @@ const CvssCalculatorPanel = () => {
   };
 
   const handleDeleteHistory = (id) => {
-    confirmDialog({
+    appConfirm({
       message: '¿Eliminar este registro del historial?',
       header: 'Confirmar eliminación',
-      icon: 'pi pi-trash',
+      severity: 'danger',
       acceptLabel: 'Eliminar',
       rejectLabel: 'Cancelar',
       accept: () => {
@@ -379,10 +380,10 @@ const CvssCalculatorPanel = () => {
   };
 
   const handleClearHistory = () => {
-    confirmDialog({
+    appConfirm({
       message: '¿Limpiar todo el historial?',
       header: 'Confirmar',
-      icon: 'pi pi-exclamation-triangle',
+      severity: 'danger',
       acceptLabel: 'Limpiar todo',
       rejectLabel: 'Cancelar',
       accept: () => {
@@ -1232,7 +1233,7 @@ const CvssCalculatorPanel = () => {
           padding: 0.7rem 0.75rem 0.6rem !important;
         }
       `}</style>
-      <ConfirmDialog />
+      <ConfirmDialog className="app-confirm-dialog" />
 
       {feedback && (
         <Message severity={feedback.severity} text={feedback.text} style={{ borderRadius: '8px' }} />

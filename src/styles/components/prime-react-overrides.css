@@ -110,13 +110,13 @@ body .p-checkbox .p-checkbox-box[style*="background"] {
   z-index: 1000008 !important;
 }
 
-/* Diálogos y ConfirmDialogs siempre por encima de fondos y capas */
-.p-dialog-mask.p-component-overlay,
-.p-dialog-mask:has(.app-confirm-dialog) {
+/* Diálogos, máscaras y ConfirmDialogs siempre por encima de fondos, toolbars y barras de estado */
+.p-dialog-mask {
   z-index: 1000004 !important;
 }
 
-.p-confirm-dialog.app-confirm-dialog {
+.p-dialog,
+.p-confirm-dialog {
   z-index: 1000005 !important;
 }
 

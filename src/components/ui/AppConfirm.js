@@ -52,6 +52,14 @@ export function appConfirm(options = {}) {
   const defaults = SEVERITY_DEFAULTS[severity] || SEVERITY_DEFAULTS.warn;
 
   return new Promise((resolve) => {
+    let settled = false;
+    const finish = (accepted) => {
+      if (!settled) {
+        settled = true;
+        resolve(accepted);
+      }
+    };
+
     try {
       confirmDialog({
         message,
@@ -65,14 +73,23 @@ export function appConfirm(options = {}) {
           try {
             if (typeof accept === 'function') accept();
           } finally {
-            resolve(true);
+            finish(true);
           }
         },
         reject: () => {
           try {
             if (typeof reject === 'function') reject();
           } finally {
-            resolve(false);
+            finish(false);
+          }
+        },
+        onHide: (result) => {
+          try {
+            if (result !== 'accept' && result !== 'reject') {
+              if (typeof reject === 'function') reject();
+            }
+          } finally {
+            finish(false);
           }
         },
         ...rest
@@ -84,13 +101,13 @@ export function appConfirm(options = {}) {
         const ok = window.confirm(text);
         if (ok) {
           if (typeof accept === 'function') accept();
-          resolve(true);
+          finish(true);
         } else {
           if (typeof reject === 'function') reject();
-          resolve(false);
+          finish(false);
         }
       } catch {
-        resolve(false);
+        finish(false);
       }
     }
   });

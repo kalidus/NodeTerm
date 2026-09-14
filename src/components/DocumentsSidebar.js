@@ -4,6 +4,7 @@ import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
 import { Tree } from 'primereact/tree';
 import AppDialog from './ui/AppDialog';
+import { appConfirm } from './ui/AppConfirm';
 import { ContextMenu } from 'primereact/contextmenu';
 import { sessionActionIconThemes } from '../themes/session-action-icons';
 import { iconThemes } from '../themes/icon-themes';
@@ -612,18 +613,15 @@ const DocumentsSidebar = ({
       });
     };
 
-    if (confirmDialog) {
-      confirmDialog({
-        message: `¿Eliminar la nota rápida "${noteNode.label}"?`,
-        header: 'Confirmar eliminación',
-        icon: 'pi pi-exclamation-triangle',
-        acceptClassName: 'p-button-danger',
-        accept: performDelete
-      });
-    } else {
-      performDelete();
-    }
-  }, [confirmDialog, showToast, setTrashedDocuments]);
+    appConfirm({
+      message: `¿Eliminar la nota rápida "${noteNode.label}"?`,
+      header: 'Confirmar eliminación',
+      severity: 'danger',
+      acceptLabel: 'Eliminar',
+      rejectLabel: 'Cancelar',
+      accept: performDelete
+    });
+  }, [showToast, setTrashedDocuments]);
 
   const handleCreateNewNote = useCallback(() => {
     createNewDocumentInTree(getParentKeyForNewNote());

@@ -2381,26 +2381,14 @@ const Sidebar = React.memo(({
               }
             };
 
-            const dialogToUse = confirmDialog || window.confirmDialog;
-            if (dialogToUse) {
-              dialogToUse({
-                message: `¿Eliminar la carpeta de favoritos "${nodeLabel}"?`,
-                header: 'Confirmar eliminación',
-                icon: 'pi pi-exclamation-triangle',
-                acceptClassName: 'p-button-danger',
-                accept: executeFavoriteGroupDeletion
-              });
-            } else {
-              appConfirm({
-                message: `¿Eliminar la carpeta de favoritos "${nodeLabel}"?`,
-                header: 'Confirmar',
-                severity: 'danger',
-                acceptLabel: 'Aceptar',
-                rejectLabel: 'Cancelar'
-              }).then(ok => {
-                if (ok) executeFavoriteGroupDeletion();
-              });
-            }
+            appConfirm({
+              message: `¿Eliminar la carpeta de favoritos "${nodeLabel}"?`,
+              header: 'Confirmar eliminación',
+              severity: 'danger',
+              acceptLabel: 'Eliminar',
+              rejectLabel: 'Cancelar',
+              accept: executeFavoriteGroupDeletion
+            });
             return;
           }
 
@@ -2483,27 +2471,18 @@ const Sidebar = React.memo(({
           };
 
           // Mostrar diálogo de confirmación antes de eliminar
-          const dialogToUse = confirmDialog || window.confirmDialog;
+          const message = hasChildren
+            ? `¿Estás seguro de que deseas eliminar la carpeta "${nodeLabel}" y todo su contenido? Esta acción no se puede deshacer.`
+            : `¿Estás seguro de que deseas eliminar "${nodeLabel}"? Esta acción no se puede deshacer.`;
 
-          if (dialogToUse) {
-            const message = hasChildren
-              ? `¿Estás seguro de que deseas eliminar la carpeta "${nodeLabel}" y todo su contenido? Esta acción no se puede deshacer.`
-              : `¿Estás seguro de que deseas eliminar "${nodeLabel}"? Esta acción no se puede deshacer.`;
-
-            dialogToUse({
-              message: message,
-              header: 'Confirmar eliminación',
-              icon: 'pi pi-exclamation-triangle',
-              acceptClassName: 'p-button-danger',
-              accept: executeDeletion,
-              reject: () => {
-                // Usuario canceló la eliminación
-              }
-            });
-          } else {
-            // Fallback si no hay confirmDialog disponible
-            executeDeletion();
-          }
+          appConfirm({
+            message: message,
+            header: 'Confirmar eliminación',
+            severity: 'danger',
+            acceptLabel: 'Eliminar',
+            rejectLabel: 'Cancelar',
+            accept: executeDeletion
+          });
         }
       };
     }

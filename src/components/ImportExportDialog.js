@@ -502,14 +502,14 @@ const ImportExportDialog = ({ visible, onHide, showToast, onImportComplete, isEm
       ? (t('import.confirmReplace') || '⚠️ Se REEMPLAZARÁN todos los datos existentes. Esta acción NO se puede deshacer. ¿Continuar?')
       : (t('import.confirmMerge') || '¿Fusionar estos datos con los existentes?');
 
-    confirmDialog({
+    appConfirm({
       message: message,
       header: t('import.confirmation') || 'Confirmación',
+      severity: importMode === 'replace' ? 'danger' : 'info',
       icon: importMode === 'replace' ? 'pi pi-exclamation-triangle' : 'pi pi-question-circle',
       acceptLabel: t('common.yes') || 'Sí',
       rejectLabel: t('common.no') || 'No',
-      accept: () => handleImport(),
-      acceptClassName: importMode === 'replace' ? 'p-button-danger' : 'p-button-primary'
+      accept: () => handleImport()
     });
   };
 

@@ -11,6 +11,7 @@ import { Dropdown } from 'primereact/dropdown';
 import { Message } from 'primereact/message';
 import { FolderDialog } from './Dialogs';
 import PasswordDetailsPanel from './PasswordDetailsPanel';
+import { appConfirm } from './ui/AppConfirm';
 import { iconThemes } from '../themes/icon-themes';
 import { FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
 import { useTranslation } from '../i18n/hooks/useTranslation';
@@ -1431,18 +1432,14 @@ const PasswordManagerSidebar = ({
       });
     };
 
-    const dialogToUse = confirmDialog || window.confirmDialog;
-    if (dialogToUse) {
-      dialogToUse({
-        message: `¿Estás seguro de que deseas eliminar la carpeta "${folder.label}" y todo su contenido?`,
-        header: 'Confirmar eliminación',
-        icon: 'pi pi-exclamation-triangle',
-        acceptClassName: 'p-button-danger',
-        accept: executeDelete
-      });
-    } else {
-      executeDelete();
-    }
+    appConfirm({
+      message: `¿Estás seguro de que deseas eliminar la carpeta "${folder.label}" y todo su contenido?`,
+      header: 'Confirmar eliminación',
+      severity: 'danger',
+      acceptLabel: 'Eliminar',
+      rejectLabel: 'Cancelar',
+      accept: executeDelete
+    });
   };
 
   // Menú contextual para el área vacía del árbol
