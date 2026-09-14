@@ -65,55 +65,108 @@ export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImpo
           label: getText('appMenu.reload'),
           icon: 'pi pi-refresh',
           shortcut: 'Ctrl+R',
-          command: () => window.electronAPI?.reload && window.electronAPI.reload()
+          command: () => {
+            if (window.electronAPI?.reload) {
+              window.electronAPI.reload();
+            } else if (window.electron?.ipcRenderer?.invoke) {
+              window.electron.ipcRenderer.invoke('app:reload');
+            } else {
+              window.location.reload();
+            }
+          }
         },
         {
           label: getText('appMenu.forceReload'),
           icon: 'pi pi-replay',
           shortcut: 'Ctrl+Shift+R',
-          command: () => window.electronAPI?.forceReload && window.electronAPI.forceReload()
+          command: () => {
+            if (window.electronAPI?.forceReload) {
+              window.electronAPI.forceReload();
+            } else if (window.electron?.ipcRenderer?.invoke) {
+              window.electron.ipcRenderer.invoke('app:force-reload');
+            } else {
+              window.location.reload(true);
+            }
+          }
         },
         { separator: true },
         {
           label: getText('appMenu.devTools'),
           icon: 'pi pi-wrench',
           shortcut: 'F12',
-          command: () => window.electronAPI?.toggleDevTools && window.electronAPI.toggleDevTools()
+          command: () => {
+            if (window.electronAPI?.toggleDevTools) {
+              window.electronAPI.toggleDevTools();
+            } else if (window.electron?.ipcRenderer?.invoke) {
+              window.electron.ipcRenderer.invoke('app:toggle-dev-tools');
+            }
+          }
         },
         { separator: true },
         {
           label: getText('appMenu.zoomIn'),
           icon: 'pi pi-search-plus',
           shortcut: 'Ctrl++',
-          command: () => window.electronAPI?.zoomIn && window.electronAPI.zoomIn()
+          command: () => {
+            if (window.electronAPI?.zoomIn) {
+              window.electronAPI.zoomIn();
+            } else if (window.electron?.ipcRenderer?.invoke) {
+              window.electron.ipcRenderer.invoke('app:zoom-in');
+            }
+          }
         },
         {
           label: getText('appMenu.zoomOut'),
           icon: 'pi pi-search-minus',
           shortcut: 'Ctrl+-',
-          command: () => window.electronAPI?.zoomOut && window.electronAPI.zoomOut()
+          command: () => {
+            if (window.electronAPI?.zoomOut) {
+              window.electronAPI.zoomOut();
+            } else if (window.electron?.ipcRenderer?.invoke) {
+              window.electron.ipcRenderer.invoke('app:zoom-out');
+            }
+          }
         },
         {
           label: getText('appMenu.actualSize'),
           icon: 'pi pi-expand',
           shortcut: 'Ctrl+0',
-          command: () => window.electronAPI?.actualSize && window.electronAPI.actualSize()
+          command: () => {
+            if (window.electronAPI?.actualSize) {
+              window.electronAPI.actualSize();
+            } else if (window.electron?.ipcRenderer?.invoke) {
+              window.electron.ipcRenderer.invoke('app:actual-size');
+            }
+          }
         },
         { separator: true },
         {
           label: getText('appMenu.fullscreen'),
           icon: 'pi pi-window-maximize',
           shortcut: 'F11',
-          command: () => window.electronAPI?.toggleFullscreen && window.electronAPI.toggleFullscreen()
+          command: () => {
+            if (window.electronAPI?.toggleFullscreen) {
+              window.electronAPI.toggleFullscreen();
+            } else if (window.electron?.ipcRenderer?.invoke) {
+              window.electron.ipcRenderer.invoke('app:toggle-fullscreen');
+            }
+          }
         },
         { separator: true },
         {
           label: getText('appMenu.unblockForms'),
           icon: 'pi pi-wrench',
           command: () => {
-            // Llamar a la función global para desbloquear formularios
             if (window.handleUnblockForms) {
               window.handleUnblockForms();
+            } else {
+              document.querySelectorAll('.p-component-overlay, .p-dialog-mask').forEach(el => {
+                if (!el.querySelector('.p-dialog')) el.remove();
+              });
+              document.querySelectorAll('input, select, textarea').forEach(el => {
+                el.removeAttribute('disabled');
+                el.style.pointerEvents = 'auto';
+              });
             }
           }
         }
@@ -137,46 +190,57 @@ export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImpo
       label: getText('appMenu.about'),
       icon: 'pi pi-info-circle',
       command: () => {
-        window.electronAPI?.getVersionInfo && window.electronAPI.getVersionInfo().then(versionInfo => {
-          // Crear overlay de fondo
+        const showDialog = (versionInfo = {}) => {
+          document.getElementById('nodeterm-about-dialog-overlay')?.remove();
+
           const overlay = document.createElement('div');
+          overlay.id = 'nodeterm-about-dialog-overlay';
           overlay.style.cssText = `
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 10000;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.65);
+            z-index: 1000005;
             display: flex;
             align-items: center;
             justify-content: center;
           `;
 
+          const localInfo = getVersionInfo();
+          const info = {
+            appName: versionInfo.appName || localInfo.appName || 'NodeTerm',
+            appVersion: versionInfo.appVersion || localInfo.appVersion || '1.7.5',
+            electronVersion: versionInfo.electronVersion || (typeof process !== 'undefined' && process.versions?.electron) || 'N/A',
+            nodeVersion: versionInfo.nodeVersion || (typeof process !== 'undefined' && process.versions?.node) || 'N/A',
+            chromeVersion: versionInfo.chromeVersion || (typeof process !== 'undefined' && process.versions?.chrome) || 'N/A'
+          };
+
           const aboutDialog = document.createElement('div');
           aboutDialog.style.cssText = `
-            background: var(--ui-sidebar-bg, #fff);
-            border: 1px solid var(--ui-sidebar-border, #ddd);
+            background: var(--ui-dialog-bg, var(--ui-sidebar-bg, #1e293b));
+            border: 1px solid var(--ui-dialog-border, var(--ui-sidebar-border, rgba(255, 255, 255, 0.15)));
             border-radius: 8px;
             padding: 24px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
             min-width: 350px;
             max-width: 500px;
-            color: var(--ui-text-primary, #333);
+            color: var(--ui-dialog-text, var(--ui-text-primary, #fff));
             font-family: var(--ui-font-family, inherit) !important;
             font-size: var(--ui-font-size, 14px);
           `;
 
           aboutDialog.innerHTML = `
-            <h3 style="margin: 0 0 16px 0; font-size: calc(var(--ui-font-size, 14px) + 4px); font-weight: 600; text-align: center;">${versionInfo.appName || 'NodeTerm'}</h3>
+            <h3 style="margin: 0 0 16px 0; font-size: calc(var(--ui-font-size, 14px) + 4px); font-weight: 600; text-align: center;">${info.appName}</h3>
             <div style="margin: 16px 0;">
-              <p style="margin: 8px 0; font-size: var(--ui-font-size, 14px);"><strong>${getText('appMenu.version')}:</strong> ${versionInfo.appVersion || getVersionInfo().appVersion}</p>
-              <p style="margin: 8px 0; font-size: var(--ui-font-size, 14px);"><strong>Electron:</strong> ${versionInfo.electronVersion || 'N/A'}</p>
-              <p style="margin: 8px 0; font-size: var(--ui-font-size, 14px);"><strong>Node.js:</strong> ${versionInfo.nodeVersion || 'N/A'}</p>
-              <p style="margin: 8px 0; font-size: var(--ui-font-size, 14px);"><strong>Chrome:</strong> ${versionInfo.chromeVersion || 'N/A'}</p>
+              <p style="margin: 8px 0; font-size: var(--ui-font-size, 14px);"><strong>${getText('appMenu.version')}:</strong> ${info.appVersion}</p>
+              <p style="margin: 8px 0; font-size: var(--ui-font-size, 14px);"><strong>Electron:</strong> ${info.electronVersion}</p>
+              <p style="margin: 8px 0; font-size: var(--ui-font-size, 14px);"><strong>Node.js:</strong> ${info.nodeVersion}</p>
+              <p style="margin: 8px 0; font-size: var(--ui-font-size, 14px);"><strong>Chrome:</strong> ${info.chromeVersion}</p>
             </div>
             <div style="margin-top: 16px; padding: 12px; background: rgba(234, 74, 170, 0.1); border: 1px solid rgba(234, 74, 170, 0.3); border-radius: 8px; text-align: center;">
-              <p style="margin: 0 0 8px 0; font-size: calc(var(--ui-font-size, 14px) - 1px); color: var(--ui-text-primary, #333);">
+              <p style="margin: 0 0 8px 0; font-size: calc(var(--ui-font-size, 14px) - 1px); color: var(--ui-dialog-text, var(--ui-text-primary, #fff));">
                 💖 <strong>¿Te gusta NodeTerm?</strong> Apoya su desarrollo en GitHub Sponsors.
               </p>
               <button id="sponsorAboutBtn" style="
@@ -192,8 +256,8 @@ export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImpo
             </div>
             <div style="margin-top: 20px; text-align: center;">
               <button id="closeAboutDialog" style="
-                background: var(--primary-color, #007ad9);
-                color: white;
+                background: var(--primary-color, var(--ui-button-primary, #007ad9));
+                color: var(--primary-color-text, var(--ui-button-primary-text, white));
                 border: none;
                 padding: 8px 18px;
                 border-radius: 4px;
@@ -205,22 +269,25 @@ export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImpo
           `;
 
           overlay.appendChild(aboutDialog);
-          // Asegurar que overlay no bloquee inputs si queda colgado
           document.body.appendChild(overlay);
-          overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) {
-              closeDialog();
-            }
-          });
 
-          // Eventos para cerrar el diálogo
           const closeDialog = () => {
             if (document.body.contains(overlay)) {
               document.body.removeChild(overlay);
             }
+            document.removeEventListener('keydown', handleEsc);
           };
 
-          document.getElementById('closeAboutDialog').addEventListener('click', closeDialog);
+          const handleEsc = (e) => {
+            if (e.key === 'Escape') {
+              closeDialog();
+            }
+          };
+
+          overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) closeDialog();
+          });
+          document.getElementById('closeAboutDialog')?.addEventListener('click', closeDialog);
           document.getElementById('sponsorAboutBtn')?.addEventListener('click', () => {
             const sponsorUrl = 'https://github.com/sponsors/kalidus';
             if (window.electronAPI?.openExternal) {
@@ -229,23 +296,16 @@ export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImpo
               window.electron.import.openExternal(sponsorUrl);
             }
           });
-          overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) {
-              closeDialog();
-            }
-          });
-
-          // Cerrar con ESC
-          const handleEsc = (e) => {
-            if (e.key === 'Escape') {
-              closeDialog();
-              document.removeEventListener('keydown', handleEsc);
-            }
-          };
           document.addEventListener('keydown', handleEsc);
-        }).catch(error => {
-          console.error('Error obteniendo información de versión:', error);
-        });
+        };
+
+        const getInfoPromise = window.electronAPI?.getVersionInfo
+          ? window.electronAPI.getVersionInfo().catch(() => getVersionInfo())
+          : (window.electron?.app?.getVersionInfo
+            ? window.electron.app.getVersionInfo().catch(() => getVersionInfo())
+            : Promise.resolve(getVersionInfo()));
+
+        getInfoPromise.then(info => showDialog(info || {})).catch(() => showDialog(getVersionInfo()));
       }
     },
     { separator: true },
@@ -254,6 +314,18 @@ export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImpo
       icon: 'pi pi-sign-out',
       shortcut: 'Ctrl+Q',
       command: () => {
+        const doQuit = () => {
+          if (window.electronAPI?.quitApp) {
+            window.electronAPI.quitApp();
+          } else if (window.electron?.app?.quit) {
+            window.electron.app.quit();
+          } else if (window.electron?.ipcRenderer?.send) {
+            window.electron.ipcRenderer.send('app-quit');
+          } else {
+            window.close();
+          }
+        };
+
         appConfirm({
           message: getText('appMenu.exitConfirm'),
           header: 'Confirmar',
@@ -262,7 +334,12 @@ export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImpo
           rejectLabel: 'Cancelar'
         }).then(ok => {
           if (ok) {
-            window.electronAPI?.quitApp && window.electronAPI.quitApp();
+            doQuit();
+          }
+        }).catch(err => {
+          console.warn('[appMenu] Error en confirmación de salida, usando fallback nativo:', err);
+          if (window.confirm(getText('appMenu.exitConfirm'))) {
+            doQuit();
           }
         });
       }
@@ -358,6 +435,7 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
     // No cerrar si el clic ocurre dentro del menú principal, un submenú o el botón disparador
     if (contextMenu && contextMenu.contains(e.target)) return;
     if (activeSubmenu && activeSubmenu.contains(e.target)) return;
+    if (e.target?.closest?.('.app-menu-surface') || e.target?.closest?.(`.${baseClass}`) || e.target?.closest?.(`.${baseClass}-submenu`)) return;
     if (triggerEl && typeof triggerEl.contains === 'function' && triggerEl.contains(e.target)) return;
 
     cleanupMenus();
@@ -522,18 +600,18 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
 
         document.body.appendChild(activeSubmenu);
 
-        // Posicionar submenú de manera segura
+        // Posicionar submenú de manera segura con solapamiento de 2px
         setTimeout(() => {
           if (isCleanedUp || !activeSubmenu || !document.body.contains(activeSubmenu)) return;
           const parentItemRect = menuItem.getBoundingClientRect();
           const submenuRect = activeSubmenu.getBoundingClientRect();
           const margin = 8;
 
-          let subLeft = parentItemRect.right + 2;
+          let subLeft = parentItemRect.right - 2;
           let subTop = parentItemRect.top;
 
           if (subLeft + submenuRect.width > window.innerWidth - margin) {
-            subLeft = parentItemRect.left - submenuRect.width - 2;
+            subLeft = parentItemRect.left - submenuRect.width + 2;
           }
           if (subLeft < margin) subLeft = margin;
 
@@ -552,7 +630,14 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
     } else {
       // Elementos normales
       menuItem.addEventListener('mouseenter', () => {
-        const allMenuItems = contextMenu.querySelectorAll('.menu-item-unified');
+        // Si hay submenú abierto y nos movemos a otro elemento en el menú principal, cerrarlo
+        if (!isSubmenu && activeSubmenu && document.body.contains(activeSubmenu)) {
+          document.body.removeChild(activeSubmenu);
+          activeSubmenu = null;
+        }
+
+        const container = menuItem.closest('.app-menu-surface') || contextMenu;
+        const allMenuItems = container.querySelectorAll('.menu-item-unified');
         allMenuItems.forEach(it => {
           if (it !== menuItem) {
             it.style.backgroundColor = 'transparent';

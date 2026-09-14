@@ -52,30 +52,47 @@ export function appConfirm(options = {}) {
   const defaults = SEVERITY_DEFAULTS[severity] || SEVERITY_DEFAULTS.warn;
 
   return new Promise((resolve) => {
-    confirmDialog({
-      message,
-      header,
-      icon: icon || defaults.icon,
-      acceptLabel: acceptLabel || 'Aceptar',
-      rejectLabel: rejectLabel || 'Cancelar',
-      acceptClassName: acceptClassName || defaults.acceptClassName,
-      className: 'app-confirm-dialog',
-      accept: () => {
-        try {
+    try {
+      confirmDialog({
+        message,
+        header,
+        icon: icon || defaults.icon,
+        acceptLabel: acceptLabel || 'Aceptar',
+        rejectLabel: rejectLabel || 'Cancelar',
+        acceptClassName: acceptClassName || defaults.acceptClassName,
+        className: 'app-confirm-dialog',
+        accept: () => {
+          try {
+            if (typeof accept === 'function') accept();
+          } finally {
+            resolve(true);
+          }
+        },
+        reject: () => {
+          try {
+            if (typeof reject === 'function') reject();
+          } finally {
+            resolve(false);
+          }
+        },
+        ...rest
+      });
+    } catch (err) {
+      console.warn('[AppConfirm] Error al abrir confirmDialog de PrimeReact, recurriendo a window.confirm:', err);
+      try {
+        const text = typeof message === 'string' ? message : (header || 'Confirmar');
+        const ok = window.confirm(text);
+        if (ok) {
           if (typeof accept === 'function') accept();
-        } finally {
           resolve(true);
-        }
-      },
-      reject: () => {
-        try {
+        } else {
           if (typeof reject === 'function') reject();
-        } finally {
           resolve(false);
         }
-      },
-      ...rest
-    });
+      } catch {
+        resolve(false);
+      }
+    }
   });
 }
 

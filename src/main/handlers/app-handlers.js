@@ -22,9 +22,18 @@ const fs = require('fs');
 function registerAppHandlers(dependencies) {
   const {
     mainWindow,
-    disconnectAllGuacamoleConnections,
-    packageJson
+    disconnectAllGuacamoleConnections
   } = dependencies;
+
+  // Cargar packageJson de forma segura con fallback
+  let packageJson = dependencies.packageJson;
+  if (!packageJson) {
+    try {
+      packageJson = require(path.join(__dirname, '..', '..', '..', 'package.json'));
+    } catch {
+      packageJson = { name: 'nodeterm', version: '1.7.5' };
+    }
+  }
 
   // Asegurar que isAppQuitting sea un objeto válido con propiedad value
   const isAppQuitting = dependencies.isAppQuitting || { value: false };
@@ -34,14 +43,14 @@ function registerAppHandlers(dependencies) {
 
   // Handler para recargar la ventana
   ipcMain.handle('app:reload', () => {
-    if (mainWindow) {
-      mainWindow.reload();
+    if (mainWindow && mainWindow.webContents) {
+      mainWindow.webContents.reload();
     }
   });
 
   // Handler para recarga forzada (ignorando caché)
   ipcMain.handle('app:force-reload', () => {
-    if (mainWindow) {
+    if (mainWindow && mainWindow.webContents) {
       // Intentar cerrar conexiones Guacamole antes de recargar el renderer
       try {
         // Not awaited on purpose; quick cleanup then reload
@@ -53,7 +62,7 @@ function registerAppHandlers(dependencies) {
 
   // Handler para alternar DevTools
   ipcMain.handle('app:toggle-dev-tools', () => {
-    if (mainWindow) {
+    if (mainWindow && mainWindow.webContents) {
       if (mainWindow.webContents.isDevToolsOpened()) {
         mainWindow.webContents.closeDevTools();
       } else {
@@ -64,7 +73,7 @@ function registerAppHandlers(dependencies) {
 
   // Handler para zoom in
   ipcMain.handle('app:zoom-in', () => {
-    if (mainWindow) {
+    if (mainWindow && mainWindow.webContents) {
       const currentZoom = mainWindow.webContents.getZoomLevel();
       mainWindow.webContents.setZoomLevel(Math.min(currentZoom + 0.5, 3));
     }
@@ -72,7 +81,7 @@ function registerAppHandlers(dependencies) {
 
   // Handler para zoom out
   ipcMain.handle('app:zoom-out', () => {
-    if (mainWindow) {
+    if (mainWindow && mainWindow.webContents) {
       const currentZoom = mainWindow.webContents.getZoomLevel();
       mainWindow.webContents.setZoomLevel(Math.max(currentZoom - 0.5, -3));
     }
@@ -80,7 +89,7 @@ function registerAppHandlers(dependencies) {
 
   // Handler para tamaño real (zoom 0)
   ipcMain.handle('app:actual-size', () => {
-    if (mainWindow) {
+    if (mainWindow && mainWindow.webContents) {
       mainWindow.webContents.setZoomLevel(0);
     }
   });
@@ -96,9 +105,10 @@ function registerAppHandlers(dependencies) {
 
   // IPC handler para obtener información de versión
   ipcMain.handle('get-version-info', () => {
+    const pkg = packageJson || {};
     return {
-      appVersion: packageJson.version,
-      appName: packageJson.name,
+      appVersion: pkg.version || '1.7.5',
+      appName: pkg.name || 'NodeTerm',
       electronVersion: process.versions.electron,
       nodeVersion: process.versions.node,
       chromeVersion: process.versions.chrome,
