@@ -21,6 +21,7 @@ const SidebarIconRail = React.memo(({
   panelOpen,
   onSectionClick,
   onSettingsClick,
+  onAppMenuClick,
   sessionActionIconTheme = 'modern',
   aiClientsEnabled = {},
   onOpenAIClient,
@@ -33,13 +34,19 @@ const SidebarIconRail = React.memo(({
   const { t } = useTranslation('common');
 
   const handleAppMenuClick = useCallback((event) => {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    if (typeof onAppMenuClick === 'function') {
+      onAppMenuClick(event);
+      return;
+    }
     const importCallback = onShowImportDialog || (() => {});
     const exportCallback = onShowExportDialog || (() => {});
     const importExportCallback = onShowImportExportDialog || (() => {});
     const wizardCallback = onShowImportWizard || (() => {});
     const menuStructure = createAppMenu(importCallback, exportCallback, importExportCallback, t, wizardCallback);
     createContextMenu(event, menuStructure, 'app-context-menu-sidebar');
-  }, [onShowImportDialog, onShowExportDialog, onShowImportExportDialog, onShowImportWizard, t]);
+  }, [onAppMenuClick, onShowImportDialog, onShowExportDialog, onShowImportExportDialog, onShowImportWizard, t]);
 
   const cliClients = ['opencode', 'geminicli', 'codexcli', 'antigravitycli', 'hermescli', 'claude'];
   const appClients = ['anythingllm', 'openwebui', 'librechat', 'agentzero', 'openclaw', 'opennotebook'];
@@ -177,7 +184,13 @@ const SidebarIconRail = React.memo(({
           style={{ '--rail-item-color': 'var(--ui-sidebar-text)' }}
         >
           <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: ICON_SIZE, height: ICON_SIZE }}>
-            {sessionActionIconThemes[sessionActionIconTheme]?.icons.menu || sessionActionIconThemes.modern.icons.menu}
+            {sessionActionIconThemes[sessionActionIconTheme]?.icons.menu || sessionActionIconThemes.modern?.icons?.menu || (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            )}
           </span>
         </button>
       </div>

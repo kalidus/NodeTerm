@@ -1198,7 +1198,9 @@ const Sidebar = React.memo(({
   };
 
   // Función para manejar el menú de aplicación (unificada)
-  const handleAppMenuClick = (event) => {
+  const handleAppMenuClick = useCallback((event) => {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
     // Usar los callbacks pasados como props, o el estado local como fallback
     const importCallback = onShowImportDialog || setShowImportDialog;
     const exportCallback = onShowExportDialog || (() => console.warn('onShowExportDialog no disponible'));
@@ -1206,7 +1208,7 @@ const Sidebar = React.memo(({
     const wizardCallback = onShowImportWizard || (() => console.warn('onShowImportWizard no disponible'));
     const menuStructure = createAppMenu(importCallback, exportCallback, importExportCallback, t, wizardCallback);
     createContextMenu(event, menuStructure, 'app-context-menu-sidebar');
-  };
+  }, [onShowImportDialog, setShowImportDialog, onShowExportDialog, onShowImportExportDialog, onShowImportWizard, t]);
 
   // Compactación progresiva al redimensionar (iconos fijos, texto/acciones se desvanecen con transición)
   useEffect(() => {
@@ -3566,6 +3568,7 @@ const Sidebar = React.memo(({
         onSectionClick={handleIconRailSectionClick}
         onSettingsClick={() => setShowSettingsDialog(true)}
         onSettingsDialogClick={() => setShowSettingsDialog(true)}
+        onAppMenuClick={handleAppMenuClick}
         sessionActionIconTheme={sessionActionIconTheme}
         aiClientsEnabled={aiClientsEnabled}
         onOpenAIClient={handleOpenAIClient}

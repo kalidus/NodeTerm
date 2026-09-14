@@ -718,6 +718,8 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
 
   // Función para manejar el menú de aplicación del TitleBar
   const handleAppMenuClick = (event) => {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
     const menuStructure = createAppMenu(onShowImportDialog, onShowExportDialog, onShowImportExportDialog, t, onShowImportWizard);
     createContextMenu(event, menuStructure, 'app-context-menu-unified');
     return;

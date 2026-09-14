@@ -273,27 +273,58 @@ export const createAppMenu = (onShowImportDialog, onShowExportDialog, onShowImpo
 };
 
 export const createContextMenu = (event, menuStructure, menuClass = 'app-context-menu-unified') => {
-  const menuSelector = `.${String(menuClass).trim().split(/\s+/).pop()}`;
-  // Remover menú existente si está abierto
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+
+  const baseClass = String(menuClass).trim().split(/\s+/).pop();
+  const menuSelector = `.${baseClass}`;
+
+  // Limpiar cualquier backdrop residual si existiera de versiones anteriores
+  document.querySelectorAll('.app-context-menu-backdrop').forEach(el => el.remove());
+
+  // Si ya existe un menú abierto con este selector, cerrarlo y salir (comportamiento toggle)
   const existingMenu = document.querySelector(menuSelector);
   if (existingMenu) {
     existingMenu.remove();
+    document.querySelectorAll(`.${baseClass}-submenu`).forEach(el => el.remove());
     return;
   }
 
-  // Variables globales para el menú
+  // Capturar el elemento disparador y sus coordenadas de forma síncrona
+  const triggerEl = (event?.currentTarget && typeof event.currentTarget.getBoundingClientRect === 'function')
+    ? event.currentTarget
+    : ((event?.target?.closest ? event.target.closest('button') : null) || event?.target);
+
+  const rect = (triggerEl && typeof triggerEl.getBoundingClientRect === 'function')
+    ? triggerEl.getBoundingClientRect()
+    : {
+        left: event?.clientX || 16,
+        top: event?.clientY || 16,
+        right: (event?.clientX || 16) + 36,
+        bottom: (event?.clientY || 16) + 36,
+        width: 36,
+        height: 36
+      };
+
+  // Variables de estado del menú
   let activeSubmenu = null;
   let submenuTimer = null;
+  let isCleanedUp = false;
 
   // Función de limpieza completa
   const cleanupMenus = () => {
-    if (submenuTimer) clearTimeout(submenuTimer);
+    if (isCleanedUp) return;
+    isCleanedUp = true;
+
+    if (submenuTimer) {
+      clearTimeout(submenuTimer);
+      submenuTimer = null;
+    }
     if (activeSubmenu && document.body.contains(activeSubmenu)) {
       document.body.removeChild(activeSubmenu);
     }
     const allMenus = document.querySelectorAll(menuSelector);
     allMenus.forEach(menu => {
-      // Limpiar todos los hovers antes de remover
       const menuItems = menu.querySelectorAll('.menu-item-unified');
       menuItems.forEach(item => {
         item.style.backgroundColor = 'transparent';
@@ -302,11 +333,46 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
         document.body.removeChild(menu);
       }
     });
+    document.querySelectorAll(`.${baseClass}-submenu`).forEach(el => {
+      if (document.body.contains(el)) {
+        document.body.removeChild(el);
+      }
+    });
+
+    document.removeEventListener('pointerdown', handleOutsidePointer, true);
+    document.removeEventListener('contextmenu', handleOutsidePointer, true);
+    document.removeEventListener('keydown', handleKeyDown, true);
+    window.removeEventListener('resize', handleResize);
     activeSubmenu = null;
-    submenuTimer = null;
   };
 
-  // Función simplificada para cerrar submenú (como funciona "Ver")
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      cleanupMenus();
+    }
+  };
+
+  const handleOutsidePointer = (e) => {
+    // No cerrar si el clic ocurre dentro del menú principal, un submenú o el botón disparador
+    if (contextMenu && contextMenu.contains(e.target)) return;
+    if (activeSubmenu && activeSubmenu.contains(e.target)) return;
+    if (triggerEl && typeof triggerEl.contains === 'function' && triggerEl.contains(e.target)) return;
+
+    cleanupMenus();
+  };
+
+  const initialWidth = window.innerWidth;
+  const initialHeight = window.innerHeight;
+  const handleResize = () => {
+    // Cerrar solo si las dimensiones de la ventana cambiaron realmente (evitar falsos positivos de reflow)
+    if (Math.abs(window.innerWidth - initialWidth) > 5 || Math.abs(window.innerHeight - initialHeight) > 5) {
+      cleanupMenus();
+    }
+  };
+
+  // Temporizador para cerrar submenú
   const scheduleSubmenuClose = () => {
     if (submenuTimer) clearTimeout(submenuTimer);
     submenuTimer = setTimeout(() => {
@@ -314,10 +380,9 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
         document.body.removeChild(activeSubmenu);
         activeSubmenu = null;
       }
-    }, 300); // Timer más corto y simple
+    }, 300);
   };
 
-  // Función para cancelar el cierre
   const cancelSubmenuClose = () => {
     if (submenuTimer) {
       clearTimeout(submenuTimer);
@@ -330,13 +395,13 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
   contextMenu.className = menuClass.includes('app-menu-surface') ? menuClass : `app-menu-surface ${menuClass}`;
   contextMenu.style.cssText = `
     position: fixed;
-    background: var(--ui-context-bg) !important;
-    border: 1px solid var(--ui-context-border);
-    border-radius: var(--ui-radius-md);
-    box-shadow: 0 4px 12px var(--ui-context-shadow, rgba(0, 0, 0, 0.3));
-    z-index: 9999;
+    background: var(--ui-context-bg, #1e293b) !important;
+    border: 1px solid var(--ui-context-border, rgba(255, 255, 255, 0.15));
+    border-radius: var(--ui-radius-md, 8px);
+    box-shadow: 0 8px 24px var(--ui-context-shadow, rgba(0, 0, 0, 0.45));
+    z-index: 1000000;
     min-width: 220px;
-    padding: var(--ui-space-1) 0;
+    padding: var(--ui-space-1, 4px) 0;
     font-family: var(--ui-font-family, inherit) !important;
     font-size: var(--ui-font-size, 14px) !important;
     left: -9999px;
@@ -347,12 +412,13 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
   const createMenuItem = (item, isSubmenu = false) => {
     if (item.separator) {
       const separator = document.createElement('div');
+      separator.className = 'menu-separator';
       separator.style.cssText = `
-          height: 1px;
-          background: var(--ui-context-border, #555);
-          margin: 4px 8px;
-          opacity: 0.5;
-        `;
+        height: 1px;
+        background: var(--ui-context-border, rgba(255, 255, 255, 0.15));
+        margin: 4px 8px;
+        opacity: 0.5;
+      `;
       return separator;
     }
 
@@ -415,9 +481,9 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
 
         // Limpiar hover de otros elementos
         const allMenuItems = contextMenu.querySelectorAll('.menu-item-unified');
-        allMenuItems.forEach(item => {
-          if (item !== menuItem) {
-            item.style.backgroundColor = 'transparent';
+        allMenuItems.forEach(it => {
+          if (it !== menuItem) {
+            it.style.backgroundColor = 'transparent';
           }
         });
         menuItem.style.backgroundColor = 'var(--ui-context-hover, rgba(255, 255, 255, 0.1))';
@@ -428,18 +494,17 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
         }
 
         // Crear nuevo submenú
-        const baseMenuClass = String(menuClass).trim().split(/\s+/).pop();
         activeSubmenu = document.createElement('div');
-        activeSubmenu.className = `app-menu-surface ${baseMenuClass}-submenu`;
+        activeSubmenu.className = `app-menu-surface ${baseClass}-submenu`;
         activeSubmenu.style.cssText = `
           position: fixed;
-          background: var(--ui-context-bg) !important;
-          border: 1px solid var(--ui-context-border);
-          border-radius: var(--ui-radius-md);
-          box-shadow: 0 4px 12px var(--ui-context-shadow, rgba(0, 0, 0, 0.3));
-          z-index: 10000;
+          background: var(--ui-context-bg, #1e293b) !important;
+          border: 1px solid var(--ui-context-border, rgba(255, 255, 255, 0.15));
+          border-radius: var(--ui-radius-md, 8px);
+          box-shadow: 0 8px 24px var(--ui-context-shadow, rgba(0, 0, 0, 0.45));
+          z-index: 1000002;
           min-width: 200px;
-          padding: var(--ui-space-1) 0;
+          padding: var(--ui-space-1, 4px) 0;
           font-family: var(--ui-font-family, inherit) !important;
           font-size: var(--ui-font-size, 14px) !important;
           left: -9999px;
@@ -447,7 +512,6 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
           opacity: 0;
         `;
 
-        // Eventos simplificados del submenú (igual que funciona "Ver")
         activeSubmenu.addEventListener('mouseenter', cancelSubmenuClose);
         activeSubmenu.addEventListener('mouseleave', scheduleSubmenuClose);
 
@@ -458,37 +522,40 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
 
         document.body.appendChild(activeSubmenu);
 
-        // Posicionar submenú de manera simple y directa (sin destellos)
+        // Posicionar submenú de manera segura
         setTimeout(() => {
-          const menuRect = menuItem.getBoundingClientRect();
+          if (isCleanedUp || !activeSubmenu || !document.body.contains(activeSubmenu)) return;
+          const parentItemRect = menuItem.getBoundingClientRect();
           const submenuRect = activeSubmenu.getBoundingClientRect();
+          const margin = 8;
 
-          let left = menuRect.right;
-          let top = menuRect.top;
+          let subLeft = parentItemRect.right + 2;
+          let subTop = parentItemRect.top;
 
-          // Ajustar si se sale de la pantalla
-          if (left + submenuRect.width > window.innerWidth) {
-            left = menuRect.left - submenuRect.width;
+          if (subLeft + submenuRect.width > window.innerWidth - margin) {
+            subLeft = parentItemRect.left - submenuRect.width - 2;
           }
-          if (top + submenuRect.height > window.innerHeight) {
-            top = window.innerHeight - submenuRect.height - 8;
-          }
+          if (subLeft < margin) subLeft = margin;
 
-          activeSubmenu.style.left = `${left}px`;
-          activeSubmenu.style.top = `${top}px`;
+          if (subTop + submenuRect.height > window.innerHeight - margin) {
+            subTop = window.innerHeight - submenuRect.height - margin;
+          }
+          if (subTop < margin) subTop = margin;
+
+          activeSubmenu.style.left = `${Math.round(subLeft)}px`;
+          activeSubmenu.style.top = `${Math.round(subTop)}px`;
           activeSubmenu.style.opacity = '1';
-        }, 5);
+        }, 10);
       });
 
       menuItem.addEventListener('mouseleave', scheduleSubmenuClose);
     } else {
-      // Eventos para elementos normales
+      // Elementos normales
       menuItem.addEventListener('mouseenter', () => {
-        // Limpiar hover de otros elementos
         const allMenuItems = contextMenu.querySelectorAll('.menu-item-unified');
-        allMenuItems.forEach(item => {
-          if (item !== menuItem) {
-            item.style.backgroundColor = 'transparent';
+        allMenuItems.forEach(it => {
+          if (it !== menuItem) {
+            it.style.backgroundColor = 'transparent';
           }
         });
         menuItem.style.backgroundColor = 'var(--ui-context-hover, rgba(255, 255, 255, 0.1))';
@@ -500,10 +567,15 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
     }
 
     if (item.command) {
-      menuItem.addEventListener('click', () => {
-        item.command();
-        // Cerrar todo usando la función de limpieza
+      menuItem.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         cleanupMenus();
+        try {
+          item.command();
+        } catch (err) {
+          console.error('[createContextMenu] Command error:', err);
+        }
       });
     }
 
@@ -515,45 +587,66 @@ export const createContextMenu = (event, menuStructure, menuClass = 'app-context
     contextMenu.appendChild(menuItem);
   });
 
-  document.body.appendChild(contextMenu);
-
-  // Posicionar el menú principal (sin destellos)
-  setTimeout(() => {
-    const rect = event.target.closest('button').getBoundingClientRect();
+  // Posicionar el menú principal de forma inteligente
+  const positionMainMenu = () => {
+    if (isCleanedUp || !document.body.contains(contextMenu)) return;
     const menuRect = contextMenu.getBoundingClientRect();
+    const margin = 8;
 
     let left = rect.left;
-    let top = rect.top - menuRect.height - 8;
+    let top;
 
-    // Ajustar si se sale de la pantalla
-    if (left + menuRect.width > window.innerWidth) {
-      left = window.innerWidth - menuRect.width - 8;
-    }
-    if (top < 8) {
-      top = rect.bottom + 8;
+    // Si el botón está en el riel lateral de iconos (lado izquierdo, no en titlebar)
+    const isSidebarRail = (rect.left < 80 && rect.right < 120 && rect.top > 40);
+    if (isSidebarRail) {
+      left = rect.right + 6;
     }
 
-    contextMenu.style.left = `${left}px`;
-    contextMenu.style.top = `${top}px`;
+    // Ajustar si se sale por la derecha o izquierda
+    if (left + menuRect.width > window.innerWidth - margin) {
+      left = window.innerWidth - menuRect.width - margin;
+    }
+    if (left < margin) {
+      left = margin;
+    }
+
+    // Posición vertical:
+    if (rect.top >= window.innerHeight / 2) {
+      // Mitad inferior de la pantalla (ej. botón inferior de la barra lateral): abrir hacia arriba
+      top = rect.top - menuRect.height - 4;
+      if (top < margin) {
+        top = Math.max(margin, rect.bottom + 4);
+      }
+    } else {
+      // Mitad superior de la pantalla (ej. TitleBar): abrir hacia abajo
+      top = rect.bottom + 4;
+      if (top + menuRect.height > window.innerHeight - margin) {
+        top = Math.max(margin, rect.top - menuRect.height - 4);
+      }
+    }
+
+    // Clamping final para asegurar visibilidad completa en viewport
+    if (top + menuRect.height > window.innerHeight - margin) {
+      top = Math.max(margin, window.innerHeight - menuRect.height - margin);
+    }
+    if (top < margin) {
+      top = margin;
+    }
+
+    contextMenu.style.left = `${Math.round(left)}px`;
+    contextMenu.style.top = `${Math.round(top)}px`;
     contextMenu.style.opacity = '1';
-  }, 10);
-
-  // Cerrar el menú al hacer clic fuera
-  const closeMenu = (e) => {
-    const button = event.target.closest('button');
-    const menu = document.querySelector(`.${menuClass}`);
-    const submenu = document.querySelector(`.${menuClass}-submenu`);
-    const isClickOnButton = button && button.contains(e.target);
-    const isClickOnMenu = menu && menu.contains(e.target);
-    const isClickOnSubmenu = submenu && submenu.contains(e.target);
-
-    if (!isClickOnButton && !isClickOnMenu && !isClickOnSubmenu) {
-      cleanupMenus();
-      document.removeEventListener('click', closeMenu);
-    }
   };
 
+  document.body.appendChild(contextMenu);
+  positionMainMenu();
+
+  // Activar escuchadores con un breve retraso para que el propio clic que abre no lo cierre
   setTimeout(() => {
-    document.addEventListener('click', closeMenu);
+    if (isCleanedUp || !document.body.contains(contextMenu)) return;
+    document.addEventListener('pointerdown', handleOutsidePointer, true);
+    document.addEventListener('contextmenu', handleOutsidePointer, true);
+    document.addEventListener('keydown', handleKeyDown, true);
+    window.addEventListener('resize', handleResize);
   }, 100);
 };
