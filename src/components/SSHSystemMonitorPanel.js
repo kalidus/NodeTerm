@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
 import { appConfirm } from './ui/AppConfirm';
 import { useTranslation } from '../i18n/hooks/useTranslation';
+import { useSshTabStats } from '../services/SshStatsStore';
 import '../styles/ssh-monitor.css';
 
 /**
@@ -462,8 +463,11 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
         };
     }, [tab?.type, refreshInterval]);
 
-    // Determinar qué estadísticas usar (pasadas por prop para SSH, locales para terminal local)
-    const activeStats = tab?.type === 'local-terminal' ? (localStats || {}) : (stats || {});
+    // Obtener estadísticas reactivas de SSH directamente del almacén (sin re-renderizar la raíz)
+    const liveSshStats = useSshTabStats(tabId);
+
+    // Determinar qué estadísticas usar (pasadas por prop/hook para SSH, locales para terminal local)
+    const activeStats = tab?.type === 'local-terminal' ? (localStats || {}) : (liveSshStats || stats || {});
 
     // ── Track CPU and Memory history from active stats ───────────────────────
     useEffect(() => {
@@ -735,7 +739,7 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
                             <div className="ssh-monitor-hover-tooltip">
                                 <div style={{ fontSize: '11px', fontWeight: 'bold', marginBottom: '8px', color: '#e6edf3', borderBottom: '1px solid #30363d', paddingBottom: '4px' }}>Utilización por Núcleo</div>
                                 <div className="ssh-monitor-cpu-cores-grid">
-                                    {stats.coreLoads.map((load, idx) => (
+                                    {activeStats.coreLoads.map((load, idx) => (
                                         <div key={idx} className="ssh-monitor-core-item">
                                             <span style={{ color: '#8b949e', width: '30px' }}>CPU{idx}</span>
                                             <div className="ssh-monitor-bar-track" style={{ flex: 1, margin: '0 8px', height: '4px' }}>
@@ -774,15 +778,15 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
                                     <span>Caché:</span>
-                                    <span style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{formatBytes(stats?.mem?.cached || 0)}</span>
+                                    <span style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{formatBytes(activeStats?.mem?.cached || 0)}</span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px', borderTop: '1px dotted #30363d', paddingTop: '8px', marginTop: '2px' }}>
                                     <span>Swap:</span>
                                     <div style={{ display: 'flex', flexWrap: 'nowrap', justifyContent: 'flex-end' }}>
-                                        <span style={{ color: stats?.mem?.swapUsed > 0 ? '#d29922' : 'inherit' }}>
-                                            {formatBytes(stats?.mem?.swapUsed || 0)}
+                                        <span style={{ color: activeStats?.mem?.swapUsed > 0 ? '#d29922' : 'inherit' }}>
+                                            {formatBytes(activeStats?.mem?.swapUsed || 0)}
                                         </span>
-                                        <span style={{ whiteSpace: 'nowrap' }}>&nbsp;/ {formatBytes(stats?.mem?.swapTotal || 0)}</span>
+                                        <span style={{ whiteSpace: 'nowrap' }}>&nbsp;/ {formatBytes(activeStats?.mem?.swapTotal || 0)}</span>
                                     </div>
                                 </div>
                             </div>
@@ -948,7 +952,7 @@ const SSHSystemMonitorPanel = ({ tabId, tab, stats = {}, onClose }) => {
                                         </tr>
                                     ) : (
                                         filteredProcesses.map(proc => {
-                                            const numCores = stats?.cores || 1;
+                                            const numCores = activeStats?.cores || 1;
                                             const normalizedCpu = proc.cpu / numCores;
 
                                             return (

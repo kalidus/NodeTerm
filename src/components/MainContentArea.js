@@ -77,7 +77,6 @@ const MainContentArea = ({
   // Content renderer props
   memoizedContentRendererProps,
   settingsTabProps,
-  sshStatsByTabId,
   openInSplit,
 
   // Context menu props
@@ -3424,6 +3423,7 @@ const MainContentArea = ({
                             right: 0,
                             bottom: 0,
                             visibility: isActiveTab ? 'visible' : 'hidden',
+                            contentVisibility: isActiveTab ? 'visible' : 'hidden',
                             opacity: isActiveTab ? 1 : 0,
                             zIndex: isActiveTab ? 1 : 0,
                             pointerEvents: isActiveTab ? 'auto' : 'none',
@@ -3438,7 +3438,6 @@ const MainContentArea = ({
                             settingsTabProps={settingsTabProps}
                             isMinimalMode={isMinimalMode}
                             // Terminal props (específicas)
-                            sshStatsByTabId={sshStatsByTabId}
                             getAllTabs={getAllTabs}
                             // Nuevos manejadores para Quick Actions
                             onStartRecording={handleStartRecording}
@@ -3453,8 +3452,6 @@ const MainContentArea = ({
                             <SSHSystemMonitorPanel
                               tabId={tab.key}
                               tab={tab}
-                              stats={sshStatsByTabId?.[tab.key] || {}
-                              }
                               onClose={() => setSshSystemMonitorTabId(null)}
                             />
                           )}

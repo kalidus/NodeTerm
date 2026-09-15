@@ -558,11 +558,13 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
 
     const updateNodeChildren = useCallback((tree, targetPath, childrenNodes) => {
         let found = false;
-        // Required for deep clone to trigger prime react re-renders safely
-        const cloneTree = (nodesToClone) => {
-            return nodesToClone.map(node => {
+        // Structural sharing: solo clona nodos en el camino hacia targetPath
+        const updateRecursive = (nodesToUpdate) => {
+            let hasChanged = false;
+            const nextNodes = nodesToUpdate.map(node => {
                 if (node?.data?.path === targetPath) {
                     found = true;
+                    hasChanged = true;
                     return {
                         ...node,
                         children: childrenNodes,
@@ -570,15 +572,20 @@ const FileExplorer = ({ tabId, tab, sshConfig, onClose, iconTheme = 'material', 
                     };
                 }
                 if (Array.isArray(node.children) && node.children.length > 0) {
-                    return {
-                        ...node,
-                        children: cloneTree(node.children)
-                    };
+                    const nextChildren = updateRecursive(node.children);
+                    if (found && nextChildren !== node.children) {
+                        hasChanged = true;
+                        return {
+                            ...node,
+                            children: nextChildren
+                        };
+                    }
                 }
                 return node;
             });
+            return hasChanged ? nextNodes : nodesToUpdate;
         };
-        const updated = cloneTree(tree);
+        const updated = updateRecursive(tree);
         if (!found) {
             // If the folder we just loaded wasn't in our tree, add it as a new root node
             // This is essential for navigating "Up" beyond the initial root set.

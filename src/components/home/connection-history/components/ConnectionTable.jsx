@@ -1,4 +1,5 @@
 import React from 'react';
+import { VirtualScroller } from 'primereact/virtualscroller';
 import { isFavorite } from '../../../../utils/connectionStore';
 import { activeKey } from '../utils/connectionHistoryHelpers';
 import ConnectionRow from './ConnectionRow';
@@ -32,6 +33,34 @@ export const ConnectionTable = ({
 					<i className="pi pi-history" style={{ fontSize: '1.5rem', opacity: 0.5, color: themeColors.textSecondary }} />
 					<span>{emptyMessage}</span>
 				</div>
+			</div>
+		);
+	}
+
+	// Virtualización para colecciones extensas (>30 conexiones)
+	if (connections.length > 30) {
+		return (
+			<div className="connection-list-container" style={{ height: '100%' }}>
+				<VirtualScroller
+					items={connections}
+					itemSize={35}
+					scrollHeight="100%"
+					className="connection-list-body"
+					itemTemplate={(c) => {
+						if (!c) return null;
+						return (
+							<ConnectionRow
+								key={c.id}
+								connection={c}
+								isPinned={isFavorite(c)}
+								isActive={activeIds ? activeIds.has(activeKey(c)) : false}
+								onConnect={onConnect}
+								onEdit={onEdit}
+								onToggleFav={onToggleFav}
+							/>
+						);
+					}}
+				/>
 			</div>
 		);
 	}

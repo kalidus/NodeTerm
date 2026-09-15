@@ -1525,7 +1525,6 @@ const App = () => {
   // Usar el hook de gestión de sesiones
   const {
     terminalRefs, activeListenersRef, sessionManager,
-    sshStatsByTabId, setSshStatsByTabId,
     sshConnectionStatus, setSshConnectionStatus,
     handleCopyFromTerminal: copyFromTerminal, handlePasteToTerminal: pasteToTerminal, handleSelectAllTerminal: selectAllTerminal, handleClearTerminal: clearTerminal,
     handleCopyFromTerminalWrapper, handlePasteToTerminalWrapper, handleSelectAllTerminalWrapper, handleClearTerminalWrapper,
@@ -2673,7 +2672,6 @@ const App = () => {
     terminalTheme,
     handleTerminalContextMenu,
     showTerminalContextMenu,
-    sshStatsByTabId,
     terminalRefs,
     statusBarIconTheme,
     handleCloseSplitPanel,
@@ -2703,7 +2701,7 @@ const App = () => {
     openEditRdpDialog, openEditSSHDialog, nodes, localFontFamily, localFontSize,
     localLinuxTerminalTheme, setLocalLinuxTerminalTheme, localPowerShellTheme, setLocalPowerShellTheme, localDockerTerminalTheme, dockerFontFamily, dockerFontSize, iconTheme, explorerFont,
     explorerColorTheme, setExplorerColorTheme, explorerFontSize, fontFamily, fontSize, terminalTheme,
-    handleTerminalContextMenu, showTerminalContextMenu, sshStatsByTabId,
+    handleTerminalContextMenu, showTerminalContextMenu,
     terminalRefs, statusBarIconTheme, handleCloseSplitPanel, openInSplit, rdpTabs, findNodeByKey,
     setSshTabs, activeIds, handleToggleBroadcast, handleToggleBroadcastTarget, handleBroadcastData,
     masterKey, secureStorage,
@@ -3177,7 +3175,6 @@ const App = () => {
 
           // Content renderer props
           memoizedContentRendererProps={memoizedContentRendererProps}
-          sshStatsByTabId={sshStatsByTabId}
 
           // Context menu props
           tabContextMenu={tabContextMenu}

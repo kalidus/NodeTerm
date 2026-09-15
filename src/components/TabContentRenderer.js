@@ -1198,15 +1198,12 @@ const TabContentRendererInner = React.memo(({
   terminalTheme,
   handleTerminalContextMenu,
   showTerminalContextMenu,
-  sshStatsByTabId,
   terminalRefs,
   statusBarIconTheme,
   handleCloseSplitPanel,
   // RDP props
   rdpTabs,
   findNodeByKey,
-  // Terminal props
-  sshStatsByTabId: terminalSshStatsByTabId,
   // Recording props
   onOpenRecordingPlayer,
   setSshTabs,
@@ -2405,7 +2402,6 @@ const TabContentRendererInner = React.memo(({
         fontSize={fontSize}
         theme={terminalTheme.theme}
         onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey, showTerminalContextMenu)}
-        sshStatsByTabId={sshStatsByTabId}
         terminalRefs={terminalRefs}
         statusBarIconTheme={statusBarIconTheme}
         splitterColor={terminalTheme.theme?.background || '#2d2d2d'}
@@ -2842,7 +2838,6 @@ const TabContentRendererInner = React.memo(({
         theme={terminalTheme.theme}
         onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey, showTerminalContextMenu)}
         active={isActiveTab}
-        stats={terminalSshStatsByTabId[tab.key]}
         statusBarIconTheme={statusBarIconTheme}
         // Quick Actions props
         onStartRecording={onStartRecording}

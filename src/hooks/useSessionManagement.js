@@ -4,6 +4,7 @@ import { createTerminalActionWrapper, handleUnblockForms } from '../utils/tabEve
 import { EVENT_NAMES, CONNECTION_STATUS } from '../utils/constants';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
+import { sshStatsStore } from '../services/SshStatsStore';
 
 export const useSessionManagement = (toast, {
   sshTabs = [],
@@ -18,9 +19,6 @@ export const useSessionManagement = (toast, {
   // Session Manager
   const sessionManager = useRef(new SessionManager()).current;
 
-  // Estado global para stats por tabId
-  const [sshStatsByTabId, setSshStatsByTabId] = useState({});
-
   // Estado para trackear conexiones SSH
   const [sshConnectionStatus, setSshConnectionStatus] = useState({});
 
@@ -31,10 +29,7 @@ export const useSessionManagement = (toast, {
       // Listener para estadísticas SSH
       window.electron.ipcRenderer.on('ssh:stats', (data) => {
         if (data && data.tabId) {
-          setSshStatsByTabId(prev => ({
-            ...prev,
-            [data.tabId]: data
-          }));
+          sshStatsStore.setStats(data.tabId, data);
         }
       });
 
@@ -93,6 +88,7 @@ export const useSessionManagement = (toast, {
         const eventName = `${EVENT_NAMES.SSH_STATS_UPDATE}:${tabId}`;
         window.electron.ipcRenderer.removeAllListeners(eventName);
         activeListenersRef.current.delete(tabId);
+        sshStatsStore.removeTab(tabId);
       }
     });
 
@@ -101,7 +97,7 @@ export const useSessionManagement = (toast, {
       if (!activeListenersRef.current.has(tabId)) {
         const eventName = `${EVENT_NAMES.SSH_STATS_UPDATE}:${tabId}`;
         const listener = (stats) => {
-          setSshStatsByTabId(prev => ({ ...prev, [tabId]: stats }));
+          sshStatsStore.setStats(tabId, stats);
           // Mantener compatibilidad con distro tracking
           if (stats && stats.distro && setTabDistros) {
             setTabDistros(prev => ({ ...prev, [tabId]: stats.distro }));
@@ -320,12 +316,8 @@ export const useSessionManagement = (toast, {
     if (activeListenersRef.current.has(tabKey)) {
       activeListenersRef.current.delete(tabKey);
     }
-    // Limpiar stats también
-    setSshStatsByTabId(prev => {
-      const newStats = { ...prev };
-      delete newStats[tabKey];
-      return newStats;
-    });
+    // Limpiar stats en el almacén reactivo
+    sshStatsStore.removeTab(tabKey);
   }, []);
 
   // Función para desconectar una sesión SSH
@@ -446,9 +438,18 @@ export const useSessionManagement = (toast, {
     activeListenersRef,
     sessionManager,
 
-    // Estados
-    sshStatsByTabId,
-    setSshStatsByTabId,
+    // Almacén reactivo de stats (sin desencadenar re-renders en App.js)
+    sshStatsByTabId: sshStatsStore.getAllStats(),
+    setSshStatsByTabId: (cbOrVal) => {
+      if (typeof cbOrVal === 'function') {
+        const updated = cbOrVal(sshStatsStore.getAllStats());
+        if (updated && typeof updated === 'object') {
+          Object.entries(updated).forEach(([id, st]) => sshStatsStore.setStats(id, st));
+        }
+      } else if (cbOrVal && typeof cbOrVal === 'object') {
+        Object.entries(cbOrVal).forEach(([id, st]) => sshStatsStore.setStats(id, st));
+      }
+    },
     sshConnectionStatus,
     setSshConnectionStatus,
 

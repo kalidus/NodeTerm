@@ -141,7 +141,6 @@ const SplitLayout = ({
   fontSize,
   theme,
   onContextMenu,
-  sshStatsByTabId,
   terminalRefs,
   statusBarIconTheme = 'classic',
   isBroadcastActive = false,
@@ -336,7 +335,6 @@ const SplitLayout = ({
             theme={theme}
             onContextMenu={onContextMenu}
             active={true}
-            stats={sshStatsByTabId?.[node.key] || {}}
             hideStatusBar={true}
             statusBarIconTheme={statusBarIconTheme}
             isBroadcastActive={isBroadcastActive}
@@ -361,7 +359,6 @@ const SplitLayout = ({
           fontSize={fontSize}
           theme={theme}
           onContextMenu={onContextMenu}
-          sshStatsByTabId={sshStatsByTabId}
           terminalRefs={terminalRefs}
           statusBarIconTheme={statusBarIconTheme}
           splitterColor={splitterColor}
@@ -378,7 +375,7 @@ const SplitLayout = ({
     }
 
     return null;
-  }, [fontFamily, fontSize, theme, onContextMenu, sshStatsByTabId, statusBarIconTheme, terminalRefs, splitterColor, onClosePanel]);
+  }, [fontFamily, fontSize, theme, onContextMenu, statusBarIconTheme, terminalRefs, splitterColor, onClosePanel]);
 
   // Función helper para encontrar el path de un terminal en el árbol por su key
   const findTerminalPath = useCallback((node, targetKey, currentPath = []) => {
@@ -572,7 +569,6 @@ const SplitLayout = ({
             theme={theme}
             onContextMenu={onContextMenu}
             active={true}
-            stats={sshStatsByTabId?.[terminal.key] || {}}
             hideStatusBar={true}
             statusBarIconTheme={statusBarIconTheme}
             isBroadcastActive={isBroadcastActive}
@@ -1317,7 +1313,6 @@ const SplitLayout = ({
               theme={theme}
               onContextMenu={onContextMenu}
               active={true}
-              stats={sshStatsByTabId?.[leftTerminal.key] || {}}
               hideStatusBar={true}
               statusBarIconTheme={statusBarIconTheme}
               isBroadcastActive={isBroadcastActive}
@@ -1383,7 +1378,6 @@ const SplitLayout = ({
               theme={theme}
               onContextMenu={onContextMenu}
               active={true}
-              stats={sshStatsByTabId?.[rightTerminal.key] || {}}
               hideStatusBar={true}
               statusBarIconTheme={statusBarIconTheme}
               isBroadcastActive={isBroadcastActive}
@@ -1515,7 +1509,6 @@ const SplitLayout = ({
               theme={theme}
               onContextMenu={onContextMenu}
               active={true}
-              stats={sshStatsByTabId?.[leftTerminal.key] || {}}
               hideStatusBar={true}
               statusBarIconTheme={statusBarIconTheme}
               isBroadcastActive={isBroadcastActive}
@@ -1586,7 +1579,6 @@ const SplitLayout = ({
               theme={theme}
               onContextMenu={onContextMenu}
               active={true}
-              stats={sshStatsByTabId?.[rightTerminal.key] || {}}
               hideStatusBar={true}
               statusBarIconTheme={statusBarIconTheme}
               isBroadcastActive={isBroadcastActive}
@@ -1676,7 +1668,6 @@ const SplitLayout = ({
               theme={theme}
               onContextMenu={onContextMenu}
               active={true}
-              stats={sshStatsByTabId?.[leftTerminal.key] || {}}
               hideStatusBar={true}
               statusBarIconTheme={statusBarIconTheme}
               isBroadcastActive={isBroadcastActive}
@@ -1736,7 +1727,6 @@ const SplitLayout = ({
               theme={theme}
               onContextMenu={onContextMenu}
               active={true}
-              stats={sshStatsByTabId?.[rightTerminal.key] || {}}
               hideStatusBar={true}
               statusBarIconTheme={statusBarIconTheme}
               isBroadcastActive={isBroadcastActive}

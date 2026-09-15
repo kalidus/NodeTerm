@@ -8,6 +8,7 @@ import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
 import { attachTerminalRenderer, getTerminalScrollback } from '../utils/xtermRenderer';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
+import { useSshTabStats } from '../services/SshStatsStore';
 
 const TerminalComponent = forwardRef(({
     tabId,
@@ -17,7 +18,7 @@ const TerminalComponent = forwardRef(({
     theme,
     onContextMenu,
     active,
-    stats,
+    stats: propsStats,
     hideStatusBar = false,
     statusBarIconTheme = 'classic',
     onDrop,
@@ -36,7 +37,9 @@ const TerminalComponent = forwardRef(({
     onToggleBroadcastTarget,
     isSplit = false
 }, ref) => {
-    const sessionHistory = useStatusBarSessionHistory(stats);
+    const storeStats = useSshTabStats(tabId);
+    const effectiveStats = propsStats !== undefined ? propsStats : storeStats;
+    const sessionHistory = useStatusBarSessionHistory(effectiveStats);
     // Visibilidad local del status bar (toggle desde el menú de la sesión SSH)
     const [localStatusBarVisible, setLocalStatusBarVisible] = useState(true);
     // Menú rápido de tema de terminal (abierto/cerrado)
@@ -1102,11 +1105,11 @@ const TerminalComponent = forwardRef(({
                 }} />
             </div>
             {!hideStatusBar && localStatusBarVisible && <StatusBar
-                stats={{ ...stats, cpuHistory: sessionHistory.map(s => s.cpu), sessionHistory }}
+                stats={{ ...effectiveStats, cpuHistory: sessionHistory.map(s => s.cpu), sessionHistory }}
                 active={active}
                 statusBarIconTheme={statusBarIconTheme}
                 terminalType={isLocalTerminal ? 'linux' : 'ssh'}
-                isLoading={!isLocalTerminal && (!stats || (typeof stats?.cpu === 'undefined' && !stats?.hostname))}
+                isLoading={!isLocalTerminal && (!effectiveStats || (typeof effectiveStats?.cpu === 'undefined' && !effectiveStats?.hostname))}
             />}
         </div >
     );
