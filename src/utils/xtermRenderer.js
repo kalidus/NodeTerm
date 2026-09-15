@@ -1,5 +1,4 @@
-import { CanvasAddon } from '@xterm/addon-canvas';
-import { WebglAddon } from '@xterm/addon-webgl';
+import { getCachedXtermModules } from './xtermLoader';
 
 /**
  * Attaches a hardware-accelerated renderer to an xterm.js instance with a tiered fallback:
@@ -9,13 +8,14 @@ import { WebglAddon } from '@xterm/addon-webgl';
  *
  * @param {import('@xterm/xterm').Terminal} termInstance - The Terminal instance
  * @param {Object} [customAddons] - Optional pre-loaded addon constructors (e.g. from dynamic import)
- * @param {typeof WebglAddon} [customAddons.WebglAddon]
- * @param {typeof CanvasAddon} [customAddons.CanvasAddon]
+ * @param {any} [customAddons.WebglAddon]
+ * @param {any} [customAddons.CanvasAddon]
  * @returns {{ rendererType: 'webgl' | 'canvas' | 'dom', addon: any }}
  */
 export function attachTerminalRenderer(termInstance, customAddons = {}) {
-  const Webgl = customAddons.WebglAddon || WebglAddon;
-  const Canvas = customAddons.CanvasAddon || CanvasAddon;
+  const cached = getCachedXtermModules();
+  const Webgl = customAddons.WebglAddon || cached?.WebglAddon;
+  const Canvas = customAddons.CanvasAddon || cached?.CanvasAddon;
 
   if (!termInstance) {
     return { rendererType: 'dom', addon: null };

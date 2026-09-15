@@ -3,16 +3,24 @@
  * Usa xterm.js para renderizar la reproducción en formato asciicast
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { Terminal } from '@xterm/xterm';
-import { FitAddon } from '@xterm/addon-fit';
-import '@xterm/xterm/css/xterm.css';
+import { loadXtermModules, getCachedXtermModules } from '../utils/xtermLoader';
 import { attachTerminalRenderer, getTerminalScrollback, registerScrollbackSync } from '../utils/xtermRenderer';
 
 const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
   const terminalRef = useRef(null);
   const terminalInstance = useRef(null);
   const fitAddon = useRef(null);
+  const [xtermLib, setXtermLib] = useState(() => getCachedXtermModules());
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (xtermLib) return undefined;
+    let cancelled = false;
+    loadXtermModules().then((lib) => {
+      if (!cancelled) setXtermLib(lib);
+    }).catch((err) => console.error('[RecordingPlayerTab] Error cargando xterm:', err));
+    return () => { cancelled = true; };
+  }, [xtermLib]);
   const [error, setError] = useState(null);
   const [playbackState, setPlaybackState] = useState({
     isPlaying: false,
@@ -32,13 +40,14 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
   });
 
   useEffect(() => {
+    if (!xtermLib) return;
     initializeTerminal();
     loadRecording();
 
     return () => {
       cleanup();
     };
-  }, []);
+  }, [xtermLib]);
 
   useEffect(() => {
     return registerScrollbackSync(terminalInstance);
@@ -52,7 +61,8 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
   }, [theme]);
 
   const initializeTerminal = () => {
-    if (!terminalRef.current) return;
+    if (!terminalRef.current || !xtermLib) return;
+    const { Terminal, FitAddon, WebglAddon, CanvasAddon } = xtermLib;
 
     // Leer scrollback desde configuración (configurable en Settings, por defecto 10000)
     const scrollbackLines = getTerminalScrollback();
@@ -75,7 +85,7 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
     fitAddon.current = new FitAddon();
     term.loadAddon(fitAddon.current);
     term.open(terminalRef.current);
-    attachTerminalRenderer(term);
+    attachTerminalRenderer(term, { WebglAddon, CanvasAddon });
 
     try {
       fitAddon.current.fit();

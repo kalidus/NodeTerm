@@ -1,10 +1,6 @@
 import React, { useEffect, useRef, useImperativeHandle, forwardRef, useState } from 'react';
 import { useStatusBarSessionHistory } from '../hooks/useStatusBarSessionHistory';
-import { Terminal } from '@xterm/xterm';
-import { FitAddon } from '@xterm/addon-fit';
-import { WebLinksAddon } from '@xterm/addon-web-links';
-import { Unicode11Addon } from '@xterm/addon-unicode11';
-import '@xterm/xterm/css/xterm.css';
+import { loadXtermModules, getCachedXtermModules } from '../utils/xtermLoader';
 import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
@@ -26,7 +22,17 @@ const CygwinTerminal = forwardRef(({
     const term = useRef(null);
     const writeBufferRef = useRef(null);
     const fitAddon = useRef(null);
+    const [xtermLib, setXtermLib] = useState(() => getCachedXtermModules());
     const [statusStats, setStatusStats] = useState(null);
+
+    useEffect(() => {
+        if (xtermLib) return undefined;
+        let cancelled = false;
+        loadXtermModules().then((lib) => {
+            if (!cancelled) setXtermLib(lib);
+        }).catch((err) => console.error('[CygwinTerminal] Error cargando xterm:', err));
+        return () => { cancelled = true; };
+    }, [xtermLib]);
     const [isLoadingStats, setIsLoadingStats] = useState(true);
     const sessionHistory = useStatusBarSessionHistory(statusStats);
     const [statusBarIconTheme, setStatusBarIconTheme] = useState(() => {
@@ -117,6 +123,9 @@ const CygwinTerminal = forwardRef(({
     }));
 
     useEffect(() => {
+        if (!xtermLib) return;
+        const { Terminal, FitAddon, WebLinksAddon, Unicode11Addon, WebglAddon, CanvasAddon } = xtermLib;
+
         // Leer scrollback desde configuración (configurable en Settings, por defecto 10000)
         const scrollbackLines = getTerminalScrollback();
 
@@ -181,7 +190,7 @@ const CygwinTerminal = forwardRef(({
         term.current.unicode.activeVersion = '11';
 
         // Load hardware-accelerated renderer with Canvas 2D fallback
-        attachTerminalRenderer(term.current);
+        attachTerminalRenderer(term.current, { WebglAddon, CanvasAddon });
 
         term.current.open(terminalRef.current);
 
@@ -341,7 +350,7 @@ const CygwinTerminal = forwardRef(({
                 }
             };
         }
-    }, [tabId]);
+    }, [tabId, xtermLib]);
 
     // Sincronizar scrollback dinámicamente si cambia en Settings
     useEffect(() => {

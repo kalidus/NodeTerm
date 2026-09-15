@@ -1,8 +1,5 @@
-import React, { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
-import { Terminal } from '@xterm/xterm';
-import { FitAddon } from '@xterm/addon-fit';
-import { WebLinksAddon } from '@xterm/addon-web-links';
-import '@xterm/xterm/css/xterm.css';
+import React, { useEffect, useRef, useImperativeHandle, forwardRef, useState } from 'react';
+import { loadXtermModules, getCachedXtermModules } from '../utils/xtermLoader';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
 import { attachTerminalRenderer, getTerminalScrollback, registerScrollbackSync } from '../utils/xtermRenderer';
@@ -21,6 +18,16 @@ const ClaudeTerminal = forwardRef(({
   const hasStartedRef = useRef(false);
   const isReadyRef = useRef(false);
   const writeBufferRef = useRef(null);
+  const [xtermLib, setXtermLib] = useState(() => getCachedXtermModules());
+
+  useEffect(() => {
+    if (xtermLib) return undefined;
+    let cancelled = false;
+    loadXtermModules().then((lib) => {
+      if (!cancelled) setXtermLib(lib);
+    }).catch((err) => console.error('[ClaudeTerminal] Error cargando xterm:', err));
+    return () => { cancelled = true; };
+  }, [xtermLib]);
   // Claude Code renderiza mejor con fondo sólido también en modo integrado
   // para evitar bordes/zonas con colores distintos.
   const terminalBg = theme?.background || '#111827';
@@ -53,6 +60,8 @@ const ClaudeTerminal = forwardRef(({
   }));
 
   useEffect(() => {
+    if (!xtermLib) return;
+    const { Terminal, FitAddon, WebLinksAddon, WebglAddon, CanvasAddon } = xtermLib;
     hasStartedRef.current = false;
     isReadyRef.current = false;
 
@@ -80,7 +89,7 @@ const ClaudeTerminal = forwardRef(({
     term.current.open(terminalRef.current);
     fitAndSyncSize();
     writeBufferRef.current = createXtermWriteBuffer(term.current);
-    attachTerminalRenderer(term.current);
+    attachTerminalRenderer(term.current, { WebglAddon, CanvasAddon });
     // Reintentos para asegurar ajuste correcto cuando el contenedor termina de montar
     setTimeout(fitAndSyncSize, 80);
     setTimeout(fitAndSyncSize, 180);
@@ -206,7 +215,7 @@ const ClaudeTerminal = forwardRef(({
       resizeHandler.dispose();
       term.current?.dispose();
     };
-  }, [tabId]);
+  }, [tabId, xtermLib]);
 
   useEffect(() => {
     return registerScrollbackSync(term);

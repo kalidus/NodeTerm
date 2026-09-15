@@ -1,10 +1,6 @@
 import React, { useEffect, useRef, useImperativeHandle, forwardRef, useState } from 'react';
 import { useStatusBarSessionHistory } from '../hooks/useStatusBarSessionHistory';
-import { Terminal } from '@xterm/xterm';
-import { FitAddon } from '@xterm/addon-fit';
-import { WebLinksAddon } from '@xterm/addon-web-links';
-import { Unicode11Addon } from '@xterm/addon-unicode11';
-import '@xterm/xterm/css/xterm.css';
+import { loadXtermModules, getCachedXtermModules } from '../utils/xtermLoader';
 import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
@@ -25,7 +21,17 @@ const DockerTerminal = forwardRef(({
     const term = useRef(null);
     const writeBufferRef = useRef(null);
     const fitAddon = useRef(null);
+    const [xtermLib, setXtermLib] = useState(() => getCachedXtermModules());
     const [statusStats, setStatusStats] = useState(null);
+
+    useEffect(() => {
+        if (xtermLib) return undefined;
+        let cancelled = false;
+        loadXtermModules().then((lib) => {
+            if (!cancelled) setXtermLib(lib);
+        }).catch((err) => console.error('[DockerTerminal] Error cargando xterm:', err));
+        return () => { cancelled = true; };
+    }, [xtermLib]);
     const [isLoadingStats, setIsLoadingStats] = useState(true);
     const sessionHistory = useStatusBarSessionHistory(statusStats);
     const [statusBarIconTheme, setStatusBarIconTheme] = useState(() => {
@@ -65,7 +71,8 @@ const DockerTerminal = forwardRef(({
 
     // Inicializar terminal
     useEffect(() => {
-        if (!terminalRef.current) return;
+        if (!terminalRef.current || !xtermLib) return;
+        const { Terminal, FitAddon, WebLinksAddon, Unicode11Addon, WebglAddon, CanvasAddon } = xtermLib;
 
         // Leer scrollback desde configuración (configurable en Settings, por defecto 10000)
         const scrollbackLines = getTerminalScrollback();
@@ -92,7 +99,7 @@ const DockerTerminal = forwardRef(({
         writeBufferRef.current = createXtermWriteBuffer(term);
 
         // Cargar renderizador acelerado por hardware con fallback a Canvas 2D
-        attachTerminalRenderer(term.current);
+        attachTerminalRenderer(term.current, { WebglAddon, CanvasAddon });
 
         // Abrir terminal en elemento DOM
         term.current.open(terminalRef.current);
@@ -184,7 +191,7 @@ const DockerTerminal = forwardRef(({
                 term.current = null;
             }
         };
-    }, [tabId, dockerInfo, fontFamily, fontSize, isIntegrated]);
+    }, [tabId, dockerInfo, fontFamily, fontSize, isIntegrated, xtermLib]);
 
     // Update theme dynamically
     useEffect(() => {

@@ -20,12 +20,10 @@
 /* Animación Space Station con estrellas cayendo */
 @keyframes spaceStationPulse {
   0%, 100% {
-    background: linear-gradient(90deg, #0f1b33 0%, #152540 50%, #0f1b33 100%);
-    box-shadow: 0 0 20px rgba(0, 188, 212, 0.3);
+    filter: brightness(1) drop-shadow(0 0 8px rgba(0, 188, 212, 0.3));
   }
   50% {
-    background: linear-gradient(90deg, #152540 0%, #1a2a4a 50%, #152540 100%);
-    box-shadow: 0 0 30px rgba(0, 188, 212, 0.5);
+    filter: brightness(1.25) drop-shadow(0 0 16px rgba(0, 188, 212, 0.6));
   }
 }
 
@@ -60,20 +58,16 @@
 /* Animación Terminal Hacker con caracteres cayendo */
 @keyframes terminalHackerFlicker {
   0%, 100% {
-    background: linear-gradient(90deg, #000000 0%, #001100 50%, #000000 100%);
-    box-shadow: 0 0 10px #00ff00;
+    filter: brightness(1) drop-shadow(0 0 6px #00ff00);
   }
   25% {
-    background: linear-gradient(90deg, #001100 0%, #002200 50%, #001100 100%);
-    box-shadow: 0 0 15px #00ff00;
+    filter: brightness(1.25) drop-shadow(0 0 14px #00ff00);
   }
   50% {
-    background: linear-gradient(90deg, #000000 0%, #001100 50%, #000000 100%);
-    box-shadow: 0 0 5px #00ff00;
+    filter: brightness(0.85) drop-shadow(0 0 4px #00ff00);
   }
   75% {
-    background: linear-gradient(90deg, #001100 0%, #002200 50%, #001100 100%);
-    box-shadow: 0 0 20px #00ff00;
+    filter: brightness(1.35) drop-shadow(0 0 18px #00ff00);
   }
 }
 
@@ -120,16 +114,13 @@
 /* Animación Cyberpunk 2077 con efectos de neón */
 @keyframes cyberpunkGlow {
   0%, 100% {
-    background: linear-gradient(90deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%);
-    box-shadow: 0 0 15px #fcee21;
+    filter: brightness(1) drop-shadow(0 0 10px #fcee21);
   }
   33% {
-    background: linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%);
-    box-shadow: 0 0 25px #ff0080;
+    filter: brightness(1.3) drop-shadow(0 0 20px #ff0080);
   }
   66% {
-    background: linear-gradient(90deg, #2a2a2a 0%, #1a1a1a 50%, #0f0f0f 100%);
-    box-shadow: 0 0 20px #7928ca;
+    filter: brightness(1.15) drop-shadow(0 0 15px #7928ca);
   }
 }
 
@@ -164,23 +155,19 @@
   }
 }
 
-/* Animación Matrix */
-@keyframes matrixRain {
+/* Animación Matrix pulso de fondo */
+@keyframes matrixPulse {
   0%, 100% {
-    background: linear-gradient(90deg, #000000 0%, #001100 50%, #000000 100%);
-    box-shadow: 0 0 10px #00ff41;
+    filter: brightness(1) drop-shadow(0 0 6px #00ff41);
   }
   25% {
-    background: linear-gradient(90deg, #001100 0%, #002200 50%, #001100 100%);
-    box-shadow: 0 0 15px #00ff41;
+    filter: brightness(1.2) drop-shadow(0 0 12px #00ff41);
   }
   50% {
-    background: linear-gradient(90deg, #000000 0%, #001100 50%, #000000 100%);
-    box-shadow: 0 0 5px #00ff41;
+    filter: brightness(0.85) drop-shadow(0 0 4px #00ff41);
   }
   75% {
-    background: linear-gradient(90deg, #001100 0%, #002200 50%, #001100 100%);
-    box-shadow: 0 0 20px #00ff41;
+    filter: brightness(1.3) drop-shadow(0 0 16px #00ff41);
   }
 }
 
@@ -246,86 +233,73 @@
 /* Animación Quantum Flux */
 @keyframes quantumFlux {
   0%, 100% {
-    background: linear-gradient(90deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
-    box-shadow: 0 0 20px #8b5cf6;
+    filter: brightness(1) drop-shadow(0 0 10px #8b5cf6);
   }
   25% {
-    background: linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%);
-    box-shadow: 0 0 30px #a78bfa;
+    filter: brightness(1.3) drop-shadow(0 0 20px #a78bfa);
   }
   50% {
-    background: linear-gradient(90deg, #2a2a2a 0%, #1a1a1a 50%, #0a0a0a 100%);
-    box-shadow: 0 0 25px #8b5cf6;
+    filter: brightness(1.1) drop-shadow(0 0 14px #8b5cf6);
   }
   75% {
-    background: linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%);
-    box-shadow: 0 0 35px #a78bfa;
+    filter: brightness(1.35) drop-shadow(0 0 24px #a78bfa);
   }
 }
 
 /* Animación Holographic */
-@keyframes holographicShimmer {
+@keyframes holographicShimmerPulse {
   0%, 100% {
-    background: linear-gradient(90deg, #0f0f23 0%, #1a1a3a 50%, #0f0f23 100%);
-    box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+    filter: brightness(1) drop-shadow(0 0 12px rgba(0, 212, 255, 0.4));
   }
   50% {
-    background: linear-gradient(90deg, #1a1a3a 0%, #2a2a4a 50%, #1a1a3a 100%);
-    box-shadow: 0 0 30px rgba(0, 212, 255, 0.6);
+    filter: brightness(1.3) drop-shadow(0 0 22px rgba(0, 212, 255, 0.6));
   }
 }
 
 /* Animación Cyber Grid */
 @keyframes cyberGridPulse {
   0%, 100% {
-    background: linear-gradient(90deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
-    box-shadow: 0 0 15px #00ff88;
+    filter: brightness(1) drop-shadow(0 0 10px #00ff88);
   }
   50% {
-    background: linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%);
-    box-shadow: 0 0 25px #00ff88;
+    filter: brightness(1.3) drop-shadow(0 0 20px #00ff88);
   }
 }
 
 /* Animación Neon Aurora */
 @keyframes neonAurora {
   0%, 100% {
-    background: linear-gradient(90deg, #0a0f1f 0%, #1a1f3f 50%, #0a0f1f 100%);
-    box-shadow: 0 0 20px #ff6b9d;
+    filter: brightness(1) drop-shadow(0 0 12px #ff6b9d);
   }
   25% {
-    background: linear-gradient(90deg, #1a1f3f 0%, #2a2f4f 50%, #1a1f3f 100%);
-    box-shadow: 0 0 30px #ff8bb3;
+    filter: brightness(1.3) drop-shadow(0 0 22px #ff8bb3);
   }
   50% {
-    background: linear-gradient(90deg, #2a2f4f 0%, #1a1f3f 50%, #0a0f1f 100%);
-    box-shadow: 0 0 25px #ff6b9d;
+    filter: brightness(1.1) drop-shadow(0 0 16px #ff6b9d);
   }
   75% {
-    background: linear-gradient(90deg, #1a1f3f 0%, #2a2f4f 50%, #1a1f3f 100%);
-    box-shadow: 0 0 35px #ff8bb3;
+    filter: brightness(1.35) drop-shadow(0 0 26px #ff8bb3);
   }
 }
 
 /* Animación Plasma */
 @keyframes plasmaFlow {
   0%, 100% {
-    background: linear-gradient(90deg, #1a0a2e 0%, #2a1a3e 50%, #1a0a2e 100%);
-    box-shadow: 0 0 20px #ff0080;
+    filter: brightness(1) drop-shadow(0 0 12px #ff0080);
   }
   33% {
-    background: linear-gradient(90deg, #2a1a3e 0%, #3a2a4e 50%, #2a1a3e 100%);
-    box-shadow: 0 0 30px #ff3399;
+    filter: brightness(1.35) drop-shadow(0 0 22px #ff3399);
   }
   66% {
-    background: linear-gradient(90deg, #3a2a4e 0%, #2a1a3e 50%, #1a0a2e 100%);
-    box-shadow: 0 0 25px #ff0080;
+    filter: brightness(1.2) drop-shadow(0 0 18px #ff0080);
   }
 }
 
 /* Aplicar animaciones a la barra del menú superior */
 .title-bar[data-animation="space-station"] {
+  background: linear-gradient(90deg, #0f1b33 0%, #152540 50%, #0f1b33 100%);
   animation: spaceStationPulse 16s ease-in-out infinite;
+  will-change: filter;
   position: relative;
   overflow: hidden;
 }
@@ -361,7 +335,9 @@
 }
 
 .title-bar[data-animation="terminal-hacker"] {
+  background: linear-gradient(90deg, #000000 0%, #001100 50%, #000000 100%);
   animation: terminalHackerFlicker 12s ease-in-out infinite;
+  will-change: filter;
   position: relative;
   overflow: hidden;
 }
@@ -389,7 +365,9 @@
 }
 
 .title-bar[data-animation="cyberpunk"] {
+  background: linear-gradient(90deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%);
   animation: cyberpunkGlow 20s ease-in-out infinite;
+  will-change: filter;
   position: relative;
   overflow: hidden;
 }
@@ -415,7 +393,9 @@
 }
 
 .title-bar[data-animation="matrix"] {
-  animation: matrixRain 14s ease-in-out infinite;
+  background: linear-gradient(90deg, #000000 0%, #001100 50%, #000000 100%);
+  animation: matrixPulse 14s ease-in-out infinite;
+  will-change: filter;
   position: relative;
   overflow: hidden;
 }
@@ -626,7 +606,9 @@
 }
 
 .title-bar[data-animation="quantum-flux"] {
+  background: linear-gradient(90deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
   animation: quantumFlux 18s ease-in-out infinite;
+  will-change: filter;
   position: relative;
   overflow: hidden;
 }
@@ -652,7 +634,9 @@
 }
 
 .title-bar[data-animation="holographic"] {
-  animation: holographicShimmer 20s ease-in-out infinite;
+  background: linear-gradient(90deg, #0f0f23 0%, #1a1a3a 50%, #0f0f23 100%);
+  animation: holographicShimmerPulse 20s ease-in-out infinite;
+  will-change: filter;
   position: relative;
   overflow: hidden;
 }
@@ -678,7 +662,9 @@
 }
 
 .title-bar[data-animation="cyber-grid"] {
+  background: linear-gradient(90deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
   animation: cyberGridPulse 16s ease-in-out infinite;
+  will-change: filter;
   position: relative;
   overflow: hidden;
 }
@@ -704,7 +690,9 @@
 }
 
 .title-bar[data-animation="neon-aurora"] {
+  background: linear-gradient(90deg, #0a0f1f 0%, #1a1f3f 50%, #0a0f1f 100%);
   animation: neonAurora 18s ease-in-out infinite;
+  will-change: filter;
   position: relative;
   overflow: hidden;
 }
@@ -730,7 +718,9 @@
 }
 
 .title-bar[data-animation="plasma"] {
+  background: linear-gradient(90deg, #1a0a2e 0%, #2a1a3e 50%, #1a0a2e 100%);
   animation: plasmaFlow 20s ease-in-out infinite;
+  will-change: filter;
   position: relative;
   overflow: hidden;
 }

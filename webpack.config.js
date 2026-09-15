@@ -48,12 +48,33 @@ module.exports = {
           priority: 30,
           chunks: 'all',
         },
-        // xterm (para terminales - se puede diferir)
+        // xterm (para terminales - chunk aislado dedicado)
         xterm: {
           test: /[\\/]node_modules[\\/](@xterm|xterm)[\\/]/,
           name: 'xterm',
           priority: 25,
-          chunks: 'async',
+          chunks: 'all',
+        },
+        // Editor de documentos Tiptap / Prosemirror
+        tiptap: {
+          test: /[\\/]node_modules[\\/](@tiptap|prosemirror[\w-]*)[\\/]/,
+          name: 'tiptap',
+          priority: 22,
+          chunks: 'all',
+        },
+        // Visor VNC / noVNC
+        novnc: {
+          test: /[\\/]node_modules[\\/]@novnc[\\/]/,
+          name: 'novnc',
+          priority: 20,
+          chunks: 'all',
+        },
+        // Sintaxis / Highlight.js
+        highlight: {
+          test: /[\\/]node_modules[\\/]highlight\.js[\\/]/,
+          name: 'highlight',
+          priority: 18,
+          chunks: 'all',
         },
         // Otros vendors
         vendors: {
