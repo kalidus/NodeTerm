@@ -9,7 +9,7 @@ import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
-import { attachTerminalRenderer } from '../utils/xtermRenderer';
+import { attachTerminalRenderer, getTerminalScrollback, registerScrollbackSync } from '../utils/xtermRenderer';
 import { systemStatsService } from '../services/SystemStatsService';
 
 const DockerTerminal = forwardRef(({
@@ -58,12 +58,17 @@ const DockerTerminal = forwardRef(({
         return unsubscribe;
     }, []);
 
+    // Sincronizar scrollback dinámicamente si cambia en Settings
+    useEffect(() => {
+        return registerScrollbackSync(term);
+    }, []);
+
     // Inicializar terminal
     useEffect(() => {
         if (!terminalRef.current) return;
 
-        // Leer scrollback desde configuraci??n (configurable en Settings)
-        const scrollbackLines = parseInt(localStorage.getItem('nodeterm_scrollback_lines') || '1000', 10);
+        // Leer scrollback desde configuración (configurable en Settings, por defecto 10000)
+        const scrollbackLines = getTerminalScrollback();
 
         // Crear terminal
         term.current = new Terminal({

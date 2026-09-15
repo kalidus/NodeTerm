@@ -6,7 +6,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
-import { attachTerminalRenderer } from '../utils/xtermRenderer';
+import { attachTerminalRenderer, getTerminalScrollback, registerScrollbackSync } from '../utils/xtermRenderer';
 
 const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
   const terminalRef = useRef(null);
@@ -41,6 +41,10 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
   }, []);
 
   useEffect(() => {
+    return registerScrollbackSync(terminalInstance);
+  }, []);
+
+  useEffect(() => {
     // Actualizar tema cuando cambie
     if (terminalInstance.current && theme) {
       terminalInstance.current.options.theme = theme;
@@ -50,8 +54,8 @@ const RecordingPlayerTab = ({ recording, fontFamily, fontSize, theme }) => {
   const initializeTerminal = () => {
     if (!terminalRef.current) return;
 
-    // Leer scrollback desde configuración (configurable en Settings)
-    const scrollbackLines = parseInt(localStorage.getItem('nodeterm_scrollback_lines') || '1000', 10);
+    // Leer scrollback desde configuración (configurable en Settings, por defecto 10000)
+    const scrollbackLines = getTerminalScrollback();
 
     const term = new Terminal({
       fontFamily: fontFamily || 'Consolas, Courier New, monospace',

@@ -9,7 +9,7 @@ import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
-import { attachTerminalRenderer } from '../utils/xtermRenderer';
+import { attachTerminalRenderer, getTerminalScrollback, registerScrollbackSync } from '../utils/xtermRenderer';
 import { systemStatsService } from '../services/SystemStatsService';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
 
@@ -173,8 +173,8 @@ const PowerShellTerminal = forwardRef(({
     }));
 
     useEffect(() => {
-        // Leer scrollback desde configuraci??n (configurable en Settings)
-        const scrollbackLines = parseInt(localStorage.getItem('nodeterm_scrollback_lines') || '1000', 10);
+        // Leer scrollback desde configuración (configurable en Settings, por defecto 10000)
+        const scrollbackLines = getTerminalScrollback();
 
         // Initialize Terminal with PowerShell-optimized settings
         term.current = new Terminal({
@@ -418,6 +418,11 @@ const PowerShellTerminal = forwardRef(({
                 }
             };
         }
+    }, []);
+
+    // Sincronizar scrollback dinámicamente si cambia en Settings
+    useEffect(() => {
+        return registerScrollbackSync(term);
     }, []);
 
     // Update font family dynamically

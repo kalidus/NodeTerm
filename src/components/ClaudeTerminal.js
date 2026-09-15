@@ -5,7 +5,7 @@ import { WebLinksAddon } from '@xterm/addon-web-links';
 import '@xterm/xterm/css/xterm.css';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
-import { attachTerminalRenderer } from '../utils/xtermRenderer';
+import { attachTerminalRenderer, getTerminalScrollback, registerScrollbackSync } from '../utils/xtermRenderer';
 
 const ClaudeTerminal = forwardRef(({
   fontFamily = 'Consolas, "Courier New", monospace',
@@ -61,7 +61,7 @@ const ClaudeTerminal = forwardRef(({
       fontFamily,
       fontSize,
       convertEol: true,
-      scrollback: parseInt(localStorage.getItem('nodeterm_scrollback_lines') || '1000', 10),
+      scrollback: getTerminalScrollback(),
       allowTransparency: isIntegrated,
       theme: {
         background: terminalBg,
@@ -207,6 +207,10 @@ const ClaudeTerminal = forwardRef(({
       term.current?.dispose();
     };
   }, [tabId]);
+
+  useEffect(() => {
+    return registerScrollbackSync(term);
+  }, []);
 
   return (
     <div style={{

@@ -68,3 +68,34 @@ export function attachTerminalRenderer(termInstance, customAddons = {}) {
   // Fallback 2: DOM por defecto de xterm
   return { rendererType: 'dom', addon: null };
 }
+
+export const DEFAULT_SCROLLBACK_LINES = 10000;
+
+/**
+ * Obtiene el límite de líneas de scrollback configurado en Settings (por defecto 10,000 líneas).
+ */
+export function getTerminalScrollback() {
+  try {
+    const saved = localStorage.getItem('nodeterm_scrollback_lines');
+    if (saved) {
+      const parsed = parseInt(saved, 10);
+      if (!isNaN(parsed) && parsed >= 1000) {
+        return parsed;
+      }
+    }
+  } catch (_) {}
+  return DEFAULT_SCROLLBACK_LINES;
+}
+
+/**
+ * Sincroniza dinámicamente el scrollback de un terminal cuando el usuario lo modifica en Settings.
+ */
+export function registerScrollbackSync(termRef) {
+  const handler = (e) => {
+    if (e.detail && typeof e.detail.scrollback === 'number' && termRef.current) {
+      termRef.current.options.scrollback = e.detail.scrollback;
+    }
+  };
+  window.addEventListener('terminal-settings-changed', handler);
+  return () => window.removeEventListener('terminal-settings-changed', handler);
+}

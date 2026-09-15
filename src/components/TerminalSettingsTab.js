@@ -7,6 +7,7 @@ import { Button } from 'primereact/button';
 import { Slider } from 'primereact/slider';
 import { themes } from '../themes';
 import { useTranslation } from '../i18n/hooks/useTranslation';
+import { getTerminalScrollback } from '../utils/xtermRenderer';
 import '../styles/components/terminal-settings.css';
 
 // Storage keys
@@ -107,9 +108,15 @@ const TerminalSettingsTab = ({
     return saved !== null ? saved === 'true' : true;
   });
   const [scrollbackLines, setScrollbackLines] = useState(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.SCROLLBACK_LINES);
-    return saved ? parseInt(saved, 10) : 10000;
+    return getTerminalScrollback();
   });
+
+  // Asegurar persistencia del default si aún no existe en localStorage
+  useEffect(() => {
+    if (!localStorage.getItem(STORAGE_KEYS.SCROLLBACK_LINES)) {
+      localStorage.setItem(STORAGE_KEYS.SCROLLBACK_LINES, '10000');
+    }
+  }, []);
   // Local echo SSH: muestra el carácter localmente antes del echo del servidor
   const [sshLocalEcho, setSshLocalEcho] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.SSH_LOCAL_ECHO);
@@ -161,17 +168,20 @@ const TerminalSettingsTab = ({
     // Solo guardamos si es un valor válido y cumple el mínimo
     if (!isNaN(val) && val >= 1000 && val <= 200000) {
       localStorage.setItem(STORAGE_KEYS.SCROLLBACK_LINES, val.toString());
+      window.dispatchEvent(new CustomEvent('terminal-settings-changed', { detail: { scrollback: val } }));
     }
   }, []);
 
   const handleScrollbackBlur = useCallback(() => {
-    if (isNaN(scrollbackLines) || scrollbackLines < 1000) {
-      setScrollbackLines(1000);
-      localStorage.setItem(STORAGE_KEYS.SCROLLBACK_LINES, '1000');
-    } else if (scrollbackLines > 200000) {
-      setScrollbackLines(200000);
-      localStorage.setItem(STORAGE_KEYS.SCROLLBACK_LINES, '200000');
+    let finalVal = scrollbackLines;
+    if (isNaN(finalVal) || finalVal < 1000) {
+      finalVal = 1000;
+    } else if (finalVal > 200000) {
+      finalVal = 200000;
     }
+    setScrollbackLines(finalVal);
+    localStorage.setItem(STORAGE_KEYS.SCROLLBACK_LINES, finalVal.toString());
+    window.dispatchEvent(new CustomEvent('terminal-settings-changed', { detail: { scrollback: finalVal } }));
   }, [scrollbackLines]);
 
   const handleSshLocalEchoChange = useCallback((value) => {

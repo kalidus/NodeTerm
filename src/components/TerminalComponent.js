@@ -6,7 +6,7 @@ import { statusBarThemes } from '../themes/status-bar-themes';
 import { themes } from '../themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
-import { attachTerminalRenderer } from '../utils/xtermRenderer';
+import { attachTerminalRenderer, getTerminalScrollback } from '../utils/xtermRenderer';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
 
 const TerminalComponent = forwardRef(({
@@ -66,11 +66,14 @@ const TerminalComponent = forwardRef(({
     }, [isBroadcastActive, onBroadcastData]);
 
 
-    // Escuchar cambios del setting de local echo SSH
+    // Escuchar cambios de settings de terminal (echo local SSH, scrollback, etc.)
     useEffect(() => {
         const handleSettingsChange = (e) => {
             if (e.detail && typeof e.detail.sshLocalEcho === 'boolean') {
                 sshLocalEchoRef.current = e.detail.sshLocalEcho;
+            }
+            if (e.detail && typeof e.detail.scrollback === 'number' && term.current) {
+                term.current.options.scrollback = e.detail.scrollback;
             }
         };
         window.addEventListener('terminal-settings-changed', handleSettingsChange);
@@ -248,8 +251,8 @@ const TerminalComponent = forwardRef(({
             defaultFontSize = parseInt(localStorage.getItem('basicapp_local_terminal_font_size') || '14', 10);
         }
 
-        // Leer scrollback desde configuraci??n (configurable en Settings)
-        const scrollbackLines = parseInt(localStorage.getItem('nodeterm_scrollback_lines') || '1000', 10);
+        // Leer scrollback desde configuración (configurable en Settings, por defecto 10000)
+        const scrollbackLines = getTerminalScrollback();
 
         // Initialize Terminal
         term.current = new Terminal({
