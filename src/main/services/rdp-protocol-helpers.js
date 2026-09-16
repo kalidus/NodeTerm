@@ -131,15 +131,16 @@ function describeRdpPdu(buf) {
           const sharePduType = userData.readUInt16LE(2) & 0x0f;
           const sharePduTypeNames = {
             1: 'DEMAND_ACTIVE',
-            2: 'CONFIRM_ACTIVE',
-            3: 'DEACTIVATE_ALL',
-            4: 'DATA_PDU',
-            7: 'SERVER_REDIRECTION'
+            2: 'DEACTIVATE_ALL',
+            3: 'CONFIRM_ACTIVE',
+            6: 'DEACTIVATE_ALL',
+            7: 'DATA_PDU',
+            10: 'SERVER_REDIRECTION'
           };
           const shareTypeName = sharePduTypeNames[sharePduType] || `SHARE_${sharePduType}`;
           pduDesc += ` ${shareTypeName}`;
 
-          if (sharePduType === 4 && userData.length >= 19) {
+          if (sharePduType === 7 && userData.length >= 19) {
             const pduType2 = userData[18];
             const pduType2Names = {
               2: 'UPDATE',
@@ -225,6 +226,206 @@ function describeRdpPdu(buf) {
   return `RAW 0x${buf[0].toString(16)} (${buf.length}B)`;
 }
 
+/**
+ * Separa múltiples frames concatenados en un mismo chunk TCP / TLS:
+ * - TPKT (0x03 0x00 ...)
+ * - Fast-Path ((b0 & 0x03) === 0 && (b0 & 0x30) === 0)
+ * - CredSSP ASN.1 SEQUENCE (0x30 ...)
+ *
+ * Preserva intactos y aislados cada uno de los frames para que IronRDP WASM
+ * no reciba bytes extra ni desalineamientos de flujo.
+ *
+ * @param {Buffer} buf
+ * @returns {Buffer[]}
+ */
+class RdpStreamDeframer {
+  constructor() {
+    this.buffer = Buffer.alloc(0);
+  }
+
+  /**
+   * Agrega un chunk TCP y retorna un array con todos los frames RDP completos.
+   * Si el último frame está incompleto (fragmentado por TCP), se retiene en el buffer
+   * interno hasta que lleguen los bytes restantes en el siguiente chunk.
+   *
+   * Soporta:
+   * - TPKT (0x03 0x00 ...)
+   * - Fast-Path ((b0 & 0x03) === 0 && (b0 & 0x30) === 0)
+   * - CredSSP ASN.1 SEQUENCE (0x30 ...)
+   *
+   * @param {Buffer} chunk
+   * @returns {Buffer[]}
+   */
+  push(chunk) {
+    if (!Buffer.isBuffer(chunk) || chunk.length === 0) return [];
+
+    if (this.buffer.length === 0) {
+      this.buffer = chunk;
+    } else {
+      this.buffer = Buffer.concat([this.buffer, chunk]);
+    }
+
+    const frames = [];
+    let offset = 0;
+
+    while (offset < this.buffer.length) {
+      const remaining = this.buffer.length - offset;
+      if (remaining < 2) {
+        // Necesitamos al menos 2 bytes para determinar el tipo y longitud
+        break;
+      }
+
+      const b0 = this.buffer[offset];
+
+      // 1. TPKT frame (0x03 0x00 len_hi len_lo)
+      if (b0 === 0x03) {
+        if (this.buffer[offset + 1] !== 0x00) {
+          offset++;
+          continue;
+        }
+        if (remaining < 4) {
+          // Incompleto: faltan bytes para leer la longitud TPKT
+          break;
+        }
+        const tpktLen = this.buffer.readUInt16BE(offset + 2);
+        if (tpktLen < 4) {
+          offset++;
+          continue;
+        }
+        if (remaining < tpktLen) {
+          // Incompleto: esperar al siguiente chunk TCP
+          break;
+        }
+        frames.push(this.buffer.subarray(offset, offset + tpktLen));
+        offset += tpktLen;
+        continue;
+      }
+
+      // 2. CredSSP ASN.1 SEQUENCE (0x30 ...)
+      if (b0 === 0x30) {
+        const b1 = this.buffer[offset + 1];
+        let credsspLen = 0;
+        let minHdr = 2;
+        if (b1 === 0x82) {
+          if (remaining < 4) break;
+          credsspLen = this.buffer.readUInt16BE(offset + 2) + 4;
+          minHdr = 4;
+        } else if (b1 === 0x81) {
+          if (remaining < 3) break;
+          credsspLen = this.buffer[offset + 2] + 3;
+          minHdr = 3;
+        } else if (b1 < 0x80) {
+          credsspLen = b1 + 2;
+        } else {
+          offset++;
+          continue;
+        }
+        if (credsspLen < minHdr) {
+          offset++;
+          continue;
+        }
+        if (remaining < credsspLen) {
+          break;
+        }
+        frames.push(this.buffer.subarray(offset, offset + credsspLen));
+        offset += credsspLen;
+        continue;
+      }
+
+      // 3. Fast-Path frame ((b0 & 0x03) === 0 && (b0 & 0x30) === 0)
+      if ((b0 & 0x03) === 0 && (b0 & 0x30) === 0) {
+        const b1 = this.buffer[offset + 1];
+        let fpLen = 0;
+        let minHdr = 2;
+        if ((b1 & 0x80) !== 0) {
+          if (remaining < 3) {
+            // Incompleto: faltan bytes para leer longitud FastPath
+            break;
+          }
+          fpLen = ((b1 & 0x7f) << 8) | this.buffer[offset + 2];
+          minHdr = 3;
+        } else {
+          fpLen = b1;
+        }
+        if (fpLen < minHdr) {
+          offset++;
+          continue;
+        }
+        if (remaining < fpLen) {
+          // Incompleto: esperar al siguiente chunk TCP
+          break;
+        }
+        frames.push(this.buffer.subarray(offset, offset + fpLen));
+        offset += fpLen;
+        continue;
+      }
+
+      // Byte no reconocido: avanzar para no bloquear
+      offset++;
+    }
+
+    if (offset > 0) {
+      this.buffer = this.buffer.subarray(offset);
+    }
+
+    return frames;
+  }
+
+  reset() {
+    this.buffer = Buffer.alloc(0);
+  }
+}
+
+function splitRdpFrames(buf) {
+  if (!Buffer.isBuffer(buf) || buf.length < 4) {
+    return [buf];
+  }
+
+  const frames = [];
+  let offset = 0;
+
+  while (offset < buf.length) {
+    const remaining = buf.length - offset;
+    const b0 = buf[offset];
+
+    // 1. TPKT frame (0x03 0x00 len_hi len_lo)
+    if (b0 === 0x03 && remaining >= 4 && buf[offset + 1] === 0x00) {
+      const tpktLen = buf.readUInt16BE(offset + 2);
+      if (tpktLen >= 4 && tpktLen <= remaining) {
+        frames.push(buf.subarray(offset, offset + tpktLen));
+        offset += tpktLen;
+        continue;
+      }
+    }
+
+    // 2. Fast-Path frame ((b0 & 0x03) === 0 && (b0 & 0x30) === 0)
+    if ((b0 & 0x03) === 0 && (b0 & 0x30) === 0 && remaining >= 2) {
+      const b1 = buf[offset + 1];
+      let fpLen = 0;
+      if ((b1 & 0x80) !== 0) {
+        if (remaining >= 3) {
+          fpLen = ((b1 & 0x7f) << 8) | buf[offset + 2];
+        }
+      } else {
+        fpLen = b1;
+      }
+      if (fpLen >= 2 && fpLen <= remaining) {
+        frames.push(buf.subarray(offset, offset + fpLen));
+        offset += fpLen;
+        continue;
+      }
+    }
+
+    // Si no coincide con TPKT ni FastPath, o es el fragmento final (ej. CredSSP 0x30)
+    frames.push(buf.subarray(offset));
+    break;
+  }
+
+  return frames.length > 0 ? frames : [buf];
+}
+
+const splitTpktFrames = splitRdpFrames;
+
 module.exports = {
   PROTOCOL_SSL,
   PROTOCOL_HYBRID,
@@ -233,6 +434,9 @@ module.exports = {
   resolveCredsspPolicy,
   readSelectedProtocol,
   parseX224ConnectionConfirm,
-  describeRdpPdu
+  describeRdpPdu,
+  splitRdpFrames,
+  splitTpktFrames
 };
+
 

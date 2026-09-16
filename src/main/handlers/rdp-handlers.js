@@ -160,7 +160,10 @@ function registerRdpHandlers(dependencies) {
 
       const host = config?.hostname || config?.server || config?.host;
       const port = config?.port || 3389;
-      const username = config?.username || config?.user || 'nodeterm';
+      const rawUser = (config?.useBastionWallix && config?.bastionUser)
+        ? config.bastionUser
+        : (config?.username || config?.user || 'nodeterm');
+      const username = String(rawUser).trim();
 
       let nego = null;
       try {

@@ -14,7 +14,7 @@ const EventEmitter = require('events');
 const { WebSocketServer } = require('ws');
 const fs = require('fs');
 const path = require('path');
-const { parseX224ConnectionConfirm, protocolName, describeRdpPdu } = require('./rdp-protocol-helpers');
+const { parseX224ConnectionConfirm, protocolName, describeRdpPdu, splitRdpFrames, splitTpktFrames } = require('./rdp-protocol-helpers');
 const { prepareMcsConnectInitial, findClientCoreData, patchInfoPacket, patchInfoAutoLogon } = require('./rdp-mcs-helpers');
 const { patchFontSequenceFlags } = require('./rdp-font-helpers');
 const { fixWallixBitmapStrideCrop } = require('./rdp-fastpath-helpers');
@@ -109,7 +109,7 @@ class RdpNativeBridgeService extends EventEmitter {
       id: tokenId,
       host: config.hostname || config.server || config.host,
       port: parseInt(config.port, 10) || 3389,
-      username: config.username || '',
+      username: (config.useBastionWallix && config.bastionUser) ? config.bastionUser : (config.username || config.user || ''),
       password: config.password || '',
       width: config.width || 1920,
       height: config.height || 1080,
@@ -200,7 +200,7 @@ class RdpNativeBridgeService extends EventEmitter {
       if (isCleanedUp) return;
       isCleanedUp = true;
       const formattedReason = formatCloseReason(reason);
-      console.log(`🧹 [RdpNativeBridgeService] Sesión RDP finalizada (${formattedReason})`);
+      console.log(`🧹 [RdpNativeBridgeService] Sesión RDP finalizada (${formattedReason}) [toRdp=${framesToRdp} (${bytesToRdp}B), fromRdp=${framesFromRdp} (${bytesFromRdp}B)]`);
       this.activeConnections.delete(connectionId);
 
       this.emit('session-closed', {
@@ -322,110 +322,118 @@ class RdpNativeBridgeService extends EventEmitter {
               rdCleanPathPhase = 'transparent';
 
               tlsSocket.on('data', (chunk) => {
-                const now = Date.now();
-                const gapFromLastRdp = lastRdpFrameAt > 0 ? now - lastRdpFrameAt : 0;
-                lastRdpFrameAt = now;
+                // Separar frames concatenados (ej. Fast-Path y TPKT) dentro del mismo chunk
+                // para que IronRDP WASM reciba cada PDU individualmente delimitada.
+                const frames = splitRdpFrames(chunk);
 
-                const n = chunk.length;
-                framesFromRdp += 1;
-                const pduDesc = describeRdpPdu(chunk);
+                for (let frame of frames) {
+                  const now = Date.now();
+                  const gapFromLastRdp = lastRdpFrameAt > 0 ? now - lastRdpFrameAt : 0;
+                  lastRdpFrameAt = now;
 
-                if (framesFromRdp <= 24 && isDebug) {
-                  console.log(`[Bridge] RDP->WASM frame#${framesFromRdp}: ${n}B | ${pduDesc}`);
-                  if (process.env.NODETERM_RDP_RECORD_FRAMES === '1') {
-                    try {
-                      fs.writeFileSync(path.join(framesDir, `from-${String(framesFromRdp).padStart(2, '0')}-${n}b.hex`), chunk.toString('hex'), 'utf8');
-                    } catch (_) { /* noop */ }
+                  const n = frame.length;
+                  framesFromRdp += 1;
+                  const pduDesc = describeRdpPdu(frame);
+
+                  if (framesFromRdp <= 40 || isDebug) {
+                    console.log(`[Bridge] RDP in frame#${framesFromRdp}: ${n}B | ${pduDesc}`);
+                    if (process.env.NODETERM_RDP_RECORD_FRAMES === '1') {
+                      try {
+                        fs.writeFileSync(path.join(framesDir, `from-${String(framesFromRdp).padStart(2, '0')}-${n}b.hex`), frame.toString('hex'), 'utf8');
+                      } catch (_) { /* noop */ }
+                    }
+                  } else if (gapFromLastRdp >= 400 && isDebug) {
+                    console.log(`⏱️ [Bridge Trace GAP ${gapFromLastRdp}ms] Pausa RDP -> Frame #${framesFromRdp} (${n}B): ${pduDesc}`);
+                    if (process.env.NODETERM_RDP_RECORD_FRAMES === '1') {
+                      try {
+                        fs.writeFileSync(path.join(framesDir, `gap-${gapFromLastRdp}ms-from-f${framesFromRdp}-${n}b.hex`), frame.toString('hex'), 'utf8');
+                      } catch (_) { /* noop */ }
+                    }
+                  } else if (
+                    isDebug && (
+                      pduDesc.includes('DEMAND_ACTIVE') ||
+                      pduDesc.includes('DEACTIVATE_ALL') ||
+                      pduDesc.includes('AUTODETECT') ||
+                      pduDesc.includes('HEARTBEAT') ||
+                      pduDesc.includes('CONTROL') ||
+                      pduDesc.includes('SAVE_SESSION_INFO') ||
+                      pduDesc.includes('SET_ERROR_INFO') ||
+                      pduDesc.includes('FRAME_ACK') ||
+                      pduDesc.includes('SURFACE_CMDS')
+                    )
+                  ) {
+                    console.log(`📡 [Bridge Trace PDU #${framesFromRdp}] ${pduDesc}`);
                   }
-                } else if (gapFromLastRdp >= 400 && isDebug) {
-                  console.log(`⏱️ [Bridge Trace GAP ${gapFromLastRdp}ms] Pausa RDP -> Frame #${framesFromRdp} (${n}B): ${pduDesc}`);
-                  if (process.env.NODETERM_RDP_RECORD_FRAMES === '1') {
-                    try {
-                      fs.writeFileSync(path.join(framesDir, `gap-${gapFromLastRdp}ms-from-f${framesFromRdp}-${n}b.hex`), chunk.toString('hex'), 'utf8');
-                    } catch (_) { /* noop */ }
-                  }
-                } else if (
-                  isDebug && (
-                    pduDesc.includes('DEMAND_ACTIVE') ||
-                    pduDesc.includes('DEACTIVATE_ALL') ||
-                    pduDesc.includes('AUTODETECT') ||
-                    pduDesc.includes('HEARTBEAT') ||
-                    pduDesc.includes('CONTROL') ||
-                    pduDesc.includes('SAVE_SESSION_INFO') ||
-                    pduDesc.includes('SET_ERROR_INFO') ||
-                    pduDesc.includes('FRAME_ACK') ||
-                    pduDesc.includes('SURFACE_CMDS')
-                  )
-                ) {
-                  console.log(`📡 [Bridge Trace PDU #${framesFromRdp}] ${pduDesc}`);
-                }
 
-                // Wallix FontMap a veces trae mapFlags invalidos para IronRDP (from_bits).
-                // Solo forzar FIRST|LAST; NO reclasificar a UPDATE (rompe FontMap con glifos).
-                const fontPatch = patchFontSequenceFlags(chunk);
-                if (fontPatch.candidates.length && isDebug) {
-                  console.log(`[Bridge] FontPdu frame#${framesFromRdp}:`, fontPatch.candidates.map((c) => `len=${c.totalLength} type2=0x${c.type2.toString(16)} flags=0x${c.flags.toString(16)} entry=${c.entrySize}`).join('; '));
-                }
-                if (fontPatch.patchedCount) {
-                  chunk = fontPatch.buf;
-                  if (isDebug) {
-                    console.log(`[Bridge] FontPdu adjust flags=${fontPatch.patchedCount}`, fontPatch.details.map((d) => `len=${d.totalLength} 0x${d.previous.toString(16)}->0x${d.next.toString(16)}`).join(', '));
+                  // Wallix FontMap a veces trae mapFlags invalidos para IronRDP (from_bits).
+                  // Solo forzar FIRST|LAST; NO reclasificar a UPDATE (rompe FontMap con glifos).
+                  const fontPatch = patchFontSequenceFlags(frame);
+                  if (fontPatch.candidates.length && isDebug) {
+                    console.log(`[Bridge] FontPdu frame#${framesFromRdp}:`, fontPatch.candidates.map((c) => `len=${c.totalLength} type2=0x${c.type2.toString(16)} flags=0x${c.flags.toString(16)} entry=${c.entrySize}`).join('; '));
                   }
-                }
+                  if (fontPatch.patchedCount) {
+                    frame = fontPatch.buf;
+                    if (isDebug) {
+                      console.log(`[Bridge] FontPdu adjust flags=${fontPatch.patchedCount}`, fontPatch.details.map((d) => `len=${d.totalLength} 0x${d.previous.toString(16)}->0x${d.next.toString(16)}`).join(', '));
+                    }
+                  }
 
-                // IronRDP 0.7: message channel (1001) no soportado -> no reenviar a WASM,
-                // pero responder Auto-Detect RTT/BW para que Wallix no espere (pantalla negra).
-                const wasReady = channelFilter.ready;
-                const processed = processServerFrame(channelFilter, chunk);
-                if (!wasReady && channelFilter.ready && isDebug) {
-                  console.log(
-                    `[Bridge] Canales MCS configurados: io=${channelFilter.ioChannelId}` +
-                      ` permitidos=[${[...channelFilter.allowed].join(',')}]` +
-                      (channelFilter.cliprdrChannelId != null ? ` cliprdr=${channelFilter.cliprdrChannelId}` : '') +
-                      (channelFilter.drdynvcChannelId != null ? ` drdynvc=${channelFilter.drdynvcChannelId}` : '') +
-                      (channelFilter.messageChannelId != null ? ` msg=${channelFilter.messageChannelId}` : '')
-                  );
-                }
-                if (processed.dropped) {
-                  if (isDebug) {
+                  // IronRDP 0.7: message channel (1001) no soportado -> no reenviar a WASM,
+                  // pero responder Auto-Detect RTT/BW para que Wallix no espere (pantalla negra).
+                  const wasReady = channelFilter.ready;
+                  const processed = processServerFrame(channelFilter, frame);
+                  if (!wasReady && channelFilter.ready) {
+                    console.log(
+                      `[Bridge] Canales MCS configurados: io=${channelFilter.ioChannelId}` +
+                        ` permitidos=[${[...channelFilter.allowed].join(',')}]` +
+                        (channelFilter.cliprdrChannelId != null ? ` cliprdr=${channelFilter.cliprdrChannelId}` : '') +
+                        (channelFilter.drdynvcChannelId != null ? ` drdynvc=${channelFilter.drdynvcChannelId}` : '') +
+                        (channelFilter.messageChannelId != null ? ` msg=${channelFilter.messageChannelId}` : '')
+                    );
+                  }
+                  if (processed.dropped) {
                     console.log(
                       `🚫 [Bridge Trace DROPPED #${framesFromRdp}] MCS ch=${processed.channelId}: ${processed.note}` +
                         (processed.replies.length ? ` (replies=${processed.replies.length})` : '') +
                         ` | PDU: ${pduDesc}`
                     );
-                  }
-                  if (processed.replies.length && tlsSocket && tlsSocket.writable) {
-                    for (const reply of processed.replies) {
-                      bytesToRdp += reply.length;
-                      tlsSocket.write(reply);
+                    if (processed.replies.length && tlsSocket && tlsSocket.writable) {
+                      for (const reply of processed.replies) {
+                        bytesToRdp += reply.length;
+                        tlsSocket.write(reply);
+                      }
                     }
+                    bytesFromRdp += n;
+                    continue;
                   }
+                  frame = processed.forward;
+
+                  if (framesFromRdp <= 40 || isDebug) {
+                    console.log(`[Bridge] RDP->WASM frame#${framesFromRdp}: ${frame.length}B | ${pduDesc}`);
+                  }
+
+                  // Normalizar todas las teselas 16bpp a estándar 0xf3/0xf4 y <=64x64
+                  const stridePatch = fixWallixBitmapStrideCrop(frame);
+                  const outChunks = stridePatch.patchedCount
+                    ? (stridePatch.buffers || [stridePatch.buf])
+                    : [frame];
+                  if (stridePatch.patchedCount && isDebug) {
+                    console.log(
+                      `[Bridge] FastPath BITMAP normalizado frame#${framesFromRdp}: rects=${stridePatch.numberRectangles} patched=${stridePatch.patchedCount}` +
+                        (stridePatch.solidCount != null ? ` solid=${stridePatch.solidCount} crop=${stridePatch.cropCount}` : '') +
+                        (stridePatch.pduCount > 1 ? ` pdus=${stridePatch.pduCount}` : '')
+                    );
+                  }
+
                   bytesFromRdp += n;
-                  return;
-                }
-                chunk = processed.forward;
-
-                // Normalizar todas las teselas 16bpp a estándar 0xf3/0xf4 y <=64x64
-                const stridePatch = fixWallixBitmapStrideCrop(chunk);
-                const outChunks = stridePatch.patchedCount
-                  ? (stridePatch.buffers || [stridePatch.buf])
-                  : [chunk];
-                if (stridePatch.patchedCount && isDebug) {
-                  console.log(
-                    `[Bridge] FastPath BITMAP normalizado frame#${framesFromRdp}: rects=${stridePatch.numberRectangles} patched=${stridePatch.patchedCount}` +
-                      (stridePatch.solidCount != null ? ` solid=${stridePatch.solidCount} crop=${stridePatch.cropCount}` : '') +
-                      (stridePatch.pduCount > 1 ? ` pdus=${stridePatch.pduCount}` : '')
-                  );
-                }
-
-                bytesFromRdp += n;
-                if (ws.readyState === ws.OPEN) {
-                  try {
-                    for (const out of outChunks) {
-                      ws.send(out, { binary: true });
+                  if (ws.readyState === ws.OPEN) {
+                    try {
+                      for (const out of outChunks) {
+                        ws.send(out, { binary: true });
+                      }
+                    } catch (sendErr) {
+                      console.warn('[Bridge] Error enviando frames a WebSocket:', sendErr.message);
                     }
-                  } catch (sendErr) {
-                    console.warn('[Bridge] Error enviando frames a WebSocket:', sendErr.message);
                   }
                 }
               });
@@ -495,7 +503,7 @@ class RdpNativeBridgeService extends EventEmitter {
           learnClientInitiator(channelFilter, payload);
           const pduDesc = describeRdpPdu(payload);
 
-          if (isDebug) {
+          if (framesToRdp <= 8 || isDebug) {
             if (framesToRdp <= 24) {
               console.log(`[Bridge] WASM->RDP frame#${framesToRdp}: ${payload.length}B | ${pduDesc}`);
               if (process.env.NODETERM_RDP_RECORD_FRAMES === '1') {

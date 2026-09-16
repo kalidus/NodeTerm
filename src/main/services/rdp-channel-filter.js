@@ -216,19 +216,19 @@ function consumeAutodetect(state, channelId, userData, force) {
   };
 }
 
-function dropShortIoPdu(state, channelId, userData) {
-  if (!Buffer.isBuffer(userData) || userData.length >= IRONRDP_SHARE_CONTROL_MIN) {
+function filterIoChannelPdu(state, channelId, userData) {
+  if (!Buffer.isBuffer(userData) || userData.length < 2) {
     return null;
   }
 
-  // Dropear Heartbeat del servidor (MS-RDPBCGR 2.2.16.1 / Wallix):
-  // El cliente no debe responder al Server Heartbeat PDU.
-  // Dropearlo evita que IronRDP WASM crashee por PDU corto (<10B) en ShareControl.
-  if (userData.length >= 6) {
+  // 1. Dropear Heartbeat del servidor (MS-RDPBCGR 2.2.16.1 / Wallix):
+  // Comprobar sin importar si userData es corto o largo (puede ser 8, 12, 16 o 22 bytes)
+  if (userData.length >= 4) {
     const flags = userData.readUInt16LE(0);
-    const hasFlagsHi = (flags & 0x8000) !== 0;
+    const hasFlagsHi = (flags & SEC_FLAGSHI_VALID) !== 0;
     const flagsHi = hasFlagsHi && userData.length >= 4 ? userData.readUInt16LE(2) : 0;
-    const isHeartbeat = (flags & 0x4000) !== 0 || (hasFlagsHi && ((flagsHi & 0x0041) !== 0));
+    const isHeartbeat = (flags & SEC_HEARTBEAT) !== 0 ||
+                        (hasFlagsHi && (((flagsHi & 0x0041) !== 0) || ((flagsHi & 0x000b) !== 0)));
 
     if (isHeartbeat) {
       markDropped(state, channelId);
@@ -242,25 +242,49 @@ function dropShortIoPdu(state, channelId, userData) {
     }
   }
 
-  let note = `short-io ${userData.length}B`;
-  if (userData.length >= 4) {
-    const flags = userData.readUInt16LE(0);
-    const flagsHi = userData.readUInt16LE(2);
-    note += ` flags=0x${flags.toString(16)} flagsHi=0x${flagsHi.toString(16)}`;
-    if (flags & SEC_AUTODETECT_REQ) note += ' autodetect';
-    else if (flags & SEC_HEARTBEAT) note += ' heartbeat';
-    else if (flags & SEC_FLAGSHI_VALID) note += ' sec-flagshi';
+  // 2. Si es un paquete de licencia (SEC_LICENSE_PKT = 0x0080), DEBE PASAR para completar el handshake
+  const secFlags = userData.length >= 2 ? userData.readUInt16LE(0) : 0;
+  if ((secFlags & 0x0080) !== 0) {
+    return null;
   }
-  note += ` hex=${userData.toString('hex').slice(0, 24)}`;
 
-  markDropped(state, channelId);
-  return {
-    forward: null,
-    replies: [],
-    dropped: true,
-    note,
-    channelId
-  };
+  // 3. PDUs con longitud menor a la mínima de ShareControlHeader (10 bytes)
+  if (userData.length < IRONRDP_SHARE_CONTROL_MIN) {
+    let note = `short-io ${userData.length}B`;
+    if (userData.length >= 4) {
+      const flagsHi = userData.readUInt16LE(2);
+      note += ` flags=0x${secFlags.toString(16)} flagsHi=0x${flagsHi.toString(16)}`;
+    }
+    note += ` hex=${userData.toString('hex').slice(0, 24)}`;
+
+    markDropped(state, channelId);
+    return {
+      forward: null,
+      replies: [],
+      dropped: true,
+      note,
+      channelId
+    };
+  }
+
+  // 4. Si el tipo PDU de ShareControlHeader no es soportado por IronRDP WASM:
+  // Tipos válidos: 1 (DemandActive), 2 (RequestActive), 3 (ConfirmActive), 4/6 (DeactivateAll), 7 (Data), 10 (ServerRedirection).
+  // Tipos no soportados (ej. 0x0b=11) crashean fatalmente IronRDP: 'invalid pdu_type: invalid pdu type ...'
+  const pduTypeWithVersion = userData.readUInt16LE(2);
+  const pduType = pduTypeWithVersion & 0x000f;
+  const VALID_SHARE_CONTROL_TYPES = [1, 2, 3, 4, 6, 7, 10];
+  if (!VALID_SHARE_CONTROL_TYPES.includes(pduType)) {
+    markDropped(state, channelId);
+    return {
+      forward: null,
+      replies: [],
+      dropped: true,
+      note: `drop invalid-share-control-0x${pduType.toString(16)} len=${userData.length}B`,
+      channelId
+    };
+  }
+
+  return null;
 }
 
 /**
@@ -278,27 +302,19 @@ function processServerFrame(state, buf) {
 
   const channelId = readSendDataIndicationChannelId(buf);
   if (channelId == null) return empty;
-  if (!state.ready) return empty;
 
   const parsed = parseMcsSendData(buf);
-  if (!parsed) return empty;
 
-  // 1. Portapapeles (cliprdr): Si es el canal cliprdr o el contenido es un PDU de CLIPRDR,
-  // REENVIAR DIRECTAMENTE A IRONRDP WASM SIN INTERCEPTAR NI DROPEAR!
-  const isCliprdr = channelId === state.cliprdrChannelId || 
-                    state.channelIdToName?.get(channelId) === 'cliprdr' ||
-                    isCliprdrHeader(parsed.userData);
+  // 1. Portapapeles (cliprdr): ÚNICAMENTE si es el canal cliprdr negociado (1004)
+  // NUNCA asumir cliprdr sobre canales de mensajes o canales no permitidos (ej. 1001)
+  const isCliprdr = (state.cliprdrChannelId != null && channelId === state.cliprdrChannelId);
   if (isCliprdr) {
-    if (state.cliprdrChannelId == null) {
-      state.cliprdrChannelId = channelId;
-      if (state.channelIdToName) state.channelIdToName.set(channelId, 'cliprdr');
-    }
     return empty; // forward: buf, dropped: false -> reenviar a WASM
   }
 
   // 2. DYNVC / Otros Virtual Channels (CHANNEL_PDU_HEADER que no sea cliprdr):
-  // Interceptar peticiones DVC y responder en 0ms para evitar timeouts de servidores RDS / Wallix.
-  if (isChannelPduHeader(parsed.userData)) {
+  // Interceptar peticiones DVC y responder al servidor para evitar timeouts, pero NUNCA reenviar a WASM.
+  if (parsed && isChannelPduHeader(parsed.userData)) {
     const dvc = handleDvcRequest(channelId, state.clientInitiator, parsed.userData);
     markDropped(state, channelId);
     return {
@@ -310,40 +326,43 @@ function processServerFrame(state, buf) {
     };
   }
 
-  const allowed = state.allowed.has(channelId);
-
-  if (allowed) {
-    const siphoned = consumeAutodetect(state, channelId, parsed.userData, false);
-    if (siphoned) return siphoned;
-
-    if (channelId === state.ioChannelId) {
-      const shortDrop = dropShortIoPdu(state, channelId, parsed.userData);
-      if (shortDrop) return shortDrop;
+  // 3. Si el canal no es el canal IO permitido (por ejemplo, canal de usuario 1001),
+  // NUNCA reenviar a IronRDP WASM (evitando crash con 'unexpected channel received: ID ...')
+  const isIoChannel = state.ready ? (channelId === state.ioChannelId) : (channelId === 1003);
+  if (!isIoChannel) {
+    if (state.messageChannelId == null) {
+      state.messageChannelId = channelId;
     }
-    return empty;
+
+    if (parsed) {
+      const siphoned = consumeAutodetect(state, channelId, parsed.userData, true);
+      if (siphoned) return siphoned;
+    }
+
+    markDropped(state, channelId);
+    const note = parsed?.userData
+      ? (parsed.userData.length === 4 ? 'heartbeat' : `drop ch=${channelId} len=${parsed.userData.length}B hex=${parsed.userData.toString('hex').slice(0, 40)}`)
+      : `drop ch=${channelId}`;
+
+    return {
+      forward: null,
+      replies: [],
+      dropped: true,
+      note,
+      channelId
+    };
   }
 
-  // Canal no permitido (message channel)
-  if (state.messageChannelId == null) {
-    state.messageChannelId = channelId;
-  }
+  // 4. Tráfico en el Canal IO:
+  if (!parsed) return empty;
 
-  const siphoned = consumeAutodetect(state, channelId, parsed.userData, true);
+  const siphoned = consumeAutodetect(state, channelId, parsed.userData, false);
   if (siphoned) return siphoned;
 
-  markDropped(state, channelId);
-  const note =
-    parsed.userData.length === 4
-      ? 'heartbeat'
-      : `drop raw ${parsed.userData.length}B hex=${parsed.userData.toString('hex').slice(0, 40)}`;
+  const ioDrop = filterIoChannelPdu(state, channelId, parsed.userData);
+  if (ioDrop) return ioDrop;
 
-  return {
-    forward: null,
-    replies: [],
-    dropped: true,
-    note,
-    channelId
-  };
+  return empty;
 }
 
 function filterServerFrame(state, buf) {

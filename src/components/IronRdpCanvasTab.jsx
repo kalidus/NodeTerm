@@ -367,15 +367,38 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         if (!isMounted) return;
 
         // 4. Construir la sesión de IronRDP WebAssembly
-        let usernameStr = String(rdpConfig.username || '');
-        let domainStr = String(rdpConfig.domain || '');
+        let rawUser = (rdpConfig.useBastionWallix && rdpConfig.bastionUser)
+          ? rdpConfig.bastionUser
+          : (rdpConfig.username || rdpConfig.user || '');
+        let usernameStr = String(rawUser || '').trim();
+        let domainStr = String(rdpConfig.domain || rdpConfig.serverDomain || '').trim();
         const destinationStr = `${rdpConfig.hostname || rdpConfig.server}:${rdpConfig.port || 3389}`;
 
-        // Formato usuario Wallix solo si hay flags/cadena de target (NO por hostname)
-        const isWallixUserFormat = rdpConfig.useBastionWallix || rdpConfig.bastionUser || rdpConfig.targetServer || usernameStr.includes('@default@') || usernameStr.includes(':APP:');
+        // Formato usuario Wallix:
+        // - Modo 2 (Cadena Wallix): si ya viene con cadena (ej: rt01119@default@Fortigate_JC:APP:rt01119)
+        //   o si tiene targetServer especificado para construirla.
+        // - Modo 1 (Conexión directa Wallix / solo host): solo usuario bastion (ej: rt01119),
+        //   sin targetServer. No debe romperse como email ni NetBIOS.
+        const isWallixChain = usernameStr.split('@').length >= 3 || (usernameStr.includes('@') && usernameStr.includes(':'));
+        const isWallixUserFormat = !!(
+          rdpConfig.useBastionWallix ||
+          rdpConfig.bastionUser ||
+          rdpConfig.targetServer ||
+          isWallixChain
+        );
 
         if (isWallixUserFormat) {
-          // Mantener la cadena de usuario de Wallix intacta
+          // Si tiene targetServer y el usuario aún no está formateado como cadena, construir la cadena Wallix
+          if (!usernameStr.includes('@') && !usernameStr.includes(':')) {
+            const tServer = rdpConfig.targetServer || rdpConfig.targetHost || '';
+            const tUser = rdpConfig.targetUser || usernameStr;
+            const wDomain = rdpConfig.wallixDomain || 'default';
+            const wService = rdpConfig.wallixService || 'APP';
+            if (tServer) {
+              usernameStr = `${usernameStr}@${wDomain}@${tServer}:${wService}:${tUser}`;
+            }
+          }
+          // En modo directo (sin tServer) o si ya es cadena completa, mantener usernameStr intacto
         } else if (!domainStr && usernameStr.includes('\\')) {
           const parts = usernameStr.split('\\');
           domainStr = parts[0];
@@ -754,16 +777,28 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     }
   }, [connectionState, isActive]);
 
-  // Sincronización periódica y por interacción del portapapeles Local -> Remoto
+  // Sincronización controlada por interacción del portapapeles Local -> Remoto
   useEffect(() => {
     if (connectionState !== 'connected' || !sessionRef.current || !isActive) return;
     const isClipboardEnabled = rdpConfig.redirectClipboard !== false;
     if (!isClipboardEnabled) return;
 
     let isDisposed = false;
+    const connectedAt = Date.now();
+
+    // Cebar el portapapeles local inicial sin enviarlo al servidor para no causar
+    // una inyección prematura a t=0ms que violaría el handshake CLIPRDR de Wallix
+    readLocalClipboardText().then((text) => {
+      if (!isDisposed && text) {
+        lastSentClipboardTextRef.current = text;
+        lastReceivedClipboardTextRef.current = text;
+      }
+    }).catch(() => {});
 
     const syncLocalClipboardToRemote = async () => {
       if (isDisposed || !sessionRef.current || isFileTransferArmedRef.current) return;
+      // Período de gracia mínimo de 3 segundos antes de permitir sincronizaciones reactivas por foco
+      if (Date.now() - connectedAt < 3000) return;
       try {
         const text = await readLocalClipboardText();
         if (
@@ -778,9 +813,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       } catch (_) {}
     };
 
-    // Sincronizar inmediatamente al activarse
-    syncLocalClipboardToRemote();
-
     const handleWindowFocus = () => {
       syncLocalClipboardToRemote();
     };
@@ -788,21 +820,17 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     const canvas = canvasRef.current;
     if (canvas) {
       canvas.addEventListener('pointerenter', handleWindowFocus);
-      canvas.addEventListener('mousedown', handleWindowFocus);
       canvas.addEventListener('focus', handleWindowFocus);
     }
     window.addEventListener('focus', handleWindowFocus);
-    const intervalId = setInterval(syncLocalClipboardToRemote, 300);
 
     return () => {
       isDisposed = true;
       if (canvas) {
         canvas.removeEventListener('pointerenter', handleWindowFocus);
-        canvas.removeEventListener('mousedown', handleWindowFocus);
         canvas.removeEventListener('focus', handleWindowFocus);
       }
       window.removeEventListener('focus', handleWindowFocus);
-      clearInterval(intervalId);
     };
   }, [connectionState, isActive, rdpConfig.redirectClipboard]);
 
