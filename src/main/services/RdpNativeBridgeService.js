@@ -58,7 +58,11 @@ class RdpNativeBridgeService extends EventEmitter {
           res.end('NodeTerm RDP Native Bridge Active');
         });
 
-        this.wss = new WebSocketServer({ noServer: true });
+        this.wss = new WebSocketServer({
+          noServer: true,
+          perMessageDeflate: false,
+          maxPayload: 64 * 1024 * 1024
+        });
 
         // Manejador de actualización de protocolo WebSocket (HTTP Upgrade)
         this.server.on('upgrade', (request, socket, head) => {

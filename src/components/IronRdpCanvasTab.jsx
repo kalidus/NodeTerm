@@ -820,7 +820,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
 
     const canvas = canvasRef.current;
     if (canvas) {
-      canvas.addEventListener('pointerenter', handleWindowFocus);
       canvas.addEventListener('focus', handleWindowFocus);
     }
     window.addEventListener('focus', handleWindowFocus);
@@ -828,7 +827,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     return () => {
       isDisposed = true;
       if (canvas) {
-        canvas.removeEventListener('pointerenter', handleWindowFocus);
         canvas.removeEventListener('focus', handleWindowFocus);
       }
       window.removeEventListener('focus', handleWindowFocus);
@@ -887,20 +885,49 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       };
     };
 
+    let pendingMousePos = null;
+    let mouseRafId = null;
+
+    const flushPendingMouseMove = () => {
+      if (mouseRafId != null) {
+        cancelAnimationFrame(mouseRafId);
+        mouseRafId = null;
+      }
+      if (pendingMousePos && sessionRef.current) {
+        const { x, y } = pendingMousePos;
+        pendingMousePos = null;
+        try {
+          const transaction = new Backend.InputTransaction();
+          transaction.addEvent(Backend.DeviceEvent.mouseMove(x, y));
+          sessionRef.current.applyInputs(transaction);
+        } catch (_) {}
+      }
+    };
+
     const handleMouseMove = (e) => {
       if (!sessionRef.current) return;
-      const { x, y } = getCanvasPos(e);
-      try {
-        const transaction = new Backend.InputTransaction();
-        transaction.addEvent(Backend.DeviceEvent.mouseMove(x, y));
-        sessionRef.current.applyInputs(transaction);
-      } catch (err) {}
+      pendingMousePos = getCanvasPos(e);
+      if (mouseRafId == null) {
+        mouseRafId = requestAnimationFrame(() => {
+          mouseRafId = null;
+          if (pendingMousePos && sessionRef.current) {
+            const { x, y } = pendingMousePos;
+            pendingMousePos = null;
+            try {
+              const transaction = new Backend.InputTransaction();
+              transaction.addEvent(Backend.DeviceEvent.mouseMove(x, y));
+              sessionRef.current.applyInputs(transaction);
+            } catch (_) {}
+          }
+        });
+      }
     };
 
     const handleMouseDown = (e) => {
       if (!sessionRef.current) return;
       canvas.focus();
       e.preventDefault();
+      flushPendingMouseMove();
       const { x, y } = getCanvasPos(e);
       const btn = e.button === 0 ? 0 : e.button === 2 ? 2 : 1;
       try {
@@ -914,6 +941,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     const handleMouseUp = (e) => {
       if (!sessionRef.current) return;
       e.preventDefault();
+      flushPendingMouseMove();
       const { x, y } = getCanvasPos(e);
       const btn = e.button === 0 ? 0 : e.button === 2 ? 2 : 1;
       try {
@@ -1018,6 +1046,10 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     canvas.addEventListener('paste', handlePaste);
 
     return () => {
+      if (mouseRafId != null) {
+        cancelAnimationFrame(mouseRafId);
+        mouseRafId = null;
+      }
       canvas.removeEventListener('mousemove', handleMouseMove);
       canvas.removeEventListener('mousedown', handleMouseDown);
       canvas.removeEventListener('mouseup', handleMouseUp);
