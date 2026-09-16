@@ -156,6 +156,19 @@ describe('RDP TCP Stream Deframer & Wallix Separation', () => {
     assert.equal(isWallixUserFormat, true);
   });
 
+  test('resolución de usuario CyberArk PAM con # o múltiples @ se preserva íntegra', () => {
+    const cyberarkStrings = [
+      'kalidus@admin#corp.local@srv-db-01',
+      'admin#corp.local@srv-db-01',
+      'kalidus@root@10.0.0.5'
+    ];
+
+    for (const str of cyberarkStrings) {
+      const isBastionChain = str.split('@').length >= 3 || (str.includes('@') && (str.includes(':') || str.includes('#')));
+      assert.equal(isBastionChain, true, `Cadena CyberArk ${str} debe reconocerse como bastión`);
+    }
+  });
+
   test('resolución de usuario Wallix con targetServer separado', () => {
     const rdpConfig = {
       hostname: 'bastion-dsn.sec.dsn.inet',

@@ -379,12 +379,13 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         //   o si tiene targetServer especificado para construirla.
         // - Modo 1 (Conexión directa Wallix / solo host): solo usuario bastion (ej: rt01119),
         //   sin targetServer. No debe romperse como email ni NetBIOS.
-        const isWallixChain = usernameStr.split('@').length >= 3 || (usernameStr.includes('@') && usernameStr.includes(':'));
+        // - Cadenas de bastión PAM (Wallix con :, CyberArk con # o múltiples @):
+        const isBastionChain = usernameStr.split('@').length >= 3 || (usernameStr.includes('@') && (usernameStr.includes(':') || usernameStr.includes('#')));
         const isWallixUserFormat = !!(
           rdpConfig.useBastionWallix ||
           rdpConfig.bastionUser ||
           rdpConfig.targetServer ||
-          isWallixChain
+          isBastionChain
         );
 
         if (isWallixUserFormat) {
