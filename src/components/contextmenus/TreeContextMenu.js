@@ -171,7 +171,7 @@ const TreeContextMenu = ({
     };
 
     const handleScroll = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
+      if (menuRef.current && (!e.target || !(e.target instanceof Node) || !menuRef.current.contains(e.target))) {
         handleClose();
       }
     };

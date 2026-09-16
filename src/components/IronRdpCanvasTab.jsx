@@ -264,7 +264,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     }));
   };
 
-  // Escuchar evento de desconexión enviado por el bridge de Node.js
+  // Escuchar evento de desconexión y telemetría de canales enviados por el bridge de Node.js
   useEffect(() => {
     if (!window.electron?.ipcRenderer) return;
 
@@ -280,9 +280,17 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       }
     };
 
+    const handleDiagnosticLog = (event, data) => {
+      if (data && data.message) {
+        console.log(`🔬 [RDP Bridge Trace] ${data.message}`);
+      }
+    };
+
     window.electron.ipcRenderer.on('rdp:native-session-closed', handleSessionClosed);
+    window.electron.ipcRenderer.on('rdp:diagnostic-log', handleDiagnosticLog);
     return () => {
       window.electron.ipcRenderer.removeListener('rdp:native-session-closed', handleSessionClosed);
+      window.electron.ipcRenderer.removeListener('rdp:diagnostic-log', handleDiagnosticLog);
     };
   }, []);
 
@@ -796,40 +804,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       }
     }).catch(() => {});
 
-    const syncLocalClipboardToRemote = async () => {
-      if (isDisposed || !sessionRef.current || isFileTransferArmedRef.current) return;
-      // Período de gracia mínimo de 3 segundos antes de permitir sincronizaciones reactivas por foco
-      if (Date.now() - connectedAt < 3000) return;
-      try {
-        const text = await readLocalClipboardText();
-        if (
-          text &&
-          text !== lastSentClipboardTextRef.current &&
-          !isFileTransferArmedRef.current
-        ) {
-          lastSentClipboardTextRef.current = text;
-          lastReceivedClipboardTextRef.current = text;
-          await sendClipboardToSession(sessionRef.current, text);
-        }
-      } catch (_) {}
-    };
-
-    const handleWindowFocus = () => {
-      syncLocalClipboardToRemote();
-    };
-
-    const canvas = canvasRef.current;
-    if (canvas) {
-      canvas.addEventListener('focus', handleWindowFocus);
-    }
-    window.addEventListener('focus', handleWindowFocus);
-
     return () => {
       isDisposed = true;
-      if (canvas) {
-        canvas.removeEventListener('focus', handleWindowFocus);
-      }
-      window.removeEventListener('focus', handleWindowFocus);
     };
   }, [connectionState, isActive, rdpConfig.redirectClipboard]);
 
@@ -1235,18 +1211,20 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       } catch (err) {
         const msg = err?.message || String(err || '');
         if ((msg.includes('Ready state') || msg.includes('not in Ready')) && attempt < 4) {
-          console.warn(`⏳ [IronRDP FileTransfer] Canal CLIPRDR negociando... reintento ${attempt}/4 en 500ms`);
-          await new Promise((r) => setTimeout(r, 500));
+          console.warn(`⏳ [IronRDP FileTransfer] Canal CLIPRDR negociando... reintento ${attempt}/4 en 1000ms`);
+          await new Promise((r) => setTimeout(r, 1000));
           continue;
         }
         isFileTransferArmedRef.current = false;
         toastRef.current?.show({
-          severity: 'error',
-          summary: 'Error de Transferencia',
-          detail: msg,
-          life: 4000
+          severity: 'warn',
+          summary: 'Transferencia no disponible',
+          detail: msg.includes('Ready state') || msg.includes('not in Ready')
+            ? 'El canal de portapapeles aún no ha sido inicializado por el servidor o bastión remoto.'
+            : msg,
+          life: 5000
         });
-        throw err;
+        return null;
       }
     }
   };

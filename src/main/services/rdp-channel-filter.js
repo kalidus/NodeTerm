@@ -14,7 +14,8 @@ const {
   createAutoDetectState,
   handleAutoDetectRequest,
   stripSecAutodetect,
-  isChannelPduHeader
+  isChannelPduHeader,
+  rewriteMcsChannelId
 } = require('./rdp-autodetect');
 const { handleDvcRequest } = require('./rdp-dynvc');
 
@@ -78,6 +79,38 @@ function readChannelJoinConfirmId(buf) {
   return buf.readUInt16BE(11);
 }
 
+const CLIPRDR_MSG_NAMES = {
+  0x0001: 'CB_MONITOR_READY',
+  0x0002: 'CB_FORMAT_LIST',
+  0x0003: 'CB_FORMAT_LIST_RESPONSE',
+  0x0004: 'CB_FORMAT_DATA_REQUEST',
+  0x0005: 'CB_FORMAT_DATA_RESPONSE',
+  0x0006: 'CB_TEMP_DIRECTORY',
+  0x0007: 'CB_CLIP_CAPS',
+  0x0008: 'CB_FILECONTENTS_REQUEST',
+  0x0009: 'CB_FILECONTENTS_RESPONSE',
+  0x000a: 'CB_LOCK_CLIPDATA',
+  0x000b: 'CB_UNLOCK_CLIPDATA'
+};
+
+function describeCliprdrPdu(userData) {
+  if (!Buffer.isBuffer(userData) || userData.length < 4) return null;
+  let payload = userData;
+  let chanHdr = '';
+  if (isChannelPduHeader(userData)) {
+    const len = userData.readUInt32LE(0);
+    const flags = userData.readUInt32LE(4);
+    chanHdr = `[ChanHdr len=${len} flags=0x${flags.toString(16)}] `;
+    payload = userData.subarray(8);
+  }
+  if (payload.length < 6) return `${chanHdr}raw len=${payload.length}B hex=${payload.toString('hex')}`;
+  const msgType = payload.readUInt16LE(0);
+  const msgFlags = payload.readUInt16LE(2);
+  const dataLen = payload.length >= 8 ? payload.readUInt32LE(4) : 0;
+  const name = CLIPRDR_MSG_NAMES[msgType] || `msgType=0x${msgType.toString(16)}`;
+  return `${chanHdr}${name} (flags=0x${msgFlags.toString(16)}, dataLen=${dataLen}, payloadLen=${payload.length}B)`;
+}
+
 function isCliprdrHeader(userData) {
   if (!isChannelPduHeader(userData) || userData.length < 16) return false;
   const payload = userData.subarray(8);
@@ -98,6 +131,7 @@ function createChannelFilterState() {
     staticVcChannelId: null,
     cliprdrChannelId: null,
     drdynvcChannelId: null,
+    cliprdrServerReady: false,
     clientInitiator: 0,
     droppedCount: 0,
     droppedByChannel: Object.create(null),
@@ -306,23 +340,38 @@ function processServerFrame(state, buf) {
   const parsed = parseMcsSendData(buf);
 
   // 1. Portapapeles (cliprdr): ÚNICAMENTE si es el canal cliprdr negociado (1004)
-  // NUNCA asumir cliprdr sobre canales de mensajes o canales no permitidos (ej. 1001)
   const isCliprdr = (state.cliprdrChannelId != null && channelId === state.cliprdrChannelId);
   if (isCliprdr) {
-    return empty; // forward: buf, dropped: false -> reenviar a WASM
+    const desc = parsed ? describeCliprdrPdu(parsed.userData) : null;
+    if (desc && (desc.includes('CB_MONITOR_READY') || desc.includes('CB_CLIP_CAPS'))) {
+      state.cliprdrServerReady = true;
+    }
+
+    return {
+      forward: buf,
+      replies: [],
+      dropped: false,
+      note: desc ? `cliprdr: ${desc}` : 'cliprdr',
+      channelId,
+      isCliprdr: true,
+      cliprdrDesc: desc
+    };
   }
 
   // 2. DYNVC / Otros Virtual Channels (CHANNEL_PDU_HEADER que no sea cliprdr):
   // Interceptar peticiones DVC y responder al servidor para evitar timeouts, pero NUNCA reenviar a WASM.
   if (parsed && isChannelPduHeader(parsed.userData)) {
+    const clipCheck = describeCliprdrPdu(parsed.userData);
     const dvc = handleDvcRequest(channelId, state.clientInitiator, parsed.userData);
     markDropped(state, channelId);
     return {
       forward: null,
       replies: dvc.replies || [],
       dropped: true,
-      note: dvc.note || `drop ${channelPduHint(parsed.userData)}`,
-      channelId
+      note: dvc.note || `drop ${channelPduHint(parsed.userData)}${clipCheck ? ` [potential-cliprdr: ${clipCheck}]` : ''}`,
+      channelId,
+      isCliprdr: false,
+      cliprdrDesc: clipCheck
     };
   }
 
@@ -340,8 +389,9 @@ function processServerFrame(state, buf) {
     }
 
     markDropped(state, channelId);
+    const clipCheck = parsed?.userData ? describeCliprdrPdu(parsed.userData) : null;
     const note = parsed?.userData
-      ? (parsed.userData.length === 4 ? 'heartbeat' : `drop ch=${channelId} len=${parsed.userData.length}B hex=${parsed.userData.toString('hex').slice(0, 40)}`)
+      ? (parsed.userData.length === 4 ? 'heartbeat' : `drop ch=${channelId} len=${parsed.userData.length}B${clipCheck ? ` [clip-like: ${clipCheck}]` : ` hex=${parsed.userData.toString('hex').slice(0, 40)}`}`)
       : `drop ch=${channelId}`;
 
     return {
@@ -349,7 +399,9 @@ function processServerFrame(state, buf) {
       replies: [],
       dropped: true,
       note,
-      channelId
+      channelId,
+      isCliprdr: false,
+      cliprdrDesc: clipCheck
     };
   }
 
@@ -374,6 +426,9 @@ module.exports = {
   SC_MSGCHANNEL,
   MCS_SEND_DATA_INDICATION,
   IRONRDP_SHARE_CONTROL_MIN,
+  CLIPRDR_MSG_NAMES,
+  describeCliprdrPdu,
+  isCliprdrHeader,
   parseServerNetworkChannels,
   readSendDataIndicationChannelId,
   readChannelJoinConfirmId,

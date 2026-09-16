@@ -22,8 +22,10 @@ const {
   createChannelFilterState,
   processServerFrame,
   learnClientInitiator,
-  buildMcsSendDataRequest
+  buildMcsSendDataRequest,
+  describeCliprdrPdu
 } = require('./rdp-channel-filter');
+const { parseMcsSendData, rewriteMcsChannelId } = require('./rdp-autodetect');
 
 function debugLog(...args) {
   if (process.env.NODETERM_RDP_DEBUG === '1') {
@@ -387,20 +389,38 @@ class RdpNativeBridgeService extends EventEmitter {
                   const wasReady = channelFilter.ready;
                   const processed = processServerFrame(channelFilter, frame);
                   if (!wasReady && channelFilter.ready) {
-                    console.log(
-                      `[Bridge] Canales MCS configurados: io=${channelFilter.ioChannelId}` +
-                        ` permitidos=[${[...channelFilter.allowed].join(',')}]` +
-                        (channelFilter.cliprdrChannelId != null ? ` cliprdr=${channelFilter.cliprdrChannelId}` : '') +
-                        (channelFilter.drdynvcChannelId != null ? ` drdynvc=${channelFilter.drdynvcChannelId}` : '') +
-                        (channelFilter.messageChannelId != null ? ` msg=${channelFilter.messageChannelId}` : '')
-                    );
+                    const chDetails = [
+                      `io=${channelFilter.ioChannelId}`,
+                      `permitidos=[${[...channelFilter.allowed].join(',')}]`,
+                      channelFilter.cliprdrChannelId != null ? `cliprdr=${channelFilter.cliprdrChannelId}` : 'cliprdr=NO_ASIGNADO',
+                      channelFilter.drdynvcChannelId != null ? `drdynvc=${channelFilter.drdynvcChannelId}` : null,
+                      channelFilter.messageChannelId != null ? `msg=${channelFilter.messageChannelId}` : null
+                    ].filter(Boolean).join(' ');
+                    console.log(`🔬 [RDP Bridge] Canales MCS servidor: ${chDetails}`);
+                    this.emit('diagnostic-log', {
+                      category: 'channels',
+                      message: `Canales MCS servidor: ${chDetails}`
+                    });
+                  }
+                  if (processed.isCliprdr) {
+                    const clipLog = `📥 [Cliprdr Servidor->WASM (ch=${processed.channelId})] ${processed.cliprdrDesc || 'PDU'}`;
+                    console.log(`📋 ${clipLog}`);
+                    this.emit('diagnostic-log', {
+                      category: 'cliprdr',
+                      message: clipLog
+                    });
                   }
                   if (processed.dropped) {
-                    console.log(
-                      `🚫 [Bridge Trace DROPPED #${framesFromRdp}] MCS ch=${processed.channelId}: ${processed.note}` +
-                        (processed.replies.length ? ` (replies=${processed.replies.length})` : '') +
-                        ` | PDU: ${pduDesc}`
-                    );
+                    const dropMsg = `MCS ch=${processed.channelId}: ${processed.note}` +
+                      (processed.replies.length ? ` (replies=${processed.replies.length})` : '') +
+                      ` | PDU: ${pduDesc}`;
+                    console.log(`🚫 [Bridge Trace DROPPED #${framesFromRdp}] ${dropMsg}`);
+                    if (processed.channelId !== channelFilter.ioChannelId) {
+                      this.emit('diagnostic-log', {
+                        category: 'dropped',
+                        message: `DROPPED frame #${framesFromRdp} (ch=${processed.channelId}): ${processed.note}`
+                      });
+                    }
                     if (processed.replies.length && tlsSocket && tlsSocket.writable) {
                       for (const reply of processed.replies) {
                         bytesToRdp += reply.length;
@@ -504,7 +524,35 @@ class RdpNativeBridgeService extends EventEmitter {
           lastWsFrameAt = now;
 
           framesToRdp += 1;
-          learnClientInitiator(channelFilter, payload);
+          const chsLearned = learnClientInitiator(channelFilter, payload);
+          if (chsLearned || framesToRdp === 1) {
+            const reqChs = channelFilter.clientChannelNames && channelFilter.clientChannelNames.length
+              ? channelFilter.clientChannelNames.join(', ')
+              : 'ninguno detectado';
+            const chMsg = `Canales solicitados por cliente WASM (TS_UD_CS_NET): [${reqChs}] (initiator=0x${channelFilter.clientInitiator.toString(16)})`;
+            console.log(`🔬 [RDP Bridge] ${chMsg}`);
+            this.emit('diagnostic-log', { category: 'client-channels', message: chMsg });
+          }
+
+          // Si WASM envía datos sobre un canal virtual estático:
+          const clientParsed = parseMcsSendData(payload);
+          if (clientParsed && clientParsed.channelId !== channelFilter.ioChannelId) {
+            const isClientClip = channelFilter.cliprdrChannelId != null && clientParsed.channelId === channelFilter.cliprdrChannelId;
+            const clipDesc = isClientClip ? describeCliprdrPdu(clientParsed.userData) : null;
+            const wasmMsg = `📤 [Canal Virtual WASM->RDP (ch=${clientParsed.channelId})] ${clipDesc || `len=${clientParsed.userData.length}B`}`;
+            console.log(`📋 ${wasmMsg}`);
+            this.emit('diagnostic-log', { category: 'wasm-channel', message: wasmMsg });
+
+            // GUARD: Si el cliente envía cliprdr antes de que el servidor haya emitido CB_MONITOR_READY,
+            // Wallix / proxies RDP cortan inmediatamente la conexión TCP por violación de protocolo.
+            // Descartamos este paquete prematuro para preservar la estabilidad de la sesión.
+            if (isClientClip && !channelFilter.cliprdrServerReady) {
+              const guardMsg = `⚠️ [Bridge Guard] Descartado PDU prematuro WASM->RDP en cliprdr (servidor no ha enviado CB_MONITOR_READY): ${clipDesc}`;
+              console.warn(guardMsg);
+              this.emit('diagnostic-log', { category: 'guard-dropped', message: guardMsg });
+              forward = null;
+            }
+          }
           const pduDesc = describeRdpPdu(payload);
 
           if (framesToRdp <= 8 || isDebug) {
@@ -557,11 +605,13 @@ class RdpNativeBridgeService extends EventEmitter {
             }
           }
         }
-        bytesToRdp += forward.length;
-        if (tlsSocket && tlsSocket.writable) {
-          tlsSocket.write(forward);
-        } else if (targetSocket && targetSocket.writable) {
-          targetSocket.write(forward);
+        if (forward && forward.length > 0) {
+          bytesToRdp += forward.length;
+          if (tlsSocket && tlsSocket.writable) {
+            tlsSocket.write(forward);
+          } else if (targetSocket && targetSocket.writable) {
+            targetSocket.write(forward);
+          }
         }
       } catch (e) {
         console.error('Error enviando datos a RDP:', e);

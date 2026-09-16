@@ -60,6 +60,56 @@ function findClientNetworkChannels(buf) {
 }
 
 /**
+ * Asegura que las opciones de los canales de TS_UD_CS_NET incluyan CHANNEL_OPTION_INITIALIZED (0x80000000)
+ * y flags estándar según MS-RDPBCGR 2.2.1.3.4 (requerido por proxies RDP como Wallix).
+ */
+function patchClientNetworkChannelOptions(buf) {
+  if (!Buffer.isBuffer(buf) || buf.length < 8) return { buf, patched: false, changes: [] };
+
+  const duca = buf.indexOf(Buffer.from('Duca'));
+  const start = duca >= 0 ? duca : 0;
+
+  for (let i = start; i + 8 <= buf.length; i++) {
+    if (buf.readUInt16LE(i) !== CS_NET) continue;
+    const length = buf.readUInt16LE(i + 2);
+    if (length < 8 || i + length > buf.length) continue;
+    const count = buf.readUInt32LE(i + 4);
+    if (count < 1 || count > 32) continue;
+    if (i + 8 + count * 12 > buf.length) continue;
+
+    let out = null;
+    const changes = [];
+
+    for (let c = 0; c < count; c++) {
+      const off = i + 8 + c * 12;
+      const rawName = buf.subarray(off, off + 8).toString('ascii');
+      const nullIdx = rawName.indexOf('\0');
+      const name = (nullIdx >= 0 ? rawName.slice(0, nullIdx) : rawName).trim();
+      const currentOpt = buf.readUInt32LE(off + 8);
+
+      // CHANNEL_OPTION_INITIALIZED = 0x80000000 (MS-RDPBCGR: "This flag MUST be set")
+      // CHANNEL_OPTION_ENCRYPT_RDP = 0x40000000
+      // CHANNEL_OPTION_COMPRESS_RDP = 0x00800000
+      // CHANNEL_OPTION_SHOW_PROTOCOL = 0x00200000
+      // Estándar FreeRDP / mstsc para cliprdr: 0xc0a00000
+      const standardOpt = (currentOpt | 0xc0a00000) >>> 0;
+      if (currentOpt !== standardOpt) {
+        if (!out) out = Buffer.from(buf);
+        out.writeUInt32LE(standardOpt, off + 8);
+        changes.push(`channel '${name}' opt 0x${currentOpt.toString(16)}->0x${standardOpt.toString(16)}`);
+      }
+    }
+
+    if (changes.length > 0) {
+      return { buf: out, patched: true, changes };
+    }
+    return { buf, patched: false, changes: [], reason: 'already-correct' };
+  }
+
+  return { buf, patched: false, changes: [], reason: 'cs-net-not-found' };
+}
+
+/**
  * Localiza el bloque TS_UD_CS_CORE en un TPKT/MCS Connect Initial.
  * @returns {{ offset: number, length: number, serverSelectedProtocol: number|null }|null}
  */
@@ -291,6 +341,12 @@ function prepareMcsConnectInitial(buf, selectedProtocol) {
     notes.push(`Wallix GCC connectPDU ${gccLen.reason}`);
   }
 
+  const netPatch = patchClientNetworkChannelOptions(current);
+  if (netPatch.patched) {
+    current = netPatch.buf;
+    notes.push(...netPatch.changes);
+  }
+
   return { buf: current, notes, core: findClientCoreData(current) };
 }
 
@@ -430,6 +486,7 @@ module.exports = {
   PERF_ENABLE_DESKTOP_COMPOSITION,
   findClientCoreData,
   findClientNetworkChannels,
+  patchClientNetworkChannelOptions,
   ensureMcsServerSelectedProtocol,
   hardenClientCoreData,
   fixWallixGccConnectPduLength,

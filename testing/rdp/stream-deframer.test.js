@@ -338,4 +338,66 @@ describe('RDP TCP Stream Deframer & Wallix Separation', () => {
     assert.equal(procClip.dropped, false);
     assert.ok(procClip.forward);
   });
+
+  test('procesa PDU cliprdr legítima en canal 1004 y activa cliprdrServerReady', () => {
+    const { isCliprdrHeader } = require('../../src/main/services/rdp-channel-filter');
+    const state = createChannelFilterState();
+    learnFromServerGcc(state, f1); // ioChannelId = 1003, cliprdr = 1004
+    state.cliprdrChannelId = 1004;
+
+    // Construir CB_CLIP_CAPS en canal 1004 (0x03ec): 8B ChanHdr + 8B ClipHdr + 16B Caps = 32B userData, 46B total
+    const capsUserData = Buffer.alloc(32);
+    capsUserData.writeUInt32LE(24, 0); // ChanHdr len = 24
+    capsUserData.writeUInt32LE(3, 4);  // ChanHdr flags (FIRST|LAST)
+    capsUserData.writeUInt16LE(7, 8);  // msgType = CB_CLIP_CAPS
+    capsUserData.writeUInt16LE(0, 10); // msgFlags
+    capsUserData.writeUInt32LE(16, 12); // dataLen = 16 (payloadLen = 24B, dataLen = 24-8 = 16)
+    // Caps set
+    capsUserData.writeUInt16LE(1, 16); // cCapabilitiesSets = 1
+    capsUserData.writeUInt16LE(0, 18); // pad1
+    capsUserData.writeUInt16LE(1, 20); // capabilitySetType = GENERAL
+    capsUserData.writeUInt16LE(16, 22); // lengthCapability = 16
+    capsUserData.writeUInt32LE(2, 24); // version = 2
+    capsUserData.writeUInt32LE(0x2e, 28); // generalFlags
+
+    assert.equal(isCliprdrHeader(capsUserData), true);
+
+    const pdu1004 = Buffer.concat([
+      Buffer.from([0x03, 0x00, 0x00, 46, 0x02, 0xf0, 0x80, 0x68, 0x00, 0x00, 0x03, 0xec, 0x70, 32]),
+      capsUserData
+    ]);
+
+    const proc = processServerFrame(state, pdu1004);
+    assert.equal(proc.dropped, false);
+    assert.ok(proc.forward);
+    assert.equal(proc.forward.readUInt16BE(10), 1004);
+    assert.equal(proc.channelId, 1004);
+    assert.equal(state.cliprdrServerReady, true);
+  });
+
+  test('patchClientNetworkChannelOptions inyecta CHANNEL_OPTION_INITIALIZED en TS_UD_CS_NET', () => {
+    const { patchClientNetworkChannelOptions } = require('../../src/main/services/rdp-mcs-helpers');
+    const fs = require('fs');
+    const path = require('path');
+    const dumpPath = path.join(__dirname, 'last-mcs-connect-initial.hex');
+    if (!fs.existsSync(dumpPath)) return;
+
+    const raw = Buffer.from(fs.readFileSync(dumpPath, 'utf8'), 'hex');
+    const res = patchClientNetworkChannelOptions(raw);
+    assert.equal(res.patched, true);
+    assert.ok(res.changes.length > 0);
+
+    // Verificar que CHANNEL_OPTION_INITIALIZED (bit 31 = 0x80000000) está activo
+    const duca = res.buf.indexOf(Buffer.from('Duca'));
+    let found = false;
+    for (let i = duca; i + 8 <= res.buf.length; i++) {
+      if (res.buf.readUInt16LE(i) === 0xc003) {
+        const opt = res.buf.readUInt32LE(i + 8 + 8);
+        assert.ok((opt & 0x80000000) !== 0, 'CHANNEL_OPTION_INITIALIZED debe estar activo');
+        found = true;
+        break;
+      }
+    }
+    assert.equal(found, true);
+  });
 });

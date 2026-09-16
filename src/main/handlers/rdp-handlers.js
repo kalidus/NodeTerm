@@ -42,6 +42,21 @@ function registerRdpHandlers(dependencies) {
       console.warn('[RDP Handlers] Error enviando rdp:native-session-closed:', err);
     }
   });
+
+  // Reenviar telemetría de canales y portapapeles del puente nativo hacia el renderer
+  rdpNativeBridgeService.removeAllListeners('diagnostic-log');
+  rdpNativeBridgeService.on('diagnostic-log', (diag) => {
+    try {
+      const { BrowserWindow } = require('electron');
+      BrowserWindow.getAllWindows().forEach((win) => {
+        if (!win.isDestroyed()) {
+          sendToRenderer(win, 'rdp:diagnostic-log', diag);
+        }
+      });
+    } catch (err) {
+      console.warn('[RDP Handlers] Error enviando rdp:diagnostic-log:', err);
+    }
+  });
   
   // === RDP Connection Handlers ===
   ipcMain.handle('rdp:connect', async (event, config) => {
