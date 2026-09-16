@@ -1123,6 +1123,11 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
 
     if (resKey === 'auto') {
       setIsAutoResize(true);
+      rdpConfig.resolution = 'auto';
+      rdpConfig.autoResize = true;
+      const nativeW = canvasRef.current?.width || currentDesktopSizeRef.current.width || 1600;
+      const nativeH = canvasRef.current?.height || currentDesktopSizeRef.current.height || 1000;
+      setDesktopDimensions({ width: nativeW, height: nativeH });
       console.log('📐 [IronRDP] Cambiando a resolución dinámica Auto (ajuste CSS)');
       toastRef.current?.show({
         severity: 'info',
@@ -1137,12 +1142,20 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         const targetW = alignDesktop(parsed.width);
         const targetH = alignDesktop(parsed.height);
         console.log(`📐 [IronRDP] Cambiando resolución de visualización a ${targetW}x${targetH}`);
-        currentDesktopSizeRef.current = { width: targetW, height: targetH };
+        // Actualizar dimensiones visuales en el estado de React (controla el CSS width/height del canvas sin borrar el búfer)
         setDesktopDimensions({ width: targetW, height: targetH });
-        if (canvasRef.current) {
-          canvasRef.current.width = targetW;
-          canvasRef.current.height = targetH;
+        rdpConfig.resolution = resKey;
+        rdpConfig.autoResize = false;
+
+        // Intentar redimensionado dinámico en la sesión si el servidor soporta DisplayControl
+        if (sessionRef.current?.resize) {
+          try {
+            sessionRef.current.resize(targetW, targetH);
+          } catch (resizeErr) {
+            console.warn('[IronRDP] Error solicitando resize a la sesión:', resizeErr);
+          }
         }
+
         toastRef.current?.show({
           severity: 'info',
           summary: 'Resolución Cambiada',
@@ -1717,6 +1730,50 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
                         </div>
                       );
                     })}
+                  </div>
+
+                  {/* Footer con opción de reconectar con la resolución seleccionada */}
+                  <div className="ironrdp-res-divider" />
+                  <div
+                    style={{
+                      padding: '8px 10px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      fontSize: '11px',
+                      color: '#94a3b8',
+                      backgroundColor: 'rgba(0, 0, 0, 0.25)',
+                      borderBottomLeftRadius: '6px',
+                      borderBottomRightRadius: '6px'
+                    }}
+                  >
+                    <span style={{ fontSize: '10px', opacity: 0.85 }}>¿Escritorio nativo remoto?</span>
+                    <button
+                      type="button"
+                      style={{
+                        background: 'rgba(0, 240, 255, 0.12)',
+                        border: '1px solid rgba(0, 240, 255, 0.4)',
+                        color: '#00f0ff',
+                        borderRadius: '4px',
+                        padding: '3px 8px',
+                        fontSize: '10px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        transition: 'all 0.15s ease'
+                      }}
+                      title="Reconectar la sesión con la resolución seleccionada para que Windows configure su escritorio nativo"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowResolutionMenu(false);
+                        handleReconnect();
+                      }}
+                    >
+                      <i className="pi pi-refresh" style={{ fontSize: '9px' }}></i>
+                      <span>Reconectar</span>
+                    </button>
                   </div>
                 </div>
               )}
