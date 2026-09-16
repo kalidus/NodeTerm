@@ -563,7 +563,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
 
         // Configurar sincronización del portapapeles nativo (CLIPRDR)
         if (isClipboardEnabled) {
-          // Remoto -> Local: cuando se copia texto en el servidor RDP, escribir en portapapeles del cliente
+          // Remoto -> Local: cuando se copia o corta texto en el servidor RDP, escribir en portapapeles del cliente
           builder.remoteClipboardChangedCallback(async (clipboardData) => {
             if (!clipboardData) return;
             isFileTransferArmedRef.current = false;
@@ -580,6 +580,12 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
                     lastSentClipboardTextRef.current = text;
                     console.log('📋 [IronRDP Clipboard] Copiado remoto -> escrito en portapapeles local:', text.slice(0, 80));
                     await writeLocalClipboardText(text);
+                    toastRef.current?.show({
+                      severity: 'success',
+                      summary: 'Portapapeles',
+                      detail: `Texto copiado al portapapeles: "${text.length > 50 ? text.slice(0, 50) + '...' : text}"`,
+                      life: 2500
+                    });
                   }
                   break;
                 }
@@ -594,10 +600,20 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             if (isFileTransferArmedRef.current) return;
             try {
               const text = await readLocalClipboardText();
-              if (text && sessionRef.current && !isFileTransferArmedRef.current) {
+              if (
+                text &&
+                sessionRef.current &&
+                text !== lastReceivedClipboardTextRef.current &&
+                !isFileTransferArmedRef.current
+              ) {
                 lastSentClipboardTextRef.current = text;
-                lastReceivedClipboardTextRef.current = text;
                 await sendClipboardToSession(sessionRef.current, text);
+              } else if (sessionRef.current && !isFileTransferArmedRef.current) {
+                // Enviar ClipboardData vacío para completar el saludo CLIPRDR si no hay texto local nuevo
+                try {
+                  const emptyClip = new Backend.ClipboardData();
+                  await sessionRef.current.onClipboardPaste(emptyClip);
+                } catch (_) {}
               }
             } catch (_) {}
           });
@@ -726,6 +742,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
                   life: 5000
                 });
               }
+              isFileTransferArmedRef.current = false;
             });
 
             currentFileTransferProvider.on('error', (err) => {
@@ -776,6 +793,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         try { currentSession.shutdown(); } catch (e) {}
       }
       sessionRef.current = null;
+      isFileTransferArmedRef.current = false;
     };
   }, [rdpConfig, reconnectTrigger]);
 
@@ -804,8 +822,34 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       }
     }).catch(() => {});
 
+    const syncLocalClipboardToRemote = async () => {
+      if (isDisposed || !sessionRef.current || isFileTransferArmedRef.current) return;
+      // Período de gracia mínimo de 3 segundos antes de permitir sincronizaciones reactivas por foco (protege Wallix handshake)
+      if (Date.now() - connectedAt < 3000) return;
+      try {
+        const text = await readLocalClipboardText();
+        if (
+          text &&
+          text !== lastSentClipboardTextRef.current &&
+          text !== lastReceivedClipboardTextRef.current &&
+          !isFileTransferArmedRef.current
+        ) {
+          lastSentClipboardTextRef.current = text;
+          console.log('📋 [IronRDP Clipboard] Foco de ventana -> sincronizado local a remoto:', text.slice(0, 80));
+          await sendClipboardToSession(sessionRef.current, text);
+        }
+      } catch (_) {}
+    };
+
+    const handleWindowFocus = () => {
+      syncLocalClipboardToRemote();
+    };
+
+    window.addEventListener('focus', handleWindowFocus);
+
     return () => {
       isDisposed = true;
+      window.removeEventListener('focus', handleWindowFocus);
     };
   }, [connectionState, isActive, rdpConfig.redirectClipboard]);
 
@@ -949,15 +993,19 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     const handleKeyDown = (e) => {
       if (!sessionRef.current) return;
 
-      // Si el usuario pulsa Ctrl+V (o Cmd+V en Mac), siempre sincronizar y enviar portapapeles local al remoto
-      // (no usar guard de deduplicación: el usuario está solicitando explícitamente la acción de pegar)
+      // Si el usuario pulsa Ctrl+V (o Cmd+V en Mac), sincronizar portapapeles local solo si es texto externo nuevo
       if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyV' || e.key === 'v' || e.key === 'V')) {
         const isClipboardEnabled = rdpConfig.redirectClipboard !== false;
         if (isClipboardEnabled && !isFileTransferArmedRef.current) {
           readLocalClipboardText().then((text) => {
-            if (text && sessionRef.current && !isFileTransferArmedRef.current) {
+            if (
+              text &&
+              sessionRef.current &&
+              text !== lastReceivedClipboardTextRef.current &&
+              text !== lastSentClipboardTextRef.current &&
+              !isFileTransferArmedRef.current
+            ) {
               lastSentClipboardTextRef.current = text;
-              lastReceivedClipboardTextRef.current = text;
               sendClipboardToSession(sessionRef.current, text);
             }
           }).catch(() => {});
@@ -1875,6 +1923,12 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
                   sessionRef.current.applyInputs(transaction);
                   setShowClipboardDialog(false);
                   setClipboardText('');
+                  toastRef.current?.show({
+                    severity: 'success',
+                    summary: 'Texto Enviado',
+                    detail: 'Texto transmitido a la sesión RDP',
+                    life: 2500
+                  });
                 } catch (e) {
                   console.error('Error enviando texto:', e);
                 }
