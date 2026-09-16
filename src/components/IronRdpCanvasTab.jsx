@@ -787,11 +787,11 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     let isDisposed = false;
     const connectedAt = Date.now();
 
-    // Cebar el portapapeles local inicial sin enviarlo al servidor para no causar
-    // una inyección prematura a t=0ms que violaría el handshake CLIPRDR de Wallix
+    // Registrar portapapeles local inicial en lastReceivedClipboardTextRef sin marcar lastSentClipboardTextRef
+    // para permitir que el foco posterior (tras el período de gracia) o el primer pegado sincronicen
+    // limpiamente el portapapeles inicial hacia la máquina remota
     readLocalClipboardText().then((text) => {
       if (!isDisposed && text) {
-        lastSentClipboardTextRef.current = text;
         lastReceivedClipboardTextRef.current = text;
       }
     }).catch(() => {});
@@ -973,12 +973,13 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     const handleKeyDown = (e) => {
       if (!sessionRef.current) return;
 
-      // Si el usuario pulsa Ctrl+V (o Cmd+V en Mac), asegurar sincronización del portapapeles local antes de pegar si no hay archivos armados
+      // Si el usuario pulsa Ctrl+V (o Cmd+V en Mac), siempre sincronizar y enviar portapapeles local al remoto
+      // (no usar guard de deduplicación: el usuario está solicitando explícitamente la acción de pegar)
       if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyV' || e.key === 'v' || e.key === 'V')) {
         const isClipboardEnabled = rdpConfig.redirectClipboard !== false;
         if (isClipboardEnabled && !isFileTransferArmedRef.current) {
           readLocalClipboardText().then((text) => {
-            if (text && text !== lastSentClipboardTextRef.current && sessionRef.current && !isFileTransferArmedRef.current) {
+            if (text && sessionRef.current && !isFileTransferArmedRef.current) {
               lastSentClipboardTextRef.current = text;
               lastReceivedClipboardTextRef.current = text;
               sendClipboardToSession(sessionRef.current, text);
@@ -1028,7 +1029,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         text = await readLocalClipboardText();
       }
 
-      if (text && text !== lastSentClipboardTextRef.current && !isFileTransferArmedRef.current) {
+      if (text && !isFileTransferArmedRef.current) {
         lastSentClipboardTextRef.current = text;
         lastReceivedClipboardTextRef.current = text;
         console.log('📋 [IronRDP Clipboard] Evento Paste -> enviando a remoto:', text.slice(0, 80));
@@ -1302,6 +1303,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
 
       {/* Contenedor de visualización / scroll para el Canvas HTML5 */}
       <div
+        onClick={() => canvasRef.current?.focus()}
         style={isAutoResize ? {
           width: '100%',
           height: '100%',

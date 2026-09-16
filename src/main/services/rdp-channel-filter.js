@@ -305,16 +305,24 @@ function processServerFrame(state, buf) {
 
   const parsed = parseMcsSendData(buf);
 
-  // 1. Portapapeles (cliprdr): ÚNICAMENTE si es el canal cliprdr negociado (1004)
-  // NUNCA asumir cliprdr sobre canales de mensajes o canales no permitidos (ej. 1001)
-  const isCliprdr = (state.cliprdrChannelId != null && channelId === state.cliprdrChannelId);
+  // 1. Portapapeles (cliprdr): Si coincide con el canal negociado O si el paquete es una PDU CLIPRDR (MS-RDPECLIP)
+  const isCliprdr = (state.cliprdrChannelId != null && channelId === state.cliprdrChannelId) ||
+    (parsed && isCliprdrHeader(parsed.userData));
   if (isCliprdr) {
+    if (state.cliprdrChannelId == null && channelId != null) {
+      state.cliprdrChannelId = channelId;
+      if (state.allowed) state.allowed.add(channelId);
+    }
     return empty; // forward: buf, dropped: false -> reenviar a WASM
   }
 
-  // 2. DYNVC / Otros Virtual Channels (CHANNEL_PDU_HEADER que no sea cliprdr):
+  // 2. Determinar si es el canal IO principal
+  const isIoChannel = state.ready ? (channelId === state.ioChannelId) : (channelId === 1003);
+
+  // 3. DYNVC / Otros Virtual Channels (CHANNEL_PDU_HEADER que no sea cliprdr ni canal IO):
   // Interceptar peticiones DVC y responder al servidor para evitar timeouts, pero NUNCA reenviar a WASM.
-  if (parsed && isChannelPduHeader(parsed.userData)) {
+  // IMPORTANTE: Nunca aplicar al canal IO (1003) para evitar falsos positivos con PDUs de ShareData.
+  if (!isIoChannel && parsed && isChannelPduHeader(parsed.userData)) {
     const dvc = handleDvcRequest(channelId, state.clientInitiator, parsed.userData);
     markDropped(state, channelId);
     return {
@@ -326,9 +334,8 @@ function processServerFrame(state, buf) {
     };
   }
 
-  // 3. Si el canal no es el canal IO permitido (por ejemplo, canal de usuario 1001),
+  // 4. Si el canal no es el canal IO permitido (por ejemplo, canal de usuario 1001),
   // NUNCA reenviar a IronRDP WASM (evitando crash con 'unexpected channel received: ID ...')
-  const isIoChannel = state.ready ? (channelId === state.ioChannelId) : (channelId === 1003);
   if (!isIoChannel) {
     if (state.messageChannelId == null) {
       state.messageChannelId = channelId;

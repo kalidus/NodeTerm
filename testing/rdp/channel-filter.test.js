@@ -80,6 +80,21 @@ describe('filterServerFrame', () => {
     const fp = Buffer.from(fs.readFileSync(path.join(__dirname, 'frames/from-14-581b.hex'), 'utf8').trim(), 'hex');
     assert.equal(filterServerFrame(state, fp), fp);
   });
+
+  it('detecta CB_MONITOR_READY en canal cliprdr y lo preserva sin dropearlo como DVC', () => {
+    const state = createChannelFilterState();
+    // TPKT(4) + X224(3) + MCS_SEND_DATA_INDICATION(7) con ch=1004 + userData(16):
+    // userData: length=8 (u32), flags=3 (u32), msgType=1 (u16), msgFlags=0 (u16), dataLen=0 (u32)
+    const tpktLen = 4 + 3 + 7 + 16;
+    const clipPdu = Buffer.concat([
+      Buffer.from([0x03, 0x00, 0x00, tpktLen, 0x02, 0xf0, 0x80, 0x68, 0x00, 0x00, 0x03, 0xec, 0x70, 0x10]),
+      Buffer.from('08000000030000000100000000000000', 'hex')
+    ]);
+    const proc = processServerFrame(state, clipPdu);
+    assert.equal(proc.dropped, false);
+    assert.equal(proc.forward, clipPdu);
+    assert.equal(state.cliprdrChannelId, 1004);
+  });
 });
 
 describe('patchInfoAutoLogon', () => {
