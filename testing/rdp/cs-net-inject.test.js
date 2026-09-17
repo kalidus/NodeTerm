@@ -1,4 +1,4 @@
-const { describe, test } = require('node:test');
+const { describe, test, beforeEach, afterEach } = require('node:test');
 const assert = require('node:assert');
 
 const {
@@ -275,12 +275,43 @@ describe('prepareMcsConnectInitial con inyeccion', () => {
     assert.equal(res.buf.length, frame.length);
   });
 
-  // Las conexiones directas no deben ver ningun cambio de handshake
+  // Sigue existiendo la puerta de salida para el codigo que no quiera tocar los canales
   test('sin opcion de inyeccion el juego de canales no se toca', () => {
     const frame = buildMcsConnectInitial([['cliprdr', 0xc0a00000]]);
     const res = prepareMcsConnectInitial(frame, 0x01);
 
     assert.deepEqual(findClientNetworkChannels(res.buf), ['cliprdr']);
     assert.equal(res.buf.length, frame.length);
+  });
+});
+
+// Esto decide el juego de canales de todas las conexiones RDP nativas, no solo las de bastion
+describe('juego de canales por defecto del bridge', () => {
+  const { resolveInjectedChannels } = require('../../src/main/services/RdpNativeBridgeService');
+  const previous = process.env.NODETERM_RDP_INJECT_CHANNELS;
+
+  // El valor se lee tambien de rdp-flags.json, asi que la variable de entorno tiene que ganar
+  beforeEach(() => { process.env.NODETERM_RDP_INJECT_CHANNELS = ''; });
+  afterEach(() => {
+    if (previous === undefined) delete process.env.NODETERM_RDP_INJECT_CHANNELS;
+    else process.env.NODETERM_RDP_INJECT_CHANNELS = previous;
+  });
+
+  test('por defecto declara el juego estandar con cliprdr en el indice 2', () => {
+    const frame = buildMcsConnectInitial([['cliprdr', 0xc0a00000]]);
+    const res = prepareMcsConnectInitial(frame, 0x01, { injectChannels: resolveInjectedChannels() });
+
+    assert.deepEqual(findClientNetworkChannels(res.buf), ['rdpdr', 'rdpsnd', 'cliprdr', 'drdynvc']);
+    assertLengthsCoherent(res.buf);
+  });
+
+  test("'off' deja la conexion sin tocar", () => {
+    process.env.NODETERM_RDP_INJECT_CHANNELS = 'off';
+    assert.equal(resolveInjectedChannels(), null);
+  });
+
+  test('un valor explicito sustituye al juego por defecto', () => {
+    process.env.NODETERM_RDP_INJECT_CHANNELS = 'rdpdr,*';
+    assert.deepEqual(resolveInjectedChannels(), { before: ['rdpdr'], after: [] });
   });
 });

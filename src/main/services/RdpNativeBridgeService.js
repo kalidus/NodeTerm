@@ -92,22 +92,25 @@ function readDiagValue(name) {
   return value == null ? '' : String(value).trim();
 }
 
-// Declarar el juego de canales estandar sirvio para descubrir que Wallix reparte los canales por su
-// propio orden ignorando los nombres del cliente: entrega rdpdr por el canal que el cliente reservo
-// a cliprdr. Aquel intento dejaba cliprdr en el indice 0, que es justo lo que no cuadra con la lista
-// del bastion, asi que la especificacion admite ahora el orden completo.
+// IronRDP declara un unico canal (cliprdr) y eso rompia el portapapeles a traves de un bastion
+// Wallix: el bastion proyecta SU lista de canales sobre la del cliente por posicion, sin mirar los
+// nombres, y al no caber acababa entregando cliprdr por el canal de usuario MCS, fuera de los
+// canales unidos. Declarando el juego estandar hay huecos suficientes y cliprdr llega por el canal
+// que IronRDP unio para cliprdr, con lo que el bastion pasa a comportarse como un servidor normal.
 //
-// El valor es la lista de canales en el orden deseado, con '*' marcando donde van los que ya
-// declara el cliente. Por ejemplo 'rdpdr,rdpsnd,*,drdynvc' deja el cliprdr de IronRDP en el indice
-// 2, que es el que ocupa en un cliente Windows. Sin '*' se anaden todos detras, como antes.
+// Es ademas lo que declara cualquier cliente real, asi que se aplica a todas las conexiones. Los
+// canales que no implementamos (rdpdr, rdpsnd, drdynvc) los descarta el filtro antes de llegar a
+// WASM, que es lo que evita el crash de IronRDP por canal inesperado.
 //
-// No se condiciona a useBastionWallix: ese flag solo esta marcado si la conexion se configuro con
-// la casilla de bastion, y a un Wallix se le puede apuntar igual de bien poniendo su host a mano,
-// que es justo lo que hace fallar la deteccion. El bridge reconoce el bastion por contenido por la
-// misma razon. Lo que protege a las conexiones directas es que el interruptor viene vacio.
+// No se condiciona a useBastionWallix: ese flag solo esta marcado si la conexion se creo con la
+// casilla de bastion, y a un Wallix se le puede apuntar igual poniendo su host a mano.
+const DEFAULT_INJECT_CHANNELS = 'rdpdr,rdpsnd,*,drdynvc';
+
+// El valor es la lista en el orden deseado, con '*' marcando donde van los canales que ya declara
+// el cliente. Sin '*' se anaden todos detras. 'off' desactiva la inyeccion.
 function resolveInjectedChannels() {
-  const requested = readDiagValue('NODETERM_RDP_INJECT_CHANNELS');
-  if (requested === '' || requested.toLowerCase() === 'off') return null;
+  const requested = readDiagValue('NODETERM_RDP_INJECT_CHANNELS') || DEFAULT_INJECT_CHANNELS;
+  if (requested.toLowerCase() === 'off') return null;
 
   const parts = requested.split('*');
   const split = (s) => s.split(',').map((n) => n.trim()).filter(Boolean);
@@ -755,16 +758,13 @@ class RdpNativeBridgeService extends EventEmitter {
             }
           }
 
-          const injectChannels = resolveInjectedChannels();
           const prepared = prepareMcsConnectInitial(payload, savedSelectedProtocol, {
-            injectChannels
+            injectChannels: resolveInjectedChannels()
           });
           forward = prepared.buf;
-          // Con inyeccion activa se registra siempre: un flag que no llega al proceso invalida la
-          // prueba sin que se note, y aqui es donde se ve si el orden de canales quedo aplicado.
-          if (isDebug || injectChannels) {
-            console.log(`[Bridge] MCS prepare: ${prepared.notes.join('; ') || 'sin cambios'}`);
-          }
+          // Una linea por conexion, siempre: el juego de canales condiciona todo el resto de la
+          // sesion y sin este rastro una inyeccion que no se aplica no se distingue de una que si.
+          console.log(`[Bridge] MCS prepare: ${prepared.notes.join('; ') || 'sin cambios'}`);
         } else if (framesToRdp <= 10 && forward) {
           const infoResult = patchInfoPacket(forward, session);
           if (infoResult.patched) {
@@ -1166,3 +1166,5 @@ class RdpNativeBridgeService extends EventEmitter {
 }
 
 module.exports = new RdpNativeBridgeService();
+// Expuesto solo para tests: decide el juego de canales de TODAS las conexiones RDP nativas
+module.exports.resolveInjectedChannels = resolveInjectedChannels;
