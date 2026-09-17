@@ -177,7 +177,7 @@ function TerminalOptionSection({ title, children }) {
 
 function TerminalSwitchOption({ iconClass, labelText, checked, onCheckedChange, disabled, inputId, helpText }) {
   return (
-    <div className="terminal-option-item">
+    <div className="terminal-option-item" style={disabled ? { opacity: 0.55 } : undefined}>
       <div className="flex align-items-center">
         {iconClass ? <i className={`pi ${iconClass} terminal-option-icon`} aria-hidden="true"></i> : null}
         <span className="terminal-option-text">{labelText}</span>
@@ -237,6 +237,13 @@ export function EnhancedRDPForm({
   const { t } = useTranslation('dialogs');
   const { t: tCommon } = useTranslation('common');
   const isWindows = isPlatformWindows();
+  const isWebRdp = formData.clientType === 'web-rdp';
+  const isGuacamole = formData.clientType === 'guacamole';
+  const driveHelpText = isWebRdp
+    ? t('rdp.help.enableDriveWebRdp')
+    : (isGuacamole ? t('rdp.help.enableDriveGuacamole') : t('rdp.help.folders'));
+  const audioHelpText = isWebRdp ? t('rdp.help.audioUnsupported') : t('rdp.help.audio');
+  const printersHelpText = isWebRdp ? t('rdp.help.printersWebRdp') : t('rdp.help.printers');
 
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(true);
   const [advancedOptionsTab, setAdvancedOptionsTab] = useState((layoutMode === 'tabbed' || layoutMode === 'sidebar') ? 'general' : 'screen');
@@ -317,7 +324,7 @@ export function EnhancedRDPForm({
         icon: 'pi-sliders-h'
       });
     }
-    if ((formData.clientType === 'guacamole' || formData.clientType === 'web-rdp') && formData.guacEnableDrive) {
+    if (formData.clientType === 'guacamole' && formData.guacEnableDrive) {
       tabs.push({
         id: 'sharedFolder',
         label: t('rdp.fields.sharedFolder'),
@@ -644,10 +651,13 @@ export function EnhancedRDPForm({
               <TerminalSwitchOption
                 iconClass="pi-volume-up"
                 labelText={t('rdp.options.audio')}
-                checked={formData.redirectAudio}
-                onCheckedChange={(v) => handleInputChange('redirectAudio', v)}
+                checked={isWebRdp ? false : formData.redirectAudio}
+                onCheckedChange={(v) => {
+                  if (!isWebRdp) handleInputChange('redirectAudio', v);
+                }}
+                disabled={isWebRdp}
                 inputId={`${p}-opt-audio`}
-                helpText={t('rdp.help.audio')}
+                helpText={audioHelpText}
               />
               <TerminalSwitchOption
                 iconClass="pi-database"
@@ -658,7 +668,7 @@ export function EnhancedRDPForm({
                   handleInputChange('redirectFolders', v);
                 }}
                 inputId={`${p}-opt-drive`}
-                helpText={t('rdp.help.enableDrive')}
+                helpText={driveHelpText}
               />
               <TerminalSwitchOption
                 iconClass="pi-arrows-alt"
@@ -685,7 +695,7 @@ export function EnhancedRDPForm({
                 checked={formData.redirectPrinters}
                 onCheckedChange={(v) => handleInputChange('redirectPrinters', v)}
                 inputId={`${p}-opt-printers`}
-                helpText={t('rdp.help.printers')}
+                helpText={printersHelpText}
               />
             </div>
           </div>
@@ -700,14 +710,16 @@ export function EnhancedRDPForm({
               </span>
             </div>
             <TerminalOptionSection title={t('rdp.advanced.performance')}>
-              <TerminalSwitchOption
-                iconClass="pi-palette"
-                labelText={t('rdp.advanced.enableGfx')}
-                checked={formData.guacEnableGfx}
-                onCheckedChange={(v) => handleInputChange('guacEnableGfx', v)}
-                inputId={`${p}-guac-gfx`}
-                helpText={t('rdp.help.enableGfx')}
-              />
+              {isGuacamole ? (
+                <TerminalSwitchOption
+                  iconClass="pi-palette"
+                  labelText={t('rdp.advanced.enableGfx')}
+                  checked={formData.guacEnableGfx}
+                  onCheckedChange={(v) => handleInputChange('guacEnableGfx', v)}
+                  inputId={`${p}-guac-gfx`}
+                  helpText={t('rdp.help.enableGfx')}
+                />
+              ) : null}
               <TerminalSwitchOption
                 iconClass="pi-image"
                 labelText={t('rdp.advanced.desktopComposition')}
@@ -751,6 +763,7 @@ export function EnhancedRDPForm({
                 helpText={t('rdp.help.menuAnimations')}
               />
             </TerminalOptionSection>
+            {isGuacamole ? (
             <TerminalOptionSection title={t('rdp.advanced.cache')}>
               <TerminalSwitchOption
                 iconClass="pi-font"
@@ -785,6 +798,7 @@ export function EnhancedRDPForm({
                 helpText={t('rdp.help.copyRect')}
               />
             </TerminalOptionSection>
+            ) : null}
           </div>
         );
       case 'sharedFolder':
@@ -1122,15 +1136,21 @@ export function EnhancedRDPForm({
 
               {/* Audio */}
               <div 
-                className={`hud-badge-pill ${formData.redirectAudio ? 'active' : ''}`}
+                className={`hud-badge-pill ${!isWebRdp && formData.redirectAudio ? 'active' : ''}`}
                 onClick={() => {
+                  if (isWebRdp) {
+                    setStatusMessage('Audio no disponible en RDP nativo (IronRDP).');
+                    return;
+                  }
                   handleInputChange('redirectAudio', !formData.redirectAudio);
                   setStatusMessage(`Redirección de audio: ${!formData.redirectAudio ? 'Activada' : 'Desactivada'}`);
                 }}
+                style={isWebRdp ? { opacity: 0.55, cursor: 'not-allowed' } : undefined}
+                title={isWebRdp ? t('rdp.help.audioUnsupported') : undefined}
               >
                 <i className="pi pi-volume-up hud-badge-icon"></i>
                 <span className="hud-badge-label">Audio:</span>
-                <span className="hud-badge-value">{formData.redirectAudio ? 'SÍ' : 'NO'}</span>
+                <span className="hud-badge-value">{!isWebRdp && formData.redirectAudio ? 'SÍ' : 'NO'}</span>
               </div>
 
               {/* Impresoras */}
@@ -1149,16 +1169,20 @@ export function EnhancedRDPForm({
               {/* Opciones específicas según Cliente */}
               {formData.clientType === 'guacamole' || formData.clientType === 'web-rdp' ? (
                 <>
-                  {/* Habilitar Disco Virtual */}
+                  {/* Habilitar Disco Virtual / Copia de archivos */}
                   <div 
                     className={`hud-badge-pill ${formData.guacEnableDrive ? 'active' : ''}`}
                     onClick={() => {
-                      handleInputChange('guacEnableDrive', !formData.guacEnableDrive);
-                      setStatusMessage(`Disco virtual de intercambio de archivos: ${!formData.guacEnableDrive ? 'Habilitado' : 'Deshabilitado'}`);
+                      const next = !formData.guacEnableDrive;
+                      handleInputChange('guacEnableDrive', next);
+                      handleInputChange('redirectFolders', next);
+                      setStatusMessage(isWebRdp
+                        ? `Copia de archivos: ${next ? 'Habilitada' : 'Deshabilitada'}`
+                        : `Disco virtual de intercambio de archivos: ${next ? 'Habilitado' : 'Deshabilitado'}`);
                     }}
                   >
                     <i className="pi pi-database hud-badge-icon"></i>
-                    <span className="hud-badge-label">Disco Virtual:</span>
+                    <span className="hud-badge-label">{isWebRdp ? 'Copia de archivos:' : 'Disco Virtual:'}</span>
                     <span className="hud-badge-value">{formData.guacEnableDrive ? 'SÍ' : 'NO'}</span>
                   </div>
 
@@ -1233,8 +1257,8 @@ export function EnhancedRDPForm({
             </div>
           </div>
 
-          {/* Grupo 4: Carpeta Compartida RDP (IronRDP / Guacamole y si está activado) */}
-          {(formData.clientType === 'guacamole' || formData.clientType === 'web-rdp') && formData.guacEnableDrive && (
+          {/* Grupo 4: Carpeta Compartida RDP (solo Guacamole monta un disco) */}
+          {formData.clientType === 'guacamole' && formData.guacEnableDrive && (
             <div style={{ marginBottom: '1.5rem' }}>
               <h4 style={{ margin: '0 0 0.75rem 0.25rem', fontSize: '0.8rem', fontWeight: 700, color: 'var(--ui-button-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 📁 Carpeta Compartida (Disco Virtual)
