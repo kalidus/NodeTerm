@@ -329,14 +329,31 @@ describe('RDP TCP Stream Deframer & Wallix Separation', () => {
     // Verificar que cliprdrChannelId sigue siendo 1004
     assert.equal(state.cliprdrChannelId, 1004);
 
-    // Y canal 1004 real debe ser reenviado a WASM
-    const dummyCliprdr = Buffer.concat([
+    // Una PDU CLIPRDR legitima en el 1004 si debe llegar a WASM. Se exige que sea CLIPRDR de
+    // verdad: reenviar cualquier cosa por venir en ese canal le colaba a IronRDP tráfico rdpdr,
+    // que es lo que el bastión entrega por el canal que el cliente reservó para el portapapeles.
+    const chanHdr = Buffer.alloc(8);
+    chanHdr.writeUInt32LE(8, 0);
+    chanHdr.writeUInt32LE(0x03, 4); // FIRST | LAST
+    const clipPayload = Buffer.alloc(8);
+    clipPayload.writeUInt16LE(1, 0); // CB_MONITOR_READY
+    const userData = Buffer.concat([chanHdr, clipPayload]);
+
+    const realCliprdr = Buffer.concat([
+      Buffer.from([0x03, 0x00, 0x00, 30, 0x02, 0xf0, 0x80, 0x68, 0x00, 0x00, 0x03, 0xec, 0x70, userData.length]),
+      userData
+    ]);
+    const procClip = processServerFrame(state, realCliprdr);
+    assert.equal(procClip.dropped, false);
+    assert.ok(procClip.forward);
+    assert.equal(procClip.channelId, 1004);
+
+    // Y basura en el 1004 se descarta en vez de reenviarse como si fuera portapapeles
+    const garbage = Buffer.concat([
       Buffer.from([0x03, 0x00, 0x00, 30, 0x02, 0xf0, 0x80, 0x68, 0x00, 0x00, 0x03, 0xec, 0x70, 16]),
       Buffer.alloc(16, 0x11)
     ]);
-    const procClip = processServerFrame(state, dummyCliprdr);
-    assert.equal(procClip.dropped, false);
-    assert.ok(procClip.forward);
+    assert.equal(processServerFrame(state, garbage).dropped, true);
   });
 
   test('procesa PDU cliprdr legítima en canal 1004 y activa cliprdrServerReady', () => {
@@ -373,6 +390,34 @@ describe('RDP TCP Stream Deframer & Wallix Separation', () => {
     assert.equal(proc.forward.readUInt16BE(10), 1004);
     assert.equal(proc.channelId, 1004);
     assert.equal(state.cliprdrServerReady, true);
+  });
+
+  test('procesa CB_FORMAT_LIST con alineación de padding de Windows (canal 1004 directo) sin descartarlo', () => {
+    const { isCliprdrHeader } = require('../../src/main/services/rdp-channel-filter');
+    const state = createChannelFilterState();
+    learnFromServerGcc(state, f1); // ioChannelId = 1003, cliprdr = 1004
+    state.cliprdrChannelId = 1004;
+
+    // Simular CB_FORMAT_LIST real con padding (dataLen = 18, 2 bytes padding para múltiplo de 4, payloadLen = 28B)
+    const formatUserData = Buffer.alloc(36);
+    formatUserData.writeUInt32LE(28, 0); // ChanHdr len = 28
+    formatUserData.writeUInt32LE(3, 4);  // ChanHdr flags = 3
+    formatUserData.writeUInt16LE(2, 8);  // msgType = CB_FORMAT_LIST
+    formatUserData.writeUInt16LE(0, 10); // msgFlags = 0
+    formatUserData.writeUInt32LE(18, 12); // dataLen = 18
+
+    assert.equal(isCliprdrHeader(formatUserData), true);
+
+    const pdu1004 = Buffer.concat([
+      Buffer.from([0x03, 0x00, 0x00, 50, 0x02, 0xf0, 0x80, 0x68, 0x00, 0x00, 0x03, 0xec, 0x70, 36]),
+      formatUserData
+    ]);
+
+    const proc = processServerFrame(state, pdu1004);
+    assert.equal(proc.dropped, false);
+    assert.ok(proc.forward);
+    assert.equal(proc.channelId, 1004);
+    assert.equal(proc.isCliprdr, true);
   });
 
   test('patchClientNetworkChannelOptions inyecta CHANNEL_OPTION_INITIALIZED en TS_UD_CS_NET', () => {

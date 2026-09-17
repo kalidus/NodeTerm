@@ -81,11 +81,11 @@ function parseMcsSendData(buf) {
   };
 }
 
-function buildMcsSendDataRequest(initiator, channelId, userData) {
+function buildMcsSendData(mcsType, initiator, channelId, userData) {
   const lenField = writePerLength(userData.length);
   const body = Buffer.concat([
     Buffer.from([
-      MCS_SEND_DATA_REQUEST,
+      mcsType,
       (initiator >> 8) & 0xff,
       initiator & 0xff,
       (channelId >> 8) & 0xff,
@@ -107,24 +107,43 @@ function buildMcsSendDataRequest(initiator, channelId, userData) {
   return out;
 }
 
+/** Cliente -> servidor. */
+function buildMcsSendDataRequest(initiator, channelId, userData) {
+  return buildMcsSendData(MCS_SEND_DATA_REQUEST, initiator, channelId, userData);
+}
+
+/** Servidor -> cliente. La usa el bridge para inyectar PDUs hacia IronRDP WASM. */
+function buildMcsSendDataIndication(initiator, channelId, userData) {
+  return buildMcsSendData(MCS_SEND_DATA_INDICATION, initiator, channelId, userData);
+}
+
 /**
  * CHANNEL_PDU_HEADER (MS-RDPBCGR 2.2.6.1): length:u32 + flags:u32 + data.
  * Con flags=0x03 el offset 4:u16 parece AutoDetect type 0x0003 (falso positivo).
  */
+// CHANNEL_FLAG_SUSPEND=0x20, CHANNEL_FLAG_RESUME=0x40, CHANNEL_FLAG_SHADOW_PERSISTENT=0x80
+const CHANNEL_ALLOWED_LOW_FLAGS = CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST | CHANNEL_FLAG_SHOW_PROTOCOL | 0x20 | 0x40 | 0x80;
+// CompressionTypeMask=0x000f0000, PACKET_COMPRESSED=0x00200000, AT_FRONT=0x00400000, FLUSHED=0x00800000
+const CHANNEL_ALLOWED_FLAGS = (CHANNEL_ALLOWED_LOW_FLAGS | 0x00ff0000) >>> 0;
+const CHANNEL_PDU_HEADER_LEN = 8;
+
 function isChannelPduHeader(userData) {
   if (!Buffer.isBuffer(userData) || userData.length < 8) return false;
   const length = userData.readUInt32LE(0);
   const flags = userData.readUInt32LE(4);
-  if (length === 0 || length > 0x100000) return false;
-  // flags altos casi siempre 0; debe tener FIRST y/o LAST
-  if ((flags & 0xffffff00) !== 0) return false;
-  if ((flags & (CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST)) === 0) return false;
-  const allowed = CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST | CHANNEL_FLAG_SHOW_PROTOCOL;
-  if ((flags & ~allowed) !== 0) return false;
-  // length suele ser el tamano del payload tras el header de 8B
-  if (length === userData.length - 8) return true;
-  // fragmentacion: length declara el total del mensaje, el chunk es mas corto
-  if (length >= userData.length - 8 && userData.length > 8) return true;
+  if (length === 0 || length > 0x04000000) return false;
+  // Sólo los bits documentados en MS-RDPBCGR 2.2.6.1.1 pueden estar activos. Ser permisivo
+  // aquí provoca falsos positivos con cabeceras de seguridad / ShareControl del canal IO.
+  if ((flags & ~CHANNEL_ALLOWED_FLAGS) !== 0) return false;
+  // flags byte 0 sólo permite flags estándar (evita falsos positivos con pduSource 0x03eb de ShareControl)
+  if (((flags & 0xff) & ~CHANNEL_ALLOWED_LOW_FLAGS) !== 0) return false;
+  if ((flags & (CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST)) === 0 && (flags & 0xff) !== 0) return false;
+
+  // CHANNEL_PDU_HEADER mide siempre 8 bytes: SHOW_PROTOCOL (0x10) no añade campos
+  const avail = userData.length - CHANNEL_PDU_HEADER_LEN;
+  if (length === avail) return true;
+  // Fragmentación o padding de alineación de 4 bytes (MS-RDPECLIP)
+  if (avail > 0 && (length >= avail || (avail - length) <= 4)) return true;
   return false;
 }
 
@@ -341,6 +360,20 @@ function rewriteMcsChannelId(buf, newChannelId) {
   return out;
 }
 
+// Limpia CHANNEL_FLAG_SHOW_PROTOCOL del CHANNEL_PDU_HEADER que empieza en userDataOffset.
+// MS-RDPBCGR 2.2.6.1 dice que el servidor debe ignorar este flag en los PDUs del cliente:
+// sólo es significativo servidor->cliente. Devuelve null si no había nada que limpiar.
+function clearChannelPduShowProtocol(buf, userDataOffset) {
+  if (!Buffer.isBuffer(buf)) return null;
+  const flagsOffset = userDataOffset + 4;
+  if (buf.length < flagsOffset + 4) return null;
+  const flags = buf.readUInt32LE(flagsOffset);
+  if ((flags & CHANNEL_FLAG_SHOW_PROTOCOL) === 0) return null;
+  const out = Buffer.from(buf);
+  out.writeUInt32LE((flags & ~CHANNEL_FLAG_SHOW_PROTOCOL) >>> 0, flagsOffset);
+  return out;
+}
+
 module.exports = {
   TYPE_ID_AUTODETECT_REQUEST,
   TYPE_ID_AUTODETECT_RESPONSE,
@@ -353,14 +386,18 @@ module.exports = {
   SEC_AUTODETECT_RSP,
   parseMcsSendData,
   buildMcsSendDataRequest,
+  buildMcsSendDataIndication,
   buildRttResponse,
   buildBwResultsResponse,
   buildNetcharSync,
   parseAutoDetectRequest,
   isChannelPduHeader,
+  CHANNEL_ALLOWED_LOW_FLAGS,
+  CHANNEL_PDU_HEADER_LEN,
   stripSecAutodetect,
   wrapSecAutodetectRsp,
   rewriteMcsChannelId,
+  clearChannelPduShowProtocol,
   createAutoDetectState,
   handleAutoDetectRequest,
   readPerLength,

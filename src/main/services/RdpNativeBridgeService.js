@@ -14,7 +14,7 @@ const EventEmitter = require('events');
 const { WebSocketServer } = require('ws');
 const fs = require('fs');
 const path = require('path');
-const { parseX224ConnectionConfirm, protocolName, describeRdpPdu, splitRdpFrames, splitTpktFrames } = require('./rdp-protocol-helpers');
+const { parseX224ConnectionConfirm, protocolName, describeRdpPdu, describeDisconnectPdu, splitRdpFrames, splitTpktFrames, RdpFrameSplitter } = require('./rdp-protocol-helpers');
 const { prepareMcsConnectInitial, findClientCoreData, patchInfoPacket, patchInfoAutoLogon } = require('./rdp-mcs-helpers');
 const { patchFontSequenceFlags } = require('./rdp-font-helpers');
 const { fixWallixBitmapStrideCrop } = require('./rdp-fastpath-helpers');
@@ -25,12 +25,75 @@ const {
   buildMcsSendDataRequest,
   describeCliprdrPdu
 } = require('./rdp-channel-filter');
-const { parseMcsSendData, rewriteMcsChannelId } = require('./rdp-autodetect');
+const {
+  parseMcsSendData,
+  rewriteMcsChannelId,
+  clearChannelPduShowProtocol,
+  buildMcsSendDataIndication
+} = require('./rdp-autodetect');
 
 function debugLog(...args) {
   if (process.env.NODETERM_RDP_DEBUG === '1') {
     console.log(...args);
   }
+}
+
+// Interruptores de diagnostico del bridge. Se leen del entorno y, si no estan ahi, de un fichero
+// rdp-flags.json en la raiz del proyecto. El fichero existe porque el bridge corre en el proceso
+// principal de Electron, lanzado a traves de cross-env y concurrently: fijar la variable en la
+// terminal no siempre llega hasta ahi, y un flag que se pierde en silencio invalida la prueba sin
+// que se note. Se relee en cada sesion para no tener que reiniciar entre experimentos.
+const DIAG_FLAGS_FILE = 'rdp-flags.json';
+
+const CB_FORMAT_LIST_RESPONSE = 0x0003;
+const CB_RESPONSE_OK = 0x0001;
+const CHANNEL_FLAG_FIRST_LAST = 0x03;
+
+/**
+ * CB_FORMAT_LIST_RESPONSE con CB_RESPONSE_OK (MS-RDPECLIP 2.2.3.2), envuelto en su
+ * CHANNEL_PDU_HEADER y en una indicacion MCS lista para entregar a IronRDP WASM.
+ */
+function buildCliprdrFormatListResponseOk(initiator, channelId) {
+  const clipHdr = Buffer.alloc(8);
+  clipHdr.writeUInt16LE(CB_FORMAT_LIST_RESPONSE, 0);
+  clipHdr.writeUInt16LE(CB_RESPONSE_OK, 2);
+  clipHdr.writeUInt32LE(0, 4);
+
+  const chanHdr = Buffer.alloc(8);
+  chanHdr.writeUInt32LE(clipHdr.length, 0);
+  chanHdr.writeUInt32LE(CHANNEL_FLAG_FIRST_LAST, 4);
+
+  return buildMcsSendDataIndication(
+    initiator == null ? 0 : initiator,
+    channelId,
+    Buffer.concat([chanHdr, clipHdr])
+  );
+}
+
+function readDiagFlag(name) {
+  if (process.env[name] === '1') return true;
+  if (process.env[name] === '0') return false;
+  try {
+    const file = path.join(process.cwd(), DIAG_FLAGS_FILE);
+    if (!fs.existsSync(file)) return false;
+    const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+    return parsed[name] === true || parsed[name] === '1' || parsed[name] === 1;
+  } catch {
+    return false;
+  }
+}
+
+// Declarar el juego de canales estándar (rdpsnd/rdpdr/drdynvc) sirvió para descubrir que Wallix
+// reparte los canales por su propio orden ignorando los nombres del cliente: entrega rdpdr por el
+// canal que el cliente reservó a cliprdr. Pero NO mueve la entrega de cliprdr, que sigue llegando
+// por el canal de usuario MCS, y además deja la pantalla en negro porque el bastión pasa a emitir
+// por canales que IronRDP no unió. Queda desactivado y sólo se habilita a mano para diagnosticar.
+function resolveInjectedChannels(session) {
+  if (!session || !session.useBastionWallix) return null;
+
+  const requested = (process.env.NODETERM_RDP_INJECT_CHANNELS || '').trim();
+  if (requested === '' || requested.toLowerCase() === 'off') return null;
+  return requested.split(',').map((n) => n.trim()).filter(Boolean);
 }
 
 class RdpNativeBridgeService extends EventEmitter {
@@ -116,6 +179,8 @@ class RdpNativeBridgeService extends EventEmitter {
       host: config.hostname || config.server || config.host,
       port: parseInt(config.port, 10) || 3389,
       username: (config.useBastionWallix && config.bastionUser) ? config.bastionUser : (config.username || config.user || ''),
+      useBastionWallix: config.useBastionWallix === true,
+      targetServer: config.targetServer || null,
       password: config.password || '',
       width: config.width || 1920,
       height: config.height || 1080,
@@ -156,7 +221,8 @@ class RdpNativeBridgeService extends EventEmitter {
    * 7. Envía el Response a WASM. Desencripta y canaliza los datos de sesión bidireccionales.
    */
   handleConnection(ws, session) {
-    console.log(`🔌 [RdpNativeBridgeService] Conectando a ${session.host}:${session.port}`);
+    const viaBastion = session.useBastionWallix === true;
+    console.log(`🔌 [RdpNativeBridgeService] Conectando a ${session.host}:${session.port}${viaBastion ? ` (bastion Wallix -> ${session.targetServer || 'destino en usuario'})` : ''}`);
 
     const connectionId = `native_rdp_${Date.now()}`;
     let targetSocket = null;
@@ -173,7 +239,20 @@ class RdpNativeBridgeService extends EventEmitter {
     let framesToRdp = 0;
     let lastRdpFrameAt = 0;
     let lastWsFrameAt = 0;
+    // Los frames dejan de loguearse pasado el #40 salvo en modo debug, justo cuando ocurren los
+    // cierres inesperados. Se guarda una ventana de los ultimos para volcarla al cerrar. Se
+    // registran los dos sentidos por separado: cuando IronRDP falla al decodificar hay que ver la
+    // secuencia que se le entrego (ya remapeada), no la que llego del servidor.
+    const recentRdpFrames = [];
+    const recentWasmFrames = [];
+    const RECENT_FRAMES_WINDOW = 15;
+    let firstCloseSide = null;
+
+    const noteClose = (side) => {
+      if (!firstCloseSide) firstCloseSide = side;
+    };
     const channelFilter = createChannelFilterState();
+    const frameSplitter = new RdpFrameSplitter();
     const framesDir = path.join(__dirname, '../../../testing/rdp/frames');
     if (process.env.NODETERM_RDP_RECORD_FRAMES === '1') {
       try { fs.mkdirSync(framesDir, { recursive: true }); } catch (_) { /* noop */ }
@@ -207,6 +286,19 @@ class RdpNativeBridgeService extends EventEmitter {
       isCleanedUp = true;
       const formattedReason = formatCloseReason(reason);
       console.log(`🧹 [RdpNativeBridgeService] Sesión RDP finalizada (${formattedReason}) [toRdp=${framesToRdp} (${bytesToRdp}B), fromRdp=${framesFromRdp} (${bytesFromRdp}B)]`);
+      console.log(`🔎 [Bridge] Primer extremo en cerrar: ${firstCloseSide || 'desconocido'}`);
+      if (recentRdpFrames.length) {
+        console.log(`🔎 [Bridge] Últimos ${recentRdpFrames.length} frames del servidor antes del cierre:`);
+        for (const line of recentRdpFrames) {
+          console.log(`   ${line}`);
+        }
+      }
+      if (recentWasmFrames.length) {
+        console.log(`🔎 [Bridge] Últimos ${recentWasmFrames.length} frames entregados a IronRDP WASM:`);
+        for (const line of recentWasmFrames) {
+          console.log(`   ${line}`);
+        }
+      }
       this.activeConnections.delete(connectionId);
 
       this.emit('session-closed', {
@@ -229,6 +321,7 @@ class RdpNativeBridgeService extends EventEmitter {
       } catch (e) {}
       try { if (tlsSocket) tlsSocket.destroy(); } catch (e) {}
       try { if (targetSocket) targetSocket.destroy(); } catch (e) {}
+      try { frameSplitter.reset(); } catch (e) {}
     };
 
     ws.on('message', (message) => {
@@ -328,9 +421,9 @@ class RdpNativeBridgeService extends EventEmitter {
               rdCleanPathPhase = 'transparent';
 
               tlsSocket.on('data', (chunk) => {
-                // Separar frames concatenados (ej. Fast-Path y TPKT) dentro del mismo chunk
-                // para que IronRDP WASM reciba cada PDU individualmente delimitada.
-                const frames = splitRdpFrames(chunk);
+                // Separar frames concatenados respetando la segmentación TCP con memoria de estado
+                // para que IronRDP WASM reciba cada PDU completa sin cortar bitmaps fragmentados
+                const frames = frameSplitter.push(chunk);
 
                 for (let frame of frames) {
                   const now = Date.now();
@@ -340,6 +433,17 @@ class RdpNativeBridgeService extends EventEmitter {
                   const n = frame.length;
                   framesFromRdp += 1;
                   const pduDesc = describeRdpPdu(frame);
+
+                  recentRdpFrames.push(`#${framesFromRdp} ${n}B | ${pduDesc}`);
+                  if (recentRdpFrames.length > RECENT_FRAMES_WINDOW) recentRdpFrames.shift();
+
+                  // El motivo del cierre viaja en un PDU, no en el socket: se registra siempre.
+                  const disconnectDesc = describeDisconnectPdu(frame);
+                  if (disconnectDesc) {
+                    const discMsg = `🛑 [Bridge] El servidor anuncia cierre en frame#${framesFromRdp}: ${disconnectDesc}`;
+                    console.warn(discMsg);
+                    this.emit('diagnostic-log', { category: 'disconnect', message: discMsg });
+                  }
 
                   if (framesFromRdp <= 40 || isDebug) {
                     console.log(`[Bridge] RDP in frame#${framesFromRdp}: ${n}B | ${pduDesc}`);
@@ -393,6 +497,9 @@ class RdpNativeBridgeService extends EventEmitter {
                       `io=${channelFilter.ioChannelId}`,
                       `permitidos=[${[...channelFilter.allowed].join(',')}]`,
                       channelFilter.cliprdrChannelId != null ? `cliprdr=${channelFilter.cliprdrChannelId}` : 'cliprdr=NO_ASIGNADO',
+                      channelFilter.serverCliprdrChannelId != null && channelFilter.serverCliprdrChannelId !== channelFilter.cliprdrChannelId
+                        ? `cliprdr-servidor=${channelFilter.serverCliprdrChannelId}`
+                        : null,
                       channelFilter.drdynvcChannelId != null ? `drdynvc=${channelFilter.drdynvcChannelId}` : null,
                       channelFilter.messageChannelId != null ? `msg=${channelFilter.messageChannelId}` : null
                     ].filter(Boolean).join(' ');
@@ -403,7 +510,16 @@ class RdpNativeBridgeService extends EventEmitter {
                     });
                   }
                   if (processed.isCliprdr) {
-                    const clipLog = `📥 [Cliprdr Servidor->WASM (ch=${processed.channelId})] ${processed.cliprdrDesc || 'PDU'}`;
+                    const srvClip = parseMcsSendData(processed.forward);
+                    const srvHex = srvClip ? ` hex=${srvClip.userData.subarray(0, 32).toString('hex')}` : '';
+                    const via = processed.serverChannelId != null && processed.serverChannelId !== processed.channelId
+                      ? ` <-remap ch=${processed.serverChannelId}`
+                      : '';
+                    // La cabecera MCS en crudo (TPKT+X224+MCS) permite comparar el campo initiator
+                    // que usa el servidor con el que emite IronRDP: el bastion tunela los canales
+                    // virtuales y un initiator que el extremo final no reconozca explicaria el corte.
+                    const srvMcs = ` mcs=${frame.subarray(0, 14).toString('hex')}`;
+                    const clipLog = `📥 [Cliprdr Servidor->WASM (ch=${processed.channelId}${via})] ${processed.cliprdrDesc || 'PDU'}${srvHex}${srvMcs}`;
                     console.log(`📋 ${clipLog}`);
                     this.emit('diagnostic-log', {
                       category: 'cliprdr',
@@ -432,7 +548,10 @@ class RdpNativeBridgeService extends EventEmitter {
                   }
                   frame = processed.forward;
 
-                  if (framesFromRdp <= 40 || isDebug) {
+                  // Tras una peticion de datos del portapapeles se registra todo lo que llega, sin
+                  // el corte del frame 40: la respuesta con el contenido llega mucho despues y es
+                  // justo la que hay que poder ver, incluso si acaba descartada.
+                  if (framesFromRdp <= 40 || isDebug || channelFilter.cliprdrDataRequested) {
                     console.log(`[Bridge] RDP->WASM frame#${framesFromRdp}: ${frame.length}B | ${pduDesc}`);
                   }
 
@@ -453,6 +572,13 @@ class RdpNativeBridgeService extends EventEmitter {
                   if (ws.readyState === ws.OPEN) {
                     try {
                       for (const out of outChunks) {
+                        recentWasmFrames.push(
+                          `#${framesFromRdp} ${out.length}B | ${describeRdpPdu(out)}` +
+                          (processed.serverChannelId != null && processed.serverChannelId !== processed.channelId
+                            ? ` [remap ch=${processed.serverChannelId}->${processed.channelId}]`
+                            : '')
+                        );
+                        if (recentWasmFrames.length > RECENT_FRAMES_WINDOW) recentWasmFrames.shift();
                         ws.send(out, { binary: true });
                       }
                     } catch (sendErr) {
@@ -463,12 +589,14 @@ class RdpNativeBridgeService extends EventEmitter {
               });
 
               tlsSocket.on('end', () => {
+                noteClose('servidor RDP (FIN de TLS)');
                 if (!isCleanedUp) {
                   cleanup('Cerrado por el servidor remoto (FIN)', 1000);
                 }
               });
 
               tlsSocket.on('close', () => {
+                noteClose('servidor RDP (cierre de TLS)');
                 if (!isCleanedUp) {
                   cleanup('Cerrado por el servidor remoto', 1000);
                 }
@@ -534,25 +662,41 @@ class RdpNativeBridgeService extends EventEmitter {
             this.emit('diagnostic-log', { category: 'client-channels', message: chMsg });
           }
 
-          // Si WASM envía datos sobre un canal virtual estático:
-          const clientParsed = parseMcsSendData(payload);
-          if (clientParsed && clientParsed.channelId !== channelFilter.ioChannelId) {
-            const isClientClip = channelFilter.cliprdrChannelId != null && clientParsed.channelId === channelFilter.cliprdrChannelId;
-            const clipDesc = isClientClip ? describeCliprdrPdu(clientParsed.userData) : null;
-            const wasmMsg = `📤 [Canal Virtual WASM->RDP (ch=${clientParsed.channelId})] ${clipDesc || `len=${clientParsed.userData.length}B`}`;
-            console.log(`📋 ${wasmMsg}`);
-            this.emit('diagnostic-log', { category: 'wasm-channel', message: wasmMsg });
-
-            // GUARD: Si el cliente envía cliprdr antes de que el servidor haya emitido CB_MONITOR_READY,
-            // Wallix / proxies RDP cortan inmediatamente la conexión TCP por violación de protocolo.
-            // Descartamos este paquete prematuro para preservar la estabilidad de la sesión.
-            if (isClientClip && !channelFilter.cliprdrServerReady) {
-              const guardMsg = `⚠️ [Bridge Guard] Descartado PDU prematuro WASM->RDP en cliprdr (servidor no ha enviado CB_MONITOR_READY): ${clipDesc}`;
-              console.warn(guardMsg);
-              this.emit('diagnostic-log', { category: 'guard-dropped', message: guardMsg });
-              forward = null;
-            }
+          // IronRDP agrupa varios PDUs en un mismo mensaje WebSocket: initiate_copy, estando en
+          // estado Initialization, emite Capabilities + TemporaryDirectory + FormatList de una sola
+          // vez (ironrdp-cliprdr). Tratando solo el primero, el remapeo de canal y la limpieza de
+          // flags se aplicaban a uno y no a los otros dos (lote incoherente, que es lo que tumbaba
+          // la sesión), y descartar el primero tiraba el lote entero: el FormatList no salía nunca,
+          // el servidor no podía responder FormatListResponse y el cliente no llegaba a Ready.
+          const clientFrames = splitTpktFrames(payload);
+          const keptClientFrames = [];
+          const wasmInjections = [];
+          let clientFramesChanged = false;
+          for (const clientFrame of clientFrames) {
+            const { forward: kept, inject } = this.filterClientVirtualChannelFrame(clientFrame, channelFilter);
+            if (kept !== clientFrame) clientFramesChanged = true;
+            if (kept) keptClientFrames.push(kept);
+            if (inject && inject.length) wasmInjections.push(...inject);
           }
+          if (clientFramesChanged) {
+            forward = keptClientFrames.length ? Buffer.concat(keptClientFrames) : null;
+          }
+
+          // Las inyecciones salen despues de reenviar el lote al servidor, para que IronRDP no vea
+          // el acuse antes de haber terminado de emitir lo que lo provoca.
+          if (wasmInjections.length && ws.readyState === ws.OPEN) {
+            setImmediate(() => {
+              if (ws.readyState !== ws.OPEN) return;
+              for (const frame of wasmInjections) {
+                try {
+                  ws.send(frame, { binary: true });
+                } catch (e) {
+                  console.warn('[Bridge] No se pudo inyectar PDU cliprdr hacia WASM:', e.message);
+                }
+              }
+            });
+          }
+
           const pduDesc = describeRdpPdu(payload);
 
           if (framesToRdp <= 8 || isDebug) {
@@ -591,12 +735,14 @@ class RdpNativeBridgeService extends EventEmitter {
             }
           }
 
-          const prepared = prepareMcsConnectInitial(payload, savedSelectedProtocol);
+          const prepared = prepareMcsConnectInitial(payload, savedSelectedProtocol, {
+            injectChannels: resolveInjectedChannels(session)
+          });
           forward = prepared.buf;
           if (isDebug) {
             console.log(`[Bridge] MCS prepare: ${prepared.notes.join('; ') || 'sin cambios'}`);
           }
-        } else if (framesToRdp <= 10) {
+        } else if (framesToRdp <= 10 && forward) {
           const infoResult = patchInfoPacket(forward, session);
           if (infoResult.patched) {
             forward = infoResult.buf;
@@ -620,12 +766,163 @@ class RdpNativeBridgeService extends EventEmitter {
 
     ws.on('close', (code, reasonBuf) => {
       const reasonStr = reasonBuf ? reasonBuf.toString() : '';
+      noteClose(`IronRDP WASM (cierre de WebSocket code=${code || 1000})`);
       cleanup(reasonStr || 'Cerrado por el usuario', code || 1000);
     });
     ws.on('error', (e) => {
+      noteClose(`IronRDP WASM (error de WebSocket: ${e.message})`);
       const isBenign = e.message && (e.message.includes('ECONNRESET') || e.message.includes('closed'));
       cleanup(isBenign ? 'Cerrado por el usuario' : `Error WebSocket: ${e.message}`, 1006);
     });
+  }
+
+  /**
+   * Filtra un unico PDU MCS que el cliente WASM envia por un canal virtual estatico.
+   * Devuelve { forward, inject }: el frame a reenviar al servidor (el mismo, uno reescrito, o null
+   * para descartarlo) y los PDUs que hay que inyectar de vuelta hacia WASM.
+   *
+   * Trabaja sobre un frame suelto a proposito: IronRDP agrupa varios PDUs cliprdr en un mismo
+   * mensaje WebSocket y cada uno necesita su propio remapeo de canal y su propia limpieza de flags.
+   */
+  filterClientVirtualChannelFrame(frame, channelFilter) {
+    const parsed = parseMcsSendData(frame);
+    if (!parsed || parsed.channelId === channelFilter.ioChannelId) {
+      return { forward: frame, inject: [] };
+    }
+
+    const isClip = channelFilter.cliprdrChannelId != null &&
+      parsed.channelId === channelFilter.cliprdrChannelId;
+    const clipDesc = isClip ? describeCliprdrPdu(parsed.userData) : null;
+    const clipHex = isClip
+      ? ` hex=${parsed.userData.subarray(0, 32).toString('hex')} mcs=${frame.subarray(0, 14).toString('hex')}`
+      : '';
+    const wasmMsg = `📤 [Canal Virtual WASM->RDP (ch=${parsed.channelId})] ${clipDesc || `len=${parsed.userData.length}B`}${clipHex}`;
+    console.log(`📋 ${wasmMsg}`);
+    this.emit('diagnostic-log', { category: 'wasm-channel', message: wasmMsg });
+
+    if (!isClip) return { forward: frame, inject: [] };
+
+    // Aviso de orden CLIPRDR: el cliente no deberia emitir nada antes de CB_MONITOR_READY
+    // (MS-RDPECLIP 1.3.2.1). No se descarta el PDU, solo se avisa.
+    if (!channelFilter.cliprdrServerReady) {
+      const guardMsg = `⚠️ [Bridge] PDU cliprdr WASM->RDP antes de CB_MONITOR_READY (se reenvía igualmente): ${clipDesc}`;
+      console.warn(guardMsg);
+      this.emit('diagnostic-log', { category: 'cliprdr-order', message: guardMsg });
+    }
+
+    // Se considera bastion cuando el servidor entrega cliprdr por un canal que no es el que anuncio
+    // en SC_NET. Un servidor que cumple el protocolo no hace eso nunca, asi que esto deja fuera a
+    // las conexiones directas de los apanos de abajo.
+    const serverClipCh = channelFilter.serverCliprdrChannelId;
+    const isBastion = serverClipCh != null && serverClipCh !== channelFilter.cliprdrChannelId;
+
+    // El bastion corta la sesion al recibir el CB_CLIP_CAPS del cliente, con un FIN de TCP en seco
+    // y sin PDU de desconexion MCS: es decision suya, no un error de protocolo del extremo final.
+    // Silenciar todo el sentido cliente->servidor demostro que el disparador es ese envio y que el
+    // bastion completa su saludo igualmente (manda CB_MONITOR_READY y luego CB_FORMAT_LIST sin
+    // haber recibido capacidades). Como no las necesita, se descarta solo ese PDU: el resto del
+    // lote sigue su camino, que es justo lo que permite que el FormatList llegue y el cliente
+    // alcance el estado Ready. Solo se aplica con bastion: un servidor normal si las necesita.
+    if (isBastion && clipDesc && clipDesc.includes('CB_CLIP_CAPS') &&
+        readDiagFlag('NODETERM_RDP_CLIPRDR_DROP_CLIENT_CAPS')) {
+      const dropMsg = `🔇 [Bridge] CB_CLIP_CAPS del cliente descartado (el bastión corta al recibirlo): ${clipDesc}`;
+      console.log(dropMsg);
+      this.emit('diagnostic-log', { category: 'cliprdr-caps-drop', message: dropMsg });
+      return { forward: null, inject: [] };
+    }
+
+    // El CB_TEMP_DIRECTORY de IronRDP lleva una ruta relativa ('.cliprdr'), mientras que un cliente
+    // Windows manda una absoluta. En todas las sesiones que el bastion corto, ese PDU viajaba por
+    // el canal negociado; en las que sobrevivieron iba por el canal del bastion o no se enviaba.
+    // Solo sirve para indicar donde guarda el cliente los temporales de copia de ficheros, asi que
+    // descartarlo no afecta al portapapeles de texto.
+    if (isBastion && clipDesc && clipDesc.includes('CB_TEMP_DIRECTORY') &&
+        readDiagFlag('NODETERM_RDP_CLIPRDR_DROP_CLIENT_TEMPDIR')) {
+      const dropMsg = `🔇 [Bridge] CB_TEMP_DIRECTORY del cliente descartado (ruta relativa no válida para el bastión): ${clipDesc}`;
+      console.log(dropMsg);
+      this.emit('diagnostic-log', { category: 'cliprdr-tempdir-drop', message: dropMsg });
+      return { forward: null, inject: [] };
+    }
+
+    // Experimento de diagnostico: silencia por completo el sentido cliente->servidor del canal
+    // cliprdr sin tocar el contrario. Aisla si el cierre lo provoca el dato del cliente.
+    if (readDiagFlag('NODETERM_RDP_CLIPRDR_MUTE_CLIENT')) {
+      const muteMsg = `🔇 [Bridge] cliprdr WASM->RDP silenciado (experimento): ${clipDesc}`;
+      console.log(muteMsg);
+      this.emit('diagnostic-log', { category: 'cliprdr-mute', message: muteMsg });
+      return { forward: null, inject: [] };
+    }
+
+    // Marca que el cliente ya ha pedido el contenido del portapapeles: a partir de aqui interesa
+    // ver todos los frames del servidor para saber si contesta, si calla o si algo se descarta.
+    if (clipDesc && clipDesc.includes('CB_FORMAT_DATA_REQUEST')) {
+      channelFilter.cliprdrDataRequested = true;
+    }
+
+    let out = frame;
+    const inject = [];
+
+    // Se escribe en el canal por el que el servidor entrega cliprdr de verdad, que es el que
+    // aprende el filtro, no en el que negocio el cliente: el bastion usa uno distinto y cambia
+    // entre sesiones (se han visto el de usuario 1001 y el IO 1003). Esto no afecta a las
+    // conexiones directas: un servidor que cumple el protocolo entrega cliprdr por el canal que
+    // anuncio en SC_NET, asi que serverClipCh coincide con el del cliente y no se remapea nada.
+    const canRemap = !readDiagFlag('NODETERM_RDP_CLIPRDR_NO_REMAP') &&
+      serverClipCh != null &&
+      serverClipCh !== parsed.channelId;
+
+    if (canRemap) {
+      const remapped = rewriteMcsChannelId(out, serverClipCh);
+      if (remapped) {
+        out = remapped;
+        const remapMsg = `📤 [Bridge] cliprdr WASM->RDP remapeado ch=${parsed.channelId}->${serverClipCh}`;
+        console.log(remapMsg);
+        this.emit('diagnostic-log', { category: 'cliprdr', message: remapMsg });
+      }
+    }
+
+    // IronRDP marca CHANNEL_FLAG_SHOW_PROTOCOL (flags=0x13) mientras el bastion emite 0x03. El
+    // servidor deberia ignorar ese flag, pero Wallix no lo hace. Se limpia solo si ya se detecto
+    // que el bastion reparte los canales a su manera, para no alterar el encuadre de las
+    // conexiones directas, que funcionan con 0x13. Reescribir el canal no cambia la longitud, asi
+    // que dataOff sigue siendo valido sobre el frame remapeado.
+    if (isBastion) {
+      const cleaned = clearChannelPduShowProtocol(out, parsed.dataOff);
+      if (cleaned) {
+        out = cleaned;
+        const flagMsg = '📤 [Bridge] CHANNEL_FLAG_SHOW_PROTOCOL limpiado en cliprdr WASM->RDP (bastión)';
+        console.log(flagMsg);
+        this.emit('diagnostic-log', { category: 'cliprdr', message: flagMsg });
+      }
+    }
+
+    // El saludo CLIPRDR del bastion se queda a medias y hay que cerrarlo aqui.
+    //
+    // En ironrdp-cliprdr, un cliente solo pasa a estado Ready al recibir un FormatListResponse::Ok,
+    // y sin Ready rechaza toda operacion de portapapeles ("clipboard channel is not in Ready
+    // state"). El bastion nunca lo envia: no admite el CB_CLIP_CAPS del cliente (por el canal
+    // negociado corta la sesion, y por el suyo deja la pantalla en negro), y sin capacidades
+    // ignora el CB_FORMAT_LIST. Queda un callejon sin salida en el que el portapapeles no puede
+    // arrancar nunca.
+    //
+    // Se sintetiza la respuesta hacia WASM. No se inventa nada del protocolo: es el acuse que
+    // corresponde a la lista que el cliente acaba de enviar, y un duplicado posterior del servidor
+    // es inocuo, porque en ese estado ironrdp-cliprdr solo lo traza. Solo aplica con bastion, asi
+    // que las conexiones directas siguen recibiendo el acuse real de su servidor.
+    if (isBastion && clipDesc && clipDesc.includes('CB_FORMAT_LIST') &&
+        !clipDesc.includes('CB_FORMAT_LIST_RESPONSE') &&
+        !channelFilter.cliprdrFormatListAcked) {
+      channelFilter.cliprdrFormatListAcked = true;
+      // initiator 0: es el valor que lleva el bastion en sus propias indicaciones cliprdr
+      // (cabecera MCS observada 68 0000 03e9), asi que el acuse es indistinguible de uno real.
+      inject.push(buildCliprdrFormatListResponseOk(0, channelFilter.cliprdrChannelId));
+      const ackMsg = '📥 [Bridge] CB_FORMAT_LIST_RESPONSE(OK) sintetizado hacia WASM ' +
+        '(el bastión no lo envía y sin él IronRDP nunca pasa a Ready)';
+      console.log(ackMsg);
+      this.emit('diagnostic-log', { category: 'cliprdr', message: ackMsg });
+    }
+
+    return { forward: out, inject };
   }
 
   /**

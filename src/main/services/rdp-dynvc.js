@@ -356,10 +356,12 @@ function handleDvcRequest(mcsChannelId, initiator, userData) {
     };
   }
 
+  // Cmd desconocido: el PDU no es MS-RDPEDYC. No reclamarlo como manejado para que el
+  // llamante decida, en vez de descartarlo dando por hecho que era DVC.
   return {
-    handled: true,
+    handled: false,
     replies: [],
-    note: `dvc-ignore cmd=0x${parsed.cmd.toString(16)}`
+    note: `no-dvc cmd=0x${parsed.cmd.toString(16)}`
   };
 }
 

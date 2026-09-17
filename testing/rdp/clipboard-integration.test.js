@@ -1,0 +1,423 @@
+'use strict';
+
+const { test, describe } = require('node:test');
+const assert = require('node:assert/strict');
+const {
+  createChannelFilterState,
+  processServerFrame,
+  describeCliprdrPdu,
+  isCliprdrHeader
+} = require('../../src/main/services/rdp-channel-filter');
+const {
+  CHANNEL_PDU_HEADER_LEN,
+  parseMcsSendData,
+  clearChannelPduShowProtocol
+} = require('../../src/main/services/rdp-autodetect');
+
+const CHANNEL_FLAG_FIRST = 0x01;
+const CHANNEL_FLAG_LAST = 0x02;
+const CHANNEL_FLAG_SHOW_PROTOCOL = 0x10;
+
+// MCS SendDataIndication (0x68) envuelto en TPKT.
+// La longitud usa el determinante PER: 1 byte si <128, si no 2 bytes con 0x8000.
+function buildMcsIndication(channelId, userData) {
+  const lenField = userData.length < 0x80
+    ? Buffer.from([userData.length])
+    : Buffer.from([0x80 | ((userData.length >> 8) & 0x7f), userData.length & 0xff]);
+
+  const mcsHdr = Buffer.concat([
+    Buffer.from([
+      0x02, 0xf0, 0x80, 0x68,
+      0x00, 0x00,
+      (channelId >> 8) & 0xff, channelId & 0xff,
+      0x70
+    ]),
+    lenField
+  ]);
+  const tpktLen = 4 + mcsHdr.length + userData.length;
+  const tpktHdr = Buffer.from([0x03, 0x00, (tpktLen >> 8) & 0xff, tpktLen & 0xff]);
+  return Buffer.concat([tpktHdr, mcsHdr, userData]);
+}
+
+// CHANNEL_PDU_HEADER (MS-RDPBCGR 2.2.6.1.1): length:u32 + flags:u32. Mide SIEMPRE 8 bytes,
+// CHANNEL_FLAG_SHOW_PROTOCOL no añade campos.
+function buildChannelPdu(payload, flags = CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST, declaredLength = null) {
+  const hdr = Buffer.alloc(CHANNEL_PDU_HEADER_LEN);
+  hdr.writeUInt32LE(declaredLength == null ? payload.length : declaredLength, 0);
+  hdr.writeUInt32LE(flags, 4);
+  return Buffer.concat([hdr, payload]);
+}
+
+// CLIPRDR_HEADER (MS-RDPECLIP 2.2.1): msgType:u16 + msgFlags:u16 + dataLen:u32
+function buildCliprdrPayload(msgType, msgFlags = 0, data = Buffer.alloc(0)) {
+  const hdr = Buffer.alloc(8);
+  hdr.writeUInt16LE(msgType, 0);
+  hdr.writeUInt16LE(msgFlags, 2);
+  hdr.writeUInt32LE(data.length, 4);
+  return Buffer.concat([hdr, data]);
+}
+
+function stateWithCliprdr() {
+  const state = createChannelFilterState();
+  state.ready = true;
+  state.ioChannelId = 1003;
+  state.cliprdrChannelId = 1004;
+  return state;
+}
+
+describe('CLIPRDR: parseo de cabeceras', () => {
+  test('CHANNEL_PDU_HEADER mide 8 bytes tambien con CHANNEL_FLAG_SHOW_PROTOCOL', () => {
+    // CB_FORMAT_LIST_RESPONSE(OK): el PDU real que IronRDP emite con flags=0x13 y que
+    // antes se interpretaba con una cabecera ficticia de 12 bytes
+    const payload = buildCliprdrPayload(3, 0x0001);
+    const userData = buildChannelPdu(
+      payload,
+      CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST | CHANNEL_FLAG_SHOW_PROTOCOL
+    );
+
+    assert.equal(userData.length, 16);
+    assert.equal(isCliprdrHeader(userData), true);
+
+    const desc = describeCliprdrPdu(userData);
+    assert.match(desc, /ChanHdr len=8 flags=0x13/);
+    assert.match(desc, /CB_FORMAT_LIST_RESPONSE/);
+    assert.doesNotMatch(desc, /raw len=/);
+  });
+
+  test('describeCliprdrPdu resuelve el saludo completo del servidor', () => {
+    const caps = buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16)));
+    assert.match(describeCliprdrPdu(caps), /CB_CLIP_CAPS \(flags=0x0, dataLen=16, payloadLen=24B\)/);
+
+    const monitorReady = buildChannelPdu(buildCliprdrPayload(1));
+    assert.match(describeCliprdrPdu(monitorReady), /CB_MONITOR_READY/);
+
+    const formatList = buildChannelPdu(buildCliprdrPayload(2, 0, Buffer.alloc(64)));
+    assert.match(describeCliprdrPdu(formatList), /CB_FORMAT_LIST \(flags=0x0, dataLen=64, payloadLen=72B\)/);
+  });
+
+  test('isCliprdrHeader admite padding de alineacion a 4 bytes en CB_FORMAT_LIST', () => {
+    // dataLen declara 18 pero Windows alinea el payload a 20 bytes
+    const hdr = Buffer.alloc(8);
+    hdr.writeUInt16LE(2, 0);
+    hdr.writeUInt16LE(0, 2);
+    hdr.writeUInt32LE(18, 4);
+    const userData = buildChannelPdu(Buffer.concat([hdr, Buffer.alloc(20)]));
+
+    assert.equal(isCliprdrHeader(userData), true);
+  });
+
+  test('isCliprdrHeader rechaza msgType fuera del rango MS-RDPECLIP', () => {
+    const userData = buildChannelPdu(buildCliprdrPayload(0x00ff, 0, Buffer.alloc(4)));
+    assert.equal(isCliprdrHeader(userData), false);
+  });
+});
+
+describe('CLIPRDR: filtrado de frames del servidor', () => {
+  test('el saludo completo del servidor llega a WASM sin modificar el buffer', () => {
+    const state = stateWithCliprdr();
+
+    const caps = buildMcsIndication(1004, buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16))));
+    const resCaps = processServerFrame(state, caps);
+    assert.equal(resCaps.dropped, false);
+    assert.equal(resCaps.isCliprdr, true);
+    assert.equal(resCaps.channelId, 1004);
+    assert.deepEqual(resCaps.forward, caps);
+    assert.equal(state.cliprdrServerReady, true);
+
+    const monitorReady = buildMcsIndication(1004, buildChannelPdu(buildCliprdrPayload(1)));
+    const resMon = processServerFrame(state, monitorReady);
+    assert.equal(resMon.dropped, false);
+    assert.deepEqual(resMon.forward, monitorReady);
+
+    const formatList = buildMcsIndication(1004, buildChannelPdu(buildCliprdrPayload(2, 0, Buffer.alloc(64))));
+    const resList = processServerFrame(state, formatList);
+    assert.equal(resList.dropped, false);
+    assert.equal(resList.isCliprdr, true);
+    assert.deepEqual(resList.forward, formatList);
+  });
+
+  test('los fragmentos de un CB_FORMAT_DATA_RESPONSE grande nunca se descartan', () => {
+    const state = stateWithCliprdr();
+    const total = 4096;
+
+    // Primer fragmento: lleva CLIPRDR_HEADER y declara el total del mensaje
+    const first = buildMcsIndication(
+      1004,
+      buildChannelPdu(buildCliprdrPayload(5, 0x0001, Buffer.alloc(1400)), CHANNEL_FLAG_FIRST, total)
+    );
+    // Fragmentos intermedio y final: datos crudos, sin CLIPRDR_HEADER
+    const middle = buildMcsIndication(1004, buildChannelPdu(Buffer.alloc(1400), 0, total));
+    const last = buildMcsIndication(1004, buildChannelPdu(Buffer.alloc(1288), CHANNEL_FLAG_LAST, total));
+
+    for (const frame of [first, middle, last]) {
+      const res = processServerFrame(state, frame);
+      assert.equal(res.dropped, false);
+      assert.equal(res.channelId, 1004);
+      assert.deepEqual(res.forward, frame);
+    }
+  });
+
+  test('el trafico del canal de usuario 1001 sigue sin reenviarse a WASM', () => {
+    const state = stateWithCliprdr();
+    const frame = buildMcsIndication(1001, Buffer.from([0xff, 0xee, 0xdd, 0xcc, 0xbb, 0xaa]));
+
+    const res = processServerFrame(state, frame);
+    assert.equal(res.dropped, true);
+    assert.equal(res.forward, null);
+    assert.equal(res.channelId, 1001);
+    assert.equal(state.serverCliprdrChannelId, null);
+  });
+});
+
+describe('CLIPRDR: bastion Wallix que usa otro canal MCS', () => {
+  // Secuencia real capturada: el servidor entrega cliprdr en 1001 mientras el cliente
+  // negocio 1004, y los tres PDUs del saludo se descartaban por no coincidir el canal.
+  test('aprende el canal del servidor y remapea el saludo completo a 1004', () => {
+    const state = stateWithCliprdr();
+
+    const caps = buildMcsIndication(1001, buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16))));
+    const resCaps = processServerFrame(state, caps);
+    assert.equal(resCaps.dropped, false);
+    assert.equal(resCaps.isCliprdr, true);
+    assert.equal(resCaps.channelId, 1004);
+    assert.equal(resCaps.forward.readUInt16BE(10), 1004);
+    assert.equal(state.serverCliprdrChannelId, 1001);
+    assert.equal(state.cliprdrServerReady, true);
+
+    const monitorReady = buildMcsIndication(1001, buildChannelPdu(buildCliprdrPayload(1)));
+    const resMon = processServerFrame(state, monitorReady);
+    assert.equal(resMon.dropped, false);
+    assert.equal(resMon.forward.readUInt16BE(10), 1004);
+
+    const formatList = buildMcsIndication(1001, buildChannelPdu(buildCliprdrPayload(2, 0, Buffer.alloc(64))));
+    const resList = processServerFrame(state, formatList);
+    assert.equal(resList.dropped, false);
+    assert.equal(resList.forward.readUInt16BE(10), 1004);
+  });
+
+  test('remapea tambien los fragmentos de continuacion, que no llevan CLIPRDR_HEADER', () => {
+    const state = stateWithCliprdr();
+    const total = 48722;
+
+    // Primer fragmento: valido como CLIPRDR, es el que fija serverCliprdrChannelId
+    const first = buildMcsIndication(
+      1001,
+      buildChannelPdu(buildCliprdrPayload(5, 0x0001, Buffer.alloc(1592)), CHANNEL_FLAG_FIRST, total)
+    );
+    assert.equal(processServerFrame(state, first).channelId, 1004);
+    assert.equal(state.serverCliprdrChannelId, 1001);
+
+    // Continuaciones: datos crudos. Sin memoria de canal se descartarian y el
+    // reensamblado de IronRDP fallaria con 'read frame: not enough bytes'.
+    const middle = buildMcsIndication(1001, buildChannelPdu(Buffer.alloc(1600, 0xab), 0, total));
+    const resMiddle = processServerFrame(state, middle);
+    assert.equal(resMiddle.dropped, false);
+    assert.equal(resMiddle.channelId, 1004);
+    assert.equal(resMiddle.forward.readUInt16BE(10), 1004);
+
+    const last = buildMcsIndication(1001, buildChannelPdu(Buffer.alloc(722, 0xcd), CHANNEL_FLAG_LAST, total));
+    const resLast = processServerFrame(state, last);
+    assert.equal(resLast.dropped, false);
+    assert.equal(resLast.channelId, 1004);
+    assert.equal(resLast.forward.readUInt16BE(10), 1004);
+    assert.equal(state.serverCliprdrFragmentOpen, false);
+  });
+
+  // 1001 es el canal de usuario MCS del cliente: una vez cerrado el mensaje CLIPRDR, el resto
+  // del trafico que pase por el no se puede colar en el canal cliprdr de IronRDP.
+  test('cerrado el mensaje, el trafico no-CLIPRDR del canal de usuario se sigue descartando', () => {
+    const state = stateWithCliprdr();
+
+    const monitorReady = buildMcsIndication(1001, buildChannelPdu(buildCliprdrPayload(1)));
+    assert.equal(processServerFrame(state, monitorReady).channelId, 1004);
+    assert.equal(state.serverCliprdrChannelId, 1001);
+    assert.equal(state.serverCliprdrFragmentOpen, false);
+
+    const noise = buildMcsIndication(1001, Buffer.from([0xff, 0xee, 0xdd, 0xcc, 0xbb, 0xaa]));
+    const resNoise = processServerFrame(state, noise);
+    assert.equal(resNoise.dropped, true);
+    assert.equal(resNoise.forward, null);
+  });
+
+  // Wallix ignora los nombres de CS_NET y proyecta su propio orden sobre los IDs, asi que el
+  // canal que el cliente reservo para cliprdr puede traer rdpdr y viceversa.
+  test('descarta un Server Announce de rdpdr que llega por el canal cliprdr negociado', () => {
+    const state = stateWithCliprdr();
+
+    // RDPDR_HEADER: component=0x4472 (RDPDR_CTYP_CORE), packetId=0x496e (PAKID_CORE_SERVER_ANNOUNCE)
+    const rdpdr = Buffer.from([0x72, 0x44, 0x6e, 0x49, 0x01, 0x00, 0x0d, 0x00, 0x7e, 0x00, 0x00, 0x00]);
+    const frame = buildMcsIndication(1004, buildChannelPdu(rdpdr));
+
+    const res = processServerFrame(state, frame);
+    assert.equal(res.isCliprdr, false);
+    assert.equal(res.forward, null);
+    assert.equal(res.dropped, true);
+    assert.equal(state.serverCliprdrChannelId, null);
+  });
+
+  test('aprende el canal real cuando cliprdr llega por el que el cliente reservo a rdpdr', () => {
+    const state = stateWithCliprdr();
+    state.allowed = new Set([1003, 1004, 1005, 1006, 1007]);
+
+    const caps = buildMcsIndication(1006, buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16))));
+    const res = processServerFrame(state, caps);
+
+    assert.equal(res.isCliprdr, true);
+    assert.equal(res.channelId, 1004);
+    assert.equal(res.serverChannelId, 1006);
+    assert.equal(res.forward.readUInt16BE(10), 1004);
+    assert.equal(state.serverCliprdrChannelId, 1006);
+  });
+
+  test('en conexion directa el canal aprendido es el negociado y no se reescribe', () => {
+    const state = stateWithCliprdr();
+    const frame = buildMcsIndication(1004, buildChannelPdu(buildCliprdrPayload(1)));
+
+    const res = processServerFrame(state, frame);
+    assert.equal(res.isCliprdr, true);
+    assert.equal(res.serverChannelId, 1004);
+    assert.deepEqual(res.forward, frame);
+    assert.equal(state.serverCliprdrChannelId, 1004);
+  });
+
+  // Capturado en real: el bastion entrega el saludo cliprdr por el canal IO (1003), donde caia
+  // descartado como 'invalid-share-control-0x0' con tamanos 46B / 30B / 94B.
+  test('rescata el saludo cliprdr que el bastion entrega por el canal IO', () => {
+    const state = stateWithCliprdr();
+
+    const caps = buildMcsIndication(1003, buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16))));
+    const resCaps = processServerFrame(state, caps);
+    assert.equal(resCaps.dropped, false);
+    assert.equal(resCaps.isCliprdr, true);
+    assert.equal(resCaps.channelId, 1004);
+    assert.equal(resCaps.serverChannelId, 1003);
+    assert.equal(resCaps.forward.readUInt16BE(10), 1004);
+    assert.equal(state.cliprdrServerReady, true);
+
+    const monitorReady = buildMcsIndication(1003, buildChannelPdu(buildCliprdrPayload(1)));
+    assert.equal(processServerFrame(state, monitorReady).forward.readUInt16BE(10), 1004);
+
+    const formatList = buildMcsIndication(1003, buildChannelPdu(buildCliprdrPayload(2, 0, Buffer.alloc(64))));
+    assert.equal(processServerFrame(state, formatList).forward.readUInt16BE(10), 1004);
+  });
+
+  // Garantia de no regresion: el rescate corre DESPUES del filtro de IO, asi que una PDU legitima
+  // del canal IO no puede acabar desviada al canal cliprdr de IronRDP.
+  test('no desvia trafico legitimo del canal IO al canal cliprdr', () => {
+    const state = stateWithCliprdr();
+
+    // DATA_PDU valido: pduType = 7 en el offset 2 del userData
+    const share = Buffer.alloc(40);
+    share.writeUInt16LE(share.length, 0);
+    share.writeUInt16LE(7 | 0x10, 2);
+    share.writeUInt16LE(1002, 4);
+    const frame = buildMcsIndication(1003, share);
+
+    const res = processServerFrame(state, frame);
+    assert.notEqual(res.isCliprdr, true);
+    assert.equal(state.serverCliprdrChannelId, null);
+    assert.deepEqual(res.forward, frame);
+  });
+
+  test('el heartbeat del servidor se sigue descartando y no se confunde con cliprdr', () => {
+    const state = stateWithCliprdr();
+    const heartbeat = Buffer.from([0x00, 0x80, 0x41, 0x00, 0x00, 0x00, 0xe9, 0x03]);
+    const frame = buildMcsIndication(1003, heartbeat);
+
+    const res = processServerFrame(state, frame);
+    assert.equal(res.dropped, true);
+    assert.notEqual(res.isCliprdr, true);
+    assert.equal(state.serverCliprdrChannelId, null);
+  });
+
+  test('clearChannelPduShowProtocol deja el encuadre del cliente en flags=0x3', () => {
+    const userData = buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16)), 0x13);
+    const frame = buildMcsIndication(1004, userData);
+    const dataOff = parseMcsSendData(frame).dataOff;
+
+    const cleaned = clearChannelPduShowProtocol(frame, dataOff);
+    assert.notEqual(cleaned, null);
+    assert.equal(parseMcsSendData(cleaned).userData.readUInt32LE(4), 0x3);
+    // El resto del frame no se toca: misma longitud y mismo payload CLIPRDR
+    assert.equal(cleaned.length, frame.length);
+    assert.deepEqual(parseMcsSendData(cleaned).userData.subarray(8), userData.subarray(8));
+  });
+
+  test('clearChannelPduShowProtocol no toca un encuadre que ya viene sin el flag', () => {
+    const frame = buildMcsIndication(1004, buildChannelPdu(buildCliprdrPayload(1)));
+    const dataOff = parseMcsSendData(frame).dataOff;
+
+    assert.equal(clearChannelPduShowProtocol(frame, dataOff), null);
+  });
+
+  test('no remapea si el cliente no negocio canal cliprdr', () => {
+    const state = createChannelFilterState();
+    state.ready = true;
+    state.ioChannelId = 1003;
+
+    const frame = buildMcsIndication(1001, buildChannelPdu(buildCliprdrPayload(1)));
+    const res = processServerFrame(state, frame);
+
+    assert.equal(res.dropped, true);
+    assert.equal(state.serverCliprdrChannelId, null);
+  });
+
+});
+
+describe('CLIPRDR: robustez del filtro', () => {
+
+  test('el interceptor DVC no se aplica al canal IO', () => {
+    const state = stateWithCliprdr();
+
+    // PDU del canal IO cuyo userData pasa la heuristica de CHANNEL_PDU_HEADER: antes se
+    // entregaba a handleDvcRequest y se descartaba como 'dvc-ignore cmd=0x0'
+    const payload = Buffer.alloc(24);
+    const userData = buildChannelPdu(payload);
+    assert.equal(isCliprdrHeader(userData), false);
+
+    const frame = buildMcsIndication(1003, userData);
+    const res = processServerFrame(state, frame);
+
+    assert.ok(res.note == null || !res.note.includes('dvc'));
+  });
+
+  test('un cmd DVC desconocido no se traga el PDU', () => {
+    const { handleDvcRequest } = require('../../src/main/services/rdp-dynvc');
+    const userData = buildChannelPdu(Buffer.alloc(24));
+
+    const res = handleDvcRequest(1004, 1005, userData);
+    assert.equal(res.handled, false);
+    assert.deepEqual(res.replies, []);
+  });
+
+  test('los fragmentos de continuacion no se describen como CLIPRDR_HEADER', () => {
+    // Fragmento intermedio de una transferencia de 48722B en trozos de 1600B
+    const userData = buildChannelPdu(Buffer.alloc(1600, 0xab), 0, 48722);
+    const desc = describeCliprdrPdu(userData);
+
+    assert.match(desc, /ChanHdr len=48722 flags=0x0/);
+    assert.match(desc, /continuación de fragmento \(1600B\)/);
+    assert.doesNotMatch(desc, /msgType=/);
+  });
+
+  test('isChannelPduHeader rechaza flags con bits no documentados', () => {
+    const { isChannelPduHeader } = require('../../src/main/services/rdp-autodetect');
+    const hdr = Buffer.alloc(16);
+    hdr.writeUInt32LE(8, 0);
+    hdr.writeUInt32LE(0x81000003, 4); // bits 24..31 activos: no existen en MS-RDPBCGR 2.2.6.1.1
+
+    assert.equal(isChannelPduHeader(hdr), false);
+  });
+
+  test('sin canal cliprdr negociado no se asume 1004', () => {
+    const state = createChannelFilterState();
+    state.ready = true;
+    state.ioChannelId = 1003;
+
+    const frame = buildMcsIndication(1004, buildChannelPdu(buildCliprdrPayload(1)));
+    const res = processServerFrame(state, frame);
+
+    assert.equal(res.isCliprdr, false);
+    assert.equal(state.cliprdrChannelId, null);
+  });
+});

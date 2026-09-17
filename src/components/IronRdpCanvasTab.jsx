@@ -102,18 +102,18 @@ const writeLocalClipboardText = async (text) => {
   } catch (_) {}
 };
 
+// Publica una Format List CLIPRDR en la sesión remota.
+// Un texto vacío es legítimo y necesario: tras CB_MONITOR_READY el cliente debe anunciar
+// formatos aunque no tenga nada que ofrecer (MS-RDPECLIP 1.3.2.1). Si no se llama a
+// onClipboardPaste, IronRDP nunca emite CB_CLIP_CAPS ni CB_FORMAT_LIST y los bastiones
+// estrictos (Wallix) cierran la conexión al recibir el CB_FORMAT_LIST_RESPONSE huérfano.
 const sendClipboardToSession = async (session, text) => {
-  if (!session || typeof text !== 'string' || !text) return;
-  try {
-    // Normalizar saltos de línea a CRLF para compatibilidad nativa con servidores Windows
-    const normalizedText = text.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
-    const clip = new Backend.ClipboardData();
-    clip.addText('text/plain', normalizedText);
-    await session.onClipboardPaste(clip);
-    console.log('📋 [IronRDP Clipboard] Enviado a sesión remota:', normalizedText.slice(0, 80));
-  } catch (err) {
-    console.warn('[IronRDP Clipboard] Error enviando a remoto:', err);
-  }
+  if (!session) return;
+  // Normalizar saltos de línea a CRLF para compatibilidad nativa con servidores Windows
+  const normalizedText = String(text || '').replace(/\r\n/g, '\n').replace(/\n/g, '\r\n');
+  const clip = new Backend.ClipboardData();
+  clip.addText('text/plain', normalizedText);
+  await session.onClipboardPaste(clip);
 };
 
 const RESOLUTION_OPTIONS = [
@@ -154,6 +154,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   const lastReceivedClipboardTextRef = useRef('');
   const lastSentClipboardTextRef = useRef('');
   const isFileTransferArmedRef = useRef(false);
+  const localClipboardCacheRef = useRef('');
+  const clipboardChainRef = useRef(Promise.resolve());
+  const pendingClipboardSendRef = useRef(null);
   const currentDesktopSizeRef = useRef({ width: 0, height: 0 });
   const hasEverConnectedRef = useRef(false);
   const currentTokenIdRef = useRef(null);
@@ -166,6 +169,42 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   const alignDesktop = (n) => {
     const base = Math.max(1, Math.floor(n));
     return (base + 3) & ~3;
+  };
+
+  const refreshLocalClipboardCache = async () => {
+    const text = await readLocalClipboardText();
+    localClipboardCacheRef.current = typeof text === 'string' ? text : '';
+    return localClipboardCacheRef.current;
+  };
+
+  // Serializa los envíos CLIPRDR. Dos Format List solapadas (foco de ventana, pegado y
+  // petición de IronRDP pueden coincidir) hacen que Wallix aborte la sesión por orden de PDUs.
+  // Si la sesión aún no está asignada, el envío queda pendiente y se vacía al conectar.
+  const enqueueClipboardSend = (text, reason) => {
+    const payload = typeof text === 'string' ? text : '';
+    const deliver = async () => {
+      const session = sessionRef.current;
+      if (!session) {
+        pendingClipboardSendRef.current = { text: payload, reason };
+        return;
+      }
+      try {
+        await sendClipboardToSession(session, payload);
+        lastSentClipboardTextRef.current = payload;
+        console.log(`📋 [IronRDP Clipboard] Format List enviada (${reason}, ${payload.length} chars)`);
+      } catch (err) {
+        console.warn(`[IronRDP Clipboard] Error enviando Format List (${reason}):`, err);
+      }
+    };
+    clipboardChainRef.current = clipboardChainRef.current.then(deliver, deliver);
+    return clipboardChainRef.current;
+  };
+
+  const flushPendingClipboardSend = () => {
+    const pending = pendingClipboardSendRef.current;
+    if (!pending) return;
+    pendingClipboardSendRef.current = null;
+    enqueueClipboardSend(pending.text, `${pending.reason}-diferido`);
   };
 
   const calculateInitialDimensions = () => {
@@ -476,7 +515,13 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         // Registrar extensiones para transferencia de archivos / carpeta compartida (RdpFileTransferProvider)
         if (isDriveEnabled) {
           try {
-            currentFileTransferProvider = new RdpFileTransferProvider({ chunkSize: 64 * 1024 });
+            // onUploadStarted/onUploadFinished silencian la sincronización de portapapeles
+            // mientras hay una subida: si no, la Format List de texto pisa la del fichero.
+            currentFileTransferProvider = new RdpFileTransferProvider({
+              chunkSize: 64 * 1024,
+              onUploadStarted: () => { isFileTransferArmedRef.current = true; },
+              onUploadFinished: () => { isFileTransferArmedRef.current = false; }
+            });
             fileTransferProviderRef.current = currentFileTransferProvider;
             for (const ext of currentFileTransferProvider.getBuilderExtensions()) {
               builder.extension(ext);
@@ -578,11 +623,12 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
                   if (text) {
                     lastReceivedClipboardTextRef.current = text;
                     lastSentClipboardTextRef.current = text;
-                    console.log('📋 [IronRDP Clipboard] Copiado remoto -> escrito en portapapeles local:', text.slice(0, 80));
+                    localClipboardCacheRef.current = text;
+                    console.log(`📋 [IronRDP Clipboard] 📥 Copiado remoto recibido (${text.length} chars):`, text.slice(0, 80));
                     await writeLocalClipboardText(text);
                     toastRef.current?.show({
                       severity: 'success',
-                      summary: 'Portapapeles',
+                      summary: 'Portapapeles Remoto',
                       detail: `Texto copiado al portapapeles: "${text.length > 50 ? text.slice(0, 50) + '...' : text}"`,
                       life: 2500
                     });
@@ -595,27 +641,19 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             }
           });
 
-          // Local -> Remoto (solicitud de actualización del portapapeles)
-          builder.forceClipboardUpdateCallback(async () => {
-            if (isFileTransferArmedRef.current) return;
-            try {
-              const text = await readLocalClipboardText();
-              if (
-                text &&
-                sessionRef.current &&
-                text !== lastReceivedClipboardTextRef.current &&
-                !isFileTransferArmedRef.current
-              ) {
-                lastSentClipboardTextRef.current = text;
-                await sendClipboardToSession(sessionRef.current, text);
-              } else if (sessionRef.current && !isFileTransferArmedRef.current) {
-                // Enviar ClipboardData vacío para completar el saludo CLIPRDR si no hay texto local nuevo
-                try {
-                  const emptyClip = new Backend.ClipboardData();
-                  await sessionRef.current.onClipboardPaste(emptyClip);
-                } catch (_) {}
-              }
-            } catch (_) {}
+          // Local -> Remoto: IronRDP reclama la Format List del cliente al recibir CB_MONITOR_READY.
+          // Hay que contestar SIEMPRE y sin esperas asíncronas previas: la lectura del portapapeles
+          // puede tardar decenas de ms y el CB_FORMAT_LIST del servidor llega inmediatamente después,
+          // así que se responde desde la caché y el refresco se hace en segundo plano.
+          builder.forceClipboardUpdateCallback(() => {
+            if (isFileTransferArmedRef.current) {
+              console.log('📋 [IronRDP Clipboard] forceClipboardUpdate omitido: transferencia de archivos en curso');
+              return;
+            }
+            const cached = localClipboardCacheRef.current || '';
+            console.log(`📋 [IronRDP Clipboard] 📤 forceClipboardUpdate -> anunciando formatos (${cached.length} chars)`);
+            enqueueClipboardSend(cached, 'handshake');
+            refreshLocalClipboardCache().catch(() => {});
           });
         }
 
@@ -627,10 +665,17 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           builder.renderCanvas(canvasRef.current);
         }
 
+        // Precargar el portapapeles local antes de conectar: el saludo CLIPRDR debe responderse
+        // sin latencia, antes de que el servidor envíe su propio CB_FORMAT_LIST.
+        if (isClipboardEnabled) {
+          await refreshLocalClipboardCache().catch(() => {});
+        }
+
         console.log(`🚀 [IronRDP WASM] Conectando a ${destinationStr} (protocolo=${tokenResponse.protocolLabel || 'auto'}, credssp=${useCredssp}, clipboard=${isClipboardEnabled}, drive=${isDriveEnabled})...`);
         
         currentSession = await builder.connect();
         sessionRef.current = currentSession;
+        flushPendingClipboardSend();
         console.log('✅ [IronRDP WASM] Sesión RDP conectada');
 
         // Inicializar FileTransferProvider con la sesión activa
@@ -794,6 +839,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       }
       sessionRef.current = null;
       isFileTransferArmedRef.current = false;
+      pendingClipboardSendRef.current = null;
     };
   }, [rdpConfig, reconnectTrigger]);
 
@@ -816,7 +862,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     // Registrar portapapeles local inicial en lastReceivedClipboardTextRef sin marcar lastSentClipboardTextRef
     // para permitir que el foco posterior (tras el período de gracia) o el primer pegado sincronicen
     // limpiamente el portapapeles inicial hacia la máquina remota
-    readLocalClipboardText().then((text) => {
+    refreshLocalClipboardCache().then((text) => {
       if (!isDisposed && text) {
         lastReceivedClipboardTextRef.current = text;
       }
@@ -827,16 +873,14 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       // Período de gracia mínimo de 3 segundos antes de permitir sincronizaciones reactivas por foco (protege Wallix handshake)
       if (Date.now() - connectedAt < 3000) return;
       try {
-        const text = await readLocalClipboardText();
+        const text = await refreshLocalClipboardCache();
         if (
           text &&
           text !== lastSentClipboardTextRef.current &&
           text !== lastReceivedClipboardTextRef.current &&
           !isFileTransferArmedRef.current
         ) {
-          lastSentClipboardTextRef.current = text;
-          console.log('📋 [IronRDP Clipboard] Foco de ventana -> sincronizado local a remoto:', text.slice(0, 80));
-          await sendClipboardToSession(sessionRef.current, text);
+          enqueueClipboardSend(text, 'foco de ventana');
         }
       } catch (_) {}
     };
@@ -993,25 +1037,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     const handleKeyDown = (e) => {
       if (!sessionRef.current) return;
 
-      // Si el usuario pulsa Ctrl+V (o Cmd+V en Mac), sincronizar portapapeles local solo si es texto externo nuevo
-      if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyV' || e.key === 'v' || e.key === 'V')) {
-        const isClipboardEnabled = rdpConfig.redirectClipboard !== false;
-        if (isClipboardEnabled && !isFileTransferArmedRef.current) {
-          readLocalClipboardText().then((text) => {
-            if (
-              text &&
-              sessionRef.current &&
-              text !== lastReceivedClipboardTextRef.current &&
-              text !== lastSentClipboardTextRef.current &&
-              !isFileTransferArmedRef.current
-            ) {
-              lastSentClipboardTextRef.current = text;
-              sendClipboardToSession(sessionRef.current, text);
-            }
-          }).catch(() => {});
-        }
-      }
-
+      // El pegado se sincroniza en el manejador del evento 'paste', que cubre Ctrl+V, Cmd+V
+      // y el menú contextual. Duplicarlo aquí emitiría dos Format List por pulsación.
       e.preventDefault();
       const scancode = CODE_TO_SCANCODE[e.code];
       try {
@@ -1050,14 +1077,14 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
 
       let text = e.clipboardData?.getData('text/plain') || '';
       if (!text) {
-        text = await readLocalClipboardText();
+        text = await refreshLocalClipboardCache();
+      } else {
+        localClipboardCacheRef.current = text;
       }
 
       if (text && !isFileTransferArmedRef.current) {
-        lastSentClipboardTextRef.current = text;
         lastReceivedClipboardTextRef.current = text;
-        console.log('📋 [IronRDP Clipboard] Evento Paste -> enviando a remoto:', text.slice(0, 80));
-        await sendClipboardToSession(sessionRef.current, text);
+        enqueueClipboardSend(text, 'evento paste');
       }
     };
 
@@ -1912,8 +1939,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             <Button label="Enviar" icon="pi pi-check" className="p-button-primary p-button-sm" onClick={async () => {
               if (sessionRef.current && clipboardText) {
                 try {
-                  await sendClipboardToSession(sessionRef.current, clipboardText);
-                  lastSentClipboardTextRef.current = clipboardText;
+                  localClipboardCacheRef.current = clipboardText;
+                  await enqueueClipboardSend(clipboardText, 'diálogo manual');
 
                   const transaction = new Backend.InputTransaction();
                   for (const char of clipboardText) {

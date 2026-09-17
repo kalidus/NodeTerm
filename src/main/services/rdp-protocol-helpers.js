@@ -93,6 +93,99 @@ function parseX224ConnectionConfirm(buf) {
   };
 }
 
+// T.125 Result: un join que no sea rt-successful deja el canal sin unir, y cualquier dato que
+// se envie por el es una violacion de protocolo.
+const MCS_RESULT_NAMES = {
+  0: 'rt-successful',
+  1: 'rt-domain-merging',
+  2: 'rt-domain-not-hierarchical',
+  3: 'rt-no-such-channel',
+  4: 'rt-no-such-domain',
+  5: 'rt-no-such-user',
+  6: 'rt-not-admitted',
+  7: 'rt-other-user-id',
+  8: 'rt-parameters-unacceptable',
+  9: 'rt-token-not-available',
+  10: 'rt-token-not-possessed',
+  11: 'rt-too-many-channels',
+  12: 'rt-too-many-tokens',
+  13: 'rt-too-many-users',
+  14: 'rt-unspecified-failure',
+  15: 'rt-user-rejected'
+};
+
+// MS-RDPBCGR 2.2.8.1.1.1.2. Cuidado: la tabla de nombres de describeRdpPdu usa un indice
+// secuencial propio que NO son los valores reales de PDUTYPE2; aqui van los de la especificacion.
+const PDUTYPE_DATAPDU = 7;
+const PDUTYPE2_SET_ERROR_INFO = 47;
+const SHARE_DATA_HEADER_LEN = 18;
+
+// T.125 DisconnectProviderUltimatum: reason va en PER de 3 bits a caballo entre los dos bytes
+const MCS_DISCONNECT_REASONS = {
+  0: 'rn-domain-disconnected',
+  1: 'rn-provider-initiated',
+  2: 'rn-token-purged',
+  3: 'rn-user-requested',
+  4: 'rn-channel-purged'
+};
+
+// MS-RDPBCGR 2.2.5.1.1. Sólo se nombran los códigos seguros; el resto se deja en hexadecimal
+// para poder buscarlo en la especificación sin inventar nombres.
+const ERROR_INFO_CODES = {
+  0x00000001: 'ERRINFO_RPC_INITIATED_DISCONNECT',
+  0x00000002: 'ERRINFO_RPC_INITIATED_LOGOFF',
+  0x00000003: 'ERRINFO_IDLE_TIMEOUT',
+  0x00000004: 'ERRINFO_LOGON_TIMEOUT',
+  0x00000005: 'ERRINFO_DISCONNECTED_BY_OTHER_CONNECTION',
+  0x00000006: 'ERRINFO_OUT_OF_MEMORY',
+  0x00000007: 'ERRINFO_SERVER_DENIED_CONNECTION',
+  0x0000000c: 'ERRINFO_LOGOFF_BY_USER',
+  0x00001001: 'ERRINFO_UNKNOWNPDUTYPE2',
+  0x00001002: 'ERRINFO_UNKNOWNPDUTYPE',
+  0x00001003: 'ERRINFO_DATAPDUSEQUENCE',
+  0x00001005: 'ERRINFO_CONTROLPDUSEQUENCE',
+  0x00001006: 'ERRINFO_INVALIDCONTROLPDUACTION',
+  0x00001007: 'ERRINFO_INVALIDINPUTPDUTYPE'
+};
+
+// Detecta el PDU con el que el servidor anuncia que va a cerrar la sesión, para poder saber el
+// motivo en vez de quedarse en un simple cierre de socket. Devuelve null si el frame no lo es.
+function describeDisconnectPdu(buf) {
+  if (!Buffer.isBuffer(buf) || buf.length < 9) return null;
+  if (buf[0] !== 0x03 || buf[1] !== 0x00) return null;
+  if (buf[4] !== 0x02 || buf[5] !== 0xf0 || buf[6] !== 0x80) return null;
+
+  const mcsType = buf[7];
+  if (mcsType === 0x21) {
+    const reason = ((mcsType & 0x03) << 1) | (buf[8] >> 7);
+    const name = MCS_DISCONNECT_REASONS[reason] || `reason=${reason}`;
+    return `MCS Disconnect Provider Ultimatum (${name})`;
+  }
+
+  if (mcsType !== 0x68) return null;
+
+  let off = 13;
+  const b0 = buf[off++];
+  const dataLen = (b0 & 0x80) === 0 ? b0 : (((b0 & 0x7f) << 8) | buf[off++]);
+  const userData = buf.subarray(off, off + dataLen);
+
+  // La cabecera de seguridad de 4 bytes puede estar o no, asi que se prueban las dos bases.
+  // Para no dar falsos positivos se exige coherencia de las tres cosas a la vez: totalLength
+  // cuadrando con el tamano real, pduType = PDUTYPE_DATAPDU y pduType2 = SET_ERROR_INFO.
+  for (const base of [0, 4]) {
+    if (userData.length < base + SHARE_DATA_HEADER_LEN + 4) continue;
+    if (userData.readUInt16LE(base) !== userData.length - base) continue;
+    if ((userData.readUInt16LE(base + 2) & 0x0f) !== PDUTYPE_DATAPDU) continue;
+    if (userData[base + 14] !== PDUTYPE2_SET_ERROR_INFO) continue;
+
+    const code = userData.readUInt32LE(base + SHARE_DATA_HEADER_LEN);
+    const name = ERROR_INFO_CODES[code] || 'ver MS-RDPBCGR 2.2.5.1.1';
+    return `TS_SET_ERROR_INFO errorInfo=0x${code.toString(16).padStart(8, '0')} (${name})`;
+  }
+
+  return null;
+}
+
 function describeRdpPdu(buf) {
   if (!Buffer.isBuffer(buf) || buf.length === 0) return 'empty';
 
@@ -185,7 +278,17 @@ function describeRdpPdu(buf) {
         return `${pduDesc} (${buf.length}B)`;
       }
       if (buf[7] === 0x3e && buf.length >= 13) {
-        return `MCS-ChannelJoinConfirm ch=${buf.readUInt16BE(11)} (${buf.length}B)`;
+        // T.125 ChannelJoinConfirm en PER alineado: byte 8 lleva el bit de presencia del campo
+        // opcional y los 4 bits de Result; despues initiator, el canal pedido y el concedido.
+        // Ojo: el canal concedido puede no ser el pedido, y el offset 11 es el PEDIDO.
+        // El campo opcional se deduce de la longitud del frame, que es un dato duro, en vez de
+        // fiarse del bit de preambulo. El byte discriminador se imprime en crudo para validarlo.
+        const result = (buf[8] >> 3) & 0x0f;
+        const requested = buf.readUInt16BE(11);
+        const granted = buf.length >= 15 ? buf.readUInt16BE(13) : null;
+        const resultName = MCS_RESULT_NAMES[result] || `result=${result}`;
+        const grantedDesc = granted != null && granted !== requested ? ` concedido=${granted}` : '';
+        return `MCS-ChannelJoinConfirm ch=${requested}${grantedDesc} [${resultName} hdr=0x${buf[8].toString(16).padStart(2, '0')}] (${buf.length}B)`;
       }
       return `MCS-PDU 0x${buf[7].toString(16)} (${buf.length}B)`;
     }
@@ -424,6 +527,147 @@ function splitRdpFrames(buf) {
   return frames.length > 0 ? frames : [buf];
 }
 
+class RdpFrameSplitter {
+  constructor() {
+    this.remainingBytes = 0;
+    this.headerBuf = Buffer.alloc(0);
+  }
+
+  reset() {
+    this.remainingBytes = 0;
+    this.headerBuf = Buffer.alloc(0);
+  }
+
+  push(chunk) {
+    if (!Buffer.isBuffer(chunk) || chunk.length === 0) return [];
+
+    let buf = chunk;
+    if (this.headerBuf.length > 0) {
+      buf = Buffer.concat([this.headerBuf, chunk]);
+      this.headerBuf = Buffer.alloc(0);
+    }
+
+    const frames = [];
+    let offset = 0;
+
+    // 1. Si estamos en medio de un frame fragmentado de un chunk anterior:
+    // Consumir los bytes de continuación sin inspeccionarlos como cabeceras falsas.
+    if (this.remainingBytes > 0) {
+      const take = Math.min(buf.length, this.remainingBytes);
+      frames.push(buf.subarray(0, take));
+      this.remainingBytes -= take;
+      offset = take;
+    }
+
+    // 2. Parsear nuevos frames que empiezan en este chunk:
+    while (offset < buf.length) {
+      const remaining = buf.length - offset;
+      const b0 = buf[offset];
+
+      // A. TPKT frame (0x03 0x00 ...)
+      if (b0 === 0x03) {
+        if (remaining < 4) {
+          this.headerBuf = buf.subarray(offset);
+          break;
+        }
+        if (buf[offset + 1] === 0x00) {
+          const tpktLen = buf.readUInt16BE(offset + 2);
+          if (tpktLen >= 4) {
+            if (remaining >= tpktLen) {
+              frames.push(buf.subarray(offset, offset + tpktLen));
+              offset += tpktLen;
+              continue;
+            } else {
+              frames.push(buf.subarray(offset));
+              this.remainingBytes = tpktLen - remaining;
+              break;
+            }
+          }
+        }
+      }
+
+      // B. Fast-Path frame ((b0 & 0x03) === 0 && (b0 & 0x30) === 0)
+      if ((b0 & 0x03) === 0 && (b0 & 0x30) === 0) {
+        if (remaining < 2) {
+          this.headerBuf = buf.subarray(offset);
+          break;
+        }
+        const b1 = buf[offset + 1];
+        let fpLen = 0;
+        let hdrLen = 2;
+        if (b1 & 0x80) {
+          if (remaining < 3) {
+            this.headerBuf = buf.subarray(offset);
+            break;
+          }
+          fpLen = ((b1 & 0x7f) << 8) | buf[offset + 2];
+          hdrLen = 3;
+        } else {
+          fpLen = b1;
+        }
+
+        if (fpLen >= hdrLen) {
+          if (remaining >= fpLen) {
+            frames.push(buf.subarray(offset, offset + fpLen));
+            offset += fpLen;
+            continue;
+          } else {
+            frames.push(buf.subarray(offset));
+            this.remainingBytes = fpLen - remaining;
+            break;
+          }
+        }
+      }
+
+      // C. CredSSP (0x30 ...)
+      if (b0 === 0x30) {
+        if (remaining < 2) {
+          this.headerBuf = buf.subarray(offset);
+          break;
+        }
+        const b1 = buf[offset + 1];
+        let credsspLen = 0;
+        let hdrLen = 2;
+        if (b1 === 0x82) {
+          if (remaining < 4) {
+            this.headerBuf = buf.subarray(offset);
+            break;
+          }
+          credsspLen = buf.readUInt16BE(offset + 2) + 4;
+          hdrLen = 4;
+        } else if (b1 === 0x81) {
+          if (remaining < 3) {
+            this.headerBuf = buf.subarray(offset);
+            break;
+          }
+          credsspLen = buf[offset + 2] + 3;
+          hdrLen = 3;
+        } else if (b1 < 0x80) {
+          credsspLen = b1 + 2;
+        }
+
+        if (credsspLen >= hdrLen) {
+          if (remaining >= credsspLen) {
+            frames.push(buf.subarray(offset, offset + credsspLen));
+            offset += credsspLen;
+            continue;
+          } else {
+            frames.push(buf.subarray(offset));
+            this.remainingBytes = credsspLen - remaining;
+            break;
+          }
+        }
+      }
+
+      // Byte o payload que no coincide: enviar todo lo restante
+      frames.push(buf.subarray(offset));
+      break;
+    }
+
+    return frames;
+  }
+}
+
 const splitTpktFrames = splitRdpFrames;
 
 module.exports = {
@@ -435,8 +679,12 @@ module.exports = {
   readSelectedProtocol,
   parseX224ConnectionConfirm,
   describeRdpPdu,
+  describeDisconnectPdu,
   splitRdpFrames,
-  splitTpktFrames
+  splitTpktFrames,
+  RdpStreamDeframer,
+  RdpFrameSplitter
 };
+
 
 

@@ -54,3 +54,5 @@ testing/rdp/frames/to-*
 !testing/rdp/frames/from-18-66b.hex
 !testing/rdp/frames/to-01-403b.hex
 !testing/rdp/frames/to-05-421b.hex
+# Interruptores de diagnostico del bridge RDP (locales, no versionados)
+rdp-flags.json

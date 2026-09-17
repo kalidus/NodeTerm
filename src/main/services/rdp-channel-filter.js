@@ -15,11 +15,14 @@ const {
   handleAutoDetectRequest,
   stripSecAutodetect,
   isChannelPduHeader,
+  CHANNEL_PDU_HEADER_LEN,
   rewriteMcsChannelId
 } = require('./rdp-autodetect');
 const { handleDvcRequest } = require('./rdp-dynvc');
 
 const TPKT_X224_MCS_HEADER = 8;
+const CHANNEL_FLAG_FIRST = 0x01;
+const CHANNEL_FLAG_LAST = 0x02;
 const MCS_SEND_DATA_INDICATION = 0x68;
 const MCS_CHANNEL_JOIN_CONFIRM = 0x3e;
 const SC_NET = 0x0c03;
@@ -101,7 +104,11 @@ function describeCliprdrPdu(userData) {
     const len = userData.readUInt32LE(0);
     const flags = userData.readUInt32LE(4);
     chanHdr = `[ChanHdr len=${len} flags=0x${flags.toString(16)}] `;
-    payload = userData.subarray(8);
+    payload = userData.subarray(CHANNEL_PDU_HEADER_LEN);
+    // Sólo el primer fragmento lleva CLIPRDR_HEADER; decodificar los siguientes da basura
+    if ((flags & CHANNEL_FLAG_FIRST) === 0) {
+      return `${chanHdr}continuación de fragmento (${payload.length}B)`;
+    }
   }
   if (payload.length < 6) return `${chanHdr}raw len=${payload.length}B hex=${payload.toString('hex')}`;
   const msgType = payload.readUInt16LE(0);
@@ -112,12 +119,24 @@ function describeCliprdrPdu(userData) {
 }
 
 function isCliprdrHeader(userData) {
-  if (!isChannelPduHeader(userData) || userData.length < 16) return false;
-  const payload = userData.subarray(8);
+  if (!isChannelPduHeader(userData)) return false;
+  if (userData.length < CHANNEL_PDU_HEADER_LEN + 8) return false;
+  const payload = userData.subarray(CHANNEL_PDU_HEADER_LEN);
   const msgType = payload.readUInt16LE(0);
   const dataLen = payload.readUInt32LE(4);
-  // Tipos estándar MS-RDPECLIP (1..11) y consistencia de longitud
-  return msgType >= 0x0001 && msgType <= 0x000b && dataLen === (payload.length - 8);
+
+  // Tipos estándar MS-RDPECLIP (1..11)
+  if (msgType < 0x0001 || msgType > 0x000b) return false;
+
+  const avail = payload.length - 8;
+  // Longitudes válidas:
+  // 1. Exacto: avail === dataLen
+  // 2. Con padding (hasta 4 bytes, como en CB_FORMAT_LIST con alineación a 4 bytes): avail >= dataLen && avail - dataLen <= 4
+  // 3. Fragmentado (primer chunk de payload grande): avail < dataLen && dataLen <= 0x04000000
+  if (avail === dataLen) return true;
+  if (avail >= dataLen && (avail - dataLen) <= 4) return true;
+  if (avail < dataLen && dataLen <= 0x04000000) return true;
+  return false;
 }
 
 function createChannelFilterState() {
@@ -130,6 +149,10 @@ function createChannelFilterState() {
     messageChannelId: null,
     staticVcChannelId: null,
     cliprdrChannelId: null,
+    // Canal MCS por el que el servidor entrega cliprdr. Normalmente coincide con
+    // cliprdrChannelId, pero Wallix usa otro (p.ej. 1001) y hay que remapear.
+    serverCliprdrChannelId: null,
+    serverCliprdrFragmentOpen: false,
     drdynvcChannelId: null,
     cliprdrServerReady: false,
     clientInitiator: 0,
@@ -250,6 +273,50 @@ function consumeAutodetect(state, channelId, userData, force) {
   };
 }
 
+/**
+ * Decide si una PDU de canal virtual pertenece al flujo cliprdr y actualiza el estado de
+ * fragmentación. Es cliprdr si abre un mensaje CLIPRDR válido o si continúa uno ya abierto en el
+ * mismo canal: los fragmentos de continuación no llevan CLIPRDR_HEADER y descartarlos rompería el
+ * reensamblado. No se decide por ID de canal porque el bastión entrega cliprdr por canales
+ * distintos en cada sesión: el de usuario, el canal IO o el negociado.
+ */
+function claimCliprdrPdu(state, channelId, userData) {
+  if (state.cliprdrChannelId == null || !Buffer.isBuffer(userData)) return false;
+
+  const flags = isChannelPduHeader(userData) ? userData.readUInt32LE(4) : 0;
+  const starts = isCliprdrHeader(userData) && (flags & CHANNEL_FLAG_FIRST) !== 0;
+  const continues = state.serverCliprdrChannelId === channelId && state.serverCliprdrFragmentOpen;
+  if (!starts && !continues) return false;
+
+  state.serverCliprdrChannelId = channelId;
+  state.serverCliprdrFragmentOpen = (flags & CHANNEL_FLAG_LAST) === 0;
+  return true;
+}
+
+function buildCliprdrResult(state, buf, channelId, userData) {
+  const desc = describeCliprdrPdu(userData);
+  if (desc && (desc.includes('CB_MONITOR_READY') || desc.includes('CB_CLIP_CAPS'))) {
+    state.cliprdrServerReady = true;
+  }
+
+  const remapped = channelId !== state.cliprdrChannelId
+    ? rewriteMcsChannelId(buf, state.cliprdrChannelId)
+    : null;
+
+  return {
+    forward: remapped || buf,
+    replies: [],
+    dropped: false,
+    note: remapped
+      ? `cliprdr (remap ch=${channelId}->${state.cliprdrChannelId}): ${desc || 'fragmento'}`
+      : `cliprdr: ${desc || 'fragmento'}`,
+    channelId: state.cliprdrChannelId,
+    serverChannelId: channelId,
+    isCliprdr: true,
+    cliprdrDesc: desc
+  };
+}
+
 function filterIoChannelPdu(state, channelId, userData) {
   if (!Buffer.isBuffer(userData) || userData.length < 2) {
     return null;
@@ -270,7 +337,7 @@ function filterIoChannelPdu(state, channelId, userData) {
         forward: null,
         replies: [],
         dropped: true,
-        note: `server-heartbeat (${userData.length}B dropped for WASM)`,
+        note: `server-heartbeat (${userData.length}B dropped for WASM) hex=${userData.toString('hex').slice(0, 32)}`,
         channelId
       };
     }
@@ -313,7 +380,7 @@ function filterIoChannelPdu(state, channelId, userData) {
       forward: null,
       replies: [],
       dropped: true,
-      note: `drop invalid-share-control-0x${pduType.toString(16)} len=${userData.length}B`,
+      note: `drop invalid-share-control-0x${pduType.toString(16)} len=${userData.length}B hex=${userData.toString('hex').slice(0, 32)}`,
       channelId
     };
   }
@@ -339,48 +406,43 @@ function processServerFrame(state, buf) {
 
   const parsed = parseMcsSendData(buf);
 
-  // 1. Portapapeles (cliprdr): ÚNICAMENTE si es el canal cliprdr negociado (1004)
-  const isCliprdr = (state.cliprdrChannelId != null && channelId === state.cliprdrChannelId);
-  if (isCliprdr) {
-    const desc = parsed ? describeCliprdrPdu(parsed.userData) : null;
-    if (desc && (desc.includes('CB_MONITOR_READY') || desc.includes('CB_CLIP_CAPS'))) {
-      state.cliprdrServerReady = true;
-    }
-
-    return {
-      forward: buf,
-      replies: [],
-      dropped: false,
-      note: desc ? `cliprdr: ${desc}` : 'cliprdr',
-      channelId,
-      isCliprdr: true,
-      cliprdrDesc: desc
-    };
-  }
-
-  // 2. DYNVC / Otros Virtual Channels (CHANNEL_PDU_HEADER que no sea cliprdr):
-  // Interceptar peticiones DVC y responder al servidor para evitar timeouts, pero NUNCA reenviar a WASM.
-  if (parsed && isChannelPduHeader(parsed.userData)) {
-    const clipCheck = describeCliprdrPdu(parsed.userData);
-    const dvc = handleDvcRequest(channelId, state.clientInitiator, parsed.userData);
-    markDropped(state, channelId);
-    return {
-      forward: null,
-      replies: dvc.replies || [],
-      dropped: true,
-      note: dvc.note || `drop ${channelPduHint(parsed.userData)}${clipCheck ? ` [potential-cliprdr: ${clipCheck}]` : ''}`,
-      channelId,
-      isCliprdr: false,
-      cliprdrDesc: clipCheck
-    };
-  }
-
-  // 3. Si el canal no es el canal IO permitido (por ejemplo, canal de usuario 1001),
-  // NUNCA reenviar a IronRDP WASM (evitando crash con 'unexpected channel received: ID ...')
   const isIoChannel = state.ready ? (channelId === state.ioChannelId) : (channelId === 1003);
+
+  // 1. Portapapeles (cliprdr). Wallix ignora los nombres de canal que declara el cliente y
+  // proyecta su propio orden sobre los IDs: cliprdr puede llegar por un canal que el cliente
+  // reservó para otra cosa y, a la vez, ese canal puede traer rdpdr. Así que no se decide por ID
+  // sino por contenido: es cliprdr si abre un mensaje CLIPRDR válido o si continúa uno ya
+  // abierto, porque los fragmentos de continuación no llevan CLIPRDR_HEADER y descartarlos
+  // rompería el reensamblado. Lo que no encaje, aunque venga por el canal cliprdr negociado, cae
+  // al bloque siguiente y se descarta: reenviarlo le metería basura de otro protocolo al canal
+  // cliprdr de IronRDP.
+  if (!isIoChannel && parsed && claimCliprdrPdu(state, channelId, parsed.userData)) {
+    return buildCliprdrResult(state, buf, channelId, parsed.userData);
+  }
+
+  // 2. Canales que no son el canal IO ni cliprdr (canal de usuario 1001, drdynvc, etc.):
+  // NUNCA reenviar a IronRDP WASM (evita el crash 'unexpected channel received: ID ...').
+  // El interceptor DVC sólo se aplica aquí: drdynvc es un canal virtual estático, el canal IO
+  // jamás transporta CHANNEL_PDU_HEADER y aplicarle esta heurística descartaba PDUs legítimas.
   if (!isIoChannel) {
     if (state.messageChannelId == null) {
       state.messageChannelId = channelId;
+    }
+
+    if (parsed && isChannelPduHeader(parsed.userData)) {
+      const dvc = handleDvcRequest(channelId, state.clientInitiator, parsed.userData);
+      if (dvc.handled) {
+        markDropped(state, channelId);
+        return {
+          forward: null,
+          replies: dvc.replies || [],
+          dropped: true,
+          note: `${dvc.note || channelPduHint(parsed.userData)} hex=${parsed.userData.toString('hex').slice(0, 48)}`,
+          channelId,
+          isCliprdr: false,
+          cliprdrDesc: null
+        };
+      }
     }
 
     if (parsed) {
@@ -405,14 +467,24 @@ function processServerFrame(state, buf) {
     };
   }
 
-  // 4. Tráfico en el Canal IO:
+  // 3. Tráfico en el Canal IO:
   if (!parsed) return empty;
 
   const siphoned = consumeAutodetect(state, channelId, parsed.userData, false);
   if (siphoned) return siphoned;
 
   const ioDrop = filterIoChannelPdu(state, channelId, parsed.userData);
-  if (ioDrop) return ioDrop;
+  if (ioDrop) {
+    // El bastión entrega cliprdr por el canal IO en algunas sesiones, y ahí caía descartado como
+    // 'invalid-share-control-0x0'. Se rescata DESPUÉS del filtro y sólo lo que el filtro ya iba a
+    // tirar: así el tráfico legítimo del canal IO no pasa nunca por esta heurística, que es lo
+    // que antes provocaba falsos positivos. Las respuestas del bridge (auto-detect) se respetan.
+    if (ioDrop.dropped && !(ioDrop.replies && ioDrop.replies.length) &&
+        claimCliprdrPdu(state, channelId, parsed.userData)) {
+      return buildCliprdrResult(state, buf, channelId, parsed.userData);
+    }
+    return ioDrop;
+  }
 
   return empty;
 }

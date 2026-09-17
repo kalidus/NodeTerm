@@ -87,12 +87,11 @@ function patchClientNetworkChannelOptions(buf) {
       const name = (nullIdx >= 0 ? rawName.slice(0, nullIdx) : rawName).trim();
       const currentOpt = buf.readUInt32LE(off + 8);
 
-      // CHANNEL_OPTION_INITIALIZED = 0x80000000 (MS-RDPBCGR: "This flag MUST be set")
-      // CHANNEL_OPTION_ENCRYPT_RDP = 0x40000000
-      // CHANNEL_OPTION_COMPRESS_RDP = 0x00800000
-      // CHANNEL_OPTION_SHOW_PROTOCOL = 0x00200000
-      // Estándar FreeRDP / mstsc para cliprdr: 0xc0a00000
-      const standardOpt = (currentOpt | 0xc0a00000) >>> 0;
+      // CHANNEL_OPTION_INITIALIZED = 0x80000000 (MS-RDPBCGR: "This flag MUST be set", exigido por Wallix).
+      // El resto de opciones se preservan tal cual las declara IronRDP: si aquí se quitara
+      // CHANNEL_OPTION_SHOW_PROTOCOL, IronRDP seguiría marcando CHANNEL_FLAG_SHOW_PROTOCOL (0x10)
+      // en sus PDUs y el servidor vería una incoherencia de protocolo.
+      const standardOpt = (currentOpt | 0x80000000) >>> 0;
       if (currentOpt !== standardOpt) {
         if (!out) out = Buffer.from(buf);
         out.writeUInt32LE(standardOpt, off + 8);
@@ -107,6 +106,166 @@ function patchClientNetworkChannelOptions(buf) {
   }
 
   return { buf, patched: false, changes: [], reason: 'cs-net-not-found' };
+}
+
+const CHANNEL_DEF_LEN = 12;
+const CHANNEL_OPTION_INITIALIZED = 0x80000000;
+const CHANNEL_OPTION_COMPRESS_RDP = 0x00800000;
+
+function findClientNetworkBlock(buf) {
+  const duca = buf.indexOf(Buffer.from('Duca'));
+  const start = duca >= 0 ? duca : 0;
+
+  for (let i = start; i + 8 <= buf.length; i++) {
+    if (buf.readUInt16LE(i) !== CS_NET) continue;
+    const length = buf.readUInt16LE(i + 2);
+    if (length < 8 || i + length > buf.length) continue;
+    const count = buf.readUInt32LE(i + 4);
+    if (count < 1 || count > 32) continue;
+    if (i + 8 + count * CHANNEL_DEF_LEN > buf.length) continue;
+    return { offset: i, length, count, ducaOffset: duca };
+  }
+  return null;
+}
+
+function readBerLength(buf, off) {
+  if (off >= buf.length) return null;
+  const first = buf[off];
+  if ((first & 0x80) === 0) return { value: first, size: 1 };
+  const n = first & 0x7f;
+  if (n < 1 || n > 2 || off + n >= buf.length) return null;
+  let value = 0;
+  for (let i = 1; i <= n; i++) value = (value << 8) | buf[off + i];
+  return { value, size: 1 + n };
+}
+
+// Reescribe una longitud BER conservando el ancho original. Devuelve false si el valor nuevo no
+// cabe: ensanchar el campo desplazaria todo el buffer y es preferible abortar el parche.
+function writeBerLength(buf, off, value) {
+  const current = readBerLength(buf, off);
+  if (!current) return false;
+  if (current.size === 1) {
+    if (value > 0x7f) return false;
+    buf[off] = value;
+    return true;
+  }
+  if (current.size === 2) {
+    if (value > 0xff) return false;
+    buf[off + 1] = value;
+    return true;
+  }
+  if (value > 0xffff) return false;
+  buf.writeUInt16BE(value, off + 1);
+  return true;
+}
+
+/**
+ * Añade canales virtuales estáticos a TS_UD_CS_NET de un MCS Connect Initial.
+ *
+ * Wallix entrega cliprdr por un canal MCS que no es el que él mismo asignó, y el destino cierra
+ * la sesión al recibir datos del cliente por el canal negociado. IronRDP declara un solo canal
+ * mientras los clientes que sí funcionan a través del bastión declaran el juego estándar, así que
+ * esto iguala el reparto de canales al de un cliente normal.
+ *
+ * Los canales nuevos se añaden DETRÁS de los existentes a propósito: IronRDP empareja SC_NET con
+ * CS_NET por índice, y meterlos delante le haría confundir su cliprdr con otro canal.
+ *
+ * Hay que recalcular longitudes anidadas (CS_NET, userData de 'Duca', OCTET STRING de userData,
+ * Connect-Initial y TPKT). Se validan todas antes de tocar nada y, si alguna no cuadra o no cabe
+ * en su ancho original, se aborta devolviendo el buffer intacto.
+ */
+function injectClientNetworkChannels(buf, names) {
+  const abort = (reason) => ({ buf, patched: false, added: [], reason });
+
+  if (!Buffer.isBuffer(buf)) return abort('not-buffer');
+  if (!Array.isArray(names) || names.length === 0) return abort('no-names');
+
+  const block = findClientNetworkBlock(buf);
+  if (!block) return abort('cs-net-not-found');
+  if (block.ducaOffset < 0) return abort('duca-not-found');
+
+  const present = new Set(findClientNetworkChannels(buf).map((n) => n.toLowerCase()));
+  const toAdd = [];
+  for (const raw of names) {
+    const name = String(raw || '').trim();
+    // El nombre ocupa 8 bytes con terminador nulo, asi que el limite real son 7 caracteres
+    if (!name || name.length > 7) continue;
+    if (present.has(name.toLowerCase())) continue;
+    present.add(name.toLowerCase());
+    toAdd.push(name);
+  }
+  if (!toAdd.length) return abort('already-present');
+  if (block.count + toAdd.length > 31) return abort('too-many-channels');
+
+  const delta = toAdd.length * CHANNEL_DEF_LEN;
+
+  if (buf.length < 11 || buf[0] !== 0x03) return abort('not-tpkt');
+  if (buf.readUInt16BE(2) !== buf.length) return abort('tpkt-len-mismatch');
+  if (buf.length + delta > 0xffff) return abort('tpkt-overflow');
+
+  if (buf[7] !== 0x7f || buf[8] !== 0x65) return abort('not-connect-initial');
+  const ciLen = readBerLength(buf, 9);
+  if (!ciLen || 9 + ciLen.size + ciLen.value !== buf.length) return abort('connect-initial-len');
+
+  // El userData OCTET STRING acaba al final del PDU y su contenido arranca 2 bytes antes del OID
+  // de GCC ("00 05" de la clave H.221). Se prueban los tres anchos BER y se valida la longitud.
+  const oidAt = buf.indexOf(Buffer.from([0x00, 0x14, 0x7c, 0x00, 0x01]));
+  if (oidAt < 6) return abort('gcc-oid-not-found');
+  let udTagAt = -1;
+  let udLen = null;
+  for (const back of [4, 5, 6]) {
+    const tag = oidAt - back;
+    if (tag < 0 || buf[tag] !== 0x04) continue;
+    const len = readBerLength(buf, tag + 1);
+    if (!len || tag + 1 + len.size + len.value !== buf.length) continue;
+    udTagAt = tag;
+    udLen = len;
+    break;
+  }
+  if (udTagAt < 0) return abort('user-data-len-not-found');
+
+  const ducaLenAt = block.ducaOffset + 4;
+  if (ducaLenAt + 1 >= buf.length) return abort('duca-len-oob');
+  const ducaWide = (buf[ducaLenAt] & 0x80) !== 0;
+  const ducaLen = ducaWide
+    ? ((buf[ducaLenAt] & 0x3f) << 8) | buf[ducaLenAt + 1]
+    : buf[ducaLenAt];
+  const newDucaLen = ducaLen + delta;
+  if (ducaWide ? newDucaLen > 0x3fff : newDucaLen > 0x7f) return abort('duca-len-overflow');
+
+  const insertAt = block.offset + 8 + block.count * CHANNEL_DEF_LEN;
+  const out = Buffer.alloc(buf.length + delta);
+  buf.copy(out, 0, 0, insertAt);
+  let write = insertAt;
+  for (const name of toAdd) {
+    // El relleno a 8 bytes y el terminador nulo ya vienen a cero de Buffer.alloc
+    out.write(name, write, 'ascii');
+    out.writeUInt32LE((CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_COMPRESS_RDP) >>> 0, write + 8);
+    write += CHANNEL_DEF_LEN;
+  }
+  buf.copy(out, write, insertAt);
+
+  if (!writeBerLength(out, 9, ciLen.value + delta)) return abort('connect-initial-len-overflow');
+  if (!writeBerLength(out, udTagAt + 1, udLen.value + delta)) return abort('user-data-len-overflow');
+
+  if (ducaWide) {
+    out[ducaLenAt] = 0x80 | ((newDucaLen >> 8) & 0x3f);
+    out[ducaLenAt + 1] = newDucaLen & 0xff;
+  } else {
+    out[ducaLenAt] = newDucaLen;
+  }
+
+  out.writeUInt16LE(block.length + delta, block.offset + 2);
+  out.writeUInt32LE(block.count + toAdd.length, block.offset + 4);
+  out.writeUInt16BE(out.length, 2);
+
+  return {
+    buf: out,
+    patched: true,
+    added: toAdd,
+    reason: 'injected',
+    channelCount: block.count + toAdd.length
+  };
 }
 
 /**
@@ -309,9 +468,21 @@ function fixWallixGccConnectPduLength(buf) {
 /**
  * Aplica parches MCS post-TLS para path SSL/TLS Direct / Wallix.
  */
-function prepareMcsConnectInitial(buf, selectedProtocol) {
+function prepareMcsConnectInitial(buf, selectedProtocol, options = {}) {
   let current = Buffer.from(buf);
   const notes = [];
+
+  // Se inyecta primero: cambia el tamaño del PDU y fixWallixGccConnectPduLength recalcula la
+  // longitud del connectPDU a partir del userData ya actualizado.
+  if (Array.isArray(options.injectChannels) && options.injectChannels.length) {
+    const injected = injectClientNetworkChannels(current, options.injectChannels);
+    if (injected.patched) {
+      current = injected.buf;
+      notes.push(`canales inyectados [${injected.added.join(', ')}] -> count=${injected.channelCount}`);
+    } else {
+      notes.push(`canales sin inyectar (${injected.reason})`);
+    }
+  }
 
   if (selectedProtocol != null) {
     const proto = ensureMcsServerSelectedProtocol(current, selectedProtocol);
@@ -487,6 +658,7 @@ module.exports = {
   findClientCoreData,
   findClientNetworkChannels,
   patchClientNetworkChannelOptions,
+  injectClientNetworkChannels,
   ensureMcsServerSelectedProtocol,
   hardenClientCoreData,
   fixWallixGccConnectPduLength,
