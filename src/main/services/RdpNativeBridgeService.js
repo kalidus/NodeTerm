@@ -636,6 +636,7 @@ class RdpNativeBridgeService extends EventEmitter {
                   if (ws.readyState === ws.OPEN) {
                     try {
                       for (const out of outChunks) {
+                        if (!out || typeof out.length !== 'number') continue;
                         recentWasmFrames.push(
                           `#${framesFromRdp} ${out.length}B | ${describeRdpPdu(out)}` +
                           (processed.serverChannelId != null && processed.serverChannelId !== processed.channelId
@@ -898,20 +899,42 @@ class RdpNativeBridgeService extends EventEmitter {
       || (channelFilter.cliprdrOnUnsafeChannel != null
           && (serverClipCh == null || serverClipCh === channelFilter.cliprdrOnUnsafeChannel));
 
-    if (isClip && (destIsUserChannel || destIsIoChannel)) {
+    if (isClip && destIsIoChannel) {
       const dest = serverClipCh || channelFilter.cliprdrOnUnsafeChannel;
-      const muteMsg = destIsIoChannel
-        ? `🔇 [Bridge] cliprdr WASM->RDP silenciado: no se escribe CHANNEL_PDU en el canal IO (${dest})`
-        : `🔇 [Bridge] cliprdr WASM->RDP silenciado: el servidor lo entrega por canal de usuario (${dest})`;
+      const muteMsg = `[Bridge] cliprdr WASM->RDP silenciado: no se escribe CHANNEL_PDU en el canal IO (${dest})`;
       console.log(muteMsg);
       this.emit('diagnostic-log', { category: 'cliprdr-mute', message: muteMsg });
       return { forward: null, inject: [] };
     }
 
+    // Destinos :APP: (saludo por 1001): escribir FORMAT_LIST en 1004 cierra el TLS. Se silencia
+    // todo el sentido WASM->RDP y se acusa en local para que IronRDP pase a Ready.
+    if (isClip && destIsUserChannel) {
+      const dest = serverClipCh || channelFilter.cliprdrOnUnsafeChannel;
+      const inject = [];
+      if (clipDesc && clipDesc.includes('CB_FORMAT_LIST') &&
+          !clipDesc.includes('CB_FORMAT_LIST_RESPONSE') &&
+          !channelFilter.cliprdrFormatListAcked) {
+        channelFilter.cliprdrFormatListAcked = true;
+        inject.push(buildCliprdrFormatListResponseOk(0, channelFilter.cliprdrChannelId));
+        const ackMsg = '[Bridge] CB_FORMAT_LIST_RESPONSE(OK) sintetizado hacia WASM ' +
+          '(destino 1001: FORMAT_LIST por 1004 cierra la sesion)';
+        console.log(ackMsg);
+        this.emit('diagnostic-log', { category: 'cliprdr', message: ackMsg });
+      }
+      if (!channelFilter.loggedCliprdrUserMute) {
+        channelFilter.loggedCliprdrUserMute = true;
+        const muteMsg = `[Bridge] cliprdr WASM->RDP silenciado: el servidor lo entrega por canal de usuario (${dest})`;
+        console.log(muteMsg);
+        this.emit('diagnostic-log', { category: 'cliprdr-mute', message: muteMsg });
+      }
+      return { forward: null, inject };
+    }
+
     const dropCaps = isBastion && clipDesc && clipDesc.includes('CB_CLIP_CAPS') &&
       readDiagFlag('NODETERM_RDP_CLIPRDR_DROP_CLIENT_CAPS');
     if (dropCaps) {
-      const dropMsg = `🔇 [Bridge] CB_CLIP_CAPS del cliente descartado (el bastion corta al recibirlo): ${clipDesc}`;
+      const dropMsg = `[Bridge] CB_CLIP_CAPS del cliente descartado (el bastion corta al recibirlo): ${clipDesc}`;
       console.log(dropMsg);
       this.emit('diagnostic-log', { category: 'cliprdr-caps-drop', message: dropMsg });
       return { forward: null, inject: [] };
@@ -956,11 +979,7 @@ class RdpNativeBridgeService extends EventEmitter {
       !destIsUserChannel &&
       !destIsIoChannel;
 
-    if (isBastion && destIsUserChannel) {
-      const skipMsg = `📤 [Bridge] cliprdr WASM->RDP se queda en ch=${parsed.channelId}: no se escribe en ${serverClipCh} (canal de usuario)`;
-      console.log(skipMsg);
-      this.emit('diagnostic-log', { category: 'cliprdr', message: skipMsg });
-    } else if (isBastion && destIsForeignStaticVc) {
+    if (isBastion && destIsForeignStaticVc) {
       const skipMsg = `📤 [Bridge] cliprdr WASM->RDP se queda en ch=${parsed.channelId}: el servidor lo entrega por ${serverClipCh} (${destName}), sin canal de vuelta seguro`;
       console.log(skipMsg);
       this.emit('diagnostic-log', { category: 'cliprdr', message: skipMsg });

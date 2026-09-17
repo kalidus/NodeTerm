@@ -342,9 +342,9 @@ function consumeAutodetect(state, channelId, userData, force) {
 }
 
 /**
- * 1001/1002 son IDs de usuario MCS, no canales virtuales. Remapear cliprdr desde ahi hacia
- * IronRDP hace que el cliente conteste por 1004 y Wallix cierra; escribir de vuelta en 1001
- * deja el TLS vivo y congela el grafico.
+ * 1001/1002 son IDs de usuario MCS, no canales virtuales. En destinos Wallix :APP: el
+ * saludo cliprdr llega por ahi: se remapea hacia el VC negociado para IronRDP, pero el
+ * cliente no debe escribir CHANNEL_PDU de vuelta en 1001 (congela el grafico).
  */
 function isUserMcsChannel(state, channelId) {
   if (channelId == null) return false;
@@ -371,11 +371,10 @@ function noteUnsafeCliprdr(state, channelId, userData) {
  * fragmentación. Es cliprdr si abre un mensaje CLIPRDR válido o si continúa uno ya abierto en el
  * mismo canal: los fragmentos de continuación no llevan CLIPRDR_HEADER y descartarlos rompería el
  * reensamblado. No se decide por ID de canal porque el bastión entrega cliprdr por canales
- * distintos en cada sesión: un VC estatico ajeno o el negociado. El canal de usuario no se reclama.
+ * distintos en cada sesión: un VC estatico ajeno, el negociado o el canal de usuario (:APP:).
  */
 function claimCliprdrPdu(state, channelId, userData) {
   if (state.cliprdrChannelId == null || !Buffer.isBuffer(userData)) return false;
-  if (isUserMcsChannel(state, channelId)) return false;
 
   const flags = isChannelPduHeader(userData) ? userData.readUInt32LE(4) : 0;
   const starts = isCliprdrHeader(userData) && (flags & CHANNEL_FLAG_FIRST) !== 0;
@@ -509,19 +508,10 @@ function processServerFrame(state, buf) {
     if (stubbed) return stubbed;
   }
 
-  // Cliprdr en canal de usuario: se descarta hacia WASM. Si se remapea, IronRDP contesta
-  // por 1004 y Wallix cierra; si se escribe en 1001, el grafico se congela.
-  if (!isIoChannel && parsed && noteUnsafeCliprdr(state, channelId, parsed.userData)) {
-    markDropped(state, channelId);
-    return {
-      forward: null,
-      replies: [],
-      dropped: true,
-      note: `cliprdr en canal de usuario ch=${channelId} (no se reenvia)`,
-      channelId,
-      isCliprdr: false,
-      cliprdrDesc: describeCliprdrPdu(parsed.userData)
-    };
+  // Cliprdr en canal de usuario (:APP:): se marca como inseguro para no escribir ahi de
+  // vuelta, y se remapea hacia el VC negociado mas abajo para que IronRDP vea MONITOR_READY.
+  if (!isIoChannel && parsed) {
+    noteUnsafeCliprdr(state, channelId, parsed.userData);
   }
 
   // 1. Portapapeles (cliprdr). Wallix ignora los nombres de canal que declara el cliente y

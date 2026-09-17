@@ -170,45 +170,60 @@ describe('CLIPRDR: filtrado de frames del servidor', () => {
 });
 
 describe('CLIPRDR: bastion Wallix que usa otro canal MCS', () => {
-  // Secuencia real capturada: el servidor entrega cliprdr en 1001 mientras el cliente
-  // negocio 1004, y los tres PDUs del saludo se descartaban por no coincidir el canal.
-  test('descarta el saludo cliprdr que llega por el canal de usuario 1001', () => {
+  // Destinos :APP: (Fortigate_JC): Wallix declara cliprdr=1004 pero manda el saludo por 1001.
+  // Se remapea hacia el VC negociado para que IronRDP vea MONITOR_READY; no se escribe en 1001.
+  test('remapea el saludo cliprdr que llega por el canal de usuario 1001', () => {
     const state = stateWithCliprdr();
 
     const caps = buildMcsIndication(1001, buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16))));
     const resCaps = processServerFrame(state, caps);
-    assert.equal(resCaps.dropped, true);
-    assert.equal(resCaps.forward, null);
-    assert.equal(resCaps.isCliprdr, false);
-    assert.equal(state.serverCliprdrChannelId, null);
+    assert.equal(resCaps.dropped, false);
+    assert.equal(resCaps.isCliprdr, true);
+    assert.equal(resCaps.channelId, 1004);
+    assert.equal(resCaps.serverChannelId, 1001);
+    assert.equal(resCaps.forward.readUInt16BE(10), 1004);
+    assert.equal(state.serverCliprdrChannelId, 1001);
     assert.equal(state.cliprdrOnUnsafeChannel, 1001);
-    assert.equal(state.cliprdrServerReady, false);
+    assert.equal(state.cliprdrServerReady, true);
 
     const monitorReady = buildMcsIndication(1001, buildChannelPdu(buildCliprdrPayload(1)));
-    assert.equal(processServerFrame(state, monitorReady).dropped, true);
+    const resReady = processServerFrame(state, monitorReady);
+    assert.equal(resReady.dropped, false);
+    assert.equal(resReady.isCliprdr, true);
+    assert.equal(resReady.forward.readUInt16BE(10), 1004);
 
     const formatList = buildMcsIndication(1001, buildChannelPdu(buildCliprdrPayload(2, 0, Buffer.alloc(64))));
-    assert.equal(processServerFrame(state, formatList).dropped, true);
+    const resList = processServerFrame(state, formatList);
+    assert.equal(resList.dropped, false);
+    assert.equal(resList.forward.readUInt16BE(10), 1004);
+    assert.equal(state.serverCliprdrChannelId, 1001);
   });
 
-  test('tambien descarta los fragmentos cliprdr del canal de usuario 1001', () => {
+  test('tambien remapea los fragmentos cliprdr del canal de usuario 1001', () => {
     const state = stateWithCliprdr();
     const total = 48722;
 
-    // Primer fragmento: valido como CLIPRDR, es el que fija serverCliprdrChannelId
     const first = buildMcsIndication(
       1001,
       buildChannelPdu(buildCliprdrPayload(5, 0x0001, Buffer.alloc(1592)), CHANNEL_FLAG_FIRST, total)
     );
-    assert.equal(processServerFrame(state, first).dropped, true);
+    const resFirst = processServerFrame(state, first);
+    assert.equal(resFirst.dropped, false);
+    assert.equal(resFirst.isCliprdr, true);
+    assert.equal(resFirst.forward.readUInt16BE(10), 1004);
     assert.equal(state.cliprdrOnUnsafeChannel, 1001);
-    assert.equal(state.serverCliprdrChannelId, null);
+    assert.equal(state.serverCliprdrChannelId, 1001);
+    assert.equal(state.unsafeCliprdrFragmentOpen, true);
 
     const middle = buildMcsIndication(1001, buildChannelPdu(Buffer.alloc(1600, 0xab), 0, total));
-    assert.equal(processServerFrame(state, middle).dropped, true);
+    const resMid = processServerFrame(state, middle);
+    assert.equal(resMid.dropped, false);
+    assert.equal(resMid.forward.readUInt16BE(10), 1004);
 
     const last = buildMcsIndication(1001, buildChannelPdu(Buffer.alloc(722, 0xcd), CHANNEL_FLAG_LAST, total));
-    assert.equal(processServerFrame(state, last).dropped, true);
+    const resLast = processServerFrame(state, last);
+    assert.equal(resLast.dropped, false);
+    assert.equal(resLast.forward.readUInt16BE(10), 1004);
     assert.equal(state.unsafeCliprdrFragmentOpen, false);
   });
 
@@ -218,9 +233,11 @@ describe('CLIPRDR: bastion Wallix que usa otro canal MCS', () => {
     const state = stateWithCliprdr();
 
     const monitorReady = buildMcsIndication(1001, buildChannelPdu(buildCliprdrPayload(1)));
-    assert.equal(processServerFrame(state, monitorReady).dropped, true);
+    const resReady = processServerFrame(state, monitorReady);
+    assert.equal(resReady.dropped, false);
+    assert.equal(resReady.isCliprdr, true);
     assert.equal(state.cliprdrOnUnsafeChannel, 1001);
-    assert.equal(state.serverCliprdrChannelId, null);
+    assert.equal(state.serverCliprdrChannelId, 1001);
 
     const noise = buildMcsIndication(1001, Buffer.from([0xff, 0xee, 0xdd, 0xcc, 0xbb, 0xaa]));
     const resNoise = processServerFrame(state, noise);

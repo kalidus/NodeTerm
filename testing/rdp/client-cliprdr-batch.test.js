@@ -15,6 +15,7 @@ const CHANNEL_FLAG_SHOW_PROTOCOL = 0x10;
 const CB_CLIP_CAPS = 0x0007;
 const CB_TEMP_DIRECTORY = 0x0006;
 const CB_FORMAT_LIST = 0x0002;
+const CB_FORMAT_DATA_REQUEST = 0x0004;
 
 const CLIPRDR_CH = 1004;
 const IO_CH = 1003;
@@ -181,14 +182,35 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
       ioChannelId: IO_CH,
       cliprdrChannelId: CLIPRDR_CH,
       serverCliprdrChannelId: 1001,
+      cliprdrOnUnsafeChannel: 1001,
       cliprdrServerReady: true,
-      allowed: new Set([1003, 1004]),
-      channelIdToName: new Map([[1004, 'cliprdr']])
+      allowed: new Set([1003, 1004, 1005]),
+      channelIdToName: new Map([[1004, 'cliprdr'], [1005, 'rdpsnd']])
     };
 
     const kept = filterBatch(service, buildInitiateCopyBatch(), state);
 
-    assert.equal(kept.length, 0, 'FORMAT_LIST por 1004 tambien cierra la sesion');
+    assert.equal(kept.length, 0, 'FORMAT_LIST por 1004 cierra la sesion APP');
+    assert.equal(kept.injected.length, 1, 'acuse sintetico para que IronRDP pase a Ready');
+    assert.equal(kept.injected[0][7], 0x68);
+    assert.equal(parseMcsSendData(kept.injected[0]).channelId, CLIPRDR_CH);
+  });
+
+  test('con destino 1001, FORMAT_DATA_REQUEST tampoco se reenvia', () => {
+    const state = {
+      ioChannelId: IO_CH,
+      cliprdrChannelId: CLIPRDR_CH,
+      serverCliprdrChannelId: 1001,
+      cliprdrOnUnsafeChannel: 1001,
+      cliprdrServerReady: true,
+      cliprdrFormatListAcked: true,
+      allowed: new Set([1003, 1004, 1005]),
+      channelIdToName: new Map([[1004, 'cliprdr'], [1005, 'rdpsnd']])
+    };
+
+    const kept = filterBatch(service, buildClipFrame(CLIPRDR_CH, CB_FORMAT_DATA_REQUEST, Buffer.alloc(4)), state);
+
+    assert.equal(kept.length, 0);
     assert.equal(kept.injected.length, 0);
   });
 
