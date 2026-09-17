@@ -111,7 +111,25 @@ function resolveInjectedChannels() {
   return { before: split(parts[0]), after: split(parts.slice(1).join(',')) };
 }
 
-const TRAFFIC_STATS_INTERVAL_MS = 5000;
+const TRAFFIC_STATS_INTERVAL_MS = 15000;
+
+function rdpDebug() {
+  return process.env.NODETERM_RDP_DEBUG === '1' || readDiagFlag('NODETERM_RDP_DEBUG');
+}
+
+function isFastPathNoise(desc) {
+  return typeof desc === 'string' && desc.includes('FastPath');
+}
+
+function isCliprdrFragmentDesc(desc) {
+  return typeof desc === 'string' &&
+    (desc.includes('continuación') || desc.includes('msgType=0x'));
+}
+
+function isNoisyDrop(note) {
+  return typeof note === 'string' &&
+    (note.includes('heartbeat') || note.includes('rdpdr-absorb') || note.includes('rdpdr-user-loggedon'));
+}
 
 function createTrafficStats(emit) {
   let since = Date.now();
@@ -120,7 +138,10 @@ function createTrafficStats(emit) {
 
   return {
     note(pduDesc, size) {
-      const kind = String(pduDesc || 'desconocido').split(' ').slice(0, 2).join(' ');
+      let kind = String(pduDesc || 'desconocido');
+      if (kind.includes('FastPath')) kind = 'FastPath';
+      else if (kind.startsWith('DROP')) kind = 'DROP';
+      else kind = kind.split(' ').slice(0, 2).join(' ');
       counts.set(kind, (counts.get(kind) || 0) + 1);
       bytes += size;
       const elapsed = Date.now() - since;
@@ -491,7 +512,7 @@ class RdpNativeBridgeService extends EventEmitter {
                     this.emit('diagnostic-log', { category: 'disconnect', message: discMsg });
                   }
 
-                  if (framesFromRdp <= 40 || isDebug) {
+                  if ((framesFromRdp <= 20 && !isFastPathNoise(pduDesc)) || isDebug) {
                     console.log(`[Bridge] RDP in frame#${framesFromRdp}: ${n}B | ${pduDesc}`);
                     if (process.env.NODETERM_RDP_RECORD_FRAMES === '1') {
                       try {
@@ -558,28 +579,22 @@ class RdpNativeBridgeService extends EventEmitter {
                       message: `Canales MCS servidor: ${chDetails}`
                     });
                   }
-                  if (processed.isCliprdr) {
-                    const srvClip = parseMcsSendData(processed.forward);
-                    const srvHex = srvClip ? ` hex=${srvClip.userData.subarray(0, 32).toString('hex')}` : '';
+                  if (processed.isCliprdr && !isCliprdrFragmentDesc(processed.cliprdrDesc)) {
                     const via = processed.serverChannelId != null && processed.serverChannelId !== processed.channelId
-                      ? ` <-remap ch=${processed.serverChannelId}`
+                      ? ` <-ch=${processed.serverChannelId}`
                       : '';
-                    // La cabecera MCS en crudo (TPKT+X224+MCS) permite comparar el campo initiator
-                    // que usa el servidor con el que emite IronRDP: el bastion tunela los canales
-                    // virtuales y un initiator que el extremo final no reconozca explicaria el corte.
-                    const srvMcs = ` mcs=${frame.subarray(0, 14).toString('hex')}`;
-                    const clipLog = `📥 [Cliprdr Servidor->WASM (ch=${processed.channelId}${via})] ${processed.cliprdrDesc || 'PDU'}${srvHex}${srvMcs}`;
+                    const clipLog = `📥 cliprdr ch=${processed.channelId}${via} ${processed.cliprdrDesc || 'PDU'}`;
                     console.log(`📋 ${clipLog}`);
                     this.emit('diagnostic-log', {
                       category: 'cliprdr',
                       message: clipLog
                     });
                   }
-                  if (processed.dropped) {
-                    const dropMsg = `MCS ch=${processed.channelId}: ${processed.note}` +
-                      (processed.replies.length ? ` (replies=${processed.replies.length})` : '') +
-                      ` | PDU: ${pduDesc}`;
-                    console.log(`🚫 [Bridge Trace DROPPED #${framesFromRdp}] ${dropMsg}`);
+                  if (processed.dropped && (rdpDebug() || !isNoisyDrop(processed.note))) {
+                    const note = String(processed.note || '').replace(/ hex=[0-9a-f]+/i, '');
+                    const dropMsg = `MCS ch=${processed.channelId}: ${note}` +
+                      (processed.replies.length ? ` (replies=${processed.replies.length})` : '');
+                    console.log(`🚫 DROPPED #${framesFromRdp} ${dropMsg}`);
                     if (processed.channelId !== channelFilter.ioChannelId) {
                       this.emit('diagnostic-log', {
                         category: 'dropped',
@@ -598,10 +613,8 @@ class RdpNativeBridgeService extends EventEmitter {
                   }
                   frame = processed.forward;
 
-                  // Tras el frame 40 se callan los BITMAP; el resto (cliprdr, MCS, cierre) se
-                  // sigue viendo. Si el cliente pide datos del portapapeles, se registra todo.
-                  const isBitmapNoise = pduDesc.includes('FastPath BITMAP') || pduDesc.includes('PTR_');
-                  if (framesFromRdp <= 40 || isDebug || channelFilter.cliprdrDataRequested || !isBitmapNoise) {
+                  // FastPath y el resto de frames sueltos no se listan: saturan el log y tapan cliprdr.
+                  if (!processed.isCliprdr && !isFastPathNoise(pduDesc) && (framesFromRdp <= 20 || rdpDebug())) {
                     console.log(`[Bridge] RDP->WASM frame#${framesFromRdp}: ${frame.length}B | ${pduDesc}`);
                   }
 
@@ -851,12 +864,11 @@ class RdpNativeBridgeService extends EventEmitter {
     const isClip = channelFilter.cliprdrChannelId != null &&
       parsed.channelId === channelFilter.cliprdrChannelId;
     const clipDesc = isClip ? describeCliprdrPdu(parsed.userData) : null;
-    const clipHex = isClip
-      ? ` hex=${parsed.userData.subarray(0, 32).toString('hex')} mcs=${frame.subarray(0, 14).toString('hex')}`
-      : '';
-    const wasmMsg = `📤 [Canal Virtual WASM->RDP (ch=${parsed.channelId})] ${clipDesc || `len=${parsed.userData.length}B`}${clipHex}`;
-    console.log(`📋 ${wasmMsg}`);
-    this.emit('diagnostic-log', { category: 'wasm-channel', message: wasmMsg });
+    if (isClip && !isCliprdrFragmentDesc(clipDesc)) {
+      const wasmMsg = `📤 cliprdr ch=${parsed.channelId} ${clipDesc}`;
+      console.log(`📋 ${wasmMsg}`);
+      this.emit('diagnostic-log', { category: 'wasm-channel', message: wasmMsg });
+    }
 
     if (!isClip) return { forward: frame, inject: [] };
 
@@ -958,9 +970,12 @@ class RdpNativeBridgeService extends EventEmitter {
       const remapped = rewriteMcsChannelId(out, serverClipCh);
       if (remapped) {
         out = remapped;
-        const remapMsg = `📤 [Bridge] cliprdr WASM->RDP remapeado ch=${parsed.channelId}->${serverClipCh}`;
-        console.log(remapMsg);
-        this.emit('diagnostic-log', { category: 'cliprdr', message: remapMsg });
+        if (rdpDebug() || !channelFilter.loggedCliprdrRemap) {
+          channelFilter.loggedCliprdrRemap = true;
+          const remapMsg = `📤 [Bridge] cliprdr WASM->RDP remapeado ch=${parsed.channelId}->${serverClipCh}`;
+          console.log(remapMsg);
+          this.emit('diagnostic-log', { category: 'cliprdr', message: remapMsg });
+        }
       }
     }
 
@@ -971,9 +986,11 @@ class RdpNativeBridgeService extends EventEmitter {
       const cleaned = clearChannelPduShowProtocol(out, parsed.dataOff);
       if (cleaned) {
         out = cleaned;
-        const flagMsg = '📤 [Bridge] CHANNEL_FLAG_SHOW_PROTOCOL limpiado en cliprdr WASM->RDP (bastión)';
-        console.log(flagMsg);
-        this.emit('diagnostic-log', { category: 'cliprdr', message: flagMsg });
+        if (rdpDebug()) {
+          const flagMsg = '📤 [Bridge] CHANNEL_FLAG_SHOW_PROTOCOL limpiado en cliprdr WASM->RDP (bastión)';
+          console.log(flagMsg);
+          this.emit('diagnostic-log', { category: 'cliprdr', message: flagMsg });
+        }
       }
     }
 
