@@ -70,30 +70,50 @@ function buildCliprdrFormatListResponseOk(initiator, channelId) {
   );
 }
 
-function readDiagFlag(name) {
-  if (process.env[name] === '1') return true;
-  if (process.env[name] === '0') return false;
+function readDiagEntry(name) {
+  if (process.env[name] != null && process.env[name] !== '') return process.env[name];
   try {
     const file = path.join(process.cwd(), DIAG_FLAGS_FILE);
-    if (!fs.existsSync(file)) return false;
-    const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
-    return parsed[name] === true || parsed[name] === '1' || parsed[name] === 1;
+    if (!fs.existsSync(file)) return undefined;
+    return JSON.parse(fs.readFileSync(file, 'utf8'))[name];
   } catch {
-    return false;
+    return undefined;
   }
 }
 
-// Declarar el juego de canales estándar (rdpsnd/rdpdr/drdynvc) sirvió para descubrir que Wallix
-// reparte los canales por su propio orden ignorando los nombres del cliente: entrega rdpdr por el
-// canal que el cliente reservó a cliprdr. Pero NO mueve la entrega de cliprdr, que sigue llegando
-// por el canal de usuario MCS, y además deja la pantalla en negro porque el bastión pasa a emitir
-// por canales que IronRDP no unió. Queda desactivado y sólo se habilita a mano para diagnosticar.
-function resolveInjectedChannels(session) {
-  if (!session || !session.useBastionWallix) return null;
+function readDiagFlag(name) {
+  const value = readDiagEntry(name);
+  return value === true || value === '1' || value === 1;
+}
 
-  const requested = (process.env.NODETERM_RDP_INJECT_CHANNELS || '').trim();
+/** Interruptores que llevan un valor, no solo on/off. Devuelve '' si no esta definido. */
+function readDiagValue(name) {
+  const value = readDiagEntry(name);
+  return value == null ? '' : String(value).trim();
+}
+
+// Declarar el juego de canales estandar sirvio para descubrir que Wallix reparte los canales por su
+// propio orden ignorando los nombres del cliente: entrega rdpdr por el canal que el cliente reservo
+// a cliprdr. Aquel intento dejaba cliprdr en el indice 0, que es justo lo que no cuadra con la lista
+// del bastion, asi que la especificacion admite ahora el orden completo.
+//
+// El valor es la lista de canales en el orden deseado, con '*' marcando donde van los que ya
+// declara el cliente. Por ejemplo 'rdpdr,rdpsnd,*,drdynvc' deja el cliprdr de IronRDP en el indice
+// 2, que es el que ocupa en un cliente Windows. Sin '*' se anaden todos detras, como antes.
+//
+// No se condiciona a useBastionWallix: ese flag solo esta marcado si la conexion se configuro con
+// la casilla de bastion, y a un Wallix se le puede apuntar igual de bien poniendo su host a mano,
+// que es justo lo que hace fallar la deteccion. El bridge reconoce el bastion por contenido por la
+// misma razon. Lo que protege a las conexiones directas es que el interruptor viene vacio.
+function resolveInjectedChannels() {
+  const requested = readDiagValue('NODETERM_RDP_INJECT_CHANNELS');
   if (requested === '' || requested.toLowerCase() === 'off') return null;
-  return requested.split(',').map((n) => n.trim()).filter(Boolean);
+
+  const parts = requested.split('*');
+  const split = (s) => s.split(',').map((n) => n.trim()).filter(Boolean);
+
+  if (parts.length === 1) return { before: [], after: split(parts[0]) };
+  return { before: split(parts[0]), after: split(parts.slice(1).join(',')) };
 }
 
 class RdpNativeBridgeService extends EventEmitter {
@@ -735,11 +755,14 @@ class RdpNativeBridgeService extends EventEmitter {
             }
           }
 
+          const injectChannels = resolveInjectedChannels();
           const prepared = prepareMcsConnectInitial(payload, savedSelectedProtocol, {
-            injectChannels: resolveInjectedChannels(session)
+            injectChannels
           });
           forward = prepared.buf;
-          if (isDebug) {
+          // Con inyeccion activa se registra siempre: un flag que no llega al proceso invalida la
+          // prueba sin que se note, y aqui es donde se ve si el orden de canales quedo aplicado.
+          if (isDebug || injectChannels) {
             console.log(`[Bridge] MCS prepare: ${prepared.notes.join('; ') || 'sin cambios'}`);
           }
         } else if (framesToRdp <= 10 && forward) {

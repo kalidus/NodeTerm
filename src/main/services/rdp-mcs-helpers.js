@@ -159,6 +159,13 @@ function writeBerLength(buf, off, value) {
   return true;
 }
 
+/** Acepta las dos formas de injectClientNetworkChannels: array plano o {before, after}. */
+function hasChannelsToInject(spec) {
+  if (Array.isArray(spec)) return spec.length > 0;
+  if (!spec || typeof spec !== 'object') return false;
+  return (spec.before || []).length > 0 || (spec.after || []).length > 0;
+}
+
 /**
  * Añade canales virtuales estáticos a TS_UD_CS_NET de un MCS Connect Initial.
  *
@@ -167,33 +174,54 @@ function writeBerLength(buf, off, value) {
  * mientras los clientes que sí funcionan a través del bastión declaran el juego estándar, así que
  * esto iguala el reparto de canales al de un cliente normal.
  *
- * Los canales nuevos se añaden DETRÁS de los existentes a propósito: IronRDP empareja SC_NET con
- * CS_NET por índice, y meterlos delante le haría confundir su cliprdr con otro canal.
+ * Los canales se pueden colocar delante o detrás de los que ya declara el cliente, porque lo que
+ * importa es el indice: el bastion empareja su lista con la del cliente por posicion, ignorando los
+ * nombres, y solo si el indice de cliprdr coincide en las dos listas acaba proyectado sobre un
+ * canal virtual de verdad. Meter canales delante desplaza el cliprdr del cliente, y entonces
+ * IronRDP (que tambien empareja SC_NET con CS_NET por indice) se queda con un id que no es el suyo;
+ * de eso se encarga el remapeo por contenido del bridge, que aprende el canal real en los dos
+ * sentidos.
  *
  * Hay que recalcular longitudes anidadas (CS_NET, userData de 'Duca', OCTET STRING de userData,
  * Connect-Initial y TPKT). Se validan todas antes de tocar nada y, si alguna no cuadra o no cabe
  * en su ancho original, se aborta devolviendo el buffer intacto.
+ *
+ * @param {Buffer} buf
+ * @param {string[]|{before?: string[], after?: string[]}} names
  */
 function injectClientNetworkChannels(buf, names) {
   const abort = (reason) => ({ buf, patched: false, added: [], reason });
 
   if (!Buffer.isBuffer(buf)) return abort('not-buffer');
-  if (!Array.isArray(names) || names.length === 0) return abort('no-names');
+
+  const spec = Array.isArray(names) ? { before: [], after: names } : (names || {});
+  const wanted = [
+    ...(Array.isArray(spec.before) ? spec.before : []),
+    ...(Array.isArray(spec.after) ? spec.after : [])
+  ];
+  if (wanted.length === 0) return abort('no-names');
 
   const block = findClientNetworkBlock(buf);
   if (!block) return abort('cs-net-not-found');
   if (block.ducaOffset < 0) return abort('duca-not-found');
 
   const present = new Set(findClientNetworkChannels(buf).map((n) => n.toLowerCase()));
-  const toAdd = [];
-  for (const raw of names) {
-    const name = String(raw || '').trim();
-    // El nombre ocupa 8 bytes con terminador nulo, asi que el limite real son 7 caracteres
-    if (!name || name.length > 7) continue;
-    if (present.has(name.toLowerCase())) continue;
-    present.add(name.toLowerCase());
-    toAdd.push(name);
-  }
+  const accept = (list) => {
+    const out = [];
+    for (const raw of Array.isArray(list) ? list : []) {
+      const name = String(raw || '').trim();
+      // El nombre ocupa 8 bytes con terminador nulo, asi que el limite real son 7 caracteres
+      if (!name || name.length > 7) continue;
+      if (present.has(name.toLowerCase())) continue;
+      present.add(name.toLowerCase());
+      out.push(name);
+    }
+    return out;
+  };
+
+  const addBefore = accept(spec.before);
+  const addAfter = accept(spec.after);
+  const toAdd = [...addBefore, ...addAfter];
   if (!toAdd.length) return abort('already-present');
   if (block.count + toAdd.length > 31) return abort('too-many-channels');
 
@@ -233,17 +261,29 @@ function injectClientNetworkChannels(buf, names) {
   const newDucaLen = ducaLen + delta;
   if (ducaWide ? newDucaLen > 0x3fff : newDucaLen > 0x7f) return abort('duca-len-overflow');
 
-  const insertAt = block.offset + 8 + block.count * CHANNEL_DEF_LEN;
+  const channelsAt = block.offset + 8;
+  const channelsEnd = channelsAt + block.count * CHANNEL_DEF_LEN;
+
   const out = Buffer.alloc(buf.length + delta);
-  buf.copy(out, 0, 0, insertAt);
-  let write = insertAt;
-  for (const name of toAdd) {
-    // El relleno a 8 bytes y el terminador nulo ya vienen a cero de Buffer.alloc
-    out.write(name, write, 'ascii');
-    out.writeUInt32LE((CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_COMPRESS_RDP) >>> 0, write + 8);
-    write += CHANNEL_DEF_LEN;
-  }
-  buf.copy(out, write, insertAt);
+  const writeDefs = (list, at) => {
+    let write = at;
+    for (const name of list) {
+      // El relleno a 8 bytes y el terminador nulo ya vienen a cero de Buffer.alloc
+      out.write(name, write, 'ascii');
+      out.writeUInt32LE((CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_COMPRESS_RDP) >>> 0, write + 8);
+      write += CHANNEL_DEF_LEN;
+    }
+    return write;
+  };
+
+  // Cabecera del bloque y todo lo anterior, luego los canales nuevos de delante, los que ya
+  // declaraba el cliente, los nuevos de detras y el resto del PDU.
+  buf.copy(out, 0, 0, channelsAt);
+  let write = writeDefs(addBefore, channelsAt);
+  buf.copy(out, write, channelsAt, channelsEnd);
+  write += block.count * CHANNEL_DEF_LEN;
+  write = writeDefs(addAfter, write);
+  buf.copy(out, write, channelsEnd);
 
   if (!writeBerLength(out, 9, ciLen.value + delta)) return abort('connect-initial-len-overflow');
   if (!writeBerLength(out, udTagAt + 1, udLen.value + delta)) return abort('user-data-len-overflow');
@@ -474,7 +514,7 @@ function prepareMcsConnectInitial(buf, selectedProtocol, options = {}) {
 
   // Se inyecta primero: cambia el tamaño del PDU y fixWallixGccConnectPduLength recalcula la
   // longitud del connectPDU a partir del userData ya actualizado.
-  if (Array.isArray(options.injectChannels) && options.injectChannels.length) {
+  if (hasChannelsToInject(options.injectChannels)) {
     const injected = injectClientNetworkChannels(current, options.injectChannels);
     if (injected.patched) {
       current = injected.buf;

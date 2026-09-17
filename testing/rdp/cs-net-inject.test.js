@@ -123,12 +123,50 @@ describe('inyeccion de canales en TS_UD_CS_NET', () => {
     assertLengthsCoherent(res.buf);
   });
 
-  // Critico: IronRDP empareja SC_NET con CS_NET por indice, asi que cliprdr debe seguir el primero
-  test('cliprdr se mantiene en el indice 0', () => {
+  // Con la forma de array los canales van detras, asi que cliprdr sigue el primero
+  test('cliprdr se mantiene en el indice 0 con la forma de array', () => {
     const frame = buildMcsConnectInitial([['cliprdr', 0xc0a00000]]);
     const res = injectClientNetworkChannels(frame, ['rdpsnd', 'rdpdr', 'drdynvc']);
 
     assert.deepEqual(findClientNetworkChannels(res.buf), ['cliprdr', 'rdpsnd', 'rdpdr', 'drdynvc']);
+  });
+
+  // El indice es lo unico que importa: el bastion empareja su lista con la del cliente por
+  // posicion, no por nombre, asi que hay que poder dejar cliprdr donde lo pone un cliente Windows.
+  test('coloca canales delante y detras para fijar el indice de cliprdr', () => {
+    const frame = buildMcsConnectInitial([['cliprdr', 0xc0a00000]]);
+    const res = injectClientNetworkChannels(frame, {
+      before: ['rdpdr', 'rdpsnd'],
+      after: ['drdynvc']
+    });
+
+    assert.equal(res.patched, true);
+    assert.deepEqual(
+      findClientNetworkChannels(res.buf),
+      ['rdpdr', 'rdpsnd', 'cliprdr', 'drdynvc'],
+      'cliprdr debe quedar en el indice 2, como en mstsc'
+    );
+    assertLengthsCoherent(res.buf);
+  });
+
+  test('solo delante: desplaza cliprdr sin anadir nada detras', () => {
+    const frame = buildMcsConnectInitial([['cliprdr', 0xc0a00000]]);
+    const res = injectClientNetworkChannels(frame, { before: ['rdpdr'] });
+
+    assert.deepEqual(findClientNetworkChannels(res.buf), ['rdpdr', 'cliprdr']);
+    assertLengthsCoherent(res.buf);
+  });
+
+  test('un canal repetido entre delante y detras solo se anade una vez', () => {
+    const frame = buildMcsConnectInitial([['cliprdr', 0xc0a00000]]);
+    const res = injectClientNetworkChannels(frame, {
+      before: ['rdpdr'],
+      after: ['rdpdr', 'drdynvc']
+    });
+
+    assert.deepEqual(res.added, ['rdpdr', 'drdynvc']);
+    assert.deepEqual(findClientNetworkChannels(res.buf), ['rdpdr', 'cliprdr', 'drdynvc']);
+    assertLengthsCoherent(res.buf);
   });
 
   test('los canales nuevos llevan CHANNEL_OPTION_INITIALIZED', () => {
@@ -211,6 +249,30 @@ describe('prepareMcsConnectInitial con inyeccion', () => {
     const oidAt = res.buf.indexOf(Buffer.from([0x00, 0x14, 0x7c, 0x00, 0x01]));
     const connectPduLen = ((res.buf[oidAt + 5] & 0x3f) << 8) | res.buf[oidAt + 6];
     assert.equal(connectPduLen, userDataLen + 14, 'Wallix exige connectPDU == userData + 14');
+  });
+
+  // La forma de objeto se descartaba en silencio por un Array.isArray, y la unica senal era que el
+  // juego de canales seguia igual en un log donde la inyeccion parecia haberse aplicado
+  test('acepta la forma {before, after} y no solo el array', () => {
+    const frame = buildMcsConnectInitial([['cliprdr', 0xc0a00000]]);
+    const res = prepareMcsConnectInitial(frame, 0x01, {
+      injectChannels: { before: ['rdpdr', 'rdpsnd'], after: ['drdynvc'] }
+    });
+
+    assert.deepEqual(findClientNetworkChannels(res.buf), ['rdpdr', 'rdpsnd', 'cliprdr', 'drdynvc']);
+    assert.ok(
+      res.notes.some((n) => n.includes('canales inyectados')),
+      'la inyeccion debe quedar anotada, no descartarse en silencio'
+    );
+    assertLengthsCoherent(res.buf);
+  });
+
+  test('una especificacion de objeto vacia no toca los canales', () => {
+    const frame = buildMcsConnectInitial([['cliprdr', 0xc0a00000]]);
+    const res = prepareMcsConnectInitial(frame, 0x01, { injectChannels: { before: [], after: [] } });
+
+    assert.deepEqual(findClientNetworkChannels(res.buf), ['cliprdr']);
+    assert.equal(res.buf.length, frame.length);
   });
 
   // Las conexiones directas no deben ver ningun cambio de handshake
