@@ -49,10 +49,10 @@ export const useContextMenuManagement = () => {
   // Context menu for nodes
   const onNodeContextMenu = useCallback((event, node, setSelectedNode, setIsGeneralTreeMenu) => {
     if (event.persist) event.persist();
-    event.preventDefault();
-    event.stopPropagation();
-    const x = event.clientX ?? event.pageX ?? 0;
-    const y = event.clientY ?? event.pageY ?? 0;
+    if (typeof event.preventDefault === 'function') event.preventDefault();
+    if (typeof event.stopPropagation === 'function') event.stopPropagation();
+    const x = event.clientX ?? event.pageX ?? event.nativeEvent?.clientX ?? 0;
+    const y = event.clientY ?? event.pageY ?? event.nativeEvent?.clientY ?? 0;
     if (setSelectedNode) setSelectedNode(node);
     if (setIsGeneralTreeMenu) setIsGeneralTreeMenu(false);
     setTreeContextMenu({ x, y, node, isGeneral: false });
@@ -67,10 +67,10 @@ export const useContextMenuManagement = () => {
 
     if (!isNodeClick) {
       if (event.persist) event.persist();
-      event.preventDefault();
-      event.stopPropagation();
-      const x = event.clientX ?? event.pageX ?? 0;
-      const y = event.clientY ?? event.pageY ?? 0;
+      if (typeof event.preventDefault === 'function') event.preventDefault();
+      if (typeof event.stopPropagation === 'function') event.stopPropagation();
+      const x = event.clientX ?? event.pageX ?? event.nativeEvent?.clientX ?? 0;
+      const y = event.clientY ?? event.pageY ?? event.nativeEvent?.clientY ?? 0;
       if (setSelectedNode) setSelectedNode(null);
       if (setIsGeneralTreeMenu) setIsGeneralTreeMenu(true);
       setTreeContextMenu({ x, y, node: null, isGeneral: true });

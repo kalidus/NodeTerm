@@ -2729,6 +2729,8 @@ const Sidebar = React.memo(({
       <div className="sidebar-tree-node-row flex align-items-center gap-1"
         onClick={handleFolderRowClick}
         onContextMenu={options.onNodeContextMenu ? (e) => {
+          e.preventDefault();
+          e.stopPropagation();
           if (isFavoritesRootKey(node.key) || isFavoriteGroupFolderNode(node)) {
             options.onNodeContextMenu(e, node);
             return;
