@@ -18,7 +18,7 @@ const CB_FORMAT_LIST = 0x0002;
 
 const CLIPRDR_CH = 1004;
 const IO_CH = 1003;
-const BASTION_CLIP_CH = 1001;
+const BASTION_CLIP_CH = 1006;
 
 // MCS SendDataRequest (0x64) envuelto en TPKT, que es lo que emite el cliente.
 function buildMcsRequest(channelId, userData) {
@@ -75,7 +75,9 @@ function bastionFilterState() {
     ioChannelId: IO_CH,
     cliprdrChannelId: CLIPRDR_CH,
     serverCliprdrChannelId: BASTION_CLIP_CH,
-    cliprdrServerReady: true
+    cliprdrServerReady: true,
+    allowed: new Set([1003, 1004, 1005, 1006]),
+    channelIdToName: new Map([[1004, 'rdpdr'], [1005, 'rdpsnd'], [1006, 'cliprdr']])
   };
 }
 
@@ -154,6 +156,60 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
         chanFlags(frame) & CHANNEL_FLAG_SHOW_PROTOCOL,
         0,
         'SHOW_PROTOCOL debe limpiarse en cada PDU del lote'
+      );
+    }
+  });
+
+  test('si el bastion entrega cliprdr por el canal IO, se silencia el cliente', () => {
+    const state = {
+      ioChannelId: IO_CH,
+      cliprdrChannelId: CLIPRDR_CH,
+      serverCliprdrChannelId: IO_CH,
+      cliprdrServerReady: true,
+      allowed: new Set([1003, 1004, 1005, 1006]),
+      channelIdToName: new Map([[1004, 'cliprdr'], [1005, 'rdpdr'], [1006, 'rdpsnd']])
+    };
+
+    const kept = filterBatch(service, buildInitiateCopyBatch(), state);
+
+    assert.equal(kept.length, 0, 'CHANNEL_PDU en el canal IO cierra la sesion');
+    assert.equal(kept.injected.length, 0);
+  });
+
+  test('si el bastion entrega cliprdr por el canal de usuario 1001, se silencia el cliente', () => {
+    const state = {
+      ioChannelId: IO_CH,
+      cliprdrChannelId: CLIPRDR_CH,
+      serverCliprdrChannelId: 1001,
+      cliprdrServerReady: true,
+      allowed: new Set([1003, 1004]),
+      channelIdToName: new Map([[1004, 'cliprdr']])
+    };
+
+    const kept = filterBatch(service, buildInitiateCopyBatch(), state);
+
+    assert.equal(kept.length, 0, 'FORMAT_LIST por 1004 tambien cierra la sesion');
+    assert.equal(kept.injected.length, 0);
+  });
+
+  test('si el bastion entrega cliprdr por rdpsnd, el cliente se queda en 1004', () => {
+    const state = {
+      ioChannelId: IO_CH,
+      cliprdrChannelId: CLIPRDR_CH,
+      serverCliprdrChannelId: 1005,
+      cliprdrServerReady: true,
+      allowed: new Set([1003, 1004, 1005, 1006]),
+      channelIdToName: new Map([[1004, 'rdpdr'], [1005, 'rdpsnd'], [1006, 'cliprdr']])
+    };
+
+    const kept = filterBatch(service, buildInitiateCopyBatch(), state);
+
+    assert.equal(kept.length, 3);
+    for (const frame of kept) {
+      assert.equal(
+        parseMcsSendData(frame).channelId,
+        CLIPRDR_CH,
+        '1005 calla el portapapeles y 1006 cierra la sesion'
       );
     }
   });

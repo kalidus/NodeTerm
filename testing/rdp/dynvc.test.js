@@ -156,5 +156,19 @@ describe('rdp-dynvc', () => {
     assert.equal(replyMcs.userData[9], 0x08); // chId=8
     assert.equal(replyMcs.userData.subarray(10).toString('ascii'), 'HEARTBEAT_TEST_123');
   });
+
+  it('conserva initiator 0, que es el que usa IronRDP con Wallix', () => {
+    const nameBuf = Buffer.from('Microsoft::Windows::RDS::DisplayControl\0', 'ascii');
+    const createReq = Buffer.concat([Buffer.from([0x10, 0x15]), nameBuf]);
+    const cpdu = Buffer.alloc(8 + createReq.length);
+    cpdu.writeUInt32LE(createReq.length, 0);
+    cpdu.writeUInt32LE(0x03, 4);
+    createReq.copy(cpdu, 8);
+
+    const res = handleDvcRequest(1005, 0, cpdu);
+    const replyMcs = parseMcsSendData(res.replies[0]);
+    assert.equal(replyMcs.initiator, 0);
+    assert.equal(replyMcs.channelId, 1005);
+  });
 });
 

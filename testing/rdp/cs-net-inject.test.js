@@ -297,12 +297,11 @@ describe('juego de canales por defecto del bridge', () => {
     else process.env.NODETERM_RDP_INJECT_CHANNELS = previous;
   });
 
-  test('por defecto declara el juego estandar con cliprdr en el indice 2', () => {
+  test('por defecto inyecta solo rdpsnd detras de cliprdr', () => {
+    assert.deepEqual(resolveInjectedChannels(), { before: [], after: ['rdpsnd'] });
     const frame = buildMcsConnectInitial([['cliprdr', 0xc0a00000]]);
     const res = prepareMcsConnectInitial(frame, 0x01, { injectChannels: resolveInjectedChannels() });
-
-    assert.deepEqual(findClientNetworkChannels(res.buf), ['rdpdr', 'rdpsnd', 'cliprdr', 'drdynvc']);
-    assertLengthsCoherent(res.buf);
+    assert.deepEqual(findClientNetworkChannels(res.buf), ['cliprdr', 'rdpsnd']);
   });
 
   test("'off' deja la conexion sin tocar", () => {

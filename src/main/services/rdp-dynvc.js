@@ -292,7 +292,10 @@ function handleDvcRequest(mcsChannelId, initiator, userData) {
     return { handled: false, replies: [], note: null };
   }
 
-  const effectiveInitiator = initiator > 0 ? initiator : 1002;
+  // IronRDP en esta sesion envia initiator 0 (se ve en cliprdr y en el canal IO). Sustituirlo
+  // por 1002 hacia que Wallix tirara las respuestas DVC, el servidor reintentaba Geometry/Audio
+  // y DisplayControl se iba al timeout de 20-30 s.
+  const effectiveInitiator = initiator == null ? 0 : initiator;
 
   if (parsed.type === 'create-req') {
     const chUpper = (parsed.channelName || '').toUpperCase();

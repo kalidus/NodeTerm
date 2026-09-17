@@ -15,7 +15,7 @@ const { WebSocketServer } = require('ws');
 const fs = require('fs');
 const path = require('path');
 const { parseX224ConnectionConfirm, protocolName, describeRdpPdu, describeDisconnectPdu, splitRdpFrames, splitTpktFrames, RdpFrameSplitter } = require('./rdp-protocol-helpers');
-const { prepareMcsConnectInitial, findClientCoreData, patchInfoPacket, patchInfoAutoLogon } = require('./rdp-mcs-helpers');
+const { prepareMcsConnectInitial, findClientCoreData, findClientNetworkChannels, patchInfoPacket, patchInfoAutoLogon } = require('./rdp-mcs-helpers');
 const { patchFontSequenceFlags } = require('./rdp-font-helpers');
 const { fixWallixBitmapStrideCrop } = require('./rdp-fastpath-helpers');
 const {
@@ -92,31 +92,49 @@ function readDiagValue(name) {
   return value == null ? '' : String(value).trim();
 }
 
-// IronRDP declara un unico canal (cliprdr) y eso rompia el portapapeles a traves de un bastion
-// Wallix: el bastion proyecta SU lista de canales sobre la del cliente por posicion, sin mirar los
-// nombres, y al no caber acababa entregando cliprdr por el canal de usuario MCS, fuera de los
-// canales unidos. Declarando el juego estandar hay huecos suficientes y cliprdr llega por el canal
-// que IronRDP unio para cliprdr, con lo que el bastion pasa a comportarse como un servidor normal.
-//
-// Es ademas lo que declara cualquier cliente real, asi que se aplica a todas las conexiones. Los
-// canales que no implementamos (rdpdr, rdpsnd, drdynvc) los descarta el filtro antes de llegar a
-// WASM, que es lo que evita el crash de IronRDP por canal inesperado.
-//
-// No se condiciona a useBastionWallix: ese flag solo esta marcado si la conexion se creo con la
-// casilla de bastion, y a un Wallix se le puede apuntar igual poniendo su host a mano.
-const DEFAULT_INJECT_CHANNELS = 'rdpdr,rdpsnd,*,drdynvc';
+// IronRDP declara solo cliprdr. Sin mas VCs, Wallix entrega cliprdr por 1001.
+// rdpdr detras ocupaba el 1004 (Wallix ignora nombres) y cliprdr saltaba al IO;
+// escribir ahi CHANNEL_PDU cierra la sesion. Solo se inyecta rdpsnd para dar un
+// segundo VC y dejar cliprdr en el indice 0. NODETERM_RDP_INJECT_CHANNELS admite
+// un orden (p.ej. 'rdpdr,rdpsnd,*') o 'off'.
+const DEFAULT_INJECTED_CHANNELS = { before: [], after: ['rdpsnd'] };
 
-// El valor es la lista en el orden deseado, con '*' marcando donde van los canales que ya declara
-// el cliente. Sin '*' se anaden todos detras. 'off' desactiva la inyeccion.
 function resolveInjectedChannels() {
-  const requested = readDiagValue('NODETERM_RDP_INJECT_CHANNELS') || DEFAULT_INJECT_CHANNELS;
+  const requested = readDiagValue('NODETERM_RDP_INJECT_CHANNELS');
   if (requested.toLowerCase() === 'off') return null;
+  if (!requested) return DEFAULT_INJECTED_CHANNELS;
 
   const parts = requested.split('*');
   const split = (s) => s.split(',').map((n) => n.trim()).filter(Boolean);
 
   if (parts.length === 1) return { before: [], after: split(parts[0]) };
   return { before: split(parts[0]), after: split(parts.slice(1).join(',')) };
+}
+
+const TRAFFIC_STATS_INTERVAL_MS = 5000;
+
+function createTrafficStats(emit) {
+  let since = Date.now();
+  let bytes = 0;
+  const counts = new Map();
+
+  return {
+    note(pduDesc, size) {
+      const kind = String(pduDesc || 'desconocido').split(' ').slice(0, 2).join(' ');
+      counts.set(kind, (counts.get(kind) || 0) + 1);
+      bytes += size;
+      const elapsed = Date.now() - since;
+      if (elapsed < TRAFFIC_STATS_INTERVAL_MS) return;
+      const detail = [...counts.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .map(([k, n]) => `${k} x${n}`)
+        .join(', ');
+      emit(`trafico RDP->WASM en ${Math.round(elapsed / 1000)}s: ${Math.round(bytes / 1024)}KB | ${detail}`);
+      since = Date.now();
+      bytes = 0;
+      counts.clear();
+    }
+  };
 }
 
 class RdpNativeBridgeService extends EventEmitter {
@@ -270,6 +288,11 @@ class RdpNativeBridgeService extends EventEmitter {
     const recentWasmFrames = [];
     const RECENT_FRAMES_WINDOW = 15;
     let firstCloseSide = null;
+
+    const trafficStats = createTrafficStats((line) => {
+      console.log(`[Bridge] ${line}`);
+      this.emit('diagnostic-log', { category: 'traffic', message: line });
+    });
 
     const noteClose = (side) => {
       if (!firstCloseSide) firstCloseSide = side;
@@ -524,6 +547,9 @@ class RdpNativeBridgeService extends EventEmitter {
                         ? `cliprdr-servidor=${channelFilter.serverCliprdrChannelId}`
                         : null,
                       channelFilter.drdynvcChannelId != null ? `drdynvc=${channelFilter.drdynvcChannelId}` : null,
+                      channelFilter.channelIdToName && channelFilter.channelIdToName.size
+                        ? `declarados=[${[...channelFilter.channelIdToName.entries()].map(([id, n]) => `${id}:${n}`).join(',')}]`
+                        : null,
                       channelFilter.messageChannelId != null ? `msg=${channelFilter.messageChannelId}` : null
                     ].filter(Boolean).join(' ');
                     console.log(`🔬 [RDP Bridge] Canales MCS servidor: ${chDetails}`);
@@ -567,14 +593,15 @@ class RdpNativeBridgeService extends EventEmitter {
                       }
                     }
                     bytesFromRdp += n;
+                    trafficStats.note(`DROP ${pduDesc}`, n);
                     continue;
                   }
                   frame = processed.forward;
 
-                  // Tras una peticion de datos del portapapeles se registra todo lo que llega, sin
-                  // el corte del frame 40: la respuesta con el contenido llega mucho despues y es
-                  // justo la que hay que poder ver, incluso si acaba descartada.
-                  if (framesFromRdp <= 40 || isDebug || channelFilter.cliprdrDataRequested) {
+                  // Tras el frame 40 se callan los BITMAP; el resto (cliprdr, MCS, cierre) se
+                  // sigue viendo. Si el cliente pide datos del portapapeles, se registra todo.
+                  const isBitmapNoise = pduDesc.includes('FastPath BITMAP') || pduDesc.includes('PTR_');
+                  if (framesFromRdp <= 40 || isDebug || channelFilter.cliprdrDataRequested || !isBitmapNoise) {
                     console.log(`[Bridge] RDP->WASM frame#${framesFromRdp}: ${frame.length}B | ${pduDesc}`);
                   }
 
@@ -592,6 +619,7 @@ class RdpNativeBridgeService extends EventEmitter {
                   }
 
                   bytesFromRdp += n;
+                  trafficStats.note(pduDesc, n);
                   if (ws.readyState === ws.OPEN) {
                     try {
                       for (const out of outChunks) {
@@ -765,6 +793,13 @@ class RdpNativeBridgeService extends EventEmitter {
           // Una linea por conexion, siempre: el juego de canales condiciona todo el resto de la
           // sesion y sin este rastro una inyeccion que no se aplica no se distingue de una que si.
           console.log(`[Bridge] MCS prepare: ${prepared.notes.join('; ') || 'sin cambios'}`);
+          const sentChs = findClientNetworkChannels(prepared.buf);
+          if (sentChs.length) {
+            if (!channelFilter.wasmChannelNames || channelFilter.wasmChannelNames.length === 0) {
+              channelFilter.wasmChannelNames = (channelFilter.clientChannelNames || []).slice();
+            }
+            channelFilter.clientChannelNames = sentChs;
+          }
         } else if (framesToRdp <= 10 && forward) {
           const infoResult = patchInfoPacket(forward, session);
           if (infoResult.patched) {
@@ -838,30 +873,42 @@ class RdpNativeBridgeService extends EventEmitter {
     // las conexiones directas de los apanos de abajo.
     const serverClipCh = channelFilter.serverCliprdrChannelId;
     const isBastion = serverClipCh != null && serverClipCh !== channelFilter.cliprdrChannelId;
+    const destName = channelFilter.channelIdToName instanceof Map
+      ? channelFilter.channelIdToName.get(serverClipCh)
+      : null;
+    // rdpsnd/rdpdr: escribir cliprdr ahi calla el canal. 1001/1002/IO son canales MCS de
+    // usuario, no VCs: escribir ahi deja el TLS vivo pero congela el grafico.
+    const destIsForeignStaticVc = Boolean(destName) && destName !== 'cliprdr';
+    const destIsIoChannel = channelFilter.ioChannelId != null
+      && serverClipCh === channelFilter.ioChannelId;
+    const destIsUserChannel = serverClipCh === 1001 || serverClipCh === 1002
+      || (channelFilter.messageChannelId != null && serverClipCh === channelFilter.messageChannelId)
+      || (channelFilter.cliprdrOnUnsafeChannel != null
+          && (serverClipCh == null || serverClipCh === channelFilter.cliprdrOnUnsafeChannel));
 
-    // El bastion corta la sesion al recibir el CB_CLIP_CAPS del cliente, con un FIN de TCP en seco
-    // y sin PDU de desconexion MCS: es decision suya, no un error de protocolo del extremo final.
-    // Silenciar todo el sentido cliente->servidor demostro que el disparador es ese envio y que el
-    // bastion completa su saludo igualmente (manda CB_MONITOR_READY y luego CB_FORMAT_LIST sin
-    // haber recibido capacidades). Como no las necesita, se descarta solo ese PDU: el resto del
-    // lote sigue su camino, que es justo lo que permite que el FormatList llegue y el cliente
-    // alcance el estado Ready. Solo se aplica con bastion: un servidor normal si las necesita.
-    if (isBastion && clipDesc && clipDesc.includes('CB_CLIP_CAPS') &&
-        readDiagFlag('NODETERM_RDP_CLIPRDR_DROP_CLIENT_CAPS')) {
-      const dropMsg = `🔇 [Bridge] CB_CLIP_CAPS del cliente descartado (el bastión corta al recibirlo): ${clipDesc}`;
+    if (isClip && (destIsUserChannel || destIsIoChannel)) {
+      const dest = serverClipCh || channelFilter.cliprdrOnUnsafeChannel;
+      const muteMsg = destIsIoChannel
+        ? `🔇 [Bridge] cliprdr WASM->RDP silenciado: no se escribe CHANNEL_PDU en el canal IO (${dest})`
+        : `🔇 [Bridge] cliprdr WASM->RDP silenciado: el servidor lo entrega por canal de usuario (${dest})`;
+      console.log(muteMsg);
+      this.emit('diagnostic-log', { category: 'cliprdr-mute', message: muteMsg });
+      return { forward: null, inject: [] };
+    }
+
+    const dropCaps = isBastion && clipDesc && clipDesc.includes('CB_CLIP_CAPS') &&
+      readDiagFlag('NODETERM_RDP_CLIPRDR_DROP_CLIENT_CAPS');
+    if (dropCaps) {
+      const dropMsg = `🔇 [Bridge] CB_CLIP_CAPS del cliente descartado (el bastion corta al recibirlo): ${clipDesc}`;
       console.log(dropMsg);
       this.emit('diagnostic-log', { category: 'cliprdr-caps-drop', message: dropMsg });
       return { forward: null, inject: [] };
     }
 
-    // El CB_TEMP_DIRECTORY de IronRDP lleva una ruta relativa ('.cliprdr'), mientras que un cliente
-    // Windows manda una absoluta. En todas las sesiones que el bastion corto, ese PDU viajaba por
-    // el canal negociado; en las que sobrevivieron iba por el canal del bastion o no se enviaba.
-    // Solo sirve para indicar donde guarda el cliente los temporales de copia de ficheros, asi que
-    // descartarlo no afecta al portapapeles de texto.
-    if (isBastion && clipDesc && clipDesc.includes('CB_TEMP_DIRECTORY') &&
-        readDiagFlag('NODETERM_RDP_CLIPRDR_DROP_CLIENT_TEMPDIR')) {
-      const dropMsg = `🔇 [Bridge] CB_TEMP_DIRECTORY del cliente descartado (ruta relativa no válida para el bastión): ${clipDesc}`;
+    const dropTemp = isBastion && clipDesc && clipDesc.includes('CB_TEMP_DIRECTORY') &&
+      readDiagFlag('NODETERM_RDP_CLIPRDR_DROP_CLIENT_TEMPDIR');
+    if (dropTemp) {
+      const dropMsg = `🔇 [Bridge] CB_TEMP_DIRECTORY del cliente descartado (ruta relativa): ${clipDesc}`;
       console.log(dropMsg);
       this.emit('diagnostic-log', { category: 'cliprdr-tempdir-drop', message: dropMsg });
       return { forward: null, inject: [] };
@@ -887,12 +934,25 @@ class RdpNativeBridgeService extends EventEmitter {
 
     // Se escribe en el canal por el que el servidor entrega cliprdr de verdad, que es el que
     // aprende el filtro, no en el que negocio el cliente: el bastion usa uno distinto y cambia
-    // entre sesiones (se han visto el de usuario 1001 y el IO 1003). Esto no afecta a las
-    // conexiones directas: un servidor que cumple el protocolo entrega cliprdr por el canal que
-    // anuncio en SC_NET, asi que serverClipCh coincide con el del cliente y no se remapea nada.
+    // entre sesiones. Conexiones directas: serverClipCh coincide con el del cliente y no se toca.
+    // No se escribe en un VC estatico ajeno (rdpsnd/rdpdr) ni en el canal de usuario (1001):
+    // aquello calla el portapapeles y esto congela el grafico.
     const canRemap = !readDiagFlag('NODETERM_RDP_CLIPRDR_NO_REMAP') &&
       serverClipCh != null &&
-      serverClipCh !== parsed.channelId;
+      serverClipCh !== parsed.channelId &&
+      !destIsForeignStaticVc &&
+      !destIsUserChannel &&
+      !destIsIoChannel;
+
+    if (isBastion && destIsUserChannel) {
+      const skipMsg = `📤 [Bridge] cliprdr WASM->RDP se queda en ch=${parsed.channelId}: no se escribe en ${serverClipCh} (canal de usuario)`;
+      console.log(skipMsg);
+      this.emit('diagnostic-log', { category: 'cliprdr', message: skipMsg });
+    } else if (isBastion && destIsForeignStaticVc) {
+      const skipMsg = `📤 [Bridge] cliprdr WASM->RDP se queda en ch=${parsed.channelId}: el servidor lo entrega por ${serverClipCh} (${destName}), sin canal de vuelta seguro`;
+      console.log(skipMsg);
+      this.emit('diagnostic-log', { category: 'cliprdr', message: skipMsg });
+    }
 
     if (canRemap) {
       const remapped = rewriteMcsChannelId(out, serverClipCh);
@@ -904,12 +964,10 @@ class RdpNativeBridgeService extends EventEmitter {
       }
     }
 
-    // IronRDP marca CHANNEL_FLAG_SHOW_PROTOCOL (flags=0x13) mientras el bastion emite 0x03. El
-    // servidor deberia ignorar ese flag, pero Wallix no lo hace. Se limpia solo si ya se detecto
-    // que el bastion reparte los canales a su manera, para no alterar el encuadre de las
-    // conexiones directas, que funcionan con 0x13. Reescribir el canal no cambia la longitud, asi
-    // que dataOff sigue siendo valido sobre el frame remapeado.
-    if (isBastion) {
+    // IronRDP marca CHANNEL_FLAG_SHOW_PROTOCOL (flags=0x13) mientras el bastion emite 0x03.
+    // Solo se limpia al escribir en el canal del bastion. Si el PDU se queda en el canal
+    // negociado (1004), 0x13 es el encuadre correcto de un cliente normal.
+    if (isBastion && canRemap) {
       const cleaned = clearChannelPduShowProtocol(out, parsed.dataOff);
       if (cleaned) {
         out = cleaned;

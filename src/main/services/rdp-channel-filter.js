@@ -19,6 +19,7 @@ const {
   rewriteMcsChannelId
 } = require('./rdp-autodetect');
 const { handleDvcRequest } = require('./rdp-dynvc');
+const { handleRdpdrRequest } = require('./rdp-rdpdr');
 
 const TPKT_X224_MCS_HEADER = 8;
 const CHANNEL_FLAG_FIRST = 0x01;
@@ -145,6 +146,9 @@ function createChannelFilterState() {
     ioChannelId: null,
     allowed: new Set(),
     clientChannelNames: [],
+    // Nombres que IronRDP declaro de verdad, antes de inyectar. El WASM mapea cliprdr al indice
+    // 0 de SC_NET aunque hacia el servidor hayamos anunciado rdpdr/rdpsnd delante.
+    wasmChannelNames: [],
     channelIdToName: new Map(),
     messageChannelId: null,
     staticVcChannelId: null,
@@ -153,6 +157,8 @@ function createChannelFilterState() {
     // cliprdrChannelId, pero Wallix usa otro (p.ej. 1001) y hay que remapear.
     serverCliprdrChannelId: null,
     serverCliprdrFragmentOpen: false,
+    cliprdrOnUnsafeChannel: null,
+    unsafeCliprdrFragmentOpen: false,
     drdynvcChannelId: null,
     cliprdrServerReady: false,
     clientInitiator: 0,
@@ -174,20 +180,34 @@ function learnFromServerGcc(state, buf) {
     state.allowed.delete(parsed.messageChannelId);
   }
 
-  // Mapear nombres de canales solicitados por el cliente a channelIds asignados por el servidor
+  // Mapear lo que ANUNCIAMOS al servidor (tras la inyeccion) a los IDs de SC_NET.
   state.channelIdToName = new Map();
   if (Array.isArray(state.clientChannelNames)) {
     parsed.channelIds.forEach((id, idx) => {
       const name = state.clientChannelNames[idx];
       if (name) {
         state.channelIdToName.set(id, name);
-        if (name === 'cliprdr') {
-          state.cliprdrChannelId = id;
-        } else if (name === 'drdynvc') {
+        if (name === 'drdynvc') {
           state.drdynvcChannelId = id;
         }
       }
     });
+  }
+
+  // IronRDP no ve la inyeccion: su cliprdr sigue siendo el indice que tenia en CS_NET original.
+  const wasmNames = (state.wasmChannelNames && state.wasmChannelNames.length)
+    ? state.wasmChannelNames
+    : state.clientChannelNames;
+  const clipIdx = Array.isArray(wasmNames) ? wasmNames.indexOf('cliprdr') : -1;
+  if (clipIdx >= 0 && parsed.channelIds[clipIdx] != null) {
+    state.cliprdrChannelId = parsed.channelIds[clipIdx];
+  } else {
+    for (const [id, name] of state.channelIdToName) {
+      if (name === 'cliprdr') {
+        state.cliprdrChannelId = id;
+        break;
+      }
+    }
   }
 
   state.ready = true;
@@ -203,6 +223,9 @@ function learnClientInitiator(state, buf) {
       const chs = findClientNetworkChannels(buf);
       if (chs.length) {
         state.clientChannelNames = chs;
+        if (!state.wasmChannelNames || state.wasmChannelNames.length === 0) {
+          state.wasmChannelNames = chs.slice();
+        }
       }
     } catch (_) {}
   }
@@ -219,6 +242,51 @@ function learnClientInitiator(state, buf) {
 function markDropped(state, channelId) {
   state.droppedCount += 1;
   state.droppedByChannel[channelId] = (state.droppedByChannel[channelId] || 0) + 1;
+}
+
+function declaredChannelId(state, wantedName) {
+  if (!(state.channelIdToName instanceof Map)) return null;
+  for (const [id, name] of state.channelIdToName) {
+    if (name === wantedName) return id;
+  }
+  return null;
+}
+
+/**
+ * rdpdr se anuncia para alinear indices con Wallix, pero no hay cliente de discos.
+ * El stub cierra el handshake y no se reenvia a WASM. Nunca se contesta por el canal
+ * IO (1003): escribir ahi CHANNEL_PDU de rdpdr corrompe el Share Control y el servidor
+ * cierra con FIN, que es lo que se vio justo despues de replies=2 en ch=1003.
+ * Si Wallix manda rdpdr por el canal que IronRDP reserva a cliprdr, las respuestas
+ * salen por el VC que anunciamos como rdpdr, para no confirmar 1004 como disco.
+ */
+function consumeRdpdr(state, channelId, userData) {
+  const rdpdr = handleRdpdrRequest(channelId, state.clientInitiator, userData);
+  if (!rdpdr.handled) return null;
+
+  const ioChannelId = state.ioChannelId != null ? state.ioChannelId : 1003;
+  const onIo = channelId === ioChannelId;
+  const rdpdrCh = declaredChannelId(state, 'rdpdr');
+  const onCliprdr = state.cliprdrChannelId != null && channelId === state.cliprdrChannelId;
+  let replies = onIo ? [] : (rdpdr.replies || []);
+  let note = rdpdr.note;
+
+  if (onIo) {
+    note = `${rdpdr.note} (sin respuesta: canal IO)`;
+  } else if (onCliprdr && rdpdrCh != null && rdpdrCh !== channelId && replies.length) {
+    replies = replies.map((buf) => rewriteMcsChannelId(buf, rdpdrCh) || buf);
+    note = `${rdpdr.note} (replies->ch=${rdpdrCh})`;
+  }
+
+  markDropped(state, channelId);
+  return {
+    forward: null,
+    replies,
+    dropped: true,
+    note: `${note} hex=${userData.toString('hex').slice(0, 48)}`,
+    channelId,
+    isCliprdr: false
+  };
 }
 
 function channelPduHint(userData) {
@@ -274,14 +342,40 @@ function consumeAutodetect(state, channelId, userData, force) {
 }
 
 /**
+ * 1001/1002 son IDs de usuario MCS, no canales virtuales. Remapear cliprdr desde ahi hacia
+ * IronRDP hace que el cliente conteste por 1004 y Wallix cierra; escribir de vuelta en 1001
+ * deja el TLS vivo y congela el grafico.
+ */
+function isUserMcsChannel(state, channelId) {
+  if (channelId == null) return false;
+  if (channelId === 1001 || channelId === 1002) return true;
+  if (state && state.messageChannelId != null && channelId === state.messageChannelId) return true;
+  return false;
+}
+
+function noteUnsafeCliprdr(state, channelId, userData) {
+  if (!isUserMcsChannel(state, channelId) || state.cliprdrChannelId == null || !Buffer.isBuffer(userData)) {
+    return false;
+  }
+  const flags = isChannelPduHeader(userData) ? userData.readUInt32LE(4) : 0;
+  const starts = isCliprdrHeader(userData) && (flags & CHANNEL_FLAG_FIRST) !== 0;
+  const continues = state.cliprdrOnUnsafeChannel === channelId && state.unsafeCliprdrFragmentOpen;
+  if (!starts && !continues) return false;
+  state.cliprdrOnUnsafeChannel = channelId;
+  state.unsafeCliprdrFragmentOpen = (flags & CHANNEL_FLAG_LAST) === 0;
+  return true;
+}
+
+/**
  * Decide si una PDU de canal virtual pertenece al flujo cliprdr y actualiza el estado de
  * fragmentación. Es cliprdr si abre un mensaje CLIPRDR válido o si continúa uno ya abierto en el
  * mismo canal: los fragmentos de continuación no llevan CLIPRDR_HEADER y descartarlos rompería el
  * reensamblado. No se decide por ID de canal porque el bastión entrega cliprdr por canales
- * distintos en cada sesión: el de usuario, el canal IO o el negociado.
+ * distintos en cada sesión: un VC estatico ajeno o el negociado. El canal de usuario no se reclama.
  */
 function claimCliprdrPdu(state, channelId, userData) {
   if (state.cliprdrChannelId == null || !Buffer.isBuffer(userData)) return false;
+  if (isUserMcsChannel(state, channelId)) return false;
 
   const flags = isChannelPduHeader(userData) ? userData.readUInt32LE(4) : 0;
   const starts = isCliprdrHeader(userData) && (flags & CHANNEL_FLAG_FIRST) !== 0;
@@ -407,6 +501,28 @@ function processServerFrame(state, buf) {
   const parsed = parseMcsSendData(buf);
 
   const isIoChannel = state.ready ? (channelId === state.ioChannelId) : (channelId === 1003);
+
+  // rdpdr por contenido, no por ID: Wallix lo ha llegado a mandar por el canal IO (1003),
+  // donde el filtro lo veia como ShareControl invalido y no contestaba.
+  if (parsed) {
+    const stubbed = consumeRdpdr(state, channelId, parsed.userData);
+    if (stubbed) return stubbed;
+  }
+
+  // Cliprdr en canal de usuario: se descarta hacia WASM. Si se remapea, IronRDP contesta
+  // por 1004 y Wallix cierra; si se escribe en 1001, el grafico se congela.
+  if (!isIoChannel && parsed && noteUnsafeCliprdr(state, channelId, parsed.userData)) {
+    markDropped(state, channelId);
+    return {
+      forward: null,
+      replies: [],
+      dropped: true,
+      note: `cliprdr en canal de usuario ch=${channelId} (no se reenvia)`,
+      channelId,
+      isCliprdr: false,
+      cliprdrDesc: describeCliprdrPdu(parsed.userData)
+    };
+  }
 
   // 1. Portapapeles (cliprdr). Wallix ignora los nombres de canal que declara el cliente y
   // proyecta su propio orden sobre los IDs: cliprdr puede llegar por un canal que el cliente
