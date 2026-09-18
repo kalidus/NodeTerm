@@ -166,31 +166,44 @@ const ConnectionHistoryStyles = ({
 				.hero-action-buttons {
 					display: flex;
 					justify-content: center;
-					gap: 8px;
-					margin-top: 10px;
+					gap: 4px;
+					margin-top: 6px;
 					padding: 3px;
 					background: rgba(0, 0, 0, 0.2);
 					border-radius: 6px;
 					border: 1px solid rgba(255, 255, 255, 0.05);
 					box-shadow: inset 0 1px 5px rgba(0,0,0,0.2);
 					backdrop-filter: blur(6px);
+					box-sizing: border-box;
+					width: 100%;
 				}
 				.hero-action-btn {
+					flex: 1 1 0;
+					min-width: 0;
 					background: transparent;
 					border: 1px solid transparent;
 					border-radius: 4px;
-					padding: 6px 16px;
-					color: rgba(255,255,255,0.4);
-					font-size: 0.75rem;
+					padding: 5px 8px;
+					color: rgba(255,255,255,0.6);
+					font-size: 0.72rem;
 					font-weight: 600;
 					font-family: 'Fira Code', 'Consolas', monospace;
 					text-transform: uppercase;
 					letter-spacing: 0.5px;
 					display: flex;
 					align-items: center;
-					gap: 8px;
+					justify-content: center;
+					gap: 6px;
 					cursor: pointer;
 					transition: all 0.2s;
+					white-space: nowrap;
+					overflow: hidden;
+					text-overflow: ellipsis;
+				}
+				.hero-action-btn .btn-label {
+					white-space: nowrap;
+					overflow: hidden;
+					text-overflow: ellipsis;
 				}
 				.hero-action-btn:hover {
 					color: #fff;
@@ -203,8 +216,9 @@ const ConnectionHistoryStyles = ({
 					box-shadow: 0 2px 10px rgba(0,0,0,0.2);
 				}
 				.hero-action-btn i {
-					font-size: 0.85rem;
-					opacity: 0.6;
+					font-size: 0.82rem;
+					opacity: 0.7;
+					flex-shrink: 0;
 				}
 				.hero-action-btn.active i {
 					opacity: 1;
@@ -235,6 +249,15 @@ const ConnectionHistoryStyles = ({
 					width: 100%;
 					position: relative;
 					backdrop-filter: blur(12px);
+				}
+				/* En el canvas modular, los marcos no deben restringirse a 600px ni tener margen exterior */
+				.home-panel-frame.top-terminal-frame,
+				.home-panel-frame.search-terminal-frame {
+					max-width: none !important;
+					margin: 0 !important;
+					width: 100% !important;
+					height: 100% !important;
+					box-shadow: none !important;
 				}
 				.top-terminal-header {
 					height: 30px;
@@ -1242,6 +1265,84 @@ const ConnectionHistoryStyles = ({
 					margin: 0 2px;
 					font-size: 0.65rem;
 					color: ${themeColors.textPrimary || 'rgba(255,255,255,0.7)'};
+				}
+
+				/* --- Compact & Narrow Mode Styles for HomeSearchPanel --- */
+				.cyber-search-panel-body.is-compact .cyber-search-top-zone {
+					padding: 6px 10px 4px 10px;
+					gap: 4px;
+				}
+				.cyber-search-panel-body.is-compact .hero-action-buttons {
+					gap: 3px;
+					padding: 2px;
+				}
+				.cyber-search-panel-body.is-compact .hero-action-btn {
+					padding: 4px 6px;
+					font-size: 0.68rem;
+					gap: 4px;
+				}
+				.cyber-search-panel-body.is-narrow .cyber-search-top-zone {
+					padding: 5px 6px 3px 6px;
+					gap: 3px;
+				}
+				.cyber-search-panel-body.is-narrow .hero-search-container::before {
+					left: 10px;
+					font-size: 0.72rem;
+				}
+				.cyber-search-panel-body.is-narrow .hero-search-input,
+				.cyber-search-panel-body.is-narrow .p-inputtext.hero-search-input {
+					padding: 6px 44px 6px 32px !important;
+					font-size: 0.76rem !important;
+				}
+				.cyber-search-panel-body.is-narrow .hero-terminal-btn {
+					min-width: 32px;
+					padding: 0 5px;
+					font-size: 0.72rem;
+					right: 6px;
+					height: 22px;
+				}
+				.cyber-search-panel-body.is-narrow .cyber-search-clear-btn {
+					right: 42px;
+					width: 18px;
+					height: 18px;
+					font-size: 0.62rem;
+				}
+				.cyber-search-panel-body.is-narrow .cyber-search-standby {
+					padding: 4px 8px 5px 8px;
+					font-size: 0.65rem;
+				}
+				.cyber-search-panel-body.is-narrow .cyber-results-header-bar {
+					padding: 4px 8px;
+					font-size: 0.66rem;
+				}
+				.cyber-search-panel-body.is-narrow .cyber-search-results-container {
+					margin: 2px 6px 6px 6px;
+				}
+				.cyber-search-panel-body.is-narrow .crc-action-btn span {
+					display: none;
+				}
+				.cyber-search-panel-body.is-narrow .crc-action-btn {
+					padding: 3px 6px;
+				}
+				.cyber-search-panel-body.is-narrow .crc-badge {
+					max-width: 55px;
+					font-size: 0.62rem;
+					padding: 1px 4px;
+				}
+				.cyber-search-panel-body.is-narrow .crc-prefix-arrow {
+					display: none;
+				}
+				.cyber-search-panel-body.is-very-narrow .hero-action-btn {
+					padding: 5px 4px;
+				}
+				.cyber-search-panel-body.is-very-narrow .hero-search-input,
+				.cyber-search-panel-body.is-very-narrow .p-inputtext.hero-search-input {
+					padding: 5px 40px 5px 28px !important;
+					font-size: 0.72rem !important;
+				}
+				.cyber-search-panel-body.is-very-narrow .hero-search-container::before {
+					left: 8px;
+					font-size: 0.68rem;
 				}
 				
 				/* Hero Chips */

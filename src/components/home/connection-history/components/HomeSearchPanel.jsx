@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { InputText } from 'primereact/inputtext';
 import { isFavorite } from '../../../../utils/connectionStore';
 import {
@@ -43,6 +43,25 @@ export const HomeSearchPanel = ({
 	terminalTheme = {},
 	minSearchChars = 2
 }) => {
+	const containerRef = useRef(null);
+	const [panelWidth, setPanelWidth] = useState(400);
+
+	useEffect(() => {
+		if (!containerRef.current) return;
+		const ro = new ResizeObserver((entries) => {
+			for (const entry of entries) {
+				const w = entry.contentRect.width;
+				if (w > 0) setPanelWidth(w);
+			}
+		});
+		ro.observe(containerRef.current);
+		return () => ro.disconnect();
+	}, []);
+
+	const isCompact = panelWidth < 440;
+	const isNarrow = panelWidth < 340;
+	const isVeryNarrow = panelWidth < 270;
+
 	const isSearchActive = searchTerm.trim().length >= minSearchChars;
 
 	const currentSearchResults = searchProtocolFilter === 'all'
@@ -58,7 +77,7 @@ export const HomeSearchPanel = ({
 		: filteredFavorites.filter(c => matchesProtocolFilter(c.type, searchProtocolFilter));
 
 	return (
-		<div className="cyber-search-panel-body">
+		<div ref={containerRef} className={`cyber-search-panel-body ${isCompact ? 'is-compact' : ''} ${isNarrow ? 'is-narrow' : ''} ${isVeryNarrow ? 'is-very-narrow' : ''}`}>
 			{/* Top Zone: Search input + Buttons */}
 			<div className="cyber-search-top-zone">
 				<div className="hero-search-container" style={{ margin: '0', width: '100%', maxWidth: '100%' }}>
@@ -68,7 +87,13 @@ export const HomeSearchPanel = ({
 							onChange={(e) => setSearchTerm(e.target.value)}
 							onKeyDown={handleSearchKeyDown}
 							className="hero-search-input"
-							placeholder="Search hosts, IPs, protocols, passwords..."
+							placeholder={
+								isVeryNarrow
+									? "Buscar..."
+									: isNarrow
+										? "Buscar conexiones..."
+										: "Search hosts, IPs, protocols, passwords..."
+							}
 							autoComplete="off"
 							spellCheck="false"
 						/>
@@ -110,7 +135,7 @@ export const HomeSearchPanel = ({
 					<button
 						type="button"
 						className={`hero-action-btn terminal-primary ${panelsLayout?.terminal?.visible !== false ? 'active' : ''}`}
-						title="Abrir o enfocar terminal"
+						title="Abrir o enfocar terminal local"
 						onClick={(e) => {
 							e.stopPropagation();
 							if (onTogglePanelVisibility) {
@@ -122,7 +147,8 @@ export const HomeSearchPanel = ({
 							}
 						}}
 					>
-						<i className="pi pi-plus-circle" /> Terminal
+						<i className="pi pi-plus-circle" />
+						{!isVeryNarrow && <span className="btn-label">{isNarrow ? 'Term' : 'Terminal'}</span>}
 					</button>
 					<button
 						type="button"
@@ -134,7 +160,8 @@ export const HomeSearchPanel = ({
 							setActiveIndex(-1);
 						}}
 					>
-						<i className="pi pi-clock" /> Recientes
+						<i className="pi pi-clock" />
+						{!isVeryNarrow && <span className="btn-label">{isNarrow ? 'Rec' : 'Recientes'}</span>}
 					</button>
 					<button
 						type="button"
@@ -146,7 +173,8 @@ export const HomeSearchPanel = ({
 							setActiveIndex(-1);
 						}}
 					>
-						<i className="pi pi-star" /> Favoritos
+						<i className="pi pi-star" />
+						{!isVeryNarrow && <span className="btn-label">{isNarrow ? 'Fav' : 'Favoritos'}</span>}
 					</button>
 					<button
 						type="button"
@@ -158,7 +186,13 @@ export const HomeSearchPanel = ({
 						}}
 					>
 						<i className="pi pi-filter" />
-						<span>{searchProtocolFilter === 'all' ? 'Filtrar' : searchProtocolFilter.toUpperCase()}</span>
+						{!isVeryNarrow && (
+							<span className="btn-label">
+								{searchProtocolFilter === 'all'
+									? (isNarrow ? 'Filt' : 'Filtrar')
+									: (isNarrow ? searchProtocolFilter.slice(0, 3).toUpperCase() : searchProtocolFilter.toUpperCase())}
+							</span>
+						)}
 						{searchProtocolFilter !== 'all' && (
 							<span
 								className="cyber-filter-reset-badge"
@@ -641,14 +675,16 @@ export const HomeSearchPanel = ({
 			) : (
 				/* Standby State: Clean & Minimalist */
 				<div className="cyber-search-standby">
-					<div style={{ display: 'flex', alignItems: 'center' }}>
+					<div style={{ display: 'flex', alignItems: 'center', minWidth: 0, overflow: 'hidden' }}>
 						<span className="css-dot" />
-						<span>STANDBY // BUSCADOR DIRECTO</span>
+						<span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+							{isNarrow ? 'STANDBY' : 'STANDBY // BUSCADOR DIRECTO'}
+						</span>
 					</div>
-					<div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-						<span><kbd>↑↓</kbd> Navegar</span>
-						<span><kbd>↵</kbd> Conectar</span>
-						<span><kbd>ESC</kbd> Limpiar</span>
+					<div style={{ display: 'flex', alignItems: 'center', gap: isNarrow ? '3px' : '4px', flexShrink: 0 }}>
+						{!isVeryNarrow && <span><kbd>↑↓</kbd>{!isNarrow && ' Navegar'}</span>}
+						<span><kbd>↵</kbd>{!isNarrow && ' Conectar'}</span>
+						<span><kbd>ESC</kbd>{!isNarrow && ' Limpiar'}</span>
 					</div>
 				</div>
 			)}

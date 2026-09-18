@@ -92,8 +92,8 @@ const computeDefaultPanelsLayout = (cWidth = (typeof window !== 'undefined' ? wi
       y: searchY,
       width: searchWidth,
       height: searchHeight,
-      minWidth: 320,
-      minHeight: 110,
+      minWidth: 220,
+      minHeight: 90,
       zIndex: 20,
       isMaximized: false
     },

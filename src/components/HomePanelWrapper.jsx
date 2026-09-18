@@ -65,8 +65,8 @@ const HomePanelWrapper = ({
     }
     const boundsLimit = getAvailableResizeBounds(id, { x, y, width, height }, allPanels, containerBounds);
     return {
-      maxWidth: Math.max(minWidth, boundsLimit.maxWidth),
-      maxHeight: Math.max(minHeight, boundsLimit.maxHeight)
+      maxWidth: Math.max(width, Math.max(minWidth, boundsLimit.maxWidth)),
+      maxHeight: Math.max(height, Math.max(minHeight, boundsLimit.maxHeight))
     };
   }, [id, x, y, width, height, isMaximized, isMinimized, allPanels, containerBounds, minWidth, minHeight]);
 
@@ -112,6 +112,14 @@ const HomePanelWrapper = ({
         const clampedY = boundsLimit.minTop;
         const clampedH = Math.max(minHeight, (y + height) - clampedY);
         ref.style.top = `${clampedY}px`;
+        ref.style.height = `${clampedH}px`;
+      }
+      if ((direction.includes('right') || direction.includes('Right')) && (position.x + ref.offsetWidth) > boundsLimit.maxRight) {
+        const clampedW = Math.max(minWidth, boundsLimit.maxRight - position.x);
+        ref.style.width = `${clampedW}px`;
+      }
+      if ((direction.includes('bottom') || direction.includes('Bottom')) && (position.y + ref.offsetHeight) > boundsLimit.maxBottom) {
+        const clampedH = Math.max(minHeight, boundsLimit.maxBottom - position.y);
         ref.style.height = `${clampedH}px`;
       }
     }
@@ -593,6 +601,16 @@ const HomePanelWrapper = ({
               topLeft: true
             }
       }
+      resizeHandleStyles={{
+        right: { width: '12px', right: '-6px', zIndex: 30, cursor: 'ew-resize' },
+        left: { width: '12px', left: '-6px', zIndex: 30, cursor: 'ew-resize' },
+        bottom: { height: '12px', bottom: '-6px', zIndex: 30, cursor: 'ns-resize' },
+        top: { height: '12px', top: '-6px', zIndex: 30, cursor: 'ns-resize' },
+        bottomRight: { width: '14px', height: '14px', right: '-6px', bottom: '-6px', zIndex: 31, cursor: 'nwse-resize' },
+        bottomLeft: { width: '14px', height: '14px', left: '-6px', bottom: '-6px', zIndex: 31, cursor: 'nesw-resize' },
+        topRight: { width: '14px', height: '14px', right: '-6px', top: '-6px', zIndex: 31, cursor: 'nesw-resize' },
+        topLeft: { width: '14px', height: '14px', left: '-6px', top: '-6px', zIndex: 31, cursor: 'nwse-resize' }
+      }}
       style={{
         zIndex,
         display: 'flex',

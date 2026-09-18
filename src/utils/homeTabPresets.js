@@ -107,7 +107,7 @@ export function getBuiltinPresets(width = 1200, height = 800) {
       width: dashProItemW,
       height: dashProRowH,
       minWidth: 200,
-      minHeight: 100,
+      minHeight: 90,
       zIndex: 12,
       isMaximized: false
     },
@@ -170,8 +170,8 @@ export function getBuiltinPresets(width = 1200, height = 800) {
       y: pad,
       width: splitColW,
       height: splitSearchH,
-      minWidth: 300,
-      minHeight: 100,
+      minWidth: 220,
+      minHeight: 90,
       zIndex: 15,
       isMaximized: false
     },
@@ -241,8 +241,8 @@ export function getBuiltinPresets(width = 1200, height = 800) {
       y: pad,
       width: termMaxSearchW,
       height: 118,
-      minWidth: 320,
-      minHeight: 100,
+      minWidth: 220,
+      minHeight: 90,
       zIndex: 20,
       isMaximized: false
     },

@@ -717,9 +717,9 @@ const ConnectionHistory = ({
 							onDragEnd={onPanelDragEnd}
 							onResizing={onPanelResizing}
 							onResizeEnd={onPanelResizeEnd}
-							minWidth={320}
-							minHeight={110}
-							className="top-terminal-frame"
+							minWidth={220}
+							minHeight={90}
+							className="top-terminal-frame search-terminal-frame"
 							frameBackground={adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}
 						>
 							{renderSearchPanel()}

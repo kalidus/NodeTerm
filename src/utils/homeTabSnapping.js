@@ -223,7 +223,7 @@ export function getAvailableResizeBounds(
 
     // Obstáculo a la DERECHA
     if (vOverlap && oX >= currentRight - 20) {
-      const allowedRight = oX - cfg.GAP;
+      const allowedRight = Math.max(currentRight, oX - cfg.GAP);
       if (allowedRight < maxRight) {
         maxRight = allowedRight;
       }
@@ -231,7 +231,7 @@ export function getAvailableResizeBounds(
 
     // Obstáculo ABAJO
     if (hOverlap && oY >= currentBottom - 20) {
-      const allowedBottom = oY - cfg.GAP;
+      const allowedBottom = Math.max(currentBottom, oY - cfg.GAP);
       if (allowedBottom < maxBottom) {
         maxBottom = allowedBottom;
       }
@@ -239,7 +239,7 @@ export function getAvailableResizeBounds(
 
     // Obstáculo a la IZQUIERDA
     if (vOverlap && oR <= x + 20) {
-      const allowedLeft = oR + cfg.GAP;
+      const allowedLeft = Math.min(x, oR + cfg.GAP);
       if (allowedLeft > minLeft) {
         minLeft = allowedLeft;
       }
@@ -247,25 +247,25 @@ export function getAvailableResizeBounds(
 
     // Obstáculo ARRIBA
     if (hOverlap && oB <= y + 20) {
-      const allowedTop = oB + cfg.GAP;
+      const allowedTop = Math.min(y, oB + cfg.GAP);
       if (allowedTop > minTop) {
         minTop = allowedTop;
       }
     }
   }
 
-  maxRight = Math.max(x + 100, maxRight);
-  maxBottom = Math.max(y + 80, maxBottom);
-  minLeft = Math.min(currentRight - 100, minLeft);
-  minTop = Math.min(currentBottom - 80, minTop);
+  maxRight = Math.max(currentRight, Math.max(x + 100, maxRight));
+  maxBottom = Math.max(currentBottom, Math.max(y + 80, maxBottom));
+  minLeft = Math.min(x, Math.min(currentRight - 100, minLeft));
+  minTop = Math.min(y, Math.min(currentBottom - 80, minTop));
 
   return {
     maxRight,
     maxBottom,
     minLeft,
     minTop,
-    maxWidth: Math.max(160, Math.floor(maxRight - x)),
-    maxHeight: Math.max(90, Math.floor(maxBottom - y))
+    maxWidth: Math.max(width, Math.max(160, Math.floor(maxRight - x))),
+    maxHeight: Math.max(height, Math.max(90, Math.floor(maxBottom - y)))
   };
 }
 
@@ -786,20 +786,23 @@ export function autoEqualizeBottomRow(
     };
   }
 
-  // Asignar nuevas posiciones y medidas exactas a cada panel de la fila
+  // Asignar nuevas posiciones y medidas exactas a cada panel de la fila secuencialmente para evitar solapamientos
+  let currentX = pad;
   rowPanelKeys.forEach((k, idx) => {
     const isLast = idx === count - 1;
-    const itemX = pad + idx * (eachW + gap);
-    const itemW = isLast ? (containerWidth - pad - itemX) : eachW;
+    const panelMinWidth = next[k]?.minWidth || 160;
+    const itemW = isLast ? Math.max(panelMinWidth, containerWidth - pad - currentX) : Math.max(panelMinWidth, eachW);
 
     next[k] = {
       ...next[k],
-      x: itemX,
+      x: currentX,
       y: bottomY,
-      width: Math.max(next[k].minWidth || 160, itemW),
+      width: itemW,
       height: Math.max(next[k].minHeight || 90, standardH),
       isMaximized: false
     };
+
+    currentX += itemW + gap;
   });
 
   return next;
