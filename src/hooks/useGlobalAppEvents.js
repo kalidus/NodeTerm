@@ -4,6 +4,8 @@ import connectionStore, { recordRecentPassword } from '../utils/connectionStore'
 import { isHomeButtonLocked as readHomeButtonLocked } from '../utils/homeTabDefaults';
 import i18n from '../i18n';
 
+const EDITABLE_CONNECTION_TYPES = ['ssh', 'rdp', 'rdp-guacamole', 'vnc', 'vnc-guacamole', 'sftp', 'ftp', 'scp', 'ssh-tunnel'];
+
 /**
  * Hook para desacoplar todos los listeners globales de eventos de ventana (CustomEvents),
  * listeners IPC de tabs y manejadores de atajos de teclado/zoom.
@@ -273,6 +275,42 @@ export const useGlobalAppEvents = ({
     promoteAndActivateTab(tabKey, (prev) => [newTab, ...prev]);
     setTimeout(() => activateTabSynchronously(tabKey), 50);
   }, [getAllTabs, promoteAndActivateTab, activateTabSynchronously]);
+
+  const handleSyncActiveEditTabFromSidebar = useCallback((node) => {
+    if (!node?.key) return;
+    const nodeType = node.data?.type || node.type;
+    if (!EDITABLE_CONNECTION_TYPES.includes(nodeType)) return;
+
+    const activeTab = filteredTabs?.[activeTabIndex];
+    if (!activeTab || activeTab.type !== 'edit-connection') return;
+
+    const isNewConnection = !!(
+      activeTab.node?.isNew ||
+      String(activeTab.key || '').startsWith('new_connection_') ||
+      String(activeTab.node?.key || '').startsWith('temp_')
+    );
+    if (isNewConnection) return;
+    if (activeTab.node?.key === node.key) return;
+
+    const oldKey = activeTab.key;
+    const newKey = `edit_connection_${node.key}`;
+    const newLabel = `Editar: ${node.label || node.name || 'Conexión'}`;
+
+    setSshTabs(prev => {
+      const withoutDest = prev.filter(t => t.key !== newKey);
+      return withoutDest.map(t => t.key === oldKey
+        ? { ...t, key: newKey, label: newLabel, node }
+        : t
+      );
+    });
+
+    setOpenTabOrder(prev => {
+      const withoutDest = prev.filter(k => k !== newKey);
+      return withoutDest.map(k => k === oldKey ? newKey : k);
+    });
+
+    setLastOpenedTabKey(prev => prev === oldKey ? newKey : prev);
+  }, [filteredTabs, activeTabIndex, setSshTabs, setOpenTabOrder, setLastOpenedTabKey]);
 
   const handleOpenNewConnectionTab = useCallback((protocol = 'ssh') => {
     const tabKey = `new_connection_${Date.now()}`;
@@ -1110,6 +1148,7 @@ export const useGlobalAppEvents = ({
     promoteAndActivateTab,
     activateTabSynchronously,
     handleOpenEditConnectionTab,
+    handleSyncActiveEditTabFromSidebar,
     handleOpenNewConnectionTab,
     openEditSSHDialog,
     openEditRdpDialog,

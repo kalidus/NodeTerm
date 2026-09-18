@@ -222,7 +222,8 @@ const Sidebar = React.memo(({
   onOpenFileExplorer,
   onOpenWallixRefresh,  // callback para refrescar carpetas importadas de Wallix
   openSessionNodeKeys = new Set(),
-  isTransitioningSidebar = false
+  isTransitioningSidebar = false,
+  onSyncActiveEditTab
 }) => {
   // Hook de internacionalización
   const { t } = useTranslation('common');
@@ -3259,6 +3260,9 @@ const Sidebar = React.memo(({
                   detailsPanelTimeoutRef.current = setTimeout(() => {
                     setSelectedNodeForDetails(resolvedNode);
                     detailsPanelTimeoutRef.current = null;
+                    if (typeof onSyncActiveEditTab === 'function') {
+                      onSyncActiveEditTab(resolvedNode);
+                    }
                   }, 250);
                 } else {
                   setSelectedNodeForDetails(null);

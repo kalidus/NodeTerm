@@ -2216,7 +2216,8 @@ const App = () => {
     openEditVncDialog,
     openEditFileConnectionDialog,
     openEditSSHTunnelDialog,
-    handleEditConnectionFromUsers
+    handleEditConnectionFromUsers,
+    handleSyncActiveEditTabFromSidebar
   } = useGlobalAppEvents({
     nodes,
     setNodes,
@@ -2488,6 +2489,7 @@ const App = () => {
     hasActiveSshSession: activeTab && (activeTab.type === 'terminal' || activeTab.type === 'split'),
     onOpenFileExplorer: openFileExplorer,
     openSessionNodeKeys,
+    onSyncActiveEditTab: handleSyncActiveEditTabFromSidebar,
 
     // Props para conexiones
     getAllFolders,
@@ -2577,6 +2579,7 @@ const App = () => {
     iconThemeSidebar, setIconThemeSidebar, iconSize, setIconSize, sidebarFont, setSidebarFont, sidebarFontSize, setSidebarFontSize, sidebarFontColor, setSidebarFontColor, terminalTheme, treeTheme, setTreeTheme, sessionActionIconTheme, setSessionActionIconTheme,
     toast, confirmDialog, onOpenSSHConnection, onNodeContextMenu, onTreeAreaContextMenu, hideContextMenu,
     sidebarCallbacksRef, selectedNodeKey, setSelectedNodeKey, activeTab, openFileExplorer, openSessionNodeKeys,
+    handleSyncActiveEditTabFromSidebar,
 
     // Dependencias para conexiones
     getAllFolders, createNewSSH, saveEditSSH, openEditSSHDialog, handleSaveRdpToSidebar,
