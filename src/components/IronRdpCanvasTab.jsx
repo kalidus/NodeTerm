@@ -161,6 +161,90 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   const hasEverConnectedRef = useRef(false);
   const currentTokenIdRef = useRef(null);
   const lastBackendReasonRef = useRef(null);
+  const uploadFailedIdsRef = useRef(new Set());
+  const transferDismissTimersRef = useRef(new Map());
+  const TRANSFER_COMPLETE_OVERLAY_MS = 2500;
+
+  const fileTransferNameOf = (file) => file?.name || file?.file?.name || 'Archivo';
+
+  const clearTransferDismissTimers = () => {
+    for (const timer of transferDismissTimersRef.current.values()) {
+      clearTimeout(timer);
+    }
+    transferDismissTimersRef.current.clear();
+  };
+
+  const scheduleTransferDismiss = (transferId) => {
+    if (transferId == null || transferDismissTimersRef.current.has(transferId)) return;
+    const timer = setTimeout(() => {
+      transferDismissTimersRef.current.delete(transferId);
+      setActiveTransfers((prev) => {
+        if (!prev[transferId]) return prev;
+        const next = { ...prev };
+        delete next[transferId];
+        return next;
+      });
+    }, TRANSFER_COMPLETE_OVERLAY_MS);
+    transferDismissTimersRef.current.set(transferId, timer);
+  };
+
+  const seedUploadTransfers = (transferIds, files) => {
+    if (!transferIds || typeof transferIds.forEach !== 'function') return;
+    setActiveTransfers((prev) => {
+      const next = { ...prev };
+      transferIds.forEach((transferId, fileIndex) => {
+        const existing = next[transferId];
+        if (existing?.status === 'complete' || existing?.status === 'error' || existing?.status === 'pasting') {
+          return;
+        }
+        next[transferId] = {
+          name: fileTransferNameOf(files?.[fileIndex]) || existing?.name || 'Archivo',
+          type: 'upload',
+          percentage: existing?.percentage || 0,
+          status: 'ready'
+        };
+      });
+      return next;
+    });
+  };
+
+  const markTransferStatus = (transferId, status, extra = {}) => {
+    if (transferId == null) return;
+    setActiveTransfers((prev) => {
+      const existing = prev[transferId];
+      if (status === 'complete' && existing?.status === 'error') return prev;
+      if (status === 'ready' && (existing?.status === 'complete' || existing?.status === 'error' || existing?.status === 'pasting')) {
+        return prev;
+      }
+      return {
+        ...prev,
+        [transferId]: {
+          name: extra.name || existing?.name || 'Archivo',
+          type: extra.type || existing?.type || 'upload',
+          percentage: status === 'complete' ? 100 : (extra.percentage ?? existing?.percentage ?? 0),
+          status
+        }
+      };
+    });
+    if (status === 'complete' || status === 'error') {
+      scheduleTransferDismiss(transferId);
+    }
+  };
+
+  const showUploadReadyToast = (fileCount) => {
+    toastRef.current?.show({
+      severity: 'success',
+      summary: 'Archivo subido',
+      detail: fileCount > 1
+        ? `${fileCount} archivos listos. Pulsa Ctrl+V en el escritorio remoto para pegarlos.`
+        : 'Listo para pegar. Pulsa Ctrl+V en el escritorio remoto.',
+      life: 6000
+    });
+  };
+
+  const disarmFileTransfer = () => {
+    isFileTransferArmedRef.current = false;
+  };
 
   const isDriveEnabled = rdpConfig.enableDrive !== false && (rdpConfig.guacEnableDrive !== false || rdpConfig.redirectFolders !== false || rdpConfig.enableDrive === true);
   const isPrinterEnabled = rdpConfig.redirectPrinters === true;
@@ -280,6 +364,10 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     }
     hasEverConnectedRef.current = false;
     lastBackendReasonRef.current = null;
+    clearTransferDismissTimers();
+    uploadFailedIdsRef.current.clear();
+    isFileTransferArmedRef.current = false;
+    setActiveTransfers({});
     setDisconnectDetails(null);
     setErrorMessage('');
     setReconnectTrigger(prev => prev + 1);
@@ -515,12 +603,11 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         // Registrar extensiones para transferencia de archivos / carpeta compartida (RdpFileTransferProvider)
         if (isDriveEnabled) {
           try {
-            // onUploadStarted/onUploadFinished silencian la sincronización de portapapeles
-            // mientras hay una subida: si no, la Format List de texto pisa la del fichero.
+            // onUploadStarted silencia el sync de texto para que no pise la Format List del fichero.
+            // No usar onUploadFinished: en iron-remote-desktop-rdp 0.7.0 se dispara al initiate, no al terminar.
             currentFileTransferProvider = new RdpFileTransferProvider({
               chunkSize: 64 * 1024,
-              onUploadStarted: () => { isFileTransferArmedRef.current = true; },
-              onUploadFinished: () => { isFileTransferArmedRef.current = false; }
+              onUploadStarted: () => { isFileTransferArmedRef.current = true; }
             });
             fileTransferProviderRef.current = currentFileTransferProvider;
             for (const ext of currentFileTransferProvider.getBuilderExtensions()) {
@@ -611,7 +698,10 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           // Remoto -> Local: cuando se copia o corta texto en el servidor RDP, escribir en portapapeles del cliente
           builder.remoteClipboardChangedCallback(async (clipboardData) => {
             if (!clipboardData) return;
-            isFileTransferArmedRef.current = false;
+            if (isFileTransferArmedRef.current) {
+              console.log('[IronRDP Clipboard] remoteClipboardChanged omitido: transferencia de archivos en curso');
+              return;
+            }
             try {
               for (const item of clipboardData.items()) {
                 const mime = typeof item.mimeType === 'function' ? item.mimeType() : (item.mimeType || '');
@@ -683,39 +773,38 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           try {
             currentFileTransferProvider.setSession(currentSession);
 
-            currentFileTransferProvider.on('upload-progress', (progress) => {
-              setActiveTransfers(prev => ({
-                ...prev,
-                [progress.transferId]: {
-                  name: progress.fileName,
-                  type: 'upload',
-                  percentage: progress.percentage || 0
-                }
-              }));
+            currentFileTransferProvider.on('upload-batch-started', (transferIds, droppedFiles) => {
+              isFileTransferArmedRef.current = true;
+              seedUploadTransfers(transferIds, droppedFiles);
+            });
 
-              if (progress.percentage >= 100) {
-                setTimeout(() => {
-                  setActiveTransfers(prev => {
-                    const next = { ...prev };
-                    delete next[progress.transferId];
-                    return next;
-                  });
-                }, 1000);
+            currentFileTransferProvider.on('upload-progress', (progress) => {
+              const reachedEnd = (progress.percentage || 0) >= 100;
+              setActiveTransfers(prev => {
+                const existing = prev[progress.transferId];
+                if (existing?.status === 'complete' || existing?.status === 'error') {
+                  return prev;
+                }
+                return {
+                  ...prev,
+                  [progress.transferId]: {
+                    name: progress.fileName || existing?.name || 'Archivo',
+                    type: 'upload',
+                    percentage: progress.percentage || 0,
+                    status: reachedEnd ? 'complete' : 'pasting'
+                  }
+                };
+              });
+              if (reachedEnd) {
+                scheduleTransferDismiss(progress.transferId);
               }
             });
 
             currentFileTransferProvider.on('upload-complete', (file, fileIndex, transferId) => {
-              console.log('✅ [IronRDP FileTransfer] Subida completada:', file?.name);
-              setActiveTransfers(prev => {
-                const next = { ...prev };
-                delete next[transferId];
-                return next;
-              });
-              toastRef.current?.show({
-                severity: 'success',
-                summary: 'Archivo Transferido',
-                detail: `${file?.name || 'Archivo'} subido a la sesión remota`,
-                life: 3000
+              console.log('[IronRDP FileTransfer] Pegado en el remoto:', file?.name);
+              markTransferStatus(transferId, 'complete', {
+                name: file?.name || 'Archivo',
+                type: 'upload'
               });
             });
 
@@ -791,7 +880,20 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             });
 
             currentFileTransferProvider.on('error', (err) => {
-              console.warn('⚠️ [IronRDP FileTransfer] Error:', err);
+              console.warn('[IronRDP FileTransfer] Error:', err);
+              const transferId = err?.transferId;
+              const fileName = err?.fileName || 'Archivo';
+              const direction = err?.direction === 'download' ? 'download' : 'upload';
+              if (transferId != null) {
+                uploadFailedIdsRef.current.add(transferId);
+                markTransferStatus(transferId, 'error', { name: fileName, type: direction });
+              }
+              toastRef.current?.show({
+                severity: 'warn',
+                summary: 'Error de transferencia',
+                detail: err?.fileName ? `${err.fileName}: ${err.message || 'fallo'}` : (err?.message || String(err || 'Error')),
+                life: 5000
+              });
             });
           } catch (ftpInitErr) {
             console.warn('[IronRDP FileTransfer] Error asociando sesión:', ftpInitErr);
@@ -838,6 +940,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         try { currentSession.shutdown(); } catch (e) {}
       }
       sessionRef.current = null;
+      clearTransferDismissTimers();
+      uploadFailedIdsRef.current.clear();
       isFileTransferArmedRef.current = false;
       pendingClipboardSendRef.current = null;
     };
@@ -1269,39 +1373,75 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     }
   };
 
-  // Transferencia segura de archivos con reintento automático si el canal CLIPRDR está negociando
+  // Transferencia segura de archivos con reintento automatico si el canal CLIPRDR esta negociando
   const uploadFilesSafely = async (provider, files) => {
     if (!provider || !files || !files.length) return;
     isFileTransferArmedRef.current = true;
     for (let attempt = 1; attempt <= 4; attempt++) {
       try {
         const handle = provider.uploadFiles(files);
-        toastRef.current?.show({
-          severity: 'info',
-          summary: 'Iniciando Transferencia',
-          detail: `Subiendo ${files.length} archivo(s) a la sesión RDP...`,
-          life: 3000
-        });
+        if (handle?.transferIds) {
+          seedUploadTransfers(handle.transferIds, files);
+        }
+        showUploadReadyToast(files.length);
+        if (handle?.completion) {
+          handle.completion.then(() => {
+            if (handle.transferIds && typeof handle.transferIds.forEach === 'function') {
+              handle.transferIds.forEach((transferId, fileIndex) => {
+                if (uploadFailedIdsRef.current.has(transferId)) return;
+                markTransferStatus(transferId, 'complete', {
+                  name: fileTransferNameOf(files[fileIndex]),
+                  type: 'upload'
+                });
+              });
+            }
+            disarmFileTransfer();
+          }).catch((completionErr) => {
+            const msg = completionErr?.message || String(completionErr || 'Error de transferencia');
+            if (handle?.transferIds && typeof handle.transferIds.forEach === 'function') {
+              handle.transferIds.forEach((transferId, fileIndex) => {
+                markTransferStatus(transferId, 'error', {
+                  name: fileTransferNameOf(files[fileIndex]),
+                  type: 'upload'
+                });
+              });
+            }
+            toastRef.current?.show({
+              severity: 'warn',
+              summary: 'Error de transferencia',
+              detail: msg,
+              life: 5000
+            });
+            disarmFileTransfer();
+          });
+        }
         return handle;
       } catch (err) {
         const msg = err?.message || String(err || '');
         if ((msg.includes('Ready state') || msg.includes('not in Ready')) && attempt < 4) {
-          console.warn(`⏳ [IronRDP FileTransfer] Canal CLIPRDR negociando... reintento ${attempt}/4 en 1000ms`);
+          console.warn(`[IronRDP FileTransfer] Canal CLIPRDR negociando... reintento ${attempt}/4 en 1000ms`);
           await new Promise((r) => setTimeout(r, 1000));
           continue;
         }
-        isFileTransferArmedRef.current = false;
+        const alreadyInProgress = msg.toLowerCase().includes('already in progress');
+        if (!alreadyInProgress) {
+          disarmFileTransfer();
+        }
         toastRef.current?.show({
           severity: 'warn',
           summary: 'Transferencia no disponible',
-          detail: msg.includes('Ready state') || msg.includes('not in Ready')
-            ? 'El canal de portapapeles aún no ha sido inicializado por el servidor o bastión remoto.'
-            : msg,
+          detail: alreadyInProgress
+            ? 'Ya hay un archivo listo para pegar en el remoto. Pulsa Ctrl+V alli o espera a que termine.'
+            : (msg.includes('Ready state') || msg.includes('not in Ready')
+              ? 'El canal de portapapeles aun no ha sido inicializado por el servidor o bastion remoto.'
+              : msg),
           life: 5000
         });
         return null;
       }
     }
+    disarmFileTransfer();
+    return null;
   };
 
   return (
@@ -1437,7 +1577,35 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       )}
 
       {/* Indicador flotante de progreso de transferencias activas */}
-      {Object.keys(activeTransfers).length > 0 && (
+      {Object.keys(activeTransfers).length > 0 && (() => {
+        const transferEntries = Object.entries(activeTransfers);
+        const hasReady = transferEntries.some(([, t]) => t.status === 'ready');
+        const hasPasting = transferEntries.some(([, t]) => t.status === 'pasting');
+        const hasActive = transferEntries.some(([, t]) => !t.status || t.status === 'active');
+        const hasError = transferEntries.some(([, t]) => t.status === 'error');
+        let headerLabel = 'Completado';
+        let headerColor = '#4ade80';
+        let headerIcon = 'pi pi-check-circle';
+        let borderColor = 'rgba(74, 222, 128, 0.45)';
+        if (hasError && !hasReady && !hasPasting && !hasActive) {
+          headerLabel = 'Error de transferencia';
+          headerColor = '#f87171';
+          headerIcon = 'pi pi-times-circle';
+          borderColor = 'rgba(248, 113, 113, 0.45)';
+        } else if (hasPasting || hasActive) {
+          headerLabel = hasPasting ? 'Pegando en el remoto' : 'Transferencias en curso';
+          headerColor = '#60a5fa';
+          headerIcon = 'pi pi-sync pi-spin';
+          borderColor = 'rgba(59, 130, 246, 0.4)';
+        } else if (hasReady) {
+          headerLabel = 'Listo para pegar';
+          headerColor = '#38bdf8';
+          headerIcon = 'pi pi-clipboard';
+          borderColor = 'rgba(56, 189, 248, 0.45)';
+        } else {
+          headerLabel = 'Pegado';
+        }
+        return (
         <div
           style={{
             position: 'absolute',
@@ -1445,7 +1613,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             right: '16px',
             backgroundColor: 'rgba(20, 24, 33, 0.94)',
             backdropFilter: 'blur(8px)',
-            border: '1px solid rgba(59, 130, 246, 0.4)',
+            border: `1px solid ${borderColor}`,
             borderRadius: '8px',
             padding: '10px 14px',
             zIndex: 100,
@@ -1454,21 +1622,41 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             boxShadow: '0 8px 24px rgba(0,0,0,0.5)'
           }}
         >
-          <div className="text-xs font-semibold text-blue-400 mb-2 flex align-items-center justify-content-between">
-            <span>Transferencias en curso</span>
-            <i className="pi pi-sync pi-spin text-xs"></i>
+          <div className="text-xs font-semibold mb-2 flex align-items-center justify-content-between" style={{ color: headerColor }}>
+            <span>{headerLabel}</span>
+            <i className={`${headerIcon} text-xs`}></i>
           </div>
-          {Object.entries(activeTransfers).map(([id, t]) => (
+          {hasReady && (
+            <p className="m-0 mb-2 text-xs text-gray-400">Pulsa Ctrl+V en el escritorio remoto</p>
+          )}
+          {transferEntries.map(([id, t]) => {
+            const isReady = t.status === 'ready';
+            const isComplete = t.status === 'complete';
+            const isError = t.status === 'error';
+            const itemColor = isComplete ? '#4ade80' : (isError ? '#f87171' : (isReady ? '#38bdf8' : '#93c5fd'));
+            const itemLabel = isComplete
+              ? 'Pegado'
+              : (isError ? 'Error' : (isReady ? 'Ctrl+V' : `${Math.round(t.percentage || 0)}%`));
+            return (
             <div key={id} className="mb-2 last:mb-0">
               <div className="flex justify-content-between text-xs text-gray-300 mb-1">
                 <span className="text-truncate" style={{ maxWidth: '180px' }} title={t.name}>{t.name}</span>
-                <span className="font-medium text-blue-300">{Math.round(t.percentage)}%</span>
+                <span className="font-medium" style={{ color: itemColor }}>{itemLabel}</span>
               </div>
-              <ProgressBar value={Math.round(t.percentage)} showValue={false} style={{ height: '4px' }} />
+              {!isReady && (
+                <ProgressBar
+                  value={isComplete ? 100 : Math.round(t.percentage || 0)}
+                  showValue={false}
+                  style={{ height: '4px' }}
+                  color={isComplete ? '#4ade80' : (isError ? '#f87171' : undefined)}
+                />
+              )}
             </div>
-          ))}
+            );
+          })}
         </div>
-      )}
+        );
+      })()}
 
       {/* Overlays de estado (Cargando / Error / Desconectado) encima del canvas */}
       {connectionState === 'connecting' && (
