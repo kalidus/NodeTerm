@@ -260,7 +260,7 @@ const ConnectionDetailsPanel = ({
     } else if (section === 'connection' && field === 'hostname') {
       if (!updatedNode.data) updatedNode.data = {};
       if (updatedNode.data.useBastionWallix) {
-        updatedNode.data.targetServer = editValue;
+        updatedNode.data.bastionHost = editValue;
       } else {
         updatedNode.data.host = editValue;
         updatedNode.data.hostname = editValue;
@@ -352,6 +352,9 @@ const ConnectionDetailsPanel = ({
   const isRDP = data && (data.type === 'rdp' || data.type === 'rdp-guacamole');
   const isVNC = data && (data.type === 'vnc' || data.type === 'vnc-guacamole');
   const isPassword = data && data.type === 'password';
+  const displayHost = data?.useBastionWallix
+    ? (data?.bastionHost || data?.host || '')
+    : (data?.host || data?.hostname || data?.server || '');
 
   // Handler for connecting (Movido antes de los retornos condicionales)
   const handleConnect = useCallback((e) => {
@@ -613,15 +616,15 @@ const ConnectionDetailsPanel = ({
             <div className="section-title">Connection</div>
             <EditableField
               label="Hostname/IP"
-              value={data?.useBastionWallix ? data?.targetServer : (data?.host || data?.hostname || data?.server || '')}
-              onEdit={() => startEdit('connection', 'hostname', data?.useBastionWallix ? data?.targetServer : (data?.host || data?.hostname || data?.server || ''))}
+              value={displayHost}
+              onEdit={() => startEdit('connection', 'hostname', displayHost)}
               isEditing={editingField?.section === 'connection' && editingField?.field === 'hostname'}
               editValue={editValue}
               onValueChange={setEditValue}
               onSave={saveEdit}
               onKeyDown={handleKeyDown}
               onCopy={copyToClipboard}
-              copyValue={data?.useBastionWallix ? data?.targetServer : (data?.host || data?.hostname || data?.server || '')}
+              copyValue={displayHost}
             />
             <EditableField
               label="Username"
