@@ -133,6 +133,7 @@ const MainContentArea = ({
   onOpenSSHConnection,
   onOpenRdpConnection,
   onOpenVncConnection,
+  onEditConnection,
   openEditSSHDialog,
   openEditRdpDialog,
   expandedKeys,
@@ -3347,6 +3348,8 @@ const MainContentArea = ({
                     handleToggleBroadcast={handleToggleBroadcast}
                     handleToggleBroadcastTarget={handleToggleBroadcastTarget}
                     getAllTabs={getAllTabs}
+                    onEditConnection={onEditConnection}
+                    nodes={allNodes}
                   />
 
                   <TerminalContextMenu

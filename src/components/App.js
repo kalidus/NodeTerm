@@ -3233,6 +3233,7 @@ const App = () => {
           onOpenSSHConnection={onOpenSSHConnection}
           onOpenRdpConnection={onOpenRdpConnection}
           onOpenVncConnection={onOpenVncConnection}
+          onEditConnection={handleEditConnectionFromUsers}
           openEditSSHDialog={openEditSSHDialog}
           openEditRdpDialog={openEditRdpDialog}
           expandedKeys={expandedKeys}

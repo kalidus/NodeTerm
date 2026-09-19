@@ -428,7 +428,7 @@ const TabHeader = React.memo(({
       onDrop={(e) => onTabDrop && onTabDrop(e, idx)}
       onDragEnd={onTabDragEnd}
       onContextMenu={(e) => onTabContextMenu && onTabContextMenu(e, tab.key)}
-      title="Arrastra para reordenar pestañas | Clic derecho para opciones de grupo"
+      title="Arrastra para reordenar pestañas | Clic derecho para ver opciones"
     >
       {leftIcon}
 
