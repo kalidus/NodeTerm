@@ -22,7 +22,6 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
   const [passwordNodes, setPasswordNodes] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const MIN_SEARCH_CHARS = 3;
-  const lastAutoExpandedSignatureRef = useRef('');
 
   // Cache para passwords y conexiones aplanados
   const [cachedAllItems, setCachedAllItems] = useState([]);
@@ -261,34 +260,7 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
     }
   }, [showDropdown]);
 
-  // Auto-expandir la ruta de todos los resultados visibles sin requerir Enter.
-  useEffect(() => {
-    if (!showDropdown) return;
-    if (sidebarFilter.trim().length < MIN_SEARCH_CHARS) return;
-    if (!filteredConnections.length) return;
 
-    const keysToExpand = filteredConnections.map((node) => node?.key).filter(Boolean);
-    if (!keysToExpand.length) return;
-    const signature = keysToExpand.join('|');
-    if (lastAutoExpandedSignatureRef.current === signature) return;
-    lastAutoExpandedSignatureRef.current = signature;
-
-    window.dispatchEvent(new CustomEvent('expand-sidebar'));
-
-    let mergedExpandedKeys = { ...(expandedKeys || {}) };
-    keysToExpand.forEach((nodeKey) => {
-      const node = filteredConnections.find((n) => n?.key === nodeKey);
-      if (!node) return;
-      const nodePath = findNodePath(allNodes, node);
-      if (nodePath && nodePath.length > 1) {
-        mergedExpandedKeys = expandNodePath(nodePath, mergedExpandedKeys);
-      }
-    });
-
-    window.dispatchEvent(new CustomEvent('expand-node-path', {
-      detail: { expandedKeys: mergedExpandedKeys, nodeKey: keysToExpand[0] }
-    }));
-  }, [showDropdown, sidebarFilter, filteredConnections, allNodes, expandedKeys]);
 
   // Función para manejar el focus del input
   const handleInputFocus = () => {
@@ -523,31 +495,6 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
     }
   };
 
-  // Función para encontrar la ruta de una conexión en el árbol
-  const findNodePath = (nodes, targetNode) => {
-    const findPath = (nodeList, target, currentPath = []) => {
-      for (const node of nodeList) {
-        const newPath = [...currentPath, node.key];
-
-        // Si encontramos el nodo objetivo, retornar la ruta
-        if (node.key === target.key) {
-          return newPath;
-        }
-
-        // Si tiene hijos, buscar recursivamente
-        if (node.children && node.children.length > 0) {
-          const foundPath = findPath(node.children, target, newPath);
-          if (foundPath) {
-            return foundPath;
-          }
-        }
-      }
-      return null;
-    };
-
-    return findPath(nodes, targetNode);
-  };
-
   // Función para obtener la ruta de carpetas de una conexión
   const getNodeFolderPath = (nodes, targetNode) => {
     const findFolderPath = (nodeList, target, currentPath = []) => {
@@ -575,45 +522,10 @@ const TitleBar = ({ sidebarFilter, setSidebarFilter, allNodes, findAllConnection
     return findFolderPath(nodes, targetNode);
   };
 
-  // Función para expandir carpetas en la ruta de una conexión
-  const expandNodePath = (nodePath, currentExpandedKeys) => {
-    if (!nodePath || nodePath.length === 0) return currentExpandedKeys;
-
-    // Crear una copia de las claves expandidas actuales para preservar el estado existente
-    const newExpandedKeys = { ...currentExpandedKeys };
-
-    // Solo expandir las carpetas en la ruta que no estén ya expandidas
-    for (let i = 0; i < nodePath.length - 1; i++) {
-      const folderKey = nodePath[i];
-      // Solo expandir si no está ya expandida
-      if (!newExpandedKeys[folderKey]) {
-        newExpandedKeys[folderKey] = true;
-      }
-    }
-
-    return newExpandedKeys;
-  };
-
   const handleSelectConnection = (node) => {
     setSidebarFilter('');
     setShowDropdown(false);
     setActiveIndex(-1);
-
-    // Asegurar que la sidebar esté visible para ver la expansión.
-    window.dispatchEvent(new CustomEvent('expand-sidebar'));
-
-    // Encontrar la ruta de la conexión y expandir las carpetas padre
-    const nodePath = findNodePath(allNodes, node);
-    if (nodePath && nodePath.length > 1) {
-      // Expandir las carpetas en la ruta, preservando las que ya están expandidas
-      const newExpandedKeys = expandNodePath(nodePath, expandedKeys || {});
-
-      // Disparar evento personalizado para que el componente padre actualice expandedKeys
-      const expandEvent = new CustomEvent('expand-node-path', {
-        detail: { expandedKeys: newExpandedKeys, nodeKey: node.key }
-      });
-      window.dispatchEvent(expandEvent);
-    }
 
     // Detectar el tipo y llamar a la función apropiada
     const isPassword = node.data && node.data.type === 'password';

@@ -103,7 +103,6 @@ const ConnectionSearchBar = ({
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
   const containerRef = useRef(null);
   const inputRef = useRef(null);
-  const lastAutoExpandedSignatureRef = useRef('');
   const MIN_SEARCH_CHARS = 3;
   const variantStyles = VARIANT_STYLES[variant] || VARIANT_STYLES.titlebar;
 
@@ -309,27 +308,6 @@ const ConnectionSearchBar = ({
     }
   }, [showDropdown]);
 
-  const findNodePath = (nodes, targetNode) => {
-    const findPath = (nodeList, target, currentPath = []) => {
-      for (const node of nodeList) {
-        const newPath = [...currentPath, node.key];
-
-        if (node.key === target.key) {
-          return newPath;
-        }
-
-        if (node.children && node.children.length > 0) {
-          const foundPath = findPath(node.children, target, newPath);
-          if (foundPath) {
-            return foundPath;
-          }
-        }
-      }
-      return null;
-    };
-
-    return findPath(nodes, targetNode);
-  };
 
   const getNodeFolderPath = (nodes, targetNode) => {
     const findFolderPath = (nodeList, target, currentPath = []) => {
@@ -354,36 +332,11 @@ const ConnectionSearchBar = ({
     return findFolderPath(nodes, targetNode);
   };
 
-  const expandNodePath = (nodePath, currentExpandedKeys) => {
-    if (!nodePath || nodePath.length === 0) return currentExpandedKeys;
-
-    const newExpandedKeys = { ...currentExpandedKeys };
-
-    for (let i = 0; i < nodePath.length - 1; i++) {
-      const folderKey = nodePath[i];
-      if (!newExpandedKeys[folderKey]) {
-        newExpandedKeys[folderKey] = true;
-      }
-    }
-
-    return newExpandedKeys;
-  };
-
   const handleSelectConnection = (node) => {
     setSidebarFilter('');
     setShowDropdown(false);
     setActiveIndex(-1);
     onRequestClose?.();
-
-    window.dispatchEvent(new CustomEvent('expand-sidebar'));
-
-    const nodePath = findNodePath(allNodes, node);
-    if (nodePath && nodePath.length > 1) {
-      const newExpandedKeys = expandNodePath(nodePath, expandedKeys || {});
-      window.dispatchEvent(new CustomEvent('expand-node-path', {
-        detail: { expandedKeys: newExpandedKeys, nodeKey: node.key }
-      }));
-    }
 
     const isPassword = node.data && node.data.type === 'password';
     const isSSH = node.data && node.data.type === 'ssh';
@@ -460,33 +413,7 @@ const ConnectionSearchBar = ({
     }
   };
 
-  useEffect(() => {
-    if (!showDropdown) return;
-    if (sidebarFilter.trim().length < MIN_SEARCH_CHARS) return;
-    if (!filteredConnections.length) return;
 
-    const keysToExpand = filteredConnections.map((node) => node?.key).filter(Boolean);
-    if (!keysToExpand.length) return;
-    const signature = keysToExpand.join('|');
-    if (lastAutoExpandedSignatureRef.current === signature) return;
-    lastAutoExpandedSignatureRef.current = signature;
-
-    window.dispatchEvent(new CustomEvent('expand-sidebar'));
-
-    let mergedExpandedKeys = { ...(expandedKeys || {}) };
-    keysToExpand.forEach((nodeKey) => {
-      const node = filteredConnections.find((n) => n?.key === nodeKey);
-      if (!node) return;
-      const nodePath = findNodePath(allNodes, node);
-      if (nodePath && nodePath.length > 1) {
-        mergedExpandedKeys = expandNodePath(nodePath, mergedExpandedKeys);
-      }
-    });
-
-    window.dispatchEvent(new CustomEvent('expand-node-path', {
-      detail: { expandedKeys: mergedExpandedKeys, nodeKey: keysToExpand[0] }
-    }));
-  }, [showDropdown, sidebarFilter, filteredConnections, allNodes, expandedKeys]);
 
   const updateDropdownPosition = () => {
     if (!containerRef.current) return;

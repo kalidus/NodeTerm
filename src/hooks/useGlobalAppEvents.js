@@ -623,48 +623,8 @@ export const useGlobalAppEvents = ({
     };
   }, [setSshTabs]);
 
-  // 14. Expansión de árbol y creación de pestañas fijadas (AI Clients, Audit, etc.)
+  // 14. Creación de pestañas fijadas (AI Clients, Audit, etc.)
   useEffect(() => {
-    const findNodePathByKey = (nodeList, targetKey, currentPath = []) => {
-      if (!nodeList || !targetKey) return null;
-      for (const node of nodeList) {
-        const nextPath = [...currentPath, node.key];
-        if (node.key === targetKey) return nextPath;
-        if (node.children && node.children.length > 0) {
-          const found = findNodePathByKey(node.children, targetKey, nextPath);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
-    const buildExpandedKeysFromPath = (nodePath = [], baseExpanded = {}) => {
-      const merged = { ...(baseExpanded || {}) };
-      for (let i = 0; i < nodePath.length - 1; i++) {
-        merged[nodePath[i]] = true;
-      }
-      return merged;
-    };
-
-    const handleExpandNodePath = (event) => {
-      const { expandedKeys: newExpandedKeys, nodeKey } = event.detail || {};
-
-      if (newExpandedKeys) {
-        setExpandedKeys((prev) => ({ ...(prev || {}), ...newExpandedKeys }));
-        return;
-      }
-
-      if (nodeKey) {
-        const path = findNodePathByKey(nodes, nodeKey);
-        if (path && path.length > 1) {
-          setExpandedKeys((prev) => buildExpandedKeysFromPath(path, prev));
-          return;
-        }
-      }
-    };
-
-    window.addEventListener('expand-node-path', handleExpandNodePath);
-
     const handleCreateAuditTab = (event) => {
       const { tabId, title, recordings } = event.detail;
       const newAuditTab = {
@@ -725,7 +685,6 @@ export const useGlobalAppEvents = ({
     window.addEventListener('create-open-notebook-tab', handleCreateOpenNotebookTab);
 
     return () => {
-      window.removeEventListener('expand-node-path', handleExpandNodePath);
       window.removeEventListener('create-audit-tab', handleCreateAuditTab);
       window.removeEventListener('create-terminal-tab', handleCreateTerminalTab);
       window.removeEventListener('create-anythingllm-tab', handleCreateAnythingLLMTab);
@@ -736,7 +695,6 @@ export const useGlobalAppEvents = ({
       window.removeEventListener('create-open-notebook-tab', handleCreateOpenNotebookTab);
     };
   }, [
-    setExpandedKeys,
     nodes,
     setSshTabs,
     setLastOpenedTabKey,

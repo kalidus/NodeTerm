@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { helpers } from '../../../../utils/connectionStore';
 import {
-	findNodePath,
-	expandNodePath,
 	matchesProtocolFilter
 } from '../utils/connectionHistoryHelpers';
 
@@ -24,7 +22,6 @@ export const useConnectionSearch = ({
 	const [searchPanelMode, setSearchPanelMode] = useState('standby'); // 'standby' | 'recents' | 'favorites'
 	const [searchProtocolFilter, setSearchProtocolFilter] = useState('all'); // 'all' | 'ssh' | 'rdp' | 'vnc' | 'sftp' | 'password' | 'note' | 'ssh-tunnel'
 	const [showProtocolFilterBar, setShowProtocolFilterBar] = useState(false);
-	const lastAutoExpandedSignatureRef = useRef('');
 
 	// Función para encontrar todas las conexiones en el árbol
 	const findAllSidebarConnections = useCallback((nodesList) => {
@@ -198,61 +195,10 @@ export const useConnectionSearch = ({
 		return () => document.removeEventListener('mousedown', handleClickOutside);
 	}, [showDropdown]);
 
-	// Auto-expandir la ruta de todos los resultados visibles en el árbol lateral
-	useEffect(() => {
-		if (searchTerm.trim().length < minSearchChars) return;
-		if (!filteredSearchResults.length) return;
-
-		const keysToExpand = filteredSearchResults.map((node) => node?.key).filter(Boolean);
-		if (!keysToExpand.length) return;
-		const signature = keysToExpand.join('|');
-		if (lastAutoExpandedSignatureRef.current === signature) return;
-		lastAutoExpandedSignatureRef.current = signature;
-
-		window.dispatchEvent(new CustomEvent('expand-sidebar'));
-
-		let mergedExpandedKeys = {};
-		try {
-			mergedExpandedKeys = JSON.parse(localStorage.getItem('nodeterm_expanded_keys') || '{}');
-		} catch {
-			mergedExpandedKeys = {};
-		}
-
-		keysToExpand.forEach((nodeKey) => {
-			const node = filteredSearchResults.find((n) => n?.key === nodeKey);
-			if (!node) return;
-			const nodePath = findNodePath(sidebarNodes, node);
-			if (nodePath && nodePath.length > 1) {
-				mergedExpandedKeys = expandNodePath(nodePath, mergedExpandedKeys);
-			}
-		});
-
-		window.dispatchEvent(new CustomEvent('expand-node-path', {
-			detail: { expandedKeys: mergedExpandedKeys, nodeKey: keysToExpand[0] }
-		}));
-	}, [searchTerm, filteredSearchResults, sidebarNodes, minSearchChars]);
 
 	const handleSelectSearchResult = useCallback((node) => {
 		setSearchTerm('');
 		setActiveIndex(-1);
-
-		// Asegurar que la sidebar esté visible para percibir la expansión
-		window.dispatchEvent(new CustomEvent('expand-sidebar'));
-
-		// Expandir en sidebar la ruta de la conexión seleccionada en el buscador del Home
-		const nodePath = findNodePath(sidebarNodes, node);
-		if (nodePath && nodePath.length > 1) {
-			let savedExpandedKeys = {};
-			try {
-				savedExpandedKeys = JSON.parse(localStorage.getItem('nodeterm_expanded_keys') || '{}');
-			} catch {
-				savedExpandedKeys = {};
-			}
-			const newExpandedKeys = expandNodePath(nodePath, savedExpandedKeys);
-			window.dispatchEvent(new CustomEvent('expand-node-path', {
-				detail: { expandedKeys: newExpandedKeys, nodeKey: node.key }
-			}));
-		}
 
 		const isPassword = node.data && ['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note', 'document', 'quick-note'].includes(node.data.type);
 		if (isPassword) {
@@ -267,7 +213,7 @@ export const useConnectionSearch = ({
 			const conn = helpers.fromSidebarNode(node);
 			if (conn) onConnectToHistory(conn);
 		}
-	}, [sidebarNodes, onConnectToHistory]);
+	}, [onConnectToHistory]);
 
 	const protocolMatches = useMemo(() => {
 		if (searchProtocolFilter === 'all') return [];
