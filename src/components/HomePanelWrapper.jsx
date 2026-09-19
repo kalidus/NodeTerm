@@ -1,6 +1,5 @@
-import React, { useRef, useCallback, useMemo, useState } from 'react';
+import React, { useRef, useCallback, useState } from 'react';
 import { Rnd } from 'react-rnd';
-import { getAvailableResizeBounds } from '../utils/homeTabSnapping';
 
 /**
  * Componente envoltorio para paneles móviles y redimensionables del Dashboard de Home.
@@ -45,6 +44,7 @@ const HomePanelWrapper = ({
   children
 }) => {
   const rndRef = useRef(null);
+  const interactingRef = useRef(false);
   const [internalMinimized, setInternalMinimized] = useState(false);
 
   const {
@@ -58,27 +58,23 @@ const HomePanelWrapper = ({
   } = panelState;
 
   const isMinimized = typeof stateMinimized === 'boolean' ? stateMinimized : internalMinimized;
-  const allowOverlap = id === 'terminal';
-  const fillParent = isMaximized && (allowOverlap || !panelState.originalBounds);
+  const fillParent = isMaximized;
   const minimizedHeight = 30;
+  const maximizeTitle = isMaximized ? 'Restaurar' : 'Maximizar';
+  const activeShadow = isMaximized
+    ? 'none'
+    : `0 10px 28px rgba(0, 0, 0, ${Math.min(0.48, 0.18 + Math.max(0, zIndex - 10) * 0.012)})`;
 
-  // Cálculo dinámico de límites máximos anti-colisión para impedir sobreponerse al redimensionar
-  const maxConstraints = useMemo(() => {
-    if (allowOverlap || !allPanels || !containerBounds || isMaximized || isMinimized) {
-      return { maxWidth: undefined, maxHeight: undefined };
-    }
-    const boundsLimit = getAvailableResizeBounds(id, { x, y, width, height }, allPanels, containerBounds);
-    return {
-      maxWidth: Math.max(width, Math.max(minWidth, boundsLimit.maxWidth)),
-      maxHeight: Math.max(height, Math.max(minHeight, boundsLimit.maxHeight))
-    };
-  }, [id, x, y, width, height, isMaximized, isMinimized, allPanels, containerBounds, minWidth, minHeight, allowOverlap]);
-
-  const handleDragStart = useCallback(() => {
+  const handleBringToFront = useCallback(() => {
     if (onBringToFront) {
       onBringToFront(id);
     }
   }, [id, onBringToFront]);
+
+  const handleDragStart = useCallback(() => {
+    interactingRef.current = true;
+    handleBringToFront();
+  }, [handleBringToFront]);
 
   const handleDrag = useCallback((e, d) => {
     if (isMaximized) return;
@@ -91,6 +87,9 @@ const HomePanelWrapper = ({
 
   const handleDragStop = useCallback((e, d) => {
     if (isMaximized) return;
+    const fromUser = interactingRef.current;
+    interactingRef.current = false;
+    if (!fromUser) return;
     if (onDragEnd) {
       onDragEnd(id, { x: d.x, y: d.y, width, height: isMinimized ? minimizedHeight : height });
     } else if (onLayoutChange) {
@@ -104,29 +103,6 @@ const HomePanelWrapper = ({
 
   const handleResize = useCallback((e, direction, ref, delta, position) => {
     if (isMaximized || isMinimized) return;
-    if (!allowOverlap && allPanels && containerBounds) {
-      const boundsLimit = getAvailableResizeBounds(id, { x, y, width, height }, allPanels, containerBounds);
-      if ((direction.includes('left') || direction.includes('Left')) && position.x < boundsLimit.minLeft) {
-        const clampedX = boundsLimit.minLeft;
-        const clampedW = Math.max(minWidth, (x + width) - clampedX);
-        ref.style.left = `${clampedX}px`;
-        ref.style.width = `${clampedW}px`;
-      }
-      if ((direction.includes('top') || direction.includes('Top')) && position.y < boundsLimit.minTop) {
-        const clampedY = boundsLimit.minTop;
-        const clampedH = Math.max(minHeight, (y + height) - clampedY);
-        ref.style.top = `${clampedY}px`;
-        ref.style.height = `${clampedH}px`;
-      }
-      if ((direction.includes('right') || direction.includes('Right')) && (position.x + ref.offsetWidth) > boundsLimit.maxRight) {
-        const clampedW = Math.max(minWidth, boundsLimit.maxRight - position.x);
-        ref.style.width = `${clampedW}px`;
-      }
-      if ((direction.includes('bottom') || direction.includes('Bottom')) && (position.y + ref.offsetHeight) > boundsLimit.maxBottom) {
-        const clampedH = Math.max(minHeight, boundsLimit.maxBottom - position.y);
-        ref.style.height = `${clampedH}px`;
-      }
-    }
     if (onResizing) {
       onResizing(id, {
         x: position.x,
@@ -135,10 +111,13 @@ const HomePanelWrapper = ({
         height: ref.offsetHeight
       }, direction);
     }
-  }, [id, isMaximized, isMinimized, onResizing, allPanels, containerBounds, x, y, width, height, minWidth, minHeight, allowOverlap]);
+  }, [id, isMaximized, isMinimized, onResizing]);
 
   const handleResizeStop = useCallback((e, direction, ref, delta, position) => {
     if (isMaximized || isMinimized) return;
+    const fromUser = interactingRef.current;
+    interactingRef.current = false;
+    if (!fromUser) return;
     const newWidth = ref.offsetWidth;
     const newHeight = ref.offsetHeight;
 
@@ -230,7 +209,7 @@ const HomePanelWrapper = ({
             <div
               className="traffic-dot green"
               onClick={handleMax}
-              title={isMaximized ? "Restaurar tamaño original" : "Ampliar al espacio libre"}
+              title={maximizeTitle}
             />
           </div>
         );
@@ -247,7 +226,7 @@ const HomePanelWrapper = ({
             </div>
             <div
               className="gnome-dot maximize"
-              title={isMaximized ? "Restaurar tamaño original" : "Ampliar al espacio libre"}
+              title={maximizeTitle}
               onClick={handleMax}
             >
               <i className={isMaximized ? "pi pi-window-minimize" : "pi pi-stop"} style={{ fontSize: '8px' }} />
@@ -276,7 +255,7 @@ const HomePanelWrapper = ({
             </div>
             <div
               className="kde-dot maximize"
-              title={isMaximized ? "Restaurar tamaño original" : "Ampliar al espacio libre"}
+              title={maximizeTitle}
               onClick={handleMax}
             >
               <div className={`custom-icon ${isMaximized ? 'icon-restore' : 'icon-max'}`} />
@@ -305,7 +284,7 @@ const HomePanelWrapper = ({
             </div>
             <div
               className="win-dot maximize"
-              title={isMaximized ? "Restaurar tamaño original" : "Ampliar al espacio libre"}
+              title={maximizeTitle}
               onClick={handleMax}
             >
               <div className={`custom-icon ${isMaximized ? 'icon-restore' : 'icon-max'}`} />
@@ -334,7 +313,7 @@ const HomePanelWrapper = ({
             </div>
             <div
               className="matcha-dot maximize"
-              title={isMaximized ? "Restaurar tamaño original" : "Ampliar al espacio libre"}
+              title={maximizeTitle}
               onClick={handleMax}
             >
               <i className={isMaximized ? "pi pi-window-minimize" : "pi pi-stop"} style={{ fontSize: '9px' }} />
@@ -359,7 +338,7 @@ const HomePanelWrapper = ({
             </div>
             <div
               className="cyber-dot maximize"
-              title={isMaximized ? "Restaurar tamaño original" : "Ampliar al espacio libre"}
+              title={maximizeTitle}
               onClick={handleMax}
             >
               {isMaximized ? "RST" : "MAX"}
@@ -384,7 +363,7 @@ const HomePanelWrapper = ({
             </div>
             <div
               className="glass-dot maximize"
-              title={isMaximized ? "Restaurar tamaño original" : "Ampliar al espacio libre"}
+              title={maximizeTitle}
               onClick={handleMax}
             >
               <i className={isMaximized ? "pi pi-window-minimize" : "pi pi-stop"} style={{ fontSize: '9px' }} />
@@ -411,7 +390,7 @@ const HomePanelWrapper = ({
             />
             <div
               className={`retro-switch ${isMaximized ? 'on' : ''}`}
-              title={isMaximized ? "Restaurar CRT" : "Ampliar CRT"}
+              title={maximizeTitle}
               onClick={handleMax}
               style={{ border: '2px solid #0f0' }}
             />
@@ -441,7 +420,7 @@ const HomePanelWrapper = ({
             </div>
             <div
               className="cyber-pro-btn maximize"
-              title={isMaximized ? "Restaurar tamaño original" : "Ampliar al espacio libre"}
+              title={maximizeTitle}
               onClick={handleMax}
             >
               {isMaximized ? "⬡" : "◈"}
@@ -472,7 +451,7 @@ const HomePanelWrapper = ({
             </div>
             <div
               className="holo-btn maximize"
-              title={isMaximized ? "Restaurar HUD" : "Maximizar HUD"}
+              title={maximizeTitle}
               onClick={handleMax}
             >
               {isMaximized ? "◈" : "⬡"}
@@ -490,7 +469,7 @@ const HomePanelWrapper = ({
         return (
           <div className="synthwave-controls no-drag" onMouseDown={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
             <div className="synth-dot min" onClick={handleMin} title={isMinimized ? "Restaurar" : "Minimizar"} />
-            <div className="synth-dot max" onClick={handleMax} title={isMaximized ? "Restaurar tamaño original" : "Ampliar"} />
+            <div className="synth-dot max" onClick={handleMax} title={maximizeTitle} />
             {closable && (
               <div className="synth-dot close" onClick={handleClose} title="Cerrar" />
             )}
@@ -534,7 +513,7 @@ const HomePanelWrapper = ({
             </div>
             <div
               className="aurora-pill maximize"
-              title={isMaximized ? "Restaurar" : "Ampliar"}
+              title={maximizeTitle}
               onClick={handleMax}
             >
               <i className={isMaximized ? "pi pi-window-minimize" : "pi pi-stop"} style={{ fontSize: '9px' }} />
@@ -579,7 +558,7 @@ const HomePanelWrapper = ({
               <div className="traffic-dot red" onClick={handleClose} title="Cerrar" />
             )}
             <div className="traffic-dot yellow" onClick={handleMin} title={isMinimized ? "Restaurar" : "Minimizar"} />
-            <div className="traffic-dot green" onClick={handleMax} title={isMaximized ? "Restaurar tamaño original" : "Ampliar"} />
+            <div className="traffic-dot green" onClick={handleMax} title={maximizeTitle} />
           </div>
         );
 
@@ -590,7 +569,7 @@ const HomePanelWrapper = ({
               <div className="traffic-dot red" onClick={handleClose} title="Cerrar" />
             )}
             <div className="traffic-dot yellow" onClick={handleMin} title={isMinimized ? "Restaurar" : "Minimizar"} />
-            <div className="traffic-dot green" onClick={handleMax} title={isMaximized ? "Restaurar tamaño original" : "Ampliar"} />
+            <div className="traffic-dot green" onClick={handleMax} title={maximizeTitle} />
           </div>
         );
     }
@@ -611,16 +590,14 @@ const HomePanelWrapper = ({
           ? { x: 0, y: 0 }
           : { x, y }
       }
-      maxWidth={isMaximized ? undefined : maxConstraints.maxWidth}
-      maxHeight={isMaximized ? undefined : maxConstraints.maxHeight}
       onDragStart={handleDragStart}
       onDrag={handleDrag}
       onDragStop={handleDragStop}
       onResizeStart={handleDragStart}
       onResize={handleResize}
       onResizeStop={handleResizeStop}
-      minWidth={isMinimized ? Math.min(minWidth, 260) : minWidth}
-      minHeight={isMinimized ? minimizedHeight : minHeight}
+      minWidth={fillParent ? undefined : (isMinimized ? Math.min(minWidth, 260, width) : Math.min(minWidth, Math.max(72, width)))}
+      minHeight={fillParent ? undefined : (isMinimized ? minimizedHeight : Math.min(minHeight, Math.max(48, height)))}
       bounds={bounds}
       dragGrid={gridStep}
       resizeGrid={gridStep}
@@ -656,12 +633,13 @@ const HomePanelWrapper = ({
         display: 'flex',
         flexDirection: 'column',
         position: 'absolute',
-          overflow: isMinimized ? 'hidden' : undefined,
-          background: 'transparent',
-          transition: isMaximized ? 'all 0.2s ease' : 'none',
+        overflow: isMinimized ? 'hidden' : undefined,
+        background: 'transparent',
+        boxShadow: activeShadow,
+        transition: isMaximized ? 'all 0.2s ease' : 'none',
         ...style
       }}
-      onMouseDown={handleDragStart}
+      onMouseDown={handleBringToFront}
     >
       <div
         className={`home-panel-frame recents-terminal-frame ${terminalFrameStyle} ${isFramelessNonTerminal ? 'is-frameless-panel' : ''} ${isMaximized ? 'is-maximized' : ''} ${isMinimized ? 'is-minimized' : ''} ${className}`}

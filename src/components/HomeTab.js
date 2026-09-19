@@ -26,7 +26,14 @@ import {
   calculateDragSnap,
   calculateResizeSnap,
   autoEqualizeBottomRow,
-  computeExpandedPanelBounds
+  clampPanelsToCanvas,
+  clampRectToCanvas,
+  attachCanvasSize,
+  scalePanelsToCanvas,
+  resolveLayoutSourceCanvas,
+  getLayoutCanvasSize,
+  preserveShowingPanels,
+  MINIMIZED_PANEL_HEIGHT as SNAP_MINIMIZED_HEIGHT
 } from '../utils/homeTabSnapping';
 import {
   getBuiltinPresets,
@@ -35,7 +42,9 @@ import {
   deleteUserPreset,
   getCurrentDisplayKey,
   getLayoutForCurrentDisplay,
+  getLayoutForDisplay,
   saveLayoutForCurrentDisplay,
+  saveLayoutForDisplay,
   ensureRequiredHomeTerminal
 } from '../utils/homeTabPresets';
 
@@ -152,11 +161,13 @@ const computeDefaultPanelsLayout = (cWidth = (typeof window !== 'undefined' ? wi
       minHeight: 200,
       zIndex: 17,
       isMaximized: false
-    }
+    },
+    canvasWidth: w,
+    canvasHeight: h
   };
 };
 
-const MINIMIZED_PANEL_HEIGHT = 30;
+const MINIMIZED_PANEL_HEIGHT = SNAP_MINIMIZED_HEIGHT;
 
 function getPanelRestoreHeight(panelId, current) {
   if (current && current.preMinimizedHeight) return current.preMinimizedHeight;
@@ -213,199 +224,6 @@ function buildRestoredPanelState(current, panelId) {
     : { ...current };
   return withRequiredTerminalVisible(restored, panelId);
 }
-
-/**
- * Preserva con precisión la estructura, proporciones y evita por completo colisiones
- * o solapamientos entre paneles cuando la ventana o contenedor cambia de tamaño.
- */
-const smartRefitPanelsLayout = (prevLayout, newWidth, newHeight, prevWidth, prevHeight) => {
-  if (!prevLayout || newWidth <= 0 || newHeight <= 0) return prevLayout;
-  if (!prevWidth || !prevHeight || prevWidth <= 0 || prevHeight <= 0) {
-    prevWidth = newWidth;
-    prevHeight = newHeight;
-  }
-
-  const pad = 16;
-  const gap = 12;
-
-  // Si el cambio de tamaño es insignificante (< 2px), no alterar
-  if (Math.abs(newWidth - prevWidth) < 2 && Math.abs(newHeight - prevHeight) < 2) {
-    return prevLayout;
-  }
-
-  const nextLayout = { ...prevLayout };
-  const keys = Object.keys(prevLayout);
-
-  const activeKeys = keys.filter(
-    (k) => prevLayout[k] && prevLayout[k].visible !== false && !prevLayout[k].isMaximized
-  );
-
-  if (activeKeys.length === 0) return prevLayout;
-
-  // Si solo hay 1 panel activo, ocupa todo el espacio útil
-  if (activeKeys.length === 1) {
-    const k = activeKeys[0];
-    nextLayout[k] = {
-      ...prevLayout[k],
-      x: pad,
-      y: pad,
-      width: Math.max(prevLayout[k].minWidth || 200, newWidth - pad * 2),
-      height: Math.max(prevLayout[k].minHeight || 120, newHeight - pad * 2),
-      isMaximized: false
-    };
-    return nextLayout;
-  }
-
-  // Detectar si tenemos el layout clásico de 2 Columnas (ej: Terminal ocupando la columna izquierda)
-  const term = prevLayout.terminal;
-  const isColumnSplit = term && term.visible !== false && !term.isMaximized &&
-    activeKeys.length >= 2 &&
-    term.x <= pad + 35 &&
-    (prevWidth > 100 && term.width < prevWidth * 0.75) &&
-    activeKeys.some(k => k !== 'terminal' && prevLayout[k].x >= term.x + term.width - 40);
-
-  if (isColumnSplit) {
-    // --- LAYOUT SPLIT: Columna Izquierda (Terminal) + Columna Derecha ---
-    const prevTermW = Math.max(300, term.width);
-    const prevRightW = Math.max(260, prevWidth - prevTermW - pad * 2 - gap);
-    const leftRatio = prevTermW / (prevTermW + prevRightW);
-
-    const totalUsefulW = Math.max(500, newWidth - pad * 2 - gap);
-    const newLeftW = Math.max(term.minWidth || 320, Math.floor(totalUsefulW * leftRatio));
-    const newRightW = Math.max(240, totalUsefulW - newLeftW);
-    const rightX = pad + newLeftW + gap;
-
-    const hasSearchLeft = prevLayout.search && prevLayout.search.visible !== false && prevLayout.search.x <= pad + 40 && prevLayout.search.width <= newLeftW + 30;
-    let leftTopY = pad;
-
-    if (hasSearchLeft) {
-      const sH = Math.min(124, prevLayout.search.height || 110);
-      nextLayout.search = {
-        ...prevLayout.search,
-        x: pad,
-        y: pad,
-        width: newLeftW,
-        height: sH,
-        isMaximized: false
-      };
-      leftTopY = pad + sH + gap;
-    }
-
-    nextLayout.terminal = {
-      ...term,
-      x: pad,
-      y: leftTopY,
-      width: newLeftW,
-      height: Math.max(term.minHeight || 200, newHeight - leftTopY - pad),
-      isMaximized: false
-    };
-
-    const rightKeys = activeKeys.filter(k => k !== 'terminal' && (!hasSearchLeft || k !== 'search'));
-    rightKeys.sort((a, b) => (prevLayout[a].y || 0) - (prevLayout[b].y || 0));
-
-    const totalRightH = Math.max(180, newHeight - pad * 2 - gap * (rightKeys.length - 1));
-    const sumPrevRightH = rightKeys.reduce((acc, k) => acc + (prevLayout[k].height || 150), 0) || 1;
-
-    let rightY = pad;
-    rightKeys.forEach((k, idx) => {
-      const isLast = idx === rightKeys.length - 1;
-      const weightH = (prevLayout[k].height || 150) / sumPrevRightH;
-      const h = isLast ? Math.max(prevLayout[k].minHeight || 100, (newHeight - pad) - rightY) : Math.max(prevLayout[k].minHeight || 100, Math.floor(totalRightH * weightH));
-
-      nextLayout[k] = {
-        ...prevLayout[k],
-        x: rightX,
-        y: rightY,
-        width: newRightW,
-        height: h,
-        isMaximized: false
-      };
-      rightY += h + gap;
-    });
-
-    return nextLayout;
-  }
-
-  // --- LAYOUT POR BANDAS / FILAS HORIZONTALES (Dashboard Pro y general) ---
-  // Agrupar los paneles activos en filas según su coordenada Y
-  const sortedKeys = [...activeKeys].sort((a, b) => {
-    const midA = prevLayout[a].y + (prevLayout[a].height || 100) / 2;
-    const midB = prevLayout[b].y + (prevLayout[b].height || 100) / 2;
-    return midA - midB;
-  });
-
-  const rows = [];
-  sortedKeys.forEach((key) => {
-    const p = prevLayout[key];
-    let placed = false;
-
-    for (const row of rows) {
-      const ref = prevLayout[row[0]];
-      const verticalOverlap = Math.min(p.y + p.height, ref.y + ref.height) - Math.max(p.y, ref.y);
-      const minH = Math.min(p.height, ref.height);
-      const sameRow = Math.abs(p.y - ref.y) <= 45 || (verticalOverlap > minH * 0.35);
-
-      if (sameRow) {
-        row.push(key);
-        placed = true;
-        break;
-      }
-    }
-
-    if (!placed) {
-      rows.push([key]);
-    }
-  });
-
-  // Calcular alturas de las filas proporcionales a la altura útil total
-  const totalUsefulH = Math.max(200, newHeight - pad * 2 - gap * (rows.length - 1));
-  const rowPrevHeights = rows.map((row) => {
-    let maxH = 0;
-    row.forEach((k) => { maxH = Math.max(maxH, prevLayout[k].height || 180); });
-    return Math.max(90, maxH);
-  });
-  const sumPrevRowH = rowPrevHeights.reduce((acc, h) => acc + h, 0) || 1;
-
-  let curY = pad;
-  rows.forEach((row, rowIdx) => {
-    const isLastRow = rowIdx === rows.length - 1;
-    const rowRatio = rowPrevHeights[rowIdx] / sumPrevRowH;
-    const targetRowH = isLastRow
-      ? Math.max(100, (newHeight - pad) - curY)
-      : Math.max(100, Math.floor(totalUsefulH * rowRatio));
-
-    // Ordenar paneles de izquierda a derecha dentro de la fila
-    row.sort((a, b) => (prevLayout[a].x || 0) - (prevLayout[b].x || 0));
-
-    const totalUsefulW = Math.max(260, newWidth - pad * 2 - gap * (row.length - 1));
-    const rowPrevWidths = row.map((k) => Math.max(prevLayout[k].minWidth || 160, prevLayout[k].width || 200));
-    const sumPrevRowW = rowPrevWidths.reduce((acc, w) => acc + w, 0) || 1;
-
-    let curX = pad;
-    row.forEach((key, colIdx) => {
-      const isLastCol = colIdx === row.length - 1;
-      const colRatio = rowPrevWidths[colIdx] / sumPrevRowW;
-      const targetW = isLastCol
-        ? Math.max(prevLayout[key].minWidth || 160, (newWidth - pad) - curX)
-        : Math.max(prevLayout[key].minWidth || 160, Math.floor(totalUsefulW * colRatio));
-
-      nextLayout[key] = {
-        ...prevLayout[key],
-        x: curX,
-        y: curY,
-        width: targetW,
-        height: Math.max(prevLayout[key].minHeight || 90, targetRowH),
-        isMaximized: false
-      };
-
-      curX += targetW + gap;
-    });
-
-    curY += targetRowH + gap;
-  });
-
-  return nextLayout;
-};
 
 /**
  * Organiza de forma inteligente todos los paneles visibles actualmente
@@ -729,23 +547,31 @@ const HomeTab = ({
   const [containerHeight, setContainerHeight] = useState(window.innerHeight - 100);
   const [containerWidth, setContainerWidth] = useState(window.innerWidth - 100);
   const prevContainerSizeRef = useRef({
-    width: typeof window !== 'undefined' ? window.innerWidth : 1200,
-    height: typeof window !== 'undefined' ? window.innerHeight : 800
+    width: 0,
+    height: 0,
+    measured: false
   });
   const [hasUserMovedTerminal, setHasUserMovedTerminal] = useState(false);
 
   // Estado modular para paneles arrastrables y redimensionables con memoria por monitor
+  const authoredLayoutRef = useRef(null);
   const [panelsLayout, setPanelsLayout] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.HOME_TAB_PANELS_LAYOUT);
       const defaults = computeDefaultPanelsLayout();
       const base = saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
       const displayLayout = getLayoutForCurrentDisplay(base);
-      return ensureRequiredHomeTerminal({ ...defaults, ...displayLayout });
+      const loaded = ensureRequiredHomeTerminal(
+        preserveShowingPanels(base, { ...defaults, ...displayLayout })
+      );
+      authoredLayoutRef.current = loaded;
+      return loaded;
     } catch (e) {
       console.warn('Failed to parse saved home panels layout:', e);
     }
-    return computeDefaultPanelsLayout();
+    const fallback = computeDefaultPanelsLayout();
+    authoredLayoutRef.current = fallback;
+    return fallback;
   });
 
   const [snapToGrid, setSnapToGrid] = useState(() => {
@@ -770,6 +596,15 @@ const HomeTab = ({
   const [userPresets, setUserPresets] = useState(() => getUserPresets());
   const [newPresetName, setNewPresetName] = useState('');
   const lastDisplayKeyRef = useRef(getCurrentDisplayKey());
+  const layoutSyncLockRef = useRef(0);
+
+  const beginLayoutSync = useCallback(() => {
+    layoutSyncLockRef.current = Date.now();
+  }, []);
+
+  const isLayoutSyncLocked = useCallback(() => (
+    Date.now() - layoutSyncLockRef.current < 450
+  ), []);
 
   // Persistencia con debounce para el layout de paneles (guarda global y por monitor)
   const savePanelsLayoutTimerRef = useRef(null);
@@ -788,77 +623,140 @@ const HomeTab = ({
     }, 400);
   }, []);
 
+  const getCanvasSize = useCallback(() => ({
+    width: containerWidth > 100 ? containerWidth : (mainAreaRef.current?.offsetWidth || window.innerWidth),
+    height: containerHeight > 100 ? containerHeight : (mainAreaRef.current?.offsetHeight || window.innerHeight)
+  }), [containerWidth, containerHeight]);
+
+  const commitAuthoredLayout = useCallback((layout) => {
+    const w = mainAreaRef.current?.offsetWidth || (containerWidth > 100 ? containerWidth : 0);
+    const h = mainAreaRef.current?.offsetHeight || (containerHeight > 100 ? containerHeight : 0);
+    const authored = attachCanvasSize(
+      ensureRequiredHomeTerminal(layout),
+      w > 0 ? w : (layout?.canvasWidth || 1200),
+      h > 0 ? h : (layout?.canvasHeight || 800)
+    );
+    authoredLayoutRef.current = authored;
+    savePanelsLayoutDebounced(authored);
+    return authored;
+  }, [containerWidth, containerHeight, savePanelsLayoutDebounced]);
+
+  const scaleAuthoredToCanvas = useCallback((toW, toH) => {
+    const authored = authoredLayoutRef.current;
+    if (!authored || toW <= 0 || toH <= 0) return null;
+    const source = resolveLayoutSourceCanvas(authored, toW, toH);
+    return ensureRequiredHomeTerminal(
+      preserveShowingPanels(
+        authored,
+        scalePanelsToCanvas(authored, source.width, source.height, toW, toH)
+      )
+    );
+  }, []);
+
   const handlePanelLayoutChange = useCallback((panelId, updates) => {
+    if (isLayoutSyncLocked()) return;
     setPanelsLayout((prev) => {
       const currentPanel = prev[panelId] || {};
       const updatedPanel = panelId === 'terminal'
         ? { ...currentPanel, ...updates, visible: true }
         : { ...currentPanel, ...updates };
       const next = ensureRequiredHomeTerminal({ ...prev, [panelId]: updatedPanel });
-      savePanelsLayoutDebounced(next);
-      return next;
+      return commitAuthoredLayout(next);
     });
     if (mainAreaRef.current) {
       prevContainerSizeRef.current = {
         width: mainAreaRef.current.offsetWidth,
-        height: mainAreaRef.current.offsetHeight
+        height: mainAreaRef.current.offsetHeight,
+        measured: true
       };
     }
-  }, [savePanelsLayoutDebounced]);
+  }, [commitAuthoredLayout, isLayoutSyncLocked]);
 
-  // Callbacks de interacción de movimiento (sin líneas visuales en pantalla)
-  const handlePanelDragging = useCallback(() => {}, []);
+  const handlePanelDragging = useCallback((panelId, current) => {
+    if (!smartSnap) {
+      setSnapGuides([]);
+      return;
+    }
+    const bounds = getCanvasSize();
+    const snapped = calculateDragSnap(panelId, current, panelsLayout, bounds);
+    setSnapGuides(snapped.guides || []);
+  }, [smartSnap, getCanvasSize, panelsLayout]);
 
   const handlePanelDragEnd = useCallback((panelId, finalBounds) => {
-    const bounds = {
-      width: containerWidth > 100 ? containerWidth : (mainAreaRef.current?.offsetWidth || window.innerWidth),
-      height: containerHeight > 100 ? containerHeight : (mainAreaRef.current?.offsetHeight || window.innerHeight)
+    setSnapGuides([]);
+    if (isLayoutSyncLocked()) return;
+    const bounds = getCanvasSize();
+    const panel = panelsLayout[panelId] || {};
+    const moved =
+      Math.abs((finalBounds.x) - (Number(panel.x) || 0)) >= 3
+      || Math.abs((finalBounds.y) - (Number(panel.y) || 0)) >= 3;
+    if (!moved) return;
+    const minW = Math.min(panel.minWidth || 160, Number(finalBounds.width) || Number(panel.width) || 160, bounds.width);
+    const minH = Math.min(
+      panel.isMinimized ? MINIMIZED_PANEL_HEIGHT : (panel.minHeight || 90),
+      Number(finalBounds.height) || Number(panel.height) || 90,
+      bounds.height
+    );
+    let nextRect = {
+      x: finalBounds.x,
+      y: finalBounds.y,
+      width: finalBounds.width,
+      height: finalBounds.height
     };
-    if (panelId === 'terminal') {
-      const w = Math.min(finalBounds.width || 380, bounds.width);
-      const h = Math.min(finalBounds.height || MINIMIZED_PANEL_HEIGHT, bounds.height);
-      handlePanelLayoutChange(panelId, {
-        x: Math.max(0, Math.min(finalBounds.x, Math.max(0, bounds.width - w))),
-        y: Math.max(0, Math.min(finalBounds.y, Math.max(0, bounds.height - h)))
-      });
+    if (smartSnap) {
+      const snapped = calculateDragSnap(panelId, nextRect, panelsLayout, bounds);
+      nextRect = { ...nextRect, x: snapped.x, y: snapped.y };
+    }
+    const clamped = clampRectToCanvas(nextRect, bounds.width, bounds.height, minW, minH);
+    handlePanelLayoutChange(panelId, { x: clamped.x, y: clamped.y });
+  }, [smartSnap, getCanvasSize, panelsLayout, handlePanelLayoutChange, isLayoutSyncLocked]);
+
+  const handlePanelResizing = useCallback((panelId, current, direction) => {
+    if (!smartSnap) {
+      setSnapGuides([]);
       return;
     }
-    if (smartSnap) {
-      const snapped = calculateDragSnap(panelId, finalBounds, panelsLayout, bounds);
-      handlePanelLayoutChange(panelId, { x: snapped.x, y: snapped.y });
-    } else {
-      handlePanelLayoutChange(panelId, { x: finalBounds.x, y: finalBounds.y });
-    }
-  }, [smartSnap, containerWidth, containerHeight, panelsLayout, handlePanelLayoutChange]);
-
-  const handlePanelResizing = useCallback(() => {}, []);
+    const bounds = getCanvasSize();
+    const snapped = calculateResizeSnap(panelId, current, direction || '', panelsLayout, bounds);
+    setSnapGuides(snapped.guides || []);
+  }, [smartSnap, getCanvasSize, panelsLayout]);
 
   const handlePanelResizeEnd = useCallback((panelId, finalBounds, direction) => {
-    const bounds = {
-      width: containerWidth > 100 ? containerWidth : (mainAreaRef.current?.offsetWidth || window.innerWidth),
-      height: containerHeight > 100 ? containerHeight : (mainAreaRef.current?.offsetHeight || window.innerHeight)
+    setSnapGuides([]);
+    if (isLayoutSyncLocked()) return;
+    const bounds = getCanvasSize();
+    const panel = panelsLayout[panelId] || {};
+    const changed =
+      Math.abs((finalBounds.x) - (Number(panel.x) || 0)) >= 3
+      || Math.abs((finalBounds.y) - (Number(panel.y) || 0)) >= 3
+      || Math.abs((finalBounds.width) - (Number(panel.width) || 0)) >= 3
+      || Math.abs((finalBounds.height) - (Number(panel.height) || 0)) >= 3;
+    if (!changed) return;
+    const minW = Math.min(panel.minWidth || 160, Number(finalBounds.width) || Number(panel.width) || 160, bounds.width);
+    const minH = Math.min(panel.minHeight || 90, Number(finalBounds.height) || Number(panel.height) || 90, bounds.height);
+    let nextRect = {
+      x: finalBounds.x,
+      y: finalBounds.y,
+      width: finalBounds.width,
+      height: finalBounds.height
     };
-    if (panelId === 'terminal') {
-      const w = Math.max(380, Math.min(finalBounds.width, bounds.width));
-      const h = Math.max(200, Math.min(finalBounds.height, bounds.height));
-      handlePanelLayoutChange(panelId, {
-        x: Math.max(0, Math.min(finalBounds.x, Math.max(0, bounds.width - w))),
-        y: Math.max(0, Math.min(finalBounds.y, Math.max(0, bounds.height - h))),
-        width: w,
-        height: h
-      });
-      return;
+    if (smartSnap) {
+      const snapped = calculateResizeSnap(panelId, nextRect, direction || '', panelsLayout, bounds);
+      nextRect = {
+        x: snapped.x,
+        y: snapped.y,
+        width: snapped.width,
+        height: snapped.height
+      };
     }
-    const snapped = calculateResizeSnap(panelId, finalBounds, direction, panelsLayout, bounds, {
-      THRESHOLD: smartSnap ? 10 : 0
-    });
+    const clamped = clampRectToCanvas(nextRect, bounds.width, bounds.height, minW, minH);
     handlePanelLayoutChange(panelId, {
-      x: snapped.x,
-      y: snapped.y,
-      width: snapped.width,
-      height: snapped.height
+      x: clamped.x,
+      y: clamped.y,
+      width: clamped.width,
+      height: clamped.height
     });
-  }, [smartSnap, containerWidth, containerHeight, panelsLayout, handlePanelLayoutChange]);
+  }, [smartSnap, getCanvasSize, panelsLayout, handlePanelLayoutChange, isLayoutSyncLocked]);
 
   const handleToggleSmartSnap = useCallback(() => {
     setSmartSnap((prev) => {
@@ -872,30 +770,31 @@ const HomeTab = ({
     const w = containerWidth > 100 ? containerWidth : (mainAreaRef.current?.offsetWidth || window.innerWidth);
     const h = containerHeight > 100 ? containerHeight : (mainAreaRef.current?.offsetHeight || window.innerHeight);
     const updated = ensureRequiredHomeTerminal(autoEqualizeBottomRow(panelsLayout, w, h));
-    setPanelsLayout(updated);
-    savePanelsLayoutDebounced(updated);
+    setPanelsLayout(commitAuthoredLayout(updated));
     setTimeout(() => {
       window.dispatchEvent(new Event('resize'));
     }, 60);
-  }, [containerWidth, containerHeight, panelsLayout, savePanelsLayoutDebounced]);
+  }, [containerWidth, containerHeight, panelsLayout, commitAuthoredLayout]);
 
   const handleApplyBuiltinPreset = useCallback((presetKey) => {
     const w = containerWidth > 100 ? containerWidth : (mainAreaRef.current?.offsetWidth || window.innerWidth);
     const h = containerHeight > 100 ? containerHeight : (mainAreaRef.current?.offsetHeight || window.innerHeight);
     const builtins = getBuiltinPresets(w, h);
     if (builtins[presetKey]?.layout) {
-      const layout = ensureRequiredHomeTerminal(builtins[presetKey].layout);
-      setPanelsLayout(layout);
-      savePanelsLayoutDebounced(layout);
+      const layout = ensureRequiredHomeTerminal(
+        clampPanelsToCanvas(builtins[presetKey].layout, w, h)
+      );
+      setPanelsLayout(commitAuthoredLayout(layout));
       setTimeout(() => {
         window.dispatchEvent(new Event('resize'));
       }, 60);
     }
-  }, [containerWidth, containerHeight, savePanelsLayoutDebounced]);
+  }, [containerWidth, containerHeight, commitAuthoredLayout]);
 
   const handleSaveCustomPreset = useCallback(() => {
     if (!newPresetName.trim()) return;
-    const updated = saveUserPreset(newPresetName, panelsLayout);
+    const snapshot = authoredLayoutRef.current || panelsLayout;
+    const updated = saveUserPreset(newPresetName, snapshot);
     setUserPresets(updated);
     setNewPresetName('');
   }, [newPresetName, panelsLayout]);
@@ -907,13 +806,16 @@ const HomeTab = ({
 
   const handleApplyCustomPreset = useCallback((preset) => {
     if (!preset?.layout) return;
-    const layout = ensureRequiredHomeTerminal(preset.layout);
-    setPanelsLayout(layout);
-    savePanelsLayoutDebounced(layout);
+    const { width: w, height: h } = getCanvasSize();
+    const source = resolveLayoutSourceCanvas(preset.layout, w, h);
+    const layout = ensureRequiredHomeTerminal(
+      scalePanelsToCanvas(preset.layout, source.width, source.height, w, h)
+    );
+    setPanelsLayout(commitAuthoredLayout(layout));
     setTimeout(() => {
       window.dispatchEvent(new Event('resize'));
     }, 60);
-  }, [savePanelsLayoutDebounced]);
+  }, [commitAuthoredLayout, getCanvasSize]);
 
   const handleBringToFront = useCallback((panelId) => {
     setPanelsLayout((prev) => {
@@ -923,10 +825,18 @@ const HomeTab = ({
       Object.values(prev).forEach((p) => {
         if (p && typeof p.zIndex === 'number') maxZ = Math.max(maxZ, p.zIndex);
       });
-      const nextZ = panelId === 'terminal' ? Math.max(maxZ + 1, 80) : maxZ + 1;
+      const nextZ = maxZ + 1;
       if (current.zIndex >= nextZ) return prev;
       const next = { ...prev, [panelId]: { ...current, zIndex: nextZ } };
-      savePanelsLayoutDebounced(next);
+      const authored = authoredLayoutRef.current;
+      if (authored && authored[panelId]) {
+        const authoredNext = {
+          ...authored,
+          [panelId]: { ...authored[panelId], zIndex: nextZ }
+        };
+        authoredLayoutRef.current = authoredNext;
+        savePanelsLayoutDebounced(authoredNext);
+      }
       return next;
     });
   }, [savePanelsLayoutDebounced]);
@@ -947,13 +857,13 @@ const HomeTab = ({
           : buildRestoredPanelState(current, 'terminal');
 
         const next = ensureRequiredHomeTerminal({ ...prev, terminal: nextPanel });
-        savePanelsLayoutDebounced(next);
+        const authored = commitAuthoredLayout(next);
         if (nextPanel.isMinimized !== current.isMinimized) {
           setTimeout(() => {
             window.dispatchEvent(new Event('resize'));
           }, 50);
         }
-        return next;
+        return authored;
       });
       return;
     }
@@ -1026,10 +936,14 @@ const HomeTab = ({
         ...prev,
         [panelId]: updatedPanel
       });
-      savePanelsLayoutDebounced(next);
-      return next;
+      const canvasW = mainAreaRef.current?.offsetWidth;
+      const canvasH = mainAreaRef.current?.offsetHeight;
+      const fitted = (canvasW > 0 && canvasH > 0)
+        ? clampPanelsToCanvas(next, canvasW, canvasH)
+        : next;
+      return commitAuthoredLayout(fitted);
     });
-  }, [savePanelsLayoutDebounced]);
+  }, [commitAuthoredLayout]);
 
   const handleClosePanel = useCallback((panelId) => {
     handleTogglePanelVisibility(panelId, false);
@@ -1040,25 +954,35 @@ const HomeTab = ({
       const current = prev[panelId];
       if (!current) return prev;
 
-      const w = containerWidth > 100 ? containerWidth : (mainAreaRef.current?.offsetWidth || window.innerWidth);
-      const h = containerHeight > 100 ? containerHeight : (mainAreaRef.current?.offsetHeight || window.innerHeight);
-      const bounds = { width: w, height: h };
+      const { width: w, height: h } = getCanvasSize();
+      let maxZ = 10;
+      Object.values(prev).forEach((p) => {
+        if (p && typeof p.zIndex === 'number') maxZ = Math.max(maxZ, p.zIndex);
+      });
 
       let nextPanel;
-      if (current.isMaximized && current.originalBounds) {
-        // Restaurar tamaño y posición original
-        nextPanel = {
+      if (current.isMaximized) {
+        const restored = {
           ...current,
-          x: current.originalBounds.x,
-          y: current.originalBounds.y,
-          width: current.originalBounds.width,
-          height: current.originalBounds.height,
+          x: current.originalBounds?.x ?? current.x,
+          y: current.originalBounds?.y ?? current.y,
+          width: current.originalBounds?.width ?? current.width,
+          height: current.originalBounds?.height ?? current.height,
           isMaximized: false,
           isMinimized: false,
           originalBounds: null
         };
-      } else if (panelId === 'terminal') {
-        const effectiveHeight = current.isMinimized ? (current.preMinimizedHeight || 280) : current.height;
+        nextPanel = clampRectToCanvas(
+          restored,
+          w,
+          h,
+          restored.minWidth || 160,
+          restored.minHeight || 90
+        );
+      } else {
+        const effectiveHeight = current.isMinimized
+          ? (current.preMinimizedHeight || current.height || 280)
+          : current.height;
         nextPanel = {
           ...current,
           originalBounds: {
@@ -1074,44 +998,21 @@ const HomeTab = ({
           isMaximized: true,
           isMinimized: false,
           preMinimizedHeight: undefined,
-          visible: true,
-          zIndex: Math.max(current.zIndex || 10, 80)
-        };
-      } else {
-        // Si estaba minimizado, restaurar altura original previa antes de calcular expansión
-        const effectiveHeight = current.isMinimized ? (current.preMinimizedHeight || 280) : current.height;
-        const basePanel = { ...current, height: effectiveHeight, isMinimized: false };
-        const stateForCalc = { ...prev, [panelId]: basePanel };
-        const expanded = computeExpandedPanelBounds(panelId, stateForCalc, bounds);
-        nextPanel = {
-          ...current,
-          originalBounds: {
-            x: current.x,
-            y: current.y,
-            width: current.width,
-            height: effectiveHeight
-          },
-          x: expanded.x,
-          y: expanded.y,
-          width: expanded.width,
-          height: expanded.height,
-          isMaximized: true,
-          isMinimized: false,
-          preMinimizedHeight: undefined
+          zIndex: maxZ + 1
         };
       }
 
       const next = ensureRequiredHomeTerminal({
         ...prev,
-        [panelId]: panelId === 'terminal' ? { ...nextPanel, visible: true } : nextPanel
+        [panelId]: nextPanel
       });
-      savePanelsLayoutDebounced(next);
+      const authored = commitAuthoredLayout(next);
       setTimeout(() => {
         window.dispatchEvent(new Event('resize'));
       }, 50);
-      return next;
+      return authored;
     });
-  }, [containerWidth, containerHeight, savePanelsLayoutDebounced]);
+  }, [getCanvasSize, commitAuthoredLayout]);
 
   const handleToggleMinimizePanel = useCallback((panelId) => {
     setPanelsLayout((prev) => {
@@ -1126,67 +1027,65 @@ const HomeTab = ({
         ...prev,
         [panelId]: nextPanel
       });
-      savePanelsLayoutDebounced(next);
+      const authored = commitAuthoredLayout(next);
       setTimeout(() => {
         window.dispatchEvent(new Event('resize'));
       }, 50);
-      return next;
+      return authored;
     });
-  }, [savePanelsLayoutDebounced]);
+  }, [commitAuthoredLayout]);
 
   const handleResetLayout = useCallback(() => {
-    const fresh = ensureRequiredHomeTerminal(computeDefaultPanelsLayout(containerWidth, containerHeight));
-    setPanelsLayout(fresh);
-    localStorage.setItem(STORAGE_KEYS.HOME_TAB_PANELS_LAYOUT, JSON.stringify(fresh));
+    const { width: w, height: h } = getCanvasSize();
+    const fresh = ensureRequiredHomeTerminal(
+      clampPanelsToCanvas(computeDefaultPanelsLayout(w, h), w, h)
+    );
+    setPanelsLayout(commitAuthoredLayout(fresh));
     window.dispatchEvent(new Event('resize'));
-  }, [containerWidth, containerHeight]);
+  }, [getCanvasSize, commitAuthoredLayout]);
 
   const handleAutoOrganizePanels = useCallback(() => {
-    const w = containerWidth > 100 ? containerWidth : (mainAreaRef.current?.offsetWidth || window.innerWidth);
-    const h = containerHeight > 100 ? containerHeight : (mainAreaRef.current?.offsetHeight || window.innerHeight);
-    const next = ensureRequiredHomeTerminal(computeAutoOrganizeLayout(panelsLayout, w, h));
-    setPanelsLayout(next);
-    localStorage.setItem(STORAGE_KEYS.HOME_TAB_PANELS_LAYOUT, JSON.stringify(next));
+    const { width: w, height: h } = getCanvasSize();
+    const next = ensureRequiredHomeTerminal(
+      clampPanelsToCanvas(computeAutoOrganizeLayout(panelsLayout, w, h), w, h)
+    );
+    setPanelsLayout(commitAuthoredLayout(next));
     setTimeout(() => {
       window.dispatchEvent(new Event('resize'));
     }, 60);
-  }, [containerWidth, containerHeight, panelsLayout]);
+  }, [getCanvasSize, panelsLayout, commitAuthoredLayout]);
 
   const handleApplySplitPreset = useCallback(() => {
-    const w = containerWidth > 100 ? containerWidth : window.innerWidth;
-    const h = containerHeight > 100 ? containerHeight : window.innerHeight;
+    const { width: w, height: h } = getCanvasSize();
     const colW = Math.max(340, Math.floor((w - 48) / 2));
     const searchH = 124;
     const topY = 16;
     const bottomY = topY + searchH + 12;
     const bottomH = Math.max(220, h - bottomY - 24);
 
-    const next = ensureRequiredHomeTerminal({
+    const next = ensureRequiredHomeTerminal(clampPanelsToCanvas({
       ...panelsLayout,
       search: { ...panelsLayout.search, visible: true, x: Math.max(20, Math.floor((w - 560) / 2)), y: topY, width: 560, height: searchH, isMaximized: false },
       terminal: { ...panelsLayout.terminal, visible: true, x: 16, y: bottomY, width: colW, height: bottomH, zIndex: 12, isMaximized: false, isMinimized: false },
       recents: { ...panelsLayout.recents, visible: true, x: 28 + colW, y: bottomY, width: colW, height: bottomH, zIndex: 11, isMaximized: false }
-    });
-    setPanelsLayout(next);
-    localStorage.setItem(STORAGE_KEYS.HOME_TAB_PANELS_LAYOUT, JSON.stringify(next));
+    }, w, h));
+    setPanelsLayout(commitAuthoredLayout(next));
     window.dispatchEvent(new Event('resize'));
-  }, [containerWidth, containerHeight, panelsLayout]);
+  }, [getCanvasSize, panelsLayout, commitAuthoredLayout]);
 
   const handleApplyTerminalMaxPreset = useCallback(() => {
-    const w = containerWidth > 100 ? containerWidth : window.innerWidth;
-    const h = containerHeight > 100 ? containerHeight : window.innerHeight;
-    const next = ensureRequiredHomeTerminal({
+    const { width: w, height: h } = getCanvasSize();
+    const next = ensureRequiredHomeTerminal(clampPanelsToCanvas({
       ...panelsLayout,
       search: { ...panelsLayout.search, visible: true, x: Math.max(20, Math.floor((w - 580) / 2)), y: 12, width: 580, height: 120, zIndex: 20, isMaximized: false },
       terminal: { ...panelsLayout.terminal, visible: true, x: 16, y: 140, width: w - 32, height: h - 156, zIndex: 10, isMaximized: false, isMinimized: false },
       recents: { ...panelsLayout.recents, visible: false },
       favorites: { ...panelsLayout.favorites, visible: false },
       quickbar: { ...panelsLayout.quickbar, visible: false }
-    });
-    setPanelsLayout(next);
-    localStorage.setItem(STORAGE_KEYS.HOME_TAB_PANELS_LAYOUT, JSON.stringify(next));
+    }, w, h));
+    setPanelsLayout(commitAuthoredLayout(next));
     window.dispatchEvent(new Event('resize'));
-  }, [containerWidth, containerHeight, panelsLayout]);
+  }, [getCanvasSize, panelsLayout, commitAuthoredLayout]);
 
   const handleToggleSnapToGrid = useCallback(() => {
     setSnapToGrid((prev) => {
@@ -1226,58 +1125,63 @@ const HomeTab = ({
     }
   }, []);
 
-  // Medir el tamaño real del contenedor y reajustar paneles inteligentemente
+  // Medir el canvas: escalar el layout autorado, sin persistir el resultado derivado
   useEffect(() => {
     const updateSize = () => {
-      if (mainAreaRef.current) {
-        const newH = mainAreaRef.current.offsetHeight;
-        const newW = mainAreaRef.current.offsetWidth;
+      if (!mainAreaRef.current) return;
+      const newH = mainAreaRef.current.offsetHeight;
+      const newW = mainAreaRef.current.offsetWidth;
+      if (newW <= 0 || newH <= 0) return;
 
-        if (newW > 0 && newH > 0) {
-          const prevW = prevContainerSizeRef.current.width;
-          const prevH = prevContainerSizeRef.current.height;
+      const prevW = prevContainerSizeRef.current.width;
+      const prevH = prevContainerSizeRef.current.height;
+      const hasRealPrev = prevContainerSizeRef.current.measured;
 
-          // Verificar si cambió el monitor / resolución de pantalla
-          const curDisplayKey = getCurrentDisplayKey();
-          if (lastDisplayKeyRef.current !== curDisplayKey) {
-            lastDisplayKeyRef.current = curDisplayKey;
-            const monitorLayout = getLayoutForCurrentDisplay(null);
-            if (monitorLayout) {
-              setPanelsLayout(ensureRequiredHomeTerminal(monitorLayout));
-              prevContainerSizeRef.current = { width: newW, height: newH };
-              setContainerHeight(newH);
-              setContainerWidth(newW);
-              setTimeout(() => {
-                window.dispatchEvent(new Event('resize'));
-              }, 60);
-              return;
-            }
-          }
-
-          // Reajustar paneles ante cualquier redimensionado de ventana (> 4px)
-          if (Math.abs(newW - prevW) > 4 || Math.abs(newH - prevH) > 4) {
-            setPanelsLayout((prevLayout) => {
-              const refitted = ensureRequiredHomeTerminal(
-                smartRefitPanelsLayout(prevLayout, newW, newH, prevW, prevH)
-              );
-              savePanelsLayoutDebounced(refitted);
-              return refitted;
-            });
-            prevContainerSizeRef.current = { width: newW, height: newH };
-          }
-
-          setContainerHeight(newH);
-          setContainerWidth(newW);
-
-          // Notificar a xterm.js para que recalcule filas y columnas
-          setTimeout(() => {
-            window.dispatchEvent(new Event('resize'));
-          }, 60);
+      const curDisplayKey = getCurrentDisplayKey();
+      if (lastDisplayKeyRef.current !== curDisplayKey) {
+        const prevKey = lastDisplayKeyRef.current;
+        lastDisplayKeyRef.current = curDisplayKey;
+        if (authoredLayoutRef.current) {
+          saveLayoutForDisplay(prevKey, authoredLayoutRef.current);
         }
+        const scaled = scaleAuthoredToCanvas(newW, newH);
+        if (scaled) {
+          beginLayoutSync();
+          setPanelsLayout((prev) => preserveShowingPanels(prev, scaled));
+        }
+        prevContainerSizeRef.current = { width: newW, height: newH, measured: true };
+        setContainerHeight(newH);
+        setContainerWidth(newW);
+        setTimeout(() => {
+          window.dispatchEvent(new Event('resize'));
+        }, 60);
+        return;
+      }
+
+      const sizeChanged = !hasRealPrev
+        || Math.abs(newW - prevW) > 4
+        || Math.abs(newH - prevH) > 4;
+
+      if (sizeChanged) {
+        const authored = authoredLayoutRef.current;
+        if (authored && !getLayoutCanvasSize(authored) && !hasRealPrev) {
+          authoredLayoutRef.current = attachCanvasSize(authored, newW, newH);
+        }
+        const scaled = scaleAuthoredToCanvas(newW, newH);
+        if (scaled) {
+          beginLayoutSync();
+          setPanelsLayout((prev) => preserveShowingPanels(prev, scaled));
+        }
+        prevContainerSizeRef.current = { width: newW, height: newH, measured: true };
+        setContainerHeight(newH);
+        setContainerWidth(newW);
+        setTimeout(() => {
+          window.dispatchEvent(new Event('resize'));
+        }, 60);
       }
     };
 
-    updateSize(); // Medición inicial
+    updateSize();
 
     const observer = new ResizeObserver(updateSize);
     if (mainAreaRef.current) observer.observe(mainAreaRef.current);
@@ -1287,7 +1191,7 @@ const HomeTab = ({
       window.removeEventListener('resize', updateSize);
       observer.disconnect();
     };
-  }, [savePanelsLayoutDebounced]);
+  }, [scaleAuthoredToCanvas, beginLayoutSync]);
 
   // Funci??n para centrar y dimensionar el terminal
   const centerAndSizeTerminal = () => {

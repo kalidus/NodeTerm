@@ -5,15 +5,42 @@ const USER_PRESETS_KEY = 'nodeterm_home_user_presets';
 const MONITOR_LAYOUTS_KEY = 'nodeterm_home_monitor_layouts';
 
 /**
- * Obtiene la clave de resolución de pantalla actual (ej: "1920x1080" o "2560x1440").
+ * Obtiene la clave de pantalla actual (resolucion + DPR).
+ * Conserva lookup legado "1920x1080" en getLayoutForCurrentDisplay.
  */
 export function getCurrentDisplayKey() {
   if (typeof window === 'undefined' || !window.screen) {
-    return '1920x1080';
+    return '1920x1080@1';
   }
   const w = window.screen.width || 1920;
   const h = window.screen.height || 1080;
-  return `${w}x${h}`;
+  const dpr = (typeof window.devicePixelRatio === 'number' && window.devicePixelRatio > 0)
+    ? window.devicePixelRatio
+    : 1;
+  const dprKey = Number.isInteger(dpr) ? String(dpr) : String(Math.round(dpr * 100) / 100);
+  return `${w}x${h}@${dprKey}`;
+}
+
+function lookupMonitorLayout(map, key) {
+  if (!map || !key) return null;
+  if (map[key]) return map[key];
+  const legacy = String(key).split('@')[0];
+  if (legacy && map[legacy]) return map[legacy];
+  return null;
+}
+
+/**
+ * Guarda el layout autorado para una clave de pantalla concreta.
+ */
+export function saveLayoutForDisplay(key, layout) {
+  if (!key || !layout) return;
+  try {
+    const map = getMonitorLayoutsMap();
+    map[key] = ensureRequiredHomeTerminal(layout);
+    localStorage.setItem(MONITOR_LAYOUTS_KEY, JSON.stringify(map));
+  } catch (err) {
+    console.warn('[HomeTabPresets] Error al guardar monitor layout:', err);
+  }
 }
 
 const REQUIRED_HOME_TERMINAL_DEFAULTS = {
@@ -70,34 +97,24 @@ export function getMonitorLayoutsMap() {
  * @param {Record<string, any>} layout
  */
 export function saveLayoutForCurrentDisplay(layout) {
-  if (!layout) return;
-  try {
-    const key = getCurrentDisplayKey();
-    const map = getMonitorLayoutsMap();
-    map[key] = ensureRequiredHomeTerminal(layout);
-    localStorage.setItem(MONITOR_LAYOUTS_KEY, JSON.stringify(map));
-  } catch (err) {
-    console.warn('[HomeTabPresets] Error al guardar monitor layout:', err);
-  }
+  saveLayoutForDisplay(getCurrentDisplayKey(), layout);
 }
 
-/**
- * Obtiene el layout guardado para la pantalla/resolución actual, si existe.
- * 
- * @param {Record<string, any>} fallbackLayout
- * @returns {Record<string, any>}
- */
-export function getLayoutForCurrentDisplay(fallbackLayout) {
+export function getLayoutForDisplay(key, fallbackLayout) {
   try {
-    const key = getCurrentDisplayKey();
     const map = getMonitorLayoutsMap();
-    if (map && map[key]) {
-      return ensureRequiredHomeTerminal(map[key]);
+    const found = lookupMonitorLayout(map, key);
+    if (found) {
+      return ensureRequiredHomeTerminal(found);
     }
   } catch (err) {
     console.warn('[HomeTabPresets] Error al recuperar monitor layout:', err);
   }
   return fallbackLayout ? ensureRequiredHomeTerminal(fallbackLayout) : fallbackLayout;
+}
+
+export function getLayoutForCurrentDisplay(fallbackLayout) {
+  return getLayoutForDisplay(getCurrentDisplayKey(), fallbackLayout);
 }
 
 /**

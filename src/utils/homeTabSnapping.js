@@ -14,6 +14,347 @@ export const SNAP_CONFIG = {
   CANVAS_PAD: 16       // Margen exterior con respecto al contenedor
 };
 
+export const MINIMIZED_PANEL_HEIGHT = 30;
+
+const LAYOUT_META_KEYS = new Set(['canvasWidth', 'canvasHeight']);
+
+export function isHomePanelState(id, value) {
+  return Boolean(id) && !LAYOUT_META_KEYS.has(id) && value && typeof value === 'object';
+}
+
+export function attachCanvasSize(layout, canvasW, canvasH) {
+  if (!layout || typeof layout !== 'object') return layout;
+  return {
+    ...layout,
+    canvasWidth: canvasW,
+    canvasHeight: canvasH
+  };
+}
+
+export function getLayoutCanvasSize(layout) {
+  const w = Number(layout?.canvasWidth);
+  const h = Number(layout?.canvasHeight);
+  if (w > 0 && h > 0) return { width: w, height: h };
+  return null;
+}
+
+export function getVisiblePanelsBBox(layout) {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxR = 0;
+  let maxB = 0;
+  let found = false;
+  Object.entries(layout || {}).forEach(([id, panel]) => {
+    if (!isHomePanelState(id, panel) || panel.visible === false) return;
+    found = true;
+    const x = Number(panel.x) || 0;
+    const y = Number(panel.y) || 0;
+    const w = Number(panel.width) || 0;
+    const h = panel.isMinimized ? MINIMIZED_PANEL_HEIGHT : (Number(panel.height) || 0);
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxR = Math.max(maxR, x + w);
+    maxB = Math.max(maxB, y + h);
+  });
+  if (!found) return { x: 0, y: 0, width: 0, height: 0 };
+  return {
+    x: minX,
+    y: minY,
+    width: Math.max(1, maxR - minX),
+    height: Math.max(1, maxB - minY)
+  };
+}
+
+export function resolveLayoutSourceCanvas(layout, fallbackW, fallbackH) {
+  const stored = getLayoutCanvasSize(layout);
+  if (stored) return stored;
+  const bbox = getVisiblePanelsBBox(layout);
+  if (bbox.width > 0 && bbox.height > 0) {
+    return {
+      width: Math.max(1, bbox.x + bbox.width),
+      height: Math.max(1, bbox.y + bbox.height)
+    };
+  }
+  return {
+    width: fallbackW > 0 ? fallbackW : 1200,
+    height: fallbackH > 0 ? fallbackH : 800
+  };
+}
+
+function scaleBounds(bounds, sx, sy) {
+  if (!bounds) return bounds;
+  return {
+    x: (Number(bounds.x) || 0) * sx,
+    y: (Number(bounds.y) || 0) * sy,
+    width: (Number(bounds.width) || 0) * sx,
+    height: (Number(bounds.height) || 0) * sy
+  };
+}
+
+/**
+ * Escala el layout de un canvas origen a un canvas destino, conservando la composicion.
+ * Si tras minimos el bounding box no cabe, reduce el grupo de forma uniforme.
+ */
+export function scalePanelsToCanvas(layout, fromW, fromH, toW, toH) {
+  if (!layout || toW <= 0 || toH <= 0) return layout;
+  const srcW = fromW > 0 ? fromW : toW;
+  const srcH = fromH > 0 ? fromH : toH;
+
+  if (Math.abs(srcW - toW) < 2 && Math.abs(srcH - toH) < 2) {
+    return attachCanvasSize(layout, toW, toH);
+  }
+
+  const sx = toW / srcW;
+  const sy = toH / srcH;
+  const next = attachCanvasSize({ ...layout }, toW, toH);
+
+  Object.keys(next).forEach((id) => {
+    const panel = next[id];
+    if (!isHomePanelState(id, panel) || panel.visible === false) return;
+
+    if (panel.isMaximized) {
+      next[id] = {
+        ...panel,
+        x: 0,
+        y: 0,
+        width: toW,
+        height: toH,
+        originalBounds: scaleBounds(panel.originalBounds, sx, sy),
+        preMinimizedHeight: panel.preMinimizedHeight
+          ? panel.preMinimizedHeight * sy
+          : panel.preMinimizedHeight
+      };
+      return;
+    }
+
+    const scaledW = Math.max(72, (Number(panel.width) || 160) * sx);
+    const scaledH = panel.isMinimized
+      ? MINIMIZED_PANEL_HEIGHT
+      : Math.max(48, (Number(panel.height) || 90) * sy);
+
+    next[id] = clampRectToCanvas(
+      {
+        ...panel,
+        x: (Number(panel.x) || 0) * sx,
+        y: (Number(panel.y) || 0) * sy,
+        width: scaledW,
+        height: scaledH,
+        originalBounds: scaleBounds(panel.originalBounds, sx, sy),
+        preMinimizedHeight: panel.preMinimizedHeight
+          ? panel.preMinimizedHeight * sy
+          : panel.preMinimizedHeight
+      },
+      toW,
+      toH,
+      Math.min(scaledW, toW),
+      Math.min(scaledH, toH)
+    );
+  });
+
+  const bbox = getVisiblePanelsBBox(next);
+  if (bbox.width > toW + 1 || bbox.height > toH + 1) {
+    const extra = Math.min(1, toW / Math.max(1, bbox.width), toH / Math.max(1, bbox.height));
+    if (extra < 0.999) {
+      Object.keys(next).forEach((id) => {
+        const panel = next[id];
+        if (!isHomePanelState(id, panel) || panel.visible === false || panel.isMaximized) return;
+        const fittedW = Math.max(72, (Number(panel.width) || 160) * extra);
+        const fittedH = panel.isMinimized
+          ? MINIMIZED_PANEL_HEIGHT
+          : Math.max(48, (Number(panel.height) || 90) * extra);
+        next[id] = clampRectToCanvas(
+          {
+            ...panel,
+            x: (Number(panel.x) || 0) * extra,
+            y: (Number(panel.y) || 0) * extra,
+            width: fittedW,
+            height: fittedH
+          },
+          toW,
+          toH,
+          Math.min(fittedW, toW),
+          Math.min(fittedH, toH)
+        );
+      });
+    }
+  }
+
+  return ensureShowingPanelsPeek(raiseCoveredPanels(next), toW, toH);
+}
+
+export function isPanelShowing(id, panel) {
+  if (!isHomePanelState(id, panel)) return false;
+  if (panel.visible === false) return false;
+  if (id === 'search' || id === 'terminal') return true;
+  return panel.visible === true;
+}
+
+function panelRect(panel) {
+  return {
+    x: Number(panel.x) || 0,
+    y: Number(panel.y) || 0,
+    w: Number(panel.width) || 0,
+    h: panel.isMinimized ? MINIMIZED_PANEL_HEIGHT : (Number(panel.height) || 0)
+  };
+}
+
+function coverageRatio(outer, inner) {
+  const a = panelRect(outer);
+  const b = panelRect(inner);
+  if (b.w < 8 || b.h < 8) return 0;
+  const overlapX = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x));
+  const overlapY = Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+  return (overlapX * overlapY) / Math.max(1, b.w * b.h);
+}
+
+/**
+ * Si un panel visible queda casi cubierto por otro con z-index mayor o igual,
+ * lo sube al frente para que no desaparezca al compactar el canvas.
+ */
+export function raiseCoveredPanels(layout) {
+  const ids = Object.keys(layout || {}).filter((id) => isPanelShowing(id, layout[id]) && !layout[id].isMaximized);
+  if (ids.length < 2) return layout;
+  const next = { ...layout };
+  let maxZ = 10;
+  Object.values(next).forEach((p) => {
+    if (p && typeof p.zIndex === 'number') maxZ = Math.max(maxZ, p.zIndex);
+  });
+
+  ids.forEach((id) => {
+    const panel = next[id];
+    const buried = ids.some((otherId) => {
+      if (otherId === id) return false;
+      const other = next[otherId];
+      const zPanel = panel.zIndex || 0;
+      const zOther = other.zIndex || 0;
+      return zOther >= zPanel && coverageRatio(other, panel) >= 0.8;
+    });
+    if (buried) {
+      maxZ += 1;
+      next[id] = { ...panel, zIndex: maxZ };
+    }
+  });
+  return next;
+}
+
+export function preserveShowingPanels(previous, next) {
+  if (!next) return next;
+  if (!previous) return next;
+  const out = { ...next };
+  Object.keys(previous).forEach((id) => {
+    if (!isPanelShowing(id, previous[id]) || !isHomePanelState(id, out[id])) return;
+    if (id === 'search' || id === 'terminal') {
+      if (out[id].visible === false) {
+        out[id] = { ...out[id], visible: true };
+      }
+      return;
+    }
+    if (out[id].visible !== true) {
+      out[id] = { ...out[id], visible: true };
+    }
+  });
+  return out;
+}
+
+/**
+ * Si tras compactar un panel sigue tapado, lo trae al frente en cascada
+ * para que se vea al menos la barra de titulo.
+ */
+export function ensureShowingPanelsPeek(layout, canvasW, canvasH) {
+  if (!layout || canvasW <= 0 || canvasH <= 0) return layout;
+  const next = { ...layout };
+  const ids = Object.keys(next).filter((id) => isPanelShowing(id, next[id]) && !next[id].isMaximized);
+  if (ids.length < 2) return next;
+
+  let maxZ = 10;
+  Object.values(next).forEach((p) => {
+    if (p && typeof p.zIndex === 'number') maxZ = Math.max(maxZ, p.zIndex);
+  });
+
+  const STEP = 36;
+  let cascade = 0;
+  ids.forEach((id) => {
+    const panel = next[id];
+    const buried = ids.some((otherId) => {
+      if (otherId === id) return false;
+      const other = next[otherId];
+      return (other.zIndex || 0) >= (panel.zIndex || 0) && coverageRatio(other, panel) >= 0.72;
+    });
+    if (!buried) return;
+
+    cascade += 1;
+    maxZ += 1;
+    const ox = Math.min(Math.max(0, canvasW - 96), STEP * cascade);
+    const oy = Math.min(Math.max(0, canvasH - 64), STEP * cascade);
+    const capW = Math.min(Number(panel.width) || 160, Math.floor(canvasW * 0.86), Math.max(72, canvasW - ox));
+    const capH = panel.isMinimized
+      ? MINIMIZED_PANEL_HEIGHT
+      : Math.min(Number(panel.height) || 90, Math.floor(canvasH * 0.86), Math.max(48, canvasH - oy));
+
+    next[id] = clampRectToCanvas(
+      {
+        ...panel,
+        x: ox,
+        y: oy,
+        width: Math.max(72, capW),
+        height: Math.max(panel.isMinimized ? MINIMIZED_PANEL_HEIGHT : 48, capH),
+        zIndex: maxZ
+      },
+      canvasW,
+      canvasH,
+      Math.min(Math.max(72, capW), canvasW),
+      Math.min(Math.max(panel.isMinimized ? MINIMIZED_PANEL_HEIGHT : 48, capH), canvasH)
+    );
+  });
+
+  return next;
+}
+
+/**
+ * Recorta un rectangulo para que quede entero dentro del canvas.
+ * Si el minimo supera el canvas, se reduce hasta caber.
+ */
+export function clampRectToCanvas(rect, canvasW, canvasH, minWidth = 160, minHeight = 90) {
+  if (!rect || canvasW <= 0 || canvasH <= 0) return rect;
+  const minW = Math.max(1, Math.min(minWidth, canvasW));
+  const minH = Math.max(1, Math.min(minHeight, canvasH));
+  const width = Math.min(canvasW, Math.max(minW, Math.round(Number(rect.width) || minW)));
+  const height = Math.min(canvasH, Math.max(minH, Math.round(Number(rect.height) || minH)));
+  const x = Math.max(0, Math.min(Math.round(Number(rect.x) || 0), canvasW - width));
+  const y = Math.max(0, Math.min(Math.round(Number(rect.y) || 0), canvasH - height));
+  return { ...rect, x, y, width, height };
+}
+
+/**
+ * Ajusta el layout de paneles al canvas actual sin reorganizar filas ni columnas.
+ * Los maximizados llenan el canvas; el resto mantiene px y se empuja/recorta si se sale.
+ */
+export function clampPanelsToCanvas(layout, canvasW, canvasH) {
+  if (!layout || canvasW <= 0 || canvasH <= 0) return layout;
+  const next = { ...layout };
+  Object.keys(next).forEach((id) => {
+    const panel = next[id];
+    if (!isHomePanelState(id, panel) || panel.visible === false) return;
+    if (panel.isMaximized) {
+      next[id] = {
+        ...panel,
+        x: 0,
+        y: 0,
+        width: canvasW,
+        height: canvasH
+      };
+      return;
+    }
+    const minW = panel.minWidth || 160;
+    const minH = panel.isMinimized ? MINIMIZED_PANEL_HEIGHT : (panel.minHeight || 90);
+    next[id] = {
+      ...panel,
+      ...clampRectToCanvas(panel, canvasW, canvasH, minW, minH)
+    };
+  });
+  return next;
+}
+
 /**
  * Calcula la posición imantada magnéticamente durante el arrastre (drag).
  * 
@@ -150,18 +491,21 @@ export function calculateDragSnap(
     bestY = current.y;
   }
 
-  // Limitar estrictamente dentro del canvas
-  const clampedX = Math.max(cfg.CANVAS_PAD, Math.min(bestX, cW - pW - cfg.CANVAS_PAD));
-  const clampedY = Math.max(cfg.CANVAS_PAD, Math.min(bestY, cH - pH - cfg.CANVAS_PAD));
+  const clamped = clampRectToCanvas(
+    { x: bestX, y: bestY, width: pW, height: pH },
+    cW,
+    cH,
+    pW,
+    pH
+  );
 
   return {
-    x: clampedX,
-    y: clampedY,
+    x: clamped.x,
+    y: clamped.y,
     guides
   };
 }
 
-/**
 /**
  * Calcula los límites de colisión y el espacio disponible para el redimensionado de un panel,
  * analizando los obstáculos vecinos que intersectan en el eje transversal y los márgenes del canvas.
@@ -269,17 +613,19 @@ export function getAvailableResizeBounds(
   };
 }
 
+function pushResizeGuide(guides, matchedGuide, type, start, end, canvasLimit) {
+  if (!matchedGuide) return;
+  guides.push({
+    type,
+    pos: matchedGuide.guidePos,
+    start: Math.max(0, start - 10),
+    end: Math.min(canvasLimit, end + 10),
+    reason: matchedGuide.reason
+  });
+}
+
 /**
- * Calcula las dimensiones y posición imantadas magnéticamente durante el redimensionado (resize),
- * impidiendo estrictamente sobreponerse a otros paneles.
- * 
- * @param {string} resizedId ID del panel
- * @param {{x: number, y: number, width: number, height: number}} current Dimensiones actuales
- * @param {string} direction Dirección del resize (ej. 'right', 'bottom', 'bottomRight', etc.)
- * @param {Record<string, any>} allPanels Mapa de todos los paneles
- * @param {{width: number, height: number}} containerBounds Límites del canvas contenedor
- * @param {Partial<typeof SNAP_CONFIG>} [customConfig]
- * @returns {{ x: number, y: number, width: number, height: number, guides: Array<any> }}
+ * Imanta el resize a bordes de canvas y vecinos. No impide solapamiento.
  */
 export function calculateResizeSnap(
   resizedId,
@@ -290,9 +636,12 @@ export function calculateResizeSnap(
   customConfig = {}
 ) {
   const cfg = { ...SNAP_CONFIG, ...customConfig };
-  const { width: cW, height: cH } = containerBounds;
-
-  const limits = getAvailableResizeBounds(resizedId, current, allPanels, containerBounds, customConfig);
+  const cW = containerBounds?.width || 0;
+  const cH = containerBounds?.height || 0;
+  const dir = direction || '';
+  const panel = allPanels?.[resizedId] || {};
+  const minW = panel.minWidth || 160;
+  const minH = panel.minHeight || 90;
 
   let newX = current.x;
   let newY = current.y;
@@ -304,12 +653,11 @@ export function calculateResizeSnap(
     ([id, p]) => id !== resizedId && p && p.visible !== false && !p.isMaximized
   );
 
-  const isResizingRight = direction.includes('right') || direction.includes('Right');
-  const isResizingBottom = direction.includes('bottom') || direction.includes('Bottom');
-  const isResizingLeft = direction.includes('left') || direction.includes('Left');
-  const isResizingTop = direction.includes('top') || direction.includes('Top');
+  const isResizingRight = dir.includes('right') || dir.includes('Right');
+  const isResizingBottom = dir.includes('bottom') || dir.includes('Bottom');
+  const isResizingLeft = dir.includes('left') || dir.includes('Left');
+  const isResizingTop = dir.includes('top') || dir.includes('Top');
 
-  // --- RESIZE POR EL BORDE DERECHO ---
   if (isResizingRight) {
     const currentRight = current.x + current.width;
     let bestRight = currentRight;
@@ -317,13 +665,11 @@ export function calculateResizeSnap(
     let matchedGuide = null;
 
     const rightCandidates = [
-      // Borde del obstáculo contiguo o límite del canvas
-      { target: limits.maxRight, guidePos: limits.maxRight, reason: 'free-space-limit' },
-      { target: cW - cfg.CANVAS_PAD, guidePos: cW - cfg.CANVAS_PAD, reason: 'canvas-right' }
+      { target: cW, guidePos: cW, reason: 'canvas-right' },
+      { target: cW - cfg.CANVAS_PAD, guidePos: cW - cfg.CANVAS_PAD, reason: 'canvas-pad-right' }
     ];
 
     otherPanels.forEach(([_, other]) => {
-      // 1. Imantar justo al borde izquierdo del vecino - gap
       rightCandidates.push({
         target: other.x - cfg.GAP,
         guidePos: other.x - cfg.GAP,
@@ -331,7 +677,6 @@ export function calculateResizeSnap(
         otherY1: other.y,
         otherY2: other.y + other.height
       });
-      // 2. Alinear borde derecho con el borde derecho del vecino
       rightCandidates.push({
         target: other.x + other.width,
         guidePos: other.x + other.width,
@@ -351,16 +696,18 @@ export function calculateResizeSnap(
     }
 
     if (matchedGuide && minDiffR <= cfg.THRESHOLD) {
-      newW = Math.max(160, bestRight - current.x);
-    }
-
-    // CLAMPING ANTI-COLISIÓN ESTRICTO: Nunca sobrepasar limits.maxRight
-    if (current.x + newW > limits.maxRight) {
-      newW = Math.max(160, limits.maxRight - current.x);
+      newW = Math.max(minW, bestRight - current.x);
+      pushResizeGuide(
+        guides,
+        matchedGuide,
+        'vertical',
+        Math.min(current.y, matchedGuide.otherY1 !== undefined ? matchedGuide.otherY1 : 0),
+        Math.max(current.y + newH, matchedGuide.otherY2 !== undefined ? matchedGuide.otherY2 : cH),
+        cH
+      );
     }
   }
 
-  // --- RESIZE POR EL BORDE INFERIOR ---
   if (isResizingBottom) {
     const currentBottom = current.y + current.height;
     let bestBottom = currentBottom;
@@ -368,13 +715,11 @@ export function calculateResizeSnap(
     let matchedGuide = null;
 
     const bottomCandidates = [
-      // Borde del obstáculo contiguo o límite del canvas
-      { target: limits.maxBottom, guidePos: limits.maxBottom, reason: 'free-space-limit' },
-      { target: cH - cfg.CANVAS_PAD, guidePos: cH - cfg.CANVAS_PAD, reason: 'canvas-bottom' }
+      { target: cH, guidePos: cH, reason: 'canvas-bottom' },
+      { target: cH - cfg.CANVAS_PAD, guidePos: cH - cfg.CANVAS_PAD, reason: 'canvas-pad-bottom' }
     ];
 
     otherPanels.forEach(([_, other]) => {
-      // 1. Imantar encima del vecino inferior - gap
       bottomCandidates.push({
         target: other.y - cfg.GAP,
         guidePos: other.y - cfg.GAP,
@@ -382,7 +727,6 @@ export function calculateResizeSnap(
         otherX1: other.x,
         otherX2: other.x + other.width
       });
-      // 2. Alinear borde inferior con el borde inferior del vecino
       bottomCandidates.push({
         target: other.y + other.height,
         guidePos: other.y + other.height,
@@ -391,13 +735,11 @@ export function calculateResizeSnap(
         otherX2: other.x + other.width
       });
 
-      // 3. AUTO-SNAP DE ALTURA IDÉNTICA en la misma fila
       const shareRow = Math.abs(current.y - other.y) < 50;
       if (shareRow) {
-        const sameHeightBottom = current.y + other.height;
         bottomCandidates.push({
-          target: sameHeightBottom,
-          guidePos: sameHeightBottom,
+          target: current.y + other.height,
+          guidePos: current.y + other.height,
           reason: 'equal-height-row',
           otherX1: other.x,
           otherX2: other.x + other.width
@@ -415,16 +757,18 @@ export function calculateResizeSnap(
     }
 
     if (matchedGuide && minDiffB <= cfg.THRESHOLD) {
-      newH = Math.max(90, bestBottom - current.y);
-    }
-
-    // CLAMPING ANTI-COLISIÓN ESTRICTO: Nunca sobrepasar limits.maxBottom
-    if (current.y + newH > limits.maxBottom) {
-      newH = Math.max(90, limits.maxBottom - current.y);
+      newH = Math.max(minH, bestBottom - current.y);
+      pushResizeGuide(
+        guides,
+        matchedGuide,
+        'horizontal',
+        Math.min(current.x, matchedGuide.otherX1 !== undefined ? matchedGuide.otherX1 : 0),
+        Math.max(current.x + newW, matchedGuide.otherX2 !== undefined ? matchedGuide.otherX2 : cW),
+        cW
+      );
     }
   }
 
-  // --- RESIZE POR EL BORDE IZQUIERDO ---
   if (isResizingLeft) {
     const currentLeft = current.x;
     let bestLeft = currentLeft;
@@ -432,8 +776,8 @@ export function calculateResizeSnap(
     let matchedGuide = null;
 
     const leftCandidates = [
-      { target: limits.minLeft, guidePos: limits.minLeft, reason: 'free-space-limit' },
-      { target: cfg.CANVAS_PAD, guidePos: cfg.CANVAS_PAD, reason: 'canvas-left' }
+      { target: 0, guidePos: 0, reason: 'canvas-left' },
+      { target: cfg.CANVAS_PAD, guidePos: cfg.CANVAS_PAD, reason: 'canvas-pad-left' }
     ];
 
     otherPanels.forEach(([_, other]) => {
@@ -464,18 +808,19 @@ export function calculateResizeSnap(
 
     if (matchedGuide && minDiffL <= cfg.THRESHOLD) {
       const deltaX = current.x - bestLeft;
-      newW = Math.max(160, current.width + deltaX);
-      newX = bestLeft;
-    }
-
-    // CLAMPING ANTI-COLISIÓN ESTRICTO: Nunca pasar a la izquierda de limits.minLeft
-    if (newX < limits.minLeft) {
-      newX = limits.minLeft;
-      newW = Math.max(160, (current.x + current.width) - newX);
+      newW = Math.max(minW, current.width + deltaX);
+      newX = current.x + current.width - newW;
+      pushResizeGuide(
+        guides,
+        matchedGuide,
+        'vertical',
+        Math.min(current.y, matchedGuide.otherY1 !== undefined ? matchedGuide.otherY1 : 0),
+        Math.max(current.y + newH, matchedGuide.otherY2 !== undefined ? matchedGuide.otherY2 : cH),
+        cH
+      );
     }
   }
 
-  // --- RESIZE POR EL BORDE SUPERIOR ---
   if (isResizingTop) {
     const currentTop = current.y;
     let bestTop = currentTop;
@@ -483,8 +828,8 @@ export function calculateResizeSnap(
     let matchedGuide = null;
 
     const topCandidates = [
-      { target: limits.minTop, guidePos: limits.minTop, reason: 'free-space-limit' },
-      { target: cfg.CANVAS_PAD, guidePos: cfg.CANVAS_PAD, reason: 'canvas-top' }
+      { target: 0, guidePos: 0, reason: 'canvas-top' },
+      { target: cfg.CANVAS_PAD, guidePos: cfg.CANVAS_PAD, reason: 'canvas-pad-top' }
     ];
 
     otherPanels.forEach(([_, other]) => {
@@ -515,22 +860,29 @@ export function calculateResizeSnap(
 
     if (matchedGuide && minDiffT <= cfg.THRESHOLD) {
       const deltaY = current.y - bestTop;
-      newH = Math.max(90, current.height + deltaY);
-      newY = bestTop;
-    }
-
-    // CLAMPING ANTI-COLISIÓN ESTRICTO: Nunca pasar hacia arriba de limits.minTop
-    if (newY < limits.minTop) {
-      newY = limits.minTop;
-      newH = Math.max(90, (current.y + current.height) - newY);
+      newH = Math.max(minH, current.height + deltaY);
+      newY = current.y + current.height - newH;
+      pushResizeGuide(
+        guides,
+        matchedGuide,
+        'horizontal',
+        Math.min(current.x, matchedGuide.otherX1 !== undefined ? matchedGuide.otherX1 : 0),
+        Math.max(current.x + newW, matchedGuide.otherX2 !== undefined ? matchedGuide.otherX2 : cW),
+        cW
+      );
     }
   }
 
+  const clamped = clampRectToCanvas(
+    { x: newX, y: newY, width: newW, height: newH },
+    cW,
+    cH,
+    minW,
+    minH
+  );
+
   return {
-    x: newX,
-    y: newY,
-    width: newW,
-    height: newH,
+    ...clamped,
     guides
   };
 }

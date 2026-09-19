@@ -818,7 +818,7 @@ const ConnectionHistory = ({
 											padding: '4px',
 											transition: 'all 0.2s'
 										}}
-										title={panelsLayout.terminal?.isMaximized ? "Restaurar Terminal" : "Ampliar Terminal al espacio libre"}
+										title={panelsLayout.terminal?.isMaximized ? "Restaurar" : "Maximizar"}
 										onClick={(e) => {
 											e.stopPropagation();
 											if (onToggleMaximizePanel) onToggleMaximizePanel('terminal');
@@ -833,7 +833,7 @@ const ConnectionHistory = ({
 					)}
 
 					{/* 3. Panel Conexiones Recientes */}
-					{panelsLayout.recents && panelsLayout.recents.visible && (
+					{panelsLayout.recents && panelsLayout.recents.visible !== false && panelsLayout.recents.visible && (
 						<HomePanelWrapper
 							id="recents"
 							title="~/recent"
