@@ -1488,6 +1488,24 @@ const ConnectionHistoryStyles = ({
 					box-shadow: none !important;
 					border: none !important;
 				}
+				.home-panel-frame.is-minimized {
+					min-height: 30px !important;
+					height: 100% !important;
+					flex: none !important;
+					overflow: hidden !important;
+				}
+				.home-panel-frame.is-minimized .recents-terminal-header {
+					height: 30px !important;
+					border-bottom: none !important;
+					border-radius: 12px !important;
+				}
+				.home-panel-frame.is-minimized .home-panel-body {
+					display: none !important;
+					height: 0 !important;
+					min-height: 0 !important;
+					overflow: hidden !important;
+					flex: none !important;
+				}
 				.home-panel-drag-handle {
 					user-select: none;
 				}

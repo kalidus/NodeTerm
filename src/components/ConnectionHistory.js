@@ -579,6 +579,7 @@ const ConnectionHistory = ({
 			activeIndex={searchMgr.activeIndex}
 			setActiveIndex={searchMgr.setActiveIndex}
 			onTogglePanelVisibility={onTogglePanelVisibility}
+			onToggleMinimizePanel={onToggleMinimizePanel}
 			onToggleTerminalVisibility={onToggleTerminalVisibility}
 			panelsLayout={panelsLayout}
 			onBringToFront={onBringToFront}
@@ -727,7 +728,7 @@ const ConnectionHistory = ({
 					)}
 
 					{/* 2. Panel Terminal Integrado */}
-					{panelsLayout.terminal && panelsLayout.terminal.visible !== false && (
+					{panelsLayout.terminal && (
 						<HomePanelWrapper
 							id="terminal"
 							title={terminalTitle}
@@ -737,7 +738,8 @@ const ConnectionHistory = ({
 							containerBounds={effectiveContainerBounds}
 							onLayoutChange={onLayoutChange}
 							onBringToFront={onBringToFront}
-							onClose={() => (onClosePanel ? onClosePanel('terminal') : onTogglePanelVisibility?.('terminal', false))}
+							closable={false}
+							onClose={() => (onToggleMinimizePanel ? onToggleMinimizePanel('terminal') : null)}
 							onToggleMaximize={() => {
 								if (onToggleMaximizePanel) onToggleMaximizePanel('terminal');
 								else if (onToggleLocalTerminalMaximized) onToggleLocalTerminalMaximized();
@@ -1101,7 +1103,7 @@ const ConnectionHistory = ({
 					>
 						<div className="recents-terminal-header" onDoubleClick={onToggleLocalTerminalMaximized} style={{ cursor: 'pointer' }}>
 							<div className="traffic-lights">
-								<div className="traffic-dot red" onClick={() => { if (onTerminalToggle) onTerminalToggle(false); setActiveBottomView('recent'); }} title="Ocultar Terminal" />
+								<div className="traffic-dot red" onClick={() => { if (onToggleMinimizePanel) onToggleMinimizePanel('terminal'); }} title="Minimizar Terminal" />
 								<div className="traffic-dot yellow" />
 								<div className="traffic-dot green" onClick={onToggleLocalTerminalMaximized} title={localTerminalMaximized ? "Restaurar tamaño" : "Maximizar Terminal"} />
 							</div>

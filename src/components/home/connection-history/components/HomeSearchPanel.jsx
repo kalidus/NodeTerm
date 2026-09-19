@@ -20,6 +20,7 @@ export const HomeSearchPanel = ({
 	activeIndex,
 	setActiveIndex,
 	onTogglePanelVisibility,
+	onToggleMinimizePanel,
 	onToggleTerminalVisibility,
 	panelsLayout,
 	onBringToFront,
@@ -116,13 +117,13 @@ export const HomeSearchPanel = ({
 						<button
 							type="button"
 							className="hero-terminal-btn"
-							title="Mostrar/ocultar terminal local"
+							title={panelsLayout?.terminal?.isMinimized ? "Restaurar terminal local" : "Minimizar terminal local"}
 							onClick={(e) => {
 								e.stopPropagation();
-								if (onTogglePanelVisibility) {
-									onTogglePanelVisibility('terminal');
-								} else if (onToggleTerminalVisibility) {
-									onToggleTerminalVisibility();
+								if (onToggleMinimizePanel) {
+									onToggleMinimizePanel('terminal');
+								} else if (onTogglePanelVisibility) {
+									onTogglePanelVisibility('terminal', false);
 								}
 							}}
 						>

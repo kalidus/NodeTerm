@@ -16,6 +16,39 @@ export function getCurrentDisplayKey() {
   return `${w}x${h}`;
 }
 
+const REQUIRED_HOME_TERMINAL_DEFAULTS = {
+  visible: true,
+  x: 20,
+  y: 154,
+  width: 380,
+  height: 240,
+  minWidth: 380,
+  minHeight: 200,
+  zIndex: 10,
+  isMaximized: false
+};
+
+/**
+ * El panel terminal del HomeTab es obligatorio: nunca puede quedar oculto.
+ * Si falta o llega con visible=false (preset antiguo, restore por monitor), se corrige.
+ */
+export function ensureRequiredHomeTerminal(layout) {
+  if (!layout || typeof layout !== 'object') {
+    return layout;
+  }
+  const current = layout.terminal && typeof layout.terminal === 'object'
+    ? layout.terminal
+    : {};
+  return {
+    ...layout,
+    terminal: {
+      ...REQUIRED_HOME_TERMINAL_DEFAULTS,
+      ...current,
+      visible: true
+    }
+  };
+}
+
 /**
  * Obtiene el mapa de layouts guardados por resolución de pantalla.
  * @returns {Record<string, any>}
@@ -41,7 +74,7 @@ export function saveLayoutForCurrentDisplay(layout) {
   try {
     const key = getCurrentDisplayKey();
     const map = getMonitorLayoutsMap();
-    map[key] = layout;
+    map[key] = ensureRequiredHomeTerminal(layout);
     localStorage.setItem(MONITOR_LAYOUTS_KEY, JSON.stringify(map));
   } catch (err) {
     console.warn('[HomeTabPresets] Error al guardar monitor layout:', err);
@@ -59,12 +92,12 @@ export function getLayoutForCurrentDisplay(fallbackLayout) {
     const key = getCurrentDisplayKey();
     const map = getMonitorLayoutsMap();
     if (map && map[key]) {
-      return map[key];
+      return ensureRequiredHomeTerminal(map[key]);
     }
   } catch (err) {
     console.warn('[HomeTabPresets] Error al recuperar monitor layout:', err);
   }
-  return fallbackLayout;
+  return fallbackLayout ? ensureRequiredHomeTerminal(fallbackLayout) : fallbackLayout;
 }
 
 /**
@@ -321,7 +354,7 @@ export function saveUserPreset(name, layout) {
     id: `preset_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     name: trimmedName,
     createdAt: Date.now(),
-    layout: JSON.parse(JSON.stringify(layout))
+    layout: JSON.parse(JSON.stringify(ensureRequiredHomeTerminal(layout)))
   };
 
   if (existingIdx !== -1) {

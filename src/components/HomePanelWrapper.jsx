@@ -21,6 +21,7 @@ const HomePanelWrapper = ({
   onToggleMaximize,
   onToggleMinimize,
   onMinimize,
+  closable = true,
   terminalFrameStyle = 'macos',
   snapToGrid = true,
   smartSnap = true,
@@ -57,10 +58,13 @@ const HomePanelWrapper = ({
   } = panelState;
 
   const isMinimized = typeof stateMinimized === 'boolean' ? stateMinimized : internalMinimized;
+  const allowOverlap = id === 'terminal';
+  const fillParent = isMaximized && (allowOverlap || !panelState.originalBounds);
+  const minimizedHeight = 30;
 
   // Cálculo dinámico de límites máximos anti-colisión para impedir sobreponerse al redimensionar
   const maxConstraints = useMemo(() => {
-    if (!allPanels || !containerBounds || isMaximized || isMinimized) {
+    if (allowOverlap || !allPanels || !containerBounds || isMaximized || isMinimized) {
       return { maxWidth: undefined, maxHeight: undefined };
     }
     const boundsLimit = getAvailableResizeBounds(id, { x, y, width, height }, allPanels, containerBounds);
@@ -68,7 +72,7 @@ const HomePanelWrapper = ({
       maxWidth: Math.max(width, Math.max(minWidth, boundsLimit.maxWidth)),
       maxHeight: Math.max(height, Math.max(minHeight, boundsLimit.maxHeight))
     };
-  }, [id, x, y, width, height, isMaximized, isMinimized, allPanels, containerBounds, minWidth, minHeight]);
+  }, [id, x, y, width, height, isMaximized, isMinimized, allPanels, containerBounds, minWidth, minHeight, allowOverlap]);
 
   const handleDragStart = useCallback(() => {
     if (onBringToFront) {
@@ -80,7 +84,7 @@ const HomePanelWrapper = ({
     if (isMaximized) return;
     if (onDragging) {
       const curW = rndRef.current?.resizableElement?.current?.offsetWidth || width;
-      const curH = rndRef.current?.resizableElement?.current?.offsetHeight || (isMinimized ? 36 : height);
+      const curH = rndRef.current?.resizableElement?.current?.offsetHeight || (isMinimized ? minimizedHeight : height);
       onDragging(id, { x: d.x, y: d.y, width: curW, height: curH });
     }
   }, [id, isMaximized, isMinimized, onDragging, width, height]);
@@ -88,7 +92,7 @@ const HomePanelWrapper = ({
   const handleDragStop = useCallback((e, d) => {
     if (isMaximized) return;
     if (onDragEnd) {
-      onDragEnd(id, { x: d.x, y: d.y, width, height: isMinimized ? 36 : height });
+      onDragEnd(id, { x: d.x, y: d.y, width, height: isMinimized ? minimizedHeight : height });
     } else if (onLayoutChange) {
       onLayoutChange(id, {
         ...panelState,
@@ -100,7 +104,7 @@ const HomePanelWrapper = ({
 
   const handleResize = useCallback((e, direction, ref, delta, position) => {
     if (isMaximized || isMinimized) return;
-    if (allPanels && containerBounds) {
+    if (!allowOverlap && allPanels && containerBounds) {
       const boundsLimit = getAvailableResizeBounds(id, { x, y, width, height }, allPanels, containerBounds);
       if ((direction.includes('left') || direction.includes('Left')) && position.x < boundsLimit.minLeft) {
         const clampedX = boundsLimit.minLeft;
@@ -131,7 +135,7 @@ const HomePanelWrapper = ({
         height: ref.offsetHeight
       }, direction);
     }
-  }, [id, isMaximized, isMinimized, onResizing, allPanels, containerBounds, x, y, width, height, minWidth, minHeight]);
+  }, [id, isMaximized, isMinimized, onResizing, allPanels, containerBounds, x, y, width, height, minWidth, minHeight, allowOverlap]);
 
   const handleResizeStop = useCallback((e, direction, ref, delta, position) => {
     if (isMaximized || isMinimized) return;
@@ -161,11 +165,6 @@ const HomePanelWrapper = ({
     }, 50);
   }, [id, isMaximized, isMinimized, onResizeEnd, onLayoutChange, panelState]);
 
-  const handleClose = useCallback((e) => {
-    e?.stopPropagation();
-    onClose?.(id);
-  }, [id, onClose]);
-
   const handleMin = useCallback((e) => {
     e?.stopPropagation();
     if (onToggleMinimize) {
@@ -176,6 +175,15 @@ const HomePanelWrapper = ({
       setInternalMinimized(prev => !prev);
     }
   }, [id, onToggleMinimize, onMinimize]);
+
+  const handleClose = useCallback((e) => {
+    e?.stopPropagation();
+    if (!closable) {
+      handleMin(e);
+      return;
+    }
+    onClose?.(id);
+  }, [id, onClose, closable, handleMin]);
 
   const handleMax = useCallback((e) => {
     e?.stopPropagation();
@@ -207,11 +215,13 @@ const HomePanelWrapper = ({
       case 'macos':
         return (
           <div className="traffic-lights no-drag" onMouseDown={(e) => e.stopPropagation()}>
-            <div
-              className="traffic-dot red"
-              onClick={handleClose}
-              title="Cerrar / Ocultar panel"
-            />
+            {closable && (
+              <div
+                className="traffic-dot red"
+                onClick={handleClose}
+                title="Cerrar / Ocultar panel"
+              />
+            )}
             <div
               className="traffic-dot yellow"
               onClick={handleMin}
@@ -242,13 +252,15 @@ const HomePanelWrapper = ({
             >
               <i className={isMaximized ? "pi pi-window-minimize" : "pi pi-stop"} style={{ fontSize: '8px' }} />
             </div>
-            <div
-              className="gnome-dot close"
-              title="Cerrar"
-              onClick={handleClose}
-            >
-              <i className="pi pi-times" style={{ fontSize: '9px' }} />
-            </div>
+            {closable && (
+              <div
+                className="gnome-dot close"
+                title="Cerrar"
+                onClick={handleClose}
+              >
+                <i className="pi pi-times" style={{ fontSize: '9px' }} />
+              </div>
+            )}
           </div>
         );
 
@@ -269,13 +281,15 @@ const HomePanelWrapper = ({
             >
               <div className={`custom-icon ${isMaximized ? 'icon-restore' : 'icon-max'}`} />
             </div>
-            <div
-              className="kde-dot close"
-              title="Cerrar"
-              onClick={handleClose}
-            >
-              <div className="custom-icon icon-close" />
-            </div>
+            {closable && (
+              <div
+                className="kde-dot close"
+                title="Cerrar"
+                onClick={handleClose}
+              >
+                <div className="custom-icon icon-close" />
+              </div>
+            )}
           </div>
         );
 
@@ -296,13 +310,15 @@ const HomePanelWrapper = ({
             >
               <div className={`custom-icon ${isMaximized ? 'icon-restore' : 'icon-max'}`} />
             </div>
-            <div
-              className="win-dot close"
-              title="Cerrar"
-              onClick={handleClose}
-            >
-              <div className="custom-icon icon-close" />
-            </div>
+            {closable && (
+              <div
+                className="win-dot close"
+                title="Cerrar"
+                onClick={handleClose}
+              >
+                <div className="custom-icon icon-close" />
+              </div>
+            )}
           </div>
         );
 
@@ -323,9 +339,11 @@ const HomePanelWrapper = ({
             >
               <i className={isMaximized ? "pi pi-window-minimize" : "pi pi-stop"} style={{ fontSize: '9px' }} />
             </div>
-            <div className="matcha-dot close" onClick={handleClose} title="Cerrar">
-              <i className="pi pi-times" style={{ fontSize: '9px' }} />
-            </div>
+            {closable && (
+              <div className="matcha-dot close" onClick={handleClose} title="Cerrar">
+                <i className="pi pi-times" style={{ fontSize: '9px' }} />
+              </div>
+            )}
           </div>
         );
 
@@ -346,9 +364,11 @@ const HomePanelWrapper = ({
             >
               {isMaximized ? "RST" : "MAX"}
             </div>
-            <div className="cyber-dot close" title="Cerrar" onClick={handleClose}>
-              EXE
-            </div>
+            {closable && (
+              <div className="cyber-dot close" title="Cerrar" onClick={handleClose}>
+                EXE
+              </div>
+            )}
           </div>
         );
 
@@ -369,9 +389,11 @@ const HomePanelWrapper = ({
             >
               <i className={isMaximized ? "pi pi-window-minimize" : "pi pi-stop"} style={{ fontSize: '9px' }} />
             </div>
-            <div className="glass-dot close" title="Cerrar" onClick={handleClose}>
-              <i className="pi pi-times" style={{ fontSize: '9px' }} />
-            </div>
+            {closable && (
+              <div className="glass-dot close" title="Cerrar" onClick={handleClose}>
+                <i className="pi pi-times" style={{ fontSize: '9px' }} />
+              </div>
+            )}
           </div>
         );
 
@@ -396,11 +418,13 @@ const HomePanelWrapper = ({
             <span style={{ fontSize: '9px', color: '#0f0', fontFamily: 'monospace' }}>
               {isMinimized ? "MIN" : (isMaximized ? "MAX" : "NORM")}
             </span>
-            <div
-              className="retro-switch on"
-              title="OFF / Cerrar"
-              onClick={handleClose}
-            />
+            {closable && (
+              <div
+                className="retro-switch on"
+                title="OFF / Cerrar"
+                onClick={handleClose}
+              />
+            )}
           </div>
         );
 
@@ -422,9 +446,11 @@ const HomePanelWrapper = ({
             >
               {isMaximized ? "⬡" : "◈"}
             </div>
-            <div className="cyber-pro-btn close" title="Cerrar" onClick={handleClose}>
-              ✕
-            </div>
+            {closable && (
+              <div className="cyber-pro-btn close" title="Cerrar" onClick={handleClose}>
+                ✕
+              </div>
+            )}
           </div>
         );
 
@@ -451,9 +477,11 @@ const HomePanelWrapper = ({
             >
               {isMaximized ? "◈" : "⬡"}
             </div>
-            <div className="holo-btn close" title="Cerrar HUD" onClick={handleClose}>
-              ✕
-            </div>
+            {closable && (
+              <div className="holo-btn close" title="Cerrar HUD" onClick={handleClose}>
+                ✕
+              </div>
+            )}
           </div>
         );
       }
@@ -463,7 +491,9 @@ const HomePanelWrapper = ({
           <div className="synthwave-controls no-drag" onMouseDown={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
             <div className="synth-dot min" onClick={handleMin} title={isMinimized ? "Restaurar" : "Minimizar"} />
             <div className="synth-dot max" onClick={handleMax} title={isMaximized ? "Restaurar tamaño original" : "Ampliar"} />
-            <div className="synth-dot close" onClick={handleClose} title="Cerrar" />
+            {closable && (
+              <div className="synth-dot close" onClick={handleClose} title="Cerrar" />
+            )}
           </div>
         );
 
@@ -484,9 +514,11 @@ const HomePanelWrapper = ({
             >
               {isMaximized ? "[10]" : "[02]"}
             </div>
-            <div className="matrix-btn close" title="EXIT [11]" onClick={handleClose}>
-              [11]
-            </div>
+            {closable && (
+              <div className="matrix-btn close" title="EXIT [11]" onClick={handleClose}>
+                [11]
+              </div>
+            )}
           </div>
         );
 
@@ -507,9 +539,11 @@ const HomePanelWrapper = ({
             >
               <i className={isMaximized ? "pi pi-window-minimize" : "pi pi-stop"} style={{ fontSize: '9px' }} />
             </div>
-            <div className="aurora-pill close" title="Cerrar" onClick={handleClose}>
-              <i className="pi pi-times" style={{ fontSize: '9px' }} />
-            </div>
+            {closable && (
+              <div className="aurora-pill close" title="Cerrar" onClick={handleClose}>
+                <i className="pi pi-times" style={{ fontSize: '9px' }} />
+              </div>
+            )}
           </div>
         );
 
@@ -530,16 +564,20 @@ const HomePanelWrapper = ({
             >
               {isMaximized ? "—" : "□"}
             </div>
-            <div className="stealth-btn close" title="ABORT" onClick={handleClose}>
-              ✕
-            </div>
+            {closable && (
+              <div className="stealth-btn close" title="ABORT" onClick={handleClose}>
+                ✕
+              </div>
+            )}
           </div>
         );
 
       case 'frameless':
         return (
           <div className="traffic-lights no-drag" onMouseDown={(e) => e.stopPropagation()} style={{ display: 'flex', gap: '6px' }}>
-            <div className="traffic-dot red" onClick={handleClose} title="Cerrar" />
+            {closable && (
+              <div className="traffic-dot red" onClick={handleClose} title="Cerrar" />
+            )}
             <div className="traffic-dot yellow" onClick={handleMin} title={isMinimized ? "Restaurar" : "Minimizar"} />
             <div className="traffic-dot green" onClick={handleMax} title={isMaximized ? "Restaurar tamaño original" : "Ampliar"} />
           </div>
@@ -548,7 +586,9 @@ const HomePanelWrapper = ({
       default:
         return (
           <div className="traffic-lights no-drag" onMouseDown={(e) => e.stopPropagation()} style={{ display: 'flex', gap: '6px' }}>
-            <div className="traffic-dot red" onClick={handleClose} title="Cerrar" />
+            {closable && (
+              <div className="traffic-dot red" onClick={handleClose} title="Cerrar" />
+            )}
             <div className="traffic-dot yellow" onClick={handleMin} title={isMinimized ? "Restaurar" : "Minimizar"} />
             <div className="traffic-dot green" onClick={handleMax} title={isMaximized ? "Restaurar tamaño original" : "Ampliar"} />
           </div>
@@ -562,12 +602,12 @@ const HomePanelWrapper = ({
     <Rnd
       ref={rndRef}
       size={
-        isMaximized && !panelState.originalBounds
+        fillParent
           ? { width: '100%', height: '100%' }
-          : { width, height: isMinimized ? 36 : height }
+          : { width, height: isMinimized ? minimizedHeight : height }
       }
       position={
-        isMaximized && !panelState.originalBounds
+        fillParent
           ? { x: 0, y: 0 }
           : { x, y }
       }
@@ -579,8 +619,8 @@ const HomePanelWrapper = ({
       onResizeStart={handleDragStart}
       onResize={handleResize}
       onResizeStop={handleResizeStop}
-      minWidth={minWidth}
-      minHeight={isMinimized ? 36 : minHeight}
+      minWidth={isMinimized ? Math.min(minWidth, 260) : minWidth}
+      minHeight={isMinimized ? minimizedHeight : minHeight}
       bounds={bounds}
       dragGrid={gridStep}
       resizeGrid={gridStep}
@@ -616,6 +656,7 @@ const HomePanelWrapper = ({
         display: 'flex',
         flexDirection: 'column',
         position: 'absolute',
+        overflow: isMinimized ? 'hidden' : undefined,
         transition: isMaximized ? 'all 0.2s ease' : 'none',
         ...style
       }}
@@ -629,7 +670,9 @@ const HomePanelWrapper = ({
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          borderRadius: isMaximized ? 0 : undefined,
+          minHeight: isMinimized ? minimizedHeight : undefined,
+          flex: isMinimized ? 'none' : undefined,
+          borderRadius: isMaximized ? 0 : (isMinimized ? 12 : undefined),
           borderBottom: isMinimized ? 'none' : undefined,
           ...(frameBackground ? { background: isFramelessNonTerminal ? 'transparent' : frameBackground } : {})
         }}
@@ -641,8 +684,9 @@ const HomePanelWrapper = ({
             style={{
               cursor: isMaximized ? 'default' : 'grab',
               userSelect: 'none',
-              borderRadius: isMaximized ? 0 : undefined,
-              flexShrink: 0
+              borderRadius: isMaximized ? 0 : (isMinimized ? 12 : undefined),
+              flexShrink: 0,
+              height: isMinimized ? minimizedHeight : undefined
             }}
           >
             {terminalFrameStyle === 'macos' ? (
