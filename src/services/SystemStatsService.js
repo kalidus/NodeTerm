@@ -68,6 +68,27 @@ class SystemStatsService {
     this.isFetching = false;
     this.latestStats = null;
     this.pollIntervalMs = 2000;
+    this.isPaused = false;
+
+    // Escuchar eventos del sistema para suspender el polling cuando la pantalla se bloquee o entre en reposo
+    if (typeof window !== 'undefined' && window.electron?.ipcRenderer) {
+      window.electron.ipcRenderer.on('system:lock-screen', () => this.handleSystemPause());
+      window.electron.ipcRenderer.on('system:suspend', () => this.handleSystemPause());
+      window.electron.ipcRenderer.on('system:unlock-screen', () => this.handleSystemResume());
+      window.electron.ipcRenderer.on('system:resume', () => this.handleSystemResume());
+    }
+  }
+
+  handleSystemPause() {
+    this.isPaused = true;
+    this.stopPolling();
+  }
+
+  handleSystemResume() {
+    this.isPaused = false;
+    if (this.subscribers.size > 0) {
+      this.startPolling();
+    }
   }
 
   /**
@@ -85,7 +106,9 @@ class SystemStatsService {
     this.pollIntervalMs = validMs;
     if (this.timer) {
       clearTimeout(this.timer);
-      this.timer = setTimeout(() => this.pollLoop(), this.pollIntervalMs);
+      if (!this.isPaused) {
+        this.timer = setTimeout(() => this.pollLoop(), this.pollIntervalMs);
+      }
     }
   }
 
@@ -109,8 +132,8 @@ class SystemStatsService {
       } catch (_) {}
     }
 
-    // Iniciar bucle si es el primer suscriptor
-    if (this.subscribers.size === 1) {
+    // Iniciar bucle si es el primer suscriptor y no está en pausa
+    if (this.subscribers.size === 1 && !this.isPaused) {
       this.startPolling();
     }
 
@@ -124,9 +147,9 @@ class SystemStatsService {
   }
 
   startPolling() {
-    if (this.timer) return;
+    if (this.timer || this.isPaused) return;
     this.fetchOnce().finally(() => {
-      if (this.subscribers.size > 0) {
+      if (this.subscribers.size > 0 && !this.isPaused) {
         this.timer = setTimeout(() => this.pollLoop(), this.pollIntervalMs);
       }
     });
@@ -141,17 +164,17 @@ class SystemStatsService {
 
   async pollLoop() {
     this.timer = null;
-    if (this.subscribers.size === 0) return;
+    if (this.subscribers.size === 0 || this.isPaused) return;
 
     await this.fetchOnce();
 
-    if (this.subscribers.size > 0) {
+    if (this.subscribers.size > 0 && !this.isPaused) {
       this.timer = setTimeout(() => this.pollLoop(), this.pollIntervalMs);
     }
   }
 
   async fetchOnce() {
-    if (this.isFetching) return;
+    if (this.isFetching || this.isPaused) return;
     if (typeof window === 'undefined' || !window.electronAPI?.getSystemStats) return;
 
     this.isFetching = true;

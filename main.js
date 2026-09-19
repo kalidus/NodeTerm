@@ -176,6 +176,9 @@ if (app) {
   if (process.platform === 'linux' && typeof app.setDesktopName === 'function') {
     app.setDesktopName('nodeterm.desktop');
   }
+  // 🛡️ MEMORIA: Ampliar el límite de Heap de V8 a 4GB tanto para el proceso principal como para los Renderer
+  // Previene caídas por OOM (Out Of Memory) en sesiones de larga duración con múltiples terminales y conexiones RDP
+  app.commandLine.appendSwitch('js-flags', '--max-old-space-size=4096');
 }
 
 // Configuración de GPU por plataforma
@@ -2148,6 +2151,11 @@ powerMonitor.on('suspend', () => {
   console.log('💤 [PowerMonitor] Sistema entrando en suspensión...');
   systemSuspendedAt = Date.now();
 
+  try {
+    const StatsWorkerService = require('./src/main/services/StatsWorkerService');
+    StatsWorkerService.pauseStatsWorker();
+  } catch (_) { }
+
   // Notificar al renderer que el sistema se va a suspender
   if (mainWindow && mainWindow.webContents) {
     mainWindow.webContents.send('system:suspend');
@@ -2158,6 +2166,11 @@ powerMonitor.on('resume', async () => {
   const suspendDuration = systemSuspendedAt ? Math.round((Date.now() - systemSuspendedAt) / 1000) : 0;
   console.log(`☀️ [PowerMonitor] Sistema reanudado después de ${suspendDuration}s de suspensión`);
   systemSuspendedAt = null;
+
+  try {
+    const StatsWorkerService = require('./src/main/services/StatsWorkerService');
+    StatsWorkerService.resumeStatsWorker();
+  } catch (_) { }
 
   // Si WSL está en uso, puede necesitar tiempo para despertar
   // Esperar un poco antes de notificar al frontend
@@ -2192,6 +2205,12 @@ powerMonitor.on('resume', async () => {
 
 powerMonitor.on('lock-screen', () => {
   console.log('🔒 [PowerMonitor] Pantalla bloqueada');
+
+  try {
+    const StatsWorkerService = require('./src/main/services/StatsWorkerService');
+    StatsWorkerService.pauseStatsWorker();
+  } catch (_) { }
+
   if (mainWindow && mainWindow.webContents) {
     mainWindow.webContents.send('system:lock-screen');
   }
@@ -2199,6 +2218,11 @@ powerMonitor.on('lock-screen', () => {
 
 powerMonitor.on('unlock-screen', async () => {
   console.log('🔓 [PowerMonitor] Pantalla desbloqueada');
+
+  try {
+    const StatsWorkerService = require('./src/main/services/StatsWorkerService');
+    StatsWorkerService.resumeStatsWorker();
+  } catch (_) { }
 
   // Cuando se desbloquea, las pantallas estaban apagadas
   // Verificar conexión WSL y notificar al frontend

@@ -112,11 +112,29 @@ function setStatsWorkerInterval(intervalMs) {
   }
 }
 
+function pauseStatsWorker() {
+  if (statsWorker && statsWorkerReady) {
+    try {
+      statsWorker.send('pause-stats');
+    } catch (_) {}
+  }
+}
+
+function resumeStatsWorker() {
+  if (statsWorker && statsWorkerReady) {
+    try {
+      statsWorker.send('resume-stats');
+    } catch (_) {}
+  }
+}
+
 module.exports = {
   startStatsWorker,
   getSystemStats,
   isWorkerReady,
   stopStatsWorker,
   getFallbackStats,
-  setStatsWorkerInterval
+  setStatsWorkerInterval,
+  pauseStatsWorker,
+  resumeStatsWorker
 };

@@ -1,14 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 
-const DEFAULT_WINDOW_MS = 3 * 60 * 60 * 1000;
+// 🛡️ MEMORIA: Ventana de 15 minutos y máximo 120 muestras (~240px para las gráficas SVG de StatusBar)
+// Evita acumular miles de objetos en memoria por pestaña durante horas de inactividad
+const DEFAULT_WINDOW_MS = 15 * 60 * 1000;
+const MAX_SAMPLES = 120;
 
 /**
  * @param {object} stats
- * @param {{ gpuStats?: object | null, windowMs?: number }} [options]
+ * @param {{ gpuStats?: object | null, windowMs?: number, maxSamples?: number }} [options]
  * Muestras: { t, cpu, memUsed, memTotal, rx, tx, gpuUsedMB, gpuTotalMB, gpuTemp }
  */
 export function useStatusBarSessionHistory(stats, options = {}) {
-    const { gpuStats = null, windowMs = DEFAULT_WINDOW_MS } = options;
+    const { gpuStats = null, windowMs = DEFAULT_WINDOW_MS, maxSamples = MAX_SAMPLES } = options;
     const samplesRef = useRef([]);
     const [history, setHistory] = useState([]);
 
@@ -52,9 +55,14 @@ export function useStatusBarSessionHistory(stats, options = {}) {
         while (i < samplesRef.current.length && samplesRef.current[i].t < cutoff) i++;
         if (i > 0) samplesRef.current = samplesRef.current.slice(i);
 
+        // 🛡️ MEMORIA: Acotar estrictamente a maxSamples para evitar crecimiento indefinido
+        if (samplesRef.current.length > maxSamples) {
+            samplesRef.current = samplesRef.current.slice(samplesRef.current.length - maxSamples);
+        }
+
         setHistory([...samplesRef.current]);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [cpu, memUsed, rx, tx, netIfaces, gUsed, gTotal, gTemp]);
+    }, [cpu, memUsed, rx, tx, netIfaces, gUsed, gTotal, gTemp, maxSamples, windowMs]);
 
     return history;
 }

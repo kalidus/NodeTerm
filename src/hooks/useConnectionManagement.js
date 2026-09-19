@@ -466,7 +466,7 @@ export const useConnectionManagement = ({
       setActiveGroupId(null);
     }
 
-    // Detectar si es RDP-Guacamole o RDP nativo
+    // Detectar si es RDP integrado (IronRDP / Guacamole) o RDP nativo externo (mstsc)
     // Manejar tanto conexiones desde sidebar (node.data) como desde ConnectionHistory (node directo)
     const nodeData = node.data || node; // Fallback para ConnectionHistory
 
@@ -569,7 +569,8 @@ export const useConnectionManagement = ({
         dfs(nodes);
       }
     }
-    const isGuacamoleRDP = baseRdp.clientType === 'web-rdp' || baseRdp.clientType === 'guacamole' || baseRdp.type === 'rdp-guacamole';
+    // Detectar si es RDP integrado (IronRDP / Guacamole) o RDP nativo externo (mstsc)
+    const isIntegratedRdp = baseRdp.clientType === 'web-rdp' || baseRdp.clientType === 'guacamole' || baseRdp.type === 'rdp-guacamole';
 
     // Registrar como reciente (RDP) - incluir todas las credenciales y configuración
     try {
@@ -612,11 +613,14 @@ export const useConnectionManagement = ({
       }, 200);
     } catch (e) { /* noop */ }
 
-    if (isGuacamoleRDP) {
+    if (isIntegratedRdp) {
       const screen = resolveRdpScreenDimensions(baseRdp, {
         width: window.innerWidth,
         height: window.innerHeight
       });
+
+      const isIronRdp = (baseRdp.clientType === 'web-rdp') || (!baseRdp.clientType && baseRdp.type !== 'mstsc');
+      const engineLabel = isIronRdp ? 'IronRDP' : (baseRdp.clientType === 'guacamole' ? 'Guacamole' : 'RDP');
 
       const rdpConfig = {
         clientType: baseRdp.clientType || 'web-rdp',
@@ -641,12 +645,11 @@ export const useConnectionManagement = ({
         driveHostDir: baseRdp.guacDriveHostDir || undefined,
         enableWallpaper: baseRdp.guacEnableWallpaper !== false && baseRdp.enableWallpaper !== false,
         security: baseRdp.guacSecurity || 'any',
-        // Campos específicos de Guacamole
+        // Campos de rendimiento / visuales
         autoResize: baseRdp.autoResize !== false,
         // Forzar congelación de resizes iniciales para camuflar RDProxy solo si autoResize está activo
         freezeInitialResize: baseRdp.autoResize !== false,
         enableGfx: (baseRdp.guacEnableGfx === true) || (baseRdp.guacWin11Compat === true),
-        // Características visuales
         enableDesktopComposition: baseRdp.guacEnableDesktopComposition === true,
         enableFontSmoothing: baseRdp.guacEnableFontSmoothing === true,
         enableTheming: baseRdp.guacEnableTheming === true,
@@ -664,11 +667,11 @@ export const useConnectionManagement = ({
         span: baseRdp.span === true
       };
 
-      // DEBUG: cadena efectiva enviada a Guacamole al conectar RDP
-      // Permite comparar manual vs importado (Wallix) en el punto real de conexión.
+      // DEBUG: parámetros efectivos enviados al cliente RDP (IronRDP / Guacamole)
       try {
         const sourceType = (baseRdp.useBastionWallix || baseRdp.bastionUser || baseRdp.targetServer) ? 'wallix' : 'normal';
-        console.log('[RDP Connect][Guacamole] config efectiva', {
+        console.log(`[RDP Connect][${engineLabel}] config efectiva`, {
+          engine: engineLabel,
           sourceType,
           name: node.label || node.name || 'RDP Connection',
           hostname: rdpConfig.hostname,
@@ -680,7 +683,7 @@ export const useConnectionManagement = ({
         });
       } catch (_) { /* noop */ }
 
-      // Crear pestaña RDP-Guacamole igual que SSH
+      // Crear pestaña RDP integrada (IronRDP / Guacamole)
       setRdpTabs(prevTabs => {
         const tabId = `${node.key || node.id || 'rdp'}_${Date.now()}`;
         const connectionName = node.label || node.name || 'RDP Connection';
@@ -704,7 +707,7 @@ export const useConnectionManagement = ({
         return [newTab, ...prevTabs];
       });
 
-      return; // Salir aquí para RDP-Guacamole
+      return; // Salir aquí para RDP integrado
     }
 
     // === LÓGICA EXISTENTE: RDP Nativo (mstsc) ===
@@ -781,18 +784,8 @@ export const useConnectionManagement = ({
       setGroupActiveIndices(prev => ({ ...prev, 'no-group': 1 }));
     }
 
-    // Manejar diferentes tipos de cliente RDP
-    if (rdpConfig.clientType === 'guacamole') {
-      // Para Guacamole, solo crear la pestaña vacía por ahora
-      toast.current?.show({
-        severity: 'info',
-        summary: 'Guacamole Lite',
-        detail: 'Pestaña de Guacamole creada (funcionalidad en desarrollo)',
-        life: 3000
-      });
-    } else {
-      // Para mstsc, conectar automáticamente
-      window.electron.ipcRenderer.invoke('rdp:connect', rdpConfig)
+    // Para mstsc, conectar automáticamente
+    window.electron.ipcRenderer.invoke('rdp:connect', rdpConfig)
         .then(result => {
           if (result.success) {
             // Actualizar el estado de la pestaña RDP para que se active el botón "Mostrar Ventana"
@@ -840,7 +833,6 @@ export const useConnectionManagement = ({
             life: 3000
           });
         });
-    }
   }, [activeGroupId, activeTabIndex, setGroupActiveIndices, setActiveGroupId, setRdpTabs, setLastOpenedTabKey, setOnCreateActivateTabKey, setActiveTabIndex, setOpenTabOrder, rdpTabs, sshTabs, toast]);
 
   // === FUNCIÓN PARA ABRIR CONEXIONES VNC ===

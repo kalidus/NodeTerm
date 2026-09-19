@@ -2466,10 +2466,10 @@ const TabContentRendererInner = React.memo(({
     );
   }
 
-  if (tab.type === 'rdp-guacamole' || tab.type === 'vnc-guacamole' || tab.type === 'vnc') {
+  if (tab.type === 'iron-rdp' || tab.type === 'rdp-iron' || tab.type === 'rdp-guacamole' || tab.type === 'vnc-guacamole' || tab.type === 'vnc') {
     const isVnc = tab.type === 'vnc-guacamole' || tab.type === 'vnc';
     const clientType = tab.rdpConfig?.clientType || tab.vncConfig?.clientType;
-    const isWebRdp = clientType === 'web-rdp';
+    const isWebRdp = clientType === 'web-rdp' || tab.type === 'iron-rdp' || tab.type === 'rdp-iron';
     const isWebVnc = isVnc && (clientType === 'web-vnc' || !clientType || clientType !== 'guacamole');
 
     if (isWebVnc) {
