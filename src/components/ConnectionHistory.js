@@ -676,7 +676,7 @@ const ConnectionHistory = ({
 	return (
 		<div className={`connection-history-root${terminalView ? ' is-terminal-view' : ''}${flushRightQuickBar ? ' has-flush-right-quick-bar' : ''}${localTerminalMaximized ? ' is-terminal-maximized' : ''}`} style={{ background: 'transparent' }}>
 			{/* Dynamic CSS Styles */}
-			<ConnectionHistoryStyles themeColors={themeColors} terminalTheme={terminalTheme} />
+			<ConnectionHistoryStyles themeColors={themeColors} terminalTheme={terminalTheme} terminalOpacity={terminalOpacity} />
 
 			{/* ========================================================= */}
 			{/* RENDER PRINCIPAL: CANVAS MODULAR O LAYOUT LEGACY          */}

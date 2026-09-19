@@ -620,43 +620,14 @@ const ConnectionHistoryStyles = ({
 				.recents-terminal-frame.matrix, .top-terminal-frame.matrix,
 				.recents-terminal-frame.aurora-glass, .top-terminal-frame.aurora-glass,
 				.recents-terminal-frame.stealth, .top-terminal-frame.stealth {
-					background-color: ${(() => {
-					const bg = terminalTheme.background || '#0d1117';
-					const adjustOpacityLoc = (color, opacity) => {
-						if (!color) return `rgba(0,0,0,${opacity})`;
-						if (color.startsWith('rgba')) {
-							return color.replace(/[\d.]+\)$/g, `${opacity})`);
-						}
-						if (color.startsWith('#')) {
-							const hex = color.replace('#', '');
-							const r = parseInt(hex.substring(0, 2), 16) || 0;
-							const g = parseInt(hex.substring(2, 4), 16) || 0;
-							const b = parseInt(hex.substring(4, 6), 16) || 0;
-							return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-						}
-						return color;
-					};
-					return adjustOpacityLoc(bg, terminalOpacity);
-				})()} !important;
-					background: ${(() => {
-					const bg = terminalTheme.background || '#0d1117';
-					const adjustOpacityLoc = (color, opacity) => {
-						if (!color) return `rgba(0,0,0,${opacity})`;
-						if (color.startsWith('rgba')) {
-							return color.replace(/[\d.]+\)$/g, `${opacity})`);
-						}
-						if (color.startsWith('#')) {
-							const hex = color.replace('#', '');
-							const r = parseInt(hex.substring(0, 2), 16) || 0;
-							const g = parseInt(hex.substring(2, 4), 16) || 0;
-							const b = parseInt(hex.substring(4, 6), 16) || 0;
-							return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-						}
-						return color;
-					};
-					return adjustOpacityLoc(bg, terminalOpacity);
-				})()} !important;
+					background-color: var(--home-panel-frame-bg, ${adjustOpacity(terminalTheme.background || '#0d1117', terminalOpacity)}) !important;
+					background: var(--home-panel-frame-bg, ${adjustOpacity(terminalTheme.background || '#0d1117', terminalOpacity)}) !important;
 				}
+
+				div.home-panel-frame.recents-terminal-frame,
+				div.home-panel-frame.top-terminal-frame {
+					background-color: var(--home-panel-frame-bg, ${adjustOpacity(terminalTheme.background || '#0d1117', terminalOpacity)}) !important;
+					background: var(--home-panel-frame-bg, ${adjustOpacity(terminalTheme.background || '#0d1117', terminalOpacity)}) !important;
 				}
 
 				/* Tarjeta NodeTerm (hometab): mismo fondo que la sidebar */
@@ -665,8 +636,8 @@ const ConnectionHistoryStyles = ({
 				.top-terminal-frame.kde, .top-terminal-frame.windows,
 				.top-terminal-frame.matcha, .top-terminal-frame.futuristic,
 				.top-terminal-frame.modern, .top-terminal-frame.retro {
-					background-color: ${adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)} !important;
-					background: ${adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)} !important;
+					background-color: var(--home-panel-frame-bg, ${adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}) !important;
+					background: var(--home-panel-frame-bg, ${adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}) !important;
 				}
 
 				/* --- Grep-style connection rows (Adaptable y fluido) --- */

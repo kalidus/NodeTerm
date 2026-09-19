@@ -656,8 +656,9 @@ const HomePanelWrapper = ({
         display: 'flex',
         flexDirection: 'column',
         position: 'absolute',
-        overflow: isMinimized ? 'hidden' : undefined,
-        transition: isMaximized ? 'all 0.2s ease' : 'none',
+          overflow: isMinimized ? 'hidden' : undefined,
+          background: 'transparent',
+          transition: isMaximized ? 'all 0.2s ease' : 'none',
         ...style
       }}
       onMouseDown={handleDragStart}
@@ -674,6 +675,7 @@ const HomePanelWrapper = ({
           flex: isMinimized ? 'none' : undefined,
           borderRadius: isMaximized ? 0 : (isMinimized ? 12 : undefined),
           borderBottom: isMinimized ? 'none' : undefined,
+          ['--home-panel-frame-bg']: isFramelessNonTerminal ? 'transparent' : (frameBackground || undefined),
           ...(frameBackground ? { background: isFramelessNonTerminal ? 'transparent' : frameBackground } : {})
         }}
       >
