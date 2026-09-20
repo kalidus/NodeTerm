@@ -5,6 +5,12 @@ import { persistHomeTabSetting } from './homeTabSync';
 export const HOME_DOCK_PINS_KEY = STORAGE_KEYS.HOME_TAB_DOCK_PINS || 'nodeterm_home_dock_pins';
 export const HOME_JUMP_PINS_KEY = STORAGE_KEYS.HOME_TAB_JUMP_PINS || 'nodeterm_home_jump_pins';
 
+export const DOCK_GROUPS = [
+  { id: 'connect', label: 'Conectar' },
+  { id: 'data', label: 'Datos' },
+  { id: 'system', label: 'Sistema' }
+];
+
 export const DOCK_ACTIONS = [
   {
     id: 'new-connection',
@@ -12,7 +18,17 @@ export const DOCK_ACTIONS = [
     icon: 'pi pi-plus',
     color: '#22c55e',
     keywords: 'nueva ssh rdp vnc host conexion',
-    event: 'open-new-unified-connection-dialog'
+    event: 'open-new-unified-connection-dialog',
+    group: 'connect'
+  },
+  {
+    id: 'new-group',
+    label: 'Nuevo grupo',
+    icon: 'pi pi-th-large',
+    color: '#ff9800',
+    keywords: 'grupo pestanas tabs workspace',
+    event: 'open-create-group-dialog',
+    group: 'connect'
   },
   {
     id: 'tools',
@@ -20,31 +36,8 @@ export const DOCK_ACTIONS = [
     icon: 'pi pi-wrench',
     color: '#06b6d4',
     keywords: 'ping dns scan red wol ssl',
-    event: 'open-network-tools-dialog'
-  },
-  {
-    id: 'vault',
-    label: 'Vault / secretos',
-    icon: 'pi pi-lock',
-    color: '#f59e0b',
-    keywords: 'password secreto vault clave',
-    event: 'open-password-manager'
-  },
-  {
-    id: 'audit',
-    label: 'Auditoria',
-    icon: 'pi pi-history',
-    color: '#a855f7',
-    keywords: 'grabacion audit recording',
-    run: 'audit'
-  },
-  {
-    id: 'settings',
-    label: 'Configuracion',
-    icon: 'pi pi-cog',
-    color: '#b0bec5',
-    keywords: 'ajustes settings preferencias',
-    run: 'settings'
+    event: 'open-network-tools-dialog',
+    group: 'connect'
   },
   {
     id: 'local-terminal',
@@ -52,7 +45,53 @@ export const DOCK_ACTIONS = [
     icon: 'pi pi-desktop',
     color: '#4fc3f7',
     keywords: 'powershell wsl bash cmd shell',
-    run: 'local-terminal'
+    run: 'local-terminal',
+    group: 'connect'
+  },
+  {
+    id: 'vault',
+    label: 'Vault / secretos',
+    icon: 'pi pi-lock',
+    color: '#f59e0b',
+    keywords: 'password secreto vault clave',
+    event: 'open-password-manager',
+    group: 'data'
+  },
+  {
+    id: 'audit',
+    label: 'Auditoria',
+    icon: 'pi pi-history',
+    color: '#a855f7',
+    keywords: 'grabacion audit recording',
+    run: 'audit',
+    group: 'data'
+  },
+  {
+    id: 'import-export',
+    label: 'Importar / Exportar',
+    icon: 'pi pi-arrow-right-arrow-left',
+    color: '#34d399',
+    keywords: 'import export backup nodeterm mremoteng keepass',
+    settingsTab: 'importar-exportar',
+    group: 'data'
+  },
+  {
+    id: 'sync',
+    label: 'Sincronizacion',
+    icon: 'pi pi-cloud',
+    color: '#60a5fa',
+    keywords: 'nextcloud sync nube cloud',
+    settingsTab: 'sincronizacion',
+    group: 'data'
+  },
+  {
+    id: 'settings',
+    label: 'Configuracion',
+    icon: 'pi pi-cog',
+    color: '#b0bec5',
+    keywords: 'ajustes settings preferencias',
+    run: 'settings',
+    group: 'system'
   },
   {
     id: 'palette',
@@ -60,7 +99,26 @@ export const DOCK_ACTIONS = [
     icon: 'pi pi-search',
     color: '#818cf8',
     keywords: 'buscar palette comando ctrl k',
-    event: 'open-command-palette'
+    event: 'open-command-palette',
+    group: 'system'
+  },
+  {
+    id: 'stats',
+    label: 'Estadisticas',
+    icon: 'pi pi-chart-pie',
+    color: '#ec4899',
+    keywords: 'stats estadisticas metricas',
+    run: 'stats',
+    group: 'system'
+  },
+  {
+    id: 'about',
+    label: 'Acerca de',
+    icon: 'pi pi-info-circle',
+    color: '#94a3b8',
+    keywords: 'about version informacion',
+    settingsTab: 'informacion',
+    group: 'system'
   }
 ];
 
@@ -159,6 +217,16 @@ export function getDockAction(id) {
   return DOCK_ACTIONS.find((a) => a.id === id) || null;
 }
 
+export function groupDockActions(actions) {
+  const list = Array.isArray(actions) ? actions : [];
+  return DOCK_GROUPS
+    .map((group) => ({
+      ...group,
+      actions: list.filter((action) => action.group === group.id)
+    }))
+    .filter((group) => group.actions.length > 0);
+}
+
 export function filterPaletteActions(query) {
   const q = String(query || '').trim().toLowerCase();
   if (!q) return DOCK_ACTIONS;
@@ -189,12 +257,23 @@ async function openGlobalAudit() {
   }
 }
 
+function openSettingsTab(mainTab) {
+  window.dispatchEvent(new CustomEvent('open-settings-tab', {
+    detail: { mainTab }
+  }));
+}
+
 export function runDockAction(actionId, { onOpenSettings } = {}) {
   const action = getDockAction(actionId);
   if (!action) return;
 
   if (action.event) {
     window.dispatchEvent(new CustomEvent(action.event));
+    return;
+  }
+
+  if (action.settingsTab) {
+    openSettingsTab(action.settingsTab);
     return;
   }
 
@@ -214,5 +293,10 @@ export function runDockAction(actionId, { onOpenSettings } = {}) {
 
   if (action.run === 'audit') {
     openGlobalAudit();
+    return;
+  }
+
+  if (action.run === 'stats') {
+    window.dispatchEvent(new CustomEvent('open-app-stats'));
   }
 }

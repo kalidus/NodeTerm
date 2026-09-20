@@ -135,6 +135,12 @@ const NodeTermStatus = ({
 	// Estado estadísticas
 	const [statsOpen, setStatsOpen] = useState(false);
 
+	useEffect(() => {
+		const openStats = () => setStatsOpen(true);
+		window.addEventListener('open-app-stats', openStats);
+		return () => window.removeEventListener('open-app-stats', openStats);
+	}, []);
+
 	const defaultSections = { acciones: false, servicios: false, terminales: false, toggles: false, ia: false };
 	const [rightColumnSectionsCollapsed, setRightColumnSectionsCollapsed] = useState(() => {
 		try {
