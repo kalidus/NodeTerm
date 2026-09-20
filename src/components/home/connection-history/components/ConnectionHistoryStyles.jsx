@@ -587,19 +587,6 @@ const ConnectionHistoryStyles = ({
 				.matcha-dot:hover { color: #fff; background: rgba(255,255,255,0.05); }
 				
 				.recents-header-right { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
-				.recents-header-filter-btn {
-					background: transparent;
-					border: none;
-					color: ${terminalTheme.foreground || '#c9d1d9'};
-					opacity: 0.6;
-					cursor: pointer;
-					padding: 4px 6px;
-					border-radius: 4px;
-					font-size: 0.85rem;
-					transition: color 0.15s, background 0.15s;
-					display: flex; align-items: center;
-				}
-				.recents-header-filter-btn:hover, .recents-header-filter-btn.active { color: ${terminalTheme.green || '#3fb950'}; background: rgba(255,255,255,0.06); opacity: 1; }
 				.recents-filter-chips-bar {
 					display: flex;
 					align-items: center;
@@ -1407,6 +1394,68 @@ const ConnectionHistoryStyles = ({
 					font-size: 0.68rem;
 					font-family: monospace;
 					white-space: nowrap;
+				}
+				.cyber-sessions-filter-btn {
+					background: transparent;
+					border: none;
+					color: inherit;
+					opacity: 0.55;
+					cursor: pointer;
+					padding: 2px 4px;
+					border-radius: 4px;
+					font-size: 0.72rem;
+					display: flex;
+					align-items: center;
+					gap: 3px;
+					transition: color 0.15s, background 0.15s, opacity 0.15s;
+				}
+				.cyber-sessions-filter-btn:hover,
+				.cyber-sessions-filter-btn.active {
+					color: ${terminalTheme.green || '#3fb950'};
+					background: rgba(255,255,255,0.06);
+					opacity: 1;
+				}
+				.home-filter-panel-root {
+					flex: 1;
+					min-height: 0;
+					display: flex;
+					flex-direction: column;
+					overflow: hidden;
+				}
+				.home-filter-context-tabs {
+					display: flex;
+					align-items: center;
+					gap: 6px;
+					padding: 8px 12px 0 12px;
+					flex-shrink: 0;
+				}
+				.home-filter-context-tab {
+					flex: 1;
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					gap: 6px;
+					border: 1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '55' : 'rgba(255,255,255,0.1)'};
+					background: rgba(255,255,255,0.03);
+					color: ${themeColors.textSecondary || 'rgba(255,255,255,0.55)'};
+					border-radius: 6px;
+					padding: 6px 8px;
+					font-size: 0.75rem;
+					cursor: pointer;
+				}
+				.home-filter-context-tab:hover {
+					color: ${themeColors.textPrimary || '#fff'};
+					background: rgba(255,255,255,0.06);
+				}
+				.home-filter-context-tab.active {
+					color: ${terminalTheme.green || '#3fb950'};
+					border-color: ${terminalTheme.green ? terminalTheme.green + '66' : 'rgba(63,185,80,0.4)'};
+					background: rgba(255,255,255,0.06);
+				}
+				.filters-terminal-frame .home-panel-body {
+					display: flex;
+					flex-direction: column;
+					min-height: 0;
 				}
 				.cyber-sessions-empty {
 					padding: 16px;

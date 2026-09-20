@@ -22,8 +22,8 @@ export const HomeTerminalSplitPanel = ({
 	getFilterColor,
 	getFilterIcon,
 	handleRemoveFilter,
-	setFilterContext,
-	setFilterPanelOpen,
+	onOpenFilter,
+	filterOpen = false,
 	clearRecents,
 	isFavorite,
 	activeIds = new Set(),
@@ -33,6 +33,7 @@ export const HomeTerminalSplitPanel = ({
 	statusBarVisible = false,
 	terminalTheme = {}
 }) => {
+	const splitContext = splitView === 'favorites' ? 'favorites' : 'recents';
 	const activeFilters = splitView === 'favorites' ? activeFavFilters : activeRecentFilters;
 	const activeCount = getActiveFilterCount ? getActiveFilterCount(activeFilters) : 0;
 
@@ -164,22 +165,21 @@ export const HomeTerminalSplitPanel = ({
 											className="split-header-filter-btn"
 											onClick={(e) => {
 												e.stopPropagation();
-												setFilterContext(splitView === 'favorites' ? 'favorites' : 'recents');
-												setFilterPanelOpen(true);
+												onOpenFilter?.(splitContext);
 											}}
 											style={{
 												background: 'transparent',
 												border: 'none',
-												color: activeCount > 0 ? '#4fc3f7' : 'rgba(255,255,255,0.4)',
+												color: (filterOpen || activeCount > 0) ? '#4fc3f7' : 'rgba(255,255,255,0.4)',
 												cursor: 'pointer',
 												padding: '2px',
 												display: 'flex',
 												alignItems: 'center',
 												transition: 'color 0.2s'
 											}}
-											title="Filtrar por protocolo"
+											title={filterOpen ? 'Cerrar panel de filtros' : 'Filtrar por protocolo'}
 											onMouseEnter={e => e.currentTarget.style.color = '#4fc3f7'}
-											onMouseLeave={e => e.currentTarget.style.color = activeCount > 0 ? '#4fc3f7' : 'rgba(255,255,255,0.4)'}
+											onMouseLeave={e => e.currentTarget.style.color = (filterOpen || activeCount > 0) ? '#4fc3f7' : 'rgba(255,255,255,0.4)'}
 										>
 											<i className={activeCount > 0 ? "pi pi-filter-fill" : "pi pi-filter"} style={{ fontSize: '0.65rem' }} />
 										</button>

@@ -57,6 +57,50 @@
     opacity: 1;
 }
 
+.filter-panel-container.filter-panel-embedded {
+    position: relative;
+    top: auto;
+    left: auto;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    transform: none;
+    opacity: 1;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    flex: 1;
+    min-height: 0;
+}
+
+.filter-panel-embedded .filter-panel-header {
+    padding: 10px 14px;
+}
+
+.filter-panel-embedded .filter-search {
+    padding: 8px 14px;
+}
+
+.filter-panel-embedded .filter-section-header {
+    padding: 8px 14px;
+}
+
+.filter-panel-embedded .filter-section-content {
+    padding: 2px 14px 8px 14px;
+}
+
+.filter-panel-embedded .filter-panel-close {
+    display: none;
+}
+
+.filter-panel-embedded .filter-panel-footer {
+    padding: 10px 14px;
+}
+
 /* === HEADER === */
 .filter-panel-header {
     display: flex;

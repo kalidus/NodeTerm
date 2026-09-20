@@ -162,6 +162,17 @@ const computeDefaultPanelsLayout = (cWidth = (typeof window !== 'undefined' ? wi
       zIndex: 17,
       isMaximized: false
     },
+    filters: {
+      visible: false,
+      x: Math.max(20, Math.floor(w * 0.30)),
+      y: Math.max(40, searchY + searchHeight + 24),
+      width: 420,
+      height: Math.min(560, Math.max(380, h - 96)),
+      minWidth: 320,
+      minHeight: 280,
+      zIndex: 25,
+      isMaximized: false
+    },
     canvasWidth: w,
     canvasHeight: h
   };
@@ -266,6 +277,7 @@ const computeAutoOrganizeLayout = (currentLayout, width, height) => {
   if (next.recents && next.recents.visible) activeSecondary.push('recents');
   if (next.favorites && next.favorites.visible) activeSecondary.push('favorites');
   if (next.sysmon && next.sysmon.visible) activeSecondary.push('sysmon');
+  if (next.filters && next.filters.visible) activeSecondary.push('filters');
   if (next.quickbar && next.quickbar.visible) activeSecondary.push('quickbar');
 
   const count = activeSecondary.length;
@@ -869,7 +881,8 @@ const HomeTab = ({
     }
 
     setPanelsLayout((prev) => {
-      const current = prev[panelId];
+      const defaults = computeDefaultPanelsLayout();
+      const current = prev[panelId] || defaults[panelId];
       if (!current) return prev;
       const isVis = forceState !== undefined ? forceState : !current.visible;
       let maxZ = 10;
@@ -2513,6 +2526,21 @@ const HomeTab = ({
                   type="checkbox" 
                   checked={!!panelsLayout?.favorites?.visible} 
                   onChange={() => handleTogglePanelVisibility('favorites')} 
+                />
+                <span className="premium-slider"></span>
+              </label>
+            </div>
+
+            <div className="menu-item-row" onClick={() => handleTogglePanelVisibility('filters')}>
+              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem', fontWeight: 500 }}>
+                <i className="pi pi-filter" style={{ marginRight: '6px', fontSize: '0.8rem', opacity: 0.7 }} />
+                Filtros
+              </span>
+              <label className="premium-switch" onClick={(e) => e.stopPropagation()}>
+                <input
+                  type="checkbox"
+                  checked={!!panelsLayout?.filters?.visible}
+                  onChange={() => handleTogglePanelVisibility('filters')}
                 />
                 <span className="premium-slider"></span>
               </label>

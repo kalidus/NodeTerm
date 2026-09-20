@@ -1,21 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import FilterPanel from '../../../FilterPanel';
 import favoriteGroupsStore from '../../../../utils/favoriteGroupsStore';
 
 export const ConnectionHistoryDialogs = ({
-	// FilterPanel props
-	filterPanelOpen,
-	setFilterPanelOpen,
-	filterContext,
-	activeFavFilters,
-	activeRecentFilters,
-	handleApplyFilters,
-	recentConnections = [],
-	favoriteConnections = [],
-	favoriteGroups = [],
-	countByType,
-	themeColors,
 	handleDeleteGroup,
 
 	// Filter Config Dialog props
@@ -61,35 +48,6 @@ export const ConnectionHistoryDialogs = ({
 }) => {
 	return (
 		<>
-			{/* FilterPanel Dropdown - Rendered in Portal to avoid clipping */}
-			{ReactDOM.createPortal(
-				<FilterPanel
-					isOpen={filterPanelOpen}
-					onClose={() => setFilterPanelOpen(false)}
-					activeFilters={filterContext === 'favorites' ? activeFavFilters : activeRecentFilters}
-					onApplyFilters={handleApplyFilters}
-					availableFilters={{
-						protocols: favoriteGroupsStore.getProtocolFilters().map(f => ({
-							...f,
-							count: countByType ? countByType(filterContext === 'recents' ? recentConnections : favoriteConnections, f.id) : 0
-						})),
-						groups: favoriteGroups.filter(g => !g.isDefault).map(g => ({
-							id: g.id,
-							label: g.name,
-							icon: g.icon || 'pi-folder',
-							color: g.color,
-							count: filterContext === 'recents'
-								? recentConnections.filter(c => c.groupId === g.id).length
-								: favoriteGroupsStore.getFavoritesInGroup(g.id, favoriteConnections).length
-						}))
-					}}
-					themeColors={themeColors}
-					onCreateGroup={() => setShowCreateGroupDialog(true)}
-					onDeleteGroup={handleDeleteGroup}
-				/>,
-				document.body
-			)}
-
 			{/* Filter Configuration Dialog */}
 			{showFilterConfig && ReactDOM.createPortal(
 				<div className="create-group-overlay" onClick={() => setShowFilterConfig(false)}>

@@ -13,7 +13,9 @@ export const HomeFavoritesPanel = ({
 	activeIds,
 	onConnectToHistory,
 	onEdit,
-	handleToggleFavoriteWithGroup
+	handleToggleFavoriteWithGroup,
+	onOpenFilter,
+	filterOpen = false
 }) => {
 	const activeCount = getActiveFilterCount ? getActiveFilterCount(activeFavFilters) : 0;
 	const { ref, className: breakpointClass } = usePanelBreakpoints();
@@ -66,6 +68,20 @@ export const HomeFavoritesPanel = ({
 				accent="#FFD700"
 				title={`FAVORITES // ${count.toString().padStart(2, '0')}`}
 				subtitle="ACCESOS FAVORITOS"
+				headerRight={onOpenFilter ? (
+					<button
+						type="button"
+						className={`cyber-sessions-filter-btn${(filterOpen || activeCount > 0) ? ' active' : ''}`}
+						onClick={(e) => {
+							e.stopPropagation();
+							onOpenFilter();
+						}}
+						title={filterOpen ? 'Cerrar panel de filtros' : 'Filtrar favoritos'}
+					>
+						<i className={`pi ${activeCount > 0 ? 'pi-filter-fill' : 'pi-filter'}`} />
+						{activeCount > 0 && <span>{activeCount}</span>}
+					</button>
+				) : null}
 				emptyMessage="// NO HAY CONEXIONES MARCADAS COMO FAVORITAS"
 				activeIds={activeIds}
 				onConnect={onConnectToHistory}

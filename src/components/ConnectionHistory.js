@@ -24,6 +24,7 @@ import {
 	HomeSearchPanel,
 	HomeRecentsPanel,
 	HomeFavoritesPanel,
+	HomeFilterPanel,
 	HomeTerminalSplitPanel,
 	ConnectionHistoryDialogs,
 	ConnectionHistoryOverlays,
@@ -624,8 +625,8 @@ const ConnectionHistory = ({
 			getFilterColor={favoriteGroupsMgr.getFilterColor}
 			getFilterIcon={favoriteGroupsMgr.getFilterIcon}
 			handleRemoveFilter={favoriteGroupsMgr.handleRemoveFilter}
-			setFilterContext={favoriteGroupsMgr.setFilterContext}
-			setFilterPanelOpen={favoriteGroupsMgr.setFilterPanelOpen}
+			onOpenFilter={toggleFilterPanel}
+			filterOpen={!!(panelsLayout?.filters?.visible && favoriteGroupsMgr.filterContext === (splitView === 'favorites' ? 'favorites' : 'recents'))}
 			clearRecents={clearRecents}
 			isFavorite={isFavorite}
 			activeIds={activeIds}
@@ -637,6 +638,44 @@ const ConnectionHistory = ({
 		>
 			{children}
 		</HomeTerminalSplitPanel>
+	);
+
+	const toggleFilterPanel = (context) => {
+		const isVisible = !!panelsLayout?.filters?.visible;
+		if (isVisible && favoriteGroupsMgr.filterContext === context) {
+			onTogglePanelVisibility?.('filters', false);
+			favoriteGroupsMgr.setFilterPanelOpen(false);
+			return;
+		}
+		favoriteGroupsMgr.setFilterContext(context);
+		favoriteGroupsMgr.setFilterPanelOpen(true);
+		onTogglePanelVisibility?.('filters', true);
+		onBringToFront?.('filters');
+	};
+
+	const closeFilterPanel = () => {
+		favoriteGroupsMgr.setFilterPanelOpen(false);
+		if (onClosePanel) onClosePanel('filters');
+		else onTogglePanelVisibility?.('filters', false);
+	};
+
+	const renderHomeFilterPanel = () => (
+		<HomeFilterPanel
+			isOpen
+			onClose={closeFilterPanel}
+			context={favoriteGroupsMgr.filterContext || 'recents'}
+			onContextChange={(nextContext) => favoriteGroupsMgr.setFilterContext(nextContext)}
+			activeFavFilters={favoriteGroupsMgr.activeFavFilters}
+			activeRecentFilters={favoriteGroupsMgr.activeRecentFilters}
+			onApplyFilters={favoriteGroupsMgr.handleApplyFilters}
+			recentConnections={recentConnections}
+			favoriteConnections={favoriteConnections}
+			favoriteGroups={favoriteGroupsMgr.favoriteGroups}
+			countByType={favoriteGroupsMgr.countByType}
+			themeColors={themeColors}
+			onCreateGroup={() => favoriteGroupsMgr.setShowCreateGroupDialog(true)}
+			onDeleteGroup={favoriteGroupsMgr.handleDeleteGroup}
+		/>
 	);
 
 	// Contenido común de la tabla de recientes
@@ -653,6 +692,8 @@ const ConnectionHistory = ({
 			onConnectToHistory={onConnectToHistory}
 			onEdit={onEdit}
 			handleToggleFavoriteWithGroup={favoriteGroupsMgr.handleToggleFavoriteWithGroup}
+			filterOpen={!!(panelsLayout?.filters?.visible && favoriteGroupsMgr.filterContext === 'recents')}
+			onOpenFilter={() => toggleFilterPanel('recents')}
 		/>
 	);
 
@@ -670,6 +711,8 @@ const ConnectionHistory = ({
 			onConnectToHistory={onConnectToHistory}
 			onEdit={onEdit}
 			handleToggleFavoriteWithGroup={favoriteGroupsMgr.handleToggleFavoriteWithGroup}
+			filterOpen={!!(panelsLayout?.filters?.visible && favoriteGroupsMgr.filterContext === 'favorites')}
+			onOpenFilter={() => toggleFilterPanel('favorites')}
 		/>
 	);
 
@@ -840,36 +883,6 @@ const ConnectionHistory = ({
 							minHeight={140}
 							className="recents-terminal-frame"
 							frameBackground={adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}
-							headerRight={
-								<>
-									<button
-										className="recents-header-filter-btn"
-										onClick={(e) => {
-											e.stopPropagation();
-											if (onTogglePanelVisibility) {
-												onTogglePanelVisibility('terminal', true);
-												onBringToFront?.('terminal');
-											} else if (onTerminalToggle) {
-												const terminalType = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
-												onTerminalToggle(true, terminalType, false);
-											}
-										}}
-										title="Abrir o enfocar terminal"
-									>
-										<i className="pi pi-desktop" />
-									</button>
-									<button
-										className={`recents-header-filter-btn ${favoriteGroupsMgr.getActiveFilterCount(favoriteGroupsMgr.activeRecentFilters) > 0 ? 'active' : ''}`}
-										onClick={() => { favoriteGroupsMgr.setFilterContext('recents'); favoriteGroupsMgr.setFilterPanelOpen(true); }}
-										title="Filtrar recientes"
-									>
-										<i className={`pi ${favoriteGroupsMgr.getActiveFilterCount(favoriteGroupsMgr.activeRecentFilters) > 0 ? 'pi-filter-fill' : 'pi-filter'}`} />
-										{favoriteGroupsMgr.getActiveFilterCount(favoriteGroupsMgr.activeRecentFilters) > 0 && (
-											<span style={{ fontSize: '0.7rem', marginLeft: 3 }}>{favoriteGroupsMgr.getActiveFilterCount(favoriteGroupsMgr.activeRecentFilters)}</span>
-										)}
-									</button>
-								</>
-							}
 						>
 							{renderRecentsPanel()}
 						</HomePanelWrapper>
@@ -900,36 +913,6 @@ const ConnectionHistory = ({
 							minHeight={140}
 							className="recents-terminal-frame favorites-terminal-frame"
 							frameBackground={adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}
-							headerRight={
-								<>
-									<button
-										className="recents-header-filter-btn"
-										onClick={(e) => {
-											e.stopPropagation();
-											if (onTogglePanelVisibility) {
-												onTogglePanelVisibility('terminal', true);
-												onBringToFront?.('terminal');
-											} else if (onTerminalToggle) {
-												const terminalType = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
-												onTerminalToggle(true, terminalType, false);
-											}
-										}}
-										title="Abrir o enfocar terminal"
-									>
-										<i className="pi pi-desktop" />
-									</button>
-									<button
-										className={`recents-header-filter-btn ${favoriteGroupsMgr.getActiveFilterCount(favoriteGroupsMgr.activeFavFilters) > 0 ? 'active' : ''}`}
-										onClick={() => { favoriteGroupsMgr.setFilterContext('favorites'); favoriteGroupsMgr.setFilterPanelOpen(true); }}
-										title="Filtrar favoritos"
-									>
-										<i className={`pi ${favoriteGroupsMgr.getActiveFilterCount(favoriteGroupsMgr.activeFavFilters) > 0 ? 'pi-filter-fill' : 'pi-filter'}`} />
-										{favoriteGroupsMgr.getActiveFilterCount(favoriteGroupsMgr.activeFavFilters) > 0 && (
-											<span style={{ fontSize: '0.7rem', marginLeft: 3 }}>{favoriteGroupsMgr.getActiveFilterCount(favoriteGroupsMgr.activeFavFilters)}</span>
-										)}
-									</button>
-								</>
-							}
 						>
 							{renderFavoritesPanel()}
 						</HomePanelWrapper>
@@ -998,6 +981,37 @@ const ConnectionHistory = ({
 								themeColors={themeColors}
 								terminalTheme={terminalTheme}
 							/>
+						</HomePanelWrapper>
+					)}
+
+					{/* 7. Panel Filtros */}
+					{panelsLayout.filters && panelsLayout.filters.visible && (
+						<HomePanelWrapper
+							id="filters"
+							title="~/filters"
+							path={`filters · ${favoriteGroupsMgr.filterContext === 'favorites' ? 'favoritos' : 'recientes'}`}
+							titleIcon={<i className="pi pi-filter" style={{ color: themeColors.primaryColor || '#4fc3f7', fontSize: '0.8rem' }} />}
+							panelState={panelsLayout.filters}
+							allPanels={panelsLayout}
+							containerBounds={effectiveContainerBounds}
+							onLayoutChange={onLayoutChange}
+							onBringToFront={onBringToFront}
+							onClose={closeFilterPanel}
+							onToggleMaximize={() => (onToggleMaximizePanel ? onToggleMaximizePanel('filters') : null)}
+							onToggleMinimize={() => (onToggleMinimizePanel ? onToggleMinimizePanel('filters') : null)}
+							terminalFrameStyle={terminalFrameStyle}
+							snapToGrid={snapToGrid}
+							smartSnap={smartSnap}
+							onDragging={onPanelDragging}
+							onDragEnd={onPanelDragEnd}
+							onResizing={onPanelResizing}
+							onResizeEnd={onPanelResizeEnd}
+							minWidth={320}
+							minHeight={280}
+							className="recents-terminal-frame filters-terminal-frame"
+							frameBackground={adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}
+						>
+							{renderHomeFilterPanel()}
 						</HomePanelWrapper>
 					)}
 				</div>
@@ -1101,17 +1115,6 @@ const ConnectionHistory = ({
 
 			{/* Dialogs and Modals */}
 			<ConnectionHistoryDialogs
-				filterPanelOpen={favoriteGroupsMgr.filterPanelOpen}
-				setFilterPanelOpen={favoriteGroupsMgr.setFilterPanelOpen}
-				filterContext={favoriteGroupsMgr.filterContext}
-				activeFavFilters={favoriteGroupsMgr.activeFavFilters}
-				activeRecentFilters={favoriteGroupsMgr.activeRecentFilters}
-				handleApplyFilters={favoriteGroupsMgr.handleApplyFilters}
-				recentConnections={recentConnections}
-				favoriteConnections={favoriteConnections}
-				favoriteGroups={favoriteGroupsMgr.favoriteGroups}
-				countByType={favoriteGroupsMgr.countByType}
-				themeColors={themeColors}
 				handleDeleteGroup={favoriteGroupsMgr.handleDeleteGroup}
 				showFilterConfig={favoriteGroupsMgr.showFilterConfig}
 				setShowFilterConfig={favoriteGroupsMgr.setShowFilterConfig}

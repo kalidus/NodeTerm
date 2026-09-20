@@ -164,7 +164,8 @@ export const CyberConnectionList = ({
 	timeVerbose = false,
 	showFav = true,
 	itemKeyPrefix = 'conn',
-	hudClassName = ''
+	hudClassName = '',
+	belowHeader = null
 }) => {
 	const count = connections.length;
 	const paddedCount = count.toString().padStart(2, '0');
@@ -212,6 +213,8 @@ export const CyberConnectionList = ({
 					{headerRight}
 				</div>
 			</div>
+
+			{belowHeader}
 
 			<div className="cyber-results-list-scroll">
 				{count === 0 ? (

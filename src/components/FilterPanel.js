@@ -14,6 +14,7 @@ const FilterPanel = ({
     themeColors = {},
     onCreateGroup,
     onDeleteGroup,
+    embedded = false,
 }) => {
     const panelRef = useRef(null);
     const [searchQuery, setSearchQuery] = useState('');
@@ -27,9 +28,9 @@ const FilterPanel = ({
         }
     }, [isOpen, activeFilters]);
 
-    // Cerrar al hacer click fuera
+    // Cerrar al hacer click fuera (solo modo overlay)
     useEffect(() => {
-        if (!isOpen) return;
+        if (!isOpen || embedded) return;
 
         const handleClickOutside = (e) => {
             if (panelRef.current && !panelRef.current.contains(e.target)) {
@@ -37,7 +38,6 @@ const FilterPanel = ({
             }
         };
 
-        // Delay para evitar que el click que abre el panel lo cierre inmediatamente
         const timer = setTimeout(() => {
             document.addEventListener('mousedown', handleClickOutside);
         }, 100);
@@ -46,7 +46,7 @@ const FilterPanel = ({
             clearTimeout(timer);
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [isOpen, onClose]);
+    }, [isOpen, onClose, embedded]);
 
     // Cerrar con tecla Escape
     useEffect(() => {
@@ -86,7 +86,7 @@ const FilterPanel = ({
 
     const handleApply = () => {
         onApplyFilters(tempFilters);
-        onClose();
+        if (!embedded) onClose();
     };
 
     const getTotalActiveCount = () => {
@@ -106,9 +106,11 @@ const FilterPanel = ({
 
     if (!isOpen) return null;
 
-    return (
-        <div className={`filter-panel-overlay ${isOpen ? 'open' : ''}`}>
-            <div className="filter-panel-container app-surface app-surface-lg" ref={panelRef} style={{
+    const panel = (
+            <div
+                className={`filter-panel-container ${embedded ? 'filter-panel-embedded' : 'app-surface app-surface-lg'}`}
+                ref={panelRef}
+                style={{
                 '--panel-bg': themeColors.cardBackground || 'var(--ui-dialog-bg)',
                 '--panel-border': themeColors.borderColor || 'var(--ui-dialog-border)',
                 '--panel-text': themeColors.textPrimary || 'var(--ui-dialog-text)',
@@ -206,7 +208,7 @@ const FilterPanel = ({
                         <button
                             className="filter-add-group-btn"
                             onClick={() => {
-                                onClose();
+                                if (!embedded) onClose();
                                 onCreateGroup?.();
                             }}
                         >
@@ -265,6 +267,13 @@ const FilterPanel = ({
                     </button>
                 </div>
             </div>
+    );
+
+    if (embedded) return panel;
+
+    return (
+        <div className={`filter-panel-overlay ${isOpen ? 'open' : ''}`}>
+            {panel}
         </div>
     );
 };
