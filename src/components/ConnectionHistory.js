@@ -808,23 +808,6 @@ const ConnectionHistory = ({
 											terminalSwitcherOverlayRef.current?.toggle(e);
 										}}
 									/>
-									<i
-										className={`pi ${panelsLayout.terminal?.isMaximized ? 'pi-window-minimize' : 'pi-window-maximize'}`}
-										style={{
-											fontSize: '0.9rem',
-											color: terminalTheme.foreground || '#c9d1d9',
-											opacity: 0.65,
-											cursor: 'pointer',
-											padding: '4px',
-											transition: 'all 0.2s'
-										}}
-										title={panelsLayout.terminal?.isMaximized ? "Restaurar" : "Maximizar"}
-										onClick={(e) => {
-											e.stopPropagation();
-											if (onToggleMaximizePanel) onToggleMaximizePanel('terminal');
-											else if (onToggleLocalTerminalMaximized) onToggleLocalTerminalMaximized();
-										}}
-									/>
 								</>
 							}
 						>

@@ -469,6 +469,24 @@ const ConnectionHistoryStyles = ({
 					height: 8px;
 					border: 1px solid currentColor;
 				}
+				.icon-restore::before,
+				.icon-restore::after {
+					content: '';
+					position: absolute;
+					width: 6px;
+					height: 6px;
+					border: 1px solid currentColor;
+					box-sizing: border-box;
+				}
+				.icon-restore::before {
+					top: 0;
+					right: 0;
+				}
+				.icon-restore::after {
+					bottom: 0;
+					left: 0;
+					background: var(--ui-chrome-header-bg, var(--ui-sidebar-bg, #1a1b26));
+				}
 				.icon-close::before, .icon-close::after {
 					content: '';
 					position: absolute;
