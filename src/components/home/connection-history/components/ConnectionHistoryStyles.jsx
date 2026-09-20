@@ -399,8 +399,19 @@ const ConnectionHistoryStyles = ({
 				.recents-terminal-header .traffic-dot.yellow:hover { filter: brightness(1.25); }
 				.recents-terminal-header .traffic-dot.green { background: #27c93f; border: 1px solid #1aab29; cursor: pointer; transition: filter 0.15s; }
 				.recents-terminal-header .traffic-dot.green:hover { filter: brightness(1.25); }
+				.recents-terminal-header > div:not(.header-path) {
+					position: relative;
+					z-index: 5;
+				}
 				.recents-terminal-header .header-path {
-					flex: 1;
+					position: absolute;
+					left: 50%;
+					top: 50%;
+					transform: translate(-50%, -50%);
+					max-width: calc(100% - 140px);
+					overflow: hidden;
+					text-overflow: ellipsis;
+					white-space: nowrap;
 					text-align: center;
 					color: ${terminalTheme.foreground || '#c9d1d9'};
 					opacity: 0.6;
@@ -586,7 +597,7 @@ const ConnectionHistoryStyles = ({
 				}
 				.matcha-dot:hover { color: #fff; background: rgba(255,255,255,0.05); }
 				
-				.recents-header-right { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+				.recents-header-right { display: flex; align-items: center; gap: 4px; flex-shrink: 0; margin-left: auto; z-index: 5; }
 				.recents-filter-chips-bar {
 					display: flex;
 					align-items: center;
