@@ -1,9 +1,15 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { subscribeHomeSnapGuides } from '../utils/homePanelSnapBus';
 
 /**
  * Lineas guia de alineacion magnetica mientras se arrastra o redimensiona un panel.
+ * Se suscribe al bus de snap para no forzar re-renders de HomeTab.
  */
-const HomePanelGuideOverlay = ({ guides = [] }) => {
+const HomePanelGuideOverlay = () => {
+  const [guides, setGuides] = useState([]);
+
+  useEffect(() => subscribeHomeSnapGuides(setGuides), []);
+
   if (!Array.isArray(guides) || guides.length === 0) return null;
 
   return (

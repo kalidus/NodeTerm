@@ -44,6 +44,7 @@ import {
 } from '../utils/homeTabPresets';
 import { ensureHomeWidgetLayout } from '../utils/homeWidgets';
 import { HomeWidgetPicker } from './home/connection-history';
+import { setHomeSnapGuides, clearHomeSnapGuides } from '../utils/homePanelSnapBus';
 
 /** Opciones de marco del terminal local (Home); mismas claves que `TERMINAL_FRAME_STYLE` en ConnectionHistory. */
 const HOME_TERMINAL_FRAME_STYLE_OPTIONS = [
@@ -515,8 +516,11 @@ const HomeTab = ({
       return true;
     }
   });
-  const [snapGuides, setSnapGuides] = useState([]);
   const [userPresets, setUserPresets] = useState(() => getUserPresets());
+  const panelsLayoutRef = useRef(panelsLayout);
+  panelsLayoutRef.current = panelsLayout;
+  const smartSnapRef = useRef(smartSnap);
+  smartSnapRef.current = smartSnap;
   const [newPresetName, setNewPresetName] = useState('');
   const lastDisplayKeyRef = useRef(getCurrentDisplayKey());
   const layoutSyncLockRef = useRef(0);
@@ -576,6 +580,9 @@ const HomeTab = ({
     );
   }, []);
 
+  const canvasSizeGetterRef = useRef(getCanvasSize);
+  canvasSizeGetterRef.current = getCanvasSize;
+
   const handlePanelLayoutChange = useCallback((panelId, updates) => {
     if (isLayoutSyncLocked()) return;
     setPanelsLayout((prev) => {
@@ -596,20 +603,21 @@ const HomeTab = ({
   }, [commitAuthoredLayout, isLayoutSyncLocked]);
 
   const handlePanelDragging = useCallback((panelId, current) => {
-    if (!smartSnap) {
-      setSnapGuides([]);
+    if (!smartSnapRef.current) {
+      clearHomeSnapGuides();
       return;
     }
-    const bounds = getCanvasSize();
-    const snapped = calculateDragSnap(panelId, current, panelsLayout, bounds);
-    setSnapGuides(snapped.guides || []);
-  }, [smartSnap, getCanvasSize, panelsLayout]);
+    const bounds = canvasSizeGetterRef.current();
+    const snapped = calculateDragSnap(panelId, current, panelsLayoutRef.current, bounds);
+    setHomeSnapGuides(snapped.guides || []);
+  }, []);
 
   const handlePanelDragEnd = useCallback((panelId, finalBounds) => {
-    setSnapGuides([]);
+    clearHomeSnapGuides();
     if (isLayoutSyncLocked()) return;
-    const bounds = getCanvasSize();
-    const panel = panelsLayout[panelId] || {};
+    const layout = panelsLayoutRef.current;
+    const bounds = canvasSizeGetterRef.current();
+    const panel = layout[panelId] || {};
     const moved =
       Math.abs((finalBounds.x) - (Number(panel.x) || 0)) >= 3
       || Math.abs((finalBounds.y) - (Number(panel.y) || 0)) >= 3;
@@ -626,29 +634,30 @@ const HomeTab = ({
       width: finalBounds.width,
       height: finalBounds.height
     };
-    if (smartSnap) {
-      const snapped = calculateDragSnap(panelId, nextRect, panelsLayout, bounds);
+    if (smartSnapRef.current) {
+      const snapped = calculateDragSnap(panelId, nextRect, layout, bounds);
       nextRect = { ...nextRect, x: snapped.x, y: snapped.y };
     }
     const clamped = clampRectToCanvas(nextRect, bounds.width, bounds.height, minW, minH);
     handlePanelLayoutChange(panelId, { x: clamped.x, y: clamped.y });
-  }, [smartSnap, getCanvasSize, panelsLayout, handlePanelLayoutChange, isLayoutSyncLocked]);
+  }, [handlePanelLayoutChange, isLayoutSyncLocked]);
 
   const handlePanelResizing = useCallback((panelId, current, direction) => {
-    if (!smartSnap) {
-      setSnapGuides([]);
+    if (!smartSnapRef.current) {
+      clearHomeSnapGuides();
       return;
     }
-    const bounds = getCanvasSize();
-    const snapped = calculateResizeSnap(panelId, current, direction || '', panelsLayout, bounds);
-    setSnapGuides(snapped.guides || []);
-  }, [smartSnap, getCanvasSize, panelsLayout]);
+    const bounds = canvasSizeGetterRef.current();
+    const snapped = calculateResizeSnap(panelId, current, direction || '', panelsLayoutRef.current, bounds);
+    setHomeSnapGuides(snapped.guides || []);
+  }, []);
 
   const handlePanelResizeEnd = useCallback((panelId, finalBounds, direction) => {
-    setSnapGuides([]);
+    clearHomeSnapGuides();
     if (isLayoutSyncLocked()) return;
-    const bounds = getCanvasSize();
-    const panel = panelsLayout[panelId] || {};
+    const layout = panelsLayoutRef.current;
+    const bounds = canvasSizeGetterRef.current();
+    const panel = layout[panelId] || {};
     const changed =
       Math.abs((finalBounds.x) - (Number(panel.x) || 0)) >= 3
       || Math.abs((finalBounds.y) - (Number(panel.y) || 0)) >= 3
@@ -663,8 +672,8 @@ const HomeTab = ({
       width: finalBounds.width,
       height: finalBounds.height
     };
-    if (smartSnap) {
-      const snapped = calculateResizeSnap(panelId, nextRect, direction || '', panelsLayout, bounds);
+    if (smartSnapRef.current) {
+      const snapped = calculateResizeSnap(panelId, nextRect, direction || '', layout, bounds);
       nextRect = {
         x: snapped.x,
         y: snapped.y,
@@ -679,12 +688,13 @@ const HomeTab = ({
       width: clamped.width,
       height: clamped.height
     });
-  }, [smartSnap, getCanvasSize, panelsLayout, handlePanelLayoutChange, isLayoutSyncLocked]);
+  }, [handlePanelLayoutChange, isLayoutSyncLocked]);
 
   const handleToggleSmartSnap = useCallback(() => {
     setSmartSnap((prev) => {
       const next = !prev;
       localStorage.setItem('nodeterm_home_smart_snap', String(next));
+      if (!next) clearHomeSnapGuides();
       return next;
     });
   }, []);
@@ -2798,10 +2808,6 @@ const HomeTab = ({
                   onToggleLocalTerminalMaximized={handleToggleLocalTerminalMaximized}
                   onLoadGroup={handleLoadGroup}
                   panelsLayout={panelsLayout}
-                  containerBounds={{
-                    width: containerWidth > 100 ? containerWidth : (mainAreaRef.current?.offsetWidth || window.innerWidth),
-                    height: containerHeight > 100 ? containerHeight : (mainAreaRef.current?.offsetHeight || window.innerHeight)
-                  }}
                   onLayoutChange={handlePanelLayoutChange}
                   onBringToFront={handleBringToFront}
                   onClosePanel={handleClosePanel}
@@ -2810,7 +2816,6 @@ const HomeTab = ({
                   onTogglePanelVisibility={handleTogglePanelVisibility}
                   snapToGrid={snapToGrid}
                   smartSnap={smartSnap}
-                  snapGuides={snapGuides}
                   onPanelDragging={handlePanelDragging}
                   onPanelDragEnd={handlePanelDragEnd}
                   onPanelResizing={handlePanelResizing}

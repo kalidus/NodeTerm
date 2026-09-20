@@ -1,6 +1,53 @@
 import React, { useRef, useCallback, useState } from 'react';
 import { Rnd } from 'react-rnd';
 
+const LIVE_Z_INDEX = 5000;
+
+function panelStateEqual(a, b) {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return a.x === b.x
+    && a.y === b.y
+    && a.width === b.width
+    && a.height === b.height
+    && a.zIndex === b.zIndex
+    && a.isMaximized === b.isMaximized
+    && a.isMinimized === b.isMinimized
+    && a.visible === b.visible;
+}
+
+function areWrapperPropsEqual(prev, next) {
+  return prev.id === next.id
+    && prev.title === next.title
+    && prev.path === next.path
+    && prev.titleIcon === next.titleIcon
+    && prev.closable === next.closable
+    && prev.terminalFrameStyle === next.terminalFrameStyle
+    && prev.snapToGrid === next.snapToGrid
+    && prev.smartSnap === next.smartSnap
+    && prev.minWidth === next.minWidth
+    && prev.minHeight === next.minHeight
+    && prev.disableDragging === next.disableDragging
+    && prev.disableResizing === next.disableResizing
+    && prev.hideHeader === next.hideHeader
+    && prev.frameBackground === next.frameBackground
+    && prev.className === next.className
+    && prev.children === next.children
+    && prev.headerRight === next.headerRight
+    && prev.headerLeft === next.headerLeft
+    && prev.onLayoutChange === next.onLayoutChange
+    && prev.onBringToFront === next.onBringToFront
+    && prev.onClose === next.onClose
+    && prev.onToggleMaximize === next.onToggleMaximize
+    && prev.onToggleMinimize === next.onToggleMinimize
+    && prev.onMinimize === next.onMinimize
+    && prev.onDragging === next.onDragging
+    && prev.onDragEnd === next.onDragEnd
+    && prev.onResizing === next.onResizing
+    && prev.onResizeEnd === next.onResizeEnd
+    && panelStateEqual(prev.panelState, next.panelState);
+}
+
 /**
  * Componente envoltorio para paneles móviles y redimensionables del Dashboard de Home.
  * Integra react-rnd, gestión de zIndex, estilos de marco (macOS, Gnome, Windows, etc.)
@@ -12,8 +59,6 @@ const HomePanelWrapper = ({
   titleIcon = null,
   path = '',
   panelState = {},
-  allPanels = null,
-  containerBounds = null,
   onLayoutChange,
   onBringToFront,
   onClose,
@@ -37,7 +82,6 @@ const HomePanelWrapper = ({
   className = '',
   style = {},
   bodyStyle = {},
-  themeColors = {},
   disableDragging = false,
   disableResizing = false,
   hideHeader = false,
@@ -45,7 +89,9 @@ const HomePanelWrapper = ({
 }) => {
   const rndRef = useRef(null);
   const interactingRef = useRef(false);
+  const liveBoxRef = useRef({ x: 0, y: 0, width: 400, height: 300 });
   const [internalMinimized, setInternalMinimized] = useState(false);
+  const [localZ, setLocalZ] = useState(null);
 
   const {
     x = 0,
@@ -61,88 +107,124 @@ const HomePanelWrapper = ({
   const fillParent = isMaximized;
   const minimizedHeight = 30;
   const maximizeTitle = isMaximized ? 'Restaurar' : 'Maximizar';
+  const displayZ = localZ || zIndex;
   const activeShadow = isMaximized
     ? 'none'
-    : `0 10px 28px rgba(0, 0, 0, ${Math.min(0.48, 0.18 + Math.max(0, zIndex - 10) * 0.012)})`;
+    : `0 10px 28px rgba(0, 0, 0, ${Math.min(0.48, 0.18 + Math.max(0, displayZ - 10) * 0.012)})`;
 
-  const handleBringToFront = useCallback(() => {
-    if (onBringToFront) {
-      onBringToFront(id);
-    }
+  const captureLiveBox = useCallback((next) => {
+    liveBoxRef.current = {
+      x: Number.isFinite(next.x) ? next.x : 0,
+      y: Number.isFinite(next.y) ? next.y : 0,
+      width: Number.isFinite(next.width) ? next.width : width,
+      height: Number.isFinite(next.height) ? next.height : (isMinimized ? minimizedHeight : height)
+    };
+    return liveBoxRef.current;
+  }, [width, height, isMinimized]);
+
+  const beginInteract = useCallback(() => {
+    interactingRef.current = true;
+    captureLiveBox({
+      x,
+      y,
+      width,
+      height: isMinimized ? minimizedHeight : height
+    });
+    setLocalZ(LIVE_Z_INDEX);
+  }, [captureLiveBox, x, y, width, height, isMinimized]);
+
+  const persistZIndex = useCallback(() => {
+    setLocalZ(null);
+    onBringToFront?.(id);
   }, [id, onBringToFront]);
 
+  const handleMouseDown = useCallback(() => {
+    setLocalZ(LIVE_Z_INDEX);
+  }, []);
+
+  const handleMouseUp = useCallback(() => {
+    if (interactingRef.current) return;
+    persistZIndex();
+  }, [persistZIndex]);
+
   const handleDragStart = useCallback(() => {
-    interactingRef.current = true;
-    handleBringToFront();
-  }, [handleBringToFront]);
+    beginInteract();
+  }, [beginInteract]);
 
   const handleDrag = useCallback((e, d) => {
     if (isMaximized) return;
-    if (onDragging) {
-      const curW = rndRef.current?.resizableElement?.current?.offsetWidth || width;
-      const curH = rndRef.current?.resizableElement?.current?.offsetHeight || (isMinimized ? minimizedHeight : height);
-      onDragging(id, { x: d.x, y: d.y, width: curW, height: curH });
-    }
-  }, [id, isMaximized, isMinimized, onDragging, width, height]);
+    const next = captureLiveBox({
+      x: d.x,
+      y: d.y,
+      width: rndRef.current?.resizableElement?.current?.offsetWidth || liveBoxRef.current.width || width,
+      height: rndRef.current?.resizableElement?.current?.offsetHeight || liveBoxRef.current.height || (isMinimized ? minimizedHeight : height)
+    });
+    onDragging?.(id, next);
+  }, [id, isMaximized, isMinimized, onDragging, captureLiveBox, width, height]);
 
   const handleDragStop = useCallback((e, d) => {
     if (isMaximized) return;
     const fromUser = interactingRef.current;
     interactingRef.current = false;
     if (!fromUser) return;
+    const next = captureLiveBox({
+      x: d.x,
+      y: d.y,
+      width: liveBoxRef.current.width || width,
+      height: liveBoxRef.current.height || (isMinimized ? minimizedHeight : height)
+    });
+    persistZIndex();
     if (onDragEnd) {
-      onDragEnd(id, { x: d.x, y: d.y, width, height: isMinimized ? minimizedHeight : height });
+      onDragEnd(id, next);
     } else if (onLayoutChange) {
       onLayoutChange(id, {
         ...panelState,
-        x: d.x,
-        y: d.y
+        x: next.x,
+        y: next.y
       });
     }
-  }, [id, isMaximized, isMinimized, onDragEnd, onLayoutChange, panelState, width, height]);
+  }, [id, isMaximized, isMinimized, onDragEnd, onLayoutChange, panelState, persistZIndex, captureLiveBox, width, height]);
+
+  const handleResizeStart = useCallback(() => {
+    beginInteract();
+  }, [beginInteract]);
 
   const handleResize = useCallback((e, direction, ref, delta, position) => {
     if (isMaximized || isMinimized) return;
-    if (onResizing) {
-      onResizing(id, {
-        x: position.x,
-        y: position.y,
-        width: ref.offsetWidth,
-        height: ref.offsetHeight
-      }, direction);
-    }
-  }, [id, isMaximized, isMinimized, onResizing]);
+    const next = captureLiveBox({
+      x: position.x,
+      y: position.y,
+      width: ref.offsetWidth,
+      height: ref.offsetHeight
+    });
+    onResizing?.(id, next, direction);
+  }, [id, isMaximized, isMinimized, onResizing, captureLiveBox]);
 
   const handleResizeStop = useCallback((e, direction, ref, delta, position) => {
     if (isMaximized || isMinimized) return;
     const fromUser = interactingRef.current;
     interactingRef.current = false;
     if (!fromUser) return;
-    const newWidth = ref.offsetWidth;
-    const newHeight = ref.offsetHeight;
-
+    const next = captureLiveBox({
+      x: position.x,
+      y: position.y,
+      width: ref.offsetWidth,
+      height: ref.offsetHeight
+    });
+    persistZIndex();
     if (onResizeEnd) {
-      onResizeEnd(id, {
-        x: position.x,
-        y: position.y,
-        width: newWidth,
-        height: newHeight
-      }, direction);
+      onResizeEnd(id, next, direction);
     } else if (onLayoutChange) {
       onLayoutChange(id, {
         ...panelState,
-        width: newWidth,
-        height: newHeight,
-        x: position.x,
-        y: position.y
+        ...next
       });
     }
 
-    // Notificar a componentes hijos (como xterm o gráficas) para que recalculen dimensiones
     setTimeout(() => {
       window.dispatchEvent(new Event('resize'));
     }, 50);
-  }, [id, isMaximized, isMinimized, onResizeEnd, onLayoutChange, panelState]);
+  }, [id, isMaximized, isMinimized, onResizeEnd, onLayoutChange, panelState, persistZIndex, captureLiveBox]);
 
   const handleMin = useCallback((e) => {
     e?.stopPropagation();
@@ -577,23 +659,29 @@ const HomePanelWrapper = ({
 
   const isFramelessNonTerminal = terminalFrameStyle === 'frameless' && id !== 'terminal';
 
+  const liveBox = interactingRef.current ? liveBoxRef.current : null;
+  const posX = liveBox ? liveBox.x : x;
+  const posY = liveBox ? liveBox.y : y;
+  const posW = liveBox ? liveBox.width : width;
+  const posH = liveBox ? liveBox.height : (isMinimized ? minimizedHeight : height);
+
   return (
     <Rnd
       ref={rndRef}
       size={
         fillParent
           ? { width: '100%', height: '100%' }
-          : { width, height: isMinimized ? minimizedHeight : height }
+          : { width: posW, height: posH }
       }
       position={
         fillParent
           ? { x: 0, y: 0 }
-          : { x, y }
+          : { x: posX, y: posY }
       }
       onDragStart={handleDragStart}
       onDrag={handleDrag}
       onDragStop={handleDragStop}
-      onResizeStart={handleDragStart}
+      onResizeStart={handleResizeStart}
       onResize={handleResize}
       onResizeStop={handleResizeStop}
       minWidth={fillParent ? undefined : (isMinimized ? Math.min(minWidth, 260, width) : Math.min(minWidth, Math.max(72, width)))}
@@ -629,7 +717,7 @@ const HomePanelWrapper = ({
         topLeft: { width: '14px', height: '14px', left: '-6px', top: '-6px', zIndex: 31, cursor: 'nwse-resize' }
       }}
       style={{
-        zIndex,
+        zIndex: displayZ,
         display: 'flex',
         flexDirection: 'column',
         position: 'absolute',
@@ -639,7 +727,8 @@ const HomePanelWrapper = ({
         transition: isMaximized ? 'all 0.2s ease' : 'none',
         ...style
       }}
-      onMouseDown={handleBringToFront}
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
       className={`home-panel-rnd home-panel-rnd-${id}`}
     >
       <div
@@ -750,4 +839,4 @@ const HomePanelWrapper = ({
   );
 };
 
-export default HomePanelWrapper;
+export default React.memo(HomePanelWrapper, areWrapperPropsEqual);

@@ -79,19 +79,13 @@ const ConnectionHistory = ({
 	onTogglePanelVisibility = null,
 	snapToGrid = true,
 	smartSnap = true,
-	snapGuides = [],
 	onPanelDragging = null,
 	onPanelDragEnd = null,
 	onPanelResizing = null,
 	onPanelResizeEnd = null,
-	containerBounds = null,
 	children
 }) => {
 	const canvasRef = useRef(null);
-	const effectiveContainerBounds = containerBounds || {
-		width: canvasRef.current?.offsetWidth || (typeof window !== 'undefined' ? window.innerWidth : 1200),
-		height: canvasRef.current?.offsetHeight || (typeof window !== 'undefined' ? window.innerHeight : 800)
-	};
 
 	const localTerminalBg = useMemo(() => {
 		const baseColor = themes[localLinuxTerminalTheme]?.theme?.background || '#0c0c0c';
@@ -757,8 +751,6 @@ const ConnectionHistory = ({
 				path={path}
 				titleIcon={opts.titleIcon}
 				panelState={state}
-				allPanels={panelsLayout}
-				containerBounds={effectiveContainerBounds}
 				onLayoutChange={onLayoutChange}
 				onBringToFront={onBringToFront}
 				onClose={() => (onClosePanel ? onClosePanel(id) : onTogglePanelVisibility?.(id, false))}
@@ -814,7 +806,7 @@ const ConnectionHistory = ({
 					}}
 				>
 					{/* Overlay de guías magnéticas inteligentes en tiempo real */}
-					<HomePanelGuideOverlay guides={snapGuides} />
+					<HomePanelGuideOverlay />
 
 					{/* 1. Panel Buscador y Conexión */}
 					{panelsLayout.search && panelsLayout.search.visible !== false && (
@@ -823,8 +815,6 @@ const ConnectionHistory = ({
 							title="~/home · terminal"
 							path={`home · ${activeViewName || 'terminal'}`}
 							panelState={panelsLayout.search}
-							allPanels={panelsLayout}
-							containerBounds={effectiveContainerBounds}
 							onLayoutChange={onLayoutChange}
 							onBringToFront={onBringToFront}
 							onClose={() => (onClosePanel ? onClosePanel('search') : onTogglePanelVisibility?.('search', false))}
@@ -853,8 +843,6 @@ const ConnectionHistory = ({
 							title={terminalTitle}
 							path={terminalTitle ? terminalTitle.replace(/^\/?(local\s*·\s*)?/, 'local · ') : 'local'}
 							panelState={panelsLayout.terminal}
-							allPanels={panelsLayout}
-							containerBounds={effectiveContainerBounds}
 							onLayoutChange={onLayoutChange}
 							onBringToFront={onBringToFront}
 							closable={false}
@@ -941,8 +929,6 @@ const ConnectionHistory = ({
 							title="~/recent"
 							path={`recent · ${favoriteGroupsMgr.filteredRecentsForDisplay.length} conexiones`}
 							panelState={panelsLayout.recents}
-							allPanels={panelsLayout}
-							containerBounds={effectiveContainerBounds}
 							onLayoutChange={onLayoutChange}
 							onBringToFront={onBringToFront}
 							onClose={() => (onClosePanel ? onClosePanel('recents') : onTogglePanelVisibility?.('recents', false))}
@@ -971,8 +957,6 @@ const ConnectionHistory = ({
 							title="~/favorites"
 							path={`favorites · ${favoriteGroupsMgr.filteredFavorites.length} conexiones`}
 							panelState={panelsLayout.favorites}
-							allPanels={panelsLayout}
-							containerBounds={effectiveContainerBounds}
 							onLayoutChange={onLayoutChange}
 							onBringToFront={onBringToFront}
 							onClose={() => (onClosePanel ? onClosePanel('favorites') : onTogglePanelVisibility?.('favorites', false))}
@@ -1012,8 +996,6 @@ const ConnectionHistory = ({
 							path="sysmon · hardware"
 							titleIcon={<i className="pi pi-bolt" style={{ color: themeColors.primaryColor || '#00f2ff', fontSize: '0.8rem' }} />}
 							panelState={panelsLayout.sysmon}
-							allPanels={panelsLayout}
-							containerBounds={effectiveContainerBounds}
 							onLayoutChange={onLayoutChange}
 							onBringToFront={onBringToFront}
 							onClose={() => (onClosePanel ? onClosePanel('sysmon') : onTogglePanelVisibility?.('sysmon', false))}
@@ -1046,8 +1028,6 @@ const ConnectionHistory = ({
 							path={`filters · ${favoriteGroupsMgr.filterContext === 'favorites' ? 'favoritos' : 'recientes'}`}
 							titleIcon={<i className="pi pi-filter" style={{ color: themeColors.primaryColor || '#4fc3f7', fontSize: '0.8rem' }} />}
 							panelState={panelsLayout.filters}
-							allPanels={panelsLayout}
-							containerBounds={effectiveContainerBounds}
 							onLayoutChange={onLayoutChange}
 							onBringToFront={onBringToFront}
 							onClose={closeFilterPanel}
