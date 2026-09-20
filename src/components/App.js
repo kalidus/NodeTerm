@@ -6,6 +6,7 @@ import { useThemeManagement } from '../hooks/useThemeManagement';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
 import localStorageSyncService from '../services/LocalStorageSyncService';
 import { persistSyncedSetting } from '../utils/persistSyncedSetting';
+import { publishHomeSessions } from '../utils/homeSessionBus';
 
 import { loadSavedTabTheme } from '../utils/tabThemeLoader';
 import i18n from '../i18n';
@@ -1386,6 +1387,40 @@ const App = () => {
     return getFilteredTabs();
   }, [getFilteredTabs]);
 
+  useEffect(() => {
+    const tabs = getAllTabs().filter((tab) => tab && tab.type !== 'home');
+    const active = filteredTabs[activeTabIndex];
+    publishHomeSessions({
+      tabs,
+      activeKey: active?.key || lastOpenedTabKey || null
+    });
+  }, [getAllTabs, filteredTabs, activeTabIndex, lastOpenedTabKey]);
+
+  useEffect(() => {
+    const activate = (event) => {
+      const key = event.detail?.key;
+      if (!key) return;
+      if (activeGroupId !== null) {
+        setActiveGroupId(null);
+      }
+      const tabs = getTabsInGroup(null);
+      const idx = tabs.findIndex((t) => t.key === key);
+      if (idx !== -1) {
+        setActiveTabIndex(idx);
+      }
+    };
+    const closeTab = (event) => {
+      const key = event.detail?.key;
+      if (key) handleTabClose?.(key);
+    };
+    window.addEventListener('home-activate-tab', activate);
+    window.addEventListener('home-close-tab', closeTab);
+    return () => {
+      window.removeEventListener('home-activate-tab', activate);
+      window.removeEventListener('home-close-tab', closeTab);
+    };
+  }, [activeGroupId, getTabsInGroup, handleTabClose, setActiveGroupId, setActiveTabIndex]);
+
   // Usar el hook de gestión de conexiones
   const {
     onOpenSSHConnection,
@@ -1650,18 +1685,19 @@ const App = () => {
         return;
       }
 
-      if (!matchesShortcut(event, connectionSearchShortcutRef.current)) {
-        return;
-      }
+      if (
+        matchesShortcut(event, connectionSearchShortcutRef.current)
+        || ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && String(event.key).toLowerCase() === 'k')
+      ) {
+        const paletteOpen = connectionSearchPaletteOpenRef.current;
+        if (!paletteOpen && shouldIgnoreShortcutTarget(event.target, event) && String(event.key).toLowerCase() !== 'k') {
+          return;
+        }
 
-      const paletteOpen = connectionSearchPaletteOpenRef.current;
-      if (!paletteOpen && shouldIgnoreShortcutTarget(event.target, event)) {
-        return;
+        event.preventDefault();
+        event.stopPropagation();
+        toggleConnectionSearchPalette();
       }
-
-      event.preventDefault();
-      event.stopPropagation();
-      toggleConnectionSearchPalette();
     };
 
     const handleShortcutFromMain = () => {
@@ -1681,10 +1717,13 @@ const App = () => {
     let shortcutFromMainListener;
     shortcutFromMainListener = window.electron?.onConnectionSearchShortcut?.(handleShortcutFromMain);
     window.addEventListener('keydown', handleKeyDown, true);
+    const openPalette = () => toggleConnectionSearchPalette();
+    window.addEventListener('open-command-palette', openPalette);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown, true);
       window.electron?.offConnectionSearchShortcut?.(shortcutFromMainListener);
+      window.removeEventListener('open-command-palette', openPalette);
     };
   }, [toggleConnectionSearchPalette]);
 

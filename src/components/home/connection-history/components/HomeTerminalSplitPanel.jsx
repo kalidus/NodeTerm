@@ -1,8 +1,7 @@
 import React from 'react';
-import ConnectionRow from './ConnectionRow';
 import FilterBadge from '../../../FilterBadge';
 import StandaloneStatusBar from '../../../StandaloneStatusBar';
-import { activeKey } from '../utils/connectionHistoryHelpers';
+import { CyberConnectionList } from './CyberConnectionList';
 
 export const HomeTerminalSplitPanel = ({
 	children,
@@ -256,35 +255,21 @@ export const HomeTerminalSplitPanel = ({
 										))}
 									</div>
 								)}
-								<div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
-									{splitConnections.length === 0 ? (
-										<div style={{
-											display: 'flex',
-											flexDirection: 'column',
-											alignItems: 'center',
-											justifyContent: 'center',
-											height: '100%',
-											gap: 8,
-											color: 'rgba(255,255,255,0.2)',
-											fontSize: '0.75rem',
-											padding: 16,
-											textAlign: 'center'
-										}}>
-											<i className={splitView === 'favorites' ? 'pi pi-star' : 'pi pi-clock'} style={{ fontSize: '1.3rem', opacity: 0.3 }} />
-											<span>No hay {splitView === 'favorites' ? 'favoritos' : 'recientes'}</span>
-										</div>
-									) : splitConnections.map(conn => (
-										<ConnectionRow
-											key={conn.id}
-											connection={conn}
-											isPinned={isFavorite ? isFavorite(conn) : false}
-											isActive={activeIds ? activeIds.has(activeKey(conn)) : false}
-											onConnect={onConnectToHistory}
-											onEdit={onEdit}
-											onToggleFav={handleToggleFavoriteWithGroup}
-											isSplit={true}
-										/>
-									))}
+								<div style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
+									<CyberConnectionList
+										connections={splitConnections}
+										accent={splitView === 'favorites' ? '#FFD700' : '#2196F3'}
+										title=""
+										subtitle=""
+										emptyMessage={`No hay ${splitView === 'favorites' ? 'favoritos' : 'recientes'}`}
+										activeIds={activeIds}
+										onConnect={onConnectToHistory}
+										onEdit={onEdit}
+										onToggleFav={handleToggleFavoriteWithGroup}
+										showTime={splitView !== 'favorites'}
+										showFav
+										itemKeyPrefix={`split-${splitView}`}
+									/>
 								</div>
 							</div>
 						</>

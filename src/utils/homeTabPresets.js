@@ -1,5 +1,6 @@
 import { STORAGE_KEYS } from './constants';
 import { SNAP_CONFIG } from './homeTabSnapping';
+import { ensureHomeWidgetLayout } from './homeWidgets';
 
 const USER_PRESETS_KEY = 'nodeterm_home_user_presets';
 const MONITOR_LAYOUTS_KEY = 'nodeterm_home_monitor_layouts';
@@ -129,6 +130,58 @@ export function getBuiltinPresets(width = 1200, height = 800) {
   const h = height > 200 ? height : 800;
   const pad = SNAP_CONFIG.CANVAS_PAD;
   const gap = SNAP_CONFIG.GAP;
+
+  const hiddenExtras = {
+    recents: { visible: false, x: pad, y: pad, width: 340, height: 260, minWidth: 250, minHeight: 140, isMaximized: false },
+    sysmon: { visible: false, x: pad, y: pad, width: 340, height: 260, minWidth: 280, minHeight: 200, isMaximized: false },
+    filters: { visible: false, x: pad, y: pad, width: 420, height: 380, minWidth: 320, minHeight: 280, isMaximized: false },
+    sessions: { visible: false, x: pad, y: pad, width: 320, height: 240, minWidth: 220, minHeight: 140, isMaximized: false },
+    vault: { visible: false, x: pad, y: pad, width: 320, height: 240, minWidth: 220, minHeight: 140, isMaximized: false },
+    notes: { visible: false, x: pad, y: pad, width: 320, height: 240, minWidth: 220, minHeight: 140, isMaximized: false },
+    groups: { visible: false, x: pad, y: pad, width: 340, height: 240, minWidth: 220, minHeight: 140, isMaximized: false },
+    quickbar: { visible: false, x: Math.max(pad, w - 240), y: pad, width: 220, height: 300, minWidth: 180, minHeight: 200, isMaximized: false }
+  };
+
+  // --- 0. LAUNCHER (Search + jump/favoritos + terminal) ---
+  const launcherSearchH = 200;
+  const launcherFavH = Math.max(140, Math.min(180, Math.floor(h * 0.22)));
+  const launcherSearchW = Math.min(720, Math.max(420, w - pad * 2));
+  const launcherLayout = ensureHomeWidgetLayout({
+    search: {
+      visible: true,
+      x: Math.max(pad, Math.floor((w - launcherSearchW) / 2)),
+      y: pad,
+      width: launcherSearchW,
+      height: launcherSearchH,
+      minWidth: 220,
+      minHeight: 90,
+      zIndex: 20,
+      isMaximized: false
+    },
+    favorites: {
+      visible: true,
+      x: pad,
+      y: pad + launcherSearchH + gap,
+      width: w - pad * 2,
+      height: launcherFavH,
+      minWidth: 250,
+      minHeight: 140,
+      zIndex: 16,
+      isMaximized: false
+    },
+    terminal: {
+      visible: true,
+      x: pad,
+      y: pad + launcherSearchH + gap + launcherFavH + gap,
+      width: w - pad * 2,
+      height: Math.max(220, h - (pad + launcherSearchH + gap + launcherFavH + gap) - pad),
+      minWidth: 380,
+      minHeight: 200,
+      zIndex: 10,
+      isMaximized: false
+    },
+    ...hiddenExtras
+  }, w, h);
 
   // --- 1. DASHBOARD PRO (Terminal Ancho Arriba + Fila de 4 Widgets Nivelados Abajo) ---
   const dashProTermH = Math.max(220, Math.floor(h * 0.62));
@@ -314,6 +367,13 @@ export function getBuiltinPresets(width = 1200, height = 800) {
   };
 
   return {
+    launcher: {
+      id: 'launcher',
+      name: 'Launcher',
+      description: 'Buscador y favoritos para conectar en 2 segundos, con terminal debajo',
+      icon: 'pi pi-bolt',
+      layout: launcherLayout
+    },
     'dashboard-pro': {
       id: 'dashboard-pro',
       name: 'Dashboard Pro',

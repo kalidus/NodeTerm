@@ -16,6 +16,7 @@ import AIClientBrandIcon from './AIClientBrandIcon';
 import HomePanelWrapper from './HomePanelWrapper';
 import HomePanelGuideOverlay from './HomePanelGuideOverlay';
 import HomeTelemetryPanel from './HomeTelemetryPanel';
+import HomeDock from './home/HomeDock';
 
 // Modular connection-history package
 import {
@@ -26,6 +27,10 @@ import {
 	HomeFavoritesPanel,
 	HomeFilterPanel,
 	HomeTerminalSplitPanel,
+	HomeSessionsPanel,
+	HomeVaultPanel,
+	HomeNotesPanel,
+	HomeGroupWorkspacePanel,
 	ConnectionHistoryDialogs,
 	ConnectionHistoryOverlays,
 	useConnectionSearch,
@@ -63,6 +68,7 @@ const ConnectionHistory = ({
 	rightQuickBar = null,
 	localTerminalMaximized = false,
 	onToggleLocalTerminalMaximized = () => { },
+	onLoadGroup = null,
 	// Props para layout modular y paneles arrastrables
 	panelsLayout = null,
 	onLayoutChange = null,
@@ -741,8 +747,53 @@ const ConnectionHistory = ({
 		/>
 	);
 
+	const wrapHomePanel = (id, title, path, content, opts = {}) => {
+		const state = panelsLayout?.[id];
+		if (!state || !state.visible) return null;
+		return (
+			<HomePanelWrapper
+				id={id}
+				title={title}
+				path={path}
+				titleIcon={opts.titleIcon}
+				panelState={state}
+				allPanels={panelsLayout}
+				containerBounds={effectiveContainerBounds}
+				onLayoutChange={onLayoutChange}
+				onBringToFront={onBringToFront}
+				onClose={() => (onClosePanel ? onClosePanel(id) : onTogglePanelVisibility?.(id, false))}
+				onToggleMaximize={() => (onToggleMaximizePanel ? onToggleMaximizePanel(id) : null)}
+				onToggleMinimize={() => (onToggleMinimizePanel ? onToggleMinimizePanel(id) : null)}
+				terminalFrameStyle={terminalFrameStyle}
+				snapToGrid={snapToGrid}
+				smartSnap={smartSnap}
+				onDragging={onPanelDragging}
+				onDragEnd={onPanelDragEnd}
+				onResizing={onPanelResizing}
+				onResizeEnd={onPanelResizeEnd}
+				minWidth={opts.minWidth || 220}
+				minHeight={opts.minHeight || 140}
+				className={`recents-terminal-frame ${opts.className || ''}`}
+				frameBackground={adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}
+			>
+				{content}
+			</HomePanelWrapper>
+		);
+	};
+
 	return (
-		<div className={`connection-history-root${terminalView ? ' is-terminal-view' : ''}${flushRightQuickBar ? ' has-flush-right-quick-bar' : ''}${localTerminalMaximized ? ' is-terminal-maximized' : ''}`} style={{ background: 'transparent' }}>
+		<div
+			className={`connection-history-root${terminalView ? ' is-terminal-view' : ''}${flushRightQuickBar ? ' has-flush-right-quick-bar' : ''}${localTerminalMaximized ? ' is-terminal-maximized' : ''}`}
+			style={{
+				background: 'transparent',
+				'--ch-text': themeColors.textPrimary || '#fff',
+				'--ch-text-secondary': themeColors.textSecondary || 'rgba(255,255,255,0.45)',
+				'--ch-green': terminalTheme.green || '#27c93f',
+				'--ch-fg': terminalTheme.foreground || '#c9d1d9',
+				'--ch-bg': terminalTheme.background || '#0d1117',
+				'--ch-primary': themeColors.primaryColor || '#4fc3f7'
+			}}
+		>
 			{/* Dynamic CSS Styles */}
 			<ConnectionHistoryStyles themeColors={themeColors} terminalTheme={terminalTheme} terminalOpacity={terminalOpacity} />
 
@@ -943,37 +994,15 @@ const ConnectionHistory = ({
 						</HomePanelWrapper>
 					)}
 
-					{/* 5. Panel Accesos Rápidos */}
-					{panelsLayout.quickbar && panelsLayout.quickbar.visible && rightQuickBar && (
-						<HomePanelWrapper
-							id="quickbar"
-							title="Accesos Rápidos"
-							path="quickbar"
-							panelState={panelsLayout.quickbar}
-							allPanels={panelsLayout}
-							containerBounds={effectiveContainerBounds}
-							onLayoutChange={onLayoutChange}
-							onBringToFront={onBringToFront}
-							onClose={() => (onClosePanel ? onClosePanel('quickbar') : onTogglePanelVisibility?.('quickbar', false))}
-							onToggleMaximize={() => (onToggleMaximizePanel ? onToggleMaximizePanel('quickbar') : null)}
-							onToggleMinimize={() => (onToggleMinimizePanel ? onToggleMinimizePanel('quickbar') : null)}
-							terminalFrameStyle={terminalFrameStyle}
-							snapToGrid={snapToGrid}
-							smartSnap={smartSnap}
-							onDragging={onPanelDragging}
-							onDragEnd={onPanelDragEnd}
-							onResizing={onPanelResizing}
-							onResizeEnd={onPanelResizeEnd}
-							minWidth={200}
-							minHeight={250}
-							className="recents-terminal-frame"
-							frameBackground={adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}
-						>
-							<div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
-								{rightQuickBar}
-							</div>
-						</HomePanelWrapper>
-					)}
+					{wrapHomePanel('quickbar', '~/acciones', 'acciones · nodeterm', (
+						<HomeDock
+							variant="panel"
+							visible
+							themeColors={themeColors}
+							onOpenSettings={onOpenSettings}
+							onConnectToHost={onConnectToHistory}
+						/>
+					), { minWidth: 180, minHeight: 200, titleIcon: <i className="pi pi-ellipsis-h" style={{ color: themeColors.primaryColor || '#4fc3f7', fontSize: '0.8rem' }} /> })}
 
 					{/* 6. Panel Monitor de Sistema (Telemetría Cyberpunk) */}
 					{panelsLayout.sysmon && panelsLayout.sysmon.visible && (
@@ -1039,6 +1068,18 @@ const ConnectionHistory = ({
 							{renderHomeFilterPanel()}
 						</HomePanelWrapper>
 					)}
+
+					{wrapHomePanel('sessions', '~/sessions', 'sessions · vivas', <HomeSessionsPanel />, { minWidth: 220, minHeight: 140, titleIcon: <i className="pi pi-circle-fill" style={{ color: '#27c93f', fontSize: '0.7rem' }} /> })}
+					{wrapHomePanel('vault', '~/vault', 'vault · secretos', <HomeVaultPanel passwordNodes={passwordNodes} />, { minWidth: 220, minHeight: 140, titleIcon: <i className="pi pi-lock" style={{ color: '#f59e0b', fontSize: '0.8rem' }} /> })}
+					{wrapHomePanel('notes', '~/notes', 'notes · rapidas', <HomeNotesPanel passwordNodes={passwordNodes} />, { minWidth: 220, minHeight: 140, titleIcon: <i className="pi pi-file" style={{ color: '#64b5f6', fontSize: '0.8rem' }} /> })}
+					{wrapHomePanel('groups', '~/groups', 'groups · workspace', (
+						<HomeGroupWorkspacePanel
+							customGroups={favoriteGroupsMgr.customGroups}
+							favoriteConnections={favoriteConnections}
+							onLoadGroup={onLoadGroup}
+							onConnectToHistory={onConnectToHistory}
+						/>
+					), { minWidth: 220, minHeight: 140, titleIcon: <i className="pi pi-th-large" style={{ color: '#a855f7', fontSize: '0.8rem' }} /> })}
 				</div>
 			) : (
 				<>

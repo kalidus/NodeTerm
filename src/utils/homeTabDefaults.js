@@ -33,7 +33,7 @@ export function isHomeButtonLocked() {
 export function applyFirstRunHomeTabDefaults() {
   const defaults = {
     [STORAGE_KEYS.HOME_TAB_CARD_VISIBLE]: 'true',
-    [STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_VISIBLE]: 'true',
+    [STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_VISIBLE]: 'false',
     [STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_COLLAPSED]: 'true',
     [STORAGE_KEYS.HOME_TAB_STATUS_BAR_VISIBLE]: 'true',
     [STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_TABS_VISIBLE]: 'false',

@@ -87,6 +87,9 @@ export const HomeFavoritesPanel = ({
 				onConnect={onConnectToHistory}
 				onEdit={onEdit}
 				onToggleFav={handleToggleFavoriteWithGroup}
+				onPinToDock={(conn) => {
+					window.dispatchEvent(new CustomEvent('home-dock-pin-host', { detail: conn }));
+				}}
 				showTime
 				showFav
 				itemKeyPrefix="fav"

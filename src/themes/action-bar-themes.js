@@ -1,5 +1,5 @@
 /**
- * Temas visuales para la barra de acciones lateral (QuickAccessSidebar)
+ * Temas visuales para la barra de acciones lateral (HomeDock)
  */
 export const actionBarThemes = {
     default: {

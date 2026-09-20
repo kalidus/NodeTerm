@@ -493,7 +493,7 @@ const MainContentArea = ({
     };
   }, [homeButtonLocked]);
 
-  // Escuchar eventos para crear terminales desde QuickAccessSidebar
+  // Escuchar eventos para crear terminales desde el dock de Home
   useEffect(() => {
     const handleCreateLocalTerminal = (event) => {
       const { terminalType, distroInfo } = event.detail;

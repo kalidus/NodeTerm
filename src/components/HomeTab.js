@@ -1,19 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Rnd } from 'react-rnd';
-import { Card } from 'primereact/card';
-import { TabView, TabPanel } from 'primereact/tabview';
-import { Divider } from 'primereact/divider';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { Slider } from 'primereact/slider';
 import { getVersionInfo } from '../version-info';
 import TabbedTerminal from './TabbedTerminal';
 import ConnectionHistory from './ConnectionHistory';
-import NodeTermStatus from './NodeTermStatus';
 import StandaloneStatusBar from './StandaloneStatusBar';
 import { uiThemes } from '../themes/ui-themes';
 import { themeManager } from '../utils/themeManager';
 import { themes } from '../themes';
-import { getRecents, onUpdate, getRecentPasswords, subscribeRecents, recordRecentPassword } from '../utils/connectionStore';
+import { getRecents, getFavorites, onUpdate, getRecentPasswords, subscribeRecents, recordRecentPassword } from '../utils/connectionStore';
 import { STORAGE_KEYS } from '../utils/constants';
 import { writeText as clipboardWriteText } from '../utils/clipboard';
 import {
@@ -47,6 +42,8 @@ import {
   saveLayoutForDisplay,
   ensureRequiredHomeTerminal
 } from '../utils/homeTabPresets';
+import { ensureHomeWidgetLayout } from '../utils/homeWidgets';
+import { HomeWidgetPicker } from './home/connection-history';
 
 /** Opciones de marco del terminal local (Home); mismas claves que `TERMINAL_FRAME_STYLE` en ConnectionHistory. */
 const HOME_TERMINAL_FRAME_STYLE_OPTIONS = [
@@ -80,102 +77,16 @@ const HOME_TERMINAL_FRAME_STYLE_OPTIONS = [
 const computeDefaultPanelsLayout = (cWidth = (typeof window !== 'undefined' ? window.innerWidth : 1200), cHeight = (typeof window !== 'undefined' ? window.innerHeight : 800)) => {
   const w = cWidth > 100 ? cWidth : 1200;
   const h = cHeight > 100 ? cHeight : 800;
-
-  const searchWidth = Math.min(Math.max(540, Math.floor(w * 0.5)), 660);
-  const searchHeight = 126;
-  const searchX = Math.max(20, Math.floor((w - searchWidth) / 2));
-  const searchY = 16;
-
-  const termMargin = 20;
-  const termX = termMargin;
-  const termY = searchY + searchHeight + 12;
-  const termWidth = Math.max(380, w - termMargin * 2);
-  const termHeight = Math.max(240, h - termY - 24);
-
-  const recentsWidth = Math.min(780, Math.floor(w * 0.6));
-  const recentsHeight = Math.min(460, Math.floor(h * 0.6));
-
-  return {
-    search: {
-      visible: true,
-      x: searchX,
-      y: searchY,
-      width: searchWidth,
-      height: searchHeight,
-      minWidth: 220,
-      minHeight: 90,
-      zIndex: 20,
-      isMaximized: false
-    },
-    terminal: {
-      visible: true,
-      x: termX,
-      y: termY,
-      width: termWidth,
-      height: termHeight,
-      minWidth: 380,
-      minHeight: 200,
-      zIndex: 10,
-      isMaximized: false
-    },
-    recents: {
-      visible: false,
-      x: Math.max(20, Math.floor(w * 0.05)),
-      y: Math.max(40, termY + 20),
-      width: recentsWidth,
-      height: recentsHeight,
-      minWidth: 250,
-      minHeight: 140,
-      zIndex: 15,
-      isMaximized: false
-    },
-    favorites: {
-      visible: false,
-      x: Math.max(40, Math.floor(w * 0.08)),
-      y: Math.max(60, termY + 40),
-      width: recentsWidth,
-      height: recentsHeight,
-      minWidth: 250,
-      minHeight: 140,
-      zIndex: 16,
-      isMaximized: false
-    },
-    quickbar: {
-      visible: false,
-      x: Math.max(20, w - 280),
-      y: termY,
-      width: 250,
-      height: Math.max(300, termHeight),
-      minWidth: 200,
-      minHeight: 250,
-      zIndex: 12,
-      isMaximized: false
-    },
-    sysmon: {
-      visible: false,
-      x: Math.max(20, Math.floor(w * 0.55)),
-      y: termY,
-      width: Math.min(460, Math.floor(w * 0.42)),
-      height: Math.min(340, termHeight),
-      minWidth: 280,
-      minHeight: 200,
-      zIndex: 17,
-      isMaximized: false
-    },
-    filters: {
-      visible: false,
-      x: Math.max(20, Math.floor(w * 0.30)),
-      y: Math.max(40, searchY + searchHeight + 24),
-      width: 420,
-      height: Math.min(560, Math.max(380, h - 96)),
-      minWidth: 320,
-      minHeight: 280,
-      zIndex: 25,
-      isMaximized: false
-    },
+  const builtins = getBuiltinPresets(w, h);
+  if (builtins.launcher?.layout) {
+    return ensureRequiredHomeTerminal(ensureHomeWidgetLayout(builtins.launcher.layout, w, h));
+  }
+  return ensureHomeWidgetLayout({
+    search: { visible: true, x: 20, y: 16, width: 560, height: 200, minWidth: 220, minHeight: 90, zIndex: 20, isMaximized: false },
+    terminal: { visible: true, x: 20, y: 228, width: Math.max(380, w - 40), height: Math.max(240, h - 252), minWidth: 380, minHeight: 200, zIndex: 10, isMaximized: false },
     canvasWidth: w,
     canvasHeight: h
-  };
+  }, w, h);
 };
 
 const MINIMIZED_PANEL_HEIGHT = SNAP_MINIMIZED_HEIGHT;
@@ -278,7 +189,10 @@ const computeAutoOrganizeLayout = (currentLayout, width, height) => {
   if (next.favorites && next.favorites.visible) activeSecondary.push('favorites');
   if (next.sysmon && next.sysmon.visible) activeSecondary.push('sysmon');
   if (next.filters && next.filters.visible) activeSecondary.push('filters');
-  if (next.quickbar && next.quickbar.visible) activeSecondary.push('quickbar');
+  if (next.sessions && next.sessions.visible) activeSecondary.push('sessions');
+  if (next.vault && next.vault.visible) activeSecondary.push('vault');
+  if (next.notes && next.notes.visible) activeSecondary.push('notes');
+  if (next.groups && next.groups.visible) activeSecondary.push('groups');
 
   const count = activeSecondary.length;
 
@@ -410,9 +324,7 @@ const HomeTab = ({
   isMinimalMode = false
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [terminalState, setTerminalState] = useState('normal'); // Estado normal para tama\u00F1o correcto
-  const [terminalHidden, setTerminalHidden] = useState(true);
-
+  const [terminalState, setTerminalState] = useState('normal');
   const [terminalFrameStyle, setTerminalFrameStyle] = useState(() => {
     return localStorage.getItem(STORAGE_KEYS.TERMINAL_FRAME_STYLE) || 'macos';
   });
@@ -428,10 +340,7 @@ const HomeTab = ({
     }
   }, [terminalFrameStyle]);
 
-  const [rndSize, setRndSize] = useState({ width: '80%', height: 400 });
-  const [rndPosition, setRndPosition] = useState({ x: 50, y: 50 });
-  const [isRndInitialized, setIsRndInitialized] = useState(false);
-  const [favType, setFavType] = useState('all'); // Nuevo estado para filtros
+  const [favType, setFavType] = useState('all');
   const [recentConnections, setRecentConnections] = useState([]); // Estado para conexiones recientes
   const [recentPasswords, setRecentPasswords] = useState([]); // Estado para passwords recientes
   const [iconThemeKey, setIconThemeKey] = useState(0); // Para forzar re-render cuando cambia el tema de iconos
@@ -465,9 +374,9 @@ const HomeTab = ({
   const [rightColumnVisible, setRightColumnVisible] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_VISIBLE);
-      return saved !== null ? saved === 'true' : true;
+      return saved !== null ? saved === 'true' : false;
     } catch {
-      return true;
+      return false;
     }
   });
 
@@ -507,7 +416,7 @@ const HomeTab = ({
     setTerminalFrameStyle(readStringSetting(STORAGE_KEYS.TERMINAL_FRAME_STYLE, 'macos'));
     setShowLocalTerminalTabs(readBoolSetting(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_TABS_VISIBLE, false));
     setStatusBarVisible(readBoolSetting(STORAGE_KEYS.HOME_TAB_STATUS_BAR_VISIBLE, true));
-    setRightColumnVisible(readBoolSetting(STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_VISIBLE, true));
+    setRightColumnVisible(readBoolSetting(STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_VISIBLE, false));
     setRightColumnCollapsed(readBoolSetting(STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_COLLAPSED, true));
     setHomeCardVisible(readBoolSetting(STORAGE_KEYS.HOME_TAB_CARD_VISIBLE, true));
     setLocalTerminalMaximized(readBoolSetting(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_MAXIMIZED, false));
@@ -547,7 +456,6 @@ const HomeTab = ({
   });
 
   const versionInfo = getVersionInfo();
-  const tabbedTerminalRef = useRef();
   const embeddedTabbedTerminalRef = useRef();
   const embeddedTerminalInitialized = useRef(false); // evitar crear tabs nuevas al cambiar de vista
   const containerRef = useRef(null);
@@ -563,7 +471,6 @@ const HomeTab = ({
     height: 0,
     measured: false
   });
-  const [hasUserMovedTerminal, setHasUserMovedTerminal] = useState(false);
 
   // Estado modular para paneles arrastrables y redimensionables con memoria por monitor
   const authoredLayoutRef = useRef(null);
@@ -574,7 +481,11 @@ const HomeTab = ({
       const base = saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
       const displayLayout = getLayoutForCurrentDisplay(base);
       const loaded = ensureRequiredHomeTerminal(
-        preserveShowingPanels(base, { ...defaults, ...displayLayout })
+        ensureHomeWidgetLayout(
+          preserveShowingPanels(base, { ...defaults, ...displayLayout }),
+          defaults.canvasWidth,
+          defaults.canvasHeight
+        )
       );
       authoredLayoutRef.current = loaded;
       return loaded;
@@ -794,7 +705,11 @@ const HomeTab = ({
     const builtins = getBuiltinPresets(w, h);
     if (builtins[presetKey]?.layout) {
       const layout = ensureRequiredHomeTerminal(
-        clampPanelsToCanvas(builtins[presetKey].layout, w, h)
+        ensureHomeWidgetLayout(
+          clampPanelsToCanvas(builtins[presetKey].layout, w, h),
+          w,
+          h
+        )
       );
       setPanelsLayout(commitAuthoredLayout(layout));
       setTimeout(() => {
@@ -1206,51 +1121,6 @@ const HomeTab = ({
     };
   }, [scaleAuthoredToCanvas, beginLayoutSync]);
 
-  // Funci??n para centrar y dimensionar el terminal
-  const centerAndSizeTerminal = () => {
-    if (mainAreaRef.current) {
-      const parentWidth = mainAreaRef.current.offsetWidth;
-      const parentHeight = mainAreaRef.current.offsetHeight;
-
-      // Usar dimensiones m??nimas si el padre a??n no est?? listo
-      if (parentWidth <= 0 || parentHeight <= 0) return;
-
-      const initialWidth = Math.min(parentWidth * 0.8, 1200);
-      const initialHeight = Math.min(parentHeight * 0.7, 600);
-
-      setRndSize({ width: initialWidth, height: initialHeight });
-      setRndPosition({
-        x: (parentWidth - initialWidth) / 2,
-        y: (parentHeight - initialHeight) / 2
-      });
-      setIsRndInitialized(true);
-    }
-  };
-
-  // Inicializar/Recalcular Rnd position
-  useEffect(() => {
-    if (!isRndInitialized || !hasUserMovedTerminal) {
-      centerAndSizeTerminal();
-    }
-  }, [containerHeight, containerWidth, isRndInitialized, hasUserMovedTerminal]);
-
-  // Asegurar que se centra si se muestra tras estar oculto o cambia tama??o
-  useEffect(() => {
-    if (!terminalHidden && isRndInitialized && mainAreaRef.current) {
-      const parentWidth = mainAreaRef.current.offsetWidth;
-      const parentHeight = mainAreaRef.current.offsetHeight;
-
-      // Recalcular si est?? sustancialmente fuera de l??mites
-      if (typeof rndPosition.y === 'number' && (rndPosition.y > parentHeight - 50 || rndPosition.y < 0)) {
-        centerAndSizeTerminal();
-      } else if (typeof rndPosition.x === 'number' && (rndPosition.x > parentWidth - 50 || rndPosition.x + 100 < 0)) {
-        centerAndSizeTerminal();
-      }
-    }
-  }, [terminalHidden]);
-
-
-
   // Estado para forzar re-render al cambiar el tema
   const [themeVersion, setThemeVersion] = useState(0);
 
@@ -1321,11 +1191,9 @@ const HomeTab = ({
       }
 
       try {
-        const saved = localStorage.getItem(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE);
-        const isVisible = saved !== null ? saved === 'true' : false; // Por defecto false (oculto)
-        setTerminalHidden(!isVisible);
+        // El terminal integrado es obligatorio; este flag ya no controla un Rnd flotante.
       } catch {
-        setTerminalHidden(true); // Por defecto oculto en caso de error
+        // ignore
       }
     };
 
@@ -1387,7 +1255,7 @@ const HomeTab = ({
     } catch {
       // Ignorar fallos del overlay al desmontar o en cambios rápidos de vista
     }
-  }, [terminalView, terminalHidden, homeCardVisible, rightColumnVisible]);
+  }, [terminalView, homeCardVisible, rightColumnVisible]);
 
   const RECENTS_LIMIT = 50;
 
@@ -1700,6 +1568,11 @@ const HomeTab = ({
   }, [localLinuxTerminalTheme, localPowerShellTheme]);
 
   const handleConnectToHistory = (connection) => {
+    if (connection && (connection.id || connection.connectionId) && !connection.host && !['group', 'password', 'secret'].includes(connection.type)) {
+      const wanted = String(connection.connectionId || connection.id);
+      const resolved = (getFavorites() || []).find((fav) => String(fav.id || fav.key) === wanted);
+      if (resolved) connection = resolved;
+    }
     // console.log('Conectando a:', connection);
     if (connection.type === 'group') {
       // Manejar grupos - cargar todas las sesiones del grupo
@@ -1769,40 +1642,12 @@ const HomeTab = ({
   }, []);
 
 
-  // Funci\u00F3n para cerrar el terminal y guardar el estado
   const handleCloseTerminal = () => {
-    setTerminalHidden(true);
-    setTerminalView(true); // Mostrar integrada al cerrar la flotante
-    try {
-      persistHomeTabSetting(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE, 'false');
-      // Despachar evento para sincronizar con otros componentes (como SettingsDialog)
-      window.dispatchEvent(new CustomEvent('home-tab-local-terminal-visibility-changed'));
-    } catch (e) {
-      console.error('Error guardando visibilidad del terminal:', e);
-    }
+    handleToggleMinimizePanel('terminal');
   };
 
-  // Funci\u00F3n para toggle de visibilidad del terminal
   const handleToggleTerminalVisibility = () => {
-    setTerminalHidden(prev => {
-      const newHidden = !prev;
-      // Guardar preferencia en localStorage
-      try {
-        persistHomeTabSetting(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE, (!newHidden).toString());
-        // Despachar evento para sincronizar
-        window.dispatchEvent(new CustomEvent('home-tab-local-terminal-visibility-changed'));
-      } catch (e) {
-        console.error('Error guardando visibilidad del terminal:', e);
-      }
-      // Mantener exclusividad entre terminal flotante e integrado
-      if (!newHidden) {
-        setTerminalState('normal');
-        setTerminalView(false); // Ocultar integrada si se muestra flotante
-      } else {
-        setTerminalView(true); // Mostrar integrada si se oculta flotante
-      }
-      return newHidden;
-    });
+    handleToggleMinimizePanel('terminal');
   };
 
   // Funci\u00F3n para toggle de la status bar
@@ -1816,22 +1661,6 @@ const HomeTab = ({
         console.error('Error guardando preferencia de status bar:', e);
       }
       return newValue;
-    });
-  };
-
-  const handleToggleRightColumn = () => {
-    setRightColumnCollapsed(prev => {
-      const next = !prev;
-      persistHomeTabSetting(STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_COLLAPSED, next.toString());
-      return next;
-    });
-  };
-
-  const handleToggleRightColumnVisibility = () => {
-    setRightColumnVisible(prev => {
-      const next = !prev;
-      persistHomeTabSetting(STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_VISIBLE, next.toString());
-      return next;
     });
   };
 
@@ -1873,9 +1702,8 @@ const HomeTab = ({
       if (!terminalType) return;
       // Abrir siempre en el terminal integrado del HomeTab
       setTerminalView(true);
-      setTerminalHidden(true);
       try {
-        persistHomeTabSetting(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE, 'false');
+        persistHomeTabSetting(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE, 'true');
       } catch (err) {
         // Ignorar errores de persistencia
       }
@@ -1899,10 +1727,8 @@ const HomeTab = ({
   const handleTerminalToggle = React.useCallback((show, terminalType, addNewTab = false) => {
     if (show) {
       setTerminalView(true);
-      // Ocultar terminal flotante para evitar duplicidad si el integrado se muestra
-      setTerminalHidden(true);
       try {
-        persistHomeTabSetting(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE, 'false');
+        persistHomeTabSetting(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_VISIBLE, 'true');
       } catch (e) { }
 
       if (addNewTab && embeddedTabbedTerminalRef.current?.addTerminalTab) {
@@ -1936,24 +1762,6 @@ const HomeTab = ({
       return newVal;
     });
   }, []);
-
-  const flushRightQuickBar = rightColumnVisible && !localTerminalMaximized;
-
-  const homeRightQuickBar = (rightColumnVisible && !localTerminalMaximized) ? (
-    <NodeTermStatus
-      variant="rightColumn"
-      collapsed={rightColumnCollapsed}
-      sshConnectionsCount={sshConnectionsCount}
-      foldersCount={foldersCount}
-      rdpConnectionsCount={rdpConnectionsCount}
-      themeColors={themeColors}
-      onOpenSettings={onOpenSettings}
-      onToggleTerminalVisibility={handleToggleTerminalVisibility}
-      onToggleStatusBar={handleToggleStatusBar}
-      onCollapse={handleToggleRightColumn}
-      statusBarVisible={statusBarVisible}
-    />
-  ) : null;
 
   // Panel superior: Nuevo layout con 3 columnas (basado en redesigned pero con ConnectionHistory)
   const topPanel = (
@@ -2470,6 +2278,10 @@ const HomeTab = ({
                 Paneles de Inicio
               </span>
             </div>
+            <HomeWidgetPicker
+              panelsLayout={panelsLayout}
+              onTogglePanel={handleTogglePanelVisibility}
+            />
 
             <div className="menu-item-row" onClick={() => handleTogglePanelVisibility('search')}>
               <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem', fontWeight: 500 }}>
@@ -2496,81 +2308,6 @@ const HomeTab = ({
                   type="checkbox" 
                   checked={!panelsLayout?.terminal?.isMinimized} 
                   onChange={() => handleToggleMinimizePanel('terminal')} 
-                />
-                <span className="premium-slider"></span>
-              </label>
-            </div>
-
-            <div className="menu-item-row" onClick={() => handleTogglePanelVisibility('recents')}>
-              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem', fontWeight: 500 }}>
-                <i className="pi pi-clock" style={{ marginRight: '6px', fontSize: '0.8rem', opacity: 0.7 }} />
-                Conexiones Recientes
-              </span>
-              <label className="premium-switch" onClick={(e) => e.stopPropagation()}>
-                <input 
-                  type="checkbox" 
-                  checked={!!panelsLayout?.recents?.visible} 
-                  onChange={() => handleTogglePanelVisibility('recents')} 
-                />
-                <span className="premium-slider"></span>
-              </label>
-            </div>
-
-            <div className="menu-item-row" onClick={() => handleTogglePanelVisibility('favorites')}>
-              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem', fontWeight: 500 }}>
-                <i className="pi pi-star" style={{ marginRight: '6px', fontSize: '0.8rem', opacity: 0.7 }} />
-                Favoritos
-              </span>
-              <label className="premium-switch" onClick={(e) => e.stopPropagation()}>
-                <input 
-                  type="checkbox" 
-                  checked={!!panelsLayout?.favorites?.visible} 
-                  onChange={() => handleTogglePanelVisibility('favorites')} 
-                />
-                <span className="premium-slider"></span>
-              </label>
-            </div>
-
-            <div className="menu-item-row" onClick={() => handleTogglePanelVisibility('filters')}>
-              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem', fontWeight: 500 }}>
-                <i className="pi pi-filter" style={{ marginRight: '6px', fontSize: '0.8rem', opacity: 0.7 }} />
-                Filtros
-              </span>
-              <label className="premium-switch" onClick={(e) => e.stopPropagation()}>
-                <input
-                  type="checkbox"
-                  checked={!!panelsLayout?.filters?.visible}
-                  onChange={() => handleTogglePanelVisibility('filters')}
-                />
-                <span className="premium-slider"></span>
-              </label>
-            </div>
-
-            <div className="menu-item-row" onClick={() => handleTogglePanelVisibility('sysmon')}>
-              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem', fontWeight: 500 }}>
-                <i className="pi pi-bolt" style={{ marginRight: '6px', fontSize: '0.8rem', color: themeColors.primaryColor || '#00f2ff' }} />
-                Monitor de Sistema (Telemetry)
-              </span>
-              <label className="premium-switch" onClick={(e) => e.stopPropagation()}>
-                <input 
-                  type="checkbox" 
-                  checked={!!panelsLayout?.sysmon?.visible} 
-                  onChange={() => handleTogglePanelVisibility('sysmon')} 
-                />
-                <span className="premium-slider"></span>
-              </label>
-            </div>
-
-            <div className="menu-item-row" onClick={() => handleTogglePanelVisibility('quickbar')}>
-              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem', fontWeight: 500 }}>
-                <i className="pi pi-th-large" style={{ marginRight: '6px', fontSize: '0.8rem', opacity: 0.7 }} />
-                Barra Accesos Rápidos
-              </span>
-              <label className="premium-switch" onClick={(e) => e.stopPropagation()}>
-                <input 
-                  type="checkbox" 
-                  checked={!!panelsLayout?.quickbar?.visible} 
-                  onChange={() => handleTogglePanelVisibility('quickbar')} 
                 />
                 <span className="premium-slider"></span>
               </label>
@@ -2645,7 +2382,30 @@ const HomeTab = ({
               <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Presets Oficiales
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '5px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '5px' }}>
+                <button
+                  type="button"
+                  onClick={() => handleApplyBuiltinPreset('launcher')}
+                  style={{
+                    padding: '6px 4px',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(79, 195, 247, 0.4)',
+                    background: 'rgba(79, 195, 247, 0.12)',
+                    color: '#4fc3f7',
+                    fontSize: '0.74rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '3px',
+                    transition: 'all 0.2s ease'
+                  }}
+                  title="Launcher: buscador, favoritos y terminal"
+                >
+                  <i className="pi pi-bolt" style={{ fontSize: '0.85rem' }} />
+                  <span>Launcher</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => handleApplyBuiltinPreset('dashboard-pro')}
@@ -3034,10 +2794,9 @@ const HomeTab = ({
                   onOpenHomeOptions={(e) => homeOptionsOverlayRef.current?.toggle(e)}
                   homeCardVisible={homeCardVisible}
                   statusBarVisible={statusBarVisible}
-                  flushRightQuickBar={flushRightQuickBar}
-                  rightQuickBar={flushRightQuickBar ? homeRightQuickBar : null}
                   localTerminalMaximized={localTerminalMaximized}
                   onToggleLocalTerminalMaximized={handleToggleLocalTerminalMaximized}
+                  onLoadGroup={handleLoadGroup}
                   panelsLayout={panelsLayout}
                   containerBounds={{
                     width: containerWidth > 100 ? containerWidth : (mainAreaRef.current?.offsetWidth || window.innerWidth),
@@ -3089,216 +2848,9 @@ const HomeTab = ({
     </>
   );
 
-  // Panel inferior: Terminal con pesta\u00F1as flotante
-  const bottomPanel = (
-    <div
-      className={`bottom-terminal-frame ${terminalFrameStyle}`}
-      style={{
-        height: '100%',
-        width: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-        background: localTerminalBg,
-        borderRadius: terminalState === 'maximized' ? '0' : (['modern', 'aurora-glass'].includes(terminalFrameStyle) ? '20px' : (terminalFrameStyle === 'retro' ? '24px' : '8px')),
-        boxShadow: terminalState === 'maximized' ? 'none' : '0 10px 30px rgba(0,0,0,0.5)',
-        border: terminalState === 'maximized' ? 'none' : (['futuristic', 'modern', 'retro', 'matcha', 'cyberpunk-pro', 'hologram', 'holo-amber', 'holo-emerald', 'holo-crimson', 'holo-violet', 'plasma-cyan', 'synthwave', 'matrix', 'aurora-glass', 'stealth'].includes(terminalFrameStyle) ? 'none' : `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`)
-      }}
-    >
-      {/* Universal header wrapper */}
-      <div
-        className="terminal-drag-handle"
-        style={{
-          height: '36px',
-          background: themeColors.cardBackground || 'rgba(255, 255, 255, 0.03)',
-          borderBottom: ['futuristic', 'modern', 'retro', 'matcha', 'cyberpunk-pro', 'hologram', 'holo-amber', 'holo-emerald', 'holo-crimson', 'holo-violet', 'plasma-cyan', 'synthwave', 'matrix', 'aurora-glass', 'stealth'].includes(terminalFrameStyle) ? 'none' : `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.1)'}`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0 12px',
-          cursor: terminalState === 'maximized' ? 'default' : 'grab',
-          flexShrink: 0,
-          position: 'relative',
-          borderTopLeftRadius: terminalState === 'maximized' ? '0' : (['modern', 'aurora-glass'].includes(terminalFrameStyle) ? '20px' : (terminalFrameStyle === 'retro' ? '24px' : (terminalFrameStyle === 'orchis' ? '24px' : '8px'))),
-          borderTopRightRadius: terminalState === 'maximized' ? '0' : (['modern', 'aurora-glass'].includes(terminalFrameStyle) ? '20px' : (terminalFrameStyle === 'retro' ? '24px' : (terminalFrameStyle === 'orchis' ? '24px' : '8px'))),
-        }}
-        onMouseDown={(e) => { if (terminalState !== 'maximized') e.currentTarget.style.cursor = 'grabbing'; }}
-        onMouseUp={(e) => { if (terminalState !== 'maximized') e.currentTarget.style.cursor = 'grab'; }}
-        onMouseLeave={(e) => { if (terminalState !== 'maximized') e.currentTarget.style.cursor = 'grab'; }}
-        onDoubleClick={handleMaximizeTerminal}
-      >
-        {terminalFrameStyle === 'macos' ? (
-          <div style={{ display: 'flex', gap: '8px', zIndex: 10 }}>
-            <div
-              className="no-drag"
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={handleCloseTerminal}
-              style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ff5f56', cursor: 'pointer', border: '1px solid #e0443e' }}
-              title="Cerrar" />
-            <div
-              className="no-drag"
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={handleMinimizeTerminal}
-              style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ffbd2e', cursor: 'pointer', border: '1px solid #dea123' }}
-              title="Minimizar" />
-            <div
-              className="no-drag"
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={handleMaximizeTerminal}
-              style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#27c93f', cursor: 'pointer', border: '1px solid #1aab29' }}
-              title="Maximizar" />
-          </div>
-        ) : (
-          <div style={{ width: '12px', zIndex: 10 }}></div>
-        )}
-
-        <div style={{
-          position: 'absolute', left: 0, right: 0, textAlign: 'center',
-          color: terminalFrameStyle === 'futuristic' || terminalFrameStyle === 'plasma-cyan' ? '#00f2ff' : (terminalFrameStyle === 'cyberpunk-pro' ? '#fcee0a' : (terminalFrameStyle === 'hologram' ? '#00e5ff' : (terminalFrameStyle === 'holo-amber' ? '#ffb000' : (terminalFrameStyle === 'holo-emerald' ? '#00ff88' : (terminalFrameStyle === 'holo-crimson' ? '#ff0055' : (terminalFrameStyle === 'holo-violet' ? '#a855f7' : (terminalFrameStyle === 'synthwave' ? '#ff2a85' : (terminalFrameStyle === 'matrix' ? '#00ff66' : (terminalFrameStyle === 'stealth' ? '#ff6b00' : (terminalFrameStyle === 'retro' ? '#0f0' : themeColors.textSecondary)))))))))),
-          fontSize: terminalFrameStyle === 'retro' ? '12px' : '11px',
-          userSelect: 'none', pointerEvents: 'none', fontWeight: 500,
-          textShadow: terminalFrameStyle === 'futuristic' || terminalFrameStyle === 'plasma-cyan' ? '0 0 8px #00f2ff' : (terminalFrameStyle === 'cyberpunk-pro' ? '0 0 8px rgba(252,238,10,0.6)' : (terminalFrameStyle === 'hologram' ? '0 0 8px #00e5ff' : (terminalFrameStyle === 'holo-amber' ? '0 0 8px #ffb000' : (terminalFrameStyle === 'holo-emerald' ? '0 0 8px #00ff88' : (terminalFrameStyle === 'holo-crimson' ? '0 0 8px #ff0055' : (terminalFrameStyle === 'holo-violet' ? '0 0 8px #a855f7' : (terminalFrameStyle === 'synthwave' ? '0 0 8px #ff2a85' : (terminalFrameStyle === 'matrix' ? '0 0 8px #00ff66' : (terminalFrameStyle === 'stealth' ? '0 0 6px #ff6b00' : (terminalFrameStyle === 'retro' ? '0 0 5px #0f0' : 'none')))))))))),
-          fontFamily: ['retro', 'cyberpunk-pro', 'matrix', 'stealth'].includes(terminalFrameStyle) ? '"Fira Code", monospace' : 'inherit'
-        }}>
-          {terminalTitle}
-        </div>
-
-        {terminalFrameStyle === 'macos' ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', zIndex: 10 }}>
-            <div style={{ width: '12px' }}></div>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', zIndex: 10 }}>
-            {terminalFrameStyle === 'frameless' ? (
-              <div className="traffic-lights no-drag" onMouseDown={(e) => e.stopPropagation()} style={{ display: 'flex', gap: '6px' }}>
-                <div className="traffic-dot red" onClick={handleCloseTerminal} title="Cerrar" />
-                <div className="traffic-dot yellow" onClick={handleMinimizeTerminal} title="Minimizar" />
-                <div className="traffic-dot green" onClick={handleMaximizeTerminal} title="Maximizar" />
-              </div>
-            ) : terminalFrameStyle === 'gnome' ? (
-              <div className="gnome-controls no-drag" onMouseDown={(e) => e.stopPropagation()} style={{ display: 'flex', gap: '4px' }}>
-                <div className="gnome-dot minimize" title="Minimizar" onClick={handleMinimizeTerminal}>
-                  <i className="pi pi-minus" style={{ fontSize: '8px' }} />
-                </div>
-                <div className="gnome-dot maximize" title="Maximizar" onClick={handleMaximizeTerminal}>
-                  <i className="pi pi-stop" style={{ fontSize: '8px' }} />
-                </div>
-                <div className="gnome-dot close" title="Cerrar" onClick={handleCloseTerminal}>
-                  <i className="pi pi-times" />
-                </div>
-              </div>
-            ) : terminalFrameStyle === 'kde' ? (
-              <div className="kde-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-                <div className="kde-dot minimize" title="Minimizar" onClick={handleMinimizeTerminal}><div className="custom-icon icon-min" /></div>
-                <div className="kde-dot maximize" title="Maximizar" onClick={handleMaximizeTerminal}><div className="custom-icon icon-max" /></div>
-                <div className="kde-dot close" title="Cerrar" onClick={handleCloseTerminal}><div className="custom-icon icon-close" /></div>
-              </div>
-            ) : terminalFrameStyle === 'windows' ? (
-              <div className="windows-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-                <div className="win-dot minimize" title="Minimizar" onClick={handleMinimizeTerminal}><div className="custom-icon icon-min" /></div>
-                <div className="win-dot maximize" title="Maximizar" onClick={handleMaximizeTerminal}><div className="custom-icon icon-max" /></div>
-                <div className="win-dot close" title="Cerrar" onClick={handleCloseTerminal}><div className="custom-icon icon-close" /></div>
-              </div>
-            ) : terminalFrameStyle === 'matcha' ? (
-              <div className="matcha-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-                <div className="matcha-dot minimize" onClick={handleMinimizeTerminal} title="Minimizar"><i className="pi pi-minus" style={{ fontSize: '10px' }} /></div>
-                <div className="matcha-dot maximize" onClick={handleMaximizeTerminal} title="Maximizar"><i className="pi pi-stop" style={{ fontSize: '10px' }} /></div>
-                <div className="matcha-dot close" onClick={handleCloseTerminal} title="Cerrar"><i className="pi pi-times" /></div>
-              </div>
-            ) : terminalFrameStyle === 'futuristic' ? (
-              <div className="futuristic-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-                <div className="cyber-dot minimize" title="Minimizar" onClick={handleMinimizeTerminal}>MIN</div>
-                <div className="cyber-dot maximize" title="Maximizar" onClick={handleMaximizeTerminal}>MAX</div>
-                <div className="cyber-dot close" title="Cerrar Terminal" onClick={handleCloseTerminal}>EXE</div>
-              </div>
-            ) : terminalFrameStyle === 'cyberpunk-pro' ? (
-              <div className="cyberpunk-pro-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-                <span className="cyber-pro-tag">SYS</span>
-                <div className="cyber-pro-btn minimize" title="Minimizar" onClick={handleMinimizeTerminal}>_</div>
-                <div className="cyber-pro-btn maximize" title="Maximizar" onClick={handleMaximizeTerminal}>⬡</div>
-                <div className="cyber-pro-btn close" title="Cerrar Terminal" onClick={handleCloseTerminal}>✕</div>
-              </div>
-            ) : ['hologram', 'holo-amber', 'holo-emerald', 'holo-crimson', 'holo-violet', 'plasma-cyan'].includes(terminalFrameStyle) ? (
-              <div className={`${terminalFrameStyle === 'hologram' ? 'hologram-controls' : `${terminalFrameStyle}-controls`} no-drag`} onMouseDown={(e) => e.stopPropagation()}>
-                <div className="holo-btn minimize" title="Minimizar" onClick={handleMinimizeTerminal}>─</div>
-                <div className="holo-btn maximize" title="Maximizar" onClick={handleMaximizeTerminal}>◈</div>
-                <div className="holo-btn close" title="Cerrar Terminal" onClick={handleCloseTerminal}>✕</div>
-              </div>
-            ) : terminalFrameStyle === 'synthwave' ? (
-              <div className="synthwave-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-                <div className="synth-dot min" title="Minimizar" onClick={handleMinimizeTerminal} />
-                <div className="synth-dot max" title="Maximizar" onClick={handleMaximizeTerminal} />
-                <div className="synth-dot close" title="Cerrar" onClick={handleCloseTerminal} />
-              </div>
-            ) : terminalFrameStyle === 'matrix' ? (
-              <div className="matrix-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-                <div className="matrix-btn minimize" title="Minimizar" onClick={handleMinimizeTerminal}>[01]</div>
-                <div className="matrix-btn maximize" title="Maximizar" onClick={handleMaximizeTerminal}>[10]</div>
-                <div className="matrix-btn close" title="Cerrar Terminal" onClick={handleCloseTerminal}>[11]</div>
-              </div>
-            ) : terminalFrameStyle === 'aurora-glass' ? (
-              <div className="aurora-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-                <div className="aurora-pill minimize" title="Minimizar" onClick={handleMinimizeTerminal}><i className="pi pi-minus" style={{ fontSize: '10px' }} /></div>
-                <div className="aurora-pill maximize" title="Maximizar" onClick={handleMaximizeTerminal}><i className="pi pi-stop" style={{ fontSize: '10px' }} /></div>
-                <div className="aurora-pill close" title="Ocultar" onClick={handleCloseTerminal}><i className="pi pi-times" /></div>
-              </div>
-            ) : terminalFrameStyle === 'stealth' ? (
-              <div className="stealth-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-                <div className="stealth-btn minimize" title="Minimizar" onClick={handleMinimizeTerminal}>—</div>
-                <div className="stealth-btn maximize" title="Maximizar" onClick={handleMaximizeTerminal}>□</div>
-                <div className="stealth-btn close" title="Cerrar Terminal" onClick={handleCloseTerminal}>✕</div>
-              </div>
-            ) : terminalFrameStyle === 'modern' ? (
-              <div className="modern-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-                <div className="glass-dot minimize" title="Minimizar" onClick={handleMinimizeTerminal}><i className="pi pi-minus" style={{ fontSize: '10px' }} /></div>
-                <div className="glass-dot maximize" title="Maximizar" onClick={handleMaximizeTerminal}><i className="pi pi-stop" style={{ fontSize: '10px' }} /></div>
-                <div className="glass-dot close" title="Ocultar" onClick={handleCloseTerminal}><i className="pi pi-times" /></div>
-              </div>
-            ) : terminalFrameStyle === 'minimal' ? (
-              <div className="minimal-controls no-drag" onMouseDown={(e) => e.stopPropagation()} />
-            ) : (
-              <div className="retro-controls no-drag" onMouseDown={(e) => e.stopPropagation()}>
-                <div className="retro-switch minimize" title="MIN" onClick={handleMinimizeTerminal} />
-                <div className="retro-switch maximize" title="MAX" onClick={handleMaximizeTerminal} />
-                <div className="retro-switch on" title="OFF" onClick={handleCloseTerminal} />
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-
-
-
-      <div style={{
-        flex: 1,
-        overflow: 'hidden',
-        display: terminalState === 'minimized' ? 'none' : 'flex',
-        flexDirection: 'column',
-        minHeight: 0,
-      }}>
-        <TabbedTerminal
-          ref={tabbedTerminalRef}
-          onMinimize={handleMinimizeTerminal}
-          onMaximize={handleMaximizeTerminal}
-          terminalState={terminalState}
-          localFontFamily={localFontFamily}
-          localFontSize={localFontSize}
-          localPowerShellTheme={localPowerShellTheme}
-          localLinuxTerminalTheme={localLinuxTerminalTheme}
-          hideStatusBar={true}
-          isIntegrated={false}
-          preferDefaultOnStartup={true}
-          onTabChange={(tab) => setTerminalTitle(tab.title)}
-        />
-      </div>
-    </div>
-  );
-
   return (
     <div
       ref={containerRef}
-      className={flushRightQuickBar ? 'home-terminal-flush-right' : undefined}
       style={{
         height: '100%',
         width: '100%',
@@ -3315,76 +2867,16 @@ const HomeTab = ({
         }}
         data-split-container-wrapper="true"
       >
-        <div style={{
-            height: '100%',
-            width: '100%',
-            display: 'flex',
-            flexDirection: 'row',
-            overflow: 'hidden'
-          }}>
-          {/* Main area with Dashboard and Terminal */}
-          <div
-            ref={mainAreaRef}
+        <div
             style={{
-              flex: 1,
-              minWidth: 0,
               height: '100%',
+              width: '100%',
               position: 'relative',
               overflow: 'hidden'
             }}
           >
             {topPanel}
-
-            {!terminalHidden && isRndInitialized && (
-              <Rnd
-                size={
-                  terminalState === 'maximized'
-                    ? { width: '100%', height: '100%' }
-                    : (terminalState === 'minimized' ? { height: 32, width: rndSize.width } : rndSize)
-                }
-                position={
-                  terminalState === 'maximized'
-                    ? { x: 0, y: 0 }
-                    : rndPosition
-                }
-                onDragStop={(e, d) => {
-                  if (terminalState !== 'maximized') {
-                    setRndPosition({ x: d.x, y: d.y });
-                    setHasUserMovedTerminal(true);
-                  }
-                }}
-                onResizeStop={(e, direction, ref, delta, position) => {
-                  if (terminalState !== 'maximized' && terminalState !== 'minimized') {
-                    setRndSize({ width: ref.style.width, height: ref.style.height });
-                    setRndPosition(position);
-                    setHasUserMovedTerminal(true);
-                  }
-                }}
-                minWidth={300}
-                minHeight={terminalState === 'minimized' ? 32 : 200}
-                bounds="parent"
-                dragHandleClassName="terminal-drag-handle"
-                cancel=".no-drag"
-                style={{
-                  zIndex: 100,
-                  display: 'flex',
-                  position: 'absolute'
-                }}
-                disableDragging={terminalState === 'maximized'}
-                enableResizing={terminalState !== 'maximized' && terminalState !== 'minimized' ? {
-                  bottom: true, bottomLeft: true, bottomRight: true,
-                  left: true, right: true,
-                  top: true, topLeft: true, topRight: true
-                } : false}
-              >
-                {bottomPanel}
-              </Rnd>
-            )}
           </div>
-
-          {/* Sidebar Area - Outside the vertical split to remain at full height */}
-          {!flushRightQuickBar && homeRightQuickBar}
-        </div>
       </div>
       <StandaloneStatusBar visible={statusBarVisible && !terminalView} />
     </div>

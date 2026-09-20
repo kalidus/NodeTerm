@@ -101,19 +101,23 @@ const HomeTelemetryPanel = ({
 
   useEffect(() => {
     let stopped = false;
+    let lastGpuAt = 0;
 
     const unsubscribe = systemStatsService.subscribe(async (systemStatsPayload) => {
       if (!systemStatsPayload || stopped) return;
-      const raw = systemStatsPayload.raw;
       const cpuUsage = systemStatsPayload.cpu || 0;
       const rxBytes = systemStatsPayload.network?.rx_speed || 0;
       const txBytes = systemStatsPayload.network?.tx_speed || 0;
 
-      try {
-        const gpuData = await window.electron?.system?.getGPUStats();
-        if (!stopped) setGpuStats(gpuData?.ok ? gpuData : null);
-      } catch {
-        if (!stopped) setGpuStats(null);
+      const now = Date.now();
+      if (now - lastGpuAt >= Math.max(1500, pollingIntervalMs)) {
+        lastGpuAt = now;
+        try {
+          const gpuData = await window.electron?.system?.getGPUStats();
+          if (!stopped) setGpuStats(gpuData?.ok ? gpuData : null);
+        } catch {
+          if (!stopped) setGpuStats(null);
+        }
       }
 
       const memTotal = systemStatsPayload.mem?.total || 0;
@@ -127,7 +131,7 @@ const HomeTelemetryPanel = ({
         perCpuLoad: systemStatsPayload.cpuMeta?.perCpuLoad || [],
         mem: { total: memTotal, used: memUsed, free: memFree },
         memPercent: memTotal > 0 ? Math.round((memUsed / memTotal) * 100) : 0,
-        disks: raw?.disks || [],
+        disks: systemStatsPayload.raw?.disks || [],
         network: { rx: rxBytes, tx: txBytes },
         hostname: systemStatsPayload.hostname || 'localhost',
         uptime: systemStatsPayload.uptime || '',
@@ -146,7 +150,7 @@ const HomeTelemetryPanel = ({
       stopped = true;
       unsubscribe();
     };
-  }, []);
+  }, [pollingIntervalMs]);
 
   const cpuLoad = stats?.cpu || 0;
   const memUsedGb = bytesToGb(stats?.mem?.used);

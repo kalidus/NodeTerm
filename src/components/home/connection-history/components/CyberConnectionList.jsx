@@ -12,7 +12,7 @@ import {
 } from '../utils/connectionHistoryHelpers';
 
 const SECRET_TYPES = ['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note', 'document', 'quick-note'];
-const VIRTUALIZE_THRESHOLD = 80;
+const VIRTUALIZE_THRESHOLD = 20;
 const CARD_ITEM_SIZE = 28;
 
 export function usePanelBreakpoints(defaultWidth = 400) {
@@ -67,6 +67,7 @@ export const CyberConnectionCard = React.memo(({
 	onConnect,
 	onEdit,
 	onToggleFav,
+	onPinToDock,
 	onMouseEnter,
 	showTime = true,
 	timeVerbose = false,
@@ -119,19 +120,34 @@ export const CyberConnectionCard = React.memo(({
 			{showTime && (
 				<span className="crc-time-tag">{showTimeTag ? timeLabel : ''}</span>
 			)}
-			{showFav && (
+			{(showFav || onPinToDock) && (
 				<div className="crc-actions" onClick={(e) => e.stopPropagation()}>
-					<button
-						type="button"
-						className={`glass-action-btn ${fav ? 'fav-active' : ''}`}
-						onClick={(e) => {
-							e.stopPropagation();
-							onToggleFav?.(connection);
-						}}
-						title={fav ? 'Quitar de Favoritos' : 'Marcar como Favorito'}
-					>
-						<i className={fav ? 'pi pi-star-fill' : 'pi pi-star'} />
-					</button>
+					{onPinToDock && !isSecret && (
+						<button
+							type="button"
+							className="glass-action-btn"
+							onClick={(e) => {
+								e.stopPropagation();
+								onPinToDock(connection);
+							}}
+							title="Pinear en Acciones"
+						>
+							<i className="pi pi-plus" />
+						</button>
+					)}
+					{showFav && (
+						<button
+							type="button"
+							className={`glass-action-btn ${fav ? 'fav-active' : ''}`}
+							onClick={(e) => {
+								e.stopPropagation();
+								onToggleFav?.(connection);
+							}}
+							title={fav ? 'Quitar de Favoritos' : 'Marcar como Favorito'}
+						>
+							<i className={fav ? 'pi pi-star-fill' : 'pi pi-star'} />
+						</button>
+					)}
 				</div>
 			)}
 		</div>
@@ -160,6 +176,7 @@ export const CyberConnectionList = ({
 	onConnect,
 	onEdit,
 	onToggleFav,
+	onPinToDock,
 	showTime = true,
 	timeVerbose = false,
 	showFav = true,
@@ -182,6 +199,7 @@ export const CyberConnectionList = ({
 				onConnect={onConnect}
 				onEdit={onEdit}
 				onToggleFav={onToggleFav}
+				onPinToDock={onPinToDock}
 				onMouseEnter={onActiveIndexChange ? () => onActiveIndexChange(idx) : undefined}
 				showTime={showTime}
 				timeVerbose={timeVerbose}

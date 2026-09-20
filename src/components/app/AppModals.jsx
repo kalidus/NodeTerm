@@ -102,6 +102,7 @@ export const AppModals = ({
         masterKey={masterKey}
         secureStorage={secureStorage}
         iconTheme={iconTheme}
+        onOpenSettings={() => setShowSettingsDialog?.(true)}
       />
 
       {/* Gestor unificado de diálogos de conexión y configuración */}

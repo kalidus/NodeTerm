@@ -1,0 +1,158 @@
+.home-dock {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 8px;
+  background: transparent;
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.home-dock-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  align-content: start;
+  align-items: stretch;
+  gap: 8px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+}
+
+.home-dock-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding-top: 8px;
+  flex-shrink: 0;
+}
+
+.home-dock-btn {
+  width: 100%;
+  min-height: 62px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ui-sidebar-text, #cfd8dc);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 4px;
+  position: relative;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.home-dock-btn i {
+  font-size: 1.05rem;
+}
+
+.home-dock-btn-label {
+  font-size: 0.65rem;
+  line-height: 1.2;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ui-sidebar-text, #cfd8dc);
+}
+
+.home-dock-btn:hover,
+.home-dock-btn.is-active {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: color-mix(in srgb, var(--home-dock-accent, #4fc3f7) 45%, transparent);
+}
+
+.home-dock-btn.is-dragging {
+  opacity: 0.45;
+}
+
+.home-dock-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 0.48rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 1px 3px;
+  border-radius: 4px;
+  background: #111;
+  color: var(--home-dock-accent, #4fc3f7);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.home-dock-more {
+  position: static;
+  width: 100%;
+  background: color-mix(in srgb, var(--ui-dialog-bg, #161b22) 94%, transparent);
+  border: 1px solid var(--ui-dialog-border, rgba(255, 255, 255, 0.12));
+  border-radius: 10px;
+  padding: 10px;
+  margin-top: 8px;
+  flex-shrink: 0;
+  max-height: 46%;
+  overflow-y: auto;
+}
+
+.home-dock-more-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--home-dock-accent, #4fc3f7);
+  margin-bottom: 8px;
+}
+
+.home-dock-more-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.home-dock-more-run {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: var(--ui-dialog-text, #e6edf3);
+  padding: 6px 4px;
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  text-align: left;
+}
+
+.home-dock-more-run:hover,
+.home-dock-more-pin:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.home-dock-more-pin {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--ui-sidebar-text, #90a4ae);
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.home-dock-more-empty,
+.home-dock-more-hint {
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.4);
+  line-height: 1.35;
+  margin-top: 8px;
+}

@@ -91,7 +91,7 @@ export const HomeSearchPanel = ({
 									? "Buscar..."
 									: isNarrow
 										? "Buscar conexiones..."
-										: "Search hosts, IPs, protocols, passwords..."
+										: "Buscar hosts, IPs, protocolos o secretos..."
 							}
 							autoComplete="off"
 							spellCheck="false"
