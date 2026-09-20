@@ -987,7 +987,7 @@ const ConnectionHistory = ({
 							onOpenSettings={onOpenSettings}
 							onConnectToHost={onConnectToHistory}
 						/>
-					), { minWidth: 180, minHeight: 200, titleIcon: <i className="pi pi-ellipsis-h" style={{ color: themeColors.primaryColor || '#4fc3f7', fontSize: '0.8rem' }} /> })}
+					), { minWidth: 200, minHeight: 180, titleIcon: <i className="pi pi-ellipsis-h" style={{ color: themeColors.primaryColor || '#4fc3f7', fontSize: '0.8rem' }} /> })}
 
 					{/* 6. Panel Monitor de Sistema (Telemetría Cyberpunk) */}
 					{panelsLayout.sysmon && panelsLayout.sysmon.visible && (
