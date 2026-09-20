@@ -34,6 +34,7 @@ export const HOME_WIDGETS = [
     path: 'favorites',
     icon: 'pi pi-star',
     required: false,
+    group: 'conexiones',
     defaultVisible: true,
     minWidth: 250,
     minHeight: 140,
@@ -46,6 +47,7 @@ export const HOME_WIDGETS = [
     path: 'recent',
     icon: 'pi pi-clock',
     required: false,
+    group: 'conexiones',
     defaultVisible: false,
     minWidth: 250,
     minHeight: 140,
@@ -58,6 +60,7 @@ export const HOME_WIDGETS = [
     path: 'sessions',
     icon: 'pi pi-circle-fill',
     required: false,
+    group: 'conexiones',
     defaultVisible: false,
     minWidth: 220,
     minHeight: 140,
@@ -70,6 +73,7 @@ export const HOME_WIDGETS = [
     path: 'vault',
     icon: 'pi pi-lock',
     required: false,
+    group: 'conexiones',
     defaultVisible: false,
     minWidth: 220,
     minHeight: 140,
@@ -82,6 +86,7 @@ export const HOME_WIDGETS = [
     path: 'notes',
     icon: 'pi pi-file',
     required: false,
+    group: 'workspace',
     defaultVisible: false,
     minWidth: 220,
     minHeight: 140,
@@ -94,6 +99,7 @@ export const HOME_WIDGETS = [
     path: 'groups',
     icon: 'pi pi-th-large',
     required: false,
+    group: 'workspace',
     defaultVisible: false,
     minWidth: 220,
     minHeight: 140,
@@ -106,6 +112,7 @@ export const HOME_WIDGETS = [
     path: 'sysmon',
     icon: 'pi pi-bolt',
     required: false,
+    group: 'extra',
     defaultVisible: false,
     minWidth: 280,
     minHeight: 200,
@@ -118,6 +125,7 @@ export const HOME_WIDGETS = [
     path: 'filters',
     icon: 'pi pi-filter',
     required: false,
+    group: 'workspace',
     defaultVisible: false,
     minWidth: 320,
     minHeight: 280,
@@ -130,6 +138,7 @@ export const HOME_WIDGETS = [
     path: 'acciones',
     icon: 'pi pi-ellipsis-h',
     required: false,
+    group: 'workspace',
     defaultVisible: false,
     minWidth: 180,
     minHeight: 200,
@@ -142,6 +151,7 @@ export const HOME_WIDGETS = [
     path: 'releases',
     icon: 'pi pi-book',
     required: false,
+    group: 'extra',
     defaultVisible: false,
     minWidth: 480,
     minHeight: 280,
@@ -158,6 +168,27 @@ export function getHomeWidget(id) {
 
 export function getOptionalHomeWidgets() {
   return HOME_WIDGETS.filter((w) => !w.required);
+}
+
+export const HOME_WIDGET_GROUP_ORDER = [
+  { id: 'conexiones', label: 'Conexiones' },
+  { id: 'workspace', label: 'Workspace' },
+  { id: 'extra', label: 'Extra' }
+];
+
+export function getOptionalHomeWidgetsByGroup() {
+  const widgets = getOptionalHomeWidgets();
+  const grouped = HOME_WIDGET_GROUP_ORDER.map((group) => ({
+    ...group,
+    widgets: widgets.filter((widget) => widget.group === group.id)
+  })).filter((group) => group.widgets.length > 0);
+
+  const knownIds = new Set(HOME_WIDGET_GROUP_ORDER.map((group) => group.id));
+  const leftover = widgets.filter((widget) => !knownIds.has(widget.group));
+  if (leftover.length > 0) {
+    grouped.push({ id: 'otros', label: 'Otros', widgets: leftover });
+  }
+  return grouped;
 }
 
 export function createHiddenPanelState(widget, index = 0) {

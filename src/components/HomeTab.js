@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { OverlayPanel } from 'primereact/overlaypanel';
-import { Slider } from 'primereact/slider';
 import { getVersionInfo } from '../version-info';
 import TabbedTerminal from './TabbedTerminal';
 import ConnectionHistory from './ConnectionHistory';
@@ -43,7 +42,7 @@ import {
   ensureRequiredHomeTerminal
 } from '../utils/homeTabPresets';
 import { ensureHomeWidgetLayout } from '../utils/homeWidgets';
-import { HomeWidgetPicker } from './home/connection-history';
+import HomeOptionsOverlay from './home/HomeOptionsOverlay';
 import { setHomeSnapGuides, clearHomeSnapGuides } from '../utils/homePanelSnapBus';
 
 /** Opciones de marco del terminal local (Home); mismas claves que `TERMINAL_FRAME_STYLE` en ConnectionHistory. */
@@ -2131,467 +2130,45 @@ const HomeTab = ({
         visibility: terminalState === 'maximized' ? 'hidden' : 'visible',
         transition: 'opacity 0.1s ease, visibility 0.1s ease'
       }}>
-        <OverlayPanel 
-          ref={homeOptionsOverlayRef} 
-          className="premium-overlay"
-          style={{ width: '300px' }}
-        >
-          <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <div style={{ marginBottom: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.95rem', fontWeight: 600 }}>Opacidad</span>
-                <span style={{ 
-                  color: themeColors.primaryColor || '#2196f3', 
-                  fontSize: '0.85rem', 
-                  fontWeight: 700,
-                  background: `${themeColors.primaryColor || '#2196f3'}22`,
-                  padding: '2px 8px',
-                  borderRadius: '6px'
-                }}>{Math.round(terminalOpacity * 100)}%</span>
-              </div>
-              <Slider
-                value={terminalOpacity * 100}
-                onChange={(e) => setTerminalOpacity(e.value / 100)}
-                min={5}
-                max={100}
-                step={1}
-                style={{ width: '100%', height: '4px' }}
-              />
-            </div>
-
-            <div style={{ marginBottom: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.88rem', fontWeight: 500 }}>
-                  Tema terminal local
-                </span>
-                <i
-                  className="pi pi-palette"
-                  style={{
-                    color: themeColors.primaryColor || '#2196f3',
-                    fontSize: '0.8rem',
-                    opacity: 0.8
-                  }}
-                />
-              </div>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  localThemeOverlayRef.current?.toggle(e);
-                }}
-                style={{
-                  width: '100%',
-                  height: '34px',
-                  borderRadius: '8px',
-                  border: `1px solid ${(themes[localLinuxTerminalTheme]?.theme?.cursor || themeColors.primaryColor || '#2196f3')}55`,
-                  background: `linear-gradient(90deg, ${(themes[localLinuxTerminalTheme]?.theme?.background || '#111')}cc 0%, rgba(255,255,255,0.08) 100%)`,
-                  color: themeColors.textPrimary || '#fff',
-                  padding: '0 10px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '10px',
-                  cursor: 'pointer'
-                }}
-                title="Tema (Linux/WSL)"
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-                  <span
-                    style={{
-                      width: '14px',
-                      height: '14px',
-                      borderRadius: '4px',
-                      flexShrink: 0,
-                      background: `linear-gradient(135deg, ${themes[localLinuxTerminalTheme]?.theme?.background || '#111'} 0%, ${themes[localLinuxTerminalTheme]?.theme?.background || '#111'} 50%, ${themes[localLinuxTerminalTheme]?.theme?.cursor || themes[localLinuxTerminalTheme]?.theme?.green || themes[localLinuxTerminalTheme]?.theme?.blue || themes[localLinuxTerminalTheme]?.theme?.foreground || '#fff'} 100%)`,
-                      border: `1px solid ${themes[localLinuxTerminalTheme]?.theme?.cursor || themes[localLinuxTerminalTheme]?.theme?.foreground || 'rgba(255,255,255,0.2)'}`
-                    }}
-                  />
-                  <span style={{ fontSize: '0.82rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {localLinuxTerminalTheme}
-                  </span>
-                </span>
-                <i className="pi pi-chevron-down" style={{ fontSize: '0.7rem', opacity: 0.8, flexShrink: 0 }} />
-              </button>
-            </div>
-
-            <div style={{ marginBottom: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.88rem', fontWeight: 500 }}>
-                  Estilo de marco
-                </span>
-                <i
-                  className="pi pi-desktop"
-                  style={{
-                    color: themeColors.primaryColor || '#2196f3',
-                    fontSize: '0.8rem',
-                    opacity: 0.8
-                  }}
-                />
-              </div>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  frameStyleOverlayRef.current?.toggle(e);
-                }}
-                style={{
-                  width: '100%',
-                  height: '34px',
-                  borderRadius: '8px',
-                  border: `1px solid ${themeColors.borderColor || 'rgba(255,255,255,0.12)'}`,
-                  background: 'rgba(255,255,255,0.04)',
-                  color: themeColors.textPrimary || '#fff',
-                  padding: '0 10px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '10px',
-                  cursor: 'pointer'
-                }}
-                title="Estilo de marco de la ventana del terminal"
-              >
-                <span style={{ fontSize: '0.82rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {(HOME_TERMINAL_FRAME_STYLE_OPTIONS.find((o) => o.id === terminalFrameStyle) || {}).label || terminalFrameStyle}
-                </span>
-                <i className="pi pi-chevron-down" style={{ fontSize: '0.7rem', opacity: 0.8, flexShrink: 0 }} />
-              </button>
-            </div>
-
-            <div className="menu-item-row" onClick={() => setShowLocalTerminalTabs(prev => !prev)}>
-              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.88rem', fontWeight: 500 }}>Pestañas</span>
-              <label className="premium-switch" onClick={(e) => e.stopPropagation()}>
-                <input 
-                  type="checkbox" 
-                  checked={showLocalTerminalTabs} 
-                  onChange={() => setShowLocalTerminalTabs(prev => !prev)} 
-                />
-                <span className="premium-slider"></span>
-              </label>
-            </div>
-
-            <div className="menu-item-row" onClick={handleToggleStatusBar}>
-              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.88rem', fontWeight: 500 }}>Status bar terminal local</span>
-              <label className="premium-switch" onClick={(e) => e.stopPropagation()}>
-                <input 
-                  type="checkbox" 
-                  checked={statusBarVisible} 
-                  onChange={handleToggleStatusBar} 
-                />
-                <span className="premium-slider"></span>
-              </label>
-            </div>
-
-            <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '6px 0' }} />
-            
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '4px 0 2px 0' }}>
-              <span style={{ color: themeColors.primaryColor || '#2196f3', fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-                Paneles de Inicio
-              </span>
-            </div>
-            <HomeWidgetPicker
-              panelsLayout={panelsLayout}
-              onTogglePanel={handleTogglePanelVisibility}
-            />
-
-            <div className="menu-item-row" onClick={() => handleTogglePanelVisibility('search')}>
-              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem', fontWeight: 500 }}>
-                <i className="pi pi-search" style={{ marginRight: '6px', fontSize: '0.8rem', opacity: 0.7 }} />
-                Buscador y Acciones
-              </span>
-              <label className="premium-switch" onClick={(e) => e.stopPropagation()}>
-                <input 
-                  type="checkbox" 
-                  checked={panelsLayout?.search?.visible !== false} 
-                  onChange={() => handleTogglePanelVisibility('search')} 
-                />
-                <span className="premium-slider"></span>
-              </label>
-            </div>
-
-            <div className="menu-item-row" onClick={() => handleToggleMinimizePanel('terminal')}>
-              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem', fontWeight: 500 }}>
-                <i className="pi pi-desktop" style={{ marginRight: '6px', fontSize: '0.8rem', opacity: 0.7 }} />
-                Terminal Integrado
-              </span>
-              <label className="premium-switch" onClick={(e) => e.stopPropagation()}>
-                <input 
-                  type="checkbox" 
-                  checked={!panelsLayout?.terminal?.isMinimized} 
-                  onChange={() => handleToggleMinimizePanel('terminal')} 
-                />
-                <span className="premium-slider"></span>
-              </label>
-            </div>
-
-            <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '6px 0' }} />
-
-            <div className="menu-item-row" onClick={handleToggleSmartSnap}>
-              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.86rem', fontWeight: 500 }}>
-                <i className="pi pi-table" style={{ marginRight: '6px', fontSize: '0.8rem', color: '#00e5ff' }} />
-                Alineación Magnética (Snap)
-              </span>
-              <label className="premium-switch" onClick={(e) => e.stopPropagation()}>
-                <input 
-                  type="checkbox" 
-                  checked={smartSnap} 
-                  onChange={handleToggleSmartSnap} 
-                />
-                <span className="premium-slider"></span>
-              </label>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginTop: '6px' }}>
-              <button
-                type="button"
-                onClick={handleEqualizeBottomRow}
-                style={{
-                  padding: '7px 8px',
-                  borderRadius: '6px',
-                  border: '1px solid rgba(0, 229, 255, 0.4)',
-                  background: 'linear-gradient(135deg, rgba(0, 229, 255, 0.18) 0%, rgba(99, 102, 241, 0.18) 100%)',
-                  color: themeColors.textPrimary || '#fff',
-                  fontSize: '0.78rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '5px',
-                  transition: 'all 0.2s ease'
-                }}
-                title="Alinear al mismo nivel Y, misma altura y distribuir uniformemente los módulos de la fila inferior"
-              >
-                <i className="pi pi-align-justify" style={{ fontSize: '0.75rem', color: '#00e5ff' }} /> Nivelar Fila
-              </button>
-
-              <button
-                type="button"
-                onClick={handleAutoOrganizePanels}
-                style={{
-                  padding: '7px 8px',
-                  borderRadius: '6px',
-                  border: '1px solid rgba(0, 229, 255, 0.25)',
-                  background: 'rgba(0, 229, 255, 0.08)',
-                  color: themeColors.textPrimary || '#fff',
-                  fontSize: '0.78rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '5px',
-                  transition: 'all 0.2s ease'
-                }}
-                title="Ajustar y reorganizar inteligentemente todos los paneles activos"
-              >
-                <i className="pi pi-sparkles" style={{ fontSize: '0.75rem', color: '#00e5ff' }} /> Auto-Ajustar
-              </button>
-            </div>
-
-            <div style={{ marginTop: '8px' }}>
-              <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Presets Oficiales
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '5px' }}>
-                <button
-                  type="button"
-                  onClick={() => handleApplyBuiltinPreset('launcher')}
-                  style={{
-                    padding: '6px 4px',
-                    borderRadius: '6px',
-                    border: '1px solid rgba(79, 195, 247, 0.4)',
-                    background: 'rgba(79, 195, 247, 0.12)',
-                    color: '#4fc3f7',
-                    fontSize: '0.74rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '3px',
-                    transition: 'all 0.2s ease'
-                  }}
-                  title="Launcher: buscador, favoritos y terminal"
-                >
-                  <i className="pi pi-bolt" style={{ fontSize: '0.85rem' }} />
-                  <span>Launcher</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleApplyBuiltinPreset('dashboard-pro')}
-                  style={{
-                    padding: '6px 4px',
-                    borderRadius: '6px',
-                    border: '1px solid rgba(0, 229, 255, 0.3)',
-                    background: 'rgba(0, 229, 255, 0.1)',
-                    color: '#00e5ff',
-                    fontSize: '0.74rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '3px',
-                    transition: 'all 0.2s ease'
-                  }}
-                  title="Dashboard Pro: Terminal ancho arriba y fila con 4 widgets nivelados abajo"
-                >
-                  <i className="pi pi-th-large" style={{ fontSize: '0.85rem' }} />
-                  <span>Dashboard</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleApplySplitPreset}
-                  style={{
-                    padding: '6px 4px',
-                    borderRadius: '6px',
-                    border: '1px solid rgba(255,255,255,0.12)',
-                    background: 'rgba(255,255,255,0.04)',
-                    color: themeColors.textPrimary || '#fff',
-                    fontSize: '0.74rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '3px',
-                    transition: 'all 0.2s ease'
-                  }}
-                  title="Diseño dividido: Terminal a la izquierda y Recientes a la derecha"
-                >
-                  <i className="pi pi-pause" style={{ transform: 'rotate(90deg)', fontSize: '0.85rem' }} />
-                  <span>2 Columnas</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleApplyTerminalMaxPreset}
-                  style={{
-                    padding: '6px 4px',
-                    borderRadius: '6px',
-                    border: '1px solid rgba(255,255,255,0.12)',
-                    background: 'rgba(255,255,255,0.04)',
-                    color: themeColors.textPrimary || '#fff',
-                    fontSize: '0.74rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '3px',
-                    transition: 'all 0.2s ease'
-                  }}
-                  title="Maximizar terminal en la pantalla de inicio"
-                >
-                  <i className="pi pi-window-maximize" style={{ fontSize: '0.85rem' }} />
-                  <span>Terminal Max</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="home-presets-section">
-              <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginTop: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Mis Presets
-              </div>
-              <div className="home-presets-save-row">
-                <input
-                  type="text"
-                  className="home-presets-input"
-                  placeholder="Nombre de mi preset..."
-                  value={newPresetName}
-                  onChange={(e) => setNewPresetName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleSaveCustomPreset();
-                    }
-                  }}
-                />
-                <button
-                  type="button"
-                  className="home-presets-save-btn"
-                  onClick={handleSaveCustomPreset}
-                  title="Guardar distribución actual de paneles"
-                >
-                  <i className="pi pi-bookmark" /> Guardar
-                </button>
-              </div>
-
-              {userPresets && userPresets.length > 0 && (
-                <div className="home-presets-list">
-                  {userPresets.map((preset) => (
-                    <div key={preset.id} className="home-preset-item">
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '170px' }}>
-                        {preset.name}
-                      </span>
-                      <div className="home-preset-item-actions">
-                        <button
-                          type="button"
-                          className="home-preset-apply-btn"
-                          onClick={() => handleApplyCustomPreset(preset)}
-                          title="Aplicar preset"
-                        >
-                          Cargar
-                        </button>
-                        <button
-                          type="button"
-                          className="home-preset-delete-btn"
-                          onClick={() => handleDeleteCustomPreset(preset.id)}
-                          title="Eliminar preset"
-                        >
-                          <i className="pi pi-trash" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <button
-              type="button"
-              onClick={handleResetLayout}
-              style={{
-                width: '100%',
-                padding: '6px 8px',
-                borderRadius: '6px',
-                border: '1px solid rgba(255,255,255,0.12)',
-                background: 'rgba(255,255,255,0.04)',
-                color: themeColors.textPrimary || '#fff',
-                fontSize: '0.78rem',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                marginTop: '6px',
-                transition: 'all 0.2s ease'
-              }}
-              title="Restablecer posición y tamaño de todos los paneles a sus valores por defecto"
-            >
-              <i className="pi pi-refresh" style={{ fontSize: '0.75rem' }} /> Restablecer Posiciones
-            </button>
-
-            <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)', margin: '6px 0' }} />
-
-            <div className="menu-item-row" onClick={() => {
-              try {
-                window.dispatchEvent(new CustomEvent('toggle-minimal-mode'));
-              } catch (e) { /* noop */ }
-            }}>
-              <span style={{ color: themeColors.textPrimary || '#fff', fontSize: '0.88rem', fontWeight: 500 }}>Modo Minimalista Absoluto</span>
-              <label className="premium-switch" onClick={(e) => e.stopPropagation()}>
-                <input 
-                  type="checkbox" 
-                  checked={isMinimalMode} 
-                  onChange={() => {
-                    try {
-                      window.dispatchEvent(new CustomEvent('toggle-minimal-mode'));
-                    } catch (e) { /* noop */ }
-                  }} 
-                />
-                <span className="premium-slider"></span>
-              </label>
-            </div>
-          </div>
-        </OverlayPanel>
+        <HomeOptionsOverlay
+          overlayRef={homeOptionsOverlayRef}
+          themeColors={themeColors}
+          themes={themes}
+          localLinuxTerminalTheme={localLinuxTerminalTheme}
+          terminalFrameStyleLabel={(HOME_TERMINAL_FRAME_STYLE_OPTIONS.find((o) => o.id === terminalFrameStyle) || {}).label || terminalFrameStyle}
+          terminalOpacity={terminalOpacity}
+          onTerminalOpacityChange={setTerminalOpacity}
+          showLocalTerminalTabs={showLocalTerminalTabs}
+          onToggleLocalTabs={() => setShowLocalTerminalTabs(prev => !prev)}
+          statusBarVisible={statusBarVisible}
+          onToggleStatusBar={handleToggleStatusBar}
+          onOpenLocalTheme={(e) => {
+            e.stopPropagation();
+            localThemeOverlayRef.current?.toggle(e);
+          }}
+          onOpenFrameStyle={(e) => {
+            e.stopPropagation();
+            frameStyleOverlayRef.current?.toggle(e);
+          }}
+          panelsLayout={panelsLayout}
+          onTogglePanel={handleTogglePanelVisibility}
+          onToggleMinimizePanel={handleToggleMinimizePanel}
+          smartSnap={smartSnap}
+          onToggleSmartSnap={handleToggleSmartSnap}
+          onEqualizeBottomRow={handleEqualizeBottomRow}
+          onAutoOrganizePanels={handleAutoOrganizePanels}
+          onApplyBuiltinPreset={handleApplyBuiltinPreset}
+          onApplySplitPreset={handleApplySplitPreset}
+          onApplyTerminalMaxPreset={handleApplyTerminalMaxPreset}
+          newPresetName={newPresetName}
+          onNewPresetNameChange={setNewPresetName}
+          onSaveCustomPreset={handleSaveCustomPreset}
+          userPresets={userPresets}
+          onApplyCustomPreset={handleApplyCustomPreset}
+          onDeleteCustomPreset={handleDeleteCustomPreset}
+          onResetLayout={handleResetLayout}
+          isMinimalMode={isMinimalMode}
+        />
         <OverlayPanel
           ref={localThemeOverlayRef}
           className="premium-overlay"
