@@ -1,7 +1,11 @@
-import React, { useRef, useCallback, useState } from 'react';
+import React, { useRef, useCallback, useState, useEffect } from 'react';
 import { Rnd } from 'react-rnd';
 
-const LIVE_Z_INDEX = 5000;
+let liveZSeq = 5000;
+function nextLiveZ() {
+  liveZSeq += 1;
+  return liveZSeq;
+}
 
 function panelStateEqual(a, b) {
   if (a === b) return true;
@@ -130,7 +134,7 @@ const HomePanelWrapper = ({
       width,
       height: isMinimized ? minimizedHeight : height
     });
-    setLocalZ(LIVE_Z_INDEX);
+    setLocalZ(nextLiveZ());
   }, [captureLiveBox, x, y, width, height, isMinimized]);
 
   const persistZIndex = useCallback(() => {
@@ -138,9 +142,29 @@ const HomePanelWrapper = ({
     onBringToFront?.(id);
   }, [id, onBringToFront]);
 
-  const handleMouseDown = useCallback(() => {
-    setLocalZ(LIVE_Z_INDEX);
-  }, []);
+  const lastRaiseTsRef = useRef(0);
+  const raiseToFront = useCallback(() => {
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (now - lastRaiseTsRef.current < 16) return;
+    lastRaiseTsRef.current = now;
+    setLocalZ(nextLiveZ());
+    onBringToFront?.(id);
+  }, [id, onBringToFront]);
+
+  useEffect(() => {
+    const el = rndRef.current?.resizableElement?.current || rndRef.current?.getSelfElement?.();
+    if (!el) return undefined;
+    el.addEventListener('pointerdown', raiseToFront, true);
+    el.addEventListener('mousedown', raiseToFront, true);
+    return () => {
+      el.removeEventListener('pointerdown', raiseToFront, true);
+      el.removeEventListener('mousedown', raiseToFront, true);
+    };
+  }, [raiseToFront]);
+
+  const handlePointerDownCapture = raiseToFront;
+
+  const handleMouseDown = raiseToFront;
 
   const handleMouseUp = useCallback(() => {
     if (interactingRef.current) return;
@@ -717,7 +741,6 @@ const HomePanelWrapper = ({
         topLeft: { width: '14px', height: '14px', left: '-6px', top: '-6px', zIndex: 31, cursor: 'nwse-resize' }
       }}
       style={{
-        zIndex: displayZ,
         display: 'flex',
         flexDirection: 'column',
         position: 'absolute',
@@ -725,8 +748,11 @@ const HomePanelWrapper = ({
         background: 'transparent',
         boxShadow: activeShadow,
         transition: isMaximized ? 'all 0.2s ease' : 'none',
-        ...style
+        ...style,
+        zIndex: displayZ,
+        isolation: 'isolate'
       }}
+      onPointerDownCapture={handlePointerDownCapture}
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
       className={`home-panel-rnd home-panel-rnd-${id}`}
@@ -747,6 +773,7 @@ const HomePanelWrapper = ({
           ...(frameBackground ? { background: isFramelessNonTerminal ? 'transparent' : frameBackground } : {})
         }}
         data-home-panel={id}
+        onPointerDownCapture={handlePointerDownCapture}
       >
         {!hideHeader && (
           <div

@@ -761,8 +761,8 @@ const HomeTab = ({
       Object.values(prev).forEach((p) => {
         if (p && typeof p.zIndex === 'number') maxZ = Math.max(maxZ, p.zIndex);
       });
+      if ((current.zIndex || 0) >= maxZ) return prev;
       const nextZ = maxZ + 1;
-      if (current.zIndex >= nextZ) return prev;
       const next = { ...prev, [panelId]: { ...current, zIndex: nextZ } };
       const authored = authoredLayoutRef.current;
       if (authored && authored[panelId]) {
