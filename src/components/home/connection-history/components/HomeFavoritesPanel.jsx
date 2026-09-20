@@ -1,6 +1,6 @@
 import React from 'react';
 import FilterBadge from '../../../FilterBadge';
-import ConnectionTable from './ConnectionTable';
+import { CyberConnectionList, usePanelBreakpoints } from './CyberConnectionList';
 
 export const HomeFavoritesPanel = ({
 	activeFavFilters = { protocols: [], groups: [], states: [] },
@@ -16,11 +16,16 @@ export const HomeFavoritesPanel = ({
 	handleToggleFavoriteWithGroup
 }) => {
 	const activeCount = getActiveFilterCount ? getActiveFilterCount(activeFavFilters) : 0;
+	const { ref, className: breakpointClass } = usePanelBreakpoints();
+	const count = filteredFavorites.length;
 
 	return (
-		<div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+		<div
+			ref={ref}
+			className={`cyber-sessions-panel-body ${breakpointClass}`.trim()}
+		>
 			{activeCount > 0 && (
-				<div className="recents-filter-chips-bar" style={{ padding: '6px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+				<div className="cyber-sessions-chips-bar">
 					{activeFavFilters.protocols?.map(filterId => (
 						<FilterBadge
 							key={`fav-protocol-${filterId}`}
@@ -56,17 +61,21 @@ export const HomeFavoritesPanel = ({
 					))}
 				</div>
 			)}
-			<div className="recents-terminal-body" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
-				<ConnectionTable
-					connections={filteredFavorites}
-					title="Favoritos"
-					emptyMessage="# no favorite sessions found"
-					activeIds={activeIds}
-					onConnect={onConnectToHistory}
-					onEdit={onEdit}
-					onToggleFav={handleToggleFavoriteWithGroup}
-				/>
-			</div>
+			<CyberConnectionList
+				connections={filteredFavorites}
+				accent="#FFD700"
+				title={`FAVORITES // ${count.toString().padStart(2, '0')}`}
+				subtitle="ACCESOS FAVORITOS"
+				emptyMessage="// NO HAY CONEXIONES MARCADAS COMO FAVORITAS"
+				activeIds={activeIds}
+				onConnect={onConnectToHistory}
+				onEdit={onEdit}
+				onToggleFav={handleToggleFavoriteWithGroup}
+				showTime
+				showFav
+				itemKeyPrefix="fav"
+				hudClassName="cyber-sessions-hud"
+			/>
 		</div>
 	);
 };

@@ -1,6 +1,6 @@
 import React from 'react';
 import FilterBadge from '../../../FilterBadge';
-import ConnectionTable from './ConnectionTable';
+import { CyberConnectionList, usePanelBreakpoints } from './CyberConnectionList';
 
 export const HomeRecentsPanel = ({
 	activeRecentFilters = { protocols: [], groups: [], states: [] },
@@ -16,11 +16,16 @@ export const HomeRecentsPanel = ({
 	handleToggleFavoriteWithGroup
 }) => {
 	const activeCount = getActiveFilterCount ? getActiveFilterCount(activeRecentFilters) : 0;
+	const { ref, className: breakpointClass } = usePanelBreakpoints();
+	const count = filteredRecentsForDisplay.length;
 
 	return (
-		<div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+		<div
+			ref={ref}
+			className={`cyber-sessions-panel-body ${breakpointClass}`.trim()}
+		>
 			{activeCount > 0 && (
-				<div className="recents-filter-chips-bar" style={{ padding: '6px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+				<div className="cyber-sessions-chips-bar">
 					{activeRecentFilters.protocols?.map(filterId => (
 						<FilterBadge
 							key={`protocol-${filterId}`}
@@ -56,17 +61,21 @@ export const HomeRecentsPanel = ({
 					))}
 				</div>
 			)}
-			<div className="recents-terminal-body" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
-				<ConnectionTable
-					connections={filteredRecentsForDisplay}
-					title="Nombre"
-					emptyMessage="# no recent sessions"
-					activeIds={activeIds}
-					onConnect={onConnectToHistory}
-					onEdit={onEdit}
-					onToggleFav={handleToggleFavoriteWithGroup}
-				/>
-			</div>
+			<CyberConnectionList
+				connections={filteredRecentsForDisplay}
+				accent="#2196F3"
+				title={`RECENT SESSIONS // ${count.toString().padStart(2, '0')}`}
+				subtitle="HISTORIAL RECIENTE"
+				emptyMessage="// NO SE REGISTRARON SESIONES RECIENTES"
+				activeIds={activeIds}
+				onConnect={onConnectToHistory}
+				onEdit={onEdit}
+				onToggleFav={handleToggleFavoriteWithGroup}
+				showTime
+				showFav
+				itemKeyPrefix="recent"
+				hudClassName="cyber-sessions-hud"
+			/>
 		</div>
 	);
 };

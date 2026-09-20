@@ -5,6 +5,7 @@ export { default as HomeIntegratedTerminalShell } from './components/HomeIntegra
 export { default as HomeSearchPanel } from './components/HomeSearchPanel';
 export { default as HomeRecentsPanel } from './components/HomeRecentsPanel';
 export { default as HomeFavoritesPanel } from './components/HomeFavoritesPanel';
+export { default as CyberConnectionList, CyberConnectionCard, usePanelBreakpoints } from './components/CyberConnectionList';
 export { default as HomeTerminalSplitPanel } from './components/HomeTerminalSplitPanel';
 export { default as ConnectionHistoryDialogs } from './components/ConnectionHistoryDialogs';
 export { default as ConnectionHistoryOverlays } from './components/ConnectionHistoryOverlays';

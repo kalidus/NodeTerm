@@ -1,16 +1,14 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { InputText } from 'primereact/inputtext';
-import { isFavorite } from '../../../../utils/connectionStore';
 import {
 	matchesProtocolFilter,
 	CYBER_PROTOCOL_OPTIONS,
 	hexToRgbString,
 	getConnectionTypeColor,
 	getProtocolBadge,
-	getNodeFolderPath,
-	buildHostLabel,
-	formatRelativeTime
+	getNodeFolderPath
 } from '../utils/connectionHistoryHelpers';
+import { CyberConnectionList } from './CyberConnectionList';
 
 export const HomeSearchPanel = ({
 	searchTerm,
@@ -277,7 +275,9 @@ export const HomeSearchPanel = ({
 							const badgeLabel = isPassword ? 'PWD' : getProtocolBadge(node.data?.type, port);
 							const folderPath = getNodeFolderPath(sidebarNodes, node);
 							const folderPathString = folderPath && folderPath.length > 0 ? folderPath.join(' / ') : null;
+							const hostLabel = `${sub}${port && Number(port) !== 22 && Number(port) !== 3389 && !sub.includes(`:${port}`) ? `:${port}` : ''}`;
 							const isSelected = activeIndex === idx;
+							const cardTitle = folderPathString ? `${label} (${hostLabel}) · ${folderPathString}` : `${label} (${hostLabel})`;
 
 							return (
 								<div
@@ -287,31 +287,18 @@ export const HomeSearchPanel = ({
 										'--row-color': color,
 										'--row-color-rgb': rgbColor
 									}}
+									title={cardTitle}
 									onClick={() => handleSelectSearchResult(node)}
 									onMouseEnter={() => setActiveIndex(idx)}
 								>
-									<span className="crc-prefix-arrow">➜</span>
+									<span className="crc-prefix-arrow">$</span>
 									<span className="crc-badge">{badgeLabel}</span>
 									<div className="crc-info">
 										<div className="crc-top-line">
 											<span className="crc-name">{label}</span>
-											<span className="crc-host">{sub}{port && Number(port) !== 22 && Number(port) !== 3389 && !sub.includes(`:${port}`) ? `:${port}` : ''}</span>
+											<span className="crc-host">{hostLabel}</span>
 										</div>
-										{folderPathString && (
-											<span className="crc-folder-path">📁 {folderPathString}</span>
-										)}
 									</div>
-									<button
-										type="button"
-										className="crc-action-btn"
-										onClick={(e) => {
-											e.stopPropagation();
-											handleSelectSearchResult(node);
-										}}
-									>
-										<span>{isPassword ? 'ABRIR' : 'CONECTAR'}</span>
-										<i className="pi pi-arrow-right" style={{ fontSize: '0.65rem' }} />
-									</button>
 								</div>
 							);
 						})}
@@ -340,243 +327,69 @@ export const HomeSearchPanel = ({
 					</div>
 				</div>
 			) : searchPanelMode === 'recents' ? (
-				/* Recents List Integrated in Cyberpunk Mode */
-				<div className="cyber-search-results-container">
-					<div className="cyber-results-header-bar">
-						<div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-							<span
-								style={{
-									width: '6px',
-									height: '6px',
-									borderRadius: '50%',
-									background: '#2196F3',
-									boxShadow: '0 0 6px #2196F3'
-								}}
-							/>
-							<span style={{ color: '#2196F3', fontWeight: '700' }}>
-								RECENT SESSIONS // {currentRecents.length.toString().padStart(2, '0')}
-							</span>
-							{searchProtocolFilter !== 'all' && (
-								<span style={{ color: '#4fc3f7', opacity: 0.8, fontSize: '0.68rem' }}>
-									[{searchProtocolFilter.toUpperCase()}]
-								</span>
-							)}
-						</div>
-						<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-							<span style={{ opacity: 0.5, fontSize: '0.68rem', fontFamily: 'monospace' }}>
-								HISTORIAL RECIENTE
-							</span>
-							<button
-								type="button"
-								className="cyber-search-clear-btn"
-								style={{ position: 'static', transform: 'none', width: '18px', height: '18px' }}
-								onClick={() => setSearchPanelMode('standby')}
-								title="Cerrar recientes"
-							>
-								<i className="pi pi-times" />
-							</button>
-						</div>
-					</div>
-
-					<div className="cyber-results-list-scroll">
-						{currentRecents.map((conn, idx) => {
-							const isPassword = ['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note', 'document', 'quick-note'].includes(conn.type);
-							const color = isPassword ? '#E91E63' : getConnectionTypeColor(conn.type);
-							const rgbColor = hexToRgbString(color);
-							const label = conn.name || conn.label || '-';
-							const sub = buildHostLabel(conn);
-							const port = conn.port;
-							const badgeLabel = isPassword ? 'PWD' : getProtocolBadge(conn.type, port);
-							const timeStr = formatRelativeTime(conn.lastConnected);
-							const isFav = isFavorite(conn);
-							const isSelected = activeIndex === idx;
-
-							const handleItemClick = () => {
-								if (isPassword) {
-									window.dispatchEvent(new CustomEvent('open-password-tab', {
-										detail: { key: conn.id, label, data: { ...conn } }
-									}));
-								} else {
-									onConnectToHistory?.(conn);
-								}
-							};
-
-							return (
-								<div
-									key={conn.id || `recent-${idx}`}
-									className={`cyber-result-card ${isSelected ? 'active-item' : ''}`}
-									style={{
-										'--row-color': color,
-										'--row-color-rgb': rgbColor
-									}}
-									onClick={handleItemClick}
-									onMouseEnter={() => setActiveIndex(idx)}
-									onContextMenu={(e) => {
-										e.preventDefault();
-										e.stopPropagation();
-										onEdit?.(conn);
-									}}
-								>
-									<span className="crc-prefix-arrow">➜</span>
-									<span className="crc-badge">{badgeLabel}</span>
-									<div className="crc-info">
-										<div className="crc-top-line">
-											<span className="crc-name">{label}</span>
-											<span className="crc-host">{sub}</span>
-										</div>
-										{timeStr && timeStr !== '-' && (
-											<span className="crc-folder-path" style={{ opacity: 0.6 }}>⏱ {timeStr}</span>
-										)}
-									</div>
-									<div style={{ display: 'flex', alignItems: 'center', gap: '6px' }} onClick={(e) => e.stopPropagation()}>
-										<button
-											type="button"
-											className={`glass-action-btn ${isFav ? 'fav-active' : ''}`}
-											onClick={(e) => {
-												e.stopPropagation();
-												handleToggleFavoriteWithGroup(conn);
-											}}
-											title={isFav ? "Quitar de Favoritos" : "Marcar como Favorito"}
-										>
-											<i className={isFav ? 'pi pi-star-fill' : 'pi pi-star'} />
-										</button>
-										<button
-											type="button"
-											className="crc-action-btn"
-											onClick={handleItemClick}
-										>
-											<span>{isPassword ? 'ABRIR' : 'CONECTAR'}</span>
-											<i className="pi pi-arrow-right" style={{ fontSize: '0.65rem' }} />
-										</button>
-									</div>
-								</div>
-							);
-						})}
-
-						{currentRecents.length === 0 && (
-							<div style={{ padding: '16px', textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: '0.78rem', fontFamily: 'monospace' }}>
-								// NO SE REGISTRARON SESIONES RECIENTES
-							</div>
-						)}
-					</div>
-				</div>
+				<CyberConnectionList
+					connections={currentRecents}
+					accent="#2196F3"
+					title={`RECENT SESSIONS // ${currentRecents.length.toString().padStart(2, '0')}`}
+					titleExtra={searchProtocolFilter !== 'all' ? (
+						<span style={{ color: '#4fc3f7', opacity: 0.8, fontSize: '0.68rem' }}>
+							[{searchProtocolFilter.toUpperCase()}]
+						</span>
+					) : null}
+					subtitle="HISTORIAL RECIENTE"
+					headerRight={(
+						<button
+							type="button"
+							className="cyber-search-clear-btn"
+							style={{ position: 'static', transform: 'none', width: '18px', height: '18px' }}
+							onClick={() => setSearchPanelMode('standby')}
+							title="Cerrar recientes"
+						>
+							<i className="pi pi-times" />
+						</button>
+					)}
+					emptyMessage="// NO SE REGISTRARON SESIONES RECIENTES"
+					activeIndex={activeIndex}
+					onActiveIndexChange={setActiveIndex}
+					onConnect={onConnectToHistory}
+					onEdit={onEdit}
+					onToggleFav={handleToggleFavoriteWithGroup}
+					showTime
+					showFav
+					itemKeyPrefix="recent"
+				/>
 			) : searchPanelMode === 'favorites' ? (
-				/* Favorites List Integrated in Cyberpunk Mode */
-				<div className="cyber-search-results-container">
-					<div className="cyber-results-header-bar">
-						<div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-							<span
-								style={{
-									width: '6px',
-									height: '6px',
-									borderRadius: '50%',
-									background: '#FFD700',
-									boxShadow: '0 0 6px #FFD700'
-								}}
-							/>
-							<span style={{ color: '#FFD700', fontWeight: '700' }}>
-								FAVORITES // {currentFavorites.length.toString().padStart(2, '0')}
-							</span>
-							{searchProtocolFilter !== 'all' && (
-								<span style={{ color: '#FFD700', opacity: 0.8, fontSize: '0.68rem' }}>
-									[{searchProtocolFilter.toUpperCase()}]
-								</span>
-							)}
-						</div>
-						<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-							<span style={{ opacity: 0.5, fontSize: '0.68rem', fontFamily: 'monospace' }}>
-								ACCESOS FAVORITOS
-							</span>
-							<button
-								type="button"
-								className="cyber-search-clear-btn"
-								style={{ position: 'static', transform: 'none', width: '18px', height: '18px' }}
-								onClick={() => setSearchPanelMode('standby')}
-								title="Cerrar favoritos"
-							>
-								<i className="pi pi-times" />
-							</button>
-						</div>
-					</div>
-
-					<div className="cyber-results-list-scroll">
-						{currentFavorites.map((conn, idx) => {
-							const isPassword = ['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note', 'document', 'quick-note'].includes(conn.type);
-							const color = isPassword ? '#E91E63' : getConnectionTypeColor(conn.type);
-							const rgbColor = hexToRgbString(color);
-							const label = conn.name || conn.label || '-';
-							const sub = buildHostLabel(conn);
-							const port = conn.port;
-							const badgeLabel = isPassword ? 'PWD' : getProtocolBadge(conn.type, port);
-							const isFav = isFavorite(conn);
-							const isSelected = activeIndex === idx;
-
-							const handleItemClick = () => {
-								if (isPassword) {
-									window.dispatchEvent(new CustomEvent('open-password-tab', {
-										detail: { key: conn.id, label, data: { ...conn } }
-									}));
-								} else {
-									onConnectToHistory?.(conn);
-								}
-							};
-
-							return (
-								<div
-									key={conn.id || `fav-${idx}`}
-									className={`cyber-result-card ${isSelected ? 'active-item' : ''}`}
-									style={{
-										'--row-color': color,
-										'--row-color-rgb': rgbColor
-									}}
-									onClick={handleItemClick}
-									onMouseEnter={() => setActiveIndex(idx)}
-									onContextMenu={(e) => {
-										e.preventDefault();
-										e.stopPropagation();
-										onEdit?.(conn);
-									}}
-								>
-									<span className="crc-prefix-arrow">➜</span>
-									<span className="crc-badge">{badgeLabel}</span>
-									<div className="crc-info">
-										<div className="crc-top-line">
-											<span className="crc-name">{label}</span>
-											<span className="crc-host">{sub}</span>
-										</div>
-									</div>
-									<div style={{ display: 'flex', alignItems: 'center', gap: '6px' }} onClick={(e) => e.stopPropagation()}>
-										<button
-											type="button"
-											className={`glass-action-btn ${isFav ? 'fav-active' : ''}`}
-											onClick={(e) => {
-												e.stopPropagation();
-												handleToggleFavoriteWithGroup(conn);
-											}}
-											title={isFav ? "Quitar de Favoritos" : "Marcar como Favorito"}
-										>
-											<i className={isFav ? 'pi pi-star-fill' : 'pi pi-star'} />
-										</button>
-										<button
-											type="button"
-											className="crc-action-btn"
-											onClick={handleItemClick}
-										>
-											<span>{isPassword ? 'ABRIR' : 'CONECTAR'}</span>
-											<i className="pi pi-arrow-right" style={{ fontSize: '0.65rem' }} />
-										</button>
-									</div>
-								</div>
-							);
-						})}
-
-						{currentFavorites.length === 0 && (
-							<div style={{ padding: '16px', textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: '0.78rem', fontFamily: 'monospace' }}>
-								// NO HAY CONEXIONES MARCADAS COMO FAVORITAS
-							</div>
-						)}
-					</div>
-				</div>
+				<CyberConnectionList
+					connections={currentFavorites}
+					accent="#FFD700"
+					title={`FAVORITES // ${currentFavorites.length.toString().padStart(2, '0')}`}
+					titleExtra={searchProtocolFilter !== 'all' ? (
+						<span style={{ color: '#FFD700', opacity: 0.8, fontSize: '0.68rem' }}>
+							[{searchProtocolFilter.toUpperCase()}]
+						</span>
+					) : null}
+					subtitle="ACCESOS FAVORITOS"
+					headerRight={(
+						<button
+							type="button"
+							className="cyber-search-clear-btn"
+							style={{ position: 'static', transform: 'none', width: '18px', height: '18px' }}
+							onClick={() => setSearchPanelMode('standby')}
+							title="Cerrar favoritos"
+						>
+							<i className="pi pi-times" />
+						</button>
+					)}
+					emptyMessage="// NO HAY CONEXIONES MARCADAS COMO FAVORITAS"
+					activeIndex={activeIndex}
+					onActiveIndexChange={setActiveIndex}
+					onConnect={onConnectToHistory}
+					onEdit={onEdit}
+					onToggleFav={handleToggleFavoriteWithGroup}
+					showTime={false}
+					showFav
+					itemKeyPrefix="fav"
+				/>
 			) : searchProtocolFilter !== 'all' ? (
 				/* Protocol Direct Filter Mode from Standby */
 				<div className="cyber-search-results-container">
@@ -627,7 +440,9 @@ export const HomeSearchPanel = ({
 							const badgeLabel = isPassword ? 'PWD' : getProtocolBadge(node.data?.type, port);
 							const folderPath = getNodeFolderPath(sidebarNodes, node);
 							const folderPathString = folderPath && folderPath.length > 0 ? folderPath.join(' / ') : null;
+							const hostLabel = `${sub}${port && Number(port) !== 22 && Number(port) !== 3389 && !sub.includes(`:${port}`) ? `:${port}` : ''}`;
 							const isSelected = activeIndex === idx;
+							const cardTitle = folderPathString ? `${label} (${hostLabel}) · ${folderPathString}` : `${label} (${hostLabel})`;
 
 							return (
 								<div
@@ -637,31 +452,18 @@ export const HomeSearchPanel = ({
 										'--row-color': color,
 										'--row-color-rgb': rgbColor
 									}}
+									title={cardTitle}
 									onClick={() => handleSelectSearchResult(node)}
 									onMouseEnter={() => setActiveIndex(idx)}
 								>
-									<span className="crc-prefix-arrow">➜</span>
+									<span className="crc-prefix-arrow">$</span>
 									<span className="crc-badge">{badgeLabel}</span>
 									<div className="crc-info">
 										<div className="crc-top-line">
 											<span className="crc-name">{label}</span>
-											<span className="crc-host">{sub}{port && Number(port) !== 22 && Number(port) !== 3389 && !sub.includes(`:${port}`) ? `:${port}` : ''}</span>
+											<span className="crc-host">{hostLabel}</span>
 										</div>
-										{folderPathString && (
-											<span className="crc-folder-path">📁 {folderPathString}</span>
-										)}
 									</div>
-									<button
-										type="button"
-										className="crc-action-btn"
-										onClick={(e) => {
-											e.stopPropagation();
-											handleSelectSearchResult(node);
-										}}
-									>
-										<span>{isPassword ? 'ABRIR' : 'CONECTAR'}</span>
-										<i className="pi pi-arrow-right" style={{ fontSize: '0.65rem' }} />
-									</button>
 								</div>
 							);
 						})}

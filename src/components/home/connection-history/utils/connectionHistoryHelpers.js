@@ -70,16 +70,16 @@ export function hexToRgbString(hex) {
 	return '79, 195, 247';
 }
 
-export function getProtocolBadge(type, port) {
+export function getProtocolBadge(type) {
 	switch (type) {
-		case 'ssh': return port && Number(port) !== 22 ? `SSH:${port}` : 'SSH:22';
+		case 'ssh': return 'SSH';
 		case 'rdp-guacamole':
-		case 'rdp': return port && Number(port) !== 3389 ? `RDP:${port}` : 'RDP:3389';
+		case 'rdp': return 'RDP';
 		case 'vnc-guacamole':
-		case 'vnc': return port && Number(port) !== 5900 ? `VNC:${port}` : 'VNC:5900';
+		case 'vnc': return 'VNC';
 		case 'explorer':
-		case 'sftp': return port && Number(port) !== 22 ? `SFTP:${port}` : 'SFTP';
-		case 'ftp': return port && Number(port) !== 21 ? `FTP:${port}` : 'FTP:21';
+		case 'sftp': return 'SFTP';
+		case 'ftp': return 'FTP';
 		case 'scp': return 'SCP';
 		case 'group': return 'GRUPO';
 		case 'password':
