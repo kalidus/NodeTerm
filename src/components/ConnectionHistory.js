@@ -659,6 +659,31 @@ const ConnectionHistory = ({
 		else onTogglePanelVisibility?.('filters', false);
 	};
 
+	useEffect(() => {
+		if (!panelsLayout?.filters?.visible) return undefined;
+
+		const isInsideFiltersPanel = (target) => {
+			if (!target || !target.closest) return false;
+			return Boolean(
+				target.closest('.home-panel-rnd-filters') ||
+				target.closest('[data-home-panel="filters"]') ||
+				target.closest('.filters-terminal-frame') ||
+				target.closest('.cyber-sessions-filter-btn') ||
+				target.closest('.split-header-filter-btn') ||
+				target.closest('.create-group-overlay') ||
+				target.closest('.app-dialog')
+			);
+		};
+
+		const handlePointerDown = (event) => {
+			if (isInsideFiltersPanel(event.target)) return;
+			closeFilterPanel();
+		};
+
+		document.addEventListener('mousedown', handlePointerDown);
+		return () => document.removeEventListener('mousedown', handlePointerDown);
+	}, [panelsLayout?.filters?.visible]);
+
 	const renderHomeFilterPanel = () => (
 		<HomeFilterPanel
 			isOpen

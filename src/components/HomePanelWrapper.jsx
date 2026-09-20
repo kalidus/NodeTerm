@@ -640,6 +640,7 @@ const HomePanelWrapper = ({
         ...style
       }}
       onMouseDown={handleBringToFront}
+      className={`home-panel-rnd home-panel-rnd-${id}`}
     >
       <div
         className={`home-panel-frame recents-terminal-frame ${terminalFrameStyle} ${isFramelessNonTerminal ? 'is-frameless-panel' : ''} ${isMaximized ? 'is-maximized' : ''} ${isMinimized ? 'is-minimized' : ''} ${className}`}
@@ -656,6 +657,7 @@ const HomePanelWrapper = ({
           ['--home-panel-frame-bg']: isFramelessNonTerminal ? 'transparent' : (frameBackground || undefined),
           ...(frameBackground ? { background: isFramelessNonTerminal ? 'transparent' : frameBackground } : {})
         }}
+        data-home-panel={id}
       >
         {!hideHeader && (
           <div
