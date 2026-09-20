@@ -139,7 +139,8 @@ export function getBuiltinPresets(width = 1200, height = 800) {
     vault: { visible: false, x: pad, y: pad, width: 320, height: 240, minWidth: 220, minHeight: 140, isMaximized: false },
     notes: { visible: false, x: pad, y: pad, width: 320, height: 240, minWidth: 220, minHeight: 140, isMaximized: false },
     groups: { visible: false, x: pad, y: pad, width: 340, height: 240, minWidth: 220, minHeight: 140, isMaximized: false },
-    quickbar: { visible: false, x: Math.max(pad, w - 240), y: pad, width: 220, height: 300, minWidth: 180, minHeight: 200, isMaximized: false }
+    quickbar: { visible: false, x: Math.max(pad, w - 240), y: pad, width: 220, height: 300, minWidth: 180, minHeight: 200, isMaximized: false },
+    releaseNotes: { visible: false, x: pad, y: pad, width: 720, height: 480, minWidth: 480, minHeight: 280, isMaximized: false }
   };
 
   // --- 0. LAUNCHER (Search + jump/favoritos + terminal) ---

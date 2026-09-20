@@ -31,6 +31,7 @@ import {
 	HomeVaultPanel,
 	HomeNotesPanel,
 	HomeGroupWorkspacePanel,
+	HomeReleaseNotesPanel,
 	ConnectionHistoryDialogs,
 	ConnectionHistoryOverlays,
 	useConnectionSearch,
@@ -1060,6 +1061,7 @@ const ConnectionHistory = ({
 							onConnectToHistory={onConnectToHistory}
 						/>
 					), { minWidth: 220, minHeight: 140, titleIcon: <i className="pi pi-th-large" style={{ color: '#a855f7', fontSize: '0.8rem' }} /> })}
+					{wrapHomePanel('releaseNotes', '~/releases', 'releases · novedades', <HomeReleaseNotesPanel />, { minWidth: 480, minHeight: 280, titleIcon: <i className="pi pi-book" style={{ color: '#67e8f9', fontSize: '0.8rem' }} /> })}
 				</div>
 			) : (
 				<>

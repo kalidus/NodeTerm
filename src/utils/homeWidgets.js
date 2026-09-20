@@ -135,6 +135,18 @@ export const HOME_WIDGETS = [
     minHeight: 200,
     defaultWidth: 360,
     defaultHeight: 280
+  },
+  {
+    id: 'releaseNotes',
+    title: 'Novedades',
+    path: 'releases',
+    icon: 'pi pi-book',
+    required: false,
+    defaultVisible: false,
+    minWidth: 480,
+    minHeight: 280,
+    defaultWidth: 720,
+    defaultHeight: 480
   }
 ];
 

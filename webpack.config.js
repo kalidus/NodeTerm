@@ -1,8 +1,32 @@
 const path = require('path');
+const fs = require('fs');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const webpack = require('webpack');
 const packageJson = require('./package.json');
+
+function embedChangelogSource() {
+  const changelogPath = path.join(__dirname, 'CHANGELOG.md');
+  const outPath = path.join(__dirname, 'src', 'data', 'changelogSource.js');
+  try {
+    const markdown = fs.readFileSync(changelogPath, 'utf8');
+    const next = `export default ${JSON.stringify(markdown)};\n`;
+    let prev = '';
+    try {
+      prev = fs.readFileSync(outPath, 'utf8');
+    } catch (err) {
+      prev = '';
+    }
+    if (prev !== next) {
+      fs.mkdirSync(path.dirname(outPath), { recursive: true });
+      fs.writeFileSync(outPath, next);
+    }
+  } catch (err) {
+    console.warn('[webpack] No se pudo embeber CHANGELOG.md:', err.message);
+  }
+}
+
+embedChangelogSource();
 
 module.exports = {
   mode: 'development',
@@ -119,6 +143,10 @@ module.exports = {
         generator: {
           filename: 'assets/fonts/[name][ext]'
         }
+      },
+      {
+        test: /CHANGELOG\.md$/,
+        type: 'asset/source'
       }
     ]
   },

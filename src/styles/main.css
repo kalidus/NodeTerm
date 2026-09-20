@@ -41,6 +41,7 @@
 @import './components/home-panels-snap.css';
 @import './components/home-dock.css';
 @import './components/home-launcher.css';
+@import './components/home-release-notes.css';
 /* Sobrescribir colores de PrimeReact después de todos los demás estilos */
 @import './components/prime-react-overrides.css';
 

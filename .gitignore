@@ -19,6 +19,9 @@ yarn-debug.log*
 yarn-error.log*
 webpack-errors.json
 
+# Changelog embebido por webpack.config.js
+src/data/changelogSource.js
+
 # Sistema operativo
 .DS_Store
 Thumbs.db
