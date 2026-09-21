@@ -297,7 +297,7 @@ describe('juego de canales por defecto del bridge', () => {
     else process.env.NODETERM_RDP_INJECT_CHANNELS = previous;
   });
 
-  test('por defecto inyecta solo rdpsnd detras de cliprdr', () => {
+  test('por defecto inyecta rdpsnd detras de cliprdr', () => {
     assert.deepEqual(resolveInjectedChannels(), { before: [], after: ['rdpsnd'] });
     const frame = buildMcsConnectInitial([['cliprdr', 0xc0a00000]]);
     const res = prepareMcsConnectInitial(frame, 0x01, { injectChannels: resolveInjectedChannels() });
@@ -312,5 +312,93 @@ describe('juego de canales por defecto del bridge', () => {
   test('un valor explicito sustituye al juego por defecto', () => {
     process.env.NODETERM_RDP_INJECT_CHANNELS = 'rdpdr,*';
     assert.deepEqual(resolveInjectedChannels(), { before: ['rdpdr'], after: [] });
+  });
+
+  test('cadena :APP: inyecta rail, rdpdr y rdpsnd delante de cliprdr', () => {
+    const session = { username: 'rt01119@default@FortiAnalyzer:APP:rt01119' };
+    assert.deepEqual(resolveInjectedChannels(session), { before: ['rail', 'rdpdr', 'rdpsnd'], after: [] });
+    const frame = buildMcsConnectInitial([['cliprdr', 0xc0a00000]]);
+    const res = prepareMcsConnectInitial(frame, 0x01, { injectChannels: resolveInjectedChannels(session) });
+    assert.deepEqual(findClientNetworkChannels(res.buf), ['rail', 'rdpdr', 'rdpsnd', 'cliprdr']);
+  });
+
+  test('cadena :RDP: inyecta rdpsnd detras de cliprdr', () => {
+    const session = { username: 'dsn_operator@WALLIX-JUMPSERVER@ESJC-SGCM-WL03P:RDP:rt01119' };
+    assert.deepEqual(resolveInjectedChannels(session), { before: [], after: ['rdpsnd'] });
+    const frame = buildMcsConnectInitial([['cliprdr', 0xc0a00000]]);
+    const res = prepareMcsConnectInitial(frame, 0x01, { injectChannels: resolveInjectedChannels(session) });
+    assert.deepEqual(findClientNetworkChannels(res.buf), ['cliprdr', 'rdpsnd']);
+  });
+
+  test('cadena :RDP: ESAH desplaza cliprdr detras de rdpdr y rdpsnd', () => {
+    const session = {
+      username: 'dsn_operator@WALLIX-JUMPSERVER@ESAH-SGCM-WL03P:RDP:rt01119',
+      targetServer: 'ESAH-SGCM-WL03P'
+    };
+    assert.deepEqual(resolveInjectedChannels(session), { before: ['rdpdr', 'rdpsnd'], after: [] });
+    const frame = buildMcsConnectInitial([['cliprdr', 0xc0a00000]]);
+    const res = prepareMcsConnectInitial(frame, 0x01, { injectChannels: resolveInjectedChannels(session) });
+    assert.deepEqual(findClientNetworkChannels(res.buf), ['rdpdr', 'rdpsnd', 'cliprdr']);
+  });
+
+  test('targetServer ESAH sin marcador en el usuario tambien desplaza cliprdr', () => {
+    assert.deepEqual(
+      resolveInjectedChannels({ targetServer: 'ESAH-SGCM-WL03P' }),
+      { before: ['rdpdr', 'rdpsnd'], after: [] }
+    );
+  });
+
+  test('wallixService APP sin marcador en el usuario usa el juego APP', () => {
+    assert.deepEqual(
+      resolveInjectedChannels({ username: 'rt01119', wallixService: 'APP' }),
+      { before: ['rail', 'rdpdr', 'rdpsnd'], after: [] }
+    );
+  });
+
+  test('el marcador :RDP: gana a wallixService APP', () => {
+    assert.deepEqual(
+      resolveInjectedChannels({
+        username: 'dsn_operator@WALLIX-JUMPSERVER@ESJC-SGCM-WL03P:RDP:rt01119',
+        wallixService: 'APP'
+      }),
+      { before: [], after: ['rdpsnd'] }
+    );
+  });
+
+  test('NODETERM_RDP_INJECT_CHANNELS gana al juego APP (p.ej. rail delante)', () => {
+    process.env.NODETERM_RDP_INJECT_CHANNELS = 'rail,rdpdr,rdpsnd,*';
+    assert.deepEqual(
+      resolveInjectedChannels({ username: 'rt01119@default@FortiAnalyzer:APP:rt01119' }),
+      { before: ['rail', 'rdpdr', 'rdpsnd'], after: [] }
+    );
+  });
+
+  test('APP_INJECTED_CHANNELS_RAIL es el default APP', () => {
+    const { APP_INJECTED_CHANNELS, APP_INJECTED_CHANNELS_RAIL } = require('../../src/main/services/RdpNativeBridgeService');
+    assert.deepEqual(APP_INJECTED_CHANNELS, APP_INJECTED_CHANNELS_RAIL);
+    const frame = buildMcsConnectInitial([['cliprdr', 0xc0a00000]]);
+    const res = prepareMcsConnectInitial(frame, 0x01, { injectChannels: APP_INJECTED_CHANNELS_RAIL });
+    assert.deepEqual(findClientNetworkChannels(res.buf), ['rail', 'rdpdr', 'rdpsnd', 'cliprdr']);
+    assert.deepEqual(resolveInjectedChannels({ username: 'x@d@h:APP:u' }), { before: ['rail', 'rdpdr', 'rdpsnd'], after: [] });
+  });
+});
+
+describe('marcador de servicio Wallix en la cadena', () => {
+  const { wallixServiceFromUsername, wallixServiceFromSession } = require('../../src/main/services/RdpNativeBridgeService');
+
+  test('extrae APP y RDP de la cadena', () => {
+    assert.equal(wallixServiceFromUsername('rt01119@default@FortiAnalyzer:APP:rt01119'), 'APP');
+    assert.equal(wallixServiceFromUsername('dsn_operator@WALLIX-JUMPSERVER@ESJC-SGCM-WL03P:RDP:rt01119'), 'RDP');
+    assert.equal(wallixServiceFromUsername('rt01119'), null);
+  });
+
+  test('la sesion prefiere el marcador del usuario al campo wallixService', () => {
+    assert.equal(
+      wallixServiceFromSession({
+        username: 'user@default@host:RDP:u',
+        wallixService: 'APP'
+      }),
+      'RDP'
+    );
   });
 });

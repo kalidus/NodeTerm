@@ -16,6 +16,7 @@ const CB_CLIP_CAPS = 0x0007;
 const CB_TEMP_DIRECTORY = 0x0006;
 const CB_FORMAT_LIST = 0x0002;
 const CB_FORMAT_DATA_REQUEST = 0x0004;
+const CB_FILECONTENTS_REQUEST = 0x0008;
 
 const CLIPRDR_CH = 1004;
 const IO_CH = 1003;
@@ -127,6 +128,7 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     process.env.NODETERM_RDP_CLIPRDR_DROP_CLIENT_TEMPDIR = '0';
     process.env.NODETERM_RDP_CLIPRDR_MUTE_CLIENT = '0';
     process.env.NODETERM_RDP_CLIPRDR_NO_REMAP = '0';
+    process.env.NODETERM_RDP_CLIPRDR_ALLOW_USER_CHANNEL = '1';
     logs = [];
     originalLog = console.log;
     originalWarn = console.warn;
@@ -141,6 +143,7 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     delete process.env.NODETERM_RDP_CLIPRDR_DROP_CLIENT_TEMPDIR;
     delete process.env.NODETERM_RDP_CLIPRDR_MUTE_CLIENT;
     delete process.env.NODETERM_RDP_CLIPRDR_NO_REMAP;
+    delete process.env.NODETERM_RDP_CLIPRDR_ALLOW_USER_CHANNEL;
   });
 
   test('trocea el lote y remapea TODOS los PDUs, no solo el primero', () => {
@@ -155,8 +158,8 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
       );
       assert.equal(
         chanFlags(frame) & CHANNEL_FLAG_SHOW_PROTOCOL,
-        0,
-        'SHOW_PROTOCOL debe limpiarse en cada PDU del lote'
+        CHANNEL_FLAG_SHOW_PROTOCOL,
+        'saludo en cliprdr nombrado: mismo encuadre 0x13 que ESJC'
       );
     }
   });
@@ -177,7 +180,40 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     assert.equal(kept.injected.length, 0);
   });
 
-  test('si el bastion entrega cliprdr por el canal de usuario 1001, se silencia el cliente', () => {
+  test('APP alineado: handshake completo (CAPS+TEMPDIR+FORMAT_LIST) sale por el VC cliprdr 1006', () => {
+    const state = bastionFilterState();
+    state.wallixService = 'APP';
+    state.cliprdrWriteChannelId = BASTION_CLIP_CH;
+
+    const kept = filterBatch(service, buildInitiateCopyBatch(), state);
+
+    assert.equal(kept.length, 3, 'camino de producto: no se tira TEMPDIR ni CAPS');
+    assert.deepEqual(kept.map(clipMsgType), [CB_CLIP_CAPS, CB_TEMP_DIRECTORY, CB_FORMAT_LIST]);
+    for (const frame of kept) {
+      assert.equal(parseMcsSendData(frame).channelId, BASTION_CLIP_CH);
+    }
+  });
+
+  test('RDP saludo por 1001 no escribe CHANNEL_PDU en 1001, 1004 ni 1005', () => {
+    const state = {
+      wallixService: 'RDP',
+      ioChannelId: IO_CH,
+      cliprdrChannelId: CLIPRDR_CH,
+      serverCliprdrChannelId: 1001,
+      cliprdrOnUnsafeChannel: 1001,
+      cliprdrServerReady: true,
+      allowed: new Set([1003, 1004, 1005]),
+      channelIdToName: new Map([[1004, 'cliprdr'], [1005, 'rdpsnd']])
+    };
+
+    const kept = filterBatch(service, buildInitiateCopyBatch(), state);
+
+    assert.equal(kept.length, 0, 'FORMAT_LIST en 1004 o 1005 tras saludo 1001 cierra el TLS');
+    assert.equal(state.pendingClientCliprdr.length, 2, 'CAPS y FORMAT_LIST encolados; TEMPDIR tirado');
+    assert.equal(kept.injected.length, 1, 'acuse sintetico para que IronRDP pase a Ready');
+  });
+
+  test('si el bastion entrega cliprdr por el canal de usuario 1001, no se escribe CHANNEL_PDU ahi', () => {
     const state = {
       ioChannelId: IO_CH,
       cliprdrChannelId: CLIPRDR_CH,
@@ -190,13 +226,16 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
 
     const kept = filterBatch(service, buildInitiateCopyBatch(), state);
 
-    assert.equal(kept.length, 0, 'FORMAT_LIST por 1004 cierra la sesion APP');
+    assert.equal(kept.length, 0, 'escribir en 1001 deja pantalla negra');
+    assert.equal(state.pendingClientCliprdr.length, 2, 'CAPS y FORMAT_LIST encolados; TEMPDIR tirado');
     assert.equal(kept.injected.length, 1, 'acuse sintetico para que IronRDP pase a Ready');
     assert.equal(kept.injected[0][7], 0x68);
     assert.equal(parseMcsSendData(kept.injected[0]).channelId, CLIPRDR_CH);
+    assert.ok(logs.some((l) => l.includes('APP cliprdr no alineado')));
+    assert.ok(logs.some((l) => l.includes('congela el grafico')));
   });
 
-  test('con destino 1001, FORMAT_DATA_REQUEST tampoco se reenvia', () => {
+  test('con destino 1001, FORMAT_DATA_REQUEST se encola y no se escribe', () => {
     const state = {
       ioChannelId: IO_CH,
       cliprdrChannelId: CLIPRDR_CH,
@@ -211,42 +250,200 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     const kept = filterBatch(service, buildClipFrame(CLIPRDR_CH, CB_FORMAT_DATA_REQUEST, Buffer.alloc(4)), state);
 
     assert.equal(kept.length, 0);
+    assert.equal(state.pendingClientCliprdr.length, 1);
+    assert.equal(clipMsgType(state.pendingClientCliprdr[0]), CB_FORMAT_DATA_REQUEST);
     assert.equal(kept.injected.length, 0);
   });
 
-  test('si el bastion entrega cliprdr por rdpsnd, el cliente se queda en 1004', () => {
+  test('con destino 1001, CB_FILECONTENTS_REQUEST se encola y no se escribe', () => {
     const state = {
       ioChannelId: IO_CH,
       cliprdrChannelId: CLIPRDR_CH,
-      serverCliprdrChannelId: 1005,
+      serverCliprdrChannelId: 1001,
+      cliprdrOnUnsafeChannel: 1001,
       cliprdrServerReady: true,
-      allowed: new Set([1003, 1004, 1005, 1006]),
-      channelIdToName: new Map([[1004, 'rdpdr'], [1005, 'rdpsnd'], [1006, 'cliprdr']])
+      cliprdrFormatListAcked: true,
+      allowed: new Set([1003, 1004, 1005]),
+      channelIdToName: new Map([[1004, 'cliprdr'], [1005, 'rdpsnd']])
+    };
+
+    const kept = filterBatch(service, buildClipFrame(CLIPRDR_CH, CB_FILECONTENTS_REQUEST, Buffer.alloc(28)), state);
+
+    assert.equal(kept.length, 0);
+    assert.equal(state.pendingClientCliprdr.length, 1);
+    assert.equal(clipMsgType(state.pendingClientCliprdr[0]), CB_FILECONTENTS_REQUEST);
+  });
+
+  test('si tras CAPS en 1001 se confirma write path 1004, el cliente escribe en 1004', () => {
+    const state = {
+      ioChannelId: IO_CH,
+      cliprdrChannelId: CLIPRDR_CH,
+      serverCliprdrChannelId: CLIPRDR_CH,
+      cliprdrWriteChannelId: CLIPRDR_CH,
+      cliprdrOnUnsafeChannel: 1001,
+      cliprdrServerReady: true,
+      allowed: new Set([1003, 1004, 1005]),
+      channelIdToName: new Map([[1004, 'cliprdr'], [1005, 'rdpsnd']])
     };
 
     const kept = filterBatch(service, buildInitiateCopyBatch(), state);
 
-    assert.equal(kept.length, 3);
+    assert.equal(kept.length, 3, 'el handshake completo va al VC negociado');
     for (const frame of kept) {
-      assert.equal(
-        parseMcsSendData(frame).channelId,
-        CLIPRDR_CH,
-        '1005 calla el portapapeles y 1006 cierra la sesion'
-      );
+      assert.equal(parseMcsSendData(frame).channelId, CLIPRDR_CH);
     }
+  });
+
+  test('ALLOW_USER_CHANNEL=1 tampoco escribe CHANNEL_PDU en 1001', () => {
+    process.env.NODETERM_RDP_CLIPRDR_ALLOW_USER_CHANNEL = '1';
+    const state = {
+      ioChannelId: IO_CH,
+      cliprdrChannelId: CLIPRDR_CH,
+      serverCliprdrChannelId: 1001,
+      cliprdrOnUnsafeChannel: 1001,
+      cliprdrServerReady: true,
+      pendingClientCliprdr: [],
+      allowed: new Set([1003, 1004, 1005]),
+      channelIdToName: new Map([[1004, 'cliprdr'], [1005, 'rdpsnd']])
+    };
+
+    const kept = filterBatch(service, buildInitiateCopyBatch(), state);
+
+    assert.equal(kept.length, 0, 'el flag no autoriza escribir en el canal de usuario MCS');
+    assert.equal(kept.injected.length, 1, 'acuse sintetico para que IronRDP pase a Ready');
+    assert.equal(state.pendingClientCliprdr.length, 2, 'CAPS y FORMAT_LIST encolados; TEMPDIR tirado');
+  });
+
+  test('si tras encolar en 1001 se confirma write path 1004, se vacia la cola hacia 1004', () => {
+    const state = {
+      ioChannelId: IO_CH,
+      cliprdrChannelId: CLIPRDR_CH,
+      serverCliprdrChannelId: 1001,
+      cliprdrOnUnsafeChannel: 1001,
+      cliprdrServerReady: true,
+      pendingClientCliprdr: [],
+      allowed: new Set([1003, 1004, 1005]),
+      channelIdToName: new Map([[1004, 'cliprdr'], [1005, 'rdpsnd']])
+    };
+
+    const kept = filterBatch(service, buildInitiateCopyBatch(), state);
+    assert.equal(kept.length, 0);
+    assert.equal(state.pendingClientCliprdr.length, 2);
+
+    state.cliprdrWriteChannelId = CLIPRDR_CH;
+    const written = [];
+    service.flushPendingClientCliprdr(
+      state,
+      { writable: true, write: (buf) => written.push(buf) },
+      { readyState: 0, OPEN: 1 }
+    );
+
+    assert.equal(written.length, 2, 'CAPS y FORMAT_LIST salen por el VC estatico');
+    for (const frame of written) {
+      assert.equal(parseMcsSendData(frame).channelId, CLIPRDR_CH);
+    }
+    assert.deepEqual(written.map(clipMsgType), [CB_CLIP_CAPS, CB_FORMAT_LIST]);
+    assert.equal(state.pendingClientCliprdr.length, 0);
+  });
+
+  test('ESAH alineado: saludo 1006 remapea a cliprdr, conserva 0x13 y no sintetiza ACK', () => {
+    const state = {
+      wallixService: 'RDP',
+      ioChannelId: IO_CH,
+      cliprdrChannelId: CLIPRDR_CH,
+      serverCliprdrChannelId: 1006,
+      cliprdrWriteChannelId: 1006,
+      cliprdrServerReady: true,
+      allowed: new Set([1003, 1004, 1005, 1006]),
+      channelIdToName: new Map([
+        [1004, 'rdpdr'],
+        [1005, 'rdpsnd'],
+        [1006, 'cliprdr']
+      ])
+    };
+
+    const kept = filterBatch(service, buildInitiateCopyBatch(), state);
+
+    assert.equal(kept.length, 3, 'CAPS+TEMPDIR+FORMAT_LIST van al VC nombrado cliprdr');
+    assert.deepEqual(kept.map(clipMsgType), [CB_CLIP_CAPS, CB_TEMP_DIRECTORY, CB_FORMAT_LIST]);
+    for (const frame of kept) {
+      assert.equal(parseMcsSendData(frame).channelId, 1006);
+      assert.equal(chanFlags(frame) & CHANNEL_FLAG_SHOW_PROTOCOL, CHANNEL_FLAG_SHOW_PROTOCOL);
+    }
+    assert.equal(kept.injected.length, 0, 'el acuse real lo tiene que enviar el servidor, como en ESJC');
+  });
+
+  test('APP con saludo 1001 escribe el handshake en el VC cliprdr 1007', () => {
+    const state = {
+      wallixService: 'APP',
+      ioChannelId: IO_CH,
+      cliprdrChannelId: CLIPRDR_CH,
+      serverCliprdrChannelId: 1001,
+      cliprdrOnUnsafeChannel: 1001,
+      cliprdrWriteChannelId: 1007,
+      cliprdrServerReady: true,
+      allowed: new Set([1003, 1004, 1005, 1006, 1007]),
+      channelIdToName: new Map([
+        [1004, 'rail'],
+        [1005, 'rdpdr'],
+        [1006, 'rdpsnd'],
+        [1007, 'cliprdr']
+      ])
+    };
+
+    const kept = filterBatch(service, buildInitiateCopyBatch(), state);
+
+    assert.equal(kept.length, 3, 'CAPS+TEMPDIR+FORMAT_LIST van al VC nombrado cliprdr');
+    assert.deepEqual(kept.map(clipMsgType), [CB_CLIP_CAPS, CB_TEMP_DIRECTORY, CB_FORMAT_LIST]);
+    for (const frame of kept) {
+      assert.equal(parseMcsSendData(frame).channelId, 1007);
+    }
+  });
+
+  test('saludo por rdpsnd 1005: handshake completo, flags 0x13, sin ACK sintetico', () => {
+    const state = {
+      ioChannelId: IO_CH,
+      cliprdrChannelId: CLIPRDR_CH,
+      serverCliprdrChannelId: 1005,
+      cliprdrWriteChannelId: 1005,
+      cliprdrServerReady: true,
+      allowed: new Set([1003, 1004, 1005]),
+      channelIdToName: new Map([[1004, 'cliprdr'], [1005, 'rdpsnd']])
+    };
+
+    const kept = filterBatch(service, buildInitiateCopyBatch(), state);
+
+    assert.equal(kept.length, 3, 'si Probe saluda por 1005, ese canal ES cliprdr');
+    assert.deepEqual(kept.map(clipMsgType), [CB_CLIP_CAPS, CB_TEMP_DIRECTORY, CB_FORMAT_LIST]);
+    for (const frame of kept) {
+      assert.equal(parseMcsSendData(frame).channelId, 1005);
+      assert.equal(chanFlags(frame) & CHANNEL_FLAG_SHOW_PROTOCOL, CHANNEL_FLAG_SHOW_PROTOCOL);
+    }
+    assert.equal(kept.injected.length, 0);
   });
 
   test('descartar el CB_CLIP_CAPS no se lleva por delante el resto del lote', () => {
     process.env.NODETERM_RDP_CLIPRDR_DROP_CLIENT_CAPS = '1';
 
-    const kept = filterBatch(service, buildInitiateCopyBatch(), bastionFilterState());
+    const state = {
+      wallixService: 'APP',
+      ioChannelId: IO_CH,
+      cliprdrChannelId: CLIPRDR_CH,
+      serverCliprdrChannelId: 1001,
+      cliprdrOnUnsafeChannel: 1001,
+      cliprdrWriteChannelId: 1007,
+      cliprdrServerReady: true,
+      allowed: new Set([1003, 1004, 1005, 1006, 1007]),
+      channelIdToName: new Map([
+        [1004, 'rail'],
+        [1005, 'rdpdr'],
+        [1006, 'rdpsnd'],
+        [1007, 'cliprdr']
+      ])
+    };
+    const kept = filterBatch(service, buildInitiateCopyBatch(), state);
 
-    assert.equal(kept.length, 2, 'solo debe caer el CB_CLIP_CAPS');
-    assert.deepEqual(
-      kept.map(clipMsgType),
-      [CB_TEMP_DIRECTORY, CB_FORMAT_LIST],
-      'el FormatList tiene que salir: sin el, el servidor no responde y el cliente no llega a Ready'
-    );
+    assert.equal(clipMsgType(kept[kept.length - 1]), CB_FORMAT_LIST, 'el FormatList tiene que salir');
   });
 
   test('conexion directa: el lote se reenvia intacto', () => {
@@ -288,8 +485,28 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     assert.equal(kept.length, 0);
   });
 
+  test('cliprdr nombrado alineado no sintetiza FORMAT_LIST_RESPONSE', () => {
+    const kept = filterBatch(service, buildInitiateCopyBatch(), bastionFilterState());
+    assert.equal(kept.injected.length, 0, 'el servidor debe enviar el acuse, como en ESJC');
+  });
+
   test('sintetiza un CB_FORMAT_LIST_RESPONSE(OK) hacia WASM tras el CB_FORMAT_LIST', () => {
-    const state = bastionFilterState();
+    const state = {
+      wallixService: 'APP',
+      ioChannelId: IO_CH,
+      cliprdrChannelId: CLIPRDR_CH,
+      serverCliprdrChannelId: 1001,
+      cliprdrOnUnsafeChannel: 1001,
+      cliprdrWriteChannelId: 1007,
+      cliprdrServerReady: true,
+      allowed: new Set([1003, 1004, 1005, 1006, 1007]),
+      channelIdToName: new Map([
+        [1004, 'rail'],
+        [1005, 'rdpdr'],
+        [1006, 'rdpsnd'],
+        [1007, 'cliprdr']
+      ])
+    };
     const kept = filterBatch(service, buildInitiateCopyBatch(), state);
 
     assert.equal(kept.injected.length, 1, 'sin este acuse IronRDP no llega nunca a Ready');
@@ -305,7 +522,22 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
   });
 
   test('el acuse sintetico se emite una sola vez por sesion', () => {
-    const state = bastionFilterState();
+    const state = {
+      wallixService: 'APP',
+      ioChannelId: IO_CH,
+      cliprdrChannelId: CLIPRDR_CH,
+      serverCliprdrChannelId: 1001,
+      cliprdrOnUnsafeChannel: 1001,
+      cliprdrWriteChannelId: 1007,
+      cliprdrServerReady: true,
+      allowed: new Set([1003, 1004, 1005, 1006, 1007]),
+      channelIdToName: new Map([
+        [1004, 'rail'],
+        [1005, 'rdpdr'],
+        [1006, 'rdpsnd'],
+        [1007, 'cliprdr']
+      ])
+    };
 
     const first = filterBatch(service, buildInitiateCopyBatch(), state);
     const second = filterBatch(service, buildClipFrame(CLIPRDR_CH, CB_FORMAT_LIST, Buffer.alloc(24)), state);
@@ -317,7 +549,23 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
   test('descartar el CB_TEMP_DIRECTORY conserva capacidades y lista de formatos', () => {
     process.env.NODETERM_RDP_CLIPRDR_DROP_CLIENT_TEMPDIR = '1';
 
-    const kept = filterBatch(service, buildInitiateCopyBatch(), bastionFilterState());
+    const state = {
+      wallixService: 'APP',
+      ioChannelId: IO_CH,
+      cliprdrChannelId: CLIPRDR_CH,
+      serverCliprdrChannelId: 1001,
+      cliprdrOnUnsafeChannel: 1001,
+      cliprdrWriteChannelId: 1007,
+      cliprdrServerReady: true,
+      allowed: new Set([1003, 1004, 1005, 1006, 1007]),
+      channelIdToName: new Map([
+        [1004, 'rail'],
+        [1005, 'rdpdr'],
+        [1006, 'rdpsnd'],
+        [1007, 'cliprdr']
+      ])
+    };
+    const kept = filterBatch(service, buildInitiateCopyBatch(), state);
 
     assert.deepEqual(kept.map(clipMsgType), [CB_CLIP_CAPS, CB_FORMAT_LIST]);
     assert.equal(kept.injected.length, 1, 'el acuse sintetico sigue saliendo');

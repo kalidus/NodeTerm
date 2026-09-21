@@ -23,7 +23,11 @@ const {
   processServerFrame,
   learnClientInitiator,
   buildMcsSendDataRequest,
-  describeCliprdrPdu
+  describeCliprdrPdu,
+  isUserMcsChannel,
+  isSafeStaticCliprdrWrite,
+  enqueueClientCliprdr,
+  takePendingClientCliprdr
 } = require('./rdp-channel-filter');
 const {
   parseMcsSendData,
@@ -92,23 +96,55 @@ function readDiagValue(name) {
   return value == null ? '' : String(value).trim();
 }
 
-// IronRDP declara solo cliprdr. Sin mas VCs, Wallix entrega cliprdr por 1001.
-// rdpdr detras ocupaba el 1004 (Wallix ignora nombres) y cliprdr saltaba al IO;
-// escribir ahi CHANNEL_PDU cierra la sesion. Solo se inyecta rdpsnd para dar un
-// segundo VC y dejar cliprdr en el indice 0. NODETERM_RDP_INJECT_CHANNELS admite
-// un orden (p.ej. 'rdpdr,rdpsnd,*') o 'off'.
-const DEFAULT_INJECTED_CHANNELS = { before: [], after: ['rdpsnd'] };
+// IronRDP declara solo cliprdr. Wallix ignora nombres y mapea por indice.
+// :RDP: cliprdr + rdpsnd detras. Sin el segundo VC, ESJC tambien saluda por
+// MCS 1001 y el clipboard muere. ESAH saluda por 1001 aun con dos VCs si
+// cliprdr es el indice 0: hay que desplazarlo (como APP, sin rail).
+// :APP: rail+rdpdr+rdpsnd delante. NODETERM_RDP_INJECT_CHANNELS admite un orden o 'off'.
+const RDP_INJECTED_CHANNELS = { before: [], after: ['rdpsnd'] };
+const RDP_SHIFTED_CLIPRDR_CHANNELS = { before: ['rdpdr', 'rdpsnd'], after: [] };
+const APP_INJECTED_CHANNELS = { before: ['rail', 'rdpdr', 'rdpsnd'], after: [] };
+const APP_INJECTED_CHANNELS_RAIL = APP_INJECTED_CHANNELS;
 
-function resolveInjectedChannels() {
-  const requested = readDiagValue('NODETERM_RDP_INJECT_CHANNELS');
-  if (requested.toLowerCase() === 'off') return null;
-  if (!requested) return DEFAULT_INJECTED_CHANNELS;
+function wallixServiceFromUsername(username) {
+  const m = String(username || '').match(/:(RDP|APP):/i);
+  return m ? m[1].toUpperCase() : null;
+}
 
-  const parts = requested.split('*');
+function wallixServiceFromSession(session) {
+  if (!session) return null;
+  return wallixServiceFromUsername(session.username)
+    || wallixServiceFromUsername(session.bastionUser)
+    || (session.wallixService ? String(session.wallixService).toUpperCase() : null);
+}
+
+function wallixTargetFromSession(session) {
+  if (!session) return '';
+  const direct = String(session.targetServer || '').trim();
+  if (direct) return direct;
+  const user = String(session.username || session.bastionUser || '');
+  const m = user.match(/@([^:@]+):(RDP|APP):/i);
+  return m ? m[1] : '';
+}
+
+function rdpNeedsShiftedCliprdr(session) {
+  return /ESAH/i.test(wallixTargetFromSession(session));
+}
+
+function parseInjectChannelsSpec(requested) {
+  const parts = String(requested || '').split('*');
   const split = (s) => s.split(',').map((n) => n.trim()).filter(Boolean);
-
   if (parts.length === 1) return { before: [], after: split(parts[0]) };
   return { before: split(parts[0]), after: split(parts.slice(1).join(',')) };
+}
+
+function resolveInjectedChannels(session) {
+  const requested = readDiagValue('NODETERM_RDP_INJECT_CHANNELS');
+  if (requested && requested.toLowerCase() === 'off') return null;
+  if (requested) return parseInjectChannelsSpec(requested);
+  if (wallixServiceFromSession(session) === 'APP') return APP_INJECTED_CHANNELS;
+  if (rdpNeedsShiftedCliprdr(session)) return RDP_SHIFTED_CLIPRDR_CHANNELS;
+  return RDP_INJECTED_CHANNELS;
 }
 
 const TRAFFIC_STATS_INTERVAL_MS = 15000;
@@ -126,9 +162,24 @@ function isCliprdrFragmentDesc(desc) {
     (desc.includes('continuación') || desc.includes('msgType=0x'));
 }
 
+function isCliprdrFormatListDesc(desc) {
+  return typeof desc === 'string' &&
+    desc.includes('CB_FORMAT_LIST') &&
+    !desc.includes('CB_FORMAT_LIST_RESPONSE');
+}
+
+/** Default ON: un 0/false del flag lo apaga. El fichero rdp-flags.json no debe dejarlo a 0 en silencio. */
+function allowUserChannelCliprdr() {
+  const value = readDiagEntry('NODETERM_RDP_CLIPRDR_ALLOW_USER_CHANNEL');
+  if (value == null || value === '') return true;
+  if (value === false || value === 0 || value === '0') return false;
+  return value === true || value === '1' || value === 1;
+}
+
 function isNoisyDrop(note) {
   return typeof note === 'string' &&
-    (note.includes('heartbeat') || note.includes('rdpdr-absorb') || note.includes('rdpdr-user-loggedon'));
+    (note.includes('heartbeat') || note.includes('rdpdr-absorb') || note.includes('rdpdr-user-loggedon')
+      || note.includes('rail-absorb') || note.includes('rail-handshake'));
 }
 
 function createTrafficStats(emit) {
@@ -241,6 +292,7 @@ class RdpNativeBridgeService extends EventEmitter {
       host: config.hostname || config.server || config.host,
       port: parseInt(config.port, 10) || 3389,
       username: (config.useBastionWallix && config.bastionUser) ? config.bastionUser : (config.username || config.user || ''),
+      wallixService: config.wallixService || null,
       useBastionWallix: config.useBastionWallix === true,
       targetServer: config.targetServer || null,
       password: config.password || '',
@@ -319,6 +371,7 @@ class RdpNativeBridgeService extends EventEmitter {
       if (!firstCloseSide) firstCloseSide = side;
     };
     const channelFilter = createChannelFilterState();
+    channelFilter.wallixService = wallixServiceFromSession(session);
     const frameSplitter = new RdpFrameSplitter();
     const framesDir = path.join(__dirname, '../../../testing/rdp/frames');
     if (process.env.NODETERM_RDP_RECORD_FRAMES === '1') {
@@ -558,7 +611,21 @@ class RdpNativeBridgeService extends EventEmitter {
                   // IronRDP 0.7: message channel (1001) no soportado -> no reenviar a WASM,
                   // pero responder Auto-Detect RTT/BW para que Wallix no espere (pantalla negra).
                   const wasReady = channelFilter.ready;
+                  const prevWriteCh = channelFilter.cliprdrWriteChannelId;
                   const processed = processServerFrame(channelFilter, frame);
+                  if (channelFilter.cliprdrWriteChannelId != null &&
+                      channelFilter.cliprdrWriteChannelId !== prevWriteCh) {
+                    const writeName = channelFilter.channelIdToName instanceof Map
+                      ? (channelFilter.channelIdToName.get(channelFilter.cliprdrWriteChannelId) || '?')
+                      : '?';
+                    const greetCh = channelFilter.serverCliprdrChannelId;
+                    console.log(`[Bridge] cliprdr write path=${channelFilter.cliprdrWriteChannelId} (${writeName}); saludo por ${greetCh}`);
+                  }
+                  if (channelFilter.cliprdrWriteChannelId != null) {
+                    this.flushPendingClientCliprdr(channelFilter, tlsSocket, ws, (n) => {
+                      bytesToRdp += n;
+                    });
+                  }
                   if (!wasReady && channelFilter.ready) {
                     const chDetails = [
                       `io=${channelFilter.ioChannelId}`,
@@ -801,13 +868,15 @@ class RdpNativeBridgeService extends EventEmitter {
           }
 
           const prepared = prepareMcsConnectInitial(payload, savedSelectedProtocol, {
-            injectChannels: resolveInjectedChannels()
+            injectChannels: resolveInjectedChannels(session)
           });
           forward = prepared.buf;
+          const sentChs = findClientNetworkChannels(prepared.buf);
           // Una linea por conexion, siempre: el juego de canales condiciona todo el resto de la
           // sesion y sin este rastro una inyeccion que no se aplica no se distingue de una que si.
-          console.log(`[Bridge] MCS prepare: ${prepared.notes.join('; ') || 'sin cambios'}`);
-          const sentChs = findClientNetworkChannels(prepared.buf);
+          const wallixService = wallixServiceFromSession(session) || 'n/a';
+          const csNet = sentChs.length ? sentChs.join(',') : 'ninguno';
+          console.log(`[Bridge] MCS prepare: service=${wallixService} CS_NET=[${csNet}]; ${prepared.notes.join('; ') || 'sin cambios'}`);
           if (sentChs.length) {
             if (!channelFilter.wasmChannelNames || channelFilter.wasmChannelNames.length === 0) {
               channelFilter.wasmChannelNames = (channelFilter.clientChannelNames || []).slice();
@@ -849,6 +918,125 @@ class RdpNativeBridgeService extends EventEmitter {
   }
 
   /**
+   * Guardarrailes: el saludo cliprdr cayo en un canal que no es el VC cliprdr
+   * (1001 usuario, rdpsnd, IO). No es el camino de producto. FORMAT_LIST en 1004
+   * cierra el TLS. TEMPDIR congela. CAPS en rdpsnd deja la pantalla en negro.
+   * CHANNEL_PDU en MCS 1001 congela el grafico: nunca se escribe ahi.
+   */
+  filterClientCliprdrOnUserChannel(frame, parsed, channelFilter, clipDesc) {
+    const dest = channelFilter.serverCliprdrChannelId || channelFilter.cliprdrOnUnsafeChannel || 1001;
+    const negotiated = channelFilter.cliprdrChannelId;
+    const keepClientCaps = isUserMcsChannel(channelFilter, dest);
+    const inject = [];
+    if (!channelFilter.loggedCliprdrMisaligned) {
+      channelFilter.loggedCliprdrMisaligned = true;
+      const csNet = Array.isArray(channelFilter.clientChannelNames)
+        ? channelFilter.clientChannelNames.join(',')
+        : '?';
+      const destName = channelFilter.channelIdToName instanceof Map
+        ? (channelFilter.channelIdToName.get(dest) || 'sin-nombre')
+        : 'sin-nombre';
+      const misMsg = `[Bridge] APP cliprdr no alineado; CS_NET=[${csNet}] dest=${dest} (${destName})`;
+      console.log(misMsg);
+      this.emit('diagnostic-log', { category: 'cliprdr-misaligned', message: misMsg });
+    }
+    const synthAck = () => {
+      if (!isCliprdrFormatListDesc(clipDesc) || channelFilter.cliprdrFormatListAcked) return;
+      channelFilter.cliprdrFormatListAcked = true;
+      inject.push(buildCliprdrFormatListResponseOk(0, negotiated));
+      const ackMsg = '[Bridge] CB_FORMAT_LIST_RESPONSE(OK) sintetizado hacia WASM ' +
+        `(FORMAT_LIST por ${negotiated} cierra la sesion si el saludo fue por ${dest})`;
+      console.log(ackMsg);
+      this.emit('diagnostic-log', { category: 'cliprdr', message: ackMsg });
+    };
+
+    if (clipDesc && clipDesc.includes('CB_TEMP_DIRECTORY')) {
+      const dropMsg = `[Bridge] CB_TEMP_DIRECTORY del cliente descartado (destino ${dest}): ${clipDesc}`;
+      console.log(dropMsg);
+      this.emit('diagnostic-log', { category: 'cliprdr-tempdir-drop', message: dropMsg });
+      return { forward: null, inject };
+    }
+
+    if (!keepClientCaps && clipDesc && clipDesc.includes('CB_CLIP_CAPS')) {
+      const dropMsg = `[Bridge] CB_CLIP_CAPS del cliente descartado (destino ${dest} congela el grafico): ${clipDesc}`;
+      console.log(dropMsg);
+      this.emit('diagnostic-log', { category: 'cliprdr-caps-drop', message: dropMsg });
+      return { forward: null, inject };
+    }
+
+    synthAck();
+
+    if (clipDesc && clipDesc.includes('CB_FORMAT_DATA_REQUEST')) {
+      channelFilter.cliprdrDataRequested = true;
+    }
+
+    // MCS 1001/1002: CHANNEL_PDU deja el TLS vivo y congela el grafico (pantalla negra).
+    // Se encola por si mas tarde se confirma el VC cliprdr estatico (1004).
+    if (keepClientCaps) {
+      enqueueClientCliprdr(channelFilter, frame);
+      if (!channelFilter.loggedCliprdrUserMute) {
+        channelFilter.loggedCliprdrUserMute = true;
+        const muteMsg = `[Bridge] cliprdr WASM->RDP encolado: no se escribe CHANNEL_PDU en MCS ${dest} (congela el grafico)`;
+        console.log(muteMsg);
+        this.emit('diagnostic-log', { category: 'cliprdr-mute', message: muteMsg });
+      }
+      return { forward: null, inject };
+    }
+
+    if (!allowUserChannelCliprdr()) {
+      enqueueClientCliprdr(channelFilter, frame);
+      if (!channelFilter.loggedCliprdrUserMute) {
+        channelFilter.loggedCliprdrUserMute = true;
+        const muteMsg = `[Bridge] cliprdr WASM->RDP encolado: no se escribe CHANNEL_PDU en ${negotiated} (cierra si dest=${dest})`;
+        console.log(muteMsg);
+        this.emit('diagnostic-log', { category: 'cliprdr-mute', message: muteMsg });
+      }
+      return { forward: null, inject };
+    }
+
+    let out = rewriteMcsChannelId(frame, dest) || frame;
+    const cleaned = clearChannelPduShowProtocol(out, parsed.dataOff);
+    if (cleaned) out = cleaned;
+    if (!channelFilter.loggedCliprdrUserRemap) {
+      channelFilter.loggedCliprdrUserRemap = true;
+      const remapMsg = `[Bridge] cliprdr WASM->RDP remapeado ch=${parsed.channelId}->${dest} (escribir en ${negotiated} cierra la sesion)`;
+      console.log(remapMsg);
+      this.emit('diagnostic-log', { category: 'cliprdr', message: remapMsg });
+    }
+    return { forward: out, inject };
+  }
+
+  /**
+   * Si el write path se confirma en un VC estatico (p.ej. MONITOR_READY en 1004 tras CAPS en 1001),
+   * se vacia la cola de PDUs del cliente hacia ese canal.
+   */
+  flushPendingClientCliprdr(channelFilter, tlsSocket, ws, onBytes) {
+    const pending = takePendingClientCliprdr(channelFilter);
+    if (!pending.length) return;
+    const wasmInjections = [];
+    for (const queued of pending) {
+      const { forward, inject } = this.filterClientVirtualChannelFrame(queued, channelFilter);
+      if (forward && tlsSocket && tlsSocket.writable) {
+        if (typeof onBytes === 'function') onBytes(forward.length);
+        tlsSocket.write(forward);
+      }
+      if (inject && inject.length) wasmInjections.push(...inject);
+    }
+    if (wasmInjections.length && ws && ws.readyState === ws.OPEN) {
+      setImmediate(() => {
+        if (ws.readyState !== ws.OPEN) return;
+        for (const frame of wasmInjections) {
+          try {
+            ws.send(frame, { binary: true });
+          } catch (e) {
+            console.warn('[Bridge] No se pudo inyectar PDU cliprdr hacia WASM:', e.message);
+          }
+        }
+      });
+    }
+  }
+
+  /**
    * Filtra un unico PDU MCS que el cliente WASM envia por un canal virtual estatico.
    * Devuelve { forward, inject }: el frame a reenviar al servidor (el mismo, uno reescrito, o null
    * para descartarlo) y los PDUs que hay que inyectar de vuelta hacia WASM.
@@ -881,11 +1069,19 @@ class RdpNativeBridgeService extends EventEmitter {
       this.emit('diagnostic-log', { category: 'cliprdr-order', message: guardMsg });
     }
 
-    // Se considera bastion cuando el servidor entrega cliprdr por un canal que no es el que anuncio
-    // en SC_NET. Un servidor que cumple el protocolo no hace eso nunca, asi que esto deja fuera a
-    // las conexiones directas de los apanos de abajo.
+    // Saludo en un VC estatico (cliprdr 1004/1006, o el que Session Probe elija: a veces
+    // rdpsnd 1005). El handshake es el de ESJC: remap de ID, flags 0x13, acuse real.
+    // Tirar CAPS o sintetizar ACK ahi deja el canal a medias. 1001/IO siguen mute.
+    const writeCh = channelFilter.cliprdrWriteChannelId;
     const serverClipCh = channelFilter.serverCliprdrChannelId;
-    const isBastion = serverClipCh != null && serverClipCh !== channelFilter.cliprdrChannelId;
+    const greetingOnAlignedStatic = serverClipCh != null
+      && !isUserMcsChannel(channelFilter, serverClipCh)
+      && (channelFilter.ioChannelId == null || serverClipCh !== channelFilter.ioChannelId)
+      && isSafeStaticCliprdrWrite(channelFilter, serverClipCh)
+      && (writeCh == null || writeCh === serverClipCh);
+    const isBastion = serverClipCh != null
+      && serverClipCh !== channelFilter.cliprdrChannelId
+      && !greetingOnAlignedStatic;
     const destName = channelFilter.channelIdToName instanceof Map
       ? channelFilter.channelIdToName.get(serverClipCh)
       : null;
@@ -894,10 +1090,14 @@ class RdpNativeBridgeService extends EventEmitter {
     const destIsForeignStaticVc = Boolean(destName) && destName !== 'cliprdr';
     const destIsIoChannel = channelFilter.ioChannelId != null
       && serverClipCh === channelFilter.ioChannelId;
-    const destIsUserChannel = serverClipCh === 1001 || serverClipCh === 1002
-      || (channelFilter.messageChannelId != null && serverClipCh === channelFilter.messageChannelId)
+    // Un CAPS en 1001 no bloquea la escritura si luego se confirma el VC negociado (1004).
+    // Forzar el handshake a 1004 cuando el saludo fue por 1001 cierra ESAH (TLS FIN).
+    const destIsUserChannel = writeCh == null && (
+      isUserMcsChannel(channelFilter, serverClipCh)
       || (channelFilter.cliprdrOnUnsafeChannel != null
-          && (serverClipCh == null || serverClipCh === channelFilter.cliprdrOnUnsafeChannel));
+          && (serverClipCh == null || isUserMcsChannel(channelFilter, serverClipCh)
+              || serverClipCh === channelFilter.cliprdrOnUnsafeChannel))
+    );
 
     if (isClip && destIsIoChannel) {
       const dest = serverClipCh || channelFilter.cliprdrOnUnsafeChannel;
@@ -907,28 +1107,33 @@ class RdpNativeBridgeService extends EventEmitter {
       return { forward: null, inject: [] };
     }
 
-    // Destinos :APP: (saludo por 1001): escribir FORMAT_LIST en 1004 cierra el TLS. Se silencia
-    // todo el sentido WASM->RDP y se acusa en local para que IronRDP pase a Ready.
-    if (isClip && destIsUserChannel) {
-      const dest = serverClipCh || channelFilter.cliprdrOnUnsafeChannel;
-      const inject = [];
-      if (clipDesc && clipDesc.includes('CB_FORMAT_LIST') &&
-          !clipDesc.includes('CB_FORMAT_LIST_RESPONSE') &&
-          !channelFilter.cliprdrFormatListAcked) {
-        channelFilter.cliprdrFormatListAcked = true;
-        inject.push(buildCliprdrFormatListResponseOk(0, channelFilter.cliprdrChannelId));
-        const ackMsg = '[Bridge] CB_FORMAT_LIST_RESPONSE(OK) sintetizado hacia WASM ' +
-          '(destino 1001: FORMAT_LIST por 1004 cierra la sesion)';
-        console.log(ackMsg);
-        this.emit('diagnostic-log', { category: 'cliprdr', message: ackMsg });
-      }
-      if (!channelFilter.loggedCliprdrUserMute) {
-        channelFilter.loggedCliprdrUserMute = true;
-        const muteMsg = `[Bridge] cliprdr WASM->RDP silenciado: el servidor lo entrega por canal de usuario (${dest})`;
-        console.log(muteMsg);
-        this.emit('diagnostic-log', { category: 'cliprdr-mute', message: muteMsg });
-      }
-      return { forward: null, inject };
+    // Destino distinto del VC negociado (APP/ESAH 1001, rdpsnd 1005).
+    // FORMAT_LIST en 1004 cierra el TLS. TEMPDIR siempre se tira. CHANNEL_PDU en
+    // MCS 1001 congela el grafico. CAPS en rdpsnd deja la pantalla en negro.
+    if (isClip && (destIsUserChannel || (writeCh == null && destIsForeignStaticVc))) {
+      return this.filterClientCliprdrOnUserChannel(frame, parsed, channelFilter, clipDesc);
+    }
+
+    const handshakeDest = writeCh != null ? writeCh : serverClipCh;
+    const handshakeName = channelFilter.channelIdToName instanceof Map
+      ? channelFilter.channelIdToName.get(handshakeDest)
+      : null;
+    const greetingOnHandshakeDest = handshakeDest != null && serverClipCh === handshakeDest;
+    // CAPS/TEMPDIR en rdpsnd solo se tiran si el saludo NO fue ahi. Si Probe saluda
+    // por 1005, ese canal ES cliprdr en esta sesion (ESAH lo ha hecho).
+    if (isClip && handshakeName === 'rdpsnd' && clipDesc && clipDesc.includes('CB_CLIP_CAPS')
+        && !greetingOnHandshakeDest) {
+      const dropMsg = `[Bridge] CB_CLIP_CAPS del cliente descartado (destino ${handshakeDest} congela el grafico): ${clipDesc}`;
+      console.log(dropMsg);
+      this.emit('diagnostic-log', { category: 'cliprdr-caps-drop', message: dropMsg });
+      return { forward: null, inject: [] };
+    }
+    if (isClip && (handshakeName === 'rdpsnd' || handshakeName === 'rdpdr') &&
+        clipDesc && clipDesc.includes('CB_TEMP_DIRECTORY') && !greetingOnHandshakeDest) {
+      const dropMsg = `[Bridge] CB_TEMP_DIRECTORY del cliente descartado (destino ${handshakeDest}): ${clipDesc}`;
+      console.log(dropMsg);
+      this.emit('diagnostic-log', { category: 'cliprdr-tempdir-drop', message: dropMsg });
+      return { forward: null, inject: [] };
     }
 
     const dropCaps = isBastion && clipDesc && clipDesc.includes('CB_CLIP_CAPS') &&
@@ -970,28 +1175,22 @@ class RdpNativeBridgeService extends EventEmitter {
     // Se escribe en el canal por el que el servidor entrega cliprdr de verdad, que es el que
     // aprende el filtro, no en el que negocio el cliente: el bastion usa uno distinto y cambia
     // entre sesiones. Conexiones directas: serverClipCh coincide con el del cliente y no se toca.
-    // No se escribe en un VC estatico ajeno (rdpsnd/rdpdr) ni en el canal de usuario (1001):
-    // aquello calla el portapapeles y esto congela el grafico.
+    // 1001/IO no. Un VC estatico ajeno (rdpsnd) si es el write path confirmado (saludo ahi).
+    const remapDest = writeCh != null ? writeCh : serverClipCh;
     const canRemap = !readDiagFlag('NODETERM_RDP_CLIPRDR_NO_REMAP') &&
-      serverClipCh != null &&
-      serverClipCh !== parsed.channelId &&
-      !destIsForeignStaticVc &&
+      remapDest != null &&
+      remapDest !== parsed.channelId &&
+      (writeCh != null || !destIsForeignStaticVc) &&
       !destIsUserChannel &&
       !destIsIoChannel;
 
-    if (isBastion && destIsForeignStaticVc) {
-      const skipMsg = `📤 [Bridge] cliprdr WASM->RDP se queda en ch=${parsed.channelId}: el servidor lo entrega por ${serverClipCh} (${destName}), sin canal de vuelta seguro`;
-      console.log(skipMsg);
-      this.emit('diagnostic-log', { category: 'cliprdr', message: skipMsg });
-    }
-
     if (canRemap) {
-      const remapped = rewriteMcsChannelId(out, serverClipCh);
+      const remapped = rewriteMcsChannelId(out, remapDest);
       if (remapped) {
         out = remapped;
         if (rdpDebug() || !channelFilter.loggedCliprdrRemap) {
           channelFilter.loggedCliprdrRemap = true;
-          const remapMsg = `📤 [Bridge] cliprdr WASM->RDP remapeado ch=${parsed.channelId}->${serverClipCh}`;
+          const remapMsg = `📤 [Bridge] cliprdr WASM->RDP remapeado ch=${parsed.channelId}->${remapDest}`;
           console.log(remapMsg);
           this.emit('diagnostic-log', { category: 'cliprdr', message: remapMsg });
         }
@@ -1262,3 +1461,10 @@ class RdpNativeBridgeService extends EventEmitter {
 module.exports = new RdpNativeBridgeService();
 // Expuesto solo para tests: decide el juego de canales de TODAS las conexiones RDP nativas
 module.exports.resolveInjectedChannels = resolveInjectedChannels;
+module.exports.wallixServiceFromUsername = wallixServiceFromUsername;
+module.exports.wallixServiceFromSession = wallixServiceFromSession;
+module.exports.RDP_INJECTED_CHANNELS = RDP_INJECTED_CHANNELS;
+module.exports.RDP_SHIFTED_CLIPRDR_CHANNELS = RDP_SHIFTED_CLIPRDR_CHANNELS;
+module.exports.APP_INJECTED_CHANNELS = APP_INJECTED_CHANNELS;
+module.exports.APP_INJECTED_CHANNELS_RAIL = APP_INJECTED_CHANNELS_RAIL;
+module.exports.wallixTargetFromSession = wallixTargetFromSession;

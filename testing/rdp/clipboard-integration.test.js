@@ -199,6 +199,102 @@ describe('CLIPRDR: bastion Wallix que usa otro canal MCS', () => {
     assert.equal(state.serverCliprdrChannelId, 1001);
   });
 
+  test('CAPS en 1001 no confirma write path; MONITOR_READY en 1004 si', () => {
+    const state = stateWithCliprdr();
+    state.allowed = new Set([1003, 1004, 1005]);
+    state.channelIdToName = new Map([[1004, 'cliprdr'], [1005, 'rdpsnd']]);
+
+    const caps = buildMcsIndication(1001, buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16))));
+    const resCaps = processServerFrame(state, caps);
+    assert.equal(resCaps.isCliprdr, true);
+    assert.equal(resCaps.serverChannelId, 1001);
+    assert.equal(state.serverCliprdrChannelId, 1001);
+    assert.equal(state.cliprdrOnUnsafeChannel, 1001);
+    assert.equal(state.cliprdrWriteChannelId, null, '1001 no; 1005 tras saludo 1001 cierra TLS');
+
+    const monitorReady = buildMcsIndication(1004, buildChannelPdu(buildCliprdrPayload(1)));
+    const resReady = processServerFrame(state, monitorReady);
+    assert.equal(resReady.isCliprdr, true);
+    assert.equal(resReady.serverChannelId, 1004);
+    assert.equal(state.cliprdrWriteChannelId, 1004);
+  });
+
+  test('RDP saludo por 1001 no confirma write path en 1004 ni en 1005', () => {
+    const state = stateWithCliprdr();
+    state.allowed = new Set([1003, 1004, 1005]);
+    state.channelIdToName = new Map([[1004, 'cliprdr'], [1005, 'rdpsnd']]);
+
+    const caps = buildMcsIndication(1001, buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16))));
+    processServerFrame(state, caps);
+    const ready = buildMcsIndication(1001, buildChannelPdu(buildCliprdrPayload(1)));
+    processServerFrame(state, ready);
+
+    assert.equal(state.serverCliprdrChannelId, 1001);
+    assert.equal(state.cliprdrWriteChannelId, null);
+  });
+
+  test('ESJC saludo por 1004 deja el write path en 1004', () => {
+    const state = stateWithCliprdr();
+    state.allowed = new Set([1003, 1004, 1005]);
+    state.channelIdToName = new Map([[1004, 'cliprdr'], [1005, 'rdpsnd']]);
+
+    const caps = buildMcsIndication(1004, buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16))));
+    processServerFrame(state, caps);
+    const ready = buildMcsIndication(1004, buildChannelPdu(buildCliprdrPayload(1)));
+    processServerFrame(state, ready);
+
+    assert.equal(state.serverCliprdrChannelId, 1004);
+    assert.equal(state.cliprdrWriteChannelId, 1004);
+  });
+
+  test('ESAH saludo por 1001 usa el VC nombrado cliprdr 1006, no el indice 0', () => {
+    const state = stateWithCliprdr();
+    state.allowed = new Set([1003, 1004, 1005, 1006]);
+    state.channelIdToName = new Map([
+      [1004, 'rdpdr'],
+      [1005, 'rdpsnd'],
+      [1006, 'cliprdr']
+    ]);
+
+    const caps = buildMcsIndication(1001, buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16))));
+    const resCaps = processServerFrame(state, caps);
+    assert.equal(resCaps.isCliprdr, true);
+    assert.equal(resCaps.serverChannelId, 1001);
+    assert.equal(state.serverCliprdrChannelId, 1001);
+    assert.equal(state.cliprdrWriteChannelId, 1006, 'no se escribe en 1004 (rdpdr) ni en 1001');
+  });
+
+  test('APP saludo por 1001 usa el VC nombrado cliprdr 1007, no el indice 0', () => {
+    const state = stateWithCliprdr();
+    state.allowed = new Set([1003, 1004, 1005, 1006, 1007]);
+    state.channelIdToName = new Map([
+      [1004, 'rail'],
+      [1005, 'rdpdr'],
+      [1006, 'rdpsnd'],
+      [1007, 'cliprdr']
+    ]);
+
+    const caps = buildMcsIndication(1001, buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16))));
+    const resCaps = processServerFrame(state, caps);
+    assert.equal(resCaps.isCliprdr, true);
+    assert.equal(resCaps.serverChannelId, 1001);
+    assert.equal(state.serverCliprdrChannelId, 1001);
+    assert.equal(state.cliprdrWriteChannelId, 1007, 'no se escribe en 1004 (rail) ni en 1001');
+  });
+
+  test('saludo cliprdr por rdpsnd 1005 confirma el write path en 1005', () => {
+    const state = stateWithCliprdr();
+    state.allowed = new Set([1003, 1004, 1005]);
+    state.channelIdToName = new Map([[1004, 'cliprdr'], [1005, 'rdpsnd']]);
+
+    const caps = buildMcsIndication(1005, buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16))));
+    const resCaps = processServerFrame(state, caps);
+    assert.equal(resCaps.isCliprdr, true);
+    assert.equal(resCaps.serverChannelId, 1005);
+    assert.equal(state.cliprdrWriteChannelId, 1005);
+    assert.equal(state.serverCliprdrChannelId, 1005);
+  });
+
   test('tambien remapea los fragmentos cliprdr del canal de usuario 1001', () => {
     const state = stateWithCliprdr();
     const total = 48722;
@@ -274,6 +370,29 @@ describe('CLIPRDR: bastion Wallix que usa otro canal MCS', () => {
     assert.equal(res.serverChannelId, 1006);
     assert.equal(res.forward.readUInt16BE(10), 1004);
     assert.equal(state.serverCliprdrChannelId, 1006);
+  });
+
+  test('APP alineado: saludo en VC nombrado cliprdr (1006) confirma el write path', () => {
+    const state = stateWithCliprdr();
+    state.allowed = new Set([1003, 1004, 1005, 1006]);
+    state.channelIdToName = new Map([
+      [1004, 'rdpdr'],
+      [1005, 'rdpsnd'],
+      [1006, 'cliprdr']
+    ]);
+
+    const caps = buildMcsIndication(1006, buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16))));
+    const resCaps = processServerFrame(state, caps);
+    assert.equal(resCaps.isCliprdr, true);
+    assert.equal(resCaps.serverChannelId, 1006);
+    assert.equal(resCaps.forward.readUInt16BE(10), 1004);
+    assert.equal(state.serverCliprdrChannelId, 1006);
+    assert.equal(state.cliprdrWriteChannelId, 1006, 'el VC nombrado cliprdr es seguro para escribir');
+
+    const ready = buildMcsIndication(1006, buildChannelPdu(buildCliprdrPayload(1)));
+    const resReady = processServerFrame(state, ready);
+    assert.equal(resReady.isCliprdr, true);
+    assert.equal(state.cliprdrWriteChannelId, 1006);
   });
 
   test('en conexion directa el canal aprendido es el negociado y no se reescribe', () => {

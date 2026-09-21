@@ -20,6 +20,7 @@ const {
 } = require('./rdp-autodetect');
 const { handleDvcRequest } = require('./rdp-dynvc');
 const { handleRdpdrRequest } = require('./rdp-rdpdr');
+const { handleRailRequest } = require('./rdp-rail');
 
 const TPKT_X224_MCS_HEADER = 8;
 const CHANNEL_FLAG_FIRST = 0x01;
@@ -157,6 +158,10 @@ function createChannelFilterState() {
     // cliprdrChannelId, pero Wallix usa otro (p.ej. 1001) y hay que remapear.
     serverCliprdrChannelId: null,
     serverCliprdrFragmentOpen: false,
+    // VC estatico seguro para WASM->RDP. Un CAPS en 1001 no se confirma aqui:
+    // eso muteaba el cliente aunque el handshake real llegara despues por 1004.
+    cliprdrWriteChannelId: null,
+    pendingClientCliprdr: [],
     cliprdrOnUnsafeChannel: null,
     unsafeCliprdrFragmentOpen: false,
     drdynvcChannelId: null,
@@ -289,6 +294,43 @@ function consumeRdpdr(state, channelId, userData) {
   };
 }
 
+/**
+ * rail solo se anuncia para alinear indices :APP:. El stub vive en el VC
+ * nombrado 'rail'; no se decide por contenido (orderType 0x0005 choca con
+ * CB_FORMAT_DATA_RESPONSE). Nunca se contesta por el canal IO.
+ */
+function consumeRail(state, channelId, userData) {
+  const railCh = declaredChannelId(state, 'rail');
+  if (railCh == null || channelId !== railCh) return null;
+
+  const rail = handleRailRequest(channelId, state.clientInitiator, userData);
+  if (!rail.handled) return null;
+
+  const ioChannelId = state.ioChannelId != null ? state.ioChannelId : 1003;
+  const onIo = channelId === ioChannelId;
+  const cliprdrCh = state.cliprdrChannelId;
+  const onCliprdr = cliprdrCh != null && channelId === cliprdrCh;
+  let replies = onIo ? [] : (rail.replies || []);
+  let note = rail.note;
+
+  if (onIo) {
+    note = `${rail.note} (sin respuesta: canal IO)`;
+  } else if (onCliprdr && railCh !== channelId && replies.length) {
+    replies = replies.map((buf) => rewriteMcsChannelId(buf, railCh) || buf);
+    note = `${rail.note} (replies->ch=${railCh})`;
+  }
+
+  markDropped(state, channelId);
+  return {
+    forward: null,
+    replies,
+    dropped: true,
+    note: `${note} hex=${userData.toString('hex').slice(0, 48)}`,
+    channelId,
+    isCliprdr: false
+  };
+}
+
 function channelPduHint(userData) {
   if (!isChannelPduHeader(userData) || userData.length < 10) return 'channel-pdu';
   const payload = userData.subarray(8);
@@ -353,6 +395,66 @@ function isUserMcsChannel(state, channelId) {
   return false;
 }
 
+function cliprdrDeclaredName(state, channelId) {
+  if (!(state && state.channelIdToName instanceof Map)) return null;
+  return state.channelIdToName.get(channelId) || null;
+}
+
+/**
+ * Canal en el que se puede escribir CHANNEL_PDU sin usar MCS 1001 ni el IO:
+ * el VC de IronRDP, uno nombrado cliprdr, o cualquier VC estatico unido (Wallix a veces
+ * entrega cliprdr por rdpsnd/rdpdr). CAPS en rdpsnd se filtra aparte.
+ */
+function isSafeStaticCliprdrWrite(state, channelId) {
+  if (!state || channelId == null) return false;
+  if (isUserMcsChannel(state, channelId)) return false;
+  if (state.ioChannelId != null && channelId === state.ioChannelId) return false;
+  if (state.cliprdrChannelId != null && channelId === state.cliprdrChannelId) return true;
+  if (cliprdrDeclaredName(state, channelId) === 'cliprdr') return true;
+  if (state.allowed instanceof Set && state.allowed.has(channelId)) return true;
+  return false;
+}
+
+/**
+ * Si el saludo va por 1001, el VC que SC_NET nombro cliprdr (APP: 1007, no el indice 0).
+ * En RDP named === indice 0: no hay fallback. Escribir FORMAT_LIST en 1004 o en 1005
+ * tras saludo 1001 cierra el TLS.
+ */
+function fallbackNamedCliprdrWrite(state) {
+  const named = declaredChannelId(state, 'cliprdr');
+  if (named == null) return null;
+  if (named === state.cliprdrChannelId) return null;
+  if (!isSafeStaticCliprdrWrite(state, named)) return null;
+  return named;
+}
+
+function confirmCliprdrWriteChannel(state, channelId) {
+  if (state.cliprdrWriteChannelId != null) return false;
+  if (isSafeStaticCliprdrWrite(state, channelId)) {
+    state.cliprdrWriteChannelId = channelId;
+    return true;
+  }
+  const fallback = fallbackNamedCliprdrWrite(state);
+  if (fallback == null) return false;
+  state.cliprdrWriteChannelId = fallback;
+  return true;
+}
+
+function enqueueClientCliprdr(state, frame) {
+  if (!state || !Buffer.isBuffer(frame)) return;
+  if (!Array.isArray(state.pendingClientCliprdr)) state.pendingClientCliprdr = [];
+  state.pendingClientCliprdr.push(frame);
+}
+
+function takePendingClientCliprdr(state) {
+  if (!state || !Array.isArray(state.pendingClientCliprdr) || state.pendingClientCliprdr.length === 0) {
+    return [];
+  }
+  const pending = state.pendingClientCliprdr;
+  state.pendingClientCliprdr = [];
+  return pending;
+}
+
 function noteUnsafeCliprdr(state, channelId, userData) {
   if (!isUserMcsChannel(state, channelId) || state.cliprdrChannelId == null || !Buffer.isBuffer(userData)) {
     return false;
@@ -383,6 +485,7 @@ function claimCliprdrPdu(state, channelId, userData) {
 
   state.serverCliprdrChannelId = channelId;
   state.serverCliprdrFragmentOpen = (flags & CHANNEL_FLAG_LAST) === 0;
+  confirmCliprdrWriteChannel(state, channelId);
   return true;
 }
 
@@ -504,8 +607,10 @@ function processServerFrame(state, buf) {
   // rdpdr por contenido, no por ID: Wallix lo ha llegado a mandar por el canal IO (1003),
   // donde el filtro lo veia como ShareControl invalido y no contestaba.
   if (parsed) {
-    const stubbed = consumeRdpdr(state, channelId, parsed.userData);
-    if (stubbed) return stubbed;
+    const stubbedRdpdr = consumeRdpdr(state, channelId, parsed.userData);
+    if (stubbedRdpdr) return stubbedRdpdr;
+    const stubbedRail = consumeRail(state, channelId, parsed.userData);
+    if (stubbedRail) return stubbedRail;
   }
 
   // Cliprdr en canal de usuario (:APP:): se marca como inseguro para no escribir ahi de
@@ -613,6 +718,11 @@ module.exports = {
   createChannelFilterState,
   learnFromServerGcc,
   learnClientInitiator,
+  isUserMcsChannel,
+  isSafeStaticCliprdrWrite,
+  confirmCliprdrWriteChannel,
+  enqueueClientCliprdr,
+  takePendingClientCliprdr,
   filterServerFrame,
   processServerFrame
 };
