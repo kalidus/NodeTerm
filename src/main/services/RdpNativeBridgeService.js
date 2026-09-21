@@ -337,17 +337,28 @@ class RdpNativeBridgeService extends EventEmitter {
     let framesToRdp = 0;
     let lastRdpFrameAt = 0;
     let lastWsFrameAt = 0;
-    // Los frames dejan de loguearse pasado el #40 salvo en modo debug, justo cuando ocurren los
-    // cierres inesperados. Se guarda una ventana de los ultimos para volcarla al cerrar. Se
-    // registran los dos sentidos por separado: cuando IronRDP falla al decodificar hay que ver la
-    // secuencia que se le entrego (ya remapeada), no la que llego del servidor.
+    // Búferes circulares en memoria para retener los últimos frames y eventos de portapapeles
+    // para volcarlos únicamente si la sesión sufre una desconexión o fallo anómalo.
+    const isDebug = rdpDebug();
     const recentRdpFrames = [];
     const recentWasmFrames = [];
-    const RECENT_FRAMES_WINDOW = 15;
+    const recentCliprdrEvents = [];
+    const RECENT_FRAMES_WINDOW = 20;
+    const RECENT_CLIPRDR_WINDOW = 25;
     let firstCloseSide = null;
 
+    const recordCliprdrEvent = (msg) => {
+      const ts = new Date().toISOString().slice(11, 19);
+      recentCliprdrEvents.push(`[${ts}] ${msg}`);
+      if (recentCliprdrEvents.length > RECENT_CLIPRDR_WINDOW) {
+        recentCliprdrEvents.shift();
+      }
+    };
+
     const trafficStats = createTrafficStats((line) => {
-      console.log(`[Bridge] ${line}`);
+      if (isDebug) {
+        console.log(`[Bridge] ${line}`);
+      }
       this.emit('diagnostic-log', { category: 'traffic', message: line });
     });
 
@@ -356,6 +367,8 @@ class RdpNativeBridgeService extends EventEmitter {
     };
     const channelFilter = createChannelFilterState();
     channelFilter.wallixService = wallixServiceFromSession(session);
+    channelFilter.recentCliprdrEvents = recentCliprdrEvents;
+    channelFilter.recordCliprdr = recordCliprdrEvent;
     const frameSplitter = new RdpFrameSplitter();
     const framesDir = path.join(__dirname, '../../../testing/rdp/frames');
     if (process.env.NODETERM_RDP_RECORD_FRAMES === '1') {
@@ -389,18 +402,30 @@ class RdpNativeBridgeService extends EventEmitter {
       if (isCleanedUp) return;
       isCleanedUp = true;
       const formattedReason = formatCloseReason(reason);
-      console.log(`🧹 [RdpNativeBridgeService] Sesión RDP finalizada (${formattedReason}) [toRdp=${framesToRdp} (${bytesToRdp}B), fromRdp=${framesFromRdp} (${bytesFromRdp}B)]`);
-      console.log(`🔎 [Bridge] Primer extremo en cerrar: ${firstCloseSide || 'desconocido'}`);
-      if (recentRdpFrames.length) {
-        console.log(`🔎 [Bridge] Últimos ${recentRdpFrames.length} frames del servidor antes del cierre:`);
-        for (const line of recentRdpFrames) {
-          console.log(`   ${line}`);
+      const isNormalUserClose = formattedReason === 'Cerrado por el usuario';
+
+      if (isNormalUserClose) {
+        console.log(`🧹 [RdpNativeBridgeService] Sesión RDP finalizada (Cerrado por el usuario) [toRdp=${framesToRdp}, fromRdp=${framesFromRdp}]`);
+      } else {
+        console.warn(`⚠️ [RdpNativeBridgeService] Desconexión anómala detectada (${formattedReason}) [toRdp=${framesToRdp} (${bytesToRdp}B), fromRdp=${framesFromRdp} (${bytesFromRdp}B)]`);
+        console.warn(`🔎 [Bridge] Primer extremo en cerrar: ${firstCloseSide || 'desconocido'}`);
+        if (recentRdpFrames.length) {
+          console.warn(`🔎 [Bridge] Últimos ${recentRdpFrames.length} frames del servidor antes del corte:`);
+          for (const line of recentRdpFrames) {
+            console.warn(`   ${line}`);
+          }
         }
-      }
-      if (recentWasmFrames.length) {
-        console.log(`🔎 [Bridge] Últimos ${recentWasmFrames.length} frames entregados a IronRDP WASM:`);
-        for (const line of recentWasmFrames) {
-          console.log(`   ${line}`);
+        if (recentWasmFrames.length) {
+          console.warn(`🔎 [Bridge] Últimos ${recentWasmFrames.length} frames entregados a IronRDP WASM:`);
+          for (const line of recentWasmFrames) {
+            console.warn(`   ${line}`);
+          }
+        }
+        if (recentCliprdrEvents.length) {
+          console.warn(`🔎 [Bridge] Últimos ${recentCliprdrEvents.length} eventos de portapapeles:`);
+          for (const line of recentCliprdrEvents) {
+            console.warn(`   ${line}`);
+          }
         }
       }
       this.activeConnections.delete(connectionId);
@@ -431,7 +456,6 @@ class RdpNativeBridgeService extends EventEmitter {
     ws.on('message', (message) => {
       try {
         const payload = Buffer.isBuffer(message) ? message : Buffer.from(message);
-        const isDebug = process.env.NODETERM_RDP_DEBUG === '1';
 
         if (rdCleanPathPhase === 'waiting_request' && payload.length > 0 && payload[0] === 0x30) {
           debugLog(`📥 [Bridge] Recibido RDCleanPath Request PDU (${payload.length} bytes). Extrayendo X.224 CR del tag [6]...`);
@@ -549,22 +573,12 @@ class RdpNativeBridgeService extends EventEmitter {
                     this.emit('diagnostic-log', { category: 'disconnect', message: discMsg });
                   }
 
-                  if ((framesFromRdp <= 20 && !isFastPathNoise(pduDesc)) || isDebug) {
-                    console.log(`[Bridge] RDP in frame#${framesFromRdp}: ${n}B | ${pduDesc}`);
-                    if (process.env.NODETERM_RDP_RECORD_FRAMES === '1') {
-                      try {
-                        fs.writeFileSync(path.join(framesDir, `from-${String(framesFromRdp).padStart(2, '0')}-${n}b.hex`), frame.toString('hex'), 'utf8');
-                      } catch (_) { /* noop */ }
-                    }
-                  } else if (gapFromLastRdp >= 400 && isDebug) {
-                    console.log(`⏱️ [Bridge Trace GAP ${gapFromLastRdp}ms] Pausa RDP -> Frame #${framesFromRdp} (${n}B): ${pduDesc}`);
-                    if (process.env.NODETERM_RDP_RECORD_FRAMES === '1') {
-                      try {
-                        fs.writeFileSync(path.join(framesDir, `gap-${gapFromLastRdp}ms-from-f${framesFromRdp}-${n}b.hex`), frame.toString('hex'), 'utf8');
-                      } catch (_) { /* noop */ }
-                    }
-                  } else if (
-                    isDebug && (
+                  if (isDebug) {
+                    if (framesFromRdp <= 20 && !isFastPathNoise(pduDesc)) {
+                      console.log(`[Bridge] RDP in frame#${framesFromRdp}: ${n}B | ${pduDesc}`);
+                    } else if (gapFromLastRdp >= 400) {
+                      console.log(`⏱️ [Bridge Trace GAP ${gapFromLastRdp}ms] Pausa RDP -> Frame #${framesFromRdp} (${n}B): ${pduDesc}`);
+                    } else if (
                       pduDesc.includes('DEMAND_ACTIVE') ||
                       pduDesc.includes('DEACTIVATE_ALL') ||
                       pduDesc.includes('AUTODETECT') ||
@@ -574,9 +588,14 @@ class RdpNativeBridgeService extends EventEmitter {
                       pduDesc.includes('SET_ERROR_INFO') ||
                       pduDesc.includes('FRAME_ACK') ||
                       pduDesc.includes('SURFACE_CMDS')
-                    )
-                  ) {
-                    console.log(`📡 [Bridge Trace PDU #${framesFromRdp}] ${pduDesc}`);
+                    ) {
+                      console.log(`📡 [Bridge Trace PDU #${framesFromRdp}] ${pduDesc}`);
+                    }
+                    if (process.env.NODETERM_RDP_RECORD_FRAMES === '1') {
+                      try {
+                        fs.writeFileSync(path.join(framesDir, `from-${String(framesFromRdp).padStart(2, '0')}-${n}b.hex`), frame.toString('hex'), 'utf8');
+                      } catch (_) { /* noop */ }
+                    }
                   }
 
                   // Wallix FontMap a veces trae mapFlags invalidos para IronRDP (from_bits).
@@ -603,7 +622,11 @@ class RdpNativeBridgeService extends EventEmitter {
                       ? (channelFilter.channelIdToName.get(channelFilter.cliprdrWriteChannelId) || '?')
                       : '?';
                     const greetCh = channelFilter.serverCliprdrChannelId;
-                    console.log(`[Bridge] cliprdr write path=${channelFilter.cliprdrWriteChannelId} (${writeName}); saludo por ${greetCh}`);
+                    const writeMsg = `[Bridge] cliprdr write path=${channelFilter.cliprdrWriteChannelId} (${writeName}); saludo por ${greetCh}`;
+                    recordCliprdrEvent(writeMsg);
+                    if (isDebug) {
+                      console.log(writeMsg);
+                    }
                   }
                   if (channelFilter.cliprdrWriteChannelId != null) {
                     this.flushPendingClientCliprdr(channelFilter, tlsSocket, ws, (n) => {
@@ -624,7 +647,9 @@ class RdpNativeBridgeService extends EventEmitter {
                         : null,
                       channelFilter.messageChannelId != null ? `msg=${channelFilter.messageChannelId}` : null
                     ].filter(Boolean).join(' ');
-                    console.log(`🔬 [RDP Bridge] Canales MCS servidor: ${chDetails}`);
+                    if (isDebug) {
+                      console.log(`🔬 [RDP Bridge] Canales MCS servidor: ${chDetails}`);
+                    }
                     this.emit('diagnostic-log', {
                       category: 'channels',
                       message: `Canales MCS servidor: ${chDetails}`
@@ -635,17 +660,22 @@ class RdpNativeBridgeService extends EventEmitter {
                       ? ` <-ch=${processed.serverChannelId}`
                       : '';
                     const clipLog = `📥 cliprdr ch=${processed.channelId}${via} ${processed.cliprdrDesc || 'PDU'}`;
-                    console.log(`📋 ${clipLog}`);
+                    recordCliprdrEvent(clipLog);
+                    if (isDebug) {
+                      console.log(`📋 ${clipLog}`);
+                    }
                     this.emit('diagnostic-log', {
                       category: 'cliprdr',
                       message: clipLog
                     });
                   }
-                  if (processed.dropped && (rdpDebug() || !isNoisyDrop(processed.note))) {
+                  if (processed.dropped && (isDebug || !isNoisyDrop(processed.note))) {
                     const note = String(processed.note || '').replace(/ hex=[0-9a-f]+/i, '');
                     const dropMsg = `MCS ch=${processed.channelId}: ${note}` +
                       (processed.replies.length ? ` (replies=${processed.replies.length})` : '');
-                    console.log(`🚫 DROPPED #${framesFromRdp} ${dropMsg}`);
+                    if (isDebug) {
+                      console.log(`🚫 DROPPED #${framesFromRdp} ${dropMsg}`);
+                    }
                     if (processed.channelId !== channelFilter.ioChannelId) {
                       this.emit('diagnostic-log', {
                         category: 'dropped',
@@ -665,7 +695,7 @@ class RdpNativeBridgeService extends EventEmitter {
                   frame = processed.forward;
 
                   // FastPath y el resto de frames sueltos no se listan: saturan el log y tapan cliprdr.
-                  if (!processed.isCliprdr && !isFastPathNoise(pduDesc) && (framesFromRdp <= 20 || rdpDebug())) {
+                  if (!processed.isCliprdr && !isFastPathNoise(pduDesc) && isDebug) {
                     console.log(`[Bridge] RDP->WASM frame#${framesFromRdp}: ${frame.length}B | ${pduDesc}`);
                   }
 
@@ -774,7 +804,9 @@ class RdpNativeBridgeService extends EventEmitter {
               ? channelFilter.clientChannelNames.join(', ')
               : 'ninguno detectado';
             const chMsg = `Canales solicitados por cliente WASM (TS_UD_CS_NET): [${reqChs}] (initiator=0x${channelFilter.clientInitiator.toString(16)})`;
-            console.log(`🔬 [RDP Bridge] ${chMsg}`);
+            if (isDebug) {
+              console.log(`🔬 [RDP Bridge] ${chMsg}`);
+            }
             this.emit('diagnostic-log', { category: 'client-channels', message: chMsg });
           }
 
@@ -807,7 +839,9 @@ class RdpNativeBridgeService extends EventEmitter {
                 try {
                   ws.send(frame, { binary: true });
                 } catch (e) {
-                  console.warn('[Bridge] No se pudo inyectar PDU cliprdr hacia WASM:', e.message);
+                  const errMsg = `[Bridge] No se pudo inyectar PDU cliprdr hacia WASM: ${e.message}`;
+                  console.warn(errMsg);
+                  recordCliprdrEvent(`ERROR: ${errMsg}`);
                 }
               }
             });
@@ -815,7 +849,7 @@ class RdpNativeBridgeService extends EventEmitter {
 
           const pduDesc = describeRdpPdu(payload);
 
-          if (framesToRdp <= 8 || isDebug) {
+          if (isDebug) {
             if (framesToRdp <= 24) {
               console.log(`[Bridge] WASM->RDP frame#${framesToRdp}: ${payload.length}B | ${pduDesc}`);
               if (process.env.NODETERM_RDP_RECORD_FRAMES === '1') {
@@ -860,7 +894,9 @@ class RdpNativeBridgeService extends EventEmitter {
           // sesion y sin este rastro una inyeccion que no se aplica no se distingue de una que si.
           const wallixService = wallixServiceFromSession(session) || 'n/a';
           const csNet = sentChs.length ? sentChs.join(',') : 'ninguno';
-          console.log(`[Bridge] MCS prepare: service=${wallixService} CS_NET=[${csNet}]; ${prepared.notes.join('; ') || 'sin cambios'}`);
+          if (isDebug) {
+            console.log(`[Bridge] MCS prepare: service=${wallixService} CS_NET=[${csNet}]; ${prepared.notes.join('; ') || 'sin cambios'}`);
+          }
           if (sentChs.length) {
             if (!channelFilter.wasmChannelNames || channelFilter.wasmChannelNames.length === 0) {
               channelFilter.wasmChannelNames = (channelFilter.clientChannelNames || []).slice();
@@ -920,30 +956,34 @@ class RdpNativeBridgeService extends EventEmitter {
       const destName = channelFilter.channelIdToName instanceof Map
         ? (channelFilter.channelIdToName.get(dest) || 'sin-nombre')
         : 'sin-nombre';
-      const misMsg = `[Bridge] APP cliprdr no alineado; CS_NET=[${csNet}] dest=${dest} (${destName})`;
-      console.log(misMsg);
+      const misMsg = `⚠️ [Bridge Clipboard] APP cliprdr no alineado; CS_NET=[${csNet}] dest=${dest} (${destName})`;
+      console.warn(misMsg);
+      if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(misMsg);
       this.emit('diagnostic-log', { category: 'cliprdr-misaligned', message: misMsg });
     }
     const synthAck = () => {
       if (!isCliprdrFormatListDesc(clipDesc) || channelFilter.cliprdrFormatListAcked) return;
       channelFilter.cliprdrFormatListAcked = true;
       inject.push(buildCliprdrFormatListResponseOk(0, negotiated));
-      const ackMsg = '[Bridge] CB_FORMAT_LIST_RESPONSE(OK) sintetizado hacia WASM ' +
+      const ackMsg = '[Bridge Clipboard] CB_FORMAT_LIST_RESPONSE(OK) sintetizado hacia WASM ' +
         `(FORMAT_LIST por ${negotiated} cierra la sesion si el saludo fue por ${dest})`;
-      console.log(ackMsg);
+      if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(ackMsg);
+      if (rdpDebug()) console.log(ackMsg);
       this.emit('diagnostic-log', { category: 'cliprdr', message: ackMsg });
     };
 
     if (clipDesc && clipDesc.includes('CB_TEMP_DIRECTORY')) {
-      const dropMsg = `[Bridge] CB_TEMP_DIRECTORY del cliente descartado (destino ${dest}): ${clipDesc}`;
-      console.log(dropMsg);
+      const dropMsg = `⚠️ [Bridge Clipboard] CB_TEMP_DIRECTORY del cliente descartado (destino ${dest}): ${clipDesc}`;
+      console.warn(dropMsg);
+      if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(dropMsg);
       this.emit('diagnostic-log', { category: 'cliprdr-tempdir-drop', message: dropMsg });
       return { forward: null, inject };
     }
 
     if (!keepClientCaps && clipDesc && clipDesc.includes('CB_CLIP_CAPS')) {
-      const dropMsg = `[Bridge] CB_CLIP_CAPS del cliente descartado (destino ${dest} congela el grafico): ${clipDesc}`;
-      console.log(dropMsg);
+      const dropMsg = `⚠️ [Bridge Clipboard] CB_CLIP_CAPS del cliente descartado (destino ${dest} congela el grafico): ${clipDesc}`;
+      console.warn(dropMsg);
+      if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(dropMsg);
       this.emit('diagnostic-log', { category: 'cliprdr-caps-drop', message: dropMsg });
       return { forward: null, inject };
     }
@@ -960,8 +1000,9 @@ class RdpNativeBridgeService extends EventEmitter {
       enqueueClientCliprdr(channelFilter, frame);
       if (!channelFilter.loggedCliprdrUserMute) {
         channelFilter.loggedCliprdrUserMute = true;
-        const muteMsg = `[Bridge] cliprdr WASM->RDP encolado: no se escribe CHANNEL_PDU en MCS ${dest} (congela el grafico)`;
-        console.log(muteMsg);
+        const muteMsg = `⚠️ [Bridge Clipboard] cliprdr WASM->RDP encolado: no se escribe CHANNEL_PDU en MCS ${dest} (congela el grafico)`;
+        console.warn(muteMsg);
+        if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(muteMsg);
         this.emit('diagnostic-log', { category: 'cliprdr-mute', message: muteMsg });
       }
       return { forward: null, inject };
@@ -971,8 +1012,9 @@ class RdpNativeBridgeService extends EventEmitter {
       enqueueClientCliprdr(channelFilter, frame);
       if (!channelFilter.loggedCliprdrUserMute) {
         channelFilter.loggedCliprdrUserMute = true;
-        const muteMsg = `[Bridge] cliprdr WASM->RDP encolado: no se escribe CHANNEL_PDU en ${negotiated} (cierra si dest=${dest})`;
-        console.log(muteMsg);
+        const muteMsg = `⚠️ [Bridge Clipboard] cliprdr WASM->RDP encolado: no se escribe CHANNEL_PDU en ${negotiated} (cierra si dest=${dest})`;
+        console.warn(muteMsg);
+        if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(muteMsg);
         this.emit('diagnostic-log', { category: 'cliprdr-mute', message: muteMsg });
       }
       return { forward: null, inject };
@@ -983,8 +1025,9 @@ class RdpNativeBridgeService extends EventEmitter {
     if (cleaned) out = cleaned;
     if (!channelFilter.loggedCliprdrUserRemap) {
       channelFilter.loggedCliprdrUserRemap = true;
-      const remapMsg = `[Bridge] cliprdr WASM->RDP remapeado ch=${parsed.channelId}->${dest} (escribir en ${negotiated} cierra la sesion)`;
-      console.log(remapMsg);
+      const remapMsg = `[Bridge Clipboard] cliprdr WASM->RDP remapeado ch=${parsed.channelId}->${dest} (escribir en ${negotiated} cierra la sesion)`;
+      if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(remapMsg);
+      if (rdpDebug()) console.log(remapMsg);
       this.emit('diagnostic-log', { category: 'cliprdr', message: remapMsg });
     }
     return { forward: out, inject };
@@ -1039,7 +1082,12 @@ class RdpNativeBridgeService extends EventEmitter {
     const clipDesc = isClip ? describeCliprdrPdu(parsed.userData) : null;
     if (isClip && !isCliprdrFragmentDesc(clipDesc)) {
       const wasmMsg = `📤 cliprdr ch=${parsed.channelId} ${clipDesc}`;
-      console.log(`📋 ${wasmMsg}`);
+      if (typeof channelFilter.recordCliprdr === 'function') {
+        channelFilter.recordCliprdr(wasmMsg);
+      }
+      if (rdpDebug()) {
+        console.log(`📋 ${wasmMsg}`);
+      }
       this.emit('diagnostic-log', { category: 'wasm-channel', message: wasmMsg });
     }
 
@@ -1048,8 +1096,11 @@ class RdpNativeBridgeService extends EventEmitter {
     // Aviso de orden CLIPRDR: el cliente no deberia emitir nada antes de CB_MONITOR_READY
     // (MS-RDPECLIP 1.3.2.1). No se descarta el PDU, solo se avisa.
     if (!channelFilter.cliprdrServerReady) {
-      const guardMsg = `⚠️ [Bridge] PDU cliprdr WASM->RDP antes de CB_MONITOR_READY (se reenvía igualmente): ${clipDesc}`;
+      const guardMsg = `⚠️ [Bridge Clipboard] PDU cliprdr WASM->RDP antes de CB_MONITOR_READY (se reenvía igualmente): ${clipDesc}`;
       console.warn(guardMsg);
+      if (typeof channelFilter.recordCliprdr === 'function') {
+        channelFilter.recordCliprdr(guardMsg);
+      }
       this.emit('diagnostic-log', { category: 'cliprdr-order', message: guardMsg });
     }
 
@@ -1085,8 +1136,11 @@ class RdpNativeBridgeService extends EventEmitter {
 
     if (isClip && destIsIoChannel) {
       const dest = serverClipCh || channelFilter.cliprdrOnUnsafeChannel;
-      const muteMsg = `[Bridge] cliprdr WASM->RDP silenciado: no se escribe CHANNEL_PDU en el canal IO (${dest})`;
-      console.log(muteMsg);
+      const muteMsg = `⚠️ [Bridge Clipboard] cliprdr WASM->RDP silenciado: no se escribe CHANNEL_PDU en el canal IO (${dest})`;
+      console.warn(muteMsg);
+      if (typeof channelFilter.recordCliprdr === 'function') {
+        channelFilter.recordCliprdr(muteMsg);
+      }
       this.emit('diagnostic-log', { category: 'cliprdr-mute', message: muteMsg });
       return { forward: null, inject: [] };
     }
@@ -1107,15 +1161,21 @@ class RdpNativeBridgeService extends EventEmitter {
     // por 1005, ese canal ES cliprdr en esta sesion (ESAH lo ha hecho).
     if (isClip && handshakeName === 'rdpsnd' && clipDesc && clipDesc.includes('CB_CLIP_CAPS')
         && !greetingOnHandshakeDest) {
-      const dropMsg = `[Bridge] CB_CLIP_CAPS del cliente descartado (destino ${handshakeDest} congela el grafico): ${clipDesc}`;
-      console.log(dropMsg);
+      const dropMsg = `⚠️ [Bridge Clipboard] CB_CLIP_CAPS del cliente descartado (destino ${handshakeDest} congela el grafico): ${clipDesc}`;
+      console.warn(dropMsg);
+      if (typeof channelFilter.recordCliprdr === 'function') {
+        channelFilter.recordCliprdr(dropMsg);
+      }
       this.emit('diagnostic-log', { category: 'cliprdr-caps-drop', message: dropMsg });
       return { forward: null, inject: [] };
     }
     if (isClip && (handshakeName === 'rdpsnd' || handshakeName === 'rdpdr') &&
         clipDesc && clipDesc.includes('CB_TEMP_DIRECTORY') && !greetingOnHandshakeDest) {
-      const dropMsg = `[Bridge] CB_TEMP_DIRECTORY del cliente descartado (destino ${handshakeDest}): ${clipDesc}`;
-      console.log(dropMsg);
+      const dropMsg = `⚠️ [Bridge Clipboard] CB_TEMP_DIRECTORY del cliente descartado (destino ${handshakeDest}): ${clipDesc}`;
+      console.warn(dropMsg);
+      if (typeof channelFilter.recordCliprdr === 'function') {
+        channelFilter.recordCliprdr(dropMsg);
+      }
       this.emit('diagnostic-log', { category: 'cliprdr-tempdir-drop', message: dropMsg });
       return { forward: null, inject: [] };
     }
@@ -1123,8 +1183,11 @@ class RdpNativeBridgeService extends EventEmitter {
     const dropCaps = isBastion && clipDesc && clipDesc.includes('CB_CLIP_CAPS') &&
       readDiagFlag('NODETERM_RDP_CLIPRDR_DROP_CLIENT_CAPS');
     if (dropCaps) {
-      const dropMsg = `[Bridge] CB_CLIP_CAPS del cliente descartado (el bastion corta al recibirlo): ${clipDesc}`;
-      console.log(dropMsg);
+      const dropMsg = `⚠️ [Bridge Clipboard] CB_CLIP_CAPS del cliente descartado (el bastion corta al recibirlo): ${clipDesc}`;
+      console.warn(dropMsg);
+      if (typeof channelFilter.recordCliprdr === 'function') {
+        channelFilter.recordCliprdr(dropMsg);
+      }
       this.emit('diagnostic-log', { category: 'cliprdr-caps-drop', message: dropMsg });
       return { forward: null, inject: [] };
     }
@@ -1132,8 +1195,11 @@ class RdpNativeBridgeService extends EventEmitter {
     const dropTemp = isBastion && clipDesc && clipDesc.includes('CB_TEMP_DIRECTORY') &&
       readDiagFlag('NODETERM_RDP_CLIPRDR_DROP_CLIENT_TEMPDIR');
     if (dropTemp) {
-      const dropMsg = `🔇 [Bridge] CB_TEMP_DIRECTORY del cliente descartado (ruta relativa): ${clipDesc}`;
-      console.log(dropMsg);
+      const dropMsg = `⚠️ [Bridge Clipboard] CB_TEMP_DIRECTORY del cliente descartado (ruta relativa): ${clipDesc}`;
+      console.warn(dropMsg);
+      if (typeof channelFilter.recordCliprdr === 'function') {
+        channelFilter.recordCliprdr(dropMsg);
+      }
       this.emit('diagnostic-log', { category: 'cliprdr-tempdir-drop', message: dropMsg });
       return { forward: null, inject: [] };
     }
@@ -1141,8 +1207,11 @@ class RdpNativeBridgeService extends EventEmitter {
     // Experimento de diagnostico: silencia por completo el sentido cliente->servidor del canal
     // cliprdr sin tocar el contrario. Aisla si el cierre lo provoca el dato del cliente.
     if (readDiagFlag('NODETERM_RDP_CLIPRDR_MUTE_CLIENT')) {
-      const muteMsg = `🔇 [Bridge] cliprdr WASM->RDP silenciado (experimento): ${clipDesc}`;
+      const muteMsg = `🔇 [Bridge Clipboard] cliprdr WASM->RDP silenciado (experimento): ${clipDesc}`;
       console.log(muteMsg);
+      if (typeof channelFilter.recordCliprdr === 'function') {
+        channelFilter.recordCliprdr(muteMsg);
+      }
       this.emit('diagnostic-log', { category: 'cliprdr-mute', message: muteMsg });
       return { forward: null, inject: [] };
     }
@@ -1172,10 +1241,15 @@ class RdpNativeBridgeService extends EventEmitter {
       const remapped = rewriteMcsChannelId(out, remapDest);
       if (remapped) {
         out = remapped;
+        const remapMsg = `[Bridge Clipboard] cliprdr WASM->RDP remapeado ch=${parsed.channelId}->${remapDest}`;
+        if (typeof channelFilter.recordCliprdr === 'function') {
+          channelFilter.recordCliprdr(remapMsg);
+        }
         if (rdpDebug() || !channelFilter.loggedCliprdrRemap) {
           channelFilter.loggedCliprdrRemap = true;
-          const remapMsg = `📤 [Bridge] cliprdr WASM->RDP remapeado ch=${parsed.channelId}->${remapDest}`;
-          console.log(remapMsg);
+          if (rdpDebug()) {
+            console.log(`📤 ${remapMsg}`);
+          }
           this.emit('diagnostic-log', { category: 'cliprdr', message: remapMsg });
         }
       }
@@ -1216,9 +1290,14 @@ class RdpNativeBridgeService extends EventEmitter {
       // initiator 0: es el valor que lleva el bastion en sus propias indicaciones cliprdr
       // (cabecera MCS observada 68 0000 03e9), asi que el acuse es indistinguible de uno real.
       inject.push(buildCliprdrFormatListResponseOk(0, channelFilter.cliprdrChannelId));
-      const ackMsg = '📥 [Bridge] CB_FORMAT_LIST_RESPONSE(OK) sintetizado hacia WASM ' +
+      const ackMsg = '📥 [Bridge Clipboard] CB_FORMAT_LIST_RESPONSE(OK) sintetizado hacia WASM ' +
         '(el bastión no lo envía y sin él IronRDP nunca pasa a Ready)';
-      console.log(ackMsg);
+      if (typeof channelFilter.recordCliprdr === 'function') {
+        channelFilter.recordCliprdr(ackMsg);
+      }
+      if (rdpDebug()) {
+        console.log(ackMsg);
+      }
       this.emit('diagnostic-log', { category: 'cliprdr', message: ackMsg });
     }
 

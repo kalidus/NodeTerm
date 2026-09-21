@@ -165,6 +165,42 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   const transferDismissTimersRef = useRef(new Map());
   const TRANSFER_COMPLETE_OVERLAY_MS = 2500;
 
+  // Búferes de diagnóstico en memoria para volcado automático ante incidencias
+  const bridgeTraceBufferRef = useRef([]);
+  const clipboardHistoryRef = useRef([]);
+
+  const isRdpDebugEnabled = () => {
+    return (
+      (typeof window !== 'undefined' && window.__NODETERM_RDP_DEBUG__ === true) ||
+      (typeof localStorage !== 'undefined' && localStorage.getItem('NODETERM_RDP_DEBUG') === '1')
+    );
+  };
+
+  const recordClipboardAction = (action, details = '') => {
+    const ts = new Date().toISOString().slice(11, 19);
+    const entry = `[${ts}] ${action}${details ? `: ${details}` : ''}`;
+    clipboardHistoryRef.current.push(entry);
+    if (clipboardHistoryRef.current.length > 30) {
+      clipboardHistoryRef.current.shift();
+    }
+  };
+
+  const dumpClipboardHistory = (title = 'Últimas operaciones del portapapeles:') => {
+    if (!clipboardHistoryRef.current.length) return;
+    console.warn(`📋 [IronRDP Clipboard Diagnostics] ${title}`);
+    for (const line of clipboardHistoryRef.current) {
+      console.warn(`   ${line}`);
+    }
+  };
+
+  const dumpBridgeTraces = (title = 'Últimos eventos del bridge antes del corte:') => {
+    if (!bridgeTraceBufferRef.current.length) return;
+    console.warn(`🔍 [IronRDP Bridge Diagnostics] ${title}`);
+    for (const line of bridgeTraceBufferRef.current) {
+      console.warn(`   ${line}`);
+    }
+  };
+
   const fileTransferNameOf = (file) => file?.name || file?.file?.name || 'Archivo';
 
   const clearTransferDismissTimers = () => {
@@ -266,18 +302,33 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   // Si la sesión aún no está asignada, el envío queda pendiente y se vacía al conectar.
   const enqueueClipboardSend = (text, reason) => {
     const payload = typeof text === 'string' ? text : '';
+    // Evitar reenvíos redundantes en foco de ventana si el texto no ha cambiado o está vacío
+    const isRedundantFocus = reason === 'foco de ventana' && (
+      payload === lastSentClipboardTextRef.current ||
+      (!payload && !lastSentClipboardTextRef.current)
+    );
+    if (isRedundantFocus) {
+      return clipboardChainRef.current;
+    }
+
     const deliver = async () => {
       const session = sessionRef.current;
       if (!session) {
         pendingClipboardSendRef.current = { text: payload, reason };
+        recordClipboardAction(`Format List pendiente (${reason})`, `${payload.length} chars`);
         return;
       }
       try {
         await sendClipboardToSession(session, payload);
         lastSentClipboardTextRef.current = payload;
-        console.log(`📋 [IronRDP Clipboard] Format List enviada (${reason}, ${payload.length} chars)`);
+        recordClipboardAction(`Format List enviada (${reason})`, `${payload.length} chars`);
+        if (isRdpDebugEnabled() || (payload.length > 0 && reason !== 'handshake' && reason !== 'foco de ventana')) {
+          console.log(`📋 [IronRDP Clipboard] Format List enviada (${reason}, ${payload.length} chars)`);
+        }
       } catch (err) {
-        console.warn(`[IronRDP Clipboard] Error enviando Format List (${reason}):`, err);
+        recordClipboardAction(`Error enviando Format List (${reason})`, err?.message || String(err));
+        console.warn(`⚠️ [IronRDP Clipboard] Error enviando Format List (${reason}):`, err);
+        dumpClipboardHistory('Historial previo al fallo de envío de Format List:');
       }
     };
     clipboardChainRef.current = clipboardChainRef.current.then(deliver, deliver);
@@ -397,8 +448,20 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
 
     const handleSessionClosed = (event, data) => {
       if (data && data.tokenId && data.tokenId === currentTokenIdRef.current) {
-        console.log('📡 [IronRDP Tab] Recibido rdp:native-session-closed del bridge:', data.reason);
         lastBackendReasonRef.current = data.reason;
+        const isNormalClose = data.reason && (
+          data.reason.includes('usuario') ||
+          data.reason.includes('user') ||
+          data.reason.includes('tab')
+        );
+
+        if (!isNormalClose) {
+          console.warn('📡 [IronRDP Tab] Desconexión anómala del bridge:', data.reason);
+          dumpBridgeTraces('Trazas del bridge previas al corte de conexión:');
+          dumpClipboardHistory('Historial de portapapeles previo al corte:');
+        } else if (isRdpDebugEnabled()) {
+          console.log('📡 [IronRDP Tab] Recibido rdp:native-session-closed del bridge:', data.reason);
+        }
 
         // Si la sesión WASM aún no terminó de procesar el cierre del socket, ordenar shutdown
         if (sessionRef.current) {
@@ -409,7 +472,15 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
 
     const handleDiagnosticLog = (event, data) => {
       if (data && data.message) {
-        console.log(`🔬 [RDP Bridge Trace] ${data.message}`);
+        const ts = new Date().toISOString().slice(11, 19);
+        const entry = `[${ts}] [${data.category || 'general'}] ${data.message}`;
+        bridgeTraceBufferRef.current.push(entry);
+        if (bridgeTraceBufferRef.current.length > 40) {
+          bridgeTraceBufferRef.current.shift();
+        }
+        if (isRdpDebugEnabled()) {
+          console.log(`🔬 [RDP Bridge Trace] ${data.message}`);
+        }
       }
     };
 
@@ -613,7 +684,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             for (const ext of currentFileTransferProvider.getBuilderExtensions()) {
               builder.extension(ext);
             }
-            console.log('📁 [IronRDP FileTransfer] Extensiones de transferencia de archivos registradas');
+            if (isRdpDebugEnabled()) {
+              console.log('📁 [IronRDP FileTransfer] Extensiones de transferencia de archivos registradas');
+            }
           } catch (ftpErr) {
             console.warn('[IronRDP FileTransfer] Error creando FileTransferProvider:', ftpErr);
           }
@@ -687,7 +760,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
                 });
               }
             }));
-            console.log('🖨️ [IronRDP Printer] Extensiones de Impresora Virtual PDF registradas');
+            if (isRdpDebugEnabled()) {
+              console.log('🖨️ [IronRDP Printer] Extensiones de Impresora Virtual PDF registradas');
+            }
           } catch (printerErr) {
             console.warn('[IronRDP Printer] Error registrando extensión de impresora:', printerErr);
           }
@@ -699,7 +774,10 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           builder.remoteClipboardChangedCallback(async (clipboardData) => {
             if (!clipboardData) return;
             if (isFileTransferArmedRef.current) {
-              console.log('[IronRDP Clipboard] remoteClipboardChanged omitido: transferencia de archivos en curso');
+              recordClipboardAction('remoteClipboardChanged omitido: transferencia en curso');
+              if (isRdpDebugEnabled()) {
+                console.log('[IronRDP Clipboard] remoteClipboardChanged omitido: transferencia de archivos en curso');
+              }
               return;
             }
             try {
@@ -714,6 +792,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
                     lastReceivedClipboardTextRef.current = text;
                     lastSentClipboardTextRef.current = text;
                     localClipboardCacheRef.current = text;
+                    recordClipboardAction('Copiado remoto recibido', `${text.length} chars`);
                     console.log(`📋 [IronRDP Clipboard] 📥 Copiado remoto recibido (${text.length} chars):`, text.slice(0, 80));
                     await writeLocalClipboardText(text);
                     toastRef.current?.show({
@@ -727,7 +806,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
                 }
               }
             } catch (e) {
-              console.warn('[IronRDP Clipboard] Error en remoteClipboardChangedCallback:', e);
+              recordClipboardAction('Error en remoteClipboardChangedCallback', e?.message || String(e));
+              console.warn('⚠️ [IronRDP Clipboard] Error en remoteClipboardChangedCallback:', e);
+              dumpClipboardHistory('Historial previo al fallo en recepción de portapapeles:');
             }
           });
 
@@ -737,11 +818,17 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           // así que se responde desde la caché y el refresco se hace en segundo plano.
           builder.forceClipboardUpdateCallback(() => {
             if (isFileTransferArmedRef.current) {
-              console.log('📋 [IronRDP Clipboard] forceClipboardUpdate omitido: transferencia de archivos en curso');
+              recordClipboardAction('forceClipboardUpdate omitido: transferencia en curso');
+              if (isRdpDebugEnabled()) {
+                console.log('📋 [IronRDP Clipboard] forceClipboardUpdate omitido: transferencia de archivos en curso');
+              }
               return;
             }
             const cached = localClipboardCacheRef.current || '';
-            console.log(`📋 [IronRDP Clipboard] 📤 forceClipboardUpdate -> anunciando formatos (${cached.length} chars)`);
+            recordClipboardAction('forceClipboardUpdate -> anunciando formatos', `${cached.length} chars`);
+            if (isRdpDebugEnabled()) {
+              console.log(`📋 [IronRDP Clipboard] 📤 forceClipboardUpdate -> anunciando formatos (${cached.length} chars)`);
+            }
             enqueueClipboardSend(cached, 'handshake');
             refreshLocalClipboardCache().catch(() => {});
           });
@@ -913,17 +1000,28 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           const rawReason = typeof terminationInfo?.reason === 'function'
             ? terminationInfo.reason()
             : String(terminationInfo || '');
-          console.log('ℹ️ [IronRDP WASM] Sesión terminada:', rawReason);
+          const isNormalEnd = !rawReason || rawReason.includes('usuario') || rawReason.includes('user') || rawReason.includes('0');
+          if (isNormalEnd) {
+            console.log('ℹ️ [IronRDP WASM] Sesión terminada:', rawReason);
+          } else {
+            console.warn('⚠️ [IronRDP WASM] Sesión terminada:', rawReason);
+            dumpBridgeTraces('Trazas del bridge previas al fin de sesión:');
+            dumpClipboardHistory('Historial de portapapeles previo al fin de sesión:');
+          }
           handleSessionEnded(rawReason, null);
         }).catch((err) => {
           const detail = extractErrorMessage(err);
           console.error('❌ [IronRDP WASM] Error en ejecución de sesión:', detail, err);
+          dumpBridgeTraces('Trazas del bridge previas al error de sesión:');
+          dumpClipboardHistory('Historial de portapapeles previo al error de sesión:');
           handleSessionEnded(null, err);
         });
 
       } catch (err) {
         const detail = extractErrorMessage(err);
         console.error('❌ [IronRDP WASM] Error conectando:', detail, err);
+        dumpBridgeTraces('Trazas del bridge previas al error de conexión:');
+        dumpClipboardHistory('Historial de portapapeles previo al error de conexión:');
         handleSessionEnded(null, err);
       }
     };
