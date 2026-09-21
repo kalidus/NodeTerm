@@ -297,11 +297,11 @@ describe('juego de canales por defecto del bridge', () => {
     else process.env.NODETERM_RDP_INJECT_CHANNELS = previous;
   });
 
-  test('por defecto inyecta rdpsnd detras de cliprdr', () => {
-    assert.deepEqual(resolveInjectedChannels(), { before: [], after: ['rdpsnd'] });
+  test('por defecto desplaza cliprdr detras de rdpdr y rdpsnd', () => {
+    assert.deepEqual(resolveInjectedChannels(), { before: ['rdpdr', 'rdpsnd'], after: [] });
     const frame = buildMcsConnectInitial([['cliprdr', 0xc0a00000]]);
     const res = prepareMcsConnectInitial(frame, 0x01, { injectChannels: resolveInjectedChannels() });
-    assert.deepEqual(findClientNetworkChannels(res.buf), ['cliprdr', 'rdpsnd']);
+    assert.deepEqual(findClientNetworkChannels(res.buf), ['rdpdr', 'rdpsnd', 'cliprdr']);
   });
 
   test("'off' deja la conexion sin tocar", () => {
@@ -322,30 +322,18 @@ describe('juego de canales por defecto del bridge', () => {
     assert.deepEqual(findClientNetworkChannels(res.buf), ['rail', 'rdpdr', 'rdpsnd', 'cliprdr']);
   });
 
-  test('cadena :RDP: inyecta rdpsnd detras de cliprdr', () => {
-    const session = { username: 'dsn_operator@WALLIX-JUMPSERVER@ESJC-SGCM-WL03P:RDP:rt01119' };
-    assert.deepEqual(resolveInjectedChannels(session), { before: [], after: ['rdpsnd'] });
-    const frame = buildMcsConnectInitial([['cliprdr', 0xc0a00000]]);
-    const res = prepareMcsConnectInitial(frame, 0x01, { injectChannels: resolveInjectedChannels(session) });
-    assert.deepEqual(findClientNetworkChannels(res.buf), ['cliprdr', 'rdpsnd']);
-  });
-
-  test('cadena :RDP: ESAH desplaza cliprdr detras de rdpdr y rdpsnd', () => {
-    const session = {
-      username: 'dsn_operator@WALLIX-JUMPSERVER@ESAH-SGCM-WL03P:RDP:rt01119',
-      targetServer: 'ESAH-SGCM-WL03P'
-    };
-    assert.deepEqual(resolveInjectedChannels(session), { before: ['rdpdr', 'rdpsnd'], after: [] });
-    const frame = buildMcsConnectInitial([['cliprdr', 0xc0a00000]]);
-    const res = prepareMcsConnectInitial(frame, 0x01, { injectChannels: resolveInjectedChannels(session) });
-    assert.deepEqual(findClientNetworkChannels(res.buf), ['rdpdr', 'rdpsnd', 'cliprdr']);
-  });
-
-  test('targetServer ESAH sin marcador en el usuario tambien desplaza cliprdr', () => {
-    assert.deepEqual(
-      resolveInjectedChannels({ targetServer: 'ESAH-SGCM-WL03P' }),
-      { before: ['rdpdr', 'rdpsnd'], after: [] }
-    );
+  test('cadena :RDP: desplaza cliprdr detras de rdpdr y rdpsnd, sin importar el hostname', () => {
+    const sessions = [
+      { username: 'dsn_operator@WALLIX-JUMPSERVER@ESJC-SGCM-WL03P:RDP:rt01119' },
+      { username: 'dsn_operator@WALLIX-JUMPSERVER@ESAH-SGCM-WL03P:RDP:rt01119', targetServer: 'ESAH-SGCM-WL03P' },
+      { username: 'dsn_operator@WALLIX-JUMPSERVER@OTRO-HOST:RDP:rt01119' }
+    ];
+    for (const session of sessions) {
+      assert.deepEqual(resolveInjectedChannels(session), { before: ['rdpdr', 'rdpsnd'], after: [] });
+      const frame = buildMcsConnectInitial([['cliprdr', 0xc0a00000]]);
+      const res = prepareMcsConnectInitial(frame, 0x01, { injectChannels: resolveInjectedChannels(session) });
+      assert.deepEqual(findClientNetworkChannels(res.buf), ['rdpdr', 'rdpsnd', 'cliprdr']);
+    }
   });
 
   test('wallixService APP sin marcador en el usuario usa el juego APP', () => {
@@ -361,7 +349,7 @@ describe('juego de canales por defecto del bridge', () => {
         username: 'dsn_operator@WALLIX-JUMPSERVER@ESJC-SGCM-WL03P:RDP:rt01119',
         wallixService: 'APP'
       }),
-      { before: [], after: ['rdpsnd'] }
+      { before: ['rdpdr', 'rdpsnd'], after: [] }
     );
   });
 

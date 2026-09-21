@@ -97,12 +97,10 @@ function readDiagValue(name) {
 }
 
 // IronRDP declara solo cliprdr. Wallix ignora nombres y mapea por indice.
-// :RDP: cliprdr + rdpsnd detras. Sin el segundo VC, ESJC tambien saluda por
-// MCS 1001 y el clipboard muere. ESAH saluda por 1001 aun con dos VCs si
-// cliprdr es el indice 0: hay que desplazarlo (como APP, sin rail).
+// :RDP: rdpdr+rdpsnd delante para que cliprdr no sea el unico/primer VC
+// (si lo es, Session Probe acaba saludando por MCS 1001 en sesiones sucesivas).
 // :APP: rail+rdpdr+rdpsnd delante. NODETERM_RDP_INJECT_CHANNELS admite un orden o 'off'.
-const RDP_INJECTED_CHANNELS = { before: [], after: ['rdpsnd'] };
-const RDP_SHIFTED_CLIPRDR_CHANNELS = { before: ['rdpdr', 'rdpsnd'], after: [] };
+const RDP_INJECTED_CHANNELS = { before: ['rdpdr', 'rdpsnd'], after: [] };
 const APP_INJECTED_CHANNELS = { before: ['rail', 'rdpdr', 'rdpsnd'], after: [] };
 const APP_INJECTED_CHANNELS_RAIL = APP_INJECTED_CHANNELS;
 
@@ -118,19 +116,6 @@ function wallixServiceFromSession(session) {
     || (session.wallixService ? String(session.wallixService).toUpperCase() : null);
 }
 
-function wallixTargetFromSession(session) {
-  if (!session) return '';
-  const direct = String(session.targetServer || '').trim();
-  if (direct) return direct;
-  const user = String(session.username || session.bastionUser || '');
-  const m = user.match(/@([^:@]+):(RDP|APP):/i);
-  return m ? m[1] : '';
-}
-
-function rdpNeedsShiftedCliprdr(session) {
-  return /ESAH/i.test(wallixTargetFromSession(session));
-}
-
 function parseInjectChannelsSpec(requested) {
   const parts = String(requested || '').split('*');
   const split = (s) => s.split(',').map((n) => n.trim()).filter(Boolean);
@@ -143,7 +128,6 @@ function resolveInjectedChannels(session) {
   if (requested && requested.toLowerCase() === 'off') return null;
   if (requested) return parseInjectChannelsSpec(requested);
   if (wallixServiceFromSession(session) === 'APP') return APP_INJECTED_CHANNELS;
-  if (rdpNeedsShiftedCliprdr(session)) return RDP_SHIFTED_CLIPRDR_CHANNELS;
   return RDP_INJECTED_CHANNELS;
 }
 
@@ -1464,7 +1448,5 @@ module.exports.resolveInjectedChannels = resolveInjectedChannels;
 module.exports.wallixServiceFromUsername = wallixServiceFromUsername;
 module.exports.wallixServiceFromSession = wallixServiceFromSession;
 module.exports.RDP_INJECTED_CHANNELS = RDP_INJECTED_CHANNELS;
-module.exports.RDP_SHIFTED_CLIPRDR_CHANNELS = RDP_SHIFTED_CLIPRDR_CHANNELS;
 module.exports.APP_INJECTED_CHANNELS = APP_INJECTED_CHANNELS;
 module.exports.APP_INJECTED_CHANNELS_RAIL = APP_INJECTED_CHANNELS_RAIL;
-module.exports.wallixTargetFromSession = wallixTargetFromSession;
