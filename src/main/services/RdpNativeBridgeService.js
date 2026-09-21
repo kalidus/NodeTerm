@@ -946,7 +946,8 @@ class RdpNativeBridgeService extends EventEmitter {
   filterClientCliprdrOnUserChannel(frame, parsed, channelFilter, clipDesc) {
     const dest = channelFilter.serverCliprdrChannelId || channelFilter.cliprdrOnUnsafeChannel || 1001;
     const negotiated = channelFilter.cliprdrChannelId;
-    const keepClientCaps = isUserMcsChannel(channelFilter, dest);
+    const keepClientCaps = isUserMcsChannel(channelFilter, dest)
+      || (channelFilter.ioChannelId != null && dest === channelFilter.ioChannelId);
     const inject = [];
     if (!channelFilter.loggedCliprdrMisaligned) {
       channelFilter.loggedCliprdrMisaligned = true;
@@ -1134,21 +1135,12 @@ class RdpNativeBridgeService extends EventEmitter {
               || serverClipCh === channelFilter.cliprdrOnUnsafeChannel))
     );
 
-    if (isClip && destIsIoChannel) {
-      const dest = serverClipCh || channelFilter.cliprdrOnUnsafeChannel;
-      const muteMsg = `⚠️ [Bridge Clipboard] cliprdr WASM->RDP silenciado: no se escribe CHANNEL_PDU en el canal IO (${dest})`;
-      console.warn(muteMsg);
-      if (typeof channelFilter.recordCliprdr === 'function') {
-        channelFilter.recordCliprdr(muteMsg);
-      }
-      this.emit('diagnostic-log', { category: 'cliprdr-mute', message: muteMsg });
-      return { forward: null, inject: [] };
-    }
-
-    // Destino distinto del VC negociado (APP/ESAH 1001, rdpsnd 1005).
+    // Destino distinto del VC negociado (APP/ESAH 1001, IO 1003, rdpsnd 1005).
     // FORMAT_LIST en 1004 cierra el TLS. TEMPDIR siempre se tira. CHANNEL_PDU en
-    // MCS 1001 congela el grafico. CAPS en rdpsnd deja la pantalla en negro.
-    if (isClip && (destIsUserChannel || (writeCh == null && destIsForeignStaticVc))) {
+    // MCS 1001 congela el grafico; en IO (1003) rompe el Share Control. CAPS en rdpsnd deja la pantalla en negro.
+    // filterClientCliprdrOnUserChannel no escribe en canales inseguros pero sintetiza
+    // CB_FORMAT_LIST_RESPONSE(OK) para que IronRDP WASM pase a Ready.
+    if (isClip && (destIsUserChannel || destIsIoChannel || (writeCh == null && destIsForeignStaticVc))) {
       return this.filterClientCliprdrOnUserChannel(frame, parsed, channelFilter, clipDesc);
     }
 

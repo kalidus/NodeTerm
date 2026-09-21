@@ -247,8 +247,9 @@ describe('CLIPRDR: bastion Wallix que usa otro canal MCS', () => {
     assert.equal(state.cliprdrWriteChannelId, 1004);
   });
 
-  test('ESAH saludo por 1001 usa el VC nombrado cliprdr 1006, no el indice 0', () => {
+  test('ESAH saludo por 1001 en RDP no confirma write path en 1006 (evita TLS FIN de Wallix)', () => {
     const state = stateWithCliprdr();
+    state.wallixService = 'RDP';
     state.allowed = new Set([1003, 1004, 1005, 1006]);
     state.channelIdToName = new Map([
       [1004, 'rdpdr'],
@@ -261,11 +262,12 @@ describe('CLIPRDR: bastion Wallix que usa otro canal MCS', () => {
     assert.equal(resCaps.isCliprdr, true);
     assert.equal(resCaps.serverChannelId, 1001);
     assert.equal(state.serverCliprdrChannelId, 1001);
-    assert.equal(state.cliprdrWriteChannelId, 1006, 'no se escribe en 1004 (rdpdr) ni en 1001');
+    assert.equal(state.cliprdrWriteChannelId, null, 'en RDP el saludo por 1001 no debe escribir en 1006');
   });
 
   test('APP saludo por 1001 usa el VC nombrado cliprdr 1007, no el indice 0', () => {
     const state = stateWithCliprdr();
+    state.wallixService = 'APP';
     state.allowed = new Set([1003, 1004, 1005, 1006, 1007]);
     state.channelIdToName = new Map([
       [1004, 'rail'],

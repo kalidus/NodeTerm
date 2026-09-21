@@ -164,7 +164,7 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     }
   });
 
-  test('si el bastion entrega cliprdr por el canal IO, se silencia el cliente', () => {
+  test('si el bastion entrega cliprdr por el canal IO, se silencia el cliente hacia RDP y se acusa hacia WASM', () => {
     const state = {
       ioChannelId: IO_CH,
       cliprdrChannelId: CLIPRDR_CH,
@@ -177,7 +177,7 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     const kept = filterBatch(service, buildInitiateCopyBatch(), state);
 
     assert.equal(kept.length, 0, 'CHANNEL_PDU en el canal IO cierra la sesion');
-    assert.equal(kept.injected.length, 0);
+    assert.equal(kept.injected.length, 1, 'sintetiza acuse hacia WASM para que el portapapeles pase a Ready');
   });
 
   test('APP alineado: handshake completo (CAPS+TEMPDIR+FORMAT_LIST) sale por el VC cliprdr 1006', () => {

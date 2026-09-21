@@ -416,11 +416,12 @@ function isSafeStaticCliprdrWrite(state, channelId) {
 }
 
 /**
- * Si el saludo va por 1001, el VC que SC_NET nombro cliprdr (APP: 1007, no el indice 0).
- * En RDP named === indice 0: no hay fallback. Escribir FORMAT_LIST en 1004 o en 1005
- * tras saludo 1001 cierra el TLS.
+ * Si el saludo va por 1001, solo en :APP: (RemoteApp) el VC que SC_NET nombro cliprdr (1007)
+ * es el destino de vuelta. En :RDP:, escribir en 1004, 1005 o 1006 tras un saludo
+ * por 1001 cierra el TLS (Wallix ESAH corta con FIN).
  */
 function fallbackNamedCliprdrWrite(state) {
+  if (!state || state.wallixService !== 'APP') return null;
   const named = declaredChannelId(state, 'cliprdr');
   if (named == null) return null;
   if (named === state.cliprdrChannelId) return null;
