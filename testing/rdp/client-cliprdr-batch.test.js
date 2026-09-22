@@ -164,7 +164,7 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     }
   });
 
-  test('si el bastion entrega cliprdr por el canal IO, se silencia el cliente hacia RDP y se acusa hacia WASM', () => {
+  test('si el bastion entrega cliprdr por el canal IO, CAPS y FORMAT_LIST van al VC nombrado', () => {
     const state = {
       ioChannelId: IO_CH,
       cliprdrChannelId: CLIPRDR_CH,
@@ -176,11 +176,48 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
 
     const kept = filterBatch(service, buildInitiateCopyBatch(), state);
 
-    assert.equal(kept.length, 1, 'FORMAT_LIST va al VC cliprdr; nada al IO');
-    assert.equal(parseMcsSendData(kept[0]).channelId, CLIPRDR_CH);
-    assert.notEqual(parseMcsSendData(kept[0]).channelId, IO_CH);
-    assert.equal(clipMsgType(kept[0]), CB_FORMAT_LIST);
+    assert.equal(state.cliprdrWriteChannelId, CLIPRDR_CH);
+    assert.equal(kept.length, 2, 'CAPS y FORMAT_LIST al VC cliprdr; TEMPDIR tirado');
+    assert.deepEqual(kept.map(clipMsgType), [CB_CLIP_CAPS, CB_FORMAT_LIST]);
+    for (const frame of kept) {
+      assert.equal(parseMcsSendData(frame).channelId, CLIPRDR_CH);
+      assert.notEqual(parseMcsSendData(frame).channelId, IO_CH);
+    }
+    assert.ok(!state.pendingClientCliprdr || state.pendingClientCliprdr.length === 0);
     assert.equal(kept.injected.length, 1, 'sintetiza acuse hacia WASM para que el portapapeles pase a Ready');
+  });
+
+  test('RDP saludo por IO 1003 escribe CAPS y FORMAT_LIST en cliprdr 1006', () => {
+    const state = {
+      wallixService: 'RDP',
+      ioChannelId: IO_CH,
+      cliprdrChannelId: BASTION_CLIP_CH,
+      serverCliprdrChannelId: IO_CH,
+      cliprdrOnUnsafeChannel: IO_CH,
+      cliprdrServerReady: true,
+      allowed: new Set([1003, 1004, 1005, 1006]),
+      channelIdToName: new Map([
+        [1004, 'rdpdr'],
+        [1005, 'rdpsnd'],
+        [1006, 'cliprdr']
+      ])
+    };
+
+    const kept = filterBatch(service, Buffer.concat([
+      buildClipFrame(BASTION_CLIP_CH, CB_CLIP_CAPS, Buffer.alloc(16)),
+      buildClipFrame(BASTION_CLIP_CH, CB_TEMP_DIRECTORY, Buffer.alloc(520)),
+      buildClipFrame(BASTION_CLIP_CH, CB_FORMAT_LIST, Buffer.alloc(24))
+    ]), state);
+
+    assert.equal(state.cliprdrWriteChannelId, BASTION_CLIP_CH);
+    assert.equal(kept.length, 2, 'CAPS y FORMAT_LIST por 1006; TEMPDIR tirado');
+    assert.deepEqual(kept.map(clipMsgType), [CB_CLIP_CAPS, CB_FORMAT_LIST]);
+    for (const frame of kept) {
+      assert.equal(parseMcsSendData(frame).channelId, BASTION_CLIP_CH);
+      assert.notEqual(parseMcsSendData(frame).channelId, IO_CH);
+    }
+    assert.ok(!state.pendingClientCliprdr || state.pendingClientCliprdr.length === 0);
+    assert.ok(logs.some((l) => l.includes('write path recuperado ch=1006')));
   });
 
   test('APP alineado: handshake completo (CAPS+TEMPDIR+FORMAT_LIST) sale por el VC cliprdr 1006', () => {

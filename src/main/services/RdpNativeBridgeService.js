@@ -27,6 +27,7 @@ const {
   isUserMcsChannel,
   isSafeStaticCliprdrWrite,
   fallbackNamedCliprdrWrite,
+  fallbackIoNamedCliprdrWrite,
   isCliprdrClientPayloadDesc,
   unsafeCliprdrClientWriteDest,
   enqueueClientCliprdr,
@@ -1107,7 +1108,10 @@ class RdpNativeBridgeService extends EventEmitter {
     }
 
     if (channelFilter.cliprdrWriteChannelId == null) {
-      const recovered = fallbackNamedCliprdrWrite(channelFilter);
+      const destIsIo = channelFilter.ioChannelId != null && dest === channelFilter.ioChannelId;
+      const recovered = destIsIo
+        ? fallbackIoNamedCliprdrWrite(channelFilter)
+        : fallbackNamedCliprdrWrite(channelFilter);
       if (recovered != null) channelFilter.cliprdrWriteChannelId = recovered;
     }
     const recoveredDest = channelFilter.cliprdrWriteChannelId;

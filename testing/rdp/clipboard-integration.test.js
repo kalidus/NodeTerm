@@ -12,7 +12,10 @@ const {
   shouldRecordMutedClientCliprdr,
   takeCliprdrRehandshake,
   isCliprdrClientPayloadDesc,
-  unsafeCliprdrClientWriteDest
+  unsafeCliprdrClientWriteDest,
+  confirmCliprdrWriteChannel,
+  fallbackIoNamedCliprdrWrite,
+  fallbackNamedCliprdrWrite
 } = require('../../src/main/services/rdp-channel-filter');
 const {
   CHANNEL_PDU_HEADER_LEN,
@@ -514,6 +517,29 @@ describe('CLIPRDR: bastion Wallix que usa otro canal MCS', () => {
 
     const formatList = buildMcsIndication(1003, buildChannelPdu(buildCliprdrPayload(2, 0, Buffer.alloc(64))));
     assert.equal(processServerFrame(state, formatList).forward.readUInt16BE(10), 1004);
+    assert.equal(state.cliprdrWriteChannelId, 1004, 'IO confirma el VC cliprdr negociado');
+  });
+
+  test('RDP saludo por IO 1003 confirma write path en cliprdr nombrado 1006', () => {
+    const state = stateWithCliprdr();
+    state.wallixService = 'RDP';
+    state.cliprdrChannelId = 1006;
+    state.allowed = new Set([1003, 1004, 1005, 1006]);
+    state.channelIdToName = new Map([
+      [1004, 'rdpdr'],
+      [1005, 'rdpsnd'],
+      [1006, 'cliprdr']
+    ]);
+
+    const caps = buildMcsIndication(1003, buildChannelPdu(buildCliprdrPayload(7, 0, buildGeneralCaps(0x3e))));
+    const resCaps = processServerFrame(state, caps);
+    assert.equal(resCaps.isCliprdr, true);
+    assert.equal(resCaps.serverChannelId, 1003);
+    assert.equal(state.serverCliprdrChannelId, 1003);
+    assert.equal(state.cliprdrWriteChannelId, 1006);
+    assert.equal(fallbackIoNamedCliprdrWrite(state), 1006);
+    assert.equal(fallbackNamedCliprdrWrite(state), null, 'RDP+1001 no debe usar el fallback APP');
+    assert.equal(confirmCliprdrWriteChannel(state, 1003), false, 'ya confirmado');
   });
 
   // Garantia de no regresion: el rescate corre DESPUES del filtro de IO, asi que una PDU legitima

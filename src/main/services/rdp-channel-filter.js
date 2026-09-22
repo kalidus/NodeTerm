@@ -488,6 +488,19 @@ function fallbackNamedCliprdrWrite(state) {
   return named;
 }
 
+/**
+ * Saludo por el canal IO (1003): el VC nombrado cliprdr (o el negociado) es destino
+ * seguro para CAPS y lista. No aplica al saludo por 1001: en ESAH :RDP: escribir
+ * en 1006 tras 1001 cierra el TLS.
+ */
+function fallbackIoNamedCliprdrWrite(state) {
+  if (!state) return null;
+  const named = declaredChannelId(state, 'cliprdr');
+  if (named != null && isSafeStaticCliprdrWrite(state, named)) return named;
+  if (isSafeStaticCliprdrWrite(state, state.cliprdrChannelId)) return state.cliprdrChannelId;
+  return null;
+}
+
 function isCliprdrClientPayloadDesc(desc) {
   if (typeof desc !== 'string' || !desc) return false;
   if (desc.includes('CB_CLIP_CAPS') || desc.includes('CB_TEMP_DIRECTORY')) return false;
@@ -518,11 +531,18 @@ function confirmCliprdrWriteChannel(state, channelId) {
   if (state.cliprdrWriteChannelId != null) return false;
   // El saludo ya es CLIPRDR valido. Si el canal no es 1001/1002, el message
   // channel de GCC ni el IO, se escribe ahi aunque no este en el mapa SC_NET.
+  const isIo = state.ioChannelId != null && channelId === state.ioChannelId;
   const userOrIo = channelId == null
     || isUserMcsChannel(state, channelId)
-    || (state.ioChannelId != null && channelId === state.ioChannelId);
+    || isIo;
   if (!userOrIo) {
     state.cliprdrWriteChannelId = channelId;
+    return true;
+  }
+  if (isIo) {
+    const ioFallback = fallbackIoNamedCliprdrWrite(state);
+    if (ioFallback == null) return false;
+    state.cliprdrWriteChannelId = ioFallback;
     return true;
   }
   const fallback = fallbackNamedCliprdrWrite(state);
@@ -977,6 +997,7 @@ module.exports = {
   isUserMcsChannel,
   isSafeStaticCliprdrWrite,
   fallbackNamedCliprdrWrite,
+  fallbackIoNamedCliprdrWrite,
   isCliprdrClientPayloadDesc,
   unsafeCliprdrClientWriteDest,
   confirmCliprdrWriteChannel,
