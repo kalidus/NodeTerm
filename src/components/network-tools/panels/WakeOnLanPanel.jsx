@@ -2,12 +2,12 @@
  * WakeOnLanPanel.jsx - Envío de Magic Packets y Gestión de Equipos WoL
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { InputText } from 'primereact/inputtext';
 import { Button } from 'primereact/button';
 import { Badge } from 'primereact/badge';
 import NetworkToolHeader from '../common/NetworkToolHeader';
-import { findToolMetadata, getResultBoxStyle, getStatItemStyle } from '../toolRegistry';
+import { findToolMetadata, getResultBoxStyle, getStatItemStyle, hexToRgba } from '../toolRegistry';
 import localStorageSyncService from '../../../services/LocalStorageSyncService';
 
 const WakeOnLanPanel = ({ isMobile = false }) => {
@@ -21,6 +21,11 @@ const WakeOnLanPanel = ({ isMobile = false }) => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+
+  const themeColors = useMemo(() => ({
+    primaryColor: '#8b5cf6',
+    textPrimary: 'var(--text-color, #ffffff)'
+  }), []);
 
   const [wolDevices, setWolDevices] = useState(() => {
     try {
@@ -98,7 +103,6 @@ const WakeOnLanPanel = ({ isMobile = false }) => {
     setLoading(true);
     setError(null);
     setResult(null);
-    setLiveOutput('');
     
     // Cargar en inputs para que el usuario vea qué se está ejecutando
     setWolMac(device.mac);
@@ -175,24 +179,22 @@ const WakeOnLanPanel = ({ isMobile = false }) => {
 
   // Verificar el estado de todos los dispositivos
   const checkAllDevicesStatus = useCallback(() => {
-    if (selectedTool !== 'wake-on-lan' || wolDevices.length === 0) return;
+    if (wolDevices.length === 0) return;
     wolDevices.forEach(device => {
       checkDeviceStatus(device);
     });
-  }, [selectedTool, wolDevices]);
+  }, [wolDevices]);
 
   // Ejecutar verificación de estado periódica
   useEffect(() => {
-    if (selectedTool === 'wake-on-lan') {
+    checkAllDevicesStatus();
+    
+    const interval = setInterval(() => {
       checkAllDevicesStatus();
-      
-      const interval = setInterval(() => {
-        checkAllDevicesStatus();
-      }, 15000);
-      
-      return () => clearInterval(interval);
-    }
-  }, [selectedTool, wolDevices]);
+    }, 15000);
+    
+    return () => clearInterval(interval);
+  }, [checkAllDevicesStatus]);
 
   // Renderizar la etiqueta de estado online/offline
   const renderStatusBadge = (mac) => {
