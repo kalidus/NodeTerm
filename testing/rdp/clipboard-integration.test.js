@@ -338,6 +338,37 @@ describe('CLIPRDR: bastion Wallix que usa otro canal MCS', () => {
     assert.equal(state.cliprdrWriteChannelId, 1007, 'no se escribe en 1004 (rail) ni en 1001');
   });
 
+  test('saludo CLIPRDR en canal sin nombre confirma ese write path', () => {
+    const state = stateWithCliprdr();
+    state.wallixService = 'APP';
+    state.allowed = new Set([1003, 1004, 1005, 1006, 1007]);
+    state.channelIdToName = new Map([
+      [1004, 'rail'],
+      [1005, 'rdpdr'],
+      [1006, 'rdpsnd'],
+      [1007, 'cliprdr']
+    ]);
+
+    const caps = buildMcsIndication(10003, buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16))));
+    const resCaps = processServerFrame(state, caps);
+    assert.equal(resCaps.isCliprdr, true);
+    assert.equal(resCaps.serverChannelId, 10003);
+    assert.equal(state.serverCliprdrChannelId, 10003);
+    assert.equal(state.cliprdrWriteChannelId, 10003, 'se escribe en el canal que trajo el saludo');
+    assert.equal(state.channelIdToName.has(10003), false);
+  });
+
+  test('el primer canal estatico desconocido no se convierte en message channel', () => {
+    const state = stateWithCliprdr();
+    state.allowed = new Set([1003, 1004, 1005]);
+    state.channelIdToName = new Map([[1004, 'cliprdr'], [1005, 'rdpsnd']]);
+
+    const noise = buildMcsIndication(1005, Buffer.from([0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88]));
+    const res = processServerFrame(state, noise);
+    assert.equal(res.dropped, true);
+    assert.equal(state.messageChannelId, null);
+  });
+
   test('saludo cliprdr por rdpsnd 1005 confirma el write path en 1005', () => {
     const state = stateWithCliprdr();
     state.allowed = new Set([1003, 1004, 1005]);

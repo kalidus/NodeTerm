@@ -26,6 +26,7 @@ const {
   describeCliprdrPdu,
   isUserMcsChannel,
   isSafeStaticCliprdrWrite,
+  fallbackNamedCliprdrWrite,
   enqueueClientCliprdr,
   takePendingClientCliprdr,
   shouldRecordMutedClientCliprdr,
@@ -1038,6 +1039,31 @@ class RdpNativeBridgeService extends EventEmitter {
       return { forward: null, inject };
     }
 
+    if (channelFilter.cliprdrWriteChannelId == null) {
+      const recovered = fallbackNamedCliprdrWrite(channelFilter);
+      if (recovered != null) channelFilter.cliprdrWriteChannelId = recovered;
+    }
+    const recoveredDest = channelFilter.cliprdrWriteChannelId;
+    const recoveredSafe = recoveredDest != null
+      && !isUserMcsChannel(channelFilter, recoveredDest)
+      && (channelFilter.ioChannelId == null || recoveredDest !== channelFilter.ioChannelId);
+    if (recoveredSafe) {
+      channelFilter.cliprdrRecoveredFromUnsafe = true;
+      if (!channelFilter.loggedCliprdrRecovered) {
+        channelFilter.loggedCliprdrRecovered = true;
+        const recMsg = `[Bridge Clipboard] write path recuperado ch=${recoveredDest} (saludo por ${dest})`;
+        console.warn(recMsg);
+        if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(recMsg);
+        this.emit('diagnostic-log', { category: 'cliprdr', message: recMsg });
+      }
+      synthAck();
+      if (clipDesc && clipDesc.includes('CB_FORMAT_DATA_REQUEST')) {
+        channelFilter.cliprdrDataRequested = true;
+      }
+      const out = rewriteMcsChannelId(frame, recoveredDest) || frame;
+      return { forward: out, inject };
+    }
+
     synthAck();
 
     if (clipDesc && clipDesc.includes('CB_FORMAT_DATA_REQUEST')) {
@@ -1162,7 +1188,7 @@ class RdpNativeBridgeService extends EventEmitter {
     const greetingOnAlignedStatic = serverClipCh != null
       && !isUserMcsChannel(channelFilter, serverClipCh)
       && (channelFilter.ioChannelId == null || serverClipCh !== channelFilter.ioChannelId)
-      && isSafeStaticCliprdrWrite(channelFilter, serverClipCh)
+      && (isSafeStaticCliprdrWrite(channelFilter, serverClipCh) || writeCh === serverClipCh)
       && (writeCh == null || writeCh === serverClipCh);
     const isBastion = serverClipCh != null
       && serverClipCh !== channelFilter.cliprdrChannelId
@@ -1213,6 +1239,22 @@ class RdpNativeBridgeService extends EventEmitter {
     if (isClip && (handshakeName === 'rdpsnd' || handshakeName === 'rdpdr') &&
         clipDesc && clipDesc.includes('CB_TEMP_DIRECTORY') && !greetingOnHandshakeDest) {
       const dropMsg = `⚠️ [Bridge Clipboard] CB_TEMP_DIRECTORY del cliente descartado (destino ${handshakeDest}): ${clipDesc}`;
+      console.warn(dropMsg);
+      if (typeof channelFilter.recordCliprdr === 'function') {
+        channelFilter.recordCliprdr(dropMsg);
+      }
+      this.emit('diagnostic-log', { category: 'cliprdr-tempdir-drop', message: dropMsg });
+      return { forward: null, inject: [] };
+    }
+    const unnamedHandshake = channelFilter.channelIdToName instanceof Map
+      && handshakeDest != null
+      && !channelFilter.channelIdToName.has(handshakeDest);
+    if (isClip && clipDesc && clipDesc.includes('CB_TEMP_DIRECTORY')
+        && (unnamedHandshake || channelFilter.cliprdrRecoveredFromUnsafe)) {
+      const why = unnamedHandshake
+        ? `${handshakeDest} sin nombre`
+        : `recuperado ch=${handshakeDest}`;
+      const dropMsg = `[Bridge Clipboard] CB_TEMP_DIRECTORY del cliente descartado (destino ${why}): ${clipDesc}`;
       console.warn(dropMsg);
       if (typeof channelFilter.recordCliprdr === 'function') {
         channelFilter.recordCliprdr(dropMsg);

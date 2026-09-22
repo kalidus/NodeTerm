@@ -488,7 +488,12 @@ function fallbackNamedCliprdrWrite(state) {
 
 function confirmCliprdrWriteChannel(state, channelId) {
   if (state.cliprdrWriteChannelId != null) return false;
-  if (isSafeStaticCliprdrWrite(state, channelId)) {
+  // El saludo ya es CLIPRDR valido. Si el canal no es 1001/1002, el message
+  // channel de GCC ni el IO, se escribe ahi aunque no este en el mapa SC_NET.
+  const userOrIo = channelId == null
+    || isUserMcsChannel(state, channelId)
+    || (state.ioChannelId != null && channelId === state.ioChannelId);
+  if (!userOrIo) {
     state.cliprdrWriteChannelId = channelId;
     return true;
   }
@@ -859,10 +864,9 @@ function processServerFrame(state, buf) {
   // El interceptor DVC sólo se aplica aquí: drdynvc es un canal virtual estático, el canal IO
   // jamás transporta CHANNEL_PDU_HEADER y aplicarle esta heurística descartaba PDUs legítimas.
   if (!isIoChannel) {
-    if (state.messageChannelId == null) {
-      state.messageChannelId = channelId;
-    }
-
+    // messageChannelId solo sale de SC_MSGCHANNEL. Adivinarlo con el primer
+    // canal desconocido marcaba un VC estatico como canal de usuario y
+    // bloqueaba el write path de cliprdr.
     if (parsed && isChannelPduHeader(parsed.userData)) {
       const dvc = handleDvcRequest(channelId, state.clientInitiator, parsed.userData);
       if (dvc.handled) {
@@ -944,6 +948,7 @@ module.exports = {
   learnClientInitiator,
   isUserMcsChannel,
   isSafeStaticCliprdrWrite,
+  fallbackNamedCliprdrWrite,
   confirmCliprdrWriteChannel,
   enqueueClientCliprdr,
   takePendingClientCliprdr,

@@ -213,6 +213,63 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     assert.equal(kept.injected.length, 1, 'acuse sintetico para que IronRDP pase a Ready');
   });
 
+  test('APP con saludo 1001 y write path null recupera el VC cliprdr 1007', () => {
+    const state = {
+      wallixService: 'APP',
+      ioChannelId: IO_CH,
+      cliprdrChannelId: CLIPRDR_CH,
+      serverCliprdrChannelId: 1001,
+      cliprdrOnUnsafeChannel: 1001,
+      cliprdrServerReady: true,
+      clientChannelNames: ['rail', 'rdpdr', 'rdpsnd', 'cliprdr'],
+      allowed: new Set([1003, 1004, 1005, 1006, 1007]),
+      channelIdToName: new Map([
+        [1004, 'rail'],
+        [1005, 'rdpdr'],
+        [1006, 'rdpsnd'],
+        [1007, 'cliprdr']
+      ])
+    };
+
+    const kept = filterBatch(service, buildInitiateCopyBatch(), state);
+
+    assert.equal(state.cliprdrWriteChannelId, 1007);
+    assert.equal(kept.length, 2, 'TEMPDIR no sale; CAPS y FORMAT_LIST si');
+    assert.deepEqual(kept.map(clipMsgType), [CB_CLIP_CAPS, CB_FORMAT_LIST]);
+    for (const frame of kept) {
+      assert.equal(parseMcsSendData(frame).channelId, 1007);
+    }
+    assert.ok(!state.pendingClientCliprdr || state.pendingClientCliprdr.length === 0);
+    assert.equal(kept.injected.length, 1, 'acuse sintetico hacia WASM');
+    assert.ok(logs.some((l) => l.includes('write path recuperado ch=1007')));
+  });
+
+  test('saludo en canal sin nombre reescribe CAPS y FORMAT_LIST y tira TEMPDIR', () => {
+    const state = {
+      wallixService: 'APP',
+      ioChannelId: IO_CH,
+      cliprdrChannelId: CLIPRDR_CH,
+      serverCliprdrChannelId: 10003,
+      cliprdrWriteChannelId: 10003,
+      cliprdrServerReady: true,
+      allowed: new Set([1003, 1004, 1005, 1006, 1007]),
+      channelIdToName: new Map([
+        [1004, 'rail'],
+        [1005, 'rdpdr'],
+        [1006, 'rdpsnd'],
+        [1007, 'cliprdr']
+      ])
+    };
+
+    const kept = filterBatch(service, buildInitiateCopyBatch(), state);
+
+    assert.equal(kept.length, 2);
+    assert.deepEqual(kept.map(clipMsgType), [CB_CLIP_CAPS, CB_FORMAT_LIST]);
+    for (const frame of kept) {
+      assert.equal(parseMcsSendData(frame).channelId, 10003);
+    }
+  });
+
   test('si el bastion entrega cliprdr por el canal de usuario 1001, no se escribe CHANNEL_PDU ahi', () => {
     const state = {
       ioChannelId: IO_CH,
