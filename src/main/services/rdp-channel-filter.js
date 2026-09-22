@@ -21,6 +21,7 @@ const {
 const { handleDvcRequest } = require('./rdp-dynvc');
 const { handleRdpdrRequest } = require('./rdp-rdpdr');
 const { handleRailRequest } = require('./rdp-rail');
+const { createCliprdrHealth } = require('./rdp-cliprdr-health');
 
 const TPKT_X224_MCS_HEADER = 8;
 const CHANNEL_FLAG_FIRST = 0x01;
@@ -187,6 +188,7 @@ function createChannelFilterState() {
     clientInitiator: 0,
     droppedCount: 0,
     droppedByChannel: Object.create(null),
+    cliprdrHealth: createCliprdrHealth(),
     autoDetect: createAutoDetectState()
   };
 }
@@ -484,6 +486,32 @@ function fallbackNamedCliprdrWrite(state) {
   if (named === state.cliprdrChannelId) return null;
   if (!isSafeStaticCliprdrWrite(state, named)) return null;
   return named;
+}
+
+function isCliprdrClientPayloadDesc(desc) {
+  if (typeof desc !== 'string' || !desc) return false;
+  if (desc.includes('CB_CLIP_CAPS') || desc.includes('CB_TEMP_DIRECTORY')) return false;
+  return desc.includes('CB_FORMAT_DATA_')
+    || desc.includes('CB_FILECONTENTS_')
+    || desc.includes('CB_LOCK_CLIPDATA')
+    || desc.includes('CB_UNLOCK_CLIPDATA')
+    || desc.includes('CB_FORMAT_LIST');
+}
+
+/**
+ * Destino para lista/datos cuando el saludo cayo en un canal inseguro.
+ * 1001: el servidor habla cliprdr ahi; CAPS/TEMPDIR congelan, la lista y los request no.
+ * IO: nunca se escribe; se usa el VC nombrado cliprdr si existe.
+ */
+function unsafeCliprdrClientWriteDest(state, dest) {
+  if (!state || dest == null) return null;
+  if (isUserMcsChannel(state, dest)) return dest;
+  const destIsIo = state.ioChannelId != null && dest === state.ioChannelId;
+  if (!destIsIo) return null;
+  const named = declaredChannelId(state, 'cliprdr');
+  if (named != null && isSafeStaticCliprdrWrite(state, named)) return named;
+  if (isSafeStaticCliprdrWrite(state, state.cliprdrChannelId)) return state.cliprdrChannelId;
+  return null;
 }
 
 function confirmCliprdrWriteChannel(state, channelId) {
@@ -949,6 +977,8 @@ module.exports = {
   isUserMcsChannel,
   isSafeStaticCliprdrWrite,
   fallbackNamedCliprdrWrite,
+  isCliprdrClientPayloadDesc,
+  unsafeCliprdrClientWriteDest,
   confirmCliprdrWriteChannel,
   enqueueClientCliprdr,
   takePendingClientCliprdr,

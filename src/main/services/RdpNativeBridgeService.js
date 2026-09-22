@@ -27,6 +27,8 @@ const {
   isUserMcsChannel,
   isSafeStaticCliprdrWrite,
   fallbackNamedCliprdrWrite,
+  isCliprdrClientPayloadDesc,
+  unsafeCliprdrClientWriteDest,
   enqueueClientCliprdr,
   takePendingClientCliprdr,
   shouldRecordMutedClientCliprdr,
@@ -34,6 +36,14 @@ const {
   patchClientCapsGeneralFlags,
   takeCliprdrRehandshake
 } = require('./rdp-channel-filter');
+const {
+  noteCliprdrHealth,
+  hasCliprdrFailure,
+  summarizeCliprdrHealth,
+  formatCliprdrHealthLine,
+  isUserOrOrderlyClose,
+  shouldDumpDisconnectDebug
+} = require('./rdp-cliprdr-health');
 const {
   parseMcsSendData,
   rewriteMcsChannelId,
@@ -332,8 +342,9 @@ class RdpNativeBridgeService extends EventEmitter {
     const connectionId = `native_rdp_${Date.now()}`;
     let targetSocket = null;
     let tlsSocket = null;
+    const connState = { ws, session, userClosing: false };
 
-    this.activeConnections.set(connectionId, { ws, session });
+    this.activeConnections.set(connectionId, connState);
 
     let rdCleanPathPhase = 'waiting_request';
     let savedX224Cc = null;
@@ -344,8 +355,8 @@ class RdpNativeBridgeService extends EventEmitter {
     let framesToRdp = 0;
     let lastRdpFrameAt = 0;
     let lastWsFrameAt = 0;
-    // Búferes circulares en memoria para retener los últimos frames y eventos de portapapeles
-    // para volcarlos únicamente si la sesión sufre una desconexión o fallo anómalo.
+    // Anillos en memoria: frames solo se vuelcan con NODETERM_RDP_DEBUG=1.
+    // El anillo cliprdr se vuelca si el portapapeles fallo o si hay debug.
     const isDebug = rdpDebug();
     const recentRdpFrames = [];
     const recentWasmFrames = [];
@@ -353,6 +364,7 @@ class RdpNativeBridgeService extends EventEmitter {
     const RECENT_FRAMES_WINDOW = 20;
     const RECENT_CLIPRDR_WINDOW = 25;
     let firstCloseSide = null;
+    let lastDisconnectDesc = null;
 
     const recordCliprdrEvent = (msg) => {
       const ts = new Date().toISOString().slice(11, 19);
@@ -360,6 +372,7 @@ class RdpNativeBridgeService extends EventEmitter {
       if (recentCliprdrEvents.length > RECENT_CLIPRDR_WINDOW) {
         recentCliprdrEvents.shift();
       }
+      noteCliprdrHealth(channelFilter, msg);
     };
 
     const trafficStats = createTrafficStats((line) => {
@@ -408,29 +421,51 @@ class RdpNativeBridgeService extends EventEmitter {
     const cleanup = (reason = 'Cerrado por el usuario', closeCode = 1000) => {
       if (isCleanedUp) return;
       isCleanedUp = true;
-      const formattedReason = formatCloseReason(reason);
-      const isNormalUserClose = formattedReason === 'Cerrado por el usuario';
+      const userInitiated = isUserOrOrderlyClose({
+        wsReadyState: ws.readyState,
+        reason,
+        firstCloseSide,
+        lastDisconnectDesc,
+        userClosing: connState.userClosing
+      });
+      const formattedReason = userInitiated ? 'Cerrado por el usuario' : formatCloseReason(reason);
+      const clipboardFailed = hasCliprdrFailure(channelFilter);
+      const dump = shouldDumpDisconnectDebug({
+        cliprdrFailed: clipboardFailed,
+        isDebug
+      });
+      const clipSummary = formatCliprdrHealthLine(summarizeCliprdrHealth(channelFilter));
 
-      if (isNormalUserClose) {
-        console.log(`🧹 [RdpNativeBridgeService] Sesión RDP finalizada (Cerrado por el usuario) [toRdp=${framesToRdp}, fromRdp=${framesFromRdp}]`);
+      if (userInitiated && !clipboardFailed && !isDebug) {
+        console.log(`🧹 [RdpNativeBridgeService] Sesion RDP finalizada (${formattedReason}) [toRdp=${framesToRdp}, fromRdp=${framesFromRdp}]`);
+      } else if (!clipboardFailed && !isDebug) {
+        console.warn(`⚠️ [RdpNativeBridgeService] Desconexion (${formattedReason}) [toRdp=${framesToRdp} (${bytesToRdp}B), fromRdp=${framesFromRdp} (${bytesFromRdp}B)]`);
+      } else if (clipboardFailed) {
+        console.warn(`⚠️ [RdpNativeBridgeService] Fallo de clipboard al cerrar (${formattedReason}) [toRdp=${framesToRdp} (${bytesToRdp}B), fromRdp=${framesFromRdp} (${bytesFromRdp}B)]`);
+        console.warn(`🔎 [Bridge] ${clipSummary}`);
       } else {
-        console.warn(`⚠️ [RdpNativeBridgeService] Desconexión anómala detectada (${formattedReason}) [toRdp=${framesToRdp} (${bytesToRdp}B), fromRdp=${framesFromRdp} (${bytesFromRdp}B)]`);
+        console.warn(`⚠️ [RdpNativeBridgeService] Desconexion anomala detectada (${formattedReason}) [toRdp=${framesToRdp} (${bytesToRdp}B), fromRdp=${framesFromRdp} (${bytesFromRdp}B)]`);
+        console.warn(`🔎 [Bridge] Primer extremo en cerrar: ${firstCloseSide || 'desconocido'}`);
+        console.warn(`🔎 [Bridge] ${clipSummary}`);
+      }
+
+      if (dump.cliprdr && recentCliprdrEvents.length) {
+        console.warn(`🔎 [Bridge] Ultimos ${recentCliprdrEvents.length} eventos de portapapeles:`);
+        for (const line of recentCliprdrEvents) {
+          console.warn(`   ${line}`);
+        }
+      }
+      if (dump.frames) {
         console.warn(`🔎 [Bridge] Primer extremo en cerrar: ${firstCloseSide || 'desconocido'}`);
         if (recentRdpFrames.length) {
-          console.warn(`🔎 [Bridge] Últimos ${recentRdpFrames.length} frames del servidor antes del corte:`);
+          console.warn(`🔎 [Bridge] Ultimos ${recentRdpFrames.length} frames del servidor antes del corte:`);
           for (const line of recentRdpFrames) {
             console.warn(`   ${line}`);
           }
         }
         if (recentWasmFrames.length) {
-          console.warn(`🔎 [Bridge] Últimos ${recentWasmFrames.length} frames entregados a IronRDP WASM:`);
+          console.warn(`🔎 [Bridge] Ultimos ${recentWasmFrames.length} frames entregados a IronRDP WASM:`);
           for (const line of recentWasmFrames) {
-            console.warn(`   ${line}`);
-          }
-        }
-        if (recentCliprdrEvents.length) {
-          console.warn(`🔎 [Bridge] Últimos ${recentCliprdrEvents.length} eventos de portapapeles:`);
-          for (const line of recentCliprdrEvents) {
             console.warn(`   ${line}`);
           }
         }
@@ -444,7 +479,9 @@ class RdpNativeBridgeService extends EventEmitter {
         rawReason: String(reason || ''),
         closeCode,
         host: session.host,
-        port: session.port
+        port: session.port,
+        clipboardFailed,
+        userInitiated
       });
 
       try {
@@ -575,6 +612,7 @@ class RdpNativeBridgeService extends EventEmitter {
                   // El motivo del cierre viaja en un PDU, no en el socket: se registra siempre.
                   const disconnectDesc = describeDisconnectPdu(frame);
                   if (disconnectDesc) {
+                    lastDisconnectDesc = disconnectDesc;
                     const discMsg = `🛑 [Bridge] El servidor anuncia cierre en frame#${framesFromRdp}: ${disconnectDesc}`;
                     console.warn(discMsg);
                     this.emit('diagnostic-log', { category: 'disconnect', message: discMsg });
@@ -868,6 +906,11 @@ class RdpNativeBridgeService extends EventEmitter {
           const wasmInjections = [];
           let clientFramesChanged = false;
           for (const clientFrame of clientFrames) {
+            const clientDisc = describeDisconnectPdu(clientFrame);
+            if (clientDisc) {
+              lastDisconnectDesc = clientDisc;
+              connState.userClosing = true;
+            }
             const { forward: kept, inject } = this.filterClientVirtualChannelFrame(clientFrame, channelFilter);
             if (kept !== clientFrame) clientFramesChanged = true;
             if (kept) keptClientFrames.push(kept);
@@ -1070,7 +1113,27 @@ class RdpNativeBridgeService extends EventEmitter {
       channelFilter.cliprdrDataRequested = true;
     }
 
-    // MCS 1001/1002: CHANNEL_PDU deja el TLS vivo y congela el grafico (pantalla negra).
+    const payloadOk = isCliprdrClientPayloadDesc(clipDesc);
+    const unsafeDest = unsafeCliprdrClientWriteDest(channelFilter, dest);
+    if (payloadOk && unsafeDest != null) {
+      let out = unsafeDest === parsed.channelId
+        ? frame
+        : (rewriteMcsChannelId(frame, unsafeDest) || frame);
+      if (isUserMcsChannel(channelFilter, unsafeDest)) {
+        const cleaned = clearChannelPduShowProtocol(out, parsed.dataOff);
+        if (cleaned) out = cleaned;
+      }
+      if (!channelFilter.loggedCliprdrUnsafePayload) {
+        channelFilter.loggedCliprdrUnsafePayload = true;
+        const payMsg = `[Bridge Clipboard] cliprdr datos por ch=${unsafeDest} (saludo por ${dest}; sin CAPS/TEMPDIR)`;
+        console.warn(payMsg);
+        if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(payMsg);
+        this.emit('diagnostic-log', { category: 'cliprdr', message: payMsg });
+      }
+      return { forward: out, inject };
+    }
+
+    // MCS 1001/1002: CHANNEL_PDU de CAPS/TEMPDIR deja el TLS vivo y congela el grafico.
     // Se encola por si mas tarde se confirma el VC cliprdr estatico (1004).
     if (keepClientCaps) {
       enqueueClientCliprdr(channelFilter, frame);
@@ -1603,6 +1666,22 @@ class RdpNativeBridgeService extends EventEmitter {
     } else {
       return Buffer.from([0x82, (len >> 8) & 0xff, len & 0xff]);
     }
+  }
+
+  /**
+   * La pestana o el renderer van a hacer shutdown: el FIN de TLS que sigue
+   * no debe clasificarse como corte del servidor remoto.
+   */
+  markUserClose(tokenId) {
+    if (!tokenId) return false;
+    let marked = false;
+    for (const conn of this.activeConnections.values()) {
+      if (conn.session && conn.session.id === tokenId) {
+        conn.userClosing = true;
+        marked = true;
+      }
+    }
+    return marked;
   }
 
   /**

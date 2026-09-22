@@ -176,7 +176,10 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
 
     const kept = filterBatch(service, buildInitiateCopyBatch(), state);
 
-    assert.equal(kept.length, 0, 'CHANNEL_PDU en el canal IO cierra la sesion');
+    assert.equal(kept.length, 1, 'FORMAT_LIST va al VC cliprdr; nada al IO');
+    assert.equal(parseMcsSendData(kept[0]).channelId, CLIPRDR_CH);
+    assert.notEqual(parseMcsSendData(kept[0]).channelId, IO_CH);
+    assert.equal(clipMsgType(kept[0]), CB_FORMAT_LIST);
     assert.equal(kept.injected.length, 1, 'sintetiza acuse hacia WASM para que el portapapeles pase a Ready');
   });
 
@@ -208,8 +211,10 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
 
     const kept = filterBatch(service, buildInitiateCopyBatch(), state);
 
-    assert.equal(kept.length, 0, 'FORMAT_LIST en 1004 o 1005 tras saludo 1001 cierra el TLS');
-    assert.equal(state.pendingClientCliprdr.length, 2, 'CAPS y FORMAT_LIST encolados; TEMPDIR tirado');
+    assert.equal(kept.length, 1, 'FORMAT_LIST sale por 1001; no por 1004/1005');
+    assert.equal(parseMcsSendData(kept[0]).channelId, 1001);
+    assert.equal(clipMsgType(kept[0]), CB_FORMAT_LIST);
+    assert.equal(state.pendingClientCliprdr.length, 1, 'CAPS encolado; TEMPDIR tirado');
     assert.equal(kept.injected.length, 1, 'acuse sintetico para que IronRDP pase a Ready');
   });
 
@@ -283,16 +288,19 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
 
     const kept = filterBatch(service, buildInitiateCopyBatch(), state);
 
-    assert.equal(kept.length, 0, 'escribir en 1001 deja pantalla negra');
-    assert.equal(state.pendingClientCliprdr.length, 2, 'CAPS y FORMAT_LIST encolados; TEMPDIR tirado');
+    assert.equal(kept.length, 1, 'CAPS no se escribe en 1001; FORMAT_LIST si (el pegado si no no sale)');
+    assert.equal(parseMcsSendData(kept[0]).channelId, 1001);
+    assert.equal(clipMsgType(kept[0]), CB_FORMAT_LIST);
+    assert.equal(state.pendingClientCliprdr.length, 1, 'CAPS encolado; TEMPDIR tirado');
+    assert.equal(clipMsgType(state.pendingClientCliprdr[0]), CB_CLIP_CAPS);
     assert.equal(kept.injected.length, 1, 'acuse sintetico para que IronRDP pase a Ready');
     assert.equal(kept.injected[0][7], 0x68);
     assert.equal(parseMcsSendData(kept.injected[0]).channelId, CLIPRDR_CH);
     assert.ok(logs.some((l) => l.includes('APP cliprdr no alineado')));
-    assert.ok(logs.some((l) => l.includes('congela el grafico')));
+    assert.ok(logs.some((l) => l.includes('datos por ch=1001')));
   });
 
-  test('con destino 1001, FORMAT_DATA_REQUEST se encola y no se escribe', () => {
+  test('con destino 1001, FORMAT_DATA_REQUEST se escribe en 1001', () => {
     const state = {
       ioChannelId: IO_CH,
       cliprdrChannelId: CLIPRDR_CH,
@@ -306,13 +314,14 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
 
     const kept = filterBatch(service, buildClipFrame(CLIPRDR_CH, CB_FORMAT_DATA_REQUEST, Buffer.alloc(4)), state);
 
-    assert.equal(kept.length, 0);
-    assert.equal(state.pendingClientCliprdr.length, 1);
-    assert.equal(clipMsgType(state.pendingClientCliprdr[0]), CB_FORMAT_DATA_REQUEST);
+    assert.equal(kept.length, 1);
+    assert.equal(parseMcsSendData(kept[0]).channelId, 1001);
+    assert.equal(clipMsgType(kept[0]), CB_FORMAT_DATA_REQUEST);
+    assert.equal((state.pendingClientCliprdr || []).length, 0);
     assert.equal(kept.injected.length, 0);
   });
 
-  test('con destino 1001, CB_FILECONTENTS_REQUEST se encola y no se escribe', () => {
+  test('con destino 1001, CB_FILECONTENTS_REQUEST se escribe en 1001', () => {
     const state = {
       ioChannelId: IO_CH,
       cliprdrChannelId: CLIPRDR_CH,
@@ -326,9 +335,33 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
 
     const kept = filterBatch(service, buildClipFrame(CLIPRDR_CH, CB_FILECONTENTS_REQUEST, Buffer.alloc(28)), state);
 
-    assert.equal(kept.length, 0);
-    assert.equal(state.pendingClientCliprdr.length, 1);
-    assert.equal(clipMsgType(state.pendingClientCliprdr[0]), CB_FILECONTENTS_REQUEST);
+    assert.equal(kept.length, 1);
+    assert.equal(parseMcsSendData(kept[0]).channelId, 1001);
+    assert.equal(clipMsgType(kept[0]), CB_FILECONTENTS_REQUEST);
+  });
+
+  test('con destino IO 1003, FORMAT_DATA_REQUEST va al VC nombrado cliprdr no al IO', () => {
+    const state = {
+      wallixService: 'RDP',
+      ioChannelId: IO_CH,
+      cliprdrChannelId: CLIPRDR_CH,
+      serverCliprdrChannelId: IO_CH,
+      cliprdrOnUnsafeChannel: IO_CH,
+      cliprdrServerReady: true,
+      cliprdrFormatListAcked: true,
+      allowed: new Set([1003, 1004, 1005, 1006]),
+      channelIdToName: new Map([
+        [1004, 'rdpdr'],
+        [1005, 'rdpsnd'],
+        [1006, 'cliprdr']
+      ])
+    };
+
+    const kept = filterBatch(service, buildClipFrame(CLIPRDR_CH, CB_FORMAT_DATA_REQUEST, Buffer.alloc(4)), state);
+
+    assert.equal(kept.length, 1);
+    assert.equal(parseMcsSendData(kept[0]).channelId, 1006);
+    assert.notEqual(parseMcsSendData(kept[0]).channelId, IO_CH);
   });
 
   test('si tras CAPS en 1001 se confirma write path 1004, el cliente escribe en 1004', () => {
@@ -366,9 +399,11 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
 
     const kept = filterBatch(service, buildInitiateCopyBatch(), state);
 
-    assert.equal(kept.length, 0, 'el flag no autoriza escribir en el canal de usuario MCS');
+    assert.equal(kept.length, 1, 'FORMAT_LIST sale por 1001; CAPS/TEMPDIR no');
+    assert.equal(parseMcsSendData(kept[0]).channelId, 1001);
+    assert.equal(clipMsgType(kept[0]), CB_FORMAT_LIST);
     assert.equal(kept.injected.length, 1, 'acuse sintetico para que IronRDP pase a Ready');
-    assert.equal(state.pendingClientCliprdr.length, 2, 'CAPS y FORMAT_LIST encolados; TEMPDIR tirado');
+    assert.equal(state.pendingClientCliprdr.length, 1, 'CAPS encolado; TEMPDIR tirado');
   });
 
   test('si tras encolar en 1001 se confirma write path 1004, se vacia la cola hacia 1004', () => {
@@ -384,8 +419,8 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     };
 
     const kept = filterBatch(service, buildInitiateCopyBatch(), state);
-    assert.equal(kept.length, 0);
-    assert.equal(state.pendingClientCliprdr.length, 2);
+    assert.equal(kept.length, 1, 'FORMAT_LIST ya salio por 1001');
+    assert.equal(state.pendingClientCliprdr.length, 1, 'solo CAPS queda en cola');
 
     state.cliprdrWriteChannelId = CLIPRDR_CH;
     const written = [];
@@ -395,11 +430,9 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
       { readyState: 0, OPEN: 1 }
     );
 
-    assert.equal(written.length, 2, 'CAPS y FORMAT_LIST salen por el VC estatico');
-    for (const frame of written) {
-      assert.equal(parseMcsSendData(frame).channelId, CLIPRDR_CH);
-    }
-    assert.deepEqual(written.map(clipMsgType), [CB_CLIP_CAPS, CB_FORMAT_LIST]);
+    assert.equal(written.length, 1, 'CAPS sale por el VC estatico');
+    assert.equal(parseMcsSendData(written[0]).channelId, CLIPRDR_CH);
+    assert.equal(clipMsgType(written[0]), CB_CLIP_CAPS);
     assert.equal(state.pendingClientCliprdr.length, 0);
   });
 

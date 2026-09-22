@@ -10,7 +10,9 @@ const {
   cliprdrMustDropShowProtocol,
   rememberClientCliprdrHandshake,
   shouldRecordMutedClientCliprdr,
-  takeCliprdrRehandshake
+  takeCliprdrRehandshake,
+  isCliprdrClientPayloadDesc,
+  unsafeCliprdrClientWriteDest
 } = require('../../src/main/services/rdp-channel-filter');
 const {
   CHANNEL_PDU_HEADER_LEN,
@@ -801,5 +803,30 @@ describe('CLIPRDR: robustez del filtro', () => {
 
     assert.equal(res.isCliprdr, false);
     assert.equal(state.cliprdrChannelId, null);
+  });
+});
+
+describe('CLIPRDR: destino de datos con saludo inseguro', () => {
+  test('1001 escribe lista y request en el propio 1001', () => {
+    const state = stateWithCliprdr();
+    state.ioChannelId = 1003;
+    assert.equal(unsafeCliprdrClientWriteDest(state, 1001), 1001);
+    assert.equal(isCliprdrClientPayloadDesc('CB_FORMAT_LIST (flags=0x0, dataLen=6, payloadLen=14B)'), true);
+    assert.equal(isCliprdrClientPayloadDesc('CB_FORMAT_DATA_REQUEST (flags=0x0, dataLen=4, payloadLen=12B)'), true);
+    assert.equal(isCliprdrClientPayloadDesc('CB_CLIP_CAPS (flags=0x0, dataLen=16, payloadLen=24B)'), false);
+    assert.equal(isCliprdrClientPayloadDesc('CB_TEMP_DIRECTORY (flags=0x0, dataLen=520, payloadLen=528B)'), false);
+  });
+
+  test('IO 1003 escribe en el VC nombrado cliprdr, no en el IO', () => {
+    const state = stateWithCliprdr();
+    state.ioChannelId = 1003;
+    state.cliprdrChannelId = 1004;
+    state.allowed = new Set([1003, 1004, 1005, 1006]);
+    state.channelIdToName = new Map([
+      [1004, 'rdpdr'],
+      [1005, 'rdpsnd'],
+      [1006, 'cliprdr']
+    ]);
+    assert.equal(unsafeCliprdrClientWriteDest(state, 1003), 1006);
   });
 });

@@ -244,6 +244,15 @@ function registerRdpHandlers(dependencies) {
     }
   });
 
+  ipcMain.handle('rdp:mark-user-close', async (event, tokenId) => {
+    try {
+      const marked = rdpNativeBridgeService.markUserClose(tokenId);
+      return { success: true, marked };
+    } catch (err) {
+      return { success: false, error: err?.message || String(err) };
+    }
+  });
+
   // Handler para guardar PDFs de trabajos de impresión RDP redirigidos
   ipcMain.handle('rdp:save-print-pdf', async (event, { filename, data }) => {
     try {
