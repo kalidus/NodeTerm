@@ -267,6 +267,45 @@ function markDropped(state, channelId) {
   state.droppedByChannel[channelId] = (state.droppedByChannel[channelId] || 0) + 1;
 }
 
+// El keepalive de Session Probe no es cliprdr y cae en este descarte. Una linea
+// por canal basta para ver la forma del PDU en el volcado de desconexion.
+function noteFirstDroppedNonCliprdr(state, channelId, userData) {
+  if (!state || channelId == null || !Buffer.isBuffer(userData)) return;
+  if (userData.length === 4) return;
+  const clipCheck = describeCliprdrPdu(userData);
+  if (clipCheck && clipCheck.includes('CB_')) return;
+  if (!(state.loggedDroppedVc instanceof Set)) state.loggedDroppedVc = new Set();
+  if (state.loggedDroppedVc.has(channelId)) return;
+  state.loggedDroppedVc.add(channelId);
+  const name = state.channelIdToName instanceof Map
+    ? (state.channelIdToName.get(channelId) || 'sin-nombre')
+    : 'sin-nombre';
+  const hex = userData.toString('hex').slice(0, 32);
+  const msg = `[Bridge] PDU no-cliprdr descartado ch=${channelId} (${name}) len=${userData.length}B hex=${hex}`;
+  if (typeof state.recordCliprdr === 'function') state.recordCliprdr(msg);
+}
+
+// Con el saludo en 1001 o en el IO el cliente repite CAPS y FORMAT_LIST sin que
+// salgan al servidor. Solo el primero de cada tipo entra en el anillo.
+function shouldRecordMutedClientCliprdr(state, desc) {
+  if (!state || typeof desc !== 'string') return true;
+  const writeCh = state.cliprdrWriteChannelId;
+  const serverClipCh = state.serverCliprdrChannelId;
+  const muted = writeCh == null && serverClipCh != null && (
+    isUserMcsChannel(state, serverClipCh)
+    || (state.ioChannelId != null && serverClipCh === state.ioChannelId)
+  );
+  if (!muted) return true;
+  const kind = desc.includes('CB_CLIP_CAPS')
+    ? 'caps'
+    : (desc.includes('CB_FORMAT_LIST') && !desc.includes('CB_FORMAT_LIST_RESPONSE') ? 'list' : null);
+  if (!kind) return true;
+  if (!(state.loggedMutedCliprdrKinds instanceof Set)) state.loggedMutedCliprdrKinds = new Set();
+  if (state.loggedMutedCliprdrKinds.has(kind)) return false;
+  state.loggedMutedCliprdrKinds.add(kind);
+  return true;
+}
+
 function declaredChannelId(state, wantedName) {
   if (!(state.channelIdToName instanceof Map)) return null;
   for (const [id, name] of state.channelIdToName) {
@@ -636,16 +675,20 @@ function buildCliprdrResult(state, buf, channelId, userData) {
     noteServerCliprdrMonitorReady(state, userData);
   }
 
-  // El selector saluda por un VC que no se llama cliprdr (rdpdr, rdpsnd) y solo
-  // ofrece generalFlags=0x2. Si IronRDP aplica ese CAPS, el downgrade es
-  // permanente: el 0x3e de la maquina ya no recupera file clip ni lock.
+  // El selector a veces saluda por rdpsnd/rdpdr y a veces por 1001 o el canal IO,
+  // sin nombre en el mapa. Si solo ofrece generalFlags sin file clip, IronRDP
+  // recorta para siempre y el 0x3e de la maquina ya no recupera lock ni archivos.
   const capsName = state.channelIdToName instanceof Map
-    ? state.channelIdToName.get(channelId)
+    ? (state.channelIdToName.get(channelId) || null)
     : null;
   const misnamedClip = capsName != null && capsName !== 'cliprdr';
+  const unnamedUnsafe = capsName == null && (
+    isUserMcsChannel(state, channelId)
+    || (state.ioChannelId != null && channelId === state.ioChannelId)
+  );
   const isCaps = desc && desc.includes('CB_CLIP_CAPS');
   const firstGen = (state.cliprdrMonitorReadyCount || 0) < 1;
-  if (isCaps && firstGen && misnamedClip && !cliprdrOffersFileClip(state.cliprdrServerGeneralFlags)) {
+  if (isCaps && firstGen && (misnamedClip || unnamedUnsafe) && !cliprdrOffersFileClip(state.cliprdrServerGeneralFlags)) {
     state.cliprdrDeferWeakCaps = true;
     return {
       forward: null,
@@ -841,6 +884,7 @@ function processServerFrame(state, buf) {
       if (siphoned) return siphoned;
     }
 
+    noteFirstDroppedNonCliprdr(state, channelId, parsed?.userData);
     markDropped(state, channelId);
     const clipCheck = parsed?.userData ? describeCliprdrPdu(parsed.userData) : null;
     const note = parsed?.userData
@@ -903,6 +947,7 @@ module.exports = {
   confirmCliprdrWriteChannel,
   enqueueClientCliprdr,
   takePendingClientCliprdr,
+  shouldRecordMutedClientCliprdr,
   noteServerCliprdrMonitorReady,
   cliprdrMustDropShowProtocol,
   rememberClientCliprdrHandshake,

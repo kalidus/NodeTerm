@@ -28,6 +28,7 @@ const {
   isSafeStaticCliprdrWrite,
   enqueueClientCliprdr,
   takePendingClientCliprdr,
+  shouldRecordMutedClientCliprdr,
   rememberClientCliprdrHandshake,
   patchClientCapsGeneralFlags,
   takeCliprdrRehandshake
@@ -1129,7 +1130,7 @@ class RdpNativeBridgeService extends EventEmitter {
     const isClip = channelFilter.cliprdrChannelId != null &&
       parsed.channelId === channelFilter.cliprdrChannelId;
     const clipDesc = isClip ? describeCliprdrPdu(parsed.userData) : null;
-    if (isClip && !isCliprdrFragmentDesc(clipDesc)) {
+    if (isClip && !isCliprdrFragmentDesc(clipDesc) && shouldRecordMutedClientCliprdr(channelFilter, clipDesc)) {
       const wasmMsg = `📤 cliprdr ch=${parsed.channelId} ${clipDesc}`;
       if (typeof channelFilter.recordCliprdr === 'function') {
         channelFilter.recordCliprdr(wasmMsg);

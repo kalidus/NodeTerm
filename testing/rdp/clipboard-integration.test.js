@@ -9,6 +9,7 @@ const {
   isCliprdrHeader,
   cliprdrMustDropShowProtocol,
   rememberClientCliprdrHandshake,
+  shouldRecordMutedClientCliprdr,
   takeCliprdrRehandshake
 } = require('../../src/main/services/rdp-channel-filter');
 const {
@@ -58,6 +59,16 @@ function buildCliprdrPayload(msgType, msgFlags = 0, data = Buffer.alloc(0)) {
   hdr.writeUInt16LE(msgFlags, 2);
   hdr.writeUInt32LE(data.length, 4);
   return Buffer.concat([hdr, data]);
+}
+
+function buildGeneralCaps(generalFlags) {
+  const body = Buffer.alloc(16);
+  body.writeUInt16LE(1, 0);
+  body.writeUInt16LE(1, 4);
+  body.writeUInt16LE(12, 6);
+  body.writeUInt32LE(2, 8);
+  body.writeUInt32LE(generalFlags, 12);
+  return body;
 }
 
 function stateWithCliprdr() {
@@ -170,6 +181,46 @@ describe('CLIPRDR: filtrado de frames del servidor', () => {
     assert.equal(res.channelId, 1001);
     assert.equal(state.serverCliprdrChannelId, null);
   });
+
+  test('el primer PDU no-cliprdr de un canal se anota una sola vez', () => {
+    const state = stateWithCliprdr();
+    state.channelIdToName = new Map([[1005, 'rdpsnd']]);
+    const seen = [];
+    state.recordCliprdr = (msg) => seen.push(msg);
+
+    processServerFrame(state, buildMcsIndication(1005, Buffer.alloc(4)));
+    assert.equal(seen.length, 0);
+
+    const frame = buildMcsIndication(1005, Buffer.alloc(16, 0xab));
+    processServerFrame(state, frame);
+    processServerFrame(state, frame);
+
+    assert.equal(seen.length, 1);
+    assert.match(seen[0], /ch=1005 \(rdpsnd\) len=16B hex=abababababababababababababababab/);
+
+    processServerFrame(state, buildMcsIndication(1006, Buffer.alloc(8, 0x11)));
+    assert.equal(seen.length, 2);
+    assert.match(seen[1], /ch=1006 \(sin-nombre\) len=8B/);
+  });
+
+  test('en 1001 solo se anota el primer CAPS y el primer FORMAT_LIST', () => {
+    const state = stateWithCliprdr();
+    state.serverCliprdrChannelId = 1001;
+    state.cliprdrWriteChannelId = null;
+    const caps = 'CB_CLIP_CAPS (flags=0x0, dataLen=16)';
+    const list = 'CB_FORMAT_LIST (flags=0x0, dataLen=6)';
+    const response = 'CB_FORMAT_LIST_RESPONSE (flags=0x1, dataLen=0)';
+
+    assert.equal(shouldRecordMutedClientCliprdr(state, caps), true);
+    assert.equal(shouldRecordMutedClientCliprdr(state, caps), false);
+    assert.equal(shouldRecordMutedClientCliprdr(state, list), true);
+    assert.equal(shouldRecordMutedClientCliprdr(state, list), false);
+    assert.equal(shouldRecordMutedClientCliprdr(state, response), true);
+
+    state.serverCliprdrChannelId = 1004;
+    assert.equal(shouldRecordMutedClientCliprdr(state, caps), true);
+    assert.equal(shouldRecordMutedClientCliprdr(state, caps), true);
+  });
 });
 
 describe('CLIPRDR: bastion Wallix que usa otro canal MCS', () => {
@@ -178,7 +229,7 @@ describe('CLIPRDR: bastion Wallix que usa otro canal MCS', () => {
   test('remapea el saludo cliprdr que llega por el canal de usuario 1001', () => {
     const state = stateWithCliprdr();
 
-    const caps = buildMcsIndication(1001, buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16))));
+    const caps = buildMcsIndication(1001, buildChannelPdu(buildCliprdrPayload(7, 0, buildGeneralCaps(0x3e))));
     const resCaps = processServerFrame(state, caps);
     assert.equal(resCaps.dropped, false);
     assert.equal(resCaps.isCliprdr, true);
@@ -416,7 +467,7 @@ describe('CLIPRDR: bastion Wallix que usa otro canal MCS', () => {
   test('rescata el saludo cliprdr que el bastion entrega por el canal IO', () => {
     const state = stateWithCliprdr();
 
-    const caps = buildMcsIndication(1003, buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16))));
+    const caps = buildMcsIndication(1003, buildChannelPdu(buildCliprdrPayload(7, 0, buildGeneralCaps(0x3e))));
     const resCaps = processServerFrame(state, caps);
     assert.equal(resCaps.dropped, false);
     assert.equal(resCaps.isCliprdr, true);
@@ -645,6 +696,34 @@ describe('CLIPRDR: robustez del filtro', () => {
       buildMcsIndication(1004, buildChannelPdu(buildCliprdrPayload(7, 0, weak), 0x13))
     );
     assert.equal(direct.dropped, false);
+  });
+
+  test('el CAPS 0x2 en 1001 o en el IO no se entrega y el 0x3e posterior si', () => {
+    const weakOn = (channelId) => {
+      const state = stateWithCliprdr();
+      state.allowed = new Set([1003, 1004, 1005]);
+      state.channelIdToName = new Map([[1004, 'cliprdr'], [1005, 'rdpsnd']]);
+      const first = processServerFrame(
+        state,
+        buildMcsIndication(channelId, buildChannelPdu(buildCliprdrPayload(7, 0, buildGeneralCaps(0x2)), 0x03))
+      );
+      assert.equal(first.dropped, true, `canal ${channelId}`);
+      assert.match(first.note, /defer-weak-caps/);
+      assert.equal(state.cliprdrDeferWeakCaps, true);
+      assert.equal(first.forward, null);
+
+      processServerFrame(state, buildMcsIndication(channelId, buildChannelPdu(buildCliprdrPayload(1), 0x03)));
+      const machine = processServerFrame(
+        state,
+        buildMcsIndication(channelId, buildChannelPdu(buildCliprdrPayload(7, 0, buildGeneralCaps(0x3e)), 0x03))
+      );
+      assert.equal(machine.dropped, false, `canal ${channelId}`);
+      assert.ok(machine.forward);
+      assert.equal(state.cliprdrServerGeneralFlags, 0x3e);
+    };
+
+    weakOn(1001);
+    weakOn(1003);
   });
 
   test('rehandshake no escribe si el saludo fue por MCS 1001 sin write path', () => {
