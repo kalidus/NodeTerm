@@ -71,6 +71,22 @@ describe('mapTerminationReason', () => {
     assert.equal(res.icon, 'pi pi-wifi');
   });
 
+  test('Ultimatum rn-user-requested no se clasifica como logoff de usuario local', () => {
+    const res = mapTerminationReason(
+      'MCS Disconnect Provider Ultimatum (rn-user-requested)',
+      'Cerrado por el servidor (desconexion ordenada)',
+      true
+    );
+    assert.equal(res.category, 'SERVER_ORDERLY_DISCONNECT');
+    assert.equal(res.severity, 'info');
+    assert.match(res.title, /servidor remoto/i);
+  });
+
+  test('detecta sesion desplazada por texto ASCII del bridge', () => {
+    const res = mapTerminationReason(null, 'Sesion desplazada por otra conexion', true);
+    assert.equal(res.category, 'DISPLACED_SESSION');
+  });
+
   test('en arranque (sin haberse conectado), clasifica como CONNECT_ERROR', () => {
     const res = mapTerminationReason(null, null, false, new Error('ECONNREFUSED'));
     assert.equal(res.category, 'CONNECT_ERROR');

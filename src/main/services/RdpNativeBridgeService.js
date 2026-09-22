@@ -14,7 +14,7 @@ const EventEmitter = require('events');
 const { WebSocketServer } = require('ws');
 const fs = require('fs');
 const path = require('path');
-const { parseX224ConnectionConfirm, protocolName, describeRdpPdu, describeDisconnectPdu, splitRdpFrames, splitTpktFrames, RdpFrameSplitter } = require('./rdp-protocol-helpers');
+const { parseX224ConnectionConfirm, protocolName, describeRdpPdu, describeDisconnectPdu, preferDisconnectDesc, splitRdpFrames, splitTpktFrames, RdpFrameSplitter } = require('./rdp-protocol-helpers');
 const { prepareMcsConnectInitial, findClientCoreData, findClientNetworkChannels, patchInfoPacket, patchInfoAutoLogon } = require('./rdp-mcs-helpers');
 const { patchFontSequenceFlags } = require('./rdp-font-helpers');
 const { fixWallixBitmapStrideCrop } = require('./rdp-fastpath-helpers');
@@ -42,6 +42,7 @@ const {
   summarizeCliprdrHealth,
   formatCliprdrHealthLine,
   isUserOrOrderlyClose,
+  formatRdpSessionCloseReason,
   shouldDumpDisconnectDebug
 } = require('./rdp-cliprdr-health');
 const {
@@ -397,27 +398,6 @@ class RdpNativeBridgeService extends EventEmitter {
 
     let isCleanedUp = false;
 
-    const formatCloseReason = (reason) => {
-      if (!reason) return 'Cerrado por el usuario';
-      const r = String(reason);
-      if (r.includes('WebSocket') || r.includes('WASM') || r.includes('usuario') || r.includes('user') || r.includes('tab')) {
-        return 'Cerrado por el usuario';
-      }
-      if (r.includes('inactividad') || r.includes('idle') || r.includes('ETIMEDOUT') || r.includes('timeout')) {
-        return 'Conexión cortada por inactividad o timeout';
-      }
-      if (r.includes('ECONNRESET') || r.includes('EPIPE') || r.includes('reiniciada')) {
-        return 'Conexión cortada por el servidor remoto o la red (posible inactividad)';
-      }
-      if (r.includes('CLOSED') || r.includes('TLS socket closed') || r.includes('servidor remoto') || r.includes('FIN')) {
-        return 'Cerrado por el servidor remoto';
-      }
-      if (r.includes('ECONNREFUSED')) {
-        return 'Conexión rechazada por el servidor remoto';
-      }
-      return r;
-    };
-
     const cleanup = (reason = 'Cerrado por el usuario', closeCode = 1000) => {
       if (isCleanedUp) return;
       isCleanedUp = true;
@@ -425,10 +405,11 @@ class RdpNativeBridgeService extends EventEmitter {
         wsReadyState: ws.readyState,
         reason,
         firstCloseSide,
-        lastDisconnectDesc,
         userClosing: connState.userClosing
       });
-      const formattedReason = userInitiated ? 'Cerrado por el usuario' : formatCloseReason(reason);
+      const formattedReason = userInitiated
+        ? 'Cerrado por el usuario'
+        : formatRdpSessionCloseReason(reason, lastDisconnectDesc);
       const clipboardFailed = hasCliprdrFailure(channelFilter);
       const dump = shouldDumpDisconnectDebug({
         cliprdrFailed: clipboardFailed,
@@ -612,7 +593,7 @@ class RdpNativeBridgeService extends EventEmitter {
                   // El motivo del cierre viaja en un PDU, no en el socket: se registra siempre.
                   const disconnectDesc = describeDisconnectPdu(frame);
                   if (disconnectDesc) {
-                    lastDisconnectDesc = disconnectDesc;
+                    lastDisconnectDesc = preferDisconnectDesc(lastDisconnectDesc, disconnectDesc);
                     const discMsg = `🛑 [Bridge] El servidor anuncia cierre en frame#${framesFromRdp}: ${disconnectDesc}`;
                     console.warn(discMsg);
                     this.emit('diagnostic-log', { category: 'disconnect', message: discMsg });
@@ -908,7 +889,7 @@ class RdpNativeBridgeService extends EventEmitter {
           for (const clientFrame of clientFrames) {
             const clientDisc = describeDisconnectPdu(clientFrame);
             if (clientDisc) {
-              lastDisconnectDesc = clientDisc;
+              lastDisconnectDesc = preferDisconnectDesc(lastDisconnectDesc, clientDisc);
               connState.userClosing = true;
             }
             const { forward: kept, inject } = this.filterClientVirtualChannelFrame(clientFrame, channelFilter);

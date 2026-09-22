@@ -1,7 +1,7 @@
 const { describe, test } = require('node:test');
 const assert = require('node:assert');
 
-const { describeDisconnectPdu, describeRdpPdu } = require('../../src/main/services/rdp-protocol-helpers');
+const { describeDisconnectPdu, describeRdpPdu, preferDisconnectDesc } = require('../../src/main/services/rdp-protocol-helpers');
 
 const PDUTYPE_DATAPDU = 7;
 const PDUTYPE2_SET_ERROR_INFO = 47;
@@ -89,6 +89,20 @@ describe('deteccion del PDU de cierre del servidor', () => {
   test('detecta MCS Disconnect Provider Ultimatum con su reason', () => {
     const frame = Buffer.from([0x03, 0x00, 0x00, 0x0a, 0x02, 0xf0, 0x80, 0x21, 0x80, 0x00]);
     assert.match(describeDisconnectPdu(frame), /Disconnect Provider Ultimatum/);
+  });
+});
+
+describe('preferDisconnectDesc', () => {
+  test('SET_ERROR_INFO no se pierde si despues llega Ultimatum', () => {
+    const err = 'TS_SET_ERROR_INFO errorInfo=0x00000003 (ERRINFO_IDLE_TIMEOUT)';
+    const ult = 'MCS Disconnect Provider Ultimatum (rn-user-requested)';
+    assert.equal(preferDisconnectDesc(err, ult), err);
+  });
+
+  test('Ultimatum se sustituye si despues llega SET_ERROR_INFO', () => {
+    const err = 'TS_SET_ERROR_INFO errorInfo=0x0000000c (ERRINFO_LOGOFF_BY_USER)';
+    const ult = 'MCS Disconnect Provider Ultimatum (rn-user-requested)';
+    assert.equal(preferDisconnectDesc(ult, err), err);
   });
 });
 

@@ -117,37 +117,67 @@ function formatCliprdrHealthLine(summary) {
     ` failed=${!!s.failed}${failBit}`;
 }
 
-function isUserOrOrderlyClose({ wsReadyState, reason, firstCloseSide, lastDisconnectDesc, userClosing } = {}) {
+function isUserOrOrderlyClose({ wsReadyState, reason, firstCloseSide, userClosing } = {}) {
   if (userClosing === true) return true;
+
+  const side = String(firstCloseSide || '').toLowerCase();
+  if (side.includes('websocket') || side.includes('wasm') || side.includes('ironrdp')) {
+    return true;
+  }
+  if (side.includes('servidor') || side.includes('tls') || side.includes('tcp')) {
+    return false;
+  }
+
   if (wsReadyState === WS_CLOSING || wsReadyState === WS_CLOSED) return true;
 
   const r = String(reason || '').toLowerCase();
   if (
-    r.includes('usuario') ||
-    r.includes('user') ||
+    r.includes('cerrado por el usuario') ||
     r.includes('tab') ||
     r.includes('websocket') ||
     r.includes('wasm')
   ) {
     return true;
   }
-
-  const side = String(firstCloseSide || '').toLowerCase();
-  if (side.includes('websocket') || side.includes('wasm') || side.includes('ironrdp')) {
-    return true;
-  }
-
-  const disc = String(lastDisconnectDesc || '');
-  if (
-    disc.includes('Disconnect Provider Ultimatum') ||
-    disc.includes('ERRINFO_LOGOFF_BY_USER') ||
-    disc.includes('ERRINFO_RPC_INITIATED_LOGOFF') ||
-    disc.includes('user-requested') ||
-    disc.includes('rn-user-requested')
-  ) {
-    return true;
-  }
   return false;
+}
+
+function formatRdpSessionCloseReason(reason, lastDisconnectDesc) {
+  const disc = String(lastDisconnectDesc || '');
+  if (disc.includes('ERRINFO_IDLE_TIMEOUT')) {
+    return 'Conexion cortada por inactividad o timeout';
+  }
+  if (disc.includes('ERRINFO_LOGON_TIMEOUT')) {
+    return 'Tiempo de inicio de sesion agotado';
+  }
+  if (disc.includes('ERRINFO_DISCONNECTED_BY_OTHER_CONNECTION')) {
+    return 'Sesion desplazada por otra conexion';
+  }
+  if (disc.includes('ERRINFO_LOGOFF_BY_USER') || disc.includes('ERRINFO_RPC_INITIATED_LOGOFF')) {
+    return 'Logoff en el sistema remoto';
+  }
+  if (disc.includes('ERRINFO_RPC_INITIATED_DISCONNECT') || disc.includes('Disconnect Provider Ultimatum')) {
+    return 'Cerrado por el servidor (desconexion ordenada)';
+  }
+
+  if (!reason) return 'Cerrado por el servidor remoto';
+  const r = String(reason);
+  if (r.includes('WebSocket') || r.includes('WASM') || r.includes('cerrado por el usuario') || r.includes('tab')) {
+    return 'Cerrado por el usuario';
+  }
+  if (r.includes('inactividad') || r.includes('idle') || r.includes('ETIMEDOUT') || r.includes('timeout')) {
+    return 'Conexion cortada por inactividad o timeout';
+  }
+  if (r.includes('ECONNRESET') || r.includes('EPIPE') || r.includes('reiniciada')) {
+    return 'Conexion cortada por el servidor remoto o la red (posible inactividad)';
+  }
+  if (r.includes('CLOSED') || r.includes('TLS socket closed') || r.includes('servidor remoto') || r.includes('FIN')) {
+    return 'Cerrado por el servidor remoto';
+  }
+  if (r.includes('ECONNREFUSED')) {
+    return 'Conexion rechazada por el servidor remoto';
+  }
+  return r;
 }
 
 function shouldDumpDisconnectDebug({ cliprdrFailed, isDebug } = {}) {
@@ -166,5 +196,6 @@ module.exports = {
   summarizeCliprdrHealth,
   formatCliprdrHealthLine,
   isUserOrOrderlyClose,
+  formatRdpSessionCloseReason,
   shouldDumpDisconnectDebug
 };

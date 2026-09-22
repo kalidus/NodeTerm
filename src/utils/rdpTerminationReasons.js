@@ -31,7 +31,9 @@ function mapTerminationReason(rawReason, backendReason, wasEverConnected = false
   if (
     combined.includes('logon timeout') ||
     combined.includes('logontimeout') ||
-    combined.includes('errinfo_logon_timeout')
+    combined.includes('errinfo_logon_timeout') ||
+    combined.includes('inicio de sesion agotado') ||
+    combined.includes('inicio de sesión agotado')
   ) {
     return {
       category: 'LOGON_TIMEOUT',
@@ -51,6 +53,7 @@ function mapTerminationReason(rawReason, backendReason, wasEverConnected = false
     combined.includes('errinfo_disconnected_by_otherconnection') ||
     combined.includes('another user') ||
     combined.includes('otra conexión') ||
+    combined.includes('otra conexion') ||
     combined.includes('otra sesion') ||
     combined.includes('otra sesión')
   ) {
@@ -65,7 +68,25 @@ function mapTerminationReason(rawReason, backendReason, wasEverConnected = false
     };
   }
 
-  // 4. Cierre ordenado por el usuario (Logoff de Windows / usuario final)
+  // 4. Cierre ordenado del servidor (MCS Ultimatum sin ERRINFO de logoff/idle)
+  if (
+    combined.includes('desconexion ordenada') ||
+    combined.includes('desconexión ordenada') ||
+    combined.includes('disconnect provider ultimatum') ||
+    combined.includes('rn-user-requested')
+  ) {
+    return {
+      category: 'SERVER_ORDERLY_DISCONNECT',
+      title: 'Sesion cerrada por el servidor remoto',
+      description: 'El servidor o el bastion ha finalizado la sesion RDP de forma ordenada (desconexion, politica o cierre remoto).',
+      suggestion: 'Puedes reconectarte o cerrar esta pestana.',
+      severity: 'info',
+      icon: 'pi pi-desktop',
+      badge: 'Servidor'
+    };
+  }
+
+  // 5. Cierre ordenado por el usuario (Logoff de Windows / pestana local)
   if (
     combined.includes('user initiated') ||
     combined.includes('userinitiated') ||
@@ -85,7 +106,7 @@ function mapTerminationReason(rawReason, backendReason, wasEverConnected = false
     };
   }
 
-  // 5. Reinicio o apagado del servidor remoto
+  // 6. Reinicio o apagado del servidor remoto
   if (
     combined.includes('shutdown') ||
     combined.includes('reboot') ||

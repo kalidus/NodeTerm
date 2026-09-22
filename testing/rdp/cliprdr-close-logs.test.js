@@ -9,6 +9,7 @@ const {
   summarizeCliprdrHealth,
   formatCliprdrHealthLine,
   isUserOrOrderlyClose,
+  formatRdpSessionCloseReason,
   shouldDumpDisconnectDebug,
   WS_CLOSED,
   WS_CLOSING
@@ -19,12 +20,12 @@ function desc(name, flags = 0) {
 }
 
 describe('isUserOrOrderlyClose', () => {
-  test('FIN de TLS con WS ya cerrado es cierre de usuario', () => {
+  test('FIN de TLS con WS ya cerrado no es cierre de usuario local', () => {
     assert.equal(isUserOrOrderlyClose({
       wsReadyState: WS_CLOSED,
       reason: 'Cerrado por el servidor remoto (FIN)',
       firstCloseSide: 'servidor RDP (FIN de TLS)'
-    }), true);
+    }), false);
   });
 
   test('WS en CLOSING tambien cuenta como cierre de usuario', () => {
@@ -41,20 +42,20 @@ describe('isUserOrOrderlyClose', () => {
     }), true);
   });
 
-  test('Disconnect Ultimatum user-requested es cierre ordenado', () => {
+  test('Disconnect Ultimatum del servidor no es cierre de usuario local', () => {
     assert.equal(isUserOrOrderlyClose({
       wsReadyState: 1,
       reason: 'Cerrado por el servidor remoto (FIN)',
       lastDisconnectDesc: 'MCS Disconnect Provider Ultimatum (rn-user-requested)'
-    }), true);
+    }), false);
   });
 
-  test('ERRINFO_LOGOFF_BY_USER es cierre ordenado', () => {
+  test('ERRINFO_LOGOFF_BY_USER no es cierre de pestana local', () => {
     assert.equal(isUserOrOrderlyClose({
       wsReadyState: 1,
       reason: 'Cerrado por el servidor remoto',
       lastDisconnectDesc: 'TS_SET_ERROR_INFO errorInfo=0x0000000c (ERRINFO_LOGOFF_BY_USER)'
-    }), true);
+    }), false);
   });
 
   test('FIN de TLS con WS abierto y sin PDU de logoff no es usuario', () => {
@@ -81,6 +82,48 @@ describe('isUserOrOrderlyClose', () => {
       lastDisconnectDesc: 'MCS Disconnect Provider Ultimatum (rn-provider-initiated)',
       userClosing: true
     }), true);
+  });
+});
+
+describe('formatRdpSessionCloseReason', () => {
+  test('Ultimatum del servidor es desconexion ordenada', () => {
+    assert.equal(
+      formatRdpSessionCloseReason(
+        'Cerrado por el servidor remoto (FIN)',
+        'MCS Disconnect Provider Ultimatum (rn-user-requested)'
+      ),
+      'Cerrado por el servidor (desconexion ordenada)'
+    );
+  });
+
+  test('ERRINFO_IDLE_TIMEOUT es inactividad', () => {
+    assert.equal(
+      formatRdpSessionCloseReason(
+        'Cerrado por el servidor remoto (FIN)',
+        'TS_SET_ERROR_INFO errorInfo=0x00000003 (ERRINFO_IDLE_TIMEOUT)'
+      ),
+      'Conexion cortada por inactividad o timeout'
+    );
+  });
+
+  test('ERRINFO_LOGOFF_BY_USER es logoff remoto', () => {
+    assert.equal(
+      formatRdpSessionCloseReason(
+        'Cerrado por el servidor remoto',
+        'TS_SET_ERROR_INFO errorInfo=0x0000000c (ERRINFO_LOGOFF_BY_USER)'
+      ),
+      'Logoff en el sistema remoto'
+    );
+  });
+
+  test('ERRINFO_DISCONNECTED_BY_OTHER_CONNECTION es sesion desplazada', () => {
+    assert.equal(
+      formatRdpSessionCloseReason(
+        'Cerrado por el servidor remoto',
+        'TS_SET_ERROR_INFO errorInfo=0x00000005 (ERRINFO_DISCONNECTED_BY_OTHER_CONNECTION)'
+      ),
+      'Sesion desplazada por otra conexion'
+    );
   });
 });
 

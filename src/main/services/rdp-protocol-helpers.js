@@ -186,6 +186,15 @@ function describeDisconnectPdu(buf) {
   return null;
 }
 
+function preferDisconnectDesc(current, next) {
+  if (!next) return current || null;
+  if (!current) return next;
+  const currentIsErrInfo = current.includes('TS_SET_ERROR_INFO') || current.includes('ERRINFO_');
+  const nextIsUltimatum = next.includes('Disconnect Provider Ultimatum');
+  if (currentIsErrInfo && nextIsUltimatum) return current;
+  return next;
+}
+
 function describeRdpPdu(buf) {
   if (!Buffer.isBuffer(buf) || buf.length === 0) return 'empty';
 
@@ -680,6 +689,7 @@ module.exports = {
   parseX224ConnectionConfirm,
   describeRdpPdu,
   describeDisconnectPdu,
+  preferDisconnectDesc,
   splitRdpFrames,
   splitTpktFrames,
   RdpStreamDeframer,
