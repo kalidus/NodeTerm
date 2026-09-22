@@ -41,6 +41,10 @@ const {
   hasCliprdrFailure,
   summarizeCliprdrHealth,
   formatCliprdrHealthLine,
+  cliprdrLiveHint,
+  cliprdrWatchKind,
+  formatCliprdrWatchTimeout,
+  CLIPRDR_WATCH_MS,
   isUserOrOrderlyClose,
   formatRdpSessionCloseReason,
   shouldDumpDisconnectDebug
@@ -366,14 +370,53 @@ class RdpNativeBridgeService extends EventEmitter {
     const RECENT_CLIPRDR_WINDOW = 25;
     let firstCloseSide = null;
     let lastDisconnectDesc = null;
+    let cliprdrWatchTimer = null;
 
-    const recordCliprdrEvent = (msg) => {
+    const clearCliprdrWatch = () => {
+      if (cliprdrWatchTimer) {
+        clearTimeout(cliprdrWatchTimer);
+        cliprdrWatchTimer = null;
+      }
+    };
+
+    const armCliprdrWatch = () => {
+      clearCliprdrWatch();
+      const kind = cliprdrWatchKind(channelFilter);
+      if (!kind) return;
+      cliprdrWatchTimer = setTimeout(() => {
+        cliprdrWatchTimer = null;
+        if (cliprdrWatchKind(channelFilter) !== kind) return;
+        const line = formatCliprdrWatchTimeout(kind);
+        if (!line) return;
+        const ts = new Date().toISOString().slice(11, 19);
+        recentCliprdrEvents.push(`[${ts}] [Bridge] ${line}`);
+        if (recentCliprdrEvents.length > RECENT_CLIPRDR_WINDOW) {
+          recentCliprdrEvents.shift();
+        }
+        console.warn(`[Bridge] ${line}`);
+      }, CLIPRDR_WATCH_MS);
+    };
+
+    const recordCliprdrEvent = (msg, opts = {}) => {
       const ts = new Date().toISOString().slice(11, 19);
       recentCliprdrEvents.push(`[${ts}] ${msg}`);
       if (recentCliprdrEvents.length > RECENT_CLIPRDR_WINDOW) {
         recentCliprdrEvents.shift();
       }
-      noteCliprdrHealth(channelFilter, msg);
+      noteCliprdrHealth(channelFilter, msg, opts);
+      if (opts.skipWatch) return;
+      const hint = cliprdrLiveHint(msg, opts);
+      if (hint) {
+        if (!channelFilter.loggedCliprdrLiveHints) {
+          channelFilter.loggedCliprdrLiveHints = new Set();
+        }
+        const already = hint.once && channelFilter.loggedCliprdrLiveHints.has(hint.kind);
+        if (hint.once) channelFilter.loggedCliprdrLiveHints.add(hint.kind);
+        if (!already) {
+          console.warn(`[Bridge] ${hint.message}`);
+        }
+      }
+      armCliprdrWatch();
     };
 
     const trafficStats = createTrafficStats((line) => {
@@ -401,6 +444,7 @@ class RdpNativeBridgeService extends EventEmitter {
     const cleanup = (reason = 'Cerrado por el usuario', closeCode = 1000) => {
       if (isCleanedUp) return;
       isCleanedUp = true;
+      clearCliprdrWatch();
       const userInitiated = isUserOrOrderlyClose({
         wsReadyState: ws.readyState,
         reason,
@@ -419,16 +463,15 @@ class RdpNativeBridgeService extends EventEmitter {
 
       if (userInitiated && !clipboardFailed && !isDebug) {
         console.log(`🧹 [RdpNativeBridgeService] Sesion RDP finalizada (${formattedReason}) [toRdp=${framesToRdp}, fromRdp=${framesFromRdp}]`);
-      } else if (!clipboardFailed && !isDebug) {
-        console.warn(`⚠️ [RdpNativeBridgeService] Desconexion (${formattedReason}) [toRdp=${framesToRdp} (${bytesToRdp}B), fromRdp=${framesFromRdp} (${bytesFromRdp}B)]`);
       } else if (clipboardFailed) {
         console.warn(`⚠️ [RdpNativeBridgeService] Fallo de clipboard al cerrar (${formattedReason}) [toRdp=${framesToRdp} (${bytesToRdp}B), fromRdp=${framesFromRdp} (${bytesFromRdp}B)]`);
-        console.warn(`🔎 [Bridge] ${clipSummary}`);
+      } else if (!isDebug) {
+        console.warn(`⚠️ [RdpNativeBridgeService] Desconexion (${formattedReason}) [toRdp=${framesToRdp} (${bytesToRdp}B), fromRdp=${framesFromRdp} (${bytesFromRdp}B)]`);
       } else {
         console.warn(`⚠️ [RdpNativeBridgeService] Desconexion anomala detectada (${formattedReason}) [toRdp=${framesToRdp} (${bytesToRdp}B), fromRdp=${framesFromRdp} (${bytesFromRdp}B)]`);
         console.warn(`🔎 [Bridge] Primer extremo en cerrar: ${firstCloseSide || 'desconocido'}`);
-        console.warn(`🔎 [Bridge] ${clipSummary}`);
       }
+      console.warn(`[Bridge] ${clipSummary}`);
 
       if (dump.cliprdr && recentCliprdrEvents.length) {
         console.warn(`🔎 [Bridge] Ultimos ${recentCliprdrEvents.length} eventos de portapapeles:`);
@@ -686,7 +729,7 @@ class RdpNativeBridgeService extends EventEmitter {
                       ? ` <-ch=${processed.serverChannelId}`
                       : '';
                     const clipLog = `📥 cliprdr ch=${processed.channelId}${via} ${processed.cliprdrDesc || 'PDU'}`;
-                    recordCliprdrEvent(clipLog);
+                    recordCliprdrEvent(clipLog, { inbound: true });
                     if (isDebug) {
                       console.log(`📋 ${clipLog}`);
                     }
@@ -1203,7 +1246,7 @@ class RdpNativeBridgeService extends EventEmitter {
     if (isClip && !isCliprdrFragmentDesc(clipDesc) && shouldRecordMutedClientCliprdr(channelFilter, clipDesc)) {
       const wasmMsg = `📤 cliprdr ch=${parsed.channelId} ${clipDesc}`;
       if (typeof channelFilter.recordCliprdr === 'function') {
-        channelFilter.recordCliprdr(wasmMsg);
+        channelFilter.recordCliprdr(wasmMsg, { inbound: false });
       }
       if (rdpDebug()) {
         console.log(`📋 ${wasmMsg}`);

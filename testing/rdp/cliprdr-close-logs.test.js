@@ -8,6 +8,9 @@ const {
   hasCliprdrFailure,
   summarizeCliprdrHealth,
   formatCliprdrHealthLine,
+  cliprdrLiveHint,
+  cliprdrWatchKind,
+  formatCliprdrWatchTimeout,
   isUserOrOrderlyClose,
   formatRdpSessionCloseReason,
   shouldDumpDisconnectDebug,
@@ -15,8 +18,8 @@ const {
   WS_CLOSING
 } = require('../../src/main/services/rdp-cliprdr-health');
 
-function desc(name, flags = 0) {
-  return `[ChanHdr len=12 flags=0x13] ${name} (flags=0x${flags.toString(16)}, dataLen=4, payloadLen=12B)`;
+function desc(name, flags = 0, dataLen = 4) {
+  return `[ChanHdr len=12 flags=0x13] ${name} (flags=0x${flags.toString(16)}, dataLen=${dataLen}, payloadLen=12B)`;
 }
 
 describe('isUserOrOrderlyClose', () => {
@@ -255,5 +258,87 @@ describe('noteCliprdrHealth / hasCliprdrFailure', () => {
       '[ChanHdr len=24 flags=0x2] CB_FORMAT_DATA_RESPONSE (flags=0x1, dataLen=16, payloadLen=24B)'
     );
     assert.equal(hasCliprdrFailure(state), false);
+  });
+
+  test('FORMAT_LIST servidor sin DATA_REQUEST es fallo no_data_request', () => {
+    const state = createChannelFilterState();
+    state.cliprdrWriteChannelId = 1004;
+    state.cliprdrServerReady = true;
+    noteCliprdrHealth(state, desc('CB_FORMAT_LIST', 0, 64), { inbound: true });
+    noteCliprdrHealth(state, desc('CB_FORMAT_LIST_RESPONSE', 0x1, 0));
+    assert.equal(hasCliprdrFailure(state), true);
+    const summary = summarizeCliprdrHealth(state);
+    assert.equal(summary.failReason, 'no_data_request');
+    assert.equal(summary.listIn, 1);
+    assert.equal(summary.req, 0);
+    assert.match(formatCliprdrHealthLine(summary), /reason=no_data_request/);
+    assert.equal(cliprdrWatchKind(state), 'list');
+  });
+
+  test('FORMAT_LIST servidor + REQUEST + RESPONSE con datos no es fallo', () => {
+    const state = createChannelFilterState();
+    state.cliprdrWriteChannelId = 1004;
+    state.cliprdrServerReady = true;
+    noteCliprdrHealth(state, desc('CB_FORMAT_LIST', 0, 64), { inbound: true });
+    noteCliprdrHealth(state, desc('CB_FORMAT_LIST_RESPONSE', 0x1, 0));
+    noteCliprdrHealth(state, desc('CB_FORMAT_DATA_REQUEST'));
+    noteCliprdrHealth(state, desc('CB_FORMAT_DATA_RESPONSE', 0x1, 16));
+    assert.equal(hasCliprdrFailure(state), false);
+    const summary = summarizeCliprdrHealth(state);
+    assert.equal(summary.failReason, null);
+    assert.equal(summary.listIn, 1);
+    assert.equal(summary.req, 1);
+    assert.equal(summary.resp, 1);
+    assert.equal(cliprdrWatchKind(state), null);
+  });
+
+  test('FORMAT_DATA_RESPONSE vacia es fallo empty_response', () => {
+    const state = createChannelFilterState();
+    state.cliprdrWriteChannelId = 1004;
+    noteCliprdrHealth(state, desc('CB_FORMAT_DATA_REQUEST'));
+    noteCliprdrHealth(state, desc('CB_FORMAT_DATA_RESPONSE', 0x1, 0));
+    assert.equal(hasCliprdrFailure(state), true);
+    const summary = summarizeCliprdrHealth(state);
+    assert.equal(summary.failReason, 'empty_response');
+    assert.match(formatCliprdrHealthLine(summary), /reason=empty_response/);
+  });
+
+  test('FORMAT_LIST del cliente no cuenta como listIn', () => {
+    const state = createChannelFilterState();
+    state.cliprdrWriteChannelId = 1004;
+    noteCliprdrHealth(state, desc('CB_FORMAT_LIST', 0, 6), { inbound: false });
+    assert.equal(hasCliprdrFailure(state), false);
+    assert.equal(summarizeCliprdrHealth(state).listIn, 0);
+    assert.equal(cliprdrWatchKind(state), null);
+  });
+});
+
+describe('cliprdrLiveHint / watch', () => {
+  test('primer FORMAT_LIST del servidor es hint once', () => {
+    const hint = cliprdrLiveHint(desc('CB_FORMAT_LIST', 0, 64), { inbound: true });
+    assert.equal(hint.kind, 'server_list');
+    assert.equal(hint.once, true);
+    assert.match(hint.message, /dataLen=64/);
+  });
+
+  test('FORMAT_DATA_REQUEST y RESPONSE son hints en vivo', () => {
+    const req = cliprdrLiveHint(desc('CB_FORMAT_DATA_REQUEST'));
+    assert.equal(req.kind, 'data_request');
+    assert.equal(req.once, false);
+    const resp = cliprdrLiveHint(desc('CB_FORMAT_DATA_RESPONSE', 0x1, 16));
+    assert.equal(resp.kind, 'data_response');
+    assert.match(resp.message, /flags=0x1/);
+    assert.match(resp.message, /dataLen=16/);
+  });
+
+  test('CAPS y FORMAT_LIST del cliente no son hint', () => {
+    assert.equal(cliprdrLiveHint(desc('CB_CLIP_CAPS')), null);
+    assert.equal(cliprdrLiveHint(desc('CB_FORMAT_LIST', 0, 6), { inbound: false }), null);
+  });
+
+  test('mensajes de timeout identifican list y request', () => {
+    assert.match(formatCliprdrWatchTimeout('list'), /FORMAT_LIST/);
+    assert.match(formatCliprdrWatchTimeout('request'), /FORMAT_DATA_REQUEST/);
+    assert.equal(formatCliprdrWatchTimeout('other'), null);
   });
 });
