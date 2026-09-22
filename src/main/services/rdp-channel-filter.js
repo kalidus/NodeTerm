@@ -25,6 +25,7 @@ const { handleRailRequest } = require('./rdp-rail');
 const TPKT_X224_MCS_HEADER = 8;
 const CHANNEL_FLAG_FIRST = 0x01;
 const CHANNEL_FLAG_LAST = 0x02;
+const CHANNEL_FLAG_SHOW_PROTOCOL = 0x10;
 const MCS_SEND_DATA_INDICATION = 0x68;
 const MCS_CHANNEL_JOIN_CONFIRM = 0x3e;
 const SC_NET = 0x0c03;
@@ -117,7 +118,13 @@ function describeCliprdrPdu(userData) {
   const msgFlags = payload.readUInt16LE(2);
   const dataLen = payload.length >= 8 ? payload.readUInt32LE(4) : 0;
   const name = CLIPRDR_MSG_NAMES[msgType] || `msgType=0x${msgType.toString(16)}`;
-  return `${chanHdr}${name} (flags=0x${msgFlags.toString(16)}, dataLen=${dataLen}, payloadLen=${payload.length}B)`;
+  let extra = '';
+  // CB_CLIP_CAPS con un solo General Capability Set: generalFlags queda en el
+  // offset 20 del payload (cabecera cliprdr 8 + cSets/pad 4 + type/len/version 8).
+  if (msgType === 0x0007 && payload.length >= 24) {
+    extra = ` generalFlags=0x${payload.readUInt32LE(20).toString(16)}`;
+  }
+  return `${chanHdr}${name} (flags=0x${msgFlags.toString(16)}, dataLen=${dataLen}, payloadLen=${payload.length}B)${extra}`;
 }
 
 function isCliprdrHeader(userData) {
@@ -166,6 +173,17 @@ function createChannelFilterState() {
     unsafeCliprdrFragmentOpen: false,
     drdynvcChannelId: null,
     cliprdrServerReady: false,
+    // El selector de Wallix completa un cliprdr y, al elegir maquina, repite
+    // CB_MONITOR_READY en la misma conexion. IronRDP ya esta en Ready y no
+    // reenvia CAPS. Se guarda el primer handshake del cliente para repetirlo.
+    cliprdrMonitorReadyCount: 0,
+    cliprdrServerChannelFlags: null,
+    cliprdrRehandshakePending: false,
+    cachedClientCaps: null,
+    cachedClientTempDir: null,
+    cachedClientFormatList: null,
+    cliprdrServerGeneralFlags: null,
+    cliprdrMuteClientFormatList: false,
     clientInitiator: 0,
     droppedCount: 0,
     droppedByChannel: Object.create(null),
@@ -490,10 +508,171 @@ function claimCliprdrPdu(state, channelId, userData) {
   return true;
 }
 
+function readChannelPduFlags(userData) {
+  if (!isChannelPduHeader(userData) || userData.length < 8) return null;
+  return userData.readUInt32LE(4);
+}
+
+// Solo CB_MONITOR_READY cuenta como saludo. CB_CLIP_CAPS llega en el mismo
+// par y no debe abrir una generacion nueva.
+// MS-RDPECLIP 2.2.2.1. Sin este bit IronRDP hace downgrade y pierde file clip y lock.
+const CB_STREAM_FILECLIP_ENABLED = 0x0004;
+
+function cliprdrOffersFileClip(flags) {
+  return ((flags >>> 0) & CB_STREAM_FILECLIP_ENABLED) !== 0;
+}
+
+function noteServerCliprdrCaps(state, userData) {
+  if (!state || !Buffer.isBuffer(userData) || !isChannelPduHeader(userData)) return;
+  const payload = userData.subarray(CHANNEL_PDU_HEADER_LEN);
+  if (payload.length < 24 || payload.readUInt16LE(0) !== 0x0007) return;
+  state.cliprdrServerGeneralFlags = payload.readUInt32LE(20);
+}
+
+function noteServerCliprdrMonitorReady(state, userData) {
+  if (!state) return;
+  const desc = describeCliprdrPdu(userData);
+  if (!desc || !desc.includes('CB_MONITOR_READY')) return;
+  state.cliprdrMonitorReadyCount = (state.cliprdrMonitorReadyCount || 0) + 1;
+  const flags = readChannelPduFlags(userData);
+  if (flags != null) state.cliprdrServerChannelFlags = flags;
+  if (state.cliprdrMonitorReadyCount >= 2) state.cliprdrRehandshakePending = true;
+}
+
+// El segundo saludo del selector no trae SHOW_PROTOCOL. Los PDU del cliente
+// de esa generacion tienen que salir igual, aunque el write path sea un VC
+// estatico alineado (rdpsnd) y isBastion quede en falso.
+function cliprdrMustDropShowProtocol(state) {
+  if (!state || (state.cliprdrMonitorReadyCount || 0) < 2) return false;
+  if (state.cliprdrServerChannelFlags == null) return false;
+  return (state.cliprdrServerChannelFlags & CHANNEL_FLAG_SHOW_PROTOCOL) === 0;
+}
+
+function rememberClientCliprdrHandshake(state, desc, frame) {
+  if (!state || !Buffer.isBuffer(frame) || typeof desc !== 'string') return;
+  if (desc.includes('CB_CLIP_CAPS')) {
+    if (!state.cachedClientCaps) state.cachedClientCaps = Buffer.from(frame);
+    return;
+  }
+  if (desc.includes('CB_TEMP_DIRECTORY')) {
+    if (!state.cachedClientTempDir) state.cachedClientTempDir = Buffer.from(frame);
+    return;
+  }
+  if (desc.includes('CB_FORMAT_LIST') && !desc.includes('CB_FORMAT_LIST_RESPONSE')) {
+    if (!state.cachedClientFormatList) state.cachedClientFormatList = Buffer.from(frame);
+  }
+}
+
+function setChannelPduFlags(buf, flags) {
+  const parsed = parseMcsSendData(buf);
+  if (!parsed || readChannelPduFlags(parsed.userData) == null) return null;
+  const flagsOffset = parsed.dataOff + 4;
+  if (buf.length < flagsOffset + 4) return null;
+  const out = Buffer.from(buf);
+  out.writeUInt32LE(flags >>> 0, flagsOffset);
+  return out;
+}
+
+// CB_CLIP_CAPS: ChannelPDU(8) + ClipHdr(8) + cSets/pad(4) + type/len/version(8) + generalFlags.
+function patchClientCapsGeneralFlags(frame, generalFlags) {
+  if (!Buffer.isBuffer(frame) || generalFlags == null) return null;
+  const parsed = parseMcsSendData(frame);
+  if (!parsed || !isChannelPduHeader(parsed.userData)) return null;
+  const payloadOff = parsed.dataOff + CHANNEL_PDU_HEADER_LEN;
+  if (frame.length < payloadOff + 24) return null;
+  if (frame.readUInt16LE(payloadOff) !== 0x0007) return null;
+  const out = Buffer.from(frame);
+  out.writeUInt32LE(generalFlags >>> 0, payloadOff + 20);
+  return out;
+}
+
+function applyCliprdrReplayFrame(frame, writeCh, flags) {
+  let out = Buffer.from(frame);
+  if (writeCh != null) {
+    const rewritten = rewriteMcsChannelId(out, writeCh);
+    if (rewritten) out = rewritten;
+  }
+  if (flags != null) {
+    const flagged = setChannelPduFlags(out, flags);
+    if (flagged) out = flagged;
+  }
+  return out;
+}
+
+// El selector completo el handshake con flags 0x13 y generalFlags=0x2. La maquina
+// saluda con 0x3 / 0x3e. Se repite solo CAPS (+ TEMPDIR) hacia el servidor; el
+// MONITOR_READY se reenvia a IronRDP para que forceClipboardUpdate anuncie el
+// portapapeles local real (si se traga el READY, la Format List queda vacia y
+// el pegado no funciona aunque el servidor acuse).
+// Solo si hay write path estatico seguro: escribir en 1004 tras un saludo por
+// 1001 cierra el TLS (Wallix).
+function takeCliprdrRehandshake(state) {
+  if (!state || !state.cliprdrRehandshakePending) return [];
+  state.cliprdrRehandshakePending = false;
+  if (!Buffer.isBuffer(state.cachedClientCaps)) return [];
+  const writeCh = state.cliprdrWriteChannelId;
+  if (!isSafeStaticCliprdrWrite(state, writeCh)) {
+    state.cliprdrRehandshakeSkippedUnsafe = true;
+    return [];
+  }
+  const flags = CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST | CHANNEL_FLAG_SHOW_PROTOCOL;
+  const frames = [];
+  for (const cached of [state.cachedClientCaps, state.cachedClientTempDir]) {
+    if (!Buffer.isBuffer(cached)) continue;
+    frames.push(applyCliprdrReplayFrame(cached, writeCh, flags));
+  }
+  return frames;
+}
+
 function buildCliprdrResult(state, buf, channelId, userData) {
   const desc = describeCliprdrPdu(userData);
   if (desc && (desc.includes('CB_MONITOR_READY') || desc.includes('CB_CLIP_CAPS'))) {
     state.cliprdrServerReady = true;
+  }
+  if (desc && desc.includes('CB_CLIP_CAPS')) {
+    noteServerCliprdrCaps(state, userData);
+  }
+  if (desc && desc.includes('CB_MONITOR_READY')) {
+    noteServerCliprdrMonitorReady(state, userData);
+  }
+
+  // El selector saluda por un VC que no se llama cliprdr (rdpdr, rdpsnd) y solo
+  // ofrece generalFlags=0x2. Si IronRDP aplica ese CAPS, el downgrade es
+  // permanente: el 0x3e de la maquina ya no recupera file clip ni lock.
+  const capsName = state.channelIdToName instanceof Map
+    ? state.channelIdToName.get(channelId)
+    : null;
+  const misnamedClip = capsName != null && capsName !== 'cliprdr';
+  const isCaps = desc && desc.includes('CB_CLIP_CAPS');
+  const firstGen = (state.cliprdrMonitorReadyCount || 0) < 1;
+  if (isCaps && firstGen && misnamedClip && !cliprdrOffersFileClip(state.cliprdrServerGeneralFlags)) {
+    state.cliprdrDeferWeakCaps = true;
+    return {
+      forward: null,
+      replies: [],
+      dropped: true,
+      note: `cliprdr-defer-weak-caps: ${desc}`,
+      channelId: state.cliprdrChannelId,
+      serverChannelId: channelId,
+      isCliprdr: true,
+      cliprdrDesc: desc
+    };
+  }
+
+  // Un segundo CAPS sin file clip no aporta. El de la maquina (0x3e) si: IronRDP
+  // aun conserva sus flags si el del selector no se le entrego.
+  const secondGenCaps = isCaps && (state.cliprdrMonitorReadyCount || 0) >= 1;
+  if (secondGenCaps && !cliprdrOffersFileClip(state.cliprdrServerGeneralFlags)) {
+    return {
+      forward: null,
+      replies: [],
+      dropped: true,
+      note: `cliprdr-swallow-2nd-gen: ${desc}`,
+      channelId: state.cliprdrChannelId,
+      serverChannelId: channelId,
+      isCliprdr: true,
+      cliprdrDesc: desc
+    };
   }
 
   const remapped = channelId !== state.cliprdrChannelId
@@ -724,6 +903,11 @@ module.exports = {
   confirmCliprdrWriteChannel,
   enqueueClientCliprdr,
   takePendingClientCliprdr,
+  noteServerCliprdrMonitorReady,
+  cliprdrMustDropShowProtocol,
+  rememberClientCliprdrHandshake,
+  patchClientCapsGeneralFlags,
+  takeCliprdrRehandshake,
   filterServerFrame,
   processServerFrame
 };

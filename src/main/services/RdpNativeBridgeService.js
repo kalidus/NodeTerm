@@ -27,7 +27,10 @@ const {
   isUserMcsChannel,
   isSafeStaticCliprdrWrite,
   enqueueClientCliprdr,
-  takePendingClientCliprdr
+  takePendingClientCliprdr,
+  rememberClientCliprdrHandshake,
+  patchClientCapsGeneralFlags,
+  takeCliprdrRehandshake
 } = require('./rdp-channel-filter');
 const {
   parseMcsSendData,
@@ -163,7 +166,9 @@ function allowUserChannelCliprdr() {
 function isNoisyDrop(note) {
   return typeof note === 'string' &&
     (note.includes('heartbeat') || note.includes('rdpdr-absorb') || note.includes('rdpdr-user-loggedon')
-      || note.includes('rail-absorb') || note.includes('rail-handshake'));
+      || note.includes('rail-absorb') || note.includes('rail-handshake')
+      || note.includes('cliprdr-swallow-2nd-gen')
+      || note.includes('cliprdr-defer-weak-caps'));
 }
 
 function createTrafficStats(emit) {
@@ -668,6 +673,46 @@ class RdpNativeBridgeService extends EventEmitter {
                       category: 'cliprdr',
                       message: clipLog
                     });
+                    if (processed.note && processed.note.includes('cliprdr-defer-weak-caps')
+                        && !channelFilter.loggedCliprdrDeferWeakCaps) {
+                      channelFilter.loggedCliprdrDeferWeakCaps = true;
+                      const deferMsg = '[Bridge Clipboard] CB_CLIP_CAPS del selector no se entrega a IronRDP ' +
+                        `(generalFlags=0x${(channelFilter.cliprdrServerGeneralFlags || 0).toString(16)} sin file clip)`;
+                      recordCliprdrEvent(deferMsg);
+                      if (isDebug) console.log(deferMsg);
+                      this.emit('diagnostic-log', { category: 'cliprdr', message: deferMsg });
+                    }
+                    // Segundo MONITOR_READY: CAPS(+TEMPDIR) al servidor antes de
+                    // reenviar el READY a WASM (forceClipboardUpdate / Format List real).
+                    if (processed.cliprdrDesc && processed.cliprdrDesc.includes('CB_MONITOR_READY')
+                        && (channelFilter.cliprdrMonitorReadyCount || 0) >= 2) {
+                      const replay = takeCliprdrRehandshake(channelFilter);
+                      if (replay.length && tlsSocket && tlsSocket.writable) {
+                        for (const pdu of replay) {
+                          bytesToRdp += pdu.length;
+                          tlsSocket.write(pdu);
+                          const parsedReplay = parseMcsSendData(pdu);
+                          const replayDesc = parsedReplay
+                            ? describeCliprdrPdu(parsedReplay.userData)
+                            : 'PDU';
+                          const replayCh = parsedReplay
+                            ? parsedReplay.channelId
+                            : channelFilter.cliprdrWriteChannelId;
+                          const replayMsg = `[Bridge Clipboard] rehandshake cliprdr ch=${replayCh} ${replayDesc}`;
+                          recordCliprdrEvent(replayMsg);
+                          if (isDebug) console.log(replayMsg);
+                          this.emit('diagnostic-log', { category: 'cliprdr', message: replayMsg });
+                        }
+                      } else if (!replay.length && !channelFilter.loggedCliprdrRehandshakeMiss) {
+                        channelFilter.loggedCliprdrRehandshakeMiss = true;
+                        const missMsg = channelFilter.cliprdrRehandshakeSkippedUnsafe
+                          ? '[Bridge Clipboard] segundo CB_MONITOR_READY sin write path seguro (saludo por canal de usuario)'
+                          : '[Bridge Clipboard] segundo CB_MONITOR_READY sin CAPS de cliente en cache';
+                        recordCliprdrEvent(missMsg);
+                        console.warn(missMsg);
+                        this.emit('diagnostic-log', { category: 'cliprdr', message: missMsg });
+                      }
+                    }
                   }
                   if (processed.dropped && (isDebug || !isNoisyDrop(processed.note))) {
                     const note = String(processed.note || '').replace(/ hex=[0-9a-f]+/i, '');
@@ -949,6 +994,9 @@ class RdpNativeBridgeService extends EventEmitter {
     const keepClientCaps = isUserMcsChannel(channelFilter, dest)
       || (channelFilter.ioChannelId != null && dest === channelFilter.ioChannelId);
     const inject = [];
+    // Aunque no se escriba en 1001, hay que cachear el handshake por si mas
+    // tarde se confirma un VC estatico (o un segundo MONITOR_READY del selector).
+    if (clipDesc) rememberClientCliprdrHandshake(channelFilter, clipDesc, frame);
     if (!channelFilter.loggedCliprdrMisaligned) {
       channelFilter.loggedCliprdrMisaligned = true;
       const csNet = Array.isArray(channelFilter.clientChannelNames)
@@ -1247,18 +1295,46 @@ class RdpNativeBridgeService extends EventEmitter {
       }
     }
 
-    // IronRDP marca CHANNEL_FLAG_SHOW_PROTOCOL (flags=0x13) mientras el bastion emite 0x03.
-    // Solo se limpia al escribir en el canal del bastion. Si el PDU se queda en el canal
-    // negociado (1004), 0x13 es el encuadre correcto de un cliente normal.
-    if (isBastion && canRemap) {
+    // IronRDP marca CHANNEL_FLAG_SHOW_PROTOCOL (flags=0x13). En el salto del
+    // selector la maquina saluda con 0x3, pero solo acusa el FORMAT_LIST si el
+    // cliente mantiene 0x13 (el mismo encuadre que CAPS y TEMPDIR). Limpiar el
+    // flag aqui deja la lista en 0x3 y no hay CB_FORMAT_LIST_RESPONSE.
+    const dropShowProtocol = isBastion && canRemap;
+    if (dropShowProtocol) {
       const cleaned = clearChannelPduShowProtocol(out, parsed.dataOff);
       if (cleaned) {
         out = cleaned;
         if (rdpDebug()) {
-          const flagMsg = '📤 [Bridge] CHANNEL_FLAG_SHOW_PROTOCOL limpiado en cliprdr WASM->RDP (bastión)';
+          const flagMsg = '[Bridge] CHANNEL_FLAG_SHOW_PROTOCOL limpiado en cliprdr WASM->RDP (bastion)';
           console.log(flagMsg);
           this.emit('diagnostic-log', { category: 'cliprdr', message: flagMsg });
         }
+      }
+    }
+
+    if (out && clipDesc && clipDesc.includes('CB_CLIP_CAPS') && channelFilter.cliprdrDeferWeakCaps
+        && !channelFilter.cliprdrClientCapsWirePatched) {
+      rememberClientCliprdrHandshake(channelFilter, clipDesc, out);
+      const patched = patchClientCapsGeneralFlags(out, channelFilter.cliprdrServerGeneralFlags);
+      if (patched) {
+        out = patched;
+        channelFilter.cliprdrClientCapsWirePatched = true;
+        const patchMsg = '[Bridge Clipboard] CB_CLIP_CAPS hacia el selector recortado a generalFlags=0x' +
+          `${(channelFilter.cliprdrServerGeneralFlags || 0).toString(16)} (la copia para la maquina conserva file clip)`;
+        if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(patchMsg);
+        if (rdpDebug()) console.log(patchMsg);
+        this.emit('diagnostic-log', { category: 'cliprdr', message: patchMsg });
+      }
+    }
+
+    if (out && clipDesc) {
+      rememberClientCliprdrHandshake(channelFilter, clipDesc, out);
+      const parsedOut = parseMcsSendData(out);
+      const outDesc = parsedOut ? describeCliprdrPdu(parsedOut.userData) : null;
+      if (outDesc && outDesc !== clipDesc && typeof channelFilter.recordCliprdr === 'function') {
+        const sentMsg = `📤 cliprdr ch=${parsedOut.channelId} ${outDesc}`;
+        channelFilter.recordCliprdr(sentMsg);
+        if (rdpDebug()) console.log(sentMsg);
       }
     }
 

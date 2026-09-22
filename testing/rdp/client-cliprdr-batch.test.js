@@ -422,6 +422,27 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     assert.equal(kept.injected.length, 0);
   });
 
+  test('segunda generacion del selector: FORMAT_LIST conserva flags 0x13 y no sintetiza ACK', () => {
+    const state = {
+      ioChannelId: IO_CH,
+      cliprdrChannelId: CLIPRDR_CH,
+      serverCliprdrChannelId: 1005,
+      cliprdrWriteChannelId: 1005,
+      cliprdrServerReady: true,
+      cliprdrMonitorReadyCount: 2,
+      cliprdrServerChannelFlags: 0x03,
+      allowed: new Set([1003, 1004, 1005]),
+      channelIdToName: new Map([[1004, 'cliprdr'], [1005, 'rdpsnd']])
+    };
+
+    const kept = filterBatch(service, buildClipFrame(CLIPRDR_CH, CB_FORMAT_LIST, Buffer.alloc(6)), state);
+
+    assert.equal(kept.length, 1);
+    assert.equal(parseMcsSendData(kept[0]).channelId, 1005);
+    assert.equal(chanFlags(kept[0]) & CHANNEL_FLAG_SHOW_PROTOCOL, CHANNEL_FLAG_SHOW_PROTOCOL);
+    assert.equal(kept.injected.length, 0, 'WASM ya esta en Ready; no se sintetiza el acuse');
+  });
+
   test('descartar el CB_CLIP_CAPS no se lleva por delante el resto del lote', () => {
     process.env.NODETERM_RDP_CLIPRDR_DROP_CLIENT_CAPS = '1';
 

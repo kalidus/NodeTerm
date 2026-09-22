@@ -6,7 +6,10 @@ const {
   createChannelFilterState,
   processServerFrame,
   describeCliprdrPdu,
-  isCliprdrHeader
+  isCliprdrHeader,
+  cliprdrMustDropShowProtocol,
+  rememberClientCliprdrHandshake,
+  takeCliprdrRehandshake
 } = require('../../src/main/services/rdp-channel-filter');
 const {
   CHANNEL_PDU_HEADER_LEN,
@@ -535,6 +538,147 @@ describe('CLIPRDR: robustez del filtro', () => {
     hdr.writeUInt32LE(0x81000003, 4); // bits 24..31 activos: no existen en MS-RDPBCGR 2.2.6.1.1
 
     assert.equal(isChannelPduHeader(hdr), false);
+  });
+
+  test('un CB_MONITOR_READY no arma el rehandshake', () => {
+    const state = stateWithCliprdr();
+    state.allowed = new Set([1003, 1004, 1005]);
+    state.channelIdToName = new Map([[1004, 'cliprdr'], [1005, 'rdpsnd']]);
+
+    const capsUser = buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16)), 0x13);
+    const caps = buildMcsIndication(1004, capsUser);
+    rememberClientCliprdrHandshake(state, describeCliprdrPdu(capsUser), caps);
+
+    const serverCaps = buildMcsIndication(1005, buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16)), 0x13));
+    processServerFrame(state, serverCaps);
+    const ready = buildMcsIndication(1005, buildChannelPdu(buildCliprdrPayload(1), 0x13));
+    processServerFrame(state, ready);
+
+    assert.equal(state.cliprdrMonitorReadyCount, 1);
+    assert.equal(state.cliprdrWriteChannelId, 1005);
+    assert.equal(state.cliprdrRehandshakePending, false);
+    assert.equal(cliprdrMustDropShowProtocol(state), false);
+    assert.deepEqual(takeCliprdrRehandshake(state), []);
+  });
+
+  test('el segundo MONITOR_READY reenvia a WASM y solo reescribe CAPS+TEMPDIR', () => {
+    const state = stateWithCliprdr();
+    state.allowed = new Set([1003, 1004, 1005]);
+    state.channelIdToName = new Map([[1004, 'cliprdr'], [1005, 'rdpsnd']]);
+
+    const capsPayload = Buffer.alloc(16);
+    capsPayload.writeUInt16LE(1, 0);
+    capsPayload.writeUInt16LE(1, 4);
+    capsPayload.writeUInt16LE(12, 6);
+    capsPayload.writeUInt32LE(2, 8);
+    capsPayload.writeUInt32LE(0x2, 12);
+    const capsUser = buildChannelPdu(buildCliprdrPayload(7, 0, capsPayload), 0x13);
+    const tempUser = buildChannelPdu(buildCliprdrPayload(6, 0, Buffer.alloc(520)), 0x13);
+    const listUser = buildChannelPdu(buildCliprdrPayload(2, 0, Buffer.alloc(6)), 0x13);
+    rememberClientCliprdrHandshake(state, describeCliprdrPdu(capsUser), buildMcsIndication(1004, capsUser));
+    rememberClientCliprdrHandshake(state, describeCliprdrPdu(tempUser), buildMcsIndication(1004, tempUser));
+    rememberClientCliprdrHandshake(state, describeCliprdrPdu(listUser), buildMcsIndication(1004, listUser));
+
+    const firstReady = processServerFrame(state, buildMcsIndication(1005, buildChannelPdu(buildCliprdrPayload(1), 0x13)));
+    assert.equal(firstReady.dropped, false);
+    assert.equal(state.cliprdrWriteChannelId, 1005);
+    assert.deepEqual(takeCliprdrRehandshake(state), []);
+
+    const machineCaps = Buffer.alloc(16);
+    machineCaps.writeUInt16LE(1, 0);
+    machineCaps.writeUInt16LE(1, 4);
+    machineCaps.writeUInt16LE(12, 6);
+    machineCaps.writeUInt32LE(2, 8);
+    machineCaps.writeUInt32LE(0x3e, 12);
+    const secondCaps = processServerFrame(
+      state,
+      buildMcsIndication(1005, buildChannelPdu(buildCliprdrPayload(7, 0, machineCaps), 0x03))
+    );
+    assert.equal(secondCaps.dropped, false);
+    assert.ok(secondCaps.forward);
+    assert.doesNotMatch(secondCaps.note, /swallow-2nd-gen/);
+
+    const secondReady = processServerFrame(
+      state,
+      buildMcsIndication(1005, buildChannelPdu(buildCliprdrPayload(1), 0x03))
+    );
+    assert.equal(secondReady.dropped, false);
+    assert.ok(secondReady.forward);
+    assert.equal(state.cliprdrServerGeneralFlags, 0x3e);
+
+    const replay = takeCliprdrRehandshake(state);
+    assert.equal(replay.length, 2);
+    assert.deepEqual(replay.map((frame) => parseMcsSendData(frame).userData.readUInt16LE(8)), [7, 6]);
+    for (const frame of replay) {
+      const parsed = parseMcsSendData(frame);
+      assert.equal(parsed.channelId, 1005);
+      assert.equal(parsed.userData.readUInt32LE(4), 0x13);
+    }
+    assert.equal(parseMcsSendData(replay[0]).userData.readUInt32LE(28), 0x2);
+    assert.deepEqual(takeCliprdrRehandshake(state), []);
+  });
+
+  test('el CAPS 0x2 del selector en rdpsnd no se entrega y el 0x3e de la maquina si', () => {
+    const state = stateWithCliprdr();
+    state.allowed = new Set([1003, 1004, 1005]);
+    state.channelIdToName = new Map([[1004, 'cliprdr'], [1005, 'rdpsnd']]);
+
+    const weak = Buffer.alloc(16);
+    weak.writeUInt16LE(1, 0);
+    weak.writeUInt16LE(1, 4);
+    weak.writeUInt16LE(12, 6);
+    weak.writeUInt32LE(2, 8);
+    weak.writeUInt32LE(0x2, 12);
+    const firstCaps = processServerFrame(
+      state,
+      buildMcsIndication(1005, buildChannelPdu(buildCliprdrPayload(7, 0, weak), 0x13))
+    );
+    assert.equal(firstCaps.dropped, true);
+    assert.match(firstCaps.note, /defer-weak-caps/);
+    assert.equal(state.cliprdrDeferWeakCaps, true);
+
+    const named = stateWithCliprdr();
+    named.allowed = new Set([1003, 1004]);
+    named.channelIdToName = new Map([[1004, 'cliprdr']]);
+    const direct = processServerFrame(
+      named,
+      buildMcsIndication(1004, buildChannelPdu(buildCliprdrPayload(7, 0, weak), 0x13))
+    );
+    assert.equal(direct.dropped, false);
+  });
+
+  test('rehandshake no escribe si el saludo fue por MCS 1001 sin write path', () => {
+    const state = stateWithCliprdr();
+    state.allowed = new Set([1003, 1004, 1005]);
+    state.channelIdToName = new Map([[1004, 'cliprdr'], [1005, 'rdpsnd']]);
+
+    const capsUser = buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16)), 0x13);
+    rememberClientCliprdrHandshake(state, describeCliprdrPdu(capsUser), buildMcsIndication(1004, capsUser));
+
+    processServerFrame(state, buildMcsIndication(1001, buildChannelPdu(buildCliprdrPayload(1), 0x13)));
+    assert.equal(state.cliprdrWriteChannelId, null);
+    processServerFrame(state, buildMcsIndication(1001, buildChannelPdu(buildCliprdrPayload(1), 0x03)));
+
+    assert.equal(state.cliprdrRehandshakePending, true);
+    const replay = takeCliprdrRehandshake(state);
+    assert.deepEqual(replay, []);
+    assert.equal(state.cliprdrRehandshakeSkippedUnsafe, true);
+  });
+
+  test('un solo saludo en cliprdr 1004 no genera la repeticion', () => {
+    const state = stateWithCliprdr();
+    state.wallixService = 'RDP';
+    state.allowed = new Set([1003, 1004]);
+    state.channelIdToName = new Map([[1004, 'cliprdr']]);
+
+    const capsUser = buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16)), 0x13);
+    rememberClientCliprdrHandshake(state, describeCliprdrPdu(capsUser), buildMcsIndication(1004, capsUser));
+    processServerFrame(state, buildMcsIndication(1004, buildChannelPdu(buildCliprdrPayload(1), 0x13)));
+
+    assert.equal(state.cliprdrWriteChannelId, 1004);
+    assert.equal(state.cliprdrMonitorReadyCount, 1);
+    assert.equal(cliprdrMustDropShowProtocol(state), false);
+    assert.deepEqual(takeCliprdrRehandshake(state), []);
   });
 
   test('sin canal cliprdr negociado no se asume 1004', () => {
