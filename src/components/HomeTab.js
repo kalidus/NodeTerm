@@ -783,12 +783,15 @@ const HomeTab = ({
         if (current.zIndex === nextZ) return prev;
         return { ...prev, filters: { ...current, zIndex: nextZ } };
       }
-      let maxZ = 10;
-      Object.values(prev).forEach((p) => {
-        if (p && typeof p.zIndex === 'number' && p.zIndex < 10000) maxZ = Math.max(maxZ, p.zIndex);
+      let maxOtherZ = 10;
+      Object.entries(prev).forEach(([id, p]) => {
+        if (id === panelId) return;
+        if (p && typeof p.zIndex === 'number' && p.zIndex < 10000) {
+          maxOtherZ = Math.max(maxOtherZ, p.zIndex);
+        }
       });
-      if ((current.zIndex || 0) >= maxZ) return prev;
-      const nextZ = Math.min(maxZ + 1, 5000);
+      if ((current.zIndex || 0) > maxOtherZ) return prev;
+      const nextZ = maxOtherZ + 1;
       const next = { ...prev, [panelId]: { ...current, zIndex: nextZ } };
       const authored = authoredLayoutRef.current;
       if (authored && authored[panelId]) {
@@ -845,7 +848,7 @@ const HomeTab = ({
         visible: isVis,
         zIndex: panelId === 'filters'
           ? (isVis ? 999999 : current.zIndex)
-          : (isVis ? Math.min(maxZ + 1, 5000) : current.zIndex),
+          : (isVis ? maxZ + 1 : current.zIndex),
         ...(extraUpdates || {})
       };
 
@@ -964,7 +967,7 @@ const HomeTab = ({
           isMaximized: true,
           isMinimized: false,
           preMinimizedHeight: undefined,
-          zIndex: Math.min(maxZ + 1, 5000)
+          zIndex: panelId === 'filters' ? 999999 : maxZ + 1
         };
       }
 

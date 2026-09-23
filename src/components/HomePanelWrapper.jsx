@@ -2,8 +2,8 @@ import React, { useRef, useCallback, useState, useEffect } from 'react';
 import { Rnd } from 'react-rnd';
 
 let liveZSeq = 5000;
-function nextLiveZ() {
-  liveZSeq += 1;
+function nextLiveZ(minZ = 0) {
+  liveZSeq = Math.max(liveZSeq, Number(minZ) || 0) + 1;
   return liveZSeq;
 }
 
@@ -114,7 +114,7 @@ const HomePanelWrapper = ({
   const isFilterPanel = id === 'filters';
   const displayZ = isFilterPanel
     ? 999999
-    : Math.min(Number(localZ) || Number(zIndex) || 10, 5000);
+    : (Number(localZ) || Number(zIndex) || 10);
   const activeShadow = isMaximized
     ? 'none'
     : (isFilterPanel
@@ -139,11 +139,10 @@ const HomePanelWrapper = ({
       width,
       height: isMinimized ? minimizedHeight : height
     });
-    setLocalZ(isFilterPanel ? 999999 : Math.min(nextLiveZ(), 5000));
-  }, [captureLiveBox, x, y, width, height, isMinimized, isFilterPanel]);
+    setLocalZ(isFilterPanel ? 999999 : nextLiveZ(zIndex));
+  }, [captureLiveBox, x, y, width, height, isMinimized, isFilterPanel, zIndex]);
 
   const persistZIndex = useCallback(() => {
-    setLocalZ(null);
     onBringToFront?.(id);
   }, [id, onBringToFront]);
 
@@ -152,9 +151,18 @@ const HomePanelWrapper = ({
     const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
     if (now - lastRaiseTsRef.current < 16) return;
     lastRaiseTsRef.current = now;
-    setLocalZ(isFilterPanel ? 999999 : Math.min(nextLiveZ(), 5000));
+    setLocalZ(isFilterPanel ? 999999 : nextLiveZ(zIndex));
     onBringToFront?.(id);
-  }, [id, onBringToFront, isFilterPanel]);
+  }, [id, onBringToFront, isFilterPanel, zIndex]);
+
+  useEffect(() => {
+    if (localZ == null) return undefined;
+    const persisted = Number(zIndex) || 10;
+    if (persisted >= localZ) {
+      setLocalZ(null);
+    }
+    return undefined;
+  }, [zIndex, localZ]);
 
   useEffect(() => {
     const el = rndRef.current?.resizableElement?.current || rndRef.current?.getSelfElement?.();
