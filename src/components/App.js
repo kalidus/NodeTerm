@@ -52,6 +52,7 @@ const FileExplorer = lazy(() => import('./FileExplorer'));
 
 // Componentes modulares de la aplicación
 import { AppHeader, AppModals } from './app/index';
+import MinimalModeExitButton from './MinimalModeExitButton';
 import { useMcpAgentBridge } from '../hooks/useMcpAgentBridge';
 import { useGlobalAppEvents } from '../hooks/useGlobalAppEvents';
 
@@ -2847,6 +2848,7 @@ const App = () => {
   return (
     <ErrorBoundary>
       <div className="app-container" style={{ display: 'flex', flexDirection: 'column', height: '100vh', minHeight: 0, background: 'var(--ui-sidebar-bg, #0a0f1f)' }}>
+        <MinimalModeExitButton isMinimalMode={isMinimalMode} />
         {/* Barra superior / TitleBar */}
         <AppHeader
           titleBarCollapsed={titleBarCollapsed}

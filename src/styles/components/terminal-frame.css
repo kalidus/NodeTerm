@@ -1544,17 +1544,38 @@ body.minimalist-terminal-mode .main-content-frame-content {
     padding: 0 !important;
 }
 
-/* Handle especial para salir del modo minimalista si el header está oculto */
-body.minimalist-terminal-mode .main-content-frame::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: transparent;
-    z-index: 9999;
-    cursor: ns-resize;
+/* Boton global para salir del modo minimalista (cualquier vista) */
+.minimal-mode-exit-btn {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 20000;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    background: rgba(18, 22, 32, 0.72);
+    color: rgba(255, 255, 255, 0.88);
+    opacity: 0.45;
+    cursor: pointer;
+    -webkit-app-region: no-drag;
+    app-region: no-drag;
+}
+
+.minimal-mode-exit-btn:hover,
+.minimal-mode-exit-btn:focus-visible {
+    opacity: 1;
+    background: rgba(28, 34, 48, 0.92);
+    border-color: rgba(255, 255, 255, 0.32);
+}
+
+.minimal-mode-exit-btn i {
+    font-size: 13px;
+    pointer-events: none;
 }
 
 /*
