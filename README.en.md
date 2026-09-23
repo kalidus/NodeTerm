@@ -42,7 +42,7 @@
 NodeTerm is an *all-in-one* remote workspace that unifies multiple connection protocols, an encrypted credential vault, and advanced AI automation capabilities within a modern, ultra-fast interface.
 
 ### 🌐 1. Connection & Multi-Protocol Support
-- 🖥️ **Full Multi-Protocol**: Native support for **SSH**, **RDP** (Remote Desktop), **VNC**, and **SFTP** connections.
+- 🖥️ **Full Multi-Protocol**: Native **SSH**, **RDP** (IronRDP default, Wallix/CyberArk), **VNC** (noVNC client), and **SFTP**.
 - 🛡️ **Professional SSH Management**: Wallix bastion integration, key/password authentication, and optimized connection pooling.
 - 🗂️ **Multi-Tab Workspace**: Hierarchical session organization in folders and tab grouping by projects.
 - 📁 **Integrated SFTP Explorer**: Visual remote navigation, file operations (copy, paste, delete), and smart search.
@@ -68,7 +68,8 @@ NodeTerm is an *all-in-one* remote workspace that unifies multiple connection pr
 - 🐧 **OS Auto-Detection**: Automatic Linux distro detection and visual connection status indicators.
 
 ### 🎨 6. Total Customization & UX
-- 🎨 **UI & Terminal Themes**: Curated dark and light themes with customizable color palettes.
+- 🏠 **HomeTab dashboard**: floating panels, widgets, recents/favorites, and in-app release notes.
+- 🎨 **UI & Terminal Themes**: dark/light themes, holographic/cyberpunk frames, and 8-32 font size control.
 - 🔤 **Fonts & Icons**: Support for developer fonts with ligatures (*FiraCode*, *JetBrains Mono*) and icon packs (*Material*, *VSCode*).
 - ⌨️ **Shortcuts & Layout**: Full keyboard customization, project-grouped tabs, and rich context menus.
 - 🔄 **Auto-Updater**: Background update checker via GitHub Releases with Stable and Beta channels.
@@ -116,7 +117,7 @@ Detailed release history is maintained exclusively in **[CHANGELOG.md](CHANGELOG
 
 | | |
 |--|--|
-| **Latest Release** | **[v1.7.4](https://github.com/kalidus/NodeTerm/releases/tag/v1.7.4)** (July 31, 2026) |
+| **Latest Release** | **[v1.7.6](https://github.com/kalidus/NodeTerm/releases/tag/v1.7.6)** (September 23, 2026) |
 | **Installers** | [Releases Downloads](https://github.com/kalidus/NodeTerm/releases) |
 
 ---
@@ -162,6 +163,8 @@ NodeTerm/
 
 | Version | Focus | Status |
 |---------|-------|--------|
+| **v1.7.6** | HomeTab, native RDP/VNC, themes and security | Published |
+| **v1.7.5** | IronRDP WASM, home dashboard, Guacamole | Published |
 | **v1.7.4** | Release clipboard hotfix | Published |
 | **v1.7.3** | Performance, unified UX, Cygwin on-demand | Published |
 | **v1.7.2** | Release process / CI | Published |

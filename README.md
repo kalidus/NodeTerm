@@ -42,7 +42,7 @@
 NodeTerm es un espacio de trabajo remoto *all-in-one* que unifica múltiples protocolos de conexión, una bóveda cifrada de credenciales y capacidades avanzadas de automatización con IA en una interfaz moderna y ultrarrápida.
 
 ### 🌐 1. Conexión & Soporte Multiprotocolo
-- 🖥️ **Multiprotocolo Completo**: Soporte nativo para conexiones **SSH**, **RDP** (Escritorio Remoto), **VNC** y **SFTP**.
+- 🖥️ **Multiprotocolo Completo**: Soporte nativo para **SSH**, **RDP** (IronRDP por defecto, Wallix/CyberArk), **VNC** (cliente noVNC) y **SFTP**.
 - 🛡️ **Gestión SSH Profesional**: Conexión a bastiones Wallix, autenticación por clave/contraseña y pool de conexiones optimizado.
 - 🗂️ **Espacio de Trabajo Multipestaña**: Organización jerárquica de sesiones en carpetas y agrupación de pestañas por proyectos.
 - 📁 **Explorador SFTP Integrado**: Navegación remota visual, operaciones de archivos (copiar, pegar, eliminar) y búsqueda inteligente.
@@ -68,7 +68,8 @@ NodeTerm es un espacio de trabajo remoto *all-in-one* que unifica múltiples pro
 - 🐧 **Auto-detección OS**: Detección automática de distribuciones Linux e indicadores visuales de estado de conexión.
 
 ### 🎨 6. Personalización Total & UX
-- 🎨 **Temas de UI y Terminal**: Selección de múltiples temas oscuros y claros con personalización de paletas de color.
+- 🏠 **Dashboard HomeTab**: paneles flotantes, widgets, recientes/favoritos y novedades de cada release.
+- 🎨 **Temas de UI y Terminal**: temas oscuros/claros, marcos holograficos/cyberpunk y selector de tipografia 8-32.
 - 🔤 **Fuentes & Iconos**: Soporte para fuentes especializadas con ligaduras (*FiraCode*, *JetBrains Mono*) y packs de iconos (*Material*, *VSCode*).
 - ⌨️ **Atajos & Layout**: Configuración completa de teclado, pestañas organizables por proyectos y menús contextuales avanzados.
 - 🔄 **Actualizador Automático**: Comprobación en segundo plano desde GitHub Releases con canales Estable y Beta.
@@ -116,8 +117,12 @@ El historial detallado vive solo en **[CHANGELOG.md](CHANGELOG.md)**. Las [GitHu
 
 | | |
 |--|--|
-| **Ultima publicada** | **[v1.7.4](https://github.com/kalidus/NodeTerm/releases/tag/v1.7.4)** (31 julio 2026) |
+| **Ultima publicada** | **[v1.7.6](https://github.com/kalidus/NodeTerm/releases/tag/v1.7.6)** (23 septiembre 2026) |
 | **Instaladores** | [Descargas en Releases](https://github.com/kalidus/NodeTerm/releases) |
+
+**Resumen de v1.7.6:** HomeTab cockpit (widgets, paneles OS, novedades), IronRDP por defecto con Wallix/CyberArk y clipboard estable, VNC nativo, temas/tipografia, rendimiento, seguridad (vault/IPC/MCP/SSH) y CI sin SignPath.
+
+**Resumen de v1.7.5:** RDP nativo HTML5 (IronRDP WASM), dashboard de inicio modular y desacoplamiento de Guacamole.
 
 **Resumen de v1.7.4:** hotfix clipboard en build de produccion (handler IPC aislado + fallback; dependencia `tar` para Joplin).
 
@@ -177,6 +182,8 @@ NodeTerm/
 
 | Version | Foco | Estado |
 |---------|------|--------|
+| **v1.7.6** | HomeTab, RDP/VNC nativos, temas y seguridad | Publicada |
+| **v1.7.5** | IronRDP WASM, dashboard inicio, Guacamole | Publicada |
 | **v1.7.4** | Hotfix clipboard en release | Publicada |
 | **v1.7.3** | Rendimiento, UX unificada, Cygwin on-demand | Publicada |
 | **v1.7.2** | Proceso release / CI | Publicada |
