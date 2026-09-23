@@ -640,7 +640,7 @@ const ConnectionHistory = ({
 		</HomeTerminalSplitPanel>
 	);
 
-	const toggleFilterPanel = (context) => {
+	const toggleFilterPanel = (context, triggerElementOrEvent = null) => {
 		const isVisible = !!panelsLayout?.filters?.visible;
 		if (isVisible && favoriteGroupsMgr.filterContext === context) {
 			onTogglePanelVisibility?.('filters', false);
@@ -649,7 +649,51 @@ const ConnectionHistory = ({
 		}
 		favoriteGroupsMgr.setFilterContext(context);
 		favoriteGroupsMgr.setFilterPanelOpen(true);
-		onTogglePanelVisibility?.('filters', true);
+
+		// Posicionamiento inteligente cerca del botón disparador o del panel correspondiente
+		const currentFilters = panelsLayout?.filters || {};
+		const filterW = currentFilters.width || 380;
+		const filterH = currentFilters.height || 380;
+		let targetX = currentFilters.x;
+		let targetY = currentFilters.y;
+
+		const targetEl = triggerElementOrEvent?.currentTarget || triggerElementOrEvent?.target || triggerElementOrEvent;
+		if (targetEl?.getBoundingClientRect && canvasRef.current) {
+			const btnRect = targetEl.getBoundingClientRect();
+			const canvasRect = canvasRef.current.getBoundingClientRect();
+			const btnRelRight = btnRect.right - canvasRect.left;
+			const btnRelBottom = btnRect.bottom - canvasRect.top;
+			const btnRelTop = btnRect.top - canvasRect.top;
+
+			targetX = btnRelRight - filterW;
+			targetY = btnRelBottom + 6;
+
+			if (targetY + filterH > canvasRect.height - 12) {
+				targetY = Math.max(12, btnRelTop - filterH - 6);
+			}
+			targetX = Math.max(12, Math.min(canvasRect.width - filterW - 12, targetX));
+			targetY = Math.max(12, Math.min(canvasRect.height - filterH - 12, targetY));
+		} else if (panelsLayout?.[context]) {
+			const p = panelsLayout[context];
+			const canvasRect = canvasRef.current?.getBoundingClientRect();
+			const maxW = canvasRect ? canvasRect.width : 1200;
+			const maxH = canvasRect ? canvasRect.height : 800;
+			targetX = Math.max(12, Math.min(maxW - filterW - 12, (p.x || 0) + (p.width || 340) - filterW));
+			targetY = Math.max(12, Math.min(maxH - filterH - 12, (p.y || 0) + 40));
+		}
+
+		const layoutUpdates = {
+			visible: true,
+			zIndex: 999999
+		};
+		if (Number.isFinite(targetX) && Number.isFinite(targetY)) {
+			layoutUpdates.x = Math.round(targetX);
+			layoutUpdates.y = Math.round(targetY);
+			layoutUpdates.width = filterW;
+			layoutUpdates.height = filterH;
+		}
+
+		onTogglePanelVisibility?.('filters', true, layoutUpdates);
 		onBringToFront?.('filters');
 	};
 
@@ -671,17 +715,37 @@ const ConnectionHistory = ({
 				target.closest('.cyber-sessions-filter-btn') ||
 				target.closest('.split-header-filter-btn') ||
 				target.closest('.create-group-overlay') ||
-				target.closest('.app-dialog')
+				target.closest('.app-dialog') ||
+				target.closest('.p-dialog') ||
+				target.closest('.p-component-overlay') ||
+				target.closest('.p-dropdown-panel') ||
+				target.closest('.p-overlaypanel')
 			);
 		};
 
+		let closed = false;
 		const handlePointerDown = (event) => {
+			if (closed) return;
 			if (isInsideFiltersPanel(event.target)) return;
+			closed = true;
 			closeFilterPanel();
 		};
 
-		document.addEventListener('mousedown', handlePointerDown);
-		return () => document.removeEventListener('mousedown', handlePointerDown);
+		const handleKeyDown = (event) => {
+			if (event.key === 'Escape') {
+				closeFilterPanel();
+			}
+		};
+
+		document.addEventListener('pointerdown', handlePointerDown, true);
+		document.addEventListener('mousedown', handlePointerDown, true);
+		window.addEventListener('keydown', handleKeyDown, true);
+
+		return () => {
+			document.removeEventListener('pointerdown', handlePointerDown, true);
+			document.removeEventListener('mousedown', handlePointerDown, true);
+			window.removeEventListener('keydown', handleKeyDown, true);
+		};
 	}, [panelsLayout?.filters?.visible]);
 
 	const renderHomeFilterPanel = () => (
@@ -692,7 +756,10 @@ const ConnectionHistory = ({
 			onContextChange={(nextContext) => favoriteGroupsMgr.setFilterContext(nextContext)}
 			activeFavFilters={favoriteGroupsMgr.activeFavFilters}
 			activeRecentFilters={favoriteGroupsMgr.activeRecentFilters}
-			onApplyFilters={favoriteGroupsMgr.handleApplyFilters}
+			onApplyFilters={(filters) => {
+				favoriteGroupsMgr.handleApplyFilters(filters);
+				closeFilterPanel();
+			}}
 			recentConnections={recentConnections}
 			favoriteConnections={favoriteConnections}
 			favoriteGroups={favoriteGroupsMgr.favoriteGroups}
@@ -718,7 +785,7 @@ const ConnectionHistory = ({
 			onEdit={onEdit}
 			handleToggleFavoriteWithGroup={favoriteGroupsMgr.handleToggleFavoriteWithGroup}
 			filterOpen={!!(panelsLayout?.filters?.visible && favoriteGroupsMgr.filterContext === 'recents')}
-			onOpenFilter={() => toggleFilterPanel('recents')}
+			onOpenFilter={(e) => toggleFilterPanel('recents', e)}
 		/>
 	);
 
@@ -737,7 +804,7 @@ const ConnectionHistory = ({
 			onEdit={onEdit}
 			handleToggleFavoriteWithGroup={favoriteGroupsMgr.handleToggleFavoriteWithGroup}
 			filterOpen={!!(panelsLayout?.filters?.visible && favoriteGroupsMgr.filterContext === 'favorites')}
-			onOpenFilter={() => toggleFilterPanel('favorites')}
+			onOpenFilter={(e) => toggleFilterPanel('favorites', e)}
 		/>
 	);
 
@@ -1024,7 +1091,10 @@ const ConnectionHistory = ({
 							title="~/filters"
 							path={`filters · ${favoriteGroupsMgr.filterContext === 'favorites' ? 'favoritos' : 'recientes'}`}
 							titleIcon={<i className="pi pi-filter" style={{ color: themeColors.primaryColor || '#4fc3f7', fontSize: '0.8rem' }} />}
-							panelState={panelsLayout.filters}
+							panelState={{
+								...panelsLayout.filters,
+								zIndex: Math.max(panelsLayout.filters?.zIndex || 0, 999999)
+							}}
 							onLayoutChange={onLayoutChange}
 							onBringToFront={onBringToFront}
 							onClose={closeFilterPanel}
@@ -1039,7 +1109,7 @@ const ConnectionHistory = ({
 							onResizeEnd={onPanelResizeEnd}
 							minWidth={320}
 							minHeight={280}
-							className="recents-terminal-frame filters-terminal-frame"
+							className="filters-terminal-frame"
 							frameBackground={adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}
 						>
 							{renderHomeFilterPanel()}

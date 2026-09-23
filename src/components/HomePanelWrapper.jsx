@@ -111,10 +111,15 @@ const HomePanelWrapper = ({
   const fillParent = isMaximized;
   const minimizedHeight = 30;
   const maximizeTitle = isMaximized ? 'Restaurar' : 'Maximizar';
-  const displayZ = localZ || zIndex;
+  const isFilterPanel = id === 'filters';
+  const displayZ = isFilterPanel
+    ? 999999
+    : Math.min(Number(localZ) || Number(zIndex) || 10, 5000);
   const activeShadow = isMaximized
     ? 'none'
-    : `0 10px 28px rgba(0, 0, 0, ${Math.min(0.48, 0.18 + Math.max(0, displayZ - 10) * 0.012)})`;
+    : (isFilterPanel
+      ? '0 16px 48px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.08)'
+      : `0 10px 28px rgba(0, 0, 0, ${Math.min(0.48, 0.18 + Math.max(0, displayZ - 10) * 0.012)})`);
 
   const captureLiveBox = useCallback((next) => {
     liveBoxRef.current = {
@@ -134,8 +139,8 @@ const HomePanelWrapper = ({
       width,
       height: isMinimized ? minimizedHeight : height
     });
-    setLocalZ(nextLiveZ());
-  }, [captureLiveBox, x, y, width, height, isMinimized]);
+    setLocalZ(isFilterPanel ? 999999 : Math.min(nextLiveZ(), 5000));
+  }, [captureLiveBox, x, y, width, height, isMinimized, isFilterPanel]);
 
   const persistZIndex = useCallback(() => {
     setLocalZ(null);
@@ -147,9 +152,9 @@ const HomePanelWrapper = ({
     const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
     if (now - lastRaiseTsRef.current < 16) return;
     lastRaiseTsRef.current = now;
-    setLocalZ(nextLiveZ());
+    setLocalZ(isFilterPanel ? 999999 : Math.min(nextLiveZ(), 5000));
     onBringToFront?.(id);
-  }, [id, onBringToFront]);
+  }, [id, onBringToFront, isFilterPanel]);
 
   useEffect(() => {
     const el = rndRef.current?.resizableElement?.current || rndRef.current?.getSelfElement?.();

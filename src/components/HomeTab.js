@@ -769,12 +769,17 @@ const HomeTab = ({
     setPanelsLayout((prev) => {
       const current = prev[panelId];
       if (!current) return prev;
+      if (panelId === 'filters') {
+        const nextZ = 999999;
+        if (current.zIndex === nextZ) return prev;
+        return { ...prev, filters: { ...current, zIndex: nextZ } };
+      }
       let maxZ = 10;
       Object.values(prev).forEach((p) => {
-        if (p && typeof p.zIndex === 'number') maxZ = Math.max(maxZ, p.zIndex);
+        if (p && typeof p.zIndex === 'number' && p.zIndex < 10000) maxZ = Math.max(maxZ, p.zIndex);
       });
       if ((current.zIndex || 0) >= maxZ) return prev;
-      const nextZ = maxZ + 1;
+      const nextZ = Math.min(maxZ + 1, 5000);
       const next = { ...prev, [panelId]: { ...current, zIndex: nextZ } };
       const authored = authoredLayoutRef.current;
       if (authored && authored[panelId]) {
@@ -789,7 +794,7 @@ const HomeTab = ({
     });
   }, [savePanelsLayoutDebounced]);
 
-  const handleTogglePanelVisibility = useCallback((panelId, forceState) => {
+  const handleTogglePanelVisibility = useCallback((panelId, forceState, extraUpdates = null) => {
     if (panelId === 'terminal') {
       setPanelsLayout((prev) => {
         const defaults = computeDefaultPanelsLayout();
@@ -823,17 +828,20 @@ const HomeTab = ({
       const isVis = forceState !== undefined ? forceState : !current.visible;
       let maxZ = 10;
       Object.values(prev).forEach((p) => {
-        if (p && typeof p.zIndex === 'number') maxZ = Math.max(maxZ, p.zIndex);
+        if (p && typeof p.zIndex === 'number' && p.zIndex < 10000) maxZ = Math.max(maxZ, p.zIndex);
       });
 
       let updatedPanel = {
         ...current,
         visible: isVis,
-        zIndex: isVis ? maxZ + 1 : current.zIndex
+        zIndex: panelId === 'filters'
+          ? (isVis ? 999999 : current.zIndex)
+          : (isVis ? Math.min(maxZ + 1, 5000) : current.zIndex),
+        ...(extraUpdates || {})
       };
 
       // Si se activa el panel y no se habia posicionado manualmente en la sesion actual
-      if (isVis && mainAreaRef.current) {
+      if (isVis && mainAreaRef.current && !extraUpdates) {
         const w = mainAreaRef.current.offsetWidth || 1200;
         const h = mainAreaRef.current.offsetHeight || 800;
         const pad = 16;
@@ -906,7 +914,7 @@ const HomeTab = ({
       const { width: w, height: h } = getCanvasSize();
       let maxZ = 10;
       Object.values(prev).forEach((p) => {
-        if (p && typeof p.zIndex === 'number') maxZ = Math.max(maxZ, p.zIndex);
+        if (p && typeof p.zIndex === 'number' && p.zIndex < 10000) maxZ = Math.max(maxZ, p.zIndex);
       });
 
       let nextPanel;
@@ -947,7 +955,7 @@ const HomeTab = ({
           isMaximized: true,
           isMinimized: false,
           preMinimizedHeight: undefined,
-          zIndex: maxZ + 1
+          zIndex: Math.min(maxZ + 1, 5000)
         };
       }
 

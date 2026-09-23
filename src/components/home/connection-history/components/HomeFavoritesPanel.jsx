@@ -74,7 +74,7 @@ export const HomeFavoritesPanel = ({
 						className={`cyber-sessions-filter-btn${(filterOpen || activeCount > 0) ? ' active' : ''}`}
 						onClick={(e) => {
 							e.stopPropagation();
-							onOpenFilter();
+							onOpenFilter(e);
 						}}
 						title={filterOpen ? 'Cerrar panel de filtros' : 'Filtrar favoritos'}
 					>

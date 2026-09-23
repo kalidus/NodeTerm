@@ -205,7 +205,7 @@ export const HomeTerminalSplitPanel = ({
 											className="split-header-filter-btn"
 											onClick={(e) => {
 												e.stopPropagation();
-												onOpenFilter?.(splitContext);
+												onOpenFilter?.(splitContext, e);
 											}}
 											style={{
 												background: 'transparent',
