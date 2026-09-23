@@ -64,6 +64,7 @@ const ConnectionHistory = ({
 	onSwitchTerminal,
 	statusBarVisible = true,
 	homeCardVisible = true,
+	hideNonTerminalHeaders = false,
 	flushRightQuickBar = false,
 	rightQuickBar = null,
 	localTerminalMaximized = false,
@@ -832,6 +833,7 @@ const ConnectionHistory = ({
 				onResizeEnd={onPanelResizeEnd}
 				minWidth={opts.minWidth || 220}
 				minHeight={opts.minHeight || 140}
+				hideHeader={hideNonTerminalHeaders}
 				className={`recents-terminal-frame ${opts.className || ''}`}
 				frameBackground={adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}
 			>
@@ -893,6 +895,7 @@ const ConnectionHistory = ({
 							onResizeEnd={onPanelResizeEnd}
 							minWidth={220}
 							minHeight={90}
+							hideHeader={hideNonTerminalHeaders}
 							className="top-terminal-frame search-terminal-frame"
 							frameBackground={adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}
 						>
@@ -910,6 +913,7 @@ const ConnectionHistory = ({
 							onLayoutChange={onLayoutChange}
 							onBringToFront={onBringToFront}
 							closable={false}
+							hideHeader={false}
 							onClose={() => (onToggleMinimizePanel ? onToggleMinimizePanel('terminal') : null)}
 							onToggleMaximize={() => {
 								if (onToggleMaximizePanel) onToggleMaximizePanel('terminal');
@@ -1007,6 +1011,7 @@ const ConnectionHistory = ({
 							onResizeEnd={onPanelResizeEnd}
 							minWidth={250}
 							minHeight={140}
+							hideHeader={hideNonTerminalHeaders}
 							className="recents-terminal-frame"
 							frameBackground={adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}
 						>
@@ -1035,6 +1040,7 @@ const ConnectionHistory = ({
 							onResizeEnd={onPanelResizeEnd}
 							minWidth={250}
 							minHeight={140}
+							hideHeader={hideNonTerminalHeaders}
 							className="recents-terminal-frame favorites-terminal-frame"
 							frameBackground={adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}
 						>
@@ -1074,6 +1080,7 @@ const ConnectionHistory = ({
 							onResizeEnd={onPanelResizeEnd}
 							minWidth={180}
 							minHeight={90}
+							hideHeader={hideNonTerminalHeaders}
 							className="recents-terminal-frame sysmon-terminal-frame"
 							frameBackground={adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}
 						>
@@ -1109,6 +1116,7 @@ const ConnectionHistory = ({
 							onResizeEnd={onPanelResizeEnd}
 							minWidth={320}
 							minHeight={280}
+							hideHeader={hideNonTerminalHeaders}
 							className="filters-terminal-frame"
 							frameBackground={adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}
 						>
@@ -1135,23 +1143,25 @@ const ConnectionHistory = ({
 					<div className="hero-splash-header" style={{ paddingBottom: '8px' }}>
 						{homeCardVisible && (
 							<div className={`top-terminal-frame ${terminalFrameStyle}`}>
-								<div className="top-terminal-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-									{terminalFrameStyle === 'macos' ? renderLegacyControls() : <div style={{ width: '12px' }} />}
-									<div className="header-path">
-										<span style={{ fontWeight: 'bold' }}>
-											<span className="path-tilde">~</span>/home
-										</span>
-										<span style={{ opacity: 0.5 }}>·</span>
-										<span style={{ opacity: 0.9 }}>{activeViewName}</span>
-									</div>
-									{terminalFrameStyle !== 'macos' ? (
-										<div className="traffic-lights" style={{ marginLeft: 'auto' }}>
-											{renderLegacyControls()}
+								{!hideNonTerminalHeaders && (
+									<div className="top-terminal-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+										{terminalFrameStyle === 'macos' ? renderLegacyControls() : <div style={{ width: '12px' }} />}
+										<div className="header-path">
+											<span style={{ fontWeight: 'bold' }}>
+												<span className="path-tilde">~</span>/home
+											</span>
+											<span style={{ opacity: 0.5 }}>·</span>
+											<span style={{ opacity: 0.9 }}>{activeViewName}</span>
 										</div>
-									) : (
-										<div style={{ width: '12px' }} />
-									)}
-								</div>
+										{terminalFrameStyle !== 'macos' ? (
+											<div className="traffic-lights" style={{ marginLeft: 'auto' }}>
+												{renderLegacyControls()}
+											</div>
+										) : (
+											<div style={{ width: '12px' }} />
+										)}
+									</div>
+								)}
 								{renderSearchPanel()}
 							</div>
 						)}
@@ -1166,16 +1176,18 @@ const ConnectionHistory = ({
 							frameClassName={`recents-terminal-frame favorites-terminal-frame ${terminalFrameStyle}`}
 							terminalFrameStyle={terminalFrameStyle}
 						>
-							<div className="recents-terminal-header">
-								<div className="traffic-lights">
-									<div className="traffic-dot red" onClick={() => setActiveBottomView('all')} title="Cerrar favoritos" />
-									<div className="traffic-dot yellow" />
-									<div className="traffic-dot green" />
+							{!hideNonTerminalHeaders && (
+								<div className="recents-terminal-header">
+									<div className="traffic-lights">
+										<div className="traffic-dot red" onClick={() => setActiveBottomView('all')} title="Cerrar favoritos" />
+										<div className="traffic-dot yellow" />
+										<div className="traffic-dot green" />
+									</div>
+									<div className="header-path">
+										<span className="path-tilde">~</span>/favorites &nbsp;·&nbsp; {favoriteGroupsMgr.filteredFavorites.length} connections
+									</div>
 								</div>
-								<div className="header-path">
-									<span className="path-tilde">~</span>/favorites &nbsp;·&nbsp; {favoriteGroupsMgr.filteredFavorites.length} connections
-								</div>
-							</div>
+							)}
 							{renderFavoritesPanel()}
 						</HomeIntegratedTerminalShell>
 					)}
@@ -1189,16 +1201,18 @@ const ConnectionHistory = ({
 							frameClassName={`recents-terminal-frame ${terminalFrameStyle}`}
 							terminalFrameStyle={terminalFrameStyle}
 						>
-							<div className="recents-terminal-header">
-								<div className="traffic-lights">
-									<div className="traffic-dot red" onClick={() => setActiveBottomView('all')} title="Cerrar recientes" />
-									<div className="traffic-dot yellow" />
-									<div className="traffic-dot green" />
+							{!hideNonTerminalHeaders && (
+								<div className="recents-terminal-header">
+									<div className="traffic-lights">
+										<div className="traffic-dot red" onClick={() => setActiveBottomView('all')} title="Cerrar recientes" />
+										<div className="traffic-dot yellow" />
+										<div className="traffic-dot green" />
+									</div>
+									<div className="header-path">
+										<span className="path-tilde">~</span>/recent &nbsp;·&nbsp; {favoriteGroupsMgr.filteredRecentsForDisplay.length} connections
+									</div>
 								</div>
-								<div className="header-path">
-									<span className="path-tilde">~</span>/recent &nbsp;·&nbsp; {favoriteGroupsMgr.filteredRecentsForDisplay.length} connections
-								</div>
-							</div>
+							)}
 							{renderRecentsPanel()}
 						</HomeIntegratedTerminalShell>
 					)}

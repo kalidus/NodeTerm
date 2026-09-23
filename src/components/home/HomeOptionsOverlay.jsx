@@ -46,6 +46,8 @@ export default function HomeOptionsOverlay({
   onToggleLocalTabs,
   statusBarVisible,
   onToggleStatusBar,
+  hideNonTerminalHeaders,
+  onToggleHideNonTerminalHeaders,
   onOpenLocalTheme,
   onOpenFrameStyle,
   panelsLayout,
@@ -193,6 +195,12 @@ export default function HomeOptionsOverlay({
                 label="Status bar terminal local"
                 checked={!!statusBarVisible}
                 onToggle={onToggleStatusBar}
+                themeColors={themeColors}
+              />
+              <SwitchRow
+                label="Ocultar barra superior en paneles"
+                checked={!!hideNonTerminalHeaders}
+                onToggle={onToggleHideNonTerminalHeaders}
                 themeColors={themeColors}
               />
               <SwitchRow

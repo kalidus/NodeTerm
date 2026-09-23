@@ -110,6 +110,7 @@ const SYNC_KEYS = [
   'homeTab_rightColumnVisible',
   'homeTab_rightColumnCollapsed',
   'homeTab_rightColumn_sections',
+  'homeTab_hideNonTerminalHeaders',
   'nodeterm_home_dock_pins',
   'nodeterm_home_jump_pins',
   'nodeterm_home_panels_layout',

@@ -406,9 +406,17 @@ const HomeTab = ({
     }
   });
 
+  const [hideNonTerminalHeaders, setHideNonTerminalHeaders] = useState(() => {
+    return readBoolSetting(STORAGE_KEYS.HOME_TAB_HIDE_NON_TERMINAL_HEADERS, false);
+  });
+
   useEffect(() => {
     persistHomeTabSetting('nodeterm_terminal_opacity', terminalOpacity.toString());
   }, [terminalOpacity]);
+
+  useEffect(() => {
+    persistHomeTabSetting(STORAGE_KEYS.HOME_TAB_HIDE_NON_TERMINAL_HEADERS, hideNonTerminalHeaders ? 'true' : 'false');
+  }, [hideNonTerminalHeaders]);
 
   const syncHomeOptionsFromStorage = React.useCallback(() => {
     setTerminalOpacity(readFloatSetting('nodeterm_terminal_opacity', 1.0));
@@ -419,6 +427,7 @@ const HomeTab = ({
     setRightColumnCollapsed(readBoolSetting(STORAGE_KEYS.HOME_TAB_RIGHT_COLUMN_COLLAPSED, true));
     setHomeCardVisible(readBoolSetting(STORAGE_KEYS.HOME_TAB_CARD_VISIBLE, true));
     setLocalTerminalMaximized(readBoolSetting(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_MAXIMIZED, false));
+    setHideNonTerminalHeaders(readBoolSetting(STORAGE_KEYS.HOME_TAB_HIDE_NON_TERMINAL_HEADERS, false));
     const linuxTheme = localStorage.getItem('localLinuxTerminalTheme');
     if (linuxTheme && setLocalLinuxTerminalTheme) {
       setLocalLinuxTerminalTheme(linuxTheme);
@@ -2162,6 +2171,8 @@ const HomeTab = ({
           onToggleLocalTabs={() => setShowLocalTerminalTabs(prev => !prev)}
           statusBarVisible={statusBarVisible}
           onToggleStatusBar={handleToggleStatusBar}
+          hideNonTerminalHeaders={hideNonTerminalHeaders}
+          onToggleHideNonTerminalHeaders={() => setHideNonTerminalHeaders(prev => !prev)}
           onOpenLocalTheme={(e) => {
             e.stopPropagation();
             localThemeOverlayRef.current?.toggle(e);
@@ -2398,9 +2409,10 @@ const HomeTab = ({
                   terminalFrameStyle={terminalFrameStyle}
                   terminalOpacity={terminalOpacity}
                   onTerminalOpacityChange={setTerminalOpacity}
-                  onOpenHomeOptions={(e) => homeOptionsOverlayRef.current?.toggle(e)}
+                   onOpenHomeOptions={(e) => homeOptionsOverlayRef.current?.toggle(e)}
                   homeCardVisible={homeCardVisible}
                   statusBarVisible={statusBarVisible}
+                  hideNonTerminalHeaders={hideNonTerminalHeaders}
                   localTerminalMaximized={localTerminalMaximized}
                   onToggleLocalTerminalMaximized={handleToggleLocalTerminalMaximized}
                   onLoadGroup={handleLoadGroup}

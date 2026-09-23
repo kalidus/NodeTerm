@@ -20,6 +20,7 @@ export const STORAGE_KEYS = {
   HOME_TAB_DOCK_PINS: 'nodeterm_home_dock_pins',
   HOME_TAB_JUMP_PINS: 'nodeterm_home_jump_pins',
   TERMINAL_FRAME_STYLE: 'nodeterm_terminal_frame_style',
+  HOME_TAB_HIDE_NON_TERMINAL_HEADERS: 'homeTab_hideNonTerminalHeaders',
   MAIN_FRAME_HEADER_START_COLLAPSED: 'nodeterm_main_frame_header_start_collapsed',
   MINIMAL_MODE: 'nodeterm_minimal_mode',
   CONNECTION_SEARCH_SHORTCUT: 'nodeterm_connection_search_shortcut',
