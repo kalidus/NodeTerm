@@ -43,7 +43,6 @@ import {
 } from '../utils/homeTabPresets';
 import { ensureHomeWidgetLayout } from '../utils/homeWidgets';
 import HomeOptionsOverlay from './home/HomeOptionsOverlay';
-import { setHomeSnapGuides, clearHomeSnapGuides } from '../utils/homePanelSnapBus';
 
 /** Opciones de marco del terminal local (Home); mismas claves que `TERMINAL_FRAME_STYLE` en ConnectionHistory. */
 const HOME_TERMINAL_FRAME_STYLE_OPTIONS = [
@@ -476,15 +475,20 @@ const HomeTab = ({
   const authoredLayoutRef = useRef(null);
   const [panelsLayout, setPanelsLayout] = useState(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEYS.HOME_TAB_PANELS_LAYOUT);
+      const savedRaw = localStorage.getItem(STORAGE_KEYS.HOME_TAB_PANELS_LAYOUT);
       const defaults = computeDefaultPanelsLayout();
-      const base = saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
+      const saved = savedRaw ? JSON.parse(savedRaw) : null;
+      const base = saved ? { ...defaults, ...saved } : defaults;
       const displayLayout = getLayoutForCurrentDisplay(base);
+      const merged = preserveShowingPanels(base, { ...defaults, ...displayLayout });
+      const canvas = getLayoutCanvasSize(merged)
+        || getLayoutCanvasSize(saved)
+        || getLayoutCanvasSize(displayLayout);
       const loaded = ensureRequiredHomeTerminal(
         ensureHomeWidgetLayout(
-          preserveShowingPanels(base, { ...defaults, ...displayLayout }),
-          defaults.canvasWidth,
-          defaults.canvasHeight
+          merged,
+          canvas?.width || defaults.canvasWidth,
+          canvas?.height || defaults.canvasHeight
         )
       );
       authoredLayoutRef.current = loaded;
@@ -534,20 +538,51 @@ const HomeTab = ({
 
   // Persistencia con debounce para el layout de paneles (guarda global y por monitor)
   const savePanelsLayoutTimerRef = useRef(null);
+  const persistPanelsLayoutNow = useCallback((layout) => {
+    if (!layout) return;
+    try {
+      const safe = ensureRequiredHomeTerminal(layout);
+      localStorage.setItem(STORAGE_KEYS.HOME_TAB_PANELS_LAYOUT, JSON.stringify(safe));
+      saveLayoutForCurrentDisplay(safe);
+    } catch (err) {
+      console.error('Error saving home panels layout:', err);
+    }
+  }, []);
+
   const savePanelsLayoutDebounced = useCallback((layout) => {
     if (savePanelsLayoutTimerRef.current) {
       clearTimeout(savePanelsLayoutTimerRef.current);
     }
     savePanelsLayoutTimerRef.current = setTimeout(() => {
-      try {
-        const safe = ensureRequiredHomeTerminal(layout);
-        localStorage.setItem(STORAGE_KEYS.HOME_TAB_PANELS_LAYOUT, JSON.stringify(safe));
-        saveLayoutForCurrentDisplay(safe);
-      } catch (err) {
-        console.error('Error saving home panels layout:', err);
-      }
+      persistPanelsLayoutNow(layout);
+      savePanelsLayoutTimerRef.current = null;
     }, 400);
-  }, []);
+  }, [persistPanelsLayoutNow]);
+
+  const flushPanelsLayout = useCallback(() => {
+    if (savePanelsLayoutTimerRef.current) {
+      clearTimeout(savePanelsLayoutTimerRef.current);
+      savePanelsLayoutTimerRef.current = null;
+    }
+    persistPanelsLayoutNow(authoredLayoutRef.current);
+  }, [persistPanelsLayoutNow]);
+
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        flushPanelsLayout();
+      }
+    };
+    window.addEventListener('beforeunload', flushPanelsLayout);
+    window.addEventListener('pagehide', flushPanelsLayout);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('beforeunload', flushPanelsLayout);
+      window.removeEventListener('pagehide', flushPanelsLayout);
+      document.removeEventListener('visibilitychange', onVisibility);
+      flushPanelsLayout();
+    };
+  }, [flushPanelsLayout]);
 
   const getCanvasSize = useCallback(() => ({
     width: containerWidth > 100 ? containerWidth : (mainAreaRef.current?.offsetWidth || window.innerWidth),
@@ -601,18 +636,7 @@ const HomeTab = ({
     }
   }, [commitAuthoredLayout, isLayoutSyncLocked]);
 
-  const handlePanelDragging = useCallback((panelId, current) => {
-    if (!smartSnapRef.current) {
-      clearHomeSnapGuides();
-      return;
-    }
-    const bounds = canvasSizeGetterRef.current();
-    const snapped = calculateDragSnap(panelId, current, panelsLayoutRef.current, bounds);
-    setHomeSnapGuides(snapped.guides || []);
-  }, []);
-
   const handlePanelDragEnd = useCallback((panelId, finalBounds) => {
-    clearHomeSnapGuides();
     if (isLayoutSyncLocked()) return;
     const layout = panelsLayoutRef.current;
     const bounds = canvasSizeGetterRef.current();
@@ -641,18 +665,7 @@ const HomeTab = ({
     handlePanelLayoutChange(panelId, { x: clamped.x, y: clamped.y });
   }, [handlePanelLayoutChange, isLayoutSyncLocked]);
 
-  const handlePanelResizing = useCallback((panelId, current, direction) => {
-    if (!smartSnapRef.current) {
-      clearHomeSnapGuides();
-      return;
-    }
-    const bounds = canvasSizeGetterRef.current();
-    const snapped = calculateResizeSnap(panelId, current, direction || '', panelsLayoutRef.current, bounds);
-    setHomeSnapGuides(snapped.guides || []);
-  }, []);
-
   const handlePanelResizeEnd = useCallback((panelId, finalBounds, direction) => {
-    clearHomeSnapGuides();
     if (isLayoutSyncLocked()) return;
     const layout = panelsLayoutRef.current;
     const bounds = canvasSizeGetterRef.current();
@@ -693,7 +706,6 @@ const HomeTab = ({
     setSmartSnap((prev) => {
       const next = !prev;
       localStorage.setItem('nodeterm_home_smart_snap', String(next));
-      if (!next) clearHomeSnapGuides();
       return next;
     });
   }, []);
@@ -1068,7 +1080,7 @@ const HomeTab = ({
       if (!mainAreaRef.current) return;
       const newH = mainAreaRef.current.offsetHeight;
       const newW = mainAreaRef.current.offsetWidth;
-      if (newW <= 0 || newH <= 0) return;
+      if (newW < 100 || newH < 100) return;
 
       const prevW = prevContainerSizeRef.current.width;
       const prevH = prevContainerSizeRef.current.height;
@@ -2393,9 +2405,7 @@ const HomeTab = ({
                   onTogglePanelVisibility={handleTogglePanelVisibility}
                   snapToGrid={snapToGrid}
                   smartSnap={smartSnap}
-                  onPanelDragging={handlePanelDragging}
                   onPanelDragEnd={handlePanelDragEnd}
-                  onPanelResizing={handlePanelResizing}
                   onPanelResizeEnd={handlePanelResizeEnd}
                   onSwitchTerminal={(type, info) => {
                     if (showLocalTerminalTabs && embeddedTabbedTerminalRef.current?.addTerminalTab) {

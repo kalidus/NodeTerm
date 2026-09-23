@@ -14,7 +14,6 @@ import { FaWindows, FaUbuntu, FaLinux } from 'react-icons/fa';
 import { SiAnthropic, SiDebian, SiDocker, SiGooglegemini, SiOpenai } from 'react-icons/si';
 import AIClientBrandIcon from './AIClientBrandIcon';
 import HomePanelWrapper from './HomePanelWrapper';
-import HomePanelGuideOverlay from './HomePanelGuideOverlay';
 import HomeTelemetryPanel from './HomeTelemetryPanel';
 import HomeDock from './home/HomeDock';
 
@@ -806,9 +805,6 @@ const ConnectionHistory = ({
 						overflow: 'hidden'
 					}}
 				>
-					{/* Overlay de guías magnéticas inteligentes en tiempo real */}
-					<HomePanelGuideOverlay />
-
 					{/* 1. Panel Buscador y Conexión */}
 					{panelsLayout.search && panelsLayout.search.visible !== false && (
 						<HomePanelWrapper

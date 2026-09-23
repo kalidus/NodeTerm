@@ -212,8 +212,14 @@ export function ensureHomeWidgetLayout(layout = {}, canvasWidth = 1200, canvasHe
       next[widget.id] = createHiddenPanelState(widget, index);
     }
   });
-  next.canvasWidth = canvasWidth > 100 ? canvasWidth : next.canvasWidth;
-  next.canvasHeight = canvasHeight > 100 ? canvasHeight : next.canvasHeight;
+  const existingW = Number(next.canvasWidth);
+  const existingH = Number(next.canvasHeight);
+  if (!(existingW > 100)) {
+    next.canvasWidth = canvasWidth > 100 ? canvasWidth : 1200;
+  }
+  if (!(existingH > 100)) {
+    next.canvasHeight = canvasHeight > 100 ? canvasHeight : 800;
+  }
   return next;
 }
 

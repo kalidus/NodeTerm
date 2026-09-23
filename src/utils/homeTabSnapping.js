@@ -65,16 +65,16 @@ export function getVisiblePanelsBBox(layout) {
   };
 }
 
+export const NEAR_CANVAS_DELTA = 48;
+
+export function isNearCanvasSize(fromW, fromH, toW, toH, delta = NEAR_CANVAS_DELTA) {
+  return Math.abs((Number(fromW) || 0) - (Number(toW) || 0)) <= delta
+    && Math.abs((Number(fromH) || 0) - (Number(toH) || 0)) <= delta;
+}
+
 export function resolveLayoutSourceCanvas(layout, fallbackW, fallbackH) {
   const stored = getLayoutCanvasSize(layout);
   if (stored) return stored;
-  const bbox = getVisiblePanelsBBox(layout);
-  if (bbox.width > 0 && bbox.height > 0) {
-    return {
-      width: Math.max(1, bbox.x + bbox.width),
-      height: Math.max(1, bbox.y + bbox.height)
-    };
-  }
   return {
     width: fallbackW > 0 ? fallbackW : 1200,
     height: fallbackH > 0 ? fallbackH : 800
@@ -100,8 +100,8 @@ export function scalePanelsToCanvas(layout, fromW, fromH, toW, toH) {
   const srcW = fromW > 0 ? fromW : toW;
   const srcH = fromH > 0 ? fromH : toH;
 
-  if (Math.abs(srcW - toW) < 2 && Math.abs(srcH - toH) < 2) {
-    return attachCanvasSize(layout, toW, toH);
+  if (isNearCanvasSize(srcW, srcH, toW, toH)) {
+    return attachCanvasSize(clampPanelsToCanvas(layout, toW, toH), toW, toH);
   }
 
   const sx = toW / srcW;
