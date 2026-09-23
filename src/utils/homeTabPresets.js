@@ -133,7 +133,7 @@ export function getBuiltinPresets(width = 1200, height = 800) {
 
   const hiddenExtras = {
     recents: { visible: false, x: pad, y: pad, width: 340, height: 260, minWidth: 250, minHeight: 140, isMaximized: false },
-    sysmon: { visible: false, x: pad, y: pad, width: 340, height: 260, minWidth: 280, minHeight: 200, isMaximized: false },
+    sysmon: { visible: false, x: pad, y: pad, width: 340, height: 260, minWidth: 180, minHeight: 90, isMaximized: false },
     filters: { visible: false, x: pad, y: pad, width: 420, height: 380, minWidth: 320, minHeight: 280, isMaximized: false },
     sessions: { visible: false, x: pad, y: pad, width: 320, height: 240, minWidth: 220, minHeight: 140, isMaximized: false },
     vault: { visible: false, x: pad, y: pad, width: 320, height: 240, minWidth: 220, minHeight: 140, isMaximized: false },
@@ -232,8 +232,8 @@ export function getBuiltinPresets(width = 1200, height = 800) {
       y: dashProRowY,
       width: dashProItemW,
       height: dashProRowH,
-      minWidth: 200,
-      minHeight: 100,
+      minWidth: 180,
+      minHeight: 90,
       zIndex: 11,
       isMaximized: false
     },
@@ -318,8 +318,8 @@ export function getBuiltinPresets(width = 1200, height = 800) {
       y: pad,
       width: 320,
       height: 220,
-      minWidth: 220,
-      minHeight: 160,
+      minWidth: 180,
+      minHeight: 90,
       zIndex: 12,
       isMaximized: false
     },

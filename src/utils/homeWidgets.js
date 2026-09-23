@@ -114,8 +114,8 @@ export const HOME_WIDGETS = [
     required: false,
     group: 'extra',
     defaultVisible: false,
-    minWidth: 280,
-    minHeight: 200,
+    minWidth: 180,
+    minHeight: 90,
     defaultWidth: 340,
     defaultHeight: 260
   },

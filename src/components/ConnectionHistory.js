@@ -1072,8 +1072,8 @@ const ConnectionHistory = ({
 							onDragEnd={onPanelDragEnd}
 							onResizing={onPanelResizing}
 							onResizeEnd={onPanelResizeEnd}
-							minWidth={280}
-							minHeight={200}
+							minWidth={180}
+							minHeight={90}
 							className="recents-terminal-frame sysmon-terminal-frame"
 							frameBackground={adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}
 						>

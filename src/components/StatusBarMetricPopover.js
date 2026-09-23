@@ -143,12 +143,22 @@ const MetricPopover = ({ anchorRect, children, onMouseLeave, onMouseEnter }) => 
     if (!anchorRect) return null;
 
     const left = Math.max(4, Math.min(anchorRect.left + anchorRect.width / 2 - PANEL_W / 2, window.innerWidth - PANEL_W - 4));
-    const bottom = window.innerHeight - anchorRect.top + 6;
+    const spaceAbove = anchorRect.top;
+    const spaceBelow = window.innerHeight - anchorRect.bottom;
+    const placeAbove = spaceAbove >= 260 || spaceAbove > spaceBelow;
+
+    const popoverStyle = {
+        left,
+        width: PANEL_W,
+        ...(placeAbove
+            ? { bottom: Math.max(4, window.innerHeight - anchorRect.top + 6) }
+            : { top: Math.max(4, anchorRect.bottom + 6) })
+    };
 
     return createPortal(
         <div
             className="sbpop-panel app-surface"
-            style={{ left, bottom, width: PANEL_W }}
+            style={popoverStyle}
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
         >
@@ -734,8 +744,10 @@ export const DiskSummaryPanel = ({ disks, title = 'DISCOS', anchorRect, onClose,
                     <div className="sbpop-diskgroup-logicals sbpop-diskgroup-logicals-open sbpop-diskgroup-details">
                         {group.logicals.map((logical, index) => {
                             const pct = Number(logical?.use ?? logical?.percentage ?? 0);
-                            const usedGb = typeof logical?.usedGb === 'number' ? logical.usedGb : null;
-                            const totalGb = typeof logical?.totalGb === 'number' ? logical.totalGb : null;
+                            const usedRaw = logical?.usedGb ?? logical?.used;
+                            const usedGb = typeof usedRaw === 'number' ? usedRaw : (!isNaN(parseFloat(usedRaw)) && isFinite(usedRaw) ? parseFloat(usedRaw) : null);
+                            const totalRaw = logical?.totalGb ?? logical?.total ?? logical?.size;
+                            const totalGb = typeof totalRaw === 'number' ? totalRaw : (!isNaN(parseFloat(totalRaw)) && isFinite(totalRaw) ? parseFloat(totalRaw) : null);
                             const freeGb = usedGb !== null && totalGb !== null ? Math.max(0, totalGb - usedGb) : null;
                             const mount = logical?.mount || '';
                             return (
