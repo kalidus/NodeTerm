@@ -184,8 +184,29 @@ export const CyberConnectionList = ({
 	hudClassName = '',
 	belowHeader = null
 }) => {
+	const scrollRef = useRef(null);
+	const [scrollHeightPx, setScrollHeightPx] = useState(0);
 	const count = connections.length;
 	const paddedCount = count.toString().padStart(2, '0');
+	const shouldVirtualize = count > VIRTUALIZE_THRESHOLD;
+	const scrollerHeight = scrollHeightPx > 0 ? scrollHeightPx : undefined;
+
+	useEffect(() => {
+		const el = scrollRef.current;
+		if (!el) return undefined;
+
+		const updateHeight = () => {
+			const next = Math.round(el.clientHeight);
+			if (next > 0) {
+				setScrollHeightPx((prev) => (prev === next ? prev : next));
+			}
+		};
+
+		updateHeight();
+		const ro = new ResizeObserver(updateHeight);
+		ro.observe(el);
+		return () => ro.disconnect();
+	}, [shouldVirtualize, count]);
 
 	const renderCard = (conn, idx) => {
 		if (!conn) return null;
@@ -234,16 +255,16 @@ export const CyberConnectionList = ({
 
 			{belowHeader}
 
-			<div className="cyber-results-list-scroll">
+			<div ref={scrollRef} className="cyber-results-list-scroll">
 				{count === 0 ? (
 					<CyberEmptyState message={emptyMessage} />
-				) : count > VIRTUALIZE_THRESHOLD ? (
+				) : shouldVirtualize ? (
 					<VirtualScroller
 						items={connections}
 						itemSize={CARD_ITEM_SIZE}
-						scrollHeight="100%"
+						scrollHeight={scrollerHeight ? `${scrollerHeight}px` : '100%'}
 						className="cyber-sessions-virtual"
-						style={{ height: '100%', width: '100%' }}
+						style={{ height: scrollerHeight || '100%', width: '100%' }}
 						itemTemplate={(c, options) => renderCard(c, options?.index ?? 0)}
 					/>
 				) : (

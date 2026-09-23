@@ -1,7 +1,48 @@
 import React from 'react';
 import FilterBadge from '../../../FilterBadge';
 import StandaloneStatusBar from '../../../StandaloneStatusBar';
-import { CyberConnectionList } from './CyberConnectionList';
+import { CyberConnectionList, usePanelBreakpoints } from './CyberConnectionList';
+
+const SplitSessionsList = ({
+	connections,
+	splitView,
+	activeIds,
+	onConnectToHistory,
+	onEdit,
+	handleToggleFavoriteWithGroup
+}) => {
+	const { ref, className: breakpointClass } = usePanelBreakpoints(220);
+
+	return (
+		<div
+			ref={ref}
+			className={`cyber-sessions-panel-body ${breakpointClass}`.trim()}
+			style={{
+				display: 'flex',
+				flexDirection: 'column',
+				flex: 1,
+				minHeight: 0,
+				height: '100%'
+			}}
+		>
+			<CyberConnectionList
+				connections={connections}
+				accent={splitView === 'favorites' ? '#FFD700' : '#2196F3'}
+				title=""
+				subtitle=""
+				emptyMessage={`No hay ${splitView === 'favorites' ? 'favoritos' : 'recientes'}`}
+				activeIds={activeIds}
+				onConnect={onConnectToHistory}
+				onEdit={onEdit}
+				onToggleFav={handleToggleFavoriteWithGroup}
+				showTime={splitView !== 'favorites'}
+				showFav
+				itemKeyPrefix={`split-${splitView}`}
+				hudClassName="cyber-sessions-hud"
+			/>
+		</div>
+	);
+};
 
 export const HomeTerminalSplitPanel = ({
 	children,
@@ -255,20 +296,21 @@ export const HomeTerminalSplitPanel = ({
 										))}
 									</div>
 								)}
-								<div style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
-									<CyberConnectionList
+								<div style={{
+									flex: 1,
+									minHeight: 0,
+									height: '100%',
+									overflow: 'hidden',
+									display: 'flex',
+									flexDirection: 'column'
+								}}>
+									<SplitSessionsList
 										connections={splitConnections}
-										accent={splitView === 'favorites' ? '#FFD700' : '#2196F3'}
-										title=""
-										subtitle=""
-										emptyMessage={`No hay ${splitView === 'favorites' ? 'favoritos' : 'recientes'}`}
+										splitView={splitView}
 										activeIds={activeIds}
-										onConnect={onConnectToHistory}
+										onConnectToHistory={onConnectToHistory}
 										onEdit={onEdit}
-										onToggleFav={handleToggleFavoriteWithGroup}
-										showTime={splitView !== 'favorites'}
-										showFav
-										itemKeyPrefix={`split-${splitView}`}
+										handleToggleFavoriteWithGroup={handleToggleFavoriteWithGroup}
 									/>
 								</div>
 							</div>
