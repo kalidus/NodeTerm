@@ -48,7 +48,7 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 - **RDP**: logging de IronRDP desacoplado de Guacamole; menos codigo muerto y menor consumo de memoria; CS_NET unificado con rdpdr/rdpsnd.
 - **Modularizacion**: App.js, ConnectionHistory/HomeTab, SettingsDialog y paneles de herramientas de red extraidos en submodulos y hooks.
 - **SSH**: parser mas robusto, stream PTY desacoplado y suite de tests unitarios (incl. AI-CLI y seguridad).
-- **CI**: SignPath retirado; empaquetado multiplataforma unificado. Los instaladores Windows de esta linea se publican sin firma SignPath.
+- **CI**: SignPath retirado; empaquetado multiplataforma unificado. Los instaladores Windows de esta linea se publican sin firma SignPath. `npm ci` usa `legacy-peer-deps` para el peer de `@xterm/addon-canvas@0.7` con xterm 6.
 
 ## [1.7.5] - 2026-08-31
 
