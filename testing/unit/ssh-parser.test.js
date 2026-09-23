@@ -204,9 +204,13 @@ describe('SSH Parser & Shell Security Unit Tests', () => {
     });
 
     it('sanitizeLocalPath previene path traversal con ..', () => {
-      const safe = sanitizeLocalPath('C:\\test\\..\\windows\\system32');
-      assert.ok(typeof safe === 'string');
-      assert.ok(!safe.includes('..'));
+      const winSafe = sanitizeLocalPath('C:\\test\\..\\windows\\system32');
+      assert.ok(typeof winSafe === 'string');
+      assert.ok(!winSafe.includes('..'));
+
+      const posixSafe = sanitizeLocalPath('/tmp/test/../etc/passwd');
+      assert.ok(typeof posixSafe === 'string');
+      assert.ok(!posixSafe.includes('..'));
     });
   });
 });

@@ -15,7 +15,8 @@ const execPromise = util.promisify(exec);
  */
 function sanitizeLocalPath(userPath) {
     if (!userPath || typeof userPath !== 'string') return '';
-    return path.normalize(userPath);
+    const unified = userPath.replace(/\\/g, path.sep);
+    return path.normalize(unified);
 }
 
 /**
