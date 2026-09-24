@@ -249,14 +249,15 @@ Consulta todos los detalles, metas y recompensas en el archivo [**SPONSORS.md**]
 5. 🔄 Abre un **Pull Request**
 
 ### 🐛 Reportar Bugs
-- Usa las [GitHub Issues](https://github.com/kalidus/NodeTerm/issues)
-- Incluye detalles del sistema operativo y versión de NodeTerm
-- Proporciona pasos para reproducir el problema
+- Abre un [Bug report](https://github.com/kalidus/NodeTerm/issues/new?template=bug_report.yml)
+- Incluye sistema operativo, version de NodeTerm y pasos para reproducir
 
 ### 💡 Solicitar Funcionalidades
-- Abre una [Feature Request](https://github.com/kalidus/NodeTerm/issues/new)
-- Describe claramente la funcionalidad deseada
-- Explica cómo mejoraría la experiencia de usuario
+- Idea abierta o votacion: [Discussions / Ideas](https://github.com/kalidus/NodeTerm/discussions/new?category=ideas)
+- Peticion concreta para implementar: [Feature request](https://github.com/kalidus/NodeTerm/issues/new?template=feature_request.yml)
+
+### Preguntas
+- Dudas de uso: [Discussions / Q&A](https://github.com/kalidus/NodeTerm/discussions/new?category=q-a)
 
 ---
 
@@ -264,7 +265,7 @@ Consulta todos los detalles, metas y recompensas en el archivo [**SPONSORS.md**]
 
 **NodeTerm** es un proyecto innovador desarrollado utilizando **IA avanzada** en colaboración humano-máquina. Lo que comenzó como un ejercicio de **vibe coding** se ha transformado en una herramienta profesional y moderna, específicamente diseñada para **administradores de infraestructuras** que necesitan una solución SSH robusta y eficiente.
 
-¡Las PRs y sugerencias son bienvenidas! Consulta [CONTRIBUTING.md](CONTRIBUTING.md) para más detalles.
+Las PRs y sugerencias son bienvenidas. Usa Issues y Discussions segun el tipo de peticion.
 
 ---
 

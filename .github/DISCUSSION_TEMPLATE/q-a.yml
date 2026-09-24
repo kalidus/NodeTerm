@@ -1,0 +1,24 @@
+title: "[Pregunta]: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Usa esta categoria para dudas de uso. Si es un fallo, abre un Bug report.
+  - type: textarea
+    id: question
+    attributes:
+      label: Pregunta
+      description: Que quieres hacer o que no te queda claro.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version de NodeTerm
+      placeholder: 1.8.0
+  - type: textarea
+    id: tried
+    attributes:
+      label: Que has intentado
+      description: Pasos, ajustes o documentacion que ya has mirado. Opcional.

@@ -1,0 +1,54 @@
+name: Bug report
+description: Reporta un fallo reproducible en NodeTerm.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Incluye version, sistema operativo y pasos para reproducir el problema.
+  - type: input
+    id: version
+    attributes:
+      label: Version de NodeTerm
+      placeholder: 1.8.0
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Sistema operativo
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Otro
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Pasos para reproducir
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportamiento esperado
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Comportamiento actual
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Logs o capturas
+      description: Mensajes de error, logs o capturas. Opcional.

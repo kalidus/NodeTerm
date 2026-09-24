@@ -1,0 +1,40 @@
+name: Feature request
+description: Peticion concreta de una funcionalidad para implementar.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Usa este formulario si la peticion ya esta clara y se puede implementar.
+        Si todavia es una idea abierta, abre una Discussion en Ideas.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Que funcionalidad quieres
+      description: Describe la peticion de forma concreta.
+      placeholder: Poder guardar perfiles de conexion SSH con un atajo de teclado.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Por que es util
+      description: Explica que problema resuelve y como mejora el uso de NodeTerm.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Como lo imaginas
+      description: Flujo, pantallas o comportamiento esperado. Opcional.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativas
+      description: Has considerado otra forma de resolverlo. Opcional.
+  - type: textarea
+    id: context
+    attributes:
+      label: Contexto extra
+      description: Capturas, version de NodeTerm u otros detalles. Opcional.

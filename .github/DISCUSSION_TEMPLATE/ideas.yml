@@ -1,0 +1,27 @@
+title: "[Idea]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Comparte una idea para NodeTerm. La comunidad puede comentar y votar.
+        Si la idea ya esta clara y lista para implementar, abre un Issue de Feature request.
+  - type: textarea
+    id: idea
+    attributes:
+      label: Idea
+      description: Describe la idea con claridad.
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Que problema resuelve
+      description: Que te falta hoy o que te resulta incomodo.
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Detalles extra
+      description: Ejemplos, capturas o alternativas. Opcional.

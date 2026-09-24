@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Idea o peticion abierta
+    url: https://github.com/kalidus/NodeTerm/discussions/new?category=ideas
+    about: Propone una idea, comenta y vota con la comunidad.
+  - name: Pregunta de uso
+    url: https://github.com/kalidus/NodeTerm/discussions/new?category=q-a
+    about: Dudas que no son bugs ni peticiones concretas de implementacion.
