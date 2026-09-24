@@ -11,19 +11,24 @@
 
 ## Novedades principales
 
-### HomeTab
-- Cockpit con widgets, paleta y panel Acciones (import/export, sync, stats).
-- Paneles flotantes tipo OS: arrastre, anti-colision, multi-pantalla y terminal fijo.
-- Recientes/favoritos unificados, busqueda, filtros y panel Novedades desde el changelog.
+### Dashboard HomeTab
+- **Cockpit**: widgets, paleta de lanzamiento y panel Acciones (import/export, sync y stats).
+- **Paneles flotantes tipo OS**: arrastre, anti-colision, multi-pantalla y terminal fijo.
+- **Recientes y favoritos**: busqueda, filtros por protocolo y widget Novedades desde el changelog.
 
-### RDP y VNC
-- IronRDP por defecto, Wallix (directo/cadena), CyberArk PAM y clipboard cliprdr estable via bastion.
-- Cliente VNC nativo (noVNC) con calidad, compresion y reconexion.
+### RDP y VNC nativos
+- **IronRDP por defecto**: cliente nativo al crear e importar; Wallix directo/cadena y CyberArk PAM.
+- **Portapapeles y sesion**: clipboard cliprdr estable via bastion; la sesion no se corta al redimensionar.
+- **VNC nativo**: cliente noVNC con calidad, compresion y reconexion automatica.
 
-### UI, rendimiento y seguridad
-- Temas/marcos holograficos, tipografia unificada 8-32, menus y sidebar corregidos.
-- GPU, telemetria reactiva, xterm y explorador en paralelo.
-- Vault, IPC, MCP timing-safe, host SSH, CSP y safeStorage.
+### UI, temas y editor
+- **Marcos y tipografia**: estilo sin marco, temas holograficos/cyberpunk y selector de tamano 8-32.
+- **Editor y sidebar**: barra de acciones, copiar contrasena, host Wallix real y menus contextuales estables.
+
+### Rendimiento, seguridad y CI
+- **Rendimiento**: aceleracion GPU, telemetria reactiva, chunks xterm y explorador en paralelo.
+- **Seguridad**: vault, IPC, MCP timing-safe, host SSH, CSP y safeStorage.
+- **CI**: SignPath retirado; `npm ci` con legacy-peer-deps para xterm 6.
 
 ---
 

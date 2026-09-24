@@ -10,45 +10,24 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ## [1.7.6] - 2026-09-23
 
-### Mejoras
-- **HomeTab cockpit**: widgets, paleta de lanzamiento y panel Acciones como launcher (import/export, sync y stats), con atajos agrupados.
-- **Paneles flotantes tipo OS**: arrastre 1:1, redimensionado anti-colision, memoria multi-pantalla, presets y escala al canvas (no desaparecen al cambiar de monitor).
-- **Terminal en HomeTab**: queda fijo; minimiza a la barra de titulo, maximiza a pantalla completa y recupera el slider de opacidad. Restaurar layout al reiniciar y sin guias azules al mover paneles.
-- **Recientes y favoritos**: filas unificadas, filtro por protocolo, busqueda en tiempo real y recientes visibles de nuevo en el split del terminal.
-- **Panel Novedades**: notas del CHANGELOG embebidas en el widget de inicio, con enlace a GitHub Releases.
-- **Opciones de HomeTab**: pestanas Apariencia, Paneles y Layout; ocultar cabeceras salvo el terminal; telemetria compacta con popovers al hover; boton global para salir del modo minimalista.
-- **Clic al frente**: el panel activo (incluido el terminal y el de filtros) se mantiene siempre por encima; filtros flotantes que se cierran al pulsar fuera.
-- **RDP IronRDP por defecto**: cliente nativo al crear e importar conexiones; toolbar flotante oculta por defecto; keep-alives, scancodes extendidos e indicacion cuando el archivo esta listo para pegar en el remoto.
-- **Bastiones RDP**: Wallix directo y en cadena sin romper CredSSP; CyberArk PAM con sintaxis de usuario `#` y varios `@`; canales alineados a un cliente Windows.
-- **VNC nativo**: cliente noVNC con usuario, seleccionado por defecto, y opciones de pantalla, calidad, compresion y reconexion automatica.
-- **Temas y marcos**: estilo sin marco, marcos holograficos/cyberpunk/modernos y temas coincidentes en statusBar, pestanas y terminal.
-- **Tipografia unificada**: selector de tamano 8-32 (stepper, enteros) y escalado persistente en toda la UI y en Ajustes.
-- **Editor de conexiones**: barra de acciones modernizada, copiar contrasena y cierre de pestana corregido; opcion de editar conexion en el menu contextual de pestanas.
-- **Sidebar**: hostname real de Wallix en la vista rapida; sin auto-expansion del arbol al buscar; sync de la pestana de edicion al cambiar de conexion.
-- **Ventana**: tres botones de control alineados a la derecha y arrastre en el marco superior.
-- **Usuarios**: paginacion, buscador rapido y scroll tematico en gestion de usuarios.
-- **Terminal**: scrollback por defecto a 10000 lineas con sincronizacion reactiva.
-- **Accesibilidad**: i18n y atributos a11y en FileExplorer y StatusBar.
+### 🏠 Dashboard HomeTab
+- **Cockpit**: widgets, paleta de lanzamiento y panel Acciones (import/export, sync y stats).
+- **Paneles flotantes tipo OS**: arrastre, anti-colision, multi-pantalla y terminal fijo.
+- **Recientes y favoritos**: busqueda, filtros por protocolo y widget Novedades desde el changelog.
 
-### Correcciones
-- **Clipboard RDP / Wallix**: handshake cliprdr estable (canal IO/1001, selector de maquina, file clip, CAPS debiles); no escribir en canales MCS inseguros; feedback de corte/copia/pega; dumps recortados y menos ruido de logs.
-- **Sesion RDP**: no etiquetar el Ultimatum del servidor como cierre de usuario; no cortar la sesion al redimensionar; evitar pantalla negra al cambiar resolucion (buffer + CSS); diagnostico de red, freeze e inactividad.
-- **HomeTab**: panel Acciones al redimensionar; buscador redimensionable; maximizar duplicado del terminal eliminado; titulos centrados en el header.
-- **Menus contextuales**: arbol, menu de aplicacion (salir, acerca de, Ver) y cierre al perder foco; menu del arbol estable en macOS; no se cierra al primer clic.
-- **SSH**: MOTD en conexiones multiplexadas y routers; sin supresion erronea de paquetes en conexiones directas.
-- **Explorador de archivos**: carga paralela local/remota y z-index del selector de tema/opacidad.
-- **Wake-on-LAN**: ReferenceError por `useCallback` y referencias perdidas.
-- **Eliminar conexiones**: confirmacion unificada y z-index de dialogos.
-- **Selector de tema**: tipografia sin desbordar, color de titlebar sin lag, persistencia del tamano de fuente.
-- **Seguridad**: preview de notas saneado, vault RDP, fugas IPC, webviews; MCP timing-safe; verificacion de host SSH; CSP; master key en safeStorage; fingerprint estable.
-- **Dependencias**: audit de criticas y mitigacion de tiptap.
+### 🖥️ RDP y VNC nativos
+- **IronRDP por defecto**: cliente nativo al crear e importar; Wallix directo/cadena y CyberArk PAM.
+- **Portapapeles y sesion**: clipboard cliprdr estable via bastion; la sesion no se corta al redimensionar.
+- **VNC nativo**: cliente noVNC con calidad, compresion y reconexion automatica.
 
-### Cambios
-- **Rendimiento**: aceleracion GPU por niveles, buffer O(n), telemetria reactiva, chunks de xterm aislados, animaciones CSS por GPU, virtualizacion y suspension DOM, throttle de mousemove RDP y clipboard.
-- **RDP**: logging de IronRDP desacoplado de Guacamole; menos codigo muerto y menor consumo de memoria; CS_NET unificado con rdpdr/rdpsnd.
-- **Modularizacion**: App.js, ConnectionHistory/HomeTab, SettingsDialog y paneles de herramientas de red extraidos en submodulos y hooks.
-- **SSH**: parser mas robusto, stream PTY desacoplado y suite de tests unitarios (incl. AI-CLI y seguridad).
-- **CI**: SignPath retirado; empaquetado multiplataforma unificado. Los instaladores Windows de esta linea se publican sin firma SignPath. `npm ci` usa `legacy-peer-deps` para el peer de `@xterm/addon-canvas@0.7` con xterm 6. `sanitizeLocalPath` unifica `\\` para que los tests de traversal pasen en Linux y macOS.
+### 🎨 UI, temas y editor
+- **Marcos y tipografia**: estilo sin marco, temas holograficos/cyberpunk y selector de tamano 8-32.
+- **Editor y sidebar**: barra de acciones, copiar contrasena, host Wallix real y menus contextuales estables.
+
+### ⚡ Rendimiento, seguridad y CI
+- **Rendimiento**: aceleracion GPU, telemetria reactiva, chunks xterm y explorador en paralelo.
+- **Seguridad**: vault, IPC, MCP timing-safe, host SSH, CSP y safeStorage.
+- **CI**: SignPath retirado; `npm ci` con legacy-peer-deps para xterm 6.
 
 ## [1.7.5] - 2026-08-31
 
