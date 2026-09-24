@@ -21,7 +21,6 @@ function registerTabEvents(tabId, dependencies) {
     Cygwin,
     Claude,
     OpenCode,
-    GeminiCli,
     CodexCli,
     AntigravityCli,
     HermesCli,
@@ -195,28 +194,6 @@ function registerTabEvents(tabId, dependencies) {
 
   ipcMain.on(`opencode:stop:${tabId}`, (event) => {
     OpenCode.OpenCodeHandlers.stop(tabId);
-  });
-
-  // ========== GeminiCli Events ==========
-  ipcMain.removeAllListeners(`geminicli:start:${tabId}`);
-  ipcMain.removeAllListeners(`geminicli:data:${tabId}`);
-  ipcMain.removeAllListeners(`geminicli:resize:${tabId}`);
-  ipcMain.removeAllListeners(`geminicli:stop:${tabId}`);
-
-  ipcMain.on(`geminicli:start:${tabId}`, (event, data) => {
-    GeminiCli.GeminiCliHandlers.start(tabId, data || {});
-  });
-
-  ipcMain.on(`geminicli:data:${tabId}`, (event, data) => {
-    GeminiCli.GeminiCliHandlers.data(tabId, data);
-  });
-
-  ipcMain.on(`geminicli:resize:${tabId}`, (event, data) => {
-    GeminiCli.GeminiCliHandlers.resize(tabId, data);
-  });
-
-  ipcMain.on(`geminicli:stop:${tabId}`, (event) => {
-    GeminiCli.GeminiCliHandlers.stop(tabId);
   });
 
   // ========== Codex CLI Events ==========

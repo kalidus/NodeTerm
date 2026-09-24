@@ -210,12 +210,9 @@ const TabHeader = React.memo(({
       return <FaWindows style={{ fontSize: `${baseIconSize}px`, marginRight: '6px', color: '#0078D4', flexShrink: 0 }} />;
     }
 
-    // AI CLIs (Claude, Gemini, Codex, OpenCode)
+    // AI CLIs (Claude, Codex, OpenCode)
     if (terminalType === 'claude') {
       return <AIClientBrandIcon tabType="claude" size={baseIconSize} style={{ marginRight: '6px', flexShrink: 0 }} />;
-    }
-    if (terminalType === 'geminicli') {
-      return <AIClientBrandIcon tabType="geminicli" size={baseIconSize} style={{ marginRight: '6px', flexShrink: 0 }} />;
     }
     if (terminalType === 'codexcli') {
       return <AIClientBrandIcon tabType="codexcli" size={baseIconSize} style={{ marginRight: '6px', flexShrink: 0 }} />;

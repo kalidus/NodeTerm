@@ -20,7 +20,6 @@ import {
   LazyDockerTerminal,
   LazyClaudeTerminal,
   LazyOpenCodeTerminal,
-  LazyGeminiCliTerminal,
   LazyCodexCliTerminal,
   LazyAntigravityCliTerminal,
   LazyHermesCliTerminal,
@@ -2627,19 +2626,6 @@ const TabContentRendererInner = React.memo(({
       const powerShellTheme = themes[localPowerShellTheme]?.theme || themes['Default Dark']?.theme;
       return (
         <LazyOpenCodeTerminal
-          ref={el => terminalRefs.current[tab.key] = el}
-          tabId={tab.key}
-          fontFamily={localFontFamily}
-          fontSize={localFontSize}
-          theme={powerShellTheme}
-        />
-      );
-    }
-
-    if (terminalType === 'geminicli') {
-      const powerShellTheme = themes[localPowerShellTheme]?.theme || themes['Default Dark']?.theme;
-      return (
-        <LazyGeminiCliTerminal
           ref={el => terminalRefs.current[tab.key] = el}
           tabId={tab.key}
           fontFamily={localFontFamily}

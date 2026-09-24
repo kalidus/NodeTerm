@@ -48,7 +48,7 @@ const SidebarIconRail = React.memo(({
     createContextMenu(event, menuStructure, 'app-context-menu-sidebar');
   }, [onAppMenuClick, onShowImportDialog, onShowExportDialog, onShowImportExportDialog, onShowImportWizard, t]);
 
-  const cliClients = ['opencode', 'geminicli', 'codexcli', 'antigravitycli', 'hermescli', 'claude'];
+  const cliClients = ['opencode', 'codexcli', 'antigravitycli', 'hermescli', 'claude'];
   const appClients = ['anythingllm', 'openwebui', 'librechat', 'agentzero', 'openclaw', 'opennotebook'];
 
   const hasAnyCli = cliClients.some(c => aiClientsEnabled[c]);
@@ -58,7 +58,6 @@ const SidebarIconRail = React.memo(({
   const aiClientTabTypes = {
 
     opencode: 'opencode',
-    geminicli: 'geminicli',
     codexcli: 'codexcli',
     antigravitycli: 'antigravitycli',
     hermescli: 'hermescli',
@@ -74,7 +73,6 @@ const SidebarIconRail = React.memo(({
   const aiClientTooltips = {
 
     opencode: 'tooltips.openCode',
-    geminicli: 'tooltips.geminiCLI',
     codexcli: 'tooltips.codexCLI',
     antigravitycli: 'tooltips.antigravityCLI',
     hermescli: 'tooltips.hermesCLI',

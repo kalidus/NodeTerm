@@ -15,7 +15,7 @@ import {
   FaBrain,
   FaSearch
 } from 'react-icons/fa';
-import { SiAnthropic, SiDebian, SiDocker, SiGooglegemini, SiOpenai } from 'react-icons/si';
+import { SiAnthropic, SiDebian, SiDocker, SiOpenai } from 'react-icons/si';
 import AIClientBrandIcon from './AIClientBrandIcon';
 import Sidebar from './Sidebar';
 import TerminalFrame from './TerminalFrame';
@@ -499,7 +499,7 @@ const MainContentArea = ({
       const { terminalType, distroInfo } = event.detail;
 
       // Los CLIs de IA se abren siempre en pestañas globales, no en el HomeTab
-      const isAIClient = ['opencode', 'geminicli', 'codexcli', 'antigravitycli', 'hermescli', 'claude'].includes(terminalType);
+      const isAIClient = ['opencode', 'codexcli', 'antigravitycli', 'hermescli', 'claude'].includes(terminalType);
       if (isAIClient) {
         createLocalTerminalTab(terminalType, distroInfo);
         return;
@@ -568,7 +568,6 @@ const MainContentArea = ({
     cygwin: false,
     claude: false,
     opencode: false,
-    geminicli: false,
     codexcli: false,
     antigravitycli: false,
     hermescli: false,
@@ -591,7 +590,6 @@ const MainContentArea = ({
     cygwin: false,
     claude: false,
     opencode: false,
-    geminicli: false,
     codexcli: false,
     antigravitycli: false,
     hermescli: false,
@@ -745,11 +743,6 @@ const MainContentArea = ({
         return <AIClientBrandIcon tabType="opencode" size={baseIconSize + 4} style={{ marginRight: iconMarginRight }} />;
       }
 
-      // Gemini CLI
-      if (terminalType === 'geminicli') {
-        return <SiGooglegemini style={{ fontSize: `${baseIconSize}px`, color: '#8E75B2', marginRight: iconMarginRight }} />;
-      }
-
       // Codex CLI
       if (terminalType === 'codexcli') {
         return <SiOpenai style={{ fontSize: `${baseIconSize}px`, color: '#10A37F', marginRight: iconMarginRight }} />;
@@ -885,18 +878,6 @@ const MainContentArea = ({
       }
 
       const aiClis = [];
-      if (aiClientsEnabled.geminicli) {
-        aiClis.push({
-          label: 'Gemini CLI',
-          icon: getTerminalMenuIcon('geminicli'),
-          command: () => {
-            setLastLocalTerminalType('geminicli');
-            if (createLocalTerminalTabRef.current) {
-              createLocalTerminalTabRef.current('geminicli');
-            }
-          }
-        });
-      }
       if (aiClientsEnabled.codexcli) {
         aiClis.push({
           label: 'Codex CLI',
@@ -1471,7 +1452,6 @@ const MainContentArea = ({
         if (lb.includes('openclaw')) return <AIClientBrandIcon tabType="openclaw" size={20} />;
         if (lb.includes('open notebook')) return <AIClientBrandIcon tabType="open-notebook" size={20} />;
         if (lb.includes('codex')) return <SiOpenai style={{ fontSize: 18, color: '#10A37F' }} />;
-        if (lb.includes('gemini')) return <SiGooglegemini style={{ fontSize: 18, color: '#8E75B2' }} />;
         if (lb.includes('claude')) return <SiAnthropic style={{ fontSize: 18, color: '#D97706' }} />;
         if (lb.includes('opencode')) return <AIClientBrandIcon tabType="opencode" size={20} />;
         if (lb.includes('ai chat')) return <FaBrain style={{ fontSize: 18, color: accent }} />;
@@ -2444,19 +2424,6 @@ const MainContentArea = ({
       }
     }
 
-    if (terminalType === 'geminicli') {
-      try {
-        const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
-        if (cfg.geminicli !== true) {
-          window.alert('Gemini CLI está desactivado. Actívalo en Configuración -> Clientes de IA.');
-          return;
-        }
-      } catch {
-        window.alert('Gemini CLI está desactivado. Actívalo en Configuración -> Clientes de IA.');
-        return;
-      }
-    }
-
     if (terminalType === 'codexcli') {
       try {
         const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
@@ -2524,7 +2491,7 @@ const MainContentArea = ({
       let finalDistroInfo = distroInfo;
 
       // Si no vino distroInfo, intentar resolver distribución WSL por nombre/label directo usando ref (estado más fresco)
-      if (!finalDistroInfo && terminalType !== 'claude' && terminalType !== 'opencode' && terminalType !== 'geminicli' && terminalType !== 'codexcli' && terminalType !== 'antigravitycli' && terminalType !== 'hermescli' && !terminalType.startsWith('docker-')) {
+      if (!finalDistroInfo && terminalType !== 'claude' && terminalType !== 'opencode' && terminalType !== 'codexcli' && terminalType !== 'antigravitycli' && terminalType !== 'hermescli' && !terminalType.startsWith('docker-')) {
         const distros = wslDistributionsRef.current || [];
         const distro = distros.find(d =>
           d.name === terminalType ||
@@ -2566,10 +2533,6 @@ const MainContentArea = ({
           case 'opencode':
             label = 'OpenCode';
             finalTerminalType = 'opencode';
-            break;
-          case 'geminicli':
-            label = 'Gemini CLI';
-            finalTerminalType = 'geminicli';
             break;
           case 'codexcli':
             label = 'Codex CLI';

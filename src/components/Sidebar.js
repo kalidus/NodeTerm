@@ -956,7 +956,6 @@ const Sidebar = React.memo(({
   const [aiClientsEnabled, setAiClientsEnabled] = React.useState({
     claude: false,
     opencode: false,
-    geminicli: false,
     codexcli: false,
     antigravitycli: false,
     hermescli: false,
@@ -978,7 +977,6 @@ const Sidebar = React.memo(({
           setAiClientsEnabled({
             claude: parsed.claude === true,
             opencode: parsed.opencode === true,
-            geminicli: parsed.geminicli === true,
             codexcli: parsed.codexcli === true,
             antigravitycli: parsed.antigravitycli === true,
             hermescli: parsed.hermescli === true,
@@ -994,7 +992,6 @@ const Sidebar = React.memo(({
           setAiClientsEnabled({
             claude: false,
             opencode: false,
-            geminicli: false,
             codexcli: false,
             antigravitycli: false,
             hermescli: false,
@@ -1057,7 +1054,7 @@ const Sidebar = React.memo(({
         if (enabledClients > 0) count += 1; // separador de clientes
         // separador entre CLIs y Apps
         if ((aiClientsEnabled.anythingllm || aiClientsEnabled.openwebui || aiClientsEnabled.librechat || aiClientsEnabled.agentzero || aiClientsEnabled.openclaw || aiClientsEnabled.opennotebook) && 
-            (aiClientsEnabled.opencode || aiClientsEnabled.geminicli || aiClientsEnabled.codexcli || aiClientsEnabled.antigravitycli || aiClientsEnabled.hermescli || aiClientsEnabled.claude)) {
+            (aiClientsEnabled.opencode || aiClientsEnabled.codexcli || aiClientsEnabled.antigravitycli || aiClientsEnabled.hermescli || aiClientsEnabled.claude)) {
           count += 1;
         }
       }
@@ -1087,12 +1084,6 @@ const Sidebar = React.memo(({
   const openOpenCodeTab = () => {
     window.dispatchEvent(new CustomEvent('create-local-terminal', {
       detail: { terminalType: 'opencode' }
-    }));
-  };
-
-  const openGeminiCliTab = () => {
-    window.dispatchEvent(new CustomEvent('create-local-terminal', {
-      detail: { terminalType: 'geminicli' }
     }));
   };
 
@@ -3501,7 +3492,6 @@ const Sidebar = React.memo(({
   const handleOpenAIClient = useCallback((clientId) => {
     const openers = {
       opencode: openOpenCodeTab,
-      geminicli: openGeminiCliTab,
       codexcli: openCodexCliTab,
       antigravitycli: openAntigravityCliTab,
       hermescli: openHermesCliTab,

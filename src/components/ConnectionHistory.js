@@ -153,7 +153,7 @@ const ConnectionHistory = ({
 			'debian',
 			'wsl-distro'
 		]);
-		const aiCliValues = new Set(['claude', 'opencode', 'geminicli', 'codexcli', 'antigravitycli', 'hermescli']);
+		const aiCliValues = new Set(['claude', 'opencode', 'codexcli', 'antigravitycli', 'hermescli']);
 
 		const groups = [
 			{ label: 'Shells', icon: 'pi pi-desktop', items: [] },
@@ -294,9 +294,6 @@ const ConnectionHistory = ({
 
 				if (platform === 'win32') {
 					shells.push({ label: 'PowerShell', value: 'powershell', icon: <FaWindows style={{ color: '#0078D4' }} /> });
-					if (aiClientsCfg.geminicli === true) {
-						shells.push({ label: 'Gemini CLI', value: 'geminicli', icon: <SiGooglegemini style={{ color: '#8E75B2' }} /> });
-					}
 					if (aiClientsCfg.claude === true) {
 						shells.push({ label: 'Claude Code', value: 'claude', icon: <SiAnthropic style={{ color: '#D97706' }} /> });
 					}
@@ -357,9 +354,6 @@ const ConnectionHistory = ({
 					}
 					if (aiClientsCfg.opencode === true) {
 						shells.push({ label: 'OpenCode', value: 'opencode', icon: <AIClientBrandIcon tabType="opencode" size={18} /> });
-					}
-					if (aiClientsCfg.geminicli === true) {
-						shells.push({ label: 'Gemini CLI', value: 'geminicli', icon: <SiGooglegemini style={{ color: '#8E75B2' }} /> });
 					}
 					if (aiClientsCfg.codexcli === true) {
 						shells.push({ label: 'Codex CLI', value: 'codexcli', icon: <SiOpenai style={{ color: '#10A37F' }} /> });

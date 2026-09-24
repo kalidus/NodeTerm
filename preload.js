@@ -21,7 +21,6 @@ const VALID_LISTENER_CHANNELS = [
   /^docker:.*$/,
   /^claude:.*$/,
   /^opencode:.*$/,
-  /^geminicli:.*$/,
   /^codexcli:.*$/,
   /^antigravitycli:.*$/,
   /^hermescli:.*$/,
@@ -193,14 +192,6 @@ contextBridge.exposeInMainWorld('electron', {
     installCli: () => ipcRenderer.invoke('opencode:cli-install'),
     uninstallCli: () => ipcRenderer.invoke('opencode:cli-uninstall')
   },
-  geminicli: {
-    getConfig: () => ipcRenderer.invoke('geminicli:get-config'),
-    setConfig: (config) => ipcRenderer.invoke('geminicli:set-config', config),
-    validateConfig: (config) => ipcRenderer.invoke('geminicli:validate-config', config),
-    getCliStatus: () => ipcRenderer.invoke('geminicli:cli-status'),
-    installCli: () => ipcRenderer.invoke('geminicli:cli-install'),
-    uninstallCli: () => ipcRenderer.invoke('geminicli:cli-uninstall')
-  },
   codexcli: {
     getConfig: () => ipcRenderer.invoke('codexcli:get-config'),
     setConfig: (config) => ipcRenderer.invoke('codexcli:set-config', config),
@@ -252,7 +243,6 @@ contextBridge.exposeInMainWorld('electron', {
         /^cygwin:(start|data|resize|stop):.+$/,
         /^claude:(start|data|resize|stop):.+$/,
         /^opencode:(start|data|resize|stop):.+$/,
-        /^geminicli:(start|data|resize|stop):.+$/,
         /^codexcli:(start|data|resize|stop):.+$/,
         /^antigravitycli:(start|data|resize|stop):.+$/,
         /^hermescli:(start|data|resize|stop):.+$/,
@@ -302,9 +292,8 @@ contextBridge.exposeInMainWorld('electron', {
         /^file:.*$/,
         /^local-fs:.*$/,
         /^claude:.*$/,
-        /^opencode:.*$/,
-        /^geminicli:.*$/,
-        /^codexcli:.*$/,
+  /^opencode:.*$/,
+  /^codexcli:.*$/,
         /^antigravitycli:.*$/,
         /^hermescli:.*$/,
         // 'process-pdf', // DESHABILITADO - pdf-parse eliminado

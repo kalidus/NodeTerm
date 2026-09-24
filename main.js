@@ -67,7 +67,7 @@ logTiming('Utils cargados');
 let Docker = null;
 
 const {
-  getWSL, getPowerShell, getCygwin, getClaude, getOpenCode, getGeminiCli, getCodexCli, getAntigravityCli, getHermesCli
+  getWSL, getPowerShell, getCygwin, getClaude, getOpenCode, getCodexCli, getAntigravityCli, getHermesCli
 } = require('./src/main/services/lazy-services');
 
 function createServiceProxy(getter) {
@@ -85,14 +85,12 @@ const PowerShell = createServiceProxy(getPowerShell);
 const Cygwin = createServiceProxy(getCygwin);
 const Claude = createServiceProxy(getClaude);
 const OpenCode = createServiceProxy(getOpenCode);
-const GeminiCli = createServiceProxy(getGeminiCli);
 const CodexCli = createServiceProxy(getCodexCli);
 const AntigravityCli = createServiceProxy(getAntigravityCli);
 const HermesCli = createServiceProxy(getHermesCli);
 
 const { getClaudeConfig } = require('./src/main/handlers/claude-handlers');
 const { getOpenCodeConfig } = require('./src/main/handlers/opencode-handlers');
-const { getGeminiCliConfig } = require('./src/main/handlers/geminicli-handlers');
 const { getCodexCliConfig } = require('./src/main/handlers/codexcli-handlers');
 const { getAntigravityCliConfig } = require('./src/main/handlers/antigravitycli-handlers');
 const { getHermesCliConfig } = require('./src/main/handlers/hermescli-handlers');
@@ -1796,12 +1794,6 @@ function createWindow() {
           isAppQuitting,
           getOpenCodeConfig
         });
-        GeminiCli.setDependencies({
-          mainWindow,
-          getPty,
-          isAppQuitting,
-          getGeminiCliConfig
-        });
         CodexCli.setDependencies({
           mainWindow,
           getPty,
@@ -3283,7 +3275,6 @@ app.on('before-quit', async (event) => {
     try { UbuntuProcessManager.cleanup(); } catch (e) {}
     try { Claude.cleanup(); } catch (e) {}
     try { OpenCode.cleanup(); } catch (e) {}
-    try { GeminiCli.cleanup(); } catch (e) {}
     try { CodexCli.cleanup(); } catch (e) {}
     try { AntigravityCli.cleanup(); } catch (e) {}
     try { HermesCli.cleanup(); } catch (e) {}
@@ -3873,7 +3864,6 @@ function registerTabEventsWrapper(tabId) {
     Cygwin,
     Claude,
     OpenCode,
-    GeminiCli,
     CodexCli,
     AntigravityCli,
     HermesCli,

@@ -65,7 +65,6 @@ const AppsTab = ({
     cygwin: false,
     claude: false,
     opencode: false,
-    geminicli: false,
     codexcli: false,
     antigravitycli: false,
     hermescli: false,
@@ -113,11 +112,6 @@ const AppsTab = ({
   const [openCodeCliStatus, setOpenCodeCliStatus] = useState({
     loading: false, installed: false, installing: false, version: null, binaryPath: null, error: null
   });
-  const [geminiCliStatus, setGeminiCliStatus] = useState({
-    loading: false, installed: false, installing: false, version: null, binaryPath: null, error: null
-  });
-  const [geminiApiKeyInput, setGeminiApiKeyInput] = useState('');
-  const [geminiApiKeySaved, setGeminiApiKeySaved] = useState(false);
   const [codexCliStatus, setCodexCliStatus] = useState({
     loading: false, installed: false, installing: false, version: null, binaryPath: null, error: null
   });
@@ -152,7 +146,6 @@ const AppsTab = ({
   // Estados para configuración detallada de los CLIs
   const [claudeConfig, setClaudeConfig] = useState({ binaryPath: '', defaultModel: '', extraArgs: '', authToken: '' });
   const [openCodeConfig, setOpenCodeConfig] = useState({ binaryPath: '', extraArgs: '' });
-  const [geminiCliConfig, setGeminiCliConfig] = useState({ binaryPath: '', extraArgs: '', apiKey: '' });
   const [codexCliConfig, setCodexCliConfig] = useState({ binaryPath: '', extraArgs: '', apiKey: '' });
   const [antigravityCliConfig, setAntigravityCliConfig] = useState({ binaryPath: '', extraArgs: '' });
   const [hermesCliConfig, setHermesCliConfig] = useState({ binaryPath: '', extraArgs: '' });
@@ -168,7 +161,8 @@ const AppsTab = ({
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        setClients(prev => ({ ...prev, ...parsed }));
+        const { geminicli: _removedGeminiCli, ...rest } = parsed;
+        setClients(prev => ({ ...prev, ...rest }));
       } catch (error) {
         console.warn('[AppsTab] Error al cargar configuración:', error);
       }
@@ -207,7 +201,6 @@ const AppsTab = ({
 
     checkClaudeCliStatus();
     checkOpenCodeCliStatus();
-    checkGeminiCliStatus();
     checkCodexCliStatus();
     checkAntigravityCliStatus();
     checkHermesCliStatus();
@@ -244,10 +237,9 @@ const AppsTab = ({
   useEffect(() => {
     const loadConfigs = async () => {
       try {
-        const [claude, opencode, gemini, codex, antigravity, hermes] = await Promise.all([
+        const [claude, opencode, codex, antigravity, hermes] = await Promise.all([
           window.electron?.claude?.getConfig?.(),
           window.electron?.opencode?.getConfig?.(),
-          window.electron?.geminicli?.getConfig?.(),
           window.electron?.codexcli?.getConfig?.(),
           window.electron?.antigravitycli?.getConfig?.(),
           window.electron?.hermescli?.getConfig?.()
@@ -255,7 +247,6 @@ const AppsTab = ({
 
         if (claude) setClaudeConfig({ ...claude, authToken: '' });
         if (opencode) setOpenCodeConfig(opencode);
-        if (gemini) setGeminiCliConfig({ ...gemini, apiKey: '' });
         if (codex) setCodexCliConfig({ ...codex, apiKey: '' });
         if (antigravity) setAntigravityCliConfig(antigravity);
         if (hermes) setHermesCliConfig(hermes);
@@ -296,12 +287,13 @@ const AppsTab = ({
 
   // Guardar configuración en localStorage cuando cambia
   const saveClientsConfig = (newClients) => {
-    setClients(newClients);
-    localStorage.setItem(AI_CLIENTS_STORAGE_KEY, JSON.stringify(newClients));
+    const { geminicli: _removedGeminiCli, ...cleanClients } = newClients;
+    setClients(cleanClients);
+    localStorage.setItem(AI_CLIENTS_STORAGE_KEY, JSON.stringify(cleanClients));
     
     // Emitir evento para que otros componentes se actualicen inmediatamente
     window.dispatchEvent(new CustomEvent('ai-clients-config-changed', {
-      detail: { config: newClients }
+      detail: { config: cleanClients }
     }));
   };
 
@@ -402,86 +394,6 @@ const AppsTab = ({
         error: error.message || 'No se pudo instalar OpenCode CLI'
       }));
       return false;
-    }
-  };
-
-  const checkGeminiCliStatus = async () => {
-    setGeminiCliStatus(prev => ({ ...prev, loading: true, error: null }));
-    try {
-      const [result, cfg] = await Promise.all([
-        window.electron?.geminicli?.getCliStatus?.(),
-        window.electron?.geminicli?.getConfig?.()
-      ]);
-      if (result?.success) {
-        setGeminiCliStatus({
-          loading: false,
-          installed: !!result.installed,
-          installing: false,
-          version: result.version || null,
-          binaryPath: result.binaryPath || null,
-          error: null
-        });
-        setGeminiApiKeySaved(cfg?.apiKey === '********');
-      } else {
-        setGeminiCliStatus(prev => ({
-          ...prev,
-          loading: false,
-          installing: false,
-          error: result?.error || 'No se pudo verificar Gemini CLI'
-        }));
-      }
-    } catch (error) {
-      setGeminiCliStatus(prev => ({
-        ...prev,
-        loading: false,
-        installing: false,
-        error: error.message || 'No se pudo verificar Gemini CLI'
-      }));
-    }
-  };
-
-  const installGeminiCli = async () => {
-    setGeminiCliStatus(prev => ({ ...prev, installing: true, error: null }));
-    try {
-      const result = await window.electron?.geminicli?.installCli?.();
-      if (!result?.success) {
-        throw new Error(result?.error || 'No se pudo instalar Gemini CLI');
-      }
-      await checkGeminiCliStatus();
-      return true;
-    } catch (error) {
-      setGeminiCliStatus(prev => ({
-        ...prev,
-        installing: false,
-        error: error.message || 'No se pudo instalar Gemini CLI'
-      }));
-      return false;
-    }
-  };
-
-  const saveGeminiApiKey = async () => {
-    try {
-      const current = await window.electron?.geminicli?.getConfig?.();
-      const result = await window.electron?.geminicli?.setConfig?.({
-        binaryPath: current?.binaryPath || '',
-        extraArgs: current?.extraArgs || '',
-        apiKey: geminiApiKeyInput || ''
-      });
-
-      if (result?.success) {
-        setGeminiApiKeySaved(!!geminiApiKeyInput.trim());
-        setGeminiApiKeyInput('');
-      } else {
-        setGeminiCliStatus(prev => ({
-          ...prev,
-          error: result?.error || 'No se pudo guardar la API key'
-        }));
-      }
-    } catch (error) {
-      setGeminiCliStatus(prev => ({
-        ...prev,
-        error: error.message || 'No se pudo guardar la API key'
-      }));
     }
   };
 
@@ -809,26 +721,6 @@ const AppsTab = ({
     }
   };
 
-  const handleSaveGeminiCliConfig = async () => {
-    try {
-      const validation = await window.electron?.geminicli?.validateConfig?.(geminiCliConfig);
-      if (validation && validation.valid === false) {
-        setGeminiCliStatus(prev => ({ ...prev, error: validation.error || 'Configuración inválida' }));
-        return;
-      }
-      const result = await window.electron?.geminicli?.setConfig?.(geminiCliConfig);
-      if (result?.success) {
-        setGeminiCliConfig(prev => ({ ...prev, apiKey: '' }));
-        setGeminiCliStatus(prev => ({ ...prev, error: null }));
-        await checkGeminiCliStatus();
-      } else {
-        setGeminiCliStatus(prev => ({ ...prev, error: result?.error || 'Error al guardar' }));
-      }
-    } catch (error) {
-      setGeminiCliStatus(prev => ({ ...prev, error: error.message }));
-    }
-  };
-
   const handleSaveAntigravityCliConfig = async () => {
     try {
       const validation = await window.electron?.antigravitycli?.validateConfig?.(antigravityCliConfig);
@@ -1035,16 +927,6 @@ const AppsTab = ({
         if (!ok) return;
       }
       saveClientsConfig({ ...clients, opencode: willEnable });
-      return;
-    }
-
-    if (clientKey === 'geminicli') {
-      const willEnable = !clients.geminicli;
-      if (willEnable && !geminiCliStatus.installed) {
-        const ok = await installGeminiCli();
-        if (!ok) return;
-      }
-      saveClientsConfig({ ...clients, geminicli: willEnable });
       return;
     }
 
@@ -1262,7 +1144,6 @@ const AppsTab = ({
   const BRAND_TYPE_MAP = {
     claude: 'claude',
     opencode: 'opencode',
-    geminicli: 'geminicli',
     codexcli: 'codexcli',
     antigravitycli: 'antigravitycli',
     hermescli: 'hermescli',
@@ -1326,15 +1207,6 @@ const AppsTab = ({
       color: '#6366f1',
       description: 'Agente de IA open-source para codificación en terminal. Soporta 75+ proveedores de modelos.',
       features: ['Open Source', '75+ proveedores', 'Terminal dedicada'],
-      badges: [{ label: 'LOCAL CLI', severity: 'warning' }, { label: 'STANDALONE', severity: 'success' }],
-      requiresDocker: false, isLocalCli: true
-    },
-    {
-      key: 'geminicli', category: 'cli',
-      name: 'Gemini CLI', shortName: 'Gemini CLI',
-      color: '#1a73e8',
-      description: 'CLI oficial de Google Gemini. Accede a los modelos Gemini con soporte para código y análisis.',
-      features: ['Google Gemini', 'Gratis con API Key', 'Terminal dedicada'],
       badges: [{ label: 'LOCAL CLI', severity: 'warning' }, { label: 'STANDALONE', severity: 'success' }],
       requiresDocker: false, isLocalCli: true
     },
@@ -1438,7 +1310,6 @@ const AppsTab = ({
   const getCliStatus = (key) => {
     if (key === 'claude') return claudeCliStatus;
     if (key === 'opencode') return openCodeCliStatus;
-    if (key === 'geminicli') return geminiCliStatus;
     if (key === 'codexcli') return codexCliStatus;
     if (key === 'antigravitycli') return antigravityCliStatus;
     if (key === 'hermescli') return hermesCliStatus;
@@ -1864,10 +1735,6 @@ const AppsTab = ({
         config = openCodeConfig; setConfig = setOpenCodeConfig;
         installFn = installOpenCodeCli; checkFn = checkOpenCodeCliStatus; saveFn = handleSaveOpenCodeConfig;
         brandClass = 'btn-brand-opencode'; brandColor = '#6366f1';
-      } else if (key === 'geminicli') {
-        config = geminiCliConfig; setConfig = setGeminiCliConfig;
-        installFn = installGeminiCli; checkFn = checkGeminiCliStatus; saveFn = handleSaveGeminiCliConfig;
-        brandClass = 'btn-brand-gemini'; brandColor = '#1a73e8';
       } else if (key === 'antigravitycli') {
         config = antigravityCliConfig; setConfig = setAntigravityCliConfig;
         installFn = installAntigravityCli; checkFn = checkAntigravityCliStatus; saveFn = handleSaveAntigravityCliConfig;
@@ -2029,32 +1896,29 @@ const AppsTab = ({
                 )}
               </div>
 
-              {(key === 'geminicli' || key === 'codexcli') && (
+              {key === 'codexcli' && (
                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.85rem', marginTop: '0.25rem' }}>
                   <div className="apps-param-field">
-                    <label htmlFor={`${key}-api-key`}>{key === 'geminicli' ? 'API Key de Gemini' : 'API Key de OpenAI'}</label>
+                    <label htmlFor={`${key}-api-key`}>API Key de OpenAI</label>
                     <Password 
                       id={`${key}-api-key`}
-                      value={key === 'geminicli' ? geminiApiKeyInput : codexApiKeyInput} 
-                      onChange={(e) => key === 'geminicli' ? setGeminiApiKeyInput(e.target.value) : setCodexApiKeyInput(e.target.value)} 
+                      value={codexApiKeyInput} 
+                      onChange={(e) => setCodexApiKeyInput(e.target.value)} 
                       feedback={false} 
                       toggleMask 
-                      placeholder={key === 'geminicli' 
-                        ? (geminiApiKeySaved ? 'API key guardada (escribe para reemplazar)' : 'Pegar API key Gemini') 
-                        : (codexApiKeySaved ? 'API key guardada (escribe para reemplazar)' : 'Pegar API key OpenAI')
-                      } 
+                      placeholder={codexApiKeySaved ? 'API key guardada (escribe para reemplazar)' : 'Pegar API key OpenAI'} 
                       style={{ width: '100%' }} 
                       inputStyle={{ width: '100%' }} 
                     />
                   </div>
                   <div style={{ marginTop: '0.65rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                     <Button 
-                      label={(key === 'geminicli' ? geminiApiKeyInput : codexApiKeyInput).trim() ? 'Guardar API key' : 'Eliminar API key'} 
+                      label={codexApiKeyInput.trim() ? 'Guardar API key' : 'Eliminar API key'} 
                       icon="pi pi-key" 
                       className="p-button-secondary p-button-sm" 
-                      onClick={key === 'geminicli' ? saveGeminiApiKey : saveCodexApiKey} 
+                      onClick={saveCodexApiKey} 
                     />
-                    {((key === 'geminicli' && geminiApiKeySaved) || (key === 'codexcli' && codexApiKeySaved)) && (
+                    {codexApiKeySaved && (
                       <span style={{ color: '#22c55e', fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <i className="pi pi-check" /> Guardada
                       </span>
@@ -2154,7 +2018,7 @@ const AppsTab = ({
     (k) => clients[k] && dockerStatus[k]?.running
   ).length;
   const dockerEnabledCount = dockerWebKeys.filter((k) => clients[k]).length;
-  const cliInstalledCount = ['claude', 'opencode', 'geminicli', 'codexcli', 'antigravitycli', 'hermescli'].filter(
+  const cliInstalledCount = ['claude', 'opencode', 'codexcli', 'antigravitycli', 'hermescli'].filter(
     (k) => getCliStatus(k)?.installed
   ).length;
 
@@ -2233,7 +2097,6 @@ const AppsTab = ({
     const handlers = {
       claude: { installFn: installClaudeCli, brandClass: 'btn-brand-claude' },
       opencode: { installFn: installOpenCodeCli, brandClass: 'btn-brand-opencode' },
-      geminicli: { installFn: installGeminiCli, brandClass: 'btn-brand-gemini' },
       codexcli: { installFn: installCodexCli, brandClass: 'btn-brand-codex' },
       antigravitycli: { installFn: installAntigravityCli, brandClass: 'btn-brand-antigravity' },
       hermescli: { installFn: installHermesCli, brandClass: 'btn-brand-hermes' }

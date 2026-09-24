@@ -288,15 +288,6 @@ const SettingsContent = ({
     }
   });
 
-  const [geminiCliClientEnabled, setGeminiCliClientEnabled] = useState(() => {
-    try {
-      const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
-      return cfg.geminicli === true;
-    } catch {
-      return false;
-    }
-  });
-
   const [codexCliClientEnabled, setCodexCliClientEnabled] = useState(() => {
     try {
       const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
@@ -381,7 +372,6 @@ const SettingsContent = ({
         setCygwinClientEnabled(cfg.cygwin === true);
         setClaudeClientEnabled(cfg.claude === true);
         setOpenCodeClientEnabled(cfg.opencode === true);
-        setGeminiCliClientEnabled(cfg.geminicli === true);
         setCodexCliClientEnabled(cfg.codexcli === true);
         setAntigravityCliClientEnabled(cfg.antigravitycli === true);
         setHermesCliClientEnabled(cfg.hermescli === true);
@@ -403,11 +393,10 @@ const SettingsContent = ({
     cygwin: cygwinClientEnabled,
     claude: claudeClientEnabled,
     opencode: openCodeClientEnabled,
-    geminicli: geminiCliClientEnabled,
     codexcli: codexCliClientEnabled,
     antigravitycli: antigravityCliClientEnabled,
     hermescli: hermesCliClientEnabled
-  }), [cygwinClientEnabled, claudeClientEnabled, openCodeClientEnabled, geminiCliClientEnabled, codexCliClientEnabled, antigravityCliClientEnabled, hermesCliClientEnabled]);
+  }), [cygwinClientEnabled, claudeClientEnabled, openCodeClientEnabled, codexCliClientEnabled, antigravityCliClientEnabled, hermesCliClientEnabled]);
 
   const defaultTerminalOptions = useMemo(() => buildDefaultTerminalOptions({
     platform,

@@ -11,7 +11,6 @@ const CygwinService = require('./CygwinService');
 const DockerService = require('./DockerService');
 const ClaudeService = require('./ClaudeService');
 const OpenCodeService = require('./OpenCodeService');
-const GeminiCliService = require('./GeminiCliService');
 const CodexCliService = require('./CodexCliService');
 const AntigravityCliService = require('./AntigravityCliService');
 
@@ -26,7 +25,6 @@ module.exports = {
   Docker: DockerService,
   Claude: ClaudeService,
   OpenCode: OpenCodeService,
-  GeminiCli: GeminiCliService,
   CodexCli: CodexCliService,
   AntigravityCli: AntigravityCliService,
   
@@ -37,7 +35,6 @@ module.exports = {
   ...DockerService,
   ...ClaudeService,
   ...OpenCodeService,
-  ...GeminiCliService,
   ...CodexCliService,
   ...AntigravityCliService
 };

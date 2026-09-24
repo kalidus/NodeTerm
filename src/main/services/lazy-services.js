@@ -6,7 +6,6 @@ let _PowerShell = null;
 let _Cygwin = null;
 let _Claude = null;
 let _OpenCode = null;
-let _GeminiCli = null;
 let _CodexCli = null;
 let _AntigravityCli = null;
 let _HermesCli = null;
@@ -31,10 +30,6 @@ function getOpenCode() {
   if (!_OpenCode) _OpenCode = require('./OpenCodeService');
   return _OpenCode;
 }
-function getGeminiCli() {
-  if (!_GeminiCli) _GeminiCli = require('./GeminiCliService');
-  return _GeminiCli;
-}
 function getCodexCli() {
   if (!_CodexCli) _CodexCli = require('./CodexCliService');
   return _CodexCli;
@@ -54,7 +49,6 @@ module.exports = {
   getCygwin,
   getClaude,
   getOpenCode,
-  getGeminiCli,
   getCodexCli,
   getAntigravityCli,
   getHermesCli

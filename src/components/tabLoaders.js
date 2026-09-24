@@ -32,7 +32,6 @@ export const LazyCygwinTerminal = lazy(() => getChunk('CygwinTerminal', () => im
 export const LazyDockerTerminal = lazy(() => getChunk('DockerTerminal', () => import('./DockerTerminal')));
 export const LazyClaudeTerminal = lazy(() => getChunk('ClaudeTerminal', () => import('./ClaudeTerminal')));
 export const LazyOpenCodeTerminal = lazy(() => getChunk('OpenCodeTerminal', () => import('./OpenCodeTerminal')));
-export const LazyGeminiCliTerminal = lazy(() => getChunk('GeminiCliTerminal', () => import('./GeminiCliTerminal')));
 export const LazyCodexCliTerminal = lazy(() => getChunk('CodexCliTerminal', () => import('./CodexCliTerminal')));
 export const LazyAntigravityCliTerminal = lazy(() => getChunk('AntigravityCliTerminal', () => import('./AntigravityCliTerminal')));
 export const LazyHermesCliTerminal = lazy(() => getChunk('HermesCliTerminal', () => import('./HermesCliTerminal')));
@@ -68,7 +67,6 @@ const SECONDARY_CHUNK_KEYS = [
   'DockerTerminal',
   'ClaudeTerminal',
   'OpenCodeTerminal',
-  'GeminiCliTerminal',
   'CodexCliTerminal',
   'AntigravityCliTerminal',
   'HermesCliTerminal',
@@ -92,7 +90,6 @@ const CHUNK_LOADERS = {
   DockerTerminal: () => import('./DockerTerminal'),
   ClaudeTerminal: () => import('./ClaudeTerminal'),
   OpenCodeTerminal: () => import('./OpenCodeTerminal'),
-  GeminiCliTerminal: () => import('./GeminiCliTerminal'),
   CodexCliTerminal: () => import('./CodexCliTerminal'),
   AntigravityCliTerminal: () => import('./AntigravityCliTerminal'),
   HermesCliTerminal: () => import('./HermesCliTerminal'),

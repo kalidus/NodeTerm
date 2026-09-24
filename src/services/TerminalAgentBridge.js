@@ -101,7 +101,7 @@ function inferShellFamily(tab) {
     return 'unix';
   }
   // AI CLIs suelen ir sobre shell host; en Windows PowerShell
-  if (['claude', 'opencode', 'geminicli', 'codexcli', 'antigravitycli', 'hermescli'].includes(tt)) {
+  if (['claude', 'opencode', 'codexcli', 'antigravitycli', 'hermescli'].includes(tt)) {
     return typeof navigator !== 'undefined' && /win/i.test(navigator.platform || '') ? 'powershell' : 'unix';
   }
   return 'unix';
@@ -133,7 +133,6 @@ function getIpcWriteChannel(tab, terminalId) {
   }
   if (tt === 'claude') return { kind: 'local', channel: `claude:data:${terminalId}` };
   if (tt === 'opencode') return { kind: 'local', channel: `opencode:data:${terminalId}` };
-  if (tt === 'geminicli') return { kind: 'local', channel: `geminicli:data:${terminalId}` };
   if (tt === 'codexcli') return { kind: 'local', channel: `codexcli:data:${terminalId}` };
   if (tt === 'antigravitycli') return { kind: 'local', channel: `antigravitycli:data:${terminalId}` };
   if (tt === 'hermescli') return { kind: 'local', channel: `hermescli:data:${terminalId}` };
