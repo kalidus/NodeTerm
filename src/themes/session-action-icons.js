@@ -1,10 +1,12 @@
 import React from 'react';
+import { premiumSessionActionIconThemes } from './session-action-icons-premium';
 
 /**
  * Temas de iconos para los botones de acción del explorador de sesiones
  * Cada tema incluye 4 iconos: nueva conexión, nueva carpeta, nuevo grupo, gestor de contraseñas
  */
 export const sessionActionIconThemes = {
+  ...premiumSessionActionIconThemes,
   modern: {
     name: 'Moderno',
     description: 'Iconos modernos con gradientes y sombras suaves',
