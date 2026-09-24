@@ -87,7 +87,7 @@ const AntigravityCliTerminal = forwardRef(({
     term.current.loadAddon(new WebLinksAddon());
     term.current.open(terminalRef.current);
     fitAndSyncSize();
-    writeBufferRef.current = createXtermWriteBuffer(term.current);
+    writeBufferRef.current = createXtermWriteBuffer(term);
     attachTerminalRenderer(term.current, { WebglAddon, CanvasAddon });
     setTimeout(fitAndSyncSize, 80);
     setTimeout(fitAndSyncSize, 180);

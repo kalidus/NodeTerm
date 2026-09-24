@@ -7,6 +7,13 @@
 const DEFAULT_MAX_CHUNK_PER_FRAME = 65536; // 64 KB por fotograma para mantener 60/120 FPS
 const MAX_BUFFER_BACKLOG_BYTES = 16 * 1024 * 1024; // 16 MB límite de contrapresión para prevenir OOM
 
+function resolveTerm(termOrRef) {
+  if (!termOrRef) return null;
+  if (typeof termOrRef.write === 'function') return termOrRef;
+  const current = termOrRef.current;
+  return current && typeof current.write === 'function' ? current : null;
+}
+
 export function createXtermWriteBuffer(termRef, options = {}) {
   const maxChunkPerFrame = options.maxChunkPerFrame || DEFAULT_MAX_CHUNK_PER_FRAME;
   let chunks = [];
@@ -15,7 +22,7 @@ export function createXtermWriteBuffer(termRef, options = {}) {
 
   const flush = () => {
     rafId = null;
-    const term = termRef?.current;
+    const term = resolveTerm(termRef);
     if (!term || chunks.length === 0) {
       chunks = [];
       pendingBytes = 0;
@@ -53,7 +60,7 @@ export function createXtermWriteBuffer(termRef, options = {}) {
     }
 
     // Si aún quedan fragmentos pendientes en la cola, programar el siguiente fotograma
-    if (chunks.length > 0 && termRef?.current) {
+    if (chunks.length > 0 && resolveTerm(termRef)) {
       rafId = requestAnimationFrame(flush);
     }
   };
@@ -93,7 +100,7 @@ export function createXtermWriteBuffer(termRef, options = {}) {
       cancelAnimationFrame(rafId);
       rafId = null;
     }
-    const term = termRef?.current;
+    const term = resolveTerm(termRef);
     if (chunks.length > 0 && term) {
       try {
         term.write(chunks.join(''));

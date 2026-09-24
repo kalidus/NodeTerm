@@ -88,7 +88,7 @@ const ClaudeTerminal = forwardRef(({
     term.current.loadAddon(new WebLinksAddon());
     term.current.open(terminalRef.current);
     fitAndSyncSize();
-    writeBufferRef.current = createXtermWriteBuffer(term.current);
+    writeBufferRef.current = createXtermWriteBuffer(term);
     attachTerminalRenderer(term.current, { WebglAddon, CanvasAddon });
     // Reintentos para asegurar ajuste correcto cuando el contenedor termina de montar
     setTimeout(fitAndSyncSize, 80);
