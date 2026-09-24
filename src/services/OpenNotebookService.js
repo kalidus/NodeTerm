@@ -28,6 +28,7 @@ class OpenNotebookService {
     const configuredBase = (process.env.NODETERM_OPENNOTEBOOK_URL || `http://127.0.0.1:${this.hostPort}`).replace(/\/$/, '');
     this.baseUrl = configuredBase;
     this.healthUrl = `http://127.0.0.1:${this.apiHostPort}/health`;
+    this.uiHealthUrl = `${this.baseUrl}/`;
     this.healthTimeoutMs = 300_000;
     this.healthIntervalMs = 2_000;
 
@@ -138,19 +139,9 @@ class OpenNotebookService {
 
     let running = await this.isContainerRunning(this.containerName);
     if (running) {
-      const quickOk = await this.checkHealth();
-      if (!quickOk) {
-        this.status.phase = 'cleanup';
-        this.status.message = 'Recreando contenedor Open Notebook';
-        await this.removeContainer(this.containerName);
-        running = false;
-      } else {
-        this.status.phase = 'running';
-        this.status.message = 'Contenedor Open Notebook en ejecución';
-      }
-    }
-
-    if (!running) {
+      this.status.phase = 'running';
+      this.status.message = 'Contenedor Open Notebook en ejecución';
+    } else {
       const exists = await this.isContainerExisting(this.containerName);
       if (exists) {
         await this.removeContainer(this.containerName);
@@ -158,7 +149,18 @@ class OpenNotebookService {
       await this.startContainer();
     }
 
-    await this.waitForHealth();
+    try {
+      await this.waitForHealth();
+    } catch (healthError) {
+      if (!running) {
+        throw healthError;
+      }
+      this.status.phase = 'cleanup';
+      this.status.message = 'Recreando contenedor Open Notebook';
+      await this.removeContainer(this.containerName);
+      await this.startContainer();
+      await this.waitForHealth();
+    }
 
     this.status.isRunning = true;
     this.status.phase = 'ready';
@@ -326,7 +328,7 @@ class OpenNotebookService {
 
   async waitForHealth() {
     this.status.phase = 'health';
-    this.status.message = 'Esperando a que Open Notebook responda';
+    this.status.message = 'Esperando a que la interfaz de Open Notebook responda';
     const startedAt = Date.now();
 
     while (Date.now() - startedAt < this.healthTimeoutMs) {
@@ -342,15 +344,18 @@ class OpenNotebookService {
   }
 
   checkHealth() {
+    return Promise.all([
+      this._isHttpReady(this.healthUrl),
+      this._isHttpReady(this.uiHealthUrl)
+    ]).then((results) => results.every(Boolean));
+  }
+
+  _isHttpReady(url) {
     return new Promise((resolve) => {
-      const request = http.get(this.healthUrl, (res) => {
-        if (res.statusCode >= 200 && res.statusCode < 600) {
-          res.resume();
-          resolve(true);
-        } else {
-          res.resume();
-          resolve(false);
-        }
+      const request = http.get(url, (res) => {
+        const ok = res.statusCode >= 200 && res.statusCode < 400;
+        res.resume();
+        resolve(ok);
       });
 
       request.on('error', () => resolve(false));

@@ -22,6 +22,7 @@ const OpenNotebookTab = () => {
   const [webviewError, setWebviewError] = useState(null);
   const webviewRef = useRef(null);
   const mountedRef = useRef(true);
+  const retryCountRef = useRef(0);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -53,6 +54,7 @@ const OpenNotebookTab = () => {
     try {
       const response = await invokeOpenNotebook('start');
       if (!mountedRef.current) return;
+      retryCountRef.current = 0;
       const nextStatus = response.status || INITIAL_STATUS;
       setStatus(nextStatus);
       setIsReady(Boolean(nextStatus.isRunning));
@@ -115,15 +117,29 @@ const OpenNotebookTab = () => {
       setWebviewState(prev => prev === 'ready' ? 'ready' : 'loading');
     };
     const handleFinishLoad = () => {
+      retryCountRef.current = 0;
       setWebviewState('ready');
       setWebviewError(null);
     };
     const handleDomReady = () => {
+      retryCountRef.current = 0;
       setWebviewState('ready');
       setWebviewError(null);
     };
     const handleFail = (e) => {
       if (e.errorCode === -3) return;
+      const transient = e.errorCode === -324 || e.errorCode === -102 || e.errorCode === -101 || e.errorCode === -118;
+      if (transient && retryCountRef.current < 8) {
+        retryCountRef.current += 1;
+        console.warn(`[OpenNotebook:WebView] Reintento ${retryCountRef.current}/8: ${e.errorDescription || e.errorCode}`);
+        setWebviewState('loading');
+        setTimeout(() => {
+          if (mountedRef.current) {
+            setReloadKey((prev) => prev + 1);
+          }
+        }, 2000);
+        return;
+      }
       console.error('[OpenNotebook:WebView] Fail load:', e);
       setWebviewState('error');
       setWebviewError(`${e.errorDescription || 'Error desconocido'} (${e.errorCode})`);
