@@ -240,19 +240,9 @@ const hideBootSplashEarly = () => {
   });
 };
 
-const initAndRender = async () => {
-  markStartup('initAndRender inicio');
-  try {
-    await localStorageSyncService.initialize();
-  } catch (err) {
-    console.warn('[Index] Error en sincronización inicial:', err);
-  }
-
-  // Reaplicar splash/layout/tema tras importar app-data (instancia secundaria)
+const paintApp = () => {
   applyEarlyBootTheme();
-
   initializeGlobalThemes();
-
   root.render(<App />);
   markStartup('React root.render');
 
@@ -266,6 +256,36 @@ const initAndRender = async () => {
     if (window.electron && window.electron.ipcRenderer) {
       window.electron.ipcRenderer.send('app:renderer-ready');
     }
+  });
+};
+
+const scheduleIdle = (fn) => {
+  if (typeof requestIdleCallback === 'function') {
+    requestIdleCallback(fn, { timeout: 2500 });
+    return;
+  }
+  setTimeout(fn, 0);
+};
+
+const initAndRender = async () => {
+  markStartup('initAndRender inicio');
+  const isSecondary = window.electron?.isSecondaryInstance === true;
+
+  if (isSecondary) {
+    try {
+      await localStorageSyncService.initialize();
+    } catch (err) {
+      console.warn('[Index] Error en sincronizacion inicial:', err);
+    }
+    paintApp();
+    return;
+  }
+
+  paintApp();
+  scheduleIdle(() => {
+    localStorageSyncService.initialize().catch((err) => {
+      console.warn('[Index] Error en sincronizacion diferida:', err);
+    });
   });
 };
 

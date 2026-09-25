@@ -8,8 +8,8 @@ import { SYNC_KEYS } from '../shared/sync-keys';
 
 const EXTRA_FETCH_ROUNDS = 2;
 const EXTRA_FETCH_DELAY_MS = 300;
-const SECONDARY_EXTRA_ROUNDS = 12;
-const SECONDARY_FETCH_DELAY_MS = 500;
+const SECONDARY_EXTRA_ROUNDS = 3;
+const SECONDARY_FETCH_DELAY_MS = 400;
 
 /** Clave legacy (sync-keys antiguo); migrar a nodeterm_favorite_group_assignments */
 const LEGACY_FAVORITE_ASSIGNMENTS_KEY = 'nodeterm_group_assignments';
@@ -37,6 +37,7 @@ class LocalStorageSyncService {
     constructor() {
         this._initialized = false;
         this._syncReady = false;
+        this._initPromise = null;
         this._debounceTimer = null;
         this._lastSyncDataStr = null;
         this._listenersBound = false;
@@ -87,10 +88,6 @@ class LocalStorageSyncService {
         window.addEventListener('pagehide', () => {
             this.syncToFile();
         });
-
-        setInterval(() => {
-            this.syncToFile();
-        }, 30000);
     }
 
     _snapshotSyncState() {
@@ -107,11 +104,32 @@ class LocalStorageSyncService {
     /**
      * Inicializa el servicio y carga datos del archivo compartido si es necesario
      */
+    _hasLocalKeysMissingFromShared(sharedData) {
+        if (!sharedData || typeof sharedData !== 'object') {
+            return true;
+        }
+        for (const key of SYNC_KEYS) {
+            const localVal = localStorage.getItem(key);
+            if (!isEmptyValue(localVal) && (sharedData[key] === undefined || sharedData[key] === null)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     async initialize() {
         if (this._initialized) {
             return;
         }
+        if (this._initPromise) {
+            return this._initPromise;
+        }
 
+        this._initPromise = this._doInitialize();
+        return this._initPromise;
+    }
+
+    async _doInitialize() {
         try {
             if (!window.electron?.appdata) {
                 return;
@@ -122,9 +140,8 @@ class LocalStorageSyncService {
             if (sharedData) {
                 this._importToLocalStorage(sharedData);
                 this._snapshotSyncState();
-                // Instancia principal: volcar claves locales que aún no estén en app-data.json
-                if (!window.electron?.isSecondaryInstance) {
-                    await this.forceSync();
+                if (!window.electron?.isSecondaryInstance && this._hasLocalKeysMissingFromShared(sharedData)) {
+                    await this.syncToFile();
                 }
             } else {
                 const hasLocalTheme = localStorage.getItem('ui_theme');
@@ -274,8 +291,6 @@ class LocalStorageSyncService {
                 return;
             }
 
-            const keys = await window.electron.appdata.getSyncKeys();
-
             const data = {};
             let count = 0;
 
@@ -285,7 +300,7 @@ class LocalStorageSyncService {
             // Inicializar caché si no existe
             if (!this._memoryCache) this._memoryCache = {};
 
-            for (const key of keys) {
+            for (const key of SYNC_KEYS) {
                 // PRIMERO: Intentar usar el override explícito si existe
                 if (overrides[key] !== undefined) {
                     data[key] = overrides[key];

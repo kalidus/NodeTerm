@@ -37,7 +37,8 @@ const VALID_LISTENER_CHANNELS = [
   /^system:.*$/, // Eventos de suspensión/reanudación del sistema
   /^ssh-tunnel:.*$/, // Eventos de túneles SSH
   /^terminal:.*$/,
-  /^linux-terminal:.*$/
+  /^linux-terminal:.*$/,
+  /^appdata:changed$/
 ];
 
 function isAllowedListenerChannel(channel) {
@@ -174,7 +175,13 @@ contextBridge.exposeInMainWorld('electron', {
     getAll: () => ipcRenderer.invoke('appdata:get-all'),
     saveAll: (data) => ipcRenderer.invoke('appdata:save-all', data),
     getSyncKeys: () => ipcRenderer.invoke('appdata:get-sync-keys'),
-    getLastModified: () => ipcRenderer.invoke('appdata:get-last-modified')
+    getLastModified: () => ipcRenderer.invoke('appdata:get-last-modified'),
+    onChanged: (func) => {
+      if (typeof func !== 'function') return () => {};
+      const subscription = () => func();
+      ipcRenderer.on('appdata:changed', subscription);
+      return () => ipcRenderer.off('appdata:changed', subscription);
+    }
   },
   claude: {
     getConfig: () => ipcRenderer.invoke('claude:get-config'),

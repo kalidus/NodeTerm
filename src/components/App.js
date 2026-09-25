@@ -11,8 +11,6 @@ import { publishHomeSessions } from '../utils/homeSessionBus';
 import { loadSavedTabTheme } from '../utils/tabThemeLoader';
 import i18n from '../i18n';
 import ErrorBoundary from './ErrorBoundary';
-// 🚀 OPTIMIZACIÓN: Servicio de detección centralizado para evitar múltiples llamadas IPC
-import systemDetectionService from '../services/SystemDetectionService';
 
 import { useStatusBarSettings } from '../hooks/useStatusBarSettings';
 import { useSessionManagement } from '../hooks/useSessionManagement';
@@ -350,13 +348,6 @@ const App = () => {
     i18n.init().catch(err => {
       console.error('[App] Error inicializando i18n:', err);
     });
-  }, []);
-
-  // 🚀 OPTIMIZACIÓN: Inicializar detecciones de sistema de forma diferida
-  // Esto evita bloquear el render inicial con llamadas IPC
-  useEffect(() => {
-    // Diferir detecciones 800ms después del mount para no bloquear el render
-    systemDetectionService.initializeDeferred(800);
   }, []);
 
   // Detectar si necesita unlock al iniciar (o auto-unlock si está recordado)

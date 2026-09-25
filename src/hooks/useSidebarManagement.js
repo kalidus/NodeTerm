@@ -126,87 +126,87 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
     }
   }, []);
 
-  // 🔄 ROBUST POLLING: Check mtime every 2s
   useEffect(() => {
-    if (!window.electron?.appdata?.getLastModified) return;
+    if (!window.electron?.appdata) return;
 
-    // Inicializar lastKnownMtime
-    window.electron.appdata.getLastModified().then(mtime => {
-      lastKnownMtimeRef.current = mtime;
-    });
+    if (window.electron.appdata.getLastModified) {
+      window.electron.appdata.getLastModified().then((mtime) => {
+        lastKnownMtimeRef.current = mtime;
+      });
+    }
 
-    const interval = setInterval(async () => {
+    const applyRemoteAppData = async () => {
       try {
         if (typeof document !== 'undefined' && document.hidden) return;
-        // 1. Evitar polling si acabamos de hacer un cambio local (ventana de 5s para que el sync ocurra)
         const now = Date.now();
         if (now - lastLocalActionTimeRef.current < 5000) {
-          // console.log('[Polling] 🛡️ Ignorando polling por acción local reciente');
           return;
         }
 
-        const mtime = await window.electron.appdata.getLastModified();
-
-        // Si el archivo no ha cambiado, no hacer nada
-        if (mtime <= lastKnownMtimeRef.current) return;
-
-        // console.log(`[Polling] 🔔 Cambio detectado: mtime ${mtime} > last ${lastKnownMtimeRef.current}`);
-        lastKnownMtimeRef.current = mtime;
+        if (window.electron.appdata.getLastModified) {
+          const mtime = await window.electron.appdata.getLastModified();
+          if (mtime && mtime <= lastKnownMtimeRef.current) return;
+          if (mtime) lastKnownMtimeRef.current = mtime;
+        }
 
         const allData = await window.electron.appdata.getAll();
         if (!allData) return;
 
-        // Intentar obtener datos (preferir encriptados si existen y estamos en una sesión con master key)
-        // Nota: El descifrado real ocurre en App.js, aquí solo lo bajamos a localStorage
         const remoteEncrypted = allData['connections_encrypted'];
         const remoteJson = allData[STORAGE_KEYS.TREE_DATA];
 
         if (!remoteEncrypted && !remoteJson) return;
 
-        // Sincronizar connections_encrypted si existe
         if (remoteEncrypted) {
-            const currentEncrypted = localStorage.getItem('connections_encrypted');
-            if (remoteEncrypted !== currentEncrypted) {
-                // console.log('[Polling] 🔐 Detectados cambios en datos encriptados');
-                localStorage.setItem('connections_encrypted', remoteEncrypted);
-                localStorageSyncService.updateCache('connections_encrypted', remoteEncrypted);
-                
-                // Si hay datos encriptados, esto disparará el useEffect en App.js que los descifrará
-                // No necesitamos llamar a setNodes aquí directament si App.js lo maneja vía localStorage/masterKey
-                // Pero notificamos para que App.js sepa que debe recargar
-                window.dispatchEvent(new CustomEvent('encryption-data-synced'));
-            }
+          const currentEncrypted = localStorage.getItem('connections_encrypted');
+          if (remoteEncrypted !== currentEncrypted) {
+            localStorage.setItem('connections_encrypted', remoteEncrypted);
+            localStorageSyncService.updateCache('connections_encrypted', remoteEncrypted);
+            window.dispatchEvent(new CustomEvent('encryption-data-synced'));
+          }
         }
 
-        // Sincronizar tree_data básico (fallback o si no hay encryption)
         if (remoteJson && remoteJson !== lastContentHashRef.current) {
-            // console.log('[Polling] 📥 Datos nuevos recibidos. Actualizando sidebar...');
-            lastContentHashRef.current = remoteJson;
+          lastContentHashRef.current = remoteJson;
+          localStorage.setItem(STORAGE_KEYS.TREE_DATA, remoteJson);
+          localStorageSyncService.updateCache(STORAGE_KEYS.TREE_DATA, remoteJson);
 
-            // Actualizar localStorage
-            localStorage.setItem(STORAGE_KEYS.TREE_DATA, remoteJson);
-
-            // Actualizar caché de memoria para proteger contra lecturas fallidas
-            localStorageSyncService.updateCache(STORAGE_KEYS.TREE_DATA, remoteJson);
-
-            // Solo actualizar nodes si NO hay datos encriptados (porque los encriptados mandan)
-            if (!remoteEncrypted) {
-                isExternalReloadRef.current = true;
-                const parsed = JSON.parse(remoteJson);
-                const { normalized, fixedCount } = normalizeTreeNodes(parsed);
-                if (fixedCount > 0) {
-                  console.warn(`[useSidebarManagement] Se normalizaron ${fixedCount} keys duplicadas/inválidas en sync`);
-                }
-                setNodes(normalized);
+          if (!remoteEncrypted) {
+            isExternalReloadRef.current = true;
+            const parsed = JSON.parse(remoteJson);
+            const { normalized, fixedCount } = normalizeTreeNodes(parsed);
+            if (fixedCount > 0) {
+              console.warn(`[useSidebarManagement] Se normalizaron ${fixedCount} keys duplicadas/invalidas en sync`);
             }
+            setNodes(normalized);
+          }
         }
-
       } catch (err) {
-        console.error('[Polling] ❌ Error en intervalo:', err);
+        console.error('[useSidebarManagement] Error aplicando app-data remoto:', err);
       }
-    }, 5000);
+    };
 
-    return () => clearInterval(interval);
+    let unsubscribe = null;
+    let fallbackInterval = null;
+
+    if (typeof window.electron.appdata.onChanged === 'function') {
+      unsubscribe = window.electron.appdata.onChanged(applyRemoteAppData);
+    } else {
+      fallbackInterval = setInterval(applyRemoteAppData, 15000);
+    }
+
+    const onVisible = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        applyRemoteAppData();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+      if (fallbackInterval) clearInterval(fallbackInterval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, []);
 
   // Función para actualizar hash localmente (llamada por Sidebar cuando guarda)
