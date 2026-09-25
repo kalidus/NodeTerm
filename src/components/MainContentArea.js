@@ -957,28 +957,6 @@ const MainContentArea = ({
         });
       }
 
-      // Fallback para mostrar distros locales frecuentes aunque la detección no haya terminado.
-      const fallbackDistros = [
-        { label: 'Ubuntu 24.04', terminalType: 'wsl-ubuntu', iconType: 'ubuntu' },
-        { label: 'Ubuntu', terminalType: 'wsl-ubuntu-old', iconType: 'ubuntu' },
-        { label: 'Debian', terminalType: 'wsl-debian', iconType: 'debian' },
-        { label: 'Kali Linux', terminalType: 'wsl-kali', iconType: 'wsl-kali' }
-      ];
-      fallbackDistros.forEach((fallback) => {
-        const exists = distros.some((d) => d.label?.toLowerCase?.() === fallback.label.toLowerCase());
-        if (exists) return;
-        distros.push({
-          label: fallback.label,
-          icon: getTerminalMenuIcon(fallback.iconType, null, fallback.label),
-          command: () => {
-            setLastLocalTerminalType(fallback.terminalType);
-            if (createLocalTerminalTabRef.current) {
-              createLocalTerminalTabRef.current(fallback.terminalType);
-            }
-          }
-        });
-      });
-
       const containers = [];
       if (dockerContainers && dockerContainers.length > 0) {
         dockerContainers.forEach((container) => {
