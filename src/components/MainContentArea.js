@@ -479,17 +479,18 @@ const MainContentArea = ({
     };
 
     window.addEventListener('storage', handleStorageChange);
-
-    const interval = setInterval(() => {
-      const currentValue = readHomeButtonLocked();
-      if (currentValue !== homeButtonLocked) {
-        setHomeButtonLocked(currentValue);
+    const handleLockEvent = (e) => {
+      if (typeof e?.detail?.locked === 'boolean') {
+        setHomeButtonLocked(e.detail.locked);
+        return;
       }
-    }, 100);
+      setHomeButtonLocked(readHomeButtonLocked());
+    };
+    window.addEventListener('lock-home-button-changed', handleLockEvent);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
+      window.removeEventListener('lock-home-button-changed', handleLockEvent);
     };
   }, [homeButtonLocked]);
 

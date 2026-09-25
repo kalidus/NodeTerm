@@ -62,8 +62,8 @@ if (typeof window !== 'undefined') {
 // Custom styles
 import './styles/main.css';
 import './styles/layout/layouts.css';
-// Fuentes locales integradas (generadas con npm run download-fonts)
-import './styles/fonts.css';
+// Fuentes: solo latin/latin-ext 400+700 al arranque. El resto se carga en Ajustes.
+import './styles/fonts-core.css';
 // import './assets/DashboardStyles.css';
 // import './assets/Dashboard.css';
 // import './assets/form-fixes.css';

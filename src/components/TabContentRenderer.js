@@ -2957,6 +2957,7 @@ const TabContentRendererInner = React.memo(({
     return (
       <LazySettingsContent
         isEmbedded={true}
+        visible={isActiveTab}
         propMainTab={tab.mainTab}
         propSubTab={tab.subTab}
         {...settingsTabProps}

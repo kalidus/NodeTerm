@@ -200,7 +200,17 @@ if (app) {
   } catch (_) {}
 }
 
-// Configuración de GPU por plataforma
+function getTotalRamGb() {
+  try {
+    return require('os').totalmem() / (1024 * 1024 * 1024);
+  } catch (_) {
+    return 8;
+  }
+}
+
+const isLowRamMachine = getTotalRamGb() <= 8;
+
+// Configuracion de GPU por plataforma
 if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU === 'true') {
   app.disableHardwareAcceleration();
 } else if (process.platform === 'linux') {
@@ -212,8 +222,8 @@ if (process.argv.includes('--disable-gpu') || process.env.NODETERM_DISABLE_GPU =
   app.commandLine.appendSwitch('disable-features', 'Vulkan,VulkanFromANGLE,DefaultANGLEVulkan,VulkanDisplay,VulkanSurface,WaylandDataDrag');
   // Desactivar watchdog del GPU process para evitar kills prematuros
   app.commandLine.appendSwitch('disable-gpu-watchdog');
-} else {
-  // 🚀 OPTIMIZACIONES DE RENDIMIENTO DE HARDWARE (GPU) — solo en macOS/Windows
+} else if (!isLowRamMachine) {
+  // GPU agresiva solo en equipos con RAM de sobra (Windows/macOS)
   app.commandLine.appendSwitch('ignore-gpu-blocklist');
   app.commandLine.appendSwitch('enable-gpu-rasterization');
   app.commandLine.appendSwitch('enable-zero-copy');
@@ -1397,9 +1407,14 @@ function createWindow() {
     console.warn('[SPLASH] No se pudo crear ventana de splash:', e?.message);
   }
 
+  const { getInitialWindowBounds, saveWindowBounds } = require('./src/main/utils/window-bounds');
+  const initialBounds = getInitialWindowBounds(app.getPath('userData'));
+
   mainWindow = new BrowserWindow({
-    width: 1600,
-    height: 1000,
+    width: initialBounds.width,
+    height: initialBounds.height,
+    x: initialBounds.x,
+    y: initialBounds.y,
     minWidth: 200,
     minHeight: 100,
     title: 'NodeTerm',
@@ -1446,9 +1461,43 @@ function createWindow() {
 
   // Cierre de la ventana principal
   mainWindow.on('close', () => {
+    try { saveWindowBounds(app.getPath('userData'), mainWindow); } catch (_) {}
     isAppQuitting.value = true;
     app.quit();
   });
+
+  let saveBoundsTimer = null;
+  const scheduleSaveBounds = () => {
+    if (saveBoundsTimer) clearTimeout(saveBoundsTimer);
+    saveBoundsTimer = setTimeout(() => {
+      try { saveWindowBounds(app.getPath('userData'), mainWindow); } catch (_) {}
+    }, 400);
+  };
+  mainWindow.on('resize', scheduleSaveBounds);
+  mainWindow.on('move', scheduleSaveBounds);
+
+  const hasActiveGraphicalSessions = () => {
+    if (activeGuacamoleConnections.size > 0) return true;
+    try {
+      const rdp = require('./src/main/services/RdpNativeBridgeService');
+      if (rdp.activeConnections && rdp.activeConnections.size > 0) return true;
+    } catch (_) {}
+    try {
+      const vnc = require('./src/main/services/VncNativeBridgeService');
+      if (vnc.activeConnections && vnc.activeConnections.size > 0) return true;
+    } catch (_) {}
+    return false;
+  };
+
+  const syncBackgroundThrottling = () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    const shouldThrottle = mainWindow.isMinimized() && !hasActiveGraphicalSessions();
+    try {
+      mainWindow.webContents.setBackgroundThrottling(shouldThrottle);
+    } catch (_) {}
+  };
+  mainWindow.on('minimize', syncBackgroundThrottling);
+  mainWindow.on('restore', syncBackgroundThrottling);
 
   // 🔒 CRÍTICO: Registrar handlers de seguridad ANTES de que la ventana cargue
   // Esto asegura que security:get-master-key esté disponible cuando el renderer arranque
@@ -1589,6 +1638,9 @@ function createWindow() {
     }
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.show();
+      if (initialBounds.isMaximized) {
+        try { mainWindow.maximize(); } catch (_) {}
+      }
       applyWindowCornersOnStartup(mainWindow);
     }
     closeSplash();

@@ -53,7 +53,8 @@ const SUBTAB_DEFAULT_APP = {
 
 const AppsTab = ({
   themeColors,
-  activeSubTab
+  activeSubTab,
+  isActive = true
 }) => {
   const { t } = useTranslation('settings');
   const toast = useRef(null);
@@ -197,8 +198,6 @@ const AppsTab = ({
       }
     };
     syncGuacamoleState();
-    const guacInterval = setInterval(syncGuacamoleState, 2500);
-
     checkClaudeCliStatus();
     checkOpenCodeCliStatus();
     checkCodexCliStatus();
@@ -208,10 +207,12 @@ const AppsTab = ({
       checkCygwinStatus();
     }
 
+    if (!isActive) return undefined;
+    const guacInterval = setInterval(syncGuacamoleState, 10000);
     return () => {
       clearInterval(guacInterval);
     };
-  }, []);
+  }, [isActive]);
 
   useEffect(() => {
     if (!isWindows || !window.electron?.ipcRenderer?.on) return undefined;

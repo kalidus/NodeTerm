@@ -225,7 +225,10 @@ const NodeTermStatus = ({
 		setTimeout(() => {
 			fetchGuacd();
 		}, 2000);
-		intervalId = setInterval(fetchGuacd, 10000); // Reducido de 5000ms a 10000ms para ahorrar CPU/RAM
+		intervalId = setInterval(() => {
+			if (typeof document !== 'undefined' && document.hidden) return;
+			fetchGuacd();
+		}, 30000);
 
 		// Verificar estado de servicios Docker de IA
 		const checkAIDockerServices = async () => {
@@ -318,7 +321,10 @@ const NodeTermStatus = ({
 		};
 		loadAIClientsConfig();
 		checkAIDockerServices();
-		const aiServicesIntervalId = setInterval(checkAIDockerServices, 10000);
+		const aiServicesIntervalId = setInterval(() => {
+			if (typeof document !== 'undefined' && document.hidden) return;
+			checkAIDockerServices();
+		}, 30000);
 
 		// Escuchar cambios en la configuración de clientes de IA
 		const handleAIClientsConfigChange = (e) => {

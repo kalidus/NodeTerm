@@ -12,18 +12,15 @@ let statsWorkerQueue = [];
 let isShuttingDown = false;
 
 function startStatsWorker() {
-  if (statsWorker) {
-    try { statsWorker.kill(); } catch { }
-    statsWorker = null;
-    statsWorkerReady = false;
-  }
+  if (statsWorker || isShuttingDown) return;
 
   statsWorker = fork(path.join(__dirname, '../../../system-stats-worker.js'));
   statsWorkerReady = true;
+  console.log('[MEM] Stats worker arrancado (primer uso)');
 
   statsWorker.on('exit', () => {
     statsWorkerReady = false;
-    // Solo reiniciar si no estamos cerrando la aplicación
+    statsWorker = null;
     if (!isShuttingDown) {
       setTimeout(startStatsWorker, 1000);
     }
@@ -62,10 +59,16 @@ function getFallbackStats(model = 'NoData') {
   };
 }
 
+function ensureStatsWorker() {
+  if (!statsWorker && !isShuttingDown) {
+    startStatsWorker();
+  }
+}
+
 async function getSystemStats() {
   return new Promise((resolve) => {
+    ensureStatsWorker();
     if (!statsWorkerReady) {
-      // Si el worker no está listo, devolver fallback
       resolve(getFallbackStats('NoWorker'));
       return;
     }
@@ -130,6 +133,7 @@ function resumeStatsWorker() {
 
 module.exports = {
   startStatsWorker,
+  ensureStatsWorker,
   getSystemStats,
   isWorkerReady,
   stopStatsWorker,

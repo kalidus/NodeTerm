@@ -25,10 +25,9 @@ function initializeSystemServices(sshConnectionPool, sshConnections) {
     ConnectionHistoryService = require('../services/ConnectionHistoryService');
     ConnectionHistoryService.loadConnectionHistory();
     
-    // System Stats Worker
+    // Stats worker: se arranca en el primer get-system-stats, no al boot
     StatsWorkerService = require('../services/StatsWorkerService');
-    StatsWorkerService.startStatsWorker();
-    
+
     // Connection Pool Cleaner
     ConnectionPoolCleaner = require('../services/ConnectionPoolCleaner');
     ConnectionPoolCleaner.startOrphanCleanup(sshConnectionPool, sshConnections);

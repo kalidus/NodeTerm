@@ -117,6 +117,7 @@ const TerminalSettingsTab = ({
     if (!localStorage.getItem(STORAGE_KEYS.SCROLLBACK_LINES)) {
       localStorage.setItem(STORAGE_KEYS.SCROLLBACK_LINES, String(DEFAULT_SCROLLBACK_LINES));
     }
+    import('../styles/fonts.css').catch(() => {});
   }, []);
   // Local echo SSH: muestra el carácter localmente antes del echo del servidor
   const [sshLocalEcho, setSshLocalEcho] = useState(() => {

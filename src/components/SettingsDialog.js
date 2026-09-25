@@ -747,6 +747,7 @@ const SettingsContent = ({
                 <AppsTab
                   themeColors={{ primary: 'var(--primary-color)' }}
                   activeSubTab={activeSubTab}
+                  isActive={visible && activeMainTab === 'apps'}
                 />
               </div>
             </TabPanel>

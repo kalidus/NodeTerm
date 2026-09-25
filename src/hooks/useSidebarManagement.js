@@ -137,6 +137,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
 
     const interval = setInterval(async () => {
       try {
+        if (typeof document !== 'undefined' && document.hidden) return;
         // 1. Evitar polling si acabamos de hacer un cambio local (ventana de 5s para que el sync ocurra)
         const now = Date.now();
         if (now - lastLocalActionTimeRef.current < 5000) {
@@ -203,7 +204,7 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
       } catch (err) {
         console.error('[Polling] ❌ Error en intervalo:', err);
       }
-    }, 2000);
+    }, 5000);
 
     return () => clearInterval(interval);
   }, []);
