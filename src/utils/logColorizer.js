@@ -1,6 +1,7 @@
 /**
  * Colorea salida tipo log inyectando SGR ANSI.
- * No toca chunks TUI ni lineas que ya traen escape sequences.
+ * No toca TUI reales (vim/less). Si la linea parece log, quita SGR/OSC 8
+ * de systemd y aplica las reglas de NodeTerm.
  */
 
 const ESC = '\x1b';
@@ -18,6 +19,7 @@ const STYLE = {
   success: `${ESC}[32m`,
   timestamp: `${ESC}[2;37m`,
   ip: `${ESC}[35m`,
+  unit: `${ESC}[36m`,
   http2: `${ESC}[32m`,
   http3: `${ESC}[36m`,
   http4: `${ESC}[33m`,
@@ -46,7 +48,12 @@ const RE_IPV4 = /\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d{1,2})\.){3}(?:25[0-5]|2[0-4]\d
 const RE_IPV6 = /\b[0-9a-fA-F]{1,4}(?::[0-9a-fA-F]{1,4}){7}\b/g;
 const RE_HTTP_METHOD_STATUS = /\b(?:GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+\S+\s+(?:HTTP\/[\d.]+\s+)?([1-5]\d{2})\b/g;
 const RE_HTTP_VERSION_STATUS = /\bHTTP\/[\d.]+\s+([1-5]\d{2})\b/g;
-const RE_CSI = /\x1b\[[0-9;?=]*([A-Za-z@`~])/g;
+const RE_UNIT_PID = /\b[A-Za-z0-9_@.:-]+\[\d+\]:/g;
+const RE_FAILED = /\b(?:failed|failure)\b/gi;
+const RE_CSI = /\x1b\[([0-9;?]*)([A-Za-z@`~])/g;
+const RE_OSC8 = /\x1b\]8;[^\x07\x1b]*(?:\x07|\x1b\\)/g;
+const RE_SGR = /\x1b\[[0-9;:]*m/g;
+const TUI_CSI_FINALS = 'HfABCDJK';
 
 export function isSshLogHighlightEnabled() {
   try {
@@ -58,24 +65,43 @@ export function isSshLogHighlightEnabled() {
 
 function httpStyleForStatus(code) {
   const n = code.charCodeAt(0);
-  if (n === 50) return STYLE.http2; // 2
-  if (n === 51) return STYLE.http3; // 3
-  if (n === 52) return STYLE.http4; // 4
-  if (n === 53) return STYLE.http5; // 5
+  if (n === 50) return STYLE.http2;
+  if (n === 51) return STYLE.http3;
+  if (n === 52) return STYLE.http4;
+  if (n === 53) return STYLE.http5;
   return STYLE.info;
 }
 
 function hasInteractiveEscapes(text) {
   if (!text || text.indexOf(ESC) === -1) return false;
-  if (text.indexOf(`${ESC}]`) !== -1) return true;
-  if (text.indexOf(`${ESC}7`) !== -1 || text.indexOf(`${ESC}8`) !== -1) return true;
-  if (text.indexOf(`${ESC}(`) !== -1 || text.indexOf(`${ESC})`) !== -1) return true;
   RE_CSI.lastIndex = 0;
   let m;
   while ((m = RE_CSI.exec(text))) {
-    if (m[1] !== 'm') return true;
+    const params = m[1];
+    const final = m[2];
+    if (final === 'm') continue;
+    if (TUI_CSI_FINALS.indexOf(final) !== -1) return true;
+    if ((final === 'h' || final === 'l') && params.indexOf('?') !== -1) return true;
+    return true;
   }
+  if (/\x1b[78]/.test(text)) return true;
+  if (text.indexOf(`${ESC}(`) !== -1 || text.indexOf(`${ESC})`) !== -1) return true;
   return false;
+}
+
+function stripDisplayEscapes(text) {
+  if (!text || text.indexOf(ESC) === -1) return text;
+  return text.replace(RE_OSC8, '').replace(RE_SGR, '');
+}
+
+function looksLikeLog(text) {
+  if (!text) return false;
+  RE_ISO_TS.lastIndex = 0;
+  if (RE_ISO_TS.test(text)) return true;
+  RE_SYSLOG_TS.lastIndex = 0;
+  if (RE_SYSLOG_TS.test(text)) return true;
+  RE_UNIT_PID.lastIndex = 0;
+  return RE_UNIT_PID.test(text);
 }
 
 function collectMatches(line, regex, getStyle, useGroup) {
@@ -121,6 +147,22 @@ function applyRanges(line, ranges) {
   return out;
 }
 
+function collectLogRanges(body) {
+  const ranges = [];
+  ranges.push(...collectMatches(body, RE_LEVEL, (text) => (
+    LEVEL_STYLE[text.toUpperCase()] || STYLE.info
+  )));
+  ranges.push(...collectMatches(body, RE_FAILED, () => STYLE.error));
+  ranges.push(...collectMatches(body, RE_ISO_TS, () => STYLE.timestamp));
+  ranges.push(...collectMatches(body, RE_SYSLOG_TS, () => STYLE.timestamp));
+  ranges.push(...collectMatches(body, RE_UNIT_PID, () => STYLE.unit));
+  ranges.push(...collectMatches(body, RE_IPV4, () => STYLE.ip));
+  ranges.push(...collectMatches(body, RE_IPV6, () => STYLE.ip));
+  ranges.push(...collectMatches(body, RE_HTTP_METHOD_STATUS, httpStyleForStatus, true));
+  ranges.push(...collectMatches(body, RE_HTTP_VERSION_STATUS, httpStyleForStatus, true));
+  return ranges;
+}
+
 export function colorizeLogLine(line) {
   if (!line) return line;
   const nl = line.endsWith('\n');
@@ -135,26 +177,22 @@ export function colorizeLogLine(line) {
     suffix = '\n';
   }
   if (!body || body.length > MAX_LINE_LEN) return line;
-  if (body.indexOf(ESC) !== -1) return line;
+  if (hasInteractiveEscapes(body)) return line;
 
-  const ranges = [];
-  ranges.push(...collectMatches(body, RE_LEVEL, (text) => (
-    LEVEL_STYLE[text.toUpperCase()] || STYLE.info
-  )));
-  ranges.push(...collectMatches(body, RE_ISO_TS, () => STYLE.timestamp));
-  ranges.push(...collectMatches(body, RE_SYSLOG_TS, () => STYLE.timestamp));
-  ranges.push(...collectMatches(body, RE_IPV4, () => STYLE.ip));
-  ranges.push(...collectMatches(body, RE_IPV6, () => STYLE.ip));
-  ranges.push(...collectMatches(body, RE_HTTP_METHOD_STATUS, httpStyleForStatus, true));
-  ranges.push(...collectMatches(body, RE_HTTP_VERSION_STATUS, httpStyleForStatus, true));
+  const hasEsc = body.indexOf(ESC) !== -1;
+  if (hasEsc) {
+    const stripped = stripDisplayEscapes(body);
+    if (!looksLikeLog(stripped)) return line;
+    body = stripped;
+  }
 
-  if (ranges.length === 0) return line;
+  const ranges = collectLogRanges(body);
+  if (ranges.length === 0) return hasEsc ? line : (body + suffix);
   return applyRanges(body, ranges) + suffix;
 }
 
 function colorizeCompleteText(text) {
   if (!text) return '';
-  if (hasInteractiveEscapes(text)) return text;
   let out = '';
   let start = 0;
   for (let i = 0; i < text.length; i++) {
