@@ -66,7 +66,7 @@ const RE_JSON_ATOM = /\b(?:true|false|null)\b/g;
 const RE_DIFF_PREFIX = /^[+-](?![+-])/;
 const RE_CSI = /\x1b\[([0-9;?]*)([A-Za-z@`~])/g;
 const RE_OSC = /\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g;
-const RE_SGR = /\x1b\[[0-9;:]*m/g;
+const RE_SGR = /\x1b\[([0-9;:]*)m/g;
 const TUI_CSI_FINALS = 'HfABCDJK';
 
 export function isSshLogHighlightEnabled() {
@@ -130,6 +130,28 @@ function hasInteractiveEscapes(text) {
 function stripDisplayEscapes(text) {
   if (!text || text.indexOf(ESC) === -1) return text;
   return text.replace(RE_OSC, '').replace(RE_SGR, '');
+}
+
+function looksLikeLog(text) {
+  if (!text) return false;
+  RE_ISO_TS.lastIndex = 0;
+  if (RE_ISO_TS.test(text)) return true;
+  RE_SYSLOG_TS.lastIndex = 0;
+  if (RE_SYSLOG_TS.test(text)) return true;
+  RE_UNIT_PID.lastIndex = 0;
+  return RE_UNIT_PID.test(text);
+}
+
+function hasMeaningfulSgr(text) {
+  if (!text || text.indexOf(ESC) === -1) return false;
+  RE_SGR.lastIndex = 0;
+  let m;
+  while ((m = RE_SGR.exec(text))) {
+    const params = m[1];
+    if (!params || params === '0' || params === '00') continue;
+    return true;
+  }
+  return false;
 }
 
 function collectMatches(line, regex, getStyle, useGroup) {
@@ -250,6 +272,7 @@ export function colorizeLogLine(line) {
   if (hasEsc) {
     const stripped = stripDisplayEscapes(body);
     if (stripped.indexOf(ESC) !== -1) return line;
+    if (hasMeaningfulSgr(body) && !looksLikeLog(stripped)) return line;
     body = stripped;
   }
 
