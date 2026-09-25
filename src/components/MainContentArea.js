@@ -3069,7 +3069,7 @@ const MainContentArea = ({
                 background: isHomeTabActive ? 'var(--ui-content-bg, #1a1b26)' : undefined
               }}>
                 <div style={{ width: '100%', minWidth: 0, overflow: 'hidden', position: 'relative' }}>
-                  {/* Pills de grupos: siempre visibles, incluso cuando el grupo está vacío */}
+                  {/* Barra de grupos: siempre visible, incluso cuando el grupo está vacío */}
                   {renderGroupTabs()}
                   {/* Solo mostrar TabView de pestañas si el grupo no está vacío */}
                   {!(activeGroupId !== null && getTabsInGroup(activeGroupId).length === 0) && (

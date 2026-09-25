@@ -1612,42 +1612,35 @@ export const getTabThemeList = () =>
     .sort((a, b) => a.name.localeCompare(b.name));
 
 const GROUP_PILL_THEME_CSS = `
+      .groups-tab-bar,
       .groups-pill-bar {
         background: var(--ui-tab-bar-bg, var(--ui-sidebar-bg)) !important;
         border-bottom: 1px solid var(--ui-tabgroup-border, var(--ui-tab-border)) !important;
       }
 
-      .groups-pill-divider {
-        background: linear-gradient(
-          to bottom,
-          transparent,
-          color-mix(in srgb, var(--ui-tabgroup-border, var(--ui-tab-border)) 55%, transparent),
-          transparent
-        ) !important;
-      }
-
+      .group-tab-item,
       .group-pill {
-        background: var(--ui-tabgroup-bg, var(--ui-tab-bg)) !important;
         color: var(--ui-tabgroup-text, var(--ui-tab-text)) !important;
-        border-color: var(--ui-tabgroup-border, var(--ui-tab-border)) !important;
+        border-radius: var(--tab-border-radius, 4px 4px 0 0) !important;
+        box-shadow: var(--tab-box-shadow, none) !important;
+        transition: var(--tab-transition, all 0.2s ease) !important;
+        backdrop-filter: var(--tab-backdrop-filter, none) !important;
       }
 
+      .group-tab-item:hover,
       .group-pill:hover {
         background: var(--ui-tabgroup-hover-bg, var(--ui-tab-hover-bg)) !important;
-        border-color: var(--ui-tab-border) !important;
         color: var(--ui-tab-text, var(--ui-tabgroup-text)) !important;
       }
 
+      .group-tab-item--active,
       .group-pill--active {
         background: var(--ui-tab-active-bg) !important;
         color: var(--ui-tab-active-text) !important;
-        border-color: color-mix(
-          in srgb,
-          var(--gp-color, var(--primary-color)) 55%,
-          var(--ui-tab-border)
-        ) !important;
+        box-shadow: var(--tab-active-elevation, var(--tab-box-shadow, none)) !important;
       }
 
+      .group-tab-item--home.group-tab-item--active,
       .group-pill--home.group-pill--active {
         border-color: var(--ui-home-tab-accent, var(--primary-color)) !important;
       }
@@ -1673,7 +1666,9 @@ export const applyTabTheme = (themeName) => {
     // Las variables CSS del tema UI se aplicarán automáticamente
     css = `
       /* Tema default - usa variables del tema UI */
-      .p-tabview .p-tabview-nav li .p-tabview-nav-link {
+      .p-tabview .p-tabview-nav li .p-tabview-nav-link,
+      .group-tab-item,
+      .group-pill {
         border-radius: var(--tab-border-radius, 4px 4px 0 0) !important;
         box-shadow: var(--tab-box-shadow, none) !important;
         transition: var(--tab-transition, all 0.2s ease) !important;
@@ -1696,7 +1691,9 @@ export const applyTabTheme = (themeName) => {
         border-bottom: 1px solid var(--ui-tab-border) !important;
       }
       
-      .p-tabview .p-tabview-nav li .p-tabview-nav-link {
+      .p-tabview .p-tabview-nav li .p-tabview-nav-link,
+      .group-tab-item,
+      .group-pill {
         background: var(--ui-tab-bg) !important;
         color: var(--ui-tab-text) !important;
         border: 1px solid var(--ui-tab-border) !important;
@@ -1712,12 +1709,16 @@ export const applyTabTheme = (themeName) => {
         background-size: var(--tab-background-size, auto) !important;
       }
       
-      .p-tabview .p-tabview-nav li .p-tabview-nav-link:hover {
+      .p-tabview .p-tabview-nav li .p-tabview-nav-link:hover,
+      .group-tab-item:hover,
+      .group-pill:hover {
         background: var(--ui-tab-hover-bg) !important;
         ${styles['--tab-active-elevation'] ? 'box-shadow: var(--tab-active-elevation) !important;' : ''}
       }
       
-      .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+      .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link,
+      .group-tab-item--active,
+      .group-pill--active {
         background: var(--ui-tab-active-bg) !important;
         color: var(--ui-tab-active-text) !important;
         border-bottom: var(--tab-active-border-bottom, none) !important;

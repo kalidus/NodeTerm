@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { getGroupTabIcon } from '../themes/group-tab-icons';
 
 export const useTabRendering = ({
@@ -34,18 +34,72 @@ export const useTabRendering = ({
   // Estado para el icono de grupos (refresca cuando cambia el icono)
   const [groupIconVersion, setGroupIconVersion] = useState(0);
 
+  const groupBarRef = useRef(null);
+  const groupHeightSyncRef = useRef({ resizeObserver: null, mutationObserver: null, observed: null });
+
   useEffect(() => {
     const handleGroupIconChange = () => setGroupIconVersion(v => v + 1);
     window.addEventListener('group-icon-changed', handleGroupIconChange);
     return () => window.removeEventListener('group-icon-changed', handleGroupIconChange);
   }, []);
 
+  const syncGroupBarHeight = useCallback((groupBar) => {
+    if (!groupBar) return false;
+    const root = groupBar.parentElement;
+    const tabLink = root?.querySelector('.main-tab-view .p-tabview-nav li:not(.home-tab) .p-tabview-nav-link')
+      || document.querySelector('.terminal-frame.main-content-frame .main-tab-view .p-tabview-nav li:not(.home-tab) .p-tabview-nav-link');
+    if (!tabLink) return false;
+
+    const applyHeight = () => {
+      const height = Math.round(tabLink.getBoundingClientRect().height);
+      if (height <= 0) return;
+      groupBar.style.setProperty('--tab-bar-height', `${height}px`);
+      groupBar.style.setProperty('height', `${height}px`, 'important');
+      groupBar.style.setProperty('min-height', `${height}px`, 'important');
+      groupBar.style.setProperty('max-height', `${height}px`, 'important');
+    };
+
+    const syncState = groupHeightSyncRef.current;
+    if (syncState.observed !== tabLink) {
+      if (syncState.resizeObserver) syncState.resizeObserver.disconnect();
+      syncState.observed = tabLink;
+      syncState.resizeObserver = new ResizeObserver(applyHeight);
+      syncState.resizeObserver.observe(tabLink);
+    }
+    applyHeight();
+    return true;
+  }, []);
+
+  const setGroupBarRef = useCallback((node) => {
+    groupBarRef.current = node;
+    const syncState = groupHeightSyncRef.current;
+    if (!node) {
+      if (syncState.resizeObserver) syncState.resizeObserver.disconnect();
+      if (syncState.mutationObserver) syncState.mutationObserver.disconnect();
+      syncState.observed = null;
+      return;
+    }
+    if (syncGroupBarHeight(node)) return;
+    if (syncState.mutationObserver) syncState.mutationObserver.disconnect();
+    syncState.mutationObserver = new MutationObserver(() => {
+      if (syncGroupBarHeight(node) && syncState.mutationObserver) {
+        syncState.mutationObserver.disconnect();
+        syncState.mutationObserver = null;
+      }
+    });
+    if (node.parentElement) {
+      syncState.mutationObserver.observe(node.parentElement, { childList: true, subtree: true });
+    }
+  }, [syncGroupBarHeight]);
+
+  useEffect(() => {
+    if (groupBarRef.current) syncGroupBarHeight(groupBarRef.current);
+  }, [tabGroups.length, activeGroupId, syncGroupBarHeight]);
+
   /**
-   * RENDERIZA LA BARRA DE GRUPOS — Pills inline integrados en la barra de pestañas.
-   *
-   * En lugar de un TabView completo que ocupa su propia fila, se usa un <div>
-   * horizontal con botones estilizados como "pills". El CSS (.groups-pill-bar)
-   * los posiciona como parte del mismo contenedor visual que la barra de tabs.
+   * RENDERIZA LA BARRA DE GRUPOS — Segunda fila de tabs (estilo TabView).
+   * Clases nuevas: .groups-tab-bar / .group-tab-item
+   * Alias: .groups-pill-bar / .group-pill para no romper temas.
    */
   const renderGroupTabs = () => {
     if (tabGroups.length === 0) return null;
@@ -96,34 +150,29 @@ export const useTabRendering = ({
 
     return (
       <div
-        className="groups-pill-bar"
+        ref={setGroupBarRef}
+        className="groups-tab-bar groups-pill-bar"
         style={{ WebkitAppRegion: isDraggable ? 'drag' : 'inherit' }}
       >
-        {/* Pill de "Sin grupo / Home" */}
         {activeGroupId !== null && (
-          <>
-            <button
-              className={`group-pill group-pill--home${activeGroupId === null ? ' group-pill--active' : ''}`}
-              onClick={() => switchGroup(null)}
-              title="Todas las pestañas (sin grupo)"
-              aria-label="Sin grupo"
-              style={{ WebkitAppRegion: isDraggable ? 'no-drag' : 'inherit' }}
-            >
-              {getGroupTabIcon(13)}
-            </button>
-
-            {/* Divisor vertical */}
-            <span className="groups-pill-divider" aria-hidden="true" />
-          </>
+          <button
+            className={`group-tab-item group-pill group-tab-item--home group-pill--home${activeGroupId === null ? ' group-tab-item--active group-pill--active' : ''}`}
+            onClick={() => switchGroup(null)}
+            title="Todas las pestañas (sin grupo)"
+            aria-label="Sin grupo"
+            style={{ WebkitAppRegion: isDraggable ? 'no-drag' : 'inherit' }}
+          >
+            {getGroupTabIcon(13)}
+          </button>
         )}
 
-        {/* Pills de cada grupo */}
         {tabGroups.map((group) => {
           const isActive = activeGroupId === group.id;
+          const tabCount = getTabsInGroup(group.id).length;
           return (
             <button
               key={group.id}
-              className={`group-pill${isActive ? ' group-pill--active' : ''}`}
+              className={`group-tab-item group-pill${isActive ? ' group-tab-item--active group-pill--active' : ''}`}
               onClick={() => switchGroup(group.id)}
               onContextMenu={(e) => {
                 e.preventDefault();
@@ -144,16 +193,21 @@ export const useTabRendering = ({
               }}
             >
               <span
-                className="group-pill__dot"
+                className="group-tab-item__dot group-pill__dot"
                 style={{
                   background: group.color,
                   boxShadow: `0 0 0 2px ${group.color}44`
                 }}
                 aria-hidden="true"
               />
-              <span className="group-pill__label">{group.name}</span>
+              <span className="group-tab-item__label group-pill__label">{group.name}</span>
+              {tabCount > 0 && (
+                <span className="group-tab-item__badge" aria-label={`${tabCount} pestanas`}>
+                  {tabCount}
+                </span>
+              )}
               <span
-                className="group-pill__close"
+                className="group-tab-item__close group-pill__close"
                 role="button"
                 tabIndex={-1}
                 aria-label={`Eliminar grupo ${group.name}`}
@@ -165,9 +219,6 @@ export const useTabRendering = ({
             </button>
           );
         })}
-
-        {/* Divisor final que separa los pills del área de pestañas */}
-        <span className="groups-pill-divider groups-pill-divider--end" aria-hidden="true" />
       </div>
     );
   };

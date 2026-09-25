@@ -725,7 +725,8 @@ class ThemeManager {
         color: white !important;
       }
 
-      /* === TAB GROUP PILLS STYLES === */
+      /* === TAB GROUP BAR STYLES === */
+      .groups-tab-bar,
       .groups-pill-bar {
         background: var(--ui-tab-bar-bg, var(--ui-sidebar-bg)) !important;
         border-bottom: 1px solid var(--ui-tabgroup-border) !important;

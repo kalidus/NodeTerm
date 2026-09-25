@@ -1285,17 +1285,26 @@
     position: relative !important;
 }
 
-/* --- Barra de grupos (pills): misma altura que el nav-container de pestañas --- */
+/* --- Barra de grupos: misma altura que el nav-container de pestañas --- */
+.terminal-frame.main-content-frame .groups-tab-bar,
 .terminal-frame.main-content-frame .groups-pill-bar {
+    box-sizing: border-box !important;
+    align-items: stretch !important;
     height: var(--tab-bar-height, 34px) !important;
+    min-height: var(--tab-bar-height, 34px) !important;
+    max-height: var(--tab-bar-height, 34px) !important;
     background: var(--ui-tab-bar-bg, var(--ui-sidebar-bg, #1a1b26)) !important;
     border-bottom: 1px solid var(--ui-tabgroup-border, rgba(255, 255, 255, 0.07)) !important;
 }
 
 /* Groups bar en layout VSCode: misma altura compacta */
+:root[data-tab-layout="vscode"] .terminal-frame.main-content-frame .groups-tab-bar,
 :root[data-tab-layout="vscode"] .terminal-frame.main-content-frame .groups-pill-bar {
-    height: 28px !important;
-    border-bottom: 1px solid var(--ui-tabgroup-border, rgba(255, 255, 255, 0.07)) !important;
+    align-items: stretch !important;
+    height: var(--tab-bar-height, 28px) !important;
+    min-height: var(--tab-bar-height, 28px) !important;
+    max-height: var(--tab-bar-height, 28px) !important;
+    border-bottom: 0 !important;
 }
 
 .terminal-frame.main-content-frame .main-tab-view .p-tabview-nav {
@@ -1314,14 +1323,6 @@
 :root[data-tab-layout="vscode"] .terminal-frame.main-content-frame .p-tabview-nav-container {
     padding-top: 0 !important;
     border-bottom: 0 !important; /* Elimina la línea separadora para VSCode */
-}
-
-/* Groups bar no hereda la altura del layout VSCode */
-:root[data-tab-layout="vscode"] .terminal-frame.main-content-frame .tabview-groups-bar .p-tabview-nav-container {
-    height: 28px !important;
-    min-height: 28px !important;
-    padding-top: 0 !important;
-    border-bottom: 1px solid var(--ui-tabgroup-border, rgba(255, 255, 255, 0.07)) !important;
 }
 
 :root[data-tab-layout="vscode"] .terminal-frame.main-content-frame .main-tab-view .p-tabview-nav {
