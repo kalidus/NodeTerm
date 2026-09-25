@@ -51,6 +51,7 @@ const QuickNotesSidePanel = ({
   const { t } = useTranslation();
   const displayTitle = title || t('quickNotes.title', 'Notas rápidas');
   const [rect, setRect] = useState(null);
+  const noteClickTimerRef = useRef(null);
 
   // Actualizar posición cuando se abre o se redimensiona
   useEffect(() => {
@@ -73,9 +74,32 @@ const QuickNotesSidePanel = ({
     };
   }, [isOpen, anchorRef]);
 
+  useEffect(() => {
+    return () => {
+      if (noteClickTimerRef.current) {
+        clearTimeout(noteClickTimerRef.current);
+      }
+    };
+  }, []);
+
   const handleNoteClick = useCallback((e, node) => {
     e.stopPropagation();
-    onOpenNote?.(node);
+    if (noteClickTimerRef.current) {
+      clearTimeout(noteClickTimerRef.current);
+    }
+    noteClickTimerRef.current = setTimeout(() => {
+      noteClickTimerRef.current = null;
+      onOpenNote?.(node, 'reuse');
+    }, 250);
+  }, [onOpenNote]);
+
+  const handleNoteDoubleClick = useCallback((e, node) => {
+    e.stopPropagation();
+    if (noteClickTimerRef.current) {
+      clearTimeout(noteClickTimerRef.current);
+      noteClickTimerRef.current = null;
+    }
+    onOpenNote?.(node, 'new');
   }, [onOpenNote]);
 
   const handleDeleteClick = useCallback((e, node) => {
@@ -155,6 +179,7 @@ const QuickNotesSidePanel = ({
                 key={note.key}
                 className={`qnp-note-item${isSelected ? ' selected' : ''}`}
                 onClick={(e) => handleNoteClick(e, note)}
+                onDoubleClick={(e) => handleNoteDoubleClick(e, note)}
                 title={note.label}
               >
                 <div className="qnp-note-header">

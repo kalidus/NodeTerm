@@ -539,14 +539,7 @@ export const useGlobalAppEvents = ({
   useEffect(() => {
     const handler = (e) => {
       const info = e.detail || {};
-      const tabId = `doc_${info.key}_${Date.now()}`;
-
-      const existingTabs = getAllTabs();
-      const existingTab = existingTabs.find(t => t.type === TAB_TYPES.DOCUMENT && t.documentData?.key === info.key);
-      if (existingTab) {
-        activateTabSynchronously(existingTab.key);
-        return;
-      }
+      const mode = info.mode === 'new' ? 'new' : info.mode === 'reuse' ? 'reuse' : null;
 
       const documentData = {
         key: info.key,
@@ -558,18 +551,66 @@ export const useGlobalAppEvents = ({
         updatedAt: info.data?.updatedAt
       };
 
-      const newTab = {
-        key: tabId,
-        label: `${documentData.icon} ${info.label}`,
-        type: TAB_TYPES.DOCUMENT,
-        documentData,
-        createdAt: Date.now()
+      const createNewTab = () => {
+        const tabId = `doc_${info.key}_${Date.now()}`;
+        const newTab = {
+          key: tabId,
+          label: `${documentData.icon} ${info.label}`,
+          type: TAB_TYPES.DOCUMENT,
+          documentData,
+          createdAt: Date.now()
+        };
+        promoteAndActivateTab(tabId, (prev) => [newTab, ...prev]);
       };
-      promoteAndActivateTab(tabId, (prev) => [newTab, ...prev]);
+
+      if (mode === 'new') {
+        createNewTab();
+        return;
+      }
+
+      if (mode === 'reuse') {
+        const activeTab = filteredTabs?.[activeTabIndex];
+        if (activeTab?.type === TAB_TYPES.DOCUMENT) {
+          if (activeTab.documentData?.key === info.key) {
+            return;
+          }
+          promoteAndActivateTab(activeTab.key, (prev) =>
+            prev.map(t =>
+              t.key === activeTab.key
+                ? {
+                    ...t,
+                    label: `${documentData.icon} ${info.label}`,
+                    documentData
+                  }
+                : t
+            )
+          );
+          return;
+        }
+
+        const existingReuseTab = getAllTabs().find(
+          t => t.type === TAB_TYPES.DOCUMENT && t.documentData?.key === info.key
+        );
+        if (existingReuseTab) {
+          activateTabSynchronously(existingReuseTab.key);
+          return;
+        }
+        createNewTab();
+        return;
+      }
+
+      const existingTab = getAllTabs().find(
+        t => t.type === TAB_TYPES.DOCUMENT && t.documentData?.key === info.key
+      );
+      if (existingTab) {
+        activateTabSynchronously(existingTab.key);
+        return;
+      }
+      createNewTab();
     };
     window.addEventListener('open-document-tab', handler);
     return () => window.removeEventListener('open-document-tab', handler);
-  }, [getAllTabs, promoteAndActivateTab, activateTabSynchronously]);
+  }, [getAllTabs, promoteAndActivateTab, activateTabSynchronously, filteredTabs, activeTabIndex]);
 
   // 13. Sincronizar título e icono de documentos
   useEffect(() => {

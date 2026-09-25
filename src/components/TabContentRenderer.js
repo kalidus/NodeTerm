@@ -1360,6 +1360,7 @@ const TabContentRendererInner = React.memo(({
   if (tab.type === TAB_TYPES.DOCUMENT && tab.documentData) {
     return (
       <LazyTiptapDocumentEditor
+        key={tab.documentData.key}
         documentKey={tab.documentData.key}
         documentData={tab.documentData}
       />

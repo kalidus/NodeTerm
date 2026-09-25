@@ -410,7 +410,16 @@ const DocumentsSidebar = ({
   const contextMenuRef = useRef(null);
   const inlineRenameInputRef = useRef(null);
   const sidebarRootRef = useRef(null);
+  const documentClickTimerRef = useRef(null);
   const [contextMenuItems, setContextMenuItems] = useState([]);
+
+  useEffect(() => {
+    return () => {
+      if (documentClickTimerRef.current) {
+        clearTimeout(documentClickTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const reloadFromStorage = async () => {
@@ -508,13 +517,14 @@ const DocumentsSidebar = ({
 
 
 
-  const handleOpenDocument = useCallback((node) => {
+  const handleOpenDocument = useCallback((node, mode = 'reuse') => {
     if (node.data?.type === 'document-folder' || node.droppable) return;
     window.dispatchEvent(new CustomEvent('open-document-tab', {
       detail: {
         key: node.key,
         label: node.label,
-        data: node.data
+        data: node.data,
+        mode
       }
     }));
   }, []);
@@ -575,7 +585,8 @@ const DocumentsSidebar = ({
         detail: {
           key: newNote.key,
           label: newNote.label,
-          data: newNote.data
+          data: newNote.data,
+          mode: 'reuse'
         }
       }));
     }, 50);
@@ -949,8 +960,25 @@ const DocumentsSidebar = ({
             e.stopPropagation();
             setSelectedNodeKey(node.key);
             setQuickNotesPanelOpen(false);
-            handleOpenDocument(node);
+            if (documentClickTimerRef.current) {
+              clearTimeout(documentClickTimerRef.current);
+            }
+            documentClickTimerRef.current = setTimeout(() => {
+              documentClickTimerRef.current = null;
+              handleOpenDocument(node, 'reuse');
+            }, 250);
           }
+        }}
+        onDoubleClick={(e) => {
+          if (isInlineRenaming || isFolder) return;
+          e.stopPropagation();
+          if (documentClickTimerRef.current) {
+            clearTimeout(documentClickTimerRef.current);
+            documentClickTimerRef.current = null;
+          }
+          setSelectedNodeKey(node.key);
+          setQuickNotesPanelOpen(false);
+          handleOpenDocument(node, 'new');
         }}
         style={{
           display: 'flex',
@@ -1178,14 +1206,15 @@ const DocumentsSidebar = ({
   }, [isQuickNoteSelected, isFolderSelected, selectedNodeForDetails, documentNodes]);
 
   // Abrir una nota rápida en el editor principal
-  const handleOpenQuickNote = useCallback((node) => {
+  const handleOpenQuickNote = useCallback((node, mode = 'reuse') => {
     setSelectedNodeKey(node.key);
     setQuickNotesPanelOpen(false);
     window.dispatchEvent(new CustomEvent('open-document-tab', {
       detail: {
         key: node.key,
         label: node.label,
-        data: node.data
+        data: node.data,
+        mode
       }
     }));
   }, []);
@@ -1208,7 +1237,8 @@ const DocumentsSidebar = ({
             detail: {
               key: newDoc.key,
               label: newDoc.label,
-              data: newDoc.data
+              data: newDoc.data,
+              mode: 'reuse'
             }
           }));
         }
