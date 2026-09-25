@@ -7,6 +7,7 @@ import { themes } from '../themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
 import { attachTerminalRenderer, getTerminalScrollback, useTerminalMemoryGuards } from '../utils/xtermRenderer';
+import { createLogColorizer, isSshLogHighlightEnabled } from '../utils/logColorizer';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
 import { useSshTabStats } from '../services/SshStatsStore';
 
@@ -57,6 +58,9 @@ const TerminalComponent = forwardRef(({
     const sshLocalEchoRef = useRef(
         localStorage.getItem('nodeterm_ssh_local_echo') === 'true'
     );
+    const logColorizerRef = useRef(null);
+    const isLocalTerminalRef = useRef(isLocalTerminal);
+    isLocalTerminalRef.current = isLocalTerminal;
     const [localStatusBarThemeName, setLocalStatusBarThemeName] = useState(() => {
         const isSSH = !isLocalTerminal;
         const storageKey = isSSH ? 'basicapp_statusbar_theme' : 'localLinuxStatusBarTheme';
@@ -75,6 +79,9 @@ const TerminalComponent = forwardRef(({
             if (e.detail && typeof e.detail.sshLocalEcho === 'boolean') {
                 sshLocalEchoRef.current = e.detail.sshLocalEcho;
             }
+            if (e.detail && typeof e.detail.sshLogHighlight === 'boolean') {
+                logColorizerRef.current?.setEnabled(!isLocalTerminalRef.current && e.detail.sshLogHighlight);
+            }
             if (e.detail && typeof e.detail.scrollback === 'number' && term.current) {
                 term.current.options.scrollback = e.detail.scrollback;
             }
@@ -82,6 +89,29 @@ const TerminalComponent = forwardRef(({
         window.addEventListener('terminal-settings-changed', handleSettingsChange);
         return () => window.removeEventListener('terminal-settings-changed', handleSettingsChange);
     }, []);
+
+    useEffect(() => {
+        const writeColored = (data) => {
+            if (!data) return;
+            if (writeBufferRef.current) {
+                writeBufferRef.current.write(data);
+            } else {
+                term.current?.write(data);
+            }
+        };
+        const colorizer = createLogColorizer({
+            enabled: !isLocalTerminal && isSshLogHighlightEnabled(),
+            onPending: writeColored
+        });
+        logColorizerRef.current = colorizer;
+        return () => {
+            writeColored(colorizer.flush());
+            colorizer.destroy();
+            if (logColorizerRef.current === colorizer) {
+                logColorizerRef.current = null;
+            }
+        };
+    }, [tabId, isLocalTerminal]);
 
     // Cerrar menú de tema al hacer clic fuera
     useEffect(() => {
@@ -447,10 +477,13 @@ const TerminalComponent = forwardRef(({
 
             // Listen for incoming data (60 FPS write batching)
             const dataListener = (data) => {
+                const colorizer = logColorizerRef.current;
+                const out = colorizer ? colorizer.push(data) : data;
+                if (!out) return;
                 if (writeBufferRef.current) {
-                    writeBufferRef.current.write(data);
+                    writeBufferRef.current.write(out);
                 } else {
-                    term.current?.write(data);
+                    term.current?.write(out);
                 }
             };
             const onDataUnsubscribe = window.electron.ipcRenderer.on(`ssh:data:${tabId}`, dataListener);
@@ -545,6 +578,10 @@ const TerminalComponent = forwardRef(({
 
             // Cleanup on component unmount
             return () => {
+                const pendingColored = logColorizerRef.current?.flush();
+                if (pendingColored) {
+                    writeBufferRef.current?.write(pendingColored);
+                }
                 writeBufferRef.current?.flushSync();
                 resizeObserver.disconnect();
                 cleanupContextMenu();

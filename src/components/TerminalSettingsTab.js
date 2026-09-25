@@ -16,6 +16,7 @@ const STORAGE_KEYS = {
   CURSOR_BLINK: 'nodeterm_cursor_blink',
   SCROLLBACK_LINES: 'nodeterm_scrollback_lines',
   SSH_LOCAL_ECHO: 'nodeterm_ssh_local_echo', // Echo local para reducir lag SSH
+  SSH_LOG_HIGHLIGHT: 'nodeterm_ssh_log_highlight',
   // SSH
   SSH_FONT_FAMILY: 'basicapp_terminal_font_family',
   SSH_FONT_SIZE: 'basicapp_terminal_font_size',
@@ -124,6 +125,10 @@ const TerminalSettingsTab = ({
     const saved = localStorage.getItem(STORAGE_KEYS.SSH_LOCAL_ECHO);
     return saved !== null ? saved === 'true' : false; // Desactivado por defecto
   });
+  const [sshLogHighlight, setSshLogHighlight] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.SSH_LOG_HIGHLIGHT);
+    return saved !== 'false';
+  });
 
   // Font settings per terminal type
   const [linuxFontFamily, setLinuxFontFamily] = useState(() =>
@@ -191,6 +196,12 @@ const TerminalSettingsTab = ({
     localStorage.setItem(STORAGE_KEYS.SSH_LOCAL_ECHO, value.toString());
     // Notificar a los terminales SSH abiertos
     window.dispatchEvent(new CustomEvent('terminal-settings-changed', { detail: { sshLocalEcho: value } }));
+  }, []);
+
+  const handleSshLogHighlightChange = useCallback((value) => {
+    setSshLogHighlight(value);
+    localStorage.setItem(STORAGE_KEYS.SSH_LOG_HIGHLIGHT, value.toString());
+    window.dispatchEvent(new CustomEvent('terminal-settings-changed', { detail: { sshLogHighlight: value } }));
   }, []);
 
   // Get/Set font for each terminal type
@@ -544,6 +555,22 @@ const TerminalSettingsTab = ({
               <div
                 className={`terminal-toggle-switch ${sshLocalEcho ? 'active' : ''}`}
                 onClick={() => handleSshLocalEchoChange(!sshLocalEcho)}
+              />
+            </div>
+            <div className="terminal-blink-group">
+              <span
+                className="terminal-mini-label"
+                id="log-highlight-label"
+                data-pr-tooltip="Resalta niveles, fechas, IPs y codigos HTTP en logs SSH. No altera vim, htop ni salida que ya venga coloreada."
+                style={{ cursor: 'help' }}
+              >
+                Logs SSH
+                <i className="pi pi-info-circle" style={{ marginLeft: '5px', fontSize: '0.75rem', opacity: 0.7 }}></i>
+              </span>
+              <Tooltip target="#log-highlight-label" position="top" />
+              <div
+                className={`terminal-toggle-switch ${sshLogHighlight ? 'active' : ''}`}
+                onClick={() => handleSshLogHighlightChange(!sshLogHighlight)}
               />
             </div>
           </div>
