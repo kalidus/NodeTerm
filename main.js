@@ -167,6 +167,22 @@ if (process.env.NODE_ENV === 'development') {
 const { app, BrowserWindow, ipcMain, clipboard, dialog, Menu, powerMonitor, screen, shell } = require('electron');
 logTiming('Electron cargado');
 
+function resolveV8MaxOldSpaceMb() {
+  const envRaw = process.env.NODETERM_MAX_OLD_SPACE_SIZE;
+  if (envRaw) {
+    const envMb = parseInt(envRaw, 10);
+    if (!Number.isNaN(envMb) && envMb >= 256 && envMb <= 8192) {
+      return envMb;
+    }
+  }
+  let totalBytes = 0;
+  try {
+    totalBytes = require('os').totalmem();
+  } catch (_) {}
+  const totalGb = totalBytes > 0 ? totalBytes / (1024 * 1024 * 1024) : 8;
+  return Math.max(512, Math.min(3072, Math.round(totalGb * 128)));
+}
+
 // Establecer el nombre de la aplicación para que el WM_CLASS en Linux
 // coincida con el productName de electron-builder ('NodeTerm')
 if (app) {
@@ -174,9 +190,14 @@ if (app) {
   if (process.platform === 'linux' && typeof app.setDesktopName === 'function') {
     app.setDesktopName('nodeterm.desktop');
   }
-  // 🛡️ MEMORIA: Ampliar el límite de Heap de V8 a 4GB tanto para el proceso principal como para los Renderer
-  // Previene caídas por OOM (Out Of Memory) en sesiones de larga duración con múltiples terminales y conexiones RDP
-  app.commandLine.appendSwitch('js-flags', '--max-old-space-size=4096');
+  // MEMORIA: tope de heap V8 segun RAM del equipo (main + renderer heredan js-flags).
+  // No reserva esa cantidad; evita que un proceso crezca hasta 4 GB en PCs justos.
+  const heapMb = resolveV8MaxOldSpaceMb();
+  app.commandLine.appendSwitch('js-flags', `--max-old-space-size=${heapMb}`);
+  try {
+    const totalGb = (require('os').totalmem() / (1024 * 1024 * 1024)).toFixed(1);
+    console.log(`[MEM] V8 max-old-space-size=${heapMb} MB (RAM ${totalGb} GB)`);
+  } catch (_) {}
 }
 
 // Configuración de GPU por plataforma

@@ -3,9 +3,24 @@
  * Compatible con asciinema para reproducción posterior
  */
 
+const MAX_RECORDING_BYTES = 32 * 1024 * 1024; // 32 MB por sesion en RAM
+
 class SessionRecorder {
   constructor() {
     this.recordings = new Map(); // Map<tabId, RecordingState>
+  }
+
+  _canRecord(recording) {
+    if (!recording || recording.isPaused) return false;
+    if (recording.bytesRecorded >= MAX_RECORDING_BYTES) {
+      if (!recording.memoryCapped) {
+        recording.memoryCapped = true;
+        recording.isPaused = true;
+        console.warn(`[SessionRecorder] Tope de RAM (${MAX_RECORDING_BYTES} bytes) en ${recording.id}. Grabacion pausada.`);
+      }
+      return false;
+    }
+    return true;
   }
 
   /**
@@ -49,6 +64,7 @@ class SessionRecorder {
       events: [], // Array de [time, type, data]
       lastEventTime: startTime,
       isPaused: false,
+      memoryCapped: false,
       bytesRecorded: 0
     };
 
@@ -65,7 +81,7 @@ class SessionRecorder {
    */
   recordOutput(tabId, data) {
     const recording = this.recordings.get(tabId);
-    if (!recording || recording.isPaused) return;
+    if (!this._canRecord(recording)) return;
 
     const now = Date.now();
     const relativeTime = (now - recording.startTime) / 1000; // Segundos con decimales
@@ -77,6 +93,7 @@ class SessionRecorder {
     recording.events.push([relativeTime, 'o', output]);
     recording.lastEventTime = now;
     recording.bytesRecorded += output.length;
+    this._canRecord(recording);
   }
 
   /**
@@ -86,7 +103,7 @@ class SessionRecorder {
    */
   recordInput(tabId, data) {
     const recording = this.recordings.get(tabId);
-    if (!recording || recording.isPaused) return;
+    if (!this._canRecord(recording)) return;
 
     const now = Date.now();
     const relativeTime = (now - recording.startTime) / 1000;
@@ -96,6 +113,8 @@ class SessionRecorder {
     // Formato asciicast v2: [time, "i", data]
     recording.events.push([relativeTime, 'i', input]);
     recording.lastEventTime = now;
+    recording.bytesRecorded += input.length;
+    this._canRecord(recording);
   }
 
   /**
@@ -177,6 +196,7 @@ class SessionRecorder {
       eventCount: recording.events.length,
       bytesRecorded: recording.bytesRecorded,
       isPaused: recording.isPaused,
+      memoryCapped: !!recording.memoryCapped,
       metadata: recording.metadata
     };
   }

@@ -50,28 +50,8 @@ export const LazyTiptapDocumentEditor = lazy(() => getChunk('TiptapDocumentEdito
 export const LazySettingsContent = lazy(() => getChunk('SettingsContent', () => import('./SettingsDialog').then(m => ({ default: m.SettingsContent }))));
 export const LazyBrowserTab = lazy(() => getChunk('BrowserTab', () => import('./BrowserTab')));
 
-const PRIORITY_CHUNK_KEYS = [
+const IDLE_PRELOAD_KEYS = [
   'TerminalComponent',
-  'PowerShellTerminal',
-  'WSLTerminal',
-  'UbuntuTerminal',
-  'SplitLayout',
-  'RdpSessionTab',
-  'FileExplorer',
-];
-
-const SECONDARY_CHUNK_KEYS = [
-  'GuacamoleTab',
-  'GuacamoleTerminal',
-  'CygwinTerminal',
-  'DockerTerminal',
-  'ClaudeTerminal',
-  'OpenCodeTerminal',
-  'CodexCliTerminal',
-  'AntigravityCliTerminal',
-  'HermesCliTerminal',
-  'SSHTunnelTab',
-  'BrowserTab',
 ];
 
 const CHUNK_LOADERS = {
@@ -117,7 +97,7 @@ export function arePriorityTabChunksReady() {
 }
 
 /**
- * Precalienta chunks de pestaña. Fase 1 inmediata; fase 2 en idle.
+ * Precalienta solo el chunk de terminal SSH en idle (sin Guacamole/CLI/Browser).
  */
 export function preloadHeavyTabChunks() {
   if (tabChunksPreloadStarted) {
@@ -125,28 +105,23 @@ export function preloadHeavyTabChunks() {
   }
   tabChunksPreloadStarted = true;
 
-  const loadKeys = (keys) =>
-    Promise.all(keys.map((key) => getChunk(key, CHUNK_LOADERS[key])));
+  const scheduleIdle =
+    typeof requestIdleCallback === 'function'
+      ? (fn) => requestIdleCallback(fn, { timeout: 8000 })
+      : (fn) => setTimeout(fn, 1500);
 
-  return loadKeys(PRIORITY_CHUNK_KEYS).then(() => {
-    tabChunksPriorityReady = true;
-    const scheduleSecondary =
-      typeof requestIdleCallback === 'function'
-        ? (fn) => requestIdleCallback(fn, { timeout: 2000 })
-        : (fn) => setTimeout(fn, 50);
-    scheduleSecondary(() => {
-      loadKeys(SECONDARY_CHUNK_KEYS).catch((err) => {
-        console.warn('[tabLoaders] Precalentado secundario:', err);
-      });
+  return new Promise((resolve) => {
+    scheduleIdle(() => {
+      Promise.all(IDLE_PRELOAD_KEYS.map((key) => getChunk(key, CHUNK_LOADERS[key])))
+        .then(() => {
+          tabChunksPriorityReady = true;
+          resolve();
+        })
+        .catch((err) => {
+          console.warn('[tabLoaders] Precalentado TerminalComponent:', err);
+          resolve();
+        });
     });
-  });
-}
-
-/** Inicia precalentado en cuanto se carga este módulo (App ya importó TabContentRenderer). */
-if (typeof window !== 'undefined') {
-  queueMicrotask(() => {
-    preloadHeavyTabChunks().catch(() => {});
-    import('../utils/xtermLoader').then(({ loadXtermModules }) => loadXtermModules()).catch(() => {});
   });
 }
 

@@ -411,15 +411,31 @@ const App = () => {
     initializeApp();
   }, [secureStorage]);
 
-  // Refuerzo de precalentado en cuanto la app está lista (el módulo tabLoaders ya arranca en microtask)
+  // Precarga ligera en idle: solo terminal SSH + xterm, no chunks de Guacamole/CLI/Browser
   useEffect(() => {
     if (!isAppReady) return;
+    const useIdle = typeof requestIdleCallback === 'function';
     preloadHeavyTabChunks().catch((err) => {
-      console.warn('[App] Precalentado de pestañas:', err);
+      console.warn('[App] Precalentado de pestanas:', err);
     });
-    loadXtermModules().catch((err) => {
-      console.warn('[App] Precalentado xterm:', err);
-    });
+    const idleId = useIdle
+      ? requestIdleCallback(() => {
+          loadXtermModules().catch((err) => {
+            console.warn('[App] Precalentado xterm:', err);
+          });
+        }, { timeout: 8000 })
+      : setTimeout(() => {
+          loadXtermModules().catch((err) => {
+            console.warn('[App] Precalentado xterm:', err);
+          });
+        }, 1500);
+    return () => {
+      if (useIdle) {
+        try { cancelIdleCallback(idleId); } catch (_) {}
+      } else {
+        clearTimeout(idleId);
+      }
+    };
   }, [isAppReady]);
 
 

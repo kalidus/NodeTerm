@@ -1,8 +1,9 @@
+import { useEffect, useRef } from 'react';
 import { getCachedXtermModules } from './xtermLoader';
 
 /**
  * Attaches a hardware-accelerated renderer to an xterm.js instance with a tiered fallback:
- * Tier 1: WebGL (ultra-fast GPU accelerated)
+ * Tier 1: WebGL (ultra-fast GPU accelerated) — only when preferWebgl is true
  * Tier 2: Canvas 2D (high-performance fallback if WebGL context is lost or exhausted)
  * Tier 3: DOM Renderer (fail-safe fallback)
  *
@@ -10,19 +11,20 @@ import { getCachedXtermModules } from './xtermLoader';
  * @param {Object} [customAddons] - Optional pre-loaded addon constructors (e.g. from dynamic import)
  * @param {any} [customAddons.WebglAddon]
  * @param {any} [customAddons.CanvasAddon]
+ * @param {{ preferWebgl?: boolean }} [options]
  * @returns {{ rendererType: 'webgl' | 'canvas' | 'dom', addon: any }}
  */
-export function attachTerminalRenderer(termInstance, customAddons = {}) {
+export function attachTerminalRenderer(termInstance, customAddons = {}, options = {}) {
   const cached = getCachedXtermModules();
   const Webgl = customAddons.WebglAddon || cached?.WebglAddon;
   const Canvas = customAddons.CanvasAddon || cached?.CanvasAddon;
+  const preferWebgl = options.preferWebgl !== false;
 
   if (!termInstance) {
     return { rendererType: 'dom', addon: null };
   }
 
-  // Intentar cargar WebGL como opción primaria
-  if (Webgl) {
+  if (preferWebgl && Webgl) {
     try {
       const webglAddon = new Webgl();
       let hasLostContext = false;
@@ -35,14 +37,13 @@ export function attachTerminalRenderer(termInstance, customAddons = {}) {
           webglAddon.dispose();
         } catch (_) {}
 
-        // Intentar fallback a Canvas si el contexto WebGL fue purgado por Chromium
         if (Canvas) {
           try {
             const fallbackCanvasAddon = new Canvas();
             termInstance.loadAddon(fallbackCanvasAddon);
-            console.log('✅ [xtermRenderer] Fallback a Canvas 2D activado con éxito.');
+            console.log('[xtermRenderer] Fallback a Canvas 2D activado.');
           } catch (canvasErr) {
-            console.warn('[xtermRenderer] Fallback a Canvas falló, usando DOM renderer:', canvasErr);
+            console.warn('[xtermRenderer] Fallback a Canvas fallo, usando DOM renderer:', canvasErr);
           }
         }
       });
@@ -54,7 +55,6 @@ export function attachTerminalRenderer(termInstance, customAddons = {}) {
     }
   }
 
-  // Fallback 1: Canvas 2D
   if (Canvas) {
     try {
       const canvasAddon = new Canvas();
@@ -65,14 +65,58 @@ export function attachTerminalRenderer(termInstance, customAddons = {}) {
     }
   }
 
-  // Fallback 2: DOM por defecto de xterm
   return { rendererType: 'dom', addon: null };
 }
 
-export const DEFAULT_SCROLLBACK_LINES = 10000;
+/**
+ * Cambia WebGL <-> Canvas segun visibilidad de la pestana, sin recrear el terminal.
+ */
+export function syncTerminalRenderer(termInstance, customAddons, preferWebgl, current) {
+  if (!termInstance) return current || { rendererType: 'dom', addon: null };
+
+  const wantWebgl = !!preferWebgl;
+  const hasWebgl = current?.rendererType === 'webgl';
+  if (current && wantWebgl === hasWebgl) {
+    return current;
+  }
+
+  try {
+    current?.addon?.dispose();
+  } catch (_) {}
+
+  return attachTerminalRenderer(termInstance, customAddons, { preferWebgl: wantWebgl });
+}
 
 /**
- * Obtiene el límite de líneas de scrollback configurado en Settings (por defecto 10,000 líneas).
+ * Ajusta renderer y write-buffer cuando la pestana pasa a segundo plano.
+ * El attach inicial debe guardar el estado en el ref devuelto.
+ */
+export function useTerminalMemoryGuards(termRef, xtermLib, active, writeBufferRef) {
+  const rendererRef = useRef(null);
+
+  useEffect(() => {
+    if (writeBufferRef?.current && typeof writeBufferRef.current.setActive === 'function') {
+      writeBufferRef.current.setActive(!!active);
+    }
+  }, [active, writeBufferRef]);
+
+  useEffect(() => {
+    if (!termRef?.current || !xtermLib || !rendererRef.current) return;
+    rendererRef.current = syncTerminalRenderer(
+      termRef.current,
+      { WebglAddon: xtermLib.WebglAddon, CanvasAddon: xtermLib.CanvasAddon },
+      !!active,
+      rendererRef.current
+    );
+  }, [active, xtermLib, termRef]);
+
+  return rendererRef;
+}
+
+export const DEFAULT_SCROLLBACK_LINES = 2000;
+
+/**
+ * Obtiene el limite de lineas de scrollback configurado en Settings (por defecto 2.000 lineas).
  */
 export function getTerminalScrollback() {
   try {
@@ -88,7 +132,7 @@ export function getTerminalScrollback() {
 }
 
 /**
- * Sincroniza dinámicamente el scrollback de un terminal cuando el usuario lo modifica en Settings.
+ * Sincroniza dinamicamente el scrollback de un terminal cuando el usuario lo modifica en Settings.
  */
 export function registerScrollbackSync(termRef) {
   const handler = (e) => {

@@ -7,7 +7,7 @@ import { Button } from 'primereact/button';
 import { Slider } from 'primereact/slider';
 import { themes } from '../themes';
 import { useTranslation } from '../i18n/hooks/useTranslation';
-import { getTerminalScrollback } from '../utils/xtermRenderer';
+import { getTerminalScrollback, DEFAULT_SCROLLBACK_LINES } from '../utils/xtermRenderer';
 import '../styles/components/terminal-settings.css';
 
 // Storage keys
@@ -46,13 +46,14 @@ const CURSOR_STYLES = [
 
 // Opciones de historial
 const SCROLLBACK_OPTIONS = [
-  { label: '1,000 líneas', value: 1000 },
-  { label: '5,000 líneas', value: 5000 },
-  { label: '10,000 líneas', value: 10000 },
-  { label: '20,000 líneas', value: 20000 },
-  { label: '50,000 líneas', value: 50000 },
-  { label: '100,000 líneas', value: 100000 },
-  { label: '200,000 líneas (Máximo)', value: 200000 }
+  { label: '1,000 lineas', value: 1000 },
+  { label: '2,000 lineas', value: 2000 },
+  { label: '5,000 lineas', value: 5000 },
+  { label: '10,000 lineas', value: 10000 },
+  { label: '20,000 lineas', value: 20000 },
+  { label: '50,000 lineas (alto consumo)', value: 50000 },
+  { label: '100,000 lineas (alto consumo)', value: 100000 },
+  { label: '200,000 lineas (alto consumo)', value: 200000 }
 ];
 
 // Terminal types
@@ -114,7 +115,7 @@ const TerminalSettingsTab = ({
   // Asegurar persistencia del default si aún no existe en localStorage
   useEffect(() => {
     if (!localStorage.getItem(STORAGE_KEYS.SCROLLBACK_LINES)) {
-      localStorage.setItem(STORAGE_KEYS.SCROLLBACK_LINES, '10000');
+      localStorage.setItem(STORAGE_KEYS.SCROLLBACK_LINES, String(DEFAULT_SCROLLBACK_LINES));
     }
   }, []);
   // Local echo SSH: muestra el carácter localmente antes del echo del servidor
@@ -510,7 +511,7 @@ const TerminalSettingsTab = ({
               <span
                 className="terminal-mini-label"
                 id="history-label"
-                data-pr-tooltip="Número de líneas a mantener en el historial de la terminal (1,000 - 200,000)"
+                data-pr-tooltip="Lineas de historial por terminal (1,000 - 200,000). Valores altos usan mas RAM. Por defecto 2,000."
                 style={{ cursor: 'help' }}
               >
                 Historial
@@ -523,7 +524,7 @@ const TerminalSettingsTab = ({
                 onChange={handleScrollbackChange}
                 onBlur={handleScrollbackBlur}
                 editable
-                placeholder="10000"
+                placeholder="2000"
                 style={{ width: '130px' }}
                 className="terminal-history-dropdown"
               />

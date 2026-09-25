@@ -5,7 +5,7 @@ import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
-import { attachTerminalRenderer, getTerminalScrollback, registerScrollbackSync } from '../utils/xtermRenderer';
+import { attachTerminalRenderer, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
 import { systemStatsService } from '../services/SystemStatsService';
 
 const DockerTerminal = forwardRef(({
@@ -15,13 +15,15 @@ const DockerTerminal = forwardRef(({
     tabId = 'default',
     dockerInfo = {},
     hideStatusBar = false,
-    isIntegrated = false
+    isIntegrated = false,
+    active = true
 }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
     const writeBufferRef = useRef(null);
     const fitAddon = useRef(null);
     const [xtermLib, setXtermLib] = useState(() => getCachedXtermModules());
+    const rendererRef = useTerminalMemoryGuards(term, xtermLib, active, writeBufferRef);
     const [statusStats, setStatusStats] = useState(null);
 
     useEffect(() => {
@@ -55,6 +57,7 @@ const DockerTerminal = forwardRef(({
 
     // Poll system stats consolidado
     useEffect(() => {
+        if (!active) return undefined;
         const unsubscribe = systemStatsService.subscribe((stats) => {
             if (stats) {
                 setStatusStats(stats);
@@ -62,7 +65,7 @@ const DockerTerminal = forwardRef(({
             }
         });
         return unsubscribe;
-    }, []);
+    }, [active]);
 
     // Sincronizar scrollback dinámicamente si cambia en Settings
     useEffect(() => {
@@ -96,10 +99,10 @@ const DockerTerminal = forwardRef(({
         term.current.loadAddon(new Unicode11Addon());
 
         // Inicializar buffer de escrituras por fotograma (60/120 FPS batching)
-        writeBufferRef.current = createXtermWriteBuffer(term);
+        writeBufferRef.current = createXtermWriteBuffer(term, { active: !!active });
 
         // Cargar renderizador acelerado por hardware con fallback a Canvas 2D
-        attachTerminalRenderer(term.current, { WebglAddon, CanvasAddon });
+        rendererRef.current = attachTerminalRenderer(term.current, { WebglAddon, CanvasAddon }, { preferWebgl: !!active });
 
         // Abrir terminal en elemento DOM
         term.current.open(terminalRef.current);

@@ -5,7 +5,7 @@ import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
-import { attachTerminalRenderer, getTerminalScrollback, registerScrollbackSync } from '../utils/xtermRenderer';
+import { attachTerminalRenderer, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
 import { systemStatsService } from '../services/SystemStatsService';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
 
@@ -23,6 +23,7 @@ const CygwinTerminal = forwardRef(({
     const writeBufferRef = useRef(null);
     const fitAddon = useRef(null);
     const [xtermLib, setXtermLib] = useState(() => getCachedXtermModules());
+    const rendererRef = useTerminalMemoryGuards(term, xtermLib, active, writeBufferRef);
     const [statusStats, setStatusStats] = useState(null);
 
     useEffect(() => {
@@ -56,6 +57,7 @@ const CygwinTerminal = forwardRef(({
 
     // Poll system stats consolidado
     useEffect(() => {
+        if (!active) return undefined;
         const unsubscribe = systemStatsService.subscribe((stats) => {
             if (stats) {
                 setStatusStats(stats);
@@ -63,7 +65,7 @@ const CygwinTerminal = forwardRef(({
             }
         });
         return unsubscribe;
-    }, []);
+    }, [active]);
 
     // Listen for storage events
     useEffect(() => {
@@ -180,7 +182,7 @@ const CygwinTerminal = forwardRef(({
         });
 
         // Inicializar buffer de escrituras por fotograma (60/120 FPS batching)
-        writeBufferRef.current = createXtermWriteBuffer(term);
+        writeBufferRef.current = createXtermWriteBuffer(term, { active: !!active });
 
         // Add addons
         fitAddon.current = new FitAddon();
@@ -190,7 +192,7 @@ const CygwinTerminal = forwardRef(({
         term.current.unicode.activeVersion = '11';
 
         // Load hardware-accelerated renderer with Canvas 2D fallback
-        attachTerminalRenderer(term.current, { WebglAddon, CanvasAddon });
+        rendererRef.current = attachTerminalRenderer(term.current, { WebglAddon, CanvasAddon }, { preferWebgl: !!active });
 
         term.current.open(terminalRef.current);
 

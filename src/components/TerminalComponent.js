@@ -6,7 +6,7 @@ import { statusBarThemes } from '../themes/status-bar-themes';
 import { themes } from '../themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
-import { attachTerminalRenderer, getTerminalScrollback } from '../utils/xtermRenderer';
+import { attachTerminalRenderer, getTerminalScrollback, useTerminalMemoryGuards } from '../utils/xtermRenderer';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
 import { useSshTabStats } from '../services/SshStatsStore';
 
@@ -109,6 +109,7 @@ const TerminalComponent = forwardRef(({
     const fitAddon = useRef(null);
     const activeRef = useRef(active);
     const [xtermLib, setXtermLib] = useState(() => getCachedXtermModules());
+    const rendererRef = useTerminalMemoryGuards(term, xtermLib, active, writeBufferRef);
 
     useEffect(() => {
         activeRef.current = active;
@@ -254,7 +255,6 @@ const TerminalComponent = forwardRef(({
             defaultFontSize = parseInt(localStorage.getItem('basicapp_local_terminal_font_size') || '14', 10);
         }
 
-        // Leer scrollback desde configuración (configurable en Settings, por defecto 10000)
         const scrollbackLines = getTerminalScrollback();
 
         // Initialize Terminal
@@ -294,7 +294,7 @@ const TerminalComponent = forwardRef(({
         });
 
         // Inicializar buffer de escrituras por fotograma (60 FPS write batching)
-        writeBufferRef.current = createXtermWriteBuffer(term);
+        writeBufferRef.current = createXtermWriteBuffer(term, { active: !!activeRef.current });
 
         // Disable bracketed paste mode to prevent weird characters on Ctrl+V
         term.current.options.bracketedPasteMode = false;
@@ -309,7 +309,7 @@ const TerminalComponent = forwardRef(({
         // term.current.loadAddon(new ImageAddon({ sixelScrolling: true }));
 
         // Load and activate the WebGL renderer with Canvas 2D fallback
-        attachTerminalRenderer(term.current, { WebglAddon, CanvasAddon });
+        rendererRef.current = attachTerminalRenderer(term.current, { WebglAddon, CanvasAddon }, { preferWebgl: !!activeRef.current });
 
         term.current.open(terminalRef.current);
         fitAddon.current.fit();

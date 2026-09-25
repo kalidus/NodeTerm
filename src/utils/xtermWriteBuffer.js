@@ -5,7 +5,8 @@
  */
 
 const DEFAULT_MAX_CHUNK_PER_FRAME = 65536; // 64 KB por fotograma para mantener 60/120 FPS
-const MAX_BUFFER_BACKLOG_BYTES = 16 * 1024 * 1024; // 16 MB límite de contrapresión para prevenir OOM
+const ACTIVE_MAX_BUFFER_BACKLOG_BYTES = 2 * 1024 * 1024; // 2 MB en pestana visible
+const INACTIVE_MAX_BUFFER_BACKLOG_BYTES = 512 * 1024; // 512 KB en pestana oculta
 
 function resolveTerm(termOrRef) {
   if (!termOrRef) return null;
@@ -16,9 +17,18 @@ function resolveTerm(termOrRef) {
 
 export function createXtermWriteBuffer(termRef, options = {}) {
   const maxChunkPerFrame = options.maxChunkPerFrame || DEFAULT_MAX_CHUNK_PER_FRAME;
+  let isActive = options.active !== false;
+  let maxBacklogBytes = isActive ? ACTIVE_MAX_BUFFER_BACKLOG_BYTES : INACTIVE_MAX_BUFFER_BACKLOG_BYTES;
   let chunks = [];
   let pendingBytes = 0;
   let rafId = null;
+
+  const trimBacklog = () => {
+    if (pendingBytes <= maxBacklogBytes || chunks.length === 0) return;
+    const half = Math.floor(chunks.length / 2) || 1;
+    chunks.splice(0, half);
+    pendingBytes = chunks.reduce((acc, c) => acc + c.length, 0);
+  };
 
   const flush = () => {
     rafId = null;
@@ -41,7 +51,6 @@ export function createXtermWriteBuffer(termRef, options = {}) {
           batch += chunks.shift();
           bytesThisFrame += nextLen;
         } else {
-          // El fragmento restante supera el cupo de este fotograma
           const remainingQuota = maxChunkPerFrame - bytesThisFrame;
           batch += nextChunk.slice(0, remainingQuota);
           chunks[0] = nextChunk.slice(remainingQuota);
@@ -59,7 +68,6 @@ export function createXtermWriteBuffer(termRef, options = {}) {
       pendingBytes = 0;
     }
 
-    // Si aún quedan fragmentos pendientes en la cola, programar el siguiente fotograma
     if (chunks.length > 0 && resolveTerm(termRef)) {
       rafId = requestAnimationFrame(flush);
     }
@@ -70,12 +78,8 @@ export function createXtermWriteBuffer(termRef, options = {}) {
     const dataStr = typeof data === 'string' ? data : String(data);
     const dataLen = dataStr.length;
 
-    // Protección de contrapresión ante volcados masivos descontrolados
-    if (pendingBytes + dataLen > MAX_BUFFER_BACKLOG_BYTES) {
-      // Descartar la mitad más antigua de la cola acumulada para mantener responsividad
-      const half = Math.floor(chunks.length / 2);
-      chunks.splice(0, half);
-      pendingBytes = chunks.reduce((acc, c) => acc + c.length, 0);
+    if (pendingBytes + dataLen > maxBacklogBytes) {
+      trimBacklog();
     }
 
     chunks.push(dataStr);
@@ -110,9 +114,16 @@ export function createXtermWriteBuffer(termRef, options = {}) {
     }
   };
 
+  const setActive = (nextActive) => {
+    isActive = !!nextActive;
+    maxBacklogBytes = isActive ? ACTIVE_MAX_BUFFER_BACKLOG_BYTES : INACTIVE_MAX_BUFFER_BACKLOG_BYTES;
+    trimBacklog();
+  };
+
   return {
     write,
     clear,
-    flushSync
+    flushSync,
+    setActive
   };
 }

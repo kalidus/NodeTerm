@@ -206,14 +206,16 @@ export const systemStatsService = new SystemStatsService();
  * React hook to consume consolidated system stats in functional components.
  * Automatically subscribes on mount and unsubscribes on unmount.
  */
-export function useSystemStats() {
+export function useSystemStats(options = {}) {
+  const enabled = options.enabled !== false;
   const [stats, setStats] = useState(() => systemStatsService.getLatestStats());
 
   useEffect(() => {
+    if (!enabled) return undefined;
     return systemStatsService.subscribe((newStats) => {
       setStats(newStats);
     });
-  }, []);
+  }, [enabled]);
 
   return stats;
 }

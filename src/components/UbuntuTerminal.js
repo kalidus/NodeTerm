@@ -5,7 +5,7 @@ import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
-import { attachTerminalRenderer, getTerminalScrollback, registerScrollbackSync } from '../utils/xtermRenderer';
+import { attachTerminalRenderer, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
 import { systemStatsService } from '../services/SystemStatsService';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
 
@@ -24,6 +24,7 @@ const UbuntuTerminal = forwardRef(({
     const writeBufferRef = useRef(null);
     const fitAddon = useRef(null);
     const [xtermLib, setXtermLib] = useState(() => getCachedXtermModules());
+    const rendererRef = useTerminalMemoryGuards(term, xtermLib, active, writeBufferRef);
     const [isConnected, setIsConnected] = useState(false);
 
     useEffect(() => {
@@ -99,20 +100,22 @@ const UbuntuTerminal = forwardRef(({
         window.addEventListener('focus', handleFocus);
         window.addEventListener('blur', handleBlur);
 
-        const unsubscribe = systemStatsService.subscribe((stats) => {
-            if (stats) {
-                setStatusStats(stats);
-                setIsLoadingStats(false);
-                if (stats.distro) setDistroId(stats.distro);
-            }
-        });
+        const unsubscribe = active
+            ? systemStatsService.subscribe((stats) => {
+                if (stats) {
+                    setStatusStats(stats);
+                    setIsLoadingStats(false);
+                    if (stats.distro) setDistroId(stats.distro);
+                }
+            })
+            : () => {};
 
         return () => {
             unsubscribe();
             window.removeEventListener('focus', handleFocus);
             window.removeEventListener('blur', handleBlur);
         };
-    }, []);
+    }, [active]);
 
     useEffect(() => {
         const onStorage = (e) => {
@@ -238,7 +241,7 @@ const UbuntuTerminal = forwardRef(({
         });
 
         // Inicializar buffer de escrituras por fotograma (60/120 FPS batching)
-        writeBufferRef.current = createXtermWriteBuffer(term);
+        writeBufferRef.current = createXtermWriteBuffer(term, { active: !!active });
 
         // Add addons
         fitAddon.current = new FitAddon();
@@ -248,7 +251,7 @@ const UbuntuTerminal = forwardRef(({
         term.current.unicode.activeVersion = '11';
 
         // Load hardware-accelerated renderer with Canvas 2D fallback
-        attachTerminalRenderer(term.current, { WebglAddon, CanvasAddon });
+        rendererRef.current = attachTerminalRenderer(term.current, { WebglAddon, CanvasAddon }, { preferWebgl: !!active });
 
         // Open terminal in DOM
         term.current.open(terminalRef.current);

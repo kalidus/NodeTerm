@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useImperativeHandle, forwardRef, useState } f
 import { loadXtermModules, getCachedXtermModules } from '../utils/xtermLoader';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
-import { attachTerminalRenderer, getTerminalScrollback, registerScrollbackSync } from '../utils/xtermRenderer';
+import { attachTerminalRenderer, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
 
 const OpenCodeTerminal = forwardRef(({
   fontFamily = 'Consolas, "Courier New", monospace',
@@ -19,6 +19,7 @@ const OpenCodeTerminal = forwardRef(({
   const isReadyRef = useRef(false);
   const writeBufferRef = useRef(null);
   const [xtermLib, setXtermLib] = useState(() => getCachedXtermModules());
+  const rendererRef = useTerminalMemoryGuards(term, xtermLib, active, writeBufferRef);
 
   useEffect(() => {
     if (xtermLib) return undefined;
@@ -87,8 +88,8 @@ const OpenCodeTerminal = forwardRef(({
     term.current.loadAddon(new WebLinksAddon());
     term.current.open(terminalRef.current);
     fitAndSyncSize();
-    writeBufferRef.current = createXtermWriteBuffer(term);
-    attachTerminalRenderer(term.current, { WebglAddon, CanvasAddon });
+    writeBufferRef.current = createXtermWriteBuffer(term, { active: !!active });
+    rendererRef.current = attachTerminalRenderer(term.current, { WebglAddon, CanvasAddon }, { preferWebgl: !!active });
     setTimeout(fitAndSyncSize, 80);
     setTimeout(fitAndSyncSize, 180);
     setTimeout(fitAndSyncSize, 320);
