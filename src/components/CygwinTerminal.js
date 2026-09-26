@@ -8,6 +8,7 @@ import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
 import { attachTerminalRenderer, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
 import { systemStatsService } from '../services/SystemStatsService';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
+import { useLogColorizer } from '../hooks/useLogColorizer';
 
 const CygwinTerminal = forwardRef(({
     fontFamily = '"FiraCode Nerd Font", Consolas, monospace',
@@ -21,6 +22,7 @@ const CygwinTerminal = forwardRef(({
     const terminalRef = useRef(null);
     const term = useRef(null);
     const writeBufferRef = useRef(null);
+    const { push: pushColored, flushPending } = useLogColorizer(term, writeBufferRef);
     const fitAddon = useRef(null);
     const [xtermLib, setXtermLib] = useState(() => getCachedXtermModules());
     const rendererRef = useTerminalMemoryGuards(term, xtermLib, active, writeBufferRef);
@@ -295,11 +297,7 @@ const CygwinTerminal = forwardRef(({
             });
 
             const dataListener = (data) => {
-                if (writeBufferRef.current) {
-                    writeBufferRef.current.write(data);
-                } else if (term.current) {
-                    term.current.write(data);
-                }
+                pushColored(data);
             };
             const onDataUnsubscribe = window.electron.ipcRenderer.on(`cygwin:data:${tabId}`, dataListener);
 
@@ -320,6 +318,7 @@ const CygwinTerminal = forwardRef(({
             terminalRef.current.addEventListener('contextmenu', contextMenuHandler);
 
             return () => {
+                flushPending();
                 if (writeBufferRef.current) {
                     writeBufferRef.current.clear();
                 }

@@ -7,6 +7,7 @@ import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
 import { attachTerminalRenderer, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
 import { systemStatsService } from '../services/SystemStatsService';
+import { useLogColorizer } from '../hooks/useLogColorizer';
 
 const DockerTerminal = forwardRef(({
     fontFamily = '"FiraCode Nerd Font", Consolas, monospace',
@@ -21,6 +22,7 @@ const DockerTerminal = forwardRef(({
     const terminalRef = useRef(null);
     const term = useRef(null);
     const writeBufferRef = useRef(null);
+    const { push: pushColored, flushPending } = useLogColorizer(term, writeBufferRef);
     const fitAddon = useRef(null);
     const [xtermLib, setXtermLib] = useState(() => getCachedXtermModules());
     const rendererRef = useTerminalMemoryGuards(term, xtermLib, active, writeBufferRef);
@@ -118,11 +120,7 @@ const DockerTerminal = forwardRef(({
 
         // Definir handlers
         const handleDockerOutput = (outputData) => {
-            if (writeBufferRef.current) {
-                writeBufferRef.current.write(outputData);
-            } else if (term.current && outputData) {
-                term.current.write(outputData);
-            }
+            pushColored(outputData);
         };
 
         const handleDockerError = (errorMsg) => {
@@ -180,6 +178,7 @@ const DockerTerminal = forwardRef(({
 
         // Cleanup
         return () => {
+            flushPending();
             if (writeBufferRef.current) {
                 writeBufferRef.current.clear();
             }

@@ -8,6 +8,7 @@ import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
 import { attachTerminalRenderer, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
 import { systemStatsService } from '../services/SystemStatsService';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
+import { useLogColorizer } from '../hooks/useLogColorizer';
 
 const UbuntuTerminal = forwardRef(({
     fontFamily = 'Consolas, "Courier New", monospace',
@@ -22,6 +23,7 @@ const UbuntuTerminal = forwardRef(({
     const terminalRef = useRef(null);
     const term = useRef(null);
     const writeBufferRef = useRef(null);
+    const { push: pushColored, flushPending } = useLogColorizer(term, writeBufferRef);
     const fitAddon = useRef(null);
     const [xtermLib, setXtermLib] = useState(() => getCachedXtermModules());
     const rendererRef = useTerminalMemoryGuards(term, xtermLib, active, writeBufferRef);
@@ -358,11 +360,7 @@ const UbuntuTerminal = forwardRef(({
 
             // Listen for WSL distribution output
             const dataListener = (data) => {
-                if (writeBufferRef.current) {
-                    writeBufferRef.current.write(data);
-                } else if (term.current) {
-                    term.current.write(data);
-                }
+                pushColored(data);
             };
             const channelPrefix = getChannelPrefix();
             const onDataUnsubscribe = window.electron.ipcRenderer.on(`${channelPrefix}:data:${tabId}`, dataListener);
@@ -395,6 +393,7 @@ const UbuntuTerminal = forwardRef(({
 
             // Cleanup function
             return () => {
+                flushPending();
                 if (writeBufferRef.current) {
                     writeBufferRef.current.clear();
                 }

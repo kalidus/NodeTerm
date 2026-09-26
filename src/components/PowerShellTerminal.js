@@ -8,6 +8,7 @@ import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
 import { attachTerminalRenderer, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
 import { systemStatsService } from '../services/SystemStatsService';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
+import { useLogColorizer } from '../hooks/useLogColorizer';
 
 const PowerShellTerminal = forwardRef(({
     fontFamily = 'Consolas, "Courier New", monospace',
@@ -21,6 +22,7 @@ const PowerShellTerminal = forwardRef(({
     const terminalRef = useRef(null);
     const term = useRef(null);
     const writeBufferRef = useRef(null);
+    const { push: pushColored, flushPending } = useLogColorizer(term, writeBufferRef);
     const fitAddon = useRef(null);
     const [xtermLib, setXtermLib] = useState(() => getCachedXtermModules());
     const rendererRef = useTerminalMemoryGuards(term, xtermLib, active, writeBufferRef);
@@ -360,11 +362,7 @@ const PowerShellTerminal = forwardRef(({
 
             // Listen for PowerShell output (60 FPS write batching)
             const dataListener = (data) => {
-                if (writeBufferRef.current) {
-                    writeBufferRef.current.write(data);
-                } else if (term.current) {
-                    term.current.write(data);
-                }
+                pushColored(data);
             };
             const onDataUnsubscribe = window.electron.ipcRenderer.on(`powershell:data:${tabId}`, dataListener);
 
@@ -396,6 +394,7 @@ const PowerShellTerminal = forwardRef(({
 
             // Cleanup function
             return () => {
+                flushPending();
                 writeBufferRef.current?.flushSync();
                 resizeObserver.disconnect();
                 document.removeEventListener('visibilitychange', handleVisibilityChange);

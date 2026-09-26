@@ -561,10 +561,10 @@ const TerminalSettingsTab = ({
               <span
                 className="terminal-mini-label"
                 id="log-highlight-label"
-                data-pr-tooltip="Resalta niveles, fechas, IPs y codigos HTTP en logs SSH. No altera vim, htop ni salida que ya venga coloreada."
+                data-pr-tooltip="Resalta logs en SSH, WSL, PowerShell, Docker, Ubuntu y Cygwin. No altera vim, htop, ls --color ni Get-ChildItem ya coloreado."
                 style={{ cursor: 'help' }}
               >
-                Logs SSH
+                Logs
                 <i className="pi pi-info-circle" style={{ marginLeft: '5px', fontSize: '0.75rem', opacity: 0.7 }}></i>
               </span>
               <Tooltip target="#log-highlight-label" position="top" />

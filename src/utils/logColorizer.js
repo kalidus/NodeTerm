@@ -63,11 +63,18 @@ const RE_EXCEPTION = /\b(?:Exception|Traceback|Panic|segfault)\b/g;
 const RE_DURATION = /\b\d+(?:\.\d+)?(?:ms|us|ns)\b|\b\d+m\d+s\b|\b\d+(?:\.\d+)?[smhd]\b/g;
 const RE_HEX = /\b0x[0-9a-fA-F]+\b/g;
 const RE_JSON_ATOM = /\b(?:true|false|null)\b/g;
+const RE_EMAIL = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g;
+const RE_PORT_WORD = /\b(?:port|puerto)\s+(\d{2,5})\b/gi;
+const RE_GIT_STATUS = /^(?:[ MADRCU?!]{1,2})(?= )/;
 const RE_DIFF_PREFIX = /^[+-](?![+-])/;
 const RE_CSI = /\x1b\[([0-9;?]*)([A-Za-z@`~])/g;
 const RE_OSC = /\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g;
 const RE_SGR = /\x1b\[([0-9;:]*)m/g;
-const TUI_CSI_FINALS = 'HfABCDJK';
+const RE_HARMLESS_CSI = /\x1b\[\?(?:2004|25|1|7|12|9001|1000|1002|1003|1004|1006|2006)[hl]/g;
+const RE_SOFT_MOVE = /\x1b\[[0-9]*[KG]/g;
+const RE_WRAP_TOKEN = /(?:\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b\[[0-9;:]*m|\x1b\[[0-9]*[KG]|\x1b\[\?(?:2004|25|1|7|12|9001|1000|1002|1003|1004|1006|2006)[hl])/;
+const TUI_CSI_FINALS = 'HfABCDJ';
+const RE_ANY_CSI = /\x1b\[[0-9;?=]*[A-Za-z@`~]/g;
 
 export function isSshLogHighlightEnabled() {
   try {
@@ -89,7 +96,7 @@ function httpStyleForStatus(code) {
 function isHarmlessPrivateMode(params, final) {
   if (final !== 'h' && final !== 'l') return false;
   if (!params || params.indexOf('?') === -1) return false;
-  return /^\??(?:2004|25|1|7|12)(?:;\??(?:2004|25|1|7|12))*$/.test(params);
+  return /^\??(?:2004|25|1|7|12|9001|1000|1002|1003|1004|1006|2006)(?:;\??(?:2004|25|1|7|12|9001|1000|1002|1003|1004|1006|2006))*$/.test(params);
 }
 
 function isAltScreenMode(params, final) {
@@ -129,7 +136,45 @@ function hasInteractiveEscapes(text) {
 
 function stripDisplayEscapes(text) {
   if (!text || text.indexOf(ESC) === -1) return text;
-  return text.replace(RE_OSC, '').replace(RE_SGR, '');
+  return text.replace(RE_OSC, '').replace(RE_SGR, '').replace(RE_HARMLESS_CSI, '').replace(RE_SOFT_MOVE, '');
+}
+
+function stripAllSoftEscapes(text) {
+  if (!text || text.indexOf(ESC) === -1) return text;
+  return text.replace(RE_OSC, '').replace(RE_ANY_CSI, '');
+}
+
+function peelWraps(text) {
+  let prefix = '';
+  let suffix = '';
+  let mid = text;
+  while (mid) {
+    const m = RE_WRAP_TOKEN.exec(mid);
+    if (!m || m.index !== 0) break;
+    prefix += m[0];
+    mid = mid.slice(m[0].length);
+  }
+  while (mid) {
+    const endRe = new RegExp(`${RE_WRAP_TOKEN.source}$`);
+    const m = endRe.exec(mid);
+    if (!m) break;
+    suffix = m[0] + suffix;
+    mid = mid.slice(0, m.index);
+  }
+  return { prefix, mid, suffix };
+}
+
+function shouldHighlight(text) {
+  if (looksLikeLog(text)) return true;
+  RE_EMAIL.lastIndex = 0;
+  if (RE_EMAIL.test(text)) return true;
+  RE_PORT_WORD.lastIndex = 0;
+  if (RE_PORT_WORD.test(text)) return true;
+  RE_LEVEL.lastIndex = 0;
+  if (RE_LEVEL.test(text)) return true;
+  RE_IPV4.lastIndex = 0;
+  if (RE_IPV4.test(text)) return true;
+  return !!RE_GIT_STATUS.exec(text);
 }
 
 function looksLikeLog(text) {
@@ -223,6 +268,12 @@ function collectV2Ranges(body) {
   if (looksLikeJson(body)) {
     ranges.push(...collectMatches(body, RE_JSON_ATOM, () => STYLE.info));
   }
+  ranges.push(...collectMatches(body, RE_EMAIL, () => STYLE.path));
+  ranges.push(...collectMatches(body, RE_PORT_WORD, () => STYLE.hex, true));
+  const git = RE_GIT_STATUS.exec(body);
+  if (git) {
+    ranges.push({ start: 0, end: git[0].length, style: STYLE.warn });
+  }
   if (RE_DIFF_PREFIX.test(body)) {
     ranges.push({ start: 0, end: 1, style: body.charCodeAt(0) === 43 ? STYLE.success : STYLE.error });
   }
@@ -238,8 +289,17 @@ function collectLogRanges(body) {
   ranges.push(...collectMatches(body, RE_ISO_TS, () => STYLE.timestamp));
   ranges.push(...collectMatches(body, RE_SYSLOG_TS, () => STYLE.timestamp));
   ranges.push(...collectMatches(body, RE_UNIT_PID, () => STYLE.unit));
-  ranges.push(...collectMatches(body, RE_IPV4, () => STYLE.ip));
+  const ipRanges = collectMatches(body, RE_IPV4, () => STYLE.ip);
+  ranges.push(...ipRanges);
   ranges.push(...collectMatches(body, RE_IPV6, () => STYLE.ip));
+  for (let i = 0; i < ipRanges.length; i++) {
+    const r = ipRanges[i];
+    if (body.charCodeAt(r.end) !== 58) continue;
+    const pm = /^:(\d{2,5})\b/.exec(body.slice(r.end));
+    if (pm) {
+      ranges.push({ start: r.end + 1, end: r.end + pm[0].length, style: STYLE.hex });
+    }
+  }
   ranges.push(...collectMatches(body, RE_HTTP_METHOD_STATUS, httpStyleForStatus, true));
   ranges.push(...collectMatches(body, RE_HTTP_VERSION_STATUS, httpStyleForStatus, true));
   const v2 = collectV2Ranges(body);
@@ -266,19 +326,25 @@ export function colorizeLogLine(line) {
     suffix = '\r';
   }
   if (!body || body.length > MAX_LINE_LEN) return line;
-  if (hasInteractiveEscapes(body)) return line;
+  if (hasHardTuiEscapes(body)) return line;
 
-  const hasEsc = body.indexOf(ESC) !== -1;
-  if (hasEsc) {
-    const stripped = stripDisplayEscapes(body);
-    if (stripped.indexOf(ESC) !== -1) return line;
-    if (hasMeaningfulSgr(body) && !looksLikeLog(stripped)) return line;
-    body = stripped;
+  const peeled = peelWraps(body);
+  if (hasHardTuiEscapes(peeled.mid)) return line;
+
+  let visible = peeled.mid;
+  if (visible.indexOf(ESC) !== -1) {
+    visible = stripDisplayEscapes(visible);
+    if (visible.indexOf(ESC) !== -1) {
+      if (hasHardTuiEscapes(visible)) return line;
+      visible = stripAllSoftEscapes(visible);
+    }
+    if (visible.indexOf(ESC) !== -1) return line;
+    if (hasMeaningfulSgr(peeled.mid) && !shouldHighlight(visible)) return line;
   }
 
-  const ranges = collectLogRanges(body);
-  if (ranges.length === 0) return hasEsc ? line : (body + suffix);
-  return applyRanges(body, ranges) + suffix;
+  const ranges = collectLogRanges(visible);
+  if (ranges.length === 0) return line;
+  return peeled.prefix + applyRanges(visible, ranges) + peeled.suffix + suffix;
 }
 
 function colorizeCompleteText(text) {
