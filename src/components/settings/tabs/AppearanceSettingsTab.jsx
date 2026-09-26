@@ -58,6 +58,8 @@ export const AppearanceSettingsTab = ({
   setSidebarFont,
   uiFont,
   setUiFont,
+  uiFontSize,
+  setUiFontSize,
   sidebarFontSize,
   setSidebarFontSize,
   sidebarFontColor,
@@ -108,7 +110,13 @@ export const AppearanceSettingsTab = ({
   return (
     <div className="apariencia-tab-container" style={{ right: '8px', width: 'calc(100% - 8px)' }}>
       {activeSubTab === 'interfaz' && (
-        <ThemeSelector showPreview={true} />
+        <ThemeSelector
+          showPreview={true}
+          uiFont={uiFont}
+          setUiFont={setUiFont}
+          uiFontSize={uiFontSize}
+          setUiFontSize={setUiFontSize}
+        />
       )}
 
       {activeSubTab === 'layouts' && (
@@ -172,9 +180,7 @@ export const AppearanceSettingsTab = ({
           setSidebarFontColor={setSidebarFontColor}
           handleUnifiedFontChange={handleUnifiedFontChange}
           handleSidebarFontColorChange={handleSidebarFontColorChange}
-          folderIconSize={folderIconSize}
-          connectionIconSize={connectionIconSize}
-          setConnectionIconSize={setConnectionIconSize}
+          setSidebarFontSize={setSidebarFontSize || setUiFontSize}
         />
       )}
 
@@ -209,6 +215,8 @@ export const AppearanceSettingsTab = ({
       {activeSubTab === 'pagina-inicio' && (
         <HomePageSubTab
           uiFont={uiFont}
+          uiFontSize={uiFontSize}
+          setUiFontSize={setUiFontSize}
           handleUnifiedFontChange={handleUnifiedFontChange}
         />
       )}

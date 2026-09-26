@@ -2,8 +2,8 @@ import React, { useRef, useState } from 'react';
 import { Button } from 'primereact/button';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { Dropdown } from 'primereact/dropdown';
-import { Slider } from 'primereact/slider';
 import { treeThemes, treeThemeOptions } from '../themes/tree-themes';
+import UiFontSizeControl from './common/UiFontSizeControl';
 import { iconThemes } from '../themes/icon-themes';
 import { sessionActionIconThemes } from '../themes/session-action-icons';
 import { explorerFonts } from '../themes';
@@ -336,22 +336,12 @@ const SidebarAppearanceMenu = ({
                   />
                 </div>
 
-                {/* Selector de Tamaño */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--ui-sidebar-text)', opacity: 0.7 }}>Tamaño de Iconos / Carpetas</span>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--primary-color)' }}>{iconSize || 20} px</span>
-                  </div>
-                  <div style={{ padding: '8px 4px 4px 4px' }}>
-                    <Slider
-                      value={iconSize || 20}
-                      onChange={(e) => setIconSize?.(e.value)}
-                      min={12}
-                      max={32}
-                      step={1}
-                      style={{ height: '4px' }}
-                    />
-                  </div>
+                  <UiFontSizeControl
+                    compact
+                    value={explorerFontSize}
+                    onChange={(next) => setExplorerFontSize?.(next)}
+                  />
                 </div>
 
                 {/* Selector de Color */}

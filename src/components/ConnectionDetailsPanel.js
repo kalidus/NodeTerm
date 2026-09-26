@@ -8,6 +8,7 @@ import { FolderIconPresets, FolderIconRenderer } from './FolderIconSelector';
 import { SSHIconPresets, SSHIconRenderer } from './SSHIconSelector';
 import TerminalFrame from './TerminalFrame';
 import { writeText as clipboardWriteText } from '../utils/clipboard';
+import { getUiFontSizePx } from '../utils/sidebarFontStack';
 
 // Wrapper estable (no definir componentes dentro del render — remonta hijos y pierde foco al escribir)
 const DetailsPanelWrapper = ({
@@ -508,7 +509,7 @@ const ConnectionDetailsPanel = ({
   // Helper for node icon
   const getNodeIcon = () => {
     const themeIcons = (iconThemes[iconTheme] || iconThemes['nord'])?.icons || iconThemes['nord'].icons;
-    const iconSize = 14;
+    const iconSize = getUiFontSizePx(14);
 
     if (selectedNode.icon && selectedNode.icon.emoji) {
       return <span style={{ fontSize: `${iconSize}px`, lineHeight: '1' }}>{selectedNode.icon.emoji}</span>;

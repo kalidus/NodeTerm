@@ -350,6 +350,15 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
 }
 
+.ui-font-size-control {
+  width: 100%;
+}
+
+.ui-font-size-control--compact .theme-size-header-label {
+  color: var(--ui-sidebar-text);
+  opacity: 0.8;
+}
+
 /* Vista previa in-situ */
 .theme-typography-preview {
   margin-top: 0.2rem;

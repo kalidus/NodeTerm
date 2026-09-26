@@ -1,8 +1,8 @@
 import React from 'react';
 import { FaFolder, FaFilePdf, FaFileWord, FaFileExcel } from 'react-icons/fa';
 import { Dropdown } from 'primereact/dropdown';
-import { Slider } from 'primereact/slider';
 import { useTranslation } from '../../../../i18n/hooks/useTranslation';
+import UiFontSizeControl from '../../../common/UiFontSizeControl';
 import { uiThemes } from '../../../../themes/ui-themes';
 import { iconThemes } from '../../../../themes/icon-themes';
 import { explorerFonts } from '../../../../themes';
@@ -406,36 +406,11 @@ export const FileExplorerSubTab = ({
                 />
               </div>
 
-              {/* Tamaño de Fuente con Slider */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  minWidth: '60px'
-                }}>
-                  <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>{t('appearance.homePage.fontSize')}</span>
-                </div>
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Slider
-                    value={explorerFontSize}
-                    onChange={(e) => setExplorerFontSize && setExplorerFontSize(e.value)}
-                    min={8}
-                    max={32}
-                    style={{ flex: 1 }}
-                  />
-                  <span style={{
-                    fontSize: '0.75rem',
-                    color: 'var(--ui-button-primary)',
-                    fontWeight: 600,
-                    minWidth: '40px',
-                    textAlign: 'right'
-                  }}>{explorerFontSize} px</span>
-                </div>
+              <div style={{ marginTop: '0.5rem' }}>
+                <UiFontSizeControl
+                  value={explorerFontSize}
+                  onChange={(next) => setExplorerFontSize && setExplorerFontSize(next)}
+                />
               </div>
             </div>
           </div>

@@ -12,11 +12,13 @@ import { ACTIVE_PRESET_STORAGE_KEY } from '../themes/presets/index';
 import localStorageSyncService from '../services/LocalStorageSyncService';
 import { applyUILayoutFromStorage } from '../utils/appearanceLayout';
 import {
-  applySidebarTypographyCssVariables,
   applyAppTypography,
   buildAppFontStack,
   shouldLoadWebFont,
-  shouldLoadWebFontForSidebar
+  clampUiFontSize,
+  deriveUiIconSize,
+  iconSizeToUiFontSize,
+  UI_FONT_SIZE_DEFAULT
 } from '../utils/sidebarFontStack';
 import { fontLoader } from '../utils/fontLoader';
 import { persistSyncedSetting } from '../utils/persistSyncedSetting';
@@ -178,49 +180,14 @@ export const useThemeManagement = () => {
     }
   });
 
-  const [explorerFontSize, setExplorerFontSize] = useState(() => {
+  const [explorerFontSize, setExplorerFontSizeState] = useState(() => {
     try {
-      const saved = localStorage.getItem('explorerFontSize');
-      return saved ? parseInt(saved, 10) : 15;
+      const saved = localStorage.getItem('uiFontSize') || localStorage.getItem('explorerFontSize') || localStorage.getItem('sidebarFontSize');
+      return saved ? clampUiFontSize(saved) : UI_FONT_SIZE_DEFAULT;
     } catch {
-      return 15;
+      return UI_FONT_SIZE_DEFAULT;
     }
   });
-
-  // ─── TAMAÑO UNIFICADO DE LA SIDEBAR ────────────────────────────────────────
-  // Un solo valor controla proporcionalemente iconos Y tipografía.
-  // Ratio fijo: fontSize = max(10, round(iconSize × 0.75))
-  //   iconSize 12 → fontSize 9 → clamp → 10
-  //   iconSize 20 → fontSize 15  (por defecto)
-  //   iconSize 32 → fontSize 24
-  const SIDEBAR_FONT_RATIO = 0.64;
-  const derivedFontSize = (iconSz) => Math.max(10, Math.round(iconSz * SIDEBAR_FONT_RATIO));
-
-  const [sidebarIconSize, setSidebarIconSize] = useState(() => {
-    try {
-      const savedFolder = localStorage.getItem('folderIconSize');
-      const savedConn = localStorage.getItem('connectionIconSize');
-      const savedIcon = localStorage.getItem('iconSize');
-      const savedSidebar = localStorage.getItem('sidebarIconSize');
-      if (savedSidebar) return parseInt(savedSidebar, 10);
-      if (savedFolder) return parseInt(savedFolder, 10);
-      if (savedConn) return parseInt(savedConn, 10);
-      if (savedIcon) return parseInt(savedIcon, 10);
-      return 20;
-    } catch {
-      return 20;
-    }
-  });
-
-  // Aliases derivados para compatibilidad con todos los consumidores existentes
-  const iconSize = sidebarIconSize;
-  const folderIconSize = sidebarIconSize;
-  const connectionIconSize = Math.round(sidebarIconSize * 1.06);
-
-  // Setters unificados: cualquier setter actualiza el estado único
-  const setIconSize = setSidebarIconSize;
-  const setFolderIconSize = setSidebarIconSize;
-  const setConnectionIconSize = setSidebarIconSize;
 
   const [explorerColorTheme, setExplorerColorTheme] = useState(() => {
     try {
@@ -249,11 +216,30 @@ export const useThemeManagement = () => {
   const [uiFontSize, setUiFontSizeState] = useState(() => {
     try {
       const saved = localStorage.getItem('uiFontSize') || localStorage.getItem('sidebarFontSize') || localStorage.getItem('explorerFontSize');
-      return saved ? parseFloat(saved) : 14;
+      return saved ? clampUiFontSize(saved) : UI_FONT_SIZE_DEFAULT;
     } catch {
-      return 14;
+      return UI_FONT_SIZE_DEFAULT;
     }
   });
+
+  const [sidebarFontSize, setSidebarFontSizeState] = useState(() => {
+    try {
+      const saved = localStorage.getItem('uiFontSize') || localStorage.getItem('sidebarFontSize') || localStorage.getItem('explorerFontSize');
+      return saved ? clampUiFontSize(saved) : UI_FONT_SIZE_DEFAULT;
+    } catch {
+      return UI_FONT_SIZE_DEFAULT;
+    }
+  });
+
+  const persistUiIconSize = useCallback((fontSize) => {
+    const iconPx = deriveUiIconSize(fontSize);
+    const iconStr = String(iconPx);
+    persistSyncedSetting('iconSize', iconStr);
+    persistSyncedSetting('folderIconSize', iconStr);
+    persistSyncedSetting('connectionIconSize', iconStr);
+    persistSyncedSetting('sidebarIconSize', iconStr);
+    return iconPx;
+  }, []);
 
   const setUiFont = useCallback((newFont) => {
     if (!newFont) return;
@@ -272,35 +258,37 @@ export const useThemeManagement = () => {
 
   const setUiFontSize = useCallback((newSize) => {
     if (!newSize && newSize !== 0) return;
-    const raw = typeof newSize === 'number' ? newSize : parseFloat(newSize);
-    if (isNaN(raw)) return;
-    const numSize = Number(raw.toFixed(1));
+    const numSize = clampUiFontSize(newSize);
     const strSize = numSize.toString();
     setUiFontSizeState(numSize);
-    setSidebarFontSize(numSize);
-    setExplorerFontSize(numSize);
+    setSidebarFontSizeState(numSize);
+    setExplorerFontSizeState(numSize);
     try {
       persistSyncedSetting('uiFontSize', strSize);
       persistSyncedSetting('sidebarFontSize', strSize);
       persistSyncedSetting('explorerFontSize', strSize);
       persistSyncedSetting('homeTabFontSize', strSize);
+      persistUiIconSize(numSize);
       window.dispatchEvent(new CustomEvent('ui-font-size-changed', { detail: { size: numSize } }));
       window.dispatchEvent(new Event('settings-updated'));
     } catch { }
-  }, []);
+  }, [persistUiIconSize]);
 
   const setSidebarFont = setUiFont;
   const setExplorerFont = setUiFont;
+  const setSidebarFontSize = setUiFontSize;
+  const setExplorerFontSize = setUiFontSize;
 
-  // sidebarFontSize: se alinea con la tipografía de UI configurada
-  const [sidebarFontSize, setSidebarFontSize] = useState(() => {
-    try {
-      const saved = localStorage.getItem('uiFontSize') || localStorage.getItem('sidebarFontSize') || localStorage.getItem('explorerFontSize');
-      return saved ? parseFloat(saved) : 14;
-    } catch {
-      return 14;
-    }
-  });
+  const iconSize = deriveUiIconSize(uiFontSize);
+  const sidebarIconSize = iconSize;
+  const folderIconSize = iconSize;
+  const connectionIconSize = iconSize;
+  const setIconSize = useCallback((iconPx) => {
+    setUiFontSize(iconSizeToUiFontSize(iconPx));
+  }, [setUiFontSize]);
+  const setFolderIconSize = setIconSize;
+  const setConnectionIconSize = setIconSize;
+  const setSidebarIconSize = setIconSize;
 
   const [sidebarFontColor, setSidebarFontColor] = useState(() => {
     try {
@@ -549,12 +537,8 @@ export const useThemeManagement = () => {
     const updatedExplorerFontSize = localStorage.getItem('explorerFontSize') || updatedUiFontSize;
     const updatedExplorerColorTheme = localStorage.getItem('explorerColorTheme') || 'Light';
     const updatedSidebarFont = localStorage.getItem('sidebarFont') || updatedUiFont;
-    const updatedSidebarFontSize = localStorage.getItem('sidebarFontSize') || updatedUiFontSize;
+    const updatedSidebarFontSize = localStorage.getItem('uiFontSize') || localStorage.getItem('sidebarFontSize') || updatedUiFontSize;
     const updatedSidebarFontColor = localStorage.getItem('sidebarFontColor') || '';
-    const updatedIconSize = localStorage.getItem('iconSize');
-    const updatedFolderIconSize = localStorage.getItem('folderIconSize');
-    const updatedConnectionIconSize = localStorage.getItem('connectionIconSize');
-    const updatedSidebarIconSize = updatedFolderIconSize || updatedConnectionIconSize;
     const updatedIconTheme = localStorage.getItem('iconTheme') || 'nord';
     const updatedIconThemeSidebar = localStorage.getItem('iconThemeSidebar') || 'nord';
     const updatedTreeTheme = localStorage.getItem(TREE_THEME_STORAGE_KEY) || 'cursorCompact';
@@ -576,15 +560,16 @@ export const useThemeManagement = () => {
 
     // UI Font State Update
     setUiFontState(updatedUiFont);
-    if (updatedUiFontSize) setUiFontSizeState(parseFloat(updatedUiFontSize));
+    if (updatedUiFontSize) {
+      const syncedSize = clampUiFontSize(updatedUiFontSize);
+      setUiFontSizeState(syncedSize);
+      setSidebarFontSizeState(syncedSize);
+      setExplorerFontSizeState(syncedSize);
+    }
     setExplorerFontState(updatedExplorerFont);
-    if (updatedExplorerFontSize) setExplorerFontSize(parseFloat(updatedExplorerFontSize));
     setExplorerColorTheme(updatedExplorerColorTheme);
     setSidebarFontState(updatedSidebarFont);
-    if (updatedSidebarFontSize) setSidebarFontSize(parseFloat(updatedSidebarFontSize));
     setSidebarFontColor(updatedSidebarFontColor);
-    if (updatedIconSize) setIconSize(parseInt(updatedIconSize, 10));
-    if (updatedSidebarIconSize) setSidebarIconSize(parseInt(updatedSidebarIconSize, 10));
     setIconTheme(updatedIconTheme);
     setIconThemeSidebar(updatedIconThemeSidebar);
     setTreeTheme(updatedTreeTheme);

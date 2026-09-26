@@ -10,6 +10,7 @@ import { SSHIconRenderer, SSHIconPresets } from './SSHIconSelector';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
 import { isHomeButtonLocked as readHomeButtonLocked } from '../utils/homeTabDefaults';
+import { getUiFontSizePx } from '../utils/sidebarFontStack';
 const TabHeader = React.memo(({
   // Props básicas de PrimeReact
   className,
@@ -200,7 +201,7 @@ const TabHeader = React.memo(({
     const distroInfo = tab.distroInfo;
     const label = (tab.label || '').toLowerCase();
 
-    const baseIconSize = 14; // Tamaño base para pestañas
+    const baseIconSize = getUiFontSizePx(14);
 
     // Si hay distroInfo, usar su categoría
     const category = distroInfo?.category || '';
@@ -454,41 +455,41 @@ const TabHeader = React.memo(({
 
       {/* Icono específico para configuración */}
       {tab.type === 'settings' && (
-        <i className="pi pi-cog" style={{ fontSize: '14px', marginRight: '6px', color: primaryColor, flexShrink: 0 }}></i>
+        <i className="pi pi-cog" style={{ fontSize: 'var(--ui-font-size, 14px)', marginRight: '6px', color: primaryColor, flexShrink: 0 }}></i>
       )}
 
       {/* Icono específico para splits */}
       {tab.type === 'split' && (
-        <i className="pi pi-window-maximize" style={{ fontSize: '14px', marginRight: '6px', color: '#007ad9', flexShrink: 0 }}></i>
+        <i className="pi pi-window-maximize" style={{ fontSize: 'var(--ui-font-size, 14px)', marginRight: '6px', color: '#007ad9', flexShrink: 0 }}></i>
       )}
 
       {/* Icono específico para exploradores */}
       {(tab.type === 'explorer' || tab.isExplorerInSSH) && (
         getSidebarConnectionIcon('explorer') ||
-        <i className="pi pi-folder-open" style={{ fontSize: '14px', marginRight: '6px', flexShrink: 0 }}></i>
+        <i className="pi pi-folder-open" style={{ fontSize: 'var(--ui-font-size, 14px)', marginRight: '6px', flexShrink: 0 }}></i>
       )}
 
       {/* Icono específico para pestañas RDP */}
       {tab.type === 'rdp' && (
         getSidebarConnectionIcon('rdp') ||
-        <i className="pi pi-desktop" style={{ fontSize: '14px', marginRight: '6px', color: '#007ad9', flexShrink: 0 }}></i>
+        <i className="pi pi-desktop" style={{ fontSize: 'var(--ui-font-size, 14px)', marginRight: '6px', color: '#007ad9', flexShrink: 0 }}></i>
       )}
 
       {/* Icono específico para pestañas RDP-Guacamole */}
       {tab.type === 'rdp-guacamole' && (
         getSidebarConnectionIcon('rdp-guacamole') ||
-        <i className="pi pi-desktop" style={{ fontSize: '14px', marginRight: '6px', color: '#ff6b35', flexShrink: 0 }}></i>
+        <i className="pi pi-desktop" style={{ fontSize: 'var(--ui-font-size, 14px)', marginRight: '6px', color: '#ff6b35', flexShrink: 0 }}></i>
       )}
 
       {/* Icono específico para pestañas VNC-Guacamole */}
       {tab.type === 'vnc-guacamole' && (
         getSidebarConnectionIcon('vnc-guacamole') ||
-        <i className="pi pi-desktop" style={{ fontSize: '14px', marginRight: '6px', color: '#ff6b35', flexShrink: 0 }}></i>
+        <i className="pi pi-desktop" style={{ fontSize: 'var(--ui-font-size, 14px)', marginRight: '6px', color: '#ff6b35', flexShrink: 0 }}></i>
       )}
 
       {/* Icono específico para pestañas Guacamole */}
       {tab.type === 'guacamole' && (
-        <i className="pi pi-globe" style={{ fontSize: '14px', marginRight: '6px', color: '#00C851', flexShrink: 0 }}></i>
+        <i className="pi pi-globe" style={{ fontSize: 'var(--ui-font-size, 14px)', marginRight: '6px', color: '#00C851', flexShrink: 0 }}></i>
       )}
 
       {/* Icono específico para terminales locales - usar misma lógica que NodeTermStatus */}
@@ -496,22 +497,22 @@ const TabHeader = React.memo(({
 
       {/* Iconos de marca: clientes embebidos (logos oficiales) */}
       {tab.type === 'anything-llm' && (
-        <AIClientBrandIcon tabType="anything-llm" size={14} style={{ marginRight: '6px', flexShrink: 0 }} />
+        <AIClientBrandIcon tabType="anything-llm" size={getUiFontSizePx(14)} style={{ marginRight: '6px', flexShrink: 0 }} />
       )}
       {tab.type === 'openwebui' && (
-        <AIClientBrandIcon tabType="openwebui" size={14} style={{ marginRight: '6px', flexShrink: 0 }} />
+        <AIClientBrandIcon tabType="openwebui" size={getUiFontSizePx(14)} style={{ marginRight: '6px', flexShrink: 0 }} />
       )}
       {tab.type === 'librechat' && (
-        <AIClientBrandIcon tabType="librechat" size={14} style={{ marginRight: '6px', flexShrink: 0 }} />
+        <AIClientBrandIcon tabType="librechat" size={getUiFontSizePx(14)} style={{ marginRight: '6px', flexShrink: 0 }} />
       )}
       {tab.type === 'agentzero' && (
-        <AIClientBrandIcon tabType="agentzero" size={14} style={{ marginRight: '6px', flexShrink: 0 }} />
+        <AIClientBrandIcon tabType="agentzero" size={getUiFontSizePx(14)} style={{ marginRight: '6px', flexShrink: 0 }} />
       )}
       {tab.type === 'openclaw' && (
-        <AIClientBrandIcon tabType="openclaw" size={14} style={{ marginRight: '6px', flexShrink: 0 }} />
+        <AIClientBrandIcon tabType="openclaw" size={getUiFontSizePx(14)} style={{ marginRight: '6px', flexShrink: 0 }} />
       )}
       {tab.type === 'open-notebook' && (
-        <AIClientBrandIcon tabType="open-notebook" size={14} style={{ marginRight: '6px', flexShrink: 0 }} />
+        <AIClientBrandIcon tabType="open-notebook" size={getUiFontSizePx(14)} style={{ marginRight: '6px', flexShrink: 0 }} />
       )}
 
       {/* Icono específico para herramientas de red */}
@@ -536,7 +537,7 @@ const TabHeader = React.memo(({
         const tool = toolsMap[tab.toolId];
         const icon = tool ? tool.icon : 'pi pi-cog';
         const color = tool ? tool.color : '#8b5cf6';
-        return <i className={icon} style={{ fontSize: '14px', marginRight: '6px', color: color, flexShrink: 0 }}></i>;
+        return <i className={icon} style={{ fontSize: 'var(--ui-font-size, 14px)', marginRight: '6px', color: color, flexShrink: 0 }}></i>;
       })()}
 
       {/* Mostrar label solo si NO es pestaña de inicio (las pestañas de inicio nunca muestran texto) */}

@@ -61,6 +61,8 @@ const SettingsContent = ({
   setConnectionIconSize,
   uiFont,
   setUiFont,
+  uiFontSize,
+  setUiFontSize,
   sidebarFont,
   setSidebarFont,
   sidebarFontSize,
@@ -722,6 +724,8 @@ const SettingsContent = ({
                 setSidebarFont={setSidebarFont}
                 uiFont={uiFont}
                 setUiFont={setUiFont}
+                uiFontSize={uiFontSize}
+                setUiFontSize={setUiFontSize}
                 sidebarFontSize={sidebarFontSize}
                 setSidebarFontSize={setSidebarFontSize}
                 sidebarFontColor={sidebarFontColor}

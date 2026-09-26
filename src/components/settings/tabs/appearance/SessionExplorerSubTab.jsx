@@ -8,7 +8,7 @@ import { sessionActionIconThemes } from '../../../../themes/session-action-icons
 import { explorerFonts } from '../../../../themes';
 import { buildSidebarFontStack } from '../../../../utils/sidebarFontStack';
 import localStorageSyncService from '../../../../services/LocalStorageSyncService';
-import { SmoothIconSlider } from '../../common/IconSelectorGrids';
+import UiFontSizeControl from '../../../common/UiFontSizeControl';
 
 export const SessionExplorerSubTab = ({
   treeTheme,
@@ -24,9 +24,7 @@ export const SessionExplorerSubTab = ({
   setSidebarFontColor,
   handleUnifiedFontChange,
   handleSidebarFontColorChange,
-  folderIconSize,
-  connectionIconSize,
-  setConnectionIconSize
+  setSidebarFontSize
 }) => {
   const { t } = useTranslation('settings');
 
@@ -375,29 +373,11 @@ export const SessionExplorerSubTab = ({
                 fontWeight: 600,
                 color: 'var(--ui-dialog-text)'
               }}>Tipografía</span>
-              {/* Badge con el tamaño de fuente calculado automáticamente */}
-              <span style={{
-                fontSize: '0.7rem',
-                color: 'var(--ui-button-primary)',
-                background: 'rgba(var(--ui-button-primary-rgb, 0,172,193), 0.12)',
-                border: '1px solid rgba(var(--ui-button-primary-rgb, 0,172,193), 0.25)',
-                borderRadius: '999px',
-                padding: '1px 8px',
-                fontWeight: 600,
-                letterSpacing: '0.02em',
-                marginLeft: '0.25rem',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '3px'
-              }}>
-                <i className="pi pi-link" style={{ fontSize: '0.6rem', opacity: 0.8 }}></i>
-                {sidebarFontSize} px · auto
-              </span>
             </div>
 
             <div style={{
               display: 'grid',
-              gridTemplateColumns: '1.2fr 1fr 1fr',
+              gridTemplateColumns: '1.2fr 1fr',
               gap: '1rem'
             }}>
               {/* Fuente */}
@@ -502,26 +482,12 @@ export const SessionExplorerSubTab = ({
                 </div>
               </div>
 
-              {/* Tamaño de Iconos */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  minWidth: '50px'
-                }}>
-                  <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>Iconos / Carpetas</span>
-                </div>
-                <SmoothIconSlider 
-                  connectionIconSize={connectionIconSize} 
-                  setConnectionIconSize={setConnectionIconSize} 
-                />
-              </div>
-
+            </div>
+            <div style={{ marginTop: '1rem' }}>
+              <UiFontSizeControl
+                value={sidebarFontSize}
+                onChange={(next) => setSidebarFontSize && setSidebarFontSize(next)}
+              />
             </div>
           </div>
 

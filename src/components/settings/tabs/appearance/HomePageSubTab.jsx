@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Dropdown } from 'primereact/dropdown';
-import { Slider } from 'primereact/slider';
 import { Checkbox } from 'primereact/checkbox';
+import UiFontSizeControl from '../../../common/UiFontSizeControl';
+import { UI_FONT_SIZE_DEFAULT } from '../../../../utils/sidebarFontStack';
 import { useTranslation } from '../../../../i18n/hooks/useTranslation';
 import { STORAGE_KEYS } from '../../../../utils/constants';
 import { explorerFonts } from '../../../../themes';
@@ -17,6 +18,8 @@ import {
 
 export const HomePageSubTab = ({
   uiFont,
+  uiFontSize,
+  setUiFontSize,
   handleUnifiedFontChange
 }) => {
   const { t } = useTranslation('settings');
@@ -47,10 +50,10 @@ export const HomePageSubTab = ({
 
   const [homeTabFontSize, setHomeTabFontSize] = useState(() => {
     try {
-      const saved = localStorage.getItem('homeTabFontSize');
-      return saved ? parseInt(saved, 10) : 15;
+      const saved = uiFontSize ?? localStorage.getItem('uiFontSize') ?? localStorage.getItem('homeTabFontSize');
+      return saved != null && saved !== '' ? parseFloat(saved) : UI_FONT_SIZE_DEFAULT;
     } catch {
-      return 15;
+      return UI_FONT_SIZE_DEFAULT;
     }
   });
 
@@ -97,11 +100,10 @@ export const HomePageSubTab = ({
   });
 
   useEffect(() => {
-    try {
-      localStorage.setItem('homeTabFontSize', String(homeTabFontSize));
-      window.dispatchEvent(new CustomEvent('home-tab-font-changed'));
-    } catch { }
-  }, [homeTabFontSize]);
+    if (uiFontSize != null) {
+      setHomeTabFontSize(uiFontSize);
+    }
+  }, [uiFontSize]);
 
   // Persistir tema de iconos de la barra de acciones
   useEffect(() => {
@@ -220,36 +222,14 @@ export const HomePageSubTab = ({
                 />
               </div>
 
-              {/* Tamaño de Fuente con Slider */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  minWidth: '60px'
-                }}>
-                  <span style={{ fontSize: '0.8125rem', color: 'var(--text-color-secondary)' }}>{t('appearance.homePage.fontSize')}</span>
-                </div>
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Slider
-                    value={homeTabFontSize}
-                    onChange={(e) => setHomeTabFontSize(e.value)}
-                    min={8}
-                    max={32}
-                    style={{ flex: 1 }}
-                  />
-                  <span style={{
-                    fontSize: '0.75rem',
-                    color: 'var(--ui-button-primary)',
-                    fontWeight: 600,
-                    minWidth: '40px',
-                    textAlign: 'right'
-                  }}>{homeTabFontSize} px</span>
-                </div>
+              <div style={{ marginTop: '0.5rem' }}>
+                <UiFontSizeControl
+                  value={uiFontSize != null ? uiFontSize : homeTabFontSize}
+                  onChange={(next) => {
+                    if (setUiFontSize) setUiFontSize(next);
+                    else setHomeTabFontSize(next);
+                  }}
+                />
               </div>
             </div>
           </div>
