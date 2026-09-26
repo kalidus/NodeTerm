@@ -418,6 +418,10 @@ function getGuacdService() {
   return _guacdService;
 }
 
+function peekGuacdService() {
+  return _guacdService;
+}
+
 function getAnythingLLMService() {
   if (!_anythingLLMService) {
     const AnythingLLMService = require('./src/services/AnythingLLMService');
@@ -1516,8 +1520,9 @@ function createWindow() {
       agentZeroService: createServiceProxy(getAgentZeroService),
       openClawService: createServiceProxy(getOpenClawService),
       openNotebookService: createServiceProxy(getOpenNotebookService),
-      // Guacamole dependencies for critical phase registration
-      guacdService: getGuacdService(),
+      // Guacamole dependencies for critical phase registration (no instanciar si esta off)
+      getGuacdService,
+      peekGuacdService,
       guacamoleServer,
       guacamoleServerReadyAt,
       sendToRenderer,
@@ -1679,8 +1684,6 @@ function createWindow() {
         initializeGuacamoleServices().catch((error) => {
           console.error('❌ [POST-SHOW] Error en inicialización de Guacamole:', error);
         });
-      } else {
-        console.log('💤 [POST-SHOW] Guacamole está desactivado por defecto (NodeTerm usa RDP Nativo). No se inicia guacd.');
       }
     } catch (e) {
       console.warn('⚠️ [POST-SHOW] Error comprobando estado de Guacamole:', e);
@@ -1696,7 +1699,8 @@ function createWindow() {
         mainWindow,
         findSSHConnection,
         disconnectAllGuacamoleConnections,
-        guacdService: getGuacdService(),
+        getGuacdService,
+        peekGuacdService,
         guacamoleServer,
         guacamoleServerReadyAt,
         sendToRenderer,
@@ -1945,7 +1949,8 @@ function createWindow() {
       mainWindow,
       findSSHConnection,
       disconnectAllGuacamoleConnections,
-      guacdService: getGuacdService(),
+      getGuacdService,
+      peekGuacdService,
       guacamoleServer,
       guacamoleServerReadyAt,
       sendToRenderer,
@@ -3715,6 +3720,9 @@ ipcMain.handle('updater:clear-cache', async () => {
 // Helper to disconnect all active guacamole connections
 async function disconnectAllGuacamoleConnections() {
   try {
+    if (activeGuacamoleConnections.size === 0 && !guacamoleInitialized) {
+      return;
+    }
     console.log(`🧹 Cerrando ${activeGuacamoleConnections.size} conexiones Guacamole activas...`);
     for (const conn of Array.from(activeGuacamoleConnections)) {
       try {

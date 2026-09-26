@@ -13,20 +13,27 @@ const {
   loadGuacamoleEnabled,
   saveGuacamoleEnabled
 } = require('../utils/file-utils');
-// ⚡ PERF FIX: require at module level so Node.js caches them before any IPC handler runs.
-// Was previously inline inside the IPC handler, causing synchronous module resolution on every token creation.
 const crypto = require('crypto');
-const Crypt = require('guacamole-lite/lib/Crypt.js');
 const {
   normalizeRdpColorDepth,
   resolveRdpScreenDimensions
 } = require('../../utils/rdpScreenConfig');
 
+let _Crypt = null;
+function getCrypt() {
+  if (!_Crypt) {
+    _Crypt = require('guacamole-lite/lib/Crypt.js');
+  }
+  return _Crypt;
+}
+
 
 /**
  * Registra todos los handlers IPC de Guacamole
  * @param {Object} dependencies - Dependencias necesarias
- * @param {Object} dependencies.guacdService - Servicio de guacd
+ * @param {Object} [dependencies.guacdService] - Servicio de guacd (opcional, preferir getter)
+ * @param {Function} [dependencies.getGuacdService] - Getter que instancia guacd solo si hace falta
+ * @param {Function} [dependencies.peekGuacdService] - Getter que no instancia
  * @param {Object} dependencies.guacamoleServer - Servidor Guacamole
  * @param {Number} dependencies.guacamoleServerReadyAt - Timestamp de inicialización del servidor
  * @param {Function} dependencies.sendToRenderer - Función para enviar datos al renderer
@@ -41,6 +48,8 @@ const {
  */
 function registerGuacamoleHandlers({
   guacdService,
+  getGuacdService,
+  peekGuacdService,
   guacamoleServer,
   guacamoleServerReadyAt,
   sendToRenderer,
@@ -55,6 +64,19 @@ function registerGuacamoleHandlers({
   initializeGuacamoleServices,
   stopGuacamoleServices
 }) {
+  const peekService = () => {
+    if (typeof peekGuacdService === 'function') {
+      return peekGuacdService();
+    }
+    return guacdService || null;
+  };
+
+  const ensureService = () => {
+    if (typeof getGuacdService === 'function') {
+      return getGuacdService();
+    }
+    return peekService();
+  };
   // IPC para configurar el watchdog de guacd desde la UI
   ipcMain.handle('guacamole:set-guacd-timeout-ms', async (event, timeoutMs) => {
     try {
@@ -69,9 +91,9 @@ function registerGuacamoleHandlers({
 
       // Si el valor es el mismo que el actual o el guardado, no hacer nada
       if (currentValue === parsed && (savedValue === null || savedValue === parsed)) {
-        // Solo actualizar el servicio si está activo, pero no guardar
-        if (guacdService && typeof guacdService.setInactivityTimeout === 'function') {
-          guacdService.setInactivityTimeout(parsed);
+        const existingService = peekService();
+        if (existingService && typeof existingService.setInactivityTimeout === 'function') {
+          existingService.setInactivityTimeout(parsed);
         }
         return { success: true, value: parsed, saved: false };
       }
@@ -88,9 +110,9 @@ function registerGuacamoleHandlers({
         console.warn('⚠️ No se pudo persistir el timeout de guacd:', saveError?.message);
       }
 
-      // Si el servicio guacd está activo, actualizar su configuración
-      if (guacdService && typeof guacdService.setInactivityTimeout === 'function') {
-        guacdService.setInactivityTimeout(parsed);
+      const existingService = peekService();
+      if (existingService && typeof existingService.setInactivityTimeout === 'function') {
+        existingService.setInactivityTimeout(parsed);
       }
 
       return { success: true, value: parsed };
@@ -118,7 +140,10 @@ function registerGuacamoleHandlers({
       if (initializeGuacamoleServices) {
         await initializeGuacamoleServices();
       }
-      const guacdStatus = guacdService ? guacdService.getStatus() : { isRunning: true, method: 'unknown' };
+      const startedService = peekService() || ensureService();
+      const guacdStatus = startedService && typeof startedService.getStatus === 'function'
+        ? startedService.getStatus()
+        : { isRunning: true, method: 'unknown' };
       return { success: true, guacd: guacdStatus, enabled: true };
     } catch (error) {
       console.error('❌ Error en guacamole:start:', error);
@@ -174,12 +199,21 @@ function registerGuacamoleHandlers({
   ipcMain.handle('guacamole:get-status', async (event) => {
     try {
       const enabled = await loadGuacamoleEnabled();
+      if (!enabled) {
+        return {
+          enabled: false,
+          guacd: { isRunning: false, method: 'unknown' },
+          server: { isRunning: false, running: false, readyAt: 0 }
+        };
+      }
+
       let guacdStatus = { isRunning: false, method: 'unknown' };
-      if (guacdService) {
-        if (typeof guacdService.checkLiveStatus === 'function') {
-          guacdStatus = await guacdService.checkLiveStatus();
-        } else if (typeof guacdService.getStatus === 'function') {
-          guacdStatus = guacdService.getStatus();
+      const existingService = peekService();
+      if (existingService) {
+        if (typeof existingService.checkLiveStatus === 'function') {
+          guacdStatus = await existingService.checkLiveStatus();
+        } else if (typeof existingService.getStatus === 'function') {
+          guacdStatus = existingService.getStatus();
         }
       }
 
@@ -235,67 +269,62 @@ function registerGuacamoleHandlers({
   // Permitir establecer el método preferido desde la UI (docker|wsl|native|mock)
   ipcMain.handle('guacamole:set-preferred-method', async (event, method) => {
     try {
-      if (guacdService && typeof guacdService.setPreferredMethod === 'function') {
-        const isGuacEnabled = await loadGuacamoleEnabled();
+      const { savePreferredGuacdMethod } = require('../../main/utils/file-utils');
+      const isGuacEnabled = await loadGuacamoleEnabled();
+      const existingService = peekService();
 
-        // Establecer la nueva preferencia en memoria y guardarla en disco
-        guacdService.setPreferredMethod(method);
-        try {
-          const { savePreferredGuacdMethod } = require('../../main/utils/file-utils');
-          await savePreferredGuacdMethod(method);
-          console.log(`💾 Preferencia de método Guacd guardada: ${method}`);
-        } catch (saveError) {
-          console.warn('⚠️ No se pudo guardar la preferencia de método Guacd:', saveError.message);
-        }
-
-        // Si Guacamole NO está habilitado, NO arrancar servicios de guacd
-        if (!isGuacEnabled) {
-          console.log(`ℹ️ Guacamole está desactivado. Preferencia ${method} guardada sin iniciar guacd.`);
-          return { success: true, method, restarted: false, disabled: true };
-        }
-
-        // NO reiniciar si la inicialización está en progreso
-        const initializing = isGuacamoleInitializing ? isGuacamoleInitializing() : false;
-        if (initializing) {
-          console.log(`⏸️ [set-preferred-method] Inicialización de Guacamole en progreso, se aplicará después.`);
-          return { success: true, method, restarted: false, skippedDuringInit: true };
-        }
-
-        // Verificar si el método ya es el mismo que el detectado actualmente
-        const currentStatus = guacdService.getStatus();
-        const currentMethod = currentStatus.method;
-
-        // Si el método ya es el correcto y está corriendo, no reiniciar
-        if (currentMethod === method && currentStatus.isRunning) {
-          console.log(`✅ Método Guacd ya está configurado como ${method} y está corriendo, omitiendo reinicio`);
-          return { success: true, method, restarted: false, alreadyCorrect: true };
-        }
-
-        // Reiniciar el servicio para aplicar la nueva preferencia
-        console.log(`🔄 Aplicando nueva preferencia de método Guacd: ${method}`);
-        const restartSuccess = await guacdService.restart();
-
-        if (restartSuccess) {
-          // Actualizar opciones de Guacamole-lite si está inicializado
-          const currentServer = getGuacamoleServer ? getGuacamoleServer() : guacamoleServer;
-          if (currentServer) {
-            const newGuacdOptions = guacdService.getGuacdOptions();
-            // Nota: guacamole-lite no tiene método para actualizar opciones dinámicamente
-            // Se requeriría recrear el servidor, pero eso es complejo
-            // Por ahora, solo logueamos que las opciones cambiaron
-            console.log(`📝 [set-preferred-method] Nuevas opciones guacd: ${newGuacdOptions.host}:${newGuacdOptions.port}`);
-            console.warn('⚠️ [set-preferred-method] Guacamole-lite puede necesitar reiniciarse para usar nuevas opciones');
-          }
-
-          console.log(`✅ GuacdService reiniciado exitosamente con método: ${method}`);
-          return { success: true, method, restarted: true };
-        } else {
-          console.warn(`⚠️ GuacdService no se pudo reiniciar con método: ${method}`);
-          return { success: false, error: 'Failed to restart GuacdService with new method' };
-        }
-      } else {
-        return { success: false, error: 'GuacdService not available' };
+      if (existingService && typeof existingService.setPreferredMethod === 'function') {
+        existingService.setPreferredMethod(method);
       }
+
+      try {
+        await savePreferredGuacdMethod(method);
+        if (isGuacEnabled) {
+          console.log(`Preferencia de metodo Guacd guardada: ${method}`);
+        }
+      } catch (saveError) {
+        console.warn('No se pudo guardar la preferencia de metodo Guacd:', saveError.message);
+      }
+
+      if (!isGuacEnabled) {
+        return { success: true, method, restarted: false, disabled: true };
+      }
+
+      if (!existingService || typeof existingService.restart !== 'function') {
+        return { success: true, method, restarted: false };
+      }
+
+      const initializing = isGuacamoleInitializing ? isGuacamoleInitializing() : false;
+      if (initializing) {
+        console.log('[set-preferred-method] Inicializacion de Guacamole en progreso, se aplicara despues.');
+        return { success: true, method, restarted: false, skippedDuringInit: true };
+      }
+
+      const currentStatus = existingService.getStatus();
+      const currentMethod = currentStatus.method;
+
+      if (currentMethod === method && currentStatus.isRunning) {
+        console.log(`Metodo Guacd ya esta configurado como ${method} y esta corriendo, omitiendo reinicio`);
+        return { success: true, method, restarted: false, alreadyCorrect: true };
+      }
+
+      console.log(`Aplicando nueva preferencia de metodo Guacd: ${method}`);
+      const restartSuccess = await existingService.restart();
+
+      if (restartSuccess) {
+        const currentServer = getGuacamoleServer ? getGuacamoleServer() : guacamoleServer;
+        if (currentServer) {
+          const newGuacdOptions = existingService.getGuacdOptions();
+          console.log(`[set-preferred-method] Nuevas opciones guacd: ${newGuacdOptions.host}:${newGuacdOptions.port}`);
+          console.warn('[set-preferred-method] Guacamole-lite puede necesitar reiniciarse para usar nuevas opciones');
+        }
+
+        console.log(`GuacdService reiniciado exitosamente con metodo: ${method}`);
+        return { success: true, method, restarted: true };
+      }
+
+      console.warn(`GuacdService no se pudo reiniciar con metodo: ${method}`);
+      return { success: false, error: 'Failed to restart GuacdService with new method' };
     } catch (error) {
       console.error('Error setting preferred method:', error);
       return { success: false, error: error.message };
@@ -305,21 +334,20 @@ function registerGuacamoleHandlers({
   // Handler para reiniciar guacd manualmente
   ipcMain.handle('guacamole:restart-guacd', async () => {
     try {
-      if (guacdService && typeof guacdService.restart === 'function') {
-        console.log('🔄 Reiniciando GuacdService desde la UI...');
-        const restartSuccess = await guacdService.restart();
+      const existingService = peekService();
+      if (existingService && typeof existingService.restart === 'function') {
+        console.log('Reiniciando GuacdService desde la UI...');
+        const restartSuccess = await existingService.restart();
 
         if (restartSuccess) {
-          const status = guacdService.getStatus ? guacdService.getStatus() : { isRunning: true };
-          console.log('✅ GuacdService reiniciado exitosamente');
+          const status = existingService.getStatus ? existingService.getStatus() : { isRunning: true };
+          console.log('GuacdService reiniciado exitosamente');
           return { success: true, status };
-        } else {
-          console.warn('⚠️ GuacdService no se pudo reiniciar');
-          return { success: false, error: 'Failed to restart GuacdService' };
         }
-      } else {
-        return { success: false, error: 'GuacdService not available' };
+        console.warn('GuacdService no se pudo reiniciar');
+        return { success: false, error: 'Failed to restart GuacdService' };
       }
+      return { success: false, error: 'GuacdService not available' };
     } catch (error) {
       console.error('Error restarting guacd:', error);
       return { success: false, error: error.message };
@@ -333,8 +361,17 @@ function registerGuacamoleHandlers({
 
   ipcMain.handle('guacamole:create-token', async (event, config) => {
     try {
-      // Verificar si el servicio guacd responde. Si está configurado como corriendo pero no responde,
-      // re-inicializarlo/reiniciarlo para levantarlo de nuevo de manera segura (autocuración).
+      const isGuacEnabled = await loadGuacamoleEnabled();
+      if (!isGuacEnabled) {
+        return {
+          success: false,
+          isServiceDisabled: true,
+          error: 'El servicio Apache Guacamole esta desactivado. Activalo en la seccion de Apps de NodeTerm para utilizar conexiones Guacamole.'
+        };
+      }
+
+      const guacdService = peekService();
+
       if (guacdService) {
         const status = guacdService.getStatus ? guacdService.getStatus() : { method: 'unknown' };
         if (status.method !== 'mock') {
@@ -342,19 +379,18 @@ function registerGuacamoleHandlers({
           if (!isInitializing) {
             const isHealthy = await guacdService._checkGuacdConnection();
             if (!isHealthy) {
-              console.warn('⚠️ [Guacamole Handlers] guacd no responde en puerto 4822. Re-inicializando/reiniciando de manera autocurativa...');
+              console.warn('[Guacamole Handlers] guacd no responde en puerto 4822. Re-inicializando/reiniciando de manera autocurativa...');
               await guacdService.restart();
             }
           }
         }
       }
 
-      // Si guacd está en modo mock, informar al usuario y rechazar
       try {
         if (guacdService && guacdService.getStatus && guacdService.getStatus().method === 'mock') {
           const connectionType = config.connectionType || 'RDP';
           const message = `${connectionType} requiere Docker Desktop o WSL. Activa Docker Desktop o instala/activa WSL para utilizar ${connectionType} con Guacamole.`;
-          console.warn(`⚠️  [MAIN] Intento de crear token con guacd en modo mock. ${message}`);
+          console.warn(`[MAIN] Intento de crear token con guacd en modo mock. ${message}`);
           return { success: false, error: message };
         }
       } catch { }
@@ -385,17 +421,12 @@ function registerGuacamoleHandlers({
       const normalizedColorDepth = normalizeRdpColorDepth(config.colorDepth, 32);
 
 
-      // Verificar si Guacamole está habilitado y el servidor disponible
-      const isGuacEnabled = await loadGuacamoleEnabled();
       const currentServer = getGuacamoleServer ? getGuacamoleServer() : guacamoleServer;
-
-      if (!isGuacEnabled || !currentServer) {
+      if (!currentServer) {
         return {
           success: false,
-          isServiceDisabled: !isGuacEnabled,
-          error: !isGuacEnabled
-            ? 'El servicio Apache Guacamole está desactivado. Actívalo en la sección de Apps de NodeTerm para utilizar conexiones Guacamole.'
-            : 'El servidor Guacamole no está inicializado o se está iniciando. Por favor, inténtalo de nuevo en unos segundos.'
+          isServiceDisabled: false,
+          error: 'El servidor Guacamole no esta inicializado o se esta iniciando. Por favor, intentalo de nuevo en unos segundos.'
         };
       }
 
@@ -420,13 +451,13 @@ function registerGuacamoleHandlers({
           if (config.enableDrive) {
             // Si llega una carpeta de host desde UI, resolverla según método actual
             let resolvedDrivePath = null;
-            if (config.driveHostDir && typeof config.driveHostDir === 'string' && config.driveHostDir.trim().length > 0 && typeof guacdService.resolveDrivePath === 'function') {
+            if (config.driveHostDir && typeof config.driveHostDir === 'string' && config.driveHostDir.trim().length > 0 && guacdService && typeof guacdService.resolveDrivePath === 'function') {
               resolvedDrivePath = await guacdService.resolveDrivePath(config.driveHostDir);
-            } else if (typeof guacdService.getDrivePathForCurrentMethod === 'function') {
+            } else if (guacdService && typeof guacdService.getDrivePathForCurrentMethod === 'function') {
               resolvedDrivePath = guacdService.getDrivePathForCurrentMethod();
             }
             const drivePath = resolvedDrivePath;
-            const driveName = guacdService.getDriveName ? guacdService.getDriveName() : 'NodeTerm Drive';
+            const driveName = guacdService && guacdService.getDriveName ? guacdService.getDriveName() : 'NodeTerm Drive';
             if (typeof drivePath === 'string' && drivePath.trim().length > 0) {
               driveSettings = {
                 'enable-drive': true,
@@ -544,8 +575,7 @@ function registerGuacamoleHandlers({
       };
 
 
-      // Encriptar token usando Crypt de guacamole-lite para asegurar compatibilidad de formato
-      // ⚡ Crypt is now required at module level (cached by Node.js)
+      const Crypt = getCrypt();
       const crypt = new Crypt(CIPHER, SECRET_KEY);
       const token = crypt.encrypt(tokenObject);
 

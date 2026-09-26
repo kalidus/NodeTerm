@@ -169,35 +169,26 @@ const AppsTab = ({
       }
     }
 
-    // Sincronizar estado persistido de Guacamole desde el proceso principal
-    const syncGuacamoleState = async () => {
+    const syncGuacamoleEnabled = async () => {
       try {
-        const status = await window.electron?.ipcRenderer?.invoke('guacamole:get-status');
-        if (status) {
-          if (typeof status.enabled === 'boolean') {
-            setClients(prev => {
-              if (prev.guacamole !== status.enabled) {
-                const updated = { ...prev, guacamole: status.enabled, rdp: status.enabled };
-                try {
-                  localStorage.setItem(AI_CLIENTS_STORAGE_KEY, JSON.stringify(updated));
-                } catch {}
-                return updated;
-              }
-              return prev;
-            });
-          }
-          if (status.guacd) {
-            setGuacdStatus(status.guacd);
-            if (status.guacd.method && status.guacd.method !== 'unknown') {
-              setGuacdPreferredMethod(status.guacd.method);
+        const res = await window.electron?.ipcRenderer?.invoke('guacamole:get-enabled');
+        if (typeof res?.enabled === 'boolean') {
+          setClients(prev => {
+            if (prev.guacamole !== res.enabled) {
+              const updated = { ...prev, guacamole: res.enabled, rdp: res.enabled };
+              try {
+                localStorage.setItem(AI_CLIENTS_STORAGE_KEY, JSON.stringify(updated));
+              } catch {}
+              return updated;
             }
-          }
+            return prev;
+          });
         }
       } catch (err) {
         console.warn('[AppsTab] Error sincronizando estado de Guacamole:', err);
       }
     };
-    syncGuacamoleState();
+    syncGuacamoleEnabled();
     checkClaudeCliStatus();
     checkOpenCodeCliStatus();
     checkCodexCliStatus();
@@ -206,13 +197,31 @@ const AppsTab = ({
     if (isWindows) {
       checkCygwinStatus();
     }
+  }, [isActive]);
 
-    if (!isActive) return undefined;
-    const guacInterval = setInterval(syncGuacamoleState, 10000);
+  useEffect(() => {
+    if (!isActive || !clients.guacamole) return undefined;
+
+    const syncGuacamoleStatus = async () => {
+      try {
+        const status = await window.electron?.ipcRenderer?.invoke('guacamole:get-status');
+        if (status?.guacd) {
+          setGuacdStatus(status.guacd);
+          if (status.guacd.method && status.guacd.method !== 'unknown') {
+            setGuacdPreferredMethod(status.guacd.method);
+          }
+        }
+      } catch (err) {
+        console.warn('[AppsTab] Error sincronizando estado de Guacamole:', err);
+      }
+    };
+
+    syncGuacamoleStatus();
+    const guacInterval = setInterval(syncGuacamoleStatus, 10000);
     return () => {
       clearInterval(guacInterval);
     };
-  }, [isActive]);
+  }, [isActive, clients.guacamole]);
 
   useEffect(() => {
     if (!isWindows || !window.electron?.ipcRenderer?.on) return undefined;

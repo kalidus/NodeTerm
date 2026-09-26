@@ -22,7 +22,8 @@ const fs = require('fs');
 function registerAppHandlers(dependencies) {
   const {
     mainWindow,
-    disconnectAllGuacamoleConnections
+    disconnectAllGuacamoleConnections,
+    isGuacamoleInitialized
   } = dependencies;
 
   // Cargar packageJson de forma segura con fallback
@@ -51,10 +52,13 @@ function registerAppHandlers(dependencies) {
   // Handler para recarga forzada (ignorando caché)
   ipcMain.handle('app:force-reload', () => {
     if (mainWindow && mainWindow.webContents) {
-      // Intentar cerrar conexiones Guacamole antes de recargar el renderer
       try {
-        // Not awaited on purpose; quick cleanup then reload
-        disconnectAllGuacamoleConnections();
+        const initialized = typeof isGuacamoleInitialized === 'function'
+          ? isGuacamoleInitialized()
+          : false;
+        if (initialized && typeof disconnectAllGuacamoleConnections === 'function') {
+          disconnectAllGuacamoleConnections();
+        }
       } catch { }
       mainWindow.webContents.reloadIgnoringCache();
     }
