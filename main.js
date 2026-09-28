@@ -56,7 +56,7 @@ logTiming('ensureMacPtyPermissions (macOS)');
 
 // Declarar variables
 let alternativePtyConfig, SafeWindowsTerminal, registerAllHandlers, cleanupTunnels;
-let orphanCleanupInterval = null;
+let idleMonitorInterval = null;
 
 // Importar utilidades centralizadas (fuera del try-catch para acceso global)
 const { parseDfOutput, parseNetDev, getGuacdPrefPath, sendToRenderer, cleanupOrphanedConnections } = require('./src/main/utils');
@@ -126,7 +126,7 @@ const sshWriteBufferService = require('./src/main/services/SSHWriteBufferService
 logTiming('SSHWriteBufferService cargado');
 
 // Handler de registro de eventos de pestañas
-const { registerTabEvents, isTabRegistered } = require('./src/main/handlers/tab-events-handler');
+const { registerTabEvents, isTabRegistered, clearAllRegisteredTabs } = require('./src/main/handlers/tab-events-handler');
 logTiming('Tab events handler cargado');
 
 // Importar procesador de PDFs
@@ -2320,7 +2320,7 @@ powerMonitor.on('unlock-screen', async () => {
 let lastIdleCheck = Date.now();
 let wasIdle = false;
 
-setInterval(() => {
+idleMonitorInterval = setInterval(() => {
   try {
     // powerMonitor.getSystemIdleTime() devuelve segundos de inactividad
     const idleSeconds = powerMonitor.getSystemIdleTime();
@@ -3292,11 +3292,17 @@ app.on('before-quit', async (event) => {
   } catch (e) {}
 
   try {
-    // ✅ MEMORY LEAK FIX: Limpiar intervalo de limpieza de conexiones huérfanas
-    if (orphanCleanupInterval) {
-      clearInterval(orphanCleanupInterval);
-      orphanCleanupInterval = null;
+    if (idleMonitorInterval) {
+      clearInterval(idleMonitorInterval);
+      idleMonitorInterval = null;
     }
+    try {
+      const ConnectionPoolCleaner = require('./src/main/services/ConnectionPoolCleaner');
+      ConnectionPoolCleaner.stopOrphanCleanup();
+    } catch (e) {}
+    try {
+      clearAllRegisteredTabs();
+    } catch (e) {}
 
     try {
       await Promise.race([
@@ -3402,8 +3408,7 @@ app.on('before-quit', async (event) => {
 // Function to safely send to mainWindow
 // Funciones sendToRenderer y cleanupOrphanedConnections movidas a main/utils/connection-utils.js
 
-// Ejecutar limpieza cada 10 minutos
-orphanCleanupInterval = setInterval(() => cleanupOrphanedConnections(sshConnectionPool, sshConnections), 10 * 60 * 1000);
+// Limpieza SSH: solo ConnectionPoolCleaner (system-services-handlers). No duplicar el intervalo aqui.
 
 // Helper function to find SSH connection by host/username or by tabId
 async function findSSHConnection(tabId, sshConfig = null) {

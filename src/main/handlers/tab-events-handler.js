@@ -10,6 +10,57 @@ const { ipcMain } = require('electron');
 // Set para trackear tabs con eventos registrados
 const registeredTabEvents = new Set();
 
+const TAB_EVENT_PREFIXES = [
+  'powershell',
+  'wsl',
+  'ubuntu',
+  'wsl-distro',
+  'cygwin',
+  'claude',
+  'opencode',
+  'codexcli',
+  'antigravitycli',
+  'hermescli',
+  'docker'
+];
+const TAB_EVENT_ACTIONS = ['start', 'data', 'resize', 'stop'];
+const UNREGISTER_DELAY_MS = 50;
+const pendingUnregister = new Map();
+
+function tabIpcChannels(tabId) {
+  const channels = [];
+  for (const prefix of TAB_EVENT_PREFIXES) {
+    for (const action of TAB_EVENT_ACTIONS) {
+      channels.push(`${prefix}:${action}:${tabId}`);
+    }
+  }
+  return channels;
+}
+
+function removeTabIpcListeners(tabId) {
+  for (const channel of tabIpcChannels(tabId)) {
+    ipcMain.removeAllListeners(channel);
+  }
+}
+
+function cancelPendingUnregister(tabId) {
+  const timer = pendingUnregister.get(tabId);
+  if (!timer) return;
+  clearTimeout(timer);
+  pendingUnregister.delete(tabId);
+}
+
+function scheduleUnregisterTab(tabId) {
+  cancelPendingUnregister(tabId);
+  const timer = setTimeout(() => {
+    pendingUnregister.delete(tabId);
+    removeTabIpcListeners(tabId);
+    registeredTabEvents.delete(tabId);
+  }, UNREGISTER_DELAY_MS);
+  if (typeof timer.unref === 'function') timer.unref();
+  pendingUnregister.set(tabId, timer);
+}
+
 /**
  * Registra todos los eventos IPC necesarios para una pestaña específica
  * Soporta: PowerShell, WSL, Ubuntu, WSL Distros, Cygwin, Docker
@@ -34,6 +85,9 @@ function registerTabEvents(tabId, dependencies) {
     handleWSLDistroStop,
     getDocker
   } = dependencies;
+
+  // Un stop reciente no debe borrar listeners si la pestana se vuelve a registrar
+  cancelPendingUnregister(tabId);
 
   // Evitar registrar dos veces
   if (registeredTabEvents.has(tabId)) {
@@ -62,6 +116,7 @@ function registerTabEvents(tabId, dependencies) {
 
   ipcMain.on(`powershell:stop:${tabId}`, (event) => {
     PowerShell.PowerShellHandlers.stop(tabId);
+    scheduleUnregisterTab(tabId);
   });
 
   // ========== WSL Events ==========
@@ -84,6 +139,7 @@ function registerTabEvents(tabId, dependencies) {
 
   ipcMain.on(`wsl:stop:${tabId}`, (event) => {
     WSL.WSLHandlers.stop(tabId);
+    scheduleUnregisterTab(tabId);
   });
 
   // ========== Ubuntu Events ==========
@@ -106,6 +162,7 @@ function registerTabEvents(tabId, dependencies) {
 
   ipcMain.on(`ubuntu:stop:${tabId}`, (event) => {
     handleUbuntuStop(tabId);
+    scheduleUnregisterTab(tabId);
   });
 
   // ========== WSL Distribution Events (genérico para todas las distros no-Ubuntu) ==========
@@ -128,6 +185,7 @@ function registerTabEvents(tabId, dependencies) {
 
   ipcMain.on(`wsl-distro:stop:${tabId}`, (event) => {
     handleWSLDistroStop(tabId);
+    scheduleUnregisterTab(tabId);
   });
 
   // ========== Cygwin Events ==========
@@ -150,6 +208,7 @@ function registerTabEvents(tabId, dependencies) {
 
   ipcMain.on(`cygwin:stop:${tabId}`, (event) => {
     Cygwin.CygwinHandlers.stop(tabId);
+    scheduleUnregisterTab(tabId);
   });
 
   // ========== Claude Code Events ==========
@@ -172,6 +231,7 @@ function registerTabEvents(tabId, dependencies) {
 
   ipcMain.on(`claude:stop:${tabId}`, (event) => {
     Claude.ClaudeHandlers.stop(tabId);
+    scheduleUnregisterTab(tabId);
   });
 
   // ========== OpenCode Events ==========
@@ -194,6 +254,7 @@ function registerTabEvents(tabId, dependencies) {
 
   ipcMain.on(`opencode:stop:${tabId}`, (event) => {
     OpenCode.OpenCodeHandlers.stop(tabId);
+    scheduleUnregisterTab(tabId);
   });
 
   // ========== Codex CLI Events ==========
@@ -216,6 +277,7 @@ function registerTabEvents(tabId, dependencies) {
 
   ipcMain.on(`codexcli:stop:${tabId}`, (event) => {
     CodexCli.CodexCliHandlers.stop(tabId);
+    scheduleUnregisterTab(tabId);
   });
 
   // ========== Antigravity CLI Events ==========
@@ -238,6 +300,7 @@ function registerTabEvents(tabId, dependencies) {
 
   ipcMain.on(`antigravitycli:stop:${tabId}`, (event) => {
     AntigravityCli.AntigravityCliHandlers.stop(tabId);
+    scheduleUnregisterTab(tabId);
   });
 
   // ========== Hermes CLI Events ==========
@@ -260,6 +323,7 @@ function registerTabEvents(tabId, dependencies) {
 
   ipcMain.on(`hermescli:stop:${tabId}`, (event) => {
     HermesCli.HermesCliHandlers.stop(tabId);
+    scheduleUnregisterTab(tabId);
   });
 
   // ========== Docker Events (lazy loading) ==========
@@ -284,6 +348,12 @@ function registerTabEvents(tabId, dependencies) {
 
     ipcMain.on(`docker:stop:${tabId}`, (event) => {
       dockerSvc.DockerHandlers.stop(tabId);
+      scheduleUnregisterTab(tabId);
+    });
+  } else {
+    ipcMain.removeAllListeners(`docker:stop:${tabId}`);
+    ipcMain.on(`docker:stop:${tabId}`, () => {
+      scheduleUnregisterTab(tabId);
     });
   }
 }
@@ -299,6 +369,8 @@ function isTabRegistered(tabId) {
  * Elimina el registro de una pestaña (útil para limpieza)
  */
 function unregisterTab(tabId) {
+  cancelPendingUnregister(tabId);
+  removeTabIpcListeners(tabId);
   registeredTabEvents.delete(tabId);
 }
 
@@ -313,6 +385,13 @@ function getRegisteredTabs() {
  * Limpia todas las pestañas registradas
  */
 function clearAllRegisteredTabs() {
+  for (const timer of pendingUnregister.values()) {
+    clearTimeout(timer);
+  }
+  pendingUnregister.clear();
+  for (const tabId of registeredTabEvents) {
+    removeTabIpcListeners(tabId);
+  }
   registeredTabEvents.clear();
 }
 
