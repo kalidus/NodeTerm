@@ -54,16 +54,55 @@ export function getUserGroups() {
     return loadGroups().filter(g => !g.isDefault);
 }
 
+function normalizeParentId(parentId) {
+    if (!parentId || parentId === 'all') return null;
+    return parentId;
+}
+
+function getGroupParentId(group) {
+    return normalizeParentId(group?.parentId);
+}
+
+function collectDescendantGroupIds(groups, groupId) {
+    const ids = [];
+    const walk = (parentId) => {
+        for (const group of groups || []) {
+            if (group.isDefault) continue;
+            if (getGroupParentId(group) === parentId) {
+                ids.push(group.id);
+                walk(group.id);
+            }
+        }
+    };
+    walk(groupId);
+    return ids;
+}
+
+function hasSiblingWithName(groups, name, parentId, excludeId = null) {
+    const normalizedName = name.toLowerCase();
+    const normalizedParent = normalizeParentId(parentId);
+    return groups.some((group) =>
+        !group.isDefault &&
+        group.id !== excludeId &&
+        getGroupParentId(group) === normalizedParent &&
+        String(group.name || '').toLowerCase() === normalizedName
+    );
+}
+
 // Create a new group
-export function createGroup({ name, icon = 'pi-folder', color = '#4fc3f7' }) {
+export function createGroup({ name, icon = 'pi-folder', color = '#4fc3f7', parentId = null }) {
     if (!name || !name.trim()) {
         throw new Error('El nombre del grupo es requerido');
     }
 
     const groups = loadGroups();
+    const normalizedParent = normalizeParentId(parentId);
+    const parentExists = normalizedParent
+        ? groups.some((group) => !group.isDefault && group.id === normalizedParent)
+        : true;
+    const safeParentId = parentExists ? normalizedParent : null;
 
-    // Check for duplicate names
-    if (groups.some(g => g.name.toLowerCase() === name.toLowerCase())) {
+    if (hasSiblingWithName(groups, name.trim(), safeParentId)) {
         throw new Error('Ya existe un grupo con ese nombre');
     }
 
@@ -72,6 +111,7 @@ export function createGroup({ name, icon = 'pi-folder', color = '#4fc3f7' }) {
         name: name.trim(),
         icon,
         color,
+        parentId: safeParentId,
         isDefault: false,
         order: groups.length,
         createdAt: new Date().toISOString()
@@ -97,7 +137,10 @@ export function updateGroup(groupId, updates) {
 
     // Check for duplicate names if name is being changed
     if (updates.name && updates.name !== groups[idx].name) {
-        if (groups.some(g => g.id !== groupId && g.name.toLowerCase() === updates.name.toLowerCase())) {
+        const nextParentId = Object.prototype.hasOwnProperty.call(updates, 'parentId')
+            ? normalizeParentId(updates.parentId)
+            : getGroupParentId(groups[idx]);
+        if (hasSiblingWithName(groups, updates.name, nextParentId, groupId)) {
             throw new Error('Ya existe un grupo con ese nombre');
         }
     }
@@ -120,11 +163,13 @@ export function deleteGroup(groupId) {
         throw new Error('No se pueden eliminar los grupos por defecto');
     }
 
-    const filtered = groups.filter(g => g.id !== groupId);
+    const descendantIds = collectDescendantGroupIds(groups, groupId);
+    const idsToDelete = [groupId, ...descendantIds];
+    const idSet = new Set(idsToDelete);
+    const filtered = groups.filter(g => !idSet.has(g.id));
     saveGroups(filtered);
 
-    // Also remove this group from any favorites that have it
-    removeFavoriteGroupAssignments(groupId);
+    removeFavoriteGroupAssignmentsMany(idsToDelete);
 
     return filtered;
 }
@@ -139,6 +184,30 @@ export function reorderGroups(newOrderList) {
 // Get a specific group by ID
 export function getGroupById(groupId) {
     return loadGroups().find(g => g.id === groupId) || null;
+}
+
+export function setGroupParents(parentMap) {
+    if (!parentMap) return loadGroups();
+    const lookup = parentMap instanceof Map
+        ? parentMap
+        : new Map(Object.entries(parentMap));
+    const groups = loadGroups();
+    let changed = false;
+
+    for (const group of groups) {
+        if (group.isDefault || !lookup.has(group.id)) continue;
+        const nextParent = normalizeParentId(lookup.get(group.id));
+        if (getGroupParentId(group) !== nextParent) {
+            group.parentId = nextParent;
+            group.updatedAt = new Date().toISOString();
+            changed = true;
+        }
+    }
+
+    if (changed) {
+        saveGroups(groups);
+    }
+    return groups;
 }
 
 // ============================================
@@ -184,7 +253,8 @@ export function getFavoriteMemberOrder() {
     return {
         root: Array.isArray(order.root) ? order.root : [],
         groups: order.groups && typeof order.groups === 'object' ? order.groups : {},
-        rootKeys: Array.isArray(order.rootKeys) ? order.rootKeys : []
+        rootKeys: Array.isArray(order.rootKeys) ? order.rootKeys : [],
+        groupKeys: order.groupKeys && typeof order.groupKeys === 'object' ? order.groupKeys : {}
     };
 }
 
@@ -192,7 +262,8 @@ export function setFavoriteMemberOrder(order) {
     saveMemberOrder({
         root: Array.isArray(order?.root) ? order.root : [],
         groups: order?.groups && typeof order.groups === 'object' ? order.groups : {},
-        rootKeys: Array.isArray(order?.rootKeys) ? order.rootKeys : []
+        rootKeys: Array.isArray(order?.rootKeys) ? order.rootKeys : [],
+        groupKeys: order?.groupKeys && typeof order.groupKeys === 'object' ? order.groupKeys : {}
     });
 }
 
@@ -244,25 +315,32 @@ export function removeFavoriteFromGroup(favoriteId, groupId) {
     return assignments[favoriteId] || [];
 }
 
-// Remove all assignments for a deleted group
-function removeFavoriteGroupAssignments(groupId) {
+function removeFavoriteGroupAssignmentsMany(groupIds) {
+    const idSet = new Set((groupIds || []).filter(Boolean));
+    if (idSet.size === 0) return;
     const assignments = loadAssignments();
     let changed = false;
 
     for (const favoriteId in assignments) {
-        const idx = assignments[favoriteId].indexOf(groupId);
-        if (idx >= 0) {
-            assignments[favoriteId].splice(idx, 1);
-            if (assignments[favoriteId].length === 0) {
-                delete assignments[favoriteId];
-            }
+        const next = assignments[favoriteId].filter((id) => !idSet.has(id));
+        if (next.length !== assignments[favoriteId].length) {
             changed = true;
+            if (next.length === 0) {
+                delete assignments[favoriteId];
+            } else {
+                assignments[favoriteId] = next;
+            }
         }
     }
 
     if (changed) {
         saveAssignments(assignments);
     }
+}
+
+// Remove all assignments for a deleted group
+function removeFavoriteGroupAssignments(groupId) {
+    removeFavoriteGroupAssignmentsMany([groupId]);
 }
 
 // Get all favorites in a specific group
@@ -430,6 +508,7 @@ export default {
     deleteGroup,
     reorderGroups,
     getGroupById,
+    setGroupParents,
     getFavoriteGroups,
     assignFavoriteToGroups,
     addFavoriteToGroup,

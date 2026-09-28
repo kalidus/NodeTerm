@@ -1,6 +1,6 @@
 import { helpers as connHelpers } from './connectionStore';
 import favoriteGroupsStore from './favoriteGroupsStore';
-import { extractDragPlacement, isShowMoreTreeNode } from './treeDragDrop';
+import { extractDragPlacement, isDescendantTreeKey, isShowMoreTreeNode } from './treeDragDrop';
 
 export const FAVORITES_ROOT_KEY = '__favorites_root__';
 export const FAVORITES_VIEW_FOLDER_COLOR = '#FFC107';
@@ -206,6 +206,34 @@ function sortNodesByFavoriteOrder(nodes, favoriteOrder) {
   });
 }
 
+function sortNodesBySavedKeys(nodes, savedKeys) {
+  if (!Array.isArray(savedKeys) || savedKeys.length === 0) {
+    return nodes;
+  }
+
+  const orderIndex = new Map(savedKeys.map((key, index) => [key, index]));
+  return [...nodes].sort((left, right) => {
+    const leftIndex = orderIndex.has(left.key) ? orderIndex.get(left.key) : Number.MAX_SAFE_INTEGER;
+    const rightIndex = orderIndex.has(right.key) ? orderIndex.get(right.key) : Number.MAX_SAFE_INTEGER;
+    return leftIndex - rightIndex;
+  });
+}
+
+function wouldCreateGroupCycle(userGroups, groupId, parentId) {
+  if (!parentId) return false;
+  if (parentId === groupId) return true;
+  const byId = new Map((userGroups || []).map((group) => [group.id, group]));
+  const visited = new Set();
+  let cursor = parentId;
+  while (cursor) {
+    if (cursor === groupId) return true;
+    if (visited.has(cursor)) return true;
+    visited.add(cursor);
+    cursor = byId.get(cursor)?.parentId || null;
+  }
+  return false;
+}
+
 function collectFavoriteShortcutPlacements(nodes, parentGroupId = null, placements = []) {
   for (const node of nodes || []) {
     if (isFavoriteGroupFolderNode(node)) {
@@ -282,16 +310,33 @@ export function buildFavoritesSidebarTree({ nodes, favorites, groups, getFavorit
     }
   }
 
+  const rootFolders = [];
+  for (const group of userGroups) {
+    const folder = groupFolderById.get(group.id);
+    if (!folder) continue;
+    const parentId = group.parentId || null;
+    if (parentId && groupFolderById.has(parentId) && !wouldCreateGroupCycle(userGroups, group.id, parentId)) {
+      groupFolderById.get(parentId).children.push(folder);
+      continue;
+    }
+    rootFolders.push(folder);
+  }
+
   for (const folder of groupFolders) {
-    folder.children = sortNodesByFavoriteOrder(
-      folder.children,
-      memberOrder.groups?.[folder.favoriteGroupId]
-    );
+    const savedChildKeys = memberOrder.groupKeys?.[folder.favoriteGroupId];
+    if (Array.isArray(savedChildKeys) && savedChildKeys.length > 0) {
+      folder.children = sortNodesBySavedKeys(folder.children, savedChildKeys);
+    } else {
+      folder.children = sortNodesByFavoriteOrder(
+        folder.children,
+        memberOrder.groups?.[folder.favoriteGroupId]
+      );
+    }
   }
 
   const orderedRootShortcuts = sortNodesByFavoriteOrder(rootShortcuts, memberOrder.root);
 
-  const groupByKey = new Map(groupFolders.map((folder) => [folder.key, folder]));
+  const rootFolderByKey = new Map(rootFolders.map((folder) => [folder.key, folder]));
   const rootShortcutByKey = new Map(orderedRootShortcuts.map((node) => [node.key, node]));
   const savedRootKeys = Array.isArray(memberOrder.rootKeys) ? memberOrder.rootKeys : [];
   let rootChildren;
@@ -301,14 +346,14 @@ export function buildFavoritesSidebarTree({ nodes, favorites, groups, getFavorit
     const usedKeys = new Set();
 
     for (const key of savedRootKeys) {
-      const node = groupByKey.get(key) || rootShortcutByKey.get(key);
+      const node = rootFolderByKey.get(key) || rootShortcutByKey.get(key);
       if (node) {
         rootChildren.push(node);
         usedKeys.add(key);
       }
     }
 
-    for (const folder of groupFolders) {
+    for (const folder of rootFolders) {
       if (!usedKeys.has(folder.key)) {
         rootChildren.push(folder);
       }
@@ -319,7 +364,7 @@ export function buildFavoritesSidebarTree({ nodes, favorites, groups, getFavorit
       }
     }
   } else {
-    rootChildren = [...groupFolders, ...orderedRootShortcuts];
+    rootChildren = [...rootFolders, ...orderedRootShortcuts];
   }
 
   return [{
@@ -406,11 +451,15 @@ export function getDefaultFavoritesExpandedKeys(tree) {
   if (!root) return {};
 
   const expanded = { [root.key]: true };
-  for (const child of root.children || []) {
-    if (child.droppable && child.children?.length) {
-      expanded[child.key] = true;
+  const walk = (nodes) => {
+    for (const child of nodes || []) {
+      if (child.droppable) {
+        expanded[child.key] = true;
+        walk(child.children);
+      }
     }
-  }
+  };
+  walk(root.children);
   return expanded;
 }
 
@@ -431,19 +480,34 @@ export function applyFavoritesTreeLayoutFromDrop(treeValue) {
   const rootKeys = [];
   const rootShortcutIds = [];
   const groupMemberOrder = {};
+  const groupKeys = {};
+  const parentMap = {};
   const orderedGroupIds = [];
+
+  const walkFolder = (folder) => {
+    if (!folder?.favoriteGroupId) return;
+    orderedGroupIds.push(folder.favoriteGroupId);
+    const kids = filterDisplayChildren(folder.children);
+    groupKeys[folder.favoriteGroupId] = kids.map((node) => node.key);
+    groupMemberOrder[folder.favoriteGroupId] = kids
+      .filter(isFavoriteShortcutNode)
+      .map((node) => node.favoriteId)
+      .filter(Boolean);
+
+    for (const child of kids) {
+      if (isFavoriteGroupFolderNode(child) && child.favoriteGroupId) {
+        parentMap[child.favoriteGroupId] = folder.favoriteGroupId;
+        walkFolder(child);
+      }
+    }
+  };
 
   for (const child of children) {
     rootKeys.push(child.key);
 
-    if (isFavoriteGroupFolderNode(child)) {
-      if (child.favoriteGroupId) {
-        orderedGroupIds.push(child.favoriteGroupId);
-        groupMemberOrder[child.favoriteGroupId] = filterDisplayChildren(child.children)
-          .filter(isFavoriteShortcutNode)
-          .map((node) => node.favoriteId)
-          .filter(Boolean);
-      }
+    if (isFavoriteGroupFolderNode(child) && child.favoriteGroupId) {
+      parentMap[child.favoriteGroupId] = null;
+      walkFolder(child);
       continue;
     }
 
@@ -455,6 +519,12 @@ export function applyFavoritesTreeLayoutFromDrop(treeValue) {
   const groups = favoriteGroupsStore.getGroups();
   const defaultGroups = groups.filter((group) => group.isDefault);
   const userGroups = groups.filter((group) => !group.isDefault);
+  for (const group of userGroups) {
+    if (!(group.id in parentMap)) {
+      parentMap[group.id] = group.parentId || null;
+    }
+  }
+
   const userGroupsById = new Map(userGroups.map((group) => [group.id, group]));
   const reorderedUserGroups = orderedGroupIds
     .map((groupId) => userGroupsById.get(groupId))
@@ -464,6 +534,8 @@ export function applyFavoritesTreeLayoutFromDrop(treeValue) {
   if (reorderedUserGroups.length > 0) {
     favoriteGroupsStore.reorderGroups([...defaultGroups, ...reorderedUserGroups, ...missingUserGroups]);
   }
+
+  favoriteGroupsStore.setGroupParents(parentMap);
 
   const placements = collectFavoriteShortcutPlacements(children);
   for (const { favoriteId, groupId } of placements) {
@@ -478,7 +550,8 @@ export function applyFavoritesTreeLayoutFromDrop(treeValue) {
   favoriteGroupsStore.setFavoriteMemberOrder({
     root: rootShortcutIds,
     groups: groupMemberOrder,
-    rootKeys
+    rootKeys,
+    groupKeys
   });
 
   return true;
@@ -507,11 +580,14 @@ export function applyFavoritesDragDropFromEvent(event) {
 
   const placement = extractDragPlacement(treeValue, dragNode.key);
   if (isFavoriteGroupFolderNode(dragNode)) {
-    if (placement?.parentKey && placement.parentKey !== FAVORITES_ROOT_KEY) {
+    if (dropNode?.key && (dropNode.key === dragNode.key || isDescendantTreeKey(dragNode, dropNode.key))) {
       return false;
     }
-    if (dropNode?.key && dragNode.key === dropNode.key) {
-      return false;
+    const parentKey = placement?.parentKey || null;
+    if (parentKey && parentKey !== FAVORITES_ROOT_KEY) {
+      if (parentKey === dragNode.key || isDescendantTreeKey(dragNode, parentKey)) {
+        return false;
+      }
     }
   }
 

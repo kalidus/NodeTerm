@@ -1770,10 +1770,14 @@ const Sidebar = React.memo(({
             life: 3000
           });
         } else {
+          const parentId = isFavoriteGroupFolderKey(parentNodeKey)
+            ? getFavoriteGroupIdFromKey(parentNodeKey)
+            : null;
           favoriteGroupsStore.createGroup({
             name: folderName.trim(),
             color: folderColor,
-            icon: 'pi-folder'
+            icon: 'pi-folder',
+            parentId
           });
           showToast && showToast({
             severity: 'success',
@@ -2073,7 +2077,7 @@ const Sidebar = React.memo(({
           if (isFavoritesRootKey(parentKey) || isFavoriteGroupFolderKey(parentKey)) {
             setViewMode('connections');
             setShowFavoritesView(true);
-            setParentNodeKey(FAVORITES_ROOT_KEY);
+            setParentNodeKey(parentKey || FAVORITES_ROOT_KEY);
             setEditingNode(null);
             setShowFolderDialog(true);
             return;
