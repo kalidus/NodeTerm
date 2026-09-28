@@ -37,6 +37,34 @@ import { applyTabTheme, getTabThemeList, applyTabLayout, getTabLayoutList, loadS
 
 const TAB_THEME_STORAGE_KEY = 'nodeterm_tab_theme';
 const TAB_LAYOUT_STORAGE_KEY = 'nodeterm_tab_layout';
+const LAUNCHER_PANEL_WIDTH = 820;
+const LAUNCHER_PANEL_MARGIN = 12;
+
+const positionLauncherPanel = (panel, triggerRect) => {
+  if (!panel || !triggerRect) return;
+
+  const margin = LAUNCHER_PANEL_MARGIN;
+  const maxWidth = Math.min(LAUNCHER_PANEL_WIDTH, window.innerWidth - margin * 2);
+  panel.style.width = `${maxWidth}px`;
+
+  const measured = panel.getBoundingClientRect();
+  const width = measured.width > 0 ? measured.width : maxWidth;
+  const height = measured.height > 0 ? measured.height : 420;
+
+  let left = (window.innerWidth - width) / 2;
+  const maxLeft = window.innerWidth - width - margin;
+  left = Math.min(Math.max(margin, left), Math.max(margin, maxLeft));
+
+  let top = triggerRect.bottom + 8;
+  if (top + height > window.innerHeight - margin) {
+    top = triggerRect.top - height - 8;
+  }
+  const maxTop = window.innerHeight - height - margin;
+  top = Math.min(Math.max(margin, top), Math.max(margin, maxTop));
+
+  panel.style.left = `${left}px`;
+  panel.style.top = `${top}px`;
+};
 
 const MainContentArea = ({
   // Sidebar props
@@ -1279,6 +1307,16 @@ const MainContentArea = ({
 
       const existingPanel = document.getElementById('terminal-grid-launcher-panel');
       if (existingPanel) {
+        if (typeof existingPanel._dispose === 'function') {
+          existingPanel._dispose();
+          return;
+        }
+        if (existingPanel._positionRaf) {
+          cancelAnimationFrame(existingPanel._positionRaf);
+        }
+        if (typeof existingPanel._onResize === 'function') {
+          window.removeEventListener('resize', existingPanel._onResize);
+        }
         if (existingPanel._actionsRoot) {
           try {
             existingPanel._actionsRoot.unmount();
@@ -1330,6 +1368,14 @@ const MainContentArea = ({
         panel._launcherIconRoots = [];
       };
       const disposePanel = () => {
+        if (panel._positionRaf) {
+          cancelAnimationFrame(panel._positionRaf);
+          panel._positionRaf = 0;
+        }
+        if (typeof panel._onResize === 'function') {
+          window.removeEventListener('resize', panel._onResize);
+          panel._onResize = null;
+        }
         if (panel._actionsRoot) {
           try {
             panel._actionsRoot.unmount();
@@ -1345,6 +1391,7 @@ const MainContentArea = ({
         }
         if (panel.parentNode) panel.parentNode.removeChild(panel);
       };
+      panel._dispose = disposePanel;
 
       const launcherStyleEl = document.createElement('style');
       launcherStyleEl.textContent = `
@@ -1355,10 +1402,11 @@ const MainContentArea = ({
       document.head.appendChild(launcherStyleEl);
       panel._launcherStyleEl = launcherStyleEl;
 
+      const launcherPanelWidth = Math.min(LAUNCHER_PANEL_WIDTH, window.innerWidth - LAUNCHER_PANEL_MARGIN * 2);
       panel.style.cssText = `
         position: fixed;
         z-index: 10020;
-        width: min(820px, calc(100vw - 20px));
+        width: ${launcherPanelWidth}px;
         max-height: min(78vh, 860px);
         overflow: auto;
         font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
@@ -1378,14 +1426,8 @@ const MainContentArea = ({
         panel.style.backgroundImage = 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 255, 200, 0.03) 2px, rgba(0, 255, 200, 0.03) 3px)';
       }
 
-      const rect = dropdownButton.getBoundingClientRect();
-      const width = Math.min(760, window.innerWidth - 24);
-      let left = rect.left;
-      let top = rect.bottom + 8;
-      if (left + width > window.innerWidth - 12) left = window.innerWidth - width - 12;
-      if (top + 420 > window.innerHeight - 12) top = Math.max(12, rect.top - 420);
-      panel.style.left = `${left}px`;
-      panel.style.top = `${top}px`;
+      const triggerRect = dropdownButton.getBoundingClientRect();
+      positionLauncherPanel(panel, triggerRect);
 
       const title = document.createElement('div');
       title.textContent = '// LAUNCHER';
@@ -1729,6 +1771,16 @@ const MainContentArea = ({
       };
 
       document.body.appendChild(panel);
+      panel._positionRaf = requestAnimationFrame(() => {
+        positionLauncherPanel(panel, triggerRect);
+        panel._positionRaf = requestAnimationFrame(() => {
+          positionLauncherPanel(panel, dropdownButton.getBoundingClientRect());
+          panel._positionRaf = 0;
+        });
+      });
+      const onResize = () => positionLauncherPanel(panel, dropdownButton.getBoundingClientRect());
+      panel._onResize = onResize;
+      window.addEventListener('resize', onResize);
       setTimeout(() => document.addEventListener('click', handleOutsideClick), 0);
     });
 
