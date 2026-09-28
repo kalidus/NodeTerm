@@ -1,5 +1,6 @@
 import React from 'react';
 import { OverlayPanel } from 'primereact/overlaypanel';
+import LauncherQuickActions from '../../LauncherQuickActions';
 
 export const ConnectionHistoryOverlays = ({
 	themePickerRef,
@@ -275,6 +276,12 @@ export const ConnectionHistoryOverlays = ({
 						<i className="pi pi-th-large" style={{ fontSize: '9px' }} />
 						TERMINAL LAUNCHER
 					</div>
+
+					<LauncherQuickActions
+						variant="overlay"
+						onOpenSettings={onOpenSettings}
+						onActionRun={() => terminalSwitcherOverlayRef.current?.hide()}
+					/>
 
 					{availableTerminals.length === 0 ? (
 						<div style={{ padding: '20px', textAlign: 'center', opacity: 0.5, fontSize: '0.8rem' }}>

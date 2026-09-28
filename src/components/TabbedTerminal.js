@@ -28,6 +28,7 @@ import {
     isExplicitNonWslDefault
 } from '../utils/defaultLocalTerminal';
 import { appConfirm } from './ui/AppConfirm';
+import LauncherQuickActions from './home/LauncherQuickActions';
 
 // Utilidad para ajustar brillo de un color hex
 function adjustColorBrightness(hex, percent) {
@@ -2008,6 +2009,11 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                         <i className="pi pi-th-large" style={{ fontSize: '9px' }} />
                         TERMINAL LAUNCHER
                     </div>
+
+                    <LauncherQuickActions
+                        variant="overlay"
+                        onActionRun={() => menuRef.current?.hide()}
+                    />
 
                     {getGroupedTerminalOptions().map(group => (
                         <div key={group.label} className="launcher-section">

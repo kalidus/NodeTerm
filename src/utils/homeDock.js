@@ -4,6 +4,9 @@ import { persistHomeTabSetting } from './homeTabSync';
 
 export const HOME_DOCK_PINS_KEY = STORAGE_KEYS.HOME_TAB_DOCK_PINS || 'nodeterm_home_dock_pins';
 export const HOME_JUMP_PINS_KEY = STORAGE_KEYS.HOME_TAB_JUMP_PINS || 'nodeterm_home_jump_pins';
+export const LAUNCHER_ACTION_PINS_KEY = STORAGE_KEYS.LAUNCHER_ACTION_PINS || 'nodeterm_launcher_action_pins';
+export const MAX_LAUNCHER_ACTION_PINS = 8;
+export const DEFAULT_LAUNCHER_ACTION_PINS = ['new-connection', 'new-group', 'tools', 'vault'];
 
 export const DOCK_GROUPS = [
   { id: 'connect', label: 'Conectar' },
@@ -215,6 +218,51 @@ export function reorderDockPins(fromIndex, toIndex) {
 
 export function getDockAction(id) {
   return DOCK_ACTIONS.find((a) => a.id === id) || null;
+}
+
+function normalizeLauncherPins(pins) {
+  const ids = Array.isArray(pins) ? pins : [];
+  const seen = new Set();
+  const next = [];
+  ids.forEach((id) => {
+    if (typeof id !== 'string' || seen.has(id) || !getDockAction(id)) return;
+    seen.add(id);
+    next.push(id);
+  });
+  return next.slice(0, MAX_LAUNCHER_ACTION_PINS);
+}
+
+export function getLauncherActionPins() {
+  try {
+    const raw = localStorage.getItem(LAUNCHER_ACTION_PINS_KEY);
+    if (!raw) return DEFAULT_LAUNCHER_ACTION_PINS.slice();
+    return normalizeLauncherPins(safeParse(raw, DEFAULT_LAUNCHER_ACTION_PINS));
+  } catch {
+    return DEFAULT_LAUNCHER_ACTION_PINS.slice();
+  }
+}
+
+export function saveLauncherActionPins(pins) {
+  const next = normalizeLauncherPins(pins);
+  persistHomeTabSetting(LAUNCHER_ACTION_PINS_KEY, JSON.stringify(next));
+  try {
+    window.dispatchEvent(new CustomEvent('launcher-action-pins-changed', { detail: { pins: next } }));
+  } catch {
+    // ignore
+  }
+  return next;
+}
+
+export function pinLauncherAction(actionId) {
+  const pins = getLauncherActionPins();
+  if (pins.includes(actionId) || pins.length >= MAX_LAUNCHER_ACTION_PINS || !getDockAction(actionId)) {
+    return pins;
+  }
+  return saveLauncherActionPins([...pins, actionId]);
+}
+
+export function unpinLauncherAction(actionId) {
+  return saveLauncherActionPins(getLauncherActionPins().filter((id) => id !== actionId));
 }
 
 export function groupDockActions(actions) {

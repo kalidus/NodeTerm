@@ -19,6 +19,7 @@ export const STORAGE_KEYS = {
   HOME_TAB_SNAP_TO_GRID: 'nodeterm_home_snap_to_grid',
   HOME_TAB_DOCK_PINS: 'nodeterm_home_dock_pins',
   HOME_TAB_JUMP_PINS: 'nodeterm_home_jump_pins',
+  LAUNCHER_ACTION_PINS: 'nodeterm_launcher_action_pins',
   TERMINAL_FRAME_STYLE: 'nodeterm_terminal_frame_style',
   HOME_TAB_HIDE_NON_TERMINAL_HEADERS: 'homeTab_hideNonTerminalHeaders',
   MAIN_FRAME_HEADER_START_COLLAPSED: 'nodeterm_main_frame_header_start_collapsed',

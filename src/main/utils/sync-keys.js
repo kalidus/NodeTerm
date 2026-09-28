@@ -113,6 +113,7 @@ const SYNC_KEYS = [
   'homeTab_hideNonTerminalHeaders',
   'nodeterm_home_dock_pins',
   'nodeterm_home_jump_pins',
+  'nodeterm_launcher_action_pins',
   'nodeterm_home_panels_layout',
   'nodeterm_home_user_presets',
   'nodeterm_home_monitor_layouts',

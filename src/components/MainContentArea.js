@@ -17,6 +17,7 @@ import {
 } from 'react-icons/fa';
 import { SiAnthropic, SiDebian, SiDocker, SiOpenai } from 'react-icons/si';
 import AIClientBrandIcon from './AIClientBrandIcon';
+import LauncherQuickActions from './home/LauncherQuickActions';
 import Sidebar from './Sidebar';
 import TerminalFrame from './TerminalFrame';
 import ConnectionSearchBar from './ConnectionSearchBar';
@@ -1278,6 +1279,14 @@ const MainContentArea = ({
 
       const existingPanel = document.getElementById('terminal-grid-launcher-panel');
       if (existingPanel) {
+        if (existingPanel._actionsRoot) {
+          try {
+            existingPanel._actionsRoot.unmount();
+          } catch {
+            /* noop */
+          }
+          existingPanel._actionsRoot = null;
+        }
         const roots = existingPanel._launcherIconRoots;
         if (Array.isArray(roots)) {
           roots.forEach((r) => {
@@ -1321,6 +1330,14 @@ const MainContentArea = ({
         panel._launcherIconRoots = [];
       };
       const disposePanel = () => {
+        if (panel._actionsRoot) {
+          try {
+            panel._actionsRoot.unmount();
+          } catch {
+            /* noop */
+          }
+          panel._actionsRoot = null;
+        }
         unmountLauncherIconRoots();
         document.removeEventListener('click', handleOutsideClick);
         if (panel._launcherStyleEl?.parentNode) {
@@ -1383,7 +1400,17 @@ const MainContentArea = ({
       `;
       panel.appendChild(title);
 
-      // searchInput removed
+      const actionsHost = document.createElement('div');
+      actionsHost.className = 'launcher-actions-host';
+      panel.appendChild(actionsHost);
+      const actionsRoot = createRoot(actionsHost);
+      panel._actionsRoot = actionsRoot;
+      actionsRoot.render(
+        <LauncherQuickActions
+          variant="panel"
+          onActionRun={() => setTimeout(() => disposePanel(), 0)}
+        />
+      );
 
       const contentHost = document.createElement('div');
       panel.appendChild(contentHost);
