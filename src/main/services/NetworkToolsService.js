@@ -29,6 +29,7 @@ try {
 }
 
 const execAsync = promisify(exec);
+const sslCertAnalyzer = require('./ssl/sslCertAnalyzer');
 
 class NetworkToolsService {
   constructor() {
@@ -733,20 +734,25 @@ class NetworkToolsService {
       return { success: false, error: 'Host inválido' };
     }
 
-    const sanitizedHost = host.trim().replace(/^https?:\/\//, '').split('/')[0];
+    const parsedTarget = sslCertAnalyzer.parseSslTarget(host, port);
+    const sanitizedHost = parsedTarget.host;
+    const targetPort = parsedTarget.port;
     const results = {
       success: false,
       host: sanitizedHost,
-      port: port,
+      port: targetPort,
       certificate: null,
       chain: [],
+      trust: null,
       supportedProtocols: [],
       testedProtocols: [],
       ciphers: [],
       security: {
         hasWeakProtocols: false,
         hasWeakCiphers: false,
-        recommendations: []
+        recommendations: [],
+        score: 0,
+        riskLevel: 'ALTO'
       },
       error: null
     };
@@ -779,7 +785,7 @@ class NetworkToolsService {
 
         const options = {
           host: sanitizedHost,
-          port: port,
+          port: targetPort,
           servername: sanitizedHost,
           rejectUnauthorized: false,
           timeout: 5000
@@ -858,7 +864,7 @@ class NetworkToolsService {
     return new Promise(async (resolve) => {
       const defaultOptions = {
         host: sanitizedHost,
-        port: port,
+        port: targetPort,
         servername: sanitizedHost,
         rejectUnauthorized: false,
         timeout: 10000
@@ -872,44 +878,12 @@ class NetworkToolsService {
 
           if (cert && cert.subject) {
             results.success = true;
-            
-            // Información completa del certificado
-            results.certificate = {
-              subject: cert.subject,
-              issuer: cert.issuer,
-              validFrom: cert.valid_from,
-              validTo: cert.valid_to,
-              serialNumber: cert.serialNumber,
-              fingerprint: cert.fingerprint,
-              fingerprint256: cert.fingerprint256,
-              subjectAltNames: cert.subjectaltname ? cert.subjectaltname.split(', ') : [],
-              isValid: defaultSocket.authorized,
-              daysUntilExpiry: Math.floor((new Date(cert.valid_to) - new Date()) / (1000 * 60 * 60 * 24)),
-              // Información adicional
-              signatureAlgorithm: cert.signatureAlgorithm || null,
-              publicKey: cert.pubkey ? {
-                type: cert.pubkey.type || null,
-                bits: cert.pubkey.bits || null
-              } : null,
-              modulus: cert.modulus || null,
-              exponent: cert.exponent || null
-            };
 
-            // Obtener cadena de certificados completa
-            let currentCert = cert;
-            while (currentCert && currentCert.issuerCertificate && 
-                   currentCert.issuerCertificate !== currentCert) {
-              results.chain.push({
-                subject: currentCert.issuerCertificate.subject,
-                issuer: currentCert.issuerCertificate.issuer,
-                validFrom: currentCert.issuerCertificate.valid_from,
-                validTo: currentCert.issuerCertificate.valid_to,
-                serialNumber: currentCert.issuerCertificate.serialNumber
-              });
-              currentCert = currentCert.issuerCertificate;
-            }
+            const analyzed = sslCertAnalyzer.analyzeCertificate(defaultSocket, cert, sanitizedHost);
+            results.certificate = analyzed.certificate;
+            results.trust = analyzed.trust;
+            results.chain = sslCertAnalyzer.buildChain(cert);
 
-            // Guardar protocolo y cipher por defecto
             results.protocols = {
               version: protocol,
               cipher: cipher ? cipher.name : null,
@@ -971,24 +945,19 @@ class NetworkToolsService {
             }
           }
 
-          // Análisis de seguridad
-          if (results.security.hasWeakProtocols) {
-            results.security.recommendations.push('Se detectaron protocolos obsoletos (SSLv3, TLSv1.0, TLSv1.1). Se recomienda deshabilitarlos.');
-          }
-
-          if (results.supportedProtocols.length === 0) {
-            results.security.recommendations.push('No se pudo establecer conexión con ningún protocolo SSL/TLS.');
-          } else if (!results.supportedProtocols.some(p => !p.deprecated)) {
-            results.security.recommendations.push('Solo se soportan protocolos obsoletos. Se recomienda habilitar TLSv1.2 o superior.');
-          }
-
-          if (!results.certificate.isValid) {
-            results.security.recommendations.push('El certificado no es válido. Verifica la cadena de certificados.');
-          }
-
-          if (results.certificate.daysUntilExpiry < 30) {
-            results.security.recommendations.push(`El certificado expira en ${results.certificate.daysUntilExpiry} días. Se recomienda renovarlo.`);
-          }
+          const assessment = sslCertAnalyzer.computeSecurityAssessment({
+            trust: results.trust,
+            daysUntilExpiry: results.certificate ? results.certificate.daysUntilExpiry : 0,
+            supportedProtocols: results.supportedProtocols
+          });
+          results.security.score = assessment.score;
+          results.security.riskLevel = assessment.riskLevel;
+          results.security.recommendations = sslCertAnalyzer.buildRecommendations({
+            trust: results.trust,
+            certificate: results.certificate,
+            hasWeakProtocols: results.security.hasWeakProtocols,
+            supportedProtocols: results.supportedProtocols
+          });
 
           resolve(results);
         } catch (err) {
@@ -3653,7 +3622,7 @@ class NetworkToolsService {
 
         if (sslResult.success) {
           // Verificar certificado válido
-          if (sslResult.certificate?.isValid) {
+          if (sslResult.trust?.authorized || sslResult.certificate?.isValid) {
             results.checks.push({
               category: 'SSL/TLS',
               check: 'Certificado válido',
@@ -3664,16 +3633,24 @@ class NetworkToolsService {
             results.summary.passed++;
             progressLog(`✅ Certificado válido\n`);
           } else {
+            const trustLabel = sslResult.trust?.statusLabel || 'No confiable';
+            const trustDetail = sslResult.trust?.issues?.[0]?.detail
+              || sslResult.trust?.summary
+              || 'El certificado SSL no es de confianza.';
+            const failSeverity = ['expired', 'not_yet_valid', 'hostname_mismatch'].includes(sslResult.trust?.status)
+              ? 'critical'
+              : 'high';
             results.checks.push({
               category: 'SSL/TLS',
               check: 'Certificado válido',
               status: 'FAIL',
-              severity: 'critical',
-              details: 'El certificado SSL no es válido o está autofirmado'
+              severity: failSeverity,
+              details: `${trustLabel}. ${trustDetail}`
             });
             results.summary.failed++;
-            results.summary.issues.critical++;
-            progressLog(`❌ Certificado inválido o autofirmado\n`);
+            if (failSeverity === 'critical') results.summary.issues.critical++;
+            else results.summary.issues.high++;
+            progressLog(`❌ Certificado: ${trustLabel}\n`);
           }
 
           // Verificar expiración próxima

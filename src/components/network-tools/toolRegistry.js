@@ -41,7 +41,7 @@ export const TOOL_CATEGORIES = [
     icon: 'pi pi-shield',
     color: '#ef4444',
     tools: [
-      { id: 'ssl-check', label: 'SSL Checker', icon: 'pi pi-lock', description: 'Verificación de certificados SSL/TLS' },
+      { id: 'ssl-check', label: 'SSL Checker', icon: 'pi pi-lock', description: 'Auditoria de certificados SSL/TLS' },
       { id: 'http-headers', label: 'HTTP Headers', icon: 'pi pi-file', description: 'Análisis de cabeceras HTTP' },
       { id: 'host-vuln-scan', label: 'Host Vuln Scanner', icon: 'pi pi-exclamation-triangle', description: 'Detecta vulnerabilidades y CVEs en servicios' },
       { id: 'web-security-scan', label: 'Web Security', icon: 'pi pi-globe', description: 'Analiza seguridad web, headers y cookies' },

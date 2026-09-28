@@ -1632,8 +1632,10 @@ const CyberTopologyMap = ({
                                     <details style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '4px', padding: '0.4rem' }}>
                                       <summary style={{ cursor: 'pointer', fontWeight: 'bold', fontSize: '0.65rem', color: '#00f0ff', display: 'flex', justifyContent: 'space-between' }}>
                                         <span>🔒 CERTIFICADO SSL/TLS</span>
-                                        <span style={{ color: webSecRes.ssl.certificate?.isValid ? '#22c55e' : '#ef4444' }}>
-                                          {webSecRes.ssl.certificate?.isValid ? 'VÁLIDO' : 'INVÁLIDO'}
+                                        <span style={{ color: webSecRes.ssl.trust?.authorized || webSecRes.ssl.certificate?.isValid ? '#22c55e' : '#ef4444' }}>
+                                          {webSecRes.ssl.trust?.statusLabel
+                                            ? String(webSecRes.ssl.trust.statusLabel).toUpperCase()
+                                            : (webSecRes.ssl.certificate?.isValid ? 'VALIDO' : 'NO CONFIABLE')}
                                         </span>
                                       </summary>
                                       <div style={{ marginTop: '0.4rem', fontSize: '0.6rem', display: 'flex', flexDirection: 'column', gap: '0.2rem', paddingLeft: '0.5rem' }}>

@@ -446,14 +446,13 @@ function registerNetworkToolsHandlers() {
     }
   });
 
-  // ── CVSS: Guardar reporte PDF ─────────────────────────────────────────────
-  ipcMain.handle('network-tools:save-cvss-report-pdf', async (event, { html, suggestedName }) => {
+  const saveReportPdf = async (event, { html, suggestedName, title }) => {
     let pdfWin = null;
     try {
       const focusedWin = BrowserWindow.getFocusedWindow();
       const { canceled, filePath } = await dialog.showSaveDialog(focusedWin, {
-        title: 'Guardar reporte CVSS (PDF)',
-        defaultPath: suggestedName || 'cvss-report.pdf',
+        title: title || 'Guardar informe PDF',
+        defaultPath: suggestedName || 'informe.pdf',
         filters: [{ name: 'PDF', extensions: ['pdf'] }]
       });
       if (canceled || !filePath) return { success: false, error: 'Operación cancelada.' };
@@ -472,11 +471,19 @@ function registerNetworkToolsHandlers() {
       fs.writeFileSync(filePath, pdfBuffer);
       return { success: true, filePath };
     } catch (err) {
-      console.error('[network-tools:save-cvss-report-pdf]', err);
+      console.error('[network-tools:save-report-pdf]', err);
       return { success: false, error: err?.message || 'Error al guardar el reporte PDF.' };
     } finally {
       if (pdfWin && !pdfWin.isDestroyed()) pdfWin.destroy();
     }
+  };
+
+  ipcMain.handle('network-tools:save-report-pdf', saveReportPdf);
+  ipcMain.handle('network-tools:save-cvss-report-pdf', async (event, payload) => {
+    return saveReportPdf(event, {
+      ...payload,
+      title: payload?.title || 'Guardar reporte CVSS (PDF)'
+    });
   });
 }
 
