@@ -26,7 +26,7 @@ const LazySettingsSidebar = React.lazy(() => import('./SettingsSidebar'));
 import { unblockAllInputs, detectBlockedInputs, resolveFormBlocking, emergencyUnblockForms } from '../utils/formDebugger';
 import ImportService from '../services/ImportService';
 import localStorageSyncService from '../services/LocalStorageSyncService';
-import { getFavorites, onUpdate as onFavoritesUpdate } from '../utils/connectionStore';
+import { getFavorites, onUpdate as onFavoritesUpdate, removeFavorite } from '../utils/connectionStore';
 import favoriteGroupsStore from '../utils/favoriteGroupsStore';
 import { buildSidebarFontStack } from '../utils/sidebarFontStack';
 import { appConfirm } from './ui/AppConfirm';
@@ -41,8 +41,11 @@ import {
   getFavoriteGroupIdFromKey,
   isFavoriteGroupFolderKey,
   isFavoriteGroupFolderNode,
+  getFavoriteIdFromShortcutKey,
+  isFavoriteShortcutKey,
   isFavoriteShortcutNode,
   isFavoritesRootKey,
+  onFavoriteSourceTreesUpdate,
   resolveFavoriteShortcutNode
 } from '../utils/favoritesSidebarTree';
 import { createAppMenu, createContextMenu } from '../utils/appMenuUtils';
@@ -1347,9 +1350,11 @@ const Sidebar = React.memo(({
   useEffect(() => {
     const unsubscribeFavorites = onFavoritesUpdate(() => bumpFavoritesRevision());
     const unsubscribeGroups = favoriteGroupsStore.onGroupsUpdate(() => bumpFavoritesRevision());
+    const unsubscribeSourceTrees = onFavoriteSourceTreesUpdate(() => bumpFavoritesRevision());
     return () => {
       unsubscribeFavorites();
       unsubscribeGroups();
+      unsubscribeSourceTrees();
     };
   }, [bumpFavoritesRevision]);
 
@@ -2356,6 +2361,22 @@ const Sidebar = React.memo(({
             return;
           }
 
+          if (isFavoriteShortcutKey(nodeKey)) {
+            const favoriteId = getFavoriteIdFromShortcutKey(nodeKey);
+            if (favoriteId) {
+              removeFavorite(favoriteId);
+              bumpFavoritesRevision();
+              showToast && showToast({
+                severity: 'success',
+                summary: 'Quitado de favoritos',
+                detail: `"${nodeLabel}" ha sido quitado de favoritos`,
+                life: 3000
+              });
+            }
+            if (hideContextMenu) hideContextMenu();
+            return;
+          }
+
           if (isFavoriteGroupFolderKey(nodeKey)) {
             const groupId = getFavoriteGroupIdFromKey(nodeKey);
             const executeFavoriteGroupDeletion = () => {
@@ -2485,7 +2506,7 @@ const Sidebar = React.memo(({
       };
     }
   }, [nodes, setShowFolderDialog, deepCopy, findNodeByKey, showToast, confirmDialog,
-    setEditingNode, setFolderName, setParentNodeKey, setNodes, openEditSSHDialog]);
+    setEditingNode, setFolderName, setParentNodeKey, setNodes, openEditSSHDialog, bumpFavoritesRevision]);
 
 
 
@@ -2733,7 +2754,20 @@ const Sidebar = React.memo(({
             options.onNodeContextMenu(e, node);
             return;
           }
-          options.onNodeContextMenu(e, resolveFavoriteShortcutNode(node, nodes));
+          if (isFavoriteShortcutNode(node)) {
+            const resolved = resolveFavoriteShortcutNode(node, nodes);
+            const shortcutType = String(node.data?.type || resolved.data?.type || '').toLowerCase();
+            const isSecretOrDoc = ['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note', 'document', 'quick-note'].includes(shortcutType);
+            options.onNodeContextMenu(e, {
+              ...resolved,
+              isFavoriteShortcut: true,
+              favoriteId: node.favoriteId,
+              sourceKey: node.sourceKey || resolved.key,
+              key: isSecretOrDoc ? node.key : (resolved.key || node.key)
+            });
+            return;
+          }
+          options.onNodeContextMenu(e, node);
         } : undefined}
         onDoubleClick={(e) => {
           e.stopPropagation();
@@ -2752,19 +2786,22 @@ const Sidebar = React.memo(({
           } else if (isSSHTunnel && sidebarCallbacksRef?.current?.openSSHTunnel) {
             sidebarCallbacksRef.current.openSSHTunnel(actionNode, nodes);
           } else if (actionNode.data && ['password', 'crypto_wallet', 'api_key', 'secure_note'].includes(actionNode.data.type)) {
+            const openKey = node.sourceKey || node.favoriteId || actionNode.data?.id || actionNode.key;
             const payload = {
-              key: actionNode.key || actionNode.id,
+              key: openKey,
               label: actionNode.label || actionNode.name,
               title: actionNode.label || actionNode.name,
               type: actionNode.data.type,
               mode: 'permanent',
-              ...actionNode.data
+              ...actionNode.data,
+              id: openKey
             };
             window.dispatchEvent(new CustomEvent('open-password-tab', { detail: payload }));
           } else if (actionNode.data && ['document', 'quick-note'].includes(actionNode.data.type)) {
+            const openKey = node.sourceKey || node.favoriteId || actionNode.data?.id || actionNode.key;
             window.dispatchEvent(new CustomEvent('open-document-tab', {
               detail: {
-                key: actionNode.key || actionNode.id,
+                key: openKey,
                 label: actionNode.label || actionNode.name,
                 data: actionNode.data
               }

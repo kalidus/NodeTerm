@@ -1,6 +1,10 @@
 // Simple connection store backed by localStorage for favorites and recents
 // Supports SSH, RDP (rdp-guacamole), Explorer (SSH-based file explorer) and Groups
 
+import favoriteGroupsStore from './favoriteGroupsStore';
+
+const SECRET_OR_DOC_TYPES = ['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note', 'document', 'quick-note'];
+
 const FAVORITES_KEY = 'nodeterm_favorite_connections';
 const RECENTS_KEY = 'nodeterm_connection_history';
 const RECENT_PASSWORDS_KEY = 'nodeterm_recent_passwords';
@@ -80,7 +84,7 @@ function toSerializable(connection) {
   }
 
   // Si es un secreto o documento (password, wallet, api_key, etc.), usar estructura especial
-  if (['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note', 'document', 'quick-note'].includes(type)) {
+  if (SECRET_OR_DOC_TYPES.includes(type)) {
     return {
       id: connection.id || `secret_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       type: type,
@@ -190,9 +194,16 @@ function fromSidebarNode(node, typeOverride = null) {
   const isVNC = node.data && (node.data.type === 'vnc' || node.data.type === 'vnc-guacamole');
   const isFileConnection = node.data && (node.data.type === 'sftp' || node.data.type === 'ftp' || node.data.type === 'scp');
   const type = typeOverride || (isSSH ? 'ssh' : (isSSHTunnel ? 'ssh-tunnel' : (isRDP ? 'rdp-guacamole' : (isVNC ? 'vnc-guacamole' : (isFileConnection ? node.data.type : (node.data?.type || 'ssh'))))));
+  const isSecretOrDoc = SECRET_OR_DOC_TYPES.includes(type);
   const base = {
+    ...(isSecretOrDoc ? { id: node.key || node.id || node.data?.id } : {}),
     type,
     name: node.label,
+    url: node.data?.url || '',
+    group: node.data?.group || '',
+    notes: node.data?.notes || '',
+    content: node.data?.content || node.data?.noteContent || '',
+    icon: node.data?.icon,
     host: node.data?.host || node.data?.server || node.data?.targetServer || node.data?.hostname,
     hostname: node.data?.hostname || node.data?.server || node.data?.host,
     username: node.data?.user || node.data?.username,
@@ -299,6 +310,7 @@ export function toggleFavorite(connOrId) {
   const idx = list.findIndex(f => f.id === id);
   if (idx >= 0) {
     list.splice(idx, 1);
+    favoriteGroupsStore.clearFavoriteAssignments(id);
   } else {
     list.unshift(serial);
   }
@@ -383,6 +395,35 @@ export function updateFavoriteOnEdit(oldConnection, newConnection) {
   return list;
 }
 
+export function updateFavoriteFields(id, fields) {
+  if (!id || !fields || typeof fields !== 'object') return getFavorites();
+  const list = getFavorites();
+  const idx = list.findIndex(f => f.id === id);
+  if (idx < 0) return list;
+  list[idx] = { ...list[idx], ...fields, id: list[idx].id };
+  saveList(FAVORITES_KEY, list);
+  return list;
+}
+
+function collectTreeNodeKeys(node, keys = []) {
+  if (!node) return keys;
+  if (node.key) keys.push(node.key);
+  if (Array.isArray(node.children)) {
+    node.children.forEach((child) => collectTreeNodeKeys(child, keys));
+  }
+  return keys;
+}
+
+export function removeFavoritesForTreeNode(node) {
+  const ids = collectTreeNodeKeys(node);
+  if (ids.length === 0) return getFavorites();
+  const idSet = new Set(ids);
+  const list = getFavorites().filter(f => !idSet.has(f.id));
+  ids.forEach((id) => favoriteGroupsStore.clearFavoriteAssignments(id));
+  saveList(FAVORITES_KEY, list);
+  return list;
+}
+
 // RECENTS
 export function getRecents(limit = DEFAULT_RECENTS_LIMIT) {
   const list = loadList(RECENTS_KEY);
@@ -461,6 +502,7 @@ export function addFavorite(conn) {
 export function removeFavorite(idOrConn) {
   const id = typeof idOrConn === 'string' ? idOrConn : toSerializable(idOrConn).id;
   const list = getFavorites().filter(f => f.id !== id);
+  favoriteGroupsStore.clearFavoriteAssignments(id);
   saveList(FAVORITES_KEY, list);
   return list;
 }
@@ -508,6 +550,8 @@ export default {
   removeGroupFromFavorites,
   isGroupFavorite,
   updateFavoriteOnEdit,
+  updateFavoriteFields,
+  removeFavoritesForTreeNode,
   getRecents,
   recordRecent,
   clearRecents,

@@ -222,6 +222,15 @@ export function addFavoriteToGroup(favoriteId, groupId) {
     return assignments[favoriteId];
 }
 
+// Remove all group assignments for a deleted favorite
+export function clearFavoriteAssignments(favoriteId) {
+    if (!favoriteId) return;
+    const assignments = loadAssignments();
+    if (!assignments[favoriteId]) return;
+    delete assignments[favoriteId];
+    saveAssignments(assignments);
+}
+
 // Remove a favorite from a specific group
 export function removeFavoriteFromGroup(favoriteId, groupId) {
     const assignments = loadAssignments();
@@ -425,6 +434,7 @@ export default {
     assignFavoriteToGroups,
     addFavoriteToGroup,
     removeFavoriteFromGroup,
+    clearFavoriteAssignments,
     getFavoritesInGroup,
     isFavoriteInGroup,
     onGroupsUpdate,

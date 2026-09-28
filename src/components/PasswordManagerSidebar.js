@@ -26,6 +26,7 @@ import {
   moveNodeFromTreeEvent
 } from '../utils/treeDragDrop';
 import connectionStore from '../utils/connectionStore';
+import { setFavoriteSourceTrees } from '../utils/favoritesSidebarTree';
 import { writeText as clipboardWriteText } from '../utils/clipboard';
 import '../styles/components/password-manager-sidebar.css';
 import '../styles/components/tree-themes.css';
@@ -89,6 +90,10 @@ const PasswordManagerSidebar = ({
   // Estado separado para passwords - no usar el árbol principal de conexiones
   const [passwordNodes, setPasswordNodes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    setFavoriteSourceTrees({ passwordNodes });
+  }, [passwordNodes]);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [showFolderDialog, setShowFolderDialog] = useState(false);
   const [editingPassword, setEditingPassword] = useState(null);
@@ -725,6 +730,15 @@ const PasswordManagerSidebar = ({
 
       const updatedPasswordNodes = updatePasswordInTree(passwordNodesCopy);
       setPasswordNodes(updatedPasswordNodes);
+      connectionStore.updateFavoriteFields(editingPassword.key, {
+        name: formData.title,
+        type: selectedSecretType,
+        username: secretData.username || '',
+        password: secretData.password || '',
+        url: secretData.url || '',
+        notes: secretData.notes || '',
+        content: secretData.noteContent || secretData.content || ''
+      });
 
       const typeLabel = selectedSecretType === 'password' ? 'Contraseña' : 
                         selectedSecretType === 'crypto_wallet' ? 'Billetera' :
@@ -838,6 +852,7 @@ const PasswordManagerSidebar = ({
       nodeData: deletedNode,
     };
     setTrashedPasswords(prev => [trashItem, ...prev]);
+    connectionStore.removeFavoritesForTreeNode(deletedNode);
 
     showToast && showToast({ severity: 'success', summary: 'Movido a la papelera', detail: `"${trashItem.label}" movido a la papelera`, life: 3000 });
   };
@@ -1423,6 +1438,7 @@ const PasswordManagerSidebar = ({
 
       const updatedPasswordNodes = removeFolderFromTree(passwordNodesCopy);
       setPasswordNodes(updatedPasswordNodes);
+      connectionStore.removeFavoritesForTreeNode(findNodeInTree(passwordNodes, folder.key) || folder);
 
       showToast && showToast({
         severity: 'success',

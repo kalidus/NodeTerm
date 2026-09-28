@@ -6,6 +6,66 @@ export const FAVORITES_ROOT_KEY = '__favorites_root__';
 export const FAVORITES_VIEW_FOLDER_COLOR = '#FFC107';
 const FAVORITE_GROUP_PREFIX = '__fav_group__';
 const FAVORITE_SHORTCUT_PREFIX = '__fav_shortcut__';
+const SOURCE_TREES_UPDATED_EVENT = 'favorite-source-trees-updated';
+
+let cachedDocumentNodes = [];
+let cachedPasswordNodes = [];
+let lastDocumentTreeSig = '';
+let lastPasswordTreeSig = '';
+
+function sourceTreeSignature(nodes) {
+  const parts = [];
+  const walk = (list) => {
+    for (const node of list || []) {
+      parts.push(`${node.key}\t${node.label || ''}`);
+      if (node.children?.length) walk(node.children);
+    }
+  };
+  walk(nodes);
+  return parts.join('\n');
+}
+
+export function setFavoriteSourceTrees({ documentNodes, passwordNodes } = {}) {
+  let changed = false;
+  if (documentNodes !== undefined) {
+    cachedDocumentNodes = documentNodes || [];
+    const sig = sourceTreeSignature(cachedDocumentNodes);
+    if (sig !== lastDocumentTreeSig) {
+      lastDocumentTreeSig = sig;
+      changed = true;
+    }
+  }
+  if (passwordNodes !== undefined) {
+    cachedPasswordNodes = passwordNodes || [];
+    const sig = sourceTreeSignature(cachedPasswordNodes);
+    if (sig !== lastPasswordTreeSig) {
+      lastPasswordTreeSig = sig;
+      changed = true;
+    }
+  }
+  if (changed && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(SOURCE_TREES_UPDATED_EVENT));
+  }
+}
+
+export function onFavoriteSourceTreesUpdate(handler) {
+  if (typeof window === 'undefined') return () => {};
+  const listener = () => handler();
+  window.addEventListener(SOURCE_TREES_UPDATED_EVENT, listener);
+  return () => window.removeEventListener(SOURCE_TREES_UPDATED_EVENT, listener);
+}
+
+export function isFavoriteShortcutKey(key) {
+  return typeof key === 'string' && key.startsWith(FAVORITE_SHORTCUT_PREFIX);
+}
+
+export function getFavoriteIdFromShortcutKey(key) {
+  if (!isFavoriteShortcutKey(key)) return null;
+  const rest = key.slice(FAVORITE_SHORTCUT_PREFIX.length);
+  const lastSep = rest.lastIndexOf('__');
+  if (lastSep <= 0) return rest || null;
+  return rest.slice(0, lastSep);
+}
 
 export function isFavoritesRootKey(key) {
   return key === FAVORITES_ROOT_KEY;
@@ -42,6 +102,9 @@ export function findNodeByKey(nodes, key) {
 
 function indexNodesByFavoriteId(nodes, map = new Map()) {
   for (const node of nodes || []) {
+    if (node?.key) {
+      map.set(node.key, node);
+    }
     if (node?.data?.type) {
       try {
         const conn = connHelpers.fromSidebarNode(node);
@@ -118,7 +181,9 @@ function createShortcutFromFavorite(favorite, sourceNode, groupId = null) {
 export function resolveFavoriteShortcutNode(node, nodes) {
   if (!isFavoriteShortcutNode(node)) return node;
   if (node.sourceKey) {
-    const sourceNode = findNodeByKey(nodes, node.sourceKey);
+    const sourceNode = findNodeByKey(nodes, node.sourceKey)
+      || findNodeByKey(cachedDocumentNodes, node.sourceKey)
+      || findNodeByKey(cachedPasswordNodes, node.sourceKey);
     if (sourceNode) return sourceNode;
   }
   return node;
@@ -156,8 +221,27 @@ function collectFavoriteShortcutPlacements(nodes, parentGroupId = null, placemen
   return placements;
 }
 
-export function buildFavoritesSidebarTree({ nodes, favorites, groups, getFavoriteGroups }) {
+function loadLocalSourceTree(storageKey) {
+  try {
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+export function buildFavoritesSidebarTree({ nodes, favorites, groups, getFavoriteGroups, documentNodes, passwordNodes }) {
   const nodeByFavoriteId = indexNodesByFavoriteId(nodes);
+  indexNodesByFavoriteId(
+    documentNodes || cachedDocumentNodes || loadLocalSourceTree('documentManagerNodes'),
+    nodeByFavoriteId
+  );
+  indexNodesByFavoriteId(
+    passwordNodes || cachedPasswordNodes || loadLocalSourceTree('passwordManagerNodes'),
+    nodeByFavoriteId
+  );
   const userGroups = (groups || []).filter((group) => !group.isDefault);
   const connectionFavorites = (favorites || []).filter((favorite) => favorite?.type !== 'group');
 

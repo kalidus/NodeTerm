@@ -519,9 +519,89 @@ export const useSidebarManagement = (toast, tabManagementProps = {}) => {
     const isRDP = nodeType === 'rdp' || nodeType === 'rdp-guacamole' || nodeType === 'web-rdp';
     const isVNC = nodeType === 'vnc' || nodeType === 'vnc-guacamole' || nodeType === 'web-vnc';
     const isFileConnection = nodeType === 'sftp' || nodeType === 'ftp' || nodeType === 'scp';
-    const isPassword = nodeType === 'password' || nodeType === 'crypto_wallet' || nodeType === 'api_key' || nodeType === 'secure_note';
+    const isPassword = nodeType === 'password' || nodeType === 'crypto_wallet' || nodeType === 'api_key' || nodeType === 'secure_note' || nodeType === 'secret';
+    const isDocument = nodeType === 'document' || nodeType === 'quick-note';
     const isSSHTunnel = nodeType === 'ssh-tunnel';
+    const isFavShortcut = !!(node.isFavoriteShortcut || node.favoriteId);
     const items = [];
+
+    if (isFavShortcut && (isPassword || isDocument)) {
+      const favId = node.favoriteId || node.data?.id;
+      const openKey = node.sourceKey || node.favoriteId || node.data?.id;
+      const label = node.label || node.name || node.data?.name || '';
+
+      items.push({
+        label: isDocument ? 'Abrir nota' : 'Abrir',
+        icon: 'pi pi-external-link',
+        command: () => {
+          if (isDocument) {
+            window.dispatchEvent(new CustomEvent('open-document-tab', {
+              detail: {
+                key: openKey,
+                label,
+                data: node.data || {}
+              }
+            }));
+            return;
+          }
+          window.dispatchEvent(new CustomEvent('open-password-tab', {
+            detail: {
+              key: openKey,
+              label,
+              title: label,
+              type: nodeType,
+              mode: 'permanent',
+              ...(node.data || {}),
+              id: openKey
+            }
+          }));
+        }
+      });
+
+      if (isPassword && node.data?.password) {
+        items.push({
+          label: 'Copiar contraseña',
+          icon: 'pi pi-key',
+          command: async () => {
+            try {
+              await clipboardWriteText(node.data.password);
+              if (window.toast?.current?.show) {
+                window.toast.current.show({
+                  severity: 'success',
+                  summary: 'Copiado',
+                  detail: 'Contraseña copiada al portapapeles',
+                  life: 1500
+                });
+              }
+            } catch (error) {
+              console.error('Error copiando contraseña:', error);
+            }
+          }
+        });
+      }
+
+      items.push({
+        label: 'Quitar de favoritos',
+        icon: 'pi pi-star-fill',
+        command: () => {
+          if (favId) connectionStore.removeFavorite(favId);
+        }
+      });
+      items.push({
+        label: 'Eliminar',
+        icon: 'pi pi-trash',
+        command: () => {
+          if (favId) {
+            connectionStore.removeFavorite(favId);
+            return;
+          }
+          if (sidebarCallbacksRef.current?.deleteNode) {
+            sidebarCallbacksRef.current.deleteNode(node.key, node.label);
+          }
+        }
+      });
+      return items;
+    }
 
     if (isSSH) {
       items.push({

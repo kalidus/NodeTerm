@@ -27,6 +27,7 @@ import {
 } from '../utils/treeDragDrop';
 import localStorageSyncService from '../services/LocalStorageSyncService';
 import connectionStore from '../utils/connectionStore';
+import { setFavoriteSourceTrees } from '../utils/favoritesSidebarTree';
 import DocumentDetailsPanel from './DocumentDetailsPanel';
 import QuickNotesSidePanel from './QuickNotesSidePanel';
 import { FolderIconSelectorModal, FolderIconRenderer, FolderIconPresets } from './FolderIconSelector';
@@ -337,6 +338,10 @@ const DocumentsSidebar = ({
   const { t: tCommon } = useTranslation('common');
   const [documentNodes, setDocumentNodes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    setFavoriteSourceTrees({ documentNodes });
+  }, [documentNodes]);
   const [expandedKeys, setExpandedKeys] = useState(() => {
     try {
       const saved = localStorage.getItem('documents_expanded_keys');
@@ -616,6 +621,7 @@ const DocumentsSidebar = ({
         nodeData: nodeCopy,
       };
       setTrashedDocuments(prev => [trashItem, ...prev]);
+      connectionStore.removeFavoritesForTreeNode(noteNode);
       showToast?.({
         severity: 'success',
         summary: 'Movido a la papelera',
@@ -644,6 +650,7 @@ const DocumentsSidebar = ({
     setDocumentNodes(prev =>
       updateNodeInTree(prev, inlineRenamingKey, { label: trimmed })
     );
+    connectionStore.updateFavoriteFields(inlineRenamingKey, { name: trimmed });
     setInlineRenamingKey(null);
     setInlineRenameValue('');
   }, [inlineRenamingKey, inlineRenameValue]);
@@ -685,6 +692,7 @@ const DocumentsSidebar = ({
     setDocumentNodes(prev =>
       updateNodeInTree(prev, renamingNode.key, { label: newName })
     );
+    connectionStore.updateFavoriteFields(renamingNode.key, { name: newName });
     setShowRenameDialog(false);
     setNewItemName('');
     setRenamingNode(null);
@@ -776,6 +784,7 @@ const DocumentsSidebar = ({
       nodeData: nodeCopy,
     };
     setTrashedDocuments(prev => [trashItem, ...prev]);
+    connectionStore.removeFavoritesForTreeNode(findNodeInTree(documentNodes, node.key) || node);
     showToast?.({
       severity: 'success',
       summary: 'Movido a la papelera',
@@ -1110,6 +1119,7 @@ const DocumentsSidebar = ({
       setDocumentNodes(prev =>
         updateNodeInTree(prev, key, { label })
       );
+      connectionStore.updateFavoriteFields(key, { name: label });
     };
     window.addEventListener('document-title-updated', handler);
     return () => window.removeEventListener('document-title-updated', handler);

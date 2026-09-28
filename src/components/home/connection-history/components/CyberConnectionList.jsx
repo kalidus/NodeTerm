@@ -12,6 +12,7 @@ import {
 } from '../utils/connectionHistoryHelpers';
 
 const SECRET_TYPES = ['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note', 'document', 'quick-note'];
+const NOTE_TYPES = ['document', 'quick-note'];
 const VIRTUALIZE_THRESHOLD = 20;
 const CARD_ITEM_SIZE = 28;
 
@@ -51,6 +52,12 @@ export function usePanelBreakpoints(defaultWidth = 400) {
 
 const openSecretOrConnect = (conn, onConnect) => {
 	const label = conn?.name || conn?.label || '-';
+	if (NOTE_TYPES.includes(conn?.type)) {
+		window.dispatchEvent(new CustomEvent('open-document-tab', {
+			detail: { key: conn.id, label, data: { ...conn } }
+		}));
+		return;
+	}
 	if (SECRET_TYPES.includes(conn?.type)) {
 		window.dispatchEvent(new CustomEvent('open-password-tab', {
 			detail: { key: conn.id, label, data: { ...conn } }
