@@ -7,6 +7,7 @@ export const HOME_JUMP_PINS_KEY = STORAGE_KEYS.HOME_TAB_JUMP_PINS || 'nodeterm_h
 export const LAUNCHER_ACTION_PINS_KEY = STORAGE_KEYS.LAUNCHER_ACTION_PINS || 'nodeterm_launcher_action_pins';
 export const MAX_LAUNCHER_ACTION_PINS = 8;
 export const DEFAULT_LAUNCHER_ACTION_PINS = ['new-connection', 'new-group', 'tools', 'vault'];
+export const LAUNCHER_HIDDEN_ACTION_IDS = new Set(['palette', 'stats', 'about']);
 
 export const DOCK_GROUPS = [
   { id: 'connect', label: 'Conectar' },
@@ -58,6 +59,15 @@ export const DOCK_ACTIONS = [
     color: '#f59e0b',
     keywords: 'password secreto vault clave',
     event: 'open-password-manager',
+    group: 'data'
+  },
+  {
+    id: 'notes',
+    label: 'Notas',
+    icon: 'pi pi-file-edit',
+    color: '#64b5f6',
+    keywords: 'nota notas documento markdown',
+    event: 'open-documents-sidebar',
     group: 'data'
   },
   {
@@ -220,12 +230,16 @@ export function getDockAction(id) {
   return DOCK_ACTIONS.find((a) => a.id === id) || null;
 }
 
+export function getLauncherCatalogActions() {
+  return DOCK_ACTIONS.filter((action) => !LAUNCHER_HIDDEN_ACTION_IDS.has(action.id));
+}
+
 function normalizeLauncherPins(pins) {
   const ids = Array.isArray(pins) ? pins : [];
   const seen = new Set();
   const next = [];
   ids.forEach((id) => {
-    if (typeof id !== 'string' || seen.has(id) || !getDockAction(id)) return;
+    if (typeof id !== 'string' || seen.has(id) || LAUNCHER_HIDDEN_ACTION_IDS.has(id) || !getDockAction(id)) return;
     seen.add(id);
     next.push(id);
   });
@@ -255,7 +269,12 @@ export function saveLauncherActionPins(pins) {
 
 export function pinLauncherAction(actionId) {
   const pins = getLauncherActionPins();
-  if (pins.includes(actionId) || pins.length >= MAX_LAUNCHER_ACTION_PINS || !getDockAction(actionId)) {
+  if (
+    pins.includes(actionId)
+    || pins.length >= MAX_LAUNCHER_ACTION_PINS
+    || LAUNCHER_HIDDEN_ACTION_IDS.has(actionId)
+    || !getDockAction(actionId)
+  ) {
     return pins;
   }
   return saveLauncherActionPins([...pins, actionId]);

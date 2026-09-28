@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  DOCK_ACTIONS,
+  LAUNCHER_HIDDEN_ACTION_IDS,
   MAX_LAUNCHER_ACTION_PINS,
   getDockAction,
   getLauncherActionPins,
+  getLauncherCatalogActions,
   pinLauncherAction,
   runDockAction,
+  saveLauncherActionPins,
   unpinLauncherAction
 } from '../../utils/homeDock';
 
@@ -19,13 +21,16 @@ const LauncherQuickActions = ({
   const [pickerOpen, setPickerOpen] = useState(false);
 
   useEffect(() => {
+    setPins(saveLauncherActionPins(getLauncherActionPins()));
     const refresh = () => setPins(getLauncherActionPins());
     window.addEventListener('launcher-action-pins-changed', refresh);
     return () => window.removeEventListener('launcher-action-pins-changed', refresh);
   }, []);
 
   const actions = useMemo(
-    () => pins.map((id) => getDockAction(id)).filter(Boolean),
+    () => pins
+      .map((id) => getDockAction(id))
+      .filter((action) => action && !LAUNCHER_HIDDEN_ACTION_IDS.has(action.id)),
     [pins]
   );
 
@@ -117,7 +122,7 @@ const LauncherQuickActions = ({
                   : 'Clic para pinear o quitar. Clic derecho en una card para quitarla.'}
               </div>
               <div className="launcher-actions-picker-grid">
-                {DOCK_ACTIONS.map((action) => {
+                {getLauncherCatalogActions().map((action) => {
                   const isPinned = pinnedIds.has(action.id);
                   const disabled = !isPinned && atLimit;
                   return (

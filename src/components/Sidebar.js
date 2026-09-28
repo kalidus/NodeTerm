@@ -2026,19 +2026,25 @@ const Sidebar = React.memo(({
   // Eventos globales para acciones de acceso rápido desde Home
   useEffect(() => {
     const handleOpenPasswords = () => setViewMode('passwords');
+    const handleOpenDocuments = () => {
+      setViewMode('documents');
+      setSidebarCollapsed(false);
+    };
     const handleOpenSettings = () => setShowSettingsDialog(true);
     const handleOpenExplorerDialog = () => {
       setShowUnifiedConnectionDialog && setShowUnifiedConnectionDialog(true);
     };
     window.addEventListener('open-password-manager', handleOpenPasswords);
+    window.addEventListener('open-documents-sidebar', handleOpenDocuments);
     window.addEventListener('open-settings-dialog', handleOpenSettings);
     window.addEventListener('open-explorer-dialog', handleOpenExplorerDialog);
     return () => {
       window.removeEventListener('open-password-manager', handleOpenPasswords);
+      window.removeEventListener('open-documents-sidebar', handleOpenDocuments);
       window.removeEventListener('open-settings-dialog', handleOpenSettings);
       window.removeEventListener('open-explorer-dialog', handleOpenExplorerDialog);
     };
-  }, [setShowSettingsDialog, setShowUnifiedConnectionDialog]);
+  }, [setShowSettingsDialog, setShowUnifiedConnectionDialog, setSidebarCollapsed]);
 
 
   // Escuchar evento para abrir el diálogo de crear grupo desde la vista de passwords
