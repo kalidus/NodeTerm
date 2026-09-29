@@ -72,13 +72,6 @@ const extractErrorMessage = (err) => {
   return msg;
 };
 
-const isStreamCutError = (msg) => {
-  const text = String(msg || '').toLowerCase();
-  return text.includes('not enough bytes') || text.includes('read frame by hint');
-};
-
-const EARLY_STREAM_CUT_MS = 8000;
-
 const readLocalClipboardText = async () => {
   try {
     if (window.electron?.clipboard?.readText) {
@@ -178,7 +171,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   const clipboardFailedRef = useRef(false);
   const clipboardUnhealthyToastShownRef = useRef(false);
   const userClosingRef = useRef(false);
-  const earlyStreamRetryUsedRef = useRef(false);
 
   const isRdpDebugEnabled = () => {
     return (
@@ -453,7 +445,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     clipboardFailedRef.current = false;
     clipboardUnhealthyToastShownRef.current = false;
     userClosingRef.current = false;
-    earlyStreamRetryUsedRef.current = false;
     clearTransferDismissTimers();
     uploadFailedIdsRef.current.clear();
     isFileTransferArmedRef.current = false;
@@ -545,7 +536,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     let aborted = false;
     let currentSession = null;
     let currentFileTransferProvider = null;
-    let sessionReadyAt = 0;
 
     const isAborted = () => aborted || !isMounted;
 
@@ -920,7 +910,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           return;
         }
         sessionRef.current = currentSession;
-        sessionReadyAt = Date.now();
         flushPendingClipboardSend();
         console.log('✅ [IronRDP WASM] Sesión RDP conectada');
 
@@ -1096,17 +1085,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             handleSessionEnded('user initiated disconnect', null);
             return;
           }
-          const elapsed = sessionReadyAt ? (Date.now() - sessionReadyAt) : 0;
-          if (isStreamCutError(detail) && elapsed < EARLY_STREAM_CUT_MS && !earlyStreamRetryUsedRef.current) {
-            earlyStreamRetryUsedRef.current = true;
-            console.warn('⚠️ [IronRDP WASM] Stream cortado al iniciar. Reintentando una vez...');
-            abandonSession(currentSession);
-            currentSession = null;
-            if (isMounted) {
-              setReconnectTrigger((prev) => prev + 1);
-            }
-            return;
-          }
           console.error('❌ [IronRDP WASM] Error en ejecucion de sesion:', detail, err);
           if (clipboardFailedRef.current || isRdpDebugEnabled()) {
             dumpBridgeTraces('Trazas del bridge previas al error de sesion:');
@@ -1150,7 +1128,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       isFileTransferArmedRef.current = false;
       pendingClipboardSendRef.current = null;
     };
-  }, [rdpConfig, reconnectTrigger]);
+    // tabId + reconnectTrigger: no reciclar WASM si el padre cambia la referencia de rdpConfig
+  }, [tabId, reconnectTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Manejo de enfoque dinámico del canvas al activar pestaña
   useEffect(() => {

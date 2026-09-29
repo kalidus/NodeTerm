@@ -7,7 +7,7 @@
 
 const { parseDfOutput, parseNetDev } = require('./parsing-utils');
 const { getGuacdPrefPath } = require('./file-utils');
-const { sendToRenderer, cleanupOrphanedConnections } = require('./connection-utils');
+const { isRendererSendable, sendToRenderer, cleanupOrphanedConnections } = require('./connection-utils');
 const { maskSensitiveData } = require('./security-utils');
 
 /**
@@ -27,6 +27,7 @@ module.exports = {
   
   // Utilidades de conexión
   connection: {
+    isRendererSendable,
     sendToRenderer,
     cleanupOrphanedConnections
   },
@@ -40,6 +41,7 @@ module.exports = {
   parseDfOutput,
   parseNetDev,
   getGuacdPrefPath,
+  isRendererSendable,
   sendToRenderer,
   cleanupOrphanedConnections,
   maskSensitiveData

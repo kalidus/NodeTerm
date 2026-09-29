@@ -27,49 +27,36 @@ function getRdpManager() {
 function registerRdpHandlers(dependencies) {
   const { sendToRenderer } = dependencies;
   const rdpNativeBridgeService = require('../services/RdpNativeBridgeService');
+  const { isRendererSendable } = require('../utils/connection-utils');
+
+  const broadcastToRenderers = (eventName, eventData) => {
+    try {
+      const { BrowserWindow } = require('electron');
+      BrowserWindow.getAllWindows().forEach((win) => {
+        if (isRendererSendable(win)) {
+          sendToRenderer(win, eventName, eventData);
+        }
+      });
+    } catch (err) {
+      console.warn(`[RDP Handlers] Error enviando ${eventName}:`, err);
+    }
+  };
 
   // Reenviar evento tipado de desconexión del puente nativo hacia el renderer
   rdpNativeBridgeService.removeAllListeners('session-closed');
   rdpNativeBridgeService.on('session-closed', (eventData) => {
-    try {
-      const { BrowserWindow } = require('electron');
-      BrowserWindow.getAllWindows().forEach((win) => {
-        if (!win.isDestroyed()) {
-          sendToRenderer(win, 'rdp:native-session-closed', eventData);
-        }
-      });
-    } catch (err) {
-      console.warn('[RDP Handlers] Error enviando rdp:native-session-closed:', err);
-    }
+    broadcastToRenderers('rdp:native-session-closed', eventData);
   });
 
   rdpNativeBridgeService.removeAllListeners('clipboard-unhealthy');
   rdpNativeBridgeService.on('clipboard-unhealthy', (eventData) => {
-    try {
-      const { BrowserWindow } = require('electron');
-      BrowserWindow.getAllWindows().forEach((win) => {
-        if (!win.isDestroyed()) {
-          sendToRenderer(win, 'rdp:clipboard-unhealthy', eventData);
-        }
-      });
-    } catch (err) {
-      console.warn('[RDP Handlers] Error enviando rdp:clipboard-unhealthy:', err);
-    }
+    broadcastToRenderers('rdp:clipboard-unhealthy', eventData);
   });
 
   // Reenviar telemetría de canales y portapapeles del puente nativo hacia el renderer
   rdpNativeBridgeService.removeAllListeners('diagnostic-log');
   rdpNativeBridgeService.on('diagnostic-log', (diag) => {
-    try {
-      const { BrowserWindow } = require('electron');
-      BrowserWindow.getAllWindows().forEach((win) => {
-        if (!win.isDestroyed()) {
-          sendToRenderer(win, 'rdp:diagnostic-log', diag);
-        }
-      });
-    } catch (err) {
-      console.warn('[RDP Handlers] Error enviando rdp:diagnostic-log:', err);
-    }
+    broadcastToRenderers('rdp:diagnostic-log', diag);
   });
   
   // === RDP Connection Handlers ===
@@ -236,7 +223,7 @@ function registerRdpHandlers(dependencies) {
         }
       }
 
-      const sessionInfo = await rdpNativeBridgeService.createSessionToken(config);
+      const sessionInfo = rdpNativeBridgeService.createSessionToken(config);
       if (process.env.NODETERM_RDP_DEBUG === '1') {
         console.log('🚀 [RDP Native Bridge] Token creado para RDP Web Nativo (Sin guacd/WSL):', sessionInfo.tokenId);
       }

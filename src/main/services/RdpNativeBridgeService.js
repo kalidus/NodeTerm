@@ -289,49 +289,10 @@ class RdpNativeBridgeService extends EventEmitter {
     });
   }
 
-  sameHostKeyFromConfig(config) {
-    const host = String(config?.hostname || config?.server || config?.host || '').toLowerCase();
-    const port = parseInt(config?.port, 10) || 3389;
-    const username = String(
-      (config?.useBastionWallix && config?.bastionUser)
-        ? config.bastionUser
-        : (config?.username || config?.user || '')
-    ).toLowerCase();
-    return `${host}:${port}|${username}`;
-  }
-
-  sameHostKeyFromSession(session) {
-    if (!session) return '';
-    const host = String(session.host || '').toLowerCase();
-    const port = parseInt(session.port, 10) || 3389;
-    const username = String(session.username || '').toLowerCase();
-    return `${host}:${port}|${username}`;
-  }
-
-  hasActiveSameHost(config) {
-    const key = this.sameHostKeyFromConfig(config);
-    if (!key || key.startsWith(':3389|') || key === ':3389|') return false;
-    for (const conn of this.activeConnections.values()) {
-      if (this.sameHostKeyFromSession(conn.session) === key) return true;
-    }
-    return false;
-  }
-
-  async waitForSameHostRelease(config, timeoutMs = 1500) {
-    if (!this.hasActiveSameHost(config)) return;
-    const key = this.sameHostKeyFromConfig(config);
-    console.log(`[RdpNativeBridgeService] Esperando a soltar conexion previa ${key}`);
-    const deadline = Date.now() + timeoutMs;
-    while (this.hasActiveSameHost(config) && Date.now() < deadline) {
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    }
-  }
-
   /**
    * Genera un token de sesión seguro para conectar una pestaña RDP nativa
    */
-  async createSessionToken(config) {
-    await this.waitForSameHostRelease(config);
+  createSessionToken(config) {
     const tokenId = crypto.randomBytes(16).toString('hex');
     const sessionData = {
       id: tokenId,
