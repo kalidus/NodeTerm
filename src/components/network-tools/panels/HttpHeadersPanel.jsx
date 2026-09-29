@@ -37,17 +37,31 @@ const HttpHeadersPanel = ({ isMobile = false }) => {
         url
       });
 
-      if (response) {
-        setResult(response);
+      if (!response) {
+        setError('No se recibieron cabeceras HTTP de la URL.');
+        return;
+      }
+
+      const failedWithoutStatus = response.success === false && !response.statusCode;
+      if (failedWithoutStatus) {
+        setError(response.error || 'No se pudieron obtener las cabeceras HTTP.');
+        setResult(null);
         history.record({
           target: url,
           params: { url },
           result: response,
-          summary: response.status ? `HTTP ${response.status}` : 'Headers'
+          summary: 'Error'
         });
-      } else {
-        setError('No se recibieron cabeceras HTTP de la URL.');
+        return;
       }
+
+      setResult(response);
+      history.record({
+        target: url,
+        params: { url },
+        result: response,
+        summary: response.statusCode ? `HTTP ${response.statusCode}` : 'Headers'
+      });
     } catch (err) {
       setError(err.message || 'Error al analizar cabeceras HTTP');
     } finally {
@@ -157,43 +171,84 @@ const HttpHeadersPanel = ({ isMobile = false }) => {
         {result && (
           <div style={resultBoxStyle}>
             <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <strong>HTTP {result.statusCode}</strong>
-              <Badge
-                value={result.statusMessage || (result.statusCode < 400 ? 'OK' : 'Error')}
-                severity={result.statusCode < 400 ? 'success' : 'danger'}
-              />
-              {result.timing?.responseTime && (
+              <strong>
+                {result.statusCode != null ? `HTTP ${result.statusCode}` : 'HTTP'}
+              </strong>
+              {result.statusCode != null && (
+                <Badge
+                  value={result.statusMessage || (result.statusCode < 400 ? 'OK' : 'Error')}
+                  severity={result.statusCode < 400 ? 'success' : 'danger'}
+                />
+              )}
+              {result.method && (
+                <span style={{ color: 'var(--text-color-secondary)', fontSize: '0.8rem' }}>
+                  {result.method}
+                </span>
+              )}
+              {result.timing?.responseTime != null && (
                 <span style={{ color: 'var(--text-color-secondary)', fontSize: '0.8rem' }}>
                   ({result.timing.responseTime}ms)
                 </span>
               )}
             </div>
 
+            {result.finalUrl && result.finalUrl !== result.url && (
+              <div style={{ ...statItemStyle, fontSize: '0.78rem' }}>
+                <span>URL final:</span>
+                <span style={{ wordBreak: 'break-all' }}>{result.finalUrl}</span>
+              </div>
+            )}
+
+            {result.error && (
+              <div style={{ marginBottom: '1rem', padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '6px', color: '#ef4444' }}>
+                <strong>Error:</strong> {result.error}
+              </div>
+            )}
+
             <div style={{ marginTop: '1rem', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.85rem' }}>
               Cabeceras de Seguridad:
             </div>
-            {Object.entries(result.securityHeaders || {}).map(([key, value]) => (
-              <div key={key} style={statItemStyle}>
-                <span>{key}:</span>
-                <Badge
-                  value={value ? 'Presente' : 'Ausente'}
-                  severity={value ? 'success' : 'warning'}
-                />
+            {Object.keys(result.securityHeaders || {}).length === 0 ? (
+              <div style={{ color: 'var(--text-color-secondary)', fontSize: '0.8rem', marginBottom: '0.5rem' }}>
+                No hay cabeceras de seguridad para mostrar.
               </div>
-            ))}
+            ) : (
+              Object.entries(result.securityHeaders).map(([key, value]) => (
+                <div key={key} style={{ ...statItemStyle, alignItems: isMobile ? 'flex-start' : 'flex-start' }}>
+                  <span style={{ minWidth: isMobile ? 'auto' : '220px' }}>{key}:</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', flex: 1, minWidth: 0 }}>
+                    <Badge
+                      value={value ? 'Presente' : 'Ausente'}
+                      severity={value ? 'success' : 'warning'}
+                    />
+                    {value && (
+                      <span style={{ color: 'var(--text-color-secondary)', fontSize: '0.75rem', wordBreak: 'break-all' }}>
+                        {String(value)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
 
             <div style={{ marginTop: '1.25rem', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.85rem' }}>
               Todas las cabeceras HTTP:
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-              {Object.entries(result.headers || {}).map(([key, value]) => (
-                <div key={key} style={{ ...statItemStyle, fontSize: '0.78rem' }}>
-                  <span style={{ color: '#3b82f6', fontWeight: '500' }}>{key}:</span>
-                  <span style={{ maxWidth: isMobile ? '100%' : '500px', overflow: 'hidden', textOverflow: 'ellipsis', wordBreak: 'break-all' }}>
-                    {String(value)}
-                  </span>
+              {Object.keys(result.headers || {}).length === 0 ? (
+                <div style={{ color: 'var(--text-color-secondary)', fontSize: '0.8rem' }}>
+                  No se recibieron cabeceras HTTP.
                 </div>
-              ))}
+              ) : (
+                Object.entries(result.headers).map(([key, value]) => (
+                  <div key={key} style={{ ...statItemStyle, fontSize: '0.78rem' }}>
+                    <span style={{ color: '#3b82f6', fontWeight: '500' }}>{key}:</span>
+                    <span style={{ maxWidth: isMobile ? '100%' : '500px', overflow: 'hidden', textOverflow: 'ellipsis', wordBreak: 'break-all' }}>
+                      {String(value)}
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}

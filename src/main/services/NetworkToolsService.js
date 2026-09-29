@@ -1383,7 +1383,7 @@ class NetworkToolsService {
    */
   async httpHeaders(url) {
     if (!url || typeof url !== 'string') {
-      return { success: false, error: 'URL inválida' };
+      return { success: false, error: 'URL invalida' };
     }
 
     let sanitizedUrl = url.trim();
@@ -1391,72 +1391,214 @@ class NetworkToolsService {
       sanitizedUrl = 'https://' + sanitizedUrl;
     }
 
+    const startTime = Date.now();
+    const results = {
+      success: false,
+      url: sanitizedUrl,
+      finalUrl: sanitizedUrl,
+      method: 'HEAD',
+      statusCode: null,
+      statusMessage: null,
+      headers: {},
+      securityHeaders: {},
+      timing: {},
+      error: null
+    };
+
+    let currentUrl = sanitizedUrl;
+    let method = 'HEAD';
+    let triedGetFallback = false;
+    const maxHops = 6;
+
+    for (let hop = 0; hop < maxHops; hop++) {
+      const response = await this._requestHttpHeaders(currentUrl, method);
+
+      if (!response.success) {
+        if (method === 'HEAD' && !triedGetFallback) {
+          method = 'GET';
+          triedGetFallback = true;
+          continue;
+        }
+        results.error = response.error || 'Error al obtener cabeceras HTTP';
+        results.method = method;
+        results.finalUrl = currentUrl;
+        results.timing.responseTime = Date.now() - startTime;
+        return results;
+      }
+
+      const headerCount = Object.keys(response.headers || {}).length;
+      const shouldFallbackGet = method === 'HEAD' && !triedGetFallback && (
+        response.statusCode === 405 ||
+        response.statusCode === 501 ||
+        headerCount === 0
+      );
+
+      if (shouldFallbackGet) {
+        method = 'GET';
+        triedGetFallback = true;
+        continue;
+      }
+
+      const isRedirect = response.statusCode >= 300 && response.statusCode < 400 && response.location;
+      if (isRedirect && hop < maxHops - 1) {
+        try {
+          currentUrl = new URL(response.location, currentUrl).toString();
+          method = 'HEAD';
+          triedGetFallback = false;
+          continue;
+        } catch (_) {
+          // Si Location no es valida, devolver la respuesta actual
+        }
+      }
+
+      results.success = true;
+      results.finalUrl = currentUrl;
+      results.method = method;
+      results.statusCode = response.statusCode;
+      results.statusMessage = response.statusMessage;
+      results.headers = response.headers;
+      results.securityHeaders = this._buildSecurityHeaders(response.headers);
+      results.timing.responseTime = Date.now() - startTime;
+      return results;
+    }
+
+    results.error = 'Demasiadas redirecciones';
+    results.finalUrl = currentUrl;
+    results.method = method;
+    results.timing.responseTime = Date.now() - startTime;
+    return results;
+  }
+
+  /**
+   * Clone IncomingHttpHeaders into a plain IPC-safe object
+   * @private
+   */
+  _flattenHttpHeaders(headers) {
+    const flat = {};
+    if (!headers || typeof headers !== 'object') {
+      return flat;
+    }
+    for (const [key, value] of Object.entries(headers)) {
+      if (value == null) continue;
+      flat[key] = Array.isArray(value) ? value.join(', ') : String(value);
+    }
+    return flat;
+  }
+
+  /**
+   * Extract well-known security headers from a flat headers object
+   * @private
+   */
+  _buildSecurityHeaders(headers) {
+    const lower = {};
+    for (const [key, value] of Object.entries(headers || {})) {
+      lower[String(key).toLowerCase()] = value;
+    }
+    return {
+      'Strict-Transport-Security': lower['strict-transport-security'] || null,
+      'Content-Security-Policy': lower['content-security-policy'] || null,
+      'X-Content-Type-Options': lower['x-content-type-options'] || null,
+      'X-Frame-Options': lower['x-frame-options'] || null,
+      'X-XSS-Protection': lower['x-xss-protection'] || null,
+      'Referrer-Policy': lower['referrer-policy'] || null,
+      'Permissions-Policy': lower['permissions-policy'] || null
+    };
+  }
+
+  /**
+   * HTTPS agent that skips certificate validation (VPN/IoT/self-signed).
+   * Request-level rejectUnauthorized is ignored by https.globalAgent in Electron.
+   * @private
+   */
+  _getInsecureHttpsAgent() {
+    if (!this._insecureHttpsAgent) {
+      this._insecureHttpsAgent = new https.Agent({
+        keepAlive: false,
+        maxSockets: 8,
+        rejectUnauthorized: false
+      });
+    }
+    return this._insecureHttpsAgent;
+  }
+
+  /**
+   * Single HTTP/HTTPS request used by httpHeaders
+   * @private
+   */
+  _requestHttpHeaders(url, method, timeout = 10000) {
     return new Promise((resolve) => {
-      const results = {
-        success: false,
-        url: sanitizedUrl,
-        statusCode: null,
-        statusMessage: null,
-        headers: {},
-        securityHeaders: {},
-        timing: {},
-        error: null
-      };
-
-      const startTime = Date.now();
-
       try {
-        const parsedUrl = new URL(sanitizedUrl);
-        const protocol = parsedUrl.protocol === 'https:' ? https : http;
-
+        const parsedUrl = new URL(url);
+        const isHttps = parsedUrl.protocol === 'https:';
+        const protocol = isHttps ? https : http;
+        const port = parsedUrl.port || (isHttps ? 443 : 80);
         const options = {
-          method: 'HEAD',
+          method,
           hostname: parsedUrl.hostname,
-          port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
-          path: parsedUrl.pathname + parsedUrl.search,
-          timeout: 10000,
+          port,
+          path: (parsedUrl.pathname || '/') + parsedUrl.search,
+          timeout,
           headers: {
-            'User-Agent': 'NodeTerm-NetworkTools/1.0'
-          }
+            'User-Agent': 'NodeTerm-NetworkTools/1.0',
+            'Accept': '*/*'
+          },
+          rejectUnauthorized: false,
+          servername: parsedUrl.hostname,
+          checkServerIdentity: () => undefined
         };
 
-        const req = protocol.request(options, (res) => {
-          results.success = true;
-          results.statusCode = res.statusCode;
-          results.statusMessage = res.statusMessage;
-          results.headers = res.headers;
-          results.timing.responseTime = Date.now() - startTime;
-
-          // Analyze security headers
-          results.securityHeaders = {
-            'Strict-Transport-Security': res.headers['strict-transport-security'] || null,
-            'Content-Security-Policy': res.headers['content-security-policy'] || null,
-            'X-Content-Type-Options': res.headers['x-content-type-options'] || null,
-            'X-Frame-Options': res.headers['x-frame-options'] || null,
-            'X-XSS-Protection': res.headers['x-xss-protection'] || null,
-            'Referrer-Policy': res.headers['referrer-policy'] || null,
-            'Permissions-Policy': res.headers['permissions-policy'] || null
+        if (isHttps) {
+          options.agent = this._getInsecureHttpsAgent();
+          options.createConnection = (connectOpts, callback) => {
+            const socket = tls.connect({
+              host: parsedUrl.hostname,
+              port: Number(port),
+              servername: parsedUrl.hostname,
+              rejectUnauthorized: false,
+              timeout
+            }, () => {
+              socket.setTimeout(0);
+              if (typeof callback === 'function') {
+                callback(null, socket);
+              }
+            });
+            socket.on('error', (err) => {
+              if (typeof callback === 'function') {
+                callback(err);
+              }
+            });
+            return socket;
           };
+        }
 
-          resolve(results);
+        const req = protocol.request(options, (res) => {
+          const headers = this._flattenHttpHeaders(res.headers);
+          const location = res.headers && (res.headers.location || res.headers.Location);
+          if (method === 'GET') {
+            res.resume();
+            res.destroy();
+          }
+          resolve({
+            success: true,
+            statusCode: res.statusCode,
+            statusMessage: res.statusMessage,
+            headers,
+            location
+          });
         });
 
         req.on('error', (err) => {
-          results.error = err.message;
-          results.timing.responseTime = Date.now() - startTime;
-          resolve(results);
+          resolve({ success: false, error: err.message });
         });
 
         req.on('timeout', () => {
-          results.error = 'Timeout de conexión';
           req.destroy();
-          resolve(results);
+          resolve({ success: false, error: 'Timeout de conexion' });
         });
 
         req.end();
       } catch (err) {
-        results.error = err.message;
-        resolve(results);
+        resolve({ success: false, error: err.message });
       }
     });
   }
