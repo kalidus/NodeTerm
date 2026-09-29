@@ -77,6 +77,225 @@ const CopyIconButton = ({ value, tooltip, onCopied }) => (
   />
 );
 
+function scoreColor(score) {
+  if (score >= 80) return '#22c55e';
+  if (score >= 60) return '#f59e0b';
+  return '#ef4444';
+}
+
+function protocolMeta(name) {
+  if (name === 'TLSv1.3' || name === 'TLSv1.2') {
+    return { color: '#22c55e', icon: 'pi-check-circle', status: 'SEGURO' };
+  }
+  if (name === 'TLSv1.1' || name === 'TLSv1.0') {
+    return { color: '#f59e0b', icon: 'pi-exclamation-circle', status: 'OBSOLETO' };
+  }
+  return { color: '#ef4444', icon: 'pi-times-circle', status: 'INSEGURO' };
+}
+
+function listSans(certificate) {
+  if (!certificate) return [];
+  if (certificate.sans && certificate.sans.length) {
+    return certificate.sans.map((san) => san.raw || san.value);
+  }
+  return certificate.subjectAltNames || [];
+}
+
+const ScoreRing = ({ score }) => {
+  const color = scoreColor(score);
+  const deg = Math.min(100, Math.max(0, Number(score) || 0)) * 3.6;
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.6rem',
+      background: 'rgba(0,0,0,0.28)',
+      borderRadius: '8px',
+      padding: '0.5rem 0.7rem',
+      border: `1px solid ${color}40`,
+      minWidth: 0
+    }}>
+      <div style={{
+        width: 52,
+        height: 52,
+        borderRadius: '50%',
+        background: `conic-gradient(${color} ${deg}deg, rgba(255,255,255,0.08) 0deg)`,
+        display: 'grid',
+        placeItems: 'center',
+        flexShrink: 0
+      }}>
+        <div style={{
+          width: 38,
+          height: 38,
+          borderRadius: '50%',
+          background: '#0b1220',
+          display: 'grid',
+          placeItems: 'center'
+        }}>
+          <span style={{ fontSize: '0.92rem', fontWeight: 700, color, lineHeight: 1 }}>{score}</span>
+        </div>
+      </div>
+      <div>
+        <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)', letterSpacing: '0.04em' }}>SCORE</div>
+        <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)' }}>/100</div>
+      </div>
+    </div>
+  );
+};
+
+const KpiTile = ({ label, value, sub, color, barPct }) => (
+  <div style={{
+    background: 'rgba(0,0,0,0.28)',
+    borderRadius: '8px',
+    padding: '0.5rem 0.7rem',
+    minWidth: 0
+  }}>
+    <div style={{
+      fontSize: '0.6rem',
+      color: 'rgba(255,255,255,0.48)',
+      marginBottom: '0.18rem',
+      textTransform: 'uppercase',
+      letterSpacing: '0.03em'
+    }}>
+      {label}
+    </div>
+    <div style={{
+      fontSize: '0.92rem',
+      fontWeight: 700,
+      color: color || '#ffffff',
+      lineHeight: 1.2,
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap'
+    }}>
+      {value}
+    </div>
+    {sub && (
+      <div style={{
+        fontSize: '0.66rem',
+        color: 'rgba(255,255,255,0.52)',
+        marginTop: '0.12rem',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        fontFamily: 'monospace'
+      }}>
+        {sub}
+      </div>
+    )}
+    {typeof barPct === 'number' && (
+      <div style={{
+        background: 'rgba(255,255,255,0.1)',
+        borderRadius: '3px',
+        height: '3px',
+        overflow: 'hidden',
+        marginTop: '0.35rem'
+      }}>
+        <div style={{ background: color, height: '100%', width: `${Math.min(100, Math.max(0, barPct))}%` }} />
+      </div>
+    )}
+  </div>
+);
+
+const SectionLabel = ({ icon, color, children }) => (
+  <div style={{
+    fontWeight: 600,
+    fontSize: '0.75rem',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.35rem',
+    color: color || '#60a5fa',
+    marginBottom: '0.4rem'
+  }}>
+    <i className={`pi ${icon}`} style={{ fontSize: '0.75rem' }} />
+    {children}
+  </div>
+);
+
+const ProtocolChips = ({ protocols }) => (
+  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+    {protocols.map((proto, idx) => {
+      const meta = protocolMeta(proto.name);
+      return (
+        <span
+          key={idx}
+          title={proto.cipher?.name || proto.cipher || ''}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.3rem',
+            fontSize: '0.7rem',
+            padding: '0.22rem 0.5rem',
+            borderRadius: '999px',
+            background: `${meta.color}18`,
+            border: `1px solid ${meta.color}66`,
+            color: meta.color,
+            fontWeight: 600
+          }}
+        >
+          <i className={`pi ${meta.icon}`} style={{ fontSize: '0.68rem' }} />
+          {proto.name}
+          <span style={{ fontSize: '0.56rem', fontWeight: 700, opacity: 0.85 }}>{meta.status}</span>
+        </span>
+      );
+    })}
+  </div>
+);
+
+const IdentityField = ({ label, value }) => (
+  <div style={{ minWidth: 0 }}>
+    <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.45)', marginBottom: '0.12rem' }}>{label}</div>
+    <div style={{
+      fontSize: '0.74rem',
+      fontWeight: 600,
+      color: '#ffffff',
+      lineHeight: 1.35,
+      wordBreak: 'break-word'
+    }}>
+      {value || 'N/A'}
+    </div>
+  </div>
+);
+
+const FingerprintRow = ({ label, value, onCopied }) => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', minWidth: 0 }}>
+    <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.45)', flexShrink: 0, width: '52px' }}>{label}</span>
+    <code style={{
+      fontSize: '0.66rem',
+      color: 'rgba(255,255,255,0.85)',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap',
+      minWidth: 0,
+      flex: 1
+    }} title={value}>{value}</code>
+    <CopyIconButton value={value} tooltip={`Copiar ${label}`} onCopied={onCopied} />
+  </div>
+);
+
+const CollapsibleBlock = ({ title, children }) => (
+  <details style={{ marginTop: '0.4rem', marginBottom: '0.4rem' }}>
+    <summary style={{
+      cursor: 'pointer',
+      fontWeight: 600,
+      fontSize: '0.8rem',
+      padding: '0.4rem 0.65rem',
+      background: 'rgba(59, 130, 246, 0.1)',
+      borderRadius: '6px',
+      userSelect: 'none',
+      listStyle: 'none',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.35rem',
+      color: 'rgba(255,255,255,0.9)'
+    }}>
+      <i className="pi pi-chevron-right" style={{ fontSize: '0.65rem' }} />
+      <span>{title}</span>
+    </summary>
+    <div style={{ marginTop: '0.4rem' }}>{children}</div>
+  </details>
+);
+
 const SslCheckerPanel = ({ isMobile = false }) => {
   const tool = findToolMetadata('ssl-check');
   const [sslCheckHost, setSslCheckHost] = useState('');
@@ -200,285 +419,208 @@ const SslCheckerPanel = ({ isMobile = false }) => {
       : daysUntilExpiry < 90 ? '#f59e0b' : '#22c55e';
     const hostnameMatch = result.trust?.hostnameMatch;
     const matchedSan = hostnameMatch?.matchedSan;
+    const cert = result.certificate;
+    const keyLabel = cert?.publicKey
+      ? `${cert.publicKey.type || 'N/A'}${cert.publicKey.bits ? ` ${cert.publicKey.bits}` : ''}`
+      : 'N/A';
+    const sans = listSans(cert);
+    const issues = result.trust?.issues || [];
+    const recommendations = result.security?.recommendations || [];
+    const panelStyle = {
+      background: 'rgba(0,0,0,0.18)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      borderRadius: '8px',
+      padding: '0.7rem 0.75rem',
+      minWidth: 0
+    };
 
     return (
-      <div style={resultBoxStyle}>
+      <div style={{ ...resultBoxStyle, fontFamily: 'inherit' }}>
         {actionMessage && (
           <div style={{
-            marginBottom: '0.75rem',
-            padding: '0.45rem 0.7rem',
+            marginBottom: '0.65rem',
+            padding: '0.4rem 0.65rem',
             borderRadius: '6px',
             background: actionOk ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
             border: actionOk ? '1px solid rgba(34, 197, 94, 0.35)' : '1px solid rgba(239, 68, 68, 0.35)',
             color: actionOk ? '#86efac' : '#fca5a5',
-            fontSize: '0.8rem'
+            fontSize: '0.78rem'
           }}>
             {actionMessage}
           </div>
         )}
 
         <div style={{
-          background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(6, 182, 212, 0.05) 100%)',
-          border: '1px solid rgba(6, 182, 212, 0.3)',
-          borderRadius: '8px',
-          padding: '0.75rem 1rem',
-          marginBottom: '1rem'
+          fontSize: '0.95rem',
+          fontWeight: 700,
+          color: '#ffffff',
+          lineHeight: 1.25,
+          wordBreak: 'break-all',
+          marginBottom: '0.55rem'
         }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '0.75rem',
-            marginBottom: '0.75rem'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
-              <i className={`pi ${trustMeta.icon}`}
-                style={{ color: trustMeta.color, fontSize: '1.5rem' }}
-              />
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.2rem', color: '#ffffff' }}>
-                  {result.host}:{result.port}
-                </div>
+          {result.host}:{result.port}
+        </div>
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr 1fr' : 'minmax(140px, 0.9fr) repeat(3, 1fr)',
+          gap: '0.5rem',
+          marginBottom: '0.7rem'
+        }}>
+          <ScoreRing score={securityScore} />
+          <KpiTile
+            label={expiryNegative ? 'Expirado hace' : 'Expira'}
+            value={typeof daysUntilExpiry === 'number' ? `${Math.abs(daysUntilExpiry)} dias` : 'N/A'}
+            sub={cert ? `${cert.validFrom || ''} - ${cert.validTo || ''}` : ''}
+            color={expiryColor}
+            barPct={typeof daysUntilExpiry === 'number' ? (daysUntilExpiry / 365) * 100 : 0}
+          />
+          <KpiTile
+            label="Conexion"
+            value={result.protocols?.version || 'N/A'}
+            sub={result.protocols?.cipher || 'N/A'}
+            color="#60a5fa"
+          />
+          <KpiTile
+            label="Clave"
+            value={keyLabel}
+            sub={cert?.signatureAlgorithm || ''}
+            color="#c4b5fd"
+          />
+        </div>
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: isMobile ? '1fr' : 'minmax(240px, 0.95fr) 1.15fr',
+          gap: '0.55rem',
+          marginBottom: '0.65rem'
+        }}>
+          <div style={panelStyle}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '0.4rem',
+              flexWrap: 'wrap',
+              marginBottom: '0.45rem'
+            }}>
+              <SectionLabel icon="pi-info-circle" color={issues.length ? '#f59e0b' : '#22c55e'}>
+                Diagnostico
+              </SectionLabel>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap', marginBottom: '0.4rem' }}>
                 <Badge
                   value={trustMeta.badge}
                   severity={trustMeta.severity}
                   style={{
-                    fontSize: '0.7rem',
-                    padding: '0.25rem 0.5rem',
-                    fontWeight: '600',
+                    fontSize: '0.62rem',
+                    padding: '0.18rem 0.4rem',
+                    fontWeight: 700,
                     background: trustMeta.color,
                     border: 'none'
                   }}
                 />
-                {result.trust?.summary && (
-                  <div style={{
-                    marginTop: '0.35rem',
-                    fontSize: '0.75rem',
-                    color: 'rgba(255,255,255,0.75)',
-                    lineHeight: 1.4,
-                    maxWidth: '520px'
-                  }}>
-                    {result.trust.summary}
-                  </div>
+                <span style={{
+                  fontSize: '0.62rem',
+                  fontWeight: 700,
+                  color: riskColor,
+                  background: `${riskColor}22`,
+                  border: `1px solid ${riskColor}66`,
+                  borderRadius: '999px',
+                  padding: '0.14rem 0.45rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.22rem'
+                }}>
+                  <i className="pi pi-exclamation-triangle" style={{ fontSize: '0.6rem' }} />
+                  {riskLevel}
+                </span>
+              </div>
+            </div>
+            {issues.length > 0 ? (
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.35rem',
+                marginBottom: result.supportedProtocols?.length ? '0.7rem' : 0
+              }}>
+                {issues.map((issue, idx) => {
+                  const color = ISSUE_COLOR[issue.severity] || ISSUE_COLOR.high;
+                  return (
+                    <div key={idx} style={{
+                      padding: '0.4rem 0.5rem',
+                      background: 'rgba(0,0,0,0.2)',
+                      borderLeft: `3px solid ${color}`,
+                      borderRadius: '4px'
+                    }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.74rem', color }}>{issue.title}</div>
+                      <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.4 }}>
+                        {issue.detail}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{
+                fontSize: '0.75rem',
+                color: 'rgba(255,255,255,0.6)',
+                marginBottom: result.supportedProtocols?.length ? '0.7rem' : 0
+              }}>
+                Sin incidencias de confianza.
+              </div>
+            )}
+            {result.supportedProtocols?.length > 0 && (
+              <div>
+                <SectionLabel icon="pi-shield">Protocolos</SectionLabel>
+                <ProtocolChips protocols={result.supportedProtocols} />
+              </div>
+            )}
+          </div>
+
+          {cert && (
+            <div style={panelStyle}>
+              <SectionLabel icon="pi-id-card">Certificado</SectionLabel>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                gap: '0.55rem 0.75rem',
+                marginBottom: '0.55rem'
+              }}>
+                <IdentityField label="Sujeto" value={cert.subjectDn || cert.subject?.CN} />
+                <IdentityField label="Emisor" value={cert.issuerDn || cert.issuer?.O || cert.issuer?.CN} />
+                <IdentityField label="Firma" value={cert.signatureAlgorithm} />
+                <IdentityField label="Clave" value={keyLabel} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginBottom: '0.5rem' }}>
+                {cert.fingerprint256 && (
+                  <FingerprintRow
+                    label="SHA-256"
+                    value={cert.fingerprint256}
+                    onCopied={(ok) => notify(ok, 'Fingerprint copiado', 'No se pudo copiar')}
+                  />
+                )}
+                {cert.fingerprint && (
+                  <FingerprintRow
+                    label="SHA-1"
+                    value={cert.fingerprint}
+                    onCopied={(ok) => notify(ok, 'Fingerprint copiado', 'No se pudo copiar')}
+                  />
                 )}
               </div>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.8)', marginBottom: '0.15rem' }}>
-                Score
-              </div>
-              <div style={{
-                fontSize: '1.5rem',
-                fontWeight: '700',
-                color: securityScore >= 80 ? '#22c55e' : securityScore >= 60 ? '#f59e0b' : '#ef4444',
-                lineHeight: 1
-              }}>
-                {securityScore}
-                <span style={{ fontSize: '0.9rem', opacity: 0.7 }}>/100</span>
-              </div>
-            </div>
-          </div>
-
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
-            gap: '0.5rem',
-            marginTop: '0.75rem'
-          }}>
-            <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '6px', padding: '0.5rem 0.75rem' }}>
-              <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.8)', marginBottom: '0.25rem' }}>
-                {expiryNegative ? 'Expirado hace' : 'Expira en'}
-              </div>
-              <div style={{
-                fontSize: '1.1rem',
-                fontWeight: '700',
-                color: expiryColor,
-                marginBottom: '0.25rem'
-              }}>
-                {typeof daysUntilExpiry === 'number' ? `${Math.abs(daysUntilExpiry)} dias` : 'N/A'}
-              </div>
-              <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '3px', height: '4px', overflow: 'hidden' }}>
-                <div style={{
-                  background: expiryColor,
-                  height: '100%',
-                  width: `${Math.min(100, Math.max(0, (daysUntilExpiry / 365) * 100))}%`
-                }} />
-              </div>
-            </div>
-
-            {result.protocols && (
-              <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '6px', padding: '0.5rem 0.75rem' }}>
-                <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.8)', marginBottom: '0.25rem' }}>
-                  Conexion
-                </div>
-                <div style={{ fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.15rem', color: '#60a5fa' }}>
-                  {result.protocols.version || 'N/A'}
-                </div>
-                <div style={{
-                  fontSize: '0.65rem',
-                  color: 'rgba(255,255,255,0.7)',
-                  fontFamily: 'monospace',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}>
-                  {result.protocols.cipher || 'N/A'}
-                </div>
-              </div>
-            )}
-
-            <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '6px', padding: '0.5rem 0.75rem' }}>
-              <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.8)', marginBottom: '0.25rem' }}>
-                Riesgo
-              </div>
-              <div style={{
-                fontSize: '1rem',
-                fontWeight: '700',
-                color: riskColor,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.35rem'
-              }}>
-                <i className="pi pi-exclamation-triangle" style={{ fontSize: '0.9rem' }} />
-                {riskLevel}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {result.trust?.issues?.length > 0 && (
-          <div style={{ marginBottom: '1rem' }}>
-            <div style={{
-              fontWeight: '600',
-              fontSize: '0.9rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              color: '#f59e0b',
-              marginBottom: '0.6rem'
-            }}>
-              <i className="pi pi-info-circle" style={{ fontSize: '0.9rem' }} />
-              Diagnostico de confianza
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-              {result.trust.issues.map((issue, idx) => {
-                const color = ISSUE_COLOR[issue.severity] || ISSUE_COLOR.high;
-                return (
-                  <div key={idx} style={{
-                    padding: '0.6rem 0.75rem',
-                    background: 'rgba(0,0,0,0.2)',
-                    borderLeft: `3px solid ${color}`,
-                    borderRadius: '4px'
-                  }}>
-                    <div style={{ fontWeight: '700', fontSize: '0.8rem', color, marginBottom: '0.2rem' }}>
-                      {issue.title}
-                    </div>
-                    <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.85)', lineHeight: 1.45 }}>
-                      {issue.detail}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {result.certificate && (
-          <div style={{
-            marginBottom: '1rem',
-            padding: '0.75rem',
-            background: 'rgba(59, 130, 246, 0.08)',
-            border: '1px solid rgba(59, 130, 246, 0.25)',
-            borderRadius: '8px'
-          }}>
-            <div style={{
-              fontWeight: '600',
-              fontSize: '0.9rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              color: '#60a5fa',
-              marginBottom: '0.5rem'
-            }}>
-              <i className="pi pi-id-card" style={{ fontSize: '0.9rem' }} />
-              Identidad del certificado
-            </div>
-            <div style={{...statItemStyle, color: 'rgba(255,255,255,0.9)'}}>
-              <span style={{ color: 'rgba(255,255,255,0.8)' }}>Sujeto:</span>
-              <strong style={{ color: '#ffffff' }}>{result.certificate.subjectDn || result.certificate.subject?.CN || 'N/A'}</strong>
-            </div>
-            <div style={{...statItemStyle, color: 'rgba(255,255,255,0.9)'}}>
-              <span style={{ color: 'rgba(255,255,255,0.8)' }}>Emisor:</span>
-              <strong style={{ color: '#ffffff' }}>{result.certificate.issuerDn || result.certificate.issuer?.O || result.certificate.issuer?.CN || 'N/A'}</strong>
-            </div>
-            <div style={{...statItemStyle, color: 'rgba(255,255,255,0.9)'}}>
-              <span style={{ color: 'rgba(255,255,255,0.8)' }}>Vigencia:</span>
-              <strong style={{ color: '#ffffff' }}>{result.certificate.validFrom} — {result.certificate.validTo}</strong>
-            </div>
-            {result.certificate.signatureAlgorithm && (
-              <div style={{...statItemStyle, color: 'rgba(255,255,255,0.9)'}}>
-                <span style={{ color: 'rgba(255,255,255,0.8)' }}>Firma:</span>
-                <strong style={{ color: '#ffffff' }}>{result.certificate.signatureAlgorithm}</strong>
-              </div>
-            )}
-            {result.certificate.publicKey && (
-              <div style={{...statItemStyle, color: 'rgba(255,255,255,0.9)'}}>
-                <span style={{ color: 'rgba(255,255,255,0.8)' }}>Clave publica:</span>
-                <strong style={{ color: '#ffffff' }}>
-                  {result.certificate.publicKey.type || 'N/A'}
-                  {result.certificate.publicKey.bits ? ` (${result.certificate.publicKey.bits} bits)` : ''}
-                </strong>
-              </div>
-            )}
-            {result.certificate.fingerprint256 && (
-              <div style={{...statItemStyle, color: 'rgba(255,255,255,0.9)'}}>
-                <span style={{ color: 'rgba(255,255,255,0.8)' }}>SHA-256:</span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', minWidth: 0 }}>
-                  <strong style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: '#ffffff', wordBreak: 'break-all' }}>
-                    {result.certificate.fingerprint256}
-                  </strong>
-                  <CopyIconButton
-                    value={result.certificate.fingerprint256}
-                    tooltip="Copiar SHA-256"
-                    onCopied={(ok) => notify(ok, 'Fingerprint copiado', 'No se pudo copiar')}
-                  />
-                </span>
-              </div>
-            )}
-            {result.certificate.fingerprint && (
-              <div style={{...statItemStyle, color: 'rgba(255,255,255,0.9)'}}>
-                <span style={{ color: 'rgba(255,255,255,0.8)' }}>SHA-1:</span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', minWidth: 0 }}>
-                  <strong style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: '#ffffff', wordBreak: 'break-all' }}>
-                    {result.certificate.fingerprint}
-                  </strong>
-                  <CopyIconButton
-                    value={result.certificate.fingerprint}
-                    tooltip="Copiar SHA-1"
-                    onCopied={(ok) => notify(ok, 'Fingerprint copiado', 'No se pudo copiar')}
-                  />
-                </span>
-              </div>
-            )}
-            <div style={{ marginTop: '0.6rem' }}>
-              <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.7)', marginBottom: '0.35rem' }}>
+              <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.45)', marginBottom: '0.3rem' }}>
                 SAN {hostnameMatch ? (hostnameMatch.matches ? '(coincide con el host)' : '(ninguno coincide con el host)') : ''}
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                {(result.certificate.sans || result.certificate.subjectAltNames || []).length === 0 && (
-                  <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.55)' }}>Sin SAN</span>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                {sans.length === 0 && (
+                  <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)' }}>Sin SAN</span>
                 )}
-                {(result.certificate.sans && result.certificate.sans.length
-                  ? result.certificate.sans.map((san) => san.raw || san.value)
-                  : (result.certificate.subjectAltNames || [])
-                ).map((san, idx) => {
+                {sans.map((san, idx) => {
                   const isMatch = matchedSan && String(san).toLowerCase().includes(String(matchedSan).toLowerCase());
                   return (
                     <span key={idx} style={{
-                      fontSize: '0.72rem',
+                      fontSize: '0.68rem',
                       fontFamily: 'monospace',
-                      padding: '0.15rem 0.45rem',
+                      padding: '0.12rem 0.4rem',
                       borderRadius: '999px',
                       background: isMatch ? 'rgba(34, 197, 94, 0.2)' : 'rgba(255,255,255,0.08)',
                       border: `1px solid ${isMatch ? '#22c55e' : 'rgba(255,255,255,0.12)'}`,
@@ -490,114 +632,15 @@ const SslCheckerPanel = ({ isMobile = false }) => {
                 })}
               </div>
             </div>
-          </div>
-        )}
-
-        {result.supportedProtocols && result.supportedProtocols.length > 0 && (
-          <>
-            <div style={{
-              marginTop: '0.25rem',
-              marginBottom: '0.75rem',
-              fontWeight: '600',
-              fontSize: '0.9rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              color: '#60a5fa'
-            }}>
-              <i className="pi pi-shield" style={{ fontSize: '0.9rem' }} />
-              Protocolos soportados
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
-              {result.supportedProtocols.map((proto, idx) => {
-                let bgColor;
-                let borderColor;
-                let iconClass;
-                let statusText;
-                if (proto.name === 'TLSv1.3' || proto.name === 'TLSv1.2') {
-                  bgColor = 'rgba(34, 197, 94, 0.1)';
-                  borderColor = '#22c55e';
-                  iconClass = 'pi-check-circle';
-                  statusText = 'SEGURO';
-                } else if (proto.name === 'TLSv1.1' || proto.name === 'TLSv1.0') {
-                  bgColor = 'rgba(245, 158, 11, 0.1)';
-                  borderColor = '#f59e0b';
-                  iconClass = 'pi-exclamation-circle';
-                  statusText = 'OBSOLETO';
-                } else {
-                  bgColor = 'rgba(239, 68, 68, 0.1)';
-                  borderColor = '#ef4444';
-                  iconClass = 'pi-times-circle';
-                  statusText = 'INSEGURO';
-                }
-
-                return (
-                  <div key={idx} style={{
-                    background: bgColor,
-                    border: `1.5px solid ${borderColor}`,
-                    borderRadius: '6px',
-                    padding: '0.5rem 0.75rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap',
-                    gap: '0.5rem'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: '150px' }}>
-                      <i className={`pi ${iconClass}`} style={{ color: borderColor, fontSize: '0.95rem' }} />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.15rem', color: borderColor }}>
-                          {proto.name}
-                        </div>
-                        {proto.cipher && (
-                          <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.7)', fontFamily: 'monospace' }}>
-                            {proto.cipher.name}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <Badge
-                      value={statusText}
-                      style={{
-                        fontSize: '0.65rem',
-                        padding: '0.2rem 0.5rem',
-                        fontWeight: '600',
-                        background: borderColor,
-                        border: 'none'
-                      }}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
+          )}
+        </div>
 
         {result.testedProtocols && result.testedProtocols.length > 0 && (
-          <details style={{ marginTop: '0.5rem', marginBottom: '0.75rem' }}>
-            <summary style={{
-              cursor: 'pointer',
-              fontWeight: '600',
-              fontSize: '0.85rem',
-              padding: '0.5rem 0.75rem',
-              background: 'rgba(59, 130, 246, 0.1)',
-              borderRadius: '6px',
-              marginBottom: '0.5rem',
-              userSelect: 'none',
-              listStyle: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              color: 'rgba(255,255,255,0.9)'
-            }}>
-              <i className="pi pi-chevron-right" style={{ fontSize: '0.7rem' }} />
-              <span>Todos los protocolos probados ({result.testedProtocols.length})</span>
-            </summary>
+          <CollapsibleBlock title={`Todos los protocolos probados (${result.testedProtocols.length})`}>
             <div style={{
               display: 'grid',
               gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
-              gap: '0.5rem',
-              marginTop: '0.5rem'
+              gap: '0.45rem'
             }}>
               {result.testedProtocols.map((proto, idx) => {
                 let icon = 'pi-circle';
@@ -614,22 +657,22 @@ const SslCheckerPanel = ({ isMobile = false }) => {
                 }
                 return (
                   <div key={idx} style={{
-                    padding: '0.75rem',
+                    padding: '0.55rem 0.65rem',
                     background: 'rgba(0,0,0,0.15)',
                     borderRadius: '6px',
-                    fontSize: '0.85rem'
+                    fontSize: '0.8rem'
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                      <i className={`pi ${icon}`} style={{ color, fontSize: '0.85rem' }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <i className={`pi ${icon}`} style={{ color, fontSize: '0.8rem' }} />
                       <strong style={{ color: '#ffffff' }}>{proto.name}</strong>
                     </div>
                     {proto.supported && proto.cipher && (
-                      <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)', marginLeft: '1.5rem' }}>
+                      <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.65)', marginLeft: '1.3rem' }}>
                         {proto.cipher.name}
                       </div>
                     )}
                     {!proto.supported && proto.error && (
-                      <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', marginLeft: '1.5rem' }}>
+                      <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.55)', fontStyle: 'italic', marginLeft: '1.3rem' }}>
                         {proto.error}
                       </div>
                     )}
@@ -637,188 +680,119 @@ const SslCheckerPanel = ({ isMobile = false }) => {
                 );
               })}
             </div>
-          </details>
+          </CollapsibleBlock>
         )}
 
         {result.ciphers && result.ciphers.length > 0 && (
-          <details style={{ marginTop: '0.5rem', marginBottom: '0.75rem' }}>
-            <summary style={{
-              cursor: 'pointer',
-              fontWeight: '600',
-              fontSize: '0.85rem',
-              padding: '0.5rem 0.75rem',
-              background: 'rgba(59, 130, 246, 0.1)',
-              borderRadius: '6px',
-              marginBottom: '0.5rem',
-              userSelect: 'none',
-              listStyle: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              color: 'rgba(255,255,255,0.9)'
-            }}>
-              <i className="pi pi-chevron-right" style={{ fontSize: '0.7rem' }} />
-              <span>Ciphers detectados ({result.ciphers.length})</span>
-            </summary>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+          <CollapsibleBlock title={`Ciphers detectados (${result.ciphers.length})`}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
               {result.ciphers.map((cipher, idx) => (
                 <div key={idx} style={{
-                  padding: '0.75rem',
+                  padding: '0.55rem 0.65rem',
                   background: 'rgba(59, 130, 246, 0.1)',
                   borderRadius: '6px',
                   borderLeft: '3px solid #3b82f6',
-                  fontSize: '0.85rem'
+                  fontSize: '0.8rem'
                 }}>
-                  <div style={{ fontWeight: '600', marginBottom: '0.25rem', color: '#ffffff' }}>
+                  <div style={{ fontWeight: 600, color: '#ffffff' }}>
                     {cipher.name}
                     {cipher.version && (
-                      <span style={{ color: 'rgba(255,255,255,0.7)', marginLeft: '0.5rem', fontWeight: '400' }}>
+                      <span style={{ color: 'rgba(255,255,255,0.65)', marginLeft: '0.4rem', fontWeight: 400 }}>
                         ({cipher.version})
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.65)' }}>
                     Protocolos: {(cipher.protocols || []).join(', ')}
                   </div>
                 </div>
               ))}
             </div>
-          </details>
+          </CollapsibleBlock>
         )}
 
         {result.chain && result.chain.length > 0 && (
-          <details style={{ marginTop: '0.5rem', marginBottom: '0.75rem' }}>
-            <summary style={{
-              cursor: 'pointer',
-              fontWeight: '600',
-              fontSize: '0.85rem',
-              padding: '0.5rem 0.75rem',
-              background: 'rgba(59, 130, 246, 0.1)',
-              borderRadius: '6px',
-              marginBottom: '0.5rem',
-              userSelect: 'none',
-              listStyle: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              color: 'rgba(255,255,255,0.9)'
-            }}>
-              <i className="pi pi-chevron-right" style={{ fontSize: '0.7rem' }} />
-              <span>Cadena de certificados ({result.chain.length})</span>
-            </summary>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
+          <CollapsibleBlock title={`Cadena de certificados (${result.chain.length})`}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
               {result.chain.map((chainCert, idx) => (
                 <div key={idx} style={{
-                  padding: '1rem',
+                  padding: '0.7rem',
                   background: 'rgba(0,0,0,0.2)',
                   borderRadius: '8px',
                   borderLeft: '3px solid #3b82f6',
-                  fontSize: '0.85rem'
+                  fontSize: '0.8rem'
                 }}>
-                  <div style={{ fontWeight: '700', marginBottom: '0.75rem', fontSize: '0.95rem', color: '#60a5fa' }}>
+                  <div style={{ fontWeight: 700, marginBottom: '0.45rem', color: '#60a5fa' }}>
                     {chainCert.role || `Certificado ${idx + 1}`}
                   </div>
-                  <div style={{...statItemStyle, color: 'rgba(255,255,255,0.9)'}}>
-                    <span style={{ color: 'rgba(255,255,255,0.8)' }}>Sujeto:</span>
+                  <div style={{ ...statItemStyle, color: 'rgba(255,255,255,0.9)' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.7)' }}>Sujeto:</span>
                     <strong style={{ color: '#ffffff' }}>{chainCert.subjectDn || chainCert.subject?.CN || chainCert.subject?.O || 'N/A'}</strong>
                   </div>
-                  <div style={{...statItemStyle, color: 'rgba(255,255,255,0.9)'}}>
-                    <span style={{ color: 'rgba(255,255,255,0.8)' }}>Emisor:</span>
+                  <div style={{ ...statItemStyle, color: 'rgba(255,255,255,0.9)' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.7)' }}>Emisor:</span>
                     <strong style={{ color: '#ffffff' }}>{chainCert.issuerDn || chainCert.issuer?.O || chainCert.issuer?.CN || 'N/A'}</strong>
                   </div>
                   {chainCert.validFrom && (
-                    <div style={{...statItemStyle, color: 'rgba(255,255,255,0.9)'}}>
-                      <span style={{ color: 'rgba(255,255,255,0.8)' }}>Valido desde:</span>
+                    <div style={{ ...statItemStyle, color: 'rgba(255,255,255,0.9)' }}>
+                      <span style={{ color: 'rgba(255,255,255,0.7)' }}>Valido desde:</span>
                       <strong style={{ color: '#ffffff' }}>{chainCert.validFrom}</strong>
                     </div>
                   )}
                   {chainCert.validTo && (
-                    <div style={{...statItemStyle, color: 'rgba(255,255,255,0.9)'}}>
-                      <span style={{ color: 'rgba(255,255,255,0.8)' }}>Valido hasta:</span>
+                    <div style={{ ...statItemStyle, color: 'rgba(255,255,255,0.9)' }}>
+                      <span style={{ color: 'rgba(255,255,255,0.7)' }}>Valido hasta:</span>
                       <strong style={{ color: '#ffffff' }}>{chainCert.validTo}</strong>
                     </div>
                   )}
                   {chainCert.fingerprint256 && (
-                    <div style={{...statItemStyle, color: 'rgba(255,255,255,0.9)'}}>
-                      <span style={{ color: 'rgba(255,255,255,0.8)' }}>SHA-256:</span>
-                      <strong style={{ fontSize: '0.72rem', fontFamily: 'monospace', color: '#ffffff' }}>{chainCert.fingerprint256}</strong>
+                    <div style={{ ...statItemStyle, color: 'rgba(255,255,255,0.9)' }}>
+                      <span style={{ color: 'rgba(255,255,255,0.7)' }}>SHA-256:</span>
+                      <strong style={{ fontSize: '0.7rem', fontFamily: 'monospace', color: '#ffffff' }}>{chainCert.fingerprint256}</strong>
                     </div>
                   )}
                 </div>
               ))}
             </div>
-          </details>
+          </CollapsibleBlock>
         )}
 
-        {result.certificate?.pem && (
-          <details style={{ marginTop: '0.5rem', marginBottom: '0.75rem' }}>
-            <summary style={{
-              cursor: 'pointer',
-              fontWeight: '600',
-              fontSize: '0.85rem',
-              padding: '0.5rem 0.75rem',
-              background: 'rgba(59, 130, 246, 0.1)',
-              borderRadius: '6px',
-              marginBottom: '0.5rem',
-              userSelect: 'none',
-              listStyle: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              color: 'rgba(255,255,255,0.9)'
-            }}>
-              <i className="pi pi-chevron-right" style={{ fontSize: '0.7rem' }} />
-              <span>PEM del certificado</span>
-            </summary>
+        {cert?.pem && (
+          <CollapsibleBlock title="PEM del certificado">
             <pre style={{
               margin: 0,
-              padding: '0.75rem',
+              padding: '0.65rem',
               background: 'rgba(0,0,0,0.35)',
               borderRadius: '6px',
-              fontSize: '0.7rem',
+              fontSize: '0.68rem',
               fontFamily: 'monospace',
               whiteSpace: 'pre-wrap',
               wordBreak: 'break-all',
               color: 'rgba(255,255,255,0.85)'
-            }}>{result.certificate.pem}</pre>
-          </details>
+            }}>{cert.pem}</pre>
+          </CollapsibleBlock>
         )}
 
-        {result.security && result.security.recommendations && result.security.recommendations.length > 0 && (
+        {recommendations.length > 0 && (
           <div style={{
-            background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%)',
-            border: '1.5px solid #f59e0b',
+            background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(245, 158, 11, 0.04) 100%)',
+            border: '1px solid #f59e0b66',
             borderRadius: '8px',
-            padding: '0.75rem',
-            marginBottom: '1rem',
-            marginTop: '1rem'
+            padding: '0.6rem 0.7rem',
+            marginTop: '0.5rem'
           }}>
-            <div style={{
-              fontWeight: '600',
-              fontSize: '0.85rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              marginBottom: '0.75rem',
-              color: '#f59e0b'
-            }}>
-              <i className="pi pi-exclamation-triangle" style={{ fontSize: '1rem' }} />
-              Recomendaciones de seguridad
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {result.security.recommendations.map((rec, idx) => (
+            <SectionLabel icon="pi-exclamation-triangle" color="#f59e0b">Recomendaciones</SectionLabel>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              {recommendations.map((rec, idx) => (
                 <div key={idx} style={{
-                  padding: '0.6rem 0.75rem',
-                  background: 'rgba(0, 0, 0, 0.2)',
+                  padding: '0.4rem 0.5rem',
+                  background: 'rgba(0, 0, 0, 0.18)',
                   borderLeft: '3px solid #f59e0b',
                   borderRadius: '4px',
-                  fontSize: '0.8rem',
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '0.5rem'
+                  fontSize: '0.74rem',
+                  color: 'rgba(255,255,255,0.88)'
                 }}>
-                  <i className="pi pi-info-circle" style={{ color: '#f59e0b', fontSize: '0.85rem', marginTop: '0.1rem', flexShrink: 0 }} />
-                  <span style={{ flex: 1, color: 'rgba(255,255,255,0.9)' }}>{rec}</span>
+                  {rec}
                 </div>
               ))}
             </div>
@@ -826,7 +800,7 @@ const SslCheckerPanel = ({ isMobile = false }) => {
         )}
 
         {result.error && (
-          <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '6px', color: '#ef4444' }}>
+          <div style={{ marginTop: '0.7rem', padding: '0.65rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '6px', color: '#ef4444' }}>
             <strong>Error:</strong> {result.error}
           </div>
         )}
