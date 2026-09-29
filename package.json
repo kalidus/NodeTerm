@@ -39,7 +39,7 @@
   "build": {
     "appId": "com.electron.nodeterm",
     "productName": "NodeTerm",
-    "copyright": "Copyright © 2024",
+    "copyright": "Copyright (C) 2024-2026 kalidus",
     "compression": "normal",
     "files": [
       "dist/",
@@ -49,6 +49,8 @@
       "preload.js",
       "system-stats-worker.js",
       "package.json",
+      "LICENSE",
+      "THIRD_PARTY_NOTICES",
       "src/main/**",
       "src/shared/**",
       "src/services/**",
@@ -65,7 +67,7 @@
       "!**/example/**",
       "!**/.github/**",
       "!**/.git/**",
-      "!**/LICENSE*",
+      "!node_modules/**/LICENSE*",
       "!**/CHANGELOG*",
       "!**/README*",
       "!**/HISTORY*",
@@ -141,6 +143,11 @@
       "binaries/**",
       "node_modules/ssh2-promise/**",
       "node_modules/ssh2/**"
+    ],
+    "extraFiles": [
+      "LICENSE",
+      "LICENSE-COMMERCIAL.md",
+      "THIRD_PARTY_NOTICES"
     ],
     "win": {
       "target": [
@@ -286,7 +293,7 @@
     "node": ">=24 <25"
   },
   "keywords": [],
-  "license": "ISC",
+  "license": "SEE LICENSE IN LICENSE",
   "description": "Aplicación de escritorio multiplataforma con Electron y PrimeReact",
   "dependencies": {
     "@devolutions/iron-remote-desktop": "^0.11.0",

@@ -1,0 +1,50 @@
+NodeTerm includes third-party software. Those components stay under their
+own licenses. They are not licensed under the NodeTerm commercial terms
+in LICENSE-COMMERCIAL.md.
+
+This list covers the main runtime pieces. The full dependency tree is in
+package-lock.json and in each package LICENSE file.
+
+Electron
+Copyright (c) Electron contributors
+License: MIT
+https://github.com/electron/electron
+
+Chromium (bundled by Electron)
+Copyright The Chromium Authors
+License: BSD-style and other notices shipped by Electron
+
+@novnc/novnc
+Copyright The noVNC authors
+License: MPL-2.0 (core library; file-level copyleft)
+https://github.com/novnc/noVNC
+
+If NodeTerm is distributed with noVNC, the source of the MPL-covered
+noVNC files (and any modifications to those files) must remain available
+under MPL-2.0.
+
+guacamole-lite
+Copyright guacamole-lite contributors
+License: Apache-2.0
+https://github.com/vadimpronin/guacamole-lite
+
+guacamole-common-js
+Copyright The Apache Software Foundation and package maintainers
+License: Apache-2.0
+https://www.npmjs.com/package/guacamole-common-js
+
+@devolutions/iron-remote-desktop
+@devolutions/iron-remote-desktop-rdp
+Copyright Devolutions and IronRDP contributors
+License: MIT OR Apache-2.0
+https://github.com/Devolutions/IronRDP
+
+Other notable runtime dependencies (typically MIT, BSD-2/3 or Apache-2.0):
+- @xterm/xterm and addons
+- node-pty
+- ssh2 / ssh2-promise / ssh2-sftp-client / node-ssh
+- better-sqlite3
+- React and React DOM
+- PrimeReact, PrimeIcons, PrimeFlex
+
+Copies of those license texts are in node_modules/<package>/ when installed.

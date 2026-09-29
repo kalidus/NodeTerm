@@ -17,7 +17,7 @@
     <a href="#-advanced-ai-ecosystem-integrated-mcp-server"><img src="https://img.shields.io/badge/🤖_AI-MCP_Native-8a2be2?style=flat-square" alt="MCP Server"/></a>
     <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/github/downloads/kalidus/NodeTerm/total?style=flat-square&color=007acc&logo=github&label=Downloads" alt="Total Downloads"/></a>
     <a href="https://github.com/kalidus/NodeTerm/stargazers"><img src="https://img.shields.io/github/stars/kalidus/NodeTerm?style=flat-square&color=ffb900&logo=github&label=Stars" alt="GitHub Stars"/></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="MIT License"/></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-blue?style=flat-square" alt="GPL-3.0 License"/></a>
     <a href="#donate"><img src="https://img.shields.io/badge/Buy_me_a_coffee-☕_Donate-FFDD00?style=flat-square&logo=buy-me-a-coffee&logoColor=black" alt="Donate"/></a>
   </p>
 
@@ -237,4 +237,4 @@ Contributions are welcome! If you'd like to improve NodeTerm:
 
 ## 📄 License
 
-MIT. Made with ❤️ by [kalidus](https://github.com/kalidus).
+GPL-3.0. Commercial licensing: see [LICENSE-COMMERCIAL.md](LICENSE-COMMERCIAL.md). Versions 1.7.6 and earlier remain under ISC. Made by [kalidus](https://github.com/kalidus).

@@ -17,7 +17,7 @@
     <a href="#-servidor-mcp-integrado-model-context-protocol"><img src="https://img.shields.io/badge/🤖_IA-MCP_Native-8a2be2?style=flat-square" alt="MCP Server"/></a>
     <a href="https://github.com/kalidus/NodeTerm/releases"><img src="https://img.shields.io/github/downloads/kalidus/NodeTerm/total?style=flat-square&color=007acc&logo=github&label=Descargas" alt="Descargas Totales"/></a>
     <a href="https://github.com/kalidus/NodeTerm/stargazers"><img src="https://img.shields.io/github/stars/kalidus/NodeTerm?style=flat-square&color=ffb900&logo=github&label=Stars" alt="GitHub Stars"/></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/Licencia-MIT-green?style=flat-square" alt="Licencia MIT"/></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/Licencia-GPL--3.0-blue?style=flat-square" alt="Licencia GPL-3.0"/></a>
     <a href="#donar"><img src="https://img.shields.io/badge/Invitar_un_café-☕_Donar-FFDD00?style=flat-square&logo=buy-me-a-coffee&logoColor=black" alt="Donar"/></a>
   </p>
 
@@ -271,4 +271,4 @@ Las PRs y sugerencias son bienvenidas. Usa Issues y Discussions segun el tipo de
 
 ## 📄 Licencia
 
-MIT. Hecho con ❤️ por [kalidus](https://github.com/kalidus).
+GPL-3.0. Licencia comercial: ver [LICENSE-COMMERCIAL.md](LICENSE-COMMERCIAL.md). Versiones 1.7.6 e inferiores siguen en ISC. Hecho por [kalidus](https://github.com/kalidus).
