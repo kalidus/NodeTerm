@@ -30,6 +30,20 @@ const ISSUE_COLOR = {
   low: '#94a3b8'
 };
 
+const GRADE_CAP_REASON = {
+  incomplete_chain: 'Limitada por cadena incompleta',
+  self_signed: 'Limitada por certificado autofirmado',
+  untrusted_ca: 'Limitada por CA no confiable',
+  hostname_mismatch: 'Limitada por hostname',
+  expired: 'Limitada por certificado expirado',
+  not_yet_valid: 'Limitada por vigencia futura',
+  unknown: 'Limitada por confianza'
+};
+
+function gradeCapReason(status) {
+  return GRADE_CAP_REASON[status] || null;
+}
+
 function getTrustMeta(result) {
   const status = result?.trust?.status
     || (result?.certificate?.isValid ? 'trusted' : 'unknown');
@@ -222,7 +236,7 @@ const SessionFact = ({ label, value, sub, color }) => (
   </div>
 );
 
-const ScoreRing = ({ score, grade, breakdown }) => {
+const ScoreRing = ({ score, grade, breakdown, gradeReason }) => {
   const color = scoreColor(score);
   const letterColor = gradeColor(grade);
   const deg = Math.min(100, Math.max(0, Number(score) || 0)) * 3.6;
@@ -257,7 +271,10 @@ const ScoreRing = ({ score, grade, breakdown }) => {
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem' }}>
             {grade && (
-              <span style={{ fontSize: '1.45rem', fontWeight: 800, color: letterColor, lineHeight: 1 }}>
+              <span
+                title="El score mide protocolo, clave y cipher. La letra baja si falla la confianza."
+                style={{ fontSize: '1.45rem', fontWeight: 800, color: letterColor, lineHeight: 1, cursor: 'help' }}
+              >
                 {grade}
               </span>
             )}
@@ -270,6 +287,17 @@ const ScoreRing = ({ score, grade, breakdown }) => {
           }}>
             Nota de cifrado
           </div>
+          {gradeReason && (
+            <div style={{
+              fontSize: '0.62rem',
+              fontWeight: 600,
+              color: letterColor,
+              marginTop: '0.18rem',
+              lineHeight: 1.3
+            }}>
+              {gradeReason}
+            </div>
+          )}
         </div>
       </div>
       {breakdown && (
@@ -334,9 +362,31 @@ const ProtocolChips = ({ protocols }) => (
   </div>
 );
 
+const InUseBadge = () => (
+  <span style={{
+    fontSize: '0.55rem',
+    fontWeight: 700,
+    letterSpacing: '0.04em',
+    color: '#86efac',
+    background: 'rgba(34, 197, 94, 0.18)',
+    border: '1px solid rgba(34, 197, 94, 0.4)',
+    borderRadius: '999px',
+    padding: '0.08rem 0.38rem'
+  }}>
+    EN USO
+  </span>
+);
+
 const IdentityField = ({ label, value }) => (
   <div style={{ minWidth: 0 }}>
-    <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.45)', marginBottom: '0.12rem' }}>{label}</div>
+    <div style={{
+      fontSize: '0.8rem',
+      fontWeight: 700,
+      color: 'rgba(255,255,255,0.92)',
+      marginBottom: '0.2rem'
+    }}>
+      {label}
+    </div>
     <div style={{
       fontSize: '0.74rem',
       fontWeight: 600,
@@ -509,6 +559,10 @@ const SslCheckerPanel = ({ isMobile = false }) => {
     const securityScore = typeof result.security?.score === 'number' ? result.security.score : 0;
     const securityGrade = result.security?.grade || null;
     const securityBreakdown = result.security?.breakdown || null;
+    const trustStatus = result?.trust?.status
+      || (result?.certificate?.isValid ? 'trusted' : 'unknown');
+    const gradeReason = gradeCapReason(trustStatus);
+    const negotiatedCipher = result.protocols?.cipher || '';
     const expiryNegative = typeof daysUntilExpiry === 'number' && daysUntilExpiry < 0;
     const expiryColor = expiryNegative || daysUntilExpiry < 30
       ? '#ef4444'
@@ -616,7 +670,12 @@ const SslCheckerPanel = ({ isMobile = false }) => {
             gridTemplateColumns: isMobile ? '1fr' : 'minmax(240px, 1fr) minmax(240px, 1fr)',
             gap: isMobile ? '0.85rem' : '1.1rem'
           }}>
-            <ScoreRing score={securityScore} grade={securityGrade} breakdown={securityBreakdown} />
+            <ScoreRing
+              score={securityScore}
+              grade={securityGrade}
+              breakdown={securityBreakdown}
+              gradeReason={gradeReason}
+            />
             <div style={{
               minWidth: 0,
               paddingLeft: isMobile ? 0 : '1rem',
@@ -642,7 +701,6 @@ const SslCheckerPanel = ({ isMobile = false }) => {
                 <SessionFact
                   label="Protocolo negociado"
                   value={result.protocols?.version || 'N/A'}
-                  sub={result.protocols?.cipher || ''}
                   color="#60a5fa"
                 />
                 <SessionFact
@@ -651,12 +709,26 @@ const SslCheckerPanel = ({ isMobile = false }) => {
                   sub={cert?.signatureAlgorithm || ''}
                   color="#c4b5fd"
                 />
+                <SessionFact
+                  label="Cipher usado"
+                  value={(
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      <span>{negotiatedCipher || 'N/A'}</span>
+                      {negotiatedCipher ? <InUseBadge /> : null}
+                    </span>
+                  )}
+                  color="#86efac"
+                />
               </div>
             </div>
           </div>
         </div>
 
-        <div style={{ ...panelStyle, marginBottom: '0.65rem' }}>
+        <div style={{
+          ...panelStyle,
+          marginBottom: '0.65rem',
+          borderLeft: `3px solid ${trustMeta.color}`
+        }}>
           <div style={{
             display: 'grid',
             gridTemplateColumns: isMobile ? '1fr' : 'minmax(240px, 1fr) minmax(240px, 1fr)',
@@ -773,7 +845,7 @@ const SslCheckerPanel = ({ isMobile = false }) => {
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '0.35rem',
-                  marginBottom: result.supportedProtocols?.length ? '0.7rem' : 0
+                  marginBottom: (result.supportedProtocols?.length || result.ciphers?.length) ? '0.75rem' : 0
                 }}>
                   {issues.map((issue, idx) => {
                     const color = ISSUE_COLOR[issue.severity] || ISSUE_COLOR.high;
@@ -796,12 +868,25 @@ const SslCheckerPanel = ({ isMobile = false }) => {
                 <div style={{
                   fontSize: '0.75rem',
                   color: 'rgba(255,255,255,0.6)',
-                  marginBottom: result.supportedProtocols?.length ? '0.7rem' : 0
+                  marginBottom: (result.supportedProtocols?.length || result.ciphers?.length) ? '0.75rem' : 0
                 }}>
                   Sin incidencias de confianza.
                 </div>
               )}
               {result.supportedProtocols?.length > 0 && (
+                <div style={{ marginBottom: result.ciphers?.length ? '0.7rem' : 0 }}>
+                  <div style={{
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    color: 'rgba(255,255,255,0.92)',
+                    marginBottom: '0.35rem'
+                  }}>
+                    Protocolos soportados
+                  </div>
+                  <ProtocolChips protocols={result.supportedProtocols} />
+                </div>
+              )}
+              {result.ciphers?.length > 0 && (
                 <div>
                   <div style={{
                     fontSize: '0.8rem',
@@ -809,9 +894,48 @@ const SslCheckerPanel = ({ isMobile = false }) => {
                     color: 'rgba(255,255,255,0.92)',
                     marginBottom: '0.35rem'
                   }}>
-                    Protocolos
+                    Ciphers soportados
                   </div>
-                  <ProtocolChips protocols={result.supportedProtocols} />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    {result.ciphers.map((cipher, idx) => {
+                      const isUsed = negotiatedCipher
+                        && String(cipher.name || '').toLowerCase() === String(negotiatedCipher).toLowerCase();
+                      return (
+                        <div key={idx} style={{
+                          padding: '0.4rem 0.5rem',
+                          background: isUsed ? 'rgba(34, 197, 94, 0.12)' : 'rgba(0,0,0,0.2)',
+                          border: isUsed ? '1px solid rgba(34, 197, 94, 0.35)' : '1px solid transparent',
+                          borderRadius: '6px'
+                        }}>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '0.4rem',
+                            flexWrap: 'wrap'
+                          }}>
+                            <span style={{
+                              fontSize: '0.74rem',
+                              fontWeight: 600,
+                              fontFamily: 'monospace',
+                              color: '#ffffff',
+                              wordBreak: 'break-word'
+                            }}>
+                              {cipher.name}
+                            </span>
+                            {isUsed ? <InUseBadge /> : null}
+                          </div>
+                          <div style={{
+                            fontSize: '0.62rem',
+                            color: 'rgba(255,255,255,0.5)',
+                            marginTop: '0.15rem'
+                          }}>
+                            {(cipher.protocols || []).join(', ') || cipher.version || ''}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
