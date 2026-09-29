@@ -3466,9 +3466,9 @@ const Sidebar = React.memo(({
       {viewMode === 'tools' && (
         <Suspense fallback={<TabChunkFallback />}>
           <LazyToolsSidebar
-            onOpenTool={(toolId, toolLabel) => {
+            onOpenTool={(toolId, toolLabel, mode) => {
               window.dispatchEvent(new CustomEvent('open-network-tool', {
-                detail: { toolId, toolLabel }
+                detail: { toolId, toolLabel, mode: mode || 'reuse' }
               }));
             }}
             iconTheme={iconTheme}

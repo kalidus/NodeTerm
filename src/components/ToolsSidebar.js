@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Tree } from 'primereact/tree';
 import { iconThemes } from '../themes/icon-themes';
 import { themeManager, getThemeGroupColorPalette } from '../utils/themeManager';
@@ -102,6 +102,16 @@ const ToolsSidebar = ({
   );
   const [hoveredTool, setHoveredTool] = useState(null);
   const [selectedToolKey, setSelectedToolKey] = useState(null);
+  const toolClickTimerRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (toolClickTimerRef.current) {
+        clearTimeout(toolClickTimerRef.current);
+        toolClickTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const [themePalette, setThemePalette] = useState(() => {
     return getThemeGroupColorPalette(themeManager.currentTheme?.colors);
@@ -247,6 +257,30 @@ const ToolsSidebar = ({
       <div 
         onMouseEnter={() => setHoveredTool(node.key)}
         onMouseLeave={() => setHoveredTool(null)}
+        onClick={(e) => {
+          e.stopPropagation();
+          setSelectedToolKey(node.key);
+          if (toolClickTimerRef.current) {
+            clearTimeout(toolClickTimerRef.current);
+          }
+          toolClickTimerRef.current = setTimeout(() => {
+            toolClickTimerRef.current = null;
+            if (onOpenTool) {
+              onOpenTool(node.key, node.label, 'reuse');
+            }
+          }, 250);
+        }}
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+          if (toolClickTimerRef.current) {
+            clearTimeout(toolClickTimerRef.current);
+            toolClickTimerRef.current = null;
+          }
+          setSelectedToolKey(node.key);
+          if (onOpenTool) {
+            onOpenTool(node.key, node.label, 'new');
+          }
+        }}
         className="flex align-items-center"
         style={{
           padding: '0.1rem 0.25rem',
@@ -365,9 +399,6 @@ const ToolsSidebar = ({
             const node = e.node;
             if (node.isLeaf) {
               setSelectedToolKey(node.key);
-              if (onOpenTool) {
-                onOpenTool(node.key, node.label);
-              }
             }
           }}
           expandedKeys={expandedKeys}

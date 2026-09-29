@@ -753,32 +753,71 @@ export const useGlobalAppEvents = ({
     const handleOpenNetworkTool = (event) => {
       const { toolId, toolLabel } = event.detail || {};
       if (!toolId) return;
+      const mode = event.detail?.mode === 'new' ? 'new' : 'reuse';
+      const label = toolLabel || toolId;
 
-      const allTabs = getAllTabs();
-      const existing = allTabs.find(t => t.type === 'network-tool' && t.toolId === toolId);
+      const applyToolToTab = (tabKey) => {
+        promoteAndActivateTab(tabKey, (prev) =>
+          prev.map(t =>
+            t.key === tabKey
+              ? { ...t, label, toolId }
+              : t
+          )
+        );
+      };
 
-      if (existing) {
-        setOnCreateActivateTabKey(existing.key);
-      } else {
+      const createNewTab = () => {
+        const tabId = `network-tool-${toolId}-${Date.now()}`;
         const newTab = {
-          key: `network-tool-${toolId}-${Date.now()}`,
-          label: toolLabel || toolId,
-          type: 'network-tool',
+          key: tabId,
+          label,
+          type: TAB_TYPES.NETWORK_TOOL,
           toolId,
           groupId: null,
           createdAt: Date.now()
         };
-        setSshTabs(prev => [newTab, ...prev]);
-        setLastOpenedTabKey(newTab.key);
-        setOnCreateActivateTabKey(newTab.key);
+        promoteAndActivateTab(tabId, (prev) => [newTab, ...prev]);
+      };
+
+      if (mode === 'new') {
+        createNewTab();
+        return;
       }
+
+      const activeTab = filteredTabs?.[activeTabIndex];
+      if (activeTab?.type === TAB_TYPES.NETWORK_TOOL) {
+        if (activeTab.toolId === toolId) {
+          return;
+        }
+        applyToolToTab(activeTab.key);
+        return;
+      }
+
+      const allTabs = getAllTabs();
+      const existingSame = allTabs.find(
+        t => t.type === TAB_TYPES.NETWORK_TOOL && t.toolId === toolId
+      );
+      if (existingSame) {
+        activateTabSynchronously(existingSame.key);
+        return;
+      }
+
+      const anyToolTab = allTabs
+        .filter(t => t.type === TAB_TYPES.NETWORK_TOOL)
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+      if (anyToolTab) {
+        applyToolToTab(anyToolTab.key);
+        return;
+      }
+
+      createNewTab();
     };
 
     window.addEventListener('open-network-tool', handleOpenNetworkTool);
     return () => {
       window.removeEventListener('open-network-tool', handleOpenNetworkTool);
     };
-  }, [getAllTabs, setSshTabs, setLastOpenedTabKey, setOnCreateActivateTabKey]);
+  }, [getAllTabs, promoteAndActivateTab, activateTabSynchronously, filteredTabs, activeTabIndex]);
 
   // 16. Abrir configuración como pestaña
   useEffect(() => {

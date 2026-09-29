@@ -4,7 +4,16 @@
 // ============================================
 
 const { fork } = require('child_process');
+const fs = require('fs');
 const path = require('path');
+
+function resolveWorkerExecPath() {
+  const npmNode = process.env.npm_node_execpath;
+  if (npmNode && fs.existsSync(npmNode)) {
+    return npmNode;
+  }
+  return process.execPath;
+}
 
 let statsWorker = null;
 let statsWorkerReady = false;
@@ -14,7 +23,19 @@ let isShuttingDown = false;
 function startStatsWorker() {
   if (statsWorker || isShuttingDown) return;
 
-  statsWorker = fork(path.join(__dirname, '../../../system-stats-worker.js'));
+  const workerPath = path.join(__dirname, '../../../system-stats-worker.js');
+  const execPath = resolveWorkerExecPath();
+  const env = { ...process.env };
+  if (execPath === process.execPath) {
+    env.ELECTRON_RUN_AS_NODE = '1';
+  }
+
+  statsWorker = fork(workerPath, [], {
+    execPath,
+    execArgv: [],
+    silent: true,
+    env
+  });
   statsWorkerReady = true;
   console.log('[MEM] Stats worker arrancado (primer uso)');
 

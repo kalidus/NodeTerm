@@ -13,7 +13,7 @@ const NetworkToolTab = ({ tab }) => {
         background: 'var(--ui-content-bg, #10141c)'
       }}
     >
-      <NetworkToolsDialog standalone={true} toolId={tab.toolId} />
+      <NetworkToolsDialog key={tab.toolId} standalone={true} toolId={tab.toolId} />
     </div>
   );
 };
