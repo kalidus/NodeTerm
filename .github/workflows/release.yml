@@ -32,7 +32,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libarchive-tools rpm
+          sudo apt-get install -y libarchive-tools rpm zsync
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -94,6 +94,75 @@ jobs:
         if: ${{ !startsWith(github.ref, 'refs/tags/v') && inputs.publish_release != true }}
         run: npx electron-builder --publish never
 
+      # electron-builder no embebe gh-releases-zsync. Se reempaqueta con appimagetool
+      # (runtime estatico) y se corrige el sha512 de latest-linux.yml.
+      - name: Embed AppImage update information
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          set -euo pipefail
+          command -v zsyncmake
+          shopt -s nullglob
+          apps=(dist/*.AppImage)
+          if [ "${#apps[@]}" -ne 1 ]; then
+            echo "Se esperaba un AppImage en dist/, encontrados: ${#apps[@]}"
+            printf '%s\n' "${apps[@]:-}"
+            exit 1
+          fi
+          APP="${apps[0]}"
+          BASE="$(basename "$APP")"
+          TOOL_DIR="${RUNNER_TEMP}/appimagetool"
+          mkdir -p "$TOOL_DIR"
+          TOOL="$TOOL_DIR/appimagetool-x86_64.AppImage"
+          curl -fsSL -o "$TOOL" "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage"
+          chmod +x "$TOOL"
+          WORK="$(mktemp -d)"
+          cleanup() { rm -rf "$WORK"; }
+          trap cleanup EXIT
+          cp "$APP" "$WORK/in.AppImage"
+          chmod +x "$WORK/in.AppImage"
+          (cd "$WORK" && ./in.AppImage --appimage-extract)
+          export APPIMAGE_EXTRACT_AND_RUN=1
+          export ARCH=x86_64
+          "$TOOL" -n -u "gh-releases-zsync|kalidus|NodeTerm|latest|NodeTerm-*.AppImage.zsync" "$WORK/squashfs-root" "$WORK/$BASE"
+          if [ ! -f "$WORK/${BASE}.zsync" ]; then
+            echo "appimagetool no genero el fichero zsync"
+            find "$WORK" -name '*.zsync' -print
+            exit 1
+          fi
+          mv -f "$WORK/$BASE" "$APP"
+          mv -f "$WORK/${BASE}.zsync" "dist/${BASE}.zsync"
+          chmod +x "$APP"
+          rm -f dist/*.AppImage.blockmap
+          node scripts/update-appimage-latest-yml.js "$APP" dist/latest-linux.yml
+          INFO="$("$APP" --appimage-updateinformation 2>&1 || true)"
+          printf '%s\n' "$INFO"
+          case "$INFO" in
+            *'gh-releases-zsync|kalidus|NodeTerm|latest|'*) ;;
+            *) echo "La informacion de actualizacion no quedo embebida"; exit 1 ;;
+          esac
+
+      - name: Publish AppImage update metadata
+        if: matrix.os == 'ubuntu-latest' && (startsWith(github.ref, 'refs/tags/v') || inputs.publish_release == true)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          shopt -s nullglob
+          apps=(dist/*.AppImage)
+          if [ "${#apps[@]}" -ne 1 ] || [ ! -f "${apps[0]}.zsync" ] || [ ! -f dist/latest-linux.yml ]; then
+            echo "Faltan el AppImage reempaquetado, su .zsync o latest-linux.yml"
+            exit 1
+          fi
+          APP="${apps[0]}"
+          ids="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" --jq '.assets[] | select(.name | endswith(".AppImage.blockmap")) | .id')"
+          if [ -n "$ids" ]; then
+            for id in $ids; do
+              gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/assets/${id}"
+            done
+          fi
+          gh release upload "$TAG" "$APP" "${APP}.zsync" dist/latest-linux.yml --clobber
+
       - name: Upload Test Artifacts
         if: ${{ !startsWith(github.ref, 'refs/tags/v') && inputs.publish_release != true }}
         uses: actions/upload-artifact@v4
@@ -102,6 +171,7 @@ jobs:
           path: |
             dist/*.exe
             dist/*.AppImage
+            dist/*.zsync
             dist/*.deb
             dist/*.rpm
             dist/*.dmg
