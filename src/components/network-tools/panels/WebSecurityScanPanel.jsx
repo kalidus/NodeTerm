@@ -8,9 +8,11 @@ import { Button } from 'primereact/button';
 import { Badge } from 'primereact/badge';
 import NetworkToolHeader from '../common/NetworkToolHeader';
 import { findToolMetadata, getResultBoxStyle, getStatItemStyle } from '../toolRegistry';
+import { useNetworkToolHistory } from '../../../hooks/useNetworkToolHistory';
 
 const WebSecurityScanPanel = ({ isMobile = false }) => {
   const tool = findToolMetadata('web-security-scan');
+  const history = useNetworkToolHistory('web-security-scan');
   const [webSecurityUrl, setWebSecurityUrl] = useState('');
   const [expandedSections, setExpandedSections] = useState({});
   const [loading, setLoading] = useState(false);
@@ -21,16 +23,16 @@ const WebSecurityScanPanel = ({ isMobile = false }) => {
     setExpandedSections(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const executeWebSecScan = async () => {
-    let url = webSecurityUrl.trim();
+  const executeWebSecScan = async (overrides) => {
+    let url = String(overrides?.url ?? webSecurityUrl).trim();
     if (!url) {
       setError('Por favor, introduce una URL.');
       return;
     }
     if (!/^https?:\/\//i.test(url)) {
       url = `https://${url}`;
-      setWebSecurityUrl(url);
     }
+    setWebSecurityUrl(url);
 
     setLoading(true);
     setError(null);
@@ -47,6 +49,14 @@ const WebSecurityScanPanel = ({ isMobile = false }) => {
 
       if (response) {
         setResult(response);
+        const grade = response.summary?.grade;
+        const score = response.summary?.score;
+        history.record({
+          target: url,
+          params: { url },
+          result: response,
+          summary: [grade, typeof score === 'number' ? `${score}/100` : null].filter(Boolean).join(' · ') || 'Web'
+        });
       } else {
         setError('No se recibieron datos del escáner web');
       }
@@ -343,6 +353,13 @@ const WebSecurityScanPanel = ({ isMobile = false }) => {
       <NetworkToolHeader
         tool={tool}
         isMobile={isMobile}
+        history={history}
+        onViewHistory={(entry) => {
+          setWebSecurityUrl(entry.params.url || entry.target);
+          setError(null);
+          setResult(entry.result || null);
+        }}
+        onRerunHistory={(entry) => executeWebSecScan(entry.params)}
         extraActions={
           result && (
             <Button

@@ -7,17 +7,20 @@ import { Column } from 'primereact/column';
 import { Message } from 'primereact/message';
 import NetworkToolHeader from '../common/NetworkToolHeader';
 import { findToolMetadata, getResultBoxStyle } from '../toolRegistry';
+import { useNetworkToolHistory } from '../../../hooks/useNetworkToolHistory';
 
 const TraceroutePanel = ({ isMobile = false }) => {
   const tool = findToolMetadata('traceroute');
+  const history = useNetworkToolHistory('traceroute');
   const [tracerouteHost, setTracerouteHost] = useState('');
   const [tracerouteMaxHops] = useState(30);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
-  const executeTraceroute = async () => {
-    const trimmed = tracerouteHost.trim();
+  const executeTraceroute = async (overrides) => {
+    const trimmed = String(overrides?.host ?? tracerouteHost).trim();
+    if (overrides?.host != null) setTracerouteHost(String(overrides.host));
     if (!trimmed) {
       setError('Por favor, introduce un host o dirección IP.');
       return;
@@ -38,6 +41,13 @@ const TraceroutePanel = ({ isMobile = false }) => {
 
       if (response) {
         setResult(response);
+        const hops = response.hops?.length || response.results?.length || 0;
+        history.record({
+          target: trimmed,
+          params: { host: trimmed },
+          result: response,
+          summary: hops ? `${hops} hops` : (response.success === false ? 'Error' : 'OK')
+        });
       } else {
         setError('No se recibió respuesta del trazado de ruta.');
       }
@@ -60,6 +70,13 @@ const TraceroutePanel = ({ isMobile = false }) => {
       <NetworkToolHeader
         tool={tool}
         isMobile={isMobile}
+        history={history}
+        onViewHistory={(entry) => {
+          setTracerouteHost(entry.params.host || entry.target);
+          setError(null);
+          setResult(entry.result || null);
+        }}
+        onRerunHistory={(entry) => executeTraceroute(entry.params)}
         extraActions={
           result && (
             <Button

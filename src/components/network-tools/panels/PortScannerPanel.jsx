@@ -7,11 +7,13 @@ import { Column } from 'primereact/column';
 import { Message } from 'primereact/message';
 import NetworkToolHeader from '../common/NetworkToolHeader';
 import { findToolMetadata, getResultBoxStyle } from '../toolRegistry';
+import { useNetworkToolHistory } from '../../../hooks/useNetworkToolHistory';
 
 const DEFAULT_PORTS = '21,22,23,25,53,80,110,143,443,993,995,3306,3389,5432,8080';
 
 const PortScannerPanel = ({ isMobile = false }) => {
   const tool = findToolMetadata('port-scan');
+  const history = useNetworkToolHistory('port-scan');
   const [portScanHost, setPortScanHost] = useState('');
   const [portScanPorts, setPortScanPorts] = useState(DEFAULT_PORTS);
   const [showPortConfig, setShowPortConfig] = useState(false);
@@ -19,8 +21,11 @@ const PortScannerPanel = ({ isMobile = false }) => {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
-  const executePortScan = async () => {
-    const trimmed = portScanHost.trim();
+  const executePortScan = async (overrides) => {
+    const trimmed = String(overrides?.host ?? portScanHost).trim();
+    const ports = String(overrides?.ports ?? portScanPorts).trim() || DEFAULT_PORTS;
+    if (overrides?.host != null) setPortScanHost(String(overrides.host));
+    if (overrides?.ports != null) setPortScanPorts(ports);
     if (!trimmed) {
       setError('Por favor, introduce un host o dirección IP.');
       return;
@@ -36,12 +41,19 @@ const PortScannerPanel = ({ isMobile = false }) => {
 
       const response = await ipc.invoke('network-tools:port-scan', {
         host: trimmed,
-        ports: portScanPorts.trim() || DEFAULT_PORTS,
+        ports,
         timeout: 2000
       });
 
       if (response) {
         setResult(response);
+        const open = response.openPorts?.length || response.ports?.filter((p) => p.open)?.length || 0;
+        history.record({
+          target: trimmed,
+          params: { host: trimmed, ports },
+          result: response,
+          summary: `${open} abiertos`
+        });
       } else {
         setError('No se recibió respuesta del escaneo de puertos.');
       }
@@ -64,6 +76,14 @@ const PortScannerPanel = ({ isMobile = false }) => {
       <NetworkToolHeader
         tool={tool}
         isMobile={isMobile}
+        history={history}
+        onViewHistory={(entry) => {
+          setPortScanHost(entry.params.host || entry.target);
+          if (entry.params.ports) setPortScanPorts(entry.params.ports);
+          setError(null);
+          setResult(entry.result || null);
+        }}
+        onRerunHistory={(entry) => executePortScan(entry.params)}
         extraActions={
           <div style={{ display: 'flex', gap: '0.4rem' }}>
             <Button

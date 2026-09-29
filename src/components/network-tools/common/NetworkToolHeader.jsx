@@ -1,9 +1,18 @@
 import React from 'react';
+import NetworkToolHistoryMenu from './NetworkToolHistoryMenu';
 
 /**
  * NetworkToolHeader - Encabezado unificado para las herramientas de red
  */
-const NetworkToolHeader = ({ tool, children, extraActions, isMobile = false }) => {
+const NetworkToolHeader = ({
+  tool,
+  children,
+  extraActions,
+  isMobile = false,
+  history,
+  onViewHistory,
+  onRerunHistory
+}) => {
   const categoryColor = tool?.categoryColor || '#2196f3';
   const icon = tool?.icon || 'pi pi-cog';
   const label = tool?.label || '';
@@ -51,8 +60,17 @@ const NetworkToolHeader = ({ tool, children, extraActions, isMobile = false }) =
             )}
           </div>
         </div>
-        {extraActions && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+        {(history || extraActions) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
+            {history && (
+              <NetworkToolHistoryMenu
+                items={history.items}
+                onView={onViewHistory}
+                onRerun={onRerunHistory}
+                onPin={history.togglePin}
+                onDelete={history.remove}
+              />
+            )}
             {extraActions}
           </div>
         )}

@@ -4,16 +4,19 @@ import { Button } from 'primereact/button';
 import { Badge } from 'primereact/badge';
 import NetworkToolHeader from '../common/NetworkToolHeader';
 import { findToolMetadata, getResultBoxStyle, getStatItemStyle } from '../toolRegistry';
+import { useNetworkToolHistory } from '../../../hooks/useNetworkToolHistory';
 
 const SubnetCalculatorPanel = ({ isMobile = false }) => {
   const tool = findToolMetadata('subnet-calc');
+  const history = useNetworkToolHistory('subnet-calc');
   const [subnetCalcCidr, setSubnetCalcCidr] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
-  const executeSubnetCalc = async () => {
-    const trimmed = subnetCalcCidr.trim();
+  const executeSubnetCalc = async (overrides) => {
+    const trimmed = String(overrides?.cidr ?? subnetCalcCidr).trim();
+    if (overrides?.cidr != null) setSubnetCalcCidr(String(overrides.cidr));
     if (!trimmed) {
       setError('Por favor, introduce una dirección IP con máscara CIDR (ej: 192.168.1.0/24).');
       return;
@@ -33,6 +36,12 @@ const SubnetCalculatorPanel = ({ isMobile = false }) => {
 
       if (response) {
         setResult(response);
+        history.record({
+          target: trimmed,
+          params: { cidr: trimmed },
+          result: response,
+          summary: response.network || response.broadcast || 'CIDR'
+        });
       } else {
         setError('No se pudieron calcular los parámetros de la subred');
       }
@@ -56,6 +65,13 @@ const SubnetCalculatorPanel = ({ isMobile = false }) => {
       <NetworkToolHeader
         tool={tool}
         isMobile={isMobile}
+        history={history}
+        onViewHistory={(entry) => {
+          setSubnetCalcCidr(entry.params.cidr || entry.target);
+          setError(null);
+          setResult(entry.result || null);
+        }}
+        onRerunHistory={(entry) => executeSubnetCalc(entry.params)}
         extraActions={
           result && (
             <Button

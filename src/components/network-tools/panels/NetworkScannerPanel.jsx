@@ -9,9 +9,11 @@ import NetworkToolHeader from '../common/NetworkToolHeader';
 import CyberTopologyMap from './CyberTopologyMap';
 import { findToolMetadata, getResultBoxStyle } from '../toolRegistry';
 import localStorageSyncService from '../../../services/LocalStorageSyncService';
+import { useNetworkToolHistory } from '../../../hooks/useNetworkToolHistory';
 
 const NetworkScannerPanel = ({ isMobile = false }) => {
   const tool = findToolMetadata('network-scan');
+  const history = useNetworkToolHistory('network-scan');
   const [networkScanSubnet, setNetworkScanSubnet] = useState('');
   const [cyberpunkMode, setCyberpunkMode] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -94,8 +96,11 @@ const NetworkScannerPanel = ({ isMobile = false }) => {
     };
   }, []);
 
-  const executeNetworkScan = async (mode = 'quick') => {
-    const subnet = networkScanSubnet.trim();
+  const executeNetworkScan = async (modeOrOverrides = 'quick') => {
+    const isObj = modeOrOverrides && typeof modeOrOverrides === 'object';
+    const mode = isObj ? (modeOrOverrides.mode || 'quick') : modeOrOverrides;
+    const subnet = String(isObj && modeOrOverrides.subnet != null ? modeOrOverrides.subnet : networkScanSubnet).trim();
+    if (isObj && modeOrOverrides.subnet != null) setNetworkScanSubnet(modeOrOverrides.subnet);
     if (!subnet) {
       setError('Por favor, introduce una subred (ej: 192.168.1.0/24).');
       return;
@@ -124,6 +129,12 @@ const NetworkScannerPanel = ({ isMobile = false }) => {
 
       if (response && response.hosts) {
         setResult(response);
+        history.record({
+          target: subnet,
+          params: { subnet, mode },
+          result: response,
+          summary: `${response.hosts.length} hosts · ${mode}`
+        });
       } else {
         setError(response?.error || 'No se recibieron datos del escaneo');
       }
@@ -190,6 +201,15 @@ const NetworkScannerPanel = ({ isMobile = false }) => {
       <NetworkToolHeader
         tool={tool}
         isMobile={isMobile}
+        history={history}
+        onViewHistory={(entry) => {
+          setNetworkScanSubnet(entry.params.subnet || entry.target);
+          setError(null);
+          setLiveOutput('');
+          setViewingSavedScan(null);
+          setResult(entry.result || null);
+        }}
+        onRerunHistory={(entry) => executeNetworkScan(entry.params)}
         extraActions={
           <div style={{ display: 'flex', gap: '0.4rem' }}>
             <Button

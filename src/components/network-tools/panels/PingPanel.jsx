@@ -4,17 +4,21 @@ import { Button } from 'primereact/button';
 import { Badge } from 'primereact/badge';
 import NetworkToolHeader from '../common/NetworkToolHeader';
 import { findToolMetadata, getResultBoxStyle, getStatItemStyle } from '../toolRegistry';
+import { useNetworkToolHistory } from '../../../hooks/useNetworkToolHistory';
 
 const PingPanel = ({ isMobile = false }) => {
   const tool = findToolMetadata('ping');
+  const history = useNetworkToolHistory('ping');
   const [pingHost, setPingHost] = useState('');
   const [pingCount, setPingCount] = useState(4);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
-  const executePing = async () => {
-    const trimmed = pingHost.trim();
+  const executePing = async (overrides) => {
+    const trimmed = String(overrides?.host ?? pingHost).trim();
+    const count = overrides?.count ?? pingCount;
+    if (overrides?.host != null) setPingHost(String(overrides.host));
     if (!trimmed) {
       setError('Por favor, introduce un host o dirección IP.');
       return;
@@ -30,12 +34,18 @@ const PingPanel = ({ isMobile = false }) => {
 
       const response = await ipc.invoke('network-tools:ping', {
         host: trimmed,
-        count: pingCount,
+        count,
         timeout: 5
       });
 
       if (response && response.success !== undefined) {
         setResult(response);
+        history.record({
+          target: trimmed,
+          params: { host: trimmed, count },
+          result: response,
+          summary: response.success ? `Activo · ${response.received || 0}/${response.sent || 0}` : 'Inactivo'
+        });
       } else {
         setError(response?.error || 'Error inesperado al ejecutar ping');
       }
@@ -59,6 +69,14 @@ const PingPanel = ({ isMobile = false }) => {
       <NetworkToolHeader
         tool={tool}
         isMobile={isMobile}
+        history={history}
+        onViewHistory={(entry) => {
+          setPingHost(entry.params.host || entry.target);
+          if (entry.params.count != null) setPingCount(entry.params.count);
+          setError(null);
+          setResult(entry.result || null);
+        }}
+        onRerunHistory={(entry) => executePing(entry.params)}
         extraActions={
           result && (
             <Button

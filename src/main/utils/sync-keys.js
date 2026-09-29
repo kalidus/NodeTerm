@@ -142,7 +142,8 @@ const SYNC_KEYS = [
 
   // Herramientas de red (Wake on LAN y escaneos de red guardados)
   'nodeterm_wol_devices',
-  'nodeterm_saved_network_scans'
+  'nodeterm_saved_network_scans',
+  'nodeterm_network_tools_history'
 ];
 
 module.exports = { SYNC_KEYS };

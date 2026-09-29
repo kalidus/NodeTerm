@@ -4,24 +4,26 @@ import { Button } from 'primereact/button';
 import { Badge } from 'primereact/badge';
 import NetworkToolHeader from '../common/NetworkToolHeader';
 import { findToolMetadata, getResultBoxStyle, getStatItemStyle } from '../toolRegistry';
+import { useNetworkToolHistory } from '../../../hooks/useNetworkToolHistory';
 
 const HttpHeadersPanel = ({ isMobile = false }) => {
   const tool = findToolMetadata('http-headers');
+  const history = useNetworkToolHistory('http-headers');
   const [httpHeadersUrl, setHttpHeadersUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
-  const executeHttpHeaders = async () => {
-    let url = httpHeadersUrl.trim();
+  const executeHttpHeaders = async (overrides) => {
+    let url = String(overrides?.url ?? httpHeadersUrl).trim();
     if (!url) {
       setError('Por favor, introduce una URL.');
       return;
     }
     if (!/^https?:\/\//i.test(url)) {
       url = `https://${url}`;
-      setHttpHeadersUrl(url);
     }
+    setHttpHeadersUrl(url);
 
     setLoading(true);
     setError(null);
@@ -37,6 +39,12 @@ const HttpHeadersPanel = ({ isMobile = false }) => {
 
       if (response) {
         setResult(response);
+        history.record({
+          target: url,
+          params: { url },
+          result: response,
+          summary: response.status ? `HTTP ${response.status}` : 'Headers'
+        });
       } else {
         setError('No se recibieron cabeceras HTTP de la URL.');
       }
@@ -60,6 +68,13 @@ const HttpHeadersPanel = ({ isMobile = false }) => {
       <NetworkToolHeader
         tool={tool}
         isMobile={isMobile}
+        history={history}
+        onViewHistory={(entry) => {
+          setHttpHeadersUrl(entry.params.url || entry.target);
+          setError(null);
+          setResult(entry.result || null);
+        }}
+        onRerunHistory={(entry) => executeHttpHeaders(entry.params)}
         extraActions={
           result && (
             <Button

@@ -3,16 +3,19 @@ import { InputText } from 'primereact/inputtext';
 import { Button } from 'primereact/button';
 import NetworkToolHeader from '../common/NetworkToolHeader';
 import { findToolMetadata, getResultBoxStyle, getStatItemStyle } from '../toolRegistry';
+import { useNetworkToolHistory } from '../../../hooks/useNetworkToolHistory';
 
 const ReverseDnsPanel = ({ isMobile = false }) => {
   const tool = findToolMetadata('reverse-dns');
+  const history = useNetworkToolHistory('reverse-dns');
   const [reverseDnsIp, setReverseDnsIp] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
-  const executeReverseDns = async () => {
-    const trimmed = reverseDnsIp.trim();
+  const executeReverseDns = async (overrides) => {
+    const trimmed = String(overrides?.ip ?? reverseDnsIp).trim();
+    if (overrides?.ip != null) setReverseDnsIp(String(overrides.ip));
     if (!trimmed) {
       setError('Por favor, introduce una dirección IP.');
       return;
@@ -32,6 +35,12 @@ const ReverseDnsPanel = ({ isMobile = false }) => {
 
       if (response) {
         setResult(response);
+        history.record({
+          target: trimmed,
+          params: { ip: trimmed },
+          result: response,
+          summary: response.hostname || response.hostnames?.[0] || 'OK'
+        });
       } else {
         setError('No se recibieron datos del DNS inverso');
       }
@@ -55,6 +64,13 @@ const ReverseDnsPanel = ({ isMobile = false }) => {
       <NetworkToolHeader
         tool={tool}
         isMobile={isMobile}
+        history={history}
+        onViewHistory={(entry) => {
+          setReverseDnsIp(entry.params.ip || entry.target);
+          setError(null);
+          setResult(entry.result || null);
+        }}
+        onRerunHistory={(entry) => executeReverseDns(entry.params)}
         extraActions={
           result && (
             <Button

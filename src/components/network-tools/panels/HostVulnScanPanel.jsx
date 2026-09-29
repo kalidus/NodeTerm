@@ -8,11 +8,13 @@ import { Button } from 'primereact/button';
 import { Badge } from 'primereact/badge';
 import NetworkToolHeader from '../common/NetworkToolHeader';
 import { findToolMetadata, getResultBoxStyle, getStatItemStyle } from '../toolRegistry';
+import { useNetworkToolHistory } from '../../../hooks/useNetworkToolHistory';
 
 const DEFAULT_VULN_PORTS = '21,22,23,25,53,80,110,143,443,445,993,995,1433,1521,3306,3389,5432,5900,6379,8080,8443,27017';
 
 const HostVulnScanPanel = ({ isMobile = false }) => {
   const tool = findToolMetadata('host-vuln-scan');
+  const history = useNetworkToolHistory('host-vuln-scan');
   const [hostVulnHost, setHostVulnHost] = useState('');
   const [hostVulnPorts, setHostVulnPorts] = useState(DEFAULT_VULN_PORTS);
   const [hostVulnUseOnline, setHostVulnUseOnline] = useState(true);
@@ -26,8 +28,13 @@ const HostVulnScanPanel = ({ isMobile = false }) => {
     setExpandedSections(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const executeHostVulnScan = async () => {
-    const trimmed = hostVulnHost.trim();
+  const executeHostVulnScan = async (overrides) => {
+    const trimmed = String(overrides?.host ?? hostVulnHost).trim();
+    const ports = String(overrides?.ports ?? hostVulnPorts).trim() || DEFAULT_VULN_PORTS;
+    const useOnline = overrides?.useOnline ?? hostVulnUseOnline;
+    if (overrides?.host != null) setHostVulnHost(String(overrides.host));
+    if (overrides?.ports != null) setHostVulnPorts(ports);
+    if (overrides?.useOnline != null) setHostVulnUseOnline(Boolean(overrides.useOnline));
     if (!trimmed) {
       setError('Por favor, introduce un host o dirección IP.');
       return;
@@ -43,13 +50,20 @@ const HostVulnScanPanel = ({ isMobile = false }) => {
 
       const response = await ipc.invoke('network-tools:host-vuln-scan', {
         host: trimmed,
-        ports: hostVulnPorts.trim() || DEFAULT_VULN_PORTS,
+        ports,
         timeout: 5000,
-        useOnline: hostVulnUseOnline
+        useOnline
       });
 
       if (response) {
         setResult(response);
+        const risk = response.summary?.riskScore ?? response.summary?.risk;
+        history.record({
+          target: trimmed,
+          params: { host: trimmed, ports, useOnline },
+          result: response,
+          summary: risk != null ? `Riesgo ${risk}` : 'Vuln scan'
+        });
       } else {
         setError('No se recibieron datos del escáner de vulnerabilidades');
       }
@@ -313,6 +327,15 @@ const HostVulnScanPanel = ({ isMobile = false }) => {
       <NetworkToolHeader
         tool={tool}
         isMobile={isMobile}
+        history={history}
+        onViewHistory={(entry) => {
+          setHostVulnHost(entry.params.host || entry.target);
+          if (entry.params.ports) setHostVulnPorts(entry.params.ports);
+          if (entry.params.useOnline != null) setHostVulnUseOnline(entry.params.useOnline);
+          setError(null);
+          setResult(entry.result || null);
+        }}
+        onRerunHistory={(entry) => executeHostVulnScan(entry.params)}
         extraActions={
           <div style={{ display: 'flex', gap: '0.4rem' }}>
             <Button

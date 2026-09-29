@@ -3,16 +3,19 @@ import { InputText } from 'primereact/inputtext';
 import { Button } from 'primereact/button';
 import NetworkToolHeader from '../common/NetworkToolHeader';
 import { findToolMetadata, getResultBoxStyle, getStatItemStyle } from '../toolRegistry';
+import { useNetworkToolHistory } from '../../../hooks/useNetworkToolHistory';
 
 const WhoisPanel = ({ isMobile = false }) => {
   const tool = findToolMetadata('whois');
+  const history = useNetworkToolHistory('whois');
   const [whoisDomain, setWhoisDomain] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
-  const executeWhois = async () => {
-    const trimmed = whoisDomain.trim();
+  const executeWhois = async (overrides) => {
+    const trimmed = String(overrides?.domain ?? whoisDomain).trim();
+    if (overrides?.domain != null) setWhoisDomain(String(overrides.domain));
     if (!trimmed) {
       setError('Por favor, introduce un dominio o dirección IP.');
       return;
@@ -32,6 +35,12 @@ const WhoisPanel = ({ isMobile = false }) => {
 
       if (response) {
         setResult(response);
+        history.record({
+          target: trimmed,
+          params: { domain: trimmed },
+          result: response,
+          summary: response.parsed?.registrar || response.registrar || 'WHOIS'
+        });
       } else {
         setError('No se recibieron datos de WHOIS');
       }
@@ -55,6 +64,13 @@ const WhoisPanel = ({ isMobile = false }) => {
       <NetworkToolHeader
         tool={tool}
         isMobile={isMobile}
+        history={history}
+        onViewHistory={(entry) => {
+          setWhoisDomain(entry.params.domain || entry.target);
+          setError(null);
+          setResult(entry.result || null);
+        }}
+        onRerunHistory={(entry) => executeWhois(entry.params)}
         extraActions={
           result && (
             <Button

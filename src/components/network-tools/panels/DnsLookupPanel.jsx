@@ -7,17 +7,22 @@ import { Column } from 'primereact/column';
 import { Message } from 'primereact/message';
 import NetworkToolHeader from '../common/NetworkToolHeader';
 import { findToolMetadata, getResultBoxStyle, DNS_RECORD_TYPES } from '../toolRegistry';
+import { useNetworkToolHistory } from '../../../hooks/useNetworkToolHistory';
 
 const DnsLookupPanel = ({ isMobile = false }) => {
   const tool = findToolMetadata('dns-lookup');
+  const history = useNetworkToolHistory('dns-lookup');
   const [dnsLookupDomain, setDnsLookupDomain] = useState('');
   const [dnsLookupType, setDnsLookupType] = useState('A');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
-  const executeDnsLookup = async () => {
-    const trimmed = dnsLookupDomain.trim();
+  const executeDnsLookup = async (overrides) => {
+    const trimmed = String(overrides?.domain ?? dnsLookupDomain).trim();
+    const type = overrides?.type ?? dnsLookupType;
+    if (overrides?.domain != null) setDnsLookupDomain(String(overrides.domain));
+    if (overrides?.type != null) setDnsLookupType(overrides.type);
     if (!trimmed) {
       setError('Por favor, introduce un nombre de dominio.');
       return;
@@ -33,11 +38,18 @@ const DnsLookupPanel = ({ isMobile = false }) => {
 
       const response = await ipc.invoke('network-tools:dns-lookup', {
         domain: trimmed,
-        type: dnsLookupType
+        type
       });
 
       if (response) {
         setResult(response);
+        const count = response.records?.length || response.answers?.length || 0;
+        history.record({
+          target: `${trimmed} ${type}`,
+          params: { domain: trimmed, type },
+          result: response,
+          summary: count ? `${type} · ${count} registros` : type
+        });
       } else {
         setError('No se recibieron datos de resolución DNS');
       }
@@ -60,6 +72,14 @@ const DnsLookupPanel = ({ isMobile = false }) => {
       <NetworkToolHeader
         tool={tool}
         isMobile={isMobile}
+        history={history}
+        onViewHistory={(entry) => {
+          setDnsLookupDomain(entry.params.domain || entry.target);
+          if (entry.params.type) setDnsLookupType(entry.params.type);
+          setError(null);
+          setResult(entry.result || null);
+        }}
+        onRerunHistory={(entry) => executeDnsLookup(entry.params)}
         extraActions={
           result && (
             <Button

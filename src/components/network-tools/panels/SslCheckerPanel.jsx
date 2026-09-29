@@ -10,6 +10,7 @@ import { Badge } from 'primereact/badge';
 import NetworkToolHeader from '../common/NetworkToolHeader';
 import { findToolMetadata, getResultBoxStyle, getStatItemStyle } from '../toolRegistry';
 import { sslReportService } from '../../../services/reports/SslReportService';
+import { useNetworkToolHistory } from '../../../hooks/useNetworkToolHistory';
 
 const TRUST_META = {
   trusted: { badge: 'VALIDO', color: '#22c55e', icon: 'pi-lock', severity: 'success' },
@@ -319,6 +320,7 @@ const CollapsibleBlock = ({ title, children }) => (
 
 const SslCheckerPanel = ({ isMobile = false }) => {
   const tool = findToolMetadata('ssl-check');
+  const history = useNetworkToolHistory('ssl-check');
   const [sslCheckHost, setSslCheckHost] = useState('');
   const [sslCheckPort, setSslCheckPort] = useState(443);
   const [loading, setLoading] = useState(false);
@@ -334,8 +336,11 @@ const SslCheckerPanel = ({ isMobile = false }) => {
     setTimeout(() => setActionMessage(null), 2200);
   };
 
-  const executeSslCheck = async () => {
-    const trimmed = sslCheckHost.trim();
+  const executeSslCheck = async (overrides) => {
+    const trimmed = String(overrides?.host ?? sslCheckHost).trim();
+    const port = overrides?.port ?? sslCheckPort ?? 443;
+    if (overrides?.host != null) setSslCheckHost(String(overrides.host));
+    if (overrides?.port != null) setSslCheckPort(overrides.port);
     if (!trimmed) {
       setError('Por favor, introduce un host o dominio.');
       return;
@@ -352,14 +357,22 @@ const SslCheckerPanel = ({ isMobile = false }) => {
 
       const response = await ipc.invoke('network-tools:ssl-check', {
         host: trimmed,
-        port: sslCheckPort || 443
+        port
       });
 
       if (response) {
         setResult(response);
-        if (response.port && response.port !== sslCheckPort) {
+        if (response.port && response.port !== port) {
           setSslCheckPort(response.port);
         }
+        const grade = response.security?.grade;
+        const score = response.security?.score;
+        history.record({
+          target: `${trimmed}:${response.port || port}`,
+          params: { host: trimmed, port: response.port || port },
+          result: response,
+          summary: [grade, typeof score === 'number' ? `${score}/100` : null].filter(Boolean).join(' · ') || 'SSL'
+        });
       } else {
         setError('No se recibieron datos del certificado SSL');
       }
@@ -833,6 +846,15 @@ const SslCheckerPanel = ({ isMobile = false }) => {
       <NetworkToolHeader
         tool={tool}
         isMobile={isMobile}
+        history={history}
+        onViewHistory={(entry) => {
+          setSslCheckHost(entry.params.host || entry.target);
+          if (entry.params.port) setSslCheckPort(entry.params.port);
+          setError(null);
+          setActionMessage(null);
+          setResult(entry.result || null);
+        }}
+        onRerunHistory={(entry) => executeSslCheck(entry.params)}
         extraActions={
           result && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
