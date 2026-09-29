@@ -701,6 +701,7 @@ const SslCheckerPanel = ({ isMobile = false }) => {
                 <SessionFact
                   label="Protocolo negociado"
                   value={result.protocols?.version || 'N/A'}
+                  sub={negotiatedCipher || ''}
                   color="#60a5fa"
                 />
                 <SessionFact
@@ -708,16 +709,6 @@ const SslCheckerPanel = ({ isMobile = false }) => {
                   value={keyLabel}
                   sub={cert?.signatureAlgorithm || ''}
                   color="#c4b5fd"
-                />
-                <SessionFact
-                  label="Cipher usado"
-                  value={(
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                      <span>{negotiatedCipher || 'N/A'}</span>
-                      {negotiatedCipher ? <InUseBadge /> : null}
-                    </span>
-                  )}
-                  color="#86efac"
                 />
               </div>
             </div>
@@ -986,34 +977,6 @@ const SslCheckerPanel = ({ isMobile = false }) => {
                   </div>
                 );
               })}
-            </div>
-          </CollapsibleBlock>
-        )}
-
-        {result.ciphers && result.ciphers.length > 0 && (
-          <CollapsibleBlock title={`Ciphers detectados (${result.ciphers.length})`}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-              {result.ciphers.map((cipher, idx) => (
-                <div key={idx} style={{
-                  padding: '0.55rem 0.65rem',
-                  background: 'rgba(59, 130, 246, 0.1)',
-                  borderRadius: '6px',
-                  borderLeft: '3px solid #3b82f6',
-                  fontSize: '0.8rem'
-                }}>
-                  <div style={{ fontWeight: 600, color: '#ffffff' }}>
-                    {cipher.name}
-                    {cipher.version && (
-                      <span style={{ color: 'rgba(255,255,255,0.65)', marginLeft: '0.4rem', fontWeight: 400 }}>
-                        ({cipher.version})
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.65)' }}>
-                    Protocolos: {(cipher.protocols || []).join(', ')}
-                  </div>
-                </div>
-              ))}
             </div>
           </CollapsibleBlock>
         )}
