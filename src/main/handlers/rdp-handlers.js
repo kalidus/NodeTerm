@@ -43,6 +43,20 @@ function registerRdpHandlers(dependencies) {
     }
   });
 
+  rdpNativeBridgeService.removeAllListeners('clipboard-unhealthy');
+  rdpNativeBridgeService.on('clipboard-unhealthy', (eventData) => {
+    try {
+      const { BrowserWindow } = require('electron');
+      BrowserWindow.getAllWindows().forEach((win) => {
+        if (!win.isDestroyed()) {
+          sendToRenderer(win, 'rdp:clipboard-unhealthy', eventData);
+        }
+      });
+    } catch (err) {
+      console.warn('[RDP Handlers] Error enviando rdp:clipboard-unhealthy:', err);
+    }
+  });
+
   // Reenviar telemetría de canales y portapapeles del puente nativo hacia el renderer
   rdpNativeBridgeService.removeAllListeners('diagnostic-log');
   rdpNativeBridgeService.on('diagnostic-log', (diag) => {
@@ -222,7 +236,7 @@ function registerRdpHandlers(dependencies) {
         }
       }
 
-      const sessionInfo = rdpNativeBridgeService.createSessionToken(config);
+      const sessionInfo = await rdpNativeBridgeService.createSessionToken(config);
       if (process.env.NODETERM_RDP_DEBUG === '1') {
         console.log('🚀 [RDP Native Bridge] Token creado para RDP Web Nativo (Sin guacd/WSL):', sessionInfo.tokenId);
       }
