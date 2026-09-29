@@ -83,6 +83,14 @@ function scoreColor(score) {
   return '#ef4444';
 }
 
+function gradeColor(grade) {
+  if (grade === 'A+' || grade === 'A' || grade === 'A-') return '#22c55e';
+  if (grade === 'B') return '#84cc16';
+  if (grade === 'C') return '#eab308';
+  if (grade === 'D') return '#f97316';
+  return '#ef4444';
+}
+
 function protocolMeta(name) {
   if (name === 'TLSv1.3' || name === 'TLSv1.2') {
     return { color: '#22c55e', icon: 'pi-check-circle', status: 'SEGURO' };
@@ -101,23 +109,27 @@ function listSans(certificate) {
   return certificate.subjectAltNames || [];
 }
 
-const ScoreRing = ({ score }) => {
+const ScoreRing = ({ score, grade, breakdown }) => {
   const color = scoreColor(score);
+  const letterColor = gradeColor(grade);
   const deg = Math.min(100, Math.max(0, Number(score) || 0)) * 3.6;
+  const parts = breakdown
+    ? `Prot ${breakdown.protocol} · Clave ${breakdown.key} · Cipher ${breakdown.cipher}`
+    : '';
   return (
     <div style={{
       display: 'flex',
       alignItems: 'center',
-      gap: '0.6rem',
+      gap: '0.55rem',
       background: 'rgba(0,0,0,0.28)',
       borderRadius: '8px',
-      padding: '0.5rem 0.7rem',
+      padding: '0.45rem 0.65rem',
       border: `1px solid ${color}40`,
       minWidth: 0
     }}>
       <div style={{
-        width: 52,
-        height: 52,
+        width: 48,
+        height: 48,
         borderRadius: '50%',
         background: `conic-gradient(${color} ${deg}deg, rgba(255,255,255,0.08) 0deg)`,
         display: 'grid',
@@ -125,19 +137,40 @@ const ScoreRing = ({ score }) => {
         flexShrink: 0
       }}>
         <div style={{
-          width: 38,
-          height: 38,
+          width: 34,
+          height: 34,
           borderRadius: '50%',
           background: '#0b1220',
           display: 'grid',
           placeItems: 'center'
         }}>
-          <span style={{ fontSize: '0.92rem', fontWeight: 700, color, lineHeight: 1 }}>{score}</span>
+          <span style={{ fontSize: '0.82rem', fontWeight: 700, color, lineHeight: 1 }}>{score}</span>
         </div>
       </div>
-      <div>
-        <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)', letterSpacing: '0.04em' }}>SCORE</div>
-        <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)' }}>/100</div>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem' }}>
+          {grade && (
+            <span style={{ fontSize: '1.15rem', fontWeight: 800, color: letterColor, lineHeight: 1 }}>
+              {grade}
+            </span>
+          )}
+          <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)' }}>/100</span>
+        </div>
+        {parts && (
+          <div
+            title={parts}
+            style={{
+              marginTop: '0.12rem',
+              fontSize: '0.58rem',
+              color: 'rgba(255,255,255,0.52)',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {parts}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -402,15 +435,9 @@ const SslCheckerPanel = ({ isMobile = false }) => {
 
     const trustMeta = getTrustMeta(result);
     const daysUntilExpiry = result.certificate?.daysUntilExpiry;
-    const supportedCount = result.supportedProtocols?.length || 0;
-    const deprecatedCount = result.supportedProtocols?.filter((p) => p.deprecated)?.length || 0;
-    const secureProtocols = result.supportedProtocols?.filter((p) => !p.deprecated)?.length || 0;
-    const securityScore = typeof result.security?.score === 'number'
-      ? result.security.score
-      : ((result.trust?.authorized || result.certificate?.isValid) ? 40 : 0)
-        + (daysUntilExpiry > 90 ? 20 : daysUntilExpiry > 30 ? 10 : 0)
-        + (secureProtocols > 0 ? 20 : 0)
-        + (deprecatedCount === 0 && supportedCount > 0 ? 20 : 0);
+    const securityScore = typeof result.security?.score === 'number' ? result.security.score : 0;
+    const securityGrade = result.security?.grade || null;
+    const securityBreakdown = result.security?.breakdown || null;
     const riskLevel = result.security?.riskLevel || 'ALTO';
     const riskColor = RISK_COLOR[riskLevel] || '#f59e0b';
     const expiryNegative = typeof daysUntilExpiry === 'number' && daysUntilExpiry < 0;
@@ -467,7 +494,7 @@ const SslCheckerPanel = ({ isMobile = false }) => {
           gap: '0.5rem',
           marginBottom: '0.7rem'
         }}>
-          <ScoreRing score={securityScore} />
+          <ScoreRing score={securityScore} grade={securityGrade} breakdown={securityBreakdown} />
           <KpiTile
             label={expiryNegative ? 'Expirado hace' : 'Expira'}
             value={typeof daysUntilExpiry === 'number' ? `${Math.abs(daysUntilExpiry)} dias` : 'N/A'}

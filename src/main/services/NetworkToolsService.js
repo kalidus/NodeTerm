@@ -752,6 +752,8 @@ class NetworkToolsService {
         hasWeakCiphers: false,
         recommendations: [],
         score: 0,
+        grade: 'F',
+        breakdown: { protocol: 0, key: 0, cipher: 0 },
         riskLevel: 'ALTO'
       },
       error: null
@@ -948,9 +950,13 @@ class NetworkToolsService {
           const assessment = sslCertAnalyzer.computeSecurityAssessment({
             trust: results.trust,
             daysUntilExpiry: results.certificate ? results.certificate.daysUntilExpiry : 0,
-            supportedProtocols: results.supportedProtocols
+            supportedProtocols: results.supportedProtocols,
+            certificate: results.certificate,
+            negotiatedCipher: results.protocols && results.protocols.cipher
           });
           results.security.score = assessment.score;
+          results.security.grade = assessment.grade;
+          results.security.breakdown = assessment.breakdown;
           results.security.riskLevel = assessment.riskLevel;
           results.security.recommendations = sslCertAnalyzer.buildRecommendations({
             trust: results.trust,

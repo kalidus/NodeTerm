@@ -519,20 +519,117 @@ function buildChain(leafCert) {
   });
 }
 
-function computeSecurityAssessment({ trust, daysUntilExpiry, supportedProtocols }) {
+const GRADE_ORDER = ['A+', 'A', 'A-', 'B', 'C', 'D', 'E', 'F', 'T'];
+
+function protocolStrength(name) {
+  const n = String(name || '').replace(/\s+/g, '');
+  if (/TLSv?1\.3/i.test(n)) return 100;
+  if (/TLSv?1\.2/i.test(n)) return 100;
+  if (/TLSv?1\.1/i.test(n)) return 95;
+  if (/TLSv?1(\.0)?$/i.test(n) || n === 'TLSv1') return 90;
+  if (/SSLv?3/i.test(n)) return 40;
+  if (/SSLv?2/i.test(n)) return 0;
+  return 50;
+}
+
+function keyStrength(publicKey) {
+  if (!publicKey) return 60;
+  const type = String(publicKey.type || '').toUpperCase();
+  const bits = Number(publicKey.bits) || 0;
+  if (type === 'RSA' || type === 'DSA') {
+    if (bits >= 4096) return 100;
+    if (bits >= 3072) return 90;
+    if (bits >= 2048) return 80;
+    if (bits >= 1024) return 20;
+    return 0;
+  }
+  if (type === 'EC' || type === 'ECDSA' || type.includes('EC')) {
+    if (bits >= 256 || bits === 0) return 100;
+    if (bits >= 224) return 80;
+    return 40;
+  }
+  if (type === 'ED25519' || type === 'ED448') return 100;
+  return 60;
+}
+
+function cipherStrength(cipherName) {
+  if (!cipherName) return 60;
+  const n = String(cipherName).toUpperCase();
+  if (/RC4|3DES|DES-CBC|EXPORT|NULL|MD5/.test(n)) return 20;
+  if (/GCM|CHACHA|POLY1305/.test(n)) return 100;
+  if (/CBC/.test(n)) return 70;
+  if (/AES[_-]?256/.test(n)) return 90;
+  if (/AES[_-]?128/.test(n)) return 80;
+  return 60;
+}
+
+function scoreToLetter(score) {
+  if (score >= 80) return 'A';
+  if (score >= 65) return 'B';
+  if (score >= 50) return 'C';
+  if (score >= 35) return 'D';
+  if (score >= 20) return 'E';
+  return 'F';
+}
+
+function capGrade(current, cap) {
+  return GRADE_ORDER.indexOf(current) >= GRADE_ORDER.indexOf(cap) ? current : cap;
+}
+
+function collectCipherNames(supportedProtocols, negotiatedCipher) {
+  const names = [];
+  if (negotiatedCipher) names.push(negotiatedCipher);
+  (Array.isArray(supportedProtocols) ? supportedProtocols : []).forEach((proto) => {
+    const name = proto && proto.cipher && (proto.cipher.name || proto.cipher);
+    if (name) names.push(name);
+  });
+  return names;
+}
+
+function computeSecurityAssessment({
+  trust,
+  daysUntilExpiry,
+  supportedProtocols,
+  certificate,
+  negotiatedCipher
+}) {
   const protocols = Array.isArray(supportedProtocols) ? supportedProtocols : [];
   const deprecatedCount = protocols.filter((p) => p.deprecated).length;
-  const secureCount = protocols.filter((p) => !p.deprecated).length;
   const expiry = typeof daysUntilExpiry === 'number' ? daysUntilExpiry : 0;
-
-  let score = 0;
-  if (trust && trust.authorized) score += 40;
-  if (expiry > 90) score += 20;
-  else if (expiry > 30) score += 10;
-  if (secureCount > 0) score += 20;
-  if (deprecatedCount === 0 && protocols.length > 0) score += 20;
-
   const status = (trust && trust.status) || 'unknown';
+
+  const protoScores = protocols.map((p) => protocolStrength(p.name));
+  const protocolScore = protoScores.length
+    ? Math.round((Math.max(...protoScores) + Math.min(...protoScores)) / 2)
+    : 0;
+
+  const keyScore = keyStrength(certificate && certificate.publicKey);
+  const cipherNames = collectCipherNames(protocols, negotiatedCipher);
+  const cipherValues = cipherNames.map(cipherStrength);
+  const cipherScore = cipherValues.length
+    ? Math.round(cipherValues.reduce((sum, value) => sum + value, 0) / cipherValues.length)
+    : 60;
+
+  const score = Math.round(protocolScore * 0.3 + keyScore * 0.3 + cipherScore * 0.4);
+  let grade = scoreToLetter(score);
+
+  if (status === 'expired' || status === 'not_yet_valid' || expiry < 0) {
+    grade = 'F';
+  } else if (status === 'hostname_mismatch' || status === 'self_signed' || status === 'untrusted_ca' || status === 'unknown') {
+    grade = 'T';
+  } else if (status === 'incomplete_chain') {
+    grade = capGrade(grade, 'B');
+  }
+
+  const hasTls13 = protocols.some((p) => /1\.3/.test(String(p.name || '')));
+  if (protocols.length > 0 && !hasTls13 && grade !== 'F' && grade !== 'T') {
+    grade = capGrade(grade, 'A-');
+  }
+
+  if (keyScore <= 20 || cipherScore <= 20) {
+    grade = 'F';
+  }
+
   let riskLevel = 'BAJO';
   if (status === 'expired' || status === 'not_yet_valid' || status === 'hostname_mismatch' || expiry < 0) {
     riskLevel = 'CRITICO';
@@ -544,7 +641,16 @@ function computeSecurityAssessment({ trust, daysUntilExpiry, supportedProtocols 
     riskLevel = 'MEDIO';
   }
 
-  return { score, riskLevel };
+  return {
+    score,
+    grade,
+    riskLevel,
+    breakdown: {
+      protocol: protocolScore,
+      key: keyScore,
+      cipher: cipherScore
+    }
+  };
 }
 
 function buildRecommendations({ trust, certificate, hasWeakProtocols, supportedProtocols }) {
