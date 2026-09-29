@@ -1550,7 +1550,6 @@ const DocumentsSidebar = ({
         onCollapseChange={setDetailsCollapsed}
         onClose={() => {
           setSelectedNodeKey(null);
-          setSelectedNodeForDetails(null);
         }}
       />
 

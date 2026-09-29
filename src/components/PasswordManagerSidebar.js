@@ -2326,7 +2326,6 @@ const PasswordManagerSidebar = ({
         onCollapseChange={setDetailsCollapsed}
         onClose={() => {
           setSelectedNodeKey(null);
-          setSelectedNodeForDetails(null);
         }}
       />
 
