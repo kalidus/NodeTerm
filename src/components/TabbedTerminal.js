@@ -901,6 +901,10 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
 
     // 🚀 OPTIMIZACIÓN: Detectar disponibilidad de Cygwin DIFERIDO
     useEffect(() => {
+        if (!aiClientsEnabled.cygwin) {
+            setCygwinAvailable(false);
+            return;
+        }
         const timer = setTimeout(() => {
             const detectCygwin = async () => {
                 if (window.electron && window.electron.platform === 'win32') {
@@ -953,7 +957,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             detectCygwin();
         }, 600); // 🚀 Diferir 600ms (después de WSL)
         return () => clearTimeout(timer);
-    }, []);
+    }, [aiClientsEnabled.cygwin]);
 
     // 🚀 OPTIMIZACIÓN: Detectar contenedores Docker DIFERIDO
     useEffect(() => {

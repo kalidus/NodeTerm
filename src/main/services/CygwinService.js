@@ -55,7 +55,6 @@ function initializeCygwinPaths() {
       if (fs.existsSync(bash)) {
         cygwinRootPath = root;
         cygwinBashPath = bash;
-        console.log('[Cygwin] Disponible en:', root);
         return {
           root: cygwinRootPath,
           bash: cygwinBashPath,
@@ -67,7 +66,6 @@ function initializeCygwinPaths() {
     const preferred = candidateRoots()[0];
     cygwinRootPath = preferred;
     cygwinBashPath = path.join(preferred, 'bin', 'bash.exe');
-    console.log('[Cygwin] No encontrado. Destino de instalacion:', preferred);
 
     return {
       root: cygwinRootPath,

@@ -482,6 +482,10 @@ const NodeTermStatus = ({
 	// 🚀 OPTIMIZACIÓN CON CACHÉ PERSISTENTE: Detectar disponibilidad de Cygwin DIFERIDO
 	useEffect(() => {
 		if ((!horizontal || !compact) && variant !== 'rightColumn') return;
+		if (!cygwinEnabled) {
+			setCygwinAvailable(false);
+			return;
+		}
 
 		const detectCygwin = async (force = false) => {
 			if (!force) {
@@ -529,7 +533,7 @@ const NodeTermStatus = ({
 			clearTimeout(timer);
 			window.removeEventListener('cygwin-install-changed', onCygwinChanged);
 		};
-	}, [horizontal, compact, variant]);
+	}, [horizontal, compact, variant, cygwinEnabled]);
 
 	// 🚀 OPTIMIZACIÓN CON CACHÉ PERSISTENTE: Detectar contenedores Docker DIFERIDO
 	useEffect(() => {
@@ -1926,8 +1930,8 @@ const NodeTermStatus = ({
 				setWSLDistributions([]);
 			}
 
-			// Recargar Cygwin
-			if (window.electron && window.electron.platform === 'win32') {
+			// Recargar Cygwin solo si la app esta activada
+			if (window.electron && window.electron.platform === 'win32' && cygwinEnabled) {
 				try {
 					const result = await window.electronAPI.invoke('cygwin:detect');
 					if (result && typeof result.available === 'boolean') {
@@ -1941,6 +1945,9 @@ const NodeTermStatus = ({
 					setCachedData(CACHE_KEYS.CYGWIN, false);
 					setCygwinAvailable(false);
 				}
+			} else {
+				setCachedData(CACHE_KEYS.CYGWIN, false);
+				setCygwinAvailable(false);
 			}
 
 			// Recargar Docker
