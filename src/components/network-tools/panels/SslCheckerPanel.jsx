@@ -113,23 +113,20 @@ const ScoreRing = ({ score, grade, breakdown }) => {
   const color = scoreColor(score);
   const letterColor = gradeColor(grade);
   const deg = Math.min(100, Math.max(0, Number(score) || 0)) * 3.6;
-  const parts = breakdown
-    ? `Prot ${breakdown.protocol} · Clave ${breakdown.key} · Cipher ${breakdown.cipher}`
-    : '';
   return (
     <div style={{
       display: 'flex',
       alignItems: 'center',
-      gap: '0.55rem',
+      gap: '0.7rem',
       background: 'rgba(0,0,0,0.28)',
       borderRadius: '8px',
-      padding: '0.45rem 0.65rem',
+      padding: '0.65rem 0.8rem',
       border: `1px solid ${color}40`,
       minWidth: 0
     }}>
       <div style={{
-        width: 48,
-        height: 48,
+        width: 58,
+        height: 58,
         borderRadius: '50%',
         background: `conic-gradient(${color} ${deg}deg, rgba(255,255,255,0.08) 0deg)`,
         display: 'grid',
@@ -137,38 +134,34 @@ const ScoreRing = ({ score, grade, breakdown }) => {
         flexShrink: 0
       }}>
         <div style={{
-          width: 34,
-          height: 34,
+          width: 42,
+          height: 42,
           borderRadius: '50%',
           background: '#0b1220',
           display: 'grid',
           placeItems: 'center'
         }}>
-          <span style={{ fontSize: '0.82rem', fontWeight: 700, color, lineHeight: 1 }}>{score}</span>
+          <span style={{ fontSize: '0.95rem', fontWeight: 700, color, lineHeight: 1 }}>{score}</span>
         </div>
       </div>
       <div style={{ minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.35rem' }}>
           {grade && (
-            <span style={{ fontSize: '1.15rem', fontWeight: 800, color: letterColor, lineHeight: 1 }}>
+            <span style={{ fontSize: '1.45rem', fontWeight: 800, color: letterColor, lineHeight: 1 }}>
               {grade}
             </span>
           )}
-          <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)' }}>/100</span>
+          <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.55)' }}>/100</span>
         </div>
-        {parts && (
-          <div
-            title={parts}
-            style={{
-              marginTop: '0.12rem',
-              fontSize: '0.58rem',
-              color: 'rgba(255,255,255,0.52)',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            {parts}
+        {breakdown && (
+          <div style={{
+            marginTop: '0.2rem',
+            fontSize: '0.68rem',
+            color: 'rgba(255,255,255,0.58)',
+            lineHeight: 1.35
+          }}>
+            <div>Prot {breakdown.protocol} · Clave {breakdown.key}</div>
+            <div>Cipher {breakdown.cipher}</div>
           </div>
         )}
       </div>
@@ -180,38 +173,33 @@ const KpiTile = ({ label, value, sub, color, barPct }) => (
   <div style={{
     background: 'rgba(0,0,0,0.28)',
     borderRadius: '8px',
-    padding: '0.5rem 0.7rem',
+    padding: '0.65rem 0.8rem',
     minWidth: 0
   }}>
     <div style={{
-      fontSize: '0.6rem',
+      fontSize: '0.68rem',
       color: 'rgba(255,255,255,0.48)',
-      marginBottom: '0.18rem',
+      marginBottom: '0.22rem',
       textTransform: 'uppercase',
       letterSpacing: '0.03em'
     }}>
       {label}
     </div>
     <div style={{
-      fontSize: '0.92rem',
+      fontSize: '1.1rem',
       fontWeight: 700,
       color: color || '#ffffff',
-      lineHeight: 1.2,
-      overflow: 'hidden',
-      textOverflow: 'ellipsis',
-      whiteSpace: 'nowrap'
+      lineHeight: 1.2
     }}>
       {value}
     </div>
     {sub && (
       <div style={{
-        fontSize: '0.66rem',
-        color: 'rgba(255,255,255,0.52)',
-        marginTop: '0.12rem',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
-        fontFamily: 'monospace'
+        fontSize: '0.72rem',
+        color: 'rgba(255,255,255,0.58)',
+        marginTop: '0.2rem',
+        lineHeight: 1.35,
+        wordBreak: 'break-word'
       }}>
         {sub}
       </div>
@@ -490,15 +478,20 @@ const SslCheckerPanel = ({ isMobile = false }) => {
 
         <div style={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr 1fr' : 'minmax(140px, 0.9fr) repeat(3, 1fr)',
-          gap: '0.5rem',
-          marginBottom: '0.7rem'
+          gridTemplateColumns: isMobile ? '1fr' : 'minmax(210px, 1.15fr) repeat(3, minmax(160px, 1fr))',
+          gap: '0.6rem',
+          marginBottom: '0.75rem'
         }}>
           <ScoreRing score={securityScore} grade={securityGrade} breakdown={securityBreakdown} />
           <KpiTile
             label={expiryNegative ? 'Expirado hace' : 'Expira'}
             value={typeof daysUntilExpiry === 'number' ? `${Math.abs(daysUntilExpiry)} dias` : 'N/A'}
-            sub={cert ? `${cert.validFrom || ''} - ${cert.validTo || ''}` : ''}
+            sub={cert ? (
+              <>
+                <div>{cert.validFrom}</div>
+                <div>{cert.validTo}</div>
+              </>
+            ) : ''}
             color={expiryColor}
             barPct={typeof daysUntilExpiry === 'number' ? (daysUntilExpiry / 365) * 100 : 0}
           />
