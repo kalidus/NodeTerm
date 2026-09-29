@@ -236,6 +236,7 @@ function learnFromServerGcc(state, buf) {
   }
 
   state.ready = true;
+  retryConfirmAppCliprdrWrite(state);
   return true;
 }
 
@@ -483,9 +484,26 @@ function fallbackNamedCliprdrWrite(state) {
   if (!state || state.wallixService !== 'APP') return null;
   const named = declaredChannelId(state, 'cliprdr');
   if (named == null) return null;
-  if (named === state.cliprdrChannelId) return null;
   if (!isSafeStaticCliprdrWrite(state, named)) return null;
   return named;
+}
+
+function greetingOnUnsafeCliprdr(state) {
+  const ch = state && state.serverCliprdrChannelId;
+  if (ch == null) return false;
+  if (isUserMcsChannel(state, ch)) return true;
+  if (state.ioChannelId != null && ch === state.ioChannelId) return true;
+  return false;
+}
+
+function retryConfirmAppCliprdrWrite(state) {
+  if (!state || state.wallixService !== 'APP') return false;
+  if (state.cliprdrWriteChannelId != null) return false;
+  if (!greetingOnUnsafeCliprdr(state)) return false;
+  const fallback = fallbackNamedCliprdrWrite(state);
+  if (fallback == null) return false;
+  state.cliprdrWriteChannelId = fallback;
+  return true;
 }
 
 /**
@@ -597,6 +615,7 @@ function claimCliprdrPdu(state, channelId, userData) {
   state.serverCliprdrChannelId = channelId;
   state.serverCliprdrFragmentOpen = (flags & CHANNEL_FLAG_LAST) === 0;
   confirmCliprdrWriteChannel(state, channelId);
+  retryConfirmAppCliprdrWrite(state);
   return true;
 }
 
@@ -629,6 +648,9 @@ function noteServerCliprdrMonitorReady(state, userData) {
   const flags = readChannelPduFlags(userData);
   if (flags != null) state.cliprdrServerChannelFlags = flags;
   if (state.cliprdrMonitorReadyCount >= 2) state.cliprdrRehandshakePending = true;
+  else if (state.wallixService === 'APP' && state.cliprdrMonitorReadyCount >= 1) {
+    state.cliprdrRehandshakePending = true;
+  }
 }
 
 // El segundo saludo del selector no trae SHOW_PROTOCOL. Los PDU del cliente
@@ -644,6 +666,14 @@ function rememberClientCliprdrHandshake(state, desc, frame) {
   if (!state || !Buffer.isBuffer(frame) || typeof desc !== 'string') return;
   if (desc.includes('CB_CLIP_CAPS')) {
     if (!state.cachedClientCaps) state.cachedClientCaps = Buffer.from(frame);
+    if (state.appCliprdrCapsWaitTimer) {
+      clearTimeout(state.appCliprdrCapsWaitTimer);
+      state.appCliprdrCapsWaitTimer = null;
+    }
+    if (state.wallixService === 'APP'
+        && isSafeStaticCliprdrWrite(state, state.cliprdrWriteChannelId)) {
+      state.cliprdrRehandshakePending = false;
+    }
     return;
   }
   if (desc.includes('CB_TEMP_DIRECTORY')) {
@@ -678,6 +708,32 @@ function patchClientCapsGeneralFlags(frame, generalFlags) {
   return out;
 }
 
+function buildAppProbeCliprdrWrites(state, payloadFrame, desc) {
+  const empty = { before: [], after: [] };
+  const service = state && state.wallixService;
+  if (!state || (service !== 'APP' && service !== 'RDP') || !greetingOnUnsafeCliprdr(state)) {
+    return empty;
+  }
+  if (!isCliprdrClientPayloadDesc(desc)) return empty;
+  const flags = CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST | CHANNEL_FLAG_SHOW_PROTOCOL;
+  const probeCh = state.serverCliprdrChannelId || 1001;
+  const before = [];
+  const after = [];
+  const isList = desc.includes('CB_FORMAT_LIST') && !desc.includes('CB_FORMAT_LIST_RESPONSE');
+  if (isList && !state.appProbeCapsOnUserSent && Buffer.isBuffer(state.cachedClientCaps)) {
+    state.appProbeCapsOnUserSent = true;
+    before.push(applyCliprdrReplayFrame(state.cachedClientCaps, probeCh, flags));
+  }
+  // Solo APP espeja al VC nombrado. En RDP ESAH escribir en 1004/1005/1006 tras 1001 cierra TLS.
+  const named = state.cliprdrWriteChannelId;
+  if (service === 'APP'
+      && isSafeStaticCliprdrWrite(state, named)
+      && Buffer.isBuffer(payloadFrame)) {
+    after.push(applyCliprdrReplayFrame(payloadFrame, named, flags));
+  }
+  return { before, after };
+}
+
 function applyCliprdrReplayFrame(frame, writeCh, flags) {
   let out = Buffer.from(frame);
   if (writeCh != null) {
@@ -700,8 +756,8 @@ function applyCliprdrReplayFrame(frame, writeCh, flags) {
 // 1001 cierra el TLS (Wallix).
 function takeCliprdrRehandshake(state) {
   if (!state || !state.cliprdrRehandshakePending) return [];
-  state.cliprdrRehandshakePending = false;
   if (!Buffer.isBuffer(state.cachedClientCaps)) return [];
+  state.cliprdrRehandshakePending = false;
   const writeCh = state.cliprdrWriteChannelId;
   if (!isSafeStaticCliprdrWrite(state, writeCh)) {
     state.cliprdrRehandshakeSkippedUnsafe = true;
@@ -726,6 +782,7 @@ function buildCliprdrResult(state, buf, channelId, userData) {
   }
   if (desc && desc.includes('CB_MONITOR_READY')) {
     noteServerCliprdrMonitorReady(state, userData);
+    retryConfirmAppCliprdrWrite(state);
   }
 
   // El selector a veces saluda por rdpsnd/rdpdr y a veces por 1001 o el canal IO,
@@ -997,6 +1054,8 @@ module.exports = {
   isUserMcsChannel,
   isSafeStaticCliprdrWrite,
   fallbackNamedCliprdrWrite,
+  greetingOnUnsafeCliprdr,
+  retryConfirmAppCliprdrWrite,
   fallbackIoNamedCliprdrWrite,
   isCliprdrClientPayloadDesc,
   unsafeCliprdrClientWriteDest,
@@ -1009,6 +1068,8 @@ module.exports = {
   rememberClientCliprdrHandshake,
   patchClientCapsGeneralFlags,
   takeCliprdrRehandshake,
+  applyCliprdrReplayFrame,
+  buildAppProbeCliprdrWrites,
   filterServerFrame,
   processServerFrame
 };

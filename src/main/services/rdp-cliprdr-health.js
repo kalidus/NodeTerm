@@ -218,6 +218,21 @@ function cliprdrLiveHint(desc, opts = {}) {
       message: `cliprdr FORMAT_DATA_RESPONSE flags=0x${flags || '?'} dataLen=${dataLen == null ? '?' : dataLen}`
     };
   }
+  if (opts.inbound === false && desc.includes('CB_CLIP_CAPS')) {
+    return {
+      kind: 'client_caps',
+      once: true,
+      message: 'cliprdr CAPS del cliente WASM'
+    };
+  }
+  if (opts.inbound === false && desc.includes('CB_FORMAT_LIST')
+      && !desc.includes('CB_FORMAT_LIST_RESPONSE')) {
+    return {
+      kind: 'client_list',
+      once: true,
+      message: 'cliprdr FORMAT_LIST del cliente WASM'
+    };
+  }
   return null;
 }
 

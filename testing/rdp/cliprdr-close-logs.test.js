@@ -333,7 +333,19 @@ describe('cliprdrLiveHint / watch', () => {
 
   test('CAPS y FORMAT_LIST del cliente no son hint', () => {
     assert.equal(cliprdrLiveHint(desc('CB_CLIP_CAPS')), null);
-    assert.equal(cliprdrLiveHint(desc('CB_FORMAT_LIST', 0, 6), { inbound: false }), null);
+    assert.equal(cliprdrLiveHint(desc('CB_FORMAT_LIST', 0, 6)), null);
+  });
+
+  test('CAPS outbound del cliente WASM es hint once', () => {
+    const hint = cliprdrLiveHint(desc('CB_CLIP_CAPS'), { inbound: false });
+    assert.equal(hint.kind, 'client_caps');
+    assert.equal(hint.once, true);
+  });
+
+  test('FORMAT_LIST outbound del cliente WASM es hint once', () => {
+    const hint = cliprdrLiveHint(desc('CB_FORMAT_LIST', 0, 6), { inbound: false });
+    assert.equal(hint.kind, 'client_list');
+    assert.equal(hint.once, true);
   });
 
   test('mensajes de timeout identifican list y request', () => {

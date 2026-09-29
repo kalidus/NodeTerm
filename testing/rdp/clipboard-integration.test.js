@@ -15,7 +15,9 @@ const {
   unsafeCliprdrClientWriteDest,
   confirmCliprdrWriteChannel,
   fallbackIoNamedCliprdrWrite,
-  fallbackNamedCliprdrWrite
+  fallbackNamedCliprdrWrite,
+  learnFromServerGcc,
+  retryConfirmAppCliprdrWrite
 } = require('../../src/main/services/rdp-channel-filter');
 const {
   CHANNEL_PDU_HEADER_LEN,
@@ -74,6 +76,23 @@ function buildGeneralCaps(generalFlags) {
   body.writeUInt32LE(2, 8);
   body.writeUInt32LE(generalFlags, 12);
   return body;
+}
+
+function buildScNet(ioId, channelIds) {
+  const count = channelIds.length;
+  const blockLen = 8 + count * 2;
+  const body = Buffer.alloc(blockLen);
+  body.writeUInt16LE(0x0c03, 0);
+  body.writeUInt16LE(blockLen, 2);
+  body.writeUInt16LE(ioId, 4);
+  body.writeUInt16LE(count, 6);
+  channelIds.forEach((id, i) => body.writeUInt16LE(id, 8 + i * 2));
+  const tpkt = Buffer.alloc(4 + body.length);
+  tpkt[0] = 0x03;
+  tpkt[1] = 0x00;
+  tpkt.writeUInt16BE(tpkt.length, 2);
+  body.copy(tpkt, 4);
+  return tpkt;
 }
 
 function stateWithCliprdr() {
@@ -801,6 +820,114 @@ describe('CLIPRDR: robustez del filtro', () => {
     const replay = takeCliprdrRehandshake(state);
     assert.deepEqual(replay, []);
     assert.equal(state.cliprdrRehandshakeSkippedUnsafe, true);
+  });
+
+  test('APP fallback usa el VC nombrado aunque coincida con cliprdrChannelId', () => {
+    const state = stateWithCliprdr();
+    state.wallixService = 'APP';
+    state.cliprdrChannelId = 1007;
+    state.allowed = new Set([1003, 1004, 1005, 1006, 1007]);
+    state.channelIdToName = new Map([
+      [1004, 'rail'],
+      [1005, 'rdpdr'],
+      [1006, 'rdpsnd'],
+      [1007, 'cliprdr']
+    ]);
+    assert.equal(fallbackNamedCliprdrWrite(state), 1007);
+  });
+
+  test('APP saludo 1001 confirma write path en cliprdr nombrado 1007', () => {
+    const state = stateWithCliprdr();
+    state.wallixService = 'APP';
+    state.allowed = new Set([1003, 1004, 1005, 1006, 1007]);
+    state.channelIdToName = new Map([
+      [1004, 'rail'],
+      [1005, 'rdpdr'],
+      [1006, 'rdpsnd'],
+      [1007, 'cliprdr']
+    ]);
+
+    processServerFrame(state, buildMcsIndication(1001, buildChannelPdu(buildCliprdrPayload(7, 0, buildGeneralCaps(0x2)))));
+    processServerFrame(state, buildMcsIndication(1001, buildChannelPdu(buildCliprdrPayload(1))));
+
+    assert.equal(state.serverCliprdrChannelId, 1001);
+    assert.equal(state.cliprdrWriteChannelId, 1007);
+    assert.equal(retryConfirmAppCliprdrWrite(state), false);
+  });
+
+  test('APP un solo MONITOR_READY reenvia CAPS si hay write path', () => {
+    const state = stateWithCliprdr();
+    state.wallixService = 'APP';
+    state.allowed = new Set([1003, 1004, 1005, 1006, 1007]);
+    state.channelIdToName = new Map([
+      [1004, 'rail'],
+      [1005, 'rdpdr'],
+      [1006, 'rdpsnd'],
+      [1007, 'cliprdr']
+    ]);
+
+    const capsUser = buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16)), 0x13);
+    rememberClientCliprdrHandshake(state, describeCliprdrPdu(capsUser), buildMcsIndication(1004, capsUser));
+
+    processServerFrame(state, buildMcsIndication(1001, buildChannelPdu(buildCliprdrPayload(1), 0x13)));
+    assert.equal(state.cliprdrWriteChannelId, 1007);
+    assert.equal(state.cliprdrMonitorReadyCount, 1);
+    assert.equal(state.cliprdrRehandshakePending, true);
+
+    const replay = takeCliprdrRehandshake(state);
+    assert.equal(replay.length, 1);
+    assert.equal(parseMcsSendData(replay[0]).channelId, 1007);
+    assert.equal(parseMcsSendData(replay[0]).userData.readUInt16LE(8), 7);
+  });
+
+  test('APP SC_NET no confirma write path si aun no hay saludo', () => {
+    const state = createChannelFilterState();
+    state.wallixService = 'APP';
+    state.wasmChannelNames = ['cliprdr'];
+    state.clientChannelNames = ['rail', 'rdpdr', 'rdpsnd', 'cliprdr'];
+    assert.equal(learnFromServerGcc(state, buildScNet(1003, [1004, 1005, 1006, 1007])), true);
+    assert.equal(state.cliprdrWriteChannelId, null);
+    assert.equal(state.serverCliprdrChannelId, null);
+    assert.equal(retryConfirmAppCliprdrWrite(state), false);
+  });
+
+  test('APP MONITOR_READY sin CAPS mantiene pending hasta el handshake WASM', () => {
+    const state = stateWithCliprdr();
+    state.wallixService = 'APP';
+    state.allowed = new Set([1003, 1004, 1005, 1006, 1007]);
+    state.channelIdToName = new Map([
+      [1004, 'rail'],
+      [1005, 'rdpdr'],
+      [1006, 'rdpsnd'],
+      [1007, 'cliprdr']
+    ]);
+
+    processServerFrame(state, buildMcsIndication(1001, buildChannelPdu(buildCliprdrPayload(1), 0x13)));
+    assert.equal(state.cliprdrWriteChannelId, 1007);
+    assert.equal(state.cliprdrRehandshakePending, true);
+    assert.equal(state.cachedClientCaps, null);
+    assert.deepEqual(takeCliprdrRehandshake(state), []);
+    assert.equal(state.cliprdrRehandshakePending, true);
+
+    const capsUser = buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16)), 0x13);
+    rememberClientCliprdrHandshake(state, describeCliprdrPdu(capsUser), buildMcsIndication(1004, capsUser));
+    assert.ok(state.cachedClientCaps);
+    assert.equal(state.cliprdrRehandshakePending, false);
+  });
+
+  test('wasmChannelNames original fija cliprdrChannelId al indice WASM', () => {
+    const injected = createChannelFilterState();
+    injected.wasmChannelNames = ['cliprdr'];
+    injected.clientChannelNames = ['rail', 'rdpdr', 'rdpsnd', 'cliprdr'];
+    assert.equal(learnFromServerGcc(injected, buildScNet(1003, [1004, 1005, 1006, 1007])), true);
+    assert.equal(injected.cliprdrChannelId, 1004, 'WASM solo anuncia cliprdr en el indice 0');
+    assert.equal(injected.channelIdToName.get(1007), 'cliprdr');
+
+    const wrong = createChannelFilterState();
+    wrong.wasmChannelNames = [];
+    wrong.clientChannelNames = ['rail', 'rdpdr', 'rdpsnd', 'cliprdr'];
+    assert.equal(learnFromServerGcc(wrong, buildScNet(1003, [1004, 1005, 1006, 1007])), true);
+    assert.equal(wrong.cliprdrChannelId, 1007, 'sin wasm names usa la lista inyectada');
   });
 
   test('un solo saludo en cliprdr 1004 no genera la repeticion', () => {

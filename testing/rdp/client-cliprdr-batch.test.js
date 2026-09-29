@@ -97,8 +97,11 @@ function filterBatch(service, payload, filterState) {
   const kept = [];
   const injected = [];
   for (const frame of splitTpktFrames(payload)) {
-    const { forward, inject } = service.filterClientVirtualChannelFrame(frame, filterState);
+    const { forward, inject, extraForwardsBefore, extraForwards } =
+      service.filterClientVirtualChannelFrame(frame, filterState);
+    if (extraForwardsBefore) kept.push(...extraForwardsBefore);
     if (forward) kept.push(forward);
+    if (extraForwards) kept.push(...extraForwards);
     injected.push(...inject);
   }
   kept.injected = injected;
@@ -234,7 +237,7 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     }
   });
 
-  test('RDP saludo por 1001 no escribe CHANNEL_PDU en 1001, 1004 ni 1005', () => {
+  test('RDP saludo por 1001 escribe CAPS y FORMAT_LIST en 1001, no en el VC nombrado', () => {
     const state = {
       wallixService: 'RDP',
       ioChannelId: IO_CH,
@@ -248,10 +251,11 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
 
     const kept = filterBatch(service, buildInitiateCopyBatch(), state);
 
-    assert.equal(kept.length, 1, 'FORMAT_LIST sale por 1001; no por 1004/1005');
-    assert.equal(parseMcsSendData(kept[0]).channelId, 1001);
-    assert.equal(clipMsgType(kept[0]), CB_FORMAT_LIST);
-    assert.equal(state.pendingClientCliprdr.length, 1, 'CAPS encolado; TEMPDIR tirado');
+    assert.deepEqual(kept.map(clipMsgType), [CB_CLIP_CAPS, CB_FORMAT_LIST]);
+    assert.equal(parseMcsSendData(kept[0]).channelId, 1001, 'CAPS al Probe');
+    assert.equal(parseMcsSendData(kept[1]).channelId, 1001, 'FORMAT_LIST al Probe');
+    assert.equal(chanFlags(kept[1]) & CHANNEL_FLAG_SHOW_PROTOCOL, CHANNEL_FLAG_SHOW_PROTOCOL);
+    assert.equal(state.pendingClientCliprdr.length, 1, 'CAPS original encolado; TEMPDIR tirado');
     assert.equal(kept.injected.length, 1, 'acuse sintetico para que IronRDP pase a Ready');
   });
 
@@ -276,11 +280,11 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     const kept = filterBatch(service, buildInitiateCopyBatch(), state);
 
     assert.equal(state.cliprdrWriteChannelId, 1007);
-    assert.equal(kept.length, 2, 'TEMPDIR no sale; CAPS y FORMAT_LIST si');
-    assert.deepEqual(kept.map(clipMsgType), [CB_CLIP_CAPS, CB_FORMAT_LIST]);
-    for (const frame of kept) {
-      assert.equal(parseMcsSendData(frame).channelId, 1007);
-    }
+    assert.deepEqual(kept.map(clipMsgType), [CB_CLIP_CAPS, CB_CLIP_CAPS, CB_FORMAT_LIST, CB_FORMAT_LIST]);
+    assert.equal(parseMcsSendData(kept[0]).channelId, 1007, 'CAPS al VC nombrado');
+    assert.equal(parseMcsSendData(kept[1]).channelId, 1001, 'CAPS al Probe');
+    assert.equal(parseMcsSendData(kept[2]).channelId, 1001, 'FORMAT_LIST al Probe');
+    assert.equal(parseMcsSendData(kept[3]).channelId, 1007, 'FORMAT_LIST tambien al VC nombrado');
     assert.ok(!state.pendingClientCliprdr || state.pendingClientCliprdr.length === 0);
     assert.equal(kept.injected.length, 1, 'acuse sintetico hacia WASM');
     assert.ok(logs.some((l) => l.includes('write path recuperado ch=1007')));
@@ -333,7 +337,7 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     assert.equal(kept.injected.length, 1, 'acuse sintetico para que IronRDP pase a Ready');
     assert.equal(kept.injected[0][7], 0x68);
     assert.equal(parseMcsSendData(kept.injected[0]).channelId, CLIPRDR_CH);
-    assert.ok(logs.some((l) => l.includes('APP cliprdr no alineado')));
+    assert.ok(logs.some((l) => l.includes('cliprdr no alineado')));
     assert.ok(logs.some((l) => l.includes('datos por ch=1001')));
   });
 
@@ -500,7 +504,7 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     assert.equal(kept.injected.length, 0, 'el acuse real lo tiene que enviar el servidor, como en ESJC');
   });
 
-  test('APP con saludo 1001 escribe el handshake en el VC cliprdr 1007', () => {
+  test('APP con saludo 1001 escribe CAPS en 1007 y FORMAT_LIST en 1001', () => {
     const state = {
       wallixService: 'APP',
       ioChannelId: IO_CH,
@@ -520,11 +524,16 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
 
     const kept = filterBatch(service, buildInitiateCopyBatch(), state);
 
-    assert.equal(kept.length, 3, 'CAPS+TEMPDIR+FORMAT_LIST van al VC nombrado cliprdr');
-    assert.deepEqual(kept.map(clipMsgType), [CB_CLIP_CAPS, CB_TEMP_DIRECTORY, CB_FORMAT_LIST]);
-    for (const frame of kept) {
-      assert.equal(parseMcsSendData(frame).channelId, 1007);
-    }
+    assert.deepEqual(
+      kept.map(clipMsgType),
+      [CB_CLIP_CAPS, CB_TEMP_DIRECTORY, CB_CLIP_CAPS, CB_FORMAT_LIST, CB_FORMAT_LIST]
+    );
+    assert.equal(parseMcsSendData(kept[0]).channelId, 1007, 'CAPS al VC nombrado');
+    assert.equal(parseMcsSendData(kept[1]).channelId, 1007, 'TEMPDIR al VC nombrado');
+    assert.equal(parseMcsSendData(kept[2]).channelId, 1001, 'CAPS al Probe');
+    assert.equal(parseMcsSendData(kept[3]).channelId, 1001, 'FORMAT_LIST al Probe');
+    assert.equal(parseMcsSendData(kept[4]).channelId, 1007, 'FORMAT_LIST tambien al VC nombrado');
+    assert.equal(chanFlags(kept[3]) & CHANNEL_FLAG_SHOW_PROTOCOL, CHANNEL_FLAG_SHOW_PROTOCOL);
   });
 
   test('saludo por rdpsnd 1005: handshake completo, flags 0x13, sin ACK sintetico', () => {
@@ -715,7 +724,10 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     };
     const kept = filterBatch(service, buildInitiateCopyBatch(), state);
 
-    assert.deepEqual(kept.map(clipMsgType), [CB_CLIP_CAPS, CB_FORMAT_LIST]);
+    assert.deepEqual(
+      kept.map(clipMsgType),
+      [CB_CLIP_CAPS, CB_CLIP_CAPS, CB_FORMAT_LIST, CB_FORMAT_LIST]
+    );
     assert.equal(kept.injected.length, 1, 'el acuse sintetico sigue saliendo');
   });
 
