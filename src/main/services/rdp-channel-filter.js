@@ -502,6 +502,26 @@ function greetingOnUnsafeCliprdr(state) {
   return false;
 }
 
+/**
+ * Selector Wallix sin cadena :APP:: el hop a RemoteApp deja el saludo cliprdr
+ * en MCS 1001. El 2o MONITOR_READY ahi, con write path aun null y un VC
+ * nombrado cliprdr, es el mismo patron que :APP:. No se toca :RDP:.
+ */
+function maybePromoteSelectorAppCliprdr(state) {
+  if (!state) return false;
+  if (state.wallixService === 'APP' || state.wallixService === 'RDP') return false;
+  if (state.cliprdrSelectorAppInferred) return false;
+  if ((state.cliprdrMonitorReadyCount || 0) < 2) return false;
+  if (state.cliprdrWriteChannelId != null) return false;
+  if (!isUserMcsChannel(state, state.serverCliprdrChannelId)) return false;
+  const named = declaredChannelId(state, 'cliprdr');
+  if (named == null || !isSafeStaticCliprdrWrite(state, named)) return false;
+  state.wallixService = 'APP';
+  state.cliprdrSelectorAppInferred = true;
+  state.cliprdrRehandshakePending = true;
+  return true;
+}
+
 function retryConfirmAppCliprdrWrite(state) {
   if (!state || state.wallixService !== 'APP') return false;
   if (state.cliprdrWriteChannelId != null) return false;
@@ -621,6 +641,7 @@ function claimCliprdrPdu(state, channelId, userData) {
   state.serverCliprdrChannelId = channelId;
   state.serverCliprdrFragmentOpen = (flags & CHANNEL_FLAG_LAST) === 0;
   confirmCliprdrWriteChannel(state, channelId);
+  maybePromoteSelectorAppCliprdr(state);
   retryConfirmAppCliprdrWrite(state);
   return true;
 }
@@ -656,6 +677,9 @@ function noteServerCliprdrMonitorReady(state, userData) {
   if (state.cliprdrMonitorReadyCount >= 2) state.cliprdrRehandshakePending = true;
   else if (state.wallixService === 'APP' && state.cliprdrMonitorReadyCount >= 1) {
     state.cliprdrRehandshakePending = true;
+  }
+  if (maybePromoteSelectorAppCliprdr(state)) {
+    retryConfirmAppCliprdrWrite(state);
   }
 }
 
@@ -1053,6 +1077,7 @@ module.exports = {
   isSafeStaticCliprdrWrite,
   fallbackNamedCliprdrWrite,
   greetingOnUnsafeCliprdr,
+  maybePromoteSelectorAppCliprdr,
   retryConfirmAppCliprdrWrite,
   fallbackIoNamedCliprdrWrite,
   isCliprdrClientPayloadDesc,

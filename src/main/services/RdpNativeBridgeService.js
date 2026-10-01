@@ -37,6 +37,7 @@ const {
   rememberClientCliprdrHandshake,
   patchClientCapsGeneralFlags,
   takeCliprdrRehandshake,
+  maybePromoteSelectorAppCliprdr,
   retryConfirmAppCliprdrWrite,
   buildAppProbeCliprdrWrites
 } = require('./rdp-channel-filter');
@@ -786,6 +787,17 @@ class RdpNativeBridgeService extends EventEmitter {
                     }
                     // APP en frio solo tiene un READY. RDP/selector sigue exigiendo el segundo.
                     if (processed.cliprdrDesc && processed.cliprdrDesc.includes('CB_MONITOR_READY')) {
+                      if (maybePromoteSelectorAppCliprdr(channelFilter)) {
+                        retryConfirmAppCliprdrWrite(channelFilter);
+                      }
+                      if (channelFilter.cliprdrSelectorAppInferred
+                          && !channelFilter.loggedCliprdrSelectorAppInferred) {
+                        channelFilter.loggedCliprdrSelectorAppInferred = true;
+                        const inferMsg = `[Bridge Clipboard] selector APP inferido: saludo ${channelFilter.serverCliprdrChannelId} persistente, write path via cliprdr nombrado ${channelFilter.cliprdrWriteChannelId}`;
+                        recordCliprdrEvent(inferMsg);
+                        console.log(inferMsg);
+                        this.emit('diagnostic-log', { category: 'cliprdr', message: inferMsg });
+                      }
                       const readyCount = channelFilter.cliprdrMonitorReadyCount || 0;
                       const isAppReady = channelFilter.wallixService === 'APP' && readyCount >= 1;
                       const isSecondReady = readyCount >= 2;
@@ -815,6 +827,11 @@ class RdpNativeBridgeService extends EventEmitter {
                             }, 2000);
                           }
                         } else if (writeSafe || isSecondReady) {
+                          if (writeSafe && tlsSocket && tlsSocket.writable) {
+                            this.flushPendingClientCliprdr(channelFilter, tlsSocket, ws, (n) => {
+                              bytesToRdp += n;
+                            });
+                          }
                           const replay = takeCliprdrRehandshake(channelFilter);
                           if (replay.length && tlsSocket && tlsSocket.writable) {
                             for (const pdu of replay) {
@@ -849,6 +866,7 @@ class RdpNativeBridgeService extends EventEmitter {
                         channelFilter.appCliprdrWriteRetryTimer = setTimeout(() => {
                           channelFilter.appCliprdrWriteRetryTimer = null;
                           if (isCleanedUp || channelFilter.cliprdrWriteChannelId != null) return;
+                          maybePromoteSelectorAppCliprdr(channelFilter);
                           if (!retryConfirmAppCliprdrWrite(channelFilter)) return;
                           const writeName = channelFilter.channelIdToName instanceof Map
                             ? (channelFilter.channelIdToName.get(channelFilter.cliprdrWriteChannelId) || '?')

@@ -17,6 +17,7 @@ const {
   fallbackIoNamedCliprdrWrite,
   fallbackNamedCliprdrWrite,
   learnFromServerGcc,
+  maybePromoteSelectorAppCliprdr,
   retryConfirmAppCliprdrWrite
 } = require('../../src/main/services/rdp-channel-filter');
 const {
@@ -835,8 +836,9 @@ describe('CLIPRDR: robustez del filtro', () => {
     weakOn(1003);
   });
 
-  test('rehandshake no escribe si el saludo fue por MCS 1001 sin write path', () => {
+  test('rehandshake no escribe si :RDP: saludo por MCS 1001 sin write path', () => {
     const state = stateWithCliprdr();
+    state.wallixService = 'RDP';
     state.allowed = new Set([1003, 1004, 1005]);
     state.channelIdToName = new Map([[1004, 'cliprdr'], [1005, 'rdpsnd']]);
 
@@ -847,10 +849,58 @@ describe('CLIPRDR: robustez del filtro', () => {
     assert.equal(state.cliprdrWriteChannelId, null);
     processServerFrame(state, buildMcsIndication(1001, buildChannelPdu(buildCliprdrPayload(1), 0x03)));
 
+    assert.equal(state.cliprdrSelectorAppInferred, undefined);
+    assert.equal(state.wallixService, 'RDP');
+    assert.equal(fallbackNamedCliprdrWrite(state), null, 'RDP+1001 no debe usar el fallback APP');
     assert.equal(state.cliprdrRehandshakePending, true);
     const replay = takeCliprdrRehandshake(state);
     assert.deepEqual(replay, []);
     assert.equal(state.cliprdrRehandshakeSkippedUnsafe, true);
+  });
+
+  test('n/a + 1er READY en 1001 no promueve a APP', () => {
+    const state = stateWithCliprdr();
+    state.allowed = new Set([1003, 1004, 1005]);
+    state.channelIdToName = new Map([[1004, 'cliprdr'], [1005, 'rdpsnd']]);
+
+    processServerFrame(state, buildMcsIndication(1001, buildChannelPdu(buildCliprdrPayload(1), 0x13)));
+
+    assert.equal(state.cliprdrMonitorReadyCount, 1);
+    assert.equal(state.serverCliprdrChannelId, 1001);
+    assert.equal(maybePromoteSelectorAppCliprdr(state), false);
+    assert.equal(state.cliprdrSelectorAppInferred, undefined);
+    assert.equal(state.wallixService, undefined);
+    assert.equal(state.cliprdrWriteChannelId, null);
+    assert.equal(fallbackNamedCliprdrWrite(state), null);
+  });
+
+  test('n/a + 2o READY en 1001 recupera write path al cliprdr nombrado', () => {
+    const state = stateWithCliprdr();
+    state.allowed = new Set([1003, 1004, 1005, 1006]);
+    state.channelIdToName = new Map([
+      [1004, 'rdpdr'],
+      [1005, 'rdpsnd'],
+      [1006, 'cliprdr']
+    ]);
+
+    const capsUser = buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16)), 0x13);
+    rememberClientCliprdrHandshake(state, describeCliprdrPdu(capsUser), buildMcsIndication(1004, capsUser));
+
+    processServerFrame(state, buildMcsIndication(1001, buildChannelPdu(buildCliprdrPayload(1), 0x13)));
+    assert.equal(state.cliprdrWriteChannelId, null);
+    assert.equal(state.cliprdrSelectorAppInferred, undefined);
+
+    processServerFrame(state, buildMcsIndication(1001, buildChannelPdu(buildCliprdrPayload(1), 0x03)));
+
+    assert.equal(state.cliprdrSelectorAppInferred, true);
+    assert.equal(state.wallixService, 'APP');
+    assert.equal(state.cliprdrWriteChannelId, 1006);
+    assert.equal(state.cliprdrRehandshakePending, true);
+
+    const replay = takeCliprdrRehandshake(state);
+    assert.equal(replay.length, 1);
+    assert.equal(parseMcsSendData(replay[0]).channelId, 1006);
+    assert.equal(parseMcsSendData(replay[0]).userData.readUInt16LE(8), 7);
   });
 
   test('APP fallback usa el VC nombrado aunque coincida con cliprdrChannelId', () => {
