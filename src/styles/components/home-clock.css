@@ -1,0 +1,198 @@
+.home-clock {
+  position: relative;
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+  color: var(--ch-text, inherit);
+}
+
+.home-clock-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 22px;
+}
+
+.home-clock-greeting {
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ch-primary, #4fc3f7);
+  opacity: 0.9;
+}
+
+.home-clock-gear {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  opacity: 0.72;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.home-clock-gear:hover,
+.home-clock-gear.is-open {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.home-clock-time {
+  font-family: 'Fira Code', Consolas, monospace;
+  font-size: clamp(1.55rem, 4.2vw, 2.35rem);
+  font-weight: 650;
+  letter-spacing: 0.03em;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+
+.home-clock-date {
+  font-size: 0.92rem;
+}
+
+.home-clock-meta,
+.home-clock-hint,
+.home-clock-error {
+  font-size: 0.72rem;
+  opacity: 0.72;
+  font-family: 'Fira Code', Consolas, monospace;
+}
+
+.home-clock-error {
+  color: #f0a202;
+  opacity: 1;
+}
+
+.home-clock-zones,
+.home-clock-forecast {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.home-clock-zone,
+.home-clock-slot {
+  min-width: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 0.68rem;
+}
+
+.home-clock-slot {
+  align-items: center;
+  min-width: 58px;
+}
+
+.home-clock-zone strong,
+.home-clock-now strong {
+  font-family: 'Fira Code', Consolas, monospace;
+  font-weight: 650;
+}
+
+.home-clock-now {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.95rem;
+}
+
+.home-clock-now i,
+.home-clock-slot i,
+.home-clock-moon i {
+  color: var(--ch-primary, #4fc3f7);
+}
+
+.home-clock-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.home-clock-chip {
+  font-size: 0.68rem;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.home-clock-moon {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+}
+
+.home-clock-section-label {
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+.home-clock-settings {
+  position: absolute;
+  top: 34px;
+  right: 8px;
+  width: min(280px, calc(100% - 16px));
+  max-height: calc(100% - 46px);
+  overflow: auto;
+  z-index: 6;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: color-mix(in srgb, var(--ch-bg, #0d1117) 94%, #000 6%);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.home-clock-settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.home-clock-settings label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.home-clock-settings input[type="text"],
+.home-clock-settings select {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.25);
+  color: inherit;
+  padding: 4px 6px;
+  font-size: 0.72rem;
+}
+
+.home-clock-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.68rem;
+  opacity: 0.9;
+}

@@ -13,6 +13,7 @@ export { default as HomeVaultPanel } from './components/HomeVaultPanel';
 export { default as HomeNotesPanel } from './components/HomeNotesPanel';
 export { default as HomeGroupWorkspacePanel } from './components/HomeGroupWorkspacePanel';
 export { default as HomeReleaseNotesPanel } from './components/HomeReleaseNotesPanel';
+export { default as HomeClockPanel } from './components/HomeClockPanel';
 export { default as HomeWidgetPicker } from './components/HomeWidgetPicker';
 export { default as CyberConnectionList, CyberConnectionCard, usePanelBreakpoints } from './components/CyberConnectionList';
 export { default as HomeTerminalSplitPanel } from './components/HomeTerminalSplitPanel';

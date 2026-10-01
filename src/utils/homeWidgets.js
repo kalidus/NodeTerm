@@ -120,6 +120,19 @@ export const HOME_WIDGETS = [
     defaultHeight: 260
   },
   {
+    id: 'clock',
+    title: 'Reloj',
+    path: 'clock',
+    icon: 'pi pi-clock',
+    required: false,
+    group: 'extra',
+    defaultVisible: false,
+    minWidth: 220,
+    minHeight: 120,
+    defaultWidth: 380,
+    defaultHeight: 240
+  },
+  {
     id: 'filters',
     title: 'Filtros',
     path: 'filters',
