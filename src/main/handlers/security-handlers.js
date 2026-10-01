@@ -18,7 +18,7 @@ function readSecurityConfig() {
 }
 
 function writeSecurityConfig(config) {
-  fs.writeFileSync(SECURITY_CONFIG_PATH, JSON.stringify(config, null, 2), 'utf8');
+  fs.writeFileSync(SECURITY_CONFIG_PATH, JSON.stringify(config, null, 2), { encoding: 'utf8', mode: 0o600 });
 }
 
 function safeHandle(channel, handler) {
@@ -35,12 +35,21 @@ function registerSecurityHandlers(dependencies) {
     try {
       const config = readSecurityConfig();
 
+      // Si el usuario desactivó recordar contraseña, no debe haber clave persistida en memoria de disco
+      if (config.rememberPassword === false && !config.masterKeyEncrypted && !config.masterKey) {
+        return null;
+      }
+
       // Prioridad 1: Descifrar con safeStorage nativo del SO (DPAPI / Keychain / Secret Service)
       if (config.masterKeyEncrypted && safeStorage && safeStorage.isEncryptionAvailable()) {
         try {
           const buffer = Buffer.from(config.masterKeyEncrypted, 'base64');
           const decrypted = safeStorage.decryptString(buffer);
-          return JSON.parse(decrypted);
+          try {
+            return JSON.parse(decrypted);
+          } catch (_) {
+            return decrypted;
+          }
         } catch (decErr) {
           console.error('❌ [Security] Falló descifrado con safeStorage:', decErr.message);
         }
@@ -56,17 +65,21 @@ function registerSecurityHandlers(dependencies) {
 
   safeHandle('security:save-master-key', async (event, payload) => {
     try {
-      let encryptedMasterKey = payload;
+      let masterKey = null;
+      let verifier = null;
       let rememberPassword;
 
-      const isEncryptedBlob =
-        payload &&
-        typeof payload === 'object' &&
-        (payload.salt || payload.iv || payload.data);
-
-      if (payload && typeof payload === 'object' && !isEncryptedBlob) {
-        encryptedMasterKey = payload.encryptedMasterKey ?? payload;
-        rememberPassword = payload.rememberPassword;
+      if (typeof payload === 'string') {
+        masterKey = payload;
+      } else if (payload && typeof payload === 'object') {
+        const isEncryptedBlob = !!(payload.salt && payload.iv && payload.data);
+        if (isEncryptedBlob) {
+          masterKey = payload;
+        } else {
+          masterKey = payload.masterKey ?? payload.encryptedMasterKey ?? null;
+          verifier = payload.verifier ?? payload.vaultVerifier ?? null;
+          rememberPassword = payload.rememberPassword;
+        }
       }
 
       const config = readSecurityConfig();
@@ -76,19 +89,29 @@ function registerSecurityHandlers(dependencies) {
         config.rememberPassword = !!rememberPassword;
       }
 
-      // ✅ SEGURIDAD: Cifrar usando safeStorage del SO (DPAPI en Windows, Keychain en macOS, Secret Service en Linux)
-      if (safeStorage && safeStorage.isEncryptionAvailable()) {
-        try {
-          const payloadStr = JSON.stringify(encryptedMasterKey);
-          const encryptedBuffer = safeStorage.encryptString(payloadStr);
-          config.masterKeyEncrypted = encryptedBuffer.toString('base64');
-          delete config.masterKey; // Eliminar clave en texto plano / cifrado débil en disco
-        } catch (encErr) {
-          console.warn('⚠️ [Security] Fallback a almacenamiento directo por error en safeStorage:', encErr.message);
-          config.masterKey = encryptedMasterKey;
+      if (verifier) {
+        config.vaultVerifier = verifier;
+      }
+
+      // Si el usuario no quiere recordar la contraseña en este dispositivo, NO almacenar clave en disco
+      if (config.rememberPassword === false) {
+        delete config.masterKey;
+        delete config.masterKeyEncrypted;
+      } else if (masterKey) {
+        // ✅ SEGURIDAD: Cifrar usando safeStorage del SO (DPAPI en Windows, Keychain en macOS, Secret Service en Linux)
+        const payloadStr = typeof masterKey === 'string' ? masterKey : JSON.stringify(masterKey);
+        if (safeStorage && safeStorage.isEncryptionAvailable()) {
+          try {
+            const encryptedBuffer = safeStorage.encryptString(payloadStr);
+            config.masterKeyEncrypted = encryptedBuffer.toString('base64');
+            delete config.masterKey;
+          } catch (encErr) {
+            console.warn('⚠️ [Security] Fallback a almacenamiento protegido por archivo:', encErr.message);
+            config.masterKey = masterKey;
+          }
+        } else {
+          config.masterKey = masterKey;
         }
-      } else {
-        config.masterKey = encryptedMasterKey;
       }
 
       writeSecurityConfig(config);
@@ -102,9 +125,18 @@ function registerSecurityHandlers(dependencies) {
   safeHandle('security:has-master-key', async () => {
     try {
       const config = readSecurityConfig();
-      return !!(config.masterKeyEncrypted || config.masterKey);
+      return !!(config.masterKeyEncrypted || config.masterKey || config.vaultVerifier);
     } catch (error) {
       return false;
+    }
+  });
+
+  safeHandle('security:get-vault-verifier', async () => {
+    try {
+      const config = readSecurityConfig();
+      return config.vaultVerifier || null;
+    } catch (error) {
+      return null;
     }
   });
 
@@ -121,6 +153,11 @@ function registerSecurityHandlers(dependencies) {
     try {
       const config = readSecurityConfig();
       config.rememberPassword = !!remember;
+      if (!remember) {
+        // Al desmarcar "recordar en este dispositivo", eliminar inmediatamente la clave en disco
+        delete config.masterKey;
+        delete config.masterKeyEncrypted;
+      }
       config.updatedAt = new Date().toISOString();
       writeSecurityConfig(config);
       return { success: true };
@@ -135,6 +172,7 @@ function registerSecurityHandlers(dependencies) {
       const config = readSecurityConfig();
       delete config.masterKey;
       delete config.masterKeyEncrypted;
+      delete config.vaultVerifier;
       delete config.rememberPassword;
       writeSecurityConfig(config);
       return { success: true };

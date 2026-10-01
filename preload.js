@@ -161,12 +161,15 @@ contextBridge.exposeInMainWorld('electron', {
   },
   security: {
     getMasterKey: () => ipcRenderer.invoke('security:get-master-key'),
-    saveMasterKey: (encryptedMasterKey, rememberPassword) =>
-      ipcRenderer.invoke('security:save-master-key', {
-        encryptedMasterKey,
-        rememberPassword
-      }),
+    saveMasterKey: (payload, rememberPassword) => {
+      const data =
+        payload && typeof payload === 'object' && !payload.salt
+          ? { ...payload, rememberPassword: payload.rememberPassword ?? rememberPassword }
+          : { encryptedMasterKey: payload, rememberPassword };
+      return ipcRenderer.invoke('security:save-master-key', data);
+    },
     hasMasterKey: () => ipcRenderer.invoke('security:has-master-key'),
+    getVaultVerifier: () => ipcRenderer.invoke('security:get-vault-verifier'),
     getRememberPassword: () => ipcRenderer.invoke('security:get-remember-password'),
     setRememberPassword: (remember) => ipcRenderer.invoke('security:set-remember-password', remember),
     clearMasterKey: () => ipcRenderer.invoke('security:clear-master-key')

@@ -73,8 +73,7 @@ const SYNC_KEYS = [
   'nodeterm_linux_font_family',
   'nodeterm_linux_font_size',
 
-  // Master key (backup) y auth
-  'nodeterm_master_key',
+  // Auth y configuración de sesión (la clave maestra NUNCA se sincroniza en plano)
   'nodeterm_remember_password',
 
   // Configuración general y UI

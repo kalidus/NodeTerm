@@ -17,22 +17,19 @@ const UnlockDialog = ({ visible, onSuccess, secureStorage }) => {
     setError('');
 
     try {
-      const savedMasterKey = await secureStorage.loadMasterKey();
+      const isValid = await secureStorage.verifyMasterPassword(password);
 
-      if (!savedMasterKey) {
-        setError(t('dialogs.unlock.errors.loadKey', 'Error al cargar la clave guardada'));
-        setLoading(false);
-        return;
-      }
-
-      if (password !== savedMasterKey) {
+      if (!isValid) {
         setError(t('dialogs.unlock.errors.incorrect', 'Contraseña incorrecta'));
         setLoading(false);
         return;
       }
 
       await secureStorage.setRememberPassword(rememberPassword);
-      onSuccess(savedMasterKey);
+      if (rememberPassword) {
+        await secureStorage.saveMasterKey(password, true);
+      }
+      onSuccess(password);
     } catch (err) {
       console.error('[UnlockDialog] Error:', err);
       setError(t('dialogs.unlock.errors.unlockFailed', 'Error al desbloquear la aplicación'));

@@ -49,12 +49,19 @@ function readAppDataFromDisk() {
   const raw = fs.readFileSync(APP_DATA_PATH, 'utf8');
   const parsed = parseAppDataFileContent(raw);
 
-  if (!isAppDataPlainJson(raw) && process.env.NODETERM_IS_SECONDARY_INSTANCE !== 'true') {
+  // 🛡️ SEGURIDAD: Purgar nodeterm_master_key si existía en versiones anteriores
+  let needsRewrite = false;
+  if (parsed && parsed.nodeterm_master_key) {
+    delete parsed.nodeterm_master_key;
+    needsRewrite = true;
+  }
+
+  if ((!isAppDataPlainJson(raw) || needsRewrite) && process.env.NODETERM_IS_SECONDARY_INSTANCE !== 'true') {
     try {
-      fs.writeFileSync(APP_DATA_PATH, serializeAppDataFile(parsed), 'utf8');
-      console.log('[AppData] Migrado app-data.json a JSON plano (multi-instancia)');
+      fs.writeFileSync(APP_DATA_PATH, serializeAppDataFile(parsed), { encoding: 'utf8', mode: 0o600 });
+      console.log('[AppData] Normalizado app-data.json (modo 0o600, sin clave maestra)');
     } catch (migrateErr) {
-      console.warn('[AppData] No se pudo migrar a JSON plano:', migrateErr.message);
+      console.warn('[AppData] No se pudo guardar app-data.json saneado:', migrateErr.message);
     }
   }
 
@@ -175,12 +182,14 @@ function registerAppDataHandlers(dependencies) {
         ...data,
         _syncedAt: new Date().toISOString()
       };
+      // 🛡️ SEGURIDAD: Nunca persistir la clave maestra en el fichero compartido
+      delete dataWithMeta.nodeterm_master_key;
 
       const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const tempPath = path.join(APP_DATA_DIR, `app-data.${uniqueId}.tmp`);
 
       const serialized = serializeAppDataFile(dataWithMeta);
-      fs.writeFileSync(tempPath, serialized, 'utf8');
+      fs.writeFileSync(tempPath, serialized, { encoding: 'utf8', mode: 0o600 });
 
       let renameRetries = 5;
       let success = false;
