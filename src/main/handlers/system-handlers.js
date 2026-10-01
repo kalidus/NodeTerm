@@ -113,6 +113,52 @@ function validateBrowserUrl(url) {
   return { valid: true, url: parsedUrl.href };
 }
 
+const ALLOWED_IMPORT_EXTENSIONS = new Set([
+  '.xml', '.json', '.nodeterm', '.csv', '.tsv', '.yaml', '.yml', '.txt', '.rdp', '.jex'
+]);
+
+const SENSITIVE_FILENAME_PATTERNS = [
+  /^\.?env(\..+)?$/i,
+  /^security\.json$/i,
+  /^app-data\.json$/i,
+  /^id_[a-z0-9_-]+$/i,
+  /^id_[a-z0-9_-]+\.pub$/i,
+  /^known_hosts(\..+)?$/i,
+  /^authorized_keys(\..+)?$/i,
+  /master[-_]?key/i,
+  /passwd/i,
+  /shadow/i,
+  /sam$/i,
+  /system$/i
+];
+
+function validateImportFilePath(filePath) {
+  if (!filePath || typeof filePath !== 'string' || filePath.trim() === '') {
+    return { ok: false, error: 'filePath inválido o vacío' };
+  }
+
+  const safePath = path.resolve(filePath.trim());
+  const fileName = path.basename(safePath).toLowerCase();
+  const ext = path.extname(safePath).toLowerCase();
+
+  // 1. Validar lista blanca de extensiones permitidas para importación
+  if (!ALLOWED_IMPORT_EXTENSIONS.has(ext)) {
+    return {
+      ok: false,
+      error: `Extensión no permitida para importación: '${ext || '(sin extensión)'}'. Extensiones permitidas: ${Array.from(ALLOWED_IMPORT_EXTENSIONS).join(', ')}`
+    };
+  }
+
+  // 2. Bloquear patrones de archivos sensibles
+  for (const pattern of SENSITIVE_FILENAME_PATTERNS) {
+    if (pattern.test(fileName)) {
+      return { ok: false, error: 'Acceso denegado a archivo sensible o protegido' };
+    }
+  }
+
+  return { ok: true, safePath };
+}
+
 
 /**
  * Registra handlers del sistema necesarios para la UI inicial
@@ -190,27 +236,29 @@ function registerSystemMonitoringHandlers() {
     return { ok: true, hash };
   });
 
-  // Handler para leer contenido de archivo
+  // Handler para leer contenido de archivo de importación (seguro y asíncrono)
   ipcMain.handle('import:read-file', async (event, filePath) => {
     try {
-      // ✅ VALIDACIÓN CRÍTICA: Validar input antes de procesar
-      if (!filePath || typeof filePath !== 'string' || filePath.trim() === '') {
-        return { ok: false, error: 'filePath inválido o vacío' };
-      }
-      
-      const safePath = path.resolve(filePath.trim());
-      
-      // Verificación básica: No permitir leer archivos de configuración sensibles directamente si no es necesario
-      const fileName = path.basename(safePath).toLowerCase();
-      if (fileName === 'id_rsa' || fileName === '.env' || fileName === 'security.json') {
-        console.warn(`⚠️ [Security] Intento de lectura bloqueado para archivo sensible: ${fileName}`);
-        return { ok: false, error: 'Acceso denegado a archivos sensibles del sistema' };
+      const validation = validateImportFilePath(filePath);
+      if (!validation.ok) {
+        return { ok: false, error: validation.error };
       }
 
-      const data = fs.readFileSync(safePath, 'utf-8');
+      const safePath = validation.safePath;
+      const stats = await fs.promises.stat(safePath);
+      if (!stats.isFile()) {
+        return { ok: false, error: 'La ruta especificada no es un archivo regular' };
+      }
+
+      const MAX_IMPORT_BYTES = 50 * 1024 * 1024; // 50 MB
+      if (stats.size > MAX_IMPORT_BYTES) {
+        return { ok: false, error: 'El archivo excede el tamaño máximo permitido para importación (50 MB)' };
+      }
+
+      const data = await fs.promises.readFile(safePath, 'utf-8');
       return { ok: true, content: data };
     } catch (e) {
-      return { ok: false, error: e?.message || 'Error desconocido al leer archivo' };
+      return { ok: false, error: e?.message || 'Error al leer archivo' };
     }
   });
 
@@ -1370,5 +1418,6 @@ module.exports = {
   registerSystemHandlers,
   registerSystemMonitoringHandlers,
   getWindowsBrowserPath,
-  validateBrowserUrl
+  validateBrowserUrl,
+  validateImportFilePath
 };
