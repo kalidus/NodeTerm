@@ -49,6 +49,7 @@ function isAllowedListenerChannel(channel) {
 contextBridge.exposeInMainWorld('electron', {
   platform: process.platform,
   isSecondaryInstance: process.env.NODETERM_IS_SECONDARY_INSTANCE === 'true',
+  openExternal: (url) => ipcRenderer.invoke('import:open-external', url),
   clipboard: {
     writeText: (text) => ipcRenderer.invoke('clipboard:writeText', text),
     readText: () => ipcRenderer.invoke('clipboard:readText'),
@@ -456,6 +457,7 @@ contextBridge.exposeInMainWorld('electron', {
 
 // Crear alias para compatibilidad con el código existente
 contextBridge.exposeInMainWorld('electronAPI', {
+  openExternal: (url) => ipcRenderer.invoke('import:open-external', url),
   getVersionInfo: () => ipcRenderer.invoke('get-version-info'),
   getSystemStats: () => ipcRenderer.invoke('get-system-stats'),
   getConnectionHistory: () => ipcRenderer.invoke('get-connection-history'),

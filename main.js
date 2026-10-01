@@ -164,7 +164,7 @@ if (process.env.NODE_ENV === 'development') {
   } catch (_) { }
 }
 
-const { app, BrowserWindow, ipcMain, clipboard, dialog, Menu, powerMonitor, screen, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, clipboard, dialog, Menu, powerMonitor, screen, shell, session } = require('electron');
 logTiming('Electron cargado');
 
 function resolveV8MaxOldSpaceMb() {
@@ -1453,6 +1453,21 @@ function createWindow() {
     return { action: 'deny' };
   });
 
+  // 🛡️ SEGURIDAD: Prevenir navegación interna accidental y abrir enlaces externos en el navegador
+  mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
+    if (navigationUrl && (navigationUrl.startsWith('http://') || navigationUrl.startsWith('https://'))) {
+      const isInternal = navigationUrl.startsWith('http://localhost') || navigationUrl.startsWith('http://127.0.0.1');
+      if (!isInternal) {
+        event.preventDefault();
+        try {
+          shell.openExternal(navigationUrl);
+        } catch (e) {
+          console.warn('⚠️ [Security] Error en will-navigate abriendo URL externa:', e?.message);
+        }
+      }
+    }
+  });
+
   // 🛡️ SEGURIDAD: Prevenir privilegios peligrosos en webviews incrustados
   mainWindow.webContents.on('will-attach-webview', (event, webPreferences, params) => {
     delete webPreferences.preload;
@@ -2186,6 +2201,29 @@ ipcMain.handle('cygwin:install-status', async () => {
 
 app.on('ready', () => {
   logTiming('app ready event');
+
+  // 🛡️ SEGURIDAD: Content Security Policy (CSP) en session.defaultSession
+  if (session && session.defaultSession) {
+    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+      // Aplicar CSP a la ventana principal y marcos internos
+      if (details.resourceType === 'mainFrame' || details.resourceType === 'subFrame') {
+        const isInternal = details.url.startsWith('file:') || details.url.startsWith('http://localhost') || details.url.startsWith('http://127.0.0.1');
+        if (isInternal) {
+          callback({
+            responseHeaders: {
+              ...details.responseHeaders,
+              'Content-Security-Policy': [
+                "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: data:; connect-src 'self' ws: wss: http: https: blob: data:; worker-src 'self' blob:; frame-src 'self'; object-src 'none'; base-uri 'self';"
+              ]
+            }
+          });
+          return;
+        }
+      }
+      callback({ responseHeaders: details.responseHeaders });
+    });
+  }
+
   sshKnownHostsService.setUserDataPath(app.getPath('userData'));
   try {
     const { registerBootstrapIpcHandlers } = require('./src/main/handlers');

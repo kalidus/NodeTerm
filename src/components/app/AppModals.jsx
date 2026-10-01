@@ -7,6 +7,7 @@ import WallixRefreshDialog from '../WallixRefreshDialog';
 import UpdateNotificationToast from '../UpdateNotificationToast';
 import { ConfirmDialog } from 'primereact/confirmdialog';
 import { Toast } from 'primereact/toast';
+import BrowserPopupModal from '../BrowserPopupModal';
 
 // Lazy loaded dialogs
 const ImportDialog = lazy(() => import('../ImportDialog'));
@@ -227,6 +228,9 @@ export const AppModals = ({
 
       {/* ConfirmDialog para confirmaciones globales */}
       <ConfirmDialog className="app-confirm-dialog" />
+
+      {/* Ventana emergente flotante del navegador para enlaces y previsualización */}
+      <BrowserPopupModal />
 
       {/* Toast global para notificaciones y alertas del sistema */}
       <Toast ref={toast} position="top-right" baseZIndex={999999} />

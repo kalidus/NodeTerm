@@ -465,26 +465,29 @@ export const useGlobalAppEvents = ({
     const handler = (e) => {
       const info = e.detail || {};
       const { url, username, password, title } = info;
-      if (!url) return;
+      const targetUrl = (url && typeof url === 'string') ? url.trim() : 'about:blank';
 
-      const existingTabs = getAllTabs();
-      const existingTab = existingTabs.find(t => t.type === TAB_TYPES.BROWSER && t.browserData?.url === url);
-      if (existingTab) {
-        activateTabSynchronously(existingTab.key);
-        return;
+      // Si es una URL concreta (distinta de about:blank), verificar si ya está abierta
+      if (targetUrl !== 'about:blank') {
+        const existingTabs = getAllTabs();
+        const existingTab = existingTabs.find(t => t.type === TAB_TYPES.BROWSER && t.browserData?.url === targetUrl);
+        if (existingTab) {
+          activateTabSynchronously(existingTab.key);
+          return;
+        }
       }
 
       const tabId = `browser_${Date.now()}`;
       const browserData = {
-        url,
+        url: targetUrl,
         username,
         password,
-        title
+        title: title || (targetUrl === 'about:blank' ? 'Navegador' : targetUrl.replace(/^https?:\/\//i, '').split('/')[0])
       };
 
       const newTab = {
         key: tabId,
-        label: `🌐 ${title || 'Navegador'}`,
+        label: `🌐 ${browserData.title}`,
         type: TAB_TYPES.BROWSER,
         browserData,
         createdAt: Date.now()

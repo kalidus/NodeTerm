@@ -74,6 +74,7 @@
     "collapseSidebar": "Collapse sidebar panel",
     "connections": "Connections",
     "passwords": "Passwords",
+    "webBrowser": "Web Browser (Tab)",
     "createGroup": "Create tab group",
     "aiChat": "AI Chat",
     "anythingLLM": "AnythingLLM",

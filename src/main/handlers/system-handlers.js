@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const os = require('os');
-const { exec } = require('child_process');
+const { exec, spawn } = require('child_process');
 const { promisify } = require('util');
 const execAsync = promisify(exec);
 const { parseProcessList } = require('../utils/parsing-utils');
@@ -51,6 +51,68 @@ function safeHandle(channel, handler) {
   }
   ipcMain.handle(channel, handler);
 }
+
+// Utilitarios de seguridad y resolución de navegadores
+function getWindowsBrowserPath(browser) {
+  const programFiles = process.env['ProgramFiles'] || 'C:\\Program Files';
+  const programFilesX86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)';
+  const localAppData = process.env['LocalAppData'] || '';
+
+  const candidates = {
+    chrome: [
+      path.join(programFiles, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+      path.join(programFilesX86, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+      path.join(localAppData, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+    ],
+    edge: [
+      path.join(programFilesX86, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+      path.join(programFiles, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+    ],
+    firefox: [
+      path.join(programFiles, 'Mozilla Firefox', 'firefox.exe'),
+      path.join(programFilesX86, 'Mozilla Firefox', 'firefox.exe'),
+    ],
+    brave: [
+      path.join(programFiles, 'BraveSoftware', 'Brave-Browser', 'Application', 'brave.exe'),
+      path.join(programFilesX86, 'BraveSoftware', 'Brave-Browser', 'Application', 'brave.exe'),
+      path.join(localAppData, 'BraveSoftware', 'Brave-Browser', 'Application', 'brave.exe'),
+    ]
+  };
+
+  const list = candidates[browser] || [];
+  for (const candidate of list) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+function validateBrowserUrl(url) {
+  if (!url || typeof url !== 'string') {
+    return { valid: false, error: 'URL inválida' };
+  }
+  const trimmedUrl = url.trim();
+
+  // Prohibir caracteres de control, saltos de línea, comillas, backticks, pipes, escapes, punto y coma o subshells
+  if (/[\x00-\x1F\x7F"'\s<>^`;|\\]|\$\(/.test(trimmedUrl)) {
+    return { valid: false, error: 'URL contiene caracteres no permitidos' };
+  }
+
+  let parsedUrl;
+  try {
+    parsedUrl = new URL(trimmedUrl);
+  } catch (_) {
+    return { valid: false, error: 'Formato de URL inválido' };
+  }
+
+  if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+    return { valid: false, error: 'Solo se permiten protocolos http:// y https://' };
+  }
+
+  return { valid: true, url: parsedUrl.href };
+}
+
 
 /**
  * Registra handlers del sistema necesarios para la UI inicial
@@ -198,16 +260,13 @@ function registerSystemMonitoringHandlers() {
   // Handler para abrir URL externa
   ipcMain.handle('import:open-external', async (event, url) => {
     try {
-      // ✅ VALIDACIÓN DE SEGURIDAD: Solo permitir protocolos web seguros
-      if (!url || typeof url !== 'string') return { ok: false, error: 'URL inválida' };
-      
-      const trimmedUrl = url.trim();
-      if (!trimmedUrl.startsWith('http://') && !trimmedUrl.startsWith('https://')) {
-        console.warn('⚠️ [Security] Intento de abrir protocolo no seguro:', trimmedUrl);
-        return { ok: false, error: 'Solo se permiten protocolos http:// y https://' };
+      const val = validateBrowserUrl(url);
+      if (!val.valid) {
+        console.warn('⚠️ [Security] URL inválida en import:open-external:', url, val.error);
+        return { ok: false, error: val.error };
       }
 
-      await shell.openExternal(trimmedUrl);
+      await shell.openExternal(val.url);
       return { ok: true };
     } catch (e) {
       return { ok: false, error: e?.message };
@@ -1109,66 +1168,110 @@ function registerSystemMonitoringHandlers() {
     }
   });
 
-  // Handler para abrir URL en navegadores específicos con Auto-Type automático en Windows
+  // Handler para abrir URL en navegadores específicos con Auto-Type automático
   ipcMain.handle('system:open-with-browser', async (event, { url, browser, privateMode, username, password }) => {
     try {
-      if (!url || typeof url !== 'string') return { ok: false, error: 'URL inválida' };
-      const trimmedUrl = url.trim();
-      if (!trimmedUrl.startsWith('http://') && !trimmedUrl.startsWith('https://')) {
-        console.warn('⚠️ [Security] Intento de abrir protocolo no seguro:', trimmedUrl);
-        return { ok: false, error: 'Solo se permiten protocolos http:// y https://' };
+      const val = validateBrowserUrl(url);
+      if (!val.valid) {
+        return { ok: false, error: val.error };
       }
+      const safeUrl = val.url;
 
-      // Evitar caracteres maliciosos para inyección de comandos
-      if (/["`;|&]/.test(trimmedUrl)) {
-        return { ok: false, error: 'URL contiene caracteres no permitidos' };
-      }
+      const launchBrowser = async () => {
+        if (!browser || browser === 'default') {
+          await shell.openExternal(safeUrl);
+          return;
+        }
 
-      let command = '';
-      if (process.platform === 'win32') {
-        if (browser === 'chrome') {
-          command = privateMode ? `start chrome --incognito "${trimmedUrl}"` : `start chrome "${trimmedUrl}"`;
-        } else if (browser === 'firefox') {
-          command = privateMode ? `start firefox -private-window "${trimmedUrl}"` : `start firefox "${trimmedUrl}"`;
-        } else if (browser === 'edge') {
-          command = privateMode ? `start msedge -inprivate "${trimmedUrl}"` : `start msedge "${trimmedUrl}"`;
-        } else {
-          await shell.openExternal(trimmedUrl);
-          if (username) clipboard.writeText(username);
-          return { ok: true };
-        }
-      } else if (process.platform === 'darwin') {
-        if (browser === 'chrome') {
-          command = privateMode ? `open -a "Google Chrome" --args --incognito "${trimmedUrl}"` : `open -a "Google Chrome" "${trimmedUrl}"`;
-        } else if (browser === 'firefox') {
-          command = privateMode ? `open -a "Firefox" --args -private-window "${trimmedUrl}"` : `open -a "Firefox" "${trimmedUrl}"`;
-        } else if (browser === 'edge') {
-          command = privateMode ? `open -a "Microsoft Edge" --args -inprivate "${trimmedUrl}"` : `open -a "Microsoft Edge" "${trimmedUrl}"`;
-        } else {
-          await shell.openExternal(trimmedUrl);
-          if (username) clipboard.writeText(username);
-          return { ok: true };
-        }
-      } else { // linux
-        if (browser === 'chrome') {
-          command = privateMode ? `google-chrome --incognito "${trimmedUrl}"` : `google-chrome "${trimmedUrl}"`;
-        } else if (browser === 'firefox') {
-          command = privateMode ? `firefox -private-window "${trimmedUrl}"` : `firefox "${trimmedUrl}"`;
-        } else if (browser === 'edge') {
-          command = privateMode ? `microsoft-edge -inprivate "${trimmedUrl}"` : `microsoft-edge "${trimmedUrl}"`;
-        } else {
-          await shell.openExternal(trimmedUrl);
-          if (username) clipboard.writeText(username);
-          return { ok: true };
-        }
-      }
+        if (process.platform === 'win32') {
+          const exePath = getWindowsBrowserPath(browser);
+          const args = [];
+          if (privateMode) {
+            if (browser === 'firefox') args.push('-private-window');
+            else if (browser === 'edge') args.push('-inprivate');
+            else args.push('--incognito');
+          }
+          args.push(safeUrl);
 
-      // Ejecutar apertura del navegador
-      exec(process.platform === 'win32' ? `cmd.exe /c ${command}` : command, (err) => {
-        if (err) {
-          console.error(`Error opening browser ${browser}:`, err);
+          if (exePath) {
+            const child = spawn(exePath, args, { detached: true, stdio: 'ignore' });
+            child.on('error', async (err) => {
+              console.warn(`[system:open-with-browser] Error iniciando ${browser}:`, err.message);
+              try { await shell.openExternal(safeUrl); } catch (_) {}
+            });
+            child.unref();
+            return;
+          }
+
+          // Fallback directo a binario sin pasar por shell/cmd.exe
+          const fallbackExe = browser === 'edge' ? 'msedge.exe' : (browser === 'chrome' ? 'chrome.exe' : (browser === 'firefox' ? 'firefox.exe' : `${browser}.exe`));
+          try {
+            const child = spawn(fallbackExe, args, { detached: true, stdio: 'ignore' });
+            child.on('error', async () => {
+              try { await shell.openExternal(safeUrl); } catch (_) {}
+            });
+            child.unref();
+          } catch (_) {
+            await shell.openExternal(safeUrl);
+          }
+        } else if (process.platform === 'darwin') {
+          const macApps = {
+            chrome: 'Google Chrome',
+            firefox: 'Firefox',
+            edge: 'Microsoft Edge',
+            brave: 'Brave Browser'
+          };
+          const appName = macApps[browser];
+          if (!appName) {
+            await shell.openExternal(safeUrl);
+            return;
+          }
+          const args = ['-a', appName];
+          if (privateMode) {
+            args.push('--args');
+            if (browser === 'firefox') args.push('-private-window');
+            else if (browser === 'edge') args.push('-inprivate');
+            else args.push('--incognito');
+          }
+          args.push(safeUrl);
+          try {
+            const child = spawn('open', args, { detached: true, stdio: 'ignore' });
+            child.on('error', async () => {
+              try { await shell.openExternal(safeUrl); } catch (_) {}
+            });
+            child.unref();
+          } catch (_) {
+            await shell.openExternal(safeUrl);
+          }
+        } else {
+          // Linux
+          const linuxBins = {
+            chrome: 'google-chrome',
+            firefox: 'firefox',
+            edge: 'microsoft-edge',
+            brave: 'brave-browser'
+          };
+          const bin = linuxBins[browser] || browser;
+          const args = [];
+          if (privateMode) {
+            if (browser === 'firefox') args.push('-private-window');
+            else if (browser === 'edge') args.push('-inprivate');
+            else args.push('--incognito');
+          }
+          args.push(safeUrl);
+          try {
+            const child = spawn(bin, args, { detached: true, stdio: 'ignore' });
+            child.on('error', async () => {
+              try { await shell.openExternal(safeUrl); } catch (_) {}
+            });
+            child.unref();
+          } catch (_) {
+            await shell.openExternal(safeUrl);
+          }
         }
-      });
+      };
+
+      await launchBrowser();
 
       // Ejecutar Auto-Type en segundo plano si hay credenciales
       if (username || password) {
@@ -1193,12 +1296,12 @@ function registerSystemMonitoringHandlers() {
           if (password) psScript += `[System.Windows.Forms.SendKeys]::SendWait('{ENTER}');\n`;
           psScript += 'exit\n';
 
-          const { spawn } = require('child_process');
           const child = spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', '-']);
           child.stdin.write(psScript);
           child.stdin.end();
           child.on('error', (err) => {
             console.error('Failed to start PowerShell process for Auto-Type:', err);
+            if (username) clipboard.writeText(username);
           });
         } else if (process.platform === 'darwin') {
           const escapeAppleScript = (str) => {
@@ -1215,7 +1318,6 @@ function registerSystemMonitoringHandlers() {
           if (password) appleScript += `key code 36\n`; // Return (Enter)
           appleScript += 'end tell\n';
 
-          const { spawn } = require('child_process');
           const child = spawn('osascript', []);
           let stderr = '';
           child.stderr.on('data', (data) => {
@@ -1247,12 +1349,13 @@ function registerSystemMonitoringHandlers() {
           if (password) bashCommand += `xdotool type --delay 10 '${passEscaped}'; `;
           if (password) bashCommand += `xdotool key Return; `;
 
-          exec(bashCommand, (err) => {
-            if (err) {
-              console.warn('Error executing Auto-Type via xdotool (¿está instalado xdotool?):', err);
-              if (username) clipboard.writeText(username);
-            }
+          const child = spawn('bash', ['-s']);
+          child.on('error', (err) => {
+            console.warn('Error executing Auto-Type via xdotool (¿está instalado xdotool?):', err);
+            if (username) clipboard.writeText(username);
           });
+          child.stdin.write(bashCommand);
+          child.stdin.end();
         }
       }
 
@@ -1265,5 +1368,7 @@ function registerSystemMonitoringHandlers() {
 
 module.exports = {
   registerSystemHandlers,
-  registerSystemMonitoringHandlers
+  registerSystemMonitoringHandlers,
+  getWindowsBrowserPath,
+  validateBrowserUrl
 };

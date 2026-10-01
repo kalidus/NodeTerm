@@ -127,3 +127,50 @@
   color: var(--ui-button-primary);
   font-weight: 500;
 }
+
+/* ========================================================
+   Ventana Emergente Flotante del Navegador (Browser Popup)
+   ======================================================== */
+.browser-popup-dialog.p-dialog {
+  border-radius: 10px;
+  border: 1px solid var(--ui-dialog-border, rgba(255, 255, 255, 0.12));
+  background: var(--ui-dialog-bg, #1e222b);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+.browser-popup-dialog .p-dialog-header {
+  padding: 8px 14px;
+  background: var(--ui-dialog-bg, #1e222b);
+  border-bottom: 1px solid var(--ui-content-border, rgba(255, 255, 255, 0.08));
+  color: var(--ui-dialog-text, #e2e8f0);
+}
+
+.browser-popup-dialog .p-dialog-content {
+  padding: 0 !important;
+  background: var(--ui-content-bg, #14171f);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.browser-popup-dialog .p-dialog-header-icons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.browser-popup-dialog .p-dialog-header-icon {
+  color: var(--ui-dialog-text, #94a3b8);
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  transition: all 0.15s ease;
+}
+
+.browser-popup-dialog .p-dialog-header-icon:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+

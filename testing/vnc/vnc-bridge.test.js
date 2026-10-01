@@ -11,10 +11,15 @@ describe('VNC Native Bridge Service Tests', () => {
   let mockVncPort;
   let receivedFromClient = [];
 
+  const serverSockets = new Set();
+
   before(async () => {
     // Iniciar un servidor TCP simulando un servidor VNC (RFB 003.008)
     await new Promise((resolve) => {
       mockVncServer = net.createServer((socket) => {
+        serverSockets.add(socket);
+        socket.on('close', () => serverSockets.delete(socket));
+        socket.on('error', () => {});
         // Enviar saludo RFB inicial
         socket.write('RFB 003.008\n');
 
@@ -35,6 +40,10 @@ describe('VNC Native Bridge Service Tests', () => {
   });
 
   after(async () => {
+    for (const s of serverSockets) {
+      try { s.destroy(); } catch (_) {}
+    }
+    serverSockets.clear();
     if (mockVncServer) {
       await new Promise((resolve) => mockVncServer.close(resolve));
     }
@@ -124,7 +133,11 @@ describe('VNC Native Bridge Service Tests', () => {
       assert.ok(incomingMessages.some(m => m.includes('RFB 003.008')));
       assert.ok(receivedFromClient.some(m => m.includes('RFB 003.008')));
 
-      ws.close();
+      await new Promise((r) => {
+        if (ws.readyState === WebSocket.CLOSED) return r();
+        ws.once('close', () => r());
+        ws.close();
+      });
     });
 
     it('cierra conexiones activas limpiamente con disconnectAll', () => {

@@ -111,6 +111,35 @@ const SidebarIconRail = React.memo(({
             </button>
           );
         })}
+
+        {/* Navegador Web Integrado */}
+        <button
+          className="sidebar-icon-rail-item"
+          onClick={() => {
+            window.dispatchEvent(new CustomEvent('open-browser-tab', {
+              detail: {
+                url: 'about:blank',
+                title: 'Navegador'
+              }
+            }));
+          }}
+          title={t('tooltips.webBrowser', 'Navegador Web')}
+          style={{ '--rail-item-color': '#38bdf8' }}
+        >
+          <span className="sidebar-rail-svg-wrapper" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="railBrowserGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#38bdf8" />
+                  <stop offset="100%" stopColor="#0284c7" />
+                </linearGradient>
+              </defs>
+              <circle cx="12" cy="12" r="9" stroke="url(#railBrowserGrad)" strokeWidth="1.8" />
+              <path d="M3.6 9h16.8M3.6 15h16.8" stroke="url(#railBrowserGrad)" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M12 3a15.3 15.3 0 0 1 4 9 15.3 15.3 0 0 1-4 9 15.3 15.3 0 0 1-4-9 15.3 15.3 0 0 1 4-9z" stroke="url(#railBrowserGrad)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+        </button>
       </div>
 
       {/* Separator */}

@@ -108,9 +108,12 @@ class VncNativeBridgeService extends EventEmitter {
     this.sessionTokens.set(tokenId, sessionData);
 
     // Auto-expirar token en 60 segundos si no se usa
-    setTimeout(() => {
+    const tokenTimer = setTimeout(() => {
       this.sessionTokens.delete(tokenId);
     }, 60000);
+    if (tokenTimer && typeof tokenTimer.unref === 'function') {
+      tokenTimer.unref();
+    }
 
     return {
       tokenId,

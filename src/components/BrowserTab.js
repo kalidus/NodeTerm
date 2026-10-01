@@ -9,13 +9,25 @@ const BrowserTab = ({ tabId, browserData }) => {
   const webviewRef = useRef(null);
 
   const { url: initialUrl, username, password, title } = browserData || {};
+  const isBlank = !initialUrl || initialUrl === 'about:blank';
 
-  const [currentUrl, setCurrentUrl] = useState(initialUrl || '');
-  const [inputUrl, setInputUrl] = useState(initialUrl || '');
-  const [webviewState, setWebviewState] = useState('loading');
+  const [currentUrl, setCurrentUrl] = useState(isBlank ? '' : initialUrl);
+  const [inputUrl, setInputUrl] = useState(isBlank ? '' : initialUrl);
+  const [webviewState, setWebviewState] = useState(isBlank ? 'ready' : 'loading');
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+
+  const addressInputRef = useRef(null);
+
+  useEffect(() => {
+    if (isBlank) {
+      const timer = setTimeout(() => {
+        addressInputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isBlank]);
 
   // Script de autocompletado inteligente
   const handleAutofill = useCallback(() => {
@@ -255,6 +267,7 @@ const BrowserTab = ({ tabId, browserData }) => {
         <div className="browser-address-container">
           <span className="pi pi-globe browser-address-icon"></span>
           <input
+            ref={addressInputRef}
             type="text"
             className="browser-address-input"
             value={inputUrl}
@@ -323,7 +336,7 @@ const BrowserTab = ({ tabId, browserData }) => {
         <webview
           key={`${initialUrl}-${reloadKey}`}
           ref={webviewRef}
-          src={initialUrl}
+          src={initialUrl || 'about:blank'}
           allowpopups="true"
           style={{ width: '100%', height: '100%', border: 'none', background: '#ffffff' }}
           webpreferences="contextIsolation=yes, nodeIntegration=no, webSecurity=yes"
