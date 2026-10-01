@@ -167,6 +167,12 @@ if (process.env.NODE_ENV === 'development') {
 const { app, BrowserWindow, ipcMain, clipboard, dialog, Menu, powerMonitor, screen, shell, session } = require('electron');
 logTiming('Electron cargado');
 
+try {
+  require('./src/main/handlers/home-wallpaper-handlers').registerHomeWallpaperHandlers();
+} catch (err) {
+  console.error('[MAIN] Error registrando home wallpaper handlers:', err?.message || err);
+}
+
 function resolveV8MaxOldSpaceMb() {
   const envRaw = process.env.NODETERM_MAX_OLD_SPACE_SIZE;
   if (envRaw) {

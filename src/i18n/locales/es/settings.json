@@ -155,7 +155,21 @@
       "showLocalTerminalDescription": "Controla si el terminal local se muestra u oculta al abrir la página de inicio",
       "statusBar": "Barra de Estado",
       "showStatusBar": "Mostrar barra de estado al iniciar",
-      "showStatusBarDescription": "Controla si la barra de estado se muestra u oculta al abrir la página de inicio"
+      "showStatusBarDescription": "Controla si la barra de estado se muestra u oculta al abrir la página de inicio",
+      "wallpaper": {
+        "title": "Fondo de pantalla",
+        "description": "Sube imagenes para usarlas como fondo de la pagina de inicio",
+        "upload": "Subir imagenes",
+        "empty": "Aun no hay fondos",
+        "apply": "Usar como fondo",
+        "remove": "Eliminar",
+        "dim": "Velo",
+        "restore": "Usar fondo del tema",
+        "tooLarge": "Archivo demasiado grande (maximo 8 MB)",
+        "invalidType": "Formato de imagen no soportado",
+        "unreadable": "No se pudo leer el archivo",
+        "unavailable": "No se puede importar el fondo"
+      }
     }
   },
   "rdp": {

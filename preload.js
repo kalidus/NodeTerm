@@ -163,6 +163,11 @@ contextBridge.exposeInMainWorld('electron', {
     getSplashStyle: () => ipcRenderer.invoke('theme:get-splash-style'),
     saveSplashStyle: (style) => ipcRenderer.invoke('theme:save-splash-style', style)
   },
+  homeWallpaper: {
+    import: () => ipcRenderer.invoke('home-wallpaper:import'),
+    getDataUrl: (file) => ipcRenderer.invoke('home-wallpaper:get-data-url', file),
+    delete: (file) => ipcRenderer.invoke('home-wallpaper:delete', file)
+  },
   security: {
     getMasterKey: () => ipcRenderer.invoke('security:get-master-key'),
     saveMasterKey: (payload, rememberPassword) => {

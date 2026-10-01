@@ -15,6 +15,7 @@ import {
   actionBarIconColors,
   actionBarIconNames
 } from '../../../../themes/action-bar-icon-themes';
+import HomeWallpaperPicker from '../../../home/HomeWallpaperPicker';
 
 export const HomePageSubTab = ({
   uiFont,
@@ -477,6 +478,30 @@ export const HomePageSubTab = ({
                 onChange={(e) => setStatusBarVisible(e.checked)}
               />
             </div>
+          </div>
+
+          {/* Fondo de pantalla */}
+          <div style={{
+            background: 'rgba(0, 0, 0, 0.08)',
+            borderRadius: '10px',
+            padding: '0.875rem 1rem',
+            border: '1px solid rgba(255, 255, 255, 0.05)',
+            marginTop: '1rem'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              marginBottom: '0.75rem'
+            }}>
+              <i className="pi pi-image" style={{ fontSize: '0.875rem', color: 'var(--ui-button-primary)' }}></i>
+              <span style={{
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                color: 'var(--ui-dialog-text)'
+              }}>{t('appearance.homePage.wallpaper.title')}</span>
+            </div>
+            <HomeWallpaperPicker hideHeading />
           </div>
 
           {/* Vista Previa */}

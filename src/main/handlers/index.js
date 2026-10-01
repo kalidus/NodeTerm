@@ -31,6 +31,7 @@ let _themeHandlers = null;
 let _securityHandlers = null;
 let _appdataHandlers = null;
 let _localFsHandlers = null;
+let _homeWallpaperHandlers = null;
 let _claudeHandlers = null;
 let _opencodeHandlers = null;
 let _codexcliHandlers = null;
@@ -154,6 +155,11 @@ function getLocalFsHandlers() {
   return _localFsHandlers;
 }
 
+function getHomeWallpaperHandlers() {
+  if (!_homeWallpaperHandlers) _homeWallpaperHandlers = require('./home-wallpaper-handlers');
+  return _homeWallpaperHandlers;
+}
+
 function getClaudeHandlers() {
   if (!_claudeHandlers) _claudeHandlers = require('./claude-handlers');
   return _claudeHandlers;
@@ -233,6 +239,7 @@ function registerBootstrapIpcHandlers() {
   runHandlerStep('appdata IPC', () => getAppDataHandlers().registerAppDataHandlers({}));
   runHandlerStep('get-system-stats IPC', registerSystemStatsIpcHandler);
   runHandlerStep('theme IPC', () => getThemeHandlers().registerThemeHandlers({}));
+  runHandlerStep('home wallpaper IPC', () => getHomeWallpaperHandlers().registerHomeWallpaperHandlers());
   runHandlerStep('security IPC', () => getSecurityHandlers().registerSecurityHandlers({}));
 }
 
@@ -261,6 +268,7 @@ function registerCriticalHandlers(dependencies) {
   runHandlerStep('system IPC', () => getSystemHandlers().registerSystemHandlers());
   runHandlerStep('security IPC', () => getSecurityHandlers().registerSecurityHandlers(dependencies));
   runHandlerStep('theme IPC', () => getThemeHandlers().registerThemeHandlers(dependencies));
+  runHandlerStep('home wallpaper IPC', () => getHomeWallpaperHandlers().registerHomeWallpaperHandlers());
   runHandlerStep('appdata IPC', () => getAppDataHandlers().registerAppDataHandlers(dependencies));
   runHandlerStep('claude IPC', () => getClaudeHandlers().registerClaudeHandlers());
   runHandlerStep('opencode IPC', () => getOpenCodeHandlers().registerOpenCodeHandlers());
@@ -397,6 +405,7 @@ module.exports = {
   getSecurityHandlers,
   getAppDataHandlers,
   getLocalFsHandlers,
+  getHomeWallpaperHandlers,
   getClaudeHandlers,
   getOpenCodeHandlers,
   getCodexCliHandlers,

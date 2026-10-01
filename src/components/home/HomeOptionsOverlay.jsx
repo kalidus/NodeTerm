@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { Slider } from 'primereact/slider';
 import { HomeWidgetPicker } from './connection-history';
+import HomeWallpaperPicker from './HomeWallpaperPicker';
 
 const TABS = [
   { id: 'apariencia', label: 'Apariencia' },
@@ -209,6 +210,7 @@ export default function HomeOptionsOverlay({
                 onToggle={toggleMinimalMode}
                 themeColors={themeColors}
               />
+              <HomeWallpaperPicker compact themeColors={themeColors} />
             </>
           )}
 

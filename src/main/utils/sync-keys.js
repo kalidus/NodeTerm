@@ -118,6 +118,7 @@ const SYNC_KEYS = [
   'nodeterm_home_monitor_layouts',
   'homeTabFont',
   'homeTabFontSize',
+  'homeTab_wallpaper',
   'actionBarIconTheme',
   'nodeterm_terminal_opacity',
   'nodeterm_terminal_frame_style',

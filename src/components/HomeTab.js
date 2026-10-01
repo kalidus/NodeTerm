@@ -43,6 +43,7 @@ import {
 } from '../utils/homeTabPresets';
 import { ensureHomeWidgetLayout } from '../utils/homeWidgets';
 import HomeOptionsOverlay from './home/HomeOptionsOverlay';
+import { useHomeWallpaper } from '../utils/homeWallpaper';
 
 /** Opciones de marco del terminal local (Home); mismas claves que `TERMINAL_FRAME_STYLE` en ConnectionHistory. */
 const HOME_TERMINAL_FRAME_STYLE_OPTIONS = [
@@ -1555,6 +1556,12 @@ const HomeTab = ({
     return currentTheme.colors?.sidebarBackground || currentTheme.colors?.contentBackground || '#fafafa';
   }, [currentTheme]);
 
+  const { activeUrl: wallpaperUrl, state: wallpaperState } = useHomeWallpaper({ loadThumbs: false });
+  const wallpaperDimOverlay = React.useMemo(() => {
+    if (!wallpaperUrl) return null;
+    return adjustOpacity(dashboardBg, (wallpaperState.dim || 0) / 100);
+  }, [wallpaperUrl, wallpaperState.dim, dashboardBg]);
+
   // Colores del tema para elementos de la lista
   const themeColors = React.useMemo(() => {
     // Special handling for Nord theme to ensure visible hover effects
@@ -2154,7 +2161,7 @@ const HomeTab = ({
       <div style={{
         height: '100%',
         overflow: 'hidden',
-        background: dashboardBg,
+        background: wallpaperUrl ? 'transparent' : dashboardBg,
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
@@ -2473,11 +2480,39 @@ const HomeTab = ({
         background: dashboardBg,
         overflow: 'hidden'
       }}>
+      {wallpaperUrl ? (
+        <>
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              backgroundImage: `url(${wallpaperUrl})`,
+              backgroundSize: wallpaperState.fit || 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              pointerEvents: 'none',
+              zIndex: 0
+            }}
+          />
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: wallpaperDimOverlay,
+              pointerEvents: 'none',
+              zIndex: 0
+            }}
+          />
+        </>
+      ) : null}
       <div
         style={{
           height: (statusBarVisible && !terminalView) ? 'calc(100% - 40px)' : '100%',
           width: '100%',
           position: 'relative',
+          zIndex: 1,
           overflow: 'hidden'
         }}
         data-split-container-wrapper="true"
@@ -2493,7 +2528,9 @@ const HomeTab = ({
             {topPanel}
           </div>
       </div>
-      <StandaloneStatusBar visible={statusBarVisible && !terminalView} />
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        <StandaloneStatusBar visible={statusBarVisible && !terminalView} />
+      </div>
     </div>
   );
 };

@@ -293,7 +293,21 @@
       "showLocalTerminalDescription": "Controls whether the local terminal is shown or hidden when opening the home page",
       "statusBar": "Status Bar",
       "showStatusBar": "Show status bar on startup",
-      "showStatusBarDescription": "Controls whether the status bar is shown or hidden when opening the home page"
+      "showStatusBarDescription": "Controls whether the status bar is shown or hidden when opening the home page",
+      "wallpaper": {
+        "title": "Wallpaper",
+        "description": "Upload images to use as the Home tab background",
+        "upload": "Upload images",
+        "empty": "No wallpapers yet",
+        "apply": "Use as wallpaper",
+        "remove": "Remove",
+        "dim": "Dim overlay",
+        "restore": "Use theme background",
+        "tooLarge": "File too large (max 8 MB)",
+        "invalidType": "Unsupported image format",
+        "unreadable": "Could not read the file",
+        "unavailable": "Wallpaper import is not available"
+      }
     }
   },
   "rdp": {
