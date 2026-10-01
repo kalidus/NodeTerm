@@ -25,6 +25,26 @@ function safeHandle(channel, handler) {
   ipcMain.handle(channel, handler);
 }
 
+function clipboardTempDir() {
+  return path.join(os.tmpdir(), 'nodeterm-clipboard');
+}
+
+function toNodeBuffer(buffer) {
+  if (Buffer.isBuffer(buffer)) return buffer;
+  if (buffer instanceof Uint8Array || (buffer && buffer.buffer)) {
+    return Buffer.from(buffer.buffer, buffer.byteOffset || 0, buffer.byteLength || buffer.length);
+  }
+  if (typeof buffer === 'string') return Buffer.from(buffer, 'base64');
+  return Buffer.from(buffer || []);
+}
+
+function isSafeClipboardTempPath(filePath) {
+  if (!filePath || typeof filePath !== 'string') return false;
+  const root = path.resolve(clipboardTempDir());
+  const resolved = path.resolve(filePath);
+  return resolved === root || resolved.startsWith(root + path.sep);
+}
+
 function registerClipboardHandlers() {
   safeHandle('clipboard:readText', () => clipboard.readText());
 
@@ -33,26 +53,44 @@ function registerClipboardHandlers() {
     return true;
   });
 
-  safeHandle('clipboard:saveTempFile', async (event, { fileName, buffer }) => {
+  safeHandle('clipboard:beginTempFile', async (event, { fileName }) => {
     try {
-      const tempDir = path.join(os.tmpdir(), 'nodeterm-clipboard');
+      const tempDir = clipboardTempDir();
       if (!fs.existsSync(tempDir)) {
         fs.mkdirSync(tempDir, { recursive: true });
       }
       const safeName = path.basename(fileName || 'file');
       const filePath = path.join(tempDir, safeName);
-      let data;
-      if (Buffer.isBuffer(buffer)) {
-        data = buffer;
-      } else if (buffer instanceof Uint8Array || (buffer && buffer.buffer)) {
-        data = Buffer.from(buffer.buffer, buffer.byteOffset || 0, buffer.byteLength || buffer.length);
-      } else if (typeof buffer === 'string') {
-        data = Buffer.from(buffer, 'base64');
-      } else if (buffer && typeof buffer === 'object' && Object.keys(buffer).length > 0) {
-        data = Buffer.from(Object.values(buffer));
-      } else {
-        data = Buffer.from(buffer || []);
+      fs.writeFileSync(filePath, Buffer.alloc(0));
+      return { success: true, filePath };
+    } catch (err) {
+      console.error('[Clipboard] Error creating temp file:', err);
+      return { success: false, error: err.message };
+    }
+  });
+
+  safeHandle('clipboard:appendTempFile', async (event, { filePath, buffer }) => {
+    try {
+      if (!isSafeClipboardTempPath(filePath)) {
+        return { success: false, error: 'invalid_temp_path' };
       }
+      fs.appendFileSync(filePath, toNodeBuffer(buffer));
+      return { success: true };
+    } catch (err) {
+      console.error('[Clipboard] Error appending temp file:', err);
+      return { success: false, error: err.message };
+    }
+  });
+
+  safeHandle('clipboard:saveTempFile', async (event, { fileName, buffer }) => {
+    try {
+      const tempDir = clipboardTempDir();
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+      const safeName = path.basename(fileName || 'file');
+      const filePath = path.join(tempDir, safeName);
+      const data = toNodeBuffer(buffer);
       fs.writeFileSync(filePath, data);
       if (process.env.NODETERM_RDP_DEBUG === '1' || process.env.NODETERM_DEBUG === '1') {
         console.log(`💾 [Clipboard] Archivo temporal guardado (${data.length} bytes): ${filePath}`);

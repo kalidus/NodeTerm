@@ -19,6 +19,27 @@ import {
 import { resolveCredsspPolicy } from '../utils/rdpSecurityPolicy';
 import { parseResolutionValue } from '../utils/rdpScreenConfig';
 import { mapTerminationReason } from '../utils/rdpTerminationReasons';
+import {
+  fileTransferNameOf,
+  formatTransferSize,
+  seedPendingDownloads,
+  activatePendingDownload,
+  applyDownloadProgress,
+  removeTransfer,
+  cancelTransferEntry,
+  abortProviderDownload,
+  installDownloadAbortGuard,
+  getTransferEntry,
+  discardPendingDownloads,
+  shouldAcceptCompletion,
+  listPendingDownloadIds,
+  hasFileTransferWork,
+  getTransferOverlayHeader
+} from '../utils/rdpFileTransferQueue';
+
+const CLIPRDR_DOWNLOAD_CHUNK = 256 * 1024;
+const TEMP_FILE_WRITE_CHUNK = 4 * 1024 * 1024;
+const LARGE_CLIPRDR_FILE_BYTES = 256 * 1024 * 1024;
 
 export { mapTerminationReason };
 
@@ -162,8 +183,13 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   const currentTokenIdRef = useRef(null);
   const lastBackendReasonRef = useRef(null);
   const uploadFailedIdsRef = useRef(new Set());
+  const abortedTransferIdsRef = useRef(new Set());
+  const activeTransfersRef = useRef({});
+  const downloadedPathsRef = useRef([]);
   const transferDismissTimersRef = useRef(new Map());
   const TRANSFER_COMPLETE_OVERLAY_MS = 2500;
+
+  activeTransfersRef.current = activeTransfers;
 
   // Búferes de diagnóstico en memoria para volcado automático ante incidencias
   const bridgeTraceBufferRef = useRef([]);
@@ -225,8 +251,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       console.warn(`   ${line}`);
     }
   };
-
-  const fileTransferNameOf = (file) => file?.name || file?.file?.name || 'Archivo';
 
   const clearTransferDismissTimers = () => {
     for (const timer of transferDismissTimersRef.current.values()) {
@@ -305,6 +329,119 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
 
   const disarmFileTransfer = () => {
     isFileTransferArmedRef.current = false;
+  };
+
+  const syncTransfersAndArm = (next) => {
+    if (!hasFileTransferWork(next)) {
+      disarmFileTransfer();
+    }
+    return next;
+  };
+
+  const finishDownloadedFiles = async (copiedPaths, fileNames) => {
+    if (!copiedPaths.length || !window.electron?.clipboard?.writeFiles) return;
+    downloadedPathsRef.current = copiedPaths;
+    await window.electron.clipboard.writeFiles(copiedPaths);
+    toastRef.current?.show({
+      severity: 'success',
+      summary: 'Archivo Listo en Portapapeles',
+      detail: `${fileNames.join(', ')} copiado. Pulsa Ctrl+V en cualquier carpeta de tu PC para pegarlo.`,
+      life: 5000
+    });
+  };
+
+  const saveBlobToTempFile = async (fileName, blob, transferId) => {
+    const clipboardApi = window.electron?.clipboard;
+    if (!clipboardApi) return null;
+    if (clipboardApi.beginTempFile && clipboardApi.appendTempFile && blob && typeof blob.slice === 'function') {
+      const begin = await clipboardApi.beginTempFile(fileName);
+      if (!begin?.success || !begin.filePath) return null;
+      for (let offset = 0; offset < blob.size; offset += TEMP_FILE_WRITE_CHUNK) {
+        if (!shouldAcceptCompletion(abortedTransferIdsRef.current, transferId)) return null;
+        const slice = blob.slice(offset, offset + TEMP_FILE_WRITE_CHUNK);
+        const uint8 = new Uint8Array(await slice.arrayBuffer());
+        const appended = await clipboardApi.appendTempFile(begin.filePath, uint8);
+        if (!appended?.success) return null;
+      }
+      return begin.filePath;
+    }
+    if (!clipboardApi.saveTempFile) return null;
+    const arrayBuffer = await blob.arrayBuffer();
+    const res = await clipboardApi.saveTempFile(fileName, new Uint8Array(arrayBuffer));
+    return res?.success ? res.filePath : null;
+  };
+
+  const startDownloadById = async (pendingId) => {
+    const entry = activeTransfersRef.current[pendingId];
+    const provider = fileTransferProviderRef.current;
+    if (!entry || entry.status !== 'pending' || !entry.fileInfo || !provider) return;
+    let transferId = null;
+    try {
+      if ((Number(entry.size) || 0) >= LARGE_CLIPRDR_FILE_BYTES) {
+        toastRef.current?.show({
+          severity: 'warn',
+          summary: 'Archivo grande por portapapeles',
+          detail: 'Ficheros grandes por CLIPRDR pueden cortar la sesion RDP. Si falla, usa una copia mas pequena o otra via.',
+          life: 6000
+        });
+      }
+      const handle = provider.downloadFile(entry.fileInfo, entry.fileIndex);
+      transferId = handle?.transferId;
+      if (transferId == null || !shouldAcceptCompletion(abortedTransferIdsRef.current, transferId)) return;
+      isFileTransferArmedRef.current = true;
+      setActiveTransfers((prev) => activatePendingDownload(prev, pendingId, transferId));
+      const blob = await handle.completion;
+      if (!shouldAcceptCompletion(abortedTransferIdsRef.current, transferId)) return;
+      const filePath = await saveBlobToTempFile(entry.fileInfo.name, blob, transferId);
+      if (filePath) {
+        downloadedPathsRef.current = [...downloadedPathsRef.current, filePath];
+      }
+      if (!shouldAcceptCompletion(abortedTransferIdsRef.current, transferId)) return;
+      const copiedPaths = downloadedPathsRef.current;
+      await finishDownloadedFiles(
+        copiedPaths,
+        copiedPaths.length > 1
+          ? [`${copiedPaths.length} archivos`]
+          : [entry.name || entry.fileInfo.name]
+      );
+      setActiveTransfers((prev) => syncTransfersAndArm(removeTransfer(prev, transferId)));
+    } catch (dlErr) {
+      if (transferId != null && !shouldAcceptCompletion(abortedTransferIdsRef.current, transferId)) return;
+      console.warn('[IronRDP FileTransfer] Error descargando archivo:', dlErr);
+      if (transferId != null) {
+        markTransferStatus(transferId, 'error', { name: entry.name, type: 'download' });
+      }
+    }
+  };
+
+  const startAllPendingDownloads = async () => {
+    const ids = listPendingDownloadIds(activeTransfersRef.current);
+    for (const id of ids) {
+      await startDownloadById(id);
+    }
+  };
+
+  const cancelTransferById = (id) => {
+    if (id == null) return;
+    const entry = getTransferEntry(activeTransfersRef.current, id);
+    const wasStarted = !!(entry && (entry.status === 'active' || entry.status === 'pasting' || !entry.status));
+    abortProviderDownload(fileTransferProviderRef.current, id);
+    setActiveTransfers((prev) => {
+      const next = cancelTransferEntry(prev, id, abortedTransferIdsRef.current);
+      return syncTransfersAndArm(next);
+    });
+    if (wasStarted) {
+      toastRef.current?.show({
+        severity: 'info',
+        summary: 'Transferencia cancelada',
+        detail: 'Se detuvo la peticion de datos al remoto.',
+        life: 2500
+      });
+    }
+  };
+
+  const discardAllPendingDownloads = () => {
+    setActiveTransfers((prev) => syncTransfersAndArm(discardPendingDownloads(prev)));
   };
 
   const isDriveEnabled = rdpConfig.enableDrive !== false && (rdpConfig.guacEnableDrive !== false || rdpConfig.redirectFolders !== false || rdpConfig.enableDrive === true);
@@ -447,6 +584,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     userClosingRef.current = false;
     clearTransferDismissTimers();
     uploadFailedIdsRef.current.clear();
+    abortedTransferIdsRef.current.clear();
+    downloadedPathsRef.current = [];
     isFileTransferArmedRef.current = false;
     setActiveTransfers({});
     setDisconnectDetails(null);
@@ -729,9 +868,10 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             // onUploadStarted silencia el sync de texto para que no pise la Format List del fichero.
             // No usar onUploadFinished: en iron-remote-desktop-rdp 0.7.0 se dispara al initiate, no al terminar.
             currentFileTransferProvider = new RdpFileTransferProvider({
-              chunkSize: 64 * 1024,
+              chunkSize: CLIPRDR_DOWNLOAD_CHUNK,
               onUploadStarted: () => { isFileTransferArmedRef.current = true; }
             });
+            installDownloadAbortGuard(currentFileTransferProvider, abortedTransferIdsRef.current);
             fileTransferProviderRef.current = currentFileTransferProvider;
             for (const ext of currentFileTransferProvider.getBuilderExtensions()) {
               builder.extension(ext);
@@ -924,6 +1064,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             });
 
             currentFileTransferProvider.on('upload-progress', (progress) => {
+              if (!shouldAcceptCompletion(abortedTransferIdsRef.current, progress.transferId)) return;
               const reachedEnd = (progress.percentage || 0) >= 100;
               setActiveTransfers(prev => {
                 const existing = prev[progress.transferId];
@@ -946,6 +1087,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             });
 
             currentFileTransferProvider.on('upload-complete', (file, fileIndex, transferId) => {
+              if (!shouldAcceptCompletion(abortedTransferIdsRef.current, transferId)) return;
               console.log('[IronRDP FileTransfer] Pegado en el remoto:', file?.name);
               markTransferStatus(transferId, 'complete', {
                 name: file?.name || 'Archivo',
@@ -954,79 +1096,34 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             });
 
             currentFileTransferProvider.on('download-progress', (progress) => {
-              setActiveTransfers(prev => ({
-                ...prev,
-                [progress.transferId]: {
-                  name: progress.fileName,
-                  type: 'download',
-                  percentage: progress.percentage || 0
-                }
-              }));
-
-              if (progress.percentage >= 100) {
-                setTimeout(() => {
-                  setActiveTransfers(prev => {
-                    const next = { ...prev };
-                    delete next[progress.transferId];
-                    return next;
-                  });
-                }, 1000);
-              }
+              setActiveTransfers(prev => applyDownloadProgress(prev, progress, abortedTransferIdsRef.current));
             });
 
             currentFileTransferProvider.on('download-complete', (fileInfo, blob, fileIndex, transferId) => {
-              console.log('✅ [IronRDP FileTransfer] Recepción de buffer completada:', fileInfo?.name);
-              setActiveTransfers(prev => {
-                const next = { ...prev };
-                delete next[transferId];
-                return next;
-              });
+              if (!shouldAcceptCompletion(abortedTransferIdsRef.current, transferId)) return;
+              console.log('[IronRDP FileTransfer] Recepcion de buffer completada:', fileInfo?.name);
+              setActiveTransfers(prev => syncTransfersAndArm(removeTransfer(prev, transferId)));
             });
 
-            currentFileTransferProvider.on('files-available', async (files) => {
+            currentFileTransferProvider.on('files-available', (files) => {
               if (!files || !files.length) return;
-              console.log('📁 [IronRDP FileTransfer] Archivos remotos disponibles:', files);
-
-              toastRef.current?.show({
-                severity: 'info',
-                summary: 'Descargando Archivo(s)',
-                detail: `Recibiendo ${files.map(f => f.name).join(', ')} del servidor remoto...`,
-                life: 3000
-              });
-
-              const copiedPaths = [];
-              for (let i = 0; i < files.length; i++) {
-                try {
-                  const { completion } = currentFileTransferProvider.downloadFile(files[i], i);
-                  const blob = await completion;
-                  const arrayBuffer = await blob.arrayBuffer();
-                  const uint8 = new Uint8Array(arrayBuffer);
-                  if (window.electron?.clipboard?.saveTempFile) {
-                    const res = await window.electron.clipboard.saveTempFile(files[i].name, uint8);
-                    if (res?.success && res.filePath) {
-                      copiedPaths.push(res.filePath);
-                    }
-                  }
-                } catch (dlErr) {
-                  console.warn('[IronRDP FileTransfer] Error descargando archivo:', dlErr);
+              console.log('[IronRDP FileTransfer] Archivos remotos disponibles:', files);
+              downloadedPathsRef.current = [];
+              setActiveTransfers((prev) => {
+                const next = seedPendingDownloads(prev, files);
+                if (hasFileTransferWork(next)) {
+                  isFileTransferArmedRef.current = true;
                 }
-              }
-
-              if (copiedPaths.length && window.electron?.clipboard?.writeFiles) {
-                await window.electron.clipboard.writeFiles(copiedPaths);
-                toastRef.current?.show({
-                  severity: 'success',
-                  summary: 'Archivo Listo en Portapapeles',
-                  detail: `${files.map(f => f.name).join(', ')} copiado. Pulsa Ctrl+V en cualquier carpeta de tu PC para pegarlo.`,
-                  life: 5000
-                });
-              }
-              isFileTransferArmedRef.current = false;
+                return syncTransfersAndArm(next);
+              });
             });
 
             currentFileTransferProvider.on('error', (err) => {
-              console.warn('[IronRDP FileTransfer] Error:', err);
               const transferId = err?.transferId;
+              if (transferId != null && !shouldAcceptCompletion(abortedTransferIdsRef.current, transferId)) {
+                return;
+              }
+              console.warn('[IronRDP FileTransfer] Error:', err);
               const fileName = err?.fileName || 'Archivo';
               const direction = err?.direction === 'download' ? 'download' : 'upload';
               if (transferId != null) {
@@ -1125,6 +1222,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       sessionRef.current = null;
       clearTransferDismissTimers();
       uploadFailedIdsRef.current.clear();
+      abortedTransferIdsRef.current.clear();
+      downloadedPathsRef.current = [];
       isFileTransferArmedRef.current = false;
       pendingClipboardSendRef.current = null;
     };
@@ -1573,6 +1672,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             if (handle.transferIds && typeof handle.transferIds.forEach === 'function') {
               handle.transferIds.forEach((transferId, fileIndex) => {
                 if (uploadFailedIdsRef.current.has(transferId)) return;
+                if (!shouldAcceptCompletion(abortedTransferIdsRef.current, transferId)) return;
                 markTransferStatus(transferId, 'complete', {
                   name: fileTransferNameOf(files[fileIndex]),
                   type: 'upload'
@@ -1763,71 +1863,122 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       {/* Indicador flotante de progreso de transferencias activas */}
       {Object.keys(activeTransfers).length > 0 && (() => {
         const transferEntries = Object.entries(activeTransfers);
-        const hasReady = transferEntries.some(([, t]) => t.status === 'ready');
-        const hasPasting = transferEntries.some(([, t]) => t.status === 'pasting');
-        const hasActive = transferEntries.some(([, t]) => !t.status || t.status === 'active');
-        const hasError = transferEntries.some(([, t]) => t.status === 'error');
-        let headerLabel = 'Completado';
-        let headerColor = '#4ade80';
-        let headerIcon = 'pi pi-check-circle';
-        let borderColor = 'rgba(74, 222, 128, 0.45)';
-        if (hasError && !hasReady && !hasPasting && !hasActive) {
-          headerLabel = 'Error de transferencia';
-          headerColor = '#f87171';
-          headerIcon = 'pi pi-times-circle';
-          borderColor = 'rgba(248, 113, 113, 0.45)';
-        } else if (hasPasting || hasActive) {
-          headerLabel = hasPasting ? 'Pegando en el remoto' : 'Transferencias en curso';
-          headerColor = '#60a5fa';
-          headerIcon = 'pi pi-sync pi-spin';
-          borderColor = 'rgba(59, 130, 246, 0.4)';
-        } else if (hasReady) {
-          headerLabel = 'Listo para pegar';
-          headerColor = '#38bdf8';
-          headerIcon = 'pi pi-clipboard';
-          borderColor = 'rgba(56, 189, 248, 0.45)';
-        } else {
-          headerLabel = 'Pegado';
-        }
+        const pendingIds = listPendingDownloadIds(activeTransfers);
+        const header = getTransferOverlayHeader(activeTransfers);
+        const stopOverlayEvent = (e) => {
+          e.stopPropagation();
+        };
         return (
         <div
+          onMouseDown={stopOverlayEvent}
+          onMouseUp={stopOverlayEvent}
+          onPointerDown={stopOverlayEvent}
+          onClick={stopOverlayEvent}
           style={{
             position: 'absolute',
             bottom: '16px',
             right: '16px',
             backgroundColor: 'rgba(20, 24, 33, 0.94)',
             backdropFilter: 'blur(8px)',
-            border: `1px solid ${borderColor}`,
+            border: `1px solid ${header.borderColor}`,
             borderRadius: '8px',
             padding: '10px 14px',
             zIndex: 100,
-            minWidth: '260px',
-            maxWidth: '340px',
+            minWidth: '280px',
+            maxWidth: '380px',
             boxShadow: '0 8px 24px rgba(0,0,0,0.5)'
           }}
         >
-          <div className="text-xs font-semibold mb-2 flex align-items-center justify-content-between" style={{ color: headerColor }}>
-            <span>{headerLabel}</span>
-            <i className={`${headerIcon} text-xs`}></i>
+          <div className="text-xs font-semibold mb-2 flex align-items-center justify-content-between" style={{ color: header.headerColor }}>
+            <span>{header.headerLabel}</span>
+            <i className={`${header.headerIcon} text-xs`}></i>
           </div>
-          {hasReady && (
-            <p className="m-0 mb-2 text-xs text-gray-400">Pulsa Ctrl+V en el escritorio remoto</p>
+          {header.hint && (
+            <p className="m-0 mb-2 text-xs text-gray-400">{header.hint}</p>
+          )}
+          {pendingIds.length > 1 && (
+            <div className="flex gap-2 mb-2">
+              <button
+                type="button"
+                className="p-button p-button-text p-button-sm"
+                onClick={(e) => {
+                  stopOverlayEvent(e);
+                  void startAllPendingDownloads();
+                }}
+              >
+                Descargar todos
+              </button>
+              <button
+                type="button"
+                className="p-button p-button-text p-button-sm p-button-secondary"
+                onClick={(e) => {
+                  stopOverlayEvent(e);
+                  discardAllPendingDownloads();
+                }}
+              >
+                Descartar todos
+              </button>
+            </div>
           )}
           {transferEntries.map(([id, t]) => {
+            const isPending = t.status === 'pending';
             const isReady = t.status === 'ready';
+            const isPasting = t.status === 'pasting';
+            const isActive = t.status === 'active' || !t.status;
             const isComplete = t.status === 'complete';
             const isError = t.status === 'error';
-            const itemColor = isComplete ? '#4ade80' : (isError ? '#f87171' : (isReady ? '#38bdf8' : '#93c5fd'));
+            const sizeLabel = formatTransferSize(t.size);
+            const itemColor = isComplete ? '#4ade80' : (isError ? '#f87171' : (isPending || isReady ? '#38bdf8' : '#93c5fd'));
             const itemLabel = isComplete
-              ? 'Pegado'
-              : (isError ? 'Error' : (isReady ? 'Ctrl+V' : `${Math.round(t.percentage || 0)}%`));
+              ? (t.type === 'upload' ? 'Pegado' : 'Listo')
+              : (isError ? 'Error' : (isReady ? 'Ctrl+V' : (isPending ? (sizeLabel || 'Copiado') : `${Math.round(t.percentage || 0)}%`)));
+            const actionLabel = isPending ? 'Descartar' : (isReady ? 'Ocultar' : 'Cancelar');
+            const showCancel = isPending || isReady || isPasting || isActive;
             return (
             <div key={id} className="mb-2 last:mb-0">
-              <div className="flex justify-content-between text-xs text-gray-300 mb-1">
-                <span className="text-truncate" style={{ maxWidth: '180px' }} title={t.name}>{t.name}</span>
-                <span className="font-medium" style={{ color: itemColor }}>{itemLabel}</span>
+              <div className="flex justify-content-between text-xs text-gray-300 mb-1 align-items-center gap-2">
+                <span className="text-truncate" style={{ maxWidth: '160px' }} title={t.name}>{t.name}</span>
+                <span className="font-medium white-space-nowrap" style={{ color: itemColor }}>{itemLabel}</span>
               </div>
-              {!isReady && (
+              {isPending && (
+                <div className="flex align-items-center gap-1 mb-1">
+                  <button
+                    type="button"
+                    className="p-button p-button-text p-button-sm"
+                    onClick={(e) => {
+                      stopOverlayEvent(e);
+                      void startDownloadById(id);
+                    }}
+                  >
+                    Descargar
+                  </button>
+                  <button
+                    type="button"
+                    className="p-button p-button-text p-button-sm p-button-secondary"
+                    onClick={(e) => {
+                      stopOverlayEvent(e);
+                      cancelTransferById(id);
+                    }}
+                  >
+                    Descartar
+                  </button>
+                </div>
+              )}
+              {!isPending && showCancel && (
+                <div className="flex justify-content-end mb-1">
+                  <button
+                    type="button"
+                    className="p-button p-button-text p-button-sm p-button-secondary"
+                    onClick={(e) => {
+                      stopOverlayEvent(e);
+                      cancelTransferById(id);
+                    }}
+                  >
+                    {actionLabel}
+                  </button>
+                </div>
+              )}
+              {!isReady && !isPending && (
                 <ProgressBar
                   value={isComplete ? 100 : Math.round(t.percentage || 0)}
                   showValue={false}
