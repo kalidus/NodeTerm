@@ -1441,30 +1441,47 @@ function createWindow() {
   logTiming('BrowserWindow creado');
   setupConnectionSearchShortcutBridge(mainWindow);
 
-  // 🛡️ SEGURIDAD: Control de ventanas emergentes / enlaces externos
+  // 🛡️ SEGURIDAD: Control de ventanas emergentes en mainWindow (delegar al pop-up interno)
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
       try {
-        shell.openExternal(url);
+        mainWindow.webContents.send('system:open-browser-popup', { url });
       } catch (e) {
-        console.warn('⚠️ [Security] Error abriendo URL externa:', e?.message);
+        console.warn('⚠️ [Security] Error delegando ventana emergente:', e?.message);
       }
     }
     return { action: 'deny' };
   });
 
-  // 🛡️ SEGURIDAD: Prevenir navegación interna accidental y abrir enlaces externos en el navegador
+  // 🛡️ SEGURIDAD: Confinamiento estricto de navegación en mainWindow
+  // Solo la carga de la SPA local (dist/index.html o localhost:3000) está permitida en la ventana principal
   mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
-    if (navigationUrl && (navigationUrl.startsWith('http://') || navigationUrl.startsWith('https://'))) {
-      const isInternal = navigationUrl.startsWith('http://localhost') || navigationUrl.startsWith('http://127.0.0.1');
-      if (!isInternal) {
-        event.preventDefault();
-        try {
-          shell.openExternal(navigationUrl);
-        } catch (e) {
-          console.warn('⚠️ [Security] Error en will-navigate abriendo URL externa:', e?.message);
-        }
-      }
+    if (!navigationUrl || typeof navigationUrl !== 'string') {
+      event.preventDefault();
+      return;
+    }
+
+    const isLocalDev = navigationUrl.startsWith('http://localhost:3000') || navigationUrl.startsWith('http://127.0.0.1:3000');
+    const isAppBundle = navigationUrl.startsWith('file://') && (
+      navigationUrl.includes('/dist/index.html') ||
+      navigationUrl.includes('\\dist\\index.html') ||
+      navigationUrl.includes('/src/index.html') ||
+      navigationUrl.includes('\\src\\index.html')
+    );
+
+    if (isLocalDev || isAppBundle) {
+      return;
+    }
+
+    // Bloquear cualquier otra navegación para proteger el renderer privilegiado
+    event.preventDefault();
+    console.warn('🛡️ [Security] Navegación bloqueada en ventana principal:', navigationUrl);
+
+    // Si es un enlace HTTP/HTTPS, abrir en ventana emergente interna de NodeTerm
+    if (navigationUrl.startsWith('http://') || navigationUrl.startsWith('https://')) {
+      try {
+        mainWindow.webContents.send('system:open-browser-popup', { url: navigationUrl });
+      } catch (_) {}
     }
   });
 
@@ -1517,6 +1534,53 @@ function createWindow() {
   };
   mainWindow.on('minimize', syncBackgroundThrottling);
   mainWindow.on('restore', syncBackgroundThrottling);
+
+  // 🛡️ SEGURIDAD GLOBAL: Confinamiento de todos los webContents (incluyendo webviews dinámicos)
+  app.on('web-contents-created', (event, contents) => {
+    if (contents.getType() === 'webview') {
+      // 1. Confinar ventanas emergentes iniciadas desde dentro del webview hacia el popup seguro
+      contents.setWindowOpenHandler(({ url }) => {
+        if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+          try {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('system:open-browser-popup', { url });
+            }
+          } catch (_) {}
+        }
+        return { action: 'deny' };
+      });
+
+      // 2. Prevenir que un webview navegue a esquemas locales o peligrosos (file://, javascript:, chrome://)
+      contents.on('will-navigate', (navEvent, navUrl) => {
+        if (!navUrl) return;
+        try {
+          const parsed = new URL(navUrl);
+          const allowed = ['http:', 'https:', 'about:'];
+          if (!allowed.includes(parsed.protocol)) {
+            navEvent.preventDefault();
+            console.warn('🛡️ [Security] Navegación bloqueada en webview (protocolo no permitido):', parsed.protocol);
+          }
+        } catch {
+          navEvent.preventDefault();
+        }
+      });
+
+      // 3. Prevenir will-redirect a protocolos no permitidos
+      contents.on('will-redirect', (redirEvent, redirUrl) => {
+        if (!redirUrl) return;
+        try {
+          const parsed = new URL(redirUrl);
+          const allowed = ['http:', 'https:', 'about:'];
+          if (!allowed.includes(parsed.protocol)) {
+            redirEvent.preventDefault();
+            console.warn('🛡️ [Security] Redirección bloqueada en webview (protocolo no permitido):', parsed.protocol);
+          }
+        } catch {
+          redirEvent.preventDefault();
+        }
+      });
+    }
+  });
 
   // 🔒 CRÍTICO: Registrar handlers de seguridad ANTES de que la ventana cargue
   // Esto asegura que security:get-master-key esté disponible cuando el renderer arranque

@@ -23,7 +23,7 @@ const BrowserPopupModal = () => {
 
   const webviewRef = useRef(null);
 
-  // Escuchar evento global 'open-browser-popup'
+  // Escuchar evento global 'open-browser-popup' y evento IPC desde el proceso main
   useEffect(() => {
     const handleOpenPopup = (e) => {
       const detail = e.detail || {};
@@ -44,7 +44,22 @@ const BrowserPopupModal = () => {
     };
 
     window.addEventListener('open-browser-popup', handleOpenPopup);
-    return () => window.removeEventListener('open-browser-popup', handleOpenPopup);
+
+    let unsubscribeIpc = null;
+    if (window.electron?.on) {
+      unsubscribeIpc = window.electron.on('system:open-browser-popup', (data) => {
+        if (data?.url) {
+          handleOpenPopup({ detail: { url: data.url, title: data.title } });
+        }
+      });
+    }
+
+    return () => {
+      window.removeEventListener('open-browser-popup', handleOpenPopup);
+      if (typeof unsubscribeIpc === 'function') {
+        unsubscribeIpc();
+      }
+    };
   }, []);
 
   // Manejadores del ciclo de vida del WebView
