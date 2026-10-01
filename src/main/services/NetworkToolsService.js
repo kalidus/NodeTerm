@@ -51,6 +51,16 @@ class NetworkToolsService {
   }
 
   /**
+   * Valida si una cadena es una dirección IP válida (IPv4 o IPv6)
+   * @param {string} ip
+   * @returns {boolean}
+   */
+  _isValidIp(ip) {
+    if (!ip || typeof ip !== 'string') return false;
+    return net.isIP(ip.trim()) !== 0;
+  }
+
+  /**
    * Carga la caché desde el archivo persistente en disco
    * @private
    */
@@ -1911,7 +1921,10 @@ class NetworkToolsService {
    */
   async _getMacFromNetNeighbor(ip) {
     if (this.platform !== 'win32') return null;
-    const ps = `Get-NetNeighbor -IPAddress '${ip}' -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty LinkLayerAddress`;
+    const cleanIp = typeof ip === 'string' ? ip.trim() : '';
+    if (!this._isValidIp(cleanIp)) return null;
+
+    const ps = `Get-NetNeighbor -IPAddress '${cleanIp}' -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty LinkLayerAddress`;
     try {
       const { stdout } = await execAsync(
         `powershell -NoProfile -NonInteractive -Command "${ps}"`,
@@ -1999,12 +2012,15 @@ class NetworkToolsService {
    * @private
    */
   async _resolveHostnameNslookup(ip) {
+    const cleanIp = typeof ip === 'string' ? ip.trim() : '';
+    if (!this._isValidIp(cleanIp)) return null;
+
     try {
-      const { stdout } = await execAsync(`nslookup ${ip}`, { timeout: 6000, shell: true });
+      const { stdout } = await execAsync(`nslookup ${cleanIp}`, { timeout: 6000, shell: true });
       const nameMatch = stdout.match(/^\s*Nombre:\s*(.+)$/im) || stdout.match(/^\s*Name:\s*(.+)$/im);
       if (!nameMatch) return null;
       const name = nameMatch[1].trim().replace(/\.$/, '');
-      if (!name || name === ip || /servidor|server|address/i.test(name)) return null;
+      if (!name || name === cleanIp || /servidor|server|address/i.test(name)) return null;
       return name;
     } catch {
       return null;
@@ -2016,6 +2032,9 @@ class NetworkToolsService {
    * @private
    */
   async _nmapEnrichHost(ip) {
+    const cleanIp = typeof ip === 'string' ? ip.trim() : '';
+    if (!this._isValidIp(cleanIp)) return null;
+
     const nmap = await this._getNmapPath();
     if (!nmap) return null;
 
@@ -2025,7 +2044,7 @@ class NetworkToolsService {
       '-sn', '-PR', '-Pn', '-n',
       '-O', '--osscan-guess', '--max-os-tries', '1',
       '-F', '--host-timeout', '12s',
-      ip
+      cleanIp
     ].join(' ');
 
     try {
