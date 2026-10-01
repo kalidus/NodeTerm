@@ -1,12 +1,18 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from 'primereact/button';
-import { ProgressSpinner } from 'primereact/progressspinner';
 import { useTranslation } from '../i18n/hooks/useTranslation';
+import {
+  BROWSER_WEBVIEW_PARTITION,
+  getBrowserWebviewUserAgent,
+  isIgnorableWebviewFail
+} from '../utils/browserWebview';
 import '../styles/components/browser-tab.css';
 
 const BrowserTab = ({ tabId, browserData }) => {
   const { t } = useTranslation('common');
   const webviewRef = useRef(null);
+  const boundViewRef = useRef(null);
+  const userAgentRef = useRef(getBrowserWebviewUserAgent());
 
   const { url: initialUrl, username, password, title } = browserData || {};
   const isBlank = !initialUrl || initialUrl === 'about:blank';
@@ -19,6 +25,7 @@ const BrowserTab = ({ tabId, browserData }) => {
   const [reloadKey, setReloadKey] = useState(0);
 
   const addressInputRef = useRef(null);
+  const autofillRef = useRef(null);
 
   useEffect(() => {
     if (isBlank) {
@@ -102,70 +109,63 @@ const BrowserTab = ({ tabId, browserData }) => {
 
     view.executeJavaScript(script)
       .then(() => {
-        console.log('[BrowserTab] Credenciales auto-completadas con éxito.');
+        console.log('[BrowserTab] Credenciales auto-completadas con exito.');
       })
       .catch(err => {
         console.warn('[BrowserTab] Error al inyectar script de auto-completado:', err);
       });
   }, [username, password]);
 
-  // Manejar el ciclo de vida de los eventos de <webview>
-  useEffect(() => {
-    const view = webviewRef.current;
-    if (!view) return undefined;
+  autofillRef.current = handleAutofill;
+
+  const attachWebview = useCallback((view) => {
+    if (boundViewRef.current && boundViewRef.current !== view) {
+      boundViewRef.current = null;
+    }
+    webviewRef.current = view;
+    if (!view || boundViewRef.current === view) return;
+
+    boundViewRef.current = view;
+
+    const syncNavState = () => {
+      try {
+        setCanGoBack(view.canGoBack());
+        setCanGoForward(view.canGoForward());
+      } catch {
+        // Guest aun no listo
+      }
+    };
 
     const handleLoadStart = () => {
       setWebviewState('loading');
-    };
-
-    const handleLoadStop = () => {
-      if (view) {
-        setWebviewState('ready');
-        setCanGoBack(view.canGoBack());
-        setCanGoForward(view.canGoForward());
-      }
     };
 
     const handleNavigate = (event) => {
       const newUrl = event.url;
       setCurrentUrl(newUrl);
       setInputUrl(newUrl);
-      if (view) {
-        setCanGoBack(view.canGoBack());
-        setCanGoForward(view.canGoForward());
-      }
+      syncNavState();
     };
 
-    const handleFailLoad = () => {
+    const handleFailLoad = (event) => {
+      if (isIgnorableWebviewFail(event)) return;
       setWebviewState('error');
     };
 
     const handleDomReady = () => {
       setWebviewState('ready');
-      if (view) {
-        setCanGoBack(view.canGoBack());
-        setCanGoForward(view.canGoForward());
+      syncNavState();
+      if (autofillRef.current) {
+        autofillRef.current();
       }
-      // Auto-inyectar credenciales cuando el DOM esté listo
-      handleAutofill();
     };
 
     view.addEventListener('did-start-loading', handleLoadStart);
-    view.addEventListener('did-stop-loading', handleLoadStop);
     view.addEventListener('did-navigate', handleNavigate);
     view.addEventListener('did-navigate-in-page', handleNavigate);
     view.addEventListener('did-fail-load', handleFailLoad);
     view.addEventListener('dom-ready', handleDomReady);
-
-    return () => {
-      view.removeEventListener('did-start-loading', handleLoadStart);
-      view.removeEventListener('did-stop-loading', handleLoadStop);
-      view.removeEventListener('did-navigate', handleNavigate);
-      view.removeEventListener('did-navigate-in-page', handleNavigate);
-      view.removeEventListener('did-fail-load', handleFailLoad);
-      view.removeEventListener('dom-ready', handleDomReady);
-    };
-  }, [reloadKey, handleAutofill]);
+  }, []);
 
   // Navegación del WebView
   const handleBack = () => {
@@ -220,10 +220,9 @@ const BrowserTab = ({ tabId, browserData }) => {
 
   const handleReloadWebViewForce = () => {
     setWebviewState('loading');
+    boundViewRef.current = null;
     setReloadKey(prev => prev + 1);
   };
-
-  const overlayClass = webviewState === 'ready' ? 'browser-overlay fading' : 'browser-overlay';
 
   return (
     <div className="browser-tab">
@@ -301,19 +300,11 @@ const BrowserTab = ({ tabId, browserData }) => {
         </div>
       </div>
 
-      {/* Contenedor del WebView y Carga */}
       <div className="browser-webview-container">
-        {webviewState !== 'ready' && webviewState !== 'error' && (
-          <div className={overlayClass}>
-            <ProgressSpinner style={{ width: '36px', height: '36px' }} />
-            <p>Cargando página y preparando auto-completado…</p>
-          </div>
-        )}
-
         {webviewState === 'error' && (
           <div className="browser-overlay">
             <span className="pi pi-exclamation-triangle" style={{ fontSize: '32px', color: 'var(--ui-button-primary)', marginBottom: '12px' }}></span>
-            <p style={{ margin: '0 0 16px 0' }}>No se pudo cargar la página. Verifica la URL o tu conexión de red.</p>
+            <p style={{ margin: '0 0 16px 0' }}>No se pudo cargar la pagina. Verifica la URL o tu conexion de red.</p>
             <div style={{ display: 'flex', gap: '8px' }}>
               <Button
                 label="Reintentar"
@@ -335,10 +326,12 @@ const BrowserTab = ({ tabId, browserData }) => {
 
         <webview
           key={`${initialUrl}-${reloadKey}`}
-          ref={webviewRef}
+          ref={attachWebview}
           src={initialUrl || 'about:blank'}
+          partition={BROWSER_WEBVIEW_PARTITION}
+          useragent={userAgentRef.current}
           allowpopups="true"
-          style={{ width: '100%', height: '100%', border: 'none', background: '#ffffff' }}
+          style={{ width: '100%', height: '100%', border: 'none', background: '#ffffff', display: 'flex' }}
           webpreferences="contextIsolation=yes, nodeIntegration=no, webSecurity=yes"
         />
       </div>

@@ -85,7 +85,6 @@
   align-items: center;
   justify-content: center;
   background: rgba(15, 23, 34, 0.85);
-  backdrop-filter: blur(4px);
   z-index: 10;
   color: #ffffff;
   transition: opacity 0.3s ease;
@@ -132,7 +131,9 @@
    Ventana Emergente Flotante del Navegador (Browser Popup)
    ======================================================== */
 .browser-popup-dialog.p-dialog {
-  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 8px;
   border: 1px solid var(--ui-dialog-border, rgba(255, 255, 255, 0.12));
   background: var(--ui-dialog-bg, #1e222b);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.05);
@@ -140,25 +141,95 @@
 }
 
 .browser-popup-dialog .p-dialog-header {
-  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: 100%;
+  height: 36px;
+  min-height: 36px;
+  padding: 0 8px 0 12px;
   background: var(--ui-dialog-bg, #1e222b);
   border-bottom: 1px solid var(--ui-content-border, rgba(255, 255, 255, 0.08));
   color: var(--ui-dialog-text, #e2e8f0);
 }
 
-.browser-popup-dialog .p-dialog-content {
+.browser-popup-dialog .p-dialog-title {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  margin: 0 !important;
   padding: 0 !important;
-  background: var(--ui-content-bg, #14171f);
+  font-size: 13px !important;
+  line-height: 1 !important;
+}
+
+.browser-popup-body {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.browser-popup-body webview {
+  display: flex;
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #ffffff;
+}
+
+.browser-popup-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+}
+
+.browser-popup-title {
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--ui-dialog-text, #e2e8f0);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.browser-popup-spinner {
+  color: #38bdf8;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.p-dialog.browser-popup-dialog .p-dialog-content {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  margin: 0 !important;
+  padding: 0 !important;
+  padding-top: 0 !important;
+  background: #ffffff !important;
   overflow: hidden;
 }
 
 .browser-popup-dialog .p-dialog-header-icons {
   display: flex;
   align-items: center;
-  gap: 4px;
+  align-self: center;
+  gap: 2px;
+  height: 36px;
+  margin: 0;
+  padding: 0;
 }
 
 .browser-popup-dialog .p-dialog-header-icon {
@@ -166,6 +237,7 @@
   border-radius: 6px;
   width: 28px;
   height: 28px;
+  margin: 0;
   transition: all 0.15s ease;
 }
 
