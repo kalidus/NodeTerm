@@ -1481,6 +1481,78 @@ button[aria-label="Seleccionar tipo de terminal"]:focus i {
     overflow-y: auto;
 }
 
+.terminal-launcher-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.terminal-launcher-title {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--terminal-tab-accent, #00f2ff);
+    opacity: 0.6;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.terminal-launcher-title i {
+    font-size: 9px;
+}
+
+.launcher-default-terminal {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.launcher-default-terminal-label {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--terminal-tab-accent, #00f2ff);
+    opacity: 0.7;
+    white-space: nowrap;
+}
+
+.launcher-default-terminal-select {
+    max-width: 180px;
+    min-width: 132px;
+    height: 24px;
+    padding: 0 22px 0 8px;
+    font-family: inherit;
+    font-size: 11px;
+    color: var(--ui-context-text, #e2f8ff);
+    background-color: var(--ui-content-bg, rgba(6, 8, 18, 0.97));
+    border: 1px solid var(--ui-context-border, rgba(0, 243, 255, 0.45));
+    border-radius: 4px;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, var(--terminal-tab-accent, #00f2ff) 50%),
+        linear-gradient(135deg, var(--terminal-tab-accent, #00f2ff) 50%, transparent 50%);
+    background-position: calc(100% - 11px) 9px, calc(100% - 7px) 9px;
+    background-size: 4px 4px, 4px 4px;
+    background-repeat: no-repeat;
+}
+
+.launcher-default-terminal-select:focus {
+    border-color: var(--terminal-tab-accent, #00f2ff);
+}
+
+.launcher-default-terminal-select option {
+    color: var(--ui-context-text, #e2f8ff);
+    background: var(--ui-context-bg, #060812);
+}
+
 .launcher-section {
     margin-bottom: 18px;
 }

@@ -9,7 +9,8 @@ import { STORAGE_KEYS } from '../utils/constants';
 import {
   buildDefaultTerminalOptions,
   getPlatformDefaultTerminalType,
-  sanitizeAndPersistDefaultTerminal
+  sanitizeAndPersistDefaultTerminal,
+  setDefaultLocalTerminal as persistDefaultLocalTerminal
 } from '../utils/defaultLocalTerminal';
 import { persistSyncedSetting } from '../utils/persistSyncedSetting';
 
@@ -416,23 +417,16 @@ const SettingsContent = ({
       terminalOptionsReady: true
     });
     if (changed) {
+      persistDefaultLocalTerminal(value);
       setDefaultLocalTerminal(value);
-      persistSyncedSetting(STORAGE_KEYS.DEFAULT_LOCAL_TERMINAL, value, { immediate: true });
-      window.dispatchEvent(new CustomEvent('default-terminal-changed', {
-        detail: { terminalType: value }
-      }));
     } else if (saved && defaultLocalTerminal !== saved) {
       setDefaultLocalTerminal(saved);
     }
   }, [defaultTerminalOptions, platform, terminalOptionsReady]);
 
   const handleDefaultTerminalChange = useCallback((terminalType) => {
-    if (!terminalType || typeof terminalType !== 'string') return;
+    if (!persistDefaultLocalTerminal(terminalType)) return;
     setDefaultLocalTerminal(terminalType);
-    persistSyncedSetting(STORAGE_KEYS.DEFAULT_LOCAL_TERMINAL, terminalType, { immediate: true });
-    window.dispatchEvent(new CustomEvent('default-terminal-changed', {
-      detail: { terminalType }
-    }));
   }, []);
 
   // Hook para redimensionamiento del diálogo

@@ -1,4 +1,5 @@
 import { STORAGE_KEYS } from './constants';
+import { persistSyncedSetting } from './persistSyncedSetting';
 
 const TERMINAL_TITLES = {
   powershell: 'Windows PowerShell',
@@ -285,4 +286,20 @@ export function isExplicitNonWslDefault(defaultTerminal) {
     return true;
   }
   return AI_CLIENT_OPTIONS.some((o) => o.value === defaultTerminal);
+}
+
+/**
+ * Persiste la terminal local por defecto y notifica al resto de la UI.
+ * @param {string} terminalType
+ * @returns {boolean}
+ */
+export function setDefaultLocalTerminal(terminalType) {
+  if (!terminalType || typeof terminalType !== 'string') return false;
+  persistSyncedSetting(STORAGE_KEYS.DEFAULT_LOCAL_TERMINAL, terminalType, { immediate: true });
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('default-terminal-changed', {
+      detail: { terminalType }
+    }));
+  }
+  return true;
 }

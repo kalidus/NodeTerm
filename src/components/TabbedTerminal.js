@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle, Suspense } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo, forwardRef, useImperativeHandle, Suspense } from 'react';
 import { Button } from 'primereact/button';
 import { Menu } from 'primereact/menu';
 import { OverlayPanel } from 'primereact/overlaypanel';
@@ -25,7 +25,9 @@ import { applyTabTheme, loadSavedTabTheme } from '../utils/tabThemeLoader';
 import {
     resolveInitialTabFromDefault,
     resolveTabUpdateFromDefault,
-    isExplicitNonWslDefault
+    isExplicitNonWslDefault,
+    buildDefaultTerminalOptions,
+    setDefaultLocalTerminal as persistDefaultLocalTerminal
 } from '../utils/defaultLocalTerminal';
 import { appConfirm } from './ui/AppConfirm';
 import LauncherQuickActions from './home/LauncherQuickActions';
@@ -1195,6 +1197,27 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
         };
     }, [tabs, scheduleFitForTab, cancelScheduledFit]);
 
+    const defaultTerminalOptions = useMemo(() => {
+        const platform = window.electron?.platform || 'unknown';
+        return buildDefaultTerminalOptions({
+            platform,
+            wslDistributions,
+            cygwinAvailable: cygwinAvailable && aiClientsEnabled.cygwin === true,
+            aiClientsEnabled
+        });
+    }, [wslDistributions, cygwinAvailable, aiClientsEnabled]);
+
+    const defaultSelectValue = defaultTerminalOptions.some((opt) => opt.value === selectedTerminalType)
+        ? selectedTerminalType
+        : (defaultTerminalOptions[0]?.value || selectedTerminalType);
+
+    const handleLauncherDefaultChange = (event) => {
+        event.stopPropagation();
+        const value = event.target.value;
+        if (!persistDefaultLocalTerminal(value)) return;
+        setSelectedTerminalType(value);
+    };
+
     // Opciones para el selector de tipo de terminal agrupadas por categorías
     const getGroupedTerminalOptions = () => {
         const platform = window.electron?.platform || 'unknown';
@@ -1998,20 +2021,31 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
             {/* Menú de selección de terminal */}
             <OverlayPanel ref={menuRef} appendTo={document.body} className="cyber-terminal-menu">
                 <div className="terminal-launcher-container">
-                    <div style={{
-                        fontSize: '9px',
-                        fontWeight: '800',
-                        letterSpacing: '0.2em',
-                        textTransform: 'uppercase',
-                        marginBottom: '15px',
-                        color: 'var(--terminal-tab-accent, #00f2ff)',
-                        opacity: 0.6,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
-                    }}>
-                        <i className="pi pi-th-large" style={{ fontSize: '9px' }} />
-                        TERMINAL LAUNCHER
+                    <div className="terminal-launcher-header">
+                        <div className="terminal-launcher-title">
+                            <i className="pi pi-th-large" />
+                            TERMINAL LAUNCHER
+                        </div>
+                        <label
+                            className="launcher-default-terminal"
+                            title="Terminal por defecto al pulsar +"
+                            onClick={(event) => event.stopPropagation()}
+                            onMouseDown={(event) => event.stopPropagation()}
+                        >
+                            <span className="launcher-default-terminal-label">DEFAULT</span>
+                            <select
+                                className="launcher-default-terminal-select"
+                                value={defaultSelectValue}
+                                onChange={handleLauncherDefaultChange}
+                                aria-label="Terminal por defecto"
+                            >
+                                {defaultTerminalOptions.map((opt) => (
+                                    <option key={opt.value} value={opt.value}>
+                                        {opt.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
                     </div>
 
                     <LauncherQuickActions

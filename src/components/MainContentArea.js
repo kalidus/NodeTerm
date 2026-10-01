@@ -29,6 +29,10 @@ import OverflowMenu from './contextmenus/OverflowMenu';
 import SSHSystemMonitorPanel from './SSHSystemMonitorPanel';
 import FileExplorer from './FileExplorer';
 import { TAB_TYPES } from '../utils/constants';
+import {
+  buildDefaultTerminalOptions,
+  setDefaultLocalTerminal as persistDefaultLocalTerminal
+} from '../utils/defaultLocalTerminal';
 import { isHomeButtonLocked as readHomeButtonLocked } from '../utils/homeTabDefaults';
 import { themeManager } from '../utils/themeManager';
 import { uiThemes } from '../themes/ui-themes';
@@ -1398,6 +1402,49 @@ const MainContentArea = ({
         #terminal-grid-launcher-panel input.terminal-launcher-search::placeholder {
           color: rgba(122, 248, 255, 0.42);
         }
+        #terminal-grid-launcher-panel .launcher-default-terminal {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-shrink: 0;
+        }
+        #terminal-grid-launcher-panel .launcher-default-terminal-label {
+          font-size: 9px;
+          font-weight: 800;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+          color: ${theme.primary || '#00f3ff'};
+          opacity: 0.7;
+          white-space: nowrap;
+        }
+        #terminal-grid-launcher-panel .launcher-default-terminal-select {
+          max-width: 180px;
+          min-width: 132px;
+          height: 24px;
+          padding: 0 22px 0 8px;
+          font-family: inherit;
+          font-size: 11px;
+          color: ${theme.ctxText || '#e2f8ff'};
+          background: ${theme.contentBg || 'rgba(6, 8, 18, 0.97)'};
+          border: 1px solid ${theme.ctxBorder || 'rgba(0, 243, 255, 0.45)'};
+          border-radius: 4px;
+          outline: none;
+          cursor: pointer;
+          appearance: none;
+          -webkit-appearance: none;
+          background-image: linear-gradient(45deg, transparent 50%, ${theme.primary || '#00f3ff'} 50%),
+            linear-gradient(135deg, ${theme.primary || '#00f3ff'} 50%, transparent 50%);
+          background-position: calc(100% - 11px) 9px, calc(100% - 7px) 9px;
+          background-size: 4px 4px, 4px 4px;
+          background-repeat: no-repeat;
+        }
+        #terminal-grid-launcher-panel .launcher-default-terminal-select:focus {
+          border-color: ${theme.primary || '#00f3ff'};
+        }
+        #terminal-grid-launcher-panel .launcher-default-terminal-select option {
+          color: ${theme.ctxText || '#e2f8ff'};
+          background: ${theme.ctxBg || '#060812'};
+        }
       `;
       document.head.appendChild(launcherStyleEl);
       panel._launcherStyleEl = launcherStyleEl;
@@ -1429,6 +1476,16 @@ const MainContentArea = ({
       const triggerRect = dropdownButton.getBoundingClientRect();
       positionLauncherPanel(panel, triggerRect);
 
+      const header = document.createElement('div');
+      header.className = 'launcher-panel-header';
+      header.style.cssText = `
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 10px;
+      `;
+
       const title = document.createElement('div');
       title.textContent = '// LAUNCHER';
       title.style.cssText = `
@@ -1436,11 +1493,67 @@ const MainContentArea = ({
         font-weight: 800;
         letter-spacing: 0.22em;
         text-transform: uppercase;
-        margin-bottom: 10px;
         color: ${theme.primary || '#00f3ff'};
         text-shadow: 0 0 12px rgba(0, 243, 255, 0.45);
       `;
-      panel.appendChild(title);
+
+      const defaultWrap = document.createElement('label');
+      defaultWrap.className = 'launcher-default-terminal';
+      defaultWrap.title = 'Terminal por defecto al pulsar +';
+
+      const defaultLabel = document.createElement('span');
+      defaultLabel.className = 'launcher-default-terminal-label';
+      defaultLabel.textContent = 'DEFAULT';
+
+      const defaultSelect = document.createElement('select');
+      defaultSelect.className = 'launcher-default-terminal-select';
+      defaultSelect.setAttribute('aria-label', 'Terminal por defecto');
+
+      const platform = window.electron?.platform || 'unknown';
+      let aiEnabled = aiClientsEnabled;
+      try {
+        const cfg = JSON.parse(localStorage.getItem('ai_clients_enabled') || '{}');
+        aiEnabled = { ...aiClientsEnabled, ...cfg };
+      } catch {
+        /* keep state */
+      }
+      const defaultOptions = buildDefaultTerminalOptions({
+        platform,
+        wslDistributions: wslDistributionsRef.current || [],
+        cygwinAvailable: aiEnabled.cygwin === true,
+        aiClientsEnabled: aiEnabled
+      });
+      const currentDefault = localStorage.getItem('nodeterm_default_local_terminal') || getDefaultTerminalFromConfig();
+      const hasCurrent = defaultOptions.some((opt) => opt.value === currentDefault);
+      if (!hasCurrent && currentDefault) {
+        defaultOptions.unshift({ label: currentDefault, value: currentDefault });
+      }
+      defaultOptions.forEach((opt) => {
+        const option = document.createElement('option');
+        option.value = opt.value;
+        option.textContent = opt.label;
+        if (opt.value === currentDefault) option.selected = true;
+        defaultSelect.appendChild(option);
+      });
+
+      const stopSelectClose = (ev) => ev.stopPropagation();
+      defaultWrap.addEventListener('click', stopSelectClose);
+      defaultSelect.addEventListener('mousedown', stopSelectClose);
+      defaultSelect.addEventListener('click', stopSelectClose);
+      defaultSelect.addEventListener('change', (ev) => {
+        ev.stopPropagation();
+        const value = ev.target.value;
+        if (!value) return;
+        persistDefaultLocalTerminal(value);
+        lastLocalTerminalTypeRef.current = value;
+        setLastLocalTerminalType(value);
+      });
+
+      defaultWrap.appendChild(defaultLabel);
+      defaultWrap.appendChild(defaultSelect);
+      header.appendChild(title);
+      header.appendChild(defaultWrap);
+      panel.appendChild(header);
 
       const actionsHost = document.createElement('div');
       actionsHost.className = 'launcher-actions-host';
@@ -1765,6 +1878,7 @@ const MainContentArea = ({
       renderGroups('');
 
       const handleOutsideClick = (ev) => {
+        if (defaultWrap.contains(ev.target) || ev.target === defaultSelect) return;
         if (!panel.contains(ev.target) && !dropdownButton.contains(ev.target)) {
           disposePanel();
         }
