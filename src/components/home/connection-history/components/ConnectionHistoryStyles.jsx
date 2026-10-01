@@ -1,5 +1,6 @@
 import React from 'react';
-import { adjustOpacity } from '../utils/connectionHistoryHelpers';
+import { adjustOpacity, homePanelSurface, mapHomePanelOpacity } from '../utils/connectionHistoryHelpers';
+import { HOME_BACKDROP_BLUR_DEFAULT, homeBackdropFilter } from '../../../../utils/homeTabSync';
 
 /**
  * Generador de estilos dinámicos interpolados para ConnectionHistory
@@ -8,12 +9,23 @@ import { adjustOpacity } from '../utils/connectionHistoryHelpers';
 const ConnectionHistoryStyles = ({
 	themeColors = {},
 	terminalTheme = {},
-	terminalOpacity = 0.85
+	terminalOpacity = 0.85,
+	backdropBlurPx = HOME_BACKDROP_BLUR_DEFAULT
 }) => {
+	const backdropFilter = homeBackdropFilter(backdropBlurPx);
+	const backdropFilterGlass = homeBackdropFilter(backdropBlurPx, 180);
+	const panelOpacity = mapHomePanelOpacity(terminalOpacity);
+	const panelSurface = homePanelSurface([
+		themeColors.sidebarBackground,
+		themeColors.cardBackground,
+		terminalTheme.background,
+		'#0d1117'
+	], terminalOpacity);
+	const headerSurface = adjustOpacity(panelSurface, Math.min(1, panelOpacity + 0.06));
 	return (
 			<style>{`
 				/* -- Custom Hero Splash Styles -- */
-				.connection-history-root { background: transparent !important; height: 100%; display: flex; flex-direction: column; color: ${themeColors.textPrimary || '#fff'}; }
+				.connection-history-root { --home-backdrop-filter: ${backdropFilter}; --home-backdrop-filter-glass: ${backdropFilterGlass}; background: transparent !important; height: 100%; display: flex; flex-direction: column; color: ${themeColors.textPrimary || '#fff'}; }
 				.connection-history-root:not(.is-terminal-view) { overflow-y: auto; }
 				.connection-history-root.is-terminal-view { overflow: hidden; }
 				.connection-history-section { border: none !important; background: transparent !important; }
@@ -85,7 +97,7 @@ const ConnectionHistoryStyles = ({
 				}
 				.hero-search-input, .p-inputtext.hero-search-input:enabled:focus {
 					width: 100% !important;
-					background: ${terminalTheme.background ? adjustOpacity(terminalTheme.background, 0.6) : 'rgba(15, 15, 15, 0.6)'} !important;
+					background: ${adjustOpacity(terminalTheme.background || '#0f0f0f', Math.max(0.18, panelOpacity * 0.7))} !important;
 					border: 1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '66' : 'rgba(255,255,255,0.15)'} !important;
 					border-radius: 4px !important;
 					padding: 8px 65px 8px 55px !important;
@@ -94,7 +106,8 @@ const ConnectionHistoryStyles = ({
 					font-family: 'Fira Code', 'JetBrains Mono', 'Consolas', monospace !important;
 					outline: none !important;
 					box-shadow: 0 4px 20px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.02) !important;
-					backdrop-filter: blur(8px);
+					backdrop-filter: ${backdropFilter};
+					-webkit-backdrop-filter: ${backdropFilter};
 					transition: all 0.2s ease;
 				}
 				.hero-search-input::placeholder {
@@ -132,7 +145,8 @@ const ConnectionHistoryStyles = ({
 					cursor: pointer;
 					z-index: 10;
 					transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-					backdrop-filter: blur(10px);
+					backdrop-filter: ${backdropFilter};
+					-webkit-backdrop-filter: ${backdropFilter};
 					box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 					letter-spacing: 1px;
 				}
@@ -173,7 +187,8 @@ const ConnectionHistoryStyles = ({
 					border-radius: 6px;
 					border: 1px solid rgba(255, 255, 255, 0.05);
 					box-shadow: inset 0 1px 5px rgba(0,0,0,0.2);
-					backdrop-filter: blur(6px);
+					backdrop-filter: ${backdropFilter};
+					-webkit-backdrop-filter: ${backdropFilter};
 					box-sizing: border-box;
 					width: 100%;
 				}
@@ -243,12 +258,13 @@ const ConnectionHistoryStyles = ({
 					display: flex;
 					flex-direction: column;
 					border: 1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '44' : 'rgba(255,255,255,0.1)'};
-					background: ${terminalTheme.background ? adjustOpacity(terminalTheme.background, 0.8) : 'rgba(15, 15, 15, 0.8)'};
+					background: ${panelSurface};
 					box-shadow: 0 15px 40px rgba(0,0,0,0.5), inset 0 0 80px rgba(0,0,0,0.2);
 					max-width: 600px;
 					width: 100%;
 					position: relative;
-					backdrop-filter: blur(12px);
+					backdrop-filter: ${backdropFilter};
+					-webkit-backdrop-filter: ${backdropFilter};
 				}
 				/* En el canvas modular, los marcos no deben restringirse a 600px ni tener margen exterior */
 				.home-panel-frame.top-terminal-frame,
@@ -263,7 +279,7 @@ const ConnectionHistoryStyles = ({
 					height: 30px;
 					box-sizing: border-box;
 					flex-shrink: 0;
-					background: ${adjustOpacity(terminalTheme.background || '#0d1117', Math.min(terminalOpacity + 0.1, 1.0))};
+					background: ${headerSurface};
 					border-bottom: 1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '44' : 'rgba(255,255,255,0.08)'};
 					border-radius: 12px 12px 0 0;
 					display: flex;
@@ -352,25 +368,7 @@ const ConnectionHistoryStyles = ({
 					height: 30px;
 					box-sizing: border-box;
 					flex-shrink: 0;
-					background: ${(() => {
-					const bg = terminalTheme.background || '#0d1117';
-					const adjustOpacity = (color, opacity) => {
-						if (!color) return `rgba(0,0,0,${opacity})`;
-						if (color.startsWith('rgba')) {
-							return color.replace(/[\d.]+\)$/g, `${opacity})`);
-						}
-						if (color.startsWith('#')) {
-							const hex = color.replace('#', '');
-							const r = parseInt(hex.substring(0, 2), 16) || 0;
-							const g = parseInt(hex.substring(2, 4), 16) || 0;
-							const b = parseInt(hex.substring(4, 6), 16) || 0;
-							return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-						}
-						return color;
-					};
-					// Un poco más de opacidad para el header para que se note, pero que siga siendo transparente
-					return adjustOpacity(bg, Math.min(terminalOpacity + 0.1, 1.0));
-				})()};
+					background: ${headerSurface};
 					border-bottom: 1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '44' : 'rgba(255,255,255,0.08)'};
 					border-radius: 12px 12px 0 0;
 					display: flex;
@@ -546,7 +544,8 @@ const ConnectionHistoryStyles = ({
 				/* Modern Glass Style */
 				.recents-terminal-frame.modern {
 					border: 1px solid rgba(255,255,255,0.2) !important;
-					backdrop-filter: blur(25px) saturate(180%) !important;
+					backdrop-filter: ${backdropFilterGlass} !important;
+					-webkit-backdrop-filter: ${backdropFilterGlass} !important;
 					background: transparent !important;
 					border-radius: 16px !important;
 					overflow: hidden;
@@ -636,14 +635,14 @@ const ConnectionHistoryStyles = ({
 				.recents-terminal-frame.matrix, .top-terminal-frame.matrix,
 				.recents-terminal-frame.aurora-glass, .top-terminal-frame.aurora-glass,
 				.recents-terminal-frame.stealth, .top-terminal-frame.stealth {
-					background-color: var(--home-panel-frame-bg, ${adjustOpacity(terminalTheme.background || '#0d1117', terminalOpacity)}) !important;
-					background: var(--home-panel-frame-bg, ${adjustOpacity(terminalTheme.background || '#0d1117', terminalOpacity)}) !important;
+					background-color: var(--home-panel-frame-bg, ${panelSurface}) !important;
+					background: var(--home-panel-frame-bg, ${panelSurface}) !important;
 				}
 
 				div.home-panel-frame.recents-terminal-frame,
 				div.home-panel-frame.top-terminal-frame {
-					background-color: var(--home-panel-frame-bg, ${adjustOpacity(terminalTheme.background || '#0d1117', terminalOpacity)}) !important;
-					background: var(--home-panel-frame-bg, ${adjustOpacity(terminalTheme.background || '#0d1117', terminalOpacity)}) !important;
+					background-color: var(--home-panel-frame-bg, ${panelSurface}) !important;
+					background: var(--home-panel-frame-bg, ${panelSurface}) !important;
 				}
 
 				/* Tarjeta NodeTerm (hometab): mismo fondo que la sidebar */
@@ -652,8 +651,8 @@ const ConnectionHistoryStyles = ({
 				.top-terminal-frame.kde, .top-terminal-frame.windows,
 				.top-terminal-frame.matcha, .top-terminal-frame.futuristic,
 				.top-terminal-frame.modern, .top-terminal-frame.retro {
-					background-color: var(--home-panel-frame-bg, ${adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}) !important;
-					background: var(--home-panel-frame-bg, ${adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}) !important;
+					background-color: var(--home-panel-frame-bg, ${panelSurface}) !important;
+					background: var(--home-panel-frame-bg, ${panelSurface}) !important;
 				}
 
 				/* --- Grep-style connection rows (Adaptable y fluido) --- */
@@ -1035,8 +1034,9 @@ const ConnectionHistoryStyles = ({
 					margin: 2px 14px 8px 14px;
 					border-radius: 8px;
 					border: 1px solid ${terminalTheme.brightBlack ? terminalTheme.brightBlack + '55' : 'rgba(255,255,255,0.1)'};
-					background: ${terminalTheme.background ? adjustOpacity(terminalTheme.background, 0.5) : 'rgba(0, 0, 0, 0.35)'};
-					backdrop-filter: blur(14px);
+					background: ${adjustOpacity(terminalTheme.background || '#000000', Math.max(0.16, panelOpacity * 0.65))};
+					backdrop-filter: ${backdropFilter};
+					-webkit-backdrop-filter: ${backdropFilter};
 					box-shadow: inset 0 1px 10px rgba(0,0,0,0.4);
 					animation: cyberFadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 				}
@@ -1468,8 +1468,8 @@ const ConnectionHistoryStyles = ({
 				}
 				.filters-terminal-frame {
 					box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
-					backdrop-filter: blur(24px) saturate(180%);
-					-webkit-backdrop-filter: blur(24px) saturate(180%);
+					backdrop-filter: ${backdropFilterGlass};
+					-webkit-backdrop-filter: ${backdropFilterGlass};
 				}
 				.filters-terminal-frame .home-panel-body {
 					display: flex;
@@ -1562,7 +1562,7 @@ const ConnectionHistoryStyles = ({
 				}
 
 				/* Hero Chips */
-				.hero-chip { display: flex; align-items: center; background: ${themeColors.itemBackground || 'rgba(22, 27, 34, 0.4)'}; border: 1px solid transparent; border-radius: 16px; padding: 8px 24px 8px 8px; width: 220px; height: 70px; cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); backdrop-filter: blur(10px); flex-shrink: 0; text-align: left; }
+				.hero-chip { display: flex; align-items: center; background: ${themeColors.itemBackground || 'rgba(22, 27, 34, 0.4)'}; border: 1px solid transparent; border-radius: 16px; padding: 8px 24px 8px 8px; width: 220px; height: 70px; cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); backdrop-filter: ${backdropFilter}; -webkit-backdrop-filter: ${backdropFilter}; flex-shrink: 0; text-align: left; }
 				.hero-chip:hover { background: ${themeColors.hoverBackground || 'rgba(30, 36, 45, 0.6)'}; transform: translateY(-4px); border-color: ${themeColors.borderColor || 'rgba(255,255,255,0.05)'}; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
 				.hero-chip.active { border-color: var(--card-accent); background: linear-gradient(135deg, ${themeColors.itemBackground || 'rgba(22, 27, 34, 0.4)'}, ${themeColors.hoverBackground || 'rgba(30,36,45,0.6)'}); box-shadow: 0 0 0 1px var(--card-accent) inset;}
 				.hero-chip-icon { width: 54px; height: 54px; min-width: 54px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-right: 16px; }
@@ -1589,7 +1589,7 @@ const ConnectionHistoryStyles = ({
 				}
 
 				/* Hero Chips */
-				.hero-chip { display: flex; align-items: center; background: ${themeColors.itemBackground || 'rgba(22, 27, 34, 0.4)'}; border: 1px solid transparent; border-radius: 16px; padding: 8px 24px 8px 8px; width: 220px; height: 70px; cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); backdrop-filter: blur(10px); flex-shrink: 0; text-align: left; }
+				.hero-chip { display: flex; align-items: center; background: ${themeColors.itemBackground || 'rgba(22, 27, 34, 0.4)'}; border: 1px solid transparent; border-radius: 16px; padding: 8px 24px 8px 8px; width: 220px; height: 70px; cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); backdrop-filter: ${backdropFilter}; -webkit-backdrop-filter: ${backdropFilter}; flex-shrink: 0; text-align: left; }
 				.hero-chip:hover { background: ${themeColors.hoverBackground || 'rgba(30, 36, 45, 0.6)'}; transform: translateY(-4px); border-color: ${themeColors.borderColor || 'rgba(255,255,255,0.05)'}; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
 				.hero-chip.active { border-color: var(--card-accent); background: linear-gradient(135deg, ${themeColors.itemBackground || 'rgba(22, 27, 34, 0.4)'}, ${themeColors.hoverBackground || 'rgba(30,36,45,0.6)'}); box-shadow: 0 0 0 1px var(--card-accent) inset;}
 				.hero-chip-icon { width: 54px; height: 54px; min-width: 54px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-right: 16px; }
@@ -1696,7 +1696,8 @@ const ConnectionHistoryStyles = ({
 					margin: 0 !important;
 					border-radius: 12px;
 					box-shadow: 0 10px 30px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05);
-					backdrop-filter: blur(16px);
+					backdrop-filter: ${backdropFilter};
+					-webkit-backdrop-filter: ${backdropFilter};
 					transition: box-shadow 0.2s ease, border-color 0.2s ease;
 				}
 				.home-panel-frame.is-maximized {

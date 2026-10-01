@@ -2,21 +2,7 @@ import { iconThemes } from '../../../../themes/icon-themes';
 import { SSHIconPresets } from '../../../SSHIconSelector';
 import { helpers } from '../../../../utils/connectionStore';
 
-// Helper para ajustar la opacidad de los colores (Hex o RGBA)
-export const adjustOpacity = (color, opacity) => {
-	if (!color) return `rgba(0,0,0,${opacity})`;
-	if (color.startsWith('rgba')) {
-		return color.replace(/[\d.]+\)$/g, `${opacity})`);
-	}
-	if (color.startsWith('#')) {
-		const hex = color.replace('#', '');
-		const r = parseInt(hex.substring(0, 2), 16) || 0;
-		const g = parseInt(hex.substring(2, 4), 16) || 0;
-		const b = parseInt(hex.substring(4, 6), 16) || 0;
-		return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-	}
-	return color;
-};
+export { adjustOpacity, homePanelSurface, mapHomePanelOpacity } from '../../../../utils/homePanelOpacity';
 
 // Formatear "Hace 5m", "Hace 2 h", "Ayer", etc.
 export function formatRelativeTime(iso) {

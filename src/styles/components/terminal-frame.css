@@ -360,7 +360,8 @@
 
 .terminal-frame-modern {
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    backdrop-filter: blur(25px) saturate(180%) !important;
+    backdrop-filter: var(--home-backdrop-filter-glass, blur(25px) saturate(180%)) !important;
+    -webkit-backdrop-filter: var(--home-backdrop-filter-glass, blur(25px) saturate(180%)) !important;
     background: rgba(255, 255, 255, 0.05) !important;
     border-radius: 16px !important;
 }
@@ -416,7 +417,8 @@
 
 .home-panel-frame.is-frameless-panel .home-panel-drag-handle {
     background: rgba(15, 23, 42, 0.75) !important;
-    backdrop-filter: blur(12px);
+    backdrop-filter: var(--home-backdrop-filter, blur(12px));
+    -webkit-backdrop-filter: var(--home-backdrop-filter, blur(12px));
     border: 1px solid rgba(255, 255, 255, 0.08) !important;
     border-radius: 8px !important;
     margin: 4px 8px 0 8px;
@@ -986,8 +988,8 @@
 .recents-terminal-frame.aurora-glass,
 .top-terminal-frame.aurora-glass {
     border: 1px solid rgba(147, 197, 253, 0.25) !important;
-    backdrop-filter: blur(28px) saturate(200%) !important;
-    -webkit-backdrop-filter: blur(28px) saturate(200%) !important;
+    backdrop-filter: var(--home-backdrop-filter-glass, blur(28px) saturate(200%)) !important;
+    -webkit-backdrop-filter: var(--home-backdrop-filter-glass, blur(28px) saturate(200%)) !important;
     background: linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.75) 100%) !important;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
     border-radius: 18px !important;

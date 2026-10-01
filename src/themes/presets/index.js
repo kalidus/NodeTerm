@@ -72,6 +72,7 @@ export const PRESET_SETTINGS_KEYS = [
   'basicapp_statusbar_height',
   // Terminal Opacity
   'nodeterm_terminal_opacity',
+  'nodeterm_home_backdrop_blur',
   'nodeterm_main_frame_header_start_collapsed'
 ];
 

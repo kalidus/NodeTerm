@@ -121,6 +121,7 @@ const SYNC_KEYS = [
   'homeTab_wallpaper',
   'actionBarIconTheme',
   'nodeterm_terminal_opacity',
+  'nodeterm_home_backdrop_blur',
   'nodeterm_terminal_frame_style',
   'nodeterm_minimal_mode',
 

@@ -13,6 +13,7 @@ function skipMessage(t, reason) {
 export default function HomeWallpaperPicker({
   compact = false,
   hideHeading = false,
+  hideDim = false,
   themeColors = {}
 }) {
   const { t } = useTranslation('settings');
@@ -131,22 +132,24 @@ export default function HomeWallpaperPicker({
         </div>
       )}
 
-      <div className="home-wallpaper-dim">
-        <div className="home-wallpaper-dim-row">
-          <span style={{ color: text }}>{t('appearance.homePage.wallpaper.dim')}</span>
-          <span className="home-wallpaper-dim-value" style={{ color: accent, background: `${accent}22` }}>
-            {state.dim}%
-          </span>
+      {!hideDim ? (
+        <div className="home-wallpaper-dim">
+          <div className="home-wallpaper-dim-row">
+            <span style={{ color: text }}>{t('appearance.homePage.wallpaper.dim')}</span>
+            <span className="home-wallpaper-dim-value" style={{ color: accent, background: `${accent}22` }}>
+              {state.dim}%
+            </span>
+          </div>
+          <Slider
+            value={state.dim}
+            onChange={(e) => setWallpaperDim(e.value)}
+            min={0}
+            max={80}
+            step={1}
+            style={{ width: '100%', height: '4px' }}
+          />
         </div>
-        <Slider
-          value={state.dim}
-          onChange={(e) => setWallpaperDim(e.value)}
-          min={0}
-          max={80}
-          step={1}
-          style={{ width: '100%', height: '4px' }}
-        />
-      </div>
+      ) : null}
 
       {notice ? (
         <div className="home-wallpaper-notice" style={{ color: muted }}>{notice}</div>

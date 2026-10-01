@@ -1,9 +1,14 @@
 import { STORAGE_KEYS } from './constants';
 import { persistSyncedSetting } from './persistSyncedSetting';
 
+export const HOME_BACKDROP_BLUR_KEY = 'nodeterm_home_backdrop_blur';
+export const HOME_BACKDROP_BLUR_DEFAULT = 8;
+export const HOME_BACKDROP_BLUR_MAX = 40;
+
 /** Claves de opciones del panel Home sincronizadas entre instancias. */
 export const HOME_TAB_SYNC_KEYS = [
   'nodeterm_terminal_opacity',
+  HOME_BACKDROP_BLUR_KEY,
   STORAGE_KEYS.TERMINAL_FRAME_STYLE,
   STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_TABS_VISIBLE,
   STORAGE_KEYS.HOME_TAB_STATUS_BAR_VISIBLE,
@@ -19,6 +24,18 @@ export const HOME_TAB_SYNC_KEYS = [
   STORAGE_KEYS.MINIMAL_MODE,
   'localLinuxTerminalTheme'
 ];
+
+export function clampHomeBackdropBlur(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return HOME_BACKDROP_BLUR_DEFAULT;
+  return Math.min(HOME_BACKDROP_BLUR_MAX, Math.max(0, Math.round(n)));
+}
+
+export function homeBackdropFilter(px, saturate) {
+  const n = clampHomeBackdropBlur(px);
+  if (n <= 0) return 'none';
+  return saturate ? `blur(${n}px) saturate(${saturate}%)` : `blur(${n}px)`;
+}
 
 export function persistHomeTabSetting(key, value) {
   persistSyncedSetting(key, value);

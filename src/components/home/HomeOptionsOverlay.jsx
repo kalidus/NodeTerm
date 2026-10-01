@@ -3,12 +3,24 @@ import { OverlayPanel } from 'primereact/overlaypanel';
 import { Slider } from 'primereact/slider';
 import { HomeWidgetPicker } from './connection-history';
 import HomeWallpaperPicker from './HomeWallpaperPicker';
+import { useHomeWallpaper } from '../../utils/homeWallpaper';
+import { HOME_BACKDROP_BLUR_DEFAULT, HOME_BACKDROP_BLUR_MAX } from '../../utils/homeTabSync';
 
 const TABS = [
   { id: 'apariencia', label: 'Apariencia' },
   { id: 'paneles', label: 'Paneles' },
   { id: 'layout', label: 'Layout' }
 ];
+
+function AppearanceSliderRow({ label, valueLabel, labelColor, valueColor, valueBg, ...sliderProps }) {
+  return (
+    <div className="home-options-slider-row">
+      <span className="home-options-slider-label" style={{ color: labelColor }}>{label}</span>
+      <Slider {...sliderProps} style={{ width: '100%', height: '4px' }} />
+      <span className="home-options-slider-value" style={{ color: valueColor, background: valueBg }}>{valueLabel}</span>
+    </div>
+  );
+}
 
 function SwitchRow({ label, icon, iconStyle, checked, onToggle, themeColors }) {
   return (
@@ -43,6 +55,8 @@ export default function HomeOptionsOverlay({
   terminalFrameStyleLabel,
   terminalOpacity,
   onTerminalOpacityChange,
+  homeBackdropBlur = HOME_BACKDROP_BLUR_DEFAULT,
+  onHomeBackdropBlurChange,
   showLocalTerminalTabs,
   onToggleLocalTabs,
   statusBarVisible,
@@ -71,10 +85,12 @@ export default function HomeOptionsOverlay({
   isMinimalMode
 }) {
   const [activeTab, setActiveTab] = useState('apariencia');
+  const { state: wallpaperState, setWallpaperDim } = useHomeWallpaper({ loadThumbs: false });
   const primary = themeColors.primaryColor || '#2196f3';
   const text = themeColors.textPrimary || '#fff';
   const themePreview = themes[localLinuxTerminalTheme]?.theme || {};
   const themeAccent = themePreview.cursor || themePreview.green || themePreview.blue || themePreview.foreground || '#fff';
+  const sliderValueBg = `${primary}22`;
 
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
@@ -112,26 +128,42 @@ export default function HomeOptionsOverlay({
         <div className="home-options-body">
           {activeTab === 'apariencia' && (
             <>
-              <div className="home-options-opacity">
-                <div className="home-options-opacity-row">
-                  <span style={{ color: text, fontSize: '0.95rem', fontWeight: 600 }}>Opacidad</span>
-                  <span
-                    className="home-options-opacity-value"
-                    style={{
-                      color: primary,
-                      background: `${primary}22`
-                    }}
-                  >
-                    {Math.round(terminalOpacity * 100)}%
-                  </span>
-                </div>
-                <Slider
+              <div className="home-options-sliders">
+                <AppearanceSliderRow
+                  label="Opacidad"
+                  valueLabel={`${Math.round(terminalOpacity * 100)}%`}
+                  labelColor={text}
+                  valueColor={primary}
+                  valueBg={sliderValueBg}
                   value={terminalOpacity * 100}
                   onChange={(e) => onTerminalOpacityChange?.(e.value / 100)}
                   min={5}
                   max={100}
                   step={1}
-                  style={{ width: '100%', height: '4px' }}
+                />
+                <AppearanceSliderRow
+                  label="Blur"
+                  valueLabel={`${Math.round(homeBackdropBlur)}px`}
+                  labelColor={text}
+                  valueColor={primary}
+                  valueBg={sliderValueBg}
+                  value={homeBackdropBlur}
+                  onChange={(e) => onHomeBackdropBlurChange?.(e.value)}
+                  min={0}
+                  max={HOME_BACKDROP_BLUR_MAX}
+                  step={1}
+                />
+                <AppearanceSliderRow
+                  label="Velo"
+                  valueLabel={`${Math.round(wallpaperState.dim || 0)}%`}
+                  labelColor={text}
+                  valueColor={primary}
+                  valueBg={sliderValueBg}
+                  value={wallpaperState.dim || 0}
+                  onChange={(e) => setWallpaperDim(e.value)}
+                  min={0}
+                  max={80}
+                  step={1}
                 />
               </div>
 
@@ -210,7 +242,7 @@ export default function HomeOptionsOverlay({
                 onToggle={toggleMinimalMode}
                 themeColors={themeColors}
               />
-              <HomeWallpaperPicker compact themeColors={themeColors} />
+              <HomeWallpaperPicker compact hideDim themeColors={themeColors} />
             </>
           )}
 

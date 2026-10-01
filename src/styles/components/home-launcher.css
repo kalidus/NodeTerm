@@ -311,6 +311,36 @@
   border-radius: 6px;
 }
 
+.home-options-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.home-options-slider-row {
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr) 42px;
+  align-items: center;
+  gap: 8px;
+  min-height: 22px;
+}
+
+.home-options-slider-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.home-options-slider-value {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 5px;
+  text-align: center;
+  justify-self: end;
+}
+
 .home-options-field {
   margin-bottom: 8px;
 }

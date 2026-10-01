@@ -14,6 +14,7 @@ import { FaWindows, FaUbuntu, FaLinux } from 'react-icons/fa';
 import { SiAnthropic, SiDebian, SiDocker, SiGooglegemini, SiOpenai } from 'react-icons/si';
 import AIClientBrandIcon from './AIClientBrandIcon';
 import HomePanelWrapper from './HomePanelWrapper';
+import { HOME_BACKDROP_BLUR_DEFAULT, homeBackdropFilter } from '../utils/homeTabSync';
 import HomeTelemetryPanel from './HomeTelemetryPanel';
 import HomeDock from './home/HomeDock';
 
@@ -36,7 +37,7 @@ import {
 	ConnectionHistoryOverlays,
 	useConnectionSearch,
 	useFavoriteGroupsManager,
-	adjustOpacity
+	homePanelSurface
 } from './home/connection-history';
 
 const MIN_SEARCH_CHARS = 2;
@@ -59,6 +60,7 @@ const ConnectionHistory = ({
 	onOpenSettings = null,
 	terminalFrameStyle = 'macos',
 	terminalOpacity = 1.0,
+	homeBackdropBlur = HOME_BACKDROP_BLUR_DEFAULT,
 	onTerminalOpacityChange = () => { },
 	onToggleTerminalVisibility,
 	onOpenHomeOptions = null,
@@ -89,11 +91,18 @@ const ConnectionHistory = ({
 }) => {
 	const canvasRef = useRef(null);
 
-	const localTerminalBg = useMemo(() => {
-		const baseColor = themes[localLinuxTerminalTheme]?.theme?.background || '#0c0c0c';
-		if (terminalOpacity >= 0.99) return baseColor;
-		return adjustOpacity(baseColor, terminalOpacity);
-	}, [localLinuxTerminalTheme, terminalOpacity]);
+	const panelFrameBg = useMemo(() => homePanelSurface([
+		themeColors.sidebarBackground,
+		themeColors.cardBackground,
+		terminalTheme.background,
+		'#0d1117'
+	], terminalOpacity), [themeColors.sidebarBackground, themeColors.cardBackground, terminalTheme.background, terminalOpacity]);
+
+	const localTerminalBg = useMemo(() => homePanelSurface([
+		themes[localLinuxTerminalTheme]?.theme?.background,
+		terminalTheme.background,
+		'#0c0c0c'
+	], terminalOpacity), [localLinuxTerminalTheme, terminalTheme.background, terminalOpacity]);
 
 	const [favoriteConnections, setFavoriteConnections] = useState([]);
 	const [passwordNodes, setPasswordNodes] = useState([]);
@@ -830,7 +839,7 @@ const ConnectionHistory = ({
 				minHeight={opts.minHeight || 140}
 				hideHeader={hideNonTerminalHeaders}
 				className={`recents-terminal-frame ${opts.className || ''}`}
-				frameBackground={adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}
+				frameBackground={panelFrameBg}
 			>
 				{content}
 			</HomePanelWrapper>
@@ -847,11 +856,13 @@ const ConnectionHistory = ({
 				'--ch-green': terminalTheme.green || '#27c93f',
 				'--ch-fg': terminalTheme.foreground || '#c9d1d9',
 				'--ch-bg': terminalTheme.background || '#0d1117',
-				'--ch-primary': themeColors.primaryColor || '#4fc3f7'
+				'--ch-primary': themeColors.primaryColor || '#4fc3f7',
+				'--home-backdrop-filter': homeBackdropFilter(homeBackdropBlur),
+				'--home-backdrop-filter-glass': homeBackdropFilter(homeBackdropBlur, 180)
 			}}
 		>
 			{/* Dynamic CSS Styles */}
-			<ConnectionHistoryStyles themeColors={themeColors} terminalTheme={terminalTheme} terminalOpacity={terminalOpacity} />
+			<ConnectionHistoryStyles themeColors={themeColors} terminalTheme={terminalTheme} terminalOpacity={terminalOpacity} backdropBlurPx={homeBackdropBlur} />
 
 			{/* ========================================================= */}
 			{/* RENDER PRINCIPAL: CANVAS MODULAR O LAYOUT LEGACY          */}
@@ -892,7 +903,7 @@ const ConnectionHistory = ({
 							minHeight={90}
 							hideHeader={hideNonTerminalHeaders}
 							className="top-terminal-frame search-terminal-frame"
-							frameBackground={adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}
+							frameBackground={panelFrameBg}
 						>
 							{renderSearchPanel()}
 						</HomePanelWrapper>
@@ -1008,7 +1019,7 @@ const ConnectionHistory = ({
 							minHeight={140}
 							hideHeader={hideNonTerminalHeaders}
 							className="recents-terminal-frame"
-							frameBackground={adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}
+							frameBackground={panelFrameBg}
 						>
 							{renderRecentsPanel()}
 						</HomePanelWrapper>
@@ -1037,7 +1048,7 @@ const ConnectionHistory = ({
 							minHeight={140}
 							hideHeader={hideNonTerminalHeaders}
 							className="recents-terminal-frame favorites-terminal-frame"
-							frameBackground={adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}
+							frameBackground={panelFrameBg}
 						>
 							{renderFavoritesPanel()}
 						</HomePanelWrapper>
@@ -1077,7 +1088,7 @@ const ConnectionHistory = ({
 							minHeight={90}
 							hideHeader={hideNonTerminalHeaders}
 							className="recents-terminal-frame sysmon-terminal-frame"
-							frameBackground={adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}
+							frameBackground={panelFrameBg}
 						>
 							<HomeTelemetryPanel
 								themeColors={themeColors}
@@ -1113,7 +1124,7 @@ const ConnectionHistory = ({
 							minHeight={280}
 							hideHeader={hideNonTerminalHeaders}
 							className="filters-terminal-frame"
-							frameBackground={adjustOpacity(themeColors.sidebarBackground || terminalTheme.background || '#0d1117', terminalOpacity)}
+							frameBackground={panelFrameBg}
 						>
 							{renderHomeFilterPanel()}
 						</HomePanelWrapper>

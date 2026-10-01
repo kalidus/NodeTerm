@@ -14,8 +14,13 @@ import {
   persistHomeTabSetting,
   readBoolSetting,
   readFloatSetting,
-  readStringSetting
+  readStringSetting,
+  HOME_BACKDROP_BLUR_KEY,
+  HOME_BACKDROP_BLUR_DEFAULT,
+  clampHomeBackdropBlur,
+  homeBackdropFilter
 } from '../utils/homeTabSync';
+import { adjustOpacity, homePanelSurface } from '../utils/homePanelOpacity';
 import {
   calculateDragSnap,
   calculateResizeSnap,
@@ -407,6 +412,10 @@ const HomeTab = ({
     }
   });
 
+  const [homeBackdropBlur, setHomeBackdropBlur] = useState(() => {
+    return clampHomeBackdropBlur(readFloatSetting(HOME_BACKDROP_BLUR_KEY, HOME_BACKDROP_BLUR_DEFAULT));
+  });
+
   const [hideNonTerminalHeaders, setHideNonTerminalHeaders] = useState(() => {
     return readBoolSetting(STORAGE_KEYS.HOME_TAB_HIDE_NON_TERMINAL_HEADERS, false);
   });
@@ -416,11 +425,16 @@ const HomeTab = ({
   }, [terminalOpacity]);
 
   useEffect(() => {
+    persistHomeTabSetting(HOME_BACKDROP_BLUR_KEY, String(homeBackdropBlur));
+  }, [homeBackdropBlur]);
+
+  useEffect(() => {
     persistHomeTabSetting(STORAGE_KEYS.HOME_TAB_HIDE_NON_TERMINAL_HEADERS, hideNonTerminalHeaders ? 'true' : 'false');
   }, [hideNonTerminalHeaders]);
 
   const syncHomeOptionsFromStorage = React.useCallback(() => {
     setTerminalOpacity(readFloatSetting('nodeterm_terminal_opacity', 1.0));
+    setHomeBackdropBlur(clampHomeBackdropBlur(readFloatSetting(HOME_BACKDROP_BLUR_KEY, HOME_BACKDROP_BLUR_DEFAULT)));
     setTerminalFrameStyle(readStringSetting(STORAGE_KEYS.TERMINAL_FRAME_STYLE, 'macos'));
     setShowLocalTerminalTabs(readBoolSetting(STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_TABS_VISIBLE, false));
     setStatusBarVisible(readBoolSetting(STORAGE_KEYS.HOME_TAB_STATUS_BAR_VISIBLE, true));
@@ -1484,22 +1498,6 @@ const HomeTab = ({
     }
   };
 
-  // Helper para ajustar la opacidad de los colores (Hex o RGBA)
-  const adjustOpacity = (color, opacity) => {
-    if (!color) return `rgba(0,0,0,${opacity})`;
-    if (color.startsWith('rgba')) {
-      return color.replace(/[\d.]+\)$/g, `${opacity})`);
-    }
-    if (color.startsWith('#')) {
-      const hex = color.replace('#', '');
-      const r = parseInt(hex.substring(0, 2), 16) || 0;
-      const g = parseInt(hex.substring(2, 4), 16) || 0;
-      const b = parseInt(hex.substring(4, 6), 16) || 0;
-      return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-    }
-    return color;
-  };
-
   // Helper para obtener un fondo con contraste basado en el brillo (ideal para temas planos como Nord)
   const getContrastBg = (color, opacity = 0.8) => {
     if (!color) return `rgba(255,255,255,${opacity * 0.1})`;
@@ -1575,7 +1573,9 @@ const HomeTab = ({
       itemBackground: currentTheme.colors?.tabBackground || 'rgba(255,255,255,0.05)',
       cardBorder: currentTheme.colors?.dialogBorder || currentTheme.colors?.contentBorder || 'rgba(255,255,255,0.1)',
       cardBackground: currentTheme.colors?.dialogBackground || 'rgba(16, 20, 28, 0.6)',
-      sidebarBackground: currentTheme.colors?.sidebarBackground || currentTheme.colors?.contentBackground || '#1e1e1e',
+      sidebarBackground: currentTheme.colors?.sidebarBackground && currentTheme.colors.sidebarBackground !== 'transparent'
+        ? currentTheme.colors.sidebarBackground
+        : (currentTheme.colors?.contentBackground || '#1e1e1e'),
       primaryColor: currentTheme.colors?.buttonPrimary || currentTheme.colors?.primaryColor || '#2196f3',
       // Colores espec\u00EDficos para el buscador para asegurar que resalte en todos los temas
       searchBackground: getContrastBg(currentTheme.colors?.contentBackground || '#1e1e1e', 0.85),
@@ -1598,10 +1598,20 @@ const HomeTab = ({
     };
   }, [currentTheme]);
 
-  const localTerminalBg = React.useMemo(() => {
-    const baseColor = themes[localLinuxTerminalTheme]?.theme?.background || themes[localPowerShellTheme]?.theme?.background || '#222';
-    return adjustOpacity(baseColor, terminalOpacity);
-  }, [localLinuxTerminalTheme, localPowerShellTheme, terminalOpacity]);
+  const localTerminalBg = React.useMemo(() => homePanelSurface([
+    themes[localLinuxTerminalTheme]?.theme?.background,
+    themes[localPowerShellTheme]?.theme?.background,
+    '#222'
+  ], terminalOpacity), [localLinuxTerminalTheme, localPowerShellTheme, terminalOpacity]);
+
+  const homeBackdropFilterValue = React.useMemo(
+    () => homeBackdropFilter(homeBackdropBlur),
+    [homeBackdropBlur]
+  );
+  const homeBackdropFilterGlass = React.useMemo(
+    () => homeBackdropFilter(homeBackdropBlur, 180),
+    [homeBackdropBlur]
+  );
 
   const localTerminalTheme = React.useMemo(() => {
     const t = themes[localLinuxTerminalTheme]?.theme || themes[localPowerShellTheme]?.theme || {};
@@ -1944,7 +1954,8 @@ const HomeTab = ({
           /* Modern Glass Style */
           .bottom-terminal-frame.modern {
             border: 1px solid rgba(255,255,255,0.2) !important;
-            backdrop-filter: blur(30px) saturate(180%) !important;
+            backdrop-filter: ${homeBackdropFilterGlass} !important;
+            -webkit-backdrop-filter: ${homeBackdropFilterGlass} !important;
             background: rgba(255, 255, 255, 0.08) !important;
             border-radius: 20px !important;
             overflow: hidden;
@@ -1999,7 +2010,8 @@ const HomeTab = ({
           /* Fluent Style */
           .bottom-terminal-frame.fluent {
             border-radius: 8px !important;
-            backdrop-filter: blur(20px) !important;
+            backdrop-filter: ${homeBackdropFilterValue} !important;
+            -webkit-backdrop-filter: ${homeBackdropFilterValue} !important;
             border: 1px solid rgba(255,255,255,0.1) !important;
           }
           .fluent-controls { display: flex; }
@@ -2145,8 +2157,8 @@ const HomeTab = ({
 
           /* Glassmorphism for OverlayPanel */
           .premium-overlay {
-            backdrop-filter: blur(25px) saturate(180%) !important;
-            -webkit-backdrop-filter: blur(25px) saturate(180%) !important;
+            backdrop-filter: ${homeBackdropFilterGlass} !important;
+            -webkit-backdrop-filter: ${homeBackdropFilterGlass} !important;
             background: ${themeColors.cardBackground ? (themeColors.cardBackground.replace(')', ', 0.85)')) : 'rgba(30, 30, 30, 0.85)'} !important;
             border: 1px solid rgba(255, 255, 255, 0.1) !important;
             box-shadow: 0 15px 50px rgba(0,0,0,0.5) !important;
@@ -2167,7 +2179,9 @@ const HomeTab = ({
         position: 'relative',
         opacity: terminalState === 'maximized' ? 0 : 1,
         visibility: terminalState === 'maximized' ? 'hidden' : 'visible',
-        transition: 'opacity 0.1s ease, visibility 0.1s ease'
+        transition: 'opacity 0.1s ease, visibility 0.1s ease',
+        '--home-backdrop-filter': homeBackdropFilterValue,
+        '--home-backdrop-filter-glass': homeBackdropFilterGlass
       }}>
         <HomeOptionsOverlay
           overlayRef={homeOptionsOverlayRef}
@@ -2177,6 +2191,8 @@ const HomeTab = ({
           terminalFrameStyleLabel={(HOME_TERMINAL_FRAME_STYLE_OPTIONS.find((o) => o.id === terminalFrameStyle) || {}).label || terminalFrameStyle}
           terminalOpacity={terminalOpacity}
           onTerminalOpacityChange={setTerminalOpacity}
+          homeBackdropBlur={homeBackdropBlur}
+          onHomeBackdropBlurChange={(value) => setHomeBackdropBlur(clampHomeBackdropBlur(value))}
           showLocalTerminalTabs={showLocalTerminalTabs}
           onToggleLocalTabs={() => setShowLocalTerminalTabs(prev => !prev)}
           statusBarVisible={statusBarVisible}
@@ -2419,6 +2435,7 @@ const HomeTab = ({
                   terminalFrameStyle={terminalFrameStyle}
                   terminalOpacity={terminalOpacity}
                   onTerminalOpacityChange={setTerminalOpacity}
+                  homeBackdropBlur={homeBackdropBlur}
                    onOpenHomeOptions={(e) => homeOptionsOverlayRef.current?.toggle(e)}
                   homeCardVisible={homeCardVisible}
                   statusBarVisible={statusBarVisible}
@@ -2478,7 +2495,9 @@ const HomeTab = ({
         width: '100%',
         position: 'relative',
         background: dashboardBg,
-        overflow: 'hidden'
+        overflow: 'hidden',
+        '--home-backdrop-filter': homeBackdropFilterValue,
+        '--home-backdrop-filter-glass': homeBackdropFilterGlass
       }}>
       {wallpaperUrl ? (
         <>
