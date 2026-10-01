@@ -63,6 +63,18 @@ describe('mapTerminationReason', () => {
     assert.equal(res.icon, 'pi pi-hourglass');
   });
 
+  test('en sesion activa, clasifica FileContentsResponse incompleto como CLIPRDR_FILE_CONTENTS', () => {
+    const res = mapTerminationReason(
+      'not enough bytes provided to decode: received 260552 bytes, expected 262148 bytes',
+      null,
+      true,
+      new Error('ironrdp_cliprdr FileContentsResponse decode')
+    );
+    assert.equal(res.category, 'CLIPRDR_FILE_CONTENTS');
+    assert.equal(res.severity, 'warn');
+    assert.match(res.title, /transferencia/i);
+  });
+
   test('en sesión activa, clasifica corte genérico de socket como CONNECTION_LOST', () => {
     const res = mapTerminationReason(null, 'Cerrado por el servidor remoto', true, new Error('read ECONNRESET'));
     assert.equal(res.category, 'CONNECTION_LOST');

@@ -37,7 +37,9 @@ import {
   getTransferOverlayHeader
 } from '../utils/rdpFileTransferQueue';
 
-const CLIPRDR_DOWNLOAD_CHUNK = 256 * 1024;
+// 64KB es el default de IronRDP. 256KB rompe el decode de FileContentsResponse
+// (received N, expected 262148) y tumba toda la sesion CLIPRDR.
+const CLIPRDR_DOWNLOAD_CHUNK = 64 * 1024;
 const TEMP_FILE_WRITE_CHUNK = 4 * 1024 * 1024;
 
 export { mapTerminationReason };
@@ -718,6 +720,11 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
 
       details.rawReason = rawReason || (err ? extractErrorMessage(err) : (backendReason || 'Desconexión normal'));
       details.timestamp = new Date().toLocaleTimeString();
+
+      abortedTransferIdsRef.current.clear();
+      downloadedPathsRef.current = [];
+      setActiveTransfers({});
+      disarmFileTransfer();
 
       setDisconnectDetails(details);
       if (wasConnected || details.category !== 'CONNECT_ERROR') {

@@ -120,6 +120,15 @@ describe('rdpdr stub', () => {
     assert.equal(parseMcsSendData(res.replies[0]).channelId, 1005);
   });
 
+  test('un component rD con packetId desconocido no se absorbe', () => {
+    const body = Buffer.alloc(8);
+    body.writeUInt16LE(0x4472, 0);
+    body.writeUInt16LE(0x9999, 2);
+    const res = handleRdpdrRequest(1004, 0, wrapChannelPdu(body));
+    assert.equal(res.handled, false);
+    assert.equal(res.replies.length, 0);
+  });
+
   test('un PDU que no es rdpdr no se reclama', () => {
     const res = handleRdpdrRequest(1004, 0, Buffer.from([0x01, 0x00, 0x00, 0x00]));
     assert.equal(res.handled, false);

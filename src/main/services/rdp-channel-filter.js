@@ -326,6 +326,12 @@ function declaredChannelId(state, wantedName) {
  * salen por el VC que anunciamos como rdpdr, para no confirmar 1004 como disco.
  */
 function consumeRdpdr(state, channelId, userData) {
+  // Un fragmento CLIPRDR de fichero no lleva CLIPRDR_HEADER. Si se mira antes que
+  // claimCliprdrPdu, bytes 0x4472 ('rD') se absorben como rdpdr y IronRDP decodifica
+  // FileContentsResponse corto (faltan ~1600B) y tumba la sesion.
+  if (state && state.serverCliprdrFragmentOpen && state.serverCliprdrChannelId === channelId) {
+    return null;
+  }
   const rdpdr = handleRdpdrRequest(channelId, state.clientInitiator, userData);
   if (!rdpdr.handled) return null;
 
@@ -937,6 +943,16 @@ function processServerFrame(state, buf) {
 
   const isIoChannel = state.ready ? (channelId === state.ioChannelId) : (channelId === 1003);
 
+  // Cliprdr ANTES que rdpdr: los trozos de FileContents no tienen CLIPRDR_HEADER y
+  // pueden empezar por 0x4472. Si rdpdr los absorbe, WASM recibe el PDU corto y corta
+  // la sesion (received N, expected chunk+4).
+  if (!isIoChannel && parsed) {
+    noteUnsafeCliprdr(state, channelId, parsed.userData);
+  }
+  if (!isIoChannel && parsed && claimCliprdrPdu(state, channelId, parsed.userData)) {
+    return buildCliprdrResult(state, buf, channelId, parsed.userData);
+  }
+
   // rdpdr por contenido, no por ID: Wallix lo ha llegado a mandar por el canal IO (1003),
   // donde el filtro lo veia como ShareControl invalido y no contestaba.
   if (parsed) {
@@ -944,24 +960,6 @@ function processServerFrame(state, buf) {
     if (stubbedRdpdr) return stubbedRdpdr;
     const stubbedRail = consumeRail(state, channelId, parsed.userData);
     if (stubbedRail) return stubbedRail;
-  }
-
-  // Cliprdr en canal de usuario (:APP:): se marca como inseguro para no escribir ahi de
-  // vuelta, y se remapea hacia el VC negociado mas abajo para que IronRDP vea MONITOR_READY.
-  if (!isIoChannel && parsed) {
-    noteUnsafeCliprdr(state, channelId, parsed.userData);
-  }
-
-  // 1. Portapapeles (cliprdr). Wallix ignora los nombres de canal que declara el cliente y
-  // proyecta su propio orden sobre los IDs: cliprdr puede llegar por un canal que el cliente
-  // reservó para otra cosa y, a la vez, ese canal puede traer rdpdr. Así que no se decide por ID
-  // sino por contenido: es cliprdr si abre un mensaje CLIPRDR válido o si continúa uno ya
-  // abierto, porque los fragmentos de continuación no llevan CLIPRDR_HEADER y descartarlos
-  // rompería el reensamblado. Lo que no encaje, aunque venga por el canal cliprdr negociado, cae
-  // al bloque siguiente y se descarta: reenviarlo le metería basura de otro protocolo al canal
-  // cliprdr de IronRDP.
-  if (!isIoChannel && parsed && claimCliprdrPdu(state, channelId, parsed.userData)) {
-    return buildCliprdrResult(state, buf, channelId, parsed.userData);
   }
 
   // 2. Canales que no son el canal IO ni cliprdr (canal de usuario 1001, drdynvc, etc.):

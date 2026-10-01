@@ -143,7 +143,26 @@ function mapTerminationReason(rawReason, backendReason, wasEverConnected = false
     };
   }
 
-  // 7. Desconexión de red / Socket Reset / Timeout durante sesión activa
+  // 7. Fallo CLIPRDR FileContents (chunk demasiado grande o PDU incompleto)
+  if (
+    wasEverConnected && (
+      combined.includes('filecontentsresponse') ||
+      combined.includes('file_contents') ||
+      (combined.includes('cliprdr') && combined.includes('not enough bytes'))
+    )
+  ) {
+    return {
+      category: 'CLIPRDR_FILE_CONTENTS',
+      title: 'La transferencia de archivos corto la sesion',
+      description: 'El canal de portapapeles RDP recibio un trozo incompleto al bajar el fichero. La sesion se cerro para no dejar CLIPRDR en un estado inconsistente.',
+      suggestion: 'Reconecta e intenta de nuevo. Si el fichero es muy grande, cancela y vuelve a copiarlo.',
+      severity: 'warn',
+      icon: 'pi pi-copy',
+      badge: 'Transferencia'
+    };
+  }
+
+  // 8. Desconexión de red / Socket Reset / Timeout durante sesión activa
   if (
     wasEverConnected && (
       combined.includes('econnreset') ||
@@ -171,7 +190,7 @@ function mapTerminationReason(rawReason, backendReason, wasEverConnected = false
     };
   }
 
-  // 8. Error de inicio o conexión nunca establecida
+  // 9. Error de inicio o conexión nunca establecida
   if (!wasEverConnected) {
     return {
       category: 'CONNECT_ERROR',
@@ -184,7 +203,7 @@ function mapTerminationReason(rawReason, backendReason, wasEverConnected = false
     };
   }
 
-  // 9. Desconexión genérica en sesión que estuvo activa
+  // 10. Desconexión genérica en sesión que estuvo activa
   return {
     category: 'DISCONNECTED',
     title: 'Sesión RDP Finalizada',

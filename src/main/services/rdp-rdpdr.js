@@ -141,11 +141,7 @@ function handleRdpdrRequest(mcsChannelId, initiator, userData) {
     return { handled: true, replies: [], note: 'rdpdr-user-loggedon' };
   }
 
-  return {
-    handled: true,
-    replies: [],
-    note: `rdpdr-absorb packetId=0x${parsed.packetId.toString(16)}`
-  };
+  return { handled: false, replies: [], note: null };
 }
 
 module.exports = {

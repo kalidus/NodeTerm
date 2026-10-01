@@ -650,6 +650,37 @@ describe('CLIPRDR: robustez del filtro', () => {
     assert.deepEqual(res.replies, []);
   });
 
+  test('un trozo FileContents que parece rdpdr no se absorbe ni corta el PDU', () => {
+    const state = stateWithCliprdr();
+    state.allowed = new Set([1003, 1004, 1005]);
+    state.channelIdToName = new Map([[1004, 'cliprdr'], [1005, 'rdpdr']]);
+
+    const fileBody = Buffer.alloc(64, 0xab);
+    fileBody.writeUInt32LE(1, 0);
+    const firstPayload = buildCliprdrPayload(0x0009, 0, fileBody);
+    const totalLen = firstPayload.length + 1600;
+    const first = buildMcsIndication(
+      1004,
+      buildChannelPdu(firstPayload, CHANNEL_FLAG_FIRST, totalLen)
+    );
+    const firstRes = processServerFrame(state, first);
+    assert.equal(firstRes.dropped, false);
+    assert.equal(state.serverCliprdrFragmentOpen, true);
+
+    const contPayload = Buffer.alloc(1600, 0xcd);
+    contPayload.writeUInt16LE(0x4472, 0);
+    contPayload.writeUInt16LE(0x496e, 2);
+    const cont = buildMcsIndication(
+      1004,
+      buildChannelPdu(contPayload, CHANNEL_FLAG_LAST, totalLen)
+    );
+    const contRes = processServerFrame(state, cont);
+    assert.equal(contRes.dropped, false);
+    assert.ok(contRes.forward);
+    assert.ok(!contRes.note || !contRes.note.includes('rdpdr'));
+    assert.equal(state.serverCliprdrFragmentOpen, false);
+  });
+
   test('los fragmentos de continuacion no se describen como CLIPRDR_HEADER', () => {
     // Fragmento intermedio de una transferencia de 48722B en trozos de 1600B
     const userData = buildChannelPdu(Buffer.alloc(1600, 0xab), 0, 48722);
