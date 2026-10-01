@@ -238,6 +238,48 @@ function parseRunningServices(rawOutput) {
 }
 
 /**
+ * Valida si un PID es seguro y válido para terminar
+ * @param {number|string} pid - PID del proceso a finalizar
+ * @param {boolean} isLocal - Indica si es un proceso del sistema local
+ * @returns {{ valid: boolean, pid?: number, error?: string }}
+ */
+function validateKillPid(pid, isLocal = false) {
+  if (pid === null || pid === undefined) {
+    return { valid: false, error: 'PID inválido. Debe ser un entero positivo mayor que 0.' };
+  }
+
+  const strPid = String(pid).trim();
+  if (!/^\d+$/.test(strPid)) {
+    return { valid: false, error: 'PID inválido. Debe ser un entero positivo mayor que 0.' };
+  }
+
+  const safePid = parseInt(strPid, 10);
+  if (isNaN(safePid) || safePid <= 0) {
+    return { valid: false, error: 'PID inválido. Debe ser un entero positivo mayor que 0.' };
+  }
+
+  // Protección para procesos locales
+  if (isLocal) {
+    if (safePid === process.pid) {
+      return { valid: false, error: 'Operación denegada: no se puede finalizar el propio proceso de NodeTerm.' };
+    }
+    if (process.ppid && safePid === process.ppid) {
+      return { valid: false, error: 'Operación denegada: no se puede finalizar el proceso padre de NodeTerm.' };
+    }
+    // Proteger PID 0 y 4 (System Idle / System en Windows)
+    if (process.platform === 'win32' && (safePid === 0 || safePid === 4)) {
+      return { valid: false, error: 'Operación denegada: no se pueden finalizar procesos protegidos del sistema.' };
+    }
+    // Proteger PID 1 en POSIX (init / launchd)
+    if (process.platform !== 'win32' && safePid === 1) {
+      return { valid: false, error: 'Operación denegada: no se puede finalizar el proceso init del sistema.' };
+    }
+  }
+
+  return { valid: true, pid: safePid };
+}
+
+/**
  * Registra todos los manejadores IPC relacionados con SSH
  * @param {Object} dependencies - Dependencias necesarias para los handlers
  */
@@ -1098,14 +1140,25 @@ function registerSSHHandlers(dependencies = {}) {
   // SSH/Local: Matar un proceso
   ipcMain.handle('ssh:kill-process', async (event, { tabId, pid, isLocal }) => {
     try {
-      const safePid = parseInt(pid, 10);
-      if (isNaN(safePid)) {
-        return { success: false, error: 'PID inválido' };
+      const validation = validateKillPid(pid, isLocal);
+      if (!validation.valid) {
+        return { success: false, error: validation.error };
       }
+      const safePid = validation.pid;
 
       if (isLocal) {
-        process.kill(safePid, 'SIGTERM');
-        return { success: true };
+        try {
+          process.kill(safePid, 'SIGTERM');
+          return { success: true };
+        } catch (killErr) {
+          if (killErr.code === 'ESRCH') {
+            return { success: false, error: 'El proceso ya no existe o ya ha finalizado.' };
+          }
+          if (killErr.code === 'EPERM') {
+            return { success: false, error: 'Permisos insuficientes para finalizar el proceso.' };
+          }
+          return { success: false, error: killErr.message || String(killErr) };
+        }
       }
 
       const conn = sshConnections && sshConnections[tabId];
@@ -1157,5 +1210,6 @@ function registerSSHHandlers(dependencies = {}) {
 registerSSHHandlers.parseLsOutput = parseLsOutput;
 registerSSHHandlers.escapeShellPath = escapeShellPath;
 registerSSHHandlers.parseListeningPorts = parseListeningPorts;
+registerSSHHandlers.validateKillPid = validateKillPid;
 
 module.exports = registerSSHHandlers;

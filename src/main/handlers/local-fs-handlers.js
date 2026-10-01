@@ -22,11 +22,11 @@ function sanitizeLocalPath(userPath) {
 /**
  * Convierte información de archivo fs.stat a formato estándar
  */
-function formatLocalFile(filename, stats, fullPath) {
+async function formatLocalFile(filename, stats, fullPath) {
     let isSymbolic = false;
     let isJunction = false;
     try {
-        const lstats = fs.lstatSync(fullPath);
+        const lstats = await fs.promises.lstat(fullPath);
         isSymbolic = lstats.isSymbolicLink();
 
         // Detect junctions/reparse points by comparing stat and lstat
@@ -138,12 +138,13 @@ async function getDrives() {
 async function listFiles(targetPath) {
     try {
         const safePath = sanitizeLocalPath(targetPath);
-        if (!fs.existsSync(safePath)) {
+        try {
+            await fs.promises.access(safePath, fs.constants.F_OK);
+        } catch {
             return { success: false, error: 'Directorio no encontrado' };
         }
 
-        const files = fs.readdirSync(safePath);
-        const result = [];
+        const files = await fs.promises.readdir(safePath);
 
         // Identify hidden files via Windows attrib
         const hiddenSet = new Set();
@@ -190,11 +191,11 @@ async function listFiles(targetPath) {
             'downloads', 'descargas', 'appdata', 'entorno de red', 'ntuser.dat', 'ntuser.ini'
         ]);
 
-        for (const file of files) {
+        const items = await Promise.all(files.map(async (file) => {
             try {
                 const fullPath = path.join(safePath, file);
-                const stats = fs.statSync(fullPath);
-                const item = formatLocalFile(file, stats, fullPath);
+                const stats = await fs.promises.stat(fullPath);
+                const item = await formatLocalFile(file, stats, fullPath);
 
                 const lowerName = file.toLowerCase();
 
@@ -207,12 +208,14 @@ async function listFiles(targetPath) {
                     }
                 }
 
-                result.push(item);
+                return item;
             } catch (e) {
-                // Ignorar archivos sin permisos de lectura
+                // Ignorar archivos sin permisos de lectura o que desaparecieron durante el listing
+                return null;
             }
-        }
+        }));
 
+        const result = items.filter(Boolean);
         return { success: true, files: result };
     } catch (err) {
         return { success: false, error: err.message || err };
@@ -225,7 +228,7 @@ async function listFiles(targetPath) {
 async function createDirectory(targetPath) {
     try {
         const safePath = sanitizeLocalPath(targetPath);
-        fs.mkdirSync(safePath, { recursive: true });
+        await fs.promises.mkdir(safePath, { recursive: true });
         return { success: true };
     } catch (err) {
         return { success: false, error: err.message || err };
@@ -239,9 +242,9 @@ async function deleteFile(targetPath, isDirectory) {
     try {
         const safePath = sanitizeLocalPath(targetPath);
         if (isDirectory) {
-            fs.rmSync(safePath, { recursive: true, force: true });
+            await fs.promises.rm(safePath, { recursive: true, force: true });
         } else {
-            fs.unlinkSync(safePath);
+            await fs.promises.unlink(safePath);
         }
         return { success: true };
     } catch (err) {
@@ -256,7 +259,7 @@ async function renameFile(oldPath, newPath) {
     try {
         const safeOldPath = sanitizeLocalPath(oldPath);
         const safeNewPath = sanitizeLocalPath(newPath);
-        fs.renameSync(safeOldPath, safeNewPath);
+        await fs.promises.rename(safeOldPath, safeNewPath);
         return { success: true };
     } catch (err) {
         return { success: false, error: err.message || err };
@@ -270,11 +273,11 @@ async function copyFile(srcPath, destPath) {
     try {
         const safeSrc = sanitizeLocalPath(srcPath);
         const safeDest = sanitizeLocalPath(destPath);
-        const srcStats = fs.statSync(safeSrc);
+        const srcStats = await fs.promises.stat(safeSrc);
         if (srcStats.isDirectory()) {
-            fs.cpSync(safeSrc, safeDest, { recursive: true, force: true });
+            await fs.promises.cp(safeSrc, safeDest, { recursive: true, force: true });
         } else {
-            fs.copyFileSync(safeSrc, safeDest);
+            await fs.promises.copyFile(safeSrc, safeDest);
         }
         return { success: true, destPath: safeDest };
     } catch (err) {
@@ -298,5 +301,11 @@ function registerLocalFsHandlers() {
 module.exports = {
     registerLocalFsHandlers,
     getDrives,
-    sanitizeLocalPath
+    sanitizeLocalPath,
+    formatLocalFile,
+    listFiles,
+    createDirectory,
+    deleteFile,
+    renameFile,
+    copyFile
 };
