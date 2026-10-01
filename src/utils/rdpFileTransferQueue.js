@@ -1,7 +1,10 @@
 /**
  * Cola de transferencias Iron RDP (CLIPRDR).
- * Copiar en el remoto solo siembra pendientes; los bytes empiezan al descargar.
+ * Copiar en el remoto solo siembra pendientes; los bytes se streamean a disco
+ * como en el cliente de Windows (sin acumular el fichero en RAM).
  */
+
+const MAX_STREAMED_FILE_BYTES = 64 * 1024 * 1024 * 1024;
 
 function fileTransferNameOf(file) {
   return file?.name || file?.file?.name || 'Archivo';
@@ -182,21 +185,217 @@ function abortProviderDownload(provider, transferId) {
   return true;
 }
 
-function installDownloadAbortGuard(provider, abortedIds) {
-  if (!provider || provider.__nodetermAbortGuard) return;
-  const original = typeof provider.handleFileContentsResponse === 'function'
-    ? provider.handleFileContentsResponse.bind(provider)
-    : null;
-  if (!original) return;
-  provider.__nodetermAbortGuard = true;
+function parseFileSizeResponse(data) {
+  if (!data || data.length < 8) return { ok: false, reason: 'short' };
+  try {
+    const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    const size = Number(view.getBigUint64(0, true));
+    if (!Number.isFinite(size) || size < 0) return { ok: false, reason: 'invalid' };
+    if (size > MAX_STREAMED_FILE_BYTES) return { ok: false, reason: 'too_large', size };
+    return { ok: true, size };
+  } catch (_) {
+    return { ok: false, reason: 'invalid' };
+  }
+}
+
+function copyCliprdrChunk(data) {
+  if (!data) return new Uint8Array(0);
+  const length = data.byteLength != null ? data.byteLength : data.length;
+  const out = new Uint8Array(length || 0);
+  if (length) out.set(data);
+  return out;
+}
+
+function getActiveDownload(provider, transferId) {
+  const downloads = provider?.activeDownloads;
+  if (!downloads) return null;
+  for (const alias of transferIdAliases(transferId)) {
+    if (downloads.has(alias)) return downloads.get(alias);
+  }
+  return null;
+}
+
+function failStreamedDownload(provider, state, message) {
+  if (!state) return;
+  if (provider?.activeDownloads) {
+    transferIdAliases(state.streamId).forEach((alias) => provider.activeDownloads.delete(alias));
+  }
+  state.chunks = [];
+  const err = {
+    message,
+    transferId: state.streamId,
+    fileIndex: state.fileIndex,
+    fileName: state.fileInfo?.name,
+    direction: 'download'
+  };
+  if (typeof provider.emit === 'function') provider.emit('error', err);
+  if (typeof state.reject === 'function') {
+    try {
+      state.reject(new Error(message));
+    } catch (_) {
+      /* noop */
+    }
+  }
+}
+
+function completeStreamedDownload(provider, state, filePath) {
+  if (provider?.activeDownloads) {
+    transferIdAliases(state.streamId).forEach((alias) => provider.activeDownloads.delete(alias));
+  }
+  state.chunks = [];
+  const result = { streamed: true, filePath: filePath || '' };
+  if (typeof provider.emit === 'function') {
+    provider.emit('download-complete', state.fileInfo, result, state.fileIndex, state.streamId);
+  }
+  if (typeof state.resolve === 'function') state.resolve(result);
+}
+
+function getStreamTarget(provider, state) {
+  if (state?.streamPath) return state.streamPath;
+  const targets = provider?.__nodetermStreamTargets;
+  if (!targets || !state) return null;
+  for (const alias of transferIdAliases(state.streamId)) {
+    if (targets.has(alias)) return targets.get(alias);
+  }
+  return null;
+}
+
+function installStreamingDownload(provider, options = {}) {
+  if (!provider || provider.__nodetermStreamGuard) return provider;
+  const abortedIds = options.abortedIds;
+  const appendFile = options.appendFile;
+  const targets = options.targets || new Map();
+  provider.__nodetermStreamTargets = targets;
+  provider.__nodetermStreamGuard = true;
+
+  const continueIfReady = (state) => {
+    if (isAbortedId(abortedIds, state.streamId)) {
+      abortProviderDownload(provider, state.streamId);
+      return;
+    }
+    const filePath = getStreamTarget(provider, state);
+    if (!filePath) {
+      state.awaitingTarget = true;
+      return;
+    }
+    state.streamPath = filePath;
+    state.awaitingTarget = false;
+    state.chunks = [];
+    if (state.expectedSize === 0) {
+      completeStreamedDownload(provider, state, filePath);
+      return;
+    }
+    if (typeof provider.requestNextChunk === 'function') {
+      provider.requestNextChunk(state);
+    }
+  };
+
+  provider.attachStreamTarget = (transferId, filePath) => {
+    if (transferId == null || !filePath) return;
+    transferIdAliases(transferId).forEach((alias) => targets.set(alias, filePath));
+    const state = getActiveDownload(provider, transferId);
+    if (state) {
+      state.streamPath = filePath;
+      if (state.awaitingTarget && state.expectedSize !== undefined) {
+        continueIfReady(state);
+      }
+    }
+  };
+
+  const handleRange = async (state, data) => {
+    if (isAbortedId(abortedIds, state.streamId)) {
+      abortProviderDownload(provider, state.streamId);
+      return;
+    }
+    const filePath = getStreamTarget(provider, state);
+    if (!filePath) {
+      failStreamedDownload(provider, state, 'No hay destino de escritura para la descarga');
+      return;
+    }
+    const chunk = copyCliprdrChunk(data);
+    state.bytesReceived = (state.bytesReceived || 0) + chunk.length;
+    state.chunks = [];
+    if (state.bytesReceived > state.expectedSize * 2) {
+      failStreamedDownload(
+        provider,
+        state,
+        `Received ${state.bytesReceived} bytes but expected ${state.expectedSize}`
+      );
+      return;
+    }
+    if (typeof appendFile === 'function') {
+      const res = await appendFile(filePath, chunk);
+      if (!res || res.success === false) {
+        failStreamedDownload(provider, state, res?.error || 'Error escribiendo fichero temporal');
+        return;
+      }
+    }
+    if (isAbortedId(abortedIds, state.streamId)) {
+      abortProviderDownload(provider, state.streamId);
+      return;
+    }
+    if (typeof provider.emit === 'function') {
+      provider.emit('download-progress', {
+        transferId: state.streamId,
+        fileIndex: state.fileIndex,
+        fileName: state.fileInfo?.name,
+        bytesTransferred: state.bytesReceived,
+        totalBytes: state.expectedSize,
+        percentage: Math.min((state.bytesReceived / state.expectedSize) * 100, 100)
+      });
+    }
+    if (state.bytesReceived >= state.expectedSize) {
+      completeStreamedDownload(provider, state, filePath);
+      return;
+    }
+    if (typeof provider.requestNextChunk === 'function') {
+      provider.requestNextChunk(state);
+    }
+  };
+
   provider.handleFileContentsResponse = (response) => {
     const streamId = response?.streamId;
+    const state = getActiveDownload(provider, streamId);
+    if (!state) return;
     if (isAbortedId(abortedIds, streamId)) {
       abortProviderDownload(provider, streamId);
       return;
     }
-    return original(response);
+    if (response.isError) {
+      failStreamedDownload(provider, state, 'Remote failed to provide file contents');
+      return;
+    }
+    state.writeChain = (state.writeChain || Promise.resolve())
+      .then(() => {
+        if (isAbortedId(abortedIds, state.streamId) || !getActiveDownload(provider, state.streamId)) {
+          return;
+        }
+        if (state.expectedSize === undefined) {
+          const parsed = parseFileSizeResponse(response.data);
+          if (!parsed.ok) {
+            const message = parsed.reason === 'too_large'
+              ? `El fichero supera el limite de descarga (${formatTransferSize(MAX_STREAMED_FILE_BYTES)})`
+              : 'Invalid SIZE response: expected 8 bytes for file size';
+            failStreamedDownload(provider, state, message);
+            return;
+          }
+          state.expectedSize = parsed.size;
+          state.chunks = [];
+          continueIfReady(state);
+          return;
+        }
+        return handleRange(state, response.data);
+      })
+      .catch((err) => {
+        failStreamedDownload(provider, state, err?.message || String(err));
+      });
   };
+
+  return provider;
+}
+
+function installDownloadAbortGuard(provider, abortedIds) {
+  return installStreamingDownload(provider, { abortedIds });
 }
 
 function discardPendingDownloads(prev) {
@@ -282,6 +481,7 @@ function getTransferOverlayHeader(transfers) {
 }
 
 module.exports = {
+  MAX_STREAMED_FILE_BYTES,
   fileTransferNameOf,
   isDownloadableFile,
   createPendingDownloadId,
@@ -292,6 +492,8 @@ module.exports = {
   removeTransfer,
   cancelTransferEntry,
   abortProviderDownload,
+  parseFileSizeResponse,
+  installStreamingDownload,
   installDownloadAbortGuard,
   markAborted,
   isAbortedId,

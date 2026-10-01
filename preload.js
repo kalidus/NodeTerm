@@ -56,7 +56,8 @@ contextBridge.exposeInMainWorld('electron', {
     writeFiles: (files) => ipcRenderer.invoke('clipboard:writeFiles', files),
     saveTempFile: (fileName, buffer) => ipcRenderer.invoke('clipboard:saveTempFile', { fileName, buffer }),
     beginTempFile: (fileName) => ipcRenderer.invoke('clipboard:beginTempFile', { fileName }),
-    appendTempFile: (filePath, buffer) => ipcRenderer.invoke('clipboard:appendTempFile', { filePath, buffer })
+    appendTempFile: (filePath, buffer) => ipcRenderer.invoke('clipboard:appendTempFile', { filePath, buffer }),
+    deleteTempFile: (filePath) => ipcRenderer.invoke('clipboard:deleteTempFile', { filePath })
   },
   fileExplorer: {
     listFiles: (tabId, path, config) => {

@@ -16,7 +16,9 @@ const {
   formatTransferSize,
   isDownloadableFile,
   abortProviderDownload,
-  installDownloadAbortGuard
+  installDownloadAbortGuard,
+  installStreamingDownload,
+  parseFileSizeResponse
 } = require('../../src/utils/rdpFileTransferQueue');
 
 function isoFile(name, size) {
@@ -152,6 +154,64 @@ describe('Cola de transferencias Iron RDP', () => {
     installDownloadAbortGuard(provider, aborted);
     provider.handleFileContentsResponse({ streamId: 3 });
     assert.equal(called, false);
+  });
+
+  it('parsea el tamano CLIPRDR little-endian', () => {
+    const buf = Buffer.alloc(8);
+    buf.writeBigUInt64LE(BigInt(800 * 1024 * 1024), 0);
+    const parsed = parseFileSizeResponse(new Uint8Array(buf));
+    assert.equal(parsed.ok, true);
+    assert.equal(parsed.size, 800 * 1024 * 1024);
+    assert.equal(parseFileSizeResponse(new Uint8Array([1, 2, 3])).ok, false);
+  });
+
+  it('streamea chunks a disco sin acumular en RAM', async () => {
+    const appended = [];
+    const requested = [];
+    let resolved = null;
+    const state = {
+      fileInfo: { name: 'a.iso' },
+      fileIndex: 0,
+      streamId: 1,
+      chunks: ['keep-empty'],
+      bytesReceived: 0,
+      resolve: (value) => { resolved = value; },
+      reject: () => {}
+    };
+    const provider = {
+      activeDownloads: new Map([[1, state]]),
+      emit() {},
+      requestNextChunk(current) { requested.push(current.bytesReceived); }
+    };
+    installStreamingDownload(provider, {
+      abortedIds: new Set(),
+      appendFile: async (filePath, buf) => {
+        appended.push({ filePath, len: buf.length });
+        return { success: true };
+      }
+    });
+    provider.attachStreamTarget(1, 'C:\\tmp\\a.iso');
+    const sizeBuf = Buffer.alloc(8);
+    sizeBuf.writeBigUInt64LE(10n, 0);
+    provider.handleFileContentsResponse({
+      streamId: 1,
+      isError: false,
+      data: new Uint8Array(sizeBuf)
+    });
+    await state.writeChain;
+    assert.deepEqual(state.chunks, []);
+    assert.equal(requested.length, 1);
+    provider.handleFileContentsResponse({
+      streamId: 1,
+      isError: false,
+      data: new Uint8Array(10)
+    });
+    await state.writeChain;
+    assert.equal(appended.length, 1);
+    assert.equal(appended[0].len, 10);
+    assert.deepEqual(state.chunks, []);
+    assert.equal(resolved.streamed, true);
+    assert.equal(resolved.filePath, 'C:\\tmp\\a.iso');
   });
 
   it('formatea tamanos y cabeceras de overlay', () => {

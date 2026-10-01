@@ -82,6 +82,21 @@ function registerClipboardHandlers() {
     }
   });
 
+  safeHandle('clipboard:deleteTempFile', async (event, { filePath }) => {
+    try {
+      if (!isSafeClipboardTempPath(filePath)) {
+        return { success: false, error: 'invalid_temp_path' };
+      }
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      return { success: true };
+    } catch (err) {
+      console.error('[Clipboard] Error deleting temp file:', err);
+      return { success: false, error: err.message };
+    }
+  });
+
   safeHandle('clipboard:saveTempFile', async (event, { fileName, buffer }) => {
     try {
       const tempDir = clipboardTempDir();

@@ -28,7 +28,7 @@ import {
   removeTransfer,
   cancelTransferEntry,
   abortProviderDownload,
-  installDownloadAbortGuard,
+  installStreamingDownload,
   getTransferEntry,
   discardPendingDownloads,
   shouldAcceptCompletion,
@@ -39,7 +39,6 @@ import {
 
 const CLIPRDR_DOWNLOAD_CHUNK = 256 * 1024;
 const TEMP_FILE_WRITE_CHUNK = 4 * 1024 * 1024;
-const LARGE_CLIPRDR_FILE_BYTES = 256 * 1024 * 1024;
 
 export { mapTerminationReason };
 
@@ -377,22 +376,25 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     if (!entry || entry.status !== 'pending' || !entry.fileInfo || !provider) return;
     let transferId = null;
     try {
-      if ((Number(entry.size) || 0) >= LARGE_CLIPRDR_FILE_BYTES) {
-        toastRef.current?.show({
-          severity: 'warn',
-          summary: 'Archivo grande por portapapeles',
-          detail: 'Ficheros grandes por CLIPRDR pueden cortar la sesion RDP. Si falla, usa una copia mas pequena o otra via.',
-          life: 6000
-        });
-      }
       const handle = provider.downloadFile(entry.fileInfo, entry.fileIndex);
       transferId = handle?.transferId;
       if (transferId == null || !shouldAcceptCompletion(abortedTransferIdsRef.current, transferId)) return;
       isFileTransferArmedRef.current = true;
       setActiveTransfers((prev) => activatePendingDownload(prev, pendingId, transferId));
-      const blob = await handle.completion;
+      if (window.electron?.clipboard?.beginTempFile && typeof provider.attachStreamTarget === 'function') {
+        const begin = await window.electron.clipboard.beginTempFile(entry.fileInfo.name);
+        if (!begin?.success || !begin.filePath) {
+          abortProviderDownload(provider, transferId);
+          throw new Error(begin?.error || 'No se pudo crear el fichero temporal');
+        }
+        provider.attachStreamTarget(transferId, begin.filePath);
+      }
+      const result = await handle.completion;
       if (!shouldAcceptCompletion(abortedTransferIdsRef.current, transferId)) return;
-      const filePath = await saveBlobToTempFile(entry.fileInfo.name, blob, transferId);
+      let filePath = result?.streamed ? result.filePath : null;
+      if (!filePath && result && typeof result.arrayBuffer === 'function') {
+        filePath = await saveBlobToTempFile(entry.fileInfo.name, result, transferId);
+      }
       if (filePath) {
         downloadedPathsRef.current = [...downloadedPathsRef.current, filePath];
       }
@@ -425,7 +427,15 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     if (id == null) return;
     const entry = getTransferEntry(activeTransfersRef.current, id);
     const wasStarted = !!(entry && (entry.status === 'active' || entry.status === 'pasting' || !entry.status));
-    abortProviderDownload(fileTransferProviderRef.current, id);
+    const provider = fileTransferProviderRef.current;
+    const streamPath = provider?.__nodetermStreamTargets
+      && (provider.__nodetermStreamTargets.get(id)
+        || provider.__nodetermStreamTargets.get(Number(id))
+        || provider.__nodetermStreamTargets.get(String(id)));
+    abortProviderDownload(provider, id);
+    if (streamPath && window.electron?.clipboard?.deleteTempFile) {
+      void window.electron.clipboard.deleteTempFile(streamPath);
+    }
     setActiveTransfers((prev) => {
       const next = cancelTransferEntry(prev, id, abortedTransferIdsRef.current);
       return syncTransfersAndArm(next);
@@ -871,7 +881,15 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
               chunkSize: CLIPRDR_DOWNLOAD_CHUNK,
               onUploadStarted: () => { isFileTransferArmedRef.current = true; }
             });
-            installDownloadAbortGuard(currentFileTransferProvider, abortedTransferIdsRef.current);
+            installStreamingDownload(currentFileTransferProvider, {
+              abortedIds: abortedTransferIdsRef.current,
+              appendFile: (filePath, buffer) => {
+                if (!window.electron?.clipboard?.appendTempFile) {
+                  return Promise.resolve({ success: false, error: 'appendTempFile no disponible' });
+                }
+                return window.electron.clipboard.appendTempFile(filePath, buffer);
+              }
+            });
             fileTransferProviderRef.current = currentFileTransferProvider;
             for (const ext of currentFileTransferProvider.getBuilderExtensions()) {
               builder.extension(ext);
