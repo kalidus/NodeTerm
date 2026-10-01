@@ -6,6 +6,7 @@
  */
 
 const { ipcMain } = require('electron');
+const path = require('path');
 
 // Lazy loading de RdpManager
 let RdpManager = null;
@@ -259,22 +260,60 @@ function registerRdpHandlers(dependencies) {
     try {
       const { app, shell } = require('electron');
       const fs = require('fs').promises;
-      const path = require('path');
       const downloadsDir = app.getPath('downloads');
-      const safeName = filename || `nodeterm-rdp-print-${Date.now()}.pdf`;
-      const filePath = path.join(downloadsDir, safeName);
-      const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data);
-      await fs.writeFile(filePath, buffer);
-      console.log(`🖨️ [RDP Print] Documento PDF guardado exitosamente en: ${filePath} (${buffer.length} bytes)`);
+      
+      const { targetPath, cleanName } = sanitizePrintPdfFilename(filename, downloadsDir);
+      const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data || []);
+      
+      await fs.writeFile(targetPath, buffer);
+      console.log(`🖨️ [RDP Print] Documento PDF guardado exitosamente en: ${targetPath} (${buffer.length} bytes)`);
       try {
-        shell.showItemInFolder(filePath);
+        shell.showItemInFolder(targetPath);
       } catch (_) {}
-      return { success: true, filePath, filename: safeName };
+      return { success: true, filePath: targetPath, filename: cleanName };
     } catch (err) {
       console.error('❌ [RDP Print] Error guardando PDF:', err);
       return { success: false, error: err.message };
     }
   });
+}
+
+/**
+ * Sanitiza y confina nombres de archivo de impresión RDP para prevenir Path Traversal
+ * y asegurar que solo se guarden documentos PDF legítimos en downloadsDir.
+ */
+function sanitizePrintPdfFilename(filename, downloadsDir) {
+  if (!downloadsDir || typeof downloadsDir !== 'string') {
+    throw new Error('Directorio de descargas inválido');
+  }
+
+  // 1. Extraer nombre base descartando cualquier prefijo de ruta (../../, C:\, etc.)
+  const normalizedSlashes = String(filename || '').replace(/\\/g, '/');
+  const rawBase = path.basename(normalizedSlashes).trim();
+
+  // 2. Eliminar caracteres reservados o peligrosos de sistemas de archivos
+  let cleanName = rawBase.replace(/[/\\?%*:|"<>]/g, '_').replace(/\0/g, '');
+
+  // 3. Si quedó vacío o solo puntos, generar nombre seguro por defecto
+  if (!cleanName || cleanName.replace(/\./g, '') === '') {
+    cleanName = `nodeterm-rdp-print-${Date.now()}.pdf`;
+  }
+
+  // 4. Forzar que termine obligatoriamente en .pdf para impedir ejecutables (.exe, .bat, etc.)
+  if (!cleanName.toLowerCase().endsWith('.pdf')) {
+    cleanName = `${cleanName}.pdf`;
+  }
+
+  // 5. Resolver la ruta absoluta en downloadsDir y verificar confinamiento estricto
+  const resolvedDownloads = path.resolve(downloadsDir);
+  const targetPath = path.resolve(resolvedDownloads, cleanName);
+
+  const relative = path.relative(resolvedDownloads, targetPath);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new Error('Intento de Path Traversal detectado');
+  }
+
+  return { targetPath, cleanName };
 }
 
 /**
@@ -289,5 +328,6 @@ function cleanupRdpConnections() {
 
 module.exports = {
   registerRdpHandlers,
-  cleanupRdpConnections
+  cleanupRdpConnections,
+  sanitizePrintPdfFilename
 };
