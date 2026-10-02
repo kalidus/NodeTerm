@@ -174,6 +174,7 @@ function createChannelFilterState() {
     unsafeCliprdrFragmentOpen: false,
     drdynvcChannelId: null,
     wasmDrdynvcChannelId: null,
+    isBastion: false,
     cliprdrServerReady: false,
     // El selector de Wallix completa un cliprdr y, al elegir maquina, repite
     // CB_MONITOR_READY en la misma conexion. IronRDP ya esta en Ready y no
@@ -527,6 +528,7 @@ function maybePromoteSelectorAppCliprdr(state) {
   state.wallixService = 'APP';
   state.cliprdrSelectorAppInferred = true;
   state.cliprdrRehandshakePending = true;
+  state.isBastion = true;
   return true;
 }
 
@@ -682,7 +684,10 @@ function noteServerCliprdrMonitorReady(state, userData) {
   state.cliprdrMonitorReadyCount = (state.cliprdrMonitorReadyCount || 0) + 1;
   const flags = readChannelPduFlags(userData);
   if (flags != null) state.cliprdrServerChannelFlags = flags;
-  if (state.cliprdrMonitorReadyCount >= 2) state.cliprdrRehandshakePending = true;
+  if (state.cliprdrMonitorReadyCount >= 2) {
+    state.cliprdrRehandshakePending = true;
+    state.isBastion = true;
+  }
   else if (state.wallixService === 'APP' && state.cliprdrMonitorReadyCount >= 1) {
     state.cliprdrRehandshakePending = true;
   }
@@ -834,6 +839,9 @@ function buildCliprdrResult(state, buf, channelId, userData) {
     isUserMcsChannel(state, channelId)
     || (state.ioChannelId != null && channelId === state.ioChannelId)
   );
+  if (misnamedClip || unnamedUnsafe) {
+    state.isBastion = true;
+  }
   const isCaps = desc && desc.includes('CB_CLIP_CAPS');
   const firstGen = (state.cliprdrMonitorReadyCount || 0) < 1;
   if (isCaps && firstGen && (misnamedClip || unnamedUnsafe) && !cliprdrOffersFileClip(state.cliprdrServerGeneralFlags)) {
@@ -956,18 +964,20 @@ function filterIoChannelPdu(state, channelId, userData) {
 }
 
 function wasmDeclaredDrdynvc(state) {
+  if (state && state.isBastion) return false;
   const names = state && Array.isArray(state.wasmChannelNames) ? state.wasmChannelNames : [];
   return names.some((n) => String(n).toLowerCase() === 'drdynvc');
 }
 
 function remapServerDrdynvcFrame(state, buf, incomingChannelId) {
+  if (state && state.isBastion) return buf;
   const wasmId = state && state.wasmDrdynvcChannelId;
   if (wasmId == null || incomingChannelId === wasmId) return buf;
   return rewriteMcsChannelId(buf, wasmId) || buf;
 }
 
 function remapClientDrdynvcFrame(state, frame) {
-  if (!state || !Buffer.isBuffer(frame)) return frame;
+  if (!state || state.isBastion || !Buffer.isBuffer(frame)) return frame;
   const parsed = parseMcsSendData(frame);
   if (!parsed) return frame;
   const wasmId = state.wasmDrdynvcChannelId;
@@ -998,10 +1008,12 @@ function processServerFrame(state, buf) {
 
   const isIoChannel = state.ready ? (channelId === state.ioChannelId) : (channelId === 1003);
 
-  // Cliprdr ANTES que rdpdr: los trozos de FileContents no tienen CLIPRDR_HEADER y
-  // pueden empezar por 0x4472. Si rdpdr los absorbe, WASM recibe el PDU corto y corta
-  // la sesion (received N, expected chunk+4).
+  // rail solo vive en el canal explicitamente declarado como 'rail'.
+  // Evaluarlo ANTES de claimCliprdrPdu evita que el handshake de RAIL (orderType 0x0005)
+  // choque con CB_FORMAT_DATA_RESPONSE (0x0005) de cliprdr.
   if (!isIoChannel && parsed) {
+    const stubbedRail = consumeRail(state, channelId, parsed.userData);
+    if (stubbedRail) return stubbedRail;
     noteUnsafeCliprdr(state, channelId, parsed.userData);
   }
   if (!isIoChannel && parsed && claimCliprdrPdu(state, channelId, parsed.userData)) {
@@ -1013,8 +1025,6 @@ function processServerFrame(state, buf) {
   if (parsed) {
     const stubbedRdpdr = consumeRdpdr(state, channelId, parsed.userData);
     if (stubbedRdpdr) return stubbedRdpdr;
-    const stubbedRail = consumeRail(state, channelId, parsed.userData);
-    if (stubbedRail) return stubbedRail;
   }
 
   // 2. Canales que no son el canal IO ni cliprdr (canal de usuario 1001, drdynvc, etc.):

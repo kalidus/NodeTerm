@@ -143,6 +143,20 @@ function wallixServiceFromSession(session) {
     || (session.wallixService ? String(session.wallixService).toUpperCase() : null);
 }
 
+function isBastionSession(session) {
+  if (!session) return false;
+  if (session.useBastionWallix === true || session.isBastion === true) return true;
+  if (session.bastionUser || session.targetServer || session.bastionHost) return true;
+  if (wallixServiceFromSession(session) != null) return true;
+  const rawUser = String(session.username || session.userChain || '');
+  if (rawUser.split('@').length >= 3) return true;
+  if (rawUser.includes('#') || (rawUser.includes('@') && rawUser.includes(':'))) return true;
+  if (typeof session.selectedProtocol === 'number' && session.selectedProtocol !== 0x02 && session.selectedProtocol !== 0x08) {
+    return true;
+  }
+  return false;
+}
+
 function parseInjectChannelsSpec(requested) {
   const parts = String(requested || '').split('*');
   const split = (s) => s.split(',').map((n) => n.trim()).filter(Boolean);
@@ -307,6 +321,8 @@ class RdpNativeBridgeService extends EventEmitter {
       username: (config.useBastionWallix && config.bastionUser) ? config.bastionUser : (config.username || config.user || ''),
       userChain: String(config.username || config.user || ''),
       bastionUser: config.bastionUser || null,
+      bastionHost: config.bastionHost || null,
+      targetUser: config.targetUser || null,
       wallixService: config.wallixService || null,
       useBastionWallix: config.useBastionWallix === true,
       targetServer: config.targetServer || null,
@@ -320,6 +336,7 @@ class RdpNativeBridgeService extends EventEmitter {
       enableTheming: config.enableTheming !== false && config.guacEnableTheming !== false,
       enableFullWindowDrag: config.enableFullWindowDrag === true || config.guacEnableFullWindowDrag === true,
       enableMenuAnimations: config.enableMenuAnimations === true || config.guacEnableMenuAnimations === true,
+      selectedProtocol: typeof config.selectedProtocol === 'number' ? config.selectedProtocol : null,
       createdAt: Date.now()
     };
 
@@ -463,6 +480,7 @@ class RdpNativeBridgeService extends EventEmitter {
     };
     const channelFilter = createChannelFilterState();
     channelFilter.wallixService = wallixServiceFromSession(session);
+    channelFilter.isBastion = isBastionSession(session);
     channelFilter.recentCliprdrEvents = recentCliprdrEvents;
     channelFilter.recordCliprdr = recordCliprdrEvent;
     const frameSplitter = new RdpFrameSplitter();
@@ -1431,6 +1449,9 @@ class RdpNativeBridgeService extends EventEmitter {
     const isBastion = serverClipCh != null
       && serverClipCh !== channelFilter.cliprdrChannelId
       && !greetingOnAlignedStatic;
+    if (isBastion) {
+      channelFilter.isBastion = true;
+    }
     const destName = channelFilter.channelIdToName instanceof Map
       ? channelFilter.channelIdToName.get(serverClipCh)
       : null;
@@ -1898,3 +1919,4 @@ module.exports.wallixServiceFromSession = wallixServiceFromSession;
 module.exports.RDP_INJECTED_CHANNELS = RDP_INJECTED_CHANNELS;
 module.exports.APP_INJECTED_CHANNELS = APP_INJECTED_CHANNELS;
 module.exports.APP_INJECTED_CHANNELS_RAIL = APP_INJECTED_CHANNELS_RAIL;
+module.exports.isBastionSession = isBastionSession;

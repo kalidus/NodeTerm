@@ -224,7 +224,13 @@ function registerRdpHandlers(dependencies) {
         }
       }
 
-      const sessionInfo = rdpNativeBridgeService.createSessionToken(config);
+      const effectiveConfig = {
+        ...config,
+        selectedProtocol: (nego && nego.ok && typeof nego.selectedProtocol === 'number')
+          ? nego.selectedProtocol
+          : (typeof config?.selectedProtocol === 'number' ? config.selectedProtocol : null)
+      };
+      const sessionInfo = rdpNativeBridgeService.createSessionToken(effectiveConfig);
       if (process.env.NODETERM_RDP_DEBUG === '1') {
         console.log('🚀 [RDP Native Bridge] Token creado para RDP Web Nativo (Sin guacd/WSL):', sessionInfo.tokenId);
       }

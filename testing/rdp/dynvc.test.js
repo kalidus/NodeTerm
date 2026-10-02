@@ -18,6 +18,7 @@ const {
   processServerFrame,
   remapClientDrdynvcFrame
 } = require('../../src/main/services/rdp-channel-filter');
+const { isBastionSession } = require('../../src/main/services/RdpNativeBridgeService');
 
 function buildMcsIndication(channelId, userData) {
   const lenField = userData.length < 0x80
@@ -239,7 +240,7 @@ describe('rdp-dynvc', () => {
     assert.equal(replyMcs.userData.subarray(10).toString('ascii'), 'HEARTBEAT_TEST_123');
   });
 
-  it('reenvia CAPS DVC al WASM cuando allowDisplayControl', () => {
+  it('responde CAPS DVC en 0ms incluso con allowDisplayControl para evitar timeout en cualquier servidor', () => {
     const dvcPayload = Buffer.from('54000300333311113d0aa704', 'hex');
     const channelPdu = Buffer.alloc(8 + dvcPayload.length);
     channelPdu.writeUInt32LE(dvcPayload.length, 0);
@@ -248,9 +249,9 @@ describe('rdp-dynvc', () => {
 
     const res = handleDvcRequest(1003, 1002, channelPdu, { allowDisplayControl: true });
     assert.ok(res.handled);
-    assert.equal(res.forward, true);
-    assert.equal(res.replies.length, 0);
-    assert.ok(res.note.includes('dvc-forward-caps'));
+    assert.equal(res.forward, false);
+    assert.equal(res.replies.length, 1);
+    assert.ok(res.note.includes('dvc-caps'));
   });
 
   it('conserva initiator 0, que es el que usa IronRDP con Wallix', () => {
@@ -289,7 +290,7 @@ describe('drdynvc remap DisplayControl', () => {
     assert.equal(res.forward.readUInt16BE(10), 1005);
   });
 
-  it('reenvia CAPS remapeando servidor->wasm', () => {
+  it('responde CAPS en 0ms en processServerFrame para evitar timeout', () => {
     const state = injectedDrdynvcState();
     const dvcPayload = Buffer.from('54000300333311113d0aa704', 'hex');
     const channelPdu = Buffer.alloc(8 + dvcPayload.length);
@@ -298,10 +299,9 @@ describe('drdynvc remap DisplayControl', () => {
     dvcPayload.copy(channelPdu, 8);
     const frame = buildMcsIndication(1007, channelPdu);
     const res = processServerFrame(state, frame);
-    assert.equal(res.dropped, false);
-    assert.ok(res.forward);
-    assert.equal(res.replies.length, 0);
-    assert.equal(res.forward.readUInt16BE(10), 1005);
+    assert.equal(res.dropped, true);
+    assert.equal(res.forward, null);
+    assert.equal(res.replies.length, 1);
   });
 
   it('sigue rechazando Geometry aunque WASM declare drdynvc', () => {
@@ -324,6 +324,24 @@ describe('drdynvc remap DisplayControl', () => {
     assert.equal(out.readUInt16BE(10), 1007);
   });
 
+  it('rechaza DisplayControl si la sesion es de bastion (isBastion = true)', () => {
+    const state = injectedDrdynvcState();
+    state.isBastion = true;
+    const frame = buildMcsIndication(1007, buildDisplayControlCreatePdu());
+    const res = processServerFrame(state, frame);
+    assert.equal(res.dropped, true);
+    assert.equal(res.forward, null);
+    assert.equal(res.replies.length, 1);
+  });
+
+  it('no remapea drdynvc cliente si isBastion = true', () => {
+    const state = injectedDrdynvcState();
+    state.isBastion = true;
+    const frame = buildMcsIndication(1005, buildDisplayControlCreatePdu());
+    const out = remapClientDrdynvcFrame(state, frame);
+    assert.equal(out, frame);
+  });
+
   it('no remapea drdynvc si los IDs coinciden', () => {
     const state = createChannelFilterState();
     state.wasmChannelNames = ['cliprdr', 'drdynvc'];
@@ -336,5 +354,39 @@ describe('drdynvc remap DisplayControl', () => {
     assert.equal(out.readUInt16BE(10), 1005);
     assert.equal(out, frame);
   });
+
+  it('detecta bastion por flag explícito, formato de cadena PAM o protocolo SSL sin mirar hostname', () => {
+    assert.equal(isBastionSession({ host: '10.0.0.1', useBastionWallix: true }), true);
+    assert.equal(isBastionSession({ host: '10.0.0.1', isBastion: true }), true);
+    assert.equal(isBastionSession({ host: '10.0.0.1', username: 'rt01119@default@target:APP:rt01119' }), true);
+    assert.equal(isBastionSession({ host: '10.0.0.1', username: 'rt01119#target#vault' }), true);
+    assert.equal(isBastionSession({ host: '10.0.0.1', username: 'Administrator' }), false);
+    assert.equal(isBastionSession({ host: '10.0.0.1', username: 'Administrator', selectedProtocol: 0x01 }), true);
+    assert.equal(isBastionSession({ host: '192.168.10.52', username: 'Administrator', selectedProtocol: 0x08 }), false);
+    assert.equal(isBastionSession({ host: '192.168.10.52', bastionHost: '10.0.0.1' }), true);
+  });
+
+  it('activa isBastion dinámicamente si cliprdr llega por canal 1001 y rechaza DVC en 0ms', () => {
+    const state = injectedDrdynvcState();
+    assert.equal(state.isBastion, false);
+
+    // Saludo cliprdr por canal 1001 (Wallix selector)
+    const clipPdu = Buffer.from([0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]); // CB_MONITOR_READY
+    const clipChannelPdu = Buffer.concat([
+      Buffer.from([0x08, 0x00, 0x00, 0x00, 0x13, 0x00, 0x00, 0x00]),
+      clipPdu
+    ]);
+    processServerFrame(state, buildMcsIndication(1001, clipChannelPdu));
+
+    assert.equal(state.isBastion, true);
+
+    // La siguiente petición DVC de DisplayControl debe ser rechazada inmediatamente
+    const dvcFrame = buildMcsIndication(1007, buildDisplayControlCreatePdu());
+    const res = processServerFrame(state, dvcFrame);
+    assert.equal(res.dropped, true);
+    assert.equal(res.forward, null);
+    assert.equal(res.replies.length, 1);
+  });
 });
+
 

@@ -373,9 +373,6 @@ function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
   }
 
   if (parsed.type === 'caps-req') {
-    if (allowDisplayControl) {
-      return dvcForwardResult(`dvc-forward-caps v=${parsed.version}`);
-    }
     const respPdu = buildDvcCapabilitiesResponse(parsed.version, parsed.sp, parsed.maxDataSize, parsed.flags);
     const mcsPacket = buildMcsSendDataRequest(effectiveInitiator, mcsChannelId, respPdu);
     return dvcReplyResult([mcsPacket], `dvc-caps v=${parsed.version} (len=${respPdu.length}B)`);

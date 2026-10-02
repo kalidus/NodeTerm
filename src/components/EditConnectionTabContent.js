@@ -441,7 +441,8 @@ export default function EditConnectionTabContent({
           username: rdpFormData?.username,
           port: rdpFormData?.port || 3389,
           password: rdpFormData?.password,
-          domain: rdpFormData?.domain
+          domain: rdpFormData?.domain,
+          useBastionWallix: !!rdpFormData?.useBastionWallix
         });
       } else if (connectionType === 'vnc' || connectionType === 'vnc-guacamole') {
         return connectionHelpers.toSerializable({

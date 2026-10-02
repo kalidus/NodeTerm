@@ -83,7 +83,8 @@ export function createDefaultRdpFormData() {
     guacDisableGlyphCaching: false,
     guacDisableOffscreenCaching: false,
     guacDisableBitmapCaching: false,
-    guacDisableCopyRect: false
+    guacDisableCopyRect: false,
+    useBastionWallix: false
   };
 }
 
@@ -136,7 +137,8 @@ export function mapEditNodeDataToRdpFormData(editNodeData) {
     guacDisableGlyphCaching: data.guacDisableGlyphCaching || false,
     guacDisableOffscreenCaching: data.guacDisableOffscreenCaching || false,
     guacDisableBitmapCaching: data.guacDisableBitmapCaching || false,
-    guacDisableCopyRect: data.guacDisableCopyRect || false
+    guacDisableCopyRect: data.guacDisableCopyRect || false,
+    useBastionWallix: !!data.useBastionWallix
   };
 }
 
@@ -696,6 +698,14 @@ export function EnhancedRDPForm({
                 onCheckedChange={(v) => handleInputChange('redirectPrinters', v)}
                 inputId={`${p}-opt-printers`}
                 helpText={printersHelpText}
+              />
+              <TerminalSwitchOption
+                iconClass="pi-shield"
+                labelText="Bastión / Proxy PAM (Wallix, CyberArk)"
+                checked={!!formData.useBastionWallix}
+                onCheckedChange={(v) => handleInputChange('useBastionWallix', v)}
+                inputId={`${p}-opt-bastion`}
+                helpText="Optimiza la sesión para pasarelas de salto y selectores PAM, asegurando conexión instantánea sin bloqueos de resolución."
               />
             </div>
           </div>

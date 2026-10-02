@@ -183,6 +183,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   const currentDesktopSizeRef = useRef({ width: 0, height: 0 });
   const lastRequestedDesktopRef = useRef({ width: 0, height: 0 });
   const resizeAckTimerRef = useRef(null);
+  const supportsDisplayControlRef = useRef(false);
   const hasEverConnectedRef = useRef(false);
   const currentTokenIdRef = useRef(null);
   const lastBackendReasonRef = useRef(null);
@@ -484,6 +485,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   };
 
   const requestSessionResize = (width, height) => {
+    if (!supportsDisplayControlRef.current) return false;
     if (!sessionRef.current?.resize) return false;
     if (width === currentDesktopSizeRef.current.width && height === currentDesktopSizeRef.current.height) {
       return false;
@@ -830,21 +832,22 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         let domainStr = String(rdpConfig.domain || rdpConfig.serverDomain || '').trim();
         const destinationStr = `${rdpConfig.hostname || rdpConfig.server}:${rdpConfig.port || 3389}`;
 
-        // Formato usuario Wallix:
-        // - Modo 2 (Cadena Wallix): si ya viene con cadena (ej: rt01119@default@Fortigate_JC:APP:rt01119)
+        // Formato usuario Wallix / Bastión PAM:
+        // - Modo 2 (Cadena Wallix/CyberArk): si ya viene con cadena (ej: rt01119@default@Fortigate_JC:APP:rt01119)
         //   o si tiene targetServer especificado para construirla.
-        // - Modo 1 (Conexión directa Wallix / solo host): solo usuario bastion (ej: rt01119),
-        //   sin targetServer. No debe romperse como email ni NetBIOS.
-        // - Cadenas de bastión PAM (Wallix con :, CyberArk con # o múltiples @):
-        const isBastionChain = usernameStr.split('@').length >= 3 || (usernameStr.includes('@') && (usernameStr.includes(':') || usernameStr.includes('#')));
-        const isWallixUserFormat = !!(
+        // - Modo 1 (Conexión a bastión / pasarela PAM): marcado con useBastionWallix o campos de bastión.
+        const isBastionChain = usernameStr.split('@').length >= 3 || usernameStr.includes('#') || (usernameStr.includes('@') && usernameStr.includes(':'));
+        const isBastionSession = !!(
           rdpConfig.useBastionWallix ||
+          rdpConfig.isBastion ||
           rdpConfig.bastionUser ||
+          rdpConfig.bastionHost ||
           rdpConfig.targetServer ||
+          rdpConfig.targetUser ||
+          rdpConfig.wallixService ||
           isBastionChain
         );
-
-        if (isWallixUserFormat) {
+        if (isBastionSession) {
           // Si tiene targetServer y el usuario aún no está formateado como cadena, construir la cadena Wallix
           if (!usernameStr.includes('@') && !usernameStr.includes(':')) {
             const tServer = rdpConfig.targetServer || rdpConfig.targetHost || '';
@@ -921,8 +924,19 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
               setDesktopDimensions({ width: w, height: h });
             }
           })
-          .extension(enableCredssp(useCredssp))
-          .extension(displayControl(true));
+          .extension(enableCredssp(useCredssp));
+
+        // DisplayControl SOLO para conexiones directas Windows con NLA/CredSSP (HYBRID / HYBRID_EX).
+        // En bastiones y proxies RDP (Wallix, CyberArk, etc.), que negocian SSL 0x01 o RDP 0x00
+        // y tienen useCredssp=false, o cuando es una sesión de bastión explícita/PAM, DisplayControl
+        // no se debe registrar en WASM para evitar que declare drdynvc y desestabilice el proxy.
+        const isProxyOrBastionProtocol = selectedProtocol === 0x01 || selectedProtocol === 0x00;
+        const supportsDisplayControl = !isBastionSession && useCredssp && !isProxyOrBastionProtocol;
+        supportsDisplayControlRef.current = supportsDisplayControl;
+
+        if (supportsDisplayControl) {
+          builder.extension(displayControl(true));
+        }
 
         // Registrar extensiones para transferencia de archivos / carpeta compartida (RdpFileTransferProvider)
         if (isDriveEnabled) {
@@ -1607,6 +1621,17 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         const rect = containerRef.current.getBoundingClientRect();
         const width = alignDesktop(Math.max(640, rect.width || window.innerWidth));
         const height = alignDesktop(Math.max(480, rect.height || window.innerHeight));
+
+        if (!supportsDisplayControlRef.current) {
+          if (width === currentDesktopSizeRef.current.width && height === currentDesktopSizeRef.current.height) {
+            return;
+          }
+          currentDesktopSizeRef.current = { width, height };
+          // En bastiones (Wallix), el CSS del canvas (width: 100%, height: 100%) ya ajusta
+          // perfectamente el escritorio al visor en tiempo real sin desestabilizar la sesión con DisplayControl.
+          return;
+        }
+
         requestSessionResize(width, height);
       }, debounceMs);
     };
@@ -1632,17 +1657,25 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       const nativeW = canvasRef.current?.width || currentDesktopSizeRef.current.width || 1600;
       const nativeH = canvasRef.current?.height || currentDesktopSizeRef.current.height || 1000;
       setDesktopDimensions({ width: nativeW, height: nativeH });
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (rect) {
-        const width = alignDesktop(Math.max(640, rect.width || window.innerWidth));
-        const height = alignDesktop(Math.max(480, rect.height || window.innerHeight));
-        requestSessionResize(width, height);
+
+      if (supportsDisplayControlRef.current) {
+        const rect = containerRef.current?.getBoundingClientRect();
+        if (rect) {
+          const width = alignDesktop(Math.max(640, rect.width || window.innerWidth));
+          const height = alignDesktop(Math.max(480, rect.height || window.innerHeight));
+          requestSessionResize(width, height);
+        }
+        console.log('[IronRDP] Cambiando a resolucion dinamica Auto (DisplayControl)');
+      } else {
+        console.log('📐 [IronRDP] Cambiando a resolución dinámica Auto (ajuste CSS)');
       }
-      console.log('[IronRDP] Cambiando a resolucion dinamica Auto (DisplayControl)');
+
       toastRef.current?.show({
         severity: 'info',
-        summary: 'Ajuste Dinamico',
-        detail: 'Modo adaptativo activado (cambio de resolucion al tamano de ventana)',
+        summary: 'Ajuste Dinámico',
+        detail: supportsDisplayControlRef.current
+          ? 'Modo adaptativo activado (cambio de resolución al tamaño de ventana)'
+          : 'Modo adaptativo activado (ajuste automático a ventana)',
         life: 2000
       });
     } else {
@@ -1655,7 +1688,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         setDesktopDimensions({ width: targetW, height: targetH });
         rdpConfig.resolution = resKey;
         rdpConfig.autoResize = false;
-        requestSessionResize(targetW, targetH);
+        if (supportsDisplayControlRef.current) {
+          requestSessionResize(targetW, targetH);
+        }
 
         toastRef.current?.show({
           severity: 'info',
