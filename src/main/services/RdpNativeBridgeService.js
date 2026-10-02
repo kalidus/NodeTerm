@@ -1196,6 +1196,9 @@ class RdpNativeBridgeService extends EventEmitter {
    * CHANNEL_PDU en MCS 1001 congela el grafico: nunca se escribe ahi.
    */
   filterClientCliprdrOnUserChannel(frame, parsed, channelFilter, clipDesc) {
+    // Si el servidor entrego cliprdr por el canal IO, serverCliprdrChannelId apunta al
+    // canal IO (1003). El path de recuperacion (fallbackIoNamedCliprdrWrite) usa ioChannelId
+    // para detectarlo: se mantiene dest=serverCliprdrChannelId para que destIsIo sea correcto.
     const dest = channelFilter.serverCliprdrChannelId || channelFilter.cliprdrOnUnsafeChannel || 1001;
     const negotiated = channelFilter.cliprdrChannelId;
     const keepClientCaps = isUserMcsChannel(channelFilter, dest)
@@ -1422,7 +1425,19 @@ class RdpNativeBridgeService extends EventEmitter {
     }
 
     if (!isClip) {
-      return { forward: remapClientDrdynvcFrame(channelFilter, frame), inject: [] };
+      // Solo remapear drdynvc una vez que el write path cliprdr está confirmado.
+      // Antes de ese punto no sabemos con certeza si es una sesión de bastión
+      // (isBastion se infiere de forma reactiva al ver cliprdr no alineado, etc.).
+      // Remapear demasiado pronto en sesiones service=n/a de Wallix reescribe el
+      // channelId a un canal que el bastión no espera → cierra la conexión TLS.
+      const canRemapDynvc = channelFilter.cliprdrWriteChannelId != null
+        || channelFilter.cliprdrServerReady;
+      return {
+        forward: canRemapDynvc
+          ? remapClientDrdynvcFrame(channelFilter, frame)
+          : frame,
+        inject: []
+      };
     }
 
     // Aviso de orden CLIPRDR: el cliente no deberia emitir nada antes de CB_MONITOR_READY
@@ -1462,8 +1477,11 @@ class RdpNativeBridgeService extends EventEmitter {
       && serverClipCh === channelFilter.ioChannelId;
     // Un CAPS en 1001 no bloquea la escritura si luego se confirma el VC negociado (1004).
     // Forzar el handshake a 1004 cuando el saludo fue por 1001 cierra ESAH (TLS FIN).
+    // Se incluye el caso serverClipCh==null: cuando el servidor no ha enviado cliprdr todavia
+    // el CAPS del cliente debe igualmente cachearse para el rehandshake posterior.
     const destIsUserChannel = writeCh == null && (
-      isUserMcsChannel(channelFilter, serverClipCh)
+      serverClipCh == null
+      || isUserMcsChannel(channelFilter, serverClipCh)
       || (channelFilter.cliprdrOnUnsafeChannel != null
           && (serverClipCh == null || isUserMcsChannel(channelFilter, serverClipCh)
               || serverClipCh === channelFilter.cliprdrOnUnsafeChannel))
@@ -1512,8 +1530,12 @@ class RdpNativeBridgeService extends EventEmitter {
     const unnamedHandshake = channelFilter.channelIdToName instanceof Map
       && handshakeDest != null
       && !channelFilter.channelIdToName.has(handshakeDest);
-    if (isClip && clipDesc && clipDesc.includes('CB_TEMP_DIRECTORY')
-        && (unnamedHandshake || channelFilter.cliprdrRecoveredFromUnsafe)) {
+    const dropTempOnRecovery = unnamedHandshake
+      // Para service=RDP (ESAH/Wallix), TEMPDIR es necesario para el handshake:
+      // no se descarta aunque el write path se haya recuperado de un canal IO.
+      || (channelFilter.cliprdrRecoveredFromUnsafe
+          && channelFilter.wallixService !== 'RDP');
+    if (isClip && clipDesc && clipDesc.includes('CB_TEMP_DIRECTORY') && dropTempOnRecovery) {
       const why = unnamedHandshake
         ? `${handshakeDest} sin nombre`
         : `recuperado ch=${handshakeDest}`;

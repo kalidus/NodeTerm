@@ -937,6 +937,10 @@ export const useFormHandlers = ({
       }
     }
 
+    const isBastion = sshData.useBastionWallix !== undefined
+      ? !!sshData.useBastionWallix
+      : (userInfo.isWallix || !!originalNode?.data?.useBastionWallix || !!originalNode?.data?.isBastion);
+
     if (isEditing && originalNode && !originalNode.isNew) {
       const oldConnection = connectionHelpers.fromSidebarNode(originalNode);
       const nodesCopy = deepCopy(nodes);
@@ -954,10 +958,11 @@ export const useFormHandlers = ({
           remoteFolder: remoteFolder ? remoteFolder.trim() : '',
           port,
           type: 'ssh',
-          useBastionWallix: userInfo.isWallix,
-          bastionHost: userInfo.isWallix ? host.trim() : '',
-          bastionUser: userInfo.isWallix ? userInfo.bastionUser : '',
-          targetServer: userInfo.isWallix ? userInfo.targetServer : '',
+          useBastionWallix: isBastion,
+          isBastion: isBastion,
+          bastionHost: isBastion ? (sshData.bastionHost || nodeToEdit.data?.bastionHost || host.trim()) : '',
+          bastionUser: isBastion ? (sshData.bastionUser || nodeToEdit.data?.bastionUser || (userInfo.isWallix ? userInfo.bastionUser : user.trim())) : '',
+          targetServer: isBastion ? (sshData.targetServer || nodeToEdit.data?.targetServer || (userInfo.isWallix ? userInfo.targetServer : '')) : '',
           autoCopyPassword,
           x11Forwarding,
           agentForwarding,
@@ -1015,10 +1020,11 @@ export const useFormHandlers = ({
           remoteFolder: remoteFolder ? remoteFolder.trim() : '',
           port,
           type: 'ssh',
-          useBastionWallix: userInfo.isWallix,
-          bastionHost: userInfo.isWallix ? host.trim() : '',
-          bastionUser: userInfo.isWallix ? userInfo.bastionUser : '',
-          targetServer: userInfo.isWallix ? userInfo.targetServer : '',
+          useBastionWallix: isBastion,
+          isBastion: isBastion,
+          bastionHost: isBastion ? (sshData.bastionHost || host.trim()) : '',
+          bastionUser: isBastion ? (sshData.bastionUser || (userInfo.isWallix ? userInfo.bastionUser : user.trim())) : '',
+          targetServer: isBastion ? (sshData.targetServer || (userInfo.isWallix ? userInfo.targetServer : '')) : '',
           autoCopyPassword: autoCopyPassword || false,
           x11Forwarding: x11Forwarding || false,
           agentForwarding: agentForwarding || false,
@@ -1368,7 +1374,13 @@ export const useFormHandlers = ({
             guacDisableGlyphCaching: rdpData.guacDisableGlyphCaching === true,
             guacDisableOffscreenCaching: rdpData.guacDisableOffscreenCaching === true,
             guacDisableBitmapCaching: rdpData.guacDisableBitmapCaching === true,
-            guacDisableCopyRect: rdpData.guacDisableCopyRect === true
+            guacDisableCopyRect: rdpData.guacDisableCopyRect === true,
+            useBastionWallix: rdpData.useBastionWallix !== undefined ? !!rdpData.useBastionWallix : !!(nodeToEdit.data?.useBastionWallix || nodeToEdit.data?.isBastion),
+            isBastion: rdpData.useBastionWallix !== undefined ? !!rdpData.useBastionWallix : !!(nodeToEdit.data?.useBastionWallix || nodeToEdit.data?.isBastion),
+            bastionHost: rdpData.bastionHost || nodeToEdit.data?.bastionHost || undefined,
+            bastionUser: rdpData.bastionUser || nodeToEdit.data?.bastionUser || undefined,
+            targetServer: rdpData.targetServer || nodeToEdit.data?.targetServer || undefined,
+            wallixService: rdpData.wallixService || nodeToEdit.data?.wallixService || undefined
           };
           
           // Actualizar favoritos si la conexión estaba en favoritos
@@ -1422,7 +1434,13 @@ export const useFormHandlers = ({
           guacDisableGlyphCaching: rdpData.guacDisableGlyphCaching === true,
           guacDisableOffscreenCaching: rdpData.guacDisableOffscreenCaching === true,
           guacDisableBitmapCaching: rdpData.guacDisableBitmapCaching === true,
-          guacDisableCopyRect: rdpData.guacDisableCopyRect === true
+          guacDisableCopyRect: rdpData.guacDisableCopyRect === true,
+          useBastionWallix: !!(rdpData.useBastionWallix || rdpData.isBastion),
+          isBastion: !!(rdpData.useBastionWallix || rdpData.isBastion),
+          bastionHost: rdpData.bastionHost || undefined,
+          bastionUser: rdpData.bastionUser || undefined,
+          targetServer: rdpData.targetServer || undefined,
+          wallixService: rdpData.wallixService || undefined
         },
         draggable: true,
         droppable: false,

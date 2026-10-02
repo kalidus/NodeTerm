@@ -1026,6 +1026,7 @@ class ImportService {
 
           if (converted?.data) {
             converted.data.useBastionWallix = true;
+            converted.data.isBastion = true;
             converted.data.bastionHost = bastionHostname;
             converted.data.bastionUser = proxyUsername;
             converted.data.targetServer = targetName;
@@ -1543,6 +1544,7 @@ class ImportService {
                 // (el mismo que usan las conexiones configuradas manualmente).
                 if (converted?.data) {
                   converted.data.useBastionWallix = true;
+                  converted.data.isBastion = true;
                   converted.data.bastionHost = bastionHostname;
                   converted.data.bastionUser = proxyUsername;
                   converted.data.targetServer = targetName;

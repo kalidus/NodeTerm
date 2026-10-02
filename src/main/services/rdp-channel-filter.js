@@ -209,9 +209,17 @@ function learnFromServerGcc(state, buf) {
 
   // Mapear lo que ANUNCIAMOS al servidor (tras la inyeccion) a los IDs de SC_NET.
   state.channelIdToName = new Map();
-  if (Array.isArray(state.clientChannelNames)) {
+  // Usar clientChannelNames (con inyeccion) para el mapa servidor->nombre.
+  // Si GCC del cliente no se pudo parsear (cs-net-not-found), clientChannelNames
+  // queda vacio; intentamos con wasmChannelNames como fallback de segundo nivel.
+  const sourceNames = (Array.isArray(state.clientChannelNames) && state.clientChannelNames.length)
+    ? state.clientChannelNames
+    : (Array.isArray(state.wasmChannelNames) && state.wasmChannelNames.length)
+      ? state.wasmChannelNames
+      : [];
+  if (sourceNames.length) {
     parsed.channelIds.forEach((id, idx) => {
-      const name = state.clientChannelNames[idx];
+      const name = sourceNames[idx];
       if (name) {
         state.channelIdToName.set(id, name);
         if (name === 'drdynvc') {
@@ -222,9 +230,11 @@ function learnFromServerGcc(state, buf) {
   }
 
   // IronRDP no ve la inyeccion: su cliprdr sigue siendo el indice que tenia en CS_NET original.
+  // wasmNames: preferir wasmChannelNames (nombres antes de inyectar) porque el WASM mapea
+  // cliprdr al indice de su GCC original, no al de la version inyectada que fue al servidor.
   const wasmNames = (state.wasmChannelNames && state.wasmChannelNames.length)
     ? state.wasmChannelNames
-    : state.clientChannelNames;
+    : sourceNames;
   const clipIdx = Array.isArray(wasmNames) ? wasmNames.indexOf('cliprdr') : -1;
   if (clipIdx >= 0 && parsed.channelIds[clipIdx] != null) {
     state.cliprdrChannelId = parsed.channelIds[clipIdx];

@@ -168,6 +168,7 @@ export default function EditConnectionTabContent({
   const [sshHostKeyPolicy, setSSHHostKeyPolicy] = useState('warn_new');
   const [sshDescription, setSSHDescription] = useState('');
   const [sshIcon, setSSHIcon] = useState(null);
+  const [sshUseBastionWallix, setSSHUseBastionWallix] = useState(false);
 
   // --- RDP / VNC STATES ---
   const [rdpFormData, setRdpFormData] = useState(() => createDefaultRdpFormData());
@@ -252,6 +253,7 @@ export default function EditConnectionTabContent({
       setSSHHostKeyPolicy(data.hostKeyPolicy || 'warn_new');
       setSSHDescription(data.description || '');
       setSSHIcon(data.customIcon || null);
+      setSSHUseBastionWallix(!!(data.useBastionWallix || data.isBastion));
     } 
     else if (connectionType === 'rdp') {
       setRdpFormData(mapEditNodeDataToRdpFormData(node));
@@ -324,7 +326,12 @@ export default function EditConnectionTabContent({
           hostKeyPolicy: sshHostKeyPolicy,
           description: sshDescription,
           customIcon: sshIcon,
-          targetFolder: sshTargetFolder
+          targetFolder: sshTargetFolder,
+          useBastionWallix: sshUseBastionWallix,
+          isBastion: sshUseBastionWallix,
+          bastionHost: node?.data?.bastionHost || sshHost,
+          bastionUser: node?.data?.bastionUser || sshUser,
+          targetServer: node?.data?.targetServer || ''
         };
         handleSaveSshToSidebar(sshData, true, node, true);
       }
@@ -370,7 +377,7 @@ export default function EditConnectionTabContent({
 
     return () => clearTimeout(saveTimeout);
   }, [
-    sshName, sshHost, sshUser, sshPassword, sshPort, sshRemoteFolder, sshTargetFolder, sshAuthMethod, sshPrivateKey, sshAutoCopyPassword, sshX11Forwarding, sshAgentForwarding, sshAutoRecording, sshProxyJumpEnabled, sshJumpHost, sshJumpPort, sshJumpUser, sshJumpAuthMethod, sshJumpPassword, sshJumpPrivateKey, sshHostKeyPolicy, sshDescription, sshIcon,
+    sshName, sshHost, sshUser, sshPassword, sshPort, sshRemoteFolder, sshTargetFolder, sshAuthMethod, sshPrivateKey, sshAutoCopyPassword, sshX11Forwarding, sshAgentForwarding, sshAutoRecording, sshProxyJumpEnabled, sshJumpHost, sshJumpPort, sshJumpUser, sshJumpAuthMethod, sshJumpPassword, sshJumpPrivateKey, sshHostKeyPolicy, sshDescription, sshIcon, sshUseBastionWallix,
     rdpFormData,
     vncFormData,
     fileName, fileHost, fileUser, filePassword, filePort, fileProtocol, fileRemoteFolder, fileTargetFolder,
@@ -429,9 +436,11 @@ export default function EditConnectionTabContent({
           authMethod: sshAuthMethod,
           customIcon: sshIcon,
           targetFolder: sshTargetFolder,
-          useBastionWallix: !!sshProxyJumpEnabled,
-          bastionHost: sshJumpHost,
-          bastionUser: sshJumpUser
+          useBastionWallix: !!(sshUseBastionWallix || node?.data?.useBastionWallix),
+          isBastion: !!(sshUseBastionWallix || node?.data?.isBastion),
+          bastionHost: node?.data?.bastionHost || (sshProxyJumpEnabled ? sshJumpHost : sshHost),
+          bastionUser: node?.data?.bastionUser || (sshProxyJumpEnabled ? sshJumpUser : sshUser),
+          targetServer: node?.data?.targetServer || ''
         });
       } else if (connectionType === 'rdp') {
         return connectionHelpers.toSerializable({

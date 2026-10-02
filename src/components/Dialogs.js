@@ -617,6 +617,7 @@ export function EditSSHConnectionDialog({
   sshHostKeyPolicy = 'warn_new', setSSHHostKeyPolicy = () => {},
   sshDescription = '', setSSHDescription = () => {},
   sshIcon = null, setSSHIcon = () => {},
+  sshUseBastionWallix = false, setSSHUseBastionWallix = () => {},
   foldersOptions = [],
   onSSHConfirm,
   sshLoading = false,
@@ -689,8 +690,11 @@ export function EditSSHConnectionDialog({
       if (setSSHIcon && typeof setSSHIcon === 'function') {
         setSSHIcon(editNodeData.data?.customIcon || null);
       }
+      if (setSSHUseBastionWallix && typeof setSSHUseBastionWallix === 'function') {
+        setSSHUseBastionWallix(!!(editNodeData.data?.useBastionWallix || editNodeData.data?.isBastion));
+      }
     }
-  }, [editNodeData, visible, setSSHName, setSSHHost, setSSHUser, setSSHPassword, setSSHAuthMethod, setSSHPrivateKey, setSSHRemoteFolder, setSSHPort, setSSHAutoCopyPassword, setSSHX11Forwarding, setSSHAgentForwarding, setSSHAutoRecording, setSSHProxyJumpEnabled, setSSHJumpHost, setSSHJumpPort, setSSHJumpUser, setSSHJumpAuthMethod, setSSHJumpPassword, setSSHJumpPrivateKey, setSSHHostKeyPolicy, setSSHDescription, setSSHIcon]);
+  }, [editNodeData, visible, setSSHName, setSSHHost, setSSHUser, setSSHPassword, setSSHAuthMethod, setSSHPrivateKey, setSSHRemoteFolder, setSSHPort, setSSHAutoCopyPassword, setSSHX11Forwarding, setSSHAgentForwarding, setSSHAutoRecording, setSSHProxyJumpEnabled, setSSHJumpHost, setSSHJumpPort, setSSHJumpUser, setSSHJumpAuthMethod, setSSHJumpPassword, setSSHJumpPrivateKey, setSSHHostKeyPolicy, setSSHDescription, setSSHIcon, setSSHUseBastionWallix]);
 
   // Handler para seleccionar icono
   const handleIconSelect = useCallback((iconId) => {
@@ -776,6 +780,8 @@ export function EditSSHConnectionDialog({
             setSSHHostKeyPolicy={setSSHHostKeyPolicy}
             sshDescription={sshDescription}
             setSSHDescription={setSSHDescription}
+            sshUseBastionWallix={sshUseBastionWallix}
+            setSSHUseBastionWallix={setSSHUseBastionWallix}
             foldersOptions={foldersOptions}
             onSSHConfirm={onSSHConfirm}
             onHide={onHide}
@@ -1299,6 +1305,7 @@ export function EnhancedSSHForm({
   sshJumpPrivateKey = '', setSSHJumpPrivateKey = () => {},
   sshHostKeyPolicy = 'warn_new', setSSHHostKeyPolicy = () => {},
   sshDescription = '', setSSHDescription = () => {},
+  sshUseBastionWallix = false, setSSHUseBastionWallix = () => {},
   foldersOptions = [],
   onSSHConfirm,
   onHide,
@@ -1726,6 +1733,20 @@ export function EnhancedSSHForm({
               <InputSwitch
                 checked={sshX11Forwarding}
                 onChange={(e) => setSSHX11Forwarding(e.value)}
+                className="terminal-switch"
+              />
+            </div>
+
+            <div className="terminal-option-item">
+              <div className="flex align-items-center">
+                <i className="pi pi-shield terminal-option-icon"></i>
+                <span className="terminal-option-text">Bastión / Proxy PAM (Wallix, CyberArk)</span>
+                <TerminalOptionHelp text="Optimiza la sesión para pasarelas de salto y bastiones PAM, usando túnel dedicado sin reenvíos innecesarios." />
+              </div>
+              <div className="terminal-dotted-spacer"></div>
+              <InputSwitch
+                checked={!!sshUseBastionWallix}
+                onChange={(e) => setSSHUseBastionWallix(e.value)}
                 className="terminal-switch"
               />
             </div>
@@ -2630,6 +2651,20 @@ export function EnhancedSSHForm({
                     <InputSwitch
                       checked={sshX11Forwarding}
                       onChange={(e) => setSSHX11Forwarding(e.value)}
+                      className="terminal-switch"
+                    />
+                  </div>
+
+                  <div className="terminal-option-item" style={{ padding: '0.5rem 0' }}>
+                    <div className="flex align-items-center">
+                      <i className="pi pi-shield terminal-option-icon"></i>
+                      <span className="terminal-option-text">Bastión / Proxy PAM (Wallix, CyberArk)</span>
+                      <TerminalOptionHelp text="Optimiza la sesión para pasarelas de salto y bastiones PAM, usando túnel dedicado sin reenvíos innecesarios." />
+                    </div>
+                    <div className="terminal-dotted-spacer"></div>
+                    <InputSwitch
+                      checked={!!sshUseBastionWallix}
+                      onChange={(e) => setSSHUseBastionWallix(e.value)}
                       className="terminal-switch"
                     />
                   </div>

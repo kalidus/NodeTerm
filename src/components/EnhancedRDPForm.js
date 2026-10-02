@@ -84,7 +84,8 @@ export function createDefaultRdpFormData() {
     guacDisableOffscreenCaching: false,
     guacDisableBitmapCaching: false,
     guacDisableCopyRect: false,
-    useBastionWallix: false
+    useBastionWallix: false,
+    isBastion: false
   };
 }
 
@@ -138,7 +139,8 @@ export function mapEditNodeDataToRdpFormData(editNodeData) {
     guacDisableOffscreenCaching: data.guacDisableOffscreenCaching || false,
     guacDisableBitmapCaching: data.guacDisableBitmapCaching || false,
     guacDisableCopyRect: data.guacDisableCopyRect || false,
-    useBastionWallix: !!data.useBastionWallix
+    useBastionWallix: !!(data.useBastionWallix || data.isBastion),
+    isBastion: !!(data.useBastionWallix || data.isBastion)
   };
 }
 
