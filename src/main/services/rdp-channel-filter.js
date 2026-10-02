@@ -173,6 +173,7 @@ function createChannelFilterState() {
     cliprdrOnUnsafeChannel: null,
     unsafeCliprdrFragmentOpen: false,
     drdynvcChannelId: null,
+    wasmDrdynvcChannelId: null,
     cliprdrServerReady: false,
     // El selector de Wallix completa un cliprdr y, al elegir maquina, repite
     // CB_MONITOR_READY en la misma conexion. IronRDP ya esta en Ready y no
@@ -234,6 +235,13 @@ function learnFromServerGcc(state, buf) {
       }
     }
   }
+
+  const dynIdx = Array.isArray(wasmNames)
+    ? wasmNames.findIndex((n) => String(n).toLowerCase() === 'drdynvc')
+    : -1;
+  state.wasmDrdynvcChannelId = (dynIdx >= 0 && parsed.channelIds[dynIdx] != null)
+    ? parsed.channelIds[dynIdx]
+    : null;
 
   state.ready = true;
   retryConfirmAppCliprdrWrite(state);
@@ -947,6 +955,29 @@ function filterIoChannelPdu(state, channelId, userData) {
   return null;
 }
 
+function wasmDeclaredDrdynvc(state) {
+  const names = state && Array.isArray(state.wasmChannelNames) ? state.wasmChannelNames : [];
+  return names.some((n) => String(n).toLowerCase() === 'drdynvc');
+}
+
+function remapServerDrdynvcFrame(state, buf, incomingChannelId) {
+  const wasmId = state && state.wasmDrdynvcChannelId;
+  if (wasmId == null || incomingChannelId === wasmId) return buf;
+  return rewriteMcsChannelId(buf, wasmId) || buf;
+}
+
+function remapClientDrdynvcFrame(state, frame) {
+  if (!state || !Buffer.isBuffer(frame)) return frame;
+  const parsed = parseMcsSendData(frame);
+  if (!parsed) return frame;
+  const wasmId = state.wasmDrdynvcChannelId;
+  const serverId = state.drdynvcChannelId;
+  if (wasmId == null || serverId == null || parsed.channelId !== wasmId || wasmId === serverId) {
+    return frame;
+  }
+  return rewriteMcsChannelId(frame, serverId) || frame;
+}
+
 /**
  * Procesa frame RDP->WASM.
  * @returns {{ forward: Buffer|null, replies: Buffer[], dropped: boolean, note: string|null, channelId: number|null }}
@@ -987,7 +1018,8 @@ function processServerFrame(state, buf) {
   }
 
   // 2. Canales que no son el canal IO ni cliprdr (canal de usuario 1001, drdynvc, etc.):
-  // NUNCA reenviar a IronRDP WASM (evita el crash 'unexpected channel received: ID ...').
+  // NUNCA reenviar a IronRDP WASM (evita el crash 'unexpected channel received: ID ...'),
+  // salvo CAPS + DisplayControl cuando WASM declaro drdynvc.
   // El interceptor DVC sólo se aplica aquí: drdynvc es un canal virtual estático, el canal IO
   // jamás transporta CHANNEL_PDU_HEADER y aplicarle esta heurística descartaba PDUs legítimas.
   if (!isIoChannel) {
@@ -995,7 +1027,21 @@ function processServerFrame(state, buf) {
     // canal desconocido marcaba un VC estatico como canal de usuario y
     // bloqueaba el write path de cliprdr.
     if (parsed && isChannelPduHeader(parsed.userData)) {
-      const dvc = handleDvcRequest(channelId, state.clientInitiator, parsed.userData);
+      const allowDisplayControl = wasmDeclaredDrdynvc(state);
+      const dvc = handleDvcRequest(channelId, state.clientInitiator, parsed.userData, {
+        allowDisplayControl
+      });
+      if (dvc.handled && dvc.forward) {
+        return {
+          forward: remapServerDrdynvcFrame(state, buf, channelId),
+          replies: [],
+          dropped: false,
+          note: dvc.note || channelPduHint(parsed.userData),
+          channelId,
+          isCliprdr: false,
+          cliprdrDesc: null
+        };
+      }
       if (dvc.handled) {
         markDropped(state, channelId);
         return {
@@ -1094,5 +1140,8 @@ module.exports = {
   applyCliprdrReplayFrame,
   buildAppProbeCliprdrWrites,
   filterServerFrame,
-  processServerFrame
+  processServerFrame,
+  wasmDeclaredDrdynvc,
+  remapClientDrdynvcFrame,
+  remapServerDrdynvcFrame
 };

@@ -12,6 +12,57 @@ const {
   STATUS_SUCCESS,
   STATUS_NOT_SUPPORTED
 } = require('../../src/main/services/rdp-dynvc');
+const {
+  createChannelFilterState,
+  learnFromServerGcc,
+  processServerFrame,
+  remapClientDrdynvcFrame
+} = require('../../src/main/services/rdp-channel-filter');
+
+function buildMcsIndication(channelId, userData) {
+  const lenField = userData.length < 0x80
+    ? Buffer.from([userData.length])
+    : Buffer.from([0x80 | ((userData.length >> 8) & 0x7f), userData.length & 0xff]);
+  const mcsHdr = Buffer.concat([
+    Buffer.from([
+      0x02, 0xf0, 0x80, 0x68,
+      0x00, 0x00,
+      (channelId >> 8) & 0xff, channelId & 0xff,
+      0x70
+    ]),
+    lenField
+  ]);
+  const tpktLen = 4 + mcsHdr.length + userData.length;
+  const tpktHdr = Buffer.from([0x03, 0x00, (tpktLen >> 8) & 0xff, tpktLen & 0xff]);
+  return Buffer.concat([tpktHdr, mcsHdr, userData]);
+}
+
+function buildScNet(ioId, channelIds) {
+  const count = channelIds.length;
+  const blockLen = 8 + count * 2;
+  const body = Buffer.alloc(blockLen);
+  body.writeUInt16LE(0x0c03, 0);
+  body.writeUInt16LE(blockLen, 2);
+  body.writeUInt16LE(ioId, 4);
+  body.writeUInt16LE(count, 6);
+  channelIds.forEach((id, i) => body.writeUInt16LE(id, 8 + i * 2));
+  const tpkt = Buffer.alloc(4 + body.length);
+  tpkt[0] = 0x03;
+  tpkt[1] = 0x00;
+  tpkt.writeUInt16BE(tpkt.length, 2);
+  body.copy(tpkt, 4);
+  return tpkt;
+}
+
+function buildDisplayControlCreatePdu(dvcChannelId = 0x15) {
+  const nameBuf = Buffer.from('Microsoft::Windows::RDS::DisplayControl\0', 'ascii');
+  const createReq = Buffer.concat([Buffer.from([0x10, dvcChannelId]), nameBuf]);
+  const cpdu = Buffer.alloc(8 + createReq.length);
+  cpdu.writeUInt32LE(createReq.length, 0);
+  cpdu.writeUInt32LE(0x03, 4);
+  createReq.copy(cpdu, 8);
+  return cpdu;
+}
 
 describe('rdp-dynvc', () => {
   it('responde instantáneamente a AUDIO_PLAYBACK_DVC (gap-6994ms)', () => {
@@ -80,7 +131,7 @@ describe('rdp-dynvc', () => {
     assert.equal(res.replies.length, 1);
   });
 
-  it('responde a Microsoft::Windows::RDS::DisplayControl (gap-2136ms)', () => {
+  it('rechaza DisplayControl si WASM no declara drdynvc', () => {
     const p = path.join(__dirname, 'frames/gap-2136ms-from-f125-64b.hex');
     if (!fs.existsSync(p)) return;
     const raw = Buffer.from(fs.readFileSync(p, 'utf8').trim(), 'hex');
@@ -93,7 +144,37 @@ describe('rdp-dynvc', () => {
 
     const res = handleDvcRequest(mcs.channelId, 1002, mcs.userData);
     assert.ok(res.handled);
+    assert.equal(res.forward, false);
     assert.equal(res.replies.length, 1);
+    assert.equal(parseMcsSendData(res.replies[0]).userData.readUInt32LE(10), STATUS_NOT_SUPPORTED);
+  });
+
+  it('reenvia DisplayControl al WASM cuando allowDisplayControl', () => {
+    const p = path.join(__dirname, 'frames/gap-2136ms-from-f125-64b.hex');
+    const userData = fs.existsSync(p)
+      ? parseMcsSendData(Buffer.from(fs.readFileSync(p, 'utf8').trim(), 'hex')).userData
+      : buildDisplayControlCreatePdu();
+    const dvc = parseDvcPdu(userData);
+    assert.ok(dvc);
+    assert.equal(dvc.channelName, 'Microsoft::Windows::RDS::DisplayControl');
+
+    const res = handleDvcRequest(1005, 1002, userData, { allowDisplayControl: true });
+    assert.ok(res.handled);
+    assert.equal(res.forward, true);
+    assert.equal(res.replies.length, 0);
+    assert.ok(res.note.includes('DisplayControl'));
+  });
+
+  it('sigue rechazando AUDIO con allowDisplayControl', () => {
+    const p = path.join(__dirname, 'frames/gap-6994ms-from-f122-43b.hex');
+    if (!fs.existsSync(p)) return;
+    const raw = Buffer.from(fs.readFileSync(p, 'utf8').trim(), 'hex');
+    const mcs = parseMcsSendData(raw);
+    const res = handleDvcRequest(mcs.channelId, 1002, mcs.userData, { allowDisplayControl: true });
+    assert.ok(res.handled);
+    assert.equal(res.forward, false);
+    assert.equal(res.replies.length, 1);
+    assert.equal(parseMcsSendData(res.replies[0]).userData.readUInt32LE(10), STATUS_NOT_SUPPORTED);
   });
 
   it('responde a DVC Capabilities Request con estructura correcta', () => {
@@ -112,6 +193,7 @@ describe('rdp-dynvc', () => {
 
     const res = handleDvcRequest(1003, 1002, channelPdu);
     assert.ok(res.handled);
+    assert.equal(res.forward, false);
     assert.equal(res.replies.length, 1);
 
     const replyMcs = parseMcsSendData(res.replies[0]);
@@ -157,6 +239,20 @@ describe('rdp-dynvc', () => {
     assert.equal(replyMcs.userData.subarray(10).toString('ascii'), 'HEARTBEAT_TEST_123');
   });
 
+  it('reenvia CAPS DVC al WASM cuando allowDisplayControl', () => {
+    const dvcPayload = Buffer.from('54000300333311113d0aa704', 'hex');
+    const channelPdu = Buffer.alloc(8 + dvcPayload.length);
+    channelPdu.writeUInt32LE(dvcPayload.length, 0);
+    channelPdu.writeUInt32LE(0x03, 4);
+    dvcPayload.copy(channelPdu, 8);
+
+    const res = handleDvcRequest(1003, 1002, channelPdu, { allowDisplayControl: true });
+    assert.ok(res.handled);
+    assert.equal(res.forward, true);
+    assert.equal(res.replies.length, 0);
+    assert.ok(res.note.includes('dvc-forward-caps'));
+  });
+
   it('conserva initiator 0, que es el que usa IronRDP con Wallix', () => {
     const nameBuf = Buffer.from('Microsoft::Windows::RDS::DisplayControl\0', 'ascii');
     const createReq = Buffer.concat([Buffer.from([0x10, 0x15]), nameBuf]);
@@ -169,6 +265,76 @@ describe('rdp-dynvc', () => {
     const replyMcs = parseMcsSendData(res.replies[0]);
     assert.equal(replyMcs.initiator, 0);
     assert.equal(replyMcs.channelId, 1005);
+  });
+});
+
+describe('drdynvc remap DisplayControl', () => {
+  function injectedDrdynvcState() {
+    const state = createChannelFilterState();
+    state.wasmChannelNames = ['cliprdr', 'drdynvc'];
+    state.clientChannelNames = ['rdpdr', 'rdpsnd', 'cliprdr', 'drdynvc'];
+    assert.equal(learnFromServerGcc(state, buildScNet(1003, [1004, 1005, 1006, 1007])), true);
+    assert.equal(state.drdynvcChannelId, 1007);
+    assert.equal(state.wasmDrdynvcChannelId, 1005);
+    return state;
+  }
+
+  it('reenvia DisplayControl remapeando servidor->wasm', () => {
+    const state = injectedDrdynvcState();
+    const frame = buildMcsIndication(1007, buildDisplayControlCreatePdu());
+    const res = processServerFrame(state, frame);
+    assert.equal(res.dropped, false);
+    assert.ok(res.forward);
+    assert.equal(res.replies.length, 0);
+    assert.equal(res.forward.readUInt16BE(10), 1005);
+  });
+
+  it('reenvia CAPS remapeando servidor->wasm', () => {
+    const state = injectedDrdynvcState();
+    const dvcPayload = Buffer.from('54000300333311113d0aa704', 'hex');
+    const channelPdu = Buffer.alloc(8 + dvcPayload.length);
+    channelPdu.writeUInt32LE(dvcPayload.length, 0);
+    channelPdu.writeUInt32LE(0x03, 4);
+    dvcPayload.copy(channelPdu, 8);
+    const frame = buildMcsIndication(1007, channelPdu);
+    const res = processServerFrame(state, frame);
+    assert.equal(res.dropped, false);
+    assert.ok(res.forward);
+    assert.equal(res.replies.length, 0);
+    assert.equal(res.forward.readUInt16BE(10), 1005);
+  });
+
+  it('sigue rechazando Geometry aunque WASM declare drdynvc', () => {
+    const state = injectedDrdynvcState();
+    const p = path.join(__dirname, 'frames/from-18-66b.hex');
+    if (!fs.existsSync(p)) return;
+    const raw = Buffer.from(fs.readFileSync(p, 'utf8').trim(), 'hex');
+    const parsed = parseMcsSendData(raw);
+    const frame = buildMcsIndication(1007, parsed.userData);
+    const res = processServerFrame(state, frame);
+    assert.equal(res.dropped, true);
+    assert.equal(res.forward, null);
+    assert.equal(res.replies.length, 1);
+  });
+
+  it('remapear WASM->servidor el canal drdynvc inyectado', () => {
+    const state = injectedDrdynvcState();
+    const frame = buildMcsIndication(1005, buildDisplayControlCreatePdu());
+    const out = remapClientDrdynvcFrame(state, frame);
+    assert.equal(out.readUInt16BE(10), 1007);
+  });
+
+  it('no remapea drdynvc si los IDs coinciden', () => {
+    const state = createChannelFilterState();
+    state.wasmChannelNames = ['cliprdr', 'drdynvc'];
+    state.clientChannelNames = ['cliprdr', 'drdynvc'];
+    assert.equal(learnFromServerGcc(state, buildScNet(1003, [1004, 1005])), true);
+    assert.equal(state.drdynvcChannelId, 1005);
+    assert.equal(state.wasmDrdynvcChannelId, 1005);
+    const frame = buildMcsIndication(1005, buildDisplayControlCreatePdu());
+    const out = remapClientDrdynvcFrame(state, frame);
+    assert.equal(out.readUInt16BE(10), 1005);
+    assert.equal(out, frame);
   });
 });
 

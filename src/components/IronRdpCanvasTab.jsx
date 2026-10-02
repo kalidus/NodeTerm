@@ -9,6 +9,7 @@ import {
   Backend,
   init as initIronRdp,
   enableCredssp,
+  displayControl,
   RdpFileTransferProvider,
   printerDeviceId,
   printerDriverName,
@@ -180,6 +181,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   const clipboardChainRef = useRef(Promise.resolve());
   const pendingClipboardSendRef = useRef(null);
   const currentDesktopSizeRef = useRef({ width: 0, height: 0 });
+  const lastRequestedDesktopRef = useRef({ width: 0, height: 0 });
+  const resizeAckTimerRef = useRef(null);
   const hasEverConnectedRef = useRef(false);
   const currentTokenIdRef = useRef(null);
   const lastBackendReasonRef = useRef(null);
@@ -463,6 +466,44 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   const alignDesktop = (n) => {
     const base = Math.max(1, Math.floor(n));
     return (base + 3) & ~3;
+  };
+
+  const clearResizeAckTimer = () => {
+    if (resizeAckTimerRef.current) {
+      clearTimeout(resizeAckTimerRef.current);
+      resizeAckTimerRef.current = null;
+    }
+  };
+
+  const readResizeSettingMs = (key, fallback, min) => {
+    try {
+      return Math.max(min, parseInt(localStorage.getItem(key) || String(fallback), 10));
+    } catch (_) {
+      return fallback;
+    }
+  };
+
+  const requestSessionResize = (width, height) => {
+    if (!sessionRef.current?.resize) return false;
+    if (width === currentDesktopSizeRef.current.width && height === currentDesktopSizeRef.current.height) {
+      return false;
+    }
+    if (width === lastRequestedDesktopRef.current.width && height === lastRequestedDesktopRef.current.height) {
+      return false;
+    }
+    lastRequestedDesktopRef.current = { width, height };
+    try {
+      sessionRef.current.resize(width, height);
+    } catch (resizeErr) {
+      console.warn('[IronRDP] Error solicitando resize a la sesion:', resizeErr);
+      return false;
+    }
+    clearResizeAckTimer();
+    const ackTimeoutMs = readResizeSettingMs('rdp_resize_ack_timeout_ms', 1500, 600);
+    resizeAckTimerRef.current = setTimeout(() => {
+      resizeAckTimerRef.current = null;
+    }, ackTimeoutMs);
+    return true;
   };
 
   const refreshLocalClipboardCache = async () => {
@@ -756,6 +797,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         const height = dims.height;
 
         currentDesktopSizeRef.current = { width, height };
+        lastRequestedDesktopRef.current = { width, height };
         setDesktopDimensions({ width, height });
 
         if (canvasRef.current) {
@@ -869,15 +911,18 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           .canvasResizedCallback((w, h) => {
             if (w && h) {
               console.log(`📐 [IronRDP WASM] Canvas redimensionado por servidor a ${w}x${h}`);
+              clearResizeAckTimer();
               if (canvasRef.current) {
                 canvasRef.current.width = w;
                 canvasRef.current.height = h;
               }
               currentDesktopSizeRef.current = { width: w, height: h };
+              lastRequestedDesktopRef.current = { width: w, height: h };
               setDesktopDimensions({ width: w, height: h });
             }
           })
-          .extension(enableCredssp(useCredssp));
+          .extension(enableCredssp(useCredssp))
+          .extension(displayControl(true));
 
         // Registrar extensiones para transferencia de archivos / carpeta compartida (RdpFileTransferProvider)
         if (isDriveEnabled) {
@@ -1549,11 +1594,12 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     };
   }, [showResolutionMenu]);
 
-  // Manejo de redimensionado de canvas dinámico
+  // Auto: DisplayControl via session.resize. El CSS 100% cubre el hueco hasta el ACK.
   useEffect(() => {
     if (!containerRef.current || connectionState !== 'connected' || !isAutoResize) return;
 
     let resizeTimer = null;
+    const debounceMs = readResizeSettingMs('rdp_resize_debounce_ms', 300, 100);
     const handleResize = () => {
       if (resizeTimer) clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
@@ -1561,15 +1607,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         const rect = containerRef.current.getBoundingClientRect();
         const width = alignDesktop(Math.max(640, rect.width || window.innerWidth));
         const height = alignDesktop(Math.max(480, rect.height || window.innerHeight));
-
-        if (width === currentDesktopSizeRef.current.width && height === currentDesktopSizeRef.current.height) {
-          return;
-        }
-        currentDesktopSizeRef.current = { width, height };
-        // En modo autoResize, el CSS del canvas (width: 100%, height: 100%) ya ajusta
-        // perfectamente el escritorio al visor en tiempo real sin desestabilizar
-        // la sesión RDP con solicitudes DisplayControl DVC no soportadas.
-      }, 300);
+        requestSessionResize(width, height);
+      }, debounceMs);
     };
 
     const resizeObserver = new ResizeObserver(handleResize);
@@ -1577,6 +1616,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
 
     return () => {
       if (resizeTimer) clearTimeout(resizeTimer);
+      clearResizeAckTimer();
       resizeObserver.disconnect();
     };
   }, [connectionState, isAutoResize]);
@@ -1592,11 +1632,17 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       const nativeW = canvasRef.current?.width || currentDesktopSizeRef.current.width || 1600;
       const nativeH = canvasRef.current?.height || currentDesktopSizeRef.current.height || 1000;
       setDesktopDimensions({ width: nativeW, height: nativeH });
-      console.log('📐 [IronRDP] Cambiando a resolución dinámica Auto (ajuste CSS)');
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (rect) {
+        const width = alignDesktop(Math.max(640, rect.width || window.innerWidth));
+        const height = alignDesktop(Math.max(480, rect.height || window.innerHeight));
+        requestSessionResize(width, height);
+      }
+      console.log('[IronRDP] Cambiando a resolucion dinamica Auto (DisplayControl)');
       toastRef.current?.show({
         severity: 'info',
-        summary: 'Ajuste Dinámico',
-        detail: 'Modo adaptativo activado (ajuste automático a ventana)',
+        summary: 'Ajuste Dinamico',
+        detail: 'Modo adaptativo activado (cambio de resolucion al tamano de ventana)',
         life: 2000
       });
     } else {
@@ -1605,20 +1651,11 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       if (parsed) {
         const targetW = alignDesktop(parsed.width);
         const targetH = alignDesktop(parsed.height);
-        console.log(`📐 [IronRDP] Cambiando resolución de visualización a ${targetW}x${targetH}`);
-        // Actualizar dimensiones visuales en el estado de React (controla el CSS width/height del canvas sin borrar el búfer)
+        console.log(`[IronRDP] Cambiando resolucion a ${targetW}x${targetH}`);
         setDesktopDimensions({ width: targetW, height: targetH });
         rdpConfig.resolution = resKey;
         rdpConfig.autoResize = false;
-
-        // Intentar redimensionado dinámico en la sesión si el servidor soporta DisplayControl
-        if (sessionRef.current?.resize) {
-          try {
-            sessionRef.current.resize(targetW, targetH);
-          } catch (resizeErr) {
-            console.warn('[IronRDP] Error solicitando resize a la sesión:', resizeErr);
-          }
-        }
+        requestSessionResize(targetW, targetH);
 
         toastRef.current?.show({
           severity: 'info',

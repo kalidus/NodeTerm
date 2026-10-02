@@ -39,7 +39,8 @@ const {
   takeCliprdrRehandshake,
   maybePromoteSelectorAppCliprdr,
   retryConfirmAppCliprdrWrite,
-  buildAppProbeCliprdrWrites
+  buildAppProbeCliprdrWrites,
+  remapClientDrdynvcFrame
 } = require('./rdp-channel-filter');
 const {
   noteCliprdrHealth,
@@ -1402,7 +1403,9 @@ class RdpNativeBridgeService extends EventEmitter {
       this.emit('diagnostic-log', { category: 'wasm-channel', message: wasmMsg });
     }
 
-    if (!isClip) return { forward: frame, inject: [] };
+    if (!isClip) {
+      return { forward: remapClientDrdynvcFrame(channelFilter, frame), inject: [] };
+    }
 
     // Aviso de orden CLIPRDR: el cliente no deberia emitir nada antes de CB_MONITOR_READY
     // (MS-RDPECLIP 1.3.2.1). No se descarta el PDU, solo se avisa.

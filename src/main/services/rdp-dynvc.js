@@ -4,10 +4,10 @@
  * 
  * 🚀 Característica Clave: Responde instantáneamente (0 ms) con STATUS_NOT_SUPPORTED (0xC00000BB)
  * o STATUS_UNSUCCESSFUL (0xC0000001) a las solicitudes DVC_CREATE_REQ de canales no soportados
- * (AUDIO_PLAYBACK_DVC, RDCamera, RDS::Input, RDS::DisplayControl, etc.).
- * 
- * Esto ELIMINA de forma definitiva los retardos/timeouts de 20 a 30 segundos (pantalla negra)
- * provocados por bastiones Wallix y servidores Windows RDS al esperar respuesta del cliente.
+ * (AUDIO_PLAYBACK_DVC, RDCamera, RDS::Input, Geometry, etc.).
+ *
+ * DisplayControl se reenvia al WASM cuando la sesion declaro drdynvc (display_control).
+ * El resto sigue rechazandose en 0 ms para evitar timeouts de 20-30 s con Wallix/RDS.
  */
 
 'use strict';
@@ -30,6 +30,34 @@ const CHANNEL_FLAG_LAST = 0x02;
 
 // Mapa de canales DVC conocidos (channelId -> channelName)
 const activeDvcChannels = new Map();
+
+const DISPLAYCONTROL_NAME = 'DISPLAYCONTROL';
+
+function isDisplayControlName(name) {
+  return String(name || '').toUpperCase().includes(DISPLAYCONTROL_NAME);
+}
+
+function isEchoName(name) {
+  return String(name || '').toUpperCase().includes('ECHO');
+}
+
+function dvcForwardResult(note) {
+  return {
+    handled: true,
+    forward: true,
+    replies: [],
+    note
+  };
+}
+
+function dvcReplyResult(replies, note) {
+  return {
+    handled: true,
+    forward: false,
+    replies,
+    note
+  };
+}
 
 /**
  * Parsea una PDU de Dynamic Virtual Channel dentro del payload de CHANNEL_PDU_HEADER
@@ -281,16 +309,19 @@ function buildDvcCapabilitiesResponse(version = 1, sp = 0, maxDataSize = 1600, f
 
 /**
  * Procesa peticiones DVC de Wallix/RDS y genera respuestas inmediatas
- * @param {number} mcsChannelId 
- * @param {number} initiator 
- * @param {Buffer} userData 
- * @returns {{ handled: boolean, replies: Buffer[], note: string|null }}
+ * @param {number} mcsChannelId
+ * @param {number} initiator
+ * @param {Buffer} userData
+ * @param {{ allowDisplayControl?: boolean }} [options]
+ * @returns {{ handled: boolean, forward: boolean, replies: Buffer[], note: string|null }}
  */
-function handleDvcRequest(mcsChannelId, initiator, userData) {
+function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
   const parsed = parseDvcPdu(userData);
   if (!parsed) {
-    return { handled: false, replies: [], note: null };
+    return { handled: false, forward: false, replies: [], note: null };
   }
+
+  const allowDisplayControl = options.allowDisplayControl === true;
 
   // IronRDP en esta sesion envia initiator 0 (se ve en cliprdr y en el canal IO). Sustituirlo
   // por 1002 hacia que Wallix tirara las respuestas DVC, el servidor reintentaba Geometry/Audio
@@ -298,71 +329,72 @@ function handleDvcRequest(mcsChannelId, initiator, userData) {
   const effectiveInitiator = initiator == null ? 0 : initiator;
 
   if (parsed.type === 'create-req') {
-    const chUpper = (parsed.channelName || '').toUpperCase();
-    activeDvcChannels.set(parsed.channelId, parsed.channelName);
+    const channelName = parsed.channelName || '';
+    activeDvcChannels.set(parsed.channelId, channelName);
 
-    // Responder STATUS_SUCCESS a ECHO, y STATUS_NOT_SUPPORTED a los demás en 0ms
-    // para que el servidor no espere 40 segundos de timeout.
-    const isEcho = chUpper.includes('ECHO');
+    if (allowDisplayControl && isDisplayControlName(channelName)) {
+      return dvcForwardResult(`dvc-forward ch=${parsed.channelId} "${channelName}"`);
+    }
+
+    const isEcho = isEchoName(channelName);
     const status = isEcho ? STATUS_SUCCESS : STATUS_NOT_SUPPORTED;
-
     const respPdu = buildDvcCreateResponse(parsed.cbId, parsed.channelId, status);
     const mcsPacket = buildMcsSendDataRequest(effectiveInitiator, mcsChannelId, respPdu);
 
-    return {
-      handled: true,
-      replies: [mcsPacket],
-      note: isEcho
-        ? `dvc-accept ch=${parsed.channelId} "${parsed.channelName}" (0ms ok)`
-        : `dvc-reject ch=${parsed.channelId} "${parsed.channelName}" (0ms fast fallback)`
-    };
+    return dvcReplyResult(
+      [mcsPacket],
+      isEcho
+        ? `dvc-accept ch=${parsed.channelId} "${channelName}" (0ms ok)`
+        : `dvc-reject ch=${parsed.channelId} "${channelName}" (0ms fast fallback)`
+    );
   }
 
   if (parsed.type === 'data') {
     const chName = activeDvcChannels.get(parsed.channelId) || '';
-    if (chName.toUpperCase().includes('ECHO')) {
-      // MS-RDPEECO: responder con el mismo payload al ping Echo
+    if (isEchoName(chName)) {
       const respPdu = buildDvcDataResponse(parsed.cbId, parsed.channelId, parsed.data);
       const mcsPacket = buildMcsSendDataRequest(effectiveInitiator, mcsChannelId, respPdu);
-
-      return {
-        handled: true,
-        replies: [mcsPacket],
-        note: `dvc-echo-reply ch=${parsed.channelId} (${parsed.data.length}B)`
-      };
+      return dvcReplyResult(
+        [mcsPacket],
+        `dvc-echo-reply ch=${parsed.channelId} (${parsed.data.length}B)`
+      );
     }
 
-    return {
-      handled: true,
-      replies: [],
-      note: `dvc-data ch=${parsed.channelId} "${chName}" (${parsed.data.length}B absorbed)`
-    };
+    if (allowDisplayControl && isDisplayControlName(chName)) {
+      return dvcForwardResult(
+        `dvc-forward-data ch=${parsed.channelId} "${chName}" (${parsed.data.length}B)`
+      );
+    }
+
+    return dvcReplyResult(
+      [],
+      `dvc-data ch=${parsed.channelId} "${chName}" (${parsed.data.length}B absorbed)`
+    );
   }
 
   if (parsed.type === 'caps-req') {
+    if (allowDisplayControl) {
+      return dvcForwardResult(`dvc-forward-caps v=${parsed.version}`);
+    }
     const respPdu = buildDvcCapabilitiesResponse(parsed.version, parsed.sp, parsed.maxDataSize, parsed.flags);
     const mcsPacket = buildMcsSendDataRequest(effectiveInitiator, mcsChannelId, respPdu);
-
-    return {
-      handled: true,
-      replies: [mcsPacket],
-      note: `dvc-caps v=${parsed.version} (len=${respPdu.length}B)`
-    };
+    return dvcReplyResult([mcsPacket], `dvc-caps v=${parsed.version} (len=${respPdu.length}B)`);
   }
 
   if (parsed.type === 'close') {
+    const chName = activeDvcChannels.get(parsed.channelId) || '';
     activeDvcChannels.delete(parsed.channelId);
-    return {
-      handled: true,
-      replies: [],
-      note: `dvc-close ch=${parsed.channelId}`
-    };
+    if (allowDisplayControl && isDisplayControlName(chName)) {
+      return dvcForwardResult(`dvc-forward-close ch=${parsed.channelId}`);
+    }
+    return dvcReplyResult([], `dvc-close ch=${parsed.channelId}`);
   }
 
   // Cmd desconocido: el PDU no es MS-RDPEDYC. No reclamarlo como manejado para que el
   // llamante decida, en vez de descartarlo dando por hecho que era DVC.
   return {
     handled: false,
+    forward: false,
     replies: [],
     note: `no-dvc cmd=0x${parsed.cmd.toString(16)}`
   };
@@ -381,5 +413,6 @@ module.exports = {
   buildDvcCreateResponse,
   buildDvcDataResponse,
   buildDvcCapabilitiesResponse,
-  handleDvcRequest
+  handleDvcRequest,
+  isDisplayControlName
 };
