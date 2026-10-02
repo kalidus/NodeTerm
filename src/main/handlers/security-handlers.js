@@ -2,6 +2,7 @@ const { ipcMain, safeStorage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { getNodeTermDataDir } = require('../utils/file-utils');
+const { VAULT_SECURITY_VERSION } = require('../services/vault-security-migrations');
 
 const SECURITY_CONFIG_PATH = path.join(getNodeTermDataDir(), 'security.json');
 
@@ -91,6 +92,7 @@ function registerSecurityHandlers(dependencies) {
 
       if (verifier) {
         config.vaultVerifier = verifier;
+        config.vaultSecurityVersion = VAULT_SECURITY_VERSION;
       }
 
       // Si el usuario no quiere recordar la contraseña en este dispositivo, NO almacenar clave en disco

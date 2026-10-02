@@ -74,13 +74,13 @@ export const AppModals = ({
     <>
       {/* UnlockDialog - Pide master password al inicio si existe */}
       <UnlockDialog
-        visible={needsUnlock}
+        visible={needsUnlock && !showCloudRestoreMasterKey}
         onSuccess={handleUnlockSuccess}
         secureStorage={secureStorage}
       />
 
       <CloudRestoreMasterKeyDialog
-        visible={showCloudRestoreMasterKey && !needsUnlock}
+        visible={showCloudRestoreMasterKey}
         secureStorage={secureStorage}
         vaultsDownloaded={cloudRestoreVaults}
         onSuccess={handleCloudRestoreMasterKeySuccess}

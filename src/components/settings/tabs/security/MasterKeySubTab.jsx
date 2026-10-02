@@ -55,9 +55,26 @@ const MasterKeySubTab = ({
     );
   };
 
+  const hasEncryptedVaultData = () => {
+    const vaultKeys = ['connections_encrypted', 'passwords_encrypted', 'documents_encrypted'];
+    return vaultKeys.some((key) => {
+      const value = localStorage.getItem(key);
+      return value && value.trim() && value.trim() !== 'null';
+    });
+  };
+
   const handleSaveMasterPassword = async () => {
     if (!validateMasterPassword()) {
       showToast?.('error', 'Error', 'Las contraseñas deben tener al menos 6 caracteres y coincidir');
+      return;
+    }
+
+    if (hasEncryptedVaultData()) {
+      showToast?.(
+        'error',
+        'Error',
+        'Ya hay datos cifrados. Usa "Cambiar clave maestra" con la clave actual en lugar de crear una nueva.'
+      );
       return;
     }
 

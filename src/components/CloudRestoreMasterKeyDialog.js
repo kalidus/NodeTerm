@@ -28,33 +28,17 @@ const CloudRestoreMasterKeyDialog = ({ visible, onSuccess, onHide, secureStorage
   };
 
   const verifyAgainstVaults = async (masterKey) => {
-    const verified = [];
-    const connectionsRaw = localStorage.getItem('connections_encrypted');
-    const passwordsRaw = localStorage.getItem('passwords_encrypted');
-
-    if (connectionsRaw) {
-      try {
-        await secureStorage.decryptData(JSON.parse(connectionsRaw), masterKey);
-        verified.push('conexiones');
-      } catch {
-        throw new Error('La clave no descifra el vault de conexiones del backup.');
-      }
-    }
-
-    if (passwordsRaw) {
-      try {
-        await secureStorage.decryptData(JSON.parse(passwordsRaw), masterKey);
-        verified.push('contrasenas');
-      } catch {
-        throw new Error('La clave no descifra el vault de contrasenas del backup.');
-      }
-    }
-
-    if (!connectionsRaw && !passwordsRaw) {
+    const cloudVaultKeys = ['connections_encrypted', 'passwords_encrypted'];
+    const hasAny = cloudVaultKeys.some((k) => localStorage.getItem(k));
+    if (!hasAny) {
       throw new Error('No se encontraron vaults locales para validar la clave.');
     }
 
-    return verified;
+    await secureStorage.verifyPasswordAgainstLocalVaults(masterKey, {
+      mode: 'all',
+      throwDetailedErrors: true,
+      keys: cloudVaultKeys
+    });
   };
 
   const handleSubmit = async () => {

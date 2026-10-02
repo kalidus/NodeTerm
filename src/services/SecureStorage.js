@@ -1,3 +1,5 @@
+import { VAULT_LOCAL_STORAGE_KEYS } from '../shared/vault-local-storage-keys';
+
 /**
  * SecureStorage - Servicio de cifrado seguro para NodeTerm
  * Características:
@@ -359,12 +361,100 @@ class SecureStorage {
   }
 
   /**
-   * Valida criptográficamente una contraseña ingresada por el usuario (en UnlockDialog)
+   * Lista vaults cifrados presentes en localStorage (tras sync de app-data).
+   */
+  _getPresentVaultEntries(keys = VAULT_LOCAL_STORAGE_KEYS) {
+    const entries = [];
+    for (const key of keys) {
+      const raw = localStorage.getItem(key);
+      if (raw && typeof raw === 'string' && raw.trim() && raw.trim() !== 'null') {
+        entries.push({ key, raw });
+      }
+    }
+    return entries;
+  }
+
+  /**
+   * Prueba autoritativa: la contrasena descifra vaults locales.
+   * @param {object} [options]
+   * @param {'any'|'all'} [options.mode='any'] - any: basta un vault; all: deben descifrar todos los presentes
+   */
+  async verifyPasswordAgainstLocalVaults(password, options = {}) {
+    if (!password || typeof password !== 'string') return false;
+
+    const mode = options.mode === 'all' ? 'all' : 'any';
+    const entries = this._getPresentVaultEntries(options.keys);
+    if (entries.length === 0) {
+      return false;
+    }
+
+    const tryDecrypt = async (raw) => {
+      await this.decryptData(JSON.parse(raw), password);
+    };
+
+    if (mode === 'all') {
+      for (const { key, raw } of entries) {
+        try {
+          await tryDecrypt(raw);
+        } catch (_) {
+          if (options.throwDetailedErrors) {
+            if (key === 'connections_encrypted') {
+              throw new Error('La clave no descifra el vault de conexiones del backup.');
+            }
+            if (key === 'passwords_encrypted') {
+              throw new Error('La clave no descifra el vault de contrasenas del backup.');
+            }
+            throw new Error('La clave no descifra los datos cifrados locales.');
+          }
+          return false;
+        }
+      }
+      return true;
+    }
+
+    for (const { raw } of entries) {
+      try {
+        await tryDecrypt(raw);
+        return true;
+      } catch (_) {}
+    }
+    return false;
+  }
+
+  /**
+   * Migracion silenciosa al arrancar (upgrade desde 1.7.x): loadMasterKey ya re-guarda en formato nuevo.
+   */
+  async migrateVaultSecurityIfNeeded() {
+    try {
+      const legacyStored = localStorage.getItem('nodeterm_master_key');
+      const hasLegacyLocal = legacyStored && legacyStored.trim();
+      if (!hasLegacyLocal && !window.electron?.security) {
+        return { migrated: false };
+      }
+      const loaded = await this.loadMasterKey();
+      if (loaded) {
+        return { migrated: true, source: 'loadMasterKey' };
+      }
+      return { migrated: false };
+    } catch (error) {
+      console.warn('[SecureStorage] migrateVaultSecurityIfNeeded:', error);
+      return { migrated: false };
+    }
+  }
+
+  async _unlockWithPasswordAndRepairStorage(password) {
+    this.masterKeyCache = password;
+    this.resetTimeout();
+    const remember = await this.isRememberPasswordEnabled();
+    await this.saveMasterKey(password, remember);
+  }
+
+  /**
+   * Valida criptograficamente una contrasena ingresada por el usuario (en UnlockDialog)
    */
   async verifyMasterPassword(password) {
     if (!password || typeof password !== 'string') return false;
 
-    // 1. Obtener verifier si existe en el proceso principal
     let verifier = null;
     if (window.electron && window.electron.security && window.electron.security.getVaultVerifier) {
       try {
@@ -379,41 +469,17 @@ class SecureStorage {
         this.resetTimeout();
         return true;
       }
-      return false;
     }
 
-    // 2. Si no hay verifier (bóveda previa a la actualización), verificar contra datos reales:
-    const connectionsData = localStorage.getItem('connections_encrypted');
-    if (connectionsData) {
-      try {
-        await this.decryptData(JSON.parse(connectionsData), password);
-        this.masterKeyCache = password;
-        this.resetTimeout();
-        const remember = await this.isRememberPasswordEnabled();
-        await this.saveMasterKey(password, remember);
-        return true;
-      } catch (_) {}
-    }
-
-    const passwordsData = localStorage.getItem('passwords_encrypted');
-    if (passwordsData) {
-      try {
-        await this.decryptData(JSON.parse(passwordsData), password);
-        this.masterKeyCache = password;
-        this.resetTimeout();
-        const remember = await this.isRememberPasswordEnabled();
-        await this.saveMasterKey(password, remember);
-        return true;
-      } catch (_) {}
+    if (await this.verifyPasswordAgainstLocalVaults(password)) {
+      await this._unlockWithPasswordAndRepairStorage(password);
+      return true;
     }
 
     try {
       const legacyKey = await this.loadMasterKey();
       if (legacyKey && legacyKey === password) {
-        this.masterKeyCache = password;
-        this.resetTimeout();
-        const remember = await this.isRememberPasswordEnabled();
-        await this.saveMasterKey(password, remember);
+        await this._unlockWithPasswordAndRepairStorage(password);
         return true;
       }
     } catch (_) {}

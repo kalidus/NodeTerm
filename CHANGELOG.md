@@ -8,6 +8,9 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ## [Unreleased]
 
+### Seguridad
+- **Master key / upgrade**: validacion vault-first al desbloquear; si el `vaultVerifier` no coincide con los datos cifrados, se prueba descifrado de `connections_encrypted` y se repara `security.json`. Migracion silenciosa al arrancar desde formatos 1.7.x; dialogo de restore nube con prioridad sobre unlock.
+
 ## [1.7.6] - 2026-09-23
 
 ### 🏠 Dashboard HomeTab

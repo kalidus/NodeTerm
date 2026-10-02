@@ -33,6 +33,7 @@ const UnlockDialog = ({ visible, onSuccess, secureStorage }) => {
     } catch (err) {
       console.error('[UnlockDialog] Error:', err);
       setError(t('dialogs.unlock.errors.unlockFailed', 'Error al desbloquear la aplicación'));
+    } finally {
       setLoading(false);
     }
   };

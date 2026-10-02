@@ -371,6 +371,8 @@ const App = () => {
         await secureStorage.setRememberPassword(true);
       }
 
+      await secureStorage.migrateVaultSecurityIfNeeded();
+
       const hasKey = await secureStorage.checkHasSavedMasterKey();
 
       if (hasKey) {
