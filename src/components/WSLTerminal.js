@@ -245,7 +245,7 @@ const WSLTerminal = forwardRef(({
             scrollSensitivity: 1,
             disableStdin: false,
             drawBoldTextInBrightColors: true,
-            minimumContrastRatio: 4.5,
+            minimumContrastRatio: 1,
             bracketedPasteMode: true, // Enable for better paste support in Linux
         });
 

@@ -309,6 +309,53 @@ function collectLogRanges(body) {
   return ranges;
 }
 
+/** Filas tipo htop/ps: PID, usuario, metricas y ruta en Command. */
+const RE_PROCESS_ROW = /^\s*[\| ]*\d+\s+\S+\s+\d/;
+
+function looksLikeProcessRow(visible) {
+  if (!visible || visible.length > 512) return false;
+  if (!RE_PROCESS_ROW.test(visible)) return false;
+  return /\/[A-Za-z0-9_@./-]+/.test(visible);
+}
+
+function indexOfHardTuiEscape(text) {
+  if (!text || text.indexOf(ESC) === -1) return -1;
+  if (/\x1b[78]/.test(text)) return text.search(/\x1b[78]/);
+  if (text.indexOf(`${ESC}(`) !== -1) return text.indexOf(`${ESC}(`);
+  if (text.indexOf(`${ESC})`) !== -1) return text.indexOf(`${ESC})`);
+  RE_CSI.lastIndex = 0;
+  let m;
+  while ((m = RE_CSI.exec(text))) {
+    const params = m[1];
+    const final = m[2];
+    if (final === 'm' || isHarmlessPrivateMode(params, final)) continue;
+    if (TUI_CSI_FINALS.indexOf(final) !== -1) return m.index;
+    if (isAltScreenMode(params, final)) return m.index;
+  }
+  return -1;
+}
+
+const RE_CLEAR_SCREEN = /\x1b\[2J/;
+const RE_CURSOR_HIDE = /\x1b\[\?25l/;
+const RE_CURSOR_SHOW = /\x1b\[\?25h/;
+
+function indexOfTuiEnterSignal(text) {
+  if (!text) return -1;
+  let earliest = -1;
+  const consider = (idx) => {
+    if (idx !== -1 && (earliest === -1 || idx < earliest)) earliest = idx;
+  };
+  consider(text.search(RE_ALT_ENTER));
+  consider(text.search(RE_CLEAR_SCREEN));
+  consider(text.search(RE_CURSOR_HIDE));
+  consider(indexOfHardTuiEscape(text));
+  return earliest;
+}
+
+function shouldEnterTuiMode(text) {
+  return indexOfTuiEnterSignal(text) !== -1;
+}
+
 export function colorizeLogLine(line) {
   if (!line) return line;
   const nl = line.endsWith('\n');
@@ -341,6 +388,8 @@ export function colorizeLogLine(line) {
     if (visible.indexOf(ESC) !== -1) return line;
     if (hasMeaningfulSgr(peeled.mid) && !shouldHighlight(visible)) return line;
   }
+
+  if (looksLikeProcessRow(visible)) return line;
 
   const ranges = collectLogRanges(visible);
   if (ranges.length === 0) return line;
@@ -404,17 +453,21 @@ export function createLogColorizer(options = {}) {
     }
     pending += data;
     if (tuiMode) {
-      if (RE_ALT_LEAVE.test(pending)) tuiMode = false;
+      if (RE_ALT_LEAVE.test(pending)) {
+        tuiMode = false;
+      } else if (RE_CURSOR_SHOW.test(pending) && !RE_ALT_ENTER.test(pending)) {
+        tuiMode = false;
+      }
       const out = pending;
       pending = '';
       clearTimer();
       return out;
     }
-    const altAt = pending.search(RE_ALT_ENTER);
-    if (altAt !== -1) {
+    const tuiAt = indexOfTuiEnterSignal(pending);
+    if (tuiAt !== -1) {
       tuiMode = true;
-      const before = pending.slice(0, altAt);
-      const rest = pending.slice(altAt);
+      const before = pending.slice(0, tuiAt);
+      const rest = pending.slice(tuiAt);
       pending = '';
       clearTimer();
       return (before ? colorizeCompleteText(before) : '') + rest;
@@ -436,6 +489,10 @@ export function createLogColorizer(options = {}) {
     pending = pending.slice(lastNl + 1);
     if (pending) schedulePending();
     else clearTimer();
+    if (shouldEnterTuiMode(complete)) {
+      tuiMode = true;
+      return complete;
+    }
     return colorizeCompleteText(complete);
   };
 

@@ -233,7 +233,7 @@ const PowerShellTerminal = forwardRef(({
             scrollSensitivity: 1,
             disableStdin: false,
             drawBoldTextInBrightColors: true,
-            minimumContrastRatio: 4.5,
+            minimumContrastRatio: 1,
             // ANSI support for rich PowerShell output
             bracketedPasteMode: false, // Disable to prevent weird characters
         });
