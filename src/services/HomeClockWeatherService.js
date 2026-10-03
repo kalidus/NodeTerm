@@ -113,6 +113,7 @@ function mapForecast(json, location) {
     time,
     temperature: hourlyIn.temperature_2m ? hourlyIn.temperature_2m[index] : null,
     code: hourlyIn.weather_code ? hourlyIn.weather_code[index] : null,
+    isDay: hourlyIn.is_day ? hourlyIn.is_day[index] : 1,
     precip: hourlyIn.precipitation_probability ? hourlyIn.precipitation_probability[index] : null
   }));
   const daily = (dailyIn.time || []).map((date, index) => ({
@@ -175,7 +176,7 @@ async function requestForecast(location, config, fetchImpl) {
       'pressure_msl',
       'visibility'
     ].join(','),
-    hourly: 'temperature_2m,weather_code,precipitation_probability',
+    hourly: 'temperature_2m,weather_code,is_day,precipitation_probability',
     daily: [
       'weather_code',
       'temperature_2m_max',

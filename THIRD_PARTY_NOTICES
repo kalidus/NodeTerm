@@ -47,4 +47,9 @@ Other notable runtime dependencies (typically MIT, BSD-2/3 or Apache-2.0):
 - React and React DOM
 - PrimeReact, PrimeIcons, PrimeFlex
 
+Meteocons weather icons (vendored SVG subset in src/assets/weather/meteocons)
+Copyright (c) Bas Milius
+License: MIT
+https://github.com/basmilius/weather-icons
+
 Copies of those license texts are in node_modules/<package>/ when installed.

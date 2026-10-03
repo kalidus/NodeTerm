@@ -18,6 +18,12 @@ const {
   wantsWeather
 } = require('../../src/utils/homeClock');
 
+const {
+  weatherMeteoconKey,
+  weatherVisualKind,
+  moonMeteoconKey
+} = require('../../src/utils/homeClockWeatherIconsMap');
+
 function memoryStorage(initial) {
   const map = { ...(initial || {}) };
   return {
@@ -37,7 +43,7 @@ describe('home clock config', () => {
     assert.strictEqual(config.showSeconds, true);
     assert.strictEqual(config.hour12, false);
     assert.strictEqual(config.showLongDate, true);
-    assert.strictEqual(config.showGreeting, true);
+    assert.strictEqual(config.showGreeting, false);
     assert.strictEqual(config.showTimezone, false);
     assert.strictEqual(config.showCity, true);
     assert.strictEqual(config.showCondition, true);
@@ -114,6 +120,27 @@ describe('codigos de clima WMO', () => {
     assert.strictEqual(weatherCodeInfo(63).icon, 'pi pi-cloud');
     assert.deepStrictEqual(weatherCodeInfo(95), { label: 'Tormenta', icon: 'pi pi-bolt' });
     assert.strictEqual(weatherCodeInfo(999).label, 'Sin datos');
+  });
+});
+
+describe('iconos Meteocons WMO', () => {
+  it('mapea despejado dia/noche y tormenta', () => {
+    assert.strictEqual(weatherMeteoconKey(0, true), 'clear-day');
+    assert.strictEqual(weatherMeteoconKey(0, false), 'clear-night');
+    assert.strictEqual(weatherMeteoconKey(95, true), 'thunderstorms-day');
+    assert.strictEqual(weatherMeteoconKey(95, 0), 'thunderstorms-night');
+  });
+
+  it('usa cloudy como fallback y kind visual', () => {
+    assert.strictEqual(weatherMeteoconKey(999), 'cloudy');
+    assert.strictEqual(weatherVisualKind(0), 'clear');
+    assert.strictEqual(weatherVisualKind(95), 'storm');
+    assert.strictEqual(weatherVisualKind(61), 'rain');
+  });
+
+  it('mapea fases lunares', () => {
+    assert.strictEqual(moonMeteoconKey(0), 'moon-new');
+    assert.strictEqual(moonMeteoconKey(6), 'moon-last-quarter');
   });
 });
 

@@ -37,7 +37,7 @@ const DEFAULT_CLOCK_CONFIG = {
   showSeconds: true,
   hour12: false,
   showLongDate: true,
-  showGreeting: true,
+  showGreeting: false,
   showTimezone: false,
   showWeekday: false,
   showIsoWeek: false,
