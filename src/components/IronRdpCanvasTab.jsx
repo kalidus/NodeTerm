@@ -336,8 +336,14 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     isFileTransferArmedRef.current = false;
   };
 
+  const hasActiveFileTransfer = (transfers) => {
+    return Object.values(transfers || {}).some(
+      (t) => t && (t.status === 'active' || t.status === 'pasting' || t.status === 'ready')
+    );
+  };
+
   const syncTransfersAndArm = (next) => {
-    if (!hasFileTransferWork(next)) {
+    if (!hasActiveFileTransfer(next)) {
       disarmFileTransfer();
     }
     return next;
@@ -1049,8 +1055,11 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           // Remoto -> Local: cuando se copia o corta texto en el servidor RDP, escribir en portapapeles del cliente
           builder.remoteClipboardChangedCallback(async (clipboardData) => {
             if (!clipboardData) return;
-            if (isFileTransferArmedRef.current) {
-              recordClipboardAction('remoteClipboardChanged omitido: transferencia en curso');
+            const hasActiveTransfer = Object.values(activeTransfersRef.current || {}).some(
+              (t) => t && (t.status === 'active' || t.status === 'pasting')
+            );
+            if (hasActiveTransfer) {
+              recordClipboardAction('remoteClipboardChanged omitido: transferencia activa en curso');
               if (isRdpDebugEnabled()) {
                 console.log('[IronRDP Clipboard] remoteClipboardChanged omitido: transferencia de archivos en curso');
               }
@@ -1068,6 +1077,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
                     lastReceivedClipboardTextRef.current = text;
                     lastSentClipboardTextRef.current = text;
                     localClipboardCacheRef.current = text;
+                    // El portapapeles remoto ahora contiene texto: descartar descargas pendientes obsoletas
+                    setActiveTransfers((prev) => discardPendingDownloads(prev));
+                    disarmFileTransfer();
                     recordClipboardAction('Copiado remoto recibido', `${text.length} chars`);
                     console.log(`📋 [IronRDP Clipboard] 📥 Copiado remoto recibido (${text.length} chars):`, text.slice(0, 80));
                     await writeLocalClipboardText(text);
@@ -1195,9 +1207,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
               downloadedPathsRef.current = [];
               setActiveTransfers((prev) => {
                 const next = seedPendingDownloads(prev, files);
-                if (hasFileTransferWork(next)) {
-                  isFileTransferArmedRef.current = true;
-                }
                 return syncTransfersAndArm(next);
               });
             });
@@ -1348,7 +1357,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         if (
           text &&
           text !== lastSentClipboardTextRef.current &&
-          text !== lastReceivedClipboardTextRef.current &&
           !isFileTransferArmedRef.current
         ) {
           enqueueClipboardSend(text, 'foco de ventana');
@@ -1508,9 +1516,21 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     const handleKeyDown = (e) => {
       if (!sessionRef.current) return;
 
-      // El pegado se sincroniza en el manejador del evento 'paste', que cubre Ctrl+V, Cmd+V
-      // y el menú contextual. Duplicarlo aquí emitiría dos Format List por pulsación.
       e.preventDefault();
+
+      // Sincronización proactiva de Ctrl+V / Cmd+V:
+      // Como e.preventDefault() cancela el evento 'paste' nativo del navegador,
+      // interceptamos la combinación aquí para actualizar el portapapeles local hacia la sesión.
+      const isPasteCombo = (e.ctrlKey || (isMac && e.metaKey)) && (e.code === 'KeyV' || e.key === 'v' || e.key === 'V');
+      if (isPasteCombo && rdpConfig.redirectClipboard !== false) {
+        refreshLocalClipboardCache().then((text) => {
+          if (text && sessionRef.current && !isFileTransferArmedRef.current) {
+            lastReceivedClipboardTextRef.current = text;
+            enqueueClipboardSend(text, 'atajo Ctrl+V');
+          }
+        }).catch(() => {});
+      }
+
       const scancode = CODE_TO_SCANCODE[e.code];
       try {
         const transaction = new Backend.InputTransaction();

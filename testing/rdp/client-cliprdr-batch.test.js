@@ -7,6 +7,7 @@ const assert = require('node:assert/strict');
 const rdpBridge = require('../../src/main/services/RdpNativeBridgeService');
 const { splitTpktFrames } = require('../../src/main/services/rdp-protocol-helpers');
 const { parseMcsSendData } = require('../../src/main/services/rdp-autodetect');
+const { maybePromoteSelectorAppCliprdr, takeCliprdrRehandshake } = require('../../src/main/services/rdp-channel-filter');
 
 const CHANNEL_FLAG_FIRST = 0x01;
 const CHANNEL_FLAG_LAST = 0x02;
@@ -15,6 +16,7 @@ const CHANNEL_FLAG_SHOW_PROTOCOL = 0x10;
 const CB_CLIP_CAPS = 0x0007;
 const CB_TEMP_DIRECTORY = 0x0006;
 const CB_FORMAT_LIST = 0x0002;
+const CB_FORMAT_LIST_RESPONSE = 0x0003;
 const CB_FORMAT_DATA_REQUEST = 0x0004;
 const CB_FILECONTENTS_REQUEST = 0x0008;
 
@@ -190,9 +192,10 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     assert.equal(kept.injected.length, 1, 'sintetiza acuse hacia WASM para que el portapapeles pase a Ready');
   });
 
-  test('RDP saludo por IO 1003 escribe CAPS y FORMAT_LIST en cliprdr 1006', () => {
+  test('RDP saludo por IO 1003 en bastión no escribe en 1006 para evitar corte TLS', () => {
     const state = {
       wallixService: 'RDP',
+      isBastion: true,
       ioChannelId: IO_CH,
       cliprdrChannelId: BASTION_CLIP_CH,
       serverCliprdrChannelId: IO_CH,
@@ -212,15 +215,162 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
       buildClipFrame(BASTION_CLIP_CH, CB_FORMAT_LIST, Buffer.alloc(24))
     ]), state);
 
+    assert.equal(kept.length, 0, 'no se escribe en 1006 para bastión Wallix tras saludo en IO (evita FIN)');
+    assert.ok(state.cliprdrWriteChannelId == null, 'write path no confirmado aún');
+    assert.equal(kept.injected.length, 1, 'sintetiza acuse hacia WASM para que el portapapeles pase a Ready');
+    assert.ok(state.pendingClientCliprdr.length > 0, 'FORMAT_LIST retenido en cola');
+  });
+
+  test('RDP saludo por IO 1003 con CAPS prematuro en bastión silencia cliente hacia RDP', () => {
+    const state = {
+      wallixService: 'RDP',
+      isBastion: true,
+      ioChannelId: IO_CH,
+      cliprdrChannelId: BASTION_CLIP_CH,
+      serverCliprdrChannelId: null,
+      cliprdrOnUnsafeChannel: null,
+      allowed: new Set([1003, 1004, 1005, 1006]),
+      channelIdToName: new Map([
+        [1004, 'rdpdr'],
+        [1005, 'rdpsnd'],
+        [1006, 'cliprdr']
+      ])
+    };
+
+    // 1. WASM emite CAPS antes de que el servidor salude por 1003
+    const capsFrame = buildClipFrame(BASTION_CLIP_CH, CB_CLIP_CAPS, Buffer.alloc(16));
+    const step1 = filterBatch(service, capsFrame, state);
+    assert.equal(step1.length, 0, 'CAPS no se envía a ciegas a canal nulo/inseguro');
+    assert.ok(Buffer.isBuffer(state.cachedClientCaps), 'CAPS del cliente queda en caché');
+
+    // 2. Servidor saluda por canal IO 1003
+    state.serverCliprdrChannelId = IO_CH;
+    state.cliprdrOnUnsafeChannel = IO_CH;
+    state.cliprdrServerReady = true;
+
+    // 3. WASM emite TEMPDIR y FORMAT_LIST
+    const restFrames = Buffer.concat([
+      buildClipFrame(BASTION_CLIP_CH, CB_TEMP_DIRECTORY, Buffer.alloc(520)),
+      buildClipFrame(BASTION_CLIP_CH, CB_FORMAT_LIST, Buffer.alloc(24))
+    ]);
+    const step2 = filterBatch(service, restFrames, state);
+
+    assert.equal(step2.length, 0, 'silenciado hacia RDP; nada enviado a 1006');
+    assert.ok(state.cliprdrWriteChannelId == null);
+    assert.equal(step2.injected.length, 1, 'sintetiza ACK hacia WASM');
+  });
+
+  test('service=n/a selector Wallix: saludo por IO 1003 no escribe en 1006 en la pantalla del selector', () => {
+    const state = {
+      wallixService: 'n/a',
+      ioChannelId: IO_CH,
+      cliprdrChannelId: BASTION_CLIP_CH,
+      serverCliprdrChannelId: IO_CH,
+      cliprdrOnUnsafeChannel: IO_CH,
+      cliprdrServerReady: true,
+      cliprdrMonitorReadyCount: 1, // 1er saludo (menú de selección)
+      allowed: new Set([1003, 1004, 1005, 1006]),
+      channelIdToName: new Map([
+        [1004, 'rdpdr'],
+        [1005, 'rdpsnd'],
+        [1006, 'cliprdr']
+      ])
+    };
+
+    const frames = Buffer.concat([
+      buildClipFrame(BASTION_CLIP_CH, CB_CLIP_CAPS, Buffer.alloc(16)),
+      buildClipFrame(BASTION_CLIP_CH, CB_TEMP_DIRECTORY, Buffer.alloc(520)),
+      buildClipFrame(BASTION_CLIP_CH, CB_FORMAT_LIST, Buffer.alloc(24))
+    ]);
+    const kept = filterBatch(service, frames, state);
+
+    // No debe emitir nada al servidor durante la pantalla de selección del bastión
+    assert.equal(kept.length, 0, 'no se escribe en 1006 ni en 1003 durante el menú del selector');
+    assert.ok(state.cliprdrWriteChannelId == null, 'write path no confirmado aún');
+    assert.equal(kept.injected.length, 1, 'sintetiza ACK hacia WASM para que no se bloquee');
+    assert.ok(state.pendingClientCliprdr.length > 0, 'FORMAT_LIST retenido en cola');
+  });
+
+  test('service=n/a selector Wallix: segundo MONITOR_READY promueve a APP, reinyecta CAPS y vacia cola por 1006', () => {
+    const state = {
+      wallixService: 'n/a',
+      ioChannelId: IO_CH,
+      cliprdrChannelId: BASTION_CLIP_CH,
+      serverCliprdrChannelId: IO_CH,
+      cliprdrOnUnsafeChannel: IO_CH,
+      cliprdrServerReady: true,
+      cliprdrMonitorReadyCount: 1,
+      allowed: new Set([1003, 1004, 1005, 1006]),
+      channelIdToName: new Map([
+        [1004, 'rdpdr'],
+        [1005, 'rdpsnd'],
+        [1006, 'cliprdr']
+      ])
+    };
+
+    // 1. Cliente WASM emite durante la pantalla del selector
+    const frames = Buffer.concat([
+      buildClipFrame(BASTION_CLIP_CH, CB_CLIP_CAPS, Buffer.alloc(16)),
+      buildClipFrame(BASTION_CLIP_CH, CB_TEMP_DIRECTORY, Buffer.alloc(520)),
+      buildClipFrame(BASTION_CLIP_CH, CB_FORMAT_LIST, Buffer.alloc(24))
+    ]);
+    const kept1 = filterBatch(service, frames, state);
+    assert.equal(kept1.length, 0, 'nada enviado durante el selector');
+    assert.equal(state.pendingClientCliprdr.length, 2, 'CAPS y FORMAT_LIST retenidos');
+
+    // 2. Usuario selecciona destino en el bastión: llega 2o MONITOR_READY (el hop RemoteApp deja el saludo en MCS 1001)
+    state.cliprdrMonitorReadyCount = 2;
+    state.serverCliprdrChannelId = 1001;
+    const promoted = maybePromoteSelectorAppCliprdr(state);
+    assert.equal(promoted, true, 'promovido a APP tras selección');
+    assert.equal(state.wallixService, 'APP');
     assert.equal(state.cliprdrWriteChannelId, BASTION_CLIP_CH);
-    assert.equal(kept.length, 2, 'CAPS y FORMAT_LIST por 1006; TEMPDIR tirado');
-    assert.deepEqual(kept.map(clipMsgType), [CB_CLIP_CAPS, CB_FORMAT_LIST]);
-    for (const frame of kept) {
-      assert.equal(parseMcsSendData(frame).channelId, BASTION_CLIP_CH);
-      assert.notEqual(parseMcsSendData(frame).channelId, IO_CH);
-    }
-    assert.ok(!state.pendingClientCliprdr || state.pendingClientCliprdr.length === 0);
-    assert.ok(logs.some((l) => l.includes('write path recuperado ch=1006')));
+
+    // 3. RdpNativeBridgeService emite rehandshake y vacía cola
+    const replay = takeCliprdrRehandshake(state);
+    assert.ok(replay.length > 0, 'genera rehandshake CAPS para el destino');
+    assert.equal(parseMcsSendData(replay[0]).channelId, BASTION_CLIP_CH);
+
+    const flushedFrames = [];
+    const mockSocket = {
+      writable: true,
+      write(buf) { flushedFrames.push(buf); }
+    };
+    service.flushPendingClientCliprdr(state, mockSocket, null);
+    assert.equal(flushedFrames.length, 4, 'CAPS y FORMAT_LIST retenidos se vacian al socket para APP');
+    assert.deepEqual(
+      flushedFrames.map(clipMsgType),
+      [CB_CLIP_CAPS, CB_CLIP_CAPS, CB_FORMAT_LIST, CB_FORMAT_LIST]
+    );
+    assert.equal(parseMcsSendData(flushedFrames[0]).channelId, BASTION_CLIP_CH);
+    assert.equal(parseMcsSendData(flushedFrames[1]).channelId, 1001);
+    assert.equal(parseMcsSendData(flushedFrames[2]).channelId, 1001);
+    assert.equal(parseMcsSendData(flushedFrames[3]).channelId, BASTION_CLIP_CH);
+  });
+
+  test('service=n/a selector Wallix: segundo MONITOR_READY por IO 1003 silencia FORMAT_LIST y no escribe en 1001 ni 1006', () => {
+    const state = {
+      wallixService: 'n/a',
+      ioChannelId: IO_CH,
+      cliprdrChannelId: BASTION_CLIP_CH,
+      serverCliprdrChannelId: IO_CH,
+      cliprdrOnUnsafeChannel: IO_CH,
+      cliprdrServerReady: true,
+      cliprdrMonitorReadyCount: 2,
+      allowed: new Set([1003, 1004, 1005, 1006]),
+      channelIdToName: new Map([
+        [1004, 'rdpdr'],
+        [1005, 'rdpsnd'],
+        [1006, 'cliprdr']
+      ])
+    };
+
+    const formatListFrame = buildClipFrame(BASTION_CLIP_CH, CB_FORMAT_LIST, Buffer.alloc(24));
+    const kept = filterBatch(service, formatListFrame, state);
+
+    assert.equal(kept.length, 0, 'no se envia FORMAT_LIST a Wallix para evitar caida con error 1000');
+    assert.equal(kept.injected.length, 1, 'sintetiza ACK para que IronRDP WASM pase a Ready');
+    assert.equal(clipMsgType(kept.injected[0]), CB_FORMAT_LIST_RESPONSE);
   });
 
   test('APP alineado: handshake completo (CAPS+TEMPDIR+FORMAT_LIST) sale por el VC cliprdr 1006', () => {

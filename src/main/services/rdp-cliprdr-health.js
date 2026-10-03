@@ -8,7 +8,7 @@
 const WS_CLOSING = 2;
 const WS_CLOSED = 3;
 const CB_RESPONSE_FAIL = 0x0002;
-const CLIPRDR_WATCH_MS = 2000;
+const CLIPRDR_WATCH_MS = 10000;
 const INBOUND_CLIP_MARK = '\u{1F4E5}';
 const OUTBOUND_CLIP_MARK = '\u{1F4E4}';
 
@@ -245,8 +245,8 @@ function cliprdrWatchKind(state) {
 }
 
 function formatCliprdrWatchTimeout(kind) {
-  if (kind === 'list') return 'cliprdr: FORMAT_LIST del servidor sin FORMAT_DATA_REQUEST (2s)';
-  if (kind === 'request') return 'cliprdr: FORMAT_DATA_REQUEST sin respuesta (2s)';
+  if (kind === 'list') return 'cliprdr: FORMAT_LIST del servidor sin FORMAT_DATA_REQUEST (10s)';
+  if (kind === 'request') return 'cliprdr: FORMAT_DATA_REQUEST sin respuesta (10s)';
   return null;
 }
 

@@ -540,7 +540,7 @@ describe('CLIPRDR: bastion Wallix que usa otro canal MCS', () => {
     assert.equal(state.cliprdrWriteChannelId, 1004, 'IO confirma el VC cliprdr negociado');
   });
 
-  test('RDP saludo por IO 1003 confirma write path en cliprdr nombrado 1006', () => {
+  test('RDP saludo por IO 1003 en bastión no confirma write path en cliprdr 1006 (evita cierre TLS)', () => {
     const state = stateWithCliprdr();
     state.wallixService = 'RDP';
     state.cliprdrChannelId = 1006;
@@ -556,10 +556,32 @@ describe('CLIPRDR: bastion Wallix que usa otro canal MCS', () => {
     assert.equal(resCaps.isCliprdr, true);
     assert.equal(resCaps.serverChannelId, 1003);
     assert.equal(state.serverCliprdrChannelId, 1003);
-    assert.equal(state.cliprdrWriteChannelId, 1006);
-    assert.equal(fallbackIoNamedCliprdrWrite(state), 1006);
+    assert.equal(state.cliprdrWriteChannelId, null, 'en bastión RDP no se confirma 1006 tras IO');
+    assert.equal(fallbackIoNamedCliprdrWrite(state), null, 'bastión RDP en IO devuelve null');
     assert.equal(fallbackNamedCliprdrWrite(state), null, 'RDP+1001 no debe usar el fallback APP');
-    assert.equal(confirmCliprdrWriteChannel(state, 1003), false, 'ya confirmado');
+    assert.equal(confirmCliprdrWriteChannel(state, 1003), false);
+  });
+
+  test('APP saludo por IO 1003 en bastión no confirma write path en cliprdr 1007 (evita cierre TLS)', () => {
+    const state = stateWithCliprdr();
+    state.wallixService = 'APP';
+    state.cliprdrChannelId = 1007;
+    state.allowed = new Set([1003, 1004, 1005, 1006, 1007]);
+    state.channelIdToName = new Map([
+      [1004, 'rail'],
+      [1005, 'rdpdr'],
+      [1006, 'rdpsnd'],
+      [1007, 'cliprdr']
+    ]);
+
+    const caps = buildMcsIndication(1003, buildChannelPdu(buildCliprdrPayload(7, 0, buildGeneralCaps(0x3e))));
+    const resCaps = processServerFrame(state, caps);
+    assert.equal(resCaps.isCliprdr, true);
+    assert.equal(resCaps.serverChannelId, 1003);
+    assert.equal(state.serverCliprdrChannelId, 1003);
+    assert.equal(state.cliprdrWriteChannelId, null, 'en bastión APP no se confirma 1007 tras IO');
+    assert.equal(fallbackIoNamedCliprdrWrite(state), null, 'bastión APP en IO devuelve null');
+    assert.equal(confirmCliprdrWriteChannel(state, 1003), false);
   });
 
   // Garantia de no regresion: el rescate corre DESPUES del filtro de IO, asi que una PDU legitima
@@ -901,6 +923,55 @@ describe('CLIPRDR: robustez del filtro', () => {
     assert.equal(replay.length, 1);
     assert.equal(parseMcsSendData(replay[0]).channelId, 1006);
     assert.equal(parseMcsSendData(replay[0]).userData.readUInt16LE(8), 7);
+  });
+
+  test('n/a + 2o READY tras saludo en IO (1003) recupera write path al cliprdr nombrado', () => {
+    const state = stateWithCliprdr();
+    state.wallixService = 'n/a';
+    state.ioChannelId = 1003;
+    state.allowed = new Set([1003, 1004, 1005, 1006]);
+    state.channelIdToName = new Map([
+      [1004, 'rdpdr'],
+      [1005, 'rdpsnd'],
+      [1006, 'cliprdr']
+    ]);
+
+    const capsUser = buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16)), 0x13);
+    rememberClientCliprdrHandshake(state, describeCliprdrPdu(capsUser), buildMcsIndication(1004, capsUser));
+
+    // 1er READY cae en el canal IO (1003)
+    processServerFrame(state, buildMcsIndication(1003, buildChannelPdu(buildCliprdrPayload(1), 0x13)));
+    assert.equal(state.serverCliprdrChannelId, 1003);
+    assert.equal(state.cliprdrWriteChannelId, null);
+    assert.equal(state.cliprdrSelectorAppInferred, undefined);
+
+    // 2o READY por IO 1003: el selector ha saltado a un escritorio RDP (no RemoteApp).
+    // wallixService debe ser 'RDP' para que TEMPDIR no se descarte (Session Probe lo necesita).
+    processServerFrame(state, buildMcsIndication(1003, buildChannelPdu(buildCliprdrPayload(1), 0x03)));
+
+    assert.equal(state.cliprdrSelectorAppInferred, true);
+    assert.equal(state.wallixService, 'RDP',
+      'saludo por IO 1003 = desktop RDP; wallixService=RDP conserva TEMPDIR para Session Probe');
+    assert.equal(state.cliprdrWriteChannelId, 1006);
+    assert.equal(state.cliprdrRehandshakePending, true);
+
+    const replay = takeCliprdrRehandshake(state);
+    assert.equal(replay.length, 1);
+    assert.equal(parseMcsSendData(replay[0]).channelId, 1006);
+    assert.equal(parseMcsSendData(replay[0]).userData.readUInt16LE(8), 7);
+  });
+
+  test('rememberClientCliprdrHandshake conserva rehandshakePending en generacion 2 (readyCount >= 2)', () => {
+    const state = stateWithCliprdr();
+    state.wallixService = 'APP';
+    state.cliprdrWriteChannelId = 1006;
+    state.cliprdrMonitorReadyCount = 2;
+    state.cliprdrRehandshakePending = true;
+
+    const caps = buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16)), 0x13);
+    rememberClientCliprdrHandshake(state, describeCliprdrPdu(caps), buildMcsIndication(1006, caps));
+
+    assert.equal(state.cliprdrRehandshakePending, true, 'no debe cancelarse antes de que takeCliprdrRehandshake lo consuma');
   });
 
   test('APP fallback usa el VC nombrado aunque coincida con cliprdrChannelId', () => {

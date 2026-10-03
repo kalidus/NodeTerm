@@ -191,6 +191,7 @@ function createChannelFilterState() {
     droppedCount: 0,
     droppedByChannel: Object.create(null),
     cliprdrHealth: createCliprdrHealth(),
+    cliprdrHandshakeSentToRecoveredDest: false,
     autoDetect: createAutoDetectState()
   };
 }
@@ -476,6 +477,7 @@ function consumeAutodetect(state, channelId, userData, force) {
 function isUserMcsChannel(state, channelId) {
   if (channelId == null) return false;
   if (channelId === 1001 || channelId === 1002) return true;
+  if (state && state.clientInitiator != null && channelId === state.clientInitiator) return true;
   if (state && state.messageChannelId != null && channelId === state.messageChannelId) return true;
   return false;
 }
@@ -531,21 +533,25 @@ function maybePromoteSelectorAppCliprdr(state) {
   if (state.wallixService === 'APP' || state.wallixService === 'RDP') return false;
   if (state.cliprdrSelectorAppInferred) return false;
   if ((state.cliprdrMonitorReadyCount || 0) < 2) return false;
-  if (state.cliprdrWriteChannelId != null) return false;
-  if (!isUserMcsChannel(state, state.serverCliprdrChannelId)) return false;
+  const isIo = state.ioChannelId != null && state.serverCliprdrChannelId === state.ioChannelId;
+  const isUser = isUserMcsChannel(state, state.serverCliprdrChannelId);
+  if (!isUser && !isIo) return false;
   const named = declaredChannelId(state, 'cliprdr');
   if (named == null || !isSafeStaticCliprdrWrite(state, named)) return false;
-  state.wallixService = 'APP';
+  state.wallixService = isUser ? 'APP' : 'RDP';
   state.cliprdrSelectorAppInferred = true;
   state.cliprdrRehandshakePending = true;
   state.isBastion = true;
+  if (state.cliprdrWriteChannelId == null) {
+    state.cliprdrWriteChannelId = named;
+  }
   return true;
 }
 
 function retryConfirmAppCliprdrWrite(state) {
   if (!state || state.wallixService !== 'APP') return false;
   if (state.cliprdrWriteChannelId != null) return false;
-  if (!greetingOnUnsafeCliprdr(state)) return false;
+  if (!isUserMcsChannel(state, state.serverCliprdrChannelId)) return false;
   const fallback = fallbackNamedCliprdrWrite(state);
   if (fallback == null) return false;
   state.cliprdrWriteChannelId = fallback;
@@ -554,11 +560,15 @@ function retryConfirmAppCliprdrWrite(state) {
 
 /**
  * Saludo por el canal IO (1003): el VC nombrado cliprdr (o el negociado) es destino
- * seguro para CAPS y lista. No aplica al saludo por 1001: en ESAH :RDP: escribir
- * en 1006 tras 1001 cierra el TLS.
+ * seguro para CAPS y lista en sesiones RDP estándar.
+ * En bastiones Wallix (service=n/a, service=RDP o isBastion), escribir en 1006 tras saludo por IO
+ * cierra la conexión TLS (Wallix ESAH corta con FIN): nunca se usa el VC nombrado.
  */
 function fallbackIoNamedCliprdrWrite(state) {
   if (!state) return null;
+  if (state.wallixService != null) {
+    return null;
+  }
   const named = declaredChannelId(state, 'cliprdr');
   if (named != null && isSafeStaticCliprdrWrite(state, named)) return named;
   if (isSafeStaticCliprdrWrite(state, state.cliprdrChannelId)) return state.cliprdrChannelId;
@@ -577,11 +587,15 @@ function isCliprdrClientPayloadDesc(desc) {
 
 /**
  * Destino para lista/datos cuando el saludo cayo en un canal inseguro.
- * 1001: el servidor habla cliprdr ahi; CAPS/TEMPDIR congelan, la lista y los request no.
- * IO: nunca se escribe; se usa el VC nombrado cliprdr si existe.
+ * 1001: en RemoteApp (:APP:), el servidor habla cliprdr ahi; la lista y los request se escriben en 1001.
+ * IO (1003) / selector Wallix (service=n/a): nunca se escribe directamente CHANNEL_PDU; escribir en 1001,
+ * 1003 o 1006 aborta la sesion o congela el grafico.
  */
 function unsafeCliprdrClientWriteDest(state, dest) {
   if (!state || dest == null) return null;
+  if (state.wallixService === 'n/a') {
+    return null;
+  }
   if (isUserMcsChannel(state, dest)) return dest;
   const destIsIo = state.ioChannelId != null && dest === state.ioChannelId;
   if (!destIsIo) return null;
@@ -773,7 +787,8 @@ function buildAppProbeCliprdrWrites(state, payloadFrame, desc) {
   const before = [];
   const after = [];
   const isList = desc.includes('CB_FORMAT_LIST') && !desc.includes('CB_FORMAT_LIST_RESPONSE');
-  if (isList && !state.appProbeCapsOnUserSent && Buffer.isBuffer(state.cachedClientCaps)) {
+  const isProbeUserChannel = isUserMcsChannel(state, probeCh);
+  if (isList && !state.appProbeCapsOnUserSent && isProbeUserChannel && Buffer.isBuffer(state.cachedClientCaps)) {
     state.appProbeCapsOnUserSent = true;
     before.push(applyCliprdrReplayFrame(state.cachedClientCaps, probeCh, flags));
   }
@@ -816,6 +831,7 @@ function takeCliprdrRehandshake(state) {
     state.cliprdrRehandshakeSkippedUnsafe = true;
     return [];
   }
+  state.cliprdrHandshakeSentToRecoveredDest = true;
   const flags = CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST | CHANNEL_FLAG_SHOW_PROTOCOL;
   const frames = [];
   for (const cached of [state.cachedClientCaps, state.cachedClientTempDir]) {
@@ -1158,6 +1174,9 @@ module.exports = {
   patchClientCapsGeneralFlags,
   takeCliprdrRehandshake,
   applyCliprdrReplayFrame,
+  CHANNEL_FLAG_FIRST,
+  CHANNEL_FLAG_LAST,
+  CHANNEL_FLAG_SHOW_PROTOCOL,
   buildAppProbeCliprdrWrites,
   filterServerFrame,
   processServerFrame,
