@@ -7,6 +7,7 @@ import { useDragAndDrop } from '../hooks/useDragAndDrop';
 import localStorageSyncService from '../services/LocalStorageSyncService';
 import { persistSyncedSetting } from '../utils/persistSyncedSetting';
 import { publishHomeSessions } from '../utils/homeSessionBus';
+import { migrateWallixBastionInTree, mergeWallixBastionFromIncoming } from '../utils/wallixBastion';
 
 import { loadSavedTabTheme } from '../utils/tabThemeLoader';
 import i18n from '../i18n';
@@ -1313,8 +1314,9 @@ const App = () => {
                        const isWallixFormat = proxyStr.includes('@') && proxyStr.includes(':');
                        if (!n.droppable && (n.importedFrom === 'Wallix' || isWallixFormat) && existingKey === incomingKey) {
                            n.label = incomingNode.label;
-                           if (n.data) {
+                           if (n.data && incomingNode.data) {
                                n.data.name = incomingNode.data.name;
+                               n.data = mergeWallixBastionFromIncoming(n.data, incomingNode.data);
                                if (!n.importedFrom) n.importedFrom = 'Wallix';
                            }
                            updated++;
@@ -2105,7 +2107,7 @@ const App = () => {
           }
           if (decrypted) {
             isExternalReloadRef.current = true;
-            setNodes(decrypted);
+            setNodes(migrateWallixBastionInTree(decrypted));
             hasLoadedNodesRef.current = true;
           } else {
             console.error('[loadNodes] Decryption failed');
@@ -2121,7 +2123,7 @@ const App = () => {
             localStorage.setItem('connections_encrypted', JSON.stringify(encrypted));
             localStorage.removeItem(STORAGE_KEYS.TREE_DATA);
             isExternalReloadRef.current = true;
-            setNodes(migratedNodes);
+            setNodes(migrateWallixBastionInTree(migratedNodes));
             hasLoadedNodesRef.current = true;
           } else {
             isExternalReloadRef.current = true;
@@ -2145,7 +2147,7 @@ const App = () => {
             });
           };
           isExternalReloadRef.current = true;
-          setNodes(migrateNodes(loadedNodes));
+          setNodes(migrateWallixBastionInTree(migrateNodes(loadedNodes)));
           hasLoadedNodesRef.current = true;
         } else {
           isExternalReloadRef.current = true;
@@ -2372,7 +2374,7 @@ const App = () => {
         });
       };
 
-      const migratedNodes = migrateNodes(nodes);
+      const migratedNodes = migrateWallixBastionInTree(migrateNodes(nodes));
       const hasEncryptedVault = !!localStorage.getItem('connections_encrypted');
 
       // El árbol en Nextcloud está sanitizado (sin contraseñas); las credenciales están en connections_encrypted

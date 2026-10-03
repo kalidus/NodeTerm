@@ -3,6 +3,8 @@
  * Inicialmente soporta mRemoteNG XML
  */
 
+import { applyWallixBastionImportFields } from '../utils/wallixBastion';
+
 class ImportService {
   // Contador para claves únicas durante la sesión
   static _idCounter = 0;
@@ -1025,12 +1027,12 @@ class ImportService {
           else converted = this.createSSHNodeFromOther(baseNode, connObj);
 
           if (converted?.data) {
-            converted.data.useBastionWallix = true;
-            converted.data.isBastion = true;
-            converted.data.bastionHost = bastionHostname;
-            converted.data.bastionUser = proxyUsername;
-            converted.data.targetServer = targetName;
-            converted.data.wallixService = serviceLabel;
+            applyWallixBastionImportFields(converted.data, {
+              bastionHostname,
+              proxyUsername,
+              targetName,
+              serviceLabel
+            });
           }
 
           groups[groupName].push(converted);
@@ -1543,12 +1545,12 @@ class ImportService {
                 // Marcar explícitamente como conexión de bastión para que use el flujo Wallix
                 // (el mismo que usan las conexiones configuradas manualmente).
                 if (converted?.data) {
-                  converted.data.useBastionWallix = true;
-                  converted.data.isBastion = true;
-                  converted.data.bastionHost = bastionHostname;
-                  converted.data.bastionUser = proxyUsername;
-                  converted.data.targetServer = targetName;
-                  converted.data.wallixService = serviceLabel;
+                  applyWallixBastionImportFields(converted.data, {
+                    bastionHostname,
+                    proxyUsername,
+                    targetName,
+                    serviceLabel
+                  });
                 }
 
                 groups[folder].push(converted);
