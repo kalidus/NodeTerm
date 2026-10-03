@@ -155,7 +155,7 @@ export function getBuiltinPresets(width = 1200, height = 800) {
       width: launcherSearchW,
       height: launcherSearchH,
       minWidth: 220,
-      minHeight: 90,
+      minHeight: 128,
       zIndex: 20,
       isMaximized: false
     },
@@ -211,7 +211,7 @@ export function getBuiltinPresets(width = 1200, height = 800) {
       width: dashProItemW,
       height: dashProRowH,
       minWidth: 200,
-      minHeight: 90,
+      minHeight: 128,
       zIndex: 12,
       isMaximized: false
     },
@@ -275,7 +275,7 @@ export function getBuiltinPresets(width = 1200, height = 800) {
       width: splitColW,
       height: splitSearchH,
       minWidth: 220,
-      minHeight: 90,
+      minHeight: 128,
       zIndex: 15,
       isMaximized: false
     },
@@ -346,7 +346,7 @@ export function getBuiltinPresets(width = 1200, height = 800) {
       width: termMaxSearchW,
       height: 118,
       minWidth: 220,
-      minHeight: 90,
+      minHeight: 128,
       zIndex: 20,
       isMaximized: false
     },

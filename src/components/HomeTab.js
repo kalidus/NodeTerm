@@ -87,7 +87,7 @@ const computeDefaultPanelsLayout = (cWidth = (typeof window !== 'undefined' ? wi
     return ensureRequiredHomeTerminal(ensureHomeWidgetLayout(builtins.launcher.layout, w, h));
   }
   return ensureHomeWidgetLayout({
-    search: { visible: true, x: 20, y: 16, width: 560, height: 200, minWidth: 220, minHeight: 90, zIndex: 20, isMaximized: false },
+    search: { visible: true, x: 20, y: 16, width: 560, height: 200, minWidth: 220, minHeight: 128, zIndex: 20, isMaximized: false },
     terminal: { visible: true, x: 20, y: 228, width: Math.max(380, w - 40), height: Math.max(240, h - 252), minWidth: 380, minHeight: 200, zIndex: 10, isMaximized: false },
     canvasWidth: w,
     canvasHeight: h
@@ -669,10 +669,9 @@ const HomeTab = ({
       Math.abs((finalBounds.x) - (Number(panel.x) || 0)) >= 3
       || Math.abs((finalBounds.y) - (Number(panel.y) || 0)) >= 3;
     if (!moved) return;
-    const minW = Math.min(panel.minWidth || 160, Number(finalBounds.width) || Number(panel.width) || 160, bounds.width);
+    const minW = Math.min(panel.minWidth || 160, bounds.width);
     const minH = Math.min(
       panel.isMinimized ? MINIMIZED_PANEL_HEIGHT : (panel.minHeight || 90),
-      Number(finalBounds.height) || Number(panel.height) || 90,
       bounds.height
     );
     let nextRect = {
@@ -700,8 +699,11 @@ const HomeTab = ({
       || Math.abs((finalBounds.width) - (Number(panel.width) || 0)) >= 3
       || Math.abs((finalBounds.height) - (Number(panel.height) || 0)) >= 3;
     if (!changed) return;
-    const minW = Math.min(panel.minWidth || 160, Number(finalBounds.width) || Number(panel.width) || 160, bounds.width);
-    const minH = Math.min(panel.minHeight || 90, Number(finalBounds.height) || Number(panel.height) || 90, bounds.height);
+    const minW = Math.min(panel.minWidth || 160, bounds.width);
+    const minH = Math.min(
+      panel.isMinimized ? MINIMIZED_PANEL_HEIGHT : (panel.minHeight || 90),
+      bounds.height
+    );
     let nextRect = {
       x: finalBounds.x,
       y: finalBounds.y,

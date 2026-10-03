@@ -273,7 +273,14 @@ const ConnectionHistoryStyles = ({
 					margin: 0 !important;
 					width: 100% !important;
 					height: 100% !important;
+					min-height: 0 !important;
+					flex: none !important;
 					box-shadow: none !important;
+				}
+				.home-panels-canvas .home-panel-frame.recents-terminal-frame {
+					min-height: 0 !important;
+					flex: none !important;
+					margin: 0 !important;
 				}
 				.top-terminal-header {
 					height: 30px;

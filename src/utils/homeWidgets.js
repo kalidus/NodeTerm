@@ -12,7 +12,7 @@ export const HOME_WIDGETS = [
     required: true,
     defaultVisible: true,
     minWidth: 220,
-    minHeight: 90,
+    minHeight: 128,
     defaultWidth: 560,
     defaultHeight: 200
   },
