@@ -24,6 +24,7 @@ import { Tree } from 'primereact/tree';
 import ImportService from '../services/ImportService';
 import exportImportService from '../services/ExportImportService';
 import { mapBrowserEntriesToNodes } from '../utils/passwordImportMapper';
+import { parsePasswordCsv } from '../utils/csvPasswordParser';
 import { useTranslation } from '../i18n/hooks/useTranslation';
 
 // Definición de fuentes de importación
@@ -111,6 +112,16 @@ const IMPORT_SOURCES = {
         extension: '',
         implemented: true,
         defaultFolder: 'Importados/Navegador'
+    },
+    password_csv: {
+        id: 'password_csv',
+        category: 'passwords',
+        label: 'Contraseñas CSV',
+        description: 'Chrome, Edge, Firefox, Bitwarden (.csv)',
+        icon: 'pi pi-file-excel',
+        extension: '.csv',
+        implemented: true,
+        defaultFolder: 'Importados/CSV'
     },
     onepassword: {
         id: 'onepassword',
@@ -614,6 +625,9 @@ const ImportWizardDialog = ({
                 case 'browser':
                     await generateBrowserPreview();
                     break;
+                case 'password_csv':
+                    await generatePasswordCsvPreview();
+                    break;
                 case 'wallix':
                     await generateWallixPreview();
                     break;
@@ -733,6 +747,31 @@ const ImportWizardDialog = ({
                 skippedAbe: stats.skippedAbe ?? 0
             },
             sampleUrls: entries.slice(0, 5).map((e) => e.url).filter(Boolean)
+        });
+    };
+
+    const generatePasswordCsvPreview = async () => {
+        if (!selectedFile) {
+            throw new Error('Seleccione un archivo CSV');
+        }
+        setPreviewStatus('Leyendo archivo CSV de contraseñas...');
+        const text = await readFileAsText(selectedFile);
+
+        setPreviewStatus('Analizando credenciales y columnas...');
+        const parsed = parsePasswordCsv(text, { defaultGroup: containerFolderName || 'CSV' });
+        if (!parsed.ok) {
+            throw new Error(parsed.error || 'Error al procesar el archivo CSV');
+        }
+        if (!parsed.entries || parsed.entries.length === 0) {
+            throw new Error('No se encontraron contraseñas válidas en el archivo CSV.');
+        }
+
+        setPreviewData({
+            type: 'password_csv',
+            entries: parsed.entries,
+            nodes: parsed.nodes,
+            stats: parsed.stats,
+            sampleUrls: parsed.entries.slice(0, 5).map(e => `${e.title}${e.username ? ` (${e.username})` : ''}`).filter(Boolean)
         });
     };
 
@@ -878,6 +917,9 @@ const ImportWizardDialog = ({
                     break;
                 case 'browser':
                     await importBrowser();
+                    break;
+                case 'password_csv':
+                    await importPasswordCsv();
                     break;
                 case 'wallix':
                     await importWallix();
@@ -1209,6 +1251,47 @@ const ImportWizardDialog = ({
         });
     };
 
+    const importPasswordCsv = async () => {
+        setImportStatus('Procesando contraseñas del archivo CSV...');
+        setImportProgress(40);
+
+        const nodes = previewData.nodes || [];
+
+        setImportProgress(70);
+        setImportStatus('Guardando...');
+
+        const payload = {
+            nodes,
+            createContainerFolder: createContainerFolder,
+            containerFolderName: containerFolderName || 'Importados CSV'
+        };
+
+        if (onImportPasswordsComplete) {
+            onImportPasswordsComplete(payload);
+        } else {
+            window.dispatchEvent(new CustomEvent('import-passwords-to-manager', { detail: payload }));
+        }
+
+        setImportProgress(100);
+        setImportStatus('Completado');
+
+        setImportResult({
+            success: true,
+            stats: {
+                total: previewData.stats?.total ?? nodes.length,
+                withPassword: previewData.stats?.withPassword ?? 0,
+                withUsername: previewData.stats?.withUsername ?? 0
+            }
+        });
+
+        showToastSafe({
+            severity: 'success',
+            summary: 'Importación exitosa',
+            detail: `Se importaron ${nodes.length} contraseñas desde el archivo CSV`,
+            life: 5000
+        });
+    };
+
     const importKeePass = async () => {
         setImportStatus('Procesando contraseñas...');
         setImportProgress(30);
@@ -1514,6 +1597,11 @@ const ImportWizardDialog = ({
                                         selected={selectedSource === 'browser'}
                                         onSelect={() => handleSourceSelect('browser')}
                                     />
+                                    <SourceCard
+                                        source={IMPORT_SOURCES.password_csv}
+                                        selected={selectedSource === 'password_csv'}
+                                        onSelect={() => handleSourceSelect('password_csv')}
+                                    />
                                 </div>
                             </div>
 
@@ -1543,7 +1631,7 @@ const ImportWizardDialog = ({
                 <div style={{ padding: '8px 12px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <i className="pi pi-info-circle" style={{ color: 'var(--cyan-400, #00f2fe)', fontSize: '0.9rem', flexShrink: 0 }}></i>
                     <span style={{ fontSize: '11px', color: 'var(--text-color-secondary)' }}>
-                        <strong>Integraciones futuras:</strong> Soporte para PuTTY, SecureCRT, MobaXterm, 1Password y Bitwarden.
+                        <strong>Integraciones futuras:</strong> Soporte para PuTTY, SecureCRT y MobaXterm.
                     </span>
                 </div>
             </div>
@@ -1755,6 +1843,17 @@ const ImportWizardDialog = ({
                             </>
                         )}
 
+                        {selectedSource === 'password_csv' && (
+                            <div style={{ padding: '10px 12px', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '6px', fontSize: '11px', lineHeight: '1.4' }}>
+                                <div style={{ fontWeight: '600', color: 'var(--green-400)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                                    <i className="pi pi-check-circle" /> Compatible con cualquier navegador o gestor
+                                </div>
+                                <span style={{ color: 'var(--text-color-secondary)' }}>
+                                    Admite archivos CSV exportados desde <strong>Google Chrome</strong>, <strong>Microsoft Edge</strong>, <strong>Brave</strong>, <strong>Firefox</strong>, <strong>Bitwarden</strong> o <strong>1Password</strong>. Todas las contraseñas se importarán descifradas con sus títulos, URLs y usuarios.
+                                </span>
+                            </div>
+                        )}
+
                         {/* Campos específicos de descifrado/perfiles/APIs */}
                         {selectedSource === 'nodeterm' && (
                             <div className="import-wizard-field">
@@ -1860,6 +1959,23 @@ const ImportWizardDialog = ({
                                         />
                                     </div>
                                 )}
+                                <div style={{ marginTop: '8px', padding: '8px 10px', background: 'rgba(56, 189, 248, 0.06)', border: '1px solid rgba(56, 189, 248, 0.2)', borderRadius: '6px', fontSize: '11px', lineHeight: '1.4' }}>
+                                    <div style={{ fontWeight: '600', color: 'var(--cyan-400, #38bdf8)', display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '3px' }}>
+                                        <i className="pi pi-info-circle" /> ¿Chrome 127+ o claves protegidas por App-Bound?
+                                    </div>
+                                    <span style={{ color: 'var(--text-color-secondary)' }}>
+                                        Si tu navegador protege las claves mediante Windows App-Bound Encryption impidiendo extraerlas directamente, expórtalas a CSV desde la configuración de tu navegador e impórtalas con total compatibilidad.
+                                    </span>
+                                    <div style={{ marginTop: '6px' }}>
+                                        <Button
+                                            label="Importar archivo CSV"
+                                            icon="pi pi-file-excel"
+                                            className="p-button-sm p-button-outlined"
+                                            style={{ fontSize: '11px', padding: '3px 8px' }}
+                                            onClick={() => handleSourceSelect('password_csv')}
+                                        />
+                                    </div>
+                                </div>
                             </div>
                         )}
 
@@ -2114,9 +2230,9 @@ const ImportWizardDialog = ({
                     {renderPreviewStats()}
                 </div>
 
-                {previewData.type === 'browser' && previewData.sampleUrls?.length > 0 && (
+                {(previewData.type === 'browser' || previewData.type === 'password_csv') && previewData.sampleUrls?.length > 0 && (
                     <div className="import-wizard-tree" style={{ marginTop: '1rem' }}>
-                        <h5>URLs de ejemplo:</h5>
+                        <h5>{previewData.type === 'password_csv' ? 'Muestra de cuentas detectadas:' : 'URLs de ejemplo:'}</h5>
                         <ul style={{ fontSize: 13, marginLeft: 16, color: 'var(--text-color-secondary)' }}>
                             {previewData.sampleUrls.map((url, i) => (
                                 <li key={i} style={{ wordBreak: 'break-all' }}>{url}</li>
@@ -2188,6 +2304,15 @@ const ImportWizardDialog = ({
                         {(previewData.stats.skippedAbe ?? 0) > 0 && (
                             <StatCard icon="pi pi-shield" label="App-Bound" value={previewData.stats.skippedAbe} color="var(--red-500)" />
                         )}
+                    </div>
+                );
+            case 'password_csv':
+                return (
+                    <div className="import-wizard-stats-grid">
+                        <StatCard icon="pi pi-key" label="Contraseñas" value={previewData.stats?.total || previewData.stats?.entries || 0} color="var(--green-500)" />
+                        <StatCard icon="pi pi-user" label="Con usuario" value={previewData.stats?.withUsername || 0} color="var(--blue-500)" />
+                        <StatCard icon="pi pi-globe" label="Con URL" value={previewData.stats?.withUrl || 0} color="var(--cyan-400)" />
+                        <StatCard icon="pi pi-lock" label="Con clave" value={previewData.stats?.withPassword || 0} color="var(--purple-400)" />
                     </div>
                 );
             case 'wallix':
