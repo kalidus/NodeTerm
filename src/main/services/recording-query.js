@@ -8,10 +8,12 @@ const path = require('path');
 const fs = require('fs').promises;
 const { getRecordingsDirectory } = require('../utils/recording-utils');
 
+const { getNodeTermDataDir } = require('../utils/file-utils');
+
 const RECORDING_ID_RE = /^[a-zA-Z0-9_-]+$/;
 
 function getUserDataPath() {
-  return app.getPath('userData');
+  return getNodeTermDataDir();
 }
 
 async function resolveRecordingsDir() {

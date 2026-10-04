@@ -144,6 +144,19 @@ class McpApiServer {
   _removeServerInfo() {
     try {
       if (fs.existsSync(MCP_SERVER_INFO_PATH)) {
+        try {
+          const raw = fs.readFileSync(MCP_SERVER_INFO_PATH, 'utf8');
+          const data = JSON.parse(raw);
+          if (data && data.pid && data.pid !== process.pid) {
+            // No eliminar si pertenece a otra instancia que sigue viva
+            try {
+              process.kill(data.pid, 0);
+              return;
+            } catch (_) {
+              // Si el proceso ya no vive, se puede eliminar
+            }
+          }
+        } catch (_) {}
         fs.unlinkSync(MCP_SERVER_INFO_PATH);
       }
     } catch (err) {
@@ -1345,27 +1358,60 @@ class McpApiServer {
         return;
       }
 
-      this.port = port || this.config.port || 19800;
-      this.server = http.createServer((req, res) => this._handleRequest(req, res));
+      const basePort = port || this.config.port || 19800;
+      const MAX_PORT_ATTEMPTS = 10;
 
-      this.server.on('error', (err) => {
-        if (err.code === 'EADDRINUSE') {
-          console.error(`❌ [MCP-API] Puerto ${this.port} ya está en uso`);
-          this.server = null;
-          reject(new Error(`Port ${this.port} is already in use`));
-        } else {
-          console.error('❌ [MCP-API] Error del servidor:', err);
-          this.server = null;
-          reject(err);
-        }
-      });
+      const tryListen = (attemptPort) => {
+        this.port = attemptPort;
+        this.server = http.createServer((req, res) => this._handleRequest(req, res));
 
-      this.server.listen(this.port, '127.0.0.1', () => {
-        this.startedAt = new Date().toISOString();
-        this._writeServerInfo();
-        console.log(`✅ [MCP-API] Servidor iniciado en http://127.0.0.1:${this.port}`);
-        resolve({ success: true, port: this.port });
-      });
+        this.server.on('error', (err) => {
+          if (err.code === 'EADDRINUSE' && attemptPort < basePort + MAX_PORT_ATTEMPTS) {
+            console.log(`ℹ️ [MCP-API] Puerto ${attemptPort} en uso, probando puerto ${attemptPort + 1}...`);
+            this.server = null;
+            tryListen(attemptPort + 1);
+          } else {
+            console.error(`❌ [MCP-API] No se pudo vincular al puerto ${attemptPort}:`, err.message);
+            this.server = null;
+            reject(err);
+          }
+        });
+
+        this.server.listen(this.port, '127.0.0.1', () => {
+          this.startedAt = new Date().toISOString();
+          
+          // Escribir archivo discovery si es instancia primaria o si no hay discovery existente de otra instancia viva
+          let shouldWriteDiscovery = process.env.NODETERM_IS_SECONDARY_INSTANCE !== 'true';
+          if (!shouldWriteDiscovery) {
+            try {
+              if (!fs.existsSync(MCP_SERVER_INFO_PATH)) {
+                shouldWriteDiscovery = true;
+              } else {
+                const raw = fs.readFileSync(MCP_SERVER_INFO_PATH, 'utf8');
+                const info = JSON.parse(raw);
+                if (info && info.pid) {
+                  try {
+                    process.kill(info.pid, 0);
+                  } catch (_) {
+                    shouldWriteDiscovery = true; // El proceso dueño anterior murió
+                  }
+                }
+              }
+            } catch (_) {
+              shouldWriteDiscovery = true;
+            }
+          }
+
+          if (shouldWriteDiscovery) {
+            this._writeServerInfo();
+          }
+
+          console.log(`✅ [MCP-API] Servidor iniciado en http://127.0.0.1:${this.port}`);
+          resolve({ success: true, port: this.port });
+        });
+      };
+
+      tryListen(basePort);
     });
   }
 

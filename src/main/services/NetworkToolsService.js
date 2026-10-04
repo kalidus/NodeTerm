@@ -40,11 +40,10 @@ class NetworkToolsService {
     
     this.nvdCachePath = null;
     try {
-      if (app) {
-        this.nvdCachePath = path.join(app.getPath('userData'), 'nvd_vulns_cache.json');
-      }
+      const { getNodeTermDataDir } = require('../utils/file-utils');
+      this.nvdCachePath = path.join(getNodeTermDataDir(), 'nvd_vulns_cache.json');
     } catch (e) {
-      console.warn('[NetworkToolsService] No se pudo obtener la ruta userData de electron:', e);
+      console.warn('[NetworkToolsService] No se pudo obtener la ruta de datos:', e);
     }
     
     this._loadCache();

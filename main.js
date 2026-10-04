@@ -293,7 +293,7 @@ if (gotTheLock) {
 
 if (!gotTheLock) {
   console.log('⚠️ [MAIN] Instancia secundaria detectada (Lock no obtenido)');
-  console.log('⚠️ [MAIN] Cambiando a directorio UserData temporal para evitar bloqueo de caché...');
+  console.log('⚠️ [MAIN] Configurando entorno de ejecución aislado con claves maestras compartidas...');
 
   const tempUserData = path.join(app.getPath('temp'), `NodeTerm-Instance-${process.pid}`);
 
@@ -303,22 +303,60 @@ if (!gotTheLock) {
       try { fs.rmSync(tempUserData, { recursive: true, force: true }); } catch (e) { }
     }
     fs.mkdirSync(tempUserData, { recursive: true });
+
+    // 🔑 CRÍTICO: Sincronizar Local State desde el directorio principal
+    // Permite que safeStorage (DPAPI en Windows, Keychain en macOS, Secret Service en Linux)
+    // utilice la misma clave de cifrado maestro para descifrar contraseñas, bóvedas y configs.
+    const mainDir = getNodeTermDataDir();
+    const mainLocalState = path.join(mainDir, 'Local State');
+    const tempLocalState = path.join(tempUserData, 'Local State');
+    if (fs.existsSync(mainLocalState)) {
+      try {
+        fs.copyFileSync(mainLocalState, tempLocalState);
+        console.log('✅ [MAIN] Local State sincronizado con éxito en instancia secundaria');
+      } catch (copyErr) {
+        console.warn('⚠️ [MAIN] No se pudo copiar Local State a instancia secundaria:', copyErr.message);
+      }
+    }
+
     app.setPath('userData', tempUserData);
     console.log(`✅ [MAIN] UserData redirigido a: ${tempUserData}`);
   } catch (error) {
     console.error('❌ [MAIN] Error configurando UserData temporal:', error);
-    // Fallback: Dejar que continúe, aunque probablemente fallará con net::ERR_CACHE_LOCK
   }
 } else {
   console.log('🔒 [MAIN] Instancia primaria (Lock obtenido)');
-  // Opcional: Manejar evento 'second-instance' si quisiéramos enfocar la ventana existente
-  // en lugar de abrir una nueva. Pero el usuario quiere ventanas independientes.
   app.on('second-instance', (event, commandLine, workingDirectory) => {
-    // Si quisiéramos Single Window, aquí haríamos mainWindow.restore() y .focus()
-    // Pero para Multi-Window, dejamos que la segunda instancia corra con su propio UserData
-    console.log('ℹ️ [MAIN] Otra instancia intentó iniciar (detectado via second-instance event)');
+    // Permitir instancias multi-ventana completamente independientes
+    console.log('ℹ️ [MAIN] Otra instancia iniciada de forma independiente.');
   });
 }
+
+// Limpieza silenciosa de directorios temporales de instancias anteriores ya finalizadas
+try {
+  const tempRoot = app.getPath('temp');
+  const tempEntries = fs.readdirSync(tempRoot);
+  for (const entry of tempEntries) {
+    if (entry.startsWith('NodeTerm-Instance-') && entry !== `NodeTerm-Instance-${process.pid}`) {
+      const pidStr = entry.replace('NodeTerm-Instance-', '');
+      const pid = parseInt(pidStr, 10);
+      let isAlive = false;
+      if (!isNaN(pid) && pid > 0) {
+        try {
+          process.kill(pid, 0);
+          isAlive = true;
+        } catch (_) {
+          isAlive = false;
+        }
+      }
+      if (!isAlive) {
+        try {
+          fs.rmSync(path.join(tempRoot, entry), { recursive: true, force: true });
+        } catch (_) {}
+      }
+    }
+  }
+} catch (_) {}
 // ============================================================================
 
 // 🚀 OPTIMIZACIÓN: Docker con lazy loading (no se usa hasta listar contenedores)
@@ -1418,7 +1456,13 @@ function createWindow() {
   }
 
   const { getInitialWindowBounds, saveWindowBounds } = require('./src/main/utils/window-bounds');
-  const initialBounds = getInitialWindowBounds(app.getPath('userData'));
+  const initialBounds = getInitialWindowBounds(getNodeTermDataDir());
+
+  // Si es una instancia secundaria y no está maximizada, aplicar offset tipo cascada para que no tape a la primera
+  if (process.env.NODETERM_IS_SECONDARY_INSTANCE === 'true' && !initialBounds.isMaximized) {
+    if (typeof initialBounds.x === 'number') initialBounds.x += 30;
+    if (typeof initialBounds.y === 'number') initialBounds.y += 30;
+  }
 
   mainWindow = new BrowserWindow({
     width: initialBounds.width,
@@ -1503,7 +1547,7 @@ function createWindow() {
 
   // Cierre de la ventana principal
   mainWindow.on('close', () => {
-    try { saveWindowBounds(app.getPath('userData'), mainWindow); } catch (_) {}
+    try { saveWindowBounds(getNodeTermDataDir(), mainWindow); } catch (_) {}
     isAppQuitting.value = true;
     app.quit();
   });
@@ -1512,7 +1556,7 @@ function createWindow() {
   const scheduleSaveBounds = () => {
     if (saveBoundsTimer) clearTimeout(saveBoundsTimer);
     saveBoundsTimer = setTimeout(() => {
-      try { saveWindowBounds(app.getPath('userData'), mainWindow); } catch (_) {}
+      try { saveWindowBounds(getNodeTermDataDir(), mainWindow); } catch (_) {}
     }, 400);
   };
   mainWindow.on('resize', scheduleSaveBounds);
@@ -2294,7 +2338,7 @@ app.on('ready', () => {
     });
   }
 
-  sshKnownHostsService.setUserDataPath(app.getPath('userData'));
+  sshKnownHostsService.setUserDataPath(getNodeTermDataDir());
   try {
     const { registerBootstrapIpcHandlers } = require('./src/main/handlers');
     registerBootstrapIpcHandlers();
@@ -2918,7 +2962,7 @@ ipcMain.on('ssh:connect', async (event, { tabId, config }) => {
           if (autoRecordingEnabled) {
             // Guardar archivo en disco
             const fsPromises = require('fs').promises;
-            const recordingsDir = await getRecordingsDirectory(app.getPath('userData'));
+            const recordingsDir = await getRecordingsDirectory(getNodeTermDataDir());
 
             // Crear directorio si no existe
             await fsPromises.mkdir(recordingsDir, { recursive: true });
@@ -3498,6 +3542,16 @@ app.on('before-quit', async (event) => {
     clearTimeout(forceExitTimeout);
     appCleanupCompleted = true;
     appCleanupInProgress = false;
+
+    // Limpieza de directorio temporal si es instancia secundaria
+    if (process.env.NODETERM_IS_SECONDARY_INSTANCE === 'true') {
+      try {
+        const currentTempUserData = path.join(app.getPath('temp'), `NodeTerm-Instance-${process.pid}`);
+        if (fs.existsSync(currentTempUserData)) {
+          try { fs.rmSync(currentTempUserData, { recursive: true, force: true }); } catch (_) {}
+        }
+      } catch (_) {}
+    }
 
     console.log('[quit] Ejecutando exit final...');
 

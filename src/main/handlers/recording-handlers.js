@@ -6,6 +6,8 @@ const { ipcMain, app } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
 
+const { getNodeTermDataDir } = require('../utils/file-utils');
+
 /**
  * Instancia global del SessionRecorder (se inicializa en main.js)
  */
@@ -25,7 +27,7 @@ function setSessionRecorder(recorder) {
 async function getRecordingsDirectory() {
   try {
     // Leer configuración desde archivo de preferencias
-    const userDataPath = app.getPath('userData');
+    const userDataPath = getNodeTermDataDir();
     const configPath = path.join(userDataPath, 'recording-config.json');
     
     try {
@@ -51,7 +53,7 @@ async function getRecordingsDirectory() {
   } catch (error) {
     console.error('Error obteniendo directorio de grabaciones:', error);
     // Fallback a ruta por defecto
-    const userDataPath = app.getPath('userData');
+    const userDataPath = getNodeTermDataDir();
     return path.join(userDataPath, 'recordings');
   }
 }
@@ -88,7 +90,7 @@ function registerRecordingHandlers() {
   ipcMain.handle('recording:get-path', async () => {
     try {
       const recordingsDir = await getRecordingsDirectory();
-      const userDataPath = app.getPath('userData');
+      const userDataPath = getNodeTermDataDir();
       const configPath = path.join(userDataPath, 'recording-config.json');
       
       let customPath = null;
@@ -118,7 +120,7 @@ function registerRecordingHandlers() {
   // RECORDING: Establecer ubicación personalizada de grabaciones
   ipcMain.handle('recording:set-path', async (event, { customPath }) => {
     try {
-      const userDataPath = app.getPath('userData');
+      const userDataPath = getNodeTermDataDir();
       const configPath = path.join(userDataPath, 'recording-config.json');
       
       // Si customPath es null o vacío, usar ruta por defecto
