@@ -1336,6 +1336,8 @@ const TabContentRendererInner = React.memo(({
         }}
         masterKey={masterKey}
         secureStorage={secureStorage}
+        onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
+        terminalRefs={terminalRefs}
       />
     );
   }
@@ -2529,6 +2531,7 @@ const TabContentRendererInner = React.memo(({
         dockerInfo={tab.distroInfo}
         onBroadcastData={handleBroadcastData}
         isBroadcastActive={tab.isBroadcastActive}
+        onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
       />
     );
   }
@@ -2550,6 +2553,7 @@ const TabContentRendererInner = React.memo(({
           theme={powerShellTheme}
           onBroadcastData={handleBroadcastData}
           isBroadcastActive={tab.isBroadcastActive}
+          onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
         />
       );
     }
@@ -2568,6 +2572,7 @@ const TabContentRendererInner = React.memo(({
           theme={linuxTheme}
           onBroadcastData={handleBroadcastData}
           isBroadcastActive={tab.isBroadcastActive}
+          onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
         />
       );
     }
@@ -2587,6 +2592,7 @@ const TabContentRendererInner = React.memo(({
           theme={linuxTheme}
           onBroadcastData={handleBroadcastData}
           isBroadcastActive={tab.isBroadcastActive}
+          onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
         />
       );
     }
@@ -2604,6 +2610,7 @@ const TabContentRendererInner = React.memo(({
           theme={linuxTheme}
           onBroadcastData={handleBroadcastData}
           isBroadcastActive={tab.isBroadcastActive}
+          onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
         />
       );
     }
@@ -2619,6 +2626,7 @@ const TabContentRendererInner = React.memo(({
           theme={powerShellTheme}
           onBroadcastData={handleBroadcastData}
           isBroadcastActive={tab.isBroadcastActive}
+          onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
         />
       );
     }
@@ -2632,6 +2640,7 @@ const TabContentRendererInner = React.memo(({
           fontFamily={localFontFamily}
           fontSize={localFontSize}
           theme={powerShellTheme}
+          onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
         />
       );
     }
@@ -2645,6 +2654,7 @@ const TabContentRendererInner = React.memo(({
           fontFamily={localFontFamily}
           fontSize={localFontSize}
           theme={powerShellTheme}
+          onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
         />
       );
     }
@@ -2658,6 +2668,7 @@ const TabContentRendererInner = React.memo(({
           fontFamily={localFontFamily}
           fontSize={localFontSize}
           theme={powerShellTheme}
+          onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
         />
       );
     }
@@ -2671,6 +2682,7 @@ const TabContentRendererInner = React.memo(({
           fontFamily={localFontFamily}
           fontSize={localFontSize}
           theme={powerShellTheme}
+          onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
         />
       );
     }
@@ -2687,6 +2699,7 @@ const TabContentRendererInner = React.memo(({
         theme={powerShellTheme}
         onBroadcastData={handleBroadcastData}
         isBroadcastActive={tab.isBroadcastActive}
+        onContextMenu={(e, tabKey) => handleTerminalContextMenu(e, tabKey || tab.key, showTerminalContextMenu)}
       />
     );
   }

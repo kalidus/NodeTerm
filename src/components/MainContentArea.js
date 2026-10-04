@@ -3506,7 +3506,7 @@ const MainContentArea = ({
                     isSSHSession={terminalContextMenu ? (() => {
                       const allT = getAllTabs ? getAllTabs() : [];
                       const tab = allT.find(t => t.key === terminalContextMenu.tabKey);
-                      return tab ? (tab.type === 'terminal' || tab.type === TAB_TYPES.TERMINAL || tab.type === 'local-terminal') : false;
+                      return tab ? ((tab.type === 'terminal' || tab.type === TAB_TYPES.TERMINAL) && !!tab.sshConfig) : false;
                     })() : false}
                   />
 

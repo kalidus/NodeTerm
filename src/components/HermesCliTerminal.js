@@ -3,6 +3,7 @@ import { loadXtermModules, getCachedXtermModules } from '../utils/xtermLoader';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
 import { attachTerminalRenderer, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
+import { setupTerminalClipboard, pasteToTerminal } from '../utils/terminalClipboard';
 
 const HermesCliTerminal = forwardRef(({
   fontFamily = 'Consolas, "Courier New", monospace',
@@ -10,7 +11,8 @@ const HermesCliTerminal = forwardRef(({
   theme = {},
   tabId = 'default',
   isIntegrated = false,
-  active = true
+  active = true,
+  onContextMenu
 }, ref) => {
   const terminalRef = useRef(null);
   const term = useRef(null);
@@ -52,12 +54,15 @@ const HermesCliTerminal = forwardRef(({
     focus: () => term.current?.focus(),
     clear: () => term.current?.clear(),
     getSelection: () => term.current?.getSelection() || '',
+    selectAll: () => {
+      term.current?.selectAll();
+    },
     paste: (text) => {
-      if (text) {
-        window.electron?.ipcRenderer.send(`hermescli:data:${tabId}`, text);
-      }
+      pasteToTerminal(term, text, (data) => {
+        window.electron?.ipcRenderer.send(`hermescli:data:${tabId}`, data);
+      });
     }
-  }));
+  }), [tabId]);
 
   useEffect(() => {
     if (!xtermLib) return;
@@ -115,26 +120,13 @@ const HermesCliTerminal = forwardRef(({
     };
     startHermesCliSession();
 
-    const keyHandler = term.current.onKey(({ domEvent }) => {
-      const isMac = window.electron?.platform === 'darwin';
-      const modifierKey = isMac ? domEvent.metaKey : domEvent.ctrlKey;
-
-      if (modifierKey && domEvent.key === 'c') {
-        const selection = term.current?.getSelection();
-        if (selection) {
-          window.electron?.clipboard?.writeText?.(selection);
-          domEvent.preventDefault();
-        }
-      } else if (modifierKey && domEvent.key === 'v') {
-        domEvent.preventDefault();
-        window.electron?.clipboard?.readText?.().then((text) => {
-          if (!text) return;
-          term.current?.focus();
-          setTimeout(() => {
-            window.electron?.ipcRenderer.send(`hermescli:data:${tabId}`, text);
-            term.current?.focus();
-          }, 10);
-        });
+    const cleanupClipboard = setupTerminalClipboard({
+      term: term.current,
+      container: terminalRef.current,
+      tabId,
+      onContextMenu,
+      onSendData: (data) => {
+        window.electron?.ipcRenderer.send(`hermescli:data:${tabId}`, data);
       }
     });
 
@@ -176,16 +168,6 @@ const HermesCliTerminal = forwardRef(({
     window.addEventListener('resize', handleWindowResize);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    const contextMenuHandler = (e) => {
-      e.preventDefault();
-      window.electron?.clipboard?.readText?.().then((text) => {
-        if (text) {
-          window.electron?.ipcRenderer.send(`hermescli:data:${tabId}`, text);
-        }
-      });
-    };
-    terminalRef.current?.addEventListener('contextmenu', contextMenuHandler);
-
     const startupSyncTimers = [400, 700, 1100, 1700, 2600].map(ms => setTimeout(fitAndSyncSize, ms));
     const startRetryTimers = [900, 1800, 3200].map((ms) => setTimeout(() => {
       if (!isReadyRef.current) {
@@ -195,6 +177,7 @@ const HermesCliTerminal = forwardRef(({
     }, ms));
 
     return () => {
+      if (cleanupClipboard) cleanupClipboard();
       writeBufferRef.current?.clear();
       resizeObserver.disconnect();
       window.removeEventListener('resize', handleWindowResize);
@@ -205,13 +188,11 @@ const HermesCliTerminal = forwardRef(({
       if (onDataUnsubscribe) onDataUnsubscribe();
       if (onReadyUnsubscribe) onReadyUnsubscribe();
       if (onErrorUnsubscribe) onErrorUnsubscribe();
-      terminalRef.current?.removeEventListener('contextmenu', contextMenuHandler);
-      keyHandler.dispose();
       dataHandler.dispose();
       resizeHandler.dispose();
       term.current?.dispose();
     };
-  }, [tabId, xtermLib]);
+  }, [tabId, xtermLib, onContextMenu]);
 
   useEffect(() => {
     return registerScrollbackSync(term);

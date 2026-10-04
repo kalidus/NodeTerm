@@ -8,6 +8,7 @@ import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
 import { attachTerminalRenderer, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
 import { systemStatsService } from '../services/SystemStatsService';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
+import { setupTerminalClipboard, pasteToTerminal } from '../utils/terminalClipboard';
 import { useLogColorizer } from '../hooks/useLogColorizer';
 
 const PowerShellTerminal = forwardRef(({
@@ -17,7 +18,8 @@ const PowerShellTerminal = forwardRef(({
     tabId = 'default',
     hideStatusBar = false,
     isIntegrated = false,
-    active = true
+    active = true,
+    onContextMenu
 }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
@@ -157,9 +159,9 @@ const PowerShellTerminal = forwardRef(({
             }
         },
         paste: (text) => {
-            if (term.current && text) {
-                window.electron?.ipcRenderer.send(`powershell:data:${tabId}`, text);
-            }
+            pasteToTerminal(term, text, (data) => {
+                window.electron?.ipcRenderer.send(`powershell:data:${tabId}`, data);
+            });
         },
         agentWrite: (data) => {
             if (!data) return;
@@ -321,31 +323,14 @@ const PowerShellTerminal = forwardRef(({
                 });
             }, delay);
 
-            // Handle keyboard events for copy/paste
-            term.current.onKey(({ key, domEvent }) => {
-                const isMac = window.electron.platform === 'darwin';
-                const modifierKey = isMac ? domEvent.metaKey : domEvent.ctrlKey;
-
-                if (modifierKey && domEvent.key === 'c') {
-                    const selection = term.current.getSelection();
-                    if (selection) {
-                        clipboardWriteText(selection).catch(() => {});
-                        domEvent.preventDefault();
-                        return;
-                    }
-                } else if (modifierKey && domEvent.key === 'v') {
-                    domEvent.preventDefault();
-                    if (shouldBlockHumanInput(tabId)) return;
-                    clipboardReadText().then(text => {
-                        if (text) {
-                            term.current.focus();
-                            setTimeout(() => {
-                                window.electron.ipcRenderer.send(`powershell:data:${tabId}`, text);
-                                term.current.focus();
-                            }, 10);
-                        }
-                    }).catch(() => {});
-                    return;
+            // Setup unified clipboard handling (Ctrl+C, Ctrl+Shift+C, Ctrl+V, Shift+Insert, context menu)
+            const cleanupClipboard = setupTerminalClipboard({
+                term,
+                container: terminalRef.current,
+                tabId,
+                onContextMenu,
+                onSendData: (data) => {
+                    window.electron.ipcRenderer.send(`powershell:data:${tabId}`, data);
                 }
             });
 
@@ -380,18 +365,6 @@ const PowerShellTerminal = forwardRef(({
             };
             const onErrorUnsubscribe = window.electron.ipcRenderer.on(`powershell:error:${tabId}`, errorListener);
 
-            // Handle right-click context menu
-            const contextMenuHandler = (e) => {
-                e.preventDefault();
-                if (shouldBlockHumanInput(tabId)) return;
-                clipboardReadText().then(text => {
-                    if (text) {
-                        window.electron.ipcRenderer.send(`powershell:data:${tabId}`, text);
-                    }
-                }).catch(() => {});
-            };
-            terminalRef.current.addEventListener('contextmenu', contextMenuHandler);
-
             // Cleanup function
             return () => {
                 flushPending();
@@ -408,9 +381,7 @@ const PowerShellTerminal = forwardRef(({
                 if (onDataUnsubscribe) onDataUnsubscribe();
                 if (onReadyUnsubscribe) onReadyUnsubscribe();
                 if (onErrorUnsubscribe) onErrorUnsubscribe();
-                if (terminalRef.current) {
-                    terminalRef.current.removeEventListener('contextmenu', contextMenuHandler);
-                }
+                cleanupClipboard();
                 dataHandler.dispose();
                 resizeHandler.dispose();
                 if (term.current) {

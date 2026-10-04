@@ -44,7 +44,23 @@ function adjustColorBrightness(hex, percent) {
     return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 }
 
-const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, localFontFamily, localFontSize, localPowerShellTheme, localLinuxTerminalTheme, hideStatusBar = false, hideTabs = false, isIntegrated = false, onTabChange, persistenceKey = null, preferDefaultOnStartup = false }, ref) => {
+const TabbedTerminal = forwardRef(({
+    onMinimize,
+    onMaximize,
+    terminalState,
+    localFontFamily,
+    localFontSize,
+    localPowerShellTheme,
+    localLinuxTerminalTheme,
+    hideStatusBar = false,
+    hideTabs = false,
+    isIntegrated = false,
+    onTabChange,
+    persistenceKey = null,
+    preferDefaultOnStartup = false,
+    onContextMenu = null,
+    parentTerminalRefs = null
+}, ref) => {
     // Referencias para control de scroll de pestañas
     const tabsContainerRef = useRef(null);
     const menuRef = useRef(null);
@@ -490,6 +506,51 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
     const [dragStartTimer, setDragStartTimer] = useState(null);
     const terminalRefs = useRef({});
     const createNewTabRef = useRef(null);
+
+    // Registra terminales en las referencias internas y externas (parentTerminalRefs)
+    const registerTerminalRef = useCallback((tabId, terminalInstance) => {
+        if (!tabId) return;
+        if (terminalInstance) {
+            terminalRefs.current[tabId] = terminalInstance;
+            if (parentTerminalRefs?.current) {
+                parentTerminalRefs.current[tabId] = terminalInstance;
+                const activeTab = tabs.find(t => t.active);
+                if (activeTab?.id === tabId) {
+                    parentTerminalRefs.current['home_tab_default'] = terminalInstance;
+                    parentTerminalRefs.current['home'] = terminalInstance;
+                }
+            }
+        } else {
+            delete terminalRefs.current[tabId];
+            if (parentTerminalRefs?.current) {
+                delete parentTerminalRefs.current[tabId];
+            }
+        }
+    }, [parentTerminalRefs, tabs]);
+
+    // Sincronizar terminal activo con parentTerminalRefs para acciones globales de portapapeles y menús contextuales
+    useEffect(() => {
+        if (!parentTerminalRefs?.current) return;
+        const currentActive = tabs.find(t => t.active);
+        if (currentActive && terminalRefs.current[currentActive.id]) {
+            const activeRef = terminalRefs.current[currentActive.id];
+            parentTerminalRefs.current['home_tab_default'] = activeRef;
+            parentTerminalRefs.current['home'] = activeRef;
+        }
+    }, [tabs, parentTerminalRefs]);
+
+    // Limpieza al desmontar TabbedTerminal
+    useEffect(() => {
+        return () => {
+            if (parentTerminalRefs?.current) {
+                delete parentTerminalRefs.current['home_tab_default'];
+                delete parentTerminalRefs.current['home'];
+                tabs.forEach(t => {
+                    delete parentTerminalRefs.current[t.id];
+                });
+            }
+        };
+    }, [parentTerminalRefs, tabs]);
     const pendingCommands = useRef({}); // Cola de comandos pendientes por terminal
     const terminalReadyFlags = useRef({}); // Flags de terminals listos
     const fitRafIdRef = useRef(null);
@@ -806,6 +867,31 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                 }
                 createNewTabRef.current?.(override, distroInfo);
             }, 10);
+        },
+        getSelection: () => {
+            const activeTab = tabs.find(t => t.active);
+            if (!activeTab) return '';
+            return terminalRefs.current[activeTab.id]?.getSelection?.() || '';
+        },
+        selectAll: () => {
+            const activeTab = tabs.find(t => t.active);
+            if (!activeTab) return;
+            terminalRefs.current[activeTab.id]?.selectAll?.();
+        },
+        clear: () => {
+            const activeTab = tabs.find(t => t.active);
+            if (!activeTab) return;
+            terminalRefs.current[activeTab.id]?.clear?.();
+        },
+        paste: (text) => {
+            const activeTab = tabs.find(t => t.active);
+            if (!activeTab) return;
+            terminalRefs.current[activeTab.id]?.paste?.(text);
+        },
+        focus: () => {
+            const activeTab = tabs.find(t => t.active);
+            if (!activeTab) return;
+            terminalRefs.current[activeTab.id]?.focus?.();
         }
     }), [tabs, selectedTerminalType]); // Agregar tabs y selectedTerminalType como dependencias
 
@@ -1596,6 +1682,9 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
 
         // Limpiar referencia del terminal
         delete terminalRefs.current[tabId];
+        if (parentTerminalRefs?.current) {
+            delete parentTerminalRefs.current[tabId];
+        }
     };
 
     // Declarar activeTab solo una vez antes de la lógica de color y renderizado
@@ -1859,9 +1948,7 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                         {tab.type === 'powershell' && (
                             <LazyPowerShellTerminal
                                 key={`${tab.id}-terminal-powershell`}
-                                ref={(ref) => {
-                                    if (ref) terminalRefs.current[tab.id] = ref;
-                                }}
+                                ref={(ref) => registerTerminalRef(tab.id, ref)}
                                 tabId={tab.id}
                                 active={tab.active}
                                 fontFamily={localFontFamily}
@@ -1869,27 +1956,25 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 theme={themes[localPowerShellTheme]?.theme || powershellXtermTheme}
                                 hideStatusBar={hideStatusBar}
                                 isIntegrated={isIntegrated}
+                                onContextMenu={onContextMenu}
                             />
                         )}
                         {tab.type === 'wsl' && (
                             <LazyWSLTerminal
                                 key={`${tab.id}-terminal-wsl`}
-                                ref={(ref) => {
-                                    if (ref) terminalRefs.current[tab.id] = ref;
-                                }}
+                                ref={(ref) => registerTerminalRef(tab.id, ref)}
                                 tabId={tab.id}
                                 active={tab.active}
                                 theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
                                 hideStatusBar={hideStatusBar}
                                 isIntegrated={isIntegrated}
+                                onContextMenu={onContextMenu}
                             />
                         )}
                         {(tab.type === 'ubuntu' || tab.type === 'debian' || tab.type === 'wsl-distro') && (
                             <LazyUbuntuTerminal
                                 key={`${tab.id}-terminal-${tab.type}`}
-                                ref={(ref) => {
-                                    if (ref) terminalRefs.current[tab.id] = ref;
-                                }}
+                                ref={(ref) => registerTerminalRef(tab.id, ref)}
                                 tabId={tab.id}
                                 active={tab.active}
                                 ubuntuInfo={tab.distroInfo || tab.ubuntuInfo}
@@ -1899,14 +1984,13 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
                                 hideStatusBar={hideStatusBar}
                                 isIntegrated={isIntegrated}
+                                onContextMenu={onContextMenu}
                             />
                         )}
                         {tab.type === 'cygwin' && (
                             <LazyCygwinTerminal
                                 key={`${tab.id}-terminal`}
-                                ref={(ref) => {
-                                    if (ref) terminalRefs.current[tab.id] = ref;
-                                }}
+                                ref={(ref) => registerTerminalRef(tab.id, ref)}
                                 tabId={tab.id}
                                 active={tab.active}
                                 fontFamily={localFontFamily}
@@ -1914,14 +1998,13 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
                                 hideStatusBar={hideStatusBar}
                                 isIntegrated={isIntegrated}
+                                onContextMenu={onContextMenu}
                             />
                         )}
                         {tab.type === 'docker' && (
                             <LazyDockerTerminal
                                 key={`${tab.id}-terminal`}
-                                ref={(ref) => {
-                                    if (ref) terminalRefs.current[tab.id] = ref;
-                                }}
+                                ref={(ref) => registerTerminalRef(tab.id, ref)}
                                 tabId={tab.id}
                                 active={tab.active}
                                 dockerInfo={tab.distroInfo}
@@ -1930,84 +2013,78 @@ const TabbedTerminal = forwardRef(({ onMinimize, onMaximize, terminalState, loca
                                 theme={themes[localLinuxTerminalTheme]?.theme || linuxXtermTheme}
                                 hideStatusBar={hideStatusBar}
                                 isIntegrated={isIntegrated}
+                                onContextMenu={onContextMenu}
                             />
                         )}
                         {tab.type === 'claude' && (
                             <LazyClaudeTerminal
                                 key={`${tab.id}-terminal`}
-                                ref={(ref) => {
-                                    if (ref) terminalRefs.current[tab.id] = ref;
-                                }}
+                                ref={(ref) => registerTerminalRef(tab.id, ref)}
                                 tabId={tab.id}
                                 active={tab.active}
                                 fontFamily={localFontFamily}
                                 fontSize={localFontSize}
                                 theme={themes[localPowerShellTheme]?.theme || powershellXtermTheme}
                                 isIntegrated={isIntegrated}
+                                onContextMenu={onContextMenu}
                             />
                         )}
                         {tab.type === 'opencode' && (
                             <LazyOpenCodeTerminal
                                 key={`${tab.id}-terminal`}
-                                ref={(ref) => {
-                                    if (ref) terminalRefs.current[tab.id] = ref;
-                                }}
+                                ref={(ref) => registerTerminalRef(tab.id, ref)}
                                 tabId={tab.id}
                                 active={tab.active}
                                 fontFamily={localFontFamily}
                                 fontSize={localFontSize}
                                 theme={themes[localPowerShellTheme]?.theme || powershellXtermTheme}
                                 isIntegrated={isIntegrated}
+                                onContextMenu={onContextMenu}
                             />
                         )}
                         {tab.type === 'codexcli' && (
                             <LazyCodexCliTerminal
                                 key={`${tab.id}-terminal`}
-                                ref={(ref) => {
-                                    if (ref) terminalRefs.current[tab.id] = ref;
-                                }}
+                                ref={(ref) => registerTerminalRef(tab.id, ref)}
                                 tabId={tab.id}
                                 active={tab.active}
                                 fontFamily={localFontFamily}
                                 fontSize={localFontSize}
                                 theme={themes[localPowerShellTheme]?.theme || powershellXtermTheme}
                                 isIntegrated={isIntegrated}
+                                onContextMenu={onContextMenu}
                             />
                         )}
                         {tab.type === 'antigravitycli' && (
                             <LazyAntigravityCliTerminal
                                 key={`${tab.id}-terminal`}
-                                ref={(ref) => {
-                                    if (ref) terminalRefs.current[tab.id] = ref;
-                                }}
+                                ref={(ref) => registerTerminalRef(tab.id, ref)}
                                 tabId={tab.id}
                                 active={tab.active}
                                 fontFamily={localFontFamily}
                                 fontSize={localFontSize}
                                 theme={themes[localPowerShellTheme]?.theme || powershellXtermTheme}
                                 isIntegrated={isIntegrated}
+                                onContextMenu={onContextMenu}
                             />
                         )}
                         {tab.type === 'hermescli' && (
                             <LazyHermesCliTerminal
                                 key={`${tab.id}-terminal`}
-                                ref={(ref) => {
-                                    if (ref) terminalRefs.current[tab.id] = ref;
-                                }}
+                                ref={(ref) => registerTerminalRef(tab.id, ref)}
                                 tabId={tab.id}
                                 active={tab.active}
                                 fontFamily={localFontFamily}
                                 fontSize={localFontSize}
                                 theme={themes[localPowerShellTheme]?.theme || powershellXtermTheme}
                                 isIntegrated={isIntegrated}
+                                onContextMenu={onContextMenu}
                             />
                         )}
                         {tab.type === 'rdp-guacamole' && (
                             <LazyGuacamoleTerminal
                                 key={`${tab.id}-terminal`}
-                                ref={(ref) => {
-                                    if (ref) terminalRefs.current[tab.id] = ref;
-                                }}
+                                ref={(ref) => registerTerminalRef(tab.id, ref)}
                                 tabId={tab.id}
                                 active={tab.active}
                                 rdpConfig={tab.rdpConfig}

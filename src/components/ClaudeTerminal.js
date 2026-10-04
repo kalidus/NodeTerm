@@ -3,6 +3,7 @@ import { loadXtermModules, getCachedXtermModules } from '../utils/xtermLoader';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
 import { attachTerminalRenderer, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
+import { setupTerminalClipboard, pasteToTerminal } from '../utils/terminalClipboard';
 
 const ClaudeTerminal = forwardRef(({
   fontFamily = 'Consolas, "Courier New", monospace',
@@ -10,7 +11,8 @@ const ClaudeTerminal = forwardRef(({
   theme = {},
   tabId = 'default',
   isIntegrated = false,
-  active = true
+  active = true,
+  onContextMenu
 }, ref) => {
   const terminalRef = useRef(null);
   const term = useRef(null);
@@ -53,12 +55,15 @@ const ClaudeTerminal = forwardRef(({
     focus: () => term.current?.focus(),
     clear: () => term.current?.clear(),
     getSelection: () => term.current?.getSelection() || '',
+    selectAll: () => {
+      term.current?.selectAll();
+    },
     paste: (text) => {
-      if (text) {
-        window.electron?.ipcRenderer.send(`claude:data:${tabId}`, text);
-      }
+      pasteToTerminal(term, text, (data) => {
+        window.electron?.ipcRenderer.send(`claude:data:${tabId}`, data);
+      });
     }
-  }));
+  }), [tabId]);
 
   useEffect(() => {
     if (!xtermLib) return;
@@ -118,26 +123,13 @@ const ClaudeTerminal = forwardRef(({
     };
     startClaudeSession();
 
-    const keyHandler = term.current.onKey(({ domEvent }) => {
-      const isMac = window.electron?.platform === 'darwin';
-      const modifierKey = isMac ? domEvent.metaKey : domEvent.ctrlKey;
-
-      if (modifierKey && domEvent.key === 'c') {
-        const selection = term.current?.getSelection();
-        if (selection) {
-          window.electron?.clipboard?.writeText?.(selection);
-          domEvent.preventDefault();
-        }
-      } else if (modifierKey && domEvent.key === 'v') {
-        domEvent.preventDefault();
-        window.electron?.clipboard?.readText?.().then((text) => {
-          if (!text) return;
-          term.current?.focus();
-          setTimeout(() => {
-            window.electron?.ipcRenderer.send(`claude:data:${tabId}`, text);
-            term.current?.focus();
-          }, 10);
-        });
+    const cleanupClipboard = setupTerminalClipboard({
+      term: term.current,
+      container: terminalRef.current,
+      tabId,
+      onContextMenu,
+      onSendData: (data) => {
+        window.electron?.ipcRenderer.send(`claude:data:${tabId}`, data);
       }
     });
 
@@ -180,16 +172,6 @@ const ClaudeTerminal = forwardRef(({
     window.addEventListener('resize', handleWindowResize);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    const contextMenuHandler = (e) => {
-      e.preventDefault();
-      window.electron?.clipboard?.readText?.().then((text) => {
-        if (text) {
-          window.electron?.ipcRenderer.send(`claude:data:${tabId}`, text);
-        }
-      });
-    };
-    terminalRef.current?.addEventListener('contextmenu', contextMenuHandler);
-
     // Algunos TUI (como Claude Code) recalculan layout tras arrancar; re-sincronizar durante el arranque.
     const startupSyncTimers = [400, 700, 1100, 1700, 2600].map(ms => setTimeout(fitAndSyncSize, ms));
     const startRetryTimers = [900, 1800, 3200].map((ms) => setTimeout(() => {
@@ -200,6 +182,7 @@ const ClaudeTerminal = forwardRef(({
     }, ms));
 
     return () => {
+      if (cleanupClipboard) cleanupClipboard();
       writeBufferRef.current?.clear();
       resizeObserver.disconnect();
       window.removeEventListener('resize', handleWindowResize);
@@ -210,13 +193,11 @@ const ClaudeTerminal = forwardRef(({
       if (onDataUnsubscribe) onDataUnsubscribe();
       if (onReadyUnsubscribe) onReadyUnsubscribe();
       if (onErrorUnsubscribe) onErrorUnsubscribe();
-      terminalRef.current?.removeEventListener('contextmenu', contextMenuHandler);
-      keyHandler.dispose();
       dataHandler.dispose();
       resizeHandler.dispose();
       term.current?.dispose();
     };
-  }, [tabId, xtermLib]);
+  }, [tabId, xtermLib, onContextMenu]);
 
   useEffect(() => {
     return registerScrollbackSync(term);

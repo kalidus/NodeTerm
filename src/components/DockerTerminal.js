@@ -8,6 +8,7 @@ import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
 import { attachTerminalRenderer, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
 import { systemStatsService } from '../services/SystemStatsService';
 import { useLogColorizer } from '../hooks/useLogColorizer';
+import { setupTerminalClipboard, pasteToTerminal } from '../utils/terminalClipboard';
 
 const DockerTerminal = forwardRef(({
     fontFamily = '"FiraCode Nerd Font", Consolas, monospace',
@@ -17,7 +18,8 @@ const DockerTerminal = forwardRef(({
     dockerInfo = {},
     hideStatusBar = false,
     isIntegrated = false,
-    active = true
+    active = true,
+    onContextMenu
 }, ref) => {
     const terminalRef = useRef(null);
     const term = useRef(null);
@@ -159,14 +161,27 @@ const DockerTerminal = forwardRef(({
             }
         });
 
-        // PASO 2: Ahora s??, iniciar sesi??n Docker
+        // Configurar atajos de copiar/pegar y menú contextual
+        const cleanupClipboard = setupTerminalClipboard({
+            term: term.current,
+            container: terminalRef.current,
+            tabId,
+            onContextMenu,
+            onSendData: (data) => {
+                if (window.electron) {
+                    window.electron.ipcRenderer.send(`docker:data:${tabId}`, data);
+                }
+            }
+        });
+
+        // PASO 2: Ahora sí, iniciar sesión Docker
         if (window.electron && window.electronAPI) {
             const containerName = dockerInfo?.containerName || 'unknown';
-            console.log(`???? Iniciando sesi??n Docker para ${containerName} en tab ${tabId}`);
+            console.log(`🐳 Iniciando sesión Docker para ${containerName} en tab ${tabId}`);
 
-            // Delay m??s largo para asegurar que listeners est??n COMPLETAMENTE listos en Electron
+            // Delay más largo para asegurar que listeners estén COMPLETAMENTE listos en Electron
             setTimeout(() => {
-                console.log(`???? Enviando docker:start:${tabId} despu??s del delay`);
+                console.log(`🐳 Enviando docker:start:${tabId} después del delay`);
                 window.electron.ipcRenderer.send(`docker:start:${tabId}`, {
                     tabId: tabId,
                     containerName: containerName,
@@ -178,6 +193,7 @@ const DockerTerminal = forwardRef(({
 
         // Cleanup
         return () => {
+            if (cleanupClipboard) cleanupClipboard();
             flushPending();
             if (writeBufferRef.current) {
                 writeBufferRef.current.clear();
@@ -193,7 +209,7 @@ const DockerTerminal = forwardRef(({
                 term.current = null;
             }
         };
-    }, [tabId, dockerInfo, fontFamily, fontSize, isIntegrated, xtermLib]);
+    }, [tabId, dockerInfo, fontFamily, fontSize, isIntegrated, xtermLib, onContextMenu]);
 
     // Update theme dynamically
     useEffect(() => {
@@ -253,7 +269,7 @@ const DockerTerminal = forwardRef(({
         };
     }, []);
 
-    // Exponer m??todos
+    // Exponer métodos
     useImperativeHandle(ref, () => ({
         fit: () => {
             try {
@@ -270,10 +286,23 @@ const DockerTerminal = forwardRef(({
         write: (data) => {
             term.current?.write(data);
         },
+        getSelection: () => {
+            return term.current?.getSelection() || '';
+        },
+        selectAll: () => {
+            if (term.current) {
+                term.current.selectAll();
+            }
+        },
         clear: () => {
             term.current?.clear();
+        },
+        paste: (text) => {
+            pasteToTerminal(term, text, (data) => {
+                window.electron?.ipcRenderer.send(`docker:data:${tabId}`, data);
+            });
         }
-    }), []);
+    }), [tabId]);
 
     return (
         <div

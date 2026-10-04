@@ -314,7 +314,7 @@ const TerminalContextMenu = ({
             {isRecording ? '⏹ Detener grabación' : '⏺ Iniciar grabación'}
           </div>
         )}
-        {handleToggleBroadcast && (
+        {handleToggleBroadcast && parentTab && (
           <>
             <div className="menu-separator" style={{ height: '1px', margin: '4px 0' }}></div>
             <div

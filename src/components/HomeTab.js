@@ -326,7 +326,9 @@ const HomeTab = ({
   activeIds = new Set(),
   masterKey = null,
   secureStorage = null,
-  isMinimalMode = false
+  isMinimalMode = false,
+  onContextMenu = null,
+  terminalRefs = null
 }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [terminalState, setTerminalState] = useState('normal');
@@ -2479,6 +2481,8 @@ const HomeTab = ({
                       persistenceKey={STORAGE_KEYS.HOME_TAB_LOCAL_TERMINAL_WORKSPACE}
                       preferDefaultOnStartup={true}
                       onTabChange={(tab) => setTerminalTitle(tab.title)}
+                      onContextMenu={onContextMenu}
+                      parentTerminalRefs={terminalRefs}
                     />
                   </div>
                 </ConnectionHistory>
