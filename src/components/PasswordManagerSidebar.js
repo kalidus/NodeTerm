@@ -1567,6 +1567,41 @@ const PasswordManagerSidebar = ({
 
       // Opciones específicas según el tipo de secreto
       if (secretType === 'password') {
+        const handleOpenExternalBrowser = (browserName, displayName, privateMode) => {
+          const url = node.data?.url || '';
+          if (!url) {
+            showToast && showToast({
+              severity: 'warn',
+              summary: 'Sin URL',
+              detail: 'Este password no tiene URL configurada',
+              life: 2000
+            });
+            return;
+          }
+
+          const hasPass = Boolean(node.data?.password);
+          const hasUser = Boolean(node.data?.username);
+          if (hasPass || hasUser) {
+            showToast && showToast({
+              severity: 'info',
+              summary: 'Auto-completado seguro',
+              detail: hasPass
+                ? `Abriendo ${displayName}... Contraseña copiada al portapapeles (se borrará en 30s).`
+                : `Abriendo ${displayName}... Usuario copiado al portapapeles (se borrará en 30s).`,
+              life: 5000
+            });
+          }
+
+          window.electron?.system?.openWithBrowser(
+            url,
+            browserName,
+            privateMode,
+            node.data?.username || '',
+            node.data?.password || '',
+            'clipboard'
+          );
+        };
+
         menuItems.push(
           {
             label: 'Copiar usuario',
@@ -1651,152 +1686,32 @@ const PasswordManagerSidebar = ({
               {
                 label: 'Abrir con Google Chrome',
                 icon: 'pi pi-external-link',
-                command: () => {
-                  const url = node.data?.url || '';
-                  if (url) {
-                    if (node.data?.username || node.data?.password) {
-                      showToast && showToast({
-                        severity: 'info',
-                        summary: 'Auto-completado iniciado',
-                        detail: 'Abriendo Chrome... El usuario y la contraseña se escribirán automáticamente en 3 segundos.',
-                        life: 5000
-                      });
-                    }
-                    window.electron?.system?.openWithBrowser(url, 'chrome', false, node.data?.username || '', node.data?.password || '');
-                  } else {
-                    showToast && showToast({
-                      severity: 'warn',
-                      summary: 'Sin URL',
-                      detail: 'Este password no tiene URL configurada',
-                      life: 2000
-                    });
-                  }
-                }
+                command: () => handleOpenExternalBrowser('chrome', 'Chrome', false)
               },
               {
                 label: 'Abrir con Google Chrome (Incógnito)',
                 icon: 'pi pi-eye-slash',
-                command: () => {
-                  const url = node.data?.url || '';
-                  if (url) {
-                    if (node.data?.username || node.data?.password) {
-                      showToast && showToast({
-                        severity: 'info',
-                        summary: 'Auto-completado iniciado',
-                        detail: 'Abriendo Chrome... El usuario y la contraseña se escribirán automáticamente en 3 segundos.',
-                        life: 5000
-                      });
-                    }
-                    window.electron?.system?.openWithBrowser(url, 'chrome', true, node.data?.username || '', node.data?.password || '');
-                  } else {
-                    showToast && showToast({
-                      severity: 'warn',
-                      summary: 'Sin URL',
-                      detail: 'Este password no tiene URL configurada',
-                      life: 2000
-                    });
-                  }
-                }
+                command: () => handleOpenExternalBrowser('chrome', 'Chrome (Incógnito)', true)
               },
               {
                 label: 'Abrir con Firefox',
                 icon: 'pi pi-external-link',
-                command: () => {
-                  const url = node.data?.url || '';
-                  if (url) {
-                    if (node.data?.username || node.data?.password) {
-                      showToast && showToast({
-                        severity: 'info',
-                        summary: 'Auto-completado iniciado',
-                        detail: 'Abriendo Firefox... El usuario y la contraseña se escribirán automáticamente en 3 segundos.',
-                        life: 5000
-                      });
-                    }
-                    window.electron?.system?.openWithBrowser(url, 'firefox', false, node.data?.username || '', node.data?.password || '');
-                  } else {
-                    showToast && showToast({
-                      severity: 'warn',
-                      summary: 'Sin URL',
-                      detail: 'Este password no tiene URL configurada',
-                      life: 2000
-                    });
-                  }
-                }
+                command: () => handleOpenExternalBrowser('firefox', 'Firefox', false)
               },
               {
                 label: 'Abrir con Firefox (Privado)',
                 icon: 'pi pi-eye-slash',
-                command: () => {
-                  const url = node.data?.url || '';
-                  if (url) {
-                    if (node.data?.username || node.data?.password) {
-                      showToast && showToast({
-                        severity: 'info',
-                        summary: 'Auto-completado iniciado',
-                        detail: 'Abriendo Firefox... El usuario y la contraseña se escribirán automáticamente en 3 segundos.',
-                        life: 5000
-                      });
-                    }
-                    window.electron?.system?.openWithBrowser(url, 'firefox', true, node.data?.username || '', node.data?.password || '');
-                  } else {
-                    showToast && showToast({
-                      severity: 'warn',
-                      summary: 'Sin URL',
-                      detail: 'Este password no tiene URL configurada',
-                      life: 2000
-                    });
-                  }
-                }
+                command: () => handleOpenExternalBrowser('firefox', 'Firefox (Privado)', true)
               },
               {
                 label: 'Abrir con Microsoft Edge',
                 icon: 'pi pi-external-link',
-                command: () => {
-                  const url = node.data?.url || '';
-                  if (url) {
-                    if (node.data?.username || node.data?.password) {
-                      showToast && showToast({
-                        severity: 'info',
-                        summary: 'Auto-completado iniciado',
-                        detail: 'Abriendo Edge... El usuario y la contraseña se escribirán automáticamente en 3 segundos.',
-                        life: 5000
-                      });
-                    }
-                    window.electron?.system?.openWithBrowser(url, 'edge', false, node.data?.username || '', node.data?.password || '');
-                  } else {
-                    showToast && showToast({
-                      severity: 'warn',
-                      summary: 'Sin URL',
-                      detail: 'Este password no tiene URL configurada',
-                      life: 2000
-                    });
-                  }
-                }
+                command: () => handleOpenExternalBrowser('edge', 'Edge', false)
               },
               {
                 label: 'Abrir con Microsoft Edge (InPrivate)',
                 icon: 'pi pi-eye-slash',
-                command: () => {
-                  const url = node.data?.url || '';
-                  if (url) {
-                    if (node.data?.username || node.data?.password) {
-                      showToast && showToast({
-                        severity: 'info',
-                        summary: 'Auto-completado iniciado',
-                        detail: 'Abriendo Edge... El usuario y la contraseña se escribirán automáticamente en 3 segundos.',
-                        life: 5000
-                      });
-                    }
-                    window.electron?.system?.openWithBrowser(url, 'edge', true, node.data?.username || '', node.data?.password || '');
-                  } else {
-                    showToast && showToast({
-                      severity: 'warn',
-                      summary: 'Sin URL',
-                      detail: 'Este password no tiene URL configurada',
-                      life: 2000
-                    });
-                  }
-                }
+                command: () => handleOpenExternalBrowser('edge', 'Edge (InPrivate)', true)
               }
             ]
           }

@@ -57,6 +57,28 @@ export async function writeText(text) {
 }
 
 /**
+ * Write text to the OS clipboard and schedule auto-clear after timeoutSeconds.
+ * @param {unknown} text
+ * @param {number} [timeoutSeconds=30]
+ * @returns {Promise<boolean>}
+ */
+export async function writeTextWithAutoClear(text, timeoutSeconds = 30) {
+  const value = normalizeText(text);
+  if (!value) return false;
+
+  if (window.electron?.clipboard?.writeTextWithAutoClear) {
+    try {
+      await window.electron.clipboard.writeTextWithAutoClear(value, timeoutSeconds);
+      return true;
+    } catch (err) {
+      console.warn('[clipboard] Electron IPC writeTextWithAutoClear failed, using writeText fallback:', err?.message || err);
+    }
+  }
+
+  return writeText(value);
+}
+
+/**
  * Read text from the OS clipboard.
  * @returns {Promise<string>}
  */

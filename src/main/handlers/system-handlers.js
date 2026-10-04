@@ -160,6 +160,68 @@ function validateImportFilePath(filePath) {
 }
 
 
+let passwordAutoClearTimer = null;
+let currentAutoClearSecret = null;
+
+/**
+ * Copia un texto/contraseña al portapapeles y programa su borrado automático.
+ * Si el usuario copia otra cosa antes del timeout, el portapapeles no se borra.
+ * @param {string} text - Contenido a copiar
+ * @param {number} [timeoutMs=30000] - Tiempo de vida en ms (30s por defecto)
+ * @param {Object} [clipboardImpl=clipboard] - Instancia de portapapeles (inyección para tests)
+ * @returns {NodeJS.Timeout|null}
+ */
+function setClipboardWithAutoClear(text, timeoutMs = 30000, clipboardImpl = clipboard) {
+  if (text == null || text === '') return null;
+  const str = String(text);
+
+  if (passwordAutoClearTimer) {
+    clearTimeout(passwordAutoClearTimer);
+    passwordAutoClearTimer = null;
+    currentAutoClearSecret = null;
+  }
+
+  currentAutoClearSecret = str;
+  try {
+    clipboardImpl.writeText(str);
+  } catch (err) {
+    console.warn('[Clipboard] Error escribiendo al portapapeles:', err?.message || err);
+  }
+
+  const activeSecret = str;
+  passwordAutoClearTimer = setTimeout(() => {
+    try {
+      if (clipboardImpl && typeof clipboardImpl.readText === 'function') {
+        const current = clipboardImpl.readText();
+        if (current === activeSecret) {
+          clipboardImpl.clear();
+        }
+      }
+    } catch (err) {
+      console.warn('[Clipboard] Error limpiando portapapeles seguro:', err?.message || err);
+    } finally {
+      if (currentAutoClearSecret === activeSecret) {
+        passwordAutoClearTimer = null;
+        currentAutoClearSecret = null;
+      }
+    }
+  }, timeoutMs);
+
+  if (passwordAutoClearTimer && typeof passwordAutoClearTimer.unref === 'function') {
+    passwordAutoClearTimer.unref();
+  }
+
+  return passwordAutoClearTimer;
+}
+
+function cancelClipboardAutoClear() {
+  if (passwordAutoClearTimer) {
+    clearTimeout(passwordAutoClearTimer);
+    passwordAutoClearTimer = null;
+    currentAutoClearSecret = null;
+  }
+}
+
 /**
  * Registra handlers del sistema necesarios para la UI inicial
  * (clipboard + dialogs). Clipboard vive en clipboard-handlers.js.
@@ -1216,8 +1278,8 @@ function registerSystemMonitoringHandlers() {
     }
   });
 
-  // Handler para abrir URL en navegadores específicos con Auto-Type automático
-  ipcMain.handle('system:open-with-browser', async (event, { url, browser, privateMode, username, password }) => {
+  // Handler para abrir URL en navegadores específicos con Auto-Type / Clipboard seguro (H-12)
+  ipcMain.handle('system:open-with-browser', async (event, { url, browser, privateMode, username, password, autoTypeMode = 'clipboard', autoClearSeconds = 30 }) => {
     try {
       const val = validateBrowserUrl(url);
       if (!val.valid) {
@@ -1321,89 +1383,102 @@ function registerSystemMonitoringHandlers() {
 
       await launchBrowser();
 
-      // Ejecutar Auto-Type en segundo plano si hay credenciales
-      if (username || password) {
-        if (process.platform === 'win32') {
-          const escapeSendKeys = (text) => {
-            if (!text) return '';
-            return text.replace(/([+^%~{}()\[\]])/g, '{$1}');
-          };
+      // Manejo de credenciales (H-12): Seguro por defecto con Portapapeles y auto-clear en 30s (0s de retraso)
+      const secretToCopy = password || username;
+      if (secretToCopy) {
+        if (autoTypeMode === 'legacy' || autoTypeMode === 'keystrokes') {
+          if (process.platform === 'win32') {
+            const escapeSendKeys = (text) => {
+              if (!text) return '';
+              return text.replace(/([+^%~{}()\[\]])/g, '{$1}');
+            };
 
-          const escapePowerShellSingleQuote = (text) => {
-            if (!text) return '';
-            return text.replace(/'/g, "''");
-          };
+            const escapePowerShellSingleQuote = (text) => {
+              if (!text) return '';
+              return text.replace(/'/g, "''");
+            };
 
-          const mapUser = escapePowerShellSingleQuote(escapeSendKeys(username));
-          const mapPass = escapePowerShellSingleQuote(escapeSendKeys(password));
+            const mapUser = escapePowerShellSingleQuote(escapeSendKeys(username));
+            const mapPass = escapePowerShellSingleQuote(escapeSendKeys(password));
 
-          let psScript = 'Add-Type -AssemblyName System.Windows.Forms;\nStart-Sleep -Seconds 3;\n';
-          if (username) psScript += `[System.Windows.Forms.SendKeys]::SendWait('${mapUser}');\n`;
-          if (username && password) psScript += `[System.Windows.Forms.SendKeys]::SendWait('{TAB}');\n`;
-          if (password) psScript += `[System.Windows.Forms.SendKeys]::SendWait('${mapPass}');\n`;
-          if (password) psScript += `[System.Windows.Forms.SendKeys]::SendWait('{ENTER}');\n`;
-          psScript += 'exit\n';
+            let psScript = 'Add-Type -AssemblyName System.Windows.Forms;\nStart-Sleep -Seconds 3;\n';
+            if (username) psScript += `[System.Windows.Forms.SendKeys]::SendWait('${mapUser}');\n`;
+            if (username && password) psScript += `[System.Windows.Forms.SendKeys]::SendWait('{TAB}');\n`;
+            if (password) psScript += `[System.Windows.Forms.SendKeys]::SendWait('${mapPass}');\n`;
+            if (password) psScript += `[System.Windows.Forms.SendKeys]::SendWait('{ENTER}');\n`;
+            psScript += 'exit\n';
 
-          const child = spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', '-']);
-          child.stdin.write(psScript);
-          child.stdin.end();
-          child.on('error', (err) => {
-            console.error('Failed to start PowerShell process for Auto-Type:', err);
-            if (username) clipboard.writeText(username);
-          });
-        } else if (process.platform === 'darwin') {
-          const escapeAppleScript = (str) => {
-            if (!str) return '';
-            return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-          };
-          const userEscaped = escapeAppleScript(username);
-          const passEscaped = escapeAppleScript(password);
-
-          let appleScript = 'delay 3\ntell application "System Events"\n';
-          if (username) appleScript += `keystroke "${userEscaped}"\n`;
-          if (username && password) appleScript += `key code 48\n`; // Tab
-          if (password) appleScript += `keystroke "${passEscaped}"\n`;
-          if (password) appleScript += `key code 36\n`; // Return (Enter)
-          appleScript += 'end tell\n';
-
-          const child = spawn('osascript', []);
-          let stderr = '';
-          child.stderr.on('data', (data) => {
-            stderr += data.toString();
-          });
-          child.on('close', (code) => {
-            if (code !== 0) {
-              console.error(`osascript exited with code ${code}. Stderr: ${stderr}`);
+            const child = spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', '-']);
+            child.stdin.write(psScript);
+            child.stdin.end();
+            child.on('error', (err) => {
+              console.error('Failed to start PowerShell process for Auto-Type:', err);
               if (username) clipboard.writeText(username);
-            }
-          });
-          child.stdin.write(appleScript);
-          child.stdin.end();
-          child.on('error', (err) => {
-            console.error('Failed to start osascript process for Auto-Type:', err);
-            if (username) clipboard.writeText(username);
-          });
-        } else if (process.platform === 'linux') {
-          const escapeLinux = (str) => {
-            if (!str) return '';
-            return str.replace(/'/g, "'\\''");
+            });
+          } else if (process.platform === 'darwin') {
+            const escapeAppleScript = (str) => {
+              if (!str) return '';
+              return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+            };
+            const userEscaped = escapeAppleScript(username);
+            const passEscaped = escapeAppleScript(password);
+
+            let appleScript = 'delay 3\ntell application "System Events"\n';
+            if (username) appleScript += `keystroke "${userEscaped}"\n`;
+            if (username && password) appleScript += `key code 48\n`; // Tab
+            if (password) appleScript += `keystroke "${passEscaped}"\n`;
+            if (password) appleScript += `key code 36\n`; // Return (Enter)
+            appleScript += 'end tell\n';
+
+            const child = spawn('osascript', []);
+            let stderr = '';
+            child.stderr.on('data', (data) => {
+              stderr += data.toString();
+            });
+            child.on('close', (code) => {
+              if (code !== 0) {
+                console.error(`osascript exited with code ${code}. Stderr: ${stderr}`);
+                if (username) clipboard.writeText(username);
+              }
+            });
+            child.stdin.write(appleScript);
+            child.stdin.end();
+            child.on('error', (err) => {
+              console.error('Failed to start osascript process for Auto-Type:', err);
+              if (username) clipboard.writeText(username);
+            });
+          } else if (process.platform === 'linux') {
+            const escapeLinux = (str) => {
+              if (!str) return '';
+              return str.replace(/'/g, "'\\''");
+            };
+            const userEscaped = escapeLinux(username);
+            const passEscaped = escapeLinux(password);
+
+            let bashCommand = 'sleep 3; ';
+            if (username) bashCommand += `xdotool type --delay 10 '${userEscaped}'; `;
+            if (username && password) bashCommand += `xdotool key Tab; `;
+            if (password) bashCommand += `xdotool type --delay 10 '${passEscaped}'; `;
+            if (password) bashCommand += `xdotool key Return; `;
+
+            const child = spawn('bash', ['-s']);
+            child.on('error', (err) => {
+              console.warn('Error executing Auto-Type via xdotool (¿está instalado xdotool?):', err);
+              if (username) clipboard.writeText(username);
+            });
+            child.stdin.write(bashCommand);
+            child.stdin.end();
+          }
+          return { ok: true, mode: 'legacy' };
+        } else {
+          // Modo por defecto seguro (H-12): Copia al portapapeles sin espera (0s delay) y auto-clear en 30s
+          setClipboardWithAutoClear(secretToCopy, autoClearSeconds * 1000);
+          return {
+            ok: true,
+            mode: 'clipboard',
+            copiedField: password ? 'password' : 'username',
+            autoClearSeconds
           };
-          const userEscaped = escapeLinux(username);
-          const passEscaped = escapeLinux(password);
-
-          let bashCommand = 'sleep 3; ';
-          if (username) bashCommand += `xdotool type --delay 10 '${userEscaped}'; `;
-          if (username && password) bashCommand += `xdotool key Tab; `;
-          if (password) bashCommand += `xdotool type --delay 10 '${passEscaped}'; `;
-          if (password) bashCommand += `xdotool key Return; `;
-
-          const child = spawn('bash', ['-s']);
-          child.on('error', (err) => {
-            console.warn('Error executing Auto-Type via xdotool (¿está instalado xdotool?):', err);
-            if (username) clipboard.writeText(username);
-          });
-          child.stdin.write(bashCommand);
-          child.stdin.end();
         }
       }
 
@@ -1419,5 +1494,9 @@ module.exports = {
   registerSystemMonitoringHandlers,
   getWindowsBrowserPath,
   validateBrowserUrl,
-  validateImportFilePath
+  validateImportFilePath,
+  setClipboardWithAutoClear,
+  cancelClipboardAutoClear,
+  getCurrentAutoClearSecret: () => currentAutoClearSecret,
+  getAutoClearTimer: () => passwordAutoClearTimer
 };

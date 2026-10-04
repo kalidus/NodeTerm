@@ -52,6 +52,7 @@ contextBridge.exposeInMainWorld('electron', {
   openExternal: (url) => ipcRenderer.invoke('import:open-external', url),
   clipboard: {
     writeText: (text) => ipcRenderer.invoke('clipboard:writeText', text),
+    writeTextWithAutoClear: (text, timeoutSeconds) => ipcRenderer.invoke('clipboard:writeTextWithAutoClear', { text, timeoutSeconds }),
     readText: () => ipcRenderer.invoke('clipboard:readText'),
     writeFiles: (files) => ipcRenderer.invoke('clipboard:writeFiles', files),
     saveTempFile: (fileName, buffer) => ipcRenderer.invoke('clipboard:saveTempFile', { fileName, buffer }),
@@ -148,7 +149,7 @@ contextBridge.exposeInMainWorld('electron', {
   system: {
     getMemoryStats: () => ipcRenderer.invoke('system:get-memory-stats'),
     getGPUStats: () => ipcRenderer.invoke('system:get-gpu-stats'),
-    openWithBrowser: (url, browser, privateMode, username, password) => ipcRenderer.invoke('system:open-with-browser', { url, browser, privateMode, username, password })
+    openWithBrowser: (url, browser, privateMode, username, password, autoTypeMode, autoClearSeconds) => ipcRenderer.invoke('system:open-with-browser', { url, browser, privateMode, username, password, autoTypeMode, autoClearSeconds })
   },
   sshMonitor: {
     getListeningPorts: (tabId) => ipcRenderer.invoke('ssh:get-listening-ports', { tabId }),

@@ -53,6 +53,12 @@ function registerClipboardHandlers() {
     return true;
   });
 
+  safeHandle('clipboard:writeTextWithAutoClear', (event, { text, timeoutSeconds = 30 } = {}) => {
+    const { setClipboardWithAutoClear } = require('./system-handlers');
+    setClipboardWithAutoClear(text == null ? '' : String(text), (timeoutSeconds || 30) * 1000);
+    return true;
+  });
+
   safeHandle('clipboard:beginTempFile', async (event, { fileName }) => {
     try {
       const tempDir = clipboardTempDir();
