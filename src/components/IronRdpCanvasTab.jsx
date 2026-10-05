@@ -1416,12 +1416,23 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       IntlBackslash: 0x56, IntlRo: 0x73, IntlYen: 0x7D
     };
 
+    let cachedRect = null;
+    let cachedScaleX = 1;
+    let cachedScaleY = 1;
+
+    const updateCanvasRect = () => {
+      if (!canvas) return;
+      cachedRect = canvas.getBoundingClientRect();
+      cachedScaleX = cachedRect.width > 0 ? canvas.width / cachedRect.width : 1;
+      cachedScaleY = cachedRect.height > 0 ? canvas.height / cachedRect.height : 1;
+    };
+
+    updateCanvasRect();
+
     const getCanvasPos = (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const scaleX = rect.width > 0 ? canvas.width / rect.width : 1;
-      const scaleY = rect.height > 0 ? canvas.height / rect.height : 1;
-      const rawX = Math.floor((e.clientX - rect.left) * scaleX);
-      const rawY = Math.floor((e.clientY - rect.top) * scaleY);
+      if (!cachedRect) updateCanvasRect();
+      const rawX = Math.floor((e.clientX - cachedRect.left) * cachedScaleX);
+      const rawY = Math.floor((e.clientY - cachedRect.top) * cachedScaleY);
       return {
         x: Math.max(0, Math.min(canvas.width - 1, rawX)),
         y: Math.max(0, Math.min(canvas.height - 1, rawY))
@@ -1429,40 +1440,62 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     };
 
     let pendingMousePos = null;
-    let mouseRafId = null;
+    let mouseThrottleTimer = null;
+    let lastSentMoveTime = 0;
+    const MOUSE_THROTTLE_MS = 10; // 100 Hz: fluido y desacoplado del rAF de vídeo
 
-    const flushPendingMouseMove = () => {
-      if (mouseRafId != null) {
-        cancelAnimationFrame(mouseRafId);
-        mouseRafId = null;
-      }
-      if (pendingMousePos && sessionRef.current) {
-        const { x, y } = pendingMousePos;
-        pendingMousePos = null;
-        try {
-          const transaction = new Backend.InputTransaction();
-          transaction.addEvent(Backend.DeviceEvent.mouseMove(x, y));
-          sessionRef.current.applyInputs(transaction);
-        } catch (_) {}
-      }
+    let isMouseDown = false;
+    let mouseDownPos = null;
+    let hasDragged = false;
+    const DRAG_THRESHOLD_PX = 4; // Umbral estándar de Windows (SM_CXDRAG) para proteger el click
+
+    const sendMouseMove = (x, y) => {
+      if (!sessionRef.current) return;
+      lastSentMoveTime = performance.now();
+      try {
+        const transaction = new Backend.InputTransaction();
+        transaction.addEvent(Backend.DeviceEvent.mouseMove(x, y));
+        sessionRef.current.applyInputs(transaction);
+      } catch (_) {}
     };
 
     const handleMouseMove = (e) => {
       if (!sessionRef.current) return;
-      pendingMousePos = getCanvasPos(e);
-      if (mouseRafId == null) {
-        mouseRafId = requestAnimationFrame(() => {
-          mouseRafId = null;
-          if (pendingMousePos && sessionRef.current) {
-            const { x, y } = pendingMousePos;
-            pendingMousePos = null;
-            try {
-              const transaction = new Backend.InputTransaction();
-              transaction.addEvent(Backend.DeviceEvent.mouseMove(x, y));
-              sessionRef.current.applyInputs(transaction);
-            } catch (_) {}
-          }
-        });
+      const { x, y } = getCanvasPos(e);
+
+      // Si el botón está presionado pero no se ha iniciado un arrastre intencionado,
+      // filtramos el micro-temblor de la mano (< 4px) para que Windows no cancele el click.
+      if (isMouseDown && !hasDragged && mouseDownPos) {
+        const dx = Math.abs(x - mouseDownPos.x);
+        const dy = Math.abs(y - mouseDownPos.y);
+        if (dx < DRAG_THRESHOLD_PX && dy < DRAG_THRESHOLD_PX) {
+          return;
+        }
+        hasDragged = true;
+      }
+
+      const now = performance.now();
+      const elapsed = now - lastSentMoveTime;
+
+      if (elapsed >= MOUSE_THROTTLE_MS) {
+        if (mouseThrottleTimer != null) {
+          clearTimeout(mouseThrottleTimer);
+          mouseThrottleTimer = null;
+        }
+        pendingMousePos = null;
+        sendMouseMove(x, y);
+      } else {
+        pendingMousePos = { x, y };
+        if (mouseThrottleTimer == null) {
+          mouseThrottleTimer = setTimeout(() => {
+            mouseThrottleTimer = null;
+            if (pendingMousePos) {
+              const pos = pendingMousePos;
+              pendingMousePos = null;
+              sendMouseMove(pos.x, pos.y);
+            }
+          }, MOUSE_THROTTLE_MS - elapsed);
+        }
       }
     };
 
@@ -1470,9 +1503,22 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       if (!sessionRef.current) return;
       canvas.focus();
       e.preventDefault();
-      flushPendingMouseMove();
+
+      // Cancelar cualquier movimiento pendiente para que no se intercale
+      if (mouseThrottleTimer != null) {
+        clearTimeout(mouseThrottleTimer);
+        mouseThrottleTimer = null;
+      }
+      pendingMousePos = null;
+
       const { x, y } = getCanvasPos(e);
       const btn = e.button === 0 ? 0 : e.button === 2 ? 2 : 1;
+
+      isMouseDown = true;
+      mouseDownPos = { x, y };
+      hasDragged = false;
+
+      // Click atómico: posicionar el cursor y pulsar el botón en la misma transacción de red
       try {
         const transaction = new Backend.InputTransaction();
         transaction.addEvent(Backend.DeviceEvent.mouseMove(x, y));
@@ -1484,12 +1530,28 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     const handleMouseUp = (e) => {
       if (!sessionRef.current) return;
       e.preventDefault();
-      flushPendingMouseMove();
+
+      if (mouseThrottleTimer != null) {
+        clearTimeout(mouseThrottleTimer);
+        mouseThrottleTimer = null;
+      }
+      pendingMousePos = null;
+
       const { x, y } = getCanvasPos(e);
       const btn = e.button === 0 ? 0 : e.button === 2 ? 2 : 1;
+
+      // Si no hubo arrastre intencionado, soltar exactamente en la posición del mouseDown
+      // para asegurar que el servidor remoto registre el click limpiamente.
+      const releaseX = (!hasDragged && mouseDownPos) ? mouseDownPos.x : x;
+      const releaseY = (!hasDragged && mouseDownPos) ? mouseDownPos.y : y;
+
+      isMouseDown = false;
+      mouseDownPos = null;
+      hasDragged = false;
+
       try {
         const transaction = new Backend.InputTransaction();
-        transaction.addEvent(Backend.DeviceEvent.mouseMove(x, y));
+        transaction.addEvent(Backend.DeviceEvent.mouseMove(releaseX, releaseY));
         transaction.addEvent(Backend.DeviceEvent.mouseButtonReleased(btn));
         sessionRef.current.applyInputs(transaction);
       } catch (err) {}
@@ -1579,9 +1641,11 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       }
     };
 
+    window.addEventListener('resize', updateCanvasRect);
     canvas.addEventListener('mousemove', handleMouseMove);
     canvas.addEventListener('mousedown', handleMouseDown);
     canvas.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('mouseup', handleMouseUp);
     canvas.addEventListener('contextmenu', handleContextMenu);
     canvas.addEventListener('wheel', handleWheel, { passive: false });
     canvas.addEventListener('keydown', handleKeyDown);
@@ -1589,13 +1653,15 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     canvas.addEventListener('paste', handlePaste);
 
     return () => {
-      if (mouseRafId != null) {
-        cancelAnimationFrame(mouseRafId);
-        mouseRafId = null;
+      if (mouseThrottleTimer != null) {
+        clearTimeout(mouseThrottleTimer);
+        mouseThrottleTimer = null;
       }
+      window.removeEventListener('resize', updateCanvasRect);
       canvas.removeEventListener('mousemove', handleMouseMove);
       canvas.removeEventListener('mousedown', handleMouseDown);
       canvas.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('mouseup', handleMouseUp);
       canvas.removeEventListener('contextmenu', handleContextMenu);
       canvas.removeEventListener('wheel', handleWheel);
       canvas.removeEventListener('keydown', handleKeyDown);
@@ -1936,7 +2002,11 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
               display: 'block',
               backgroundColor: '#000000',
               outline: 'none',
-              cursor: 'default'
+              cursor: 'default',
+              transform: 'translateZ(0)',
+              backfaceVisibility: 'hidden',
+              willChange: 'transform',
+              imageRendering: 'auto'
             } : {
               width: `${desktopDimensions.width}px`,
               height: `${desktopDimensions.height}px`,
@@ -1947,7 +2017,11 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
               outline: 'none',
               cursor: 'default',
               borderRadius: '4px',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.7)'
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.7)',
+              transform: 'translateZ(0)',
+              backfaceVisibility: 'hidden',
+              willChange: 'transform',
+              imageRendering: 'auto'
             }}
           />
         </div>

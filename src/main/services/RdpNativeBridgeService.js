@@ -289,7 +289,14 @@ class RdpNativeBridgeService extends EventEmitter {
           const session = this.sessionTokens.get(token);
           this.sessionTokens.delete(token); // Token de un solo uso
 
+          if (socket && typeof socket.setNoDelay === 'function') {
+            socket.setNoDelay(true);
+          }
+
           this.wss.handleUpgrade(request, socket, head, (ws) => {
+            if (ws && ws._socket && typeof ws._socket.setNoDelay === 'function') {
+              ws._socket.setNoDelay(true);
+            }
             debugLog(`✅ [RdpNativeBridgeService] Handshake WebSocket completado exitosamente para la sesión.`);
             this.handleConnection(ws, session);
           });
@@ -678,7 +685,33 @@ class RdpNativeBridgeService extends EventEmitter {
 
               rdCleanPathPhase = 'transparent';
 
+              // Control de contrapresión (Backpressure): evita que ráfagas de vídeo
+              // o movimiento continuo de ventanas acumulen megabytes en cola (bufferbloat).
+              const WS_HIGH_WATER_MARK = 256 * 1024; // 256 KB
+              const WS_LOW_WATER_MARK = 64 * 1024;   // 64 KB
+              let isTlsPaused = false;
+
+              const checkResumeTls = () => {
+                if (isTlsPaused && ws.bufferedAmount <= WS_LOW_WATER_MARK) {
+                  isTlsPaused = false;
+                  if (tlsSocket && !tlsSocket.destroyed) {
+                    tlsSocket.resume();
+                  }
+                }
+              };
+
+              if (ws._socket && typeof ws._socket.on === 'function') {
+                ws._socket.on('drain', checkResumeTls);
+              }
+
               tlsSocket.on('data', (chunk) => {
+                // Si el cliente WebSocket está saturado procesando vídeo o ventanas, pausar la lectura de red
+                // para que el servidor remoto descarte fotogramas intermedios en origen y mantenga la latencia a 0 ms.
+                if (ws.bufferedAmount > WS_HIGH_WATER_MARK && !isTlsPaused) {
+                  isTlsPaused = true;
+                  tlsSocket.pause();
+                }
+
                 // Separar frames concatenados respetando la segmentación TCP con memoria de estado
                 // para que IronRDP WASM reciba cada PDU completa sin cortar bitmaps fragmentados
                 const frames = frameSplitter.push(chunk);
@@ -690,18 +723,21 @@ class RdpNativeBridgeService extends EventEmitter {
 
                   const n = frame.length;
                   framesFromRdp += 1;
-                  const pduDesc = describeRdpPdu(frame);
+                  const isFastPath = (frame[0] & 0x03) === 0 && (frame[0] & 0x30) === 0;
+                  const pduDesc = (isFastPath && !isDebug) ? 'FastPath' : describeRdpPdu(frame);
 
-                  recentRdpFrames.push(`#${framesFromRdp} ${n}B | ${pduDesc}`);
-                  if (recentRdpFrames.length > RECENT_FRAMES_WINDOW) recentRdpFrames.shift();
+                  if (isDebug || !isFastPath) {
+                    recentRdpFrames.push(`#${framesFromRdp} ${n}B | ${pduDesc}`);
+                    if (recentRdpFrames.length > RECENT_FRAMES_WINDOW) recentRdpFrames.shift();
 
-                  // El motivo del cierre viaja en un PDU, no en el socket: se registra siempre.
-                  const disconnectDesc = describeDisconnectPdu(frame);
-                  if (disconnectDesc) {
-                    lastDisconnectDesc = preferDisconnectDesc(lastDisconnectDesc, disconnectDesc);
-                    const discMsg = `🛑 [Bridge] El servidor anuncia cierre en frame#${framesFromRdp}: ${disconnectDesc}`;
-                    console.warn(discMsg);
-                    this.emit('diagnostic-log', { category: 'disconnect', message: discMsg });
+                    // El motivo del cierre viaja en un PDU TPKT, no en FastPath: se comprueba solo en paquetes no-FastPath
+                    const disconnectDesc = describeDisconnectPdu(frame);
+                    if (disconnectDesc) {
+                      lastDisconnectDesc = preferDisconnectDesc(lastDisconnectDesc, disconnectDesc);
+                      const discMsg = `🛑 [Bridge] El servidor anuncia cierre en frame#${framesFromRdp}: ${disconnectDesc}`;
+                      console.warn(discMsg);
+                      this.emit('diagnostic-log', { category: 'disconnect', message: discMsg });
+                    }
                   }
 
                   if (isDebug) {
@@ -942,8 +978,9 @@ class RdpNativeBridgeService extends EventEmitter {
                     console.log(`[Bridge] RDP->WASM frame#${framesFromRdp}: ${frame.length}B | ${pduDesc}`);
                   }
 
-                  // Normalizar todas las teselas 16bpp a estándar 0xf3/0xf4 y <=64x64
-                  const stridePatch = fixWallixBitmapStrideCrop(frame);
+                  // Normalizar todas las teselas 16bpp solo en sesiones Wallix / Bastión con padding irregular
+                  const isWallix = wallixServiceFromSession(session) != null || isBastionSession(session);
+                  const stridePatch = isWallix ? fixWallixBitmapStrideCrop(frame) : { patchedCount: 0 };
                   const outChunks = stridePatch.patchedCount
                     ? (stridePatch.buffers || [stridePatch.buf])
                     : [frame];
@@ -961,14 +998,18 @@ class RdpNativeBridgeService extends EventEmitter {
                     try {
                       for (const out of outChunks) {
                         if (!out || typeof out.length !== 'number') continue;
-                        recentWasmFrames.push(
-                          `#${framesFromRdp} ${out.length}B | ${describeRdpPdu(out)}` +
-                          (processed.serverChannelId != null && processed.serverChannelId !== processed.channelId
-                            ? ` [remap ch=${processed.serverChannelId}->${processed.channelId}]`
-                            : '')
-                        );
-                        if (recentWasmFrames.length > RECENT_FRAMES_WINDOW) recentWasmFrames.shift();
-                        ws.send(out, { binary: true });
+                        if (isDebug || !isFastPath) {
+                          recentWasmFrames.push(
+                            `#${framesFromRdp} ${out.length}B | ${describeRdpPdu(out)}` +
+                            (processed.serverChannelId != null && processed.serverChannelId !== processed.channelId
+                              ? ` [remap ch=${processed.serverChannelId}->${processed.channelId}]`
+                              : '')
+                          );
+                          if (recentWasmFrames.length > RECENT_FRAMES_WINDOW) recentWasmFrames.shift();
+                        }
+                        ws.send(out, { binary: true }, () => {
+                          checkResumeTls();
+                        });
                       }
                     } catch (sendErr) {
                       console.warn('[Bridge] Error enviando frames a WebSocket:', sendErr.message);
@@ -1036,6 +1077,21 @@ class RdpNativeBridgeService extends EventEmitter {
         // Primer frame post-TLS: MCS Connect Initial. Parches CS_CORE para bastiones TLS Direct.
         let forward = payload;
         if (rdCleanPathPhase === 'transparent') {
+          // Fast-track para eventos de entrada del cliente (ratón, teclado)
+          // Los paquetes FastPath de entrada no contienen canales virtuales ni desconexiones.
+          const isFastPathInput = Buffer.isBuffer(payload) && payload.length >= 2 &&
+            (payload[0] & 0x03) === 0 && (payload[0] & 0x30) === 0;
+
+          if (isFastPathInput) {
+            bytesToRdp += payload.length;
+            if (tlsSocket && tlsSocket.writable) {
+              tlsSocket.write(payload);
+            } else if (targetSocket && targetSocket.writable) {
+              targetSocket.write(payload);
+            }
+            return;
+          }
+
           const now = Date.now();
           const gapFromLastWs = lastWsFrameAt > 0 ? now - lastWsFrameAt : 0;
           lastWsFrameAt = now;

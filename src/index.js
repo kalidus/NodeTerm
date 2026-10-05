@@ -20,10 +20,14 @@ import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
 // primeflex diferido (no bloquea primer paint)
 const loadPrimeFlex = () => import('primeflex/primeflex.css').catch(() => {});
+// Fuentes locales integradas (JetBrains Mono, Fira Code, etc.) diferidas y 100% offline
+const loadLocalFonts = () => import('./styles/fonts.css').catch(() => {});
 if (typeof requestIdleCallback === 'function') {
   requestIdleCallback(loadPrimeFlex, { timeout: 3000 });
+  requestIdleCallback(loadLocalFonts, { timeout: 3500 });
 } else {
   setTimeout(loadPrimeFlex, 0);
+  setTimeout(loadLocalFonts, 50);
 }
 import './styles/base/base.css'; // Importamos la nueva base de estilos
 import PrimeReact from 'primereact/api';

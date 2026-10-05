@@ -6,18 +6,6 @@
     <meta name="color-scheme" content="dark light" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: data:; connect-src 'self' ws: wss: http: https: blob: data:; worker-src 'self' blob:; frame-src 'self'; object-src 'none'; base-uri 'self';" />
     
-    <!-- 🚀 OPTIMIZACIÓN: Google Fonts cargados de forma NO BLOQUEANTE -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    
-    <!-- Fuentes principales para la interfaz - DIFERIDAS -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Roboto:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-    
-    <!-- Fuentes monoespaciadas para terminales - DIFERIDAS -->
-    <link id="terminal-fonts-fallback" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-    
-    <!-- Fuentes adicionales - DIFERIDAS con delay mayor -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
     <script>
       // Global polyfill - DEBE ejecutarse ANTES que cualquier otro script
       (function() {
