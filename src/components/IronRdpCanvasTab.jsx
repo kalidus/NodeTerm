@@ -99,7 +99,6 @@ const getOptimized2dContext = (canvas) => {
   if (!canvas) return null;
   return canvas.getContext('2d', {
     alpha: false,
-    desynchronized: true,
     willReadFrequently: false
   });
 };
@@ -1453,7 +1452,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     let mouseThrottleTimer = null;
     let lastSentMoveTime = 0;
     const MOUSE_THROTTLE_MS = 10; // 100 Hz: cursor ultra-reactivo en movimiento libre
-    const DRAG_THROTTLE_MS = 16;  // ~60 Hz: óptimo para mover ventanas en Windows sin saturar la red ni la cola DWM
+    const DRAG_THROTTLE_MS = 10;  // 100 Hz: movimiento de ventanas ultra-fluido e instantáneo
 
     let isMouseDown = false;
     let mouseDownPos = null;
@@ -2027,8 +2026,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
               transform: 'translateZ(0)',
               backfaceVisibility: 'hidden',
               willChange: 'transform',
-              imageRendering: 'auto',
-              contain: 'strict'
+              imageRendering: 'auto'
             } : {
               width: `${desktopDimensions.width}px`,
               height: `${desktopDimensions.height}px`,
@@ -2043,8 +2041,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
               transform: 'translateZ(0)',
               backfaceVisibility: 'hidden',
               willChange: 'transform',
-              imageRendering: 'auto',
-              contain: 'strict'
+              imageRendering: 'auto'
             }}
           />
         </div>

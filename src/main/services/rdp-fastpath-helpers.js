@@ -325,8 +325,8 @@ function fixWallixBitmapDestStride(buf) {
   };
 }
 
-/** Fast-Path standard max: 16384 (16KB). Usar 14000 para margen seguro. */
-const MAX_FASTPATH_PDU = 14000;
+/** Fast-Path standard max: 16384 (16KB). */
+const MAX_FASTPATH_PDU = 16384;
 
 /**
  * Construye un Fast-Path BITMAP con N rectangulos ya serializados.
