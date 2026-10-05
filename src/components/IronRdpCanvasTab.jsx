@@ -95,6 +95,15 @@ const extractErrorMessage = (err) => {
   return msg;
 };
 
+const getOptimized2dContext = (canvas) => {
+  if (!canvas) return null;
+  return canvas.getContext('2d', {
+    alpha: false,
+    desynchronized: true,
+    willReadFrequently: false
+  });
+};
+
 const readLocalClipboardText = async () => {
   try {
     if (window.electron?.clipboard?.readText) {
@@ -631,7 +640,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     }
     if (canvasRef.current) {
       try {
-        const ctx = canvasRef.current.getContext('2d');
+        const ctx = getOptimized2dContext(canvasRef.current);
         if (ctx) {
           ctx.fillStyle = '#141821';
           ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
@@ -750,7 +759,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     const clearCanvasScreen = () => {
       if (canvasRef.current) {
         try {
-          const ctx = canvasRef.current.getContext('2d');
+          const ctx = getOptimized2dContext(canvasRef.current);
           if (ctx) {
             ctx.fillStyle = '#141821';
             ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
@@ -1127,6 +1136,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         }
 
         if (canvasRef.current) {
+          getOptimized2dContext(canvasRef.current);
           builder.renderCanvas(canvasRef.current);
         }
 
@@ -1442,7 +1452,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     let pendingMousePos = null;
     let mouseThrottleTimer = null;
     let lastSentMoveTime = 0;
-    const MOUSE_THROTTLE_MS = 10; // 100 Hz: fluido y desacoplado del rAF de vídeo
+    const MOUSE_THROTTLE_MS = 10; // 100 Hz: cursor ultra-reactivo en movimiento libre
+    const DRAG_THROTTLE_MS = 16;  // ~60 Hz: óptimo para mover ventanas en Windows sin saturar la red ni la cola DWM
 
     let isMouseDown = false;
     let mouseDownPos = null;
@@ -1476,8 +1487,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
 
       const now = performance.now();
       const elapsed = now - lastSentMoveTime;
+      const throttleLimit = isMouseDown ? DRAG_THROTTLE_MS : MOUSE_THROTTLE_MS;
 
-      if (elapsed >= MOUSE_THROTTLE_MS) {
+      if (elapsed >= throttleLimit) {
         if (mouseThrottleTimer != null) {
           clearTimeout(mouseThrottleTimer);
           mouseThrottleTimer = null;
@@ -1494,7 +1506,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
               pendingMousePos = null;
               sendMouseMove(pos.x, pos.y);
             }
-          }, MOUSE_THROTTLE_MS - elapsed);
+          }, throttleLimit - elapsed);
         }
       }
     };
@@ -1642,6 +1654,11 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     };
 
     window.addEventListener('resize', updateCanvasRect);
+    canvas.addEventListener('mouseenter', updateCanvasRect, { passive: true });
+    const containerEl = containerRef.current;
+    if (containerEl) {
+      containerEl.addEventListener('scroll', updateCanvasRect, { passive: true });
+    }
     canvas.addEventListener('mousemove', handleMouseMove);
     canvas.addEventListener('mousedown', handleMouseDown);
     canvas.addEventListener('mouseup', handleMouseUp);
@@ -1658,6 +1675,10 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         mouseThrottleTimer = null;
       }
       window.removeEventListener('resize', updateCanvasRect);
+      canvas.removeEventListener('mouseenter', updateCanvasRect);
+      if (containerEl) {
+        containerEl.removeEventListener('scroll', updateCanvasRect);
+      }
       canvas.removeEventListener('mousemove', handleMouseMove);
       canvas.removeEventListener('mousedown', handleMouseDown);
       canvas.removeEventListener('mouseup', handleMouseUp);
@@ -2006,7 +2027,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
               transform: 'translateZ(0)',
               backfaceVisibility: 'hidden',
               willChange: 'transform',
-              imageRendering: 'auto'
+              imageRendering: 'auto',
+              contain: 'strict'
             } : {
               width: `${desktopDimensions.width}px`,
               height: `${desktopDimensions.height}px`,
@@ -2021,7 +2043,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
               transform: 'translateZ(0)',
               backfaceVisibility: 'hidden',
               willChange: 'transform',
-              imageRendering: 'auto'
+              imageRendering: 'auto',
+              contain: 'strict'
             }}
           />
         </div>

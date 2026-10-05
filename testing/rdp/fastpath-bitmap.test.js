@@ -192,6 +192,22 @@ describe('fixWallixBitmapStrideCrop', () => {
     const result = fixWallixBitmapStrideCrop(raw);
     assert.equal(result.patchedCount, 0);
   });
+
+  it('omite descompresion y retorna null si width coincide con dest width (!needsCrop)', () => {
+    const { fixOneBitmapRectStride } = require('../../src/main/services/rdp-fastpath-helpers');
+    const rectBuf = Buffer.alloc(18 + 200 * 100 * 2);
+    rectBuf.writeUInt16LE(0, 0); // destLeft
+    rectBuf.writeUInt16LE(0, 2); // destTop
+    rectBuf.writeUInt16LE(199, 4); // destRight (iw = 200)
+    rectBuf.writeUInt16LE(99, 6); // destBottom (ih = 100)
+    rectBuf.writeUInt16LE(200, 8); // width exacto (200)
+    rectBuf.writeUInt16LE(100, 10); // height exacto (100)
+    rectBuf.writeUInt16LE(16, 12); // bitsPerPixel
+    rectBuf.writeUInt16LE(0, 14); // flags
+    rectBuf.writeUInt16LE(200 * 100 * 2, 16); // bitmapLength
+    const result = fixOneBitmapRectStride(rectBuf);
+    assert.equal(result, null);
+  });
 });
 
 describe('alignDesktopDimension', () => {

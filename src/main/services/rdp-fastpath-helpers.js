@@ -179,15 +179,9 @@ function fixOneBitmapRectStride(rectBuf) {
   const raw = rectBuf.subarray(18, 18 + bitmapLength);
   const needsCrop = needsStrideCrop(width, height, destLeft, destTop, destRight, destBottom);
 
-  // Si ya es un formato elemental 0xf3 o 0xf4 sin desfase de stride y <=64x64, pasar directo
-  if (
-    !needsCrop &&
-    (flags & NO_BITMAP_COMPRESSION_HDR) &&
-    raw.length > 0 &&
-    (raw[0] === 0xf3 || raw[0] === 0xf4) &&
-    iw <= SUBTILE_MAX &&
-    ih <= SUBTILE_MAX
-  ) {
+  // Si no hay desfase de stride (width === iw && height === ih), el rectángulo cumple
+  // la especificación RDP estándar y IronRDP WASM lo descomprime de forma nativa a máxima velocidad sin CPU en Node.js.
+  if (!needsCrop) {
     return null;
   }
 
