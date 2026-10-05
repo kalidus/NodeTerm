@@ -1,7 +1,7 @@
 // Simple connection store backed by localStorage for favorites and recents
 // Supports SSH, RDP (rdp-guacamole), Explorer (SSH-based file explorer) and Groups
 
-import favoriteGroupsStore from './favoriteGroupsStore';
+import favoriteGroupsStore from './favoriteGroupsStore.js';
 
 const SECRET_OR_DOC_TYPES = ['password', 'secret', 'crypto_wallet', 'api_key', 'secure_note', 'document', 'quick-note'];
 
@@ -28,14 +28,76 @@ function safeParse(json, fallback) {
   }
 }
 
+// 🚀 OPTIMIZACIÓN: Caché en memoria para evitar llamadas síncronas repetidas a localStorage.getItem y JSON.parse
+let cachedFavorites = null;
+let cachedFavoriteIds = null;
+let cachedRecents = null;
+let cachedRecentPasswords = null;
+
+export function invalidateConnectionStoreCache(key = null) {
+  if (!key || key === FAVORITES_KEY) {
+    cachedFavorites = null;
+    cachedFavoriteIds = null;
+  }
+  if (!key || key === RECENTS_KEY) {
+    cachedRecents = null;
+  }
+  if (!key || key === RECENT_PASSWORDS_KEY) {
+    cachedRecentPasswords = null;
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (!e.key || e.key === FAVORITES_KEY || e.key === RECENTS_KEY || e.key === RECENT_PASSWORDS_KEY) {
+      invalidateConnectionStoreCache(e.key);
+    }
+  });
+}
+
 function loadList(key) {
-  return safeParse(localStorage.getItem(key), []);
+  if (key === FAVORITES_KEY && cachedFavorites !== null) {
+    return cachedFavorites;
+  }
+  if (key === RECENTS_KEY && cachedRecents !== null) {
+    return cachedRecents;
+  }
+  if (key === RECENT_PASSWORDS_KEY && cachedRecentPasswords !== null) {
+    return cachedRecentPasswords;
+  }
+
+  const parsed = safeParse(localStorage.getItem(key), []);
+  if (key === FAVORITES_KEY) {
+    cachedFavorites = parsed;
+    cachedFavoriteIds = new Set(parsed.map(f => f.id).filter(Boolean));
+  } else if (key === RECENTS_KEY) {
+    cachedRecents = parsed;
+  } else if (key === RECENT_PASSWORDS_KEY) {
+    cachedRecentPasswords = parsed;
+  }
+  return parsed;
 }
 
 function saveList(key, list) {
-  localStorage.setItem(key, JSON.stringify(list));
+  if (key === FAVORITES_KEY) {
+    cachedFavorites = list;
+    cachedFavoriteIds = new Set(list.map(f => f.id).filter(Boolean));
+  } else if (key === RECENTS_KEY) {
+    cachedRecents = list;
+  } else if (key === RECENT_PASSWORDS_KEY) {
+    cachedRecentPasswords = list;
+  }
+
+  try {
+    localStorage.setItem(key, JSON.stringify(list));
+  } catch (err) {
+    console.warn(`[connectionStore] Error persistiendo ${key} en localStorage:`, err);
+  }
+
   // Notify listeners in UI
-  window.dispatchEvent(new CustomEvent(UPDATED_EVENT, { detail: { key } }));
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(UPDATED_EVENT, { detail: { key } }));
+  }
   // Notificación directa para recents (respaldo, misma ejecución síncrona)
   if (key === RECENTS_KEY) {
     recentsListeners.forEach((fn) => {
@@ -299,14 +361,38 @@ export function getFavorites() {
 }
 
 export function isFavorite(idOrConn) {
-  const id = typeof idOrConn === 'string' ? idOrConn : toSerializable(idOrConn).id;
-  return getFavorites().some(f => f.id === id);
+  if (!idOrConn) return false;
+  if (cachedFavoriteIds === null) {
+    getFavorites();
+  }
+
+  // 1. Si es ID directo en string (caso más común): búsqueda O(1) inmediata en memoria
+  if (typeof idOrConn === 'string') {
+    return cachedFavoriteIds ? cachedFavoriteIds.has(idOrConn) : false;
+  }
+
+  // 2. Si es objeto y ya contiene 'id': búsqueda O(1) inmediata
+  if (idOrConn.id && cachedFavoriteIds && cachedFavoriteIds.has(idOrConn.id)) {
+    return true;
+  }
+
+  // 3. Caso especial para grupos
+  if (idOrConn.type === 'group') {
+    const gId = idOrConn.id;
+    const gName = idOrConn.name || idOrConn.label;
+    if (gId && cachedFavoriteIds && cachedFavoriteIds.has(gId)) return true;
+    return getFavorites().some(f => f.type === 'group' && (f.id === gId || (gName && f.name === gName)));
+  }
+
+  // 4. Si es objeto de conexión sin ID normalizado aún, construir el ID serializado y consultar en O(1)
+  const serial = toSerializable(idOrConn);
+  return cachedFavoriteIds ? cachedFavoriteIds.has(serial.id) : false;
 }
 
 export function toggleFavorite(connOrId) {
   const serial = typeof connOrId === 'string' ? null : toSerializable(connOrId);
   const id = serial ? serial.id : connOrId;
-  const list = getFavorites();
+  const list = [...getFavorites()];
   const idx = list.findIndex(f => f.id === id);
   if (idx >= 0) {
     list.splice(idx, 1);
@@ -324,7 +410,7 @@ export function addGroupToFavorites(group) {
     ...group,
     type: 'group'
   });
-  const list = getFavorites();
+  const list = [...getFavorites()];
 
   // Buscar por ID del grupo original o por nombre si no hay ID
   const idx = list.findIndex(f =>
@@ -352,6 +438,9 @@ export function removeGroupFromFavorites(groupId, groupName = null) {
 }
 
 export function isGroupFavorite(groupId, groupName = null) {
+  if (groupId && cachedFavoriteIds && cachedFavoriteIds.has(groupId)) {
+    return true;
+  }
   return getFavorites().some(f =>
     f.type === 'group' &&
     (f.id === groupId || (groupName && f.name === groupName))
@@ -372,7 +461,7 @@ export function updateFavoriteOnEdit(oldConnection, newConnection) {
   const oldId = oldSerial.id;
   const newId = newSerial.id;
 
-  const list = getFavorites();
+  const list = [...getFavorites()];
   const oldIdx = list.findIndex(f => f.id === oldId);
 
   // Si el ID cambió (por ejemplo, cambió el tipo), remover el viejo
@@ -397,7 +486,7 @@ export function updateFavoriteOnEdit(oldConnection, newConnection) {
 
 export function updateFavoriteFields(id, fields) {
   if (!id || !fields || typeof fields !== 'object') return getFavorites();
-  const list = getFavorites();
+  const list = [...getFavorites()];
   const idx = list.findIndex(f => f.id === id);
   if (idx < 0) return list;
   list[idx] = { ...list[idx], ...fields, id: list[idx].id };
@@ -558,6 +647,7 @@ export default {
   getRecentPasswords,
   recordRecentPassword,
   clearRecentPasswords,
+  invalidateConnectionStoreCache,
   onUpdate,
   helpers,
   constants

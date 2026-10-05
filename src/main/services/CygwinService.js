@@ -5,6 +5,7 @@ const fs = require('fs');
 const { app } = require('electron');
 const { getNodeTermDataDir } = require('../utils/file-utils');
 const { sendToRenderer } = require('../utils');
+const { terminalIpcBatcher } = require('./TerminalIpcBatcher');
 
 /**
  * Servicio para Cygwin portable instalado bajo demanda (Apps).
@@ -279,7 +280,7 @@ cd ~
         if (!listenerReady) {
           outputBuffer.push(data);
         } else {
-          sendToRenderer(mainWindow, `cygwin:data:${tabId}`, data);
+          terminalIpcBatcher.send(mainWindow, `cygwin:data:${tabId}`, data);
         }
       }
     });
@@ -289,7 +290,7 @@ cd ~
       listenerReady = true;
       if (outputBuffer.length > 0 && !isAppQuitting.value) {
         outputBuffer.forEach(data => {
-          sendToRenderer(mainWindow, `cygwin:data:${tabId}`, data);
+          terminalIpcBatcher.send(mainWindow, `cygwin:data:${tabId}`, data);
         });
         outputBuffer = [];
       }
@@ -297,6 +298,7 @@ cd ~
 
     // Handle exit
     cygwinProcesses[tabId].onExit(({ exitCode, signal }) => {
+      terminalIpcBatcher.flush(`cygwin:data:${tabId}`);
       console.log(`🔚 Cygwin ${tabId}: Terminado`);
       delete cygwinProcesses[tabId];
       if (!isAppQuitting.value) {

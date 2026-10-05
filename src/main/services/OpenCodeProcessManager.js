@@ -1,6 +1,7 @@
 const os = require('os');
 const fs = require('fs');
 const { sendToRenderer } = require('../utils');
+const { terminalIpcBatcher } = require('./TerminalIpcBatcher');
 
 let openCodeProcesses = {};
 let mainWindow = null;
@@ -110,11 +111,12 @@ async function startOpenCodeSession(tabId, { cols, rows } = {}) {
 
     ptyProcess.onData((data) => {
       if (!isAppQuitting.value) {
-        sendToRenderer(mainWindow, `opencode:data:${tabId}`, data);
+        terminalIpcBatcher.send(mainWindow, `opencode:data:${tabId}`, data);
       }
     });
 
     ptyProcess.onExit((event) => {
+      terminalIpcBatcher.flush(`opencode:data:${tabId}`);
       const exitCode = typeof event === 'object' ? event?.exitCode : event;
       delete openCodeProcesses[tabId];
 

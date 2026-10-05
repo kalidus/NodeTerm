@@ -10,6 +10,7 @@
  */
 
 const { sendToRenderer } = require('../utils');
+const { terminalIpcBatcher } = require('./TerminalIpcBatcher');
 const {
   buildSshConnectOptions,
   buildShellOptions,
@@ -353,10 +354,11 @@ class SSHAuthService {
             getSessionRecorder().recordOutput(tabId, dataStr);
           }
 
-          sendToRenderer(sender, `ssh:data:${tabId}`, dataStr);
+          terminalIpcBatcher.send(sender, `ssh:data:${tabId}`, dataStr);
         });
 
         shellStream.on('close', () => {
+          terminalIpcBatcher.flush(`ssh:data:${tabId}`);
           sendToRenderer(sender, `ssh:data:${tabId}`, '\r\nConnection closed.\r\n');
 
           if (conn && conn.statsTimeout) {

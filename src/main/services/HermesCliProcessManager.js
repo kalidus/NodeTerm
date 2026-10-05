@@ -1,6 +1,7 @@
 const os = require('os');
 const fs = require('fs');
 const { sendToRenderer } = require('../utils');
+const { terminalIpcBatcher } = require('./TerminalIpcBatcher');
 const path = require('path');
 
 let hermesCliProcesses = {};
@@ -148,11 +149,12 @@ async function startHermesCliSession(tabId, { cols, rows } = {}) {
 
     ptyProcess.onData((data) => {
       if (!isAppQuitting.value) {
-        sendToRenderer(mainWindow, `hermescli:data:${tabId}`, data);
+        terminalIpcBatcher.send(mainWindow, `hermescli:data:${tabId}`, data);
       }
     });
 
     ptyProcess.onExit((event) => {
+      terminalIpcBatcher.flush(`hermescli:data:${tabId}`);
       const exitCode = typeof event === 'object' ? event?.exitCode : event;
       delete hermesCliProcesses[tabId];
 

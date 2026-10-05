@@ -2,6 +2,7 @@ const { execSync, spawn } = require('child_process');
 const pty = require('node-pty');
 const os = require('os');
 const { sendToRenderer } = require('../utils');
+const { terminalIpcBatcher } = require('./TerminalIpcBatcher');
 
 /**
  * Servicio para gestión de contenedores Docker
@@ -287,12 +288,13 @@ async function startDockerSession(tabId, containerName, { cols, rows }) {
     dockerProcesses[tabId].onData((data) => {
       if (!isAppQuitting.value) {
         const dataStr = data.toString('utf8');
-        sendToRenderer(mainWindow, `docker:data:${tabId}`, dataStr);
+        terminalIpcBatcher.send(mainWindow, `docker:data:${tabId}`, dataStr);
       }
     });
 
     // Handle exit
     dockerProcesses[tabId].onExit(({ exitCode, signal }) => {
+      terminalIpcBatcher.flush(`docker:data:${tabId}`);
       delete dockerProcesses[tabId];
       if (!isAppQuitting.value) {
         sendToRenderer(mainWindow, `docker:exit:${tabId}`, exitCode?.toString() || '0');

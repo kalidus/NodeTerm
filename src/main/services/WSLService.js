@@ -2,6 +2,7 @@ const { exec, spawn } = require('child_process');
 const os = require('os');
 const pty = require('node-pty');
 const { sendToRenderer } = require('../utils');
+const { terminalIpcBatcher } = require('./TerminalIpcBatcher');
 
 /**
  * Servicio para gestión de WSL (Windows Subsystem for Linux)
@@ -331,11 +332,12 @@ function startWSLSession(tabId, { cols, rows }) {
 
     wslProcesses[tabId].on('data', (data) => {
       if (!isAppQuitting.value) {
-        sendToRenderer(mainWindow, `wsl:data:${tabId}`, data);
+        terminalIpcBatcher.send(mainWindow, `wsl:data:${tabId}`, data);
       }
     });
 
     wslProcesses[tabId].on('exit', (exitCode) => {
+      terminalIpcBatcher.flush(`wsl:data:${tabId}`);
       if (!isAppQuitting.value) {
         const exitCodeStr = exitCode ? exitCode.toString() : '0';
         sendToRenderer(mainWindow, `wsl:exit:${tabId}`, exitCodeStr);
@@ -422,6 +424,7 @@ const WSLHandlers = {
           }
         }
 
+        terminalIpcBatcher.clear(`wsl:data:${tabId}`);
         delete wslProcesses[tabId];
       } catch (error) {
         console.error(`Error stopping WSL ${tabId}:`, error);

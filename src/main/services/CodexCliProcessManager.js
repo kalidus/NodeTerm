@@ -1,6 +1,7 @@
 const os = require('os');
 const fs = require('fs');
 const { sendToRenderer } = require('../utils');
+const { terminalIpcBatcher } = require('./TerminalIpcBatcher');
 
 let codexCliProcesses = {};
 let mainWindow = null;
@@ -116,11 +117,12 @@ async function startCodexCliSession(tabId, { cols, rows } = {}) {
 
     ptyProcess.onData((data) => {
       if (!isAppQuitting.value) {
-        sendToRenderer(mainWindow, `codexcli:data:${tabId}`, data);
+        terminalIpcBatcher.send(mainWindow, `codexcli:data:${tabId}`, data);
       }
     });
 
     ptyProcess.onExit((event) => {
+      terminalIpcBatcher.flush(`codexcli:data:${tabId}`);
       const exitCode = typeof event === 'object' ? event?.exitCode : event;
       delete codexCliProcesses[tabId];
 

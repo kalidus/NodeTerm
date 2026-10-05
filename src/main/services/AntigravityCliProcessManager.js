@@ -1,6 +1,7 @@
 const os = require('os');
 const fs = require('fs');
 const { sendToRenderer } = require('../utils');
+const { terminalIpcBatcher } = require('./TerminalIpcBatcher');
 
 let antigravityCliProcesses = {};
 let mainWindow = null;
@@ -120,11 +121,12 @@ async function startAntigravityCliSession(tabId, { cols, rows } = {}) {
 
     ptyProcess.onData((data) => {
       if (!isAppQuitting.value) {
-        sendToRenderer(mainWindow, `antigravitycli:data:${tabId}`, data);
+        terminalIpcBatcher.send(mainWindow, `antigravitycli:data:${tabId}`, data);
       }
     });
 
     ptyProcess.onExit((event) => {
+      terminalIpcBatcher.flush(`antigravitycli:data:${tabId}`);
       const exitCode = typeof event === 'object' ? event?.exitCode : event;
       delete antigravityCliProcesses[tabId];
 

@@ -4,6 +4,7 @@
 // ============================================
 const os = require('os');
 const { sendToRenderer } = require('../utils');
+const { terminalIpcBatcher } = require('./TerminalIpcBatcher');
 
 let wslDistroProcesses = {};
 let isAppQuitting = { value: false };
@@ -149,7 +150,7 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
 
       if (!isAppQuitting.value) {
         const channelName = distroInfo?.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
-        sendToRenderer(mainWindow, `${channelName}:data:${tabId}`, data);
+        terminalIpcBatcher.send(mainWindow, `${channelName}:data:${tabId}`, data);
       }
     });
 
@@ -160,11 +161,13 @@ function startWSLDistroSession(tabId, { cols, rows, distroInfo }) {
 
       // Enviar mensaje de bienvenida para confirmar que el backend está respondiendo
       const welcomeMsg = `\r\n\x1b[36m🚀 Starting ${distroInfo?.label || distroInfo?.name || 'WSL Distribution'}...\x1b[0m\r\n`;
-      sendToRenderer(mainWindow, `${channelName}:data:${tabId}`, welcomeMsg);
+      terminalIpcBatcher.send(mainWindow, `${channelName}:data:${tabId}`, welcomeMsg);
     }
 
     // Handle distribution exit  
     wslDistroProcesses[tabId].onExit((exitCode, signal) => {
+      const channelName = distroInfo?.category === 'ubuntu' ? 'ubuntu' : 'wsl-distro';
+      terminalIpcBatcher.flush(`${channelName}:data:${tabId}`);
 
       if (isAppQuitting.value) {
         console.log(`App is closing, ignoring exit for ${tabId}`);

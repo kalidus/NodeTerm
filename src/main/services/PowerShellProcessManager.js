@@ -5,6 +5,7 @@
 
 const os = require('os');
 const { sendToRenderer } = require('../utils');
+const { terminalIpcBatcher } = require('./TerminalIpcBatcher');
 
 let powershellProcesses = {};
 let isAppQuitting = { value: false };
@@ -207,12 +208,13 @@ function startPowerShellSession(tabId, { cols, rows }) {
     // Handle PowerShell output
     ptyProcess.onData((data) => {
       if (!isAppQuitting.value) {
-        sendToRenderer(mainWindow, `powershell:data:${tabId}`, data);
+        terminalIpcBatcher.send(mainWindow, `powershell:data:${tabId}`, data);
       }
     });
 
     // Handle PowerShell exit
     ptyProcess.onExit((exitCode, signal) => {
+      terminalIpcBatcher.flush(`powershell:data:${tabId}`);
       // Extraer el código de salida real
       let actualExitCode = exitCode;
       if (typeof exitCode === 'object' && exitCode !== null) {
@@ -342,6 +344,7 @@ function stopPowerShell(tabId) {
         }
       }
 
+      terminalIpcBatcher.clear(`powershell:data:${tabId}`);
       delete powershellProcesses[tabId];
     } catch (error) {
       console.error(`Error stopping PowerShell ${tabId}:`, error);

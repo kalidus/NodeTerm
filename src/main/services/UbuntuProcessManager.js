@@ -5,6 +5,7 @@
 
 const os = require('os');
 const { sendToRenderer } = require('../utils');
+const { terminalIpcBatcher } = require('./TerminalIpcBatcher');
 
 let ubuntuProcesses = {};
 let isAppQuitting = { value: false };
@@ -103,12 +104,13 @@ function startUbuntuSession(tabId, { cols, rows, ubuntuInfo }) {
     // Handle Ubuntu output
     ptyProcess.onData((data) => {
       if (!isAppQuitting.value) {
-        sendToRenderer(mainWindow, `ubuntu:data:${tabId}`, data);
+        terminalIpcBatcher.send(mainWindow, `ubuntu:data:${tabId}`, data);
       }
     });
 
     // Handle Ubuntu exit
     ptyProcess.onExit((exitCode, signal) => {
+      terminalIpcBatcher.flush(`ubuntu:data:${tabId}`);
 
       // Extraer el código de salida real
       let actualExitCode = exitCode;
