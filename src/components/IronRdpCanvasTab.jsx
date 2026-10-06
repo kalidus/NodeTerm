@@ -20,6 +20,7 @@ import {
 import { resolveCredsspPolicy } from '../utils/rdpSecurityPolicy';
 import { parseResolutionValue } from '../utils/rdpScreenConfig';
 import { mapTerminationReason } from '../utils/rdpTerminationReasons';
+import { installCanvasDrawProbe } from '../utils/rdpCanvasProbe';
 import {
   fileTransferNameOf,
   formatTransferSize,
@@ -95,12 +96,25 @@ const extractErrorMessage = (err) => {
   return msg;
 };
 
+// Opt-in (A/B): `localStorage.setItem('NODETERM_RDP_DESYNC', '1')` y reabrir la pestana RDP.
+// desynchronized deja pintar el canvas sin esperar al compositor (menos latencia, a costa de
+// posible tearing). Solo aplica al crear el contexto 2D por primera vez.
+const isRdpDesyncEnabled = () => {
+  try {
+    return window.localStorage?.getItem('NODETERM_RDP_DESYNC') === '1';
+  } catch (_) {
+    return false;
+  }
+};
+
 const getOptimized2dContext = (canvas) => {
   if (!canvas) return null;
-  return canvas.getContext('2d', {
+  const options = {
     alpha: false,
     willReadFrequently: false
-  });
+  };
+  if (isRdpDesyncEnabled()) options.desynchronized = true;
+  return canvas.getContext('2d', options);
 };
 
 const readLocalClipboardText = async () => {
@@ -750,6 +764,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     let aborted = false;
     let currentSession = null;
     let currentFileTransferProvider = null;
+    let disposeCanvasProbe = null;
 
     const isAborted = () => aborted || !isMounted;
 
@@ -1187,6 +1202,10 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
 
         if (canvasRef.current) {
           getOptimized2dContext(canvasRef.current);
+          if (isRdpDebugEnabled()) {
+            if (disposeCanvasProbe) disposeCanvasProbe();
+            disposeCanvasProbe = installCanvasDrawProbe(canvasRef.current);
+          }
           lastCursorStyleRef.current = 'default';
           lastCursorKindRef.current = '';
           lastCursorHotspotRef.current = { x: 0, y: 0 };
@@ -1369,6 +1388,10 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     return () => {
       aborted = true;
       isMounted = false;
+      if (disposeCanvasProbe) {
+        try { disposeCanvasProbe(); } catch (_) {}
+        disposeCanvasProbe = null;
+      }
       if (currentFileTransferProvider) {
         try { currentFileTransferProvider.dispose(); } catch (_) {}
       }

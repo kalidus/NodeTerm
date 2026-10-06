@@ -1,12 +1,6 @@
 /**
  * Interleaved RLE 16bpp (MS-RDPBCGR 3.1.9), port de IronRDP ironrdp-graphics/rle.rs.
  * Solo Mode16Bpp: Wallix envia bitsPerPixel=16.
- *
- * Rendimiento: el decodificador corre en el hilo principal de Electron por cada
- * tesela del arrastre de ventanas, asi que los bucles por pixel usan acceso directo
- * por indice (sin readUInt16LE/writeUInt16LE ni propiedades colgadas del Buffer).
- * El resultado es identico byte a byte al de la version anterior (ver
- * testing/rdp/rle16-equivalence.test.js).
  */
 
 'use strict';
@@ -56,9 +50,76 @@ function decodeCode(header) {
   return header >> 4;
 }
 
-/** Cursor de lectura sobre el RLE de origen (un objeto por llamada, sin mutar el Buffer). */
-function ensureFrom(rd, expected) {
-  const actual = rd.n - rd.p;
+function extractRunLengthFgBg(header, lengthMask, src) {
+  const rl = header & lengthMask;
+  if (rl === 0) {
+    ensureFrom(src, 1);
+    return src.readUInt8(src._pos++) + 1;
+  }
+  return rl * 8;
+}
+
+function extractRunLengthRegular(header, src) {
+  const rl = header & MASK_REGULAR_RUN_LENGTH;
+  if (rl === 0) {
+    ensureFrom(src, 1);
+    return src.readUInt8(src._pos++) + 32;
+  }
+  return rl;
+}
+
+function extractRunLengthLite(header, src) {
+  const rl = header & MASK_LITE_RUN_LENGTH;
+  if (rl === 0) {
+    ensureFrom(src, 1);
+    return src.readUInt8(src._pos++) + 16;
+  }
+  return rl;
+}
+
+function extractRunLengthMegaMega(src) {
+  ensureFrom(src, 2);
+  const runLength = src.readUInt16LE(src._pos);
+  src._pos += 2;
+  if (runLength === 0) throw new RleError('unexpected zero-length');
+  return runLength;
+}
+
+function extractRunLength(code, header, src) {
+  switch (code) {
+    case CODE.REGULAR_FGBG_IMAGE:
+      return extractRunLengthFgBg(header, MASK_REGULAR_RUN_LENGTH, src);
+    case CODE.LITE_SET_FG_FGBG_IMAGE:
+      return extractRunLengthFgBg(header, MASK_LITE_RUN_LENGTH, src);
+    case CODE.REGULAR_BG_RUN:
+    case CODE.REGULAR_FG_RUN:
+    case CODE.REGULAR_COLOR_RUN:
+    case CODE.REGULAR_COLOR_IMAGE:
+      return extractRunLengthRegular(header, src);
+    case CODE.LITE_SET_FG_FG_RUN:
+    case CODE.LITE_DITHERED_RUN:
+      return extractRunLengthLite(header, src);
+    case CODE.MEGA_MEGA_BG_RUN:
+    case CODE.MEGA_MEGA_FG_RUN:
+    case CODE.MEGA_MEGA_SET_FG_RUN:
+    case CODE.MEGA_MEGA_DITHERED_RUN:
+    case CODE.MEGA_MEGA_COLOR_RUN:
+    case CODE.MEGA_MEGA_FGBG_IMAGE:
+    case CODE.MEGA_MEGA_SET_FGBG_IMAGE:
+    case CODE.MEGA_MEGA_COLOR_IMAGE:
+      return extractRunLengthMegaMega(src);
+    case CODE.SPECIAL_FGBG_1:
+    case CODE.SPECIAL_FGBG_2:
+    case CODE.SPECIAL_WHITE:
+    case CODE.SPECIAL_BLACK:
+      return 0;
+    default:
+      return 0;
+  }
+}
+
+function ensureFrom(src, expected) {
+  const actual = src.length - src._pos;
   if (expected > actual) {
     throw new RleError(`not enough bytes: expected ${expected}, got ${actual}`);
   }
@@ -72,91 +133,27 @@ function ensureInto(dstPos, dstLen, required) {
   }
 }
 
-function extractRunLengthFgBg(header, lengthMask, rd) {
-  const rl = header & lengthMask;
-  if (rl === 0) {
-    ensureFrom(rd, 1);
-    return rd.b[rd.p++] + 1;
-  }
-  return rl * 8;
+function readPixel(src) {
+  const v = src.readUInt16LE(src._pos);
+  src._pos += 2;
+  return v;
 }
 
-function extractRunLengthRegular(header, rd) {
-  const rl = header & MASK_REGULAR_RUN_LENGTH;
-  if (rl === 0) {
-    ensureFrom(rd, 1);
-    return rd.b[rd.p++] + 32;
-  }
-  return rl;
+function writePixel(dst, pos, pixel) {
+  dst.writeUInt16LE(pixel, pos);
+  return pos + 2;
 }
 
-function extractRunLengthLite(header, rd) {
-  const rl = header & MASK_LITE_RUN_LENGTH;
-  if (rl === 0) {
-    ensureFrom(rd, 1);
-    return rd.b[rd.p++] + 16;
-  }
-  return rl;
-}
-
-function extractRunLengthMegaMega(rd) {
-  ensureFrom(rd, 2);
-  const runLength = rd.b[rd.p] | (rd.b[rd.p + 1] << 8);
-  rd.p += 2;
-  if (runLength === 0) throw new RleError('unexpected zero-length');
-  return runLength;
-}
-
-function extractRunLength(code, header, rd) {
-  switch (code) {
-    case CODE.REGULAR_FGBG_IMAGE:
-      return extractRunLengthFgBg(header, MASK_REGULAR_RUN_LENGTH, rd);
-    case CODE.LITE_SET_FG_FGBG_IMAGE:
-      return extractRunLengthFgBg(header, MASK_LITE_RUN_LENGTH, rd);
-    case CODE.REGULAR_BG_RUN:
-    case CODE.REGULAR_FG_RUN:
-    case CODE.REGULAR_COLOR_RUN:
-    case CODE.REGULAR_COLOR_IMAGE:
-      return extractRunLengthRegular(header, rd);
-    case CODE.LITE_SET_FG_FG_RUN:
-    case CODE.LITE_DITHERED_RUN:
-      return extractRunLengthLite(header, rd);
-    case CODE.MEGA_MEGA_BG_RUN:
-    case CODE.MEGA_MEGA_FG_RUN:
-    case CODE.MEGA_MEGA_SET_FG_RUN:
-    case CODE.MEGA_MEGA_DITHERED_RUN:
-    case CODE.MEGA_MEGA_COLOR_RUN:
-    case CODE.MEGA_MEGA_FGBG_IMAGE:
-    case CODE.MEGA_MEGA_SET_FGBG_IMAGE:
-    case CODE.MEGA_MEGA_COLOR_IMAGE:
-      return extractRunLengthMegaMega(rd);
-    case CODE.SPECIAL_FGBG_1:
-    case CODE.SPECIAL_FGBG_2:
-    case CODE.SPECIAL_WHITE:
-    case CODE.SPECIAL_BLACK:
-      return 0;
-    default:
-      return 0;
-  }
-}
-
-function readPixel(rd) {
-  const b = rd.b;
-  const p = rd.p;
-  rd.p = p + 2;
-  return b[p] | (b[p + 1] << 8);
+function readPixelAbove(dst, pos, rowDelta) {
+  return dst.readUInt16LE(pos - rowDelta);
 }
 
 function writeFgBgImage(dst, pos, rowDelta, bitmask, fgPel, cBits) {
   ensureInto(pos, dst.length, cBits * COLOR_DEPTH);
   let mask = 0x01;
   for (let i = 0; i < 8 && cBits > 0; i++) {
-    const a = pos - rowDelta;
-    let pixel = dst[a] | (dst[a + 1] << 8);
-    if (bitmask & mask) pixel ^= fgPel;
-    dst[pos] = pixel & 0xff;
-    dst[pos + 1] = pixel >> 8;
-    pos += 2;
+    const above = readPixelAbove(dst, pos, rowDelta);
+    pos = writePixel(dst, pos, bitmask & mask ? above ^ fgPel : above);
     cBits -= 1;
     mask <<= 1;
   }
@@ -167,29 +164,9 @@ function writeFirstLineFgBgImage(dst, pos, bitmask, fgPel, cBits) {
   ensureInto(pos, dst.length, cBits * COLOR_DEPTH);
   let mask = 0x01;
   for (let i = 0; i < 8 && cBits > 0; i++) {
-    const pixel = bitmask & mask ? fgPel : BLACK_PIXEL;
-    dst[pos] = pixel & 0xff;
-    dst[pos + 1] = pixel >> 8;
-    pos += 2;
+    pos = writePixel(dst, pos, bitmask & mask ? fgPel : BLACK_PIXEL);
     cBits -= 1;
     mask <<= 1;
-  }
-  return pos;
-}
-
-/** Rellena n pixeles iguales (ya validado con ensureInto). */
-function fillPixels(dst, pos, n, pixel) {
-  const lo = pixel & 0xff;
-  const hi = pixel >> 8;
-  if (lo === hi) {
-    const end = pos + n * 2;
-    dst.fill(lo, pos, end);
-    return end;
-  }
-  for (let i = 0; i < n; i++) {
-    dst[pos] = lo;
-    dst[pos + 1] = hi;
-    pos += 2;
   }
   return pos;
 }
@@ -204,59 +181,43 @@ function decompress16bpp(src, width, height) {
 
   const rowDelta = COLOR_DEPTH * width;
   const dst = Buffer.alloc(rowDelta * height);
-  const dstLen = dst.length;
-  const rd = { b: src, p: 0, n: src.length };
+  const srcBuf = src;
+  srcBuf._pos = 0;
 
   let dstPos = 0;
   let fgPel = WHITE_PIXEL;
   let insertFgPel = false;
   let isFirstLine = true;
 
-  while (rd.p < rd.n) {
+  while (srcBuf._pos < srcBuf.length) {
     if (isFirstLine && dstPos >= rowDelta) {
       isFirstLine = false;
       insertFgPel = false;
     }
 
-    ensureFrom(rd, 1);
-    const header = rd.b[rd.p++];
+    ensureFrom(srcBuf, 1);
+    const header = srcBuf.readUInt8(srcBuf._pos++);
     const code = decodeCode(header);
-    const runLength = extractRunLength(code, header, rd);
+    const runLength = extractRunLength(code, header, srcBuf);
 
     if (code === CODE.REGULAR_BG_RUN || code === CODE.MEGA_MEGA_BG_RUN) {
-      ensureInto(dstPos, dstLen, runLength * COLOR_DEPTH);
-      let n = runLength;
+      ensureInto(dstPos, dst.length, runLength * COLOR_DEPTH);
       if (isFirstLine) {
+        let n = runLength;
         if (insertFgPel) {
-          dst[dstPos] = fgPel & 0xff;
-          dst[dstPos + 1] = fgPel >> 8;
-          dstPos += 2;
+          dstPos = writePixel(dst, dstPos, fgPel);
           n -= 1;
         }
-        // Negro: ya esta a cero en el buffer recien reservado.
-        dstPos += n * 2;
+        for (let i = 0; i < n; i++) dstPos = writePixel(dst, dstPos, BLACK_PIXEL);
       } else {
+        let n = runLength;
         if (insertFgPel) {
-          const a = dstPos - rowDelta;
-          const xored = (dst[a] | (dst[a + 1] << 8)) ^ fgPel;
-          dst[dstPos] = xored & 0xff;
-          dst[dstPos + 1] = xored >> 8;
-          dstPos += 2;
+          const xored = readPixelAbove(dst, dstPos, rowDelta) ^ fgPel;
+          dstPos = writePixel(dst, dstPos, xored);
           n -= 1;
         }
-        if (n > 0) {
-          const bytes = n * 2;
-          if (bytes <= rowDelta) {
-            // Origen (fila de arriba) y destino no se solapan: copia en bloque.
-            dst.copyWithin(dstPos, dstPos - rowDelta, dstPos - rowDelta + bytes);
-            dstPos += bytes;
-          } else {
-            for (let i = 0; i < n; i++) {
-              dst[dstPos] = dst[dstPos - rowDelta];
-              dst[dstPos + 1] = dst[dstPos - rowDelta + 1];
-              dstPos += 2;
-            }
-          }
+        for (let i = 0; i < n; i++) {
+          dstPos = writePixel(dst, dstPos, readPixelAbove(dst, dstPos, rowDelta));
         }
       }
       insertFgPel = true;
@@ -272,43 +233,31 @@ function decompress16bpp(src, width, height) {
       code === CODE.MEGA_MEGA_SET_FG_RUN
     ) {
       if (code === CODE.LITE_SET_FG_FG_RUN || code === CODE.MEGA_MEGA_SET_FG_RUN) {
-        ensureFrom(rd, COLOR_DEPTH);
-        fgPel = readPixel(rd);
+        ensureFrom(srcBuf, COLOR_DEPTH);
+        fgPel = readPixel(srcBuf);
       }
-      ensureInto(dstPos, dstLen, runLength * COLOR_DEPTH);
+      ensureInto(dstPos, dst.length, runLength * COLOR_DEPTH);
       if (isFirstLine) {
-        dstPos = fillPixels(dst, dstPos, runLength, fgPel);
+        for (let i = 0; i < runLength; i++) dstPos = writePixel(dst, dstPos, fgPel);
       } else {
-        const fgLo = fgPel & 0xff;
-        const fgHi = fgPel >> 8;
         for (let i = 0; i < runLength; i++) {
-          const a = dstPos - rowDelta;
-          dst[dstPos] = dst[a] ^ fgLo;
-          dst[dstPos + 1] = dst[a + 1] ^ fgHi;
-          dstPos += 2;
+          dstPos = writePixel(dst, dstPos, readPixelAbove(dst, dstPos, rowDelta) ^ fgPel);
         }
       }
     } else if (code === CODE.LITE_DITHERED_RUN || code === CODE.MEGA_MEGA_DITHERED_RUN) {
-      ensureFrom(rd, 2 * COLOR_DEPTH);
-      const pixelA = readPixel(rd);
-      const pixelB = readPixel(rd);
-      ensureInto(dstPos, dstLen, runLength * 2 * COLOR_DEPTH);
-      const aLo = pixelA & 0xff;
-      const aHi = pixelA >> 8;
-      const bLo = pixelB & 0xff;
-      const bHi = pixelB >> 8;
+      ensureFrom(srcBuf, 2 * COLOR_DEPTH);
+      const pixelA = readPixel(srcBuf);
+      const pixelB = readPixel(srcBuf);
+      ensureInto(dstPos, dst.length, runLength * 2 * COLOR_DEPTH);
       for (let i = 0; i < runLength; i++) {
-        dst[dstPos] = aLo;
-        dst[dstPos + 1] = aHi;
-        dst[dstPos + 2] = bLo;
-        dst[dstPos + 3] = bHi;
-        dstPos += 4;
+        dstPos = writePixel(dst, dstPos, pixelA);
+        dstPos = writePixel(dst, dstPos, pixelB);
       }
     } else if (code === CODE.REGULAR_COLOR_RUN || code === CODE.MEGA_MEGA_COLOR_RUN) {
-      ensureFrom(rd, COLOR_DEPTH);
-      const pixel = readPixel(rd);
-      ensureInto(dstPos, dstLen, runLength * COLOR_DEPTH);
-      dstPos = fillPixels(dst, dstPos, runLength, pixel);
+      ensureFrom(srcBuf, COLOR_DEPTH);
+      const pixel = readPixel(srcBuf);
+      ensureInto(dstPos, dst.length, runLength * COLOR_DEPTH);
+      for (let i = 0; i < runLength; i++) dstPos = writePixel(dst, dstPos, pixel);
     } else if (
       code === CODE.REGULAR_FGBG_IMAGE ||
       code === CODE.MEGA_MEGA_FGBG_IMAGE ||
@@ -316,14 +265,14 @@ function decompress16bpp(src, width, height) {
       code === CODE.MEGA_MEGA_SET_FGBG_IMAGE
     ) {
       if (code === CODE.LITE_SET_FG_FGBG_IMAGE || code === CODE.MEGA_MEGA_SET_FGBG_IMAGE) {
-        ensureFrom(rd, COLOR_DEPTH);
-        fgPel = readPixel(rd);
+        ensureFrom(srcBuf, COLOR_DEPTH);
+        fgPel = readPixel(srcBuf);
       }
       let numberToRead = runLength;
       while (numberToRead > 0) {
-        const cBits = numberToRead < 8 ? numberToRead : 8;
-        ensureFrom(rd, 1);
-        const bitmask = rd.b[rd.p++];
+        const cBits = Math.min(8, numberToRead);
+        ensureFrom(srcBuf, 1);
+        const bitmask = srcBuf.readUInt8(srcBuf._pos++);
         if (isFirstLine) {
           dstPos = writeFirstLineFgBgImage(dst, dstPos, bitmask, fgPel, cBits);
         } else {
@@ -333,10 +282,10 @@ function decompress16bpp(src, width, height) {
       }
     } else if (code === CODE.REGULAR_COLOR_IMAGE || code === CODE.MEGA_MEGA_COLOR_IMAGE) {
       const byteCount = runLength * COLOR_DEPTH;
-      ensureFrom(rd, byteCount);
-      ensureInto(dstPos, dstLen, byteCount);
-      src.copy(dst, dstPos, rd.p, rd.p + byteCount);
-      rd.p += byteCount;
+      ensureFrom(srcBuf, byteCount);
+      ensureInto(dstPos, dst.length, byteCount);
+      srcBuf.copy(dst, dstPos, srcBuf._pos, srcBuf._pos + byteCount);
+      srcBuf._pos += byteCount;
       dstPos += byteCount;
     } else if (code === CODE.SPECIAL_FGBG_1) {
       if (isFirstLine) {
@@ -351,15 +300,11 @@ function decompress16bpp(src, width, height) {
         dstPos = writeFgBgImage(dst, dstPos, rowDelta, MASK_SPECIAL_FG_BG_2, fgPel, 8);
       }
     } else if (code === CODE.SPECIAL_WHITE) {
-      ensureInto(dstPos, dstLen, COLOR_DEPTH);
-      dst[dstPos] = 0xff;
-      dst[dstPos + 1] = 0xff;
-      dstPos += 2;
+      ensureInto(dstPos, dst.length, COLOR_DEPTH);
+      dstPos = writePixel(dst, dstPos, WHITE_PIXEL);
     } else if (code === CODE.SPECIAL_BLACK) {
-      ensureInto(dstPos, dstLen, COLOR_DEPTH);
-      dst[dstPos] = 0;
-      dst[dstPos + 1] = 0;
-      dstPos += 2;
+      ensureInto(dstPos, dst.length, COLOR_DEPTH);
+      dstPos = writePixel(dst, dstPos, BLACK_PIXEL);
     } else {
       throw new RleError(`bad RLE order code 0x${code.toString(16)}`);
     }
@@ -504,10 +449,10 @@ function writeColorRun(out, o, run, color) {
     if (left >= 288) {
       const n = Math.min(left, 0xffff);
       out[o++] = CODE.MEGA_MEGA_COLOR_RUN;
-      out[o++] = n & 0xff;
-      out[o++] = n >> 8;
-      out[o++] = color & 0xff;
-      out[o++] = (color >> 8) & 0xff;
+      out.writeUInt16LE(n, o);
+      o += 2;
+      out.writeUInt16LE(color, o);
+      o += 2;
       left -= n;
       continue;
     }
@@ -517,8 +462,8 @@ function writeColorRun(out, o, run, color) {
     } else {
       out[o++] = 0x60 | left;
     }
-    out[o++] = color & 0xff;
-    out[o++] = (color >> 8) & 0xff;
+    out.writeUInt16LE(color, o);
+    o += 2;
     break;
   }
   return o;
@@ -561,34 +506,24 @@ function encodeCompactRgb16(pixels) {
   const pixelCount = pixels.length / COLOR_DEPTH;
   if (pixelCount === 0) throw new RleError('empty pixels');
 
-  // Solo se lee lo escrito (subarray(0, o)): no hace falta rellenar con ceros.
-  const out = Buffer.allocUnsafe(pixelCount * 3);
+  const out = Buffer.alloc(pixelCount * 3);
   let o = 0;
   let i = 0;
   while (i < pixelCount) {
-    const lo = pixels[i * 2];
-    const hi = pixels[i * 2 + 1];
-    const color = lo | (hi << 8);
+    const color = pelAt(pixels, i);
     let run = 1;
     const runCap = Math.min(0xffff, pixelCount - i);
-    let rp = (i + 1) * 2;
-    while (run < runCap && pixels[rp] === lo && pixels[rp + 1] === hi) {
-      run += 1;
-      rp += 2;
-    }
+    while (run < runCap && pelAt(pixels, i + run) === color) run += 1;
     if (run >= 2) {
       o = writeColorRun(out, o, run, color);
       i += run;
       continue;
     }
 
-    // Tramo de pixeles sueltos: termina donde empieza una pareja de iguales.
     let j = i;
     while (j < pixelCount && (j - i) < 0xffff) {
-      if (j + 1 < pixelCount) {
-        const q = j * 2;
-        if (pixels[q] === pixels[q + 2] && pixels[q + 1] === pixels[q + 3]) break;
-      }
+      const c = pelAt(pixels, j);
+      if (j + 1 < pixelCount && pelAt(pixels, j + 1) === c) break;
       j += 1;
     }
     if (j === i) j = i + 1;

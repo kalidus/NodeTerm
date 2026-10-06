@@ -20,7 +20,9 @@ const { patchFontSequenceFlags } = require('./rdp-font-helpers');
 const { fixWallixBitmapStrideCrop, FastPathBitmapReassembler } = require('./rdp-fastpath-helpers');
 const {
   BridgeLatencyMetrics,
-  WsBackpressureController
+  WsBackpressureController,
+  WsTickBatcher,
+  classifyFastPathUpdate
 } = require('./rdp-bridge-backpressure');
 const {
   createChannelFilterState,
@@ -407,6 +409,12 @@ class RdpNativeBridgeService extends EventEmitter {
     // El anillo cliprdr se vuelca si el portapapeles fallo o si hay debug.
     // session.rdpDebug viene del renderer (localStorage / window.__NODETERM_RDP_DEBUG__).
     const isDebug = rdpDebug() || session.rdpDebug === true;
+    // Metricas de latencia: solo con debug (cero coste en uso normal).
+    const latencyMetrics = isDebug ? new BridgeLatencyMetrics() : null;
+    if (latencyMetrics) latencyMetrics.startLoopMonitor();
+    // En directo el splitter reenvia fragmentos sueltos; para clasificar updates
+    // en debug se usa un deframer independiente (copias solo en debug).
+    const statsDeframer = latencyMetrics ? new RdpStreamDeframer() : null;
     const recentRdpFrames = [];
     const recentWasmFrames = [];
     const recentCliprdrEvents = [];
@@ -603,6 +611,10 @@ class RdpNativeBridgeService extends EventEmitter {
       try { streamDeframer.reset(); } catch (e) {}
       try { frameSplitter.reset(); } catch (e) {}
       try { bitmapReassembler.reset(); } catch (e) {}
+      if (latencyMetrics) {
+        try { console.log(latencyMetrics.formatLine()); } catch (e) {}
+        latencyMetrics.stopLoopMonitor();
+      }
     };
 
     ws.on('message', (message) => {
@@ -703,16 +715,32 @@ class RdpNativeBridgeService extends EventEmitter {
               // Bastión: latest-wins (descartar BITMAP viejos) sin pausar TLS — Wallix encola.
               // Directo: pausa TLS solo si la cola WS es muy alta (evita OOM en ráfagas).
               // Métricas [Bridge Perf] solo con NODETERM_RDP_DEBUG / session.rdpDebug.
-              const latencyMetrics = isDebug ? new BridgeLatencyMetrics() : null;
               const backpressure = new WsBackpressureController({
                 bastion: normalizeBitmaps,
                 metrics: latencyMetrics
               });
 
+              // Un unico ws.send por evento TLS 'data' (en vez de uno por PDU/fragmento): menos
+              // frames WS, menos syscalls y menos mensajes para el WASM, que trata el WS como un
+              // flujo de bytes. Kill-switch: NODETERM_RDP_COALESCE=0 (env o rdp-flags.json).
+              const coalesceFlag = readDiagEntry('NODETERM_RDP_COALESCE');
+              const coalesceWs = !(coalesceFlag === false || coalesceFlag === 0
+                || coalesceFlag === '0' || coalesceFlag === 'false');
+              const tickBatcher = new WsTickBatcher(coalesceWs);
+
               const sendBinaryToWasm = (out) => {
                 if (!out || typeof out.length !== 'number') return;
                 if (ws.readyState !== ws.OPEN) return;
+                if (tickBatcher.push(out)) return;
                 ws.send(out, { binary: true }, () => {
+                  checkResumeTls();
+                });
+              };
+
+              const flushTickOut = () => {
+                const payload = tickBatcher.take();
+                if (!payload || ws.readyState !== ws.OPEN) return;
+                ws.send(payload, { binary: true }, () => {
                   checkResumeTls();
                 });
               };
@@ -751,7 +779,10 @@ class RdpNativeBridgeService extends EventEmitter {
 
               const flushPendingBitmap = (opts) => {
                 const pending = backpressure.takePendingIfDrained(ws.bufferedAmount, opts);
-                if (pending) rewriteAndSend(pending, 'pending');
+                if (pending) {
+                  // En orden: cada delta pendiente se pinta sobre el anterior.
+                  for (const frame of pending) rewriteAndSend(frame, 'pending');
+                }
               };
 
               const checkResumeTls = () => {
@@ -769,6 +800,9 @@ class RdpNativeBridgeService extends EventEmitter {
               }
 
               tlsSocket.on('data', (chunk) => {
+                // Si un tick anterior abortó con salida acumulada, se entrega antes de empezar.
+                if (tickBatcher.active) flushTickOut();
+                tickBatcher.begin();
                 backpressure.beginDataTick();
                 backpressure.noteBufferedAmount(ws.bufferedAmount);
                 // Solo path directo: pausar TLS en colas extremas.
@@ -782,6 +816,14 @@ class RdpNativeBridgeService extends EventEmitter {
                 // trozos, el corrector de stride no lo ve y IronRDP pinta el
                 // rectangulo con el ancho equivocado.
                 const frames = normalizeBitmaps ? streamDeframer.push(chunk) : frameSplitter.push(chunk);
+
+                if (latencyMetrics) {
+                  const statFrames = normalizeBitmaps ? frames : statsDeframer.push(chunk);
+                  for (const sf of statFrames) {
+                    const kind = classifyFastPathUpdate(sf);
+                    if (kind) latencyMetrics.noteUpdate(kind, sf.length);
+                  }
+                }
 
                 for (let frame of frames) {
                   const now = Date.now();
@@ -1040,6 +1082,13 @@ class RdpNativeBridgeService extends EventEmitter {
                     continue;
                   }
                   frame = processed.forward;
+                  // El filtro puede consumir el frame sin reenviar nada (forward nulo):
+                  // no hay nada que entregar a IronRDP.
+                  if (!frame || typeof frame.length !== 'number') {
+                    bytesFromRdp += n;
+                    trafficStats.note(pduDesc, n);
+                    continue;
+                  }
 
                   // FastPath y el resto de frames sueltos no se listan: saturan el log y tapan cliprdr.
                   if (!processed.isCliprdr && !isFastPathNoise(pduDesc) && isDebug) {
@@ -1057,9 +1106,18 @@ class RdpNativeBridgeService extends EventEmitter {
                     try {
                       flushPendingBitmap();
                       for (const ready of readyFrames) {
+                        if (!ready || typeof ready.length !== 'number') continue;
+                        // Un frame grafico no-bitmap (ordenes, surface...) no puede adelantar
+                        // a bitmaps pendientes: se vacian antes, en orden.
+                        if (backpressure.mustFlushBefore(ready)) {
+                          flushPendingBitmap({ force: true, ignoreBudget: true });
+                        }
                         if (backpressure.shouldShedBitmap(ws.bufferedAmount, ready)) {
                           // Sin rewrite: ahorra CPU mientras la cola WASM está llena
                           // o se agotó el presupuesto RLE de este tick.
+                          if (backpressure.pendingOverflow()) {
+                            flushPendingBitmap({ force: true, ignoreBudget: true });
+                          }
                           continue;
                         }
                         if (isDebug || !isFastPath) {
@@ -1085,6 +1143,11 @@ class RdpNativeBridgeService extends EventEmitter {
                   try {
                     flushPendingBitmap({ force: true, ignoreBudget: true });
                   } catch (_) { /* noop */ }
+                }
+                try {
+                  flushTickOut();
+                } catch (sendErr) {
+                  console.warn('[Bridge] Error enviando lote a WebSocket:', sendErr.message);
                 }
                 if (latencyMetrics) {
                   latencyMetrics.maybeLog((line) => console.log(line), normalizeBitmaps ? 2000 : 5000);
@@ -1157,6 +1220,7 @@ class RdpNativeBridgeService extends EventEmitter {
 
           if (isFastPathInput) {
             bytesToRdp += payload.length;
+            if (latencyMetrics) latencyMetrics.noteInput();
             if (tlsSocket && tlsSocket.writable) {
               tlsSocket.write(payload);
             } else if (targetSocket && targetSocket.writable) {
@@ -1291,7 +1355,24 @@ class RdpNativeBridgeService extends EventEmitter {
             channelFilter.clientChannelNames = sentChs;
           }
         } else if (framesToRdp <= 10 && forward) {
-          const infoResult = patchInfoPacket(forward, session);
+          // Solo se aplican los interruptores de rendimiento que ya existen en el formulario
+          // (fondo, arrastre de ventana completa, animaciones de menu, composicion).
+          // Temas y suavizado de fuentes se dejan como los envia IronRDP: sus defaults del
+          // formulario (false) cambiarian el aspecto de las conexiones guardadas.
+          const infoResult = patchInfoPacket(forward, {
+            enableWallpaper: session.enableWallpaper,
+            enableFullWindowDrag: session.enableFullWindowDrag,
+            enableMenuAnimations: session.enableMenuAnimations,
+            enableDesktopComposition: session.enableDesktopComposition
+          });
+          if (infoResult.perfFlagsBefore != null && !channelFilter.loggedPerfFlags) {
+            channelFilter.loggedPerfFlags = true;
+            console.log(
+              `[Bridge] perfFlags cliente: 0x${infoResult.perfFlagsBefore.toString(16)} -> 0x${infoResult.perfFlagsAfter.toString(16)}` +
+              ` (wallpaper=${session.enableWallpaper ? 'on' : 'off'}, dragCompleto=${session.enableFullWindowDrag ? 'on' : 'off'},` +
+              ` animMenus=${session.enableMenuAnimations ? 'on' : 'off'}, composicion=${session.enableDesktopComposition ? 'on' : 'off'})`
+            );
+          }
           if (infoResult.patched) {
             forward = infoResult.buf;
             if (isDebug) {

@@ -10,8 +10,14 @@
 
 const {
   parseFastPathUpdate,
-  FASTPATH_UPDATETYPE_BITMAP
+  FASTPATH_UPDATETYPE_BITMAP,
+  getBitmapDestRects,
+  rectsCoveredBy
 } = require('./rdp-fastpath-helpers');
+
+/** Tope de bitmaps pendientes antes de forzar su envio ordenado. */
+const MAX_PENDING_FRAMES = 24;
+const MAX_PENDING_BYTES = 1024 * 1024;
 
 /** Bastión: umbral bajo para empezar a descartar (WASM aún no ha acumulado mucho). */
 const WS_HIGH_WATER_MARK = 64 * 1024; // 64 KB
@@ -29,6 +35,26 @@ function isFastPathBitmapFrame(buf) {
     && parsed.updateCode === FASTPATH_UPDATETYPE_BITMAP
     && parsed.compression === 0
   );
+}
+
+/**
+ * Clasifica un Fast-Path update completo (solo diagnostico).
+ * @returns {'BITMAP'|'SURFACE_CMDS'|'ORDERS'|'POINTER'|'OTHER'|null} null si no es Fast-Path completo.
+ */
+function classifyFastPathUpdate(buf) {
+  if (!Buffer.isBuffer(buf) || buf.length < 4) return null;
+  if (buf[0] === 0x03 || buf[0] === 0x30) return null;
+  if ((buf[0] & 0x03) !== 0) return null;
+  const hdrLen = (buf[1] & 0x80) ? 3 : 2;
+  if (buf.length <= hdrLen) return null;
+  const code = buf[hdrLen] & 0x0f;
+  switch (code) {
+    case 0: return 'ORDERS';
+    case 1: return 'BITMAP';
+    case 4: return 'SURFACE_CMDS';
+    case 5: case 6: case 7: case 8: case 9: case 10: case 11: return 'POINTER';
+    default: return 'OTHER';
+  }
 }
 
 function percentile(sorted, p) {
@@ -51,6 +77,7 @@ class BridgeLatencyMetrics {
     this.rewritePassthrough = 0;
     this.bitmapShed = 0;
     this.bitmapFlushed = 0;
+    this.bitmapCoalesced = 0;
     this.budgetShed = 0;
     this.bufferedAmountPeak = 0;
     this.tlsPauseCount = 0;
@@ -59,6 +86,48 @@ class BridgeLatencyMetrics {
     this.gapsMs = [];
     this.lastSummaryAt = 0;
     this.totalRewriteMs = 0;
+    this.inputToUpdateMs = [];
+    this._pendingInputAt = 0;
+    this.updateBytesByKind = Object.create(null);
+    this.updateCountByKind = Object.create(null);
+    this._loopMonitor = null;
+  }
+
+  /** Input del cliente reenviado al servidor (se conserva el mas antiguo sin respuesta). */
+  noteInput(now = Date.now()) {
+    if (!this._pendingInputAt) this._pendingInputAt = now;
+  }
+
+  /** Update grafico recibido del servidor: cierra la medicion input -> update. */
+  noteUpdate(kind, bytes, now = Date.now()) {
+    if (!kind) return;
+    this.updateBytesByKind[kind] = (this.updateBytesByKind[kind] || 0) + (bytes || 0);
+    this.updateCountByKind[kind] = (this.updateCountByKind[kind] || 0) + 1;
+    if (this._pendingInputAt && (kind === 'BITMAP' || kind === 'SURFACE_CMDS' || kind === 'ORDERS')) {
+      const ms = now - this._pendingInputAt;
+      this._pendingInputAt = 0;
+      if (ms >= 0 && ms < 5000 && this.inputToUpdateMs.length < 2000) {
+        this.inputToUpdateMs.push(ms);
+      }
+    }
+  }
+
+  /** Lag del event loop del proceso main (perf_hooks). No-op si no esta disponible. */
+  startLoopMonitor() {
+    if (this._loopMonitor) return;
+    try {
+      const { monitorEventLoopDelay } = require('perf_hooks');
+      this._loopMonitor = monitorEventLoopDelay({ resolution: 5 });
+      this._loopMonitor.enable();
+    } catch (_) {
+      this._loopMonitor = null;
+    }
+  }
+
+  stopLoopMonitor() {
+    if (!this._loopMonitor) return;
+    try { this._loopMonitor.disable(); } catch (_) { /* noop */ }
+    this._loopMonitor = null;
   }
 
   noteBufferedAmount(n) {
@@ -83,8 +152,13 @@ class BridgeLatencyMetrics {
     if (reason === 'budget') this.budgetShed += 1;
   }
 
-  noteFlushPending() {
-    this.bitmapFlushed += 1;
+  noteFlushPending(count = 1) {
+    this.bitmapFlushed += count;
+  }
+
+  /** Bitmap pendiente descartado por quedar totalmente tapado por uno posterior. */
+  noteCoalesced() {
+    this.bitmapCoalesced += 1;
   }
 
   noteGap(ms) {
@@ -106,7 +180,22 @@ class BridgeLatencyMetrics {
   summary() {
     const rw = this.rewriteSamplesMs.slice().sort((a, b) => a - b);
     const gaps = this.gapsMs.slice().sort((a, b) => a - b);
+    const i2u = this.inputToUpdateMs.slice().sort((a, b) => a - b);
+    let loopP99Ms = 0;
+    let loopMaxMs = 0;
+    if (this._loopMonitor) {
+      // El histograma de perf_hooks va en nanosegundos.
+      loopP99Ms = this._loopMonitor.percentile(99) / 1e6;
+      loopMaxMs = this._loopMonitor.max / 1e6;
+    }
     return {
+      inputToUpdateCount: i2u.length,
+      inputToUpdateP50Ms: percentile(i2u, 50),
+      inputToUpdateP95Ms: percentile(i2u, 95),
+      loopP99Ms,
+      loopMaxMs,
+      updateBytesByKind: { ...this.updateBytesByKind },
+      updateCountByKind: { ...this.updateCountByKind },
       rewriteCount: this.rewriteSamplesMs.length,
       rewritePatched: this.rewritePatched,
       rewritePassthrough: this.rewritePassthrough,
@@ -116,6 +205,7 @@ class BridgeLatencyMetrics {
       bitmapShed: this.bitmapShed,
       budgetShed: this.budgetShed,
       bitmapFlushed: this.bitmapFlushed,
+      bitmapCoalesced: this.bitmapCoalesced,
       bufferedAmountPeak: this.bufferedAmountPeak,
       tlsPauseCount: this.tlsPauseCount,
       tlsPausedMs: this.tlsPausedMs + (this._tlsPausedSince ? Date.now() - this._tlsPausedSince : 0),
@@ -126,10 +216,16 @@ class BridgeLatencyMetrics {
 
   formatLine() {
     const s = this.summary();
+    const kinds = Object.keys(s.updateBytesByKind)
+      .map((k) => `${k}=${Math.round(s.updateBytesByKind[k] / 1024)}KB/${s.updateCountByKind[k]}`)
+      .join(' ');
     return (
-      `[Bridge Perf] rewrite n=${s.rewriteCount} p50=${s.rewriteP50Ms.toFixed(2)}ms p95=${s.rewriteP95Ms.toFixed(2)}ms` +
+      `[Bridge Perf] in->upd n=${s.inputToUpdateCount} p50=${s.inputToUpdateP50Ms}ms p95=${s.inputToUpdateP95Ms}ms` +
+      ` loop p99=${s.loopP99Ms.toFixed(1)}ms max=${s.loopMaxMs.toFixed(1)}ms` +
+      (kinds ? ` | ${kinds}` : '') + ' || ' +
+      `rewrite n=${s.rewriteCount} p50=${s.rewriteP50Ms.toFixed(2)}ms p95=${s.rewriteP95Ms.toFixed(2)}ms` +
       ` sum=${s.totalRewriteMs.toFixed(0)}ms patched=${s.rewritePatched} pass=${s.rewritePassthrough}` +
-      ` shed=${s.bitmapShed} (budget=${s.budgetShed}) flushPending=${s.bitmapFlushed}` +
+      ` shed=${s.bitmapShed} (budget=${s.budgetShed}) flushPending=${s.bitmapFlushed} covered=${s.bitmapCoalesced}` +
       ` wsPeak=${s.bufferedAmountPeak}` +
       ` tlsPause=${s.tlsPauseCount} (${s.tlsPausedMs}ms)` +
       ` gap p50=${s.gapP50Ms} p95=${s.gapP95Ms}`
@@ -142,7 +238,9 @@ class BridgeLatencyMetrics {
   maybeLog(logFn, intervalMs = 2000) {
     const now = Date.now();
     if (this.lastSummaryAt && now - this.lastSummaryAt < intervalMs) return false;
-    if (!this.rewriteSamplesMs.length && !this.bitmapShed && !this.tlsPauseCount) {
+    const hasUpdates = Object.keys(this.updateCountByKind).length > 0;
+    if (!this.rewriteSamplesMs.length && !this.bitmapShed && !this.tlsPauseCount
+        && !this.inputToUpdateMs.length && !hasUpdates) {
       this.lastSummaryAt = now;
       return false;
     }
@@ -150,8 +248,15 @@ class BridgeLatencyMetrics {
     if (typeof logFn === 'function') logFn(this.formatLine());
     this.rewriteSamplesMs = this.rewriteSamplesMs.slice(-200);
     this.gapsMs = this.gapsMs.slice(-200);
+    this.inputToUpdateMs = this.inputToUpdateMs.slice(-200);
+    this.updateBytesByKind = Object.create(null);
+    this.updateCountByKind = Object.create(null);
+    if (this._loopMonitor) {
+      try { this._loopMonitor.reset(); } catch (_) { /* noop */ }
+    }
     this.bufferedAmountPeak = 0;
     this.totalRewriteMs = 0;
+    this.bitmapCoalesced = 0;
     return true;
   }
 }
@@ -168,7 +273,9 @@ class WsBackpressureController {
     this.lowWater = opts.lowWater != null ? opts.lowWater : WS_LOW_WATER_MARK;
     this.pauseTlsMark = opts.pauseTlsMark != null ? opts.pauseTlsMark : WS_PAUSE_TLS_MARK;
     this.rewriteBudgetMs = opts.rewriteBudgetMs != null ? opts.rewriteBudgetMs : BASTION_REWRITE_BUDGET_MS;
-    this.pendingLatestBitmap = null;
+    /** @type {Array<{ buf: Buffer, rects: Array<number[]>|null }>} */
+    this.pendingBitmaps = [];
+    this._pendingBytes = 0;
     this.isTlsPaused = false;
     this._rewriteSpentMs = 0;
   }
@@ -186,9 +293,50 @@ class WsBackpressureController {
     if (this.metrics) this.metrics.noteBufferedAmount(bufferedAmount);
   }
 
+  /**
+   * Encola el bitmap (en orden). Los pendientes mas antiguos solo se descartan si
+   * TODOS sus rects quedan dentro de algun rect del nuevo: el resultado en pantalla
+   * es identico. Un delta que no queda tapado se conserva y se enviara en orden.
+   */
   _stashBitmap(frame, reason) {
-    this.pendingLatestBitmap = Buffer.from(frame);
+    const copy = Buffer.from(frame);
+    const rects = getBitmapDestRects(copy);
+    if (rects) {
+      let w = 0;
+      for (let r = 0; r < this.pendingBitmaps.length; r++) {
+        const old = this.pendingBitmaps[r];
+        if (old.rects && rectsCoveredBy(old.rects, rects)) {
+          this._pendingBytes -= old.buf.length;
+          if (this.metrics) this.metrics.noteCoalesced();
+          continue;
+        }
+        this.pendingBitmaps[w++] = old;
+      }
+      this.pendingBitmaps.length = w;
+    }
+    this.pendingBitmaps.push({ buf: copy, rects });
+    this._pendingBytes += copy.length;
     if (this.metrics) this.metrics.noteShed(reason);
+  }
+
+  /** ¿Hay bitmaps esperando? (mantener orden: no adelantar nada grafico). */
+  hasPending() {
+    return this.pendingBitmaps.length > 0;
+  }
+
+  /**
+   * ¿Hay que vaciar los pendientes antes de reenviar este frame? Cualquier cosa que
+   * no sea un bitmap descartable ni un puntero podria depender del contenido previo.
+   */
+  mustFlushBefore(frame) {
+    if (this.pendingBitmaps.length === 0) return false;
+    if (isFastPathBitmapFrame(frame)) return false;
+    return classifyFastPathUpdate(frame) !== 'POINTER';
+  }
+
+  /** La lista de pendientes crecio demasiado: hay que vaciarla ya (en orden). */
+  pendingOverflow() {
+    return this.pendingBitmaps.length > MAX_PENDING_FRAMES || this._pendingBytes > MAX_PENDING_BYTES;
   }
 
   /**
@@ -199,6 +347,11 @@ class WsBackpressureController {
     if (!this.bastion) return false;
     if (!isFastPathBitmapFrame(frame)) return false;
 
+    // Hay pendientes mas antiguos: este bitmap debe ir detras (orden de pintado).
+    if (this.pendingBitmaps.length > 0) {
+      this._stashBitmap(frame, bufferedAmount > this.highWater ? 'queue' : 'budget');
+      return true;
+    }
     if (bufferedAmount > this.highWater) {
       this._stashBitmap(frame, 'queue');
       return true;
@@ -211,24 +364,22 @@ class WsBackpressureController {
   }
 
   /**
-   * Bitmap pendiente al drenar la cola (o null).
-   * Con presupuesto: también se puede forzar al final del tick si la cola bajó.
-   */
-  /**
-   * Bitmap pendiente al drenar la cola (o null).
+   * Bitmaps pendientes, en orden, al drenar la cola (o null).
    * @param {number} bufferedAmount
    * @param {{ force?: boolean, ignoreBudget?: boolean }} [opts]
-   *   force: ignorar low-water (fin de tick / drain).
-   *   ignoreBudget: permitir un rewrite del latest aunque el presupuesto se agotara.
+   *   force: ignorar low-water (fin de tick / drain / overflow / frame no-bitmap).
+   *   ignoreBudget: permitir el rewrite aunque el presupuesto se agotara.
+   * @returns {Buffer[]|null}
    */
   takePendingIfDrained(bufferedAmount, { force = false, ignoreBudget = false } = {}) {
     this.noteBufferedAmount(bufferedAmount);
-    if (!this.pendingLatestBitmap) return null;
+    if (this.pendingBitmaps.length === 0) return null;
     if (!force && bufferedAmount > this.lowWater) return null;
     if (!ignoreBudget && this._rewriteSpentMs >= this.rewriteBudgetMs) return null;
-    const pending = this.pendingLatestBitmap;
-    this.pendingLatestBitmap = null;
-    if (this.metrics) this.metrics.noteFlushPending();
+    const pending = this.pendingBitmaps.map((p) => p.buf);
+    this.pendingBitmaps = [];
+    this._pendingBytes = 0;
+    if (this.metrics) this.metrics.noteFlushPending(pending.length);
     return pending;
   }
 
@@ -253,12 +404,50 @@ class WsBackpressureController {
   }
 }
 
+/**
+ * Junta todo lo que se manda al WASM durante un evento TLS 'data' en un unico
+ * mensaje WebSocket. El WASM consume el WS como flujo de bytes, asi que el orden
+ * se conserva y solo cambia el numero de mensajes.
+ */
+class WsTickBatcher {
+  constructor(enabled = true) {
+    this.enabled = enabled !== false;
+    /** @type {Buffer[]|null} */
+    this._parts = null;
+  }
+
+  begin() {
+    this._parts = this.enabled ? [] : null;
+  }
+
+  get active() {
+    return this._parts !== null;
+  }
+
+  /** @returns {boolean} true si el buffer quedo acumulado (no hay que enviarlo ya). */
+  push(buf) {
+    if (!this._parts) return false;
+    this._parts.push(buf);
+    return true;
+  }
+
+  /** Devuelve el mensaje unico a enviar (o null) y cierra el lote. */
+  take() {
+    const parts = this._parts;
+    this._parts = null;
+    if (!parts || parts.length === 0) return null;
+    return parts.length === 1 ? parts[0] : Buffer.concat(parts);
+  }
+}
+
 module.exports = {
+  WsTickBatcher,
   WS_HIGH_WATER_MARK,
   WS_LOW_WATER_MARK,
   WS_PAUSE_TLS_MARK,
   BASTION_REWRITE_BUDGET_MS,
   isFastPathBitmapFrame,
+  classifyFastPathUpdate,
   BridgeLatencyMetrics,
   WsBackpressureController
 };

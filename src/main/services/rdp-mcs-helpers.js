@@ -592,31 +592,40 @@ function patchInfoPacket(buf, options = {}) {
       const cbAlternateShell = u.readUInt16LE(off + 14);
       const cbWorkingDir = u.readUInt16LE(off + 16);
 
-      if (cbUserName > 0 && cbPassword > 0) {
+      // Heuristica: con usuario vacio no es un Info Packet de logon (p. ej. un PDU ajeno).
+      if (cbUserName > 0) {
         let out = Buffer.from(buf);
         let wasPatched = false;
         const changes = [];
+        let perfFlagsBefore = null;
+        let perfFlagsAfter = null;
 
-        // 1. Inyectar INFO_AUTOLOGON si no está activo
-        if ((flags & 0x0008) === 0) {
+        // 1. Inyectar INFO_AUTOLOGON si no está activo (solo con credenciales completas)
+        if (cbPassword > 0 && (flags & 0x0008) === 0) {
           const dataOff = parsed.dataOff + off + 4;
           out.writeUInt32LE(flags | 0x0008, dataOff);
           wasPatched = true;
           changes.push('autologon');
         }
 
-        // 2. Localizar TS_EXTENDED_INFO_PACKET y ajustar performanceFlags
-        const extOff = off + 18 + cbDomain + cbUserName + cbPassword + cbAlternateShell + cbWorkingDir;
+        // 2. Localizar TS_EXTENDED_INFO_PACKET y ajustar performanceFlags.
+        // Cada string (Domain, UserName, Password, AlternateShell, WorkingDir) va seguido de
+        // un terminador nulo de 2 bytes que NO cuenta en su cb* (MS-RDPBCGR 2.2.1.11.1.1).
+        const extOff = off + 18
+          + (cbDomain + 2) + (cbUserName + 2) + (cbPassword + 2)
+          + (cbAlternateShell + 2) + (cbWorkingDir + 2);
         if (extOff + 4 <= u.length) {
           const cbClientAddress = u.readUInt16LE(extOff + 2);
           const dirOff = extOff + 4 + cbClientAddress;
-          if (dirOff + 2 <= u.length) {
+          // Sanidad: el cb de la direccion es par y pequeno; si no, no se toca nada.
+          if (cbClientAddress % 2 === 0 && cbClientAddress <= 128 && dirOff + 2 <= u.length) {
             const cbClientDir = u.readUInt16LE(dirOff);
             const tzOff = dirOff + 2 + cbClientDir;
             const perfFlagsOff = tzOff + 172 + 4; // 172B TimeZone + 4B clientSessionId
 
-            if (perfFlagsOff + 4 <= u.length) {
+            if (cbClientDir % 2 === 0 && cbClientDir <= 1024 && perfFlagsOff + 4 <= u.length) {
               const oldPerfFlags = u.readUInt32LE(perfFlagsOff);
+              perfFlagsBefore = oldPerfFlags;
               let newPerfFlags = oldPerfFlags;
 
               if (options.enableWallpaper === true) {
@@ -655,6 +664,7 @@ function patchInfoPacket(buf, options = {}) {
                 newPerfFlags |= PERF_DISABLE_MENUANIMATIONS;
               }
 
+              perfFlagsAfter = newPerfFlags >>> 0;
               if (newPerfFlags !== oldPerfFlags) {
                 const perfDataOff = parsed.dataOff + perfFlagsOff;
                 out.writeUInt32LE(newPerfFlags >>> 0, perfDataOff);
@@ -669,7 +679,9 @@ function patchInfoPacket(buf, options = {}) {
           buf: wasPatched ? out : buf,
           patched: wasPatched,
           oldFlags: flags,
-          newFlags: flags | 0x0008,
+          newFlags: (flags | 0x0008) >>> 0,
+          perfFlagsBefore,
+          perfFlagsAfter,
           changes
         };
       }

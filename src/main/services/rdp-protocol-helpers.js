@@ -321,7 +321,7 @@ function describeRdpPdu(buf) {
         1: 'BITMAP',
         2: 'PALETTE',
         3: 'SYNCHRONIZE',
-        4: 'SURFACE_CMDS (EGFX)',
+        4: 'SURFACE_CMDS (RemoteFX)',
         5: 'PTR_HIDDEN',
         6: 'PTR_DEFAULT',
         7: 'PTR_POSITION',

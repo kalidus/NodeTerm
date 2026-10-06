@@ -134,6 +134,55 @@ function inspectWallixFastPathBitmap(buf) {
   };
 }
 
+/**
+ * Rectangulos destino (inclusivos) de un Fast-Path BITMAP completo y sin comprimir.
+ * Sirve para saber que bitmaps pendientes quedan totalmente tapados por uno posterior.
+ * @returns {Array<[number, number, number, number]>|null} null si no se puede interpretar.
+ */
+function getBitmapDestRects(buf) {
+  const parsed = parseFastPathUpdate(buf);
+  if (!parsed || parsed.updateCode !== FASTPATH_UPDATETYPE_BITMAP || parsed.compression !== 0) return null;
+  if (parsed.fragmentation !== FP_FRAG_SINGLE) return null;
+  const payload = parsed.updateData;
+  // PDU con mas de un update: no se puede razonar sobre cobertura.
+  if (payload.byteOffset - buf.byteOffset + payload.length !== buf.length) return null;
+  if (payload.length < 4 || payload.readUInt16LE(0) !== UPDATETYPE_BITMAP) return null;
+  const n = payload.readUInt16LE(2);
+  const rects = [];
+  let p = 4;
+  for (let i = 0; i < n; i++) {
+    if (p + 18 > payload.length) return null;
+    const bitmapLength = payload.readUInt16LE(p + 16);
+    const end = p + 18 + bitmapLength;
+    if (end > payload.length) return null;
+    rects.push([
+      payload.readUInt16LE(p),
+      payload.readUInt16LE(p + 2),
+      payload.readUInt16LE(p + 4),
+      payload.readUInt16LE(p + 6)
+    ]);
+    p = end;
+  }
+  if (p !== payload.length || !rects.length) return null;
+  return rects;
+}
+
+/** ¿Todos los rects de `inner` caben dentro de algun rect de `outer`? */
+function rectsCoveredBy(inner, outer) {
+  if (!inner || !outer || !inner.length || !outer.length) return false;
+  for (const r of inner) {
+    let covered = false;
+    for (const o of outer) {
+      if (o[0] <= r[0] && o[1] <= r[1] && o[2] >= r[2] && o[3] >= r[3]) {
+        covered = true;
+        break;
+      }
+    }
+    if (!covered) return false;
+  }
+  return true;
+}
+
 function needsStrideCrop(width, height, destLeft, destTop, destRight, destBottom) {
   const iw = destRight - destLeft + 1;
   const ih = destBottom - destTop + 1;
@@ -733,6 +782,8 @@ module.exports = {
   encodeFpLength,
   parseFastPathUpdate,
   inspectWallixFastPathBitmap,
+  getBitmapDestRects,
+  rectsCoveredBy,
   fixWallixBitmapDestStride,
   fixWallixBitmapStrideCrop,
   rewriteBitmapPayload,
