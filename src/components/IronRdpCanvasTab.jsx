@@ -229,6 +229,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   const currentDesktopSizeRef = useRef({ width: 0, height: 0 });
   const lastRequestedDesktopRef = useRef({ width: 0, height: 0 });
   const resizeAckTimerRef = useRef(null);
+  const resizeInFlightRef = useRef(false);
+  const pendingResizeRef = useRef(null);
+  const resizeRecoveredRef = useRef(false);
   const supportsDisplayControlRef = useRef(false);
   const hasEverConnectedRef = useRef(false);
   const currentTokenIdRef = useRef(null);
@@ -569,6 +572,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         stats = JSON.parse(taken.stats || '{}');
       } catch (_) { /* noop */ }
     }
+    const errors = stats.errors ?? 0;
     writeEgfxLine({
       t: 'resize',
       w: width,
@@ -579,10 +583,19 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       unclean: stats.unclean ?? 0,
       altSign: stats.altSign ?? 0,
       held: stats.held ?? 0,
-      errors: stats.errors ?? 0,
+      errors,
       cacheMiss: stats.cacheMiss ?? 0,
       pdus: stats.pdus || ''
     }, bytes);
+
+    // Soft-fail Progressive deja celdas en negro: un DisplayControl del mismo tamaño
+    // fuerza otro ResetGraphics y un repintado completo (una sola vez por ventana).
+    const w = Math.round(Number(width) || 0);
+    const h = Math.round(Number(height) || 0);
+    if (errors > 0 && w > 0 && h > 0 && !resizeRecoveredRef.current) {
+      resizeRecoveredRef.current = true;
+      requestSessionResize(w, h, { force: true });
+    }
   };
 
   const readResizeSettingMs = (key, fallback, min) => {
@@ -593,16 +606,41 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     }
   };
 
-  const requestSessionResize = (width, height) => {
+  const completeResizeInFlight = () => {
+    resizeInFlightRef.current = false;
+    const pending = pendingResizeRef.current;
+    pendingResizeRef.current = null;
+    if (!pending) return;
+    if (
+      pending.width === currentDesktopSizeRef.current.width
+      && pending.height === currentDesktopSizeRef.current.height
+    ) {
+      return;
+    }
+    requestSessionResize(pending.width, pending.height);
+  };
+
+  const requestSessionResize = (width, height, opts = {}) => {
     if (!supportsDisplayControlRef.current) return false;
     if (!sessionRef.current?.resize) return false;
-    if (width === currentDesktopSizeRef.current.width && height === currentDesktopSizeRef.current.height) {
-      return false;
+    const force = opts.force === true;
+    if (!force) {
+      if (width === currentDesktopSizeRef.current.width && height === currentDesktopSizeRef.current.height) {
+        return false;
+      }
+      if (width === lastRequestedDesktopRef.current.width && height === lastRequestedDesktopRef.current.height) {
+        return false;
+      }
     }
-    if (width === lastRequestedDesktopRef.current.width && height === lastRequestedDesktopRef.current.height) {
-      return false;
+    if (resizeInFlightRef.current && !force) {
+      pendingResizeRef.current = { width, height };
+      return true;
     }
     lastRequestedDesktopRef.current = { width, height };
+    resizeInFlightRef.current = true;
+    if (!force) {
+      resizeRecoveredRef.current = false;
+    }
     try {
       if (egfxDiagRef.current.active && typeof beginEgfxResizeCapture === 'function') {
         beginEgfxResizeCapture();
@@ -610,12 +648,14 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       sessionRef.current.resize(width, height);
     } catch (resizeErr) {
       console.warn('[IronRDP] Error solicitando resize a la sesion:', resizeErr);
+      resizeInFlightRef.current = false;
       return false;
     }
     clearResizeAckTimer();
     const ackTimeoutMs = readResizeSettingMs('rdp_resize_ack_timeout_ms', 1500, 600);
     resizeAckTimerRef.current = setTimeout(() => {
       resizeAckTimerRef.current = null;
+      completeResizeInFlight();
     }, ackTimeoutMs);
     return true;
   };
@@ -1134,6 +1174,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
                 setDesktopDimensions({ width: w, height: h });
                 queueMicrotask(() => updateCanvasRectRef.current?.());
               }
+              clearResizeAckTimer();
+              completeResizeInFlight();
               if (egfxResizeFlushRef.current) clearTimeout(egfxResizeFlushRef.current);
               egfxResizeFlushRef.current = setTimeout(() => {
                 egfxResizeFlushRef.current = null;
