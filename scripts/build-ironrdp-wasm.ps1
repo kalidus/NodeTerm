@@ -32,7 +32,10 @@ $patchDir = Join-Path $root 'patches\ironrdp'
 if (Test-Path $patchDir) {
   Get-ChildItem $patchDir -Filter '*.patch' | ForEach-Object {
     Write-Host "[ironrdp-wasm] Aplicando $($_.Name)"
-    git apply --reject --whitespace=nowarn $_.FullName 2>$null
+    cmd /c "git apply --reject --whitespace=nowarn `"$($_.FullName)`""
+    if ($LASTEXITCODE -ne 0) {
+      throw "No se pudo aplicar $($_.Name)"
+    }
   }
 }
 
@@ -61,9 +64,12 @@ Copy-Item (Join-Path $IronRdpSrc 'web-client\iron-remote-desktop-rdp\dist\*') $d
 $pkgPath = Join-Path $dst 'package.json'
 $pkg = Get-Content $pkgPath -Raw | ConvertFrom-Json
 $pkg.name = '@devolutions/iron-remote-desktop-rdp'
-$pkg.version = '0.7.0-nodeterm-egfx.5'
-$pkg.description = "NodeTerm vendor IronRDP $Commit + EGFX + WebCodecs"
-$pkg | ConvertTo-Json -Depth 8 | Set-Content $pkgPath -Encoding UTF8
+$pkg.version = '0.7.0-nodeterm-egfx.11'
+$pkg.description = "NodeTerm vendor IronRDP $Commit + EGFX + WebCodecs + diag"
+$json = ($pkg | ConvertTo-Json -Depth 8) -replace "`r`n", "`n"
+if (-not $json.EndsWith("`n")) { $json += "`n" }
+$utf8 = New-Object System.Text.UTF8Encoding $false
+[System.IO.File]::WriteAllText($pkgPath, $json, $utf8)
 
 Write-Host "[ironrdp-wasm] Listo en $dst"
 Pop-Location

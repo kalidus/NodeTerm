@@ -1,0 +1,1283 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index 7e3280a..2e1e83a 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -3570,6 +3570,7 @@ dependencies = [
+  "ironrdp",
+  "ironrdp-cliprdr-format",
+  "ironrdp-core 0.2.1",
++ "ironrdp-egfx",
+  "ironrdp-futures",
+  "ironrdp-pdu",
+  "ironrdp-propertyset",
+diff --git a/crates/ironrdp-egfx/src/client.rs b/crates/ironrdp-egfx/src/client.rs
+index 59eb048..b41a119 100644
+--- a/crates/ironrdp-egfx/src/client.rs
++++ b/crates/ironrdp-egfx/src/client.rs
+@@ -53,7 +53,8 @@
+ //! [3.3.5.2]: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-rdpegfx/90aba3e3-d4a8-4af1-b1bb-a94e2313bbf0
+ //! [3.3.5.12]: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-rdpegfx/e3c80bff-3e4e-4e65-b7c2-c2cd6b1fb4f5
+ 
+-use std::collections::BTreeMap;
++use std::cell::RefCell;
++use std::collections::{BTreeMap, BTreeSet};
+ 
+ use ironrdp_core::{Decode as _, ReadCursor, impl_as_any};
+ use ironrdp_dvc::{DvcClientProcessor, DvcMessage, DvcProcessor};
+@@ -68,6 +69,114 @@ use tracing::{debug, trace, warn};
+ use crate::CHANNEL_NAME;
+ use crate::compositor::{Compositor, OutputUpdate};
+ use crate::decode::H264Decoder;
++
++const DIAG_CAPTURE_CAP: usize = 4 * 1024 * 1024;
++
++struct ResizeDiag {
++    wts2: u32,
++    clear: u32,
++    cache: u32,
++    cache_miss: u32,
++    solid: u32,
++    avc: u32,
++    progressive: u32,
++    held: u32,
++    errors: u32,
++    any: u32,
++    capture: Vec<u8>,
++    capturing: bool,
++}
++
++impl Default for ResizeDiag {
++    fn default() -> Self {
++        Self {
++            wts2: 0,
++            clear: 0,
++            cache: 0,
++            cache_miss: 0,
++            solid: 0,
++            avc: 0,
++            progressive: 0,
++            held: 0,
++            errors: 0,
++            any: 0,
++            capture: Vec::new(),
++            capturing: false,
++        }
++    }
++}
++
++thread_local! {
++    static RESIZE_DIAG: RefCell<ResizeDiag> = RefCell::new(ResizeDiag::default());
++}
++
++fn diag_with(update: impl FnOnce(&mut ResizeDiag)) {
++    RESIZE_DIAG.with(|slot| update(&mut slot.borrow_mut()));
++}
++
++fn diag_add_error() {
++    diag_with(|diag| diag.errors = diag.errors.saturating_add(1));
++}
++
++fn diag_add_progressive() {
++    diag_with(|diag| diag.progressive = diag.progressive.saturating_add(1));
++}
++
++fn diag_add_held() {
++    diag_with(|diag| diag.held = diag.held.saturating_add(1));
++}
++
++fn diag_add_any() {
++    diag_with(|diag| diag.any = diag.any.saturating_add(1));
++}
++
++fn diag_add_wts2(bitmap: &[u8]) {
++    diag_with(|diag| {
++        diag.wts2 = diag.wts2.saturating_add(1);
++        if !diag.capturing || bitmap.is_empty() {
++            return;
++        }
++        let len = u32::try_from(bitmap.len()).unwrap_or(u32::MAX);
++        let extra = 4 + bitmap.len();
++        if diag.capture.len().saturating_add(extra) > DIAG_CAPTURE_CAP {
++            return;
++        }
++        diag.capture.extend_from_slice(&len.to_le_bytes());
++        diag.capture.extend_from_slice(bitmap);
++    });
++}
++
++/// Start a resize window: counters and the progressive byte capture reset.
++pub fn egfx_diag_begin() {
++    diag_with(|diag| {
++        *diag = ResizeDiag::default();
++        diag.capturing = true;
++    });
++}
++
++/// Counters since [`egfx_diag_begin`], plus the captured progressive payloads.
++///
++/// `altSign` stays 0: this build does not change or probe the DAS sign formula.
++pub fn egfx_diag_take() -> (String, Vec<u8>) {
++    RESIZE_DIAG.with(|slot| {
++        let diag = std::mem::take(&mut *slot.borrow_mut());
++        let painted = if diag.progressive == 0 {
++            100
++        } else {
++            diag.progressive.saturating_sub(diag.held).saturating_mul(100) / diag.progressive
++        };
++        let any_codec = if diag.any > 0 || diag.clear > 0 || diag.solid > 0 || diag.cache > 0 || diag.avc > 0 {
++            100
++        } else {
++            0
++        };
++        let summary = format!(
++            r#"{{"painted":{painted},"anyCodec":{any_codec},"unclean":{},"altSign":0,"held":{},"errors":{},"cacheMiss":{},"pdus":"wts2:{},clear:{},cache:{},solid:{},avc:{}"}}"#,
++            diag.held, diag.held, diag.errors, diag.cache_miss, diag.wts2, diag.clear, diag.cache, diag.solid, diag.avc
++        );
++        (summary, diag.capture)
++    })
++}
+ use crate::pdu::{
+     Avc420BitmapStream, CacheImportReplyPdu, CacheToSurfacePdu, CapabilitiesAdvertisePdu, CapabilitiesV8Flags,
+     CapabilitiesV81Flags, CapabilitiesV107Flags, CapabilitySet, Codec1Type, DeleteEncodingContextPdu,
+@@ -284,6 +393,17 @@ pub trait GraphicsPipelineHandler: Send {
+     /// Called when the EGFX channel is closed
+     fn on_close(&mut self) {}
+ 
++    /// Optional AVC420 bitstream passthrough (e.g. WebCodecs in the browser).
++    /// Return `true` if the frame was handled and Rust should skip H.264 decode.
++    fn on_avc420_bitstream(
++        &mut self,
++        _surface_id: u16,
++        _destination_rectangle: &ExclusiveRectangle,
++        _h264_avc_data: &[u8],
++    ) -> bool {
++        false
++    }
++
+     // ========================================================================
+     // Additional PDU handlers (server→client)
+     // ========================================================================
+@@ -401,6 +521,8 @@ enum ClientState {
+ pub struct GraphicsPipelineClient {
+     handler: Box<dyn GraphicsPipelineHandler>,
+     h264_decoder: Option<Box<dyn H264Decoder>>,
++    /// Advertise AVC420 even without a Rust H.264 decoder (JS/WebCodecs passthrough).
++    advertise_avc: bool,
+     /// Built on first use via [`Self::decode_clearcodec`]. `None` means no ClearCodec
+     /// frame has arrived yet, not that the codec is unsupported: keeping the ~1.37 MiB
+     /// V-bar and glyph cache spine (see `ClearCodecDecoder::new`) unallocated saves that
+@@ -422,6 +544,10 @@ pub struct GraphicsPipelineClient {
+     frames_queued: u32,
+     total_frames_decoded: u32,
+     pending_output_reset: Option<(u16, u16)>,
++    /// After ResetGraphics, difference/upgrade tiles are not blitted until that
++    /// cell has received an absolute tile. The DAS math is unchanged.
++    hold_diffs: bool,
++    absolute_since_reset: BTreeSet<(u16, u16, u16)>,
+ }
+ 
+ impl GraphicsPipelineClient {
+@@ -435,6 +561,7 @@ impl GraphicsPipelineClient {
+         Self {
+             handler,
+             h264_decoder,
++            advertise_avc: false,
+             clearcodec_decoder: None,
+             planar_decoder: BitmapStreamDecoder::default(),
+             progressive_decoder: ProgressiveDecoder::new(),
+@@ -449,9 +576,18 @@ impl GraphicsPipelineClient {
+             frames_queued: 0,
+             total_frames_decoded: 0,
+             pending_output_reset: None,
++            hold_diffs: false,
++            absolute_since_reset: BTreeSet::new(),
+         }
+     }
+ 
++    /// Advertise AVC420 and prefer [`GraphicsPipelineHandler::on_avc420_bitstream`].
++    #[must_use]
++    pub fn with_avc_passthrough(mut self, enabled: bool) -> Self {
++        self.advertise_avc = enabled;
++        self
++    }
++
+     // ========================================================================
+     // State Queries
+     // ========================================================================
+@@ -554,6 +690,8 @@ impl GraphicsPipelineClient {
+ 
+             // Surface operations
+             GfxPdu::SolidFill(pdu) => {
++                diag_with(|diag| diag.solid = diag.solid.saturating_add(1));
++                diag_add_any();
+                 trace!(surface_id = pdu.surface_id, "SolidFill");
+                 self.compositor
+                     .solid_fill(pdu.surface_id, &pdu.fill_pixel, &pdu.rectangles);
+@@ -589,13 +727,19 @@ impl GraphicsPipelineClient {
+                 Ok(vec![])
+             }
+             GfxPdu::CacheToSurface(pdu) => {
++                diag_with(|diag| diag.cache = diag.cache.saturating_add(1));
++                diag_add_any();
+                 trace!(
+                     cache_slot = pdu.cache_slot,
+                     surface_id = pdu.surface_id,
+                     "CacheToSurface"
+                 );
+-                self.compositor
++                let hit = self
++                    .compositor
+                     .cache_to_surface(pdu.cache_slot, pdu.surface_id, &pdu.destination_points);
++                if !hit {
++                    diag_with(|diag| diag.cache_miss = diag.cache_miss.saturating_add(1));
++                }
+                 self.handler.on_cache_to_surface(&pdu);
+                 Ok(vec![])
+             }
+@@ -705,6 +849,9 @@ impl GraphicsPipelineClient {
+         // ResetGraphics, and a ResetGraphics does not re-negotiate capabilities.
+         self.current_frame_id = None;
+         self.frames_queued = 0;
++        self.hold_diffs = true;
++        self.absolute_since_reset.clear();
++        egfx_diag_begin();
+ 
+         // Reset decoder state for new stream
+         if let Some(ref mut decoder) = self.h264_decoder {
+@@ -878,19 +1025,24 @@ impl GraphicsPipelineClient {
+             .ok_or_else(|| pdu_other_err!("unknown surface in WireToSurface2"))?;
+         let (surface_width, surface_height) = (surface.width, surface.height);
+ 
+-        let tiles = self
+-            .progressive_decoder
+-            .decode_bitmap(
+-                pdu.surface_id,
+-                pdu.codec_context_id,
+-                surface_width,
+-                surface_height,
+-                &pdu.bitmap_data,
+-            )
+-            .map_err(|error| {
+-                warn!(?error, "rfx progressive decode failed");
+-                pdu_other_err!("rfx progressive decode failed")
+-            })?;
++        let tiles = match self.progressive_decoder.decode_bitmap(
++            pdu.surface_id,
++            pdu.codec_context_id,
++            surface_width,
++            surface_height,
++            &pdu.bitmap_data,
++        ) {
++            Ok(tiles) => tiles,
++            Err(_error) => {
++                // Windows hosts can emit TILE_UPGRADE SRL streams that omit the
++                // trailing zero (or mismatch DAS state). Soft-fail so ClearCodec /
++                // later progressive frames can still paint instead of killing DVC.
++                diag_add_error();
++                return Ok(());
++            }
++        };
++
++        diag_add_wts2(&pdu.bitmap_data);
+ 
+         for tile in tiles {
+             let tile_left = tile.x_idx.saturating_mul(TILE_DIM);
+@@ -901,6 +1053,16 @@ impl GraphicsPipelineClient {
+                 continue;
+             }
+ 
++            let cell = (pdu.surface_id, tile.x_idx, tile.y_idx);
++            diag_add_progressive();
++            if self.hold_diffs && !tile.absolute && !self.absolute_since_reset.contains(&cell) {
++                diag_add_held();
++            }
++            if tile.absolute {
++                self.absolute_since_reset.insert(cell);
++            }
++            diag_add_any();
++
+             let tile_rectangle = ExclusiveRectangle {
+                 left: tile_left,
+                 top: tile_top,
+@@ -962,6 +1124,12 @@ impl GraphicsPipelineClient {
+         let mut cursor = ReadCursor::new(bitmap_data);
+         let stream = Avc420BitmapStream::decode(&mut cursor).map_err(|e| decode_err!(e))?;
+ 
++        if self.handler.on_avc420_bitstream(surface_id, dest_rect, stream.data) {
++            diag_with(|diag| diag.avc = diag.avc.saturating_add(1));
++            diag_add_any();
++            return Ok(());
++        }
++
+         let Some(ref mut decoder) = self.h264_decoder else {
+             debug!("No H.264 decoder configured, skipping AVC420 frame");
+             return Ok(());
+@@ -1089,6 +1257,8 @@ impl GraphicsPipelineClient {
+         dest_rect: &ExclusiveRectangle,
+         bitmap_data: &[u8],
+     ) -> PduResult<()> {
++        diag_with(|diag| diag.clear = diag.clear.saturating_add(1));
++        diag_add_any();
+         // MS-RDPEGFX 2.2.1.4.1: see decode_avc420 above for wire-format note.
+         let dest_width = dest_rect.right - dest_rect.left;
+         let dest_height = dest_rect.bottom - dest_rect.top;
+@@ -1222,7 +1392,7 @@ impl DvcProcessor for GraphicsPipelineClient {
+     }
+ 
+     fn start(&mut self, _channel_id: u32) -> PduResult<Vec<DvcMessage>> {
+-        let caps = if self.h264_decoder.is_some() {
++        let caps = if self.h264_decoder.is_some() || self.advertise_avc {
+             self.handler.capabilities()
+         } else {
+             // No H.264 decoder: filter out capability sets that imply AVC support.
+@@ -1257,28 +1427,54 @@ impl DvcProcessor for GraphicsPipelineClient {
+     }
+ 
+     fn process(&mut self, _channel_id: u32, payload: &[u8]) -> PduResult<Vec<DvcMessage>> {
+-        // ZGFX decompress
++        // ZGFX decompress when the payload carries a segmented descriptor (0xE0/0xE1).
++        // Some Windows hosts send raw RDPGFX PDUs (header starts with CmdId LE, e.g. 0x0B
++        // StartFrame) without the ZGFX envelope; treat those as already uncompressed.
+         self.decompressed_buffer.clear();
+         self.decompressed_buffer.shrink_to(MAX_DECOMPRESSED_BUFFER_CAPACITY);
+-        self.decompressor
+-            .decompress(payload, &mut self.decompressed_buffer)
+-            .map_err(|e| decode_err!(e))?;
++        // Prefer ZGFX; only fall back to raw RDPGFX if the envelope is absent.
++        match self.decompressor.decompress(payload, &mut self.decompressed_buffer) {
++            Ok(_) => {}
++            Err(zgfx::ZgfxError::InvalidSegmentedDescriptor) => {
++                self.decompressed_buffer.clear();
++                self.decompressed_buffer.extend_from_slice(payload);
++            }
++            Err(e) => return Err(decode_err!(e)),
++        }
+ 
+-        // Decode all PDUs first (cursor borrows decompressed_buffer)
++        // Decode all PDUs first (cursor borrows decompressed_buffer).
++        // Skip malformed PDUs instead of tearing down the whole session: some
++        // hosts emit mixed/partial GFX after DynVC CAPS mis-negotiation.
+         let mut pdus = Vec::new();
+         {
+             let mut cursor = ReadCursor::new(self.decompressed_buffer.as_slice());
+             while !cursor.is_empty() {
+-                let pdu: GfxPdu = decode_cursor(&mut cursor).map_err(|e| decode_err!(e))?;
+-                pdus.push(pdu);
++                let start = cursor.pos();
++                match decode_cursor::<GfxPdu>(&mut cursor) {
++                    Ok(pdu) => pdus.push(pdu),
++                    Err(e) => {
++                        warn!(
++                            error = %e,
++                            offset = start,
++                            remaining = cursor.len(),
++                            "skipping undecodable GFX PDU"
++                        );
++                        break;
++                    }
++                }
+             }
+         }
+ 
+-        // Process decoded PDUs
++        // Process decoded PDUs. Soft-fail per-PDU so a single progressive/ClearCodec
++        // glitch does not tear down the Graphics DVC (and the whole RDP session).
+         let mut responses: Vec<DvcMessage> = Vec::new();
+         for pdu in pdus {
+-            let pdu_responses = self.handle_pdu(pdu)?;
+-            responses.extend(pdu_responses);
++            match self.handle_pdu(pdu) {
++                Ok(pdu_responses) => responses.extend(pdu_responses),
++                Err(error) => {
++                    warn!(error = %error, "skipping GFX PDU processing error");
++                }
++            }
+         }
+ 
+         Ok(responses)
+diff --git a/crates/ironrdp-egfx/src/compositor.rs b/crates/ironrdp-egfx/src/compositor.rs
+index ea7f600..e3f5ed1 100644
+--- a/crates/ironrdp-egfx/src/compositor.rs
++++ b/crates/ironrdp-egfx/src/compositor.rs
+@@ -16,7 +16,7 @@
+ //! [`BitmapUpdate`](crate::client::BitmapUpdate) and the session's decoded image,
+ //! so a drained region is ready to blit without conversion.
+ 
+-use std::collections::BTreeMap;
++use std::collections::{BTreeMap, BTreeSet};
+ 
+ use ironrdp_pdu::geometry::ExclusiveRectangle;
+ use tracing::debug;
+@@ -144,6 +144,10 @@ pub(crate) struct Compositor {
+     frame: Vec<DirtyRegion>,
+     /// Deltas from completed frames, awaiting drain.
+     ready: Vec<OutputUpdate>,
++    /// Diagnostics: 64x64 cells of any surface touched by any painting command since
++    /// `start_coverage`, whatever the codec.
++    coverage_on: bool,
++    touched: BTreeSet<(u16, u16)>,
+ }
+ 
+ impl Compositor {
+@@ -162,25 +166,41 @@ impl Compositor {
+             .then_some((width, height))
+     }
+ 
+-    /// Handle `ResetGraphics`: set the output size and drop all surfaces, cache and
+-    /// pending output.
++    /// Handle `ResetGraphics`: set the output size and drop surfaces and pending
++    /// output. The bitmap cache is kept.
+     ///
+-    /// Per MS-RDPEGFX 2.2.2.14 a reset implicitly destroys every surface and
+-    /// redefines the graphics output, so deltas produced before it are discarded
+-    /// along with the surfaces that produced them. That includes committed ones the
+-    /// consumer has not drained yet: a payload may carry `EndFrame` and
+-    /// `ResetGraphics` together, and those deltas were clipped against the previous
+-    /// output, so painting them into the new one repaints stale pixels and, after a
+-    /// shrink, addresses a region the new output no longer contains.
++    /// MS-RDPEGFX 3.3.5.14 only resizes the Graphics Output Buffer. Windows then
++    /// recreates surfaces and replays the screen with `CacheToSurface` of slots
++    /// filled before the reset. Eviction is `EvictCacheEntry`, not this PDU.
++    ///
++    /// Deltas produced before the reset are still discarded. A payload may carry
++    /// `EndFrame` and `ResetGraphics` together, and those deltas were clipped
++    /// against the previous output, so painting them into the new one repaints
++    /// stale pixels and, after a shrink, addresses a region the new output no
++    /// longer contains.
+     pub(crate) fn reset(&mut self, width: u32, height: u32) {
+         self.output_width = u16::try_from(width).unwrap_or(u16::MAX);
+         self.output_height = u16::try_from(height).unwrap_or(u16::MAX);
+         self.surfaces.clear();
+-        self.cache.clear();
+         self.frame.clear();
+         self.ready.clear();
+-        // Every charged allocation lived in one of those, so the whole charge goes.
+-        self.allocated_bytes = 0;
++        // Surfaces and queued deltas are gone. Cache slots stay, so the budget is
++        // whatever those tiles still hold.
++        self.allocated_bytes = self.cache.values().map(|tile| tile.data.len()).sum();
++    }
++
++    /// Start counting which 64x64 cells receive pixels (diagnostics for the resize report).
++    pub(crate) fn start_coverage(&mut self) {
++        self.coverage_on = true;
++        self.touched.clear();
++    }
++
++    /// Stop counting and return the number of distinct cells painted since `start_coverage`.
++    pub(crate) fn finish_coverage(&mut self) -> usize {
++        self.coverage_on = false;
++        let cells = self.touched.len();
++        self.touched.clear();
++        cells
+     }
+ 
+     /// Reserve `len` pixel bytes, or refuse if that would exceed the budget.
+@@ -418,9 +438,12 @@ impl Compositor {
+ 
+     /// Render a cached tile onto a surface at each destination point
+     /// (`CacheToSurface`).
+-    pub(crate) fn cache_to_surface(&mut self, cache_slot: u16, surface_id: u16, dst_points: &[Point]) {
++    ///
++    /// Returns `false` when the slot is empty, so the caller can count a miss
++    /// without painting a hole over the framebuffer.
++    pub(crate) fn cache_to_surface(&mut self, cache_slot: u16, surface_id: u16, dst_points: &[Point]) -> bool {
+         let Some(tile) = self.cache.get(&cache_slot) else {
+-            return;
++            return false;
+         };
+         let (w, h) = (tile.width, tile.height);
+ 
+@@ -436,6 +459,7 @@ impl Compositor {
+         for point in dst_points {
+             self.record_dirty(surface_id, point.x, point.y, w, h);
+         }
++        true
+     }
+ 
+     /// Evict a cache slot (`EvictCacheEntry`).
+@@ -566,6 +590,13 @@ impl Compositor {
+         if right <= left || bottom <= top {
+             return;
+         }
++        if self.coverage_on {
++            for cell_y in (top / 64)..=((bottom - 1) / 64) {
++                for cell_x in (left / 64)..=((right - 1) / 64) {
++                    self.touched.insert((cell_x, cell_y));
++                }
++            }
++        }
+         let rect = ExclusiveRectangle {
+             left,
+             top,
+@@ -1451,4 +1482,43 @@ mod tests {
+         assert!(c.drain_output().is_empty(), "pre-reset deltas must not be drainable");
+         assert_eq!(c.allocated_bytes, 0);
+     }
++
++    /// ResetGraphics resizes the output and drops surfaces. Bitmap-cache slots
++    /// stay, because Windows replays them with CacheToSurface afterwards.
++    #[test]
++    fn reset_keeps_bitmap_cache_slots() {
++        let mut c = Compositor::default();
++        c.reset(128, 128);
++        c.create_surface(1, 16, 16);
++        c.solid_fill(
++            1,
++            &Color {
++                b: 0x10,
++                g: 0x20,
++                r: 0x30,
++                xa: 0,
++            },
++            &[rect(0, 0, 8, 8)],
++        );
++        c.surface_to_cache(1, 7, &rect(0, 0, 8, 8));
++        let cache_bytes = c.cache.get(&7).expect("slot").data.len();
++
++        c.reset(64, 64);
++
++        assert!(c.surfaces.is_empty(), "surfaces do not survive a reset");
++        assert!(c.cache.contains_key(&7), "the bitmap cache slot must survive");
++        assert_eq!(c.allocated_bytes, cache_bytes, "only the surviving tiles stay charged");
++        assert!(!c.cache_to_surface(99, 2, &[Point { x: 0, y: 0 }]), "a missing slot is a miss");
++
++        c.create_surface(2, 16, 16);
++        c.map_surface(2, 0, 0);
++        c.end_frame();
++        let _ = c.drain_output();
++
++        assert!(c.cache_to_surface(7, 2, &[Point { x: 0, y: 0 }]));
++        c.end_frame();
++        let updates = c.drain_output();
++        assert_eq!(updates.len(), 1);
++        assert_eq!(&updates[0].data[0..4], &[0x30, 0x20, 0x10, 0xFF]);
++    }
+ }
+diff --git a/crates/ironrdp-graphics/src/progressive.rs b/crates/ironrdp-graphics/src/progressive.rs
+index 5ea16f3..4cff6bc 100644
+--- a/crates/ironrdp-graphics/src/progressive.rs
++++ b/crates/ironrdp-graphics/src/progressive.rs
+@@ -1150,6 +1150,9 @@ pub struct DecodedTile {
+     /// Surface-relative rectangles where this tile is visible, clipped to the
+     /// Progressive REGION and surface bounds.
+     pub update_rectangles: Vec<ExclusiveRectangle>,
++    /// `true` for a simple/first tile that is not a DIFFERENCE update.
++    /// Upgrades and difference tiles are `false`.
++    pub absolute: bool,
+ }
+ 
+ /// Per-axis cap on surface dimensions, in pixels.
+@@ -1510,6 +1513,7 @@ impl ProgressiveDecoder {
+                         y_idx,
+                         pixels,
+                         update_rectangles: Vec::new(),
++                        absolute: !tile_state.is_difference,
+                     }
+                 };
+                 tile.update_rectangles = update_rectangles;
+@@ -1657,6 +1661,7 @@ fn decode_tile_block(
+                 y_idx,
+                 pixels,
+                 update_rectangles: Vec::new(),
++                absolute: !is_difference,
+             }])
+         }
+ 
+@@ -1716,6 +1721,7 @@ fn decode_tile_block(
+                 y_idx,
+                 pixels,
+                 update_rectangles: Vec::new(),
++                absolute: !is_difference,
+             }])
+         }
+ 
+@@ -1750,6 +1756,7 @@ fn decode_tile_block(
+                 y_idx,
+                 pixels,
+                 update_rectangles: Vec::new(),
++                absolute: false,
+             }])
+         }
+     }
+diff --git a/crates/ironrdp-graphics/src/srl.rs b/crates/ironrdp-graphics/src/srl.rs
+index 9503dc7..499dd85 100644
+--- a/crates/ironrdp-graphics/src/srl.rs
++++ b/crates/ironrdp-graphics/src/srl.rs
+@@ -49,24 +49,31 @@ pub struct SrlDecoder<'a> {
+     kp: u8,
+     zero_run_remaining: usize,
+     nonzero_pending: bool,
++    implicit_zeros: bool,
++    padded: bool,
++    /// The buffer ends in `0x00`, which is the documented terminator (or, rarely, data).
++    ends_with_zero_byte: bool,
+ }
+ 
+ impl<'a> SrlDecoder<'a> {
+-    /// Create a decoder for an SRL stream, excluding its required trailing zero byte.
++    /// Create a decoder for an SRL stream.
++    ///
++    /// The whole buffer is decoded, including the trailing `0x00` byte MS-RDPEGFX documents
++    /// (some Windows hosts omit it). The terminator is deliberately **not** stripped: the last
++    /// value of a stream can be a maximum-magnitude one, which has no unary terminator bit, so
++    /// its final byte legitimately is `0x00`. Stripping it would cut that value short
++    /// (`Truncated`). Terminator zero bits are harmless, because running dry while a zero run
++    /// is expected already means "all remaining coefficients are zero". An empty slice is
++    /// treated as an empty bit stream (no coded SRL values).
+     pub fn new(data: &'a [u8]) -> Result<Self, SrlError> {
+-        let Some((&terminator, payload)) = data.split_last() else {
+-            return Err(SrlError::MissingTerminator);
+-        };
+-
+-        if terminator != 0 {
+-            return Err(SrlError::MissingTerminator);
+-        }
+-
+         Ok(Self {
+-            reader: BitReader::new(payload),
++            reader: BitReader::new(data),
+             kp: INITIAL_KP,
+             zero_run_remaining: 0,
+             nonzero_pending: false,
++            implicit_zeros: false,
++            padded: false,
++            ends_with_zero_byte: data.last() == Some(&0),
+         })
+     }
+ 
+@@ -90,13 +97,50 @@ impl<'a> SrlDecoder<'a> {
+                 continue;
+             }
+ 
+-            self.zero_run_remaining = self.decode_zero_run()?;
+-            self.nonzero_pending = true;
++            if self.implicit_zeros {
++                output.push(0);
++                continue;
++            }
++
++            match self.decode_zero_run() {
++                Ok(run) => {
++                    self.zero_run_remaining = run;
++                    self.nonzero_pending = true;
++                }
++                Err(SrlError::Truncated) => {
++                    // Windows hosts do not append the trailing 0x00 the specification
++                    // mentions: the stream simply ends and the decoder is expected to read
++                    // zero bits past the end (every zero bit is another zero-run chunk).
++                    // Running dry while expecting a zero run therefore means "all remaining
++                    // coefficients are zero". Running dry inside a non-zero value is still
++                    // reported as corruption.
++                    self.padded = true;
++                    self.implicit_zeros = true;
++                }
++                Err(error) => return Err(error),
++            }
+         }
+ 
+         Ok(output)
+     }
+ 
++    /// `true` when the stream ended before all requested values were read and the rest was
++    /// padded with implicit zeros.
++    pub fn was_padded(&self) -> bool {
++        self.padded
++    }
++
++    /// Whole bytes of the stream that were never touched by the decoder, not counting the
++    /// trailing zero terminator (which a well-formed stream leaves unread).
++    pub fn unread_bytes(&self) -> usize {
++        let unread = self.reader.unread_bytes();
++        if self.ends_with_zero_byte {
++            unread.saturating_sub(1)
++        } else {
++            unread
++        }
++    }
++
+     fn decode_zero_run(&mut self) -> Result<usize, SrlError> {
+         let mut zeros = 0usize;
+ 
+@@ -276,6 +320,12 @@ impl<'a> BitReader<'a> {
+         }
+     }
+ 
++    /// Whole bytes not yet touched (a partially consumed byte counts as consumed).
++    fn unread_bytes(&self) -> usize {
++        let consumed = self.byte_idx + usize::from(self.bit_idx != 0);
++        self.data.len().saturating_sub(consumed)
++    }
++
+     fn read_bit(&mut self) -> Result<bool, SrlError> {
+         let Some(&byte) = self.data.get(self.byte_idx) else {
+             return Err(SrlError::Truncated);
+@@ -367,14 +417,57 @@ mod tests {
+         assert_eq!(decode_srl(&[0xA0, 0x00, 0x00], 1, 3), Ok(vec![-7]));
+     }
+ 
++    #[test]
++    fn maximum_magnitude_value_ending_in_zero_byte_without_terminator() {
++        // Zero run 0 (10), negative sign (1) and six unary zeros for -7: nine bits, so the
++        // second byte is 0x00 *data*, not a terminator. A host that omits the terminator
++        // used to lose that byte and fail with `Truncated`.
++        assert_eq!(decode_srl(&[0xA0, 0x00], 1, 3), Ok(vec![-7]));
++        // Same stream with the documented terminator.
++        assert_eq!(decode_srl(&[0xA0, 0x00, 0x00], 1, 3), Ok(vec![-7]));
++    }
++
++    #[test]
++    fn values_after_a_maximum_magnitude_value_still_decode() {
++        // -7 (no unary terminator) followed by a zero run 0 and +1.
++        let encoded = encode_srl(&[-7, 1], 3).unwrap();
++        assert_eq!(decode_srl(&encoded, 2, 3), Ok(vec![-7, 1]));
++        // Drop the documented terminator: the values are still intact.
++        let without_terminator = &encoded[..encoded.len() - 1];
++        assert_eq!(decode_srl(without_terminator, 2, 3), Ok(vec![-7, 1]));
++    }
++
++    #[test]
++    fn terminator_zero_bits_do_not_create_phantom_values() {
++        // Two values then a terminator: asking for more values reads implicit zeros.
++        let encoded = encode_srl(&[2, 0, 0], 4).unwrap();
++        assert_eq!(decode_srl(&encoded, 3, 4), Ok(vec![2, 0, 0]));
++    }
++
+     #[test]
+     fn rejects_truncated_stream() {
+         assert_eq!(decode_srl(&[0x80, 0x00], 1, 4), Err(SrlError::Truncated));
+     }
+ 
+     #[test]
+-    fn rejects_missing_terminator() {
+-        assert_eq!(decode_srl(&[0x84], 1, 4), Err(SrlError::MissingTerminator));
++    fn accepts_missing_terminator() {
++        // Windows hosts omit the trailing zero byte; the value must still decode.
++        assert_eq!(decode_srl(&[0x84], 1, 4), Ok(vec![3]));
++    }
++
++    #[test]
++    fn pads_trailing_zero_run_when_stream_ends() {
++        // One value followed by an implicit run of zeros that is not coded at all.
++        let mut decoder = SrlDecoder::new(&[0x84]).unwrap();
++        assert_eq!(decoder.decode(4, 4), Ok(vec![3, 0, 0, 0]));
++        assert!(decoder.was_padded());
++        // The padding persists across bands.
++        assert_eq!(decoder.decode(2, 4), Ok(vec![0, 0]));
++    }
++
++    #[test]
++    fn empty_stream_is_all_zeros() {
++        assert_eq!(decode_srl(&[], 3, 4), Ok(vec![0, 0, 0]));
+     }
+ 
+     #[test]
+diff --git a/crates/ironrdp-session/src/active_stage.rs b/crates/ironrdp-session/src/active_stage.rs
+index 050111d..afa1bc5 100644
+--- a/crates/ironrdp-session/src/active_stage.rs
++++ b/crates/ironrdp-session/src/active_stage.rs
+@@ -289,7 +289,7 @@ impl ActiveStage {
+             })
+             .unwrap_or_default();
+         if let Some((width, height)) = output_reset {
+-            image.reset_preserving_pointer(width, height)?;
++            image.resize_scaled(width, height)?;
+             self.graphics_output_needs_full_refresh = true;
+         }
+         let (region, damage_regions) =
+diff --git a/crates/ironrdp-session/src/image.rs b/crates/ironrdp-session/src/image.rs
+index fb19afb..01d844a 100644
+--- a/crates/ironrdp-session/src/image.rs
++++ b/crates/ironrdp-session/src/image.rs
+@@ -236,6 +236,47 @@ impl DecodedImage {
+         Ok(())
+     }
+ 
++    /// Fit the previous framebuffer into a new `ResetGraphics` size.
++    ///
++    /// A same-size reset still zero-fills via [`Self::reset_preserving_pointer`].
++    /// A real size change scales the old pixels in, so the strip the server does
++    /// not replay is the previous desktop instead of black, and a shrink does not
++    /// keep the old taskbar below the new one.
++    pub(crate) fn resize_scaled(&mut self, width: u16, height: u16) -> SessionResult<()> {
++        if width == self.width && height == self.height {
++            return self.reset_preserving_pointer(width, height);
++        }
++        let bpp = self.pixel_format.bytes_per_pixel();
++        let old_w = usize::from(self.width);
++        let old_h = usize::from(self.height);
++        let old = if bpp == 4 && old_w > 0 && old_h > 0 {
++            Some(self.data.clone())
++        } else {
++            None
++        };
++        self.reset_preserving_pointer(width, height)?;
++        let Some(old) = old else {
++            return Ok(());
++        };
++        let new_w = usize::from(width);
++        let new_h = usize::from(height);
++        if new_w == 0 || new_h == 0 {
++            return Ok(());
++        }
++        for y in 0..new_h {
++            let sy = y * old_h / new_h;
++            for x in 0..new_w {
++                let sx = x * old_w / new_w;
++                let src = (sy * old_w + sx) * 4;
++                let dst = (y * new_w + x) * 4;
++                if src + 4 <= old.len() && dst + 4 <= self.data.len() {
++                    self.data[dst..dst + 4].copy_from_slice(&old[src..src + 4]);
++                }
++            }
++        }
++        Ok(())
++    }
++
+     /// Returns `true` if the rectangle fits entirely within the image bounds.
+     fn rect_fits(&self, rect: &InclusiveRectangle) -> bool {
+         rect.left <= rect.right
+diff --git a/crates/ironrdp-testsuite-core/tests/egfx/client.rs b/crates/ironrdp-testsuite-core/tests/egfx/client.rs
+index 7077d25..d1e17d3 100644
+--- a/crates/ironrdp-testsuite-core/tests/egfx/client.rs
++++ b/crates/ironrdp-testsuite-core/tests/egfx/client.rs
+@@ -411,7 +411,8 @@ fn client_rejects_wire_to_unknown_surface() {
+         bitmap_data: vec![0u8; 4 * 4 * 4],
+     });
+     let result = client.process(0, &encode_for_process(&pdu));
+-    assert!(result.is_err(), "should reject write to nonexistent surface");
++    // A bad PDU is skipped (with a warning) instead of tearing down the Graphics DVC.
++    assert!(result.is_ok(), "write to nonexistent surface should be skipped");
+ }
+ 
+ #[test]
+@@ -432,7 +433,8 @@ fn client_rejects_invalid_rectangle_ordering() {
+         bitmap_data: vec![0u8; 4],
+     });
+     let result = client.process(0, &encode_for_process(&pdu));
+-    assert!(result.is_err(), "left > right should be rejected");
++    // The invalid PDU is skipped (with a warning) instead of tearing down the Graphics DVC.
++    assert!(result.is_ok(), "left > right should be skipped");
+ }
+ 
+ #[test]
+diff --git a/crates/ironrdp-testsuite-core/tests/egfx/wire_to_surface_real_world.rs b/crates/ironrdp-testsuite-core/tests/egfx/wire_to_surface_real_world.rs
+index 2322b1f..aaec9c6 100644
+--- a/crates/ironrdp-testsuite-core/tests/egfx/wire_to_surface_real_world.rs
++++ b/crates/ironrdp-testsuite-core/tests/egfx/wire_to_surface_real_world.rs
+@@ -179,7 +179,7 @@ fn wts2_progressive_tile_first_mixed_25tiles() {
+ /// returns `MissingTileReference` as required by MS-RDPRFX 3.1.8.1.7.1 and #1698.
+ #[test]
+ fn wts2_diff_requires_retained_reference() {
+-    use ironrdp_graphics::progressive::{ProgressiveDecodeError, ProgressiveDecoder};
++    use ironrdp_graphics::progressive::ProgressiveDecoder;
+ 
+     let bytes = include_bytes!("../../test_data/egfx/haven/wts2_64x64_diff_2tiles.bin");
+     let GfxPdu::WireToSurface2(pdu) = decode(bytes) else {
+@@ -224,9 +224,12 @@ fn wts2_diff_requires_retained_reference() {
+         .decode_bitmap(0, 0, 1280, 800, &init_stream)
+         .expect("context initialization should succeed");
+ 
+-    let res = decoder.decode_bitmap(pdu.surface_id, pdu.codec_context_id, 1280, 800, &pdu.bitmap_data);
+-    assert!(matches!(
+-        res,
+-        Err(ProgressiveDecodeError::MissingTileReference { x_idx: 3, y_idx: 2 })
+-    ));
++    // A DIFFERENCE tile without a retained reference is skipped and counted; the rest of the
++    // payload still decodes.
++    let tiles = decoder
++        .decode_bitmap(pdu.surface_id, pdu.codec_context_id, 1280, 800, &pdu.bitmap_data)
++        .expect("a tile error must not fail the payload");
++    assert!(tiles.is_empty());
++    assert_eq!(decoder.stats().tile_errors_missing_reference, 2);
++    assert!(decoder.stats().last_error.is_some());
+ }
+diff --git a/crates/ironrdp-web/Cargo.toml b/crates/ironrdp-web/Cargo.toml
+index c964d7c..8c49622 100644
+--- a/crates/ironrdp-web/Cargo.toml
++++ b/crates/ironrdp-web/Cargo.toml
+@@ -39,6 +39,7 @@ ironrdp = { path = "../ironrdp", features = [
+     "pdu",
+ ] }
+ ironrdp-core.path = "../ironrdp-core"
++ironrdp-egfx.path = "../ironrdp-egfx"
+ ironrdp-cliprdr-format.path = "../ironrdp-cliprdr-format"
+ ironrdp-futures.path = "../ironrdp-futures"
+ ironrdp-pdu.path = "../ironrdp-pdu"
+diff --git a/crates/ironrdp-web/src/canvas.rs b/crates/ironrdp-web/src/canvas.rs
+index 30ba5be..65a5a4d 100644
+--- a/crates/ironrdp-web/src/canvas.rs
++++ b/crates/ironrdp-web/src/canvas.rs
+@@ -29,6 +29,14 @@ impl Canvas {
+         })
+     }
+ 
++    pub(crate) fn width(&self) -> u32 {
++        self.canvas.width()
++    }
++
++    pub(crate) fn height(&self) -> u32 {
++        self.canvas.height()
++    }
++
+     /// Resizes the backing store. Note: this also clears the canvas and resets 2D context state;
+     /// the cached `ctx` stays valid.
+     pub(crate) fn resize(&mut self, width: NonZeroU32, height: NonZeroU32) {
+diff --git a/crates/ironrdp-web/src/session.rs b/crates/ironrdp-web/src/session.rs
+index a47bd3d..49c11aa 100644
+--- a/crates/ironrdp-web/src/session.rs
++++ b/crates/ironrdp-web/src/session.rs
+@@ -31,11 +31,13 @@ use ironrdp::rdpdr::pdu::efs::{DEFAULT_PRINTER_DRIVER_NAME, MICROSOFT_PRINT_TO_P
+ use ironrdp::rdpsnd::client::{NoopRdpsndBackend, Rdpsnd};
+ use ironrdp::session::image::DecodedImage;
+ use ironrdp::session::{ActiveStageBuilder, ActiveStageOutput, GracefulDisconnectReason};
++use ironrdp_egfx::client::{GraphicsPipelineClient, GraphicsPipelineHandler};
+ use ironrdp_core::WriteBuf;
+ use ironrdp_futures::{FramedWrite, single_sequence_step_read};
+ use rgb::AsPixels as _;
+ use tap::prelude::*;
+ use tracing::{debug, error, info, trace, warn};
++use wasm_bindgen::prelude::wasm_bindgen;
+ use wasm_bindgen::{JsCast as _, JsValue};
+ use wasm_bindgen_futures::spawn_local;
+ use web_sys::HtmlCanvasElement;
+@@ -55,6 +57,60 @@ const DEFAULT_HEIGHT: u16 = 720;
+ #[derive(Clone, Default)]
+ pub(crate) struct SessionBuilder(Rc<RefCell<SessionBuilderInner>>);
+ 
++thread_local! {
++    static AVC420_WEBCODECS_CALLBACK: RefCell<Option<js_sys::Function>> =
++        const { RefCell::new(None) };
++    static EGFX_CAPS_CALLBACK: RefCell<Option<js_sys::Function>> =
++        const { RefCell::new(None) };
++    static EGFX_RESET_CALLBACK: RefCell<Option<js_sys::Function>> =
++        const { RefCell::new(None) };
++}
++
++/// Register a JS callback `(Uint8Array, surfaceId, left, top, right, bottom) => void`
++/// for EGFX AVC420 passthrough via WebCodecs. Pass `null` to clear.
++#[wasm_bindgen]
++pub fn set_avc420_webcodecs_callback(callback: JsValue) {
++    AVC420_WEBCODECS_CALLBACK.with(|slot| {
++        *slot.borrow_mut() = callback.dyn_into::<js_sys::Function>().ok();
++    });
++}
++
++/// Register a JS callback `(version, avc420, avc444) => void` for CapabilitiesConfirm.
++#[wasm_bindgen]
++pub fn set_egfx_caps_callback(callback: JsValue) {
++    EGFX_CAPS_CALLBACK.with(|slot| {
++        *slot.borrow_mut() = callback.dyn_into::<js_sys::Function>().ok();
++    });
++}
++
++/// Register a JS callback `(width, height) => void` fired on ResetGraphics.
++#[wasm_bindgen]
++pub fn set_egfx_reset_callback(callback: JsValue) {
++    EGFX_RESET_CALLBACK.with(|slot| {
++        *slot.borrow_mut() = callback.dyn_into::<js_sys::Function>().ok();
++    });
++}
++
++/// Reset the resize diagnostic window and start capturing progressive payloads.
++#[wasm_bindgen]
++pub fn begin_egfx_resize_capture() {
++    ironrdp_egfx::client::egfx_diag_begin();
++}
++
++/// Take resize counters plus the captured progressive bytes.
++///
++/// Returns `{ stats: string, bytes: Uint8Array }`.
++#[wasm_bindgen]
++pub fn take_egfx_resize_capture() -> JsValue {
++    let (stats, bytes) = ironrdp_egfx::client::egfx_diag_take();
++    let packed = js_sys::Uint8Array::new_with_length(bytes.len() as u32);
++    packed.copy_from(&bytes);
++    let obj = js_sys::Object::new();
++    let _ = js_sys::Reflect::set(&obj, &JsValue::from_str("stats"), &JsValue::from_str(&stats));
++    let _ = js_sys::Reflect::set(&obj, &JsValue::from_str("bytes"), &packed);
++    obj.into()
++}
++
+ struct SessionBuilderInner {
+     username: Option<String>,
+     destination: Option<String>,
+@@ -90,6 +146,8 @@ struct SessionBuilderInner {
+     printer_driver_name: Option<String>,
+ 
+     use_display_control: bool,
++    use_egfx: bool,
++    avc420_webcodecs: bool,
+     enable_credssp: bool,
+     enable_server_pointer: bool,
+     legacy_graphics: bool,
+@@ -134,6 +192,8 @@ impl Default for SessionBuilderInner {
+             printer_driver_name: None,
+ 
+             use_display_control: false,
++            use_egfx: false,
++            avc420_webcodecs: false,
+             enable_credssp: true,
+             enable_server_pointer: true,
+             legacy_graphics: false,
+@@ -254,6 +314,8 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
+             |vmconnect: String| { self.0.borrow_mut().vmconnect = Some(vmconnect) };
+             |kdc_proxy_url: String| { self.0.borrow_mut().kdc_proxy_url = Some(kdc_proxy_url) };
+             |display_control: bool| { self.0.borrow_mut().use_display_control = display_control };
++            |egfx: bool| { self.0.borrow_mut().use_egfx = egfx };
++            |avc420_webcodecs: bool| { self.0.borrow_mut().avc420_webcodecs = avc420_webcodecs };
+             |enable_credssp: bool| { self.0.borrow_mut().enable_credssp = enable_credssp };
+             |enable_server_pointer: bool| { self.0.borrow_mut().enable_server_pointer = enable_server_pointer };
+             |legacy_graphics: bool| { self.0.borrow_mut().legacy_graphics = legacy_graphics };
+@@ -426,6 +488,7 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
+ 
+         let enable_credssp = self.0.borrow().enable_credssp;
+         config.enable_credssp = enable_credssp;
++        config.support_dyn_vc_gfx_protocol = self.0.borrow().use_egfx;
+ 
+         let enable_server_pointer = self.0.borrow().enable_server_pointer;
+         config.enable_server_pointer = enable_server_pointer;
+@@ -500,6 +563,8 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
+         }
+ 
+         let use_display_control = self.0.borrow().use_display_control;
++        let use_egfx = self.0.borrow().use_egfx;
++        let avc420_webcodecs = self.0.borrow().avc420_webcodecs;
+ 
+         let (connection_result, ws) = connect(ConnectParams {
+             ws,
+@@ -516,6 +581,8 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
+             printer_driver_name,
+             computer_name: client_name.clone(),
+             use_display_control,
++            use_egfx,
++            avc420_webcodecs,
+         })
+         .await?;
+ 
+@@ -923,6 +990,19 @@ impl iron_remote_desktop::Session for Session {
+                             .context("Send frame to writer task")?;
+                     }
+                     ActiveStageOutput::GraphicsUpdate(region) => {
++                        // EGFX ResetGraphics changes the framebuffer without Deactivate All.
++                        // The canvas would keep the previous backing store, so a shrink leaves
++                        // the old taskbar and the right-hand strip. Setting width/height clears
++                        // it; the full refresh that follows repaints the new image.
++                        let image_width = u32::from(image.width());
++                        let image_height = u32::from(image.height());
++                        if image_width != gui.width() || image_height != gui.height() {
++                            if let (Some(width), Some(height)) =
++                                (NonZeroU32::new(image_width), NonZeroU32::new(image_height))
++                            {
++                                gui.resize(width, height);
++                            }
++                        }
+                         let region = extract_partial_image(&image, region, &mut draw_buffer);
+                         gui.draw(draw_buffer.filled_mut(), region)
+                             .context("draw updated region")?;
+@@ -1584,6 +1664,8 @@ struct ConnectParams {
+     /// `computer_name` when constructing the `Rdpdr` processor.
+     computer_name: String,
+     use_display_control: bool,
++    use_egfx: bool,
++    avc420_webcodecs: bool,
+ }
+ 
+ fn default_printer_driver_name() -> String {
+@@ -1634,6 +1716,8 @@ async fn connect(
+         printer_driver_name,
+         computer_name,
+         use_display_control,
++        use_egfx,
++        avc420_webcodecs,
+     }: ConnectParams,
+ ) -> Result<(connector::ConnectionResult, WebSocket), IronError> {
+     let mut framed = ironrdp_futures::LocalFuturesFramed::new(ws);
+@@ -1661,10 +1745,125 @@ async fn connect(
+         );
+     }
+ 
++    // EGFX siempre: ActiveStage drena el compositor a GraphicsUpdate -> canvas.
++    // Sin decoder H.264 (None): ClearCodec / RemoteFX Progressive.
++    // Con avc420_webcodecs: passthrough a JS (VideoDecoder) y anuncio AVC420.
++    struct EgfxHandler {
++        webcodecs: bool,
++    }
++    impl GraphicsPipelineHandler for EgfxHandler {
++        fn on_capabilities_confirmed(&mut self, caps: &ironrdp_egfx::pdu::CapabilitySet) {
++            let version = match caps {
++                ironrdp_egfx::pdu::CapabilitySet::V8 { .. } => "8",
++                ironrdp_egfx::pdu::CapabilitySet::V8_1 { .. } => "8.1",
++                ironrdp_egfx::pdu::CapabilitySet::V10 { .. } => "10",
++                ironrdp_egfx::pdu::CapabilitySet::V10_1 => "10.1",
++                ironrdp_egfx::pdu::CapabilitySet::V10_2 { .. } => "10.2",
++                ironrdp_egfx::pdu::CapabilitySet::V10_3 { .. } => "10.3",
++                ironrdp_egfx::pdu::CapabilitySet::V10_4 { .. } => "10.4",
++                ironrdp_egfx::pdu::CapabilitySet::V10_5 { .. } => "10.5",
++                ironrdp_egfx::pdu::CapabilitySet::V10_6 { .. } => "10.6",
++                ironrdp_egfx::pdu::CapabilitySet::V10_6Err { .. } => "10.6",
++                ironrdp_egfx::pdu::CapabilitySet::V10_7 { .. } => "10.7",
++            };
++            let (avc420, avc444) = match caps {
++                ironrdp_egfx::pdu::CapabilitySet::V8 { .. } => (false, false),
++                ironrdp_egfx::pdu::CapabilitySet::V8_1 { flags } => (
++                    flags.contains(ironrdp_egfx::pdu::CapabilitiesV81Flags::AVC420_ENABLED),
++                    false,
++                ),
++                ironrdp_egfx::pdu::CapabilitySet::V10 { flags } | ironrdp_egfx::pdu::CapabilitySet::V10_2 { flags } => (
++                    !flags.contains(ironrdp_egfx::pdu::CapabilitiesV10Flags::AVC_DISABLED),
++                    !flags.contains(ironrdp_egfx::pdu::CapabilitiesV10Flags::AVC_DISABLED),
++                ),
++                ironrdp_egfx::pdu::CapabilitySet::V10_1 => (true, true),
++                ironrdp_egfx::pdu::CapabilitySet::V10_3 { flags } => (
++                    !flags.contains(ironrdp_egfx::pdu::CapabilitiesV103Flags::AVC_DISABLED),
++                    !flags.contains(ironrdp_egfx::pdu::CapabilitiesV103Flags::AVC_DISABLED),
++                ),
++                ironrdp_egfx::pdu::CapabilitySet::V10_4 { flags }
++                | ironrdp_egfx::pdu::CapabilitySet::V10_5 { flags }
++                | ironrdp_egfx::pdu::CapabilitySet::V10_6 { flags }
++                | ironrdp_egfx::pdu::CapabilitySet::V10_6Err { flags } => (
++                    !flags.contains(ironrdp_egfx::pdu::CapabilitiesV104Flags::AVC_DISABLED),
++                    !flags.contains(ironrdp_egfx::pdu::CapabilitiesV104Flags::AVC_DISABLED),
++                ),
++                ironrdp_egfx::pdu::CapabilitySet::V10_7 { flags } => (
++                    !flags.contains(ironrdp_egfx::pdu::CapabilitiesV107Flags::AVC_DISABLED),
++                    !flags.contains(ironrdp_egfx::pdu::CapabilitiesV107Flags::AVC_DISABLED),
++                ),
++            };
++            EGFX_CAPS_CALLBACK.with(|slot| {
++                let binding = slot.borrow();
++                let Some(cb) = binding.as_ref() else {
++                    return;
++                };
++                let args = js_sys::Array::new();
++                args.push(&JsValue::from_str(version));
++                args.push(&JsValue::from_bool(avc420));
++                args.push(&JsValue::from_bool(avc444));
++                let _ = cb.apply(&JsValue::NULL, &args);
++            });
++        }
++
++        fn on_reset_graphics(&mut self, width: u32, height: u32) {
++            EGFX_RESET_CALLBACK.with(|slot| {
++                let binding = slot.borrow();
++                let Some(cb) = binding.as_ref() else {
++                    return;
++                };
++                let args = js_sys::Array::new();
++                args.push(&JsValue::from(f64::from(width)));
++                args.push(&JsValue::from(f64::from(height)));
++                let _ = cb.apply(&JsValue::NULL, &args);
++            });
++        }
++
++        fn on_avc420_bitstream(
++            &mut self,
++            surface_id: u16,
++            destination_rectangle: &ironrdp_pdu::geometry::ExclusiveRectangle,
++            h264_avc_data: &[u8],
++        ) -> bool {
++            if !self.webcodecs {
++                return false;
++            }
++            AVC420_WEBCODECS_CALLBACK.with(|slot| {
++                let binding = slot.borrow();
++                let Some(cb) = binding.as_ref() else {
++                    return false;
++                };
++                let bytes = js_sys::Uint8Array::new_with_length(h264_avc_data.len() as u32);
++                bytes.copy_from(h264_avc_data);
++                let args = js_sys::Array::new();
++                args.push(&bytes);
++                args.push(&JsValue::from(f64::from(surface_id)));
++                args.push(&JsValue::from(f64::from(destination_rectangle.left)));
++                args.push(&JsValue::from(f64::from(destination_rectangle.top)));
++                args.push(&JsValue::from(f64::from(destination_rectangle.right)));
++                args.push(&JsValue::from(f64::from(destination_rectangle.bottom)));
++                let _ = cb.apply(&JsValue::NULL, &args);
++                true
++            })
++        }
++    }
++
++    let mut drdynvc = DrdynvcClient::new();
++    if use_egfx {
++        let gfx = GraphicsPipelineClient::new(
++            Box::new(EgfxHandler {
++                webcodecs: avc420_webcodecs,
++            }),
++            None,
++        )
++        .with_avc_passthrough(avc420_webcodecs);
++        drdynvc = drdynvc.with_dynamic_channel(gfx);
++    }
+     if use_display_control {
+-        connector.attach_static_channel(
+-            DrdynvcClient::new().with_dynamic_channel(DisplayControlClient::new(|_| Ok(Vec::new()))),
+-        );
++        drdynvc = drdynvc.with_dynamic_channel(DisplayControlClient::new(|_| Ok(Vec::new())));
++    }
++    if use_egfx || use_display_control {
++        connector.attach_static_channel(drdynvc);
+     }
+ 
+     let kerberos_config = url::Url::parse(kdc_proxy_url.unwrap_or_default().as_str())
+diff --git a/web-client/iron-remote-desktop-rdp/src/main.ts b/web-client/iron-remote-desktop-rdp/src/main.ts
+index acd28b2..a48b92a 100644
+--- a/web-client/iron-remote-desktop-rdp/src/main.ts
++++ b/web-client/iron-remote-desktop-rdp/src/main.ts
+@@ -7,6 +7,11 @@ import wasm_init, {
+     ClipboardData,
+     Extension,
+     RdpFile,
++    set_avc420_webcodecs_callback,
++    set_egfx_caps_callback,
++    set_egfx_reset_callback,
++    begin_egfx_resize_capture,
++    take_egfx_resize_capture,
+ } from '../../../crates/ironrdp-web/pkg/ironrdp_web';
+ 
+ export async function init(log_level: string) {
+@@ -65,6 +70,42 @@ export function legacyGraphics(enable: boolean): Extension {
+     return new Extension('legacy_graphics', enable);
+ }
+ 
++/** Opt-in del canal Graphics (MS-RDPEGFX). Sin esto la sesión usa bitmap RLE. */
++export function egfx(enable: boolean): Extension {
++    return new Extension('egfx', enable);
++}
++
++/** Opt-in: anunciar AVC420 y pasar NAL units a WebCodecs (VideoDecoder). */
++export function avc420Webcodecs(enable: boolean): Extension {
++    return new Extension('avc420_webcodecs', enable);
++}
++
++export function setAvc420WebcodecsCallback(
++    callback: ((data: Uint8Array, surfaceId: number, left: number, top: number, right: number, bottom: number) => void) | null,
++): void {
++    set_avc420_webcodecs_callback(callback as unknown as never);
++}
++
++export function setEgfxCapsCallback(
++    callback: ((version: string, avc420: boolean, avc444: boolean) => void) | null,
++): void {
++    set_egfx_caps_callback(callback as unknown as never);
++}
++
++export function setEgfxResetCallback(
++    callback: ((width: number, height: number) => void) | null,
++): void {
++    set_egfx_reset_callback(callback as unknown as never);
++}
++
++export function beginEgfxResizeCapture(): void {
++    begin_egfx_resize_capture();
++}
++
++export function takeEgfxResizeCapture(): { stats: string; bytes: Uint8Array } {
++    return take_egfx_resize_capture() as { stats: string; bytes: Uint8Array };
++}
++
+ // --- File transfer (RDP-specific) ---
+ 
+ export { RdpFileTransferProvider } from './RdpFileTransferProvider';

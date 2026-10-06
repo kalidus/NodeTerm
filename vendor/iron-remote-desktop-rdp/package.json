@@ -1,25 +1,25 @@
 {
-  "name": "@devolutions/iron-remote-desktop-rdp",
-  "author": "Alexandr Yusuk",
-  "email": "thepulticula@gmail.com",
-  "contributors": [
-    "Benoit Cortier"
-  ],
-  "description": "NodeTerm vendor IronRDP 38b074e4 + EGFX + WebCodecs + RFX soft-fail",
-  "version": "0.7.0-nodeterm-egfx.5",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Devolutions/IronRDP.git"
-  },
-  "homepage": "https://github.com/Devolutions/IronRDP",
-  "bugs": {
-    "url": "https://github.com/Devolutions/IronRDP/issues"
-  },
-  "license": "MIT OR Apache-2.0",
-  "main": "iron-remote-desktop-rdp.js",
-  "types": "index.d.ts",
-  "files": [
-    "iron-remote-desktop-rdp.js",
-    "index.d.ts"
-  ]
+    "name":  "@devolutions/iron-remote-desktop-rdp",
+    "author":  "Alexandr Yusuk",
+    "email":  "thepulticula@gmail.com",
+    "contributors":  [
+                         "Benoit Cortier"
+                     ],
+    "description":  "NodeTerm vendor IronRDP 38b074e4befeed6dd25a67decf3558bb9e7762f9 + EGFX + WebCodecs + diag",
+    "version":  "0.7.0-nodeterm-egfx.11",
+    "repository":  {
+                       "type":  "git",
+                       "url":  "git+https://github.com/Devolutions/IronRDP.git"
+                   },
+    "homepage":  "https://github.com/Devolutions/IronRDP",
+    "bugs":  {
+                 "url":  "https://github.com/Devolutions/IronRDP/issues"
+             },
+    "license":  "MIT OR Apache-2.0",
+    "main":  "iron-remote-desktop-rdp.js",
+    "types":  "index.d.ts",
+    "files":  [
+                  "iron-remote-desktop-rdp.js",
+                  "index.d.ts"
+              ]
 }

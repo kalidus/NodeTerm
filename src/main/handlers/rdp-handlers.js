@@ -55,6 +55,18 @@ function registerRdpHandlers(dependencies) {
   });
 
   // Reenviar telemetría de canales y portapapeles del puente nativo hacia el renderer
+  const egfxJournal = require('../services/rdp-egfx-journal');
+  ipcMain.removeHandler('rdp:egfx-journal');
+  ipcMain.handle('rdp:egfx-journal', async (_event, payload) => {
+    try {
+      if (payload?.line) egfxJournal.appendLine(payload.line);
+      if (payload?.bytes) egfxJournal.writeCapture(payload.bytes);
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err?.message || String(err) };
+    }
+  });
+
   rdpNativeBridgeService.removeAllListeners('diagnostic-log');
   rdpNativeBridgeService.on('diagnostic-log', (diag) => {
     broadcastToRenderers('rdp:diagnostic-log', diag);

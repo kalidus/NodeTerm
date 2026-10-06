@@ -29,6 +29,10 @@ const {
   PrinterDriverName,
   avc420Webcodecs = null,
   setAvc420WebcodecsCallback = null,
+  setEgfxCapsCallback = null,
+  setEgfxResetCallback = null,
+  beginEgfxResizeCapture = null,
+  takeEgfxResizeCapture = null,
   egfx = null
 } = IronRdpRdp;
 import {
@@ -206,6 +210,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   const [activeTransfers, setActiveTransfers] = useState({});
   const [isAutoResize, setIsAutoResize] = useState(rdpConfig.autoResize !== false);
   const [showResolutionMenu, setShowResolutionMenu] = useState(false);
+  const [negotiatedCodec, setNegotiatedCodec] = useState(null);
+  const egfxDiagRef = useRef({ active: false, codec: 'bitmap', wroteSession: false });
+  const egfxResizeFlushRef = useRef(null);
 
   const lastCursorStyleRef = useRef('default');
   const lastCursorKindRef = useRef('');
@@ -520,6 +527,46 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     }
   };
 
+  const writeEgfxLine = (entry, bytes) => {
+    if (!window.electron?.ipcRenderer?.invoke) return;
+    const payload = { line: JSON.stringify(entry) };
+    if (bytes && bytes.length) payload.bytes = bytes;
+    void window.electron.ipcRenderer.invoke('rdp:egfx-journal', payload).catch(() => {});
+  };
+
+  const finishEgfxJournal = (end) => {
+    if (!egfxDiagRef.current.active || egfxDiagRef.current.wroteSession) return;
+    egfxDiagRef.current.wroteSession = true;
+    writeEgfxLine({ t: 'session', end });
+  };
+
+  const flushEgfxResize = (width, height) => {
+    if (!egfxDiagRef.current.active) return;
+    let stats = {};
+    let bytes = null;
+    if (typeof takeEgfxResizeCapture === 'function') {
+      try {
+        const taken = takeEgfxResizeCapture() || {};
+        bytes = taken.bytes || null;
+        stats = JSON.parse(taken.stats || '{}');
+      } catch (_) { /* noop */ }
+    }
+    writeEgfxLine({
+      t: 'resize',
+      w: width,
+      h: height,
+      codec: egfxDiagRef.current.codec,
+      painted: stats.painted ?? 0,
+      anyCodec: stats.anyCodec ?? 0,
+      unclean: stats.unclean ?? 0,
+      altSign: stats.altSign ?? 0,
+      held: stats.held ?? 0,
+      errors: stats.errors ?? 0,
+      cacheMiss: stats.cacheMiss ?? 0,
+      pdus: stats.pdus || ''
+    }, bytes);
+  };
+
   const readResizeSettingMs = (key, fallback, min) => {
     try {
       return Math.max(min, parseInt(localStorage.getItem(key) || String(fallback), 10));
@@ -539,6 +586,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     }
     lastRequestedDesktopRef.current = { width, height };
     try {
+      if (egfxDiagRef.current.active && typeof beginEgfxResizeCapture === 'function') {
+        beginEgfxResizeCapture();
+      }
       sessionRef.current.resize(width, height);
     } catch (resizeErr) {
       console.warn('[IronRDP] Error solicitando resize a la sesion:', resizeErr);
@@ -1002,12 +1052,23 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           .setCursorStyleCallbackContext({})
           .canvasResizedCallback((w, h) => {
             if (w && h) {
-              console.log(`📐 [IronRDP WASM] Canvas redimensionado por servidor a ${w}x${h}`);
               clearResizeAckTimer();
               if (canvasRef.current) {
-                canvasRef.current.width = w;
-                canvasRef.current.height = h;
-                canvasRef.current.style.cursor = lastCursorStyleRef.current;
+                const canvas = canvasRef.current;
+                if (canvas.width !== w || canvas.height !== h) {
+                  const snap = document.createElement('canvas');
+                  snap.width = canvas.width;
+                  snap.height = canvas.height;
+                  if (canvas.width > 0 && canvas.height > 0) {
+                    snap.getContext('2d')?.drawImage(canvas, 0, 0);
+                  }
+                  canvas.width = w;
+                  canvas.height = h;
+                  if (snap.width > 0 && snap.height > 0) {
+                    canvas.getContext('2d')?.drawImage(snap, 0, 0, w, h);
+                  }
+                }
+                canvas.style.cursor = lastCursorStyleRef.current;
               }
               currentDesktopSizeRef.current = { width: w, height: h };
               lastRequestedDesktopRef.current = { width: w, height: h };
@@ -1039,12 +1100,43 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         } catch (_) { /* noop */ }
         if (egfxEnabled && typeof egfx === 'function') {
           builder.extension(egfx(true));
-          if (isRdpDebugEnabled()) console.log('[IronRDP] EGFX activo', rdpConfig.ironRdpGraphics === 'egfx' ? '(conexión)' : '(override)');
+          egfxDiagRef.current = { active: true, codec: 'progressive', wroteSession: false };
+          setNegotiatedCodec('progressive');
+          if (typeof setEgfxCapsCallback === 'function') {
+            setEgfxCapsCallback((version, avc420, avc444) => {
+              const chosen = avc420 ? 'h264' : 'progressive';
+              egfxDiagRef.current.codec = chosen;
+              setNegotiatedCodec(chosen);
+              writeEgfxLine({ t: 'caps', v: String(version || ''), avc420: !!avc420, avc444: !!avc444 });
+              writeEgfxLine({ t: 'codec', chosen });
+            });
+          }
+          if (typeof setEgfxResetCallback === 'function') {
+            setEgfxResetCallback((width, height) => {
+              const w = Math.round(Number(width) || 0);
+              const h = Math.round(Number(height) || 0);
+              if (w > 0 && h > 0) {
+                currentDesktopSizeRef.current = { width: w, height: h };
+                lastRequestedDesktopRef.current = { width: w, height: h };
+                setDesktopDimensions({ width: w, height: h });
+                queueMicrotask(() => updateCanvasRectRef.current?.());
+              }
+              if (egfxResizeFlushRef.current) clearTimeout(egfxResizeFlushRef.current);
+              egfxResizeFlushRef.current = setTimeout(() => {
+                egfxResizeFlushRef.current = null;
+                flushEgfxResize(width, height);
+              }, 800);
+            });
+          }
+        } else {
+          egfxDiagRef.current = { active: true, codec: 'bitmap', wroteSession: false };
+          setNegotiatedCodec('bitmap');
+          writeEgfxLine({ t: 'codec', chosen: 'bitmap' });
         }
 
-        // WebCodecs AVC420 (opt-in): anuncia AVC420 y pinta VideoFrame sobre el canvas.
-        // Sin flag, sin VideoDecoder o con npm 0.7 (sin exports): ClearCodec / RFX en WASM.
-        const useWebCodecs = typeof avc420Webcodecs === 'function'
+        // AVC420 solo con opt-in. H.264 sigue apagado hasta que EGFX pinte bien.
+        const useWebCodecs = egfxEnabled
+          && typeof avc420Webcodecs === 'function'
           && typeof setAvc420WebcodecsCallback === 'function'
           && isWebCodecsH264Enabled()
           && isWebCodecsH264Available()
@@ -1062,9 +1154,10 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
               webCodecsDecoder.push(data, surfaceId, left, top, right, bottom);
             });
             builder.extension(avc420Webcodecs(true));
-            if (isRdpDebugEnabled()) console.log('[IronRDP] WebCodecs AVC420 habilitado');
           } catch (wcErr) {
-            console.warn('[IronRDP] WebCodecs no disponible, fallback ClearCodec/RFX:', wcErr.message);
+            if (isRdpDebugEnabled()) {
+              console.warn('[IronRDP] WebCodecs no disponible, fallback ClearCodec/RFX:', wcErr.message);
+            }
             try { setAvc420WebcodecsCallback(null); } catch (_) { /* noop */ }
             webCodecsDecoder = null;
           }
@@ -1392,6 +1485,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             : String(terminationInfo || '');
           const isNormalEnd = !rawReason || rawReason.includes('usuario') || rawReason.includes('user') || rawReason.includes('0');
           const clipFailed = clipboardFailedRef.current;
+          finishEgfxJournal(isNormalEnd && !clipFailed ? 'ok' : 'gfx-fail');
           if (isNormalEnd && !clipFailed) {
             console.log('ℹ️ [IronRDP WASM] Sesion terminada:', rawReason);
           } else if (clipFailed || isRdpDebugEnabled()) {
@@ -1428,6 +1522,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           return;
         }
         const detail = extractErrorMessage(err);
+        finishEgfxJournal('gfx-fail');
         console.error('❌ [IronRDP WASM] Error conectando:', detail, err);
         if (clipboardFailedRef.current || isRdpDebugEnabled()) {
           dumpBridgeTraces('Trazas del bridge previas al error de conexion:');
@@ -1452,6 +1547,10 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       }
       try {
         if (typeof setAvc420WebcodecsCallback === 'function') setAvc420WebcodecsCallback(null);
+        if (typeof setEgfxCapsCallback === 'function') setEgfxCapsCallback(null);
+        if (typeof setEgfxResetCallback === 'function') setEgfxResetCallback(null);
+        if (egfxResizeFlushRef.current) clearTimeout(egfxResizeFlushRef.current);
+        finishEgfxJournal('ok');
       } catch (_) { /* noop */ }
       if (currentFileTransferProvider) {
         try { currentFileTransferProvider.dispose(); } catch (_) {}
@@ -1869,7 +1968,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     if (!containerRef.current || connectionState !== 'connected' || !isAutoResize) return;
 
     let resizeTimer = null;
-    const debounceMs = readResizeSettingMs('rdp_resize_debounce_ms', 300, 100);
+    const debounceMs = readResizeSettingMs('rdp_resize_debounce_ms', 1200, 200);
     const handleResize = () => {
       if (resizeTimer) clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
@@ -2167,6 +2266,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             onClick={() => canvasRef.current?.focus()}
             onMouseDown={() => canvasRef.current?.focus()}
             style={isAutoResize ? {
+              position: 'absolute',
+              inset: 0,
               width: '100%',
               height: '100%',
               display: 'block',
@@ -2595,6 +2696,12 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             <span className="ironrdp-badge-host">
               <i className="pi pi-globe"></i>
               <span>{rdpConfig?.hostname || rdpConfig?.server || 'RDP Web'}</span>
+            </span>
+
+            <span className="ironrdp-cyber-divider" />
+
+            <span className="ironrdp-badge-host" title="Códec negociado con el servidor">
+              <span>{negotiatedCodec === 'h264' ? 'EGFX · H.264' : negotiatedCodec === 'progressive' ? 'EGFX · Progressive' : negotiatedCodec === 'bitmap' ? 'Bitmap' : '—'}</span>
             </span>
 
             <span className="ironrdp-cyber-divider" />

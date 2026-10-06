@@ -2,7 +2,8 @@
  * Decodificador H.264 AVC420 vía WebCodecs para frames EGFX passthrough.
  * Los NAL units llegan en formato AVC (prefijo longitud BE 4 bytes), no Annex B.
  *
- * Activar con localStorage NODETERM_RDP_WEBCODECS=1 (o window.__NODETERM_RDP_WEBCODECS__).
+ * Apagado por defecto. Activar con localStorage NODETERM_RDP_WEBCODECS=1
+ * (o window.__NODETERM_RDP_WEBCODECS__ = true).
  */
 
 'use strict';
@@ -14,6 +15,7 @@ function isWebCodecsH264Available() {
 function isWebCodecsH264Enabled() {
   if (typeof window === 'undefined') return false;
   if (window.__NODETERM_RDP_WEBCODECS__ === true) return true;
+  if (window.__NODETERM_RDP_WEBCODECS__ === false) return false;
   try {
     return window.localStorage?.getItem('NODETERM_RDP_WEBCODECS') === '1';
   } catch (_) {

@@ -2,13 +2,14 @@
 
 Paquete local `@devolutions/iron-remote-desktop-rdp` desde IronRDP `38b074e4`.
 
-- **Por defecto:** sin EGFX → bitmap RLE (estable en NodeTerm).
-- **Opt-in EGFX:** `localStorage.setItem('NODETERM_RDP_EGFX', '1')` luego reconectar.
-- **WebCodecs AVC420:** `NODETERM_RDP_WEBCODECS=1` (implica EGFX).
+- **Por defecto:** sin EGFX → bitmap RLE.
+- **EGFX:** opción de la conexión. RemoteFX Progressive. H.264 no se anuncia.
+- **WebCodecs:** apagado. `NODETERM_RDP_WEBCODECS=1` lo enciende.
+- **Diario:** `userData/logs/rdp-egfx-diag.jsonl` y `rdp-egfx-last-resize.bin`.
 
 ## Versión
 
-`0.7.0-nodeterm-egfx.5`
+`0.7.0-nodeterm-egfx.11`
 
 ## Regenerar
 

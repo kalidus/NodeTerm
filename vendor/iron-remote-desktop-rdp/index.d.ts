@@ -1,4 +1,4 @@
-/** Opt-in: anunciar AVC420 y pasar NAL units a WebCodecs (VideoDecoder). Implica egfx. */
+/** Opt-in: anunciar AVC420 y pasar NAL units a WebCodecs (VideoDecoder). */
 export declare function avc420Webcodecs(enable: boolean): Extension;
 
 export declare const Backend: {
@@ -8,6 +8,8 @@ export declare const Backend: {
     ClipboardData: typeof ClipboardData;
     DeviceEvent: typeof DeviceEvent;
 };
+
+export declare function beginEgfxResizeCapture(): void;
 
 /**
  * In-memory Blob storage backend.
@@ -131,7 +133,7 @@ export declare interface DroppedFile {
     isDirectory?: boolean;
 }
 
-/** Opt-in: canal EGFX (ClearCodec/RFX). Por defecto off en NodeTerm (bitmap estable). */
+/** Opt-in del canal Graphics (MS-RDPEGFX). Sin esto la sesión usa bitmap RLE. */
 export declare function egfx(enable: boolean): Extension;
 
 export declare function enableCredssp(enable: boolean): Extension;
@@ -1053,6 +1055,10 @@ declare class SessionTerminationInfo {
 
 export declare function setAvc420WebcodecsCallback(callback: ((data: Uint8Array, surfaceId: number, left: number, top: number, right: number, bottom: number) => void) | null): void;
 
+export declare function setEgfxCapsCallback(callback: ((version: string, avc420: boolean, avc444: boolean) => void) | null): void;
+
+export declare function setEgfxResetCallback(callback: ((width: number, height: number) => void) | null): void;
+
 /**
  * Storage backend preference for downloads.
  *
@@ -1069,6 +1075,11 @@ export declare function submitFileContents(params: {
     is_error: boolean;
     data: Uint8Array;
 }): Extension;
+
+export declare function takeEgfxResizeCapture(): {
+    stats: string;
+    bytes: Uint8Array;
+};
 
 /**
  * Progress information for file transfer operations.

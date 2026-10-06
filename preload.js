@@ -495,7 +495,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getPresets: () => ipcRenderer.invoke('rdp:get-presets'),
     showWindow: (server) => ipcRenderer.invoke('rdp:show-window', { server }),
     disconnectSession: (server) => ipcRenderer.invoke('rdp:disconnect-session', { server }),
-    createNativeBridgeToken: (config) => ipcRenderer.invoke('rdp:create-native-bridge-token', config)
+    createNativeBridgeToken: (config) => ipcRenderer.invoke('rdp:create-native-bridge-token', config),
+    egfxJournal: (payload) => ipcRenderer.invoke('rdp:egfx-journal', payload)
   },
   // VNC API
   vnc: {
