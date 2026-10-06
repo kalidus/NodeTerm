@@ -387,6 +387,30 @@ class WsBackpressureController {
   }
 
   /**
+   * El siguiente bitmap pendiente, si el presupuesto RLE aun da (o null).
+   * No vacia la lista: la rodaja del bastion reescribe de uno en uno hasta gastar ~3 ms.
+   * @param {number} bufferedAmount
+   * @param {{ force?: boolean, ignoreBudget?: boolean }} [opts]
+   * @returns {Buffer|null}
+   */
+  takePendingWithinBudget(bufferedAmount, { force = false, ignoreBudget = false } = {}) {
+    this.noteBufferedAmount(bufferedAmount);
+    if (this.pendingBitmaps.length === 0) return null;
+    if (!force && bufferedAmount > this.lowWater) return null;
+    if (!ignoreBudget && this._rewriteSpentMs >= this.rewriteBudgetMs) return null;
+    const next = this.pendingBitmaps.shift();
+    this._pendingBytes -= next.buf.length;
+    if (this._pendingBytes < 0) this._pendingBytes = 0;
+    if (this.metrics) this.metrics.noteFlushPending(1);
+    return next.buf;
+  }
+
+  /** Deja el presupuesto RLE agotado para que el resto del tick siga encolando. */
+  exhaustBudget() {
+    this._rewriteSpentMs = this.rewriteBudgetMs;
+  }
+
+  /**
    * Path directo: pausar TLS solo como ultimo recurso (2 MB). Por debajo, el
    * shed de bitmaps cubiertos absorbe la rafaga sin callar al servidor.
    * Bastión: nunca pausar (latest-wins evita bufferbloat).

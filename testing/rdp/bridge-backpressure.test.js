@@ -181,6 +181,40 @@ describe('WsBackpressureController bastion latest-wins', () => {
     });
   });
 
+  it('takePendingWithinBudget saca un tramo y no revive un rect ya cubierto', () => {
+    const bp = new WsBackpressureController({
+      bastion: true,
+      highWater: 1000,
+      lowWater: 100,
+      rewriteBudgetMs: 3
+    });
+    const covered = buildSolidBitmapPdu(0, 0, 8, 8, 0x1111);
+    const kept = buildSolidBitmapPdu(100, 100, 8, 8, 0x2222);
+    const covers = buildSolidBitmapPdu(0, 0, 8, 8, 0x3333);
+    assert.equal(bp.shouldShedBitmap(5000, covered), true);
+    assert.equal(bp.shouldShedBitmap(5000, kept), true);
+    assert.equal(bp.shouldShedBitmap(5000, covers), true);
+
+    bp.noteRewriteSpent(3);
+    assert.equal(bp.takePendingWithinBudget(0, { force: true }), null);
+    assert.equal(bp.hasPending(), true);
+
+    bp.beginDataTick();
+    assert.deepEqual(bp.takePendingWithinBudget(0, { force: true }), kept);
+    bp.noteRewriteSpent(3);
+    assert.equal(bp.takePendingWithinBudget(0, { force: true }), null);
+    assert.equal(bp.hasPending(), true);
+
+    bp.beginDataTick();
+    assert.deepEqual(bp.takePendingWithinBudget(0, { force: true }), covers);
+    assert.equal(bp.hasPending(), false);
+
+    bp.shouldShedBitmap(5000, kept);
+    bp.exhaustBudget();
+    assert.equal(bp.takePendingWithinBudget(0, { force: true }), null);
+    assert.equal(bp.hasPending(), true);
+  });
+
   it('frames nulos no lanzan ni se descartan (regresion ready.length)', () => {
     const bp = new WsBackpressureController({ bastion: true, highWater: 10, lowWater: 1 });
     assert.equal(bp.shouldShedBitmap(5000, null), false);

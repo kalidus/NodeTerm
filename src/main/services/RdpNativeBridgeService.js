@@ -526,10 +526,15 @@ class RdpNativeBridgeService extends EventEmitter {
     }
 
     let isCleanedUp = false;
+    let bastionSliceTimer = null;
 
     const cleanup = (reason = 'Cerrado por el usuario', closeCode = 1000) => {
       if (isCleanedUp) return;
       isCleanedUp = true;
+      if (bastionSliceTimer) {
+        clearImmediate(bastionSliceTimer);
+        bastionSliceTimer = null;
+      }
       clearCliprdrWatch();
       if (channelFilter.appCliprdrWriteRetryTimer) {
         clearTimeout(channelFilter.appCliprdrWriteRetryTimer);
@@ -789,6 +794,44 @@ class RdpNativeBridgeService extends EventEmitter {
                 }
               };
 
+              // Bastion: reescribe pendientes hasta gastar el presupuesto (~3 ms) y deja el resto.
+              // Devuelve cuantos frames ha sacado. No abre ni cierra el lote WS.
+              const rewritePendingSlice = () => {
+                backpressure.beginDataTick();
+                let sent = 0;
+                // Tope por si una reescritura no avanza el reloj: no vaciar la lista de un golpe.
+                while (sent < 32 && backpressure.hasPending()) {
+                  const frame = backpressure.takePendingWithinBudget(ws.bufferedAmount, { force: true });
+                  if (!frame) break;
+                  rewriteAndSend(frame, 'pending');
+                  sent += 1;
+                }
+                return sent;
+              };
+
+              // La rodaja corre cuando el handler TLS ya ha salido, asi el raton se escribe entre medias.
+              const scheduleBastionSlice = () => {
+                if (bastionSliceTimer || isCleanedUp) return;
+                bastionSliceTimer = setImmediate(() => {
+                  bastionSliceTimer = null;
+                  if (isCleanedUp || ws.readyState !== ws.OPEN) return;
+                  if (!backpressure.hasPending()) return;
+                  if (tickBatcher.active) flushTickOut();
+                  tickBatcher.begin();
+                  try {
+                    rewritePendingSlice();
+                  } catch (sliceErr) {
+                    console.warn('[Bridge] Error reescribiendo rodaja bastion:', sliceErr.message);
+                  }
+                  try {
+                    flushTickOut();
+                  } catch (sendErr) {
+                    console.warn('[Bridge] Error enviando rodaja bastion:', sendErr.message);
+                  }
+                  if (backpressure.hasPending()) scheduleBastionSlice();
+                });
+              };
+
               const checkResumeTls = () => {
                 if (backpressure.shouldResumeTls(ws.bufferedAmount)) {
                   backpressure.markTlsPaused(false);
@@ -796,7 +839,11 @@ class RdpNativeBridgeService extends EventEmitter {
                     tlsSocket.resume();
                   }
                 }
-                flushPendingBitmap();
+                if (normalizeBitmaps) {
+                  if (backpressure.hasPending()) scheduleBastionSlice();
+                } else {
+                  flushPendingBitmap();
+                }
               };
 
               if (ws._socket && typeof ws._socket.on === 'function') {
@@ -808,6 +855,7 @@ class RdpNativeBridgeService extends EventEmitter {
                 if (tickBatcher.active) flushTickOut();
                 tickBatcher.begin();
                 backpressure.beginDataTick();
+                let bastionSlicedThisTick = false;
                 backpressure.noteBufferedAmount(ws.bufferedAmount);
                 // Solo path directo: pausar TLS en colas extremas.
                 if (backpressure.shouldPauseTls(ws.bufferedAmount)) {
@@ -1116,7 +1164,7 @@ class RdpNativeBridgeService extends EventEmitter {
                   trafficStats.note(pduDesc, n);
                   if (ws.readyState === ws.OPEN) {
                     try {
-                      flushPendingBitmap();
+                      if (!normalizeBitmaps) flushPendingBitmap();
                       for (const ready of readyFrames) {
                         if (!ready || typeof ready.length !== 'number') continue;
                         // Un frame grafico no-bitmap (ordenes, surface...) no puede adelantar
@@ -1128,7 +1176,17 @@ class RdpNativeBridgeService extends EventEmitter {
                           // Sin rewrite: ahorra CPU mientras la cola WASM está llena
                           // o se agotó el presupuesto RLE de este tick.
                           if (backpressure.pendingOverflow()) {
-                            flushPendingBitmap({ force: true, ignoreBudget: true });
+                            if (normalizeBitmaps) {
+                              // Una sola rodaja por evento TLS. El resto sigue en diferido.
+                              if (!bastionSlicedThisTick) {
+                                rewritePendingSlice();
+                                backpressure.exhaustBudget();
+                                bastionSlicedThisTick = true;
+                                scheduleBastionSlice();
+                              }
+                            } else {
+                              flushPendingBitmap({ force: true, ignoreBudget: true });
+                            }
                           }
                           continue;
                         }
@@ -1148,13 +1206,15 @@ class RdpNativeBridgeService extends EventEmitter {
                     }
                   }
                 }
-                // Al final del tick: vaciar los bitmaps encolados, en orden (directo y bastion).
-                // En reposo la lista esta vacia. ignoreBudget: el ultimo lote se reescribe
-                // aunque el presupuesto RLE del bastion se haya gastado en este chunk.
-                if (ws.readyState === ws.OPEN) {
+                // Directo: vaciar ya (enviar no reescribe). Bastion: no reescribir la rafaga
+                // dentro de este callback; una rodaja diferida pinta lo que quede, tambien
+                // si ya no llega mas trafico.
+                if (!normalizeBitmaps && ws.readyState === ws.OPEN) {
                   try {
                     flushPendingBitmap({ force: true, ignoreBudget: true });
                   } catch (_) { /* noop */ }
+                } else if (normalizeBitmaps && backpressure.hasPending()) {
+                  scheduleBastionSlice();
                 }
                 try {
                   flushTickOut();
