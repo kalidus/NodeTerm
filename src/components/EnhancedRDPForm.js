@@ -75,6 +75,7 @@ export function createDefaultRdpFormData() {
     guacEnableDrive: true,
     guacDriveHostDir: '',
     guacEnableGfx: false,
+    ironRdpGraphics: 'bitmap',
     guacEnableDesktopComposition: false,
     guacEnableFontSmoothing: false,
     guacEnableTheming: false,
@@ -130,6 +131,7 @@ export function mapEditNodeDataToRdpFormData(editNodeData) {
     guacEnableDrive: isDriveOn,
     guacDriveHostDir: data.guacDriveHostDir || '',
     guacEnableGfx: data.guacEnableGfx || false,
+    ironRdpGraphics: data.ironRdpGraphics === 'egfx' ? 'egfx' : 'bitmap',
     guacEnableDesktopComposition: data.guacEnableDesktopComposition || false,
     guacEnableFontSmoothing: data.guacEnableFontSmoothing || false,
     guacEnableTheming: data.guacEnableTheming || false,
@@ -358,6 +360,20 @@ export function EnhancedRDPForm({
 
   const p = idPrefix;
 
+  const renderIronRdpEgfxSwitch = (idSuffix = 'opt') => {
+    if (!isWebRdp) return null;
+    return (
+      <TerminalSwitchOption
+        iconClass="pi-palette"
+        labelText={t('rdp.options.enableEgfx')}
+        checked={formData.ironRdpGraphics === 'egfx'}
+        onCheckedChange={(v) => handleInputChange('ironRdpGraphics', v ? 'egfx' : 'bitmap')}
+        inputId={`${p}-${idSuffix}-egfx`}
+        helpText={t('rdp.help.ironRdpGraphics')}
+      />
+    );
+  };
+
   const renderCredentials = () => (
     <>
       <div className="flex align-items-center gap-2 mb-3">
@@ -530,6 +546,12 @@ export function EnhancedRDPForm({
         </div>
       )}
 
+      {isWebRdp ? (
+        <div className="terminal-options-grid mb-3">
+          {renderIronRdpEgfxSwitch('cred')}
+        </div>
+      ) : null}
+
       {(formData.clientType === 'guacamole' || formData.clientType === 'web-rdp') ? (
         <TerminalDropdownField
           id={`${p}-guacSecurity`}
@@ -644,6 +666,7 @@ export function EnhancedRDPForm({
               </span>
             </div>
             <div className="terminal-options-grid">
+              {renderIronRdpEgfxSwitch('opt')}
               <TerminalSwitchOption
                 iconClass="pi-copy"
                 labelText={t('rdp.options.clipboard')}
@@ -722,6 +745,7 @@ export function EnhancedRDPForm({
               </span>
             </div>
             <TerminalOptionSection title={t('rdp.advanced.performance')}>
+              {renderIronRdpEgfxSwitch('adv')}
               {isGuacamole ? (
                 <TerminalSwitchOption
                   iconClass="pi-palette"
@@ -1227,6 +1251,22 @@ export function EnhancedRDPForm({
                     <span className="hud-badge-label">Fondo:</span>
                     <span className="hud-badge-value">{formData.guacEnableWallpaper ? 'SÍ' : 'NO'}</span>
                   </div>
+
+                  {isWebRdp && (
+                    <div
+                      className={`hud-badge-pill ${formData.ironRdpGraphics === 'egfx' ? 'active' : ''}`}
+                      onClick={() => {
+                        const next = formData.ironRdpGraphics === 'egfx' ? 'bitmap' : 'egfx';
+                        handleInputChange('ironRdpGraphics', next);
+                        setStatusMessage(`Gráficos IronRDP: ${next === 'egfx' ? 'EGFX' : 'Bitmap'}`);
+                      }}
+                      title={t('rdp.help.ironRdpGraphics')}
+                    >
+                      <i className={`pi ${formData.ironRdpGraphics === 'egfx' ? 'pi-palette' : 'pi-th-large'} hud-badge-icon`}></i>
+                      <span className="hud-badge-label">Gráficos:</span>
+                      <span className="hud-badge-value">{formData.ironRdpGraphics === 'egfx' ? 'EGFX' : 'Bitmap'}</span>
+                    </div>
+                  )}
                 </>
               ) : (
                 <>

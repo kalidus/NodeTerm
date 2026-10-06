@@ -1029,17 +1029,17 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           builder.extension(displayControl(true));
         }
 
-        // EGFX opt-in (pantalla negra en algunos hosts si el stream Graphics llega mal).
-        // localStorage NODETERM_RDP_EGFX=1 para probar ClearCodec/RFX.
-        let egfxEnabled = false;
+        // EGFX: preferencia de conexión (ironRdpGraphics) + override debug localStorage.
+        let egfxEnabled = rdpConfig.ironRdpGraphics === 'egfx';
         try {
-          egfxEnabled = typeof window !== 'undefined'
-            && (window.__NODETERM_RDP_EGFX__ === true
-              || window.localStorage?.getItem('NODETERM_RDP_EGFX') === '1');
+          if (!egfxEnabled && typeof window !== 'undefined') {
+            egfxEnabled = window.__NODETERM_RDP_EGFX__ === true
+              || window.localStorage?.getItem('NODETERM_RDP_EGFX') === '1';
+          }
         } catch (_) { /* noop */ }
         if (egfxEnabled && typeof egfx === 'function') {
           builder.extension(egfx(true));
-          if (isRdpDebugEnabled()) console.log('[IronRDP] EGFX opt-in activo');
+          if (isRdpDebugEnabled()) console.log('[IronRDP] EGFX activo', rdpConfig.ironRdpGraphics === 'egfx' ? '(conexión)' : '(override)');
         }
 
         // WebCodecs AVC420 (opt-in): anuncia AVC420 y pinta VideoFrame sobre el canvas.

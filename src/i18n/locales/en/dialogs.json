@@ -133,6 +133,7 @@
       "fullscreen": "Fullscreen",
       "client": "Client",
       "security": "Security",
+      "ironRdpGraphics": "IronRDP graphics",
       "preset": "Preset",
       "resolution": "Resolution",
       "color": "Color",
@@ -159,6 +160,10 @@
       "web-rdp": "Native RDP (IronRDP - Recommended)",
       "mstsc": "Remote Desktop (MSTSC)",
       "guacamole": "Apache Guacamole (Docker/WSL Tunnel)"
+    },
+    "graphicsModes": {
+      "bitmap": "Bitmap",
+      "egfx": "EGFX"
     },
     "securityOptions": {
       "any": "Automatic",
@@ -192,7 +197,8 @@
       "fullscreen": "Fullscreen",
       "enableDrive": "File Copying",
       "autoResize": "Auto resize",
-      "enableWallpaper": "Show wallpaper"
+      "enableWallpaper": "Show wallpaper",
+      "enableEgfx": "Enable EGFX"
     },
     "advanced": {
       "performance": "Performance",
@@ -229,6 +235,9 @@
       "autoResize": "Adapts the remote resolution to the NodeTerm panel size.",
       "enableWallpaper": "Shows the remote desktop wallpaper.",
       "enableGfx": "Enables GFX extensions for certain visual scenarios.",
+      "ironRdpGraphics": "Choose the IronRDP graphics pipeline. Bitmap is stable; EGFX uses ClearCodec/RFX (better on direct hosts).",
+      "ironRdpGraphicsBitmap": "Classic bitmap RLE: more stable and compatible.",
+      "ironRdpGraphicsEgfx": "EGFX (ClearCodec/RFX): better quality; still experimental on some hosts.",
       "desktopComposition": "Enables Aero desktop composition on the remote desktop.",
       "fontSmoothing": "Smooths font rendering on the remote desktop.",
       "theming": "Allows remote system visual themes in the session.",

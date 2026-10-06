@@ -497,6 +497,7 @@ export const useConnectionManagement = ({
         guacEnableFullWindowDrag: node.guacEnableFullWindowDrag || node.enableFullWindowDrag || false,
         guacEnableMenuAnimations: node.guacEnableMenuAnimations || node.enableMenuAnimations || false,
         guacEnableGfx: node.guacEnableGfx || node.enableGfx || false,
+        ironRdpGraphics: node.ironRdpGraphics === 'egfx' ? 'egfx' : 'bitmap',
         guacDisableGlyphCaching: node.guacDisableGlyphCaching || node.disableGlyphCaching || false,
         guacDisableOffscreenCaching: node.guacDisableOffscreenCaching || node.disableOffscreenCaching || false,
         guacDisableBitmapCaching: node.guacDisableBitmapCaching || node.disableBitmapCaching || false,
@@ -546,6 +547,9 @@ export const useConnectionManagement = ({
               baseRdp.guacEnableFullWindowDrag = n.data.guacEnableFullWindowDrag !== undefined ? n.data.guacEnableFullWindowDrag : (n.data.enableFullWindowDrag !== undefined ? n.data.enableFullWindowDrag : baseRdp.guacEnableFullWindowDrag);
               baseRdp.guacEnableMenuAnimations = n.data.guacEnableMenuAnimations !== undefined ? n.data.guacEnableMenuAnimations : (n.data.enableMenuAnimations !== undefined ? n.data.enableMenuAnimations : baseRdp.guacEnableMenuAnimations);
               baseRdp.guacEnableGfx = n.data.guacEnableGfx !== undefined ? n.data.guacEnableGfx : (n.data.enableGfx !== undefined ? n.data.enableGfx : baseRdp.guacEnableGfx);
+              if (n.data.ironRdpGraphics === 'egfx' || n.data.ironRdpGraphics === 'bitmap') {
+                baseRdp.ironRdpGraphics = n.data.ironRdpGraphics;
+              }
               baseRdp.guacDisableGlyphCaching = n.data.guacDisableGlyphCaching !== undefined ? n.data.guacDisableGlyphCaching : (n.data.disableGlyphCaching !== undefined ? n.data.disableGlyphCaching : baseRdp.guacDisableGlyphCaching);
               baseRdp.guacDisableOffscreenCaching = n.data.guacDisableOffscreenCaching !== undefined ? n.data.guacDisableOffscreenCaching : (n.data.disableOffscreenCaching !== undefined ? n.data.disableOffscreenCaching : baseRdp.guacDisableOffscreenCaching);
               baseRdp.guacDisableBitmapCaching = n.data.guacDisableBitmapCaching !== undefined ? n.data.guacDisableBitmapCaching : (n.data.disableBitmapCaching !== undefined ? n.data.disableBitmapCaching : baseRdp.guacDisableBitmapCaching);
@@ -593,6 +597,7 @@ export const useConnectionManagement = ({
         guacEnableFullWindowDrag: baseRdp.guacEnableFullWindowDrag || false,
         guacEnableMenuAnimations: baseRdp.guacEnableMenuAnimations || false,
         guacEnableGfx: baseRdp.guacEnableGfx || false,
+        ironRdpGraphics: baseRdp.ironRdpGraphics === 'egfx' ? 'egfx' : 'bitmap',
         guacDisableGlyphCaching: baseRdp.guacDisableGlyphCaching || false,
         guacDisableOffscreenCaching: baseRdp.guacDisableOffscreenCaching || false,
         guacDisableBitmapCaching: baseRdp.guacDisableBitmapCaching || false,
@@ -650,6 +655,7 @@ export const useConnectionManagement = ({
         // Forzar congelación de resizes iniciales para camuflar RDProxy solo si autoResize está activo
         freezeInitialResize: baseRdp.autoResize !== false,
         enableGfx: (baseRdp.guacEnableGfx === true) || (baseRdp.guacWin11Compat === true),
+        ironRdpGraphics: baseRdp.ironRdpGraphics === 'egfx' ? 'egfx' : 'bitmap',
         enableDesktopComposition: baseRdp.guacEnableDesktopComposition === true,
         enableFontSmoothing: baseRdp.guacEnableFontSmoothing === true,
         enableTheming: baseRdp.guacEnableTheming === true,
