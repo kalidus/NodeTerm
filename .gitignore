@@ -59,3 +59,8 @@ testing/rdp/frames/to-*
 !testing/rdp/frames/to-05-421b.hex
 # Interruptores de diagnostico del bridge RDP (locales, no versionados)
 rdp-flags.json
+
+# Builds temporales del parche IronRDP (cursores remotos)
+tmp-ironrdp-src/
+tmp-ironrdp-cursor-patch/
+tmp-rustup-init.sh

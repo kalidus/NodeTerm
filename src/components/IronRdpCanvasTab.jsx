@@ -183,6 +183,11 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   const [isAutoResize, setIsAutoResize] = useState(rdpConfig.autoResize !== false);
   const [showResolutionMenu, setShowResolutionMenu] = useState(false);
 
+  const lastCursorStyleRef = useRef('default');
+  const lastCursorKindRef = useRef('');
+  const lastCursorHotspotRef = useRef({ x: 0, y: 0 });
+  const lastCursorDataUrlRef = useRef('');
+  const cursorImageRef = useRef(null);
   const lastReceivedClipboardTextRef = useRef('');
   const lastSentClipboardTextRef = useRef('');
   const isFileTransferArmedRef = useRef(false);
@@ -916,16 +921,56 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           .authToken(authTokenStr)
           .desktopSize(new Backend.DesktopSize(width, height))
           .setCursorStyleCallback((cursorKind, cursorData, hotspotX, hotspotY) => {
-            if (canvasRef.current) {
-              if (cursorKind === 'url' && cursorData) {
-                const hX = Math.round(hotspotX || 0);
-                const hY = Math.round(hotspotY || 0);
-                canvasRef.current.style.cursor = `url(${cursorData}) ${hX} ${hY}, default`;
-              } else if (cursorKind === 'none') {
-                canvasRef.current.style.cursor = 'none';
-              } else {
-                canvasRef.current.style.cursor = 'default';
+            // Alineado con @devolutions/iron-remote-desktop: kinds default|hidden|url.
+            // Dedupe + cache Image: al arrastrar ventanas el servidor reenvía el mismo
+            // bitmap; evitar new Image()/style writes reduce jank.
+            const hX = cursorKind === 'url' ? Math.round(hotspotX ?? 0) : 0;
+            const hY = cursorKind === 'url' ? Math.round(hotspotY ?? 0) : 0;
+            if (
+              cursorKind === lastCursorKindRef.current &&
+              (cursorKind !== 'url' || (
+                hX === lastCursorHotspotRef.current.x &&
+                hY === lastCursorHotspotRef.current.y &&
+                cursorData === lastCursorDataUrlRef.current
+              ))
+            ) {
+              return;
+            }
+
+            let cssStyle;
+            switch (cursorKind) {
+              case 'hidden':
+              case 'none':
+                cssStyle = 'none';
+                break;
+              case 'default':
+                cssStyle = 'default';
+                break;
+              case 'url': {
+                if (cursorData == null || hotspotX == null || hotspotY == null) {
+                  console.error('[IronRDP] Parámetros de cursor custom inválidos.');
+                  return;
+                }
+                if (cursorData !== lastCursorDataUrlRef.current) {
+                  const image = cursorImageRef.current || (cursorImageRef.current = new Image());
+                  image.src = cursorData;
+                  lastCursorDataUrlRef.current = cursorData;
+                }
+                cssStyle = `url(${cursorData}) ${hX} ${hY}, default`;
+                break;
               }
+              default:
+                console.error(`[IronRDP] Estilo de cursor no soportado: ${cursorKind}.`);
+                return;
+            }
+            lastCursorKindRef.current = cursorKind;
+            lastCursorHotspotRef.current = { x: hX, y: hY };
+            if (cursorKind !== 'url') {
+              lastCursorDataUrlRef.current = '';
+            }
+            lastCursorStyleRef.current = cssStyle;
+            if (canvasRef.current) {
+              canvasRef.current.style.cursor = cssStyle;
             }
           })
           .setCursorStyleCallbackContext({})
@@ -936,6 +981,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
               if (canvasRef.current) {
                 canvasRef.current.width = w;
                 canvasRef.current.height = h;
+                canvasRef.current.style.cursor = lastCursorStyleRef.current;
               }
               currentDesktopSizeRef.current = { width: w, height: h };
               lastRequestedDesktopRef.current = { width: w, height: h };
@@ -1141,6 +1187,11 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
 
         if (canvasRef.current) {
           getOptimized2dContext(canvasRef.current);
+          lastCursorStyleRef.current = 'default';
+          lastCursorKindRef.current = '';
+          lastCursorHotspotRef.current = { x: 0, y: 0 };
+          lastCursorDataUrlRef.current = '';
+          canvasRef.current.style.cursor = 'default';
           builder.renderCanvas(canvasRef.current);
         }
 
@@ -2037,7 +2088,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
               display: 'block',
               backgroundColor: '#000000',
               outline: 'none',
-              cursor: 'default',
+              // cursor lo controla setCursorStyleCallback (no pisar con React)
               transform: 'translateZ(0)',
               backfaceVisibility: 'hidden',
               willChange: 'transform',
@@ -2050,7 +2101,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
               display: 'block',
               backgroundColor: '#000000',
               outline: 'none',
-              cursor: 'default',
               borderRadius: '4px',
               boxShadow: '0 8px 32px rgba(0, 0, 0, 0.7)',
               transform: 'translateZ(0)',
