@@ -211,6 +211,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   const [isAutoResize, setIsAutoResize] = useState(rdpConfig.autoResize !== false);
   const [showResolutionMenu, setShowResolutionMenu] = useState(false);
   const [negotiatedCodec, setNegotiatedCodec] = useState(null);
+  const [supportsDisplayControl, setSupportsDisplayControl] = useState(false);
   const egfxDiagRef = useRef({ active: false, codec: 'bitmap', wroteSession: false });
   const egfxResizeFlushRef = useRef(null);
 
@@ -520,6 +521,23 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     return (base + 3) & ~3;
   };
 
+  const readDisplayPixelRatio = () => Math.min(
+    (typeof window !== 'undefined' && window.devicePixelRatio) || 1,
+    2
+  );
+
+  // clientWidth/Height son enteros; el DPR (tope 2) pide más píxeles en HiDPI.
+  const measureAutoDesktopSize = () => {
+    const el = containerRef.current;
+    const cssW = (el && el.clientWidth > 100) ? el.clientWidth : (window.innerWidth || 1600);
+    const cssH = (el && el.clientHeight > 100) ? el.clientHeight : (window.innerHeight || 1000);
+    const dpr = readDisplayPixelRatio();
+    return {
+      width: alignDesktop(Math.max(640, Math.floor(cssW * dpr))),
+      height: alignDesktop(Math.max(480, Math.floor(cssH * dpr)))
+    };
+  };
+
   const clearResizeAckTimer = () => {
     if (resizeAckTimerRef.current) {
       clearTimeout(resizeAckTimerRef.current);
@@ -655,13 +673,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
 
   const calculateInitialDimensions = () => {
     if (isFullscreen || (rdpConfig.autoResize !== false)) {
-      const rect = containerRef.current?.getBoundingClientRect();
-      const w = (rect && rect.width > 100) ? rect.width : (window.innerWidth || 1600);
-      const h = (rect && rect.height > 100) ? rect.height : (window.innerHeight || 1000);
-      return {
-        width: alignDesktop(Math.max(640, Math.floor(w))),
-        height: alignDesktop(Math.max(480, Math.floor(h)))
-      };
+      return measureAutoDesktopSize();
     }
 
     const parsed = parseResolutionValue(rdpConfig.resolution);
@@ -1085,6 +1097,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         const isProxyOrBastionProtocol = selectedProtocol === 0x01 || selectedProtocol === 0x00;
         const supportsDisplayControl = !isBastionSession && useCredssp && !isProxyOrBastionProtocol;
         supportsDisplayControlRef.current = supportsDisplayControl;
+        setSupportsDisplayControl(supportsDisplayControl);
 
         if (supportsDisplayControl) {
           builder.extension(displayControl(true));
@@ -1963,7 +1976,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     };
   }, [showResolutionMenu]);
 
-  // Auto: DisplayControl via session.resize. El CSS 100% cubre el hueco hasta el ACK.
+  // Auto: DisplayControl via session.resize. El canvas se pinta 1:1 (sin stretch CSS).
   useEffect(() => {
     if (!containerRef.current || connectionState !== 'connected' || !isAutoResize) return;
 
@@ -1973,9 +1986,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       if (resizeTimer) clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
         if (!containerRef.current || !isAutoResize) return;
-        const rect = containerRef.current.getBoundingClientRect();
-        const width = alignDesktop(Math.max(640, rect.width || window.innerWidth));
-        const height = alignDesktop(Math.max(480, rect.height || window.innerHeight));
+        const { width, height } = measureAutoDesktopSize();
 
         if (!supportsDisplayControlRef.current) {
           if (width === currentDesktopSizeRef.current.width && height === currentDesktopSizeRef.current.height) {
@@ -2014,12 +2025,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       setDesktopDimensions({ width: nativeW, height: nativeH });
 
       if (supportsDisplayControlRef.current) {
-        const rect = containerRef.current?.getBoundingClientRect();
-        if (rect) {
-          const width = alignDesktop(Math.max(640, rect.width || window.innerWidth));
-          const height = alignDesktop(Math.max(480, rect.height || window.innerHeight));
-          requestSessionResize(width, height);
-        }
+        const { width, height } = measureAutoDesktopSize();
+        requestSessionResize(width, height);
         console.log('[IronRDP] Cambiando a resolucion dinamica Auto (DisplayControl)');
       } else {
         console.log('📐 [IronRDP] Cambiando a resolución dinámica Auto (ajuste CSS)');
@@ -2233,7 +2240,15 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       {/* Contenedor de visualización / scroll para el Canvas HTML5 */}
       <div
         onClick={() => canvasRef.current?.focus()}
-        style={isAutoResize ? {
+        style={isAutoResize && supportsDisplayControl ? {
+          width: '100%',
+          height: '100%',
+          overflow: 'hidden',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#000000'
+        } : isAutoResize ? {
           width: '100%',
           height: '100%',
           overflow: 'hidden'
@@ -2246,7 +2261,12 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         }}
       >
         <div
-          style={isAutoResize ? {
+          style={isAutoResize && supportsDisplayControl ? {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            lineHeight: 0
+          } : isAutoResize ? {
             width: '100%',
             height: '100%'
           } : {
@@ -2265,34 +2285,53 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             tabIndex={0}
             onClick={() => canvasRef.current?.focus()}
             onMouseDown={() => canvasRef.current?.focus()}
-            style={isAutoResize ? {
-              position: 'absolute',
-              inset: 0,
-              width: '100%',
-              height: '100%',
-              display: 'block',
-              backgroundColor: '#000000',
-              outline: 'none',
-              // cursor lo controla setCursorStyleCallback (no pisar con React)
-              transform: 'translateZ(0)',
-              backfaceVisibility: 'hidden',
-              willChange: 'transform',
-              imageRendering: 'auto'
-            } : {
-              width: `${desktopDimensions.width}px`,
-              height: `${desktopDimensions.height}px`,
-              minWidth: `${desktopDimensions.width}px`,
-              minHeight: `${desktopDimensions.height}px`,
-              display: 'block',
-              backgroundColor: '#000000',
-              outline: 'none',
-              borderRadius: '4px',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.7)',
-              transform: 'translateZ(0)',
-              backfaceVisibility: 'hidden',
-              willChange: 'transform',
-              imageRendering: 'auto'
-            }}
+            style={(() => {
+              if (isAutoResize && supportsDisplayControl) {
+                // 1:1 lógico: el framebuffer puede ir a DPR>1; el CSS lo muestra sin estirar ejes.
+                const dpr = readDisplayPixelRatio();
+                const cssW = Math.max(1, Math.round(desktopDimensions.width / dpr));
+                const cssH = Math.max(1, Math.round(desktopDimensions.height / dpr));
+                return {
+                  width: `${cssW}px`,
+                  height: `${cssH}px`,
+                  display: 'block',
+                  backgroundColor: '#000000',
+                  outline: 'none',
+                  transform: 'translateZ(0)',
+                  backfaceVisibility: 'hidden',
+                  willChange: 'transform',
+                  imageRendering: 'auto'
+                };
+              }
+              if (isAutoResize) {
+                return {
+                  width: '100%',
+                  height: '100%',
+                  display: 'block',
+                  backgroundColor: '#000000',
+                  outline: 'none',
+                  transform: 'translateZ(0)',
+                  backfaceVisibility: 'hidden',
+                  willChange: 'transform',
+                  imageRendering: 'auto'
+                };
+              }
+              return {
+                width: `${desktopDimensions.width}px`,
+                height: `${desktopDimensions.height}px`,
+                minWidth: `${desktopDimensions.width}px`,
+                minHeight: `${desktopDimensions.height}px`,
+                display: 'block',
+                backgroundColor: '#000000',
+                outline: 'none',
+                borderRadius: '4px',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.7)',
+                transform: 'translateZ(0)',
+                backfaceVisibility: 'hidden',
+                willChange: 'transform',
+                imageRendering: 'auto'
+              };
+            })()}
           />
         </div>
       </div>
