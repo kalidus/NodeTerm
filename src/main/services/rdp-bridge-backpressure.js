@@ -432,37 +432,54 @@ class WsBackpressureController {
   }
 }
 
+/** Directo: a partir de aqui el lote WS se envia para que el WASM pinte entre medias. */
+const DIRECT_WS_CHUNK_BYTES = 64 * 1024;
+
 /**
- * Junta todo lo que se manda al WASM durante un evento TLS 'data' en un unico
- * mensaje WebSocket. El WASM consume el WS como flujo de bytes, asi que el orden
- * se conserva y solo cambia el numero de mensajes.
+ * Junta lo que se manda al WASM durante un evento TLS 'data' en un mensaje
+ * WebSocket. El WASM consume el WS como flujo de bytes, asi que el orden se
+ * conserva. En directo el lote se corta al pasar de DIRECT_WS_CHUNK_BYTES
+ * (sin partir un frame). En bastion se manda un solo mensaje por tick.
  */
 class WsTickBatcher {
   constructor(enabled = true) {
     this.enabled = enabled !== false;
     /** @type {Buffer[]|null} */
     this._parts = null;
+    this._pendingBytes = 0;
   }
 
   begin() {
     this._parts = this.enabled ? [] : null;
+    this._pendingBytes = 0;
   }
 
   get active() {
     return this._parts !== null;
   }
 
+  get pendingBytes() {
+    return this._pendingBytes;
+  }
+
   /** @returns {boolean} true si el buffer quedo acumulado (no hay que enviarlo ya). */
   push(buf) {
     if (!this._parts) return false;
     this._parts.push(buf);
+    this._pendingBytes += buf.length;
     return true;
+  }
+
+  /** El lote, ya con el ultimo frame entero, supero el tope. */
+  shouldFlush(maxBytes) {
+    return this._parts != null && this._pendingBytes > maxBytes;
   }
 
   /** Devuelve el mensaje unico a enviar (o null) y cierra el lote. */
   take() {
     const parts = this._parts;
     this._parts = null;
+    this._pendingBytes = 0;
     if (!parts || parts.length === 0) return null;
     return parts.length === 1 ? parts[0] : Buffer.concat(parts);
   }
@@ -470,6 +487,7 @@ class WsTickBatcher {
 
 module.exports = {
   WsTickBatcher,
+  DIRECT_WS_CHUNK_BYTES,
   WS_HIGH_WATER_MARK,
   WS_LOW_WATER_MARK,
   WS_PAUSE_TLS_MARK,

@@ -96,14 +96,14 @@ const extractErrorMessage = (err) => {
   return msg;
 };
 
-// Opt-in (A/B): `localStorage.setItem('NODETERM_RDP_DESYNC', '1')` y reabrir la pestana RDP.
-// desynchronized deja pintar el canvas sin esperar al compositor (menos latencia, a costa de
-// posible tearing). Solo aplica al crear el contexto 2D por primera vez.
+// desynchronized pinta el canvas sin esperar al compositor. Va por defecto.
+// Para quitarlo: `localStorage.setItem('NODETERM_RDP_DESYNC', '0')` y reabrir la pestaña.
+// No se usa contain:strict (iba junto a los recuadros negros).
 const isRdpDesyncEnabled = () => {
   try {
-    return window.localStorage?.getItem('NODETERM_RDP_DESYNC') === '1';
+    return window.localStorage?.getItem('NODETERM_RDP_DESYNC') !== '0';
   } catch (_) {
-    return false;
+    return true;
   }
 };
 

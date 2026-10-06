@@ -23,6 +23,7 @@ const {
   BridgeLatencyMetrics,
   WsBackpressureController,
   WsTickBatcher,
+  DIRECT_WS_CHUNK_BYTES,
   classifyFastPathUpdate
 } = require('./rdp-bridge-backpressure');
 const {
@@ -740,7 +741,16 @@ class RdpNativeBridgeService extends EventEmitter {
               const sendBinaryToWasm = (out) => {
                 if (!out || typeof out.length !== 'number') return;
                 if (ws.readyState !== ws.OPEN) return;
-                if (tickBatcher.push(out)) return;
+                if (tickBatcher.push(out)) {
+                  // Directo: un bloque de cientos de KB se decodifica de un tirón en el
+                  // renderer. Al pasar de 64 KB se envia el lote (el frame que lo cruza
+                  // sale entero) y se abre otro. Bastion sigue con un solo mensaje por tick.
+                  if (!normalizeBitmaps && tickBatcher.shouldFlush(DIRECT_WS_CHUNK_BYTES)) {
+                    flushTickOut();
+                    tickBatcher.begin();
+                  }
+                  return;
+                }
                 ws.send(out, { binary: true }, () => {
                   checkResumeTls();
                 });

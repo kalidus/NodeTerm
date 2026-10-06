@@ -281,7 +281,34 @@ describe('WsTickBatcher', () => {
     b.begin();
     assert.equal(b.active, false);
     assert.equal(b.push(Buffer.from([1])), false);
+    assert.equal(b.pendingBytes, 0);
+    assert.equal(b.shouldFlush(0), false);
     assert.equal(b.take(), null);
+  });
+
+  it('shouldFlush avisa al pasar el tope con el ultimo frame entero', () => {
+    const b = new WsTickBatcher(true);
+    const first = Buffer.alloc(40, 1);
+    const second = Buffer.alloc(30, 2);
+    b.begin();
+    assert.equal(b.push(first), true);
+    assert.equal(b.pendingBytes, 40);
+    assert.equal(b.shouldFlush(50), false);
+    assert.equal(b.push(second), true);
+    assert.equal(b.pendingBytes, 70);
+    assert.equal(b.shouldFlush(50), true);
+    assert.deepEqual(b.take(), Buffer.concat([first, second]));
+    assert.equal(b.pendingBytes, 0);
+    assert.equal(b.active, false);
+  });
+
+  it('un frame mas grande que el tope no se parte', () => {
+    const b = new WsTickBatcher(true);
+    const big = Buffer.alloc(80, 3);
+    b.begin();
+    b.push(big);
+    assert.equal(b.shouldFlush(50), true);
+    assert.equal(b.take(), big);
   });
 });
 
