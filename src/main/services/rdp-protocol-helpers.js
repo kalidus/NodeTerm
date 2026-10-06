@@ -341,7 +341,7 @@ function describeRdpPdu(buf) {
 /**
  * Separa múltiples frames concatenados en un mismo chunk TCP / TLS:
  * - TPKT (0x03 0x00 ...)
- * - Fast-Path ((b0 & 0x03) === 0 && (b0 & 0x30) === 0)
+ * - Fast-Path (action bits 0..1 == 0; numEvents en bits 2..5)
  * - CredSSP ASN.1 SEQUENCE (0x30 ...)
  *
  * Preserva intactos y aislados cada uno de los frames para que IronRDP WASM
@@ -362,7 +362,7 @@ class RdpStreamDeframer {
    *
    * Soporta:
    * - TPKT (0x03 0x00 ...)
-   * - Fast-Path ((b0 & 0x03) === 0 && (b0 & 0x30) === 0)
+   * - Fast-Path (action bits 0..1 == 0; numEvents en bits 2..5)
    * - CredSSP ASN.1 SEQUENCE (0x30 ...)
    *
    * @param {Buffer} chunk
@@ -392,6 +392,8 @@ class RdpStreamDeframer {
       // 1. TPKT frame (0x03 0x00 len_hi len_lo)
       if (b0 === 0x03) {
         if (this.buffer[offset + 1] !== 0x00) {
+          // No es TPKT. Reenviar el byte: descartarlo desincroniza a IronRDP.
+          frames.push(Buffer.from(this.buffer.subarray(offset, offset + 1)));
           offset++;
           continue;
         }
@@ -401,6 +403,7 @@ class RdpStreamDeframer {
         }
         const tpktLen = this.buffer.readUInt16BE(offset + 2);
         if (tpktLen < 4) {
+          frames.push(Buffer.from(this.buffer.subarray(offset, offset + 1)));
           offset++;
           continue;
         }
@@ -408,7 +411,7 @@ class RdpStreamDeframer {
           // Incompleto: esperar al siguiente chunk TCP
           break;
         }
-        frames.push(this.buffer.subarray(offset, offset + tpktLen));
+        frames.push(Buffer.from(this.buffer.subarray(offset, offset + tpktLen)));
         offset += tpktLen;
         continue;
       }
@@ -429,23 +432,29 @@ class RdpStreamDeframer {
         } else if (b1 < 0x80) {
           credsspLen = b1 + 2;
         } else {
+          frames.push(Buffer.from(this.buffer.subarray(offset, offset + 1)));
           offset++;
           continue;
         }
         if (credsspLen < minHdr) {
+          frames.push(Buffer.from(this.buffer.subarray(offset, offset + 1)));
           offset++;
           continue;
         }
         if (remaining < credsspLen) {
           break;
         }
-        frames.push(this.buffer.subarray(offset, offset + credsspLen));
+        frames.push(Buffer.from(this.buffer.subarray(offset, offset + credsspLen)));
         offset += credsspLen;
         continue;
       }
 
-      // 3. Fast-Path frame ((b0 & 0x03) === 0 && (b0 & 0x30) === 0)
-      if ((b0 & 0x03) === 0 && (b0 & 0x30) === 0) {
+      // 3. Fast-Path. action (bits 0..1) == 0.
+      // Bits 2..5 son numEvents (MS-RDPBCGR 2.2.8.1.2): con 4 o mas updates
+      // el bit 4 o el 5 estan a 1. Exigir (b0 & 0x30) == 0 tiraba esos PDU
+      // byte a byte y la sesion directa (Windows agrupa puntero + bitmap)
+      // no llegaba a IronRDP. 0x30 es CredSSP y ya se trato arriba.
+      if ((b0 & 0x03) === 0 && b0 !== 0x30) {
         const b1 = this.buffer[offset + 1];
         let fpLen = 0;
         let minHdr = 2;
@@ -459,7 +468,8 @@ class RdpStreamDeframer {
         } else {
           fpLen = b1;
         }
-        if (fpLen < minHdr) {
+        if (fpLen < minHdr || fpLen > 0x7fff) {
+          frames.push(Buffer.from(this.buffer.subarray(offset, offset + 1)));
           offset++;
           continue;
         }
@@ -467,12 +477,13 @@ class RdpStreamDeframer {
           // Incompleto: esperar al siguiente chunk TCP
           break;
         }
-        frames.push(this.buffer.subarray(offset, offset + fpLen));
+        frames.push(Buffer.from(this.buffer.subarray(offset, offset + fpLen)));
         offset += fpLen;
         continue;
       }
 
-      // Byte no reconocido: avanzar para no bloquear
+      // Byte no reconocido: entregarlo. Saltarlo deja el flujo mudo.
+      frames.push(Buffer.from(this.buffer.subarray(offset, offset + 1)));
       offset++;
     }
 
@@ -510,8 +521,8 @@ function splitRdpFrames(buf) {
       }
     }
 
-    // 2. Fast-Path frame ((b0 & 0x03) === 0 && (b0 & 0x30) === 0)
-    if ((b0 & 0x03) === 0 && (b0 & 0x30) === 0 && remaining >= 2) {
+    // 2. Fast-Path: action == 0. numEvents ocupa los bits 2..5 (puede ser >= 4).
+    if ((b0 & 0x03) === 0 && b0 !== 0x30 && remaining >= 2) {
       const b1 = buf[offset + 1];
       let fpLen = 0;
       if ((b1 & 0x80) !== 0) {
@@ -595,8 +606,8 @@ class RdpFrameSplitter {
         }
       }
 
-      // B. Fast-Path frame ((b0 & 0x03) === 0 && (b0 & 0x30) === 0)
-      if ((b0 & 0x03) === 0 && (b0 & 0x30) === 0) {
+      // B. Fast-Path: action == 0, numEvents en bits 2..5. 0x30 es CredSSP.
+      if ((b0 & 0x03) === 0 && b0 !== 0x30) {
         if (remaining < 2) {
           this.headerBuf = buf.subarray(offset);
           break;

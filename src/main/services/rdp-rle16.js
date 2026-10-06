@@ -314,9 +314,12 @@ function decompress16bpp(src, width, height) {
 }
 
 /**
- * Recorta padding (columnas derechas + filas inferiores).
- * Buffer bottom-up: fila 0 = abajo imagen. Padding inferior = inicio del buffer.
- * IronRDP apply_rgb16: .rev().take(destHeight) -> usa las ultimas destHeight filas.
+ * Recorta al dest-rect (columnas derechas + filas que IronRDP pintaria fuera).
+ * Buffer bottom-up: fila 0 = abajo de la imagen.
+ * IronRDP apply_rgb16 hace chunks(anchoDestino).rev() y pinta la ultima fila
+ * del buffer en destTop. Con alto de mas, esas filas de abajo se dibujan
+ * por debajo del rectangulo. Se conservan las ultimas destHeight filas
+ * (la parte superior visible) y se descarta el inicio del buffer.
  */
 function cropRgb16(src, srcWidth, srcHeight, destWidth, destHeight) {
   if (destWidth > srcWidth || destHeight > srcHeight) {
@@ -326,14 +329,66 @@ function cropRgb16(src, srcWidth, srcHeight, destWidth, destHeight) {
     return Buffer.from(src);
   }
   const out = Buffer.alloc(destWidth * destHeight * COLOR_DEPTH);
-  // Bitmaps bottom-up en RDP: la fila 0 en memoria es la parte inferior en pantalla (destBottom).
-  // Las filas utiles estan en y = 0 .. destHeight - 1. El padding de alto esta en y >= destHeight.
+  const y0 = srcHeight - destHeight;
   for (let y = 0; y < destHeight; y++) {
-    const srcOff = y * srcWidth * COLOR_DEPTH;
+    const srcOff = (y0 + y) * srcWidth * COLOR_DEPTH;
     const dstOff = y * destWidth * COLOR_DEPTH;
     src.copy(out, dstOff, srcOff, srcOff + destWidth * COLOR_DEPTH);
   }
   return out;
+}
+
+/**
+ * True si el RLE es solo color absoluto (REGULAR o MEGA_MEGA COLOR_RUN /
+ * COLOR_IMAGE, o SPECIAL blanco/negro). IronRDP 0.7 pinta eso sin el codec
+ * por deltas. Un FG_RUN o un FGBG devuelve false.
+ */
+function isAbsoluteColorRle(rle) {
+  if (!Buffer.isBuffer(rle) || rle.length === 0) return false;
+  let o = 0;
+  while (o < rle.length) {
+    const b = rle[o];
+    if (b === CODE.SPECIAL_WHITE || b === CODE.SPECIAL_BLACK) {
+      o += 1;
+      continue;
+    }
+    if (b === CODE.MEGA_MEGA_COLOR_RUN || b === CODE.MEGA_MEGA_COLOR_IMAGE) {
+      if (o + 3 > rle.length) return false;
+      const run = rle.readUInt16LE(o + 1);
+      if (run === 0) return false;
+      if (b === CODE.MEGA_MEGA_COLOR_RUN) {
+        if (o + 5 > rle.length) return false;
+        o += 5;
+      } else {
+        const bytes = 3 + run * COLOR_DEPTH;
+        if (o + bytes > rle.length) return false;
+        o += bytes;
+      }
+      continue;
+    }
+    const op = b & 0xe0;
+    if (op === 0x60 || op === 0x80) {
+      let run = b & MASK_REGULAR_RUN_LENGTH;
+      let hdr = 1;
+      if (run === 0) {
+        if (o + 2 > rle.length) return false;
+        run = rle[o + 1] + 32;
+        hdr = 2;
+      }
+      if (run === 0) return false;
+      if (op === 0x60) {
+        if (o + hdr + COLOR_DEPTH > rle.length) return false;
+        o += hdr + COLOR_DEPTH;
+      } else {
+        const bytes = hdr + run * COLOR_DEPTH;
+        if (o + bytes > rle.length) return false;
+        o += bytes;
+      }
+      continue;
+    }
+    return false;
+  }
+  return true;
 }
 
 function isUniformRgb16(pixels) {
@@ -379,19 +434,117 @@ function encodeMegaMegaColorRun(pixelCount, color) {
   return out;
 }
 
+function pelAt(pixels, index) {
+  const o = index * COLOR_DEPTH;
+  return pixels[o] | (pixels[o + 1] << 8);
+}
+
 /**
- * Elige encoding compacto: solido -> COLOR_RUN; si no -> COLOR_IMAGE.
+ * COLOR_RUN absoluto. Corridas cortas van en la orden regular (3 o 4 bytes);
+ * a partir de 288 pixeles, MEGA_MEGA (5 bytes) sale mas corta.
  */
-function encodeRgb16Rle(pixels) {
+function writeColorRun(out, o, run, color) {
+  let left = run;
+  while (left > 0) {
+    if (left >= 288) {
+      const n = Math.min(left, 0xffff);
+      out[o++] = CODE.MEGA_MEGA_COLOR_RUN;
+      out.writeUInt16LE(n, o);
+      o += 2;
+      out.writeUInt16LE(color, o);
+      o += 2;
+      left -= n;
+      continue;
+    }
+    if (left >= 32) {
+      out[o++] = 0x60;
+      out[o++] = left - 32;
+    } else {
+      out[o++] = 0x60 | left;
+    }
+    out.writeUInt16LE(color, o);
+    o += 2;
+    break;
+  }
+  return o;
+}
+
+function writeColorImage(out, o, pixels, startPixel, count) {
+  let left = count;
+  let p = startPixel;
+  while (left > 0) {
+    const n = Math.min(left, 0xffff);
+    if (n >= 288) {
+      out[o++] = CODE.MEGA_MEGA_COLOR_IMAGE;
+      out.writeUInt16LE(n, o);
+      o += 2;
+    } else if (n >= 32) {
+      out[o++] = 0x80;
+      out[o++] = n - 32;
+    } else {
+      out[o++] = 0x80 | n;
+    }
+    const bytes = n * COLOR_DEPTH;
+    pixels.copy(out, o, p * COLOR_DEPTH, p * COLOR_DEPTH + bytes);
+    o += bytes;
+    p += n;
+    left -= n;
+  }
+  return o;
+}
+
+/**
+ * RLE absoluto y corto: COLOR_RUN / COLOR_IMAGE regulares, MEGA_MEGA solo
+ * en tramos largos, SPECIAL para un pixel blanco o negro suelto.
+ * Una sola reserva: el arrastre reescribe decenas de teselas por frame y
+ * un Buffer por orden llenaba el hilo principal.
+ */
+function encodeCompactRgb16(pixels) {
   if (!Buffer.isBuffer(pixels) || pixels.length % COLOR_DEPTH !== 0) {
     throw new RleError('invalid pixel buffer');
   }
   const pixelCount = pixels.length / COLOR_DEPTH;
   if (pixelCount === 0) throw new RleError('empty pixels');
-  if (isUniformRgb16(pixels)) {
-    return encodeMegaMegaColorRun(pixelCount, pixels.readUInt16LE(0));
+
+  const out = Buffer.alloc(pixelCount * 3);
+  let o = 0;
+  let i = 0;
+  while (i < pixelCount) {
+    const color = pelAt(pixels, i);
+    let run = 1;
+    const runCap = Math.min(0xffff, pixelCount - i);
+    while (run < runCap && pelAt(pixels, i + run) === color) run += 1;
+    if (run >= 2) {
+      o = writeColorRun(out, o, run, color);
+      i += run;
+      continue;
+    }
+
+    let j = i;
+    while (j < pixelCount && (j - i) < 0xffff) {
+      const c = pelAt(pixels, j);
+      if (j + 1 < pixelCount && pelAt(pixels, j + 1) === c) break;
+      j += 1;
+    }
+    if (j === i) j = i + 1;
+    const n = j - i;
+    if (n === 1 && color === WHITE_PIXEL) {
+      out[o++] = CODE.SPECIAL_WHITE;
+    } else if (n === 1 && color === BLACK_PIXEL) {
+      out[o++] = CODE.SPECIAL_BLACK;
+    } else {
+      o = writeColorImage(out, o, pixels, i, n);
+    }
+    i = j;
   }
-  return encodeMegaMegaColorImage(pixels);
+  return out.subarray(0, o);
+}
+
+/**
+ * Elige encoding compacto: solido -> COLOR_RUN; si no -> COLOR_RUN + COLOR_IMAGE.
+ */
+function encodeRgb16Rle(pixels) {
+  return encodeCompactRgb16(pixels);
 }
 
 module.exports = {
@@ -401,6 +554,8 @@ module.exports = {
   isUniformRgb16,
   encodeMegaMegaColorImage,
   encodeMegaMegaColorRun,
+  encodeCompactRgb16,
   encodeRgb16Rle,
+  isAbsoluteColorRle,
   COLOR_DEPTH
 };

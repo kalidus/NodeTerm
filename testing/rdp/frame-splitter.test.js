@@ -4,7 +4,7 @@ const { test, describe } = require('node:test');
 const assert = require('node:assert/strict');
 
 // Importar o definir la clase RdpFrameSplitter
-const { RdpFrameSplitter } = require('../../src/main/services/rdp-protocol-helpers');
+const { RdpFrameSplitter, RdpStreamDeframer } = require('../../src/main/services/rdp-protocol-helpers');
 
 describe('RdpFrameSplitter - Stateful TCP Segmentation & Anti-Corruption', () => {
   test('separa tramas TPKT y Fast-Path concatenadas en un mismo chunk', () => {
@@ -97,5 +97,21 @@ describe('RdpFrameSplitter - Stateful TCP Segmentation & Anti-Corruption', () =>
     assert.deepEqual(f2[0], fp1.subarray(600, 1000));
     assert.equal(f2[1].length, 20);
     assert.deepEqual(f2[1], nextTpkt);
+  });
+
+  test('un Fast-Path con 4 eventos (numEvents en bits 2..5) no se descarta', () => {
+    const fp = Buffer.from([0x10, 0x08, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06]);
+    const tpkt = Buffer.concat([Buffer.from([0x03, 0x00, 0x00, 0x08]), Buffer.alloc(4, 0xab)]);
+    const blob = Buffer.concat([fp, tpkt]);
+
+    const split = new RdpFrameSplitter().push(blob);
+    assert.equal(split.length, 2);
+    assert.deepEqual(split[0], fp);
+    assert.deepEqual(split[1], tpkt);
+
+    const held = new RdpStreamDeframer().push(blob);
+    assert.equal(held.length, 2);
+    assert.deepEqual(held[0], fp);
+    assert.deepEqual(held[1], tpkt);
   });
 });

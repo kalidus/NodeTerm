@@ -14,10 +14,10 @@ const EventEmitter = require('events');
 const { WebSocketServer } = require('ws');
 const fs = require('fs');
 const path = require('path');
-const { parseX224ConnectionConfirm, protocolName, describeRdpPdu, describeDisconnectPdu, preferDisconnectDesc, splitRdpFrames, splitTpktFrames, RdpFrameSplitter } = require('./rdp-protocol-helpers');
+const { parseX224ConnectionConfirm, protocolName, describeRdpPdu, describeDisconnectPdu, preferDisconnectDesc, splitTpktFrames, RdpStreamDeframer, RdpFrameSplitter } = require('./rdp-protocol-helpers');
 const { prepareMcsConnectInitial, findClientCoreData, findClientNetworkChannels, patchInfoPacket, patchInfoAutoLogon } = require('./rdp-mcs-helpers');
 const { patchFontSequenceFlags } = require('./rdp-font-helpers');
-const { fixWallixBitmapStrideCrop } = require('./rdp-fastpath-helpers');
+const { fixWallixBitmapStrideCrop, FastPathBitmapReassembler } = require('./rdp-fastpath-helpers');
 const {
   createChannelFilterState,
   processServerFrame,
@@ -494,7 +494,13 @@ class RdpNativeBridgeService extends EventEmitter {
     channelFilter.isBastion = isBastionSession(session);
     channelFilter.recentCliprdrEvents = recentCliprdrEvents;
     channelFilter.recordCliprdr = recordCliprdrEvent;
+    const streamDeframer = new RdpStreamDeframer();
     const frameSplitter = new RdpFrameSplitter();
+    // Solo el bastion necesita el PDU entero antes de corregir el bitmap.
+    // Una sesion directa usa el splitter: reenvia los bytes tal cual, tambien
+    // cuando Windows mete 4 o mas eventos en un Fast-Path.
+    const normalizeBitmaps = channelFilter.isBastion === true;
+    const bitmapReassembler = new FastPathBitmapReassembler();
     const framesDir = path.join(__dirname, '../../../testing/rdp/frames');
     if (process.env.NODETERM_RDP_RECORD_FRAMES === '1') {
       try { fs.mkdirSync(framesDir, { recursive: true }); } catch (_) { /* noop */ }
@@ -587,7 +593,9 @@ class RdpNativeBridgeService extends EventEmitter {
       } catch (e) {}
       try { if (tlsSocket) tlsSocket.destroy(); } catch (e) {}
       try { if (targetSocket) targetSocket.destroy(); } catch (e) {}
+      try { streamDeframer.reset(); } catch (e) {}
       try { frameSplitter.reset(); } catch (e) {}
+      try { bitmapReassembler.reset(); } catch (e) {}
     };
 
     ws.on('message', (message) => {
@@ -712,9 +720,11 @@ class RdpNativeBridgeService extends EventEmitter {
                   tlsSocket.pause();
                 }
 
-                // Separar frames concatenados respetando la segmentación TCP con memoria de estado
-                // para que IronRDP WASM reciba cada PDU completa sin cortar bitmaps fragmentados
-                const frames = frameSplitter.push(chunk);
+                // Reensamblar cada PDU antes de reenviarla. Un bitmap partido en
+                // varios segmentos TCP tiene que llegar entero: si se manda a
+                // trozos, el corrector de stride no lo ve y IronRDP pinta el
+                // rectangulo con el ancho equivocado.
+                const frames = normalizeBitmaps ? streamDeframer.push(chunk) : frameSplitter.push(chunk);
 
                 for (let frame of frames) {
                   const now = Date.now();
@@ -723,7 +733,7 @@ class RdpNativeBridgeService extends EventEmitter {
 
                   const n = frame.length;
                   framesFromRdp += 1;
-                  const isFastPath = (frame[0] & 0x03) === 0 && (frame[0] & 0x30) === 0;
+                  const isFastPath = frame.length >= 2 && (frame[0] & 0x03) === 0 && frame[0] !== 0x30;
                   const pduDesc = (isFastPath && !isDebug) ? 'FastPath' : describeRdpPdu(frame);
 
                   if (isDebug || !isFastPath) {
@@ -978,38 +988,47 @@ class RdpNativeBridgeService extends EventEmitter {
                     console.log(`[Bridge] RDP->WASM frame#${framesFromRdp}: ${frame.length}B | ${pduDesc}`);
                   }
 
-                  // Normalizar todas las teselas 16bpp solo en sesiones Wallix / Bastión con padding irregular
-                  const isWallix = wallixServiceFromSession(session) != null || isBastionSession(session);
-                  const stridePatch = isWallix ? fixWallixBitmapStrideCrop(frame) : { patchedCount: 0 };
-                  const outChunks = stridePatch.patchedCount
-                    ? (stridePatch.buffers || [stridePatch.buf])
-                    : [frame];
-                  if (stridePatch.patchedCount && isDebug) {
-                    console.log(
-                      `[Bridge] FastPath BITMAP normalizado frame#${framesFromRdp}: rects=${stridePatch.numberRectangles} patched=${stridePatch.patchedCount}` +
-                        (stridePatch.solidCount != null ? ` solid=${stridePatch.solidCount} crop=${stridePatch.cropCount}` : '') +
-                        (stridePatch.pduCount > 1 ? ` pdus=${stridePatch.pduCount}` : '')
-                    );
-                  }
+                  // Normalizar bitmaps 16bpp solo en sesiones Wallix / Bastión.
+                  // Los fragmentos Fast-Path se juntan antes de corregir el stride;
+                  // ordenes y puntero no esperan.
+                  const readyFrames = normalizeBitmaps ? bitmapReassembler.push(frame) : [frame];
 
                   bytesFromRdp += n;
                   trafficStats.note(pduDesc, n);
                   if (ws.readyState === ws.OPEN) {
                     try {
-                      for (const out of outChunks) {
-                        if (!out || typeof out.length !== 'number') continue;
-                        if (isDebug || !isFastPath) {
-                          recentWasmFrames.push(
-                            `#${framesFromRdp} ${out.length}B | ${describeRdpPdu(out)}` +
-                            (processed.serverChannelId != null && processed.serverChannelId !== processed.channelId
-                              ? ` [remap ch=${processed.serverChannelId}->${processed.channelId}]`
-                              : '')
+                      for (const ready of readyFrames) {
+                        const stridePatch = normalizeBitmaps ? fixWallixBitmapStrideCrop(ready) : { patchedCount: 0 };
+                        const outChunks = stridePatch.patchedCount
+                          ? (stridePatch.buffers || [stridePatch.buf])
+                          : [ready];
+                        if (stridePatch.failed) {
+                          console.warn(
+                            `[Bridge] FastPath BITMAP: ${stridePatch.failed} rectangulo(s) no se pudieron reescribir; se reenvian originales`
                           );
-                          if (recentWasmFrames.length > RECENT_FRAMES_WINDOW) recentWasmFrames.shift();
                         }
-                        ws.send(out, { binary: true }, () => {
-                          checkResumeTls();
-                        });
+                        if (stridePatch.patchedCount && isDebug) {
+                          console.log(
+                            `[Bridge] FastPath BITMAP normalizado frame#${framesFromRdp}: rects=${stridePatch.numberRectangles} patched=${stridePatch.patchedCount}` +
+                              (stridePatch.solidCount != null ? ` solid=${stridePatch.solidCount} crop=${stridePatch.cropCount}` : '') +
+                              (stridePatch.pduCount > 1 ? ` pdus=${stridePatch.pduCount}` : '')
+                          );
+                        }
+                        for (const out of outChunks) {
+                          if (!out || typeof out.length !== 'number') continue;
+                          if (isDebug || !isFastPath) {
+                            recentWasmFrames.push(
+                              `#${framesFromRdp} ${out.length}B | ${describeRdpPdu(out)}` +
+                              (processed.serverChannelId != null && processed.serverChannelId !== processed.channelId
+                                ? ` [remap ch=${processed.serverChannelId}->${processed.channelId}]`
+                                : '')
+                            );
+                            if (recentWasmFrames.length > RECENT_FRAMES_WINDOW) recentWasmFrames.shift();
+                          }
+                          ws.send(out, { binary: true }, () => {
+                            checkResumeTls();
+                          });
+                        }
                       }
                     } catch (sendErr) {
                       console.warn('[Bridge] Error enviando frames a WebSocket:', sendErr.message);
@@ -1080,7 +1099,7 @@ class RdpNativeBridgeService extends EventEmitter {
           // Fast-track para eventos de entrada del cliente (ratón, teclado)
           // Los paquetes FastPath de entrada no contienen canales virtuales ni desconexiones.
           const isFastPathInput = Buffer.isBuffer(payload) && payload.length >= 2 &&
-            (payload[0] & 0x03) === 0 && (payload[0] & 0x30) === 0;
+            (payload[0] & 0x03) === 0 && payload[0] !== 0x30;
 
           if (isFastPathInput) {
             bytesToRdp += payload.length;

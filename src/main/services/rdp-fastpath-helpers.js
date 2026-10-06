@@ -5,9 +5,12 @@
  * Wallix (como xrdp) rellena TS_BITMAP_DATA.width a multiplo de 4, distinto
  * del ancho inclusivo del dest-rect -> cizalla / texto dentado.
  *
- * Fix: descomprimir RLE16, recortar al dest-rect, reenviar sin comprimir
+ * Fix: descomprimir RLE16, recortar al dest-rect y reenviar en RLE compacto
  * con width/height = tamano del dest (IronRDP master ya tiene source_width;
- * npm 0.7.0 no).
+ * npm 0.7.0 no). Las teselas 64xN (el recuadro que deja el RLE por deltas)
+ * se reescriben aunque el ancho ya coincida. Si no cabe en un Fast-Path,
+ * se parte en tiras horizontales.
+ * No se agranda el dest-rect: el padding pintaria encima de los pixeles vecinos.
  *
  * TS_UPDATE_BITMAP_DATA (tambien en Fast-Path) incluye updateType=0x0001;
  * IronRDP lo exige. No eliminarlo.
@@ -18,10 +21,8 @@
 const {
   decompress16bpp,
   cropRgb16,
-  encodeRgb16Rle,
-  encodeMegaMegaColorImage,
-  encodeMegaMegaColorRun,
-  isUniformRgb16,
+  encodeCompactRgb16,
+  isAbsoluteColorRle,
   RleError
 } = require('./rdp-rle16');
 
@@ -29,6 +30,10 @@ const FASTPATH_UPDATETYPE_BITMAP = 0x1;
 const UPDATETYPE_BITMAP = 0x0001;
 const BITMAP_COMPRESSION = 0x0001;
 const NO_BITMAP_COMPRESSION_HDR = 0x0400;
+const FP_FRAG_SINGLE = 0;
+const FP_FRAG_LAST = 1;
+const FP_FRAG_FIRST = 2;
+const FP_FRAG_NEXT = 3;
 
 function readFpLength(buf) {
   if (!Buffer.isBuffer(buf) || buf.length < 2) return null;
@@ -47,6 +52,45 @@ function encodeFpLength(totalLen) {
     return Buffer.from([totalLen & 0xff]);
   }
   return Buffer.from([0x80 | ((totalLen >> 8) & 0x7f), totalLen & 0xff]);
+}
+
+/**
+ * Fast-Path update completo (MS-RDPBCGR 2.2.9.1.2.1), con o sin fragmentacion.
+ * No interpreta el cuerpo: solo separa cabecera y updateData.
+ */
+function parseFastPathUpdate(buf) {
+  if (!Buffer.isBuffer(buf) || buf.length < 6) return null;
+  if (buf[0] === 0x03) return null;
+  if ((buf[0] & 0x3) !== 0 || (buf[0] >> 6) !== 0) return null;
+
+  const fpLen = readFpLength(buf);
+  if (!fpLen || fpLen.length !== buf.length) return null;
+
+  let o = fpLen.headerLen;
+  if (o >= buf.length) return null;
+  const updateHeader = buf[o];
+  o += 1;
+  const updateCode = updateHeader & 0x0f;
+  const fragmentation = (updateHeader >> 4) & 0x03;
+  const compression = (updateHeader >> 6) & 0x03;
+  if (compression !== 0) {
+    if (o >= buf.length) return null;
+    o += 1;
+  }
+  if (o + 2 > buf.length) return null;
+  const size = buf.readUInt16LE(o);
+  o += 2;
+  if (size < 0 || o + size > buf.length) return null;
+
+  return {
+    fpHeaderByte: buf[0],
+    updateHeader,
+    updateCode,
+    fragmentation,
+    compression,
+    updateData: buf.subarray(o, o + size),
+    headerLen: fpLen.headerLen
+  };
 }
 
 /**
@@ -97,47 +141,34 @@ function needsStrideCrop(width, height, destLeft, destTop, destRight, destBottom
 }
 
 /**
- * Expande dest-rect in-place (mismo bitmap). OK si el tile es color uniforme
- * (el padding se pinta del mismo color; sin ghosting visible).
+ * Tesela con la que Windows parte el escritorio (64x64, a menudo 64x62 + 64x2).
+ * El ancho ya coincide con el dest, asi que el corrector de stride la dejaba
+ * pasar. IronRDP 0.7 a veces no aplica ese RLE por deltas y el rectangulo se
+ * queda en el color solido de debajo: un recuadro.
  */
-function destExpandOneBitmapRect(rectBuf) {
-  const out = Buffer.from(rectBuf);
-  const destLeft = out.readUInt16LE(0);
-  const destTop = out.readUInt16LE(2);
-  const width = out.readUInt16LE(8);
-  const height = out.readUInt16LE(10);
-  out.writeUInt16LE((destLeft + width - 1) & 0xffff, 4);
-  out.writeUInt16LE((destTop + height - 1) & 0xffff, 6);
-  return out;
+function isWindowsTile(iw, ih) {
+  return iw >= 56 && iw <= 64 && ih >= 2 && ih <= 64;
 }
 
 /**
- * Corrige stride Wallix de un TS_BITMAP_DATA.
- * - Solido: dest-expand (mantiene RLE original, 0 coste de tamaño).
- * - Complejo: crop + RLE compacto (COLOR_RUN / COLOR_IMAGE).
- * @returns {{ kind: 'dest-expand'|'crop', buf: Buffer } | null}
+ * TS_BITMAP_DATA con pixeles ya recortados al dest-rect, en RLE compacto.
+ * @returns {{ kind: string, buf: Buffer } | null}
  */
-const SUBTILE_MAX = 64;
+function isSingleColorRun(encoded) {
+  if (!encoded || encoded.length === 0) return false;
+  if (encoded.length === 5 && encoded[0] === 0xf3) return true;
+  if (encoded.length === 3 && (encoded[0] & 0xe0) === 0x60 && (encoded[0] & 0x1f) !== 0) return true;
+  if (encoded.length === 4 && encoded[0] === 0x60) return true;
+  return false;
+}
 
 function encodeOneTileBuffer(destLeft, destTop, destRight, destBottom, width, height, tilePixels) {
   let encoded;
-  let kind = 'crop';
-  if (isUniformRgb16(tilePixels)) {
-    const color = tilePixels.readUInt16LE(0);
-    try {
-      encoded = encodeMegaMegaColorRun(width * height, color);
-      kind = 'solid-run';
-    } catch (err) {
-      if (err instanceof RleError) return null;
-      throw err;
-    }
-  } else {
-    try {
-      encoded = encodeMegaMegaColorImage(tilePixels);
-    } catch (err) {
-      if (err instanceof RleError) return null;
-      throw err;
-    }
+  try {
+    encoded = encodeCompactRgb16(tilePixels);
+  } catch (err) {
+    if (err instanceof RleError) return null;
+    throw err;
   }
   if (!encoded || encoded.length > 0xffff) return null;
 
@@ -152,7 +183,21 @@ function encodeOneTileBuffer(destLeft, destTop, destRight, destBottom, width, he
   header.writeUInt16LE(BITMAP_COMPRESSION | NO_BITMAP_COMPRESSION_HDR, 14);
   header.writeUInt16LE(encoded.length, 16);
 
+  const kind = isSingleColorRun(encoded) ? 'solid-run' : 'crop';
   return { kind, buf: Buffer.concat([header, encoded]) };
+}
+
+/**
+ * Tira horizontal del bitmap bottom-up. ty es el desplazamiento desde arriba.
+ */
+function extractHorizontalStrip(pixels, iw, ih, ty, th) {
+  const tilePixels = Buffer.alloc(iw * th * 2);
+  const startRow = ih - (ty + th);
+  for (let y = 0; y < th; y++) {
+    const srcOff = ((startRow + y) * iw) * 2;
+    pixels.copy(tilePixels, y * iw * 2, srcOff, srcOff + iw * 2);
+  }
+  return tilePixels;
 }
 
 function fixOneBitmapRectStride(rectBuf) {
@@ -178,12 +223,11 @@ function fixOneBitmapRectStride(rectBuf) {
 
   const raw = rectBuf.subarray(18, 18 + bitmapLength);
   const needsCrop = needsStrideCrop(width, height, destLeft, destTop, destRight, destBottom);
+  const tile = isWindowsTile(iw, ih);
 
-  // Si no hay desfase de stride (width === iw && height === ih), el rectángulo cumple
-  // la especificación RDP estándar y IronRDP WASM lo descomprime de forma nativa a máxima velocidad sin CPU en Node.js.
-  if (!needsCrop) {
-    return null;
-  }
+  // Sin desfase y sin forma de tesela: no tocar. Los glifos y las tiras anchas
+  // siguen igual y el arrastre no se infla.
+  if (!needsCrop && !tile) return null;
 
   let full;
 
@@ -193,6 +237,8 @@ function fixOneBitmapRectStride(rectBuf) {
       if (raw.length < 8) return null;
       rle = raw.subarray(8);
     }
+    // Ya esta en COLOR_RUN/COLOR_IMAGE y el stride cuadra: IronRDP lo pinta.
+    if (!needsCrop && isAbsoluteColorRle(rle)) return null;
     try {
       full = decompress16bpp(rle, width, height);
     } catch (err) {
@@ -217,59 +263,66 @@ function fixOneBitmapRectStride(rectBuf) {
     pixels = full;
   }
 
-  // Si es un relleno sólido completo, un único solid-run (5B) basta para cualquier tamaño
-  if (isUniformRgb16(pixels) && iw * ih <= 0xffff) {
-    const solid = encodeOneTileBuffer(destLeft, destTop, destRight, destBottom, iw, ih, pixels);
-    if (!solid) return null;
-    return { kind: 'solid-run', buf: solid.buf, buffers: [solid.buf] };
+  const encoded = encodeRectOrStrips(destLeft, destTop, destRight, destBottom, iw, ih, pixels);
+  if (!encoded) return null;
+  return encoded;
+}
+
+/**
+ * Un rectangulo si el RLE cabe en un Fast-Path; si no, tiras horizontales
+ * del ancho completo. No se usa una malla: partir en las dos direcciones
+ * multiplica PDUs al mover ventanas.
+ */
+function encodeRectOrStrips(destLeft, destTop, destRight, destBottom, iw, ih, pixels) {
+  const maxRect = MAX_FASTPATH_PDU - 10;
+  const whole = encodeOneTileBuffer(destLeft, destTop, destRight, destBottom, iw, ih, pixels);
+  if (whole && whole.buf.length <= maxRect) {
+    return {
+      kind: whole.kind,
+      buf: whole.buf,
+      buffers: [whole.buf],
+      solidCount: whole.kind === 'solid-run' ? 1 : 0,
+      cropCount: whole.kind === 'solid-run' ? 0 : 1
+    };
   }
 
-  // Si cabe en un único subtile pequeño (<= 64x64)
-  if (iw <= SUBTILE_MAX && ih <= SUBTILE_MAX) {
-    const single = encodeOneTileBuffer(destLeft, destTop, destRight, destBottom, iw, ih, pixels);
-    if (!single) return null;
-    return { kind: single.kind, buf: single.buf, buffers: [single.buf] };
-  }
+  const rowBytes = iw * 2;
+  const budget = maxRect - 18 - 3;
+  if (rowBytes <= 0 || budget < rowBytes) return null;
+  let rowsPerStrip = Math.max(1, Math.floor(budget / rowBytes));
 
-  // Subdividir rectángulos grandes en teselas de máximo 64x64 para que nunca
-  // superen el límite de tamaño de Fast-Path PDU ni dejen recuadros sin repintar.
-  const tiles = [];
-  let solidCount = 0;
-  let cropCount = 0;
-
-  for (let ty = 0; ty < ih; ty += SUBTILE_MAX) {
-    const th = Math.min(SUBTILE_MAX, ih - ty);
-    for (let tx = 0; tx < iw; tx += SUBTILE_MAX) {
-      const tw = Math.min(SUBTILE_MAX, iw - tx);
-      const tileLeft = destLeft + tx;
+  while (rowsPerStrip >= 1) {
+    const buffers = [];
+    let solidCount = 0;
+    let cropCount = 0;
+    let ok = true;
+    for (let ty = 0; ty < ih; ty += rowsPerStrip) {
+      const th = Math.min(rowsPerStrip, ih - ty);
+      const stripPixels = extractHorizontalStrip(pixels, iw, ih, ty, th);
       const tileTop = destTop + ty;
-      const tileRight = tileLeft + tw - 1;
       const tileBottom = tileTop + th - 1;
-
-      const tilePixels = Buffer.alloc(tw * th * 2);
-      const startRow = ih - (ty + th);
-      for (let y = 0; y < th; y++) {
-        const srcRow = startRow + y;
-        const srcOff = (srcRow * iw + tx) * 2;
-        const dstOff = y * tw * 2;
-        pixels.copy(tilePixels, dstOff, srcOff, srcOff + tw * 2);
+      const encoded = encodeOneTileBuffer(destLeft, tileTop, destRight, tileBottom, iw, th, stripPixels);
+      if (!encoded || encoded.buf.length > maxRect) {
+        ok = false;
+        break;
       }
-
-      const encodedTile = encodeOneTileBuffer(tileLeft, tileTop, tileRight, tileBottom, tw, th, tilePixels);
-      if (!encodedTile) return null;
-      tiles.push(encodedTile.buf);
-      if (encodedTile.kind === 'solid-run') solidCount += 1;
+      buffers.push(encoded.buf);
+      if (encoded.kind === 'solid-run') solidCount += 1;
       else cropCount += 1;
     }
+    if (ok && buffers.length) {
+      return {
+        kind: buffers.length === 1 ? (solidCount ? 'solid-run' : 'crop') : 'strips',
+        buf: buffers[0],
+        buffers,
+        solidCount,
+        cropCount
+      };
+    }
+    if (rowsPerStrip === 1) return null;
+    rowsPerStrip = Math.floor(rowsPerStrip / 2);
   }
-
-  return {
-    kind: 'subtiles',
-    buf: tiles[0],
-    buffers: tiles,
-    solidCount,
-    cropCount
-  };
+  return null;
 }
 
 /** @deprecated usar fixOneBitmapRectStride */
@@ -394,66 +447,40 @@ function packRectBuffersToFastPath(fpHeaderByte, updateHeader, rectBuffers) {
   return pdus;
 }
 
-function fixWallixBitmapStrideCrop(buf) {
-  const info = inspectWallixFastPathBitmap(buf);
-  if (!info || !info.ok) {
-    return { buf, buffers: [buf], patchedCount: 0, numberRectangles: 0, fallback: false };
-  }
-
-  const payload = buf.subarray(info.payloadOffset, info.payloadOffset + info.size);
-  const n = payload.readUInt16LE(2);
-  const rectBuffers = [];
-  let p = 4;
-  let patchedCount = 0;
-  let solidCount = 0;
-  let cropCount = 0;
-  let failed = 0;
-
-  for (let i = 0; i < n; i++) {
-    if (p + 18 > payload.length) {
-      return { buf, buffers: [buf], patchedCount: 0, numberRectangles: n, fallback: true };
-    }
-
-    const bitmapLength = payload.readUInt16LE(p + 16);
-    const rectEnd = p + 18 + bitmapLength;
-    if (rectEnd > payload.length) {
-      return { buf, buffers: [buf], patchedCount: 0, numberRectangles: n, fallback: true };
-    }
-
-    const rectBuf = payload.subarray(p, rectEnd);
-    const width = rectBuf.readUInt16LE(8);
-    const height = rectBuf.readUInt16LE(10);
-    const destLeft = rectBuf.readUInt16LE(0);
-    const destTop = rectBuf.readUInt16LE(2);
-    const destRight = rectBuf.readUInt16LE(4);
-    const destBottom = rectBuf.readUInt16LE(6);
-
-    const fixed = fixOneBitmapRectStride(rectBuf);
-    if (fixed && fixed.buffers && fixed.buffers.length) {
-      rectBuffers.push(...fixed.buffers);
-      patchedCount += 1;
-      if (fixed.kind === 'solid-run') {
-        solidCount += 1;
-      } else if (fixed.kind === 'subtiles') {
-        solidCount += fixed.solidCount || 0;
-        cropCount += fixed.cropCount || 0;
-      } else {
-        cropCount += 1;
-      }
-    } else {
-      rectBuffers.push(Buffer.from(rectBuf));
-    }
-
-    p = rectEnd;
-  }
-
+function finishBitmapRewrite(fpHeaderByte, updateHeader, rectBuffers, meta, originalBuf) {
+  const { patchedCount, solidCount, cropCount, numberRectangles, failed } = meta;
   if (patchedCount === 0) {
-    return { buf, buffers: [buf], patchedCount: 0, numberRectangles: n, fallback: false, failed };
+    return {
+      buf: originalBuf || null,
+      buffers: originalBuf ? [originalBuf] : [],
+      patchedCount: 0,
+      numberRectangles,
+      fallback: false,
+      failed
+    };
   }
 
-  const pdus = packRectBuffersToFastPath(info.fpHeaderByte, info.updateHeader, rectBuffers);
+  let pdus = packRectBuffersToFastPath(fpHeaderByte, updateHeader, rectBuffers);
   if (!pdus || !pdus.length) {
-    return { buf, buffers: [buf], patchedCount: 0, numberRectangles: n, fallback: true, failed };
+    pdus = [];
+    for (const rect of rectBuffers) {
+      const one = packRectBuffersToFastPath(fpHeaderByte, updateHeader, [rect]);
+      if (!one || !one.length) {
+        pdus = [];
+        break;
+      }
+      pdus.push(...one);
+    }
+  }
+  if (!pdus.length) {
+    return {
+      buf: originalBuf || null,
+      buffers: originalBuf ? [originalBuf] : [],
+      patchedCount: 0,
+      numberRectangles,
+      fallback: true,
+      failed: failed + patchedCount
+    };
   }
 
   const totalNew = pdus.reduce((s, b) => s + b.length, 0);
@@ -464,13 +491,148 @@ function fixWallixBitmapStrideCrop(buf) {
     patchedCount,
     solidCount,
     cropCount,
-    numberRectangles: n,
+    numberRectangles,
     fallback: false,
-    failed: 0,
-    originalLength: buf.length,
+    failed,
+    originalLength: originalBuf ? originalBuf.length : 0,
     newLength: totalNew,
     pduCount: pdus.length
   };
+}
+
+/**
+ * Reescribe un TS_UPDATE_BITMAP_DATA ya reunido (un Fast-Path o varios fragmentos).
+ * updateHeader debe ir sin bits de fragmentacion.
+ */
+function rewriteBitmapPayload(fpHeaderByte, updateHeader, payload) {
+  if (!Buffer.isBuffer(payload) || payload.length < 8) return null;
+  if (payload.readUInt16LE(0) !== UPDATETYPE_BITMAP) return null;
+
+  const n = payload.readUInt16LE(2);
+  const rectBuffers = [];
+  let p = 4;
+  let patchedCount = 0;
+  let solidCount = 0;
+  let cropCount = 0;
+  let failed = 0;
+
+  for (let i = 0; i < n; i++) {
+    if (p + 18 > payload.length) return null;
+    const bitmapLength = payload.readUInt16LE(p + 16);
+    const rectEnd = p + 18 + bitmapLength;
+    if (rectEnd > payload.length) return null;
+
+    const rectBuf = payload.subarray(p, rectEnd);
+    const width = rectBuf.readUInt16LE(8);
+    const height = rectBuf.readUInt16LE(10);
+    const destLeft = rectBuf.readUInt16LE(0);
+    const destTop = rectBuf.readUInt16LE(2);
+    const destRight = rectBuf.readUInt16LE(4);
+    const destBottom = rectBuf.readUInt16LE(6);
+    const iw = destRight - destLeft + 1;
+    const ih = destBottom - destTop + 1;
+    const wantsCrop = needsStrideCrop(width, height, destLeft, destTop, destRight, destBottom);
+    const fixed = (wantsCrop || isWindowsTile(iw, ih)) ? fixOneBitmapRectStride(rectBuf) : null;
+
+    if (fixed && fixed.buffers && fixed.buffers.length) {
+      rectBuffers.push(...fixed.buffers);
+      patchedCount += 1;
+      solidCount += fixed.solidCount || 0;
+      cropCount += fixed.cropCount || 0;
+    } else {
+      if (wantsCrop) failed += 1;
+      rectBuffers.push(Buffer.from(rectBuf));
+    }
+    p = rectEnd;
+  }
+
+  return finishBitmapRewrite(fpHeaderByte, updateHeader & 0x0f, rectBuffers, {
+    patchedCount,
+    solidCount,
+    cropCount,
+    numberRectangles: n,
+    failed
+  }, null);
+}
+
+function fixWallixBitmapStrideCrop(buf) {
+  const info = inspectWallixFastPathBitmap(buf);
+  if (!info || !info.ok) {
+    return { buf, buffers: [buf], patchedCount: 0, numberRectangles: 0, fallback: false };
+  }
+
+  const payload = buf.subarray(info.payloadOffset, info.payloadOffset + info.size);
+  const rewritten = rewriteBitmapPayload(info.fpHeaderByte, info.updateHeader, payload);
+  if (!rewritten || !rewritten.buffers || !rewritten.buffers.length || rewritten.patchedCount === 0) {
+    return {
+      buf,
+      buffers: [buf],
+      patchedCount: 0,
+      numberRectangles: rewritten ? rewritten.numberRectangles : 0,
+      fallback: !rewritten,
+      failed: rewritten ? rewritten.failed : 0
+    };
+  }
+  rewritten.originalLength = buf.length;
+  if (!rewritten.buf) rewritten.buf = rewritten.buffers[0];
+  return rewritten;
+}
+
+/**
+ * Junta fragmentos Fast-Path de bitmap (FIRST/NEXT/LAST) y reescribe el
+ * update entero. El resto de PDUs sale en orden, sin esperar.
+ */
+class FastPathBitmapReassembler {
+  constructor() {
+    this.pending = null;
+  }
+
+  reset() {
+    this.pending = null;
+  }
+
+  _abort() {
+    if (!this.pending) return [];
+    const frames = this.pending.frames;
+    this.pending = null;
+    return frames;
+  }
+
+  push(frame) {
+    const parsed = parseFastPathUpdate(frame);
+    const isBitmap = parsed
+      && parsed.updateCode === FASTPATH_UPDATETYPE_BITMAP
+      && parsed.compression === 0;
+    const frag = isBitmap ? parsed.fragmentation : null;
+
+    if (frag === FP_FRAG_FIRST) {
+      const flushed = this._abort();
+      this.pending = {
+        frames: [Buffer.from(frame)],
+        parts: [Buffer.from(parsed.updateData)],
+        fpHeaderByte: parsed.fpHeaderByte,
+        updateHeader: parsed.updateHeader
+      };
+      return flushed;
+    }
+
+    if (frag === FP_FRAG_NEXT || frag === FP_FRAG_LAST) {
+      if (!this.pending) return [frame];
+      this.pending.frames.push(Buffer.from(frame));
+      this.pending.parts.push(Buffer.from(parsed.updateData));
+      if (frag !== FP_FRAG_LAST) return [];
+      const pending = this.pending;
+      this.pending = null;
+      const payload = Buffer.concat(pending.parts);
+      const rewritten = rewriteBitmapPayload(pending.fpHeaderByte, pending.updateHeader & 0x0f, payload);
+      if (!rewritten || !rewritten.buffers || !rewritten.buffers.length) return pending.frames;
+      return rewritten.buffers;
+    }
+
+    const flushed = this._abort();
+    flushed.push(frame);
+    return flushed;
+  }
 }
 
 module.exports = {
@@ -478,15 +640,22 @@ module.exports = {
   UPDATETYPE_BITMAP,
   BITMAP_COMPRESSION,
   NO_BITMAP_COMPRESSION_HDR,
+  FP_FRAG_SINGLE,
+  FP_FRAG_LAST,
+  FP_FRAG_FIRST,
+  FP_FRAG_NEXT,
   MAX_FASTPATH_PDU,
   readFpLength,
   encodeFpLength,
+  parseFastPathUpdate,
   inspectWallixFastPathBitmap,
   fixWallixBitmapDestStride,
   fixWallixBitmapStrideCrop,
+  rewriteBitmapPayload,
   fixOneBitmapRectStride,
   cropOneBitmapRect,
   needsStrideCrop,
   buildFastPathBitmapPdu,
-  packRectBuffersToFastPath
+  packRectBuffersToFastPath,
+  FastPathBitmapReassembler
 };
