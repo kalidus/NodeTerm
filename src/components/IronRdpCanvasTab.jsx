@@ -163,6 +163,7 @@ const RESOLUTION_OPTIONS = [
 const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, onClose }, ref) => {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
+  const updateCanvasRectRef = useRef(null);
   const sessionRef = useRef(null);
   const fileTransferProviderRef = useRef(null);
   const toastRef = useRef(null);
@@ -936,6 +937,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
               currentDesktopSizeRef.current = { width: w, height: h };
               lastRequestedDesktopRef.current = { width: w, height: h };
               setDesktopDimensions({ width: w, height: h });
+              updateCanvasRectRef.current?.();
             }
           })
           .extension(enableCredssp(useCredssp));
@@ -1436,6 +1438,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       cachedScaleY = cachedRect.height > 0 ? canvas.height / cachedRect.height : 1;
     };
 
+    updateCanvasRectRef.current = updateCanvasRect;
     updateCanvasRect();
 
     const getCanvasPos = (e) => {
@@ -1539,7 +1542,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     };
 
     const handleMouseUp = (e) => {
-      if (!sessionRef.current) return;
+      if (!sessionRef.current || !isMouseDown) return;
       e.preventDefault();
 
       if (mouseThrottleTimer != null) {
@@ -1658,9 +1661,15 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     if (containerEl) {
       containerEl.addEventListener('scroll', updateCanvasRect, { passive: true });
     }
+    const rectResizeObserver = new ResizeObserver(() => {
+      updateCanvasRect();
+    });
+    rectResizeObserver.observe(canvas);
+    if (containerEl) {
+      rectResizeObserver.observe(containerEl);
+    }
     canvas.addEventListener('mousemove', handleMouseMove);
     canvas.addEventListener('mousedown', handleMouseDown);
-    canvas.addEventListener('mouseup', handleMouseUp);
     document.addEventListener('mouseup', handleMouseUp);
     canvas.addEventListener('contextmenu', handleContextMenu);
     canvas.addEventListener('wheel', handleWheel, { passive: false });
@@ -1673,6 +1682,10 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         clearTimeout(mouseThrottleTimer);
         mouseThrottleTimer = null;
       }
+      if (updateCanvasRectRef.current === updateCanvasRect) {
+        updateCanvasRectRef.current = null;
+      }
+      rectResizeObserver.disconnect();
       window.removeEventListener('resize', updateCanvasRect);
       canvas.removeEventListener('mouseenter', updateCanvasRect);
       if (containerEl) {
@@ -1680,7 +1693,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       }
       canvas.removeEventListener('mousemove', handleMouseMove);
       canvas.removeEventListener('mousedown', handleMouseDown);
-      canvas.removeEventListener('mouseup', handleMouseUp);
       document.removeEventListener('mouseup', handleMouseUp);
       canvas.removeEventListener('contextmenu', handleContextMenu);
       canvas.removeEventListener('wheel', handleWheel);
