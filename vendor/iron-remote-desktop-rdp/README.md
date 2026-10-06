@@ -9,7 +9,7 @@ Paquete local `@devolutions/iron-remote-desktop-rdp` desde IronRDP `38b074e4`.
 
 ## Versión
 
-`0.7.0-nodeterm-egfx.12`
+`0.7.0-nodeterm-egfx.14`
 
 ## Regenerar
 

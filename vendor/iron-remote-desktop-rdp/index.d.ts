@@ -136,6 +136,8 @@ export declare interface DroppedFile {
 /** Opt-in del canal Graphics (MS-RDPEGFX). Sin esto la sesión usa bitmap RLE. */
 export declare function egfx(enable: boolean): Extension;
 
+export declare function egfxDiagErrorCount(): number;
+
 export declare function enableCredssp(enable: boolean): Extension;
 
 export declare function enableServerPointer(enable: boolean): Extension;
@@ -1017,6 +1019,7 @@ declare class Session {
     desktopSize(): DesktopSize;
     invokeExtension(ext: Extension): any;
     onClipboardPaste(content: ClipboardData): Promise<void>;
+    refresh(): void;
     releaseAllInputs(): void;
     resize(width: number, height: number, scale_factor?: number | null, physical_width?: number | null, physical_height?: number | null): void;
     run(): Promise<SessionTerminationInfo>;
