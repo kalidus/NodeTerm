@@ -2,8 +2,11 @@
  * Contrapresión y métricas del bridge IronRDP.
  *
  * En bastión Wallix, pausar TLS provoca bufferbloat (el PAM encola).
- * Mejor: latest-wins — descartar Fast-Path BITMAP intermedios cuando la cola
- * WebSocket está llena o el rewrite RLE agota el presupuesto de CPU por tick.
+ * En directo, pausar TLS a 512 KB tambien dejaba al servidor callado y luego
+ * soltaba la rafaga (p95 de cientos de ms). En los dos casos: latest-wins
+ * seguro — encolar Fast-Path BITMAP cuando la cola WebSocket esta llena y
+ * descartar solo los que un bitmap posterior cubre por completo.
+ * El presupuesto RLE (3 ms) solo aplica en bastion, que es quien reescribe.
  */
 
 'use strict';
@@ -23,8 +26,8 @@ const MAX_PENDING_BYTES = 1024 * 1024;
 const WS_HIGH_WATER_MARK = 64 * 1024; // 64 KB
 /** Reanudar envío del bitmap pendiente. */
 const WS_LOW_WATER_MARK = 16 * 1024; // 16 KB
-/** Solo path directo: pausa TLS si la cola WS es extrema. */
-const WS_PAUSE_TLS_MARK = 512 * 1024; // 512 KB
+/** Solo path directo: pausa TLS como ultimo recurso anti-OOM, no al primer pico. */
+const WS_PAUSE_TLS_MARK = 2 * 1024 * 1024; // 2 MB
 /** Máx. ms de rewrite RLE por evento TLS en bastión (el resto se shed). */
 const BASTION_REWRITE_BUDGET_MS = 3;
 
@@ -344,7 +347,6 @@ class WsBackpressureController {
    */
   shouldShedBitmap(bufferedAmount, frame) {
     this.noteBufferedAmount(bufferedAmount);
-    if (!this.bastion) return false;
     if (!isFastPathBitmapFrame(frame)) return false;
 
     // Hay pendientes mas antiguos: este bitmap debe ir detras (orden de pintado).
@@ -356,7 +358,8 @@ class WsBackpressureController {
       this._stashBitmap(frame, 'queue');
       return true;
     }
-    if (this._rewriteSpentMs >= this.rewriteBudgetMs) {
+    // El presupuesto RLE solo existe en bastion. En directo no hay rewrite.
+    if (this.bastion && this._rewriteSpentMs >= this.rewriteBudgetMs) {
       this._stashBitmap(frame, 'budget');
       return true;
     }
@@ -384,7 +387,8 @@ class WsBackpressureController {
   }
 
   /**
-   * Path directo: pausar TLS solo en colas muy altas.
+   * Path directo: pausar TLS solo como ultimo recurso (2 MB). Por debajo, el
+   * shed de bitmaps cubiertos absorbe la rafaga sin callar al servidor.
    * Bastión: nunca pausar (latest-wins evita bufferbloat).
    */
   shouldPauseTls(bufferedAmount) {

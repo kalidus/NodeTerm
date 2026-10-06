@@ -15,8 +15,9 @@ const { WebSocketServer } = require('ws');
 const fs = require('fs');
 const path = require('path');
 const { parseX224ConnectionConfirm, protocolName, describeRdpPdu, describeDisconnectPdu, preferDisconnectDesc, splitTpktFrames, RdpStreamDeframer, RdpFrameSplitter } = require('./rdp-protocol-helpers');
-const { prepareMcsConnectInitial, findClientCoreData, findClientNetworkChannels, patchInfoPacket, patchInfoAutoLogon } = require('./rdp-mcs-helpers');
+const { prepareMcsConnectInitial, findClientCoreData, findClientNetworkChannels, patchInfoPacket, patchInfoAutoLogon, isMcsConnectInitial, patchClientCoreWant32bpp } = require('./rdp-mcs-helpers');
 const { patchFontSequenceFlags } = require('./rdp-font-helpers');
+const { describeCapabilities, formatCapabilities, patchConfirmActiveBitmapBpp } = require('./rdp-caps-helpers');
 const { fixWallixBitmapStrideCrop, FastPathBitmapReassembler } = require('./rdp-fastpath-helpers');
 const {
   BridgeLatencyMetrics,
@@ -515,6 +516,9 @@ class RdpNativeBridgeService extends EventEmitter {
     // Una sesion directa usa el splitter: reenvia los bytes tal cual, tambien
     // cuando Windows mete 4 o mas eventos en un Fast-Path.
     const normalizeBitmaps = channelFilter.isBastion === true;
+    // Experimento opt-in (NODETERM_RDP_FORCE32=1): pedir sesion de 32bpp al servidor para que
+    // pueda usar RemoteFX/Surface Commands. Solo conexion directa; nunca en bastion.
+    const force32 = !normalizeBitmaps && readDiagFlag('NODETERM_RDP_FORCE32');
     const bitmapReassembler = new FastPathBitmapReassembler();
     const framesDir = path.join(__dirname, '../../../testing/rdp/frames');
     if (process.env.NODETERM_RDP_RECORD_FRAMES === '1') {
@@ -712,8 +716,8 @@ class RdpNativeBridgeService extends EventEmitter {
 
               rdCleanPathPhase = 'transparent';
 
-              // Bastión: latest-wins (descartar BITMAP viejos) sin pausar TLS — Wallix encola.
-              // Directo: pausa TLS solo si la cola WS es muy alta (evita OOM en ráfagas).
+              // Bastión y directo: latest-wins seguro (solo bitmaps ya cubiertos) sin callar TLS.
+              // Directo: pausa TLS solo a 2 MB, como ultimo recurso anti-OOM.
               // Métricas [Bridge Perf] solo con NODETERM_RDP_DEBUG / session.rdpDebug.
               const backpressure = new WsBackpressureController({
                 bastion: normalizeBitmaps,
@@ -835,6 +839,14 @@ class RdpNativeBridgeService extends EventEmitter {
                   framesFromRdp += 1;
                   const isFastPath = frame.length >= 2 && (frame[0] & 0x03) === 0 && frame[0] !== 0x30;
                   const pduDesc = (isFastPath && !isDebug) ? 'FastPath' : describeRdpPdu(frame);
+
+                  // Sondeo: que bpp/codecs ofrece el servidor (solo debug).
+                  if (isDebug && !isFastPath && pduDesc.includes('DEMAND_ACTIVE')) {
+                    try {
+                      const srvCaps = describeCapabilities(frame);
+                      if (srvCaps) console.log(formatCapabilities(srvCaps));
+                    } catch (_) { /* noop */ }
+                  }
 
                   if (isDebug || !isFastPath) {
                     recentRdpFrames.push(`#${framesFromRdp} ${n}B | ${pduDesc}`);
@@ -1136,10 +1148,10 @@ class RdpNativeBridgeService extends EventEmitter {
                     }
                   }
                 }
-                // Al final del tick: enviar el último bitmap shed (latest-wins).
-                // ignoreBudget: sí reescribir ese único frame aunque el presupuesto se haya gastado
-                // con los bitmaps anteriores del mismo chunk.
-                if (normalizeBitmaps && ws.readyState === ws.OPEN) {
+                // Al final del tick: vaciar los bitmaps encolados, en orden (directo y bastion).
+                // En reposo la lista esta vacia. ignoreBudget: el ultimo lote se reescribe
+                // aunque el presupuesto RLE del bastion se haya gastado en este chunk.
+                if (ws.readyState === ws.OPEN) {
                   try {
                     flushPendingBitmap({ force: true, ignoreBudget: true });
                   } catch (_) { /* noop */ }
@@ -1256,7 +1268,32 @@ class RdpNativeBridgeService extends EventEmitter {
           const keptClientFrames = [];
           const wasmInjections = [];
           let clientFramesChanged = false;
-          for (const clientFrame of clientFrames) {
+          for (let clientFrame of clientFrames) {
+            // Confirm Active del WASM: sondeo de capacidades (debug) y, con
+            // NODETERM_RDP_FORCE32, pedir 32bpp en el Bitmap Capability.
+            if ((isDebug || force32) && clientFrame[0] === 0x03 && clientFrame.length > 100) {
+              try {
+                const clientCaps = describeCapabilities(clientFrame);
+                if (clientCaps && clientCaps.kind === 'CONFIRM') {
+                  if (isDebug) console.log(formatCapabilities(clientCaps));
+                  if (force32 && !channelFilter.isBastion) {
+                    const hasRfx = clientCaps.codecs.some((c) => c.name === 'RemoteFX' || c.name === 'ImageRemoteFX');
+                    if (clientCaps.surfaceCmds != null && hasRfx) {
+                      const capPatch = patchConfirmActiveBitmapBpp(clientFrame, 32);
+                      if (capPatch.patched) {
+                        clientFrame = capPatch.buf;
+                        clientFramesChanged = true;
+                        console.log(`[Bridge] FORCE32: Confirm Active bpp ${capPatch.before} -> 32`);
+                      }
+                    } else {
+                      console.log('[Bridge] FORCE32: el WASM no anuncia RemoteFX/SurfaceCommands; Confirm Active sin cambios');
+                    }
+                  }
+                }
+              } catch (capErr) {
+                if (isDebug) console.warn('[Bridge] Error sondeando capacidades:', capErr.message);
+              }
+            }
             const clientDisc = describeDisconnectPdu(clientFrame);
             if (clientDisc) {
               lastDisconnectDesc = preferDisconnectDesc(lastDisconnectDesc, clientDisc);
@@ -1336,7 +1373,8 @@ class RdpNativeBridgeService extends EventEmitter {
           }
 
           const prepared = prepareMcsConnectInitial(payload, savedSelectedProtocol, {
-            injectChannels: resolveInjectedChannels(session)
+            injectChannels: resolveInjectedChannels(session),
+            force32
           });
           forward = prepared.buf;
           const sentChs = findClientNetworkChannels(prepared.buf);
@@ -1355,6 +1393,15 @@ class RdpNativeBridgeService extends EventEmitter {
             channelFilter.clientChannelNames = sentChs;
           }
         } else if (framesToRdp <= 10 && forward) {
+          // Directo con NLA: el primer frame post-TLS es CredSSP y el Connect Initial llega
+          // despues, asi que el pedido de 32bpp (NODETERM_RDP_FORCE32) se aplica aqui.
+          if (force32 && !channelFilter.isBastion && isMcsConnectInitial(forward)) {
+            const want32 = patchClientCoreWant32bpp(forward);
+            if (want32.patched) {
+              forward = want32.buf;
+              console.log(`[Bridge] FORCE32 Connect Initial: ${want32.changes.join(', ')}`);
+            }
+          }
           // Solo se aplican los interruptores de rendimiento que ya existen en el formulario
           // (fondo, arrastre de ventana completa, animaciones de menu, composicion).
           // Temas y suavizado de fuentes se dejan como los envia IronRDP: sus defaults del

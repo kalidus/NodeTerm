@@ -188,19 +188,31 @@ describe('WsBackpressureController bastion latest-wins', () => {
     assert.equal(isFastPathBitmapFrame(null), false);
   });
 
-  it('en path directo no shed; puede pedir pause TLS', () => {
+  it('en path directo shed solo por cola alta, y no pausa TLS por debajo de 2 MB', () => {
     const bp = new WsBackpressureController({
       bastion: false,
       highWater: 1000,
-      lowWater: 100,
-      pauseTlsMark: 2000
+      lowWater: 100
     });
-    const a = buildSolidBitmapPdu(0, 0, 4, 4);
-    assert.equal(bp.shouldShedBitmap(50_000, a), false);
-    assert.equal(bp.shouldPauseTls(1500), false);
-    assert.equal(bp.shouldPauseTls(3000), true);
+    const a = buildSolidBitmapPdu(0, 0, 8, 8, 0x1111);
+    const uncovered = buildSolidBitmapPdu(100, 100, 8, 8, 0x2222);
+    const coversA = buildSolidBitmapPdu(0, 0, 8, 8, 0x3333);
+    // Cola baja y presupuesto RLE gastado: en directo no hay rewrite, no se descarta.
+    bp.noteRewriteSpent(100);
+    assert.equal(bp.shouldShedBitmap(50, a), false);
+    // Cola alta: se encola, se tira solo el rect cubierto y se conserva el otro.
+    assert.equal(bp.shouldShedBitmap(5000, a), true);
+    assert.equal(bp.shouldShedBitmap(5000, uncovered), true);
+    assert.equal(bp.shouldShedBitmap(5000, coversA), true);
+    assert.deepEqual(
+      bp.takePendingIfDrained(0, { force: true, ignoreBudget: true }),
+      [uncovered, coversA]
+    );
+    assert.equal(bp.shouldPauseTls(512 * 1024), false);
+    assert.equal(bp.shouldPauseTls(2 * 1024 * 1024), false);
+    assert.equal(bp.shouldPauseTls(2 * 1024 * 1024 + 1), true);
     bp.markTlsPaused(true);
-    assert.equal(bp.shouldPauseTls(3000), false);
+    assert.equal(bp.shouldPauseTls(3 * 1024 * 1024), false);
     assert.equal(bp.shouldResumeTls(50), true);
   });
 });

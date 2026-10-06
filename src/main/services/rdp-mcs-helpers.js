@@ -438,6 +438,51 @@ function hardenClientCoreData(buf, options = {}) {
   };
 }
 
+// Offsets dentro de los DATOS del bloque CS_CORE (tras type+length de 4 bytes).
+const CS_CORE_POST_BETA2_OFFSET = 128;
+const CS_CORE_HIGH_COLOR_DEPTH_OFFSET = 136;
+const CS_CORE_EARLY_CAPS_OFFSET = 140;
+const CS_CORE_MIN_LEN_COLOR_FIELDS = 4 + 142;
+const RNS_UD_COLOR_8BPP_POST_BETA2 = 0xca01;
+const RNS_UD_CS_WANT_32BPP_SESSION = 0x0002;
+const HIGH_COLOR_24BPP = 0x0018;
+
+/** ¿Es un MCS Connect Initial completo (TPKT + X.224 data + BER 7f 65)? */
+function isMcsConnectInitial(buf) {
+  return Buffer.isBuffer(buf) && buf.length > 12 && buf[0] === 0x03
+    && buf[4] === 0x02 && buf[5] === 0xf0 && buf[6] === 0x80
+    && buf[7] === 0x7f && buf[8] === 0x65;
+}
+
+/**
+ * Pide una sesion de 32bpp (experimento NODETERM_RDP_FORCE32): activa WANT_32BPP_SESSION en
+ * earlyCapabilityFlags y deja highColorDepth en 24, como exige MS-RDPBCGR 2.2.1.3.2 (el campo
+ * highColorDepth no admite 32). No cambia longitudes. Solo se llama con el flag activo.
+ */
+function patchClientCoreWant32bpp(buf) {
+  const found = findClientCoreData(buf);
+  if (!found || found.length < CS_CORE_MIN_LEN_COLOR_FIELDS) {
+    return { buf, patched: false, changes: [], reason: 'cs-core-not-found' };
+  }
+  const d = found.offset + 4;
+  if (buf.readUInt16LE(d + CS_CORE_POST_BETA2_OFFSET) !== RNS_UD_COLOR_8BPP_POST_BETA2) {
+    return { buf, patched: false, changes: [], reason: 'post-beta2-not-8bpp' };
+  }
+  const high = buf.readUInt16LE(d + CS_CORE_HIGH_COLOR_DEPTH_OFFSET);
+  const early = buf.readUInt16LE(d + CS_CORE_EARLY_CAPS_OFFSET);
+  const changes = [];
+  const out = Buffer.from(buf);
+  if ((early & RNS_UD_CS_WANT_32BPP_SESSION) === 0) {
+    out.writeUInt16LE((early | RNS_UD_CS_WANT_32BPP_SESSION) & 0xffff, d + CS_CORE_EARLY_CAPS_OFFSET);
+    changes.push(`earlyCapabilityFlags 0x${early.toString(16)}->0x${((early | RNS_UD_CS_WANT_32BPP_SESSION) & 0xffff).toString(16)}`);
+  }
+  if (high !== HIGH_COLOR_24BPP) {
+    out.writeUInt16LE(HIGH_COLOR_24BPP, d + CS_CORE_HIGH_COLOR_DEPTH_OFFSET);
+    changes.push(`highColorDepth 0x${high.toString(16)}->0x18`);
+  }
+  return { buf: changes.length ? out : buf, patched: changes.length > 0, changes, reason: changes.length ? 'want32' : 'already' };
+}
+
 /**
  * Wallix redemption (rdpproxy) valida estrictamente:
  *   connectPDU_length == userData_length + 14
@@ -540,6 +585,14 @@ function prepareMcsConnectInitial(buf, selectedProtocol, options = {}) {
   if (hard.patched) {
     current = hard.buf;
     notes.push(...hard.changes);
+  }
+
+  if (options.force32 === true) {
+    const want32 = patchClientCoreWant32bpp(current);
+    if (want32.patched) {
+      current = want32.buf;
+      notes.push(`FORCE32 ${want32.changes.join(', ')}`);
+    }
   }
 
   const gccLen = fixWallixGccConnectPduLength(current);
@@ -713,6 +766,8 @@ module.exports = {
   injectClientNetworkChannels,
   ensureMcsServerSelectedProtocol,
   hardenClientCoreData,
+  isMcsConnectInitial,
+  patchClientCoreWant32bpp,
   fixWallixGccConnectPduLength,
   prepareMcsConnectInitial,
   patchInfoPacket,

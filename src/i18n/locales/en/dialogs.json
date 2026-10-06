@@ -233,6 +233,8 @@
       "fontSmoothing": "Smooths font rendering on the remote desktop.",
       "theming": "Allows remote system visual themes in the session.",
       "fullWindowDrag": "Previews windows while dragging them on the remote desktop.",
+      "fullWindowDragWebRdp": "Shows window contents while dragging. It greatly increases traffic and lag; keeping it off makes window movement smoother. Behind a bastion it depends on the Wallix policy.",
+      "ironrdpAdvancedNote": "Font Smoothing and Theming do not apply to the IronRDP client and are hidden (saved values are kept). Wallpaper, Full Window Drag, menu animations and Desktop Composition are sent to the server.",
       "menuAnimations": "Shows menu animations on the remote desktop.",
       "glyphCaching": "Caches glyphs to speed up remote text drawing.",
       "offscreenCaching": "Caches off-screen surfaces to reduce redraws.",

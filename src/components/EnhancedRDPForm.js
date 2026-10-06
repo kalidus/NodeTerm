@@ -740,22 +740,26 @@ export function EnhancedRDPForm({
                 inputId={`${p}-guac-composition`}
                 helpText={t('rdp.help.desktopComposition')}
               />
-              <TerminalSwitchOption
-                iconClass="pi-star"
-                labelText={t('rdp.advanced.fontSmoothing')}
-                checked={formData.guacEnableFontSmoothing}
-                onCheckedChange={(v) => handleInputChange('guacEnableFontSmoothing', v)}
-                inputId={`${p}-guac-font`}
-                helpText={t('rdp.help.fontSmoothing')}
-              />
-              <TerminalSwitchOption
-                iconClass="pi-tags"
-                labelText={t('rdp.advanced.theming')}
-                checked={formData.guacEnableTheming}
-                onCheckedChange={(v) => handleInputChange('guacEnableTheming', v)}
-                inputId={`${p}-guac-theme`}
-                helpText={t('rdp.help.theming')}
-              />
+              {!isWebRdp ? (
+                <TerminalSwitchOption
+                  iconClass="pi-star"
+                  labelText={t('rdp.advanced.fontSmoothing')}
+                  checked={formData.guacEnableFontSmoothing}
+                  onCheckedChange={(v) => handleInputChange('guacEnableFontSmoothing', v)}
+                  inputId={`${p}-guac-font`}
+                  helpText={t('rdp.help.fontSmoothing')}
+                />
+              ) : null}
+              {!isWebRdp ? (
+                <TerminalSwitchOption
+                  iconClass="pi-tags"
+                  labelText={t('rdp.advanced.theming')}
+                  checked={formData.guacEnableTheming}
+                  onCheckedChange={(v) => handleInputChange('guacEnableTheming', v)}
+                  inputId={`${p}-guac-theme`}
+                  helpText={t('rdp.help.theming')}
+                />
+              ) : null}
             </TerminalOptionSection>
             <TerminalOptionSection title={t('rdp.advanced.interface')}>
               <TerminalSwitchOption
@@ -764,7 +768,7 @@ export function EnhancedRDPForm({
                 checked={formData.guacEnableFullWindowDrag}
                 onCheckedChange={(v) => handleInputChange('guacEnableFullWindowDrag', v)}
                 inputId={`${p}-guac-drag`}
-                helpText={t('rdp.help.fullWindowDrag')}
+                helpText={isWebRdp ? t('rdp.help.fullWindowDragWebRdp') : t('rdp.help.fullWindowDrag')}
               />
               <TerminalSwitchOption
                 iconClass="pi-bars"
