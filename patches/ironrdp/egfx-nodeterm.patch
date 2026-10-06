@@ -924,7 +924,7 @@ index 30ba5be..65a5a4d 100644
      /// the cached `ctx` stays valid.
      pub(crate) fn resize(&mut self, width: NonZeroU32, height: NonZeroU32) {
 diff --git a/crates/ironrdp-web/src/session.rs b/crates/ironrdp-web/src/session.rs
-index a47bd3d..49c11aa 100644
+index a47bd3d..df42e8d 100644
 --- a/crates/ironrdp-web/src/session.rs
 +++ b/crates/ironrdp-web/src/session.rs
 @@ -31,11 +31,13 @@ use ironrdp::rdpdr::pdu::efs::{DEFAULT_PRINTER_DRIVER_NAME, MICROSOFT_PRINT_TO_P
@@ -1055,7 +1055,17 @@ index a47bd3d..49c11aa 100644
          })
          .await?;
  
-@@ -923,6 +990,19 @@ impl iron_remote_desktop::Session for Session {
+@@ -705,6 +772,9 @@ impl iron_remote_desktop::Session for Session {
+ 
+         // Timer interval for driving clipboard lock timeouts (5 second interval)
+         let mut cleanup_interval = IntervalStream::new(5_000).fuse();
++        // A burst of EGFX cache PDUs otherwise runs the select loop without returning
++        // to the browser, so mouse input waits until the socket drains.
++        let mut frames_since_yield: u8 = 0;
+ 
+         let disconnect_reason = 'outer: loop {
+             let outputs = select! {
+@@ -923,6 +993,19 @@ impl iron_remote_desktop::Session for Session {
                              .context("Send frame to writer task")?;
                      }
                      ActiveStageOutput::GraphicsUpdate(region) => {
@@ -1075,7 +1085,20 @@ index a47bd3d..49c11aa 100644
                          let region = extract_partial_image(&image, region, &mut draw_buffer);
                          gui.draw(draw_buffer.filled_mut(), region)
                              .context("draw updated region")?;
-@@ -1584,6 +1664,8 @@ struct ConnectParams {
+@@ -1114,6 +1197,12 @@ impl iron_remote_desktop::Session for Session {
+                     ActiveStageOutput::Terminate(reason) => break 'outer reason,
+                 }
+             }
++
++            frames_since_yield = frames_since_yield.saturating_add(1);
++            if frames_since_yield >= 4 {
++                frames_since_yield = 0;
++                gloo_timers::future::TimeoutFuture::new(0).await;
++            }
+         };
+ 
+         info!(%disconnect_reason, "RDP session terminated");
+@@ -1584,6 +1673,8 @@ struct ConnectParams {
      /// `computer_name` when constructing the `Rdpdr` processor.
      computer_name: String,
      use_display_control: bool,
@@ -1084,7 +1107,7 @@ index a47bd3d..49c11aa 100644
  }
  
  fn default_printer_driver_name() -> String {
-@@ -1634,6 +1716,8 @@ async fn connect(
+@@ -1634,6 +1725,8 @@ async fn connect(
          printer_driver_name,
          computer_name,
          use_display_control,
@@ -1093,7 +1116,7 @@ index a47bd3d..49c11aa 100644
      }: ConnectParams,
  ) -> Result<(connector::ConnectionResult, WebSocket), IronError> {
      let mut framed = ironrdp_futures::LocalFuturesFramed::new(ws);
-@@ -1661,10 +1745,125 @@ async fn connect(
+@@ -1661,10 +1754,125 @@ async fn connect(
          );
      }
  

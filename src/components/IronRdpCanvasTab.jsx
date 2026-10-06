@@ -1734,7 +1734,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     updateCanvasRect();
 
     const getCanvasPos = (e) => {
-      if (!cachedRect) updateCanvasRect();
+      // El CSS y el framebuffer cambian al conectar y en cada DisplayControl.
+      // Una caché tomada al montar manda el clic a otro píxel hasta el siguiente resize.
+      updateCanvasRect();
       const rawX = Math.floor((e.clientX - cachedRect.left) * cachedScaleX);
       const rawY = Math.floor((e.clientY - cachedRect.top) * cachedScaleY);
       return {
@@ -2023,7 +2025,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     if (!containerRef.current || connectionState !== 'connected' || !isAutoResize) return;
 
     let resizeTimer = null;
-    const debounceMs = readResizeSettingMs('rdp_resize_debounce_ms', 1200, 200);
+    const debounceMs = readResizeSettingMs('rdp_resize_debounce_ms', 400, 200);
     const handleResize = () => {
       if (resizeTimer) clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
