@@ -15,7 +15,7 @@ const { WebSocketServer } = require('ws');
 const fs = require('fs');
 const path = require('path');
 const { parseX224ConnectionConfirm, protocolName, describeRdpPdu, describeDisconnectPdu, preferDisconnectDesc, splitTpktFrames, RdpStreamDeframer, RdpFrameSplitter } = require('./rdp-protocol-helpers');
-const { prepareMcsConnectInitial, findClientCoreData, findClientNetworkChannels, patchInfoPacket, patchInfoAutoLogon, isMcsConnectInitial, patchClientCoreWant32bpp } = require('./rdp-mcs-helpers');
+const { prepareMcsConnectInitial, findClientCoreData, findClientNetworkChannels, patchInfoPacket, patchInfoAutoLogon, isMcsConnectInitial, patchClientCoreWant32bpp, describeClientEarlyCaps, formatClientEarlyCaps } = require('./rdp-mcs-helpers');
 const { patchFontSequenceFlags } = require('./rdp-font-helpers');
 const { describeCapabilities, formatCapabilities, patchConfirmActiveBitmapBpp } = require('./rdp-caps-helpers');
 const { fixWallixBitmapStrideCrop, FastPathBitmapReassembler } = require('./rdp-fastpath-helpers');
@@ -52,7 +52,8 @@ const {
   maybePromoteSelectorAppCliprdr,
   retryConfirmAppCliprdrWrite,
   buildAppProbeCliprdrWrites,
-  remapClientDrdynvcFrame
+  remapClientDrdynvcFrame,
+  formatDrdynvcForwardDebug
 } = require('./rdp-channel-filter');
 const {
   noteCliprdrHealth,
@@ -769,6 +770,8 @@ class RdpNativeBridgeService extends EventEmitter {
                 const stridePatch = normalizeBitmaps
                   ? fixWallixBitmapStrideCrop(ready)
                   : { patchedCount: 0 };
+                // SURFACE_CMDS / EGFX: fixWallixBitmapStrideCrop solo reescribe BITMAP RLE;
+                // el resto (surface/GFX) se reenvia sin tocar.
                 if (normalizeBitmaps) {
                   const ms = Number(process.hrtime.bigint() - t0) / 1e6;
                   backpressure.noteRewriteSpent(ms);
@@ -1160,6 +1163,21 @@ class RdpNativeBridgeService extends EventEmitter {
                     continue;
                   }
 
+                  if (processed.dvcForward && isDebug) {
+                    channelFilter.dvcForwardDebugCount = (channelFilter.dvcForwardDebugCount || 0) + 1;
+                    if (channelFilter.dvcForwardDebugCount <= 24) {
+                      const parsedFwd = parseMcsSendData(frame);
+                      const dbg = parsedFwd
+                        ? formatDrdynvcForwardDebug(parsedFwd.userData)
+                        : null;
+                      console.log(
+                        `[Bridge] DynVC->WASM #${channelFilter.dvcForwardDebugCount}` +
+                        ` ch=${processed.channelId} ${processed.note || ''}` +
+                        (dbg ? ` | ${dbg}` : '')
+                      );
+                    }
+                  }
+
                   // FastPath y el resto de frames sueltos no se listan: saturan el log y tapan cliprdr.
                   if (!processed.isCliprdr && !isFastPathNoise(pduDesc) && isDebug) {
                     console.log(`[Bridge] RDP->WASM frame#${framesFromRdp}: ${frame.length}B | ${pduDesc}`);
@@ -1432,6 +1450,8 @@ class RdpNativeBridgeService extends EventEmitter {
           const core = findClientCoreData(payload);
           if (isDebug) {
             console.log(`[Bridge] Primer frame WASM->RDP: ${payload.length} bytes; CS_CORE=${core ? `len=${core.length} serverSelectedProtocol=0x${(core.serverSelectedProtocol ?? -1).toString(16)}` : 'no'}`);
+            const earlyCaps = describeClientEarlyCaps(payload);
+            if (earlyCaps) console.log(formatClientEarlyCaps(earlyCaps));
             try {
               const dumpPath = path.join(__dirname, '../../../testing/rdp/last-mcs-connect-initial.hex');
               fs.mkdirSync(path.dirname(dumpPath), { recursive: true });

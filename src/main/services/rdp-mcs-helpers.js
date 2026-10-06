@@ -438,14 +438,42 @@ function hardenClientCoreData(buf, options = {}) {
   };
 }
 
-// Offsets dentro de los DATOS del bloque CS_CORE (tras type+length de 4 bytes).
 const CS_CORE_POST_BETA2_OFFSET = 128;
 const CS_CORE_HIGH_COLOR_DEPTH_OFFSET = 136;
 const CS_CORE_EARLY_CAPS_OFFSET = 140;
 const CS_CORE_MIN_LEN_COLOR_FIELDS = 4 + 142;
 const RNS_UD_COLOR_8BPP_POST_BETA2 = 0xca01;
 const RNS_UD_CS_WANT_32BPP_SESSION = 0x0002;
+/** MS-RDPBCGR 2.2.1.3.2 — cliente anuncia EGFX / DynVC Graphics */
+const RNS_UD_CS_SUPPORT_DYNVC_GFX_PROTOCOL = 0x0100;
 const HIGH_COLOR_24BPP = 0x0018;
+
+/**
+ * Lee earlyCapabilityFlags del CS_CORE (MCS Connect Initial).
+ * @returns {{ earlyCapabilityFlags: number, supportDynVcGfx: boolean, highColorDepth: number|null }|null}
+ */
+function describeClientEarlyCaps(buf) {
+  const found = findClientCoreData(buf);
+  if (!found || found.length < CS_CORE_MIN_LEN_COLOR_FIELDS) return null;
+  const d = found.offset + 4;
+  if (buf.readUInt16LE(d + CS_CORE_POST_BETA2_OFFSET) !== RNS_UD_COLOR_8BPP_POST_BETA2) {
+    return null;
+  }
+  const early = buf.readUInt16LE(d + CS_CORE_EARLY_CAPS_OFFSET);
+  const high = buf.readUInt16LE(d + CS_CORE_HIGH_COLOR_DEPTH_OFFSET);
+  return {
+    earlyCapabilityFlags: early,
+    supportDynVcGfx: (early & RNS_UD_CS_SUPPORT_DYNVC_GFX_PROTOCOL) !== 0,
+    highColorDepth: high
+  };
+}
+
+function formatClientEarlyCaps(info) {
+  if (!info) return '';
+  return `[Bridge] early caps cliente: flags=0x${info.earlyCapabilityFlags.toString(16)}`
+    + ` EGFX=${info.supportDynVcGfx ? 'si' : 'no'}`
+    + ` highColor=0x${(info.highColorDepth ?? 0).toString(16)}`;
+}
 
 /** ¿Es un MCS Connect Initial completo (TPKT + X.224 data + BER 7f 65)? */
 function isMcsConnectInitial(buf) {
@@ -768,6 +796,9 @@ module.exports = {
   hardenClientCoreData,
   isMcsConnectInitial,
   patchClientCoreWant32bpp,
+  describeClientEarlyCaps,
+  formatClientEarlyCaps,
+  RNS_UD_CS_SUPPORT_DYNVC_GFX_PROTOCOL,
   fixWallixGccConnectPduLength,
   prepareMcsConnectInitial,
   patchInfoPacket,

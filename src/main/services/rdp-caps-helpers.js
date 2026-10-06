@@ -3,8 +3,9 @@
  * Confirm Active (cliente), MS-RDPBCGR 2.2.1.13.1 / 2.2.1.13.2 / 2.2.7.
  *
  * Sirve para saber, con datos, si el cliente WASM anuncia RemoteFX / Surface
- * Commands / 32bpp y que ofrece el servidor. No modifica nada salvo
- * `patchConfirmActiveBitmapBpp`, que solo se usa detras de NODETERM_RDP_FORCE32.
+ * Commands / 32bpp / EGFX (earlyCapabilityFlags) y que ofrece el servidor.
+ * No modifica nada salvo `patchConfirmActiveBitmapBpp`, que solo se usa detras
+ * de NODETERM_RDP_FORCE32.
  */
 
 'use strict';
@@ -16,6 +17,9 @@ const CAPSET_BITMAP = 0x0002;
 const CAPSET_LARGE_POINTER = 0x001b;
 const CAPSET_SURFACE_COMMANDS = 0x001c;
 const CAPSET_BITMAP_CODECS = 0x001d;
+
+/** RNS_UD_CS_SUPPORT_DYNVC_GFX_PROTOCOL — MS-RDPBCGR 2.2.1.3.2 */
+const RNS_UD_CS_SUPPORT_DYNVC_GFX_PROTOCOL = 0x0100;
 
 const CAPSET_NAMES = {
   0x01: 'General', 0x02: 'Bitmap', 0x03: 'Order', 0x04: 'BitmapCache', 0x05: 'Control',
@@ -108,7 +112,7 @@ function listCapabilitySets(buf, loc) {
  * @returns {null | {
  *   kind: 'DEMAND'|'CONFIRM', bpp: number|null, desktop: string|null,
  *   surfaceCmds: number|null, largePointer: boolean, codecs: Array<{name:string,id:number}>,
- *   setNames: string[]
+ *   setNames: string[], likelyEgfxSurface: boolean
  * }}
  */
 function describeCapabilities(buf) {
@@ -122,7 +126,8 @@ function describeCapabilities(buf) {
     surfaceCmds: null,
     largePointer: false,
     codecs: [],
-    setNames: sets.map((s) => CAPSET_NAMES[s.type] || `0x${s.type.toString(16)}`)
+    setNames: sets.map((s) => CAPSET_NAMES[s.type] || `0x${s.type.toString(16)}`),
+    likelyEgfxSurface: false
   };
 
   for (const set of sets) {
@@ -148,6 +153,10 @@ function describeCapabilities(buf) {
       }
     }
   }
+  // SurfaceCommands + RemoteFX en Confirm Active sugiere camino SURFACE_CMDS;
+  // EGFX real se confirma con earlyCapabilityFlags SUPPORT_DYNVC_GFX + canal Graphics.
+  info.likelyEgfxSurface = info.surfaceCmds != null && info.surfaceCmds !== 0
+    && info.codecs.some((c) => c.name === 'RemoteFX' || c.name === 'ImageRemoteFX');
   return info;
 }
 
@@ -161,6 +170,7 @@ function formatCapabilities(info) {
   return `[Bridge] caps ${who}: bpp=${info.bpp == null ? '?' : info.bpp}`
     + ` desktop=${info.desktop || '?'} codecs=[${codecs}] surfaceCmds=${surf}`
     + ` largePointer=${info.largePointer ? 'si' : 'no'}`
+    + ` egfxHint=${info.likelyEgfxSurface ? 'si' : 'no'}`
     + ` sets=[${info.setNames.join(',')}]`;
 }
 
@@ -186,6 +196,7 @@ module.exports = {
   CAPSET_BITMAP,
   CAPSET_SURFACE_COMMANDS,
   CAPSET_BITMAP_CODECS,
+  RNS_UD_CS_SUPPORT_DYNVC_GFX_PROTOCOL,
   locateCapabilities,
   listCapabilitySets,
   describeCapabilities,

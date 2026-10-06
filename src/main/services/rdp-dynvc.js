@@ -6,20 +6,25 @@
  * o STATUS_UNSUCCESSFUL (0xC0000001) a las solicitudes DVC_CREATE_REQ de canales no soportados
  * (AUDIO_PLAYBACK_DVC, RDCamera, RDS::Input, Geometry, etc.).
  *
- * DisplayControl se reenvia al WASM cuando la sesion declaro drdynvc (display_control).
- * El resto sigue rechazandose en 0 ms para evitar timeouts de 20-30 s con Wallix/RDS.
+ * DisplayControl y EGFX (Microsoft::Windows::RDS::Graphics) se reenvian al WASM
+ * cuando la sesion declaro drdynvc. El resto sigue rechazandose en 0 ms para
+ * evitar timeouts de 20-30 s con Wallix/RDS.
  */
 
 'use strict';
 
 const { isChannelPduHeader, buildMcsSendDataRequest } = require('./rdp-autodetect');
 
-const DVC_CMD_CREATE_REQ = 0x01;
-const DVC_CMD_CREATE_RSP = 0x02;
-const DVC_CMD_DATA_FIRST = 0x03;
-const DVC_CMD_DATA = 0x04;
+// MS-RDPEDYC 2.2: Cmd nibble (Create REQ/RSP comparten 0x01).
+const DVC_CMD_CREATE = 0x01;
+const DVC_CMD_CREATE_REQ = DVC_CMD_CREATE;
+const DVC_CMD_CREATE_RSP = DVC_CMD_CREATE;
+const DVC_CMD_DATA_FIRST = 0x02;
+const DVC_CMD_DATA = 0x03;
+const DVC_CMD_CLOSE = 0x04;
 const DVC_CMD_CAPS = 0x05;
-const DVC_CMD_CLOSE = 0x06;
+const DVC_CMD_DATA_FIRST_COMPRESSED = 0x06;
+const DVC_CMD_DATA_COMPRESSED = 0x07;
 
 const STATUS_SUCCESS = 0x00000000;
 const STATUS_NOT_SUPPORTED = 0xc00000bb;
@@ -32,13 +37,25 @@ const CHANNEL_FLAG_LAST = 0x02;
 const activeDvcChannels = new Map();
 
 const DISPLAYCONTROL_NAME = 'DISPLAYCONTROL';
+const GRAPHICS_CHANNEL_NAME = 'MICROSOFT::WINDOWS::RDS::GRAPHICS';
 
 function isDisplayControlName(name) {
   return String(name || '').toUpperCase().includes(DISPLAYCONTROL_NAME);
 }
 
+function isGraphicsChannelName(name) {
+  const upper = String(name || '').toUpperCase();
+  return upper === GRAPHICS_CHANNEL_NAME || upper.endsWith('::GRAPHICS') || upper.includes('RDS::GRAPHICS');
+}
+
 function isEchoName(name) {
   return String(name || '').toUpperCase().includes('ECHO');
+}
+
+function shouldForwardDvcChannel(channelName, options) {
+  if (options.allowGraphics === true && isGraphicsChannelName(channelName)) return true;
+  if (options.allowDisplayControl === true && isDisplayControlName(channelName)) return true;
+  return false;
 }
 
 function dvcForwardResult(note) {
@@ -78,8 +95,9 @@ function parseDvcPdu(userData) {
   const sp = (headerByte >> 2) & 0x03;
   const cbId = headerByte & 0x03;
 
-  if (cmd === DVC_CMD_CREATE_REQ) {
-    // DVC_CREATE_REQ: cbId determina longitud del ChannelId (0=1B, 1=2B, 2=4B)
+  if (cmd === DVC_CMD_CREATE) {
+    // CREATE_REQ (servidor→cliente): ChannelId + ChannelName\0
+    // CREATE_RSP (cliente→servidor): ChannelId + CreationStatus u32
     let idLen = 1;
     if (cbId === 1) idLen = 2;
     else if (cbId === 2) idLen = 4;
@@ -95,9 +113,23 @@ function parseDvcPdu(userData) {
       channelId = dvcPayload.readUInt32LE(1);
     }
 
-    const rawName = dvcPayload.subarray(1 + idLen);
-    const nullIdx = rawName.indexOf(0);
-    const channelName = (nullIdx >= 0 ? rawName.subarray(0, nullIdx) : rawName).toString('ascii');
+    const rest = dvcPayload.subarray(1 + idLen);
+    // Exactamente 4 bytes restantes ⇒ CreationStatus (CREATE_RSP).
+    if (rest.length === 4) {
+      return {
+        type: 'create-rsp',
+        cmd,
+        cbId,
+        idLen,
+        sp,
+        channelId,
+        status: rest.readUInt32LE(0),
+        dvcPayload
+      };
+    }
+
+    const nullIdx = rest.indexOf(0);
+    const channelName = (nullIdx >= 0 ? rest.subarray(0, nullIdx) : rest).toString('ascii');
 
     return {
       type: 'create-req',
@@ -111,7 +143,12 @@ function parseDvcPdu(userData) {
     };
   }
 
-  if (cmd === DVC_CMD_DATA || cmd === DVC_CMD_DATA_FIRST) {
+  if (
+    cmd === DVC_CMD_DATA
+    || cmd === DVC_CMD_DATA_FIRST
+    || cmd === DVC_CMD_DATA_COMPRESSED
+    || cmd === DVC_CMD_DATA_FIRST_COMPRESSED
+  ) {
     let idLen = 1;
     if (cbId === 1) idLen = 2;
     else if (cbId === 2) idLen = 4;
@@ -127,13 +164,27 @@ function parseDvcPdu(userData) {
       channelId = dvcPayload.readUInt32LE(1);
     }
 
-    const data = dvcPayload.subarray(1 + idLen);
+    let offset = 1 + idLen;
+    let totalLength = null;
+    // DATA_FIRST / DATA_FIRST_COMPRESSED: Sp indica tamaño del campo Length.
+    if (cmd === DVC_CMD_DATA_FIRST || cmd === DVC_CMD_DATA_FIRST_COMPRESSED) {
+      const lenSize = sp === 1 ? 2 : (sp === 2 ? 4 : 1);
+      if (dvcPayload.length < offset + lenSize) return null;
+      if (lenSize === 1) totalLength = dvcPayload.readUInt8(offset);
+      else if (lenSize === 2) totalLength = dvcPayload.readUInt16LE(offset);
+      else totalLength = dvcPayload.readUInt32LE(offset);
+      offset += lenSize;
+    }
+
+    const data = dvcPayload.subarray(offset);
     return {
       type: 'data',
       cmd,
       cbId,
       idLen,
+      sp,
       channelId,
+      totalLength,
       data,
       dvcPayload
     };
@@ -209,7 +260,7 @@ function buildDvcCreateResponse(cbId, channelId, status = STATUS_SUCCESS) {
   const dvcLen = 1 + idLen + 4;
   const dvcBuf = Buffer.alloc(dvcLen);
 
-  // Header byte: Cmd = DVC_CMD_CREATE_RSP (0x02), Sp = 0, cbId
+  // Header: Cmd = 0x01 (Create), Sp = 0, cbId — igual que CREATE_REQ (MS-RDPEDYC 2.2.2.2)
   dvcBuf[0] = (DVC_CMD_CREATE_RSP << 4) | (cbId & 0x03);
 
   if (idLen === 1) {
@@ -312,7 +363,7 @@ function buildDvcCapabilitiesResponse(version = 1, sp = 0, maxDataSize = 1600, f
  * @param {number} mcsChannelId
  * @param {number} initiator
  * @param {Buffer} userData
- * @param {{ allowDisplayControl?: boolean }} [options]
+ * @param {{ allowDisplayControl?: boolean, allowGraphics?: boolean }} [options]
  * @returns {{ handled: boolean, forward: boolean, replies: Buffer[], note: string|null }}
  */
 function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
@@ -320,8 +371,6 @@ function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
   if (!parsed) {
     return { handled: false, forward: false, replies: [], note: null };
   }
-
-  const allowDisplayControl = options.allowDisplayControl === true;
 
   // IronRDP en esta sesion envia initiator 0 (se ve en cliprdr y en el canal IO). Sustituirlo
   // por 1002 hacia que Wallix tirara las respuestas DVC, el servidor reintentaba Geometry/Audio
@@ -332,7 +381,7 @@ function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
     const channelName = parsed.channelName || '';
     activeDvcChannels.set(parsed.channelId, channelName);
 
-    if (allowDisplayControl && isDisplayControlName(channelName)) {
+    if (shouldForwardDvcChannel(channelName, options)) {
       return dvcForwardResult(`dvc-forward ch=${parsed.channelId} "${channelName}"`);
     }
 
@@ -349,8 +398,21 @@ function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
     );
   }
 
+  // CREATE_RSP del servidor es inusual; no lo absorbemos como create-req.
+  if (parsed.type === 'create-rsp') {
+    return {
+      handled: false,
+      forward: false,
+      replies: [],
+      note: `dvc-create-rsp ch=${parsed.channelId} status=0x${(parsed.status >>> 0).toString(16)}`
+    };
+  }
+
   if (parsed.type === 'data') {
     const chName = activeDvcChannels.get(parsed.channelId) || '';
+    const kind = parsed.cmd === DVC_CMD_DATA_FIRST || parsed.cmd === DVC_CMD_DATA_FIRST_COMPRESSED
+      ? 'data-first'
+      : 'data';
     if (isEchoName(chName)) {
       const respPdu = buildDvcDataResponse(parsed.cbId, parsed.channelId, parsed.data);
       const mcsPacket = buildMcsSendDataRequest(effectiveInitiator, mcsChannelId, respPdu);
@@ -360,19 +422,27 @@ function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
       );
     }
 
-    if (allowDisplayControl && isDisplayControlName(chName)) {
+    if (shouldForwardDvcChannel(chName, options)) {
+      const totalHint = parsed.totalLength != null ? ` total=${parsed.totalLength}` : '';
       return dvcForwardResult(
-        `dvc-forward-data ch=${parsed.channelId} "${chName}" (${parsed.data.length}B)`
+        `dvc-forward-${kind} ch=${parsed.channelId} "${chName}" (${parsed.data.length}B${totalHint})`
       );
     }
 
     return dvcReplyResult(
       [],
-      `dvc-data ch=${parsed.channelId} "${chName}" (${parsed.data.length}B absorbed)`
+      `dvc-${kind} ch=${parsed.channelId} "${chName}" (${parsed.data.length}B absorbed)`
     );
   }
 
   if (parsed.type === 'caps-req') {
+    // Con DisplayControl/EGFX el WASM debe completar el handshake DynVC.
+    // Si el bridge responde CAPS en local, IronRDP ve CREATE antes de CAPS,
+    // emite un segundo CapsResponse y el trafico Graphics queda desencajado
+    // (ZGFX/RDPGFX basura → invalid segmented descriptor / Unknown GFX type).
+    if (options.allowGraphics === true || options.allowDisplayControl === true) {
+      return dvcForwardResult(`dvc-forward-caps v=${parsed.version}`);
+    }
     const respPdu = buildDvcCapabilitiesResponse(parsed.version, parsed.sp, parsed.maxDataSize, parsed.flags);
     const mcsPacket = buildMcsSendDataRequest(effectiveInitiator, mcsChannelId, respPdu);
     return dvcReplyResult([mcsPacket], `dvc-caps v=${parsed.version} (len=${respPdu.length}B)`);
@@ -381,7 +451,7 @@ function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
   if (parsed.type === 'close') {
     const chName = activeDvcChannels.get(parsed.channelId) || '';
     activeDvcChannels.delete(parsed.channelId);
-    if (allowDisplayControl && isDisplayControlName(chName)) {
+    if (shouldForwardDvcChannel(chName, options)) {
       return dvcForwardResult(`dvc-forward-close ch=${parsed.channelId}`);
     }
     return dvcReplyResult([], `dvc-close ch=${parsed.channelId}`);
@@ -398,11 +468,15 @@ function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
 }
 
 module.exports = {
+  DVC_CMD_CREATE,
   DVC_CMD_CREATE_REQ,
   DVC_CMD_CREATE_RSP,
+  DVC_CMD_DATA_FIRST,
   DVC_CMD_DATA,
-  DVC_CMD_CAPS,
   DVC_CMD_CLOSE,
+  DVC_CMD_CAPS,
+  DVC_CMD_DATA_FIRST_COMPRESSED,
+  DVC_CMD_DATA_COMPRESSED,
   STATUS_SUCCESS,
   STATUS_NOT_SUPPORTED,
   STATUS_UNSUCCESSFUL,
@@ -411,5 +485,6 @@ module.exports = {
   buildDvcDataResponse,
   buildDvcCapabilitiesResponse,
   handleDvcRequest,
-  isDisplayControlName
+  isDisplayControlName,
+  isGraphicsChannelName
 };

@@ -33,7 +33,11 @@
     "test:rdp": "node --test testing/rdp/*.test.js",
     "test:vnc": "node --test testing/vnc/*.test.js",
     "test": "npm run test:unit && npm run test:rdp && npm run test:vnc",
-    "probe:rdp": "node testing/rdp/probe-wallix-nego.js"
+    "probe:rdp": "node testing/rdp/probe-wallix-nego.js",
+    "ironrdp:wasm:build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-ironrdp-wasm.ps1",
+    "ironrdp:wasm:vendor": "cross-env NODETERM_RDP_WASM=vendor node scripts/switch-ironrdp-wasm.js",
+    "ironrdp:wasm:npm": "cross-env NODETERM_RDP_WASM=npm node scripts/switch-ironrdp-wasm.js",
+    "ironrdp:wasm:measure": "node scripts/measure-ironrdp-egfx.js"
   },
   "build": {
     "appId": "com.electron.nodeterm",
@@ -291,7 +295,7 @@
   "description": "Aplicación de escritorio multiplataforma con Electron y PrimeReact",
   "dependencies": {
     "@devolutions/iron-remote-desktop": "^0.11.0",
-    "@devolutions/iron-remote-desktop-rdp": "^0.7.0",
+    "@devolutions/iron-remote-desktop-rdp": "file:vendor/iron-remote-desktop-rdp",
     "@fortawesome/fontawesome-svg-core": "^7.2.0",
     "@fortawesome/free-solid-svg-icons": "^7.2.0",
     "@fortawesome/react-fontawesome": "^3.2.0",

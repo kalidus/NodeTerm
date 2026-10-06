@@ -78,6 +78,14 @@ function main() {
 
   const hits = findAll(wasm, NEEDLE);
   if (hits.length === 0) {
+    // Vendor EGFX (master) ya trae enable_server_pointer=true; el patrón del 0.7.0 no aplica.
+    const pkgPath = path.join(path.dirname(JS), 'package.json');
+    let ver = '';
+    try { ver = JSON.parse(fs.readFileSync(pkgPath, 'utf8')).version || ''; } catch (_) { /* noop */ }
+    if (String(ver).includes('egfx') || String(ver).includes('nodeterm')) {
+      log(`Parche de cursores omitido (vendor ${ver} ya habilita server pointer)`);
+      return;
+    }
     throw new Error(
       'No se encontró el patrón enable_server_pointer en el WASM. ' +
         '¿Cambió la versión de @devolutions/iron-remote-desktop-rdp?'

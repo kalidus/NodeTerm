@@ -5,9 +5,20 @@ import { InputTextarea } from 'primereact/inputtextarea';
 import { ProgressBar } from 'primereact/progressbar';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { Toast } from 'primereact/toast';
+import * as IronRdpRdp from '@devolutions/iron-remote-desktop-rdp';
+import { resolveCredsspPolicy } from '../utils/rdpSecurityPolicy';
+import { parseResolutionValue } from '../utils/rdpScreenConfig';
+import { mapTerminationReason } from '../utils/rdpTerminationReasons';
+import { installCanvasDrawProbe } from '../utils/rdpCanvasProbe';
 import {
+  isWebCodecsH264Available,
+  isWebCodecsH264Enabled,
+  createRdpWebCodecsDecoder
+} from '../utils/rdpWebCodecsH264';
+
+const {
   Backend,
-  init as initIronRdp,
+  init: initIronRdp,
   enableCredssp,
   displayControl,
   RdpFileTransferProvider,
@@ -15,12 +26,11 @@ import {
   printerDriverName,
   printerName,
   printJobStreamCallbacks,
-  PrinterDriverName
-} from '@devolutions/iron-remote-desktop-rdp';
-import { resolveCredsspPolicy } from '../utils/rdpSecurityPolicy';
-import { parseResolutionValue } from '../utils/rdpScreenConfig';
-import { mapTerminationReason } from '../utils/rdpTerminationReasons';
-import { installCanvasDrawProbe } from '../utils/rdpCanvasProbe';
+  PrinterDriverName,
+  avc420Webcodecs = null,
+  setAvc420WebcodecsCallback = null,
+  egfx = null
+} = IronRdpRdp;
 import {
   fileTransferNameOf,
   formatTransferSize,
@@ -765,6 +775,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     let currentSession = null;
     let currentFileTransferProvider = null;
     let disposeCanvasProbe = null;
+    let webCodecsDecoder = null;
 
     const isAborted = () => aborted || !isMounted;
 
@@ -1016,6 +1027,49 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
 
         if (supportsDisplayControl) {
           builder.extension(displayControl(true));
+        }
+
+        // EGFX opt-in (pantalla negra en algunos hosts si el stream Graphics llega mal).
+        // localStorage NODETERM_RDP_EGFX=1 para probar ClearCodec/RFX.
+        let egfxEnabled = false;
+        try {
+          egfxEnabled = typeof window !== 'undefined'
+            && (window.__NODETERM_RDP_EGFX__ === true
+              || window.localStorage?.getItem('NODETERM_RDP_EGFX') === '1');
+        } catch (_) { /* noop */ }
+        if (egfxEnabled && typeof egfx === 'function') {
+          builder.extension(egfx(true));
+          if (isRdpDebugEnabled()) console.log('[IronRDP] EGFX opt-in activo');
+        }
+
+        // WebCodecs AVC420 (opt-in): anuncia AVC420 y pinta VideoFrame sobre el canvas.
+        // Sin flag, sin VideoDecoder o con npm 0.7 (sin exports): ClearCodec / RFX en WASM.
+        const useWebCodecs = typeof avc420Webcodecs === 'function'
+          && typeof setAvc420WebcodecsCallback === 'function'
+          && isWebCodecsH264Enabled()
+          && isWebCodecsH264Available()
+          && canvasRef.current;
+        if (useWebCodecs) {
+          try {
+            webCodecsDecoder = createRdpWebCodecsDecoder(canvasRef.current, {
+              onError: (err) => {
+                if (isRdpDebugEnabled()) {
+                  console.warn('[IronRDP WebCodecs]', err?.message || err);
+                }
+              }
+            });
+            setAvc420WebcodecsCallback((data, surfaceId, left, top, right, bottom) => {
+              webCodecsDecoder.push(data, surfaceId, left, top, right, bottom);
+            });
+            builder.extension(avc420Webcodecs(true));
+            if (isRdpDebugEnabled()) console.log('[IronRDP] WebCodecs AVC420 habilitado');
+          } catch (wcErr) {
+            console.warn('[IronRDP] WebCodecs no disponible, fallback ClearCodec/RFX:', wcErr.message);
+            try { setAvc420WebcodecsCallback(null); } catch (_) { /* noop */ }
+            webCodecsDecoder = null;
+          }
+        } else if (typeof setAvc420WebcodecsCallback === 'function') {
+          try { setAvc420WebcodecsCallback(null); } catch (_) { /* noop */ }
         }
 
         // Registrar extensiones para transferencia de archivos / carpeta compartida (RdpFileTransferProvider)
@@ -1392,6 +1446,13 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         try { disposeCanvasProbe(); } catch (_) {}
         disposeCanvasProbe = null;
       }
+      if (webCodecsDecoder) {
+        try { webCodecsDecoder.close(); } catch (_) {}
+        webCodecsDecoder = null;
+      }
+      try {
+        if (typeof setAvc420WebcodecsCallback === 'function') setAvc420WebcodecsCallback(null);
+      } catch (_) { /* noop */ }
       if (currentFileTransferProvider) {
         try { currentFileTransferProvider.dispose(); } catch (_) {}
       }

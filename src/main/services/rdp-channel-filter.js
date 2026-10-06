@@ -427,6 +427,28 @@ function channelPduHint(userData) {
   return `channel-pdu len=${userData.readUInt32LE(0)}`;
 }
 
+/**
+ * Resumen corto para NODETERM_RDP_DEBUG de un CHANNEL_PDU DynVC reenviado.
+ * @returns {string|null}
+ */
+function formatDrdynvcForwardDebug(userData) {
+  if (!Buffer.isBuffer(userData) || userData.length < 8) return null;
+  const length = userData.readUInt32LE(0);
+  const flags = userData.readUInt32LE(4);
+  const frag = [
+    (flags & CHANNEL_FLAG_FIRST) ? 'F' : '-',
+    (flags & CHANNEL_FLAG_LAST) ? 'L' : '-'
+  ].join('');
+  const body = userData.subarray(8);
+  let dvcCmd = '?';
+  if (body.length >= 1) {
+    const cmd = (body[0] >> 4) & 0x0f;
+    dvcCmd = `0x${cmd.toString(16)}`;
+  }
+  const hex = body.subarray(0, Math.min(16, body.length)).toString('hex');
+  return `chFlags=0x${flags.toString(16)} frag=${frag} dvcCmd=${dvcCmd} pduLen=${length} body=${body.length}B hex16=${hex}`;
+}
+
 function consumeAutodetect(state, channelId, userData, force) {
   const sec = stripSecAutodetect(userData);
   if (!sec.hadSec && !force) {
@@ -989,21 +1011,35 @@ function filterIoChannelPdu(state, channelId, userData) {
   return null;
 }
 
+function wasmHasDrdynvcName(state) {
+  const names = state && Array.isArray(state.wasmChannelNames) ? state.wasmChannelNames : [];
+  return names.some((n) => String(n).toUpperCase() === 'DRDYNVC' || String(n).toLowerCase() === 'drdynvc');
+}
+
+/** DisplayControl solo en directo (bastion lo rechaza). EGFX Graphics tambien en bastion. */
 function wasmDeclaredDrdynvc(state) {
   if (state && state.isBastion) return false;
-  const names = state && Array.isArray(state.wasmChannelNames) ? state.wasmChannelNames : [];
-  return names.some((n) => String(n).toLowerCase() === 'drdynvc');
+  return wasmHasDrdynvcName(state);
+}
+
+function wasmAllowsGraphicsDvc(state) {
+  return wasmHasDrdynvcName(state);
 }
 
 function remapServerDrdynvcFrame(state, buf, incomingChannelId) {
-  if (state && state.isBastion) return buf;
+  // En bastion no remapeamos IDs de DisplayControl historico, pero EGFX necesita
+  // el mismo remap servidor->wasm cuando los channel IDs difieren.
   const wasmId = state && state.wasmDrdynvcChannelId;
   if (wasmId == null || incomingChannelId === wasmId) return buf;
+  if (state && state.isBastion && !wasmAllowsGraphicsDvc(state)) return buf;
   return rewriteMcsChannelId(buf, wasmId) || buf;
 }
 
 function remapClientDrdynvcFrame(state, frame) {
-  if (!state || state.isBastion || !Buffer.isBuffer(frame)) return frame;
+  if (!state || !Buffer.isBuffer(frame)) return frame;
+  // DisplayControl cliente->servidor sigue sin remap en bastion puro sin EGFX.
+  // Con Graphics activo, el remapeo es necesario para que el create_rsp llegue.
+  if (state.isBastion && !wasmAllowsGraphicsDvc(state)) return frame;
   const parsed = parseMcsSendData(frame);
   if (!parsed) return frame;
   const wasmId = state.wasmDrdynvcChannelId;
@@ -1055,17 +1091,24 @@ function processServerFrame(state, buf) {
 
   // 2. Canales que no son el canal IO ni cliprdr (canal de usuario 1001, drdynvc, etc.):
   // NUNCA reenviar a IronRDP WASM (evita el crash 'unexpected channel received: ID ...'),
-  // salvo CAPS + DisplayControl cuando WASM declaro drdynvc.
-  // El interceptor DVC sólo se aplica aquí: drdynvc es un canal virtual estático, el canal IO
-  // jamás transporta CHANNEL_PDU_HEADER y aplicarle esta heurística descartaba PDUs legítimas.
+  // salvo CAPS + DisplayControl/EGFX Graphics (y fragmentos CHANNEL_PDU de drdynvc)
+  // cuando WASM declaro drdynvc. Sin passthrough de fragmentos, EGFX llega a medias (~1.5KB)
+  // y el decoder ve ZGFX/GFX basura.
   if (!isIoChannel) {
     // messageChannelId solo sale de SC_MSGCHANNEL. Adivinarlo con el primer
     // canal desconocido marcaba un VC estatico como canal de usuario y
     // bloqueaba el write path de cliprdr.
     if (parsed && isChannelPduHeader(parsed.userData)) {
       const allowDisplayControl = wasmDeclaredDrdynvc(state);
+      const allowGraphics = wasmAllowsGraphicsDvc(state);
+      const isServerDrdynvc = state.drdynvcChannelId != null && channelId === state.drdynvcChannelId;
+      // Fragmentos CHANNEL_PDU (FIRST sin LAST / MIDDLE / LAST) a menudo no traen
+      // header DVC completo: parseDvcPdu falla y antes se dropeaban → EGFX a medias.
+      const passthroughDrdynvcFrags = isServerDrdynvc
+        && (allowGraphics || allowDisplayControl);
       const dvc = handleDvcRequest(channelId, state.clientInitiator, parsed.userData, {
-        allowDisplayControl
+        allowDisplayControl,
+        allowGraphics
       });
       if (dvc.handled && dvc.forward) {
         return {
@@ -1075,7 +1118,8 @@ function processServerFrame(state, buf) {
           note: dvc.note || channelPduHint(parsed.userData),
           channelId,
           isCliprdr: false,
-          cliprdrDesc: null
+          cliprdrDesc: null,
+          dvcForward: true
         };
       }
       if (dvc.handled) {
@@ -1088,6 +1132,20 @@ function processServerFrame(state, buf) {
           channelId,
           isCliprdr: false,
           cliprdrDesc: null
+        };
+      }
+      if (passthroughDrdynvcFrags) {
+        const ud = parsed.userData;
+        const chFlags = ud.length >= 8 ? ud.readUInt32LE(4) : 0;
+        return {
+          forward: remapServerDrdynvcFrame(state, buf, channelId),
+          replies: [],
+          dropped: false,
+          note: `dvc-passthrough-frag ch=${channelId} flags=0x${chFlags.toString(16)} len=${ud.length}B`,
+          channelId,
+          isCliprdr: false,
+          cliprdrDesc: null,
+          dvcForward: true
         };
       }
     }
@@ -1181,6 +1239,9 @@ module.exports = {
   filterServerFrame,
   processServerFrame,
   wasmDeclaredDrdynvc,
+  wasmAllowsGraphicsDvc,
+  wasmHasDrdynvcName,
   remapClientDrdynvcFrame,
-  remapServerDrdynvcFrame
+  remapServerDrdynvcFrame,
+  formatDrdynvcForwardDebug
 };
