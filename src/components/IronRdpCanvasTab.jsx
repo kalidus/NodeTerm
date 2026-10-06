@@ -825,7 +825,10 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         const configPayload = {
           ...rdpConfig,
           width,
-          height
+          height,
+          // Activa logs verbose del bridge si el usuario puso debug en DevTools.
+          // Las métricas [Bridge Perf] en bastión salen siempre en la consola del proceso main.
+          rdpDebug: isRdpDebugEnabled()
         };
 
         // 3. Crear token y endpoint para el proxy nativo TCP-a-WebSocket en Node.js (Sin guacd/WSL/Docker)

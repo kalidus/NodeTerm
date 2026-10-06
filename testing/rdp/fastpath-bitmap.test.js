@@ -378,9 +378,12 @@ describe('fixWallixBitmapStrideCrop', () => {
     const asm = new FastPathBitmapReassembler();
     assert.equal(asm.push(first).length, 0);
     const ready = asm.push(last);
-    assert.ok(ready.length >= 1);
-    for (const out of ready) assert.ok(out.length <= MAX_FASTPATH_PDU);
-    const painted = paintPdus(ready, 1, 2, iw, ih);
+    assert.equal(ready.length, 1);
+    // El reensamblador solo junta; el crop lo hace fixWallix una sola vez.
+    const fixed = fixWallixBitmapStrideCrop(ready[0]);
+    assert.ok(fixed.patchedCount > 0);
+    for (const out of fixed.buffers) assert.ok(out.length <= MAX_FASTPATH_PDU);
+    const painted = paintPdus(fixed.buffers, 1, 2, iw, ih);
     assert.deepEqual(painted, cropRgb16(pixels, srcW, srcH, iw, ih));
   });
 });

@@ -501,6 +501,75 @@ function finishBitmapRewrite(fpHeaderByte, updateHeader, rectBuffers, meta, orig
 }
 
 /**
+ * ¿Algún rectángulo del payload necesita decode/reencode?
+ * Evita el bucle caro de rewrite cuando todo ya es passthrough.
+ */
+function bitmapPayloadNeedsRewrite(payload) {
+  if (!Buffer.isBuffer(payload) || payload.length < 8) return false;
+  if (payload.readUInt16LE(0) !== UPDATETYPE_BITMAP) return false;
+  const n = payload.readUInt16LE(2);
+  let p = 4;
+  for (let i = 0; i < n; i++) {
+    if (p + 18 > payload.length) return false;
+    const bitmapLength = payload.readUInt16LE(p + 16);
+    const rectEnd = p + 18 + bitmapLength;
+    if (rectEnd > payload.length) return false;
+
+    const width = payload.readUInt16LE(p + 8);
+    const height = payload.readUInt16LE(p + 10);
+    const destLeft = payload.readUInt16LE(p);
+    const destTop = payload.readUInt16LE(p + 2);
+    const destRight = payload.readUInt16LE(p + 4);
+    const destBottom = payload.readUInt16LE(p + 6);
+    const iw = destRight - destLeft + 1;
+    const ih = destBottom - destTop + 1;
+    const wantsCrop = needsStrideCrop(width, height, destLeft, destTop, destRight, destBottom);
+    if (wantsCrop) return true;
+    if (isWindowsTile(iw, ih)) {
+      const flags = payload.readUInt16LE(p + 14);
+      if (flags & BITMAP_COMPRESSION) {
+        let rle = payload.subarray(p + 18, rectEnd);
+        if ((flags & NO_BITMAP_COMPRESSION_HDR) === 0) {
+          if (rle.length < 8) return true;
+          rle = rle.subarray(8);
+        }
+        if (!isAbsoluteColorRle(rle)) return true;
+      } else {
+        return true;
+      }
+    }
+    p = rectEnd;
+  }
+  return false;
+}
+
+/**
+ * Empaqueta updateData ya reunido en un Fast-Path SINGLE (sin rewrite).
+ */
+function wrapFastPathUpdate(fpHeaderByte, updateHeader, updateData) {
+  if (!Buffer.isBuffer(updateData) || updateData.length > 0xffff) return null;
+  // Conservar updateCode + compression; limpiar bits de fragmentacion.
+  const uh = (updateHeader & 0x0f) | (updateHeader & 0xc0);
+  const sizeBuf = Buffer.alloc(2);
+  sizeBuf.writeUInt16LE(updateData.length, 0);
+
+  let lengthField = encodeFpLength(1 + 2 + 1 + 2 + updateData.length);
+  let totalLen = 1 + lengthField.length + 1 + 2 + updateData.length;
+  lengthField = encodeFpLength(totalLen);
+  totalLen = 1 + lengthField.length + 1 + 2 + updateData.length;
+
+  const out = Buffer.concat([
+    Buffer.from([fpHeaderByte & 0xff]),
+    lengthField,
+    Buffer.from([uh]),
+    sizeBuf,
+    updateData
+  ]);
+  if (out.length !== totalLen) return null;
+  return out;
+}
+
+/**
  * Reescribe un TS_UPDATE_BITMAP_DATA ya reunido (un Fast-Path o varios fragmentos).
  * updateHeader debe ir sin bits de fragmentacion.
  */
@@ -509,6 +578,17 @@ function rewriteBitmapPayload(fpHeaderByte, updateHeader, payload) {
   if (payload.readUInt16LE(0) !== UPDATETYPE_BITMAP) return null;
 
   const n = payload.readUInt16LE(2);
+  if (!bitmapPayloadNeedsRewrite(payload)) {
+    return {
+      buf: null,
+      buffers: [],
+      patchedCount: 0,
+      numberRectangles: n,
+      fallback: false,
+      failed: 0
+    };
+  }
+
   const rectBuffers = [];
   let p = 4;
   let patchedCount = 0;
@@ -541,6 +621,7 @@ function rewriteBitmapPayload(fpHeaderByte, updateHeader, payload) {
       cropCount += fixed.cropCount || 0;
     } else {
       if (wantsCrop) failed += 1;
+      // Copiar solo si hace falta reempaquetar; subarray se invalida al mutar el original.
       rectBuffers.push(Buffer.from(rectBuf));
     }
     p = rectEnd;
@@ -579,8 +660,9 @@ function fixWallixBitmapStrideCrop(buf) {
 }
 
 /**
- * Junta fragmentos Fast-Path de bitmap (FIRST/NEXT/LAST) y reescribe el
- * update entero. El resto de PDUs sale en orden, sin esperar.
+ * Junta fragmentos Fast-Path de bitmap (FIRST/NEXT/LAST) en un PDU SINGLE.
+ * No reescribe RLE: eso lo hace fixWallixBitmapStrideCrop una sola vez.
+ * El resto de PDUs sale en orden, sin esperar.
  */
 class FastPathBitmapReassembler {
   constructor() {
@@ -607,6 +689,7 @@ class FastPathBitmapReassembler {
 
     if (frag === FP_FRAG_FIRST) {
       const flushed = this._abort();
+      // Copiar: el buffer del TLS puede reutilizarse en el siguiente chunk.
       this.pending = {
         frames: [Buffer.from(frame)],
         parts: [Buffer.from(parsed.updateData)],
@@ -624,11 +707,12 @@ class FastPathBitmapReassembler {
       const pending = this.pending;
       this.pending = null;
       const payload = Buffer.concat(pending.parts);
-      const rewritten = rewriteBitmapPayload(pending.fpHeaderByte, pending.updateHeader & 0x0f, payload);
-      if (!rewritten || !rewritten.buffers || !rewritten.buffers.length) return pending.frames;
-      return rewritten.buffers;
+      const wrapped = wrapFastPathUpdate(pending.fpHeaderByte, pending.updateHeader, payload);
+      if (!wrapped) return pending.frames;
+      return [wrapped];
     }
 
+    // SINGLE u otros updates: sin copia del frame (el bridge lo consume ya).
     const flushed = this._abort();
     flushed.push(frame);
     return flushed;
@@ -652,6 +736,8 @@ module.exports = {
   fixWallixBitmapDestStride,
   fixWallixBitmapStrideCrop,
   rewriteBitmapPayload,
+  bitmapPayloadNeedsRewrite,
+  wrapFastPathUpdate,
   fixOneBitmapRectStride,
   cropOneBitmapRect,
   needsStrideCrop,

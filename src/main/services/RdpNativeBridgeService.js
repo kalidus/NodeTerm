@@ -19,6 +19,10 @@ const { prepareMcsConnectInitial, findClientCoreData, findClientNetworkChannels,
 const { patchFontSequenceFlags } = require('./rdp-font-helpers');
 const { fixWallixBitmapStrideCrop, FastPathBitmapReassembler } = require('./rdp-fastpath-helpers');
 const {
+  BridgeLatencyMetrics,
+  WsBackpressureController
+} = require('./rdp-bridge-backpressure');
+const {
   createChannelFilterState,
   processServerFrame,
   learnClientInitiator,
@@ -348,6 +352,8 @@ class RdpNativeBridgeService extends EventEmitter {
       enableFullWindowDrag: config.enableFullWindowDrag === true || config.guacEnableFullWindowDrag === true,
       enableMenuAnimations: config.enableMenuAnimations === true || config.guacEnableMenuAnimations === true,
       selectedProtocol: typeof config.selectedProtocol === 'number' ? config.selectedProtocol : null,
+      // Debug del bridge: env, rdp-flags.json o flag desde el renderer (localStorage).
+      rdpDebug: config.rdpDebug === true || config.enableRdpDebug === true,
       createdAt: Date.now()
     };
 
@@ -399,7 +405,8 @@ class RdpNativeBridgeService extends EventEmitter {
     let lastWsFrameAt = 0;
     // Anillos en memoria: frames solo se vuelcan con NODETERM_RDP_DEBUG=1.
     // El anillo cliprdr se vuelca si el portapapeles fallo o si hay debug.
-    const isDebug = rdpDebug();
+    // session.rdpDebug viene del renderer (localStorage / window.__NODETERM_RDP_DEBUG__).
+    const isDebug = rdpDebug() || session.rdpDebug === true;
     const recentRdpFrames = [];
     const recentWasmFrames = [];
     const recentCliprdrEvents = [];
@@ -693,19 +700,68 @@ class RdpNativeBridgeService extends EventEmitter {
 
               rdCleanPathPhase = 'transparent';
 
-              // Control de contrapresión (Backpressure): evita que ráfagas de vídeo
-              // o movimiento continuo de ventanas acumulen megabytes en cola (bufferbloat).
-              const WS_HIGH_WATER_MARK = 256 * 1024; // 256 KB
-              const WS_LOW_WATER_MARK = 64 * 1024;   // 64 KB
-              let isTlsPaused = false;
+              // Bastión: latest-wins (descartar BITMAP viejos) sin pausar TLS — Wallix encola.
+              // Directo: pausa TLS solo si la cola WS es muy alta (evita OOM en ráfagas).
+              // Métricas [Bridge Perf] solo con NODETERM_RDP_DEBUG / session.rdpDebug.
+              const latencyMetrics = isDebug ? new BridgeLatencyMetrics() : null;
+              const backpressure = new WsBackpressureController({
+                bastion: normalizeBitmaps,
+                metrics: latencyMetrics
+              });
+
+              const sendBinaryToWasm = (out) => {
+                if (!out || typeof out.length !== 'number') return;
+                if (ws.readyState !== ws.OPEN) return;
+                ws.send(out, { binary: true }, () => {
+                  checkResumeTls();
+                });
+              };
+
+              const rewriteAndSend = (ready, frameTag) => {
+                const t0 = (latencyMetrics || normalizeBitmaps) ? process.hrtime.bigint() : 0n;
+                const stridePatch = normalizeBitmaps
+                  ? fixWallixBitmapStrideCrop(ready)
+                  : { patchedCount: 0 };
+                if (normalizeBitmaps) {
+                  const ms = Number(process.hrtime.bigint() - t0) / 1e6;
+                  backpressure.noteRewriteSpent(ms);
+                  if (latencyMetrics) {
+                    latencyMetrics.noteRewrite(ms, !!stridePatch.patchedCount);
+                  }
+                }
+                const outChunks = stridePatch.patchedCount
+                  ? (stridePatch.buffers || [stridePatch.buf])
+                  : [ready];
+                if (stridePatch.failed) {
+                  console.warn(
+                    `[Bridge] FastPath BITMAP: ${stridePatch.failed} rectangulo(s) no se pudieron reescribir; se reenvian originales`
+                  );
+                }
+                if (stridePatch.patchedCount && isDebug) {
+                  console.log(
+                    `[Bridge] FastPath BITMAP normalizado frame#${frameTag}: rects=${stridePatch.numberRectangles} patched=${stridePatch.patchedCount}` +
+                      (stridePatch.solidCount != null ? ` solid=${stridePatch.solidCount} crop=${stridePatch.cropCount}` : '') +
+                      (stridePatch.pduCount > 1 ? ` pdus=${stridePatch.pduCount}` : '')
+                  );
+                }
+                for (const out of outChunks) {
+                  sendBinaryToWasm(out);
+                }
+              };
+
+              const flushPendingBitmap = (opts) => {
+                const pending = backpressure.takePendingIfDrained(ws.bufferedAmount, opts);
+                if (pending) rewriteAndSend(pending, 'pending');
+              };
 
               const checkResumeTls = () => {
-                if (isTlsPaused && ws.bufferedAmount <= WS_LOW_WATER_MARK) {
-                  isTlsPaused = false;
+                if (backpressure.shouldResumeTls(ws.bufferedAmount)) {
+                  backpressure.markTlsPaused(false);
                   if (tlsSocket && !tlsSocket.destroyed) {
                     tlsSocket.resume();
                   }
                 }
+                flushPendingBitmap();
               };
 
               if (ws._socket && typeof ws._socket.on === 'function') {
@@ -713,10 +769,11 @@ class RdpNativeBridgeService extends EventEmitter {
               }
 
               tlsSocket.on('data', (chunk) => {
-                // Si el cliente WebSocket está saturado procesando vídeo o ventanas, pausar la lectura de red
-                // para que el servidor remoto descarte fotogramas intermedios en origen y mantenga la latencia a 0 ms.
-                if (ws.bufferedAmount > WS_HIGH_WATER_MARK && !isTlsPaused) {
-                  isTlsPaused = true;
+                backpressure.beginDataTick();
+                backpressure.noteBufferedAmount(ws.bufferedAmount);
+                // Solo path directo: pausar TLS en colas extremas.
+                if (backpressure.shouldPauseTls(ws.bufferedAmount)) {
+                  backpressure.markTlsPaused(true);
                   tlsSocket.pause();
                 }
 
@@ -730,6 +787,7 @@ class RdpNativeBridgeService extends EventEmitter {
                   const now = Date.now();
                   const gapFromLastRdp = lastRdpFrameAt > 0 ? now - lastRdpFrameAt : 0;
                   lastRdpFrameAt = now;
+                  if (latencyMetrics) latencyMetrics.noteGap(gapFromLastRdp);
 
                   const n = frame.length;
                   framesFromRdp += 1;
@@ -997,43 +1055,39 @@ class RdpNativeBridgeService extends EventEmitter {
                   trafficStats.note(pduDesc, n);
                   if (ws.readyState === ws.OPEN) {
                     try {
+                      flushPendingBitmap();
                       for (const ready of readyFrames) {
-                        const stridePatch = normalizeBitmaps ? fixWallixBitmapStrideCrop(ready) : { patchedCount: 0 };
-                        const outChunks = stridePatch.patchedCount
-                          ? (stridePatch.buffers || [stridePatch.buf])
-                          : [ready];
-                        if (stridePatch.failed) {
-                          console.warn(
-                            `[Bridge] FastPath BITMAP: ${stridePatch.failed} rectangulo(s) no se pudieron reescribir; se reenvian originales`
+                        if (backpressure.shouldShedBitmap(ws.bufferedAmount, ready)) {
+                          // Sin rewrite: ahorra CPU mientras la cola WASM está llena
+                          // o se agotó el presupuesto RLE de este tick.
+                          continue;
+                        }
+                        if (isDebug || !isFastPath) {
+                          recentWasmFrames.push(
+                            `#${framesFromRdp} ${ready.length}B | ${describeRdpPdu(ready)}` +
+                            (processed.serverChannelId != null && processed.serverChannelId !== processed.channelId
+                              ? ` [remap ch=${processed.serverChannelId}->${processed.channelId}]`
+                              : '')
                           );
+                          if (recentWasmFrames.length > RECENT_FRAMES_WINDOW) recentWasmFrames.shift();
                         }
-                        if (stridePatch.patchedCount && isDebug) {
-                          console.log(
-                            `[Bridge] FastPath BITMAP normalizado frame#${framesFromRdp}: rects=${stridePatch.numberRectangles} patched=${stridePatch.patchedCount}` +
-                              (stridePatch.solidCount != null ? ` solid=${stridePatch.solidCount} crop=${stridePatch.cropCount}` : '') +
-                              (stridePatch.pduCount > 1 ? ` pdus=${stridePatch.pduCount}` : '')
-                          );
-                        }
-                        for (const out of outChunks) {
-                          if (!out || typeof out.length !== 'number') continue;
-                          if (isDebug || !isFastPath) {
-                            recentWasmFrames.push(
-                              `#${framesFromRdp} ${out.length}B | ${describeRdpPdu(out)}` +
-                              (processed.serverChannelId != null && processed.serverChannelId !== processed.channelId
-                                ? ` [remap ch=${processed.serverChannelId}->${processed.channelId}]`
-                                : '')
-                            );
-                            if (recentWasmFrames.length > RECENT_FRAMES_WINDOW) recentWasmFrames.shift();
-                          }
-                          ws.send(out, { binary: true }, () => {
-                            checkResumeTls();
-                          });
-                        }
+                        rewriteAndSend(ready, framesFromRdp);
                       }
                     } catch (sendErr) {
                       console.warn('[Bridge] Error enviando frames a WebSocket:', sendErr.message);
                     }
                   }
+                }
+                // Al final del tick: enviar el último bitmap shed (latest-wins).
+                // ignoreBudget: sí reescribir ese único frame aunque el presupuesto se haya gastado
+                // con los bitmaps anteriores del mismo chunk.
+                if (normalizeBitmaps && ws.readyState === ws.OPEN) {
+                  try {
+                    flushPendingBitmap({ force: true, ignoreBudget: true });
+                  } catch (_) { /* noop */ }
+                }
+                if (latencyMetrics) {
+                  latencyMetrics.maybeLog((line) => console.log(line), normalizeBitmaps ? 2000 : 5000);
                 }
               });
 
