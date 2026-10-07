@@ -598,26 +598,45 @@ function createRdpWebCodecsDecoder(opts = {}) {
   let reportedGpu = false;
   let deliverChain = Promise.resolve();
   const SETTLE_MS = 80;
-  const hold = { gen: 0, luma: null, chroma: null, meta: null, chromaMeta: null, targets: null, box: null, frameW: 0, frameH: 0 };
-  const inflight = new Set();
+  /**
+   * Un frame de luma y uno de croma como máximo.
+   * No se clona: clonar VideoFrame tumba el proceso GPU (exit 34).
+   */
+  const hold = {
+    gen: 0,
+    lumaFrame: null,
+    chromaFrame: null,
+    meta: null,
+    chromaMeta: null,
+    targets: null,
+    box: null,
+    frameW: 0,
+    frameH: 0
+  };
   let settleTimer = null;
 
-  const releaseFrame = (frame) => {
-    if (!frame || inflight.has(frame)) return;
+  const closeQuiet = (frame) => {
+    if (!frame) return;
     try { frame.close(); } catch (_) { /* noop */ }
   };
 
-  const dropHold = () => {
-    releaseFrame(hold.luma);
-    releaseFrame(hold.chroma);
-    hold.luma = null;
-    hold.chroma = null;
+  const clearHold = () => {
+    closeQuiet(hold.lumaFrame);
+    closeQuiet(hold.chromaFrame);
+    hold.lumaFrame = null;
+    hold.chromaFrame = null;
+    hold.meta = null;
+    hold.chromaMeta = null;
+    hold.targets = null;
+    hold.box = null;
   };
+
   const fail = (err) => {
     lastError = err;
+    const msg = err && err.message ? err.message : String(err);
     if (!reported) {
       reported = true;
-      console.warn('[IronRDP WebCodecs]', err && err.message ? err.message : err);
+      console.warn('[IronRDP WebCodecs]', msg);
     }
     if (typeof opts.onError === 'function') opts.onError(err);
   };
@@ -692,58 +711,54 @@ function createRdpWebCodecsDecoder(opts = {}) {
   };
 
   const settle = async (gen) => {
-    const luma = hold.luma;
-    const chroma = hold.chroma;
-    if (!luma || gen !== hold.gen) return;
-    inflight.add(luma);
-    if (chroma) inflight.add(chroma);
+    if (gen !== hold.gen) return;
+    const lumaFrame = hold.lumaFrame;
+    const chromaFrame = hold.chromaFrame;
+    const meta = hold.meta;
+    const chromaMeta = hold.chromaMeta;
+    const box = hold.box;
+    const frameW = hold.frameW;
+    const frameH = hold.frameH;
+    hold.lumaFrame = null;
+    hold.chromaFrame = null;
+    if (!lumaFrame || !meta || !box) {
+      closeQuiet(lumaFrame);
+      closeQuiet(chromaFrame);
+      return;
+    }
     try {
-      const { meta, targets, box, frameW, frameH, chromaMeta } = hold;
-      let rgba = null;
-      try {
-        rgba = await readRgbaRect(luma, box);
-      } catch (_) {
-        rgba = null;
-      }
+      const planes = await readI420Rect(lumaFrame, box);
       if (gen !== hold.gen) return;
-      let main = null;
-      try {
-        const planes = await readI420Rect(luma, box);
-        main = { ...planes, frameWidth, frameHeight };
-      } catch (_) {
-        main = null;
+      const main = { ...planes, frameWidth: frameW, frameHeight: frameH };
+      lumaBySurface.set(meta.surfaceId, main);
+      if (!chromaFrame || !chromaMeta) return;
+      const chromaTargets = paintTargets(chromaMeta, frameW, frameH);
+      if (!chromaTargets) return;
+      const cBox = unionAlignedBox(chromaTargets.regions, frameW, frameH);
+      const aux = await readAux(chromaFrame, cBox, frameW, frameH);
+      if (gen !== hold.gen || !aux) return;
+      for (const region of chromaTargets.regions) {
+        if (!lumaCovers(main, region)) continue;
+        const mixed = combineAvc444v2Chroma(main, aux, region);
+        const rgba = avc444RectToRgba(main, mixed);
+        if (!rgba) continue;
+        const destLeft = chromaTargets.originLeft + region.left;
+        const destTop = chromaTargets.originTop + region.top;
+        applyRgba(
+          meta.epoch,
+          meta.surfaceId,
+          destLeft,
+          destTop,
+          destLeft + mixed.width,
+          destTop + mixed.height,
+          rgba
+        );
       }
-      if (gen !== hold.gen) return;
-      const chromaTargets = chroma && chromaMeta ? paintTargets(chromaMeta, frameW, frameH) : null;
-      if (main && chroma && chromaTargets) {
-        const cBox = unionAlignedBox(chromaTargets.regions, frameW, frameH);
-        let aux = null;
-        try {
-          aux = await readAux(chroma, cBox, frameW, frameH);
-        } catch (_) {
-          aux = null;
-        }
-        if (gen !== hold.gen) return;
-        if (aux && rgba) {
-          const boxW = box.right - box.left;
-          for (const region of chromaTargets.regions) {
-            if (!lumaCovers(main, region)) continue;
-            const mixed = combineAvc444v2Chroma(main, aux, region);
-            if (!mixed) continue;
-            const sharp = sharpenRgba(rgba, boxW, region, box, main, mixed);
-            const destLeft = chromaTargets.originLeft + region.left;
-            const destTop = chromaTargets.originTop + region.top;
-            applyRgba(meta.epoch, meta.surfaceId, destLeft, destTop, destLeft + mixed.width, destTop + mixed.height, sharp);
-          }
-          return;
-        }
-      }
-      if (rgba) paintBox(rgba, box, targets, meta);
+    } catch (_) {
+      /* el siguiente key reabre el decoder si hace falta */
     } finally {
-      inflight.delete(luma);
-      if (chroma) inflight.delete(chroma);
-      if (hold.luma !== luma) releaseFrame(luma);
-      if (chroma && hold.chroma !== chroma) releaseFrame(chroma);
+      closeQuiet(lumaFrame);
+      closeQuiet(chromaFrame);
     }
   };
 
@@ -757,6 +772,7 @@ function createRdpWebCodecsDecoder(opts = {}) {
   };
 
   const deliver = async (frame, meta) => {
+    let keepOpen = false;
     try {
       if (!applyRgba || !meta) return;
       const frameW = frame.displayWidth || frame.codedWidth;
@@ -773,34 +789,29 @@ function createRdpWebCodecsDecoder(opts = {}) {
             console.warn('[IronRDP WebCodecs] presenta en gpu', frameW, frameH);
           }
           presentNow(frame, targets);
-          let copy = null;
-          try { copy = frame.clone(); } catch (_) { copy = null; }
-          if (copy) {
-            releaseFrame(hold.luma);
-            releaseFrame(hold.chroma);
-            hold.gen += 1;
-            hold.luma = copy;
-            hold.chroma = null;
-            hold.meta = meta;
-            hold.chromaMeta = null;
-            hold.targets = targets;
-            hold.box = box;
-            hold.frameW = frameW;
-            hold.frameH = frameH;
-            scheduleSettle();
-            return;
-          }
-        } else if (hold.luma) {
-          let copy = null;
-          try { copy = frame.clone(); } catch (_) { copy = null; }
-          if (copy) {
-            releaseFrame(hold.chroma);
-            hold.chroma = copy;
-            hold.chromaMeta = meta;
-            scheduleSettle();
-            return;
-          }
+          closeQuiet(hold.lumaFrame);
+          closeQuiet(hold.chromaFrame);
+          hold.gen += 1;
+          hold.lumaFrame = frame;
+          hold.chromaFrame = null;
+          hold.meta = meta;
+          hold.chromaMeta = null;
+          hold.targets = targets;
+          hold.box = box;
+          hold.frameW = frameW;
+          hold.frameH = frameH;
+          keepOpen = true;
+          scheduleSettle();
+          return;
         }
+        if (hold.lumaFrame) {
+          closeQuiet(hold.chromaFrame);
+          hold.chromaFrame = frame;
+          hold.chromaMeta = meta;
+          keepOpen = true;
+          scheduleSettle();
+        }
+        return;
       }
 
       if (meta.display === false) {
@@ -858,7 +869,7 @@ function createRdpWebCodecsDecoder(opts = {}) {
     } catch (err) {
       fail(err instanceof Error ? err : new Error(String(err)));
     } finally {
-      try { frame.close(); } catch (_) { /* noop */ }
+      if (!keepOpen) closeQuiet(frame);
     }
   };
 
@@ -884,7 +895,17 @@ function createRdpWebCodecsDecoder(opts = {}) {
       error: (err) => {
         configured = false;
         needsKey = true;
+        activeCodec = '';
         if (acceleration === 'prefer-hardware') acceleration = 'prefer-software';
+        if (decoder) {
+          try { decoder.close(); } catch (_) { /* noop */ }
+          decoder = null;
+        }
+        clearHold();
+        if (settleTimer) {
+          clearTimeout(settleTimer);
+          settleTimer = null;
+        }
         fail(err);
       }
     });
@@ -973,7 +994,7 @@ function createRdpWebCodecsDecoder(opts = {}) {
       deliverChain = Promise.resolve();
       if (settleTimer) clearTimeout(settleTimer);
       settleTimer = null;
-      dropHold();
+      clearHold();
       if (decoder) {
         try { decoder.close(); } catch (_) { /* noop */ }
         decoder = null;
@@ -986,7 +1007,7 @@ function createRdpWebCodecsDecoder(opts = {}) {
       deliverChain = Promise.resolve();
       if (settleTimer) clearTimeout(settleTimer);
       settleTimer = null;
-      dropHold();
+      clearHold();
       if (decoder) {
         try { decoder.close(); } catch (_) { /* noop */ }
         decoder = null;
