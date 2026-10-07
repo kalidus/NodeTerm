@@ -1427,7 +1427,10 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             if (webAudioPlayerRef.current) {
               try { webAudioPlayerRef.current.close(); } catch (_) { /* noop */ }
             }
-            const player = createRdpWebAudioPlayer();
+            // Soft rebase si la cola crece; hard drop solo en desfase extremo.
+            const player = createRdpWebAudioPlayer(egfxEnabled
+              ? { maxQueueSec: 0.55, hardDropSec: 0.9, playaheadSec: 0.05 }
+              : { maxQueueSec: 0.6, hardDropSec: 1.2, playaheadSec: 0 });
             webAudioPlayerRef.current = player;
             let waveBlocks = 0;
             setRdpsndWaveCallback((pcm, sampleRate, channels, bitsPerSample) => {

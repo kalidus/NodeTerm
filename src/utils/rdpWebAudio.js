@@ -1,11 +1,14 @@
 /**
  * Reproductor PCM para RDPSND (MS-RDPEA) vía Web Audio API.
- * El WASM entrega bloques PCM; aquí se encolan y reproducen con baja latencia.
+ * Cola soft/hard: reprograma si crece; solo tira bloques en desfase extremo.
  */
 
-const DEFAULT_MAX_QUEUE_SEC = 1.5;
+const DEFAULT_MAX_QUEUE_SEC = 0.55;
+const DEFAULT_HARD_DROP_SEC = 0.9;
+const DEFAULT_PLAYAHEAD_SEC = 0.05;
 
 /**
+ * @param {{ maxQueueSec?: number, hardDropSec?: number, playaheadSec?: number }} [options]
  * @returns {{
  *   playPcm: (pcm: Uint8Array, sampleRate: number, channels: number, bitsPerSample: number) => void,
  *   resume: () => Promise<void>,
@@ -16,6 +19,10 @@ const DEFAULT_MAX_QUEUE_SEC = 1.5;
  */
 export function createRdpWebAudioPlayer(options = {}) {
   const maxQueueSec = Number(options.maxQueueSec) > 0 ? Number(options.maxQueueSec) : DEFAULT_MAX_QUEUE_SEC;
+  const hardDropSec = Number(options.hardDropSec) > 0
+    ? Math.max(Number(options.hardDropSec), maxQueueSec)
+    : Math.max(DEFAULT_HARD_DROP_SEC, maxQueueSec);
+  const playaheadSec = Number(options.playaheadSec) >= 0 ? Number(options.playaheadSec) : DEFAULT_PLAYAHEAD_SEC;
   /** @type {AudioContext | null} */
   let ctx = null;
   /** @type {GainNode | null} */
@@ -28,7 +35,12 @@ export function createRdpWebAudioPlayer(options = {}) {
     if (!ctx) {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return null;
-      ctx = new AC();
+      // playback: más estable bajo carga GPU que interactive.
+      try {
+        ctx = new AC({ latencyHint: 'playback' });
+      } catch (_) {
+        ctx = new AC();
+      }
       gainNode = ctx.createGain();
       gainNode.gain.value = 1;
       gainNode.connect(ctx.destination);
@@ -44,7 +56,7 @@ export function createRdpWebAudioPlayer(options = {}) {
       try {
         await audioCtx.resume();
       } catch (_) {
-        /* autoplay policy: caller may retry after user gesture */
+        /* autoplay policy */
       }
     }
   }
@@ -71,6 +83,21 @@ export function createRdpWebAudioPlayer(options = {}) {
     const frameCount = Math.floor(pcm.length / (bytesPerSample * ch));
     if (frameCount <= 0) return;
 
+    const now = audioCtx.currentTime;
+    const earliest = now + playaheadSec;
+    if (nextStart < earliest) nextStart = earliest;
+
+    const queued = nextStart - now;
+    if (queued > hardDropSec) {
+      // Desfase extremo: tirar este bloque y reanudar cerca de ahora.
+      nextStart = earliest;
+      return;
+    }
+    if (queued > maxQueueSec) {
+      // Soft: acortar cola pero seguir reproduciendo (evita entrecortes).
+      nextStart = earliest;
+    }
+
     const buffer = audioCtx.createBuffer(ch, frameCount, rate);
     if (bits === 16) {
       const view = new DataView(pcm.buffer, pcm.byteOffset, pcm.byteLength);
@@ -93,12 +120,6 @@ export function createRdpWebAudioPlayer(options = {}) {
     const source = audioCtx.createBufferSource();
     source.buffer = buffer;
     source.connect(gainNode);
-
-    const now = audioCtx.currentTime;
-    if (nextStart < now) nextStart = now;
-    if (nextStart - now > maxQueueSec) {
-      nextStart = now + 0.02;
-    }
     source.start(nextStart);
     nextStart += buffer.duration;
   }

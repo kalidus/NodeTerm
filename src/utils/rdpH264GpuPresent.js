@@ -4,6 +4,9 @@
  * acelerado y el proceso GPU muere (exit 34). Aquí la GPU copia el frame a un
  * canvas propio y el canvas RDP solo recibe esa textura ya convertida.
  *
+ * Ping-pong de 2 scratch: submit sin await del fence en el hot path; el blit
+ * corre cuando GPU termina. Así el main thread no se bloquea (audio RDPSND).
+ *
  * Tras llamar a present(frame), el caller no debe copyTo/drawImage/clone del
  * mismo VideoFrame: importExternalTexture ya lo usa. present() cierra el frame.
  */
@@ -51,11 +54,11 @@ function createH264GpuPresenter(opts) {
   let mode = 'init';
   let generation = 0;
   let initPromise = null;
-  let scratch = null;
-  let scratchCtx = null;
-  let busy = false;
+  /** @type {{ canvas: OffscreenCanvas, ctx: GPUCanvasContext | null, busy: boolean }[]} */
+  let slots = [];
   let latest = null;
   let reported = false;
+  let copyBusy = false;
 
   const dropLatest = () => {
     if (!latest) return;
@@ -64,13 +67,13 @@ function createH264GpuPresenter(opts) {
     latest = null;
   };
 
-  const blitRegions = (regions) => {
+  const blitRegions = (canvas, regions) => {
     const ctx = get2dContext();
-    if (!ctx || !scratch) return;
+    if (!ctx || !canvas) return;
     ctx.imageSmoothingEnabled = false;
     for (const region of regions) {
       ctx.drawImage(
-        scratch,
+        canvas,
         region.sx, region.sy, region.sw, region.sh,
         region.dx, region.dy, region.sw, region.sh
       );
@@ -99,37 +102,91 @@ function createH264GpuPresenter(opts) {
     }
   };
 
-  const ensureScratch = (width, height) => {
+  const ensureSlots = () => {
+    if (slots.length === 2) return;
+    slots = [0, 1].map(() => ({
+      canvas: new OffscreenCanvas(1, 1),
+      ctx: null,
+      busy: false
+    }));
+  };
+
+  const ensureSlotConfigured = (slot, width, height) => {
     const w = Math.max(1, width | 0);
     const h = Math.max(1, height | 0);
-    if (!scratch) scratch = new OffscreenCanvas(w, h);
-    if (scratch.width !== w || scratch.height !== h) {
-      scratch.width = w;
-      scratch.height = h;
-      scratchCtx = null;
+    if (slot.canvas.width !== w || slot.canvas.height !== h) {
+      slot.canvas.width = w;
+      slot.canvas.height = h;
+      slot.ctx = null;
     }
-    if (!scratchCtx) {
-      scratchCtx = scratch.getContext('webgpu');
-      scratchCtx.configure({
+    if (!slot.ctx) {
+      slot.ctx = slot.canvas.getContext('webgpu');
+      slot.ctx.configure({
         device: gpu.device,
         format: gpu.format,
         alphaMode: 'opaque',
         usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC
       });
     }
-    return scratchCtx;
+    return slot.ctx;
   };
 
-  const gpuPresent = async (frame, regions) => {
-    const width = frame.displayWidth || frame.codedWidth;
-    const height = frame.displayHeight || frame.codedHeight;
-    if (!width || !height) {
-      closeFrame(frame);
+  const acquireSlot = () => {
+    ensureSlots();
+    return slots.find((s) => !s.busy) || null;
+  };
+
+  const slotsBusyCount = () => slots.reduce((n, s) => n + (s.busy ? 1 : 0), 0);
+
+  const drainLatest = () => {
+    if (!latest) return;
+    if (mode === 'webgpu' && gpu) {
+      if (!acquireSlot()) return;
+      const job = latest;
+      latest = null;
+      void startGpuJob(job.frame, job.regions, job.resolve);
       return;
     }
+    if (copyBusy) return;
+    const job = latest;
+    latest = null;
+    copyBusy = true;
+    void runCopy(job.frame, job.regions, job.resolve);
+  };
+
+  const finishSlot = (slot, resolve) => {
+    slot.busy = false;
+    if (typeof resolve === 'function') resolve();
+    drainLatest();
+  };
+
+  /**
+   * Submit GPU work without awaiting the fence on the hot path.
+   */
+  const startGpuJob = (frame, regions, resolve) => {
+    const slot = acquireSlot();
+    if (!slot) {
+      if (latest) {
+        closeFrame(latest.frame);
+        if (typeof latest.resolve === 'function') latest.resolve();
+      }
+      latest = { frame, regions, resolve };
+      return;
+    }
+
+    const width = frame.displayWidth || frame.codedWidth;
+    const height = frame.displayHeight || frame.codedHeight;
+    if (!width || !height || !gpu) {
+      closeFrame(frame);
+      if (typeof resolve === 'function') resolve();
+      drainLatest();
+      return;
+    }
+
+    slot.busy = true;
     let imported = false;
     try {
-      const ctx = ensureScratch(width, height);
+      const ctx = ensureSlotConfigured(slot, width, height);
       const external = gpu.device.importExternalTexture({ source: frame });
       imported = true;
       const bindGroup = gpu.device.createBindGroup({
@@ -154,36 +211,65 @@ function createH264GpuPresenter(opts) {
       pass.draw(3);
       pass.end();
       gpu.device.queue.submit([encoder.finish()]);
-      await gpu.device.queue.onSubmittedWorkDone();
-      if (!reported) {
-        reported = true;
-        console.warn('[IronRDP WebCodecs] presenta en gpu', width, height);
-      }
-      blitRegions(regions);
-      closeFrame(frame);
+
+      const gen = generation;
+      const canvas = slot.canvas;
+      void gpu.device.queue.onSubmittedWorkDone().then(() => {
+        if (gen !== generation) {
+          closeFrame(frame);
+          finishSlot(slot, resolve);
+          return;
+        }
+        try {
+          if (!reported) {
+            reported = true;
+            console.warn('[IronRDP WebCodecs] presenta en gpu', width, height);
+          }
+          blitRegions(canvas, regions);
+        } catch (_) { /* siguiente frame */ }
+        closeFrame(frame);
+        finishSlot(slot, resolve);
+      }, () => {
+        closeFrame(frame);
+        finishSlot(slot, resolve);
+      });
     } catch (_) {
-      if (imported) closeFrame(frame);
-      else await copyPresent(frame, regions);
+      slot.busy = false;
+      if (imported) {
+        closeFrame(frame);
+        if (typeof resolve === 'function') resolve();
+        drainLatest();
+      } else {
+        copyBusy = true;
+        void runCopy(frame, regions, resolve);
+      }
     }
   };
 
-  const run = async (frame, regions, resolve) => {
+  const runCopy = async (frame, regions, resolve) => {
     try {
-      if (mode === 'copy' || !gpu) await copyPresent(frame, regions);
-      else await gpuPresent(frame, regions);
+      await copyPresent(frame, regions);
     } finally {
       if (typeof resolve === 'function') resolve();
-      busy = false;
-      if (!latest) return;
-      const job = latest;
-      latest = null;
-      busy = true;
-      void run(job.frame, job.regions, job.resolve);
+      copyBusy = false;
+      drainLatest();
     }
   };
 
   const kick = (frame, regions) => new Promise((resolve) => {
-    if (busy) {
+    if (mode === 'webgpu' && gpu) {
+      if (slotsBusyCount() >= 2 || !acquireSlot()) {
+        if (latest) {
+          closeFrame(latest.frame);
+          if (typeof latest.resolve === 'function') latest.resolve();
+        }
+        latest = { frame, regions, resolve };
+        return;
+      }
+      void startGpuJob(frame, regions, resolve);
+      return;
+    }
+    if (copyBusy) {
       if (latest) {
         closeFrame(latest.frame);
         if (typeof latest.resolve === 'function') latest.resolve();
@@ -191,8 +277,8 @@ function createH264GpuPresenter(opts) {
       latest = { frame, regions, resolve };
       return;
     }
-    busy = true;
-    void run(frame, regions, resolve);
+    copyBusy = true;
+    void runCopy(frame, regions, resolve);
   });
 
   const init = async () => {
@@ -230,6 +316,7 @@ function createH264GpuPresenter(opts) {
         format: nav.gpu.getPreferredCanvasFormat(),
         sampler: device.createSampler({ magFilter: 'nearest', minFilter: 'nearest' })
       };
+      ensureSlots();
       mode = 'webgpu';
     } catch (_) {
       if (gen !== generation) return;
@@ -237,14 +324,7 @@ function createH264GpuPresenter(opts) {
       mode = 'copy';
     }
     if (gen !== generation) return;
-    const job = latest;
-    latest = null;
-    if (!job) {
-      busy = false;
-      return;
-    }
-    busy = true;
-    void run(job.frame, job.regions, job.resolve);
+    drainLatest();
   };
 
   return {
@@ -264,7 +344,6 @@ function createH264GpuPresenter(opts) {
             if (typeof latest.resolve === 'function') latest.resolve();
           }
           latest = { frame, regions, resolve };
-          busy = true;
           if (!initPromise) initPromise = init();
         });
       }
@@ -273,11 +352,10 @@ function createH264GpuPresenter(opts) {
     dispose() {
       generation += 1;
       dropLatest();
-      busy = false;
+      copyBusy = false;
       try { gpu?.device?.destroy(); } catch (_) { /* noop */ }
       gpu = null;
-      scratch = null;
-      scratchCtx = null;
+      slots = [];
       mode = 'copy';
     }
   };
