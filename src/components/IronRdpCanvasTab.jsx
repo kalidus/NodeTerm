@@ -529,6 +529,16 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     2
   );
 
+  // MS-RDPEDISP DesktopScaleFactor. El framebuffer sigue en píxeles físicos;
+  // este porcentaje hace que Windows agrande la interfaz (100 = 96 DPI).
+  const RDP_DESKTOP_SCALES = [100, 125, 150, 175, 200];
+  const readDesktopScaleFactor = () => {
+    const raw = Math.round(readDisplayPixelRatio() * 100);
+    return RDP_DESKTOP_SCALES.reduce((best, value) => (
+      Math.abs(value - raw) < Math.abs(best - raw) ? value : best
+    ));
+  };
+
   // clientWidth/Height son enteros; el DPR (tope 2) pide más píxeles en HiDPI.
   const measureAutoDesktopSize = () => {
     const el = containerRef.current;
@@ -611,32 +621,36 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     const pending = pendingResizeRef.current;
     pendingResizeRef.current = null;
     if (!pending) return;
+    const last = lastRequestedDesktopRef.current;
     if (
       pending.width === currentDesktopSizeRef.current.width
       && pending.height === currentDesktopSizeRef.current.height
+      && pending.scaleFactor === last.scaleFactor
     ) {
       return;
     }
-    requestSessionResize(pending.width, pending.height);
+    requestSessionResize(pending.width, pending.height, { scaleFactor: pending.scaleFactor });
   };
 
   const requestSessionResize = (width, height, opts = {}) => {
     if (!supportsDisplayControlRef.current) return false;
     if (!sessionRef.current?.resize) return false;
     const force = opts.force === true;
-    if (!force) {
-      if (width === currentDesktopSizeRef.current.width && height === currentDesktopSizeRef.current.height) {
-        return false;
-      }
-      if (width === lastRequestedDesktopRef.current.width && height === lastRequestedDesktopRef.current.height) {
-        return false;
-      }
+    const scaleFactor = Number.isFinite(opts.scaleFactor) ? opts.scaleFactor : readDesktopScaleFactor();
+    const last = lastRequestedDesktopRef.current;
+    // Sin escala anunciada el escritorio inicial queda al 100 % (96 DPI).
+    const announcedScale = last.scaleFactor ?? 100;
+    const sameSizeAndScale = width === last.width
+      && height === last.height
+      && scaleFactor === announcedScale;
+    if (!force && sameSizeAndScale && last.width > 0) {
+      return false;
     }
     if (resizeInFlightRef.current && !force) {
-      pendingResizeRef.current = { width, height };
+      pendingResizeRef.current = { width, height, scaleFactor };
       return true;
     }
-    lastRequestedDesktopRef.current = { width, height };
+    lastRequestedDesktopRef.current = { width, height, scaleFactor };
     resizeInFlightRef.current = true;
     if (!force) {
       resizeRecoveredRef.current = false;
@@ -645,10 +659,17 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       if (egfxDiagRef.current.active && typeof beginEgfxResizeCapture === 'function') {
         beginEgfxResizeCapture();
       }
-      sessionRef.current.resize(width, height);
+      sessionRef.current.resize(width, height, scaleFactor);
     } catch (resizeErr) {
       console.warn('[IronRDP] Error solicitando resize a la sesion:', resizeErr);
       resizeInFlightRef.current = false;
+      if (
+        lastRequestedDesktopRef.current.width === width
+        && lastRequestedDesktopRef.current.height === height
+        && lastRequestedDesktopRef.current.scaleFactor === scaleFactor
+      ) {
+        lastRequestedDesktopRef.current = { width: 0, height: 0 };
+      }
       return false;
     }
     clearResizeAckTimer();
@@ -1123,7 +1144,11 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
                 canvas.style.cursor = lastCursorStyleRef.current;
               }
               currentDesktopSizeRef.current = { width: w, height: h };
-              lastRequestedDesktopRef.current = { width: w, height: h };
+              lastRequestedDesktopRef.current = {
+                width: w,
+                height: h,
+                scaleFactor: lastRequestedDesktopRef.current.scaleFactor
+              };
               setDesktopDimensions({ width: w, height: h });
               updateCanvasRectRef.current?.();
             }
@@ -1170,7 +1195,11 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
               const h = Math.round(Number(height) || 0);
               if (w > 0 && h > 0) {
                 currentDesktopSizeRef.current = { width: w, height: h };
-                lastRequestedDesktopRef.current = { width: w, height: h };
+                lastRequestedDesktopRef.current = {
+                  width: w,
+                  height: h,
+                  scaleFactor: lastRequestedDesktopRef.current.scaleFactor
+                };
                 setDesktopDimensions({ width: w, height: h });
                 queueMicrotask(() => updateCanvasRectRef.current?.());
               }
@@ -1529,8 +1558,18 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           }, 100);
         }
 
-        // Ejecutar sesión RDP
-        currentSession.run().then((terminationInfo) => {
+        // Ejecutar sesión RDP. El bucle tiene que estar en marcha antes del resize
+        // para que DisplayControl procese la escala.
+        const runPromise = currentSession.run();
+
+        // El escritorio inicial ya coincide con el medido, así que un resize por
+        // tamaño se descartaría. En HiDPI hay que anunciar la escala igual.
+        const usesPhysicalPixels = isFullscreen || rdpConfig.autoResize !== false;
+        if (supportsDisplayControlRef.current && usesPhysicalPixels && readDesktopScaleFactor() !== 100) {
+          requestSessionResize(width, height, { force: true });
+        }
+
+        runPromise.then((terminationInfo) => {
           if (aborted) {
             console.log('ℹ️ [IronRDP WASM] Sesion abortada');
             return;
@@ -2095,7 +2134,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         rdpConfig.resolution = resKey;
         rdpConfig.autoResize = false;
         if (supportsDisplayControlRef.current) {
-          requestSessionResize(targetW, targetH);
+          // Resolución fija: el framebuffer va en píxeles CSS, no físicos.
+          requestSessionResize(targetW, targetH, { scaleFactor: 100 });
         }
 
         toastRef.current?.show({
