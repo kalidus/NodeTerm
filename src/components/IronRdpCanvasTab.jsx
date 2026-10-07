@@ -233,7 +233,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   const [isAutoResize, setIsAutoResize] = useState(rdpConfig.autoResize !== false);
   const [showResolutionMenu, setShowResolutionMenu] = useState(false);
   const [negotiatedCodec, setNegotiatedCodec] = useState(null);
-  const [h264Stats, setH264Stats] = useState(null);
   const [supportsDisplayControl, setSupportsDisplayControl] = useState(false);
   const egfxDiagRef = useRef({ active: false, codec: 'bitmap', wroteSession: false });
   const egfxResizeFlushRef = useRef(null);
@@ -282,18 +281,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       (typeof window !== 'undefined' && window.__NODETERM_RDP_DEBUG__ === true) ||
       (typeof localStorage !== 'undefined' && localStorage.getItem('NODETERM_RDP_DEBUG') === '1')
     );
-  };
-
-  // Diagnostico H.264 ON por defecto. Apagar: localStorage NODETERM_RDP_H264_STATS=0
-  // o window.__NODETERM_RDP_H264_STATS__ = false.
-  const isH264StatsEnabled = () => {
-    if (typeof window !== 'undefined' && window.__NODETERM_RDP_H264_STATS__ === false) return false;
-    if (typeof window !== 'undefined' && window.__NODETERM_RDP_H264_STATS__ === true) return true;
-    try {
-      return localStorage.getItem('NODETERM_RDP_H264_STATS') !== '0';
-    } catch (_) {
-      return true;
-    }
   };
 
   const notifyUserClose = () => {
@@ -608,6 +595,17 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     writeEgfxLine({ t: 'session', end });
   };
 
+  const codecFromPduSummary = (pdus) => {
+    const num = (name) => {
+      const match = String(pdus || '').match(new RegExp(`(?:^|,)${name}:(\\d+)`));
+      return match ? Number(match[1]) : 0;
+    };
+    const h264 = num('avc') + num('a420') + num('a444l') + num('a444c');
+    if (h264 > 0) return 'h264';
+    if (num('clear') + num('cache') + num('solid') > 0) return 'clear';
+    return null;
+  };
+
   const flushEgfxResize = (width, height) => {
     if (!egfxDiagRef.current.active) return;
     let stats = {};
@@ -620,6 +618,11 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       } catch (_) { /* noop */ }
     }
     const errors = stats.errors ?? 0;
+    const wireCodec = codecFromPduSummary(stats.pdus || '');
+    if (wireCodec) {
+      egfxDiagRef.current.codec = wireCodec;
+      setNegotiatedCodec(wireCodec);
+    }
     writeEgfxLine({
       t: 'resize',
       w: width,
@@ -956,10 +959,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     let disposeCanvasProbe = null;
     let webCodecsDecoder = null;
     let h264Presenter = null;
-    let h264StatsTimer = null;
-    let h264MissTimer = null;
-    let h264WireCount = 0;
-
     const isAborted = () => aborted || !isMounted;
 
     const beginGfxV107Fallback = (reason) => {
@@ -1299,9 +1298,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           setNegotiatedCodec('progressive');
           if (typeof setEgfxCapsCallback === 'function') {
             setEgfxCapsCallback((version, avc420, avc444) => {
-              const chosen = avc420 ? 'h264' : 'progressive';
-              egfxDiagRef.current.codec = chosen;
-              setNegotiatedCodec(chosen);
               writeEgfxLine({
                 t: 'caps',
                 v: String(version || ''),
@@ -1309,7 +1305,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
                 avc444: !!avc444,
                 mode: 'v106-dwm'
               });
-              writeEgfxLine({ t: 'codec', chosen });
             });
           }
           if (typeof setEgfxResetCallback === 'function') {
@@ -1382,83 +1377,21 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             });
             // Contadores en el borde WASM→JS (antes de push): si wireChroma=0,
             // el residual AVC444 no llega al decoder (servidor o trait Rust).
-            const wireCb = { luma: 0, chroma: 0, other: 0, lumaBytes: 0, chromaBytes: 0, samples: 0 };
+            let wireSamples = 0;
             setAvc420WebcodecsCallback((data, surfaceId, left, top, right, bottom, rects, epoch, display) => {
-              const len = data?.byteLength || data?.length || 0;
-              if (display === false) {
-                wireCb.chroma += 1;
-                wireCb.chromaBytes += len;
-              } else if (display === true || display === undefined || display === null) {
-                // undefined/null: wasm no paso el 9º arg → se trata como luma
-                if (display === true) wireCb.luma += 1;
-                else wireCb.other += 1;
-                wireCb.lumaBytes += len;
-              } else {
-                wireCb.other += 1;
-                wireCb.lumaBytes += len;
-              }
-              if (wireCb.samples < 6) {
-                wireCb.samples += 1;
+              if (wireSamples < 6) {
+                wireSamples += 1;
                 writeEgfxLine({
                   t: 'h264wire',
-                  n: wireCb.samples,
+                  n: wireSamples,
                   display,
-                  typeofDisplay: typeof display,
-                  len,
+                  len: data?.byteLength || data?.length || 0,
                   surfaceId: surfaceId | 0
                 });
               }
-              h264WireCount += 1;
               webCodecsDecoder.push(data, surfaceId, left, top, right, bottom, rects, epoch, display);
             });
             builder.extension(avc420Webcodecs(true));
-
-            // Diagnostico H.264: poll ~1s (ON por defecto). No toca el render.
-            if (isH264StatsEnabled() && typeof webCodecsDecoder.getStats === 'function') {
-              writeEgfxLine({ t: 'h264stats-start', at: Date.now() });
-              h264StatsTimer = setInterval(() => {
-                try {
-                  const s = webCodecsDecoder.getStats();
-                  const fps = s.paint420 + s.paint444;
-                  const painted = s.paint420 + s.paint444;
-                  const dropPct = (s.chromaPushed + s.chromaDropped) > 0
-                    ? Math.round((s.chromaDropped / (s.chromaPushed + s.chromaDropped)) * 100)
-                    : 0;
-                  const pct444 = painted > 0 ? Math.round((s.paint444 / painted) * 100) : 0;
-                  const kbpsLuma = Math.round((s.lumaBytes * 8) / 1000);
-                  const kbpsChroma = Math.round((s.chromaBytes * 8) / 1000);
-                  const wireLuma = wireCb.luma;
-                  const wireChroma = wireCb.chroma;
-                  const wireOther = wireCb.other;
-                  const wireKbpsLuma = Math.round((wireCb.lumaBytes * 8) / 1000);
-                  const wireKbpsChroma = Math.round((wireCb.chromaBytes * 8) / 1000);
-                  wireCb.luma = 0;
-                  wireCb.chroma = 0;
-                  wireCb.other = 0;
-                  wireCb.lumaBytes = 0;
-                  wireCb.chromaBytes = 0;
-                  const view = {
-                    fps,
-                    qDepth: s.maxQueueDepth,
-                    queueNow: s.queueNow,
-                    dropPct,
-                    pct444,
-                    paint420: s.paint420,
-                    paint444: s.paint444,
-                    kbpsLuma,
-                    kbpsChroma,
-                    mergeMs: Math.round(s.mergeMsAvg * 10) / 10,
-                    wireLuma,
-                    wireChroma,
-                    wireOther,
-                    wireKbpsLuma,
-                    wireKbpsChroma
-                  };
-                  setH264Stats(view);
-                  writeEgfxLine({ t: 'h264stats', ...view });
-                } catch (_) { /* noop */ }
-              }, 1000);
-            }
           } catch (wcErr) {
             if (isRdpDebugEnabled()) {
               console.warn('[IronRDP] WebCodecs no disponible, fallback ClearCodec/RFX:', wcErr.message);
@@ -1855,14 +1788,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       if (disposeCanvasProbe) {
         try { disposeCanvasProbe(); } catch (_) {}
         disposeCanvasProbe = null;
-      }
-      if (h264StatsTimer) {
-        try { clearInterval(h264StatsTimer); } catch (_) {}
-        h264StatsTimer = null;
-      }
-      if (h264MissTimer) {
-        try { clearTimeout(h264MissTimer); } catch (_) {}
-        h264MissTimer = null;
       }
       if (webCodecsDecoder) {
         try { webCodecsDecoder.close(); } catch (_) {}
@@ -3044,32 +2969,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         </div>
       )}
 
-      {/* Overlay de diagnostico H.264 (ON por defecto; apagar con NODETERM_RDP_H264_STATS=0) */}
-      {connectionState === 'connected' && h264Stats && isH264StatsEnabled() && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 8,
-            right: 8,
-            zIndex: 50,
-            padding: '6px 9px',
-            background: 'rgba(0,0,0,0.72)',
-            color: '#9cff9c',
-            font: '11px/1.45 ui-monospace, Consolas, monospace',
-            borderRadius: 6,
-            border: '1px solid rgba(120,255,120,0.25)',
-            pointerEvents: 'none',
-            whiteSpace: 'pre'
-          }}
-        >
-          {`H264  ${h264Stats.fps} fps  q:${h264Stats.queueNow}/${h264Stats.qDepth}\n`}
-          {`444: ${h264Stats.pct444}%  drop: ${h264Stats.dropPct}%  merge: ${h264Stats.mergeMs}ms\n`}
-          {`420/444: ${h264Stats.paint420}/${h264Stats.paint444}\n`}
-          {`luma: ${h264Stats.kbpsLuma} kbps  croma: ${h264Stats.kbpsChroma} kbps\n`}
-          {`wire L/C/?: ${h264Stats.wireLuma ?? 0}/${h264Stats.wireChroma ?? 0}/${h264Stats.wireOther ?? 0}`}
-        </div>
-      )}
-
       {/* Barra flotante de utilidades RDP Cyberpunk (HTML5 Canvas) */}
       {connectionState === 'connected' && (
         <div
@@ -3087,7 +2986,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             <span className="ironrdp-cyber-divider" />
 
             <span className="ironrdp-badge-host" title="Códec negociado con el servidor">
-              <span>{negotiatedCodec === 'h264' ? 'EGFX · H.264' : negotiatedCodec === 'progressive' ? 'EGFX · Progressive' : negotiatedCodec === 'bitmap' ? 'Bitmap' : '—'}</span>
+              <span>{negotiatedCodec === 'h264' ? 'EGFX · H.264' : negotiatedCodec === 'clear' ? 'EGFX · ClearCodec' : negotiatedCodec === 'progressive' ? 'EGFX · Progressive' : negotiatedCodec === 'bitmap' ? 'Bitmap' : '—'}</span>
             </span>
 
             <span className="ironrdp-cyber-divider" />

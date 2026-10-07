@@ -546,12 +546,6 @@ export function EnhancedRDPForm({
         </div>
       )}
 
-      {isWebRdp ? (
-        <div className="terminal-options-grid mb-3">
-          {renderIronRdpEgfxSwitch('cred')}
-        </div>
-      ) : null}
-
       {(formData.clientType === 'guacamole' || formData.clientType === 'web-rdp') ? (
         <TerminalDropdownField
           id={`${p}-guacSecurity`}
@@ -745,7 +739,6 @@ export function EnhancedRDPForm({
               </span>
             </div>
             <TerminalOptionSection title={t('rdp.advanced.performance')}>
-              {renderIronRdpEgfxSwitch('adv')}
               {isGuacamole ? (
                 <TerminalSwitchOption
                   iconClass="pi-palette"
