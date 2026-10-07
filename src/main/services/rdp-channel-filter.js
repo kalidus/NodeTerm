@@ -449,6 +449,51 @@ function formatDrdynvcForwardDebug(userData) {
   return `chFlags=0x${flags.toString(16)} frag=${frag} dvcCmd=${dvcCmd} pduLen=${length} body=${body.length}B hex16=${hex}`;
 }
 
+/**
+ * Auto-Detect suelto, sin el resto del filtro. null si el frame no lo es
+ * (y en ese caso no cambia el estado). Así la respuesta RTT/ancho de banda
+ * sale antes de procesar la ráfaga gráfica del mismo tick.
+ */
+function tryConsumeAutoDetectFrame(state, buf) {
+  if (!state?.ready || !Buffer.isBuffer(buf) || buf[0] !== 0x03) return null;
+  const channelId = readSendDataIndicationChannelId(buf);
+  if (channelId == null) return null;
+  const parsed = parseMcsSendData(buf);
+  if (!parsed) return null;
+  const isIo = channelId === state.ioChannelId;
+  return consumeAutodetect(state, channelId, parsed.userData, !isIo);
+}
+
+/**
+ * Saca los PDUs Auto-Detect de una ráfaga ya reensamblada y deja el resto
+ * en orden. `notes` trae el índice dentro de la ráfaga y el retraso hasta
+ * armar la respuesta, para NODETERM_RDP_DEBUG.
+ */
+function siphonAutoDetectFrames(state, frames) {
+  const kept = [];
+  const replies = [];
+  const notes = [];
+  if (!Array.isArray(frames) || frames.length === 0) {
+    return { kept: Array.isArray(frames) ? frames : [], replies, notes };
+  }
+  const started = Date.now();
+  for (let i = 0; i < frames.length; i++) {
+    const hit = tryConsumeAutoDetectFrame(state, frames[i]);
+    if (!hit) {
+      kept.push(frames[i]);
+      continue;
+    }
+    if (hit.replies && hit.replies.length) replies.push(...hit.replies);
+    notes.push({
+      index: i,
+      burst: frames.length,
+      lagMs: Date.now() - started,
+      note: hit.note || 'autodetect'
+    });
+  }
+  return { kept, replies, notes };
+}
+
 function consumeAutodetect(state, channelId, userData, force) {
   const sec = stripSecAutodetect(userData);
   if (!sec.hadSec && !force) {
@@ -1238,6 +1283,8 @@ module.exports = {
   buildAppProbeCliprdrWrites,
   filterServerFrame,
   processServerFrame,
+  tryConsumeAutoDetectFrame,
+  siphonAutoDetectFrames,
   wasmDeclaredDrdynvc,
   wasmAllowsGraphicsDvc,
   wasmHasDrdynvcName,

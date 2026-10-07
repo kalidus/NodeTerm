@@ -408,6 +408,20 @@ function avc444RectToRgba(main, chroma) {
   return rgba;
 }
 
+/** El siguiente access unit ya encolado es el croma: no pintar todavía el 4:2:0. */
+function shouldDeferLumaPresent(nextIsChroma) {
+  return nextIsChroma === true;
+}
+
+/**
+ * Quedan otras salidas del decoder por delante. Mezclar este par bloquea el
+ * hilo y, mientras tanto, la pantalla se queda en el 4:2:0. Se descarta y
+ * se pinta solo el par más reciente, ya con el croma.
+ */
+function shouldSkipStaleChroma(queuedOutputs) {
+  return (queuedOutputs | 0) >= 2;
+}
+
 function paintTargets(meta, frameW, frameH) {
   const regions = parseRegionRects(meta.rects);
   const inside = regions.filter((region) => (
@@ -599,9 +613,11 @@ function createRdpWebCodecsDecoder(opts = {}) {
   /** @type {Map<number, object>} */
   const lumaBySurface = new Map();
 
-  let reported = false;
+  let errorLogs = 0;
   let reportedFirst = false;
   let reportedPaint = false;
+  /** @type {{ frame: any, meta: object, targets: object, box: object, frameW: number, frameH: number }|null} */
+  let heldLuma = null;
   let deliverChain = Promise.resolve();
   const SETTLE_MS = 80;
   /**
@@ -626,6 +642,12 @@ function createRdpWebCodecsDecoder(opts = {}) {
     try { frame.close(); } catch (_) { /* noop */ }
   };
 
+  const dropHeldLuma = () => {
+    if (!heldLuma) return;
+    closeQuiet(heldLuma.frame);
+    heldLuma = null;
+  };
+
   const clearHold = () => {
     closeQuiet(hold.lumaFrame);
     closeQuiet(hold.chromaFrame);
@@ -635,13 +657,14 @@ function createRdpWebCodecsDecoder(opts = {}) {
     hold.chromaMeta = null;
     hold.targets = null;
     hold.box = null;
+    dropHeldLuma();
   };
 
   const fail = (err) => {
     lastError = err;
     const msg = err && err.message ? err.message : String(err);
-    if (!reported) {
-      reported = true;
+    if (errorLogs < 8) {
+      errorLogs += 1;
       console.warn('[IronRDP WebCodecs]', msg);
     }
     if (typeof opts.onError === 'function') opts.onError(err);
@@ -848,6 +871,36 @@ function createRdpWebCodecsDecoder(opts = {}) {
     }, SETTLE_MS);
   };
 
+  const paintSharpFromHeld = async (held, chromaFrame, chromaTargets, frameW, frameH) => {
+    const planes = await readI420Rect(held.frame, held.box);
+    const main = { ...planes, frameWidth: held.frameW, frameHeight: held.frameH };
+    lumaBySurface.set(held.meta.surfaceId, main);
+    const aux = await readAux(
+      chromaFrame,
+      unionAlignedBox(chromaTargets.regions, frameW, frameH),
+      frameW,
+      frameH
+    );
+    if (!aux) return false;
+    let painted = false;
+    for (const region of chromaTargets.regions) {
+      if (!lumaCovers(main, region)) continue;
+      const chroma = combineAvc444v2Chroma(main, aux, region);
+      const rgba = avc444RectToRgba(main, chroma);
+      if (!rgba) continue;
+      paintChromaRgba(
+        chromaTargets.originLeft + region.left,
+        chromaTargets.originTop + region.top,
+        chroma.width,
+        chroma.height,
+        rgba,
+        held.meta
+      );
+      painted = true;
+    }
+    return painted;
+  };
+
   const deliver = async (frame, meta) => {
     let keepOpen = false;
     try {
@@ -862,20 +915,40 @@ function createRdpWebCodecsDecoder(opts = {}) {
 
       if (presentFrame) {
         if (meta.display !== false) {
-          // I420 solo antes del blit. Tras enqueuePresent el frame es del presentador:
-          // ni copyTo, ni drawImage, ni clone (importExternalTexture tumba la GPU).
-          try {
-            const planes = await readI420Rect(frame, box);
-            lumaBySurface.set(meta.surfaceId, {
-              ...planes,
-              frameWidth: frameW,
-              frameHeight: frameH
-            });
-          } catch (_) {
-            lumaBySurface.delete(meta.surfaceId);
+          const stale = shouldSkipStaleChroma(order.length);
+          const nextIsChroma = !!(order[0] && order[0].display === false);
+          // El 4:2:0 se ve pixelado. Si el croma de este mismo par ya está
+          // en el decoder, se espera a mezclarlo y se pinta una sola vez.
+          if (!stale && shouldDeferLumaPresent(nextIsChroma)) {
+            dropHeldLuma();
+            heldLuma = { frame, meta, targets, box, frameW, frameH };
+            keepOpen = true;
+            return;
+          }
+          if (stale) {
+            dropHeldLuma();
+            return;
           }
           enqueuePresent(frame, targets);
           keepOpen = true;
+          return;
+        }
+        const held = heldLuma;
+        heldLuma = null;
+        if (shouldSkipStaleChroma(order.length)) {
+          closeQuiet(held && held.frame);
+          return;
+        }
+        if (held) {
+          let handed = false;
+          try {
+            const painted = await paintSharpFromHeld(held, frame, targets, frameW, frameH);
+            if (painted) closeQuiet(held.frame);
+            else enqueuePresent(held.frame, held.targets);
+            handed = true;
+          } catch (_) {
+            if (!handed) enqueuePresent(held.frame, held.targets);
+          }
           return;
         }
         await presentGate;
@@ -987,7 +1060,6 @@ function createRdpWebCodecsDecoder(opts = {}) {
         configured = false;
         needsKey = true;
         activeCodec = '';
-        if (acceleration === 'prefer-hardware') acceleration = 'prefer-software';
         if (decoder) {
           try { decoder.close(); } catch (_) { /* noop */ }
           decoder = null;
@@ -1125,5 +1197,7 @@ module.exports = {
   unionAlignedBox,
   chromaSpansFor,
   combineAvc444v2Chroma,
+  shouldDeferLumaPresent,
+  shouldSkipStaleChroma,
   createRdpWebCodecsDecoder
 };

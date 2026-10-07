@@ -53,7 +53,8 @@ const {
   retryConfirmAppCliprdrWrite,
   buildAppProbeCliprdrWrites,
   remapClientDrdynvcFrame,
-  formatDrdynvcForwardDebug
+  formatDrdynvcForwardDebug,
+  siphonAutoDetectFrames
 } = require('./rdp-channel-filter');
 const {
   noteCliprdrHealth,
@@ -880,7 +881,25 @@ class RdpNativeBridgeService extends EventEmitter {
                 // varios segmentos TCP tiene que llegar entero: si se manda a
                 // trozos, el corrector de stride no lo ve y IronRDP pinta el
                 // rectangulo con el ancho equivocado.
-                const frames = normalizeBitmaps ? streamDeframer.push(chunk) : frameSplitter.push(chunk);
+                const splitFrames = normalizeBitmaps ? streamDeframer.push(chunk) : frameSplitter.push(chunk);
+                // RTT y ancho de banda se contestan antes de la ráfaga gráfica.
+                // Si la respuesta espera a procesar los bitmaps, Windows mide
+                // esa espera como red lenta y baja la calidad H.264 al mover.
+                const earlyAd = siphonAutoDetectFrames(channelFilter, splitFrames);
+                if (earlyAd.notes.length && isDebug) {
+                  for (const item of earlyAd.notes) {
+                    console.log(
+                      `[Bridge AutoDetect] reply idx=${item.index}/${item.burst} lag=${item.lagMs}ms ${item.note}`
+                    );
+                  }
+                }
+                if (earlyAd.replies.length && tlsSocket && tlsSocket.writable) {
+                  for (const reply of earlyAd.replies) {
+                    bytesToRdp += reply.length;
+                    tlsSocket.write(reply);
+                  }
+                }
+                const frames = earlyAd.kept;
 
                 if (latencyMetrics) {
                   const statFrames = normalizeBitmaps ? frames : statsDeframer.push(chunk);

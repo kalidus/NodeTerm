@@ -2,7 +2,7 @@
 
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const { avcToAnnexB, avcChunkType, avcCodecString, inspectAvcAccessUnit, cropRgbaRect, unionAlignedBox, chromaSpansFor, combineAvc444v2Chroma, isWebCodecsH264Available } = require('../../src/utils/rdpWebCodecsH264');
+const { avcToAnnexB, avcChunkType, avcCodecString, inspectAvcAccessUnit, cropRgbaRect, unionAlignedBox, chromaSpansFor, combineAvc444v2Chroma, isWebCodecsH264Available, shouldDeferLumaPresent, shouldSkipStaleChroma } = require('../../src/utils/rdpWebCodecsH264');
 
 describe('rdpWebCodecsH264', () => {
   it('convierte AVC length-prefixed a Annex B', () => {
@@ -15,8 +15,11 @@ describe('rdpWebCodecsH264', () => {
     assert.deepEqual(Buffer.from(annex.subarray(4)), nalu);
   });
 
-  it('isWebCodecsH264Available refleja el entorno', () => {
-    assert.equal(typeof isWebCodecsH264Available(), 'boolean');
+  it('no pinta el 4:2:0 si el siguiente access unit es croma, y descarta pares viejos', () => {
+    assert.equal(shouldDeferLumaPresent(true), true);
+    assert.equal(shouldDeferLumaPresent(false), false);
+    assert.equal(shouldSkipStaleChroma(2), true);
+    assert.equal(shouldSkipStaleChroma(1), false);
   });
 
   it('el SPS de un escritorio grande anuncia al menos nivel 5.1', () => {

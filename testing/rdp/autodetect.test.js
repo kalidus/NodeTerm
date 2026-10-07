@@ -21,7 +21,8 @@ const {
 const {
   createChannelFilterState,
   learnFromServerGcc,
-  processServerFrame
+  processServerFrame,
+  siphonAutoDetectFrames
 } = require('../../src/main/services/rdp-channel-filter');
 
 describe('parseAutoDetectRequest / RTT response', () => {
@@ -149,5 +150,39 @@ describe('processServerFrame message channel', () => {
     const result = processServerFrame(state, io);
     assert.equal(result.dropped, false);
     assert.equal(result.forward, io);
+  });
+});
+
+describe('siphonAutoDetectFrames', () => {
+  function loadScNet(state) {
+    const scNet = Buffer.from(
+      fs.readFileSync(path.join(__dirname, 'frames/from-01-105b.hex'), 'utf8').trim(),
+      'hex'
+    );
+    learnFromServerGcc(state, scNet);
+  }
+
+  it('contesta el RTT antes de dejar pasar el resto de la ráfaga', () => {
+    const state = createChannelFilterState();
+    loadScNet(state);
+
+    const rtt = Buffer.from([0x06, 0x00, 0x09, 0x00, 0x01, 0x00]);
+    const autodetect = buildMcsSendDataRequest(0, 1001, rtt);
+    autodetect[7] = 0x68;
+
+    const graphics = Buffer.from([0x00, 0x10, 0x08, 0x00]);
+    const early = siphonAutoDetectFrames(state, [graphics, autodetect, graphics]);
+    assert.equal(early.replies.length, 1);
+    assert.equal(early.kept.length, 2);
+    assert.equal(early.notes.length, 1);
+    assert.equal(early.notes[0].index, 1);
+    assert.equal(early.notes[0].burst, 3);
+    assert.ok(early.notes[0].lagMs >= 0);
+    assert.match(early.notes[0].note, /rtt/);
+    assert.equal(state.autoDetect.repliedCount, 1);
+
+    const again = processServerFrame(state, early.kept[0]);
+    assert.equal(again.replies.length, 0);
+    assert.equal(state.autoDetect.repliedCount, 1);
   });
 });
