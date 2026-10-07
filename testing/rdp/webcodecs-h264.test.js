@@ -2,7 +2,7 @@
 
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const { avcToAnnexB, avcChunkType, avcCodecString, inspectAvcAccessUnit, cropRgbaRect, isWebCodecsH264Available } = require('../../src/utils/rdpWebCodecsH264');
+const { avcToAnnexB, avcChunkType, avcCodecString, inspectAvcAccessUnit, cropRgbaRect, unionAlignedBox, chromaSpansFor, combineAvc444v2Chroma, isWebCodecsH264Available } = require('../../src/utils/rdpWebCodecsH264');
 
 describe('rdpWebCodecsH264', () => {
   it('convierte AVC length-prefixed a Annex B', () => {
@@ -80,4 +80,90 @@ describe('rdpWebCodecsH264', () => {
     assert.equal(crop.bottom, 1);
     assert.equal(cropRgbaRect(src, 2, 2, 2, 0, 2, 1), null);
   });
+
+  it('la caja de copyTo es la ventana, no el escritorio', () => {
+    const box = unionAlignedBox([{ left: 101, top: 50, right: 400, bottom: 301 }], 2600, 1800);
+    assert.equal(box.left, 100);
+    assert.equal(box.top, 50);
+    assert.equal(box.right, 400);
+    assert.equal(box.bottom, 302);
+    assert.ok((box.right - box.left) * (box.bottom - box.top) < 2600 * 1800);
+  });
+
+  it('un macrobloque AVC444v2 usa el croma impar del frame auxiliar', () => {
+    const width = 16;
+    const height = 16;
+    const chroma = 8;
+    const main = {
+      width,
+      height,
+      y: new Uint8Array(width * height).fill(128),
+      u: new Uint8Array(chroma * chroma).fill(40),
+      v: new Uint8Array(chroma * chroma).fill(50)
+    };
+    const auxY = new Uint8Array(width * height);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) auxY[y * width + x] = x < 8 ? 200 : 210;
+    }
+    const auxU = new Uint8Array(chroma * chroma).fill(180);
+    const auxV = new Uint8Array(chroma * chroma).fill(190);
+    for (let y = 0; y < chroma; y++) {
+      for (let x = 4; x < 8; x++) {
+        auxU[y * chroma + x] = 181;
+        auxV[y * chroma + x] = 191;
+      }
+    }
+    const aux = { width, height, y: auxY, u: auxU, v: auxV };
+    const rect = { left: 0, top: 0, right: 16, bottom: 16 };
+    const out = combineAvc444v2Chroma(main, aux, rect);
+
+    assert.equal(out.u[0], 40);
+    assert.equal(out.v[0], 50);
+    assert.equal(out.u[1], 200);
+    assert.equal(out.v[1], 210);
+    assert.notEqual(out.u[1], 40);
+    assert.equal(out.u[16], 180);
+    assert.equal(out.v[16], 181);
+    assert.equal(out.u[18], 190);
+    assert.equal(out.v[18], 191);
+
+    const spans = chromaSpansFor(rect, width, height);
+    const cropped = {
+      frameWidth: width,
+      width,
+      spans: {
+        u: sliceI420(aux, spans.u),
+        v: sliceI420(aux, spans.v)
+      }
+    };
+    const fromSpans = combineAvc444v2Chroma(main, cropped, rect);
+    assert.equal(fromSpans.u[1], 200);
+    assert.equal(fromSpans.v[1], 210);
+    assert.equal(fromSpans.u[0], 40);
+    assert.equal(fromSpans.u[16], 180);
+    assert.equal(fromSpans.v[16], 181);
+    assert.equal(fromSpans.u[18], 190);
+    assert.equal(fromSpans.v[18], 191);
+  });
 });
+
+function sliceI420(src, box) {
+  const w = box.right - box.left;
+  const h = box.bottom - box.top;
+  const cw = w >> 1;
+  const ch = h >> 1;
+  const y = new Uint8Array(w * h);
+  const u = new Uint8Array(cw * ch);
+  const v = new Uint8Array(cw * ch);
+  const cStride = src.width >> 1;
+  for (let row = 0; row < h; row++) {
+    y.set(src.y.subarray((box.top + row) * src.width + box.left, (box.top + row) * src.width + box.left + w), row * w);
+  }
+  for (let row = 0; row < ch; row++) {
+    const sy = (box.top >> 1) + row;
+    const sx = box.left >> 1;
+    u.set(src.u.subarray(sy * cStride + sx, sy * cStride + sx + cw), row * cw);
+    v.set(src.v.subarray(sy * cStride + sx, sy * cStride + sx + cw), row * cw);
+  }
+  return { y, u, v, width: w, height: h, originX: box.left, originY: box.top };
+}

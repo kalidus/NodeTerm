@@ -1233,6 +1233,15 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
               applyRgba: (epoch, surfaceId, left, top, right, bottom, rgba) => {
                 applyEgfxRgba(epoch, surfaceId, left, top, right, bottom, rgba);
               },
+              presentFrame: (frame, regions) => {
+                const canvas = canvasRef.current;
+                const ctx = getOptimized2dContext(canvas);
+                if (!ctx) return;
+                ctx.imageSmoothingEnabled = false;
+                for (const region of regions) {
+                  ctx.drawImage(frame, region.sx, region.sy, region.sw, region.sh, region.dx, region.dy, region.sw, region.sh);
+                }
+              },
               onError: (err) => {
                 if (isRdpDebugEnabled()) {
                   console.warn('[IronRDP WebCodecs]', err?.message || err);

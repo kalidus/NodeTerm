@@ -218,6 +218,356 @@ function parseRegionRects(rects) {
   return out;
 }
 
+/** Caja par que cubre los rectángulos, recortada al frame. */
+function unionAlignedBox(regions, frameW, frameH) {
+  const maxW = frameW & ~1;
+  const maxH = frameH & ~1;
+  if (maxW <= 0 || maxH <= 0) return { left: 0, top: 0, right: frameW, bottom: frameH };
+  let left = maxW;
+  let top = maxH;
+  let right = 0;
+  let bottom = 0;
+  for (const region of regions) {
+    if (region.left < left) left = region.left;
+    if (region.top < top) top = region.top;
+    if (region.right > right) right = region.right;
+    if (region.bottom > bottom) bottom = region.bottom;
+  }
+  left = Math.max(0, left & ~1);
+  top = Math.max(0, top & ~1);
+  right = Math.min(maxW, (right + 1) & ~1);
+  bottom = Math.min(maxH, (bottom + 1) & ~1);
+  if (left >= right || top >= bottom) return { left: 0, top: 0, right: maxW, bottom: maxH };
+  return { left, top, right, bottom };
+}
+
+function planeAt(plane, stride, x, y) {
+  if (!plane || x < 0 || y < 0 || x >= stride) return 0;
+  const index = y * stride + x;
+  if (index >= plane.length) return 0;
+  return plane[index];
+}
+
+function cropHolds(crop, x, y, subsampled) {
+  const ox = subsampled ? crop.originX >> 1 : crop.originX;
+  const oy = subsampled ? crop.originY >> 1 : crop.originY;
+  const w = subsampled ? crop.width >> 1 : crop.width;
+  const h = subsampled ? crop.height >> 1 : crop.height;
+  return x >= ox && y >= oy && x < ox + w && y < oy + h;
+}
+
+function readCrop(crop, plane, x, y, subsampled) {
+  if (!cropHolds(crop, x, y, subsampled)) return null;
+  const ox = subsampled ? crop.originX >> 1 : crop.originX;
+  const oy = subsampled ? crop.originY >> 1 : crop.originY;
+  const stride = subsampled ? crop.width >> 1 : crop.width;
+  return planeAt(crop[plane], stride, x - ox, y - oy);
+}
+
+/**
+ * Reconstruye U y V a resolución completa (AVC444v2, MS-RDPEGFX 3.3.8.3.3).
+ * El frame principal aporta el croma par. El auxiliar guarda el impar:
+ * la mitad izquierda de Y/U/V es U y la derecha es V.
+ * `aux.spans` son esas dos franjas cuando no se ha leído el frame entero.
+ */
+function combineAvc444v2Chroma(main, aux, rect) {
+  const left = rect.left | 0;
+  const top = rect.top | 0;
+  const width = (rect.right | 0) - left;
+  const height = (rect.bottom | 0) - top;
+  if (!main || !aux || width <= 0 || height <= 0) return null;
+  const mainFrameW = main.frameWidth || main.width;
+  const local = !aux.spans && aux.width !== mainFrameW;
+  const frameW = local ? aux.width : (aux.frameWidth || aux.width);
+  const ax = (x) => (local ? x - left : x);
+  const ay = (y) => (local ? y - top : y);
+  const mainOx = main.originX || 0;
+  const mainOy = main.originY || 0;
+  const mainCStride = main.width >> 1;
+  const u444 = new Uint8Array(width * height);
+  const v444 = new Uint8Array(width * height);
+
+  const mainC = (plane, x, y) => planeAt(main[plane], mainCStride, x - (mainOx >> 1), y - (mainOy >> 1));
+  const auxY = (x, y) => {
+    if (aux.spans) {
+      const hit = readCrop(aux.spans.u, 'y', x, y, false);
+      if (hit !== null) return hit;
+      const other = readCrop(aux.spans.v, 'y', x, y, false);
+      return other === null ? 0 : other;
+    }
+    return planeAt(aux.y, aux.width, x - (aux.originX || 0), y - (aux.originY || 0));
+  };
+  const auxC = (plane, x, y) => {
+    if (aux.spans) {
+      const hit = readCrop(aux.spans.u, plane, x, y, true);
+      if (hit !== null) return hit;
+      const other = readCrop(aux.spans.v, plane, x, y, true);
+      return other === null ? 0 : other;
+    }
+    const stride = aux.width >> 1;
+    return planeAt(aux[plane], stride, x - ((aux.originX || 0) >> 1), y - ((aux.originY || 0) >> 1));
+  };
+
+  for (let y = 0; y < height; y++) {
+    const sy = top + y;
+    for (let x = 0; x < width; x++) {
+      const sx = left + x;
+      const index = y * width + x;
+      u444[index] = mainC('u', sx >> 1, sy >> 1);
+      v444[index] = mainC('v', sx >> 1, sy >> 1);
+    }
+  }
+
+  const halfWidth = (width + 1) >> 1;
+  for (let y = 0; y < height; y++) {
+    const row = ay(top + y);
+    for (let x = 0; x < halfWidth; x++) {
+      const odd = (x << 1) + 1;
+      if (odd >= width) break;
+      const srcX = (ax(left) >> 1) + x;
+      const index = y * width + odd;
+      u444[index] = auxY(srcX, row);
+      v444[index] = auxY(srcX + (frameW >> 1), row);
+    }
+  }
+
+  const quarter = (width + 3) >> 2;
+  const halfHeight = (height + 1) >> 1;
+  const split = frameW >> 2;
+  for (let y = 0; y < halfHeight; y++) {
+    const sy = top + (y << 1) + 1;
+    if (sy >= top + height) break;
+    const row = ay(sy);
+    const chromaY = row >> 1;
+    const localY = sy - top;
+    for (let x = 0; x < quarter; x++) {
+      const srcX = (ax(left) >> 2) + x;
+      const col0 = x << 2;
+      const col2 = col0 + 2;
+      if (col0 < width) {
+        const index = localY * width + col0;
+        u444[index] = auxC('u', srcX, chromaY);
+        v444[index] = auxC('u', srcX + split, chromaY);
+      }
+      if (col2 < width) {
+        const index = localY * width + col2;
+        u444[index] = auxC('v', srcX, chromaY);
+        v444[index] = auxC('v', srcX + split, chromaY);
+      }
+    }
+  }
+
+  return { u: u444, v: v444, width, height, left, top };
+}
+
+function undoChromaFilter(sample, right, below, diag) {
+  const restored = (sample << 2) - (right + below + diag);
+  if (Math.abs(restored - sample) < 30) return sample;
+  if (restored < 0) return 0;
+  if (restored > 255) return 255;
+  return restored;
+}
+
+function yuv601FullToRgb(y, u, v) {
+  const d = u - 128;
+  const e = v - 128;
+  const r = y + ((1436 * e + 512) >> 10);
+  const g = y - ((352 * d + 731 * e + 512) >> 10);
+  const b = y + ((1815 * d + 512) >> 10);
+  return [
+    r < 0 ? 0 : r > 255 ? 255 : r,
+    g < 0 ? 0 : g > 255 ? 255 : g,
+    b < 0 ? 0 : b > 255 ? 255 : b
+  ];
+}
+
+function avc444RectToRgba(main, chroma) {
+  if (!chroma) return null;
+  const { u, v, width, height, left, top } = chroma;
+  const rgba = new Uint8Array(width * height * 4);
+  const ox = main.originX || 0;
+  const oy = main.originY || 0;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let cu = u[y * width + x];
+      let cv = v[y * width + x];
+      if ((x & 1) === 0 && (y & 1) === 0 && x + 1 < width && y + 1 < height) {
+        cu = undoChromaFilter(cu, u[y * width + x + 1], u[(y + 1) * width + x], u[(y + 1) * width + x + 1]);
+        cv = undoChromaFilter(cv, v[y * width + x + 1], v[(y + 1) * width + x], v[(y + 1) * width + x + 1]);
+      }
+      const yv = planeAt(main.y, main.width, left + x - ox, top + y - oy);
+      const rgb = yuv601FullToRgb(yv, cu, cv);
+      const offset = (y * width + x) * 4;
+      rgba[offset] = rgb[0];
+      rgba[offset + 1] = rgb[1];
+      rgba[offset + 2] = rgb[2];
+      rgba[offset + 3] = 255;
+    }
+  }
+  return rgba;
+}
+
+function paintTargets(meta, frameW, frameH) {
+  const regions = parseRegionRects(meta.rects);
+  const inside = regions.filter((region) => (
+    region.left >= 0 && region.top >= 0 && region.right <= frameW && region.bottom <= frameH && region.left < region.right
+  ));
+  if (inside.length) return { regions: inside, originLeft: 0, originTop: 0 };
+  const destW = Math.max(0, (meta.right | 0) - (meta.left | 0)) || frameW;
+  const destH = Math.max(0, (meta.bottom | 0) - (meta.top | 0)) || frameH;
+  const w = Math.min(destW, frameW);
+  const h = Math.min(destH, frameH);
+  if (w <= 0 || h <= 0) return null;
+  return {
+    regions: [{ left: 0, top: 0, right: w, bottom: h }],
+    originLeft: meta.left | 0,
+    originTop: meta.top | 0
+  };
+}
+
+function chromaSpanBox(x, y, w, h, frameW, frameH) {
+  const maxW = frameW & ~1;
+  const maxH = frameH & ~1;
+  const left = Math.max(0, x & ~1);
+  const top = Math.max(0, y & ~1);
+  const right = Math.min(maxW, (x + w + 1) & ~1);
+  const bottom = Math.min(maxH, (y + h + 1) & ~1);
+  if (left >= right || top >= bottom) return null;
+  return { left, top, right, bottom };
+}
+
+/** Franjas del frame auxiliar donde AVC444v2 guarda el croma impar de `box`. */
+function chromaSpansFor(box, frameW, frameH) {
+  const width = box.right - box.left;
+  const height = box.bottom - box.top;
+  const halfWidth = (width + 1) >> 1;
+  const uX = box.left >> 1;
+  return {
+    u: chromaSpanBox(uX, box.top, halfWidth, height, frameW, frameH),
+    v: chromaSpanBox((frameW >> 1) + uX, box.top, halfWidth, height, frameW, frameH)
+  };
+}
+
+async function readRgbaRect(frame, box) {
+  const w = box.right - box.left;
+  const h = box.bottom - box.top;
+  const rgba = new Uint8Array(w * h * 4);
+  try {
+    await frame.copyTo(rgba, {
+      format: 'RGBA',
+      rect: { x: box.left, y: box.top, width: w, height: h },
+      layout: [{ offset: 0, stride: w * 4 }]
+    });
+    return rgba;
+  } catch (_) {
+    const scratch = new OffscreenCanvas(w, h);
+    const ctx = scratch.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(frame, box.left, box.top, w, h, 0, 0, w, h);
+    return new Uint8Array(ctx.getImageData(0, 0, w, h).data);
+  }
+}
+
+function sliceI420Planes(src, box) {
+  const w = box.right - box.left;
+  const h = box.bottom - box.top;
+  const cw = w >> 1;
+  const ch = h >> 1;
+  const y = new Uint8Array(w * h);
+  const u = new Uint8Array(cw * ch);
+  const v = new Uint8Array(cw * ch);
+  const cStride = src.width >> 1;
+  for (let row = 0; row < h; row++) {
+    y.set(src.y.subarray((box.top + row) * src.width + box.left, (box.top + row) * src.width + box.left + w), row * w);
+  }
+  for (let row = 0; row < ch; row++) {
+    const sy = (box.top >> 1) + row;
+    const sx = box.left >> 1;
+    u.set(src.u.subarray(sy * cStride + sx, sy * cStride + sx + cw), row * cw);
+    v.set(src.v.subarray(sy * cStride + sx, sy * cStride + sx + cw), row * cw);
+  }
+  return { y, u, v, width: w, height: h, originX: box.left, originY: box.top };
+}
+
+async function copyI420(frame, box) {
+  const w = box.right - box.left;
+  const h = box.bottom - box.top;
+  const cw = w >> 1;
+  const ch = h >> 1;
+  const ySize = w * h;
+  const cSize = cw * ch;
+  const buf = new Uint8Array(ySize + cSize * 2);
+  await frame.copyTo(buf, {
+    format: 'I420',
+    rect: { x: box.left, y: box.top, width: w, height: h },
+    layout: [
+      { offset: 0, stride: w },
+      { offset: ySize, stride: cw },
+      { offset: ySize + cSize, stride: cw }
+    ]
+  });
+  return {
+    y: buf.subarray(0, ySize),
+    u: buf.subarray(ySize, ySize + cSize),
+    v: buf.subarray(ySize + cSize),
+    width: w,
+    height: h,
+    originX: box.left,
+    originY: box.top
+  };
+}
+
+async function readI420Rect(frame, box) {
+  try {
+    return await copyI420(frame, box);
+  } catch (err) {
+    const frameW = (frame.displayWidth || frame.codedWidth) & ~1;
+    const frameH = (frame.displayHeight || frame.codedHeight) & ~1;
+    if (box.left === 0 && box.top === 0 && box.right === frameW && box.bottom === frameH) throw err;
+    const full = await copyI420(frame, { left: 0, top: 0, right: frameW, bottom: frameH });
+    return sliceI420Planes(full, box);
+  }
+}
+
+/**
+ * Suma al RGBA del navegador solo la diferencia entre el croma 4:2:0 y el 4:4:4.
+ * El color de base sigue siendo el de la GPU.
+ */
+function sharpenRgba(base, boxW, region, box, main, mixed) {
+  const rw = mixed.width;
+  const rh = mixed.height;
+  const out = new Uint8Array(rw * rh * 4);
+  const ox = main.originX || 0;
+  const oy = main.originY || 0;
+  const cStride = main.width >> 1;
+  for (let y = 0; y < rh; y++) {
+    for (let x = 0; x < rw; x++) {
+      const sx = region.left + x;
+      const sy = region.top + y;
+      const yv = planeAt(main.y, main.width, sx - ox, sy - oy);
+      const u420 = planeAt(main.u, cStride, (sx >> 1) - (ox >> 1), (sy >> 1) - (oy >> 1));
+      const v420 = planeAt(main.v, cStride, (sx >> 1) - (ox >> 1), (sy >> 1) - (oy >> 1));
+      let u444 = mixed.u[y * rw + x];
+      let v444 = mixed.v[y * rw + x];
+      if ((x & 1) === 0 && (y & 1) === 0 && x + 1 < rw && y + 1 < rh) {
+        u444 = undoChromaFilter(u444, mixed.u[y * rw + x + 1], mixed.u[(y + 1) * rw + x], mixed.u[(y + 1) * rw + x + 1]);
+        v444 = undoChromaFilter(v444, mixed.v[y * rw + x + 1], mixed.v[(y + 1) * rw + x], mixed.v[(y + 1) * rw + x + 1]);
+      }
+      const soft = yuv601FullToRgb(yv, u420, v420);
+      const sharp = yuv601FullToRgb(yv, u444, v444);
+      const bx = sx - box.left;
+      const by = sy - box.top;
+      const src = (by * boxW + bx) * 4;
+      const dst = (y * rw + x) * 4;
+      for (let c = 0; c < 3; c++) {
+        const value = base[src + c] + (sharp[c] - soft[c]);
+        out[dst + c] = value < 0 ? 0 : value > 255 ? 255 : value;
+      }
+      out[dst + 3] = 255;
+    }
+  }
+  return out;
+}
+
 /**
  * @param {{ applyRgba?: Function, onError?: (err: Error) => void }} [opts]
  */
@@ -227,6 +577,7 @@ function createRdpWebCodecsDecoder(opts = {}) {
   }
 
   const applyRgba = typeof opts.applyRgba === 'function' ? opts.applyRgba : null;
+  const presentFrame = typeof opts.presentFrame === 'function' ? opts.presentFrame : null;
   let decoder = null;
   let timestampUs = 0;
   let configured = false;
@@ -238,10 +589,30 @@ function createRdpWebCodecsDecoder(opts = {}) {
   const pending = new Map();
   /** @type {object[]} */
   const order = [];
+  /** @type {Map<number, object>} */
+  const lumaBySurface = new Map();
 
   let reported = false;
   let reportedFirst = false;
   let reportedPaint = false;
+  let reportedGpu = false;
+  let deliverChain = Promise.resolve();
+  const SETTLE_MS = 80;
+  const hold = { gen: 0, luma: null, chroma: null, meta: null, chromaMeta: null, targets: null, box: null, frameW: 0, frameH: 0 };
+  const inflight = new Set();
+  let settleTimer = null;
+
+  const releaseFrame = (frame) => {
+    if (!frame || inflight.has(frame)) return;
+    try { frame.close(); } catch (_) { /* noop */ }
+  };
+
+  const dropHold = () => {
+    releaseFrame(hold.luma);
+    releaseFrame(hold.chroma);
+    hold.luma = null;
+    hold.chroma = null;
+  };
   const fail = (err) => {
     lastError = err;
     if (!reported) {
@@ -251,59 +622,238 @@ function createRdpWebCodecsDecoder(opts = {}) {
     if (typeof opts.onError === 'function') opts.onError(err);
   };
 
+  const paintBox = (rgba, box, targets, meta) => {
+    const bw = box.right - box.left;
+    const bh = box.bottom - box.top;
+    for (const region of targets.regions) {
+      const crop = cropRgbaRect(
+        rgba,
+        bw,
+        bh,
+        region.left - box.left,
+        region.top - box.top,
+        region.right - box.left,
+        region.bottom - box.top
+      );
+      if (!crop) continue;
+      const destLeft = targets.originLeft + region.left;
+      const destTop = targets.originTop + region.top;
+      applyRgba(
+        meta.epoch,
+        meta.surfaceId,
+        destLeft,
+        destTop,
+        destLeft + (crop.right - crop.left),
+        destTop + (crop.bottom - crop.top),
+        crop.rgba
+      );
+    }
+  };
+
+  const lumaCovers = (main, region) => {
+    const ox = main.originX || 0;
+    const oy = main.originY || 0;
+    return region.left >= ox && region.top >= oy
+      && region.right <= ox + main.width && region.bottom <= oy + main.height;
+  };
+
+  const readAux = async (frame, box, frameW, frameH) => {
+    const evenW = frameW & ~1;
+    const evenH = frameH & ~1;
+    const full = box.left === 0 && box.top === 0 && box.right === evenW && box.bottom === evenH;
+    if (full || (box.right - box.left) * (box.bottom - box.top) >= evenW * evenH) {
+      const planes = await readI420Rect(frame, { left: 0, top: 0, right: evenW, bottom: evenH });
+      return { ...planes, frameWidth: frameW, frameHeight: frameH };
+    }
+    const spans = chromaSpansFor(box, frameW, frameH);
+    if (!spans.u || !spans.v) return null;
+    const spanU = await readI420Rect(frame, spans.u);
+    const spanV = await readI420Rect(frame, spans.v);
+    return { frameWidth: frameW, frameHeight: frameH, width: frameW, spans: { u: spanU, v: spanV } };
+  };
+
+  const presentNow = (frame, targets) => {
+    const regions = [];
+    for (const region of targets.regions) {
+      const sw = region.right - region.left;
+      const sh = region.bottom - region.top;
+      if (sw <= 0 || sh <= 0) continue;
+      regions.push({
+        sx: region.left,
+        sy: region.top,
+        sw,
+        sh,
+        dx: targets.originLeft + region.left,
+        dy: targets.originTop + region.top
+      });
+    }
+    if (!regions.length) return;
+    presentFrame(frame, regions);
+  };
+
+  const settle = async (gen) => {
+    const luma = hold.luma;
+    const chroma = hold.chroma;
+    if (!luma || gen !== hold.gen) return;
+    inflight.add(luma);
+    if (chroma) inflight.add(chroma);
+    try {
+      const { meta, targets, box, frameW, frameH, chromaMeta } = hold;
+      let rgba = null;
+      try {
+        rgba = await readRgbaRect(luma, box);
+      } catch (_) {
+        rgba = null;
+      }
+      if (gen !== hold.gen) return;
+      let main = null;
+      try {
+        const planes = await readI420Rect(luma, box);
+        main = { ...planes, frameWidth, frameHeight };
+      } catch (_) {
+        main = null;
+      }
+      if (gen !== hold.gen) return;
+      const chromaTargets = chroma && chromaMeta ? paintTargets(chromaMeta, frameW, frameH) : null;
+      if (main && chroma && chromaTargets) {
+        const cBox = unionAlignedBox(chromaTargets.regions, frameW, frameH);
+        let aux = null;
+        try {
+          aux = await readAux(chroma, cBox, frameW, frameH);
+        } catch (_) {
+          aux = null;
+        }
+        if (gen !== hold.gen) return;
+        if (aux && rgba) {
+          const boxW = box.right - box.left;
+          for (const region of chromaTargets.regions) {
+            if (!lumaCovers(main, region)) continue;
+            const mixed = combineAvc444v2Chroma(main, aux, region);
+            if (!mixed) continue;
+            const sharp = sharpenRgba(rgba, boxW, region, box, main, mixed);
+            const destLeft = chromaTargets.originLeft + region.left;
+            const destTop = chromaTargets.originTop + region.top;
+            applyRgba(meta.epoch, meta.surfaceId, destLeft, destTop, destLeft + mixed.width, destTop + mixed.height, sharp);
+          }
+          return;
+        }
+      }
+      if (rgba) paintBox(rgba, box, targets, meta);
+    } finally {
+      inflight.delete(luma);
+      if (chroma) inflight.delete(chroma);
+      if (hold.luma !== luma) releaseFrame(luma);
+      if (chroma && hold.chroma !== chroma) releaseFrame(chroma);
+    }
+  };
+
+  const scheduleSettle = () => {
+    if (settleTimer) clearTimeout(settleTimer);
+    const gen = hold.gen;
+    settleTimer = setTimeout(() => {
+      settleTimer = null;
+      settle(gen).catch((err) => fail(err instanceof Error ? err : new Error(String(err))));
+    }, SETTLE_MS);
+  };
+
   const deliver = async (frame, meta) => {
     try {
-      if (!applyRgba || !meta || meta.display === false) return;
+      if (!applyRgba || !meta) return;
       const frameW = frame.displayWidth || frame.codedWidth;
       const frameH = frame.displayHeight || frame.codedHeight;
       if (!frameW || !frameH) return;
-      if (!reportedPaint) {
-        reportedPaint = true;
-        console.warn('[IronRDP WebCodecs] pinta', frameW, frameH);
+      const targets = paintTargets(meta, frameW, frameH);
+      if (!targets) return;
+      const box = unionAlignedBox(targets.regions, frameW, frameH);
+
+      if (presentFrame) {
+        if (meta.display !== false) {
+          if (!reportedGpu) {
+            reportedGpu = true;
+            console.warn('[IronRDP WebCodecs] presenta en gpu', frameW, frameH);
+          }
+          presentNow(frame, targets);
+          let copy = null;
+          try { copy = frame.clone(); } catch (_) { copy = null; }
+          if (copy) {
+            releaseFrame(hold.luma);
+            releaseFrame(hold.chroma);
+            hold.gen += 1;
+            hold.luma = copy;
+            hold.chroma = null;
+            hold.meta = meta;
+            hold.chromaMeta = null;
+            hold.targets = targets;
+            hold.box = box;
+            hold.frameW = frameW;
+            hold.frameH = frameH;
+            scheduleSettle();
+            return;
+          }
+        } else if (hold.luma) {
+          let copy = null;
+          try { copy = frame.clone(); } catch (_) { copy = null; }
+          if (copy) {
+            releaseFrame(hold.chroma);
+            hold.chroma = copy;
+            hold.chromaMeta = meta;
+            scheduleSettle();
+            return;
+          }
+        }
       }
-      let rgba;
-      try {
-        rgba = new Uint8Array(frameW * frameH * 4);
-        await frame.copyTo(rgba, {
-          format: 'RGBA',
-          layout: [{ offset: 0, stride: frameW * 4 }]
-        });
-      } catch (_) {
-        const scratch = new OffscreenCanvas(frameW, frameH);
-        const ctx = scratch.getContext('2d', { willReadFrequently: true });
-        ctx.drawImage(frame, 0, 0);
-        rgba = new Uint8Array(ctx.getImageData(0, 0, frameW, frameH).data);
-      }
-      const regions = parseRegionRects(meta.rects);
-      const paintCrop = (crop, destLeft, destTop) => {
-        applyRgba(
-          meta.epoch,
-          meta.surfaceId,
-          destLeft,
-          destTop,
-          destLeft + (crop.right - crop.left),
-          destTop + (crop.bottom - crop.top),
-          crop.rgba
-        );
-      };
-      if (!regions.length) {
-        const destW = Math.max(0, (meta.right | 0) - (meta.left | 0));
-        const destH = Math.max(0, (meta.bottom | 0) - (meta.top | 0));
-        const crop = cropRgbaRect(rgba, frameW, frameH, 0, 0, Math.min(destW, frameW), Math.min(destH, frameH));
-        if (!crop) return;
-        paintCrop(crop, meta.left | 0, meta.top | 0);
+
+      if (meta.display === false) {
+        const main = lumaBySurface.get(meta.surfaceId);
+        if (!main || main.frameWidth !== frameW || main.frameHeight !== frameH) return;
+        let aux = null;
+        try {
+          aux = await readAux(frame, box, frameW, frameH);
+        } catch (_) {
+          aux = null;
+        }
+        if (!aux) return;
+        for (const region of targets.regions) {
+          if (!lumaCovers(main, region)) continue;
+          const chroma = combineAvc444v2Chroma(main, aux, region);
+          const rgba = avc444RectToRgba(main, chroma);
+          if (!rgba) continue;
+          const destLeft = targets.originLeft + region.left;
+          const destTop = targets.originTop + region.top;
+          applyRgba(
+            meta.epoch,
+            meta.surfaceId,
+            destLeft,
+            destTop,
+            destLeft + chroma.width,
+            destTop + chroma.height,
+            rgba
+          );
+        }
         return;
       }
-      for (const region of regions) {
-        const direct = cropRgbaRect(rgba, frameW, frameH, region.left, region.top, region.right, region.bottom);
-        if (direct) {
-          paintCrop(direct, direct.left, direct.top);
-          continue;
-        }
-        const rw = Math.max(0, (region.right | 0) - (region.left | 0));
-        const rh = Math.max(0, (region.bottom | 0) - (region.top | 0));
-        const local = cropRgbaRect(rgba, frameW, frameH, 0, 0, Math.min(rw, frameW), Math.min(rh, frameH));
-        if (local) paintCrop(local, region.left | 0, region.top | 0);
+
+      let rgba;
+      try {
+        rgba = await readRgbaRect(frame, box);
+      } catch (err) {
+        fail(err instanceof Error ? err : new Error(String(err)));
+        return;
+      }
+      if (!reportedPaint) {
+        reportedPaint = true;
+        console.warn('[IronRDP WebCodecs] pinta', frameW, frameH, box.right - box.left, box.bottom - box.top);
+      }
+      paintBox(rgba, box, targets, meta);
+      try {
+        const planes = await readI420Rect(frame, box);
+        lumaBySurface.set(meta.surfaceId, {
+          ...planes,
+          frameWidth: frameW,
+          frameHeight: frameH
+        });
+      } catch (_) {
+        lumaBySurface.delete(meta.surfaceId);
       }
     } catch (err) {
       fail(err instanceof Error ? err : new Error(String(err)));
@@ -328,7 +878,8 @@ function createRdpWebCodecsDecoder(opts = {}) {
         } else {
           meta = order.shift() || null;
         }
-        deliver(frame, meta);
+        const run = deliverChain.then(() => deliver(frame, meta));
+        deliverChain = run.catch(() => {});
       },
       error: (err) => {
         configured = false;
@@ -357,7 +908,7 @@ function createRdpWebCodecsDecoder(opts = {}) {
      * @param {number} bottom
      * @param {Uint16Array|ArrayLike<number>|null} rects
      * @param {number} epoch
-     * @param {boolean} [display] false = access unit de croma: se decodifica y no se pinta
+     * @param {boolean} [display] false = access unit de croma: se decodifica y se mezcla, no se pinta tal cual
      */
     push(avcData, surfaceId, left, top, right, bottom, rects, epoch, display) {
       const raw = avcData instanceof Uint8Array ? avcData : new Uint8Array(avcData);
@@ -418,6 +969,11 @@ function createRdpWebCodecsDecoder(opts = {}) {
       activeCodec = '';
       pending.clear();
       order.length = 0;
+      lumaBySurface.clear();
+      deliverChain = Promise.resolve();
+      if (settleTimer) clearTimeout(settleTimer);
+      settleTimer = null;
+      dropHold();
       if (decoder) {
         try { decoder.close(); } catch (_) { /* noop */ }
         decoder = null;
@@ -426,6 +982,11 @@ function createRdpWebCodecsDecoder(opts = {}) {
     close() {
       configured = false;
       pending.clear();
+      lumaBySurface.clear();
+      deliverChain = Promise.resolve();
+      if (settleTimer) clearTimeout(settleTimer);
+      settleTimer = null;
+      dropHold();
       if (decoder) {
         try { decoder.close(); } catch (_) { /* noop */ }
         decoder = null;
@@ -447,5 +1008,8 @@ module.exports = {
   buildAvcC,
   cropRgbaRect,
   parseRegionRects,
+  unionAlignedBox,
+  chromaSpansFor,
+  combineAvc444v2Chroma,
   createRdpWebCodecsDecoder
 };
