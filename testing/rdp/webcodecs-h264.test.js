@@ -2,7 +2,7 @@
 
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const { avcToAnnexB, avcChunkType, avcCodecString, inspectAvcAccessUnit, cropRgbaRect, unionAlignedBox, chromaSpansFor, combineAvc444v2Chroma, isWebCodecsH264Available, shouldDeferLumaPresent, shouldSkipStaleChroma } = require('../../src/utils/rdpWebCodecsH264');
+const { avcToAnnexB, avcChunkType, avcCodecString, inspectAvcAccessUnit, cropRgbaRect, unionAlignedBox, chromaSpansFor, combineAvc444v2Chroma, isWebCodecsH264Available, avcUnitHoldAction, shouldDeferLumaPresent, shouldSkipStaleChroma } = require('../../src/utils/rdpWebCodecsH264');
 
 describe('rdpWebCodecsH264', () => {
   it('convierte AVC length-prefixed a Annex B', () => {
@@ -13,6 +13,13 @@ describe('rdpWebCodecsH264', () => {
     const annex = avcToAnnexB(avc);
     assert.deepEqual(Buffer.from(annex.subarray(0, 4)), Buffer.from([0, 0, 0, 1]));
     assert.deepEqual(Buffer.from(annex.subarray(4)), nalu);
+  });
+
+  it('pinta el 4:2:0 al momento y solo retiene el luma si el siguiente AU es croma', () => {
+    assert.equal(avcUnitHoldAction(true, false), 'present-420');
+    assert.equal(avcUnitHoldAction(true, true), 'hold-luma');
+    assert.equal(avcUnitHoldAction(false, true), 'merge-444');
+    assert.equal(avcUnitHoldAction(false, false), 'merge-444');
   });
 
   it('no pinta el 4:2:0 si el siguiente access unit es croma, y descarta pares viejos', () => {

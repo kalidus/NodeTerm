@@ -1,3 +1,6 @@
+/** Release deferred FrameAcknowledge after WebCodecs present/discard. */
+export declare function acknowledgeEgfxPresented(count?: number): void;
+
 /** Write one decoded AVC rectangle into the EGFX framebuffer. */
 export declare function applyEgfxRgba(epoch: number, surfaceId: number, left: number, top: number, right: number, bottom: number, rgba: Uint8Array): void;
 
@@ -513,6 +516,9 @@ export declare interface PrintJobStreamCallbacks {
 
 export declare function printJobStreamCallbacks(callbacks: PrintJobStreamCallbacks): Extension;
 
+/** Entrega al sesion un PDU DRDYNVC llegado por el tunel UDP. */
+export declare function pushUdpPayload(payload: Uint8Array): void;
+
 export declare class RdpFile {
     free(): void;
     [Symbol.dispose](): void;
@@ -999,6 +1005,9 @@ export declare interface RdpFileTransferProviderOptions {
     storageBackend?: StorageBackendPreference | FileStorageBackend;
 }
 
+/** Opt-in: canal estÔö£├¡tico rdpsnd (MS-RDPEA) con reproducciÔö£Ôöén PCM vÔö£┬ía Web Audio. */
+export declare function rdpsndAudio(enable: boolean): Extension;
+
 export declare function requestFileContents(params: {
     stream_id: number;
     file_index: number;
@@ -1061,9 +1070,21 @@ declare class SessionTerminationInfo {
 
 export declare function setAvc420WebcodecsCallback(callback: ((data: Uint8Array, surfaceId: number, left: number, top: number, right: number, bottom: number, rects: Uint16Array, epoch: number) => void) | null): void;
 
+/** `true` anuncia solo V10.1. `false` anuncia solo V10.7 con SMALL_CACHE. */
+export declare function setEgfxAvcThinClient(enabled: boolean): void;
+
 export declare function setEgfxCapsCallback(callback: ((version: string, avc420: boolean, avc444: boolean) => void) | null): void;
 
 export declare function setEgfxResetCallback(callback: ((width: number, height: number) => void) | null): void;
+
+/** Register PCM wave callback: `(pcm, sampleRate, channels, bitsPerSample, ts) => void`. */
+export declare function setRdpsndWaveCallback(callback: ((pcm: Uint8Array, sampleRate: number, channels: number, bitsPerSample: number, ts: number) => void) | null): void;
+
+/** Abre RDPEUDP2. `cookie` son los 16 bytes del Initiate Multitransport Request. */
+export declare function setUdpOpenCallback(callback: ((destination: string, requestId: number, cookie: Uint8Array) => Promise<boolean> | boolean) | null): void;
+
+/** Envia un PDU DRDYNVC sin encapsular por el tunel UDP. */
+export declare function setUdpSendCallback(callback: ((payload: Uint8Array) => void) | null): void;
 
 /**
  * Storage backend preference for downloads.

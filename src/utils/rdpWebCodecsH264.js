@@ -408,6 +408,18 @@ function avc444RectToRgba(main, chroma) {
   return rgba;
 }
 
+/**
+ * El 4:2:0 se pinta y se reconoce enseguida. El luma solo se retiene si el
+ * siguiente access unit ya encolado es el residual de croma.
+ * @param {boolean} display
+ * @param {boolean} nextIsChroma
+ * @returns {'present-420'|'hold-luma'|'merge-444'}
+ */
+function avcUnitHoldAction(display, nextIsChroma) {
+  if (display === false) return 'merge-444';
+  return nextIsChroma ? 'hold-luma' : 'present-420';
+}
+
 /** El siguiente access unit ya encolado es el croma: no pintar todavía el 4:2:0. */
 function shouldDeferLumaPresent(nextIsChroma) {
   return nextIsChroma === true;
@@ -585,6 +597,7 @@ function sharpenRgba(base, boxW, region, box, main, mixed) {
  *   applyRgba?: Function,
  *   presentFrame?: Function,
  *   presentChromaRgba?: (left: number, top: number, width: number, height: number, rgba: Uint8Array) => void,
+ *   onFrameSettled?: (count?: number) => void,
  *   onError?: (err: Error) => void
  * }} [opts]
  */
@@ -596,6 +609,12 @@ function createRdpWebCodecsDecoder(opts = {}) {
   const applyRgba = typeof opts.applyRgba === 'function' ? opts.applyRgba : null;
   const presentFrame = typeof opts.presentFrame === 'function' ? opts.presentFrame : null;
   const presentChromaRgba = typeof opts.presentChromaRgba === 'function' ? opts.presentChromaRgba : null;
+  const onFrameSettled = typeof opts.onFrameSettled === 'function' ? opts.onFrameSettled : null;
+  /** Libera FrameAcknowledge aplazado (sin esto Windows congela la sesion H.264). */
+  const settleFrame = (count = 1) => {
+    if (!onFrameSettled || !count) return;
+    try { onFrameSettled(count); } catch (_) { /* noop */ }
+  };
   let decoder = null;
   let timestampUs = 0;
   let configured = false;
@@ -616,6 +635,39 @@ function createRdpWebCodecsDecoder(opts = {}) {
   let errorLogs = 0;
   let reportedFirst = false;
   let reportedPaint = false;
+
+  // Contadores de diagnostico (solo lectura, no alteran el render). Ventana que
+  // se vacia en getStats(). Sirven para distinguir cliente (tira el croma 4:4:4)
+  // vs servidor (QP alto): bytes de luma como proxy de bitrate/QP.
+  const stats = {
+    lumaPushed: 0,
+    chromaPushed: 0,
+    lumaBytes: 0,
+    chromaBytes: 0,
+    chromaDropped: 0,
+    paint420: 0,
+    paint444: 0,
+    maxQueueDepth: 0,
+    mergeMsSum: 0,
+    mergeCount: 0
+  };
+  const resetStats = () => {
+    stats.lumaPushed = 0;
+    stats.chromaPushed = 0;
+    stats.lumaBytes = 0;
+    stats.chromaBytes = 0;
+    stats.chromaDropped = 0;
+    stats.paint420 = 0;
+    stats.paint444 = 0;
+    stats.maxQueueDepth = 0;
+    stats.mergeMsSum = 0;
+    stats.mergeCount = 0;
+  };
+  const noteQueueDepth = () => {
+    if (order.length > stats.maxQueueDepth) stats.maxQueueDepth = order.length;
+  };
+  const nowMs = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+
   /** @type {{ frame: any, meta: object, targets: object, box: object, frameW: number, frameH: number }|null} */
   let heldLuma = null;
   let deliverChain = Promise.resolve();
@@ -812,63 +864,68 @@ function createRdpWebCodecsDecoder(opts = {}) {
 
   const settle = async (gen) => {
     if (gen !== hold.gen) return;
+    hold.gen += 1;
+    if (settleTimer) {
+      clearTimeout(settleTimer);
+      settleTimer = null;
+    }
     const lumaFrame = hold.lumaFrame;
     const chromaFrame = hold.chromaFrame;
     const meta = hold.meta;
     const chromaMeta = hold.chromaMeta;
+    const targets = hold.targets;
     const box = hold.box;
     const frameW = hold.frameW;
     const frameH = hold.frameH;
     hold.lumaFrame = null;
     hold.chromaFrame = null;
-    if (!lumaFrame || !meta || !box) {
+    hold.meta = null;
+    hold.chromaMeta = null;
+    hold.targets = null;
+    hold.box = null;
+    if (!lumaFrame || !meta || !box || !targets) {
       closeQuiet(lumaFrame);
       closeQuiet(chromaFrame);
+      if (chromaFrame) settleFrame(1);
       return;
     }
-    try {
-      const planes = await readI420Rect(lumaFrame, box);
-      if (gen !== hold.gen) return;
-      const main = { ...planes, frameWidth: frameW, frameHeight: frameH };
-      lumaBySurface.set(meta.surfaceId, main);
-      if (!chromaFrame || !chromaMeta) return;
+    if (chromaFrame && chromaMeta) {
       const chromaTargets = paintTargets(chromaMeta, frameW, frameH);
-      if (!chromaTargets) return;
-      const cBox = unionAlignedBox(chromaTargets.regions, frameW, frameH);
-      const aux = await readAux(chromaFrame, cBox, frameW, frameH);
-      if (gen !== hold.gen || !aux) return;
-      for (const region of chromaTargets.regions) {
-        if (!lumaCovers(main, region)) continue;
-        const mixed = combineAvc444v2Chroma(main, aux, region);
-        const rgba = avc444RectToRgba(main, mixed);
-        if (!rgba) continue;
-        const destLeft = chromaTargets.originLeft + region.left;
-        const destTop = chromaTargets.originTop + region.top;
-        applyRgba(
-          meta.epoch,
-          meta.surfaceId,
-          destLeft,
-          destTop,
-          destLeft + mixed.width,
-          destTop + mixed.height,
-          rgba
-        );
+      let painted = false;
+      const mergeStart = nowMs();
+      try {
+        if (chromaTargets) {
+          painted = await paintSharpFromHeld(
+            { frame: lumaFrame, meta, box, frameW, frameH },
+            chromaFrame,
+            chromaTargets,
+            frameW,
+            frameH
+          );
+        }
+      } catch (_) {
+        painted = false;
       }
-    } catch (_) {
-      /* el siguiente key reabre el decoder si hace falta */
-    } finally {
-      closeQuiet(lumaFrame);
+      closeQuiet(chromaFrame);
+      if (painted) {
+        stats.paint444 += 1;
+        stats.mergeMsSum += nowMs() - mergeStart;
+        stats.mergeCount += 1;
+        closeQuiet(lumaFrame);
+        settleFrame(1);
+        return;
+      }
+    } else {
       closeQuiet(chromaFrame);
     }
-  };
-
-  const scheduleSettle = () => {
-    if (settleTimer) clearTimeout(settleTimer);
-    const gen = hold.gen;
-    settleTimer = setTimeout(() => {
-      settleTimer = null;
-      settle(gen).catch((err) => fail(err instanceof Error ? err : new Error(String(err))));
-    }, SETTLE_MS);
+    if (presentFrame) {
+      stats.paint420 += 1;
+      enqueuePresent(lumaFrame, targets);
+      settleFrame(1);
+      return;
+    }
+    closeQuiet(lumaFrame);
+    settleFrame(1);
   };
 
   const paintSharpFromHeld = async (held, chromaFrame, chromaTargets, frameW, frameH) => {
@@ -914,80 +971,71 @@ function createRdpWebCodecsDecoder(opts = {}) {
       const box = unionAlignedBox(targets.regions, frameW, frameH);
 
       if (presentFrame) {
-        if (meta.display !== false) {
-          const stale = shouldSkipStaleChroma(order.length);
-          const nextIsChroma = !!(order[0] && order[0].display === false);
-          // El 4:2:0 se ve pixelado. Si el croma de este mismo par ya está
-          // en el decoder, se espera a mezclarlo y se pinta una sola vez.
-          if (!stale && shouldDeferLumaPresent(nextIsChroma)) {
-            dropHeldLuma();
-            heldLuma = { frame, meta, targets, box, frameW, frameH };
-            keepOpen = true;
-            return;
+        const nextIsChroma = !!(order[0] && order[0].display === false);
+        const action = avcUnitHoldAction(meta.display !== false, nextIsChroma);
+        if (action === 'present-420') {
+          if (hold.lumaFrame) {
+            closeQuiet(hold.lumaFrame);
+            hold.lumaFrame = null;
+            hold.meta = null;
+            hold.targets = null;
           }
-          if (stale) {
-            dropHeldLuma();
-            return;
-          }
+          stats.paint420 += 1;
           enqueuePresent(frame, targets);
+          settleFrame(1);
           keepOpen = true;
           return;
         }
-        const held = heldLuma;
-        heldLuma = null;
-        if (shouldSkipStaleChroma(order.length)) {
-          closeQuiet(held && held.frame);
+        if (action === 'hold-luma') {
+          hold.lumaFrame = frame;
+          hold.chromaFrame = null;
+          hold.meta = meta;
+          hold.chromaMeta = null;
+          hold.targets = targets;
+          hold.box = box;
+          hold.frameW = frameW;
+          hold.frameH = frameH;
+          keepOpen = true;
           return;
         }
-        if (held) {
-          let handed = false;
-          try {
-            const painted = await paintSharpFromHeld(held, frame, targets, frameW, frameH);
-            if (painted) closeQuiet(held.frame);
-            else enqueuePresent(held.frame, held.targets);
-            handed = true;
-          } catch (_) {
-            if (!handed) enqueuePresent(held.frame, held.targets);
+        if (!hold.lumaFrame || !hold.targets || shouldSkipStaleChroma(order.length)) {
+          stats.chromaDropped += 1;
+          if (hold.lumaFrame && hold.targets) {
+            const prevFrame = hold.lumaFrame;
+            const prevTargets = hold.targets;
+            hold.lumaFrame = null;
+            hold.targets = null;
+            stats.paint420 += 1;
+            enqueuePresent(prevFrame, prevTargets);
           }
+          settleFrame(1);
           return;
         }
-        await presentGate;
-        const main = lumaBySurface.get(meta.surfaceId);
-        if (!main || main.frameWidth !== frameW || main.frameHeight !== frameH) return;
-        let aux = null;
-        try {
-          aux = await readAux(frame, box, frameW, frameH);
-        } catch (_) {
-          aux = null;
-        }
-        if (!aux) return;
-        for (const region of targets.regions) {
-          if (!lumaCovers(main, region)) continue;
-          const chroma = combineAvc444v2Chroma(main, aux, region);
-          const rgba = avc444RectToRgba(main, chroma);
-          if (!rgba) continue;
-          paintChromaRgba(
-            targets.originLeft + region.left,
-            targets.originTop + region.top,
-            chroma.width,
-            chroma.height,
-            rgba,
-            meta
-          );
-        }
+        hold.chromaFrame = frame;
+        hold.chromaMeta = meta;
+        keepOpen = true;
+        await settle(hold.gen);
         return;
       }
 
       if (meta.display === false) {
         const main = lumaBySurface.get(meta.surfaceId);
-        if (!main || main.frameWidth !== frameW || main.frameHeight !== frameH) return;
+        if (!main || main.frameWidth !== frameW || main.frameHeight !== frameH) {
+          settleFrame(1);
+          return;
+        }
         let aux = null;
         try {
           aux = await readAux(frame, box, frameW, frameH);
         } catch (_) {
           aux = null;
         }
-        if (!aux) return;
+        if (!aux) {
+          settleFrame(1);
+          return;
+        }
+        const mergeStart = nowMs();
+        let merged = false;
         for (const region of targets.regions) {
           if (!lumaCovers(main, region)) continue;
           const chroma = combineAvc444v2Chroma(main, aux, region);
@@ -1004,7 +1052,14 @@ function createRdpWebCodecsDecoder(opts = {}) {
             destTop + chroma.height,
             rgba
           );
+          merged = true;
         }
+        if (merged) {
+          stats.paint444 += 1;
+          stats.mergeMsSum += nowMs() - mergeStart;
+          stats.mergeCount += 1;
+        }
+        settleFrame(1);
         return;
       }
 
@@ -1013,12 +1068,14 @@ function createRdpWebCodecsDecoder(opts = {}) {
         rgba = await readRgbaRect(frame, box);
       } catch (err) {
         fail(err instanceof Error ? err : new Error(String(err)));
+        settleFrame(1);
         return;
       }
       if (!reportedPaint) {
         reportedPaint = true;
         console.warn('[IronRDP WebCodecs] pinta', frameW, frameH, box.right - box.left, box.bottom - box.top);
       }
+      stats.paint420 += 1;
       paintBox(rgba, box, targets, meta);
       try {
         const planes = await readI420Rect(frame, box);
@@ -1030,8 +1087,10 @@ function createRdpWebCodecsDecoder(opts = {}) {
       } catch (_) {
         lumaBySurface.delete(meta.surfaceId);
       }
+      settleFrame(1);
     } catch (err) {
       fail(err instanceof Error ? err : new Error(String(err)));
+      settleFrame(1);
     } finally {
       if (!keepOpen) closeQuiet(frame);
     }
@@ -1131,6 +1190,14 @@ function createRdpWebCodecsDecoder(opts = {}) {
       };
       pending.set(timestampUs, meta);
       order.push(meta);
+      noteQueueDepth();
+      if (meta.display === false) {
+        stats.chromaPushed += 1;
+        stats.chromaBytes += raw.length;
+      } else {
+        stats.lumaPushed += 1;
+        stats.lumaBytes += raw.length;
+      }
       try {
         decoder.decode(new EncodedVideoChunk({
           type: unit.key ? 'key' : 'delta',
@@ -1180,6 +1247,29 @@ function createRdpWebCodecsDecoder(opts = {}) {
     },
     get lastError() {
       return lastError;
+    },
+    /**
+     * Devuelve y resetea los contadores de la ventana. Solo diagnostico.
+     * @returns {{lumaPushed:number, chromaPushed:number, lumaBytes:number,
+     *   chromaBytes:number, chromaDropped:number, paint420:number,
+     *   paint444:number, maxQueueDepth:number, mergeMsAvg:number,
+     *   queueNow:number}}
+     */
+    getStats() {
+      const snapshot = {
+        lumaPushed: stats.lumaPushed,
+        chromaPushed: stats.chromaPushed,
+        lumaBytes: stats.lumaBytes,
+        chromaBytes: stats.chromaBytes,
+        chromaDropped: stats.chromaDropped,
+        paint420: stats.paint420,
+        paint444: stats.paint444,
+        maxQueueDepth: stats.maxQueueDepth,
+        mergeMsAvg: stats.mergeCount ? stats.mergeMsSum / stats.mergeCount : 0,
+        queueNow: order.length
+      };
+      resetStats();
+      return snapshot;
     }
   };
 }
@@ -1197,6 +1287,7 @@ module.exports = {
   unionAlignedBox,
   chromaSpansFor,
   combineAvc444v2Chroma,
+  avcUnitHoldAction,
   shouldDeferLumaPresent,
   shouldSkipStaleChroma,
   createRdpWebCodecsDecoder

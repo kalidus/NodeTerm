@@ -64,8 +64,8 @@ Copy-Item (Join-Path $IronRdpSrc 'web-client\iron-remote-desktop-rdp\dist\*') $d
 $pkgPath = Join-Path $dst 'package.json'
 $pkg = Get-Content $pkgPath -Raw | ConvertFrom-Json
 $pkg.name = '@devolutions/iron-remote-desktop-rdp'
-$pkg.version = '0.7.0-nodeterm-egfx.19'
-$pkg.description = "NodeTerm vendor IronRDP $Commit + EGFX + WebCodecs + diag"
+$pkg.version = '0.7.0-nodeterm-egfx.31'
+$pkg.description = "NodeTerm vendor IronRDP $Commit + EGFX 10.6 y canal UDP fiable (RDPEUDP2)"
 $json = ($pkg | ConvertTo-Json -Depth 8) -replace "`r`n", "`n"
 if (-not $json.EndsWith("`n")) { $json += "`n" }
 $utf8 = New-Object System.Text.UTF8Encoding $false

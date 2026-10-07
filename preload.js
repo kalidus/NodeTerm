@@ -268,6 +268,8 @@ contextBridge.exposeInMainWorld('electron', {
         /^hermescli:(start|data|resize|stop):.+$/,
         /^docker:(start|data|stop):.+$/,
         /^linux-terminal:data:.+$/,
+        'rdp:udp-send',
+        'rdp:udp-close',
       ];
       const allowed = validSendChannels.some((rule) =>
         typeof rule === 'string' ? rule === channel : rule.test(channel)

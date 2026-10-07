@@ -56,6 +56,26 @@ function registerRdpHandlers(dependencies) {
 
   // Reenviar telemetría de canales y portapapeles del puente nativo hacia el renderer
   const egfxJournal = require('../services/rdp-egfx-journal');
+  const udpTunnel = require('../services/rdp-udp-tunnel');
+  ipcMain.removeHandler('rdp:udp-open');
+  ipcMain.handle('rdp:udp-open', async (_event, payload = {}) => {
+    try {
+      return await udpTunnel.openTunnel(payload, (frame) => {
+        broadcastToRenderers('rdp:udp-payload', frame);
+      });
+    } catch (err) {
+      return { ok: false, error: err?.message || String(err) };
+    }
+  });
+  ipcMain.removeAllListeners('rdp:udp-send');
+  ipcMain.on('rdp:udp-send', (_event, payload) => {
+    udpTunnel.sendTunnel(payload);
+  });
+  ipcMain.removeAllListeners('rdp:udp-close');
+  ipcMain.on('rdp:udp-close', () => {
+    udpTunnel.stopTunnel();
+  });
+
   ipcMain.removeHandler('rdp:egfx-journal');
   ipcMain.handle('rdp:egfx-journal', async (_event, payload) => {
     try {

@@ -99,3 +99,54 @@ console.log('  Framing: drdynvc CHANNEL_PDU middle passthrough OK');
 console.log('  Criterio live: NODETERM_RDP_EGFX=1 + NODETERM_RDP_DEBUG=1');
 console.log('    -> DynVC->WASM hex + escritorio; sin undecodable GFX spam');
 console.log('  Bastion Wallix puede seguir en BITMAP aunque el cliente pida EGFX.');
+
+// Sumario opcional del diagnostico H.264 en movimiento.
+// Uso: node scripts/measure-ironrdp-egfx.js --h264-stats [ruta-al-jsonl]
+if (process.argv.includes('--h264-stats')) {
+  summarizeH264Stats();
+}
+
+function defaultJournalPath() {
+  const appData = process.env.APPDATA
+    || (process.env.HOME ? path.join(process.env.HOME, '.config') : null);
+  if (!appData) return null;
+  return path.join(appData, 'nodeterm', 'logs', 'rdp-egfx-diag.jsonl');
+}
+
+function summarizeH264Stats() {
+  const argPath = process.argv[process.argv.indexOf('--h264-stats') + 1];
+  const file = argPath && !argPath.startsWith('--') ? argPath : defaultJournalPath();
+  if (!file || !fs.existsSync(file)) {
+    console.log(`\n[h264stats] no encontrado: ${file || '(sin APPDATA)'}`);
+    return;
+  }
+  const rows = fs.readFileSync(file, 'utf8')
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map((l) => { try { return JSON.parse(l); } catch (_) { return null; } })
+    .filter((o) => o && o.t === 'h264stats');
+  if (!rows.length) {
+    console.log('\n[h264stats] sin lineas t==h264stats en el journal');
+    return;
+  }
+  const n = rows.length;
+  const sum = (k) => rows.reduce((a, r) => a + (Number(r[k]) || 0), 0);
+  const max = (k) => rows.reduce((a, r) => Math.max(a, Number(r[k]) || 0), 0);
+  const avg = (k) => (sum(k) / n);
+  const fmt = (x) => Math.round(x * 10) / 10;
+  console.log(`\n[h264stats] ${n} ventanas de 1s`);
+  console.log(`  fps medio:      ${fmt(avg('fps'))}`);
+  console.log(`  cola max:       ${max('qDepth')}`);
+  console.log(`  %444 medio:     ${fmt(avg('pct444'))}%   (frames 4:4:4 vs total)`);
+  console.log(`  %drop croma:    ${fmt(avg('dropPct'))}%  (max ${max('dropPct')}%)`);
+  console.log(`  merge medio:    ${fmt(avg('mergeMs'))} ms (coste bucle JS croma)`);
+  console.log(`  kbps luma med:  ${fmt(avg('kbpsLuma'))}  (max ${max('kbpsLuma')})  <- proxy QP/bitrate`);
+  console.log(`  kbps croma med: ${fmt(avg('kbpsChroma'))}`);
+  if (rows.some((r) => 'wireChroma' in r)) {
+    console.log(`  wire L/C med:   ${fmt(avg('wireLuma'))}/${fmt(avg('wireChroma'))}  (AU en borde WASM→JS)`);
+    console.log(`  wire other med: ${fmt(avg('wireOther'))}  (display raro/undefined)`);
+  }
+  console.log('  Lectura:');
+  console.log('    wireChroma=0 -> residual AVC444 no llega al JS (servidor manda solo LUMA/Avc420, o bug WASM)');
+  console.log('    drop/%444 malos -> CLIENTE tira croma; merge alto -> bucle JS; kbpsLuma alto + drop bajo -> SERVIDOR QP');
+}

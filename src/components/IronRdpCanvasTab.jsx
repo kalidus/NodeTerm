@@ -34,6 +34,11 @@ const {
   setEgfxCapsCallback = null,
   setEgfxResetCallback = null,
   applyEgfxRgba = null,
+  acknowledgeEgfxPresented = null,
+  setEgfxAvcThinClient = null,
+  setUdpOpenCallback = null,
+  setUdpSendCallback = null,
+  pushUdpPayload = null,
   beginEgfxResizeCapture = null,
   takeEgfxResizeCapture = null,
   egfx = null
@@ -62,6 +67,10 @@ const CLIPRDR_DOWNLOAD_CHUNK = 64 * 1024;
 const TEMP_FILE_WRITE_CHUNK = 4 * 1024 * 1024;
 
 export { mapTerminationReason };
+
+const isGraphicsSubsystemFailure = (text) => (
+  /0x112f|graphics subsystem|unable to continue graphics encoding/i.test(String(text || ''))
+);
 
 const extractErrorMessage = (err) => {
   if (!err) return 'Error desconocido de conexión RDP';
@@ -224,6 +233,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   const [isAutoResize, setIsAutoResize] = useState(rdpConfig.autoResize !== false);
   const [showResolutionMenu, setShowResolutionMenu] = useState(false);
   const [negotiatedCodec, setNegotiatedCodec] = useState(null);
+  const [h264Stats, setH264Stats] = useState(null);
   const [supportsDisplayControl, setSupportsDisplayControl] = useState(false);
   const egfxDiagRef = useRef({ active: false, codec: 'bitmap', wroteSession: false });
   const egfxResizeFlushRef = useRef(null);
@@ -264,12 +274,26 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   const clipboardFailedRef = useRef(false);
   const clipboardUnhealthyToastShownRef = useRef(false);
   const userClosingRef = useRef(false);
+  const gfxThinFallbackUsedRef = useRef(false);
+  const gfxFallbackPendingRef = useRef(false);
 
   const isRdpDebugEnabled = () => {
     return (
       (typeof window !== 'undefined' && window.__NODETERM_RDP_DEBUG__ === true) ||
       (typeof localStorage !== 'undefined' && localStorage.getItem('NODETERM_RDP_DEBUG') === '1')
     );
+  };
+
+  // Diagnostico H.264 ON por defecto. Apagar: localStorage NODETERM_RDP_H264_STATS=0
+  // o window.__NODETERM_RDP_H264_STATS__ = false.
+  const isH264StatsEnabled = () => {
+    if (typeof window !== 'undefined' && window.__NODETERM_RDP_H264_STATS__ === false) return false;
+    if (typeof window !== 'undefined' && window.__NODETERM_RDP_H264_STATS__ === true) return true;
+    try {
+      return localStorage.getItem('NODETERM_RDP_H264_STATS') !== '0';
+    } catch (_) {
+      return true;
+    }
   };
 
   const notifyUserClose = () => {
@@ -813,6 +837,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       } catch (_) {}
     }
     hasEverConnectedRef.current = false;
+    gfxThinFallbackUsedRef.current = false;
     lastBackendReasonRef.current = null;
     clipboardFailedRef.current = false;
     clipboardUnhealthyToastShownRef.current = false;
@@ -895,13 +920,31 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       markClipboardUnhealthy(data.reason || 'unknown');
     };
 
+    let udpPayloadCount = 0;
+    const handleUdpPayload = (payload) => {
+      if (typeof pushUdpPayload !== 'function' || !payload) return;
+      const bytes = payload instanceof Uint8Array
+        ? payload
+        : (payload?.type === 'Buffer' && Array.isArray(payload.data)
+          ? new Uint8Array(payload.data)
+          : new Uint8Array(payload));
+      if (bytes.length === 0) return;
+      udpPayloadCount += 1;
+      if (udpPayloadCount === 1 || udpPayloadCount === 20) {
+        writeEgfxLine({ t: 'udp-data', n: udpPayloadCount, bytes: bytes.length });
+      }
+      pushUdpPayload(bytes);
+    };
+
     window.electron.ipcRenderer.on('rdp:native-session-closed', handleSessionClosed);
     window.electron.ipcRenderer.on('rdp:diagnostic-log', handleDiagnosticLog);
     window.electron.ipcRenderer.on('rdp:clipboard-unhealthy', handleClipboardUnhealthy);
+    window.electron.ipcRenderer.on('rdp:udp-payload', handleUdpPayload);
     return () => {
       window.electron.ipcRenderer.removeListener('rdp:native-session-closed', handleSessionClosed);
       window.electron.ipcRenderer.removeListener('rdp:diagnostic-log', handleDiagnosticLog);
       window.electron.ipcRenderer.removeListener('rdp:clipboard-unhealthy', handleClipboardUnhealthy);
+      window.electron.ipcRenderer.removeListener('rdp:udp-payload', handleUdpPayload);
     };
   }, []);
 
@@ -913,8 +956,22 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     let disposeCanvasProbe = null;
     let webCodecsDecoder = null;
     let h264Presenter = null;
+    let h264StatsTimer = null;
+    let h264MissTimer = null;
+    let h264WireCount = 0;
 
     const isAborted = () => aborted || !isMounted;
+
+    const beginGfxV107Fallback = (reason) => {
+      if (isAborted() || userClosingRef.current || gfxThinFallbackUsedRef.current) return;
+      if (typeof setEgfxAvcThinClient !== 'function') return;
+      gfxThinFallbackUsedRef.current = true;
+      gfxFallbackPendingRef.current = true;
+      try { setEgfxAvcThinClient(false); } catch (_) { /* noop */ }
+      writeEgfxLine({ t: 'gfx-fallback', reason, mode: 'v107' });
+      setConnectionState('connecting');
+      setReconnectTrigger((n) => n + 1);
+    };
 
     const abandonSession = (session) => {
       if (!session) return;
@@ -938,6 +995,15 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
 
     const handleSessionEnded = (rawReason, err) => {
       if (!isMounted) return;
+      if (gfxFallbackPendingRef.current) return;
+      const reasonText = rawReason || (err ? extractErrorMessage(err) : '');
+      if (
+        !userClosingRef.current
+        && !gfxThinFallbackUsedRef.current
+        && isGraphicsSubsystemFailure(reasonText)
+      ) {
+        writeEgfxLine({ t: 'gfx-fail', reason: '0x112f' });
+      }
       clearCanvasScreen();
 
       const wasConnected = hasEverConnectedRef.current;
@@ -975,6 +1041,39 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         // 1. Inicializar módulo WebAssembly de IronRDP con nivel warn para evitar ruido de consola
         await initIronRdp('warn');
         if (isAborted()) return;
+        if (typeof setEgfxAvcThinClient === 'function') {
+          setEgfxAvcThinClient(!gfxThinFallbackUsedRef.current);
+        }
+        if (typeof setUdpOpenCallback === 'function') {
+          setUdpOpenCallback(async (destination, requestId, cookie) => {
+            const text = String(destination || '');
+            const colon = text.lastIndexOf(':');
+            const host = colon > 0 ? text.slice(0, colon) : text;
+            const port = colon > 0 ? Number(text.slice(colon + 1)) || 3389 : 3389;
+            const raw = cookie instanceof Uint8Array ? cookie : new Uint8Array(cookie || []);
+            let binary = '';
+            for (let i = 0; i < raw.length; i += 1) binary += String.fromCharCode(raw[i]);
+            const result = await window.electron.ipcRenderer.invoke('rdp:udp-open', {
+              host,
+              port,
+              serverName: host,
+              requestId,
+              cookie: btoa(binary)
+            });
+            writeEgfxLine({ t: 'udp', ok: !!result?.ok, error: result?.error || '' });
+            console.log(result?.ok
+              ? `🛰️ [IronRDP UDP] Canal fiable abierto hacia ${host}:${port}`
+              : `⚠️ [IronRDP UDP] Sin canal (${result?.error || 'rechazado'}); la sesion sigue por TCP`);
+            return !!result?.ok;
+          });
+        }
+        if (typeof setUdpSendCallback === 'function') {
+          setUdpSendCallback((payload) => {
+            window.electron.ipcRenderer.send('rdp:udp-send', payload);
+          });
+        }
+        gfxFallbackPendingRef.current = false;
+        writeEgfxLine({ t: 'gfx-advertise', mode: 'v106-dwm' });
 
         // 2. Obtener dimensiones calculadas según configuración (autoResize vs resolución fija)
         const dims = calculateInitialDimensions();
@@ -994,6 +1093,10 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           ...rdpConfig,
           width,
           height,
+          // mstsc deja la composición encendida. El formulario la manda en false
+          // y el puente borra el bit 0x100; sin ese bit el host pinta ClearCodec.
+          enableDesktopComposition: true,
+          guacEnableDesktopComposition: true,
           // Activa logs verbose del bridge si el usuario puso debug en DevTools.
           // Las métricas [Bridge Perf] en bastión salen siempre en la consola del proceso main.
           rdpDebug: isRdpDebugEnabled()
@@ -1199,7 +1302,13 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
               const chosen = avc420 ? 'h264' : 'progressive';
               egfxDiagRef.current.codec = chosen;
               setNegotiatedCodec(chosen);
-              writeEgfxLine({ t: 'caps', v: String(version || ''), avc420: !!avc420, avc444: !!avc444 });
+              writeEgfxLine({
+                t: 'caps',
+                v: String(version || ''),
+                avc420: !!avc420,
+                avc444: !!avc444,
+                mode: 'v106-dwm'
+              });
               writeEgfxLine({ t: 'codec', chosen });
             });
           }
@@ -1259,16 +1368,97 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
                   : new Uint8ClampedArray(rgba.subarray(0, expected));
                 ctx.putImageData(new ImageData(pixels, width, height), left, top);
               },
+              // Sin esto, con AVC_THIN_CLIENT el ACK queda aplazado y Windows congela la sesion.
+              onFrameSettled: (count) => {
+                if (typeof acknowledgeEgfxPresented === 'function') {
+                  acknowledgeEgfxPresented(count || 1);
+                }
+              },
               onError: (err) => {
                 if (isRdpDebugEnabled()) {
                   console.warn('[IronRDP WebCodecs]', err?.message || err);
                 }
               }
             });
+            // Contadores en el borde WASM→JS (antes de push): si wireChroma=0,
+            // el residual AVC444 no llega al decoder (servidor o trait Rust).
+            const wireCb = { luma: 0, chroma: 0, other: 0, lumaBytes: 0, chromaBytes: 0, samples: 0 };
             setAvc420WebcodecsCallback((data, surfaceId, left, top, right, bottom, rects, epoch, display) => {
+              const len = data?.byteLength || data?.length || 0;
+              if (display === false) {
+                wireCb.chroma += 1;
+                wireCb.chromaBytes += len;
+              } else if (display === true || display === undefined || display === null) {
+                // undefined/null: wasm no paso el 9º arg → se trata como luma
+                if (display === true) wireCb.luma += 1;
+                else wireCb.other += 1;
+                wireCb.lumaBytes += len;
+              } else {
+                wireCb.other += 1;
+                wireCb.lumaBytes += len;
+              }
+              if (wireCb.samples < 6) {
+                wireCb.samples += 1;
+                writeEgfxLine({
+                  t: 'h264wire',
+                  n: wireCb.samples,
+                  display,
+                  typeofDisplay: typeof display,
+                  len,
+                  surfaceId: surfaceId | 0
+                });
+              }
+              h264WireCount += 1;
               webCodecsDecoder.push(data, surfaceId, left, top, right, bottom, rects, epoch, display);
             });
             builder.extension(avc420Webcodecs(true));
+
+            // Diagnostico H.264: poll ~1s (ON por defecto). No toca el render.
+            if (isH264StatsEnabled() && typeof webCodecsDecoder.getStats === 'function') {
+              writeEgfxLine({ t: 'h264stats-start', at: Date.now() });
+              h264StatsTimer = setInterval(() => {
+                try {
+                  const s = webCodecsDecoder.getStats();
+                  const fps = s.paint420 + s.paint444;
+                  const painted = s.paint420 + s.paint444;
+                  const dropPct = (s.chromaPushed + s.chromaDropped) > 0
+                    ? Math.round((s.chromaDropped / (s.chromaPushed + s.chromaDropped)) * 100)
+                    : 0;
+                  const pct444 = painted > 0 ? Math.round((s.paint444 / painted) * 100) : 0;
+                  const kbpsLuma = Math.round((s.lumaBytes * 8) / 1000);
+                  const kbpsChroma = Math.round((s.chromaBytes * 8) / 1000);
+                  const wireLuma = wireCb.luma;
+                  const wireChroma = wireCb.chroma;
+                  const wireOther = wireCb.other;
+                  const wireKbpsLuma = Math.round((wireCb.lumaBytes * 8) / 1000);
+                  const wireKbpsChroma = Math.round((wireCb.chromaBytes * 8) / 1000);
+                  wireCb.luma = 0;
+                  wireCb.chroma = 0;
+                  wireCb.other = 0;
+                  wireCb.lumaBytes = 0;
+                  wireCb.chromaBytes = 0;
+                  const view = {
+                    fps,
+                    qDepth: s.maxQueueDepth,
+                    queueNow: s.queueNow,
+                    dropPct,
+                    pct444,
+                    paint420: s.paint420,
+                    paint444: s.paint444,
+                    kbpsLuma,
+                    kbpsChroma,
+                    mergeMs: Math.round(s.mergeMsAvg * 10) / 10,
+                    wireLuma,
+                    wireChroma,
+                    wireOther,
+                    wireKbpsLuma,
+                    wireKbpsChroma
+                  };
+                  setH264Stats(view);
+                  writeEgfxLine({ t: 'h264stats', ...view });
+                } catch (_) { /* noop */ }
+              }, 1000);
+            }
           } catch (wcErr) {
             if (isRdpDebugEnabled()) {
               console.warn('[IronRDP] WebCodecs no disponible, fallback ClearCodec/RFX:', wcErr.message);
@@ -1666,6 +1856,14 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         try { disposeCanvasProbe(); } catch (_) {}
         disposeCanvasProbe = null;
       }
+      if (h264StatsTimer) {
+        try { clearInterval(h264StatsTimer); } catch (_) {}
+        h264StatsTimer = null;
+      }
+      if (h264MissTimer) {
+        try { clearTimeout(h264MissTimer); } catch (_) {}
+        h264MissTimer = null;
+      }
       if (webCodecsDecoder) {
         try { webCodecsDecoder.close(); } catch (_) {}
         webCodecsDecoder = null;
@@ -1678,6 +1876,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         if (typeof setAvc420WebcodecsCallback === 'function') setAvc420WebcodecsCallback(null);
         if (typeof setEgfxCapsCallback === 'function') setEgfxCapsCallback(null);
         if (typeof setEgfxResetCallback === 'function') setEgfxResetCallback(null);
+        if (typeof setUdpOpenCallback === 'function') setUdpOpenCallback(null);
+        if (typeof setUdpSendCallback === 'function') setUdpSendCallback(null);
+        try { window.electron?.ipcRenderer?.send('rdp:udp-close'); } catch (_) {}
         if (egfxResizeFlushRef.current) clearTimeout(egfxResizeFlushRef.current);
         finishEgfxJournal('ok');
       } catch (_) { /* noop */ }
@@ -2840,6 +3041,32 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Overlay de diagnostico H.264 (ON por defecto; apagar con NODETERM_RDP_H264_STATS=0) */}
+      {connectionState === 'connected' && h264Stats && isH264StatsEnabled() && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            zIndex: 50,
+            padding: '6px 9px',
+            background: 'rgba(0,0,0,0.72)',
+            color: '#9cff9c',
+            font: '11px/1.45 ui-monospace, Consolas, monospace',
+            borderRadius: 6,
+            border: '1px solid rgba(120,255,120,0.25)',
+            pointerEvents: 'none',
+            whiteSpace: 'pre'
+          }}
+        >
+          {`H264  ${h264Stats.fps} fps  q:${h264Stats.queueNow}/${h264Stats.qDepth}\n`}
+          {`444: ${h264Stats.pct444}%  drop: ${h264Stats.dropPct}%  merge: ${h264Stats.mergeMs}ms\n`}
+          {`420/444: ${h264Stats.paint420}/${h264Stats.paint444}\n`}
+          {`luma: ${h264Stats.kbpsLuma} kbps  croma: ${h264Stats.kbpsChroma} kbps\n`}
+          {`wire L/C/?: ${h264Stats.wireLuma ?? 0}/${h264Stats.wireChroma ?? 0}/${h264Stats.wireOther ?? 0}`}
         </div>
       )}
 
