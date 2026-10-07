@@ -1221,7 +1221,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           writeEgfxLine({ t: 'codec', chosen: 'bitmap' });
         }
 
-        // AVC420 en H.264. WebGPU copia el frame; el canvas RDP no toca la textura del decodificador.
+        // AVC420/444 en H.264. WebGPU pinta la imagen; el croma 4:4:4 va por putImageData.
         const useWebCodecs = egfxEnabled
           && typeof avc420Webcodecs === 'function'
           && typeof setAvc420WebcodecsCallback === 'function'
@@ -1237,8 +1237,16 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
               applyRgba: (epoch, surfaceId, left, top, right, bottom, rgba) => {
                 applyEgfxRgba(epoch, surfaceId, left, top, right, bottom, rgba);
               },
-              presentFrame: (frame, regions) => {
-                h264Presenter.present(frame, regions);
+              presentFrame: (frame, regions) => h264Presenter.present(frame, regions),
+              presentChromaRgba: (left, top, width, height, rgba) => {
+                const ctx = getOptimized2dContext(canvasRef.current);
+                if (!ctx || !rgba || width <= 0 || height <= 0) return;
+                const expected = width * height * 4;
+                if (rgba.length < expected) return;
+                const pixels = rgba instanceof Uint8ClampedArray && rgba.length === expected
+                  ? rgba
+                  : new Uint8ClampedArray(rgba.subarray(0, expected));
+                ctx.putImageData(new ImageData(pixels, width, height), left, top);
               },
               onError: (err) => {
                 if (isRdpDebugEnabled()) {

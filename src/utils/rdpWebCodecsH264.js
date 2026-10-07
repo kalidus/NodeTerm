@@ -5,8 +5,9 @@
  * Activo cuando VideoDecoder existe. Apagar con localStorage NODETERM_RDP_WEBCODECS=0
  * (o window.__NODETERM_RDP_WEBCODECS__ = false).
  *
- * El frame de imagen se entrega a presentFrame, que lo pinta en la GPU y lo cierra.
- * No se clona ni se hace drawImage del VideoFrame: esa textura tumba el proceso GPU.
+ * El frame de imagen se entrega a presentFrame (WebGPU) y se cierra ahí.
+ * Antes del blit se lee I420 por copyTo para el croma AVC444; nunca después de
+ * importExternalTexture. El residual display=false se pinta con presentChromaRgba.
  */
 
 'use strict';
@@ -566,7 +567,12 @@ function sharpenRgba(base, boxW, region, box, main, mixed) {
 }
 
 /**
- * @param {{ applyRgba?: Function, onError?: (err: Error) => void }} [opts]
+ * @param {{
+ *   applyRgba?: Function,
+ *   presentFrame?: Function,
+ *   presentChromaRgba?: (left: number, top: number, width: number, height: number, rgba: Uint8Array) => void,
+ *   onError?: (err: Error) => void
+ * }} [opts]
  */
 function createRdpWebCodecsDecoder(opts = {}) {
   if (!isWebCodecsH264Available()) {
@@ -575,6 +581,7 @@ function createRdpWebCodecsDecoder(opts = {}) {
 
   const applyRgba = typeof opts.applyRgba === 'function' ? opts.applyRgba : null;
   const presentFrame = typeof opts.presentFrame === 'function' ? opts.presentFrame : null;
+  const presentChromaRgba = typeof opts.presentChromaRgba === 'function' ? opts.presentChromaRgba : null;
   let decoder = null;
   let timestampUs = 0;
   let configured = false;
@@ -692,34 +699,22 @@ function createRdpWebCodecsDecoder(opts = {}) {
 
   let queuedPresent = null;
   let presentRaf = 0;
+  let presentGate = Promise.resolve();
+  let resolvePresentGate = null;
 
   const cancelPresent = () => {
     if (presentRaf) cancelAnimationFrame(presentRaf);
     presentRaf = 0;
     if (queuedPresent) closeQuiet(queuedPresent.frame);
     queuedPresent = null;
-  };
-
-  const pumpPresent = () => {
-    presentRaf = 0;
-    const job = queuedPresent;
-    queuedPresent = null;
-    if (!job) return;
-    try {
-      presentNow(job.frame, job.targets);
-    } catch (_) {
-      closeQuiet(job.frame);
+    if (resolvePresentGate) {
+      const done = resolvePresentGate;
+      resolvePresentGate = null;
+      done();
     }
   };
 
-  const enqueuePresent = (frame, targets) => {
-    if (queuedPresent) closeQuiet(queuedPresent.frame);
-    queuedPresent = { frame, targets };
-    if (presentRaf) return;
-    presentRaf = requestAnimationFrame(pumpPresent);
-  };
-
-  const presentNow = (frame, targets) => {
+  const buildPresentRegions = (targets) => {
     const regions = [];
     for (const region of targets.regions) {
       const sw = region.right - region.left;
@@ -734,11 +729,62 @@ function createRdpWebCodecsDecoder(opts = {}) {
         dy: targets.originTop + region.top
       });
     }
-    if (!regions.length) {
-      closeQuiet(frame);
+    return regions;
+  };
+
+  const pumpPresent = async () => {
+    presentRaf = 0;
+    const job = queuedPresent;
+    queuedPresent = null;
+    const done = resolvePresentGate;
+    resolvePresentGate = null;
+    try {
+      if (!job) return;
+      const regions = buildPresentRegions(job.targets);
+      if (!regions.length) {
+        closeQuiet(job.frame);
+        return;
+      }
+      try {
+        const result = presentFrame(job.frame, regions);
+        if (result && typeof result.then === 'function') await result;
+      } catch (_) {
+        closeQuiet(job.frame);
+      }
+    } finally {
+      if (done) done();
+    }
+  };
+
+  const enqueuePresent = (frame, targets) => {
+    if (queuedPresent) closeQuiet(queuedPresent.frame);
+    queuedPresent = { frame, targets };
+    if (!resolvePresentGate) {
+      presentGate = new Promise((resolve) => {
+        resolvePresentGate = resolve;
+      });
+    }
+    if (presentRaf) return;
+    presentRaf = requestAnimationFrame(() => {
+      pumpPresent().catch(() => {});
+    });
+  };
+
+  const paintChromaRgba = (destLeft, destTop, width, height, rgba, meta) => {
+    if (presentChromaRgba) {
+      presentChromaRgba(destLeft, destTop, width, height, rgba);
       return;
     }
-    presentFrame(frame, regions);
+    if (!applyRgba) return;
+    applyRgba(
+      meta.epoch,
+      meta.surfaceId,
+      destLeft,
+      destTop,
+      destLeft + width,
+      destTop + height,
+      rgba
+    );
   };
 
   const settle = async (gen) => {
@@ -805,7 +851,8 @@ function createRdpWebCodecsDecoder(opts = {}) {
   const deliver = async (frame, meta) => {
     let keepOpen = false;
     try {
-      if (!applyRgba || !meta) return;
+      if (!meta) return;
+      if (!applyRgba && !presentFrame) return;
       const frameW = frame.displayWidth || frame.codedWidth;
       const frameH = frame.displayHeight || frame.codedHeight;
       if (!frameW || !frameH) return;
@@ -815,8 +862,45 @@ function createRdpWebCodecsDecoder(opts = {}) {
 
       if (presentFrame) {
         if (meta.display !== false) {
+          // I420 solo antes del blit. Tras enqueuePresent el frame es del presentador:
+          // ni copyTo, ni drawImage, ni clone (importExternalTexture tumba la GPU).
+          try {
+            const planes = await readI420Rect(frame, box);
+            lumaBySurface.set(meta.surfaceId, {
+              ...planes,
+              frameWidth: frameW,
+              frameHeight: frameH
+            });
+          } catch (_) {
+            lumaBySurface.delete(meta.surfaceId);
+          }
           enqueuePresent(frame, targets);
           keepOpen = true;
+          return;
+        }
+        await presentGate;
+        const main = lumaBySurface.get(meta.surfaceId);
+        if (!main || main.frameWidth !== frameW || main.frameHeight !== frameH) return;
+        let aux = null;
+        try {
+          aux = await readAux(frame, box, frameW, frameH);
+        } catch (_) {
+          aux = null;
+        }
+        if (!aux) return;
+        for (const region of targets.regions) {
+          if (!lumaCovers(main, region)) continue;
+          const chroma = combineAvc444v2Chroma(main, aux, region);
+          const rgba = avc444RectToRgba(main, chroma);
+          if (!rgba) continue;
+          paintChromaRgba(
+            targets.originLeft + region.left,
+            targets.originTop + region.top,
+            chroma.width,
+            chroma.height,
+            rgba,
+            meta
+          );
         }
         return;
       }

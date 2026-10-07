@@ -3,6 +3,9 @@
  * En Windows ese blit importa la textura D3D11 del decodificador en el canvas
  * acelerado y el proceso GPU muere (exit 34). Aquí la GPU copia el frame a un
  * canvas propio y el canvas RDP solo recibe esa textura ya convertida.
+ *
+ * Tras llamar a present(frame), el caller no debe copyTo/drawImage/clone del
+ * mismo VideoFrame: importExternalTexture ya lo usa. present() cierra el frame.
  */
 
 'use strict';
@@ -57,6 +60,7 @@ function createH264GpuPresenter(opts) {
   const dropLatest = () => {
     if (!latest) return;
     closeFrame(latest.frame);
+    if (typeof latest.resolve === 'function') latest.resolve();
     latest = null;
   };
 
@@ -163,29 +167,33 @@ function createH264GpuPresenter(opts) {
     }
   };
 
-  const run = async (frame, regions) => {
+  const run = async (frame, regions, resolve) => {
     try {
       if (mode === 'copy' || !gpu) await copyPresent(frame, regions);
       else await gpuPresent(frame, regions);
     } finally {
+      if (typeof resolve === 'function') resolve();
       busy = false;
       if (!latest) return;
       const job = latest;
       latest = null;
       busy = true;
-      void run(job.frame, job.regions);
+      void run(job.frame, job.regions, job.resolve);
     }
   };
 
-  const kick = (frame, regions) => {
+  const kick = (frame, regions) => new Promise((resolve) => {
     if (busy) {
-      if (latest) closeFrame(latest.frame);
-      latest = { frame, regions };
+      if (latest) {
+        closeFrame(latest.frame);
+        if (typeof latest.resolve === 'function') latest.resolve();
+      }
+      latest = { frame, regions, resolve };
       return;
     }
     busy = true;
-    void run(frame, regions);
-  };
+    void run(frame, regions, resolve);
+  });
 
   const init = async () => {
     const gen = generation;
@@ -236,24 +244,31 @@ function createH264GpuPresenter(opts) {
       return;
     }
     busy = true;
-    void run(job.frame, job.regions);
+    void run(job.frame, job.regions, job.resolve);
   };
 
   return {
+    /**
+     * @returns {Promise<void>}
+     */
     present(frame, regions) {
-      if (!frame) return;
+      if (!frame) return Promise.resolve();
       if (!regions?.length) {
         closeFrame(frame);
-        return;
+        return Promise.resolve();
       }
       if (mode === 'init') {
-        if (latest) closeFrame(latest.frame);
-        latest = { frame, regions };
-        busy = true;
-        if (!initPromise) initPromise = init();
-        return;
+        return new Promise((resolve) => {
+          if (latest) {
+            closeFrame(latest.frame);
+            if (typeof latest.resolve === 'function') latest.resolve();
+          }
+          latest = { frame, regions, resolve };
+          busy = true;
+          if (!initPromise) initPromise = init();
+        });
       }
-      kick(frame, regions);
+      return kick(frame, regions);
     },
     dispose() {
       generation += 1;
