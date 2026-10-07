@@ -1,3 +1,6 @@
+/** Write one decoded AVC rectangle into the EGFX framebuffer. */
+export declare function applyEgfxRgba(epoch: number, surfaceId: number, left: number, top: number, right: number, bottom: number, rgba: Uint8Array): void;
+
 /** Opt-in: anunciar AVC420 y pasar NAL units a WebCodecs (VideoDecoder). */
 export declare function avc420Webcodecs(enable: boolean): Extension;
 
@@ -1056,7 +1059,7 @@ declare class SessionTerminationInfo {
     reason(): string;
 }
 
-export declare function setAvc420WebcodecsCallback(callback: ((data: Uint8Array, surfaceId: number, left: number, top: number, right: number, bottom: number) => void) | null): void;
+export declare function setAvc420WebcodecsCallback(callback: ((data: Uint8Array, surfaceId: number, left: number, top: number, right: number, bottom: number, rects: Uint16Array, epoch: number) => void) | null): void;
 
 export declare function setEgfxCapsCallback(callback: ((version: string, avc420: boolean, avc444: boolean) => void) | null): void;
 

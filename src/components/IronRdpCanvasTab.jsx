@@ -31,6 +31,7 @@ const {
   setAvc420WebcodecsCallback = null,
   setEgfxCapsCallback = null,
   setEgfxResetCallback = null,
+  applyEgfxRgba = null,
   beginEgfxResizeCapture = null,
   takeEgfxResizeCapture = null,
   egfx = null
@@ -110,14 +111,14 @@ const extractErrorMessage = (err) => {
   return msg;
 };
 
-// desynchronized pinta el canvas sin esperar al compositor. Va por defecto.
-// Para quitarlo: `localStorage.setItem('NODETERM_RDP_DESYNC', '0')` y reabrir la pestaña.
+// desynchronized presenta cada putImageData antes de cerrar el frame.
+// Solo depuración: `localStorage.setItem('NODETERM_RDP_DESYNC', '1')`.
 // No se usa contain:strict (iba junto a los recuadros negros).
 const isRdpDesyncEnabled = () => {
   try {
-    return window.localStorage?.getItem('NODETERM_RDP_DESYNC') !== '0';
+    return window.localStorage?.getItem('NODETERM_RDP_DESYNC') === '1';
   } catch (_) {
-    return true;
+    return false;
   }
 };
 
@@ -1218,24 +1219,28 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           writeEgfxLine({ t: 'codec', chosen: 'bitmap' });
         }
 
-        // AVC420 solo con opt-in. H.264 sigue apagado hasta que EGFX pinte bien.
+        // AVC420 en GPU cuando el navegador tiene VideoDecoder. Los píxeles vuelven
+        // al framebuffer EGFX; no se pintan por otro canvas.
         const useWebCodecs = egfxEnabled
           && typeof avc420Webcodecs === 'function'
           && typeof setAvc420WebcodecsCallback === 'function'
+          && typeof applyEgfxRgba === 'function'
           && isWebCodecsH264Enabled()
-          && isWebCodecsH264Available()
-          && canvasRef.current;
+          && isWebCodecsH264Available();
         if (useWebCodecs) {
           try {
-            webCodecsDecoder = createRdpWebCodecsDecoder(canvasRef.current, {
+            webCodecsDecoder = createRdpWebCodecsDecoder({
+              applyRgba: (epoch, surfaceId, left, top, right, bottom, rgba) => {
+                applyEgfxRgba(epoch, surfaceId, left, top, right, bottom, rgba);
+              },
               onError: (err) => {
                 if (isRdpDebugEnabled()) {
                   console.warn('[IronRDP WebCodecs]', err?.message || err);
                 }
               }
             });
-            setAvc420WebcodecsCallback((data, surfaceId, left, top, right, bottom) => {
-              webCodecsDecoder.push(data, surfaceId, left, top, right, bottom);
+            setAvc420WebcodecsCallback((data, surfaceId, left, top, right, bottom, rects, epoch, display) => {
+              webCodecsDecoder.push(data, surfaceId, left, top, right, bottom, rects, epoch, display);
             });
             builder.extension(avc420Webcodecs(true));
           } catch (wcErr) {

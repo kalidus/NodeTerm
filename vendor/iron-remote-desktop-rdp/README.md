@@ -3,13 +3,13 @@
 Paquete local `@devolutions/iron-remote-desktop-rdp` desde IronRDP `38b074e4`.
 
 - **Por defecto:** sin EGFX → bitmap RLE.
-- **EGFX:** opción de la conexión. RemoteFX Progressive. H.264 no se anuncia.
-- **WebCodecs:** apagado. `NODETERM_RDP_WEBCODECS=1` lo enciende.
+- **EGFX:** opción de la conexión. Con VideoDecoder se anuncia AVC444 (V10.7, thin client) para que Windows codifique el escritorio, fondo incluido, como H.264. Si no hay decoder, RemoteFX Progressive.
+- **WebCodecs:** decodifica el stream de imagen AVC444/AVC420 en GPU y lo escribe en el framebuffer EGFX. `NODETERM_RDP_WEBCODECS=0` lo apaga.
 - **Diario:** `userData/logs/rdp-egfx-diag.jsonl` y `rdp-egfx-last-resize.bin`.
 
 ## Versión
 
-`0.7.0-nodeterm-egfx.14`
+`0.7.0-nodeterm-egfx.19`
 
 ## Regenerar
 

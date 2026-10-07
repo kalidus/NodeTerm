@@ -6,7 +6,7 @@
                          "Benoit Cortier"
                      ],
     "description":  "NodeTerm vendor IronRDP 38b074e4befeed6dd25a67decf3558bb9e7762f9 + EGFX + WebCodecs + diag",
-    "version":  "0.7.0-nodeterm-egfx.14",
+    "version":  "0.7.0-nodeterm-egfx.19",
     "repository":  {
                        "type":  "git",
                        "url":  "git+https://github.com/Devolutions/IronRDP.git"

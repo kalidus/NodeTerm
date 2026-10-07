@@ -159,9 +159,9 @@ export const useFormHandlers = ({
 
   const notify = useCallback((options) => {
     if (toast?.current?.show) {
-      notify(options);
+      toast.current.show(options);
     } else if (window.toast?.current?.show) {
-      window.notify(options);
+      window.toast.current.show(options);
     } else {
       console.warn('[useFormHandlers] Toast no disponible:', options);
     }
