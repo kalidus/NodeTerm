@@ -1794,7 +1794,7 @@ index 2df63ef..2c901ea 100644
  }
 +
 diff --git a/crates/ironrdp-web/src/session.rs b/crates/ironrdp-web/src/session.rs
-index a47bd3d..e53eb6a 100644
+index a47bd3d..389499f 100644
 --- a/crates/ironrdp-web/src/session.rs
 +++ b/crates/ironrdp-web/src/session.rs
 @@ -1,4 +1,5 @@
@@ -2431,17 +2431,38 @@ index a47bd3d..e53eb6a 100644
              |enable_credssp: bool| { self.0.borrow_mut().enable_credssp = enable_credssp };
              |enable_server_pointer: bool| { self.0.borrow_mut().enable_server_pointer = enable_server_pointer };
              |legacy_graphics: bool| { self.0.borrow_mut().legacy_graphics = legacy_graphics };
-@@ -426,6 +999,9 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
+@@ -364,6 +937,7 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
+             printer_driver_name,
+             outbound_message_size_limit,
+             legacy_graphics,
++            use_egfx,
+         );
+ 
+         {
+@@ -407,6 +981,7 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
+             printer_driver_name = inner.printer_driver_name.clone();
+             outbound_message_size_limit = inner.outbound_message_size_limit;
+             legacy_graphics = inner.legacy_graphics;
++            use_egfx = inner.use_egfx;
+         }
+ 
+         if pcb.is_some() && vmconnect.is_some() {
+@@ -422,10 +997,14 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
+             client_name.clone(),
+             desktop_size,
+             legacy_graphics,
++            use_egfx,
+         );
  
          let enable_credssp = self.0.borrow().enable_credssp;
          config.enable_credssp = enable_credssp;
-+        config.support_dyn_vc_gfx_protocol = self.0.borrow().use_egfx;
++        config.support_dyn_vc_gfx_protocol = use_egfx;
 +        let use_rdpsnd_audio = self.0.borrow().use_rdpsnd_audio;
 +        config.enable_audio_playback = use_rdpsnd_audio;
  
          let enable_server_pointer = self.0.borrow().enable_server_pointer;
          config.enable_server_pointer = enable_server_pointer;
-@@ -500,6 +1076,8 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
+@@ -500,6 +1079,8 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
          }
  
          let use_display_control = self.0.borrow().use_display_control;
@@ -2450,7 +2471,7 @@ index a47bd3d..e53eb6a 100644
  
          let (connection_result, ws) = connect(ConnectParams {
              ws,
-@@ -516,6 +1094,9 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
+@@ -516,6 +1097,9 @@ impl iron_remote_desktop::SessionBuilder for SessionBuilder {
              printer_driver_name,
              computer_name: client_name.clone(),
              use_display_control,
@@ -2460,7 +2481,7 @@ index a47bd3d..e53eb6a 100644
          })
          .await?;
  
-@@ -562,6 +1143,8 @@ pub(crate) enum RdpInputEvent {
+@@ -562,6 +1146,8 @@ pub(crate) enum RdpInputEvent {
          scale_factor: Option<u32>,
          physical_size: Option<(u32, u32)>,
      },
@@ -2469,7 +2490,7 @@ index a47bd3d..e53eb6a 100644
      TerminateSession,
  }
  
-@@ -658,6 +1241,9 @@ impl iron_remote_desktop::Session for Session {
+@@ -658,6 +1244,9 @@ impl iron_remote_desktop::Session for Session {
              .take()
              .expect("run called only once");
  
@@ -2479,7 +2500,7 @@ index a47bd3d..e53eb6a 100644
          let mut clipboard = self.clipboard.borrow_mut().take().expect("run called only once");
          let mut wasm_printer = self.printer.borrow_mut().take().expect("run called only once");
  
-@@ -688,6 +1274,18 @@ impl iron_remote_desktop::Session for Session {
+@@ -688,6 +1277,18 @@ impl iron_remote_desktop::Session for Session {
          // Reused across frames so per-region extraction doesn't allocate on every draw.
          let mut draw_buffer = WriteBuf::new();
  
@@ -2498,7 +2519,7 @@ index a47bd3d..e53eb6a 100644
          // We retain the factory to drive the Deactivation-Reactivation Sequence locally.
          let activation_factory = connection_result.activation_factory;
  
-@@ -703,11 +1301,33 @@ impl iron_remote_desktop::Session for Session {
+@@ -703,11 +1304,33 @@ impl iron_remote_desktop::Session for Session {
          }
          .build();
  
@@ -2533,7 +2554,7 @@ index a47bd3d..e53eb6a 100644
                  frame = framed.read_pdu().fuse() => {
                      let (action, payload) = frame.context("read frame")?;
                      trace!(?action, frame_length = payload.len(), "Frame received");
-@@ -874,6 +1494,48 @@ impl iron_remote_desktop::Session for Session {
+@@ -874,6 +1497,48 @@ impl iron_remote_desktop::Session for Session {
                                  Vec::new()
                              }
                          },
@@ -2582,7 +2603,7 @@ index a47bd3d..e53eb6a 100644
                          RdpInputEvent::Printer(message) => {
                              // The printer backend lives inside the Rdpdr SVC
                              // processor (Send-only); the front-end
-@@ -892,6 +1554,23 @@ impl iron_remote_desktop::Session for Session {
+@@ -892,6 +1557,23 @@ impl iron_remote_desktop::Session for Session {
                          }
                      }
                  }
@@ -2606,7 +2627,7 @@ index a47bd3d..e53eb6a 100644
                  _ = cleanup_interval.next() => {
                      // Drive clipboard lock timeout cleanup
                      if let Some(cliprdr) = active_stage.get_svc_processor_mut::<CliprdrClient>() {
-@@ -915,14 +1594,36 @@ impl iron_remote_desktop::Session for Session {
+@@ -915,14 +1597,36 @@ impl iron_remote_desktop::Session for Session {
                  }
              };
  
@@ -2646,7 +2667,7 @@ index a47bd3d..e53eb6a 100644
                          let region = extract_partial_image(&image, region, &mut draw_buffer);
                          gui.draw(draw_buffer.filled_mut(), region)
                              .context("draw updated region")?;
-@@ -1111,9 +1812,19 @@ impl iron_remote_desktop::Session for Session {
+@@ -1111,9 +1815,19 @@ impl iron_remote_desktop::Session for Session {
                      ActiveStageOutput::SaveSessionInfo { logon_complete: false } => {
                          debug!("RDP session info notification");
                      }
@@ -2667,7 +2688,7 @@ index a47bd3d..e53eb6a 100644
          };
  
          info!(%disconnect_reason, "RDP session terminated");
-@@ -1201,6 +1912,12 @@ impl iron_remote_desktop::Session for Session {
+@@ -1201,6 +1915,12 @@ impl iron_remote_desktop::Session for Session {
          }
      }
  
@@ -2680,21 +2701,34 @@ index a47bd3d..e53eb6a 100644
      fn supports_unicode_keyboard_shortcuts(&self) -> bool {
          // RDP does not support Unicode keyboard shortcuts.
          // When key combinations are executed, only plain scancode events are allowed to function correctly.
-@@ -1468,9 +2185,11 @@ fn build_config(
+@@ -1459,6 +2179,7 @@ fn build_config(
+     client_name: String,
+     desktop_size: DesktopSize,
+     legacy_graphics: bool,
++    use_egfx: bool,
+ ) -> connector::Config {
+     // Win7-class servers need 32-bpp lossless bitmaps and no advertised codecs.
+     let bitmap = if legacy_graphics {
+@@ -1468,10 +2189,15 @@ fn build_config(
              codecs: BitmapCodecs(Vec::new()),
          }
      } else {
 +        // 32 bpp sin pérdida, como mstsc. 16 bpp con pérdida apartaba al
 +        // encoder del camino H.264 que ese cliente usa en el mismo host.
++        // NSCodec (ID 1) solo con EGFX: IronRDP no lo decodifica en Fast-Path,
++        // y sin el canal Graphics Windows lo elige y cierra la sesión.
++        let codec_config: &[&str] = if use_egfx { &[] } else { &["nscodec:off"] };
          connector::BitmapConfig {
 -            color_depth: 16,
 -            lossy_compression: true,
+-            codecs: client_codecs_capabilities(&[]).expect("can't panic for &[]"),
 +            color_depth: 32,
 +            lossy_compression: false,
-             codecs: client_codecs_capabilities(&[]).expect("can't panic for &[]"),
++            codecs: client_codecs_capabilities(codec_config).expect("can't panic for codec config"),
          }
      };
-@@ -1484,7 +2203,9 @@ fn build_config(
+ 
+@@ -1484,7 +2210,9 @@ fn build_config(
          enable_standard_rdp_security: false,
          keyboard_type: ironrdp::pdu::gcc::KeyboardType::IBM_ENHANCED,
          keyboard_subtype: 0,
@@ -2705,7 +2739,7 @@ index a47bd3d..e53eb6a 100644
          keyboard_functional_keys_count: 12,
          connection_type: ironrdp::pdu::gcc::ConnectionType::Lan,
          ime_file_name: String::new(),
-@@ -1495,19 +2216,15 @@ fn build_config(
+@@ -1495,19 +2223,15 @@ fn build_config(
          },
          monitor_layout: None,
          bitmap: Some(bitmap),
@@ -2730,7 +2764,7 @@ index a47bd3d..e53eb6a 100644
          compression_type: None,
          enable_server_pointer: true,
          autologon: false,
-@@ -1515,10 +2232,20 @@ fn build_config(
+@@ -1515,10 +2239,20 @@ fn build_config(
          enable_audio_capture: false,
          request_data: None,
          pointer_software_rendering: false,
@@ -2754,7 +2788,7 @@ index a47bd3d..e53eb6a 100644
          hardware_id: None,
          license_cache: None,
          timezone_info: TimezoneInfo::default(),
-@@ -1584,6 +2311,9 @@ struct ConnectParams {
+@@ -1584,6 +2318,9 @@ struct ConnectParams {
      /// `computer_name` when constructing the `Rdpdr` processor.
      computer_name: String,
      use_display_control: bool,
@@ -2764,7 +2798,7 @@ index a47bd3d..e53eb6a 100644
  }
  
  fn default_printer_driver_name() -> String {
-@@ -1618,6 +2348,56 @@ fn macos_major_version_from_user_agent(user_agent: &str) -> Option<u32> {
+@@ -1618,6 +2355,56 @@ fn macos_major_version_from_user_agent(user_agent: &str) -> Option<u32> {
          .and_then(|major| major.parse().ok())
  }
  
@@ -2821,7 +2855,7 @@ index a47bd3d..e53eb6a 100644
  async fn connect(
      ConnectParams {
          ws,
-@@ -1634,6 +2414,9 @@ async fn connect(
+@@ -1634,6 +2421,9 @@ async fn connect(
          printer_driver_name,
          computer_name,
          use_display_control,
@@ -2831,7 +2865,7 @@ index a47bd3d..e53eb6a 100644
      }: ConnectParams,
  ) -> Result<(connector::ConnectionResult, WebSocket), IronError> {
      let mut framed = ironrdp_futures::LocalFuturesFramed::new(ws);
-@@ -1647,11 +2430,15 @@ async fn connect(
+@@ -1647,11 +2437,15 @@ async fn connect(
          connector.attach_static_channel(CliprdrClient::new(Box::new(clipboard_backend)));
      }
  
@@ -2851,7 +2885,7 @@ index a47bd3d..e53eb6a 100644
          connector.attach_static_channel(
              Rdpdr::new(Box::new(printer_backend), computer_name).with_printer_driver(
                  printer_device_id,
-@@ -1661,10 +2448,182 @@ async fn connect(
+@@ -1661,10 +2455,182 @@ async fn connect(
          );
      }
  
@@ -3038,7 +3072,7 @@ index a47bd3d..e53eb6a 100644
      }
  
      let kerberos_config = url::Url::parse(kdc_proxy_url.unwrap_or_default().as_str())
-@@ -1693,7 +2652,13 @@ async fn connect(
+@@ -1693,7 +2659,13 @@ async fn connect(
      )
      .await?;
  
@@ -3053,7 +3087,7 @@ index a47bd3d..e53eb6a 100644
          upgraded,
          connector,
          &mut framed,
-@@ -1701,6 +2666,7 @@ async fn connect(
+@@ -1701,6 +2673,7 @@ async fn connect(
          server_name,
          server_public_key,
          kerberos_config,
