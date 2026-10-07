@@ -15,6 +15,7 @@ import {
   isWebCodecsH264Enabled,
   createRdpWebCodecsDecoder
 } from '../utils/rdpWebCodecsH264';
+import { createH264GpuPresenter } from '../utils/rdpH264GpuPresent';
 
 const {
   Backend,
@@ -900,6 +901,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     let currentFileTransferProvider = null;
     let disposeCanvasProbe = null;
     let webCodecsDecoder = null;
+    let h264Presenter = null;
 
     const isAborted = () => aborted || !isMounted;
 
@@ -1219,8 +1221,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           writeEgfxLine({ t: 'codec', chosen: 'bitmap' });
         }
 
-        // AVC420 en GPU cuando el navegador tiene VideoDecoder. Los píxeles vuelven
-        // al framebuffer EGFX; no se pintan por otro canvas.
+        // AVC420 en H.264. WebGPU copia el frame; el canvas RDP no toca la textura del decodificador.
         const useWebCodecs = egfxEnabled
           && typeof avc420Webcodecs === 'function'
           && typeof setAvc420WebcodecsCallback === 'function'
@@ -1229,18 +1230,15 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           && isWebCodecsH264Available();
         if (useWebCodecs) {
           try {
+            h264Presenter = createH264GpuPresenter({
+              get2dContext: () => getOptimized2dContext(canvasRef.current)
+            });
             webCodecsDecoder = createRdpWebCodecsDecoder({
               applyRgba: (epoch, surfaceId, left, top, right, bottom, rgba) => {
                 applyEgfxRgba(epoch, surfaceId, left, top, right, bottom, rgba);
               },
               presentFrame: (frame, regions) => {
-                const canvas = canvasRef.current;
-                const ctx = getOptimized2dContext(canvas);
-                if (!ctx) return;
-                ctx.imageSmoothingEnabled = false;
-                for (const region of regions) {
-                  ctx.drawImage(frame, region.sx, region.sy, region.sw, region.sh, region.dx, region.dy, region.sw, region.sh);
-                }
+                h264Presenter.present(frame, regions);
               },
               onError: (err) => {
                 if (isRdpDebugEnabled()) {
@@ -1652,6 +1650,10 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       if (webCodecsDecoder) {
         try { webCodecsDecoder.close(); } catch (_) {}
         webCodecsDecoder = null;
+      }
+      if (h264Presenter) {
+        try { h264Presenter.dispose(); } catch (_) {}
+        h264Presenter = null;
       }
       try {
         if (typeof setAvc420WebcodecsCallback === 'function') setAvc420WebcodecsCallback(null);

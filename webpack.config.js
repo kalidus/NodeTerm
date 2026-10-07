@@ -34,9 +34,11 @@ module.exports = {
   stats: 'minimal',
   entry: './src/index.js',
   target: 'electron-renderer',
-  // 🚀 OPTIMIZACIÓN: Cache en disco para que la 2.ª y siguientes compilaciones sean mucho más rápidas
+  // Cache en disco. En watch, una sola generación en RAM: el valor por defecto
+  // retiene todas y, al serializar el módulo de ~6 MB, el heap no puede crecer.
   cache: {
     type: 'filesystem',
+    maxMemoryGenerations: process.argv.includes('--watch') ? 1 : 0,
     buildDependencies: { config: [__filename] }
   },
   node: {
@@ -173,7 +175,18 @@ module.exports = {
       process: 'process/browser.js',
       Buffer: ['buffer', 'Buffer'],
       global: 'globalThis'
-    })
+    }),
+    {
+      apply(compiler) {
+        compiler.hooks.done.tap('WebpackReadyPlugin', () => {
+          try {
+            const dir = compiler.options.output.path;
+            fs.mkdirSync(dir, { recursive: true });
+            fs.writeFileSync(path.join(dir, '.webpack-ready'), String(Date.now()));
+          } catch (_) { /* el siguiente ciclo lo reintenta */ }
+        });
+      }
+    }
   ],
   resolve: {
     extensions: ['.js', '.jsx'],

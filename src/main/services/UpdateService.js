@@ -137,12 +137,16 @@ class UpdateService {
    * Envía eventos al proceso renderer
    */
   sendStatusToWindow(event, data = {}) {
-    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-      this.mainWindow.webContents.send('updater-event', {
+    const win = this.mainWindow;
+    if (!win || win.isDestroyed() || win.webContents?.isDestroyed()) return;
+    try {
+      win.webContents.send('updater-event', {
         event,
         data,
         timestamp: new Date().toISOString(),
       });
+    } catch (_) {
+      // El renderer puede morir con la ventana aún viva (caída del proceso GPU).
     }
   }
 

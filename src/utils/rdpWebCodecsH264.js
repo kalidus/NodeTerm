@@ -5,8 +5,8 @@
  * Activo cuando VideoDecoder existe. Apagar con localStorage NODETERM_RDP_WEBCODECS=0
  * (o window.__NODETERM_RDP_WEBCODECS__ = false).
  *
- * Los píxeles no se pintan en el canvas. Se devuelven al framebuffer EGFX
- * (applyRgba) para que Progressive y el vídeo compartan la misma imagen.
+ * El frame de imagen se entrega a presentFrame, que lo pinta en la GPU y lo cierra.
+ * No se clona ni se hace drawImage del VideoFrame: esa textura tumba el proceso GPU.
  */
 
 'use strict';
@@ -459,11 +459,8 @@ async function readRgbaRect(frame, box) {
       layout: [{ offset: 0, stride: w * 4 }]
     });
     return rgba;
-  } catch (_) {
-    const scratch = new OffscreenCanvas(w, h);
-    const ctx = scratch.getContext('2d', { willReadFrequently: true });
-    ctx.drawImage(frame, box.left, box.top, w, h, 0, 0, w, h);
-    return new Uint8Array(ctx.getImageData(0, 0, w, h).data);
+  } catch (err) {
+    throw err instanceof Error ? err : new Error(String(err));
   }
 }
 
@@ -583,6 +580,9 @@ function createRdpWebCodecsDecoder(opts = {}) {
   let configured = false;
   let needsKey = true;
   let activeCodec = '';
+  // prefer-software tumba el renderer en el primer access unit. El hardware
+  // llega al frame. La textura se pinta una vez y se cierra; retenerla para
+  // un copyTo tumba el proceso GPU.
   let acceleration = 'prefer-hardware';
   let lastError = null;
   /** @type {Map<number, object>} */
@@ -595,7 +595,6 @@ function createRdpWebCodecsDecoder(opts = {}) {
   let reported = false;
   let reportedFirst = false;
   let reportedPaint = false;
-  let reportedGpu = false;
   let deliverChain = Promise.resolve();
   const SETTLE_MS = 80;
   /**
@@ -691,6 +690,35 @@ function createRdpWebCodecsDecoder(opts = {}) {
     return { frameWidth: frameW, frameHeight: frameH, width: frameW, spans: { u: spanU, v: spanV } };
   };
 
+  let queuedPresent = null;
+  let presentRaf = 0;
+
+  const cancelPresent = () => {
+    if (presentRaf) cancelAnimationFrame(presentRaf);
+    presentRaf = 0;
+    if (queuedPresent) closeQuiet(queuedPresent.frame);
+    queuedPresent = null;
+  };
+
+  const pumpPresent = () => {
+    presentRaf = 0;
+    const job = queuedPresent;
+    queuedPresent = null;
+    if (!job) return;
+    try {
+      presentNow(job.frame, job.targets);
+    } catch (_) {
+      closeQuiet(job.frame);
+    }
+  };
+
+  const enqueuePresent = (frame, targets) => {
+    if (queuedPresent) closeQuiet(queuedPresent.frame);
+    queuedPresent = { frame, targets };
+    if (presentRaf) return;
+    presentRaf = requestAnimationFrame(pumpPresent);
+  };
+
   const presentNow = (frame, targets) => {
     const regions = [];
     for (const region of targets.regions) {
@@ -706,7 +734,10 @@ function createRdpWebCodecsDecoder(opts = {}) {
         dy: targets.originTop + region.top
       });
     }
-    if (!regions.length) return;
+    if (!regions.length) {
+      closeQuiet(frame);
+      return;
+    }
     presentFrame(frame, regions);
   };
 
@@ -784,32 +815,8 @@ function createRdpWebCodecsDecoder(opts = {}) {
 
       if (presentFrame) {
         if (meta.display !== false) {
-          if (!reportedGpu) {
-            reportedGpu = true;
-            console.warn('[IronRDP WebCodecs] presenta en gpu', frameW, frameH);
-          }
-          presentNow(frame, targets);
-          closeQuiet(hold.lumaFrame);
-          closeQuiet(hold.chromaFrame);
-          hold.gen += 1;
-          hold.lumaFrame = frame;
-          hold.chromaFrame = null;
-          hold.meta = meta;
-          hold.chromaMeta = null;
-          hold.targets = targets;
-          hold.box = box;
-          hold.frameW = frameW;
-          hold.frameH = frameH;
+          enqueuePresent(frame, targets);
           keepOpen = true;
-          scheduleSettle();
-          return;
-        }
-        if (hold.lumaFrame) {
-          closeQuiet(hold.chromaFrame);
-          hold.chromaFrame = frame;
-          hold.chromaMeta = meta;
-          keepOpen = true;
-          scheduleSettle();
         }
         return;
       }
@@ -995,6 +1002,7 @@ function createRdpWebCodecsDecoder(opts = {}) {
       if (settleTimer) clearTimeout(settleTimer);
       settleTimer = null;
       clearHold();
+      cancelPresent();
       if (decoder) {
         try { decoder.close(); } catch (_) { /* noop */ }
         decoder = null;
@@ -1008,6 +1016,7 @@ function createRdpWebCodecsDecoder(opts = {}) {
       if (settleTimer) clearTimeout(settleTimer);
       settleTimer = null;
       clearHold();
+      cancelPresent();
       if (decoder) {
         try { decoder.close(); } catch (_) { /* noop */ }
         decoder = null;
