@@ -28,6 +28,11 @@ assert.ok(
   'export WebCodecs callback'
 );
 assert.ok(js.includes('avc420Webcodecs') || js.includes('avc420_webcodecs'), 'export avc420Webcodecs');
+assert.ok(js.includes('rdpsndAudio') || js.includes('rdpsnd_audio'), 'export rdpsndAudio');
+assert.ok(
+  js.includes('setRdpsndWaveCallback') || js.includes('set_rdpsnd_wave_callback'),
+  'export setRdpsndWaveCallback'
+);
 assert.ok(String(pkg.version).includes('egfx'), `version vendor: ${pkg.version}`);
 
 const { RNS_UD_CS_SUPPORT_DYNVC_GFX_PROTOCOL } = require('../src/main/services/rdp-caps-helpers');
@@ -96,8 +101,10 @@ function buildScNet(ioId, channelIds) {
 console.log('[measure-ironrdp-egfx] OK');
 console.log(`  vendor version=${pkg.version} size=${js.length}`);
 console.log('  Framing: drdynvc CHANNEL_PDU middle passthrough OK');
+console.log('  Audio: rdpsndAudio + setRdpsndWaveCallback presentes');
 console.log('  Criterio live: NODETERM_RDP_EGFX=1 + NODETERM_RDP_DEBUG=1');
 console.log('    -> DynVC->WASM hex + escritorio; sin undecodable GFX spam');
+console.log('  Audio live: redirectAudio=true; AUDIO_PLAYBACK_DVC solo con rdpsnd+drdynvc');
 console.log('  Bastion Wallix puede seguir en BITMAP aunque el cliente pida EGFX.');
 
 // Sumario opcional del diagnostico H.264 en movimiento.

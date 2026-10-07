@@ -285,7 +285,7 @@ describe('prepareMcsConnectInitial con inyeccion', () => {
   });
 });
 
-// Esto decide el juego de canales de todas las conexiones RDP nativas, no solo las de bastion
+// Por defecto se antepone rdpdr+rdpsnd (cliprdr como primer VC rompe el saludo).
 describe('juego de canales por defecto del bridge', () => {
   const { resolveInjectedChannels } = require('../../src/main/services/RdpNativeBridgeService');
   const previous = process.env.NODETERM_RDP_INJECT_CHANNELS;
@@ -299,6 +299,10 @@ describe('juego de canales por defecto del bridge', () => {
 
   test('por defecto desplaza cliprdr detras de rdpdr y rdpsnd', () => {
     assert.deepEqual(resolveInjectedChannels(), { before: ['rdpdr', 'rdpsnd'], after: [] });
+    assert.deepEqual(
+      resolveInjectedChannels({ host: '192.168.10.52', username: 'admin' }),
+      { before: ['rdpdr', 'rdpsnd'], after: [] }
+    );
     const frame = buildMcsConnectInitial([['cliprdr', 0xc0a00000]]);
     const res = prepareMcsConnectInitial(frame, 0x01, { injectChannels: resolveInjectedChannels() });
     assert.deepEqual(findClientNetworkChannels(res.buf), ['rdpdr', 'rdpsnd', 'cliprdr']);

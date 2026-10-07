@@ -17,6 +17,7 @@ import {
 } from '../utils/rdpWebCodecsH264';
 import { createH264GpuPresenter } from '../utils/rdpH264GpuPresent';
 import { clipRdpClipboardText, RDP_CLIPBOARD_TEXT_MAX_CHARS } from '../utils/rdpClipboardLimit';
+import { createRdpWebAudioPlayer } from '../utils/rdpWebAudio';
 
 const {
   Backend,
@@ -41,7 +42,9 @@ const {
   pushUdpPayload = null,
   beginEgfxResizeCapture = null,
   takeEgfxResizeCapture = null,
-  egfx = null
+  egfx = null,
+  rdpsndAudio = null,
+  setRdpsndWaveCallback = null
 } = IronRdpRdp;
 import {
   fileTransferNameOf,
@@ -236,6 +239,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   const [supportsDisplayControl, setSupportsDisplayControl] = useState(false);
   const egfxDiagRef = useRef({ active: false, codec: 'bitmap', wroteSession: false });
   const egfxResizeFlushRef = useRef(null);
+  const webAudioPlayerRef = useRef(null);
 
   const lastCursorStyleRef = useRef('default');
   const lastCursorKindRef = useRef('');
@@ -273,7 +277,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   const clipboardFailedRef = useRef(false);
   const clipboardUnhealthyToastShownRef = useRef(false);
   const userClosingRef = useRef(false);
-  const gfxThinFallbackUsedRef = useRef(false);
+  /** Tras 0x112f: reintentar EGFX sin H.264/WebCodecs (Progressive/ClearCodec). */
+  const gfxNoAvcFallbackUsedRef = useRef(false);
   const gfxFallbackPendingRef = useRef(false);
 
   const isRdpDebugEnabled = () => {
@@ -840,7 +845,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       } catch (_) {}
     }
     hasEverConnectedRef.current = false;
-    gfxThinFallbackUsedRef.current = false;
+    gfxNoAvcFallbackUsedRef.current = false;
     lastBackendReasonRef.current = null;
     clipboardFailedRef.current = false;
     clipboardUnhealthyToastShownRef.current = false;
@@ -961,13 +966,12 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     let h264Presenter = null;
     const isAborted = () => aborted || !isMounted;
 
-    const beginGfxV107Fallback = (reason) => {
-      if (isAborted() || userClosingRef.current || gfxThinFallbackUsedRef.current) return;
-      if (typeof setEgfxAvcThinClient !== 'function') return;
-      gfxThinFallbackUsedRef.current = true;
+    const beginGfxNoAvcFallback = (reason) => {
+      if (isAborted() || userClosingRef.current || gfxNoAvcFallbackUsedRef.current) return;
+      gfxNoAvcFallbackUsedRef.current = true;
       gfxFallbackPendingRef.current = true;
-      try { setEgfxAvcThinClient(false); } catch (_) { /* noop */ }
-      writeEgfxLine({ t: 'gfx-fallback', reason, mode: 'v107' });
+      writeEgfxLine({ t: 'gfx-fallback', reason, mode: 'no-avc' });
+      console.warn('⚠️ [IronRDP EGFX] 0x112f → reintento sin H.264/WebCodecs (Progressive/ClearCodec)');
       setConnectionState('connecting');
       setReconnectTrigger((n) => n + 1);
     };
@@ -998,10 +1002,13 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       const reasonText = rawReason || (err ? extractErrorMessage(err) : '');
       if (
         !userClosingRef.current
-        && !gfxThinFallbackUsedRef.current
+        && !gfxNoAvcFallbackUsedRef.current
         && isGraphicsSubsystemFailure(reasonText)
       ) {
         writeEgfxLine({ t: 'gfx-fail', reason: '0x112f' });
+        abandonSession(sessionRef.current);
+        beginGfxNoAvcFallback('0x112f');
+        return;
       }
       clearCanvasScreen();
 
@@ -1041,7 +1048,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         await initIronRdp('warn');
         if (isAborted()) return;
         if (typeof setEgfxAvcThinClient === 'function') {
-          setEgfxAvcThinClient(!gfxThinFallbackUsedRef.current);
+          // Thin-client ya no cambia caps; se deja apagado en el reintento sin AVC.
+          setEgfxAvcThinClient(!gfxNoAvcFallbackUsedRef.current);
         }
         if (typeof setUdpOpenCallback === 'function') {
           setUdpOpenCallback(async (destination, requestId, cookie) => {
@@ -1337,12 +1345,18 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         }
 
         // AVC420/444 en H.264. WebGPU pinta la imagen; el croma 4:4:4 va por putImageData.
+        // Tras 0x112f: sin passthrough AVC → IronRDP filtra caps y usa Progressive/ClearCodec.
         const useWebCodecs = egfxEnabled
+          && !gfxNoAvcFallbackUsedRef.current
           && typeof avc420Webcodecs === 'function'
           && typeof setAvc420WebcodecsCallback === 'function'
           && typeof applyEgfxRgba === 'function'
           && isWebCodecsH264Enabled()
           && isWebCodecsH264Available();
+        if (egfxEnabled && gfxNoAvcFallbackUsedRef.current) {
+          writeEgfxLine({ t: 'codec', chosen: 'no-avc-fallback' });
+          console.log('ℹ️ [IronRDP EGFX] Sesión sin H.264 (fallback tras 0x112f)');
+        }
         if (useWebCodecs) {
           try {
             h264Presenter = createH264GpuPresenter({
@@ -1401,6 +1415,45 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           }
         } else if (typeof setAvc420WebcodecsCallback === 'function') {
           try { setAvc420WebcodecsCallback(null); } catch (_) { /* noop */ }
+        }
+
+        // RDPSND audio (MS-RDPEA): PCM → Web Audio. Opt-in explícito (no abre DynVC solo).
+        // Con EGFX/DisplayControl ya hay drdynvc → WASM también acepta AUDIO_PLAYBACK_DVC.
+        const audioEnabled = rdpConfig.redirectAudio === true
+          && typeof rdpsndAudio === 'function'
+          && typeof setRdpsndWaveCallback === 'function';
+        if (audioEnabled) {
+          try {
+            if (webAudioPlayerRef.current) {
+              try { webAudioPlayerRef.current.close(); } catch (_) { /* noop */ }
+            }
+            const player = createRdpWebAudioPlayer();
+            webAudioPlayerRef.current = player;
+            let waveBlocks = 0;
+            setRdpsndWaveCallback((pcm, sampleRate, channels, bitsPerSample) => {
+              waveBlocks += 1;
+              if (waveBlocks === 1 || waveBlocks % 50 === 0) {
+                console.log(`[IronRDP Audio] wave #${waveBlocks} ${pcm?.byteLength || 0}B ${sampleRate}Hz ch=${channels}`);
+              }
+              void player.resume();
+              player.playPcm(pcm, sampleRate, channels, bitsPerSample);
+            });
+            builder.extension(rdpsndAudio(true));
+            const resumeAudio = () => { void player.resume(); };
+            canvasRef.current?.addEventListener('pointerdown', resumeAudio, { once: true });
+            window.addEventListener('pointerdown', resumeAudio, { once: true });
+            void player.resume();
+            console.log('[IronRDP Audio] RDPSND habilitado (redirectAudio)');
+          } catch (audioErr) {
+            console.warn('[IronRDP] Audio RDPSND no disponible:', audioErr?.message || audioErr);
+            try { setRdpsndWaveCallback(null); } catch (_) { /* noop */ }
+            if (webAudioPlayerRef.current) {
+              try { webAudioPlayerRef.current.close(); } catch (_) { /* noop */ }
+              webAudioPlayerRef.current = null;
+            }
+          }
+        } else if (typeof setRdpsndWaveCallback === 'function') {
+          try { setRdpsndWaveCallback(null); } catch (_) { /* noop */ }
         }
 
         // Registrar extensiones para transferencia de archivos / carpeta compartida (RdpFileTransferProvider)
@@ -1801,6 +1854,11 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         if (typeof setAvc420WebcodecsCallback === 'function') setAvc420WebcodecsCallback(null);
         if (typeof setEgfxCapsCallback === 'function') setEgfxCapsCallback(null);
         if (typeof setEgfxResetCallback === 'function') setEgfxResetCallback(null);
+        if (typeof setRdpsndWaveCallback === 'function') setRdpsndWaveCallback(null);
+        if (webAudioPlayerRef.current) {
+          try { webAudioPlayerRef.current.close(); } catch (_) { /* noop */ }
+          webAudioPlayerRef.current = null;
+        }
         if (typeof setUdpOpenCallback === 'function') setUdpOpenCallback(null);
         if (typeof setUdpSendCallback === 'function') setUdpSendCallback(null);
         try { window.electron?.ipcRenderer?.send('rdp:udp-close'); } catch (_) {}

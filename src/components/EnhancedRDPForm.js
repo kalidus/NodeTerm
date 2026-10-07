@@ -62,7 +62,7 @@ export function createDefaultRdpFormData() {
     redirectFolders: true,
     redirectClipboard: true,
     redirectPrinters: false,
-    redirectAudio: true,
+    redirectAudio: false,
     fullscreen: false,
     smartSizing: true,
     span: false,
@@ -118,7 +118,7 @@ export function mapEditNodeDataToRdpFormData(editNodeData) {
     redirectFolders: isDriveOn,
     redirectClipboard: data.redirectClipboard !== undefined ? data.redirectClipboard : true,
     redirectPrinters: data.redirectPrinters || false,
-    redirectAudio: data.redirectAudio !== undefined ? data.redirectAudio : true,
+    redirectAudio: data.redirectAudio === true,
     fullscreen: data.fullscreen || false,
     smartSizing: isAutoResizeOn,
     span: data.span || false,
@@ -248,7 +248,7 @@ export function EnhancedRDPForm({
   const driveHelpText = isWebRdp
     ? t('rdp.help.enableDriveWebRdp')
     : (isGuacamole ? t('rdp.help.enableDriveGuacamole') : t('rdp.help.folders'));
-  const audioHelpText = isWebRdp ? t('rdp.help.audioUnsupported') : t('rdp.help.audio');
+  const audioHelpText = isWebRdp ? t('rdp.help.audioIronRdp') : t('rdp.help.audio');
   const printersHelpText = isWebRdp ? t('rdp.help.printersWebRdp') : t('rdp.help.printers');
 
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(true);
@@ -672,11 +672,8 @@ export function EnhancedRDPForm({
               <TerminalSwitchOption
                 iconClass="pi-volume-up"
                 labelText={t('rdp.options.audio')}
-                checked={isWebRdp ? false : formData.redirectAudio}
-                onCheckedChange={(v) => {
-                  if (!isWebRdp) handleInputChange('redirectAudio', v);
-                }}
-                disabled={isWebRdp}
+                checked={formData.redirectAudio === true}
+                onCheckedChange={(v) => handleInputChange('redirectAudio', !!v)}
                 inputId={`${p}-opt-audio`}
                 helpText={audioHelpText}
               />
@@ -1169,21 +1166,17 @@ export function EnhancedRDPForm({
 
               {/* Audio */}
               <div 
-                className={`hud-badge-pill ${!isWebRdp && formData.redirectAudio ? 'active' : ''}`}
+                className={`hud-badge-pill ${formData.redirectAudio === true ? 'active' : ''}`}
                 onClick={() => {
-                  if (isWebRdp) {
-                    setStatusMessage('Audio no disponible en RDP nativo (IronRDP).');
-                    return;
-                  }
-                  handleInputChange('redirectAudio', !formData.redirectAudio);
-                  setStatusMessage(`Redirección de audio: ${!formData.redirectAudio ? 'Activada' : 'Desactivada'}`);
+                  const next = formData.redirectAudio !== true;
+                  handleInputChange('redirectAudio', next);
+                  setStatusMessage(`Redirección de audio: ${next ? 'Activada' : 'Desactivada'}`);
                 }}
-                style={isWebRdp ? { opacity: 0.55, cursor: 'not-allowed' } : undefined}
-                title={isWebRdp ? t('rdp.help.audioUnsupported') : undefined}
+                title={audioHelpText}
               >
                 <i className="pi pi-volume-up hud-badge-icon"></i>
                 <span className="hud-badge-label">Audio:</span>
-                <span className="hud-badge-value">{!isWebRdp && formData.redirectAudio ? 'SÍ' : 'NO'}</span>
+                <span className="hud-badge-value">{formData.redirectAudio === true ? 'SÍ' : 'NO'}</span>
               </div>
 
               {/* Impresoras */}

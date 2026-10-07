@@ -961,13 +961,25 @@ function createRdpWebCodecsDecoder(opts = {}) {
   const deliver = async (frame, meta) => {
     let keepOpen = false;
     try {
-      if (!meta) return;
-      if (!applyRgba && !presentFrame) return;
+      if (!meta) {
+        settleFrame(1);
+        return;
+      }
+      if (!applyRgba && !presentFrame) {
+        settleFrame(1);
+        return;
+      }
       const frameW = frame.displayWidth || frame.codedWidth;
       const frameH = frame.displayHeight || frame.codedHeight;
-      if (!frameW || !frameH) return;
+      if (!frameW || !frameH) {
+        settleFrame(1);
+        return;
+      }
       const targets = paintTargets(meta, frameW, frameH);
-      if (!targets) return;
+      if (!targets) {
+        settleFrame(1);
+        return;
+      }
       const box = unionAlignedBox(targets.regions, frameW, frameH);
 
       if (presentFrame) {
@@ -1173,10 +1185,20 @@ function createRdpWebCodecsDecoder(opts = {}) {
           return;
         }
       }
-      if (!configured || !decoder || decoder.state !== 'configured') return;
-      if (needsKey && !unit.key) return;
+      if (!configured || !decoder || decoder.state !== 'configured') {
+        settleFrame(1);
+        return;
+      }
+      if (needsKey && !unit.key) {
+        // EndFrame ya habrá aplazado ACK; sin settle Windows acaba en 0x112f.
+        settleFrame(1);
+        return;
+      }
       const annexB = annex ? src : avcToAnnexB(src);
-      if (!annexB.length) return;
+      if (!annexB.length) {
+        settleFrame(1);
+        return;
+      }
       timestampUs += 33333;
       const meta = {
         epoch: epoch | 0,

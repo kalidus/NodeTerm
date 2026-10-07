@@ -223,6 +223,7 @@
       "dpi": "Pixel density used to scale text and UI in the session.",
       "clipboard": "Syncs text and images between your machine and the remote session. Independent from file copy.",
       "audio": "Plays remote session audio on your machine.",
+      "audioIronRdp": "Plays remote audio via RDPSND (PCM). Opt-in; does not open DynVC on pure bitmap. Direct RDP.",
       "audioUnsupported": "Not available in native RDP (IronRDP). This client does not play remote audio.",
       "printers": "Redirects local printers to the remote desktop.",
       "printersWebRdp": "Creates a virtual PDF in NodeTerm. Does not redirect physical printers.",

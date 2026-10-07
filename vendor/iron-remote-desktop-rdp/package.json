@@ -5,8 +5,8 @@
   "contributors": [
     "Benoit Cortier"
   ],
-  "description": "NodeTerm vendor IronRDP 38b074e4 + EGFX 10.6 y canal UDP fiable (RDPEUDP2)",
-  "version": "0.7.0-nodeterm-egfx.32",
+  "description": "NodeTerm vendor IronRDP + EGFX V10.6 + Soft-Sync + ACK eager + rdpsnd (sin AUDIO_PLAYBACK_DVC en EGFX)",
+  "version": "0.7.0-nodeterm-egfx.37",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Devolutions/IronRDP.git"

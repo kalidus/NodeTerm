@@ -231,6 +231,18 @@ describe('rdp-dynvc', () => {
     assert.equal(parseMcsSendData(res.replies[0]).userData.readUInt32LE(10), STATUS_NOT_SUPPORTED);
   });
 
+  it('reenvia AUDIO_PLAYBACK_DVC cuando allowAudio', () => {
+    const p = path.join(__dirname, 'frames/gap-6994ms-from-f122-43b.hex');
+    if (!fs.existsSync(p)) return;
+    const raw = Buffer.from(fs.readFileSync(p, 'utf8').trim(), 'hex');
+    const mcs = parseMcsSendData(raw);
+    const res = handleDvcRequest(mcs.channelId, 1002, mcs.userData, { allowAudio: true });
+    assert.ok(res.handled);
+    assert.equal(res.forward, true);
+    assert.equal(res.replies.length, 0);
+    assert.ok((res.note || '').includes('AUDIO'));
+  });
+
   it('responde a DVC Capabilities Request con estructura correcta', () => {
     // DVC Caps Request V3: Cmd=0x05, Sp=0x01 (0x54), pad8=0x00, Version=0x0003, MaxDataSize, Flags
     const dvcPayload = Buffer.from('54000300333311113d0aa704', 'hex');
@@ -507,6 +519,174 @@ describe('drdynvc remap DisplayControl', () => {
     assert.ok((res.note || '').includes('dvc-reject'));
     assert.ok((res.note || '').includes('AUDIO'));
     assert.equal(parseMcsSendData(res.replies[0]).userData.readUInt32LE(10), STATUS_NOT_SUPPORTED);
+  });
+
+  it('reenvia CREATE Audio en processServerFrame si WASM anuncio rdpsnd+drdynvc', () => {
+    const state = injectedDrdynvcState();
+    state.wasmChannelNames = ['cliprdr', 'rdpsnd', 'drdynvc'];
+    const nameBuf = Buffer.from('AUDIO_PLAYBACK_DVC\0', 'ascii');
+    const createReq = Buffer.concat([Buffer.from([0x10, 0x30]), nameBuf]);
+    const cpdu = Buffer.alloc(8 + createReq.length);
+    cpdu.writeUInt32LE(createReq.length, 0);
+    cpdu.writeUInt32LE(0x03, 4);
+    createReq.copy(cpdu, 8);
+    const frame = buildMcsIndication(1007, cpdu);
+    const res = processServerFrame(state, frame);
+    assert.equal(res.dropped, false);
+    assert.ok(res.forward);
+    assert.equal(res.dvcForward, true);
+    assert.ok((res.note || '').includes('AUDIO'));
+  });
+
+  it('reenvia CREATE Audio con allowAudioPlayback aunque wasmChannelNames no liste rdpsnd', () => {
+    const state = injectedDrdynvcState();
+    assert.ok(!state.wasmChannelNames.some((n) => String(n).toLowerCase() === 'rdpsnd'));
+    state.allowAudioPlayback = true;
+    const nameBuf = Buffer.from('AUDIO_PLAYBACK_DVC\0', 'ascii');
+    const createReq = Buffer.concat([Buffer.from([0x10, 0x30]), nameBuf]);
+    const cpdu = Buffer.alloc(8 + createReq.length);
+    cpdu.writeUInt32LE(createReq.length, 0);
+    cpdu.writeUInt32LE(0x03, 4);
+    createReq.copy(cpdu, 8);
+    const frame = buildMcsIndication(1007, cpdu);
+    const res = processServerFrame(state, frame);
+    assert.equal(res.dropped, false);
+    assert.ok(res.forward);
+    assert.equal(res.dvcForward, true);
+    assert.ok((res.note || '').includes('AUDIO'));
+  });
+
+  it('con egfxGraphics rechaza AUDIO_PLAYBACK_DVC aunque haya rdpsnd+drdynvc', () => {
+    const state = injectedDrdynvcState();
+    state.wasmChannelNames = ['cliprdr', 'rdpsnd', 'drdynvc'];
+    state.egfxGraphics = true;
+    state.allowAudioPlayback = true;
+    const nameBuf = Buffer.from('AUDIO_PLAYBACK_DVC\0', 'ascii');
+    const createReq = Buffer.concat([Buffer.from([0x10, 0x30]), nameBuf]);
+    const cpdu = Buffer.alloc(8 + createReq.length);
+    cpdu.writeUInt32LE(createReq.length, 0);
+    cpdu.writeUInt32LE(0x03, 4);
+    createReq.copy(cpdu, 8);
+    const frame = buildMcsIndication(1007, cpdu);
+    const res = processServerFrame(state, frame);
+    assert.equal(res.dropped, true);
+    assert.equal(res.forward, null);
+    assert.equal(res.replies.length, 1);
+    assert.ok((res.note || '').includes('dvc-reject'));
+    assert.ok((res.note || '').includes('AUDIO'));
+    assert.equal(parseMcsSendData(res.replies[0]).userData.readUInt32LE(10), STATUS_NOT_SUPPORTED);
+  });
+
+  it('con egfxGraphics sigue reenviando rdpsnd estatico', () => {
+    const state = createChannelFilterState();
+    state.wasmChannelNames = ['cliprdr', 'rdpsnd', 'drdynvc'];
+    state.clientChannelNames = ['rdpdr', 'cliprdr', 'rdpsnd', 'drdynvc'];
+    state.egfxGraphics = true;
+    state.allowAudioPlayback = true;
+    assert.equal(learnFromServerGcc(state, buildScNet(1003, [1004, 1005, 1006, 1007])), true);
+    assert.equal(state.rdpsndChannelId, 1006);
+    const payload = Buffer.alloc(4, 0xab);
+    const cpdu = Buffer.alloc(8 + payload.length);
+    cpdu.writeUInt32LE(payload.length, 0);
+    cpdu.writeUInt32LE(0x03, 4);
+    payload.copy(cpdu, 8);
+    const frame = buildMcsIndication(1006, cpdu);
+    const res = processServerFrame(state, frame);
+    assert.equal(res.dropped, false);
+    assert.ok(res.forward);
+    assert.equal(res.rdpsndForward, true);
+  });
+});
+
+describe('static rdpsnd forward', () => {
+  function buildChannelPdu(payloadLen = 4) {
+    const payload = Buffer.alloc(payloadLen, 0xab);
+    const cpdu = Buffer.alloc(8 + payload.length);
+    cpdu.writeUInt32LE(payload.length, 0);
+    cpdu.writeUInt32LE(0x03, 4);
+    payload.copy(cpdu, 8);
+    return cpdu;
+  }
+
+  function rdpsndState(wasmNames) {
+    const state = createChannelFilterState();
+    state.wasmChannelNames = wasmNames;
+    state.clientChannelNames = ['rdpdr', 'rdpsnd', 'cliprdr', 'drdynvc'];
+    assert.equal(learnFromServerGcc(state, buildScNet(1003, [1004, 1005, 1006, 1007])), true);
+    assert.equal(state.rdpsndChannelId, 1005);
+    return state;
+  }
+
+  it('reenvia PDU estatico rdpsnd si WASM anuncio rdpsnd', () => {
+    const state = rdpsndState(['cliprdr', 'rdpsnd', 'drdynvc']);
+    assert.equal(state.wasmRdpsndChannelId, 1005);
+    const frame = buildMcsIndication(1005, buildChannelPdu());
+    const res = processServerFrame(state, frame);
+    assert.equal(res.dropped, false);
+    assert.ok(res.forward);
+    assert.equal(res.rdpsndForward, true);
+    assert.ok((res.note || '').includes('rdpsnd-forward'));
+    assert.equal(res.forward.readUInt16BE(10), 1005);
+  });
+
+  it('descarta PDU estatico rdpsnd si no hay opt-in audio', () => {
+    const state = rdpsndState(['cliprdr', 'drdynvc']);
+    assert.equal(state.allowAudioPlayback, false);
+    const frame = buildMcsIndication(1005, buildChannelPdu());
+    const res = processServerFrame(state, frame);
+    assert.equal(res.dropped, true);
+    assert.equal(res.forward, null);
+  });
+
+  it('reenvia PDU estatico rdpsnd con allowAudioPlayback sin nombre en CS_NET wasm', () => {
+    const state = rdpsndState(['cliprdr', 'drdynvc']);
+    state.allowAudioPlayback = true;
+    const frame = buildMcsIndication(1005, buildChannelPdu());
+    const res = processServerFrame(state, frame);
+    assert.equal(res.dropped, false);
+    assert.ok(res.forward);
+    assert.equal(res.rdpsndForward, true);
+  });
+
+  it('remapea rdpsnd servidor->wasm cuando los indices difieren por inyeccion', () => {
+    const state = createChannelFilterState();
+    // WASM: rdpsnd en indice 0; servidor inyecta rdpdr delante → IDs distintos.
+    state.wasmChannelNames = ['rdpsnd', 'cliprdr', 'drdynvc'];
+    state.clientChannelNames = ['rdpdr', 'rdpsnd', 'cliprdr', 'drdynvc'];
+    assert.equal(learnFromServerGcc(state, buildScNet(1003, [1004, 1005, 1006, 1007])), true);
+    assert.equal(state.rdpsndChannelId, 1005);
+    assert.equal(state.wasmRdpsndChannelId, 1004);
+    const frame = buildMcsIndication(1005, buildChannelPdu());
+    const res = processServerFrame(state, frame);
+    assert.equal(res.dropped, false);
+    assert.ok(res.forward);
+    assert.equal(res.forward.readUInt16BE(10), 1004);
+  });
+
+  it('no trata SNDC_TRAINING (0x06) en rdpsnd como CB_TEMP_DIRECTORY', () => {
+    // Caso real NLA: solo rdpdr inyectado → wire rdpsnd=1006, wasm index rdpsnd→1005.
+    const state = createChannelFilterState();
+    state.wasmChannelNames = ['cliprdr', 'rdpsnd', 'drdynvc'];
+    state.clientChannelNames = ['rdpdr', 'cliprdr', 'rdpsnd', 'drdynvc'];
+    assert.equal(learnFromServerGcc(state, buildScNet(1003, [1004, 1005, 1006, 1007])), true);
+    assert.equal(state.rdpsndChannelId, 1006);
+    assert.equal(state.channelIdToName.get(1006), 'rdpsnd');
+    // CHANNEL_PDU + payload que parece cliprdr TEMP_DIRECTORY (msgType=0x0006, dataLen=520)
+    // pero es SNDC_TRAINING en rdpsnd.
+    const clipLike = Buffer.alloc(8);
+    clipLike.writeUInt16LE(0x0006, 0);
+    clipLike.writeUInt16LE(0, 2);
+    clipLike.writeUInt32LE(520, 4);
+    const cpdu = Buffer.alloc(8 + clipLike.length);
+    cpdu.writeUInt32LE(clipLike.length, 0);
+    cpdu.writeUInt32LE(0x03, 4);
+    clipLike.copy(cpdu, 8);
+    const frame = buildMcsIndication(1006, cpdu);
+    const res = processServerFrame(state, frame);
+    assert.equal(res.dropped, false);
+    assert.equal(res.rdpsndForward, true);
+    assert.equal(res.isCliprdr, false);
+    assert.ok(!(res.note || '').includes('cliprdr'));
   });
 });
 

@@ -139,7 +139,7 @@ export declare interface DroppedFile {
     isDirectory?: boolean;
 }
 
-/** Opt-in del canal Graphics (MS-RDPEGFX). Sin esto la sesión usa bitmap RLE. */
+/** Opt-in del canal Graphics (MS-RDPEGFX). Sin esto la sesi├│n usa bitmap RLE. */
 export declare function egfx(enable: boolean): Extension;
 
 export declare function egfxDiagErrorCount(): number;
@@ -1005,7 +1005,7 @@ export declare interface RdpFileTransferProviderOptions {
     storageBackend?: StorageBackendPreference | FileStorageBackend;
 }
 
-/** Opt-in: canal estÔö£├¡tico rdpsnd (MS-RDPEA) con reproducciÔö£Ôöén PCM vÔö£┬ía Web Audio. */
+/** Opt-in: canal est├ö├Â┬úÔö£┬ítico rdpsnd (MS-RDPEA) con reproducci├ö├Â┬ú├ö├Â├®n PCM v├ö├Â┬úÔö¼├¡a Web Audio. */
 export declare function rdpsndAudio(enable: boolean): Extension;
 
 export declare function requestFileContents(params: {

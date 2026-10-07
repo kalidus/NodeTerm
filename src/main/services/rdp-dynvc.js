@@ -7,8 +7,9 @@
  * (AUDIO_PLAYBACK_DVC, RDCamera, RDS::Input, Geometry, etc.).
  *
  * DisplayControl y EGFX (Microsoft::Windows::RDS::Graphics) se reenvian al WASM
- * cuando la sesion declaro drdynvc. El resto sigue rechazandose en 0 ms para
- * evitar timeouts de 20-30 s con Wallix/RDS.
+ * cuando la sesion declaro drdynvc. AUDIO_PLAYBACK_DVC solo con allowAudio
+ * (WASM anuncio rdpsnd + ya hay DynVC por EGFX/DisplayControl).
+ * El resto sigue rechazandose en 0 ms para evitar timeouts Wallix/RDS.
  */
 
 'use strict';
@@ -52,9 +53,14 @@ function isEchoName(name) {
   return String(name || '').toUpperCase().includes('ECHO');
 }
 
+function isAudioPlaybackName(name) {
+  return String(name || '').toUpperCase().includes('AUDIO_PLAYBACK');
+}
+
 function shouldForwardDvcChannel(channelName, options) {
   if (options.allowGraphics === true && isGraphicsChannelName(channelName)) return true;
   if (options.allowDisplayControl === true && isDisplayControlName(channelName)) return true;
+  if (options.allowAudio === true && isAudioPlaybackName(channelName)) return true;
   return false;
 }
 
@@ -440,7 +446,7 @@ function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
     // Si el bridge responde CAPS en local, IronRDP ve CREATE antes de CAPS,
     // emite un segundo CapsResponse y el trafico Graphics queda desencajado
     // (ZGFX/RDPGFX basura → invalid segmented descriptor / Unknown GFX type).
-    if (options.allowGraphics === true || options.allowDisplayControl === true) {
+    if (options.allowGraphics === true || options.allowDisplayControl === true || options.allowAudio === true) {
       return dvcForwardResult(`dvc-forward-caps v=${parsed.version}`);
     }
     const respPdu = buildDvcCapabilitiesResponse(parsed.version, parsed.sp, parsed.maxDataSize, parsed.flags);
@@ -486,5 +492,6 @@ module.exports = {
   buildDvcCapabilitiesResponse,
   handleDvcRequest,
   isDisplayControlName,
-  isGraphicsChannelName
+  isGraphicsChannelName,
+  isAudioPlaybackName
 };

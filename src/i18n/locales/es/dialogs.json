@@ -223,6 +223,7 @@
       "dpi": "Densidad de píxeles para escalar texto e interfaz en la sesión.",
       "clipboard": "Sincroniza texto e imagen entre tu equipo y la sesión remota. Independiente de la copia de archivos.",
       "audio": "Reproduce el audio de la sesión remota en tu equipo.",
+      "audioIronRdp": "Reproduce audio remoto vía RDPSND (PCM). Opt-in; no abre DynVC en bitmap puro. RDP directo.",
       "audioUnsupported": "No disponible en RDP nativo (IronRDP). Este cliente no reproduce audio remoto.",
       "printers": "Redirige impresoras locales al escritorio remoto.",
       "printersWebRdp": "Genera un PDF virtual en NodeTerm. No redirige impresoras físicas.",

@@ -42,7 +42,7 @@ index db347f0..94ade70 100644
  
      fn invoke_extension(&self, ext: Extension) -> Result<JsValue, Self::Error>;
 diff --git a/crates/ironrdp-egfx/src/client.rs b/crates/ironrdp-egfx/src/client.rs
-index 59eb048..4a70a57 100644
+index 59eb048..12f1bb5 100644
 --- a/crates/ironrdp-egfx/src/client.rs
 +++ b/crates/ironrdp-egfx/src/client.rs
 @@ -53,7 +53,8 @@
@@ -283,7 +283,7 @@ index 59eb048..4a70a57 100644
              clearcodec_decoder: None,
              planar_decoder: BitmapStreamDecoder::default(),
              progressive_decoder: ProgressiveDecoder::new(),
-@@ -447,11 +628,82 @@ impl GraphicsPipelineClient {
+@@ -447,9 +628,80 @@ impl GraphicsPipelineClient {
              compositor: Compositor::default(),
              current_frame_id: None,
              frames_queued: 0,
@@ -294,9 +294,9 @@ index 59eb048..4a70a57 100644
              pending_output_reset: None,
 +            hold_diffs: false,
 +            absolute_since_reset: BTreeSet::new(),
-         }
-     }
- 
++        }
++    }
++
 +    /// Advertise AVC420 and prefer [`GraphicsPipelineHandler::on_avc420_bitstream`].
 +    #[must_use]
 +    pub fn with_avc_passthrough(mut self, enabled: bool) -> Self {
@@ -315,7 +315,7 @@ index 59eb048..4a70a57 100644
 +    pub fn mark_frames_presented(&mut self) {
 +        if self.advertise_avc {
 +            return;
-+        }
+         }
 +        self.frames_awaiting_present = 0;
 +    }
 +
@@ -361,10 +361,8 @@ index 59eb048..4a70a57 100644
 +            out.push(Box::new(ack) as DvcMessage);
 +        }
 +        out
-+    }
-+
-     // ========================================================================
-     // State Queries
+     }
+ 
      // ========================================================================
 @@ -554,6 +806,8 @@ impl GraphicsPipelineClient {
  
@@ -599,7 +597,7 @@ index 59eb048..4a70a57 100644
          // MS-RDPEGFX 2.2.1.4.1: see decode_avc420 above for wire-format note.
          let dest_width = dest_rect.right - dest_rect.left;
          let dest_height = dest_rect.bottom - dest_rect.top;
-@@ -1200,11 +1528,24 @@ impl GraphicsPipelineClient {
+@@ -1200,11 +1528,17 @@ impl GraphicsPipelineClient {
  
          self.handler.on_frame_complete(frame_id);
  
@@ -608,27 +606,20 @@ index 59eb048..4a70a57 100644
 -        // the real value gives the server backpressure information for frame pacing.
 +        self.frames_awaiting_present = self.frames_awaiting_present.saturating_add(1);
 +
-+        // Only H.264 passthrough is painted later by WebCodecs. Progressive and
-+        // ClearCodec are already on the compositor: deferring their ACK waits
-+        // forever and Windows stops the session (frozen image, clicks do nothing).
-+        if self.advertise_avc && self.frame_bytes > 0 {
-+            self.pending_acks
-+                .push_back((frame_id, self.total_frames_decoded, self.frame_bytes));
-+            self.frame_bytes = 0;
-+            self.frames_awaiting_present = self.pending_ack_count();
-+            trace!(frame_id, pending = self.pending_ack_count(), "Defer FrameAcknowledge for WebCodecs");
-+            return Ok(Vec::new());
-+        }
++        // Eager ACK even for WebCodecs passthrough. Deferring until JS paints
++        // stalls the Windows H.264 encoder under load (ERRINFO 0x112f). Progressive
++        // / ClearCodec already needed an immediate ACK for the same reason.
 +        self.frame_bytes = 0;
++        self.frames_awaiting_present = 0;
++        self.pending_acks.clear();
 +
-+        // Progressive / ClearCodec: session flushes after compositor present.
          let ack = GfxPdu::FrameAcknowledge(FrameAcknowledgePdu {
 -            queue_depth: QueueDepth::from_u32(self.frames_queued),
 +            queue_depth: QueueDepth::from_u32(0),
              frame_id,
              total_frames_decoded: self.total_frames_decoded,
          });
-@@ -1222,7 +1563,7 @@ impl DvcProcessor for GraphicsPipelineClient {
+@@ -1222,7 +1556,7 @@ impl DvcProcessor for GraphicsPipelineClient {
      }
  
      fn start(&mut self, _channel_id: u32) -> PduResult<Vec<DvcMessage>> {
@@ -637,7 +628,7 @@ index 59eb048..4a70a57 100644
              self.handler.capabilities()
          } else {
              // No H.264 decoder: filter out capability sets that imply AVC support.
-@@ -1257,28 +1598,54 @@ impl DvcProcessor for GraphicsPipelineClient {
+@@ -1257,28 +1591,54 @@ impl DvcProcessor for GraphicsPipelineClient {
      }
  
      fn process(&mut self, _channel_id: u32, payload: &[u8]) -> PduResult<Vec<DvcMessage>> {
@@ -702,7 +693,7 @@ index 59eb048..4a70a57 100644
          }
  
          Ok(responses)
-@@ -2320,7 +2687,8 @@ mod tests {
+@@ -2320,7 +2680,8 @@ mod tests {
          assert_eq!(output[1].data.len(), 8 * 10 * 4);
          assert!(output[1].data.iter().any(|&value| value != 0));
  
@@ -712,7 +703,7 @@ index 59eb048..4a70a57 100644
          start_frame(&mut client, 3);
          wire_progressive(&mut client, shared_bitmap_data).unwrap();
          end_frame(&mut client, 3);
-@@ -2331,7 +2699,10 @@ mod tests {
+@@ -2331,7 +2692,10 @@ mod tests {
          let mut client = progressive_client();
          wire_progressive(&mut client, progressive_context_stream(true)).unwrap();
          clear(&mut client);
@@ -724,7 +715,7 @@ index 59eb048..4a70a57 100644
      }
  
      #[test]
-@@ -2573,6 +2944,129 @@ mod tests {
+@@ -2573,6 +2937,122 @@ mod tests {
          );
      }
  
@@ -801,10 +792,10 @@ index 59eb048..4a70a57 100644
 +        assert_eq!(run(Codec1Type::Avc444, encode(Encoding::CHROMA)), 0);
 +    }
 +
-+    /// Progressive frames ACK immediately. Only an EndFrame that carried AVC
-+    /// bytes waits for the WebCodecs present.
++    /// AVC passthrough ACKs immediately (same as Progressive). Waiting for
++    /// WebCodecs present starved the Windows encoder and produced 0x112f.
 +    #[test]
-+    fn webcodecs_defers_frame_acknowledge_until_presented() {
++    fn webcodecs_acks_end_frame_immediately() {
 +        let mut client = GraphicsPipelineClient::new(
 +            Box::new(CapturingHandler {
 +                updates: Arc::new(Mutex::new(Vec::new())),
@@ -837,18 +828,11 @@ index 59eb048..4a70a57 100644
 +        assert_eq!(client.pending_ack_count(), 0);
 +
 +        client.frame_bytes = 4096;
-+        let deferred = end_frame(&mut client, 8);
-+        assert!(deferred.is_empty(), "AVC ACK must wait for WebCodecs present");
-+        assert_eq!(client.pending_ack_count(), 1);
++        let avc_ack = end_frame(&mut client, 8);
++        assert_eq!(avc_ack.len(), 1, "AVC EndFrame must ACK immediately");
++        assert_eq!(client.pending_ack_count(), 0);
 +        assert_eq!(client.frame_bytes, 0);
-+
-+        client.frame_bytes = 2048;
-+        let _ = end_frame(&mut client, 9);
-+        assert_eq!(client.next_ack_queue_depth(), 2048);
-+
-+        let acks = client.acknowledge_presented(1);
-+        assert_eq!(acks.len(), 1);
-+        assert_eq!(client.pending_ack_count(), 1);
++        assert!(client.acknowledge_presented(1).is_empty());
 +    }
 +
      /// Pins the coordinate CONVENTION: regionRects are surface/frame-absolute,
@@ -1794,7 +1778,7 @@ index 2df63ef..2c901ea 100644
  }
 +
 diff --git a/crates/ironrdp-web/src/session.rs b/crates/ironrdp-web/src/session.rs
-index a47bd3d..389499f 100644
+index a47bd3d..c8683d9 100644
 --- a/crates/ironrdp-web/src/session.rs
 +++ b/crates/ironrdp-web/src/session.rs
 @@ -1,4 +1,5 @@
@@ -1854,7 +1838,7 @@ index a47bd3d..389499f 100644
 +    static EGFX_AVC_THIN_CLIENT: Cell<bool> = const { Cell::new(true) };
 +    /// `(destination, requestId, cookie) => Promise<boolean>`
 +    static UDP_OPEN_CALLBACK: RefCell<Option<js_sys::Function>> = const { RefCell::new(None) };
-+    /// `(payload: Uint8Array) => void` — PDU DRDYNVC hacia el proceso UDP.
++    /// `(payload: Uint8Array) => void` ÔÇö PDU DRDYNVC hacia el proceso UDP.
 +    static UDP_SEND_CALLBACK: RefCell<Option<js_sys::Function>> = const { RefCell::new(None) };
 +    static UDP_TX: RefCell<Option<mpsc::UnboundedSender<Vec<u8>>>> = const { RefCell::new(None) };
 +    static UDP_RX: RefCell<Option<mpsc::UnboundedReceiver<Vec<u8>>>> = const { RefCell::new(None) };
@@ -2713,10 +2697,10 @@ index a47bd3d..389499f 100644
              codecs: BitmapCodecs(Vec::new()),
          }
      } else {
-+        // 32 bpp sin pérdida, como mstsc. 16 bpp con pérdida apartaba al
++        // 32 bpp sin p├®rdida, como mstsc. 16 bpp con p├®rdida apartaba al
 +        // encoder del camino H.264 que ese cliente usa en el mismo host.
 +        // NSCodec (ID 1) solo con EGFX: IronRDP no lo decodifica en Fast-Path,
-+        // y sin el canal Graphics Windows lo elige y cierra la sesión.
++        // y sin el canal Graphics Windows lo elige y cierra la sesi├│n.
 +        let codec_config: &[&str] = if use_egfx { &[] } else { &["nscodec:off"] };
          connector::BitmapConfig {
 -            color_depth: 16,
@@ -2751,7 +2735,7 @@ index a47bd3d..389499f 100644
 -            .map_or(0, |version| version.major * 100 + version.minor * 10 + version.patch)
 -            .pipe(u32::try_from)
 -            .expect("fine until major ~42949672"),
-+        // La versión del crate es 0.0.0, así que la fórmula dejaba clientBuild en 0.
++        // La versi├│n del crate es 0.0.0, as├¡ que la f├│rmula dejaba clientBuild en 0.
 +        // En HYBRID_EX el puente no puede parchearlo (duca-not-found) y mstsc
 +        // manda un build real. 19041 es el mismo valor que ya usa el puente.
 +        client_build: 19041,
@@ -2764,13 +2748,14 @@ index a47bd3d..389499f 100644
          compression_type: None,
          enable_server_pointer: true,
          autologon: false,
-@@ -1515,10 +2239,20 @@ fn build_config(
+@@ -1515,10 +2239,21 @@ fn build_config(
          enable_audio_capture: false,
          request_data: None,
          pointer_software_rendering: false,
 -        multitransport_flags: None,
 +        // Mismo anuncio que el cliente nativo: UDP fiable y Soft-Sync.
 +        // El socket no cabe en WASM; el callback se lo pide a Electron.
++        // Con EGFX el audio va por rdpsnd estatico (sin AUDIO_PLAYBACK_DVC).
 +        multitransport_flags: Some(
 +            ironrdp::pdu::gcc::MultiTransportFlags::TRANSPORT_TYPE_UDP_FECR
 +                | ironrdp::pdu::gcc::MultiTransportFlags::SOFT_SYNC_TCP_TO_UDP,
@@ -2778,7 +2763,7 @@ index a47bd3d..389499f 100644
          support_dyn_vc_gfx_protocol: false,
 -        performance_flags: PerformanceFlags::default(),
 -        desktop_scale_factor: 0,
-+        // 0x86 es el default (sin composición). mstsc pone PERF_ENABLE_DESKTOP_COMPOSITION
++        // 0x86 es el default (sin composici├│n). mstsc pone PERF_ENABLE_DESKTOP_COMPOSITION
 +        // (0x100): sin ese bit este host confirma 10.6 y pinta ClearCodec.
 +        performance_flags: PerformanceFlags::DISABLE_FULLWINDOWDRAG
 +            | PerformanceFlags::DISABLE_MENUANIMATIONS
@@ -2788,7 +2773,7 @@ index a47bd3d..389499f 100644
          hardware_id: None,
          license_cache: None,
          timezone_info: TimezoneInfo::default(),
-@@ -1584,6 +2318,9 @@ struct ConnectParams {
+@@ -1584,6 +2319,9 @@ struct ConnectParams {
      /// `computer_name` when constructing the `Rdpdr` processor.
      computer_name: String,
      use_display_control: bool,
@@ -2798,7 +2783,7 @@ index a47bd3d..389499f 100644
  }
  
  fn default_printer_driver_name() -> String {
-@@ -1618,6 +2355,56 @@ fn macos_major_version_from_user_agent(user_agent: &str) -> Option<u32> {
+@@ -1618,6 +2356,56 @@ fn macos_major_version_from_user_agent(user_agent: &str) -> Option<u32> {
          .and_then(|major| major.parse().ok())
  }
  
@@ -2855,7 +2840,7 @@ index a47bd3d..389499f 100644
  async fn connect(
      ConnectParams {
          ws,
-@@ -1634,6 +2421,9 @@ async fn connect(
+@@ -1634,6 +2422,9 @@ async fn connect(
          printer_driver_name,
          computer_name,
          use_display_control,
@@ -2865,7 +2850,7 @@ index a47bd3d..389499f 100644
      }: ConnectParams,
  ) -> Result<(connector::ConnectionResult, WebSocket), IronError> {
      let mut framed = ironrdp_futures::LocalFuturesFramed::new(ws);
-@@ -1647,11 +2437,15 @@ async fn connect(
+@@ -1647,11 +2438,15 @@ async fn connect(
          connector.attach_static_channel(CliprdrClient::new(Box::new(clipboard_backend)));
      }
  
@@ -2885,7 +2870,7 @@ index a47bd3d..389499f 100644
          connector.attach_static_channel(
              Rdpdr::new(Box::new(printer_backend), computer_name).with_printer_driver(
                  printer_device_id,
-@@ -1661,10 +2455,182 @@ async fn connect(
+@@ -1661,10 +2456,203 @@ async fn connect(
          );
      }
  
@@ -2895,9 +2880,9 @@ index a47bd3d..389499f 100644
 -        );
 +    // EGFX siempre: ActiveStage drena el compositor a GraphicsUpdate -> canvas.
 +    // mstsc contra 192.168.10.52 confirma 0xA0600 (10.6), modo de cliente 0,
-+    // AVC disponible 1 y búfer en hardware. 10.7 lo confirma este host y,
++    // AVC disponible 1 y b├║fer en hardware. 10.7 lo confirma este host y,
 +    // con AVC_THINCLIENT, cae en 0x112f; sin ese flag pinta ClearCodec.
-+    // 10.2 también queda en ClearCodec. El tope es 10.6, sin thin.
++    // 10.2 tambi├®n queda en ClearCodec. El tope es 10.6, sin thin.
 +    struct EgfxHandler {
 +        webcodecs: bool,
 +        prefer_v101: bool,
@@ -2909,6 +2894,24 @@ index a47bd3d..389499f 100644
 +                CapabilitiesV8Flags, CapabilitySet,
 +            };
 +            let _ = self.prefer_v101;
++            // mstsc contra este host confirma 0xA0600 (10.6), AVC disponible.
++            // Sin WebCodecs: AVC_DISABLED -> Progressive/ClearCodec (fallback 0x112f).
++            if !self.webcodecs {
++                return vec![
++                    CapabilitySet::V8 {
++                        flags: CapabilitiesV8Flags::SMALL_CACHE,
++                    },
++                    CapabilitySet::V10 {
++                        flags: CapabilitiesV10Flags::SMALL_CACHE | CapabilitiesV10Flags::AVC_DISABLED,
++                    },
++                    CapabilitySet::V10_2 {
++                        flags: CapabilitiesV10Flags::SMALL_CACHE | CapabilitiesV10Flags::AVC_DISABLED,
++                    },
++                    CapabilitySet::V10_6 {
++                        flags: CapabilitiesV104Flags::SMALL_CACHE | CapabilitiesV104Flags::AVC_DISABLED,
++                    },
++                ];
++            }
 +            vec![
 +                CapabilitySet::V8 {
 +                    flags: CapabilitiesV8Flags::SMALL_CACHE,
@@ -3047,8 +3050,11 @@ index a47bd3d..389499f 100644
 +        }
 +    }
 +
-+    // DynVC: EGFX / DisplayControl / AUDIO_PLAYBACK_DVC (Windows lo abre cuando hay drdynvc).
-+    if use_egfx || use_display_control || use_rdpsnd_audio {
++    // DynVC solo por EGFX / DisplayControl. Audio NUNCA crea drdynvc solo.
++    // Con EGFX no registrar AUDIO_PLAYBACK_DVC (comparte DynVC con Graphics;
++    // Soft-Sync/UDP puede abrirlo fuera del bridge TCP y tumbar la sesion).
++    // Bitmap+DisplayControl si puede usar DVC audio; EGFX usa rdpsnd estatico.
++    if use_egfx || use_display_control {
 +        let mut drdynvc = DrdynvcClient::new();
 +        if use_egfx {
 +            let prefer_v101 = EGFX_AVC_THIN_CLIENT.with(|flag| flag.get());
@@ -3065,14 +3071,14 @@ index a47bd3d..389499f 100644
 +        if use_display_control {
 +            drdynvc = drdynvc.with_dynamic_channel(DisplayControlClient::new(|_| Ok(Vec::new())));
 +        }
-+        if use_rdpsnd_audio {
++        if use_rdpsnd_audio && !use_egfx {
 +            drdynvc = drdynvc.with_dynamic_channel(AudioPlaybackDvc::new());
 +        }
 +        connector.attach_static_channel(drdynvc);
      }
  
      let kerberos_config = url::Url::parse(kdc_proxy_url.unwrap_or_default().as_str())
-@@ -1693,7 +2659,13 @@ async fn connect(
+@@ -1693,7 +2681,13 @@ async fn connect(
      )
      .await?;
  
@@ -3087,7 +3093,7 @@ index a47bd3d..389499f 100644
          upgraded,
          connector,
          &mut framed,
-@@ -1701,6 +2673,7 @@ async fn connect(
+@@ -1701,6 +2695,7 @@ async fn connect(
          server_name,
          server_public_key,
          kerberos_config,
@@ -3096,7 +3102,7 @@ index a47bd3d..389499f 100644
      .await?;
  
 diff --git a/web-client/iron-remote-desktop-rdp/src/main.ts b/web-client/iron-remote-desktop-rdp/src/main.ts
-index acd28b2..fc11b09 100644
+index acd28b2..ee9c1d0 100644
 --- a/web-client/iron-remote-desktop-rdp/src/main.ts
 +++ b/web-client/iron-remote-desktop-rdp/src/main.ts
 @@ -7,6 +7,19 @@ import wasm_init, {
@@ -3123,7 +3129,7 @@ index acd28b2..fc11b09 100644
      return new Extension('legacy_graphics', enable);
  }
  
-+/** Opt-in del canal Graphics (MS-RDPEGFX). Sin esto la sesión usa bitmap RLE. */
++/** Opt-in del canal Graphics (MS-RDPEGFX). Sin esto la sesi├│n usa bitmap RLE. */
 +export function egfx(enable: boolean): Extension {
 +    return new Extension('egfx', enable);
 +}
@@ -3133,7 +3139,7 @@ index acd28b2..fc11b09 100644
 +    return new Extension('avc420_webcodecs', enable);
 +}
 +
-+/** Opt-in: canal estÔö£├¡tico rdpsnd (MS-RDPEA) con reproducciÔö£Ôöén PCM vÔö£┬ía Web Audio. */
++/** Opt-in: canal est├ö├Â┬úÔö£┬ítico rdpsnd (MS-RDPEA) con reproducci├ö├Â┬ú├ö├Â├®n PCM v├ö├Â┬úÔö¼├¡a Web Audio. */
 +export function rdpsndAudio(enable: boolean): Extension {
 +    return new Extension('rdpsnd_audio', enable);
 +}

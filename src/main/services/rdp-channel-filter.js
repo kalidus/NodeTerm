@@ -174,6 +174,15 @@ function createChannelFilterState() {
     unsafeCliprdrFragmentOpen: false,
     drdynvcChannelId: null,
     wasmDrdynvcChannelId: null,
+    rdpsndChannelId: null,
+    wasmRdpsndChannelId: null,
+    // Opt-in de sesion (redirectAudio): respaldo si CS_NET no listo rdpsnd a tiempo (NLA).
+    allowAudioPlayback: false,
+    // EGFX: no reenviar AUDIO_PLAYBACK_DVC (multiplex con Graphics tumba DynVC).
+    egfxGraphics: false,
+    loggedAudioDvc: false,
+    loggedEgfxAudioReject: false,
+    loggedStaticRdpsnd: false,
     isBastion: false,
     cliprdrServerReady: false,
     // El selector de Wallix completa un cliprdr y, al elegir maquina, repite
@@ -226,6 +235,9 @@ function learnFromServerGcc(state, buf) {
         if (name === 'drdynvc') {
           state.drdynvcChannelId = id;
         }
+        if (String(name).toLowerCase() === 'rdpsnd') {
+          state.rdpsndChannelId = id;
+        }
       }
     });
   }
@@ -253,6 +265,13 @@ function learnFromServerGcc(state, buf) {
     : -1;
   state.wasmDrdynvcChannelId = (dynIdx >= 0 && parsed.channelIds[dynIdx] != null)
     ? parsed.channelIds[dynIdx]
+    : null;
+
+  const rdpsndIdx = Array.isArray(wasmNames)
+    ? wasmNames.findIndex((n) => String(n).toLowerCase() === 'rdpsnd')
+    : -1;
+  state.wasmRdpsndChannelId = (rdpsndIdx >= 0 && parsed.channelIds[rdpsndIdx] != null)
+    ? parsed.channelIds[rdpsndIdx]
     : null;
 
   state.ready = true;
@@ -734,6 +753,15 @@ function noteUnsafeCliprdr(state, channelId, userData) {
 function claimCliprdrPdu(state, channelId, userData) {
   if (state.cliprdrChannelId == null || !Buffer.isBuffer(userData)) return false;
 
+  // MS-RDPEA SNDC_TRAINING=0x06 ≡ CB_TEMP_DIRECTORY; SNDC_FORMATS=0x07 ≡ CB_CLIP_CAPS.
+  // No reclamar rdpsnd/drdynvc/rail. rdpdr se deja (consumeRdpdr va antes) por si el
+  // saludo cliprdr llega por un VC mal etiquetado en bastion.
+  const declared = channelNameForId(state, channelId);
+  if (declared) {
+    const n = declared.toLowerCase();
+    if (n === 'rdpsnd' || n === 'drdynvc' || n === 'rail') return false;
+  }
+
   const flags = isChannelPduHeader(userData) ? userData.readUInt32LE(4) : 0;
   const starts = isCliprdrHeader(userData) && (flags & CHANNEL_FLAG_FIRST) !== 0;
   const continues = state.serverCliprdrChannelId === channelId && state.serverCliprdrFragmentOpen;
@@ -1071,6 +1099,65 @@ function wasmAllowsGraphicsDvc(state) {
   return wasmHasDrdynvcName(state);
 }
 
+function wasmHasRdpsndName(state) {
+  const names = state && Array.isArray(state.wasmChannelNames) ? state.wasmChannelNames : [];
+  return names.some((n) => String(n).toLowerCase() === 'rdpsnd');
+}
+
+/** Audio opt-in: CS_NET con rdpsnd o flag de sesion redirectAudio. */
+function wasmAllowsStaticRdpsnd(state) {
+  if (!state) return false;
+  return state.allowAudioPlayback === true || wasmHasRdpsndName(state);
+}
+
+/** AUDIO_PLAYBACK_DVC solo con audio opt-in y DynVC; nunca con EGFX (static rdpsnd). */
+function wasmAllowsAudioDvc(state) {
+  if (state && state.egfxGraphics === true) return false;
+  if (!wasmHasDrdynvcName(state)) return false;
+  return wasmAllowsStaticRdpsnd(state);
+}
+
+function channelNameForId(state, channelId) {
+  if (!(state && state.channelIdToName instanceof Map) || channelId == null) return null;
+  const name = state.channelIdToName.get(channelId);
+  return name != null ? String(name) : null;
+}
+
+function isServerRdpsndChannel(state, channelId) {
+  if (state && state.rdpsndChannelId != null && channelId === state.rdpsndChannelId) return true;
+  const name = channelNameForId(state, channelId);
+  return name != null && name.toLowerCase() === 'rdpsnd';
+}
+
+function logAudioOnce(state, key, message) {
+  if (!state || state[key]) return;
+  state[key] = true;
+  console.log(message);
+  if (typeof state.recordCliprdr === 'function') {
+    try { state.recordCliprdr(message); } catch (_) { /* noop */ }
+  }
+}
+
+function logAudioDvcRejectOnce(state, note) {
+  if (state && state.egfxGraphics === true) {
+    logAudioOnce(
+      state,
+      'loggedEgfxAudioReject',
+      '[Bridge] Audio: EGFX → AUDIO_PLAYBACK_DVC rejected (static rdpsnd)'
+    );
+    return;
+  }
+  if (note && /AUDIO_PLAYBACK/i.test(note)) {
+    logAudioOnce(state, 'loggedAudioDvc', `[Bridge] Audio: reject ${note}`);
+  }
+}
+
+function remapServerRdpsndFrame(state, buf, incomingChannelId) {
+  const wasmId = state && state.wasmRdpsndChannelId;
+  if (wasmId == null || incomingChannelId === wasmId) return buf;
+  return rewriteMcsChannelId(buf, wasmId) || buf;
+}
+
 function remapServerDrdynvcFrame(state, buf, incomingChannelId) {
   // En bastion no remapeamos IDs de DisplayControl historico, pero EGFX necesita
   // el mismo remap servidor->wasm cuando los channel IDs difieren.
@@ -1078,6 +1165,18 @@ function remapServerDrdynvcFrame(state, buf, incomingChannelId) {
   if (wasmId == null || incomingChannelId === wasmId) return buf;
   if (state && state.isBastion && !wasmAllowsGraphicsDvc(state)) return buf;
   return rewriteMcsChannelId(buf, wasmId) || buf;
+}
+
+function remapClientRdpsndFrame(state, frame) {
+  if (!state || !Buffer.isBuffer(frame) || !wasmAllowsStaticRdpsnd(state)) return frame;
+  const parsed = parseMcsSendData(frame);
+  if (!parsed) return frame;
+  const wasmId = state.wasmRdpsndChannelId;
+  const serverId = state.rdpsndChannelId;
+  if (wasmId == null || serverId == null || parsed.channelId !== wasmId || wasmId === serverId) {
+    return frame;
+  }
+  return rewriteMcsChannelId(frame, serverId) || frame;
 }
 
 function remapClientDrdynvcFrame(state, frame) {
@@ -1123,39 +1222,117 @@ function processServerFrame(state, buf) {
     if (stubbedRail) return stubbedRail;
     noteUnsafeCliprdr(state, channelId, parsed.userData);
   }
-  if (!isIoChannel && parsed && claimCliprdrPdu(state, channelId, parsed.userData)) {
-    return buildCliprdrResult(state, buf, channelId, parsed.userData);
+
+  // rdpsnd ANTES de claimCliprdr: SNDC_TRAINING/FORMATS chocan con TEMP_DIRECTORY/CAPS.
+  if (!isIoChannel && parsed && isServerRdpsndChannel(state, channelId) && wasmAllowsStaticRdpsnd(state)) {
+    const fwd = remapServerRdpsndFrame(state, buf, channelId);
+    const note = `rdpsnd-forward ch=${channelId} len=${parsed.userData.length}B`;
+    logAudioOnce(state, 'loggedStaticRdpsnd', `[Bridge] Audio: forward static rdpsnd ch=${channelId}`);
+    return {
+      forward: fwd,
+      replies: [],
+      dropped: false,
+      note,
+      channelId,
+      isCliprdr: false,
+      cliprdrDesc: null,
+      rdpsndForward: true
+    };
   }
 
-  // rdpdr por contenido, no por ID: Wallix lo ha llegado a mandar por el canal IO (1003),
-  // donde el filtro lo veia como ShareControl invalido y no contestaba.
+  // DynVC (EGFX / DisplayControl / AUDIO_PLAYBACK) antes de claimCliprdr: el canal
+  // inyectado puede compartir patrones de header con cliprdr.
+  if (!isIoChannel && parsed && isChannelPduHeader(parsed.userData)
+      && state.drdynvcChannelId != null && channelId === state.drdynvcChannelId) {
+    const allowDisplayControl = wasmDeclaredDrdynvc(state);
+    const allowGraphics = wasmAllowsGraphicsDvc(state);
+    const allowAudio = wasmAllowsAudioDvc(state);
+    const passthroughDrdynvcFrags = allowGraphics || allowDisplayControl || allowAudio;
+    const dvc = handleDvcRequest(channelId, state.clientInitiator, parsed.userData, {
+      allowDisplayControl,
+      allowGraphics,
+      allowAudio
+    });
+    if (dvc.handled && dvc.forward) {
+      if (dvc.note && /AUDIO_PLAYBACK/i.test(dvc.note)) {
+        logAudioOnce(state, 'loggedAudioDvc', `[Bridge] Audio: forward ${dvc.note}`);
+      }
+      return {
+        forward: remapServerDrdynvcFrame(state, buf, channelId),
+        replies: [],
+        dropped: false,
+        note: dvc.note || channelPduHint(parsed.userData),
+        channelId,
+        isCliprdr: false,
+        cliprdrDesc: null,
+        dvcForward: true
+      };
+    }
+    if (dvc.handled) {
+      logAudioDvcRejectOnce(state, dvc.note);
+      markDropped(state, channelId);
+      return {
+        forward: null,
+        replies: dvc.replies || [],
+        dropped: true,
+        note: `${dvc.note || channelPduHint(parsed.userData)} hex=${parsed.userData.toString('hex').slice(0, 48)}`,
+        channelId,
+        isCliprdr: false,
+        cliprdrDesc: null
+      };
+    }
+    if (passthroughDrdynvcFrags) {
+      const ud = parsed.userData;
+      const chFlags = ud.length >= 8 ? ud.readUInt32LE(4) : 0;
+      return {
+        forward: remapServerDrdynvcFrame(state, buf, channelId),
+        replies: [],
+        dropped: false,
+        note: `dvc-passthrough-frag ch=${channelId} flags=0x${chFlags.toString(16)} len=${ud.length}B`,
+        channelId,
+        isCliprdr: false,
+        cliprdrDesc: null,
+        dvcForward: true
+      };
+    }
+  }
+
+  // rdpdr antes de claimCliprdr: con inyeccion el ID de rdpdr coincide a veces con el
+  // indice wasm de cliprdr; hay que stubbear el handshake de dispositivos o la sesion cuelga.
   if (parsed) {
     const stubbedRdpdr = consumeRdpdr(state, channelId, parsed.userData);
     if (stubbedRdpdr) return stubbedRdpdr;
   }
 
+  if (!isIoChannel && parsed && claimCliprdrPdu(state, channelId, parsed.userData)) {
+    return buildCliprdrResult(state, buf, channelId, parsed.userData);
+  }
+
   // 2. Canales que no son el canal IO ni cliprdr (canal de usuario 1001, drdynvc, etc.):
   // NUNCA reenviar a IronRDP WASM (evita el crash 'unexpected channel received: ID ...'),
   // salvo CAPS + DisplayControl/EGFX Graphics (y fragmentos CHANNEL_PDU de drdynvc)
-  // cuando WASM declaro drdynvc. Sin passthrough de fragmentos, EGFX llega a medias (~1.5KB)
+  // cuando WASM declaro drdynvc, y rdpsnd estatico cuando hay audio opt-in.
+  // Sin passthrough de fragmentos, EGFX llega a medias (~1.5KB)
   // y el decoder ve ZGFX/GFX basura.
   if (!isIoChannel) {
     // messageChannelId solo sale de SC_MSGCHANNEL. Adivinarlo con el primer
     // canal desconocido marcaba un VC estatico como canal de usuario y
     // bloqueaba el write path de cliprdr.
-    if (parsed && isChannelPduHeader(parsed.userData)) {
+    // DynVC en canal aun no aprendido (antes de SC_NET) u otro MCS: mismo filtro.
+    if (parsed && isChannelPduHeader(parsed.userData)
+        && (state.drdynvcChannelId == null || channelId !== state.drdynvcChannelId)) {
       const allowDisplayControl = wasmDeclaredDrdynvc(state);
       const allowGraphics = wasmAllowsGraphicsDvc(state);
-      const isServerDrdynvc = state.drdynvcChannelId != null && channelId === state.drdynvcChannelId;
-      // Fragmentos CHANNEL_PDU (FIRST sin LAST / MIDDLE / LAST) a menudo no traen
-      // header DVC completo: parseDvcPdu falla y antes se dropeaban → EGFX a medias.
-      const passthroughDrdynvcFrags = isServerDrdynvc
-        && (allowGraphics || allowDisplayControl);
+      const allowAudio = wasmAllowsAudioDvc(state);
       const dvc = handleDvcRequest(channelId, state.clientInitiator, parsed.userData, {
         allowDisplayControl,
-        allowGraphics
+        allowGraphics,
+        allowAudio
       });
       if (dvc.handled && dvc.forward) {
+        if (dvc.note && /AUDIO_PLAYBACK/i.test(dvc.note)) {
+          logAudioOnce(state, 'loggedAudioDvc', `[Bridge] Audio: forward ${dvc.note}`);
+        }
         return {
           forward: remapServerDrdynvcFrame(state, buf, channelId),
           replies: [],
@@ -1168,6 +1345,7 @@ function processServerFrame(state, buf) {
         };
       }
       if (dvc.handled) {
+        logAudioDvcRejectOnce(state, dvc.note);
         markDropped(state, channelId);
         return {
           forward: null,
@@ -1177,20 +1355,6 @@ function processServerFrame(state, buf) {
           channelId,
           isCliprdr: false,
           cliprdrDesc: null
-        };
-      }
-      if (passthroughDrdynvcFrags) {
-        const ud = parsed.userData;
-        const chFlags = ud.length >= 8 ? ud.readUInt32LE(4) : 0;
-        return {
-          forward: remapServerDrdynvcFrame(state, buf, channelId),
-          replies: [],
-          dropped: false,
-          note: `dvc-passthrough-frag ch=${channelId} flags=0x${chFlags.toString(16)} len=${ud.length}B`,
-          channelId,
-          isCliprdr: false,
-          cliprdrDesc: null,
-          dvcForward: true
         };
       }
     }
@@ -1287,8 +1451,13 @@ module.exports = {
   siphonAutoDetectFrames,
   wasmDeclaredDrdynvc,
   wasmAllowsGraphicsDvc,
+  wasmAllowsAudioDvc,
+  wasmAllowsStaticRdpsnd,
   wasmHasDrdynvcName,
+  wasmHasRdpsndName,
   remapClientDrdynvcFrame,
+  remapClientRdpsndFrame,
   remapServerDrdynvcFrame,
+  remapServerRdpsndFrame,
   formatDrdynvcForwardDebug
 };

@@ -53,6 +53,8 @@ const {
   retryConfirmAppCliprdrWrite,
   buildAppProbeCliprdrWrites,
   remapClientDrdynvcFrame,
+  remapClientRdpsndFrame,
+  wasmAllowsGraphicsDvc,
   formatDrdynvcForwardDebug,
   siphonAutoDetectFrames
 } = require('./rdp-channel-filter');
@@ -136,10 +138,13 @@ function readDiagValue(name) {
   return value == null ? '' : String(value).trim();
 }
 
-// IronRDP declara solo cliprdr. Wallix ignora nombres y mapea por indice.
-// :RDP: rdpdr+rdpsnd delante para que cliprdr no sea el unico/primer VC
-// (si lo es, Session Probe acaba saludando por MCS 1001 en sesiones sucesivas).
-// :APP: rail+rdpdr+rdpsnd delante. NODETERM_RDP_INJECT_CHANNELS admite un orden o 'off'.
+// Wallix (y hosts donde cliprdr como primer VC rompe el saludo) ignoran nombres y
+// mapean por indice: anteponer rdpdr/rdpsnd para que cliprdr no sea el unico/primer VC.
+// :RDP: rdpdr+rdpsnd delante. :APP: rail+rdpdr+rdpsnd.
+// En directo tambien: sin inject cliprdr queda primero y la sesion no arranca.
+// El filtro alinea rdpsnd/drdynvc por nombre y despacha antes de claimCliprdr
+// (evita SNDC_TRAINING≡TEMP_DIRECTORY y DynVC huerfano).
+// NODETERM_RDP_INJECT_CHANNELS admite un orden o 'off'.
 const RDP_INJECTED_CHANNELS = { before: ['rdpdr', 'rdpsnd'], after: [] };
 const APP_INJECTED_CHANNELS = { before: ['rail', 'rdpdr', 'rdpsnd'], after: [] };
 const APP_INJECTED_CHANNELS_RAIL = APP_INJECTED_CHANNELS;
@@ -358,6 +363,12 @@ class RdpNativeBridgeService extends EventEmitter {
       enableFullWindowDrag: config.enableFullWindowDrag === true || config.guacEnableFullWindowDrag === true,
       enableMenuAnimations: config.enableMenuAnimations === true || config.guacEnableMenuAnimations === true,
       selectedProtocol: typeof config.selectedProtocol === 'number' ? config.selectedProtocol : null,
+      // Opt-in audio IronRDP (RDPSND / AUDIO_PLAYBACK_DVC). El bridge lo usa si CS_NET
+      // llega tarde (NLA) y wasmChannelNames aun no lista rdpsnd.
+      redirectAudio: config.redirectAudio === true,
+      // EGFX: el bridge rechaza AUDIO_PLAYBACK_DVC (comparte DynVC con Graphics) y
+      // deja solo rdpsnd estatico para no tumbar la sesion.
+      ironRdpGraphics: config.ironRdpGraphics === 'egfx' ? 'egfx' : 'bitmap',
       // Debug del bridge: env, rdp-flags.json o flag desde el renderer (localStorage).
       rdpDebug: config.rdpDebug === true || config.enableRdpDebug === true,
       createdAt: Date.now()
@@ -511,6 +522,8 @@ class RdpNativeBridgeService extends EventEmitter {
     const channelFilter = createChannelFilterState();
     channelFilter.wallixService = wallixServiceFromSession(session) || (isBastionSession(session) ? 'n/a' : null);
     channelFilter.isBastion = isBastionSession(session);
+    channelFilter.allowAudioPlayback = session.redirectAudio === true;
+    channelFilter.egfxGraphics = session.ironRdpGraphics === 'egfx';
     channelFilter.recentCliprdrEvents = recentCliprdrEvents;
     channelFilter.recordCliprdr = recordCliprdrEvent;
     const streamDeframer = new RdpStreamDeframer();
@@ -1493,6 +1506,7 @@ class RdpNativeBridgeService extends EventEmitter {
           const csNet = sentChs.length ? sentChs.join(',') : 'ninguno';
           console.log(`[Bridge] MCS prepare: service=${wallixService} CS_NET=[${csNet}]; ${prepared.notes.join('; ') || 'sin cambios'}`);
           if (sentChs.length) {
+            channelFilter.mcsConnectPrepared = true;
             const wasmChs = findClientNetworkChannels(payload);
             if (wasmChs.length && (!channelFilter.wasmChannelNames || channelFilter.wasmChannelNames.length === 0)) {
               channelFilter.wasmChannelNames = wasmChs;
@@ -1503,8 +1517,30 @@ class RdpNativeBridgeService extends EventEmitter {
           }
         } else if (framesToRdp <= 10 && forward) {
           // Directo con NLA: el primer frame post-TLS es CredSSP y el Connect Initial llega
-          // despues, asi que el pedido de 32bpp (NODETERM_RDP_FORCE32) se aplica aqui.
-          if (force32 && !channelFilter.isBastion && isMcsConnectInitial(forward)) {
+          // despues. Aplicar prepare (inyeccion + nombres) una sola vez; learnClientInitiator
+          // puede haber rellenado wasmChannelNames antes, pero aun hace falta inject/FORCE32.
+          if (isMcsConnectInitial(forward) && !channelFilter.mcsConnectPrepared) {
+            channelFilter.mcsConnectPrepared = true;
+            const connectInitial = forward;
+            const preparedLate = prepareMcsConnectInitial(connectInitial, savedSelectedProtocol, {
+              injectChannels: resolveInjectedChannels(session),
+              force32
+            });
+            forward = preparedLate.buf;
+            const sentChsLate = findClientNetworkChannels(preparedLate.buf);
+            const wallixServiceLate = wallixServiceFromSession(session) || 'n/a';
+            const csNetLate = sentChsLate.length ? sentChsLate.join(',') : 'ninguno';
+            console.log(`[Bridge] MCS prepare (NLA late): service=${wallixServiceLate} CS_NET=[${csNetLate}]; ${preparedLate.notes.join('; ') || 'sin cambios'}`);
+            if (sentChsLate.length) {
+              const wasmChsLate = findClientNetworkChannels(connectInitial);
+              if (wasmChsLate.length && (!channelFilter.wasmChannelNames || channelFilter.wasmChannelNames.length === 0)) {
+                channelFilter.wasmChannelNames = wasmChsLate;
+              } else if (!channelFilter.wasmChannelNames || channelFilter.wasmChannelNames.length === 0) {
+                channelFilter.wasmChannelNames = sentChsLate.slice();
+              }
+              channelFilter.clientChannelNames = sentChsLate;
+            }
+          } else if (force32 && !channelFilter.isBastion && isMcsConnectInitial(forward)) {
             const want32 = patchClientCoreWant32bpp(forward);
             if (want32.patched) {
               forward = want32.buf;
@@ -1832,17 +1868,25 @@ class RdpNativeBridgeService extends EventEmitter {
     }
 
     if (!isClip) {
-      // Solo remapear drdynvc una vez que el write path cliprdr está confirmado.
-      // Antes de ese punto no sabemos con certeza si es una sesión de bastión
-      // (isBastion se infiere de forma reactiva al ver cliprdr no alineado, etc.).
-      // Remapear demasiado pronto en sesiones service=n/a de Wallix reescribe el
-      // channelId a un canal que el bastión no espera → cierra la conexión TLS.
-      const canRemapDynvc = channelFilter.cliprdrWriteChannelId != null
-        || channelFilter.cliprdrServerReady;
+      // Con inyeccion, WASM habla DynVC en wasmDrdynvcChannelId y el servidor en
+      // drdynvcChannelId. AUDIO_PLAYBACK_DVC llega antes del saludo cliprdr: si no
+      // remapeamos el CREATE_RSP, el servidor no ve la respuesta y la sesion cuelga
+      // en "conectando". En bastion puro sin EGFX se mantiene el gate cliprdr.
+      const needsDynvcRemap = channelFilter.wasmDrdynvcChannelId != null
+        && channelFilter.drdynvcChannelId != null
+        && channelFilter.wasmDrdynvcChannelId !== channelFilter.drdynvcChannelId;
+      const canRemapDynvc = !needsDynvcRemap
+        || channelFilter.cliprdrWriteChannelId != null
+        || channelFilter.cliprdrServerReady
+        || channelFilter.isBastion !== true
+        || wasmAllowsGraphicsDvc(channelFilter);
+      let out = frame;
+      if (canRemapDynvc) {
+        out = remapClientDrdynvcFrame(channelFilter, out);
+      }
+      out = remapClientRdpsndFrame(channelFilter, out);
       return {
-        forward: canRemapDynvc
-          ? remapClientDrdynvcFrame(channelFilter, frame)
-          : frame,
+        forward: out,
         inject: []
       };
     }
