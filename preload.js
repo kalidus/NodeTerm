@@ -53,7 +53,7 @@ contextBridge.exposeInMainWorld('electron', {
   clipboard: {
     writeText: (text) => ipcRenderer.invoke('clipboard:writeText', text),
     writeTextWithAutoClear: (text, timeoutSeconds) => ipcRenderer.invoke('clipboard:writeTextWithAutoClear', { text, timeoutSeconds }),
-    readText: () => ipcRenderer.invoke('clipboard:readText'),
+    readText: (opts) => ipcRenderer.invoke('clipboard:readText', opts),
     writeFiles: (files) => ipcRenderer.invoke('clipboard:writeFiles', files),
     saveTempFile: (fileName, buffer) => ipcRenderer.invoke('clipboard:saveTempFile', { fileName, buffer }),
     beginTempFile: (fileName) => ipcRenderer.invoke('clipboard:beginTempFile', { fileName }),

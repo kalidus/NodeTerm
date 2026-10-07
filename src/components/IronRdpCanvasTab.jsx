@@ -16,6 +16,7 @@ import {
   createRdpWebCodecsDecoder
 } from '../utils/rdpWebCodecsH264';
 import { createH264GpuPresenter } from '../utils/rdpH264GpuPresent';
+import { clipRdpClipboardText, RDP_CLIPBOARD_TEXT_MAX_CHARS } from '../utils/rdpClipboardLimit';
 
 const {
   Backend,
@@ -133,16 +134,26 @@ const getOptimized2dContext = (canvas) => {
   return canvas.getContext('2d', options);
 };
 
+const limitClipboardPayload = (text) => {
+  const limited = clipRdpClipboardText(text);
+  if (limited.dropped) {
+    console.warn(
+      `📋 [IronRDP Clipboard] Texto de ${limited.length} caracteres descartado: cerraría el WebSocket (1009).`
+    );
+  }
+  return limited.text;
+};
+
 const readLocalClipboardText = async () => {
   try {
     if (window.electron?.clipboard?.readText) {
-      const text = await window.electron.clipboard.readText();
+      const text = await window.electron.clipboard.readText({ maxChars: RDP_CLIPBOARD_TEXT_MAX_CHARS });
       if (typeof text === 'string') return text;
     }
   } catch (_) {}
   try {
     if (navigator.clipboard?.readText) {
-      return await navigator.clipboard.readText();
+      return limitClipboardPayload(await navigator.clipboard.readText());
     }
   } catch (_) {}
   return '';
@@ -693,7 +704,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   // petición de IronRDP pueden coincidir) hacen que Wallix aborte la sesión por orden de PDUs.
   // Si la sesión aún no está asignada, el envío queda pendiente y se vacía al conectar.
   const enqueueClipboardSend = (text, reason) => {
-    const payload = typeof text === 'string' ? text : '';
+    const payload = limitClipboardPayload(text);
     // Evitar reenvíos redundantes en foco de ventana si el texto no ha cambiado o está vacío
     const isRedundantFocus = reason === 'foco de ventana' && (
       payload === lastSentClipboardTextRef.current ||
@@ -2003,6 +2014,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       if (!text) {
         text = await refreshLocalClipboardCache();
       } else {
+        text = limitClipboardPayload(text);
         localClipboardCacheRef.current = text;
       }
 
@@ -3076,11 +3088,21 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             <Button label="Enviar" icon="pi pi-check" className="p-button-primary p-button-sm" onClick={async () => {
               if (sessionRef.current && clipboardText) {
                 try {
-                  localClipboardCacheRef.current = clipboardText;
-                  await enqueueClipboardSend(clipboardText, 'diálogo manual');
+                  const text = limitClipboardPayload(clipboardText);
+                  if (!text) {
+                    toastRef.current?.show({
+                      severity: 'warn',
+                      summary: 'Texto demasiado grande',
+                      detail: 'No se envía: cerraría la sesión RDP.',
+                      life: 4000
+                    });
+                    return;
+                  }
+                  localClipboardCacheRef.current = text;
+                  await enqueueClipboardSend(text, 'diálogo manual');
 
                   const transaction = new Backend.InputTransaction();
-                  for (const char of clipboardText) {
+                  for (const char of text) {
                     transaction.addEvent(Backend.DeviceEvent.unicodePressed(char));
                     transaction.addEvent(Backend.DeviceEvent.unicodeReleased(char));
                   }

@@ -46,7 +46,15 @@ function isSafeClipboardTempPath(filePath) {
 }
 
 function registerClipboardHandlers() {
-  safeHandle('clipboard:readText', () => clipboard.readText());
+  safeHandle('clipboard:readText', (_event, opts) => {
+    const text = clipboard.readText();
+    const max = opts && Number(opts.maxChars);
+    if (Number.isFinite(max) && max >= 0 && typeof text === 'string' && text.length > max) {
+      console.warn(`[Clipboard] Texto de ${text.length} caracteres no reenviado (tope ${max}).`);
+      return '';
+    }
+    return text;
+  });
 
   safeHandle('clipboard:writeText', (event, text) => {
     clipboard.writeText(text == null ? '' : String(text));
