@@ -27,7 +27,7 @@ const {
 } = require('./rdp-caps-helpers');
 const { fixWallixBitmapStrideCrop, FastPathBitmapReassembler } = require('./rdp-fastpath-helpers');
 const { SessionTimeline } = require('./rdp-session-timeline');
-const { clearActiveDvcChannels, parseDvcPdu } = require('./rdp-dynvc');
+const { parseDvcPdu } = require('./rdp-dynvc');
 const {
   BridgeLatencyMetrics,
   WsBackpressureController,
@@ -250,7 +250,20 @@ function isNoisyDrop(note) {
       || note.includes('rdpdr-absorb') || note.includes('rdpdr-user-loggedon')
       || note.includes('rail-absorb') || note.includes('rail-handshake')
       || note.includes('cliprdr-swallow-2nd-gen')
-      || note.includes('cliprdr-defer-weak-caps'));
+      || note.includes('cliprdr-defer-weak-caps')
+      // DynVC keepalive / ruido: no saturar consola ni el tope de hitos del timeline.
+      || note.includes('dvc-echo-reply')
+      || note.includes('dvc-compressed-drop')
+      || /dvc-data ch=\d+ .*absorbed/i.test(note)
+      || /dvc-close ch=/i.test(note));
+}
+
+/** Solo CREATE/reject/stub/caps relevantes en el timeline (no Echo ni closes). */
+function isInterestingDvcTimelineNote(note) {
+  if (typeof note !== 'string' || !/dvc-/i.test(note)) return false;
+  if (isNoisyDrop(note)) return false;
+  return /dvc-(reject|accept-stub|accept |forward-caps|forward ch=)/i.test(note)
+    || /GRAPHICS/i.test(note);
 }
 
 function createTrafficStats(emit) {
@@ -561,6 +574,7 @@ class RdpNativeBridgeService extends EventEmitter {
     // Linea de tiempo solo-log para bastion: donde se va la espera tras los banners.
     const timeline = new SessionTimeline({
       enabled: normalizeBitmaps,
+      label: channelFilter.wallixService || (normalizeBitmaps ? 'bastion' : ''),
       log: (line) => console.log(`⏱️ [Bridge] ${line}`)
     });
     // Experimento opt-in (NODETERM_RDP_FORCE32=1): pedir sesion de 32bpp al servidor para que
@@ -630,8 +644,6 @@ class RdpNativeBridgeService extends EventEmitter {
       if (timeline.enabled) {
         console.log(`⏱️ [Bridge] ${timeline.summary()}`);
       }
-      clearActiveDvcChannels();
-
       if (userInitiated && !clipboardFailed && !isDebug) {
         console.log(`🧹 [RdpNativeBridgeService] Sesion RDP finalizada (${formattedReason}) [toRdp=${framesToRdp} (${bytesToRdp}B), fromRdp=${framesFromRdp} (${bytesFromRdp}B)]`);
       } else if (clipboardFailed) {
@@ -792,7 +804,6 @@ class RdpNativeBridgeService extends EventEmitter {
               }
 
               rdCleanPathPhase = 'transparent';
-              clearActiveDvcChannels();
 
               // Bastión y directo: latest-wins seguro (solo bitmaps ya cubiertos) sin callar TLS.
               // Directo: pausa TLS solo a 2 MB, como ultimo recurso anti-OOM.
@@ -1269,25 +1280,26 @@ class RdpNativeBridgeService extends EventEmitter {
                       }
                     }
                   }
-                  if (processed.dropped && (isDebug || !isNoisyDrop(processed.note))) {
+                  // Dropped: replies SIEMPRE (Echo/stubs). isNoisyDrop solo silencia logs.
+                  if (processed.dropped) {
                     const note = String(processed.note || '').replace(/ hex=[0-9a-f]+/i, '');
                     const dropMsg = `MCS ch=${processed.channelId}: ${note}` +
                       (processed.replies.length ? ` (replies=${processed.replies.length})` : '');
-                    // Bastion: ver que DynVC se rechaza durante la espera tras el banner
-                    // (sin NODETERM_RDP_DEBUG). Son pocas lineas por sesion.
-                    if (timeline.enabled && typeof processed.note === 'string'
-                        && /dvc-|probe-keepalive/i.test(processed.note)
+                    // Bastion: solo CREATE/reject/stub/caps (Echo/close/absorb saturan el log).
+                    if (timeline.enabled && isInterestingDvcTimelineNote(processed.note)
                         && !/hex=/i.test(dropMsg)) {
                       timeline.event(`DROP ${note}`, `#${framesFromRdp}`);
                     }
-                    if (isDebug) {
-                      console.log(`🚫 DROPPED #${framesFromRdp} ${dropMsg}`);
-                    }
-                    if (processed.channelId !== channelFilter.ioChannelId) {
-                      this.emit('diagnostic-log', {
-                        category: 'dropped',
-                        message: `DROPPED frame #${framesFromRdp} (ch=${processed.channelId}): ${processed.note}`
-                      });
+                    if (isDebug || !isNoisyDrop(processed.note)) {
+                      if (isDebug) {
+                        console.log(`🚫 DROPPED #${framesFromRdp} ${dropMsg}`);
+                      }
+                      if (processed.channelId !== channelFilter.ioChannelId) {
+                        this.emit('diagnostic-log', {
+                          category: 'dropped',
+                          message: `DROPPED frame #${framesFromRdp} (ch=${processed.channelId}): ${processed.note}`
+                        });
+                      }
                     }
                     if (processed.replies.length && tlsSocket && tlsSocket.writable) {
                       for (const reply of processed.replies) {
@@ -2633,3 +2645,6 @@ module.exports.APP_INJECTED_CHANNELS_RAIL = APP_INJECTED_CHANNELS_RAIL;
 module.exports.isBastionSession = isBastionSession;
 module.exports.resolveIronRdpGraphics = resolveIronRdpGraphics;
 module.exports.shouldSanitizeBastionConfirm = shouldSanitizeBastionConfirm;
+/** Solo silencia logs; el bridge SIEMPRE escribe processed.replies en drops. */
+module.exports.isNoisyDrop = isNoisyDrop;
+module.exports.isInterestingDvcTimelineNote = isInterestingDvcTimelineNote;

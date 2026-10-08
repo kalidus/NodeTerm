@@ -46,7 +46,7 @@ class SessionTimeline {
     this.now = typeof opts.now === 'function' ? opts.now : Date.now;
     this.intervalMs = opts.intervalMs || 1000;
     this.maxSeconds = opts.maxSeconds || DEFAULT_MAX_SECONDS;
-    this.label = opts.label || '';
+    this.label = opts.label ? String(opts.label) : '';
     this.t0 = this.now();
     this.marks = new Map();
     this.eventCount = 0;
@@ -71,12 +71,16 @@ class SessionTimeline {
     return this.marks.has(name);
   }
 
+  _prefix() {
+    return this.label ? `[Timeline ${this.label} +` : '[Timeline +';
+  }
+
   /** Hito unico: solo la primera vez. Devuelve true si se ha registrado ahora. */
   mark(name, detail = '') {
     if (!this.enabled || this.marks.has(name)) return false;
     const at = this.elapsed();
     this.marks.set(name, at);
-    this.log(`[Timeline +${at}ms] ${name}${detail ? ` ${detail}` : ''}`);
+    this.log(`${this._prefix()}${at}ms] ${name}${detail ? ` ${detail}` : ''}`);
     return true;
   }
 
@@ -85,7 +89,7 @@ class SessionTimeline {
     if (!this.enabled) return;
     this.eventCount += 1;
     if (this.eventCount > MAX_EVENTS) return;
-    this.log(`[Timeline +${this.elapsed()}ms] ${name}${detail ? ` ${detail}` : ''}`);
+    this.log(`${this._prefix()}${this.elapsed()}ms] ${name}${detail ? ` ${detail}` : ''}`);
   }
 
   noteIn(kind, bytes) {
@@ -148,14 +152,14 @@ class SessionTimeline {
         }
         this.lines += 1;
         this.log(
-          `[Timeline +${this.elapsed()}ms] in: ${fmtCounters(this.bucketIn, IN_KINDS)}` +
+          `${this._prefix()}${this.elapsed()}ms] in: ${fmtCounters(this.bucketIn, IN_KINDS)}` +
           ` | out: ${fmtCounters(this.bucketOut, OUT_KINDS)}${extra}` +
           `${lagMs >= 200 ? ` | LAG event-loop ${lagMs}ms` : ''}`
         );
       } else {
         this.idleStreak += 1;
         if (this.idleStreak === 1 || this.idleStreak % 5 === 0) {
-          this.log(`[Timeline +${this.elapsed()}ms] silencio ${this.idleStreak}s (sin trafico servidor ni WASM)`);
+          this.log(`${this._prefix()}${this.elapsed()}ms] silencio ${this.idleStreak}s (sin trafico servidor ni WASM)`);
         }
       }
     }
@@ -168,7 +172,10 @@ class SessionTimeline {
     if (!this.enabled) return '';
     const marks = [...this.marks.entries()].map(([k, v]) => `${k}=+${v}ms`).join(' ');
     const sinceLastIn = this.lastInAt ? `${this.now() - this.lastInAt}ms` : 'n/a';
-    return `[Timeline resumen +${this.elapsed()}ms] in: ${fmtCounters(this.totalIn, IN_KINDS)}` +
+    const head = this.label
+      ? `[Timeline ${this.label} resumen +${this.elapsed()}ms]`
+      : `[Timeline resumen +${this.elapsed()}ms]`;
+    return `${head} in: ${fmtCounters(this.totalIn, IN_KINDS)}` +
       ` | out: ${fmtCounters(this.totalOut, OUT_KINDS)}` +
       ` | ultimo dato servidor hace ${sinceLastIn}` +
       `${marks ? ` | hitos: ${marks}` : ''}`;

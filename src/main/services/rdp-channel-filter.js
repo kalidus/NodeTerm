@@ -159,6 +159,8 @@ function createChannelFilterState() {
     // 0 de SC_NET aunque hacia el servidor hayamos anunciado rdpdr/rdpsnd delante.
     wasmChannelNames: [],
     channelIdToName: new Map(),
+    // DynVC por sesion (Echo Soft-Sync). NUNCA compartir entre pestañas.
+    activeDvcChannels: new Map(),
     messageChannelId: null,
     staticVcChannelId: null,
     cliprdrChannelId: null,
@@ -1256,7 +1258,8 @@ function processServerFrame(state, buf) {
       allowDisplayControl,
       allowGraphics,
       allowAudio,
-      bastionStub
+      bastionStub,
+      activeDvcChannels: state.activeDvcChannels
     });
     if (dvc.handled && dvc.forward) {
       if (dvc.note && /AUDIO_PLAYBACK/i.test(dvc.note)) {
@@ -1335,7 +1338,8 @@ function processServerFrame(state, buf) {
         allowDisplayControl,
         allowGraphics,
         allowAudio,
-        bastionStub
+        bastionStub,
+        activeDvcChannels: state.activeDvcChannels
       });
       if (dvc.handled && dvc.forward) {
         if (dvc.note && /AUDIO_PLAYBACK/i.test(dvc.note)) {

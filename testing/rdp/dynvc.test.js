@@ -20,7 +20,12 @@ const {
   remapClientDrdynvcFrame,
   wasmAllowsGraphicsDvc
 } = require('../../src/main/services/rdp-channel-filter');
-const { isBastionSession, resolveIronRdpGraphics } = require('../../src/main/services/RdpNativeBridgeService');
+const {
+  isBastionSession,
+  resolveIronRdpGraphics,
+  isNoisyDrop,
+  isInterestingDvcTimelineNote
+} = require('../../src/main/services/RdpNativeBridgeService');
 
 function buildMcsIndication(channelId, userData) {
   const lenField = userData.length < 0x80
@@ -359,6 +364,55 @@ describe('rdp-dynvc', () => {
     assert.equal(replyMcs.userData[8], 0x30); // Cmd=3 DATA, cbId=0
     assert.equal(replyMcs.userData[9], 0x08); // chId=8
     assert.equal(replyMcs.userData.subarray(10).toString('ascii'), 'HEARTBEAT_TEST_123');
+
+    // Regresión: Echo es "noisy" para logs, pero replies NO deben filtrarse en el bridge.
+    assert.equal(isNoisyDrop(resData.note), true);
+    assert.equal(isInterestingDvcTimelineNote(resData.note), false);
+    assert.equal(resData.replies.length, 1);
+  });
+
+  it('Maps DynVC por sesion: clear en A no rompe Echo replies en B', () => {
+    clearActiveDvcChannels();
+    const mapA = new Map();
+    const mapB = new Map();
+
+    const nameBuf = Buffer.from('ECHO\0', 'ascii');
+    const createReq = Buffer.concat([Buffer.from([0x10, 0x08]), nameBuf]);
+    const cpduCreate = Buffer.alloc(8 + createReq.length);
+    cpduCreate.writeUInt32LE(createReq.length, 0);
+    cpduCreate.writeUInt32LE(0x03, 4);
+    createReq.copy(cpduCreate, 8);
+
+    const createA = handleDvcRequest(1003, 1002, cpduCreate, { activeDvcChannels: mapA });
+    const createB = handleDvcRequest(1003, 1002, cpduCreate, { activeDvcChannels: mapB });
+    assert.ok(createA.note.includes('dvc-accept'));
+    assert.ok(createB.note.includes('dvc-accept'));
+    assert.equal(mapA.get(8), 'ECHO');
+    assert.equal(mapB.get(8), 'ECHO');
+
+    // Simula abrir/cerrar otra pestana que vaciaba el Map global.
+    mapA.clear();
+    clearActiveDvcChannels();
+
+    assert.equal(mapB.get(8), 'ECHO');
+
+    const pingData = Buffer.from('KEEPALIVE', 'ascii');
+    const dataReq = Buffer.concat([Buffer.from([0x30, 0x08]), pingData]);
+    const cpduData = Buffer.alloc(8 + dataReq.length);
+    cpduData.writeUInt32LE(dataReq.length, 0);
+    cpduData.writeUInt32LE(0x03, 4);
+    dataReq.copy(cpduData, 8);
+
+    const pingB = handleDvcRequest(1003, 1002, cpduData, { activeDvcChannels: mapB });
+    assert.ok(pingB.handled);
+    assert.equal(pingB.replies.length, 1);
+    assert.ok(pingB.note.includes('dvc-echo-reply'));
+
+    // Sin mapa (sesion A ya vacia): no debe inventar reply de Echo.
+    const pingA = handleDvcRequest(1003, 1002, cpduData, { activeDvcChannels: mapA });
+    assert.ok(pingA.handled);
+    assert.equal(pingA.replies.length, 0);
+    assert.ok(/absorbed/i.test(pingA.note));
   });
 
   it('reenvia CAPS al WASM y responde ya al servidor (caps-quick)', () => {

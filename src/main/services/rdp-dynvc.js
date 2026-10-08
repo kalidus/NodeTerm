@@ -34,9 +34,9 @@ const STATUS_UNSUCCESSFUL = 0xc0000001;
 const CHANNEL_FLAG_FIRST = 0x01;
 const CHANNEL_FLAG_LAST = 0x02;
 
-// Mapa de canales DVC conocidos (channelId -> channelName).
-// Por proceso: hay que vaciarlo al abrir/cerrar cada sesion bridge.
-const activeDvcChannels = new Map();
+// Fallback solo para tests legacy que no pasan options.activeDvcChannels.
+// En el bridge cada sesion usa su propio Map en channelFilter.state.
+const fallbackActiveDvcChannels = new Map();
 
 /** ChannelId DVC plausibles en MS-RDPEDYC (1/2/4 bytes; en la practica caben en 16 bits). */
 const MAX_PLAUSIBLE_DVC_CHANNEL_ID = 0xffff;
@@ -44,8 +44,14 @@ const MAX_PLAUSIBLE_DVC_CHANNEL_ID = 0xffff;
 const DISPLAYCONTROL_NAME = 'DISPLAYCONTROL';
 const GRAPHICS_CHANNEL_NAME = 'MICROSOFT::WINDOWS::RDS::GRAPHICS';
 
+function resolveActiveDvcMap(options = {}) {
+  if (options.activeDvcChannels instanceof Map) return options.activeDvcChannels;
+  return fallbackActiveDvcChannels;
+}
+
+/** Limpia el fallback de tests. No usar en el bridge (cada sesion tiene su Map). */
 function clearActiveDvcChannels() {
-  activeDvcChannels.clear();
+  fallbackActiveDvcChannels.clear();
 }
 
 function wantsDynvcPassthrough(options = {}) {
@@ -418,10 +424,12 @@ function buildDvcCapabilitiesResponse(version = 1, sp = 0, maxDataSize = 1600, f
  * @param {number} mcsChannelId
  * @param {number} initiator
  * @param {Buffer} userData
- * @param {{ allowDisplayControl?: boolean, allowGraphics?: boolean }} [options]
+ * @param {{ allowDisplayControl?: boolean, allowGraphics?: boolean,
+ *           allowAudio?: boolean, bastionStub?: boolean, activeDvcChannels?: Map }} [options]
  * @returns {{ handled: boolean, forward: boolean, replies: Buffer[], note: string|null }}
  */
 function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
+  const activeDvcChannels = resolveActiveDvcMap(options);
   // El WASM vendor no implementa DataCompressed / DataFirstCompressed: si se los
   // reenviamos, IronRDP cierra con "unsupported Cmd (DataCompressed)".
   const peekCmd = peekDvcCmd(userData);
