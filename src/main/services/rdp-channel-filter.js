@@ -1290,7 +1290,9 @@ function processServerFrame(state, buf) {
         cliprdrDesc: null
       };
     }
-    if (passthroughDrdynvcFrags) {
+    // Solo fragmentos / create vacio (note *passthrough*). No reenviar Cmd
+    // desconocidos (p.ej. 0x0b): IronRDP cierra con invalid Cmd.
+    if (passthroughDrdynvcFrags && dvc.note && /passthrough/i.test(dvc.note)) {
       const ud = parsed.userData;
       const chFlags = ud.length >= 8 ? ud.readUInt32LE(4) : 0;
       return {

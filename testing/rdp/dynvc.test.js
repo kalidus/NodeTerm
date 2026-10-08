@@ -371,6 +371,40 @@ describe('rdp-dynvc', () => {
     assert.equal(resData.replies.length, 1);
   });
 
+  it('no reenvia DynVC Cmd 0x0b al WASM (IronRDP invalid Cmd)', () => {
+    clearActiveDvcChannels();
+    // CHANNEL_PDU FIRST|LAST + header DVC Cmd=0x0b
+    const dvc = Buffer.from([0xb0]);
+    const cpdu = Buffer.alloc(8 + dvc.length);
+    cpdu.writeUInt32LE(dvc.length, 0);
+    cpdu.writeUInt32LE(0x03, 4);
+    dvc.copy(cpdu, 8);
+    const res = handleDvcRequest(1005, 1002, cpdu, { allowGraphics: true });
+    assert.ok(res.handled);
+    assert.equal(res.forward, false);
+    assert.equal(res.replies.length, 0);
+    assert.ok(/dvc-unsupported-cmd-drop/i.test(res.note));
+    assert.match(res.note, /cmd=0xb\b/i);
+  });
+
+  it('responde Soft-Sync Request en local sin reenviar al WASM', () => {
+    clearActiveDvcChannels();
+    const dvc = Buffer.from([0x80, 0x00, 0x00, 0x00, 0x00, 0x00]);
+    const cpdu = Buffer.alloc(8 + dvc.length);
+    cpdu.writeUInt32LE(dvc.length, 0);
+    cpdu.writeUInt32LE(0x03, 4);
+    dvc.copy(cpdu, 8);
+    const res = handleDvcRequest(1005, 1002, cpdu, { allowGraphics: true });
+    assert.ok(res.handled);
+    assert.equal(res.forward, false);
+    assert.equal(res.replies.length, 1);
+    assert.ok(/dvc-soft-sync-response/i.test(res.note));
+    const mcs = parseMcsSendData(res.replies[0]);
+    assert.ok(mcs);
+    // CHANNEL_PDU + Soft-Sync Response Cmd=0x09
+    assert.equal(mcs.userData[8], 0x90);
+  });
+
   it('Maps DynVC por sesion: clear en A no rompe Echo replies en B', () => {
     clearActiveDvcChannels();
     const mapA = new Map();

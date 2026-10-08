@@ -26,6 +26,8 @@ const DVC_CMD_CLOSE = 0x04;
 const DVC_CMD_CAPS = 0x05;
 const DVC_CMD_DATA_FIRST_COMPRESSED = 0x06;
 const DVC_CMD_DATA_COMPRESSED = 0x07;
+const DVC_CMD_SOFT_SYNC_REQUEST = 0x08;
+const DVC_CMD_SOFT_SYNC_RESPONSE = 0x09;
 
 const STATUS_SUCCESS = 0x00000000;
 const STATUS_NOT_SUPPORTED = 0xc00000bb;
@@ -67,6 +69,11 @@ function isCompleteChannelPdu(userData) {
   return (flags & CHANNEL_FLAG_FIRST) !== 0 && (flags & CHANNEL_FLAG_LAST) !== 0;
 }
 
+function isChannelPduFirst(userData) {
+  if (!Buffer.isBuffer(userData) || userData.length < 8) return false;
+  return (userData.readUInt32LE(4) & CHANNEL_FLAG_FIRST) !== 0;
+}
+
 function peekDvcCmd(userData) {
   if (!Buffer.isBuffer(userData) || userData.length < 9) return null;
   return (userData[8] >> 4) & 0x0f;
@@ -74,6 +81,28 @@ function peekDvcCmd(userData) {
 
 function isCompressedDvcCmd(cmd) {
   return cmd === DVC_CMD_DATA_FIRST_COMPRESSED || cmd === DVC_CMD_DATA_COMPRESSED;
+}
+
+/** Cmds que IronRDP TryFrom acepta (0x01-0x09). Fuera de eso tumba la sesion WASM. */
+function isIronRdpKnownDvcCmd(cmd) {
+  return typeof cmd === 'number' && cmd >= DVC_CMD_CREATE && cmd <= DVC_CMD_SOFT_SYNC_RESPONSE;
+}
+
+/**
+ * Soft-Sync Response minimo (MS-RDPEDYC 2.2.5.2): Cmd=0x09, Pad=0, Length=0.
+ * @returns {Buffer} CHANNEL_PDU completo
+ */
+function buildDvcSoftSyncResponse() {
+  const dvc = Buffer.from([
+    (DVC_CMD_SOFT_SYNC_RESPONSE << 4),
+    0x00,
+    0x00, 0x00, 0x00, 0x00
+  ]);
+  const cpdu = Buffer.alloc(8 + dvc.length);
+  cpdu.writeUInt32LE(dvc.length, 0);
+  cpdu.writeUInt32LE(CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST, 4);
+  dvc.copy(cpdu, 8);
+  return cpdu;
 }
 
 function isDisplayControlName(name) {
@@ -430,13 +459,36 @@ function buildDvcCapabilitiesResponse(version = 1, sp = 0, maxDataSize = 1600, f
  */
 function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
   const activeDvcChannels = resolveActiveDvcMap(options);
-  // El WASM vendor no implementa DataCompressed / DataFirstCompressed: si se los
-  // reenviamos, IronRDP cierra con "unsupported Cmd (DataCompressed)".
-  const peekCmd = peekDvcCmd(userData);
+  // IronRDP en esta sesion envia initiator 0 (se ve en cliprdr y en el canal IO). Sustituirlo
+  // por 1002 hacia que Wallix tirara las respuestas DVC, el servidor reintentaba Geometry/Audio
+  // y DisplayControl se iba al timeout de 20-30 s.
+  const effectiveInitiator = initiator == null ? 0 : initiator;
+
+  // Cmd solo es fiable con FLAG_FIRST (en continuaciones el byte 8 es payload).
+  const peekCmd = isChannelPduFirst(userData) ? peekDvcCmd(userData) : null;
+  // El WASM vendor no implementa DataCompressed / DataFirstCompressed.
   if (isCompressedDvcCmd(peekCmd)) {
     return dvcReplyResult(
       [],
       `dvc-compressed-drop cmd=0x${peekCmd.toString(16)} (${userData.length}B; IronRDP no soporta DynVC comprimido)`
+    );
+  }
+  // Soft-Sync Request: respuesta local Length=0. Cmd desconocido (0x0a+): NUNCA al WASM.
+  if (peekCmd === DVC_CMD_SOFT_SYNC_REQUEST) {
+    const mcsPacket = buildMcsSendDataRequest(
+      effectiveInitiator,
+      mcsChannelId,
+      buildDvcSoftSyncResponse()
+    );
+    return dvcReplyResult([mcsPacket], 'dvc-soft-sync-response (0ms local)');
+  }
+  if (peekCmd === DVC_CMD_SOFT_SYNC_RESPONSE) {
+    return dvcReplyResult([], 'dvc-soft-sync-response-drop');
+  }
+  if (peekCmd != null && !isIronRdpKnownDvcCmd(peekCmd)) {
+    return dvcReplyResult(
+      [],
+      `dvc-unsupported-cmd-drop cmd=0x${peekCmd.toString(16)} (${userData.length}B; IronRDP invalid Cmd)`
     );
   }
 
@@ -456,11 +508,6 @@ function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
   if (!parsed) {
     return { handled: false, forward: false, replies: [], note: null };
   }
-
-  // IronRDP en esta sesion envia initiator 0 (se ve en cliprdr y en el canal IO). Sustituirlo
-  // por 1002 hacia que Wallix tirara las respuestas DVC, el servidor reintentaba Geometry/Audio
-  // y DisplayControl se iba al timeout de 20-30 s.
-  const effectiveInitiator = initiator == null ? 0 : initiator;
 
   if (parsed.type === 'create-req') {
     const channelName = parsed.channelName || '';
@@ -589,14 +636,11 @@ function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
     return dvcReplyResult([], `dvc-close ch=${parsed.channelId}`);
   }
 
-  // Cmd desconocido: el PDU no es MS-RDPEDYC. No reclamarlo como manejado para que el
-  // llamante decida, en vez de descartarlo dando por hecho que era DVC.
-  return {
-    handled: false,
-    forward: false,
-    replies: [],
-    note: `no-dvc cmd=0x${parsed.cmd.toString(16)}`
-  };
+  // dvc-other u otros: absorber (el passthrough del filtro ya no reenvia handled:false).
+  return dvcReplyResult(
+    [],
+    `dvc-unsupported-cmd-drop cmd=0x${(parsed.cmd >>> 0).toString(16)} (${userData.length}B)`
+  );
 }
 
 module.exports = {
@@ -609,6 +653,8 @@ module.exports = {
   DVC_CMD_CAPS,
   DVC_CMD_DATA_FIRST_COMPRESSED,
   DVC_CMD_DATA_COMPRESSED,
+  DVC_CMD_SOFT_SYNC_REQUEST,
+  DVC_CMD_SOFT_SYNC_RESPONSE,
   STATUS_SUCCESS,
   STATUS_NOT_SUPPORTED,
   STATUS_UNSUCCESSFUL,

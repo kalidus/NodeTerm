@@ -254,6 +254,8 @@ function isNoisyDrop(note) {
       // DynVC keepalive / ruido: no saturar consola ni el tope de hitos del timeline.
       || note.includes('dvc-echo-reply')
       || note.includes('dvc-compressed-drop')
+      || note.includes('dvc-soft-sync')
+      || note.includes('dvc-unsupported-cmd-drop')
       || /dvc-data ch=\d+ .*absorbed/i.test(note)
       || /dvc-close ch=/i.test(note));
 }
