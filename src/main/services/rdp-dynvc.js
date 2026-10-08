@@ -34,11 +34,41 @@ const STATUS_UNSUCCESSFUL = 0xc0000001;
 const CHANNEL_FLAG_FIRST = 0x01;
 const CHANNEL_FLAG_LAST = 0x02;
 
-// Mapa de canales DVC conocidos (channelId -> channelName)
+// Mapa de canales DVC conocidos (channelId -> channelName).
+// Por proceso: hay que vaciarlo al abrir/cerrar cada sesion bridge.
 const activeDvcChannels = new Map();
+
+/** ChannelId DVC plausibles en MS-RDPEDYC (1/2/4 bytes; en la practica caben en 16 bits). */
+const MAX_PLAUSIBLE_DVC_CHANNEL_ID = 0xffff;
 
 const DISPLAYCONTROL_NAME = 'DISPLAYCONTROL';
 const GRAPHICS_CHANNEL_NAME = 'MICROSOFT::WINDOWS::RDS::GRAPHICS';
+
+function clearActiveDvcChannels() {
+  activeDvcChannels.clear();
+}
+
+function wantsDynvcPassthrough(options = {}) {
+  return options.allowGraphics === true
+    || options.allowDisplayControl === true
+    || options.allowAudio === true;
+}
+
+/** PDU DynVC completo (FIRST|LAST). Un fragmento no se puede rechazar ni absorber. */
+function isCompleteChannelPdu(userData) {
+  if (!Buffer.isBuffer(userData) || userData.length < 8) return false;
+  const flags = userData.readUInt32LE(4);
+  return (flags & CHANNEL_FLAG_FIRST) !== 0 && (flags & CHANNEL_FLAG_LAST) !== 0;
+}
+
+function peekDvcCmd(userData) {
+  if (!Buffer.isBuffer(userData) || userData.length < 9) return null;
+  return (userData[8] >> 4) & 0x0f;
+}
+
+function isCompressedDvcCmd(cmd) {
+  return cmd === DVC_CMD_DATA_FIRST_COMPRESSED || cmd === DVC_CMD_DATA_COMPRESSED;
+}
 
 function isDisplayControlName(name) {
   return String(name || '').toUpperCase().includes(DISPLAYCONTROL_NAME);
@@ -57,11 +87,30 @@ function isAudioPlaybackName(name) {
   return String(name || '').toUpperCase().includes('AUDIO_PLAYBACK');
 }
 
+function isGeometryName(name) {
+  return String(name || '').toUpperCase().includes('GEOMETRY');
+}
+
+function isTelemetryName(name) {
+  return String(name || '').toUpperCase().includes('TELEMETRY');
+}
+
 function shouldForwardDvcChannel(channelName, options) {
   if (options.allowGraphics === true && isGraphicsChannelName(channelName)) return true;
   if (options.allowDisplayControl === true && isDisplayControlName(channelName)) return true;
   if (options.allowAudio === true && isAudioPlaybackName(channelName)) return true;
   return false;
+}
+
+/**
+ * Bastion+EGFX: SUCCESS local (sin WASM) para canales que Wallix reintenta 20-30 s
+ * si ve NOT_SUPPORTED. DisplayControl off de verdad: no reenviamos DATA al WASM.
+ */
+function shouldStubAcceptDvc(channelName, options) {
+  if (options.bastionStub !== true) return false;
+  return isDisplayControlName(channelName)
+    || isGeometryName(channelName)
+    || isTelemetryName(channelName);
 }
 
 function dvcForwardResult(note) {
@@ -373,6 +422,28 @@ function buildDvcCapabilitiesResponse(version = 1, sp = 0, maxDataSize = 1600, f
  * @returns {{ handled: boolean, forward: boolean, replies: Buffer[], note: string|null }}
  */
 function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
+  // El WASM vendor no implementa DataCompressed / DataFirstCompressed: si se los
+  // reenviamos, IronRDP cierra con "unsupported Cmd (DataCompressed)".
+  const peekCmd = peekDvcCmd(userData);
+  if (isCompressedDvcCmd(peekCmd)) {
+    return dvcReplyResult(
+      [],
+      `dvc-compressed-drop cmd=0x${peekCmd.toString(16)} (${userData.length}B; IronRDP no soporta DynVC comprimido)`
+    );
+  }
+
+  // Fragmentos CHANNEL_PDU: con EGFX/DisplayControl no se interpretan aqui.
+  // Un CREATE de Graphics a medias mal parseado + NOT_SUPPORTED tumba EGFX
+  // (Wallix no reabre Graphics y el salto se va a bitmap con esperas de 20-30 s).
+  if (wantsDynvcPassthrough(options) && !isCompleteChannelPdu(userData)) {
+    return {
+      handled: false,
+      forward: false,
+      replies: [],
+      note: 'dvc-fragment-passthrough'
+    };
+  }
+
   const parsed = parseDvcPdu(userData);
   if (!parsed) {
     return { handled: false, forward: false, replies: [], note: null };
@@ -385,6 +456,15 @@ function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
 
   if (parsed.type === 'create-req') {
     const channelName = parsed.channelName || '';
+    // CREATE sin nombre usable: casi seguro fragmento mal clasificado como completo.
+    if (wantsDynvcPassthrough(options) && !channelName) {
+      return {
+        handled: false,
+        forward: false,
+        replies: [],
+        note: 'dvc-create-empty-name-passthrough'
+      };
+    }
     activeDvcChannels.set(parsed.channelId, channelName);
 
     if (shouldForwardDvcChannel(channelName, options)) {
@@ -392,7 +472,8 @@ function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
     }
 
     const isEcho = isEchoName(channelName);
-    const status = isEcho ? STATUS_SUCCESS : STATUS_NOT_SUPPORTED;
+    const isStub = shouldStubAcceptDvc(channelName, options);
+    const status = (isEcho || isStub) ? STATUS_SUCCESS : STATUS_NOT_SUPPORTED;
     const respPdu = buildDvcCreateResponse(parsed.cbId, parsed.channelId, status);
     const mcsPacket = buildMcsSendDataRequest(effectiveInitiator, mcsChannelId, respPdu);
 
@@ -400,7 +481,9 @@ function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
       [mcsPacket],
       isEcho
         ? `dvc-accept ch=${parsed.channelId} "${channelName}" (0ms ok)`
-        : `dvc-reject ch=${parsed.channelId} "${channelName}" (0ms fast fallback)`
+        : isStub
+          ? `dvc-accept-stub ch=${parsed.channelId} "${channelName}" (0ms SUCCESS local)`
+          : `dvc-reject ch=${parsed.channelId} "${channelName}" (0ms fast fallback)`
     );
   }
 
@@ -415,6 +498,16 @@ function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
   }
 
   if (parsed.type === 'data') {
+    // ID imposible: basura de un fragmento mal parseado. Passthrough al WASM
+    // solo si no es DynVC comprimido (ya filtrado arriba por peekCmd).
+    if (typeof parsed.channelId === 'number' && parsed.channelId > MAX_PLAUSIBLE_DVC_CHANNEL_ID) {
+      return {
+        handled: false,
+        forward: false,
+        replies: [],
+        note: `dvc-data-id-implausible ch=${parsed.channelId}`
+      };
+    }
     const chName = activeDvcChannels.get(parsed.channelId) || '';
     const kind = parsed.cmd === DVC_CMD_DATA_FIRST || parsed.cmd === DVC_CMD_DATA_FIRST_COMPRESSED
       ? 'data-first'
@@ -435,6 +528,23 @@ function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
       );
     }
 
+    // Canal ya visto (rechazado o stub): NUNCA reenviar su DATA al WASM.
+    // Antes, con allowGraphics, el DATA de Camera/Telemetry iba al WASM y
+    // DataCompressed tumbaba la sesion / alargaba la espera.
+    if (chName) {
+      return dvcReplyResult(
+        [],
+        `dvc-${kind} ch=${parsed.channelId} "${chName}" (${parsed.data.length}B absorbed)`
+      );
+    }
+
+    // Solo canal desconocido (CREATE lo vio solo el WASM): reenviar sin comprimir.
+    if (wantsDynvcPassthrough(options)) {
+      return dvcForwardResult(
+        `dvc-forward-${kind}-unknown ch=${parsed.channelId} (${parsed.data.length}B)`
+      );
+    }
+
     return dvcReplyResult(
       [],
       `dvc-${kind} ch=${parsed.channelId} "${chName}" (${parsed.data.length}B absorbed)`
@@ -442,12 +552,20 @@ function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
   }
 
   if (parsed.type === 'caps-req') {
-    // Con DisplayControl/EGFX el WASM debe completar el handshake DynVC.
-    // Si el bridge responde CAPS en local, IronRDP ve CREATE antes de CAPS,
-    // emite un segundo CapsResponse y el trafico Graphics queda desencajado
-    // (ZGFX/RDPGFX basura → invalid segmented descriptor / Unknown GFX type).
+    // EGFX/DisplayControl/Audio: reenviar CAPS al WASM (estado del cliente) Y
+    // responder ya al servidor (0 ms). Si solo se reenvio, Wallix/RDS encadenaba
+    // CREATE mientras el CapsResponse del WASM iba por el WS y el salto tardaba.
+    // El CapsResponse duplicado del WASM se descarta en el filtro cliente.
     if (options.allowGraphics === true || options.allowDisplayControl === true || options.allowAudio === true) {
-      return dvcForwardResult(`dvc-forward-caps v=${parsed.version}`);
+      const respPdu = buildDvcCapabilitiesResponse(parsed.version, parsed.sp, parsed.maxDataSize, parsed.flags);
+      const mcsPacket = buildMcsSendDataRequest(effectiveInitiator, mcsChannelId, respPdu);
+      return {
+        handled: true,
+        forward: true,
+        replies: [mcsPacket],
+        note: `dvc-forward-caps-quick v=${parsed.version}`,
+        capsQuickReply: true
+      };
     }
     const respPdu = buildDvcCapabilitiesResponse(parsed.version, parsed.sp, parsed.maxDataSize, parsed.flags);
     const mcsPacket = buildMcsSendDataRequest(effectiveInitiator, mcsChannelId, respPdu);
@@ -491,6 +609,8 @@ module.exports = {
   buildDvcDataResponse,
   buildDvcCapabilitiesResponse,
   handleDvcRequest,
+  clearActiveDvcChannels,
+  isCompleteChannelPdu,
   isDisplayControlName,
   isGraphicsChannelName,
   isAudioPlaybackName

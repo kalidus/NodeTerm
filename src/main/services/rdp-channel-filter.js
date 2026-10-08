@@ -1096,6 +1096,9 @@ function wasmDeclaredDrdynvc(state) {
 }
 
 function wasmAllowsGraphicsDvc(state) {
+  // egfxGraphics cubre el caso en que el flag de sesion ya pide EGFX aunque
+  // wasmChannelNames aun no liste drdynvc (carrera tras el MCS prepare).
+  if (state && state.egfxGraphics === true) return true;
   return wasmHasDrdynvcName(state);
 }
 
@@ -1247,19 +1250,22 @@ function processServerFrame(state, buf) {
     const allowDisplayControl = wasmDeclaredDrdynvc(state);
     const allowGraphics = wasmAllowsGraphicsDvc(state);
     const allowAudio = wasmAllowsAudioDvc(state);
+    const bastionStub = state.isBastion === true && state.egfxGraphics === true;
     const passthroughDrdynvcFrags = allowGraphics || allowDisplayControl || allowAudio;
     const dvc = handleDvcRequest(channelId, state.clientInitiator, parsed.userData, {
       allowDisplayControl,
       allowGraphics,
-      allowAudio
+      allowAudio,
+      bastionStub
     });
     if (dvc.handled && dvc.forward) {
       if (dvc.note && /AUDIO_PLAYBACK/i.test(dvc.note)) {
         logAudioOnce(state, 'loggedAudioDvc', `[Bridge] Audio: forward ${dvc.note}`);
       }
+      if (dvc.capsQuickReply) state.egfxCapsRepliedByBridge = true;
       return {
         forward: remapServerDrdynvcFrame(state, buf, channelId),
-        replies: [],
+        replies: dvc.replies || [],
         dropped: false,
         note: dvc.note || channelPduHint(parsed.userData),
         channelId,
@@ -1324,18 +1330,21 @@ function processServerFrame(state, buf) {
       const allowDisplayControl = wasmDeclaredDrdynvc(state);
       const allowGraphics = wasmAllowsGraphicsDvc(state);
       const allowAudio = wasmAllowsAudioDvc(state);
+      const bastionStub = state.isBastion === true && state.egfxGraphics === true;
       const dvc = handleDvcRequest(channelId, state.clientInitiator, parsed.userData, {
         allowDisplayControl,
         allowGraphics,
-        allowAudio
+        allowAudio,
+        bastionStub
       });
       if (dvc.handled && dvc.forward) {
         if (dvc.note && /AUDIO_PLAYBACK/i.test(dvc.note)) {
           logAudioOnce(state, 'loggedAudioDvc', `[Bridge] Audio: forward ${dvc.note}`);
         }
+        if (dvc.capsQuickReply) state.egfxCapsRepliedByBridge = true;
         return {
           forward: remapServerDrdynvcFrame(state, buf, channelId),
-          replies: [],
+          replies: dvc.replies || [],
           dropped: false,
           note: dvc.note || channelPduHint(parsed.userData),
           channelId,
@@ -1355,6 +1364,22 @@ function processServerFrame(state, buf) {
           channelId,
           isCliprdr: false,
           cliprdrDesc: null
+        };
+      }
+      // Fragmentos / IDs imposibles en canal aun no mapeado: mismo passthrough EGFX.
+      // Sin esto caen al DROP generico y Wallix no completa Graphics.
+      if ((allowGraphics || allowDisplayControl || allowAudio)
+          && dvc.note
+          && /passthrough|implausible/i.test(dvc.note)) {
+        return {
+          forward: remapServerDrdynvcFrame(state, buf, channelId),
+          replies: [],
+          dropped: false,
+          note: dvc.note,
+          channelId,
+          isCliprdr: false,
+          cliprdrDesc: null,
+          dvcForward: true
         };
       }
     }

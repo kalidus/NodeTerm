@@ -1642,11 +1642,19 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           builder.serverDomain(domainStr);
         }
 
+        // Origen de tiempos de la linea de tiempo del renderer (solo log).
+        const timelineStartedAt = performance.now();
+
         if (canvasRef.current) {
           getOptimized2dContext(canvasRef.current);
+          // Solo con debug: envolver putImageData. La sonda WS (sustituir
+          // window.WebSocket) se retiro porque tumba la sesion de IronRDP.
           if (isRdpDebugEnabled()) {
             if (disposeCanvasProbe) disposeCanvasProbe();
-            disposeCanvasProbe = installCanvasDrawProbe(canvasRef.current);
+            disposeCanvasProbe = installCanvasDrawProbe(canvasRef.current, console.log, {
+              quiet: isBastionSession,
+              startedAt: timelineStartedAt
+            });
           }
           lastCursorStyleRef.current = 'default';
           lastCursorKindRef.current = '';
@@ -1666,6 +1674,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         console.log(`🚀 [IronRDP WASM] Conectando a ${destinationStr} (protocolo=${tokenResponse.protocolLabel || 'auto'}, credssp=${useCredssp}, clipboard=${isClipboardEnabled}, drive=${isDriveEnabled})...`);
         
         currentSession = await builder.connect();
+        if (isBastionSession) {
+          console.log(`⏱️ [RDP Timeline renderer +${Math.round(performance.now() - timelineStartedAt)}ms] builder.connect() resuelto`);
+        }
         if (isAborted()) {
           abandonSession(currentSession);
           currentSession = null;

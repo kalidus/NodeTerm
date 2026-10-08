@@ -26,6 +26,8 @@ const {
   sanitizeBastionConfirmActiveGraphics
 } = require('./rdp-caps-helpers');
 const { fixWallixBitmapStrideCrop, FastPathBitmapReassembler } = require('./rdp-fastpath-helpers');
+const { SessionTimeline } = require('./rdp-session-timeline');
+const { clearActiveDvcChannels, parseDvcPdu } = require('./rdp-dynvc');
 const {
   BridgeLatencyMetrics,
   WsBackpressureController,
@@ -443,6 +445,7 @@ class RdpNativeBridgeService extends EventEmitter {
     let framesToRdp = 0;
     let lastRdpFrameAt = 0;
     let lastWsFrameAt = 0;
+    let demandActiveCount = 0;
     // Anillos en memoria: frames solo se vuelcan con NODETERM_RDP_DEBUG=1.
     // El anillo cliprdr se vuelca si el portapapeles fallo o si hay debug.
     // session.rdpDebug viene del renderer (localStorage / window.__NODETERM_RDP_DEBUG__).
@@ -555,6 +558,11 @@ class RdpNativeBridgeService extends EventEmitter {
     // Una sesion directa usa el splitter: reenvia los bytes tal cual, tambien
     // cuando Windows mete 4 o mas eventos en un Fast-Path.
     const normalizeBitmaps = channelFilter.isBastion === true;
+    // Linea de tiempo solo-log para bastion: donde se va la espera tras los banners.
+    const timeline = new SessionTimeline({
+      enabled: normalizeBitmaps,
+      log: (line) => console.log(`⏱️ [Bridge] ${line}`)
+    });
     // Experimento opt-in (NODETERM_RDP_FORCE32=1): pedir sesion de 32bpp al servidor para que
     // pueda usar RemoteFX/Surface Commands. Solo conexion directa; nunca en bastion.
     const force32 = !normalizeBitmaps && readDiagFlag('NODETERM_RDP_FORCE32');
@@ -618,8 +626,14 @@ class RdpNativeBridgeService extends EventEmitter {
       });
       const clipSummary = formatCliprdrHealthLine(summarizeCliprdrHealth(channelFilter));
 
+      timeline.stop();
+      if (timeline.enabled) {
+        console.log(`⏱️ [Bridge] ${timeline.summary()}`);
+      }
+      clearActiveDvcChannels();
+
       if (userInitiated && !clipboardFailed && !isDebug) {
-        console.log(`🧹 [RdpNativeBridgeService] Sesion RDP finalizada (${formattedReason}) [toRdp=${framesToRdp}, fromRdp=${framesFromRdp}]`);
+        console.log(`🧹 [RdpNativeBridgeService] Sesion RDP finalizada (${formattedReason}) [toRdp=${framesToRdp} (${bytesToRdp}B), fromRdp=${framesFromRdp} (${bytesFromRdp}B)]`);
       } else if (clipboardFailed) {
         console.warn(`⚠️ [RdpNativeBridgeService] Fallo de clipboard al cerrar (${formattedReason}) [toRdp=${framesToRdp} (${bytesToRdp}B), fromRdp=${framesFromRdp} (${bytesFromRdp}B)]`);
       } else if (!isDebug) {
@@ -778,6 +792,7 @@ class RdpNativeBridgeService extends EventEmitter {
               }
 
               rdCleanPathPhase = 'transparent';
+              clearActiveDvcChannels();
 
               // Bastión y directo: latest-wins seguro (solo bitmaps ya cubiertos) sin callar TLS.
               // Directo: pausa TLS solo a 2 MB, como ultimo recurso anti-OOM.
@@ -794,6 +809,11 @@ class RdpNativeBridgeService extends EventEmitter {
               const coalesceWs = !(coalesceFlag === false || coalesceFlag === 0
                 || coalesceFlag === '0' || coalesceFlag === 'false');
               const tickBatcher = new WsTickBatcher(coalesceWs);
+              timeline.mark('tls-ok-transparente');
+              timeline.start(() => ({
+                pending: backpressure.pendingBitmaps.length,
+                buffered: ws.bufferedAmount
+              }));
 
               const sendBinaryToWasm = (out) => {
                 if (!out || typeof out.length !== 'number') return;
@@ -997,6 +1017,27 @@ class RdpNativeBridgeService extends EventEmitter {
                   }
 
                   const n = frame.length;
+
+                  if (timeline.enabled) {
+                    timeline.mark('first-frame', `#${framesFromRdp} ${n}B ${pduDesc}`);
+                    if (!isFastPath) {
+                      if (pduDesc.includes('DEACTIVATE_ALL')) {
+                        timeline.event('DEACTIVATE_ALL', `#${framesFromRdp}`);
+                      } else if (pduDesc.includes('DEMAND_ACTIVE')) {
+                        demandActiveCount += 1;
+                        timeline.event(`DEMAND_ACTIVE ${demandActiveCount}`, `#${framesFromRdp} ${n}B`);
+                      }
+                    } else {
+                      if (demandActiveCount >= 2) {
+                        timeline.mark('first-fastpath-tras-2o-demand-active', `#${framesFromRdp} ${n}B`);
+                      }
+                      if (!timeline.has('first-surface-cmds') || !timeline.has('first-bitmap')) {
+                        const fpKind = classifyFastPathUpdate(frame);
+                        if (fpKind === 'SURFACE_CMDS') timeline.mark('first-surface-cmds', `#${framesFromRdp} ${n}B`);
+                        else if (fpKind === 'BITMAP') timeline.mark('first-bitmap', `#${framesFromRdp} ${n}B`);
+                      }
+                    }
+                  }
 
                   // Sondeo: que bpp/codecs ofrece el servidor (solo debug).
                   if (isDebug && !isFastPath && pduDesc.includes('DEMAND_ACTIVE')) {
@@ -1232,6 +1273,13 @@ class RdpNativeBridgeService extends EventEmitter {
                     const note = String(processed.note || '').replace(/ hex=[0-9a-f]+/i, '');
                     const dropMsg = `MCS ch=${processed.channelId}: ${note}` +
                       (processed.replies.length ? ` (replies=${processed.replies.length})` : '');
+                    // Bastion: ver que DynVC se rechaza durante la espera tras el banner
+                    // (sin NODETERM_RDP_DEBUG). Son pocas lineas por sesion.
+                    if (timeline.enabled && typeof processed.note === 'string'
+                        && /dvc-|probe-keepalive/i.test(processed.note)
+                        && !/hex=/i.test(dropMsg)) {
+                      timeline.event(`DROP ${note}`, `#${framesFromRdp}`);
+                    }
                     if (isDebug) {
                       console.log(`🚫 DROPPED #${framesFromRdp} ${dropMsg}`);
                     }
@@ -1248,6 +1296,7 @@ class RdpNativeBridgeService extends EventEmitter {
                       }
                     }
                     bytesFromRdp += n;
+                    timeline.noteIn('drop', n);
                     trafficStats.note(`DROP ${pduDesc}`, n);
                     continue;
                   }
@@ -1256,20 +1305,33 @@ class RdpNativeBridgeService extends EventEmitter {
                   // no hay nada que entregar a IronRDP.
                   if (!frame || typeof frame.length !== 'number') {
                     bytesFromRdp += n;
+                    timeline.noteIn('drop', n);
                     trafficStats.note(pduDesc, n);
                     continue;
                   }
 
-                  if (processed.dvcForward
-                      && !channelFilter.loggedEgfxGraphicsCreate
-                      && typeof processed.note === 'string'
-                      && /^dvc-forward ch=/i.test(processed.note)
-                      && /GRAPHICS/i.test(processed.note)) {
-                    channelFilter.loggedEgfxGraphicsCreate = true;
-                    console.log(
-                      `[Bridge] EGFX Graphics CREATE mcs=${processed.channelId}` +
-                      ` wasm=${channelFilter.wasmDrdynvcChannelId} ${processed.note}`
-                    );
+                  // Caps quick-reply u otras respuestas DVC junto al forward hacia WASM.
+                  if (processed.replies && processed.replies.length && tlsSocket && tlsSocket.writable) {
+                    for (const reply of processed.replies) {
+                      bytesToRdp += reply.length;
+                      tlsSocket.write(reply);
+                    }
+                  }
+
+                  if (processed.dvcForward && typeof processed.note === 'string') {
+                    if (/dvc-forward-caps/i.test(processed.note)) {
+                      timeline.mark('dvc-caps-hacia-wasm', `#${framesFromRdp}`);
+                    }
+                    if (!channelFilter.loggedEgfxGraphicsCreate
+                        && /^dvc-forward ch=/i.test(processed.note)
+                        && /GRAPHICS/i.test(processed.note)) {
+                      channelFilter.loggedEgfxGraphicsCreate = true;
+                      timeline.mark('egfx-graphics-create', `#${framesFromRdp}`);
+                      console.log(
+                        `[Bridge] EGFX Graphics CREATE mcs=${processed.channelId}` +
+                        ` wasm=${channelFilter.wasmDrdynvcChannelId} ${processed.note}`
+                      );
+                    }
                   }
 
                   if (processed.dvcForward && isDebug) {
@@ -1298,6 +1360,10 @@ class RdpNativeBridgeService extends EventEmitter {
                   const readyFrames = normalizeBitmaps ? bitmapReassembler.push(frame) : [frame];
 
                   bytesFromRdp += n;
+                  timeline.noteIn(isFastPath ? 'fp' : (processed.dvcForward ? 'dvc' : 'tpkt'), n);
+                  if (processed.dvcForward) {
+                    timeline.mark('primer-dvc-hacia-wasm', `#${framesFromRdp} ${n}B`);
+                  }
                   trafficStats.note(pduDesc, n);
                   // El banner ya no pinta el destino. Tirarlo aquí evita que el
                   // DEMAND_ACTIVE siguiente encuentre la cola RLE.
@@ -1460,6 +1526,7 @@ class RdpNativeBridgeService extends EventEmitter {
 
           if (isFastPathInput) {
             bytesToRdp += payload.length;
+            timeline.noteOut('input', payload.length);
             if (latencyMetrics) latencyMetrics.noteInput();
             if (tlsSocket && tlsSocket.writable) {
               tlsSocket.write(payload);
@@ -1549,6 +1616,19 @@ class RdpNativeBridgeService extends EventEmitter {
             }
             const { forward: kept, inject, extraForwardsBefore, extraForwards } =
               this.filterClientVirtualChannelFrame(clientFrame, channelFilter);
+            if (timeline.enabled) {
+              const sendOut = parseMcsSendData(clientFrame);
+              const isDvcOut = !!sendOut && (
+                (channelFilter.wasmDrdynvcChannelId != null && sendOut.channelId === channelFilter.wasmDrdynvcChannelId)
+                || (channelFilter.drdynvcChannelId != null && sendOut.channelId === channelFilter.drdynvcChannelId)
+              );
+              if (kept) {
+                timeline.noteOut(isDvcOut ? 'dvc' : 'tpkt', kept.length);
+                if (isDvcOut) timeline.mark('primer-dvc-cliente-al-servidor', `${kept.length}B`);
+              } else if (isDvcOut) {
+                timeline.event('DVC del cliente NO reenviado al servidor', `${clientFrame.length}B`);
+              }
+            }
             if (kept !== clientFrame || (extraForwardsBefore && extraForwardsBefore.length)
                 || (extraForwards && extraForwards.length)) {
               clientFramesChanged = true;
@@ -2013,6 +2093,18 @@ class RdpNativeBridgeService extends EventEmitter {
     }
 
     if (!isClip) {
+      // Caps quick-reply: el bridge ya respondio Caps al servidor; un segundo
+      // CapsResponse del WASM desalinea DynVC / alarga el salto Wallix.
+      if (channelFilter.egfxCapsRepliedByBridge) {
+        const dvcClient = parseDvcPdu(parsed.userData);
+        if (dvcClient && dvcClient.type === 'caps-req') {
+          if (!channelFilter.loggedEgfxCapsMute) {
+            channelFilter.loggedEgfxCapsMute = true;
+            console.log('[Bridge] DynVC: CapsResponse WASM omitido (bridge ya respondio al servidor)');
+          }
+          return { forward: null, inject: [] };
+        }
+      }
       // Con inyeccion, WASM habla DynVC en wasmDrdynvcChannelId y el servidor en
       // drdynvcChannelId. AUDIO_PLAYBACK_DVC llega antes del saludo cliprdr: si no
       // remapeamos el CREATE_RSP, el servidor no ve la respuesta y la sesion cuelga

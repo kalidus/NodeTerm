@@ -9,6 +9,7 @@ const {
   parseDvcPdu,
   buildDvcCreateResponse,
   handleDvcRequest,
+  clearActiveDvcChannels,
   STATUS_SUCCESS,
   STATUS_NOT_SUPPORTED
 } = require('../../src/main/services/rdp-dynvc');
@@ -16,7 +17,8 @@ const {
   createChannelFilterState,
   learnFromServerGcc,
   processServerFrame,
-  remapClientDrdynvcFrame
+  remapClientDrdynvcFrame,
+  wasmAllowsGraphicsDvc
 } = require('../../src/main/services/rdp-channel-filter');
 const { isBastionSession, resolveIronRdpGraphics } = require('../../src/main/services/RdpNativeBridgeService');
 
@@ -180,6 +182,60 @@ describe('rdp-dynvc', () => {
     assert.ok(res.note.includes('Graphics'));
   });
 
+  it('con allowGraphics no rechaza un CREATE fragmentado (sin FLAG_LAST)', () => {
+    clearActiveDvcChannels();
+    const nameBuf = Buffer.from('Microsoft::Windows::RDS::Graphics\0', 'ascii');
+    const createReq = Buffer.concat([Buffer.from([0x10, 0x21]), nameBuf]);
+    const cpdu = Buffer.alloc(8 + createReq.length);
+    cpdu.writeUInt32LE(createReq.length, 0);
+    cpdu.writeUInt32LE(0x01, 4); // solo FIRST: fragmento
+    createReq.copy(cpdu, 8);
+    const res = handleDvcRequest(1005, 1002, cpdu, { allowGraphics: true });
+    assert.equal(res.handled, false);
+    assert.equal(res.forward, false);
+    assert.ok((res.note || '').includes('fragment'));
+  });
+
+  it('con allowGraphics reenvia DATA de canal desconocido en vez de absorberlo', () => {
+    clearActiveDvcChannels();
+    const dvc = Buffer.from([0x30, 0x2a, 0x01, 0x02, 0x03, 0x04]);
+    const cpdu = Buffer.alloc(8 + dvc.length);
+    cpdu.writeUInt32LE(dvc.length, 0);
+    cpdu.writeUInt32LE(0x03, 4);
+    dvc.copy(cpdu, 8);
+    const res = handleDvcRequest(1005, 1002, cpdu, { allowGraphics: true });
+    assert.ok(res.handled);
+    assert.equal(res.forward, true);
+    assert.ok((res.note || '').includes('unknown'));
+  });
+
+  it('con allowGraphics no absorbe DATA con channelId imposible', () => {
+    clearActiveDvcChannels();
+    const dvc = Buffer.from([0x32, 0x44, 0x3c, 0x43, 0x01, 0xaa, 0xbb]);
+    const cpdu = Buffer.alloc(8 + dvc.length);
+    cpdu.writeUInt32LE(dvc.length, 0);
+    cpdu.writeUInt32LE(0x03, 4);
+    dvc.copy(cpdu, 8);
+    const res = handleDvcRequest(1005, 1002, cpdu, { allowGraphics: true });
+    assert.equal(res.handled, false);
+    assert.ok((res.note || '').includes('implausible'));
+  });
+
+  it('no reenvia DataCompressed al WASM (IronRDP no lo soporta)', () => {
+    clearActiveDvcChannels();
+    // Cmd=0x07 DataCompressed, cbId=0, ch=0x15, 3 bytes payload
+    const dvc = Buffer.from([0x70, 0x15, 0xaa, 0xbb, 0xcc]);
+    const cpdu = Buffer.alloc(8 + dvc.length);
+    cpdu.writeUInt32LE(dvc.length, 0);
+    cpdu.writeUInt32LE(0x03, 4);
+    dvc.copy(cpdu, 8);
+    const res = handleDvcRequest(1005, 1002, cpdu, { allowGraphics: true });
+    assert.ok(res.handled);
+    assert.equal(res.forward, false);
+    assert.equal(res.replies.length, 0);
+    assert.ok((res.note || '').includes('compressed-drop'));
+  });
+
   it('reenvia DYNVC_DATA_FIRST (Cmd=0x02) de Graphics, no lo trata como CREATE_RSP', () => {
     // Header 0x24 = Cmd=DataFirst(2), Sp=1 (Length u16), cbId=0; chId=7; Length=0x06f9; payload ZGFX 0xe0
     const dvc = Buffer.from('2407f906e0240900', 'hex');
@@ -305,7 +361,7 @@ describe('rdp-dynvc', () => {
     assert.equal(replyMcs.userData.subarray(10).toString('ascii'), 'HEARTBEAT_TEST_123');
   });
 
-  it('reenvia CAPS DVC al WASM cuando allowDisplayControl/EGFX (handshake DynVC real)', () => {
+  it('reenvia CAPS al WASM y responde ya al servidor (caps-quick)', () => {
     const dvcPayload = Buffer.from('54000300333311113d0aa704', 'hex');
     const channelPdu = Buffer.alloc(8 + dvcPayload.length);
     channelPdu.writeUInt32LE(dvcPayload.length, 0);
@@ -315,8 +371,45 @@ describe('rdp-dynvc', () => {
     const res = handleDvcRequest(1003, 1002, channelPdu, { allowDisplayControl: true });
     assert.ok(res.handled);
     assert.equal(res.forward, true);
-    assert.equal(res.replies.length, 0);
-    assert.ok(res.note.includes('dvc-forward-caps'));
+    assert.equal(res.replies.length, 1);
+    assert.equal(res.capsQuickReply, true);
+    assert.ok(res.note.includes('dvc-forward-caps-quick'));
+  });
+
+  it('bastionStub acepta DisplayControl/Geometry con SUCCESS local', () => {
+    clearActiveDvcChannels();
+    const nameBuf = Buffer.from('Microsoft::Windows::RDS::DisplayControl\0', 'ascii');
+    const createReq = Buffer.concat([Buffer.from([0x10, 0x15]), nameBuf]);
+    const cpdu = Buffer.alloc(8 + createReq.length);
+    cpdu.writeUInt32LE(createReq.length, 0);
+    cpdu.writeUInt32LE(0x03, 4);
+    createReq.copy(cpdu, 8);
+    const res = handleDvcRequest(1005, 1002, cpdu, { allowGraphics: true, bastionStub: true });
+    assert.ok(res.handled);
+    assert.equal(res.forward, false);
+    assert.equal(res.replies.length, 1);
+    assert.ok(res.note.includes('dvc-accept-stub'));
+    assert.ok(res.note.includes('DisplayControl'));
+  });
+
+  it('no reenvia al WASM el DATA de un canal ya rechazado', () => {
+    clearActiveDvcChannels();
+    const nameBuf = Buffer.from('RDCamera_Device_Enumerator\0', 'ascii');
+    const createReq = Buffer.concat([Buffer.from([0x10, 0x21]), nameBuf]);
+    const createPdu = Buffer.alloc(8 + createReq.length);
+    createPdu.writeUInt32LE(createReq.length, 0);
+    createPdu.writeUInt32LE(0x03, 4);
+    createReq.copy(createPdu, 8);
+    handleDvcRequest(1005, 1002, createPdu, { allowGraphics: true });
+    const dvc = Buffer.from([0x30, 0x21, 0x01, 0x02, 0x03, 0x04]);
+    const dataPdu = Buffer.alloc(8 + dvc.length);
+    dataPdu.writeUInt32LE(dvc.length, 0);
+    dataPdu.writeUInt32LE(0x03, 4);
+    dvc.copy(dataPdu, 8);
+    const res = handleDvcRequest(1005, 1002, dataPdu, { allowGraphics: true });
+    assert.ok(res.handled);
+    assert.equal(res.forward, false);
+    assert.ok((res.note || '').includes('absorbed'));
   });
 
   it('responde CAPS DVC en local si WASM no consume DynVC', () => {
@@ -380,8 +473,9 @@ describe('drdynvc remap DisplayControl', () => {
     const res = processServerFrame(state, frame);
     assert.equal(res.dropped, false);
     assert.ok(res.forward);
-    assert.equal(res.replies.length, 0);
-    assert.ok((res.note || '').includes('dvc-forward-caps'));
+    assert.equal(res.replies.length, 1);
+    assert.equal(state.egfxCapsRepliedByBridge, true);
+    assert.ok((res.note || '').includes('dvc-forward-caps-quick'));
   });
 
   it('sigue rechazando Geometry aunque WASM declare drdynvc', () => {
@@ -404,7 +498,7 @@ describe('drdynvc remap DisplayControl', () => {
     assert.equal(out.readUInt16BE(10), 1007);
   });
 
-  it('rechaza DisplayControl si la sesion es de bastion (isBastion = true)', () => {
+  it('en bastion+EGFX acepta DisplayControl con SUCCESS stub (sin reenviar al WASM)', () => {
     const state = injectedDrdynvcState();
     state.isBastion = true;
     state.egfxGraphics = true;
@@ -413,6 +507,7 @@ describe('drdynvc remap DisplayControl', () => {
     assert.equal(res.dropped, true);
     assert.equal(res.forward, null);
     assert.equal(res.replies.length, 1);
+    assert.ok((res.note || '').includes('dvc-accept-stub') || (res.note || '').includes('DisplayControl'));
   });
 
   it('reenvia EGFX Graphics en bastion cuando WASM declara drdynvc', () => {
@@ -429,6 +524,16 @@ describe('drdynvc remap DisplayControl', () => {
     assert.equal(res.dropped, false);
     assert.ok(res.forward);
     assert.equal(res.forward.readUInt16BE(10), 1005);
+  });
+
+  it('egfxGraphics permite Graphics aunque wasmChannelNames no liste drdynvc aun', () => {
+    const state = createChannelFilterState();
+    state.isBastion = true;
+    state.egfxGraphics = true;
+    state.wasmChannelNames = ['cliprdr'];
+    assert.equal(wasmAllowsGraphicsDvc(state), true);
+    state.egfxGraphics = false;
+    assert.equal(wasmAllowsGraphicsDvc(state), false);
   });
 
   it('remapea drdynvc cliente en bastion para EGFX (WASM declaro drdynvc)', () => {

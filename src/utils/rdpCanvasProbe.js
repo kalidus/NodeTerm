@@ -1,16 +1,20 @@
 /**
- * Sonda de dibujado del canvas RDP (solo diagnostico, opt-in).
+ * Sonda de dibujado del canvas RDP (solo diagnostico, no cambia el trafico).
  *
- * El WASM de IronRDP pinta cada rectangulo con putImageData sobre el contexto 2D
- * del canvas. Envolviendo el metodo en la instancia (no en el prototipo) se cuenta
- * cuantas llamadas / pixeles / ms por segundo cuesta el dibujado, sin tocar el WASM.
- * Se activa solo con window.__NODETERM_RDP_DEBUG__ o localStorage NODETERM_RDP_DEBUG=1.
+ * El WASM de IronRDP pinta con putImageData / drawImage / fillRect. Envolviendo
+ * esos metodos en la instancia se cuenta el coste de dibujo sin tocar el WASM.
+ *
+ * Modo normal (NODETERM_RDP_DEBUG): resumen cada 2 s.
+ * Modo quiet (bastion): solo registra el primer pintado; sin intervalos ni
+ * sustitucion de WebSocket (eso tumba la sesion de IronRDP).
  */
 
 const LOG_INTERVAL_MS = 2000;
 
-export function installCanvasDrawProbe(canvas, log = console.log) {
+export function installCanvasDrawProbe(canvas, log = console.log, opts = {}) {
   if (!canvas || typeof canvas.getContext !== 'function') return () => {};
+  const quiet = opts.quiet === true;
+  const startedAt = typeof opts.startedAt === 'number' ? opts.startedAt : performance.now();
   let ctx = null;
   try {
     ctx = canvas.getContext('2d');
@@ -20,6 +24,7 @@ export function installCanvasDrawProbe(canvas, log = console.log) {
   if (!ctx || ctx.__nodetermProbe) return () => {};
 
   const stats = { calls: 0, pixels: 0, ms: 0, maxMs: 0 };
+  let firstDrawLogged = false;
   const originals = {};
 
   const wrap = (name, pixelsOf) => {
@@ -35,7 +40,13 @@ export function installCanvasDrawProbe(canvas, log = console.log) {
         stats.calls += 1;
         stats.ms += dt;
         if (dt > stats.maxMs) stats.maxMs = dt;
-        try { stats.pixels += pixelsOf(args) || 0; } catch (_) { /* noop */ }
+        let px = 0;
+        try { px = pixelsOf(args) || 0; } catch (_) { /* noop */ }
+        stats.pixels += px;
+        if (quiet && !firstDrawLogged) {
+          firstDrawLogged = true;
+          log(`⏱️ [RDP Timeline renderer +${Math.round(t0 - startedAt)}ms] primer pintado en canvas (${name}, ${px}px)`);
+        }
       }
     };
   };
@@ -51,6 +62,15 @@ export function installCanvasDrawProbe(canvas, log = console.log) {
   wrap('fillRect', (args) => (args[2] || 0) * (args[3] || 0));
 
   ctx.__nodetermProbe = true;
+
+  if (quiet) {
+    return () => {
+      for (const name of Object.keys(originals)) {
+        try { delete ctx[name]; } catch (_) { /* noop */ }
+      }
+      try { delete ctx.__nodetermProbe; } catch (_) { /* noop */ }
+    };
+  }
 
   const timer = setInterval(() => {
     if (!stats.calls) return;

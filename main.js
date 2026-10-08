@@ -1490,6 +1490,14 @@ function createWindow() {
     }
   });
   logTiming('BrowserWindow creado');
+  // Diagnostico RDP: las lineas de linea de tiempo del renderer salen tambien en la terminal
+  // del proceso main, junto a las del bridge, para ver las dos mitades con el mismo orden.
+  mainWindow.webContents.on('console-message', (event, level, message) => {
+    const text = typeof message === 'string' ? message : (event && event.message);
+    if (typeof text === 'string' && text.includes('[RDP Timeline renderer')) {
+      console.log(text);
+    }
+  });
   setupConnectionSearchShortcutBridge(mainWindow);
 
   // 🛡️ SEGURIDAD: Control de ventanas emergentes en mainWindow (delegar al pop-up interno)
