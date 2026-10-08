@@ -447,6 +447,7 @@ const RNS_UD_CS_WANT_32BPP_SESSION = 0x0002;
 /** MS-RDPBCGR 2.2.1.3.2 — cliente anuncia EGFX / DynVC Graphics */
 const RNS_UD_CS_SUPPORT_DYNVC_GFX_PROTOCOL = 0x0100;
 const HIGH_COLOR_24BPP = 0x0018;
+const HIGH_COLOR_16BPP = 0x0010;
 
 /**
  * Lee earlyCapabilityFlags del CS_CORE (MCS Connect Initial).
@@ -509,6 +510,41 @@ function patchClientCoreWant32bpp(buf) {
     changes.push(`highColorDepth 0x${high.toString(16)}->0x18`);
   }
   return { buf: changes.length ? out : buf, patched: changes.length > 0, changes, reason: changes.length ? 'want32' : 'already' };
+}
+
+/**
+ * Bastion Wallix: highColorDepth 16bpp, sin WANT_32BPP ni SUPPORT_DYNVC_GFX.
+ * Evita que el proxy pinte banners/APP en 24bpp (el rewriter solo estabiliza RLE16).
+ */
+function patchClientCoreBastion16bpp(buf) {
+  const found = findClientCoreData(buf);
+  if (!found || found.length < CS_CORE_MIN_LEN_COLOR_FIELDS) {
+    return { buf, patched: false, changes: [], reason: 'cs-core-not-found' };
+  }
+  const d = found.offset + 4;
+  if (buf.readUInt16LE(d + CS_CORE_POST_BETA2_OFFSET) !== RNS_UD_COLOR_8BPP_POST_BETA2) {
+    return { buf, patched: false, changes: [], reason: 'post-beta2-not-8bpp' };
+  }
+  const high = buf.readUInt16LE(d + CS_CORE_HIGH_COLOR_DEPTH_OFFSET);
+  const early = buf.readUInt16LE(d + CS_CORE_EARLY_CAPS_OFFSET);
+  const clearBits = RNS_UD_CS_WANT_32BPP_SESSION | RNS_UD_CS_SUPPORT_DYNVC_GFX_PROTOCOL;
+  const newEarly = early & ~clearBits;
+  const changes = [];
+  const out = Buffer.from(buf);
+  if (newEarly !== early) {
+    out.writeUInt16LE(newEarly & 0xffff, d + CS_CORE_EARLY_CAPS_OFFSET);
+    changes.push(`earlyCapabilityFlags 0x${early.toString(16)}->0x${newEarly.toString(16)}`);
+  }
+  if (high !== HIGH_COLOR_16BPP) {
+    out.writeUInt16LE(HIGH_COLOR_16BPP, d + CS_CORE_HIGH_COLOR_DEPTH_OFFSET);
+    changes.push(`highColorDepth 0x${high.toString(16)}->0x10`);
+  }
+  return {
+    buf: changes.length ? out : buf,
+    patched: changes.length > 0,
+    changes,
+    reason: changes.length ? 'bastion16' : 'already'
+  };
 }
 
 /**
@@ -615,7 +651,13 @@ function prepareMcsConnectInitial(buf, selectedProtocol, options = {}) {
     notes.push(...hard.changes);
   }
 
-  if (options.force32 === true) {
+  if (options.bastion16 === true) {
+    const b16 = patchClientCoreBastion16bpp(current);
+    if (b16.patched) {
+      current = b16.buf;
+      notes.push(`bastion16 ${b16.changes.join(', ')}`);
+    }
+  } else if (options.force32 === true) {
     const want32 = patchClientCoreWant32bpp(current);
     if (want32.patched) {
       current = want32.buf;
@@ -796,6 +838,8 @@ module.exports = {
   hardenClientCoreData,
   isMcsConnectInitial,
   patchClientCoreWant32bpp,
+  patchClientCoreBastion16bpp,
+  HIGH_COLOR_16BPP,
   describeClientEarlyCaps,
   formatClientEarlyCaps,
   RNS_UD_CS_SUPPORT_DYNVC_GFX_PROTOCOL,

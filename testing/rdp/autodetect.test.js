@@ -127,6 +127,26 @@ describe('processServerFrame message channel', () => {
     assert.match(result.note, /dvc-(accept|reject)/);
   });
 
+  it('eco Session Probe keepalive 4B en canal 1001 sin forward a WASM', () => {
+    const state = createChannelFilterState();
+    loadScNet(state);
+    state.clientInitiator = 1002;
+
+    const userData = Buffer.from([0x01, 0x02, 0x03, 0x04]);
+    const indication = buildMcsSendDataRequest(0, 1001, userData);
+    indication[7] = 0x68;
+
+    const result = processServerFrame(state, indication);
+    assert.equal(result.dropped, true);
+    assert.equal(result.forward, null);
+    assert.equal(result.replies.length, 1);
+    assert.match(result.note, /probe-keepalive-echo/);
+    const mcs = parseMcsSendData(result.replies[0]);
+    assert.equal(mcs.channelId, 1001);
+    assert.equal(mcs.initiator, 1002);
+    assert.deepEqual(Buffer.from(mcs.userData), userData);
+  });
+
   it('dropea from-18-22b (8B IO) que tumba ShareControl IronRDP', () => {
     const state = createChannelFilterState();
     loadScNet(state);

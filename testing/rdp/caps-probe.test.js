@@ -6,10 +6,14 @@ const {
   locateCapabilities,
   describeCapabilities,
   formatCapabilities,
-  patchConfirmActiveBitmapBpp
+  patchConfirmActiveBitmapBpp,
+  sanitizeDemandActiveEmptyRemoteFx,
+  stripDemandActiveEmptyRemoteFx,
+  sanitizeBastionConfirmActiveGraphics
 } = require('../../src/main/services/rdp-caps-helpers');
 
 const RFX_GUID = Buffer.from('122f777672bd6344afb3b73c9c6f7886', 'hex');
+const IMAGE_RFX_GUID = Buffer.from('d4cc44278a9d744e803c0ecbeea19c54', 'hex');
 const NSC_GUID = Buffer.from('b91b8dca0f004f15589fae2d1a87e2d6', 'hex');
 
 function capSet(type, body) {
@@ -152,5 +156,141 @@ describe('patchConfirmActiveBitmapBpp (solo NODETERM_RDP_FORCE32)', () => {
     const demand = buildCapsPdu('DEMAND', [bitmapSet(16)]);
     assert.equal(patchConfirmActiveBitmapBpp(demand, 32).patched, false);
     assert.equal(patchConfirmActiveBitmapBpp(Buffer.alloc(10), 32).patched, false);
+  });
+});
+
+describe('sanitizeDemandActiveEmptyRemoteFx', () => {
+  it('Demand Active con RemoteFX sin props: inserta ServerContainer(1) y crece +1', () => {
+    const pdu = buildCapsPdu('DEMAND', [
+      bitmapSet(32, 1920, 1080),
+      codecsSet([{ guid: RFX_GUID, id: 3 }])
+    ], { source: 'RDP' });
+    const beforeLen = pdu.length;
+    const r = sanitizeDemandActiveEmptyRemoteFx(pdu);
+    assert.equal(r.patched, true);
+    assert.equal(r.count, 1);
+    assert.equal(r.buf.length, beforeLen + 1);
+    assert.equal(pdu.length, beforeLen); // original intacto
+    const info = describeCapabilities(r.buf);
+    assert.equal(info.kind, 'DEMAND');
+    assert.deepEqual(info.codecs, [{ name: 'RemoteFX', id: 3 }]);
+    assert.equal(r.buf.readUInt16BE(2), r.buf.length);
+    // Segunda pasada: ya no vacio -> no vuelve a parchear
+    const again = sanitizeDemandActiveEmptyRemoteFx(r.buf);
+    assert.equal(again.patched, false);
+    assert.equal(again.count, 0);
+  });
+
+  it('RemoteFX e ImageRemoteFX vacios suman +2; props no vacias no se tocan', () => {
+    const pdu = buildCapsPdu('DEMAND', [
+      bitmapSet(32),
+      codecsSet([
+        { guid: RFX_GUID, id: 3 },
+        { guid: IMAGE_RFX_GUID, id: 4 },
+        { guid: NSC_GUID, id: 1, props: Buffer.from([1, 0, 0, 0]) }
+      ])
+    ], { source: 'RDP' });
+    const r = sanitizeDemandActiveEmptyRemoteFx(pdu);
+    assert.equal(r.patched, true);
+    assert.equal(r.count, 2);
+    assert.equal(r.buf.length, pdu.length + 2);
+    assert.deepEqual(describeCapabilities(r.buf).codecs, [
+      { name: 'RemoteFX', id: 3 },
+      { name: 'ImageRemoteFX', id: 4 },
+      { name: 'NSCodec', id: 1 }
+    ]);
+  });
+
+  it('con props no vacias, Confirm Active y tramas ajenas: no toca', () => {
+    const filled = buildCapsPdu('DEMAND', [
+      codecsSet([{ guid: RFX_GUID, id: 3, props: Buffer.from([0x00]) }])
+    ], { source: 'RDP' });
+    assert.equal(sanitizeDemandActiveEmptyRemoteFx(filled).patched, false);
+
+    const confirm = buildCapsPdu('CONFIRM', [
+      codecsSet([{ guid: RFX_GUID, id: 3 }])
+    ]);
+    assert.equal(sanitizeDemandActiveEmptyRemoteFx(confirm).patched, false);
+    assert.equal(sanitizeDemandActiveEmptyRemoteFx(Buffer.alloc(10)).patched, false);
+    assert.equal(sanitizeDemandActiveEmptyRemoteFx(null).patched, false);
+  });
+});
+
+describe('stripDemandActiveEmptyRemoteFx (bastion)', () => {
+  it('elimina RemoteFX vacio y acorta el PDU', () => {
+    const pdu = buildCapsPdu('DEMAND', [
+      bitmapSet(32),
+      codecsSet([
+        { guid: RFX_GUID, id: 3 },
+        { guid: NSC_GUID, id: 1, props: Buffer.from([1, 0, 0, 0]) }
+      ])
+    ], { source: 'RDP' });
+    const r = stripDemandActiveEmptyRemoteFx(pdu);
+    assert.equal(r.patched, true);
+    assert.equal(r.count, 1);
+    assert.ok(r.buf.length < pdu.length);
+    assert.deepEqual(describeCapabilities(r.buf).codecs, [{ name: 'NSCodec', id: 1 }]);
+    assert.equal(r.buf.readUInt16BE(2), r.buf.length);
+  });
+
+  it('no toca props no vacias ni Confirm Active', () => {
+    const filled = buildCapsPdu('DEMAND', [
+      codecsSet([{ guid: RFX_GUID, id: 3, props: Buffer.from([0x00]) }])
+    ], { source: 'RDP' });
+    assert.equal(stripDemandActiveEmptyRemoteFx(filled).patched, false);
+    const confirm = buildCapsPdu('CONFIRM', [codecsSet([{ guid: RFX_GUID, id: 3 }])]);
+    assert.equal(stripDemandActiveEmptyRemoteFx(confirm).patched, false);
+  });
+});
+
+describe('sanitizeBastionConfirmActiveGraphics', () => {
+  it('quita RFX/NSCodec, pone surface=0 y conserva bpp', () => {
+    const pdu = buildCapsPdu('CONFIRM', [
+      bitmapSet(32),
+      surfaceSet(0x52),
+      codecsSet([
+        { guid: RFX_GUID, id: 3, props: Buffer.from([1, 2, 3, 4]) },
+        { guid: NSC_GUID, id: 1, props: Buffer.from([1, 0, 0, 0]) }
+      ])
+    ]);
+    const r = sanitizeBastionConfirmActiveGraphics(pdu);
+    assert.equal(r.patched, true);
+    assert.equal(r.bpp, false);
+    assert.equal(r.surface, true);
+    assert.equal(r.codecsRemoved, 2);
+    const info = describeCapabilities(r.buf);
+    assert.equal(info.kind, 'CONFIRM');
+    assert.equal(info.bpp, 32);
+    assert.equal(info.surfaceCmds, 0);
+    assert.deepEqual(info.codecs, []);
+    assert.equal(r.buf.readUInt16BE(2), r.buf.length);
+    assert.equal(describeCapabilities(pdu).bpp, 32); // original intacto
+    assert.equal(describeCapabilities(pdu).surfaceCmds, 0x52);
+  });
+
+  it('limpia surface/RFX aunque no haya NSCodec; ignora Demand Active', () => {
+    const dirty = buildCapsPdu('CONFIRM', [
+      bitmapSet(24),
+      surfaceSet(0x52),
+      codecsSet([{ guid: RFX_GUID, id: 3, props: Buffer.from([0x00]) }])
+    ]);
+    const r = sanitizeBastionConfirmActiveGraphics(dirty);
+    assert.equal(r.patched, true);
+    assert.equal(r.surface, true);
+    assert.equal(r.codecsRemoved, 1);
+    assert.equal(describeCapabilities(r.buf).bpp, 24);
+    assert.equal(describeCapabilities(r.buf).surfaceCmds, 0);
+    assert.deepEqual(describeCapabilities(r.buf).codecs, []);
+
+    const clean = buildCapsPdu('CONFIRM', [
+      bitmapSet(24),
+      surfaceSet(0),
+      codecsSet([])
+    ]);
+    assert.equal(sanitizeBastionConfirmActiveGraphics(clean).patched, false);
+
+    const demand = buildCapsPdu('DEMAND', [bitmapSet(32), codecsSet([{ guid: RFX_GUID, id: 3 }])], { source: 'RDP' });
+    assert.equal(sanitizeBastionConfirmActiveGraphics(demand).patched, false);
+    assert.equal(sanitizeBastionConfirmActiveGraphics(Buffer.alloc(8)).patched, false);
   });
 });

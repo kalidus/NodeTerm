@@ -309,8 +309,8 @@ function markDropped(state, channelId) {
   state.droppedByChannel[channelId] = (state.droppedByChannel[channelId] || 0) + 1;
 }
 
-// El keepalive de Session Probe no es cliprdr y cae en este descarte. Una linea
-// por canal basta para ver la forma del PDU en el volcado de desconexion.
+// PDU no-cliprdr en VC estatico (no el keepalive 4B, que ya hace eco arriba).
+// Una linea por canal basta para ver la forma en el volcado de desconexion.
 function noteFirstDroppedNonCliprdr(state, channelId, userData) {
   if (!state || channelId == null || !Buffer.isBuffer(userData)) return;
   if (userData.length === 4) return;
@@ -1364,11 +1364,28 @@ function processServerFrame(state, buf) {
       if (siphoned) return siphoned;
     }
 
+    // Session Probe keepalive (típicamente 4B en MCS 1001): eco al servidor sin
+    // reenviar a WASM (IronRDP no soporta ese canal).
+    if (parsed && Buffer.isBuffer(parsed.userData) && parsed.userData.length === 4) {
+      markDropped(state, channelId);
+      const initiator = state.clientInitiator || 0;
+      const reply = buildMcsSendDataRequest(initiator, channelId, parsed.userData);
+      return {
+        forward: null,
+        replies: [reply],
+        dropped: true,
+        note: `probe-keepalive-echo ch=${channelId}`,
+        channelId,
+        isCliprdr: false,
+        cliprdrDesc: null
+      };
+    }
+
     noteFirstDroppedNonCliprdr(state, channelId, parsed?.userData);
     markDropped(state, channelId);
     const clipCheck = parsed?.userData ? describeCliprdrPdu(parsed.userData) : null;
     const note = parsed?.userData
-      ? (parsed.userData.length === 4 ? 'heartbeat' : `drop ch=${channelId} len=${parsed.userData.length}B${clipCheck ? ` [clip-like: ${clipCheck}]` : ` hex=${parsed.userData.toString('hex').slice(0, 40)}`}`)
+      ? `drop ch=${channelId} len=${parsed.userData.length}B${clipCheck ? ` [clip-like: ${clipCheck}]` : ` hex=${parsed.userData.toString('hex').slice(0, 40)}`}`
       : `drop ch=${channelId}`;
 
     return {

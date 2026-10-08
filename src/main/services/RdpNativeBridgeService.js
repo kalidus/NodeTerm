@@ -17,7 +17,14 @@ const path = require('path');
 const { parseX224ConnectionConfirm, protocolName, describeRdpPdu, describeDisconnectPdu, preferDisconnectDesc, splitTpktFrames, RdpStreamDeframer, RdpFrameSplitter } = require('./rdp-protocol-helpers');
 const { prepareMcsConnectInitial, findClientCoreData, findClientNetworkChannels, patchInfoPacket, patchInfoAutoLogon, isMcsConnectInitial, patchClientCoreWant32bpp, describeClientEarlyCaps, formatClientEarlyCaps } = require('./rdp-mcs-helpers');
 const { patchFontSequenceFlags } = require('./rdp-font-helpers');
-const { describeCapabilities, formatCapabilities, patchConfirmActiveBitmapBpp } = require('./rdp-caps-helpers');
+const {
+  describeCapabilities,
+  formatCapabilities,
+  patchConfirmActiveBitmapBpp,
+  sanitizeDemandActiveEmptyRemoteFx,
+  stripDemandActiveEmptyRemoteFx,
+  sanitizeBastionConfirmActiveGraphics
+} = require('./rdp-caps-helpers');
 const { fixWallixBitmapStrideCrop, FastPathBitmapReassembler } = require('./rdp-fastpath-helpers');
 const {
   BridgeLatencyMetrics,
@@ -222,7 +229,8 @@ function allowUserChannelCliprdr() {
 
 function isNoisyDrop(note) {
   return typeof note === 'string' &&
-    (note.includes('heartbeat') || note.includes('rdpdr-absorb') || note.includes('rdpdr-user-loggedon')
+    (note.includes('heartbeat') || note.includes('probe-keepalive-echo')
+      || note.includes('rdpdr-absorb') || note.includes('rdpdr-user-loggedon')
       || note.includes('rail-absorb') || note.includes('rail-handshake')
       || note.includes('cliprdr-swallow-2nd-gen')
       || note.includes('cliprdr-defer-weak-caps'));
@@ -367,12 +375,15 @@ class RdpNativeBridgeService extends EventEmitter {
       // llega tarde (NLA) y wasmChannelNames aun no lista rdpsnd.
       redirectAudio: config.redirectAudio === true,
       // EGFX: el bridge rechaza AUDIO_PLAYBACK_DVC (comparte DynVC con Graphics) y
-      // deja solo rdpsnd estatico para no tumbar la sesion.
+      // deja solo rdpsnd estatico. En bastion Wallix siempre bitmap.
       ironRdpGraphics: config.ironRdpGraphics === 'egfx' ? 'egfx' : 'bitmap',
       // Debug del bridge: env, rdp-flags.json o flag desde el renderer (localStorage).
       rdpDebug: config.rdpDebug === true || config.enableRdpDebug === true,
       createdAt: Date.now()
     };
+    if (isBastionSession(sessionData)) {
+      sessionData.ironRdpGraphics = 'bitmap';
+    }
 
     this.sessionTokens.set(tokenId, sessionData);
 
@@ -523,7 +534,9 @@ class RdpNativeBridgeService extends EventEmitter {
     channelFilter.wallixService = wallixServiceFromSession(session) || (isBastionSession(session) ? 'n/a' : null);
     channelFilter.isBastion = isBastionSession(session);
     channelFilter.allowAudioPlayback = session.redirectAudio === true;
-    channelFilter.egfxGraphics = session.ironRdpGraphics === 'egfx';
+    channelFilter.egfxGraphics = channelFilter.isBastion
+      ? false
+      : session.ironRdpGraphics === 'egfx';
     channelFilter.recentCliprdrEvents = recentCliprdrEvents;
     channelFilter.recordCliprdr = recordCliprdrEvent;
     const streamDeframer = new RdpStreamDeframer();
@@ -543,10 +556,29 @@ class RdpNativeBridgeService extends EventEmitter {
 
     let isCleanedUp = false;
     let bastionSliceTimer = null;
+    let rewriteFailFrames = 0;
+    let rewriteFailRects = 0;
+    let rewriteFailSampleBpp = null;
+    let rewriteFailLastLogAt = 0;
+
+    const flushRewriteFailLog = (force = false) => {
+      if (!rewriteFailFrames && !rewriteFailRects) return;
+      const now = Date.now();
+      if (!force && now - rewriteFailLastLogAt < 2000) return;
+      rewriteFailLastLogAt = now;
+      const sample = rewriteFailSampleBpp != null ? ` (sample bpp=${rewriteFailSampleBpp})` : '';
+      console.warn(
+        `[Bridge] FastPath BITMAP: ${rewriteFailFrames} frames, ${rewriteFailRects} rects sin reescribir${sample}; se reenvian originales`
+      );
+      rewriteFailFrames = 0;
+      rewriteFailRects = 0;
+      rewriteFailSampleBpp = null;
+    };
 
     const cleanup = (reason = 'Cerrado por el usuario', closeCode = 1000) => {
       if (isCleanedUp) return;
       isCleanedUp = true;
+      flushRewriteFailLog(true);
       if (bastionSliceTimer) {
         clearImmediate(bastionSliceTimer);
         bastionSliceTimer = null;
@@ -797,9 +829,12 @@ class RdpNativeBridgeService extends EventEmitter {
                   ? (stridePatch.buffers || [stridePatch.buf])
                   : [ready];
                 if (stridePatch.failed) {
-                  console.warn(
-                    `[Bridge] FastPath BITMAP: ${stridePatch.failed} rectangulo(s) no se pudieron reescribir; se reenvian originales`
-                  );
+                  rewriteFailFrames += 1;
+                  rewriteFailRects += stridePatch.failed;
+                  if (rewriteFailSampleBpp == null && stridePatch.sampleBpp != null) {
+                    rewriteFailSampleBpp = stridePatch.sampleBpp;
+                  }
+                  flushRewriteFailLog(false);
                 }
                 if (stridePatch.patchedCount && isDebug) {
                   console.log(
@@ -928,10 +963,30 @@ class RdpNativeBridgeService extends EventEmitter {
                   lastRdpFrameAt = now;
                   if (latencyMetrics) latencyMetrics.noteGap(gapFromLastRdp);
 
-                  const n = frame.length;
                   framesFromRdp += 1;
                   const isFastPath = frame.length >= 2 && (frame[0] & 0x03) === 0 && frame[0] !== 0x30;
-                  const pduDesc = (isFastPath && !isDebug) ? 'FastPath' : describeRdpPdu(frame);
+                  let pduDesc = (isFastPath && !isDebug) ? 'FastPath' : describeRdpPdu(frame);
+
+                  // Wallix: RemoteFX con property length 0 tumba IronRDP en Demand Active.
+                  // Bastion: strip (no legitimar RFX). Directo: fill ServerContainer(1).
+                  if (!isFastPath && pduDesc.includes('DEMAND_ACTIVE')) {
+                    const rfxSan = normalizeBitmaps
+                      ? stripDemandActiveEmptyRemoteFx(frame)
+                      : sanitizeDemandActiveEmptyRemoteFx(frame);
+                    if (rfxSan.patched) {
+                      frame = rfxSan.buf;
+                      pduDesc = describeRdpPdu(frame);
+                      if (isDebug) {
+                        console.log(
+                          normalizeBitmaps
+                            ? `[Bridge] Demand Active bastion: ${rfxSan.count} RemoteFX vacio(s) eliminados`
+                            : `[Bridge] Demand Active: ${rfxSan.count} RemoteFX prop vacia(s) -> ServerContainer(1)`
+                        );
+                      }
+                    }
+                  }
+
+                  const n = frame.length;
 
                   // Sondeo: que bpp/codecs ofrece el servidor (solo debug).
                   if (isDebug && !isFastPath && pduDesc.includes('DEMAND_ACTIVE')) {
@@ -1389,6 +1444,24 @@ class RdpNativeBridgeService extends EventEmitter {
           const wasmInjections = [];
           let clientFramesChanged = false;
           for (let clientFrame of clientFrames) {
+            // Bastion: Confirm Active sin RFX/Surface (bpp intacto → RLE 16/24).
+            if (normalizeBitmaps && clientFrame[0] === 0x03 && clientFrame.length > 100) {
+              try {
+                const bastionCaps = sanitizeBastionConfirmActiveGraphics(clientFrame);
+                if (bastionCaps.patched) {
+                  clientFrame = bastionCaps.buf;
+                  clientFramesChanged = true;
+                  if (isDebug) {
+                    console.log(
+                      `[Bridge] Bastion Confirm Active: bppTouched=${bastionCaps.bpp} surface0=${bastionCaps.surface}` +
+                        ` codecsRemoved=${bastionCaps.codecsRemoved}`
+                    );
+                  }
+                }
+              } catch (capErr) {
+                if (isDebug) console.warn('[Bridge] Error sanitizando Confirm Active bastion:', capErr.message);
+              }
+            }
             // Confirm Active del WASM: sondeo de capacidades (debug) y, con
             // NODETERM_RDP_FORCE32, pedir 32bpp en el Bitmap Capability.
             if ((isDebug || force32) && clientFrame[0] === 0x03 && clientFrame.length > 100) {

@@ -1293,13 +1293,17 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         }
 
         // EGFX: preferencia de conexión (ironRdpGraphics) + override debug localStorage.
-        let egfxEnabled = rdpConfig.ironRdpGraphics === 'egfx';
-        try {
-          if (!egfxEnabled && typeof window !== 'undefined') {
-            egfxEnabled = window.__NODETERM_RDP_EGFX__ === true
-              || window.localStorage?.getItem('NODETERM_RDP_EGFX') === '1';
-          }
-        } catch (_) { /* noop */ }
+        // Bastión Wallix: nunca EGFX (el rewriter solo estabiliza BITMAP RLE16).
+        let egfxEnabled = false;
+        if (!isBastionSession) {
+          egfxEnabled = rdpConfig.ironRdpGraphics === 'egfx';
+          try {
+            if (!egfxEnabled && typeof window !== 'undefined') {
+              egfxEnabled = window.__NODETERM_RDP_EGFX__ === true
+                || window.localStorage?.getItem('NODETERM_RDP_EGFX') === '1';
+            }
+          } catch (_) { /* noop */ }
+        }
         if (egfxEnabled && typeof egfx === 'function') {
           builder.extension(egfx(true));
           egfxDiagRef.current = { active: true, codec: 'progressive', wroteSession: false };

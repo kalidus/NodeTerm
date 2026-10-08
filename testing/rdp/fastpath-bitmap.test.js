@@ -290,6 +290,37 @@ describe('fixWallixBitmapStrideCrop', () => {
     assert.equal(result.patchedCount, 0);
   });
 
+  it('24bpp uncompressed con padding Wallix se recorta y queda bpp=24', () => {
+    const { fixOneBitmapRectStride } = require('../../src/main/services/rdp-fastpath-helpers');
+    const srcW = 8;
+    const srcH = 4;
+    const iw = 5;
+    const ih = 4;
+    const rectBuf = Buffer.alloc(18 + srcW * srcH * 3);
+    rectBuf.writeUInt16LE(0, 0);
+    rectBuf.writeUInt16LE(0, 2);
+    rectBuf.writeUInt16LE(iw - 1, 4);
+    rectBuf.writeUInt16LE(ih - 1, 6);
+    rectBuf.writeUInt16LE(srcW, 8);
+    rectBuf.writeUInt16LE(srcH, 10);
+    rectBuf.writeUInt16LE(24, 12);
+    rectBuf.writeUInt16LE(0, 14);
+    rectBuf.writeUInt16LE(srcW * srcH * 3, 16);
+    for (let i = 0; i < srcW * srcH; i++) {
+      rectBuf[18 + i * 3] = (i * 3) & 0xff;
+      rectBuf[18 + i * 3 + 1] = (i * 5) & 0xff;
+      rectBuf[18 + i * 3 + 2] = (i * 7) & 0xff;
+    }
+    const fixed = fixOneBitmapRectStride(rectBuf);
+    assert.ok(fixed);
+    assert.ok(fixed.buffers.length >= 1);
+    const out = fixed.buffers[0];
+    assert.equal(out.readUInt16LE(8), iw);
+    assert.equal(out.readUInt16LE(10), ih);
+    assert.equal(out.readUInt16LE(12), 24);
+    assert.ok(out.readUInt16LE(14) & 0x0001);
+  });
+
   it('una tesela 64x62 con stride correcto se reescribe a RLE absoluto', () => {
     const { fixOneBitmapRectStride } = require('../../src/main/services/rdp-fastpath-helpers');
     const iw = 64;

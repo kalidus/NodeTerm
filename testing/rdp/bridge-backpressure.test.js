@@ -358,6 +358,29 @@ describe('bitmapPayloadNeedsRewrite / wrapFastPathUpdate', () => {
     assert.equal(fixed.patchedCount, 0);
   });
 
+  it('24bpp con stride Wallix se reescribe (crop RLE24)', () => {
+    // width=8 dest iw=5 => crop; bpp=24 como Wallix APP post-banners
+    const pixels = Buffer.alloc(8 * 4 * 3, 0x55);
+    const rect = Buffer.alloc(18 + pixels.length);
+    rect.writeUInt16LE(0, 0);
+    rect.writeUInt16LE(0, 2);
+    rect.writeUInt16LE(4, 4); // destRight -> iw=5
+    rect.writeUInt16LE(3, 6);
+    rect.writeUInt16LE(8, 8);
+    rect.writeUInt16LE(4, 10);
+    rect.writeUInt16LE(24, 12);
+    rect.writeUInt16LE(0, 14);
+    rect.writeUInt16LE(pixels.length, 16);
+    pixels.copy(rect, 18);
+    const pdu = buildFastPathBitmapPdu(0x00, 0x01, [rect]);
+    const info = parseFastPathUpdate(pdu);
+    assert.equal(bitmapPayloadNeedsRewrite(info.updateData), true);
+    const fixed = fixWallixBitmapStrideCrop(pdu);
+    assert.ok(fixed.patchedCount > 0);
+    assert.equal(fixed.failed || 0, 0);
+    assert.notEqual(fixed.buf, pdu);
+  });
+
   it('wrapFastPathUpdate reconstruye un PDU SINGLE desde fragmentos', () => {
     const pdu = buildSolidBitmapPdu(0, 0, 8, 4);
     const parsed = parseFastPathUpdate(pdu);

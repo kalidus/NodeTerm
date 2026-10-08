@@ -8,6 +8,7 @@ const {
   findClientCoreData,
   isMcsConnectInitial,
   patchClientCoreWant32bpp,
+  patchClientCoreBastion16bpp,
   prepareMcsConnectInitial
 } = require('../../src/main/services/rdp-mcs-helpers');
 const {
@@ -79,6 +80,28 @@ describe('FORCE32: Client Core Data', { skip: !hasCapture }, () => {
     const on = prepareMcsConnectInitial(ci, 1, { force32: true });
     assert.equal(coreFields(on.buf).high, 0x18);
     assert.ok(on.notes.some((n) => n.includes('FORCE32')));
+  });
+
+  it('bastion16: baja de 24/32 a highColor=16 y limpia WANT_32BPP+EGFX', () => {
+    const forced = patchClientCoreWant32bpp(loadConnectInitial()).buf;
+    // Simular EGFX bit en early caps
+    const found = findClientCoreData(forced);
+    const d = found.offset + 4;
+    const withEgfx = Buffer.from(forced);
+    const early = withEgfx.readUInt16LE(d + 140);
+    withEgfx.writeUInt16LE(early | 0x0100, d + 140);
+    const r = patchClientCoreBastion16bpp(withEgfx);
+    assert.equal(r.patched, true);
+    const f = coreFields(r.buf);
+    assert.equal(f.high, 0x10);
+    assert.equal(f.early & 0x2, 0);
+    assert.equal(f.early & 0x100, 0);
+    const prep = prepareMcsConnectInitial(withEgfx, 1, { bastion16: true });
+    assert.equal(coreFields(prep.buf).high, 0x10);
+    assert.ok(prep.notes.some((n) => n.includes('bastion16')));
+    // bastion16 gana sobre force32
+    const both = prepareMcsConnectInitial(withEgfx, 1, { bastion16: true, force32: true });
+    assert.equal(coreFields(both.buf).high, 0x10);
   });
 
   it('tramas ajenas o truncadas no se tocan ni lanzan', () => {

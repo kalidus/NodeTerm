@@ -4,11 +4,19 @@
  *
  * Sirve para saber, con datos, si el cliente WASM anuncia RemoteFX / Surface
  * Commands / 32bpp / EGFX (earlyCapabilityFlags) y que ofrece el servidor.
- * No modifica nada salvo `patchConfirmActiveBitmapBpp`, que solo se usa detras
- * de NODETERM_RDP_FORCE32.
+ * Modifica el wire con `patchConfirmActiveBitmapBpp` (FORCE32),
+ * `sanitizeDemandActiveEmptyRemoteFx` (fill RFX vacio, directo),
+ * `stripDemandActiveEmptyRemoteFx` (quita RFX vacio, bastion) y
+ * `sanitizeBastionConfirmActiveGraphics` (sin RFX/Surface; bpp intacto).
  */
 
 'use strict';
+
+/**
+ * Bastion Confirm: IronRDP sin EGFX no decodifica RFX/NSCodec ni SURFACE_CMDS.
+ * Se fuerza RLE (16/24/32) dejando el bpp que anuncie el cliente.
+ */
+const DROP_CODEC_NAMES = new Set(['RemoteFX', 'ImageRemoteFX', 'NSCodec']);
 
 const SHARE_PDU_DEMAND_ACTIVE = 1;
 const SHARE_PDU_CONFIRM_ACTIVE = 3;
@@ -89,7 +97,73 @@ function locateCapabilities(buf) {
   const numCaps = buf.readUInt16LE(numCapsOff);
   const setsOff = numCapsOff + 4; // numberCapabilities(2) + pad2octets(2)
   const setsEnd = Math.min(buf.length, udOff + dataLen);
-  return { kind, udOff, setsOff, numCaps, setsEnd, lenCombinedOff };
+  return { kind, udOff, setsOff, numCaps, setsEnd, lenCombinedOff, dataLen, perOff: 13 };
+}
+
+/** Reescribe TPKT + PER alrededor de un user-data ya ajustado. */
+function wrapCapsUserData(buf, loc, newUserData) {
+  const newDataLen = newUserData.length;
+  const useTwoBytePer = newDataLen >= 0x80;
+  const headerLen = useTwoBytePer ? 15 : 14;
+  const out = Buffer.alloc(headerLen + newDataLen);
+  buf.copy(out, 0, 0, loc.perOff);
+  let w = loc.perOff;
+  if (useTwoBytePer) {
+    out[w++] = 0x80 | ((newDataLen >> 8) & 0x7f);
+    out[w++] = newDataLen & 0xff;
+  } else {
+    out[w++] = newDataLen;
+  }
+  newUserData.copy(out, w);
+  out.writeUInt16BE(out.length, 2);
+  return out;
+}
+
+/**
+ * Sustituye un capability set en el user-data y recalcula lengthCombined + Share totalLength.
+ * @returns {Buffer|null} frame TPKT completo
+ */
+function replaceCapabilitySet(buf, loc, setOff, setLen, newSet) {
+  const udEnd = loc.udOff + loc.dataLen;
+  if (setOff < loc.udOff || setOff + setLen > udEnd) return null;
+  const before = buf.subarray(loc.udOff, setOff);
+  const after = buf.subarray(setOff + setLen, udEnd);
+  const delta = newSet.length - setLen;
+  const newUd = Buffer.concat([before, newSet, after]);
+  // Share Control totalLength (primer u16 del user-data)
+  newUd.writeUInt16LE(newUd.readUInt16LE(0) + delta, 0);
+  const lenCombRel = loc.lenCombinedOff - loc.udOff;
+  newUd.writeUInt16LE(newUd.readUInt16LE(lenCombRel) + delta, lenCombRel);
+  return wrapCapsUserData(buf, loc, newUd);
+}
+
+/** Reconstruye el set BitmapCodecs conservando solo codecs cuyo filtro diga true. */
+function filterBitmapCodecsSet(buf, codecsSet, keepFn) {
+  const setEnd = codecsSet.off + codecsSet.len;
+  const codecCount = buf[codecsSet.off + 4];
+  const kept = [];
+  let removed = 0;
+  let p = codecsSet.off + 5;
+  for (let i = 0; i < codecCount; i++) {
+    if (p + 19 > setEnd) break;
+    const propLen = buf.readUInt16LE(p + 17);
+    const entryEnd = p + 19 + propLen;
+    if (entryEnd > setEnd) break;
+    const name = codecNameFromGuid(buf.subarray(p, p + 16));
+    if (keepFn(name, propLen, buf.subarray(p, entryEnd))) {
+      kept.push(Buffer.from(buf.subarray(p, entryEnd)));
+    } else {
+      removed += 1;
+    }
+    p = entryEnd;
+  }
+  if (!removed) return null;
+  const body = Buffer.concat([Buffer.from([kept.length]), ...kept]);
+  const newSet = Buffer.alloc(4 + body.length);
+  newSet.writeUInt16LE(CAPSET_BITMAP_CODECS, 0);
+  newSet.writeUInt16LE(newSet.length, 2);
+  body.copy(newSet, 4);
+  return { newSet, removed, kept: kept.length };
 }
 
 /** Lista {type, off, len} de cada capability set, con comprobacion de limites. */
@@ -192,6 +266,158 @@ function patchConfirmActiveBitmapBpp(buf, bpp = 32) {
   return { buf: out, patched: true, before, after: bpp };
 }
 
+/**
+ * IronRDP rechaza RemoteFX/ImageRemoteFX con codecPropertiesLength=0
+ * (`invalid remotefx property … must not be empty`). Wallix a menudo lo envia
+ * asi en Demand Active. Inserta 1 byte 0x00 (ServerContainer) y actualiza
+ * longitudes TPKT / PER / Share / capability set.
+ *
+ * @returns {{ buf: Buffer, patched: boolean, count: number }}
+ */
+function sanitizeDemandActiveEmptyRemoteFx(buf) {
+  const loc = locateCapabilities(buf);
+  if (!loc || loc.kind !== 'DEMAND') return { buf, patched: false, count: 0 };
+
+  const sets = listCapabilitySets(buf, loc);
+  const codecsSet = sets.find((s) => s.type === CAPSET_BITMAP_CODECS);
+  if (!codecsSet || codecsSet.len < 5) return { buf, patched: false, count: 0 };
+
+  const setEnd = codecsSet.off + codecsSet.len;
+  const codecCount = buf[codecsSet.off + 4];
+  const inserts = [];
+  let p = codecsSet.off + 5;
+  for (let i = 0; i < codecCount; i++) {
+    if (p + 19 > setEnd) break;
+    const name = codecNameFromGuid(buf.subarray(p, p + 16));
+    const propLen = buf.readUInt16LE(p + 17);
+    if ((name === 'RemoteFX' || name === 'ImageRemoteFX') && propLen === 0) {
+      inserts.push({ propLenOff: p + 17, insertAt: p + 19 });
+    }
+    p += 19 + propLen;
+  }
+  if (!inserts.length) return { buf, patched: false, count: 0 };
+
+  const delta = inserts.length;
+  const perOff = 13;
+  const perOneByte = (buf[perOff] & 0x80) === 0;
+  const dataLen = perOneByte
+    ? buf[perOff]
+    : ((buf[perOff] & 0x7f) << 8) | buf[perOff + 1];
+  const newDataLen = dataLen + delta;
+  const needExpandPer = perOneByte && newDataLen >= 0x80;
+  const perGrowth = needExpandPer ? 1 : 0;
+  const out = Buffer.alloc(buf.length + delta + perGrowth);
+
+  buf.copy(out, 0, 0, perOff);
+  let writePos = perOff;
+  if (!perOneByte || needExpandPer) {
+    out[writePos++] = 0x80 | ((newDataLen >> 8) & 0x7f);
+    out[writePos++] = newDataLen & 0xff;
+  } else {
+    out[writePos++] = newDataLen;
+  }
+
+  const srcUdOff = loc.udOff;
+  const dstUdOff = writePos;
+  let srcPos = srcUdOff;
+  for (const ins of inserts) {
+    buf.copy(out, writePos, srcPos, ins.insertAt);
+    writePos += ins.insertAt - srcPos;
+    out.writeUInt16LE(1, writePos - 2);
+    out[writePos++] = 0x00;
+    srcPos = ins.insertAt;
+  }
+  buf.copy(out, writePos, srcPos, buf.length);
+
+  const lenCombinedOff = dstUdOff + (loc.lenCombinedOff - loc.udOff);
+  out.writeUInt16LE(out.readUInt16LE(lenCombinedOff) + delta, lenCombinedOff);
+  out.writeUInt16LE(out.readUInt16LE(dstUdOff) + delta, dstUdOff);
+
+  const codecsSetOffDst = dstUdOff + (codecsSet.off - loc.udOff);
+  out.writeUInt16LE(out.readUInt16LE(codecsSetOffDst + 2) + delta, codecsSetOffDst + 2);
+  out.writeUInt16BE(out.length, 2);
+
+  return { buf: out, patched: true, count: delta };
+}
+
+/**
+ * Bastion: elimina codecs RemoteFX/ImageRemoteFX con property length 0 del Demand Active
+ * (no los legitima con ServerContainer) para no empujar surface/RFX.
+ *
+ * @returns {{ buf: Buffer, patched: boolean, count: number }}
+ */
+function stripDemandActiveEmptyRemoteFx(buf) {
+  const loc = locateCapabilities(buf);
+  if (!loc || loc.kind !== 'DEMAND') return { buf, patched: false, count: 0 };
+  const sets = listCapabilitySets(buf, loc);
+  const codecsSet = sets.find((s) => s.type === CAPSET_BITMAP_CODECS);
+  if (!codecsSet || codecsSet.len < 5) return { buf, patched: false, count: 0 };
+
+  const filtered = filterBitmapCodecsSet(buf, codecsSet, (name, propLen) => {
+    if ((name === 'RemoteFX' || name === 'ImageRemoteFX') && propLen === 0) return false;
+    return true;
+  });
+  if (!filtered) return { buf, patched: false, count: 0 };
+
+  const out = replaceCapabilitySet(buf, loc, codecsSet.off, codecsSet.len, filtered.newSet);
+  if (!out) return { buf, patched: false, count: 0 };
+  return { buf: out, patched: true, count: filtered.removed };
+}
+
+/**
+ * Bastion Confirm Active: quita RemoteFX/ImageRemoteFX/NSCodec y pone SurfaceCommands=0.
+ * No toca bpp (Wallix puede seguir en 24bpp RLE).
+ *
+ * @returns {{ buf: Buffer, patched: boolean, bpp: boolean, surface: boolean, codecsRemoved: number }}
+ */
+function sanitizeBastionConfirmActiveGraphics(buf) {
+  const loc = locateCapabilities(buf);
+  if (!loc || loc.kind !== 'CONFIRM') {
+    return { buf, patched: false, bpp: false, surface: false, codecsRemoved: 0 };
+  }
+
+  let working = buf;
+  let codecsRemoved = 0;
+  let surface = false;
+
+  const sets = listCapabilitySets(working, loc);
+  const codecsSet = sets.find((s) => s.type === CAPSET_BITMAP_CODECS);
+  if (codecsSet && codecsSet.len >= 5) {
+    const filtered = filterBitmapCodecsSet(working, codecsSet, (name) => !DROP_CODEC_NAMES.has(name));
+    if (filtered) {
+      const replaced = replaceCapabilitySet(working, loc, codecsSet.off, codecsSet.len, filtered.newSet);
+      if (replaced) {
+        working = replaced;
+        codecsRemoved = filtered.removed;
+      }
+    }
+  }
+
+  const loc2 = locateCapabilities(working);
+  if (loc2) {
+    const sets2 = listCapabilitySets(working, loc2);
+    const surfSet = sets2.find((s) => s.type === CAPSET_SURFACE_COMMANDS);
+    if (surfSet && surfSet.len >= 8) {
+      const flags = working.readUInt32LE(surfSet.off + 4);
+      if (flags !== 0) {
+        const out = Buffer.from(working);
+        out.writeUInt32LE(0, surfSet.off + 4);
+        working = out;
+        surface = true;
+      }
+    }
+  }
+
+  const patched = codecsRemoved > 0 || surface;
+  return {
+    buf: patched ? working : buf,
+    patched,
+    bpp: false,
+    surface,
+    codecsRemoved
+  };
+}
+
 module.exports = {
   CAPSET_BITMAP,
   CAPSET_SURFACE_COMMANDS,
@@ -201,5 +427,8 @@ module.exports = {
   listCapabilitySets,
   describeCapabilities,
   formatCapabilities,
-  patchConfirmActiveBitmapBpp
+  patchConfirmActiveBitmapBpp,
+  sanitizeDemandActiveEmptyRemoteFx,
+  stripDemandActiveEmptyRemoteFx,
+  sanitizeBastionConfirmActiveGraphics
 };
