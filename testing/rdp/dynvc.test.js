@@ -18,7 +18,7 @@ const {
   processServerFrame,
   remapClientDrdynvcFrame
 } = require('../../src/main/services/rdp-channel-filter');
-const { isBastionSession } = require('../../src/main/services/RdpNativeBridgeService');
+const { isBastionSession, resolveIronRdpGraphics } = require('../../src/main/services/RdpNativeBridgeService');
 
 function buildMcsIndication(channelId, userData) {
   const lenField = userData.length < 0x80
@@ -407,6 +407,7 @@ describe('drdynvc remap DisplayControl', () => {
   it('rechaza DisplayControl si la sesion es de bastion (isBastion = true)', () => {
     const state = injectedDrdynvcState();
     state.isBastion = true;
+    state.egfxGraphics = true;
     const frame = buildMcsIndication(1007, buildDisplayControlCreatePdu());
     const res = processServerFrame(state, frame);
     assert.equal(res.dropped, true);
@@ -460,6 +461,26 @@ describe('drdynvc remap DisplayControl', () => {
     assert.equal(isBastionSession({ host: '10.0.0.1', username: 'Administrator', selectedProtocol: 0x01 }), true);
     assert.equal(isBastionSession({ host: '192.168.10.52', username: 'Administrator', selectedProtocol: 0x08 }), false);
     assert.equal(isBastionSession({ host: '192.168.10.52', bastionHost: '10.0.0.1' }), true);
+  });
+
+  it('no degrada EGFX a bitmap solo por bastion o cadena :RDP:/:APP:', () => {
+    const rdpChain = {
+      ironRdpGraphics: 'egfx',
+      username: 'rt01119@default@target:RDP:rt01119',
+      useBastionWallix: true
+    };
+    const appChain = {
+      ironRdpGraphics: 'egfx',
+      username: 'rt01119@default@target:APP:rt01119',
+      bastionHost: '10.0.0.1'
+    };
+    assert.equal(isBastionSession(rdpChain), true);
+    assert.equal(isBastionSession(appChain), true);
+    assert.equal(resolveIronRdpGraphics(rdpChain), 'egfx');
+    assert.equal(resolveIronRdpGraphics(appChain), 'egfx');
+    assert.equal(resolveIronRdpGraphics({ ironRdpGraphics: 'bitmap', useBastionWallix: true }), 'bitmap');
+    assert.equal(resolveIronRdpGraphics({ useBastionWallix: true }), 'bitmap');
+    assert.equal(resolveIronRdpGraphics({ ironRdpGraphics: 'egfx', username: 'Administrator' }), 'egfx');
   });
 
   it('activa isBastion dinámicamente si cliprdr llega por canal 1001 y rechaza DVC en 0ms', () => {

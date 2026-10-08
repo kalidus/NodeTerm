@@ -31,6 +31,26 @@ const WS_PAUSE_TLS_MARK = 2 * 1024 * 1024; // 2 MB
 /** Máx. ms de rewrite RLE por evento TLS en bastión (el resto se shed). */
 const BASTION_REWRITE_BUDGET_MS = 3;
 
+/**
+ * EGFX por DynVC no depende de los bitmaps RLE del banner. Si se vaciara la cola
+ * antes de cada TPKT Graphics, el salto tras el banner reescribiria todo el RLE
+ * en el camino critico.
+ */
+function gfxBypassesBitmapQueue(egfxGraphics, dvcForward) {
+  return egfxGraphics === true && dvcForward === true;
+}
+
+/**
+ * Con EGFX, un TPKT (Deactivate, Demand Active, DynVC) no reescribe el banner
+ * en el camino crítico. Fast-Path ORDERS y SURFACE sí vacían antes.
+ */
+function egfxSkipsSyncBitmapFlush(egfxGraphics, frame) {
+  return egfxGraphics === true
+    && Buffer.isBuffer(frame)
+    && frame.length > 0
+    && frame[0] === 0x03;
+}
+
 function isFastPathBitmapFrame(buf) {
   const parsed = parseFastPathUpdate(buf);
   return !!(
@@ -328,6 +348,18 @@ class WsBackpressureController {
   }
 
   /**
+   * Tira los bitmaps pendientes sin reescribirlos. El banner deja de valer en
+   * DEACTIVATE_ALL: reescribirlo no pinta el destino y ocupa la rodaja de 3 ms.
+   * @returns {number} frames descartados
+   */
+  dropPending() {
+    const n = this.pendingBitmaps.length;
+    this.pendingBitmaps = [];
+    this._pendingBytes = 0;
+    return n;
+  }
+
+  /**
    * ¿Hay que vaciar los pendientes antes de reenviar este frame? Cualquier cosa que
    * no sea un bitmap descartable ni un puntero podria depender del contenido previo.
    */
@@ -492,6 +524,8 @@ module.exports = {
   WS_LOW_WATER_MARK,
   WS_PAUSE_TLS_MARK,
   BASTION_REWRITE_BUDGET_MS,
+  gfxBypassesBitmapQueue,
+  egfxSkipsSyncBitmapFlush,
   isFastPathBitmapFrame,
   classifyFastPathUpdate,
   BridgeLatencyMetrics,

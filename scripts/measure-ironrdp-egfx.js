@@ -105,7 +105,7 @@ console.log('  Audio: rdpsndAudio + setRdpsndWaveCallback presentes');
 console.log('  Criterio live: NODETERM_RDP_EGFX=1 + NODETERM_RDP_DEBUG=1');
 console.log('    -> DynVC->WASM hex + escritorio; sin undecodable GFX spam');
 console.log('  Audio live: redirectAudio=true; AUDIO_PLAYBACK_DVC solo con rdpsnd+drdynvc');
-console.log('  Bastion Wallix puede seguir en BITMAP aunque el cliente pida EGFX.');
+console.log('  Bastion: EGFX si ironRdpGraphics=egfx (banner BITMAP; Graphics tras el hop). DisplayControl sigue off.');
 
 // Sumario opcional del diagnostico H.264 en movimiento.
 // Uso: node scripts/measure-ironrdp-egfx.js --h264-stats [ruta-al-jsonl]

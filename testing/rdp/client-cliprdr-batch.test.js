@@ -409,6 +409,68 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     assert.equal(kept.injected.length, 1, 'acuse sintetico para que IronRDP pase a Ready');
   });
 
+  test('EGFX saludo por 1001 no escribe FORMAT_LIST en 1001', () => {
+    const state = {
+      wallixService: 'RDP',
+      egfxGraphics: true,
+      ioChannelId: IO_CH,
+      cliprdrChannelId: CLIPRDR_CH,
+      serverCliprdrChannelId: 1001,
+      cliprdrOnUnsafeChannel: 1001,
+      cliprdrServerReady: true,
+      allowed: new Set([1003, 1004, 1005]),
+      channelIdToName: new Map([[1004, 'cliprdr'], [1005, 'rdpsnd']])
+    };
+
+    const kept = filterBatch(service, buildInitiateCopyBatch(), state);
+
+    assert.equal(kept.length, 0, 'EGFX no escribe CHANNEL_PDU en MCS 1001');
+    for (const frame of kept) {
+      assert.notEqual(parseMcsSendData(frame).channelId, 1001);
+    }
+    assert.ok(state.pendingClientCliprdr.length >= 1, 'handshake encolado');
+    assert.equal(kept.injected.length, 1, 'acuse sintetico hacia WASM');
+    assert.equal(clipMsgType(kept.injected[0]), CB_FORMAT_LIST_RESPONSE);
+  });
+
+  test('EGFX saludo por IO 1003 no escribe CHANNEL_PDU en 1003 ni en 1006', () => {
+    const state = {
+      wallixService: 'RDP',
+      egfxGraphics: true,
+      isBastion: true,
+      ioChannelId: IO_CH,
+      cliprdrChannelId: BASTION_CLIP_CH,
+      serverCliprdrChannelId: IO_CH,
+      cliprdrOnUnsafeChannel: IO_CH,
+      cliprdrServerReady: true,
+      allowed: new Set([1003, 1004, 1005, 1006]),
+      channelIdToName: new Map([
+        [1004, 'rdpdr'],
+        [1005, 'rdpsnd'],
+        [1006, 'cliprdr']
+      ])
+    };
+
+    const frames = Buffer.concat([
+      buildClipFrame(BASTION_CLIP_CH, CB_CLIP_CAPS, Buffer.alloc(16)),
+      buildClipFrame(BASTION_CLIP_CH, CB_TEMP_DIRECTORY, Buffer.alloc(520)),
+      buildClipFrame(BASTION_CLIP_CH, CB_FORMAT_LIST, Buffer.alloc(24))
+    ]);
+    const kept = filterBatch(service, frames, state);
+
+    assert.equal(kept.length, 0, 'EGFX no escribe CHANNEL_PDU en 1003 ni en 1006');
+    assert.equal(kept.injected.length, 1);
+  });
+
+  test('shouldSanitizeBastionConfirm solo capa sin EGFX', () => {
+    const { shouldSanitizeBastionConfirm } = rdpBridge;
+    assert.equal(shouldSanitizeBastionConfirm(true, false), true);
+    assert.equal(shouldSanitizeBastionConfirm(true, undefined), true);
+    assert.equal(shouldSanitizeBastionConfirm(true, true), false);
+    assert.equal(shouldSanitizeBastionConfirm(false, false), false);
+    assert.equal(shouldSanitizeBastionConfirm(false, true), false);
+  });
+
   test('APP con saludo 1001 y write path null recupera el VC cliprdr 1007', () => {
     const state = {
       wallixService: 'APP',

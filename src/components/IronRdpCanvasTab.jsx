@@ -1280,9 +1280,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           .extension(enableCredssp(useCredssp));
 
         // DisplayControl SOLO para conexiones directas Windows con NLA/CredSSP (HYBRID / HYBRID_EX).
-        // En bastiones y proxies RDP (Wallix, CyberArk, etc.), que negocian SSL 0x01 o RDP 0x00
-        // y tienen useCredssp=false, o cuando es una sesión de bastión explícita/PAM, DisplayControl
-        // no se debe registrar en WASM para evitar que declare drdynvc y desestabilice el proxy.
+        // En bastiones y proxies RDP (Wallix, CyberArk, etc.) el proxy no habla DisplayControl:
+        // un DVC_CREATE sin respuesta cuelga el banner y el salto. EGFX declara drdynvc por su cuenta.
         const isProxyOrBastionProtocol = selectedProtocol === 0x01 || selectedProtocol === 0x00;
         const supportsDisplayControl = !isBastionSession && useCredssp && !isProxyOrBastionProtocol;
         supportsDisplayControlRef.current = supportsDisplayControl;
@@ -1293,17 +1292,15 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         }
 
         // EGFX: preferencia de conexión (ironRdpGraphics) + override debug localStorage.
-        // Bastión Wallix: nunca EGFX (el rewriter solo estabiliza BITMAP RLE16).
-        let egfxEnabled = false;
-        if (!isBastionSession) {
-          egfxEnabled = rdpConfig.ironRdpGraphics === 'egfx';
-          try {
-            if (!egfxEnabled && typeof window !== 'undefined') {
-              egfxEnabled = window.__NODETERM_RDP_EGFX__ === true
-                || window.localStorage?.getItem('NODETERM_RDP_EGFX') === '1';
-            }
-          } catch (_) { /* noop */ }
-        }
+        // También en bastión: el codec se anuncia en el MCS Connect Initial, antes del banner.
+        // El rewriter de BITMAP sigue activo para el banner; Graphics va por DynVC.
+        let egfxEnabled = rdpConfig.ironRdpGraphics === 'egfx';
+        try {
+          if (!egfxEnabled && typeof window !== 'undefined') {
+            egfxEnabled = window.__NODETERM_RDP_EGFX__ === true
+              || window.localStorage?.getItem('NODETERM_RDP_EGFX') === '1';
+          }
+        } catch (_) { /* noop */ }
         if (egfxEnabled && typeof egfx === 'function') {
           builder.extension(egfx(true));
           egfxDiagRef.current = { active: true, codec: 'progressive', wroteSession: false };

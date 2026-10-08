@@ -31,7 +31,9 @@ const {
   WsBackpressureController,
   WsTickBatcher,
   DIRECT_WS_CHUNK_BYTES,
-  classifyFastPathUpdate
+  classifyFastPathUpdate,
+  gfxBypassesBitmapQueue,
+  egfxSkipsSyncBitmapFlush
 } = require('./rdp-bridge-backpressure');
 const {
   createChannelFilterState,
@@ -181,6 +183,19 @@ function isBastionSession(session) {
     return true;
   }
   return false;
+}
+
+/** Preferencia de gráficos del usuario. El bastión no la degrada a bitmap. */
+function resolveIronRdpGraphics(config) {
+  return config && config.ironRdpGraphics === 'egfx' ? 'egfx' : 'bitmap';
+}
+
+/**
+ * Sin EGFX el Confirm Active de bastión se deja en RLE (sin RFX/Surface).
+ * Con EGFX el WASM anuncia el pipeline Graphics: caparlo deja la superficie negra tras el banner.
+ */
+function shouldSanitizeBastionConfirm(normalizeBitmaps, egfxGraphics) {
+  return normalizeBitmaps === true && egfxGraphics !== true;
 }
 
 function parseInjectChannelsSpec(requested) {
@@ -375,15 +390,12 @@ class RdpNativeBridgeService extends EventEmitter {
       // llega tarde (NLA) y wasmChannelNames aun no lista rdpsnd.
       redirectAudio: config.redirectAudio === true,
       // EGFX: el bridge rechaza AUDIO_PLAYBACK_DVC (comparte DynVC con Graphics) y
-      // deja solo rdpsnd estatico. En bastion Wallix siempre bitmap.
-      ironRdpGraphics: config.ironRdpGraphics === 'egfx' ? 'egfx' : 'bitmap',
+      // deja solo rdpsnd estatico. Vale tambien en bastion (banner bitmap + GFX tras el hop).
+      ironRdpGraphics: resolveIronRdpGraphics(config),
       // Debug del bridge: env, rdp-flags.json o flag desde el renderer (localStorage).
       rdpDebug: config.rdpDebug === true || config.enableRdpDebug === true,
       createdAt: Date.now()
     };
-    if (isBastionSession(sessionData)) {
-      sessionData.ironRdpGraphics = 'bitmap';
-    }
 
     this.sessionTokens.set(tokenId, sessionData);
 
@@ -534,9 +546,7 @@ class RdpNativeBridgeService extends EventEmitter {
     channelFilter.wallixService = wallixServiceFromSession(session) || (isBastionSession(session) ? 'n/a' : null);
     channelFilter.isBastion = isBastionSession(session);
     channelFilter.allowAudioPlayback = session.redirectAudio === true;
-    channelFilter.egfxGraphics = channelFilter.isBastion
-      ? false
-      : session.ironRdpGraphics === 'egfx';
+    channelFilter.egfxGraphics = session.ironRdpGraphics === 'egfx';
     channelFilter.recentCliprdrEvents = recentCliprdrEvents;
     channelFilter.recordCliprdr = recordCliprdrEvent;
     const streamDeframer = new RdpStreamDeframer();
@@ -1250,6 +1260,18 @@ class RdpNativeBridgeService extends EventEmitter {
                     continue;
                   }
 
+                  if (processed.dvcForward
+                      && !channelFilter.loggedEgfxGraphicsCreate
+                      && typeof processed.note === 'string'
+                      && /^dvc-forward ch=/i.test(processed.note)
+                      && /GRAPHICS/i.test(processed.note)) {
+                    channelFilter.loggedEgfxGraphicsCreate = true;
+                    console.log(
+                      `[Bridge] EGFX Graphics CREATE mcs=${processed.channelId}` +
+                      ` wasm=${channelFilter.wasmDrdynvcChannelId} ${processed.note}`
+                    );
+                  }
+
                   if (processed.dvcForward && isDebug) {
                     channelFilter.dvcForwardDebugCount = (channelFilter.dvcForwardDebugCount || 0) + 1;
                     if (channelFilter.dvcForwardDebugCount <= 24) {
@@ -1277,14 +1299,45 @@ class RdpNativeBridgeService extends EventEmitter {
 
                   bytesFromRdp += n;
                   trafficStats.note(pduDesc, n);
+                  // El banner ya no pinta el destino. Tirarlo aquí evita que el
+                  // DEMAND_ACTIVE siguiente encuentre la cola RLE.
+                  if (channelFilter.egfxGraphics && !isFastPath && pduDesc.includes('DEACTIVATE_ALL')) {
+                    const dropped = backpressure.dropPending();
+                    console.log(
+                      `[Bridge] EGFX: ${dropped} bitmap(s) del banner descartados en DEACTIVATE_ALL`
+                    );
+                  }
                   if (ws.readyState === ws.OPEN) {
                     try {
                       if (!normalizeBitmaps) flushPendingBitmap();
+                      // Graphics (DynVC) no espera al rewriter del banner: mustFlushBefore
+                      // reescribía toda la cola RLE antes de cada TPKT y el salto tardaba.
+                      const gfxFast = gfxBypassesBitmapQueue(
+                        channelFilter.egfxGraphics,
+                        processed.dvcForward
+                      );
                       for (const ready of readyFrames) {
                         if (!ready || typeof ready.length !== 'number') continue;
+                        // Solo el TPKT Graphics. Un bitmap fragmentado que el
+                        // reensamblador suelta antes sigue por el rewriter.
+                        if (gfxFast && ready === frame) {
+                          if (isDebug || !isFastPath) {
+                            recentWasmFrames.push(
+                              `#${framesFromRdp} ${ready.length}B | ${describeRdpPdu(ready)}` +
+                              (processed.serverChannelId != null && processed.serverChannelId !== processed.channelId
+                                ? ` [remap ch=${processed.serverChannelId}->${processed.channelId}]`
+                                : '')
+                            );
+                            if (recentWasmFrames.length > RECENT_FRAMES_WINDOW) recentWasmFrames.shift();
+                          }
+                          sendBinaryToWasm(ready);
+                          continue;
+                        }
                         // Un frame grafico no-bitmap (ordenes, surface...) no puede adelantar
                         // a bitmaps pendientes: se vacian antes, en orden.
-                        if (backpressure.mustFlushBefore(ready)) {
+                        // Con EGFX un TPKT no reescribe el banner en este callback.
+                        if (backpressure.mustFlushBefore(ready)
+                            && !egfxSkipsSyncBitmapFlush(channelFilter.egfxGraphics, ready)) {
                           flushPendingBitmap({ force: true, ignoreBudget: true });
                         }
                         if (backpressure.shouldShedBitmap(ws.bufferedAmount, ready)) {
@@ -1444,8 +1497,10 @@ class RdpNativeBridgeService extends EventEmitter {
           const wasmInjections = [];
           let clientFramesChanged = false;
           for (let clientFrame of clientFrames) {
-            // Bastion: Confirm Active sin RFX/Surface (bpp intacto → RLE 16/24).
-            if (normalizeBitmaps && clientFrame[0] === 0x03 && clientFrame.length > 100) {
+            // Bastion sin EGFX: Confirm Active sin RFX/Surface (bpp intacto → RLE 16/24).
+            // Con EGFX no se capa: el destino tiene que ver Surface/codecs del WASM.
+            if (shouldSanitizeBastionConfirm(normalizeBitmaps, channelFilter.egfxGraphics)
+                && clientFrame[0] === 0x03 && clientFrame.length > 100) {
               try {
                 const bastionCaps = sanitizeBastionConfirmActiveGraphics(clientFrame);
                 if (bastionCaps.patched) {
@@ -1702,6 +1757,10 @@ class RdpNativeBridgeService extends EventEmitter {
       if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(misMsg);
       this.emit('diagnostic-log', { category: 'cliprdr-misaligned', message: misMsg });
     }
+    // EGFX: un CHANNEL_PDU en 1001 o en el IO (1003) congela el gráfico tras el banner.
+    // Se encola y se acusa al WASM. Sin EGFX se mantiene el camino de bitmap.
+    const egfxMuteUnsafe = channelFilter.egfxGraphics === true
+      && (isUserMcsChannel(channelFilter, dest) || destIsIo);
     const synthAck = () => {
       if (!isCliprdrFormatListDesc(clipDesc) || channelFilter.cliprdrFormatListAcked) return;
       channelFilter.cliprdrFormatListAcked = true;
@@ -1712,6 +1771,19 @@ class RdpNativeBridgeService extends EventEmitter {
       if (rdpDebug()) console.log(ackMsg);
       this.emit('diagnostic-log', { category: 'cliprdr', message: ackMsg });
     };
+
+    if (egfxMuteUnsafe) {
+      synthAck();
+      enqueueClientCliprdr(channelFilter, frame);
+      if (!channelFilter.loggedCliprdrUserMute) {
+        channelFilter.loggedCliprdrUserMute = true;
+        const muteMsg = `⚠️ [Bridge Clipboard] EGFX: cliprdr WASM->RDP encolado: no se escribe CHANNEL_PDU en MCS ${dest} (congela el grafico)`;
+        console.warn(muteMsg);
+        if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(muteMsg);
+        this.emit('diagnostic-log', { category: 'cliprdr-mute', message: muteMsg });
+      }
+      return { forward: null, inject };
+    }
 
     const appProbePayload = channelFilter.wallixService === 'APP'
       && greetingOnUnsafeCliprdr(channelFilter)
@@ -2467,3 +2539,5 @@ module.exports.RDP_INJECTED_CHANNELS = RDP_INJECTED_CHANNELS;
 module.exports.APP_INJECTED_CHANNELS = APP_INJECTED_CHANNELS;
 module.exports.APP_INJECTED_CHANNELS_RAIL = APP_INJECTED_CHANNELS_RAIL;
 module.exports.isBastionSession = isBastionSession;
+module.exports.resolveIronRdpGraphics = resolveIronRdpGraphics;
+module.exports.shouldSanitizeBastionConfirm = shouldSanitizeBastionConfirm;

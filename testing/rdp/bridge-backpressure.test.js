@@ -5,6 +5,8 @@ const assert = require('node:assert/strict');
 const {
   isFastPathBitmapFrame,
   classifyFastPathUpdate,
+  gfxBypassesBitmapQueue,
+  egfxSkipsSyncBitmapFlush,
   BridgeLatencyMetrics,
   WsBackpressureController,
   WS_HIGH_WATER_MARK,
@@ -163,6 +165,39 @@ describe('WsBackpressureController bastion latest-wins', () => {
       assert.equal(bp.mustFlushBefore(orders), true);
       assert.equal(bp.mustFlushBefore(pointer), false);
       assert.equal(bp.mustFlushBefore(buildSolidBitmapPdu(1, 1, 4, 4)), false);
+    });
+
+    it('EGFX DynVC no exige vaciar la cola bitmap del banner', () => {
+      const bp = mk();
+      const banner = buildSolidBitmapPdu(0, 0, 8, 8);
+      const graphics = Buffer.from([0x03, 0x00, 0x00, 0x0b, 0x02, 0xf0, 0x80, 0x68, 0x00, 0x00, 0x00]);
+      bp.shouldShedBitmap(5000, banner);
+      assert.equal(bp.hasPending(), true);
+      // Un TPKT no es bitmap ni puntero: mustFlushBefore lo retendria.
+      assert.equal(bp.mustFlushBefore(graphics), true);
+      assert.equal(gfxBypassesBitmapQueue(true, true), true);
+      assert.equal(gfxBypassesBitmapQueue(false, true), false);
+      assert.equal(gfxBypassesBitmapQueue(true, false), false);
+      assert.equal(gfxBypassesBitmapQueue(true, undefined), false);
+      // El bypass no toca la cola: el banner sigue pendiente para la rodaja.
+      assert.equal(bp.hasPending(), true);
+      assert.deepEqual(bp.takePendingIfDrained(0, { force: true, ignoreBudget: true }), [banner]);
+    });
+
+    it('EGFX no reescribe el banner en un TPKT; ORDERS sí, y DEACTIVATE lo tira', () => {
+      const bp = mk();
+      const banner = buildSolidBitmapPdu(0, 0, 8, 8);
+      const tpkt = Buffer.from([0x03, 0x00, 0x00, 0x0b, 0x02, 0xf0, 0x80, 0x68, 0x00, 0x00, 0x00]);
+      const orders = Buffer.from([0x00, 0x06, 0x00, 0x03, 0x00, 0x00]);
+      bp.shouldShedBitmap(5000, banner);
+      assert.equal(bp.mustFlushBefore(tpkt), true);
+      assert.equal(egfxSkipsSyncBitmapFlush(true, tpkt), true);
+      assert.equal(egfxSkipsSyncBitmapFlush(false, tpkt), false);
+      assert.equal(egfxSkipsSyncBitmapFlush(true, orders), false);
+      assert.equal(bp.dropPending(), 1);
+      assert.equal(bp.hasPending(), false);
+      assert.equal(bp.dropPending(), 0);
+      assert.equal(bp.takePendingIfDrained(0, { force: true, ignoreBudget: true }), null);
     });
 
     it('desborda por numero de frames: pendingOverflow pide vaciar', () => {
