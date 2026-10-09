@@ -184,20 +184,37 @@ describe('WsBackpressureController bastion latest-wins', () => {
       assert.deepEqual(bp.takePendingIfDrained(0, { force: true, ignoreBudget: true }), [banner]);
     });
 
-    it('EGFX no reescribe el banner en un TPKT; ORDERS sí, y DEACTIVATE lo tira', () => {
+    it('EGFX no reescribe el banner en un TPKT; ORDERS/SURFACE tampoco con cola stale', () => {
       const bp = mk();
       const banner = buildSolidBitmapPdu(0, 0, 8, 8);
       const tpkt = Buffer.from([0x03, 0x00, 0x00, 0x0b, 0x02, 0xf0, 0x80, 0x68, 0x00, 0x00, 0x00]);
       const orders = Buffer.from([0x00, 0x06, 0x00, 0x03, 0x00, 0x00]);
+      const surface = Buffer.from([0x00, 0x06, 0x04, 0x03, 0x00, 0x00]);
       bp.shouldShedBitmap(5000, banner);
       assert.equal(bp.mustFlushBefore(tpkt), true);
       assert.equal(egfxSkipsSyncBitmapFlush(true, tpkt), true);
       assert.equal(egfxSkipsSyncBitmapFlush(false, tpkt), false);
+      // Con banner stale: ORDERS/SURFACE no fuerzan sync flush (el salto no reescribe RLE).
+      assert.equal(egfxSkipsSyncBitmapFlush(true, orders, { staleBannerPending: true }), true);
+      assert.equal(egfxSkipsSyncBitmapFlush(true, surface, { staleBannerPending: true }), true);
+      // Tras drop del hop: cola vacia / sin stale → ORDERS vuelve al orden normal.
+      assert.equal(egfxSkipsSyncBitmapFlush(true, orders, { staleBannerPending: false }), false);
       assert.equal(egfxSkipsSyncBitmapFlush(true, orders), false);
       assert.equal(bp.dropPending(), 1);
       assert.equal(bp.hasPending(), false);
       assert.equal(bp.dropPending(), 0);
       assert.equal(bp.takePendingIfDrained(0, { force: true, ignoreBudget: true }), null);
+    });
+
+    it('dropPending en hop (DEMAND_ACTIVE/caps) deja pending=0 sin rewrite', () => {
+      const bp = mk();
+      bp.shouldShedBitmap(5000, buildSolidBitmapPdu(0, 0, 8, 8));
+      bp.shouldShedBitmap(5000, buildSolidBitmapPdu(8, 0, 8, 8));
+      assert.equal(bp.hasPending(), true);
+      assert.equal(bp.dropPending(), 2);
+      assert.equal(bp.hasPending(), false);
+      const orders = Buffer.from([0x00, 0x06, 0x00, 0x03, 0x00, 0x00]);
+      assert.equal(bp.mustFlushBefore(orders), false);
     });
 
     it('desborda por numero de frames: pendingOverflow pide vaciar', () => {

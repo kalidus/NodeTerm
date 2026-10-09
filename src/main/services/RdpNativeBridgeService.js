@@ -959,6 +959,21 @@ class RdpNativeBridgeService extends EventEmitter {
                 }
               };
 
+              // El banner deja de valer en el salto: tirarlo evita reescribir RLE a 3 ms/tick.
+              const dropStaleBannerBitmaps = (reason) => {
+                if (!channelFilter.egfxGraphics) return 0;
+                const dropped = backpressure.dropPending();
+                try { bitmapReassembler.reset(); } catch (e) {}
+                channelFilter.bannerBitmapsDropped = true;
+                if (dropped > 0) {
+                  timeline.mark('banner-bitmaps-dropped', `${dropped} reason=${reason}`);
+                  console.log(
+                    `[Bridge] EGFX: ${dropped} bitmap(s) del banner descartados en ${reason}`
+                  );
+                }
+                return dropped;
+              };
+
               // Bastion: reescribe pendientes hasta gastar el presupuesto (~3 ms) y deja el resto.
               // Con 2+ sesiones bastion, tope mas bajo para no ahogar la segunda conexion.
               const rewritePendingSlice = () => {
@@ -1079,6 +1094,7 @@ class RdpNativeBridgeService extends EventEmitter {
                   // Wallix: RemoteFX con property length 0 tumba IronRDP en Demand Active.
                   // Bastion: strip (no legitimar RFX). Directo: fill ServerContainer(1).
                   if (!isFastPath && pduDesc.includes('DEMAND_ACTIVE')) {
+                    demandActiveCount += 1;
                     const rfxSan = normalizeBitmaps
                       ? stripDemandActiveEmptyRemoteFx(frame)
                       : sanitizeDemandActiveEmptyRemoteFx(frame);
@@ -1103,7 +1119,6 @@ class RdpNativeBridgeService extends EventEmitter {
                       if (pduDesc.includes('DEACTIVATE_ALL')) {
                         timeline.event('DEACTIVATE_ALL', `#${framesFromRdp}`);
                       } else if (pduDesc.includes('DEMAND_ACTIVE')) {
-                        demandActiveCount += 1;
                         timeline.event(`DEMAND_ACTIVE ${demandActiveCount}`, `#${framesFromRdp} ${n}B`);
                       }
                     } else {
@@ -1465,6 +1480,7 @@ class RdpNativeBridgeService extends EventEmitter {
                   if (processed.dvcForward && typeof processed.note === 'string') {
                     if (/dvc-forward-caps/i.test(processed.note)) {
                       timeline.mark('dvc-caps-hacia-wasm', `#${framesFromRdp}`);
+                      dropStaleBannerBitmaps('dvc-caps');
                       if (timeline.enabled && !channelFilter.loggedEgfxGraphicsCreate
                           && !graphicsCapsWarnTimer) {
                         graphicsCapsWarnTimer = setTimeout(() => {
@@ -1473,6 +1489,7 @@ class RdpNativeBridgeService extends EventEmitter {
                           const pend = backpressure.pendingBitmaps
                             ? backpressure.pendingBitmaps.length
                             : 0;
+                          timeline.mark('egfx-caps-no-create', `pend=${pend}`);
                           console.warn(
                             `⚠️ [Bridge] DynVC Caps sin Graphics CREATE tras 5s` +
                             ` (bitmap-only; pend=${pend})`
@@ -1530,13 +1547,14 @@ class RdpNativeBridgeService extends EventEmitter {
                     timeline.mark('primer-dvc-hacia-wasm', `#${framesFromRdp} ${n}B`);
                   }
                   trafficStats.note(pduDesc, n);
-                  // El banner ya no pinta el destino. Tirarlo aquí evita que el
-                  // DEMAND_ACTIVE siguiente encuentre la cola RLE.
-                  if (channelFilter.egfxGraphics && !isFastPath && pduDesc.includes('DEACTIVATE_ALL')) {
-                    const dropped = backpressure.dropPending();
-                    console.log(
-                      `[Bridge] EGFX: ${dropped} bitmap(s) del banner descartados en DEACTIVATE_ALL`
-                    );
+                  // El banner ya no pinta el destino. Tirarlo en señales de salto evita
+                  // que ORDERS/SURFACE reescriban la cola RLE a 3 ms/tick.
+                  if (channelFilter.egfxGraphics && !isFastPath) {
+                    if (pduDesc.includes('DEACTIVATE_ALL')) {
+                      dropStaleBannerBitmaps('DEACTIVATE_ALL');
+                    } else if (pduDesc.includes('DEMAND_ACTIVE') && demandActiveCount >= 2) {
+                      dropStaleBannerBitmaps('DEMAND_ACTIVE');
+                    }
                   }
                   if (ws.readyState === ws.OPEN) {
                     try {
@@ -1548,6 +1566,9 @@ class RdpNativeBridgeService extends EventEmitter {
                         processed.dvcForward
                       );
                       const clipFast = processed.isCliprdr && !processed.buffered;
+                      const staleBannerPending = channelFilter.egfxGraphics === true
+                        && backpressure.hasPending()
+                        && channelFilter.bannerBitmapsDropped !== true;
                       for (const ready of readyFrames) {
                         if (!ready || typeof ready.length !== 'number') continue;
                         // DynVC/EGFX (gfxFast) no espera al rewriter RLE del banner
@@ -1567,9 +1588,11 @@ class RdpNativeBridgeService extends EventEmitter {
                         }
                         // Un frame grafico no-bitmap (ordenes, surface...) no puede adelantar
                         // a bitmaps pendientes: se vacian antes, en orden.
-                        // Con EGFX un TPKT no reescribe el banner en este callback.
+                        // Con EGFX: TPKT siempre; ORDERS/SURFACE solo si el banner ya se tiro.
                         if (backpressure.mustFlushBefore(ready)
-                            && !egfxSkipsSyncBitmapFlush(channelFilter.egfxGraphics, ready)) {
+                            && !egfxSkipsSyncBitmapFlush(channelFilter.egfxGraphics, ready, {
+                              staleBannerPending
+                            })) {
                           flushPendingBitmap({ force: true, ignoreBudget: true });
                         }
                         if (backpressure.shouldShedBitmap(ws.bufferedAmount, ready)) {

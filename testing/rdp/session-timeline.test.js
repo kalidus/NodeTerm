@@ -114,4 +114,21 @@ describe('SessionTimeline', () => {
     assert.match(s, /ultimo dato servidor hace 700ms/);
     assert.match(s, /first-frame=\+0ms/);
   });
+
+  it('resumen incluye hitos de salto banner y caps sin CREATE', () => {
+    const clock = makeClock();
+    const tl = new SessionTimeline({ now: clock.now, log: () => {} });
+    tl.mark('first-bitmap');
+    clock.advance(500);
+    tl.mark('banner-bitmaps-dropped', '2 reason=DEMAND_ACTIVE');
+    clock.advance(3000);
+    tl.mark('dvc-caps-hacia-wasm');
+    clock.advance(5000);
+    tl.mark('egfx-caps-no-create', 'pend=0');
+    const s = tl.summary();
+    assert.match(s, /banner-bitmaps-dropped=\+500ms/);
+    assert.match(s, /dvc-caps-hacia-wasm=\+3500ms/);
+    assert.match(s, /egfx-caps-no-create=\+8500ms/);
+    assert.ok(!/egfx-graphics-create=/.test(s));
+  });
 });

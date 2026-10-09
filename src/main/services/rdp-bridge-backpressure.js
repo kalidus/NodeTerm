@@ -41,14 +41,22 @@ function gfxBypassesBitmapQueue(egfxGraphics, dvcForward) {
 }
 
 /**
- * Con EGFX, un TPKT (Deactivate, Demand Active, DynVC) no reescribe el banner
- * en el camino crítico. Fast-Path ORDERS y SURFACE sí vacían antes.
+ * Con EGFX, no reescribir el banner RLE en el camino critico:
+ * - TPKT (Deactivate, Demand Active, DynVC) siempre.
+ * - ORDERS/SURFACE solo mientras la cola sigue siendo del banner (stale);
+ *   tras dropPending el destino vuelve al orden normal (mustFlushBefore).
+ * @param {boolean} egfxGraphics
+ * @param {Buffer} frame
+ * @param {{ staleBannerPending?: boolean }} [opts]
  */
-function egfxSkipsSyncBitmapFlush(egfxGraphics, frame) {
-  return egfxGraphics === true
-    && Buffer.isBuffer(frame)
-    && frame.length > 0
-    && frame[0] === 0x03;
+function egfxSkipsSyncBitmapFlush(egfxGraphics, frame, opts = {}) {
+  if (egfxGraphics !== true || !Buffer.isBuffer(frame) || frame.length === 0) return false;
+  if (frame[0] === 0x03) return true;
+  if (opts.staleBannerPending === true) {
+    const kind = classifyFastPathUpdate(frame);
+    return kind === 'ORDERS' || kind === 'SURFACE_CMDS';
+  }
+  return false;
 }
 
 function isFastPathBitmapFrame(buf) {
