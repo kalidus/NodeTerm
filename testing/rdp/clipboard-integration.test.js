@@ -19,7 +19,9 @@ const {
   learnFromServerGcc,
   maybePromoteSelectorAppCliprdr,
   retryConfirmAppCliprdrWrite,
-  retryConfirmRdpCliprdrWrite
+  retryConfirmRdpCliprdrWrite,
+  canFlushCliprdrToNamedVc,
+  sanitizeIllegalCliprdrWrite
 } = require('../../src/main/services/rdp-channel-filter');
 const {
   CHANNEL_PDU_HEADER_LEN,
@@ -561,6 +563,32 @@ describe('CLIPRDR: bastion Wallix que usa otro canal MCS', () => {
     assert.equal(fallbackIoNamedCliprdrWrite(state), null, 'bastión RDP en IO devuelve null');
     assert.equal(fallbackNamedCliprdrWrite(state), null, 'RDP+1001 no debe usar el fallback APP');
     assert.equal(confirmCliprdrWriteChannel(state, 1003), false);
+  });
+
+  test('sanitizeIllegalCliprdrWrite limpia write=1006 con saludo en IO bastion', () => {
+    const state = stateWithCliprdr();
+    state.wallixService = 'RDP';
+    state.isBastion = true;
+    state.ioChannelId = 1003;
+    state.serverCliprdrChannelId = 1003;
+    state.cliprdrChannelId = 1006;
+    state.cliprdrWriteChannelId = 1006;
+    state.channelIdToName = new Map([
+      [1004, 'rdpdr'],
+      [1005, 'rdpsnd'],
+      [1006, 'cliprdr']
+    ]);
+    state.allowed = new Set([1003, 1004, 1005, 1006]);
+
+    assert.equal(canFlushCliprdrToNamedVc(state), false);
+    assert.equal(sanitizeIllegalCliprdrWrite(state), true);
+    assert.equal(state.cliprdrWriteChannelId, null);
+    assert.equal(canFlushCliprdrToNamedVc(state), false);
+
+    // Tras hop: servidor habla en VC nombrado → write OK
+    state.serverCliprdrChannelId = 1006;
+    state.cliprdrWriteChannelId = 1006;
+    assert.equal(canFlushCliprdrToNamedVc(state), true);
   });
 
   test('APP saludo por IO 1003 en bastión no confirma write path en cliprdr 1007 (evita cierre TLS)', () => {
@@ -1188,5 +1216,19 @@ describe('CLIPRDR: destino de datos con saludo inseguro', () => {
       [1006, 'cliprdr']
     ]);
     assert.equal(unsafeCliprdrClientWriteDest(state, 1003), 1006);
+  });
+
+  test('IO 1003 en bastion RDP no remapea a VC nombrado (evita FIN ESAH)', () => {
+    const state = stateWithCliprdr();
+    state.wallixService = 'RDP';
+    state.ioChannelId = 1003;
+    state.cliprdrChannelId = 1006;
+    state.allowed = new Set([1003, 1004, 1005, 1006]);
+    state.channelIdToName = new Map([
+      [1004, 'rdpdr'],
+      [1005, 'rdpsnd'],
+      [1006, 'cliprdr']
+    ]);
+    assert.equal(unsafeCliprdrClientWriteDest(state, 1003), null);
   });
 });

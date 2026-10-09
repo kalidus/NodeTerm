@@ -298,11 +298,13 @@ function formatRdpSessionCloseReason(reason, lastDisconnectDesc) {
   if (r.includes('WebSocket') || r.includes('WASM') || r.includes('cerrado por el usuario') || r.includes('tab')) {
     return 'Cerrado por el usuario';
   }
-  if (r.includes('inactividad') || r.includes('idle') || r.includes('ETIMEDOUT') || r.includes('timeout')) {
+  if (r.includes('inactividad') || r.includes('idle') || r.includes('ETIMEDOUT')
+      || (r.includes('timeout') && !r.includes('ECONNRESET') && !r.includes('EPIPE'))) {
     return 'Conexion cortada por inactividad o timeout';
   }
   if (r.includes('ECONNRESET') || r.includes('EPIPE') || r.includes('reiniciada')) {
-    return 'Conexion cortada por el servidor remoto o la red (posible inactividad)';
+    // Sin "inactividad": el UI clasifica como CONNECTION_LOST, no timeout idle.
+    return 'Conexion cortada por el servidor remoto o la red';
   }
   if (r.includes('CLOSED') || r.includes('TLS socket closed') || r.includes('servidor remoto') || r.includes('FIN')) {
     return 'Cerrado por el servidor remoto';

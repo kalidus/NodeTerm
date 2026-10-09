@@ -54,13 +54,20 @@ describe('mapTerminationReason', () => {
     assert.equal(res.icon, 'pi pi-lock');
   });
 
-  test('en sesión activa, clasifica corte con inactividad como INACTIVITY_TIMEOUT', () => {
+  test('en sesión activa, ECONNRESET con "posible inactividad" es CONNECTION_LOST (no idle)', () => {
+    // El bridge ya no debe etiquetar resets con tráfico reciente como idle; si el
+    // texto residual trae "posible inactividad" + ECONNRESET, priorizar corte de red.
     const res = mapTerminationReason(null, 'Conexión cortada por el servidor remoto o la red (posible inactividad)', true, new Error('read ECONNRESET'));
-    assert.equal(res.category, 'INACTIVITY_TIMEOUT');
+    assert.equal(res.category, 'CONNECTION_LOST');
     assert.equal(res.severity, 'warn');
+    assert.match(res.title, /servidor remoto o la red/i);
+    assert.equal(res.icon, 'pi pi-wifi');
+  });
+
+  test('ERRINFO_IDLE_TIMEOUT sigue siendo INACTIVITY_TIMEOUT', () => {
+    const res = mapTerminationReason('ERRINFO_IDLE_TIMEOUT', 'Conexion cortada por inactividad o timeout', true);
+    assert.equal(res.category, 'INACTIVITY_TIMEOUT');
     assert.match(res.title, /inactividad/i);
-    assert.match(res.description, /tiempo límite de inactividad/i);
-    assert.equal(res.icon, 'pi pi-hourglass');
   });
 
   test('en sesion activa, clasifica FileContentsResponse incompleto como CLIPRDR_FILE_CONTENTS', () => {

@@ -8,14 +8,21 @@ function mapTerminationReason(rawReason, backendReason, wasEverConnected = false
   const errStr = error ? (error.message || String(error)) : '';
   const combined = `${rawReason || ''} ${backendReason || ''} ${errStr}`.toLowerCase();
 
-  // 1. Inactividad / Idle Timeout (Servidor RDP o red)
-  if (
+  // 1. Inactividad / Idle Timeout (Servidor RDP o red).
+  // ECONNRESET/EPIPE con "posible inactividad" durante sesión activa es corte de red
+  // (p.ej. bastión), no idle real: se clasifica más abajo como CONNECTION_LOST.
+  const looksLikeSocketReset =
+    combined.includes('econnreset') ||
+    combined.includes('epipe') ||
+    combined.includes('connection reset');
+  const idleHint =
     combined.includes('idle timeout') ||
     combined.includes('idletimeout') ||
     combined.includes('errinfo_idle_timeout') ||
-    combined.includes('inactividad') ||
-    combined.includes('by server (idle timeout)')
-  ) {
+    combined.includes('by server (idle timeout)') ||
+    (combined.includes('inactividad') && !looksLikeSocketReset) ||
+    (combined.includes('posible inactividad') && !wasEverConnected);
+  if (idleHint) {
     return {
       category: 'INACTIVITY_TIMEOUT',
       title: 'Conexión cortada por inactividad',

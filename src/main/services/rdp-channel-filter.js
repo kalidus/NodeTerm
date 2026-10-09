@@ -790,6 +790,51 @@ function greetingOnUnsafeCliprdr(state) {
   return false;
 }
 
+/** Saludo cliprdr del servidor sigue en el canal IO MCS (p.ej. 1003). */
+function greetingStillOnIo(state) {
+  return !!(state && state.ioChannelId != null
+    && state.serverCliprdrChannelId === state.ioChannelId);
+}
+
+/**
+ * Bastion / Wallix: escribir VC nombrado con saludo en IO provoca FIN ESAH.
+ * Solo con wallixService declarado (sesion bastion real). No usar isBastion solo:
+ * el filtro marca isBastion al detectar saludo en IO tambien en recuperacion directa.
+ */
+function bastionIoCliprdrWriteForbidden(state) {
+  if (!state) return false;
+  const svc = state.wallixService;
+  return svc === 'n/a' || svc === 'RDP' || svc === 'APP';
+}
+
+/**
+ * Se puede vaciar la cola / escribir CHANNEL_PDU en el VC cliprdr nombrado.
+ * En bastion Wallix: falso si el saludo sigue en IO (FIN ESAH al escribir 1006).
+ * En directo (wallixService null): IO→named es path de recuperacion valido.
+ */
+function canFlushCliprdrToNamedVc(state) {
+  if (!state) return false;
+  const writeCh = state.cliprdrWriteChannelId;
+  if (writeCh == null || !isSafeStaticCliprdrWrite(state, writeCh)) return false;
+  if (greetingStillOnIo(state) && bastionIoCliprdrWriteForbidden(state)) return false;
+  return true;
+}
+
+/**
+ * Si el saludo volvio (o sigue) en IO en bastion y habia write al VC nombrado, limpia el write.
+ * Evita flush prematuro tras hop APP→IO o race selector. No toca RDP directo.
+ * @returns {boolean} true si se limpio cliprdrWriteChannelId
+ */
+function sanitizeIllegalCliprdrWrite(state) {
+  if (!state || state.cliprdrWriteChannelId == null) return false;
+  if (!greetingStillOnIo(state) || !bastionIoCliprdrWriteForbidden(state)) return false;
+  if (!isSafeStaticCliprdrWrite(state, state.cliprdrWriteChannelId)) return false;
+  state.cliprdrWriteChannelId = null;
+  state.cliprdrHandshakeSentToRecoveredDest = false;
+  state.cliprdrHandshakeSentToRecoveredDestAlready = false;
+  return true;
+}
+
 /**
  * Selector Wallix sin cadena :APP:/:RDP::
  * - Saludo en MCS 1001 (usuario): 2o MONITOR_READY → APP (RemoteApp);
@@ -819,8 +864,10 @@ function maybePromoteSelectorAppCliprdr(state) {
         || !isSafeStaticCliprdrWrite(state, state.cliprdrWriteChannelId)) {
       state.cliprdrWriteChannelId = named;
     }
+  } else {
+    // RDP+IO: limpiar cualquier write ilegal residual (evita FIN en 1006).
+    sanitizeIllegalCliprdrWrite(state);
   }
-  // RDP+IO: no tocar cliprdrWriteChannelId ni rehandshake (evita FIN en 1006).
   return true;
 }
 
@@ -828,6 +875,7 @@ function retryConfirmAppCliprdrWrite(state) {
   if (!state || state.wallixService !== 'APP') return false;
   if (state.cliprdrWriteChannelId != null) return false;
   if (!isUserMcsChannel(state, state.serverCliprdrChannelId)) return false;
+  if (greetingStillOnIo(state)) return false;
   const fallback = fallbackNamedCliprdrWrite(state);
   if (fallback == null) return false;
   state.cliprdrWriteChannelId = fallback;
@@ -895,8 +943,12 @@ function unsafeCliprdrClientWriteDest(state, dest) {
   if (state.wallixService === 'n/a') {
     return null;
   }
-  if (isUserMcsChannel(state, dest)) return dest;
   const destIsIo = state.ioChannelId != null && dest === state.ioChannelId;
+  // Bastion / selector: saludo en IO → nunca remapear a VC nombrado (FIN ESAH).
+  if (destIsIo && bastionIoCliprdrWriteForbidden(state)) {
+    return null;
+  }
+  if (isUserMcsChannel(state, dest)) return dest;
   if (!destIsIo) return null;
   const named = declaredChannelId(state, 'cliprdr');
   if (named != null && isSafeStaticCliprdrWrite(state, named)) return named;
@@ -905,6 +957,10 @@ function unsafeCliprdrClientWriteDest(state, dest) {
 }
 
 function confirmCliprdrWriteChannel(state, channelId) {
+  // Si el saludo acaba de caer en IO, anular write nombrado residual (race APP→IO).
+  if (state.ioChannelId != null && channelId === state.ioChannelId) {
+    sanitizeIllegalCliprdrWrite(state);
+  }
   if (state.cliprdrWriteChannelId != null) return false;
   // El saludo ya es CLIPRDR valido. Si el canal no es 1001/1002, el message
   // channel de GCC ni el IO, se escribe ahi aunque no este en el mapa SC_NET.
@@ -2239,6 +2295,9 @@ module.exports = {
   isSafeStaticCliprdrWrite,
   fallbackNamedCliprdrWrite,
   greetingOnUnsafeCliprdr,
+  greetingStillOnIo,
+  canFlushCliprdrToNamedVc,
+  sanitizeIllegalCliprdrWrite,
   maybePromoteSelectorAppCliprdr,
   retryConfirmAppCliprdrWrite,
   retryConfirmRdpCliprdrWrite,

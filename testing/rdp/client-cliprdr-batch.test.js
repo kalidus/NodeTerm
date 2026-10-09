@@ -10,7 +10,10 @@ const { parseMcsSendData } = require('../../src/main/services/rdp-autodetect');
 const {
   maybePromoteSelectorAppCliprdr,
   retryConfirmRdpCliprdrWrite,
-  takeCliprdrRehandshake
+  takeCliprdrRehandshake,
+  canFlushCliprdrToNamedVc,
+  sanitizeIllegalCliprdrWrite,
+  greetingStillOnIo
 } = require('../../src/main/services/rdp-channel-filter');
 
 const CHANNEL_FLAG_FIRST = 0x01;
@@ -353,6 +356,93 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     assert.equal(parseMcsSendData(flushedFrames[3]).channelId, BASTION_CLIP_CH);
   });
 
+  test('write=1006 con saludo en IO 1003: flush no escribe al socket (evita FIN ESAH)', () => {
+    const state = {
+      wallixService: 'RDP',
+      isBastion: true,
+      ioChannelId: IO_CH,
+      cliprdrChannelId: BASTION_CLIP_CH,
+      serverCliprdrChannelId: IO_CH,
+      cliprdrOnUnsafeChannel: IO_CH,
+      cliprdrWriteChannelId: BASTION_CLIP_CH, // estado ilegal residual del race
+      cliprdrServerReady: true,
+      cliprdrMonitorReadyCount: 2,
+      cliprdrSelectorAppInferred: true,
+      allowed: new Set([1003, 1004, 1005, 1006]),
+      channelIdToName: new Map([
+        [1004, 'rdpdr'],
+        [1005, 'rdpsnd'],
+        [1006, 'cliprdr']
+      ]),
+      pendingClientCliprdr: [
+        buildClipFrame(BASTION_CLIP_CH, CB_CLIP_CAPS, Buffer.alloc(16)),
+        buildClipFrame(BASTION_CLIP_CH, CB_FORMAT_LIST, Buffer.alloc(24))
+      ]
+    };
+
+    assert.equal(greetingStillOnIo(state), true);
+    assert.equal(canFlushCliprdrToNamedVc(state), false, 'no flush mientras saludo en IO');
+
+    const flushedFrames = [];
+    const mockSocket = {
+      writable: true,
+      write(buf) { flushedFrames.push(buf); }
+    };
+    assert.equal(sanitizeIllegalCliprdrWrite(state), true);
+    assert.equal(state.cliprdrWriteChannelId, null, 'write ilegal limpiado');
+    // Restaura el estado ilegal residual para probar el flush
+    state.cliprdrWriteChannelId = BASTION_CLIP_CH;
+    assert.equal(canFlushCliprdrToNamedVc(state), false);
+
+    service.flushPendingClientCliprdr(state, mockSocket, null);
+    assert.equal(flushedFrames.length, 0, 'nada al TLS con saludo en IO');
+    assert.equal(state.pendingClientCliprdr.length, 2, 'cola intacta');
+    assert.equal(state.cliprdrWriteChannelId, null, 'flush tambien sanea write ilegal');
+  });
+
+  test('CAPS temprano encolado + 2o READY en IO: flush no manda a 1006', () => {
+    const state = {
+      wallixService: 'n/a',
+      ioChannelId: IO_CH,
+      cliprdrChannelId: BASTION_CLIP_CH,
+      serverCliprdrChannelId: IO_CH,
+      cliprdrOnUnsafeChannel: IO_CH,
+      cliprdrServerReady: true,
+      cliprdrMonitorReadyCount: 1,
+      allowed: new Set([1003, 1004, 1005, 1006]),
+      channelIdToName: new Map([
+        [1004, 'rdpdr'],
+        [1005, 'rdpsnd'],
+        [1006, 'cliprdr']
+      ])
+    };
+
+    const frames = Buffer.concat([
+      buildClipFrame(BASTION_CLIP_CH, CB_CLIP_CAPS, Buffer.alloc(16)),
+      buildClipFrame(BASTION_CLIP_CH, CB_FORMAT_LIST, Buffer.alloc(24))
+    ]);
+    const kept1 = filterBatch(service, frames, state);
+    assert.equal(kept1.length, 0);
+    assert.ok(state.pendingClientCliprdr.length >= 1, 'PDUs encolados');
+
+    state.cliprdrMonitorReadyCount = 2;
+    assert.equal(maybePromoteSelectorAppCliprdr(state), true);
+    assert.equal(state.wallixService, 'RDP');
+    assert.ok(state.cliprdrWriteChannelId == null);
+
+    // Simula race: alguien dejo write=1006 con saludo aun en IO
+    state.cliprdrWriteChannelId = BASTION_CLIP_CH;
+    assert.equal(canFlushCliprdrToNamedVc(state), false);
+
+    const flushedFrames = [];
+    const mockSocket = {
+      writable: true,
+      write(buf) { flushedFrames.push(buf); }
+    };
+    service.flushPendingClientCliprdr(state, mockSocket, null);
+    assert.equal(flushedFrames.length, 0, 'flush diferido; no CHANNEL_PDU en 1006');
+  });
+
   test('service=n/a selector Wallix: 2o READY en IO promueve RDP sin write; named VC confirma replay', () => {
     const state = {
       wallixService: 'n/a',
@@ -648,7 +738,7 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     assert.equal(clipMsgType(kept[0]), CB_FILECONTENTS_REQUEST);
   });
 
-  test('con destino IO 1003, FORMAT_DATA_REQUEST va al VC nombrado cliprdr no al IO', () => {
+  test('con destino IO 1003 en bastion RDP, FORMAT_DATA_REQUEST no escribe en 1006 (evita FIN)', () => {
     const state = {
       wallixService: 'RDP',
       ioChannelId: IO_CH,
@@ -667,9 +757,8 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
 
     const kept = filterBatch(service, buildClipFrame(CLIPRDR_CH, CB_FORMAT_DATA_REQUEST, Buffer.alloc(4)), state);
 
-    assert.equal(kept.length, 1);
-    assert.equal(parseMcsSendData(kept[0]).channelId, 1006);
-    assert.notEqual(parseMcsSendData(kept[0]).channelId, IO_CH);
+    assert.equal(kept.length, 0, 'no CHANNEL_PDU a 1006 mientras saludo en IO');
+    assert.ok(state.pendingClientCliprdr && state.pendingClientCliprdr.length > 0, 'encolado hasta hop');
   });
 
   test('si tras CAPS en 1001 se confirma write path 1004, el cliente escribe en 1004', () => {

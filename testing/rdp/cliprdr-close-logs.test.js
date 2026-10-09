@@ -109,6 +109,13 @@ describe('formatRdpSessionCloseReason', () => {
     );
   });
 
+  test('ECONNRESET sin ERRINFO idle no se etiqueta como inactividad', () => {
+    assert.equal(
+      formatRdpSessionCloseReason('read ECONNRESET', null),
+      'Conexion cortada por el servidor remoto o la red'
+    );
+  });
+
   test('ERRINFO_LOGOFF_BY_USER es logoff remoto', () => {
     assert.equal(
       formatRdpSessionCloseReason(
