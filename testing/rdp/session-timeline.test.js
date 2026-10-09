@@ -2,7 +2,7 @@
 
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-const { SessionTimeline } = require('../../src/main/services/rdp-session-timeline');
+const { SessionTimeline, shouldLogSilence } = require('../../src/main/services/rdp-session-timeline');
 
 function makeClock(start = 1000) {
   let t = start;
@@ -53,6 +53,41 @@ describe('SessionTimeline', () => {
     clock.advance(1000);
     tl.tick();
     assert.match(lines[lines.length - 1], /silencio 1s/);
+  });
+
+  it('silencio solo en 1s, 5s y multiplos de 15', () => {
+    assert.equal(shouldLogSilence(1), true);
+    assert.equal(shouldLogSilence(5), true);
+    assert.equal(shouldLogSilence(2), false);
+    assert.equal(shouldLogSilence(10), false);
+    assert.equal(shouldLogSilence(15), true);
+    assert.equal(shouldLogSilence(30), true);
+    assert.equal(shouldLogSilence(16), false);
+  });
+
+  it('input-only se trata como silencio (no linea de trafico)', () => {
+    const clock = makeClock();
+    const lines = [];
+    const tl = new SessionTimeline({ now: clock.now, log: (l) => lines.push(l) });
+    tl.mark('first-frame');
+    tl.noteOut('input', 234);
+    clock.advance(1000);
+    tl.tick();
+    assert.match(lines[lines.length - 1], /silencio 1s/);
+    assert.ok(!/in: fp=/.test(lines[lines.length - 1]));
+  });
+
+  it('setLabel cambia el prefijo de las lineas', () => {
+    const clock = makeClock();
+    const lines = [];
+    const tl = new SessionTimeline({ now: clock.now, log: (l) => lines.push(l), label: 'n/a' });
+    tl.mark('first-frame');
+    assert.match(lines[0], /\[Timeline n\/a \+/);
+    tl.setLabel('RDP');
+    tl.noteIn('fp', 10);
+    clock.advance(1000);
+    tl.tick();
+    assert.match(lines[lines.length - 1], /\[Timeline RDP \+/);
   });
 
   it('marca LAG del event loop cuando el tick llega tarde', () => {

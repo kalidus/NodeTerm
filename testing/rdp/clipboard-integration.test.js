@@ -18,7 +18,8 @@ const {
   fallbackNamedCliprdrWrite,
   learnFromServerGcc,
   maybePromoteSelectorAppCliprdr,
-  retryConfirmAppCliprdrWrite
+  retryConfirmAppCliprdrWrite,
+  retryConfirmRdpCliprdrWrite
 } = require('../../src/main/services/rdp-channel-filter');
 const {
   CHANNEL_PDU_HEADER_LEN,
@@ -925,7 +926,66 @@ describe('CLIPRDR: robustez del filtro', () => {
     assert.equal(parseMcsSendData(replay[0]).userData.readUInt16LE(8), 7);
   });
 
-  test('n/a + 2o READY tras saludo en IO (1003) recupera write path al cliprdr nombrado', () => {
+  test('n/a + 1er READY en IO (1003) no promueve a RDP (menu del selector)', () => {
+    const state = stateWithCliprdr();
+    state.wallixService = 'n/a';
+    state.ioChannelId = 1003;
+    state.allowed = new Set([1003, 1004, 1005, 1006]);
+    state.channelIdToName = new Map([
+      [1004, 'rdpdr'],
+      [1005, 'rdpsnd'],
+      [1006, 'cliprdr']
+    ]);
+
+    processServerFrame(state, buildMcsIndication(1003, buildChannelPdu(buildCliprdrPayload(1), 0x13)));
+
+    assert.equal(state.serverCliprdrChannelId, 1003);
+    assert.equal(state.cliprdrMonitorReadyCount, 1);
+    assert.equal(state.cliprdrSelectorAppInferred, undefined);
+    assert.equal(state.wallixService, 'n/a');
+    assert.equal(state.cliprdrWriteChannelId, null);
+    assert.equal(maybePromoteSelectorAppCliprdr(state), false);
+  });
+
+  test('n/a + 2o READY en IO (1003) promueve a RDP y recupera write path al cliprdr nombrado', () => {
+    const state = stateWithCliprdr();
+    state.wallixService = 'n/a';
+    state.ioChannelId = 1003;
+    state.allowed = new Set([1003, 1004, 1005, 1006]);
+    state.channelIdToName = new Map([
+      [1004, 'rdpdr'],
+      [1005, 'rdpsnd'],
+      [1006, 'cliprdr']
+    ]);
+
+    const capsUser = buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16)), 0x13);
+    rememberClientCliprdrHandshake(state, describeCliprdrPdu(capsUser), buildMcsIndication(1004, capsUser));
+    const tempUser = buildChannelPdu(buildCliprdrPayload(6, 0, Buffer.alloc(520)), 0x13);
+    rememberClientCliprdrHandshake(state, describeCliprdrPdu(tempUser), buildMcsIndication(1004, tempUser));
+
+    processServerFrame(state, buildMcsIndication(1003, buildChannelPdu(buildCliprdrPayload(1), 0x13)));
+    assert.equal(state.wallixService, 'n/a');
+    assert.equal(state.cliprdrWriteChannelId, null);
+
+    // 2o READY por IO: hop a escritorio RDP (TEMPDIR para Session Probe).
+    processServerFrame(state, buildMcsIndication(1003, buildChannelPdu(buildCliprdrPayload(1), 0x03)));
+
+    assert.equal(state.cliprdrMonitorReadyCount, 2);
+    assert.equal(state.cliprdrSelectorAppInferred, true);
+    assert.equal(state.wallixService, 'RDP');
+    assert.equal(state.cliprdrWriteChannelId, 1006);
+    assert.equal(state.cliprdrRehandshakePending, true);
+    assert.equal(retryConfirmRdpCliprdrWrite(state), false, 'write path ya confirmado');
+
+    const replay = takeCliprdrRehandshake(state);
+    assert.equal(replay.length, 2, 'CAPS + TEMPDIR hacia el VC nombrado');
+    assert.equal(parseMcsSendData(replay[0]).channelId, 1006);
+    assert.equal(parseMcsSendData(replay[0]).userData.readUInt16LE(8), 7);
+    assert.equal(parseMcsSendData(replay[1]).channelId, 1006);
+    assert.equal(parseMcsSendData(replay[1]).userData.readUInt16LE(8), 6);
+  });
+
+  test('n/a + servidor habla cliprdr en VC nombrado promueve a RDP sin READY en IO', () => {
     const state = stateWithCliprdr();
     state.wallixService = 'n/a';
     state.ioChannelId = 1003;
@@ -939,26 +999,15 @@ describe('CLIPRDR: robustez del filtro', () => {
     const capsUser = buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16)), 0x13);
     rememberClientCliprdrHandshake(state, describeCliprdrPdu(capsUser), buildMcsIndication(1004, capsUser));
 
-    // 1er READY cae en el canal IO (1003)
-    processServerFrame(state, buildMcsIndication(1003, buildChannelPdu(buildCliprdrPayload(1), 0x13)));
-    assert.equal(state.serverCliprdrChannelId, 1003);
-    assert.equal(state.cliprdrWriteChannelId, null);
-    assert.equal(state.cliprdrSelectorAppInferred, undefined);
+    processServerFrame(state, buildMcsIndication(1006, buildChannelPdu(buildCliprdrPayload(1), 0x03)));
 
-    // 2o READY por IO 1003: el selector ha saltado a un escritorio RDP (no RemoteApp).
-    // wallixService debe ser 'RDP' para que TEMPDIR no se descarte (Session Probe lo necesita).
-    processServerFrame(state, buildMcsIndication(1003, buildChannelPdu(buildCliprdrPayload(1), 0x03)));
-
+    assert.equal(state.wallixService, 'RDP');
     assert.equal(state.cliprdrSelectorAppInferred, true);
-    assert.equal(state.wallixService, 'RDP',
-      'saludo por IO 1003 = desktop RDP; wallixService=RDP conserva TEMPDIR para Session Probe');
     assert.equal(state.cliprdrWriteChannelId, 1006);
     assert.equal(state.cliprdrRehandshakePending, true);
-
     const replay = takeCliprdrRehandshake(state);
     assert.equal(replay.length, 1);
     assert.equal(parseMcsSendData(replay[0]).channelId, 1006);
-    assert.equal(parseMcsSendData(replay[0]).userData.readUInt16LE(8), 7);
   });
 
   test('rememberClientCliprdrHandshake conserva rehandshakePending en generacion 2 (readyCount >= 2)', () => {

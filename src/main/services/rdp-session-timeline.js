@@ -15,7 +15,7 @@
 const IN_KINDS = ['fp', 'dvc', 'tpkt', 'drop'];
 const OUT_KINDS = ['dvc', 'tpkt', 'input'];
 /** Segundos con linea por segundo (el resto de la sesion solo hitos y resumen final). */
-const DEFAULT_MAX_SECONDS = 150;
+const DEFAULT_MAX_SECONDS = 45;
 /** Tope de hitos repetibles (DEMAND_ACTIVE, DEACTIVATE_ALL...). */
 const MAX_EVENTS = 40;
 
@@ -33,6 +33,12 @@ function fmtBytes(b) {
 
 function fmtCounters(counters, kinds) {
   return kinds.map((k) => `${k}=${counters[k].n}/${fmtBytes(counters[k].bytes)}`).join(' ');
+}
+
+/** Silencio: 1s, 5s, luego cada 15s (15, 30, 45...). */
+function shouldLogSilence(idleStreak) {
+  if (idleStreak === 1 || idleStreak === 5) return true;
+  return idleStreak >= 15 && idleStreak % 15 === 0;
 }
 
 class SessionTimeline {
@@ -60,6 +66,11 @@ class SessionTimeline {
     this.timer = null;
     this.lastTickAt = this.t0;
     this.getExtra = null;
+  }
+
+  /** Actualiza la etiqueta (p.ej. n/a → RDP tras promote del selector). */
+  setLabel(label) {
+    this.label = label != null ? String(label) : '';
   }
 
   /** Milisegundos desde el inicio de la sesion. */
@@ -130,6 +141,15 @@ class SessionTimeline {
     }
   }
 
+  /** Solo input (keepalive raton/teclado) sin fp/dvc/tpkt/drop = silencio. */
+  _inputOnlyQuiet() {
+    const inQuiet = !IN_KINDS.some((k) => this.bucketIn[k].n > 0);
+    const outDvc = this.bucketOut.dvc.n;
+    const outTpkt = this.bucketOut.tpkt.n;
+    const outInput = this.bucketOut.input.n;
+    return inQuiet && outDvc === 0 && outTpkt === 0 && outInput > 0;
+  }
+
   /** Una linea por segundo (publico para tests). */
   tick() {
     if (!this.enabled) return;
@@ -138,10 +158,12 @@ class SessionTimeline {
     this.lastTickAt = now;
     const seconds = Math.round(this.elapsed() / 1000);
     const hadIn = IN_KINDS.some((k) => this.bucketIn[k].n > 0);
-    const hadOut = OUT_KINDS.some((k) => this.bucketOut[k].n > 0);
+    const hadOutMeaningful = this.bucketOut.dvc.n > 0 || this.bucketOut.tpkt.n > 0;
+    const inputOnly = this._inputOnlyQuiet();
+    const hadTraffic = hadIn || hadOutMeaningful;
 
     if (seconds <= this.maxSeconds && this.marks.has('first-frame')) {
-      if (hadIn || hadOut || lagMs >= 200) {
+      if ((hadTraffic || lagMs >= 200) && !inputOnly) {
         this.idleStreak = 0;
         let extra = '';
         if (this.getExtra) {
@@ -158,7 +180,7 @@ class SessionTimeline {
         );
       } else {
         this.idleStreak += 1;
-        if (this.idleStreak === 1 || this.idleStreak % 5 === 0) {
+        if (shouldLogSilence(this.idleStreak)) {
           this.log(`${this._prefix()}${this.elapsed()}ms] silencio ${this.idleStreak}s (sin trafico servidor ni WASM)`);
         }
       }
@@ -182,4 +204,4 @@ class SessionTimeline {
   }
 }
 
-module.exports = { SessionTimeline };
+module.exports = { SessionTimeline, shouldLogSilence };

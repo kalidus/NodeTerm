@@ -349,7 +349,7 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     assert.equal(parseMcsSendData(flushedFrames[3]).channelId, BASTION_CLIP_CH);
   });
 
-  test('service=n/a selector Wallix: segundo MONITOR_READY por IO 1003 silencia FORMAT_LIST y no escribe en 1001 ni 1006', () => {
+  test('service=n/a selector Wallix: 1er READY en IO no promueve (menu); 2o READY en IO promueve a RDP', () => {
     const state = {
       wallixService: 'n/a',
       ioChannelId: IO_CH,
@@ -357,7 +357,52 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
       serverCliprdrChannelId: IO_CH,
       cliprdrOnUnsafeChannel: IO_CH,
       cliprdrServerReady: true,
-      cliprdrMonitorReadyCount: 2,
+      cliprdrMonitorReadyCount: 1,
+      allowed: new Set([1003, 1004, 1005, 1006]),
+      channelIdToName: new Map([
+        [1004, 'rdpdr'],
+        [1005, 'rdpsnd'],
+        [1006, 'cliprdr']
+      ])
+    };
+
+    const frames = Buffer.concat([
+      buildClipFrame(BASTION_CLIP_CH, CB_CLIP_CAPS, Buffer.alloc(16)),
+      buildClipFrame(BASTION_CLIP_CH, CB_TEMP_DIRECTORY, Buffer.alloc(520)),
+      buildClipFrame(BASTION_CLIP_CH, CB_FORMAT_LIST, Buffer.alloc(24))
+    ]);
+    const kept1 = filterBatch(service, frames, state);
+    assert.equal(kept1.length, 0, 'nada enviado durante el selector');
+    assert.ok(Buffer.isBuffer(state.cachedClientCaps));
+    assert.ok(Buffer.isBuffer(state.cachedClientTempDir));
+
+    assert.equal(maybePromoteSelectorAppCliprdr(state), false, '1er READY = menu; no envenenar hop APP');
+    assert.equal(state.wallixService, 'n/a');
+
+    state.cliprdrMonitorReadyCount = 2;
+    const promoted = maybePromoteSelectorAppCliprdr(state);
+    assert.equal(promoted, true, 'promovido a RDP tras 2o READY en IO');
+    assert.equal(state.wallixService, 'RDP');
+    assert.equal(state.cliprdrSelectorAppInferred, true);
+    assert.equal(state.cliprdrWriteChannelId, BASTION_CLIP_CH);
+    assert.notEqual(state.cliprdrWriteChannelId, IO_CH, 'nunca escribir en 1003');
+
+    const replay = takeCliprdrRehandshake(state);
+    assert.equal(replay.length, 2, 'CAPS + TEMPDIR (Session Probe)');
+    assert.equal(parseMcsSendData(replay[0]).channelId, BASTION_CLIP_CH);
+    assert.equal(parseMcsSendData(replay[1]).channelId, BASTION_CLIP_CH);
+    assert.deepEqual(replay.map(clipMsgType), [CB_CLIP_CAPS, CB_TEMP_DIRECTORY]);
+  });
+
+  test('service=n/a selector Wallix sin promover: FORMAT_LIST por saludo IO se silencia', () => {
+    const state = {
+      wallixService: 'n/a',
+      ioChannelId: IO_CH,
+      cliprdrChannelId: BASTION_CLIP_CH,
+      serverCliprdrChannelId: IO_CH,
+      cliprdrOnUnsafeChannel: IO_CH,
+      cliprdrServerReady: true,
+      cliprdrMonitorReadyCount: 1,
       allowed: new Set([1003, 1004, 1005, 1006]),
       channelIdToName: new Map([
         [1004, 'rdpdr'],

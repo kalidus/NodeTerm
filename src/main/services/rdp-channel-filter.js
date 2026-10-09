@@ -791,25 +791,28 @@ function greetingOnUnsafeCliprdr(state) {
 }
 
 /**
- * Selector Wallix sin cadena :APP:: el hop a RemoteApp deja el saludo cliprdr
- * en MCS 1001. El 2o MONITOR_READY ahi, con write path aun null y un VC
- * nombrado cliprdr, es el mismo patron que :APP:. No se toca :RDP:.
+ * Selector Wallix sin cadena :APP:/:RDP::
+ * - Saludo en MCS 1001 (usuario): 2o MONITOR_READY → APP (RemoteApp).
+ * - Saludo en IO 1003: 2o MONITOR_READY → RDP (escritorio completo).
+ *   El 1er READY en IO es el menu del selector; promover ahi envenena un hop APP.
+ *   Si el 2o READY no llega, claimCliprdrPdu promueve al hablar el servidor en el VC nombrado.
  */
 function maybePromoteSelectorAppCliprdr(state) {
   if (!state) return false;
   if (state.wallixService === 'APP' || state.wallixService === 'RDP') return false;
   if (state.cliprdrSelectorAppInferred) return false;
-  if ((state.cliprdrMonitorReadyCount || 0) < 2) return false;
   const isIo = state.ioChannelId != null && state.serverCliprdrChannelId === state.ioChannelId;
   const isUser = isUserMcsChannel(state, state.serverCliprdrChannelId);
   if (!isUser && !isIo) return false;
+  if ((state.cliprdrMonitorReadyCount || 0) < 2) return false;
   const named = declaredChannelId(state, 'cliprdr');
   if (named == null || !isSafeStaticCliprdrWrite(state, named)) return false;
   state.wallixService = isUser ? 'APP' : 'RDP';
   state.cliprdrSelectorAppInferred = true;
   state.cliprdrRehandshakePending = true;
   state.isBastion = true;
-  if (state.cliprdrWriteChannelId == null) {
+  if (state.cliprdrWriteChannelId == null
+      || !isSafeStaticCliprdrWrite(state, state.cliprdrWriteChannelId)) {
     state.cliprdrWriteChannelId = named;
   }
   return true;
@@ -822,6 +825,28 @@ function retryConfirmAppCliprdrWrite(state) {
   const fallback = fallbackNamedCliprdrWrite(state);
   if (fallback == null) return false;
   state.cliprdrWriteChannelId = fallback;
+  return true;
+}
+
+/**
+ * Solo hop selector n/a→RDP (cliprdrSelectorAppInferred). Tras saludo por IO,
+ * recupera write path al VC cliprdr nombrado y pide rehandshake CAPS+TEMPDIR
+ * (Session Probe). No aplica a :RDP: explícito: escribir 1006 tras IO cierra TLS.
+ */
+function retryConfirmRdpCliprdrWrite(state) {
+  if (!state || state.wallixService !== 'RDP') return false;
+  if (!state.cliprdrSelectorAppInferred) return false;
+  if (isSafeStaticCliprdrWrite(state, state.cliprdrWriteChannelId)) return false;
+  const named = declaredChannelId(state, 'cliprdr');
+  if (named == null || !isSafeStaticCliprdrWrite(state, named)) return false;
+  const greetedIo = state.ioChannelId != null && (
+    state.serverCliprdrChannelId === state.ioChannelId
+    || state.cliprdrOnUnsafeChannel === state.ioChannelId
+  );
+  const serverOnNamed = state.serverCliprdrChannelId === named;
+  if (!greetedIo && !serverOnNamed && state.cliprdrWriteChannelId != null) return false;
+  state.cliprdrWriteChannelId = named;
+  state.cliprdrRehandshakePending = true;
   return true;
 }
 
@@ -957,6 +982,22 @@ function claimCliprdrPdu(state, channelId, userData) {
   confirmCliprdrWriteChannel(state, channelId);
   maybePromoteSelectorAppCliprdr(state);
   retryConfirmAppCliprdrWrite(state);
+  // Selector n/a: servidor habla cliprdr en el VC nombrado (hop RDP sin 2o READY).
+  // No tocar wallixService null (BeeSer / RDP directo).
+  if (state.wallixService === 'n/a'
+      && cliprdrDeclaredName(state, channelId) === 'cliprdr') {
+    const named = declaredChannelId(state, 'cliprdr');
+    if (named === channelId && isSafeStaticCliprdrWrite(state, named)) {
+      state.wallixService = 'RDP';
+      state.isBastion = true;
+      state.cliprdrSelectorAppInferred = true;
+      state.cliprdrRehandshakePending = true;
+      if (!isSafeStaticCliprdrWrite(state, state.cliprdrWriteChannelId)) {
+        state.cliprdrWriteChannelId = named;
+      }
+    }
+  }
+  retryConfirmRdpCliprdrWrite(state);
   return true;
 }
 
@@ -997,6 +1038,11 @@ function noteServerCliprdrMonitorReady(state, userData) {
   }
   if (maybePromoteSelectorAppCliprdr(state)) {
     retryConfirmAppCliprdrWrite(state);
+    retryConfirmRdpCliprdrWrite(state);
+  } else if (state.wallixService === 'RDP' && state.cliprdrSelectorAppInferred
+      && state.cliprdrMonitorReadyCount >= 1) {
+    state.cliprdrRehandshakePending = true;
+    retryConfirmRdpCliprdrWrite(state);
   }
 }
 
@@ -1282,6 +1328,7 @@ function buildCliprdrResult(state, buf, channelId, userData) {
   if (desc && desc.includes('CB_MONITOR_READY')) {
     noteServerCliprdrMonitorReady(state, userData);
     retryConfirmAppCliprdrWrite(state);
+    retryConfirmRdpCliprdrWrite(state);
   }
 
   // El selector a veces saluda por rdpsnd/rdpdr y a veces por 1001 o el canal IO,
@@ -2187,6 +2234,7 @@ module.exports = {
   greetingOnUnsafeCliprdr,
   maybePromoteSelectorAppCliprdr,
   retryConfirmAppCliprdrWrite,
+  retryConfirmRdpCliprdrWrite,
   fallbackIoNamedCliprdrWrite,
   isCliprdrClientPayloadDesc,
   unsafeCliprdrClientWriteDest,

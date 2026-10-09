@@ -62,6 +62,7 @@ const {
   CHANNEL_FLAG_SHOW_PROTOCOL,
   maybePromoteSelectorAppCliprdr,
   retryConfirmAppCliprdrWrite,
+  retryConfirmRdpCliprdrWrite,
   buildAppProbeCliprdrWrites,
   remapClientDrdynvcFrame,
   remapClientRdpsndFrame,
@@ -655,6 +656,10 @@ class RdpNativeBridgeService extends EventEmitter {
         clearTimeout(channelFilter.appCliprdrWriteRetryTimer);
         channelFilter.appCliprdrWriteRetryTimer = null;
       }
+      if (channelFilter.rdpCliprdrWriteRetryTimer) {
+        clearTimeout(channelFilter.rdpCliprdrWriteRetryTimer);
+        channelFilter.rdpCliprdrWriteRetryTimer = null;
+      }
       if (channelFilter.appCliprdrCapsWaitTimer) {
         clearTimeout(channelFilter.appCliprdrCapsWaitTimer);
         channelFilter.appCliprdrCapsWaitTimer = null;
@@ -1164,6 +1169,11 @@ class RdpNativeBridgeService extends EventEmitter {
                   const wasReady = channelFilter.ready;
                   const prevWriteCh = channelFilter.cliprdrWriteChannelId;
                   const processed = processServerFrame(channelFilter, frame);
+                  if (timeline.enabled && channelFilter.wallixService
+                      && timeline.label !== channelFilter.wallixService
+                      && typeof timeline.setLabel === 'function') {
+                    timeline.setLabel(channelFilter.wallixService);
+                  }
                   if (channelFilter.cliprdrWriteChannelId != null &&
                       channelFilter.cliprdrWriteChannelId !== prevWriteCh) {
                     const writeName = channelFilter.channelIdToName instanceof Map
@@ -1226,24 +1236,37 @@ class RdpNativeBridgeService extends EventEmitter {
                       if (isDebug) console.log(deferMsg);
                       this.emit('diagnostic-log', { category: 'cliprdr', message: deferMsg });
                     }
-                    // APP en frio solo tiene un READY. RDP/selector sigue exigiendo el segundo.
+                    // APP en frio: 1 READY. Selector→APP: 2o READY en 1001.
+                    // Selector→RDP: 2o READY en IO, o servidor en VC nombrado (claimCliprdrPdu).
                     if (processed.cliprdrDesc && processed.cliprdrDesc.includes('CB_MONITOR_READY')) {
                       if (maybePromoteSelectorAppCliprdr(channelFilter)) {
                         retryConfirmAppCliprdrWrite(channelFilter);
+                        retryConfirmRdpCliprdrWrite(channelFilter);
+                        if (typeof timeline.setLabel === 'function') {
+                          timeline.setLabel(channelFilter.wallixService || timeline.label);
+                        }
                       }
                       if (channelFilter.cliprdrSelectorAppInferred
                           && !channelFilter.loggedCliprdrSelectorAppInferred) {
                         channelFilter.loggedCliprdrSelectorAppInferred = true;
-                        const inferMsg = `[Bridge Clipboard] selector APP inferido: saludo ${channelFilter.serverCliprdrChannelId} persistente, write path via cliprdr nombrado ${channelFilter.cliprdrWriteChannelId}`;
+                        const svcLabel = channelFilter.wallixService === 'RDP' ? 'RDP' : 'APP';
+                        const inferMsg = `[Bridge Clipboard] selector ${svcLabel} inferido: saludo ${channelFilter.serverCliprdrChannelId}, write path via cliprdr nombrado ${channelFilter.cliprdrWriteChannelId}`;
                         recordCliprdrEvent(inferMsg);
                         console.log(inferMsg);
                         this.emit('diagnostic-log', { category: 'cliprdr', message: inferMsg });
+                        if (typeof timeline.setLabel === 'function') {
+                          timeline.setLabel(svcLabel);
+                        }
                       }
                       const readyCount = channelFilter.cliprdrMonitorReadyCount || 0;
                       const isAppReady = channelFilter.wallixService === 'APP' && readyCount >= 1;
+                      const isSelectorRdpReady = channelFilter.wallixService === 'RDP'
+                        && channelFilter.cliprdrSelectorAppInferred
+                        && readyCount >= 1;
                       const isSecondReady = readyCount >= 2;
-                      if (isSecondReady || isAppReady) {
+                      if (isSecondReady || isAppReady || isSelectorRdpReady) {
                         retryConfirmAppCliprdrWrite(channelFilter);
+                        retryConfirmRdpCliprdrWrite(channelFilter);
                         const writeSafe = isSafeStaticCliprdrWrite(
                           channelFilter,
                           channelFilter.cliprdrWriteChannelId
@@ -1257,12 +1280,14 @@ class RdpNativeBridgeService extends EventEmitter {
                             recordCliprdrEvent(waitMsg);
                             console.log(waitMsg);
                           }
-                          if (channelFilter.wallixService === 'APP'
+                          if ((channelFilter.wallixService === 'APP'
+                                || (channelFilter.wallixService === 'RDP'
+                                    && channelFilter.cliprdrSelectorAppInferred))
                               && !channelFilter.appCliprdrCapsWaitTimer) {
                             channelFilter.appCliprdrCapsWaitTimer = setTimeout(() => {
                               channelFilter.appCliprdrCapsWaitTimer = null;
                               if (isCleanedUp || Buffer.isBuffer(channelFilter.cachedClientCaps)) return;
-                              const lateMsg = '[Bridge Clipboard] APP: 2s sin CAPS del cliente WASM tras MONITOR_READY';
+                              const lateMsg = `[Bridge Clipboard] ${channelFilter.wallixService}: 2s sin CAPS del cliente WASM tras MONITOR_READY`;
                               recordCliprdrEvent(lateMsg);
                               console.warn(lateMsg);
                             }, 2000);
@@ -1280,7 +1305,10 @@ class RdpNativeBridgeService extends EventEmitter {
                               const replayCh = parsedReplay
                                 ? parsedReplay.channelId
                                 : channelFilter.cliprdrWriteChannelId;
-                              const replayMsg = `[Bridge Clipboard] rehandshake cliprdr ch=${replayCh} ${replayDesc}`;
+                              const replayMsg = `[Bridge Clipboard] rehandshake cliprdr ch=${replayCh} ${replayDesc}` +
+                                (channelFilter.wallixService === 'RDP' && channelFilter.cliprdrSelectorAppInferred
+                                  ? ' (selector→RDP)'
+                                  : '');
                               recordCliprdrEvent(replayMsg);
                               if (isDebug) console.log(replayMsg);
                               this.emit('diagnostic-log', { category: 'cliprdr', message: replayMsg });
@@ -1313,6 +1341,34 @@ class RdpNativeBridgeService extends EventEmitter {
                             ? (channelFilter.channelIdToName.get(channelFilter.cliprdrWriteChannelId) || '?')
                             : '?';
                           const lateMsg = `[Bridge] cliprdr write path=${channelFilter.cliprdrWriteChannelId} (${writeName}); saludo por ${channelFilter.serverCliprdrChannelId} (reintento APP)`;
+                          recordCliprdrEvent(lateMsg);
+                          console.log(lateMsg);
+                          if (!tlsSocket || !tlsSocket.writable) return;
+                          channelFilter.cliprdrRehandshakePending = true;
+                          const lateReplay = takeCliprdrRehandshake(channelFilter);
+                          for (const pdu of lateReplay) {
+                            bytesToRdp += pdu.length;
+                            tlsSocket.write(pdu);
+                          }
+                          this.flushPendingClientCliprdr(channelFilter, tlsSocket, ws, (n) => {
+                            bytesToRdp += n;
+                          });
+                        }, 400);
+                      }
+                      if (channelFilter.wallixService === 'RDP'
+                          && channelFilter.cliprdrSelectorAppInferred
+                          && !isSafeStaticCliprdrWrite(channelFilter, channelFilter.cliprdrWriteChannelId)
+                          && !channelFilter.rdpCliprdrWriteRetryTimer) {
+                        channelFilter.rdpCliprdrWriteRetryTimer = setTimeout(() => {
+                          channelFilter.rdpCliprdrWriteRetryTimer = null;
+                          if (isCleanedUp) return;
+                          if (isSafeStaticCliprdrWrite(channelFilter, channelFilter.cliprdrWriteChannelId)) return;
+                          maybePromoteSelectorAppCliprdr(channelFilter);
+                          if (!retryConfirmRdpCliprdrWrite(channelFilter)) return;
+                          const writeName = channelFilter.channelIdToName instanceof Map
+                            ? (channelFilter.channelIdToName.get(channelFilter.cliprdrWriteChannelId) || '?')
+                            : '?';
+                          const lateMsg = `[Bridge] cliprdr write path=${channelFilter.cliprdrWriteChannelId} (${writeName}); saludo por ${channelFilter.serverCliprdrChannelId} (reintento selector→RDP)`;
                           recordCliprdrEvent(lateMsg);
                           console.log(lateMsg);
                           if (!tlsSocket || !tlsSocket.writable) return;
@@ -2212,8 +2268,9 @@ class RdpNativeBridgeService extends EventEmitter {
     }
 
     // Aviso de orden CLIPRDR: el cliente no deberia emitir nada antes de CB_MONITOR_READY
-    // (MS-RDPECLIP 1.3.2.1). No se descarta el PDU, solo se avisa.
-    if (!channelFilter.cliprdrServerReady) {
+    // (MS-RDPECLIP 1.3.2.1). No se descarta el PDU; solo se avisa una vez por sesion.
+    if (!channelFilter.cliprdrServerReady && !channelFilter.loggedCliprdrBeforeReady) {
+      channelFilter.loggedCliprdrBeforeReady = true;
       const guardMsg = `⚠️ [Bridge Clipboard] PDU cliprdr WASM->RDP antes de CB_MONITOR_READY (se reenvía igualmente): ${clipDesc}`;
       console.warn(guardMsg);
       if (typeof channelFilter.recordCliprdr === 'function') {
