@@ -11,6 +11,7 @@
 const {
   parseMcsSendData,
   buildMcsSendDataRequest,
+  buildMcsSendDataIndication,
   createAutoDetectState,
   handleAutoDetectRequest,
   stripSecAutodetect,
@@ -49,6 +50,7 @@ function parseServerNetworkChannels(buf) {
   let ioChannelId = null;
   let channelIds = [];
   let messageChannelId = null;
+  let scNetOffset = -1;
 
   for (let i = 0; i + 4 <= buf.length; i++) {
     const type = buf.readUInt16LE(i);
@@ -56,6 +58,7 @@ function parseServerNetworkChannels(buf) {
     if (len < 4 || i + len > buf.length) continue;
 
     if (type === SC_NET && len >= 8) {
+      scNetOffset = i;
       ioChannelId = buf.readUInt16LE(i + 4);
       const count = buf.readUInt16LE(i + 6);
       channelIds = [];
@@ -70,7 +73,82 @@ function parseServerNetworkChannels(buf) {
   }
 
   if (ioChannelId == null) return null;
-  return { ioChannelId, channelIds, messageChannelId };
+  return { ioChannelId, channelIds, messageChannelId, scNetOffset };
+}
+
+/**
+ * IDs de SC_NET que IronRDP debe ver: los del servidor para cada nombre del CS_NET
+ * original del WASM (sin canales inyectados). Si WASM recibe la lista inyectada completa,
+ * hace zip por indice y cliprdr/rdpsnd/drdynvc caen en IDs ajenos → remap fragil y
+ * dechunkify huerfano.
+ */
+function resolveWasmAlignedServerIds(wasmNames, clientNames, serverIds) {
+  if (!Array.isArray(wasmNames) || !Array.isArray(clientNames) || !Array.isArray(serverIds)) {
+    return null;
+  }
+  if (!wasmNames.length || wasmNames.length >= clientNames.length) return null;
+  const out = [];
+  for (const raw of wasmNames) {
+    const want = String(raw || '').toLowerCase();
+    const idx = clientNames.findIndex((n) => String(n || '').toLowerCase() === want);
+    if (idx < 0 || serverIds[idx] == null) return null;
+    out.push(serverIds[idx]);
+  }
+  return out.length ? out : null;
+}
+
+/**
+ * IDs que IronRDP asigna por zip de indice cuando SC_NET no se recorta:
+ * wasmNames[i] ↔ serverIds[i]. Usado en bastion (Wallix exige joins de todos los VCs).
+ */
+function resolveWasmZipVisibleIds(wasmNames, serverIds) {
+  if (!Array.isArray(wasmNames) || !Array.isArray(serverIds)) return null;
+  if (!wasmNames.length || wasmNames.length > serverIds.length) return null;
+  const out = [];
+  for (let i = 0; i < wasmNames.length; i++) {
+    if (serverIds[i] == null) return null;
+    out.push(serverIds[i]);
+  }
+  return out.length ? out : null;
+}
+
+/**
+ * Reescribe count+IDs de SC_NET in-place (sin tocar longitudes TPKT/GCC).
+ * Las entradas sobrantes se ponen a 0; IronRDP solo lee `count`.
+ */
+function rewriteScNetChannelIds(buf, newIds) {
+  if (!Buffer.isBuffer(buf) || !Array.isArray(newIds) || !newIds.length) {
+    return { buf, patched: false, reason: 'bad-args' };
+  }
+  const parsed = parseServerNetworkChannels(buf);
+  if (!parsed || parsed.scNetOffset < 0) {
+    return { buf, patched: false, reason: 'sc-net-not-found' };
+  }
+  const i = parsed.scNetOffset;
+  const len = buf.readUInt16LE(i + 2);
+  const oldCount = buf.readUInt16LE(i + 6);
+  if (newIds.length > oldCount) {
+    return { buf, patched: false, reason: 'too-many-ids' };
+  }
+  if (i + 8 + oldCount * 2 > i + len) {
+    return { buf, patched: false, reason: 'sc-net-truncated' };
+  }
+  const same = oldCount === newIds.length
+    && newIds.every((id, idx) => parsed.channelIds[idx] === id);
+  if (same) return { buf, patched: false, reason: 'already-aligned' };
+
+  const out = Buffer.from(buf);
+  out.writeUInt16LE(newIds.length, i + 6);
+  for (let c = 0; c < oldCount; c++) {
+    const off = i + 8 + c * 2;
+    out.writeUInt16LE(c < newIds.length ? (newIds[c] & 0xffff) : 0, off);
+  }
+  return {
+    buf: out,
+    patched: true,
+    previousIds: parsed.channelIds.slice(),
+    newIds: newIds.slice()
+  };
 }
 
 function readSendDataIndicationChannelId(buf) {
@@ -168,6 +246,18 @@ function createChannelFilterState() {
     // cliprdrChannelId, pero Wallix usa otro (p.ej. 1001) y hay que remapear.
     serverCliprdrChannelId: null,
     serverCliprdrFragmentOpen: false,
+    // Servidor→WASM: reensamblado CHANNEL_PDU por clave (cliprdr, rdpsnd, drdynvc, …).
+    staticVcReasmByKey: null,
+    // Tras alinear SC_NET: canales que IronRDP unió vs solo inyectados (p. ej. rdpdr 1004).
+    wasmJoinedChannelIds: null,
+    injectOnlyChannelIds: null,
+    injectOnlyFragmentOpen: false,
+    injectOnlyFragmentChannelId: null,
+    serverRdpdrFragmentOpen: false,
+    serverRdpdrFragmentChannelId: null,
+    // WASM->RDP: FORMAT_DATA_RESPONSE grande (FIRST sin LAST). Las continuaciones
+    // no llevan CLIPRDR_HEADER; hay que seguir remapeando al write path.
+    clientCliprdrFragmentOpen: false,
     // VC estatico seguro para WASM->RDP. Un CAPS en 1001 no se confirma aqui:
     // eso muteaba el cliente aunque el handshake real llegara despues por 1004.
     cliprdrWriteChannelId: null,
@@ -176,6 +266,10 @@ function createChannelFilterState() {
     unsafeCliprdrFragmentOpen: false,
     drdynvcChannelId: null,
     wasmDrdynvcChannelId: null,
+    // Si se absorbe un DynVC con FIRST y sin LAST (comprimido / cmd raro), las
+    // continuaciones no pueden ir al WASM: IronRDP revienta con dechunkify huerfano.
+    serverDrdynvcDropFragmentOpen: false,
+    serverDrdynvcDropChannelId: null,
     rdpsndChannelId: null,
     wasmRdpsndChannelId: null,
     // Opt-in de sesion (redirectAudio): respaldo si CS_NET no listo rdpsnd a tiempo (NLA).
@@ -205,6 +299,60 @@ function createChannelFilterState() {
     cliprdrHandshakeSentToRecoveredDest: false,
     autoDetect: createAutoDetectState()
   };
+}
+
+/**
+ * SC_NET rewrite solo en conexion directa con inyeccion.
+ * Wallix/bastion mantiene SC_NET completo (exige Channel Join de todos los VCs).
+ */
+function isDirectInjectAlignPath(state) {
+  return state && state.isBastion !== true
+    && Array.isArray(state.wasmAlignedServerIds)
+    && state.wasmAlignedServerIds.length > 0;
+}
+
+/**
+ * Canales solo-inyectados (rdpdr/rail/…) que no deben llegar al WASM.
+ * Usa IDs reales de nombres WASM (wasmAlignedServerIds), en directo y bastion.
+ */
+function syncWasmJoinedChannels(state, serverChannelIds) {
+  if (!state || !Array.isArray(state.wasmAlignedServerIds) || !state.wasmAlignedServerIds.length) {
+    state.wasmJoinedChannelIds = null;
+    state.injectOnlyChannelIds = null;
+    return;
+  }
+  const joined = new Set([state.ioChannelId, ...state.wasmAlignedServerIds]);
+  state.wasmJoinedChannelIds = joined;
+  state.injectOnlyChannelIds = new Set();
+  if (Array.isArray(serverChannelIds)) {
+    for (const id of serverChannelIds) {
+      if (id != null && !joined.has(id)) state.injectOnlyChannelIds.add(id);
+    }
+  }
+}
+
+/** Asigna cliprdr/drdynvc/rdpsnd WASM-facing: zip por indice en bastion+inyeccion; IDs reales en directo. */
+function applyWasmFacingChannelIds(state, wasmNames, sourceNames, serverIds, idForName) {
+  const injected = Array.isArray(wasmNames) && Array.isArray(sourceNames)
+    && wasmNames.length > 0
+    && wasmNames.length < sourceNames.length;
+  if (state.isBastion === true && injected) {
+    const zipIds = resolveWasmZipVisibleIds(wasmNames, serverIds);
+    if (zipIds && zipIds.length === wasmNames.length) {
+      for (let i = 0; i < wasmNames.length; i++) {
+        const name = String(wasmNames[i] || '').toLowerCase();
+        const zipId = zipIds[i];
+        if (name === 'cliprdr') state.cliprdrChannelId = zipId;
+        else if (name === 'drdynvc') state.wasmDrdynvcChannelId = zipId;
+        else if (name === 'rdpsnd') state.wasmRdpsndChannelId = zipId;
+      }
+      return;
+    }
+  }
+  const clipId = idForName('cliprdr');
+  if (clipId != null) state.cliprdrChannelId = clipId;
+  state.wasmDrdynvcChannelId = idForName('drdynvc');
+  state.wasmRdpsndChannelId = idForName('rdpsnd');
 }
 
 function learnFromServerGcc(state, buf) {
@@ -244,37 +392,34 @@ function learnFromServerGcc(state, buf) {
     });
   }
 
-  // IronRDP no ve la inyeccion: su cliprdr sigue siendo el indice que tenia en CS_NET original.
-  // wasmNames: preferir wasmChannelNames (nombres antes de inyectar) porque el WASM mapea
-  // cliprdr al indice de su GCC original, no al de la version inyectada que fue al servidor.
+  // IDs que vera IronRDP tras alinear SC_NET: los del servidor para cada nombre del
+  // CS_NET original (wasmChannelNames), NO el zip por indice sobre la lista inyectada.
   const wasmNames = (state.wasmChannelNames && state.wasmChannelNames.length)
     ? state.wasmChannelNames
     : sourceNames;
-  const clipIdx = Array.isArray(wasmNames) ? wasmNames.indexOf('cliprdr') : -1;
-  if (clipIdx >= 0 && parsed.channelIds[clipIdx] != null) {
-    state.cliprdrChannelId = parsed.channelIds[clipIdx];
-  } else {
-    for (const [id, name] of state.channelIdToName) {
-      if (name === 'cliprdr') {
-        state.cliprdrChannelId = id;
-        break;
-      }
+  const idForName = (want) => {
+    const needle = String(want || '').toLowerCase();
+    if (sourceNames.length && parsed.channelIds.length) {
+      const idx = sourceNames.findIndex((n) => String(n || '').toLowerCase() === needle);
+      if (idx >= 0 && parsed.channelIds[idx] != null) return parsed.channelIds[idx];
     }
-  }
+    for (const [id, name] of state.channelIdToName) {
+      if (String(name || '').toLowerCase() === needle) return id;
+    }
+    return null;
+  };
 
-  const dynIdx = Array.isArray(wasmNames)
-    ? wasmNames.findIndex((n) => String(n).toLowerCase() === 'drdynvc')
-    : -1;
-  state.wasmDrdynvcChannelId = (dynIdx >= 0 && parsed.channelIds[dynIdx] != null)
-    ? parsed.channelIds[dynIdx]
-    : null;
+  // Wire IDs reales ya en channelIdToName / drdynvcChannelId / rdpsndChannelId.
+  // WASM-facing: zip por indice en bastion; IDs reales (post-align) en directo.
+  applyWasmFacingChannelIds(state, wasmNames, sourceNames, parsed.channelIds, idForName);
 
-  const rdpsndIdx = Array.isArray(wasmNames)
-    ? wasmNames.findIndex((n) => String(n).toLowerCase() === 'rdpsnd')
-    : -1;
-  state.wasmRdpsndChannelId = (rdpsndIdx >= 0 && parsed.channelIds[rdpsndIdx] != null)
-    ? parsed.channelIds[rdpsndIdx]
-    : null;
+  // IDs reales de nombres WASM (para inject-only). SC_NET rewrite solo en directo.
+  state.wasmAlignedServerIds = resolveWasmAlignedServerIds(
+    wasmNames,
+    sourceNames,
+    parsed.channelIds
+  );
+  syncWasmJoinedChannels(state, parsed.channelIds);
 
   state.ready = true;
   retryConfirmAppCliprdrWrite(state);
@@ -360,11 +505,10 @@ function declaredChannelId(state, wantedName) {
 
 /**
  * rdpdr se anuncia para alinear indices con Wallix, pero no hay cliente de discos.
- * El stub cierra el handshake y no se reenvia a WASM. Nunca se contesta por el canal
- * IO (1003): escribir ahi CHANNEL_PDU de rdpdr corrompe el Share Control y el servidor
- * cierra con FIN, que es lo que se vio justo despues de replies=2 en ch=1003.
- * Si Wallix manda rdpdr por el canal que IronRDP reserva a cliprdr, las respuestas
- * salen por el VC que anunciamos como rdpdr, para no confirmar 1004 como disco.
+ * El stub cierra el handshake y no se reenvia a WASM. Nunca se escribe CHANNEL_PDU
+ * rdpdr en el canal IO (1003): corrompe Share Control y el servidor cierra con FIN.
+ * Si el announce llega por IO o por cliprdr, las respuestas salen por el VC nombrado
+ * rdpdr (si esta declarado); sin VC rdpdr y en IO se absorbe en silencio.
  */
 function consumeRdpdr(state, channelId, userData) {
   // Un fragmento CLIPRDR de fichero no lleva CLIPRDR_HEADER. Si se mira antes que
@@ -373,18 +517,53 @@ function consumeRdpdr(state, channelId, userData) {
   if (state && state.serverCliprdrFragmentOpen && state.serverCliprdrChannelId === channelId) {
     return null;
   }
+  // Continuaciones rdpdr (sin cabecera 0x4472) solo en directo/inject-only.
+  // En bastion el stub previo no abría series: no cambiar el comportamiento.
+  const trackRdpdrFrags = state && state.isBastion !== true
+    && (state.injectOnlyChannelIds instanceof Set || state.serverRdpdrFragmentOpen);
+  if (trackRdpdrFrags && state.serverRdpdrFragmentOpen
+      && state.serverRdpdrFragmentChannelId === channelId
+      && Buffer.isBuffer(userData) && isChannelPduHeader(userData)
+      && (userData.readUInt32LE(4) & CHANNEL_FLAG_FIRST) === 0) {
+    markDropped(state, channelId);
+    if ((userData.readUInt32LE(4) & CHANNEL_FLAG_LAST) !== 0) {
+      state.serverRdpdrFragmentOpen = false;
+      state.serverRdpdrFragmentChannelId = null;
+    }
+    return {
+      forward: null,
+      replies: [],
+      dropped: true,
+      note: `rdpdr-fragment-continuation ch=${channelId}`,
+      channelId,
+      isCliprdr: false
+    };
+  }
   const rdpdr = handleRdpdrRequest(channelId, state.clientInitiator, userData);
   if (!rdpdr.handled) return null;
+
+  if (trackRdpdrFrags && Buffer.isBuffer(userData) && isChannelPduHeader(userData)) {
+    const chFlags = userData.readUInt32LE(4);
+    state.serverRdpdrFragmentOpen = (chFlags & CHANNEL_FLAG_LAST) === 0;
+    state.serverRdpdrFragmentChannelId = channelId;
+  }
 
   const ioChannelId = state.ioChannelId != null ? state.ioChannelId : 1003;
   const onIo = channelId === ioChannelId;
   const rdpdrCh = declaredChannelId(state, 'rdpdr');
   const onCliprdr = state.cliprdrChannelId != null && channelId === state.cliprdrChannelId;
-  let replies = onIo ? [] : (rdpdr.replies || []);
+  let replies = rdpdr.replies || [];
   let note = rdpdr.note;
 
   if (onIo) {
-    note = `${rdpdr.note} (sin respuesta: canal IO)`;
+    // Contestar en IO tumba la sesion; redirigir al VC rdpdr si existe.
+    if (rdpdrCh != null && replies.length) {
+      replies = replies.map((buf) => rewriteMcsChannelId(buf, rdpdrCh) || buf);
+      note = `${rdpdr.note} (replies->ch=${rdpdrCh}; saludo por IO)`;
+    } else {
+      replies = [];
+      note = `${rdpdr.note} (sin respuesta: canal IO)`;
+    }
   } else if (onCliprdr && rdpdrCh != null && rdpdrCh !== channelId && replies.length) {
     replies = replies.map((buf) => rewriteMcsChannelId(buf, rdpdrCh) || buf);
     note = `${rdpdr.note} (replies->ch=${rdpdrCh})`;
@@ -766,7 +945,11 @@ function claimCliprdrPdu(state, channelId, userData) {
 
   const flags = isChannelPduHeader(userData) ? userData.readUInt32LE(4) : 0;
   const starts = isCliprdrHeader(userData) && (flags & CHANNEL_FLAG_FIRST) !== 0;
-  const continues = state.serverCliprdrChannelId === channelId && state.serverCliprdrFragmentOpen;
+  const continuationsOnly = isChannelPduHeader(userData) && (flags & CHANNEL_FLAG_FIRST) === 0;
+  const continues = state.serverCliprdrFragmentOpen && (
+    state.serverCliprdrChannelId === channelId
+    || (continuationsOnly && channelId === state.cliprdrChannelId)
+  );
   if (!starts && !continues) return false;
 
   state.serverCliprdrChannelId = channelId;
@@ -938,8 +1121,158 @@ function takeCliprdrRehandshake(state) {
   return frames;
 }
 
+function staticVcReasmSlot(state, reasmKey) {
+  if (!state.staticVcReasmByKey) state.staticVcReasmByKey = Object.create(null);
+  return state.staticVcReasmByKey[reasmKey] || null;
+}
+
+function setStaticVcReasmSlot(state, reasmKey, slot) {
+  if (!state.staticVcReasmByKey) state.staticVcReasmByKey = Object.create(null);
+  if (slot == null) delete state.staticVcReasmByKey[reasmKey];
+  else state.staticVcReasmByKey[reasmKey] = slot;
+}
+
+function buildMcsIndicationWithChannelPdu(initiator, channelId, payload, chFlags) {
+  const chanUserData = Buffer.alloc(CHANNEL_PDU_HEADER_LEN + payload.length);
+  chanUserData.writeUInt32LE(payload.length, 0);
+  chanUserData.writeUInt32LE(chFlags >>> 0, 4);
+  payload.copy(chanUserData, 8);
+  return {
+    buf: buildMcsSendDataIndication(initiator == null ? 0 : initiator, channelId, chanUserData),
+    userData: chanUserData
+  };
+}
+
+/**
+ * IronRDP StaticVirtualChannel::dechunkify exige la serie FIRST…LAST intacta.
+ * Promueve FIRST-only cuando el payload ya cumple length (BeeSer).
+ */
+function reassembleStaticChannelPduForWasm(state, reasmKey, buf, channelId, userData) {
+  if (!isChannelPduHeader(userData)) {
+    return { action: 'pass', buf, userData };
+  }
+  const totalLen = userData.readUInt32LE(0);
+  const flags = userData.readUInt32LE(4);
+  const first = (flags & CHANNEL_FLAG_FIRST) !== 0;
+  const last = (flags & CHANNEL_FLAG_LAST) !== 0;
+  const chunk = userData.subarray(CHANNEL_PDU_HEADER_LEN);
+
+  if (first && last) {
+    setStaticVcReasmSlot(state, reasmKey, null);
+    return { action: 'pass', buf, userData };
+  }
+
+  if (first && !last) {
+    const parsed = parseMcsSendData(buf);
+    const initiator = parsed ? parsed.initiator : null;
+    if (chunk.length >= totalLen && totalLen > 0) {
+      const payload = chunk.subarray(0, totalLen);
+      const outFlags = (flags | CHANNEL_FLAG_LAST) >>> 0;
+      setStaticVcReasmSlot(state, reasmKey, null);
+      const built = buildMcsIndicationWithChannelPdu(initiator, channelId, payload, outFlags);
+      return {
+        action: 'complete',
+        buf: built.buf,
+        userData: built.userData,
+        promotedFirstOnly: true
+      };
+    }
+    setStaticVcReasmSlot(state, reasmKey, {
+      wireChannelId: channelId,
+      totalLen,
+      acc: Buffer.from(chunk),
+      initiator,
+      firstFlags: flags
+    });
+    return { action: 'buffer' };
+  }
+
+  const reasm = staticVcReasmSlot(state, reasmKey);
+  if (!reasm || reasm.wireChannelId !== channelId) {
+    setStaticVcReasmSlot(state, reasmKey, null);
+    return { action: 'drop-orphan' };
+  }
+  reasm.acc = Buffer.concat([reasm.acc, chunk]);
+  if (!last) {
+    return { action: 'buffer' };
+  }
+
+  const payload = reasm.acc;
+  setStaticVcReasmSlot(state, reasmKey, null);
+  const outFlags = ((reasm.firstFlags || CHANNEL_FLAG_FIRST) | CHANNEL_FLAG_LAST) >>> 0;
+  const parsed = parseMcsSendData(buf);
+  const initiator = reasm.initiator != null
+    ? reasm.initiator
+    : (parsed ? parsed.initiator : 0);
+  const built = buildMcsIndicationWithChannelPdu(initiator, channelId, payload, outFlags);
+  return {
+    action: 'complete',
+    buf: built.buf,
+    userData: built.userData,
+    lengthMismatch: reasm.totalLen != null && payload.length !== reasm.totalLen
+  };
+}
+
+function reassembleServerCliprdrForWasm(state, buf, channelId, userData) {
+  return reassembleStaticChannelPduForWasm(state, 'cliprdr', buf, channelId, userData);
+}
+
+/**
+ * Canales anunciados al servidor pero omitidos en SC_NET al WASM (rdpdr): nunca reenviar.
+ */
+function consumeInjectOnlyChannelFragment(state, channelId, userData) {
+  if (!state || !state.injectOnlyChannelIds || !state.injectOnlyChannelIds.has(channelId)) {
+    return null;
+  }
+  if (Buffer.isBuffer(userData) && isChannelPduHeader(userData)) {
+    const chFlags = userData.readUInt32LE(4);
+    const first = (chFlags & CHANNEL_FLAG_FIRST) !== 0;
+    const last = (chFlags & CHANNEL_FLAG_LAST) !== 0;
+    if (first && !last) {
+      state.injectOnlyFragmentOpen = true;
+      state.injectOnlyFragmentChannelId = channelId;
+    } else if (last && state.injectOnlyFragmentOpen
+        && state.injectOnlyFragmentChannelId === channelId) {
+      state.injectOnlyFragmentOpen = false;
+      state.injectOnlyFragmentChannelId = null;
+    }
+  }
+  markDropped(state, channelId);
+  return {
+    forward: null,
+    replies: [],
+    dropped: true,
+    note: `inject-only-absorb ch=${channelId} len=${userData ? userData.length : 0}B`,
+    channelId,
+    isCliprdr: false,
+    cliprdrDesc: null
+  };
+}
+
+/** Aplica reensamblado estático; devuelve frame listo para remap/forward o null si buffer/drop. */
+function applyStaticVcReasmForward(state, reasmKey, frame, channelId, userData, remapFn) {
+  const reasmOut = reassembleStaticChannelPduForWasm(state, reasmKey, frame, channelId, userData);
+  if (reasmOut.action === 'buffer') {
+    return {
+      status: 'buffer',
+      note: `static-vc-reasm-buffer key=${reasmKey} ch=${channelId}`
+    };
+  }
+  if (reasmOut.action === 'drop-orphan') {
+    return { status: 'drop', note: `static-vc-reasm-orphan key=${reasmKey} ch=${channelId}` };
+  }
+  let outFrame = reasmOut.action === 'complete' ? reasmOut.buf : frame;
+  if (typeof remapFn === 'function') {
+    outFrame = remapFn(state, outFrame, channelId) || outFrame;
+  }
+  let note = `static-vc-reasm key=${reasmKey} ch=${channelId}`;
+  if (reasmOut.action === 'complete') note += ' (reassembled FIRST|LAST)';
+  if (reasmOut.promotedFirstOnly) note += ' (promoted FIRST-only)';
+  return { status: 'forward', frame: outFrame, note, reasmOut };
+}
+
 function buildCliprdrResult(state, buf, channelId, userData) {
-  const desc = describeCliprdrPdu(userData);
+  let desc = describeCliprdrPdu(userData);
   if (desc && (desc.includes('CB_MONITOR_READY') || desc.includes('CB_CLIP_CAPS'))) {
     state.cliprdrServerReady = true;
   }
@@ -997,17 +1330,57 @@ function buildCliprdrResult(state, buf, channelId, userData) {
     };
   }
 
+  const reasmOut = reassembleServerCliprdrForWasm(state, buf, channelId, userData);
+  if (reasmOut.action === 'buffer') {
+    return {
+      forward: null,
+      replies: [],
+      dropped: false,
+      buffered: true,
+      note: `cliprdr-reasm-buffer ch=${channelId}`,
+      channelId: state.cliprdrChannelId,
+      serverChannelId: channelId,
+      isCliprdr: true,
+      cliprdrDesc: desc
+    };
+  }
+  if (reasmOut.action === 'drop-orphan') {
+    state.serverCliprdrFragmentOpen = false;
+    return {
+      forward: null,
+      replies: [],
+      dropped: true,
+      note: 'cliprdr-reasm-orphan',
+      channelId: state.cliprdrChannelId,
+      serverChannelId: channelId,
+      isCliprdr: true,
+      cliprdrDesc: desc
+    };
+  }
+  if (reasmOut.action === 'complete') {
+    buf = reasmOut.buf;
+    userData = reasmOut.userData;
+    desc = describeCliprdrPdu(userData);
+    const udLen = userData.length;
+    console.log(
+      `[Bridge] cliprdr reassembled ch=${channelId} len=${udLen}B` +
+      (reasmOut.promotedFirstOnly ? ' (FIRST-only promoted)' : '')
+    );
+  }
+
   const remapped = channelId !== state.cliprdrChannelId
     ? rewriteMcsChannelId(buf, state.cliprdrChannelId)
     : null;
+
+  const reasmNote = reasmOut.action === 'complete' ? ' (reassembled FIRST|LAST)' : '';
 
   return {
     forward: remapped || buf,
     replies: [],
     dropped: false,
     note: remapped
-      ? `cliprdr (remap ch=${channelId}->${state.cliprdrChannelId}): ${desc || 'fragmento'}`
-      : `cliprdr: ${desc || 'fragmento'}`,
+      ? `cliprdr (remap ch=${channelId}->${state.cliprdrChannelId}): ${desc || 'fragmento'}${reasmNote}`
+      : `cliprdr: ${desc || 'fragmento'}${reasmNote}`,
     channelId: state.cliprdrChannelId,
     serverChannelId: channelId,
     isCliprdr: true,
@@ -1091,7 +1464,10 @@ function wasmHasDrdynvcName(state) {
   return names.some((n) => String(n).toUpperCase() === 'DRDYNVC' || String(n).toLowerCase() === 'drdynvc');
 }
 
-/** DisplayControl solo en directo (bastion lo rechaza). EGFX Graphics tambien en bastion. */
+/**
+ * DisplayControl solo en directo (bastion lo stub-acepta con EGFX, sin WASM).
+ * EGFX Graphics sigue permitido en bastion via wasmAllowsGraphicsDvc.
+ */
 function wasmDeclaredDrdynvc(state) {
   if (state && state.isBastion) return false;
   return wasmHasDrdynvcName(state);
@@ -1157,6 +1533,58 @@ function logAudioDvcRejectOnce(state, note) {
   }
 }
 
+/**
+ * Tras absorber un DynVC FIRST sin LAST, las continuaciones del mismo canal MCS
+ * deben tirarse: si van al WASM, ChunkProcessor revienta (fragmento huerfano).
+ */
+function noteDrdynvcAbsorbedFragment(state, channelId, userData) {
+  if (!state || channelId == null || !Buffer.isBuffer(userData) || userData.length < 8) return;
+  const flags = userData.readUInt32LE(4);
+  const first = (flags & CHANNEL_FLAG_FIRST) !== 0;
+  const last = (flags & CHANNEL_FLAG_LAST) !== 0;
+  if (first && !last) {
+    state.serverDrdynvcDropFragmentOpen = true;
+    state.serverDrdynvcDropChannelId = channelId;
+    return;
+  }
+  if (last && state.serverDrdynvcDropFragmentOpen
+      && state.serverDrdynvcDropChannelId === channelId) {
+    state.serverDrdynvcDropFragmentOpen = false;
+    state.serverDrdynvcDropChannelId = null;
+  }
+}
+
+/**
+ * Continuacion de una serie DynVC ya absorbida. Un nuevo FIRST cierra la serie
+ * abandonada y deja que handleDvcRequest decida el PDU actual.
+ * @returns {object|null} resultado processServerFrame o null
+ */
+function consumeDrdynvcDropContinuation(state, channelId, userData) {
+  if (!state || !state.serverDrdynvcDropFragmentOpen) return null;
+  if (state.serverDrdynvcDropChannelId !== channelId) return null;
+  if (!Buffer.isBuffer(userData) || userData.length < 8) return null;
+  const flags = userData.readUInt32LE(4);
+  if ((flags & CHANNEL_FLAG_FIRST) !== 0) {
+    state.serverDrdynvcDropFragmentOpen = false;
+    state.serverDrdynvcDropChannelId = null;
+    return null;
+  }
+  if ((flags & CHANNEL_FLAG_LAST) !== 0) {
+    state.serverDrdynvcDropFragmentOpen = false;
+    state.serverDrdynvcDropChannelId = null;
+  }
+  markDropped(state, channelId);
+  return {
+    forward: null,
+    replies: [],
+    dropped: true,
+    note: `dvc-drop-fragment-continuation ch=${channelId} flags=0x${flags.toString(16)} len=${userData.length}B`,
+    channelId,
+    isCliprdr: false,
+    cliprdrDesc: null
+  };
+}
+
 function remapServerRdpsndFrame(state, buf, incomingChannelId) {
   const wasmId = state && state.wasmRdpsndChannelId;
   if (wasmId == null || incomingChannelId === wasmId) return buf;
@@ -1208,14 +1636,43 @@ function processServerFrame(state, buf) {
   if (!state || !Buffer.isBuffer(buf)) return empty;
   if (buf[0] !== 0x03) return empty;
 
+  let frame = buf;
   if (!state.ready) {
-    learnFromServerGcc(state, buf);
+    const learned = learnFromServerGcc(state, frame);
+    // Tras inyectar rdpdr/etc., SC_NET trae mas IDs que canales del WASM. Sin recortar,
+    // IronRDP hace zip por indice y deja cliprdr/rdpsnd/drdynvc en IDs ajenos.
+    // Solo directo: bastion Wallix necesita la lista SC_NET completa (rail/rdpdr/rdpsnd).
+    if (learned && isDirectInjectAlignPath(state)) {
+      const aligned = rewriteScNetChannelIds(frame, state.wasmAlignedServerIds);
+      if (aligned.patched) {
+        frame = aligned.buf;
+        if (!state.loggedScNetAlign) {
+          state.loggedScNetAlign = true;
+          console.log(
+            `[Bridge] SC_NET alineado al WASM: [${aligned.previousIds.join(',')}]` +
+            ` -> [${aligned.newIds.join(',')}]`
+          );
+        }
+        return {
+          forward: frame,
+          replies: [],
+          dropped: false,
+          note: `sc-net-align [${aligned.previousIds.join(',')}]→[${aligned.newIds.join(',')}]`,
+          channelId: null,
+          isCliprdr: false,
+          cliprdrDesc: null,
+          scNetAligned: true
+        };
+      }
+    }
   }
 
-  const channelId = readSendDataIndicationChannelId(buf);
-  if (channelId == null) return empty;
+  const channelId = readSendDataIndicationChannelId(frame);
+  if (channelId == null) {
+    return frame === buf ? empty : { ...empty, forward: frame };
+  }
 
-  const parsed = parseMcsSendData(buf);
+  const parsed = parseMcsSendData(frame);
 
   const isIoChannel = state.ready ? (channelId === state.ioChannelId) : (channelId === 1003);
 
@@ -1230,14 +1687,64 @@ function processServerFrame(state, buf) {
 
   // rdpsnd ANTES de claimCliprdr: SNDC_TRAINING/FORMATS chocan con TEMP_DIRECTORY/CAPS.
   if (!isIoChannel && parsed && isServerRdpsndChannel(state, channelId) && wasmAllowsStaticRdpsnd(state)) {
-    const fwd = remapServerRdpsndFrame(state, buf, channelId);
-    const note = `rdpsnd-forward ch=${channelId} len=${parsed.userData.length}B`;
+    // Bastion: remap directo sin reensamblar (flujo Wallix ya estable).
+    if (state.isBastion === true) {
+      const fwd = remapServerRdpsndFrame(state, frame, channelId);
+      logAudioOnce(state, 'loggedStaticRdpsnd', `[Bridge] Audio: forward static rdpsnd ch=${channelId}`);
+      return {
+        forward: fwd,
+        replies: [],
+        dropped: false,
+        note: `rdpsnd-forward ch=${channelId} len=${parsed.userData.length}B`,
+        channelId,
+        isCliprdr: false,
+        cliprdrDesc: null,
+        rdpsndForward: true
+      };
+    }
+    const rdpsndReasm = applyStaticVcReasmForward(
+      state,
+      'rdpsnd',
+      frame,
+      channelId,
+      parsed.userData,
+      remapServerRdpsndFrame
+    );
+    if (rdpsndReasm.status === 'buffer') {
+      return {
+        forward: null,
+        replies: [],
+        dropped: false,
+        buffered: true,
+        note: rdpsndReasm.note,
+        channelId,
+        isCliprdr: false,
+        cliprdrDesc: null,
+        rdpsndForward: true
+      };
+    }
+    if (rdpsndReasm.status === 'drop') {
+      markDropped(state, channelId);
+      return {
+        forward: null,
+        replies: [],
+        dropped: true,
+        note: rdpsndReasm.note,
+        channelId,
+        isCliprdr: false,
+        cliprdrDesc: null
+      };
+    }
     logAudioOnce(state, 'loggedStaticRdpsnd', `[Bridge] Audio: forward static rdpsnd ch=${channelId}`);
+    let rdpsndNote = rdpsndReasm.note || `rdpsnd-forward ch=${channelId} len=${parsed.userData.length}B`;
+    if (rdpsndNote.includes('static-vc-reasm key=rdpsnd') && !rdpsndNote.includes('reassembled')) {
+      rdpsndNote = `rdpsnd-forward ch=${channelId} len=${parsed.userData.length}B`;
+    }
     return {
-      forward: fwd,
+      forward: rdpsndReasm.frame,
       replies: [],
       dropped: false,
-      note,
+      note: rdpsndNote,
       channelId,
       isCliprdr: false,
       cliprdrDesc: null,
@@ -1249,6 +1756,8 @@ function processServerFrame(state, buf) {
   // inyectado puede compartir patrones de header con cliprdr.
   if (!isIoChannel && parsed && isChannelPduHeader(parsed.userData)
       && state.drdynvcChannelId != null && channelId === state.drdynvcChannelId) {
+    const dropCont = consumeDrdynvcDropContinuation(state, channelId, parsed.userData);
+    if (dropCont) return dropCont;
     const allowDisplayControl = wasmDeclaredDrdynvc(state);
     const allowGraphics = wasmAllowsGraphicsDvc(state);
     const allowAudio = wasmAllowsAudioDvc(state);
@@ -1266,11 +1775,57 @@ function processServerFrame(state, buf) {
         logAudioOnce(state, 'loggedAudioDvc', `[Bridge] Audio: forward ${dvc.note}`);
       }
       if (dvc.capsQuickReply) state.egfxCapsRepliedByBridge = true;
+      // Bastion: remap sin reensamblar CHANNEL_PDU (EGFX Wallix ya estable).
+      if (state.isBastion === true) {
+        return {
+          forward: remapServerDrdynvcFrame(state, frame, channelId),
+          replies: dvc.replies || [],
+          dropped: false,
+          note: dvc.note || channelPduHint(parsed.userData),
+          channelId,
+          isCliprdr: false,
+          cliprdrDesc: null,
+          dvcForward: true
+        };
+      }
+      const dvcReasm = applyStaticVcReasmForward(
+        state,
+        'drdynvc',
+        frame,
+        channelId,
+        parsed.userData,
+        remapServerDrdynvcFrame
+      );
+      if (dvcReasm.status === 'buffer') {
+        return {
+          forward: null,
+          replies: dvc.replies || [],
+          dropped: false,
+          buffered: true,
+          note: dvcReasm.note,
+          channelId,
+          isCliprdr: false,
+          cliprdrDesc: null,
+          dvcForward: true
+        };
+      }
+      if (dvcReasm.status === 'drop') {
+        markDropped(state, channelId);
+        return {
+          forward: null,
+          replies: dvc.replies || [],
+          dropped: true,
+          note: dvcReasm.note,
+          channelId,
+          isCliprdr: false,
+          cliprdrDesc: null
+        };
+      }
       return {
-        forward: remapServerDrdynvcFrame(state, buf, channelId),
+        forward: dvcReasm.frame,
         replies: dvc.replies || [],
         dropped: false,
-        note: dvc.note || channelPduHint(parsed.userData),
+        note: dvc.note || dvcReasm.note || channelPduHint(parsed.userData),
         channelId,
         isCliprdr: false,
         cliprdrDesc: null,
@@ -1279,6 +1834,7 @@ function processServerFrame(state, buf) {
     }
     if (dvc.handled) {
       logAudioDvcRejectOnce(state, dvc.note);
+      noteDrdynvcAbsorbedFragment(state, channelId, parsed.userData);
       markDropped(state, channelId);
       return {
         forward: null,
@@ -1292,14 +1848,63 @@ function processServerFrame(state, buf) {
     }
     // Solo fragmentos / create vacio (note *passthrough*). No reenviar Cmd
     // desconocidos (p.ej. 0x0b): IronRDP cierra con invalid Cmd.
-    if (passthroughDrdynvcFrags && dvc.note && /passthrough/i.test(dvc.note)) {
+    // Tampoco si hay una serie drop-open (FIRST absorbido sin LAST).
+    if (passthroughDrdynvcFrags && dvc.note && /passthrough/i.test(dvc.note)
+        && !(state.serverDrdynvcDropFragmentOpen
+          && state.serverDrdynvcDropChannelId === channelId)) {
       const ud = parsed.userData;
       const chFlags = ud.length >= 8 ? ud.readUInt32LE(4) : 0;
+      if (state.isBastion === true) {
+        return {
+          forward: remapServerDrdynvcFrame(state, frame, channelId),
+          replies: [],
+          dropped: false,
+          note: `dvc-passthrough-frag ch=${channelId} flags=0x${chFlags.toString(16)} len=${ud.length}B`,
+          channelId,
+          isCliprdr: false,
+          cliprdrDesc: null,
+          dvcForward: true
+        };
+      }
+      const passthroughReasm = applyStaticVcReasmForward(
+        state,
+        'drdynvc',
+        frame,
+        channelId,
+        ud,
+        remapServerDrdynvcFrame
+      );
+      if (passthroughReasm.status === 'buffer') {
+        return {
+          forward: null,
+          replies: [],
+          dropped: false,
+          buffered: true,
+          note: passthroughReasm.note,
+          channelId,
+          isCliprdr: false,
+          cliprdrDesc: null,
+          dvcForward: true
+        };
+      }
+      if (passthroughReasm.status === 'drop') {
+        markDropped(state, channelId);
+        return {
+          forward: null,
+          replies: [],
+          dropped: true,
+          note: passthroughReasm.note,
+          channelId,
+          isCliprdr: false,
+          cliprdrDesc: null
+        };
+      }
       return {
-        forward: remapServerDrdynvcFrame(state, buf, channelId),
+        forward: passthroughReasm.frame,
         replies: [],
         dropped: false,
-        note: `dvc-passthrough-frag ch=${channelId} flags=0x${chFlags.toString(16)} len=${ud.length}B`,
+        note: passthroughReasm.note
+          || `dvc-passthrough-frag ch=${channelId} flags=0x${chFlags.toString(16)} len=${ud.length}B`,
         channelId,
         isCliprdr: false,
         cliprdrDesc: null,
@@ -1313,10 +1918,12 @@ function processServerFrame(state, buf) {
   if (parsed) {
     const stubbedRdpdr = consumeRdpdr(state, channelId, parsed.userData);
     if (stubbedRdpdr) return stubbedRdpdr;
+    const injectOnly = consumeInjectOnlyChannelFragment(state, channelId, parsed.userData);
+    if (injectOnly) return injectOnly;
   }
 
   if (!isIoChannel && parsed && claimCliprdrPdu(state, channelId, parsed.userData)) {
-    return buildCliprdrResult(state, buf, channelId, parsed.userData);
+    return buildCliprdrResult(state, frame, channelId, parsed.userData);
   }
 
   // 2. Canales que no son el canal IO ni cliprdr (canal de usuario 1001, drdynvc, etc.):
@@ -1332,6 +1939,8 @@ function processServerFrame(state, buf) {
     // DynVC en canal aun no aprendido (antes de SC_NET) u otro MCS: mismo filtro.
     if (parsed && isChannelPduHeader(parsed.userData)
         && (state.drdynvcChannelId == null || channelId !== state.drdynvcChannelId)) {
+      const dropCont = consumeDrdynvcDropContinuation(state, channelId, parsed.userData);
+      if (dropCont) return dropCont;
       const allowDisplayControl = wasmDeclaredDrdynvc(state);
       const allowGraphics = wasmAllowsGraphicsDvc(state);
       const allowAudio = wasmAllowsAudioDvc(state);
@@ -1348,11 +1957,56 @@ function processServerFrame(state, buf) {
           logAudioOnce(state, 'loggedAudioDvc', `[Bridge] Audio: forward ${dvc.note}`);
         }
         if (dvc.capsQuickReply) state.egfxCapsRepliedByBridge = true;
+        if (state.isBastion === true) {
+          return {
+            forward: remapServerDrdynvcFrame(state, frame, channelId),
+            replies: dvc.replies || [],
+            dropped: false,
+            note: dvc.note || channelPduHint(parsed.userData),
+            channelId,
+            isCliprdr: false,
+            cliprdrDesc: null,
+            dvcForward: true
+          };
+        }
+        const dvcReasmAlt = applyStaticVcReasmForward(
+          state,
+          'drdynvc',
+          frame,
+          channelId,
+          parsed.userData,
+          remapServerDrdynvcFrame
+        );
+        if (dvcReasmAlt.status === 'buffer') {
+          return {
+            forward: null,
+            replies: dvc.replies || [],
+            dropped: false,
+            buffered: true,
+            note: dvcReasmAlt.note,
+            channelId,
+            isCliprdr: false,
+            cliprdrDesc: null,
+            dvcForward: true
+          };
+        }
+        if (dvcReasmAlt.status === 'drop') {
+          markDropped(state, channelId);
+          return {
+            forward: null,
+            replies: dvc.replies || [],
+            dropped: true,
+            note: dvcReasmAlt.note,
+            channelId,
+            isCliprdr: false,
+            cliprdrDesc: null
+          };
+        }
         return {
-          forward: remapServerDrdynvcFrame(state, buf, channelId),
+          forward: dvcReasmAlt.frame,
           replies: dvc.replies || [],
           dropped: false,
-          note: dvc.note || channelPduHint(parsed.userData),
+          note: dvc.note || dvcReasmAlt.note || channelPduHint(parsed.userData),
           channelId,
           isCliprdr: false,
           cliprdrDesc: null,
@@ -1361,6 +2015,7 @@ function processServerFrame(state, buf) {
       }
       if (dvc.handled) {
         logAudioDvcRejectOnce(state, dvc.note);
+        noteDrdynvcAbsorbedFragment(state, channelId, parsed.userData);
         markDropped(state, channelId);
         return {
           forward: null,
@@ -1376,12 +2031,59 @@ function processServerFrame(state, buf) {
       // Sin esto caen al DROP generico y Wallix no completa Graphics.
       if ((allowGraphics || allowDisplayControl || allowAudio)
           && dvc.note
-          && /passthrough|implausible/i.test(dvc.note)) {
+          && /passthrough|implausible/i.test(dvc.note)
+          && !(state.serverDrdynvcDropFragmentOpen
+            && state.serverDrdynvcDropChannelId === channelId)) {
+        if (state.isBastion === true) {
+          return {
+            forward: remapServerDrdynvcFrame(state, frame, channelId),
+            replies: [],
+            dropped: false,
+            note: dvc.note,
+            channelId,
+            isCliprdr: false,
+            cliprdrDesc: null,
+            dvcForward: true
+          };
+        }
+        const passthroughReasmAlt = applyStaticVcReasmForward(
+          state,
+          'drdynvc',
+          frame,
+          channelId,
+          parsed.userData,
+          remapServerDrdynvcFrame
+        );
+        if (passthroughReasmAlt.status === 'buffer') {
+          return {
+            forward: null,
+            replies: [],
+            dropped: false,
+            buffered: true,
+            note: passthroughReasmAlt.note,
+            channelId,
+            isCliprdr: false,
+            cliprdrDesc: null,
+            dvcForward: true
+          };
+        }
+        if (passthroughReasmAlt.status === 'drop') {
+          markDropped(state, channelId);
+          return {
+            forward: null,
+            replies: [],
+            dropped: true,
+            note: passthroughReasmAlt.note,
+            channelId,
+            isCliprdr: false,
+            cliprdrDesc: null
+          };
+        }
         return {
-          forward: remapServerDrdynvcFrame(state, buf, channelId),
+          forward: passthroughReasmAlt.frame,
           replies: [],
           dropped: false,
-          note: dvc.note,
+          note: passthroughReasmAlt.note || dvc.note,
           channelId,
           isCliprdr: false,
           cliprdrDesc: null,
@@ -1444,12 +2146,12 @@ function processServerFrame(state, buf) {
     // que antes provocaba falsos positivos. Las respuestas del bridge (auto-detect) se respetan.
     if (ioDrop.dropped && !(ioDrop.replies && ioDrop.replies.length) &&
         claimCliprdrPdu(state, channelId, parsed.userData)) {
-      return buildCliprdrResult(state, buf, channelId, parsed.userData);
+      return buildCliprdrResult(state, frame, channelId, parsed.userData);
     }
     return ioDrop;
   }
 
-  return empty;
+  return frame === buf ? empty : { ...empty, forward: frame };
 }
 
 function filterServerFrame(state, buf) {
@@ -1462,7 +2164,16 @@ module.exports = {
   MCS_SEND_DATA_INDICATION,
   IRONRDP_SHARE_CONTROL_MIN,
   CLIPRDR_MSG_NAMES,
+  resolveWasmAlignedServerIds,
+  resolveWasmZipVisibleIds,
+  rewriteScNetChannelIds,
   describeCliprdrPdu,
+  reassembleServerCliprdrForWasm,
+  reassembleStaticChannelPduForWasm,
+  isDirectInjectAlignPath,
+  syncWasmJoinedChannels,
+  consumeInjectOnlyChannelFragment,
+  applyStaticVcReasmForward,
   isCliprdrHeader,
   parseServerNetworkChannels,
   readSendDataIndicationChannelId,

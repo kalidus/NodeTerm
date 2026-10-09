@@ -353,12 +353,15 @@ function describeRdpPdu(buf) {
 class RdpStreamDeframer {
   constructor() {
     this.buffer = Buffer.alloc(0);
+    // Cola opaca tras un CredSSP emitido a medias (NLA). No reparsear como Fast-Path.
+    this.opaqueRemaining = 0;
   }
 
   /**
    * Agrega un chunk TCP y retorna un array con todos los frames RDP completos.
-   * Si el último frame está incompleto (fragmentado por TCP), se retiene en el buffer
-   * interno hasta que lleguen los bytes restantes en el siguiente chunk.
+   * TPKT/Fast-Path incompletos se retienen. CredSSP incompleto se emite al momento
+   * (como RdpFrameSplitter): retenerlo cuelga HYBRID/NLA si la longitud DER no
+   * cierra o tarda varios segmentos TLS.
    *
    * Soporta:
    * - TPKT (0x03 0x00 ...)
@@ -379,6 +382,18 @@ class RdpStreamDeframer {
 
     const frames = [];
     let offset = 0;
+
+    // Continuacion opaca de CredSSP emitido a medias: no inspeccionar cabeceras.
+    if (this.opaqueRemaining > 0) {
+      const take = Math.min(this.buffer.length, this.opaqueRemaining);
+      frames.push(Buffer.from(this.buffer.subarray(0, take)));
+      this.opaqueRemaining -= take;
+      offset = take;
+      if (this.opaqueRemaining > 0) {
+        this.buffer = this.buffer.subarray(offset);
+        return frames;
+      }
+    }
 
     while (offset < this.buffer.length) {
       const remaining = this.buffer.length - offset;
@@ -429,19 +444,31 @@ class RdpStreamDeframer {
           if (remaining < 3) break;
           credsspLen = this.buffer[offset + 2] + 3;
           minHdr = 3;
+        } else if (b1 === 0x83) {
+          if (remaining < 5) break;
+          credsspLen = ((this.buffer[offset + 2] << 16)
+            | (this.buffer[offset + 3] << 8)
+            | this.buffer[offset + 4]) + 5;
+          minHdr = 5;
         } else if (b1 < 0x80) {
           credsspLen = b1 + 2;
         } else {
-          frames.push(Buffer.from(this.buffer.subarray(offset, offset + 1)));
-          offset++;
-          continue;
+          // Longitud indefinida (0x80) u otra forma: passthrough del resto.
+          // Emitir byte a byte hacia Fast-Path (p.ej. 0x80) cuelga NLA.
+          frames.push(Buffer.from(this.buffer.subarray(offset)));
+          offset = this.buffer.length;
+          break;
         }
         if (credsspLen < minHdr) {
-          frames.push(Buffer.from(this.buffer.subarray(offset, offset + 1)));
-          offset++;
-          continue;
+          frames.push(Buffer.from(this.buffer.subarray(offset)));
+          offset = this.buffer.length;
+          break;
         }
         if (remaining < credsspLen) {
+          // Emitir ya el prefijo (NLA). La cola opaca evita reparsear como Fast-Path.
+          frames.push(Buffer.from(this.buffer.subarray(offset)));
+          this.opaqueRemaining = credsspLen - remaining;
+          offset = this.buffer.length;
           break;
         }
         frames.push(Buffer.from(this.buffer.subarray(offset, offset + credsspLen)));
@@ -496,6 +523,7 @@ class RdpStreamDeframer {
 
   reset() {
     this.buffer = Buffer.alloc(0);
+    this.opaqueRemaining = 0;
   }
 }
 

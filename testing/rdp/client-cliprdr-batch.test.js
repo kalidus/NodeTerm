@@ -18,6 +18,7 @@ const CB_TEMP_DIRECTORY = 0x0006;
 const CB_FORMAT_LIST = 0x0002;
 const CB_FORMAT_LIST_RESPONSE = 0x0003;
 const CB_FORMAT_DATA_REQUEST = 0x0004;
+const CB_FORMAT_DATA_RESPONSE = 0x0005;
 const CB_FILECONTENTS_REQUEST = 0x0008;
 
 const CLIPRDR_CH = 1004;
@@ -462,7 +463,7 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     assert.equal(kept.injected.length, 1);
   });
 
-  test('shouldSanitizeBastionConfirm solo capa sin EGFX', () => {
+  test('shouldSanitizeBastionConfirm solo capa sin EGFX (directo nunca)', () => {
     const { shouldSanitizeBastionConfirm } = rdpBridge;
     assert.equal(shouldSanitizeBastionConfirm(true, false), true);
     assert.equal(shouldSanitizeBastionConfirm(true, undefined), true);
@@ -970,5 +971,58 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     for (const frame of kept) {
       assert.equal(parseMcsSendData(frame).channelId, CLIPRDR_CH);
     }
+  });
+
+  test('directo post-inyeccion: FORMAT_DATA_RESPONSE fragmentado remapea FIRST+middle+LAST a 1005', () => {
+    // WASM cliprdr=1004 (indice post-rdpdr); wire cliprdr=1005. Serie como IronRDP:
+    // ChanHdr len=4134 flags=0x11 / 0x10 / 0x12, primer payload 1600B.
+    const dataLen = 4126;
+    const totalLen = 8 + dataLen;
+    const clipHdr = Buffer.alloc(8);
+    clipHdr.writeUInt16LE(CB_FORMAT_DATA_RESPONSE, 0);
+    clipHdr.writeUInt16LE(0x0001, 2);
+    clipHdr.writeUInt32LE(dataLen, 4);
+    const fullClip = Buffer.concat([clipHdr, Buffer.alloc(dataLen, 0x41)]);
+    assert.equal(fullClip.length, totalLen);
+
+    const buildChunk = (flags, payload) => {
+      const chanHdr = Buffer.alloc(8);
+      chanHdr.writeUInt32LE(totalLen, 0);
+      chanHdr.writeUInt32LE(flags, 4);
+      return buildMcsRequest(CLIPRDR_CH, Buffer.concat([chanHdr, payload]));
+    };
+
+    const batch = Buffer.concat([
+      buildChunk(CHANNEL_FLAG_FIRST | CHANNEL_FLAG_SHOW_PROTOCOL, fullClip.subarray(0, 1600)),
+      buildChunk(CHANNEL_FLAG_SHOW_PROTOCOL, fullClip.subarray(1600, 3200)),
+      buildChunk(CHANNEL_FLAG_LAST | CHANNEL_FLAG_SHOW_PROTOCOL, fullClip.subarray(3200))
+    ]);
+
+    const state = {
+      ioChannelId: IO_CH,
+      cliprdrChannelId: CLIPRDR_CH,
+      serverCliprdrChannelId: 1005,
+      cliprdrWriteChannelId: 1005,
+      cliprdrServerReady: true,
+      clientCliprdrFragmentOpen: false,
+      allowed: new Set([1003, 1004, 1005, 1006, 1007]),
+      channelIdToName: new Map([
+        [1004, 'rdpdr'],
+        [1005, 'cliprdr'],
+        [1006, 'rdpsnd'],
+        [1007, 'drdynvc']
+      ])
+    };
+
+    const kept = filterBatch(service, batch, state);
+    assert.equal(kept.length, 3, 'los tres chunks CHANNEL_PDU tienen que salir');
+    for (const frame of kept) {
+      assert.equal(parseMcsSendData(frame).channelId, 1005, 'remap 1004->1005 en toda la serie');
+    }
+    assert.equal(clipMsgType(kept[0]), CB_FORMAT_DATA_RESPONSE);
+    assert.equal(chanFlags(kept[0]) & CHANNEL_FLAG_FIRST, CHANNEL_FLAG_FIRST);
+    assert.equal(chanFlags(kept[0]) & CHANNEL_FLAG_LAST, 0);
+    assert.equal(chanFlags(kept[2]) & CHANNEL_FLAG_LAST, CHANNEL_FLAG_LAST);
+    assert.equal(state.clientCliprdrFragmentOpen, false, 'LAST cierra la serie');
   });
 });

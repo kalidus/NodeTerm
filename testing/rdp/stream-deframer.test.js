@@ -9,7 +9,40 @@ const { readFpLength, fixWallixBitmapStrideCrop } = require('../../src/main/serv
 const { createChannelFilterState, processServerFrame, learnFromServerGcc } = require('../../src/main/services/rdp-channel-filter');
 const { patchFontSequenceFlags } = require('../../src/main/services/rdp-font-helpers');
 
-const { splitTpktFrames } = require('../../src/main/services/rdp-protocol-helpers');
+const { splitTpktFrames, RdpStreamDeframer } = require('../../src/main/services/rdp-protocol-helpers');
+
+describe('RdpStreamDeframer framing (directo y bastion)', () => {
+  test('TPKT partido en dos chunks TCP solo emite al completar', () => {
+    const deframer = new RdpStreamDeframer();
+    const tpkt = Buffer.concat([
+      Buffer.from([0x03, 0x00, 0x00, 0x20]),
+      Buffer.alloc(28, 0xaa)
+    ]);
+    assert.equal(deframer.push(tpkt.subarray(0, 10)).length, 0, 'prefijo incompleto no se emite');
+    const done = deframer.push(tpkt.subarray(10));
+    assert.equal(done.length, 1);
+    assert.deepEqual(done[0], tpkt);
+  });
+
+  test('CredSSP incompleto se emite ya (NLA) y la cola no se reparsea como Fast-Path', () => {
+    const deframer = new RdpStreamDeframer();
+    const cred = Buffer.alloc(200);
+    cred[0] = 0x30;
+    cred[1] = 0x82;
+    cred.writeUInt16BE(196, 2);
+    for (let i = 4; i < 200; i++) cred[i] = i & 0xff;
+
+    const first = deframer.push(cred.subarray(0, 50));
+    assert.equal(first.length, 1, 'prefijo CredSSP sale al momento');
+    assert.equal(first[0].length, 50);
+    assert.equal(first[0][0], 0x30);
+
+    const rest = deframer.push(cred.subarray(50));
+    assert.equal(rest.length, 1);
+    assert.equal(rest[0].length, 150);
+    assert.deepEqual(Buffer.concat([first[0], rest[0]]), cred);
+  });
+});
 
 describe('RDP TCP Stream Deframer & Wallix Separation', () => {
   const f1Path = path.join(__dirname, 'frames/from-01-105b.hex');

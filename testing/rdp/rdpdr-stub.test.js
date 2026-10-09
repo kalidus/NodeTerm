@@ -69,7 +69,7 @@ describe('rdpdr stub', () => {
     assert.equal(parseRdpdrPdu(parseMcsSendData(res.replies[1]).userData).packetId, PAKID_CORE_DEVICELIST_ANNOUNCE);
   });
 
-  test('en el canal IO se absorbe el Server Announce y no se contesta', () => {
+  test('en el canal IO sin VC rdpdr se absorbe el Announce y no se contesta', () => {
     const state = createChannelFilterState();
     state.ready = true;
     state.ioChannelId = 1003;
@@ -84,6 +84,26 @@ describe('rdpdr stub', () => {
     assert.equal(res.forward, null);
     assert.equal(res.replies.length, 0, 'escribir rdpdr en el canal IO cierra la sesion');
     assert.ok(res.note.includes('canal IO'));
+  });
+
+  test('en el canal IO con VC rdpdr se contesta por el VC nombrado (no por IO)', () => {
+    const state = createChannelFilterState();
+    state.ready = true;
+    state.ioChannelId = 1003;
+    state.cliprdrChannelId = 1004;
+    state.allowed = new Set([1003, 1004, 1005, 1006]);
+    state.channelIdToName = new Map([[1004, 'cliprdr'], [1005, 'rdpdr'], [1006, 'rdpsnd']]);
+    state.clientInitiator = 0;
+
+    const frame = buildMcsSendDataIndication(0, 1003, serverAnnounce(13, 0x7e));
+    const res = processServerFrame(state, frame);
+
+    assert.equal(res.dropped, true);
+    assert.equal(res.forward, null);
+    assert.ok(res.replies.length >= 2);
+    assert.equal(parseMcsSendData(res.replies[0]).channelId, 1005);
+    assert.ok(res.note.includes('replies->ch=1005'));
+    assert.ok(res.note.includes('saludo por IO'));
   });
 
   test('rdpdr en el canal cliprdr se contesta por el VC rdpdr declarado', () => {

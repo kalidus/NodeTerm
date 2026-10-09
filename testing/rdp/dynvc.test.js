@@ -387,6 +387,19 @@ describe('rdp-dynvc', () => {
     assert.match(res.note, /cmd=0xb\b/i);
   });
 
+  it('TPKT a medias con flags FIRST|LAST no se absorbe (evita dechunkify huerfano)', () => {
+    clearActiveDvcChannels();
+    // Cabecera dice length=500 y FIRST|LAST, pero solo hay 20B de payload.
+    const cpdu = Buffer.alloc(28, 0xab);
+    cpdu.writeUInt32LE(500, 0);
+    cpdu.writeUInt32LE(0x03, 4);
+    cpdu[8] = 0xb0; // parecería Cmd 0x0b si se tratara como completo
+    const res = handleDvcRequest(1005, 1002, cpdu, { allowGraphics: true });
+    assert.equal(res.handled, false);
+    assert.equal(res.forward, false);
+    assert.ok(/dvc-fragment-passthrough/i.test(res.note));
+  });
+
   it('responde Soft-Sync Request en local sin reenviar al WASM', () => {
     clearActiveDvcChannels();
     const dvc = Buffer.from([0x80, 0x00, 0x00, 0x00, 0x00, 0x00]);
@@ -536,18 +549,20 @@ describe('drdynvc remap DisplayControl', () => {
     state.clientChannelNames = ['rdpdr', 'rdpsnd', 'cliprdr', 'drdynvc'];
     assert.equal(learnFromServerGcc(state, buildScNet(1003, [1004, 1005, 1006, 1007])), true);
     assert.equal(state.drdynvcChannelId, 1007);
-    assert.equal(state.wasmDrdynvcChannelId, 1005);
+    // Alineado por nombre: mismo ID que el servidor (ya no zip por indice WASM).
+    assert.equal(state.wasmDrdynvcChannelId, 1007);
+    assert.deepEqual(state.wasmAlignedServerIds, [1006, 1007]);
     return state;
   }
 
-  it('reenvia DisplayControl remapeando servidor->wasm', () => {
+  it('reenvia DisplayControl al WASM con el mismo ID (SC_NET alineado)', () => {
     const state = injectedDrdynvcState();
     const frame = buildMcsIndication(1007, buildDisplayControlCreatePdu());
     const res = processServerFrame(state, frame);
     assert.equal(res.dropped, false);
     assert.ok(res.forward);
     assert.equal(res.replies.length, 0);
-    assert.equal(res.forward.readUInt16BE(10), 1005);
+    assert.equal(res.forward.readUInt16BE(10), 1007);
   });
 
   it('reenvia CAPS al WASM en processServerFrame cuando hay drdynvc', () => {
@@ -579,11 +594,12 @@ describe('drdynvc remap DisplayControl', () => {
     assert.equal(res.replies.length, 1);
   });
 
-  it('remapear WASM->servidor el canal drdynvc inyectado', () => {
+  it('WASM->servidor drdynvc: con IDs alineados el frame no se reescribe', () => {
     const state = injectedDrdynvcState();
-    const frame = buildMcsIndication(1005, buildDisplayControlCreatePdu());
+    const frame = buildMcsIndication(1007, buildDisplayControlCreatePdu());
     const out = remapClientDrdynvcFrame(state, frame);
     assert.equal(out.readUInt16BE(10), 1007);
+    assert.equal(out, frame);
   });
 
   it('en bastion+EGFX acepta DisplayControl con SUCCESS stub (sin reenviar al WASM)', () => {
@@ -596,6 +612,18 @@ describe('drdynvc remap DisplayControl', () => {
     assert.equal(res.forward, null);
     assert.equal(res.replies.length, 1);
     assert.ok((res.note || '').includes('dvc-accept-stub') || (res.note || '').includes('DisplayControl'));
+  });
+
+  it('en directo reenvia DisplayControl al WASM (allowDisplayControl)', () => {
+    const state = injectedDrdynvcState();
+    state.isBastion = false;
+    state.egfxGraphics = true;
+    const frame = buildMcsIndication(1007, buildDisplayControlCreatePdu());
+    const res = processServerFrame(state, frame);
+    assert.equal(res.dropped, false);
+    assert.ok(res.forward);
+    assert.ok((res.note || '').includes('dvc-forward'));
+    assert.ok((res.note || '').includes('DisplayControl'));
   });
 
   it('reenvia EGFX Graphics en bastion cuando WASM declara drdynvc', () => {
@@ -611,7 +639,7 @@ describe('drdynvc remap DisplayControl', () => {
     const res = processServerFrame(state, frame);
     assert.equal(res.dropped, false);
     assert.ok(res.forward);
-    assert.equal(res.forward.readUInt16BE(10), 1005);
+    assert.equal(res.forward.readUInt16BE(10), 1007);
   });
 
   it('egfxGraphics permite Graphics aunque wasmChannelNames no liste drdynvc aun', () => {
@@ -624,12 +652,13 @@ describe('drdynvc remap DisplayControl', () => {
     assert.equal(wasmAllowsGraphicsDvc(state), false);
   });
 
-  it('remapea drdynvc cliente en bastion para EGFX (WASM declaro drdynvc)', () => {
+  it('drdynvc cliente en bastion+EGFX: IDs alineados no requieren remap', () => {
     const state = injectedDrdynvcState();
     state.isBastion = true;
-    const frame = buildMcsIndication(1005, buildDisplayControlCreatePdu());
+    const frame = buildMcsIndication(1007, buildDisplayControlCreatePdu());
     const out = remapClientDrdynvcFrame(state, frame);
     assert.equal(out.readUInt16BE(10), 1007);
+    assert.equal(out, frame);
   });
 
   it('no remapea drdynvc si los IDs coinciden', () => {
@@ -698,7 +727,7 @@ describe('drdynvc remap DisplayControl', () => {
     assert.equal(res.replies.length, 1);
   });
 
-  it('reenvia fragmento CHANNEL_PDU drdynvc sin header DVC cuando allowGraphics', () => {
+  it('directo: middle CHANNEL_PDU drdynvc huérfano se descarta (reasm)', () => {
     const state = injectedDrdynvcState();
     // MIDDLE fragment: no FIRST/LAST, payload ZGFX-like (0xe0…) — no es PDU DVC parseable
     const body = Buffer.alloc(1590, 0xab);
@@ -710,11 +739,93 @@ describe('drdynvc remap DisplayControl', () => {
     body.copy(channelPdu, 8);
     const frame = buildMcsIndication(1007, channelPdu);
     const res = processServerFrame(state, frame);
+    assert.equal(res.dropped, true);
+    assert.equal(res.forward, null);
+    assert.ok((res.note || '').includes('static-vc-reasm-orphan'));
+  });
+
+  it('bastion: middle CHANNEL_PDU drdynvc se reenvia (legacy passthrough)', () => {
+    const state = injectedDrdynvcState();
+    state.isBastion = true;
+    const body = Buffer.alloc(1590, 0xab);
+    body[0] = 0xe0;
+    body[1] = 0x01;
+    const channelPdu = Buffer.alloc(8 + body.length);
+    channelPdu.writeUInt32LE(body.length, 0);
+    channelPdu.writeUInt32LE(0x00, 4);
+    body.copy(channelPdu, 8);
+    const frame = buildMcsIndication(1007, channelPdu);
+    const res = processServerFrame(state, frame);
     assert.equal(res.dropped, false);
     assert.ok(res.forward);
     assert.equal(res.dvcForward, true);
     assert.ok((res.note || '').includes('dvc-passthrough-frag'));
-    assert.equal(res.forward.readUInt16BE(10), 1005);
+    assert.equal(res.forward.readUInt16BE(10), 1007);
+  });
+
+  it('tras absorber FIRST DynVC comprimido sin LAST no reenvia middle/LAST al WASM', () => {
+    const state = injectedDrdynvcState();
+    const totalLen = 3200;
+    // FIRST: DataFirstCompressed (Cmd=0x06) — IronRDP no lo soporta
+    const firstBody = Buffer.alloc(1400, 0xcd);
+    firstBody[0] = 0x60; // Cmd=6
+    const firstPdu = Buffer.alloc(8 + firstBody.length);
+    firstPdu.writeUInt32LE(totalLen, 0);
+    firstPdu.writeUInt32LE(0x01, 4); // FIRST only
+    firstBody.copy(firstPdu, 8);
+    const first = processServerFrame(state, buildMcsIndication(1007, firstPdu));
+    assert.equal(first.dropped, true);
+    assert.equal(first.forward, null);
+    assert.ok(/dvc-compressed-drop/i.test(first.note || ''));
+    assert.equal(state.serverDrdynvcDropFragmentOpen, true);
+    assert.equal(state.serverDrdynvcDropChannelId, 1007);
+
+    const middleBody = Buffer.alloc(1400, 0xee);
+    const middlePdu = Buffer.alloc(8 + middleBody.length);
+    middlePdu.writeUInt32LE(totalLen, 0);
+    middlePdu.writeUInt32LE(0x00, 4);
+    middleBody.copy(middlePdu, 8);
+    const middle = processServerFrame(state, buildMcsIndication(1007, middlePdu));
+    assert.equal(middle.dropped, true);
+    assert.equal(middle.forward, null);
+    assert.ok(/dvc-drop-fragment-continuation/i.test(middle.note || ''));
+    assert.equal(state.serverDrdynvcDropFragmentOpen, true);
+
+    const lastBody = Buffer.alloc(400, 0xef);
+    const lastPdu = Buffer.alloc(8 + lastBody.length);
+    lastPdu.writeUInt32LE(totalLen, 0);
+    lastPdu.writeUInt32LE(0x02, 4); // LAST
+    lastBody.copy(lastPdu, 8);
+    const last = processServerFrame(state, buildMcsIndication(1007, lastPdu));
+    assert.equal(last.dropped, true);
+    assert.equal(last.forward, null);
+    assert.ok(/dvc-drop-fragment-continuation/i.test(last.note || ''));
+    assert.equal(state.serverDrdynvcDropFragmentOpen, false);
+    assert.equal(state.serverDrdynvcDropChannelId, null);
+  });
+
+  it('tras absorber FIRST cmd 0x0b incompleto tampoco reenvia la continuacion', () => {
+    const state = injectedDrdynvcState();
+    const totalLen = 2000;
+    const firstBody = Buffer.from([0xb0, 0x01, 0x02, 0x03]);
+    const firstPdu = Buffer.alloc(8 + 1400);
+    firstPdu.writeUInt32LE(totalLen, 0);
+    firstPdu.writeUInt32LE(0x01, 4);
+    firstBody.copy(firstPdu, 8);
+    const first = processServerFrame(state, buildMcsIndication(1007, firstPdu));
+    assert.equal(first.dropped, true);
+    assert.ok(/dvc-unsupported-cmd-drop/i.test(first.note || ''));
+    assert.equal(state.serverDrdynvcDropFragmentOpen, true);
+
+    const lastBody = Buffer.alloc(600, 0xaa);
+    const lastPdu = Buffer.alloc(8 + lastBody.length);
+    lastPdu.writeUInt32LE(totalLen, 0);
+    lastPdu.writeUInt32LE(0x02, 4);
+    lastBody.copy(lastPdu, 8);
+    const last = processServerFrame(state, buildMcsIndication(1007, lastPdu));
+    assert.equal(last.dropped, true);
+    assert.equal(last.forward, null);
+    assert.equal(state.serverDrdynvcDropFragmentOpen, false);
   });
 
   it('sigue rechazando CREATE Audio en processServerFrame aunque allowGraphics', () => {
@@ -862,19 +973,20 @@ describe('static rdpsnd forward', () => {
     assert.equal(res.rdpsndForward, true);
   });
 
-  it('remapea rdpsnd servidor->wasm cuando los indices difieren por inyeccion', () => {
+  it('con inyeccion, wasmRdpsnd usa el ID real del servidor (sin zip por indice)', () => {
     const state = createChannelFilterState();
-    // WASM: rdpsnd en indice 0; servidor inyecta rdpdr delante → IDs distintos.
+    // WASM: rdpsnd primero; al servidor se antepone rdpdr.
     state.wasmChannelNames = ['rdpsnd', 'cliprdr', 'drdynvc'];
     state.clientChannelNames = ['rdpdr', 'rdpsnd', 'cliprdr', 'drdynvc'];
     assert.equal(learnFromServerGcc(state, buildScNet(1003, [1004, 1005, 1006, 1007])), true);
     assert.equal(state.rdpsndChannelId, 1005);
-    assert.equal(state.wasmRdpsndChannelId, 1004);
+    assert.equal(state.wasmRdpsndChannelId, 1005);
+    assert.deepEqual(state.wasmAlignedServerIds, [1005, 1006, 1007]);
     const frame = buildMcsIndication(1005, buildChannelPdu());
     const res = processServerFrame(state, frame);
     assert.equal(res.dropped, false);
     assert.ok(res.forward);
-    assert.equal(res.forward.readUInt16BE(10), 1004);
+    assert.equal(res.forward.readUInt16BE(10), 1005);
   });
 
   it('no trata SNDC_TRAINING (0x06) en rdpsnd como CB_TEMP_DIRECTORY', () => {

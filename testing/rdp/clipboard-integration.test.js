@@ -1067,19 +1067,20 @@ describe('CLIPRDR: robustez del filtro', () => {
     assert.equal(state.cliprdrRehandshakePending, false);
   });
 
-  test('wasmChannelNames original fija cliprdrChannelId al indice WASM', () => {
+  test('wasmChannelNames alinea cliprdrChannelId al ID real del servidor (no al indice 0 inyectado)', () => {
     const injected = createChannelFilterState();
     injected.wasmChannelNames = ['cliprdr'];
     injected.clientChannelNames = ['rail', 'rdpdr', 'rdpsnd', 'cliprdr'];
     assert.equal(learnFromServerGcc(injected, buildScNet(1003, [1004, 1005, 1006, 1007])), true);
-    assert.equal(injected.cliprdrChannelId, 1004, 'WASM solo anuncia cliprdr en el indice 0');
+    assert.equal(injected.cliprdrChannelId, 1007, 'cliprdr es el 4º anunciado al servidor');
+    assert.deepEqual(injected.wasmAlignedServerIds, [1007]);
     assert.equal(injected.channelIdToName.get(1007), 'cliprdr');
 
     const wrong = createChannelFilterState();
     wrong.wasmChannelNames = [];
     wrong.clientChannelNames = ['rail', 'rdpdr', 'rdpsnd', 'cliprdr'];
     assert.equal(learnFromServerGcc(wrong, buildScNet(1003, [1004, 1005, 1006, 1007])), true);
-    assert.equal(wrong.cliprdrChannelId, 1007, 'sin wasm names usa la lista inyectada');
+    assert.equal(wrong.cliprdrChannelId, 1007, 'sin wasm names usa la lista inyectada por nombre');
   });
 
   test('un solo saludo en cliprdr 1004 no genera la repeticion', () => {

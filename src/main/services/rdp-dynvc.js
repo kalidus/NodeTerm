@@ -62,11 +62,22 @@ function wantsDynvcPassthrough(options = {}) {
     || options.allowAudio === true;
 }
 
-/** PDU DynVC completo (FIRST|LAST). Un fragmento no se puede rechazar ni absorber. */
-function isCompleteChannelPdu(userData) {
+function isChannelPduFirstLastFlags(userData) {
   if (!Buffer.isBuffer(userData) || userData.length < 8) return false;
   const flags = userData.readUInt32LE(4);
   return (flags & CHANNEL_FLAG_FIRST) !== 0 && (flags & CHANNEL_FLAG_LAST) !== 0;
+}
+
+/**
+ * PDU DynVC completo (FIRST|LAST) con payload entero.
+ * Solo mirar flags engaña con TPKT a medias (cabecera FIRST|LAST + length grande
+ * y pocos bytes): se rechaza/absorbe el "FIRST" y el resto llega huerfano a IronRDP.
+ */
+function isCompleteChannelPdu(userData) {
+  if (!isChannelPduFirstLastFlags(userData)) return false;
+  const length = userData.readUInt32LE(0);
+  // length = bytes tras CHANNEL_PDU_HEADER (MS-RDPBCGR 2.2.6.1).
+  return length <= 0x7fffff && userData.length === 8 + length;
 }
 
 function isChannelPduFirst(userData) {
@@ -140,6 +151,7 @@ function shouldForwardDvcChannel(channelName, options) {
 /**
  * Bastion+EGFX: SUCCESS local (sin WASM) para canales que Wallix reintenta 20-30 s
  * si ve NOT_SUPPORTED. DisplayControl off de verdad: no reenviamos DATA al WASM.
+ * Solo aplica con bastionStub (isBastion && egfx); en directo no se usa.
  */
 function shouldStubAcceptDvc(channelName, options) {
   if (options.bastionStub !== true) return false;
@@ -466,6 +478,19 @@ function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
 
   // Cmd solo es fiable con FLAG_FIRST (en continuaciones el byte 8 es payload).
   const peekCmd = isChannelPduFirst(userData) ? peekDvcCmd(userData) : null;
+
+  // FIRST|LAST en cabecera pero payload truncado (TPKT a medias): NO absorber.
+  // Si se tira como cmd raro/comprimido, el resto del TPKT llega huerfano a IronRDP.
+  if (wantsDynvcPassthrough(options) && isChannelPduFirstLastFlags(userData)
+      && !isCompleteChannelPdu(userData)) {
+    return {
+      handled: false,
+      forward: false,
+      replies: [],
+      note: 'dvc-fragment-passthrough'
+    };
+  }
+
   // El WASM vendor no implementa DataCompressed / DataFirstCompressed.
   if (isCompressedDvcCmd(peekCmd)) {
     return dvcReplyResult(
@@ -492,9 +517,9 @@ function handleDvcRequest(mcsChannelId, initiator, userData, options = {}) {
     );
   }
 
-  // Fragmentos CHANNEL_PDU: con EGFX/DisplayControl no se interpretan aqui.
-  // Un CREATE de Graphics a medias mal parseado + NOT_SUPPORTED tumba EGFX
-  // (Wallix no reabre Graphics y el salto se va a bitmap con esperas de 20-30 s).
+  // Fragmentos CHANNEL_PDU (FIRST sin LAST, etc.): con EGFX no se interpretan aqui.
+  // Si el filtro ya absorbio un FIRST sin LAST (compressed/cmd raro), NO debe
+  // reenviar estas continuaciones: ver serverDrdynvcDropFragmentOpen.
   if (wantsDynvcPassthrough(options) && !isCompleteChannelPdu(userData)) {
     return {
       handled: false,

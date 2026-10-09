@@ -86,8 +86,22 @@ const {
   parseMcsSendData,
   rewriteMcsChannelId,
   clearChannelPduShowProtocol,
-  buildMcsSendDataIndication
+  buildMcsSendDataIndication,
+  isChannelPduHeader
 } = require('./rdp-autodetect');
+
+/** FIRST sin LAST abre serie; LAST la cierra. Continuaciones no llevan CLIPRDR_HEADER. */
+function noteClientCliprdrFragment(channelFilter, userData) {
+  if (!channelFilter || !isChannelPduHeader(userData)) return;
+  const flags = userData.readUInt32LE(4);
+  const first = (flags & CHANNEL_FLAG_FIRST) !== 0;
+  const last = (flags & CHANNEL_FLAG_LAST) !== 0;
+  if (first && !last) {
+    channelFilter.clientCliprdrFragmentOpen = true;
+  } else if (last) {
+    channelFilter.clientCliprdrFragmentOpen = false;
+  }
+}
 
 function debugLog(...args) {
   if (process.env.NODETERM_RDP_DEBUG === '1') {
@@ -194,7 +208,8 @@ function resolveIronRdpGraphics(config) {
 
 /**
  * Sin EGFX el Confirm Active de bastión se deja en RLE (sin RFX/Surface).
- * Con EGFX el WASM anuncia el pipeline Graphics: caparlo deja la superficie negra tras el banner.
+ * Con EGFX el WASM anuncia Surface/codecs: caparlo deja la superficie negra tras el banner.
+ * Directo (normalizeBitmaps=false) nunca sanea.
  */
 function shouldSanitizeBastionConfirm(normalizeBitmaps, egfxGraphics) {
   return normalizeBitmaps === true && egfxGraphics !== true;
@@ -264,7 +279,7 @@ function isNoisyDrop(note) {
 function isInterestingDvcTimelineNote(note) {
   if (typeof note !== 'string' || !/dvc-/i.test(note)) return false;
   if (isNoisyDrop(note)) return false;
-  return /dvc-(reject|accept-stub|accept |forward-caps|forward ch=)/i.test(note)
+  return /dvc-(reject|accept-stub|accept |forward-caps|forward ch=|caps )/i.test(note)
     || /GRAPHICS/i.test(note);
 }
 
@@ -304,6 +319,8 @@ class RdpNativeBridgeService extends EventEmitter {
     this.activeConnections = new Map();
     this.sessionTokens = new Map();
     this.isInitialized = false;
+    /** Sesiones bastion con rewrite RLE activo (fairness multi-sesion). */
+    this.activeBastionSessions = 0;
   }
 
   /**
@@ -569,10 +586,18 @@ class RdpNativeBridgeService extends EventEmitter {
     channelFilter.recordCliprdr = recordCliprdrEvent;
     const streamDeframer = new RdpStreamDeframer();
     const frameSplitter = new RdpFrameSplitter();
-    // Solo el bastion necesita el PDU entero antes de corregir el bitmap.
-    // Una sesion directa usa el splitter: reenvia los bytes tal cual, tambien
-    // cuando Windows mete 4 o mas eventos en un Fast-Path.
+    // Bastion: siempre StreamDeframer (PDU entero para bitmaps/filtro).
+    // Directo: FrameSplitter solo durante CredSSP/NLA (StreamDeframer ahi cuelga
+    // HYBRID). Tras MCS Connect Initial → StreamDeframer para no partir TPKT
+    // de EGFX/cliprdr y provocar dechunkify huerfano en IronRDP.
     const normalizeBitmaps = channelFilter.isBastion === true;
+    let bastionSessionCounted = false;
+    if (normalizeBitmaps) {
+      this.activeBastionSessions += 1;
+      bastionSessionCounted = true;
+    }
+    let directPostNlaDeframer = false;
+    let graphicsCapsWarnTimer = null;
     // Linea de tiempo solo-log para bastion: donde se va la espera tras los banners.
     const timeline = new SessionTimeline({
       enabled: normalizeBitmaps,
@@ -616,6 +641,14 @@ class RdpNativeBridgeService extends EventEmitter {
       if (bastionSliceTimer) {
         clearImmediate(bastionSliceTimer);
         bastionSliceTimer = null;
+      }
+      if (graphicsCapsWarnTimer) {
+        clearTimeout(graphicsCapsWarnTimer);
+        graphicsCapsWarnTimer = null;
+      }
+      if (bastionSessionCounted) {
+        bastionSessionCounted = false;
+        this.activeBastionSessions = Math.max(0, this.activeBastionSessions - 1);
       }
       clearCliprdrWatch();
       if (channelFilter.appCliprdrWriteRetryTimer) {
@@ -828,6 +861,15 @@ class RdpNativeBridgeService extends EventEmitter {
                 buffered: ws.bufferedAmount
               }));
 
+              const sendDirectToWasm = (out) => {
+                if (!out || typeof out.length !== 'number') return;
+                if (ws.readyState !== ws.OPEN) return;
+                flushTickOut();
+                ws.send(out, { binary: true }, () => {
+                  checkResumeTls();
+                });
+              };
+
               const sendBinaryToWasm = (out) => {
                 if (!out || typeof out.length !== 'number') return;
                 if (ws.readyState !== ws.OPEN) return;
@@ -900,12 +942,12 @@ class RdpNativeBridgeService extends EventEmitter {
               };
 
               // Bastion: reescribe pendientes hasta gastar el presupuesto (~3 ms) y deja el resto.
-              // Devuelve cuantos frames ha sacado. No abre ni cierra el lote WS.
+              // Con 2+ sesiones bastion, tope mas bajo para no ahogar la segunda conexion.
               const rewritePendingSlice = () => {
                 backpressure.beginDataTick();
                 let sent = 0;
-                // Tope por si una reescritura no avanza el reloj: no vaciar la lista de un golpe.
-                while (sent < 32 && backpressure.hasPending()) {
+                const maxFrames = this.activeBastionSessions > 1 ? 8 : 32;
+                while (sent < maxFrames && backpressure.hasPending()) {
                   const frame = backpressure.takePendingWithinBudget(ws.bufferedAmount, { force: true });
                   if (!frame) break;
                   rewriteAndSend(frame, 'pending');
@@ -968,11 +1010,16 @@ class RdpNativeBridgeService extends EventEmitter {
                   tlsSocket.pause();
                 }
 
-                // Reensamblar cada PDU antes de reenviarla. Un bitmap partido en
-                // varios segmentos TCP tiene que llegar entero: si se manda a
-                // trozos, el corrector de stride no lo ve y IronRDP pinta el
-                // rectangulo con el ancho equivocado.
-                const splitFrames = normalizeBitmaps ? streamDeframer.push(chunk) : frameSplitter.push(chunk);
+                // Bastion: PDU completo. Directo: splitter en NLA, deframer tras MCS.
+                if (!normalizeBitmaps && !directPostNlaDeframer
+                    && channelFilter.mcsConnectPrepared) {
+                  const splitterIdle = frameSplitter.remainingBytes === 0
+                    && (!frameSplitter.headerBuf || frameSplitter.headerBuf.length === 0);
+                  if (splitterIdle) directPostNlaDeframer = true;
+                }
+                const splitFrames = (normalizeBitmaps || directPostNlaDeframer)
+                  ? streamDeframer.push(chunk)
+                  : frameSplitter.push(chunk);
                 // RTT y ancho de banda se contestan antes de la ráfaga gráfica.
                 // Si la respuesta espera a procesar los bitmaps, Windows mide
                 // esa espera como red lenta y baja la calidad H.264 al mover.
@@ -1335,11 +1382,32 @@ class RdpNativeBridgeService extends EventEmitter {
                   if (processed.dvcForward && typeof processed.note === 'string') {
                     if (/dvc-forward-caps/i.test(processed.note)) {
                       timeline.mark('dvc-caps-hacia-wasm', `#${framesFromRdp}`);
+                      if (timeline.enabled && !channelFilter.loggedEgfxGraphicsCreate
+                          && !graphicsCapsWarnTimer) {
+                        graphicsCapsWarnTimer = setTimeout(() => {
+                          graphicsCapsWarnTimer = null;
+                          if (isCleanedUp || channelFilter.loggedEgfxGraphicsCreate) return;
+                          const pend = backpressure.pendingBitmaps
+                            ? backpressure.pendingBitmaps.length
+                            : 0;
+                          console.warn(
+                            `⚠️ [Bridge] DynVC Caps sin Graphics CREATE tras 5s` +
+                            ` (bitmap-only; pend=${pend})`
+                          );
+                        }, 5000);
+                        if (graphicsCapsWarnTimer && typeof graphicsCapsWarnTimer.unref === 'function') {
+                          graphicsCapsWarnTimer.unref();
+                        }
+                      }
                     }
                     if (!channelFilter.loggedEgfxGraphicsCreate
                         && /^dvc-forward ch=/i.test(processed.note)
                         && /GRAPHICS/i.test(processed.note)) {
                       channelFilter.loggedEgfxGraphicsCreate = true;
+                      if (graphicsCapsWarnTimer) {
+                        clearTimeout(graphicsCapsWarnTimer);
+                        graphicsCapsWarnTimer = null;
+                      }
                       timeline.mark('egfx-graphics-create', `#${framesFromRdp}`);
                       console.log(
                         `[Bridge] EGFX Graphics CREATE mcs=${processed.channelId}` +
@@ -1396,11 +1464,12 @@ class RdpNativeBridgeService extends EventEmitter {
                         channelFilter.egfxGraphics,
                         processed.dvcForward
                       );
+                      const clipFast = processed.isCliprdr && !processed.buffered;
                       for (const ready of readyFrames) {
                         if (!ready || typeof ready.length !== 'number') continue;
-                        // Solo el TPKT Graphics. Un bitmap fragmentado que el
-                        // reensamblador suelta antes sigue por el rewriter.
-                        if (gfxFast && ready === frame) {
+                        // DynVC/EGFX (gfxFast) no espera al rewriter RLE del banner
+                        // ni en bastion. Cliprdr fast solo en directo (bastion reensambla).
+                        if ((gfxFast || (!normalizeBitmaps && clipFast)) && ready === frame) {
                           if (isDebug || !isFastPath) {
                             recentWasmFrames.push(
                               `#${framesFromRdp} ${ready.length}B | ${describeRdpPdu(ready)}` +
@@ -1410,7 +1479,7 @@ class RdpNativeBridgeService extends EventEmitter {
                             );
                             if (recentWasmFrames.length > RECENT_FRAMES_WINDOW) recentWasmFrames.shift();
                           }
-                          sendBinaryToWasm(ready);
+                          sendDirectToWasm(ready);
                           continue;
                         }
                         // Un frame grafico no-bitmap (ordenes, surface...) no puede adelantar
@@ -2293,6 +2362,11 @@ class RdpNativeBridgeService extends EventEmitter {
       channelFilter.cliprdrDataRequested = true;
     }
 
+    // Serie chunked (p.ej. FORMAT_DATA_RESPONSE flags=0x11): el FIRST abre y LAST cierra.
+    // Hay que remapear tambien middle/LAST sin CLIPRDR_HEADER (inyeccion 1004->1005).
+    const wasFragmentOpen = channelFilter.clientCliprdrFragmentOpen === true;
+    noteClientCliprdrFragment(channelFilter, parsed.userData);
+
     let out = frame;
     const inject = [];
 
@@ -2301,12 +2375,13 @@ class RdpNativeBridgeService extends EventEmitter {
     // entre sesiones. Conexiones directas: serverClipCh coincide con el del cliente y no se toca.
     // 1001/IO no. Un VC estatico ajeno (rdpsnd) si es el write path confirmado (saludo ahi).
     const remapDest = writeCh != null ? writeCh : serverClipCh;
+    const fragmentRemap = wasFragmentOpen || channelFilter.clientCliprdrFragmentOpen === true;
     const canRemap = !readDiagFlag('NODETERM_RDP_CLIPRDR_NO_REMAP') &&
       remapDest != null &&
       remapDest !== parsed.channelId &&
-      (writeCh != null || !destIsForeignStaticVc) &&
-      !destIsUserChannel &&
-      !destIsIoChannel;
+      !destIsIoChannel &&
+      (fragmentRemap
+        || ((writeCh != null || !destIsForeignStaticVc) && !destIsUserChannel));
 
     if (canRemap) {
       const remapped = rewriteMcsChannelId(out, remapDest);

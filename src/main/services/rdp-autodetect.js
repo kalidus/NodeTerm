@@ -137,7 +137,12 @@ function isChannelPduHeader(userData) {
   if ((flags & ~CHANNEL_ALLOWED_FLAGS) !== 0) return false;
   // flags byte 0 sólo permite flags estándar (evita falsos positivos con pduSource 0x03eb de ShareControl)
   if (((flags & 0xff) & ~CHANNEL_ALLOWED_LOW_FLAGS) !== 0) return false;
-  if ((flags & (CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST)) === 0 && (flags & 0xff) !== 0) return false;
+  // Continuacion sin FIRST/LAST: SHOW_PROTOCOL/SUSPEND/RESUME/SHADOW son validos (IronRDP 0x10).
+  // Antes se rechazaba cualquier low!=0 y se perdia el remap de middle chunks cliprdr.
+  if ((flags & (CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST)) === 0
+      && ((flags & 0xff) & ~(CHANNEL_FLAG_SHOW_PROTOCOL | 0x20 | 0x40 | 0x80)) !== 0) {
+    return false;
+  }
 
   // CHANNEL_PDU_HEADER mide siempre 8 bytes: SHOW_PROTOCOL (0x10) no añade campos
   const avail = userData.length - CHANNEL_PDU_HEADER_LEN;
