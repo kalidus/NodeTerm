@@ -280,6 +280,10 @@ function createChannelFilterState() {
     loggedEgfxAudioReject: false,
     loggedStaticRdpsnd: false,
     isBastion: false,
+    // true cuando activeBastionSessions > 1 (lo sincroniza el bridge).
+    bastionOverlap: false,
+    // true tras forward de DynVC CAPS hacia WASM (fin hop pre-caps).
+    dvcCapsSeen: false,
     cliprdrServerReady: false,
     // El selector de Wallix completa un cliprdr y, al elegir maquina, repite
     // CB_MONITOR_READY en la misma conexion. IronRDP ya esta en Ready y no
@@ -836,6 +840,43 @@ function sanitizeIllegalCliprdrWrite(state) {
 }
 
 /**
+ * Menu selector Wallix (wallixService n/a, aun sin promote APP/RDP).
+ * En este path los CAPS/FORMAT_LIST tempranos del WASM no deben ir al wire
+ * ni encolarse con synthAck: el rehandshake limpio ocurre al promote.
+ */
+function isSelectorMenuCliprdrDefer(state) {
+  if (!state || state.cliprdrSelectorAppInferred) return false;
+  return state.wallixService === 'n/a';
+}
+
+/**
+ * Mismo gate que cliprdr defer: en el menu n/a el rewrite RLE + cola setImmediate
+ * satura el event loop. Passthrough de bitmaps hasta promote APP/RDP.
+ * Cold APP/RDP (wallixService ya APP|RDP) no cumple.
+ */
+function isSelectorMenuBitmapPassthrough(state) {
+  return isSelectorMenuCliprdrDefer(state);
+}
+
+/**
+ * Bastion con solape (N>1) aun en hop pre-caps/CREATE: mismo alivio RLE que el
+ * menu n/a. No usa egfxGraphics de config (a menudo true desde el inicio).
+ * APP/RDP solos (N=1) no cumplen.
+ */
+function isBastionOverlapHopBitmapPassthrough(state) {
+  if (!state || state.isBastion !== true) return false;
+  if (state.bastionOverlap !== true) return false;
+  if (state.dvcCapsSeen === true || state.loggedEgfxGraphicsCreate === true) return false;
+  return true;
+}
+
+/** Menu n/a o hop bajo solape: bitmaps sin rewrite RLE. */
+function shouldBastionBitmapPassthrough(state) {
+  return isSelectorMenuBitmapPassthrough(state)
+    || isBastionOverlapHopBitmapPassthrough(state);
+}
+
+/**
  * Selector Wallix sin cadena :APP:/:RDP::
  * - Saludo en MCS 1001 (usuario): 2o MONITOR_READY → APP (RemoteApp);
  *   write path al VC cliprdr nombrado + rehandshake.
@@ -857,6 +898,10 @@ function maybePromoteSelectorAppCliprdr(state) {
   state.wallixService = isUser ? 'APP' : 'RDP';
   state.cliprdrSelectorAppInferred = true;
   state.isBastion = true;
+  // PDUs muteados pre-promote no deben flush-earse: el rehandshake usa la cache.
+  if (Array.isArray(state.pendingClientCliprdr) && state.pendingClientCliprdr.length) {
+    state.pendingClientCliprdr = [];
+  }
   if (isUser) {
     // APP: write al VC nombrado es seguro tras saludo en 1001.
     state.cliprdrRehandshakePending = true;
@@ -1055,6 +1100,9 @@ function claimCliprdrPdu(state, channelId, userData) {
       state.isBastion = true;
       state.cliprdrSelectorAppInferred = true;
       state.cliprdrRehandshakePending = true;
+      if (Array.isArray(state.pendingClientCliprdr) && state.pendingClientCliprdr.length) {
+        state.pendingClientCliprdr = [];
+      }
       if (!isSafeStaticCliprdrWrite(state, state.cliprdrWriteChannelId)) {
         state.cliprdrWriteChannelId = named;
       }
@@ -1126,8 +1174,12 @@ function rememberClientCliprdrHandshake(state, desc, frame) {
       clearTimeout(state.appCliprdrCapsWaitTimer);
       state.appCliprdrCapsWaitTimer = null;
     }
+    // APP en frio (1er READY): CAPS vivos al wire sustituyen el rehandshake.
+    // Selector gen2 / promote: conservar pending hasta takeCliprdrRehandshake.
     if (state.wallixService === 'APP'
-        && isSafeStaticCliprdrWrite(state, state.cliprdrWriteChannelId)) {
+        && isSafeStaticCliprdrWrite(state, state.cliprdrWriteChannelId)
+        && (state.cliprdrMonitorReadyCount || 0) < 2
+        && !state.cliprdrSelectorAppInferred) {
       state.cliprdrRehandshakePending = false;
     }
     return;
@@ -1472,10 +1524,12 @@ function buildCliprdrResult(state, buf, channelId, userData) {
     userData = reasmOut.userData;
     desc = describeCliprdrPdu(userData);
     const udLen = userData.length;
-    console.log(
-      `[Bridge] cliprdr reassembled ch=${channelId} len=${udLen}B` +
-      (reasmOut.promotedFirstOnly ? ' (FIRST-only promoted)' : '')
-    );
+    if (state.rdpDebug === true || process.env.NODETERM_RDP_DEBUG === '1') {
+      console.log(
+        `[Bridge] cliprdr reassembled ch=${channelId} len=${udLen}B` +
+        (reasmOut.promotedFirstOnly ? ' (FIRST-only promoted)' : '')
+      );
+    }
   }
 
   const remapped = channelId !== state.cliprdrChannelId
@@ -1623,7 +1677,9 @@ function isServerRdpsndChannel(state, channelId) {
 function logAudioOnce(state, key, message) {
   if (!state || state[key]) return;
   state[key] = true;
-  console.log(message);
+  if (state.rdpDebug === true || process.env.NODETERM_RDP_DEBUG === '1') {
+    console.log(message);
+  }
   if (typeof state.recordCliprdr === 'function') {
     try { state.recordCliprdr(message); } catch (_) { /* noop */ }
   }
@@ -1871,7 +1927,8 @@ function processServerFrame(state, buf) {
     const allowDisplayControl = wasmDeclaredDrdynvc(state);
     const allowGraphics = wasmAllowsGraphicsDvc(state);
     const allowAudio = wasmAllowsAudioDvc(state);
-    const bastionStub = state.isBastion === true && state.egfxGraphics === true;
+    // Stub SUCCESS en cualquier bastion (no solo EGFX): NOT_SUPPORTED alarga el hop 20-30s.
+    const bastionStub = state.isBastion === true;
     const passthroughDrdynvcFrags = allowGraphics || allowDisplayControl || allowAudio;
     const dvc = handleDvcRequest(channelId, state.clientInitiator, parsed.userData, {
       allowDisplayControl,
@@ -2054,7 +2111,8 @@ function processServerFrame(state, buf) {
       const allowDisplayControl = wasmDeclaredDrdynvc(state);
       const allowGraphics = wasmAllowsGraphicsDvc(state);
       const allowAudio = wasmAllowsAudioDvc(state);
-      const bastionStub = state.isBastion === true && state.egfxGraphics === true;
+      // Stub SUCCESS en cualquier bastion (no solo EGFX): NOT_SUPPORTED alarga el hop 20-30s.
+    const bastionStub = state.isBastion === true;
       const dvc = handleDvcRequest(channelId, state.clientInitiator, parsed.userData, {
         allowDisplayControl,
         allowGraphics,
@@ -2296,6 +2354,10 @@ module.exports = {
   fallbackNamedCliprdrWrite,
   greetingOnUnsafeCliprdr,
   greetingStillOnIo,
+  isSelectorMenuCliprdrDefer,
+  isSelectorMenuBitmapPassthrough,
+  isBastionOverlapHopBitmapPassthrough,
+  shouldBastionBitmapPassthrough,
   canFlushCliprdrToNamedVc,
   sanitizeIllegalCliprdrWrite,
   maybePromoteSelectorAppCliprdr,

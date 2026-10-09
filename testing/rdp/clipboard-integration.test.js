@@ -21,7 +21,11 @@ const {
   retryConfirmAppCliprdrWrite,
   retryConfirmRdpCliprdrWrite,
   canFlushCliprdrToNamedVc,
-  sanitizeIllegalCliprdrWrite
+  sanitizeIllegalCliprdrWrite,
+  isSelectorMenuCliprdrDefer,
+  isSelectorMenuBitmapPassthrough,
+  isBastionOverlapHopBitmapPassthrough,
+  shouldBastionBitmapPassthrough
 } = require('../../src/main/services/rdp-channel-filter');
 const {
   CHANNEL_PDU_HEADER_LEN,
@@ -1054,6 +1058,118 @@ describe('CLIPRDR: robustez del filtro', () => {
     rememberClientCliprdrHandshake(state, describeCliprdrPdu(caps), buildMcsIndication(1006, caps));
 
     assert.equal(state.cliprdrRehandshakePending, true, 'no debe cancelarse antes de que takeCliprdrRehandshake lo consuma');
+  });
+
+  test('rememberClientCliprdrHandshake conserva pending tras promote selector (cliprdrSelectorAppInferred)', () => {
+    const state = stateWithCliprdr();
+    state.wallixService = 'APP';
+    state.cliprdrWriteChannelId = 1006;
+    state.cliprdrMonitorReadyCount = 1;
+    state.cliprdrSelectorAppInferred = true;
+    state.cliprdrRehandshakePending = true;
+
+    const caps = buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16)), 0x13);
+    rememberClientCliprdrHandshake(state, describeCliprdrPdu(caps), buildMcsIndication(1006, caps));
+
+    assert.equal(state.cliprdrRehandshakePending, true);
+  });
+
+  test('isSelectorMenuCliprdrDefer solo con wallixService n/a sin promote', () => {
+    const state = stateWithCliprdr();
+    state.wallixService = 'n/a';
+    assert.equal(isSelectorMenuCliprdrDefer(state), true);
+    state.cliprdrSelectorAppInferred = true;
+    assert.equal(isSelectorMenuCliprdrDefer(state), false);
+    state.cliprdrSelectorAppInferred = false;
+    state.wallixService = 'APP';
+    assert.equal(isSelectorMenuCliprdrDefer(state), false);
+  });
+
+  test('isSelectorMenuBitmapPassthrough mismo gate que cliprdr defer (APP frio no entra)', () => {
+    const state = stateWithCliprdr();
+    state.wallixService = 'n/a';
+    assert.equal(isSelectorMenuBitmapPassthrough(state), true);
+    state.cliprdrSelectorAppInferred = true;
+    assert.equal(isSelectorMenuBitmapPassthrough(state), false, 'tras promote: rewrite normal');
+    state.cliprdrSelectorAppInferred = false;
+    state.wallixService = 'APP';
+    assert.equal(isSelectorMenuBitmapPassthrough(state), false, 'APP frio no passthrough');
+    state.wallixService = 'RDP';
+    assert.equal(isSelectorMenuBitmapPassthrough(state), false, 'RDP frio no passthrough');
+  });
+
+  test('isBastionOverlapHopBitmapPassthrough solo N>1 y hop pendiente', () => {
+    const state = stateWithCliprdr();
+    state.isBastion = true;
+    state.wallixService = 'RDP';
+    state.bastionOverlap = false;
+    assert.equal(isBastionOverlapHopBitmapPassthrough(state), false, 'RDP solo sin overlap');
+    state.bastionOverlap = true;
+    assert.equal(isBastionOverlapHopBitmapPassthrough(state), true, 'RDP + overlap pre-caps');
+    state.dvcCapsSeen = true;
+    assert.equal(isBastionOverlapHopBitmapPassthrough(state), false, 'tras dvc caps');
+    state.dvcCapsSeen = false;
+    state.loggedEgfxGraphicsCreate = true;
+    assert.equal(isBastionOverlapHopBitmapPassthrough(state), false, 'tras EGFX CREATE');
+    state.loggedEgfxGraphicsCreate = false;
+    state.egfxGraphics = true;
+    assert.equal(
+      isBastionOverlapHopBitmapPassthrough(state),
+      true,
+      'egfxGraphics de config no bloquea passthrough'
+    );
+    state.isBastion = false;
+    assert.equal(isBastionOverlapHopBitmapPassthrough(state), false, 'no bastion');
+  });
+
+  test('shouldBastionBitmapPassthrough une menu n/a y overlap hop', () => {
+    const menu = stateWithCliprdr();
+    menu.wallixService = 'n/a';
+    menu.isBastion = true;
+    assert.equal(shouldBastionBitmapPassthrough(menu), true, 'n/a menu');
+
+    const rdpSolo = stateWithCliprdr();
+    rdpSolo.isBastion = true;
+    rdpSolo.wallixService = 'RDP';
+    rdpSolo.bastionOverlap = false;
+    assert.equal(shouldBastionBitmapPassthrough(rdpSolo), false, 'RDP N=1');
+
+    const rdpOverlap = stateWithCliprdr();
+    rdpOverlap.isBastion = true;
+    rdpOverlap.wallixService = 'RDP';
+    rdpOverlap.bastionOverlap = true;
+    assert.equal(shouldBastionBitmapPassthrough(rdpOverlap), true, 'RDP N>1 hop');
+    rdpOverlap.dvcCapsSeen = true;
+    assert.equal(shouldBastionBitmapPassthrough(rdpOverlap), false, 'RDP post-caps');
+  });
+
+  test('selector inferred + CAPS tardios: rehandshake pendiente hasta take tras write seguro', () => {
+    const state = stateWithCliprdr();
+    state.wallixService = 'RDP';
+    state.cliprdrSelectorAppInferred = true;
+    state.cliprdrRehandshakePending = true;
+    state.loggedCliprdrWaitingClientCaps = true;
+    state.allowed = new Set([1003, 1004, 1005, 1006]);
+    state.channelIdToName = new Map([
+      [1004, 'rdpdr'],
+      [1005, 'rdpsnd'],
+      [1006, 'cliprdr']
+    ]);
+    state.cliprdrWriteChannelId = 1006;
+    state.serverCliprdrChannelId = 1006;
+
+    assert.deepEqual(takeCliprdrRehandshake(state), [], 'sin CAPS en cache aun');
+    state.cliprdrRehandshakePending = true;
+
+    const caps = buildChannelPdu(buildCliprdrPayload(7, 0, Buffer.alloc(16)), 0x13);
+    rememberClientCliprdrHandshake(state, describeCliprdrPdu(caps), buildMcsIndication(1004, caps));
+    assert.ok(Buffer.isBuffer(state.cachedClientCaps));
+    assert.equal(state.cliprdrRehandshakePending, true, 'inferred conserva pending para late-caps');
+
+    const replay = takeCliprdrRehandshake(state);
+    assert.equal(replay.length, 1);
+    assert.equal(parseMcsSendData(replay[0]).channelId, 1006);
+    assert.equal(parseMcsSendData(replay[0]).userData.readUInt16LE(8), 7);
   });
 
   test('APP fallback usa el VC nombrado aunque coincida con cliprdrChannelId', () => {

@@ -48,6 +48,10 @@ const {
   fallbackNamedCliprdrWrite,
   greetingOnUnsafeCliprdr,
   greetingStillOnIo,
+  isSelectorMenuCliprdrDefer,
+  isSelectorMenuBitmapPassthrough,
+  isBastionOverlapHopBitmapPassthrough,
+  shouldBastionBitmapPassthrough,
   canFlushCliprdrToNamedVc,
   sanitizeIllegalCliprdrWrite,
   fallbackIoNamedCliprdrWrite,
@@ -279,12 +283,16 @@ function isNoisyDrop(note) {
       || /dvc-close ch=/i.test(note));
 }
 
-/** Solo CREATE/reject/stub/caps relevantes en el timeline (no Echo ni closes). */
-function isInterestingDvcTimelineNote(note) {
+/**
+ * DROP DynVC en el timeline.
+ * Quiet: solo GRAPHICS / forward-caps. Con verbose (debug): tambien reject/stub/accept.
+ */
+function isInterestingDvcTimelineNote(note, verbose = false) {
   if (typeof note !== 'string' || !/dvc-/i.test(note)) return false;
   if (isNoisyDrop(note)) return false;
-  return /dvc-(reject|accept-stub|accept |forward-caps|forward ch=|caps )/i.test(note)
-    || /GRAPHICS/i.test(note);
+  if (/GRAPHICS/i.test(note) || /dvc-forward-caps/i.test(note)) return true;
+  if (!verbose) return false;
+  return /dvc-(reject|accept-stub|accept |forward ch=|caps )/i.test(note);
 }
 
 function createTrafficStats(emit) {
@@ -325,6 +333,20 @@ class RdpNativeBridgeService extends EventEmitter {
     this.isInitialized = false;
     /** Sesiones bastion con rewrite RLE activo (fairness multi-sesion). */
     this.activeBastionSessions = 0;
+  }
+
+  /**
+   * Propaga bastionOverlap a todos los filters bastion activos.
+   * N>1 → passthrough RLE en hop pendiente (mitiga 2ª sesion lenta).
+   */
+  syncBastionOverlapFlags() {
+    const overlap = this.activeBastionSessions > 1;
+    for (const conn of this.activeConnections.values()) {
+      const filter = conn && conn.channelFilter;
+      if (filter && filter.isBastion === true) {
+        filter.bastionOverlap = overlap;
+      }
+    }
   }
 
   /**
@@ -468,7 +490,7 @@ class RdpNativeBridgeService extends EventEmitter {
     const connectionId = `native_rdp_${Date.now()}`;
     let targetSocket = null;
     let tlsSocket = null;
-    const connState = { ws, session, userClosing: false };
+    const connState = { ws, session, userClosing: false, channelFilter: null };
 
     this.activeConnections.set(connectionId, connState);
 
@@ -564,7 +586,7 @@ class RdpNativeBridgeService extends EventEmitter {
         }
         const already = hint.once && channelFilter.loggedCliprdrLiveHints.has(hint.kind);
         if (hint.once) channelFilter.loggedCliprdrLiveHints.add(hint.kind);
-        if (!already) {
+        if (!already && isDebug) {
           console.warn(`[Bridge] ${hint.message}`);
         }
       }
@@ -586,8 +608,10 @@ class RdpNativeBridgeService extends EventEmitter {
     channelFilter.isBastion = isBastionSession(session);
     channelFilter.allowAudioPlayback = session.redirectAudio === true;
     channelFilter.egfxGraphics = session.ironRdpGraphics === 'egfx';
+    channelFilter.rdpDebug = isDebug;
     channelFilter.recentCliprdrEvents = recentCliprdrEvents;
     channelFilter.recordCliprdr = recordCliprdrEvent;
+    connState.channelFilter = channelFilter;
     const streamDeframer = new RdpStreamDeframer();
     const frameSplitter = new RdpFrameSplitter();
     // Bastion: siempre StreamDeframer (PDU entero para bitmaps/filtro).
@@ -599,15 +623,128 @@ class RdpNativeBridgeService extends EventEmitter {
     if (normalizeBitmaps) {
       this.activeBastionSessions += 1;
       bastionSessionCounted = true;
+      this.syncBastionOverlapFlags();
+      const bastionSvc = channelFilter.wallixService || 'n/a';
+      const overlapNote = this.activeBastionSessions > 1 ? ' (solape multi-sesion)' : '';
+      console.log(
+        `[Bridge] bastion session open: service=${bastionSvc} ` +
+        `activeBastionSessions=${this.activeBastionSessions}${overlapNote}`
+      );
     }
     let directPostNlaDeframer = false;
     let graphicsCapsWarnTimer = null;
+    let postBannerDvcTimer = null;
+    /** Contadores DynVC (forward vs stub vs reject); dvc=0 en timeline solo cuenta forward. */
+    const dvcDiag = { forward: 0, stub: 0, reject: 0, caps: 0 };
+    /** Asignado tras crear backpressure; el watch post-banner lo usa para tirar la cola RLE. */
+    let dropStaleBannerBitmaps = () => 0;
     // Linea de tiempo solo-log para bastion: donde se va la espera tras los banners.
     const timeline = new SessionTimeline({
       enabled: normalizeBitmaps,
+      verboseTraffic: isDebug,
       label: channelFilter.wallixService || (normalizeBitmaps ? 'bastion' : ''),
       log: (line) => console.log(`⏱️ [Bridge] ${line}`)
     });
+    const formatDvcDiagLine = (tag) => {
+      const dest = channelFilter.serverCliprdrChannelId;
+      const write = channelFilter.cliprdrWriteChannelId;
+      const muted = channelFilter.loggedCliprdrUserMute ? 'mute' : 'ok';
+      const dropped = channelFilter.bannerBitmapsDropped ? 'yes' : 'no';
+      const gapCaps = timeline.has('dvc-caps-hacia-wasm') && timeline.has('first-bitmap')
+        ? `${timeline.marks.get('dvc-caps-hacia-wasm') - timeline.marks.get('first-bitmap')}ms`
+        : 'n/a';
+      return `[Bridge] ${tag} dvc forward=${dvcDiag.forward} stub=${dvcDiag.stub} reject=${dvcDiag.reject}` +
+        ` caps=${dvcDiag.caps} gapBitmap→caps=${gapCaps} bannerDropped=${dropped}` +
+        ` cliprdr dest=${dest == null ? 'none' : dest} write=${write == null ? 'none' : write} ${muted}`;
+    };
+    const noteDvcDiagFromNote = (note) => {
+      if (typeof note !== 'string') return;
+      if (/dvc-forward-caps/i.test(note)) dvcDiag.caps += 1;
+      else if (/dvc-forward/i.test(note)) dvcDiag.forward += 1;
+      if (/dvc-accept-stub/i.test(note)) dvcDiag.stub += 1;
+      else if (/dvc-reject/i.test(note)) dvcDiag.reject += 1;
+    };
+    const clearPostBannerDvcTimer = () => {
+      if (postBannerDvcTimer) {
+        clearTimeout(postBannerDvcTimer);
+        postBannerDvcTimer = null;
+      }
+    };
+    /**
+     * Tras first-bitmap: si en 5s no hay DynVC caps ni EGFX CREATE, hito + tirar cola banner
+     * (rompe la dependencia: el hop no puede esperar caps que nunca llegan).
+     * Menu selector n/a: no armar hasta promote (force); DynVC no llega en el menu.
+     */
+    const armPostBannerDvcWatch = (opts = {}) => {
+      const force = opts.force === true;
+      if (!timeline.enabled) return;
+      if (timeline.has('dvc-caps-hacia-wasm') || timeline.has('egfx-graphics-create')) return;
+      const selectorMenu = channelFilter.wallixService === 'n/a'
+        && !channelFilter.cliprdrSelectorAppInferred;
+      if (!force && selectorMenu) return;
+      if (postBannerDvcTimer) {
+        if (!force) return;
+        clearPostBannerDvcTimer();
+      }
+      postBannerDvcTimer = setTimeout(() => {
+        postBannerDvcTimer = null;
+        if (isCleanedUp) return;
+        if (timeline.has('dvc-caps-hacia-wasm') || timeline.has('egfx-graphics-create')) return;
+        // Race: aun en menu (sin promote) — no marcar bannerBitmapsDropped.
+        if (channelFilter.wallixService === 'n/a'
+            && !channelFilter.cliprdrSelectorAppInferred) {
+          return;
+        }
+        const nDropped = dropStaleBannerBitmaps('post-banner-sin-dvc');
+        timeline.mark(
+          'post-banner-sin-dvc',
+          `sin DynVC caps ni EGFX CREATE tras 5s dropped=${nDropped}`
+        );
+        console.warn(formatDvcDiagLine('post-banner'));
+      }, 5000);
+      if (postBannerDvcTimer && typeof postBannerDvcTimer.unref === 'function') {
+        postBannerDvcTimer.unref();
+      }
+    };
+    /**
+     * Solo path selector (cliprdrSelectorAppInferred). Emite CAPS/TEMPDIR cacheados
+     * al VC nombrado cuando el write ya es seguro. No aplica a APP/RDP en frio.
+     */
+    const emitSelectorCliprdrRehandshake = (reason) => {
+      if (!channelFilter.cliprdrSelectorAppInferred) return 0;
+      if (!tlsSocket || !tlsSocket.writable) return 0;
+      sanitizeIllegalCliprdrWrite(channelFilter);
+      if (!canFlushCliprdrToNamedVc(channelFilter)) return 0;
+      if (!Buffer.isBuffer(channelFilter.cachedClientCaps)) return 0;
+      // READY espero CAPS: pending puede haberse perdido; rearmar si aun no enviamos.
+      if (!channelFilter.cliprdrRehandshakePending
+          && channelFilter.loggedCliprdrWaitingClientCaps
+          && !channelFilter.cliprdrHandshakeSentToRecoveredDest) {
+        channelFilter.cliprdrRehandshakePending = true;
+      }
+      const replay = takeCliprdrRehandshake(channelFilter);
+      if (!replay.length) return 0;
+      for (const pdu of replay) {
+        bytesToRdp += pdu.length;
+        tlsSocket.write(pdu);
+        const parsedReplay = parseMcsSendData(pdu);
+        const replayDesc = parsedReplay
+          ? describeCliprdrPdu(parsedReplay.userData)
+          : 'PDU';
+        const replayCh = parsedReplay
+          ? parsedReplay.channelId
+          : channelFilter.cliprdrWriteChannelId;
+        const replayMsg = `[Bridge Clipboard] rehandshake cliprdr ch=${replayCh} ${replayDesc}` +
+          ` (selector→${channelFilter.wallixService || '?'}${reason ? `; ${reason}` : ''})`;
+        recordCliprdrEvent(replayMsg);
+        console.log(replayMsg);
+        this.emit('diagnostic-log', { category: 'cliprdr', message: replayMsg });
+      }
+      this.flushPendingClientCliprdr(channelFilter, tlsSocket, ws, (n) => {
+        bytesToRdp += n;
+      });
+      return replay.length;
+    };
     // Experimento opt-in (NODETERM_RDP_FORCE32=1): pedir sesion de 32bpp al servidor para que
     // pueda usar RemoteFX/Surface Commands. Solo conexion directa; nunca en bastion.
     const force32 = !normalizeBitmaps && readDiagFlag('NODETERM_RDP_FORCE32');
@@ -660,9 +797,14 @@ class RdpNativeBridgeService extends EventEmitter {
         clearTimeout(graphicsCapsWarnTimer);
         graphicsCapsWarnTimer = null;
       }
+      clearPostBannerDvcTimer();
       if (bastionSessionCounted) {
         bastionSessionCounted = false;
         this.activeBastionSessions = Math.max(0, this.activeBastionSessions - 1);
+        this.syncBastionOverlapFlags();
+        console.log(
+          `[Bridge] bastion session close: activeBastionSessions=${this.activeBastionSessions}`
+        );
       }
       clearCliprdrWatch();
       if (channelFilter.appCliprdrWriteRetryTimer) {
@@ -696,6 +838,7 @@ class RdpNativeBridgeService extends EventEmitter {
       timeline.stop();
       if (timeline.enabled) {
         console.log(`⏱️ [Bridge] ${timeline.summary()}`);
+        console.log(formatDvcDiagLine('sesion'));
       }
       if (userInitiated && !clipboardFailed && !isDebug) {
         console.log(`🧹 [RdpNativeBridgeService] Sesion RDP finalizada (${formattedReason}) [toRdp=${framesToRdp} (${bytesToRdp}B), fromRdp=${framesFromRdp} (${bytesFromRdp}B)]`);
@@ -915,6 +1058,11 @@ class RdpNativeBridgeService extends EventEmitter {
               };
 
               const rewriteAndSend = (ready, frameTag) => {
+                // Menu n/a o hop bajo solape: sin rewrite RLE (evita LAG event-loop).
+                if (shouldBastionBitmapPassthrough(channelFilter)) {
+                  sendBinaryToWasm(ready);
+                  return;
+                }
                 const t0 = (latencyMetrics || normalizeBitmaps) ? process.hrtime.bigint() : 0n;
                 const stridePatch = normalizeBitmaps
                   ? fixWallixBitmapStrideCrop(ready)
@@ -960,26 +1108,36 @@ class RdpNativeBridgeService extends EventEmitter {
               };
 
               // El banner deja de valer en el salto: tirarlo evita reescribir RLE a 3 ms/tick.
-              const dropStaleBannerBitmaps = (reason) => {
-                if (!channelFilter.egfxGraphics) return 0;
+              // EGFX o bastion: en ambos la cola stale bloquea el hop si no hay caps/2o DA.
+              dropStaleBannerBitmaps = (reason) => {
+                if (!channelFilter.egfxGraphics && !normalizeBitmaps) return 0;
                 const dropped = backpressure.dropPending();
                 try { bitmapReassembler.reset(); } catch (e) {}
                 channelFilter.bannerBitmapsDropped = true;
-                if (dropped > 0) {
+                const markReason = reason === 'post-banner-sin-dvc'
+                  || reason === 'selector-promote'
+                  || reason === 'selector-hop'
+                  || dropped > 0;
+                if (markReason) {
                   timeline.mark('banner-bitmaps-dropped', `${dropped} reason=${reason}`);
-                  console.log(
-                    `[Bridge] EGFX: ${dropped} bitmap(s) del banner descartados en ${reason}`
-                  );
+                  if (dropped > 0 || isDebug || reason === 'selector-promote' || reason === 'selector-hop') {
+                    console.log(
+                      `[Bridge] banner: ${dropped} bitmap(s) descartados en ${reason}`
+                    );
+                  }
                 }
                 return dropped;
               };
 
               // Bastion: reescribe pendientes hasta gastar el presupuesto (~3 ms) y deja el resto.
-              // Con 2+ sesiones bastion, tope mas bajo para no ahogar la segunda conexion.
+              // Con 2+ sesiones ya establecidas, tope mas bajo. En hop pre-caps: presupuesto
+              // completo aunque N>1 (mitiga lentitud multi-tab; no inventa DynVC).
               const rewritePendingSlice = () => {
                 backpressure.beginDataTick();
                 let sent = 0;
-                const maxFrames = this.activeBastionSessions > 1 ? 8 : 32;
+                const hopPending = !timeline.has('dvc-caps-hacia-wasm')
+                  && !timeline.has('egfx-graphics-create');
+                const maxFrames = (this.activeBastionSessions > 1 && !hopPending) ? 8 : 32;
                 while (sent < maxFrames && backpressure.hasPending()) {
                   const frame = backpressure.takePendingWithinBudget(ws.bufferedAmount, { force: true });
                   if (!frame) break;
@@ -991,10 +1149,13 @@ class RdpNativeBridgeService extends EventEmitter {
 
               // La rodaja corre cuando el handler TLS ya ha salido, asi el raton se escribe entre medias.
               const scheduleBastionSlice = () => {
+                // Menu n/a o hop bajo solape: no encadenar rodajas RLE (passthrough directo).
+                if (shouldBastionBitmapPassthrough(channelFilter)) return;
                 if (bastionSliceTimer || isCleanedUp) return;
                 bastionSliceTimer = setImmediate(() => {
                   bastionSliceTimer = null;
                   if (isCleanedUp || ws.readyState !== ws.OPEN) return;
+                  if (shouldBastionBitmapPassthrough(channelFilter)) return;
                   if (!backpressure.hasPending()) return;
                   if (tickBatcher.active) flushTickOut();
                   tickBatcher.begin();
@@ -1128,7 +1289,11 @@ class RdpNativeBridgeService extends EventEmitter {
                       if (!timeline.has('first-surface-cmds') || !timeline.has('first-bitmap')) {
                         const fpKind = classifyFastPathUpdate(frame);
                         if (fpKind === 'SURFACE_CMDS') timeline.mark('first-surface-cmds', `#${framesFromRdp} ${n}B`);
-                        else if (fpKind === 'BITMAP') timeline.mark('first-bitmap', `#${framesFromRdp} ${n}B`);
+                        else if (fpKind === 'BITMAP') {
+                          if (timeline.mark('first-bitmap', `#${framesFromRdp} ${n}B`)) {
+                            armPostBannerDvcWatch();
+                          }
+                        }
                       }
                     }
                   }
@@ -1282,21 +1447,28 @@ class RdpNativeBridgeService extends EventEmitter {
                           timeline.setLabel(channelFilter.wallixService || timeline.label);
                         }
                       }
-                      if (channelFilter.cliprdrSelectorAppInferred
-                          && !channelFilter.loggedCliprdrSelectorAppInferred) {
-                        channelFilter.loggedCliprdrSelectorAppInferred = true;
-                        const svcLabel = channelFilter.wallixService === 'RDP' ? 'RDP' : 'APP';
-                        const writeNote = channelFilter.cliprdrWriteChannelId != null
-                          ? `write path via cliprdr nombrado ${channelFilter.cliprdrWriteChannelId}`
-                          : 'write path pendiente (saludo IO; no escribir 1006 hasta VC nombrado)';
-                        const inferMsg = `[Bridge Clipboard] selector ${svcLabel} inferido: saludo ${channelFilter.serverCliprdrChannelId}, ${writeNote}`;
-                        recordCliprdrEvent(inferMsg);
-                        console.log(inferMsg);
-                        this.emit('diagnostic-log', { category: 'cliprdr', message: inferMsg });
-                        if (typeof timeline.setLabel === 'function') {
-                          timeline.setLabel(svcLabel);
-                        }
+                    }
+                    // Promote por READY o por claim en VC nombrado: log + rearmar watch DynVC post-hop.
+                    if (channelFilter.cliprdrSelectorAppInferred
+                        && !channelFilter.loggedCliprdrSelectorAppInferred) {
+                      channelFilter.loggedCliprdrSelectorAppInferred = true;
+                      const svcLabel = channelFilter.wallixService === 'RDP' ? 'RDP' : 'APP';
+                      const writeNote = channelFilter.cliprdrWriteChannelId != null
+                        ? `write path via cliprdr nombrado ${channelFilter.cliprdrWriteChannelId}`
+                        : 'write path pendiente (saludo IO; no escribir 1006 hasta VC nombrado)';
+                      const inferMsg = `[Bridge Clipboard] selector ${svcLabel} inferido: saludo ${channelFilter.serverCliprdrChannelId}, ${writeNote}`;
+                      recordCliprdrEvent(inferMsg);
+                      console.log(inferMsg);
+                      this.emit('diagnostic-log', { category: 'cliprdr', message: inferMsg });
+                      if (typeof timeline.setLabel === 'function') {
+                        timeline.setLabel(svcLabel);
                       }
+                      // Hop: tirar banner ya (no esperar 5s del watch). Solo inferred.
+                      dropStaleBannerBitmaps('selector-promote');
+                      armPostBannerDvcWatch({ force: true });
+                      emitSelectorCliprdrRehandshake('promote');
+                    }
+                    if (processed.cliprdrDesc && processed.cliprdrDesc.includes('CB_MONITOR_READY')) {
                       const readyCount = channelFilter.cliprdrMonitorReadyCount || 0;
                       const isAppReady = channelFilter.wallixService === 'APP' && readyCount >= 1;
                       const isSelectorRdpReady = channelFilter.wallixService === 'RDP'
@@ -1345,19 +1517,25 @@ class RdpNativeBridgeService extends EventEmitter {
                               const replayCh = parsedReplay
                                 ? parsedReplay.channelId
                                 : channelFilter.cliprdrWriteChannelId;
-                              const replayMsg = `[Bridge Clipboard] rehandshake cliprdr ch=${replayCh} ${replayDesc}` +
-                                (channelFilter.wallixService === 'RDP' && channelFilter.cliprdrSelectorAppInferred
-                                  ? ' (selector→RDP)'
-                                  : '');
+                              const selectorNote = channelFilter.cliprdrSelectorAppInferred
+                                ? ` (selector→${channelFilter.wallixService || '?'})`
+                                : '';
+                              const replayMsg = `[Bridge Clipboard] rehandshake cliprdr ch=${replayCh} ${replayDesc}${selectorNote}`;
                               recordCliprdrEvent(replayMsg);
-                              if (isDebug) console.log(replayMsg);
+                              console.log(replayMsg);
                               this.emit('diagnostic-log', { category: 'cliprdr', message: replayMsg });
                             }
-                          } else if (writeSafe && !replay.length && !channelFilter.loggedCliprdrRehandshakeMiss) {
+                          } else if (writeSafe && !replay.length && !channelFilter.loggedCliprdrRehandshakeMiss
+                              && !channelFilter.cliprdrHandshakeSentToRecoveredDest) {
                             channelFilter.loggedCliprdrRehandshakeMiss = true;
-                            const missMsg = channelFilter.cliprdrRehandshakeSkippedUnsafe
-                              ? '[Bridge Clipboard] CB_MONITOR_READY sin write path seguro (saludo por canal de usuario)'
-                              : '[Bridge Clipboard] CB_MONITOR_READY sin CAPS de cliente en cache';
+                            let missMsg;
+                            if (channelFilter.cliprdrRehandshakeSkippedUnsafe) {
+                              missMsg = '[Bridge Clipboard] CB_MONITOR_READY sin write path seguro (saludo por canal de usuario)';
+                            } else if (Buffer.isBuffer(channelFilter.cachedClientCaps)) {
+                              missMsg = '[Bridge Clipboard] CB_MONITOR_READY: CAPS en cache pero rehandshake no emitido (pending ya consumido)';
+                            } else {
+                              missMsg = '[Bridge Clipboard] CB_MONITOR_READY sin CAPS de cliente en cache';
+                            }
                             recordCliprdrEvent(missMsg);
                             console.warn(missMsg);
                             this.emit('diagnostic-log', { category: 'cliprdr', message: missMsg });
@@ -1429,11 +1607,12 @@ class RdpNativeBridgeService extends EventEmitter {
                   }
                   // Dropped: replies SIEMPRE (Echo/stubs). isNoisyDrop solo silencia logs.
                   if (processed.dropped) {
+                    noteDvcDiagFromNote(processed.note);
                     const note = String(processed.note || '').replace(/ hex=[0-9a-f]+/i, '');
                     const dropMsg = `MCS ch=${processed.channelId}: ${note}` +
                       (processed.replies.length ? ` (replies=${processed.replies.length})` : '');
                     // Bastion: solo CREATE/reject/stub/caps (Echo/close/absorb saturan el log).
-                    if (timeline.enabled && isInterestingDvcTimelineNote(processed.note)
+                    if (timeline.enabled && isInterestingDvcTimelineNote(processed.note, isDebug)
                         && !/hex=/i.test(dropMsg)) {
                       timeline.event(`DROP ${note}`, `#${framesFromRdp}`);
                     }
@@ -1478,8 +1657,11 @@ class RdpNativeBridgeService extends EventEmitter {
                   }
 
                   if (processed.dvcForward && typeof processed.note === 'string') {
+                    noteDvcDiagFromNote(processed.note);
                     if (/dvc-forward-caps/i.test(processed.note)) {
+                      channelFilter.dvcCapsSeen = true;
                       timeline.mark('dvc-caps-hacia-wasm', `#${framesFromRdp}`);
+                      clearPostBannerDvcTimer();
                       dropStaleBannerBitmaps('dvc-caps');
                       if (timeline.enabled && !channelFilter.loggedEgfxGraphicsCreate
                           && !graphicsCapsWarnTimer) {
@@ -1508,6 +1690,7 @@ class RdpNativeBridgeService extends EventEmitter {
                         clearTimeout(graphicsCapsWarnTimer);
                         graphicsCapsWarnTimer = null;
                       }
+                      clearPostBannerDvcTimer();
                       timeline.mark('egfx-graphics-create', `#${framesFromRdp}`);
                       console.log(
                         `[Bridge] EGFX Graphics CREATE mcs=${processed.channelId}` +
@@ -1549,11 +1732,23 @@ class RdpNativeBridgeService extends EventEmitter {
                   trafficStats.note(pduDesc, n);
                   // El banner ya no pinta el destino. Tirarlo en señales de salto evita
                   // que ORDERS/SURFACE reescriban la cola RLE a 3 ms/tick.
-                  if (channelFilter.egfxGraphics && !isFastPath) {
+                  // Selector post-promote: drop + retry write + rehandshake (gated inferred).
+                  if ((channelFilter.egfxGraphics || normalizeBitmaps) && !isFastPath) {
+                    const selectorHop = channelFilter.cliprdrSelectorAppInferred === true;
                     if (pduDesc.includes('DEACTIVATE_ALL')) {
-                      dropStaleBannerBitmaps('DEACTIVATE_ALL');
+                      dropStaleBannerBitmaps(selectorHop ? 'selector-hop' : 'DEACTIVATE_ALL');
+                      if (selectorHop) {
+                        retryConfirmAppCliprdrWrite(channelFilter);
+                        retryConfirmRdpCliprdrWrite(channelFilter);
+                        emitSelectorCliprdrRehandshake('DEACTIVATE_ALL');
+                      }
                     } else if (pduDesc.includes('DEMAND_ACTIVE') && demandActiveCount >= 2) {
-                      dropStaleBannerBitmaps('DEMAND_ACTIVE');
+                      dropStaleBannerBitmaps(selectorHop ? 'selector-hop' : 'DEMAND_ACTIVE');
+                      if (selectorHop) {
+                        retryConfirmAppCliprdrWrite(channelFilter);
+                        retryConfirmRdpCliprdrWrite(channelFilter);
+                        emitSelectorCliprdrRehandshake('DEMAND_ACTIVE');
+                      }
                     }
                   }
                   if (ws.readyState === ws.OPEN) {
@@ -1566,11 +1761,29 @@ class RdpNativeBridgeService extends EventEmitter {
                         processed.dvcForward
                       );
                       const clipFast = processed.isCliprdr && !processed.buffered;
-                      const staleBannerPending = channelFilter.egfxGraphics === true
+                      const staleBannerPending = (channelFilter.egfxGraphics === true || normalizeBitmaps)
                         && backpressure.hasPending()
                         && channelFilter.bannerBitmapsDropped !== true;
+                      const menuPassthrough = shouldBastionBitmapPassthrough(channelFilter);
+                      if (menuPassthrough && !channelFilter.loggedBastionBitmapPassthrough) {
+                        channelFilter.loggedBastionBitmapPassthrough = true;
+                        if (isSelectorMenuBitmapPassthrough(channelFilter)) {
+                          console.log(
+                            '[Bridge] selector n/a: bitmaps passthrough (sin rewrite RLE) hasta promote'
+                          );
+                        } else if (isBastionOverlapHopBitmapPassthrough(channelFilter)) {
+                          console.log(
+                            '[Bridge] bastion overlap: bitmaps passthrough hasta caps/EGFX'
+                          );
+                        }
+                      }
                       for (const ready of readyFrames) {
                         if (!ready || typeof ready.length !== 'number') continue;
+                        // Menu n/a o hop bajo solape: sin cola ni rewrite (evita LAG event-loop).
+                        if (menuPassthrough) {
+                          sendDirectToWasm(ready);
+                          continue;
+                        }
                         // DynVC/EGFX (gfxFast) no espera al rewriter RLE del banner
                         // ni en bastion. Cliprdr fast solo en directo (bastion reensambla).
                         if ((gfxFast || (!normalizeBitmaps && clipFast)) && ready === frame) {
@@ -1591,7 +1804,8 @@ class RdpNativeBridgeService extends EventEmitter {
                         // Con EGFX: TPKT siempre; ORDERS/SURFACE solo si el banner ya se tiro.
                         if (backpressure.mustFlushBefore(ready)
                             && !egfxSkipsSyncBitmapFlush(channelFilter.egfxGraphics, ready, {
-                              staleBannerPending
+                              staleBannerPending,
+                              allowBastionStale: normalizeBitmaps
                             })) {
                           flushPendingBitmap({ force: true, ignoreBudget: true });
                         }
@@ -1636,7 +1850,8 @@ class RdpNativeBridgeService extends EventEmitter {
                   try {
                     flushPendingBitmap({ force: true, ignoreBudget: true });
                   } catch (_) { /* noop */ }
-                } else if (normalizeBitmaps && backpressure.hasPending()) {
+                } else if (normalizeBitmaps && backpressure.hasPending()
+                    && !shouldBastionBitmapPassthrough(channelFilter)) {
                   scheduleBastionSlice();
                 }
                 try {
@@ -1818,7 +2033,7 @@ class RdpNativeBridgeService extends EventEmitter {
               if (kept) {
                 timeline.noteOut(isDvcOut ? 'dvc' : 'tpkt', kept.length);
                 if (isDvcOut) timeline.mark('primer-dvc-cliente-al-servidor', `${kept.length}B`);
-              } else if (isDvcOut) {
+              } else if (isDvcOut && isDebug) {
                 timeline.event('DVC del cliente NO reenviado al servidor', `${clientFrame.length}B`);
               }
             }
@@ -1835,6 +2050,13 @@ class RdpNativeBridgeService extends EventEmitter {
           }
           if (clientFramesChanged) {
             forward = keptClientFrames.length ? Buffer.concat(keptClientFrames) : null;
+          }
+          // Selector: CAPS WASM tras "esperando CAPS" — rehandshake ya, no esperar otro READY.
+          if (channelFilter.cliprdrSelectorAppInferred
+              && Buffer.isBuffer(channelFilter.cachedClientCaps)
+              && (channelFilter.cliprdrRehandshakePending
+                  || channelFilter.loggedCliprdrWaitingClientCaps)) {
+            emitSelectorCliprdrRehandshake('late-caps');
           }
 
           // Las inyecciones salen despues de reenviar el lote al servidor, para que IronRDP no vea
@@ -1905,7 +2127,9 @@ class RdpNativeBridgeService extends EventEmitter {
           // sesion y sin este rastro una inyeccion que no se aplica no se distingue de una que si.
           const wallixService = wallixServiceFromSession(session) || 'n/a';
           const csNet = sentChs.length ? sentChs.join(',') : 'ninguno';
-          console.log(`[Bridge] MCS prepare: service=${wallixService} CS_NET=[${csNet}]; ${prepared.notes.join('; ') || 'sin cambios'}`);
+          if (isDebug) {
+            console.log(`[Bridge] MCS prepare: service=${wallixService} CS_NET=[${csNet}]; ${prepared.notes.join('; ') || 'sin cambios'}`);
+          }
           if (sentChs.length) {
             channelFilter.mcsConnectPrepared = true;
             const wasmChs = findClientNetworkChannels(payload);
@@ -1931,7 +2155,9 @@ class RdpNativeBridgeService extends EventEmitter {
             const sentChsLate = findClientNetworkChannels(preparedLate.buf);
             const wallixServiceLate = wallixServiceFromSession(session) || 'n/a';
             const csNetLate = sentChsLate.length ? sentChsLate.join(',') : 'ninguno';
-            console.log(`[Bridge] MCS prepare (NLA late): service=${wallixServiceLate} CS_NET=[${csNetLate}]; ${preparedLate.notes.join('; ') || 'sin cambios'}`);
+            if (isDebug) {
+              console.log(`[Bridge] MCS prepare (NLA late): service=${wallixServiceLate} CS_NET=[${csNetLate}]; ${preparedLate.notes.join('; ') || 'sin cambios'}`);
+            }
             if (sentChsLate.length) {
               const wasmChsLate = findClientNetworkChannels(connectInitial);
               if (wasmChsLate.length && (!channelFilter.wasmChannelNames || channelFilter.wasmChannelNames.length === 0)) {
@@ -1960,11 +2186,13 @@ class RdpNativeBridgeService extends EventEmitter {
           });
           if (infoResult.perfFlagsBefore != null && !channelFilter.loggedPerfFlags) {
             channelFilter.loggedPerfFlags = true;
-            console.log(
-              `[Bridge] perfFlags cliente: 0x${infoResult.perfFlagsBefore.toString(16)} -> 0x${infoResult.perfFlagsAfter.toString(16)}` +
-              ` (wallpaper=${session.enableWallpaper ? 'on' : 'off'}, dragCompleto=${session.enableFullWindowDrag ? 'on' : 'off'},` +
-              ` animMenus=${session.enableMenuAnimations ? 'on' : 'off'}, composicion=${session.enableDesktopComposition ? 'on' : 'off'})`
-            );
+            if (isDebug) {
+              console.log(
+                `[Bridge] perfFlags cliente: 0x${infoResult.perfFlagsBefore.toString(16)} -> 0x${infoResult.perfFlagsAfter.toString(16)}` +
+                ` (wallpaper=${session.enableWallpaper ? 'on' : 'off'}, dragCompleto=${session.enableFullWindowDrag ? 'on' : 'off'},` +
+                ` animMenus=${session.enableMenuAnimations ? 'on' : 'off'}, composicion=${session.enableDesktopComposition ? 'on' : 'off'})`
+              );
+            }
           }
           if (infoResult.patched) {
             forward = infoResult.buf;
@@ -2030,10 +2258,6 @@ class RdpNativeBridgeService extends EventEmitter {
       if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(misMsg);
       this.emit('diagnostic-log', { category: 'cliprdr-misaligned', message: misMsg });
     }
-    // EGFX: un CHANNEL_PDU en 1001 o en el IO (1003) congela el gráfico tras el banner.
-    // Se encola y se acusa al WASM. Sin EGFX se mantiene el camino de bitmap.
-    const egfxMuteUnsafe = channelFilter.egfxGraphics === true
-      && (isUserMcsChannel(channelFilter, dest) || destIsIo);
     const synthAck = () => {
       if (!isCliprdrFormatListDesc(clipDesc) || channelFilter.cliprdrFormatListAcked) return;
       channelFilter.cliprdrFormatListAcked = true;
@@ -2045,7 +2269,57 @@ class RdpNativeBridgeService extends EventEmitter {
       this.emit('diagnostic-log', { category: 'cliprdr', message: ackMsg });
     };
 
+    // Selector n/a (menu Wallix): cachear CAPS/FORMAT_LIST sin wire ni cola.
+    // synthAck solo tras el primer MONITOR_READY (evita Ready prematuro que
+    // impide re-anunciar en el promote). Rehandshake limpio en promote.
+    const selectorDefer = isSelectorMenuCliprdrDefer(channelFilter)
+      && (isUserMcsChannel(channelFilter, dest) || destIsIo
+          || channelFilter.serverCliprdrChannelId == null);
+    if (selectorDefer) {
+      const serverGreeted = channelFilter.cliprdrServerReady === true
+        || (channelFilter.cliprdrMonitorReadyCount || 0) >= 1;
+      if (serverGreeted) synthAck();
+      if (!channelFilter.loggedSelectorCliprdrDefer) {
+        channelFilter.loggedSelectorCliprdrDefer = true;
+        const deferMsg = `[Bridge Clipboard] selector n/a: CLIPRDR WASM cacheado` +
+          `${serverGreeted ? ' (synthAck tras MONITOR_READY)' : ' (sin synthAck prematuro)'}` +
+          `; sin wire hasta promote dest=${dest}`;
+        console.warn(deferMsg);
+        if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(deferMsg);
+        this.emit('diagnostic-log', { category: 'cliprdr-defer', message: deferMsg });
+      }
+      return { forward: null, inject };
+    }
+
+    // EGFX: un CHANNEL_PDU en 1001 o en el IO (1003) congela el gráfico tras el banner.
+    // Se encola y se acusa al WASM. Sin EGFX se mantiene el camino de bitmap.
+    // Tras promote selector→APP con write al VC nombrado: no mute eterno; escribir ahi.
+    const egfxMuteUnsafe = channelFilter.egfxGraphics === true
+      && (isUserMcsChannel(channelFilter, dest) || destIsIo);
+
     if (egfxMuteUnsafe) {
+      const named = channelFilter.cliprdrWriteChannelId;
+      const namedSafe = canFlushCliprdrToNamedVc(channelFilter)
+        && named != null
+        && !isUserMcsChannel(channelFilter, named)
+        && (channelFilter.ioChannelId == null || named !== channelFilter.ioChannelId);
+      if (namedSafe) {
+        if (clipDesc && clipDesc.includes('CB_TEMP_DIRECTORY')
+            && channelFilter.wallixService !== 'RDP') {
+          return { forward: null, inject };
+        }
+        synthAck();
+        const out = rewriteMcsChannelId(frame, named) || frame;
+        if (!channelFilter.loggedCliprdrEgfxNamedFlush) {
+          channelFilter.loggedCliprdrEgfxNamedFlush = true;
+          const namedMsg = `[Bridge Clipboard] EGFX: cliprdr al VC nombrado ${named}` +
+            ` (no CHANNEL_PDU en MCS ${dest})`;
+          console.warn(namedMsg);
+          if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(namedMsg);
+          this.emit('diagnostic-log', { category: 'cliprdr', message: namedMsg });
+        }
+        return { forward: out, inject };
+      }
       synthAck();
       enqueueClientCliprdr(channelFilter, frame);
       if (!channelFilter.loggedCliprdrUserMute) {
@@ -2309,7 +2583,9 @@ class RdpNativeBridgeService extends EventEmitter {
         if (dvcClient && dvcClient.type === 'caps-req') {
           if (!channelFilter.loggedEgfxCapsMute) {
             channelFilter.loggedEgfxCapsMute = true;
-            console.log('[Bridge] DynVC: CapsResponse WASM omitido (bridge ya respondio al servidor)');
+            if (rdpDebug() || channelFilter.rdpDebug) {
+              console.log('[Bridge] DynVC: CapsResponse WASM omitido (bridge ya respondio al servidor)');
+            }
           }
           return { forward: null, inject: [] };
         }

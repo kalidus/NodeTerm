@@ -141,6 +141,16 @@ function isTelemetryName(name) {
   return String(name || '').toUpperCase().includes('TELEMETRY');
 }
 
+function isRdsInputName(name) {
+  const upper = String(name || '').toUpperCase();
+  return upper.includes('RDS::INPUT') || upper.endsWith('::INPUT');
+}
+
+function isRdsVideoName(name) {
+  const upper = String(name || '').toUpperCase();
+  return upper.includes('RDS::VIDEO') || upper.includes('::VIDEO::');
+}
+
 function shouldForwardDvcChannel(channelName, options) {
   if (options.allowGraphics === true && isGraphicsChannelName(channelName)) return true;
   if (options.allowDisplayControl === true && isDisplayControlName(channelName)) return true;
@@ -149,15 +159,17 @@ function shouldForwardDvcChannel(channelName, options) {
 }
 
 /**
- * Bastion+EGFX: SUCCESS local (sin WASM) para canales que Wallix reintenta 20-30 s
- * si ve NOT_SUPPORTED. DisplayControl off de verdad: no reenviamos DATA al WASM.
- * Solo aplica con bastionStub (isBastion && egfx); en directo no se usa.
+ * Bastion: SUCCESS local (sin WASM) para canales que Wallix reintenta 20-30 s
+ * si ve NOT_SUPPORTED. DisplayControl/Geometry/Video/Input off de verdad: no DATA al WASM.
+ * Solo aplica con bastionStub (isBastion); en directo no se usa.
  */
 function shouldStubAcceptDvc(channelName, options) {
   if (options.bastionStub !== true) return false;
   return isDisplayControlName(channelName)
     || isGeometryName(channelName)
-    || isTelemetryName(channelName);
+    || isTelemetryName(channelName)
+    || isRdsInputName(channelName)
+    || isRdsVideoName(channelName);
 }
 
 function dvcForwardResult(note) {

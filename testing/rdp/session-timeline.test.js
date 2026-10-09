@@ -36,7 +36,11 @@ describe('SessionTimeline', () => {
   it('tick resume entrada y salida por tipo y los reinicia', () => {
     const clock = makeClock();
     const lines = [];
-    const tl = new SessionTimeline({ now: clock.now, log: (l) => lines.push(l) });
+    const tl = new SessionTimeline({
+      now: clock.now,
+      log: (l) => lines.push(l),
+      verboseTraffic: true
+    });
     tl.start(() => ({ pending: 3, buffered: 2048 }));
     tl.mark('first-frame');
     tl.noteIn('fp', 4000);
@@ -55,7 +59,38 @@ describe('SessionTimeline', () => {
     assert.match(lines[lines.length - 1], /silencio 1s/);
   });
 
-  it('silencio solo en 1s, 5s y multiplos de 15', () => {
+  it('quiet: trafico sano no imprime linea in/out', () => {
+    const clock = makeClock();
+    const lines = [];
+    const tl = new SessionTimeline({ now: clock.now, log: (l) => lines.push(l) });
+    tl.mark('first-frame');
+    tl.noteIn('fp', 4000);
+    tl.noteOut('input', 10);
+    clock.advance(1000);
+    tl.tick();
+    assert.equal(lines.length, 1);
+    assert.match(lines[0], /first-frame/);
+    assert.ok(!lines.some((l) => /in: fp=/.test(l)));
+  });
+
+  it('quiet: imprime trafico si hay cola pendiente', () => {
+    const clock = makeClock();
+    const lines = [];
+    const tl = new SessionTimeline({
+      now: clock.now,
+      log: (l) => lines.push(l),
+      getExtra: undefined
+    });
+    tl.start(() => ({ pending: 2, buffered: 0 }));
+    tl.mark('first-frame');
+    tl.noteIn('fp', 100);
+    clock.advance(1000);
+    tl.tick();
+    tl.stop();
+    assert.ok(lines.some((l) => /in: fp=1\/100B/.test(l) && /pend=2/.test(l)));
+  });
+
+  it('silencio verbose: 1s, 5s y multiplos de 15', () => {
     assert.equal(shouldLogSilence(1), true);
     assert.equal(shouldLogSilence(5), true);
     assert.equal(shouldLogSilence(2), false);
@@ -65,10 +100,22 @@ describe('SessionTimeline', () => {
     assert.equal(shouldLogSilence(16), false);
   });
 
+  it('silencio quiet: solo 5s y multiplos de 15', () => {
+    assert.equal(shouldLogSilence(1, { quiet: true }), false);
+    assert.equal(shouldLogSilence(5, { quiet: true }), true);
+    assert.equal(shouldLogSilence(10, { quiet: true }), false);
+    assert.equal(shouldLogSilence(15, { quiet: true }), true);
+    assert.equal(shouldLogSilence(30, { quiet: true }), true);
+  });
+
   it('input-only se trata como silencio (no linea de trafico)', () => {
     const clock = makeClock();
     const lines = [];
-    const tl = new SessionTimeline({ now: clock.now, log: (l) => lines.push(l) });
+    const tl = new SessionTimeline({
+      now: clock.now,
+      log: (l) => lines.push(l),
+      verboseTraffic: true
+    });
     tl.mark('first-frame');
     tl.noteOut('input', 234);
     clock.advance(1000);
@@ -77,10 +124,29 @@ describe('SessionTimeline', () => {
     assert.ok(!/in: fp=/.test(lines[lines.length - 1]));
   });
 
+  it('quiet: input-only no loguea silencio a 1s; si a 5s', () => {
+    const clock = makeClock();
+    const lines = [];
+    const tl = new SessionTimeline({ now: clock.now, log: (l) => lines.push(l) });
+    tl.mark('first-frame');
+    for (let i = 0; i < 5; i++) {
+      tl.noteOut('input', 10);
+      clock.advance(1000);
+      tl.tick();
+    }
+    assert.ok(!lines.some((l) => /silencio 1s/.test(l)));
+    assert.ok(lines.some((l) => /silencio 5s/.test(l)));
+  });
+
   it('setLabel cambia el prefijo de las lineas', () => {
     const clock = makeClock();
     const lines = [];
-    const tl = new SessionTimeline({ now: clock.now, log: (l) => lines.push(l), label: 'n/a' });
+    const tl = new SessionTimeline({
+      now: clock.now,
+      log: (l) => lines.push(l),
+      label: 'n/a',
+      verboseTraffic: true
+    });
     tl.mark('first-frame');
     assert.match(lines[0], /\[Timeline n\/a \+/);
     tl.setLabel('RDP');

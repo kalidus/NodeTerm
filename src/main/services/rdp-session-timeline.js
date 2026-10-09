@@ -35,19 +35,30 @@ function fmtCounters(counters, kinds) {
   return kinds.map((k) => `${k}=${counters[k].n}/${fmtBytes(counters[k].bytes)}`).join(' ');
 }
 
-/** Silencio: 1s, 5s, luego cada 15s (15, 30, 45...). */
-function shouldLogSilence(idleStreak) {
-  if (idleStreak === 1 || idleStreak === 5) return true;
+/**
+ * Silencio: verbose = 1s, 5s, luego cada 15s.
+ * Quiet = solo 5s y multiplos de 15 (evita spam de huecos cortos post-banner).
+ */
+function shouldLogSilence(idleStreak, opts = {}) {
+  const quiet = opts.quiet === true;
+  if (idleStreak === 5) return true;
+  if (!quiet && idleStreak === 1) return true;
   return idleStreak >= 15 && idleStreak % 15 === 0;
 }
+
+/** Cola WS alta: loguear trafico aunque verboseTraffic este off. */
+const PRESSURE_WS_BYTES = 64 * 1024;
 
 class SessionTimeline {
   /**
    * @param {{ enabled?: boolean, log?: (line: string) => void, now?: () => number,
-   *           intervalMs?: number, maxSeconds?: number, label?: string }} [opts]
+   *           intervalMs?: number, maxSeconds?: number, label?: string,
+   *           verboseTraffic?: boolean }} [opts]
    */
   constructor(opts = {}) {
     this.enabled = opts.enabled !== false;
+    /** Con true: 1 Hz de trafico sano. Con false (default): solo silencio, LAG y cola. */
+    this.verboseTraffic = opts.verboseTraffic === true;
     this.log = typeof opts.log === 'function' ? opts.log : () => {};
     this.now = typeof opts.now === 'function' ? opts.now : Date.now;
     this.intervalMs = opts.intervalMs || 1000;
@@ -150,7 +161,7 @@ class SessionTimeline {
     return inQuiet && outDvc === 0 && outTpkt === 0 && outInput > 0;
   }
 
-  /** Una linea por segundo (publico para tests). */
+  /** Una linea por segundo (publico para tests). Quiet: solo silencio / LAG / cola. */
   tick() {
     if (!this.enabled) return;
     const now = this.now();
@@ -165,22 +176,30 @@ class SessionTimeline {
     if (seconds <= this.maxSeconds && this.marks.has('first-frame')) {
       if ((hadTraffic || lagMs >= 200) && !inputOnly) {
         this.idleStreak = 0;
+        let pending = 0;
+        let buffered = 0;
         let extra = '';
         if (this.getExtra) {
           try {
             const e = this.getExtra() || {};
-            extra = ` | pend=${e.pending ?? '?'} ws=${fmtBytes(e.buffered || 0)}`;
+            pending = Number(e.pending) || 0;
+            buffered = Number(e.buffered) || 0;
+            extra = ` | pend=${e.pending ?? '?'} ws=${fmtBytes(buffered)}`;
           } catch (_) { /* noop */ }
         }
-        this.lines += 1;
-        this.log(
-          `${this._prefix()}${this.elapsed()}ms] in: ${fmtCounters(this.bucketIn, IN_KINDS)}` +
-          ` | out: ${fmtCounters(this.bucketOut, OUT_KINDS)}${extra}` +
-          `${lagMs >= 200 ? ` | LAG event-loop ${lagMs}ms` : ''}`
-        );
+        const pressure = pending > 0 || buffered >= PRESSURE_WS_BYTES;
+        const shouldLogTraffic = this.verboseTraffic || lagMs >= 200 || pressure;
+        if (shouldLogTraffic) {
+          this.lines += 1;
+          this.log(
+            `${this._prefix()}${this.elapsed()}ms] in: ${fmtCounters(this.bucketIn, IN_KINDS)}` +
+            ` | out: ${fmtCounters(this.bucketOut, OUT_KINDS)}${extra}` +
+            `${lagMs >= 200 ? ` | LAG event-loop ${lagMs}ms` : ''}`
+          );
+        }
       } else {
         this.idleStreak += 1;
-        if (shouldLogSilence(this.idleStreak)) {
+        if (shouldLogSilence(this.idleStreak, { quiet: !this.verboseTraffic })) {
           this.log(`${this._prefix()}${this.elapsed()}ms] silencio ${this.idleStreak}s (sin trafico servidor ni WASM)`);
         }
       }

@@ -50,9 +50,12 @@ function gfxBypassesBitmapQueue(egfxGraphics, dvcForward) {
  * @param {{ staleBannerPending?: boolean }} [opts]
  */
 function egfxSkipsSyncBitmapFlush(egfxGraphics, frame, opts = {}) {
-  if (egfxGraphics !== true || !Buffer.isBuffer(frame) || frame.length === 0) return false;
-  if (frame[0] === 0x03) return true;
-  if (opts.staleBannerPending === true) {
+  if (!Buffer.isBuffer(frame) || frame.length === 0) return false;
+  const egfx = egfxGraphics === true;
+  // TPKT (Deactivate/Demand Active/DynVC): solo EGFX bypasea siempre el flush RLE.
+  if (egfx && frame[0] === 0x03) return true;
+  // ORDERS/SURFACE: no vaciar cola del banner stale (EGFX o bastion bitmap-only).
+  if (opts.staleBannerPending === true && (egfx || opts.allowBastionStale === true)) {
     const kind = classifyFastPathUpdate(frame);
     return kind === 'ORDERS' || kind === 'SURFACE_CMDS';
   }

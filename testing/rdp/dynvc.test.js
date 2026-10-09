@@ -493,6 +493,25 @@ describe('rdp-dynvc', () => {
     assert.ok(res.note.includes('DisplayControl'));
   });
 
+  it('bastionStub acepta RDS::Input y Video sin reenviar al WASM', () => {
+    clearActiveDvcChannels();
+    for (const name of [
+      'Microsoft::Windows::RDS::Input',
+      'Microsoft::Windows::RDS::Video::Control::v08.01'
+    ]) {
+      const nameBuf = Buffer.from(`${name}\0`, 'ascii');
+      const createReq = Buffer.concat([Buffer.from([0x10, 0x19]), nameBuf]);
+      const cpdu = Buffer.alloc(8 + createReq.length);
+      cpdu.writeUInt32LE(createReq.length, 0);
+      cpdu.writeUInt32LE(0x03, 4);
+      createReq.copy(cpdu, 8);
+      const res = handleDvcRequest(1005, 1002, cpdu, { bastionStub: true });
+      assert.ok(res.handled, name);
+      assert.equal(res.forward, false, name);
+      assert.ok(res.note.includes('dvc-accept-stub'), name);
+    }
+  });
+
   it('no reenvia al WASM el DATA de un canal ya rechazado', () => {
     clearActiveDvcChannels();
     const nameBuf = Buffer.from('RDCamera_Device_Enumerator\0', 'ascii');

@@ -768,7 +768,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         await sendClipboardToSession(session, payload);
         lastSentClipboardTextRef.current = payload;
         recordClipboardAction(`Format List enviada (${reason})`, `${payload.length} chars`);
-        if (isRdpDebugEnabled() || (payload.length > 0 && reason !== 'handshake' && reason !== 'foco de ventana')) {
+        if (isRdpDebugEnabled()) {
           console.log(`📋 [IronRDP Clipboard] Format List enviada (${reason}, ${payload.length} chars)`);
         }
       } catch (err) {
@@ -1453,7 +1453,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             let waveBlocks = 0;
             setRdpsndWaveCallback((pcm, sampleRate, channels, bitsPerSample) => {
               waveBlocks += 1;
-              if (waveBlocks === 1 || waveBlocks % 50 === 0) {
+              if (isRdpDebugEnabled() && (waveBlocks === 1 || waveBlocks % 50 === 0)) {
                 console.log(`[IronRDP Audio] wave #${waveBlocks} ${pcm?.byteLength || 0}B ${sampleRate}Hz ch=${channels}`);
               }
               void player.resume();
@@ -1464,7 +1464,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             canvasRef.current?.addEventListener('pointerdown', resumeAudio, { once: true });
             window.addEventListener('pointerdown', resumeAudio, { once: true });
             void player.resume();
-            console.log('[IronRDP Audio] RDPSND habilitado (redirectAudio)');
+            if (isRdpDebugEnabled()) {
+              console.log('[IronRDP Audio] RDPSND habilitado (redirectAudio)');
+            }
           } catch (audioErr) {
             console.warn('[IronRDP] Audio RDPSND no disponible:', audioErr?.message || audioErr);
             try { setRdpsndWaveCallback(null); } catch (_) { /* noop */ }
@@ -1516,7 +1518,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             builder.extension(printerDeviceId(1));
             builder.extension(printJobStreamCallbacks({
               onJobStart: (fileId) => {
-                console.log(`🖨️ [IronRDP Printer] Inicio de trabajo de impresión #${fileId}`);
+                if (isRdpDebugEnabled()) {
+                  console.log(`🖨️ [IronRDP Printer] Inicio de trabajo de impresión #${fileId}`);
+                }
                 activePrintJobs.set(fileId, []);
                 toastRef.current?.show({
                   severity: 'info',
@@ -1531,7 +1535,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
                 activePrintJobs.set(fileId, chunks);
               },
               onJobComplete: async (fileId) => {
-                console.log(`🖨️ [IronRDP Printer] Trabajo de impresión completado #${fileId}`);
+                if (isRdpDebugEnabled()) {
+                  console.log(`🖨️ [IronRDP Printer] Trabajo de impresión completado #${fileId}`);
+                }
                 const chunks = activePrintJobs.get(fileId) || [];
                 activePrintJobs.delete(fileId);
 
@@ -1614,7 +1620,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
                     setActiveTransfers((prev) => discardPendingDownloads(prev));
                     disarmFileTransfer();
                     recordClipboardAction('Copiado remoto recibido', `${text.length} chars`);
-                    console.log(`📋 [IronRDP Clipboard] 📥 Copiado remoto recibido (${text.length} chars):`, text.slice(0, 80));
+                    if (isRdpDebugEnabled()) {
+                      console.log(`📋 [IronRDP Clipboard] 📥 Copiado remoto recibido (${text.length} chars):`, text.slice(0, 80));
+                    }
                     await writeLocalClipboardText(text);
                     toastRef.current?.show({
                       severity: 'success',
@@ -1735,7 +1743,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
 
             currentFileTransferProvider.on('upload-complete', (file, fileIndex, transferId) => {
               if (!shouldAcceptCompletion(abortedTransferIdsRef.current, transferId)) return;
-              console.log('[IronRDP FileTransfer] Pegado en el remoto:', file?.name);
+              if (isRdpDebugEnabled()) {
+                console.log('[IronRDP FileTransfer] Pegado en el remoto:', file?.name);
+              }
               markTransferStatus(transferId, 'complete', {
                 name: file?.name || 'Archivo',
                 type: 'upload'
@@ -1748,13 +1758,17 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
 
             currentFileTransferProvider.on('download-complete', (fileInfo, blob, fileIndex, transferId) => {
               if (!shouldAcceptCompletion(abortedTransferIdsRef.current, transferId)) return;
-              console.log('[IronRDP FileTransfer] Recepcion de buffer completada:', fileInfo?.name);
+              if (isRdpDebugEnabled()) {
+                console.log('[IronRDP FileTransfer] Recepcion de buffer completada:', fileInfo?.name);
+              }
               setActiveTransfers(prev => syncTransfersAndArm(removeTransfer(prev, transferId)));
             });
 
             currentFileTransferProvider.on('files-available', (files) => {
               if (!files || !files.length) return;
-              console.log('[IronRDP FileTransfer] Archivos remotos disponibles:', files);
+              if (isRdpDebugEnabled()) {
+                console.log('[IronRDP FileTransfer] Archivos remotos disponibles:', files);
+              }
               downloadedPathsRef.current = [];
               setActiveTransfers((prev) => {
                 const next = seedPendingDownloads(prev, files);

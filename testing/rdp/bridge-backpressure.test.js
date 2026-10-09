@@ -200,6 +200,11 @@ describe('WsBackpressureController bastion latest-wins', () => {
       // Tras drop del hop: cola vacia / sin stale → ORDERS vuelve al orden normal.
       assert.equal(egfxSkipsSyncBitmapFlush(true, orders, { staleBannerPending: false }), false);
       assert.equal(egfxSkipsSyncBitmapFlush(true, orders), false);
+      // Bastion bitmap-only: ORDERS tampoco reescriben cola stale del banner.
+      assert.equal(
+        egfxSkipsSyncBitmapFlush(false, orders, { staleBannerPending: true, allowBastionStale: true }),
+        true
+      );
       assert.equal(bp.dropPending(), 1);
       assert.equal(bp.hasPending(), false);
       assert.equal(bp.dropPending(), 0);

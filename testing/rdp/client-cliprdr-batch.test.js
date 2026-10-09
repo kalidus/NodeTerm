@@ -295,11 +295,47 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     // No debe emitir nada al servidor durante la pantalla de selección del bastión
     assert.equal(kept.length, 0, 'no se escribe en 1006 ni en 1003 durante el menú del selector');
     assert.ok(state.cliprdrWriteChannelId == null, 'write path no confirmado aún');
-    assert.equal(kept.injected.length, 1, 'sintetiza ACK hacia WASM para que no se bloquee');
-    assert.ok(state.pendingClientCliprdr.length > 0, 'FORMAT_LIST retenido en cola');
+    assert.equal(kept.injected.length, 1, 'synthAck tras MONITOR_READY (WASM Ready sin wire)');
+    assert.ok(Buffer.isBuffer(state.cachedClientCaps), 'CAPS cacheados para rehandshake');
+    assert.ok(Buffer.isBuffer(state.cachedClientTempDir), 'TEMPDIR cacheado');
+    assert.equal(
+      !state.pendingClientCliprdr || state.pendingClientCliprdr.length === 0,
+      true,
+      'sin cola: rehandshake limpio en promote'
+    );
   });
 
-  test('service=n/a selector Wallix: segundo MONITOR_READY promueve a APP, reinyecta CAPS y vacia cola por 1006', () => {
+  test('service=n/a selector Wallix: CLIPRDR antes de MONITOR_READY solo cachea (sin synthAck)', () => {
+    const state = {
+      wallixService: 'n/a',
+      egfxGraphics: true,
+      ioChannelId: IO_CH,
+      cliprdrChannelId: BASTION_CLIP_CH,
+      serverCliprdrChannelId: null,
+      cliprdrServerReady: false,
+      cliprdrMonitorReadyCount: 0,
+      allowed: new Set([1003, 1004, 1005, 1006]),
+      channelIdToName: new Map([
+        [1004, 'rdpdr'],
+        [1005, 'rdpsnd'],
+        [1006, 'cliprdr']
+      ])
+    };
+
+    const frames = Buffer.concat([
+      buildClipFrame(BASTION_CLIP_CH, CB_CLIP_CAPS, Buffer.alloc(16)),
+      buildClipFrame(BASTION_CLIP_CH, CB_FORMAT_LIST, Buffer.alloc(24))
+    ]);
+    const kept = filterBatch(service, frames, state);
+
+    assert.equal(kept.length, 0);
+    assert.equal(kept.injected.length, 0, 'sin synthAck prematuro antes del saludo');
+    assert.ok(Buffer.isBuffer(state.cachedClientCaps));
+    assert.equal(!state.pendingClientCliprdr || state.pendingClientCliprdr.length === 0, true);
+    assert.equal(state.cliprdrFormatListAcked, undefined);
+  });
+
+  test('service=n/a selector Wallix: segundo MONITOR_READY promueve a APP y rehandshake CAPS por 1006', () => {
     const state = {
       wallixService: 'n/a',
       ioChannelId: IO_CH,
@@ -324,7 +360,12 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     ]);
     const kept1 = filterBatch(service, frames, state);
     assert.equal(kept1.length, 0, 'nada enviado durante el selector');
-    assert.equal(state.pendingClientCliprdr.length, 2, 'CAPS y FORMAT_LIST retenidos');
+    assert.ok(Buffer.isBuffer(state.cachedClientCaps), 'CAPS en cache');
+    assert.equal(
+      !state.pendingClientCliprdr || state.pendingClientCliprdr.length === 0,
+      true,
+      'sin cola prematura'
+    );
 
     // 2. Usuario selecciona destino en el bastión: llega 2o MONITOR_READY (el hop RemoteApp deja el saludo en MCS 1001)
     state.cliprdrMonitorReadyCount = 2;
@@ -333,11 +374,13 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     assert.equal(promoted, true, 'promovido a APP tras selección');
     assert.equal(state.wallixService, 'APP');
     assert.equal(state.cliprdrWriteChannelId, BASTION_CLIP_CH);
+    assert.equal(state.cliprdrRehandshakePending, true);
 
-    // 3. RdpNativeBridgeService emite rehandshake y vacía cola
+    // 3. Rehandshake limpio desde cache (no flush de cola muteada)
     const replay = takeCliprdrRehandshake(state);
-    assert.ok(replay.length > 0, 'genera rehandshake CAPS para el destino');
+    assert.equal(replay.length, 2, 'CAPS + TEMPDIR hacia el VC nombrado');
     assert.equal(parseMcsSendData(replay[0]).channelId, BASTION_CLIP_CH);
+    assert.deepEqual(replay.map(clipMsgType), [CB_CLIP_CAPS, CB_TEMP_DIRECTORY]);
 
     const flushedFrames = [];
     const mockSocket = {
@@ -345,15 +388,7 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
       write(buf) { flushedFrames.push(buf); }
     };
     service.flushPendingClientCliprdr(state, mockSocket, null);
-    assert.equal(flushedFrames.length, 4, 'CAPS y FORMAT_LIST retenidos se vacian al socket para APP');
-    assert.deepEqual(
-      flushedFrames.map(clipMsgType),
-      [CB_CLIP_CAPS, CB_CLIP_CAPS, CB_FORMAT_LIST, CB_FORMAT_LIST]
-    );
-    assert.equal(parseMcsSendData(flushedFrames[0]).channelId, BASTION_CLIP_CH);
-    assert.equal(parseMcsSendData(flushedFrames[1]).channelId, 1001);
-    assert.equal(parseMcsSendData(flushedFrames[2]).channelId, 1001);
-    assert.equal(parseMcsSendData(flushedFrames[3]).channelId, BASTION_CLIP_CH);
+    assert.equal(flushedFrames.length, 0, 'cola vacia: solo rehandshake');
   });
 
   test('write=1006 con saludo en IO 1003: flush no escribe al socket (evita FIN ESAH)', () => {
@@ -400,7 +435,7 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     assert.equal(state.cliprdrWriteChannelId, null, 'flush tambien sanea write ilegal');
   });
 
-  test('CAPS temprano encolado + 2o READY en IO: flush no manda a 1006', () => {
+  test('CAPS temprano cacheado + 2o READY en IO: flush no manda a 1006', () => {
     const state = {
       wallixService: 'n/a',
       ioChannelId: IO_CH,
@@ -423,7 +458,12 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     ]);
     const kept1 = filterBatch(service, frames, state);
     assert.equal(kept1.length, 0);
-    assert.ok(state.pendingClientCliprdr.length >= 1, 'PDUs encolados');
+    assert.ok(Buffer.isBuffer(state.cachedClientCaps), 'CAPS cacheados');
+    assert.equal(
+      !state.pendingClientCliprdr || state.pendingClientCliprdr.length === 0,
+      true,
+      'sin cola en selector n/a'
+    );
 
     state.cliprdrMonitorReadyCount = 2;
     assert.equal(maybePromoteSelectorAppCliprdr(state), true);
@@ -576,6 +616,40 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     assert.ok(state.pendingClientCliprdr.length >= 1, 'handshake encolado');
     assert.equal(kept.injected.length, 1, 'acuse sintetico hacia WASM');
     assert.equal(clipMsgType(kept.injected[0]), CB_FORMAT_LIST_RESPONSE);
+  });
+
+  test('EGFX APP post-promote: write nombrado seguro escribe en 1006 no mute en 1001', () => {
+    const state = {
+      wallixService: 'APP',
+      egfxGraphics: true,
+      cliprdrSelectorAppInferred: true,
+      ioChannelId: IO_CH,
+      cliprdrChannelId: CLIPRDR_CH,
+      serverCliprdrChannelId: 1001,
+      cliprdrOnUnsafeChannel: 1001,
+      cliprdrWriteChannelId: BASTION_CLIP_CH,
+      cliprdrServerReady: true,
+      allowed: new Set([1003, 1004, 1005, 1006]),
+      channelIdToName: new Map([
+        [1004, 'rdpdr'],
+        [1005, 'rdpsnd'],
+        [1006, 'cliprdr']
+      ])
+    };
+
+    const kept = filterBatch(service, buildInitiateCopyBatch(), state);
+
+    assert.ok(kept.length >= 2, 'CAPS/LIST (y opcional TEMPDIR) al VC nombrado');
+    for (const frame of kept) {
+      assert.equal(parseMcsSendData(frame).channelId, BASTION_CLIP_CH, 'nada a MCS 1001');
+    }
+    assert.ok(kept.map(clipMsgType).includes(CB_CLIP_CAPS));
+    assert.ok(kept.map(clipMsgType).includes(CB_FORMAT_LIST));
+    assert.equal(
+      !state.pendingClientCliprdr || state.pendingClientCliprdr.length === 0,
+      true,
+      'sin cola mute si write nombrado es seguro'
+    );
   });
 
   test('EGFX saludo por IO 1003 no escribe CHANNEL_PDU en 1003 ni en 1006', () => {
