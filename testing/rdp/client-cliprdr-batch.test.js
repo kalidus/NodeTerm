@@ -7,7 +7,11 @@ const assert = require('node:assert/strict');
 const rdpBridge = require('../../src/main/services/RdpNativeBridgeService');
 const { splitTpktFrames } = require('../../src/main/services/rdp-protocol-helpers');
 const { parseMcsSendData } = require('../../src/main/services/rdp-autodetect');
-const { maybePromoteSelectorAppCliprdr, takeCliprdrRehandshake } = require('../../src/main/services/rdp-channel-filter');
+const {
+  maybePromoteSelectorAppCliprdr,
+  retryConfirmRdpCliprdrWrite,
+  takeCliprdrRehandshake
+} = require('../../src/main/services/rdp-channel-filter');
 
 const CHANNEL_FLAG_FIRST = 0x01;
 const CHANNEL_FLAG_LAST = 0x02;
@@ -349,7 +353,7 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     assert.equal(parseMcsSendData(flushedFrames[3]).channelId, BASTION_CLIP_CH);
   });
 
-  test('service=n/a selector Wallix: 1er READY en IO no promueve (menu); 2o READY en IO promueve a RDP', () => {
+  test('service=n/a selector Wallix: 2o READY en IO promueve RDP sin write; named VC confirma replay', () => {
     const state = {
       wallixService: 'n/a',
       ioChannelId: IO_CH,
@@ -384,8 +388,13 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     assert.equal(promoted, true, 'promovido a RDP tras 2o READY en IO');
     assert.equal(state.wallixService, 'RDP');
     assert.equal(state.cliprdrSelectorAppInferred, true);
+    assert.ok(state.cliprdrWriteChannelId == null, 'no write a 1006 con saludo en IO (evita FIN)');
+    assert.deepEqual(takeCliprdrRehandshake(state), []);
+
+    // Servidor saluda en VC nombrado: entonces write + CAPS/TEMPDIR.
+    state.serverCliprdrChannelId = BASTION_CLIP_CH;
+    assert.equal(retryConfirmRdpCliprdrWrite(state), true);
     assert.equal(state.cliprdrWriteChannelId, BASTION_CLIP_CH);
-    assert.notEqual(state.cliprdrWriteChannelId, IO_CH, 'nunca escribir en 1003');
 
     const replay = takeCliprdrRehandshake(state);
     assert.equal(replay.length, 2, 'CAPS + TEMPDIR (Session Probe)');

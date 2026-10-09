@@ -52,6 +52,8 @@ export const LazyBrowserTab = lazy(() => getChunk('BrowserTab', () => import('./
 
 const IDLE_PRELOAD_KEYS = [
   'TerminalComponent',
+  // IronRDP: chunk + WASM compile fuera del 1er connect (evita silencio post-banner).
+  'IronRdpCanvasTab',
 ];
 
 const CHUNK_LOADERS = {
@@ -60,6 +62,7 @@ const CHUNK_LOADERS = {
   SplitLayout: () => import('./SplitLayout'),
   RdpSessionTab: () => import('./RdpSessionTab'),
   GuacamoleTerminal: () => import('./GuacamoleTerminal'),
+  IronRdpCanvasTab: () => import('./IronRdpCanvasTab'),
   VncCanvasTab: () => import('./VncCanvasTab'),
   GuacamoleTab: () => import('./GuacamoleTab'),
   TerminalComponent: () => import('./TerminalComponent'),
@@ -97,7 +100,7 @@ export function arePriorityTabChunksReady() {
 }
 
 /**
- * Precalienta solo el chunk de terminal SSH en idle (sin Guacamole/CLI/Browser).
+ * Precalienta en idle: terminal SSH + IronRDP (chunk JS y compile WASM).
  */
 export function preloadHeavyTabChunks() {
   if (tabChunksPreloadStarted) {
@@ -113,12 +116,18 @@ export function preloadHeavyTabChunks() {
   return new Promise((resolve) => {
     scheduleIdle(() => {
       Promise.all(IDLE_PRELOAD_KEYS.map((key) => getChunk(key, CHUNK_LOADERS[key])))
-        .then(() => {
+        .then(async () => {
           tabChunksPriorityReady = true;
+          try {
+            const { warmupIronRdpInIdle } = await import('../utils/ironRdpWarmup');
+            await warmupIronRdpInIdle();
+          } catch (err) {
+            console.warn('[tabLoaders] Precarga IronRDP WASM:', err);
+          }
           resolve();
         })
         .catch((err) => {
-          console.warn('[tabLoaders] Precalentado TerminalComponent:', err);
+          console.warn('[tabLoaders] Precalentado chunks de pestaña:', err);
           resolve();
         });
     });

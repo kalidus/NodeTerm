@@ -947,7 +947,7 @@ describe('CLIPRDR: robustez del filtro', () => {
     assert.equal(maybePromoteSelectorAppCliprdr(state), false);
   });
 
-  test('n/a + 2o READY en IO (1003) promueve a RDP y recupera write path al cliprdr nombrado', () => {
+  test('n/a + 2o READY en IO (1003) promueve a RDP sin write a 1006 (evita FIN)', () => {
     const state = stateWithCliprdr();
     state.wallixService = 'n/a';
     state.ioChannelId = 1003;
@@ -967,15 +967,20 @@ describe('CLIPRDR: robustez del filtro', () => {
     assert.equal(state.wallixService, 'n/a');
     assert.equal(state.cliprdrWriteChannelId, null);
 
-    // 2o READY por IO: hop a escritorio RDP (TEMPDIR para Session Probe).
+    // 2o READY por IO: marca RDP (TEMPDIR) pero no escribe en 1006 (Wallix FIN).
     processServerFrame(state, buildMcsIndication(1003, buildChannelPdu(buildCliprdrPayload(1), 0x03)));
 
     assert.equal(state.cliprdrMonitorReadyCount, 2);
     assert.equal(state.cliprdrSelectorAppInferred, true);
     assert.equal(state.wallixService, 'RDP');
+    assert.equal(state.cliprdrWriteChannelId, null, 'saludo aun en IO: no write a 1006');
+    assert.equal(retryConfirmRdpCliprdrWrite(state), false, 'saludo IO no confirma write');
+    assert.deepEqual(takeCliprdrRehandshake(state), []);
+
+    // Servidor pasa al VC nombrado: entonces write + rehandshake CAPS/TEMPDIR.
+    processServerFrame(state, buildMcsIndication(1006, buildChannelPdu(buildCliprdrPayload(1), 0x03)));
     assert.equal(state.cliprdrWriteChannelId, 1006);
     assert.equal(state.cliprdrRehandshakePending, true);
-    assert.equal(retryConfirmRdpCliprdrWrite(state), false, 'write path ya confirmado');
 
     const replay = takeCliprdrRehandshake(state);
     assert.equal(replay.length, 2, 'CAPS + TEMPDIR hacia el VC nombrado');

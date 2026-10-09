@@ -1250,7 +1250,10 @@ class RdpNativeBridgeService extends EventEmitter {
                           && !channelFilter.loggedCliprdrSelectorAppInferred) {
                         channelFilter.loggedCliprdrSelectorAppInferred = true;
                         const svcLabel = channelFilter.wallixService === 'RDP' ? 'RDP' : 'APP';
-                        const inferMsg = `[Bridge Clipboard] selector ${svcLabel} inferido: saludo ${channelFilter.serverCliprdrChannelId}, write path via cliprdr nombrado ${channelFilter.cliprdrWriteChannelId}`;
+                        const writeNote = channelFilter.cliprdrWriteChannelId != null
+                          ? `write path via cliprdr nombrado ${channelFilter.cliprdrWriteChannelId}`
+                          : 'write path pendiente (saludo IO; no escribir 1006 hasta VC nombrado)';
+                        const inferMsg = `[Bridge Clipboard] selector ${svcLabel} inferido: saludo ${channelFilter.serverCliprdrChannelId}, ${writeNote}`;
                         recordCliprdrEvent(inferMsg);
                         console.log(inferMsg);
                         this.emit('diagnostic-log', { category: 'cliprdr', message: inferMsg });

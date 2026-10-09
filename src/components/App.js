@@ -405,7 +405,7 @@ const App = () => {
     initializeApp();
   }, [secureStorage]);
 
-  // Precarga ligera en idle: solo terminal SSH + xterm, no chunks de Guacamole/CLI/Browser
+  // Precarga en idle: terminal SSH + IronRDP (chunk/WASM) + xterm
   useEffect(() => {
     if (!isAppReady) return;
     const useIdle = typeof requestIdleCallback === 'function';

@@ -792,10 +792,12 @@ function greetingOnUnsafeCliprdr(state) {
 
 /**
  * Selector Wallix sin cadena :APP:/:RDP::
- * - Saludo en MCS 1001 (usuario): 2o MONITOR_READY → APP (RemoteApp).
- * - Saludo en IO 1003: 2o MONITOR_READY → RDP (escritorio completo).
- *   El 1er READY en IO es el menu del selector; promover ahi envenena un hop APP.
- *   Si el 2o READY no llega, claimCliprdrPdu promueve al hablar el servidor en el VC nombrado.
+ * - Saludo en MCS 1001 (usuario): 2o MONITOR_READY → APP (RemoteApp);
+ *   write path al VC cliprdr nombrado + rehandshake.
+ * - Saludo en IO 1003: 2o MONITOR_READY → RDP (escritorio completo) SOLO marca
+ *   wallixService (TEMPDIR/Session Probe). NO escribe en el VC nombrado: Wallix
+ *   ESAH cierra con FIN si se manda CHANNEL_PDU a 1006 con saludo aun en 1003.
+ *   El write+rehandshake llega cuando el servidor habla en el VC nombrado.
  */
 function maybePromoteSelectorAppCliprdr(state) {
   if (!state) return false;
@@ -809,12 +811,16 @@ function maybePromoteSelectorAppCliprdr(state) {
   if (named == null || !isSafeStaticCliprdrWrite(state, named)) return false;
   state.wallixService = isUser ? 'APP' : 'RDP';
   state.cliprdrSelectorAppInferred = true;
-  state.cliprdrRehandshakePending = true;
   state.isBastion = true;
-  if (state.cliprdrWriteChannelId == null
-      || !isSafeStaticCliprdrWrite(state, state.cliprdrWriteChannelId)) {
-    state.cliprdrWriteChannelId = named;
+  if (isUser) {
+    // APP: write al VC nombrado es seguro tras saludo en 1001.
+    state.cliprdrRehandshakePending = true;
+    if (state.cliprdrWriteChannelId == null
+        || !isSafeStaticCliprdrWrite(state, state.cliprdrWriteChannelId)) {
+      state.cliprdrWriteChannelId = named;
+    }
   }
+  // RDP+IO: no tocar cliprdrWriteChannelId ni rehandshake (evita FIN en 1006).
   return true;
 }
 
@@ -829,25 +835,26 @@ function retryConfirmAppCliprdrWrite(state) {
 }
 
 /**
- * Solo hop selector n/a→RDP (cliprdrSelectorAppInferred). Tras saludo por IO,
- * recupera write path al VC cliprdr nombrado y pide rehandshake CAPS+TEMPDIR
- * (Session Probe). No aplica a :RDP: explícito: escribir 1006 tras IO cierra TLS.
+ * Solo hop selector n/a→RDP (cliprdrSelectorAppInferred). Confirma write+rehandshake
+ * unicamente cuando el servidor ya habla cliprdr en el VC nombrado.
+ * Si el saludo sigue en IO, escribir 1006 cierra el TLS (Wallix ESAH).
  */
 function retryConfirmRdpCliprdrWrite(state) {
   if (!state || state.wallixService !== 'RDP') return false;
   if (!state.cliprdrSelectorAppInferred) return false;
-  if (isSafeStaticCliprdrWrite(state, state.cliprdrWriteChannelId)) return false;
   const named = declaredChannelId(state, 'cliprdr');
   if (named == null || !isSafeStaticCliprdrWrite(state, named)) return false;
-  const greetedIo = state.ioChannelId != null && (
-    state.serverCliprdrChannelId === state.ioChannelId
-    || state.cliprdrOnUnsafeChannel === state.ioChannelId
-  );
-  const serverOnNamed = state.serverCliprdrChannelId === named;
-  if (!greetedIo && !serverOnNamed && state.cliprdrWriteChannelId != null) return false;
-  state.cliprdrWriteChannelId = named;
-  state.cliprdrRehandshakePending = true;
-  return true;
+  if (state.serverCliprdrChannelId !== named) return false;
+  let changed = false;
+  if (state.cliprdrWriteChannelId !== named) {
+    state.cliprdrWriteChannelId = named;
+    changed = true;
+  }
+  if (!state.cliprdrHandshakeSentToRecoveredDest && !state.cliprdrRehandshakePending) {
+    state.cliprdrRehandshakePending = true;
+    changed = true;
+  }
+  return changed;
 }
 
 /**

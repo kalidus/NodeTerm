@@ -6,6 +6,7 @@ import { ProgressBar } from 'primereact/progressbar';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { Toast } from 'primereact/toast';
 import * as IronRdpRdp from '@devolutions/iron-remote-desktop-rdp';
+import { ensureIronRdpInitialized } from '../utils/ironRdpWarmup';
 import { resolveCredsspPolicy } from '../utils/rdpSecurityPolicy';
 import { parseResolutionValue } from '../utils/rdpScreenConfig';
 import { mapTerminationReason } from '../utils/rdpTerminationReasons';
@@ -21,7 +22,6 @@ import { createRdpWebAudioPlayer } from '../utils/rdpWebAudio';
 
 const {
   Backend,
-  init: initIronRdp,
   enableCredssp,
   displayControl,
   RdpFileTransferProvider,
@@ -186,6 +186,10 @@ const writeLocalClipboardText = async (text) => {
   } catch (_) {}
 };
 
+// Origen de tiempos compartido para el log del primer CAPS/FORMAT_LIST (onClipboardPaste).
+let rdpTimelineStartedAt = 0;
+let loggedFirstClipboardPaste = false;
+
 // Publica una Format List CLIPRDR en la sesión remota.
 // Un texto vacío es legítimo y necesario: tras CB_MONITOR_READY el cliente debe anunciar
 // formatos aunque no tenga nada que ofrecer (MS-RDPECLIP 1.3.2.1). Si no se llama a
@@ -198,6 +202,13 @@ const sendClipboardToSession = async (session, text) => {
   const clip = new Backend.ClipboardData();
   clip.addText('text/plain', normalizedText);
   await session.onClipboardPaste(clip);
+  if (!loggedFirstClipboardPaste && rdpTimelineStartedAt) {
+    loggedFirstClipboardPaste = true;
+    console.log(
+      `⏱️ [RDP Timeline renderer +${Math.round(performance.now() - rdpTimelineStartedAt)}ms] ` +
+      'primer onClipboardPaste (CAPS/FORMAT_LIST hacia el bridge)'
+    );
+  }
 };
 
 const RESOLUTION_OPTIONS = [
@@ -1044,8 +1055,14 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           throw new Error('Electron IPC no está disponible');
         }
 
-        // 1. Inicializar módulo WebAssembly de IronRDP con nivel warn para evitar ruido de consola
-        await initIronRdp('warn');
+        // Origen de tiempos del renderer (incluye WASM init si no se precargo en idle).
+        const timelineStartedAt = performance.now();
+        rdpTimelineStartedAt = timelineStartedAt;
+        loggedFirstClipboardPaste = false;
+
+        // 1. WASM IronRDP (no-op si preloadHeavyTabChunks ya lo compilo en idle)
+        await ensureIronRdpInitialized('warn');
+        console.log(`⏱️ [RDP Timeline renderer +${Math.round(performance.now() - timelineStartedAt)}ms] initIronRdp listo`);
         if (isAborted()) return;
         if (typeof setEgfxAvcThinClient === 'function') {
           // Thin-client ya no cambia caps; se deja apagado en el reintento sin AVC.
@@ -1641,9 +1658,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         if (domainStr) {
           builder.serverDomain(domainStr);
         }
-
-        // Origen de tiempos de la linea de tiempo del renderer (solo log).
-        const timelineStartedAt = performance.now();
 
         if (canvasRef.current) {
           getOptimized2dContext(canvasRef.current);
