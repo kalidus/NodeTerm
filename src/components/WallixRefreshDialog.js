@@ -5,11 +5,15 @@ import { ProgressSpinner } from 'primereact/progressspinner';
 import ImportService from '../services/ImportService';
 import AppDialog from './ui/AppDialog';
 import { useTranslation } from '../i18n/hooks/useTranslation';
+import { isPlatformWindows, resolveRdpClientType } from '../utils/rdpClientType';
 
 const WallixRefreshDialog = ({ visible, onHide, node, onRefreshComplete, toast }) => {
   const { t } = useTranslation();
+  const { t: tDialogs } = useTranslation('dialogs');
+  const isWindows = isPlatformWindows();
   const [wallixUsername, setWallixUsername] = useState('');
   const [wallixUrl, setWallixUrl] = useState('');
+  const [wallixRdpClientType, setWallixRdpClientType] = useState('web-rdp');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -17,6 +21,7 @@ const WallixRefreshDialog = ({ visible, onHide, node, onRefreshComplete, toast }
     if (visible && node && node.data) {
       setWallixUrl(node.data.wallixUrl || '');
       setWallixUsername(node.data.wallixUsername || '');
+      setWallixRdpClientType(resolveRdpClientType(node.data.wallixRdpClientType || 'web-rdp'));
       setPassword('');
     }
   }, [visible, node]);
@@ -34,7 +39,10 @@ const WallixRefreshDialog = ({ visible, onHide, node, onRefreshComplete, toast }
 
     setLoading(true);
     try {
-      const result = await ImportService.importFromWallix(wallixUrl, wallixUsername, password);
+      const rdpClientType = resolveRdpClientType(wallixRdpClientType);
+      const result = await ImportService.importFromWallix(wallixUrl, wallixUsername, password, {
+        rdpClientType
+      });
       if (result && result.success) {
         onRefreshComplete(result, node.key);
         onHide();
@@ -53,6 +61,12 @@ const WallixRefreshDialog = ({ visible, onHide, node, onRefreshComplete, toast }
       setLoading(false);
     }
   };
+
+  const clientOptions = [
+    { value: 'web-rdp', icon: 'pi-globe', short: 'IronRDP' },
+    { value: 'mstsc', icon: 'pi-desktop', short: 'MSTSC', windowsOnly: true },
+    { value: 'guacamole', icon: 'pi-server', short: 'Guacamole' }
+  ];
 
   return (
     <AppDialog
@@ -94,6 +108,54 @@ const WallixRefreshDialog = ({ visible, onHide, node, onRefreshComplete, toast }
                 feedback={false}
                 toggleMask
               />
+            </div>
+            <div className="app-form-field">
+              <label className="app-form-label">{tDialogs('wallix.rdpClient', 'Cliente RDP')}</label>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {clientOptions.map((opt) => {
+                  const disabled = opt.windowsOnly && !isWindows;
+                  const active = wallixRdpClientType === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      disabled={disabled}
+                      title={disabled ? 'Cliente MSTSC disponible exclusivamente en Windows' : tDialogs(`rdp.clientTypes.${opt.value}`)}
+                      onClick={() => {
+                        if (!disabled) setWallixRdpClientType(opt.value);
+                      }}
+                      style={{
+                        flex: '1 1 30%',
+                        minWidth: '80px',
+                        padding: '6px 8px',
+                        fontSize: '11px',
+                        cursor: disabled ? 'not-allowed' : 'pointer',
+                        opacity: disabled ? 0.4 : 1,
+                        borderRadius: '4px',
+                        border: active
+                          ? '1px solid color-mix(in srgb, var(--primary-color, #6366f1) 50%, transparent)'
+                          : '1px solid rgba(255,255,255,0.1)',
+                        background: active
+                          ? 'color-mix(in srgb, var(--primary-color, #6366f1) 18%, transparent)'
+                          : 'transparent',
+                        color: active
+                          ? 'var(--primary-color, #6366f1)'
+                          : 'var(--text-color-secondary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <i className={`pi ${opt.icon}`} aria-hidden="true" />
+                      {opt.short}
+                    </button>
+                  );
+                })}
+              </div>
+              <small style={{ display: 'block', marginTop: '6px', fontSize: '10px', color: 'var(--text-color-secondary)' }}>
+                {tDialogs(`rdp.clientTypes.${wallixRdpClientType}`)}
+              </small>
             </div>
           </>
         )}

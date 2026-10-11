@@ -26,6 +26,7 @@ import exportImportService from '../services/ExportImportService';
 import { mapBrowserEntriesToNodes } from '../utils/passwordImportMapper';
 import { parsePasswordCsv } from '../utils/csvPasswordParser';
 import { useTranslation } from '../i18n/hooks/useTranslation';
+import { isPlatformWindows, resolveRdpClientType } from '../utils/rdpClientType';
 
 // Definición de fuentes de importación
 const IMPORT_SOURCES = {
@@ -288,6 +289,8 @@ const ImportWizardDialog = ({
     initialStep = 0
 }) => {
     const { t } = useTranslation('common');
+    const { t: tDialogs } = useTranslation('dialogs');
+    const isWindows = isPlatformWindows();
     const toast = useRef(null);
 
     // Estado del wizard
@@ -309,6 +312,7 @@ const ImportWizardDialog = ({
     // Opciones específicas para Wallix
     const [wallixUrl, setWallixUrl] = useState('');
     const [wallixUsername, setWallixUsername] = useState('');
+    const [wallixRdpClientType, setWallixRdpClientType] = useState('web-rdp');
 
     // Importación desde navegador
     const [browserProfiles, setBrowserProfiles] = useState([]);
@@ -383,6 +387,7 @@ const ImportWizardDialog = ({
         setImportMode('merge');
         setWallixUrl('');
         setWallixUsername('');
+        setWallixRdpClientType('web-rdp');
         setBrowserProfiles([]);
         setSelectedBrowserProfileId(null);
         setFirefoxMasterPassword('');
@@ -827,7 +832,9 @@ const ImportWizardDialog = ({
     const generateWallixPreview = async () => {
         try {
             setPreviewStatus('Conectando con API de Wallix...');
-            const result = await ImportService.importFromWallix(wallixUrl, wallixUsername, password);
+            const result = await ImportService.importFromWallix(wallixUrl, wallixUsername, password, {
+                rdpClientType: resolveRdpClientType(wallixRdpClientType)
+            });
 
             if (!result.success) {
                 throw new Error(result.error || 'Error al conectar con la API de Wallix');
@@ -2096,6 +2103,64 @@ const ImportWizardDialog = ({
                                         </div>
                                     )}
                                 </div>
+
+                                {selectedSource === 'wallix' && (
+                                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '10px' }}>
+                                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-color-secondary)', marginBottom: '6px' }}>
+                                            <i className="pi pi-desktop" style={{ marginRight: '4px' }} />
+                                            {tDialogs('wallix.rdpClient', 'Cliente RDP')}
+                                        </label>
+                                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                            {[
+                                                { value: 'web-rdp', icon: 'pi-globe', short: 'IronRDP' },
+                                                { value: 'mstsc', icon: 'pi-desktop', short: 'MSTSC', windowsOnly: true },
+                                                { value: 'guacamole', icon: 'pi-server', short: 'Guacamole' }
+                                            ].map((opt) => {
+                                                const disabled = opt.windowsOnly && !isWindows;
+                                                const active = wallixRdpClientType === opt.value;
+                                                return (
+                                                    <button
+                                                        key={opt.value}
+                                                        type="button"
+                                                        disabled={disabled}
+                                                        title={disabled ? 'Cliente MSTSC disponible exclusivamente en Windows' : undefined}
+                                                        onClick={() => {
+                                                            if (!disabled) setWallixRdpClientType(opt.value);
+                                                        }}
+                                                        style={{
+                                                            flex: '1 1 30%',
+                                                            minWidth: '90px',
+                                                            padding: '6px 8px',
+                                                            fontSize: '11px',
+                                                            cursor: disabled ? 'not-allowed' : 'pointer',
+                                                            opacity: disabled ? 0.4 : 1,
+                                                            borderRadius: '4px',
+                                                            border: active
+                                                                ? '1px solid color-mix(in srgb, var(--primary-color, #6366f1) 50%, transparent)'
+                                                                : '1px solid rgba(255,255,255,0.1)',
+                                                            background: active
+                                                                ? 'color-mix(in srgb, var(--primary-color, #6366f1) 18%, transparent)'
+                                                                : 'transparent',
+                                                            color: active
+                                                                ? 'var(--primary-color, #6366f1)'
+                                                                : 'var(--text-color-secondary)',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            gap: '4px'
+                                                        }}
+                                                    >
+                                                        <i className={`pi ${opt.icon}`} aria-hidden="true" />
+                                                        {opt.short}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                        <small style={{ display: 'block', marginTop: '6px', fontSize: '10px', color: 'var(--text-color-secondary)' }}>
+                                            {tDialogs(wallixRdpClientType === 'web-rdp' ? 'rdp.clientTypes.web-rdp' : (wallixRdpClientType === 'mstsc' ? 'rdp.clientTypes.mstsc' : 'rdp.clientTypes.guacamole'))}
+                                        </small>
+                                    </div>
+                                )}
 
                                 {selectedSource === 'keepass' && (
                                     <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '10px' }}>

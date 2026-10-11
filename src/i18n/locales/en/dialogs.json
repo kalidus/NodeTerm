@@ -689,6 +689,7 @@
     "url": "Wallix Server URL",
     "adminUser": "Admin / API User",
     "password": "Password",
+    "rdpClient": "RDP Client",
     "requiredFields": "All fields are required",
     "emptyResult": "No results received from API",
     "importError": "Import error"

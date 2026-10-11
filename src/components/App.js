@@ -1085,7 +1085,8 @@ const App = () => {
           importedFrom: importResult?.metadata?.source || 'mRemoteNG',
           data: importResult?.metadata?.source === 'Wallix' ? {
               wallixUrl: importResult.metadata.wallixUrl,
-              wallixUsername: importResult.metadata.wallixUsername
+              wallixUsername: importResult.metadata.wallixUsername,
+              wallixRdpClientType: importResult.metadata.wallixRdpClientType || 'web-rdp'
           } : {}
         });
 
@@ -1174,7 +1175,8 @@ const App = () => {
             importedFrom: 'Wallix',
             data: {
               wallixUrl: importResult.metadata.wallixUrl,
-              wallixUsername: importResult.metadata.wallixUsername
+              wallixUsername: importResult.metadata.wallixUsername,
+              wallixRdpClientType: importResult.metadata.wallixRdpClientType || 'web-rdp'
             }
           };
           setNodes(prev => {
@@ -1295,6 +1297,13 @@ const App = () => {
         if (!containerNode) {
             toast.current?.show({ severity: 'error', summary: 'Error', detail: 'La carpeta raíz de Wallix ya no existe', life: 3000 });
             return prev;
+        }
+
+        if (!containerNode.data) containerNode.data = {};
+        if (result.metadata?.wallixUrl) containerNode.data.wallixUrl = result.metadata.wallixUrl;
+        if (result.metadata?.wallixUsername) containerNode.data.wallixUsername = result.metadata.wallixUsername;
+        if (result.metadata?.wallixRdpClientType) {
+          containerNode.data.wallixRdpClientType = result.metadata.wallixRdpClientType;
         }
         
         if (!containerNode.children) containerNode.children = [];

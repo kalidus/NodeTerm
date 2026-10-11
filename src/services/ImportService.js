@@ -4,6 +4,7 @@
  */
 
 import { applyWallixBastionImportFields } from '../utils/wallixBastion';
+import { resolveRdpClientType } from '../utils/rdpClientType';
 
 class ImportService {
   // Contador para claves únicas durante la sesión
@@ -491,7 +492,7 @@ class ImportService {
         redirectPrinters: conn.redirectPrinters === 'true',
         redirectSmartCards: conn.redirectSmartCards === 'true',
         description: conn.description,
-        clientType: 'web-rdp',
+        clientType: resolveRdpClientType(conn.clientType),
         // Activar ajuste automático por defecto para evitar reconexiones
         autoResize: true,
         // Activar mostrar fondo por defecto
@@ -901,10 +902,12 @@ class ImportService {
    * @param {string} url - URL base de la API de Wallix
    * @param {string} username - Usuario para autenticación Basic
    * @param {string} password - Contraseña para autenticación Basic
+   * @param {{ rdpClientType?: string }} [options] - Opciones de importación (cliente RDP)
    * @returns {Promise<Object>} - Resultado de la importación
    */
-  static async importFromWallix(url, username, password) {
+  static async importFromWallix(url, username, password, options = {}) {
     try {
+      const rdpClientType = resolveRdpClientType(options?.rdpClientType);
       const baseUrl = url.replace(/\/$/, '');
       let bastionHostname = baseUrl;
       try {
@@ -1016,6 +1019,7 @@ class ImportService {
             username: proxyUsername,
             password: password,
             protocol,
+            clientType: rdpClientType,
             description: isApp
               ? `Wallix Application${right?.application_description ? ` - ${right.application_description}` : ''}`
               : `Alias: ${right?.device_alias || ''}`
@@ -1075,6 +1079,7 @@ class ImportService {
             importDate: new Date().toISOString(),
             wallixUrl: url,
             wallixUsername: username,
+            wallixRdpClientType: rdpClientType,
             wallixSourceMode: 'sessionrights'
           }
         };
@@ -1515,6 +1520,7 @@ class ImportService {
                     username: proxyUsername,
                     password: password, // Credencial Wallix del usuario que importa
                     protocol: protocol,
+                    clientType: rdpClientType,
                     description: alias
                 };
 
@@ -1598,6 +1604,7 @@ class ImportService {
             importDate: new Date().toISOString(),
             wallixUrl: url,
             wallixUsername: username,
+            wallixRdpClientType: rdpClientType,
             wallixSourceMode: sourceMode,
             wallixFilterStats: {
               groupsEvaluated,
