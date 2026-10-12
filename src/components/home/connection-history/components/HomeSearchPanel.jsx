@@ -21,8 +21,6 @@ export const HomeSearchPanel = ({
 	onToggleMinimizePanel,
 	onToggleTerminalVisibility,
 	panelsLayout,
-	onBringToFront,
-	onTerminalToggle,
 	searchPanelMode,
 	setSearchPanelMode,
 	searchProtocolFilter,
@@ -133,29 +131,12 @@ export const HomeSearchPanel = ({
 				<div className="hero-action-buttons" style={{ margin: '0' }}>
 					<button
 						type="button"
-						className={`hero-action-btn terminal-primary ${panelsLayout?.terminal?.visible !== false ? 'active' : ''}`}
-						title="Abrir o enfocar terminal local"
-						onClick={(e) => {
-							e.stopPropagation();
-							if (onTogglePanelVisibility) {
-								onTogglePanelVisibility('terminal', true);
-								onBringToFront?.('terminal');
-							} else if (onTerminalToggle) {
-								const terminalType = localStorage.getItem('nodeterm_default_local_terminal') || 'powershell';
-								onTerminalToggle(true, terminalType, false);
-							}
-						}}
-					>
-						<i className="pi pi-plus-circle" />
-						{!isVeryNarrow && <span className="btn-label">{isNarrow ? 'Term' : 'Terminal'}</span>}
-					</button>
-					<button
-						type="button"
 						className={`hero-action-btn ${searchPanelMode === 'recents' ? 'active' : ''}`}
 						title="Mostrar recientes en este panel"
 						onClick={(e) => {
 							e.stopPropagation();
-							setSearchPanelMode(prev => (prev === 'recents' ? 'standby' : 'recents'));
+							if (searchPanelMode === 'recents') return;
+							setSearchPanelMode('recents');
 							setActiveIndex(-1);
 						}}
 					>
@@ -168,7 +149,8 @@ export const HomeSearchPanel = ({
 						title="Mostrar favoritos en este panel"
 						onClick={(e) => {
 							e.stopPropagation();
-							setSearchPanelMode(prev => (prev === 'favorites' ? 'standby' : 'favorites'));
+							if (searchPanelMode === 'favorites') return;
+							setSearchPanelMode('favorites');
 							setActiveIndex(-1);
 						}}
 					>
@@ -177,21 +159,26 @@ export const HomeSearchPanel = ({
 					</button>
 					<button
 						type="button"
-						className={`hero-action-btn cyber-filter-trigger-btn ${searchProtocolFilter !== 'all' || showProtocolFilterBar ? 'active' : ''}`}
-						title="Filtrar por tipo / protocolo"
+						className={`hero-action-btn hero-filter-icon-btn ${searchProtocolFilter !== 'all' || showProtocolFilterBar ? 'active' : ''}`}
+						title="Filtrar por protocolo"
 						onClick={(e) => {
 							e.stopPropagation();
 							setShowProtocolFilterBar(prev => !prev);
 						}}
 					>
-						<i className="pi pi-filter" />
-						{!isVeryNarrow && (
-							<span className="btn-label">
-								{searchProtocolFilter === 'all'
-									? (isNarrow ? 'Filt' : 'Filtrar')
-									: (isNarrow ? searchProtocolFilter.slice(0, 3).toUpperCase() : searchProtocolFilter.toUpperCase())}
-							</span>
-						)}
+						<span className="hero-filter-icon" aria-hidden="true">
+							<svg viewBox="0 0 16 16" fill="none">
+								<path
+									d="M1.8 2.4h12.4L9.4 8.2v4.1l-2.8 1.1V8.2L1.8 2.4z"
+									stroke="currentColor"
+									strokeWidth="1.3"
+									strokeLinejoin="round"
+									fill={searchProtocolFilter !== 'all' ? 'currentColor' : 'none'}
+									fillOpacity={searchProtocolFilter !== 'all' ? 0.9 : 0}
+								/>
+							</svg>
+							{searchProtocolFilter !== 'all' && <span className="hero-filter-active-dot" />}
+						</span>
 						{searchProtocolFilter !== 'all' && (
 							<span
 								className="cyber-filter-reset-badge"
@@ -337,17 +324,6 @@ export const HomeSearchPanel = ({
 						</span>
 					) : null}
 					subtitle="HISTORIAL RECIENTE"
-					headerRight={(
-						<button
-							type="button"
-							className="cyber-search-clear-btn"
-							style={{ position: 'static', transform: 'none', width: '18px', height: '18px' }}
-							onClick={() => setSearchPanelMode('standby')}
-							title="Cerrar recientes"
-						>
-							<i className="pi pi-times" />
-						</button>
-					)}
 					emptyMessage="// NO SE REGISTRARON SESIONES RECIENTES"
 					activeIndex={activeIndex}
 					onActiveIndexChange={setActiveIndex}
@@ -369,17 +345,6 @@ export const HomeSearchPanel = ({
 						</span>
 					) : null}
 					subtitle="ACCESOS FAVORITOS"
-					headerRight={(
-						<button
-							type="button"
-							className="cyber-search-clear-btn"
-							style={{ position: 'static', transform: 'none', width: '18px', height: '18px' }}
-							onClick={() => setSearchPanelMode('standby')}
-							title="Cerrar favoritos"
-						>
-							<i className="pi pi-times" />
-						</button>
-					)}
 					emptyMessage="// NO HAY CONEXIONES MARCADAS COMO FAVORITAS"
 					activeIndex={activeIndex}
 					onActiveIndexChange={setActiveIndex}

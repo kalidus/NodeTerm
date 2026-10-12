@@ -19,7 +19,7 @@ export const useConnectionSearch = ({
 	const [isSearching, setIsSearching] = useState(false);
 	const [showDropdown, setShowDropdown] = useState(false);
 	const [activeIndex, setActiveIndex] = useState(-1);
-	const [searchPanelMode, setSearchPanelMode] = useState('standby'); // 'standby' | 'recents' | 'favorites'
+	const [searchPanelMode, setSearchPanelMode] = useState('recents'); // 'recents' | 'favorites' | 'standby'
 	const [searchProtocolFilter, setSearchProtocolFilter] = useState('all'); // 'all' | 'ssh' | 'rdp' | 'vnc' | 'sftp' | 'password' | 'note' | 'ssh-tunnel'
 	const [showProtocolFilterBar, setShowProtocolFilterBar] = useState(false);
 
@@ -248,6 +248,9 @@ export const useConnectionSearch = ({
 			} else if (e.key === 'Escape') {
 				e.preventDefault();
 				setSearchTerm('');
+				setSearchProtocolFilter('all');
+				setShowProtocolFilterBar(false);
+				setSearchPanelMode('recents');
 				setActiveIndex(-1);
 			}
 			return;
@@ -296,8 +299,10 @@ export const useConnectionSearch = ({
 				}
 			} else if (e.key === 'Escape') {
 				e.preventDefault();
-				setSearchPanelMode('standby');
+				setSearchTerm('');
 				setSearchProtocolFilter('all');
+				setShowProtocolFilterBar(false);
+				setSearchPanelMode('recents');
 				setActiveIndex(-1);
 			}
 			return;

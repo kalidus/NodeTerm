@@ -239,12 +239,40 @@ const ConnectionHistoryStyles = ({
 					opacity: 1;
 					color: ${terminalTheme.green || '#3fb950'};
 				}
-				.hero-action-btn.terminal-primary {
-					color: ${terminalTheme.green || '#3fb950'};
-					border-bottom: 2px solid ${terminalTheme.green || '#3fb950'};
+				.hero-action-btn.hero-filter-icon-btn {
+					flex: 0 0 auto;
+					margin-left: auto;
+					width: auto;
+					min-width: 32px;
+					padding: 5px 7px;
+					gap: 4px;
 				}
-				.hero-action-btn.terminal-primary:hover {
-					background: ${terminalTheme.green ? terminalTheme.green + '11' : 'rgba(39, 201, 63, 0.05)'};
+				.hero-filter-icon {
+					position: relative;
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					width: 14px;
+					height: 14px;
+					flex-shrink: 0;
+				}
+				.hero-filter-icon svg {
+					width: 14px;
+					height: 14px;
+					display: block;
+				}
+				.hero-filter-active-dot {
+					position: absolute;
+					top: -2px;
+					right: -3px;
+					width: 5px;
+					height: 5px;
+					border-radius: 50%;
+					background: currentColor;
+					box-shadow: 0 0 4px currentColor;
+				}
+				.hero-filter-icon-btn .cyber-filter-reset-badge {
+					margin-left: 0;
 				}
 				
 				.hero-shortcuts { color: ${themeColors.textSecondary || 'rgba(255,255,255,0.2)'}; font-size: 0.7rem;}
