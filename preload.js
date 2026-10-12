@@ -125,6 +125,7 @@ contextBridge.exposeInMainWorld('electron', {
   },
   app: {
     getVersionInfo: () => ipcRenderer.invoke('get-version-info'),
+    getChangelog: () => ipcRenderer.invoke('app:get-changelog'),
     quit: () => ipcRenderer.send('app-quit'),
     openSplashPreview: (style) => ipcRenderer.invoke('app:open-splash-preview', style)
   },
@@ -470,6 +471,7 @@ contextBridge.exposeInMainWorld('electron', {
 contextBridge.exposeInMainWorld('electronAPI', {
   openExternal: (url) => ipcRenderer.invoke('import:open-external', url),
   getVersionInfo: () => ipcRenderer.invoke('get-version-info'),
+  getChangelog: () => ipcRenderer.invoke('app:get-changelog'),
   getSystemStats: () => ipcRenderer.invoke('get-system-stats'),
   getConnectionHistory: () => ipcRenderer.invoke('get-connection-history'),
   addConnectionToHistory: (connection) => ipcRenderer.invoke('add-connection-to-history', connection),

@@ -1,6 +1,5 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { getVersionInfo } from '../../../../version-info';
-import changelogMarkdown from '../../../../data/changelogSource';
 import {
   parseChangelog,
   formatReleaseDate,
@@ -34,7 +33,25 @@ function sectionCount(section) {
 }
 
 export const HomeReleaseNotesPanel = () => {
-  const parsed = useMemo(() => parseChangelog(changelogMarkdown), []);
+  const [changelogMarkdown, setChangelogMarkdown] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = window.electronAPI?.getChangelog;
+    if (typeof load !== 'function') return undefined;
+    load()
+      .then((markdown) => {
+        if (!cancelled && typeof markdown === 'string') {
+          setChangelogMarkdown(markdown);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const parsed = useMemo(() => parseChangelog(changelogMarkdown), [changelogMarkdown]);
   const currentVersion = useMemo(
     () => normalizeVersion(getVersionInfo().appVersion),
     []

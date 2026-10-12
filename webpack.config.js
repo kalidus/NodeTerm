@@ -5,37 +5,13 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 const webpack = require('webpack');
 const packageJson = require('./package.json');
 
-function embedChangelogSource() {
-  const changelogPath = path.join(__dirname, 'CHANGELOG.md');
-  const outPath = path.join(__dirname, 'src', 'data', 'changelogSource.js');
-  try {
-    const markdown = fs.readFileSync(changelogPath, 'utf8');
-    const next = `export default ${JSON.stringify(markdown)};\n`;
-    let prev = '';
-    try {
-      prev = fs.readFileSync(outPath, 'utf8');
-    } catch (err) {
-      prev = '';
-    }
-    if (prev !== next) {
-      fs.mkdirSync(path.dirname(outPath), { recursive: true });
-      fs.writeFileSync(outPath, next);
-    }
-  } catch (err) {
-    console.warn('[webpack] No se pudo embeber CHANGELOG.md:', err.message);
-  }
-}
-
-embedChangelogSource();
-
 module.exports = {
   mode: 'development',
   // 🚀 Limpiar consola: solo mostrar compilación y avisos/errores, sin volcar la lista de todos los assets
   stats: 'minimal',
   entry: './src/index.js',
   target: 'electron-renderer',
-  // Cache en disco. En watch, una sola generación en RAM: el valor por defecto
-  // retiene todas y, al serializar el módulo de ~6 MB, el heap no puede crecer.
+  // Cache en disco. En watch, una sola generación en RAM: el valor por defecto retiene todas.
   cache: {
     type: 'filesystem',
     maxMemoryGenerations: process.argv.includes('--watch') ? 1 : 0,
@@ -138,10 +114,6 @@ module.exports = {
         generator: {
           filename: 'assets/fonts/[name][ext]'
         }
-      },
-      {
-        test: /CHANGELOG\.md$/,
-        type: 'asset/source'
       }
     ]
   },
@@ -151,6 +123,7 @@ module.exports = {
     }),
     new CopyWebpackPlugin({
       patterns: [
+        { from: 'CHANGELOG.md', to: 'CHANGELOG.md' },
         { from: 'preload.js', to: 'preload.js' },
         { from: 'node_modules/kdbxweb/dist/kdbxweb.min.js', to: 'vendor/kdbxweb.min.js' },
         { from: 'testing/splash-preview.html', to: 'splash-preview.html', noErrorOnMissing: true },

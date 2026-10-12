@@ -107,6 +107,17 @@ function registerAppHandlers(dependencies) {
 
   // === HANDLERS DE INFORMACIÓN Y CIERRE ===
 
+  // Solo dist/CHANGELOG.md. El renderer no recibe una ruta arbitraria.
+  ipcMain.handle('app:get-changelog', async () => {
+    try {
+      const changelogPath = path.join(app.getAppPath(), 'dist', 'CHANGELOG.md');
+      return await fs.promises.readFile(changelogPath, 'utf8');
+    } catch (error) {
+      console.warn('[app] No se pudo leer dist/CHANGELOG.md:', error.message);
+      return '';
+    }
+  });
+
   // IPC handler para obtener información de versión
   ipcMain.handle('get-version-info', () => {
     const pkg = packageJson || {};
