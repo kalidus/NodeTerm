@@ -50,12 +50,6 @@ export const LazyTiptapDocumentEditor = lazy(() => getChunk('TiptapDocumentEdito
 export const LazySettingsContent = lazy(() => getChunk('SettingsContent', () => import('./SettingsDialog').then(m => ({ default: m.SettingsContent }))));
 export const LazyBrowserTab = lazy(() => getChunk('BrowserTab', () => import('./BrowserTab')));
 
-const IDLE_PRELOAD_KEYS = [
-  'TerminalComponent',
-  // IronRDP: chunk + WASM compile fuera del 1er connect (evita silencio post-banner).
-  'IronRdpCanvasTab',
-];
-
 const CHUNK_LOADERS = {
   HomeTab: () => import('./HomeTab'),
   FileExplorer: () => import('./FileExplorer'),
@@ -100,7 +94,8 @@ export function arePriorityTabChunksReady() {
 }
 
 /**
- * Precalienta en idle: terminal SSH + IronRDP (chunk JS y compile WASM).
+ * Precalienta la terminal SSH en idle. IronRDP (chunk de ~6 MB y WASM) espera
+ * un margen mayor para no competir con el primer segundo del home.
  */
 export function preloadHeavyTabChunks() {
   if (tabChunksPreloadStarted) {
@@ -108,16 +103,32 @@ export function preloadHeavyTabChunks() {
   }
   tabChunksPreloadStarted = true;
 
-  const scheduleIdle =
-    typeof requestIdleCallback === 'function'
-      ? (fn) => requestIdleCallback(fn, { timeout: 8000 })
-      : (fn) => setTimeout(fn, 1500);
+  const scheduleIdle = (fn, timeout) => {
+    if (typeof requestIdleCallback === 'function') {
+      requestIdleCallback(fn, { timeout });
+      return;
+    }
+    setTimeout(fn, timeout);
+  };
 
-  return new Promise((resolve) => {
+  const terminalReady = new Promise((resolve) => {
     scheduleIdle(() => {
-      Promise.all(IDLE_PRELOAD_KEYS.map((key) => getChunk(key, CHUNK_LOADERS[key])))
-        .then(async () => {
+      getChunk('TerminalComponent', CHUNK_LOADERS.TerminalComponent)
+        .then(() => {
           tabChunksPriorityReady = true;
+          resolve();
+        })
+        .catch((err) => {
+          console.warn('[tabLoaders] Precalentado terminal SSH:', err);
+          resolve();
+        });
+    }, 8000);
+  });
+
+  const ironReady = new Promise((resolve) => {
+    scheduleIdle(() => {
+      getChunk('IronRdpCanvasTab', CHUNK_LOADERS.IronRdpCanvasTab)
+        .then(async () => {
           try {
             const { warmupIronRdpInIdle } = await import('../utils/ironRdpWarmup');
             await warmupIronRdpInIdle();
@@ -127,11 +138,13 @@ export function preloadHeavyTabChunks() {
           resolve();
         })
         .catch((err) => {
-          console.warn('[tabLoaders] Precalentado chunks de pestaña:', err);
+          console.warn('[tabLoaders] Precalentado IronRDP:', err);
           resolve();
         });
-    });
+    }, 20000);
   });
+
+  return Promise.all([terminalReady, ironReady]).then(() => {});
 }
 
 export const TabChunkFallback = () => null;

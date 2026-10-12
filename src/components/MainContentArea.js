@@ -1184,7 +1184,7 @@ const MainContentArea = ({
         }
       };
       detectWSLDistributions();
-    }, 600); // Diferir 600ms
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, []);

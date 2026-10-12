@@ -163,12 +163,15 @@ const HomeTelemetryPanel = ({
     return () => ro.disconnect();
   }, []);
 
-  // Suscripción al servicio centralizado de telemetría
+  // Suscripción al servicio centralizado de telemetría (idle: no compite con el primer frame)
   useEffect(() => {
     let stopped = false;
     let lastGpuAt = 0;
+    let unsubscribe = () => {};
 
-    const unsubscribe = systemStatsService.subscribe(async (systemStatsPayload) => {
+    const start = () => {
+      if (stopped) return;
+      unsubscribe = systemStatsService.subscribe(async (systemStatsPayload) => {
       if (!systemStatsPayload || stopped) return;
       const cpuUsage = systemStatsPayload.cpu || 0;
       const rxBytes = systemStatsPayload.network?.rx_speed || 0;
@@ -219,9 +222,20 @@ const HomeTelemetryPanel = ({
         setNetRxHistory((prev) => [...prev.slice(-20), rxBytes / 1024]);
       }
     });
+    };
+
+    let cancelIdle = () => {};
+    if (typeof requestIdleCallback === 'function') {
+      const idleId = requestIdleCallback(start, { timeout: 1500 });
+      cancelIdle = () => cancelIdleCallback(idleId);
+    } else {
+      const timerId = setTimeout(start, 1500);
+      cancelIdle = () => clearTimeout(timerId);
+    }
 
     return () => {
       stopped = true;
+      cancelIdle();
       unsubscribe();
     };
   }, [pollingIntervalMs]);

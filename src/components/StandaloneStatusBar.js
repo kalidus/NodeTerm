@@ -40,20 +40,39 @@ const StandaloneStatusBar = React.memo(({ visible = true, style = {} }) => {
     useEffect(() => {
         if (!visible) return;
 
-        const unsubscribe = systemStatsService.subscribe(async (stats) => {
-            if (stats) {
-                setStatusStats(stats);
-                setIsLoadingStats(false);
-                try {
-                    const gpuData = await window.electron.system?.getGPUStats();
-                    setGpuStats(gpuData && gpuData.ok ? gpuData : null);
-                } catch {
-                    setGpuStats(null);
-                }
-            }
-        });
+        let unsubscribe = () => {};
+        let cancelled = false;
 
-        return unsubscribe;
+        const start = () => {
+            if (cancelled) return;
+            unsubscribe = systemStatsService.subscribe(async (stats) => {
+                if (stats) {
+                    setStatusStats(stats);
+                    setIsLoadingStats(false);
+                    try {
+                        const gpuData = await window.electron.system?.getGPUStats();
+                        setGpuStats(gpuData && gpuData.ok ? gpuData : null);
+                    } catch {
+                        setGpuStats(null);
+                    }
+                }
+            });
+        };
+
+        let cancelIdle = () => {};
+        if (typeof requestIdleCallback === 'function') {
+            const idleId = requestIdleCallback(start, { timeout: 1500 });
+            cancelIdle = () => cancelIdleCallback(idleId);
+        } else {
+            const timerId = setTimeout(start, 1500);
+            cancelIdle = () => clearTimeout(timerId);
+        }
+
+        return () => {
+            cancelled = true;
+            cancelIdle();
+            unsubscribe();
+        };
     }, [visible]);
 
     useEffect(() => {

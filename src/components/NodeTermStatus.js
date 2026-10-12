@@ -475,7 +475,7 @@ const NodeTermStatus = ({
 				}
 			};
 			detectWSLDistributions();
-		}, 900); // Diferir 900ms
+		}, 2000);
 		return () => clearTimeout(timer);
 	}, [horizontal, compact, variant]);
 

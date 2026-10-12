@@ -706,6 +706,19 @@ function registerSystemMonitoringHandlers() {
   let amdDisabledUntil = 0;
   const PENALTY_DURATION = 30 * 1000; // Penalización reducida a 30 segundos (asíncrono, no bloquea)
 
+  function classifyControllerGpu(controller) {
+    if (!controller) return null;
+    const vendor = String(controller.vendor || '').toLowerCase();
+    const name = String(controller.name || '').toLowerCase();
+    const model = String(controller.model || '').toLowerCase();
+    const blob = `${vendor} ${name} ${model}`;
+    if (blob.includes('nvidia')) return 'nvidia';
+    if (blob.includes('amd') || blob.includes('ati') || blob.includes('radeon')) return 'amd';
+    if (blob.includes('intel')) return 'intel';
+    if (blob.includes('apple')) return 'apple-metal';
+    return null;
+  }
+
   // Función asíncrona para detectar el tipo de GPU una única vez
   async function detectGpuTypeOnce() {
     if (detectedGpuType) return detectedGpuType;
@@ -856,7 +869,17 @@ function registerSystemMonitoringHandlers() {
       ]);
 
       if (graphicsData && Array.isArray(graphicsData.controllers) && graphicsData.controllers.length > 0) {
-        const type = await detectGpuTypeOnce();
+        const classified = graphicsData.controllers
+          .map((controller) => ({ controller, type: classifyControllerGpu(controller) }))
+          .find((entry) => entry.type);
+        let type = classified ? classified.type : null;
+        if (classified) {
+          detectedGpuType = classified.type;
+          const label = classified.controller.name || classified.controller.model;
+          if (label) detectedGpuName = label;
+        } else {
+          type = await detectGpuTypeOnce();
+        }
         
         // Buscar el controlador de GPU que coincida con el tipo detectado (o que tenga estadísticas de memoria)
         let controller = null;
