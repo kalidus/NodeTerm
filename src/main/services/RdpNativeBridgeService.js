@@ -182,13 +182,13 @@ function readDiagValue(name) {
 }
 
 // Wallix (y hosts donde cliprdr como primer VC rompe el saludo) ignoran nombres y
-// mapean por indice: anteponer rdpdr/rdpsnd para que cliprdr no sea el unico/primer VC.
-// :RDP: rdpdr+rdpsnd delante. :APP: rail+rdpdr+rdpsnd.
+// :RDP: rdpsnd delante (sin rdpdr para no demorar la sesión fría de Windows ~24s).
+// :APP: rail+rdpdr+rdpsnd delante (requerido por RemoteApp).
 // En directo tambien: sin inject cliprdr queda primero y la sesion no arranca.
 // El filtro alinea rdpsnd/drdynvc por nombre y despacha antes de claimCliprdr
 // (evita SNDC_TRAINING≡TEMP_DIRECTORY y DynVC huerfano).
 // NODETERM_RDP_INJECT_CHANNELS admite un orden o 'off'.
-const RDP_INJECTED_CHANNELS = { before: ['rdpdr', 'rdpsnd'], after: [] };
+const RDP_INJECTED_CHANNELS = { before: ['rdpsnd'], after: [] };
 const APP_INJECTED_CHANNELS = { before: ['rail', 'rdpdr', 'rdpsnd'], after: [] };
 const APP_INJECTED_CHANNELS_RAIL = APP_INJECTED_CHANNELS;
 
@@ -241,10 +241,16 @@ function parseInjectChannelsSpec(requested) {
 }
 
 function resolveInjectedChannels(session) {
+  const isApp = wallixServiceFromSession(session) === 'APP';
+  if (isApp) {
+    const requestedApp = readDiagValue('NODETERM_RDP_INJECT_CHANNELS_APP');
+    if (requestedApp && requestedApp.toLowerCase() === 'off') return null;
+    if (requestedApp) return parseInjectChannelsSpec(requestedApp);
+    return APP_INJECTED_CHANNELS;
+  }
   const requested = readDiagValue('NODETERM_RDP_INJECT_CHANNELS');
   if (requested && requested.toLowerCase() === 'off') return null;
   if (requested) return parseInjectChannelsSpec(requested);
-  if (wallixServiceFromSession(session) === 'APP') return APP_INJECTED_CHANNELS;
   return RDP_INJECTED_CHANNELS;
 }
 
