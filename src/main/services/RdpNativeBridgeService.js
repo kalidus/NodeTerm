@@ -1470,8 +1470,8 @@ class RdpNativeBridgeService extends EventEmitter {
                   const prevWriteCh = channelFilter.cliprdrWriteChannelId;
                   if (!isFastPath) noteServerAttachUserConfirm(channelFilter, frame);
                   const processed = processServerFrame(channelFilter, frame);
-                  if (!isFastPath && noteServerChannelJoinConfirm(channelFilter, frame)) {
-                    emitJoinedCliprdrAnswer('join-confirm');
+                  if (!isFastPath) {
+                    noteServerChannelJoinConfirm(channelFilter, frame);
                   }
                   if (timeline.enabled && channelFilter.wallixService
                       && timeline.label !== channelFilter.wallixService
@@ -1580,22 +1580,14 @@ class RdpNativeBridgeService extends EventEmitter {
                     }
                     if (processed.cliprdrDesc && processed.cliprdrDesc.includes('CB_MONITOR_READY')) {
                       const readyCount = channelFilter.cliprdrMonitorReadyCount || 0;
-                      // Session Probe RDP: TEMPDIR-only al IO del saludo (antes del path nombrado).
-                      if (channelFilter.wallixService === 'RDP' && greetingStillOnIo(channelFilter)) {
-                        emitProbeTempDirOnGreet(`monitor-ready-${readyCount}`);
-                        if (!channelFilter.loggedCliprdrGreetOnIo) {
-                          channelFilter.loggedCliprdrGreetOnIo = true;
-                          const joined = channelFilter.cliprdrJoined ? 'si' : 'no';
-                          const greetMsg = `[Bridge Clipboard] cliprdr-join=${joined} greet=1003`;
-                          recordCliprdrEvent(greetMsg);
-                          console.warn(greetMsg);
-                          if (timeline.enabled) {
-                            timeline.mark('cliprdr-greet-io', `joined=${joined}`);
-                          }
+                      if (!channelFilter.loggedCliprdrGreetOnIo) {
+                        channelFilter.loggedCliprdrGreetOnIo = true;
+                        const joined = channelFilter.cliprdrJoined ? 'si' : 'no';
+                        const greetMsg = `[Bridge Clipboard] cliprdr-join=${joined} greet=${channelFilter.serverCliprdrChannelId || '1003'}`;
+                        recordCliprdrEvent(greetMsg);
+                        if (timeline.enabled) {
+                          timeline.mark('cliprdr-greet-io', `joined=${joined}`);
                         }
-                      }
-                      if (channelFilter.wallixService === 'RDP' && channelFilter.cliprdrJoined) {
-                        emitJoinedCliprdrAnswer(`monitor-ready-${readyCount}`);
                       }
                       const isAppReady = channelFilter.wallixService === 'APP' && readyCount >= 1;
                       const isSelectorRdpReady = channelFilter.wallixService === 'RDP'
@@ -2201,12 +2193,6 @@ class RdpNativeBridgeService extends EventEmitter {
                   || channelFilter.loggedCliprdrWaitingClientCaps)) {
             emitSelectorCliprdrRehandshake('late-caps');
           }
-          // TEMPDIR WASM llego tras READY en IO: completar Probe si aun no se envio.
-          if (channelFilter.wallixService === 'RDP'
-              && greetingStillOnIo(channelFilter)
-              && !channelFilter.probeTempDirOnGreetSent) {
-            emitProbeTempDirOnGreet('late-tempdir');
-          }
 
           // Las inyecciones salen despues de reenviar el lote al servidor, para que IronRDP no vea
           // el acuse antes de haber terminado de emitir lo que lo provoca.
@@ -2358,7 +2344,6 @@ class RdpNativeBridgeService extends EventEmitter {
             targetSocket.write(forward);
           }
         }
-        if (rdCleanPathPhase === 'transparent') emitEarlyCliprdrJoin('client-join');
       } catch (e) {
         console.error('Error enviando datos a RDP:', e);
       }
@@ -2482,46 +2467,7 @@ class RdpNativeBridgeService extends EventEmitter {
       return { forward: null, inject };
     }
 
-    // EGFX: CHANNEL_PDU de CAPS/FORMAT_LIST en 1001 o IO (1003) congela el gráfico.
-    // Se encola y se acusa al WASM. TEMPDIR Probe va por emitProbeTempDirOnGreet (un PDU
-    // sintetizado), no por este forward frame-a-frame. No write a 1006 con saludo en IO.
-    const egfxMuteUnsafe = channelFilter.egfxGraphics === true
-      && (isUserMcsChannel(channelFilter, dest) || destIsIo);
-
-    if (egfxMuteUnsafe) {
-      const named = channelFilter.cliprdrWriteChannelId;
-      const namedSafe = canFlushCliprdrToNamedVc(channelFilter)
-        && named != null
-        && !isUserMcsChannel(channelFilter, named)
-        && (channelFilter.ioChannelId == null || named !== channelFilter.ioChannelId);
-      if (namedSafe) {
-        if (clipDesc && clipDesc.includes('CB_TEMP_DIRECTORY')
-            && channelFilter.wallixService !== 'RDP') {
-          return { forward: null, inject };
-        }
-        synthAck();
-        const out = rewriteMcsChannelId(frame, named) || frame;
-        if (!channelFilter.loggedCliprdrEgfxNamedFlush) {
-          channelFilter.loggedCliprdrEgfxNamedFlush = true;
-          const namedMsg = `[Bridge Clipboard] EGFX: cliprdr al VC nombrado ${named}` +
-            ` (no CHANNEL_PDU en MCS ${dest})`;
-          console.warn(namedMsg);
-          if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(namedMsg);
-          this.emit('diagnostic-log', { category: 'cliprdr', message: namedMsg });
-        }
-        return { forward: out, inject };
-      }
-      synthAck();
-      enqueueClientCliprdr(channelFilter, frame);
-      if (!channelFilter.loggedCliprdrUserMute) {
-        channelFilter.loggedCliprdrUserMute = true;
-        const muteMsg = `⚠️ [Bridge Clipboard] EGFX: cliprdr WASM->RDP encolado: no se escribe CHANNEL_PDU en MCS ${dest} (congela el grafico)`;
-        console.warn(muteMsg);
-        if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(muteMsg);
-        this.emit('diagnostic-log', { category: 'cliprdr-mute', message: muteMsg });
-      }
-      return { forward: null, inject };
-    }
+    // EGFX ya no enmudece incondicionalmente el portapapeles: se sigue el mismo camino que en Bitmap.
 
     const appProbePayload = channelFilter.wallixService === 'APP'
       && greetingOnUnsafeCliprdr(channelFilter)
@@ -2611,10 +2557,7 @@ class RdpNativeBridgeService extends EventEmitter {
       channelFilter.cliprdrDataRequested = true;
     }
 
-    const isFormatList = clipDesc && clipDesc.includes('CB_FORMAT_LIST')
-      && !clipDesc.includes('CB_FORMAT_LIST_RESPONSE');
-    const isBastionIo = destIsIo && (channelFilter.isBastion || channelFilter.wallixService === 'RDP');
-    const payloadOk = isCliprdrClientPayloadDesc(clipDesc) && !(isFormatList && isBastionIo);
+    const payloadOk = isCliprdrClientPayloadDesc(clipDesc);
     const unsafeDest = unsafeCliprdrClientWriteDest(channelFilter, dest);
     if (payloadOk && unsafeDest != null) {
       let out = unsafeDest === parsed.channelId

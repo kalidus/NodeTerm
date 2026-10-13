@@ -888,7 +888,7 @@ function greetingStillOnIo(state) {
 function bastionIoCliprdrWriteForbidden(state) {
   if (!state) return false;
   const svc = state.wallixService;
-  return svc === 'n/a' || svc === 'RDP' || svc === 'APP';
+  return svc === 'n/a';
 }
 
 /**
@@ -1048,7 +1048,7 @@ function retryConfirmRdpCliprdrWrite(state) {
  */
 function fallbackIoNamedCliprdrWrite(state) {
   if (!state) return null;
-  if (state.wallixService != null) {
+  if (state.wallixService === 'n/a') {
     return null;
   }
   const named = declaredChannelId(state, 'cliprdr');
