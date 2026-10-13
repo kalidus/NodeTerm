@@ -255,6 +255,8 @@ function createChannelFilterState() {
     injectOnlyFragmentChannelId: null,
     serverRdpdrFragmentOpen: false,
     serverRdpdrFragmentChannelId: null,
+    // Caps+device-list ya enviados (announce eager o SERVER_CAPABILITY).
+    rdpdrHandshakeComplete: false,
     // WASM->RDP: FORMAT_DATA_RESPONSE grande (FIRST sin LAST). Las continuaciones
     // no llevan CLIPRDR_HEADER; hay que seguir remapeando al write path.
     clientCliprdrFragmentOpen: false,
@@ -511,8 +513,8 @@ function declaredChannelId(state, wantedName) {
  * rdpdr se anuncia para alinear indices con Wallix, pero no hay cliente de discos.
  * El stub cierra el handshake y no se reenvia a WASM. Nunca se escribe CHANNEL_PDU
  * rdpdr en el canal IO (1003): corrompe Share Control y el servidor cierra con FIN.
- * Si el announce llega por IO o por cliprdr, las respuestas salen por el VC nombrado
- * rdpdr (si esta declarado); sin VC rdpdr y en IO se absorbe en silencio.
+ * Si el announce llega por IO, por MCS 1001/1002 o por cliprdr, las respuestas salen
+ * por el VC nombrado rdpdr (si esta declarado); sin VC rdpdr, en IO o en 1001, se absorbe.
  */
 function consumeRdpdr(state, channelId, userData) {
   // Un fragmento CLIPRDR de fichero no lleva CLIPRDR_HEADER. Si se mira antes que
@@ -543,7 +545,7 @@ function consumeRdpdr(state, channelId, userData) {
       isCliprdr: false
     };
   }
-  const rdpdr = handleRdpdrRequest(channelId, state.clientInitiator, userData);
+  const rdpdr = handleRdpdrRequest(channelId, state.clientInitiator, userData, state);
   if (!rdpdr.handled) return null;
 
   if (trackRdpdrFrags && Buffer.isBuffer(userData) && isChannelPduHeader(userData)) {
@@ -554,23 +556,33 @@ function consumeRdpdr(state, channelId, userData) {
 
   const ioChannelId = state.ioChannelId != null ? state.ioChannelId : 1003;
   const onIo = channelId === ioChannelId;
+  const onUser = isUserMcsChannel(state, channelId);
   const rdpdrCh = declaredChannelId(state, 'rdpdr');
   const onCliprdr = state.cliprdrChannelId != null && channelId === state.cliprdrChannelId;
   let replies = rdpdr.replies || [];
   let note = rdpdr.note;
 
-  if (onIo) {
-    // Contestar en IO tumba la sesion; redirigir al VC rdpdr si existe.
+  if (onIo || onUser) {
+    // Contestar en IO o en MCS 1001 tumba o congela el grafico; redirigir al VC rdpdr.
+    const where = onIo ? 'IO' : 'usuario';
     if (rdpdrCh != null && replies.length) {
       replies = replies.map((buf) => rewriteMcsChannelId(buf, rdpdrCh) || buf);
-      note = `${rdpdr.note} (replies->ch=${rdpdrCh}; saludo por IO)`;
+      note = `${rdpdr.note} (replies->ch=${rdpdrCh}; saludo por ${where})`;
     } else {
       replies = [];
-      note = `${rdpdr.note} (sin respuesta: canal IO)`;
+      note = `${rdpdr.note} (sin respuesta: canal ${where})`;
     }
   } else if (onCliprdr && rdpdrCh != null && rdpdrCh !== channelId && replies.length) {
     replies = replies.map((buf) => rewriteMcsChannelId(buf, rdpdrCh) || buf);
     note = `${rdpdr.note} (replies->ch=${rdpdrCh})`;
+  }
+
+  if (replies.length) {
+    const redirected = rdpdrCh != null && (
+      onIo || onUser || (onCliprdr && rdpdrCh !== channelId)
+    );
+    state.rdpdrReplyCount = (state.rdpdrReplyCount || 0) + replies.length;
+    state.rdpdrReplyChannelId = redirected ? rdpdrCh : channelId;
   }
 
   markDropped(state, channelId);
@@ -856,6 +868,16 @@ function isSelectorMenuCliprdrDefer(state) {
  */
 function isSelectorMenuBitmapPassthrough(state) {
   return isSelectorMenuCliprdrDefer(state);
+}
+
+/**
+ * Experimento N=1 RDP hop-passthrough REVERTIDO: sin rewrite RLE la pantalla
+ * queda negra y DynVC sigue ausente (post-banner-sin-dvc). El hueco frio ~30s es
+ * Session Probe Wallix, no el rewrite local; no reactivar este gate.
+ * @returns {false}
+ */
+function isBastionRdpHopBitmapPassthrough(_state) {
+  return false;
 }
 
 /**
@@ -1154,7 +1176,137 @@ function noteServerCliprdrMonitorReady(state, userData) {
       && state.cliprdrMonitorReadyCount >= 1) {
     state.cliprdrRehandshakePending = true;
     retryConfirmRdpCliprdrWrite(state);
+  } else if (isDirectRdpNamedCliprdrGreeting(state)) {
+    // RDP abierta ya como service=RDP: el primer READY en el VC cliprdr
+    // completa CAPS+TEMPDIR igual que APP. El saludo en 1001/IO no entra.
+    // Si ya se escribieron en pre-saludo, no repetir el rehandshake.
+    dropReplayedHandshakeFromPending(state);
+    if (!state.cliprdrHandshakeSentToRecoveredDest) {
+      state.cliprdrRehandshakePending = true;
+    }
   }
+}
+
+/**
+ * Deshabilitado: CHANNEL_PDU a cliprdr nombrado (~1006) sin saludo del servidor
+ * provoca FIN ESAH (first-frame y post-rdpdr). CAPS/TEMPDIR solo tras saludo en el
+ * VC nombrado; en RDP Probe el saludo suele ir por IO 1003 (mute EGFX).
+ * @returns {null}
+ */
+function namedCliprdrPreGreetChannel(_state) {
+  return null;
+}
+
+/** Solo CAPS/TEMPDIR en el camino pre-saludo; FORMAT_LIST sigue mute/cola. */
+function isNamedCliprdrPreGreetPdu(desc) {
+  if (typeof desc !== 'string' || !desc) return false;
+  return desc.includes('CB_CLIP_CAPS') || desc.includes('CB_TEMP_DIRECTORY');
+}
+
+const CB_MSG_CLIP_CAPS = 0x0007;
+const CB_MSG_TEMP_DIRECTORY = 0x0006;
+/** IronRDP-like: long names + file clip + lock + huge files. */
+const DEFAULT_CLIPRDR_GENERAL_FLAGS = 0x3e;
+const CLIPRDR_TEMPDIR_BYTES = 520;
+const DEFAULT_CLIPRDR_TEMPDIR_PATH = 'C:\\Windows\\Temp\\';
+
+/** CHANNEL_PDU + CLIPRDR_HEADER + data, flags FIRST|LAST|SHOW_PROTOCOL (0x13). */
+function buildCliprdrChannelUserData(msgType, data) {
+  const payload = Buffer.isBuffer(data) ? data : Buffer.alloc(0);
+  const clipHdr = Buffer.alloc(8);
+  clipHdr.writeUInt16LE(msgType & 0xffff, 0);
+  clipHdr.writeUInt16LE(0, 2);
+  clipHdr.writeUInt32LE(payload.length, 4);
+  const clipPayload = Buffer.concat([clipHdr, payload]);
+  const chanHdr = Buffer.alloc(CHANNEL_PDU_HEADER_LEN);
+  chanHdr.writeUInt32LE(clipPayload.length, 0);
+  chanHdr.writeUInt32LE(
+    (CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST | CHANNEL_FLAG_SHOW_PROTOCOL) >>> 0,
+    4
+  );
+  return Buffer.concat([chanHdr, clipPayload]);
+}
+
+/**
+ * CB_CLIP_CAPS cliente (1 General Capability Set, version 2).
+ * @param {number} channelId MCS VC destino
+ * @param {{ generalFlags?: number, initiator?: number }} [opts]
+ */
+function buildClientCliprdrCapsFrame(channelId, opts = {}) {
+  const generalFlags = opts.generalFlags != null
+    ? (opts.generalFlags >>> 0)
+    : DEFAULT_CLIPRDR_GENERAL_FLAGS;
+  const data = Buffer.alloc(16);
+  data.writeUInt16LE(1, 0); // cCapabilitiesSets
+  data.writeUInt16LE(0, 2); // pad1
+  data.writeUInt16LE(1, 4); // CB_CAPSTYPE_GENERAL
+  data.writeUInt16LE(12, 6); // lengthCapability
+  data.writeUInt32LE(2, 8); // CB_CAPS_VERSION_2
+  data.writeUInt32LE(generalFlags, 12);
+  const initiator = opts.initiator != null ? opts.initiator : 0;
+  return buildMcsSendDataRequest(
+    initiator,
+    channelId,
+    buildCliprdrChannelUserData(CB_MSG_CLIP_CAPS, data)
+  );
+}
+
+/**
+ * CB_TEMP_DIRECTORY cliente (520 B UTF-16LE, zero-padded).
+ * @param {number} channelId
+ * @param {{ path?: string, initiator?: number }} [opts]
+ */
+function buildClientCliprdrTempDirFrame(channelId, opts = {}) {
+  const pathStr = typeof opts.path === 'string' && opts.path
+    ? opts.path
+    : DEFAULT_CLIPRDR_TEMPDIR_PATH;
+  const data = Buffer.alloc(CLIPRDR_TEMPDIR_BYTES);
+  Buffer.from(pathStr, 'utf16le').copy(data, 0, 0, CLIPRDR_TEMPDIR_BYTES);
+  const initiator = opts.initiator != null ? opts.initiator : 0;
+  return buildMcsSendDataRequest(
+    initiator,
+    channelId,
+    buildCliprdrChannelUserData(CB_MSG_TEMP_DIRECTORY, data)
+  );
+}
+
+/**
+ * Deshabilitado: CHANNEL_PDU en cliprdr nombrado sin saludo del servidor
+ * (first-frame o post-rdpdr) provoca FIN ESAH. Builders siguen para tests.
+ * @returns {null}
+ */
+function takeSynthCliprdrPreGreet(_state) {
+  return null;
+}
+
+/**
+ * RDP directa (no promovida desde el selector) cuyo saludo cliprdr ya está
+ * en el VC declarado cliprdr. Escribir ahí no es el caso ESAH de 1001/IO.
+ */
+function isDirectRdpNamedCliprdrGreeting(state) {
+  if (!state || state.wallixService !== 'RDP' || state.cliprdrSelectorAppInferred) return false;
+  const ch = state.serverCliprdrChannelId;
+  if (ch == null) return false;
+  if (isUserMcsChannel(state, ch)) return false;
+  if (state.ioChannelId != null && ch === state.ioChannelId) return false;
+  const named = declaredChannelId(state, 'cliprdr');
+  return named != null && ch === named && isSafeStaticCliprdrWrite(state, named);
+}
+
+/** La cache ya va a reenviar CAPS/TEMPDIR: no volver a sacarlos de la cola. */
+function dropReplayedHandshakeFromPending(state) {
+  if (!state || !Array.isArray(state.pendingClientCliprdr)) return;
+  const dropCaps = Buffer.isBuffer(state.cachedClientCaps);
+  const dropTemp = Buffer.isBuffer(state.cachedClientTempDir);
+  if (!dropCaps && !dropTemp) return;
+  state.pendingClientCliprdr = state.pendingClientCliprdr.filter((frame) => {
+    const parsed = parseMcsSendData(frame);
+    const desc = parsed ? describeCliprdrPdu(parsed.userData) : null;
+    if (!desc) return true;
+    if (dropCaps && desc.includes('CB_CLIP_CAPS')) return false;
+    if (dropTemp && desc.includes('CB_TEMP_DIRECTORY')) return false;
+    return true;
+  });
 }
 
 // El segundo saludo del selector no trae SHOW_PROTOCOL. Los PDU del cliente
@@ -2356,6 +2508,7 @@ module.exports = {
   greetingStillOnIo,
   isSelectorMenuCliprdrDefer,
   isSelectorMenuBitmapPassthrough,
+  isBastionRdpHopBitmapPassthrough,
   isBastionOverlapHopBitmapPassthrough,
   shouldBastionBitmapPassthrough,
   canFlushCliprdrToNamedVc,
@@ -2363,6 +2516,14 @@ module.exports = {
   maybePromoteSelectorAppCliprdr,
   retryConfirmAppCliprdrWrite,
   retryConfirmRdpCliprdrWrite,
+  isDirectRdpNamedCliprdrGreeting,
+  namedCliprdrPreGreetChannel,
+  isNamedCliprdrPreGreetPdu,
+  buildClientCliprdrCapsFrame,
+  buildClientCliprdrTempDirFrame,
+  takeSynthCliprdrPreGreet,
+  DEFAULT_CLIPRDR_GENERAL_FLAGS,
+  CLIPRDR_TEMPDIR_BYTES,
   fallbackIoNamedCliprdrWrite,
   isCliprdrClientPayloadDesc,
   unsafeCliprdrClientWriteDest,

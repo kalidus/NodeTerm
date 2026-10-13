@@ -13,7 +13,16 @@ const {
   takeCliprdrRehandshake,
   canFlushCliprdrToNamedVc,
   sanitizeIllegalCliprdrWrite,
-  greetingStillOnIo
+  greetingStillOnIo,
+  processServerFrame,
+  isDirectRdpNamedCliprdrGreeting,
+  buildClientCliprdrCapsFrame,
+  buildClientCliprdrTempDirFrame,
+  takeSynthCliprdrPreGreet,
+  namedCliprdrPreGreetChannel,
+  DEFAULT_CLIPRDR_GENERAL_FLAGS,
+  CLIPRDR_TEMPDIR_BYTES,
+  describeCliprdrPdu
 } = require('../../src/main/services/rdp-channel-filter');
 
 const CHANNEL_FLAG_FIRST = 0x01;
@@ -53,6 +62,49 @@ function buildMcsRequest(channelId, userData) {
 }
 
 // CHANNEL_PDU_HEADER (8 bytes) + CLIPRDR_HEADER (8 bytes) + datos.
+function buildMcsIndication(channelId, userData) {
+  const lenField = userData.length < 0x80
+    ? Buffer.from([userData.length])
+    : Buffer.from([0x80 | ((userData.length >> 8) & 0x7f), userData.length & 0xff]);
+  const mcsHdr = Buffer.concat([
+    Buffer.from([
+      0x02, 0xf0, 0x80, 0x68,
+      0x00, 0x00,
+      (channelId >> 8) & 0xff, channelId & 0xff,
+      0x70
+    ]),
+    lenField
+  ]);
+  const tpktLen = 4 + mcsHdr.length + userData.length;
+  const tpktHdr = Buffer.from([0x03, 0x00, (tpktLen >> 8) & 0xff, tpktLen & 0xff]);
+  return Buffer.concat([tpktHdr, mcsHdr, userData]);
+}
+
+function buildMonitorReady(channelId) {
+  const clipHdr = Buffer.alloc(8);
+  clipHdr.writeUInt16LE(1, 0);
+  const chanHdr = Buffer.alloc(8);
+  chanHdr.writeUInt32LE(clipHdr.length, 0);
+  chanHdr.writeUInt32LE(CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST, 4);
+  return buildMcsIndication(channelId, Buffer.concat([chanHdr, clipHdr]));
+}
+
+function coldRdpState() {
+  return {
+    wallixService: 'RDP',
+    egfxGraphics: true,
+    isBastion: true,
+    ioChannelId: IO_CH,
+    cliprdrChannelId: CLIPRDR_CH,
+    allowed: new Set([1003, 1004, 1005, 1006]),
+    channelIdToName: new Map([
+      [1004, 'rdpdr'],
+      [1005, 'rdpsnd'],
+      [1006, 'cliprdr']
+    ])
+  };
+}
+
 function buildClipFrame(channelId, msgType, data = Buffer.alloc(0), chanFlags = null) {
   const clipHdr = Buffer.alloc(8);
   clipHdr.writeUInt16LE(msgType, 0);
@@ -1241,5 +1293,157 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     assert.equal(chanFlags(kept[0]) & CHANNEL_FLAG_LAST, 0);
     assert.equal(chanFlags(kept[2]) & CHANNEL_FLAG_LAST, CHANNEL_FLAG_LAST);
     assert.equal(state.clientCliprdrFragmentOpen, false, 'LAST cierra la serie');
+  });
+
+  test('buildClientCliprdrCaps/TempDir: canal 1006 flags 0x13 y payload correcto', () => {
+    const caps = buildClientCliprdrCapsFrame(BASTION_CLIP_CH);
+    const temp = buildClientCliprdrTempDirFrame(BASTION_CLIP_CH);
+    assert.equal(parseMcsSendData(caps).channelId, BASTION_CLIP_CH);
+    assert.equal(parseMcsSendData(temp).channelId, BASTION_CLIP_CH);
+    assert.equal(chanFlags(caps) & 0x13, 0x13);
+    assert.equal(chanFlags(temp) & 0x13, 0x13);
+    assert.equal(clipMsgType(caps), CB_CLIP_CAPS);
+    assert.equal(clipMsgType(temp), CB_TEMP_DIRECTORY);
+    const capsDesc = describeCliprdrPdu(parseMcsSendData(caps).userData);
+    assert.match(capsDesc, /CB_CLIP_CAPS/);
+    assert.match(capsDesc, new RegExp(`generalFlags=0x${DEFAULT_CLIPRDR_GENERAL_FLAGS.toString(16)}`));
+    const tempUd = parseMcsSendData(temp).userData;
+    assert.equal(tempUd.readUInt32LE(0), 8 + CLIPRDR_TEMPDIR_BYTES, 'CHANNEL_PDU length');
+    assert.equal(tempUd.readUInt32LE(12), CLIPRDR_TEMPDIR_BYTES, 'CB dataLen 520');
+  });
+
+  test('takeSynthCliprdrPreGreet: deshabilitado (FIN ESAH en 1006 sin saludo cliprdr)', () => {
+    const state = coldRdpState();
+    state.rdpdrHandshakeComplete = true;
+    assert.equal(namedCliprdrPreGreetChannel(state), null, 'pre-greet nombrado deshabilitado');
+    assert.equal(takeSynthCliprdrPreGreet(state), null, 'no inyecta post-rdpdr ni first-frame');
+    assert.equal(state.cliprdrWriteChannelId ?? null, null);
+  });
+
+  test('takeSynthCliprdrPreGreet: con saludo en IO 1003 no escribe', () => {
+    const state = coldRdpState();
+    state.rdpdrHandshakeComplete = true;
+    state.serverCliprdrChannelId = IO_CH;
+    state.cliprdrOnUnsafeChannel = IO_CH;
+    assert.equal(namedCliprdrPreGreetChannel(state), null);
+    assert.equal(takeSynthCliprdrPreGreet(state), null);
+  });
+
+  test('tras rdpdr-announce en frio, takeSynthCliprdrPreGreet no inyecta a 1006', () => {
+    const { buildMcsSendDataIndication } = require('../../src/main/services/rdp-autodetect');
+    const { createChannelFilterState } = require('../../src/main/services/rdp-channel-filter');
+    const { PAKID_CORE_SERVER_ANNOUNCE } = require('../../src/main/services/rdp-rdpdr');
+    const state = {
+      ...createChannelFilterState(),
+      ...coldRdpState(),
+      ready: true,
+      clientInitiator: 0,
+      allowed: new Set([1001, 1003, 1004, 1005, 1006]),
+      droppedByChannel: Object.create(null)
+    };
+    const body = Buffer.alloc(12);
+    body.writeUInt16LE(0x4472, 0);
+    body.writeUInt16LE(PAKID_CORE_SERVER_ANNOUNCE, 2);
+    body.writeUInt16LE(1, 4);
+    body.writeUInt16LE(13, 6);
+    body.writeUInt32LE(0x7e, 8);
+    const chan = Buffer.alloc(8 + body.length);
+    chan.writeUInt32LE(body.length, 0);
+    chan.writeUInt32LE(0x03, 4);
+    body.copy(chan, 8);
+    const frame = buildMcsSendDataIndication(0, 1001, chan);
+    const res = processServerFrame(state, frame);
+    assert.equal(res.replies.length, 4, 'eager rdpdr intacto');
+    assert.equal(state.rdpdrHandshakeComplete, true);
+    assert.equal(takeSynthCliprdrPreGreet(state), null, 'sin CHANNEL_PDU cliprdr post-rdpdr');
+  });
+
+  test('RDP EGFX sin saludo: pre-greet deshabilitado; CAPS/TEMPDIR cacheados, nada al wire', () => {
+    const state = coldRdpState();
+    const kept = filterBatch(service, buildInitiateCopyBatch(), state);
+
+    assert.equal(kept.length, 0, 'sin CHANNEL_PDU a 1006 pre-saludo');
+    assert.equal(kept.injected.length, 0);
+    assert.ok(Buffer.isBuffer(state.cachedClientCaps));
+    assert.ok(Buffer.isBuffer(state.cachedClientTempDir));
+    assert.notEqual(state.cliprdrNamedPreGreetSent, true);
+    assert.equal(state.cliprdrWriteChannelId ?? null, null, 'no confirma write path');
+    assert.ok(state.pendingClientCliprdr.length >= 1, 'PDUs en cola hasta saludo nombrado');
+    assert.equal(state.serverCliprdrChannelId, undefined);
+  });
+
+  test('si cliprdrSynthPreGreetSent, CAPS/TEMPDIR del WASM no se reenvian al nombrado', () => {
+    const state = coldRdpState();
+    state.cliprdrSynthPreGreetSent = true;
+
+    const kept = filterBatch(service, buildInitiateCopyBatch(), state);
+    assert.equal(kept.length, 0, 'dedupe: WASM CAPS/TEMPDIR no al wire');
+    assert.equal(state.pendingClientCliprdr.length, 1, 'FORMAT_LIST sigue en cola');
+    assert.equal(clipMsgType(state.pendingClientCliprdr[0]), CB_FORMAT_LIST);
+  });
+
+  test('RDP EGFX sin saludo: con saludo luego en IO 1003 sigue mute (no FORMAT_LIST a 1006)', () => {
+    const state = coldRdpState();
+    const pre = filterBatch(service, buildInitiateCopyBatch(), state);
+    assert.equal(pre.length, 0, 'pre-greet deshabilitado: nada al nombrado');
+
+    state.serverCliprdrChannelId = IO_CH;
+    state.cliprdrOnUnsafeChannel = IO_CH;
+    state.cliprdrServerReady = true;
+
+    const kept = filterBatch(service, Buffer.concat(state.pendingClientCliprdr || []), state);
+    assert.equal(kept.length, 0, 'FORMAT_LIST no va a 1006 ni a 1003 tras saludo IO');
+    assert.equal(state.cliprdrWriteChannelId ?? null, null);
+  });
+
+  test('RDP directa: primer MONITOR_READY en el VC cliprdr reenvia CAPS+TEMPDIR cacheados', () => {
+    const state = coldRdpState();
+    const pre = filterBatch(service, buildInitiateCopyBatch(), state);
+    assert.equal(pre.length, 0, 'sin pre-saludo al nombrado');
+    assert.ok(Buffer.isBuffer(state.cachedClientCaps));
+    assert.ok(Buffer.isBuffer(state.cachedClientTempDir));
+
+    processServerFrame(state, buildMonitorReady(BASTION_CLIP_CH));
+
+    assert.equal(state.serverCliprdrChannelId, BASTION_CLIP_CH);
+    assert.equal(state.cliprdrWriteChannelId, BASTION_CLIP_CH);
+    assert.equal(isDirectRdpNamedCliprdrGreeting(state), true);
+    assert.notEqual(state.cliprdrSelectorAppInferred, true);
+
+    const replay = takeCliprdrRehandshake(state);
+    assert.deepEqual(
+      replay.map((f) => clipMsgType(f)),
+      [CB_CLIP_CAPS, CB_TEMP_DIRECTORY],
+      'rehandshake CAPS+TEMPDIR tras saludo nombrado'
+    );
+    for (const frame of replay) {
+      assert.equal(parseMcsSendData(frame).channelId, BASTION_CLIP_CH);
+    }
+
+    const flushed = filterBatch(service, Buffer.concat(state.pendingClientCliprdr || []), state);
+    assert.ok(flushed.some((f) => clipMsgType(f) === CB_FORMAT_LIST));
+    for (const frame of flushed) {
+      assert.equal(parseMcsSendData(frame).channelId, BASTION_CLIP_CH);
+    }
+  });
+
+  test('RDP saludo en 1001 no vuelca la cache al VC nombrado', () => {
+    const state = coldRdpState();
+    const pre = filterBatch(service, buildInitiateCopyBatch(), state);
+    assert.equal(pre.length, 0, 'pre-greet deshabilitado');
+
+    processServerFrame(state, buildMonitorReady(1001));
+
+    assert.equal(state.serverCliprdrChannelId, 1001);
+    assert.equal(state.cliprdrWriteChannelId ?? null, null);
+    assert.equal(isDirectRdpNamedCliprdrGreeting(state), false);
+    assert.deepEqual(takeCliprdrRehandshake(state), []);
+
+    const kept = filterBatch(service, Buffer.concat(state.pendingClientCliprdr || []), state);
+    assert.equal(kept.length, 0, 'EGFX no escribe FORMAT_LIST tras saludo de 1001');
+    for (const frame of kept) {
+      assert.notEqual(parseMcsSendData(frame).channelId, BASTION_CLIP_CH);
+      assert.notEqual(parseMcsSendData(frame).channelId, 1001);
+    }
   });
 });

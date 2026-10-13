@@ -70,6 +70,9 @@ const {
   maybePromoteSelectorAppCliprdr,
   retryConfirmAppCliprdrWrite,
   retryConfirmRdpCliprdrWrite,
+  isDirectRdpNamedCliprdrGreeting,
+  namedCliprdrPreGreetChannel,
+  isNamedCliprdrPreGreetPdu,
   buildAppProbeCliprdrWrites,
   remapClientDrdynvcFrame,
   remapClientRdpsndFrame,
@@ -645,6 +648,7 @@ class RdpNativeBridgeService extends EventEmitter {
       label: channelFilter.wallixService || (normalizeBitmaps ? 'bastion' : ''),
       log: (line) => console.log(`⏱️ [Bridge] ${line}`)
     });
+    channelFilter.markTimeline = (name, detail) => timeline.mark(name, detail);
     const formatDvcDiagLine = (tag) => {
       const dest = channelFilter.serverCliprdrChannelId;
       const write = channelFilter.cliprdrWriteChannelId;
@@ -653,9 +657,28 @@ class RdpNativeBridgeService extends EventEmitter {
       const gapCaps = timeline.has('dvc-caps-hacia-wasm') && timeline.has('first-bitmap')
         ? `${timeline.marks.get('dvc-caps-hacia-wasm') - timeline.marks.get('first-bitmap')}ms`
         : 'n/a';
+      const idOf = (name) => {
+        const map = channelFilter.channelIdToName;
+        if (!(map instanceof Map)) return null;
+        for (const [id, n] of map) {
+          if (n === name) return id;
+        }
+        return null;
+      };
+      const chLabel = (id) => (id == null ? 'none' : String(id));
+      const rdpdrReplies = channelFilter.rdpdrReplyCount || 0;
+      const rdpdrReplyCh = channelFilter.rdpdrReplyChannelId;
+      const rdpdrReplyLabel = rdpdrReplies > 0 && rdpdrReplyCh != null
+        ? `${rdpdrReplies}@${rdpdrReplyCh}`
+        : String(rdpdrReplies);
+      const mappedDrdynvc = idOf('drdynvc');
+      const drdynvcId = mappedDrdynvc != null ? mappedDrdynvc : channelFilter.drdynvcChannelId;
       return `[Bridge] ${tag} dvc forward=${dvcDiag.forward} stub=${dvcDiag.stub} reject=${dvcDiag.reject}` +
         ` caps=${dvcDiag.caps} gapBitmap→caps=${gapCaps} bannerDropped=${dropped}` +
-        ` cliprdr dest=${dest == null ? 'none' : dest} write=${write == null ? 'none' : write} ${muted}`;
+        ` cliprdr dest=${dest == null ? 'none' : dest} write=${write == null ? 'none' : write} ${muted}` +
+        ` channels io=${chLabel(channelFilter.ioChannelId)} rdpdr=${chLabel(idOf('rdpdr'))}` +
+        ` rdpsnd=${chLabel(idOf('rdpsnd'))} cliprdr=${chLabel(idOf('cliprdr'))}` +
+        ` drdynvc=${chLabel(drdynvcId)} rdpdrReplies=${rdpdrReplyLabel}`;
     };
     const noteDvcDiagFromNote = (note) => {
       if (typeof note !== 'string') return;
@@ -674,6 +697,10 @@ class RdpNativeBridgeService extends EventEmitter {
      * Tras first-bitmap: si en 5s no hay DynVC caps ni EGFX CREATE, hito + tirar cola banner
      * (rompe la dependencia: el hop no puede esperar caps que nunca llegan).
      * Menu selector n/a: no armar hasta promote (force); DynVC no llega en el menu.
+     *
+     * RDP frio bastion (N=1): post-banner-sin-dvc + silencio ~20-30s hasta rdpdr-announce
+     * es Session Probe de Wallix (DynVC server-driven). No acelerar con passthrough RLE N=1
+     * (pantalla negra) ni synth CAPS/TEMPDIR a cliprdr 1006 pre-saludo (FIN ESAH).
      */
     const armPostBannerDvcWatch = (opts = {}) => {
       const force = opts.force === true;
@@ -1474,8 +1501,9 @@ class RdpNativeBridgeService extends EventEmitter {
                       const isSelectorRdpReady = channelFilter.wallixService === 'RDP'
                         && channelFilter.cliprdrSelectorAppInferred
                         && readyCount >= 1;
+                      const isDirectRdpReady = isDirectRdpNamedCliprdrGreeting(channelFilter);
                       const isSecondReady = readyCount >= 2;
-                      if (isSecondReady || isAppReady || isSelectorRdpReady) {
+                      if (isSecondReady || isAppReady || isSelectorRdpReady || isDirectRdpReady) {
                         sanitizeIllegalCliprdrWrite(channelFilter);
                         retryConfirmAppCliprdrWrite(channelFilter);
                         retryConfirmRdpCliprdrWrite(channelFilter);
@@ -1489,9 +1517,7 @@ class RdpNativeBridgeService extends EventEmitter {
                             recordCliprdrEvent(waitMsg);
                             console.log(waitMsg);
                           }
-                          if ((channelFilter.wallixService === 'APP'
-                                || (channelFilter.wallixService === 'RDP'
-                                    && channelFilter.cliprdrSelectorAppInferred))
+                          if ((isAppReady || isSelectorRdpReady || isDirectRdpReady)
                               && !channelFilter.appCliprdrCapsWaitTimer) {
                             channelFilter.appCliprdrCapsWaitTimer = setTimeout(() => {
                               channelFilter.appCliprdrCapsWaitTimer = null;
@@ -1611,6 +1637,19 @@ class RdpNativeBridgeService extends EventEmitter {
                     const note = String(processed.note || '').replace(/ hex=[0-9a-f]+/i, '');
                     const dropMsg = `MCS ch=${processed.channelId}: ${note}` +
                       (processed.replies.length ? ` (replies=${processed.replies.length})` : '');
+                    if (timeline.enabled && typeof note === 'string') {
+                      if (/rdpdr-announce/i.test(note) && !/corto/i.test(note)) {
+                        timeline.mark(
+                          'rdpdr-announce',
+                          `ch=${processed.channelId} replies=${processed.replies.length}`
+                        );
+                      } else if (/rdpdr-caps/i.test(note)) {
+                        timeline.mark(
+                          'rdpdr-caps',
+                          `ch=${processed.channelId} replies=${processed.replies.length}`
+                        );
+                      }
+                    }
                     // Bastion: solo CREATE/reject/stub/caps (Echo/close/absorb saturan el log).
                     if (timeline.enabled && isInterestingDvcTimelineNote(processed.note, isDebug)
                         && !/hex=/i.test(dropMsg)) {
@@ -1775,6 +1814,9 @@ class RdpNativeBridgeService extends EventEmitter {
                           console.log(
                             '[Bridge] bastion overlap: bitmaps passthrough hasta caps/EGFX'
                           );
+                          if (typeof channelFilter.markTimeline === 'function') {
+                            channelFilter.markTimeline('hop-bitmap-passthrough', 'overlap');
+                          }
                         }
                       }
                       for (const ready of readyFrames) {
@@ -2233,6 +2275,47 @@ class RdpNativeBridgeService extends EventEmitter {
    * CHANNEL_PDU en MCS 1001 congela el grafico: nunca se escribe ahi.
    */
   filterClientCliprdrOnUserChannel(frame, parsed, channelFilter, clipDesc) {
+    // Sin saludo del servidor, dest||1001 es un canal inventado. Cachear hasta el
+    // VC cliprdr real. Escribir ese CHANNEL_PDU en 1001 congela el grafico.
+    // Excepcion RDP+EGFX bastion: CAPS+TEMPDIR una vez al VC nombrado cliprdr
+    // (Session Probe) antes del saludo; FORMAT_LIST sigue en cola. Si el saludo
+    // llega luego por IO, el mute ESAH se mantiene (write path no se confirma).
+    const noServerGreeting = channelFilter.serverCliprdrChannelId == null
+      && channelFilter.cliprdrOnUnsafeChannel == null;
+    if (noServerGreeting
+        && (channelFilter.wallixService === 'RDP' || channelFilter.wallixService === 'APP')) {
+      if (clipDesc) rememberClientCliprdrHandshake(channelFilter, clipDesc, frame);
+      // Synth del bridge (no el forward WASM frame-a-frame): no reenviar CAPS/TEMPDIR.
+      if (channelFilter.cliprdrSynthPreGreetSent && isNamedCliprdrPreGreetPdu(clipDesc)) {
+        return { forward: null, inject: [] };
+      }
+      const namedPre = namedCliprdrPreGreetChannel(channelFilter);
+      if (namedPre != null && isNamedCliprdrPreGreetPdu(clipDesc)) {
+        const out = rewriteMcsChannelId(frame, namedPre) || frame;
+        channelFilter.cliprdrHandshakeSentToRecoveredDest = true;
+        if (!channelFilter.cliprdrNamedPreGreetSent) {
+          channelFilter.cliprdrNamedPreGreetSent = true;
+          if (typeof channelFilter.markTimeline === 'function') {
+            channelFilter.markTimeline('cliprdr-named-pre-greet', `ch=${namedPre}`);
+          }
+          const preMsg = `[Bridge Clipboard] RDP EGFX: CAPS/TEMPDIR al VC nombrado ${namedPre} (pre-saludo)`;
+          console.warn(preMsg);
+          if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(preMsg);
+          this.emit('diagnostic-log', { category: 'cliprdr-named-pre-greet', message: preMsg });
+        }
+        return { forward: out, inject: [] };
+      }
+      enqueueClientCliprdr(channelFilter, frame);
+      if (!channelFilter.loggedCliprdrAwaitingGreeting) {
+        channelFilter.loggedCliprdrAwaitingGreeting = true;
+        const awaitMsg = `[Bridge Clipboard] ${channelFilter.wallixService}: CLIPRDR WASM cacheado;` +
+          ' sin saludo del servidor (no MCS 1001)';
+        console.warn(awaitMsg);
+        if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(awaitMsg);
+        this.emit('diagnostic-log', { category: 'cliprdr-await-greeting', message: awaitMsg });
+      }
+      return { forward: null, inject: [] };
+    }
     // Si el servidor entrego cliprdr por el canal IO, serverCliprdrChannelId apunta al
     // canal IO (1003). El path de recuperacion (fallbackIoNamedCliprdrWrite) usa ioChannelId
     // para detectarlo: se mantiene dest=serverCliprdrChannelId para que destIsIo sea correcto.
@@ -2291,9 +2374,11 @@ class RdpNativeBridgeService extends EventEmitter {
       return { forward: null, inject };
     }
 
-    // EGFX: un CHANNEL_PDU en 1001 o en el IO (1003) congela el gráfico tras el banner.
-    // Se encola y se acusa al WASM. Sin EGFX se mantiene el camino de bitmap.
-    // Tras promote selector→APP con write al VC nombrado: no mute eterno; escribir ahi.
+    // EGFX: un CHANNEL_PDU en 1001 o en el IO (1003) congela el gráfico tras el banner
+    // y el servidor corta el socket. Se encola y se acusa al WASM. Sin EGFX se mantiene
+    // el camino de bitmap. Tras promote selector→APP con write al VC nombrado: no mute eterno.
+    // RDP Probe saluda a menudo por 1003: mute correcto. No reintentar write a 1006
+    // mientras el saludo siga en IO (FIN ESAH) ni passthrough bitmap N=1.
     const egfxMuteUnsafe = channelFilter.egfxGraphics === true
       && (isUserMcsChannel(channelFilter, dest) || destIsIo);
 
@@ -2613,9 +2698,13 @@ class RdpNativeBridgeService extends EventEmitter {
       };
     }
 
+    // Sin saludo aun: RDP/APP cachean. No avisar "se reenvía" si no va a salir al wire.
+    const cacheUntilGreeting = channelFilter.serverCliprdrChannelId == null
+      && channelFilter.cliprdrOnUnsafeChannel == null
+      && (channelFilter.wallixService === 'RDP' || channelFilter.wallixService === 'APP');
     // Aviso de orden CLIPRDR: el cliente no deberia emitir nada antes de CB_MONITOR_READY
     // (MS-RDPECLIP 1.3.2.1). No se descarta el PDU; solo se avisa una vez por sesion.
-    if (!channelFilter.cliprdrServerReady && !channelFilter.loggedCliprdrBeforeReady) {
+    if (!cacheUntilGreeting && !channelFilter.cliprdrServerReady && !channelFilter.loggedCliprdrBeforeReady) {
       channelFilter.loggedCliprdrBeforeReady = true;
       const guardMsg = `⚠️ [Bridge Clipboard] PDU cliprdr WASM->RDP antes de CB_MONITOR_READY (se reenvía igualmente): ${clipDesc}`;
       console.warn(guardMsg);

@@ -24,6 +24,7 @@ const {
   sanitizeIllegalCliprdrWrite,
   isSelectorMenuCliprdrDefer,
   isSelectorMenuBitmapPassthrough,
+  isBastionRdpHopBitmapPassthrough,
   isBastionOverlapHopBitmapPassthrough,
   shouldBastionBitmapPassthrough
 } = require('../../src/main/services/rdp-channel-filter');
@@ -1098,6 +1099,14 @@ describe('CLIPRDR: robustez del filtro', () => {
     assert.equal(isSelectorMenuBitmapPassthrough(state), false, 'RDP frio no passthrough');
   });
 
+  test('isBastionRdpHopBitmapPassthrough: revertido (pantalla negra sin rewrite)', () => {
+    const state = stateWithCliprdr();
+    state.isBastion = true;
+    state.wallixService = 'RDP';
+    state.bastionOverlap = false;
+    assert.equal(isBastionRdpHopBitmapPassthrough(state), false, 'N=1 RDP no passthrough');
+  });
+
   test('isBastionOverlapHopBitmapPassthrough solo N>1 y hop pendiente', () => {
     const state = stateWithCliprdr();
     state.isBastion = true;
@@ -1281,7 +1290,7 @@ describe('CLIPRDR: robustez del filtro', () => {
     assert.equal(wrong.cliprdrChannelId, 1007, 'sin wasm names usa la lista inyectada por nombre');
   });
 
-  test('un solo saludo en cliprdr 1004 no genera la repeticion', () => {
+  test('RDP directa: un saludo en cliprdr 1004 reenvia los CAPS cacheados', () => {
     const state = stateWithCliprdr();
     state.wallixService = 'RDP';
     state.allowed = new Set([1003, 1004]);
@@ -1294,7 +1303,10 @@ describe('CLIPRDR: robustez del filtro', () => {
     assert.equal(state.cliprdrWriteChannelId, 1004);
     assert.equal(state.cliprdrMonitorReadyCount, 1);
     assert.equal(cliprdrMustDropShowProtocol(state), false);
-    assert.deepEqual(takeCliprdrRehandshake(state), []);
+    const replay = takeCliprdrRehandshake(state);
+    assert.equal(replay.length, 1);
+    assert.equal(parseMcsSendData(replay[0]).channelId, 1004);
+    assert.equal(parseMcsSendData(replay[0]).userData.readUInt16LE(8), 7);
   });
 
   test('sin canal cliprdr negociado no se asume 1004', () => {

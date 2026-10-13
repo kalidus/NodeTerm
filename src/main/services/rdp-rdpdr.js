@@ -104,7 +104,14 @@ function wrapMcs(initiator, channelId, channelPdu) {
   return buildMcsSendDataRequest(effectiveInitiator, channelId, channelPdu);
 }
 
-function handleRdpdrRequest(mcsChannelId, initiator, userData) {
+/**
+ * @param {number} mcsChannelId
+ * @param {number|null|undefined} initiator
+ * @param {Buffer} userData
+ * @param {{ rdpdrHandshakeComplete?: boolean }|null} [state]
+ *   Si se pasa, marca rdpdrHandshakeComplete tras caps+device-list y evita duplicar.
+ */
+function handleRdpdrRequest(mcsChannelId, initiator, userData, state) {
   const parsed = parseRdpdrPdu(userData);
   if (!parsed) return { handled: false, replies: [], note: null };
 
@@ -115,18 +122,31 @@ function handleRdpdrRequest(mcsChannelId, initiator, userData) {
     const versionMajor = parsed.payload.readUInt16LE(4);
     const versionMinor = parsed.payload.readUInt16LE(6);
     const clientId = parsed.payload.readUInt32LE(8);
+    // Caps + device-list vacia en el mismo lote: Wallix a veces no manda
+    // SERVER_CAPABILITY y espera 20-30s el Device List.
     const replies = [
       wrapMcs(initiator, mcsChannelId, buildClientIdConfirm(versionMajor, versionMinor, clientId)),
-      wrapMcs(initiator, mcsChannelId, buildClientName('NODETERM'))
+      wrapMcs(initiator, mcsChannelId, buildClientName('NODETERM')),
+      wrapMcs(initiator, mcsChannelId, buildClientCapability()),
+      wrapMcs(initiator, mcsChannelId, buildEmptyDeviceList())
     ];
+    if (state) state.rdpdrHandshakeComplete = true;
     return {
       handled: true,
       replies,
-      note: `rdpdr-announce v=${versionMajor}.${versionMinor} clientId=${clientId} (0ms stub)`
+      note: `rdpdr-announce v=${versionMajor}.${versionMinor} clientId=${clientId} +caps+device-list (0ms stub)`
     };
   }
 
   if (parsed.packetId === PAKID_CORE_SERVER_CAPABILITY) {
+    if (state && state.rdpdrHandshakeComplete) {
+      return {
+        handled: true,
+        replies: [],
+        note: 'rdpdr-caps already (handshake completo en announce)'
+      };
+    }
+    if (state) state.rdpdrHandshakeComplete = true;
     return {
       handled: true,
       replies: [

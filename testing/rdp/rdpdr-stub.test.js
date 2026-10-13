@@ -35,14 +35,17 @@ function serverAnnounce(versionMinor, clientId) {
 }
 
 describe('rdpdr stub', () => {
-  test('el Server Announce de Wallix (hex del log) no se reenvia y se contesta en el acto', () => {
+  test('el Server Announce cierra el handshake: confirm+name+caps+device-list', () => {
     // hex=0c0000000300000072446e4901000d00 + clientId
     const userData = serverAnnounce(13, 0x7e);
-    const res = handleRdpdrRequest(1003, 0, userData);
+    const state = {};
+    const res = handleRdpdrRequest(1003, 0, userData, state);
 
     assert.equal(res.handled, true);
-    assert.equal(res.replies.length, 2);
+    assert.equal(res.replies.length, 4, 'announce eager: 4 PDUs sin esperar SERVER_CAPABILITY');
     assert.ok(res.note.includes('rdpdr-announce'));
+    assert.ok(res.note.includes('caps+device-list'));
+    assert.equal(state.rdpdrHandshakeComplete, true);
 
     const confirm = parseMcsSendData(res.replies[0]);
     assert.equal(confirm.channelId, 1003);
@@ -54,6 +57,14 @@ describe('rdpdr stub', () => {
 
     const name = parseRdpdrPdu(parseMcsSendData(res.replies[1]).userData);
     assert.equal(name.packetId, PAKID_CORE_CLIENT_NAME);
+    assert.equal(
+      parseRdpdrPdu(parseMcsSendData(res.replies[2]).userData).packetId,
+      PAKID_CORE_CLIENT_CAPABILITY
+    );
+    assert.equal(
+      parseRdpdrPdu(parseMcsSendData(res.replies[3]).userData).packetId,
+      PAKID_CORE_DEVICELIST_ANNOUNCE
+    );
   });
 
   test('las capabilities del servidor cierran el handshake con device list vacia', () => {
@@ -62,11 +73,31 @@ describe('rdpdr stub', () => {
     body.writeUInt16LE(PAKID_CORE_SERVER_CAPABILITY, 2);
     body.writeUInt16LE(1, 4);
     body.writeUInt16LE(0, 6);
-    const res = handleRdpdrRequest(1004, 1002, wrapChannelPdu(body));
+    const state = {};
+    const res = handleRdpdrRequest(1004, 1002, wrapChannelPdu(body), state);
 
     assert.equal(res.replies.length, 2);
+    assert.equal(state.rdpdrHandshakeComplete, true);
     assert.equal(parseRdpdrPdu(parseMcsSendData(res.replies[0]).userData).packetId, PAKID_CORE_CLIENT_CAPABILITY);
     assert.equal(parseRdpdrPdu(parseMcsSendData(res.replies[1]).userData).packetId, PAKID_CORE_DEVICELIST_ANNOUNCE);
+  });
+
+  test('SERVER_CAPABILITY tras announce completo no duplica caps/device-list', () => {
+    const state = {};
+    const announce = handleRdpdrRequest(1004, 0, serverAnnounce(13, 0x7e), state);
+    assert.equal(announce.replies.length, 4);
+    assert.equal(state.rdpdrHandshakeComplete, true);
+
+    const body = Buffer.alloc(8);
+    body.writeUInt16LE(0x4472, 0);
+    body.writeUInt16LE(PAKID_CORE_SERVER_CAPABILITY, 2);
+    body.writeUInt16LE(1, 4);
+    body.writeUInt16LE(0, 6);
+    const caps = handleRdpdrRequest(1004, 0, wrapChannelPdu(body), state);
+
+    assert.equal(caps.handled, true);
+    assert.equal(caps.replies.length, 0, 'no duplicar tras handshake en announce');
+    assert.ok(caps.note.includes('already'));
   });
 
   test('en el canal IO sin VC rdpdr se absorbe el Announce y no se contesta', () => {
@@ -100,10 +131,59 @@ describe('rdpdr stub', () => {
 
     assert.equal(res.dropped, true);
     assert.equal(res.forward, null);
-    assert.ok(res.replies.length >= 2);
+    assert.equal(res.replies.length, 4, 'announce eager por VC rdpdr');
     assert.equal(parseMcsSendData(res.replies[0]).channelId, 1005);
     assert.ok(res.note.includes('replies->ch=1005'));
     assert.ok(res.note.includes('saludo por IO'));
+    assert.equal(state.rdpdrHandshakeComplete, true);
+    assert.equal(state.rdpdrReplyCount, 4);
+  });
+
+  test('anuncio rdpdr en MCS 1001 se contesta por el VC rdpdr, no por 1001', () => {
+    const state = createChannelFilterState();
+    state.ready = true;
+    state.ioChannelId = 1003;
+    state.cliprdrChannelId = 1006;
+    state.allowed = new Set([1001, 1003, 1004, 1005, 1006, 1007]);
+    state.channelIdToName = new Map([
+      [1004, 'rdpdr'],
+      [1005, 'rdpsnd'],
+      [1006, 'cliprdr'],
+      [1007, 'drdynvc']
+    ]);
+    state.clientInitiator = 0;
+
+    const frame = buildMcsSendDataIndication(0, 1001, serverAnnounce(13, 0x7e));
+    const res = processServerFrame(state, frame);
+
+    assert.equal(res.dropped, true);
+    assert.equal(res.forward, null);
+    assert.equal(res.replies.length, 4);
+    for (const reply of res.replies) {
+      assert.equal(parseMcsSendData(reply).channelId, 1004);
+      assert.notEqual(parseMcsSendData(reply).channelId, 1001);
+    }
+    assert.equal(state.rdpdrReplyChannelId, 1004);
+    assert.equal(state.rdpdrReplyCount, 4);
+    assert.ok(res.note.includes('replies->ch=1004'));
+    assert.ok(res.note.includes('saludo por usuario'));
+  });
+
+  test('anuncio rdpdr en MCS 1001 sin VC rdpdr no se contesta', () => {
+    const state = createChannelFilterState();
+    state.ready = true;
+    state.ioChannelId = 1003;
+    state.cliprdrChannelId = 1006;
+    state.allowed = new Set([1001, 1003, 1006]);
+    state.clientInitiator = 0;
+
+    const frame = buildMcsSendDataIndication(0, 1001, serverAnnounce(13, 0x7e));
+    const res = processServerFrame(state, frame);
+
+    assert.equal(res.dropped, true);
+    assert.equal(res.replies.length, 0);
+    assert.ok(res.note.includes('canal usuario'));
+    assert.equal(state.rdpdrReplyCount || 0, 0);
   });
 
   test('rdpdr en el canal cliprdr se contesta por el VC rdpdr declarado', () => {
