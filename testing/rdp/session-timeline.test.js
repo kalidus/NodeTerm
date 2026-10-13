@@ -197,4 +197,33 @@ describe('SessionTimeline', () => {
     assert.match(s, /egfx-caps-no-create=\+8500ms/);
     assert.ok(!/egfx-graphics-create=/.test(s));
   });
+
+  it('silence-start a idle 5s tras first-bitmap; resume una vez con gap', () => {
+    const clock = makeClock();
+    const lines = [];
+    const tl = new SessionTimeline({ now: clock.now, log: (l) => lines.push(l) });
+    tl.mark('first-frame');
+    clock.advance(100);
+    tl.mark('first-bitmap');
+    for (let i = 0; i < 5; i++) {
+      clock.advance(1000);
+      tl.tick();
+    }
+    assert.equal(tl.has('post-banner-silence-start'), true);
+    assert.ok(lines.some((l) => /esperando Session Probe Wallix/.test(l)));
+    clock.advance(2000);
+    tl.noteIn('fp', 500);
+    assert.equal(tl.has('desktop-fp-resume'), true);
+    assert.match(
+      lines.find((l) => /desktop-fp-resume/.test(l)) || '',
+      /gapBanner→desktop=/
+    );
+    clock.advance(100);
+    tl.noteIn('fp', 100);
+    assert.equal(
+      lines.filter((l) => /desktop-fp-resume/.test(l)).length,
+      1,
+      'resume una sola vez'
+    );
+  });
 });

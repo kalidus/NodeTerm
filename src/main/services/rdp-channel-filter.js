@@ -164,6 +164,67 @@ function readChannelJoinConfirmId(buf) {
   return buf.readUInt16BE(11);
 }
 
+/** MCS Attach User Confirm (0x2e): user id en offset 9 si result=0. */
+function readAttachUserConfirmInitiator(buf) {
+  if (!isTpkt(buf) || buf.length < 11 || buf[7] !== 0x2e || buf[8] !== 0x00) return null;
+  const id = buf.readUInt16BE(9);
+  return id > 0 ? id : null;
+}
+
+/** MCS Channel Join Request (0x38), 12 bytes. */
+function readChannelJoinRequest(buf) {
+  if (!isTpkt(buf) || buf.length < 12 || buf[7] !== 0x38) return null;
+  const channelId = buf.readUInt16BE(10);
+  if (!channelId) return null;
+  return { initiator: buf.readUInt16BE(8), channelId };
+}
+
+function buildMcsChannelJoinRequest(initiator, channelId) {
+  const buf = Buffer.alloc(12);
+  buf[0] = 0x03;
+  buf[1] = 0x00;
+  buf[2] = 0x00;
+  buf[3] = 0x0c;
+  buf[4] = 0x02;
+  buf[5] = 0xf0;
+  buf[6] = 0x80;
+  buf[7] = 0x38;
+  buf.writeUInt16BE(initiator & 0xffff, 8);
+  buf.writeUInt16BE(channelId & 0xffff, 10);
+  return buf;
+}
+
+function ensureJoinSet(state) {
+  if (!(state.clientJoinRequested instanceof Set)) state.clientJoinRequested = new Set();
+  return state.clientJoinRequested;
+}
+
+function noteClientChannelJoinRequest(state, buf) {
+  const req = readChannelJoinRequest(buf);
+  if (!state || !req) return false;
+  ensureJoinSet(state).add(req.channelId);
+  if (req.initiator > 0 && !state.clientInitiator) state.clientInitiator = req.initiator;
+  return true;
+}
+
+function noteServerAttachUserConfirm(state, buf) {
+  const id = readAttachUserConfirmInitiator(buf);
+  if (!state || id == null) return false;
+  if (!state.clientInitiator) state.clientInitiator = id;
+  return true;
+}
+
+/** Join confirm rt-successful del VC cliprdr declarado. */
+function noteServerChannelJoinConfirm(state, buf) {
+  if (!state || !isTpkt(buf) || buf.length < 15 || buf[7] !== MCS_CHANNEL_JOIN_CONFIRM) return false;
+  const result = (buf[8] >> 3) & 0x0f;
+  if (result !== 0) return false;
+  const requested = buf.readUInt16BE(11);
+  const named = declaredChannelId(state, 'cliprdr');
+  if (named != null && requested === named) state.cliprdrJoined = true;
+  return state.cliprdrJoined === true;
+}
+
 const CLIPRDR_MSG_NAMES = {
   0x0001: 'CB_MONITOR_READY',
   0x0002: 'CB_FORMAT_LIST',
@@ -296,6 +357,9 @@ function createChannelFilterState() {
     cachedClientCaps: null,
     cachedClientTempDir: null,
     cachedClientFormatList: null,
+    // RDP Probe: un TEMPDIR al canal del saludo (IO). null = default ON.
+    probeTempDirOnGreetEnabled: null,
+    probeTempDirOnGreetSent: false,
     cliprdrServerGeneralFlags: null,
     cliprdrMuteClientFormatList: false,
     clientInitiator: 0,
@@ -303,6 +367,10 @@ function createChannelFilterState() {
     droppedByChannel: Object.create(null),
     cliprdrHealth: createCliprdrHealth(),
     cliprdrHandshakeSentToRecoveredDest: false,
+    clientJoinRequested: null,
+    cliprdrEarlyJoinSent: false,
+    cliprdrJoined: false,
+    cliprdrBridgeHandshakeSent: false,
     autoDetect: createAutoDetectState()
   };
 }
@@ -1280,6 +1348,67 @@ function takeSynthCliprdrPreGreet(_state) {
 }
 
 /**
+ * Default OFF. TEMPDIR-only a IO 1003 cerro la sesion ~11ms despues
+ * (servidor remoto, cold RDP N=1). Solo opt-in explicito.
+ * state.probeTempDirOnGreetEnabled fuerza el valor de sesion (bridge / tests).
+ */
+function isProbeTempDirOnGreetEnabled(state) {
+  if (state && state.probeTempDirOnGreetEnabled === false) return false;
+  if (state && state.probeTempDirOnGreetEnabled === true) return true;
+  const v = process.env.NODETERM_RDP_PROBE_TEMPDIR_ON_GREET;
+  return v === '1' || v === 'true';
+}
+
+/**
+ * Opt-in: un CB_TEMP_DIRECTORY al canal del MONITOR_READY en IO.
+ * Desactivado por defecto: el write a 1003 tumba Wallix (cierre del servidor).
+ * @returns {Buffer|null} MCS SendDataRequest listo para tlsSocket.write
+ */
+function takeProbeTempDirOnGreet(state) {
+  if (!isProbeTempDirOnGreetEnabled(state)) return null;
+  if (!state || state.wallixService !== 'RDP') return null;
+  if (state.probeTempDirOnGreetSent) return null;
+  if (!greetingStillOnIo(state)) return null;
+  const dest = state.serverCliprdrChannelId;
+  if (dest == null) return null;
+
+  const flags = CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST | CHANNEL_FLAG_SHOW_PROTOCOL;
+  let frame;
+  if (Buffer.isBuffer(state.cachedClientTempDir)) {
+    frame = applyCliprdrReplayFrame(state.cachedClientTempDir, dest, flags);
+  } else {
+    frame = buildClientCliprdrTempDirFrame(dest, {
+      initiator: state.clientInitiator || 0
+    });
+  }
+  if (!Buffer.isBuffer(frame)) return null;
+  state.probeTempDirOnGreetSent = true;
+  return frame;
+}
+
+/**
+ * RDP bastión: un Channel Join de cliprdr en cuanto hay user id e id del VC,
+ * si el WASM aún no lo pidió. Una sola vez.
+ * @returns {Buffer|null}
+ */
+function takeEarlyCliprdrJoin(state) {
+  if (!state || state.wallixService !== 'RDP' || state.isBastion !== true) return null;
+  if (state.cliprdrEarlyJoinSent) return null;
+  const initiator = state.clientInitiator || 0;
+  if (!initiator) return null;
+  const ch = declaredChannelId(state, 'cliprdr');
+  if (ch == null) return null;
+  const requested = ensureJoinSet(state);
+  if (requested.has(ch)) {
+    state.cliprdrEarlyJoinSent = true;
+    return null;
+  }
+  state.cliprdrEarlyJoinSent = true;
+  requested.add(ch);
+  return buildMcsChannelJoinRequest(initiator, ch);
+}
+
+/**
  * RDP directa (no promovida desde el selector) cuyo saludo cliprdr ya está
  * en el VC declarado cliprdr. Escribir ahí no es el caso ESAH de 1001/IO.
  */
@@ -1431,6 +1560,32 @@ function takeCliprdrRehandshake(state) {
     if (!Buffer.isBuffer(cached)) continue;
     frames.push(applyCliprdrReplayFrame(cached, writeCh, flags));
   }
+  return frames;
+}
+
+/**
+ * RDP: si el servidor saluda en el cliprdr ya unido, CAPS+TEMPDIR al momento
+ * (cache WASM o sintesis). No escribe en IO.
+ * @returns {Buffer[]}
+ */
+function takeJoinedCliprdrAnswer(state) {
+  if (!state || state.wallixService !== 'RDP') return [];
+  if (!state.cliprdrJoined || state.cliprdrBridgeHandshakeSent) return [];
+  if (state.cliprdrHandshakeSentToRecoveredDest) return [];
+  if (!isDirectRdpNamedCliprdrGreeting(state)) return [];
+  const ch = state.serverCliprdrChannelId;
+  const initiator = state.clientInitiator || 0;
+  const flags = CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST | CHANNEL_FLAG_SHOW_PROTOCOL;
+  const frames = [];
+  frames.push(Buffer.isBuffer(state.cachedClientCaps)
+    ? applyCliprdrReplayFrame(state.cachedClientCaps, ch, flags)
+    : buildClientCliprdrCapsFrame(ch, { initiator }));
+  frames.push(Buffer.isBuffer(state.cachedClientTempDir)
+    ? applyCliprdrReplayFrame(state.cachedClientTempDir, ch, flags)
+    : buildClientCliprdrTempDirFrame(ch, { initiator }));
+  state.cliprdrBridgeHandshakeSent = true;
+  state.cliprdrHandshakeSentToRecoveredDest = true;
+  state.cliprdrRehandshakePending = false;
   return frames;
 }
 
@@ -2498,6 +2653,14 @@ module.exports = {
   parseServerNetworkChannels,
   readSendDataIndicationChannelId,
   readChannelJoinConfirmId,
+  readAttachUserConfirmInitiator,
+  readChannelJoinRequest,
+  buildMcsChannelJoinRequest,
+  noteClientChannelJoinRequest,
+  noteServerAttachUserConfirm,
+  noteServerChannelJoinConfirm,
+  takeEarlyCliprdrJoin,
+  takeJoinedCliprdrAnswer,
   createChannelFilterState,
   learnFromServerGcc,
   learnClientInitiator,
@@ -2522,6 +2685,8 @@ module.exports = {
   buildClientCliprdrCapsFrame,
   buildClientCliprdrTempDirFrame,
   takeSynthCliprdrPreGreet,
+  isProbeTempDirOnGreetEnabled,
+  takeProbeTempDirOnGreet,
   DEFAULT_CLIPRDR_GENERAL_FLAGS,
   CLIPRDR_TEMPDIR_BYTES,
   fallbackIoNamedCliprdrWrite,

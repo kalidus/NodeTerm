@@ -118,6 +118,27 @@ class SessionTimeline {
     if (!this.enabled) return;
     const k = this.bucketIn[kind] ? kind : 'tpkt';
     this.bucketIn[k].n += 1;
+    // Escritorio vuelve tras silencio post-banner (Fast-Path bitmap).
+    if (k === 'fp' && this.marks.has('post-banner-silence-start')
+        && !this.marks.has('desktop-fp-resume')) {
+      const silenceAt = this.marks.get('post-banner-silence-start');
+      const bannerAt = this.marks.has('first-bitmap')
+        ? this.marks.get('first-bitmap')
+        : silenceAt;
+      const gap = this.elapsed() - bannerAt;
+      const rdpdrAt = this.marks.has('rdpdr-announce')
+        ? this.marks.get('rdpdr-announce')
+        : null;
+      const rdpdrNote = rdpdrAt == null
+        ? 'rdpdr=pending'
+        : (rdpdrAt <= this.elapsed()
+          ? `rdpdr=+${rdpdrAt}ms(antes)`
+          : `rdpdr=+${rdpdrAt}ms`);
+      this.mark(
+        'desktop-fp-resume',
+        `gapBanner→desktop=${gap}ms silence=+${silenceAt}ms ${rdpdrNote}`
+      );
+    }
     this.bucketIn[k].bytes += bytes || 0;
     this.totalIn[k].n += 1;
     this.totalIn[k].bytes += bytes || 0;
@@ -199,6 +220,22 @@ class SessionTimeline {
         }
       } else {
         this.idleStreak += 1;
+        // Primer silencio sostenido tras banner: hito UX (espera Session Probe).
+        if (this.idleStreak === 5
+            && (this.marks.has('first-bitmap') || this.marks.has('post-banner-sin-dvc'))
+            && !this.marks.has('post-banner-silence-start')) {
+          const probeNote = this.marks.has('probe-tempdir-sent')
+            ? 'probe-tempdir=ya'
+            : 'probe-tempdir=pendiente';
+          this.mark(
+            'post-banner-silence-start',
+            `idle=${this.idleStreak}s ${probeNote}`
+          );
+          this.log(
+            `${this._prefix()}${this.elapsed()}ms] RDP frio: esperando Session Probe Wallix` +
+            ` (sin trafico; ${probeNote})`
+          );
+        }
         if (shouldLogSilence(this.idleStreak, { quiet: !this.verboseTraffic })) {
           this.log(`${this._prefix()}${this.elapsed()}ms] silencio ${this.idleStreak}s (sin trafico servidor ni WASM)`);
         }

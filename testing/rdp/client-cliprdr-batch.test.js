@@ -20,6 +20,13 @@ const {
   buildClientCliprdrTempDirFrame,
   takeSynthCliprdrPreGreet,
   namedCliprdrPreGreetChannel,
+  isProbeTempDirOnGreetEnabled,
+  takeProbeTempDirOnGreet,
+  takeEarlyCliprdrJoin,
+  takeJoinedCliprdrAnswer,
+  noteClientChannelJoinRequest,
+  noteServerChannelJoinConfirm,
+  buildMcsChannelJoinRequest,
   DEFAULT_CLIPRDR_GENERAL_FLAGS,
   CLIPRDR_TEMPDIR_BYTES,
   describeCliprdrPdu
@@ -1445,5 +1452,119 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
       assert.notEqual(parseMcsSendData(frame).channelId, BASTION_CLIP_CH);
       assert.notEqual(parseMcsSendData(frame).channelId, 1001);
     }
+  });
+
+  test('takeProbeTempDirOnGreet: apagado por defecto (1003 cierra la sesion)', () => {
+    const state = coldRdpState();
+    state.serverCliprdrChannelId = IO_CH;
+    assert.equal(isProbeTempDirOnGreetEnabled(state), false);
+    assert.equal(takeProbeTempDirOnGreet(state), null);
+  });
+
+  test('takeProbeTempDirOnGreet: TEMPDIR-only a IO; sin CAPS; una vez', () => {
+    const state = coldRdpState();
+    state.probeTempDirOnGreetEnabled = true;
+    state.serverCliprdrChannelId = IO_CH;
+    state.cliprdrOnUnsafeChannel = IO_CH;
+    state.cachedClientTempDir = buildClientCliprdrTempDirFrame(CLIPRDR_CH, { initiator: 0 });
+    state.cachedClientCaps = buildClientCliprdrCapsFrame(CLIPRDR_CH, { initiator: 0 });
+
+    assert.equal(isProbeTempDirOnGreetEnabled(state), true);
+    assert.equal(greetingStillOnIo(state), true);
+
+    const pdu = takeProbeTempDirOnGreet(state);
+    assert.ok(Buffer.isBuffer(pdu));
+    assert.equal(parseMcsSendData(pdu).channelId, IO_CH);
+    assert.equal(clipMsgType(pdu), CB_TEMP_DIRECTORY);
+    assert.equal(state.probeTempDirOnGreetSent, true);
+    assert.equal(takeProbeTempDirOnGreet(state), null, 'idempotente');
+  });
+
+  test('takeProbeTempDirOnGreet: sintetiza TEMPDIR si no hay cache WASM', () => {
+    const state = coldRdpState();
+    state.probeTempDirOnGreetEnabled = true;
+    state.serverCliprdrChannelId = IO_CH;
+    state.clientInitiator = 0;
+    const pdu = takeProbeTempDirOnGreet(state);
+    assert.ok(Buffer.isBuffer(pdu));
+    assert.equal(parseMcsSendData(pdu).channelId, IO_CH);
+    assert.equal(clipMsgType(pdu), CB_TEMP_DIRECTORY);
+  });
+
+  test('takeProbeTempDirOnGreet: no escribe al VC nombrado ni con saludo nombrado', () => {
+    const named = coldRdpState();
+    named.serverCliprdrChannelId = BASTION_CLIP_CH;
+    named.cliprdrWriteChannelId = BASTION_CLIP_CH;
+    assert.equal(takeProbeTempDirOnGreet(named), null, 'saludo no en IO');
+
+    const off = coldRdpState();
+    off.serverCliprdrChannelId = IO_CH;
+    off.probeTempDirOnGreetEnabled = false;
+    assert.equal(isProbeTempDirOnGreetEnabled(off), false);
+    assert.equal(takeProbeTempDirOnGreet(off), null);
+
+    const app = coldRdpState();
+    app.wallixService = 'APP';
+    app.serverCliprdrChannelId = IO_CH;
+    assert.equal(takeProbeTempDirOnGreet(app), null, 'solo RDP');
+  });
+
+  test('takeEarlyCliprdrJoin: un join a 1006 si el WASM no lo pidio', () => {
+    const state = coldRdpState();
+    state.clientInitiator = 0x03ea;
+    const pdu = takeEarlyCliprdrJoin(state);
+    assert.ok(Buffer.isBuffer(pdu));
+    assert.equal(pdu.length, 12);
+    assert.equal(pdu[7], 0x38);
+    assert.equal(pdu.readUInt16BE(8), 0x03ea);
+    assert.equal(pdu.readUInt16BE(10), BASTION_CLIP_CH);
+    assert.equal(takeEarlyCliprdrJoin(state), null, 'una sola vez');
+  });
+
+  test('takeEarlyCliprdrJoin: no duplica si el WASM ya pidio 1006', () => {
+    const state = coldRdpState();
+    state.clientInitiator = 0x03ea;
+    noteClientChannelJoinRequest(state, buildMcsChannelJoinRequest(0x03ea, BASTION_CLIP_CH));
+    assert.equal(takeEarlyCliprdrJoin(state), null);
+  });
+
+  test('takeJoinedCliprdrAnswer: CAPS+TEMPDIR solo con saludo en el VC unido', () => {
+    const state = coldRdpState();
+    state.cliprdrChannelId = BASTION_CLIP_CH;
+    state.serverCliprdrChannelId = BASTION_CLIP_CH;
+    state.clientInitiator = 0x03ea;
+    assert.deepEqual(takeJoinedCliprdrAnswer(state), [], 'sin join confirm no responde');
+    state.cliprdrJoined = true;
+    const frames = takeJoinedCliprdrAnswer(state);
+    assert.equal(frames.length, 2);
+    assert.deepEqual(frames.map((f) => parseMcsSendData(f).channelId), [BASTION_CLIP_CH, BASTION_CLIP_CH]);
+    assert.deepEqual(frames.map(clipMsgType), [CB_CLIP_CAPS, CB_TEMP_DIRECTORY]);
+    assert.deepEqual(takeJoinedCliprdrAnswer(state), [], 'una sola vez');
+
+    const io = coldRdpState();
+    io.cliprdrJoined = true;
+    io.serverCliprdrChannelId = IO_CH;
+    io.cliprdrOnUnsafeChannel = IO_CH;
+    assert.deepEqual(takeJoinedCliprdrAnswer(io), [], 'saludo en 1003 no se contesta');
+  });
+
+  test('join confirm de 1006 marca cliprdrJoined', () => {
+    const state = coldRdpState();
+    const confirm = Buffer.from([
+      0x03, 0x00, 0x00, 0x0f, 0x02, 0xf0, 0x80, 0x3e,
+      0x00, 0x00, 0x08, 0x03, 0xee, 0x03, 0xee
+    ]);
+    assert.equal(noteServerChannelJoinConfirm(state, confirm), true);
+    assert.equal(state.cliprdrJoined, true);
+  });
+
+  test('takeProbeTempDirOnGreet: 1006 pre-saludo sigue prohibido', () => {
+    const state = coldRdpState();
+    state.probeTempDirOnGreetEnabled = true;
+    assert.equal(namedCliprdrPreGreetChannel(state), null);
+    assert.equal(takeSynthCliprdrPreGreet(state), null);
+    state.serverCliprdrChannelId = IO_CH;
+    const pdu = takeProbeTempDirOnGreet(state);
+    assert.notEqual(parseMcsSendData(pdu).channelId, BASTION_CLIP_CH);
   });
 });
