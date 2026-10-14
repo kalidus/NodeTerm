@@ -888,7 +888,7 @@ function greetingStillOnIo(state) {
 function bastionIoCliprdrWriteForbidden(state) {
   if (!state) return false;
   const svc = state.wallixService;
-  return svc === 'n/a';
+  return svc === 'n/a' || svc === 'RDP' || svc === 'APP';
 }
 
 /**
@@ -1048,7 +1048,7 @@ function retryConfirmRdpCliprdrWrite(state) {
  */
 function fallbackIoNamedCliprdrWrite(state) {
   if (!state) return null;
-  if (state.wallixService === 'n/a') {
+  if (bastionIoCliprdrWriteForbidden(state)) {
     return null;
   }
   const named = declaredChannelId(state, 'cliprdr');
@@ -1079,8 +1079,10 @@ function unsafeCliprdrClientWriteDest(state, dest) {
     return null;
   }
   const destIsIo = state.ioChannelId != null && dest === state.ioChannelId;
-  // Bastion / selector: saludo en IO → nunca remapear a VC nombrado (FIN ESAH).
   if (destIsIo && bastionIoCliprdrWriteForbidden(state)) {
+    if (state.wallixService === 'RDP') {
+      return state.cliprdrServerFormatListSeen ? dest : null;
+    }
     return null;
   }
   if (isUserMcsChannel(state, dest)) return dest;
@@ -1163,7 +1165,8 @@ function claimCliprdrPdu(state, channelId, userData) {
   const declared = channelNameForId(state, channelId);
   if (declared) {
     const n = declared.toLowerCase();
-    if (n === 'rdpsnd' || n === 'drdynvc' || n === 'rail') return false;
+    if (n === 'drdynvc' || n === 'rail') return false;
+    if (n === 'rdpsnd' && wasmAllowsStaticRdpsnd(state)) return false;
   }
 
   const flags = isChannelPduHeader(userData) ? userData.readUInt32LE(4) : 0;
@@ -1751,6 +1754,16 @@ function buildCliprdrResult(state, buf, channelId, userData) {
     noteServerCliprdrMonitorReady(state, userData);
     retryConfirmAppCliprdrWrite(state);
     retryConfirmRdpCliprdrWrite(state);
+  }
+  if (desc && desc.includes('CB_FORMAT_LIST') && !desc.includes('CB_FORMAT_LIST_RESPONSE')) {
+    state.cliprdrServerFormatListSeen = true;
+    if (Array.isArray(state.pendingClientCliprdr) && state.pendingClientCliprdr.length > 0) {
+      state.pendingClientCliprdr = [];
+    }
+    const isIo = state.ioChannelId != null && channelId === state.ioChannelId;
+    if (!isIo && state.wallixService !== 'RDP') {
+      confirmCliprdrWriteChannel(state, channelId);
+    }
   }
 
   // El selector a veces saluda por rdpsnd/rdpdr y a veces por 1001 o el canal IO,

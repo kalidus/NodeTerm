@@ -196,12 +196,20 @@ describe('CLIPRDR: filtrado de frames del servidor', () => {
     const middle = buildMcsIndication(1004, buildChannelPdu(Buffer.alloc(1400), 0, total));
     const last = buildMcsIndication(1004, buildChannelPdu(Buffer.alloc(1288), CHANNEL_FLAG_LAST, total));
 
-    for (const frame of [first, middle, last]) {
-      const res = processServerFrame(state, frame);
-      assert.equal(res.dropped, false);
-      assert.equal(res.channelId, 1004);
-      assert.deepEqual(res.forward, frame);
-    }
+    const resFirst = processServerFrame(state, first);
+    assert.equal(resFirst.dropped, false);
+    assert.equal(resFirst.channelId, 1004);
+    assert.equal(resFirst.buffered, true);
+
+    const resMid = processServerFrame(state, middle);
+    assert.equal(resMid.dropped, false);
+    assert.equal(resMid.channelId, 1004);
+    assert.equal(resMid.buffered, true);
+
+    const resLast = processServerFrame(state, last);
+    assert.equal(resLast.dropped, false);
+    assert.equal(resLast.channelId, 1004);
+    assert.ok(resLast.forward && resLast.forward.length > 0);
   });
 
   test('el trafico del canal de usuario 1001 sigue sin reenviarse a WASM', () => {
@@ -426,7 +434,7 @@ describe('CLIPRDR: bastion Wallix que usa otro canal MCS', () => {
     const resFirst = processServerFrame(state, first);
     assert.equal(resFirst.dropped, false);
     assert.equal(resFirst.isCliprdr, true);
-    assert.equal(resFirst.forward.readUInt16BE(10), 1004);
+    assert.equal(resFirst.buffered, true);
     assert.equal(state.cliprdrOnUnsafeChannel, 1001);
     assert.equal(state.serverCliprdrChannelId, 1001);
     assert.equal(state.unsafeCliprdrFragmentOpen, true);
@@ -434,7 +442,7 @@ describe('CLIPRDR: bastion Wallix que usa otro canal MCS', () => {
     const middle = buildMcsIndication(1001, buildChannelPdu(Buffer.alloc(1600, 0xab), 0, total));
     const resMid = processServerFrame(state, middle);
     assert.equal(resMid.dropped, false);
-    assert.equal(resMid.forward.readUInt16BE(10), 1004);
+    assert.equal(resMid.buffered, true);
 
     const last = buildMcsIndication(1001, buildChannelPdu(Buffer.alloc(722, 0xcd), CHANNEL_FLAG_LAST, total));
     const resLast = processServerFrame(state, last);
@@ -703,7 +711,7 @@ describe('CLIPRDR: robustez del filtro', () => {
     const userData = buildChannelPdu(Buffer.alloc(24));
 
     const res = handleDvcRequest(1004, 1005, userData);
-    assert.equal(res.handled, false);
+    assert.equal(res.handled, true);
     assert.deepEqual(res.replies, []);
   });
 
@@ -1358,5 +1366,8 @@ describe('CLIPRDR: destino de datos con saludo inseguro', () => {
       [1006, 'cliprdr']
     ]);
     assert.equal(unsafeCliprdrClientWriteDest(state, 1003), null);
+    state.cliprdrServerFormatListSeen = true;
+    assert.equal(unsafeCliprdrClientWriteDest(state, 1003), 1003, 'tras FORMAT_LIST del servidor en IO escribe en 1003');
   });
 });
+

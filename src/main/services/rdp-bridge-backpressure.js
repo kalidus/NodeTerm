@@ -22,10 +22,10 @@ const {
 const MAX_PENDING_FRAMES = 24;
 const MAX_PENDING_BYTES = 1024 * 1024;
 
-/** Bastión: umbral bajo para empezar a descartar (WASM aún no ha acumulado mucho). */
-const WS_HIGH_WATER_MARK = 64 * 1024; // 64 KB
+/** Bastión: umbral para empezar a encolar cuando el socket local se satura. */
+const WS_HIGH_WATER_MARK = 128 * 1024; // 128 KB
 /** Reanudar envío del bitmap pendiente. */
-const WS_LOW_WATER_MARK = 16 * 1024; // 16 KB
+const WS_LOW_WATER_MARK = 32 * 1024; // 32 KB
 /** Solo path directo: pausa TLS como ultimo recurso anti-OOM, no al primer pico. */
 const WS_PAUSE_TLS_MARK = 2 * 1024 * 1024; // 2 MB
 /** Máx. ms de rewrite RLE por evento TLS en bastión (el resto se shed). */
@@ -302,6 +302,7 @@ class BridgeLatencyMetrics {
 class WsBackpressureController {
   constructor(opts = {}) {
     this.bastion = opts.bastion === true;
+    this.hopPending = opts.hopPending !== false;
     this.metrics = opts.metrics || null;
     this.highWater = opts.highWater != null ? opts.highWater : WS_HIGH_WATER_MARK;
     this.lowWater = opts.lowWater != null ? opts.lowWater : WS_LOW_WATER_MARK;
@@ -401,8 +402,9 @@ class WsBackpressureController {
       this._stashBitmap(frame, 'queue');
       return true;
     }
-    // El presupuesto RLE solo existe en bastion. En directo no hay rewrite.
-    if (this.bastion && this._rewriteSpentMs >= this.rewriteBudgetMs) {
+    // El presupuesto RLE solo existe en bastion durante el hop/banner de inicio.
+    // En directo y en sesion activa de escritorio no se frena el dibujo a 3ms.
+    if (this.bastion && this.hopPending && this._rewriteSpentMs >= this.rewriteBudgetMs) {
       this._stashBitmap(frame, 'budget');
       return true;
     }
@@ -421,7 +423,7 @@ class WsBackpressureController {
     this.noteBufferedAmount(bufferedAmount);
     if (this.pendingBitmaps.length === 0) return null;
     if (!force && bufferedAmount > this.lowWater) return null;
-    if (!ignoreBudget && this._rewriteSpentMs >= this.rewriteBudgetMs) return null;
+    if (!ignoreBudget && this.bastion && this.hopPending && this._rewriteSpentMs >= this.rewriteBudgetMs) return null;
     const pending = this.pendingBitmaps.map((p) => p.buf);
     this.pendingBitmaps = [];
     this._pendingBytes = 0;
@@ -440,7 +442,7 @@ class WsBackpressureController {
     this.noteBufferedAmount(bufferedAmount);
     if (this.pendingBitmaps.length === 0) return null;
     if (!force && bufferedAmount > this.lowWater) return null;
-    if (!ignoreBudget && this._rewriteSpentMs >= this.rewriteBudgetMs) return null;
+    if (!ignoreBudget && this.bastion && this.hopPending && this._rewriteSpentMs >= this.rewriteBudgetMs) return null;
     const next = this.pendingBitmaps.shift();
     this._pendingBytes -= next.buf.length;
     if (this._pendingBytes < 0) this._pendingBytes = 0;

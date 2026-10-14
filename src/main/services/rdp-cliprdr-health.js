@@ -82,7 +82,7 @@ function isServerFormatListDesc(desc, inbound) {
 function resolveCliprdrFailReason(state, health) {
   if (health && health.failReason) return health.failReason;
   if (health && health.pendingRequest) return `pending_${health.pendingRequest}`;
-  if (health && (health.serverFormatList || 0) > 0 && !health.dataRequested) return 'no_data_request';
+  if (health && (health.serverFormatList || 0) > 0 && !health.dataRequested && !health.fileRequested) return 'no_data_request';
   if (!state) return null;
   const writeCh = state.cliprdrWriteChannelId;
   const recovered = !!state.cliprdrRecoveredFromUnsafe || writeCh != null;
@@ -120,8 +120,14 @@ function noteCliprdrHealth(state, desc, opts = {}) {
     health.pendingRequest = requestKind;
     if (requestKind === 'data') {
       health.dataRequested = (health.dataRequested || 0) + 1;
+    } else if (requestKind === 'file') {
+      health.fileRequested = (health.fileRequested || 0) + 1;
     }
     return state;
+  }
+
+  if (desc.includes('CB_LOCK_CLIPDATA')) {
+    health.fileRequested = (health.fileRequested || 0) + 1;
   }
 
   const responseKind = responseKindFromDesc(desc);
@@ -144,7 +150,7 @@ function hasCliprdrFailure(state) {
   const health = state.cliprdrHealth;
   if (health && health.failed) return true;
   if (health && health.pendingRequest) return true;
-  if (health && (health.serverFormatList || 0) > 0 && !health.dataRequested) return true;
+  if (health && (health.serverFormatList || 0) > 0 && !health.dataRequested && !health.fileRequested) return true;
 
   const writeCh = state.cliprdrWriteChannelId;
   const recovered = !!state.cliprdrRecoveredFromUnsafe || writeCh != null;
@@ -240,7 +246,7 @@ function cliprdrWatchKind(state) {
   const health = state && state.cliprdrHealth;
   if (!health) return null;
   if (health.pendingRequest) return 'request';
-  if ((health.serverFormatList || 0) > 0 && !health.dataRequested) return 'list';
+  if ((health.serverFormatList || 0) > 0 && !health.dataRequested && !health.fileRequested) return 'list';
   return null;
 }
 

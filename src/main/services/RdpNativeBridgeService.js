@@ -60,6 +60,7 @@ const {
   enqueueClientCliprdr,
   takePendingClientCliprdr,
   shouldRecordMutedClientCliprdr,
+  cliprdrMustDropShowProtocol,
   rememberClientCliprdrHandshake,
   patchClientCapsGeneralFlags,
   takeCliprdrRehandshake,
@@ -182,13 +183,13 @@ function readDiagValue(name) {
 }
 
 // Wallix (y hosts donde cliprdr como primer VC rompe el saludo) ignoran nombres y
-// :RDP: rdpsnd delante (sin rdpdr para no demorar la sesión fría de Windows ~24s).
-// :APP: rail+rdpdr+rdpsnd delante (requerido por RemoteApp).
+// mapean por indice: anteponer rdpdr/rdpsnd para que cliprdr no sea el unico/primer VC.
+// :RDP: rdpdr+rdpsnd delante. :APP: rail+rdpdr+rdpsnd delante.
 // En directo tambien: sin inject cliprdr queda primero y la sesion no arranca.
 // El filtro alinea rdpsnd/drdynvc por nombre y despacha antes de claimCliprdr
 // (evita SNDC_TRAINING≡TEMP_DIRECTORY y DynVC huerfano).
 // NODETERM_RDP_INJECT_CHANNELS admite un orden o 'off'.
-const RDP_INJECTED_CHANNELS = { before: ['rdpsnd'], after: [] };
+const RDP_INJECTED_CHANNELS = { before: ['rdpdr', 'rdpsnd'], after: [] };
 const APP_INJECTED_CHANNELS = { before: ['rail', 'rdpdr', 'rdpsnd'], after: [] };
 const APP_INJECTED_CHANNELS_RAIL = APP_INJECTED_CHANNELS;
 
@@ -570,7 +571,9 @@ class RdpNativeBridgeService extends EventEmitter {
           recentCliprdrEvents.shift();
         }
         console.warn(`[Bridge] ${line}`);
-        emitClipboardUnhealthy(kind === 'request' ? 'pending_data' : 'no_data_request');
+        if (kind === 'request') {
+          emitClipboardUnhealthy('pending_data');
+        }
       }, CLIPRDR_WATCH_MS);
     };
 
@@ -1213,6 +1216,16 @@ class RdpNativeBridgeService extends EventEmitter {
                 }
               };
 
+              const isHopPending = () => {
+                if (channelFilter.bannerBitmapsDropped === true) return false;
+                if (channelFilter.cliprdrMonitorReadyCount > 0) return false;
+                if (channelFilter.cliprdrServerReady === true) return false;
+                if (timeline.has('dvc-caps-hacia-wasm')) return false;
+                if (timeline.has('egfx-graphics-create')) return false;
+                if (timeline.has('egfx-caps-no-create')) return false;
+                return true;
+              };
+
               // El banner deja de valer en el salto: tirarlo evita reescribir RLE a 3 ms/tick.
               // EGFX o bastion: en ambos la cola stale bloquea el hop si no hay caps/2o DA.
               dropStaleBannerBitmaps = (reason) => {
@@ -1220,6 +1233,7 @@ class RdpNativeBridgeService extends EventEmitter {
                 const dropped = backpressure.dropPending();
                 try { bitmapReassembler.reset(); } catch (e) {}
                 channelFilter.bannerBitmapsDropped = true;
+                backpressure.hopPending = false;
                 const markReason = reason === 'post-banner-sin-dvc'
                   || reason === 'selector-promote'
                   || reason === 'selector-hop'
@@ -1236,16 +1250,19 @@ class RdpNativeBridgeService extends EventEmitter {
               };
 
               // Bastion: reescribe pendientes hasta gastar el presupuesto (~3 ms) y deja el resto.
-              // Con 2+ sesiones ya establecidas, tope mas bajo. En hop pre-caps: presupuesto
-              // completo aunque N>1 (mitiga lentitud multi-tab; no inventa DynVC).
+              // En hop inicial: presupuesto de 3 ms para dar paso al ratón y handshake.
+              // En sesión activa de escritorio (hop finalizado): sin límite artificial (60 fps fluidos).
               const rewritePendingSlice = () => {
                 backpressure.beginDataTick();
                 let sent = 0;
-                const hopPending = !timeline.has('dvc-caps-hacia-wasm')
-                  && !timeline.has('egfx-graphics-create');
-                const maxFrames = (this.activeBastionSessions > 1 && !hopPending) ? 8 : 32;
+                const hopPending = isHopPending();
+                backpressure.hopPending = hopPending;
+                const maxFrames = (this.activeBastionSessions > 1 && hopPending) ? 8 : 64;
                 while (sent < maxFrames && backpressure.hasPending()) {
-                  const frame = backpressure.takePendingWithinBudget(ws.bufferedAmount, { force: true });
+                  const frame = backpressure.takePendingWithinBudget(ws.bufferedAmount, {
+                    force: true,
+                    ignoreBudget: !hopPending
+                  });
                   if (!frame) break;
                   rewriteAndSend(frame, 'pending');
                   sent += 1;
@@ -1577,6 +1594,10 @@ class RdpNativeBridgeService extends EventEmitter {
                       dropStaleBannerBitmaps('selector-promote');
                       armPostBannerDvcWatch({ force: true });
                       emitSelectorCliprdrRehandshake('promote');
+                    }
+                    if (processed.cliprdrDesc && processed.cliprdrDesc.includes('CB_FORMAT_LIST')
+                        && !processed.cliprdrDesc.includes('CB_FORMAT_LIST_RESPONSE')) {
+                      channelFilter.cliprdrServerFormatListSeen = true;
                     }
                     if (processed.cliprdrDesc && processed.cliprdrDesc.includes('CB_MONITOR_READY')) {
                       const readyCount = channelFilter.cliprdrMonitorReadyCount || 0;
@@ -1948,8 +1969,9 @@ class RdpNativeBridgeService extends EventEmitter {
                           // o se agotó el presupuesto RLE de este tick.
                           if (backpressure.pendingOverflow()) {
                             if (normalizeBitmaps) {
-                              // Una sola rodaja por evento TLS. El resto sigue en diferido.
-                              if (!bastionSlicedThisTick) {
+                              if (!isHopPending()) {
+                                flushPendingBitmap({ force: true, ignoreBudget: true });
+                              } else if (!bastionSlicedThisTick) {
                                 rewritePendingSlice();
                                 backpressure.exhaustBudget();
                                 bastionSlicedThisTick = true;
@@ -1977,10 +1999,9 @@ class RdpNativeBridgeService extends EventEmitter {
                     }
                   }
                 }
-                // Directo: vaciar ya (enviar no reescribe). Bastion: no reescribir la rafaga
-                // dentro de este callback; una rodaja diferida pinta lo que quede, tambien
-                // si ya no llega mas trafico.
-                if (!normalizeBitmaps && ws.readyState === ws.OPEN) {
+                // Directo y bastion tras hop: vaciar ya (sesion activa sin retraso artificial).
+                // Bastion en hop inicial: una rodaja diferida pinta el banner para no saturar.
+                if ((!normalizeBitmaps || !isHopPending()) && ws.readyState === ws.OPEN) {
                   try {
                     flushPendingBitmap({ force: true, ignoreBudget: true });
                   } catch (_) { /* noop */ }
@@ -2467,7 +2488,46 @@ class RdpNativeBridgeService extends EventEmitter {
       return { forward: null, inject };
     }
 
-    // EGFX ya no enmudece incondicionalmente el portapapeles: se sigue el mismo camino que en Bitmap.
+    // EGFX: un CHANNEL_PDU en 1001 o en el IO (1003) congela el gráfico tras el banner.
+    // Se encola y se acusa al WASM. Sin EGFX se mantiene el camino de bitmap.
+    // Tras promote selector→APP con write al VC nombrado: no mute eterno; escribir ahi.
+    const egfxMuteUnsafe = channelFilter.egfxGraphics === true
+      && (isUserMcsChannel(channelFilter, dest) || destIsIo);
+
+    if (egfxMuteUnsafe) {
+      const named = channelFilter.cliprdrWriteChannelId;
+      const namedSafe = canFlushCliprdrToNamedVc(channelFilter)
+        && named != null
+        && !isUserMcsChannel(channelFilter, named)
+        && (channelFilter.ioChannelId == null || named !== channelFilter.ioChannelId);
+      if (namedSafe) {
+        if (clipDesc && clipDesc.includes('CB_TEMP_DIRECTORY')
+            && channelFilter.wallixService !== 'RDP') {
+          return { forward: null, inject };
+        }
+        synthAck();
+        const out = rewriteMcsChannelId(frame, named) || frame;
+        if (!channelFilter.loggedCliprdrEgfxNamedFlush) {
+          channelFilter.loggedCliprdrEgfxNamedFlush = true;
+          const namedMsg = `[Bridge Clipboard] EGFX: cliprdr al VC nombrado ${named}` +
+            ` (no CHANNEL_PDU en MCS ${dest})`;
+          console.warn(namedMsg);
+          if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(namedMsg);
+          this.emit('diagnostic-log', { category: 'cliprdr', message: namedMsg });
+        }
+        return { forward: out, inject };
+      }
+      synthAck();
+      enqueueClientCliprdr(channelFilter, frame);
+      if (!channelFilter.loggedCliprdrUserMute) {
+        channelFilter.loggedCliprdrUserMute = true;
+        const muteMsg = `⚠️ [Bridge Clipboard] EGFX: cliprdr WASM->RDP encolado: no se escribe CHANNEL_PDU en MCS ${dest} (congela el grafico)`;
+        console.warn(muteMsg);
+        if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(muteMsg);
+        this.emit('diagnostic-log', { category: 'cliprdr-mute', message: muteMsg });
+      }
+      return { forward: null, inject };
+    }
 
     const appProbePayload = channelFilter.wallixService === 'APP'
       && greetingOnUnsafeCliprdr(channelFilter)
@@ -2500,15 +2560,7 @@ class RdpNativeBridgeService extends EventEmitter {
       }
 
       if (clipDesc && clipDesc.includes('CB_TEMP_DIRECTORY')) {
-        // Para service=RDP el TEMPDIR es necesario: el Session Probe de Wallix lo usa
-        // para validar el directorio temporal en la maquina de escritorio de destino.
-        // Solo se descarta cuando el servicio no es RDP (APP/n/a/sin servicio).
-        if (channelFilter.wallixService !== 'RDP') {
-          return { forward: null, inject };
-        }
-        // Para RDP: reenviar TEMPDIR remapeado al write path recuperado.
-        const out = rewriteMcsChannelId(frame, recoveredDest) || frame;
-        return { forward: out, inject, extraForwardsBefore };
+        return { forward: null, inject };
       }
 
       if (isCaps && channelFilter.cliprdrHandshakeSentToRecoveredDestAlready) {
@@ -2557,7 +2609,12 @@ class RdpNativeBridgeService extends EventEmitter {
       channelFilter.cliprdrDataRequested = true;
     }
 
-    const payloadOk = isCliprdrClientPayloadDesc(clipDesc);
+    const isFormatList = clipDesc && clipDesc.includes('CB_FORMAT_LIST')
+      && !clipDesc.includes('CB_FORMAT_LIST_RESPONSE');
+    const isBastionIo = destIsIo && (channelFilter.isBastion || channelFilter.wallixService === 'RDP');
+    const bannerActive = channelFilter.bannerBitmapsDropped !== true && !channelFilter.cliprdrServerFormatListSeen;
+    const payloadOk = isCliprdrClientPayloadDesc(clipDesc)
+      && !(isFormatList && isBastionIo && bannerActive);
     const unsafeDest = unsafeCliprdrClientWriteDest(channelFilter, dest);
     if (payloadOk && unsafeDest != null) {
       let out = unsafeDest === parsed.channelId
@@ -2571,9 +2628,23 @@ class RdpNativeBridgeService extends EventEmitter {
         if (cleaned) out = cleaned;
       }
       const extras = buildAppProbeCliprdrWrites(channelFilter, out, clipDesc);
+      const extraBefore = [...extras.before];
+      const isResponseOrRequest = clipDesc && (
+        clipDesc.includes('CB_FORMAT_LIST_RESPONSE') ||
+        clipDesc.includes('CB_FORMAT_DATA_REQUEST')
+      );
+      if (!isResponseOrRequest
+          && !channelFilter.cliprdrHandshakeSentToRecoveredDest
+          && Buffer.isBuffer(channelFilter.cachedClientCaps)
+          && isSafeStaticCliprdrWrite(channelFilter, unsafeDest)) {
+        channelFilter.cliprdrHandshakeSentToRecoveredDest = true;
+        channelFilter.cliprdrHandshakeSentToRecoveredDestAlready = true;
+        const flags = CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST | CHANNEL_FLAG_SHOW_PROTOCOL;
+        extraBefore.unshift(applyCliprdrReplayFrame(channelFilter.cachedClientCaps, unsafeDest, flags));
+      }
       if (!channelFilter.loggedCliprdrUnsafePayload) {
         channelFilter.loggedCliprdrUnsafePayload = true;
-        const extraNote = extras.before.length
+        const extraNote = extraBefore.length
           ? `; CAPS tambien por ${unsafeDest}`
           : '';
         const mirrorNote = extras.after.length
@@ -2587,7 +2658,7 @@ class RdpNativeBridgeService extends EventEmitter {
       return {
         forward: out,
         inject,
-        extraForwardsBefore: extras.before,
+        extraForwardsBefore: extraBefore,
         extraForwards: extras.after
       };
     }
@@ -2595,6 +2666,9 @@ class RdpNativeBridgeService extends EventEmitter {
     // MCS 1001/1002: CHANNEL_PDU de CAPS/TEMPDIR deja el TLS vivo y congela el grafico.
     // Se encola por si mas tarde se confirma el VC cliprdr estatico (1004).
     if (keepClientCaps) {
+      if (isFormatList && isBastionIo && bannerActive) {
+        return { forward: null, inject };
+      }
       enqueueClientCliprdr(channelFilter, frame);
       if (!channelFilter.loggedCliprdrUserMute) {
         channelFilter.loggedCliprdrUserMute = true;
@@ -2654,6 +2728,15 @@ class RdpNativeBridgeService extends EventEmitter {
     if (!pending.length) return;
     const wasmInjections = [];
     for (const queued of pending) {
+      const parsed = parseMcsSendData(queued);
+      const queuedDesc = parsed ? describeCliprdrPdu(parsed.userData) : null;
+      if (queuedDesc) {
+        if (queuedDesc.includes('CB_TEMP_DIRECTORY')) continue;
+        if (queuedDesc.includes('CB_FORMAT_LIST') && !queuedDesc.includes('CB_FORMAT_LIST_RESPONSE')
+            && channelFilter.cliprdrServerFormatListSeen) {
+          continue;
+        }
+      }
       const { forward, inject, extraForwardsBefore, extraForwards } =
         this.filterClientVirtualChannelFrame(queued, channelFilter);
       const outgoing = [];
@@ -2847,10 +2930,7 @@ class RdpNativeBridgeService extends EventEmitter {
       && handshakeDest != null
       && !channelFilter.channelIdToName.has(handshakeDest);
     const dropTempOnRecovery = unnamedHandshake
-      // Para service=RDP (ESAH/Wallix), TEMPDIR es necesario para el handshake:
-      // no se descarta aunque el write path se haya recuperado de un canal IO.
-      || (channelFilter.cliprdrRecoveredFromUnsafe
-          && channelFilter.wallixService !== 'RDP');
+      || channelFilter.cliprdrRecoveredFromUnsafe;
     if (isClip && clipDesc && clipDesc.includes('CB_TEMP_DIRECTORY') && dropTempOnRecovery) {
       const why = unnamedHandshake
         ? `${handshakeDest} sin nombre`
@@ -2949,7 +3029,8 @@ class RdpNativeBridgeService extends EventEmitter {
     // selector la maquina saluda con 0x3, pero solo acusa el FORMAT_LIST si el
     // cliente mantiene 0x13 (el mismo encuadre que CAPS y TEMPDIR). Limpiar el
     // flag aqui deja la lista en 0x3 y no hay CB_FORMAT_LIST_RESPONSE.
-    const dropShowProtocol = isBastion && canRemap;
+    // Los flags salen directamente intactos (0x13).
+    const dropShowProtocol = false;
     if (dropShowProtocol) {
       const cleaned = clearChannelPduShowProtocol(out, parsed.dataOff);
       if (cleaned) {

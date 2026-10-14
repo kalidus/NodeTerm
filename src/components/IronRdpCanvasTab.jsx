@@ -1607,8 +1607,8 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
             try {
               for (const item of clipboardData.items()) {
                 const mime = typeof item.mimeType === 'function' ? item.mimeType() : (item.mimeType || '');
-                const val = typeof item.value === 'function' ? item.value() : item.value;
                 if (mime.startsWith('text/') || mime === 'text/plain' || !mime) {
+                  const val = typeof item.value === 'function' ? item.value() : item.value;
                   const text = typeof val === 'string'
                     ? val
                     : (val instanceof Uint8Array ? new TextDecoder('utf-8').decode(val) : String(val || ''));
@@ -1636,8 +1636,9 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
               }
             } catch (e) {
               recordClipboardAction('Error en remoteClipboardChangedCallback', e?.message || String(e));
-              console.warn('⚠️ [IronRDP Clipboard] Error en remoteClipboardChangedCallback:', e);
-              markClipboardUnhealthy(e?.message || String(e) || 'remote_clipboard');
+              if (isRdpDebugEnabled()) {
+                console.warn('⚠️ [IronRDP Clipboard] Error en remoteClipboardChangedCallback:', e);
+              }
             }
           });
 

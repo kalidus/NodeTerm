@@ -493,7 +493,7 @@ describe('rdp-dynvc', () => {
     assert.ok(res.note.includes('DisplayControl'));
   });
 
-  it('bastionStub acepta RDS::Input y Video sin reenviar al WASM', () => {
+  it('bastionStub rechaza RDS::Input y Video para preservar FastPath input sin lag', () => {
     clearActiveDvcChannels();
     for (const name of [
       'Microsoft::Windows::RDS::Input',
@@ -508,7 +508,9 @@ describe('rdp-dynvc', () => {
       const res = handleDvcRequest(1005, 1002, cpdu, { bastionStub: true });
       assert.ok(res.handled, name);
       assert.equal(res.forward, false, name);
-      assert.ok(res.note.includes('dvc-accept-stub'), name);
+      assert.ok(res.note.includes('dvc-reject'), name);
+      const mcs = parseMcsSendData(res.replies[0]);
+      assert.equal(mcs.userData.readUInt32LE(10), STATUS_NOT_SUPPORTED);
     }
   });
 

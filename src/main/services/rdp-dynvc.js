@@ -160,16 +160,20 @@ function shouldForwardDvcChannel(channelName, options) {
 
 /**
  * Bastion: SUCCESS local (sin WASM) para canales que Wallix reintenta 20-30 s
- * si ve NOT_SUPPORTED. DisplayControl/Geometry/Video/Input off de verdad: no DATA al WASM.
+ * si ve NOT_SUPPORTED. DisplayControl/Geometry off de verdad: no DATA al WASM.
  * Solo aplica con bastionStub (isBastion); en directo no se usa.
+ *
+ * RDS::Input (MS-RDPEI) y RDS::Video (MS-RDPEV) NUNCA se stub-aceptan:
+ * Si el servidor ve STATUS_SUCCESS pero no hay negociacion RDPEI, Windows entra en
+ * un estado de espera de sincronizacion de entrada y el movimiento de ventanas y
+ * raton sufre un lag extremo. Con STATUS_NOT_SUPPORTED, Windows cae inmediatamente
+ * en FastPath mouse input nativo y fluido.
  */
 function shouldStubAcceptDvc(channelName, options) {
   if (options.bastionStub !== true) return false;
   return isDisplayControlName(channelName)
     || isGeometryName(channelName)
-    || isTelemetryName(channelName)
-    || isRdsInputName(channelName)
-    || isRdsVideoName(channelName);
+    || isTelemetryName(channelName);
 }
 
 function dvcForwardResult(note) {
