@@ -183,13 +183,14 @@ function readDiagValue(name) {
 }
 
 // Wallix (y hosts donde cliprdr como primer VC rompe el saludo) ignoran nombres y
-// mapean por indice: anteponer rdpdr/rdpsnd para que cliprdr no sea el unico/primer VC.
-// :RDP: rdpdr+rdpsnd delante. :APP: rail+rdpdr+rdpsnd delante.
+// mapean por indice: anteponer VCs para que cliprdr no sea el unico/primer VC.
+// :RDP: rdpsnd delante (sin rdpdr: Windows en frio espera ~24 s el Device List).
+// :APP: rail+rdpdr+rdpsnd delante (requerido por RemoteApp).
 // En directo tambien: sin inject cliprdr queda primero y la sesion no arranca.
 // El filtro alinea rdpsnd/drdynvc por nombre y despacha antes de claimCliprdr
 // (evita SNDC_TRAINING≡TEMP_DIRECTORY y DynVC huerfano).
 // NODETERM_RDP_INJECT_CHANNELS admite un orden o 'off'.
-const RDP_INJECTED_CHANNELS = { before: ['rdpdr', 'rdpsnd'], after: [] };
+const RDP_INJECTED_CHANNELS = { before: ['rdpsnd'], after: [] };
 const APP_INJECTED_CHANNELS = { before: ['rail', 'rdpdr', 'rdpsnd'], after: [] };
 const APP_INJECTED_CHANNELS_RAIL = APP_INJECTED_CHANNELS;
 
@@ -256,6 +257,16 @@ function resolveInjectedChannels(session) {
 }
 
 const TRAFFIC_STATS_INTERVAL_MS = 15000;
+
+/**
+ * Tope de frames por rodaja RLE en bastion.
+ * Hop (sin caps/CREATE): presupuesto completo aunque N>1 (2ª sesion no se ahoga).
+ * Sesiones ya establecidas con N>1: tope 8 (fairness).
+ */
+function bastionHopMaxFrames(activeBastionSessions, hopPending) {
+  const n = Number(activeBastionSessions) || 0;
+  return (n > 1 && hopPending !== true) ? 8 : 64;
+}
 
 function rdpDebug() {
   return process.env.NODETERM_RDP_DEBUG === '1' || readDiagFlag('NODETERM_RDP_DEBUG');
@@ -361,11 +372,21 @@ class RdpNativeBridgeService extends EventEmitter {
     this.activeBastionSessions = 0;
   }
 
+  /** Recuento al vuelo de filtros bastion vivos (evita fugas del contador +/-). */
+  countActiveBastionSessions() {
+    let n = 0;
+    for (const conn of this.activeConnections.values()) {
+      if (conn && conn.channelFilter && conn.channelFilter.isBastion === true) n += 1;
+    }
+    return n;
+  }
+
   /**
-   * Propaga bastionOverlap a todos los filters bastion activos.
+   * Actualiza activeBastionSessions desde conexiones vivas y propaga bastionOverlap.
    * N>1 → passthrough RLE en hop pendiente (mitiga 2ª sesion lenta).
    */
   syncBastionOverlapFlags() {
+    this.activeBastionSessions = this.countActiveBastionSessions();
     const overlap = this.activeBastionSessions > 1;
     for (const conn of this.activeConnections.values()) {
       const filter = conn && conn.channelFilter;
@@ -373,6 +394,7 @@ class RdpNativeBridgeService extends EventEmitter {
         filter.bastionOverlap = overlap;
       }
     }
+    return this.activeBastionSessions;
   }
 
   /**
@@ -650,14 +672,13 @@ class RdpNativeBridgeService extends EventEmitter {
     const normalizeBitmaps = channelFilter.isBastion === true;
     let bastionSessionCounted = false;
     if (normalizeBitmaps) {
-      this.activeBastionSessions += 1;
       bastionSessionCounted = true;
-      this.syncBastionOverlapFlags();
+      const n = this.syncBastionOverlapFlags();
       const bastionSvc = channelFilter.wallixService || 'n/a';
-      const overlapNote = this.activeBastionSessions > 1 ? ' (solape multi-sesion)' : '';
+      const overlapNote = n > 1 ? ' (solape multi-sesion)' : '';
       console.log(
         `[Bridge] bastion session open: service=${bastionSvc} ` +
-        `activeBastionSessions=${this.activeBastionSessions}${overlapNote}`
+        `activeBastionSessions=${n} activeConnections=${this.activeConnections.size}${overlapNote}`
       );
     }
     let directPostNlaDeframer = false;
@@ -909,10 +930,12 @@ class RdpNativeBridgeService extends EventEmitter {
       clearPostBannerDvcTimer();
       if (bastionSessionCounted) {
         bastionSessionCounted = false;
-        this.activeBastionSessions = Math.max(0, this.activeBastionSessions - 1);
-        this.syncBastionOverlapFlags();
+        // Quitar del recuento antes de sync (delete del Map es mas tarde).
+        channelFilter.isBastion = false;
+        const n = this.syncBastionOverlapFlags();
         console.log(
-          `[Bridge] bastion session close: activeBastionSessions=${this.activeBastionSessions}`
+          `[Bridge] bastion session close: activeBastionSessions=${n} ` +
+          `activeConnections=${this.activeConnections.size}`
         );
       }
       clearCliprdrWatch();
@@ -1250,14 +1273,13 @@ class RdpNativeBridgeService extends EventEmitter {
               };
 
               // Bastion: reescribe pendientes hasta gastar el presupuesto (~3 ms) y deja el resto.
-              // En hop inicial: presupuesto de 3 ms para dar paso al ratón y handshake.
-              // En sesión activa de escritorio (hop finalizado): sin límite artificial (60 fps fluidos).
+              // Hop: presupuesto completo aunque N>1. Post-hop con N>1: tope 8 (fairness).
               const rewritePendingSlice = () => {
                 backpressure.beginDataTick();
                 let sent = 0;
                 const hopPending = isHopPending();
                 backpressure.hopPending = hopPending;
-                const maxFrames = (this.activeBastionSessions > 1 && hopPending) ? 8 : 64;
+                const maxFrames = bastionHopMaxFrames(this.activeBastionSessions, hopPending);
                 while (sent < maxFrames && backpressure.hasPending()) {
                   const frame = backpressure.takePendingWithinBudget(ws.bufferedAmount, {
                     force: true,
@@ -3319,6 +3341,7 @@ class RdpNativeBridgeService extends EventEmitter {
       try { if (conn.targetSocket) conn.targetSocket.destroy(); } catch (e) {}
     }
     this.activeConnections.clear();
+    this.activeBastionSessions = 0;
 
     if (this.wss) {
       try { this.wss.close(); } catch (e) {}
@@ -3350,3 +3373,4 @@ module.exports.shouldSanitizeBastionConfirm = shouldSanitizeBastionConfirm;
 /** Solo silencia logs; el bridge SIEMPRE escribe processed.replies en drops. */
 module.exports.isNoisyDrop = isNoisyDrop;
 module.exports.isInterestingDvcTimelineNote = isInterestingDvcTimelineNote;
+module.exports.bastionHopMaxFrames = bastionHopMaxFrames;

@@ -949,18 +949,16 @@ function isBastionRdpHopBitmapPassthrough(_state) {
 }
 
 /**
- * Bastion con solape (N>1) aun en hop pre-caps/CREATE: mismo alivio RLE que el
- * menu n/a. No usa egfxGraphics de config (a menudo true desde el inicio).
- * APP/RDP solos (N=1) no cumplen.
+ * Solape N>1 hop-passthrough REVERTIDO: mismo fallo que N=1 RDP (pantalla negra,
+ * DynVC ausente, post-banner-sin-dvc ~40s). La 2ª sesion necesita rewrite RLE
+ * igual que la primera; el tope bastionHopMaxFrames ya limita fairness post-hop.
+ * @returns {false}
  */
-function isBastionOverlapHopBitmapPassthrough(state) {
-  if (!state || state.isBastion !== true) return false;
-  if (state.bastionOverlap !== true) return false;
-  if (state.dvcCapsSeen === true || state.loggedEgfxGraphicsCreate === true) return false;
-  return true;
+function isBastionOverlapHopBitmapPassthrough(_state) {
+  return false;
 }
 
-/** Menu n/a o hop bajo solape: bitmaps sin rewrite RLE. */
+/** Solo menu n/a: bitmaps sin rewrite RLE. El hop bajo solape ya no hace passthrough. */
 function shouldBastionBitmapPassthrough(state) {
   return isSelectorMenuBitmapPassthrough(state)
     || isBastionOverlapHopBitmapPassthrough(state);

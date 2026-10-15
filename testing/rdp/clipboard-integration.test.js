@@ -1115,14 +1115,14 @@ describe('CLIPRDR: robustez del filtro', () => {
     assert.equal(isBastionRdpHopBitmapPassthrough(state), false, 'N=1 RDP no passthrough');
   });
 
-  test('isBastionOverlapHopBitmapPassthrough solo N>1 y hop pendiente', () => {
+  test('isBastionOverlapHopBitmapPassthrough: revertido (igual que N=1 RDP)', () => {
     const state = stateWithCliprdr();
     state.isBastion = true;
     state.wallixService = 'RDP';
     state.bastionOverlap = false;
     assert.equal(isBastionOverlapHopBitmapPassthrough(state), false, 'RDP solo sin overlap');
     state.bastionOverlap = true;
-    assert.equal(isBastionOverlapHopBitmapPassthrough(state), true, 'RDP + overlap pre-caps');
+    assert.equal(isBastionOverlapHopBitmapPassthrough(state), false, 'RDP + overlap pre-caps');
     state.dvcCapsSeen = true;
     assert.equal(isBastionOverlapHopBitmapPassthrough(state), false, 'tras dvc caps');
     state.dvcCapsSeen = false;
@@ -1132,14 +1132,14 @@ describe('CLIPRDR: robustez del filtro', () => {
     state.egfxGraphics = true;
     assert.equal(
       isBastionOverlapHopBitmapPassthrough(state),
-      true,
-      'egfxGraphics de config no bloquea passthrough'
+      false,
+      'egfxGraphics de config tampoco activa passthrough'
     );
     state.isBastion = false;
     assert.equal(isBastionOverlapHopBitmapPassthrough(state), false, 'no bastion');
   });
 
-  test('shouldBastionBitmapPassthrough une menu n/a y overlap hop', () => {
+  test('shouldBastionBitmapPassthrough solo menu n/a (overlap hop revertido)', () => {
     const menu = stateWithCliprdr();
     menu.wallixService = 'n/a';
     menu.isBastion = true;
@@ -1155,7 +1155,7 @@ describe('CLIPRDR: robustez del filtro', () => {
     rdpOverlap.isBastion = true;
     rdpOverlap.wallixService = 'RDP';
     rdpOverlap.bastionOverlap = true;
-    assert.equal(shouldBastionBitmapPassthrough(rdpOverlap), true, 'RDP N>1 hop');
+    assert.equal(shouldBastionBitmapPassthrough(rdpOverlap), false, 'RDP N>1 hop sin passthrough');
     rdpOverlap.dvcCapsSeen = true;
     assert.equal(shouldBastionBitmapPassthrough(rdpOverlap), false, 'RDP post-caps');
   });
