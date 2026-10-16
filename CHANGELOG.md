@@ -8,8 +8,44 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ## [Unreleased]
 
-### Seguridad
-- **Master key / upgrade**: validacion vault-first al desbloquear; si el `vaultVerifier` no coincide con los datos cifrados, se prueba descifrado de `connections_encrypted` y se repara `security.json`. Migracion silenciosa al arrancar desde formatos 1.7.x; dialogo de restore nube con prioridad sobre unlock.
+## [1.7.7] - 2026-10-16
+
+### RDP IronRDP, EGFX y Wallix
+- **EGFX opt-in**: Renderizado Enhanced Graphics (H.264/WebGPU, Progressive, audio rdpsnd) con soft-fail a RFX; interruptor unico por conexion.
+- **Canales virtuales**: Capa alineada con mstsc por defecto; CS_NET/cliprdr del selector Wallix al baseline; DynVC aislado por sesion.
+- **Bastion Wallix**: Cold-start endurecido (Session Probe, hop post-banner, RLE24); sin FIN por flush cliprdr; sin promover selector en el menu.
+- **Clipboard CLIPRDR**: Stream de descargas a disco con cancelacion; sync APP/RDP via bastion; limite de texto para no cerrar el WebSocket.
+- **Display y HiDPI**: DisplayControl al redimensionar; opcion Ajuste HiDPI para bastion y directo; canvas EGFX 1:1 sin huecos negros.
+- **Rendimiento RDP**: Latest-wins/RLE, coalescing WS, backpressure en bridge, cursores remotos; liberacion GPU/workers al ocultar o desconectar.
+- **WASM**: IronRDP congelado en `third_party/ironrdp`; precarga en idle; eleccion de cliente RDP al importar/refrescar Wallix.
+
+### HomeTab, launcher y UI
+- **Home**: Fondos personalizados, blur/opacidad unificada, widget reloj/fecha/clima (estilo Overdrop), buscador en recientes.
+- **Launcher**: Acciones rapidas configurables, selector de terminal por defecto al pulsar +, Notas en el menu.
+- **Tabs y favoritos**: Grupos como segunda fila de tabs; subcarpetas anidadas en favoritos; notas reutilizan pestana en foco.
+- **Temas**: 8 temas premium de iconos de accion; tamano de letra de interfaz unificado.
+
+### Passwords, vault y seguridad
+- **Vault**: Vista detalle Modern Vault; importacion universal CSV de contrasenas.
+- **Master key**: Unlock vault-first con reparacion de `security.json`; cifrado con safeStorage y verifier PBKDF2; multi-instancia con sync de safeStorage.
+- **Hardening**: Confinamiento navegacion/webviews (H-08), path traversal impresion RDP (H-10), import async (H-09), IP injection (H-15), process kill (H-16/17), clipboard auto-clear 30s (H-12), deps/overrides (H-20), polyfills (H-19).
+
+### Herramientas, SSL y browser
+- **SSL Checker**: Score/grado estilo SSL Labs, confianza del certificado, ciphers en uso y export PDF.
+- **HTTP Headers**: Resultados compactos, cabeceras reales y informe PDF.
+- **Tools**: Historial automatico de escaneos; pestana de herramientas reutilizable como notas.
+- **Browser**: Ventana minima sin chrome para enlaces; boton en sidebar.
+
+### Terminal, SSH y arranque
+- **Logs**: Resaltado de tokens (email, puerto, git, journalctl) sin romper vim/htop/fish/URLs; enriquecimiento en WSL/PowerShell.
+- **Clipboard local**: Copiar/pegar y menu contextual en terminales locales y HomeTab.
+- **Startup**: UI sin esperar app-data; telemetria/WSL/IronRDP diferidos al primer frame; menos presion de RAM en PCs justos.
+- **IPC**: Micro-batching de terminales; cache O(1) de favoritos; limpieza de listeners/timers huerfanos.
+
+### Build, licencia y apps
+- **Linux**: Zsync embebido en AppImage para actualizaciones.
+- **Licencia**: De ISC a GPL-3.0 con aviso comercial.
+- **Apps**: Gemini CLI retirado; Cygwin/Guacamole no se cargan si estan desactivados.
 
 ## [1.7.6] - 2026-09-23
 
