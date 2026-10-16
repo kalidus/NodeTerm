@@ -602,6 +602,30 @@ describe('drdynvc remap DisplayControl', () => {
     assert.ok((res.note || '').includes('dvc-forward-caps-quick'));
   });
 
+  it('solape Wallix: DynVC CAPS en IO 1003 no se tira como invalid-share-control', () => {
+    // Hex real de nodeterm-RDP-2026-10-16T10-10-22 (solape): CAPS por ch=1003.
+    const frame = Buffer.from(
+      '0300002202f08068000003eb70140c000000030000005c000300333311113d0aa704',
+      'hex'
+    );
+    const state = injectedDrdynvcState();
+    state.isBastion = true;
+    state.virtualChannels = true;
+    state.egfxGraphics = true;
+    state.wallixService = 'RDP';
+
+    const res = processServerFrame(state, frame);
+    assert.equal(res.dropped, false, res.note);
+    assert.equal(res.dvcForward, true);
+    assert.ok(res.forward, 'debe llegar al WASM (remap a drdynvc)');
+    assert.equal(res.replies.length, 1, 'caps-quick reply al servidor en IO');
+    assert.equal(state.egfxCapsRepliedByBridge, true);
+    assert.ok((res.note || '').includes('dvc-forward-caps-quick'));
+    assert.ok(!(res.note || '').includes('invalid-share-control'));
+    // Reply simetrico: mismo canal wire (1003), no 1007.
+    assert.equal(parseMcsSendData(res.replies[0]).channelId, 1003);
+  });
+
   it('sigue rechazando Geometry aunque WASM declare drdynvc', () => {
     const state = injectedDrdynvcState();
     const p = path.join(__dirname, 'frames/from-18-66b.hex');

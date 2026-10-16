@@ -2189,6 +2189,124 @@ function remapServerDrdynvcFrame(state, buf, incomingChannelId) {
   return rewriteMcsChannelId(buf, wasmId) || buf;
 }
 
+/**
+ * DynVC en un canal MCS concreto (1007 declarado, 1001, o IO 1003 en solape).
+ * @returns {object|null} resultado processServerFrame, o null si no es DynVC.
+ */
+function processServerDrdynvcOnChannel(state, frame, channelId, userData) {
+  if (!state || !Buffer.isBuffer(userData) || !isChannelPduHeader(userData)) return null;
+
+  const dropCont = consumeDrdynvcDropContinuation(state, channelId, userData);
+  if (dropCont) return dropCont;
+
+  const allowDisplayControl = wasmDeclaredDrdynvc(state);
+  const allowGraphics = wasmAllowsGraphicsDvc(state);
+  const allowAudio = wasmAllowsAudioDvc(state);
+  const bastionStub = state.isBastion === true;
+  const passthroughDrdynvcFrags = allowGraphics || allowDisplayControl || allowAudio;
+  const dvc = handleDvcRequest(channelId, state.clientInitiator, userData, {
+    allowDisplayControl,
+    allowGraphics,
+    allowAudio,
+    bastionStub,
+    activeDvcChannels: state.activeDvcChannels
+  });
+  if (!dvc.handled) return null;
+
+  if (dvc.forward) {
+    if (dvc.note && /AUDIO_PLAYBACK/i.test(dvc.note)) {
+      logAudioOnce(state, 'loggedAudioDvc', `[Bridge] Audio: forward ${dvc.note}`);
+    }
+    if (dvc.capsQuickReply) state.egfxCapsRepliedByBridge = true;
+    if (state.isBastion === true) {
+      return {
+        forward: remapServerDrdynvcFrame(state, frame, channelId),
+        replies: dvc.replies || [],
+        dropped: false,
+        note: dvc.note || channelPduHint(userData),
+        channelId,
+        isCliprdr: false,
+        cliprdrDesc: null,
+        dvcForward: true
+      };
+    }
+    const dvcReasm = applyStaticVcReasmForward(
+      state,
+      'drdynvc',
+      frame,
+      channelId,
+      userData,
+      remapServerDrdynvcFrame
+    );
+    if (dvcReasm.status === 'buffer') {
+      return {
+        forward: null,
+        replies: dvc.replies || [],
+        dropped: false,
+        buffered: true,
+        note: dvcReasm.note,
+        channelId,
+        isCliprdr: false,
+        cliprdrDesc: null,
+        dvcForward: true
+      };
+    }
+    if (dvcReasm.status === 'drop') {
+      markDropped(state, channelId);
+      return {
+        forward: null,
+        replies: dvc.replies || [],
+        dropped: true,
+        note: dvcReasm.note,
+        channelId,
+        isCliprdr: false,
+        cliprdrDesc: null
+      };
+    }
+    return {
+      forward: dvcReasm.frame,
+      replies: dvc.replies || [],
+      dropped: false,
+      note: dvc.note || dvcReasm.note || channelPduHint(userData),
+      channelId,
+      isCliprdr: false,
+      cliprdrDesc: null,
+      dvcForward: true
+    };
+  }
+
+  if (passthroughDrdynvcFrags && dvc.note && /passthrough/i.test(dvc.note)
+      && !(state.serverDrdynvcDropFragmentOpen
+        && state.serverDrdynvcDropChannelId === channelId)) {
+    const chFlags = userData.length >= 8 ? userData.readUInt32LE(4) : 0;
+    if (state.isBastion === true) {
+      return {
+        forward: remapServerDrdynvcFrame(state, frame, channelId),
+        replies: [],
+        dropped: false,
+        note: `dvc-passthrough-frag ch=${channelId} flags=0x${chFlags.toString(16)} len=${userData.length}B`,
+        channelId,
+        isCliprdr: false,
+        cliprdrDesc: null,
+        dvcForward: true
+      };
+    }
+  }
+
+  logAudioDvcRejectOnce(state, dvc.note);
+  noteDrdynvcAbsorbedFragment(state, channelId, userData);
+  markDropped(state, channelId);
+  return {
+    forward: null,
+    replies: dvc.replies || [],
+    dropped: true,
+    note: `${dvc.note || channelPduHint(userData)} hex=${userData.toString('hex').slice(0, 48)}`,
+    channelId,
+    isCliprdr: false,
+    cliprdrDesc: null
+  };
+}
+
 function remapClientRdpsndFrame(state, frame) {
   if (!state || !Buffer.isBuffer(frame) || !wasmAllowsStaticRdpsnd(state)) return frame;
   const parsed = parseMcsSendData(frame);
@@ -2779,6 +2897,16 @@ function processServerFrame(state, buf) {
 
   const siphoned = consumeAutodetect(state, channelId, parsed.userData, false);
   if (siphoned) return siphoned;
+
+  // Solape Wallix RDP: DynVC CAPS/CREATE a veces llega por IO 1003 (no por 1007/1001).
+  // Sin esto filterIoChannelPdu lo tira como invalid-share-control-0x0 → caps=0 y
+  // post-banner-sin-dvc (~35s). mstsc habla DynVC en 1007; el bridge debe aceptar
+  // tambien el homeo por IO.
+  if (isChannelPduHeader(parsed.userData)
+      && (wasmDeclaredDrdynvc(state) || state.drdynvcChannelId != null)) {
+    const ioDvc = processServerDrdynvcOnChannel(state, frame, channelId, parsed.userData);
+    if (ioDvc) return ioDvc;
+  }
 
   const ioDrop = filterIoChannelPdu(state, channelId, parsed.userData);
   if (ioDrop) {
