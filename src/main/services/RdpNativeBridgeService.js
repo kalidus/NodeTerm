@@ -248,9 +248,9 @@ function parseInjectChannelsSpec(requested) {
 /**
  * Capa de canales: 'virtual' (CS_NET = mstsc en los 3 escenarios, SC_NET recortado al WASM
  * por nombre y joins de canales inyectados hechos por el bridge) o 'legacy' (zip por indice
- * + heuristicas). NODETERM_RDP_CHANNELS=virtual|legacy.
+ * + heuristicas). Default virtual; kill-switch NODETERM_RDP_CHANNELS=legacy.
  */
-const CHANNELS_MODE_DEFAULT = 'legacy';
+const CHANNELS_MODE_DEFAULT = 'virtual';
 
 function resolveChannelsMode() {
   const v = readDiagValue('NODETERM_RDP_CHANNELS').toLowerCase();

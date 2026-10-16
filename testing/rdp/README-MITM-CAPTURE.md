@@ -98,15 +98,14 @@ Informe: `node testing/rdp/matrix-report.js` (exit 2 si hay diferencias de canal
 
 ## 3d. Capa de canales `virtual` y A/B de latencia (Fases 3-6)
 
-Flag: `NODETERM_RDP_CHANNELS=virtual|legacy` (env o `rdp-flags.json`; default `legacy` hasta validar la matriz).
+Flag: `NODETERM_RDP_CHANNELS=virtual|legacy` (env o `rdp-flags.json`; **default `virtual`**).
 
-- `virtual`: CS_NET = mstsc en los 3 escenarios (APP sin `rail`); SC_NET recortado al WASM con IDs
+- `virtual` (default): CS_NET = mstsc en los 3 escenarios (APP sin `rail`); SC_NET recortado al WASM con IDs
   reales por nombre tambien en bastion; el bridge hace los Channel Join de rdpdr/rdpsnd al llegar el
   Attach User Confirm y absorbe sus Join Confirm. Log de arranque: `[Bridge] Capa de canales: virtual`.
+- Kill-switch: `NODETERM_RDP_CHANNELS=legacy` (env o `rdp-flags.json`) restaura zip por indice + heuristicas.
 - A/B: capturar cada escenario (selector / rdp / app, frio y solape) con `legacy` y con `virtual`
   (`NODETERM_RDP_TRACE=1`), copiar a `traces/matrix/nodeterm-<escenario>-<frio|solape>-<n>.jsonl` y
   ejecutar `node testing/rdp/matrix-report.js`. Hitos a mirar: `inputToBurst` (clic banner -> escritorio),
   gen1/gen2 cliprdr y `clientAnswerMs`. `node testing/rdp/handshake-diff.js <mstsc> <nodeterm>` compara
   CS_CORE/CS_NET del Connect Initial (requiere trazas nuevas con `hex` completo).
-- Para pasar a `virtual` por defecto: cambiar `CHANNELS_MODE_DEFAULT` en `RdpNativeBridgeService.js`
-  cuando la matriz no muestre diferencias de CS_NET/cliprdr y la latencia sea <= legacy.

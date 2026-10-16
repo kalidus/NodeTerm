@@ -97,7 +97,7 @@ describe('resolveInjectedChannels en modo virtual', () => {
 
   test('valor desconocido cae al default', () => {
     process.env.NODETERM_RDP_CHANNELS = 'otro';
-    assert.equal(svc.resolveChannelsMode(), 'legacy');
+    assert.equal(svc.resolveChannelsMode(), 'virtual');
   });
 });
 
