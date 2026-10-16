@@ -161,12 +161,17 @@ jobs:
           chmod +x "$APP"
           rm -f dist/*.AppImage.blockmap
           node scripts/update-appimage-latest-yml.js "$APP" dist/latest-linux.yml
-          INFO="$("$APP" --appimage-updateinformation 2>&1 || true)"
-          printf '%s\n' "$INFO"
-          case "$INFO" in
-            *'gh-releases-zsync|kalidus|NodeTerm|latest|'*) ;;
-            *) echo "La informacion de actualizacion no quedo embebida"; exit 1 ;;
-          esac
+          # No ejecutar el AppImage en CI: el runtime type2 continuous a menudo
+          # ignora --appimage-updateinformation sin DISPLAY y arranca Electron.
+          if ! grep -aFq 'gh-releases-zsync|kalidus|NodeTerm|latest|' "$APP"; then
+            echo "La informacion de actualizacion no quedo embebida en el AppImage"
+            exit 1
+          fi
+          if [ ! -f "dist/${BASE}.zsync" ]; then
+            echo "Falta dist/${BASE}.zsync"
+            exit 1
+          fi
+          echo "Update info embebida y zsync listo: dist/${BASE}.zsync"
 
       - name: Publish AppImage update metadata
         if: matrix.os == 'ubuntu-latest' && (startsWith(github.ref, 'refs/tags/v') || inputs.publish_release == true)
