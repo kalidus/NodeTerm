@@ -37,6 +37,58 @@ const PACKAGE_JSON_GLOBS = [
   'config/librechat.full.yaml'
 ];
 
+const VENDOR_DEP = 'file:third_party/ironrdp/wasm';
+const VENDOR_JS = 'third_party/ironrdp/wasm/iron-remote-desktop-rdp.js';
+const VENDOR_PKG = 'third_party/ironrdp/wasm/package.json';
+
+/**
+ * El WASM IronRDP NodeTerm viaja congelado en third_party/ironrdp/wasm/; releases no lo recompilan.
+ * @param {object} rootPkg
+ * @returns {string[]}
+ */
+function verifyIronRdpVendor(rootPkg) {
+  const errors = [];
+  const dep = rootPkg.dependencies && rootPkg.dependencies['@devolutions/iron-remote-desktop-rdp'];
+  if (dep !== VENDOR_DEP) {
+    errors.push(
+      `dependencia @devolutions/iron-remote-desktop-rdp debe ser "${VENDOR_DEP}" (actual: ${dep || 'ausente'})`
+    );
+  }
+
+  const jsPath = path.join(REPO_ROOT, VENDOR_JS);
+  const pkgPath = path.join(REPO_ROOT, VENDOR_PKG);
+  if (!fs.existsSync(jsPath)) {
+    errors.push(`falta ${VENDOR_JS}`);
+  }
+  if (!fs.existsSync(pkgPath)) {
+    errors.push(`falta ${VENDOR_PKG}`);
+  }
+  if (errors.length) return errors;
+
+  let vendorPkg;
+  try {
+    vendorPkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+  } catch (err) {
+    errors.push(`no se pudo leer ${VENDOR_PKG}: ${err.message}`);
+    return errors;
+  }
+
+  const ver = String(vendorPkg.version || '');
+  if (!ver.includes('nodeterm-egfx') && !ver.includes('egfx')) {
+    errors.push(`versión vendor inválida (se esperaba *nodeterm-egfx* / *egfx*): ${ver || '(vacía)'}`);
+  }
+
+  const js = fs.readFileSync(jsPath, 'utf8');
+  if (js.length < 1_000_000) {
+    errors.push(`${VENDOR_JS} demasiado pequeño (${js.length} bytes)`);
+  }
+  if (!js.includes('data:application/wasm;base64,')) {
+    errors.push(`${VENDOR_JS} no contiene WASM embebido (data:application/wasm;base64,)`);
+  }
+
+  return errors;
+}
+
 function main() {
   const missing = [];
   for (const rel of REQUIRED_PATHS) {
@@ -57,6 +109,8 @@ function main() {
     unpackGaps.push('falta system-stats-worker.js en build.files');
   }
 
+  const vendorErrors = verifyIronRdpVendor(pkg);
+
   console.log('\n📦 Verificación de empaquetado NodeTerm\n');
   console.log('Rutas runtime requeridas:');
   for (const rel of REQUIRED_PATHS) {
@@ -67,6 +121,14 @@ function main() {
   console.log('\nPatrones en package.json build.files:');
   for (const g of PACKAGE_JSON_GLOBS) {
     console.log(`  ${filesStr.includes(g.replace('/**', '')) || filesStr.includes(g) ? '✅' : '⚠️'} ${g}`);
+  }
+
+  console.log('\nIronRDP WASM vendor (congelado):');
+  if (vendorErrors.length === 0) {
+    const vendorPkg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, VENDOR_PKG), 'utf8'));
+    console.log(`  ✅ ${VENDOR_DEP} → ${vendorPkg.version}`);
+  } else {
+    vendorErrors.forEach((m) => console.log(`  ❌ ${m}`));
   }
 
   if (unpackGaps.length) {
@@ -81,6 +143,11 @@ function main() {
 
   if (unpackGaps.length) {
     console.error('\n❌ Revisa package.json build.files antes de publicar.');
+    process.exit(1);
+  }
+
+  if (vendorErrors.length) {
+    console.error('\n❌ Vendor IronRDP incompleto o no congelado. Releases deben usar file:third_party/ironrdp/wasm.');
     process.exit(1);
   }
 

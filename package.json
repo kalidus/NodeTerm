@@ -37,7 +37,8 @@
     "ironrdp:wasm:build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-ironrdp-wasm.ps1",
     "ironrdp:wasm:vendor": "cross-env NODETERM_RDP_WASM=vendor node scripts/switch-ironrdp-wasm.js",
     "ironrdp:wasm:npm": "cross-env NODETERM_RDP_WASM=npm node scripts/switch-ironrdp-wasm.js",
-    "ironrdp:wasm:measure": "node scripts/measure-ironrdp-egfx.js"
+    "ironrdp:wasm:measure": "node scripts/measure-ironrdp-egfx.js",
+    "ironrdp:wasm:measure:vendor": "node scripts/measure-ironrdp-egfx.js --vendor-only"
   },
   "build": {
     "appId": "com.electron.nodeterm",
@@ -295,7 +296,7 @@
   "description": "Aplicación de escritorio multiplataforma con Electron y PrimeReact",
   "dependencies": {
     "@devolutions/iron-remote-desktop": "^0.11.0",
-    "@devolutions/iron-remote-desktop-rdp": "file:vendor/iron-remote-desktop-rdp",
+    "@devolutions/iron-remote-desktop-rdp": "file:third_party/ironrdp/wasm",
     "@fortawesome/fontawesome-svg-core": "^7.2.0",
     "@fortawesome/free-solid-svg-icons": "^7.2.0",
     "@fortawesome/react-fontawesome": "^3.2.0",

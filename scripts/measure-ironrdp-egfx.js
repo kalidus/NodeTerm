@@ -10,8 +10,8 @@ const path = require('path');
 const assert = require('assert');
 
 const root = path.join(__dirname, '..');
-const vendorJs = path.join(root, 'vendor/iron-remote-desktop-rdp/iron-remote-desktop-rdp.js');
-const vendorPkg = path.join(root, 'vendor/iron-remote-desktop-rdp/package.json');
+const vendorJs = path.join(root, 'third_party/ironrdp/wasm/iron-remote-desktop-rdp.js');
+const vendorPkg = path.join(root, 'third_party/ironrdp/wasm/package.json');
 
 assert.ok(fs.existsSync(vendorJs), 'falta vendor JS');
 assert.ok(fs.existsSync(vendorPkg), 'falta vendor package.json');
@@ -34,6 +34,14 @@ assert.ok(
   'export setRdpsndWaveCallback'
 );
 assert.ok(String(pkg.version).includes('egfx'), `version vendor: ${pkg.version}`);
+assert.ok(js.includes('data:application/wasm;base64,'), 'WASM embebido en base64');
+
+// CI / freeze: solo artefacto vendor (sin asserts del channel-filter).
+if (process.argv.includes('--vendor-only')) {
+  console.log('[measure-ironrdp-egfx] OK (vendor-only)');
+  console.log(`  vendor version=${pkg.version} size=${js.length}`);
+  process.exit(0);
+}
 
 const { RNS_UD_CS_SUPPORT_DYNVC_GFX_PROTOCOL } = require('../src/main/services/rdp-caps-helpers');
 assert.equal(RNS_UD_CS_SUPPORT_DYNVC_GFX_PROTOCOL, 0x0100);

@@ -43,6 +43,9 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
+      - name: Verify IronRDP WASM vendor
+        run: node scripts/measure-ironrdp-egfx.js --vendor-only
+
       - name: Build Webpack
         run: npm run build
 

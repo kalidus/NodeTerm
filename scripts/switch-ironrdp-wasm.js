@@ -2,6 +2,9 @@
 /**
  * Kill-switch IronRDP WASM: vendor (EGFX) <-> npm oficial 0.7.0
  *
+ * Solo para comparación / diagnóstico. Producción y CI deben quedarse en
+ * file:third_party/ironrdp/wasm (artefacto congelado nodeterm-egfx).
+ *
  *   NODETERM_RDP_WASM=vendor|npm node scripts/switch-ironrdp-wasm.js
  *   (por defecto: vendor)
  */
@@ -14,7 +17,7 @@ const root = path.join(__dirname, '..');
 const pkgPath = path.join(root, 'package.json');
 const mode = String(process.env.NODETERM_RDP_WASM || 'vendor').toLowerCase();
 
-const VENDOR = 'file:vendor/iron-remote-desktop-rdp';
+const VENDOR = 'file:third_party/ironrdp/wasm';
 const NPM = '@devolutions/iron-remote-desktop-rdp@^0.7.0';
 
 const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
