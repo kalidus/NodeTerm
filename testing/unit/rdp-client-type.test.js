@@ -29,7 +29,7 @@ describe('resolveRdpClientType', () => {
 
 describe('createRDPNode respeta clientType (contrato Wallix)', () => {
   // Réplica mínima del contrato de ImportService.createRDPNode para no cargar el módulo ESM.
-  function createRDPNode(baseNode, conn) {
+  function createRDPNode(baseNode, conn, resolveOpts = { isWindows: true }) {
     const { resolveRdpClientType: resolve } = require('../../src/utils/rdpClientType');
     return {
       ...baseNode,
@@ -40,7 +40,7 @@ describe('createRDPNode respeta clientType (contrato Wallix)', () => {
         username: conn.username,
         password: conn.password,
         port: parseInt(conn.port, 10) || 3389,
-        clientType: resolve(conn.clientType),
+        clientType: resolve(conn.clientType, resolveOpts),
         autoResize: true,
         guacEnableWallpaper: true,
         redirectAudio: false
@@ -71,14 +71,16 @@ describe('createRDPNode respeta clientType (contrato Wallix)', () => {
     });
     assert.strictEqual(guac.data.clientType, 'guacamole');
 
+    // mstsc solo aplica en Windows; el import se resuelve con isWindows:true
+    // (en CI Linux/macOS process.platform no es win32).
     const mstsc = createRDPNode({ key: 'k3', label: 'Host' }, {
       name: 'Host',
       hostname: 'bastion.example.com',
       username: 'a@d@t:RDP:u',
       password: 'x',
       port: 3389,
-      clientType: resolveRdpClientType('mstsc', { isWindows: true })
-    });
+      clientType: 'mstsc'
+    }, { isWindows: true });
     assert.strictEqual(mstsc.data.clientType, 'mstsc');
   });
 });

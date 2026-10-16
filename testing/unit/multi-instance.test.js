@@ -4,9 +4,14 @@ const path = require('path');
 const fs = require('fs');
 
 test('Multi-instance safeStorage and path resolution', async (t) => {
-  const mainDataDir = process.env.APPDATA 
+  const mainDataDir = process.env.APPDATA
     ? path.join(process.env.APPDATA, 'nodeterm')
     : path.join(require('os').homedir(), '.nodeterm');
+
+  // En CI (Linux/macOS) el perfil puede no existir; crear stub como en Local State.
+  if (!fs.existsSync(mainDataDir)) {
+    fs.mkdirSync(mainDataDir, { recursive: true });
+  }
   assert.ok(fs.existsSync(mainDataDir), 'mainDataDir must exist');
 
   const mainLocalState = path.join(mainDataDir, 'Local State');
