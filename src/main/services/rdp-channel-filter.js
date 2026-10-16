@@ -427,6 +427,18 @@ function applyWasmFacingChannelIds(state, wasmNames, sourceNames, serverIds, idF
   if (clipId != null) state.cliprdrChannelId = clipId;
   state.wasmDrdynvcChannelId = idForName('drdynvc');
   state.wasmRdpsndChannelId = idForName('rdpsnd');
+
+  // Strip cliprdr del CS_NET: el servidor no tiene ese nombre, pero IronRDP sigue
+  // haciendo zip por indice (cliprdr → serverIds[i]). Hay que conocer ese ID para
+  // descartar CAPS/FORMAT_LIST y no reenviarlos al canal real (p.ej. rdpsnd).
+  if (state.omitCliprdrRdpdr === true && state.cliprdrChannelId == null
+      && Array.isArray(wasmNames) && Array.isArray(serverIds)) {
+    const zipIds = resolveWasmZipVisibleIds(wasmNames, serverIds);
+    if (zipIds) {
+      const idx = wasmNames.findIndex((n) => String(n || '').toLowerCase() === 'cliprdr');
+      if (idx >= 0 && zipIds[idx] != null) state.cliprdrChannelId = zipIds[idx];
+    }
+  }
 }
 
 function learnFromServerGcc(state, buf) {
@@ -1538,6 +1550,18 @@ function applyCliprdrReplayFrame(frame, writeCh, flags) {
   return out;
 }
 
+/**
+ * Flags CAPS del rehandshake post-hop (mstsc clipboard: 0x3e tras el 2o READY).
+ * Si el servidor ya ofrecio file-clip, ecoamos esos flags; si no, DEFAULT 0x3e.
+ */
+function resolveRehandshakeCapsFlags(state) {
+  const server = state && state.cliprdrServerGeneralFlags != null
+    ? (state.cliprdrServerGeneralFlags >>> 0)
+    : 0;
+  if ((server & CB_STREAM_FILECLIP_ENABLED) !== 0) return server;
+  return DEFAULT_CLIPRDR_GENERAL_FLAGS;
+}
+
 // El selector completo el handshake con flags 0x13 y generalFlags=0x2. La maquina
 // saluda con 0x3 / 0x3e. Se repite solo CAPS (+ TEMPDIR) hacia el servidor; el
 // MONITOR_READY se reenvia a IronRDP para que forceClipboardUpdate anuncie el
@@ -1557,9 +1581,15 @@ function takeCliprdrRehandshake(state) {
   state.cliprdrHandshakeSentToRecoveredDest = true;
   const flags = CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST | CHANNEL_FLAG_SHOW_PROTOCOL;
   const frames = [];
+  const capsFlags = resolveRehandshakeCapsFlags(state);
   for (const cached of [state.cachedClientCaps, state.cachedClientTempDir]) {
     if (!Buffer.isBuffer(cached)) continue;
-    frames.push(applyCliprdrReplayFrame(cached, writeCh, flags));
+    let frame = applyCliprdrReplayFrame(cached, writeCh, flags);
+    if (cached === state.cachedClientCaps) {
+      const patched = patchClientCapsGeneralFlags(frame, capsFlags);
+      if (patched) frame = patched;
+    }
+    frames.push(frame);
   }
   return frames;
 }
@@ -1578,9 +1608,17 @@ function takeJoinedCliprdrAnswer(state) {
   const initiator = state.clientInitiator || 0;
   const flags = CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST | CHANNEL_FLAG_SHOW_PROTOCOL;
   const frames = [];
-  frames.push(Buffer.isBuffer(state.cachedClientCaps)
-    ? applyCliprdrReplayFrame(state.cachedClientCaps, ch, flags)
-    : buildClientCliprdrCapsFrame(ch, { initiator }));
+  if (Buffer.isBuffer(state.cachedClientCaps)) {
+    let caps = applyCliprdrReplayFrame(state.cachedClientCaps, ch, flags);
+    const patched = patchClientCapsGeneralFlags(caps, resolveRehandshakeCapsFlags(state));
+    if (patched) caps = patched;
+    frames.push(caps);
+  } else {
+    frames.push(buildClientCliprdrCapsFrame(ch, {
+      initiator,
+      generalFlags: resolveRehandshakeCapsFlags(state)
+    }));
+  }
   frames.push(Buffer.isBuffer(state.cachedClientTempDir)
     ? applyCliprdrReplayFrame(state.cachedClientTempDir, ch, flags)
     : buildClientCliprdrTempDirFrame(ch, { initiator }));
@@ -2711,6 +2749,8 @@ module.exports = {
   cliprdrMustDropShowProtocol,
   rememberClientCliprdrHandshake,
   patchClientCapsGeneralFlags,
+  resolveRehandshakeCapsFlags,
+  CB_STREAM_FILECLIP_ENABLED,
   takeCliprdrRehandshake,
   applyCliprdrReplayFrame,
   CHANNEL_FLAG_FIRST,

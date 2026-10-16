@@ -130,6 +130,49 @@ describe('filterServerFrame', () => {
     assert.deepEqual(parseServerNetworkChannels(rewritten.buf).channelIds, [1005, 1006, 1007]);
   });
 
+  it('bastion RDP/selector mstsc: CS_NET rdpdr,rdpsnd,cliprdr,drdynvc mapea IDs reales', () => {
+    // Baseline MITM mstsc: inject before=[rdpdr,rdpsnd]; cliprdr wire = 1006.
+    const ids = [1004, 1005, 1006, 1007];
+    const scLen = 8 + ids.length * 2;
+    const sc = Buffer.alloc(scLen);
+    sc.writeUInt16LE(0x0c03, 0);
+    sc.writeUInt16LE(scLen, 2);
+    sc.writeUInt16LE(1003, 4);
+    sc.writeUInt16LE(ids.length, 6);
+    ids.forEach((id, i) => sc.writeUInt16LE(id, 8 + i * 2));
+    const frame = Buffer.alloc(4 + sc.length);
+    frame[0] = 0x03;
+    frame[1] = 0x00;
+    frame.writeUInt16BE(frame.length, 2);
+    sc.copy(frame, 4);
+
+    assert.deepEqual(
+      resolveWasmAlignedServerIds(
+        ['cliprdr', 'drdynvc'],
+        ['rdpdr', 'rdpsnd', 'cliprdr', 'drdynvc'],
+        ids
+      ),
+      [1006, 1007]
+    );
+
+    const state = createChannelFilterState();
+    state.isBastion = true;
+    state.wallixService = 'n/a';
+    state.wasmChannelNames = ['cliprdr', 'drdynvc'];
+    state.clientChannelNames = ['rdpdr', 'rdpsnd', 'cliprdr', 'drdynvc'];
+    const res = processServerFrame(state, frame);
+    assert.notEqual(res.scNetAligned, true, 'bastion no recorta SC_NET');
+    assert.deepEqual(parseServerNetworkChannels(res.forward).channelIds, ids);
+    assert.equal(state.channelIdToName.get(1004), 'rdpdr');
+    assert.equal(state.channelIdToName.get(1005), 'rdpsnd');
+    assert.equal(state.channelIdToName.get(1006), 'cliprdr');
+    assert.equal(state.channelIdToName.get(1007), 'drdynvc');
+    assert.deepEqual(state.wasmAlignedServerIds, [1006, 1007]);
+    assert.ok(state.injectOnlyChannelIds.has(1004));
+    assert.ok(state.injectOnlyChannelIds.has(1005));
+    assert.ok(!state.injectOnlyChannelIds.has(1006));
+  });
+
   it('bastion APP: no recorta SC_NET; WASM-facing = zip; inject-only = rail/rdpdr/rdpsnd', () => {
     const ids = [1004, 1005, 1006, 1007, 1008];
     const scLen = 8 + ids.length * 2;

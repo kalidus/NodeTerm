@@ -169,6 +169,34 @@ describe('rdpdr stub', () => {
     assert.ok(res.note.includes('saludo por usuario'));
   });
 
+  test('orden mstsc: Announce en VC rdpdr 1004 cierra handshake en el mismo canal', () => {
+    const state = createChannelFilterState();
+    state.ready = true;
+    state.isBastion = true;
+    state.ioChannelId = 1003;
+    state.cliprdrChannelId = 1006;
+    state.clientChannelNames = ['rdpdr', 'rdpsnd', 'cliprdr', 'drdynvc'];
+    state.allowed = new Set([1003, 1004, 1005, 1006, 1007]);
+    state.channelIdToName = new Map([
+      [1004, 'rdpdr'],
+      [1005, 'rdpsnd'],
+      [1006, 'cliprdr'],
+      [1007, 'drdynvc']
+    ]);
+    state.clientInitiator = 0;
+
+    const frame = buildMcsSendDataIndication(0, 1004, serverAnnounce(13, 0x42));
+    const res = processServerFrame(state, frame);
+
+    assert.equal(res.dropped, true);
+    assert.equal(res.replies.length, 4);
+    for (const reply of res.replies) {
+      assert.equal(parseMcsSendData(reply).channelId, 1004);
+    }
+    assert.equal(state.rdpdrHandshakeComplete, true);
+    assert.equal(state.rdpdrReplyChannelId, 1004);
+  });
+
   test('anuncio rdpdr en MCS 1001 sin VC rdpdr no se contesta', () => {
     const state = createChannelFilterState();
     state.ready = true;

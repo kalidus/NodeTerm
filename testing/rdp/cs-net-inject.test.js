@@ -3,6 +3,7 @@ const assert = require('node:assert');
 
 const {
   injectClientNetworkChannels,
+  removeClientNetworkChannels,
   findClientNetworkChannels,
   prepareMcsConnectInitial,
   CS_NET
@@ -236,6 +237,41 @@ describe('inyeccion de canales en TS_UD_CS_NET', () => {
   });
 });
 
+describe('eliminacion de canales en TS_UD_CS_NET', () => {
+  test('quita cliprdr y rdpdr y recalcula longitudes', () => {
+    const frame = buildMcsConnectInitial([
+      ['rdpsnd', 0x80000000],
+      ['cliprdr', 0xc0a00000],
+      ['rdpdr', 0x80000000],
+      ['drdynvc', 0x80000000]
+    ]);
+    const res = removeClientNetworkChannels(frame, ['cliprdr', 'rdpdr']);
+    assert.equal(res.patched, true);
+    assert.deepEqual(res.removed.sort(), ['cliprdr', 'rdpdr']);
+    assert.deepEqual(findClientNetworkChannels(res.buf), ['rdpsnd', 'drdynvc']);
+    assertLengthsCoherent(res.buf);
+  });
+
+  test('no vacia CS_NET si solo queda un canal a quitar', () => {
+    const frame = buildMcsConnectInitial([['cliprdr', 0xc0a00000]]);
+    const res = removeClientNetworkChannels(frame, ['cliprdr']);
+    assert.equal(res.patched, false);
+    assert.equal(res.reason, 'would-empty-cs-net');
+    assert.equal(res.buf, frame);
+  });
+
+  test('prepare: inject rdpsnd + strip cliprdr/rdpdr (selector)', () => {
+    const frame = buildMcsConnectInitial([['cliprdr', 0xc0a00000], ['drdynvc', 0x80000000]]);
+    const res = prepareMcsConnectInitial(frame, 0x01, {
+      injectChannels: { before: ['rdpsnd'], after: [] },
+      stripChannels: ['cliprdr', 'rdpdr']
+    });
+    assert.deepEqual(findClientNetworkChannels(res.buf), ['rdpsnd', 'drdynvc']);
+    assert.ok(res.notes.some((n) => n.includes('canales eliminados')));
+    assertLengthsCoherent(res.buf);
+  });
+});
+
 describe('prepareMcsConnectInitial con inyeccion', () => {
   test('inyecta y deja el connectPDU de GCC coherente con userData+14', () => {
     const frame = buildMcsConnectInitial([['cliprdr', 0xc0a00000]]);
@@ -285,7 +321,7 @@ describe('prepareMcsConnectInitial con inyeccion', () => {
   });
 });
 
-// Escritorio: rdpsnd delante (sin rdpdr). APP: rail+rdpdr+rdpsnd.
+// Escritorio/selector: rdpdr+rdpsnd delante (baseline mstsc). APP: rail+rdpdr+rdpsnd.
 // cliprdr como primer VC rompe el saludo.
 describe('juego de canales por defecto del bridge', () => {
   const { resolveInjectedChannels } = require('../../src/main/services/RdpNativeBridgeService');
@@ -298,15 +334,15 @@ describe('juego de canales por defecto del bridge', () => {
     else process.env.NODETERM_RDP_INJECT_CHANNELS = previous;
   });
 
-  test('por defecto desplaza cliprdr detras de rdpsnd, sin rdpdr', () => {
-    assert.deepEqual(resolveInjectedChannels(), { before: ['rdpsnd'], after: [] });
+  test('por defecto desplaza cliprdr detras de rdpdr+rdpsnd (orden mstsc)', () => {
+    assert.deepEqual(resolveInjectedChannels(), { before: ['rdpdr', 'rdpsnd'], after: [] });
     assert.deepEqual(
       resolveInjectedChannels({ host: '192.168.10.52', username: 'admin' }),
-      { before: ['rdpsnd'], after: [] }
+      { before: ['rdpdr', 'rdpsnd'], after: [] }
     );
     const frame = buildMcsConnectInitial([['cliprdr', 0xc0a00000]]);
     const res = prepareMcsConnectInitial(frame, 0x01, { injectChannels: resolveInjectedChannels() });
-    assert.deepEqual(findClientNetworkChannels(res.buf), ['rdpsnd', 'cliprdr']);
+    assert.deepEqual(findClientNetworkChannels(res.buf), ['rdpdr', 'rdpsnd', 'cliprdr']);
   });
 
   test("'off' deja la conexion sin tocar", () => {
@@ -327,17 +363,17 @@ describe('juego de canales por defecto del bridge', () => {
     assert.deepEqual(findClientNetworkChannels(res.buf), ['rail', 'rdpdr', 'rdpsnd', 'cliprdr']);
   });
 
-  test('cadena :RDP: desplaza cliprdr detras de rdpsnd, sin rdpdr ni importar el hostname', () => {
+  test('cadena :RDP: desplaza cliprdr detras de rdpdr+rdpsnd (orden mstsc)', () => {
     const sessions = [
       { username: 'dsn_operator@WALLIX-JUMPSERVER@ESJC-SGCM-WL03P:RDP:rt01119' },
       { username: 'dsn_operator@WALLIX-JUMPSERVER@ESAH-SGCM-WL03P:RDP:rt01119', targetServer: 'ESAH-SGCM-WL03P' },
       { username: 'dsn_operator@WALLIX-JUMPSERVER@OTRO-HOST:RDP:rt01119' }
     ];
     for (const session of sessions) {
-      assert.deepEqual(resolveInjectedChannels(session), { before: ['rdpsnd'], after: [] });
+      assert.deepEqual(resolveInjectedChannels(session), { before: ['rdpdr', 'rdpsnd'], after: [] });
       const frame = buildMcsConnectInitial([['cliprdr', 0xc0a00000]]);
       const res = prepareMcsConnectInitial(frame, 0x01, { injectChannels: resolveInjectedChannels(session) });
-      assert.deepEqual(findClientNetworkChannels(res.buf), ['rdpsnd', 'cliprdr']);
+      assert.deepEqual(findClientNetworkChannels(res.buf), ['rdpdr', 'rdpsnd', 'cliprdr']);
     }
   });
 
@@ -354,7 +390,7 @@ describe('juego de canales por defecto del bridge', () => {
         username: 'dsn_operator@WALLIX-JUMPSERVER@ESJC-SGCM-WL03P:RDP:rt01119',
         wallixService: 'APP'
       }),
-      { before: ['rdpsnd'], after: [] }
+      { before: ['rdpdr', 'rdpsnd'], after: [] }
     );
   });
 
@@ -373,6 +409,49 @@ describe('juego de canales por defecto del bridge', () => {
     const res = prepareMcsConnectInitial(frame, 0x01, { injectChannels: APP_INJECTED_CHANNELS_RAIL });
     assert.deepEqual(findClientNetworkChannels(res.buf), ['rail', 'rdpdr', 'rdpsnd', 'cliprdr']);
     assert.deepEqual(resolveInjectedChannels({ username: 'x@d@h:APP:u' }), { before: ['rail', 'rdpdr', 'rdpsnd'], after: [] });
+  });
+});
+
+describe('strip cliprdr/rdpdr en selector n/a', () => {
+  const {
+    resolveStripChannels,
+    selectorStripCliprdrRdpdrEnabled
+  } = require('../../src/main/services/RdpNativeBridgeService');
+  const prev = process.env.NODETERM_RDP_SELECTOR_STRIP_CLIPRDR_RDPDR;
+
+  afterEach(() => {
+    if (prev === undefined) delete process.env.NODETERM_RDP_SELECTOR_STRIP_CLIPRDR_RDPDR;
+    else process.env.NODETERM_RDP_SELECTOR_STRIP_CLIPRDR_RDPDR = prev;
+  });
+
+  test('por defecto apagado (prueba strip no elimino el hueco)', () => {
+    delete process.env.NODETERM_RDP_SELECTOR_STRIP_CLIPRDR_RDPDR;
+    assert.equal(selectorStripCliprdrRdpdrEnabled(), false);
+    assert.equal(
+      resolveStripChannels({ useBastionWallix: true, bastionUser: 'rt01119' }, { wallixService: 'n/a' }),
+      null
+    );
+  });
+
+  test('no aplica a :APP: ni :RDP: aunque el flag este ON', () => {
+    process.env.NODETERM_RDP_SELECTOR_STRIP_CLIPRDR_RDPDR = '1';
+    assert.equal(
+      resolveStripChannels({ username: 'u@d@h:APP:t' }, { wallixService: 'APP' }),
+      null
+    );
+    assert.equal(
+      resolveStripChannels({ username: 'u@d@h:RDP:t' }, { wallixService: 'RDP' }),
+      null
+    );
+  });
+
+  test('NODETERM_RDP_SELECTOR_STRIP_CLIPRDR_RDPDR=1 lo enciende en selector n/a', () => {
+    process.env.NODETERM_RDP_SELECTOR_STRIP_CLIPRDR_RDPDR = '1';
+    assert.equal(selectorStripCliprdrRdpdrEnabled(), true);
+    assert.deepEqual(
+      resolveStripChannels({ useBastionWallix: true }, { wallixService: 'n/a' }),
+      ['cliprdr', 'rdpdr']
+    );
   });
 });
 

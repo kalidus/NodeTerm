@@ -220,7 +220,7 @@ class SessionTimeline {
         }
       } else {
         this.idleStreak += 1;
-        // Primer silencio sostenido tras banner: hito UX (espera Session Probe).
+        // Primer silencio sostenido tras banner (puede ser menu, hop o espera remota).
         if (this.idleStreak === 5
             && (this.marks.has('first-bitmap') || this.marks.has('post-banner-sin-dvc'))
             && !this.marks.has('post-banner-silence-start')) {
@@ -232,8 +232,8 @@ class SessionTimeline {
             `idle=${this.idleStreak}s ${probeNote}`
           );
           this.log(
-            `${this._prefix()}${this.elapsed()}ms] RDP frio: esperando Session Probe Wallix` +
-            ` (sin trafico; ${probeNote})`
+            `${this._prefix()}${this.elapsed()}ms] post-banner: silencio 5s` +
+            ` (sin trafico servidor ni WASM; ${probeNote}; no asumir Session Probe)`
           );
         }
         if (shouldLogSilence(this.idleStreak, { quiet: !this.verboseTraffic })) {

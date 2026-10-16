@@ -483,6 +483,43 @@ function isMcsConnectInitial(buf) {
     && buf[7] === 0x7f && buf[8] === 0x65;
 }
 
+function isMcsConnectResponse(buf) {
+  return Buffer.isBuffer(buf) && buf.length > 12 && buf[0] === 0x03
+    && buf[4] === 0x02 && buf[5] === 0xf0 && buf[6] === 0x80
+    && buf[7] === 0x7f && buf[8] === 0x66;
+}
+
+const SC_CORE = 0x0c01;
+
+/**
+ * MS-RDPBCGR 3.2.5.3.4: mstsc exige que SC_CORE.clientRequestedProtocols coincida
+ * con el RDP_NEG_REQ original. Si un MITM reescribe el CR a SSL-only, el bastion
+ * echoa 0x01 y el cliente corta — hay que restaurar los flags originales hacia mstsc.
+ */
+function patchScCoreClientRequestedProtocols(buf, requestedProtocols) {
+  if (!Buffer.isBuffer(buf) || requestedProtocols == null) {
+    return { buf, patched: false, reason: 'bad-args' };
+  }
+  const want = requestedProtocols >>> 0;
+  const mcdn = buf.indexOf(Buffer.from('McDn'));
+  const start = mcdn >= 0 ? mcdn + 4 : 0;
+
+  for (let i = start; i + 12 <= buf.length; i++) {
+    if (buf.readUInt16LE(i) !== SC_CORE) continue;
+    const length = buf.readUInt16LE(i + 2);
+    if (length < 12 || i + length > buf.length) continue;
+    // header(4) + versionMajor(2) + versionMinor(2) + clientRequestedProtocols(4)
+    const old = buf.readUInt32LE(i + 8) >>> 0;
+    if (old === want) {
+      return { buf, patched: false, reason: 'already-ok', old };
+    }
+    const out = Buffer.from(buf);
+    out.writeUInt32LE(want, i + 8);
+    return { buf: out, patched: true, old, newVal: want, scCoreLen: length };
+  }
+  return { buf, patched: false, reason: mcdn < 0 ? 'no-mcdn' : 'no-sc-core-with-protocols' };
+}
+
 /**
  * Pide una sesion de 32bpp (experimento NODETERM_RDP_FORCE32): activa WANT_32BPP_SESSION en
  * earlyCapabilityFlags y deja highColorDepth en 24, como exige MS-RDPBCGR 2.2.1.3.2 (el campo
@@ -615,6 +652,114 @@ function fixWallixGccConnectPduLength(buf) {
 }
 
 /**
+ * Elimina canales virtuales estáticos de TS_UD_CS_NET (inverso de inject).
+ * Recalcula longitudes anidadas (CS_NET, Duca, OCTET STRING, Connect-Initial, TPKT).
+ *
+ * Uso: experimento selector Wallix sin cliprdr/rdpdr — no anunciar canales que
+ * Windows espera completar (Device List / clipboard handshake) y provocan timeout.
+ *
+ * @param {Buffer} buf
+ * @param {string[]} names
+ */
+function removeClientNetworkChannels(buf, names) {
+  const abort = (reason) => ({ buf, patched: false, removed: [], reason });
+
+  if (!Buffer.isBuffer(buf)) return abort('not-buffer');
+  const wanted = [...new Set(
+    (Array.isArray(names) ? names : [])
+      .map((n) => String(n || '').trim().toLowerCase())
+      .filter(Boolean)
+  )];
+  if (!wanted.length) return abort('no-names');
+
+  const block = findClientNetworkBlock(buf);
+  if (!block) return abort('cs-net-not-found');
+  if (block.ducaOffset < 0) return abort('duca-not-found');
+
+  const channelsAt = block.offset + 8;
+  const keep = [];
+  const removed = [];
+  for (let c = 0; c < block.count; c++) {
+    const off = channelsAt + c * CHANNEL_DEF_LEN;
+    const rawName = buf.subarray(off, off + 8).toString('ascii');
+    const nullIdx = rawName.indexOf('\0');
+    const name = (nullIdx >= 0 ? rawName.slice(0, nullIdx) : rawName).trim();
+    if (wanted.includes(name.toLowerCase())) {
+      removed.push(name);
+    } else {
+      keep.push(buf.subarray(off, off + CHANNEL_DEF_LEN));
+    }
+  }
+  if (!removed.length) return abort('not-present');
+  if (keep.length < 1) return abort('would-empty-cs-net');
+
+  const delta = removed.length * CHANNEL_DEF_LEN;
+  if (buf.length < 11 || buf[0] !== 0x03) return abort('not-tpkt');
+  if (buf.readUInt16BE(2) !== buf.length) return abort('tpkt-len-mismatch');
+
+  if (buf[7] !== 0x7f || buf[8] !== 0x65) return abort('not-connect-initial');
+  const ciLen = readBerLength(buf, 9);
+  if (!ciLen || 9 + ciLen.size + ciLen.value !== buf.length) return abort('connect-initial-len');
+
+  const oidAt = buf.indexOf(Buffer.from([0x00, 0x14, 0x7c, 0x00, 0x01]));
+  if (oidAt < 6) return abort('gcc-oid-not-found');
+  let udTagAt = -1;
+  let udLen = null;
+  for (const back of [4, 5, 6]) {
+    const tag = oidAt - back;
+    if (tag < 0 || buf[tag] !== 0x04) continue;
+    const len = readBerLength(buf, tag + 1);
+    if (!len || tag + 1 + len.size + len.value !== buf.length) continue;
+    udTagAt = tag;
+    udLen = len;
+    break;
+  }
+  if (udTagAt < 0) return abort('user-data-len-not-found');
+
+  const ducaLenAt = block.ducaOffset + 4;
+  if (ducaLenAt + 1 >= buf.length) return abort('duca-len-oob');
+  const ducaWide = (buf[ducaLenAt] & 0x80) !== 0;
+  const ducaLen = ducaWide
+    ? ((buf[ducaLenAt] & 0x3f) << 8) | buf[ducaLenAt + 1]
+    : buf[ducaLenAt];
+  const newDucaLen = ducaLen - delta;
+  if (newDucaLen < 0) return abort('duca-len-underflow');
+  if (ducaWide ? newDucaLen > 0x3fff : newDucaLen > 0x7f) return abort('duca-len-overflow');
+
+  const channelsEnd = channelsAt + block.count * CHANNEL_DEF_LEN;
+  const out = Buffer.alloc(buf.length - delta);
+  buf.copy(out, 0, 0, channelsAt);
+  let write = channelsAt;
+  for (const def of keep) {
+    def.copy(out, write);
+    write += CHANNEL_DEF_LEN;
+  }
+  buf.copy(out, write, channelsEnd);
+
+  if (!writeBerLength(out, 9, ciLen.value - delta)) return abort('connect-initial-len-overflow');
+  if (!writeBerLength(out, udTagAt + 1, udLen.value - delta)) return abort('user-data-len-overflow');
+
+  if (ducaWide) {
+    out[ducaLenAt] = 0x80 | ((newDucaLen >> 8) & 0x3f);
+    out[ducaLenAt + 1] = newDucaLen & 0xff;
+  } else {
+    out[ducaLenAt] = newDucaLen;
+  }
+
+  out.writeUInt16LE(block.length - delta, block.offset + 2);
+  out.writeUInt32LE(keep.length, block.offset + 4);
+  out.writeUInt16BE(out.length, 2);
+
+  return {
+    buf: out,
+    patched: true,
+    removed,
+    reason: 'removed',
+    channelCount: keep.length
+  };
+}
+
+/**
  * Aplica parches MCS post-TLS para path SSL/TLS Direct / Wallix.
  */
 function prepareMcsConnectInitial(buf, selectedProtocol, options = {}) {
@@ -630,6 +775,19 @@ function prepareMcsConnectInitial(buf, selectedProtocol, options = {}) {
       notes.push(`canales inyectados [${injected.added.join(', ')}] -> count=${injected.channelCount}`);
     } else {
       notes.push(`canales sin inyectar (${injected.reason})`);
+    }
+  }
+
+  // Tras inject: quitar canales (cliprdr/rdpdr) que no queremos anunciar a Wallix.
+  if (Array.isArray(options.stripChannels) && options.stripChannels.length) {
+    const stripped = removeClientNetworkChannels(current, options.stripChannels);
+    if (stripped.patched) {
+      current = stripped.buf;
+      notes.push(
+        `canales eliminados [${stripped.removed.join(', ')}] -> count=${stripped.channelCount}`
+      );
+    } else {
+      notes.push(`canales sin eliminar (${stripped.reason})`);
     }
   }
 
@@ -834,9 +992,13 @@ module.exports = {
   findClientNetworkChannels,
   patchClientNetworkChannelOptions,
   injectClientNetworkChannels,
+  removeClientNetworkChannels,
   ensureMcsServerSelectedProtocol,
   hardenClientCoreData,
   isMcsConnectInitial,
+  isMcsConnectResponse,
+  SC_CORE,
+  patchScCoreClientRequestedProtocols,
   patchClientCoreWant32bpp,
   patchClientCoreBastion16bpp,
   HIGH_COLOR_16BPP,

@@ -210,7 +210,8 @@ describe('SessionTimeline', () => {
       tl.tick();
     }
     assert.equal(tl.has('post-banner-silence-start'), true);
-    assert.ok(lines.some((l) => /esperando Session Probe Wallix/.test(l)));
+    assert.ok(lines.some((l) => /post-banner: silencio 5s/.test(l)));
+    assert.ok(lines.some((l) => /no asumir Session Probe/.test(l)));
     clock.advance(2000);
     tl.noteIn('fp', 500);
     assert.equal(tl.has('desktop-fp-resume'), true);

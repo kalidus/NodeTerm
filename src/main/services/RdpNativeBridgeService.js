@@ -101,6 +101,7 @@ const {
   formatRdpSessionCloseReason,
   shouldDumpDisconnectDebug
 } = require('./rdp-cliprdr-health');
+const { createPduTraceWriter, defaultTracePath } = require('./rdp-pdu-trace');
 const {
   parseMcsSendData,
   rewriteMcsChannelId,
@@ -184,13 +185,16 @@ function readDiagValue(name) {
 
 // Wallix (y hosts donde cliprdr como primer VC rompe el saludo) ignoran nombres y
 // mapean por indice: anteponer VCs para que cliprdr no sea el unico/primer VC.
-// :RDP: rdpsnd delante (sin rdpdr: Windows en frio espera ~24 s el Device List).
+// Baseline mstsc MITM (selector/RDP): CS_NET=[rdpdr,rdpsnd,cliprdr,drdynvc].
+// :RDP:/selector: rdpdr+rdpsnd delante (cliprdr queda en indice 2 / MCS ~1006).
+// El stub rdpdr (rdp-rdpdr.js) cierra Device List en 0 ms; sin el stub el frio
+// con rdpdr anunciado esperaba ~24 s.
 // :APP: rail+rdpdr+rdpsnd delante (requerido por RemoteApp).
 // En directo tambien: sin inject cliprdr queda primero y la sesion no arranca.
 // El filtro alinea rdpsnd/drdynvc por nombre y despacha antes de claimCliprdr
 // (evita SNDC_TRAINING≡TEMP_DIRECTORY y DynVC huerfano).
 // NODETERM_RDP_INJECT_CHANNELS admite un orden o 'off'.
-const RDP_INJECTED_CHANNELS = { before: ['rdpsnd'], after: [] };
+const RDP_INJECTED_CHANNELS = { before: ['rdpdr', 'rdpsnd'], after: [] };
 const APP_INJECTED_CHANNELS = { before: ['rail', 'rdpdr', 'rdpsnd'], after: [] };
 const APP_INJECTED_CHANNELS_RAIL = APP_INJECTED_CHANNELS;
 
@@ -254,6 +258,25 @@ function resolveInjectedChannels(session) {
   if (requested && requested.toLowerCase() === 'off') return null;
   if (requested) return parseInjectChannelsSpec(requested);
   return RDP_INJECTED_CHANNELS;
+}
+
+/**
+ * Selector Wallix (service n/a): experimento strip cliprdr/rdpdr.
+ * Default OFF (la prueba no elimino el hueco ~37s). Opt-in con =1.
+ */
+function selectorStripCliprdrRdpdrEnabled() {
+  const value = readDiagEntry('NODETERM_RDP_SELECTOR_STRIP_CLIPRDR_RDPDR');
+  return value === true || value === '1' || value === 1;
+}
+
+/** Canales a eliminar del CS_NET hacia Wallix (solo selector n/a). */
+function resolveStripChannels(session, channelFilter) {
+  if (!selectorStripCliprdrRdpdrEnabled()) return null;
+  const svc = (channelFilter && channelFilter.wallixService)
+    || wallixServiceFromSession(session)
+    || (isBastionSession(session) ? 'n/a' : null);
+  if (svc !== 'n/a') return null;
+  return ['cliprdr', 'rdpdr'];
 }
 
 const TRAFFIC_STATS_INTERVAL_MS = 15000;
@@ -659,7 +682,21 @@ class RdpNativeBridgeService extends EventEmitter {
     channelFilter.allowAudioPlayback = session.redirectAudio === true;
     channelFilter.egfxGraphics = session.ironRdpGraphics === 'egfx';
     channelFilter.probeTempDirOnGreetEnabled = probeTempDirOnGreetFlag();
+    // Selector n/a: no anunciar cliprdr/rdpdr (evita timeout Device List / clipboard).
+    channelFilter.omitCliprdrRdpdr = Array.isArray(resolveStripChannels(session, channelFilter));
     channelFilter.rdpDebug = isDebug;
+    // Traza PDU JSONL (NODETERM_RDP_TRACE=1 o path en NODETERM_RDP_TRACE_FILE).
+    const traceEnabled = readDiagFlag('NODETERM_RDP_TRACE');
+    const traceFileOverride = readDiagValue('NODETERM_RDP_TRACE_FILE');
+    const pduTrace = (traceEnabled || traceFileOverride)
+      ? createPduTraceWriter(
+        traceFileOverride || defaultTracePath(`nodeterm-${channelFilter.wallixService || 'rdp'}`),
+        { label: `nodeterm:${channelFilter.wallixService || 'rdp'}` }
+      )
+      : createPduTraceWriter(null);
+    if (pduTrace.enabled) {
+      console.warn(`[Bridge] PDU trace ON -> ${pduTrace.path}`);
+    }
     channelFilter.recentCliprdrEvents = recentCliprdrEvents;
     channelFilter.recordCliprdr = recordCliprdrEvent;
     connState.channelFilter = channelFilter;
@@ -968,6 +1005,7 @@ class RdpNativeBridgeService extends EventEmitter {
       const clipSummary = formatCliprdrHealthLine(summarizeCliprdrHealth(channelFilter));
 
       timeline.stop();
+      try { pduTrace.close(); } catch (_) { /* noop */ }
       if (timeline.enabled) {
         console.log(`⏱️ [Bridge] ${timeline.summary()}`);
         console.log(formatDvcDiagLine('sesion'));
@@ -1157,6 +1195,7 @@ class RdpNativeBridgeService extends EventEmitter {
               const sendDirectToWasm = (out) => {
                 if (!out || typeof out.length !== 'number') return;
                 if (ws.readyState !== ws.OPEN) return;
+                if (pduTrace.enabled) pduTrace.write('s2c', out);
                 flushTickOut();
                 ws.send(out, { binary: true }, () => {
                   checkResumeTls();
@@ -1166,6 +1205,7 @@ class RdpNativeBridgeService extends EventEmitter {
               const sendBinaryToWasm = (out) => {
                 if (!out || typeof out.length !== 'number') return;
                 if (ws.readyState !== ws.OPEN) return;
+                if (pduTrace.enabled) pduTrace.write('s2c', out);
                 if (tickBatcher.push(out)) {
                   // Directo: un bloque de cientos de KB se decodifica de un tirón en el
                   // renderer. Al pasar de 64 KB se envia el lote (el frame que lo cruza
@@ -2295,18 +2335,30 @@ class RdpNativeBridgeService extends EventEmitter {
             }
           }
 
+          const stripChannels = resolveStripChannels(session, channelFilter);
           const prepared = prepareMcsConnectInitial(payload, savedSelectedProtocol, {
             injectChannels: resolveInjectedChannels(session),
+            stripChannels,
             force32
           });
           forward = prepared.buf;
           const sentChs = findClientNetworkChannels(prepared.buf);
           // Una linea por conexion, siempre: el juego de canales condiciona todo el resto de la
           // sesion y sin este rastro una inyeccion que no se aplica no se distingue de una que si.
-          const wallixService = wallixServiceFromSession(session) || 'n/a';
+          const wallixService = channelFilter.wallixService
+            || wallixServiceFromSession(session)
+            || 'n/a';
           const csNet = sentChs.length ? sentChs.join(',') : 'ninguno';
-          if (isDebug) {
-            console.log(`[Bridge] MCS prepare: service=${wallixService} CS_NET=[${csNet}]; ${prepared.notes.join('; ') || 'sin cambios'}`);
+          const prepareMsg = `[Bridge] MCS prepare: service=${wallixService} CS_NET=[${csNet}]; ${prepared.notes.join('; ') || 'sin cambios'}`;
+          // Siempre log si se ha hecho strip (experimento selector): hay que verlo en consola.
+          if (isDebug || (stripChannels && stripChannels.length)) {
+            console.log(prepareMsg);
+          }
+          if (stripChannels && stripChannels.length) {
+            channelFilter.omitCliprdrRdpdr = true;
+            const stripMsg = `[Bridge] selector n/a: CS_NET sin cliprdr/rdpdr (prueba timeout) -> [${csNet}]`;
+            console.warn(stripMsg);
+            this.emit('diagnostic-log', { category: 'cs-net-strip', message: stripMsg });
           }
           if (sentChs.length) {
             channelFilter.mcsConnectPrepared = true;
@@ -2325,16 +2377,27 @@ class RdpNativeBridgeService extends EventEmitter {
           if (isMcsConnectInitial(forward) && !channelFilter.mcsConnectPrepared) {
             channelFilter.mcsConnectPrepared = true;
             const connectInitial = forward;
+            const stripChannelsLate = resolveStripChannels(session, channelFilter);
             const preparedLate = prepareMcsConnectInitial(connectInitial, savedSelectedProtocol, {
               injectChannels: resolveInjectedChannels(session),
+              stripChannels: stripChannelsLate,
               force32
             });
             forward = preparedLate.buf;
             const sentChsLate = findClientNetworkChannels(preparedLate.buf);
-            const wallixServiceLate = wallixServiceFromSession(session) || 'n/a';
+            const wallixServiceLate = channelFilter.wallixService
+              || wallixServiceFromSession(session)
+              || 'n/a';
             const csNetLate = sentChsLate.length ? sentChsLate.join(',') : 'ninguno';
-            if (isDebug) {
-              console.log(`[Bridge] MCS prepare (NLA late): service=${wallixServiceLate} CS_NET=[${csNetLate}]; ${preparedLate.notes.join('; ') || 'sin cambios'}`);
+            const prepareLateMsg = `[Bridge] MCS prepare (NLA late): service=${wallixServiceLate} CS_NET=[${csNetLate}]; ${preparedLate.notes.join('; ') || 'sin cambios'}`;
+            if (isDebug || (stripChannelsLate && stripChannelsLate.length)) {
+              console.log(prepareLateMsg);
+            }
+            if (stripChannelsLate && stripChannelsLate.length) {
+              channelFilter.omitCliprdrRdpdr = true;
+              const stripLateMsg = `[Bridge] selector n/a: CS_NET sin cliprdr/rdpdr (prueba timeout) -> [${csNetLate}]`;
+              console.warn(stripLateMsg);
+              this.emit('diagnostic-log', { category: 'cs-net-strip', message: stripLateMsg });
             }
             if (sentChsLate.length) {
               const wasmChsLate = findClientNetworkChannels(connectInitial);
@@ -2381,6 +2444,7 @@ class RdpNativeBridgeService extends EventEmitter {
         }
         if (forward && forward.length > 0) {
           bytesToRdp += forward.length;
+          if (pduTrace.enabled) pduTrace.write('c2s', forward);
           if (tlsSocket && tlsSocket.writable) {
             tlsSocket.write(forward);
           } else if (targetSocket && targetSocket.writable) {
@@ -2803,6 +2867,23 @@ class RdpNativeBridgeService extends EventEmitter {
     const isClip = channelFilter.cliprdrChannelId != null &&
       parsed.channelId === channelFilter.cliprdrChannelId;
     const clipDesc = isClip ? describeCliprdrPdu(parsed.userData) : null;
+    // Experimento selector: cliprdr no anunciado a Wallix — tirar todo el trafico WASM.
+    // synthAck de FORMAT_LIST para que IronRDP no se quede esperando respuesta.
+    if (isClip && channelFilter.omitCliprdrRdpdr === true) {
+      const inject = [];
+      if (isCliprdrFormatListDesc(clipDesc) && !channelFilter.cliprdrFormatListAcked) {
+        channelFilter.cliprdrFormatListAcked = true;
+        inject.push(buildCliprdrFormatListResponseOk(0, channelFilter.cliprdrChannelId));
+      }
+      if (!channelFilter.loggedOmitCliprdrDrop) {
+        channelFilter.loggedOmitCliprdrDrop = true;
+        const omitMsg = '[Bridge Clipboard] selector n/a: cliprdr omitido (no anunciado a Wallix); PDUs WASM descartados';
+        console.warn(omitMsg);
+        if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(omitMsg);
+        this.emit('diagnostic-log', { category: 'cliprdr-omit', message: omitMsg });
+      }
+      return { forward: null, inject };
+    }
     if (isClip && channelFilter.cliprdrBridgeHandshakeSent && isNamedCliprdrPreGreetPdu(clipDesc)) {
       return { forward: null, inject: [] };
     }
@@ -3362,6 +3443,8 @@ class RdpNativeBridgeService extends EventEmitter {
 module.exports = new RdpNativeBridgeService();
 // Expuesto solo para tests: decide el juego de canales de TODAS las conexiones RDP nativas
 module.exports.resolveInjectedChannels = resolveInjectedChannels;
+module.exports.resolveStripChannels = resolveStripChannels;
+module.exports.selectorStripCliprdrRdpdrEnabled = selectorStripCliprdrRdpdrEnabled;
 module.exports.wallixServiceFromUsername = wallixServiceFromUsername;
 module.exports.wallixServiceFromSession = wallixServiceFromSession;
 module.exports.RDP_INJECTED_CHANNELS = RDP_INJECTED_CHANNELS;

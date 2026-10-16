@@ -59,6 +59,9 @@ testing/rdp/frames/to-*
 !testing/rdp/frames/to-05-421b.hex
 # Interruptores de diagnostico del bridge RDP (locales, no versionados)
 rdp-flags.json
+# Trazas PDU de captura MITM / NODETERM_RDP_TRACE
+testing/rdp/traces/*.jsonl
+!testing/rdp/traces/.gitkeep
 
 # Builds temporales del parche IronRDP (cursores remotos)
 tmp-ironrdp-src/

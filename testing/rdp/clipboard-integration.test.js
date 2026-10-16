@@ -839,7 +839,8 @@ describe('CLIPRDR: robustez del filtro', () => {
       assert.equal(parsed.channelId, 1005);
       assert.equal(parsed.userData.readUInt32LE(4), 0x13);
     }
-    assert.equal(parseMcsSendData(replay[0]).userData.readUInt32LE(28), 0x2);
+    // Post-hop (mstsc): rehandshake sube CAPS cache 0x2 a file-clip del servidor (0x3e).
+    assert.equal(parseMcsSendData(replay[0]).userData.readUInt32LE(28), 0x3e);
     assert.deepEqual(takeCliprdrRehandshake(state), []);
   });
 
