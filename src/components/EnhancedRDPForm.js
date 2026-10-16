@@ -76,6 +76,7 @@ export function createDefaultRdpFormData() {
     guacDriveHostDir: '',
     guacEnableGfx: false,
     ironRdpGraphics: 'bitmap',
+    bastionLogicalDesktop: true,
     guacEnableDesktopComposition: false,
     guacEnableFontSmoothing: false,
     guacEnableTheming: false,
@@ -132,6 +133,7 @@ export function mapEditNodeDataToRdpFormData(editNodeData) {
     guacDriveHostDir: data.guacDriveHostDir || '',
     guacEnableGfx: data.guacEnableGfx || false,
     ironRdpGraphics: data.ironRdpGraphics === 'egfx' ? 'egfx' : 'bitmap',
+    bastionLogicalDesktop: data.bastionLogicalDesktop !== false,
     guacEnableDesktopComposition: data.guacEnableDesktopComposition || false,
     guacEnableFontSmoothing: data.guacEnableFontSmoothing || false,
     guacEnableTheming: data.guacEnableTheming || false,
@@ -370,6 +372,20 @@ export function EnhancedRDPForm({
         onCheckedChange={(v) => handleInputChange('ironRdpGraphics', v ? 'egfx' : 'bitmap')}
         inputId={`${p}-${idSuffix}-egfx`}
         helpText={t('rdp.help.ironRdpGraphics')}
+      />
+    );
+  };
+
+  const renderBastionLogicalDesktopSwitch = (idSuffix = 'opt') => {
+    if (!isWebRdp) return null;
+    return (
+      <TerminalSwitchOption
+        iconClass="pi-desktop"
+        labelText={t('rdp.options.bastionLogicalDesktop')}
+        checked={formData.bastionLogicalDesktop !== false}
+        onCheckedChange={(v) => handleInputChange('bastionLogicalDesktop', !!v)}
+        inputId={`${p}-${idSuffix}-bastion-logical`}
+        helpText={t('rdp.help.bastionLogicalDesktop')}
       />
     );
   };
@@ -661,6 +677,7 @@ export function EnhancedRDPForm({
             </div>
             <div className="terminal-options-grid">
               {renderIronRdpEgfxSwitch('opt')}
+              {renderBastionLogicalDesktopSwitch('opt')}
               <TerminalSwitchOption
                 iconClass="pi-copy"
                 labelText={t('rdp.options.clipboard')}

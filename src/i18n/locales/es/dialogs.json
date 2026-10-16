@@ -198,7 +198,8 @@
       "enableDrive": "Copia de archivos",
       "autoResize": "Ajuste automático",
       "enableWallpaper": "Mostrar fondo",
-      "enableEgfx": "Habilitar EGFX"
+      "enableEgfx": "Habilitar EGFX",
+      "bastionLogicalDesktop": "Ajuste HiDPI"
     },
     "advanced": {
       "performance": "Rendimiento",
@@ -239,6 +240,7 @@
       "ironRdpGraphics": "Elige el pipeline gráfico de IronRDP. Bitmap es estable. EGFX usa RemoteFX Progressive.",
       "ironRdpGraphicsBitmap": "Bitmap RLE clásico: más estable y compatible.",
       "ironRdpGraphicsEgfx": "EGFX: RemoteFX Progressive. H.264 no se anuncia en esta versión.",
+      "bastionLogicalDesktop": "Activa el ajuste HiDPI: en directo escala la UI con DisplayControl; en bastión usa píxeles CSS (sin DisplayControl). Desactivado = resolución nativa (× DPR, escala 100 %).",
       "desktopComposition": "Habilita la composición Aero en el escritorio remoto.",
       "fontSmoothing": "Suaviza la renderización de fuentes en el escritorio remoto.",
       "theming": "Permite temas visuales del sistema remoto en la sesión.",

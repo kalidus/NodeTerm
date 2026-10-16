@@ -498,6 +498,7 @@ export const useConnectionManagement = ({
         guacEnableMenuAnimations: node.guacEnableMenuAnimations || node.enableMenuAnimations || false,
         guacEnableGfx: node.guacEnableGfx || node.enableGfx || false,
         ironRdpGraphics: node.ironRdpGraphics === 'egfx' ? 'egfx' : 'bitmap',
+        bastionLogicalDesktop: node.bastionLogicalDesktop !== false,
         guacDisableGlyphCaching: node.guacDisableGlyphCaching || node.disableGlyphCaching || false,
         guacDisableOffscreenCaching: node.guacDisableOffscreenCaching || node.disableOffscreenCaching || false,
         guacDisableBitmapCaching: node.guacDisableBitmapCaching || node.disableBitmapCaching || false,
@@ -550,6 +551,9 @@ export const useConnectionManagement = ({
               if (n.data.ironRdpGraphics === 'egfx' || n.data.ironRdpGraphics === 'bitmap') {
                 baseRdp.ironRdpGraphics = n.data.ironRdpGraphics;
               }
+              if (n.data.bastionLogicalDesktop !== undefined) {
+                baseRdp.bastionLogicalDesktop = n.data.bastionLogicalDesktop !== false;
+              }
               baseRdp.guacDisableGlyphCaching = n.data.guacDisableGlyphCaching !== undefined ? n.data.guacDisableGlyphCaching : (n.data.disableGlyphCaching !== undefined ? n.data.disableGlyphCaching : baseRdp.guacDisableGlyphCaching);
               baseRdp.guacDisableOffscreenCaching = n.data.guacDisableOffscreenCaching !== undefined ? n.data.guacDisableOffscreenCaching : (n.data.disableOffscreenCaching !== undefined ? n.data.disableOffscreenCaching : baseRdp.guacDisableOffscreenCaching);
               baseRdp.guacDisableBitmapCaching = n.data.guacDisableBitmapCaching !== undefined ? n.data.guacDisableBitmapCaching : (n.data.disableBitmapCaching !== undefined ? n.data.disableBitmapCaching : baseRdp.guacDisableBitmapCaching);
@@ -598,6 +602,7 @@ export const useConnectionManagement = ({
         guacEnableMenuAnimations: baseRdp.guacEnableMenuAnimations || false,
         guacEnableGfx: baseRdp.guacEnableGfx || false,
         ironRdpGraphics: baseRdp.ironRdpGraphics === 'egfx' ? 'egfx' : 'bitmap',
+        bastionLogicalDesktop: baseRdp.bastionLogicalDesktop !== false,
         guacDisableGlyphCaching: baseRdp.guacDisableGlyphCaching || false,
         guacDisableOffscreenCaching: baseRdp.guacDisableOffscreenCaching || false,
         guacDisableBitmapCaching: baseRdp.guacDisableBitmapCaching || false,
@@ -656,6 +661,7 @@ export const useConnectionManagement = ({
         freezeInitialResize: baseRdp.autoResize !== false,
         enableGfx: (baseRdp.guacEnableGfx === true) || (baseRdp.guacWin11Compat === true),
         ironRdpGraphics: baseRdp.ironRdpGraphics === 'egfx' ? 'egfx' : 'bitmap',
+        bastionLogicalDesktop: baseRdp.bastionLogicalDesktop !== false,
         enableDesktopComposition: baseRdp.guacEnableDesktopComposition === true,
         enableFontSmoothing: baseRdp.guacEnableFontSmoothing === true,
         enableTheming: baseRdp.guacEnableTheming === true,

@@ -569,22 +569,51 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     2
   );
 
+  // Opción común «Ajuste HiDPI» (bastionLogicalDesktop, default on).
+  const isHiDpiAdjustEnabled = () => rdpConfig.bastionLogicalDesktop !== false;
+
   // MS-RDPEDISP DesktopScaleFactor. El framebuffer sigue en píxeles físicos;
   // este porcentaje hace que Windows agrande la interfaz (100 = 96 DPI).
+  // Con HiDPI off → siempre 100 % (resolución nativa).
   const RDP_DESKTOP_SCALES = [100, 125, 150, 175, 200];
   const readDesktopScaleFactor = () => {
+    if (!isHiDpiAdjustEnabled()) return 100;
     const raw = Math.round(readDisplayPixelRatio() * 100);
     return RDP_DESKTOP_SCALES.reduce((best, value) => (
       Math.abs(value - raw) < Math.abs(best - raw) ? value : best
     ));
   };
 
-  // clientWidth/Height son enteros; el DPR (tope 2) pide más píxeles en HiDPI.
+  // Bastión: sin DisplayControl no se anuncia DesktopScaleFactor. Pedir framebuffer
+  // físico (×DPR) deja la UI de Windows a 96 DPI diminuta. Usar píxeles CSS.
+  const isBastionConfig = () => {
+    const user = String(
+      (rdpConfig.useBastionWallix && rdpConfig.bastionUser)
+        ? rdpConfig.bastionUser
+        : (rdpConfig.username || rdpConfig.user || '')
+    ).trim();
+    const chain = user.split('@').length >= 3
+      || user.includes('#')
+      || (user.includes('@') && user.includes(':'));
+    return !!(
+      rdpConfig.useBastionWallix
+      || rdpConfig.isBastion
+      || rdpConfig.bastionUser
+      || rdpConfig.bastionHost
+      || rdpConfig.targetServer
+      || rdpConfig.targetUser
+      || rdpConfig.wallixService
+      || chain
+    );
+  };
+
+  // Directo: siempre × DPR. Bastión + HiDPI on: píxeles CSS (dpr=1). Bastión + HiDPI off: × DPR.
   const measureAutoDesktopSize = () => {
     const el = containerRef.current;
     const cssW = (el && el.clientWidth > 100) ? el.clientWidth : (window.innerWidth || 1600);
     const cssH = (el && el.clientHeight > 100) ? el.clientHeight : (window.innerHeight || 1000);
-    const dpr = readDisplayPixelRatio();
+    const useLogical = isBastionConfig() && isHiDpiAdjustEnabled();
+    const dpr = useLogical ? 1 : readDisplayPixelRatio();
     return {
       width: alignDesktop(Math.max(640, Math.floor(cssW * dpr))),
       height: alignDesktop(Math.max(480, Math.floor(cssH * dpr)))
