@@ -164,11 +164,13 @@ function readChannelJoinConfirmId(buf) {
   return buf.readUInt16BE(11);
 }
 
-/** MCS Attach User Confirm (0x2e): user id en offset 9 si result=0. */
+/** MCS Attach User Confirm (0x2e): user id en offset 9 si result=0.
+ * Wallix (y mstsc contra Wallix) envian userId=0; IronRDP join-ea con initiator 0.
+ * 0 es un initiator valido: no filtrarlo.
+ */
 function readAttachUserConfirmInitiator(buf) {
   if (!isTpkt(buf) || buf.length < 11 || buf[7] !== 0x2e || buf[8] !== 0x00) return null;
-  const id = buf.readUInt16BE(9);
-  return id > 0 ? id : null;
+  return buf.readUInt16BE(9);
 }
 
 /** MCS Channel Join Request (0x38), 12 bytes. */
@@ -210,7 +212,8 @@ function noteClientChannelJoinRequest(state, buf) {
 function noteServerAttachUserConfirm(state, buf) {
   const id = readAttachUserConfirmInitiator(buf);
   if (!state || id == null) return false;
-  if (!state.clientInitiator) state.clientInitiator = id;
+  // nullish: initiator 0 (Wallix) es valido y debe persistir.
+  if (state.clientInitiator == null) state.clientInitiator = id;
   return true;
 }
 
@@ -288,6 +291,15 @@ function isCliprdrHeader(userData) {
   return false;
 }
 
+/** CB_MONITOR_READY (0x1) o CB_CLIP_CAPS (0x7) con FIRST — saludo cliprdr. */
+function isCliprdrGreetingPdu(userData) {
+  if (!isCliprdrHeader(userData)) return false;
+  const flags = userData.readUInt32LE(4);
+  if ((flags & CHANNEL_FLAG_FIRST) === 0) return false;
+  const msgType = userData.readUInt16LE(CHANNEL_PDU_HEADER_LEN);
+  return msgType === 0x0001 || msgType === 0x0007;
+}
+
 function createChannelFilterState() {
   return {
     ready: false,
@@ -312,6 +324,13 @@ function createChannelFilterState() {
     // Tras alinear SC_NET: canales que IronRDP unió vs solo inyectados (p. ej. rdpdr 1004).
     wasmJoinedChannelIds: null,
     injectOnlyChannelIds: null,
+    // Capa de canales 'virtual' (NODETERM_RDP_CHANNELS=virtual): IDs reales por nombre
+    // tambien en bastion; el bridge hace los Channel Join de los VCs inyectados y se
+    // come sus confirms (IronRDP solo ve los canales que declaro).
+    virtualChannels: false,
+    virtualBridgeJoinIds: null,
+    virtualJoinsSent: false,
+    virtualJoinConfirmed: null,
     injectOnlyFragmentOpen: false,
     injectOnlyFragmentChannelId: null,
     serverRdpdrFragmentOpen: false,
@@ -380,7 +399,7 @@ function createChannelFilterState() {
  * Wallix/bastion mantiene SC_NET completo (exige Channel Join de todos los VCs).
  */
 function isDirectInjectAlignPath(state) {
-  return state && state.isBastion !== true
+  return state && (state.isBastion !== true || state.virtualChannels === true)
     && Array.isArray(state.wasmAlignedServerIds)
     && state.wasmAlignedServerIds.length > 0;
 }
@@ -410,7 +429,7 @@ function applyWasmFacingChannelIds(state, wasmNames, sourceNames, serverIds, idF
   const injected = Array.isArray(wasmNames) && Array.isArray(sourceNames)
     && wasmNames.length > 0
     && wasmNames.length < sourceNames.length;
-  if (state.isBastion === true && injected) {
+  if (state.isBastion === true && injected && state.virtualChannels !== true) {
     const zipIds = resolveWasmZipVisibleIds(wasmNames, serverIds);
     if (zipIds && zipIds.length === wasmNames.length) {
       for (let i = 0; i < wasmNames.length; i++) {
@@ -506,6 +525,10 @@ function learnFromServerGcc(state, buf) {
     parsed.channelIds
   );
   syncWasmJoinedChannels(state, parsed.channelIds);
+  if (state.virtualChannels === true) {
+    state.virtualBridgeJoinIds = new Set(state.injectOnlyChannelIds || []);
+    state.virtualJoinConfirmed = new Set();
+  }
 
   state.ready = true;
   retryConfirmAppCliprdrWrite(state);
@@ -642,10 +665,20 @@ function consumeRdpdr(state, channelId, userData) {
   let replies = rdpdr.replies || [];
   let note = rdpdr.note;
 
-  if (onIo || onUser) {
-    // Contestar en IO o en MCS 1001 tumba o congela el grafico; redirigir al VC rdpdr.
+  // Virtual: solo contestar si el announce llega al VC rdpdr declarado (1004).
+  // Wallix a veces lo manda por IO, 1001 o el slot cliprdr (1006); redirigir a
+  // 1004 provoca ECONNRESET (trazas RDP/selector 2026-10-16).
+  if (state.virtualChannels === true) {
+    if (rdpdrCh != null && channelId === rdpdrCh) {
+      // replies intactas en el VC rdpdr real
+    } else {
+      replies = [];
+      note = `${rdpdr.note} (sin respuesta: ch=${channelId} / virtual; announce fuera de rdpdr)`;
+    }
+  } else if (onIo || onUser) {
     const where = onIo ? 'IO' : 'usuario';
     if (rdpdrCh != null && replies.length) {
+      // Legacy: redirigir al VC rdpdr (no escribir rdpdr en IO/1001).
       replies = replies.map((buf) => rewriteMcsChannelId(buf, rdpdrCh) || buf);
       note = `${rdpdr.note} (replies->ch=${rdpdrCh}; saludo por ${where})`;
     } else {
@@ -658,7 +691,7 @@ function consumeRdpdr(state, channelId, userData) {
   }
 
   if (replies.length) {
-    const redirected = rdpdrCh != null && (
+    const redirected = state.virtualChannels !== true && rdpdrCh != null && (
       onIo || onUser || (onCliprdr && rdpdrCh !== channelId)
     );
     state.rdpdrReplyCount = (state.rdpdrReplyCount || 0) + replies.length;
@@ -866,6 +899,21 @@ function isSafeStaticCliprdrWrite(state, channelId) {
 }
 
 /**
+ * Virtual: se puede emitir al canal donde el servidor saluda (incl. MCS 1001).
+ * Nunca al IO (ESAH). Legacy: solo VCs estaticos "seguros".
+ */
+function canEmitCliprdrToWire(state, channelId) {
+  if (!state || channelId == null) return false;
+  if (state.ioChannelId != null && channelId === state.ioChannelId) return false;
+  if (state.virtualChannels === true) {
+    if (state.serverCliprdrChannelId != null && channelId === state.serverCliprdrChannelId) {
+      return true;
+    }
+  }
+  return isSafeStaticCliprdrWrite(state, channelId);
+}
+
+/**
  * Si el saludo va por 1001, solo en :APP: (RemoteApp) el VC que SC_NET nombro cliprdr (1007)
  * es el destino de vuelta. En :RDP:, escribir en 1004, 1005 o 1006 tras un saludo
  * por 1001 cierra el TLS (Wallix ESAH corta con FIN).
@@ -911,7 +959,7 @@ function bastionIoCliprdrWriteForbidden(state) {
 function canFlushCliprdrToNamedVc(state) {
   if (!state) return false;
   const writeCh = state.cliprdrWriteChannelId;
-  if (writeCh == null || !isSafeStaticCliprdrWrite(state, writeCh)) return false;
+  if (writeCh == null || !canEmitCliprdrToWire(state, writeCh)) return false;
   if (greetingStillOnIo(state) && bastionIoCliprdrWriteForbidden(state)) return false;
   return true;
 }
@@ -1003,9 +1051,11 @@ function maybePromoteSelectorAppCliprdr(state) {
     state.pendingClientCliprdr = [];
   }
   if (isUser) {
-    // APP: write al VC nombrado es seguro tras saludo en 1001.
     state.cliprdrRehandshakePending = true;
-    if (state.cliprdrWriteChannelId == null
+    if (state.virtualChannels === true) {
+      // Simetria: escribir donde saluda Wallix (1001), no forzar VC nombrado 1006.
+      state.cliprdrWriteChannelId = state.serverCliprdrChannelId;
+    } else if (state.cliprdrWriteChannelId == null
         || !isSafeStaticCliprdrWrite(state, state.cliprdrWriteChannelId)) {
       state.cliprdrWriteChannelId = named;
     }
@@ -1021,6 +1071,10 @@ function retryConfirmAppCliprdrWrite(state) {
   if (state.cliprdrWriteChannelId != null) return false;
   if (!isUserMcsChannel(state, state.serverCliprdrChannelId)) return false;
   if (greetingStillOnIo(state)) return false;
+  if (state.virtualChannels === true) {
+    state.cliprdrWriteChannelId = state.serverCliprdrChannelId;
+    return true;
+  }
   const fallback = fallbackNamedCliprdrWrite(state);
   if (fallback == null) return false;
   state.cliprdrWriteChannelId = fallback;
@@ -1125,6 +1179,11 @@ function confirmCliprdrWriteChannel(state, channelId) {
     state.cliprdrWriteChannelId = ioFallback;
     return true;
   }
+  // Virtual: simetria — el write path es el canal del saludo (p.ej. MCS 1001).
+  if (state.virtualChannels === true) {
+    state.cliprdrWriteChannelId = channelId;
+    return true;
+  }
   const fallback = fallbackNamedCliprdrWrite(state);
   if (fallback == null) return false;
   state.cliprdrWriteChannelId = fallback;
@@ -1172,10 +1231,17 @@ function claimCliprdrPdu(state, channelId, userData) {
   // MS-RDPEA SNDC_TRAINING=0x06 ≡ CB_TEMP_DIRECTORY; SNDC_FORMATS=0x07 ≡ CB_CLIP_CAPS.
   // No reclamar rdpsnd/drdynvc/rail. rdpdr se deja (consumeRdpdr va antes) por si el
   // saludo cliprdr llega por un VC mal etiquetado en bastion.
+  // Virtual: Wallix a veces entrega CAPS/READY en el VC etiquetado drdynvc (1007);
+  // hay que reclamar el saludo (y sus continuaciones) antes de que DynVC lo trague.
   const declared = channelNameForId(state, channelId);
   if (declared) {
     const n = declared.toLowerCase();
-    if (n === 'drdynvc' || n === 'rail') return false;
+    const virtDrdynvcClip = state.virtualChannels === true && n === 'drdynvc' && (
+      isCliprdrGreetingPdu(userData)
+      || state.serverCliprdrChannelId === channelId
+    );
+    if (n === 'rail') return false;
+    if (n === 'drdynvc' && !virtDrdynvcClip) return false;
     if (n === 'rdpsnd' && wasmAllowsStaticRdpsnd(state)) return false;
   }
 
@@ -1574,7 +1640,8 @@ function takeCliprdrRehandshake(state) {
   if (!Buffer.isBuffer(state.cachedClientCaps)) return [];
   state.cliprdrRehandshakePending = false;
   const writeCh = state.cliprdrWriteChannelId;
-  if (!isSafeStaticCliprdrWrite(state, writeCh)) {
+  // Virtual permite rehandshake en MCS 1001 (simetria); legacy solo VC estatico.
+  if (!canEmitCliprdrToWire(state, writeCh)) {
     state.cliprdrRehandshakeSkippedUnsafe = true;
     return [];
   }
@@ -2150,6 +2217,42 @@ function remapClientDrdynvcFrame(state, frame) {
 }
 
 /**
+ * Capa virtual: el bridge hace los Channel Join de los VCs que IronRDP no declaro
+ * (rdpdr/rdpsnd inyectados) en cuanto llega Attach User Confirm, y absorbe sus
+ * Join Confirm para que WASM nunca vea un canal que no pidio.
+ * @returns {object|null} fragmento de resultado, o null si el frame no es de interes.
+ */
+function virtualJoinServerFrame(state, buf) {
+  if (!isTpkt(buf) || buf.length < 9 || buf[4] !== 0x02 || buf[5] !== 0xf0 || buf[6] !== 0x80) return null;
+  const ids = state.virtualBridgeJoinIds;
+  if (!(ids instanceof Set) || ids.size === 0) return null;
+
+  if (buf[7] === 0x2e && !state.virtualJoinsSent) {
+    const initiator = readAttachUserConfirmInitiator(buf);
+    if (initiator == null) return null;
+    state.virtualJoinsSent = true;
+    const sorted = [...ids].sort((a, b) => a - b);
+    const joins = sorted.map((id) => buildMcsChannelJoinRequest(initiator, id));
+    return { replies: joins, note: `virtual-bridge-joins [${sorted.join(',')}]` };
+  }
+
+  if (buf[7] === MCS_CHANNEL_JOIN_CONFIRM && buf.length >= 15) {
+    const requested = buf.readUInt16BE(11);
+    if (!ids.has(requested)) return null;
+    const result = (buf[8] >> 3) & 0x0f;
+    if (!(state.virtualJoinConfirmed instanceof Set)) state.virtualJoinConfirmed = new Set();
+    state.virtualJoinConfirmed.add(requested);
+    return {
+      forward: null,
+      dropped: true,
+      note: `virtual-join-confirm-absorbed ch=${requested} result=${result}`,
+      channelId: requested
+    };
+  }
+  return null;
+}
+
+/**
  * Procesa frame RDP->WASM.
  * @returns {{ forward: Buffer|null, replies: Buffer[], dropped: boolean, note: string|null, channelId: number|null }}
  */
@@ -2157,6 +2260,11 @@ function processServerFrame(state, buf) {
   const empty = { forward: buf, replies: [], dropped: false, note: null, channelId: null };
   if (!state || !Buffer.isBuffer(buf)) return empty;
   if (buf[0] !== 0x03) return empty;
+
+  if (state.virtualChannels === true) {
+    const virt = virtualJoinServerFrame(state, buf);
+    if (virt) return { ...empty, ...virt };
+  }
 
   let frame = buf;
   if (!state.ready) {
@@ -2272,6 +2380,16 @@ function processServerFrame(state, buf) {
       cliprdrDesc: null,
       rdpsndForward: true
     };
+  }
+
+  // Virtual: saludo cliprdr en canal etiquetado drdynvc (Wallix APP frio) — claim
+  // ANTES de DynVC o handleDvcRequest se lo come y dest queda none.
+  if (state.virtualChannels === true && !isIoChannel && parsed
+      && state.drdynvcChannelId != null && channelId === state.drdynvcChannelId
+      && (isCliprdrGreetingPdu(parsed.userData)
+        || state.serverCliprdrChannelId === channelId)
+      && claimCliprdrPdu(state, channelId, parsed.userData)) {
+    return buildCliprdrResult(state, frame, channelId, parsed.userData);
   }
 
   // DynVC (EGFX / DisplayControl / AUDIO_PLAYBACK) antes de claimCliprdr: el canal
@@ -2695,6 +2813,7 @@ module.exports = {
   reassembleServerCliprdrForWasm,
   reassembleStaticChannelPduForWasm,
   isDirectInjectAlignPath,
+  virtualJoinServerFrame,
   syncWasmJoinedChannels,
   consumeInjectOnlyChannelFragment,
   applyStaticVcReasmForward,
@@ -2715,6 +2834,8 @@ module.exports = {
   learnClientInitiator,
   isUserMcsChannel,
   isSafeStaticCliprdrWrite,
+  canEmitCliprdrToWire,
+  isCliprdrGreetingPdu,
   fallbackNamedCliprdrWrite,
   greetingOnUnsafeCliprdr,
   greetingStillOnIo,

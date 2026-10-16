@@ -117,9 +117,10 @@ describe('rdpdr stub', () => {
     assert.ok(res.note.includes('canal IO'));
   });
 
-  test('en el canal IO con VC rdpdr se contesta por el VC nombrado (no por IO)', () => {
+  test('legacy: en el canal IO con VC rdpdr se contesta por el VC nombrado (no por IO)', () => {
     const state = createChannelFilterState();
     state.ready = true;
+    state.virtualChannels = false;
     state.ioChannelId = 1003;
     state.cliprdrChannelId = 1004;
     state.allowed = new Set([1003, 1004, 1005, 1006]);
@@ -137,6 +138,83 @@ describe('rdpdr stub', () => {
     assert.ok(res.note.includes('saludo por IO'));
     assert.equal(state.rdpdrHandshakeComplete, true);
     assert.equal(state.rdpdrReplyCount, 4);
+  });
+
+  test('virtual: announce rdpdr en IO se absorbe sin replies al VC nombrado', () => {
+    const state = createChannelFilterState();
+    state.ready = true;
+    state.isBastion = true;
+    state.virtualChannels = true;
+    state.ioChannelId = 1003;
+    state.cliprdrChannelId = 1006;
+    state.allowed = new Set([1003, 1004, 1005, 1006, 1007]);
+    state.channelIdToName = new Map([
+      [1004, 'rdpdr'],
+      [1005, 'rdpsnd'],
+      [1006, 'cliprdr'],
+      [1007, 'drdynvc']
+    ]);
+    state.clientInitiator = 0;
+
+    const frame = buildMcsSendDataIndication(0, 1003, serverAnnounce(13, 0x7e));
+    const res = processServerFrame(state, frame);
+
+    assert.equal(res.dropped, true);
+    assert.equal(res.forward, null);
+    assert.equal(res.replies.length, 0, 'redirigir a 1004 tras announce en IO tumba Wallix APP');
+    assert.ok(res.note.includes('virtual'));
+    assert.ok(res.note.includes('fuera de rdpdr'));
+  });
+
+  test('virtual: announce rdpdr en cliprdr 1006 se absorbe sin replies a 1004', () => {
+    const state = createChannelFilterState();
+    state.ready = true;
+    state.isBastion = true;
+    state.virtualChannels = true;
+    state.ioChannelId = 1003;
+    state.cliprdrChannelId = 1006;
+    state.allowed = new Set([1003, 1004, 1005, 1006, 1007]);
+    state.channelIdToName = new Map([
+      [1004, 'rdpdr'],
+      [1005, 'rdpsnd'],
+      [1006, 'cliprdr'],
+      [1007, 'drdynvc']
+    ]);
+    state.clientInitiator = 0;
+
+    const frame = buildMcsSendDataIndication(0, 1006, serverAnnounce(13, 0x7e));
+    const res = processServerFrame(state, frame);
+
+    assert.equal(res.dropped, true);
+    assert.equal(res.forward, null);
+    assert.equal(res.replies.length, 0, 'redirigir 1006→1004 provoca ECONNRESET en RDP/selector');
+    assert.ok(res.note.includes('virtual'));
+    assert.ok(res.note.includes('fuera de rdpdr'));
+    assert.equal(state.rdpdrReplyCount || 0, 0);
+  });
+
+  test('virtual: announce en el VC rdpdr real sigue contestando ahi', () => {
+    const state = createChannelFilterState();
+    state.ready = true;
+    state.isBastion = true;
+    state.virtualChannels = true;
+    state.ioChannelId = 1003;
+    state.cliprdrChannelId = 1006;
+    state.allowed = new Set([1003, 1004, 1005, 1006, 1007]);
+    state.channelIdToName = new Map([
+      [1004, 'rdpdr'],
+      [1005, 'rdpsnd'],
+      [1006, 'cliprdr'],
+      [1007, 'drdynvc']
+    ]);
+    state.clientInitiator = 0;
+
+    const frame = buildMcsSendDataIndication(0, 1004, serverAnnounce(13, 0x42));
+    const res = processServerFrame(state, frame);
+
+    assert.equal(res.dropped, true);
+    assert.equal(res.replies.length, 4);
+    assert.equal(parseMcsSendData(res.replies[0]).channelId, 1004);
   });
 
   test('anuncio rdpdr en MCS 1001 se contesta por el VC rdpdr, no por 1001', () => {

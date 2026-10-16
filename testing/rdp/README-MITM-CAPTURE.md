@@ -62,9 +62,51 @@ Gate unitario (sin sesión live):
 node --test testing/rdp/mstsc-baseline-align.test.js testing/rdp/cs-net-inject.test.js
 ```
 
+## 3b. Trazas de cable fieles (NodeTerm)
+
+Con `NODETERM_RDP_TRACE=1` el bridge escribe:
+
+| `dir` | Significado |
+|-------|-------------|
+| `s2c` | CABLE: lo que envia Wallix, antes de cualquier filtro/stub (comparable con mstsc MITM) |
+| `c2s` | CABLE: todo lo que sale hacia Wallix; `src=client` (reenvio del WASM) o `synth` (stubs/joins del bridge). Input FastPath como `tipo=FastPath INPUT` |
+| `s2c-wasm` | Lo que ve el WASM tras el filtro (rewrites/remaps/drops) |
+| `c2s-wasm` | Lo que envia el WASM antes del filtro |
+
+Los primeros 40 frames de cada direccion (y todo CS_NET) llevan `hex` completo ademas de `hex64`.
+`node testing/rdp/trace-diff.js mstsc.jsonl nodeterm.jsonl` imprime hitos por canal, generaciones cliprdr y input -> rafaga.
+
+## 3c. Matriz de capturas (Fase 1)
+
+Guardar en `testing/rdp/traces/matrix/` con el nombre `<cliente>-<escenario>-<estado>-<n>.jsonl`:
+
+- cliente: `mstsc` (via `mitm-capture.js --out ...`) o `nodeterm` (`NODETERM_RDP_TRACE_FILE=<ruta>` en `rdp-flags.json`)
+- escenario: `selector` (usuario sin `:APP:`/`:RDP:`), `rdp` (`:RDP:`), `app` (`:APP:`)
+- estado: `frio` (primera sesion tras arrancar) o `solape` (con otra sesion bastion abierta)
+- n: 1..3 repeticiones, mismo bastion y destino
+
+En cada captura: esperar al banner, pulsar el banner, esperar al escritorio, marcar "Portapapeles" en el dialogo Wallix, copiar/pegar en ambos sentidos, cerrar.
+
+Informe: `node testing/rdp/matrix-report.js` (exit 2 si hay diferencias de canal/cliprdr o falta un lado).
+
 ## 4. Criterios de éxito NodeTerm
 
 1. `csNet` empieza por `rdpdr,rdpsnd,cliprdr`
 2. Cliprdr: CAPS débil diferido → tras hop CAPS con file-clip (`0x3e`) + FORMAT/LOCK
 3. Portapapeles texto ida y vuelta OK
 4. Cold-start no peor que mstsc (~20s burst Session Probe)
+
+## 3d. Capa de canales `virtual` y A/B de latencia (Fases 3-6)
+
+Flag: `NODETERM_RDP_CHANNELS=virtual|legacy` (env o `rdp-flags.json`; default `legacy` hasta validar la matriz).
+
+- `virtual`: CS_NET = mstsc en los 3 escenarios (APP sin `rail`); SC_NET recortado al WASM con IDs
+  reales por nombre tambien en bastion; el bridge hace los Channel Join de rdpdr/rdpsnd al llegar el
+  Attach User Confirm y absorbe sus Join Confirm. Log de arranque: `[Bridge] Capa de canales: virtual`.
+- A/B: capturar cada escenario (selector / rdp / app, frio y solape) con `legacy` y con `virtual`
+  (`NODETERM_RDP_TRACE=1`), copiar a `traces/matrix/nodeterm-<escenario>-<frio|solape>-<n>.jsonl` y
+  ejecutar `node testing/rdp/matrix-report.js`. Hitos a mirar: `inputToBurst` (clic banner -> escritorio),
+  gen1/gen2 cliprdr y `clientAnswerMs`. `node testing/rdp/handshake-diff.js <mstsc> <nodeterm>` compara
+  CS_CORE/CS_NET del Connect Initial (requiere trazas nuevas con `hex` completo).
+- Para pasar a `virtual` por defecto: cambiar `CHANNELS_MODE_DEFAULT` en `RdpNativeBridgeService.js`
+  cuando la matriz no muestre diferencias de CS_NET/cliprdr y la latencia sea <= legacy.

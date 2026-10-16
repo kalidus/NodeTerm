@@ -321,17 +321,33 @@ describe('prepareMcsConnectInitial con inyeccion', () => {
   });
 });
 
-// Escritorio/selector: rdpdr+rdpsnd delante (baseline mstsc). APP: rail+rdpdr+rdpsnd.
-// cliprdr como primer VC rompe el saludo.
+// Escritorio/selector: rdpdr+rdpsnd delante (baseline mstsc). APP legacy: rail+rdpdr+rdpsnd.
+// cliprdr como primer VC rompe el saludo. (APP virtual sin rail se cubre en virtual-channels.test.js)
 describe('juego de canales por defecto del bridge', () => {
   const { resolveInjectedChannels } = require('../../src/main/services/RdpNativeBridgeService');
-  const previous = process.env.NODETERM_RDP_INJECT_CHANNELS;
+  const previous = {
+    inj: process.env.NODETERM_RDP_INJECT_CHANNELS,
+    app: process.env.NODETERM_RDP_INJECT_CHANNELS_APP,
+    ch: process.env.NODETERM_RDP_CHANNELS
+  };
 
-  // El valor se lee tambien de rdp-flags.json, asi que la variable de entorno tiene que ganar
-  beforeEach(() => { process.env.NODETERM_RDP_INJECT_CHANNELS = ''; });
+  // El valor se lee tambien de rdp-flags.json, asi que la variable de entorno tiene que ganar.
+  // Forzar legacy: si el usuario tiene NODETERM_RDP_CHANNELS=virtual en rdp-flags.json,
+  // APP dejaria de inyectar rail y estos tests fallarian sin aislar el flag.
+  beforeEach(() => {
+    process.env.NODETERM_RDP_INJECT_CHANNELS = '';
+    process.env.NODETERM_RDP_INJECT_CHANNELS_APP = '';
+    process.env.NODETERM_RDP_CHANNELS = 'legacy';
+  });
   afterEach(() => {
-    if (previous === undefined) delete process.env.NODETERM_RDP_INJECT_CHANNELS;
-    else process.env.NODETERM_RDP_INJECT_CHANNELS = previous;
+    for (const [k, v] of [
+      ['NODETERM_RDP_INJECT_CHANNELS', previous.inj],
+      ['NODETERM_RDP_INJECT_CHANNELS_APP', previous.app],
+      ['NODETERM_RDP_CHANNELS', previous.ch]
+    ]) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
   });
 
   test('por defecto desplaza cliprdr detras de rdpdr+rdpsnd (orden mstsc)', () => {
@@ -394,8 +410,8 @@ describe('juego de canales por defecto del bridge', () => {
     );
   });
 
-  test('NODETERM_RDP_INJECT_CHANNELS gana al juego APP (p.ej. rail delante)', () => {
-    process.env.NODETERM_RDP_INJECT_CHANNELS = 'rail,rdpdr,rdpsnd,*';
+  test('NODETERM_RDP_INJECT_CHANNELS_APP gana al juego APP (p.ej. rail delante)', () => {
+    process.env.NODETERM_RDP_INJECT_CHANNELS_APP = 'rail,rdpdr,rdpsnd,*';
     assert.deepEqual(
       resolveInjectedChannels({ username: 'rt01119@default@FortiAnalyzer:APP:rt01119' }),
       { before: ['rail', 'rdpdr', 'rdpsnd'], after: [] }

@@ -46,6 +46,7 @@ const {
   isUserMcsChannel,
   isSafeStaticCliprdrWrite,
   fallbackNamedCliprdrWrite,
+  canEmitCliprdrToWire,
   greetingOnUnsafeCliprdr,
   greetingStillOnIo,
   isSelectorMenuCliprdrDefer,
@@ -60,7 +61,6 @@ const {
   enqueueClientCliprdr,
   takePendingClientCliprdr,
   shouldRecordMutedClientCliprdr,
-  cliprdrMustDropShowProtocol,
   rememberClientCliprdrHandshake,
   patchClientCapsGeneralFlags,
   takeCliprdrRehandshake,
@@ -79,8 +79,6 @@ const {
   noteClientChannelJoinRequest,
   noteServerAttachUserConfirm,
   noteServerChannelJoinConfirm,
-  takeEarlyCliprdrJoin,
-  takeJoinedCliprdrAnswer,
   buildAppProbeCliprdrWrites,
   remapClientDrdynvcFrame,
   remapClientRdpsndFrame,
@@ -189,7 +187,8 @@ function readDiagValue(name) {
 // :RDP:/selector: rdpdr+rdpsnd delante (cliprdr queda en indice 2 / MCS ~1006).
 // El stub rdpdr (rdp-rdpdr.js) cierra Device List en 0 ms; sin el stub el frio
 // con rdpdr anunciado esperaba ~24 s.
-// :APP: rail+rdpdr+rdpsnd delante (requerido por RemoteApp).
+// :APP: legacy anade rail delante; con NODETERM_RDP_CHANNELS=virtual el CS_NET es el de
+// mstsc (rdpdr,rdpsnd,cliprdr,drdynvc; sin rail: baseline mstsc-app-clipboard.jsonl).
 // En directo tambien: sin inject cliprdr queda primero y la sesion no arranca.
 // El filtro alinea rdpsnd/drdynvc por nombre y despacha antes de claimCliprdr
 // (evita SNDC_TRAINING≡TEMP_DIRECTORY y DynVC huerfano).
@@ -246,12 +245,31 @@ function parseInjectChannelsSpec(requested) {
   return { before: split(parts[0]), after: split(parts.slice(1).join(',')) };
 }
 
+/**
+ * Capa de canales: 'virtual' (CS_NET = mstsc en los 3 escenarios, SC_NET recortado al WASM
+ * por nombre y joins de canales inyectados hechos por el bridge) o 'legacy' (zip por indice
+ * + heuristicas). NODETERM_RDP_CHANNELS=virtual|legacy.
+ */
+const CHANNELS_MODE_DEFAULT = 'legacy';
+
+function resolveChannelsMode() {
+  const v = readDiagValue('NODETERM_RDP_CHANNELS').toLowerCase();
+  if (v === 'virtual' || v === 'legacy') return v;
+  return CHANNELS_MODE_DEFAULT;
+}
+
+function isVirtualChannelsMode() {
+  return resolveChannelsMode() === 'virtual';
+}
+
 function resolveInjectedChannels(session) {
   const isApp = wallixServiceFromSession(session) === 'APP';
   if (isApp) {
     const requestedApp = readDiagValue('NODETERM_RDP_INJECT_CHANNELS_APP');
     if (requestedApp && requestedApp.toLowerCase() === 'off') return null;
     if (requestedApp) return parseInjectChannelsSpec(requestedApp);
+    // Baseline mstsc :APP: CS_NET = [rdpdr,rdpsnd,cliprdr,drdynvc], sin rail.
+    if (isVirtualChannelsMode()) return RDP_INJECTED_CHANNELS;
     return APP_INJECTED_CHANNELS;
   }
   const requested = readDiagValue('NODETERM_RDP_INJECT_CHANNELS');
@@ -679,6 +697,13 @@ class RdpNativeBridgeService extends EventEmitter {
     const channelFilter = createChannelFilterState();
     channelFilter.wallixService = wallixServiceFromSession(session) || (isBastionSession(session) ? 'n/a' : null);
     channelFilter.isBastion = isBastionSession(session);
+    // Capa de canales virtual: solo bastion con inyeccion de CS_NET.
+    channelFilter.virtualChannels = channelFilter.isBastion === true
+      && isVirtualChannelsMode()
+      && resolveInjectedChannels(session) != null;
+    if (channelFilter.virtualChannels) {
+      console.log(`[Bridge] Capa de canales: virtual (${channelFilter.wallixService || 'bastion'})`);
+    }
     channelFilter.allowAudioPlayback = session.redirectAudio === true;
     channelFilter.egfxGraphics = session.ironRdpGraphics === 'egfx';
     channelFilter.probeTempDirOnGreetEnabled = probeTempDirOnGreetFlag();
@@ -694,6 +719,8 @@ class RdpNativeBridgeService extends EventEmitter {
         { label: `nodeterm:${channelFilter.wallixService || 'rdp'}` }
       )
       : createPduTraceWriter(null);
+    // Origen de lo que se escribe al cable (solo traza): 'synth' por defecto, 'client' en reenvio WASM.
+    let c2sTraceSrc = 'synth';
     if (pduTrace.enabled) {
       console.warn(`[Bridge] PDU trace ON -> ${pduTrace.path}`);
     }
@@ -821,37 +848,6 @@ class RdpNativeBridgeService extends EventEmitter {
      * RDP Probe (paridad FreeRDP/Moba): un CB_TEMP_DIRECTORY al canal del MONITOR_READY
      * si sigue en IO. Sin CAPS. Idempotente (probeTempDirOnGreetSent).
      */
-    const emitEarlyCliprdrJoin = (reason) => {
-      if (!tlsSocket || !tlsSocket.writable) return false;
-      const pdu = takeEarlyCliprdrJoin(channelFilter);
-      if (!pdu) return false;
-      bytesToRdp += pdu.length;
-      tlsSocket.write(pdu);
-      const ch = pdu.readUInt16BE(10);
-      const msg = `[Bridge] cliprdr Channel Join ch=${ch} (${reason || 'early'})`;
-      console.warn(msg);
-      this.emit('diagnostic-log', { category: 'cliprdr-join', message: msg });
-      if (timeline.enabled) timeline.mark('cliprdr-join-sent', `ch=${ch} ${reason || 'early'}`);
-      return true;
-    };
-
-    const emitJoinedCliprdrAnswer = (reason) => {
-      if (!tlsSocket || !tlsSocket.writable) return 0;
-      const frames = takeJoinedCliprdrAnswer(channelFilter);
-      if (!frames.length) return 0;
-      for (const pdu of frames) {
-        bytesToRdp += pdu.length;
-        tlsSocket.write(pdu);
-      }
-      const ch = channelFilter.serverCliprdrChannelId;
-      const msg = `[Bridge Clipboard] RDP cliprdr unido: CAPS+TEMPDIR ch=${ch} (${reason || 'ready'})`;
-      recordCliprdrEvent(msg);
-      console.warn(msg);
-      this.emit('diagnostic-log', { category: 'cliprdr-joined-answer', message: msg });
-      if (timeline.enabled) timeline.mark('cliprdr-joined-answer', `ch=${ch} ${reason || 'ready'}`);
-      return frames.length;
-    };
-
     const emitProbeTempDirOnGreet = (reason) => {
       if (!tlsSocket || !tlsSocket.writable) return false;
       if (!isProbeTempDirOnGreetEnabled(channelFilter)) return false;
@@ -1137,6 +1133,27 @@ class RdpNativeBridgeService extends EventEmitter {
               tlsSocket.removeListener('error', onTlsHandshakeError);
               tlsSocket.setNoDelay(true);
               tlsSocket.setKeepAlive(true, 15000);
+              if (pduTrace.enabled) {
+                // Traza de CABLE c2s: todo lo que sale hacia Wallix (cliente WASM, stubs rdpdr/rail,
+                // autodetect, joins propios...). src='client' = reenviado del WASM, 'synth' = del bridge.
+                const origTlsWrite = tlsSocket.write.bind(tlsSocket);
+                tlsSocket.write = (data, ...rest) => {
+                  try {
+                    if (Buffer.isBuffer(data)) {
+                      const src = c2sTraceSrc;
+                      const isFp = data.length >= 2 && (data[0] & 0x03) === 0 && data[0] !== 0x30;
+                      if (isFp) {
+                        pduTrace.writeInput('c2s', data, src);
+                      } else {
+                        for (const f of splitTpktFrames(data)) {
+                          pduTrace.write('c2s', f, undefined, { src });
+                        }
+                      }
+                    }
+                  } catch (_) { /* traza nunca rompe el cable */ }
+                  return origTlsWrite(data, ...rest);
+                };
+              }
               console.log(`🔒 [RdpNativeBridgeService] Conexión RDP TLS establecida con ${session.host}:${session.port}`);
 
               let peerCertChain = [];
@@ -1195,7 +1212,7 @@ class RdpNativeBridgeService extends EventEmitter {
               const sendDirectToWasm = (out) => {
                 if (!out || typeof out.length !== 'number') return;
                 if (ws.readyState !== ws.OPEN) return;
-                if (pduTrace.enabled) pduTrace.write('s2c', out);
+                if (pduTrace.enabled) pduTrace.write('s2c-wasm', out, undefined, { src: 'wasm' });
                 flushTickOut();
                 ws.send(out, { binary: true }, () => {
                   checkResumeTls();
@@ -1205,7 +1222,7 @@ class RdpNativeBridgeService extends EventEmitter {
               const sendBinaryToWasm = (out) => {
                 if (!out || typeof out.length !== 'number') return;
                 if (ws.readyState !== ws.OPEN) return;
-                if (pduTrace.enabled) pduTrace.write('s2c', out);
+                if (pduTrace.enabled) pduTrace.write('s2c-wasm', out, undefined, { src: 'wasm' });
                 if (tickBatcher.push(out)) {
                   // Directo: un bloque de cientos de KB se decodifica de un tirón en el
                   // renderer. Al pasar de 64 KB se envia el lote (el frame que lo cruza
@@ -1399,6 +1416,10 @@ class RdpNativeBridgeService extends EventEmitter {
                 const splitFrames = (normalizeBitmaps || directPostNlaDeframer)
                   ? streamDeframer.push(chunk)
                   : frameSplitter.push(chunk);
+                if (pduTrace.enabled) {
+                  // Cable s2c: exactamente lo que envia Wallix, antes de cualquier filtro/stub.
+                  for (const wf of splitFrames) pduTrace.write('s2c', wf, undefined, { src: 'wire' });
+                }
                 // RTT y ancho de banda se contestan antes de la ráfaga gráfica.
                 // Si la respuesta espera a procesar los bitmaps, Windows mide
                 // esa espera como red lenta y baja la calidad H.264 al mover.
@@ -2153,9 +2174,12 @@ class RdpNativeBridgeService extends EventEmitter {
             bytesToRdp += payload.length;
             timeline.noteOut('input', payload.length);
             if (latencyMetrics) latencyMetrics.noteInput();
+            c2sTraceSrc = 'client';
             if (tlsSocket && tlsSocket.writable) {
               tlsSocket.write(payload);
+              c2sTraceSrc = 'synth';
             } else if (targetSocket && targetSocket.writable) {
+              c2sTraceSrc = 'synth';
               targetSocket.write(payload);
             }
             return;
@@ -2189,6 +2213,7 @@ class RdpNativeBridgeService extends EventEmitter {
           const wasmInjections = [];
           let clientFramesChanged = false;
           for (let clientFrame of clientFrames) {
+            if (pduTrace.enabled) pduTrace.write('c2s-wasm', clientFrame, undefined, { src: 'wasm' });
             noteClientChannelJoinRequest(channelFilter, clientFrame);
             // Bastion sin EGFX: Confirm Active sin RFX/Surface (bpp intacto → RLE 16/24).
             // Con EGFX no se capa: el destino tiene que ver Surface/codecs del WASM.
@@ -2444,9 +2469,10 @@ class RdpNativeBridgeService extends EventEmitter {
         }
         if (forward && forward.length > 0) {
           bytesToRdp += forward.length;
-          if (pduTrace.enabled) pduTrace.write('c2s', forward);
           if (tlsSocket && tlsSocket.writable) {
+            c2sTraceSrc = 'client';
             tlsSocket.write(forward);
+            c2sTraceSrc = 'synth';
           } else if (targetSocket && targetSocket.writable) {
             targetSocket.write(forward);
           }
@@ -2574,9 +2600,40 @@ class RdpNativeBridgeService extends EventEmitter {
       return { forward: null, inject };
     }
 
+    // Virtual: simetria — FORMAT_LIST / FORMAT_DATA_REQUEST al canal del saludo
+    // (aunque sea MCS 1001). Flush EGFX a 1006 deja pending_data (Wallix no responde).
+    if (channelFilter.virtualChannels === true && !destIsIo
+        && channelFilter.serverCliprdrChannelId != null) {
+      const wireDest = channelFilter.cliprdrWriteChannelId != null
+        ? channelFilter.cliprdrWriteChannelId
+        : channelFilter.serverCliprdrChannelId;
+      if (canEmitCliprdrToWire(channelFilter, wireDest)) {
+        if (channelFilter.cliprdrWriteChannelId == null) {
+          channelFilter.cliprdrWriteChannelId = wireDest;
+        }
+        if (clipDesc && clipDesc.includes('CB_TEMP_DIRECTORY')
+            && channelFilter.wallixService !== 'RDP'
+            && isUserMcsChannel(channelFilter, wireDest)) {
+          // TEMPDIR en 1001 no aporta; CAPS/listas/request si.
+          return { forward: null, inject };
+        }
+        const out = rewriteMcsChannelId(frame, wireDest) || frame;
+        if (!channelFilter.loggedCliprdrVirtualSymmetric) {
+          channelFilter.loggedCliprdrVirtualSymmetric = true;
+          const symMsg = `[Bridge Clipboard] virtual: cliprdr c2s simetrico ch=${wireDest}` +
+            ` (saludo servidor; no flush a VC nombrado)`;
+          console.warn(symMsg);
+          if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(symMsg);
+          this.emit('diagnostic-log', { category: 'cliprdr', message: symMsg });
+        }
+        return { forward: out, inject };
+      }
+    }
+
     // EGFX: un CHANNEL_PDU en 1001 o en el IO (1003) congela el gráfico tras el banner.
     // Se encola y se acusa al WASM. Sin EGFX se mantiene el camino de bitmap.
     // Tras promote selector→APP con write al VC nombrado: no mute eterno; escribir ahi.
+    // (Legacy only: virtual ya salio arriba.)
     const egfxMuteUnsafe = channelFilter.egfxGraphics === true
       && (isUserMcsChannel(channelFilter, dest) || destIsIo);
 
@@ -3443,6 +3500,8 @@ class RdpNativeBridgeService extends EventEmitter {
 module.exports = new RdpNativeBridgeService();
 // Expuesto solo para tests: decide el juego de canales de TODAS las conexiones RDP nativas
 module.exports.resolveInjectedChannels = resolveInjectedChannels;
+module.exports.resolveChannelsMode = resolveChannelsMode;
+module.exports.isVirtualChannelsMode = isVirtualChannelsMode;
 module.exports.resolveStripChannels = resolveStripChannels;
 module.exports.selectorStripCliprdrRdpdrEnabled = selectorStripCliprdrRdpdrEnabled;
 module.exports.wallixServiceFromUsername = wallixServiceFromUsername;

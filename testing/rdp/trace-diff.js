@@ -9,6 +9,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { analyzeTrace, printMilestones } = require('./trace-milestones');
 
 function loadJsonl(filePath) {
   const text = fs.readFileSync(filePath, 'utf8');
@@ -168,6 +169,44 @@ function diff(a, b) {
   );
 }
 
+/** Diferencias de canales/cliprdr entre baseline (A) y NodeTerm (B). Devuelve lista de strings. */
+function milestoneDiffs(ma, mb) {
+  const out = [];
+  const csA = (ma.csNet || []).join(',');
+  const csB = (mb.csNet || []).join(',');
+  if (csA !== csB) out.push(`CS_NET distinto: A=[${csA}] B=[${csB}]`);
+  const clipA = ma.channels.cliprdr;
+  const clipB = mb.channels.cliprdr;
+  if (clipA && (!clipB || clipA.id !== clipB.id)) {
+    out.push(`cliprdr canal: A=${clipA.id} B=${clipB ? clipB.id : 'sin trafico'}`);
+  }
+  if (clipA && clipB && clipA.firstS2c != null && clipB.firstS2c != null) {
+    out.push(`primer saludo cliprdr: A=${clipA.firstS2c}ms B=${clipB.firstS2c}ms (delta ${clipB.firstS2c - clipA.firstS2c}ms)`);
+  }
+  const gA = ma.cliprdrGenerations.length;
+  const gB = mb.cliprdrGenerations.length;
+  if (gA !== gB) out.push(`generaciones cliprdr: A=${gA} B=${gB}`);
+  const n = Math.min(gA, gB);
+  for (let i = 0; i < n; i++) {
+    const x = ma.cliprdrGenerations[i];
+    const y = mb.cliprdrGenerations[i];
+    if (x.generalFlags !== y.generalFlags) {
+      out.push(`gen${i + 1} flags servidor: A=${x.generalFlags} B=${y.generalFlags}`);
+    }
+    if ((x.clientFormatListMs == null) !== (y.clientFormatListMs == null)) {
+      out.push(`gen${i + 1} FORMAT_LIST cliente: A=${x.clientFormatListMs} B=${y.clientFormatListMs}`);
+    }
+  }
+  return out;
+}
+
+function printMilestoneDiff(ma, mb) {
+  const diffs = milestoneDiffs(ma, mb);
+  console.log('\n=== DIFF HITOS (canales / cliprdr) ===');
+  if (!diffs.length) console.log('  sin diferencias de canal/cliprdr');
+  for (const d of diffs) console.log(`  ${d}`);
+}
+
 function main() {
   const aPath = process.argv[2];
   const bPath = process.argv[3];
@@ -182,6 +221,11 @@ function main() {
   printSummary(a);
   printSummary(b);
   diff(a, b);
+  const ma = analyzeTrace(aRows);
+  const mb = analyzeTrace(bRows);
+  printMilestones(a.label, ma);
+  printMilestones(b.label, mb);
+  printMilestoneDiff(ma, mb);
   // Exit 2 si NodeTerm (B) no alinea CS_NET al baseline mstsc.
   if (!csNetMatchesMstsc(b.csNet)) {
     console.error('\n[trace-diff] FAIL: NodeTerm CS_NET no empieza por rdpdr,rdpsnd,cliprdr');
@@ -194,6 +238,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  milestoneDiffs,
   loadJsonl,
   firstCsNet,
   summarize,

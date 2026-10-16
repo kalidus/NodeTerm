@@ -47,6 +47,18 @@ function classifyFrame(buf) {
   return { tipo, canal, extra: { cliprdr, csNet } };
 }
 
+/** Hex completo en handshake: primeros N frames por direccion, CS_NET/SC_NET y tramas cortas con nota. */
+const FULL_HEX_MAX_FRAMES = 40;
+const FULL_HEX_MAX_LEN = 4096;
+
+function shouldWriteFullHex(buf, indexForDir, extra, opts) {
+  if (opts && opts.full === true) return buf.length <= 65536;
+  if (buf.length > FULL_HEX_MAX_LEN) return false;
+  if (indexForDir <= FULL_HEX_MAX_FRAMES) return true;
+  if (extra && extra.csNet) return true;
+  return false;
+}
+
 /**
  * Writer JSONL. startMs fija t=0 de la sesion.
  * @param {string} filePath
@@ -57,6 +69,7 @@ function createPduTraceWriter(filePath, opts = {}) {
     return {
       enabled: false,
       write() {},
+      writeInput() {},
       close() {},
       path: null
     };
@@ -77,9 +90,18 @@ function createPduTraceWriter(filePath, opts = {}) {
     enabled: true,
     path: filePath,
     startMs,
-    write(dir, buf, note) {
+    /**
+     * @param {string} dir 'c2s' / 's2c' = CABLE (comparable con mstsc MITM).
+     *   'c2s-wasm' / 's2c-wasm' = lado WASM (antes/despues del filtro del bridge).
+     * @param {Buffer} buf
+     * @param {string} [note]
+     * @param {{ src?: 'wire'|'wasm'|'synth', full?: boolean }} [opts]
+     */
+    write(dir, buf, note, opts) {
       if (!Buffer.isBuffer(buf)) return;
       const { tipo, canal, extra } = classifyFrame(buf);
+      const counts = this._counts || (this._counts = {});
+      counts[dir] = (counts[dir] || 0) + 1;
       const row = {
         t_ms: Date.now() - startMs,
         dir,
@@ -88,8 +110,26 @@ function createPduTraceWriter(filePath, opts = {}) {
         len: buf.length,
         hex64: hexPrefix(buf),
         note: note || undefined,
+        src: (opts && opts.src) || undefined,
         cliprdr: extra.cliprdr || undefined,
         csNet: extra.csNet || undefined
+      };
+      if (shouldWriteFullHex(buf, counts[dir], extra, opts)) {
+        row.hex = buf.toString('hex');
+      }
+      stream.write(`${JSON.stringify(row)}\n`);
+    },
+    /** Entrada FastPath (raton/teclado): fila compacta, nunca hex completo. */
+    writeInput(dir, buf, note) {
+      if (!Buffer.isBuffer(buf)) return;
+      const row = {
+        t_ms: Date.now() - startMs,
+        dir,
+        tipo: 'FastPath INPUT',
+        canal: null,
+        len: buf.length,
+        hex64: hexPrefix(buf),
+        note: note || undefined
       };
       stream.write(`${JSON.stringify(row)}\n`);
     },
