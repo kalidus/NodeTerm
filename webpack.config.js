@@ -82,11 +82,13 @@ module.exports = {
       },
     },
   },
+  // Glue IronRDP: sin Babel (realpath del file: sale de node_modules). Sí se parsea para
+  // que webpack reescriba new URL('./….wasm', import.meta.url) → asset/resource.
   module: {
     rules: [
       {
         test: /\.(js|jsx)$/,
-        exclude: /node_modules/,
+        exclude: /node_modules|third_party[\\/]ironrdp/,
         use: {
           loader: 'babel-loader',
           options: {
@@ -103,6 +105,13 @@ module.exports = {
       {
         test: /\.css$/,
         use: ['style-loader', 'css-loader']
+      },
+      {
+        test: /\.wasm$/i,
+        type: 'asset/resource',
+        generator: {
+          filename: '[name][ext]'
+        }
       },
       {
         test: /\.(png|jpe?g|gif|svg)$/i,

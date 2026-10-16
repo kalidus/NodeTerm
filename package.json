@@ -141,7 +141,8 @@
     "asarUnpack": [
       "binaries/**",
       "node_modules/ssh2-promise/**",
-      "node_modules/ssh2/**"
+      "node_modules/ssh2/**",
+      "**/*.wasm"
     ],
     "extraFiles": [
       "LICENSE",

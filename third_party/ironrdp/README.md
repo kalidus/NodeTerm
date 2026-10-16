@@ -4,13 +4,13 @@ Todo el material IronRDP custom de NodeTerm vive aquí (no en `src/`).
 
 ```
 third_party/ironrdp/
-  wasm/       Paquete npm congelado (runtime / releases)
+  wasm/       Paquete npm congelado (JS glue + .wasm binario)
   patches/    Parches para regenerar el WASM (mantenimiento)
 ```
 
 ## Runtime (producción)
 
-El binario empaquetado es [`wasm/`](wasm/). Releases y CI solo hacen `npm ci` + webpack + electron-builder.
+El artefacto empaquetado es [`wasm/`](wasm/) (`iron-remote-desktop-rdp.js` + `iron-remote-desktop-rdp_bg.wasm`). Releases y CI solo hacen `npm ci` + webpack + electron-builder.
 
 Dependencia raíz:
 

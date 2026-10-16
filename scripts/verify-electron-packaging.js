@@ -39,10 +39,12 @@ const PACKAGE_JSON_GLOBS = [
 
 const VENDOR_DEP = 'file:third_party/ironrdp/wasm';
 const VENDOR_JS = 'third_party/ironrdp/wasm/iron-remote-desktop-rdp.js';
+const VENDOR_WASM = 'third_party/ironrdp/wasm/iron-remote-desktop-rdp_bg.wasm';
 const VENDOR_PKG = 'third_party/ironrdp/wasm/package.json';
 
 /**
- * El WASM IronRDP NodeTerm viaja congelado en third_party/ironrdp/wasm/; releases no lo recompilan.
+ * El WASM IronRDP NodeTerm viaja congelado en third_party/ironrdp/wasm/ (JS glue + .wasm binario);
+ * releases no lo recompilan.
  * @param {object} rootPkg
  * @returns {string[]}
  */
@@ -56,9 +58,13 @@ function verifyIronRdpVendor(rootPkg) {
   }
 
   const jsPath = path.join(REPO_ROOT, VENDOR_JS);
+  const wasmPath = path.join(REPO_ROOT, VENDOR_WASM);
   const pkgPath = path.join(REPO_ROOT, VENDOR_PKG);
   if (!fs.existsSync(jsPath)) {
     errors.push(`falta ${VENDOR_JS}`);
+  }
+  if (!fs.existsSync(wasmPath)) {
+    errors.push(`falta ${VENDOR_WASM}`);
   }
   if (!fs.existsSync(pkgPath)) {
     errors.push(`falta ${VENDOR_PKG}`);
@@ -78,12 +84,40 @@ function verifyIronRdpVendor(rootPkg) {
     errors.push(`versión vendor inválida (se esperaba *nodeterm-egfx* / *egfx*): ${ver || '(vacía)'}`);
   }
 
-  const js = fs.readFileSync(jsPath, 'utf8');
-  if (js.length < 1_000_000) {
-    errors.push(`${VENDOR_JS} demasiado pequeño (${js.length} bytes)`);
+  const files = Array.isArray(vendorPkg.files) ? vendorPkg.files : [];
+  if (!files.includes('iron-remote-desktop-rdp_bg.wasm')) {
+    errors.push(`${VENDOR_PKG} files[] debe incluir iron-remote-desktop-rdp_bg.wasm`);
   }
-  if (!js.includes('data:application/wasm;base64,')) {
-    errors.push(`${VENDOR_JS} no contiene WASM embebido (data:application/wasm;base64,)`);
+
+  const js = fs.readFileSync(jsPath, 'utf8');
+  if (js.includes('data:application/wasm;base64,')) {
+    errors.push(
+      `${VENDOR_JS} aún tiene WASM embebido en base64; ejecuta node scripts/extract-ironrdp-wasm.js`
+    );
+  }
+  if (!js.includes('iron-remote-desktop-rdp_bg.wasm')) {
+    errors.push(`${VENDOR_JS} no referencia iron-remote-desktop-rdp_bg.wasm`);
+  }
+  if (js.length > 2_000_000) {
+    errors.push(`${VENDOR_JS} demasiado grande (${js.length} bytes); ¿sigue el base64?`);
+  }
+
+  const wasmStat = fs.statSync(wasmPath);
+  if (wasmStat.size < 100_000) {
+    errors.push(`${VENDOR_WASM} demasiado pequeño (${wasmStat.size} bytes)`);
+  }
+  const magic = Buffer.alloc(4);
+  const fd = fs.openSync(wasmPath, 'r');
+  fs.readSync(fd, magic, 0, 4, 0);
+  fs.closeSync(fd);
+  if (magic.toString('binary') !== '\0asm') {
+    errors.push(`${VENDOR_WASM} magic inválido (no es módulo WASM)`);
+  }
+
+  const unpack = (rootPkg.build && rootPkg.build.asarUnpack) || [];
+  const unpackStr = unpack.join('\n');
+  if (!unpackStr.includes('.wasm')) {
+    errors.push('build.asarUnpack debe incluir **/*.wasm (fetch de WASM desde asar falla)');
   }
 
   return errors;

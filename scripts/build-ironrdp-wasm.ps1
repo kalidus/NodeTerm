@@ -64,12 +64,17 @@ Copy-Item (Join-Path $IronRdpSrc 'web-client\iron-remote-desktop-rdp\dist\*') $d
 $pkgPath = Join-Path $dst 'package.json'
 $pkg = Get-Content $pkgPath -Raw | ConvertFrom-Json
 $pkg.name = '@devolutions/iron-remote-desktop-rdp'
-$pkg.version = '0.7.0-nodeterm-egfx.37'
+$pkg.version = '0.7.0-nodeterm-egfx.38'
 $pkg.description = "NodeTerm vendor IronRDP $Commit + EGFX V10.6 + Soft-Sync + ACK eager + rdpsnd (sin AUDIO_PLAYBACK_DVC en EGFX)"
 $json = ($pkg | ConvertTo-Json -Depth 8) -replace "`r`n", "`n"
 if (-not $json.EndsWith("`n")) { $json += "`n" }
 $utf8 = New-Object System.Text.UTF8Encoding $false
 [System.IO.File]::WriteAllText($pkgPath, $json, $utf8)
+
+# Vite lib mode inlinea el .wasm como data URL; extraer a binario hermano.
+Write-Host "[ironrdp-wasm] Extrayendo WASM embebido..."
+node (Join-Path $root 'scripts\extract-ironrdp-wasm.js') $dst
+if ($LASTEXITCODE -ne 0) { throw "extract-ironrdp-wasm.js falló" }
 
 Write-Host "[ironrdp-wasm] Listo en $dst"
 Pop-Location

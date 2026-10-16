@@ -11,15 +11,21 @@ const assert = require('assert');
 
 const root = path.join(__dirname, '..');
 const vendorJs = path.join(root, 'third_party/ironrdp/wasm/iron-remote-desktop-rdp.js');
+const vendorWasm = path.join(root, 'third_party/ironrdp/wasm/iron-remote-desktop-rdp_bg.wasm');
 const vendorPkg = path.join(root, 'third_party/ironrdp/wasm/package.json');
 
 assert.ok(fs.existsSync(vendorJs), 'falta vendor JS');
+assert.ok(fs.existsSync(vendorWasm), 'falta vendor WASM');
 assert.ok(fs.existsSync(vendorPkg), 'falta vendor package.json');
 
 const js = fs.readFileSync(vendorJs, 'utf8');
+const wasmStat = fs.statSync(vendorWasm);
 const pkg = JSON.parse(fs.readFileSync(vendorPkg, 'utf8'));
 
-assert.ok(js.length > 1_000_000, 'JS vendor demasiado pequeno');
+assert.ok(js.length > 50_000 && js.length < 2_000_000, `JS vendor tamaño raro: ${js.length}`);
+assert.ok(!js.includes('data:application/wasm;base64,'), 'WASM no debe ir embebido en base64');
+assert.ok(js.includes('iron-remote-desktop-rdp_bg.wasm'), 'JS debe referenciar el .wasm hermano');
+assert.ok(wasmStat.size > 100_000, `WASM demasiado pequeno: ${wasmStat.size}`);
 assert.ok(js.includes('SessionBuilder'), 'API SessionBuilder');
 assert.ok(js.includes('enableCredssp') || js.includes('enable_credssp'), 'API enableCredssp');
 assert.ok(js.includes('displayControl') || js.includes('display_control'), 'API displayControl');
@@ -34,12 +40,11 @@ assert.ok(
   'export setRdpsndWaveCallback'
 );
 assert.ok(String(pkg.version).includes('egfx'), `version vendor: ${pkg.version}`);
-assert.ok(js.includes('data:application/wasm;base64,'), 'WASM embebido en base64');
 
 // CI / freeze: solo artefacto vendor (sin asserts del channel-filter).
 if (process.argv.includes('--vendor-only')) {
   console.log('[measure-ironrdp-egfx] OK (vendor-only)');
-  console.log(`  vendor version=${pkg.version} size=${js.length}`);
+  console.log(`  vendor version=${pkg.version} js=${js.length} wasm=${wasmStat.size}`);
   process.exit(0);
 }
 

@@ -8,6 +8,14 @@ Ubicación: `third_party/ironrdp/wasm/` (antes `vendor/iron-remote-desktop-rdp`)
 
 Este directorio **es el binario empaquetado**. Releases y CI solo hacen `npm ci` + webpack + electron-builder; **no** clonan IronRDP, **no** aplican `third_party/ironrdp/patches` y **no** ejecutan `wasm-pack`.
 
+Contenido runtime:
+
+- `iron-remote-desktop-rdp.js` — glue JS (sin WASM embebido)
+- `iron-remote-desktop-rdp_bg.wasm` — módulo WASM binario (~4.9 MB)
+- `index.d.ts`, `package.json`
+
+Vite en library mode inlinea el `.wasm` como data URL; tras cada `ironrdp:wasm:build`, `scripts/extract-ironrdp-wasm.js` lo extrae a fichero hermano. En Electron, `build.asarUnpack` incluye `**/*.wasm`.
+
 Dependencia raíz (obligatoria):
 
 ```json
@@ -28,7 +36,7 @@ Dependencia raíz (obligatoria):
 
 ## Versión
 
-`0.7.0-nodeterm-egfx.37`
+`0.7.0-nodeterm-egfx.38`
 
 ## Regenerar (mantenimiento raro)
 
@@ -38,7 +46,7 @@ Solo cuando cambiéis el patch NodeTerm **sobre el mismo** commit upstream:
 npm run ironrdp:wasm:build
 ```
 
-Luego bump del sufijo (`egfx.38`, …) en el script / `package.json` generado, `npm run ironrdp:wasm:measure:vendor` y commit de `wasm/`.
+El script ya ejecuta `extract-ironrdp-wasm.js` al final. Luego bump del sufijo (`egfx.39`, …) si hace falta, `npm run ironrdp:wasm:measure:vendor` y commit de `wasm/` (JS + `.wasm`).
 
 ## Upgrade a un IronRDP upstream nuevo
 
