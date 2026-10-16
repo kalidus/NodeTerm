@@ -740,6 +740,38 @@ describe('cliprdr cliente->servidor: lotes de varios PDUs', () => {
     assert.equal(kept.injected.length, 1);
   });
 
+  test('EGFX saludo IO + FormatListSeen: tampoco escribe a IO (FIN Wallix al pegar)', () => {
+    const state = {
+      wallixService: 'RDP',
+      egfxGraphics: true,
+      isBastion: true,
+      virtualChannels: true,
+      ioChannelId: IO_CH,
+      cliprdrChannelId: BASTION_CLIP_CH,
+      serverCliprdrChannelId: IO_CH,
+      cliprdrOnUnsafeChannel: IO_CH,
+      cliprdrServerReady: true,
+      cliprdrServerFormatListSeen: true,
+      allowed: new Set([1003, 1004, 1005, 1006]),
+      channelIdToName: new Map([
+        [1004, 'rdpdr'],
+        [1005, 'rdpsnd'],
+        [1006, 'cliprdr']
+      ])
+    };
+
+    const payloadKept = filterBatch(
+      service,
+      Buffer.concat([
+        buildClipFrame(BASTION_CLIP_CH, CB_FORMAT_LIST_RESPONSE, Buffer.alloc(0)),
+        buildClipFrame(BASTION_CLIP_CH, CB_FORMAT_DATA_REQUEST, Buffer.alloc(4))
+      ]),
+      state
+    );
+    assert.equal(payloadKept.length, 0, 'FORMAT_* por IO cierra TLS; mute + cola');
+    assert.ok(state.pendingClientCliprdr.length >= 1);
+  });
+
   test('shouldSanitizeBastionConfirm solo capa sin EGFX (directo nunca)', () => {
     const { shouldSanitizeBastionConfirm } = rdpBridge;
     assert.equal(shouldSanitizeBastionConfirm(true, false), true);

@@ -81,6 +81,9 @@ const {
   noteClientChannelJoinRequest,
   noteServerAttachUserConfirm,
   noteServerChannelJoinConfirm,
+  shouldOrderClientJoins,
+  enqueueClientChannelJoin,
+  readChannelJoinRequest,
   buildAppProbeCliprdrWrites,
   remapClientDrdynvcFrame,
   remapClientRdpsndFrame,
@@ -2219,6 +2222,13 @@ class RdpNativeBridgeService extends EventEmitter {
           let clientFramesChanged = false;
           for (let clientFrame of clientFrames) {
             if (pduTrace.enabled) pduTrace.write('c2s-wasm', clientFrame, undefined, { src: 'wasm' });
+            // Bastion virtual: encolar Join Requests y liberar user→IO→cliprdr→…→drdynvc.
+            if (shouldOrderClientJoins(channelFilter) && readChannelJoinRequest(clientFrame)) {
+              const joinQ = enqueueClientChannelJoin(channelFilter, clientFrame);
+              clientFramesChanged = true;
+              if (joinQ.released.length) keptClientFrames.push(...joinQ.released);
+              continue;
+            }
             noteClientChannelJoinRequest(channelFilter, clientFrame);
             // Bastion sin EGFX: Confirm Active sin RFX/Surface (bpp intacto → RLE 16/24).
             // Con EGFX no se capa: el destino tiene que ver Surface/codecs del WASM.
@@ -2635,10 +2645,9 @@ class RdpNativeBridgeService extends EventEmitter {
       }
     }
 
-    // EGFX: un CHANNEL_PDU en 1001 o en el IO (1003) congela el gráfico tras el banner.
-    // Se encola y se acusa al WASM. Sin EGFX se mantiene el camino de bitmap.
-    // Tras promote selector→APP con write al VC nombrado: no mute eterno; escribir ahi.
-    // (Legacy only: virtual ya salio arriba.)
+    // EGFX: un CHANNEL_PDU en 1001 o en el IO (1003) congela el grafico / FIN Wallix.
+    // No escribir payloads a IO: en 2026-10-16 FORMAT_LIST_RESPONSE por 1003 cerro TLS.
+    // Solo VC nombrado seguro (mstsc); si el saludo sigue en IO, encolar + synthAck.
     const egfxMuteUnsafe = channelFilter.egfxGraphics === true
       && (isUserMcsChannel(channelFilter, dest) || destIsIo);
 
@@ -2882,6 +2891,7 @@ class RdpNativeBridgeService extends EventEmitter {
   /**
    * Si el write path se confirma en un VC estatico (p.ej. MONITOR_READY en 1004 tras CAPS en 1001),
    * se vacia la cola de PDUs del cliente hacia ese canal.
+   * No flush a IO: CHANNEL_PDU en 1003 cierra Wallix (visto al pegar/copiar).
    */
   flushPendingClientCliprdr(channelFilter, tlsSocket, ws, onBytes) {
     sanitizeIllegalCliprdrWrite(channelFilter);
@@ -2891,7 +2901,7 @@ class RdpNativeBridgeService extends EventEmitter {
           && greetingStillOnIo(channelFilter)
           && !channelFilter.loggedCliprdrFlushDeferredIo) {
         channelFilter.loggedCliprdrFlushDeferredIo = true;
-        const deferMsg = `[Bridge Clipboard] flush diferido: saludo aun en IO ${channelFilter.serverCliprdrChannelId} (no escribir VC nombrado)`;
+        const deferMsg = `[Bridge Clipboard] flush diferido: saludo aun en IO ${channelFilter.serverCliprdrChannelId} (no escribir VC nombrado ni IO)`;
         if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(deferMsg);
         console.warn(deferMsg);
         this.emit('diagnostic-log', { category: 'cliprdr', message: deferMsg });

@@ -209,6 +209,92 @@ function noteClientChannelJoinRequest(state, buf) {
   return true;
 }
 
+/**
+ * Bastion virtual: reordenar joins WASM para que drdynvc no se una antes que IO/cliprdr
+ * (si no, Wallix mete DynVC en el slot SC_NET=cliprdr y saluda CLIPRDR por IO).
+ */
+function shouldOrderClientJoins(state) {
+  return !!(state && state.virtualChannels === true && state.isBastion === true);
+}
+
+function joinReleaseRank(state, channelId) {
+  if (channelId == null) return 50;
+  if (channelId === state.messageChannelId || channelId === 1001 || channelId === 1002) return 0;
+  if (state.ioChannelId != null && channelId === state.ioChannelId) return 1;
+  const clip = declaredChannelId(state, 'cliprdr') || state.cliprdrChannelId;
+  if (clip != null && channelId === clip) return 2;
+  const dvc = state.drdynvcChannelId || declaredChannelId(state, 'drdynvc');
+  if (dvc != null && channelId === dvc) return 99;
+  return 10 + (channelId & 0xffff);
+}
+
+/**
+ * Libera joins encolados en orden: user → IO → cliprdr → estáticos → drdynvc.
+ * drdynvc solo tras haber enviado IO y cliprdr.
+ * @returns {Buffer[]}
+ */
+function flushPendingClientJoins(state) {
+  if (!state || !(state.pendingClientJoins instanceof Map) || state.pendingClientJoins.size === 0) {
+    return [];
+  }
+  if (!(state.clientJoinsReleased instanceof Set)) state.clientJoinsReleased = new Set();
+  const pending = state.pendingClientJoins;
+  const released = state.clientJoinsReleased;
+  const out = [];
+  const tryRelease = (ch) => {
+    if (ch == null || !pending.has(ch) || released.has(ch)) return false;
+    out.push(pending.get(ch));
+    pending.delete(ch);
+    released.add(ch);
+    return true;
+  };
+
+  for (const ch of [...pending.keys()].sort((a, b) => a - b)) {
+    if (joinReleaseRank(state, ch) === 0) tryRelease(ch);
+  }
+
+  const io = state.ioChannelId;
+  if (io != null) tryRelease(io);
+  const ioOk = io == null || released.has(io);
+
+  const clip = declaredChannelId(state, 'cliprdr') || state.cliprdrChannelId;
+  if (ioOk) tryRelease(clip);
+  const clipOk = clip == null || released.has(clip);
+
+  const dvc = state.drdynvcChannelId || declaredChannelId(state, 'drdynvc');
+  if (ioOk) {
+    for (const ch of [...pending.keys()].sort((a, b) => a - b)) {
+      if (dvc != null && ch === dvc) continue;
+      if (joinReleaseRank(state, ch) === 0) continue;
+      tryRelease(ch);
+    }
+  }
+
+  if (ioOk && clipOk) tryRelease(dvc);
+  return out;
+}
+
+/**
+ * Encola un Join Request del WASM y libera los que ya pueden salir en orden canónico.
+ * @returns {{ held: boolean, released: Buffer[] }}
+ */
+function enqueueClientChannelJoin(state, frame) {
+  if (!shouldOrderClientJoins(state)) {
+    noteClientChannelJoinRequest(state, frame);
+    return { held: false, released: [] };
+  }
+  const req = readChannelJoinRequest(frame);
+  if (!req) return { held: false, released: [] };
+  noteClientChannelJoinRequest(state, frame);
+  if (!(state.pendingClientJoins instanceof Map)) state.pendingClientJoins = new Map();
+  if (!(state.clientJoinsReleased instanceof Set)) state.clientJoinsReleased = new Set();
+  if (state.clientJoinsReleased.has(req.channelId)) {
+    return { held: true, released: [] };
+  }
+  state.pendingClientJoins.set(req.channelId, Buffer.from(frame));
+  return { held: true, released: flushPendingClientJoins(state) };
+}
+
 function noteServerAttachUserConfirm(state, buf) {
   const id = readAttachUserConfirmInitiator(buf);
   if (!state || id == null) return false;
@@ -223,9 +309,32 @@ function noteServerChannelJoinConfirm(state, buf) {
   const result = (buf[8] >> 3) & 0x0f;
   if (result !== 0) return false;
   const requested = buf.readUInt16BE(11);
+  if (!(state.serverJoinConfirmed instanceof Set)) state.serverJoinConfirmed = new Set();
+  state.serverJoinConfirmed.add(requested);
   const named = declaredChannelId(state, 'cliprdr');
   if (named != null && requested === named) state.cliprdrJoined = true;
   return state.cliprdrJoined === true;
+}
+
+/**
+ * Tras JoinConfirm de IO: early cliprdr join (si WASM no lo pidio) + flush cola.
+ * @returns {Buffer[]}
+ */
+function takeJoinsAfterIoConfirm(state, confirmChannelId) {
+  if (!state || state.ioChannelId == null || confirmChannelId !== state.ioChannelId) return [];
+  const out = [];
+  const early = takeEarlyCliprdrJoin(state);
+  if (early) {
+    if (shouldOrderClientJoins(state)) {
+      const queued = enqueueClientChannelJoin(state, early);
+      out.push(...queued.released);
+    } else {
+      out.push(early);
+    }
+  } else if (shouldOrderClientJoins(state)) {
+    out.push(...flushPendingClientJoins(state));
+  }
+  return out;
 }
 
 const CLIPRDR_MSG_NAMES = {
@@ -331,6 +440,9 @@ function createChannelFilterState() {
     virtualBridgeJoinIds: null,
     virtualJoinsSent: false,
     virtualJoinConfirmed: null,
+    pendingClientJoins: null,
+    clientJoinsReleased: null,
+    serverJoinConfirmed: null,
     injectOnlyFragmentOpen: false,
     injectOnlyFragmentChannelId: null,
     serverRdpdrFragmentOpen: false,
@@ -1178,10 +1290,8 @@ function unsafeCliprdrClientWriteDest(state, dest) {
     return null;
   }
   const destIsIo = state.ioChannelId != null && dest === state.ioChannelId;
+  // Bastion/RDP: nunca CHANNEL_PDU cliprdr en IO (FORMAT_LIST_RESPONSE por 1003 → FIN TLS).
   if (destIsIo && bastionIoCliprdrWriteForbidden(state)) {
-    if (state.wallixService === 'RDP') {
-      return state.cliprdrServerFormatListSeen ? dest : null;
-    }
     return null;
   }
   if (isUserMcsChannel(state, dest)) return dest;
@@ -2226,14 +2336,19 @@ function remapServerDrdynvcFrame(state, buf, incomingChannelId) {
 }
 
 /**
- * Solape Wallix: DynVC a veces llega por IO 1003. Responder CHANNEL_PDU en el IO
- * provoca ECONNRESET (2a APP). Remapear synth al VC drdynvc declarado, o silenciar.
+ * DynVC por IO 1003 o por el slot SC_NET cliprdr (1006): no contestar CHANNEL_PDU
+ * ahi (ECONNRESET / desplaza CLIPRDR). Remapear synth al VC drdynvc declarado.
  */
 function sanitizeIoDynvcReplies(state, channelId, replies) {
   if (!Array.isArray(replies) || replies.length === 0) return [];
-  if (!state || state.ioChannelId == null || channelId !== state.ioChannelId) return replies;
+  if (!state) return replies;
+  const io = state.ioChannelId;
+  const clip = declaredChannelId(state, 'cliprdr') || state.cliprdrChannelId;
+  const onIo = io != null && channelId === io;
+  const onClip = clip != null && channelId === clip;
+  if (!onIo && !onClip) return replies;
   const safeCh = state.drdynvcChannelId;
-  if (safeCh == null || safeCh === state.ioChannelId) return [];
+  if (safeCh == null || safeCh === channelId) return [];
   return replies.map((buf) => rewriteMcsChannelId(buf, safeCh) || buf);
 }
 
@@ -2385,9 +2500,29 @@ function remapClientDrdynvcFrame(state, frame) {
 }
 
 /**
- * Capa virtual: el bridge hace los Channel Join de los VCs que IronRDP no declaro
- * (rdpdr/rdpsnd inyectados) en cuanto llega Attach User Confirm, y absorbe sus
- * Join Confirm para que WASM nunca vea un canal que no pidio.
+ * Orden CS_NET de joins inject-only (rdpdr → rdpsnd → …).
+ * @returns {number[]}
+ */
+function orderVirtualBridgeJoinIds(state, ids) {
+  const byName = [];
+  const rest = [];
+  const nameOf = (id) => (state.channelIdToName instanceof Map ? state.channelIdToName.get(id) : null);
+  const prefer = ['rdpdr', 'rdpsnd'];
+  for (const name of prefer) {
+    for (const id of ids) {
+      if (nameOf(id) === name) byName.push(id);
+    }
+  }
+  for (const id of [...ids].sort((a, b) => a - b)) {
+    if (!byName.includes(id)) rest.push(id);
+  }
+  return [...byName, ...rest];
+}
+
+/**
+ * Capa virtual: el bridge une rdpdr/rdpsnd inyectados en Attach User Confirm
+ * (temprano: Wallix necesita esos slots antes que cliprdr/drdynvc) y absorbe
+ * sus Join Confirm. Tras JoinConfirm de IO solo early-cliprdr / flush cola WASM.
  * @returns {object|null} fragmento de resultado, o null si el frame no es de interes.
  */
 function virtualJoinServerFrame(state, buf) {
@@ -2399,23 +2534,41 @@ function virtualJoinServerFrame(state, buf) {
     const initiator = readAttachUserConfirmInitiator(buf);
     if (initiator == null) return null;
     state.virtualJoinsSent = true;
-    const sorted = [...ids].sort((a, b) => a - b);
-    const joins = sorted.map((id) => buildMcsChannelJoinRequest(initiator, id));
-    return { replies: joins, note: `virtual-bridge-joins [${sorted.join(',')}]` };
+    if (state.clientInitiator == null) state.clientInitiator = initiator;
+    const ordered = orderVirtualBridgeJoinIds(state, ids);
+    const joins = ordered.map((id) => buildMcsChannelJoinRequest(initiator, id));
+    return { replies: joins, note: `virtual-bridge-joins [${ordered.join(',')}]` };
   }
 
   if (buf[7] === MCS_CHANNEL_JOIN_CONFIRM && buf.length >= 15) {
     const requested = buf.readUInt16BE(11);
-    if (!ids.has(requested)) return null;
     const result = (buf[8] >> 3) & 0x0f;
-    if (!(state.virtualJoinConfirmed instanceof Set)) state.virtualJoinConfirmed = new Set();
-    state.virtualJoinConfirmed.add(requested);
-    return {
-      forward: null,
-      dropped: true,
-      note: `virtual-join-confirm-absorbed ch=${requested} result=${result}`,
-      channelId: requested
-    };
+    let extraJoins = [];
+    let extraNote = null;
+
+    // Early cliprdr + flush cola WASM; no unir virtuales aqui (ya salieron en Attach).
+    if (result === 0 && state.ioChannelId != null && requested === state.ioChannelId) {
+      extraJoins = takeJoinsAfterIoConfirm(state, requested);
+      if (extraJoins.length) extraNote = `joins-after-io-confirm n=${extraJoins.length}`;
+    }
+
+    if (ids.has(requested)) {
+      if (!(state.virtualJoinConfirmed instanceof Set)) state.virtualJoinConfirmed = new Set();
+      state.virtualJoinConfirmed.add(requested);
+      return {
+        forward: null,
+        dropped: true,
+        replies: extraJoins,
+        note: extraNote
+          || `virtual-join-confirm-absorbed ch=${requested} result=${result}`,
+        channelId: requested
+      };
+    }
+
+    if (extraJoins.length) {
+      return { replies: extraJoins, note: extraNote };
+    }
+    return null;
   }
   return null;
 }
@@ -3014,6 +3167,11 @@ module.exports = {
   noteClientChannelJoinRequest,
   noteServerAttachUserConfirm,
   noteServerChannelJoinConfirm,
+  shouldOrderClientJoins,
+  joinReleaseRank,
+  flushPendingClientJoins,
+  enqueueClientChannelJoin,
+  takeJoinsAfterIoConfirm,
   takeEarlyCliprdrJoin,
   takeJoinedCliprdrAnswer,
   createChannelFilterState,
@@ -3081,5 +3239,6 @@ module.exports = {
   remapClientRdpsndFrame,
   remapServerDrdynvcFrame,
   remapServerRdpsndFrame,
+  sanitizeIoDynvcReplies,
   formatDrdynvcForwardDebug
 };

@@ -1370,7 +1370,11 @@ describe('CLIPRDR: destino de datos con saludo inseguro', () => {
     ]);
     assert.equal(unsafeCliprdrClientWriteDest(state, 1003), null);
     state.cliprdrServerFormatListSeen = true;
-    assert.equal(unsafeCliprdrClientWriteDest(state, 1003), 1003, 'tras FORMAT_LIST del servidor en IO escribe en 1003');
+    assert.equal(
+      unsafeCliprdrClientWriteDest(state, 1003),
+      null,
+      'tras FORMAT_LIST en IO tampoco escribe en 1003 (FIN TLS al pegar)'
+    );
   });
 
   test('FILECONTENTS con saludo en IO no sale por 1003; si el servidor habla en 1006, va ahi', () => {

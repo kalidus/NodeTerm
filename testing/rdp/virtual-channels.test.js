@@ -14,7 +14,10 @@ const {
   createChannelFilterState,
   processServerFrame,
   parseServerNetworkChannels,
-  readChannelJoinRequest
+  readChannelJoinRequest,
+  buildMcsChannelJoinRequest,
+  enqueueClientChannelJoin,
+  sanitizeIoDynvcReplies
 } = require('../../src/main/services/rdp-channel-filter');
 
 function buildScNetFrame(ioId, ids) {
@@ -129,7 +132,6 @@ describe('capa virtual en bastion', () => {
     const state = virtualState(wasm, client);
     processServerFrame(state, buildScNetFrame(1003, ids));
 
-    // Wallix: Attach User Confirm con userId=0 (hex 2e000000).
     const res = processServerFrame(state, attachConfirm(0));
     assert.equal(res.dropped, false);
     assert.ok(res.forward, 'el Attach Confirm sigue llegando al WASM');
@@ -162,6 +164,33 @@ describe('capa virtual en bastion', () => {
       assert.equal(r.dropped, false, `ch=${ch}`);
       assert.ok(r.forward, `ch=${ch}`);
     }
+  });
+
+  test('cola de joins: drdynvc no sale antes que IO y cliprdr', () => {
+    const state = virtualState(wasm, client);
+    processServerFrame(state, buildScNetFrame(1003, ids));
+    state.clientInitiator = 0x03ea;
+
+    const orderIn = [1001, 1007, 1003, 1006];
+    const released = [];
+    for (const ch of orderIn) {
+      const q = enqueueClientChannelJoin(state, buildMcsChannelJoinRequest(0x03ea, ch));
+      assert.equal(q.held, true);
+      released.push(...q.released.map((f) => readChannelJoinRequest(f).channelId));
+    }
+    assert.deepEqual(released, [1001, 1003, 1006, 1007]);
+  });
+
+  test('DynVC replies en slot cliprdr 1006 se reescriben a drdynvc 1007', () => {
+    const { buildMcsSendDataRequest } = require('../../src/main/services/rdp-autodetect');
+    const state = virtualState(wasm, client);
+    processServerFrame(state, buildScNetFrame(1003, ids));
+    const fake = buildMcsSendDataRequest(0x03ea, 1006, Buffer.from([0x0c, 0, 0, 0, 0x03, 0, 0, 0, 0x50]));
+    const out = sanitizeIoDynvcReplies(state, 1006, [fake]);
+    assert.equal(out.length, 1);
+    assert.equal(readChannelJoinRequest(out[0]), null);
+    const { parseMcsSendData } = require('../../src/main/services/rdp-autodetect');
+    assert.equal(parseMcsSendData(out[0]).channelId, 1007);
   });
 
   test('APP sin rail: mismos IDs reales que RDP', () => {

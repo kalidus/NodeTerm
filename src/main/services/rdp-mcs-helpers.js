@@ -59,9 +59,37 @@ function findClientNetworkChannels(buf) {
   return [];
 }
 
+const CHANNEL_DEF_LEN = 12;
+const CHANNEL_OPTION_INITIALIZED = 0x80000000;
+const CHANNEL_OPTION_ENCRYPT_RDP = 0x40000000;
+const CHANNEL_OPTION_COMPRESS_RDP = 0x00800000;
+const CHANNEL_OPTION_SHOW_PROTOCOL = 0x00200000;
+
 /**
- * Asegura que las opciones de los canales de TS_UD_CS_NET incluyan CHANNEL_OPTION_INITIALIZED (0x80000000)
- * y flags estándar según MS-RDPBCGR 2.2.1.3.4 (requerido por proxies RDP como Wallix).
+ * Opciones TS_UD_CS_NET a paridad mstsc (matrix/mstsc-rdp-frio / selector-file-frio).
+ * Sin SHOW_PROTOCOL en cliprdr Wallix tiende a saludar CLIPRDR por IO 1003
+ * (flags ChanHdr 0x3) en vez del VC nombrado 1006 (0x13).
+ */
+const MSTSC_CS_NET_OPTIONS = Object.freeze({
+  rdpdr: (CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_COMPRESS_RDP) >>> 0,
+  rdpsnd: (CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_ENCRYPT_RDP) >>> 0,
+  cliprdr: (CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_ENCRYPT_RDP
+    | CHANNEL_OPTION_COMPRESS_RDP | CHANNEL_OPTION_SHOW_PROTOCOL) >>> 0,
+  drdynvc: (CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_ENCRYPT_RDP
+    | CHANNEL_OPTION_COMPRESS_RDP) >>> 0
+});
+
+function csNetOptionsForChannel(name, currentOpt = 0) {
+  const key = String(name || '').toLowerCase();
+  if (Object.prototype.hasOwnProperty.call(MSTSC_CS_NET_OPTIONS, key)) {
+    return MSTSC_CS_NET_OPTIONS[key];
+  }
+  return (currentOpt | CHANNEL_OPTION_INITIALIZED) >>> 0;
+}
+
+/**
+ * Alinea opciones TS_UD_CS_NET a mstsc / MS-RDPBCGR 2.2.1.3.4 (Wallix exige INITIALIZED
+ * y espeja SHOW_PROTOCOL/ENCRYPT_RDP del cliente al demultiplexar CLIPRDR).
  */
 function patchClientNetworkChannelOptions(buf) {
   if (!Buffer.isBuffer(buf) || buf.length < 8) return { buf, patched: false, changes: [] };
@@ -86,12 +114,7 @@ function patchClientNetworkChannelOptions(buf) {
       const nullIdx = rawName.indexOf('\0');
       const name = (nullIdx >= 0 ? rawName.slice(0, nullIdx) : rawName).trim();
       const currentOpt = buf.readUInt32LE(off + 8);
-
-      // CHANNEL_OPTION_INITIALIZED = 0x80000000 (MS-RDPBCGR: "This flag MUST be set", exigido por Wallix).
-      // El resto de opciones se preservan tal cual las declara IronRDP: si aquí se quitara
-      // CHANNEL_OPTION_SHOW_PROTOCOL, IronRDP seguiría marcando CHANNEL_FLAG_SHOW_PROTOCOL (0x10)
-      // en sus PDUs y el servidor vería una incoherencia de protocolo.
-      const standardOpt = (currentOpt | 0x80000000) >>> 0;
+      const standardOpt = csNetOptionsForChannel(name, currentOpt);
       if (currentOpt !== standardOpt) {
         if (!out) out = Buffer.from(buf);
         out.writeUInt32LE(standardOpt, off + 8);
@@ -107,10 +130,6 @@ function patchClientNetworkChannelOptions(buf) {
 
   return { buf, patched: false, changes: [], reason: 'cs-net-not-found' };
 }
-
-const CHANNEL_DEF_LEN = 12;
-const CHANNEL_OPTION_INITIALIZED = 0x80000000;
-const CHANNEL_OPTION_COMPRESS_RDP = 0x00800000;
 
 function findClientNetworkBlock(buf) {
   const duca = buf.indexOf(Buffer.from('Duca'));
@@ -270,7 +289,7 @@ function injectClientNetworkChannels(buf, names) {
     for (const name of list) {
       // El relleno a 8 bytes y el terminador nulo ya vienen a cero de Buffer.alloc
       out.write(name, write, 'ascii');
-      out.writeUInt32LE((CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_COMPRESS_RDP) >>> 0, write + 8);
+      out.writeUInt32LE(csNetOptionsForChannel(name, 0), write + 8);
       write += CHANNEL_DEF_LEN;
     }
     return write;
@@ -991,6 +1010,12 @@ module.exports = {
   findClientCoreData,
   findClientNetworkChannels,
   patchClientNetworkChannelOptions,
+  csNetOptionsForChannel,
+  MSTSC_CS_NET_OPTIONS,
+  CHANNEL_OPTION_INITIALIZED,
+  CHANNEL_OPTION_ENCRYPT_RDP,
+  CHANNEL_OPTION_COMPRESS_RDP,
+  CHANNEL_OPTION_SHOW_PROTOCOL,
   injectClientNetworkChannels,
   removeClientNetworkChannels,
   ensureMcsServerSelectedProtocol,

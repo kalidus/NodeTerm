@@ -179,6 +179,36 @@ describe('inyeccion de canales en TS_UD_CS_NET', () => {
     assert.equal((options & CHANNEL_OPTION_INITIALIZED) >>> 0, CHANNEL_OPTION_INITIALIZED);
   });
 
+  test('inject+patch alinean opciones CS_NET a mstsc (cliprdr SHOW_PROTOCOL)', () => {
+    const {
+      prepareMcsConnectInitial,
+      MSTSC_CS_NET_OPTIONS
+    } = require('../../src/main/services/rdp-mcs-helpers');
+    // IronRDP real: solo COMPRESS sin INITIALIZED/SHOW_PROTOCOL
+    const frame = buildMcsConnectInitial([
+      ['cliprdr', 0x00800000],
+      ['drdynvc', 0x00800000]
+    ]);
+    const res = prepareMcsConnectInitial(frame, null, {
+      injectChannels: { before: ['rdpdr', 'rdpsnd'] }
+    });
+    assert.deepEqual(
+      findClientNetworkChannels(res.buf),
+      ['rdpdr', 'rdpsnd', 'cliprdr', 'drdynvc']
+    );
+    const duca = res.buf.indexOf(Buffer.from('Duca'));
+    const csNet = res.buf.indexOf(Buffer.from([0x03, 0xc0]), duca);
+    const names = findClientNetworkChannels(res.buf);
+    for (let i = 0; i < names.length; i++) {
+      const opt = res.buf.readUInt32LE(csNet + 8 + i * 12 + 8) >>> 0;
+      assert.equal(
+        opt,
+        MSTSC_CS_NET_OPTIONS[names[i]],
+        `${names[i]} debe ser 0x${MSTSC_CS_NET_OPTIONS[names[i]].toString(16)}`
+      );
+    }
+  });
+
   test('no duplica un canal ya declarado', () => {
     const frame = buildMcsConnectInitial([['cliprdr', 0xc0a00000], ['rdpsnd', 0xc0000000]]);
     const res = injectClientNetworkChannels(frame, ['rdpsnd', 'rdpdr']);
