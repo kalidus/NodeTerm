@@ -618,12 +618,12 @@ describe('drdynvc remap DisplayControl', () => {
     assert.equal(res.dropped, false, res.note);
     assert.equal(res.dvcForward, true);
     assert.ok(res.forward, 'debe llegar al WASM (remap a drdynvc)');
-    assert.equal(res.replies.length, 1, 'caps-quick reply al servidor en IO');
+    assert.equal(res.replies.length, 1, 'caps-quick reply al servidor (no en IO)');
     assert.equal(state.egfxCapsRepliedByBridge, true);
     assert.ok((res.note || '').includes('dvc-forward-caps-quick'));
     assert.ok(!(res.note || '').includes('invalid-share-control'));
-    // Reply simetrico: mismo canal wire (1003), no 1007.
-    assert.equal(parseMcsSendData(res.replies[0]).channelId, 1003);
+    // Synth en IO corta Wallix (2a APP ECONNRESET): remap a drdynvc declarado.
+    assert.equal(parseMcsSendData(res.replies[0]).channelId, 1007);
   });
 
   it('sigue rechazando Geometry aunque WASM declare drdynvc', () => {
@@ -965,6 +965,51 @@ describe('drdynvc remap DisplayControl', () => {
     assert.equal(res.dropped, false);
     assert.ok(res.forward);
     assert.equal(res.rdpsndForward, true);
+  });
+
+  function buildGeometryCreatePdu(dvcChannelId = 0x20) {
+    const nameBuf = Buffer.from('Microsoft::Windows::RDS::Geometry\0', 'ascii');
+    const createReq = Buffer.concat([Buffer.from([0x10, dvcChannelId]), nameBuf]);
+    const cpdu = Buffer.alloc(8 + createReq.length);
+    cpdu.writeUInt32LE(createReq.length, 0);
+    cpdu.writeUInt32LE(0x03, 4);
+    createReq.copy(cpdu, 8);
+    return cpdu;
+  }
+
+  it('DynVC CREATE en IO 1003 remapea synth replies a drdynvc 1007 (solape APP)', () => {
+    const state = injectedDrdynvcState();
+    state.isBastion = true;
+    state.virtualChannels = true;
+    state.ready = true;
+    state.ioChannelId = 1003;
+    const res = processServerFrame(state, buildMcsIndication(1003, buildGeometryCreatePdu()));
+    assert.ok(res.replies.length >= 1, 'stub CREATE debe generar reply');
+    for (const reply of res.replies) {
+      assert.equal(parseMcsSendData(reply).channelId, 1007, 'nunca synth DynVC en IO');
+    }
+  });
+
+  it('DynVC CREATE en IO sin drdynvcChannelId suprime replies (mejor que RST)', () => {
+    const state = injectedDrdynvcState();
+    state.isBastion = true;
+    state.virtualChannels = true;
+    state.ready = true;
+    state.ioChannelId = 1003;
+    state.drdynvcChannelId = null;
+    const res = processServerFrame(state, buildMcsIndication(1003, buildGeometryCreatePdu()));
+    assert.equal(res.replies.length, 0, 'sin canal seguro: no CHANNEL_PDU en IO');
+  });
+
+  it('DynVC CREATE en 1007 deja replies en el mismo canal', () => {
+    const state = injectedDrdynvcState();
+    state.isBastion = true;
+    state.virtualChannels = true;
+    state.ready = true;
+    state.ioChannelId = 1003;
+    const res = processServerFrame(state, buildMcsIndication(1007, buildGeometryCreatePdu()));
+    assert.ok(res.replies.length >= 1);
+    assert.equal(parseMcsSendData(res.replies[0]).channelId, 1007);
   });
 });
 

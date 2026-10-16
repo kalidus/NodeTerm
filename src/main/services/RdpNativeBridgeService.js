@@ -2601,7 +2601,7 @@ class RdpNativeBridgeService extends EventEmitter {
     }
 
     // Virtual: simetria — FORMAT_LIST / FORMAT_DATA_REQUEST al canal del saludo
-    // (aunque sea MCS 1001). Flush EGFX a 1006 deja pending_data (Wallix no responde).
+    // (MCS 1001 / drdynvc). Nunca IO 1003 (corta Wallix APP). Flush EGFX a 1006: ESAH FIN.
     if (channelFilter.virtualChannels === true && !destIsIo
         && channelFilter.serverCliprdrChannelId != null) {
       const wireDest = channelFilter.cliprdrWriteChannelId != null

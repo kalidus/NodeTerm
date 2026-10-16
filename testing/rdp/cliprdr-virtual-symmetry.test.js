@@ -3,7 +3,8 @@
 /**
  * Simetria cliprdr en modo virtual:
  *  - saludo en canal etiquetado drdynvc llega al WASM (claim antes de DynVC)
- *  - c2s se escribe al canal del saludo (1001), no flush EGFX a 1006
+ *  - saludo en IO 1003 llega al WASM (claim antes de DynVC-on-IO); sin write c2s en IO
+ *  - c2s se escribe al canal del saludo (1001 / 1007), no flush EGFX a 1006 ni a IO 1003
  */
 
 const { describe, test } = require('node:test');
@@ -13,7 +14,9 @@ const rdpBridge = require('../../src/main/services/RdpNativeBridgeService');
 const {
   createChannelFilterState,
   processServerFrame,
-  isCliprdrGreetingPdu
+  isCliprdrGreetingPdu,
+  canEmitCliprdrToWire,
+  canFlushCliprdrToNamedVc
 } = require('../../src/main/services/rdp-channel-filter');
 const { parseMcsSendData, buildMcsSendDataIndication } = require('../../src/main/services/rdp-autodetect');
 
@@ -147,5 +150,59 @@ describe('virtual: c2s simetrico al canal del saludo', () => {
     processServerFrame(st, ready);
     assert.equal(st.serverCliprdrChannelId, 1001);
     assert.equal(st.cliprdrWriteChannelId, 1001);
+  });
+});
+
+describe('virtual: claim saludo en IO antes de DynVC', () => {
+  test('CAPS+READY en 1003 con DynVC activo llegan como cliprdr al WASM', () => {
+    const st = virtualAppState();
+    const capsData = Buffer.alloc(16);
+    capsData.writeUInt32LE(0x3e, 12);
+    const caps = buildMcsSendDataIndication(0, 1003, wrapClip(CB_CLIP_CAPS, capsData));
+    const ready = buildMcsSendDataIndication(0, 1003, wrapClip(CB_MONITOR_READY, Buffer.alloc(0)));
+
+    const r1 = processServerFrame(st, caps);
+    assert.equal(r1.dropped, false);
+    assert.equal(r1.isCliprdr, true);
+    assert.ok(r1.forward, 'CAPS debe llegar a WASM');
+    assert.equal(st.serverCliprdrChannelId, 1003);
+    assert.match(r1.cliprdrDesc || '', /CB_CLIP_CAPS/);
+
+    const r2 = processServerFrame(st, ready);
+    assert.equal(r2.isCliprdr, true);
+    assert.ok(r2.forward, 'READY debe llegar a WASM');
+    assert.equal(st.serverCliprdrChannelId, 1003);
+    assert.equal(st.cliprdrWriteChannelId, null, 'sin write en IO (corta sesion)');
+    assert.equal(canEmitCliprdrToWire(st, 1003), false);
+    assert.equal(canFlushCliprdrToNamedVc(st), false, 'named flush sigue prohibido con saludo en IO');
+  });
+
+  test('c2s FORMAT_DATA_REQUEST con saludo IO no sale al wire por 1003', () => {
+    const st = virtualAppState();
+    st.serverCliprdrChannelId = 1003;
+    st.cliprdrWriteChannelId = null;
+    st.cliprdrServerReady = true;
+
+    const reqBody = Buffer.alloc(4);
+    reqBody.writeUInt32LE(1, 0);
+    const frame = buildMcsRequest(1006, wrapClip(CB_FORMAT_DATA_REQUEST, reqBody));
+    const { forward } = rdpBridge.filterClientVirtualChannelFrame(frame, st);
+
+    assert.equal(forward, null, 'mute: no CHANNEL_PDU en MCS 1003');
+  });
+
+  test('legacy: saludo IO no confirma write path (sin virtual)', () => {
+    const st = virtualAppState();
+    st.virtualChannels = false;
+    const capsData = Buffer.alloc(16);
+    capsData.writeUInt32LE(0x3e, 12);
+    const caps = buildMcsSendDataIndication(0, 1003, wrapClip(CB_CLIP_CAPS, capsData));
+    const ready = buildMcsSendDataIndication(0, 1003, wrapClip(CB_MONITOR_READY, Buffer.alloc(0)));
+    const r1 = processServerFrame(st, caps);
+    assert.equal(r1.isCliprdr, true, 'claim antes de DynVC tambien en legacy');
+    assert.equal(st.serverCliprdrChannelId, 1003);
+    processServerFrame(st, ready);
+    assert.equal(st.cliprdrWriteChannelId, null, 'legacy: sin write en IO');
+    assert.equal(canEmitCliprdrToWire(st, 1003), false);
   });
 });

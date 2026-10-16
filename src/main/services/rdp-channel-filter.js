@@ -899,8 +899,9 @@ function isSafeStaticCliprdrWrite(state, channelId) {
 }
 
 /**
- * Virtual: se puede emitir al canal donde el servidor saluda (incl. MCS 1001).
- * Nunca al IO (ESAH). Legacy: solo VCs estaticos "seguros".
+ * Virtual: se puede emitir al canal donde el servidor saluda (MCS 1001 / drdynvc).
+ * Nunca al IO 1003 (CHANNEL_PDU ahi corta Wallix APP / IronRDP not-enough-bytes).
+ * Legacy: solo VCs estaticos "seguros". Named flush con saludo en IO: canFlushCliprdrToNamedVc.
  */
 function canEmitCliprdrToWire(state, channelId) {
   if (!state || channelId == null) return false;
@@ -1174,6 +1175,7 @@ function confirmCliprdrWriteChannel(state, channelId) {
     return true;
   }
   if (isIo) {
+    // Nunca write=IO (corta sesion). Bastion: named tambien prohibido (ESAH FIN).
     const ioFallback = fallbackIoNamedCliprdrWrite(state);
     if (ioFallback == null) return false;
     state.cliprdrWriteChannelId = ioFallback;
@@ -2190,6 +2192,18 @@ function remapServerDrdynvcFrame(state, buf, incomingChannelId) {
 }
 
 /**
+ * Solape Wallix: DynVC a veces llega por IO 1003. Responder CHANNEL_PDU en el IO
+ * provoca ECONNRESET (2a APP). Remapear synth al VC drdynvc declarado, o silenciar.
+ */
+function sanitizeIoDynvcReplies(state, channelId, replies) {
+  if (!Array.isArray(replies) || replies.length === 0) return [];
+  if (!state || state.ioChannelId == null || channelId !== state.ioChannelId) return replies;
+  const safeCh = state.drdynvcChannelId;
+  if (safeCh == null || safeCh === state.ioChannelId) return [];
+  return replies.map((buf) => rewriteMcsChannelId(buf, safeCh) || buf);
+}
+
+/**
  * DynVC en un canal MCS concreto (1007 declarado, 1001, o IO 1003 en solape).
  * @returns {object|null} resultado processServerFrame, o null si no es DynVC.
  */
@@ -2213,6 +2227,8 @@ function processServerDrdynvcOnChannel(state, frame, channelId, userData) {
   });
   if (!dvc.handled) return null;
 
+  const replies = sanitizeIoDynvcReplies(state, channelId, dvc.replies || []);
+
   if (dvc.forward) {
     if (dvc.note && /AUDIO_PLAYBACK/i.test(dvc.note)) {
       logAudioOnce(state, 'loggedAudioDvc', `[Bridge] Audio: forward ${dvc.note}`);
@@ -2221,7 +2237,7 @@ function processServerDrdynvcOnChannel(state, frame, channelId, userData) {
     if (state.isBastion === true) {
       return {
         forward: remapServerDrdynvcFrame(state, frame, channelId),
-        replies: dvc.replies || [],
+        replies,
         dropped: false,
         note: dvc.note || channelPduHint(userData),
         channelId,
@@ -2241,7 +2257,7 @@ function processServerDrdynvcOnChannel(state, frame, channelId, userData) {
     if (dvcReasm.status === 'buffer') {
       return {
         forward: null,
-        replies: dvc.replies || [],
+        replies,
         dropped: false,
         buffered: true,
         note: dvcReasm.note,
@@ -2255,7 +2271,7 @@ function processServerDrdynvcOnChannel(state, frame, channelId, userData) {
       markDropped(state, channelId);
       return {
         forward: null,
-        replies: dvc.replies || [],
+        replies,
         dropped: true,
         note: dvcReasm.note,
         channelId,
@@ -2265,7 +2281,7 @@ function processServerDrdynvcOnChannel(state, frame, channelId, userData) {
     }
     return {
       forward: dvcReasm.frame,
-      replies: dvc.replies || [],
+      replies,
       dropped: false,
       note: dvc.note || dvcReasm.note || channelPduHint(userData),
       channelId,
@@ -2298,7 +2314,7 @@ function processServerDrdynvcOnChannel(state, frame, channelId, userData) {
   markDropped(state, channelId);
   return {
     forward: null,
-    replies: dvc.replies || [],
+    replies,
     dropped: true,
     note: `${dvc.note || channelPduHint(userData)} hex=${userData.toString('hex').slice(0, 48)}`,
     channelId,
@@ -2897,6 +2913,15 @@ function processServerFrame(state, buf) {
 
   const siphoned = consumeAutodetect(state, channelId, parsed.userData, false);
   if (siphoned) return siphoned;
+
+  // Saludo cliprdr en IO ANTES de DynVC-on-IO: Wallix APP (p.ej. FortiAnalyzer)
+  // manda CAPS/READY por 1003 tras dvc-caps; si DynVC gana, dest=none y clipboard queued.
+  if (parsed && isChannelPduHeader(parsed.userData)
+      && (isCliprdrGreetingPdu(parsed.userData)
+        || state.serverCliprdrChannelId === channelId)
+      && claimCliprdrPdu(state, channelId, parsed.userData)) {
+    return buildCliprdrResult(state, frame, channelId, parsed.userData);
+  }
 
   // Solape Wallix RDP: DynVC CAPS/CREATE a veces llega por IO 1003 (no por 1007/1001).
   // Sin esto filterIoChannelPdu lo tira como invalid-share-control-0x0 → caps=0 y
