@@ -126,14 +126,38 @@ jobs:
           (cd "$WORK" && ./in.AppImage --appimage-extract)
           export APPIMAGE_EXTRACT_AND_RUN=1
           export ARCH=x86_64
-          "$TOOL" -n -u "gh-releases-zsync|kalidus|NodeTerm|latest|NodeTerm-*.AppImage.zsync" "$WORK/squashfs-root" "$WORK/$BASE"
-          if [ ! -f "$WORK/${BASE}.zsync" ]; then
-            echo "appimagetool no genero el fichero zsync"
-            find "$WORK" -name '*.zsync' -print
+          UPDATE_URL="gh-releases-zsync|kalidus|NodeTerm|latest|NodeTerm-*.AppImage.zsync"
+          # Empaquetar desde WORK: appimagetool continuous a veces deja el .zsync en CWD.
+          (cd "$WORK" && "$TOOL" -n -u "$UPDATE_URL" squashfs-root "$BASE")
+          ZSYNC_SRC=""
+          for candidate in "$WORK/${BASE}.zsync" "${PWD}/${BASE}.zsync" "./${BASE}.zsync"; do
+            if [ -f "$candidate" ]; then
+              ZSYNC_SRC="$candidate"
+              break
+            fi
+          done
+          if [ -z "$ZSYNC_SRC" ]; then
+            mapfile -t found < <(find "$WORK" "$PWD" -maxdepth 2 -type f -name '*.zsync' 2>/dev/null || true)
+            if [ "${#found[@]}" -ge 1 ]; then
+              ZSYNC_SRC="${found[0]}"
+            fi
+          fi
+          # Fallback: generar zsync a mano si appimagetool solo embutio update info.
+          if [ -z "$ZSYNC_SRC" ] || [ ! -f "$ZSYNC_SRC" ]; then
+            echo "appimagetool no dejo .zsync; generando con zsyncmake..."
+            (cd "$WORK" && zsyncmake -u "$UPDATE_URL" "$BASE")
+            if [ -f "$WORK/${BASE}.zsync" ]; then
+              ZSYNC_SRC="$WORK/${BASE}.zsync"
+            fi
+          fi
+          if [ -z "$ZSYNC_SRC" ] || [ ! -f "$ZSYNC_SRC" ]; then
+            echo "No se pudo obtener el fichero zsync"
+            find "$WORK" "$PWD" -maxdepth 3 -name '*.zsync' -print || true
+            ls -la "$WORK" || true
             exit 1
           fi
           mv -f "$WORK/$BASE" "$APP"
-          mv -f "$WORK/${BASE}.zsync" "dist/${BASE}.zsync"
+          mv -f "$ZSYNC_SRC" "dist/${BASE}.zsync"
           chmod +x "$APP"
           rm -f dist/*.AppImage.blockmap
           node scripts/update-appimage-latest-yml.js "$APP" dist/latest-linux.yml
