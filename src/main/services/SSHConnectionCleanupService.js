@@ -127,6 +127,12 @@ class SSHConnectionCleanupService {
     if (!conn) return false;
 
     try {
+      // 0. Parar la grabación aunque el renderer aún no tenga recordingId
+      try {
+        const { stopAndPersistRecording } = require('../handlers/recording-handlers');
+        void stopAndPersistRecording(tabId);
+      } catch (_) {}
+
       // 1. Limpiar timeouts
       this.cleanupTimeouts(conn);
 

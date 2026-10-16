@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useImperativeHandle, forwardRef, useState } f
 import { loadXtermModules, getCachedXtermModules } from '../utils/xtermLoader';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
-import { attachTerminalRenderer, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
+import { attachVisibleTerminalRenderer, createTimerBag, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
 import { setupTerminalClipboard, pasteToTerminal } from '../utils/terminalClipboard';
 
 const ClaudeTerminal = forwardRef(({
@@ -95,11 +95,12 @@ const ClaudeTerminal = forwardRef(({
     term.current.open(terminalRef.current);
     fitAndSyncSize();
     writeBufferRef.current = createXtermWriteBuffer(term, { active: !!active });
-    rendererRef.current = attachTerminalRenderer(term.current, { WebglAddon, CanvasAddon }, { preferWebgl: !!active });
+    rendererRef.current = attachVisibleTerminalRenderer(term.current, { WebglAddon, CanvasAddon }, !!active);
     // Reintentos para asegurar ajuste correcto cuando el contenedor termina de montar
-    setTimeout(fitAndSyncSize, 80);
-    setTimeout(fitAndSyncSize, 180);
-    setTimeout(fitAndSyncSize, 320);
+    const timers = createTimerBag();
+    timers.later(fitAndSyncSize, 80);
+    timers.later(fitAndSyncSize, 180);
+    timers.later(fitAndSyncSize, 320);
     term.current.focus();
 
     window.electron?.claude?.validateConfig?.().then((result) => {
@@ -114,7 +115,7 @@ const ClaudeTerminal = forwardRef(({
 
       // Asegurar que los eventos IPC del tab existen antes de iniciar Claude.
       window.electron?.ipcRenderer.send('register-tab-events', tabId);
-      setTimeout(() => {
+      timers.later(() => {
         window.electron?.ipcRenderer.send(`claude:start:${tabId}`, {
           cols: term.current?.cols || 120,
           rows: term.current?.rows || 30
@@ -149,9 +150,9 @@ const ClaudeTerminal = forwardRef(({
     const onReadyUnsubscribe = window.electron?.ipcRenderer.on(`claude:ready:${tabId}`, () => {
       isReadyRef.current = true;
       // Cuando el proceso está realmente listo, volver a sincronizar tamaño varias veces.
-      setTimeout(fitAndSyncSize, 10);
-      setTimeout(fitAndSyncSize, 120);
-      setTimeout(fitAndSyncSize, 280);
+      timers.later(fitAndSyncSize, 10);
+      timers.later(fitAndSyncSize, 120);
+      timers.later(fitAndSyncSize, 280);
     });
 
     const onErrorUnsubscribe = window.electron?.ipcRenderer.on(`claude:error:${tabId}`, (error) => {
@@ -166,15 +167,15 @@ const ClaudeTerminal = forwardRef(({
     const handleWindowResize = () => fitAndSyncSize();
     const handleVisibilityChange = () => {
       if (!document.hidden && active) {
-        setTimeout(fitAndSyncSize, 100);
+        timers.later(fitAndSyncSize, 100);
       }
     };
     window.addEventListener('resize', handleWindowResize);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // Algunos TUI (como Claude Code) recalculan layout tras arrancar; re-sincronizar durante el arranque.
-    const startupSyncTimers = [400, 700, 1100, 1700, 2600].map(ms => setTimeout(fitAndSyncSize, ms));
-    const startRetryTimers = [900, 1800, 3200].map((ms) => setTimeout(() => {
+    [400, 700, 1100, 1700, 2600].forEach(ms => timers.later(fitAndSyncSize, ms));
+    [900, 1800, 3200].forEach((ms) => timers.later(() => {
       if (!isReadyRef.current) {
         hasStartedRef.current = false;
         startClaudeSession();
@@ -187,8 +188,7 @@ const ClaudeTerminal = forwardRef(({
       resizeObserver.disconnect();
       window.removeEventListener('resize', handleWindowResize);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      startupSyncTimers.forEach(clearTimeout);
-      startRetryTimers.forEach(clearTimeout);
+      timers.clear();
       window.electron?.ipcRenderer.send(`claude:stop:${tabId}`);
       if (onDataUnsubscribe) onDataUnsubscribe();
       if (onReadyUnsubscribe) onReadyUnsubscribe();

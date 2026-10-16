@@ -5,6 +5,7 @@ node_modules/
 /dist
 /build
 .cold-cache
+.dev-webpack.lock
 
 # Archivos de entorno
 .env

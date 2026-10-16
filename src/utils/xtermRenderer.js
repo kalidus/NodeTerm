@@ -69,22 +69,50 @@ export function attachTerminalRenderer(termInstance, customAddons = {}, options 
 }
 
 /**
- * Cambia WebGL <-> Canvas segun visibilidad de la pestana, sin recrear el terminal.
+ * Renderer de una pestaña visible. Si está oculta no monta WebGL ni Canvas:
+ * xterm se queda en el renderer DOM y el bitmap de GPU se libera.
+ */
+export function attachVisibleTerminalRenderer(termInstance, customAddons, active) {
+  if (!active) return { rendererType: 'suspended', addon: null };
+  return attachTerminalRenderer(termInstance, customAddons, { preferWebgl: true });
+}
+
+/**
+ * Activa WebGL al mostrar la pestaña y lo suelta al ocultarla, sin recrear el terminal.
  */
 export function syncTerminalRenderer(termInstance, customAddons, preferWebgl, current) {
-  if (!termInstance) return current || { rendererType: 'dom', addon: null };
+  if (!termInstance) return current || { rendererType: 'suspended', addon: null };
 
-  const wantWebgl = !!preferWebgl;
-  const hasWebgl = current?.rendererType === 'webgl';
-  if (current && wantWebgl === hasWebgl) {
-    return current;
+  if (!preferWebgl) {
+    if (current?.rendererType === 'suspended') return current;
+    try {
+      current?.addon?.dispose();
+    } catch (_) {}
+    return { rendererType: 'suspended', addon: null };
   }
+
+  if (current?.rendererType === 'webgl' && current.addon) return current;
 
   try {
     current?.addon?.dispose();
   } catch (_) {}
 
-  return attachTerminalRenderer(termInstance, customAddons, { preferWebgl: wantWebgl });
+  return attachTerminalRenderer(termInstance, customAddons, { preferWebgl: true });
+}
+
+/** Temporizadores de fit/resize que hay que cancelar al desmontar. */
+export function createTimerBag() {
+  const ids = [];
+  return {
+    later(fn, ms) {
+      const id = setTimeout(fn, ms);
+      ids.push(id);
+      return id;
+    },
+    clear() {
+      while (ids.length) clearTimeout(ids.pop());
+    }
+  };
 }
 
 /**

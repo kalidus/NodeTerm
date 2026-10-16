@@ -1256,6 +1256,7 @@ function createRdpWebCodecsDecoder(opts = {}) {
     close() {
       configured = false;
       pending.clear();
+      order.length = 0;
       lumaBySurface.clear();
       deliverChain = Promise.resolve();
       if (settleTimer) clearTimeout(settleTimer);

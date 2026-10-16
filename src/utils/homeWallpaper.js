@@ -11,6 +11,16 @@ export const DEFAULT_WALLPAPER_STATE = {
 };
 
 const dataUrlCache = new Map();
+const WALLPAPER_CACHE_MAX = 2;
+
+function rememberWallpaperDataUrl(file, dataUrl) {
+  if (dataUrlCache.has(file)) dataUrlCache.delete(file);
+  dataUrlCache.set(file, dataUrl);
+  while (dataUrlCache.size > WALLPAPER_CACHE_MAX) {
+    const oldest = dataUrlCache.keys().next().value;
+    dataUrlCache.delete(oldest);
+  }
+}
 
 function clampDim(value) {
   const n = Number(value);
@@ -72,13 +82,17 @@ export function evictWallpaperCache(file) {
 
 export async function getWallpaperDataUrl(file) {
   if (!file) return null;
-  if (dataUrlCache.has(file)) return dataUrlCache.get(file);
+  if (dataUrlCache.has(file)) {
+    const cached = dataUrlCache.get(file);
+    rememberWallpaperDataUrl(file, cached);
+    return cached;
+  }
   const api = getApi();
   if (!api || typeof api.getDataUrl !== 'function') return null;
   try {
     const result = await api.getDataUrl(file);
     if (result && result.ok && result.dataUrl) {
-      dataUrlCache.set(file, result.dataUrl);
+      rememberWallpaperDataUrl(file, result.dataUrl);
       return result.dataUrl;
     }
   } catch {

@@ -355,6 +355,17 @@ function createH264GpuPresenter(opts) {
       copyBusy = false;
       try { gpu?.device?.destroy(); } catch (_) { /* noop */ }
       gpu = null;
+      if (Array.isArray(slots)) {
+        for (const slot of slots) {
+          try {
+            if (slot?.canvas) {
+              slot.canvas.width = 0;
+              slot.canvas.height = 0;
+            }
+          } catch (_) { /* noop */ }
+          if (slot) slot.ctx = null;
+        }
+      }
       slots = [];
       mode = 'copy';
     }

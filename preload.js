@@ -389,6 +389,11 @@ contextBridge.exposeInMainWorld('electron', {
     removeAllListeners: (channel) => {
       if (channel && isAllowedListenerChannel(channel)) {
         ipcRenderer.removeAllListeners(channel);
+        for (const [func, channelMap] of listenerSubscriptions) {
+          if (!channelMap.has(channel)) continue;
+          channelMap.delete(channel);
+          if (channelMap.size === 0) listenerSubscriptions.delete(func);
+        }
       }
     }
   },

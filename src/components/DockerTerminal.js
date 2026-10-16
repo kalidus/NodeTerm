@@ -5,7 +5,7 @@ import StatusBar from './StatusBar';
 import { statusBarThemes } from '../themes/status-bar-themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
-import { attachTerminalRenderer, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
+import { attachVisibleTerminalRenderer, getTerminalScrollback, registerScrollbackSync, useTerminalMemoryGuards } from '../utils/xtermRenderer';
 import { systemStatsService } from '../services/SystemStatsService';
 import { useLogColorizer } from '../hooks/useLogColorizer';
 import { setupTerminalClipboard, pasteToTerminal } from '../utils/terminalClipboard';
@@ -106,7 +106,7 @@ const DockerTerminal = forwardRef(({
         writeBufferRef.current = createXtermWriteBuffer(term, { active: !!active });
 
         // Cargar renderizador acelerado por hardware con fallback a Canvas 2D
-        rendererRef.current = attachTerminalRenderer(term.current, { WebglAddon, CanvasAddon }, { preferWebgl: !!active });
+        rendererRef.current = attachVisibleTerminalRenderer(term.current, { WebglAddon, CanvasAddon }, !!active);
 
         // Abrir terminal en elemento DOM
         term.current.open(terminalRef.current);

@@ -434,10 +434,12 @@ export const useConnectionManagement = ({
           tabId: tabId,
           metadata: recordingMetadata
         }).then(result => {
-          if (result.success) {
-            // Guardar ID de grabación en la pestaña para referencia
-            newTab.recordingId = result.recordingId;
-          } else {
+          if (result?.success && result.recordingId) {
+            const recordingId = result.recordingId;
+            setSshTabs(prev => prev.map(tab => (
+              tab.key === tabId ? { ...tab, recordingId } : tab
+            )));
+          } else if (result && result.success === false) {
             console.warn('⚠️ Error iniciando grabación automática:', result.error);
           }
         }).catch(error => {

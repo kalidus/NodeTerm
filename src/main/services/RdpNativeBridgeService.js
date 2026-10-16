@@ -918,6 +918,7 @@ class RdpNativeBridgeService extends EventEmitter {
     }
 
     let isCleanedUp = false;
+    let sessionBackpressure = null;
     let bastionSliceTimer = null;
     let rewriteFailFrames = 0;
     let rewriteFailRects = 0;
@@ -1066,6 +1067,8 @@ class RdpNativeBridgeService extends EventEmitter {
       try { streamDeframer.reset(); } catch (e) {}
       try { frameSplitter.reset(); } catch (e) {}
       try { bitmapReassembler.reset(); } catch (e) {}
+      try { sessionBackpressure?.dropPending(); } catch (e) {}
+      sessionBackpressure = null;
       if (latencyMetrics) {
         try { console.log(latencyMetrics.formatLine()); } catch (e) {}
         latencyMetrics.stopLoopMonitor();
@@ -1191,7 +1194,7 @@ class RdpNativeBridgeService extends EventEmitter {
               // Bastión y directo: latest-wins seguro (solo bitmaps ya cubiertos) sin callar TLS.
               // Directo: pausa TLS solo a 2 MB, como ultimo recurso anti-OOM.
               // Métricas [Bridge Perf] solo con NODETERM_RDP_DEBUG / session.rdpDebug.
-              const backpressure = new WsBackpressureController({
+              const backpressure = sessionBackpressure = new WsBackpressureController({
                 bastion: normalizeBitmaps,
                 metrics: latencyMetrics
               });

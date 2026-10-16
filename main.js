@@ -201,6 +201,11 @@ if (app) {
   const heapMb = resolveV8MaxOldSpaceMb();
   app.commandLine.appendSwitch('js-flags', `--max-old-space-size=${heapMb}`);
   try {
+    require('./src/main/services/StatsWorkerService').reapOrphanStatsWorkers();
+  } catch (err) {
+    console.warn('[MEM] Barrido de workers huérfanos omitido:', err?.message || err);
+  }
+  try {
     const totalGb = (require('os').totalmem() / (1024 * 1024 * 1024)).toFixed(1);
     console.log(`[MEM] V8 max-old-space-size=${heapMb} MB (RAM ${totalGb} GB)`);
   } catch (_) {}
@@ -3421,6 +3426,15 @@ async function stopAiClientDockerContainersOnQuit() {
 
   await Promise.all(stopTasks);
 }
+
+function requestGracefulQuit(signal) {
+  if (isAppQuitting.value || appCleanupInProgress || appCleanupCompleted) return;
+  console.log(`[quit] Señal ${signal}, cierre ordenado`);
+  try { app.quit(); } catch (_) {}
+}
+
+process.on('SIGTERM', () => requestGracefulQuit('SIGTERM'));
+process.on('SIGINT', () => requestGracefulQuit('SIGINT'));
 
 // Limpieza robusta también en before-quit
 app.on('before-quit', async (event) => {

@@ -299,6 +299,19 @@ async function updateStatsLoop() {
   }
 }
 
+function shutdownWorker() {
+  shouldGenerateStats = false;
+  if (updateTimer) {
+    clearTimeout(updateTimer);
+    updateTimer = null;
+  }
+  process.exit(0);
+}
+
+// Si Electron muere (SIGKILL, cierre de terminal, crash), el canal IPC se cierra
+// y este proceso no debe quedarse en bucle como node.exe huérfano.
+process.on('disconnect', shutdownWorker);
+
 // Iniciar el bucle de actualización inmediatamente
 updateStatsLoop();
 

@@ -6,7 +6,7 @@ import { statusBarThemes } from '../themes/status-bar-themes';
 import { themes } from '../themes';
 import { shouldBlockHumanInput } from '../services/terminalAgentState';
 import { createXtermWriteBuffer } from '../utils/xtermWriteBuffer';
-import { attachTerminalRenderer, getTerminalScrollback, useTerminalMemoryGuards } from '../utils/xtermRenderer';
+import { attachVisibleTerminalRenderer, getTerminalScrollback, useTerminalMemoryGuards } from '../utils/xtermRenderer';
 import { useLogColorizer } from '../hooks/useLogColorizer';
 import { writeText as clipboardWriteText, readText as clipboardReadText } from '../utils/clipboard';
 import { useSshTabStats } from '../services/SshStatsStore';
@@ -311,7 +311,7 @@ const TerminalComponent = forwardRef(({
         // term.current.loadAddon(new ImageAddon({ sixelScrolling: true }));
 
         // Load and activate the WebGL renderer with Canvas 2D fallback
-        rendererRef.current = attachTerminalRenderer(term.current, { WebglAddon, CanvasAddon }, { preferWebgl: !!activeRef.current });
+        rendererRef.current = attachVisibleTerminalRenderer(term.current, { WebglAddon, CanvasAddon }, !!activeRef.current);
 
         term.current.open(terminalRef.current);
         fitAddon.current.fit();

@@ -257,6 +257,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
   const lastCursorHotspotRef = useRef({ x: 0, y: 0 });
   const lastCursorDataUrlRef = useRef('');
   const cursorImageRef = useRef(null);
+  const releaseSessionMediaRef = useRef(() => {});
   const lastReceivedClipboardTextRef = useRef('');
   const lastSentClipboardTextRef = useRef('');
   const isFileTransferArmedRef = useRef(false);
@@ -856,9 +857,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     },
     disconnect: () => {
       notifyUserClose();
-      try {
-        sessionRef.current?.shutdown();
-      } catch (_) {}
+      releaseSessionMediaRef.current();
     },
     reconnect: () => {
       handleReconnect();
@@ -1006,6 +1005,35 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     let h264Presenter = null;
     const isAborted = () => aborted || !isMounted;
 
+    const releaseSessionMedia = () => {
+      if (webCodecsDecoder) {
+        try { webCodecsDecoder.close(); } catch (_) {}
+        webCodecsDecoder = null;
+      }
+      if (h264Presenter) {
+        try { h264Presenter.dispose(); } catch (_) {}
+        h264Presenter = null;
+      }
+      const session = sessionRef.current;
+      sessionRef.current = null;
+      if (session) {
+        try { session.shutdown(); } catch (_) {}
+      }
+      const canvas = canvasRef.current;
+      if (canvas && (canvas.width > 1 || canvas.height > 1)) {
+        try {
+          canvas.width = 1;
+          canvas.height = 1;
+        } catch (_) {}
+      }
+      lastCursorDataUrlRef.current = '';
+      if (cursorImageRef.current) {
+        try { cursorImageRef.current.src = ''; } catch (_) {}
+        cursorImageRef.current = null;
+      }
+    };
+    releaseSessionMediaRef.current = releaseSessionMedia;
+
     const beginGfxNoAvcFallback = (reason) => {
       if (isAborted() || userClosingRef.current || gfxNoAvcFallbackUsedRef.current) return;
       gfxNoAvcFallbackUsedRef.current = true;
@@ -1024,18 +1052,6 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
       }
     };
 
-    const clearCanvasScreen = () => {
-      if (canvasRef.current) {
-        try {
-          const ctx = getOptimized2dContext(canvasRef.current);
-          if (ctx) {
-            ctx.fillStyle = '#141821';
-            ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-          }
-        } catch (_) {}
-      }
-    };
-
     const handleSessionEnded = (rawReason, err) => {
       if (!isMounted) return;
       if (gfxFallbackPendingRef.current) return;
@@ -1050,7 +1066,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         beginGfxNoAvcFallback('0x112f');
         return;
       }
-      clearCanvasScreen();
+      releaseSessionMedia();
 
       const wasConnected = hasEverConnectedRef.current;
       const backendReason = lastBackendReasonRef.current;
@@ -1911,6 +1927,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     return () => {
       aborted = true;
       isMounted = false;
+      releaseSessionMediaRef.current = () => {};
       if (disposeCanvasProbe) {
         try { disposeCanvasProbe(); } catch (_) {}
         disposeCanvasProbe = null;

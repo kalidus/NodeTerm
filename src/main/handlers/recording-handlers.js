@@ -58,6 +58,55 @@ async function getRecordingsDirectory() {
   }
 }
 
+async function stopAndPersistRecording(tabId) {
+  if (!sessionRecorder) {
+    return { success: false, error: 'SessionRecorder no inicializado' };
+  }
+  if (!tabId || !sessionRecorder.isRecording(tabId)) {
+    return { success: true, skipped: true };
+  }
+
+  try {
+    const recording = sessionRecorder.stopRecording(tabId);
+    const recordingId = recording.id;
+    const recordingsDir = await getRecordingsDirectory();
+    await fs.mkdir(recordingsDir, { recursive: true });
+
+    const asciicastContent = sessionRecorder.toAsciicast(recording);
+    const filename = `${recordingId}.cast`;
+    const filepath = path.join(recordingsDir, filename);
+    await fs.writeFile(filepath, asciicastContent, 'utf-8');
+
+    const metadataPath = path.join(recordingsDir, `${recordingId}.meta.json`);
+    const metadata = {
+      id: recordingId,
+      filepath,
+      filename,
+      ...recording.metadata,
+      duration: recording.duration,
+      endTime: recording.endTime,
+      eventCount: recording.eventCount,
+      bytesRecorded: recording.bytesRecorded,
+      createdAt: Date.now()
+    };
+
+    await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
+    console.log(`💾 Grabación guardada: ${filepath}`);
+
+    return {
+      success: true,
+      recordingId,
+      filepath,
+      duration: recording.duration,
+      eventCount: recording.eventCount,
+      message: `Grabación guardada: ${filename}`
+    };
+  } catch (error) {
+    console.error('Error deteniendo grabación:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 /**
  * Registra todos los manejadores IPC relacionados con grabaciones
  */
@@ -173,71 +222,7 @@ function registerRecordingHandlers() {
   });
 
   // RECORDING: Detener grabación y guardar
-  ipcMain.handle('recording:stop', async (event, { tabId }) => {
-    try {
-      if (!sessionRecorder) {
-        throw new Error('SessionRecorder no inicializado');
-      }
-
-      // Detener grabación
-      const recording = sessionRecorder.stopRecording(tabId);
-      
-      // Guardar archivo en disco
-      const recordingId = recording.id;
-      const recordingsDir = await getRecordingsDirectory();
-      
-      // Crear directorio si no existe
-      await fs.mkdir(recordingsDir, { recursive: true });
-      
-      // Generar formato asciicast
-      const asciicastContent = sessionRecorder.toAsciicast(recording);
-      const filename = `${recordingId}.cast`;
-      const filepath = path.join(recordingsDir, filename);
-      
-      // Guardar archivo
-      await fs.writeFile(filepath, asciicastContent, 'utf-8');
-      
-      // Guardar metadata en archivo separado para índice rápido
-      const metadataPath = path.join(recordingsDir, `${recordingId}.meta.json`);
-      const metadata = {
-        id: recordingId,
-        filepath,
-        filename,
-        ...recording.metadata,
-        duration: recording.duration,
-        endTime: recording.endTime,
-        eventCount: recording.eventCount,
-        bytesRecorded: recording.bytesRecorded,
-        createdAt: Date.now()
-      };
-      
-      console.log('💾 Guardando metadata de grabación:', {
-        id: metadata.id,
-        host: metadata.host,
-        username: metadata.username,
-        title: metadata.title
-      });
-      
-      await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
-      
-      console.log(`💾 Grabación guardada: ${filepath}`);
-      
-      return {
-        success: true,
-        recordingId,
-        filepath,
-        duration: recording.duration,
-        eventCount: recording.eventCount,
-        message: `Grabación guardada: ${filename}`
-      };
-    } catch (error) {
-      console.error('Error deteniendo grabación:', error);
-      return {
-        success: false,
-        error: error.message
-      };
-    }
-  });
+  ipcMain.handle('recording:stop', async (event, { tabId }) => stopAndPersistRecording(tabId));
 
   // RECORDING: Pausar grabación
   ipcMain.handle('recording:pause', async (event, { tabId }) => {
@@ -773,6 +758,7 @@ function registerRecordingHandlers() {
 
 module.exports = {
   registerRecordingHandlers,
-  setSessionRecorder
+  setSessionRecorder,
+  stopAndPersistRecording
 };
 
