@@ -20,9 +20,10 @@ const {
 } = require('../../src/main/services/rdp-channel-filter');
 
 const TR = path.join(__dirname, 'traces');
+// Baselines versionadas en traces/matrix/ (traces/*.jsonl esta en .gitignore).
 const BASELINES = [
-  { scenario: 'APP', service: 'APP', file: path.join(TR, 'mstsc-app-clipboard.jsonl') },
-  { scenario: 'RDP', service: 'RDP', file: path.join(TR, 'mstsc-rdp-clipboard.jsonl') }
+  { scenario: 'APP', service: 'APP', file: path.join(TR, 'matrix', 'mstsc-app-frio-1.jsonl') },
+  { scenario: 'RDP', service: 'RDP', file: path.join(TR, 'matrix', 'mstsc-rdp-frio-1.jsonl') }
 ];
 
 function loadRows(file) {
