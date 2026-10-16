@@ -426,14 +426,12 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
     isFileTransferArmedRef.current = false;
   };
 
-  const hasActiveFileTransfer = (transfers) => {
-    return Object.values(transfers || {}).some(
-      (t) => t && (t.status === 'active' || t.status === 'pasting' || t.status === 'ready')
-    );
-  };
+  const hasActiveFileTransfer = (transfers) => hasFileTransferWork(transfers);
 
   const syncTransfersAndArm = (next) => {
-    if (!hasActiveFileTransfer(next)) {
+    if (hasFileTransferWork(next)) {
+      isFileTransferArmedRef.current = true;
+    } else {
       disarmFileTransfer();
     }
     return next;
@@ -1247,6 +1245,7 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
         const authTokenStr = String(tokenResponse.tokenId || '');
 
         const isClipboardEnabled = rdpConfig.redirectClipboard !== false;
+        const needsCliprdr = isClipboardEnabled || isDriveEnabled;
 
         const builder = new Backend.SessionBuilder()
           .username(usernameStr)
@@ -1634,15 +1633,14 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           }
         }
 
-        // Configurar sincronización del portapapeles nativo (CLIPRDR)
-        if (isClipboardEnabled) {
+        // CLIPRDR: texto y/o file-clip («Copia de archivos»). Sin onClipboardPaste
+        // IronRDP no emite CAPS/FORMAT_LIST y Wallix cierra.
+        if (needsCliprdr) {
+          if (isClipboardEnabled) {
           // Remoto -> Local: cuando se copia o corta texto en el servidor RDP, escribir en portapapeles del cliente
           builder.remoteClipboardChangedCallback(async (clipboardData) => {
             if (!clipboardData) return;
-            const hasActiveTransfer = Object.values(activeTransfersRef.current || {}).some(
-              (t) => t && (t.status === 'active' || t.status === 'pasting')
-            );
-            if (hasActiveTransfer) {
+            if (hasFileTransferWork(activeTransfersRef.current)) {
               recordClipboardAction('remoteClipboardChanged omitido: transferencia activa en curso');
               if (isRdpDebugEnabled()) {
                 console.log('[IronRDP Clipboard] remoteClipboardChanged omitido: transferencia de archivos en curso');
@@ -1691,12 +1689,17 @@ const IronRdpCanvasTab = forwardRef(({ tabId, rdpConfig = {}, isActive = true, o
           // Hay que contestar SIEMPRE y sin esperas asíncronas previas: la lectura del portapapeles
           // puede tardar decenas de ms y el CB_FORMAT_LIST del servidor llega inmediatamente después,
           // así que se responde desde la caché y el refresco se hace en segundo plano.
+          }
           builder.forceClipboardUpdateCallback(() => {
             if (isFileTransferArmedRef.current) {
               recordClipboardAction('forceClipboardUpdate omitido: transferencia en curso');
               if (isRdpDebugEnabled()) {
                 console.log('📋 [IronRDP Clipboard] forceClipboardUpdate omitido: transferencia de archivos en curso');
               }
+              return;
+            }
+            if (!isClipboardEnabled) {
+              enqueueClipboardSend('', 'handshake file-clip');
               return;
             }
             const cached = localClipboardCacheRef.current || '';

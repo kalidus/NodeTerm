@@ -115,6 +115,12 @@ describe('Cola de transferencias Iron RDP', () => {
     })), false);
   });
 
+  it('una descarga pendiente cuenta como trabajo de ficheros (silencia el sync de texto)', () => {
+    const pending = seedPendingDownloads({}, [isoFile('nota.txt', 40)]);
+    assert.equal(hasFileTransferWork(pending), true);
+    assert.equal(hasFileTransferWork({}), false);
+  });
+
   it('cancelar con id string no revive el progreso numerico', () => {
     const files = [isoFile('a.iso', 100)];
     const seeded = seedPendingDownloads({}, files);

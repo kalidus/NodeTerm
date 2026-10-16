@@ -12,6 +12,8 @@ const {
   shouldRecordMutedClientCliprdr,
   takeCliprdrRehandshake,
   isCliprdrClientPayloadDesc,
+  isCliprdrFileContentsDesc,
+  cliprdrFileContentsWireDest,
   unsafeCliprdrClientWriteDest,
   confirmCliprdrWriteChannel,
   fallbackIoNamedCliprdrWrite,
@@ -1369,6 +1371,25 @@ describe('CLIPRDR: destino de datos con saludo inseguro', () => {
     assert.equal(unsafeCliprdrClientWriteDest(state, 1003), null);
     state.cliprdrServerFormatListSeen = true;
     assert.equal(unsafeCliprdrClientWriteDest(state, 1003), 1003, 'tras FORMAT_LIST del servidor en IO escribe en 1003');
+  });
+
+  test('FILECONTENTS con saludo en IO no sale por 1003; si el servidor habla en 1006, va ahi', () => {
+    const state = stateWithCliprdr();
+    state.wallixService = 'RDP';
+    state.virtualChannels = true;
+    state.ioChannelId = 1003;
+    state.cliprdrChannelId = 1006;
+    state.serverCliprdrChannelId = 1003;
+    state.allowed = new Set([1003, 1004, 1005, 1006]);
+    state.channelIdToName = new Map([
+      [1004, 'rdpdr'],
+      [1005, 'rdpsnd'],
+      [1006, 'cliprdr']
+    ]);
+    assert.equal(isCliprdrFileContentsDesc('CB_FILECONTENTS_REQUEST (flags=0x0, dataLen=28, payloadLen=36B)'), true);
+    assert.equal(cliprdrFileContentsWireDest(state, 1003), null, 'saludo en IO: encolar, no escribir 1003');
+    state.serverCliprdrChannelId = 1006;
+    assert.equal(cliprdrFileContentsWireDest(state, 1003), 1006, 'mstsc file-clip: VC nombrado');
   });
 });
 

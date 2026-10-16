@@ -57,6 +57,8 @@ const {
   sanitizeIllegalCliprdrWrite,
   fallbackIoNamedCliprdrWrite,
   isCliprdrClientPayloadDesc,
+  isCliprdrFileContentsDesc,
+  cliprdrFileContentsWireDest,
   unsafeCliprdrClientWriteDest,
   enqueueClientCliprdr,
   takePendingClientCliprdr,
@@ -1755,7 +1757,7 @@ class RdpNativeBridgeService extends EventEmitter {
                             channelFilter.loggedCliprdrRehandshakeMiss = true;
                             let missMsg;
                             if (channelFilter.cliprdrRehandshakeSkippedUnsafe) {
-                              missMsg = '[Bridge Clipboard] CB_MONITOR_READY sin write path seguro (saludo por canal de usuario)';
+                              missMsg = '[Bridge Clipboard] rehandshake 0x3e omitido: sin write path seguro (file-clip imposible hasta saludo en VC cliprdr)';
                             } else if (Buffer.isBuffer(channelFilter.cachedClientCaps)) {
                               missMsg = '[Bridge Clipboard] CB_MONITOR_READY: CAPS en cache pero rehandshake no emitido (pending ya consumido)';
                             } else {
@@ -2761,6 +2763,32 @@ class RdpNativeBridgeService extends EventEmitter {
     const bannerActive = channelFilter.bannerBitmapsDropped !== true && !channelFilter.cliprdrServerFormatListSeen;
     const payloadOk = isCliprdrClientPayloadDesc(clipDesc)
       && !(isFormatList && isBastionIo && bannerActive);
+    // mstsc file-clip: FILECONTENTS nunca por IO. Si el servidor ya habla en el VC
+    // nombrado (1006), reescribir ahi; si no, encolar hasta el flush post-hop.
+    if (payloadOk && isCliprdrFileContentsDesc(clipDesc) && destIsIo) {
+      const fileDest = cliprdrFileContentsWireDest(channelFilter, dest);
+      if (fileDest != null) {
+        const out = rewriteMcsChannelId(frame, fileDest) || frame;
+        if (!channelFilter.loggedCliprdrFileContentsNamed) {
+          channelFilter.loggedCliprdrFileContentsNamed = true;
+          const fileMsg = `[Bridge Clipboard] FILECONTENTS por VC cliprdr ch=${fileDest} (no IO ${dest})`;
+          console.warn(fileMsg);
+          if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(fileMsg);
+          this.emit('diagnostic-log', { category: 'cliprdr', message: fileMsg });
+        }
+        return { forward: out, inject };
+      }
+      enqueueClientCliprdr(channelFilter, frame);
+      if (!channelFilter.loggedCliprdrFileContentsHold) {
+        channelFilter.loggedCliprdrFileContentsHold = true;
+        const holdMsg = `[Bridge Clipboard] FILECONTENTS encolado: saludo aun en IO ${dest} (mstsc usa VC cliprdr)`;
+        console.warn(holdMsg);
+        if (typeof channelFilter.recordCliprdr === 'function') channelFilter.recordCliprdr(holdMsg);
+        this.emit('diagnostic-log', { category: 'cliprdr', message: holdMsg });
+      }
+      return { forward: null, inject };
+    }
+
     const unsafeDest = unsafeCliprdrClientWriteDest(channelFilter, dest);
     if (payloadOk && unsafeDest != null) {
       let out = unsafeDest === parsed.channelId

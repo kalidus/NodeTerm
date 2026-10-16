@@ -1132,6 +1132,40 @@ function isCliprdrClientPayloadDesc(desc) {
     || desc.includes('CB_FORMAT_LIST');
 }
 
+function isCliprdrFileContentsDesc(desc) {
+  return typeof desc === 'string' && desc.includes('CB_FILECONTENTS_');
+}
+
+/**
+ * Destino cable de FILECONTENTS. Baseline mstsc selector (mstsc-selector-file-frio-1):
+ * SIZE/RANGE van siempre al VC nombrado cliprdr (1006), nunca al IO 1003.
+ * Si el saludo sigue en IO y el servidor aun no habla en el VC nombrado, null = encolar.
+ */
+function cliprdrFileContentsWireDest(state, greetingDest) {
+  if (!state) return null;
+  const io = state.ioChannelId;
+  const greetingOnIo = io != null && greetingDest === io;
+  const named = declaredChannelId(state, 'cliprdr');
+  if (named != null
+      && state.serverCliprdrChannelId === named
+      && canEmitCliprdrToWire(state, named)) {
+    return named;
+  }
+  const write = state.cliprdrWriteChannelId;
+  const writeOk = write != null
+    && write !== io
+    && !isUserMcsChannel(state, write)
+    && canEmitCliprdrToWire(state, write);
+  if (writeOk && (!greetingOnIo || state.serverCliprdrChannelId === write)) {
+    return write;
+  }
+  if (greetingOnIo) return null;
+  if (greetingDest != null && greetingDest !== io && canEmitCliprdrToWire(state, greetingDest)) {
+    return greetingDest;
+  }
+  return null;
+}
+
 /**
  * Destino para lista/datos cuando el saludo cayo en un canal inseguro.
  * 1001: en RemoteApp (:APP:), el servidor habla cliprdr ahi; la lista y los request se escriben en 1001.
@@ -3014,6 +3048,8 @@ module.exports = {
   CLIPRDR_TEMPDIR_BYTES,
   fallbackIoNamedCliprdrWrite,
   isCliprdrClientPayloadDesc,
+  isCliprdrFileContentsDesc,
+  cliprdrFileContentsWireDest,
   unsafeCliprdrClientWriteDest,
   confirmCliprdrWriteChannel,
   enqueueClientCliprdr,
