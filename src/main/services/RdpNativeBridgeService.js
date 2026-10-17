@@ -229,9 +229,9 @@ function isBastionSession(session) {
   return false;
 }
 
-/** Preferencia de gráficos del usuario. El bastión no la degrada a bitmap. */
+/** Preferencia de gráficos del usuario. EGFX por defecto; Bitmap solo si se pide explícito. */
 function resolveIronRdpGraphics(config) {
-  return config && config.ironRdpGraphics === 'egfx' ? 'egfx' : 'bitmap';
+  return config && config.ironRdpGraphics === 'bitmap' ? 'bitmap' : 'egfx';
 }
 
 /**

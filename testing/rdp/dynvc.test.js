@@ -746,7 +746,7 @@ describe('drdynvc remap DisplayControl', () => {
     assert.equal(resolveIronRdpGraphics(rdpChain), 'egfx');
     assert.equal(resolveIronRdpGraphics(appChain), 'egfx');
     assert.equal(resolveIronRdpGraphics({ ironRdpGraphics: 'bitmap', useBastionWallix: true }), 'bitmap');
-    assert.equal(resolveIronRdpGraphics({ useBastionWallix: true }), 'bitmap');
+    assert.equal(resolveIronRdpGraphics({ useBastionWallix: true }), 'egfx');
     assert.equal(resolveIronRdpGraphics({ ironRdpGraphics: 'egfx', username: 'Administrator' }), 'egfx');
   });
 

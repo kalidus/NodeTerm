@@ -1365,7 +1365,7 @@ export const useFormHandlers = ({
             guacEnableDrive: rdpData.guacEnableDrive !== false && (rdpData.guacEnableDrive === true || rdpData.redirectFolders !== false),
             guacDriveHostDir: (typeof rdpData.guacDriveHostDir === 'string') ? rdpData.guacDriveHostDir : '',
             guacEnableGfx: (rdpData.guacEnableGfx === true) || (rdpData.guacWin11Compat === true),
-            ironRdpGraphics: rdpData.ironRdpGraphics === 'egfx' ? 'egfx' : 'bitmap',
+            ironRdpGraphics: rdpData.ironRdpGraphics === 'bitmap' ? 'bitmap' : 'egfx',
             bastionLogicalDesktop: rdpData.bastionLogicalDesktop !== false,
             // Nuevos flags avanzados
             guacEnableDesktopComposition: rdpData.guacEnableDesktopComposition === true,
@@ -1427,7 +1427,7 @@ export const useFormHandlers = ({
           guacEnableDrive: rdpData.guacEnableDrive !== false && (rdpData.guacEnableDrive === true || rdpData.redirectFolders !== false),
           guacDriveHostDir: (typeof rdpData.guacDriveHostDir === 'string') ? rdpData.guacDriveHostDir : '',
           guacEnableGfx: (rdpData.guacEnableGfx === true) || (rdpData.guacWin11Compat === true),
-          ironRdpGraphics: rdpData.ironRdpGraphics === 'egfx' ? 'egfx' : 'bitmap',
+          ironRdpGraphics: rdpData.ironRdpGraphics === 'bitmap' ? 'bitmap' : 'egfx',
           bastionLogicalDesktop: rdpData.bastionLogicalDesktop !== false,
           // Nuevos flags avanzados
           guacEnableDesktopComposition: rdpData.guacEnableDesktopComposition === true,
@@ -1497,7 +1497,7 @@ export const useFormHandlers = ({
                 guacEnableDrive: rdpData.guacEnableDrive !== false && (rdpData.guacEnableDrive === true || rdpData.redirectFolders !== false),
                 guacDriveHostDir: (typeof rdpData.guacDriveHostDir === 'string') ? rdpData.guacDriveHostDir : '',
                 guacEnableGfx: (rdpData.guacEnableGfx === true) || (rdpData.guacWin11Compat === true),
-                ironRdpGraphics: rdpData.ironRdpGraphics === 'egfx' ? 'egfx' : 'bitmap',
+                ironRdpGraphics: rdpData.ironRdpGraphics === 'bitmap' ? 'bitmap' : 'egfx',
                 bastionLogicalDesktop: rdpData.bastionLogicalDesktop !== false,
                 guacDisableGlyphCaching: rdpData.guacDisableGlyphCaching === true,
                 guacDisableOffscreenCaching: rdpData.guacDisableOffscreenCaching === true,
